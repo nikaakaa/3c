@@ -1,0 +1,70 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d7a7d7846625e54888122e8a679901b, type: 3}
+  m_Name: DefaultLocomotionAnimationSet
+  m_EditorClassIdentifier: 
+  idleKey: Idle
+  walkStartKey: WalkStart
+  runStartKey: RunStart
+  walkLoopKey: WalkLoop
+  runLoopKey: RunLoop
+  walkEndKey: WalkEnd
+  runEndKey: RunEnd
+  idle:
+    key: Idle
+    fadeDuration: -1
+    speed: 1
+    normalizedStartTime: -1
+    exitDurationMode: 0
+    exitDurationOverride: -1
+  walkStart:
+    key: WalkStart
+    fadeDuration: -1
+    speed: 1
+    normalizedStartTime: -1
+    exitDurationMode: 0
+    exitDurationOverride: -1
+  runStart:
+    key: RunStart
+    fadeDuration: -1
+    speed: 1
+    normalizedStartTime: -1
+    exitDurationMode: 0
+    exitDurationOverride: -1
+  walkLoop:
+    key: WalkLoop
+    fadeDuration: -1
+    speed: 1
+    normalizedStartTime: -1
+    exitDurationMode: 0
+    exitDurationOverride: -1
+  runLoop:
+    key: RunLoop
+    fadeDuration: -1
+    speed: 1
+    normalizedStartTime: -1
+    exitDurationMode: 0
+    exitDurationOverride: -1
+  walkEnd:
+    key: WalkEnd
+    fadeDuration: -1
+    speed: 1
+    normalizedStartTime: -1
+    exitDurationMode: 0
+    exitDurationOverride: -1
+  runEnd:
+    key: RunEnd
+    fadeDuration: -1
+    speed: 1
+    normalizedStartTime: -1
+    exitDurationMode: 0
+    exitDurationOverride: -1

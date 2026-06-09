@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1d20cc7387d1bd4fab8f70c4ff06894, type: 3}
+  m_Name: DefaultLocomotionStateGraph
+  m_EditorClassIdentifier: 
+  initialState: 0
+  enabledStates: 00000000010000000200000003000000
+  transitions:
+  - from: 0
+    to: 1
+    priority: 100
+    conditions: 00000000
+  - from: 1
+    to: 3
+    priority: 100
+    conditions: 01000000
+  - from: 1
+    to: 2
+    priority: 0
+    conditions: 0000000002000000
+  - from: 2
+    to: 3
+    priority: 100
+    conditions: 01000000
+  - from: 3
+    to: 1
+    priority: 100
+    conditions: 00000000
+  - from: 3
+    to: 0
+    priority: 0
+    conditions: 0100000003000000

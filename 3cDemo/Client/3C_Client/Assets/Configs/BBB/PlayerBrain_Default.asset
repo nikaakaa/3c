@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5dac5f67b234d6489c88ba77c8546fa, type: 3}
+  m_Name: PlayerBrain_Default
+  m_EditorClassIdentifier: 
+  AvailableStates: 00000000010000000200000003000000040000000500000006000000070000000a0000000b0000000c0000000d0000000e000000
+  GlobalInterceptors:
+  - {fileID: 11400000, guid: 840b50943159d7049b470211d7753f7c, type: 2}
+  - {fileID: 11400000, guid: 69438aebdb1317b49931aa4b8c0a9868, type: 2}
+  - {fileID: 11400000, guid: 8e0b720845e5bfb449329606dde4318b, type: 2}
+  - {fileID: 11400000, guid: e13cdd61dd922894abf4fe965da1e0bb, type: 2}
+  UpperBodyStates: 000000000100000002000000
+  UpperBodyInterceptors:
+  - {fileID: 11400000, guid: 2ce1b66b413699341bd4e8e510d1944a, type: 2}
+  - {fileID: 11400000, guid: 739919015e7285540969a272dce266a1, type: 2}

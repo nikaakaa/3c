@@ -1,0 +1,171 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 42938266, guid: e743331561ef77147ae48cda9bcb8209, type: 3}
+  m_Name: PlayMakerGlobals
+  m_EditorClassIdentifier: 
+  variables:
+    floatVariables: []
+    intVariables:
+    - useVariable: 1
+      name: CurrentButton
+      tooltip: 
+      showInInspector: 0
+      networkSync: 0
+      value: 0
+    boolVariables:
+    - useVariable: 1
+      name: CurrentCheck
+      tooltip: 
+      showInInspector: 0
+      networkSync: 0
+      value: 0
+    - useVariable: 1
+      name: ToggleChecked
+      tooltip: 
+      showInInspector: 0
+      networkSync: 0
+      value: 0
+    stringVariables: []
+    vector2Variables: []
+    vector3Variables: []
+    colorVariables:
+    - useVariable: 1
+      name: ColorWhite
+      tooltip: 
+      showInInspector: 0
+      networkSync: 0
+      value: {r: 0, g: 0, b: 0, a: 1}
+    - useVariable: 1
+      name: ColorClicked
+      tooltip: 
+      showInInspector: 0
+      networkSync: 0
+      value: {r: 0, g: 0, b: 0, a: 1}
+    - useVariable: 1
+      name: ColorOver
+      tooltip: 
+      showInInspector: 0
+      networkSync: 0
+      value: {r: 0, g: 0, b: 0, a: 1}
+    - useVariable: 1
+      name: ColorBlack
+      tooltip: 
+      showInInspector: 0
+      networkSync: 0
+      value: {r: 0, g: 0, b: 0, a: 1}
+    - useVariable: 1
+      name: ColorUnclicked
+      tooltip: 
+      showInInspector: 0
+      networkSync: 0
+      value: {r: 0, g: 0, b: 0, a: 1}
+    rectVariables: []
+    quaternionVariables: []
+    gameObjectVariables:
+    - useVariable: 1
+      name: CubeL
+      tooltip: 
+      showInInspector: 0
+      networkSync: 0
+      value: {fileID: 0}
+    - useVariable: 1
+      name: NarrowTrgV
+      tooltip: 
+      showInInspector: 0
+      networkSync: 0
+      value: {fileID: 0}
+    - useVariable: 1
+      name: WideTrgV
+      tooltip: 
+      showInInspector: 0
+      networkSync: 0
+      value: {fileID: 0}
+    - useVariable: 1
+      name: HitObstacles
+      tooltip: 
+      showInInspector: 0
+      networkSync: 0
+      value: {fileID: 0}
+    objectVariables: []
+    materialVariables: []
+    textureVariables: []
+    arrayVariables: []
+    enumVariables: []
+    categories:
+    - 
+    variableCategoryIDs: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  events:
+  - SendColor
+  - CurrentCheck
+  - ToJump
+  - ToLand
+  - CurrentCamera
+  - JumpCheck
+  - UIVoalt1
+  - UIVoalt2
+  - UIVoalt3
+  - UIVoalt4
+  - UIVoalt5
+  - OnCheck
+  - ToMove
+  - JogLeft
+  - JogRight
+  - MoveRight
+  - MoveLeft
+  - ToJog
+  - ToRun
+  - ToSprint
+  - SprintMoveLeft
+  - SprintMoveRight
+  - OnCheckSprint
+  - WaitForJump
+  - ToSlide
+  - ToDoubleJump
+  - ButtonChecked
+  - DoubleJumpListener
+  - DoubleJump?
+  - isAir?
+  - AirMoveLeft
+  - AirMoveRight
+  - ToCubeLow
+  - CubeChecked
+  - TurnOff
+  - TurnOn
+  - ToCubeMiddle
+  - ToCubeHigh
+  - ToTrigger
+  - Killed
+  - ToCollisionAir
+  - ToCollisionLand
+  - Restart
+  - ToVaultObstacles
+  - ToWalk
+  - DoubleJumpSound
+  - RollExit
+  - Create
+  - ToValultExit
+  - ToVaultExit
+  - VaultTrigger
+  - NotVault
+  - CurrentKeyInfo
+  - ToObstacles
+  - ToKeySet
+  - Footstep
+  - CameraVertical?
+  - SpaceKey
+  - SpaceKey_Jump
+  - SpaceJump
+  - SpaceKey_Vault
+  - SpaceVault
+  - Tooltip
+  - CanvasOn
+  - CanvasOff

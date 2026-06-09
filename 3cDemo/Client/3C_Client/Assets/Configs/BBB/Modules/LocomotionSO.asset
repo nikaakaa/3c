@@ -1,0 +1,954 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26f2e2f3a705ba349befdc49a354cb49, type: 3}
+  m_Name: LocomotionSO
+  m_EditorClassIdentifier: 
+  FadeInWalkStartOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInRunStartOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInSprintStartOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInLoopBreakInOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInWalkLoopOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInRunLoopOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInSprintLoopOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInStopWalkOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInStopRunOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInStopSprintOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInJumpOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInFallOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInVaultOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInQuickDodgeOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  FadeInMoveDodgeOptions:
+    Layer: 0
+    FadeDuration: -1
+    Speed: -1
+    NormalizedTime: -1
+    ForcePhaseSync: 0
+  AirborneTimeThresholdForFall: 0.3
+  IdleAnim:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: 1434217968119270155, guid: dbd1c41f8c065684ab4dd1ab3a070bd4, type: 3}
+    _NormalizedStartTime: NaN
+  FallAnim:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: 7400000, guid: 890a07b1827bed54d8f196abd204522c, type: 2}
+    _NormalizedStartTime: NaN
+  WalkLoopFwd_L:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: 3142276431437391435, guid: dbd1c41f8c065684ab4dd1ab3a070bd4, type: 3}
+    _NormalizedStartTime: NaN
+  WalkLoopFwd_R:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: 3142276431437391435, guid: dbd1c41f8c065684ab4dd1ab3a070bd4, type: 3}
+    _NormalizedStartTime: NaN
+  JogLoopFwd_L:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: -186969883458142690, guid: dbd1c41f8c065684ab4dd1ab3a070bd4, type: 3}
+    _NormalizedStartTime: NaN
+  JogLoopFwd_R:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: -186969883458142690, guid: dbd1c41f8c065684ab4dd1ab3a070bd4, type: 3}
+    _NormalizedStartTime: NaN
+  SprintLoopFwd_L:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: -186969883458142690, guid: dbd1c41f8c065684ab4dd1ab3a070bd4, type: 3}
+    _NormalizedStartTime: NaN
+  SprintLoopFwd_R:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: -186969883458142690, guid: dbd1c41f8c065684ab4dd1ab3a070bd4, type: 3}
+    _NormalizedStartTime: NaN
+  WalkStopLeft:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: 7400000, guid: f5c7d85bb4458d6408627367a17cc04c, type: 2}
+    _NormalizedStartTime: NaN
+  WalkStopRight:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: 7400000, guid: 48aa169a0fe7c3648b51b4b756984fd4, type: 2}
+    _NormalizedStartTime: NaN
+  RunStopLeft:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: 7400000, guid: 4d1b7f7714038624dab10e96edc6b632, type: 2}
+    _NormalizedStartTime: NaN
+  RunStopRight:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: 7400000, guid: 9084b5dd9c2d06a44adda1f9ba63f252, type: 2}
+    _NormalizedStartTime: NaN
+  SprintStopLeft:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: 7400000, guid: 4d1b7f7714038624dab10e96edc6b632, type: 2}
+    _NormalizedStartTime: NaN
+  SprintStopRight:
+    _FadeDuration: 0.25
+    _Speed: 1
+    _Events:
+      _NormalizedTimes: []
+      _Callbacks: []
+      _Names: []
+    _Clip: {fileID: 7400000, guid: 9084b5dd9c2d06a44adda1f9ba63f252, type: 2}
+    _NormalizedStartTime: NaN
+  WalkStartFwd:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400044, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.7333335
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  WalkStartBack:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400070, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.5333334
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  WalkStartLeft:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400074, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 2
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  WalkStartRight:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400068, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.5000001
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  WalkStartFwdLeft:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400074, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 2
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  WalkStartFwdRight:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400068, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.5000001
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  WalkStartBackLeft:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400070, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.5333334
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  WalkStartBackRight:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400070, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.5333334
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  RunStartFwd:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400120, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.1333334
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  RunStartBack:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400128, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.1
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  RunStartLeft:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400132, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 0.70000005
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  RunStartRight:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400134, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.1
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  RunStartFwdLeft:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400132, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 0.70000005
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  RunStartFwdRight:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400134, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.1
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  RunStartBackLeft:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400128, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.1
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  RunStartBackRight:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400128, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.1
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  SprintStartFwd:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400120, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.1333334
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  SprintStartBack:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400128, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.1
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  SprintStartLeft:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400132, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 0.70000005
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  SprintStartRight:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400134, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.1
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  SprintStartFwdLeft:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400132, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 0.70000005
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  SprintStartFwdRight:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400134, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.1
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  SprintStartBackLeft:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400128, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.1
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  SprintStartBackRight:
+    Clip:
+      _FadeDuration: 0.25
+      _Speed: 1
+      _Events:
+        _NormalizedTimes: []
+        _Callbacks: []
+        _Names: []
+      _Clip: {fileID: 7400128, guid: e5366f5926c8dd949a168f5f0095a4d3, type: 3}
+      _NormalizedStartTime: NaN
+    Type: 0
+    TargetDuration: 0
+    EndTime: 1.1
+    AllowBakeTargetLocalDirection: 0
+    TargetLocalDirection: {x: 0, y: 0, z: 0}
+    EndPhase: 0
+    PlaybackSpeed: 1
+    SpeedCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    RotationFinishedTime: 0
+  references:
+    version: 2
+    RefIds: []

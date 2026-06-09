@@ -1,0 +1,26 @@
+﻿Corin animation split report
+2026-06-08 19:36:00
+
+Corin_Idle
+  source: Assets/Animation/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Idle
+  sourceCurves: 2058
+  inplaceCurves: 1928
+  weaponCurves: 130
+
+Corin_RunStart
+  source: Assets/Animation/可琳/可琳补充.fbx :: Avatar_Female_Size01_Corin_Ani_Run_Start
+  sourceCurves: 2068
+  inplaceCurves: 1938
+  weaponCurves: 130
+
+Corin_RunLoop
+  source: Assets/Animation/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Run
+  sourceCurves: 2068
+  inplaceCurves: 1938
+  weaponCurves: 130
+
+Corin_RunEnd
+  source: Assets/Animation/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Run_Start_End
+  sourceCurves: 2068
+  inplaceCurves: 1938
+  weaponCurves: 130

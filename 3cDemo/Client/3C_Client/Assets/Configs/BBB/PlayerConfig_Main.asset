@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fcffa0b3752444a4d970aa0e777a05d7, type: 3}
+  m_Name: PlayerConfig_Main
+  m_EditorClassIdentifier: 
+  Brain: {fileID: 11400000, guid: a04dd3c7596945144bdeb85dec042d96, type: 2}
+  Core: {fileID: 11400000, guid: 2b890764ca2dfe94d8a13a9ec062a820, type: 2}
+  LocomotionAnims: {fileID: 11400000, guid: aac11a1976784cd4496f73a521134dcb, type: 2}
+  JumpAndLanding: {fileID: 11400000, guid: c49481b95dba9694fb35108ae1e420df, type: 2}
+  Aiming: {fileID: 11400000, guid: 2cd6e46d26050af42bd3d14f10a8207c, type: 2}
+  Vaulting: {fileID: 11400000, guid: b60c5f8143ce4cb4ea5417c253625b27, type: 2}
+  Dodging: {fileID: 11400000, guid: bb5d085623c900d4b9459af16c9bec29, type: 2}
+  Rolling: {fileID: 11400000, guid: ee40197c7c522e24e974ee4f35ec87c3, type: 2}
+  Action: {fileID: 11400000, guid: 68e7cfa4aa9430b41b1656089153ede6, type: 2}
+  Audio: {fileID: 11400000, guid: e460d26821faa2e41aab5d3ad3bdcd41, type: 2}
+  Emj: {fileID: 11400000, guid: 45a37ac3a390168439b15891d4145b5e, type: 2}

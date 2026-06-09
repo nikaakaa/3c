@@ -1,0 +1,7 @@
+Corin with-weapon inplace quick test
+2026-06-08 19:57:32
+
+Corin_Idle_WithWeaponInplace.anim <- Corin_Idle_Rootmotion.anim
+Corin_RunStart_WithWeaponInplace.anim <- Corin_RunStart_Rootmotion.anim
+Corin_RunLoop_WithWeaponInplace.anim <- Corin_RunLoop_Rootmotion.anim
+Corin_RunEnd_WithWeaponInplace.anim <- Corin_RunEnd_Rootmotion.anim

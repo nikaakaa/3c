@@ -1,0 +1,1408 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8971062679696575111
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_RightRingProximal
+    elementChain:
+    - name: rusk_RightRingProximal
+      index: 82
+      depth: -1
+    - name: rusk_RightRingIntermediate
+      index: 83
+      depth: -1
+    - name: rusk_RightRingDistal
+      index: 84
+      depth: -1
+    - name: rusk_RightRingDistal_end
+      index: 85
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &-8221404911969770608
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 1
+  sourceChain:
+    chainName: Neck
+    elementChain:
+    - name: Neck
+      index: 75
+      depth: 5
+    - name: Head
+      index: 76
+      depth: 6
+  targetChain:
+    chainName: rusk_Neck
+    elementChain:
+    - name: rusk_Neck
+      index: 38
+      depth: 4
+    - name: rusk_Head
+      index: 39
+      depth: 5
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &-7629112108119004663
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: Hair_L
+    elementChain:
+    - name: Hair_L
+      index: 232
+      depth: -1
+    - name: Hip.031_L.001
+      index: 233
+      depth: -1
+    - name: Hip.031_L.002
+      index: 234
+      depth: -1
+    - name: Hip.031_L.003
+      index: 235
+      depth: -1
+    - name: Hip.031_L.004
+      index: 236
+      depth: -1
+    - name: Hip.031_L.004_end
+      index: 237
+      depth: -1
+  targetChain:
+    chainName: rusk_ear_L
+    elementChain:
+    - name: rusk_ear_L
+      index: 47
+      depth: -1
+    - name: rusk_ear_L_end
+      index: 48
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &-6540569080393121257
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_RightThumbProximal
+    elementChain:
+    - name: rusk_RightThumbProximal
+      index: 86
+      depth: -1
+    - name: rusk_RightThumbIntermediate
+      index: 87
+      depth: -1
+    - name: rusk_RightThumbDistal
+      index: 88
+      depth: -1
+    - name: rusk_RightThumbDistal_end
+      index: 89
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &-6287023217213574687
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 1
+  sourceChain:
+    chainName: Hip
+    elementChain:
+    - name: Hip
+      index: 27
+      depth: 1
+  targetChain:
+    chainName: rusk_Hips
+    elementChain:
+    - name: rusk_Hips
+      index: 1
+      depth: 1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &-5756079037810850329
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 1
+  sourceChain:
+    chainName: Hip_R
+    elementChain:
+    - name: Hip_R
+      index: 45
+      depth: 2
+    - name: Leg_R
+      index: 46
+      depth: 3
+    - name: Knee_R
+      index: 47
+      depth: 4
+    - name: Foot_R
+      index: 48
+      depth: 5
+  targetChain:
+    chainName: rusk_RightUpperLeg
+    elementChain:
+    - name: rusk_RightUpperLeg
+      index: 7
+      depth: 2
+    - name: rusk_RightLowerLeg
+      index: 8
+      depth: 3
+    - name: rusk_RightFoot
+      index: 9
+      depth: 4
+    - name: rusk_RightToeBase
+      index: 10
+      depth: 5
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &-5552549017125966041
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_LeftRingProximal
+    elementChain:
+    - name: rusk_LeftRingProximal
+      index: 30
+      depth: -1
+    - name: rusk_LeftRingIntermediate
+      index: 31
+      depth: -1
+    - name: rusk_LeftRingDistal
+      index: 32
+      depth: -1
+    - name: rusk_LeftRingDistal_end
+      index: 33
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &-4485930637475150762
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_string_R_1
+    elementChain:
+    - name: rusk_string_R_1
+      index: 95
+      depth: -1
+    - name: rusk_string_R_2
+      index: 96
+      depth: -1
+    - name: rusk_string_R_3
+      index: 97
+      depth: -1
+    - name: rusk_string_R_4
+      index: 98
+      depth: -1
+    - name: rusk_string_R_end
+      index: 99
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &-4206275698772471181
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 1
+  sourceChain:
+    chainName: Shoulder_L
+    elementChain:
+    - name: Shoulder_L
+      index: 267
+      depth: 5
+    - name: Arm_L
+      index: 268
+      depth: 6
+    - name: Elbow_L
+      index: 269
+      depth: 7
+    - name: Hand_L
+      index: 270
+      depth: 8
+  targetChain:
+    chainName: rusk_LeftShoulder
+    elementChain:
+    - name: rusk_LeftShoulder
+      index: 14
+      depth: 4
+    - name: rusk_LeftUpperArm
+      index: 15
+      depth: 5
+    - name: rusk_LeftLowerArm
+      index: 16
+      depth: 6
+    - name: rusk_LeftHand
+      index: 17
+      depth: 7
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &-2047677939818263696
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 1
+  sourceChain:
+    chainName: Spine_2
+    elementChain:
+    - name: Spine_2
+      index: 73
+      depth: 3
+    - name: Spine_3
+      index: 74
+      depth: 4
+  targetChain:
+    chainName: rusk_Spine
+    elementChain:
+    - name: rusk_Spine
+      index: 12
+      depth: 2
+    - name: rusk_Chest
+      index: 13
+      depth: 3
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &-1512578470245271473
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_ear_root
+    elementChain:
+    - name: rusk_ear_root
+      index: 46
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &-1176673825369054967
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: EyeL
+    elementChain:
+    - name: EyeL
+      index: 82
+      depth: -1
+  targetChain:
+    chainName: rusk_LeftEye
+    elementChain:
+    - name: rusk_LeftEye
+      index: 62
+      depth: -1
+    - name: rusk_LeftEye_end
+      index: 63
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12349bae48c61824bb8e519537ce28eb, type: 3}
+  m_Name: Retarget_Rig_Courier_Retake_Rig_Rusk_ver1.1
+  m_EditorClassIdentifier: 
+  sourceCharacter: {fileID: 0}
+  targetCharacter: {fileID: 0}
+  sourcePose: {fileID: 0}
+  targetPose: {fileID: 0}
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  excludeChain:
+    chainName: Elements To Exclude
+    elementChain: []
+  retargetFeatures:
+  - {fileID: 5074857977951560407}
+  - {fileID: 2264935869635826816}
+  - {fileID: -5756079037810850329}
+  - {fileID: -2047677939818263696}
+  - {fileID: -4206275698772471181}
+  - {fileID: 2607550164945847601}
+  - {fileID: 9168260026845272005}
+  - {fileID: 3868773660189280407}
+  - {fileID: -5552549017125966041}
+  - {fileID: 765533676674810809}
+  - {fileID: -8221404911969770608}
+  - {fileID: 6043647303401614606}
+  - {fileID: 8861968298480527776}
+  - {fileID: -1512578470245271473}
+  - {fileID: -7629112108119004663}
+  - {fileID: 1474563461172129708}
+  - {fileID: 644805612061198383}
+  - {fileID: 9004272400673726010}
+  - {fileID: 2559810042139949346}
+  - {fileID: 6739279503635360213}
+  - {fileID: 6042187437441146945}
+  - {fileID: 3078288761269167015}
+  - {fileID: -1176673825369054967}
+  - {fileID: 8797130949761052076}
+  - {fileID: 6547238324860264591}
+  - {fileID: 8017555550444582791}
+  - {fileID: 8759530613360788107}
+  - {fileID: 7613311735935151028}
+  - {fileID: -8971062679696575111}
+  - {fileID: -6540569080393121257}
+  - {fileID: 1810642012351982518}
+  - {fileID: -4485930637475150762}
+  - {fileID: 2822472296097657463}
+  - {fileID: -6287023217213574687}
+--- !u!114 &644805612061198383
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: Hair
+    elementChain:
+    - name: Hair
+      index: 201
+      depth: -1
+  targetChain:
+    chainName: rusk_hair_root
+    elementChain:
+    - name: rusk_hair_root
+      index: 51
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &765533676674810809
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_LeftThumbProximal
+    elementChain:
+    - name: rusk_LeftThumbProximal
+      index: 34
+      depth: -1
+    - name: rusk_LeftThumbIntermediate
+      index: 35
+      depth: -1
+    - name: rusk_LeftThumbDistal
+      index: 36
+      depth: -1
+    - name: rusk_LeftThumbDistal_end
+      index: 37
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &1474563461172129708
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: Hair_R
+    elementChain:
+    - name: Hair_R
+      index: 238
+      depth: -1
+    - name: Hip.031_R.001
+      index: 239
+      depth: -1
+    - name: Hip.031_R.002
+      index: 240
+      depth: -1
+    - name: Hip.031_R.003
+      index: 241
+      depth: -1
+    - name: Hip.031_R.004
+      index: 242
+      depth: -1
+    - name: Hip.031_R.004_end
+      index: 243
+      depth: -1
+  targetChain:
+    chainName: rusk_ear_R
+    elementChain:
+    - name: rusk_ear_R
+      index: 49
+      depth: -1
+    - name: rusk_ear_R_end
+      index: 50
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &1810642012351982518
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_string_L_1
+    elementChain:
+    - name: rusk_string_L_1
+      index: 90
+      depth: -1
+    - name: rusk_string_L_2
+      index: 91
+      depth: -1
+    - name: rusk_string_L_3
+      index: 92
+      depth: -1
+    - name: rusk_string_L_4
+      index: 93
+      depth: -1
+    - name: rusk_string_L_end
+      index: 94
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &2264935869635826816
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 1
+  sourceChain:
+    chainName: Hip_L
+    elementChain:
+    - name: Hip_L
+      index: 28
+      depth: 2
+    - name: Leg_L
+      index: 29
+      depth: 3
+    - name: Knee_L
+      index: 30
+      depth: 4
+    - name: Foot_L
+      index: 31
+      depth: 5
+  targetChain:
+    chainName: rusk_LeftUpperLeg
+    elementChain:
+    - name: rusk_LeftUpperLeg
+      index: 2
+      depth: 2
+    - name: rusk_LeftLowerLeg
+      index: 3
+      depth: 3
+    - name: rusk_LeftFoot
+      index: 4
+      depth: 4
+    - name: rusk_LeftToeBase
+      index: 5
+      depth: 5
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &2559810042139949346
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_hair_back_L
+    elementChain:
+    - name: rusk_hair_back_L
+      index: 54
+      depth: -1
+    - name: rusk_hair_back_L_end
+      index: 55
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &2607550164945847601
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_LeftIndexProximal
+    elementChain:
+    - name: rusk_LeftIndexProximal
+      index: 18
+      depth: -1
+    - name: rusk_LeftIndexIntermediate
+      index: 19
+      depth: -1
+    - name: rusk_LeftIndexDistal
+      index: 20
+      depth: -1
+    - name: rusk_LeftIndexDistal_end
+      index: 21
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &2822472296097657463
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_tail_1
+    elementChain:
+    - name: rusk_tail_1
+      index: 100
+      depth: -1
+    - name: rusk_tail_2
+      index: 101
+      depth: -1
+    - name: rusk_tail_3
+      index: 102
+      depth: -1
+    - name: rusk_tail_4
+      index: 103
+      depth: -1
+    - name: rusk_tail_4
+      index: 103
+      depth: -1
+    - name: rusk_tail_end
+      index: 105
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &3078288761269167015
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_hair_side_R_1
+    elementChain:
+    - name: rusk_hair_side_R_1
+      index: 60
+      depth: -1
+    - name: rusk_hair_side_R_2
+      index: 61
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &3868773660189280407
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_LeftMiddleProximal
+    elementChain:
+    - name: rusk_LeftMiddleProximal
+      index: 26
+      depth: -1
+    - name: rusk_LeftMiddleIntermediate
+      index: 27
+      depth: -1
+    - name: rusk_LeftMiddleDistal
+      index: 28
+      depth: -1
+    - name: rusk_LeftMiddleDistal_end
+      index: 29
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &5074857977951560407
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 1
+  sourceChain:
+    chainName: Armature
+    elementChain:
+    - name: Armature
+      index: 0
+      depth: 0
+  targetChain:
+    chainName: rusk_Armature
+    elementChain:
+    - name: rusk_Armature
+      index: 0
+      depth: 0
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &6042187437441146945
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_hair_side_L_1
+    elementChain:
+    - name: rusk_hair_side_L_1
+      index: 58
+      depth: -1
+    - name: rusk_hair_side_L_2
+      index: 59
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &6043647303401614606
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: Toe_L1
+    elementChain:
+    - name: Toe_L1
+      index: 40
+      depth: -1
+    - name: Toe_L2
+      index: 41
+      depth: -1
+  targetChain:
+    chainName: rusk_ahoge_1
+    elementChain:
+    - name: rusk_ahoge_1
+      index: 40
+      depth: -1
+    - name: rusk_ahoge_2
+      index: 41
+      depth: -1
+    - name: rusk_ahoge_3
+      index: 42
+      depth: -1
+    - name: rusk_ahoge_end
+      index: 43
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &6547238324860264591
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 1
+  sourceChain:
+    chainName: Shoulder_R
+    elementChain:
+    - name: Shoulder_R
+      index: 304
+      depth: 5
+    - name: Arm_R
+      index: 305
+      depth: 6
+    - name: Elbow_R
+      index: 306
+      depth: 7
+    - name: Hand_R
+      index: 311
+      depth: 8
+  targetChain:
+    chainName: rusk_RightShoulder
+    elementChain:
+    - name: rusk_RightShoulder
+      index: 66
+      depth: 4
+    - name: rusk_RightUpperArm
+      index: 67
+      depth: 5
+    - name: rusk_RightLowerArm
+      index: 68
+      depth: 6
+    - name: rusk_RightHand
+      index: 69
+      depth: 7
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &6739279503635360213
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_hair_back_R
+    elementChain:
+    - name: rusk_hair_back_R
+      index: 56
+      depth: -1
+    - name: rusk_hair_back_R_end
+      index: 57
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &7613311735935151028
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_RightMiddleProximal
+    elementChain:
+    - name: rusk_RightMiddleProximal
+      index: 78
+      depth: -1
+    - name: rusk_RightMiddleIntermediate
+      index: 79
+      depth: -1
+    - name: rusk_RightMiddleDistal
+      index: 80
+      depth: -1
+    - name: rusk_RightMiddleDistal_end
+      index: 81
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &8017555550444582791
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_RightIndexProximal
+    elementChain:
+    - name: rusk_RightIndexProximal
+      index: 70
+      depth: -1
+    - name: rusk_RightIndexIntermediate
+      index: 71
+      depth: -1
+    - name: rusk_RightIndexDistal
+      index: 72
+      depth: -1
+    - name: rusk_RightIndexDistal_end
+      index: 73
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &8759530613360788107
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_RightLittleProximal
+    elementChain:
+    - name: rusk_RightLittleProximal
+      index: 74
+      depth: -1
+    - name: rusk_RightLittleIntermediate
+      index: 75
+      depth: -1
+    - name: rusk_RightLittleDistal
+      index: 76
+      depth: -1
+    - name: rusk_RightLittleDistal_end
+      index: 77
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &8797130949761052076
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: EyeR
+    elementChain:
+    - name: EyeR
+      index: 114
+      depth: -1
+  targetChain:
+    chainName: rusk_RightEye
+    elementChain:
+    - name: rusk_RightEye
+      index: 64
+      depth: -1
+    - name: rusk_RightEye_end
+      index: 65
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &8861968298480527776
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_bangs
+    elementChain:
+    - name: rusk_bangs
+      index: 44
+      depth: -1
+    - name: rusk_bangs_end
+      index: 45
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &9004272400673726010
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: Hair
+    elementChain:
+    - name: Hair
+      index: 201
+      depth: -1
+  targetChain:
+    chainName: rusk_hair_back
+    elementChain:
+    - name: rusk_hair_back
+      index: 52
+      depth: -1
+    - name: rusk_hair_back_end
+      index: 53
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &9168260026845272005
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c037f4882c5493a84c1732694149815, type: 3}
+  m_Name: IKRetargetFeature
+  m_EditorClassIdentifier: 
+  sourceRig: {fileID: 11400000, guid: b3e8029e5deed804cb84aad03bd21279, type: 2}
+  targetRig: {fileID: 11400000, guid: cb23c9136c774654c8da89d335ba1208, type: 2}
+  featureWeight: 0
+  sourceChain:
+    chainName: None
+    elementChain: []
+  targetChain:
+    chainName: rusk_LeftLittleProximal
+    elementChain:
+    - name: rusk_LeftLittleProximal
+      index: 22
+      depth: -1
+    - name: rusk_LeftLittleIntermediate
+      index: 23
+      depth: -1
+    - name: rusk_LeftLittleDistal
+      index: 24
+      depth: -1
+    - name: rusk_LeftLittleDistal_end
+      index: 25
+      depth: -1
+  scaleWeight: 1
+  translationWeight: 0
+  offset: {x: 0, y: 0, z: 0}
+  ikWeight: 0
+  effectorOffset: {x: 0, y: 0, z: 0}
+  poleOffset: {x: 0, y: 0, z: 0}

@@ -1,0 +1,129 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_Courier_Eyes Opaque
+  m_Shader: {fileID: 4800000, guid: 845eec87cd33c96488266b4529e025a7, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _DOTSONLY_ON
+  m_InvalidKeywords: []
+  m_LightmapFlags: 0
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties:
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+      _Emission:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _MainTex:
+        m_Texture: {fileID: 2800000, guid: 757e3750774269142a668bf994a4aa7c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _Metal:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _Normal:
+        m_Texture: {fileID: 2800000, guid: 2b2f6d8617a6d15449a7fac0c1d887aa, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _curvaturemask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _texcoord:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: {}
+    m_Floats:
+      _AlphaClip: 0
+      _AlphaCutoff: 0.5
+      _AlphaToMask: 0
+      _Blend: 0
+      _BlendModePreserveSpecular: 1
+      _Brightness: 1
+      _BumpScale: 1
+      _CONFETTITIME: 0
+      _ClearCoatMask: 0
+      _ClearCoatSmoothness: 0
+      _ConfettiScale: 35.43
+      _ConfettiScatter: 0.3
+      _Contrast: 0.7
+      _Counter: 0
+      _Cull: 2
+      _Cutoff: 0.5
+      _DetailAlbedoMapScale: 1
+      _DetailNormalMapScale: 1
+      _DotsOnly: 1
+      _DstBlend: 0
+      _DstBlendAlpha: 0
+      _EmissionIntensity: 0
+      _EnvironmentReflections: 1
+      _GlossMapScale: 0
+      _Glossiness: 0
+      _GlossyReflections: 0
+      _H: 0
+      _Highlight: 0.5
+      _IndirectMultiplier: 1
+      _Metallic: 0
+      _NormalStr: 1
+      _OcclusionStrength: 1
+      _Oil: 0
+      _Parallax: 0.005
+      _QueueControl: 0
+      _QueueOffset: 0
+      _ReceiveShadows: 1
+      _Reflection: 0.25
+      _RimAmount: 1
+      _RimColorIntensity: 0.252771
+      _RimPower: 3
+      _S: 1
+      _ShieldAmount: 0
+      _ShineAmount: 0
+      _Smoothness: 0
+      _SmoothnessTextureChannel: 0
+      _SpecularAmount: 1.97
+      _SpecularHighlights: 1
+      _SpecularOpacity: 0
+      _SpecularRange: 0.85
+      _SpecularTint: 1
+      _SpecularTintIntensity: 0.09
+      _SrcBlend: 1
+      _SrcBlendAlpha: 1
+      _Surface: 0
+      _UVScale: 1
+      _V: 1
+      _WorkflowMode: 1
+      _ZWrite: 1
+      __dirty: 0
+      _rimcolorintensity: 0
+      _specularamount: 242.63
+      _specularmax: 0.2
+      _specularmin: 0.1
+    m_Colors:
+      _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+      _Color: {r: 1.4980391, g: 1.4980391, b: 1.4980391, a: 1}
+      _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+      _RimColor: {r: 0.390566, g: 1, b: 0.91022193, a: 0}
+      _ShaderColor: {r: 2.670157, g: 2.670157, b: 2.670157, a: 1}
+      _ShadowColor: {r: 0.8113208, g: 0.8113208, b: 0.8113208, a: 0}
+      _Shadows: {r: 0, g: 0.20000005, b: 0, a: 0}
+      _ShadowsHSV: {r: 0, g: 0, b: 0, a: 0}
+      _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
+      _SpecularTintColor: {r: 1, g: 1, b: 1, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 0

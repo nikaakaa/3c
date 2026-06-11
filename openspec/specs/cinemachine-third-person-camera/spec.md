@@ -16,23 +16,29 @@ TBD - created by archiving change refactor-camera-to-cinemachine-freelook. Updat
 - **THEN** FreeLook MUST 更新自身 X/Y 轴状态
 - **AND** Cinemachine MUST 负责基础轨道、阻尼、构图和最终画面输出
 
-#### Scenario: 手动维护 Cinemachine 配置
-- **WHEN** 开发者在 Inspector 中调整 FreeLook 轴、轨道、Follow 或 LookAt 配置
-- **THEN** 项目相机控制器 MUST NOT 在初始化或运行 tick 中覆盖这些 Cinemachine 配置
-- **AND** 项目相机控制器 MUST 只读取 FreeLook 状态并提供项目侧移动方向接口
+#### Scenario: Cinemachine 配置边界
+- **WHEN** 开发者在 Inspector 中调整 FreeLook 轴、轨道、镜头或阻尼配置
+- **THEN** 项目相机控制器 MUST NOT 在初始化或运行 tick 中覆盖这些 Cinemachine 表现配置
+- **AND** 项目相机控制器 MAY 通过统一目标代理绑定 Follow 和 LookAt
 
-### Requirement: FreeLook 单锚点绑定
-系统 MUST 使用同一个角色锚点作为 FreeLook 的 Follow 和 LookAt 来源，并 MUST NOT 为 Free 模式继续维护独立的 CameraFollowTarget 或 CameraAimTarget 场景目标。
+### Requirement: 相机目标代理绑定
+系统 MUST 使用项目侧解析后的相机目标代理作为 FreeLook、Rail 和后续第三人称 vcam 的 Follow/LookAt 来源，并 MUST 保证这些代理来自同一条相机主路径。系统 MAY 使用独立的 `CameraFollowTarget` 与 `CameraAimTarget` 表达跟随点和瞄准点，但 MUST NOT 让业务系统直接散落写入这些目标代理。
 
-#### Scenario: 场景角色锚点绑定
-- **WHEN** 场景中的相机控制器配置了角色锚点
-- **THEN** 开发者 MUST 在 Cinemachine Inspector 中将 FreeLook 的 Follow 指向该角色锚点
-- **AND** 开发者 MUST 将 FreeLook 的 LookAt 指向同一个角色锚点
+#### Scenario: 场景锚点解析
+- **WHEN** 场景中的相机控制器配置了角色锚点或表现层锚点
+- **THEN** 相机控制器 MUST 通过统一主路径解析出 Follow 和 LookAt 代理目标
+- **AND** 当前 live Cinemachine 相机 MUST 通过这些代理目标输出最终画面
 
-#### Scenario: Prefab 不保存场景目标
+#### Scenario: Prefab 保存目标代理
 - **WHEN** 检查 `Third Person Camera Rig.prefab`
-- **THEN** prefab MUST NOT 包含 `CameraFollowTarget` 或 `CameraAimTarget` 子物体
-- **AND** prefab 中的 FreeLook MUST NOT 通过项目相机控制器在运行时强制改写 Follow 或 LookAt
+- **THEN** prefab MAY 包含 `CameraFollowTarget` 和 `CameraAimTarget` 子物体
+- **AND** 这些子物体 MUST 只作为相机主路径的输出代理
+- **AND** 业务移动、动作或战斗系统 MUST NOT 直接写入这些子物体
+
+#### Scenario: 目标代理不形成旁路
+- **WHEN** FreeLook、Rail 或后续第三人称 vcam 需要 Follow/LookAt
+- **THEN** 它们 MUST 使用相机主路径提供的目标代理或其等价输出
+- **AND** 它们 MUST NOT 各自维护与项目相机控制器无关的场景目标更新逻辑
 
 ### Requirement: 项目侧影响源掌控
 系统 MUST 由项目侧相机影响源入口掌控移动、战斗、锁定、瞄准和技能镜头等影响源决策，并 MUST 通过统一适配边界影响 Cinemachine。
@@ -93,15 +99,40 @@ TBD - created by archiving change refactor-camera-to-cinemachine-freelook. Updat
 - **AND** 输入、移动和影响源接口 MUST 不需要同步改代码才能编译
 
 ### Requirement: 相机主路径统一
-系统 MUST 在 prefab 和演示场景中统一 Free 模式相机主路径，避免 FreeLook、旧 Free vcam 和旧 yaw/pitch target 输出同时作为主相机源。
+系统 MUST 在 prefab 和演示场景中统一第三人称相机主路径，允许多个 vcam 作为模式候选存在，但 MUST 避免同一时刻多个未仲裁的相机输出或旧 yaw/pitch target 旁路同时作为主相机源。
 
-#### Scenario: Prefab 主路径唯一
+#### Scenario: Live 输出唯一
 - **WHEN** 检查 `Third Person Camera Rig.prefab`
-- **THEN** Free 模式 MUST 只有一个启用的主相机输出源
-- **AND** 该输出源 MUST 指向 FreeLook 主相机
+- **THEN** prefab MAY 包含 FreeLook、Rail、Shooting 或后续第三人称 vcam 候选
+- **AND** 当前 live 输出 MUST 由 Cinemachine 优先级、Brain 或项目侧相机模式仲裁决定
+- **AND** 旧 yaw/pitch target MUST NOT 绕过 Cinemachine 直接输出主相机结果
 
 #### Scenario: 场景继承统一配置
 - **WHEN** `CameraTest.unity` 或 `Sandbox.unity` 加载第三人称相机 rig
-- **THEN** 场景 MUST 使用统一后的 FreeLook 配置
+- **THEN** 场景 MUST 使用统一后的相机目标代理和 Cinemachine 配置
 - **AND** 场景 MUST NOT 额外启用旧 Free 模式主相机旁路
+
+### Requirement: 相机消费表现层输出
+系统 MUST 让 Cinemachine Follow/LookAt 目标代理消费角色表现层输出，使相机跟随位置与角色可见位置来自同一条表现主路径，而不是直接消费 tick 阶梯化角色真实 Transform。
+
+#### Scenario: 高刷新率跟随表现根
+- **WHEN** 角色真实 Transform 由 60Hz simulation tick 推进
+- **AND** 渲染帧率高于 simulation tick rate
+- **THEN** `CameraFollowTarget` / `CameraAimTarget` MUST 使用表现层输出更新
+- **AND** Cinemachine MUST NOT 直接追随未插值的角色真实 Transform
+
+#### Scenario: 相机目标代理保持统一
+- **WHEN** `Third Person Rail CM vcam`、FreeLook 或后续第三人称 vcam 需要 Follow/LookAt
+- **THEN** 它们 MUST 继续使用相机主路径提供的目标代理或等价输出
+- **AND** 它们 MUST NOT 各自维护绕过表现层输出的场景目标更新逻辑
+
+#### Scenario: 缺少 tick 信息安全退化
+- **WHEN** 表现层输出缺少 tick driver 或有效样本
+- **THEN** 相机目标代理 MUST 安全退化为跟随当前真实锚点或当前表现根
+- **AND** 相机 MUST 不因为插值数据缺失而跳到无效位置
+
+#### Scenario: 相机碰撞仍在 Cinemachine 边界
+- **WHEN** 相机消费表现层输出
+- **THEN** `CameraArmCollisionConstraint` MUST 继续在 Cinemachine 管线边界内修正最终相机位置
+- **AND** 表现层插值 MUST NOT 新增第二套相机碰撞或缩臂路径
 

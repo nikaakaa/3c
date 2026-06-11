@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonDiagnostics;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonInput
@@ -30,6 +31,15 @@ namespace ThirdPersonInput
             int safeWindow = windowSteps < 0 ? 0 : windowSteps;
             BufferedInputRequest request = new BufferedInputRequest(kind, sourceButton, originStep, originStep + safeWindow);
             requests.Add(request);
+            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                RuntimeDiagnosticLogCategory.Input,
+                RuntimeDiagnosticLogLevel.Info,
+                "input-request-added",
+                string.Empty,
+                string.Empty,
+                originStep,
+                0,
+                $"kind={kind} button={sourceButton} origin={request.OriginStep} expire={request.ExpireStep} window={safeWindow} count={requests.Count}"));
             return request;
         }
 
@@ -65,6 +75,15 @@ namespace ThirdPersonInput
                 candidate.MarkConsumed();
                 requests[i] = candidate;
                 request = candidate;
+                RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                    RuntimeDiagnosticLogCategory.Input,
+                    RuntimeDiagnosticLogLevel.Info,
+                    "input-request-consumed",
+                    string.Empty,
+                    string.Empty,
+                    currentStep,
+                    0,
+                    $"kind={candidate.Kind} button={candidate.SourceButton} origin={candidate.OriginStep} expire={candidate.ExpireStep} count={requests.Count}"));
                 return true;
             }
 
@@ -79,7 +98,23 @@ namespace ThirdPersonInput
 
         public void RemoveExpired(int currentStep)
         {
-            requests.RemoveAll(request => request.IsExpiredAt(currentStep));
+            for (int i = requests.Count - 1; i >= 0; i--)
+            {
+                BufferedInputRequest request = requests[i];
+                if (!request.IsExpiredAt(currentStep))
+                    continue;
+
+                requests.RemoveAt(i);
+                RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                    RuntimeDiagnosticLogCategory.Input,
+                    RuntimeDiagnosticLogLevel.Info,
+                    "input-request-expired",
+                    string.Empty,
+                    string.Empty,
+                    currentStep,
+                    0,
+                    $"kind={request.Kind} button={request.SourceButton} origin={request.OriginStep} expire={request.ExpireStep} consumed={request.Consumed} count={requests.Count}"));
+            }
         }
 
         public void RemoveExpired(SimulationTick currentTick)

@@ -18,6 +18,7 @@ namespace ThirdPersonSimulation
         public SimulationTickRunner Runner { get; } = new SimulationTickRunner();
         public bool RunAutomatically { get => runAutomatically; set => runAutomatically = value; }
         public SimulationTick NextTick => EnsureAccumulator().NextTick;
+        public float InterpolationAlpha => (float)EnsureAccumulator().InterpolationAlpha;
 
         void Awake()
         {

@@ -76,7 +76,7 @@ namespace ThirdPersonMovement
                 ResolveReferences();
 
             if (locomotionController != null)
-                locomotionController.TickFromInputSource(context.FixedDeltaSecondsFloat);
+                locomotionController.TickFromInputSource(context.FixedDeltaSecondsFloat, context.TickValue);
         }
 
         void ResolveReferences()

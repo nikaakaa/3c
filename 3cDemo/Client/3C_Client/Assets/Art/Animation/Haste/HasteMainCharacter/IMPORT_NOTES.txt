@@ -1,0 +1,37 @@
+Haste 主角导入说明
+
+1. 主角模型不是普通 FBX，而是 Unity Prefab：
+   Assets/HasteMainCharacter/GameObject/Courier_Retake.prefab
+
+2. 角色动画控制器：
+   Assets/HasteMainCharacter/AnimatorController/New_Animator_Courier.controller
+
+3. 滑板动画控制器：
+   Assets/HasteMainCharacter/AnimatorController/New_Animator_Board.controller
+
+4. 动画文件在这里：
+   Assets/HasteMainCharacter/AnimationClip
+
+注意：
+这些动画是 AssetRipper 导出的 Unity 原生 .anim，不是嵌在 FBX 里的动画。
+所以你选中模型/FBX 时，Inspector 的 Animation 页签里默认不会显示这些动作。
+
+导入方法：
+把本包的 Assets 文件夹解压/复制到你的 Unity 工程根目录。
+然后在 Unity Project 面板搜索 Courier_Retake，把 Prefab 拖到场景里。
+如果 Animator 没自动绑定，就选中 Courier_Retake 或子物体 Courier，
+手动把 New_Animator_Courier.controller 拖到 Animator 的 Controller 槽里。
+
+如果只想测试一个动作：
+新建 Animator Controller，把某个 .anim（比如 New_Courier_Board_Fly_0.anim）
+拖进 Animator 窗口作为状态，再把这个 Controller 挂到角色 Animator 上。
+
+本安全包已经补入主角材质直接引用的 Shader：
+AirWave、EffectParticle、Env_TerrainDecal、sav_CHAREYESHELLS、savglasstest、W_savCharacterNEW
+
+但 AssetRipper 导出的很多 shader 是 DummyShaderTextExporter fallback：
+它能保留 shader 名字和材质属性，不保证完全还原原游戏视觉。
+
+本安全包仍然跳过了反编译脚本：
+Scripts、MonoBehaviour、Editor、Plugins
+因此可能会有 Missing Script。骨骼、网格、动画和主角材质引用是重点保留对象。

@@ -1,0 +1,150 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_Courier_Glasses 1
+  m_Shader: {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _ALPHABLEND_ON
+  - _EMISSION
+  - _GLOSSYREFLECTIONS_OFF
+  m_InvalidKeywords:
+  - _SURFACE_TYPE_TRANSPARENT
+  m_LightmapFlags: 0
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3000
+  stringTagMap:
+    RenderType: Transparent
+  disabledShaderPasses:
+  - DepthOnly
+  - SHADOWCASTER
+  m_LockedProperties:
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+      _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _DetailAlbedoMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _DetailMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _MainTex:
+        m_Texture: {fileID: 2800000, guid: 123c01bcc9002e047a11c71411955a21, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _OcclusionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+      _ParallaxMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: {}
+    m_Floats:
+      _AlphaClip: 0
+      _AlphaToMask: 0
+      _Blend: 0
+      _BlendModePreserveSpecular: 1
+      _Brightness: 1
+      _BumpScale: 0.2
+      _ClearCoatMask: 0
+      _ClearCoatSmoothness: 0
+      _Contrast: 0.7
+      _Counter: 0
+      _Cull: 2
+      _Cutoff: 0.5
+      _DetailAlbedoMapScale: 1
+      _DetailNormalMapScale: 1
+      _DotsOnly: 0
+      _DstBlend: 10
+      _DstBlendAlpha: 10
+      _EnvironmentReflections: 1
+      _GlossMapScale: 0
+      _Glossiness: 1
+      _GlossyReflections: 0
+      _H: 0
+      _IndirectMultiplier: 1
+      _Metallic: 0
+      _Mode: 2
+      _NormalStr: 1
+      _OcclusionStrength: 1
+      _Parallax: 0.005
+      _QueueOffset: 0
+      _ReceiveShadows: 1
+      _RimAmount: 0.5
+      _RimPower: 0.1
+      _S: 1
+      _ShieldAmount: 0
+      _ShineAmount: 0
+      _Smoothness: 1
+      _SmoothnessTextureChannel: 0
+      _SpecularHighlights: 1
+      _SpecularOpacity: 0
+      _SpecularTint: 1
+      _SrcBlend: 5
+      _SrcBlendAlpha: 1
+      _Surface: 1
+      _UVScale: 1
+      _UVSec: 0
+      _V: 1
+      _WorkflowMode: 1
+      _ZWrite: 0
+      __dirty: 0
+      _circleoffset: 0
+      _circleparallaxdistance: 0.1
+      _circlesize: 0.5
+      _circlesizeinner: 0.23
+      _circlesizeouter: 1.05
+      _glassesopacity: 0.41
+      _linesparallaxdistance: 1.03
+      _parallaxheight: 12.01
+      _parallaxscale: 0.75
+      _rimcolorintensity: 0.08
+      _sat: 2
+      _specularamount: 13.91
+      _specularmax: 0.33
+      _specularmin: 0.2
+      _spherizeoffset: 2.09
+      _spherizestrength: 1.98
+      _tiling2: 0.7
+    m_Colors:
+      _BaseColor: {r: 1, g: 1, b: 1, a: 0}
+      _Color: {r: 1, g: 1, b: 1, a: 1}
+      _EmissionColor: {r: 2.143547, g: 2.143547, b: 2.143547, a: 1}
+      _RimColor: {r: 0, g: 1, b: 0.53597283, a: 0}
+      _ShaderColor: {r: 2.670157, g: 2.670157, b: 2.670157, a: 1}
+      _ShadowColor: {r: 1, g: 0, b: 0, a: 0}
+      _Shadows: {r: 0, g: 0.20000002, b: 0, a: 0}
+      _ShadowsHSV: {r: 0, g: 0, b: 0, a: 0}
+      _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
+      _SpecularTintColor: {r: 0.7876389, g: 1, b: 0.57169807, a: 0}
+      _highlightcolor: {r: 0.69516426, g: 1.3275965, b: 1.5415776, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 0

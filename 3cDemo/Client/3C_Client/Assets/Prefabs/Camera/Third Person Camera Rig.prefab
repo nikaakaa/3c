@@ -84,8 +84,8 @@ MonoBehaviour:
   m_StreamingVersion: 20170927
   m_Priority: 0
   m_StandbyUpdate: 2
-  m_LookAt: {fileID: 0}
-  m_Follow: {fileID: 0}
+  m_LookAt: {fileID: 6115033150588311242}
+  m_Follow: {fileID: 8791746253601236308}
   m_Lens:
     FieldOfView: 52
     OrthographicSize: 10
@@ -147,7 +147,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb3c32288a1843a19f4a899201216e6d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  anchor: {fileID: 0}
+  anchor: {fileID: 8791746253601236308}
   collisionMask:
     serializedVersion: 2
     m_Bits: 513
@@ -251,7 +251,7 @@ GameObject:
   - component: {fileID: 910000000100000002}
   - component: {fileID: 910000000100000003}
   m_Layer: 11
-  m_Name: FreeLook Camera
+  m_Name: Third Person Free CM vcam
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -293,8 +293,8 @@ MonoBehaviour:
   m_StreamingVersion: 20170927
   m_Priority: 10
   m_StandbyUpdate: 2
-  m_LookAt: {fileID: 0}
-  m_Follow: {fileID: 0}
+  m_LookAt: {fileID: 6115033150588311242}
+  m_Follow: {fileID: 8791746253601236308}
   m_CommonLens: 1
   m_Lens:
     FieldOfView: 60
@@ -405,7 +405,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb3c32288a1843a19f4a899201216e6d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  anchor: {fileID: 0}
+  anchor: {fileID: 8791746253601236308}
   collisionMask:
     serializedVersion: 2
     m_Bits: 513
@@ -773,6 +773,54 @@ MonoBehaviour:
   m_BiasX: 0
   m_BiasY: 0
   m_CenterOnActivate: 1
+--- !u!1 &1951203467809512688
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4149401813882910834}
+  - component: {fileID: 2412820779835194164}
+  m_Layer: 0
+  m_Name: PresentationAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4149401813882910834
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1951203467809512688}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3635835326220684909}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2412820779835194164
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1951203467809512688}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 180b23d04ffd4459865acddb93e3d196, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  source: {fileID: 0}
+  visualTarget: {fileID: 4149401813882910834}
+  tickDriver: {fileID: 0}
+  snapDistance: 3
 --- !u!1 &2829352345789979999
 GameObject:
   m_ObjectHideFlags: 3
@@ -798,7 +846,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2829352345789979999}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0.093201205, y: 0.8810764, z: -0.42059308, w: -0.19524185}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -831,7 +879,7 @@ MonoBehaviour:
   m_StreamingVersion: 20170927
   m_Priority: 10
   m_StandbyUpdate: 2
-  m_LookAt: {fileID: 0}
+  m_LookAt: {fileID: 6115033150588311242}
   m_Follow: {fileID: 0}
   m_Lens:
     FieldOfView: 60
@@ -905,8 +953,8 @@ MonoBehaviour:
   m_StreamingVersion: 20170927
   m_Priority: 0
   m_StandbyUpdate: 2
-  m_LookAt: {fileID: 0}
-  m_Follow: {fileID: 0}
+  m_LookAt: {fileID: 6115033150588311242}
+  m_Follow: {fileID: 8791746253601236308}
   m_Lens:
     FieldOfView: 60
     OrthographicSize: 10
@@ -968,7 +1016,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb3c32288a1843a19f4a899201216e6d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  anchor: {fileID: 0}
+  anchor: {fileID: 8791746253601236308}
   collisionMask:
     serializedVersion: 2
     m_Bits: 513
@@ -1108,7 +1156,7 @@ Transform:
   m_GameObject: {fileID: 5834589985154490240}
   serializedVersion: 2
   m_LocalRotation: {x: -0.098754935, y: 0.8686687, z: -0.44565558, w: -0.19249243}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -0.00000023841858, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1140,7 +1188,7 @@ MonoBehaviour:
   m_StreamingVersion: 20170927
   m_Priority: 10
   m_StandbyUpdate: 2
-  m_LookAt: {fileID: 0}
+  m_LookAt: {fileID: 6115033150588311242}
   m_Follow: {fileID: 0}
   m_Lens:
     FieldOfView: 60
@@ -1197,6 +1245,7 @@ Transform:
   - {fileID: 6147653807611499267}
   - {fileID: 8791746253601236308}
   - {fileID: 6115033150588311242}
+  - {fileID: 4149401813882910834}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &5809153073416674383
@@ -1212,7 +1261,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   freeLook: {fileID: 910000000100000001}
-  followAnchorSource: {fileID: 0}
+  followAnchorSource: {fileID: 4149401813882910834}
   cameraFollowTarget: {fileID: 8791746253601236308}
   cameraAimTarget: {fileID: 6115033150588311242}
   bindFreeLookToResolvedTargets: 1
@@ -1503,7 +1552,7 @@ Transform:
   m_GameObject: {fileID: 9202158904797998858}
   serializedVersion: 2
   m_LocalRotation: {x: -0.102992795, y: 0.8585883, z: -0.4647799, w: -0.19025864}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -0.00000023841858, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1535,7 +1584,7 @@ MonoBehaviour:
   m_StreamingVersion: 20170927
   m_Priority: 10
   m_StandbyUpdate: 2
-  m_LookAt: {fileID: 0}
+  m_LookAt: {fileID: 6115033150588311242}
   m_Follow: {fileID: 0}
   m_Lens:
     FieldOfView: 60

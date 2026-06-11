@@ -1,5 +1,8 @@
 using ThirdPersonAnimation;
 using ThirdPersonCamera;
+using ThirdPersonCharacterStateMachine;
+using ThirdPersonDiagnostics;
+using ThirdPersonInput;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -13,38 +16,55 @@ namespace ThirdPersonMovement
         [SerializeField] MonoBehaviour motionExecutorBehaviour;
         [SerializeField] ThirdPersonCameraController cameraController;
         [SerializeField] BasicLocomotionAnimancerPresenter locomotionPresenter;
+        [SerializeField] RunLocomotionAnimationConfigSO runAnimationConfig;
         [SerializeField] BasicMovementConfigSO config;
-        [SerializeField] LocomotionStateGraphConfigSO stateGraphConfig;
+        [SerializeField] CharacterStateMachineDefinitionSO stateMachineDefinition;
         [SerializeField] bool autoUpdate = true;
         [SerializeField] bool debugCameraLog = true;
         [SerializeField, Min(0f)] float debugCameraLogInterval = 0.1f;
 
         readonly BasicLocomotionPipeline pipeline = new BasicLocomotionPipeline();
-        BasicLocomotionStateMachine stateMachine;
+        CharacterStateMachineRunner stateMachine;
         IBasicLocomotionInputSource inputSource;
         IBasicLocomotionMotionExecutor motionExecutor;
+        IAnimationPhasePlaybackProgressSource playbackProgressSource;
+        AnimationPhasePlaybackProgress previousMotionPlaybackProgress;
         MovementInputIntent currentIntent;
+        BasicMovementGait lastMovingGait = BasicMovementGait.Walk;
         Vector3 currentWorldDirection;
         BasicLocomotionFrame currentFrame;
-        LocomotionAnimationGait lastMovingGait = LocomotionAnimationGait.Run;
+        bool hasPreviousMotionPlaybackProgress;
+        bool hasActiveMoveStopGait;
+        BasicMovementGait activeMoveStopGait = BasicMovementGait.Walk;
         bool previousCameraAutoTick;
         bool hasPreviousCameraAutoTick;
         float nextCameraDebugLogTime;
         bool defaultGraphWarningLogged;
+        bool suppressBasicMotionExecution;
+        bool suppressLocomotionAnimationPresentation;
+        bool runLatchActive;
 
-        public BasicMovementPhase CurrentPhase => stateMachine != null ? stateMachine.Phase : BasicMovementPhase.Idle;
-        public float CurrentPhaseTime => stateMachine != null ? stateMachine.PhaseTime : 0f;
-        public string ActiveStatePath => stateMachine != null ? stateMachine.ActivePath : string.Empty;
+        public BasicMovementPhase CurrentPhase => stateMachine != null ? stateMachine.Snapshot.LocomotionPhase : BasicMovementPhase.Idle;
+        public float CurrentPhaseTime => stateMachine != null ? stateMachine.StateTime : 0f;
+        public string ActiveStatePath => stateMachine != null ? stateMachine.Snapshot.ActivePath : string.Empty;
+        public BasicMovementGait CurrentGait => currentIntent.HasMoveIntent ? currentIntent.Gait : lastMovingGait;
         public Vector3 CurrentWorldDirection => currentWorldDirection;
         public MovementInputIntent CurrentIntent => currentIntent;
+        public BasicLocomotionFrame CurrentFrame => currentFrame;
+        public AnimationPhasePlaybackProgress CurrentAnimationPlaybackProgress => ResolvePlaybackProgress(CurrentPhase);
+        public string CurrentAnimationName => locomotionPresenter != null ? locomotionPresenter.CurrentAnimationName : string.Empty;
+        public bool RunLatchActive => runLatchActive;
         public MonoBehaviour InputSourceBehaviour { get => inputSourceBehaviour; set => inputSourceBehaviour = value; }
         public MonoBehaviour MotionExecutorBehaviour { get => motionExecutorBehaviour; set => motionExecutorBehaviour = value; }
         public ThirdPersonCameraController CameraController { get => cameraController; set => cameraController = value; }
         public BasicLocomotionAnimancerPresenter LocomotionPresenter { get => locomotionPresenter; set => locomotionPresenter = value; }
+        public RunLocomotionAnimationConfigSO RunAnimationConfig { get => runAnimationConfig; set => runAnimationConfig = value; }
         public BasicMovementConfigSO Config { get => config; set => config = value; }
-        public LocomotionStateGraphConfigSO StateGraphConfig { get => stateGraphConfig; set => SetStateGraphConfig(value); }
+        public CharacterStateMachineDefinitionSO StateMachineDefinition { get => stateMachineDefinition; set => SetStateMachineDefinition(value); }
         public bool AutoUpdate { get => autoUpdate; set => autoUpdate = value; }
-        public bool UsesDefaultStateGraph => stateMachine != null && stateMachine.UsesDefaultGraph;
+        public bool SuppressBasicMotionExecution { get => suppressBasicMotionExecution; set => suppressBasicMotionExecution = value; }
+        public bool SuppressLocomotionAnimationPresentation { get => suppressLocomotionAnimationPresentation; set => suppressLocomotionAnimationPresentation = value; }
+        public bool UsesDefaultStateMachine => stateMachineDefinition == null;
 
         void Reset()
         {
@@ -106,6 +126,11 @@ namespace ThirdPersonMovement
 
             if (inputSource != null)
                 inputSource.SetInputEnabled(false);
+
+            lastMovingGait = BasicMovementGait.Walk;
+            runLatchActive = false;
+            hasActiveMoveStopGait = false;
+            ResetMotionPlaybackWindow();
         }
 
         void Update()
@@ -118,61 +143,196 @@ namespace ThirdPersonMovement
 
         public bool TickFromInputSource(float deltaTime)
         {
-            if (inputSource == null)
-                ResolveInputSource();
+            return TickFromInputSource(deltaTime, 0);
+        }
 
-            if (inputSource == null)
+        public bool TickFromInputSource(float deltaTime, int diagnosticStep)
+        {
+            if (!TryReadInput(deltaTime, out BasicLocomotionInputSnapshot input))
                 return false;
 
-            Tick(inputSource.ReadInput(deltaTime));
+            Tick(in input, diagnosticStep);
             return true;
         }
 
         public void Tick(in BasicLocomotionInputSnapshot input)
         {
-            if (!TryEnsureStateMachine())
+            Tick(in input, 0);
+        }
+
+        public void Tick(in BasicLocomotionInputSnapshot input, int diagnosticStep)
+        {
+            if (!TryEvaluateLocomotion(in input, out BasicLocomotionFrame frame))
                 return;
 
+            ExecuteLocomotionMotion(in frame);
+            PresentLocomotionAnimation(in frame);
+            CompleteLocomotionTick();
+            LogDiagnosticTickSnapshot(diagnosticStep);
+        }
+
+        public bool TryReadInput(float deltaTime, out BasicLocomotionInputSnapshot input)
+        {
+            if (inputSource == null)
+                ResolveInputSource();
+
+            if (inputSource == null)
+            {
+                input = default;
+                return false;
+            }
+
+            input = inputSource.ReadInput(deltaTime);
+            return true;
+        }
+
+        public bool TryEvaluateLocomotion(in BasicLocomotionInputSnapshot input, out BasicLocomotionFrame frame)
+        {
+            if (!TryEnsureStateMachine())
+            {
+                frame = default;
+                return false;
+            }
+
+            CharacterInputRequestFact request = CharacterInputRequestFact.None(InputRequestKind.Dodge);
+            return TryEvaluateWithStateMachine(in input, stateMachine, in request, 0, out frame, out _);
+        }
+
+        public bool TryEvaluateWithStateMachine(
+            in BasicLocomotionInputSnapshot input,
+            CharacterStateMachineRunner runner,
+            in CharacterInputRequestFact inputRequest,
+            int currentStep,
+            out BasicLocomotionFrame frame,
+            out CharacterStateMachineFrame stateFrame)
+        {
+            if (runner == null)
+            {
+                frame = default;
+                stateFrame = default;
+                return false;
+            }
+
             BasicMovementSettings baseSettings = BasicMovementSettings.FromConfig(config);
-            MovementInputIntent previewIntent = MovementInputIntent.FromRaw(input.Move, baseSettings.InputDeadZone);
-            BasicMovementSettings settings = ResolveMovementSettings(in previewIntent, in baseSettings);
+            bool wantsRun = input.RunHeld || runLatchActive;
+            MovementInputIntent pendingIntent = MovementInputIntent.FromRaw(input.Move, baseSettings.InputDeadZone, wantsRun);
+            CharacterStateMachineSnapshot snapshot = runner.Snapshot;
+            BasicMovementPhase currentPhase = snapshot.LocomotionPhase;
+            BasicMovementGait frameGait = ResolveFrameGait(currentPhase, in pendingIntent);
+            BasicMovementSettings settings = ResolveMovementSettings(frameGait, in baseSettings);
+            BasicMovementPhaseFacts phaseFacts = ResolvePhaseFacts(currentPhase, runner.StateTime, frameGait, input.DeltaTime, in settings);
+            BasicLocomotionInputSnapshot resolvedInput = new BasicLocomotionInputSnapshot(
+                input.DeltaTime,
+                input.Move,
+                input.Look,
+                wantsRun);
 
             if (cameraController != null)
                 cameraController.ApplyLook(input.Look);
 
             LogCameraInput(input.Move, input.Look);
 
-            currentFrame = pipeline.Tick(in input, in settings, cameraController, stateMachine);
-            currentIntent = currentFrame.Intent;
-            currentWorldDirection = currentFrame.WorldDirection;
-            if (currentIntent.HasMoveIntent)
-                lastMovingGait = ResolveGait(currentIntent.Strength);
+            Vector3 worldDirection = CameraRelativeMovementResolver.Resolve(pendingIntent, cameraController);
+            CharacterStateMachineContext context = new CharacterStateMachineContext(
+                input.DeltaTime,
+                currentStep,
+                pendingIntent,
+                worldDirection,
+                phaseFacts,
+                inputRequest);
+            bool runLatchBeforeStateTick = runLatchActive;
+            stateFrame = runner.Tick(in context);
+            ApplyStateMachineOutputs(in stateFrame);
 
+            BasicMovementMotionFacts motionFacts = ResolveMotionFacts(stateFrame.LocomotionPhase, frameGait);
+            currentFrame = pipeline.Tick(in resolvedInput, in settings, cameraController, stateFrame.LocomotionPhase, phaseFacts, motionFacts, frameGait);
+            currentIntent = currentFrame.Intent;
+            UpdatePhaseGaitMemory(stateFrame.LocomotionPhase, frameGait);
+            LogStateMachineOutputProbe(
+                currentStep,
+                currentPhase,
+                frameGait,
+                in pendingIntent,
+                in phaseFacts,
+                runLatchBeforeStateTick,
+                in stateFrame);
+            if (currentIntent.HasMoveIntent)
+                lastMovingGait = currentIntent.Gait;
+
+            currentWorldDirection = currentFrame.WorldDirection;
+            frame = currentFrame;
+            return true;
+        }
+
+        public void ExecuteLocomotionMotion(in BasicLocomotionFrame frame)
+        {
             if (motionExecutor == null)
                 ResolveMotionExecutor();
 
-            if (motionExecutor != null)
+            if (motionExecutor != null && !suppressBasicMotionExecution)
             {
-                MovementCommand command = currentFrame.Command;
+                MovementCommand command = frame.Command;
                 motionExecutor.ExecuteBasicMovement(in command);
             }
-
-            if (locomotionPresenter != null)
-            {
-                float currentSpeed = motionExecutor != null ? motionExecutor.CurrentSpeed : currentFrame.Command.PlanarSpeed;
-                MovementAnimationContext animationContext = BuildAnimationContext(in currentFrame, currentSpeed);
-                locomotionPresenter.Present(in animationContext);
-            }
-
-            if (cameraController != null)
-                cameraController.Resolve();
         }
 
-        public void SetStateGraphConfig(LocomotionStateGraphConfigSO graphConfig)
+        public void PresentLocomotionAnimation(in BasicLocomotionFrame frame)
         {
-            stateGraphConfig = graphConfig;
+            if (locomotionPresenter != null && !suppressLocomotionAnimationPresentation)
+            {
+                float currentSpeed = motionExecutor != null ? motionExecutor.CurrentSpeed : frame.Command.PlanarSpeed;
+                MovementAnimationContext animationContext = BuildAnimationContext(in frame, currentSpeed);
+                locomotionPresenter.Present(in animationContext);
+            }
+        }
+
+        public void CompleteLocomotionTick()
+        {
+            if (cameraController != null)
+                cameraController.Resolve();
+
+            ResetRunLatchAfterIdle();
+        }
+
+        public void SetStateMachineDefinition(CharacterStateMachineDefinitionSO definition)
+        {
+            stateMachineDefinition = definition;
             stateMachine = null;
             defaultGraphWarningLogged = false;
+            lastMovingGait = BasicMovementGait.Walk;
+            runLatchActive = false;
+            hasActiveMoveStopGait = false;
+            ResetMotionPlaybackWindow();
+        }
+
+        public void SetRunLatchActive(bool active)
+        {
+            runLatchActive = active;
+            if (!active && !currentIntent.HasMoveIntent)
+                lastMovingGait = BasicMovementGait.Walk;
+        }
+
+        BasicMovementGait ResolveFrameGait(BasicMovementPhase currentPhase, in MovementInputIntent pendingIntent)
+        {
+            if (pendingIntent.HasMoveIntent)
+                return pendingIntent.Gait;
+
+            if (currentPhase == BasicMovementPhase.MoveStop && hasActiveMoveStopGait)
+                return activeMoveStopGait;
+
+            return lastMovingGait;
+        }
+
+        void UpdatePhaseGaitMemory(BasicMovementPhase phase, BasicMovementGait frameGait)
+        {
+            if (phase == BasicMovementPhase.MoveStop)
+            {
+                activeMoveStopGait = frameGait;
+                hasActiveMoveStopGait = true;
+                return;
+            }
+
+            hasActiveMoveStopGait = false;
         }
 
         public void SetInputSource(IBasicLocomotionInputSource source)
@@ -187,31 +347,236 @@ namespace ThirdPersonMovement
             motionExecutorBehaviour = executor as MonoBehaviour;
         }
 
+        public void SetAnimationPlaybackProgressSource(IAnimationPhasePlaybackProgressSource source)
+        {
+            playbackProgressSource = source;
+            ResetMotionPlaybackWindow();
+        }
+
+        public void LogDiagnosticTickSnapshot(int step)
+        {
+            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                RuntimeDiagnosticLogCategory.Locomotion,
+                RuntimeDiagnosticLogLevel.Trace,
+                "locomotion-tick-snapshot",
+                ActiveStatePath,
+                string.Empty,
+                step,
+                Time.frameCount,
+                BuildLocomotionDiagnosticContext()));
+        }
+
         static MovementAnimationContext BuildAnimationContext(in BasicLocomotionFrame frame, float planarSpeed)
         {
             return new MovementAnimationContext(
                 frame.Phase,
+                frame.Command.Gait,
                 frame.Intent.HasMoveIntent,
                 frame.Intent.Strength,
                 frame.WorldDirection,
                 planarSpeed);
         }
 
-        BasicMovementSettings ResolveMovementSettings(in MovementInputIntent previewIntent, in BasicMovementSettings settings)
+        BasicMovementSettings ResolveMovementSettings(BasicMovementGait gait, in BasicMovementSettings baseSettings)
         {
-            LocomotionAnimationSetSO set = locomotionPresenter != null ? locomotionPresenter.AnimationSet : null;
-            if (set == null)
-                return settings;
+            RunLocomotionAnimationConfigSO animationConfig = ResolveRunAnimationConfig();
+            if (animationConfig == null)
+                return baseSettings;
 
-            LocomotionAnimationGait gait = previewIntent.HasMoveIntent ? ResolveGait(previewIntent.Strength) : lastMovingGait;
-            float stopExitDuration = set.ResolveTiming(BasicMovementPhase.MoveStop, gait, gait, settings.MoveStopMinTime).ExitDuration;
-            return settings.WithMoveStopExitDuration(stopExitDuration);
+            return animationConfig.ApplyPhaseTiming(gait, in baseSettings);
         }
 
-        LocomotionAnimationGait ResolveGait(float inputStrength)
+        BasicMovementPhaseFacts ResolvePhaseFacts(BasicMovementGait gait, float deltaTime, in BasicMovementSettings settings)
         {
-            float threshold = locomotionPresenter != null ? locomotionPresenter.RunInputThreshold : 0.65f;
-            return inputStrength >= threshold ? LocomotionAnimationGait.Run : LocomotionAnimationGait.Walk;
+            return ResolvePhaseFacts(CurrentPhase, CurrentPhaseTime, gait, deltaTime, in settings);
+        }
+
+        BasicMovementPhaseFacts ResolvePhaseFacts(
+            BasicMovementPhase phase,
+            float currentPhaseTime,
+            BasicMovementGait gait,
+            float deltaTime,
+            in BasicMovementSettings settings)
+        {
+            float nextPhaseTime = currentPhaseTime + Mathf.Max(0f, deltaTime);
+            RunLocomotionAnimationConfigSO animationConfig = ResolveRunAnimationConfig();
+            if (animationConfig == null)
+                return BasicMovementPhaseFacts.FromTiming(phase, nextPhaseTime, in settings);
+
+            LocomotionAnimationPhaseConfig phaseConfig = animationConfig.ResolvePhaseConfig(phase, gait);
+            AnimationPhasePlaybackProgress progress = ResolvePlaybackProgress(phase);
+            AnimationPhaseTimelineFacts facts = AnimationPhaseTimelineSampler.Sample(phase, in phaseConfig, nextPhaseTime, in progress);
+            return new BasicMovementPhaseFacts(facts.CanExit);
+        }
+
+        BasicMovementMotionFacts ResolveMotionFacts(BasicMovementGait gait)
+        {
+            return ResolveMotionFacts(CurrentPhase, gait);
+        }
+
+        BasicMovementMotionFacts ResolveMotionFacts(BasicMovementPhase phase, BasicMovementGait gait)
+        {
+            RunLocomotionAnimationConfigSO animationConfig = ResolveRunAnimationConfig();
+            if (animationConfig == null)
+            {
+                ResetMotionPlaybackWindow();
+                return BasicMovementMotionFacts.None(phase);
+            }
+
+            string aliasKey = animationConfig.ResolveAliasKey(phase, gait);
+            LocomotionMotionProfileSO profile = animationConfig.ResolveMotionProfile(phase, gait, aliasKey);
+            if (profile == null)
+            {
+                ResetMotionPlaybackWindow();
+                return BasicMovementMotionFacts.None(phase);
+            }
+
+            AnimationPhasePlaybackProgress progress = ResolvePlaybackProgress(phase);
+            AnimationMotionPlaybackWindow playbackWindow = BuildMotionPlaybackWindow(phase, gait, in progress);
+            AnimationMotionProfileSample sample = AnimationMotionProfileSampler.Sample(profile, in playbackWindow);
+            if (!sample.HasMotionContribution)
+                return BasicMovementMotionFacts.None(phase);
+
+            return new BasicMovementMotionFacts(
+                true,
+                sample.LocalPlanarDelta,
+                sample.YawDelta,
+                sample.SourcePhase,
+                sample.SourceAliasKey);
+        }
+
+        AnimationPhasePlaybackProgress ResolvePlaybackProgress(BasicMovementPhase phase)
+        {
+            IAnimationPhasePlaybackProgressSource source = playbackProgressSource ?? locomotionPresenter;
+            return source != null ? source.CurrentPlaybackProgress : AnimationPhasePlaybackProgress.Invalid(phase);
+        }
+
+        AnimationMotionPlaybackWindow BuildMotionPlaybackWindow(BasicMovementPhase phase, BasicMovementGait gait, in AnimationPhasePlaybackProgress progress)
+        {
+            if (!progress.HasValidPlayback || progress.Phase != phase)
+            {
+                ResetMotionPlaybackWindow();
+                return AnimationMotionPlaybackWindow.Invalid(phase, gait);
+            }
+
+            bool samePlayback =
+                hasPreviousMotionPlaybackProgress &&
+                previousMotionPlaybackProgress.HasValidPlayback &&
+                previousMotionPlaybackProgress.Phase == progress.Phase &&
+                previousMotionPlaybackProgress.AliasKey == progress.AliasKey &&
+                progress.NormalizedTime >= previousMotionPlaybackProgress.NormalizedTime;
+
+            float previousTime = samePlayback ? previousMotionPlaybackProgress.NormalizedTime : progress.NormalizedTime;
+            previousMotionPlaybackProgress = progress;
+            hasPreviousMotionPlaybackProgress = true;
+            return new AnimationMotionPlaybackWindow(phase, gait, progress.AliasKey, previousTime, progress.NormalizedTime, true);
+        }
+
+        string BuildLocomotionDiagnosticContext()
+        {
+            AnimationPhasePlaybackProgress progress = ResolvePlaybackProgress(CurrentPhase);
+            string presenterName = locomotionPresenter != null ? locomotionPresenter.name : "null";
+            string animationName = locomotionPresenter != null ? locomotionPresenter.CurrentAnimationName : string.Empty;
+
+            return
+                $"phase={CurrentPhase} gait={currentFrame.Command.Gait} phaseTime={CurrentPhaseTime:F3} " +
+                $"hasMove={currentIntent.HasMoveIntent} strength={currentIntent.Strength:F3} " +
+                $"rawMove={currentIntent.RawInput.ToString("F3")} normalizedMove={currentIntent.NormalizedInput.ToString("F3")} " +
+                $"worldDirection={currentWorldDirection.ToString("F3")} planarSpeed={currentFrame.Command.PlanarSpeed:F3} rotationSpeed={currentFrame.Command.RotationSpeed:F3} " +
+                $"runLatch={runLatchActive} motionSuppressed={suppressBasicMotionExecution} animationSuppressed={suppressLocomotionAnimationPresentation} " +
+                $"hasAnimationMotion={currentFrame.Command.HasAnimationMotion} animMotionSourcePhase={currentFrame.Command.AnimationMotionSourcePhase} animMotionAlias={currentFrame.Command.AnimationMotionSourceAliasKey} " +
+                $"animationPresenter={presenterName} animationPhase={progress.Phase} animationAlias={progress.AliasKey} animationName={animationName} " +
+                $"animationNormalized={progress.NormalizedTime:F3} animationValid={progress.HasValidPlayback} animationEnded={progress.IsEnded}";
+        }
+
+        void ResetMotionPlaybackWindow()
+        {
+            previousMotionPlaybackProgress = AnimationPhasePlaybackProgress.Invalid(CurrentPhase);
+            hasPreviousMotionPlaybackProgress = false;
+        }
+
+        void ResetRunLatchAfterIdle()
+        {
+            if (CurrentPhase != BasicMovementPhase.Idle || currentIntent.HasMoveIntent)
+                return;
+
+            if (runLatchActive || lastMovingGait != BasicMovementGait.Walk)
+            {
+                RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                    RuntimeDiagnosticLogCategory.Locomotion,
+                    RuntimeDiagnosticLogLevel.Info,
+                    "locomotion-run-latch-reset-after-idle",
+                    ActiveStatePath,
+                    string.Empty,
+                    0,
+                    Time.frameCount,
+                    $"phase={CurrentPhase} intentHasMove={currentIntent.HasMoveIntent} lastMovingGait={lastMovingGait} runLatchBefore={runLatchActive} animation={CurrentAnimationName}"));
+            }
+
+            runLatchActive = false;
+            lastMovingGait = BasicMovementGait.Walk;
+        }
+
+        RunLocomotionAnimationConfigSO ResolveRunAnimationConfig()
+        {
+            if (runAnimationConfig != null)
+                return runAnimationConfig;
+
+            return locomotionPresenter != null ? locomotionPresenter.RunAnimationConfig : null;
+        }
+
+        void ApplyStateMachineOutputs(in CharacterStateMachineFrame stateFrame)
+        {
+            bool previousRunLatch = runLatchActive;
+
+            if (stateFrame.ResetRunLatch)
+                SetRunLatchActive(false);
+
+            if (stateFrame.SetRunLatch)
+                SetRunLatchActive(true);
+
+            if (previousRunLatch != runLatchActive || stateFrame.SetRunLatch || stateFrame.ResetRunLatch)
+            {
+                RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                    RuntimeDiagnosticLogCategory.Locomotion,
+                    RuntimeDiagnosticLogLevel.Info,
+                    "locomotion-run-latch-output-applied",
+                    stateFrame.Snapshot.ActivePath,
+                    string.Empty,
+                    0,
+                    Time.frameCount,
+                    $"setOutput={stateFrame.SetRunLatch} resetOutput={stateFrame.ResetRunLatch} before={previousRunLatch} after={runLatchActive} statePhase={stateFrame.LocomotionPhase} stateGait={stateFrame.Snapshot.Variant} actionCompleted={stateFrame.ActionCompleted}"));
+            }
+        }
+
+        void LogStateMachineOutputProbe(
+            int currentStep,
+            BasicMovementPhase phaseBeforeTick,
+            BasicMovementGait frameGait,
+            in MovementInputIntent pendingIntent,
+            in BasicMovementPhaseFacts phaseFacts,
+            bool runLatchBeforeTick,
+            in CharacterStateMachineFrame stateFrame)
+        {
+            if (!runLatchBeforeTick &&
+                !runLatchActive &&
+                !stateFrame.SetRunLatch &&
+                !stateFrame.ResetRunLatch &&
+                stateFrame.LocomotionPhase != BasicMovementPhase.MoveStop &&
+                frameGait != BasicMovementGait.Run)
+            {
+                return;
+            }
+
+            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                RuntimeDiagnosticLogCategory.Locomotion,
+                RuntimeDiagnosticLogLevel.Trace,
+                "locomotion-state-machine-output-probe",
+                stateFrame.Snapshot.ActivePath,
+                string.Empty,
+                currentStep,
+                Time.frameCount,
+                $"phaseBefore={phaseBeforeTick} statePhase={stateFrame.LocomotionPhase} frameGait={frameGait} hasMove={pendingIntent.HasMoveIntent} pendingGait={pendingIntent.Gait} phaseCanExit={phaseFacts.PhaseCanExit} setRunLatch={stateFrame.SetRunLatch} resetRunLatch={stateFrame.ResetRunLatch} runLatchBeforeTick={runLatchBeforeTick} runLatchAfterOutput={runLatchActive} lastMovingGait={lastMovingGait} hasMoveStopGait={hasActiveMoveStopGait} moveStopGait={activeMoveStopGait} executeBasic={stateFrame.ExecuteBasicMovement} presentLocomotion={stateFrame.PresentLocomotionAnimation}"));
         }
 
         bool HasEnabledLegacyPlayer()
@@ -227,18 +592,21 @@ namespace ThirdPersonMovement
 
             try
             {
-                stateMachine = new BasicLocomotionStateMachine(stateGraphConfig);
+                CharacterStateMachineDefinition definition = stateMachineDefinition != null
+                    ? stateMachineDefinition.ToDefinition()
+                    : CharacterStateMachineDefinition.CreateDefault();
+                stateMachine = new CharacterStateMachineRunner(definition);
             }
             catch (System.Exception exception)
             {
-                Debug.LogError($"[PlayerLocomotionController] Locomotion state graph is invalid. {exception.Message}", this);
+                Debug.LogError($"[PlayerLocomotionController] Character state machine is invalid. {exception.Message}", this);
                 return false;
             }
 
-            if (stateMachine.UsesDefaultGraph && !defaultGraphWarningLogged)
+            if (stateMachineDefinition == null && !defaultGraphWarningLogged)
             {
                 defaultGraphWarningLogged = true;
-                Debug.LogWarning("[PlayerLocomotionController] State graph config is missing. Using generated default locomotion graph.", this);
+                Debug.LogWarning("[PlayerLocomotionController] Character state machine config is missing. Using generated default unified state machine.", this);
             }
 
             return true;

@@ -1,0 +1,722 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c9c04639ae548bdb0a8e927492d029d, type: 3}
+  m_Name: Rig_Rusk_ver1.1
+  m_EditorClassIdentifier: 
+  targetAnimator: {fileID: 0}
+  rigHierarchy:
+  - name: rusk_Armature
+    index: 0
+    depth: 0
+  - name: rusk_Hips
+    index: 1
+    depth: 1
+  - name: rusk_LeftUpperLeg
+    index: 2
+    depth: 2
+  - name: rusk_LeftLowerLeg
+    index: 3
+    depth: 3
+  - name: rusk_LeftFoot
+    index: 4
+    depth: 4
+  - name: rusk_LeftToeBase
+    index: 5
+    depth: 5
+  - name: rusk_LeftToeBase_end
+    index: 6
+    depth: 6
+  - name: rusk_RightUpperLeg
+    index: 7
+    depth: 2
+  - name: rusk_RightLowerLeg
+    index: 8
+    depth: 3
+  - name: rusk_RightFoot
+    index: 9
+    depth: 4
+  - name: rusk_RightToeBase
+    index: 10
+    depth: 5
+  - name: rusk_RightToeBase_end
+    index: 11
+    depth: 6
+  - name: rusk_Spine
+    index: 12
+    depth: 2
+  - name: rusk_Chest
+    index: 13
+    depth: 3
+  - name: rusk_LeftShoulder
+    index: 14
+    depth: 4
+  - name: rusk_LeftUpperArm
+    index: 15
+    depth: 5
+  - name: rusk_LeftLowerArm
+    index: 16
+    depth: 6
+  - name: rusk_LeftHand
+    index: 17
+    depth: 7
+  - name: rusk_LeftIndexProximal
+    index: 18
+    depth: 8
+  - name: rusk_LeftIndexIntermediate
+    index: 19
+    depth: 9
+  - name: rusk_LeftIndexDistal
+    index: 20
+    depth: 10
+  - name: rusk_LeftIndexDistal_end
+    index: 21
+    depth: 11
+  - name: rusk_LeftLittleProximal
+    index: 22
+    depth: 8
+  - name: rusk_LeftLittleIntermediate
+    index: 23
+    depth: 9
+  - name: rusk_LeftLittleDistal
+    index: 24
+    depth: 10
+  - name: rusk_LeftLittleDistal_end
+    index: 25
+    depth: 11
+  - name: rusk_LeftMiddleProximal
+    index: 26
+    depth: 8
+  - name: rusk_LeftMiddleIntermediate
+    index: 27
+    depth: 9
+  - name: rusk_LeftMiddleDistal
+    index: 28
+    depth: 10
+  - name: rusk_LeftMiddleDistal_end
+    index: 29
+    depth: 11
+  - name: rusk_LeftRingProximal
+    index: 30
+    depth: 8
+  - name: rusk_LeftRingIntermediate
+    index: 31
+    depth: 9
+  - name: rusk_LeftRingDistal
+    index: 32
+    depth: 10
+  - name: rusk_LeftRingDistal_end
+    index: 33
+    depth: 11
+  - name: rusk_LeftThumbProximal
+    index: 34
+    depth: 8
+  - name: rusk_LeftThumbIntermediate
+    index: 35
+    depth: 9
+  - name: rusk_LeftThumbDistal
+    index: 36
+    depth: 10
+  - name: rusk_LeftThumbDistal_end
+    index: 37
+    depth: 11
+  - name: rusk_Neck
+    index: 38
+    depth: 4
+  - name: rusk_Head
+    index: 39
+    depth: 5
+  - name: rusk_ahoge_1
+    index: 40
+    depth: 6
+  - name: rusk_ahoge_2
+    index: 41
+    depth: 7
+  - name: rusk_ahoge_3
+    index: 42
+    depth: 8
+  - name: rusk_ahoge_end
+    index: 43
+    depth: 9
+  - name: rusk_bangs
+    index: 44
+    depth: 6
+  - name: rusk_bangs_end
+    index: 45
+    depth: 7
+  - name: rusk_ear_root
+    index: 46
+    depth: 6
+  - name: rusk_ear_L
+    index: 47
+    depth: 7
+  - name: rusk_ear_L_end
+    index: 48
+    depth: 8
+  - name: rusk_ear_R
+    index: 49
+    depth: 7
+  - name: rusk_ear_R_end
+    index: 50
+    depth: 8
+  - name: rusk_hair_root
+    index: 51
+    depth: 6
+  - name: rusk_hair_back
+    index: 52
+    depth: 7
+  - name: rusk_hair_back_end
+    index: 53
+    depth: 8
+  - name: rusk_hair_back_L
+    index: 54
+    depth: 7
+  - name: rusk_hair_back_L_end
+    index: 55
+    depth: 8
+  - name: rusk_hair_back_R
+    index: 56
+    depth: 7
+  - name: rusk_hair_back_R_end
+    index: 57
+    depth: 8
+  - name: rusk_hair_side_L_1
+    index: 58
+    depth: 7
+  - name: rusk_hair_side_L_2
+    index: 59
+    depth: 8
+  - name: rusk_hair_side_R_1
+    index: 60
+    depth: 7
+  - name: rusk_hair_side_R_2
+    index: 61
+    depth: 8
+  - name: rusk_LeftEye
+    index: 62
+    depth: 6
+  - name: rusk_LeftEye_end
+    index: 63
+    depth: 7
+  - name: rusk_RightEye
+    index: 64
+    depth: 6
+  - name: rusk_RightEye_end
+    index: 65
+    depth: 7
+  - name: rusk_RightShoulder
+    index: 66
+    depth: 4
+  - name: rusk_RightUpperArm
+    index: 67
+    depth: 5
+  - name: rusk_RightLowerArm
+    index: 68
+    depth: 6
+  - name: rusk_RightHand
+    index: 69
+    depth: 7
+  - name: rusk_RightIndexProximal
+    index: 70
+    depth: 8
+  - name: rusk_RightIndexIntermediate
+    index: 71
+    depth: 9
+  - name: rusk_RightIndexDistal
+    index: 72
+    depth: 10
+  - name: rusk_RightIndexDistal_end
+    index: 73
+    depth: 11
+  - name: rusk_RightLittleProximal
+    index: 74
+    depth: 8
+  - name: rusk_RightLittleIntermediate
+    index: 75
+    depth: 9
+  - name: rusk_RightLittleDistal
+    index: 76
+    depth: 10
+  - name: rusk_RightLittleDistal_end
+    index: 77
+    depth: 11
+  - name: rusk_RightMiddleProximal
+    index: 78
+    depth: 8
+  - name: rusk_RightMiddleIntermediate
+    index: 79
+    depth: 9
+  - name: rusk_RightMiddleDistal
+    index: 80
+    depth: 10
+  - name: rusk_RightMiddleDistal_end
+    index: 81
+    depth: 11
+  - name: rusk_RightRingProximal
+    index: 82
+    depth: 8
+  - name: rusk_RightRingIntermediate
+    index: 83
+    depth: 9
+  - name: rusk_RightRingDistal
+    index: 84
+    depth: 10
+  - name: rusk_RightRingDistal_end
+    index: 85
+    depth: 11
+  - name: rusk_RightThumbProximal
+    index: 86
+    depth: 8
+  - name: rusk_RightThumbIntermediate
+    index: 87
+    depth: 9
+  - name: rusk_RightThumbDistal
+    index: 88
+    depth: 10
+  - name: rusk_RightThumbDistal_end
+    index: 89
+    depth: 11
+  - name: rusk_string_L_1
+    index: 90
+    depth: 4
+  - name: rusk_string_L_2
+    index: 91
+    depth: 5
+  - name: rusk_string_L_3
+    index: 92
+    depth: 6
+  - name: rusk_string_L_4
+    index: 93
+    depth: 7
+  - name: rusk_string_L_end
+    index: 94
+    depth: 8
+  - name: rusk_string_R_1
+    index: 95
+    depth: 4
+  - name: rusk_string_R_2
+    index: 96
+    depth: 5
+  - name: rusk_string_R_3
+    index: 97
+    depth: 6
+  - name: rusk_string_R_4
+    index: 98
+    depth: 7
+  - name: rusk_string_R_end
+    index: 99
+    depth: 8
+  - name: rusk_tail_1
+    index: 100
+    depth: 2
+  - name: rusk_tail_2
+    index: 101
+    depth: 3
+  - name: rusk_tail_3
+    index: 102
+    depth: 4
+  - name: rusk_tail_4
+    index: 103
+    depth: 5
+  - name: rusk_tail_4
+    index: 104
+    depth: 6
+  - name: rusk_tail_end
+    index: 105
+    depth: 7
+  rigElementChains:
+  - chainName: rusk_Armature
+    elementChain:
+    - name: rusk_Armature
+      index: 0
+      depth: -1
+    - name: rusk_Hips
+      index: 1
+      depth: -1
+  - chainName: rusk_LeftUpperLeg
+    elementChain:
+    - name: rusk_LeftUpperLeg
+      index: 2
+      depth: -1
+    - name: rusk_LeftLowerLeg
+      index: 3
+      depth: -1
+    - name: rusk_LeftFoot
+      index: 4
+      depth: -1
+    - name: rusk_LeftToeBase
+      index: 5
+      depth: -1
+    - name: rusk_LeftToeBase_end
+      index: 6
+      depth: -1
+  - chainName: rusk_RightUpperLeg
+    elementChain:
+    - name: rusk_RightUpperLeg
+      index: 7
+      depth: -1
+    - name: rusk_RightLowerLeg
+      index: 8
+      depth: -1
+    - name: rusk_RightFoot
+      index: 9
+      depth: -1
+    - name: rusk_RightToeBase
+      index: 10
+      depth: -1
+    - name: rusk_RightToeBase_end
+      index: 11
+      depth: -1
+  - chainName: rusk_Spine
+    elementChain:
+    - name: rusk_Spine
+      index: 12
+      depth: -1
+    - name: rusk_Chest
+      index: 13
+      depth: -1
+  - chainName: rusk_LeftShoulder
+    elementChain:
+    - name: rusk_LeftShoulder
+      index: 14
+      depth: -1
+    - name: rusk_LeftUpperArm
+      index: 15
+      depth: -1
+    - name: rusk_LeftLowerArm
+      index: 16
+      depth: -1
+    - name: rusk_LeftHand
+      index: 17
+      depth: -1
+  - chainName: rusk_LeftIndexProximal
+    elementChain:
+    - name: rusk_LeftIndexProximal
+      index: 18
+      depth: -1
+    - name: rusk_LeftIndexIntermediate
+      index: 19
+      depth: -1
+    - name: rusk_LeftIndexDistal
+      index: 20
+      depth: -1
+    - name: rusk_LeftIndexDistal_end
+      index: 21
+      depth: -1
+  - chainName: rusk_LeftLittleProximal
+    elementChain:
+    - name: rusk_LeftLittleProximal
+      index: 22
+      depth: -1
+    - name: rusk_LeftLittleIntermediate
+      index: 23
+      depth: -1
+    - name: rusk_LeftLittleDistal
+      index: 24
+      depth: -1
+    - name: rusk_LeftLittleDistal_end
+      index: 25
+      depth: -1
+  - chainName: rusk_LeftMiddleProximal
+    elementChain:
+    - name: rusk_LeftMiddleProximal
+      index: 26
+      depth: -1
+    - name: rusk_LeftMiddleIntermediate
+      index: 27
+      depth: -1
+    - name: rusk_LeftMiddleDistal
+      index: 28
+      depth: -1
+    - name: rusk_LeftMiddleDistal_end
+      index: 29
+      depth: -1
+  - chainName: rusk_LeftRingProximal
+    elementChain:
+    - name: rusk_LeftRingProximal
+      index: 30
+      depth: -1
+    - name: rusk_LeftRingIntermediate
+      index: 31
+      depth: -1
+    - name: rusk_LeftRingDistal
+      index: 32
+      depth: -1
+    - name: rusk_LeftRingDistal_end
+      index: 33
+      depth: -1
+  - chainName: rusk_LeftThumbProximal
+    elementChain:
+    - name: rusk_LeftThumbProximal
+      index: 34
+      depth: -1
+    - name: rusk_LeftThumbIntermediate
+      index: 35
+      depth: -1
+    - name: rusk_LeftThumbDistal
+      index: 36
+      depth: -1
+    - name: rusk_LeftThumbDistal_end
+      index: 37
+      depth: -1
+  - chainName: rusk_Neck
+    elementChain:
+    - name: rusk_Neck
+      index: 38
+      depth: -1
+    - name: rusk_Head
+      index: 39
+      depth: -1
+  - chainName: rusk_ahoge_1
+    elementChain:
+    - name: rusk_ahoge_1
+      index: 40
+      depth: -1
+    - name: rusk_ahoge_2
+      index: 41
+      depth: -1
+    - name: rusk_ahoge_3
+      index: 42
+      depth: -1
+    - name: rusk_ahoge_end
+      index: 43
+      depth: -1
+  - chainName: rusk_bangs
+    elementChain:
+    - name: rusk_bangs
+      index: 44
+      depth: -1
+    - name: rusk_bangs_end
+      index: 45
+      depth: -1
+  - chainName: rusk_ear_root
+    elementChain:
+    - name: rusk_ear_root
+      index: 46
+      depth: -1
+  - chainName: rusk_ear_L
+    elementChain:
+    - name: rusk_ear_L
+      index: 47
+      depth: -1
+    - name: rusk_ear_L_end
+      index: 48
+      depth: -1
+  - chainName: rusk_ear_R
+    elementChain:
+    - name: rusk_ear_R
+      index: 49
+      depth: -1
+    - name: rusk_ear_R_end
+      index: 50
+      depth: -1
+  - chainName: rusk_hair_root
+    elementChain:
+    - name: rusk_hair_root
+      index: 51
+      depth: -1
+  - chainName: rusk_hair_back
+    elementChain:
+    - name: rusk_hair_back
+      index: 52
+      depth: -1
+    - name: rusk_hair_back_end
+      index: 53
+      depth: -1
+  - chainName: rusk_hair_back_L
+    elementChain:
+    - name: rusk_hair_back_L
+      index: 54
+      depth: -1
+    - name: rusk_hair_back_L_end
+      index: 55
+      depth: -1
+  - chainName: rusk_hair_back_R
+    elementChain:
+    - name: rusk_hair_back_R
+      index: 56
+      depth: -1
+    - name: rusk_hair_back_R_end
+      index: 57
+      depth: -1
+  - chainName: rusk_hair_side_L_1
+    elementChain:
+    - name: rusk_hair_side_L_1
+      index: 58
+      depth: -1
+    - name: rusk_hair_side_L_2
+      index: 59
+      depth: -1
+  - chainName: rusk_hair_side_R_1
+    elementChain:
+    - name: rusk_hair_side_R_1
+      index: 60
+      depth: -1
+    - name: rusk_hair_side_R_2
+      index: 61
+      depth: -1
+  - chainName: rusk_LeftEye
+    elementChain:
+    - name: rusk_LeftEye
+      index: 62
+      depth: -1
+    - name: rusk_LeftEye_end
+      index: 63
+      depth: -1
+  - chainName: rusk_RightEye
+    elementChain:
+    - name: rusk_RightEye
+      index: 64
+      depth: -1
+    - name: rusk_RightEye_end
+      index: 65
+      depth: -1
+  - chainName: rusk_RightShoulder
+    elementChain:
+    - name: rusk_RightShoulder
+      index: 66
+      depth: -1
+    - name: rusk_RightUpperArm
+      index: 67
+      depth: -1
+    - name: rusk_RightLowerArm
+      index: 68
+      depth: -1
+    - name: rusk_RightHand
+      index: 69
+      depth: -1
+  - chainName: rusk_RightIndexProximal
+    elementChain:
+    - name: rusk_RightIndexProximal
+      index: 70
+      depth: -1
+    - name: rusk_RightIndexIntermediate
+      index: 71
+      depth: -1
+    - name: rusk_RightIndexDistal
+      index: 72
+      depth: -1
+    - name: rusk_RightIndexDistal_end
+      index: 73
+      depth: -1
+  - chainName: rusk_RightLittleProximal
+    elementChain:
+    - name: rusk_RightLittleProximal
+      index: 74
+      depth: -1
+    - name: rusk_RightLittleIntermediate
+      index: 75
+      depth: -1
+    - name: rusk_RightLittleDistal
+      index: 76
+      depth: -1
+    - name: rusk_RightLittleDistal_end
+      index: 77
+      depth: -1
+  - chainName: rusk_RightMiddleProximal
+    elementChain:
+    - name: rusk_RightMiddleProximal
+      index: 78
+      depth: -1
+    - name: rusk_RightMiddleIntermediate
+      index: 79
+      depth: -1
+    - name: rusk_RightMiddleDistal
+      index: 80
+      depth: -1
+    - name: rusk_RightMiddleDistal_end
+      index: 81
+      depth: -1
+  - chainName: rusk_RightRingProximal
+    elementChain:
+    - name: rusk_RightRingProximal
+      index: 82
+      depth: -1
+    - name: rusk_RightRingIntermediate
+      index: 83
+      depth: -1
+    - name: rusk_RightRingDistal
+      index: 84
+      depth: -1
+    - name: rusk_RightRingDistal_end
+      index: 85
+      depth: -1
+  - chainName: rusk_RightThumbProximal
+    elementChain:
+    - name: rusk_RightThumbProximal
+      index: 86
+      depth: -1
+    - name: rusk_RightThumbIntermediate
+      index: 87
+      depth: -1
+    - name: rusk_RightThumbDistal
+      index: 88
+      depth: -1
+    - name: rusk_RightThumbDistal_end
+      index: 89
+      depth: -1
+  - chainName: rusk_string_L_1
+    elementChain:
+    - name: rusk_string_L_1
+      index: 90
+      depth: -1
+    - name: rusk_string_L_2
+      index: 91
+      depth: -1
+    - name: rusk_string_L_3
+      index: 92
+      depth: -1
+    - name: rusk_string_L_4
+      index: 93
+      depth: -1
+    - name: rusk_string_L_end
+      index: 94
+      depth: -1
+  - chainName: rusk_string_R_1
+    elementChain:
+    - name: rusk_string_R_1
+      index: 95
+      depth: -1
+    - name: rusk_string_R_2
+      index: 96
+      depth: -1
+    - name: rusk_string_R_3
+      index: 97
+      depth: -1
+    - name: rusk_string_R_4
+      index: 98
+      depth: -1
+    - name: rusk_string_R_end
+      index: 99
+      depth: -1
+  - chainName: rusk_tail_1
+    elementChain:
+    - name: rusk_tail_1
+      index: 100
+      depth: -1
+    - name: rusk_tail_2
+      index: 101
+      depth: -1
+    - name: rusk_tail_3
+      index: 102
+      depth: -1
+    - name: rusk_tail_4
+      index: 103
+      depth: -1
+    - name: rusk_tail_4
+      index: 103
+      depth: -1
+    - name: rusk_tail_end
+      index: 105
+      depth: -1
+  inputConfig: {fileID: 0}
+  rigCurves: []
+  rigDepths: 00000000010000000200000003000000040000000500000006000000020000000300000004000000050000000600000002000000030000000400000005000000060000000700000008000000090000000a0000000b00000008000000090000000a0000000b00000008000000090000000a0000000b00000008000000090000000a0000000b00000008000000090000000a0000000b000000040000000500000006000000070000000800000009000000060000000700000006000000070000000800000007000000080000000600000007000000080000000700000008000000070000000800000007000000080000000700000008000000060000000700000006000000070000000400000005000000060000000700000008000000090000000a0000000b00000008000000090000000a0000000b00000008000000090000000a0000000b00000008000000090000000a0000000b00000008000000090000000a0000000b00000004000000050000000600000007000000080000000400000005000000060000000700000008000000020000000300000004000000050000000600000007000000

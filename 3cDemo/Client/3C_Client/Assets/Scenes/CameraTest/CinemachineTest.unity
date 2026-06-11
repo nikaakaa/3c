@@ -416,12 +416,6 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 7
       objectReference: {fileID: 0}
-    - target: {fileID: 818273645900000002, guid: 43b770cfc3328e040b7a205c1a61f45b,
-        type: 3}
-      propertyPath: animationSet
-      value: 
-      objectReference: {fileID: 11400000, guid: 8e4c9618c1a2b494fb81238652241b11,
-        type: 2}
     - target: {fileID: 868639113058789116, guid: 43b770cfc3328e040b7a205c1a61f45b,
         type: 3}
       propertyPath: m_Layer
@@ -2350,6 +2344,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5a5b6c35cff14f98994e3fef16d478f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  runAnimationConfig: {fileID: 11400000, guid: bdf1c9cfe4f94c56a30668b3f734ff6c, type: 2}
 --- !u!114 &1934790527
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2366,6 +2361,7 @@ MonoBehaviour:
   motionExecutorBehaviour: {fileID: 1934790528}
   cameraController: {fileID: 0}
   locomotionPresenter: {fileID: 1934790523}
+  runAnimationConfig: {fileID: 11400000, guid: bdf1c9cfe4f94c56a30668b3f734ff6c, type: 2}
   config: {fileID: 11400000, guid: 1f4ac8a4ba65c6648afa001a33f4e022, type: 2}
   stateGraphConfig: {fileID: 11400000, guid: f3bb0b90921cfcd4db67f9a27c511fd0, type: 2}
   autoUpdate: 1
@@ -2404,6 +2400,7 @@ MonoBehaviour:
   actionMapName: Player
   moveActionName: Move
   lookActionName: Look
+  runActionName: 
   enableInputOnEnable: 1
 --- !u!1001 &2045541522
 PrefabInstance:

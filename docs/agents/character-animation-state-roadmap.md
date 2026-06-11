@@ -4,31 +4,56 @@
 
 ## 当前基线
 
-当前基础移动链路已经存在：
+当前 FullBody base layer 已收束到统一层级角色逻辑状态机：
 
 ```text
-PlayerLocomotionController
-  -> BasicLocomotionPipeline
-  -> BasicLocomotionStateMachine
-  -> MovementCommand
-  -> MovementAnimationContext
-  -> BasicLocomotionAnimancerPresenter
+PlayerFullBodyActionController
+  -> FullBodyActionInputRequestBuilder
+  -> CharacterStateMachineRunner
+  -> CharacterStateMachineDefinitionSO
+  -> CharacterStateMachineFrame
+  -> IBasicLocomotionMotionExecutor / IActionMovementExecutor
+  -> BasicLocomotionAnimancerPresenter / ActionAnimationAnimancerPresenter
 ```
 
 当前已具备的能力：
 
 - 输入快照、移动意图、相机相对方向、移动命令和动画上下文已经分层。
-- `BasicLocomotionStateMachine` 负责 `Idle / MoveStart / MoveLoop / MoveStop` 阶段流转。
-- `LocomotionAnimationSetSO` 负责移动阶段到 Animancer key 的映射。
-- `BasicLocomotionAnimancerPresenter` 负责 Animancer 播放，不负责业务仲裁。
-- `BasicMovementConfigSO` 负责基础移动数值。
+- `CharacterStateMachineDefinitionSO` 是 FullBody base layer 的统一配置入口，默认资产为 `Assets/Configs/3C/Statemachine/DefaultCharacterStateMachine.asset`。
+- 默认统一状态树显式包含 `FullBody/Locomotion/Idle`、`MoveStart`、`MoveLoop`、`MoveStop` 和 `FullBody/Action/Dodge`。
+- Locomotion 四阶段和 Dodge 进入/退出 transition 都在同一张状态机配置中可见，不再由 Locomotion 特化状态机、Dodge runtime 或 FullBody 缝合 driver 分别决定。
+- `CharacterStateMachineRunner` 只读取 `CharacterStateMachineContext` 中的纯数据事实：移动意图、输入请求、phase can exit、状态时间、请求优先级和当前状态标签。
+- `CharacterStateMachineFrame` 统一产出当前状态快照、基础移动输出、通用动作移动输出、动画请求、输入请求消费、Run latch 写入和状态事实。
+- `PlayerLocomotionController` 保留输入读取、相机 Look、基础移动帧构建、运动 adapter 和基础移动动画 adapter，不再拥有独立状态切换权威。
+- `FullBodyActionInputRequestBuilder` 复用动作侧 planner，把缓冲中的 Dodge 请求映射为统一状态机 `CharacterInputRequestFact`；FullBody 控制器不内联 Dodge 方向解析或优先级规则。
+- `PlayerFullBodyActionController` 是统一状态机装配层，每帧只 tick 一次 `CharacterStateMachineRunner`，再把输出提交给运动、动画和输入缓冲 adapter。
+- Animancer TransitionLibrary alias 表负责基础移动动画资源和过渡参数。
+- `RunLocomotionAnimationConfigSO` 作为当前基础移动 Walk/Run 配置资产，按 `BasicMovementPhase + BasicMovementGait` 解析 alias、phase exit policy 和 motion profile。
+- `AnimationPhaseTimelineSampler` 把 phase config、phase time 和动画播放进度采样为 `CanExit`。
+- `LocomotionMotionProfileSO` 保存基础移动动作的烘焙累计本地 X/Z 位移曲线和 yaw 曲线。
+- `LocomotionPhaseMotionProfileBinding` 使用 `phase + gait + alias` 绑定 Profile，并通过 `motionMode` 显式控制 Profile 是否进入运行时消费。
+- `AnimationMotionProfileSampler` 把播放进度窗口采样成动画运动贡献。
+- `BasicMovementMotionFacts` 把动画运动贡献作为纯数据交给运动层。
+- `MovementCommand` 可以携带输入驱动速度和烘焙动画位移，实际移动仍由 `IBasicLocomotionMotionExecutor` 执行。
+- 默认基础移动配置已绑定 `MoveStop + Run + RunEnd -> Bake/DefaultRunEndMotionProfile`，并显式设置为 `AdditiveBakedMotion`。
+- `DefaultRunEndMotionProfile` 使用 `Corin_RunEnd_Rootmotion` 作为 source，Animancer 仍播放现有 alias 配置的视觉动画。
+- `Bake/DefaultRunMotionProfile` 这类 RunLoop 烘焙资产可以保留在配置中，但必须设置为 `Disabled`；在引入 loop/override 策略前不进入默认运行时消费。
+- `BasicLocomotionAnimancerPresenter` 根据 `MovementAnimationContext` 中的 phase 和 gait 解析 alias key。
+- `BasicLocomotionAnimancerPresenter` 负责 Animancer 播放并暴露只读播放进度，不负责业务仲裁或状态切换。
+- `BasicMovementConfigSO` 负责基础移动 Walk/Run 数值。
+- Shift 写入 `InputRequestBuffer` 后只作为 Dodge 请求事实进入统一状态机；是否消费请求由 `Locomotion/* -> Dodge` transition 和状态输出决定。
+- `Dodge` 状态包含 `Directional` 和 `Backstep` 变体，运动距离/时长、立即转向、输入请求消费、Run latch 写入和动画 key 都通过状态机中的通用动作移动定义跟随状态或变体配置。
+- `CharacterStateMachineRunner` 只解释状态输出中的通用动作移动定义，不直接读取 `DodgeActionConfig` 或 Dodge 专用距离/时长结构。
+- `ActionAnimationAnimancerPresenter` 只消费统一状态机产出的 `CharacterStateAnimationRequest`，不再通过游离 `ActionAnimationProfileSO` 入口选择 Dodge 动画。
+- 旧 `BasicLocomotionStateMachine`、`LocomotionStateGraphConfigSO`、`DodgeActionRuntime`、`DodgeFullBodyActionModule`、`FullBodyHfsmStateTreeBuilder/Driver`、`FullBodyActionSetSO` 和 `FullBodyActionAnimationSetSO` 已从运行时代码和 prefab 入口删除。
+- 动作位移通过 `ActionMovementCommand -> IActionMovementExecutor` 进入 `CharacterMotionDriver`，动画 Presenter 不写 Transform，也不调用 `CharacterController.Move`。
 
 当前缺口：
 
-- 动画播放参数还不够完整，缺少统一的 fade、speed、start time、exit duration。
-- 状态机的 `MoveStopMinTime` 还不是由 `WalkEnd / RunEnd` 动画配置驱动。
-- 还没有统一的动作状态数据、打断窗口、事件窗口、运动窗口。
-- 还没有 FullBody / UpperBody / LowerBody / Additive / Weapon 等层级抽象。
+- Walk/Run 已作为基础移动档位接入，普通移动为 Walk，Shift Directional Dodge 完成后的 Run latch 可进入 Run；Shift held 不再直接决定基础移动 Run。
+- 已有最小统一 `Dodge` 闭环，但还没有 Roll、Jump、Attack、Hit、Death 的具体状态内容。
+- 统一状态机已有最小 transition 条件和输出模型，后续还需要补齐打断窗口、事件窗口、运动窗口和编辑器校验视图。
+- 还没有 UpperBody / LowerBody / Additive / Weapon 等并行层级抽象。
 - 还没有 IK 目标、权重曲线和动画事件的统一归属。
 - 还没有面向预测回滚的纯数据状态快照。
 - 还没有动作 Timeline 编辑器。
@@ -74,37 +99,25 @@ BBB 的参考价值：
 
 本项目应吸收 BBB 的配置密度和拦截思路，但切换规则要收敛到统一的状态图、仲裁器和打断规则数据。
 
-## 第一阶段：移动动画参数可配置
+## 第一阶段：基础移动动画 phase 边界固化
 
-目标是先把当前 `Idle / MoveStart / MoveLoop / MoveStop` 的动画参数补齐，同时保持现有链路不分裂。
+目标是先固定当前 `Idle / MoveStart / MoveLoop / MoveStop` 到基础移动 phase config 的边界，同时保持现有链路不分裂。Walk/Run 是档位事实，不是逻辑 phase。
 
 ### 数据目标
 
-新增或扩展移动动画配置项：
+不新增项目侧 clip/fade/speed 二次映射资产。基础移动 phase config 只保存 alias 和逻辑退出策略：
 
 ```text
-LocomotionAnimationEntry
-  Key
-  FadeDuration
-  Speed
-  NormalizedStartTime
-  ExitDurationMode
-  ExitDurationOverride
+Idle      alias=Idle      exitPolicy=Manual
+MoveStart + Walk alias=WalkStart exitPolicy=AfterDuration
+MoveLoop  + Walk alias=WalkLoop  exitPolicy=Manual
+MoveStop  + Walk alias=WalkEnd   exitPolicy=OnAnimationEnd
+MoveStart + Run  alias=RunStart  exitPolicy=AfterDuration
+MoveLoop  + Run  alias=RunLoop   exitPolicy=Manual
+MoveStop  + Run  alias=RunEnd    exitPolicy=OnAnimationEnd
 ```
 
-`ExitDurationMode` 建议第一版支持：
-
-```text
-ClipLength
-Override
-```
-
-最终逻辑层只读取解析后的纯数据：
-
-```text
-ResolvedAnimationTiming
-  ExitDuration
-```
+实际 clip、fade、transition 参数由 Animancer TransitionLibrary 管理。
 
 ### RunEnd 路径
 
@@ -115,39 +128,59 @@ ResolvedAnimationTiming
 ```text
 MoveLoop + 没输入
   -> MoveStop
-  -> 播 RunEnd 或 WalkEnd
+  -> 播 last moving gait 对应的 WalkEnd 或 RunEnd
 
-MoveStop + 没输入 + PhaseTime >= 当前 Stop 动画 ExitDuration
+MoveStop + 没输入 + PhaseCanExit
   -> Idle
 
 MoveStop + 有输入
   -> MoveStart
-  -> 立刻播 RunStart 或 WalkStart
+  -> 立刻播当前输入档位对应的 WalkStart 或 RunStart
+```
+
+`RunEnd` 的位移补偿路径：
+
+```text
+MoveStop + RunEnd playback progress
+  -> RunLocomotionAnimationConfigSO.ResolveMotionProfile(MoveStop, Run, RunEnd)
+  -> AnimationMotionProfileSampler
+  -> BasicMovementMotionFacts
+  -> MovementCommand
+  -> IBasicLocomotionMotionExecutor
 ```
 
 关键原则：
 
-- 状态机不问 Animancer 当前动画是否播完。
-- 状态机读取动画配置解析出的 `ExitDuration`。
-- 动画层只根据 phase、gait 和 key 播动画。
+- 状态机不直接问 Animancer 当前动画是否播完，只读取 `PhaseCanExit` 纯数据事实。
+- 状态机不读取具体动画 key、clip 名或 alias 表。
+- 动画层只根据 phase + gait 解析 alias key、请求 Animancer 播放并暴露播放进度快照。
+- 动画事实层把 `Manual / AfterDuration / OnAnimationEnd` 采样成 `CanExit`。
+- 烘焙运动事实只影响本帧如何移动，不决定是否切状态。
+- `RunEnd` 自然结束切到 `Idle` 的同一帧可以消费最后一段烘焙位移。
 - 有输入打断 `MoveStop` 的优先级高于无输入回 `Idle`。
+- `MoveStop` 中途有输入切 `MoveStart` 后，旧 `RunEnd` 的剩余烘焙位移不再继续推动角色。
+- Animancer Presenter 不调用 `CharacterController.Move`，也不打开基础移动完整 `Animator.applyRootMotion`。
+- Sprint 不放入 Walk/Run gait；如果它需要资源、打断、耐力或额外输入规则，应进入后续动作/FullBody 状态设计。
 
 ### 细任务
 
-- [ ] 设计 `LocomotionAnimationEntry` 纯数据结构。
-- [ ] 扩展 `LocomotionAnimationSetSO`，让每个移动动画 key 对应一份 entry。
-- [ ] 保留旧字段迁移路径，避免现有资产立刻失效。
-- [ ] 提供 `ResolveTiming(phase, gait, lastMovingGait)`。
-- [ ] 将 `MoveStopMinTimeReached` 改为读取当前 stop 动画 exit duration。
-- [ ] 保留 `MoveStop -> MoveStart` 的高优先级立即切换。
-- [ ] 为 `WalkEnd` 和 `RunEnd` 分别写 EditMode 测试。
-- [ ] 为“中途有输入立刻切到 MoveStart”写 EditMode 测试。
-- [ ] 为缺少 Clip 且未配置 override 的情况写校验测试。
-- [ ] 给手动验证步骤：无输入急停完整回 Idle，中途输入立即起步。
+- [x] 删除 `LocomotionAnimationSetSO` 和相关二次映射模型。
+- [x] 删除默认基础移动动画集资产。
+- [x] 移除 prefab / scene 中的 `animationSet` 绑定。
+- [x] Presenter 从 Run phase config 解析标准 Animancer alias key。
+- [x] `MoveStart -> MoveLoop` 和 `MoveStop -> Idle` 读取 phase exit timing。
+- [x] `MoveStop / RunEnd` 可通过 `OnAnimationEnd` 采样 `PhaseCanExit`，不再依赖手填动画长度。
+- [x] `MoveStop / RunEnd` 可通过烘焙 Motion Profile 采样急停位移，减少胶囊停住但脚步继续刹车的滑步。
+- [x] 默认 `RunEnd` Profile 使用 Rootmotion 参考 clip 烘焙，视觉播放仍由 Animancer alias 表管理。
+- [x] 烘焙位移通过 `MovementCommand -> IBasicLocomotionMotionExecutor` 生效，不新增第二套移动路径。
+- [x] 保留 `MoveStop -> MoveStart` 的高优先级立即切换。
+- [x] 为“项目不再引用二次动画映射资产”写 EditMode 测试。
+- [ ] 手动验证：无输入急停播放 `RunEnd` alias，中途输入立即起步。
+- [ ] 手动验证：无输入急停时胶囊随 RunEnd 烘焙位移继续刹车，旧 RunEnd 位移不会在中途输入后继续生效。
 
 ## 第二阶段：动作状态配置
 
-目标是把闪避、跳跃、落地、攻击、受击、死亡等动作引入统一状态配置，而不是散落在 MonoBehaviour 或 Animancer 播放代码里。
+目标是把闪避、跳跃、落地、攻击、受击、死亡等动作引入统一状态配置，而不是散落在 MonoBehaviour 或 Animancer 播放代码里。当前 `Action.Dodge` 已先作为最小 FullBody 垂直切片落地，后续应把它沉淀进通用动作状态配置和 timeline/window 数据，而不是扩成第二套角色控制器。
 
 ### 数据目标
 
@@ -185,13 +218,18 @@ InterruptPolicy
 
 第一版不要做大而全，只做最小可测闭环：
 
-- Dodge 可打断 MoveStop。
+- Shift pressed 生成 Dodge 请求，有方向时 Directional 冲刺，无方向时 Backstep 后闪。
+- Dodge 可从 `FullBody/Locomotion/*` 进入，并通过统一状态机 transition 与请求消费输出处理输入请求。
+- Directional 完成后设置 Run latch；Backstep 完成后不强制进入 Run。
 - Death 可强制打断任何状态。
 - Attack 只能在 cancel window 后被 Dodge 打断。
 
 ### 细任务
 
-- [ ] 定义 `CharacterStateId`。
+- [x] 完成 `Action.Dodge` 最小 FullBody 垂直切片，接入输入缓冲、仲裁、tracker、动作位移和动作动画 Profile。
+- [x] 配置 `Action.Dodge.Directional` / `Action.Dodge.Backstep` 稳定动画 key，并保持动作逻辑不引用具体可琳 clip。
+- [x] Shift held 不再直接驱动基础移动 Run；Directional 完成后通过 Run latch 进入 Run。
+- [ ] 定义通用 `CharacterStateId`。
 - [ ] 定义 `CharacterStateTag`。
 - [ ] 定义 `CharacterLayerId`。
 - [ ] 定义 `CharacterActionStateDefinition`。
@@ -211,7 +249,9 @@ InterruptPolicy
 
 ```text
 FullBody
-  跳跃、闪避、翻滚、受击、死亡、全身攻击
+  Locomotion 局部子树
+  Action.Dodge
+  后续 Jump / Roll / Attack / Hit / Death 等只能作为 FullBody/Action/* 子状态扩展
 
 LowerBody
   移动循环、起步、急停、转身
@@ -462,7 +502,8 @@ Debug Marker Track
 
 以下内容进入实现前必须走 OpenSpec：
 
-- 扩展移动动画配置并改变 `MoveStop` 退出时间来源。
+- 新增 `OnMarker`、cancel window、hitbox window、IK window 或其它 Timeline Fact。
+- 新增项目侧动画事件、动作窗口或动画反馈逻辑层机制。
 - 引入动作状态配置和打断规则。
 - 引入动画 layer 配置。
 - 引入动作 timeline/window 数据。
@@ -481,16 +522,17 @@ Debug Marker Track
 ## 推荐推进顺序
 
 ```text
-1. 移动动画参数可配置
-2. RunEnd / WalkEnd exit duration 驱动 MoveStop
-3. 最小动作状态配置
-4. 最小打断规则
-5. FullBody / UpperBody / LowerBody 层配置
-6. 动作 timeline window
-7. IK 命令数据
-8. 可同步动画状态快照
-9. 轻量编辑器
-10. Timeline 编辑器
+1. 基础移动动画 alias 边界固化
+2. 最小 AnimationPhaseTimelineFact：CanExit
+3. 最小基础移动 Motion Profile Facts：RunEnd 急停位移
+4. 最小动作状态配置
+5. 最小打断规则
+6. FullBody / UpperBody / LowerBody 层配置
+7. 动作 timeline window
+8. IK 命令数据
+9. 可同步动画状态快照
+10. 轻量编辑器
+11. Timeline 编辑器
 ```
 
-最重要的第一步是小：先让现有移动链路的数据更完整，证明逻辑层可以只读动画配置结果，而不是读取 Animancer 运行时状态。
+最重要的第一步是小：先确认现有移动链路只消费逻辑事实、Timeline Fact 和 Motion Fact，动画资源只由 Animancer alias 表管理，避免出现第二张动画映射表。

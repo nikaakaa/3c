@@ -27,6 +27,7 @@ namespace ThirdPersonSimulation
         public int MaxTicksPerStep { get; }
         public SimulationTick NextTick => nextTick;
         public double AccumulatedSeconds => accumulatedSeconds;
+        public double InterpolationAlpha => CalculateInterpolationAlpha();
 
         public int Accumulate(double deltaSeconds, IList<SimulationTickContext> output, SimulationTickRole role)
         {
@@ -58,6 +59,20 @@ namespace ThirdPersonSimulation
         {
             nextTick = startTick;
             accumulatedSeconds = 0d;
+        }
+
+        double CalculateInterpolationAlpha()
+        {
+            double fixedDelta = TickRate.FixedDeltaSeconds;
+            if (fixedDelta <= 0d)
+                return 0d;
+
+            double alpha = accumulatedSeconds / fixedDelta;
+            if (alpha <= 0d)
+                return 0d;
+            if (alpha >= 1d)
+                return 1d;
+            return alpha;
         }
     }
 }

@@ -1,0 +1,9 @@
+Haste retarget preview report
+2026-06-10 11:30:07
+Target: 可琳
+Target Asset: Assets/Prefabs/Character/可琳.prefab
+Avatar: 可琳（基本动作）Avatar
+Clip: Humanoid_New_Courier_Dash_Loop
+Clip Asset: Assets/Art/Animation/Haste/HasteMainCharacter/HUMANOID/HumanoidClips/Humanoid_New_Courier_Dash_Loop.anim
+Controller: Assets/Art/Animation/Haste/HasteMainCharacter/HUMANOID/RetargetPreviews/可琳/Preview_可琳_Humanoid_New_Courier_Dash_Loop.controller
+Preview Prefab: Assets/Art/Animation/Haste/HasteMainCharacter/HUMANOID/RetargetPreviews/可琳/Preview_可琳_Humanoid_New_Courier_Dash_Loop.prefab

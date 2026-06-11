@@ -11,8 +11,20 @@ namespace ThirdPersonAnimation
             float inputStrength,
             Vector3 worldDirection,
             float planarSpeed)
+            : this(phase, BasicMovementGait.Walk, hasMoveIntent, inputStrength, worldDirection, planarSpeed)
+        {
+        }
+
+        public MovementAnimationContext(
+            BasicMovementPhase phase,
+            BasicMovementGait gait,
+            bool hasMoveIntent,
+            float inputStrength,
+            Vector3 worldDirection,
+            float planarSpeed)
         {
             Phase = phase;
+            Gait = gait;
             HasMoveIntent = hasMoveIntent;
             InputStrength = Mathf.Clamp01(inputStrength);
             WorldDirection = worldDirection.sqrMagnitude > 0.000001f ? worldDirection.normalized : Vector3.zero;
@@ -20,6 +32,7 @@ namespace ThirdPersonAnimation
         }
 
         public BasicMovementPhase Phase { get; }
+        public BasicMovementGait Gait { get; }
         public bool HasMoveIntent { get; }
         public float InputStrength { get; }
         public Vector3 WorldDirection { get; }

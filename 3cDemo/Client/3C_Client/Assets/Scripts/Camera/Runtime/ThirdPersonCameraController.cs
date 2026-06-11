@@ -5,6 +5,7 @@ using UnityEngine.Serialization;
 
 namespace ThirdPersonCamera
 {
+    [DefaultExecutionOrder(-50)]
     public sealed class ThirdPersonCameraController : MonoBehaviour, ICameraMovementBasisProvider, ICameraPitchProvider, ICameraInfluenceSink
     {
         [SerializeField] CinemachineFreeLook freeLook;
@@ -34,8 +35,8 @@ namespace ThirdPersonCamera
 
         public CinemachineFreeLook FreeLook { get => freeLook; set => freeLook = value; }
         public Transform FollowAnchorSource { get => followAnchorSource; set => followAnchorSource = value; }
-        public Transform CameraFollowTarget { get => cameraFollowTarget; set => cameraFollowTarget = value; }
-        public Transform CameraAimTarget { get => cameraAimTarget; set => cameraAimTarget = value; }
+        public Transform CameraFollowTarget { get => cameraFollowTarget; set { cameraFollowTarget = value; targetAdapter = null; } }
+        public Transform CameraAimTarget { get => cameraAimTarget; set { cameraAimTarget = value; targetAdapter = null; } }
         public bool BindFreeLookToResolvedTargets { get => bindFreeLookToResolvedTargets; set => bindFreeLookToResolvedTargets = value; }
         public InputActionReference LookAction { get => lookAction; set => lookAction = value; }
         public Vector2 Sensitivity { get => sensitivity; set => sensitivity = value; }
@@ -86,7 +87,16 @@ namespace ThirdPersonCamera
                 legacyInfluenceHandle = null;
             }
         }
-        void LateUpdate() { if (autoTick) Tick(ManualLookSource.Read(lookAction)); }
+        void LateUpdate()
+        {
+            if (autoTick)
+            {
+                Tick(ManualLookSource.Read(lookAction));
+                return;
+            }
+
+            Resolve();
+        }
 
         public void Tick(CameraLookIntent intent)
         {

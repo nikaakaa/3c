@@ -3,7 +3,7 @@ using UnityEngine;
 namespace ThirdPersonMovement
 {
     [RequireComponent(typeof(CharacterController))]
-    public sealed class CharacterMotionDriver : MonoBehaviour, IBasicLocomotionMotionExecutor
+    public sealed class CharacterMotionDriver : MonoBehaviour, IBasicLocomotionMotionExecutor, IActionMovementExecutor
     {
         [SerializeField] Transform rotationRoot;
         [SerializeField] bool applyGravity = true;
@@ -25,6 +25,12 @@ namespace ThirdPersonMovement
         {
             EnsureReady();
             executor.ExecuteBasicMovement(in command);
+        }
+
+        public void ExecuteActionMovement(in ActionMovementCommand command)
+        {
+            EnsureReady();
+            executor.ExecuteActionMovement(in command);
         }
 
         void OnValidate()

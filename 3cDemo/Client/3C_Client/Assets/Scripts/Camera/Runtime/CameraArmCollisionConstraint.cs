@@ -1,4 +1,5 @@
 using Cinemachine;
+using ThirdPersonPresentation;
 using UnityEngine;
 
 namespace ThirdPersonCamera
@@ -220,7 +221,17 @@ namespace ThirdPersonCamera
         Transform ResolveIgnoredRoot()
         {
             ThirdPersonCameraController controller = GetComponentInParent<ThirdPersonCameraController>(true);
-            return controller != null ? controller.FollowAnchorSource : null;
+            if (controller == null)
+                return null;
+
+            Transform followAnchorSource = controller.FollowAnchorSource;
+            if (followAnchorSource == null)
+                return null;
+
+            PresentationTransformInterpolator interpolator = followAnchorSource.GetComponentInParent<PresentationTransformInterpolator>();
+            return interpolator != null && interpolator.Source != null
+                ? interpolator.Source
+                : followAnchorSource;
         }
 
         Transform ResolveDefaultAnchor()

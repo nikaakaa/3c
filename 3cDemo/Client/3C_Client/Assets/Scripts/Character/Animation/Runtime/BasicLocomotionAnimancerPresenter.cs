@@ -1,5 +1,6 @@
 using Animancer;
 using Animancer.TransitionLibraries;
+using ThirdPersonDiagnostics;
 using ThirdPersonMovement;
 using UnityEngine;
 
@@ -7,7 +8,7 @@ namespace ThirdPersonAnimation
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AnimancerComponent))]
-    public sealed class BasicLocomotionAnimancerPresenter : MonoBehaviour
+    public sealed class BasicLocomotionAnimancerPresenter : MonoBehaviour, IAnimationPhasePlaybackProgressSource
     {
         const string IdleKey = "Idle";
         const string WalkStartKey = "WalkStart";
@@ -18,19 +19,19 @@ namespace ThirdPersonAnimation
         const string RunEndKey = "RunEnd";
 
         [SerializeField] AnimancerComponent animancer;
-        [SerializeField] LocomotionAnimationSetSO animationSet;
-        [SerializeField, Range(0f, 1f)] float runInputThreshold = 0.65f;
+        [SerializeField] RunLocomotionAnimationConfigSO runAnimationConfig;
         [SerializeField] bool disableAnimatorRootMotion = true;
 
         BasicMovementPhase currentPhase = (BasicMovementPhase)(-1);
+        BasicMovementGait currentGait = BasicMovementGait.Walk;
         StringReference currentKey;
-        LocomotionAnimationGait lastMovingGait = LocomotionAnimationGait.Run;
+        string currentAliasKey = string.Empty;
         AnimancerState currentState;
         StringReference lastInvalidKey;
-        bool missingSetWarningLogged;
 
         public BasicMovementPhase CurrentPhase => currentPhase;
-        public float RunInputThreshold => runInputThreshold;
+        public BasicMovementGait CurrentGait => currentGait;
+        public AnimationPhasePlaybackProgress CurrentPlaybackProgress => BuildPlaybackProgress();
         public string CurrentAnimationName
         {
             get
@@ -47,7 +48,7 @@ namespace ThirdPersonAnimation
         }
 
         public float CurrentSpeed { get; private set; }
-        public LocomotionAnimationSetSO AnimationSet { get => animationSet; set => animationSet = value; }
+        public RunLocomotionAnimationConfigSO RunAnimationConfig { get => runAnimationConfig; set => runAnimationConfig = value; }
 
         void Reset()
         {
@@ -72,36 +73,49 @@ namespace ThirdPersonAnimation
             ApplyRootMotionPolicy();
 
             if (animancer == null)
+            {
+                LogPlayback("locomotion-animation-missing-animancer", RuntimeDiagnosticLogLevel.Warning, in context, string.Empty, null);
+                return;
+            }
+
+            string aliasKey = ResolveAliasKey(context.Phase, context.Gait);
+            StringReference nextKey = StringReference.Get(aliasKey);
+            LogPresentProbe(in context, aliasKey, nextKey);
+            if (currentPhase == context.Phase && currentGait == context.Gait && currentKey == nextKey && currentState != null && currentState.IsCurrent)
                 return;
 
-            LocomotionAnimationEntry entry = GetAnimationEntry(in context);
-            StringReference nextKey = entry.KeyReference;
-            if (currentPhase == context.Phase && currentKey == nextKey)
+            if (!CanPlay(nextKey, in context))
                 return;
 
-            if (!CanPlay(nextKey))
-                return;
-
-            AnimancerState nextState = entry.FadeDuration >= 0f
-                ? animancer.TryPlay(nextKey, entry.FadeDuration)
-                : animancer.TryPlay(nextKey);
+            AnimancerState nextState = animancer.TryPlay(nextKey);
             if (nextState == null)
+            {
+                LogPlayback("locomotion-animation-play-failed", RuntimeDiagnosticLogLevel.Warning, in context, aliasKey, null);
                 return;
-
-            nextState.Speed = entry.Speed;
-            if (entry.NormalizedStartTime >= 0f)
-                nextState.NormalizedTime = entry.NormalizedStartTime;
+            }
 
             currentPhase = context.Phase;
+            currentGait = context.Gait;
             currentKey = nextKey;
+            currentAliasKey = aliasKey;
             currentState = nextState;
+            LogPlayback("locomotion-animation-played", RuntimeDiagnosticLogLevel.Info, in context, aliasKey, nextState);
         }
 
-        bool CanPlay(StringReference key)
+        bool CanPlay(StringReference key, in MovementAnimationContext context)
         {
             TransitionLibrary library = animancer.Graph.Transitions;
-            if (library == null || !library.TryGetTransition(key, out TransitionModifierGroup group))
+            if (library == null)
+            {
+                LogPlayback("locomotion-animation-missing-library", RuntimeDiagnosticLogLevel.Warning, in context, key);
                 return false;
+            }
+
+            if (!library.TryGetTransition(key, out TransitionModifierGroup group))
+            {
+                LogPlayback("locomotion-animation-missing-transition", RuntimeDiagnosticLogLevel.Warning, in context, key);
+                return false;
+            }
 
             if (group.Transition.IsValid())
                 return true;
@@ -109,6 +123,7 @@ namespace ThirdPersonAnimation
             if (lastInvalidKey != key)
             {
                 lastInvalidKey = key;
+                LogPlayback("locomotion-animation-invalid-transition", RuntimeDiagnosticLogLevel.Warning, in context, key);
                 Debug.LogError($"[BasicLocomotionAnimancerPresenter] Invalid Animancer transition for key '{key}'. {DescribeTransition(group.Transition)}", this);
             }
 
@@ -137,42 +152,107 @@ namespace ThirdPersonAnimation
             return transition?.ToString() ?? "null";
         }
 
-        LocomotionAnimationEntry GetAnimationEntry(in MovementAnimationContext context)
+        string ResolveAliasKey(BasicMovementPhase phase, BasicMovementGait gait)
         {
-            LocomotionAnimationGait gait = ResolveGait(in context);
-            if (context.HasMoveIntent)
-                lastMovingGait = gait;
+            if (runAnimationConfig != null)
+                return runAnimationConfig.ResolveAliasKey(phase, gait);
 
-            if (animationSet != null)
-                return animationSet.ResolveEntry(context.Phase, gait, lastMovingGait);
-
-            if (!missingSetWarningLogged)
+            if (gait == BasicMovementGait.Walk)
             {
-                missingSetWarningLogged = true;
-                Debug.LogWarning("[BasicLocomotionAnimancerPresenter] Animation set is missing. Using generated default locomotion animation keys.", this);
+                return phase switch
+                {
+                    BasicMovementPhase.MoveStart => WalkStartKey,
+                    BasicMovementPhase.MoveLoop => WalkLoopKey,
+                    BasicMovementPhase.MoveStop => WalkEndKey,
+                    _ => IdleKey
+                };
             }
 
-            return context.Phase switch
+            return phase switch
             {
-                BasicMovementPhase.MoveStart => gait == LocomotionAnimationGait.Run ? new LocomotionAnimationEntry(RunStartKey) : new LocomotionAnimationEntry(WalkStartKey),
-                BasicMovementPhase.MoveLoop => gait == LocomotionAnimationGait.Run ? new LocomotionAnimationEntry(RunLoopKey) : new LocomotionAnimationEntry(WalkLoopKey),
-                BasicMovementPhase.MoveStop => lastMovingGait == LocomotionAnimationGait.Run ? new LocomotionAnimationEntry(RunEndKey) : new LocomotionAnimationEntry(WalkEndKey),
-                _ => new LocomotionAnimationEntry(IdleKey)
+                BasicMovementPhase.MoveStart => RunStartKey,
+                BasicMovementPhase.MoveLoop => RunLoopKey,
+                BasicMovementPhase.MoveStop => RunEndKey,
+                _ => IdleKey
             };
         }
 
-        LocomotionAnimationGait ResolveGait(in MovementAnimationContext context)
+        void LogPresentProbe(in MovementAnimationContext context, string aliasKey, StringReference nextKey)
         {
-            if (!context.HasMoveIntent)
-                return lastMovingGait;
+            bool relevant = context.Phase == BasicMovementPhase.MoveStop ||
+                            context.Gait == BasicMovementGait.Run ||
+                            string.Equals(aliasKey, RunEndKey, System.StringComparison.Ordinal);
+            if (!relevant)
+                return;
 
-            return context.InputStrength >= runInputThreshold ? LocomotionAnimationGait.Run : LocomotionAnimationGait.Walk;
+            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                RuntimeDiagnosticLogCategory.Animation,
+                RuntimeDiagnosticLogLevel.Trace,
+                "locomotion-animation-present-probe",
+                aliasKey,
+                currentAliasKey,
+                0,
+                Time.frameCount,
+                $"phase={context.Phase} gait={context.Gait} alias={aliasKey} currentPhase={currentPhase} currentGait={currentGait} currentAlias={currentAliasKey} sameKey={(currentKey == nextKey)} currentStateCurrent={(currentState != null && currentState.IsCurrent)} currentAnimation={CurrentAnimationName} planarSpeed={context.PlanarSpeed:F3}"));
         }
 
         void ApplyRootMotionPolicy()
         {
             if (disableAnimatorRootMotion && animancer != null && animancer.Animator != null)
                 animancer.Animator.applyRootMotion = false;
+        }
+
+        void LogPlayback(
+            string message,
+            RuntimeDiagnosticLogLevel level,
+            in MovementAnimationContext context,
+            string aliasKey,
+            AnimancerState state)
+        {
+            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                RuntimeDiagnosticLogCategory.Animation,
+                level,
+                message,
+                aliasKey,
+                currentAliasKey,
+                0,
+                Time.frameCount,
+                $"phase={context.Phase} gait={context.Gait} hasMove={context.HasMoveIntent} strength={context.InputStrength:F3} speed={context.PlanarSpeed:F3} direction={context.WorldDirection.ToString("F3")} alias={aliasKey} previousAlias={currentAliasKey} currentAnimation={CurrentAnimationName} nextAnimation={AnimationName(state)} normalized={(state != null ? state.NormalizedTime : 0f):F3} rootMotionDisabled={disableAnimatorRootMotion}"));
+        }
+
+        void LogPlayback(
+            string message,
+            RuntimeDiagnosticLogLevel level,
+            in MovementAnimationContext context,
+            StringReference aliasKey)
+        {
+            LogPlayback(message, level, in context, aliasKey.ToString(), null);
+        }
+
+        static string AnimationName(AnimancerState state)
+        {
+            if (state == null)
+                return string.Empty;
+
+            Object mainObject = state.MainObject;
+            if (mainObject != null)
+                return mainObject.name;
+
+            return state.Clip != null ? state.Clip.name : string.Empty;
+        }
+
+        AnimationPhasePlaybackProgress BuildPlaybackProgress()
+        {
+            if (currentState == null)
+                return AnimationPhasePlaybackProgress.Invalid(currentPhase);
+
+            float normalizedTime = currentState.NormalizedTime;
+            return new AnimationPhasePlaybackProgress(
+                currentPhase,
+                currentAliasKey,
+                normalizedTime,
+                true,
+                normalizedTime >= currentState.NormalizedEndTime);
         }
     }
 }

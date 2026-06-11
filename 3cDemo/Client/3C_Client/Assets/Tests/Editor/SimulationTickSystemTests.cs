@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using ThirdPersonInput;
 using ThirdPersonSimulation;
+using UnityEngine;
 
 namespace ThirdPersonSimulation.Tests
 {
@@ -95,6 +96,17 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
+        public void AccumulatorReportsInterpolationAlphaForPartialTick()
+        {
+            SimulationTickAccumulator accumulator = new SimulationTickAccumulator(new SimulationTickRate(60), 4);
+            List<SimulationTickContext> ticks = new List<SimulationTickContext>();
+
+            accumulator.Accumulate(1d / 120d, ticks, SimulationTickRole.Client);
+
+            Assert.AreEqual(0.5d, accumulator.InterpolationAlpha, 0.0000001d);
+        }
+
+        [Test]
         public void AccumulatorEmitsOneTickAtFixedDelta()
         {
             SimulationTickAccumulator accumulator = new SimulationTickAccumulator(new SimulationTickRate(60), 4);
@@ -123,6 +135,18 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
+        public void AccumulatorReportsInterpolationAlphaFromRemainderAfterTick()
+        {
+            SimulationTickAccumulator accumulator = new SimulationTickAccumulator(new SimulationTickRate(60), 4);
+            List<SimulationTickContext> ticks = new List<SimulationTickContext>();
+
+            accumulator.Accumulate(1.5d / 60d, ticks, SimulationTickRole.Client);
+
+            Assert.AreEqual(1, ticks.Count);
+            Assert.AreEqual(0.5d, accumulator.InterpolationAlpha, 0.0000001d);
+        }
+
+        [Test]
         public void AccumulatorCapsCatchUpTicksAndKeepsRemainder()
         {
             SimulationTickAccumulator accumulator = new SimulationTickAccumulator(new SimulationTickRate(60), 2);
@@ -143,12 +167,42 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
+        public void AccumulatorClampsInterpolationAlphaAfterCatchUpCap()
+        {
+            SimulationTickAccumulator accumulator = new SimulationTickAccumulator(new SimulationTickRate(60), 2);
+            List<SimulationTickContext> ticks = new List<SimulationTickContext>();
+
+            accumulator.Accumulate(5d / 60d, ticks, SimulationTickRole.Client);
+
+            Assert.AreEqual(1d, accumulator.InterpolationAlpha, 0.0000001d);
+        }
+
+        [Test]
         public void AccumulatorRejectsNegativeDelta()
         {
             SimulationTickAccumulator accumulator = new SimulationTickAccumulator(new SimulationTickRate(60), 4);
 
             Assert.Throws<ArgumentOutOfRangeException>(() =>
                 accumulator.Accumulate(-0.01d, new List<SimulationTickContext>(), SimulationTickRole.Client));
+        }
+
+        [Test]
+        public void UnitySimulationTickDriverReportsInterpolationAlpha()
+        {
+            GameObject gameObject = new GameObject("Tick Driver");
+            try
+            {
+                UnitySimulationTickDriver driver = gameObject.AddComponent<UnitySimulationTickDriver>();
+
+                driver.ResetDriver(SimulationTick.Zero);
+                driver.Advance(1f / 120f);
+
+                Assert.AreEqual(0.5f, driver.InterpolationAlpha, 0.0001f);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(gameObject);
+            }
         }
 
         [Test]

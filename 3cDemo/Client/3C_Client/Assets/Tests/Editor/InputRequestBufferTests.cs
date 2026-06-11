@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using NUnit.Framework;
+using ThirdPersonDiagnostics;
 using ThirdPersonInput;
 
 namespace ThirdPersonInput.Tests
@@ -6,6 +8,12 @@ namespace ThirdPersonInput.Tests
     public sealed class InputRequestBufferTests
     {
         static readonly InputBufferSettings Settings = new InputBufferSettings(6, 3, 4, 2);
+
+        [TearDown]
+        public void TearDown()
+        {
+            RuntimeDiagnosticLog.Reset();
+        }
 
         [Test]
         public void ButtonStatePressedWhenHeldStarts()
@@ -73,6 +81,30 @@ namespace ThirdPersonInput.Tests
             Assert.True(buffer.TryPeek(InputRequestKind.Dodge, 4, out BufferedInputRequest dodge));
             Assert.AreEqual(10, attack.ExpireStep);
             Assert.AreEqual(7, dodge.ExpireStep);
+        }
+
+        [Test]
+        public void DodgePressedCreatesDodgeRequest()
+        {
+            InputRequestBuffer buffer = new InputRequestBuffer();
+
+            buffer.AddFromButtonState(InputButtonKind.Dodge, InputButtonState.FromHeld(false, true), 3, Settings);
+
+            Assert.True(buffer.TryPeek(InputRequestKind.Dodge, 3, out BufferedInputRequest request));
+            Assert.AreEqual(InputButtonKind.Dodge, request.SourceButton);
+            Assert.AreEqual(3, request.OriginStep);
+        }
+
+        [Test]
+        public void DodgeHeldDoesNotRepeatRequest()
+        {
+            InputRequestBuffer buffer = new InputRequestBuffer();
+
+            buffer.AddFromButtonState(InputButtonKind.Dodge, InputButtonState.FromHeld(false, true), 3, Settings);
+            buffer.AddFromButtonState(InputButtonKind.Dodge, InputButtonState.FromHeld(true, true), 4, Settings);
+
+            Assert.AreEqual(1, buffer.Count);
+            Assert.True(buffer.TryPeek(InputRequestKind.Dodge, 4, out _));
         }
 
         [Test]
@@ -168,6 +200,32 @@ namespace ThirdPersonInput.Tests
             Assert.AreEqual(InputRequestKind.Interact, request.Kind);
         }
 
+        [Test]
+        public void RequestLifecycleWritesDiagnosticLogs()
+        {
+            InputRequestBuffer buffer = new InputRequestBuffer();
+            List<RuntimeDiagnosticLogEvent> events = new List<RuntimeDiagnosticLogEvent>();
+
+            using (RuntimeDiagnosticLog.Capture(events.Add))
+            {
+                buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 2, 3);
+                buffer.TryConsume(InputRequestKind.Dodge, 2, out _);
+                buffer.AddRequest(InputRequestKind.Attack, InputButtonKind.Attack, 4, 0);
+                buffer.RemoveExpired(5);
+            }
+
+            RuntimeDiagnosticLogEvent added = FindEvent(events, "input-request-added", "kind=Dodge");
+            RuntimeDiagnosticLogEvent consumed = FindEvent(events, "input-request-consumed", "kind=Dodge");
+            RuntimeDiagnosticLogEvent expired = FindEvent(events, "input-request-expired", "kind=Attack");
+
+            Assert.AreEqual(RuntimeDiagnosticLogCategory.Input, added.Category);
+            Assert.AreEqual(2, added.Step);
+            StringAssert.Contains("origin=2", added.Context);
+            StringAssert.Contains("expire=5", added.Context);
+            StringAssert.Contains("button=Dodge", consumed.Context);
+            StringAssert.Contains("consumed=False", expired.Context);
+        }
+
         static InputRequestBuffer BuildAttackBufferFromHeldSequence(params bool[] heldSequence)
         {
             InputRequestBuffer buffer = new InputRequestBuffer();
@@ -181,6 +239,18 @@ namespace ThirdPersonInput.Tests
             }
 
             return buffer;
+        }
+
+        static RuntimeDiagnosticLogEvent FindEvent(List<RuntimeDiagnosticLogEvent> events, string message, string contextNeedle)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i].Message == message && events[i].Context.Contains(contextNeedle))
+                    return events[i];
+            }
+
+            Assert.Fail($"Missing diagnostic event {message} with {contextNeedle}");
+            return default;
         }
     }
 }

@@ -1,8 +1,4 @@
 namespace ThirdPersonAnimation
 {
-    public enum LocomotionAnimationGait
-    {
-        Walk,
-        Run
-    }
+    using BasicMovementGait = ThirdPersonMovement.BasicMovementGait;
 }

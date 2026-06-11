@@ -80,5 +80,3 @@ node_modules/
 .env
 .env.*
 !.env.example
-3c
-3c

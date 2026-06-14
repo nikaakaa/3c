@@ -10,6 +10,8 @@ namespace ThirdPersonRendering
         static readonly int GlitchParamsId = Shader.PropertyToID("_GlitchParams");
         static readonly int GlitchSecondaryParamsId = Shader.PropertyToID("_GlitchSecondaryParams");
         static readonly int GlitchMaskParamsId = Shader.PropertyToID("_GlitchMaskParams");
+        static readonly int GlitchSlashParamsId = Shader.PropertyToID("_GlitchSlashParams");
+        static readonly int GlitchModeParamsId = Shader.PropertyToID("_GlitchModeParams");
         static readonly int GlitchMaskTextureId = Shader.PropertyToID("_GlitchMaskTexture");
         static readonly int GlitchTimeId = Shader.PropertyToID("_GlitchTime");
 
@@ -57,6 +59,8 @@ namespace ThirdPersonRendering
                 material.SetVector(GlitchParamsId, settings.PrimaryParams);
                 material.SetVector(GlitchSecondaryParamsId, settings.SecondaryParams);
                 material.SetVector(GlitchMaskParamsId, settings.MaskParams);
+                material.SetVector(GlitchSlashParamsId, settings.SlashParams);
+                material.SetVector(GlitchModeParamsId, settings.ModeParams);
                 material.SetTexture(GlitchMaskTextureId, settings.UseTargetMask ? maskTexture : Texture2D.whiteTexture);
                 material.SetFloat(GlitchTimeId, Time.time);
 

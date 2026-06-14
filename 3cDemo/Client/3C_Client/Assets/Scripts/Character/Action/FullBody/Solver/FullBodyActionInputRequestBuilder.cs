@@ -1,4 +1,3 @@
-using ThirdPersonCamera;
 using ThirdPersonDiagnostics;
 using ThirdPersonCharacterStateMachine;
 using ThirdPersonInput;
@@ -9,19 +8,19 @@ namespace ThirdPersonAction
 {
     public static class FullBodyActionInputRequestBuilder
     {
-        public static CharacterInputRequestFact BuildDodgeRequestFact(
+        public static bool TryBuildDodgeRequest(
             InputRequestBuffer inputBuffer,
             int currentStep,
             in BasicLocomotionInputSnapshot input,
-            in BasicMovementSettings settings,
             bool runLatchActive,
-            ICameraMovementBasisProvider cameraBasisProvider,
-            IFacingDirectionProvider facingProvider,
-            in DodgeActionConfig config)
+            in LocomotionDecisionFacts locomotionFacts,
+            in DodgeActionConfig config,
+            out DodgeActionRequest request)
         {
-            bool wantsRun = input.RunHeld || runLatchActive;
-            MovementInputIntent intent = MovementInputIntent.FromRaw(input.Move, settings.InputDeadZone, wantsRun);
-            Vector3 worldMoveDirection = CameraRelativeMovementResolver.Resolve(intent, cameraBasisProvider);
+            MovementInputIntent intent = locomotionFacts.MoveIntent;
+            LocomotionSpatialFacts spatialFacts = locomotionFacts.SpatialFacts;
+            Vector3 worldMoveDirection = spatialFacts.WorldMoveDirection;
+            Vector3 facingForward = spatialFacts.FacingForward;
             BufferedInputRequest bufferedRequest = default;
             bool hasBufferedDodge = inputBuffer != null &&
                                     inputBuffer.TryPeek(InputRequestKind.Dodge, currentStep, out bufferedRequest);
@@ -31,20 +30,20 @@ namespace ThirdPersonAction
                     currentStep,
                     in intent,
                     worldMoveDirection,
-                    facingProvider,
+                    facingForward,
                     in config,
-                    out DodgeActionRequest request))
+                    out request))
             {
                 if (hasBufferedDodge)
-                    LogDodgeRequestFactProbe(currentStep, in input, in intent, runLatchActive, wantsRun, worldMoveDirection, in bufferedRequest, false, default);
+                    LogDodgeRequestFactProbe(currentStep, in input, in intent, runLatchActive, worldMoveDirection, in bufferedRequest, false, default);
 
-                return CharacterInputRequestFact.None(InputRequestKind.Dodge);
+                return false;
             }
 
             if (hasBufferedDodge)
-                LogDodgeRequestFactProbe(currentStep, in input, in intent, runLatchActive, wantsRun, worldMoveDirection, in bufferedRequest, true, in request);
+                LogDodgeRequestFactProbe(currentStep, in input, in intent, runLatchActive, worldMoveDirection, in bufferedRequest, true, in request);
 
-            return ToInputRequestFact(in request);
+            return true;
         }
 
         public static CharacterInputRequestFact ToInputRequestFact(in DodgeActionRequest request)
@@ -64,7 +63,6 @@ namespace ThirdPersonAction
             in BasicLocomotionInputSnapshot input,
             in MovementInputIntent intent,
             bool runLatchActive,
-            bool wantsRun,
             Vector3 worldMoveDirection,
             in BufferedInputRequest bufferedRequest,
             bool resolved,
@@ -78,7 +76,7 @@ namespace ThirdPersonAction
                 string.Empty,
                 currentStep,
                 Time.frameCount,
-                $"origin={bufferedRequest.OriginStep} expire={bufferedRequest.ExpireStep} consumed={bufferedRequest.Consumed} rawMove={input.Move.ToString("F3")} intentMove={intent.NormalizedInput.ToString("F3")} strength={intent.Strength:F3} hasMove={intent.HasMoveIntent} inputRunHeld={input.RunHeld} wantsRun={wantsRun} runLatch={runLatchActive} worldMove={worldMoveDirection.ToString("F3")} resolved={resolved} variant={(resolved ? request.Variant.ToString() : string.Empty)} requestWorld={(resolved ? request.WorldDirection.ToString("F3") : Vector3.zero.ToString("F3"))}"));
+                $"origin={bufferedRequest.OriginStep} expire={bufferedRequest.ExpireStep} consumed={bufferedRequest.Consumed} rawMove={input.Move.ToString("F3")} intentMove={intent.NormalizedInput.ToString("F3")} strength={intent.Strength:F3} hasMove={intent.HasMoveIntent} inputRunHeld={input.RunHeld} runLatch={runLatchActive} worldMove={worldMoveDirection.ToString("F3")} resolved={resolved} variant={(resolved ? request.Variant.ToString() : string.Empty)} requestWorld={(resolved ? request.WorldDirection.ToString("F3") : Vector3.zero.ToString("F3"))}"));
         }
     }
 }

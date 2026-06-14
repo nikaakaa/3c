@@ -5,6 +5,7 @@ namespace ThirdPersonInput
         Attack,
         Dodge,
         Jump,
-        Interact
+        Interact,
+        TurnBack
     }
 }

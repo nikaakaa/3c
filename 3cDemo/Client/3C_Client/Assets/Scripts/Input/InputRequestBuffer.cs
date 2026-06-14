@@ -5,6 +5,42 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonInput
 {
+    public readonly struct BufferedInputRequestRestoreState
+    {
+        public BufferedInputRequestRestoreState(
+            InputRequestKind kind,
+            InputButtonKind sourceButton,
+            int originStep,
+            int expireStep,
+            bool consumed)
+        {
+            Kind = kind;
+            SourceButton = sourceButton;
+            OriginStep = originStep < 0 ? 0 : originStep;
+            ExpireStep = expireStep < OriginStep ? OriginStep : expireStep;
+            Consumed = consumed;
+        }
+
+        public InputRequestKind Kind { get; }
+        public InputButtonKind SourceButton { get; }
+        public int OriginStep { get; }
+        public int ExpireStep { get; }
+        public bool Consumed { get; }
+    }
+
+    public readonly struct InputRequestBufferRestoreState
+    {
+        public InputRequestBufferRestoreState(BufferedInputRequestRestoreState[] requests)
+        {
+            Requests = requests ?? Array.Empty<BufferedInputRequestRestoreState>();
+        }
+
+        public IReadOnlyList<BufferedInputRequestRestoreState> Requests { get; }
+
+        public static InputRequestBufferRestoreState Empty =>
+            new InputRequestBufferRestoreState(Array.Empty<BufferedInputRequestRestoreState>());
+    }
+
     public sealed class InputRequestBuffer
     {
         readonly List<BufferedInputRequest> requests = new List<BufferedInputRequest>();
@@ -41,6 +77,41 @@ namespace ThirdPersonInput
                 0,
                 $"kind={kind} button={sourceButton} origin={request.OriginStep} expire={request.ExpireStep} window={safeWindow} count={requests.Count}"));
             return request;
+        }
+
+        public InputRequestBufferRestoreState CaptureRestoreState()
+        {
+            BufferedInputRequestRestoreState[] snapshot = new BufferedInputRequestRestoreState[requests.Count];
+            for (int i = 0; i < requests.Count; i++)
+            {
+                BufferedInputRequest request = requests[i];
+                snapshot[i] = new BufferedInputRequestRestoreState(
+                    request.Kind,
+                    request.SourceButton,
+                    request.OriginStep,
+                    request.ExpireStep,
+                    request.Consumed);
+            }
+
+            return new InputRequestBufferRestoreState(snapshot);
+        }
+
+        public void Restore(in InputRequestBufferRestoreState restoreState)
+        {
+            requests.Clear();
+            IReadOnlyList<BufferedInputRequestRestoreState> source = restoreState.Requests;
+            for (int i = 0; i < source.Count; i++)
+            {
+                BufferedInputRequestRestoreState item = source[i];
+                BufferedInputRequest request = new BufferedInputRequest(
+                    item.Kind,
+                    item.SourceButton,
+                    item.OriginStep,
+                    item.ExpireStep);
+                if (item.Consumed)
+                    request.MarkConsumed();
+                requests.Add(request);
+            }
         }
 
         public bool TryPeek(InputRequestKind kind, int currentStep, out BufferedInputRequest request)

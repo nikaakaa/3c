@@ -1,7 +1,7 @@
 # camera-arm-collision-constraint Specification
 
 ## Purpose
-TBD - created by archiving change add-camera-arm-collision-constraint. Update Purpose after archive.
+定义第三人称相机臂碰撞约束、缩臂恢复、遮挡处理和与表现插值的职责边界，确保相机避免穿墙且不新增第二套相机控制路径。
 ## Requirements
 ### Requirement: 单一相机臂碰撞入口
 系统 MUST 为第三人称相机提供唯一的正式缩臂碰撞入口，并 MUST 避免 `CinemachineCollider`、`3rd Person Follow` 内置碰撞和自定义约束同时修正相机位置。

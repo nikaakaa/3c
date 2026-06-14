@@ -88,24 +88,27 @@ MonoBehaviour:
   m_Name: Glitch
   m_EditorClassIdentifier: 
   active: 0
+  mode:
+    m_OverrideState: 1
+    m_Value: 1
   intensity:
     m_OverrideState: 1
     m_Value: 1
   blockSize:
     m_OverrideState: 1
-    m_Value: 78.6
+    m_Value: 160
   horizontalJitter:
     m_OverrideState: 1
-    m_Value: 0.0338
+    m_Value: 0.08
   rgbSplit:
     m_OverrideState: 1
-    m_Value: 0.0089
+    m_Value: 0.0083
   scanLineIntensity:
     m_OverrideState: 1
-    m_Value: 0.321
+    m_Value: 0.731
   speed:
     m_OverrideState: 1
-    m_Value: 20.8
+    m_Value: 11.5
   useTargetMask:
     m_OverrideState: 1
     m_Value: 1
@@ -114,7 +117,120 @@ MonoBehaviour:
     m_Value: 1
   maskExpansion:
     m_OverrideState: 1
-    m_Value: 0.0484
+    m_Value: 0.0259
+  slashSliceDensity:
+    m_OverrideState: 1
+    m_Value: 720
+  slashSmearWidth:
+    m_OverrideState: 0
+    m_Value: 0.0103
+  slashHighlightStretch:
+    m_OverrideState: 1
+    m_Value: 0.32
+  slashDirection:
+    m_OverrideState: 1
+    m_Value: 1
+  slashBlend:
+    m_OverrideState: 1
+    m_Value: 1
+--- !u!114 &-6454549240273489525
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fb6cf7ce5a24a64bbdee7865035ea47, type: 3}
+  m_Name: Local Heat Distortion
+  m_EditorClassIdentifier: 
+  active: 0
+  intensity:
+    m_OverrideState: 1
+    m_Value: 0.674
+  mode:
+    m_OverrideState: 1
+    m_Value: 1
+  speed:
+    m_OverrideState: 1
+    m_Value: 34.8
+  noiseScale:
+    m_OverrideState: 1
+    m_Value: 28.6
+  distortionStrength:
+    m_OverrideState: 1
+    m_Value: 0.054
+  areaSoftness:
+    m_OverrideState: 1
+    m_Value: 0.417
+  particleVisibility:
+    m_OverrideState: 1
+    m_Value: 1
+  previewDebug:
+    m_OverrideState: 0
+    m_Value: 0
+--- !u!114 &-6123456789012345678
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af4288aee78a4eef819ce5c7cb3ab271, type: 3}
+  m_Name: Edge Scan
+  m_EditorClassIdentifier: 
+  active: 0
+  intensity:
+    m_OverrideState: 1
+    m_Value: 1
+  origin:
+    m_OverrideState: 1
+    m_Value: {x: 0, y: 0, z: 0}
+  radius:
+    m_OverrideState: 1
+    m_Value: 46
+  width:
+    m_OverrideState: 1
+    m_Value: 1.8
+  color:
+    m_OverrideState: 1
+    m_Value: {r: 0.2, g: 0.85, b: 1, a: 1}
+  depthThreshold:
+    m_OverrideState: 1
+    m_Value: 0.08
+  normalThreshold:
+    m_OverrideState: 1
+    m_Value: 0.25
+  edgeStrength:
+    m_OverrideState: 1
+    m_Value: 1.5
+  distanceFade:
+    m_OverrideState: 1
+    m_Value: 80
+  direction:
+    m_OverrideState: 1
+    m_Value: {x: 0, y: 0, z: 1}
+  arcAngle:
+    m_OverrideState: 1
+    m_Value: 360
+  scanLineSpacing:
+    m_OverrideState: 1
+    m_Value: 1.15
+  scanLineWidth:
+    m_OverrideState: 1
+    m_Value: 0.08
+  scanLineStrength:
+    m_OverrideState: 1
+    m_Value: 1.2
+  frontGlowStrength:
+    m_OverrideState: 1
+    m_Value: 1.8
+  darkenStrength:
+    m_OverrideState: 1
+    m_Value: 0.22
 --- !u!114 &-5621983114013619339
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -140,6 +256,92 @@ MonoBehaviour:
   sampleCount:
     m_OverrideState: 1
     m_Value: 5
+--- !u!114 &-5123456789012345678
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4c21abec9844f03944e551e94083272, type: 3}
+  m_Name: Block Impact
+  m_EditorClassIdentifier: 
+  active: 0
+  globalIntensity:
+    m_OverrideState: 1
+    m_Value: 0.7
+  flashIntensity:
+    m_OverrideState: 1
+    m_Value: 1.1
+  radialStrength:
+    m_OverrideState: 1
+    m_Value: 0.35
+  streakIntensity:
+    m_OverrideState: 1
+    m_Value: 1.1
+  streakLength:
+    m_OverrideState: 1
+    m_Value: 1.2
+  streakThickness:
+    m_OverrideState: 1
+    m_Value: 0.018
+  streakSoftness:
+    m_OverrideState: 1
+    m_Value: 0.7
+  chromaticStrength:
+    m_OverrideState: 1
+    m_Value: 0.012
+  radius:
+    m_OverrideState: 1
+    m_Value: 0.76
+  sampleCount:
+    m_OverrideState: 1
+    m_Value: 9
+--- !u!114 &-4123456789012345678
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 607257caa3c24ecaa65bc652386eb6b2, type: 3}
+  m_Name: Black White Flash
+  m_EditorClassIdentifier: 
+  active: 1
+  mode:
+    m_OverrideState: 1
+    m_Value: 1
+  intensity:
+    m_OverrideState: 1
+    m_Value: 1
+  threshold:
+    m_OverrideState: 1
+    m_Value: 0.403
+  contrast:
+    m_OverrideState: 1
+    m_Value: 16
+  whiteBoost:
+    m_OverrideState: 1
+    m_Value: 1.06
+  blackCrush:
+    m_OverrideState: 1
+    m_Value: 1
+  invertAmount:
+    m_OverrideState: 1
+    m_Value: 0
+  center:
+    m_OverrideState: 1
+    m_Value: {x: 0.5, y: 0.5}
+  radius:
+    m_OverrideState: 1
+    m_Value: 2
+  softness:
+    m_OverrideState: 1
+    m_Value: 0.235
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -158,6 +360,10 @@ MonoBehaviour:
   - {fileID: -7011558710299706105}
   - {fileID: -5621983114013619339}
   - {fileID: -6815678113389162432}
+  - {fileID: -6454549240273489525}
+  - {fileID: -6123456789012345678}
+  - {fileID: -5123456789012345678}
+  - {fileID: -4123456789012345678}
 --- !u!114 &849379129802519247
 MonoBehaviour:
   m_ObjectHideFlags: 3

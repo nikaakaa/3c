@@ -2,11 +2,236 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonAction;
 using ThirdPersonInput;
+using ThirdPersonMovement;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 namespace ThirdPersonCharacterStateMachine
 {
+    public enum StateTimelineWindowKind
+    {
+        Custom = 0,
+        Motion = 1,
+        InputLock = 2,
+        Interrupt = 3,
+        Exit = 4,
+        Cancel = 5
+    }
+
+    public enum StateTimelineTimeDomain
+    {
+        Normalized = 0,
+        Seconds = 1
+    }
+
+    [Serializable]
+    public struct StateTimelineWindowDefinition
+    {
+        [SerializeField] string windowId;
+        [SerializeField] StateTimelineWindowKind kind;
+        [SerializeField] StateTimelineTimeDomain timeDomain;
+        [SerializeField] float start;
+        [SerializeField] float end;
+        [SerializeField, Min(0)] int priority;
+        [SerializeField, Min(0)] int resistance;
+        [SerializeField, Min(0)] int minPriority;
+        [SerializeField] bool force;
+        [SerializeField] ActionRequestType requestType;
+        [SerializeField] string note;
+
+        public StateTimelineWindowDefinition(
+            string windowId,
+            StateTimelineWindowKind kind,
+            StateTimelineTimeDomain timeDomain,
+            float start,
+            float end,
+            int priority = 0,
+            int resistance = 0,
+            int minPriority = 0,
+            bool force = false,
+            ActionRequestType requestType = ActionRequestType.None,
+            string note = "")
+        {
+            this.windowId = (windowId ?? string.Empty).Trim();
+            this.kind = kind;
+            this.timeDomain = timeDomain;
+            this.start = start;
+            this.end = end;
+            this.priority = Mathf.Max(0, priority);
+            this.resistance = Mathf.Max(0, resistance);
+            this.minPriority = Mathf.Max(0, minPriority);
+            this.force = force;
+            this.requestType = requestType;
+            this.note = note ?? string.Empty;
+        }
+
+        public string WindowId => windowId ?? string.Empty;
+        public StateTimelineWindowKind Kind => kind;
+        public StateTimelineTimeDomain TimeDomain => timeDomain;
+        public float Start => start;
+        public float End => end;
+        public int Priority => Mathf.Max(0, priority);
+        public int Resistance => Mathf.Max(0, resistance);
+        public int MinPriority => Mathf.Max(0, minPriority);
+        public bool Force => force;
+        public ActionRequestType RequestType => requestType;
+        public string Note => note ?? string.Empty;
+
+        public bool AllowsRequest(ActionRequestType candidate)
+        {
+            return candidate == ActionRequestType.None ||
+                   requestType == candidate;
+        }
+
+        public bool IsRequestWindow => kind == StateTimelineWindowKind.Interrupt || kind == StateTimelineWindowKind.Cancel;
+    }
+
+    [Serializable]
+    public struct StateTimelinePolicyDefinition
+    {
+        [SerializeField] string stateId;
+        [SerializeField, Min(0)] int priority;
+        [SerializeField, Min(0)] int resistance;
+        [SerializeField] StateTimelineWindowDefinition[] windows;
+        [SerializeField] string note;
+
+        public StateTimelinePolicyDefinition(
+            string stateId,
+            int priority,
+            int resistance,
+            StateTimelineWindowDefinition[] windows,
+            string note = "")
+        {
+            this.stateId = CharacterStateId.Normalize(stateId);
+            this.priority = Mathf.Max(0, priority);
+            this.resistance = Mathf.Max(0, resistance);
+            this.windows = windows ?? Array.Empty<StateTimelineWindowDefinition>();
+            this.note = note ?? string.Empty;
+        }
+
+        public CharacterStateId StateId => new CharacterStateId(stateId);
+        public int Priority => Mathf.Max(0, priority);
+        public int Resistance => Mathf.Max(0, resistance);
+        public IReadOnlyList<StateTimelineWindowDefinition> Windows => windows ?? Array.Empty<StateTimelineWindowDefinition>();
+        public string Note => note ?? string.Empty;
+    }
+
+    public readonly struct StateTimelineWindowFacts
+    {
+        public StateTimelineWindowFacts(
+            CharacterStateId stateId,
+            float normalizedTime,
+            bool hasValidNormalizedTime,
+            float elapsedSeconds,
+            bool motionWindowActive,
+            bool inputLockWindowActive,
+            bool interruptWindowActive,
+            bool exitWindowActive,
+            int priority,
+            int resistance,
+            int minPriority,
+            bool force,
+            string activeWindowIds)
+            : this(
+                stateId,
+                normalizedTime,
+                hasValidNormalizedTime,
+                elapsedSeconds,
+                motionWindowActive,
+                inputLockWindowActive,
+                interruptWindowActive,
+                exitWindowActive,
+                priority,
+                resistance,
+                minPriority,
+                force,
+                activeWindowIds,
+                string.Empty)
+        {
+        }
+
+        public StateTimelineWindowFacts(
+            CharacterStateId stateId,
+            float normalizedTime,
+            bool hasValidNormalizedTime,
+            float elapsedSeconds,
+            bool motionWindowActive,
+            bool inputLockWindowActive,
+            bool interruptWindowActive,
+            bool exitWindowActive,
+            int priority,
+            int resistance,
+            int minPriority,
+            bool force,
+            string activeWindowIds,
+            string requestWindowIds)
+        {
+            StateId = stateId;
+            NormalizedTime = Mathf.Max(0f, normalizedTime);
+            HasValidNormalizedTime = hasValidNormalizedTime;
+            ElapsedSeconds = Mathf.Max(0f, elapsedSeconds);
+            MotionWindowActive = motionWindowActive;
+            InputLockWindowActive = inputLockWindowActive;
+            InterruptWindowActive = interruptWindowActive;
+            ExitWindowActive = exitWindowActive;
+            Priority = Mathf.Max(0, priority);
+            Resistance = Mathf.Max(0, resistance);
+            MinPriority = Mathf.Max(0, minPriority);
+            Force = force;
+            ActiveWindowIds = activeWindowIds ?? string.Empty;
+            RequestWindowIds = requestWindowIds ?? string.Empty;
+        }
+
+        public CharacterStateId StateId { get; }
+        public float NormalizedTime { get; }
+        public bool HasValidNormalizedTime { get; }
+        public float ElapsedSeconds { get; }
+        public bool MotionWindowActive { get; }
+        public bool InputLockWindowActive { get; }
+        public bool InterruptWindowActive { get; }
+        public bool ExitWindowActive { get; }
+        public int Priority { get; }
+        public int Resistance { get; }
+        public int MinPriority { get; }
+        public bool Force { get; }
+        public string ActiveWindowIds { get; }
+        public string RequestWindowIds { get; }
+        public bool HasActiveWindow => MotionWindowActive || InputLockWindowActive || InterruptWindowActive || ExitWindowActive || !string.IsNullOrEmpty(ActiveWindowIds);
+        public bool HasRequestWindow => !string.IsNullOrEmpty(RequestWindowIds);
+
+        public static StateTimelineWindowFacts None(CharacterStateId stateId)
+        {
+            return new StateTimelineWindowFacts(stateId, 0f, false, 0f, false, false, false, false, 0, 0, 0, false, string.Empty, string.Empty);
+        }
+    }
+
+    public sealed class StateTimelinePolicyValidationResult
+    {
+        readonly List<string> errors = new List<string>();
+        readonly List<string> warnings = new List<string>();
+
+        public IReadOnlyList<string> Errors => errors;
+        public IReadOnlyList<string> Warnings => warnings;
+        public bool HasErrors => errors.Count > 0;
+
+        public void AddError(string message)
+        {
+            if (!string.IsNullOrWhiteSpace(message))
+                errors.Add(message);
+        }
+
+        public void AddWarning(string message)
+        {
+            if (!string.IsNullOrWhiteSpace(message))
+                warnings.Add(message);
+        }
+
+        public string DescribeErrors()
+        {
+            return string.Join(Environment.NewLine, errors);
+        }
+    }
+
     public enum CharacterStateTag
     {
         FullBody,
@@ -25,20 +250,23 @@ namespace ThirdPersonCharacterStateMachine
 
     public enum CharacterStateTransitionConditionKind
     {
-        HasMoveIntent,
-        NoMoveIntent,
-        StateCanExit,
-        HasInputRequest,
-        StateElapsedAtLeast,
-        RequestPriorityAtLeast,
-        CurrentStateHasTag
+        HasMoveIntent = 0,
+        NoMoveIntent = 1,
+        StateCanExit = 2,
+        HasInputRequest = 3,
+        StateElapsedAtLeast = 4,
+        CurrentStateHasTag = 6,
+        MoveTurnBackRequested = 7,
+        LocomotionAnimationCanExit = 8,
+        ActionCanExit = 9
     }
 
     public enum CharacterStateMotionOutputKind
     {
         None,
         InputDrivenMovement,
-        ConfiguredActionMovement
+        ConfiguredActionMovement,
+        AnimationDrivenLocomotion
     }
 
     [Serializable]
@@ -133,6 +361,7 @@ namespace ThirdPersonCharacterStateMachine
         public static readonly CharacterStateId MoveStart = new CharacterStateId("FullBody/Locomotion/MoveStart");
         public static readonly CharacterStateId MoveLoop = new CharacterStateId("FullBody/Locomotion/MoveLoop");
         public static readonly CharacterStateId MoveStop = new CharacterStateId("FullBody/Locomotion/MoveStop");
+        public static readonly CharacterStateId TurnBack = new CharacterStateId("FullBody/Locomotion/TurnBack");
         public static readonly CharacterStateId Action = new CharacterStateId("FullBody/Action");
         public static readonly CharacterStateId Dodge = new CharacterStateId("FullBody/Action/Dodge");
     }
@@ -210,6 +439,7 @@ namespace ThirdPersonCharacterStateMachine
         [SerializeField] bool consumeInputRequest;
         [SerializeField] InputRequestKind consumeRequestKind;
         [SerializeField] bool resetRunLatchOnEnter;
+        [SerializeField] TurnBackMotionPolicy turnBackMotionPolicy;
         [FormerlySerializedAs("actionDisplacements")]
         [SerializeField] CharacterActionMovementDefinition[] actionMovements = Array.Empty<CharacterActionMovementDefinition>();
 
@@ -226,6 +456,9 @@ namespace ThirdPersonCharacterStateMachine
         public bool ConsumeInputRequest => consumeInputRequest;
         public InputRequestKind ConsumeRequestKind => consumeRequestKind;
         public bool ResetRunLatchOnEnter => resetRunLatchOnEnter;
+        public TurnBackMotionPolicy TurnBackMotionPolicy =>
+            turnBackMotionPolicy.IsEnabled ? turnBackMotionPolicy : ThirdPersonMovement.TurnBackMotionPolicy.Default;
+        public bool HasTurnBackMotionPolicy => turnBackMotionPolicy.IsEnabled || motionOutput == CharacterStateMotionOutputKind.AnimationDrivenLocomotion;
         public IReadOnlyList<CharacterActionMovementDefinition> ActionMovements =>
             actionMovements ?? Array.Empty<CharacterActionMovementDefinition>();
 
@@ -260,6 +493,14 @@ namespace ThirdPersonCharacterStateMachine
         public static CharacterStateOutputDefinition InputDrivenMovement()
         {
             return new CharacterStateOutputDefinition(CharacterStateMotionOutputKind.InputDrivenMovement);
+        }
+
+        public static CharacterStateOutputDefinition TurnBackMotion(TurnBackMotionPolicy policy)
+        {
+            return new CharacterStateOutputDefinition(CharacterStateMotionOutputKind.AnimationDrivenLocomotion)
+            {
+                turnBackMotionPolicy = policy.IsEnabled ? policy : ThirdPersonMovement.TurnBackMotionPolicy.Default
+            };
         }
 
         public static CharacterStateOutputDefinition IdleReset()
@@ -413,14 +654,24 @@ namespace ThirdPersonCharacterStateMachine
             return new CharacterStateTransitionCondition(CharacterStateTransitionConditionKind.StateElapsedAtLeast, minSeconds: seconds);
         }
 
-        public static CharacterStateTransitionCondition RequestPriorityAtLeast(int priority)
-        {
-            return new CharacterStateTransitionCondition(CharacterStateTransitionConditionKind.RequestPriorityAtLeast, minPriority: priority);
-        }
-
         public static CharacterStateTransitionCondition CurrentStateHasTag(CharacterStateTag tag)
         {
             return new CharacterStateTransitionCondition(CharacterStateTransitionConditionKind.CurrentStateHasTag, tag: tag);
+        }
+
+        public static CharacterStateTransitionCondition MoveTurnBackRequested(float minAngle)
+        {
+            return new CharacterStateTransitionCondition(CharacterStateTransitionConditionKind.MoveTurnBackRequested, minSeconds: minAngle);
+        }
+
+        public static CharacterStateTransitionCondition LocomotionAnimationCanExit()
+        {
+            return new CharacterStateTransitionCondition(CharacterStateTransitionConditionKind.LocomotionAnimationCanExit);
+        }
+
+        public static CharacterStateTransitionCondition ActionCanExit()
+        {
+            return new CharacterStateTransitionCondition(CharacterStateTransitionConditionKind.ActionCanExit);
         }
     }
 

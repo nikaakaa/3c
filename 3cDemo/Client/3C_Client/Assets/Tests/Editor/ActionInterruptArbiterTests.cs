@@ -165,6 +165,63 @@ namespace ThirdPersonAction.Tests
         }
 
         [Test]
+        public void NaturalExitWindowDoesNotSatisfyTimelinePolicyWindow()
+        {
+            ThirdPersonCharacterStateMachine.StateTimelineWindowFacts exitFacts =
+                new ThirdPersonCharacterStateMachine.StateTimelineWindowFacts(
+                    new ThirdPersonCharacterStateMachine.CharacterStateId("Action.Attack01"),
+                    1f,
+                    true,
+                    0.5f,
+                    false,
+                    false,
+                    false,
+                    true,
+                    0,
+                    0,
+                    0,
+                    false,
+                    "attack-exit");
+
+            ActionInterruptDecision decision = ActionInterruptArbiter.Arbitrate(
+                Context(Attack01, timelineFacts: exitFacts),
+                new[] { Request(Dodge, 50) },
+                new[] { new ActionInterruptPolicy(Attack01, Dodge, 1, windowId: "attack-exit") });
+
+            Assert.False(decision.Accepted);
+            Assert.AreEqual(ActionInterruptRejectReason.TimingNotSatisfied, decision.RejectReason);
+        }
+
+        [Test]
+        public void RequestWindowSatisfiesTimelinePolicyWindow()
+        {
+            ThirdPersonCharacterStateMachine.StateTimelineWindowFacts cancelFacts =
+                new ThirdPersonCharacterStateMachine.StateTimelineWindowFacts(
+                    new ThirdPersonCharacterStateMachine.CharacterStateId("Action.Attack01"),
+                    0.5f,
+                    true,
+                    0.25f,
+                    false,
+                    false,
+                    true,
+                    false,
+                    0,
+                    0,
+                    0,
+                    false,
+                    "attack-dodge-cancel",
+                    "attack-dodge-cancel");
+
+            ActionInterruptDecision decision = ActionInterruptArbiter.Arbitrate(
+                Context(Attack01, timelineFacts: cancelFacts),
+                new[] { Request(Dodge, 50) },
+                new[] { new ActionInterruptPolicy(Attack01, Dodge, 1, windowId: "attack-dodge-cancel") });
+
+            Assert.True(decision.Accepted);
+            Assert.AreEqual(Dodge, decision.TargetState);
+        }
+
+        [Test]
         public void AfterElapsedTimeRejectsBeforeThreshold()
         {
             ActionInterruptDecision decision = ActionInterruptArbiter.Arbitrate(
@@ -369,9 +426,10 @@ namespace ThirdPersonAction.Tests
             ActionStateId state,
             float elapsed = 0f,
             int resistance = 0,
-            int currentTick = 0)
+            int currentTick = 0,
+            ThirdPersonCharacterStateMachine.StateTimelineWindowFacts timelineFacts = default)
         {
-            return new ActionInterruptContext(state, elapsed, resistance, currentTick);
+            return new ActionInterruptContext(state, elapsed, resistance, currentTick, timelineFacts);
         }
 
         static ActionInterruptRequest Request(

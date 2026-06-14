@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacterStateMachine;
 
 namespace ThirdPersonAction
 {
@@ -9,17 +10,20 @@ namespace ThirdPersonAction
             ActionStateId currentState,
             float currentStateElapsedSeconds,
             int currentStateResistance = 0,
-            int currentTick = 0)
+            int currentTick = 0,
+            StateTimelineWindowFacts timelineFacts = default)
         {
             CurrentState = currentState;
             CurrentStateElapsedSeconds = currentStateElapsedSeconds < 0f ? 0f : currentStateElapsedSeconds;
             CurrentStateResistance = currentStateResistance < 0 ? 0 : currentStateResistance;
             CurrentTick = currentTick < 0 ? 0 : currentTick;
+            TimelineFacts = timelineFacts;
         }
 
         public ActionStateId CurrentState { get; }
         public float CurrentStateElapsedSeconds { get; }
         public int CurrentStateResistance { get; }
         public int CurrentTick { get; }
+        public StateTimelineWindowFacts TimelineFacts { get; }
     }
 }

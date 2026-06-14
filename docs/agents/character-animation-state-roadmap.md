@@ -8,7 +8,8 @@
 
 ```text
 PlayerFullBodyActionController
-  -> FullBodyActionInputRequestBuilder
+  -> FullBodyFramePipeline
+  -> FullBodyActionRequestGate
   -> CharacterStateMachineRunner
   -> CharacterStateMachineDefinitionSO
   -> CharacterStateMachineFrame
@@ -19,14 +20,19 @@ PlayerFullBodyActionController
 当前已具备的能力：
 
 - 输入快照、移动意图、相机相对方向、移动命令和动画上下文已经分层。
-- `CharacterStateMachineDefinitionSO` 是 FullBody base layer 的统一配置入口，默认资产为 `Assets/Configs/3C/Statemachine/DefaultCharacterStateMachine.asset`。
+- `CharacterConfigSO` 是角色正式根配置入口，`CharacterStateMachineDefinitionSO` 作为其 StateMachine 子配置提供 FullBody base layer 的统一状态树，默认资产为 `Assets/Configs/3C/Statemachine/DefaultCharacterStateMachine.asset`。
 - 默认统一状态树显式包含 `FullBody/Locomotion/Idle`、`MoveStart`、`MoveLoop`、`MoveStop` 和 `FullBody/Action/Dodge`。
+- `PlayerFullBodyActionController` 是唯一创建并推进 `CharacterStateMachineRunner` 的运行时 owner；`PlayerLocomotionController` 只作为 FullBody pipeline 下的 Locomotion adapter。
 - Locomotion 四阶段和 Dodge 进入/退出 transition 都在同一张状态机配置中可见，不再由 Locomotion 特化状态机、Dodge runtime 或 FullBody 缝合 driver 分别决定。
-- `CharacterStateMachineRunner` 只读取 `CharacterStateMachineContext` 中的纯数据事实：移动意图、输入请求、phase can exit、状态时间、请求优先级和当前状态标签。
+- `CharacterStateMachineRunner` 只读取 `CharacterStateMachineContext` 中的纯数据事实：移动意图、输入请求、phase can exit、状态时间、请求优先级、当前状态标签和只读 runtime blackboard snapshot。
 - `CharacterStateMachineFrame` 统一产出当前状态快照、基础移动输出、通用动作移动输出、动画请求、输入请求消费、Run latch 写入和状态事实。
 - `PlayerLocomotionController` 保留输入读取、相机 Look、基础移动帧构建、运动 adapter 和基础移动动画 adapter，不再拥有独立状态切换权威。
-- `FullBodyActionInputRequestBuilder` 复用动作侧 planner，把缓冲中的 Dodge 请求映射为统一状态机 `CharacterInputRequestFact`；FullBody 控制器不内联 Dodge 方向解析或优先级规则。
-- `PlayerFullBodyActionController` 是统一状态机装配层，每帧只 tick 一次 `CharacterStateMachineRunner`，再把输出提交给运动、动画和输入缓冲 adapter。
+- `PlayerLocomotionController` 持有 `CharacterRuntimeBlackboard`，作为第一版 Locomotion facts 写入权威和其它 runtime facts 的受控提交点。
+- `FullBodyActionRequestGate` 复用动作侧 planner，把缓冲中的 Dodge 请求和 Locomotion TurnBack intent 映射为统一状态机 `CharacterInputRequestFact`；FullBody 控制器不内联单个动作的方向解析或优先级规则。
+- `PlayerFullBodyActionController` 是 FullBody frame pipeline 的装配层，兼容 `Tick` 入口只调用同一条 pipeline。
+- `FullBodyFramePipeline` 按 `ReadInput -> UpdateInputBuffer -> GameplayDecision -> BuildMotion -> ExecuteMotion -> PresentationBridge -> WriteSnapshotAndEvents` 编排一帧，统一状态机仍是状态权威。
+- `PlayerFullBodyActionController` 只把 `CharacterStateMachineFrame` 和动作 Presenter 的只读播放进度转换为 Action / Animation facts，不直接持有可变黑板实例。
+- `CharacterRuntimeBlackboard` 是 typed facts blackboard，第一版包含 Locomotion、Action、Animation、Debug facts；它保存纯数据 snapshot / restore state，不保存 Animancer runtime、UnityEngine.Object、Transform、Camera、CharacterController、InputAction、AnimationClip 或 TransitionAsset。
 - Animancer TransitionLibrary alias 表负责基础移动动画资源和过渡参数。
 - `RunLocomotionAnimationConfigSO` 作为当前基础移动 Walk/Run 配置资产，按 `BasicMovementPhase + BasicMovementGait` 解析 alias、phase exit policy 和 motion profile。
 - `AnimationPhaseTimelineSampler` 把 phase config、phase time 和动画播放进度采样为 `CanExit`。
@@ -55,7 +61,7 @@ PlayerFullBodyActionController
 - 统一状态机已有最小 transition 条件和输出模型，后续还需要补齐打断窗口、事件窗口、运动窗口和编辑器校验视图。
 - 还没有 UpperBody / LowerBody / Additive / Weapon 等并行层级抽象。
 - 还没有 IK 目标、权重曲线和动画事件的统一归属。
-- 还没有面向预测回滚的纯数据状态快照。
+- 已有第一版角色运行时黑板 snapshot / restore，可随 `CharacterSimulationSnapshot` 进入本地预测回放；后续仍需要把 hitbox、timeline window、upper body 和表现事件 sequence 扩进去。
 - 还没有动作 Timeline 编辑器。
 
 ## 总体方向
@@ -79,7 +85,7 @@ PlayerFullBodyActionController
   编辑动作数据、窗口、曲线、IK、事件、调试视图和校验报告
 ```
 
-状态机不直接操作 Animancer、CharacterController、Camera、Unity 对象引用。动画层不决定业务状态。运动层不散落在状态和动画事件里。
+状态机不直接操作 Animancer、CharacterController、Camera、Unity 对象引用。动画层不决定业务状态。运动层不散落在状态和动画事件里。runtime blackboard 只承载 typed facts，不变成 BBB 风格大 `PlayerRuntimeData`，也不成为第二状态机。
 
 ## 与 BBB 的关系
 

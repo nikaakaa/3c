@@ -17,8 +17,7 @@ MonoBehaviour:
   - stateId: FullBody
     parentStateId: 
     pathSegment: FullBody
-    tags:
-    - 0
+    tags: 00000000
     variants: []
     output:
       motionOutput: 0
@@ -38,10 +37,7 @@ MonoBehaviour:
   - stateId: FullBody/Locomotion
     parentStateId: FullBody
     pathSegment: Locomotion
-    tags:
-    - 0
-    - 1
-    - 4
+    tags: 000000000100000004000000
     variants: []
     output:
       motionOutput: 0
@@ -61,10 +57,7 @@ MonoBehaviour:
   - stateId: FullBody/Locomotion/Idle
     parentStateId: FullBody/Locomotion
     pathSegment: Idle
-    tags:
-    - 0
-    - 1
-    - 4
+    tags: 000000000100000004000000
     variants: []
     output:
       motionOutput: 0
@@ -84,10 +77,7 @@ MonoBehaviour:
   - stateId: FullBody/Locomotion/MoveStart
     parentStateId: FullBody/Locomotion
     pathSegment: MoveStart
-    tags:
-    - 0
-    - 1
-    - 4
+    tags: 000000000100000004000000
     variants: []
     output:
       motionOutput: 1
@@ -107,10 +97,7 @@ MonoBehaviour:
   - stateId: FullBody/Locomotion/MoveLoop
     parentStateId: FullBody/Locomotion
     pathSegment: MoveLoop
-    tags:
-    - 0
-    - 1
-    - 4
+    tags: 000000000100000004000000
     variants: []
     output:
       motionOutput: 1
@@ -130,10 +117,7 @@ MonoBehaviour:
   - stateId: FullBody/Locomotion/MoveStop
     parentStateId: FullBody/Locomotion
     pathSegment: MoveStop
-    tags:
-    - 0
-    - 1
-    - 4
+    tags: 000000000100000004000000
     variants: []
     output:
       motionOutput: 1
@@ -150,12 +134,45 @@ MonoBehaviour:
       speed: 1
       startTime: 0
       debugName: 
+  - stateId: FullBody/Locomotion/TurnBack
+    parentStateId: FullBody/Locomotion
+    pathSegment: TurnBack
+    tags: 000000000100000004000000
+    variants: []
+    output:
+      motionOutput: 3
+      consumeInputRequest: 0
+      consumeRequestKind: 1
+      resetRunLatchOnEnter: 0
+      turnBackMotionPolicy:
+        enabled: 1
+        aliasKey: Locomotion.Turn.Back
+        entryPhase: 2
+        entryGait: 1
+        yawSource: 1
+        translationSource: 1
+        suppressInputRotation: 1
+        suppressInputPlanarMovement: 1
+        turnCompleteNormalizedTime: 1
+        enterFadeDuration: 0.08
+        startNormalizedTime: 0
+        lockInputNormalizedTime: 1
+        exitNormalizedTime: 1
+        bakedMotionProfileId: Locomotion.Turn.Back
+      actionMovements: []
+    animation:
+      animationKey: Locomotion.Turn.Back
+      clip: {fileID: 0}
+      transitionAsset: {fileID: 0}
+      transitionLibraryKey: Locomotion.Turn.Back
+      fadeDuration: 0.08
+      speed: 1
+      startTime: 0
+      debugName: Turn Back
   - stateId: FullBody/Action
     parentStateId: FullBody
     pathSegment: Action
-    tags:
-    - 0
-    - 2
+    tags: 0000000002000000
     variants: []
     output:
       motionOutput: 0
@@ -175,10 +192,7 @@ MonoBehaviour:
   - stateId: FullBody/Action/Dodge
     parentStateId: FullBody/Action
     pathSegment: Dodge
-    tags:
-    - 0
-    - 2
-    - 3
+    tags: 000000000200000003000000
     variants:
     - variant: 1
       animation:
@@ -228,7 +242,7 @@ MonoBehaviour:
   transitions:
   - fromStateId: FullBody/Locomotion/Idle
     toStateId: FullBody/Locomotion/MoveStart
-    priority: 100
+    priority: 50
     conditions:
     - kind: 0
       requestKind: 1
@@ -258,11 +272,57 @@ MonoBehaviour:
       minSeconds: 0
       minPriority: 0
       tag: 0
+  - fromStateId: FullBody/Locomotion/MoveStart
+    toStateId: FullBody/Locomotion/TurnBack
+    priority: 200
+    conditions:
+    - kind: 3
+      requestKind: 4
+      minSeconds: 0
+      minPriority: 0
+      tag: 0
+  - fromStateId: FullBody/Locomotion/MoveLoop
+    toStateId: FullBody/Locomotion/TurnBack
+    priority: 200
+    conditions:
+    - kind: 3
+      requestKind: 4
+      minSeconds: 0
+      minPriority: 0
+      tag: 0
   - fromStateId: FullBody/Locomotion/MoveLoop
     toStateId: FullBody/Locomotion/MoveStop
     priority: 100
     conditions:
     - kind: 1
+      requestKind: 1
+      minSeconds: 0
+      minPriority: 0
+      tag: 0
+  - fromStateId: FullBody/Locomotion/TurnBack
+    toStateId: FullBody/Locomotion/MoveLoop
+    priority: 100
+    conditions:
+    - kind: 0
+      requestKind: 1
+      minSeconds: 0
+      minPriority: 0
+      tag: 0
+    - kind: 8
+      requestKind: 1
+      minSeconds: 0
+      minPriority: 0
+      tag: 0
+  - fromStateId: FullBody/Locomotion/TurnBack
+    toStateId: FullBody/Locomotion/Idle
+    priority: 0
+    conditions:
+    - kind: 1
+      requestKind: 1
+      minSeconds: 0
+      minPriority: 0
+      tag: 0
+    - kind: 8
       requestKind: 1
       minSeconds: 0
       minPriority: 0
@@ -299,10 +359,19 @@ MonoBehaviour:
       minSeconds: 0
       minPriority: 0
       tag: 0
-    - kind: 5
+  - fromStateId: FullBody/Action/Dodge
+    toStateId: FullBody/Action/Dodge
+    priority: 1500
+    conditions:
+    - kind: 3
       requestKind: 1
       minSeconds: 0
-      minPriority: 30
+      minPriority: 0
+      tag: 0
+    - kind: 4
+      requestKind: 1
+      minSeconds: 0.35
+      minPriority: 0
       tag: 0
   - fromStateId: FullBody/Action/Dodge
     toStateId: FullBody/Locomotion/MoveLoop
@@ -332,3 +401,79 @@ MonoBehaviour:
       minSeconds: 0.35
       minPriority: 0
       tag: 0
+    - kind: 9
+      requestKind: 1
+      minSeconds: 0
+      minPriority: 0
+      tag: 0
+  timelinePolicies:
+  - stateId: FullBody/Locomotion/MoveStart
+    priority: 0
+    resistance: 0
+    windows:
+    - windowId: turnback-enter
+      kind: 3
+      timeDomain: 1
+      start: 0
+      end: 999
+      priority: 0
+      resistance: 0
+      minPriority: 0
+      force: 0
+      requestType: 1
+      note: Allow accepted TurnBack request while starting movement.
+    note: MoveStart state request windows.
+  - stateId: FullBody/Locomotion/MoveLoop
+    priority: 0
+    resistance: 0
+    windows:
+    - windowId: turnback-enter
+      kind: 3
+      timeDomain: 1
+      start: 0
+      end: 999
+      priority: 0
+      resistance: 0
+      minPriority: 0
+      force: 0
+      requestType: 1
+      note: Allow accepted TurnBack request while running in MoveLoop.
+    note: MoveLoop state request windows.
+  - stateId: FullBody/Locomotion/TurnBack
+    priority: 0
+    resistance: 30
+    windows:
+    - windowId: turnback-motion
+      kind: 1
+      timeDomain: 1
+      start: 0
+      end: 10
+      priority: 0
+      resistance: 30
+      minPriority: 0
+      force: 0
+      requestType: 0
+      note: TurnBack consumes sampled motion profile until exit.
+    - windowId: turnback-input-lock
+      kind: 2
+      timeDomain: 1
+      start: 0
+      end: 10
+      priority: 0
+      resistance: 30
+      minPriority: 0
+      force: 0
+      requestType: 0
+      note: TurnBack suppresses regular input movement.
+    - windowId: turnback-exit
+      kind: 4
+      timeDomain: 0
+      start: 1
+      end: 1
+      priority: 0
+      resistance: 0
+      minPriority: 0
+      force: 0
+      requestType: 0
+      note: TurnBack exits when animation progress reaches configured end.
+    note: TurnBack motion, lock and exit windows.

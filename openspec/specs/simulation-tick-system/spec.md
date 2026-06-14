@@ -1,7 +1,7 @@
 # simulation-tick-system Specification
 
 ## Purpose
-TBD - created by archiving change add-simulation-tick-system. Update Purpose after archive.
+定义 simulation tick 系统的固定步进、tick driver、调度顺序和与现有玩法主线的接入边界。
 ## Requirements
 ### Requirement: Simulation Tick 标识
 系统 MUST 使用项目级 `SimulationTick` 表达模拟步编号，使客户端、服务端、输入缓冲、玩法判定和未来回滚系统共享同一 tick 语义。
@@ -188,4 +188,3 @@ TBD - created by archiving change add-simulation-tick-system. Update Purpose aft
 - **WHEN** 检查 simulation core 代码
 - **THEN** simulation core MUST NOT 引用 Cinemachine、相机 runtime、Animancer、VFX、UI 或场景 Transform 类型
 - **AND** 表现层适配 MUST 位于 runtime adapter 边界
-

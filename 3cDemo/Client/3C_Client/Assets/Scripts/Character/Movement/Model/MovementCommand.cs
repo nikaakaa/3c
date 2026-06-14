@@ -43,6 +43,12 @@ namespace ThirdPersonMovement
             AnimationYawDelta = motionFacts.HasAnimationMotion ? motionFacts.YawDelta : 0f;
             AnimationMotionSourcePhase = motionFacts.SourcePhase;
             AnimationMotionSourceAliasKey = motionFacts.SourceAliasKey;
+            SuppressInputRotation = motionFacts.SuppressInputRotation;
+            SuppressInputPlanarMovement = motionFacts.SuppressInputPlanarMovement;
+            AnimationPlanarDeltaSpace = motionFacts.PlanarDeltaSpace;
+            AnimationPlanarBasisForward = motionFacts.EntryPlanarBasisForward;
+            TurnBackMotionPolicy = motionFacts.TurnBackMotionPolicy;
+            HasTurnBackMotionPolicy = motionFacts.HasTurnBackMotionPolicy;
         }
 
         public Vector3 WorldDirection { get; }
@@ -57,6 +63,12 @@ namespace ThirdPersonMovement
         public float AnimationYawDelta { get; }
         public BasicMovementPhase AnimationMotionSourcePhase { get; }
         public string AnimationMotionSourceAliasKey { get; }
+        public bool SuppressInputRotation { get; }
+        public bool SuppressInputPlanarMovement { get; }
+        public BasicMovementPlanarDeltaSpace AnimationPlanarDeltaSpace { get; }
+        public Vector3 AnimationPlanarBasisForward { get; }
+        public TurnBackMotionPolicy TurnBackMotionPolicy { get; }
+        public bool HasTurnBackMotionPolicy { get; }
         public bool HasMovement => WorldDirection.sqrMagnitude > 0.000001f && PlanarSpeed > 0f;
     }
 }

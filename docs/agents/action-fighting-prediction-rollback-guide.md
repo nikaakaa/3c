@@ -170,7 +170,7 @@ SimulationTick
 SimulationTickRunner
 SimulationTickPhaseOrder
 UnitySimulationTickDriver
-LocomotionTickAdapter
+FullBodyActionTickAdapter
 InputRequestBuffer
 CharacterStateMachineRunner
 CharacterStateMachineSnapshot
@@ -186,8 +186,8 @@ UpdateInputBuffer
 GameplayDecision
 BuildMotion
 ExecuteMotion
-WriteSnapshotAndEvents
 PresentationBridge
+WriteSnapshotAndEvents
 ```
 
 推荐映射：
@@ -200,14 +200,20 @@ ReadInput
 UpdateInputBuffer
   更新预输入请求
 
-GameplayDecision / BuildMotion / ExecuteMotion
-  继续走统一状态机和 PlayerLocomotionController
+GameplayDecision
+  FullBodyFramePipeline 准备 Locomotion facts、执行 Action request gate、推进统一状态机
+
+BuildMotion
+  FullBodyFramePipeline 将状态机输出构建为 Locomotion/Action 运动命令
+
+ExecuteMotion
+  只通过当前 owner 的 motion executor 提交运动
+
+PresentationBridge
+  提交基础移动/动作动画命令，写入动画 facts，处理相机 resolve
 
 WriteSnapshotAndEvents
   写 CharacterSimulationSnapshot 到 SnapshotHistory
-
-PresentationBridge
-  处理表现插值和事件去重
 ```
 
 这说明预测回滚应该是 tick runner 外围的编排层，不是新 gameplay 主线。
@@ -225,9 +231,11 @@ PredictionInputFrame
   v
 SimulationTickRunner
   |
-  +--> PlayerLocomotionController
-  +--> CharacterStateMachineRunner
-  +--> MotionExecutor
+  +--> FullBodyFramePipeline
+       +--> PlayerLocomotionController adapter
+       +--> CharacterStateMachineRunner
+       +--> MotionExecutor
+       +--> Animancer presenter
   |
   v
 CharacterSimulationSnapshot
@@ -326,6 +334,7 @@ LocomotionPhase
 LocomotionGait
 CurrentAnimationKey
 AnimationNormalizedTime 或 AnimationElapsedTicks
+RuntimeBlackboardRestoreState
 LastPresentationEventSequence
 Checksum
 ```
@@ -351,7 +360,10 @@ MonoBehaviour 实例引用
 数值
 短字符串 key
 量化向量
+typed runtime facts snapshot
 ```
+
+当前 3C 第一版 `CharacterRuntimeBlackboard` 已作为 typed facts blackboard 接入 `CharacterSimulationSnapshot`。它只保存 Locomotion、Action、Animation、Debug 纯数据 facts，不保存 BBB 风格大 `RuntimeData`，也不保存 Unity 对象、Animancer runtime、输入对象或动画资产引用。
 
 ### PredictionInputHistory
 
@@ -547,6 +559,111 @@ NAT/连接复杂
 本项目建议路线 B，但内部借鉴 GGPO 的输入历史、快照历史、回滚重放。
 
 ## 分阶段实现路线
+
+## 当前阶段状态
+
+截至 2026-06-11，`add-local-rollback-synctest-foundation` 已完成阶段 0 到阶段 4 的本地地基：
+
+```text
+已完成：
+  PredictionInputFrame
+  PredictionInputHistory
+  CharacterSimulationSnapshot
+  PredictionSnapshotHistory
+  CharacterStateMachineRunner restore
+  PlayerLocomotionController snapshot capture/restore
+  CharacterRuntimeBlackboard snapshot/restore
+  WriteSnapshotAndEvents 快照记录 adapter
+  ReadInput 输入记录 adapter
+  LocalRollbackSynctestRunner
+  LocalRollbackSynctestDebugRunner
+  EditMode 自动测试和静态边界测试
+
+未进入：
+  真实网络
+  远端输入预测
+  Fantasy proto
+  权威快照校正
+  hitbox/hurtbox/伤害回滚
+```
+
+当前验证结果：
+
+```text
+dotnet build 3cDemo\Client\3C_Client\Assembly-CSharp.csproj --no-restore --no-dependencies
+dotnet build 3cDemo\Client\3C_Client\Assembly-CSharp-Editor.csproj --no-restore --no-dependencies
+openspec validate add-local-rollback-synctest-foundation --strict --no-interactive
+```
+
+新增 `LocalRollbackSynctestDebugRunner` 后，需要在 Unity Test Runner 中复跑：
+
+```text
+ThirdPersonSimulation.Tests.LocalRollbackSynctestFoundationTests
+Tests.Editor.UnifiedCharacterStateMachineTests
+Tests.Editor.SimulationTickSystemTests
+Tests.Editor.InputRequestBufferTests
+```
+
+手动验证仍需要在 Unity Editor 的 `Assets/Scenes/Sandbox.unity` 中执行：
+
+```text
+1. 进入 Play Mode。
+2. 未启用 synctest 额外流程时，验证 WASD/Look/Run 行为不变。
+3. 验证 Dodge 输入仍能进入动作状态，并能回到 locomotion。
+4. 在角色或同级 GameObject 上挂载：
+   PredictionInputHistoryTickRecorder
+   LocomotionSnapshotHistoryRecorder
+   LocomotionRollbackSimulation
+   LocalRollbackSynctestDebugRunner
+5. 确认 recorder 引用到当前 UnitySimulationTickDriver、PlayerFullBodyActionController 和 PlayerLocomotionController adapter。
+6. Play Mode 中先移动、Run、Dodge 几秒，让输入和快照历史积累。
+7. 按 F6 运行本地 synctest。
+8. Console 应输出：
+   [rollback-synctest] PASS restore=<tick> end=<tick>
+   或失败时输出 reason/differences 字段。
+```
+
+截至 2026-06-14，当前 Sandbox 的动作 demo 以 `FullBodyActionTickAdapter -> PlayerFullBodyActionController -> FullBodyFramePipeline` 作为正式 simulation tick 主入口。`LocomotionTickAdapter` 已退为迁移诊断组件：启用时应报告旧 Locomotion tick 入口已退役，并且不得推进 gameplay 或注册为正式 driver。
+
+截至 2026-06-13，`refactor-fullbody-frame-pipeline` 已把本地 replay adapter 收到 `FullBodyFramePipeline`。`FullBodyRollbackSimulation.Advance` 从 `PredictionInputFrame` 构造 `FullBodyFrameInput`，再通过 `PlayerFullBodyActionController.Tick` 的兼容入口复用同一条 pipeline；离散按钮事实写入发生在 pipeline 的 `UpdateInputBuffer` 步骤，Dodge/TurnBack 仍经过 Action request gate 和统一状态机。自动测试覆盖了输入缓冲 capture/restore、`PlayerFullBodyActionController` 状态恢复，以及 Move/Run/Dodge 通过 full-body pipeline 恢复旧 tick 后重放到同一快照。
+
+`LocalRollbackSynctestDebugRunner` 默认是 Play Mode 安全探针。按 F6 时它会在真实角色上临时恢复旧 tick 并重放输入，然后恢复回触发前的最新现场快照；因此即使 synctest 输出 FAIL，角色也不应该因为这次探针永久前冲、加速或停在回滚后的状态。当前 debug runner 需要把 `SimulationBehaviour` 指向 `FullBodyRollbackSimulation` 才代表 full-body/action replay；如果指向 `LocomotionRollbackSimulation`，它仍然只是 locomotion-only 诊断。
+
+截至 2026-06-14，rollback 验收口径改为严格 first mismatch：`LocalRollbackSynctestRunner`、F6 debug runner 和 F8 soak runner 只要发现 restore/replay 过程中任一 tick 的 `FirstMismatch.HasMismatch=true`，本次检查就必须失败，即使最终 end tick 快照又重新收敛。Console 搜索 `rollback-synctest`、`first-mismatch`、`differences` 可以定位首个分叉；F8 搜索 `ROLLBACK_SOAK_RESULT` 和 `ROLLBACK_SOAK_FIRST_MISMATCH`。F7 latency/reconciliation 需要区分 `PredictionCorrection` 与 `ReplayNondeterminism`：前者表示预测输入和确认输入不同但 resolved input replay 确定，后者表示同一段 resolved input 重放仍分叉，必须按 rollback 状态缺失或非确定性处理。
+
+当前 full-body replay 已覆盖：
+
+```text
+Move
+Run held
+Dodge pressed
+InputRequestBuffer consumed/expired restore
+FullBody action state restore
+Runtime blackboard action sourceStep 收敛
+fake action presenter 下的 animation facts 收敛
+```
+
+当前仍未覆盖：
+
+```text
+Fantasy transport
+本地高延迟模拟器
+远端输入预测
+服务器权威快照校正
+真实 Animancer runtime 进度恢复
+Attack/Jump/Interact 的完整动作语义
+hitbox/hurtbox/伤害回滚
+```
+
+如果要肉眼观察“逻辑根被校正后，表现根插值追上去”的效果，可以在 debug runner 上打开可见 correction：
+
+```text
+Apply Replay Result To Scene = true
+Presentation Interpolator = CharacterVisualRoot 上的 PresentationTransformInterpolator
+Visual Correction Seconds = 0.12 到 0.25
+```
+
+此模式下，F6 会把 replay 后的逻辑根结果应用到场景，并让 `PresentationTransformInterpolator` 从按键前的 visual pose 插值追到新的逻辑根 pose。只有 position 或 yaw 真的发生校正时，肉眼才会明显看到插值；如果 Console differences 只剩 stateTime、animation、blackboard sourceStep，说明当前差异在 full-body/action/animation facts，表现根不会有明显位移 correction。
 
 ### 阶段 0：确认边界
 

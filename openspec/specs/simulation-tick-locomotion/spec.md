@@ -1,7 +1,7 @@
 # simulation-tick-locomotion Specification
 
 ## Purpose
-TBD - created by archiving change integrate-simulation-tick-locomotion. Update Purpose after archive.
+定义基础 Locomotion 接入 simulation tick 的调度方式、输入快照、单驱动约束和回归验证。
 ## Requirements
 ### Requirement: Locomotion Tick 接入
 系统 MUST 能通过 `UnitySimulationTickDriver` 产生的 simulation tick 调度现有基础 Locomotion 主线，而不是继续只能由 Unity frame `Update` 驱动。
@@ -98,4 +98,3 @@ TBD - created by archiving change integrate-simulation-tick-locomotion. Update P
 #### Scenario: 不实现状态图配置
 - **WHEN** 实施 tick Locomotion 接入
 - **THEN** 实施 MUST NOT 实现 `add-locomotion-state-graph-config` 的状态图配置化内容
-

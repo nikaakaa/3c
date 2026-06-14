@@ -11,7 +11,7 @@ namespace ThirdPersonAction
             int currentStep,
             in MovementInputIntent movementIntent,
             Vector3 currentWorldMoveDirection,
-            IFacingDirectionProvider facingProvider,
+            Vector3 facingForward,
             in DodgeActionConfig config,
             out DodgeActionRequest request)
         {
@@ -21,7 +21,7 @@ namespace ThirdPersonAction
                 return false;
             }
 
-            if (!DodgeActionDirectionResolver.TryResolve(movementIntent, currentWorldMoveDirection, facingProvider, out DodgeActionVariant variant, out Vector3 worldDirection))
+            if (!DodgeActionDirectionResolver.TryResolve(movementIntent, currentWorldMoveDirection, facingForward, out DodgeActionVariant variant, out Vector3 worldDirection))
             {
                 request = default;
                 return false;

@@ -2,6 +2,21 @@ using UnityEngine;
 
 namespace ThirdPersonInput
 {
+    public readonly struct InputRequestBufferComponentRestoreState
+    {
+        public InputRequestBufferComponentRestoreState(int currentStep, InputRequestBufferRestoreState buffer)
+        {
+            CurrentStep = currentStep < 0 ? 0 : currentStep;
+            Buffer = buffer;
+        }
+
+        public int CurrentStep { get; }
+        public InputRequestBufferRestoreState Buffer { get; }
+
+        public static InputRequestBufferComponentRestoreState Empty =>
+            new InputRequestBufferComponentRestoreState(0, InputRequestBufferRestoreState.Empty);
+    }
+
     [DisallowMultipleComponent]
     public sealed class InputRequestBufferComponent : MonoBehaviour
     {
@@ -32,6 +47,18 @@ namespace ThirdPersonInput
         {
             InputBufferSettings settings = Settings;
             buffer.AddFromButtonState(button, state, currentStep, in settings);
+        }
+
+        public InputRequestBufferComponentRestoreState CaptureRestoreState()
+        {
+            return new InputRequestBufferComponentRestoreState(currentStep, buffer.CaptureRestoreState());
+        }
+
+        public void Restore(in InputRequestBufferComponentRestoreState restoreState)
+        {
+            currentStep = Mathf.Max(0, restoreState.CurrentStep);
+            buffer.Restore(restoreState.Buffer);
+            buffer.RemoveExpired(currentStep);
         }
 
         public void Clear()

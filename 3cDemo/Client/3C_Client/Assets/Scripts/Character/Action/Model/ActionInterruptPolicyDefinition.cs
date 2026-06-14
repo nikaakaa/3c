@@ -11,6 +11,7 @@ namespace ThirdPersonAction
         public ActionInterruptTimingRule timingRule;
         public float windowStart;
         public float windowEnd;
+        public string windowId;
         public bool force;
         public string note;
 
@@ -22,6 +23,7 @@ namespace ThirdPersonAction
             float windowStart = 0f,
             float windowEnd = 0f,
             bool force = false,
+            string windowId = "",
             string note = "")
         {
             this.fromStateId = fromStateId ?? string.Empty;
@@ -30,6 +32,7 @@ namespace ThirdPersonAction
             this.timingRule = timingRule;
             this.windowStart = windowStart;
             this.windowEnd = windowEnd;
+            this.windowId = windowId ?? string.Empty;
             this.force = force;
             this.note = note ?? string.Empty;
         }
@@ -40,6 +43,7 @@ namespace ThirdPersonAction
         public ActionInterruptTimingRule TimingRule => timingRule;
         public float WindowStart => windowStart;
         public float WindowEnd => windowEnd;
+        public string WindowId => windowId ?? string.Empty;
         public bool Force => force;
         public string Note => note ?? string.Empty;
     }

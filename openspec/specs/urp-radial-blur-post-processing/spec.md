@@ -1,7 +1,7 @@
 # urp-radial-blur-post-processing Specification
 
 ## Purpose
-TBD - created by archiving change add-urp-radial-blur-post-processing. Update Purpose after archive.
+定义 URP 径向模糊后处理的 Volume 参数、Renderer Feature 接入、默认关闭和验证要求。
 ## Requirements
 ### Requirement: URP 径向模糊后处理接入
 系统 MUST 通过当前 URP Renderer Feature 链路接入径向模糊后处理，并且 MUST NOT 使用 `OnRenderImage`、额外相机叠加或独立渲染路径绕过当前 URP 系统。
@@ -50,4 +50,3 @@ TBD - created by archiving change add-urp-radial-blur-post-processing. Update Pu
 - **WHEN** 用户在 Unity Editor 中启用径向模糊 Volume 参数
 - **THEN** 用户 MUST 能通过调节强度、中心点和采样次数观察到画面变化
 - **AND** 用户 MUST 能将强度调回 0 以恢复无径向模糊画面
-

@@ -1,0 +1,115 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1470694269334639887
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3997406544562249893}
+  - component: {fileID: 7271738015386999309}
+  m_Layer: 0
+  m_Name: RuntimeDiagnosticLog
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3997406544562249893
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1470694269334639887}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -8.533012, y: 0.86270577, z: 7.2778883}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7271738015386999309
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1470694269334639887}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9334048aafa34e99aaae5c37f4fe2835, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  channels:
+  - key: Action.action-accepted
+    enabled: 0
+  - key: Action.action-dodge-request-fact-probe
+    enabled: 0
+  - key: Action.interrupt-decision-accepted
+    enabled: 0
+  - key: Action.interrupt-decision-rejected
+    enabled: 0
+  - key: Action.interrupt-request-accepted
+    enabled: 0
+  - key: Action.interrupt-request-rejected
+    enabled: 0
+  - key: Animation.action-animation-cleared
+    enabled: 0
+  - key: Animation.action-animation-play-failed
+    enabled: 0
+  - key: Animation.action-animation-played
+    enabled: 0
+  - key: Animation.animation-tick-snapshot
+    enabled: 1
+  - key: Animation.locomotion-animation-played
+    enabled: 1
+  - key: Animation.locomotion-animation-present-probe
+    enabled: 0
+  - key: Camera.camera-arm-constraint
+    enabled: 0
+  - key: Camera.camera-input
+    enabled: 0
+  - key: Camera.camera-output
+    enabled: 0
+  - key: FullBody.fullbody-path-changed
+    enabled: 0
+  - key: FullBody.fullbody-pending-transition-changed
+    enabled: 0
+  - key: FullBody.fullbody-tick-snapshot
+    enabled: 0
+  - key: Input.input-request-added
+    enabled: 0
+  - key: Input.input-request-consumed
+    enabled: 0
+  - key: Input.input-request-expired
+    enabled: 0
+  - key: Locomotion.locomotion-phase-changed
+    enabled: 0
+  - key: Locomotion.locomotion-run-latch-output-applied
+    enabled: 0
+  - key: Locomotion.locomotion-run-latch-reset-after-idle
+    enabled: 0
+  - key: Locomotion.locomotion-state-machine-output-probe
+    enabled: 0
+  - key: Locomotion.locomotion-tick-snapshot
+    enabled: 0
+  - key: Locomotion.movement-camera-input
+    enabled: 0
+  - key: Locomotion.moving-pivot-turn
+    enabled: 1
+  - key: Locomotion.state-machine-config-missing
+    enabled: 1
+  - key: Simulation.reconciliation-fail-detail
+    enabled: 1
+  - key: Simulation.synctest-fail-detail
+    enabled: 1
+  - key: Simulation.synctest-pass
+    enabled: 1
+  containsFilter: 
+  prefixFilter: 
+  suffixFilter: 
+  manualChannelKey: 

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ba83867ed8640aa815ddaf243be8e15, type: 3}
+  m_Name: InteractiveTallGrassPreviewProfile
+  m_EditorClassIdentifier: 
+  areaSize: {x: 4, y: 4}
+  bladeCount: 2987
+  randomSeed: 3107
+  heightRange: {x: 1.1, y: 1.8}
+  widthRange: {x: 0.12, y: 0.24}
+  baseColor: {r: 0.16, g: 0.34, b: 0.12, a: 1}
+  topColor: {r: 0.45, g: 0.75, b: 0.28, a: 1}
+  toonStrength: 0.65
+  windStrength: 1.34
+  windFrequency: 1.8
+  windDirection: {x: 1, y: 0.35}
+  interactionRadius: 1.1
+  bendStrength: 0.75

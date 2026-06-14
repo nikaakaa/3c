@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using ThirdPersonDiagnostics;
 
 public static class HasteHumanoidRetargetPreviewBuilder
 {
@@ -17,12 +18,12 @@ public static class HasteHumanoidRetargetPreviewBuilder
         {
             TargetHumanoidPrepareResult result = PrepareTargetAsHumanoid(GetSelectedTarget());
             string state = result.AvatarValid ? "valid" : "invalid";
-            Debug.Log($"[HasteHumanoidRetargetPreviewBuilder] Prepared {result.ModelPath}. Avatar is {state}.");
+         RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(RuntimeDiagnosticLogCategory.Editor, RuntimeDiagnosticLogLevel.Info, "retarget-preview-prepared", "", "", 0, Time.frameCount, $"[HasteHumanoidRetargetPreviewBuilder] Prepared {result.ModelPath}. Avatar is {state}."));
             EditorUtility.DisplayDialog("Haste Target Humanoid", $"Model: {result.ModelPath}\nAvatar: {state}", "OK");
         }
         catch (Exception ex)
         {
-            Debug.LogError("[HasteHumanoidRetargetPreviewBuilder] " + ex.Message);
+         RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(RuntimeDiagnosticLogCategory.Editor, RuntimeDiagnosticLogLevel.Error, "retarget-preview-error1", "", "", 0, Time.frameCount, "[HasteHumanoidRetargetPreviewBuilder] " + ex.Message));
             EditorUtility.DisplayDialog("Haste Target Humanoid", ex.Message, "OK");
         }
     }
@@ -56,11 +57,11 @@ public static class HasteHumanoidRetargetPreviewBuilder
             RetargetPreviewResult result = CreatePreview(target, clip, DefaultOutputRoot);
             Selection.activeObject = result.PreviewPrefab;
             EditorGUIUtility.PingObject(result.PreviewPrefab);
-            Debug.Log($"[HasteHumanoidRetargetPreviewBuilder] Prepared target and created {result.PreviewPrefabPath}");
+         RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(RuntimeDiagnosticLogCategory.Editor, RuntimeDiagnosticLogLevel.Info, "retarget-preview-target-created", "", "", 0, Time.frameCount, $"[HasteHumanoidRetargetPreviewBuilder] Prepared target and created {result.PreviewPrefabPath}"));
         }
         catch (Exception ex)
         {
-            Debug.LogError("[HasteHumanoidRetargetPreviewBuilder] " + ex.Message);
+         RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(RuntimeDiagnosticLogCategory.Editor, RuntimeDiagnosticLogLevel.Error, "retarget-preview-error2", "", "", 0, Time.frameCount, "[HasteHumanoidRetargetPreviewBuilder] " + ex.Message));
             EditorUtility.DisplayDialog("Haste Retarget Preview", ex.Message, "OK");
         }
     }
@@ -80,11 +81,11 @@ public static class HasteHumanoidRetargetPreviewBuilder
             RetargetPreviewResult result = CreatePreview(target, clip, DefaultOutputRoot);
             Selection.activeObject = result.PreviewPrefab;
             EditorGUIUtility.PingObject(result.PreviewPrefab);
-            Debug.Log($"[HasteHumanoidRetargetPreviewBuilder] Created {result.PreviewPrefabPath}");
+         RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(RuntimeDiagnosticLogCategory.Editor, RuntimeDiagnosticLogLevel.Info, "retarget-preview-created", "", "", 0, Time.frameCount, $"[HasteHumanoidRetargetPreviewBuilder] Created {result.PreviewPrefabPath}"));
         }
         catch (Exception ex)
         {
-            Debug.LogError("[HasteHumanoidRetargetPreviewBuilder] " + ex.Message);
+         RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(RuntimeDiagnosticLogCategory.Editor, RuntimeDiagnosticLogLevel.Error, "retarget-preview-error3", "", "", 0, Time.frameCount, "[HasteHumanoidRetargetPreviewBuilder] " + ex.Message));
             EditorUtility.DisplayDialog("Haste Retarget Preview", ex.Message, "OK");
         }
     }

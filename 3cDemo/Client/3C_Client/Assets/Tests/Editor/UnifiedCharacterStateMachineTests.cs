@@ -1,14 +1,21 @@
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Animancer;
 using Animancer.TransitionLibraries;
 using NUnit.Framework;
 using ThirdPersonAction;
 using ThirdPersonAnimation;
+using ThirdPersonAnimation.EditorTools;
 using ThirdPersonCamera;
+using ThirdPersonCharacterConfig;
 using ThirdPersonCharacterStateMachine;
+using ThirdPersonDiagnostics;
 using ThirdPersonInput;
 using ThirdPersonMovement;
+using ThirdPersonSimulation;
+using UnityEditor;
 using UnityEngine;
 
 namespace Tests.Editor
@@ -16,7 +23,7 @@ namespace Tests.Editor
     public sealed class UnifiedCharacterStateMachineTests
     {
         [Test]
-        public void DefaultStateIsFullBodyLocomotionIdle()
+        public void ConfiguredStateMachineInitialStateIsFullBodyLocomotionIdle()
         {
             CharacterStateMachineRunner runner = CreateRunner();
 
@@ -26,16 +33,237 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void DefaultTreeContainsLocomotionAndDodgeStates()
+        public void ConfiguredStateMachineContainsLocomotionAndDodgeStates()
         {
-            CharacterStateMachineDefinition definition = CharacterStateMachineDefinition.CreateDefault();
+            CharacterStateMachineDefinition definition = LoadConfiguredStateMachineDefinition();
             string[] ids = definition.Nodes.Select(node => node.StateId.Value).ToArray();
 
             CollectionAssert.Contains(ids, "FullBody/Locomotion/Idle");
             CollectionAssert.Contains(ids, "FullBody/Locomotion/MoveStart");
             CollectionAssert.Contains(ids, "FullBody/Locomotion/MoveLoop");
             CollectionAssert.Contains(ids, "FullBody/Locomotion/MoveStop");
+            CollectionAssert.Contains(ids, "FullBody/Locomotion/TurnBack");
+            CollectionAssert.DoesNotContain(ids, "FullBody/Locomotion/TurnInPlace");
             CollectionAssert.Contains(ids, "FullBody/Action/Dodge");
+        }
+
+        [Test]
+        public void LocomotionDecisionFactsDefaultIsPureEmptyData()
+        {
+            LocomotionDecisionFacts facts = LocomotionDecisionFacts.Empty;
+
+            Assert.False(facts.HasMoveIntent);
+            Assert.AreEqual(BasicMovementGait.Walk, facts.GaitCandidate);
+            Assert.False(facts.TurnBackIntent.IsValid);
+            Assert.AreEqual(Vector3.zero, facts.SpatialFacts.WorldMoveDirection);
+            Assert.AreEqual(Vector3.zero, facts.SpatialFacts.FacingForward);
+        }
+
+        [Test]
+        public void LocomotionSpatialFactsNormalizePlanarDirections()
+        {
+            LocomotionSpatialFacts facts = new LocomotionSpatialFacts(
+                new Vector3(0f, 4f, -3f),
+                new Vector3(2f, 5f, 0f),
+                new Vector3(0f, 9f, 4f),
+                new Vector3(3f, -8f, 0f));
+
+            Assert.AreEqual(Vector3.back, facts.WorldMoveDirection);
+            Assert.AreEqual(Vector3.right, facts.FacingForward);
+            Assert.AreEqual(Vector3.forward, facts.CameraPlanarForward);
+            Assert.AreEqual(Vector3.right, facts.CameraPlanarRight);
+        }
+
+        [Test]
+        public void LocomotionTurnBackIntentHonorsStepWindow()
+        {
+            LocomotionTurnBackIntent intent = LocomotionTurnBackIntent.Capture(
+                10,
+                2,
+                180f,
+                120f,
+                Vector3.back,
+                Vector3.forward);
+
+            Assert.True(intent.IsValidAt(10));
+            Assert.True(intent.IsValidAt(11));
+            Assert.True(intent.IsValidAt(12));
+            Assert.False(intent.IsValidAt(13));
+            Assert.AreEqual(Vector3.back, intent.WorldMoveDirection);
+            Assert.AreEqual(Vector3.forward, intent.FacingForward);
+        }
+
+        [Test]
+        public void TurnBackMotionPolicyDefaultDeclaresRunLoopBakedMotionProfile()
+        {
+            TurnBackMotionPolicy policy = TurnBackMotionPolicy.Default;
+
+            Assert.True(policy.IsEnabled);
+            Assert.AreEqual(TurnBackMotionPolicy.DefaultAliasKey, policy.AliasKey);
+            Assert.AreEqual(BasicMovementPhase.MoveLoop, policy.EntryPhase);
+            Assert.AreEqual(BasicMovementGait.Run, policy.EntryGait);
+            Assert.AreEqual(TurnBackMotionYawSource.BakedMotionProfile, policy.YawSource);
+            Assert.AreEqual(TurnBackMotionTranslationSource.BakedMotionProfile, policy.TranslationSource);
+            Assert.True(policy.SuppressInputRotation);
+            Assert.True(policy.SuppressInputPlanarMovement);
+            Assert.AreEqual(TurnBackMotionPolicy.DefaultTurnCompleteNormalizedTime, policy.TurnCompleteNormalizedTime);
+            Assert.AreEqual(0.08f, policy.EnterFadeDuration);
+            Assert.AreEqual(0f, policy.StartNormalizedTime);
+            Assert.AreEqual(TurnBackMotionPolicy.DefaultTurnCompleteNormalizedTime, policy.LockInputNormalizedTime);
+            Assert.AreEqual(TurnBackMotionPolicy.DefaultTurnCompleteNormalizedTime, policy.ExitNormalizedTime);
+            Assert.True(policy.HasBakedMotionProfile);
+            Assert.AreEqual(TurnBackMotionPolicy.DefaultBakedMotionProfileId, policy.BakedMotionProfileId);
+        }
+
+        [Test]
+        public void TurnBackMotionPolicyCarriesBakedProfileIdAsPureData()
+        {
+            TurnBackMotionPolicy policy = new TurnBackMotionPolicy(
+                "Locomotion.Turn.Back",
+                BasicMovementPhase.MoveLoop,
+                BasicMovementGait.Run,
+                TurnBackMotionYawSource.BakedMotionProfile,
+                TurnBackMotionTranslationSource.BakedMotionProfile,
+                true,
+                true,
+                0.5f,
+                0.1f,
+                0.05f,
+                0.4f,
+                0.5f,
+                "Configs/3C/Animation/Locomotion/Corin/Bake/Generic/TurnBack");
+
+            Assert.True(policy.HasBakedMotionProfile);
+            Assert.AreEqual("Configs/3C/Animation/Locomotion/Corin/Bake/Generic/TurnBack", policy.BakedMotionProfileId);
+            Assert.AreEqual(TurnBackMotionYawSource.BakedMotionProfile, policy.YawSource);
+            Assert.AreEqual(TurnBackMotionTranslationSource.BakedMotionProfile, policy.TranslationSource);
+        }
+
+        [Test]
+        public void TurnBackMotionPolicyClampsInvalidTimingValues()
+        {
+            TurnBackMotionPolicy policy = new TurnBackMotionPolicy(
+                "Locomotion.Turn.Back",
+                BasicMovementPhase.MoveLoop,
+                BasicMovementGait.Run,
+                TurnBackMotionYawSource.BakedMotionProfile,
+                TurnBackMotionTranslationSource.None,
+                true,
+                true,
+                2f,
+                -1f,
+                -0.5f,
+                2f,
+                3f,
+                string.Empty);
+
+            Assert.AreEqual(1f, policy.TurnCompleteNormalizedTime);
+            Assert.AreEqual(0f, policy.EnterFadeDuration);
+            Assert.AreEqual(0f, policy.StartNormalizedTime);
+            Assert.AreEqual(1f, policy.LockInputNormalizedTime);
+            Assert.AreEqual(1f, policy.ExitNormalizedTime);
+        }
+
+        [Test]
+        public void StateTimelineSamplerSeparatesExitAndRequestWindows()
+        {
+            StateTimelinePolicyDefinition policy = new StateTimelinePolicyDefinition(
+                "FullBody/Action/Attack01",
+                0,
+                0,
+                new[]
+                {
+                    new StateTimelineWindowDefinition(
+                        "attack-exit",
+                        StateTimelineWindowKind.Exit,
+                        StateTimelineTimeDomain.Normalized,
+                        0.8f,
+                        1f),
+                    new StateTimelineWindowDefinition(
+                        "attack-dodge-cancel",
+                        StateTimelineWindowKind.Cancel,
+                        StateTimelineTimeDomain.Normalized,
+                        0.2f,
+                        0.6f,
+                        minPriority: 30,
+                        requestType: ActionRequestType.Dodge)
+                });
+
+            StateTimelineWindowFacts exitFacts = StateTimelineSampler.Sample(
+                in policy,
+                0.9f,
+                true,
+                0.9f,
+                ActionRequestType.Dodge);
+            StateTimelineWindowFacts cancelFacts = StateTimelineSampler.Sample(
+                in policy,
+                0.4f,
+                true,
+                0.4f,
+                ActionRequestType.Dodge);
+
+            Assert.True(exitFacts.ExitWindowActive);
+            Assert.False(exitFacts.InterruptWindowActive);
+            Assert.AreEqual("attack-exit", exitFacts.ActiveWindowIds);
+            Assert.IsEmpty(exitFacts.RequestWindowIds);
+            Assert.False(exitFacts.HasRequestWindow);
+
+            Assert.False(cancelFacts.ExitWindowActive);
+            Assert.True(cancelFacts.InterruptWindowActive);
+            Assert.AreEqual("attack-dodge-cancel", cancelFacts.ActiveWindowIds);
+            Assert.AreEqual("attack-dodge-cancel", cancelFacts.RequestWindowIds);
+            Assert.True(cancelFacts.HasRequestWindow);
+            Assert.AreEqual(30, cancelFacts.MinPriority);
+        }
+
+        [Test]
+        public void StateTimelineValidatorRequiresRequestTypeForInterruptWindows()
+        {
+            StateTimelinePolicyDefinition policy = new StateTimelinePolicyDefinition(
+                "FullBody/Action/Attack01",
+                0,
+                0,
+                new[]
+                {
+                    new StateTimelineWindowDefinition(
+                        "attack-cancel",
+                        StateTimelineWindowKind.Cancel,
+                        StateTimelineTimeDomain.Normalized,
+                        0.2f,
+                        0.6f)
+                });
+
+            StateTimelinePolicyValidationResult result = StateTimelinePolicyValidator.Validate(policy);
+
+            Assert.True(result.HasErrors);
+            Assert.That(result.DescribeErrors(), Does.Contain("request type"));
+        }
+
+        [Test]
+        public void BasicLocomotionPipelineUsesDecisionFactsWithoutRecomputingInputOrCamera()
+        {
+            BasicLocomotionPipeline pipeline = new BasicLocomotionPipeline();
+            BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, false);
+            MovementInputIntent intent = new MovementInputIntent(Vector2.left, Vector2.left, 1f, true, BasicMovementGait.Run);
+            LocomotionDecisionFacts facts = new LocomotionDecisionFacts(
+                intent,
+                BasicMovementGait.Run,
+                BasicMovementPhaseFacts.None,
+                new LocomotionSpatialFacts(Vector3.right, Vector3.forward, Vector3.forward, Vector3.right),
+                LocomotionTurnBackIntent.None);
+
+            BasicLocomotionFrame frame = pipeline.Tick(
+                in input,
+                BasicMovementSettings.FromConfig(null),
+                in facts,
+                BasicMovementPhase.MoveLoop,
+                BasicMovementMotionFacts.None(BasicMovementPhase.MoveLoop),
+                BasicMovementGait.Run);
+
+            Assert.AreEqual(Vector2.left, frame.Intent.RawInput);
+            Assert.AreEqual(Vector3.right, frame.WorldDirection);
+            Assert.AreEqual(Vector3.right, frame.Command.WorldDirection);
+            Assert.AreEqual(BasicMovementGait.Run, frame.Command.Gait);
         }
 
         [Test]
@@ -89,6 +317,512 @@ namespace Tests.Editor
         }
 
         [Test]
+        public void ConfiguredStateMachineRoutesMoveStartAndMoveLoopToTurnBackOnly()
+        {
+            CharacterStateMachineDefinition definition = LoadConfiguredStateMachineDefinition();
+            string[] sources = definition.Transitions
+                .Where(transition => transition.ToStateId == CharacterStateIds.TurnBack)
+                .Select(transition => transition.FromStateId)
+                .ToArray();
+
+            CollectionAssert.Contains(sources, CharacterStateIds.MoveStart.Value);
+            CollectionAssert.Contains(sources, CharacterStateIds.MoveLoop.Value);
+            CollectionAssert.DoesNotContain(sources, CharacterStateIds.MoveStop.Value);
+            CollectionAssert.DoesNotContain(sources, CharacterStateIds.Idle.Value);
+        }
+
+        [Test]
+        public void ConfiguredStateMachineAssetUsesFormalTurnBackState()
+        {
+            CharacterStateMachineDefinitionSO asset = AssetDatabase.LoadAssetAtPath<CharacterStateMachineDefinitionSO>(
+                "Assets/Configs/3C/Statemachine/DefaultCharacterStateMachine.asset");
+            Assert.NotNull(asset);
+
+            CharacterStateMachineDefinition definition = asset.ToDefinition();
+            Assert.True(definition.TryGetNode(CharacterStateIds.TurnBack, out CharacterStateNodeDefinition turnBack));
+            Assert.AreEqual(CharacterStateMotionOutputKind.AnimationDrivenLocomotion, turnBack.Output.MotionOutput);
+            Assert.True(turnBack.Output.HasTurnBackMotionPolicy);
+            Assert.AreEqual("Locomotion.Turn.Back", turnBack.Output.TurnBackMotionPolicy.AliasKey);
+            Assert.AreEqual(TurnBackMotionYawSource.BakedMotionProfile, turnBack.Output.TurnBackMotionPolicy.YawSource);
+            Assert.AreEqual(TurnBackMotionTranslationSource.BakedMotionProfile, turnBack.Output.TurnBackMotionPolicy.TranslationSource);
+            Assert.True(turnBack.Output.TurnBackMotionPolicy.SuppressInputRotation);
+            Assert.True(turnBack.Output.TurnBackMotionPolicy.SuppressInputPlanarMovement);
+            Assert.True(turnBack.Output.TurnBackMotionPolicy.HasBakedMotionProfile);
+            Assert.AreEqual(TurnBackMotionPolicy.DefaultBakedMotionProfileId, turnBack.Output.TurnBackMotionPolicy.BakedMotionProfileId);
+
+            string[] sources = definition.Transitions
+                .Where(transition => transition.ToStateId == CharacterStateIds.TurnBack)
+                .Select(transition => transition.FromStateId)
+                .ToArray();
+            CollectionAssert.AreEquivalent(new[] { CharacterStateIds.MoveStart.Value, CharacterStateIds.MoveLoop.Value }, sources);
+        }
+
+        [Test]
+        public void ConfiguredRunLocomotionEnablesTurnBackBakedProfileAndKeepsRunEndProfile()
+        {
+            RunLocomotionAnimationConfigSO asset = AssetDatabase.LoadAssetAtPath<RunLocomotionAnimationConfigSO>(
+                "Assets/Configs/3C/Animation/Locomotion/Corin/DefaultRunLocomotionAnimationConfig.asset");
+            Assert.NotNull(asset);
+
+            RunLocomotionAnimationConfigValidationResult validation = asset.Validate();
+            Assert.False(validation.HasErrors, validation.DescribeErrors());
+            LocomotionMotionProfileSO turnBackProfile = asset.ResolveMotionProfile(
+                BasicMovementPhase.TurnBack,
+                BasicMovementGait.Run,
+                "Locomotion.Turn.Back");
+            Assert.NotNull(turnBackProfile);
+            Assert.AreEqual(BasicMovementPhase.TurnBack, turnBackProfile.Phase);
+            Assert.AreEqual(BasicMovementGait.Run, turnBackProfile.Gait);
+            Assert.AreEqual("Locomotion.Turn.Back", turnBackProfile.AliasKey);
+            Assert.NotNull(asset.ResolveMotionProfile(
+                BasicMovementPhase.MoveStop,
+                BasicMovementGait.Run,
+                "RunEnd"));
+        }
+
+        [Test]
+        public void ConfiguredTurnBackEntryOnlyConsumesAcceptedTurnBackInputFact()
+        {
+            CharacterStateMachineDefinition definition = LoadConfiguredStateMachineDefinition();
+            CharacterStateTransitionDefinition[] transitions = definition.Transitions
+                .Where(transition => transition.ToStateId == CharacterStateIds.TurnBack)
+                .ToArray();
+
+            Assert.AreEqual(2, transitions.Length);
+            CollectionAssert.AreEquivalent(
+                new[] { CharacterStateIds.MoveStart.Value, CharacterStateIds.MoveLoop.Value },
+                transitions.Select(transition => transition.FromStateId).ToArray());
+            foreach (CharacterStateTransitionDefinition transition in transitions)
+            {
+                Assert.AreEqual(1, transition.Conditions.Count);
+                Assert.AreEqual(CharacterStateTransitionConditionKind.HasInputRequest, transition.Conditions[0].Kind);
+                Assert.AreEqual(InputRequestKind.TurnBack, transition.Conditions[0].RequestKind);
+                Assert.False(transition.Conditions.Any(condition => condition.Kind == CharacterStateTransitionConditionKind.MoveTurnBackRequested));
+            }
+
+            string asset = File.ReadAllText(Path.Combine(Application.dataPath, "Configs/3C/Statemachine/DefaultCharacterStateMachine.asset"));
+            Assert.That(asset, Does.Not.Contain("kind: 7"));
+        }
+
+        [Test]
+        public void MoveLoopAcceptedTurnBackRequestEntersTurnBack()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true));
+            runner.Tick(Context(move: true, canExit: true));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                request: TurnBackRequest(1, 3, Vector3.back),
+                turnBackIntent: TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward)));
+
+            Assert.AreEqual(CharacterStateIds.TurnBack, frame.Snapshot.ActiveState);
+            Assert.AreEqual(BasicMovementPhase.TurnBack, frame.LocomotionPhase);
+            Assert.True(frame.ExecuteBasicMovement);
+            Assert.True(frame.PresentLocomotionAnimation);
+            Assert.False(frame.Owner.IsAction);
+            Assert.True(frame.HasTurnBackMotionPolicy);
+            Assert.AreEqual(TurnBackMotionPolicy.DefaultAliasKey, frame.TurnBackMotionPolicy.AliasKey);
+            Assert.AreEqual(Vector3.back, frame.TurnBackWorldDirection);
+        }
+
+        [Test]
+        public void MoveLoopIntentOnlyDoesNotEnterTurnBack()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true));
+            runner.Tick(Context(move: true, canExit: true));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                turnBackIntent: TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward)));
+
+            Assert.AreEqual(CharacterStateIds.MoveLoop, frame.Snapshot.ActiveState);
+        }
+
+        [Test]
+        public void MoveStartAcceptedTurnBackRequestEntersTurnBack()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true, runHeld: true));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                request: TurnBackRequest(1, 3, Vector3.back),
+                turnBackIntent: TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward)));
+
+            Assert.AreEqual(CharacterStateIds.TurnBack, frame.Snapshot.ActiveState);
+            Assert.AreEqual(BasicMovementPhase.TurnBack, frame.LocomotionPhase);
+            Assert.AreEqual(Vector3.back, frame.TurnBackWorldDirection);
+        }
+
+        [Test]
+        public void RejectedTurnBackRequestDoesNotEnterTurnBack()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true));
+            runner.Tick(Context(move: true, canExit: true));
+            LocomotionTurnBackIntent intent = TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward);
+            LocomotionDecisionFacts facts = new LocomotionDecisionFacts(
+                MovementInputIntent.FromRaw(Vector2.up, 0.1f, true),
+                BasicMovementGait.Run,
+                BasicMovementPhaseFacts.None,
+                new LocomotionSpatialFacts(Vector3.back, Vector3.forward, Vector3.forward, Vector3.right),
+                intent);
+            CharacterInputRequestFact rejectedFact = FullBodyActionInterruptGate.BuildTurnBackRequestFact(
+                1,
+                runner.Snapshot,
+                in facts,
+                StateTimelineWindowFacts.None(CharacterStateIds.MoveLoop),
+                new[] { new ActionInterruptPolicy(new ActionStateId(CharacterStateIds.MoveLoop.Value), new ActionStateId(CharacterStateIds.TurnBack.Value), 99) },
+                out ActionInterruptDecision decision);
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                request: rejectedFact,
+                turnBackIntent: intent));
+
+            Assert.False(decision.Accepted);
+            Assert.False(rejectedFact.HasRequest);
+            Assert.AreEqual(CharacterStateIds.MoveLoop, frame.Snapshot.ActiveState);
+        }
+
+        [Test]
+        public void MoveLoopTurnBackUsesAcceptedRequestDirectionInsteadOfPreviousMoveDirection()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true));
+            runner.Tick(Context(move: true, canExit: true));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                request: TurnBackRequest(1, 3, Vector3.back),
+                turnBackIntent: TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward),
+                runtimeBlackboard: BlackboardWithLocomotionDirection(Vector3.back)));
+
+            Assert.AreEqual(CharacterStateIds.TurnBack, frame.Snapshot.ActiveState);
+            Assert.AreEqual(Vector3.back, frame.TurnBackWorldDirection);
+            Assert.AreEqual(Vector3.forward, frame.TurnBackEntryBasisForward);
+            Assert.AreNotEqual(frame.TurnBackWorldDirection, frame.TurnBackEntryBasisForward);
+        }
+
+        [Test]
+        public void TurnBackLockedDirectionSurvivesSubsequentInputBasisChanges()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true));
+            runner.Tick(Context(move: true, canExit: true));
+
+            CharacterStateMachineFrame entered = runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                request: TurnBackRequest(1, 3, Vector3.back),
+                turnBackIntent: TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward)));
+            CharacterStateMachineFrame held = runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.right,
+                facingForward: Vector3.right,
+                runtimeBlackboard: BlackboardWithLocomotionProgress("Locomotion.Turn.Back", 0.25f, false)));
+
+            Assert.AreEqual(CharacterStateIds.TurnBack, entered.Snapshot.ActiveState);
+            Assert.AreEqual(CharacterStateIds.TurnBack, held.Snapshot.ActiveState);
+            Assert.AreEqual(Vector3.back, held.TurnBackWorldDirection);
+            Assert.AreEqual(Vector3.forward, held.TurnBackEntryBasisForward);
+        }
+
+        [Test]
+        public void TurnBackEntryBasisSurvivesRestore()
+        {
+            CharacterStateMachineRunner original = CreateRunner();
+            original.Tick(Context(move: true));
+            original.Tick(Context(move: true, canExit: true));
+            CharacterStateMachineFrame entered = original.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                request: TurnBackRequest(1, 3, Vector3.back),
+                turnBackIntent: TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward)));
+            CharacterStateMachineRestoreState restoreState = original.CaptureRestoreState();
+
+            CharacterStateMachineRunner restored = CreateRunner();
+            Assert.True(restored.Restore(in restoreState));
+            CharacterStateMachineFrame restoredFrame = restored.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.right,
+                facingForward: Vector3.right,
+                runtimeBlackboard: BlackboardWithLocomotionProgress("Locomotion.Turn.Back", 0.25f, false)));
+
+            Assert.AreEqual(CharacterStateIds.TurnBack, entered.Snapshot.ActiveState);
+            Assert.AreEqual(CharacterStateIds.TurnBack, restoredFrame.Snapshot.ActiveState);
+            Assert.AreEqual(Vector3.back, restoredFrame.TurnBackWorldDirection);
+            Assert.AreEqual(Vector3.forward, restoredFrame.TurnBackEntryBasisForward);
+        }
+
+        [Test]
+        public void MoveLoopPreviousOpposedDirectionDoesNotTriggerTurnBackWhenFacingMatchesInput()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true));
+            runner.Tick(Context(move: true, canExit: true));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                worldDirection: Vector3.forward,
+                facingForward: Vector3.forward,
+                runtimeBlackboard: BlackboardWithLocomotionDirection(Vector3.back)));
+
+            Assert.AreEqual(CharacterStateIds.MoveLoop, frame.Snapshot.ActiveState);
+        }
+
+        [Test]
+        public void MoveLoopReverseInputWithoutDerivedIntentDoesNotEnterTurnBack()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true));
+            runner.Tick(Context(move: true, canExit: true));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward));
+
+            Assert.AreEqual(CharacterStateIds.MoveLoop, frame.Snapshot.ActiveState);
+        }
+
+        [Test]
+        public void MoveStartIntentOnlyDoesNotEnterTurnBack()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true, runHeld: true));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                turnBackIntent: TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward)));
+
+            Assert.AreEqual(CharacterStateIds.MoveStart, frame.Snapshot.ActiveState);
+        }
+
+        [Test]
+        public void MoveStopDoesNotConsumeTurnBackIntent()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true, runHeld: true));
+            runner.Tick(Context(move: true, runHeld: true, canExit: true));
+            runner.Tick(Context(move: false));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                turnBackIntent: TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward)));
+
+            Assert.AreEqual(CharacterStateIds.MoveStart, frame.Snapshot.ActiveState);
+        }
+
+        [Test]
+        public void IdleDoesNotConsumeTurnBackIntentDirectly()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                turnBackIntent: TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward)));
+
+            Assert.AreEqual(CharacterStateIds.MoveStart, frame.Snapshot.ActiveState);
+        }
+
+        [Test]
+        public void TurnBackExitsToMoveLoopAfterLocomotionAnimationEnds()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true, runHeld: true));
+            runner.Tick(Context(move: true, runHeld: true, canExit: true));
+            runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                request: TurnBackRequest(1, 3, Vector3.back),
+                turnBackIntent: TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward),
+                runtimeBlackboard: BlackboardWithLocomotionDirection(Vector3.back)));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                runtimeBlackboard: BlackboardWithLocomotionProgress("Locomotion.Turn.Back", 1f, true)));
+
+            Assert.AreEqual(CharacterStateIds.MoveLoop, frame.Snapshot.ActiveState);
+            Assert.AreEqual(BasicMovementPhase.MoveLoop, frame.LocomotionPhase);
+        }
+
+        [Test]
+        public void TurnBackDoesNotExitBeforeTurnCompleteTime()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true, runHeld: true));
+            runner.Tick(Context(move: true, runHeld: true, canExit: true));
+            runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                request: TurnBackRequest(1, 3, Vector3.back),
+                turnBackIntent: TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward),
+                runtimeBlackboard: BlackboardWithLocomotionDirection(Vector3.back)));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                runtimeBlackboard: BlackboardWithLocomotionProgress(
+                    "Locomotion.Turn.Back",
+                    TurnBackMotionPolicy.DefaultTurnCompleteNormalizedTime - 0.01f,
+                    false)));
+
+            Assert.AreEqual(CharacterStateIds.TurnBack, frame.Snapshot.ActiveState);
+            Assert.AreEqual(BasicMovementPhase.TurnBack, frame.LocomotionPhase);
+        }
+
+        [Test]
+        public void TurnBackExitsToMoveLoopAtTurnCompleteTime()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true, runHeld: true));
+            runner.Tick(Context(move: true, runHeld: true, canExit: true));
+            runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                request: TurnBackRequest(1, 3, Vector3.back),
+                turnBackIntent: TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward),
+                runtimeBlackboard: BlackboardWithLocomotionDirection(Vector3.back)));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                runtimeBlackboard: BlackboardWithLocomotionProgress(
+                    "Locomotion.Turn.Back",
+                    TurnBackMotionPolicy.DefaultTurnCompleteNormalizedTime,
+                    false)));
+
+            Assert.AreEqual(CharacterStateIds.MoveLoop, frame.Snapshot.ActiveState);
+            Assert.AreEqual(BasicMovementPhase.MoveLoop, frame.LocomotionPhase);
+        }
+
+        [Test]
+        public void TurnBackExitsToIdleAtTurnCompleteTimeWithoutMoveInput()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true, runHeld: true));
+            runner.Tick(Context(move: true, runHeld: true, canExit: true));
+            runner.Tick(Context(
+                move: true,
+                runHeld: true,
+                worldDirection: Vector3.back,
+                facingForward: Vector3.forward,
+                request: TurnBackRequest(1, 3, Vector3.back),
+                turnBackIntent: TurnBackIntent(1, 3, 180f, Vector3.back, Vector3.forward),
+                runtimeBlackboard: BlackboardWithLocomotionDirection(Vector3.back)));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: false,
+                runHeld: true,
+                runtimeBlackboard: BlackboardWithLocomotionProgress(
+                    "Locomotion.Turn.Back",
+                    TurnBackMotionPolicy.DefaultTurnCompleteNormalizedTime,
+                    false)));
+
+            Assert.AreEqual(CharacterStateIds.Idle, frame.Snapshot.ActiveState);
+            Assert.AreEqual(BasicMovementPhase.Idle, frame.LocomotionPhase);
+        }
+
+        [Test]
+        public void CorinTurnBackTransitionLibrariesUseRootMotionClips()
+        {
+            AssertTurnBackLibraryUsesInPlaceVisualClip("Assets/Configs/3C/Animacer/Corin/Humanoid/CorinHumanoid_TransitionLib.asset");
+            AssertTurnBackLibraryUsesInPlaceVisualClip("Assets/Configs/3C/Animacer/Corin/Generic/Corin_TransitionLib.asset");
+        }
+
+        [Test]
+        public void MissingTurnBackTransitionReportsDiagnosticAndDoesNotPlay()
+        {
+            RuntimeDiagnosticLog.Reset();
+            List<RuntimeDiagnosticLogEvent> events = new List<RuntimeDiagnosticLogEvent>();
+            GameObject gameObject = new GameObject("missing-turnback-transition-test");
+            try
+            {
+                gameObject.AddComponent<Animator>();
+                AnimancerComponent animancer = gameObject.AddComponent<AnimancerComponent>();
+                BasicLocomotionAnimancerPresenter presenter = gameObject.AddComponent<BasicLocomotionAnimancerPresenter>();
+                TransitionLibrary library = new TransitionLibrary();
+                library.AddTransition(StringReference.Get("Idle"), CreateClipTransition(CreateClip("Idle")));
+                animancer.Graph.Transitions = library;
+
+                using (RuntimeDiagnosticLog.Capture(events.Add))
+                {
+                    presenter.Present(new MovementAnimationContext(
+                        BasicMovementPhase.TurnBack,
+                        BasicMovementGait.Run,
+                        true,
+                        1f,
+                        Vector3.back,
+                        0f,
+                        TurnBackMotionPolicy.Default,
+                        true));
+                }
+
+                Assert.IsEmpty(presenter.CurrentAnimationName);
+                Assert.True(events.Any(item => item.Message == "locomotion-animation-missing-transition" && item.Context.Contains("Locomotion.Turn.Back")));
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void CorinPrefabAnimatorKeepsRootMotionEnabledForManualOnAnimatorMove()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Character/可琳.prefab");
+
+            Assert.NotNull(prefab);
+            Animator animator = prefab.GetComponentInChildren<Animator>(true);
+            Assert.NotNull(animator);
+            Assert.True(animator.applyRootMotion);
+        }
+
+
+        [Test]
         public void MoveInputAndDodgeRequestEnterDirectionalDodge()
         {
             CharacterStateMachineRunner runner = CreateRunner();
@@ -139,6 +873,7 @@ namespace Tests.Editor
             try
             {
                 PlayerLocomotionController controller = gameObject.AddComponent<PlayerLocomotionController>();
+                ConfigureLocomotion(controller);
                 CharacterStateMachineRunner runner = CreateRunner();
                 BasicLocomotionFrame locomotionFrame;
                 CharacterStateMachineFrame stateFrame;
@@ -194,25 +929,57 @@ namespace Tests.Editor
             CharacterStateMachineRunner runner = CreateRunner();
             runner.Tick(Context(move: false, deltaTime: 0.1f, request: DodgeRequest(CharacterStateVariant.Backstep, Vector3.back)));
 
-            CharacterStateMachineFrame frame = runner.Tick(Context(move: false, deltaTime: 0.25f));
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: false,
+                deltaTime: 0.25f,
+                runtimeBlackboard: BlackboardWithActionProgress(ActionAnimationKeys.DodgeBackstep, 0.35f, false)));
 
-            Assert.AreEqual(CharacterStateIds.Idle, frame.Snapshot.ActiveState);
+            Assert.AreEqual(CharacterStateIds.Dodge, frame.Snapshot.ActiveState);
+            Assert.True(frame.ActionCompleted);
             Assert.False(frame.SetRunLatch);
         }
 
         [Test]
-        public void DodgeExitsToMoveLoopOrIdleAfterDuration()
+        public void BackstepDodgeWaitsForMatchingActionEndBeforeIdle()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: false, deltaTime: 0.35f, request: DodgeRequest(CharacterStateVariant.Backstep, Vector3.back)));
+
+            CharacterStateMachineFrame mismatched = runner.Tick(Context(
+                move: false,
+                runtimeBlackboard: BlackboardWithActionProgress(ActionAnimationKeys.DodgeDirectional, 1f, true)));
+            CharacterStateMachineFrame ended = runner.Tick(Context(
+                move: false,
+                runtimeBlackboard: BlackboardWithActionProgress(ActionAnimationKeys.DodgeBackstep, 1f, true)));
+
+            Assert.AreEqual(CharacterStateIds.Dodge, mismatched.Snapshot.ActiveState);
+            Assert.AreEqual(CharacterStateIds.Idle, ended.Snapshot.ActiveState);
+            Assert.False(ended.SetRunLatch);
+        }
+
+        [Test]
+        public void BackstepDodgeMoveInputCanInterruptRecoveryAfterDuration()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: false, deltaTime: 0.35f, request: DodgeRequest(CharacterStateVariant.Backstep, Vector3.back)));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(
+                move: true,
+                runtimeBlackboard: BlackboardWithActionProgress(ActionAnimationKeys.DodgeBackstep, 0.5f, false)));
+
+            Assert.AreEqual(CharacterStateIds.MoveLoop, frame.Snapshot.ActiveState);
+            Assert.False(frame.SetRunLatch);
+        }
+
+        [Test]
+        public void DirectionalDodgeStillExitsToMoveLoopAfterDuration()
         {
             CharacterStateMachineRunner directional = CreateRunner();
             directional.Tick(Context(move: true, deltaTime: 0.35f, request: DodgeRequest(CharacterStateVariant.Directional, Vector3.forward)));
             CharacterStateMachineFrame moveLoop = directional.Tick(Context(move: true));
 
-            CharacterStateMachineRunner backstep = CreateRunner();
-            backstep.Tick(Context(move: false, deltaTime: 0.35f, request: DodgeRequest(CharacterStateVariant.Backstep, Vector3.back)));
-            CharacterStateMachineFrame idle = backstep.Tick(Context(move: false));
-
             Assert.AreEqual(CharacterStateIds.MoveLoop, moveLoop.Snapshot.ActiveState);
-            Assert.AreEqual(CharacterStateIds.Idle, idle.Snapshot.ActiveState);
+            Assert.True(moveLoop.SetRunLatch);
         }
 
         [Test]
@@ -232,6 +999,8 @@ namespace Tests.Editor
         public void FullBodyActionControllerClearsActionAnimationWhenReturningToLocomotion()
         {
             GameObject gameObject = new GameObject("fullbody-action-clear-test");
+            ActionInterruptPolicySetSO policySet = CreateDodgePolicyAsset(30);
+            DodgeActionConfigSO dodgeConfig = CreateDodgeConfigAsset(30, 20);
 
             try
             {
@@ -243,26 +1012,38 @@ namespace Tests.Editor
 
                 locomotion.AutoUpdate = false;
                 fullBody.AutoUpdate = false;
-                fullBody.LocomotionController = locomotion;
+                ConfigureFullBody(fullBody, locomotion);
                 fullBody.InputBufferComponent = inputBuffer;
                 fullBody.FacingProviderBehaviour = facing;
                 fullBody.AnimationPresenterBehaviour = actionPresenter;
+                fullBody.InterruptPolicySet = policySet;
+                fullBody.DodgeActionConfigAsset = dodgeConfig;
 
                 inputBuffer.SetStep(1);
                 inputBuffer.Buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 1, 4);
 
-                Assert.True(fullBody.Tick(new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero)));
+                Assert.True(fullBody.Tick(new BasicLocomotionInputSnapshot(0.1f, Vector2.zero, Vector2.zero)));
                 Assert.AreEqual(CharacterStateIds.Dodge, fullBody.CurrentStateSnapshot.ActiveState);
                 Assert.AreEqual(1, actionPresenter.PresentCount);
                 Assert.AreEqual(0, actionPresenter.ClearCount);
+                Assert.False(inputBuffer.Buffer.TryPeek(InputRequestKind.Dodge, 1, out _));
 
-                Assert.True(fullBody.Tick(new BasicLocomotionInputSnapshot(0.25f, Vector2.up, Vector2.zero)));
-                Assert.AreEqual(CharacterStateIds.MoveLoop, fullBody.CurrentStateSnapshot.ActiveState);
+                actionPresenter.NormalizedTime = 1f;
+                actionPresenter.PlaybackEnded = true;
+
+                Assert.True(fullBody.Tick(new BasicLocomotionInputSnapshot(0.25f, Vector2.zero, Vector2.zero)));
+                Assert.AreEqual(CharacterStateIds.Dodge, fullBody.CurrentStateSnapshot.ActiveState);
+                Assert.AreEqual(0, actionPresenter.ClearCount);
+
+                Assert.True(fullBody.Tick(new BasicLocomotionInputSnapshot(0.1f, Vector2.zero, Vector2.zero)));
+                Assert.AreEqual(CharacterStateIds.Idle, fullBody.CurrentStateSnapshot.ActiveState);
                 Assert.AreEqual(1, actionPresenter.ClearCount);
             }
             finally
             {
                 Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(policySet);
+                Object.DestroyImmediate(dodgeConfig);
             }
         }
 
@@ -337,6 +1118,332 @@ namespace Tests.Editor
         }
 
         [Test]
+        public void TurnBackLocomotionKeepsAnimatorRootMotionDisabledAfterAction()
+        {
+            CreateAnimationPresenterRig(
+                out GameObject gameObject,
+                out BasicLocomotionAnimancerPresenter locomotionPresenter,
+                out ActionAnimationAnimancerPresenter actionPresenter,
+                out AnimancerComponent animancer,
+                out AnimationClip idleClip,
+                out AnimationClip runClip,
+                out AnimationClip dodgeClip);
+
+            try
+            {
+                AnimatorRootMotionController rootMotionController = animancer.GetComponent<AnimatorRootMotionController>();
+                actionPresenter.Present(new CharacterStateAnimationRequest(CharacterStateAnimationBinding.FromLibraryKey(ActionAnimationKeys.DodgeDirectional.Value, "Dodge Directional"), 1));
+                Assert.False(rootMotionController.ManualRootMotionActive);
+                Assert.False(animancer.Animator.applyRootMotion);
+
+                locomotionPresenter.Present(new MovementAnimationContext(BasicMovementPhase.TurnBack, BasicMovementGait.Run, true, 1f, Vector3.back, 5f));
+
+                Assert.False(rootMotionController.ManualRootMotionActive);
+                Assert.False(animancer.Animator.applyRootMotion);
+                Assert.AreSame(runClip, animancer.Graph.Layers[0].CurrentState.MainObject);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(idleClip);
+                Object.DestroyImmediate(runClip);
+                Object.DestroyImmediate(dodgeClip);
+            }
+        }
+
+        [Test]
+        public void RootMotionPolicyKeepsAnimatorApplyRootMotionDisabledForTurnBack()
+        {
+            CreateAnimationPresenterRig(
+                out GameObject gameObject,
+                out BasicLocomotionAnimancerPresenter locomotionPresenter,
+                out ActionAnimationAnimancerPresenter actionPresenter,
+                out AnimancerComponent animancer,
+                out AnimationClip idleClip,
+                out AnimationClip runClip,
+                out AnimationClip dodgeClip);
+
+            try
+            {
+                AnimatorRootMotionController rootMotionController = animancer.GetComponent<AnimatorRootMotionController>();
+                animancer.Animator.applyRootMotion = false;
+
+                locomotionPresenter.Present(new MovementAnimationContext(BasicMovementPhase.TurnBack, BasicMovementGait.Run, true, 1f, Vector3.back, 5f));
+
+                Assert.False(animancer.Animator.applyRootMotion);
+                Assert.False(rootMotionController.ManualRootMotionActive);
+
+                animancer.Animator.applyRootMotion = true;
+                actionPresenter.Present(new CharacterStateAnimationRequest(CharacterStateAnimationBinding.FromLibraryKey(ActionAnimationKeys.DodgeDirectional.Value, "Dodge Directional"), 1));
+
+                Assert.False(animancer.Animator.applyRootMotion);
+                Assert.False(rootMotionController.ManualRootMotionActive);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(idleClip);
+                Object.DestroyImmediate(runClip);
+                Object.DestroyImmediate(dodgeClip);
+            }
+        }
+
+        [Test]
+        public void NonTurnBackLocomotionKeepsAnimatorRootMotionDisabledByDefault()
+        {
+            CreateAnimationPresenterRig(
+                out GameObject gameObject,
+                out BasicLocomotionAnimancerPresenter locomotionPresenter,
+                out _,
+                out AnimancerComponent animancer,
+                out AnimationClip idleClip,
+                out AnimationClip runClip,
+                out AnimationClip dodgeClip);
+
+            try
+            {
+                AnimatorRootMotionController rootMotionController = animancer.GetComponent<AnimatorRootMotionController>();
+                animancer.Animator.applyRootMotion = true;
+
+                locomotionPresenter.Present(new MovementAnimationContext(BasicMovementPhase.MoveLoop, BasicMovementGait.Run, true, 1f, Vector3.forward, 5f));
+
+                Assert.False(animancer.Animator.applyRootMotion);
+                Assert.False(rootMotionController.ManualRootMotionActive);
+                Assert.AreSame(runClip, animancer.Graph.Layers[0].CurrentState.MainObject);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(idleClip);
+                Object.DestroyImmediate(runClip);
+                Object.DestroyImmediate(dodgeClip);
+            }
+        }
+
+        [Test]
+        public void LocomotionPresenterDoesNotKeepPendingRuntimeRootMotionDelta()
+        {
+            CreateAnimationPresenterRig(
+                out GameObject gameObject,
+                out BasicLocomotionAnimancerPresenter locomotionPresenter,
+                out _,
+                out _,
+                out AnimationClip idleClip,
+                out AnimationClip runClip,
+                out AnimationClip dodgeClip);
+
+            try
+            {
+                locomotionPresenter.Present(new MovementAnimationContext(BasicMovementPhase.MoveLoop, BasicMovementGait.Run, true, 1f, Vector3.forward, 5f));
+
+                string presenter = File.ReadAllText(Path.Combine(
+                    Application.dataPath,
+                    "Scripts/Character/Animation/Runtime/BasicLocomotionAnimancerPresenter.cs"));
+                Assert.That(presenter, Does.Not.Contain("pendingRootMotionDelta"));
+                Assert.That(presenter, Does.Not.Contain("ConsumeRootMotionDelta"));
+                Assert.That(presenter, Does.Not.Contain("ILocomotionRootMotionSource"));
+                Assert.That(presenter, Does.Not.Contain("ILocomotionRootMotionRollbackStateProvider"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(idleClip);
+                Object.DestroyImmediate(runClip);
+                Object.DestroyImmediate(dodgeClip);
+            }
+        }
+
+
+        [Test]
+        public void LocomotionPlaybackProgressAdvancesFromSimulationTick()
+        {
+            CreateAnimationPresenterRig(
+                out GameObject gameObject,
+                out BasicLocomotionAnimancerPresenter locomotionPresenter,
+                out _,
+                out AnimancerComponent animancer,
+                out AnimationClip idleClip,
+                out AnimationClip runClip,
+                out AnimationClip dodgeClip);
+
+            try
+            {
+                locomotionPresenter.Present(new MovementAnimationContext(BasicMovementPhase.TurnBack, BasicMovementGait.Run, true, 1f, Vector3.back, 5f));
+                AnimancerState state = animancer.Graph.Layers[0].CurrentState;
+                locomotionPresenter.RestorePlaybackProgress(new AnimationPhasePlaybackProgress(
+                    BasicMovementPhase.TurnBack,
+                    "Locomotion.Turn.Back",
+                    0.25f,
+                    true,
+                    false));
+
+                AnimationPhasePlaybackProgress before = locomotionPresenter.CurrentPlaybackProgress;
+                AnimationPhasePlaybackProgress after = locomotionPresenter.AdvancePlayback(0.5f);
+
+                Assert.AreEqual(0.25f, before.NormalizedTime, 0.0001f);
+                Assert.AreEqual(0.75f, after.NormalizedTime, 0.0001f);
+                Assert.AreEqual(0.75f, state.NormalizedTime, 0.0001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(idleClip);
+                Object.DestroyImmediate(runClip);
+                Object.DestroyImmediate(dodgeClip);
+            }
+        }
+
+        [Test]
+        public void TurnBackRestorePlaybackProgressResumesSameAliasWithoutRestart()
+        {
+            CreateAnimationPresenterRig(
+                out GameObject gameObject,
+                out BasicLocomotionAnimancerPresenter locomotionPresenter,
+                out ActionAnimationAnimancerPresenter actionPresenter,
+                out AnimancerComponent animancer,
+                out AnimationClip idleClip,
+                out AnimationClip runClip,
+                out AnimationClip dodgeClip);
+
+            try
+            {
+                locomotionPresenter.Present(new MovementAnimationContext(BasicMovementPhase.TurnBack, BasicMovementGait.Run, true, 1f, Vector3.back, 5f));
+                Assert.AreSame(runClip, animancer.Graph.Layers[0].CurrentState.MainObject);
+
+                locomotionPresenter.RestorePlaybackProgress(
+                    new AnimationPhasePlaybackProgress(
+                        BasicMovementPhase.TurnBack,
+                        "Locomotion.Turn.Back",
+                        0.35f,
+                        true,
+                        false),
+                    BasicMovementGait.Run);
+                actionPresenter.Present(new CharacterStateAnimationRequest(
+                    CharacterStateAnimationBinding.FromLibraryKey(ActionAnimationKeys.DodgeDirectional.Value, "Dodge Directional"),
+                    1));
+                Assert.AreSame(dodgeClip, animancer.Graph.Layers[0].CurrentState.MainObject);
+
+                locomotionPresenter.Present(new MovementAnimationContext(BasicMovementPhase.TurnBack, BasicMovementGait.Run, true, 1f, Vector3.back, 5f));
+
+                Assert.AreSame(runClip, animancer.Graph.Layers[0].CurrentState.MainObject);
+                Assert.AreEqual(0.35f, animancer.Graph.Layers[0].CurrentState.NormalizedTime, 0.0001f);
+                Assert.AreEqual(0.35f, locomotionPresenter.CurrentPlaybackProgress.NormalizedTime, 0.0001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(idleClip);
+                Object.DestroyImmediate(runClip);
+                Object.DestroyImmediate(dodgeClip);
+            }
+        }
+
+        [Test]
+        public void TurnBackAnimationRestartsWhenReenteredAfterCompletion()
+        {
+            CreateAnimationPresenterRig(
+                out GameObject gameObject,
+                out BasicLocomotionAnimancerPresenter locomotionPresenter,
+                out _,
+                out AnimancerComponent animancer,
+                out AnimationClip idleClip,
+                out AnimationClip runClip,
+                out AnimationClip dodgeClip);
+
+            try
+            {
+                locomotionPresenter.Present(new MovementAnimationContext(BasicMovementPhase.TurnBack, BasicMovementGait.Run, true, 1f, Vector3.back, 0f));
+                AnimancerState turnBackState = animancer.Graph.Layers[0].CurrentState;
+                turnBackState.NormalizedTime = 1.024f;
+
+                locomotionPresenter.Present(new MovementAnimationContext(BasicMovementPhase.MoveLoop, BasicMovementGait.Run, true, 1f, Vector3.forward, 6f));
+                locomotionPresenter.Present(new MovementAnimationContext(BasicMovementPhase.TurnBack, BasicMovementGait.Run, true, 1f, Vector3.back, 0f));
+
+                Assert.AreEqual(0f, animancer.Graph.Layers[0].CurrentState.NormalizedTime, 0.0001f);
+                Assert.AreEqual(0f, locomotionPresenter.CurrentPlaybackProgress.NormalizedTime, 0.0001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(idleClip);
+                Object.DestroyImmediate(runClip);
+                Object.DestroyImmediate(dodgeClip);
+            }
+        }
+
+        [Test]
+        public void ActionAnimationKeepsRootMotionDisabledAfterTurnBack()
+        {
+            CreateAnimationPresenterRig(
+                out GameObject gameObject,
+                out BasicLocomotionAnimancerPresenter locomotionPresenter,
+                out ActionAnimationAnimancerPresenter actionPresenter,
+                out AnimancerComponent animancer,
+                out AnimationClip idleClip,
+                out AnimationClip runClip,
+                out AnimationClip dodgeClip);
+
+            try
+            {
+                AnimatorRootMotionController rootMotionController = animancer.GetComponent<AnimatorRootMotionController>();
+                locomotionPresenter.Present(new MovementAnimationContext(BasicMovementPhase.TurnBack, BasicMovementGait.Run, true, 1f, Vector3.back, 5f));
+                Assert.False(rootMotionController.ManualRootMotionActive);
+                Assert.False(animancer.Animator.applyRootMotion);
+
+                actionPresenter.Present(new CharacterStateAnimationRequest(CharacterStateAnimationBinding.FromLibraryKey(ActionAnimationKeys.DodgeDirectional.Value, "Dodge Directional"), 1));
+
+                Assert.False(rootMotionController.ManualRootMotionActive);
+                Assert.False(animancer.Animator.applyRootMotion);
+                Assert.AreSame(dodgeClip, animancer.Graph.Layers[0].CurrentState.MainObject);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(idleClip);
+                Object.DestroyImmediate(runClip);
+                Object.DestroyImmediate(dodgeClip);
+            }
+        }
+
+        [Test]
+        public void ActionAnimationKeepsRootMotionDisabledAfterRepeatedTurnBackPolicy()
+        {
+            CreateAnimationPresenterRig(
+                out GameObject gameObject,
+                out BasicLocomotionAnimancerPresenter locomotionPresenter,
+                out ActionAnimationAnimancerPresenter actionPresenter,
+                out AnimancerComponent animancer,
+                out AnimationClip idleClip,
+                out AnimationClip runClip,
+                out AnimationClip dodgeClip);
+
+            try
+            {
+                AnimatorRootMotionController rootMotionController = animancer.GetComponent<AnimatorRootMotionController>();
+                actionPresenter.Present(new CharacterStateAnimationRequest(CharacterStateAnimationBinding.FromLibraryKey(ActionAnimationKeys.DodgeDirectional.Value, "Dodge Directional"), 1));
+                Assert.False(rootMotionController.ManualRootMotionActive);
+                Assert.False(animancer.Animator.applyRootMotion);
+
+                locomotionPresenter.Present(new MovementAnimationContext(BasicMovementPhase.TurnBack, BasicMovementGait.Run, true, 1f, Vector3.back, 5f));
+                Assert.False(rootMotionController.ManualRootMotionActive);
+                Assert.False(animancer.Animator.applyRootMotion);
+
+                actionPresenter.Present(new CharacterStateAnimationRequest(CharacterStateAnimationBinding.FromLibraryKey(ActionAnimationKeys.DodgeDirectional.Value, "Dodge Directional"), 2));
+
+                Assert.False(rootMotionController.ManualRootMotionActive);
+                Assert.False(animancer.Animator.applyRootMotion);
+                Assert.AreSame(dodgeClip, animancer.Graph.Layers[0].CurrentState.MainObject);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(idleClip);
+                Object.DestroyImmediate(runClip);
+                Object.DestroyImmediate(dodgeClip);
+            }
+        }
+
+        [Test]
         public void MissingActionMovementVariantAnimationFailsValidation()
         {
             CharacterStateNodeDefinition dodge = new CharacterStateNodeDefinition(
@@ -356,8 +1463,8 @@ namespace Tests.Editor
                 });
             CharacterStateMachineDefinition definition = new CharacterStateMachineDefinition(
                 CharacterStateIds.Idle,
-                CharacterStateMachineDefinition.CreateDefault().Nodes.Where(node => node.StateId != CharacterStateIds.Dodge).Concat(new[] { dodge }).ToArray(),
-                CharacterStateMachineDefinition.CreateDefault().Transitions.ToArray());
+                LoadConfiguredStateMachineDefinition().Nodes.Where(node => node.StateId != CharacterStateIds.Dodge).Concat(new[] { dodge }).ToArray(),
+                LoadConfiguredStateMachineDefinition().Transitions.ToArray());
 
             CharacterStateMachineValidationResult validation = definition.Validate();
 
@@ -377,7 +1484,7 @@ namespace Tests.Editor
                     InputRequestKind.Dodge,
                     new CharacterActionMovementDefinition(CharacterStateVariant.None, 0.25f, 2f, true, false)),
                 CharacterStateAnimationBinding.FromLibraryKey("Action.Roll", "Roll"));
-            CharacterStateMachineDefinition defaults = CharacterStateMachineDefinition.CreateDefault();
+            CharacterStateMachineDefinition defaults = LoadConfiguredStateMachineDefinition();
             CharacterStateMachineDefinition definition = new CharacterStateMachineDefinition(
                 CharacterStateIds.Idle,
                 defaults.Nodes.Concat(new[] { roll }).ToArray(),
@@ -389,23 +1496,104 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyActionInputRequestBuilderBuildsDirectionalDodgeFact()
+        public void FullBodyActionInputRequestBuilderBuildsDirectionalDodgeRequest()
         {
             InputRequestBuffer buffer = new InputRequestBuffer();
             buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 2, 4);
             BasicMovementSettings settings = BasicMovementSettings.FromConfig(null);
             BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero);
+            LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
+            DodgeActionConfig config = DodgeActionConfig.Default;
 
-            CharacterInputRequestFact fact = FullBodyActionInputRequestBuilder.BuildDodgeRequestFact(
+            bool built = FullBodyActionInputRequestBuilder.TryBuildDodgeRequest(
                 buffer,
                 2,
                 in input,
-                in settings,
                 false,
-                new TestCameraBasisProvider(Vector3.forward, Vector3.right),
-                new TestFacingDirectionProvider(Vector3.forward),
-                DodgeActionConfig.Default);
+                in facts,
+                in config,
+                out DodgeActionRequest request);
 
+            Assert.True(built);
+            Assert.AreEqual(DodgeActionVariant.Directional, request.Variant);
+            Assert.AreEqual(DodgeActionConfig.Default.Priority, request.Priority);
+            Assert.AreEqual(2, request.OriginStep);
+            Assert.AreEqual(6, request.ExpireStep);
+            Assert.AreEqual(ActionStateIds.Dodge, request.TargetState);
+            Assert.AreEqual(Vector3.forward, request.WorldDirection);
+        }
+
+        [Test]
+        public void FullBodyActionInputRequestBuilderUsesLocomotionDecisionFactsDirection()
+        {
+            InputRequestBuffer buffer = new InputRequestBuffer();
+            buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 2, 4);
+            BasicMovementSettings settings = BasicMovementSettings.FromConfig(null);
+            BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.left, Vector2.zero);
+            LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.right, Vector3.forward);
+            DodgeActionConfig config = DodgeActionConfig.Default;
+
+            bool built = FullBodyActionInputRequestBuilder.TryBuildDodgeRequest(
+                buffer,
+                2,
+                in input,
+                false,
+                in facts,
+                in config,
+                out DodgeActionRequest request);
+
+            Assert.True(built);
+            Assert.AreEqual(DodgeActionVariant.Directional, request.Variant);
+            Assert.AreEqual(Vector3.right, request.WorldDirection);
+        }
+
+        [Test]
+        public void FullBodyActionInputRequestBuilderBuildsBackstepDodgeRequest()
+        {
+            InputRequestBuffer buffer = new InputRequestBuffer();
+            buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 3, 4);
+            BasicMovementSettings settings = BasicMovementSettings.FromConfig(null);
+            BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.zero, Vector2.zero);
+            LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.zero, Vector3.forward);
+            DodgeActionConfig config = DodgeActionConfig.Default;
+
+            bool built = FullBodyActionInputRequestBuilder.TryBuildDodgeRequest(
+                buffer,
+                3,
+                in input,
+                false,
+                in facts,
+                in config,
+                out DodgeActionRequest request);
+
+            Assert.True(built);
+            Assert.AreEqual(DodgeActionVariant.Backstep, request.Variant);
+            Assert.AreEqual(Vector3.back, request.WorldDirection);
+        }
+
+        [Test]
+        public void FullBodyActionInterruptGateAcceptedDecisionBuildsDodgeFact()
+        {
+            InputRequestBuffer buffer = new InputRequestBuffer();
+            buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 4, 4);
+            BasicMovementSettings settings = BasicMovementSettings.FromConfig(null);
+            BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero);
+            LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
+            DodgeActionConfig config = DodgeActionConfig.Default;
+
+            CharacterInputRequestFact fact = FullBodyActionInterruptGate.BuildDodgeRequestFact(
+                buffer,
+                4,
+                CharacterStateMachineSnapshot.Inactive,
+                in input,
+                false,
+                in facts,
+                in config,
+                0,
+                new[] { new ActionInterruptPolicy(ActionStateIds.None, ActionStateIds.Dodge, 30) },
+                out ActionInterruptDecision decision);
+
+            Assert.True(decision.Accepted);
             Assert.True(fact.HasRequest);
             Assert.AreEqual(CharacterStateVariant.Directional, fact.Variant);
             Assert.AreEqual(DodgeActionConfig.Default.Priority, fact.Priority);
@@ -413,26 +1601,1409 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyActionInputRequestBuilderBuildsBackstepDodgeFact()
+        public void FullBodyActionInterruptGateRejectedDecisionDoesNotBuildFact()
         {
             InputRequestBuffer buffer = new InputRequestBuffer();
-            buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 3, 4);
+            buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 5, 4);
             BasicMovementSettings settings = BasicMovementSettings.FromConfig(null);
-            BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.zero, Vector2.zero);
+            BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero);
+            LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
+            DodgeActionConfig config = DodgeActionConfig.Default;
 
-            CharacterInputRequestFact fact = FullBodyActionInputRequestBuilder.BuildDodgeRequestFact(
+            CharacterInputRequestFact fact = FullBodyActionInterruptGate.BuildDodgeRequestFact(
                 buffer,
-                3,
+                5,
+                CharacterStateMachineSnapshot.Inactive,
                 in input,
-                in settings,
                 false,
-                new TestCameraBasisProvider(Vector3.forward, Vector3.right),
-                new TestFacingDirectionProvider(Vector3.forward),
-                DodgeActionConfig.Default);
+                in facts,
+                in config,
+                0,
+                new[] { new ActionInterruptPolicy(ActionStateIds.None, ActionStateIds.Dodge, 31) },
+                out ActionInterruptDecision decision);
 
+            Assert.False(decision.Accepted);
+            Assert.AreEqual(ActionInterruptRejectReason.PriorityTooLow, decision.RejectReason);
+            Assert.False(fact.HasRequest);
+            Assert.True(buffer.TryPeek(InputRequestKind.Dodge, 5, out _));
+        }
+
+        [Test]
+        public void FullBodyActionInterruptGateResistanceRejectsDodgeAndKeepsBufferRequest()
+        {
+            InputRequestBuffer buffer = new InputRequestBuffer();
+            buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 6, 4);
+            BasicMovementSettings settings = BasicMovementSettings.FromConfig(null);
+            BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero);
+            LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
+            DodgeActionConfig config = DodgeActionConfig.Default;
+
+            CharacterInputRequestFact fact = FullBodyActionInterruptGate.BuildDodgeRequestFact(
+                buffer,
+                6,
+                CharacterStateMachineSnapshot.Inactive,
+                in input,
+                false,
+                in facts,
+                in config,
+                30,
+                new[] { new ActionInterruptPolicy(ActionStateIds.None, ActionStateIds.Dodge, 30) },
+                out ActionInterruptDecision decision);
+
+            Assert.False(decision.Accepted);
+            Assert.AreEqual(ActionInterruptRejectReason.BlockedByResistance, decision.RejectReason);
+            Assert.False(fact.HasRequest);
+            Assert.True(buffer.TryPeek(InputRequestKind.Dodge, 6, out _));
+        }
+
+        [Test]
+        public void FullBodyActionInterruptGateForcePolicyBypassesResistance()
+        {
+            InputRequestBuffer buffer = new InputRequestBuffer();
+            buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 7, 4);
+            BasicMovementSettings settings = BasicMovementSettings.FromConfig(null);
+            BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero);
+            LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
+            DodgeActionConfig config = DodgeActionConfig.Default;
+
+            CharacterInputRequestFact fact = FullBodyActionInterruptGate.BuildDodgeRequestFact(
+                buffer,
+                7,
+                CharacterStateMachineSnapshot.Inactive,
+                in input,
+                false,
+                in facts,
+                in config,
+                100,
+                new[] { new ActionInterruptPolicy(ActionStateIds.None, ActionStateIds.Dodge, 30, force: true) },
+                out ActionInterruptDecision decision);
+
+            Assert.True(decision.Accepted);
             Assert.True(fact.HasRequest);
-            Assert.AreEqual(CharacterStateVariant.Backstep, fact.Variant);
-            Assert.AreEqual(Vector3.back, fact.WorldDirection);
+        }
+
+        [Test]
+        public void FullBodyActionInterruptGateUsesDodgeTimelineWindow()
+        {
+            InputRequestBuffer buffer = new InputRequestBuffer();
+            buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 7, 4);
+            BasicMovementSettings settings = BasicMovementSettings.FromConfig(null);
+            BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero);
+            LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
+            DodgeActionConfig config = DodgeActionConfig.Default;
+            StateTimelineWindowFacts dodgeWindow = new StateTimelineWindowFacts(
+                CharacterStateIds.Dodge,
+                0.5f,
+                true,
+                0.2f,
+                false,
+                false,
+                true,
+                false,
+                0,
+                0,
+                30,
+                false,
+                "dodge-chain-cancel",
+                "dodge-chain-cancel");
+
+            CharacterInputRequestFact rejected = FullBodyActionInterruptGate.BuildDodgeRequestFact(
+                buffer,
+                7,
+                CharacterStateMachineSnapshot.Inactive,
+                in input,
+                false,
+                in facts,
+                in config,
+                0,
+                new[] { new ActionInterruptPolicy(ActionStateIds.None, ActionStateIds.Dodge, 30, windowId: "dodge-chain-cancel") },
+                default,
+                out ActionInterruptDecision rejectedDecision);
+            CharacterInputRequestFact accepted = FullBodyActionInterruptGate.BuildDodgeRequestFact(
+                buffer,
+                7,
+                CharacterStateMachineSnapshot.Inactive,
+                in input,
+                false,
+                in facts,
+                in config,
+                0,
+                new[] { new ActionInterruptPolicy(ActionStateIds.None, ActionStateIds.Dodge, 30, windowId: "dodge-chain-cancel") },
+                dodgeWindow,
+                out ActionInterruptDecision acceptedDecision);
+
+            Assert.False(rejected.HasRequest);
+            Assert.AreEqual(ActionInterruptRejectReason.TimingNotSatisfied, rejectedDecision.RejectReason);
+            Assert.True(acceptedDecision.Accepted);
+            Assert.True(accepted.HasRequest);
+        }
+
+        [Test]
+        public void FullBodyActionInterruptGateRejectsDodgeToDodgeWhenPriorityDoesNotBeatResistance()
+        {
+            InputRequestBuffer buffer = new InputRequestBuffer();
+            buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 8, 4);
+            BasicMovementSettings settings = BasicMovementSettings.FromConfig(null);
+            BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero);
+            CharacterStateMachineSnapshot snapshot = DodgeSnapshot(0.1f);
+            DodgeActionConfig config = new DodgeActionConfig(0.35f, 4f, 0.35f, 3f, 30, 40, true, false);
+            LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
+
+            CharacterInputRequestFact fact = FullBodyActionInterruptGate.BuildDodgeRequestFact(
+                buffer,
+                8,
+                in snapshot,
+                in input,
+                false,
+                in facts,
+                in config,
+                PlayerFullBodyActionController.ResolveCurrentActionResistance(in snapshot, in config),
+                new[] { new ActionInterruptPolicy(ActionStateIds.Dodge, ActionStateIds.Dodge, 30) },
+                out ActionInterruptDecision decision);
+
+            Assert.False(decision.Accepted);
+            Assert.AreEqual(ActionInterruptRejectReason.BlockedByResistance, decision.RejectReason);
+            Assert.False(fact.HasRequest);
+            Assert.True(buffer.TryPeek(InputRequestKind.Dodge, 8, out _));
+        }
+
+        [Test]
+        public void FullBodyActionInterruptGateForceDodgeToDodgeBypassesCurrentResistance()
+        {
+            InputRequestBuffer buffer = new InputRequestBuffer();
+            buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 9, 4);
+            BasicMovementSettings settings = BasicMovementSettings.FromConfig(null);
+            BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero);
+            CharacterStateMachineSnapshot snapshot = DodgeSnapshot(0.1f);
+            DodgeActionConfig config = new DodgeActionConfig(0.35f, 4f, 0.35f, 3f, 30, 40, true, false);
+            LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
+
+            CharacterInputRequestFact fact = FullBodyActionInterruptGate.BuildDodgeRequestFact(
+                buffer,
+                9,
+                in snapshot,
+                in input,
+                false,
+                in facts,
+                in config,
+                PlayerFullBodyActionController.ResolveCurrentActionResistance(in snapshot, in config),
+                new[] { new ActionInterruptPolicy(ActionStateIds.Dodge, ActionStateIds.Dodge, 30, force: true) },
+                out ActionInterruptDecision decision);
+
+            Assert.True(decision.Accepted);
+            Assert.True(fact.HasRequest);
+            Assert.AreEqual(30, decision.SelectedRequest.Priority);
+        }
+
+        [Test]
+        public void RuntimeBlackboardDefaultsAndWritesTypedFacts()
+        {
+            CharacterRuntimeBlackboard blackboard = new CharacterRuntimeBlackboard();
+            CharacterRuntimeBlackboardSnapshot initial = blackboard.Snapshot;
+
+            Assert.AreEqual(BasicMovementPhase.Idle, initial.Locomotion.Phase);
+            Assert.AreEqual(BasicMovementGait.Walk, initial.Locomotion.LastMovingGait);
+            Assert.False(initial.Action.Active);
+            Assert.False(initial.Animation.ActionHasValidPlayback);
+            Assert.False(initial.Animation.ActionIsEnded);
+            Assert.AreEqual(string.Empty, initial.Debug.LastWriter);
+
+            blackboard.WriteLocomotionFacts(new CharacterRuntimeLocomotionFacts(
+                BasicMovementPhase.MoveStop,
+                BasicMovementGait.Run,
+                BasicMovementGait.Run,
+                true,
+                BasicMovementGait.Run,
+                true,
+                new Vector3(0f, 2f, 5f),
+                false,
+                0f,
+                12));
+            blackboard.WriteActionFacts(new CharacterRuntimeActionFacts(
+                true,
+                ActionStateIds.Dodge,
+                false,
+                false,
+                true,
+                Vector3.forward,
+                0.3f,
+                true,
+                13));
+            blackboard.WriteAnimationFacts(new CharacterRuntimeAnimationFacts(
+                new AnimationPhasePlaybackProgress(BasicMovementPhase.MoveLoop, "RunLoop", 0.4f, true, false),
+                "RunLoop",
+                ActionAnimationKeys.DodgeDirectional,
+                0.25f,
+                true,
+                true,
+                "Dodge Directional",
+                14));
+
+            CharacterRuntimeBlackboardSnapshot snapshot = blackboard.Snapshot;
+            Assert.AreEqual(BasicMovementPhase.MoveStop, snapshot.Locomotion.Phase);
+            Assert.AreEqual(BasicMovementGait.Run, snapshot.Locomotion.MoveStopEntryGait);
+            Assert.AreEqual(ActionStateIds.Dodge, snapshot.Action.State);
+            Assert.AreEqual(ActionAnimationKeys.DodgeDirectional, snapshot.Animation.ActionKey);
+            Assert.True(snapshot.Animation.ActionIsEnded);
+            Assert.AreEqual("Animation", snapshot.Debug.LastWriter);
+            Assert.AreEqual(14, snapshot.Debug.LastWriteStep);
+        }
+
+        [Test]
+        public void RuntimeBlackboardRestoreIsIdempotent()
+        {
+            CharacterRuntimeBlackboard blackboard = new CharacterRuntimeBlackboard();
+            blackboard.WriteActionFacts(new CharacterRuntimeActionFacts(
+                true,
+                ActionStateIds.Dodge,
+                true,
+                true,
+                false,
+                Vector3.zero,
+                0f,
+                false,
+                20));
+            CharacterRuntimeBlackboardRestoreState restoreState = blackboard.CaptureRestoreState();
+
+            blackboard.Reset();
+            blackboard.Restore(in restoreState);
+            CharacterRuntimeBlackboardSnapshot once = blackboard.Snapshot;
+            blackboard.Restore(in restoreState);
+            CharacterRuntimeBlackboardSnapshot twice = blackboard.Snapshot;
+
+            Assert.True(once.Action.Active);
+            Assert.True(twice.Action.Active);
+            Assert.AreEqual(once.Action.State, twice.Action.State);
+            Assert.AreEqual(once.Action.Completed, twice.Action.Completed);
+            Assert.AreEqual(once.Debug.LastWriter, twice.Debug.LastWriter);
+            Assert.AreEqual(once.Debug.LastWriteStep, twice.Debug.LastWriteStep);
+        }
+
+        [Test]
+        public void CharacterStateMachineContextCarriesRuntimeBlackboardSnapshot()
+        {
+            CharacterRuntimeBlackboard blackboard = new CharacterRuntimeBlackboard();
+            blackboard.WriteLocomotionFacts(new CharacterRuntimeLocomotionFacts(
+                BasicMovementPhase.MoveLoop,
+                BasicMovementGait.Run,
+                BasicMovementGait.Run,
+                false,
+                BasicMovementGait.Walk,
+                true,
+                Vector3.forward,
+                true,
+                1f,
+                30));
+
+            CharacterStateMachineContext context = Context(
+                move: true,
+                runtimeBlackboard: blackboard.Snapshot);
+
+            Assert.AreEqual(BasicMovementGait.Run, context.RuntimeBlackboard.Locomotion.LastMovingGait);
+            Assert.True(context.RuntimeBlackboard.Locomotion.RunLatchActive);
+            Assert.AreEqual("Locomotion", context.RuntimeBlackboard.Debug.LastWriter);
+        }
+
+        [Test]
+        public void PlayerLocomotionControllerWritesLocomotionBlackboardFacts()
+        {
+            GameObject gameObject = new GameObject("locomotion-blackboard-test");
+
+            try
+            {
+                PlayerLocomotionController controller = gameObject.AddComponent<PlayerLocomotionController>();
+                ConfigureLocomotion(controller);
+                CharacterStateMachineRunner runner = CreateRunner();
+
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    31,
+                    out BasicLocomotionFrame locomotionFrame,
+                    out CharacterStateMachineFrame stateFrame));
+
+                CharacterRuntimeBlackboardSnapshot snapshot = controller.RuntimeBlackboardSnapshot;
+                Assert.AreEqual(stateFrame.LocomotionPhase, snapshot.Locomotion.Phase);
+                Assert.AreEqual(locomotionFrame.Command.Gait, snapshot.Locomotion.FrameGait);
+                Assert.True(snapshot.Locomotion.HasMoveIntent);
+                Assert.AreEqual(31, snapshot.Locomotion.SourceStep);
+                Assert.AreEqual("Locomotion", snapshot.Debug.LastWriter);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void PlayerLocomotionTurnBackSuppressesInputAndConsumesBakedProfile()
+        {
+            GameObject gameObject = new GameObject("locomotion-turnback-baked-profile-test");
+            RunLocomotionAnimationConfigSO animationConfig = ScriptableObject.CreateInstance<RunLocomotionAnimationConfigSO>();
+            LocomotionMotionProfileSO turnBackProfile = ScriptableObject.CreateInstance<LocomotionMotionProfileSO>();
+
+            try
+            {
+                turnBackProfile.SetBakedData(
+                    BasicMovementPhase.TurnBack,
+                    BasicMovementGait.Run,
+                    TurnBackMotionPolicy.DefaultAliasKey,
+                    1f,
+                    AnimationCurve.Linear(0f, 0f, 1f, 1f),
+                    AnimationCurve.Linear(0f, 0f, 1f, 2f),
+                    AnimationCurve.Linear(0f, 0f, 1f, 180f),
+                    "BakedTurnBack",
+                    string.Empty);
+                animationConfig.SetMotionProfileBindings(new LocomotionPhaseMotionProfileBinding(
+                    BasicMovementPhase.TurnBack,
+                    BasicMovementGait.Run,
+                    TurnBackMotionPolicy.DefaultAliasKey,
+                    turnBackProfile));
+                PlayerLocomotionController controller = gameObject.AddComponent<PlayerLocomotionController>();
+                TestAnimationPlaybackProgressSource presenter = gameObject.AddComponent<TestAnimationPlaybackProgressSource>();
+                CharacterStateMachineRunner runner = CreateRunner();
+                controller.CharacterConfig = CreateCharacterConfig(animationConfig);
+                controller.SetAnimationPlaybackProgressSource(presenter);
+
+                presenter.SetPlaybackProgress(new AnimationPhasePlaybackProgress(
+                    BasicMovementPhase.TurnBack,
+                    "Locomotion.Turn.Back",
+                    0.5f,
+                    true,
+                    false));
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    1,
+                    out _,
+                    out _));
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    2,
+                    out _,
+                    out _));
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.down, Vector2.zero, true),
+                    runner,
+                    TurnBackRequest(3, 7, Vector3.back),
+                    3,
+                    out BasicLocomotionFrame locomotionFrame,
+                    out CharacterStateMachineFrame stateFrame));
+
+                MovementCommand command = locomotionFrame.Command;
+                Assert.AreEqual(CharacterStateIds.TurnBack, stateFrame.Snapshot.ActiveState);
+                Assert.AreEqual(BasicMovementPhase.TurnBack, command.Phase);
+                Assert.True(command.SuppressInputRotation);
+                Assert.True(command.SuppressInputPlanarMovement);
+                Assert.True(command.HasAnimationMotion);
+                Assert.AreEqual("Locomotion.Turn.Back", command.AnimationMotionSourceAliasKey);
+                Assert.AreEqual(0.5f, command.AnimationLocalPlanarDelta.x, 0.0001f);
+                Assert.AreEqual(1f, command.AnimationLocalPlanarDelta.z, 0.0001f);
+                Assert.AreEqual(BasicMovementPlanarDeltaSpace.EntryLocal, command.AnimationPlanarDeltaSpace);
+                Assert.AreEqual(Vector3.forward, command.AnimationPlanarBasisForward);
+                Assert.AreNotEqual(command.AnimationPlanarBasisForward, command.DesiredFacing);
+                Assert.AreEqual(90f, command.AnimationYawDelta, 0.0001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(turnBackProfile);
+                Object.DestroyImmediate(animationConfig);
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void PlayerLocomotionTurnBackDoesNotTriggerBeforeRunLoop()
+        {
+            GameObject gameObject = new GameObject("locomotion-turnback-empty-window-test");
+
+            try
+            {
+                PlayerLocomotionController controller = gameObject.AddComponent<PlayerLocomotionController>();
+                ConfigureLocomotion(controller);
+                TestAnimationPlaybackProgressSource presenter = gameObject.AddComponent<TestAnimationPlaybackProgressSource>();
+                CharacterStateMachineRunner runner = CreateRunner();
+
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.down, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    1,
+                    out BasicLocomotionFrame firstFrame,
+                    out CharacterStateMachineFrame firstStateFrame));
+                Assert.AreEqual(CharacterStateIds.MoveStart, firstStateFrame.Snapshot.ActiveState);
+                Assert.AreEqual(BasicMovementPhase.MoveStart, firstFrame.Command.Phase);
+
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.35f, Vector2.down, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    2,
+                    out BasicLocomotionFrame locomotionFrame,
+                    out CharacterStateMachineFrame stateFrame));
+
+                Assert.AreEqual(CharacterStateIds.MoveLoop, stateFrame.Snapshot.ActiveState);
+                Assert.AreEqual(BasicMovementPhase.MoveLoop, locomotionFrame.Command.Phase);
+                Assert.False(locomotionFrame.Command.SuppressInputRotation);
+                Assert.False(locomotionFrame.Command.SuppressInputPlanarMovement);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void PlayerLocomotionPreservesReverseTurnBackIntentUntilRunLoopAfterInputRotation()
+        {
+            GameObject gameObject = new GameObject("locomotion-turnback-pre-rotation-test");
+
+            try
+            {
+                PlayerLocomotionController controller = gameObject.AddComponent<PlayerLocomotionController>();
+                ConfigureLocomotion(controller);
+                CharacterController characterController = gameObject.AddComponent<CharacterController>();
+                CharacterControllerBasicMotionExecutor executor = new CharacterControllerBasicMotionExecutor(
+                    characterController,
+                    gameObject.transform,
+                    false,
+                    -20f,
+                    -2f);
+                CharacterStateMachineRunner runner = CreateRunner();
+                controller.SetMotionExecutor(executor);
+
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    1,
+                    out BasicLocomotionFrame forwardFrame,
+                    out CharacterStateMachineFrame forwardState));
+                controller.ExecuteLocomotionMotion(in forwardFrame);
+                Assert.AreEqual(BasicMovementPhase.MoveStart, forwardState.LocomotionPhase);
+
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.35f, Vector2.down, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    2,
+                    out BasicLocomotionFrame reverseBeforeLoopFrame,
+                    out CharacterStateMachineFrame reverseBeforeLoopState));
+                controller.ExecuteLocomotionMotion(in reverseBeforeLoopFrame);
+                Assert.AreEqual(BasicMovementPhase.MoveLoop, reverseBeforeLoopState.LocomotionPhase);
+                Assert.Less(Vector3.Angle(gameObject.transform.forward, Vector3.back), 120f);
+
+                CharacterSimulationSnapshot snapshot = controller.CaptureSimulationSnapshot(new SimulationTick(2));
+                LocomotionTurnBackIntent pendingIntent = snapshot.LocomotionRuntimeState.PendingTurnBackIntent;
+                Assert.True(pendingIntent.IsValidAt(3));
+                Assert.AreEqual(Vector3.back, pendingIntent.WorldMoveDirection);
+                Assert.AreEqual(Vector3.forward, pendingIntent.FacingForward);
+
+                BasicLocomotionInputSnapshot reverseInput = new BasicLocomotionInputSnapshot(0.1f, Vector2.down, Vector2.zero, true);
+                Assert.True(controller.TryPrepareDecisionFrame(
+                    in reverseInput,
+                    runner,
+                    3,
+                    out LocomotionDecisionFrame decisionFrame));
+                CharacterInputRequestFact turnBackRequest = FullBodyActionInterruptGate.BuildTurnBackRequestFact(
+                    3,
+                    runner.Snapshot,
+                    decisionFrame.Facts,
+                    StateTimelineWindowFacts.None(CharacterStateIds.MoveLoop),
+                    new[] { new ActionInterruptPolicy(new ActionStateId(CharacterStateIds.MoveLoop.Value), new ActionStateId(CharacterStateIds.TurnBack.Value), 20) },
+                    out ActionInterruptDecision decision);
+
+                Assert.True(decision.Accepted);
+                Assert.True(turnBackRequest.HasRequest);
+                Assert.True(controller.TryEvaluatePreparedWithStateMachine(
+                    in decisionFrame,
+                    runner,
+                    in turnBackRequest,
+                    3,
+                    out BasicLocomotionFrame turnBackFrame,
+                    out CharacterStateMachineFrame turnBackState));
+
+                Assert.AreEqual(CharacterStateIds.TurnBack, turnBackState.Snapshot.ActiveState);
+                Assert.AreEqual(BasicMovementPhase.TurnBack, turnBackFrame.Command.Phase);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void PlayerLocomotionTurnBackSuppressesInputWhenBakedProfileIsMissing()
+        {
+            GameObject gameObject = new GameObject("locomotion-turnback-empty-root-motion-test");
+
+            try
+            {
+                PlayerLocomotionController controller = gameObject.AddComponent<PlayerLocomotionController>();
+                ConfigureLocomotion(controller);
+                TestAnimationPlaybackProgressSource presenter = gameObject.AddComponent<TestAnimationPlaybackProgressSource>();
+                CharacterStateMachineRunner runner = CreateRunner();
+
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    1,
+                    out _,
+                    out _));
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.35f, Vector2.up, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    2,
+                    out _,
+                    out _));
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.down, Vector2.zero, true),
+                    runner,
+                    TurnBackRequest(3, 7, Vector3.back),
+                    3,
+                    out BasicLocomotionFrame locomotionFrame,
+                    out CharacterStateMachineFrame stateFrame));
+
+                MovementCommand command = locomotionFrame.Command;
+                Assert.AreEqual(CharacterStateIds.TurnBack, stateFrame.Snapshot.ActiveState);
+                Assert.AreEqual(BasicMovementPhase.TurnBack, command.Phase);
+                Assert.True(command.SuppressInputRotation);
+                Assert.True(command.SuppressInputPlanarMovement);
+                Assert.False(command.HasAnimationMotion);
+                Assert.AreEqual(Vector3.zero, command.AnimationLocalPlanarDelta);
+                Assert.AreEqual(BasicMovementPlanarDeltaSpace.EntryLocal, command.AnimationPlanarDeltaSpace);
+                Assert.AreEqual(0f, command.AnimationYawDelta, 0.0001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void PlayerLocomotionTurnBackMissingBakedProfileDoesNotFallbackToAnimatorDelta()
+        {
+            GameObject gameObject = new GameObject("locomotion-turnback-missing-baked-profile-test");
+
+            try
+            {
+                PlayerLocomotionController controller = gameObject.AddComponent<PlayerLocomotionController>();
+                controller.CharacterConfig = CreateCharacterConfig(ScriptableObject.CreateInstance<RunLocomotionAnimationConfigSO>());
+                TestAnimationPlaybackProgressSource presenter = gameObject.AddComponent<TestAnimationPlaybackProgressSource>();
+                CharacterStateMachineRunner runner = CreateRunner();
+                presenter.SetPlaybackProgress(new AnimationPhasePlaybackProgress(
+                    BasicMovementPhase.TurnBack,
+                    TurnBackMotionPolicy.DefaultAliasKey,
+                    0.25f,
+                    true,
+                    false));
+                controller.SetAnimationPlaybackProgressSource(presenter);
+                List<RuntimeDiagnosticLogEvent> events = new List<RuntimeDiagnosticLogEvent>();
+
+                using (RuntimeDiagnosticLog.Capture(events.Add))
+                {
+                    Assert.True(controller.TryEvaluateWithStateMachine(
+                        new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, true),
+                        runner,
+                        CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                        1,
+                        out _,
+                        out _));
+                    Assert.True(controller.TryEvaluateWithStateMachine(
+                        new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, true),
+                        runner,
+                        CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                        2,
+                        out _,
+                        out _));
+                    Assert.True(controller.TryEvaluateWithStateMachine(
+                        new BasicLocomotionInputSnapshot(0.1f, Vector2.down, Vector2.zero, true),
+                        runner,
+                        TurnBackRequest(3, 7, Vector3.back),
+                        3,
+                        out BasicLocomotionFrame locomotionFrame,
+                        out CharacterStateMachineFrame stateFrame));
+
+                    MovementCommand command = locomotionFrame.Command;
+                    Assert.AreEqual(CharacterStateIds.TurnBack, stateFrame.Snapshot.ActiveState);
+                    Assert.AreEqual(BasicMovementPhase.TurnBack, command.Phase);
+                    Assert.False(command.HasAnimationMotion);
+                    Assert.AreEqual(Vector3.zero, command.AnimationLocalPlanarDelta);
+                    Assert.AreEqual(0f, command.AnimationYawDelta, 0.0001f);
+                    Assert.AreEqual(BasicMovementPlanarDeltaSpace.EntryLocal, command.AnimationPlanarDeltaSpace);
+                    Assert.AreEqual(TurnBackMotionYawSource.BakedMotionProfile, command.TurnBackMotionPolicy.YawSource);
+                    Assert.AreEqual(TurnBackMotionTranslationSource.BakedMotionProfile, command.TurnBackMotionPolicy.TranslationSource);
+                }
+
+                Assert.False(events.Any(item => item.Message == "turnback-runtime-root-delta-missing"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void PlayerLocomotionTurnBackDoesNotConsumeAnimatorDeltaOutsideMotionWindow()
+        {
+            GameObject gameObject = new GameObject("locomotion-turnback-motion-window-test");
+
+            try
+            {
+                PlayerLocomotionController controller = gameObject.AddComponent<PlayerLocomotionController>();
+                ConfigureLocomotion(controller);
+                TestAnimationPlaybackProgressSource presenter = gameObject.AddComponent<TestAnimationPlaybackProgressSource>();
+                CharacterStateMachineDefinition defaults = LoadConfiguredStateMachineDefinition();
+                StateTimelinePolicyDefinition[] policies = defaults.TimelinePolicies
+                    .Where(policy => policy.StateId != CharacterStateIds.TurnBack)
+                    .Concat(new[]
+                    {
+                        new StateTimelinePolicyDefinition(
+                            CharacterStateIds.TurnBack.Value,
+                            0,
+                            30,
+                            new[]
+                            {
+                                new StateTimelineWindowDefinition(
+                                    "turnback-motion-test",
+                                    StateTimelineWindowKind.Motion,
+                                    StateTimelineTimeDomain.Seconds,
+                                    0f,
+                                    0.05f),
+                                new StateTimelineWindowDefinition(
+                                    "turnback-input-lock-test",
+                                    StateTimelineWindowKind.InputLock,
+                                    StateTimelineTimeDomain.Seconds,
+                                    0f,
+                                    0.05f),
+                                new StateTimelineWindowDefinition(
+                                    "turnback-exit-test",
+                                    StateTimelineWindowKind.Exit,
+                                    StateTimelineTimeDomain.Normalized,
+                                    1f,
+                                    1f)
+                            })
+                    })
+                    .ToArray();
+                CharacterStateMachineRunner runner = new CharacterStateMachineRunner(new CharacterStateMachineDefinition(
+                    defaults.InitialState,
+                    defaults.Nodes.ToArray(),
+                    defaults.Transitions.ToArray(),
+                    policies));
+
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    1,
+                    out _,
+                    out _));
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    2,
+                    out _,
+                    out _));
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.down, Vector2.zero, true),
+                    runner,
+                    TurnBackRequest(3, 7, Vector3.back),
+                    3,
+                    out _,
+                    out CharacterStateMachineFrame entered));
+                Assert.AreEqual(CharacterStateIds.TurnBack, entered.Snapshot.ActiveState);
+
+                controller.WriteAnimationFacts(new CharacterRuntimeAnimationFacts(
+                    new AnimationPhasePlaybackProgress(
+                        BasicMovementPhase.TurnBack,
+                        "Locomotion.Turn.Back",
+                        0.5f,
+                        true,
+                        false),
+                    "Locomotion.Turn.Back",
+                    ActionAnimationPlaybackProgress.Invalid,
+                    string.Empty,
+                    4));
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.down, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    4,
+                    out BasicLocomotionFrame outsideWindowFrame,
+                    out CharacterStateMachineFrame outsideWindowState));
+
+                Assert.AreEqual(CharacterStateIds.TurnBack, outsideWindowState.Snapshot.ActiveState);
+                Assert.AreEqual(BasicMovementPhase.TurnBack, outsideWindowFrame.Command.Phase);
+                Assert.False(outsideWindowFrame.Command.HasAnimationMotion);
+                Assert.AreEqual(Vector3.zero, outsideWindowFrame.Command.AnimationLocalPlanarDelta);
+                Assert.AreEqual(0f, outsideWindowFrame.Command.AnimationYawDelta, 0.0001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void PlayerLocomotionTurnBackUsesBakedProfileWithoutAlternateRootMotionRoute()
+        {
+            GameObject gameObject = new GameObject("locomotion-turnback-authored-yaw-test");
+            RunLocomotionAnimationConfigSO animationConfig = ScriptableObject.CreateInstance<RunLocomotionAnimationConfigSO>();
+            LocomotionMotionProfileSO turnBackProfile = ScriptableObject.CreateInstance<LocomotionMotionProfileSO>();
+
+            try
+            {
+                turnBackProfile.SetBakedData(
+                    BasicMovementPhase.TurnBack,
+                    BasicMovementGait.Run,
+                    TurnBackMotionPolicy.DefaultAliasKey,
+                    1f,
+                    AnimationCurve.Linear(0f, 0f, 1f, 0.4f),
+                    AnimationCurve.Linear(0f, 0f, 1f, 4f),
+                    AnimationCurve.Linear(0f, 0f, 1f, 180f),
+                    "BakedTurnBack",
+                    string.Empty);
+                animationConfig.SetMotionProfileBindings(new LocomotionPhaseMotionProfileBinding(
+                    BasicMovementPhase.TurnBack,
+                    BasicMovementGait.Run,
+                    TurnBackMotionPolicy.DefaultAliasKey,
+                    turnBackProfile));
+                PlayerLocomotionController controller = gameObject.AddComponent<PlayerLocomotionController>();
+                TestAnimationPlaybackProgressSource presenter = gameObject.AddComponent<TestAnimationPlaybackProgressSource>();
+                CharacterStateMachineRunner runner = CreateRunner();
+                controller.CharacterConfig = CreateCharacterConfig(animationConfig);
+                controller.SetAnimationPlaybackProgressSource(presenter);
+
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    1,
+                    out _,
+                    out _));
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    2,
+                    out _,
+                    out _));
+
+                presenter.SetPlaybackProgress(new AnimationPhasePlaybackProgress(
+                    BasicMovementPhase.TurnBack,
+                    "Locomotion.Turn.Back",
+                    0.25f,
+                    true,
+                    false));
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.down, Vector2.zero, true),
+                    runner,
+                    TurnBackRequest(3, 7, Vector3.back),
+                    3,
+                    out BasicLocomotionFrame firstFrame,
+                    out CharacterStateMachineFrame firstStateFrame));
+
+                Assert.AreEqual(CharacterStateIds.TurnBack, firstStateFrame.Snapshot.ActiveState);
+                Assert.AreEqual(BasicMovementPhase.TurnBack, firstFrame.Command.Phase);
+                Assert.AreEqual(45f, firstFrame.Command.AnimationYawDelta, 0.0001f);
+                Assert.AreEqual(0.1f, firstFrame.Command.AnimationLocalPlanarDelta.x, 0.0001f);
+                Assert.AreEqual(0f, firstFrame.Command.AnimationLocalPlanarDelta.y, 0.0001f);
+                Assert.AreEqual(1f, firstFrame.Command.AnimationLocalPlanarDelta.z, 0.0001f);
+                Assert.AreEqual(BasicMovementPlanarDeltaSpace.EntryLocal, firstFrame.Command.AnimationPlanarDeltaSpace);
+                Assert.AreEqual(Vector3.forward, firstFrame.Command.AnimationPlanarBasisForward);
+                Assert.True(firstFrame.Command.HasTurnBackMotionPolicy);
+                Assert.AreEqual(TurnBackMotionYawSource.BakedMotionProfile, firstFrame.Command.TurnBackMotionPolicy.YawSource);
+                Assert.AreEqual(TurnBackMotionTranslationSource.BakedMotionProfile, firstFrame.Command.TurnBackMotionPolicy.TranslationSource);
+
+                presenter.SetPlaybackProgress(new AnimationPhasePlaybackProgress(
+                    BasicMovementPhase.TurnBack,
+                    "Locomotion.Turn.Back",
+                    0.5f,
+                    true,
+                    false));
+                Assert.True(controller.TryEvaluateWithStateMachine(
+                    new BasicLocomotionInputSnapshot(0.1f, Vector2.down, Vector2.zero, true),
+                    runner,
+                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
+                    4,
+                    out BasicLocomotionFrame secondFrame,
+                    out CharacterStateMachineFrame secondStateFrame));
+
+                Assert.AreEqual(CharacterStateIds.TurnBack, secondStateFrame.Snapshot.ActiveState);
+                Assert.AreEqual(BasicMovementPhase.TurnBack, secondFrame.Command.Phase);
+                Assert.AreEqual(45f, secondFrame.Command.AnimationYawDelta, 0.0001f);
+                Assert.AreEqual(0.1f, secondFrame.Command.AnimationLocalPlanarDelta.x, 0.0001f);
+                Assert.AreEqual(0f, secondFrame.Command.AnimationLocalPlanarDelta.y, 0.0001f);
+                Assert.AreEqual(1f, secondFrame.Command.AnimationLocalPlanarDelta.z, 0.0001f);
+                Assert.AreEqual(BasicMovementPlanarDeltaSpace.EntryLocal, secondFrame.Command.AnimationPlanarDeltaSpace);
+                Assert.AreEqual(Vector3.forward, secondFrame.Command.AnimationPlanarBasisForward);
+            }
+            finally
+            {
+                Object.DestroyImmediate(turnBackProfile);
+                Object.DestroyImmediate(animationConfig);
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void CharacterControllerExecutorAppliesTurnBackAnimationMotionWithoutInputMotion()
+        {
+            GameObject gameObject = new GameObject("turnback-motion-executor-test");
+
+            try
+            {
+                CharacterController characterController = gameObject.AddComponent<CharacterController>();
+                CharacterControllerBasicMotionExecutor executor = new CharacterControllerBasicMotionExecutor(
+                    characterController,
+                    gameObject.transform,
+                    false,
+                    -20f,
+                    -2f);
+                MovementCommand command = new MovementCommand(
+                    Vector3.right,
+                    10f,
+                    720f,
+                    0.1f,
+                    BasicMovementPhase.TurnBack,
+                    BasicMovementGait.Run,
+                    new BasicMovementMotionFacts(
+                        true,
+                        new Vector3(0f, 0f, 1f),
+                        90f,
+                        BasicMovementPhase.TurnBack,
+                        "Locomotion.Turn.Back",
+                        true,
+                        true));
+
+                executor.ExecuteBasicMovement(in command);
+
+                Assert.AreEqual(0f, gameObject.transform.position.x, 0.001f);
+                Assert.AreEqual(1f, gameObject.transform.position.z, 0.001f);
+                Assert.AreEqual(90f, gameObject.transform.eulerAngles.y, 0.001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void CharacterControllerExecutorDoesNotRotateWorldRootMotionDeltaTwice()
+        {
+            GameObject gameObject = new GameObject("turnback-world-root-motion-executor-test");
+
+            try
+            {
+                gameObject.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+                CharacterController characterController = gameObject.AddComponent<CharacterController>();
+                CharacterControllerBasicMotionExecutor executor = new CharacterControllerBasicMotionExecutor(
+                    characterController,
+                    gameObject.transform,
+                    false,
+                    -20f,
+                    -2f);
+                MovementCommand command = new MovementCommand(
+                    Vector3.back,
+                    10f,
+                    720f,
+                    0.1f,
+                    BasicMovementPhase.TurnBack,
+                    BasicMovementGait.Run,
+                    new BasicMovementMotionFacts(
+                        true,
+                        new Vector3(0f, 0f, 1f),
+                        0f,
+                        BasicMovementPhase.TurnBack,
+                        "Locomotion.Turn.Back",
+                        true,
+                        true,
+                        BasicMovementPlanarDeltaSpace.World));
+
+                executor.ExecuteBasicMovement(in command);
+
+                Assert.AreEqual(0f, gameObject.transform.position.x, 0.001f);
+                Assert.AreEqual(1f, gameObject.transform.position.z, 0.001f);
+                Assert.AreEqual(90f, gameObject.transform.eulerAngles.y, 0.001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void CharacterControllerExecutorUsesEntryLocalBasisInsteadOfCurrentRootYaw()
+        {
+            GameObject gameObject = new GameObject("turnback-entry-local-motion-executor-test");
+
+            try
+            {
+                gameObject.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+                CharacterController characterController = gameObject.AddComponent<CharacterController>();
+                CharacterControllerBasicMotionExecutor executor = new CharacterControllerBasicMotionExecutor(
+                    characterController,
+                    gameObject.transform,
+                    false,
+                    -20f,
+                    -2f);
+                MovementCommand command = new MovementCommand(
+                    Vector3.zero,
+                    0f,
+                    0f,
+                    0.1f,
+                    BasicMovementPhase.TurnBack,
+                    BasicMovementGait.Run,
+                    new BasicMovementMotionFacts(
+                        true,
+                        new Vector3(1f, 0f, 0f),
+                        0f,
+                        BasicMovementPhase.TurnBack,
+                        "Locomotion.Turn.Back",
+                        true,
+                        true,
+                        BasicMovementPlanarDeltaSpace.EntryLocal,
+                        TurnBackMotionPolicy.Default,
+                        Vector3.forward));
+
+                executor.ExecuteBasicMovement(in command);
+
+                Assert.AreEqual(1f, gameObject.transform.position.x, 0.001f);
+                Assert.AreEqual(0f, gameObject.transform.position.z, 0.001f);
+                Assert.AreEqual(90f, gameObject.transform.eulerAngles.y, 0.001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void CharacterControllerExecutorDoesNotFallbackEntryLocalToCurrentRootYawWithoutBasis()
+        {
+            GameObject gameObject = new GameObject("turnback-entry-local-missing-basis-test");
+
+            try
+            {
+                gameObject.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+                CharacterController characterController = gameObject.AddComponent<CharacterController>();
+                CharacterControllerBasicMotionExecutor executor = new CharacterControllerBasicMotionExecutor(
+                    characterController,
+                    gameObject.transform,
+                    false,
+                    -20f,
+                    -2f);
+                MovementCommand command = new MovementCommand(
+                    Vector3.zero,
+                    0f,
+                    0f,
+                    0.1f,
+                    BasicMovementPhase.TurnBack,
+                    BasicMovementGait.Run,
+                    new BasicMovementMotionFacts(
+                        true,
+                        new Vector3(0f, 0f, 1f),
+                        0f,
+                        BasicMovementPhase.TurnBack,
+                        "Locomotion.Turn.Back",
+                        true,
+                        true,
+                        BasicMovementPlanarDeltaSpace.EntryLocal,
+                        TurnBackMotionPolicy.Default));
+
+                executor.ExecuteBasicMovement(in command);
+
+                Assert.AreEqual(0f, gameObject.transform.position.x, 0.001f);
+                Assert.AreEqual(0f, gameObject.transform.position.z, 0.001f);
+                Assert.AreEqual(90f, gameObject.transform.eulerAngles.y, 0.001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void CharacterControllerExecutorStillRotatesLocalBakedMotionDelta()
+        {
+            GameObject gameObject = new GameObject("local-baked-motion-executor-test");
+
+            try
+            {
+                gameObject.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+                CharacterController characterController = gameObject.AddComponent<CharacterController>();
+                CharacterControllerBasicMotionExecutor executor = new CharacterControllerBasicMotionExecutor(
+                    characterController,
+                    gameObject.transform,
+                    false,
+                    -20f,
+                    -2f);
+                MovementCommand command = new MovementCommand(
+                    Vector3.zero,
+                    0f,
+                    0f,
+                    0.1f,
+                    BasicMovementPhase.MoveStart,
+                    BasicMovementGait.Run,
+                    new BasicMovementMotionFacts(
+                        true,
+                        new Vector3(0f, 0f, 1f),
+                        0f,
+                        BasicMovementPhase.MoveStart,
+                        "RunStart"));
+
+                executor.ExecuteBasicMovement(in command);
+
+                Assert.AreEqual(1f, gameObject.transform.position.x, 0.001f);
+                Assert.AreEqual(0f, gameObject.transform.position.z, 0.001f);
+                Assert.AreEqual(90f, gameObject.transform.eulerAngles.y, 0.001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void CharacterControllerExecutorRollbackStateRestoresRootPose()
+        {
+            GameObject gameObject = new GameObject("motion-executor-root-pose-restore-test");
+
+            try
+            {
+                CharacterController characterController = gameObject.AddComponent<CharacterController>();
+                CharacterControllerBasicMotionExecutor executor = new CharacterControllerBasicMotionExecutor(
+                    characterController,
+                    gameObject.transform,
+                    false,
+                    -20f,
+                    -2f);
+
+                gameObject.transform.SetPositionAndRotation(new Vector3(3f, 0f, 4f), Quaternion.Euler(0f, 37f, 0f));
+                MotionExecutorRollbackState state = executor.CaptureRollbackState();
+
+                gameObject.transform.SetPositionAndRotation(new Vector3(-8f, 0f, 9f), Quaternion.Euler(0f, 220f, 0f));
+                executor.RestoreRollbackState(in state);
+
+                Assert.AreEqual(3f, gameObject.transform.position.x, 0.001f);
+                Assert.AreEqual(4f, gameObject.transform.position.z, 0.001f);
+                Assert.AreEqual(37f, gameObject.transform.eulerAngles.y, 0.001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void FullBodyActionControllerWritesActionAndAnimationBlackboardFacts()
+        {
+            GameObject gameObject = new GameObject("fullbody-blackboard-test");
+            ActionInterruptPolicySetSO policySet = CreateDodgePolicyAsset(30);
+            DodgeActionConfigSO dodgeConfig = CreateDodgeConfigAsset(30, 20);
+
+            try
+            {
+                PlayerLocomotionController locomotion = gameObject.AddComponent<PlayerLocomotionController>();
+                PlayerFullBodyActionController fullBody = gameObject.AddComponent<PlayerFullBodyActionController>();
+                InputRequestBufferComponent inputBuffer = gameObject.AddComponent<InputRequestBufferComponent>();
+                TestFacingDirectionProviderComponent facing = gameObject.AddComponent<TestFacingDirectionProviderComponent>();
+                TestActionAnimationPresenter actionPresenter = gameObject.AddComponent<TestActionAnimationPresenter>();
+
+                locomotion.AutoUpdate = false;
+                fullBody.AutoUpdate = false;
+                ConfigureFullBody(fullBody, locomotion);
+                fullBody.InputBufferComponent = inputBuffer;
+                fullBody.FacingProviderBehaviour = facing;
+                fullBody.AnimationPresenterBehaviour = actionPresenter;
+                fullBody.InterruptPolicySet = policySet;
+                fullBody.DodgeActionConfigAsset = dodgeConfig;
+
+                inputBuffer.SetStep(40);
+                inputBuffer.Buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 40, 4);
+
+                Assert.True(fullBody.Tick(new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero)));
+
+                CharacterRuntimeBlackboardSnapshot entered = locomotion.RuntimeBlackboardSnapshot;
+                Assert.True(entered.Action.Active);
+                Assert.AreEqual(ActionStateIds.Dodge, entered.Action.State);
+                Assert.AreEqual(ActionAnimationKeys.DodgeDirectional, entered.Animation.ActionKey);
+                Assert.True(entered.Animation.ActionHasValidPlayback);
+                Assert.AreEqual("Animation", entered.Debug.LastWriter);
+
+                inputBuffer.SetStep(41);
+                Assert.True(fullBody.Tick(new BasicLocomotionInputSnapshot(0.25f, Vector2.up, Vector2.zero)));
+
+                CharacterRuntimeBlackboardSnapshot exited = locomotion.RuntimeBlackboardSnapshot;
+                Assert.False(exited.Action.Active);
+                Assert.True(exited.Action.ExitedToLocomotion);
+                Assert.False(exited.Animation.ActionHasValidPlayback);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(policySet);
+                Object.DestroyImmediate(dodgeConfig);
+            }
+        }
+
+        [Test]
+        public void FullBodyActionControllerWithoutPolicyRejectsDodgeAndKeepsBufferRequest()
+        {
+            GameObject gameObject = new GameObject("fullbody-action-policy-missing-test");
+
+            try
+            {
+                PlayerLocomotionController locomotion = gameObject.AddComponent<PlayerLocomotionController>();
+                PlayerFullBodyActionController fullBody = gameObject.AddComponent<PlayerFullBodyActionController>();
+                InputRequestBufferComponent inputBuffer = gameObject.AddComponent<InputRequestBufferComponent>();
+                TestFacingDirectionProviderComponent facing = gameObject.AddComponent<TestFacingDirectionProviderComponent>();
+
+                locomotion.AutoUpdate = false;
+                fullBody.AutoUpdate = false;
+                ConfigureFullBody(fullBody, locomotion);
+                fullBody.InputBufferComponent = inputBuffer;
+                fullBody.FacingProviderBehaviour = facing;
+
+                inputBuffer.SetStep(1);
+                inputBuffer.Buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 1, 4);
+
+                Assert.True(fullBody.Tick(new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero)));
+                Assert.AreNotEqual(CharacterStateIds.Dodge, fullBody.CurrentStateSnapshot.ActiveState);
+                Assert.True(inputBuffer.Buffer.TryPeek(InputRequestKind.Dodge, 1, out _));
+                Assert.True(fullBody.ValidateActionInterruptPolicies().HasErrors);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void FullBodyActionControllerUsesDodgeConfigAssetPriorityForRequest()
+        {
+            GameObject gameObject = new GameObject("fullbody-dodge-config-priority-test");
+            ActionInterruptPolicySetSO policySet = CreateDodgePolicyAsset(37);
+            DodgeActionConfigSO dodgeConfig = CreateDodgeConfigAsset(37, 55);
+
+            try
+            {
+                PlayerLocomotionController locomotion = gameObject.AddComponent<PlayerLocomotionController>();
+                PlayerFullBodyActionController fullBody = gameObject.AddComponent<PlayerFullBodyActionController>();
+                InputRequestBufferComponent inputBuffer = gameObject.AddComponent<InputRequestBufferComponent>();
+                TestFacingDirectionProviderComponent facing = gameObject.AddComponent<TestFacingDirectionProviderComponent>();
+
+                locomotion.AutoUpdate = false;
+                fullBody.AutoUpdate = false;
+                ConfigureFullBody(fullBody, locomotion);
+                fullBody.InputBufferComponent = inputBuffer;
+                fullBody.FacingProviderBehaviour = facing;
+                fullBody.InterruptPolicySet = policySet;
+                fullBody.DodgeActionConfigAsset = dodgeConfig;
+
+                inputBuffer.SetStep(50);
+                inputBuffer.Buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 50, 4);
+
+                Assert.True(fullBody.Tick(new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero)));
+
+                Assert.AreEqual(CharacterStateIds.Dodge, fullBody.CurrentStateSnapshot.ActiveState);
+                Assert.True(fullBody.TryResolveDodgeActionConfig(out DodgeActionConfig resolvedConfig));
+                Assert.AreEqual(37, resolvedConfig.Priority);
+                Assert.False(inputBuffer.Buffer.TryPeek(InputRequestKind.Dodge, 50, out _));
+                Assert.False(fullBody.ValidateActionInterruptPolicies().HasErrors);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(policySet);
+                Object.DestroyImmediate(dodgeConfig);
+            }
+        }
+
+        [Test]
+        public void FullBodyActionControllerReportsMissingDodgeConfigAsset()
+        {
+            GameObject gameObject = new GameObject("fullbody-dodge-config-missing-test");
+            ActionInterruptPolicySetSO policySet = CreateDodgePolicyAsset(30);
+
+            try
+            {
+                PlayerFullBodyActionController fullBody = gameObject.AddComponent<PlayerFullBodyActionController>();
+                fullBody.InterruptPolicySet = policySet;
+
+                ActionInterruptPolicyValidationResult validation = fullBody.ValidateActionInterruptPolicies();
+
+                Assert.True(validation.HasErrors);
+                Assert.That(validation.DescribeErrors(), Does.Contain("Dodge action config is missing."));
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(policySet);
+            }
+        }
+
+        [Test]
+        public void FullBodyActionControllerReportsMissingReferencedTimelineWindow()
+        {
+            GameObject gameObject = new GameObject("fullbody-timeline-window-missing-test");
+            ActionInterruptPolicySetSO policySet = ScriptableObject.CreateInstance<ActionInterruptPolicySetSO>();
+            DodgeActionConfigSO dodgeConfig = CreateDodgeConfigAsset(30, 20);
+
+            try
+            {
+                SetPrivateField(policySet, "policies", new[]
+                {
+                    new ActionInterruptPolicyDefinition(ActionStateIds.None.Value, ActionStateIds.Dodge.Value, 30),
+                    new ActionInterruptPolicyDefinition(ActionStateIds.Dodge.Value, ActionStateIds.Dodge.Value, 30),
+                    new ActionInterruptPolicyDefinition(
+                        CharacterStateIds.MoveLoop.Value,
+                        CharacterStateIds.TurnBack.Value,
+                        20,
+                        windowId: "missing-turnback-enter")
+                });
+
+                PlayerFullBodyActionController fullBody = gameObject.AddComponent<PlayerFullBodyActionController>();
+                fullBody.CharacterConfig = LoadConfiguredCharacterConfigAsset();
+                fullBody.InterruptPolicySet = policySet;
+                fullBody.DodgeActionConfigAsset = dodgeConfig;
+
+                ActionInterruptPolicyValidationResult validation = fullBody.ValidateActionInterruptPolicies();
+
+                Assert.True(validation.HasErrors);
+                Assert.That(validation.DescribeErrors(), Does.Contain("missing timeline window"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+                Object.DestroyImmediate(policySet);
+                Object.DestroyImmediate(dodgeConfig);
+            }
+        }
+
+        [Test]
+        public void ResolveCurrentActionResistanceReturnsZeroOutsideAction()
+        {
+            DodgeActionConfig config = new DodgeActionConfig(0.35f, 4f, 0.35f, 3f, 30, 55, true, false);
+            CharacterStateMachineSnapshot locomotion = new CharacterStateMachineSnapshot(
+                CharacterStateIds.MoveLoop,
+                0.1f,
+                CharacterStateVariant.None,
+                string.Empty,
+                new[] { CharacterStateTag.FullBody, CharacterStateTag.Locomotion, CharacterStateTag.Movement });
+
+            int resistance = PlayerFullBodyActionController.ResolveCurrentActionResistance(in locomotion, in config);
+
+            Assert.AreEqual(0, resistance);
+        }
+
+        [Test]
+        public void ResolveCurrentActionResistanceReturnsDodgeConfigResistanceForDodge()
+        {
+            DodgeActionConfig config = new DodgeActionConfig(0.35f, 4f, 0.35f, 3f, 30, 55, true, false);
+            CharacterStateMachineSnapshot dodge = DodgeSnapshot(0.1f);
+
+            int resistance = PlayerFullBodyActionController.ResolveCurrentActionResistance(in dodge, in config);
+
+            Assert.AreEqual(55, resistance);
+        }
+
+        [Test]
+        public void ConfiguredStateMachineDodgeEntryOnlyConsumesAcceptedDodgeInputFact()
+        {
+            CharacterStateMachineDefinition definition = LoadConfiguredStateMachineDefinition();
+            int dodgeEntryCount = 0;
+            int dodgeChainDodgeCount = 0;
+
+            foreach (CharacterStateTransitionDefinition transition in definition.Transitions)
+            {
+                if (transition.ToStateId != CharacterStateIds.Dodge)
+                    continue;
+
+                dodgeEntryCount++;
+
+                if (transition.FromStateId == CharacterStateIds.Dodge.Value)
+                {
+                    dodgeChainDodgeCount++;
+                    Assert.AreEqual(2, transition.Conditions.Count);
+                    Assert.AreEqual(CharacterStateTransitionConditionKind.HasInputRequest, transition.Conditions[0].Kind);
+                    Assert.AreEqual(InputRequestKind.Dodge, transition.Conditions[0].RequestKind);
+                    Assert.AreEqual(CharacterStateTransitionConditionKind.StateElapsedAtLeast, transition.Conditions[1].Kind);
+                    Assert.AreEqual(DodgeActionConfig.Default.DirectionalDuration, transition.Conditions[1].MinSeconds);
+                }
+                else
+                {
+                    Assert.AreEqual(1, transition.Conditions.Count);
+                    Assert.AreEqual(CharacterStateTransitionConditionKind.HasInputRequest, transition.Conditions[0].Kind);
+                    Assert.AreEqual(InputRequestKind.Dodge, transition.Conditions[0].RequestKind);
+                    Assert.AreEqual(0, transition.Conditions[0].MinPriority);
+                }
+            }
+
+            string asset = File.ReadAllText(Path.Combine(Application.dataPath, "Configs/3C/Statemachine/DefaultCharacterStateMachine.asset"));
+            Assert.AreEqual(2, dodgeEntryCount, "Expected both Locomotion->Dodge entry and Dodge->Dodge chain-dodge transitions.");
+            Assert.AreEqual(1, dodgeChainDodgeCount, "Expected exactly one Dodge->Dodge chain-dodge transition.");
+            Assert.That(asset, Does.Not.Contain("minPriority: 30"));
+            Assert.That(asset, Does.Not.Contain("transitionAsset: {fileID: 114"));
+        }
+
+        [Test]
+        public void DodgeToDodgeIsBlockedBeforeDurationElapsed()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true, request: DodgeRequest(CharacterStateVariant.Directional, Vector3.forward)));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(move: true, deltaTime: 0.1f, request: DodgeRequest(CharacterStateVariant.Directional, Vector3.right)));
+
+            Assert.AreEqual(CharacterStateIds.Dodge, frame.Snapshot.ActiveState);
+            Assert.AreEqual(0.2f, frame.Snapshot.StateTime, 0.001f);
+            Assert.False(frame.ConsumeInputRequest);
+        }
+
+        [Test]
+        public void DodgeToDodgeIsAllowedAfterDurationElapsed()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true, deltaTime: 0.35f, request: DodgeRequest(CharacterStateVariant.Directional, Vector3.forward)));
+
+            CharacterStateMachineFrame frame = runner.Tick(Context(move: true, deltaTime: 0.01f, request: DodgeRequest(CharacterStateVariant.Directional, Vector3.right)));
+
+            Assert.AreEqual(CharacterStateIds.Dodge, frame.Snapshot.ActiveState);
+            Assert.That(frame.Snapshot.StateTime, Is.LessThanOrEqualTo(0.01f + 0.001f));
+            Assert.True(frame.ConsumeInputRequest);
+        }
+
+        [Test]
+        public void DodgeActionConfigDefaultIsUsedForTransitionDurations()
+        {
+            CharacterStateMachineDefinition definition = LoadConfiguredStateMachineDefinition();
+
+            foreach (CharacterStateTransitionDefinition transition in definition.Transitions)
+            {
+                if (transition.FromStateId != CharacterStateIds.Dodge.Value)
+                    continue;
+
+                if (transition.ToStateId == CharacterStateIds.Dodge)
+                {
+                    Assert.AreEqual(DodgeActionConfig.Default.DirectionalDuration,
+                        transition.Conditions[1].MinSeconds,
+                        "Dodge→Dodge transition must use DirectionalDuration for StateElapsedAtLeast");
+                }
+                else if (transition.ToStateId == CharacterStateIds.MoveLoop || transition.ToStateId == CharacterStateIds.Idle)
+                {
+                    int elapsedIndex = transition.ToStateId == CharacterStateIds.Idle ? 1 : 1;
+                    Assert.AreEqual(DodgeActionConfig.Default.DirectionalDuration,
+                        transition.Conditions[elapsedIndex].MinSeconds,
+                        $"Dodge→{transition.ToStateId.Value} transition must use DirectionalDuration for StateElapsedAtLeast");
+                }
+            }
         }
 
         [Test]
@@ -451,6 +3022,246 @@ namespace Tests.Editor
             Assert.That(combined, Does.Not.Contain("Cinemachine"));
             Assert.That(combined, Does.Not.Contain("DodgeActionConfig"));
             Assert.That(combined, Does.Not.Contain("CharacterStateIds.Dodge"));
+            Assert.That(combined, Does.Not.Contain("ActionInterruptArbiter"));
+            Assert.That(combined, Does.Not.Contain("ActionInterruptPolicySetSO"));
+        }
+
+        [Test]
+        public void ActionRequestGateDoesNotReferencePresentationOrMotionRuntimeObjects()
+        {
+            string actionRoot = Path.Combine(Application.dataPath, "Scripts/Character/Action");
+            string combined = string.Join("\n", new[]
+            {
+                Path.Combine(actionRoot, "FullBody/Solver/FullBodyActionInterruptGate.cs"),
+                Path.Combine(actionRoot, "FullBody/Solver/FullBodyActionInputRequestBuilder.cs"),
+                Path.Combine(actionRoot, "Solver/DodgeActionPlanner.cs"),
+                Path.Combine(actionRoot, "Solver/DodgeActionDirectionResolver.cs")
+            }.Select(File.ReadAllText));
+
+            Assert.That(combined, Does.Not.Contain("Animancer"));
+            Assert.That(combined, Does.Not.Contain("Animator"));
+            Assert.That(combined, Does.Not.Contain("CharacterController"));
+            Assert.That(combined, Does.Not.Contain("Cinemachine"));
+            Assert.That(combined, Does.Not.Contain("UnityEngine.InputSystem"));
+            Assert.That(combined, Does.Not.Contain("BBBNexus"));
+            Assert.That(combined, Does.Not.Contain("ICameraMovementBasisProvider"));
+            Assert.That(combined, Does.Not.Contain("CameraRelativeMovementResolver"));
+            Assert.That(combined, Does.Not.Contain("MovementInputIntent.FromRaw"));
+        }
+
+        [Test]
+        public void LocomotionDecisionStagesDoNotCallMotionOrAnimationAdapters()
+        {
+            string controller = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Movement/Runtime/PlayerLocomotionController.cs"));
+
+            AssertMethodBodyDoesNotContain(controller, "ResolveMovementIntent", "ExecuteBasicMovement");
+            AssertMethodBodyDoesNotContain(controller, "ResolveMovementIntent", "Present(");
+            AssertMethodBodyDoesNotContain(controller, "ResolveSpatialFacts", "ExecuteBasicMovement");
+            AssertMethodBodyDoesNotContain(controller, "ResolveSpatialFacts", "Present(");
+            AssertMethodBodyDoesNotContain(controller, "DeriveLocomotionDecisionFacts", "ExecuteBasicMovement");
+            AssertMethodBodyDoesNotContain(controller, "DeriveLocomotionDecisionFacts", "Present(");
+            AssertMethodBodyDoesNotContain(controller, "BuildStateMachineContext", "ExecuteBasicMovement");
+            AssertMethodBodyDoesNotContain(controller, "BuildStateMachineContext", "Present(");
+        }
+
+        [Test]
+        public void LocomotionDecisionPreparationOwnsAnimationProgressAdvance()
+        {
+            string controller = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Movement/Runtime/PlayerLocomotionController.cs"));
+
+            string evaluateBody = ExtractMethodBody(controller, "TryEvaluateWithStateMachine");
+            string prepareBody = ExtractMethodBody(controller, "TryPrepareDecisionFrame");
+
+            Assert.That(prepareBody, Does.Contain("AdvanceAnimationPlaybackProgress"));
+            Assert.That(evaluateBody, Does.Not.Contain("AdvanceAnimationPlaybackProgress"));
+        }
+
+        [Test]
+        public void RuntimeStateMachineRunnerHasSingleFullBodyOwner()
+        {
+            string locomotion = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Movement/Runtime/PlayerLocomotionController.cs"));
+            string fullBody = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Action/FullBody/Runtime/PlayerFullBodyActionController.cs"));
+
+            Assert.That(locomotion, Does.Not.Contain("new CharacterStateMachineRunner"));
+            Assert.AreEqual(1, CountOccurrences(fullBody, "new CharacterStateMachineRunner"));
+            Assert.That(fullBody, Does.Contain("ResolveStateMachineDefinition"));
+            Assert.That(fullBody, Does.Contain("CharacterConfigSO"));
+        }
+
+        [Test]
+        public void LocomotionDirectGameplayTickIsRetired()
+        {
+            string controller = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Movement/Runtime/PlayerLocomotionController.cs"));
+            string adapter = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Movement/Runtime/LocomotionTickAdapter.cs"));
+
+            string tickFromSource = ExtractMethodBody(controller, "TickFromInputSource", "int diagnosticStep");
+            string tickInput = ExtractMethodBody(controller, "Tick", "int diagnosticStep");
+            string evaluate = ExtractMethodBody(controller, "TryEvaluateLocomotion");
+
+            Assert.That(tickFromSource, Does.Contain("LogRetiredDirectTick"));
+            Assert.That(tickInput, Does.Contain("LogRetiredDirectTick"));
+            Assert.That(evaluate, Does.Contain("LogRetiredDirectTick"));
+            Assert.That(adapter, Does.Not.Contain("TickFromInputSource"));
+            Assert.That(adapter, Does.Contain("locomotion-tick-adapter-retired"));
+        }
+
+        [Test]
+        public void FullBodyPipelineOwnsOutputOrder()
+        {
+            string controller = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Action/FullBody/Runtime/PlayerFullBodyActionController.cs"));
+            string pipeline = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Action/FullBody/Runtime/FullBodyFramePipeline.cs"));
+
+            Assert.That(controller, Does.Not.Contain("ApplyStateFrameOutputs"));
+            Assert.That(pipeline, Does.Contain("RunExecuteMotion"));
+            Assert.That(pipeline, Does.Contain("RunPresentationBridge"));
+        }
+
+        [Test]
+        public void RuntimeDodgeConfigDoesNotFallbackToDefault()
+        {
+            string controller = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Action/FullBody/Runtime/PlayerFullBodyActionController.cs"));
+            string pipeline = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Action/FullBody/Runtime/FullBodyFramePipeline.cs"));
+
+            Assert.That(controller, Does.Not.Contain("DodgeActionConfig.Default"));
+            Assert.That(pipeline, Does.Not.Contain("DodgeActionConfig.Default"));
+            Assert.That(controller, Does.Contain("TryResolveDodgeActionConfig"));
+            Assert.That(pipeline, Does.Contain("TryResolveDodgeActionConfig"));
+        }
+
+        [Test]
+        public void LocomotionConfigDoesNotFallbackToOldFields()
+        {
+            string controller = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Movement/Runtime/PlayerLocomotionController.cs"));
+
+            string animation = ExtractMethodBody(controller, "ResolveRunAnimationConfig");
+            string movement = ExtractMethodBody(controller, "ResolveMovementConfig");
+            string stateMachine = ExtractMethodBody(controller, "ResolveStateMachineDefinition");
+
+            Assert.That(animation, Does.Not.Contain("runAnimationConfig"));
+            Assert.That(movement, Does.Not.Contain("return config"));
+            Assert.That(stateMachine, Does.Not.Contain("stateMachineDefinition"));
+        }
+
+        [Test]
+        public void TurnBackRootMotionDoesNotExposeAnimatorDeltaPendingBuffer()
+        {
+            string controller = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Movement/Runtime/PlayerLocomotionController.cs"));
+
+            string body = ExtractMethodBody(controller, "ResolveTurnBackRootMotionFacts", "TurnBackMotionPolicy policy");
+            string bakedGuard = ExtractMethodBody(controller, "RequiresTurnBackBakedMotion");
+            string planarResolver = ExtractMethodBody(controller, "ResolveTurnBackPlanarDelta");
+            string yawResolver = ExtractMethodBody(controller, "ResolveTurnBackYawDelta");
+
+            Assert.That(body, Does.Contain("motionWindowActive"));
+            Assert.That(body, Does.Not.Contain("RequiresTurnBackRuntimeRootDelta"));
+            Assert.That(body, Does.Not.Contain("RuntimeRootDelta"));
+            Assert.That(body, Does.Not.Contain("ConsumeRootMotionDelta"));
+            Assert.That(body, Does.Not.Contain("TryResolveTurnBackAuthoredRootMotionDelta"));
+            Assert.That(body, Does.Not.Contain("ResolveAuthoredRootMotionSource"));
+            Assert.That(controller, Does.Not.Contain("ResolveRootMotionSource"));
+            Assert.That(controller, Does.Not.Contain("CapturePendingRootMotionDelta"));
+            Assert.That(controller, Does.Not.Contain("RestorePendingRootMotionDelta"));
+            Assert.That(controller, Does.Not.Contain("turnback-runtime-root-delta-missing"));
+            Assert.That(controller, Does.Not.Contain("LocomotionRootMotionDelta"));
+            Assert.That(controller, Does.Not.Contain("LocomotionAuthoredRootMotionDelta"));
+            Assert.That(controller, Does.Not.Contain("ILocomotionAuthoredRootMotionSource"));
+            Assert.That(controller, Does.Not.Contain("AnimationClipRootMotionSampler"));
+            Assert.That(body, Does.Contain("? ResolveTurnBackBakedMotionSample"));
+            Assert.That(body, Does.Contain("RequiresTurnBackBakedMotion(in policy)"));
+            Assert.That(bakedGuard, Does.Contain("TurnBackMotionYawSource.BakedMotionProfile"));
+            Assert.That(bakedGuard, Does.Contain("TurnBackMotionTranslationSource.BakedMotionProfile"));
+            Assert.That(planarResolver, Does.Not.Contain("RuntimeRootDelta"));
+            Assert.That(planarResolver, Does.Not.Contain("rawDelta"));
+            Assert.That(yawResolver, Does.Not.Contain("RuntimeRootDelta"));
+            Assert.That(yawResolver, Does.Not.Contain("rawDelta"));
+            Assert.That(yawResolver, Does.Contain("bakedSample.HasMotionContribution ? bakedSample.YawDelta : 0f"));
+            Assert.That(controller, Does.Contain("ResolveMotionProfile"));
+            Assert.That(controller, Does.Contain("AnimationMotionProfileSampler"));
+        }
+
+        [Test]
+        public void LocomotionPresenterDoesNotApplyCharacterRootMotion()
+        {
+            string presenter = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Animation/Runtime/BasicLocomotionAnimancerPresenter.cs"));
+
+            Assert.That(presenter, Does.Not.Contain("CharacterController"));
+            Assert.That(presenter, Does.Not.Contain(".Move("));
+            Assert.That(presenter, Does.Not.Contain("transform.position ="));
+            Assert.That(presenter, Does.Not.Contain("transform.rotation ="));
+            Assert.That(presenter, Does.Not.Contain("transform.Translate"));
+            Assert.That(presenter, Does.Not.Contain("transform.Rotate"));
+            Assert.That(presenter, Does.Not.Contain("pendingRootMotionDelta"));
+            Assert.That(presenter, Does.Not.Contain("ConsumeRootMotionDelta"));
+            Assert.That(presenter, Does.Not.Contain("ILocomotionRootMotionSource"));
+            Assert.That(presenter, Does.Not.Contain("ILocomotionRootMotionRollbackStateProvider"));
+            Assert.That(presenter, Does.Not.Contain("ILocomotionAuthoredRootMotionSource"));
+            Assert.That(presenter, Does.Not.Contain("TrySampleAuthoredRootMotion"));
+            Assert.That(presenter, Does.Not.Contain("AnimationClipRootMotionSampler"));
+        }
+
+        [Test]
+        public void BasicLocomotionPipelineDoesNotRecomputeDecisionFacts()
+        {
+            string pipeline = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Movement/Solver/BasicLocomotionPipeline.cs"));
+
+            Assert.That(pipeline, Does.Not.Contain("MovementInputIntent.FromRaw"));
+            Assert.That(pipeline, Does.Not.Contain("CameraRelativeMovementResolver.Resolve"));
+            Assert.That(pipeline, Does.Not.Contain("ICameraMovementBasisProvider"));
+        }
+
+        [Test]
+        public void RuntimeBlackboardDoesNotReferenceForbiddenRuntimeObjects()
+        {
+            string blackboard = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/StateMachine/Model/CharacterRuntimeBlackboard.cs"));
+            string animationRuntime = string.Join("\n", new[]
+            {
+                Path.Combine(Application.dataPath, "Scripts/Character/Animation/Runtime/BasicLocomotionAnimancerPresenter.cs"),
+                Path.Combine(Application.dataPath, "Scripts/Character/Animation/Runtime/ActionAnimationAnimancerPresenter.cs")
+            }.Select(File.ReadAllText));
+
+            Assert.That(blackboard, Does.Not.Contain("Animancer"));
+            Assert.That(blackboard, Does.Not.Contain("Transform"));
+            Assert.That(blackboard, Does.Not.Contain("Camera"));
+            Assert.That(blackboard, Does.Not.Contain("CharacterController"));
+            Assert.That(blackboard, Does.Not.Contain("InputAction"));
+            Assert.That(blackboard, Does.Not.Contain("UnityEngine.Object"));
+            Assert.That(blackboard, Does.Not.Contain("AnimationClip"));
+            Assert.That(blackboard, Does.Not.Contain("TransitionAsset"));
+            Assert.That(blackboard, Does.Not.Contain("TransitionLibrary"));
+            Assert.That(blackboard, Does.Not.Contain("Dictionary<"));
+            Assert.That(animationRuntime, Does.Not.Contain("RuntimeBlackboard"));
+            Assert.That(animationRuntime, Does.Not.Contain("WriteActionFacts"));
+            Assert.That(animationRuntime, Does.Not.Contain("WriteAnimationFacts"));
         }
 
         [Test]
@@ -470,28 +3281,334 @@ namespace Tests.Editor
             Assert.That(combined, Does.Not.Contain("ActionAnimationProfileSO"));
         }
 
+        [Test]
+        public void RuntimeCodeDoesNotIntroduceTurnBackSpecificControllerOrStateMachine()
+        {
+            string scriptsRoot = Path.Combine(Application.dataPath, "Scripts");
+            string[] turnBackControllers = Directory.GetFiles(scriptsRoot, "*TurnBack*Controller*.cs", SearchOption.AllDirectories);
+            string[] turnBackStateMachines = Directory.GetFiles(scriptsRoot, "*TurnBack*StateMachine*.cs", SearchOption.AllDirectories);
+
+            Assert.IsEmpty(turnBackControllers);
+            Assert.IsEmpty(turnBackStateMachines);
+        }
+
         static CharacterStateMachineRunner CreateRunner()
         {
-            return new CharacterStateMachineRunner(CharacterStateMachineDefinition.CreateDefault());
+            return new CharacterStateMachineRunner(LoadConfiguredStateMachineDefinition());
+        }
+
+        static CharacterStateMachineDefinition LoadConfiguredStateMachineDefinition()
+        {
+            return LoadConfiguredStateMachineDefinitionAsset().ToDefinition();
+        }
+
+        static CharacterStateMachineDefinitionSO LoadConfiguredStateMachineDefinitionAsset()
+        {
+            CharacterStateMachineDefinitionSO asset = AssetDatabase.LoadAssetAtPath<CharacterStateMachineDefinitionSO>(
+                "Assets/Configs/3C/Statemachine/DefaultCharacterStateMachine.asset");
+            Assert.NotNull(asset);
+            return asset;
+        }
+
+        static CharacterConfigSO LoadConfiguredCharacterConfigAsset()
+        {
+            CharacterConfigSO asset = AssetDatabase.LoadAssetAtPath<CharacterConfigSO>(
+                "Assets/Configs/3C/CharacterConfig.asset");
+            Assert.NotNull(asset);
+            Assert.NotNull(asset.StateMachine);
+            Assert.NotNull(asset.Movement);
+            return asset;
+        }
+
+        static CharacterConfigSO CreateCharacterConfig(RunLocomotionAnimationConfigSO locomotionAnimation)
+        {
+            CharacterConfigSO baseConfig = LoadConfiguredCharacterConfigAsset();
+            CharacterConfigSO config = ScriptableObject.CreateInstance<CharacterConfigSO>();
+            SetPrivateField(config, "stateMachine", baseConfig.StateMachine);
+            SetPrivateField(config, "movement", baseConfig.Movement);
+            SetPrivateField(config, "locomotionAnimation", locomotionAnimation != null ? locomotionAnimation : baseConfig.LocomotionAnimation);
+            return config;
+        }
+
+        static void ConfigureLocomotion(PlayerLocomotionController controller)
+        {
+            controller.CharacterConfig = LoadConfiguredCharacterConfigAsset();
+        }
+
+        static void ConfigureFullBody(PlayerFullBodyActionController fullBody, PlayerLocomotionController locomotion)
+        {
+            if (locomotion.CharacterConfig == null)
+                ConfigureLocomotion(locomotion);
+
+            fullBody.CharacterConfig = locomotion.CharacterConfig;
+            fullBody.LocomotionController = locomotion;
+        }
+
+        static int CountOccurrences(string source, string text)
+        {
+            int count = 0;
+            int index = 0;
+            while ((index = source.IndexOf(text, index)) >= 0)
+            {
+                count++;
+                index += text.Length;
+            }
+
+            return count;
+        }
+
+        static void AssertMethodBodyDoesNotContain(string source, string methodName, string text)
+        {
+            string body = ExtractMethodBody(source, methodName);
+            Assert.That(body, Does.Not.Contain(text));
+        }
+
+        static string ExtractMethodBody(string source, string methodName)
+        {
+            return ExtractMethodBody(source, methodName, string.Empty);
+        }
+
+        static string ExtractMethodBody(string source, string methodName, string signatureMustContain)
+        {
+            int openBrace = FindMethodBodyOpenBrace(source, methodName, signatureMustContain);
+            Assert.GreaterOrEqual(openBrace, 0, $"Method {methodName} was not found.");
+
+            int depth = 0;
+            for (int i = openBrace; i < source.Length; i++)
+            {
+                if (source[i] == '{')
+                    depth++;
+                else if (source[i] == '}')
+                {
+                    depth--;
+                    if (depth == 0)
+                        return source.Substring(openBrace, i - openBrace + 1);
+                }
+            }
+
+            Assert.Fail($"Method {methodName} body was not closed.");
+            return string.Empty;
+        }
+
+        static int FindMethodBodyOpenBrace(string source, string methodName)
+        {
+            return FindMethodBodyOpenBrace(source, methodName, string.Empty);
+        }
+
+        static int FindMethodBodyOpenBrace(string source, string methodName, string signatureMustContain)
+        {
+            int searchIndex = 0;
+            while (searchIndex < source.Length)
+            {
+                int nameIndex = source.IndexOf(methodName, searchIndex, System.StringComparison.Ordinal);
+                if (nameIndex < 0)
+                    return -1;
+
+                int afterName = nameIndex + methodName.Length;
+                if (!IsIdentifierBoundary(source, nameIndex - 1) ||
+                    !IsIdentifierBoundary(source, afterName) ||
+                    afterName >= source.Length ||
+                    source[afterName] != '(')
+                {
+                    searchIndex = afterName;
+                    continue;
+                }
+
+                int closeParen = FindMatchingParen(source, afterName);
+                if (closeParen < 0)
+                    return -1;
+
+                if (!string.IsNullOrEmpty(signatureMustContain))
+                {
+                    string signature = source.Substring(nameIndex, closeParen - nameIndex + 1);
+                    if (!signature.Contains(signatureMustContain))
+                    {
+                        searchIndex = closeParen + 1;
+                        continue;
+                    }
+                }
+
+                int next = NextNonWhitespace(source, closeParen + 1);
+                if (next >= 0 && source[next] == '{')
+                    return next;
+
+                searchIndex = afterName;
+            }
+
+            return -1;
+        }
+
+        static int FindMatchingParen(string source, int openParen)
+        {
+            int depth = 0;
+            for (int i = openParen; i < source.Length; i++)
+            {
+                if (source[i] == '(')
+                    depth++;
+                else if (source[i] == ')')
+                {
+                    depth--;
+                    if (depth == 0)
+                        return i;
+                }
+            }
+
+            return -1;
+        }
+
+        static int NextNonWhitespace(string source, int start)
+        {
+            for (int i = start; i < source.Length; i++)
+            {
+                if (!char.IsWhiteSpace(source[i]))
+                    return i;
+            }
+
+            return -1;
+        }
+
+        static bool IsIdentifierBoundary(string source, int index)
+        {
+            if (index < 0 || index >= source.Length)
+                return true;
+
+            char value = source[index];
+            return !char.IsLetterOrDigit(value) && value != '_';
+        }
+
+        static CharacterRuntimeBlackboardSnapshot BlackboardWithActionProgress(
+            ActionAnimationKey key,
+            float normalizedTime,
+            bool isEnded)
+        {
+            return new CharacterRuntimeBlackboardSnapshot(
+                CharacterRuntimeLocomotionFacts.Default,
+                CharacterRuntimeActionFacts.Default,
+                new CharacterRuntimeAnimationFacts(
+                    AnimationPhasePlaybackProgress.Invalid(BasicMovementPhase.Idle),
+                    string.Empty,
+                    key,
+                    normalizedTime,
+                    true,
+                    isEnded,
+                    key.Value,
+                    1),
+                CharacterRuntimeDebugFacts.Record("Animation", 1));
+        }
+
+        static CharacterRuntimeBlackboardSnapshot BlackboardWithLocomotionDirection(Vector3 worldDirection)
+        {
+            return new CharacterRuntimeBlackboardSnapshot(
+                new CharacterRuntimeLocomotionFacts(
+                    BasicMovementPhase.MoveLoop,
+                    BasicMovementGait.Run,
+                    BasicMovementGait.Run,
+                    false,
+                    BasicMovementGait.Walk,
+                    true,
+                    worldDirection,
+                    true,
+                    1f,
+                    1),
+                CharacterRuntimeActionFacts.Default,
+                CharacterRuntimeAnimationFacts.Default,
+                CharacterRuntimeDebugFacts.Record("Locomotion", 1));
+        }
+
+        static CharacterRuntimeBlackboardSnapshot BlackboardWithLocomotionProgress(
+            string aliasKey,
+            float normalizedTime,
+            bool isEnded)
+        {
+            return new CharacterRuntimeBlackboardSnapshot(
+                CharacterRuntimeLocomotionFacts.Default,
+                CharacterRuntimeActionFacts.Default,
+                new CharacterRuntimeAnimationFacts(
+                    new AnimationPhasePlaybackProgress(BasicMovementPhase.TurnBack, aliasKey, normalizedTime, true, isEnded),
+                    aliasKey,
+                    ActionAnimationPlaybackProgress.Invalid,
+                    string.Empty,
+                    1),
+                CharacterRuntimeDebugFacts.Record("Animation", 1));
         }
 
         static CharacterStateMachineContext Context(
             bool move,
             float deltaTime = 0.1f,
             bool canExit = false,
-            CharacterInputRequestFact request = default)
+            bool runHeld = false,
+            CharacterInputRequestFact request = default,
+            CharacterRuntimeBlackboardSnapshot runtimeBlackboard = default,
+            Vector3 worldDirection = default,
+            Vector3 facingForward = default,
+            LocomotionTurnBackIntent turnBackIntent = default)
         {
             Vector2 moveInput = move ? Vector2.up : Vector2.zero;
-            MovementInputIntent intent = MovementInputIntent.FromRaw(moveInput, 0.1f, false);
-            Vector3 worldDirection = move ? Vector3.forward : Vector3.zero;
+            MovementInputIntent intent = MovementInputIntent.FromRaw(moveInput, 0.1f, runHeld);
+            Vector3 resolvedWorldDirection = move
+                ? worldDirection.sqrMagnitude > 0.000001f ? worldDirection.normalized : Vector3.forward
+                : Vector3.zero;
+            Vector3 resolvedFacingForward = facingForward.sqrMagnitude > 0.000001f ? facingForward.normalized : Vector3.forward;
             CharacterInputRequestFact resolvedRequest = request.HasRequest ? request : CharacterInputRequestFact.None(InputRequestKind.Dodge);
+            CharacterRuntimeBlackboardSnapshot resolvedBlackboard = !string.IsNullOrEmpty(runtimeBlackboard.Debug.LastWriter)
+                ? runtimeBlackboard
+                : CharacterRuntimeBlackboardSnapshot.Empty;
+            LocomotionDecisionFacts facts = new LocomotionDecisionFacts(
+                intent,
+                intent.HasMoveIntent ? intent.Gait : BasicMovementGait.Walk,
+                new BasicMovementPhaseFacts(canExit),
+                new LocomotionSpatialFacts(resolvedWorldDirection, resolvedFacingForward, Vector3.forward, Vector3.right),
+                turnBackIntent);
             return new CharacterStateMachineContext(
                 deltaTime,
                 1,
+                in facts,
+                resolvedRequest,
+                resolvedBlackboard);
+        }
+
+        static LocomotionDecisionFacts DecisionFacts(
+            in BasicLocomotionInputSnapshot input,
+            in BasicMovementSettings settings,
+            Vector3 worldDirection,
+            Vector3 facingForward)
+        {
+            MovementInputIntent intent = MovementInputIntent.FromRaw(input.Move, settings.InputDeadZone, input.RunHeld);
+            return new LocomotionDecisionFacts(
                 intent,
+                intent.HasMoveIntent ? intent.Gait : BasicMovementGait.Walk,
+                BasicMovementPhaseFacts.None,
+                new LocomotionSpatialFacts(worldDirection, facingForward, Vector3.forward, Vector3.right),
+                LocomotionTurnBackIntent.None);
+        }
+
+        static LocomotionTurnBackIntent TurnBackIntent(
+            int originStep,
+            int expireStep,
+            float angle,
+            Vector3 worldDirection,
+            Vector3 facingForward)
+        {
+            return new LocomotionTurnBackIntent(
+                true,
+                originStep,
+                expireStep,
+                angle,
+                120f,
                 worldDirection,
-                new BasicMovementPhaseFacts(canExit),
-                resolvedRequest);
+                facingForward);
+        }
+
+        static CharacterInputRequestFact TurnBackRequest(int originStep, int expireStep, Vector3 worldDirection)
+        {
+            return new CharacterInputRequestFact(
+                true,
+                InputRequestKind.TurnBack,
+                originStep,
+                expireStep,
+                20,
+                CharacterStateVariant.None,
+                worldDirection);
         }
 
         static CharacterInputRequestFact DodgeRequest(CharacterStateVariant variant, Vector3 direction)
@@ -504,6 +3621,50 @@ namespace Tests.Editor
                 DodgeActionConfig.Default.Priority,
                 variant,
                 direction);
+        }
+
+        static ActionInterruptPolicySetSO CreateDodgePolicyAsset(int minPriority)
+        {
+            ActionInterruptPolicySetSO asset = ScriptableObject.CreateInstance<ActionInterruptPolicySetSO>();
+            FieldInfo field = typeof(ActionInterruptPolicySetSO).GetField("policies", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(field);
+            field.SetValue(asset, new[]
+            {
+                new ActionInterruptPolicyDefinition(ActionStateIds.None.Value, ActionStateIds.Dodge.Value, minPriority),
+                new ActionInterruptPolicyDefinition(ActionStateIds.Dodge.Value, ActionStateIds.Dodge.Value, minPriority)
+            });
+            return asset;
+        }
+
+        static DodgeActionConfigSO CreateDodgeConfigAsset(int priority, int resistance)
+        {
+            DodgeActionConfigSO asset = ScriptableObject.CreateInstance<DodgeActionConfigSO>();
+            SetPrivateField(asset, "directionalDuration", 0.35f);
+            SetPrivateField(asset, "directionalDistance", 4f);
+            SetPrivateField(asset, "backstepDuration", 0.35f);
+            SetPrivateField(asset, "backstepDistance", 3f);
+            SetPrivateField(asset, "priority", priority);
+            SetPrivateField(asset, "resistance", resistance);
+            SetPrivateField(asset, "directionalRotateToDirection", true);
+            SetPrivateField(asset, "backstepRotateToDirection", false);
+            return asset;
+        }
+
+        static CharacterStateMachineSnapshot DodgeSnapshot(float stateTime)
+        {
+            return new CharacterStateMachineSnapshot(
+                CharacterStateIds.Dodge,
+                stateTime,
+                CharacterStateVariant.Directional,
+                string.Empty,
+                new[] { CharacterStateTag.FullBody, CharacterStateTag.Action, CharacterStateTag.Dodge });
+        }
+
+        static void SetPrivateField<T>(object target, string fieldName, T value)
+        {
+            FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(field, fieldName);
+            field.SetValue(target, value);
         }
 
         static void CreateAnimationPresenterRig(
@@ -520,6 +3681,7 @@ namespace Tests.Editor
             animancer = gameObject.AddComponent<AnimancerComponent>();
             locomotionPresenter = gameObject.AddComponent<BasicLocomotionAnimancerPresenter>();
             actionPresenter = gameObject.AddComponent<ActionAnimationAnimancerPresenter>();
+            AnimatorRootMotionController.Resolve(animancer);
             idleClip = CreateClip("Idle");
             runClip = CreateClip("RunLoop");
             dodgeClip = CreateClip("Action.Dodge");
@@ -527,9 +3689,33 @@ namespace Tests.Editor
             TransitionLibrary library = new TransitionLibrary();
             library.AddTransition(StringReference.Get("Idle"), CreateClipTransition(idleClip));
             library.AddTransition(StringReference.Get("RunLoop"), CreateClipTransition(runClip));
+            library.AddTransition(StringReference.Get("Locomotion.Turn.Back"), CreateClipTransition(runClip));
             library.AddTransition(StringReference.Get(ActionAnimationKeys.DodgeBackstep.Value), CreateClipTransition(dodgeClip));
             library.AddTransition(StringReference.Get(ActionAnimationKeys.DodgeDirectional.Value), CreateClipTransition(dodgeClip));
             animancer.Graph.Transitions = library;
+        }
+
+        static void AssertTurnBackLibraryUsesInPlaceVisualClip(string libraryPath)
+        {
+            TransitionLibraryAsset asset = AssetDatabase.LoadAssetAtPath<TransitionLibraryAsset>(libraryPath);
+
+            Assert.NotNull(asset, libraryPath);
+            Assert.NotNull(asset.Library, libraryPath);
+            Assert.True(
+                asset.Library.TryGetTransition(StringReference.Get("Locomotion.Turn.Back"), out TransitionModifierGroup group),
+                libraryPath);
+
+            ITransition transition = group.Transition;
+            if (transition is TransitionAssetBase transitionAsset)
+                transition = transitionAsset.GetTransition();
+
+            ClipTransition clipTransition = transition as ClipTransition;
+            Assert.NotNull(clipTransition, libraryPath);
+            Assert.True(clipTransition.IsValid, libraryPath);
+            Assert.NotNull(clipTransition.Clip, libraryPath);
+            StringAssert.Contains("TurnBack", clipTransition.Clip.name, libraryPath);
+            StringAssert.Contains("Inplace", clipTransition.Clip.name, libraryPath);
+            Assert.That(clipTransition.Clip.name, Does.Not.Contain("Rootmotion"), libraryPath);
         }
 
         static AnimationClip CreateClip(string name)
@@ -537,6 +3723,19 @@ namespace Tests.Editor
             AnimationClip clip = new AnimationClip { name = name };
             clip.legacy = false;
             return clip;
+        }
+
+        static void EnsureTestFolder(string path)
+        {
+            if (AssetDatabase.IsValidFolder(path))
+                return;
+
+            string parent = Path.GetDirectoryName(path)?.Replace('\\', '/');
+            if (!string.IsNullOrWhiteSpace(parent))
+                EnsureTestFolder(parent);
+
+            string name = Path.GetFileName(path);
+            AssetDatabase.CreateFolder(string.IsNullOrWhiteSpace(parent) ? "Assets" : parent, name);
         }
 
         static ClipTransition CreateClipTransition(AnimationClip clip)
@@ -575,13 +3774,28 @@ namespace Tests.Editor
             public Vector3 FacingForward => Vector3.forward;
         }
 
+        sealed class TestAnimationPlaybackProgressSource : MonoBehaviour, IAnimationPhasePlaybackProgressSource
+        {
+            AnimationPhasePlaybackProgress playbackProgress = AnimationPhasePlaybackProgress.Invalid(BasicMovementPhase.Idle);
+
+            public AnimationPhasePlaybackProgress CurrentPlaybackProgress => playbackProgress;
+
+            public void SetPlaybackProgress(AnimationPhasePlaybackProgress progress)
+            {
+                playbackProgress = progress;
+            }
+        }
+
         sealed class TestActionAnimationPresenter : MonoBehaviour, IActionAnimationPresenter
         {
             public int PresentCount { get; private set; }
             public int ClearCount { get; private set; }
             public ActionAnimationKey CurrentKey { get; private set; }
-            public float CurrentNormalizedTime => 0f;
+            public float NormalizedTime { get; set; }
+            public bool PlaybackEnded { get; set; }
+            public float CurrentNormalizedTime => NormalizedTime;
             public bool HasValidPlayback => CurrentKey.IsValid;
+            public ActionAnimationPlaybackProgress CurrentPlaybackProgress => new ActionAnimationPlaybackProgress(CurrentKey, CurrentNormalizedTime, HasValidPlayback, PlaybackEnded);
             public string CurrentAnimationName => CurrentKey.Value;
 
             public bool Present(in CharacterStateAnimationRequest request)
@@ -595,6 +3809,8 @@ namespace Tests.Editor
             {
                 ClearCount++;
                 CurrentKey = default;
+                NormalizedTime = 0f;
+                PlaybackEnded = false;
             }
         }
     }

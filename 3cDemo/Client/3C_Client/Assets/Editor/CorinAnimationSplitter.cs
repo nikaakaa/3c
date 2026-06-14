@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
+using ThirdPersonDiagnostics;
 
 public static class CorinAnimationSplitter
 {
@@ -69,12 +70,12 @@ public static class CorinAnimationSplitter
             }
             catch (Exception exception)
             {
-                Debug.LogException(exception);
+                 RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(RuntimeDiagnosticLogCategory.Editor, RuntimeDiagnosticLogLevel.Error, "corin-split-exception", "", "", 0, Time.frameCount, exception.ToString()));
             }
         };
     }
 
-    [MenuItem("Tools/BBB/Corin/Split All Generic And Humanoid Animations")]
+    [MenuItem("Tools/3C/Corin/Split All Generic And Humanoid Animations")]
     public static void SplitAllGenericAndHumanoidAnimations()
     {
         EnsureFolders();
@@ -94,10 +95,10 @@ public static class CorinAnimationSplitter
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"[CorinAnimationSplitter] Split {clips.Length} Corin generic and humanoid animations.");
+         RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(RuntimeDiagnosticLogCategory.Editor, RuntimeDiagnosticLogLevel.Info, "corin-split-generic-humanoid", "", "", 0, Time.frameCount, $"[CorinAnimationSplitter] Split {clips.Length} Corin generic and humanoid animations."));
     }
 
-    [MenuItem("Tools/BBB/Corin/Split All Humanoid Animations")]
+    [MenuItem("Tools/3C/Corin/Split All Humanoid Animations")]
     public static void SplitAllHumanoidOnly()
     {
         EnsureFolders();
@@ -106,7 +107,7 @@ public static class CorinAnimationSplitter
         SplitHumanoid(clips);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"[CorinAnimationSplitter] Split {clips.Length} Corin humanoid animations.");
+         RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(RuntimeDiagnosticLogCategory.Editor, RuntimeDiagnosticLogLevel.Info, "corin-split-humanoid", "", "", 0, Time.frameCount, $"[CorinAnimationSplitter] Split {clips.Length} Corin humanoid animations."));
     }
 
     public static bool IsHumanoidBindingForTest(string path)

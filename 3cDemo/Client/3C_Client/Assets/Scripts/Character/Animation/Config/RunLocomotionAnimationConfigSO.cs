@@ -17,6 +17,7 @@ namespace ThirdPersonAnimation
         [SerializeField] LocomotionAnimationPhaseConfig runStart = LocomotionAnimationPhaseConfig.AfterDuration("RunStart", 0.08f);
         [SerializeField] LocomotionAnimationPhaseConfig runLoop = LocomotionAnimationPhaseConfig.Manual("RunLoop");
         [SerializeField] LocomotionAnimationPhaseConfig runEnd = LocomotionAnimationPhaseConfig.OnAnimationEnd("RunEnd");
+        [SerializeField] LocomotionAnimationPhaseConfig turnBack = LocomotionAnimationPhaseConfig.OnAnimationEnd("Locomotion.Turn.Back");
         [SerializeField] LocomotionPhaseMotionProfileBinding[] motionProfiles = Array.Empty<LocomotionPhaseMotionProfileBinding>();
 
         public LocomotionAnimationPhaseConfig Idle => idle;
@@ -29,6 +30,7 @@ namespace ThirdPersonAnimation
         public LocomotionAnimationPhaseConfig RunStart => ResolveGaitPhaseConfig(BasicMovementPhase.MoveStart, BasicMovementGait.Run);
         public LocomotionAnimationPhaseConfig RunLoop => ResolveGaitPhaseConfig(BasicMovementPhase.MoveLoop, BasicMovementGait.Run);
         public LocomotionAnimationPhaseConfig RunEnd => ResolveGaitPhaseConfig(BasicMovementPhase.MoveStop, BasicMovementGait.Run);
+        public LocomotionAnimationPhaseConfig TurnBack => turnBack;
         public LocomotionPhaseMotionProfileBinding[] MotionProfiles => motionProfiles ?? Array.Empty<LocomotionPhaseMotionProfileBinding>();
 
         public LocomotionAnimationPhaseConfig ResolvePhaseConfig(BasicMovementPhase phase)
@@ -112,6 +114,7 @@ namespace ThirdPersonAnimation
             result = result.WithPhaseTiming(BasicMovementPhase.MoveStart, ResolvePhaseTiming(BasicMovementPhase.MoveStart, gait, result.ResolvePhaseTiming(BasicMovementPhase.MoveStart)));
             result = result.WithPhaseTiming(BasicMovementPhase.MoveLoop, ResolvePhaseTiming(BasicMovementPhase.MoveLoop, gait, result.ResolvePhaseTiming(BasicMovementPhase.MoveLoop)));
             result = result.WithPhaseTiming(BasicMovementPhase.MoveStop, ResolvePhaseTiming(BasicMovementPhase.MoveStop, gait, result.ResolvePhaseTiming(BasicMovementPhase.MoveStop)));
+            result = result.WithPhaseTiming(BasicMovementPhase.TurnBack, ResolvePhaseTiming(BasicMovementPhase.TurnBack, gait, result.ResolvePhaseTiming(BasicMovementPhase.TurnBack)));
             return result;
         }
 
@@ -125,6 +128,7 @@ namespace ThirdPersonAnimation
             ValidatePhase(runStart, "RunStart (MoveStart + Run)", requireTimedPhaseExits, result);
             ValidatePhase(runLoop, "RunLoop (MoveLoop + Run)", false, result);
             ValidatePhase(runEnd, "RunEnd (MoveStop + Run)", requireTimedPhaseExits, result);
+            ValidatePhase(turnBack, "TurnBack", false, result);
             ValidateMotionProfiles(result);
             return result;
         }
@@ -141,11 +145,15 @@ namespace ThirdPersonAnimation
             runStart = LocomotionAnimationPhaseConfig.AfterDuration("RunStart", 0.08f);
             runLoop = LocomotionAnimationPhaseConfig.Manual("RunLoop");
             runEnd = LocomotionAnimationPhaseConfig.OnAnimationEnd("RunEnd");
+            turnBack = LocomotionAnimationPhaseConfig.OnAnimationEnd("Locomotion.Turn.Back");
             motionProfiles = Array.Empty<LocomotionPhaseMotionProfileBinding>();
         }
 
         LocomotionAnimationPhaseConfig ResolveGaitPhaseConfig(BasicMovementPhase phase, BasicMovementGait gait)
         {
+            if (phase == BasicMovementPhase.TurnBack)
+                return IsConfigured(turnBack) ? turnBack : LocomotionAnimationPhaseConfig.OnAnimationEnd("Locomotion.Turn.Back");
+
             if (phase == BasicMovementPhase.Idle)
                 return idle;
 

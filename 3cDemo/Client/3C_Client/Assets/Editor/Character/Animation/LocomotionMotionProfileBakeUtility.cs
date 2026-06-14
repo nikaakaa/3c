@@ -15,7 +15,7 @@ namespace ThirdPersonAnimation.EditorTools
             BasicMovementPhase phase,
             string aliasKey,
             int sampleRate)
-            : this(targetPrefab, clip, phase, BasicMovementGait.Run, aliasKey, "Bip001", sampleRate)
+            : this(targetPrefab, clip, phase, BasicMovementGait.Run, aliasKey, "Bip001", sampleRate, 0f)
         {
         }
 
@@ -26,7 +26,7 @@ namespace ThirdPersonAnimation.EditorTools
             string aliasKey,
             string motionRootPath,
             int sampleRate)
-            : this(targetPrefab, clip, phase, BasicMovementGait.Run, aliasKey, motionRootPath, sampleRate)
+            : this(targetPrefab, clip, phase, BasicMovementGait.Run, aliasKey, motionRootPath, sampleRate, 0f)
         {
         }
 
@@ -38,6 +38,19 @@ namespace ThirdPersonAnimation.EditorTools
             string aliasKey,
             string motionRootPath,
             int sampleRate)
+            : this(targetPrefab, clip, phase, gait, aliasKey, motionRootPath, sampleRate, 0f)
+        {
+        }
+
+        public LocomotionMotionProfileBakeRequest(
+            GameObject targetPrefab,
+            AnimationClip clip,
+            BasicMovementPhase phase,
+            BasicMovementGait gait,
+            string aliasKey,
+            string motionRootPath,
+            int sampleRate,
+            float clipEndTime)
         {
             TargetPrefab = targetPrefab;
             Clip = clip;
@@ -46,6 +59,7 @@ namespace ThirdPersonAnimation.EditorTools
             AliasKey = aliasKey ?? string.Empty;
             MotionRootPath = motionRootPath ?? string.Empty;
             SampleRate = Mathf.Max(1, sampleRate);
+            ClipEndTime = Mathf.Max(0f, clipEndTime);
         }
 
         public GameObject TargetPrefab { get; }
@@ -55,13 +69,15 @@ namespace ThirdPersonAnimation.EditorTools
         public string AliasKey { get; }
         public string MotionRootPath { get; }
         public int SampleRate { get; }
+        public float ClipEndTime { get; }
     }
 
     public static class LocomotionMotionProfileBakeUtility
     {
         public static LocomotionMotionProfileSO CreateOrUpdateProfileAsset(
             string assetPath,
-            in LocomotionMotionProfileBakeRequest request)
+            in LocomotionMotionProfileBakeRequest request,
+            bool negateYaw = false)
         {
             if (string.IsNullOrWhiteSpace(assetPath))
                 throw new ArgumentException("Output asset path is missing.", nameof(assetPath));
@@ -76,7 +92,7 @@ namespace ThirdPersonAnimation.EditorTools
                 AssetDatabase.CreateAsset(profile, normalizedPath);
             }
 
-            BakeIntoProfile(profile, in request);
+            BakeIntoProfile(profile, in request, negateYaw);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             return profile;
@@ -84,7 +100,8 @@ namespace ThirdPersonAnimation.EditorTools
 
         public static void BakeIntoProfile(
             LocomotionMotionProfileSO profile,
-            in LocomotionMotionProfileBakeRequest request)
+            in LocomotionMotionProfileBakeRequest request,
+            bool negateYaw = false)
         {
             if (profile == null)
                 throw new ArgumentNullException(nameof(profile));
@@ -101,7 +118,7 @@ namespace ThirdPersonAnimation.EditorTools
             GameObject instance = null;
             try
             {
-                instance = (GameObject)PrefabUtility.InstantiatePrefab(request.TargetPrefab);
+                instance = PrefabUtility.InstantiatePrefab(request.TargetPrefab) as GameObject;
                 if (instance == null)
                     instance = UnityEngine.Object.Instantiate(request.TargetPrefab);
 
@@ -109,35 +126,60 @@ namespace ThirdPersonAnimation.EditorTools
                 GameObject sampleRoot = ResolveSampleRoot(instance);
                 Transform root = ResolveMotionRoot(sampleRoot, request.MotionRootPath);
                 request.Clip.SampleAnimation(sampleRoot, 0f);
+
                 Transform basis = root.parent != null ? root.parent : root;
-                Transform yawRoot = sampleRoot.transform;
                 Vector3 initialPosition = root.position;
-                Quaternion initialYawRotation = yawRoot.rotation;
                 Quaternion inverseInitialBasisRotation = Quaternion.Inverse(basis.rotation);
+                float previousYaw = NormalizeYaw(root.eulerAngles.y);
+                float totalYaw = 0f;
+                float duration = ResolveBakeDuration(request.Clip, request.ClipEndTime);
+                int steps = Mathf.Max(1, Mathf.CeilToInt(duration * request.SampleRate));
 
                 AnimationCurve cumulativeLocalX = new AnimationCurve();
                 AnimationCurve cumulativeLocalZ = new AnimationCurve();
                 AnimationCurve cumulativeYaw = new AnimationCurve();
-                int steps = Mathf.Max(1, Mathf.CeilToInt(request.Clip.length * request.SampleRate));
 
                 for (int i = 0; i <= steps; i++)
                 {
                     float normalizedTime = i / (float)steps;
-                    float time = Mathf.Clamp01(normalizedTime) * request.Clip.length;
+                    float time = normalizedTime * duration;
                     request.Clip.SampleAnimation(sampleRoot, time);
 
                     Vector3 localOffset = inverseInitialBasisRotation * (root.position - initialPosition);
-                    float yaw = Mathf.DeltaAngle(initialYawRotation.eulerAngles.y, yawRoot.eulerAngles.y);
+                    float currentYaw = NormalizeYaw(root.eulerAngles.y);
+                    if (i > 0)
+                        totalYaw += Mathf.DeltaAngle(previousYaw, currentYaw);
+
+                    previousYaw = currentYaw;
                     cumulativeLocalX.AddKey(normalizedTime, localOffset.x);
                     cumulativeLocalZ.AddKey(normalizedTime, localOffset.z);
-                    cumulativeYaw.AddKey(normalizedTime, yaw);
+                    cumulativeYaw.AddKey(normalizedTime, negateYaw ? -totalYaw : totalYaw);
+                }
+
+                if (TryBakeAnimatorRootCurves(
+                        request.Clip,
+                        duration,
+                        steps,
+                        negateYaw,
+                        out AnimationCurve animatorRootX,
+                        out AnimationCurve animatorRootZ,
+                        out AnimationCurve animatorRootYaw))
+                {
+                    if (HasPlanarMotion(animatorRootX, animatorRootZ))
+                    {
+                        cumulativeLocalX = animatorRootX;
+                        cumulativeLocalZ = animatorRootZ;
+                    }
+
+                    if (HasCurveMotion(animatorRootYaw, 0.0001f))
+                        cumulativeYaw = animatorRootYaw;
                 }
 
                 profile.SetBakedData(
                     request.Phase,
                     request.Gait,
                     request.AliasKey,
-                    request.Clip.length,
+                    duration,
                     cumulativeLocalX,
                     cumulativeLocalZ,
                     cumulativeYaw,
@@ -193,6 +235,119 @@ namespace ThirdPersonAnimation.EditorTools
             }
 
             return null;
+        }
+
+        static float NormalizeYaw(float yaw)
+        {
+            return Mathf.Repeat(yaw + 180f, 360f) - 180f;
+        }
+
+        static float ResolveBakeDuration(AnimationClip clip, float clipEndTime)
+        {
+            if (clip == null)
+                return 0f;
+
+            if (clipEndTime > 0f)
+                return Mathf.Clamp(clipEndTime, 0.001f, Mathf.Max(0.001f, clip.length));
+
+            return Mathf.Max(0.001f, clip.length);
+        }
+
+        static bool HasMotion(AnimationCurve cumulativeLocalX, AnimationCurve cumulativeLocalZ, AnimationCurve cumulativeYaw)
+        {
+            return HasCurveMotion(cumulativeLocalX, 0.000001f) ||
+                   HasCurveMotion(cumulativeLocalZ, 0.000001f) ||
+                   HasCurveMotion(cumulativeYaw, 0.0001f);
+        }
+
+        static bool HasPlanarMotion(AnimationCurve cumulativeLocalX, AnimationCurve cumulativeLocalZ)
+        {
+            return HasCurveMotion(cumulativeLocalX, 0.000001f) ||
+                   HasCurveMotion(cumulativeLocalZ, 0.000001f);
+        }
+
+        static bool HasCurveMotion(AnimationCurve curve, float epsilon)
+        {
+            if (curve == null || curve.length == 0)
+                return false;
+
+            float first = curve.keys[0].value;
+            for (int i = 1; i < curve.length; i++)
+            {
+                if (Mathf.Abs(curve.keys[i].value - first) > epsilon)
+                    return true;
+            }
+
+            return false;
+        }
+
+        static bool TryBakeAnimatorRootCurves(
+            AnimationClip clip,
+            float duration,
+            int steps,
+            bool negateYaw,
+            out AnimationCurve cumulativeLocalX,
+            out AnimationCurve cumulativeLocalZ,
+            out AnimationCurve cumulativeYaw)
+        {
+            cumulativeLocalX = null;
+            cumulativeLocalZ = null;
+            cumulativeYaw = null;
+
+            AnimationCurve rootTx = AnimationUtility.GetEditorCurve(clip, EditorCurveBinding.FloatCurve(string.Empty, typeof(Animator), "RootT.x"));
+            AnimationCurve rootTz = AnimationUtility.GetEditorCurve(clip, EditorCurveBinding.FloatCurve(string.Empty, typeof(Animator), "RootT.z"));
+            AnimationCurve rootQx = AnimationUtility.GetEditorCurve(clip, EditorCurveBinding.FloatCurve(string.Empty, typeof(Animator), "RootQ.x"));
+            AnimationCurve rootQy = AnimationUtility.GetEditorCurve(clip, EditorCurveBinding.FloatCurve(string.Empty, typeof(Animator), "RootQ.y"));
+            AnimationCurve rootQz = AnimationUtility.GetEditorCurve(clip, EditorCurveBinding.FloatCurve(string.Empty, typeof(Animator), "RootQ.z"));
+            AnimationCurve rootQw = AnimationUtility.GetEditorCurve(clip, EditorCurveBinding.FloatCurve(string.Empty, typeof(Animator), "RootQ.w"));
+
+            if (rootTx == null && rootTz == null && (rootQy == null || rootQw == null))
+                return false;
+
+            cumulativeLocalX = new AnimationCurve();
+            cumulativeLocalZ = new AnimationCurve();
+            cumulativeYaw = new AnimationCurve();
+
+            float startTx = EvaluateOrDefault(rootTx, 0f, 0f);
+            float startTz = EvaluateOrDefault(rootTz, 0f, 0f);
+            float previousYaw = 0f;
+            float totalYaw = 0f;
+
+            for (int i = 0; i <= steps; i++)
+            {
+                float normalizedTime = i / (float)steps;
+                float time = normalizedTime * duration;
+                float yaw = EvaluateAnimatorRootYaw(rootQx, rootQy, rootQz, rootQw, time);
+
+                if (i > 0)
+                    totalYaw += Mathf.DeltaAngle(previousYaw, yaw);
+
+                previousYaw = yaw;
+                cumulativeLocalX.AddKey(normalizedTime, EvaluateOrDefault(rootTx, time, 0f) - startTx);
+                cumulativeLocalZ.AddKey(normalizedTime, EvaluateOrDefault(rootTz, time, 0f) - startTz);
+                cumulativeYaw.AddKey(normalizedTime, negateYaw ? -totalYaw : totalYaw);
+            }
+
+            return HasMotion(cumulativeLocalX, cumulativeLocalZ, cumulativeYaw);
+        }
+
+        static float EvaluateOrDefault(AnimationCurve curve, float time, float fallback)
+        {
+            return curve != null ? curve.Evaluate(time) : fallback;
+        }
+
+        static float EvaluateAnimatorRootYaw(
+            AnimationCurve rootQx,
+            AnimationCurve rootQy,
+            AnimationCurve rootQz,
+            AnimationCurve rootQw,
+            float time)
+        {
+            float qx = EvaluateOrDefault(rootQx, time, 0f);
+            float qy = EvaluateOrDefault(rootQy, time, 0f);
+            float qz = EvaluateOrDefault(rootQz, time, 0f);
+            float qw = EvaluateOrDefault(rootQw, time, 1f);
+            return Mathf.Atan2(2f * (qw * qy + qx * qz), 1f - 2f * (qy * qy + qz * qz)) * Mathf.Rad2Deg;
         }
 
         static string ResolveClipGuid(AnimationClip clip)

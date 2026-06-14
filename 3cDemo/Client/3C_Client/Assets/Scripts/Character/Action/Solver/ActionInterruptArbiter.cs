@@ -80,21 +80,25 @@ namespace ThirdPersonAction
                     continue;
                 }
 
-                if (request.Priority < policy.MinPriority)
+                int effectiveMinPriority = EffectiveMinPriority(in context, policy);
+                int effectiveResistance = EffectiveResistance(in context);
+                bool effectiveForce = policy.Force || context.TimelineFacts.Force;
+
+                if (request.Priority < effectiveMinPriority)
                 {
                     rejectReason = MoreUseful(rejectReason, ActionInterruptRejectReason.PriorityTooLow);
                     LogRequestRejected(in context, request, ActionInterruptRejectReason.PriorityTooLow, i, policy);
                     continue;
                 }
 
-                if (!policy.Force && request.Priority <= context.CurrentStateResistance)
+                if (!effectiveForce && request.Priority <= effectiveResistance)
                 {
                     rejectReason = MoreUseful(rejectReason, ActionInterruptRejectReason.BlockedByResistance);
                     LogRequestRejected(in context, request, ActionInterruptRejectReason.BlockedByResistance, i, policy);
                     continue;
                 }
 
-                if (!IsTimingSatisfied(in context, policy))
+                if (!IsTimingSatisfied(in context, policy) || !IsTimelineWindowSatisfied(in context, policy))
                 {
                     rejectReason = MoreUseful(rejectReason, ActionInterruptRejectReason.TimingNotSatisfied);
                     LogRequestRejected(in context, request, ActionInterruptRejectReason.TimingNotSatisfied, i, policy);
@@ -115,6 +119,20 @@ namespace ThirdPersonAction
             return false;
         }
 
+        static int EffectiveMinPriority(in ActionInterruptContext context, ActionInterruptPolicy policy)
+        {
+            return context.TimelineFacts.HasRequestWindow
+                ? System.Math.Max(policy.MinPriority, context.TimelineFacts.MinPriority)
+                : policy.MinPriority;
+        }
+
+        static int EffectiveResistance(in ActionInterruptContext context)
+        {
+            return context.TimelineFacts.HasRequestWindow
+                ? System.Math.Max(context.CurrentStateResistance, context.TimelineFacts.Resistance)
+                : context.CurrentStateResistance;
+        }
+
         static bool IsTimingSatisfied(in ActionInterruptContext context, ActionInterruptPolicy policy)
         {
             switch (policy.TimingRule)
@@ -129,6 +147,26 @@ namespace ThirdPersonAction
                 default:
                     return false;
             }
+        }
+
+        static bool IsTimelineWindowSatisfied(in ActionInterruptContext context, ActionInterruptPolicy policy)
+        {
+            if (!policy.RequiresTimelineWindow)
+                return true;
+
+            string activeWindowIds = context.TimelineFacts.RequestWindowIds;
+            if (string.IsNullOrWhiteSpace(activeWindowIds))
+                return false;
+
+            string required = policy.WindowId;
+            string[] ids = activeWindowIds.Split(',');
+            for (int i = 0; i < ids.Length; i++)
+            {
+                if (string.Equals(ids[i].Trim(), required, System.StringComparison.Ordinal))
+                    return true;
+            }
+
+            return false;
         }
 
         static bool IsHigherPriority(ActionInterruptRequest candidate, ActionInterruptRequest current)
@@ -176,7 +214,7 @@ namespace ThirdPersonAction
                 context.CurrentState.Value,
                 context.CurrentTick,
                 0,
-                $"accepted={decision.Accepted} target={decision.TargetState.Value} reject={decision.RejectReason} requests={requestCount} policies={policyCount} elapsed={context.CurrentStateElapsedSeconds:F3} resistance={context.CurrentStateResistance}"));
+                $"accepted={decision.Accepted} target={decision.TargetState.Value} reject={decision.RejectReason} requests={requestCount} policies={policyCount} elapsed={context.CurrentStateElapsedSeconds:F3} resistance={context.CurrentStateResistance} timelineWindows={context.TimelineFacts.ActiveWindowIds} requestWindows={context.TimelineFacts.RequestWindowIds} timelineResistance={context.TimelineFacts.Resistance}"));
             return decision;
         }
 
@@ -194,7 +232,7 @@ namespace ThirdPersonAction
                 context.CurrentState.Value,
                 context.CurrentTick,
                 0,
-                $"request={request.RequestType} id={request.RequestId} origin={request.OriginTick} expire={request.ExpireTick} priority={request.Priority} sourceOrder={request.SourceOrder} policyIndex={policyIndex} policyFrom={policy.FromState.Value} policyTarget={policy.TargetState.Value} minPriority={policy.MinPriority} timing={policy.TimingRule} windowStart={policy.WindowStart:F3} windowEnd={policy.WindowEnd:F3} force={policy.Force} elapsed={context.CurrentStateElapsedSeconds:F3} resistance={context.CurrentStateResistance}"));
+                $"request={request.RequestType} id={request.RequestId} origin={request.OriginTick} expire={request.ExpireTick} priority={request.Priority} sourceOrder={request.SourceOrder} policyIndex={policyIndex} policyFrom={policy.FromState.Value} policyTarget={policy.TargetState.Value} minPriority={policy.MinPriority} timing={policy.TimingRule} windowStart={policy.WindowStart:F3} windowEnd={policy.WindowEnd:F3} windowId={policy.WindowId} force={policy.Force} elapsed={context.CurrentStateElapsedSeconds:F3} resistance={context.CurrentStateResistance} timelineWindows={context.TimelineFacts.ActiveWindowIds} requestWindows={context.TimelineFacts.RequestWindowIds} timelineMinPriority={context.TimelineFacts.MinPriority} timelineResistance={context.TimelineFacts.Resistance}"));
         }
 
         static void LogRequestRejected(
@@ -205,7 +243,7 @@ namespace ThirdPersonAction
             ActionInterruptPolicy policy)
         {
             string policyContext = policyIndex >= 0
-                ? $" policyIndex={policyIndex} policyFrom={policy.FromState.Value} policyTarget={policy.TargetState.Value} minPriority={policy.MinPriority} timing={policy.TimingRule} windowStart={policy.WindowStart:F3} windowEnd={policy.WindowEnd:F3} force={policy.Force}"
+                ? $" policyIndex={policyIndex} policyFrom={policy.FromState.Value} policyTarget={policy.TargetState.Value} minPriority={policy.MinPriority} timing={policy.TimingRule} windowStart={policy.WindowStart:F3} windowEnd={policy.WindowEnd:F3} windowId={policy.WindowId} force={policy.Force}"
                 : " policyIndex=none";
             RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Action,
@@ -215,7 +253,7 @@ namespace ThirdPersonAction
                 context.CurrentState.Value,
                 context.CurrentTick,
                 0,
-                $"request={request.RequestType} id={request.RequestId} origin={request.OriginTick} expire={request.ExpireTick} priority={request.Priority} sourceOrder={request.SourceOrder} reason={reason}{policyContext} elapsed={context.CurrentStateElapsedSeconds:F3} resistance={context.CurrentStateResistance}"));
+                $"request={request.RequestType} id={request.RequestId} origin={request.OriginTick} expire={request.ExpireTick} priority={request.Priority} sourceOrder={request.SourceOrder} reason={reason}{policyContext} elapsed={context.CurrentStateElapsedSeconds:F3} resistance={context.CurrentStateResistance} timelineWindows={context.TimelineFacts.ActiveWindowIds} requestWindows={context.TimelineFacts.RequestWindowIds} timelineMinPriority={context.TimelineFacts.MinPriority} timelineResistance={context.TimelineFacts.Resistance}"));
         }
     }
 }

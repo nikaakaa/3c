@@ -8,10 +8,16 @@ namespace ThirdPersonDiagnostics
     public static class RuntimeDiagnosticLog
     {
         static readonly RuntimeDiagnosticLogFilter filter = new RuntimeDiagnosticLogFilter();
+        static RuntimeDiagnosticLogLevel minimumUnityLogLevel = RuntimeDiagnosticLogLevel.Info;
 
         public static event Action<RuntimeDiagnosticLogEvent> EventSubmitted;
 
         public static RuntimeDiagnosticLogFilter Filter => filter;
+        public static RuntimeDiagnosticLogLevel MinimumUnityLogLevel
+        {
+            get => minimumUnityLogLevel;
+            set => minimumUnityLogLevel = value;
+        }
 
         public static void RegisterChannel(string channelKey, bool defaultEnabled = true)
         {
@@ -89,12 +95,16 @@ namespace ThirdPersonDiagnostics
         public static void Reset()
         {
             filter.Reset();
+            minimumUnityLogLevel = RuntimeDiagnosticLogLevel.Info;
         }
 
         [Conditional("THIRDPERSON_DIAGNOSTIC_LOGS")]
         [Conditional("UNITY_EDITOR")]
         static void EmitToUnity(RuntimeDiagnosticLogEvent diagnosticEvent)
         {
+            if (diagnosticEvent.Level < minimumUnityLogLevel)
+                return;
+
             string formatted = Format(in diagnosticEvent);
             if (diagnosticEvent.Level == RuntimeDiagnosticLogLevel.Error)
             {

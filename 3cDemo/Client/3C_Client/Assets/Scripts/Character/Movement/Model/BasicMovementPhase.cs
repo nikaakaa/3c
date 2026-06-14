@@ -5,6 +5,7 @@ namespace ThirdPersonMovement
         Idle,
         MoveStart,
         MoveLoop,
-        MoveStop
+        MoveStop,
+        TurnBack
     }
 }

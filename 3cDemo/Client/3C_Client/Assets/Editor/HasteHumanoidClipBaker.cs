@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using ThirdPersonDiagnostics;
 
 public static class HasteHumanoidClipBaker
 {
@@ -91,7 +92,7 @@ public static class HasteHumanoidClipBaker
         File.WriteAllLines(ToAbsolutePath(Root + "/HUMANOID/HumanoidBakeReport.txt"), report);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"[HasteHumanoidClipBaker] Baked {baked} Humanoid clips.");
+         RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(RuntimeDiagnosticLogCategory.Editor, RuntimeDiagnosticLogLevel.Info, "humanoid-clips-baked", "", "", 0, Time.frameCount, $"[HasteHumanoidClipBaker] Baked {baked} Humanoid clips."));
     }
 
     static Avatar LoadAvatar()

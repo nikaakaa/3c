@@ -20,6 +20,7 @@ MonoBehaviour:
     windowStart: 0
     windowEnd: 0
     windowId: 
+    requiredFactId:
     force: 0
     note: Default locomotion to dodge entry.
   - fromStateId: Action.Dodge
@@ -29,6 +30,7 @@ MonoBehaviour:
     windowStart: 0.35
     windowEnd: 0
     windowId: 
+    requiredFactId:
     force: 0
     note: Dodge chain re-entry.
   - fromStateId: FullBody/Locomotion/MoveStart
@@ -38,6 +40,7 @@ MonoBehaviour:
     windowStart: 0
     windowEnd: 0
     windowId: turnback-enter
+    requiredFactId: TurnBackEnterOpen
     force: 0
     note: MoveStart to TurnBack entry through state timeline window.
   - fromStateId: FullBody/Locomotion/MoveLoop
@@ -47,5 +50,6 @@ MonoBehaviour:
     windowStart: 0
     windowEnd: 0
     windowId: turnback-enter
+    requiredFactId: TurnBackEnterOpen
     force: 0
     note: RunLoop to TurnBack entry through state timeline window.

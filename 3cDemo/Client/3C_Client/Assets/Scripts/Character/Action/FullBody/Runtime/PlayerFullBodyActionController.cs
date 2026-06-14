@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using ThirdPersonAnimation;
 using ThirdPersonCharacterConfig;
 using ThirdPersonCharacterStateMachine;
-using ThirdPersonDiagnostics;
 using ThirdPersonInput;
 using ThirdPersonMovement;
 using UnityEngine;
@@ -415,32 +414,14 @@ namespace ThirdPersonAction
         {
             if (snapshot.ActivePath != lastLoggedFullBodyPath)
             {
-                RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                    RuntimeDiagnosticLogCategory.FullBody,
-                    RuntimeDiagnosticLogLevel.Info,
-                    "fullbody-path-changed",
-                    snapshot.ActivePath,
-                    previousSnapshot.ActivePath,
-                    step,
-                    Time.frameCount,
-                    $"owner={snapshot.Owner.Kind} action={snapshot.ActionState.Value} stateTime={snapshot.StateTime:F3} variant={snapshot.Variant}"));
-
+                FullBodyDiagnostics.LogFullBodyPathChanged(in previousSnapshot, in snapshot, step);
                 lastLoggedFullBodyPath = snapshot.ActivePath;
             }
 
             if (snapshot.PendingTransitionPath == lastLoggedPendingTransitionPath)
                 return;
 
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.FullBody,
-                RuntimeDiagnosticLogLevel.Trace,
-                "fullbody-pending-transition-changed",
-                snapshot.PendingTransitionPath,
-                previousSnapshot.PendingTransitionPath,
-                step,
-                Time.frameCount,
-                $"owner={snapshot.Owner.Kind} action={snapshot.ActionState.Value}"));
-
+            FullBodyDiagnostics.LogFullBodyPendingTransitionChanged(in previousSnapshot, in snapshot, step);
             lastLoggedPendingTransitionPath = snapshot.PendingTransitionPath;
         }
 
@@ -452,16 +433,13 @@ namespace ThirdPersonAction
                 locomotionPath == lastLoggedLocomotionPath)
                 return;
 
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Info,
-                "locomotion-phase-changed",
+            FullBodyDiagnostics.LogLocomotionPhaseChanged(
                 locomotionPath,
                 lastLoggedLocomotionPath,
-                step,
-                Time.frameCount,
-                $"fromPhase={lastLoggedLocomotionPhase} toPhase={snapshot.LocomotionPhase} gait={LastLocomotionFrame.Command.Gait} phaseTime={snapshot.StateTime:F3}"));
-
+                lastLoggedLocomotionPhase,
+                LastLocomotionFrame.Command.Gait,
+                in snapshot,
+                step);
             lastLoggedLocomotionPhase = snapshot.LocomotionPhase;
             lastLoggedLocomotionPath = locomotionPath;
             loggedInitialLocomotionState = true;
@@ -476,15 +454,7 @@ namespace ThirdPersonAction
             if (!frame.ConsumeInputRequest)
                 return;
 
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Action,
-                RuntimeDiagnosticLogLevel.Info,
-                "action-accepted",
-                snapshot.ActivePath,
-                previousSnapshot.ActivePath,
-                step,
-                Time.frameCount,
-                $"owner={snapshot.Owner.Kind} action={snapshot.ActionState.Value} variant={snapshot.Variant} animation={(frame.HasAnimationRequest ? frame.AnimationRequest.Key.Value : string.Empty)}"));
+            FullBodyDiagnostics.LogActionAccepted(in previousSnapshot, in snapshot, in frame, step);
         }
 
         void LogDiagnosticTickSnapshots(int step)
@@ -497,28 +467,12 @@ namespace ThirdPersonAction
 
         void LogFullBodyTickSnapshot(int step)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.FullBody,
-                RuntimeDiagnosticLogLevel.Trace,
-                "fullbody-tick-snapshot",
-                currentStateSnapshot.ActivePath,
-                string.Empty,
-                step,
-                Time.frameCount,
-                BuildFullBodyTickContext()));
+            FullBodyDiagnostics.LogFullBodyTickSnapshot(in currentStateSnapshot, step, BuildFullBodyTickContext());
         }
 
         void LogAnimationTickSnapshot(int step)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Animation,
-                RuntimeDiagnosticLogLevel.Trace,
-                "animation-tick-snapshot",
-                currentStateSnapshot.ActivePath,
-                string.Empty,
-                step,
-                Time.frameCount,
-                BuildAnimationTickContext()));
+            FullBodyDiagnostics.LogAnimationTickSnapshot(currentStateSnapshot.ActivePath, step, BuildAnimationTickContext());
         }
 
         string BuildFullBodyTickContext()
@@ -570,15 +524,7 @@ namespace ThirdPersonAction
             {
                 SetInactiveStateSnapshot();
                 if (logErrors)
-                    RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                         RuntimeDiagnosticLogCategory.FullBody,
-                         RuntimeDiagnosticLogLevel.Error,
-                         "state-machine-definition-invalid",
-                         "",
-                         "",
-                         0,
-                         Time.frameCount,
-                         "Character state machine definition is invalid:\n" + exception.Message));
+                    FullBodyDiagnostics.LogStateMachineDefinitionInvalid(exception.Message);
                 return false;
             }
 
@@ -614,22 +560,15 @@ namespace ThirdPersonAction
 
         void ResolveReferences()
         {
-            if (inputBufferComponent == null)
-                inputBufferComponent = GetComponent<InputRequestBufferComponent>();
-            if (inputBufferComponent == null)
-                inputBufferComponent = GetComponentInParent<InputRequestBufferComponent>();
+            inputBufferComponent = FullBodyReferenceResolver.ResolveInputBuffer(this, inputBufferComponent);
+            locomotionController = FullBodyReferenceResolver.ResolveLocomotionController(this, locomotionController);
 
-            if (locomotionController == null)
-                locomotionController = GetComponent<PlayerLocomotionController>();
-            if (locomotionController == null)
-                locomotionController = GetComponentInParent<PlayerLocomotionController>();
-
-            if (actionMovementExecutorBehaviour == null && TryResolveLocomotionActionExecutor(out IActionMovementExecutor locomotionExecutor, out MonoBehaviour locomotionExecutorBehaviour))
+            if (actionMovementExecutorBehaviour == null && FullBodyReferenceResolver.TryResolveLocomotionActionExecutor(locomotionController, out IActionMovementExecutor locomotionExecutor, out MonoBehaviour locomotionExecutorBehaviour))
             {
                 actionMovementExecutor = locomotionExecutor;
                 actionMovementExecutorBehaviour = locomotionExecutorBehaviour;
             }
-            else if (actionMovementExecutorBehaviour == null && TryResolveComponentInterface(out IActionMovementExecutor resolvedExecutor, out MonoBehaviour executorBehaviour))
+            else if (actionMovementExecutorBehaviour == null && FullBodyReferenceResolver.TryResolveComponentInterface(this, out IActionMovementExecutor resolvedExecutor, out MonoBehaviour executorBehaviour))
             {
                 actionMovementExecutor = resolvedExecutor;
                 actionMovementExecutorBehaviour = executorBehaviour;
@@ -639,10 +578,9 @@ namespace ThirdPersonAction
                 actionMovementExecutor = actionMovementExecutorBehaviour as IActionMovementExecutor;
             }
 
-            if (facingProviderBehaviour == null)
-                facingProviderBehaviour = GetComponent<TransformFacingDirectionProvider>();
+            facingProviderBehaviour = FullBodyReferenceResolver.ResolveFacingProviderBehaviour(this, facingProviderBehaviour);
 
-            if (animationPresenterBehaviour == null && TryResolveComponentInterface(out IActionAnimationPresenter resolvedPresenter, out MonoBehaviour presenterBehaviour))
+            if (animationPresenterBehaviour == null && FullBodyReferenceResolver.TryResolveComponentInterface(this, out IActionAnimationPresenter resolvedPresenter, out MonoBehaviour presenterBehaviour))
                 animationPresenterBehaviour = presenterBehaviour;
 
             ResolveAnimationPresenter();
@@ -688,38 +626,5 @@ namespace ThirdPersonAction
             interruptPoliciesCompiled = false;
         }
 
-        bool TryResolveLocomotionActionExecutor(out IActionMovementExecutor executor, out MonoBehaviour executorBehaviour)
-        {
-            executor = null;
-            executorBehaviour = null;
-
-            if (locomotionController == null || locomotionController.MotionExecutorBehaviour == null)
-                return false;
-
-            executor = locomotionController.MotionExecutorBehaviour as IActionMovementExecutor;
-            if (executor == null)
-                return false;
-
-            executorBehaviour = locomotionController.MotionExecutorBehaviour;
-            return true;
-        }
-
-        bool TryResolveComponentInterface<T>(out T service, out MonoBehaviour serviceBehaviour) where T : class
-        {
-            MonoBehaviour[] behaviours = GetComponentsInChildren<MonoBehaviour>(true);
-            for (int i = 0; i < behaviours.Length; i++)
-            {
-                if (behaviours[i] is T candidate)
-                {
-                    service = candidate;
-                    serviceBehaviour = behaviours[i];
-                    return true;
-                }
-            }
-
-            service = null;
-            serviceBehaviour = null;
-            return false;
-        }
     }
 }

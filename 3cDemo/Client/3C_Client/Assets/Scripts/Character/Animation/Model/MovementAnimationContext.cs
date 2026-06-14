@@ -43,6 +43,31 @@ namespace ThirdPersonAnimation
             float planarSpeed,
             TurnBackMotionPolicy turnBackMotionPolicy,
             bool hasTurnBackMotionPolicy)
+            : this(
+                phase,
+                gait,
+                hasMoveIntent,
+                inputStrength,
+                worldDirection,
+                planarSpeed,
+                turnBackMotionPolicy,
+                hasTurnBackMotionPolicy,
+                LocomotionFootPhaseMatchResult.NotRequested,
+                false)
+        {
+        }
+
+        public MovementAnimationContext(
+            BasicMovementPhase phase,
+            BasicMovementGait gait,
+            bool hasMoveIntent,
+            float inputStrength,
+            Vector3 worldDirection,
+            float planarSpeed,
+            TurnBackMotionPolicy turnBackMotionPolicy,
+            bool hasTurnBackMotionPolicy,
+            LocomotionFootPhaseMatchResult entryFootPhaseMatchResult,
+            bool hasEntryFootPhaseMatchRequest)
         {
             Phase = phase;
             Gait = gait;
@@ -52,6 +77,10 @@ namespace ThirdPersonAnimation
             PlanarSpeed = Mathf.Max(0f, planarSpeed);
             TurnBackMotionPolicy = turnBackMotionPolicy;
             HasTurnBackMotionPolicy = hasTurnBackMotionPolicy && turnBackMotionPolicy.IsEnabled;
+            HasEntryFootPhaseMatchRequest = hasEntryFootPhaseMatchRequest;
+            EntryFootPhaseMatchResult = hasEntryFootPhaseMatchRequest
+                ? entryFootPhaseMatchResult
+                : LocomotionFootPhaseMatchResult.NotRequested;
         }
 
         public BasicMovementPhase Phase { get; }
@@ -62,5 +91,8 @@ namespace ThirdPersonAnimation
         public float PlanarSpeed { get; }
         public TurnBackMotionPolicy TurnBackMotionPolicy { get; }
         public bool HasTurnBackMotionPolicy { get; }
+        public LocomotionFootPhaseMatchResult EntryFootPhaseMatchResult { get; }
+        public bool HasEntryFootPhaseMatchRequest { get; }
+        public bool HasEntryStartNormalizedTimeOverride => HasEntryFootPhaseMatchRequest && EntryFootPhaseMatchResult.IsValid;
     }
 }

@@ -43,6 +43,12 @@ namespace ThirdPersonCharacterStateMachine
             for (int i = 0; i < timelineValidation.Errors.Count; i++)
                 result.AddError(timelineValidation.Errors[i]);
 
+            if (ids.Contains(CharacterStateIds.TurnBack) &&
+                !definition.TryGetTimelinePolicy(CharacterStateIds.TurnBack, out _))
+            {
+                result.AddError("TurnBack timeline policy is missing.");
+            }
+
             if (!ids.Contains(definition.InitialState))
                 result.AddError($"Initial state '{definition.InitialState.Value}' is not declared.");
 
@@ -159,6 +165,9 @@ namespace ThirdPersonCharacterStateMachine
                 else if (!windowIds.Add(window.WindowId))
                     result.AddWarning($"Timeline policy {index} window '{window.WindowId}' is duplicated.");
 
+                if (!window.FactId.IsValid)
+                    result.AddError($"Timeline policy {index} window '{window.WindowId}' fact id is missing.");
+
                 if (window.Start < 0f)
                     result.AddError($"Timeline policy {index} window '{window.WindowId}' start is invalid.");
 
@@ -203,6 +212,8 @@ namespace ThirdPersonCharacterStateMachine
             bool force = false;
             List<string> activeIds = null;
             List<string> requestIds = null;
+            List<string> activeFactIds = null;
+            List<string> requestFactIds = null;
 
             for (int i = 0; i < policy.Windows.Count; i++)
             {
@@ -218,6 +229,12 @@ namespace ThirdPersonCharacterStateMachine
 
                 activeIds ??= new List<string>();
                 activeIds.Add(window.WindowId);
+                if (window.FactId.IsValid)
+                {
+                    activeFactIds ??= new List<string>();
+                    activeFactIds.Add(window.FactId.Value);
+                }
+
                 priority = Mathf.Max(priority, window.Priority);
                 resistance = Mathf.Max(resistance, window.Resistance);
 
@@ -225,6 +242,12 @@ namespace ThirdPersonCharacterStateMachine
                 {
                     requestIds ??= new List<string>();
                     requestIds.Add(window.WindowId);
+                    if (window.FactId.IsValid)
+                    {
+                        requestFactIds ??= new List<string>();
+                        requestFactIds.Add(window.FactId.Value);
+                    }
+
                     minPriority = Mathf.Max(minPriority, window.MinPriority);
                     force = force || window.Force;
                 }
@@ -261,7 +284,9 @@ namespace ThirdPersonCharacterStateMachine
                 minPriority,
                 force,
                 activeIds == null ? string.Empty : string.Join(",", activeIds),
-                requestIds == null ? string.Empty : string.Join(",", requestIds));
+                requestIds == null ? string.Empty : string.Join(",", requestIds),
+                activeFactIds == null ? string.Empty : string.Join(",", activeFactIds),
+                requestFactIds == null ? string.Empty : string.Join(",", requestFactIds));
         }
 
         public static StateTimelineWindowFacts None(CharacterStateId stateId)

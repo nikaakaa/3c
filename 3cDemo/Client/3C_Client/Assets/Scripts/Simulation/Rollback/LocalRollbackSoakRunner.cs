@@ -28,6 +28,29 @@ namespace ThirdPersonSimulation
             int checkedWindows,
             string failureReason,
             in LocalRollbackSynctestResult firstFailure)
+            : this(
+                success,
+                seed,
+                tickCount,
+                rollbackFrames,
+                checkedWindows,
+                failureReason,
+                in firstFailure,
+                false,
+                default)
+        {
+        }
+
+        public LocalRollbackSoakResult(
+            bool success,
+            int seed,
+            int tickCount,
+            int rollbackFrames,
+            int checkedWindows,
+            string failureReason,
+            in LocalRollbackSynctestResult firstFailure,
+            bool hasPresentationDrift,
+            in LocalRollbackSynctestResult firstPresentationDrift)
         {
             Success = success;
             Seed = seed;
@@ -36,6 +59,8 @@ namespace ThirdPersonSimulation
             CheckedWindows = checkedWindows;
             FailureReason = failureReason ?? string.Empty;
             FirstFailure = firstFailure;
+            HasPresentationDrift = hasPresentationDrift;
+            FirstPresentationDrift = firstPresentationDrift;
         }
 
         public bool Success { get; }
@@ -45,6 +70,8 @@ namespace ThirdPersonSimulation
         public int CheckedWindows { get; }
         public string FailureReason { get; }
         public LocalRollbackSynctestResult FirstFailure { get; }
+        public bool HasPresentationDrift { get; }
+        public LocalRollbackSynctestResult FirstPresentationDrift { get; }
     }
 
     public sealed class LocalRollbackSoakRunner
@@ -79,8 +106,10 @@ namespace ThirdPersonSimulation
 
             LocalRollbackSynctestRunner synctest = new LocalRollbackSynctestRunner(InputHistory, SnapshotHistory, Simulation);
             LocalRollbackSynctestResult firstFailure = default;
+            LocalRollbackSynctestResult firstPresentationDrift = default;
             int checkedWindows = 0;
             bool hasFailure = false;
+            bool hasPresentationDrift = false;
 
             for (int end = config.RollbackFrames; end <= config.TickCount; end++)
             {
@@ -92,6 +121,12 @@ namespace ThirdPersonSimulation
                     restoreTick,
                     in tolerance);
                 checkedWindows++;
+
+                if (!hasPresentationDrift && result.FirstMismatch.HasPresentationDrift)
+                {
+                    firstPresentationDrift = result;
+                    hasPresentationDrift = true;
+                }
 
                 if (result.Success)
                     continue;
@@ -114,7 +149,9 @@ namespace ThirdPersonSimulation
                 config.RollbackFrames,
                 checkedWindows,
                 success ? string.Empty : firstFailure.FailureReason,
-                in firstFailure);
+                in firstFailure,
+                hasPresentationDrift,
+                in firstPresentationDrift);
         }
     }
 }

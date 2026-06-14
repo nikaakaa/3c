@@ -1,5 +1,27 @@
 # 可配置状态打断窗口任务
 
+## 0. 规划结论和术语收口
+- [ ] 0.1 明确本变更不新开第二条运行路径，只更新 `add-configurable-state-interrupt-windows`。
+- [ ] 0.2 明确窗口和打断分开建模：窗口负责 timing 和 active facts，打断负责 request 准入裁决。
+- [ ] 0.3 明确 `transitionPriority` 只用于状态图选边。
+- [ ] 0.4 明确 `requestPriority` 只表达请求强度。
+- [ ] 0.5 明确 `stateResistance` 只表达当前状态抗性。
+- [ ] 0.6 明确 `windowMinPriority` 只表达当前 request window 的最低准入门槛。
+- [ ] 0.7 明确 `force` 只表达是否绕过 resistance，不绕过策略匹配和窗口存在性。
+- [ ] 0.8 明确 `motionWindow` 只控制 motion facts，不授权请求打断。
+- [ ] 0.9 明确 `inputLockWindow` 只控制普通输入抑制，不授权请求打断。
+- [ ] 0.10 明确 `exitWindow` 只控制自然退出，不授权外部请求打断。
+- [ ] 0.11 明确 `interrupt/cancel/requestWindow` 才允许外部请求进入仲裁。
+- [ ] 0.12 明确 visual fade、clip、speed、start time 和 TransitionAsset 不参与逻辑窗口。
+- [ ] 0.13 明确新增状态请求策略优先引用 `requiredFactId`，不重复定义窗口 start/end。
+- [ ] 0.14 明确旧 elapsed timing rule 只作为迁移兼容，不作为 Attack/HitReact 新窗口首选表达。
+- [ ] 0.15 用文档示例写清 `Attack01 combo window -> Attack01 到 Attack02 request policy -> accepted fact -> transition` 的完整链路。
+- [ ] 0.16 用文档示例写清 `TurnBack motion/input lock/exit window` 与 `TurnBack request window` 的区别。
+- [ ] 0.17 用文档示例写清 `Dodge cancel window` 与 `natural exit window` 的区别。
+- [ ] 0.18 在最终说明中明确：攻击连招依赖本变更，编辑器依赖攻击/窗口配置模型稳定。
+- [ ] 0.19 明确 window id 主要用于编辑、诊断和校验，runtime 仲裁优先消费 active fact id。
+- [ ] 0.20 明确 facts 是稳定类型化 tag，不允许状态机、仲裁器和编辑器各自维护临时字符串。
+
 ## 1. 现状确认
 - [ ] 1.1 读取本变更 `proposal.md`、`design.md` 和全部 spec delta。
 - [ ] 1.2 读取 `formalize-turnback-locomotion-state`，确认 TurnBack 现有状态输出和 baked motion 接入点。
@@ -30,6 +52,10 @@
 - [ ] 2.18 policy 不保存 fade、blend duration、clip、clip fallback、speed、start time、TransitionAsset 或 TransitionLibrary key。
 - [ ] 2.19 增加 natural exit 不授权 Dodge/Attack 的模型测试。
 - [ ] 2.20 增加修改视觉 fade 不改变 window facts 的模型测试。
+- [ ] 2.21 定义 `TimelineFactId` 或等价稳定事实标识。
+- [ ] 2.22 定义 window 到 fact id 的输出关系。
+- [ ] 2.23 定义基础 fact 类别：input lock、motion、natural exit、cancel、combo。
+- [ ] 2.24 增加 fact id 默认值和等值比较测试。
 
 ## 3. Timeline Policy 配置和校验
 - [ ] 3.1 新增正式 ScriptableObject 或等价配置入口保存 timeline policy。
@@ -48,6 +74,9 @@
 - [ ] 3.14 增加配置校验测试。
 - [ ] 3.15 校验 interrupt/cancel window 必须携带 allowed request kind 或等价请求过滤。
 - [ ] 3.16 校验 timeline policy 编译结果不暴露表现层字段。
+- [ ] 3.17 校验 window 输出的 fact id 不能为空。
+- [ ] 3.18 校验 request policy 引用的 required fact id 能在对应 state timeline 中找到。
+- [ ] 3.19 校验未知 required fact id 报错而不是静默 fallback。
 
 ## 4. Timeline Window Facts 采样
 - [ ] 4.1 新增纯数据 window facts。
@@ -66,6 +95,10 @@
 - [ ] 4.14 增加 sampler 窗口边界测试。
 - [ ] 4.15 增加 sampler time domain 测试。
 - [ ] 4.16 增加 sampler 静态边界测试。
+- [ ] 4.17 window facts 支持 `Contains(TimelineFactId)` 或等价查询。
+- [ ] 4.18 window facts 支持枚举当前 active fact id，用于日志和未来编辑器。
+- [ ] 4.19 增加 active fact 命中和未命中测试。
+- [ ] 4.20 增加同一时间多个 fact 同时 active 的测试。
 
 ## 5. 状态请求仲裁接入
 - [ ] 5.1 复用或扩展现有 `ActionInterruptArbiter` 纯数据模型，不创建 TurnBack 专用仲裁器。
@@ -85,6 +118,10 @@
 - [ ] 5.15 增加 TurnBack 请求窗口仲裁测试。
 - [ ] 5.16 增加 Dodge 旧行为兼容测试。
 - [ ] 5.17 增加多请求选择测试。
+- [ ] 5.18 请求策略支持 `requiredFactId` 或等价字段。
+- [ ] 5.19 仲裁器使用 active facts 判断 required fact，不读取 window start/end。
+- [ ] 5.20 增加 required fact 未激活时拒绝测试。
+- [ ] 5.21 增加 required fact 激活且 priority/resistance 通过时接受测试。
 
 ## 6. 统一状态机接入
 - [ ] 6.1 状态机配置能引用状态 timeline policy。

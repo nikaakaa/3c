@@ -19,41 +19,58 @@
 
 ## Proposed Module Shape
 ```text
-PlayerLocomotionController
+Movement/Runtime/PlayerLocomotionController
   Unity 引用解析
   FullBody pipeline facade
   adapter 状态缓存
 
-LocomotionDecisionFrameBuilder
+Movement/Model/Facts
+  LocomotionDecisionFrame / LocomotionDecisionFacts / LocomotionSpatialFacts
+  LocomotionStateDecisionFrame
+  名称中的 Decision 只表示状态机判定前的 facts 聚合
+
+Movement/Solver/Facts/LocomotionFactsBuilder
   input snapshot -> intent
   intent + camera/facing -> spatial facts
-  spatial facts -> decision facts
-  decision facts + blackboard snapshot -> state machine context
+  spatial facts -> locomotion facts
+  locomotion facts + blackboard snapshot -> state machine context
 
-LocomotionStateMotionBuilder
+Movement/Model/Motion
+  基础移动输出和 motion facts 中转模型
+
+Movement/Solver/Motion/LocomotionStateMotionBuilder
   CharacterStateMachineFrame -> BasicLocomotionFrame
   state outputs -> MovementCommand / MovementAnimationContext
 
-TurnBackIntentResolver
+Movement/Model/TurnBack
+  LocomotionTurnBackIntent
+  TurnBack 专用纯数据
+
+Movement/Solver/TurnBack/TurnBackIntentResolver
   previous direction + current spatial facts -> LocomotionTurnBackIntent
   intent clear/consume 规则
 
-TurnBackMotionResolver
+Movement/Solver/TurnBack/TurnBackMotionResolver
   TurnBack state output + animation/profile facts -> BasicMovementMotionFacts
   input lock / motion window / entry basis 计算
 
-LocomotionSnapshotAdapter
+Movement/Model/Snapshot
+  Movement 边界内的 snapshot/restore 数据模型
+
+Movement/Solver/Snapshot/LocomotionSnapshotAdapter
   capture / restore controller-owned locomotion facts
   不定义动画播放进度权威，只调用已批准的 playback restore 入口
 
-LocomotionDiagnostics
+Movement/Diagnostics/LocomotionDiagnostics
   统一提交 RuntimeDiagnosticLog
   保持现有 eventId / channel key
 ```
 
 ## Decisions
+- Decision: 将原先口语中的 decision 模块命名为 facts 模块。
+  - Reason: Locomotion 只提供统一状态机判定所需 facts，不拥有状态选择权威，`Facts` 比 `Decision` 更不容易误导。
 - Decision: 先抽纯逻辑，再收窄 MonoBehaviour。
-  - Reason: 先移动最容易测试的 decision/TurnBack 逻辑，可以降低行为回退风险。
+  - Reason: 先移动最容易测试的 facts/TurnBack 逻辑，可以降低行为回退风险。
 - Decision: `PlayerLocomotionController` 保留 facade 方法名直到所有调用点迁移完。
   - Reason: 直接删除公开 API 容易破坏测试和场景引用；删除必须基于静态搜索。
 - Decision: 诊断日志只移动，不删除。
@@ -73,7 +90,7 @@ LocomotionDiagnostics
 
 ## Migration Plan
 1. 加静态和行为锁定测试，确认当前唯一 runner owner、唯一 tick driver、无 fallback、日志 key。
-2. 抽 `LocomotionDecisionFrameBuilder`，保持 public facade 结果不变。
+2. 抽 `LocomotionFactsBuilder`，保持 public facade 结果不变。
 3. 抽 `TurnBackIntentResolver`，保持 TurnBack 进入条件不变。
 4. 抽 `TurnBackMotionResolver`，保持 root motion/profile/input lock 结果不变。
 5. 抽 `LocomotionStateMotionBuilder`，保持 `BasicLocomotionFrame` 输出不变。

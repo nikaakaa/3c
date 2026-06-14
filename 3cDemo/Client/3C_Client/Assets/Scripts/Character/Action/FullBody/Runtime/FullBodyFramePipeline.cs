@@ -1,9 +1,7 @@
 using ThirdPersonCharacterStateMachine;
-using ThirdPersonDiagnostics;
 using ThirdPersonInput;
 using ThirdPersonMovement;
 using ThirdPersonSimulation;
-using UnityEngine;
 
 namespace ThirdPersonAction
 {
@@ -115,7 +113,7 @@ namespace ThirdPersonAction
             }
 
             context.SetLocomotionDecision(in locomotionDecision);
-            FullBodyActionRequestGateResult gateResult = EvaluateActionRequest(controller, in context, in locomotionDecision);
+            FullBodyActionRequestGateResult gateResult = ResolveActionRequest(controller, in context, in locomotionDecision);
             context.SetInputRequest(gateResult.Request, gateResult.Decision);
             CharacterInputRequestFact inputRequest = gateResult.Request;
             CharacterStateMachineSnapshot previousSnapshot = controller.CurrentStateSnapshot;
@@ -211,58 +209,38 @@ namespace ThirdPersonAction
         {
             context.MarkStep(FullBodyFramePipelineStep.WriteSnapshotAndEvents);
             context.MarkSnapshotEventsReady();
-            LogPipelineSnapshot(controller, in context);
+            FullBodyDiagnostics.LogPipelineSnapshot(
+                controller != null ? controller.ActiveFullBodyStatePath : string.Empty,
+                context.Step,
+                new FullBodyFrameResult(in context).DiagnosticSummary);
             context.MarkCompleted();
         }
 
-        FullBodyActionRequestGateResult EvaluateActionRequest(
+        FullBodyActionRequestGateResult ResolveActionRequest(
             PlayerFullBodyActionController controller,
             in FullBodyFrameContext context,
             in LocomotionDecisionFrame locomotionDecision)
         {
-            if (!controller.TryResolveDodgeActionConfig(out DodgeActionConfig config))
-            {
-                return new FullBodyActionRequestGateResult(
-                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
-                    ActionInterruptDecision.Reject(ActionInterruptRejectReason.NoRequest));
-            }
-
-            CharacterInputRequestFact emptyRequest = CharacterInputRequestFact.None(InputRequestKind.TurnBack);
-            LocomotionDecisionFacts locomotionFacts = locomotionDecision.Facts;
             CharacterRuntimeBlackboardSnapshot runtimeBlackboard = controller.LocomotionController != null
                 ? controller.LocomotionController.RuntimeBlackboardSnapshot
                 : default;
-            CharacterStateMachineContext arbitrationContext = new CharacterStateMachineContext(
-                context.Input.DeltaTime,
-                context.Step,
-                in locomotionFacts,
-                emptyRequest,
-                runtimeBlackboard);
-            StateTimelineWindowFacts turnBackTimelineFacts = controller.StateMachine != null
-                ? controller.StateMachine.SampleCurrentTimelineFacts(
-                    in arbitrationContext,
-                    controller.CurrentStateSnapshot.StateTime,
-                    ActionRequestType.Locomotion)
-                : default;
-            StateTimelineWindowFacts dodgeTimelineFacts = controller.StateMachine != null
-                ? controller.StateMachine.SampleCurrentTimelineFacts(
-                    in arbitrationContext,
-                    controller.CurrentStateSnapshot.StateTime,
-                    ActionRequestType.Dodge)
-                : default;
-            FullBodyActionRequestGateInput gateInput = new FullBodyActionRequestGateInput(
+            bool hasDodgeConfig = controller.TryResolveDodgeActionConfig(out DodgeActionConfig config);
+            FullBodyPipelineActionRequestResolverInput input = new FullBodyPipelineActionRequestResolverInput(
                 controller.InputBufferComponent != null ? controller.InputBufferComponent.Buffer : null,
                 context.Step,
+                context.Input.DeltaTime,
+                controller.StateMachine,
                 controller.CurrentStateSnapshot,
                 context.Input.LocomotionInput,
                 controller.LocomotionController != null && controller.LocomotionController.RunLatchActive,
-                locomotionFacts,
-                turnBackTimelineFacts,
-                dodgeTimelineFacts,
+                locomotionDecision.Facts,
+                runtimeBlackboard,
+                hasDodgeConfig,
                 config,
                 controller.ResolveCurrentActionResistance(),
                 controller.ResolveInterruptPoliciesForPipeline());
-            return FullBodyActionRequestGate.Evaluate(in gateInput);
+
+            return FullBodyPipelineActionRequestResolver.Resolve(in input);
         }
 
         static void WriteBufferedInputFacts(InputRequestBufferComponent buffer, in FullBodyFrameInput input)
@@ -282,17 +260,5 @@ namespace ThirdPersonAction
             return new InputButtonState(frame.Pressed, frame.Held, frame.Released);
         }
 
-        static void LogPipelineSnapshot(PlayerFullBodyActionController controller, in FullBodyFrameContext context)
-        {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.FullBody,
-                RuntimeDiagnosticLogLevel.Trace,
-                "fullbody-frame-pipeline",
-                controller != null ? controller.ActiveFullBodyStatePath : string.Empty,
-                string.Empty,
-                context.Step,
-                Time.frameCount,
-                new FullBodyFrameResult(in context).DiagnosticSummary));
-        }
     }
 }

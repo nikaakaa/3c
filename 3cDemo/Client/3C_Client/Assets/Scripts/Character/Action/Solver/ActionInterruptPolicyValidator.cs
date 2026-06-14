@@ -17,7 +17,7 @@ namespace ThirdPersonAction
                 ActionInterruptPolicy policy = ActionInterruptPolicySetCompiler.Compile(policySet[i]);
                 ValidatePolicy(policy, i, result);
 
-                string key = $"{policy.FromState.Value}->{policy.TargetState.Value}:{policy.TimingRule}:{policy.WindowId}";
+                string key = $"{policy.FromState.Value}->{policy.TargetState.Value}:{policy.TimingRule}:{policy.WindowId}:{policy.RequiredFactId.Value}";
                 if (!keys.Add(key))
                     result.AddWarning($"Policy {i} duplicates an earlier policy: {key}.");
             }
@@ -46,7 +46,7 @@ namespace ThirdPersonAction
                 ActionInterruptPolicy policy = policies[i];
                 ValidatePolicy(policy, i, result);
 
-                string key = $"{policy.FromState.Value}->{policy.TargetState.Value}:{policy.TimingRule}:{policy.WindowId}";
+                string key = $"{policy.FromState.Value}->{policy.TargetState.Value}:{policy.TimingRule}:{policy.WindowId}:{policy.RequiredFactId.Value}";
                 if (!keys.Add(key))
                     result.AddWarning($"Policy {i} duplicates an earlier policy: {key}.");
             }
@@ -123,9 +123,27 @@ namespace ThirdPersonAction
             {
                 ActionInterruptPolicy policy = policies[i];
                 if (!policy.RequiresTimelineWindow)
+                {
+                    if (!policy.RequiresTimelineFact)
+                        continue;
+                }
+
+                if (policy.RequiresTimelineFact)
+                {
+                    if (!TryFindTimelineFact(policy, timelinePolicies, out StateTimelineWindowDefinition factWindow))
+                    {
+                        result.AddError($"Policy {i} references missing timeline fact '{policy.RequiredFactId.Value}'.");
+                        continue;
+                    }
+
+                    if (!factWindow.IsRequestWindow)
+                        result.AddError($"Policy {i} references non-request timeline fact '{policy.RequiredFactId.Value}'.");
+                }
+
+                if (!policy.RequiresTimelineWindow)
                     continue;
 
-                if (!TryFindTimelineWindow(policy.WindowId, timelinePolicies, out StateTimelineWindowDefinition window))
+                if (!TryFindTimelineWindow(policy, timelinePolicies, out StateTimelineWindowDefinition window))
                 {
                     result.AddError($"Policy {i} references missing timeline window '{policy.WindowId}'.");
                     continue;
@@ -137,7 +155,7 @@ namespace ThirdPersonAction
         }
 
         static bool TryFindTimelineWindow(
-            string windowId,
+            ActionInterruptPolicy interruptPolicy,
             IReadOnlyList<StateTimelinePolicyDefinition> timelinePolicies,
             out StateTimelineWindowDefinition window)
         {
@@ -146,10 +164,13 @@ namespace ThirdPersonAction
                 for (int i = 0; i < timelinePolicies.Count; i++)
                 {
                     StateTimelinePolicyDefinition policy = timelinePolicies[i];
+                    if (!MatchesPolicyState(interruptPolicy, policy))
+                        continue;
+
                     for (int j = 0; j < policy.Windows.Count; j++)
                     {
                         StateTimelineWindowDefinition candidate = policy.Windows[j];
-                        if (string.Equals(candidate.WindowId, windowId, System.StringComparison.Ordinal))
+                        if (string.Equals(candidate.WindowId, interruptPolicy.WindowId, System.StringComparison.Ordinal))
                         {
                             window = candidate;
                             return true;
@@ -160,6 +181,40 @@ namespace ThirdPersonAction
 
             window = default;
             return false;
+        }
+
+        static bool TryFindTimelineFact(
+            ActionInterruptPolicy interruptPolicy,
+            IReadOnlyList<StateTimelinePolicyDefinition> timelinePolicies,
+            out StateTimelineWindowDefinition window)
+        {
+            if (timelinePolicies != null)
+            {
+                for (int i = 0; i < timelinePolicies.Count; i++)
+                {
+                    StateTimelinePolicyDefinition policy = timelinePolicies[i];
+                    if (!MatchesPolicyState(interruptPolicy, policy))
+                        continue;
+
+                    for (int j = 0; j < policy.Windows.Count; j++)
+                    {
+                        StateTimelineWindowDefinition candidate = policy.Windows[j];
+                        if (candidate.FactId == interruptPolicy.RequiredFactId)
+                        {
+                            window = candidate;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            window = default;
+            return false;
+        }
+
+        static bool MatchesPolicyState(ActionInterruptPolicy interruptPolicy, StateTimelinePolicyDefinition timelinePolicy)
+        {
+            return interruptPolicy.FromState.Matches(new ActionStateId(timelinePolicy.StateId.Value));
         }
     }
 }

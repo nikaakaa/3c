@@ -142,6 +142,20 @@ namespace ThirdPersonSimulation
             builder.Append(" rollbackFrames=").Append(result.RollbackFrames);
             builder.Append(" checkedWindows=").Append(result.CheckedWindows);
             builder.Append(" applyReplay=").Append(applyReplayResultToScene);
+            builder.Append(" presentationDrift=").Append(result.HasPresentationDrift);
+            if (result.HasPresentationDrift)
+            {
+                LocalRollbackSynctestResult drift = result.FirstPresentationDrift;
+                builder.Append(" firstPresentationRestore=").Append(drift.RestoreTick.Value);
+                builder.Append(" firstPresentationEnd=").Append(drift.EndTick.Value);
+                if (drift.FirstMismatch.HasPresentationDrift)
+                {
+                    builder.Append(" firstPresentationStage=").Append(drift.FirstMismatch.Stage);
+                    builder.Append(" firstPresentationTick=").Append(drift.FirstMismatch.Tick.Value);
+                    if (drift.FirstMismatch.Comparison.PresentationDifferences.Count > 0)
+                        builder.Append(" firstPresentationDifferences=").Append(string.Join(",", drift.FirstMismatch.Comparison.PresentationDifferences));
+                }
+            }
             builder.Append(" sourceRestored=").Append(restoreProbe.SourceRestored);
             builder.Append(" visualRestored=").Append(restoreProbe.VisualRestored);
             builder.Append(" cameraLocalOnly=").Append(restoreProbe.CameraLocalOnly);
@@ -213,10 +227,14 @@ namespace ThirdPersonSimulation
                 builder.Append(" tick=").Append(failure.FirstMismatch.Tick.Value);
                 if (failure.FirstMismatch.Comparison.Differences.Count > 0)
                     builder.Append(" firstDifferences=").Append(string.Join(",", failure.FirstMismatch.Comparison.Differences));
+                if (failure.FirstMismatch.Comparison.PresentationDifferences.Count > 0)
+                    builder.Append(" firstPresentationDifferences=").Append(string.Join(",", failure.FirstMismatch.Comparison.PresentationDifferences));
             }
 
             if (failure.Comparison.Differences.Count > 0)
                 builder.Append(" differences=").Append(string.Join(",", failure.Comparison.Differences));
+            if (failure.Comparison.PresentationDifferences.Count > 0)
+                builder.Append(" presentationDifferences=").Append(string.Join(",", failure.Comparison.PresentationDifferences));
 
             RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Simulation,

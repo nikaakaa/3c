@@ -163,13 +163,13 @@ namespace ThirdPersonSimulation
 
         void LogFirstMismatch(in LocalRollbackSynctestResult result)
         {
-            if (result.Success || !result.FirstMismatch.HasMismatch)
+            if (!result.FirstMismatch.HasAnyDifference)
                 return;
 
              RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
                  RuntimeDiagnosticLogCategory.Simulation,
-                 RuntimeDiagnosticLogLevel.Warning,
-                 "synctest-first-mismatch",
+                 result.FirstMismatch.HasMismatch ? RuntimeDiagnosticLogLevel.Warning : RuntimeDiagnosticLogLevel.Info,
+                 result.FirstMismatch.HasMismatch ? "synctest-first-mismatch" : "synctest-first-presentation-drift",
                  "",
                  "",
                  result.FirstMismatch.Tick.Value,

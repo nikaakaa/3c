@@ -16,6 +16,7 @@ namespace ThirdPersonAction
             LocomotionDecisionFacts locomotionFacts,
             StateTimelineWindowFacts turnBackTimelineFacts,
             StateTimelineWindowFacts dodgeTimelineFacts,
+            bool hasDodgeConfig,
             DodgeActionConfig dodgeConfig,
             int currentActionResistance,
             IReadOnlyList<ActionInterruptPolicy> interruptPolicies)
@@ -28,6 +29,7 @@ namespace ThirdPersonAction
             LocomotionFacts = locomotionFacts;
             TurnBackTimelineFacts = turnBackTimelineFacts;
             DodgeTimelineFacts = dodgeTimelineFacts;
+            HasDodgeConfig = hasDodgeConfig;
             DodgeConfig = dodgeConfig;
             CurrentActionResistance = currentActionResistance < 0 ? 0 : currentActionResistance;
             InterruptPolicies = interruptPolicies;
@@ -41,6 +43,7 @@ namespace ThirdPersonAction
         public LocomotionDecisionFacts LocomotionFacts { get; }
         public StateTimelineWindowFacts TurnBackTimelineFacts { get; }
         public StateTimelineWindowFacts DodgeTimelineFacts { get; }
+        public bool HasDodgeConfig { get; }
         public DodgeActionConfig DodgeConfig { get; }
         public int CurrentActionResistance { get; }
         public IReadOnlyList<ActionInterruptPolicy> InterruptPolicies { get; }
@@ -76,18 +79,23 @@ namespace ThirdPersonAction
                 input.TurnBackTimelineFacts,
                 input.InterruptPolicies,
                 out ActionInterruptDecision turnBackDecision);
-            CharacterInputRequestFact dodgeRequest = FullBodyActionInterruptGate.BuildDodgeRequestFact(
-                input.InputBuffer,
-                input.CurrentStep,
-                in snapshot,
-                in locomotionInput,
-                input.RunLatchActive,
-                in locomotionFacts,
-                in dodgeConfig,
-                input.CurrentActionResistance,
-                input.InterruptPolicies,
-                input.DodgeTimelineFacts,
-                out ActionInterruptDecision dodgeDecision);
+            CharacterInputRequestFact dodgeRequest = CharacterInputRequestFact.None(InputRequestKind.Dodge);
+            ActionInterruptDecision dodgeDecision = ActionInterruptDecision.Reject(ActionInterruptRejectReason.NoRequest);
+            if (input.HasDodgeConfig)
+            {
+                dodgeRequest = FullBodyActionInterruptGate.BuildDodgeRequestFact(
+                    input.InputBuffer,
+                    input.CurrentStep,
+                    in snapshot,
+                    in locomotionInput,
+                    input.RunLatchActive,
+                    in locomotionFacts,
+                    in dodgeConfig,
+                    input.CurrentActionResistance,
+                    input.InterruptPolicies,
+                    input.DodgeTimelineFacts,
+                    out dodgeDecision);
+            }
             CharacterInputRequestFact request = FullBodyActionInterruptGate.SelectHighestPriorityAcceptedRequest(
                 in turnBackRequest,
                 in dodgeRequest);

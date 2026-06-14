@@ -5,7 +5,7 @@
 #### Scenario: 拆出的模块不拥有 runner
 - **WHEN** 检查 Locomotion adapter 拆分后的运行时代码
 - **THEN** 只有 FullBody 主调度入口 MAY 创建 `CharacterStateMachineRunner`
-- **AND** Locomotion decision、TurnBack、motion builder、snapshot 或 diagnostics 模块 MUST NOT 创建 runner
+- **AND** Locomotion facts、TurnBack、motion builder、snapshot 或 diagnostics 模块 MUST NOT 创建 runner
 - **AND** 这些模块 MUST NOT 保存一套独立 active state path 作为状态权威
 
 #### Scenario: Locomotion 仍通过 FullBody pipeline 被调用

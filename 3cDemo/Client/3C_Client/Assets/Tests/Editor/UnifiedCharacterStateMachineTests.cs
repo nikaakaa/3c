@@ -178,7 +178,8 @@ namespace Tests.Editor
                         StateTimelineWindowKind.Exit,
                         StateTimelineTimeDomain.Normalized,
                         0.8f,
-                        1f),
+                        1f,
+                        factId: TimelineFactIds.NaturalExitReady.Value),
                     new StateTimelineWindowDefinition(
                         "attack-dodge-cancel",
                         StateTimelineWindowKind.Cancel,
@@ -186,7 +187,8 @@ namespace Tests.Editor
                         0.2f,
                         0.6f,
                         minPriority: 30,
-                        requestType: ActionRequestType.Dodge)
+                        requestType: ActionRequestType.Dodge,
+                        factId: TimelineFactIds.CancelableToDodge.Value)
                 });
 
             StateTimelineWindowFacts exitFacts = StateTimelineSampler.Sample(
@@ -205,6 +207,9 @@ namespace Tests.Editor
             Assert.True(exitFacts.ExitWindowActive);
             Assert.False(exitFacts.InterruptWindowActive);
             Assert.AreEqual("attack-exit", exitFacts.ActiveWindowIds);
+            Assert.AreEqual(TimelineFactIds.NaturalExitReady.Value, exitFacts.ActiveFactIds);
+            Assert.True(exitFacts.Contains(TimelineFactIds.NaturalExitReady));
+            Assert.False(exitFacts.ContainsRequestFact(TimelineFactIds.NaturalExitReady));
             Assert.IsEmpty(exitFacts.RequestWindowIds);
             Assert.False(exitFacts.HasRequestWindow);
 
@@ -212,6 +217,13 @@ namespace Tests.Editor
             Assert.True(cancelFacts.InterruptWindowActive);
             Assert.AreEqual("attack-dodge-cancel", cancelFacts.ActiveWindowIds);
             Assert.AreEqual("attack-dodge-cancel", cancelFacts.RequestWindowIds);
+            Assert.AreEqual(TimelineFactIds.CancelableToDodge.Value, cancelFacts.ActiveFactIds);
+            Assert.AreEqual(TimelineFactIds.CancelableToDodge.Value, cancelFacts.RequestFactIds);
+            Assert.True(cancelFacts.Contains(TimelineFactIds.CancelableToDodge));
+            Assert.True(cancelFacts.ContainsRequestFact(TimelineFactIds.CancelableToDodge));
+            CollectionAssert.AreEqual(
+                new[] { TimelineFactIds.CancelableToDodge },
+                cancelFacts.EnumerateActiveFacts().ToArray());
             Assert.True(cancelFacts.HasRequestWindow);
             Assert.AreEqual(30, cancelFacts.MinPriority);
         }
@@ -230,7 +242,8 @@ namespace Tests.Editor
                         StateTimelineWindowKind.Cancel,
                         StateTimelineTimeDomain.Normalized,
                         0.2f,
-                        0.6f)
+                        0.6f,
+                        factId: TimelineFactIds.CancelableToDodge.Value)
                 });
 
             StateTimelinePolicyValidationResult result = StateTimelinePolicyValidator.Validate(policy);
@@ -355,6 +368,22 @@ namespace Tests.Editor
                 .Select(transition => transition.FromStateId)
                 .ToArray();
             CollectionAssert.AreEquivalent(new[] { CharacterStateIds.MoveStart.Value, CharacterStateIds.MoveLoop.Value }, sources);
+        }
+
+        [Test]
+        public void TurnBackStateWithoutTimelinePolicyFailsValidation()
+        {
+            CharacterStateMachineDefinition defaults = LoadConfiguredStateMachineDefinition();
+            CharacterStateMachineDefinition definition = new CharacterStateMachineDefinition(
+                defaults.InitialState,
+                defaults.Nodes.ToArray(),
+                defaults.Transitions.ToArray(),
+                defaults.TimelinePolicies.Where(policy => policy.StateId != CharacterStateIds.TurnBack).ToArray());
+
+            CharacterStateMachineValidationResult validation = definition.Validate();
+
+            Assert.True(validation.HasErrors);
+            Assert.That(validation.DescribeErrors(), Does.Contain("TurnBack timeline policy is missing"));
         }
 
         [Test]
@@ -1464,7 +1493,8 @@ namespace Tests.Editor
             CharacterStateMachineDefinition definition = new CharacterStateMachineDefinition(
                 CharacterStateIds.Idle,
                 LoadConfiguredStateMachineDefinition().Nodes.Where(node => node.StateId != CharacterStateIds.Dodge).Concat(new[] { dodge }).ToArray(),
-                LoadConfiguredStateMachineDefinition().Transitions.ToArray());
+                LoadConfiguredStateMachineDefinition().Transitions.ToArray(),
+                LoadConfiguredStateMachineDefinition().TimelinePolicies.ToArray());
 
             CharacterStateMachineValidationResult validation = definition.Validate();
 
@@ -1488,7 +1518,8 @@ namespace Tests.Editor
             CharacterStateMachineDefinition definition = new CharacterStateMachineDefinition(
                 CharacterStateIds.Idle,
                 defaults.Nodes.Concat(new[] { roll }).ToArray(),
-                defaults.Transitions.ToArray());
+                defaults.Transitions.ToArray(),
+                defaults.TimelinePolicies.ToArray());
 
             CharacterStateMachineValidationResult validation = definition.Validate();
 
@@ -2275,19 +2306,22 @@ namespace Tests.Editor
                                     StateTimelineWindowKind.Motion,
                                     StateTimelineTimeDomain.Seconds,
                                     0f,
-                                    0.05f),
+                                    0.05f,
+                                    factId: TimelineFactIds.MotionActive.Value),
                                 new StateTimelineWindowDefinition(
                                     "turnback-input-lock-test",
                                     StateTimelineWindowKind.InputLock,
                                     StateTimelineTimeDomain.Seconds,
                                     0f,
-                                    0.05f),
+                                    0.05f,
+                                    factId: TimelineFactIds.InputLocked.Value),
                                 new StateTimelineWindowDefinition(
                                     "turnback-exit-test",
                                     StateTimelineWindowKind.Exit,
                                     StateTimelineTimeDomain.Normalized,
                                     1f,
-                                    1f)
+                                    1f,
+                                    factId: TimelineFactIds.NaturalExitReady.Value)
                             })
                     })
                     .ToArray();
@@ -2851,6 +2885,50 @@ namespace Tests.Editor
         }
 
         [Test]
+        public void FullBodyPipelineTurnBackRequestDoesNotRequireDodgeConfig()
+        {
+            CharacterStateMachineRunner runner = CreateRunner();
+            runner.Tick(Context(move: true, runHeld: true));
+            runner.Tick(Context(move: true, canExit: true, runHeld: true));
+            LocomotionTurnBackIntent intent = TurnBackIntent(4, 6, 180f, Vector3.back, Vector3.forward);
+            MovementInputIntent moveIntent = MovementInputIntent.FromRaw(Vector2.down, 0.1f, true);
+            LocomotionDecisionFacts facts = new LocomotionDecisionFacts(
+                moveIntent,
+                BasicMovementGait.Run,
+                BasicMovementPhaseFacts.None,
+                new LocomotionSpatialFacts(Vector3.back, Vector3.forward, Vector3.forward, Vector3.right),
+                intent);
+            ActionInterruptPolicy[] policies =
+            {
+                new ActionInterruptPolicy(
+                    new ActionStateId(CharacterStateIds.MoveLoop.Value),
+                    new ActionStateId(CharacterStateIds.TurnBack.Value),
+                    20,
+                    requiredFactId: TimelineFactIds.TurnBackEnterOpen.Value)
+            };
+            FullBodyPipelineActionRequestResolverInput input = new FullBodyPipelineActionRequestResolverInput(
+                null,
+                4,
+                0.1f,
+                runner,
+                runner.Snapshot,
+                new BasicLocomotionInputSnapshot(0.1f, Vector2.down, Vector2.zero, true),
+                true,
+                facts,
+                CharacterRuntimeBlackboardSnapshot.Empty,
+                false,
+                default,
+                0,
+                policies);
+
+            FullBodyActionRequestGateResult result = FullBodyPipelineActionRequestResolver.Resolve(in input);
+
+            Assert.True(result.Accepted);
+            Assert.AreEqual(InputRequestKind.TurnBack, result.Request.RequestKind);
+            Assert.AreEqual(CharacterStateIds.TurnBack.Value, result.Decision.TargetState.Value);
+        }
+
+        [Test]
         public void FullBodyActionControllerReportsMissingReferencedTimelineWindow()
         {
             GameObject gameObject = new GameObject("fullbody-timeline-window-missing-test");
@@ -3052,18 +3130,136 @@ namespace Tests.Editor
         [Test]
         public void LocomotionDecisionStagesDoNotCallMotionOrAnimationAdapters()
         {
+            string movementRoot = Path.Combine(Application.dataPath, "Scripts/Character/Movement");
+            string controller = File.ReadAllText(Path.Combine(
+                movementRoot,
+                "Runtime/PlayerLocomotionController.cs"));
+            string pipeline = File.ReadAllText(Path.Combine(
+                movementRoot,
+                "Solver/LocomotionFramePipeline.cs"));
+
+            AssertMethodBodyDoesNotContain(pipeline, "ResolvePrepareFacts", "ExecuteBasicMovement");
+            AssertMethodBodyDoesNotContain(pipeline, "ResolvePrepareFacts", "Present(");
+            AssertMethodBodyDoesNotContain(pipeline, "TryPrepareDecisionFrame", "ExecuteBasicMovement");
+            AssertMethodBodyDoesNotContain(pipeline, "TryPrepareDecisionFrame", "Present(");
+            AssertMethodBodyDoesNotContain(controller, "ResolveSpatialFacts", "ExecuteBasicMovement");
+            AssertMethodBodyDoesNotContain(controller, "ResolveSpatialFacts", "Present(");
+            AssertMethodBodyDoesNotContain(pipeline, "TryEvaluatePreparedGameplayDecision", "ExecuteBasicMovement");
+            AssertMethodBodyDoesNotContain(pipeline, "TryEvaluatePreparedGameplayDecision", "Present(");
+            AssertMethodBodyDoesNotContain(pipeline, "TryBuildMotionFromStateDecision", "ExecuteBasicMovement");
+            AssertMethodBodyDoesNotContain(pipeline, "TryBuildMotionFromStateDecision", "Present(");
+        }
+
+        [Test]
+        public void LocomotionAdapterModulesDoNotReferenceRuntimeDrivers()
+        {
+            string movementRoot = Path.Combine(Application.dataPath, "Scripts/Character/Movement");
+            string combined = string.Join("\n", new[]
+            {
+                Path.Combine(movementRoot, "Solver/Facts/LocomotionFactsBuilder.cs"),
+                Path.Combine(movementRoot, "Solver/TurnBack/TurnBackIntentResolver.cs"),
+                Path.Combine(movementRoot, "Solver/TurnBack/TurnBackMotionResolver.cs"),
+                Path.Combine(movementRoot, "Solver/Motion/LocomotionStateMotionBuilder.cs"),
+                Path.Combine(movementRoot, "Solver/Snapshot/LocomotionSnapshotAdapter.cs"),
+                Path.Combine(movementRoot, "Diagnostics/LocomotionDiagnostics.cs")
+            }.Select(File.ReadAllText));
+
+            Assert.That(combined, Does.Not.Contain("MonoBehaviour"));
+            Assert.That(combined, Does.Not.Contain("CharacterController"));
+            Assert.That(combined, Does.Not.Contain("Animancer"));
+            Assert.That(combined, Does.Not.Contain("UnityEngine.InputSystem"));
+            Assert.That(combined, Does.Not.Contain("InputAction"));
+            Assert.That(combined, Does.Not.Contain("ISimulationTick"));
+            Assert.That(combined, Does.Not.Contain("RegisterTick"));
+            Assert.That(combined, Does.Not.Contain("new CharacterStateMachineRunner"));
+            Assert.That(combined, Does.Not.Contain(".ExecuteBasicMovement("));
+            Assert.That(combined, Does.Not.Contain(".Present("));
+        }
+
+        [Test]
+        public void LocomotionFramePipelineOwnsMainlineWithoutRuntimeAdapters()
+        {
+            string pipeline = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Movement/Solver/LocomotionFramePipeline.cs"));
+
+            Assert.That(pipeline, Does.Not.Contain("MonoBehaviour"));
+            Assert.That(pipeline, Does.Not.Contain("Transform"));
+            Assert.That(pipeline, Does.Not.Contain("CharacterController"));
+            Assert.That(pipeline, Does.Not.Contain("UnityEngine.InputSystem"));
+            Assert.That(pipeline, Does.Not.Contain("InputAction"));
+            Assert.That(pipeline, Does.Not.Contain("Animancer"));
+            Assert.That(pipeline, Does.Not.Contain("new CharacterStateMachineRunner"));
+            Assert.That(pipeline, Does.Not.Contain("RegisterTick"));
+            Assert.That(pipeline, Does.Not.Contain(".Move("));
+            Assert.That(pipeline, Does.Not.Contain(".Present("));
+            Assert.That(pipeline, Does.Not.Contain("RestorePlaybackProgress"));
+            Assert.That(pipeline, Does.Not.Contain("ResetMotionPlaybackWindow"));
+        }
+
+        [Test]
+        public void PlayerLocomotionControllerDelegatesFrameMainline()
+        {
             string controller = File.ReadAllText(Path.Combine(
                 Application.dataPath,
                 "Scripts/Character/Movement/Runtime/PlayerLocomotionController.cs"));
 
-            AssertMethodBodyDoesNotContain(controller, "ResolveMovementIntent", "ExecuteBasicMovement");
-            AssertMethodBodyDoesNotContain(controller, "ResolveMovementIntent", "Present(");
-            AssertMethodBodyDoesNotContain(controller, "ResolveSpatialFacts", "ExecuteBasicMovement");
-            AssertMethodBodyDoesNotContain(controller, "ResolveSpatialFacts", "Present(");
-            AssertMethodBodyDoesNotContain(controller, "DeriveLocomotionDecisionFacts", "ExecuteBasicMovement");
-            AssertMethodBodyDoesNotContain(controller, "DeriveLocomotionDecisionFacts", "Present(");
-            AssertMethodBodyDoesNotContain(controller, "BuildStateMachineContext", "ExecuteBasicMovement");
-            AssertMethodBodyDoesNotContain(controller, "BuildStateMachineContext", "Present(");
+            string prepareBody = ExtractMethodBody(controller, "TryPrepareDecisionFrame");
+            string evaluateBody = ExtractMethodBody(controller, "TryEvaluatePreparedGameplayDecision");
+            string buildBody = ExtractMethodBody(controller, "TryBuildMotionFromStateDecision");
+
+            Assert.That(prepareBody, Does.Contain("framePipeline."));
+            Assert.That(evaluateBody, Does.Contain("framePipeline."));
+            Assert.That(buildBody, Does.Contain("framePipeline."));
+            Assert.That(evaluateBody, Does.Not.Contain("runner.Tick"));
+            Assert.That(buildBody, Does.Not.Contain("LocomotionStateMotionBuilder.BuildFrame"));
+            Assert.That(buildBody, Does.Not.Contain("UpdatePhaseGaitMemory"));
+        }
+
+        [Test]
+        public void LocomotionDiagnosticsKeepsKnownEventIds()
+        {
+            string movementRoot = Path.Combine(Application.dataPath, "Scripts/Character/Movement");
+            string combined = string.Join("\n", new[]
+            {
+                Path.Combine(movementRoot, "Runtime/PlayerLocomotionController.cs"),
+                Path.Combine(movementRoot, "Diagnostics/LocomotionDiagnostics.cs")
+            }.Select(File.ReadAllText));
+
+            Assert.That(combined, Does.Contain("locomotion-state-machine-output-probe"));
+            Assert.That(combined, Does.Contain("locomotion-decision-pipeline"));
+            Assert.That(combined, Does.Contain("locomotion-turnback-intent"));
+            Assert.That(combined, Does.Contain("turnback-root-motion-consumed"));
+            Assert.That(combined, Does.Contain("locomotion-turnback-state-policy"));
+            Assert.That(combined, Does.Contain("turnback-entry-basis-missing"));
+            Assert.That(combined, Does.Contain("turnback-frame-summary"));
+            Assert.That(combined, Does.Contain("locomotion-direct-driver-retired"));
+            Assert.That(combined, Does.Contain("movement-config-missing"));
+            Assert.That(combined, Does.Contain("legacy-player-enabled"));
+            Assert.That(combined, Does.Contain("input-source-missing"));
+            Assert.That(combined, Does.Contain("motion-executor-missing"));
+            Assert.That(combined, Does.Contain("locomotion-tick-snapshot"));
+            Assert.That(combined, Does.Contain("locomotion-run-latch-reset-after-idle"));
+            Assert.That(combined, Does.Contain("movement-camera-input"));
+        }
+
+        [Test]
+        public void PlayerLocomotionControllerDelegatesReferencesAndDiagnostics()
+        {
+            string movementRoot = Path.Combine(Application.dataPath, "Scripts/Character/Movement");
+            string controller = File.ReadAllText(Path.Combine(
+                movementRoot,
+                "Runtime/PlayerLocomotionController.cs"));
+            string referenceResolver = File.ReadAllText(Path.Combine(
+                movementRoot,
+                "Runtime/LocomotionRuntimeReferenceResolver.cs"));
+
+            Assert.That(controller, Does.Contain("LocomotionRuntimeReferenceResolver"));
+            Assert.That(controller, Does.Contain("LocomotionDiagnostics"));
+            Assert.That(controller, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
+            Assert.That(controller, Does.Not.Contain("GetComponents<MonoBehaviour>"));
+            Assert.That(referenceResolver, Does.Contain("GetComponents<MonoBehaviour>"));
+            Assert.That(referenceResolver, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
         }
 
         [Test]
@@ -3133,6 +3329,165 @@ namespace Tests.Editor
         }
 
         [Test]
+        public void FullBodyPipelineDelegatesActionRequestAndDiagnostics()
+        {
+            string pipeline = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Action/FullBody/Runtime/FullBodyFramePipeline.cs"));
+
+            Assert.That(pipeline, Does.Contain("FullBodyPipelineActionRequestResolver.Resolve"));
+            Assert.That(pipeline, Does.Contain("FullBodyDiagnostics.LogPipelineSnapshot"));
+            Assert.That(pipeline, Does.Not.Contain("FullBodyActionRequestGateInput gateInput"));
+            Assert.That(pipeline, Does.Not.Contain("SampleCurrentTimelineFacts"));
+            Assert.That(pipeline, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
+        }
+
+        [Test]
+        public void FullBodyControllerDelegatesReferenceResolution()
+        {
+            string fullBodyRoot = Path.Combine(Application.dataPath, "Scripts/Character/Action/FullBody");
+            string controller = File.ReadAllText(Path.Combine(
+                fullBodyRoot,
+                "Runtime/PlayerFullBodyActionController.cs"));
+            string referenceResolver = File.ReadAllText(Path.Combine(
+                fullBodyRoot,
+                "Runtime/FullBodyReferenceResolver.cs"));
+
+            Assert.That(controller, Does.Contain("FullBodyReferenceResolver"));
+            Assert.That(controller, Does.Not.Contain("GetComponentsInChildren<MonoBehaviour>"));
+            Assert.That(controller, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
+            Assert.That(referenceResolver, Does.Contain("GetComponentsInChildren<MonoBehaviour>"));
+            Assert.That(referenceResolver, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
+            Assert.That(referenceResolver, Does.Not.Contain("new CharacterStateMachineRunner"));
+            Assert.That(referenceResolver, Does.Not.Contain("RegisterTick"));
+        }
+
+        [Test]
+        public void CharacterRuntimeLayerSolversAvoidRuntimeAdapterReferences()
+        {
+            string animationSolver = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Animation/Solver/LocomotionAnimationAliasResolver.cs"));
+            string movementSolver = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Movement/Solver/Motion/AnimationPlanarDeltaResolver.cs"));
+            string actionSolver = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Action/FullBody/Solver/FullBodyPipelineActionRequestResolver.cs"));
+
+            Assert.That(animationSolver, Does.Not.Contain("Animancer"));
+            Assert.That(animationSolver, Does.Not.Contain("Animator"));
+            Assert.That(animationSolver, Does.Not.Contain("AnimationClip"));
+            Assert.That(animationSolver, Does.Not.Contain("CharacterController"));
+            Assert.That(animationSolver, Does.Not.Contain("InputAction"));
+
+            Assert.That(movementSolver, Does.Not.Contain("CharacterController"));
+            Assert.That(movementSolver, Does.Not.Contain("Transform"));
+            Assert.That(movementSolver, Does.Not.Contain(".Move("));
+            Assert.That(movementSolver, Does.Not.Contain("transform."));
+
+            Assert.That(actionSolver, Does.Not.Contain("new CharacterStateMachineRunner"));
+            Assert.That(actionSolver, Does.Not.Contain("RegisterTick"));
+            Assert.That(actionSolver, Does.Not.Contain("CharacterController"));
+            Assert.That(actionSolver, Does.Not.Contain("Animancer"));
+            Assert.That(actionSolver, Does.Not.Contain("InputAction"));
+            Assert.That(actionSolver, Does.Not.Contain("Camera.main"));
+            Assert.That(actionSolver, Does.Not.Contain(".Move("));
+            Assert.That(actionSolver, Does.Not.Contain(".Present("));
+            Assert.That(actionSolver, Does.Not.Contain("Resources.Load"));
+        }
+
+        [Test]
+        public void FullBodyDiagnosticsUsesUnifiedLogOnly()
+        {
+            string diagnostics = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Action/FullBody/Diagnostics/FullBodyDiagnostics.cs"));
+
+            Assert.That(diagnostics, Does.Contain("RuntimeDiagnosticLog.Submit"));
+            Assert.That(diagnostics, Does.Not.Contain("Debug.Log"));
+            Assert.That(diagnostics, Does.Not.Contain("new CharacterStateMachineRunner"));
+            Assert.That(diagnostics, Does.Not.Contain(".Move("));
+            Assert.That(diagnostics, Does.Not.Contain(".Present("));
+            Assert.That(diagnostics, Does.Contain("fullbody-path-changed"));
+            Assert.That(diagnostics, Does.Contain("fullbody-pending-transition-changed"));
+            Assert.That(diagnostics, Does.Contain("locomotion-phase-changed"));
+            Assert.That(diagnostics, Does.Contain("action-accepted"));
+            Assert.That(diagnostics, Does.Contain("fullbody-tick-snapshot"));
+            Assert.That(diagnostics, Does.Contain("animation-tick-snapshot"));
+            Assert.That(diagnostics, Does.Contain("state-machine-definition-invalid"));
+        }
+
+        [Test]
+        public void LocomotionAnimationAliasResolverKeepsFallbackAliases()
+        {
+            Assert.AreEqual(
+                "Idle",
+                LocomotionAnimationAliasResolver.ResolveAliasKey(null, BasicMovementPhase.Idle, BasicMovementGait.Walk));
+            Assert.AreEqual(
+                "WalkStart",
+                LocomotionAnimationAliasResolver.ResolveAliasKey(null, BasicMovementPhase.MoveStart, BasicMovementGait.Walk));
+            Assert.AreEqual(
+                "RunLoop",
+                LocomotionAnimationAliasResolver.ResolveAliasKey(null, BasicMovementPhase.MoveLoop, BasicMovementGait.Run));
+            Assert.AreEqual(
+                "RunEnd",
+                LocomotionAnimationAliasResolver.ResolveAliasKey(null, BasicMovementPhase.MoveStop, BasicMovementGait.Run));
+            Assert.AreEqual(
+                "Locomotion.Turn.Back",
+                LocomotionAnimationAliasResolver.ResolveAliasKey(null, BasicMovementPhase.TurnBack, BasicMovementGait.Run));
+        }
+
+        [Test]
+        public void AnimationPlanarDeltaResolverMapsMotionWithoutRuntimeAdapters()
+        {
+            BasicMovementMotionFacts localFacts = new BasicMovementMotionFacts(
+                true,
+                new Vector3(0f, 0f, 2f),
+                0f,
+                BasicMovementPhase.TurnBack,
+                "Locomotion.Turn.Back",
+                planarDeltaSpace: BasicMovementPlanarDeltaSpace.Local);
+            MovementCommand localCommand = new MovementCommand(
+                Vector3.forward,
+                0f,
+                0f,
+                0.02f,
+                BasicMovementPhase.TurnBack,
+                BasicMovementGait.Run,
+                localFacts);
+            Vector3 localWorldDelta = AnimationPlanarDeltaResolver.ResolveWorldDelta(
+                in localCommand,
+                Quaternion.Euler(0f, 90f, 0f));
+
+            Assert.That(localWorldDelta.x, Is.EqualTo(2f).Within(0.001f));
+            Assert.That(localWorldDelta.y, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(localWorldDelta.z, Is.EqualTo(0f).Within(0.001f));
+
+            BasicMovementMotionFacts entryFacts = new BasicMovementMotionFacts(
+                true,
+                new Vector3(1f, 0f, 2f),
+                0f,
+                BasicMovementPhase.TurnBack,
+                "Locomotion.Turn.Back",
+                planarDeltaSpace: BasicMovementPlanarDeltaSpace.EntryLocal,
+                entryPlanarBasisForward: Vector3.forward);
+            MovementCommand entryCommand = new MovementCommand(
+                Vector3.zero,
+                0f,
+                0f,
+                0.02f,
+                BasicMovementPhase.TurnBack,
+                BasicMovementGait.Run,
+                entryFacts);
+            Vector3 entryWorldDelta = AnimationPlanarDeltaResolver.ResolveWorldDelta(in entryCommand, Quaternion.identity);
+
+            Assert.That(entryWorldDelta.x, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(entryWorldDelta.y, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(entryWorldDelta.z, Is.EqualTo(2f).Within(0.001f));
+        }
+
+        [Test]
         public void RuntimeDodgeConfigDoesNotFallbackToDefault()
         {
             string controller = File.ReadAllText(Path.Combine(
@@ -3170,16 +3525,24 @@ namespace Tests.Editor
             string controller = File.ReadAllText(Path.Combine(
                 Application.dataPath,
                 "Scripts/Character/Movement/Runtime/PlayerLocomotionController.cs"));
+            string resolver = File.ReadAllText(Path.Combine(
+                Application.dataPath,
+                "Scripts/Character/Movement/Solver/TurnBack/TurnBackMotionResolver.cs"));
 
             string body = ExtractMethodBody(controller, "ResolveTurnBackRootMotionFacts", "TurnBackMotionPolicy policy");
-            string bakedGuard = ExtractMethodBody(controller, "RequiresTurnBackBakedMotion");
-            string planarResolver = ExtractMethodBody(controller, "ResolveTurnBackPlanarDelta");
-            string yawResolver = ExtractMethodBody(controller, "ResolveTurnBackYawDelta");
+            string resolverBody = ExtractMethodBody(resolver, "Resolve", "AnimationMotionProfileSample bakedSample");
+            string bakedGuard = ExtractMethodBody(resolver, "RequiresBakedMotion");
+            string planarResolver = ExtractMethodBody(resolver, "ResolvePlanarDelta");
+            string yawResolver = ExtractMethodBody(resolver, "ResolveYawDelta");
 
-            Assert.That(body, Does.Contain("motionWindowActive"));
+            Assert.That(body, Does.Contain("TurnBackMotionResolver.Resolve"));
+            Assert.That(resolverBody, Does.Contain("motionWindowActive"));
             Assert.That(body, Does.Not.Contain("RequiresTurnBackRuntimeRootDelta"));
+            Assert.That(resolverBody, Does.Not.Contain("RequiresTurnBackRuntimeRootDelta"));
             Assert.That(body, Does.Not.Contain("RuntimeRootDelta"));
+            Assert.That(resolverBody, Does.Not.Contain("RuntimeRootDelta"));
             Assert.That(body, Does.Not.Contain("ConsumeRootMotionDelta"));
+            Assert.That(resolverBody, Does.Not.Contain("ConsumeRootMotionDelta"));
             Assert.That(body, Does.Not.Contain("TryResolveTurnBackAuthoredRootMotionDelta"));
             Assert.That(body, Does.Not.Contain("ResolveAuthoredRootMotionSource"));
             Assert.That(controller, Does.Not.Contain("ResolveRootMotionSource"));
@@ -3191,7 +3554,7 @@ namespace Tests.Editor
             Assert.That(controller, Does.Not.Contain("ILocomotionAuthoredRootMotionSource"));
             Assert.That(controller, Does.Not.Contain("AnimationClipRootMotionSampler"));
             Assert.That(body, Does.Contain("? ResolveTurnBackBakedMotionSample"));
-            Assert.That(body, Does.Contain("RequiresTurnBackBakedMotion(in policy)"));
+            Assert.That(body, Does.Contain("TurnBackMotionResolver.RequiresBakedMotion(in policy)"));
             Assert.That(bakedGuard, Does.Contain("TurnBackMotionYawSource.BakedMotionProfile"));
             Assert.That(bakedGuard, Does.Contain("TurnBackMotionTranslationSource.BakedMotionProfile"));
             Assert.That(planarResolver, Does.Not.Contain("RuntimeRootDelta"));

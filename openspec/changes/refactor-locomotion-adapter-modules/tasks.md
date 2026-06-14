@@ -13,18 +13,18 @@
 - [ ] 2.3 新增静态测试：拆出的 Locomotion 模块不注册 simulation tick driver。
 - [ ] 2.4 新增静态测试：退役直驱 API 不参与正式 runtime 调用链。
 - [ ] 2.5 新增日志 key 测试：关键 Locomotion / TurnBack eventId 在迁移前后保持。
-- [ ] 2.6 新增 characterization 测试：同一输入和 snapshot 下，拆分前后 decision facts 一致。
+- [ ] 2.6 新增 characterization 测试：同一输入和 snapshot 下，拆分前后 locomotion facts 一致。
 - [ ] 2.7 新增 characterization 测试：同一 TurnBack 输入下，拆分前后 intent 结果一致。
 - [ ] 2.8 新增 characterization 测试：同一 state frame 和 playback facts 下，拆分前后 motion facts 一致。
 
-## 3. Decision frame 模块
-- [ ] 3.1 创建 `LocomotionDecisionFrameBuilder` 或等价纯逻辑类型。
+## 3. Locomotion facts 模块
+- [ ] 3.1 创建 `LocomotionFactsBuilder` 或等价纯逻辑类型。
 - [ ] 3.2 将移动意图解析迁移到 builder。
 - [ ] 3.3 将相机/facing 空间事实解析迁移到 builder，Unity 引用仍由 controller 传入纯数据。
-- [ ] 3.4 将 decision facts 派生迁移到 builder。
+- [ ] 3.4 将 locomotion facts 派生迁移到 builder。
 - [ ] 3.5 将 state machine context 构建迁移到 builder。
 - [ ] 3.6 保持 `PlayerLocomotionController.TryPrepareDecisionFrame` 的外部调用形状。
-- [ ] 3.7 运行 decision frame 定向测试。
+- [ ] 3.7 运行 locomotion facts 定向测试。
 
 ## 4. TurnBack intent 模块
 - [ ] 4.1 创建 `TurnBackIntentResolver` 或等价纯逻辑类型。
@@ -60,7 +60,7 @@
 ## 8. Diagnostics 模块
 - [ ] 8.1 创建 `LocomotionDiagnostics` 或等价日志提交类型。
 - [ ] 8.2 迁移 state output probe 日志。
-- [ ] 8.3 迁移 decision facts 日志。
+- [ ] 8.3 迁移 locomotion facts 日志。
 - [ ] 8.4 迁移 TurnBack intent / root motion / state policy 日志。
 - [ ] 8.5 迁移 retired direct tick 和 missing config 错误日志。
 - [ ] 8.6 保持现有 eventId、level 和关键消息文本。

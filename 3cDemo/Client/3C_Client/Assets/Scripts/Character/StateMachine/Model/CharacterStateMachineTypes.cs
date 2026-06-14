@@ -25,9 +25,70 @@ namespace ThirdPersonCharacterStateMachine
     }
 
     [Serializable]
+    public readonly struct TimelineFactId : IEquatable<TimelineFactId>
+    {
+        readonly string value;
+
+        public TimelineFactId(string value)
+        {
+            this.value = Normalize(value);
+        }
+
+        public string Value => value ?? string.Empty;
+        public bool IsValid => !string.IsNullOrWhiteSpace(Value);
+
+        public bool Equals(TimelineFactId other)
+        {
+            return string.Equals(Value, other.Value, StringComparison.Ordinal);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is TimelineFactId other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return StringComparer.Ordinal.GetHashCode(Value);
+        }
+
+        public override string ToString()
+        {
+            return Value;
+        }
+
+        public static bool operator ==(TimelineFactId left, TimelineFactId right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(TimelineFactId left, TimelineFactId right)
+        {
+            return !left.Equals(right);
+        }
+
+        public static string Normalize(string raw)
+        {
+            return string.IsNullOrWhiteSpace(raw) ? string.Empty : raw.Trim();
+        }
+    }
+
+    public static class TimelineFactIds
+    {
+        public static readonly TimelineFactId InputLocked = new TimelineFactId("InputLocked");
+        public static readonly TimelineFactId MotionActive = new TimelineFactId("MotionActive");
+        public static readonly TimelineFactId MotionLocked = new TimelineFactId("MotionLocked");
+        public static readonly TimelineFactId NaturalExitReady = new TimelineFactId("NaturalExitReady");
+        public static readonly TimelineFactId CancelableToDodge = new TimelineFactId("CancelableToDodge");
+        public static readonly TimelineFactId ComboInputOpen = new TimelineFactId("ComboInputOpen");
+        public static readonly TimelineFactId TurnBackEnterOpen = new TimelineFactId("TurnBackEnterOpen");
+    }
+
+    [Serializable]
     public struct StateTimelineWindowDefinition
     {
         [SerializeField] string windowId;
+        [SerializeField] string factId;
         [SerializeField] StateTimelineWindowKind kind;
         [SerializeField] StateTimelineTimeDomain timeDomain;
         [SerializeField] float start;
@@ -50,9 +111,11 @@ namespace ThirdPersonCharacterStateMachine
             int minPriority = 0,
             bool force = false,
             ActionRequestType requestType = ActionRequestType.None,
-            string note = "")
+            string note = "",
+            string factId = "")
         {
             this.windowId = (windowId ?? string.Empty).Trim();
+            this.factId = TimelineFactId.Normalize(factId);
             this.kind = kind;
             this.timeDomain = timeDomain;
             this.start = start;
@@ -66,6 +129,7 @@ namespace ThirdPersonCharacterStateMachine
         }
 
         public string WindowId => windowId ?? string.Empty;
+        public TimelineFactId FactId => new TimelineFactId(factId);
         public StateTimelineWindowKind Kind => kind;
         public StateTimelineTimeDomain TimeDomain => timeDomain;
         public float Start => start;
@@ -164,7 +228,9 @@ namespace ThirdPersonCharacterStateMachine
             int minPriority,
             bool force,
             string activeWindowIds,
-            string requestWindowIds)
+            string requestWindowIds,
+            string activeFactIds = "",
+            string requestFactIds = "")
         {
             StateId = stateId;
             NormalizedTime = Mathf.Max(0f, normalizedTime);
@@ -180,6 +246,8 @@ namespace ThirdPersonCharacterStateMachine
             Force = force;
             ActiveWindowIds = activeWindowIds ?? string.Empty;
             RequestWindowIds = requestWindowIds ?? string.Empty;
+            ActiveFactIds = activeFactIds ?? string.Empty;
+            RequestFactIds = requestFactIds ?? string.Empty;
         }
 
         public CharacterStateId StateId { get; }
@@ -196,12 +264,53 @@ namespace ThirdPersonCharacterStateMachine
         public bool Force { get; }
         public string ActiveWindowIds { get; }
         public string RequestWindowIds { get; }
-        public bool HasActiveWindow => MotionWindowActive || InputLockWindowActive || InterruptWindowActive || ExitWindowActive || !string.IsNullOrEmpty(ActiveWindowIds);
-        public bool HasRequestWindow => !string.IsNullOrEmpty(RequestWindowIds);
+        public string ActiveFactIds { get; }
+        public string RequestFactIds { get; }
+        public bool HasActiveWindow => MotionWindowActive || InputLockWindowActive || InterruptWindowActive || ExitWindowActive || !string.IsNullOrEmpty(ActiveWindowIds) || !string.IsNullOrEmpty(ActiveFactIds);
+        public bool HasRequestWindow => !string.IsNullOrEmpty(RequestWindowIds) || !string.IsNullOrEmpty(RequestFactIds);
+
+        public bool Contains(TimelineFactId factId)
+        {
+            return ContainsId(ActiveFactIds, factId.Value);
+        }
+
+        public bool ContainsRequestFact(TimelineFactId factId)
+        {
+            return ContainsId(RequestFactIds, factId.Value);
+        }
+
+        public IEnumerable<TimelineFactId> EnumerateActiveFacts()
+        {
+            if (string.IsNullOrWhiteSpace(ActiveFactIds))
+                yield break;
+
+            string[] ids = ActiveFactIds.Split(',');
+            for (int i = 0; i < ids.Length; i++)
+            {
+                TimelineFactId factId = new TimelineFactId(ids[i]);
+                if (factId.IsValid)
+                    yield return factId;
+            }
+        }
 
         public static StateTimelineWindowFacts None(CharacterStateId stateId)
         {
-            return new StateTimelineWindowFacts(stateId, 0f, false, 0f, false, false, false, false, 0, 0, 0, false, string.Empty, string.Empty);
+            return new StateTimelineWindowFacts(stateId, 0f, false, 0f, false, false, false, false, 0, 0, 0, false, string.Empty, string.Empty, string.Empty, string.Empty);
+        }
+
+        static bool ContainsId(string ids, string required)
+        {
+            if (string.IsNullOrWhiteSpace(ids) || string.IsNullOrWhiteSpace(required))
+                return false;
+
+            string[] split = ids.Split(',');
+            for (int i = 0; i < split.Length; i++)
+            {
+                if (string.Equals(split[i].Trim(), required, StringComparison.Ordinal))
+                    return true;
+            }
+
+            return false;
         }
     }
 

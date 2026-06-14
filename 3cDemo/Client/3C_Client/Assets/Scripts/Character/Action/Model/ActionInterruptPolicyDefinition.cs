@@ -12,6 +12,7 @@ namespace ThirdPersonAction
         public float windowStart;
         public float windowEnd;
         public string windowId;
+        public string requiredFactId;
         public bool force;
         public string note;
 
@@ -24,6 +25,7 @@ namespace ThirdPersonAction
             float windowEnd = 0f,
             bool force = false,
             string windowId = "",
+            string requiredFactId = "",
             string note = "")
         {
             this.fromStateId = fromStateId ?? string.Empty;
@@ -33,6 +35,7 @@ namespace ThirdPersonAction
             this.windowStart = windowStart;
             this.windowEnd = windowEnd;
             this.windowId = windowId ?? string.Empty;
+            this.requiredFactId = requiredFactId ?? string.Empty;
             this.force = force;
             this.note = note ?? string.Empty;
         }
@@ -44,6 +47,7 @@ namespace ThirdPersonAction
         public float WindowStart => windowStart;
         public float WindowEnd => windowEnd;
         public string WindowId => windowId ?? string.Empty;
+        public string RequiredFactId => requiredFactId ?? string.Empty;
         public bool Force => force;
         public string Note => note ?? string.Empty;
     }

@@ -49,6 +49,22 @@ namespace ThirdPersonAction.Tests
             Assert.AreEqual(0.18f, policies[0].WindowStart);
             Assert.AreEqual(0.42f, policies[0].WindowEnd);
             Assert.True(policies[0].Force);
+            Assert.False(policies[0].RequiredFactId.IsValid);
+        }
+
+        [Test]
+        public void DefinitionCompilesRequiredFactId()
+        {
+            ActionInterruptPolicyDefinition definition = Definition(
+                "Action.Attack01",
+                "Action.Dodge",
+                30,
+                requiredFactId: TimelineFactIds.CancelableToDodge.Value);
+
+            var policies = ActionInterruptPolicySetCompiler.Compile(new ActionInterruptPolicySet(new[] { definition }));
+
+            Assert.AreEqual(TimelineFactIds.CancelableToDodge, policies[0].RequiredFactId);
+            Assert.True(policies[0].RequiresTimelineFact);
         }
 
         [Test]
@@ -168,7 +184,8 @@ namespace ThirdPersonAction.Tests
                             StateTimelineWindowKind.Exit,
                             StateTimelineTimeDomain.Normalized,
                             0.8f,
-                            1f)
+                            1f,
+                            factId: TimelineFactIds.NaturalExitReady.Value)
                     })
             };
 
@@ -198,7 +215,8 @@ namespace ThirdPersonAction.Tests
                             StateTimelineWindowKind.Exit,
                             StateTimelineTimeDomain.Normalized,
                             0.8f,
-                            1f)
+                            1f,
+                            factId: TimelineFactIds.NaturalExitReady.Value)
                     })
             };
 
@@ -229,7 +247,101 @@ namespace ThirdPersonAction.Tests
                             StateTimelineTimeDomain.Normalized,
                             0.2f,
                             0.6f,
-                            requestType: ActionRequestType.Dodge)
+                            requestType: ActionRequestType.Dodge,
+                            factId: TimelineFactIds.CancelableToDodge.Value)
+                    })
+            };
+
+            ActionInterruptPolicyValidationResult result = ActionInterruptPolicyValidator.Validate(set, timelinePolicies);
+
+            Assert.False(result.HasErrors);
+        }
+
+        [Test]
+        public void ValidatorReportsMissingTimelineFactReference()
+        {
+            ActionInterruptPolicySet set = new ActionInterruptPolicySet(new[]
+            {
+                Definition("Action.Attack01", "Action.Dodge", 30, requiredFactId: TimelineFactIds.CancelableToDodge.Value)
+            });
+            StateTimelinePolicyDefinition[] timelinePolicies =
+            {
+                new StateTimelinePolicyDefinition(
+                    "Action.Attack01",
+                    0,
+                    0,
+                    new[]
+                    {
+                        new StateTimelineWindowDefinition(
+                            "attack-exit",
+                            StateTimelineWindowKind.Exit,
+                            StateTimelineTimeDomain.Normalized,
+                            0.8f,
+                            1f,
+                            factId: TimelineFactIds.NaturalExitReady.Value)
+                    })
+            };
+
+            ActionInterruptPolicyValidationResult result = ActionInterruptPolicyValidator.Validate(set, timelinePolicies);
+
+            Assert.True(result.HasErrors);
+            Assert.That(result.DescribeErrors(), Does.Contain("missing timeline fact"));
+        }
+
+        [Test]
+        public void ValidatorRejectsPolicyReferenceToNaturalExitFact()
+        {
+            ActionInterruptPolicySet set = new ActionInterruptPolicySet(new[]
+            {
+                Definition("Action.Attack01", "Action.Dodge", 30, requiredFactId: TimelineFactIds.NaturalExitReady.Value)
+            });
+            StateTimelinePolicyDefinition[] timelinePolicies =
+            {
+                new StateTimelinePolicyDefinition(
+                    "Action.Attack01",
+                    0,
+                    0,
+                    new[]
+                    {
+                        new StateTimelineWindowDefinition(
+                            "attack-exit",
+                            StateTimelineWindowKind.Exit,
+                            StateTimelineTimeDomain.Normalized,
+                            0.8f,
+                            1f,
+                            factId: TimelineFactIds.NaturalExitReady.Value)
+                    })
+            };
+
+            ActionInterruptPolicyValidationResult result = ActionInterruptPolicyValidator.Validate(set, timelinePolicies);
+
+            Assert.True(result.HasErrors);
+            Assert.That(result.DescribeErrors(), Does.Contain("non-request timeline fact"));
+        }
+
+        [Test]
+        public void ValidatorAcceptsPolicyReferenceToRequestFact()
+        {
+            ActionInterruptPolicySet set = new ActionInterruptPolicySet(new[]
+            {
+                Definition("Action.Attack01", "Action.Dodge", 30, requiredFactId: TimelineFactIds.CancelableToDodge.Value)
+            });
+            StateTimelinePolicyDefinition[] timelinePolicies =
+            {
+                new StateTimelinePolicyDefinition(
+                    "Action.Attack01",
+                    0,
+                    0,
+                    new[]
+                    {
+                        new StateTimelineWindowDefinition(
+                            "attack-dodge-cancel",
+                            StateTimelineWindowKind.Cancel,
+                            StateTimelineTimeDomain.Normalized,
+                            0.2f,
+                            0.6f,
+                            requestType: ActionRequestType.Dodge,
+                            factId: TimelineFactIds.CancelableToDodge.Value)
                     })
             };
 
@@ -280,6 +392,7 @@ namespace ThirdPersonAction.Tests
                 turnBackPolicies.Select(policy => policy.FromState.Value).ToArray());
             Assert.True(turnBackPolicies.All(policy => policy.MinPriority == 20));
             Assert.True(turnBackPolicies.All(policy => policy.WindowId == "turnback-enter"));
+            Assert.True(turnBackPolicies.All(policy => policy.RequiredFactId == TimelineFactIds.TurnBackEnterOpen));
         }
 
         [Test]
@@ -395,9 +508,10 @@ namespace ThirdPersonAction.Tests
             float windowStart = 0f,
             float windowEnd = 0f,
             bool force = false,
-            string windowId = "")
+            string windowId = "",
+            string requiredFactId = "")
         {
-            return new ActionInterruptPolicyDefinition(from, target, minPriority, timingRule, windowStart, windowEnd, force, windowId);
+            return new ActionInterruptPolicyDefinition(from, target, minPriority, timingRule, windowStart, windowEnd, force, windowId, requiredFactId);
         }
 
         static void SetAssetPolicies(ActionInterruptPolicySetSO asset, ActionInterruptPolicyDefinition[] policies)

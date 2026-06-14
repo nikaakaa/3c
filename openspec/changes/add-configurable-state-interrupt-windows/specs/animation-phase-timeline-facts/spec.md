@@ -1,6 +1,6 @@
 ## ADDED Requirements
 ### Requirement: 通用状态 Timeline Window Facts
-系统 MUST 将状态 timeline policy 和当前状态播放/计时进度采样为通用 window facts。facts MUST 表达 state id、normalized time、elapsed seconds、活跃窗口、窗口标签和窗口携带的 priority/resistance 信息，并 MUST 保持纯数据边界。
+系统 MUST 将状态 timeline policy 和当前状态播放/计时进度采样为通用 window facts。facts MUST 表达 state id、normalized time、elapsed seconds、活跃窗口、稳定 fact id 和窗口携带的 priority/resistance 信息，并 MUST 保持纯数据边界。
 
 #### Scenario: TurnBack motion window facts
 - **GIVEN** 当前状态为 `FullBody/Locomotion/TurnBack`
@@ -19,7 +19,13 @@
 - **GIVEN** 当前状态位于 interrupt/cancel window 内
 - **WHEN** timeline sampler 采样
 - **THEN** window facts MUST 标记对应 request kind 在当前窗口可被仲裁
+- **AND** MUST 输出 `CancelableToDodge`、`ComboInputOpen` 或等价 typed fact id
 - **AND** 仲裁入口 MUST 能读取该事实，而不是直接读取播放层对象
+
+#### Scenario: typed facts 可枚举
+- **WHEN** 诊断、测试或未来编辑器读取 active facts
+- **THEN** 系统 MUST 能枚举当前 active fact id
+- **AND** MUST 能区分 input lock、motion、natural exit、cancel、combo 等事实语义
 
 ### Requirement: Timeline Facts 不拥有业务裁决
 timeline sampler MUST 只负责把配置和进度转换为 facts，不得直接切换状态、接受请求、播放动画或提交位移。priority、resistance、force 和 request 选择 MUST 由状态请求仲裁入口处理。

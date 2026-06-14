@@ -2,7 +2,6 @@ using ThirdPersonAnimation;
 using ThirdPersonCamera;
 using ThirdPersonCharacterConfig;
 using ThirdPersonCharacterStateMachine;
-using ThirdPersonDiagnostics;
 using ThirdPersonInput;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -13,8 +12,6 @@ namespace ThirdPersonMovement
     [DisallowMultipleComponent]
     public sealed class PlayerLocomotionController : MonoBehaviour
     {
-        const string TurnBackRootMotionLogKeyword = "TURNBACK_RM_CHAIN";
-        const string TurnBackDirectionDebugChannel = "Locomotion.turnback-direction-debug";
         [SerializeField] MonoBehaviour inputSourceBehaviour;
         [FormerlySerializedAs("motionDriver")]
         [SerializeField] MonoBehaviour motionExecutorBehaviour;
@@ -33,10 +30,8 @@ namespace ThirdPersonMovement
         [SerializeField, Min(0f)] float debugCameraLogInterval = 0.1f;
 
         const float DirectionSqrEpsilon = 0.000001f;
-        const float TurnBackIntentMinAngle = 120f;
-        const int TurnBackIntentWindowSteps = 2;
 
-        readonly BasicLocomotionPipeline pipeline = new BasicLocomotionPipeline();
+        readonly LocomotionFramePipeline framePipeline = new LocomotionFramePipeline();
         readonly CharacterRuntimeBlackboard runtimeBlackboard = new CharacterRuntimeBlackboard();
         IBasicLocomotionInputSource inputSource;
         IBasicLocomotionMotionExecutor motionExecutor;
@@ -117,45 +112,21 @@ namespace ThirdPersonMovement
 
             if (HasEnabledLegacyPlayer())
             {
-                 RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                     RuntimeDiagnosticLogCategory.Locomotion,
-                     RuntimeDiagnosticLogLevel.Error,
-                     "legacy-player-enabled",
-                     "",
-                     "",
-                     0,
-                     Time.frameCount,
-                     "Legacy Player path is enabled. Player locomotion is disabled to avoid double movement input."));
+                LocomotionDiagnostics.SubmitLegacyPlayerEnabled();
                 enabled = false;
                 return;
             }
 
             if (inputSource == null)
             {
-                 RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                     RuntimeDiagnosticLogCategory.Locomotion,
-                     RuntimeDiagnosticLogLevel.Error,
-                     "input-source-missing",
-                     "",
-                     "",
-                     0,
-                     Time.frameCount,
-                     "Locomotion input source is missing. Player locomotion cannot read movement input."));
+                LocomotionDiagnostics.SubmitInputSourceMissing();
                 enabled = false;
                 return;
             }
 
             if (motionExecutor == null)
             {
-                 RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                     RuntimeDiagnosticLogCategory.Locomotion,
-                     RuntimeDiagnosticLogLevel.Error,
-                     "motion-executor-missing",
-                     "",
-                     "",
-                     0,
-                     Time.frameCount,
-                     "Locomotion motion executor is missing. Player locomotion cannot enter the main movement path."));
+                LocomotionDiagnostics.SubmitMotionExecutorMissing();
                 enabled = false;
                 return;
             }
@@ -313,33 +284,29 @@ namespace ThirdPersonMovement
                 return false;
             }
 
-            BasicLocomotionInputSnapshot input = decisionFrame.Input;
-            MovementInputIntent pendingIntent = decisionFrame.Intent;
-            BasicMovementPhase currentPhase = runner.Snapshot.LocomotionPhase;
-            BasicMovementGait frameGait = decisionFrame.FrameGait;
-            BasicMovementPhaseFacts phaseFacts = decisionFrame.PhaseFacts;
-            LocomotionDecisionFacts decisionFacts = decisionFrame.Facts;
-            CharacterRuntimeBlackboardSnapshot blackboardBeforeTick = runtimeBlackboard.Snapshot;
-            CharacterStateMachineContext context = BuildStateMachineContext(
-                in input,
+            BasicLocomotionInputSnapshot frameInput = decisionFrame.Input;
+            BasicMovementSettings settings = decisionFrame.Settings;
+            CharacterRuntimeBlackboardSnapshot blackboardSnapshot = runtimeBlackboard.Snapshot;
+            LocomotionFramePipelineInput pipelineInput = BuildFramePipelineInput(
+                in frameInput,
                 currentStep,
-                in decisionFacts,
+                runner.Snapshot.LocomotionPhase,
+                runner.StateTime,
+                in settings,
                 in inputRequest,
-                in blackboardBeforeTick);
-            bool runLatchBeforeStateTick = runLatchActive;
-            CharacterStateMachineFrame stateFrame = runner.Tick(in context);
-            ConsumeTurnBackIntentIfEntered(in decisionFacts, in stateFrame, currentStep);
-            ApplyStateMachineOutputs(in stateFrame);
-            stateDecision = new LocomotionStateDecisionFrame(
-                decisionFrame,
-                stateFrame,
-                currentPhase,
-                frameGait,
-                pendingIntent,
-                phaseFacts,
-                decisionFacts,
-                blackboardBeforeTick,
-                runLatchBeforeStateTick);
+                in blackboardSnapshot);
+            if (!framePipeline.TryEvaluatePreparedGameplayDecision(
+                    in decisionFrame,
+                    runner,
+                    in pipelineInput,
+                    out stateDecision,
+                    out LocomotionFramePipelineResult pipelineResult))
+            {
+                return false;
+            }
+
+            LocomotionFrameRuntimeState runtimeState = pipelineResult.RuntimeState;
+            ApplyFrameRuntimeState(in runtimeState);
             return true;
         }
 
@@ -356,42 +323,29 @@ namespace ThirdPersonMovement
                 return false;
             }
 
-            LocomotionDecisionFrame decisionFrame = stateDecision.DecisionFrame;
-            LocomotionDecisionFacts decisionFacts = stateDecision.DecisionFacts;
-            stateFrame = stateDecision.StateFrame;
-            BasicLocomotionInputSnapshot input = decisionFrame.Input;
-            BasicMovementGait frameGait = stateDecision.FrameGait;
-            CharacterRuntimeBlackboardSnapshot blackboardBeforeTick = stateDecision.BlackboardBeforeTick;
-            BasicMovementMotionFacts motionFacts = ResolveMotionFacts(in stateFrame, frameGait, currentStep);
-            BasicMovementSettings settings = decisionFrame.Settings;
-            LocomotionDecisionFacts motionDecisionFacts = ResolveMotionDecisionFacts(in decisionFacts, in stateFrame);
-            currentFrame = pipeline.Tick(in input, in settings, in motionDecisionFacts, stateFrame.LocomotionPhase, motionFacts, frameGait);
-            currentPhaseTime = stateFrame.Snapshot.StateTime;
-            activeStatePath = stateFrame.Snapshot.ActivePath;
-            currentIntent = currentFrame.Intent;
-            UpdatePhaseGaitMemory(stateFrame.LocomotionPhase, frameGait);
-            LogStateMachineOutputProbe(
-                currentStep,
-                stateDecision.PhaseBeforeTick,
+            CharacterStateMachineFrame stateFrameForMotion = stateDecision.StateFrame;
+            BasicMovementMotionFacts motionFacts = ResolveMotionFacts(
+                in stateFrameForMotion,
                 stateDecision.FrameGait,
-                stateDecision.PendingIntent,
-                stateDecision.PhaseFacts,
-                stateDecision.RunLatchBeforeStateTick,
-                in stateFrame);
-            LogTurnBackFrameSummary(
-                currentStep,
-                stateDecision.PhaseBeforeTick,
-                in decisionFacts,
-                in stateFrame,
-                in motionFacts,
-                in currentFrame);
-            if (currentIntent.HasMoveIntent)
-                lastMovingGait = currentIntent.Gait;
+                currentStep);
+            AnimationPhasePlaybackProgress progress = ResolveCurrentAnimationPlaybackProgress();
+            LocomotionFrameRuntimeState runtimeState = CaptureFrameRuntimeState();
+            if (!framePipeline.TryBuildMotionFromStateDecision(
+                    in stateDecision,
+                    currentStep,
+                    in motionFacts,
+                    in runtimeState,
+                    in progress,
+                    out frame,
+                    out stateFrame,
+                    out LocomotionFramePipelineResult pipelineResult))
+            {
+                return false;
+            }
 
-            currentWorldDirection = currentFrame.WorldDirection;
-            WriteLocomotionFacts(in currentFrame, in stateFrame, in blackboardBeforeTick, currentStep);
-            UpdatePreviousWorldDirection(in currentFrame);
-            frame = currentFrame;
+            ApplyFramePipelineResult(in pipelineResult);
+            CharacterRuntimeLocomotionFacts locomotionFacts = pipelineResult.LocomotionFacts;
+            runtimeBlackboard.WriteLocomotionFacts(in locomotionFacts);
             return true;
         }
 
@@ -457,15 +411,61 @@ namespace ThirdPersonMovement
                 lastMovingGait = BasicMovementGait.Walk;
         }
 
-        BasicMovementGait ResolveFrameGait(BasicMovementPhase currentPhase, in MovementInputIntent pendingIntent)
+        LocomotionFramePipelineInput BuildFramePipelineInput(
+            in BasicLocomotionInputSnapshot input,
+            int currentStep,
+            BasicMovementPhase currentPhase,
+            float currentPhaseTime,
+            in BasicMovementSettings baseSettings,
+            in CharacterInputRequestFact inputRequest,
+            in CharacterRuntimeBlackboardSnapshot blackboardSnapshot)
         {
-            if (pendingIntent.HasMoveIntent)
-                return pendingIntent.Gait;
+            return new LocomotionFramePipelineInput(
+                input,
+                currentStep,
+                currentPhase,
+                currentPhaseTime,
+                baseSettings,
+                inputRequest,
+                blackboardSnapshot,
+                CaptureFrameRuntimeState(),
+                ActiveStatePath);
+        }
 
-            if (currentPhase == BasicMovementPhase.MoveStop && hasActiveMoveStopGait)
-                return activeMoveStopGait;
+        LocomotionFrameRuntimeState CaptureFrameRuntimeState()
+        {
+            return new LocomotionFrameRuntimeState(
+                currentIntent,
+                lastMovingGait,
+                hasActiveMoveStopGait,
+                activeMoveStopGait,
+                runLatchActive,
+                previousWorldDirection,
+                pendingTurnBackIntent);
+        }
 
-            return lastMovingGait;
+        void ApplyFrameRuntimeState(in LocomotionFrameRuntimeState state)
+        {
+            currentIntent = state.CurrentIntent;
+            lastMovingGait = state.LastMovingGait;
+            hasActiveMoveStopGait = state.HasActiveMoveStopGait;
+            activeMoveStopGait = state.ActiveMoveStopGait;
+            runLatchActive = state.RunLatchActive;
+            previousWorldDirection = state.PreviousWorldDirection;
+            pendingTurnBackIntent = state.PendingTurnBackIntent;
+        }
+
+        void ApplyFramePipelineResult(in LocomotionFramePipelineResult result)
+        {
+            LocomotionFrameRuntimeState runtimeState = result.RuntimeState;
+            ApplyFrameRuntimeState(in runtimeState);
+            if (!result.HasFrame)
+                return;
+
+            currentFrame = result.Frame;
+            currentPhaseTime = result.CurrentPhaseTime;
+            activeStatePath = result.ActiveStatePath;
+            currentWorldDirection = result.CurrentWorldDirection;
         }
 
         public bool TryPrepareDecisionFrame(
@@ -490,31 +490,41 @@ namespace ThirdPersonMovement
 
             BasicMovementSettings baseSettings = BasicMovementSettings.FromConfig(movementConfig);
             AdvanceAnimationPlaybackProgress(input.DeltaTime);
-            MovementInputIntent pendingIntent = ResolveMovementIntent(in input, in baseSettings);
             BasicMovementPhase currentPhase = runner.Snapshot.LocomotionPhase;
-            BasicMovementGait frameGait = ResolveFrameGait(currentPhase, in pendingIntent);
-            BasicMovementSettings settings = ResolveMovementSettings(frameGait, in baseSettings);
-            BasicMovementPhaseFacts phaseFacts = ResolvePhaseFacts(currentPhase, runner.StateTime, frameGait, input.DeltaTime, in settings);
-            bool wantsRun = pendingIntent.HasMoveIntent && pendingIntent.Gait == BasicMovementGait.Run || input.RunHeld || runLatchActive;
-            BasicLocomotionInputSnapshot resolvedInput = new BasicLocomotionInputSnapshot(
-                input.DeltaTime,
-                input.Move,
-                input.Look,
-                wantsRun);
-            LocomotionSpatialFacts spatialFacts = ResolveSpatialFacts(in input, in pendingIntent);
-            LocomotionDecisionFacts decisionFacts = DeriveLocomotionDecisionFacts(
-                in pendingIntent,
-                frameGait,
+            CharacterInputRequestFact inputRequest = default;
+            CharacterRuntimeBlackboardSnapshot blackboardSnapshot = runtimeBlackboard.Snapshot;
+            LocomotionFramePipelineInput pipelineInput = BuildFramePipelineInput(
+                in input,
+                currentStep,
                 currentPhase,
-                in phaseFacts,
-                in spatialFacts,
-                currentStep);
-            decisionFrame = new LocomotionDecisionFrame(
-                resolvedInput,
-                settings,
-                pendingIntent,
-                decisionFacts,
-                frameGait);
+                runner.StateTime,
+                in baseSettings,
+                in inputRequest,
+                in blackboardSnapshot);
+            LocomotionFramePrepareFacts prepareFacts = framePipeline.ResolvePrepareFacts(in pipelineInput);
+            BasicMovementSettings settings = ResolveMovementSettings(prepareFacts.FrameGait, in baseSettings);
+            BasicMovementPhaseFacts phaseFacts = ResolvePhaseFacts(
+                currentPhase,
+                runner.StateTime,
+                prepareFacts.FrameGait,
+                input.DeltaTime,
+                in settings);
+            MovementInputIntent prepareIntent = prepareFacts.Intent;
+            LocomotionSpatialFacts spatialFacts = ResolveSpatialFacts(in input, in prepareIntent);
+            if (!framePipeline.TryPrepareDecisionFrame(
+                    in pipelineInput,
+                    in prepareFacts,
+                    in settings,
+                    in phaseFacts,
+                    in spatialFacts,
+                    out decisionFrame,
+                    out LocomotionFramePipelineResult pipelineResult))
+            {
+                return false;
+            }
+
+            LocomotionFrameRuntimeState runtimeState = pipelineResult.RuntimeState;
+            ApplyFrameRuntimeState(in runtimeState);
             return true;
         }
 
@@ -528,12 +538,6 @@ namespace ThirdPersonMovement
 
             localDecisionStep++;
             return localDecisionStep;
-        }
-
-        MovementInputIntent ResolveMovementIntent(in BasicLocomotionInputSnapshot input, in BasicMovementSettings baseSettings)
-        {
-            bool wantsRun = input.RunHeld || runLatchActive;
-            return MovementInputIntent.FromRaw(input.Move, baseSettings.InputDeadZone, wantsRun);
         }
 
         LocomotionSpatialFacts ResolveSpatialFacts(
@@ -556,161 +560,13 @@ namespace ThirdPersonMovement
 
             LogCameraInput(input.Move, input.Look);
 
-            return new LocomotionSpatialFacts(
+            return LocomotionFactsBuilder.BuildSpatialFacts(
+                in intent,
                 CameraRelativeMovementResolver.Resolve(intent, rollbackCameraBasisProvider),
                 ResolveFacingForward(),
                 rollbackCameraBasisProvider.CameraPlanarForward,
                 rollbackCameraBasisProvider.CameraPlanarRight);
         }
-
-        LocomotionDecisionFacts DeriveLocomotionDecisionFacts(
-            in MovementInputIntent intent,
-            BasicMovementGait frameGait,
-            BasicMovementPhase currentPhase,
-            in BasicMovementPhaseFacts phaseFacts,
-            in LocomotionSpatialFacts spatialFacts,
-            int currentStep)
-        {
-            LocomotionTurnBackIntent turnBackIntent = ResolveTurnBackIntent(
-                in intent,
-                frameGait,
-                currentPhase,
-                in spatialFacts,
-                currentStep);
-            LocomotionDecisionFacts facts = new LocomotionDecisionFacts(
-                intent,
-                frameGait,
-                phaseFacts,
-                spatialFacts,
-                turnBackIntent);
-            LogLocomotionDecisionFacts(currentStep, currentPhase, in facts);
-            return facts;
-        }
-
-        LocomotionTurnBackIntent ResolveTurnBackIntent(
-            in MovementInputIntent intent,
-            BasicMovementGait frameGait,
-            BasicMovementPhase currentPhase,
-            in LocomotionSpatialFacts spatialFacts,
-            int currentStep)
-        {
-            if (currentPhase == BasicMovementPhase.TurnBack)
-            {
-                ClearTurnBackIntent("already-turnback", currentStep);
-                return LocomotionTurnBackIntent.None;
-            }
-
-            if (!intent.HasMoveIntent)
-            {
-                if (frameGait == BasicMovementGait.Run && pendingTurnBackIntent.IsValidAt(currentStep))
-                {
-                    LogTurnBackIntent("hold-empty-input-window", currentStep, pendingTurnBackIntent);
-                    return pendingTurnBackIntent;
-                }
-
-                ClearTurnBackIntent("no-move-or-expired", currentStep);
-                return LocomotionTurnBackIntent.None;
-            }
-
-            if (frameGait != BasicMovementGait.Run || intent.Gait != BasicMovementGait.Run)
-            {
-                ClearTurnBackIntent("not-run-gait", currentStep);
-                return LocomotionTurnBackIntent.None;
-            }
-
-            if (!spatialFacts.HasWorldMoveDirection)
-            {
-                ClearTurnBackIntent("missing-spatial-facts", currentStep);
-                return LocomotionTurnBackIntent.None;
-            }
-
-            if (pendingTurnBackIntent.IsValidAt(currentStep) &&
-                Vector3.Angle(pendingTurnBackIntent.WorldMoveDirection, spatialFacts.WorldMoveDirection) <= 20f)
-            {
-                LogTurnBackIntent("hold-existing-reverse-input", currentStep, pendingTurnBackIntent);
-                return pendingTurnBackIntent;
-            }
-
-            if (!TryResolveTurnBackReferenceFacing(currentPhase, in spatialFacts, out Vector3 referenceFacing))
-            {
-                ClearTurnBackIntent("missing-facing-reference", currentStep);
-                return LocomotionTurnBackIntent.None;
-            }
-
-            float angle = Vector3.Angle(referenceFacing, spatialFacts.WorldMoveDirection);
-            if (angle >= TurnBackIntentMinAngle)
-            {
-                pendingTurnBackIntent = LocomotionTurnBackIntent.Capture(
-                    currentStep,
-                    TurnBackIntentWindowSteps,
-                    angle,
-                    TurnBackIntentMinAngle,
-                    spatialFacts.WorldMoveDirection,
-                    referenceFacing);
-                LogTurnBackIntent("captured", currentStep, pendingTurnBackIntent);
-                return pendingTurnBackIntent;
-            }
-
-            ClearTurnBackIntent("angle-below-threshold", currentStep, angle);
-            return LocomotionTurnBackIntent.None;
-        }
-
-        bool TryResolveTurnBackReferenceFacing(
-            BasicMovementPhase currentPhase,
-            in LocomotionSpatialFacts spatialFacts,
-            out Vector3 referenceFacing)
-        {
-            if (currentPhase != BasicMovementPhase.MoveLoop)
-                return TryNormalizePlanar(previousWorldDirection, out referenceFacing);
-
-            if (TryNormalizePlanar(previousWorldDirection, out Vector3 previousDirection) &&
-                spatialFacts.HasWorldMoveDirection &&
-                Vector3.Angle(previousDirection, spatialFacts.WorldMoveDirection) >= TurnBackIntentMinAngle)
-            {
-                referenceFacing = previousDirection;
-                return true;
-            }
-
-            if (spatialFacts.HasFacingForward)
-            {
-                referenceFacing = spatialFacts.FacingForward;
-                return true;
-            }
-
-            referenceFacing = Vector3.zero;
-            return false;
-        }
-
-        CharacterStateMachineContext BuildStateMachineContext(
-            in BasicLocomotionInputSnapshot input,
-            int currentStep,
-            in LocomotionDecisionFacts decisionFacts,
-            in CharacterInputRequestFact inputRequest,
-            in CharacterRuntimeBlackboardSnapshot blackboardBeforeTick)
-        {
-            return new CharacterStateMachineContext(
-                input.DeltaTime,
-                currentStep,
-                in decisionFacts,
-                inputRequest,
-                blackboardBeforeTick);
-        }
-
-        void ConsumeTurnBackIntentIfEntered(
-            in LocomotionDecisionFacts decisionFacts,
-            in CharacterStateMachineFrame stateFrame,
-            int currentStep)
-        {
-            if (stateFrame.LocomotionPhase != BasicMovementPhase.TurnBack)
-                return;
-
-            if (!decisionFacts.TurnBackIntent.IsValid)
-                return;
-
-            LogTurnBackIntent("consumed-enter-turnback", currentStep, decisionFacts.TurnBackIntent);
-            pendingTurnBackIntent = LocomotionTurnBackIntent.None;
-        }
-
 
         public void WriteActionFacts(in CharacterRuntimeActionFacts facts)
         {
@@ -719,13 +575,14 @@ namespace ThirdPersonMovement
 
         public void WriteAnimationFacts(in CharacterRuntimeAnimationFacts facts)
         {
-            runtimeBlackboard.WriteAnimationFacts(in facts);
+            CharacterRuntimeAnimationFacts resolvedFacts = ResolveLocomotionFootPhaseAnimationFacts(in facts);
+            runtimeBlackboard.WriteAnimationFacts(in resolvedFacts);
         }
 
         void WriteLocomotionAnimationFacts(int sourceStep)
         {
             CharacterRuntimeAnimationFacts previous = runtimeBlackboard.Snapshot.Animation;
-            runtimeBlackboard.WriteAnimationFacts(new CharacterRuntimeAnimationFacts(
+            WriteAnimationFacts(new CharacterRuntimeAnimationFacts(
                 CurrentAnimationPlaybackProgress,
                 CurrentAnimationName,
                 previous.ActionProgress,
@@ -733,23 +590,98 @@ namespace ThirdPersonMovement
                 sourceStep));
         }
 
-        void WriteLocomotionFacts(
-            in BasicLocomotionFrame frame,
-            in CharacterStateMachineFrame stateFrame,
-            in CharacterRuntimeBlackboardSnapshot previousBlackboard,
+        CharacterRuntimeAnimationFacts ResolveLocomotionFootPhaseAnimationFacts(in CharacterRuntimeAnimationFacts facts)
+        {
+            CharacterRuntimeAnimationFacts previous = runtimeBlackboard.Snapshot.Animation;
+            AnimationPhasePlaybackProgress locomotionProgress = facts.LocomotionProgress;
+            LocomotionFootPhaseSample currentSample = ResolveCurrentLocomotionFootPhaseSample(
+                in locomotionProgress,
+                facts.SourceStep);
+            LocomotionFootPhaseSample exitSample = ResolveLastLocomotionExitFootPhase(
+                in previous,
+                in facts,
+                facts.SourceStep);
+
+            return new CharacterRuntimeAnimationFacts(
+                facts.LocomotionProgress,
+                facts.LocomotionAnimationName,
+                facts.ActionProgress,
+                facts.ActionAnimationName,
+                currentSample,
+                exitSample,
+                facts.SourceStep);
+        }
+
+        LocomotionFootPhaseSample ResolveCurrentLocomotionFootPhaseSample(
+            in AnimationPhasePlaybackProgress progress,
             int sourceStep)
         {
-            runtimeBlackboard.WriteLocomotionFacts(new CharacterRuntimeLocomotionFacts(
-                stateFrame.LocomotionPhase,
-                frame.Command.Gait,
-                lastMovingGait,
-                hasActiveMoveStopGait,
-                activeMoveStopGait,
-                runLatchActive,
-                frame.WorldDirection,
-                frame.Intent.HasMoveIntent,
-                frame.Intent.Strength,
-                sourceStep));
+            BasicMovementGait gait = ResolvePlaybackGait(in progress, CurrentGait);
+            if (!progress.HasValidPlayback || string.IsNullOrWhiteSpace(progress.AliasKey))
+            {
+                return LocomotionFootPhaseSample.Invalid(
+                    progress.Phase,
+                    gait,
+                    progress.AliasKey,
+                    progress.NormalizedTime,
+                    sourceStep);
+            }
+
+            RunLocomotionAnimationConfigSO animationConfig = ResolveRunAnimationConfig();
+            LocomotionFootPhaseProfileSO profile = animationConfig != null
+                ? animationConfig.ResolveFootPhaseProfile(progress.Phase, gait, progress.AliasKey)
+                : null;
+            return LocomotionFootPhaseSampler.Sample(
+                profile,
+                progress.Phase,
+                gait,
+                progress.AliasKey,
+                progress.NormalizedTime,
+                sourceStep);
+        }
+
+        LocomotionFootPhaseSample ResolveLastLocomotionExitFootPhase(
+            in CharacterRuntimeAnimationFacts previous,
+            in CharacterRuntimeAnimationFacts current,
+            int sourceStep)
+        {
+            if (!IsTurnBackToRunLoopAnimationTransition(in previous, in current))
+                return previous.LastLocomotionExitFootPhase;
+
+            LocomotionFootPhaseSample previousSample = previous.CurrentLocomotionFootPhase;
+            if (previousSample.IsValid && previousSample.Phase == BasicMovementPhase.TurnBack)
+                return previousSample.WithSourceStep(sourceStep);
+
+            AnimationPhasePlaybackProgress progress = previous.LocomotionProgress;
+            BasicMovementGait gait = ResolvePlaybackGait(in progress, BasicMovementGait.Run);
+            return LocomotionFootPhaseSample.Invalid(
+                BasicMovementPhase.TurnBack,
+                gait,
+                progress.AliasKey,
+                progress.NormalizedTime,
+                sourceStep);
+        }
+
+        bool IsTurnBackToRunLoopAnimationTransition(
+            in CharacterRuntimeAnimationFacts previous,
+            in CharacterRuntimeAnimationFacts current)
+        {
+            bool previousWasTurnBack =
+                previous.LocomotionProgress.Phase == BasicMovementPhase.TurnBack ||
+                previous.CurrentLocomotionFootPhase.Phase == BasicMovementPhase.TurnBack;
+            if (!previousWasTurnBack)
+                return false;
+
+            AnimationPhasePlaybackProgress currentProgress = current.LocomotionProgress;
+            if (!currentProgress.HasValidPlayback || currentProgress.Phase != BasicMovementPhase.MoveLoop)
+                return false;
+
+            RunLocomotionAnimationConfigSO animationConfig = ResolveRunAnimationConfig();
+            string runLoopAlias = LocomotionAnimationAliasResolver.ResolveAliasKey(
+                animationConfig,
+                BasicMovementPhase.MoveLoop,
+                BasicMovementGait.Run);
+            return string.Equals(currentProgress.AliasKey, runLoopAlias, System.StringComparison.Ordinal);
         }
 
         public CharacterSimulationSnapshot CaptureSimulationSnapshot(SimulationTick tick)
@@ -765,14 +697,14 @@ namespace ThirdPersonMovement
                 false,
                 false);
             RollbackCameraBasisState cameraBasisState = CaptureRollbackCameraBasisState();
-            LocomotionRuntimeRollbackState locomotionRuntimeState = new LocomotionRuntimeRollbackState(
-                currentIntent,
+            LocomotionRuntimeRollbackState locomotionRuntimeState = LocomotionSnapshotAdapter.CaptureRuntimeState(
+                in currentIntent,
                 previousWorldDirection,
-                previousMotionPlaybackProgress,
+                in previousMotionPlaybackProgress,
                 hasPreviousMotionPlaybackProgress,
                 hasActiveMoveStopGait,
                 activeMoveStopGait,
-                pendingTurnBackIntent);
+                in pendingTurnBackIntent);
             MotionExecutorRollbackState motionExecutorState = motionExecutor is IMotionExecutorRollbackStateProvider stateProvider
                 ? stateProvider.CaptureRollbackState()
                 : new MotionExecutorRollbackState(
@@ -815,11 +747,15 @@ namespace ThirdPersonMovement
             if (motionExecutor is IMotionExecutorRollbackStateProvider stateProvider)
                 stateProvider.RestoreRollbackState(snapshot.MotionExecutorState);
             LocomotionRuntimeRollbackState locomotionState = snapshot.LocomotionRuntimeState;
-            previousWorldDirection = locomotionState.PreviousWorldDirection;
-            pendingTurnBackIntent = locomotionState.PendingTurnBackIntent;
-            hasActiveMoveStopGait = locomotionState.HasActiveMoveStopGait;
-            activeMoveStopGait = locomotionState.ActiveMoveStopGait;
-            currentIntent = locomotionState.CurrentIntent;
+            LocomotionSnapshotAdapter.ReadRuntimeState(
+                in locomotionState,
+                out currentIntent,
+                out previousWorldDirection,
+                out previousMotionPlaybackProgress,
+                out hasPreviousMotionPlaybackProgress,
+                out hasActiveMoveStopGait,
+                out activeMoveStopGait,
+                out pendingTurnBackIntent);
             activeStatePath = snapshot.FullBodyRestoreState.Snapshot.ActivePath;
             BasicMovementConfigSO movementConfig = ResolveMovementConfig();
             if (movementConfig == null)
@@ -838,9 +774,8 @@ namespace ThirdPersonMovement
             currentPhaseTime = ResolveSnapshotPhaseTime(in snapshot);
             AnimationPhasePlaybackProgress restoredProgress = ResolveSnapshotAnimationPlaybackProgress(in snapshot);
             RestoreAnimationPlaybackProgress(in restoredProgress, snapshot.LocomotionGait);
-            if (locomotionState.HasPreviousMotionPlaybackProgress)
+            if (hasPreviousMotionPlaybackProgress)
             {
-                previousMotionPlaybackProgress = locomotionState.PreviousMotionPlaybackProgress;
                 hasPreviousMotionPlaybackProgress = true;
             }
             else
@@ -870,19 +805,6 @@ namespace ThirdPersonMovement
                 blackboardProgress.IsEnded);
         }
 
-        void UpdatePhaseGaitMemory(BasicMovementPhase phase, BasicMovementGait frameGait)
-        {
-            if (phase == BasicMovementPhase.MoveStop)
-            {
-                activeMoveStopGait = frameGait;
-                hasActiveMoveStopGait = true;
-                return;
-            }
-
-            if (phase != BasicMovementPhase.TurnBack)
-                hasActiveMoveStopGait = false;
-        }
-
         public void SetInputSource(IBasicLocomotionInputSource source)
         {
             inputSource = source;
@@ -904,19 +826,15 @@ namespace ThirdPersonMovement
 
         public void LogDiagnosticTickSnapshot(int step)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Trace,
-                "locomotion-tick-snapshot",
-                ActiveStatePath,
-                string.Empty,
-                step,
-                Time.frameCount,
-                BuildLocomotionDiagnosticContext()));
+            LocomotionDiagnostics.LogTickSnapshot(ActiveStatePath, step, BuildLocomotionDiagnosticContext());
         }
 
-        static MovementAnimationContext BuildAnimationContext(in BasicLocomotionFrame frame, float planarSpeed)
+        MovementAnimationContext BuildAnimationContext(in BasicLocomotionFrame frame, float planarSpeed)
         {
+            bool hasEntryFootPhaseMatchRequest = TryResolveRunLoopEntryFootPhaseMatch(
+                in frame,
+                out LocomotionFootPhaseMatchResult entryFootPhaseMatchResult);
+
             return new MovementAnimationContext(
                 frame.Phase,
                 frame.Command.Gait,
@@ -925,16 +843,60 @@ namespace ThirdPersonMovement
                 frame.WorldDirection,
                 planarSpeed,
                 frame.Command.TurnBackMotionPolicy,
-                frame.Command.HasTurnBackMotionPolicy);
+                frame.Command.HasTurnBackMotionPolicy,
+                entryFootPhaseMatchResult,
+                hasEntryFootPhaseMatchRequest);
         }
 
-        void UpdatePreviousWorldDirection(in BasicLocomotionFrame frame)
+        bool TryResolveRunLoopEntryFootPhaseMatch(
+            in BasicLocomotionFrame frame,
+            out LocomotionFootPhaseMatchResult result)
         {
-            if (!frame.Intent.HasMoveIntent)
-                return;
+            result = LocomotionFootPhaseMatchResult.NotRequested;
+            if (frame.Phase != BasicMovementPhase.MoveLoop || frame.Command.Gait != BasicMovementGait.Run)
+                return false;
 
-            if (TryNormalizePlanar(frame.WorldDirection, out Vector3 direction))
-                previousWorldDirection = direction;
+            RunLocomotionAnimationConfigSO animationConfig = ResolveRunAnimationConfig();
+            string runLoopAlias = LocomotionAnimationAliasResolver.ResolveAliasKey(
+                animationConfig,
+                BasicMovementPhase.MoveLoop,
+                BasicMovementGait.Run);
+            CharacterRuntimeAnimationFacts previousAnimation = runtimeBlackboard.Snapshot.Animation;
+            bool previousWasTurnBack =
+                previousAnimation.LocomotionProgress.Phase == BasicMovementPhase.TurnBack ||
+                previousAnimation.CurrentLocomotionFootPhase.Phase == BasicMovementPhase.TurnBack;
+            if (!previousWasTurnBack)
+                return false;
+
+            LocomotionFootPhaseSample exitSample = previousAnimation.CurrentLocomotionFootPhase;
+            if (!exitSample.IsValid)
+            {
+                result = LocomotionFootPhaseMatchResult.Invalid("exit-foot-phase-invalid");
+                return true;
+            }
+
+            LocomotionFootPhaseMatchRequest request = new LocomotionFootPhaseMatchRequest(
+                exitSample,
+                BasicMovementPhase.MoveLoop,
+                BasicMovementGait.Run,
+                runLoopAlias);
+            LocomotionFootPhaseProfileSO targetProfile = animationConfig != null
+                ? animationConfig.ResolveFootPhaseProfile(BasicMovementPhase.MoveLoop, BasicMovementGait.Run, runLoopAlias)
+                : null;
+            result = LocomotionFootPhaseMatcher.Match(in request, targetProfile);
+            return true;
+        }
+
+        BasicMovementGait ResolvePlaybackGait(
+            in AnimationPhasePlaybackProgress progress,
+            BasicMovementGait fallback)
+        {
+            RunLocomotionAnimationConfigSO animationConfig = ResolveRunAnimationConfig();
+            return LocomotionAnimationAliasResolver.ResolveGaitForAlias(
+                animationConfig,
+                progress.Phase,
+                progress.AliasKey,
+                fallback);
         }
 
         static bool TryNormalizePlanar(Vector3 value, out Vector3 normalized)
@@ -1083,9 +1045,6 @@ namespace ThirdPersonMovement
         {
             RunLocomotionAnimationConfigSO animationConfig = ResolveRunAnimationConfig();
             string aliasKey = policy.IsEnabled ? policy.AliasKey : animationConfig != null ? animationConfig.ResolveAliasKey(phase, gait) : TurnBackMotionPolicy.DefaultAliasKey;
-            bool hasTimelineFacts = timelineFacts.StateId == CharacterStateIds.TurnBack;
-            bool motionWindowActive = !hasTimelineFacts || timelineFacts.MotionWindowActive;
-            bool inputLockActive = hasTimelineFacts ? timelineFacts.InputLockWindowActive : policy.SuppressInputRotation || policy.SuppressInputPlanarMovement;
             AnimationPhasePlaybackProgress progress = ResolvePlaybackProgress(phase);
             AnimationMotionPlaybackWindow playbackWindow = BuildMotionPlaybackWindow(
                 phase,
@@ -1094,7 +1053,7 @@ namespace ThirdPersonMovement
                 in progress,
                 true,
                 true);
-            AnimationMotionProfileSample bakedSample = RequiresTurnBackBakedMotion(in policy)
+            AnimationMotionProfileSample bakedSample = TurnBackMotionResolver.RequiresBakedMotion(in policy)
                 ? ResolveTurnBackBakedMotionSample(
                     animationConfig,
                     phase,
@@ -1102,26 +1061,23 @@ namespace ThirdPersonMovement
                     aliasKey,
                     in playbackWindow)
                 : AnimationMotionProfileSample.None(phase);
-            BasicMovementPlanarDeltaSpace deltaSpace = policy.TranslationSource == TurnBackMotionTranslationSource.BakedMotionProfile
-                ? BasicMovementPlanarDeltaSpace.EntryLocal
-                : BasicMovementPlanarDeltaSpace.World;
-            bool entryBasisValid = deltaSpace != BasicMovementPlanarDeltaSpace.EntryLocal ||
-                                   TryNormalizePlanar(entryPlanarBasisForward, out entryPlanarBasisForward);
-            Vector3 planarDelta = motionWindowActive
-                ? ResolveTurnBackPlanarDelta(in policy, in bakedSample)
-                : Vector3.zero;
-            if (deltaSpace == BasicMovementPlanarDeltaSpace.EntryLocal &&
-                planarDelta.sqrMagnitude > 0.000001f &&
-                !entryBasisValid)
+            TurnBackMotionResolution resolution = TurnBackMotionResolver.Resolve(
+                phase,
+                aliasKey,
+                in policy,
+                in bakedSample,
+                entryPlanarBasisForward,
+                in timelineFacts);
+            Vector3 appliedPlanarDelta = resolution.AppliedPlanarDelta;
+            float appliedYawDelta = resolution.AppliedYawDelta;
+            BasicMovementPlanarDeltaSpace deltaSpace = resolution.DeltaSpace;
+            Vector3 resolvedEntryBasisForward = resolution.EntryPlanarBasisForward;
+            if (resolution.EntryBasisMissing)
             {
-                LogTurnBackEntryBasisMissing(currentStep, phase, gait, aliasKey, in planarDelta);
-                planarDelta = Vector3.zero;
+                Vector3 rejectedPlanarDelta = resolution.RejectedPlanarDelta;
+                LogTurnBackEntryBasisMissing(currentStep, phase, gait, aliasKey, in rejectedPlanarDelta);
             }
 
-            float appliedYawDelta = motionWindowActive
-                ? ResolveTurnBackYawDelta(in policy, in bakedSample)
-                : 0f;
-            bool hasMotion = planarDelta.sqrMagnitude > 0.000001f || Mathf.Abs(appliedYawDelta) > 0.0001f;
             LogTurnBackRootMotionConsumed(
                 phase,
                 gait,
@@ -1129,79 +1085,13 @@ namespace ThirdPersonMovement
                 in bakedSample,
                 in policy,
                 in playbackWindow,
-                in planarDelta,
+                in appliedPlanarDelta,
                 appliedYawDelta,
                 deltaSpace,
-                entryPlanarBasisForward,
+                resolvedEntryBasisForward,
                 in timelineFacts);
-            LogTurnBackStatePolicy(currentStep, phase, gait, aliasKey, in policy, lockedWorldDirection, entryPlanarBasisForward, in planarDelta, appliedYawDelta, in timelineFacts);
-            return new BasicMovementMotionFacts(
-                hasMotion,
-                planarDelta,
-                appliedYawDelta,
-                phase,
-                aliasKey,
-                inputLockActive && policy.SuppressInputRotation,
-                inputLockActive && policy.SuppressInputPlanarMovement,
-                deltaSpace,
-                policy,
-                entryPlanarBasisForward);
-        }
-
-        static bool RequiresTurnBackBakedMotion(in TurnBackMotionPolicy policy)
-        {
-            return policy.YawSource == TurnBackMotionYawSource.BakedMotionProfile ||
-                   policy.TranslationSource == TurnBackMotionTranslationSource.BakedMotionProfile;
-        }
-
-        static Vector3 ResolveTurnBackPlanarDelta(
-            in TurnBackMotionPolicy policy,
-            in AnimationMotionProfileSample bakedSample)
-        {
-            switch (policy.TranslationSource)
-            {
-                case TurnBackMotionTranslationSource.BakedMotionProfile:
-                    return bakedSample.HasMotionContribution ? bakedSample.LocalPlanarDelta : Vector3.zero;
-                default:
-                    return Vector3.zero;
-            }
-        }
-
-        static float ResolveTurnBackYawDelta(
-            in TurnBackMotionPolicy policy,
-            in AnimationMotionProfileSample bakedSample)
-        {
-            switch (policy.YawSource)
-            {
-                case TurnBackMotionYawSource.BakedMotionProfile:
-                    return bakedSample.HasMotionContribution ? bakedSample.YawDelta : 0f;
-                default:
-                    return 0f;
-            }
-        }
-
-        LocomotionDecisionFacts ResolveMotionDecisionFacts(
-            in LocomotionDecisionFacts decisionFacts,
-            in CharacterStateMachineFrame stateFrame)
-        {
-            if (stateFrame.LocomotionPhase != BasicMovementPhase.TurnBack ||
-                !stateFrame.HasTurnBackMotionPolicy ||
-                !TryNormalizePlanar(stateFrame.TurnBackWorldDirection, out Vector3 lockedDirection))
-            {
-                return decisionFacts;
-            }
-
-            LocomotionSpatialFacts spatialFacts = new LocomotionSpatialFacts(
-                lockedDirection,
-                decisionFacts.SpatialFacts.FacingForward,
-                decisionFacts.SpatialFacts.CameraPlanarForward,
-                decisionFacts.SpatialFacts.CameraPlanarRight);
-            return new LocomotionDecisionFacts(
-                decisionFacts.MoveIntent,
-                decisionFacts.GaitCandidate,
-                decisionFacts.PhaseFacts,
-                spatialFacts,
-                decisionFacts.TurnBackIntent);
+            LogTurnBackStatePolicy(currentStep, phase, gait, aliasKey, in policy, lockedWorldDirection, resolvedEntryBasisForward, in appliedPlanarDelta, appliedYawDelta, in timelineFacts);
+            return resolution.MotionFacts;
         }
 
         AnimationMotionProfileSample ResolveTurnBackBakedMotionSample(
@@ -1357,15 +1247,13 @@ namespace ThirdPersonMovement
 
             if (runLatchActive || lastMovingGait != BasicMovementGait.Walk)
             {
-                RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                    RuntimeDiagnosticLogCategory.Locomotion,
-                    RuntimeDiagnosticLogLevel.Info,
-                    "locomotion-run-latch-reset-after-idle",
+                LocomotionDiagnostics.LogRunLatchResetAfterIdle(
                     ActiveStatePath,
-                    string.Empty,
-                    0,
-                    Time.frameCount,
-                    $"phase={CurrentPhase} intentHasMove={currentIntent.HasMoveIntent} lastMovingGait={lastMovingGait} runLatchBefore={runLatchActive} animation={CurrentAnimationName}"));
+                    CurrentPhase,
+                    currentIntent.HasMoveIntent,
+                    lastMovingGait,
+                    runLatchActive,
+                    CurrentAnimationName);
             }
 
             runLatchActive = false;
@@ -1396,110 +1284,6 @@ namespace ThirdPersonMovement
             return null;
         }
 
-
-        void ApplyStateMachineOutputs(in CharacterStateMachineFrame stateFrame)
-        {
-            bool previousRunLatch = runLatchActive;
-
-            if (stateFrame.ResetRunLatch)
-                SetRunLatchActive(false);
-
-            if (stateFrame.SetRunLatch)
-                SetRunLatchActive(true);
-
-            if (previousRunLatch != runLatchActive || stateFrame.SetRunLatch || stateFrame.ResetRunLatch)
-            {
-                RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                    RuntimeDiagnosticLogCategory.Locomotion,
-                    RuntimeDiagnosticLogLevel.Info,
-                    "locomotion-run-latch-output-applied",
-                    stateFrame.Snapshot.ActivePath,
-                    string.Empty,
-                    0,
-                    Time.frameCount,
-                    $"setOutput={stateFrame.SetRunLatch} resetOutput={stateFrame.ResetRunLatch} before={previousRunLatch} after={runLatchActive} statePhase={stateFrame.LocomotionPhase} stateGait={stateFrame.Snapshot.Variant} actionCompleted={stateFrame.ActionCompleted}"));
-            }
-        }
-
-        void LogStateMachineOutputProbe(
-            int currentStep,
-            BasicMovementPhase phaseBeforeTick,
-            BasicMovementGait frameGait,
-            in MovementInputIntent pendingIntent,
-            in BasicMovementPhaseFacts phaseFacts,
-            bool runLatchBeforeTick,
-            in CharacterStateMachineFrame stateFrame)
-        {
-            if (!runLatchBeforeTick &&
-                !runLatchActive &&
-                !stateFrame.SetRunLatch &&
-                !stateFrame.ResetRunLatch &&
-                stateFrame.LocomotionPhase != BasicMovementPhase.MoveStop &&
-                frameGait != BasicMovementGait.Run)
-            {
-                return;
-            }
-
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Trace,
-                "locomotion-state-machine-output-probe",
-                stateFrame.Snapshot.ActivePath,
-                string.Empty,
-                currentStep,
-                Time.frameCount,
-                $"phaseBefore={phaseBeforeTick} statePhase={stateFrame.LocomotionPhase} frameGait={frameGait} hasMove={pendingIntent.HasMoveIntent} pendingGait={pendingIntent.Gait} phaseCanExit={phaseFacts.PhaseCanExit} setRunLatch={stateFrame.SetRunLatch} resetRunLatch={stateFrame.ResetRunLatch} runLatchBeforeTick={runLatchBeforeTick} runLatchAfterOutput={runLatchActive} lastMovingGait={lastMovingGait} hasMoveStopGait={hasActiveMoveStopGait} moveStopGait={activeMoveStopGait} executeBasic={stateFrame.ExecuteBasicMovement} presentLocomotion={stateFrame.PresentLocomotionAnimation}"));
-        }
-
-        void LogLocomotionDecisionFacts(
-            int currentStep,
-            BasicMovementPhase phaseBeforeTick,
-            in LocomotionDecisionFacts facts)
-        {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Trace,
-                "locomotion-decision-pipeline",
-                ActiveStatePath,
-                string.Empty,
-                currentStep,
-                Time.frameCount,
-                $"phaseBefore={phaseBeforeTick} hasMove={facts.HasMoveIntent} gaitCandidate={facts.GaitCandidate} " +
-                $"rawMove={facts.MoveIntent.RawInput.ToString("F3")} normalizedMove={facts.MoveIntent.NormalizedInput.ToString("F3")} strength={facts.MoveIntent.Strength:F3} " +
-                $"worldMove={facts.SpatialFacts.WorldMoveDirection.ToString("F3")} facing={facts.SpatialFacts.FacingForward.ToString("F3")} " +
-                $"cameraForward={facts.SpatialFacts.CameraPlanarForward.ToString("F3")} cameraRight={facts.SpatialFacts.CameraPlanarRight.ToString("F3")} " +
-                $"phaseCanExit={facts.PhaseFacts.PhaseCanExit} turnBackValid={facts.TurnBackIntent.IsValidAt(currentStep)} " +
-                $"turnBackAngle={facts.TurnBackIntent.Angle:F3} turnBackThreshold={facts.TurnBackIntent.Threshold:F3} " +
-                $"turnBackOrigin={facts.TurnBackIntent.OriginStep} turnBackExpire={facts.TurnBackIntent.ExpireStep}"));
-        }
-
-        void ClearTurnBackIntent(string reason, int currentStep, float angle = -1f)
-        {
-            if (pendingTurnBackIntent.IsValid)
-                LogTurnBackIntent(reason, currentStep, pendingTurnBackIntent, angle);
-
-            pendingTurnBackIntent = LocomotionTurnBackIntent.None;
-        }
-
-        void LogTurnBackIntent(
-            string reason,
-            int currentStep,
-            in LocomotionTurnBackIntent intent,
-            float observedAngle = -1f)
-        {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Trace,
-                "locomotion-turnback-intent",
-                ActiveStatePath,
-                string.Empty,
-                currentStep,
-                Time.frameCount,
-                $"reason={reason} valid={intent.IsValidAt(currentStep)} rawValid={intent.IsValid} origin={intent.OriginStep} expire={intent.ExpireStep} " +
-                $"angle={intent.Angle:F3} observedAngle={observedAngle:F3} threshold={intent.Threshold:F3} " +
-                $"worldMove={intent.WorldMoveDirection.ToString("F3")} facing={intent.FacingForward.ToString("F3")}"));
-        }
-
         void LogTurnBackRootMotionConsumed(
             BasicMovementPhase phase,
             BasicMovementGait gait,
@@ -1513,22 +1297,18 @@ namespace ThirdPersonMovement
             Vector3 entryPlanarBasisForward,
             in StateTimelineWindowFacts timelineFacts)
         {
-            Vector3 entryPlanarBasisRight = ResolvePlanarRightOrZero(entryPlanarBasisForward);
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Info,
-                "turnback-root-motion-consumed",
+            LocomotionDiagnostics.LogTurnBackRootMotionConsumed(
+                phase,
+                gait,
                 aliasKey,
-                string.Empty,
-                0,
-                Time.frameCount,
-                $"[{TurnBackRootMotionLogKeyword}] stage=controller phase={phase} gait={gait} alias={aliasKey} " +
-                $"bakedMotion={bakedSample.HasMotionContribution} bakedAlias={bakedSample.SourceAliasKey} bakedLocalDelta={bakedSample.LocalPlanarDelta.ToString("F3")} bakedYawDelta={bakedSample.YawDelta:F3} " +
-                $"playbackWindow={playbackWindow.HasValidPlayback}/{playbackWindow.PreviousNormalizedTime:F3}->{playbackWindow.CurrentNormalizedTime:F3} " +
-                $"appliedTranslationSource={policy.TranslationSource} appliedPlanarDelta={appliedPlanarDelta.ToString("F3")} appliedYawSource={policy.YawSource} yawDelta={appliedYawDelta:F3} deltaSpace={deltaSpace} entryBasisForward={entryPlanarBasisForward.ToString("F3")} entryBasisRight={entryPlanarBasisRight.ToString("F3")} " +
-                $"turnComplete={policy.TurnCompleteNormalizedTime:F3} suppressInputRotation={policy.SuppressInputRotation} suppressInputPlanarMovement={policy.SuppressInputPlanarMovement} bakedProfile={policy.BakedMotionProfileId} " +
-                $"timelineMotion={timelineFacts.MotionWindowActive} timelineInputLock={timelineFacts.InputLockWindowActive} timelineInterrupt={timelineFacts.InterruptWindowActive} timelineExit={timelineFacts.ExitWindowActive} timelineWindows={timelineFacts.ActiveWindowIds}",
-                TurnBackDirectionDebugChannel));
+                in bakedSample,
+                in policy,
+                in playbackWindow,
+                in appliedPlanarDelta,
+                appliedYawDelta,
+                deltaSpace,
+                entryPlanarBasisForward,
+                in timelineFacts);
         }
 
         void LogTurnBackStatePolicy(
@@ -1544,29 +1324,20 @@ namespace ThirdPersonMovement
             in StateTimelineWindowFacts timelineFacts)
         {
             AnimationPhasePlaybackProgress progress = ResolveCurrentAnimationPlaybackProgress();
-            float lockedYaw = TryNormalizePlanar(lockedWorldDirection, out Vector3 lockedDirection)
-                ? Quaternion.LookRotation(lockedDirection, Vector3.up).eulerAngles.y
-                : 0f;
-            float entryYaw = TryNormalizePlanar(entryPlanarBasisForward, out Vector3 entryDirection)
-                ? Quaternion.LookRotation(entryDirection, Vector3.up).eulerAngles.y
-                : 0f;
-            bool canExit = progress.HasValidPlayback && progress.NormalizedTime >= policy.TurnCompleteNormalizedTime;
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Info,
-                "locomotion-turnback-state-policy",
+            LocomotionDiagnostics.LogTurnBackStatePolicy(
                 ActiveStatePath,
-                aliasKey,
                 currentStep,
-                Time.frameCount,
-                $"[{TurnBackRootMotionLogKeyword}] stage=policy phase={phase} gait={gait} alias={aliasKey} entryPhase={policy.EntryPhase} entryGait={policy.EntryGait} " +
-                $"lockedDirection={lockedWorldDirection.ToString("F3")} lockedYaw={lockedYaw:F3} entryBasisForward={entryPlanarBasisForward.ToString("F3")} entryYaw={entryYaw:F3} currentYaw={transform.eulerAngles.y:F3} " +
-                $"yawSource={policy.YawSource} translationSource={policy.TranslationSource} planarDelta={planarDelta.ToString("F3")} yawDelta={yawDelta:F3} " +
-                $"suppressInputRotation={policy.SuppressInputRotation} suppressInputPlanarMovement={policy.SuppressInputPlanarMovement} " +
-                $"startNormalized={policy.StartNormalizedTime:F3} lockInputNormalized={policy.LockInputNormalizedTime:F3} exitNormalized={policy.ExitNormalizedTime:F3} turnComplete={policy.TurnCompleteNormalizedTime:F3} " +
-                $"progressAlias={progress.AliasKey} progressNormalized={progress.NormalizedTime:F3} progressValid={progress.HasValidPlayback} progressEnded={progress.IsEnded} canExit={canExit} bakedProfile={policy.BakedMotionProfileId} " +
-                $"timelineNormalized={timelineFacts.NormalizedTime:F3} timelineNormalizedValid={timelineFacts.HasValidNormalizedTime} timelineElapsed={timelineFacts.ElapsedSeconds:F3} timelineMotion={timelineFacts.MotionWindowActive} timelineInputLock={timelineFacts.InputLockWindowActive} timelineInterrupt={timelineFacts.InterruptWindowActive} timelineExit={timelineFacts.ExitWindowActive} timelineWindows={timelineFacts.ActiveWindowIds}",
-                TurnBackDirectionDebugChannel));
+                phase,
+                gait,
+                aliasKey,
+                in policy,
+                lockedWorldDirection,
+                entryPlanarBasisForward,
+                in planarDelta,
+                yawDelta,
+                in timelineFacts,
+                in progress,
+                transform.eulerAngles.y);
         }
 
         void LogTurnBackEntryBasisMissing(
@@ -1576,22 +1347,13 @@ namespace ThirdPersonMovement
             string aliasKey,
             in Vector3 rejectedPlanarDelta)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Warning,
-                "turnback-entry-basis-missing",
+            LocomotionDiagnostics.LogTurnBackEntryBasisMissing(
                 ActiveStatePath,
-                aliasKey,
                 currentStep,
-                Time.frameCount,
-                $"[{TurnBackRootMotionLogKeyword}] stage=controller-entry-basis-missing phase={phase} gait={gait} alias={aliasKey} deltaSpace={BasicMovementPlanarDeltaSpace.EntryLocal} rejectedPlanarDelta={rejectedPlanarDelta.ToString("F3")}"));
-        }
-
-        static Vector3 ResolvePlanarRightOrZero(Vector3 forward)
-        {
-            return TryNormalizePlanar(forward, out Vector3 normalizedForward)
-                ? Vector3.Cross(Vector3.up, normalizedForward).normalized
-                : Vector3.zero;
+                phase,
+                gait,
+                aliasKey,
+                in rejectedPlanarDelta);
         }
 
         void LogTurnBackFrameSummary(
@@ -1602,34 +1364,15 @@ namespace ThirdPersonMovement
             in BasicMovementMotionFacts motionFacts,
             in BasicLocomotionFrame frame)
         {
-            bool relevant =
-                phaseBeforeTick == BasicMovementPhase.TurnBack ||
-                stateFrame.LocomotionPhase == BasicMovementPhase.TurnBack ||
-                facts.TurnBackIntent.IsValidAt(currentStep) ||
-                motionFacts.SourcePhase == BasicMovementPhase.TurnBack;
-
-            if (!relevant)
-                return;
-
-            MovementCommand command = frame.Command;
             AnimationPhasePlaybackProgress progress = ResolveCurrentAnimationPlaybackProgress();
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Info,
-                "turnback-frame-summary",
-                stateFrame.Snapshot.ActivePath,
-                progress.AliasKey,
+            LocomotionDiagnostics.LogTurnBackFrameSummary(
                 currentStep,
-                Time.frameCount,
-                $"phaseBefore={phaseBeforeTick} statePhase={stateFrame.LocomotionPhase} stateTime={stateFrame.Snapshot.StateTime:F3} " +
-                $"hasMove={facts.HasMoveIntent} gaitCandidate={facts.GaitCandidate} commandGait={command.Gait} " +
-                $"worldMove={facts.SpatialFacts.WorldMoveDirection.ToString("F3")} facing={facts.SpatialFacts.FacingForward.ToString("F3")} desiredFacing={command.DesiredFacing.ToString("F3")} " +
-                $"turnBackValid={facts.TurnBackIntent.IsValidAt(currentStep)} turnBackRawValid={facts.TurnBackIntent.IsValid} turnBackAngle={facts.TurnBackIntent.Angle:F3} turnBackThreshold={facts.TurnBackIntent.Threshold:F3} " +
-                $"turnBackOrigin={facts.TurnBackIntent.OriginStep} turnBackExpire={facts.TurnBackIntent.ExpireStep} executeBasic={stateFrame.ExecuteBasicMovement} presentLocomotion={stateFrame.PresentLocomotionAnimation} " +
-                $"hasAnimationMotion={command.HasAnimationMotion} animationAlias={command.AnimationMotionSourceAliasKey} animationDeltaSpace={command.AnimationPlanarDeltaSpace} animationDelta={command.AnimationLocalPlanarDelta.ToString("F3")} animationBasisForward={command.AnimationPlanarBasisForward.ToString("F3")} animationYawDelta={command.AnimationYawDelta:F3} " +
-                $"suppressInputRotation={command.SuppressInputRotation} suppressInputPlanarMovement={command.SuppressInputPlanarMovement} planarSpeed={command.PlanarSpeed:F3} rotationSpeed={command.RotationSpeed:F3} deltaTime={command.DeltaTime:F3} " +
-                $"animationProgressAlias={progress.AliasKey} animationProgressPhase={progress.Phase} animationNormalized={progress.NormalizedTime:F3} animationValid={progress.HasValidPlayback} animationEnded={progress.IsEnded}",
-                TurnBackDirectionDebugChannel));
+                phaseBeforeTick,
+                in facts,
+                in stateFrame,
+                in motionFacts,
+                in frame,
+                in progress);
         }
 
         bool HasEnabledLegacyPlayer()
@@ -1644,28 +1387,12 @@ namespace ThirdPersonMovement
                 return;
 
             loggedRetiredDirectTick = true;
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Error,
-                "locomotion-direct-driver-retired",
-                activeStatePath,
-                string.Empty,
-                step,
-                Time.frameCount,
-                "PlayerLocomotionController direct gameplay tick is retired. Drive locomotion through PlayerFullBodyActionController and FullBodyFramePipeline."));
+            LocomotionDiagnostics.SubmitRetiredDirectTick(activeStatePath, step);
         }
 
         void LogFormalConfigMissing(string eventId, string message)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Error,
-                eventId,
-                activeStatePath,
-                string.Empty,
-                0,
-                Time.frameCount,
-                message));
+            LocomotionDiagnostics.SubmitFormalConfigMissing(activeStatePath, eventId, message);
         }
 
         void ResolveInputSource()
@@ -1681,7 +1408,7 @@ namespace ThirdPersonMovement
                 return;
             }
 
-            if (TryResolveComponentInterface(out inputSource, out MonoBehaviour sourceBehaviour))
+            if (LocomotionRuntimeReferenceResolver.TryResolveComponentInterface(this, out inputSource, out MonoBehaviour sourceBehaviour))
             {
                 inputSourceBehaviour = sourceBehaviour;
             }
@@ -1700,7 +1427,7 @@ namespace ThirdPersonMovement
                 return;
             }
 
-            if (TryResolveComponentInterface(out motionExecutor, out MonoBehaviour executorBehaviour))
+            if (LocomotionRuntimeReferenceResolver.TryResolveComponentInterface(this, out motionExecutor, out MonoBehaviour executorBehaviour))
             {
                 motionExecutorBehaviour = executorBehaviour;
             }
@@ -1708,11 +1435,7 @@ namespace ThirdPersonMovement
 
         void ResolveFacingProvider()
         {
-            if (facingProviderBehaviour == null)
-                facingProviderBehaviour = GetComponent<TransformFacingDirectionProvider>();
-            if (facingProviderBehaviour == null && TryResolveComponentInterface(out IFacingDirectionProvider provider, out MonoBehaviour providerBehaviour))
-                facingProviderBehaviour = providerBehaviour;
-            facingProvider = facingProviderBehaviour as IFacingDirectionProvider;
+            facingProvider = LocomotionRuntimeReferenceResolver.ResolveFacingProvider(this, facingProviderBehaviour, out facingProviderBehaviour);
         }
 
         void ResolveLocomotionPresenter()
@@ -1724,28 +1447,12 @@ namespace ThirdPersonMovement
                 return;
             }
 
-            if (TryGetComponent(out BasicLocomotionAnimancerPresenter presenter))
-            {
-                locomotionPresenter = presenter;
-                playbackProgressController = presenter;
-                return;
-            }
-
-            locomotionPresenter = GetComponentInChildren<BasicLocomotionAnimancerPresenter>(true);
-            playbackProgressController = locomotionPresenter as ILocomotionAnimationPlaybackProgressController;
+            locomotionPresenter = LocomotionRuntimeReferenceResolver.ResolveLocomotionPresenter(this, out playbackProgressController);
         }
 
         void ResolveCameraController()
         {
-            cameraController = GetComponent<ThirdPersonCameraController>();
-            if (cameraController != null)
-                return;
-
-            cameraController = GetComponentInParent<ThirdPersonCameraController>(true);
-            if (cameraController != null)
-                return;
-
-            cameraController = GetComponentInChildren<ThirdPersonCameraController>(true);
+            cameraController = LocomotionRuntimeReferenceResolver.ResolveCameraController(this);
         }
 
         float ResolveCameraPlanarYaw()
@@ -1783,18 +1490,13 @@ namespace ThirdPersonMovement
             if (!ShouldLogCamera(lookInput.sqrMagnitude > 0.000001f))
                 return;
 
-             RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                 RuntimeDiagnosticLogCategory.Locomotion,
-                 RuntimeDiagnosticLogLevel.Info,
-                 "movement-camera-input",
-                 "",
-                 "",
-                 0,
-                 Time.frameCount,
-                 $"[DEBUG-CAM-CHAIN] movement.camera frame={Time.frameCount} object={name} " +
-                 $"move={moveInput.ToString("F3")} look={lookInput.ToString("F3")} camera={CameraName()} " +
-                 $"cameraAutoTick={(cameraController != null ? cameraController.AutoTick.ToString() : "null")} " +
-                 $"followPosition={transform.position.ToString("F3")}"));
+            LocomotionDiagnostics.LogCameraInput(
+                name,
+                moveInput,
+                lookInput,
+                CameraName(),
+                cameraController != null ? cameraController.AutoTick.ToString() : "null",
+                transform.position);
         }
 
         bool ShouldLogCamera(bool force)
@@ -1818,22 +1520,5 @@ namespace ThirdPersonMovement
             return cameraController != null ? cameraController.name : "null";
         }
 
-        bool TryResolveComponentInterface<T>(out T service, out MonoBehaviour serviceBehaviour) where T : class
-        {
-            MonoBehaviour[] behaviours = GetComponents<MonoBehaviour>();
-            for (int i = 0; i < behaviours.Length; i++)
-            {
-                if (behaviours[i] is T candidate)
-                {
-                    service = candidate;
-                    serviceBehaviour = behaviours[i];
-                    return true;
-                }
-            }
-
-            service = null;
-            serviceBehaviour = null;
-            return false;
-        }
     }
 }

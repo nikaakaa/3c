@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using ThirdPersonAnimation;
 using ThirdPersonCharacterStateMachine;
+using ThirdPersonMovement;
 using UnityEngine;
 
 namespace ThirdPersonSimulation
@@ -7,13 +9,28 @@ namespace ThirdPersonSimulation
     public readonly struct CharacterSimulationSnapshotComparison
     {
         public CharacterSimulationSnapshotComparison(bool matches, string[] differences)
+            : this(matches, differences, System.Array.Empty<string>())
+        {
+        }
+
+        public CharacterSimulationSnapshotComparison(bool matches, string[] differences, string[] presentationDifferences)
         {
             Matches = matches;
             Differences = differences ?? System.Array.Empty<string>();
+            PresentationDifferences = presentationDifferences ?? System.Array.Empty<string>();
+        }
+
+        public CharacterSimulationSnapshotComparison(string[] differences, string[] presentationDifferences)
+        {
+            Differences = differences ?? System.Array.Empty<string>();
+            PresentationDifferences = presentationDifferences ?? System.Array.Empty<string>();
+            Matches = Differences.Count == 0;
         }
 
         public bool Matches { get; }
         public IReadOnlyList<string> Differences { get; }
+        public IReadOnlyList<string> PresentationDifferences { get; }
+        public bool HasPresentationDifferences => PresentationDifferences.Count > 0;
     }
 
     public readonly struct CharacterSimulationSnapshotTolerance
@@ -43,6 +60,8 @@ namespace ThirdPersonSimulation
             in CharacterSimulationSnapshotTolerance tolerance)
         {
             List<string> differences = new List<string>();
+            List<string> presentationDifferences = new List<string>();
+            RollbackCompareScope animationScope = PredictionRollbackScopeResolver.ResolveSnapshotAnimationScope(in expected, in actual);
 
             if (expected.Tick != actual.Tick)
                 differences.Add("tick");
@@ -69,13 +88,13 @@ namespace ThirdPersonSimulation
             if (expected.LocomotionGait != actual.LocomotionGait)
                 differences.Add("locomotionGait");
             if (!string.Equals(expected.AnimationKey, actual.AnimationKey, System.StringComparison.Ordinal))
-                differences.Add("animationKey");
+                AddScopedDifference("animationKey", animationScope, differences, presentationDifferences);
             if (Mathf.Abs(expected.AnimationNormalizedTime - actual.AnimationNormalizedTime) > tolerance.AnimationTime)
-                differences.Add("animationNormalizedTime");
+                AddScopedDifference("animationNormalizedTime", animationScope, differences, presentationDifferences);
             CompareMotionExecutorState(expected.MotionExecutorState, actual.MotionExecutorState, in tolerance, differences);
-            CompareRuntimeBlackboard(in expected, in actual, in tolerance, differences);
+            CompareRuntimeBlackboard(in expected, in actual, in tolerance, animationScope, differences, presentationDifferences);
 
-            return new CharacterSimulationSnapshotComparison(differences.Count == 0, differences.ToArray());
+            return new CharacterSimulationSnapshotComparison(differences.ToArray(), presentationDifferences.ToArray());
         }
 
         static CharacterStateMachineSnapshot ResolveComparedState(in CharacterSimulationSnapshot snapshot)
@@ -88,14 +107,16 @@ namespace ThirdPersonSimulation
             in CharacterSimulationSnapshot expected,
             in CharacterSimulationSnapshot actual,
             in CharacterSimulationSnapshotTolerance tolerance,
-            List<string> differences)
+            RollbackCompareScope animationScope,
+            List<string> differences,
+            List<string> presentationDifferences)
         {
             CharacterRuntimeBlackboardSnapshot expectedBlackboard = expected.RuntimeBlackboard;
             CharacterRuntimeBlackboardSnapshot actualBlackboard = actual.RuntimeBlackboard;
 
             CompareLocomotionFacts(expectedBlackboard.Locomotion, actualBlackboard.Locomotion, in tolerance, differences);
             CompareActionFacts(expectedBlackboard.Action, actualBlackboard.Action, in tolerance, differences);
-            CompareAnimationFacts(expectedBlackboard.Animation, actualBlackboard.Animation, in tolerance, differences);
+            CompareAnimationFacts(expectedBlackboard.Animation, actualBlackboard.Animation, in tolerance, animationScope, differences, presentationDifferences);
         }
 
         static void CompareMotionExecutorState(
@@ -175,30 +196,91 @@ namespace ThirdPersonSimulation
             CharacterRuntimeAnimationFacts expected,
             CharacterRuntimeAnimationFacts actual,
             in CharacterSimulationSnapshotTolerance tolerance,
-            List<string> differences)
+            RollbackCompareScope locomotionPlaybackScope,
+            List<string> differences,
+            List<string> presentationDifferences)
         {
             if (expected.LocomotionProgress.Phase != actual.LocomotionProgress.Phase)
-                differences.Add("blackboard.animation.locomotionPhase");
+                AddScopedDifference("blackboard.animation.locomotionPhase", locomotionPlaybackScope, differences, presentationDifferences);
             if (!string.Equals(expected.LocomotionProgress.AliasKey, actual.LocomotionProgress.AliasKey, System.StringComparison.Ordinal))
-                differences.Add("blackboard.animation.locomotionAlias");
+                AddScopedDifference("blackboard.animation.locomotionAlias", locomotionPlaybackScope, differences, presentationDifferences);
             if (Mathf.Abs(expected.LocomotionProgress.NormalizedTime - actual.LocomotionProgress.NormalizedTime) > tolerance.AnimationTime)
-                differences.Add("blackboard.animation.locomotionNormalizedTime");
+                AddScopedDifference("blackboard.animation.locomotionNormalizedTime", locomotionPlaybackScope, differences, presentationDifferences);
             if (expected.LocomotionProgress.HasValidPlayback != actual.LocomotionProgress.HasValidPlayback)
-                differences.Add("blackboard.animation.locomotionHasValidPlayback");
+                AddScopedDifference("blackboard.animation.locomotionHasValidPlayback", locomotionPlaybackScope, differences, presentationDifferences);
             if (expected.LocomotionProgress.IsEnded != actual.LocomotionProgress.IsEnded)
-                differences.Add("blackboard.animation.locomotionIsEnded");
+                AddScopedDifference("blackboard.animation.locomotionIsEnded", locomotionPlaybackScope, differences, presentationDifferences);
             if (!string.Equals(expected.LocomotionAnimationName, actual.LocomotionAnimationName, System.StringComparison.Ordinal))
-                differences.Add("blackboard.animation.locomotionAnimationName");
+                presentationDifferences.Add("blackboard.animation.locomotionAnimationName");
             if (expected.ActionKey != actual.ActionKey)
-                differences.Add("blackboard.animation.actionKey");
+                presentationDifferences.Add("blackboard.animation.actionKey");
             if (Mathf.Abs(expected.ActionNormalizedTime - actual.ActionNormalizedTime) > tolerance.AnimationTime)
-                differences.Add("blackboard.animation.actionNormalizedTime");
+                presentationDifferences.Add("blackboard.animation.actionNormalizedTime");
             if (expected.ActionHasValidPlayback != actual.ActionHasValidPlayback)
-                differences.Add("blackboard.animation.actionHasValidPlayback");
+                presentationDifferences.Add("blackboard.animation.actionHasValidPlayback");
             if (expected.ActionIsEnded != actual.ActionIsEnded)
-                differences.Add("blackboard.animation.actionIsEnded");
+                presentationDifferences.Add("blackboard.animation.actionIsEnded");
             if (!string.Equals(expected.ActionAnimationName, actual.ActionAnimationName, System.StringComparison.Ordinal))
-                differences.Add("blackboard.animation.actionAnimationName");
+                presentationDifferences.Add("blackboard.animation.actionAnimationName");
+            CompareFootPhaseSample(
+                expected.CurrentLocomotionFootPhase,
+                actual.CurrentLocomotionFootPhase,
+                "blackboard.animation.currentFootPhase",
+                in tolerance,
+                locomotionPlaybackScope,
+                differences,
+                presentationDifferences);
+            CompareFootPhaseSample(
+                expected.LastLocomotionExitFootPhase,
+                actual.LastLocomotionExitFootPhase,
+                "blackboard.animation.lastExitFootPhase",
+                in tolerance,
+                locomotionPlaybackScope,
+                differences,
+                presentationDifferences);
+        }
+
+        static void CompareFootPhaseSample(
+            LocomotionFootPhaseSample expected,
+            LocomotionFootPhaseSample actual,
+            string prefix,
+            in CharacterSimulationSnapshotTolerance tolerance,
+            RollbackCompareScope locomotionPlaybackScope,
+            List<string> differences,
+            List<string> presentationDifferences)
+        {
+            if (expected.IsValid != actual.IsValid)
+                AddScopedDifference($"{prefix}.isValid", locomotionPlaybackScope, differences, presentationDifferences);
+            if (expected.Phase != actual.Phase)
+                AddScopedDifference($"{prefix}.phase", locomotionPlaybackScope, differences, presentationDifferences);
+            if (expected.Gait != actual.Gait)
+                AddScopedDifference($"{prefix}.gait", locomotionPlaybackScope, differences, presentationDifferences);
+            if (!string.Equals(expected.AliasKey, actual.AliasKey, System.StringComparison.Ordinal))
+                AddScopedDifference($"{prefix}.alias", locomotionPlaybackScope, differences, presentationDifferences);
+            if (Mathf.Abs(expected.NormalizedTime - actual.NormalizedTime) > tolerance.AnimationTime)
+                AddScopedDifference($"{prefix}.normalizedTime", locomotionPlaybackScope, differences, presentationDifferences);
+            if (expected.FootPhase != actual.FootPhase)
+                AddScopedDifference($"{prefix}.footPhase", locomotionPlaybackScope, differences, presentationDifferences);
+            if (expected.SourceStep != actual.SourceStep)
+                AddScopedDifference($"{prefix}.sourceStep", locomotionPlaybackScope, differences, presentationDifferences);
+        }
+
+        static void AddScopedDifference(
+            string difference,
+            RollbackCompareScope scope,
+            List<string> differences,
+            List<string> presentationDifferences)
+        {
+            switch (scope)
+            {
+                case RollbackCompareScope.StrictGameplay:
+                    differences.Add(difference);
+                    break;
+                case RollbackCompareScope.PresentationDrift:
+                case RollbackCompareScope.PredictiveGameplay:
+                    presentationDifferences.Add(difference);
+                    break;
+            }
         }
     }
 }

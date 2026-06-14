@@ -186,6 +186,153 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
+        public void SnapshotComparisonClassifiesVisualLocomotionPlaybackAsPresentationDrift()
+        {
+            CharacterSimulationSnapshot expected = SnapshotWithAnimation(
+                4,
+                BasicMovementPhase.MoveLoop,
+                "WalkLoop",
+                0f);
+            CharacterSimulationSnapshot actual = SnapshotWithAnimation(
+                4,
+                BasicMovementPhase.MoveLoop,
+                "WalkLoop",
+                0.111111f);
+
+            CharacterSimulationSnapshotComparison comparison = CharacterSimulationSnapshotComparer.Compare(
+                in expected,
+                in actual,
+                CharacterSimulationSnapshotTolerance.Default);
+
+            Assert.True(comparison.Matches, string.Join(", ", comparison.Differences));
+            CollectionAssert.Contains(comparison.PresentationDifferences.ToArray(), "animationNormalizedTime");
+            CollectionAssert.Contains(comparison.PresentationDifferences.ToArray(), "blackboard.animation.locomotionNormalizedTime");
+            CollectionAssert.DoesNotContain(comparison.Differences.ToArray(), "animationNormalizedTime");
+        }
+
+        [Test]
+        public void SnapshotComparisonKeepsTurnBackPlaybackStrict()
+        {
+            CharacterSimulationSnapshot expected = SnapshotWithAnimation(
+                4,
+                BasicMovementPhase.TurnBack,
+                "Locomotion.Turn.Back",
+                0.267606f);
+            CharacterSimulationSnapshot actual = SnapshotWithAnimation(
+                4,
+                BasicMovementPhase.TurnBack,
+                "Locomotion.Turn.Back",
+                0f);
+
+            CharacterSimulationSnapshotComparison comparison = CharacterSimulationSnapshotComparer.Compare(
+                in expected,
+                in actual,
+                CharacterSimulationSnapshotTolerance.Default);
+
+            Assert.False(comparison.Matches);
+            CollectionAssert.Contains(comparison.Differences.ToArray(), "animationNormalizedTime");
+            CollectionAssert.Contains(comparison.Differences.ToArray(), "blackboard.animation.locomotionNormalizedTime");
+        }
+
+        [Test]
+        public void SnapshotComparisonClassifiesActionPlaybackAsPresentationDrift()
+        {
+            CharacterSimulationSnapshot expected = SnapshotWithAnimation(
+                4,
+                BasicMovementPhase.MoveLoop,
+                "WalkLoop",
+                0.5f,
+                ActionAnimationKeys.DodgeDirectional,
+                0.2f,
+                true);
+            CharacterSimulationSnapshot actual = SnapshotWithAnimation(
+                4,
+                BasicMovementPhase.MoveLoop,
+                "WalkLoop",
+                0.5f,
+                ActionAnimationKeys.DodgeDirectional,
+                0.31f,
+                true);
+
+            CharacterSimulationSnapshotComparison comparison = CharacterSimulationSnapshotComparer.Compare(
+                in expected,
+                in actual,
+                CharacterSimulationSnapshotTolerance.Default);
+
+            Assert.True(comparison.Matches, string.Join(", ", comparison.Differences));
+            CollectionAssert.Contains(comparison.PresentationDifferences.ToArray(), "blackboard.animation.actionNormalizedTime");
+            CollectionAssert.DoesNotContain(comparison.Differences.ToArray(), "blackboard.animation.actionNormalizedTime");
+        }
+
+        [Test]
+        public void RollbackScopeResolverClassifiesTurnBackAsProfileDrivenStrict()
+        {
+            PredictionRollbackAuthorityPolicy policy = PredictionRollbackScopeResolver.ResolveLocomotionPlayback(
+                BasicMovementPhase.TurnBack,
+                "Locomotion.Turn.Back");
+
+            Assert.AreEqual(AnimationPlaybackAuthority.ProfileDriven, policy.AnimationAuthority);
+            Assert.AreEqual(RollbackMotionAuthority.AnimationProfile, policy.MotionAuthority);
+            Assert.AreEqual(RollbackCompareScope.StrictGameplay, policy.CompareScope);
+        }
+
+        [Test]
+        public void RollbackScopeResolverClassifiesMoveLoopAsVisualPresentation()
+        {
+            PredictionRollbackAuthorityPolicy policy = PredictionRollbackScopeResolver.ResolveLocomotionPlayback(
+                BasicMovementPhase.MoveLoop,
+                "WalkLoop");
+
+            Assert.AreEqual(AnimationPlaybackAuthority.VisualOnly, policy.AnimationAuthority);
+            Assert.AreEqual(RollbackMotionAuthority.KinematicInput, policy.MotionAuthority);
+            Assert.AreEqual(RollbackCompareScope.PresentationDrift, policy.CompareScope);
+        }
+
+        [Test]
+        public void RollbackScopeResolverClassifiesActionPlaybackAsPresentation()
+        {
+            PredictionRollbackAuthorityPolicy policy = PredictionRollbackScopeResolver.ResolveActionPlayback(
+                ActionAnimationKeys.DodgeDirectional);
+
+            Assert.AreEqual(AnimationPlaybackAuthority.VisualOnly, policy.AnimationAuthority);
+            Assert.AreEqual(RollbackMotionAuthority.StateTimeline, policy.MotionAuthority);
+            Assert.AreEqual(RollbackCompareScope.PresentationDrift, policy.CompareScope);
+        }
+
+        [Test]
+        public void RollbackScopeResolverClassifiesGameplayFactsAsStrict()
+        {
+            PredictionRollbackAuthorityPolicy root = PredictionRollbackScopeResolver.ResolveRootPose();
+            PredictionRollbackAuthorityPolicy locomotion = PredictionRollbackScopeResolver.ResolveLocomotionFacts();
+            PredictionRollbackAuthorityPolicy action = PredictionRollbackScopeResolver.ResolveActionFacts();
+
+            Assert.AreEqual(RollbackCompareScope.StrictGameplay, root.CompareScope);
+            Assert.AreEqual(RollbackMotionAuthority.MotionExecutor, root.MotionAuthority);
+            Assert.AreEqual(RollbackCompareScope.StrictGameplay, locomotion.CompareScope);
+            Assert.AreEqual(RollbackCompareScope.StrictGameplay, action.CompareScope);
+            Assert.AreEqual(RollbackMotionAuthority.StateTimeline, action.MotionAuthority);
+        }
+
+        [Test]
+        public void RollbackScopeResolverDoesNotReferencePresentationRuntimeObjects()
+        {
+            string root = Path.Combine(
+                Application.dataPath,
+                "Scripts",
+                "Simulation",
+                "Rollback");
+            string source = string.Join(
+                "\n",
+                File.ReadAllText(Path.Combine(root, "PredictionRollbackAuthorityPolicy.cs"), System.Text.Encoding.UTF8),
+                File.ReadAllText(Path.Combine(root, "PredictionRollbackScopeResolver.cs"), System.Text.Encoding.UTF8));
+
+            Assert.That(source, Does.Not.Contain("AnimancerState"));
+            Assert.That(source, Does.Not.Contain("AnimationClip"));
+            Assert.That(source, Does.Not.Contain("TransitionAsset"));
+            Assert.That(source, Does.Not.Contain("UnityEngine.Object"));
+        }
+
+        [Test]
         public void SnapshotComparisonIgnoresBlackboardDiagnosticSourceSteps()
         {
             CharacterRuntimeBlackboard expectedBlackboard = new CharacterRuntimeBlackboard();
@@ -498,6 +645,58 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
+        public void LocalSynctestPassesWhenReplayOnlyHasPresentationDrift()
+        {
+            PredictionInputHistory inputHistory = new PredictionInputHistory(8);
+            PredictionSnapshotHistory snapshotHistory = new PredictionSnapshotHistory(8);
+            PresentationDriftRollbackSimulation simulation = new PresentationDriftRollbackSimulation();
+
+            snapshotHistory.Write(SnapshotWithAnimation(0, BasicMovementPhase.MoveLoop, "WalkLoop", 0f));
+            inputHistory.Write(Input(1, Vector2.zero));
+            snapshotHistory.Write(SnapshotWithAnimation(1, BasicMovementPhase.MoveLoop, "WalkLoop", 0f));
+
+            LocalRollbackSynctestRunner runner = new LocalRollbackSynctestRunner(inputHistory, snapshotHistory, simulation);
+            LocalRollbackSynctestResult result = runner.Run(
+                SimulationTick.Zero,
+                new SimulationTick(1),
+                SimulationTick.Zero,
+                CharacterSimulationSnapshotTolerance.Default);
+
+            Assert.True(result.Success, result.FailureReason);
+            Assert.False(result.FirstMismatch.HasMismatch);
+            Assert.True(result.FirstMismatch.HasPresentationDrift);
+            CollectionAssert.Contains(result.FirstMismatch.Comparison.PresentationDifferences.ToArray(), "animationNormalizedTime");
+        }
+
+        [Test]
+        public void LocalSynctestStrictMismatchOverridesEarlierPresentationDrift()
+        {
+            PredictionInputHistory inputHistory = new PredictionInputHistory(8);
+            PredictionSnapshotHistory snapshotHistory = new PredictionSnapshotHistory(8);
+            PresentationThenStrictMismatchRollbackSimulation simulation = new PresentationThenStrictMismatchRollbackSimulation();
+
+            snapshotHistory.Write(SnapshotWithAnimation(0, Vector3.zero, BasicMovementPhase.MoveLoop, "WalkLoop", 0f));
+            inputHistory.Write(Input(1, Vector2.zero));
+            snapshotHistory.Write(SnapshotWithAnimation(1, Vector3.zero, BasicMovementPhase.MoveLoop, "WalkLoop", 0f));
+            inputHistory.Write(Input(2, Vector2.right));
+            snapshotHistory.Write(SnapshotWithAnimation(2, Vector3.right, BasicMovementPhase.MoveLoop, "WalkLoop", 0f));
+
+            LocalRollbackSynctestRunner runner = new LocalRollbackSynctestRunner(inputHistory, snapshotHistory, simulation);
+            LocalRollbackSynctestResult result = runner.Run(
+                SimulationTick.Zero,
+                new SimulationTick(2),
+                SimulationTick.Zero,
+                CharacterSimulationSnapshotTolerance.Default);
+
+            Assert.False(result.Success);
+            Assert.True(result.FirstMismatch.HasMismatch);
+            Assert.True(result.FirstMismatch.HasPresentationDrift);
+            Assert.AreEqual(new SimulationTick(2), result.FirstMismatch.Tick);
+            CollectionAssert.Contains(result.FirstMismatch.Comparison.Differences.ToArray(), "position");
+            CollectionAssert.Contains(result.FirstMismatch.Comparison.PresentationDifferences.ToArray(), "animationNormalizedTime");
+        }
+
+        [Test]
         public void LocalSynctestFailsWhenFirstMismatchConvergesByEnd()
         {
             PredictionInputHistory inputHistory = new PredictionInputHistory(8);
@@ -681,6 +880,31 @@ namespace ThirdPersonSimulation.Tests
             Assert.True(result.FirstFailure.Comparison.Matches);
             Assert.True(result.FirstFailure.FirstMismatch.HasMismatch);
             Assert.AreEqual("first mismatch", result.FirstFailure.FailureReason);
+        }
+
+        [Test]
+        public void LocalRollbackSoakRunnerPassesAndRecordsPresentationDrift()
+        {
+            PredictionInputHistory inputHistory = new PredictionInputHistory(8);
+            PredictionSnapshotHistory snapshotHistory = new PredictionSnapshotHistory(8);
+            PresentationDriftRollbackSimulation simulation = new PresentationDriftRollbackSimulation();
+            LocalRollbackSoakConfig config = new LocalRollbackSoakConfig(7, 2, 1, true);
+
+            snapshotHistory.Write(SnapshotWithAnimation(0, BasicMovementPhase.MoveLoop, "WalkLoop", 0f));
+            inputHistory.Write(Input(1, Vector2.zero));
+            snapshotHistory.Write(SnapshotWithAnimation(1, BasicMovementPhase.MoveLoop, "WalkLoop", 0f));
+            inputHistory.Write(Input(2, Vector2.zero));
+            snapshotHistory.Write(SnapshotWithAnimation(2, BasicMovementPhase.MoveLoop, "WalkLoop", 0f));
+
+            LocalRollbackSoakRunner runner = new LocalRollbackSoakRunner(inputHistory, snapshotHistory, simulation);
+            LocalRollbackSoakResult result = runner.Run(in config, CharacterSimulationSnapshotTolerance.Default);
+
+            Assert.True(result.Success, result.FailureReason);
+            Assert.True(result.HasPresentationDrift);
+            Assert.True(result.FirstPresentationDrift.FirstMismatch.HasPresentationDrift);
+            CollectionAssert.Contains(
+                result.FirstPresentationDrift.FirstMismatch.Comparison.PresentationDifferences.ToArray(),
+                "animationNormalizedTime");
         }
 
         [Test]
@@ -1045,6 +1269,68 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
+        public void LogFormatterOutputsScopeGroupsForPassFailAndFirstDrift()
+        {
+            CharacterSimulationSnapshot expected = SnapshotWithAnimation(1, BasicMovementPhase.MoveLoop, "WalkLoop", 0f);
+            CharacterSimulationSnapshot actual = SnapshotWithAnimation(1, BasicMovementPhase.MoveLoop, "WalkLoop", 0.111111f);
+            CharacterSimulationSnapshotComparison driftComparison =
+                new CharacterSimulationSnapshotComparison(Array.Empty<string>(), new[] { "animationNormalizedTime" });
+            LocalRollbackSynctestFirstMismatch firstDrift = new LocalRollbackSynctestFirstMismatch(
+                LocalRollbackSynctestMismatchStage.Replay,
+                new SimulationTick(1),
+                true,
+                Input(1, Vector2.zero),
+                expected,
+                actual,
+                driftComparison);
+            LocalRollbackSynctestResult passResult = new LocalRollbackSynctestResult(
+                true,
+                SimulationTick.Zero,
+                new SimulationTick(1),
+                SimulationTick.Zero,
+                string.Empty,
+                driftComparison,
+                in firstDrift);
+
+            string pass = LocalRollbackSynctestLogFormatter.FormatPass(in passResult);
+            string firstPresentation = LocalRollbackSynctestLogFormatter.FormatFirstMismatch(in passResult);
+
+            StringAssert.Contains("[rollback-synctest] PASS", pass);
+            StringAssert.Contains("presentationDifferences=animationNormalizedTime", pass);
+            StringAssert.Contains("firstPresentationDifferences=animationNormalizedTime", pass);
+            StringAssert.Contains("[rollback-synctest] first-presentation-drift", firstPresentation);
+
+            CharacterSimulationSnapshotComparison failureComparison =
+                new CharacterSimulationSnapshotComparison(new[] { "position" }, new[] { "blackboard.animation.actionNormalizedTime" });
+            LocalRollbackSynctestFirstMismatch firstMismatch = new LocalRollbackSynctestFirstMismatch(
+                LocalRollbackSynctestMismatchStage.Replay,
+                new SimulationTick(2),
+                true,
+                Input(2, Vector2.right),
+                expected,
+                SnapshotWithAnimation(2, Vector3.right, BasicMovementPhase.MoveLoop, "WalkLoop", 0.222222f),
+                failureComparison);
+            LocalRollbackSynctestResult failResult = new LocalRollbackSynctestResult(
+                false,
+                SimulationTick.Zero,
+                new SimulationTick(2),
+                SimulationTick.Zero,
+                "first mismatch and snapshot mismatch",
+                failureComparison,
+                in firstMismatch);
+
+            string fail = LocalRollbackSynctestLogFormatter.FormatFail(in failResult);
+            string firstStrict = LocalRollbackSynctestLogFormatter.FormatFirstMismatch(in failResult);
+
+            StringAssert.Contains("[rollback-synctest] FAIL", fail);
+            StringAssert.Contains("firstDifferences=position", fail);
+            StringAssert.Contains("firstPresentationDifferences=blackboard.animation.actionNormalizedTime", fail);
+            StringAssert.Contains("differences=position", fail);
+            StringAssert.Contains("presentationDifferences=blackboard.animation.actionNormalizedTime", fail);
+            StringAssert.Contains("[rollback-synctest] first-mismatch", firstStrict);
+        }
+
+        [Test]
         public void DebugRunnerCanApplyReplayResultWithPresentationCorrection()
         {
             GameObject gameObject = new GameObject("rollback-debug-runner-visible-test");
@@ -1150,6 +1436,8 @@ namespace ThirdPersonSimulation.Tests
                 "PredictionHistoryQueryResult.cs",
                 "PredictionInputFrame.cs",
                 "PredictionButtonFrame.cs",
+                "PredictionRollbackAuthorityPolicy.cs",
+                "PredictionRollbackScopeResolver.cs",
                 "CharacterSimulationSnapshotComparer.cs"
             };
             string combined = string.Join("\n", coreFiles.Select(file => File.ReadAllText(Path.Combine(root, file))));
@@ -1224,6 +1512,79 @@ namespace ThirdPersonSimulation.Tests
                 BasicMovementGait.Walk,
                 string.Empty,
                 0f);
+        }
+
+        static CharacterSimulationSnapshot SnapshotWithAnimation(
+            int tick,
+            BasicMovementPhase phase,
+            string aliasKey,
+            float normalizedTime,
+            ActionAnimationKey actionKey = default,
+            float actionNormalizedTime = 0f,
+            bool actionHasPlayback = false)
+        {
+            return SnapshotWithAnimation(
+                tick,
+                Vector3.zero,
+                phase,
+                aliasKey,
+                normalizedTime,
+                actionKey,
+                actionNormalizedTime,
+                actionHasPlayback);
+        }
+
+        static CharacterSimulationSnapshot SnapshotWithAnimation(
+            int tick,
+            Vector3 position,
+            BasicMovementPhase phase,
+            string aliasKey,
+            float normalizedTime,
+            ActionAnimationKey actionKey = default,
+            float actionNormalizedTime = 0f,
+            bool actionHasPlayback = false)
+        {
+            CharacterRuntimeBlackboard blackboard = new CharacterRuntimeBlackboard();
+            blackboard.WriteAnimationFacts(new CharacterRuntimeAnimationFacts(
+                new AnimationPhasePlaybackProgress(
+                    phase,
+                    aliasKey,
+                    normalizedTime,
+                    !string.IsNullOrWhiteSpace(aliasKey),
+                    false),
+                aliasKey,
+                new ActionAnimationPlaybackProgress(
+                    actionKey,
+                    actionNormalizedTime,
+                    actionHasPlayback,
+                    false),
+                actionHasPlayback ? actionKey.Value : string.Empty,
+                tick));
+
+            return new CharacterSimulationSnapshot(
+                new SimulationTick(tick),
+                position,
+                0f,
+                new CharacterStateMachineRestoreState(
+                    new CharacterStateMachineSnapshot(
+                        CharacterStateIds.Idle,
+                        0f,
+                        CharacterStateVariant.None,
+                        string.Empty,
+                        Array.Empty<CharacterStateTag>()),
+                    Vector3.zero,
+                    false,
+                    false,
+                    false,
+                    false),
+                false,
+                BasicMovementGait.Walk,
+                Vector3.zero,
+                phase,
+                BasicMovementGait.Walk,
+                aliasKey,
+                normalizedTime,
+                blackboard.CaptureRestoreState());
         }
 
         static CharacterStateMachineContext Context(
@@ -1326,6 +1687,48 @@ namespace ThirdPersonSimulation.Tests
             public void Advance(in PredictionInputFrame input)
             {
                 position += new Vector3(input.Move.x, 0f, input.Move.y);
+            }
+        }
+
+        sealed class PresentationDriftRollbackSimulation : ILocalRollbackSynctestSimulation
+        {
+            float normalizedTime;
+
+            public CharacterSimulationSnapshot CaptureSnapshot(SimulationTick tick)
+            {
+                return SnapshotWithAnimation(tick.Value, BasicMovementPhase.MoveLoop, "WalkLoop", normalizedTime);
+            }
+
+            public void Restore(in CharacterSimulationSnapshot snapshot)
+            {
+                normalizedTime = snapshot.AnimationNormalizedTime;
+            }
+
+            public void Advance(in PredictionInputFrame input)
+            {
+                normalizedTime = 0.111111f;
+            }
+        }
+
+        sealed class PresentationThenStrictMismatchRollbackSimulation : ILocalRollbackSynctestSimulation
+        {
+            Vector3 position;
+            float normalizedTime;
+
+            public CharacterSimulationSnapshot CaptureSnapshot(SimulationTick tick)
+            {
+                return SnapshotWithAnimation(tick.Value, position, BasicMovementPhase.MoveLoop, "WalkLoop", normalizedTime);
+            }
+
+            public void Restore(in CharacterSimulationSnapshot snapshot)
+            {
+                position = snapshot.Position;
+                normalizedTime = snapshot.AnimationNormalizedTime;
+            }
+
+            public void Advance(in PredictionInputFrame input)
+            {
+                normalizedTime = 0.111111f;
             }
         }
 

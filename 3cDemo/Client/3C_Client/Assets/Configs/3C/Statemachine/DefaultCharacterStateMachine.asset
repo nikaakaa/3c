@@ -412,6 +412,7 @@ MonoBehaviour:
     resistance: 0
     windows:
     - windowId: turnback-enter
+      factId: TurnBackEnterOpen
       kind: 3
       timeDomain: 1
       start: 0
@@ -428,6 +429,7 @@ MonoBehaviour:
     resistance: 0
     windows:
     - windowId: turnback-enter
+      factId: TurnBackEnterOpen
       kind: 3
       timeDomain: 1
       start: 0
@@ -444,6 +446,7 @@ MonoBehaviour:
     resistance: 30
     windows:
     - windowId: turnback-motion
+      factId: MotionActive
       kind: 1
       timeDomain: 1
       start: 0
@@ -455,6 +458,7 @@ MonoBehaviour:
       requestType: 0
       note: TurnBack consumes sampled motion profile until exit.
     - windowId: turnback-input-lock
+      factId: InputLocked
       kind: 2
       timeDomain: 1
       start: 0
@@ -466,6 +470,7 @@ MonoBehaviour:
       requestType: 0
       note: TurnBack suppresses regular input movement.
     - windowId: turnback-exit
+      factId: NaturalExitReady
       kind: 4
       timeDomain: 0
       start: 1

@@ -1,4 +1,43 @@
 ## ADDED Requirements
+### Requirement: Timeline Fact 使用类型化标识
+系统 MUST 将 timeline window 的运行时输出表达为稳定 `TimelineFactId` 或等价类型化 tag。window id MAY 用于编辑器定位、诊断和校验；仲裁、自然退出、输入锁和运动输出 MUST 消费 active facts，而不是重新读取 window start/end 或依赖临时字符串。fact 标识 MUST 保持纯数据边界，并 MUST NOT 持有 Unity 对象引用。
+
+#### Scenario: TurnBack 窗口产出 typed facts
+- **GIVEN** 当前状态为 `FullBody/Locomotion/TurnBack`
+- **AND** timeline policy 定义了 input lock、motion 和 natural exit 窗口
+- **WHEN** timeline sampler 在对应时间点采样
+- **THEN** 输出 facts MUST 包含 `InputLocked`、`MotionLocked` 或 `NaturalExitReady` 等稳定 fact id
+- **AND** 输出 facts MUST NOT 只依赖任意字符串比较
+
+#### Scenario: 请求策略引用 required fact
+- **GIVEN** Attack01 timeline policy 定义了一个 combo input window
+- **AND** 该 window 产出 `ComboInputOpen` 或等价 fact id
+- **WHEN** 设计者配置 Attack01 到 Attack02 的请求策略
+- **THEN** 策略 MUST 引用 required fact id
+- **AND** 策略 MUST NOT 重新配置 combo window start/end
+
+#### Scenario: 未知 fact id 可校验
+- **GIVEN** 请求策略引用了不存在的 required fact id
+- **WHEN** 系统校验 timeline policy 与请求策略集合
+- **THEN** 校验结果 MUST 包含错误
+
+### Requirement: 窗口与请求打断职责分离
+系统 MUST 将状态窗口 timing 与请求打断准入分离。`StateTimelinePolicy` MUST 是 motion、input lock、request/cancel/interrupt 和 exit window 的 timing 权威；请求打断策略 MAY 引用 required fact id、window id 或 request type，但 MUST NOT 为新增状态请求重新定义同一窗口的开始和结束时间。仲裁器 MUST 只消费 `StateTimelineWindowFacts`，不得直接采样 timeline policy 或读取动画播放对象。
+
+#### Scenario: 请求策略引用 fact 而不重写时间
+- **GIVEN** `FullBody/Action/Attack01` 有 `attack-combo` request window
+- **AND** 该 window 产出 `ComboInputOpen` fact
+- **WHEN** 设计者配置 Attack01 到 Attack02 的请求策略
+- **THEN** 策略 MUST 引用 `ComboInputOpen` 或等价 fact id
+- **AND** 策略 MUST NOT 再配置一份 Attack01 combo window start/end
+
+#### Scenario: 仲裁器只消费 facts
+- **GIVEN** 当前状态 timeline 已被采样为 `StateTimelineWindowFacts`
+- **WHEN** 请求打断仲裁入口执行裁决
+- **THEN** 仲裁器 MUST 只读取 window facts 中的 active request window、min priority、resistance 和 force
+- **AND** MUST NOT 读取 `StateTimelinePolicy` 资产
+- **AND** MUST NOT 读取 Animancer、Animator 或 AnimationClip
+
 ### Requirement: 状态 Timeline Policy 数据源
 系统 MUST 提供状态级 timeline policy 数据源，用于表达一个统一状态在生命周期内的 motion、input lock、interrupt/cancel、exit、priority 和 resistance 窗口。该数据源 MUST 使用稳定 state id、窗口 id、时间域、窗口起止值和请求过滤表达规则，并 MUST NOT 持有 MonoBehaviour、Transform、Animator、Animancer runtime 对象、AnimationClip、TransitionAsset、CharacterController 或场景实例引用。
 

@@ -273,16 +273,39 @@ namespace ThirdPersonCharacterStateMachine
             ActionAnimationPlaybackProgress actionProgress,
             string actionAnimationName,
             int sourceStep)
+            : this(
+                locomotionProgress,
+                locomotionAnimationName,
+                actionProgress,
+                actionAnimationName,
+                LocomotionFootPhaseSample.Invalid(locomotionProgress.Phase),
+                LocomotionFootPhaseSample.Invalid(BasicMovementPhase.TurnBack),
+                sourceStep)
+        {
+        }
+
+        public CharacterRuntimeAnimationFacts(
+            AnimationPhasePlaybackProgress locomotionProgress,
+            string locomotionAnimationName,
+            ActionAnimationPlaybackProgress actionProgress,
+            string actionAnimationName,
+            LocomotionFootPhaseSample currentLocomotionFootPhase,
+            LocomotionFootPhaseSample lastLocomotionExitFootPhase,
+            int sourceStep)
         {
             LocomotionProgress = locomotionProgress;
             LocomotionAnimationName = locomotionAnimationName ?? string.Empty;
             ActionProgress = actionProgress;
             ActionAnimationName = actionAnimationName ?? string.Empty;
+            CurrentLocomotionFootPhase = currentLocomotionFootPhase;
+            LastLocomotionExitFootPhase = lastLocomotionExitFootPhase;
             SourceStep = Mathf.Max(0, sourceStep);
         }
 
         public AnimationPhasePlaybackProgress LocomotionProgress { get; }
         public string LocomotionAnimationName { get; }
+        public LocomotionFootPhaseSample CurrentLocomotionFootPhase { get; }
+        public LocomotionFootPhaseSample LastLocomotionExitFootPhase { get; }
         public ActionAnimationPlaybackProgress ActionProgress { get; }
         public ActionAnimationKey ActionKey => ActionProgress.Key;
         public float ActionNormalizedTime => ActionProgress.NormalizedTime;

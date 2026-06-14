@@ -1,4 +1,27 @@
 ## ADDED Requirements
+### Requirement: 仲裁器消费窗口事实而不拥有窗口时间
+状态请求仲裁入口 MUST 将窗口时间视为外部事实。仲裁器 MAY 使用 `StateTimelineWindowFacts` 中的 active facts、request window、min priority、resistance 和 force 参与裁决，但 MUST NOT 自己计算状态 normalized time、动画 normalized time、clip length 或窗口 start/end。新增状态请求准入 MUST 优先依赖 required fact id 与 window facts；旧 elapsed time timing rule 只作为迁移兼容。
+
+#### Scenario: required window 未激活时拒绝
+- **GIVEN** 请求策略要求 `attack-combo` window
+- **AND** `StateTimelineWindowFacts` 中没有 active `attack-combo` request window
+- **WHEN** 仲裁器处理该请求
+- **THEN** 裁决 MUST 为 rejected
+- **AND** 拒绝原因 MUST 能诊断为窗口未满足或 timing 未满足
+
+#### Scenario: required fact 未激活时拒绝
+- **GIVEN** 请求策略要求 `ComboInputOpen` fact
+- **AND** `StateTimelineWindowFacts` 中没有 active `ComboInputOpen`
+- **WHEN** 仲裁器处理 LightAttack 请求
+- **THEN** 裁决 MUST 为 rejected
+- **AND** 仲裁器 MUST NOT 尝试读取 Attack01 的窗口 start/end
+
+#### Scenario: 仲裁器不读取动画时间
+- **WHEN** 仲裁器处理 TurnBack、Dodge 或 Attack 请求
+- **THEN** 仲裁器 MUST NOT 读取 Animancer state
+- **AND** MUST NOT 读取 Animator state
+- **AND** MUST NOT 读取 AnimationClip length
+
 ### Requirement: 状态请求打断仲裁入口
 系统 MUST 将现有动作打断仲裁能力扩展为状态请求准入入口，能够处理 TurnBack、Dodge、Attack、HitReact 或等价 FullBody 状态请求。仲裁入口 MUST 继续保持纯数据边界，并 MUST NOT 直接切换统一状态机、播放动画或提交运动命令。
 

@@ -77,3 +77,14 @@ MonoBehaviour:
     aliasKey: Locomotion.Turn.Back
     profile: {fileID: 11400000, guid: b5b41379037e4e745a41e917f27bc4bb, type: 2}
     motionMode: 1
+  footPhaseProfiles:
+  - phase: 4
+    gait: 1
+    aliasKey: Locomotion.Turn.Back
+    profile: {fileID: 11400000, guid: 47b590a06a5449e8b36cb9137b76f0aa, type: 2}
+    enabled: 1
+  - phase: 2
+    gait: 1
+    aliasKey: RunLoop
+    profile: {fileID: 11400000, guid: 2f1e45b4646240e1b30c6fc935bd2c4d, type: 2}
+    enabled: 1

@@ -27,7 +27,8 @@ namespace ThirdPersonAction
                 definition.WindowStart,
                 definition.WindowEnd,
                 definition.Force,
-                definition.WindowId);
+                definition.WindowId,
+                definition.RequiredFactId);
         }
 
         static ActionStateId ToStateId(string value)

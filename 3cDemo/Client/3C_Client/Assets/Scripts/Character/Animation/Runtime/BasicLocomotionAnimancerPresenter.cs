@@ -13,12 +13,6 @@ namespace ThirdPersonAnimation
         const string TurnBackRootMotionLogKeyword = "TURNBACK_RM_CHAIN";
         const string TurnBackRootMotionProbeChannel = "Animation.turnback-root-motion-probe";
         const string TurnBackAliasKey = "Locomotion.Turn.Back";
-        const string IdleKey = "Idle";
-        const string WalkStartKey = "WalkStart";
-        const string WalkLoopKey = "WalkLoop";
-        const string WalkEndKey = "WalkEnd";
-        const string RunStartKey = "RunStart";
-        const string RunLoopKey = "RunLoop";
         const string RunEndKey = "RunEnd";
 
         [SerializeField] AnimancerComponent animancer;
@@ -172,6 +166,7 @@ namespace ThirdPersonAnimation
             else
             {
                 RestartOneShotStateIfNeeded(in context, nextState);
+                ApplyEntryFootPhaseMatchIfNeeded(in context, aliasKey, nextState);
                 currentNormalizedTime = nextState.NormalizedTime;
             }
             hasRestoredPlaybackResume = false;
@@ -187,6 +182,30 @@ namespace ThirdPersonAnimation
             state.NormalizedTime = context.HasTurnBackMotionPolicy
                 ? context.TurnBackMotionPolicy.StartNormalizedTime
                 : 0f;
+        }
+
+        void ApplyEntryFootPhaseMatchIfNeeded(
+            in MovementAnimationContext context,
+            string aliasKey,
+            AnimancerState state)
+        {
+            if (state == null || !context.HasEntryFootPhaseMatchRequest)
+                return;
+
+            LocomotionFootPhaseMatchResult result = context.EntryFootPhaseMatchResult;
+            bool runLoopTarget =
+                context.Phase == BasicMovementPhase.MoveLoop &&
+                context.Gait == BasicMovementGait.Run &&
+                result.IsValid &&
+                string.Equals(result.TargetAliasKey, aliasKey, System.StringComparison.Ordinal);
+            if (runLoopTarget)
+            {
+                state.NormalizedTime = result.StartNormalizedTime;
+                LogFootPhaseMatch("locomotion-foot-phase-match-applied", RuntimeDiagnosticLogLevel.Info, in context, aliasKey, state);
+                return;
+            }
+
+            LogFootPhaseMatch("locomotion-foot-phase-match-skipped", RuntimeDiagnosticLogLevel.Warning, in context, aliasKey, state);
         }
 
         public bool RestorePlaybackProgress(in AnimationPhasePlaybackProgress progress)
@@ -292,44 +311,17 @@ namespace ThirdPersonAnimation
 
         string ResolveAliasKey(in MovementAnimationContext context)
         {
-            return ResolveAliasKey(context.Phase, context.Gait);
+            return LocomotionAnimationAliasResolver.ResolveAliasKey(runAnimationConfig, in context);
         }
 
         string ResolveAliasKey(BasicMovementPhase phase, BasicMovementGait gait)
         {
-            if (runAnimationConfig != null)
-                return runAnimationConfig.ResolveAliasKey(phase, gait);
-
-            if (gait == BasicMovementGait.Walk)
-            {
-                return phase switch
-                {
-                    BasicMovementPhase.MoveStart => WalkStartKey,
-                    BasicMovementPhase.MoveLoop => WalkLoopKey,
-                    BasicMovementPhase.MoveStop => WalkEndKey,
-                    BasicMovementPhase.TurnBack => TurnBackAliasKey,
-                    _ => IdleKey
-                };
-            }
-
-            return phase switch
-            {
-                BasicMovementPhase.MoveStart => RunStartKey,
-                BasicMovementPhase.MoveLoop => RunLoopKey,
-                BasicMovementPhase.MoveStop => RunEndKey,
-                BasicMovementPhase.TurnBack => TurnBackAliasKey,
-                _ => IdleKey
-            };
+            return LocomotionAnimationAliasResolver.ResolveAliasKey(runAnimationConfig, phase, gait);
         }
 
         BasicMovementGait ResolveGaitForAlias(BasicMovementPhase phase, string aliasKey, BasicMovementGait fallback)
         {
-            if (string.Equals(aliasKey, ResolveAliasKey(phase, BasicMovementGait.Walk), System.StringComparison.Ordinal))
-                return BasicMovementGait.Walk;
-            if (string.Equals(aliasKey, ResolveAliasKey(phase, BasicMovementGait.Run), System.StringComparison.Ordinal))
-                return BasicMovementGait.Run;
-
-            return fallback;
+            return LocomotionAnimationAliasResolver.ResolveGaitForAlias(runAnimationConfig, phase, aliasKey, fallback);
         }
 
         bool EnsureAnimancer()
@@ -450,6 +442,25 @@ namespace ThirdPersonAnimation
                 0,
                 Time.frameCount,
                 $"phase={context.Phase} gait={context.Gait} hasMove={context.HasMoveIntent} strength={context.InputStrength:F3} speed={context.PlanarSpeed:F3} direction={context.WorldDirection.ToString("F3")} alias={aliasKey} previousAlias={currentAliasKey} currentAnimation={CurrentAnimationName} nextAnimation={AnimationName(state)} normalized={(state != null ? state.NormalizedTime : 0f):F3} rootMotionDisabled={disableAnimatorRootMotion}"));
+        }
+
+        void LogFootPhaseMatch(
+            string message,
+            RuntimeDiagnosticLogLevel level,
+            in MovementAnimationContext context,
+            string aliasKey,
+            AnimancerState state)
+        {
+            LocomotionFootPhaseMatchResult result = context.EntryFootPhaseMatchResult;
+            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                RuntimeDiagnosticLogCategory.Animation,
+                level,
+                message,
+                aliasKey,
+                currentAliasKey,
+                0,
+                Time.frameCount,
+                $"phase={context.Phase} gait={context.Gait} alias={aliasKey} previousAlias={currentAliasKey} requested={context.HasEntryFootPhaseMatchRequest} valid={result.IsValid} matchedPhase={result.MatchedPhase} targetAlias={result.TargetAliasKey} targetNormalized={result.StartNormalizedTime:F3} appliedNormalized={(state != null ? state.NormalizedTime : 0f):F3} reason={result.Reason}"));
         }
 
         void LogPlayback(

@@ -1,4 +1,5 @@
 using System.Text;
+using ThirdPersonAnimation;
 using UnityEngine;
 
 namespace ThirdPersonSimulation
@@ -7,7 +8,18 @@ namespace ThirdPersonSimulation
     {
         public static string FormatPass(in LocalRollbackSynctestResult result)
         {
-            return $"[rollback-synctest] PASS restore={result.RestoreTick.Value} end={result.EndTick.Value}";
+            StringBuilder builder = new StringBuilder();
+            builder.Append("[rollback-synctest] PASS restore=").Append(result.RestoreTick.Value);
+            builder.Append(" end=").Append(result.EndTick.Value);
+            AppendPresentationDifferences(builder, result.Comparison);
+            if (result.FirstMismatch.HasPresentationDrift)
+            {
+                builder.Append(" firstPresentationStage=").Append(result.FirstMismatch.Stage);
+                builder.Append(" firstPresentationTick=").Append(result.FirstMismatch.Tick.Value);
+                AppendPresentationDifferences(builder, result.FirstMismatch.Comparison, " firstPresentationDifferences=");
+            }
+
+            return builder.ToString();
         }
 
         public static string FormatFail(in LocalRollbackSynctestResult result)
@@ -23,9 +35,11 @@ namespace ThirdPersonSimulation
             {
                 builder.Append(" firstStage=").Append(result.FirstMismatch.Stage);
                 builder.Append(" firstTick=").Append(result.FirstMismatch.Tick.Value);
+                AppendGameplayDifferences(builder, result.FirstMismatch.Comparison, " firstDifferences=");
+                AppendPresentationDifferences(builder, result.FirstMismatch.Comparison, " firstPresentationDifferences=");
             }
-            if (result.Comparison.Differences.Count > 0)
-                builder.Append(" differences=").Append(string.Join(",", result.Comparison.Differences));
+            AppendGameplayDifferences(builder, result.Comparison);
+            AppendPresentationDifferences(builder, result.Comparison);
 
             return builder.ToString();
         }
@@ -34,12 +48,13 @@ namespace ThirdPersonSimulation
         {
             LocalRollbackSynctestFirstMismatch mismatch = result.FirstMismatch;
             StringBuilder builder = new StringBuilder(512);
-            builder.Append("[rollback-synctest] first-mismatch");
+            builder.Append(mismatch.HasMismatch ? "[rollback-synctest] first-mismatch" : "[rollback-synctest] first-presentation-drift");
             builder.Append(" stage=").Append(mismatch.Stage);
             builder.Append(" tick=").Append(mismatch.Tick.Value);
             builder.Append(" restore=").Append(result.RestoreTick.Value);
             builder.Append(" end=").Append(result.EndTick.Value);
-            builder.Append(" differences=").Append(string.Join(",", mismatch.Comparison.Differences));
+            AppendGameplayDifferences(builder, mismatch.Comparison);
+            AppendPresentationDifferences(builder, mismatch.Comparison);
             if (mismatch.HasInput)
             {
                 PredictionInputFrame input = mismatch.Input;
@@ -75,7 +90,29 @@ namespace ThirdPersonSimulation
                 $"motionSpeed={motion.CurrentSpeed:F3} motionLast={Format(motion.LastWorldDirection)} motionY={motion.VerticalVelocity:F3} motionRoot={motion.HasRootPose}/{Format(motion.RootPosition)}/{motion.RootYaw:F3} " +
                 $"bbWorld={Format(locomotion.WorldDirection)} bbMove={locomotion.HasMoveIntent}/{locomotion.MoveStrength:F3} bbStep={locomotion.SourceStep} " +
                 $"bbAction={action.Active}/{action.State}/{action.HasMovement}/{Format(action.WorldDirection)}/{action.PlanarDistance:F3}/step={action.SourceStep} " +
+                $"bbActionAnim={animation.ActionKey}/{animation.ActionNormalizedTime:F6}/valid={animation.ActionHasValidPlayback}/ended={animation.ActionIsEnded}/name={animation.ActionAnimationName} " +
+                $"bbFoot={Format(animation.CurrentLocomotionFootPhase)} bbExitFoot={Format(animation.LastLocomotionExitFootPhase)} " +
                 $"bbAnim={animation.LocomotionProgress.Phase}/{animation.LocomotionProgress.AliasKey}/{animation.LocomotionProgress.NormalizedTime:F6}/valid={animation.LocomotionProgress.HasValidPlayback}/ended={animation.LocomotionProgress.IsEnded}/name={animation.LocomotionAnimationName}/step={animation.SourceStep}";
+        }
+
+        static string Format(LocomotionFootPhaseSample sample)
+        {
+            return $"{sample.Phase}/{sample.Gait}/{sample.AliasKey}/{sample.FootPhase}/norm={sample.NormalizedTime:F6}/valid={sample.IsValid}/step={sample.SourceStep}";
+        }
+
+        static void AppendGameplayDifferences(
+            StringBuilder builder,
+            in CharacterSimulationSnapshotComparison comparison,
+            string label = " differences=")
+        {
+            if (comparison.Differences.Count > 0)
+                builder.Append(label).Append(string.Join(",", comparison.Differences));
+        }
+
+        static void AppendPresentationDifferences(StringBuilder builder, in CharacterSimulationSnapshotComparison comparison, string label = " presentationDifferences=")
+        {
+            if (comparison.PresentationDifferences.Count > 0)
+                builder.Append(label).Append(string.Join(",", comparison.PresentationDifferences));
         }
 
         static void AppendButton(StringBuilder builder, string name, in PredictionButtonFrame button)

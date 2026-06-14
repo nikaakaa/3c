@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacterStateMachine;
 
 namespace ThirdPersonAction
 {
@@ -13,7 +14,8 @@ namespace ThirdPersonAction
             float windowStart = 0f,
             float windowEnd = 0f,
             bool force = false,
-            string windowId = "")
+            string windowId = "",
+            string requiredFactId = "")
         {
             FromState = fromState;
             TargetState = targetState;
@@ -22,6 +24,7 @@ namespace ThirdPersonAction
             WindowStart = windowStart;
             WindowEnd = windowEnd;
             WindowId = windowId ?? string.Empty;
+            RequiredFactId = new TimelineFactId(requiredFactId);
             Force = force;
         }
 
@@ -32,8 +35,10 @@ namespace ThirdPersonAction
         public float WindowStart { get; }
         public float WindowEnd { get; }
         public string WindowId { get; }
+        public TimelineFactId RequiredFactId { get; }
         public bool Force { get; }
         public bool RequiresTimelineWindow => !string.IsNullOrWhiteSpace(WindowId);
+        public bool RequiresTimelineFact => RequiredFactId.IsValid;
 
         public bool Matches(ActionInterruptContext context, ActionInterruptRequest request)
         {

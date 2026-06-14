@@ -19,6 +19,7 @@ namespace ThirdPersonAnimation
         [SerializeField] LocomotionAnimationPhaseConfig runEnd = LocomotionAnimationPhaseConfig.OnAnimationEnd("RunEnd");
         [SerializeField] LocomotionAnimationPhaseConfig turnBack = LocomotionAnimationPhaseConfig.OnAnimationEnd("Locomotion.Turn.Back");
         [SerializeField] LocomotionPhaseMotionProfileBinding[] motionProfiles = Array.Empty<LocomotionPhaseMotionProfileBinding>();
+        [SerializeField] LocomotionPhaseFootPhaseProfileBinding[] footPhaseProfiles = Array.Empty<LocomotionPhaseFootPhaseProfileBinding>();
 
         public LocomotionAnimationPhaseConfig Idle => idle;
         public LocomotionAnimationPhaseConfig MoveStart => moveStart;
@@ -32,6 +33,7 @@ namespace ThirdPersonAnimation
         public LocomotionAnimationPhaseConfig RunEnd => ResolveGaitPhaseConfig(BasicMovementPhase.MoveStop, BasicMovementGait.Run);
         public LocomotionAnimationPhaseConfig TurnBack => turnBack;
         public LocomotionPhaseMotionProfileBinding[] MotionProfiles => motionProfiles ?? Array.Empty<LocomotionPhaseMotionProfileBinding>();
+        public LocomotionPhaseFootPhaseProfileBinding[] FootPhaseProfiles => footPhaseProfiles ?? Array.Empty<LocomotionPhaseFootPhaseProfileBinding>();
 
         public LocomotionAnimationPhaseConfig ResolvePhaseConfig(BasicMovementPhase phase)
         {
@@ -92,6 +94,34 @@ namespace ThirdPersonAnimation
             motionProfiles = bindings ?? Array.Empty<LocomotionPhaseMotionProfileBinding>();
         }
 
+        public LocomotionFootPhaseProfileSO ResolveFootPhaseProfile(BasicMovementPhase phase, BasicMovementGait gait, string aliasKey)
+        {
+            LocomotionPhaseFootPhaseProfileBinding[] profiles = footPhaseProfiles;
+            if (profiles == null || profiles.Length == 0)
+                return null;
+
+            for (int i = 0; i < profiles.Length; i++)
+            {
+                LocomotionPhaseFootPhaseProfileBinding binding = profiles[i];
+                LocomotionFootPhaseProfileSO profile = binding.Profile;
+                if (profile != null &&
+                    binding.Matches(phase, gait, aliasKey) &&
+                    profile.Phase == phase &&
+                    profile.Gait == gait &&
+                    profile.AliasKey == binding.AliasKey)
+                {
+                    return profile;
+                }
+            }
+
+            return null;
+        }
+
+        public void SetFootPhaseProfileBindings(params LocomotionPhaseFootPhaseProfileBinding[] bindings)
+        {
+            footPhaseProfiles = bindings ?? Array.Empty<LocomotionPhaseFootPhaseProfileBinding>();
+        }
+
         public BasicMovementPhaseTiming ResolvePhaseTiming(BasicMovementPhase phase, BasicMovementPhaseTiming fallback)
         {
             return ResolvePhaseTiming(phase, BasicMovementGait.Run, fallback);
@@ -130,6 +160,9 @@ namespace ThirdPersonAnimation
             ValidatePhase(runEnd, "RunEnd (MoveStop + Run)", requireTimedPhaseExits, result);
             ValidatePhase(turnBack, "TurnBack", false, result);
             ValidateMotionProfiles(result);
+            ValidateFootPhaseProfiles(result);
+            ValidateRequiredFootPhaseProfile(BasicMovementPhase.TurnBack, BasicMovementGait.Run, TurnBack.AliasKey, "TurnBack", result);
+            ValidateRequiredFootPhaseProfile(BasicMovementPhase.MoveLoop, BasicMovementGait.Run, RunLoop.AliasKey, "RunLoop (MoveLoop + Run)", result);
             return result;
         }
 
@@ -147,6 +180,7 @@ namespace ThirdPersonAnimation
             runEnd = LocomotionAnimationPhaseConfig.OnAnimationEnd("RunEnd");
             turnBack = LocomotionAnimationPhaseConfig.OnAnimationEnd("Locomotion.Turn.Back");
             motionProfiles = Array.Empty<LocomotionPhaseMotionProfileBinding>();
+            footPhaseProfiles = Array.Empty<LocomotionPhaseFootPhaseProfileBinding>();
         }
 
         LocomotionAnimationPhaseConfig ResolveGaitPhaseConfig(BasicMovementPhase phase, BasicMovementGait gait)
@@ -190,6 +224,31 @@ namespace ThirdPersonAnimation
 
             for (int i = 0; i < profiles.Length; i++)
                 LocomotionMotionProfileValidator.ValidateBinding(in profiles[i], $"MotionProfile[{i}]", result);
+        }
+
+        void ValidateFootPhaseProfiles(RunLocomotionAnimationConfigValidationResult result)
+        {
+            LocomotionPhaseFootPhaseProfileBinding[] profiles = footPhaseProfiles;
+            if (profiles == null)
+                return;
+
+            for (int i = 0; i < profiles.Length; i++)
+                LocomotionFootPhaseProfileValidator.ValidateBinding(in profiles[i], $"FootPhaseProfile[{i}]", result);
+        }
+
+        void ValidateRequiredFootPhaseProfile(
+            BasicMovementPhase phase,
+            BasicMovementGait gait,
+            string aliasKey,
+            string name,
+            RunLocomotionAnimationConfigValidationResult result)
+        {
+            if (string.IsNullOrWhiteSpace(aliasKey))
+                return;
+
+            LocomotionFootPhaseProfileSO profile = ResolveFootPhaseProfile(phase, gait, aliasKey);
+            if (profile == null || !profile.EnablePhaseMatching)
+                result.AddError($"{name} foot phase profile is missing.");
         }
 
         static void ValidatePhase(

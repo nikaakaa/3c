@@ -88,9 +88,12 @@ namespace ThirdPersonSimulation
             Actual = actual;
             Comparison = comparison;
             HasMismatch = stage != LocalRollbackSynctestMismatchStage.None && !comparison.Matches;
+            HasPresentationDrift = stage != LocalRollbackSynctestMismatchStage.None && comparison.HasPresentationDifferences;
         }
 
         public bool HasMismatch { get; }
+        public bool HasPresentationDrift { get; }
+        public bool HasAnyDifference => HasMismatch || HasPresentationDrift;
         public LocalRollbackSynctestMismatchStage Stage { get; }
         public SimulationTick Tick { get; }
         public bool HasInput { get; }
@@ -163,6 +166,17 @@ namespace ThirdPersonSimulation
                     restoredSnapshot,
                     restoreComparison);
             }
+            else if (restoreComparison.HasPresentationDifferences)
+            {
+                firstMismatch = new LocalRollbackSynctestFirstMismatch(
+                    LocalRollbackSynctestMismatchStage.Restore,
+                    restoreTick,
+                    false,
+                    default,
+                    restoreSnapshot,
+                    restoredSnapshot,
+                    restoreComparison);
+            }
 
             for (int i = 0; i < replayInputs.Count; i++)
             {
@@ -179,6 +193,17 @@ namespace ThirdPersonSimulation
                 CharacterSimulationSnapshotComparison stepComparison =
                     CharacterSimulationSnapshotComparer.Compare(in expectedStepSnapshot, in actualStepSnapshot, in tolerance);
                 if (!stepComparison.Matches)
+                {
+                    firstMismatch = new LocalRollbackSynctestFirstMismatch(
+                        LocalRollbackSynctestMismatchStage.Replay,
+                        input.Tick,
+                        true,
+                        input,
+                        expectedStepSnapshot,
+                        actualStepSnapshot,
+                        stepComparison);
+                }
+                else if (!firstMismatch.HasAnyDifference && stepComparison.HasPresentationDifferences)
                 {
                     firstMismatch = new LocalRollbackSynctestFirstMismatch(
                         LocalRollbackSynctestMismatchStage.Replay,

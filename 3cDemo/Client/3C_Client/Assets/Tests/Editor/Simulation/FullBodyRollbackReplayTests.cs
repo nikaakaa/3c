@@ -424,6 +424,7 @@ namespace ThirdPersonSimulation.Tests
                 default,
                 default,
                 default,
+                true,
                 DodgeActionConfig.Default,
                 0,
                 Array.Empty<ActionInterruptPolicy>());

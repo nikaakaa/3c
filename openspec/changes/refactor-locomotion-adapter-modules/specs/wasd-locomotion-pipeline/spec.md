@@ -5,11 +5,11 @@
 #### Scenario: Controller 只保留 facade 职责
 - **WHEN** Locomotion 模块化重构完成
 - **THEN** `PlayerLocomotionController` MUST 只负责 Unity 引用解析、生命周期、FullBody pipeline 调用入口和必要运行时缓存
-- **AND** 它 MUST NOT 内联维护大段 TurnBack motion、diagnostics 或纯逻辑 decision 构建实现
+- **AND** 它 MUST NOT 内联维护大段 TurnBack motion、diagnostics 或纯逻辑 facts 构建实现
 
-#### Scenario: Decision frame builder 保持纯逻辑边界
-- **WHEN** FullBody pipeline 请求 Locomotion decision facts
-- **THEN** 系统 MUST 通过 `LocomotionDecisionFrameBuilder` 或等价模块生成移动意图、空间事实和状态机 context
+#### Scenario: Facts builder 保持纯逻辑边界
+- **WHEN** FullBody pipeline 请求 Locomotion facts
+- **THEN** 系统 MUST 通过 `LocomotionFactsBuilder` 或等价模块生成移动意图、空间事实和状态机 context
 - **AND** 该模块 MUST NOT 直接持有 `MonoBehaviour`、`Transform`、`Camera`、Animancer runtime、`InputAction` 或 motion executor
 
 #### Scenario: TurnBack 模块不改变输出
@@ -28,7 +28,7 @@
 
 #### Scenario: 自动测试覆盖拆分前后一致性
 - **WHEN** 运行 Locomotion module EditMode 测试
-- **THEN** 测试 MUST 覆盖 decision facts 一致性
+- **THEN** 测试 MUST 覆盖 locomotion facts 一致性
 - **AND** MUST 覆盖 TurnBack intent 一致性
 - **AND** MUST 覆盖 TurnBack motion facts 一致性
 - **AND** MUST 覆盖 state frame 到 locomotion frame 的输出一致性

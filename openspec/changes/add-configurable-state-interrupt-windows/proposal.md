@@ -1,17 +1,50 @@
-# Change: 增加可配置状态打断窗口
+# Change: 收口状态窗口与请求打断权威
 
 ## Why
-TurnBack 已经从临时移动特判收敛为状态，但它的输入锁定、转身完成、退出和打断规则仍是局部字段，不能表达“前 20% 不可打断、20%-47% 只允许高优先级、47% 后恢复普通移动”这类动作窗口。后续攻击连招、Dodge、受击和 TurnBack 都需要同一种 timeline window、priority、resistance 和 baked motion 采样模型，否则会继续出现分裂路径。
+当前项目里 priority、resistance、force、状态窗口、动作打断策略和动画退出时间已经都有雏形，但职责边界还不够清晰：`ActionInterruptPolicy` 能表达 elapsed time window，`StateTimelinePolicy` 也能表达 request window，TurnBack 自己还有局部 lock/exit timing 字段，状态机 transition 也有 priority。继续在这个基础上接攻击连招或编辑器，会把“窗口”和“打断”混成第二套运行路径。
+
+本变更用于先把权威边界定清楚：窗口和打断需要分开建模，但不能分裂执行路径。窗口只负责在 timeline 采样后产出纯数据 timeline facts；打断只负责消费 request、policy 和 active facts 做准入裁决；统一状态机只消费已 accepted 的 input fact 做状态切换。
 
 ## What Changes
-- 新增状态级 timeline policy：每个 FullBody 状态可以配置 motion window、input lock window、interrupt/cancel window、exit window、priority、resistance 和窗口标签。
-- 将 timeline policy 采样为纯数据 facts，供统一状态机条件、运动输出和打断仲裁消费，不让 Animancer、Animator 或 MonoBehaviour 直接决定业务窗口。
-- 扩展现有 ActionInterrupt 仲裁思路为状态请求准入入口，使 TurnBack、Dodge、Attack、HitReact 等请求都能使用同一套 priority/resistance/window 规则。
-- 明确逻辑 transition、自然退出窗口、打断/取消窗口和视觉 blend 的边界：transition 条件满足后立即切换逻辑状态，视觉 fade、clip、speed 和 TransitionAsset 只属于动画表现配置。
-- TurnBack 第一版作为落地对象：只允许从 RunLoop 触发，视觉播放完整 inplace 动画，位移和 yaw 来自已配置的 baked motion profile，普通输入旋转和平面位移在配置窗口内被锁定。
-- 预留轻量编辑器/校验入口，但第一版运行时只要求正式配置资产和自动测试，不实现完整 timeline 编辑器。
+- 明确三层职责：
+  - `StateTimelinePolicy`：定义当前状态生命周期内的 motion、input lock、request、cancel 和 exit window。
+  - `StateRequestInterruptPolicy` / 现有 `ActionInterruptPolicy` 演进：定义某类请求从 from state 到 target state 的准入规则、最小优先级、force 和 required fact id。
+  - 统一状态机 transition：只处理 accepted request fact、自然退出和普通状态图选边，不裁决请求优先级、抗性或窗口。
+- 将窗口 timing 从各动作局部字段收口到状态 timeline policy；TurnBack 的 lock/exit/turn complete timing 不再作为独立权威长期存在。
+- 将窗口采样结果表达为稳定 `TimelineFactId` 或等价类型化 tag；窗口 id 主要用于编辑、诊断和校验，仲裁策略优先引用 required fact id。
+- 将请求准入从状态机条件和动作局部判断收口到统一仲裁入口；Dodge、TurnBack、后续 Attack 复用同一套 priority/resistance/force/window facts 规则。
+- 保留现有 elapsed time timing rule 作为迁移兼容，但新增状态请求准入优先使用 required fact id + `StateTimelineWindowFacts`。
+- 明确 transition priority、request priority、state resistance、window min priority 和 force 的不同语义，避免配置面板里同名字段被误用。
+- 明确 visual fade、clip、TransitionAsset、speed、start time 只属于动画表现配置，不能改变逻辑窗口、自然退出或打断许可。
+- 第一版只收口数据模型、TurnBack 迁移、现有 Dodge 行为兼容、诊断日志和测试；攻击连招与编辑器只作为后续消费者，不在本变更实现。
+
+## Non-Goals
+- 不实现轻攻击三段连招。
+- 不实现完整 timeline 编辑器。
+- 不新增 hitbox、hurtbox、伤害、命中停顿、VFX、SFX、IK 或相机事件轨道。
+- 不新增 TurnBack、Dodge 或 Attack 专用仲裁器。
+- 不让 Animancer、Animator、动画事件或 TransitionAsset 决定业务状态切换。
+- 不引入 fallback 配置；缺少正式 timeline/policy 配置必须诊断失败。
 
 ## Impact
-- Affected specs: `state-timeline-policy`, `animation-phase-timeline-facts`, `action-interrupt-arbiter`, `action-interrupt-policy-data`, `unified-character-state-machine`, `basic-locomotion-animation`
-- Affected code: `Assets/Scripts/Character/Action/Model/*Interrupt*`, `Assets/Scripts/Character/StateMachine/*`, `Assets/Scripts/Character/Movement/*`, `Assets/Scripts/Character/Animation/*`, `Assets/Configs/3C/Animation/Locomotion/Corin/Bake/*`
-- Related changes: builds on `formalize-turnback-locomotion-state`, coordinates with `refactor-fullbody-frame-pipeline`, and provides the shared window model needed by `add-light-attack-combo-action`
+- Affected specs:
+  - `state-timeline-policy`
+  - `action-interrupt-arbiter`
+  - `action-interrupt-policy-data`
+  - `unified-character-state-machine`
+  - `basic-locomotion-animation`
+  - `animation-phase-timeline-facts`
+- Affected code:
+  - `Assets/Scripts/Character/StateMachine/Model/*`
+  - `Assets/Scripts/Character/StateMachine/Solver/*`
+  - `Assets/Scripts/Character/Action/Model/*Interrupt*`
+  - `Assets/Scripts/Character/Action/Solver/*Interrupt*`
+  - `Assets/Scripts/Character/Action/FullBody/*`
+  - `Assets/Scripts/Character/Movement/*`
+  - `Assets/Scripts/Character/Animation/*`
+  - `Assets/Configs/3C/Statemachine/*`
+  - `Assets/Configs/3C/Action/*`
+- Related changes:
+  - Blocks `add-light-attack-combo-action` implementation until the shared window/request boundary is stable.
+  - Coordinates with `refactor-fullbody-frame-pipeline` and `refactor-state-machine-runtime-authority`.
+  - Builds on `formalize-turnback-locomotion-state` but replaces TurnBack-local timing authority with state timeline facts.

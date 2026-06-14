@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using ThirdPersonAction;
+using ThirdPersonCharacterStateMachine;
 using ThirdPersonDiagnostics;
 using UnityEngine;
 
@@ -195,9 +196,9 @@ namespace ThirdPersonAction.Tests
         [Test]
         public void RequestWindowSatisfiesTimelinePolicyWindow()
         {
-            ThirdPersonCharacterStateMachine.StateTimelineWindowFacts cancelFacts =
-                new ThirdPersonCharacterStateMachine.StateTimelineWindowFacts(
-                    new ThirdPersonCharacterStateMachine.CharacterStateId("Action.Attack01"),
+            StateTimelineWindowFacts cancelFacts =
+                new StateTimelineWindowFacts(
+                    new CharacterStateId("Action.Attack01"),
                     0.5f,
                     true,
                     0.25f,
@@ -219,6 +220,96 @@ namespace ThirdPersonAction.Tests
 
             Assert.True(decision.Accepted);
             Assert.AreEqual(Dodge, decision.TargetState);
+        }
+
+        [Test]
+        public void RequiredFactRejectsWhenRequestFactIsMissing()
+        {
+            StateTimelineWindowFacts cancelFacts = new StateTimelineWindowFacts(
+                new CharacterStateId("Action.Attack01"),
+                0.5f,
+                true,
+                0.25f,
+                false,
+                false,
+                true,
+                false,
+                0,
+                0,
+                0,
+                false,
+                "attack-dodge-cancel",
+                "attack-dodge-cancel",
+                TimelineFactIds.CancelableToDodge.Value,
+                string.Empty);
+
+            ActionInterruptDecision decision = ActionInterruptArbiter.Arbitrate(
+                Context(Attack01, timelineFacts: cancelFacts),
+                new[] { Request(Dodge, 50) },
+                new[] { new ActionInterruptPolicy(Attack01, Dodge, 1, requiredFactId: TimelineFactIds.CancelableToDodge.Value) });
+
+            Assert.False(decision.Accepted);
+            Assert.AreEqual(ActionInterruptRejectReason.TimingNotSatisfied, decision.RejectReason);
+        }
+
+        [Test]
+        public void RequiredFactAcceptsWhenRequestFactIsActive()
+        {
+            StateTimelineWindowFacts cancelFacts = new StateTimelineWindowFacts(
+                new CharacterStateId("Action.Attack01"),
+                0.5f,
+                true,
+                0.25f,
+                false,
+                false,
+                true,
+                false,
+                0,
+                0,
+                0,
+                false,
+                "attack-dodge-cancel",
+                "attack-dodge-cancel",
+                TimelineFactIds.CancelableToDodge.Value,
+                TimelineFactIds.CancelableToDodge.Value);
+
+            ActionInterruptDecision decision = ActionInterruptArbiter.Arbitrate(
+                Context(Attack01, timelineFacts: cancelFacts),
+                new[] { Request(Dodge, 50) },
+                new[] { new ActionInterruptPolicy(Attack01, Dodge, 1, requiredFactId: TimelineFactIds.CancelableToDodge.Value) });
+
+            Assert.True(decision.Accepted);
+            Assert.AreEqual(Dodge, decision.TargetState);
+        }
+
+        [Test]
+        public void RequiredFactDoesNotUseNaturalExitFactAsRequestPermission()
+        {
+            StateTimelineWindowFacts exitFacts = new StateTimelineWindowFacts(
+                new CharacterStateId("Action.Attack01"),
+                1f,
+                true,
+                0.5f,
+                false,
+                false,
+                false,
+                true,
+                0,
+                0,
+                0,
+                false,
+                "attack-exit",
+                string.Empty,
+                TimelineFactIds.NaturalExitReady.Value,
+                string.Empty);
+
+            ActionInterruptDecision decision = ActionInterruptArbiter.Arbitrate(
+                Context(Attack01, timelineFacts: exitFacts),
+                new[] { Request(Dodge, 50) },
+                new[] { new ActionInterruptPolicy(Attack01, Dodge, 1, requiredFactId: TimelineFactIds.NaturalExitReady.Value) });
+
+            Assert.False(decision.Accepted);
+            Assert.AreEqual(ActionInterruptRejectReason.TimingNotSatisfied, decision.RejectReason);
         }
 
         [Test]

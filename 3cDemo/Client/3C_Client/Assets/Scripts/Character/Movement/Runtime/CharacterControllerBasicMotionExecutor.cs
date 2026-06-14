@@ -81,12 +81,14 @@ namespace ThirdPersonMovement
             Vector3 worldDirection = command.WorldDirection;
             worldDirection.y = 0f;
             worldDirection = worldDirection.sqrMagnitude > 0.000001f ? worldDirection.normalized : Vector3.zero;
-            Vector3 animationWorldDelta = ResolveAnimationWorldDelta(in command);
-            LastWorldDirection = ResolveLastWorldDirection(worldDirection, animationWorldDelta);
+            Transform root = ResolveMotionRoot();
+            Vector3 animationWorldDelta = AnimationPlanarDeltaResolver.ResolveWorldDelta(
+                in command,
+                root != null ? root.rotation : Quaternion.identity);
+            LastWorldDirection = AnimationPlanarDeltaResolver.ResolveLastWorldDirection(worldDirection, animationWorldDelta);
 
             bool suppressInputRotation = command.SuppressInputRotation;
             bool suppressInputPlanarMovement = command.SuppressInputPlanarMovement;
-            Transform root = ResolveMotionRoot();
             float yawBefore = ResolveYaw(root);
             bool appliedInputRotation = command.HasMovement && command.RotationSpeed > 0f && !suppressInputRotation;
             float targetYaw = command.DesiredFacing.sqrMagnitude > 0.000001f
@@ -171,53 +173,6 @@ namespace ThirdPersonMovement
             rotationRoot.rotation = Quaternion.LookRotation(worldDirection, Vector3.up);
         }
 
-        Vector3 ResolveAnimationWorldDelta(in MovementCommand command)
-        {
-            if (!command.HasAnimationMotion)
-                return Vector3.zero;
-
-            Vector3 localDelta = command.AnimationLocalPlanarDelta;
-            localDelta.y = 0f;
-            if (localDelta.sqrMagnitude <= 0.000001f)
-                return Vector3.zero;
-
-            Transform root = ResolveMotionRoot();
-            Vector3 worldDelta;
-            switch (command.AnimationPlanarDeltaSpace)
-            {
-                case BasicMovementPlanarDeltaSpace.World:
-                    worldDelta = localDelta;
-                    break;
-                case BasicMovementPlanarDeltaSpace.EntryLocal:
-                    worldDelta = ResolveEntryLocalWorldDelta(localDelta, command.AnimationPlanarBasisForward);
-                    break;
-                default:
-                    worldDelta = root != null ? root.TransformDirection(localDelta) : localDelta;
-                    break;
-            }
-
-            worldDelta.y = 0f;
-            return worldDelta;
-        }
-
-        static Vector3 ResolveEntryLocalWorldDelta(Vector3 localDelta, Vector3 entryPlanarBasisForward)
-        {
-            if (!TryNormalizePlanar(entryPlanarBasisForward, out Vector3 forward))
-                return Vector3.zero;
-
-            Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
-            return right * localDelta.x + forward * localDelta.z;
-        }
-
-        Vector3 ResolveLastWorldDirection(Vector3 inputWorldDirection, Vector3 animationWorldDelta)
-        {
-            if (inputWorldDirection.sqrMagnitude > 0.000001f)
-                return inputWorldDirection;
-
-            animationWorldDelta.y = 0f;
-            return animationWorldDelta.sqrMagnitude > 0.000001f ? animationWorldDelta.normalized : Vector3.zero;
-        }
-
         Transform ResolveMotionRoot()
         {
             if (rotationRoot != null)
@@ -234,27 +189,6 @@ namespace ThirdPersonMovement
         static float DeltaYaw(float from, float to)
         {
             return Mathf.DeltaAngle(from, to);
-        }
-
-        static bool TryNormalizePlanar(Vector3 value, out Vector3 normalized)
-        {
-            value.y = 0f;
-            float sqrMagnitude = value.sqrMagnitude;
-            if (sqrMagnitude <= 0.000001f)
-            {
-                normalized = Vector3.zero;
-                return false;
-            }
-
-            normalized = value / Mathf.Sqrt(sqrMagnitude);
-            return true;
-        }
-
-        static Vector3 ResolvePlanarRightOrZero(Vector3 forward)
-        {
-            return TryNormalizePlanar(forward, out Vector3 normalizedForward)
-                ? Vector3.Cross(Vector3.up, normalizedForward).normalized
-                : Vector3.zero;
         }
 
         void LogAnimationMotion(
@@ -279,7 +213,7 @@ namespace ThirdPersonMovement
             Vector3 requestedPlanarDisplacement = inputPlanarDisplacement + animationWorldDelta;
             Vector3 actualRootDelta = rootPositionAfter - rootPositionBefore;
             bool isTurnBack = command.Phase == BasicMovementPhase.TurnBack;
-            Vector3 animationPlanarBasisRight = ResolvePlanarRightOrZero(command.AnimationPlanarBasisForward);
+            Vector3 animationPlanarBasisRight = AnimationPlanarDeltaResolver.ResolvePlanarRightOrZero(command.AnimationPlanarBasisForward);
             bool entryBasisMissing = command.AnimationPlanarDeltaSpace == BasicMovementPlanarDeltaSpace.EntryLocal &&
                                      command.AnimationLocalPlanarDelta.sqrMagnitude > 0.000001f &&
                                      command.AnimationPlanarBasisForward.sqrMagnitude <= 0.000001f;

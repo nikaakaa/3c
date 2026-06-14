@@ -1,6 +1,7 @@
-using Cinemachine;
+﻿using Cinemachine;
 using ThirdPersonPresentation;
 using UnityEngine;
+using ThirdPersonDiagnostics;
 
 namespace ThirdPersonCamera
 {
@@ -271,12 +272,23 @@ namespace ThirdPersonCamera
             if (!ShouldLog())
                 return;
 
-            Debug.Log(
-                $"[DEBUG-CAM-CHAIN] arm.constraint frame={Time.frameCount} vcam={TargetName(vcam != null ? vcam.transform : null)} " +
-                $"reason={ConstraintReason(constrainedByHit, constrainedByOverlap, recovering)} desiredDistance={desiredDistance:F3} hitDistance={hitDistance:F3} " +
-                $"targetDistance={state.TargetDistance:F3} currentDistance={state.CurrentDistance:F3} hit={state.HitName} overlap={(overlapCollider != null ? overlapCollider.name : string.Empty)} " +
-                $"ignoredRoot={TargetName(ignoredRoot)} ignoredHits={ignoredHits} ignoredOverlaps={ignoredOverlaps} deltaTime={deltaTime:F4} " +
-                $"mask={collisionMask.value} radius={radius:F3} skin={collisionSkin:F3} min={minDistance:F3}");
+             RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                 RuntimeDiagnosticLogCategory.Camera,
+                 RuntimeDiagnosticLogLevel.Info,
+                 "camera-arm-constraint",
+                 "",
+                 "",
+                 0,
+                 Time.frameCount,
+                 $"[DEBUG-CAM-CHAIN] arm.constraint frame={Time.frameCount} " +
+                 $"vcam={TargetName(vcam != null ? vcam.transform : null)} " +
+                 $"reason={ConstraintReason(constrainedByHit, constrainedByOverlap, recovering)} " +
+                 $"desiredDistance={desiredDistance:F3} hitDistance={hitDistance:F3} " +
+                 $"targetDistance={state.TargetDistance:F3} currentDistance={state.CurrentDistance:F3} " +
+                 $"hit={state.HitName} overlap={(overlapCollider != null ? overlapCollider.name : string.Empty)} " +
+                 $"ignoredRoot={TargetName(ignoredRoot)} ignoredHits={ignoredHits} ignoredOverlaps={ignoredOverlaps} " +
+                 $"deltaTime={deltaTime:F4} mask={collisionMask.value} radius={radius:F3} skin={collisionSkin:F3} " +
+                 $"min={minDistance:F3}"));
         }
 
         bool ShouldLog()

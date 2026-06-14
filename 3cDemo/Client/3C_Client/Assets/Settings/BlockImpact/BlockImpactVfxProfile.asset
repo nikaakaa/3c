@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b917eaa0e7c44e749bf407f90962f001, type: 3}
+  m_Name: BlockImpactVfxProfile
+  m_EditorClassIdentifier: 
+  flashTexture: {fileID: 2800000, guid: 3234b06fa1adb22498046c4325b478a4, type: 3}
+  sparkTexture: {fileID: 2800000, guid: c2c9bc77246cfae45984ea6fe03c42bd, type: 3}
+  sparkTrailTexture: {fileID: 2800000, guid: e61d5d713e631b54fa0573be0232551b, type: 3}
+  streakTexture: {fileID: 2800000, guid: 25b812da98790024d9743db570d5bce6, type: 3}
+  noiseTexture: {fileID: 2800000, guid: ac57799e89edcdc4799e0a95fc58d912, type: 3}
+  coreFlashEnabled: 1
+  screenStreakEnabled: 1
+  sparksEnabled: 1
+  screenPulseEnabled: 1
+  flashColor: {r: 1, g: 0.76, b: 0.32, a: 1}
+  sparkColor: {r: 1, g: 0.55, b: 0.12, a: 1}
+  streakColor: {r: 1, g: 0.42, b: 0.34, a: 1}
+  duration: 0.28
+  hdrIntensity: 12
+  flashSoftness: 0.32
+  flashScale: {x: 1.45, y: 1.45}
+  sparkCount: 54
+  sparkSpeed: 13
+  sparkLifetime: 0.26
+  sparkConeAngle: 42
+  sparkVelocityScale: 0.18
+  sparkLengthScale: 5.2
+  sparkTrailLifetime: 0.12
+  sparkTrailWidth: 0.045
+  sparkGravityModifier: 0.35
+  sparkVelocityDampen: 0.42
+  screenStreakLength: 1.2
+  screenStreakThickness: 0.018
+  screenStreakSoftness: 0.7
+  screenFlashWeight: 1
+  screenRadialWeight: 1
+  screenStreakWeight: 1
+  screenChromaticWeight: 1
+  screenImpactStrength: 1

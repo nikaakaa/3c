@@ -1,3 +1,5 @@
+using ThirdPersonAction;
+using ThirdPersonDiagnostics;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -8,16 +10,11 @@ namespace ThirdPersonMovement
     {
         [SerializeField] UnitySimulationTickDriver tickDriver;
         [SerializeField] PlayerLocomotionController locomotionController;
-        [SerializeField] bool restoreAutoUpdateOnDisable = true;
-
-        bool registered;
-        bool hadPreviousAutoUpdate;
-        bool previousAutoUpdate;
+        bool loggedRetiredDriver;
 
         public UnitySimulationTickDriver TickDriver { get => tickDriver; set => tickDriver = value; }
         public PlayerLocomotionController LocomotionController { get => locomotionController; set => locomotionController = value; }
-        public bool RestoreAutoUpdateOnDisable { get => restoreAutoUpdateOnDisable; set => restoreAutoUpdateOnDisable = value; }
-        public bool IsRegistered => registered;
+        public bool IsRegistered => false;
 
         void Reset()
         {
@@ -36,35 +33,14 @@ namespace ThirdPersonMovement
 
         public bool Register()
         {
-            if (registered)
-                return true;
-
             ResolveReferences();
-
-            if (tickDriver == null || locomotionController == null)
-                return false;
-
-            previousAutoUpdate = locomotionController.AutoUpdate;
-            hadPreviousAutoUpdate = true;
-            locomotionController.AutoUpdate = false;
-            tickDriver.Runner.Register(SimulationTickPhase.ExecuteMotion, this);
-            registered = true;
-            return true;
+            HasConflictingFullBodyTickAdapter();
+            ReportRetiredDriver();
+            return false;
         }
 
         public void Unregister()
         {
-            if (!registered)
-                return;
-
-            if (tickDriver != null)
-                tickDriver.Runner.Unregister(SimulationTickPhase.ExecuteMotion, this);
-
-            if (restoreAutoUpdateOnDisable && hadPreviousAutoUpdate && locomotionController != null)
-                locomotionController.AutoUpdate = previousAutoUpdate;
-
-            registered = false;
-            hadPreviousAutoUpdate = false;
         }
 
         public void Tick(SimulationTickPhase phase, in SimulationTickContext context)
@@ -72,11 +48,87 @@ namespace ThirdPersonMovement
             if (phase != SimulationTickPhase.ExecuteMotion)
                 return;
 
+            ReportRetiredDriver();
+        }
+
+        public bool UsesLocomotionController(PlayerLocomotionController controller)
+        {
+            if (controller == null)
+                return false;
+
             if (locomotionController == null)
                 ResolveReferences();
 
-            if (locomotionController != null)
-                locomotionController.TickFromInputSource(context.FixedDeltaSecondsFloat, context.TickValue);
+            return locomotionController == controller;
+        }
+
+        bool HasConflictingFullBodyTickAdapter()
+        {
+            if (locomotionController == null)
+                return false;
+
+            FullBodyActionTickAdapter[] adapters = GetComponentsInParent<FullBodyActionTickAdapter>(true);
+            for (int i = 0; i < adapters.Length; i++)
+            {
+                if (IsActiveFullBodyDriver(adapters[i]) &&
+                    adapters[i].FullBodyActionController != null &&
+                    adapters[i].FullBodyActionController.LocomotionController == locomotionController)
+                {
+                    ReportDriverConflict(adapters[i]);
+                    return true;
+                }
+            }
+
+            adapters = GetComponentsInChildren<FullBodyActionTickAdapter>(true);
+            for (int i = 0; i < adapters.Length; i++)
+            {
+                if (IsActiveFullBodyDriver(adapters[i]) &&
+                    adapters[i].FullBodyActionController != null &&
+                    adapters[i].FullBodyActionController.LocomotionController == locomotionController)
+                {
+                    ReportDriverConflict(adapters[i]);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        void ReportDriverConflict(FullBodyActionTickAdapter adapter)
+        {
+            string targetName = locomotionController != null ? locomotionController.name : name;
+            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                RuntimeDiagnosticLogCategory.Locomotion,
+                RuntimeDiagnosticLogLevel.Error,
+                "locomotion-driver-conflict",
+                string.Empty,
+                string.Empty,
+                0,
+                Time.frameCount,
+                $"LocomotionTickAdapter and FullBodyActionTickAdapter both target {targetName}. Disable one gameplay driver. conflict={adapter.name}"));
+        }
+
+        void ReportRetiredDriver()
+        {
+            if (loggedRetiredDriver)
+                return;
+
+            loggedRetiredDriver = true;
+            string targetName = locomotionController != null ? locomotionController.name : name;
+            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                RuntimeDiagnosticLogCategory.Locomotion,
+                RuntimeDiagnosticLogLevel.Error,
+                "locomotion-tick-adapter-retired",
+                string.Empty,
+                string.Empty,
+                0,
+                Time.frameCount,
+                $"LocomotionTickAdapter is retired and cannot drive gameplay ticks. Drive {targetName} through FullBodyActionTickAdapter."));
+        }
+
+        static bool IsActiveFullBodyDriver(FullBodyActionTickAdapter adapter)
+        {
+            return adapter != null && (adapter.IsRegistered || adapter.isActiveAndEnabled);
         }
 
         void ResolveReferences()

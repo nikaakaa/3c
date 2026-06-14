@@ -13,7 +13,8 @@ namespace ThirdPersonMovement
                 BasicMovementPhaseTiming.Manual,
                 BasicMovementPhaseTiming.AfterDuration(moveStartMinTime),
                 BasicMovementPhaseTiming.Manual,
-                BasicMovementPhaseTiming.AfterDuration(moveStopMinTime))
+                BasicMovementPhaseTiming.AfterDuration(moveStopMinTime),
+                BasicMovementPhaseTiming.Manual)
         {
         }
 
@@ -31,8 +32,11 @@ namespace ThirdPersonMovement
                 rotationSpeed,
                 moveStartMinTime,
                 moveStopMinTime,
+                BasicMovementPhaseTiming.Manual,
                 BasicMovementPhaseTiming.AfterDuration(moveStartMinTime),
-                BasicMovementPhaseTiming.AfterDuration(moveStopExitDuration < 0f ? moveStopMinTime : moveStopExitDuration))
+                BasicMovementPhaseTiming.Manual,
+                BasicMovementPhaseTiming.AfterDuration(moveStopExitDuration < 0f ? moveStopMinTime : moveStopExitDuration),
+                BasicMovementPhaseTiming.Manual)
         {
         }
 
@@ -75,7 +79,8 @@ namespace ThirdPersonMovement
                 BasicMovementPhaseTiming.Manual,
                 moveStartTiming,
                 BasicMovementPhaseTiming.Manual,
-                moveStopTiming)
+                moveStopTiming,
+                BasicMovementPhaseTiming.Manual)
         {
         }
 
@@ -89,7 +94,8 @@ namespace ThirdPersonMovement
             BasicMovementPhaseTiming idleTiming,
             BasicMovementPhaseTiming moveStartTiming,
             BasicMovementPhaseTiming moveLoopTiming,
-            BasicMovementPhaseTiming moveStopTiming)
+            BasicMovementPhaseTiming moveStopTiming,
+            BasicMovementPhaseTiming turnBackTiming)
         {
             WalkPlanarSpeed = ClampNonNegative(walkPlanarSpeed);
             RunPlanarSpeed = ClampNonNegative(runPlanarSpeed);
@@ -102,12 +108,14 @@ namespace ThirdPersonMovement
             this.moveStartTiming = moveStartTiming;
             this.moveLoopTiming = moveLoopTiming;
             this.moveStopTiming = moveStopTiming;
+            this.turnBackTiming = turnBackTiming;
         }
 
         readonly BasicMovementPhaseTiming idleTiming;
         readonly BasicMovementPhaseTiming moveStartTiming;
         readonly BasicMovementPhaseTiming moveLoopTiming;
         readonly BasicMovementPhaseTiming moveStopTiming;
+        readonly BasicMovementPhaseTiming turnBackTiming;
 
         public float MaxPlanarSpeed { get; }
         public float WalkPlanarSpeed { get; }
@@ -129,6 +137,7 @@ namespace ThirdPersonMovement
             BasicMovementPhaseTiming nextMoveStart = moveStartTiming;
             BasicMovementPhaseTiming nextMoveLoop = moveLoopTiming;
             BasicMovementPhaseTiming nextMoveStop = moveStopTiming;
+            BasicMovementPhaseTiming nextTurnBack = turnBackTiming;
 
             switch (phase)
             {
@@ -140,6 +149,9 @@ namespace ThirdPersonMovement
                     break;
                 case BasicMovementPhase.MoveStop:
                     nextMoveStop = timing;
+                    break;
+                case BasicMovementPhase.TurnBack:
+                    nextTurnBack = timing;
                     break;
                 default:
                     nextIdle = timing;
@@ -156,7 +168,8 @@ namespace ThirdPersonMovement
                 nextIdle,
                 nextMoveStart,
                 nextMoveLoop,
-                nextMoveStop);
+                nextMoveStop,
+                nextTurnBack);
         }
 
         public BasicMovementPhaseTiming ResolvePhaseTiming(BasicMovementPhase phase)
@@ -166,6 +179,7 @@ namespace ThirdPersonMovement
                 BasicMovementPhase.MoveStart => moveStartTiming,
                 BasicMovementPhase.MoveLoop => moveLoopTiming,
                 BasicMovementPhase.MoveStop => moveStopTiming,
+                BasicMovementPhase.TurnBack => turnBackTiming,
                 _ => idleTiming
             };
         }
@@ -193,7 +207,8 @@ namespace ThirdPersonMovement
                     BasicMovementPhaseTiming.Manual,
                     BasicMovementPhaseTiming.AfterDuration(config.MoveStartMinTime),
                     BasicMovementPhaseTiming.Manual,
-                    BasicMovementPhaseTiming.AfterDuration(config.MoveStopMinTime))
+                    BasicMovementPhaseTiming.AfterDuration(config.MoveStopMinTime),
+                    BasicMovementPhaseTiming.Manual)
                 : new BasicMovementSettings(
                     2f,
                     4f,
@@ -204,7 +219,8 @@ namespace ThirdPersonMovement
                     BasicMovementPhaseTiming.Manual,
                     BasicMovementPhaseTiming.AfterDuration(0.08f),
                     BasicMovementPhaseTiming.Manual,
-                    BasicMovementPhaseTiming.AfterDuration(0.08f));
+                    BasicMovementPhaseTiming.AfterDuration(0.08f),
+                    BasicMovementPhaseTiming.Manual);
         }
 
         static float ClampNonNegative(float value)

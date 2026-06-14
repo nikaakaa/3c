@@ -1,7 +1,7 @@
 # basic-locomotion-animation Specification
 
 ## Purpose
-TBD - created by archiving change add-basic-locomotion-animation. Update Purpose after archive.
+定义基础移动动画上下文、Walk/Run 动画配置、Animancer 外观层边界、动画退出事实和烘焙运动采样规则，确保动画表现不接管逻辑状态或位移权威。
 ## Requirements
 ### Requirement: 移动动画上下文
 系统 MUST 提供不依赖 Animancer 和场景对象的移动动画上下文，用于把当前基础移动阶段、Walk/Run 档位、输入强度、世界方向和当前速度传递给动画外观层。
@@ -12,9 +12,10 @@ TBD - created by archiving change add-basic-locomotion-animation. Update Purpose
 - **AND** 该上下文 MUST 不包含 Animancer 运行时类型
 
 #### Scenario: 上下文承载 Walk/Run 档位
-- **WHEN** 普通移动选择 Walk 或按住 Run 输入选择 Run
+- **WHEN** 普通移动选择 Walk 或 Shift FullBody 动作 `Directional` 完成后的 Run latch 选择 Run
 - **THEN** 移动动画上下文 MUST 记录当前基础移动档位
 - **AND** Walk/Run MUST NOT 替代 `BasicMovementPhase`
+- **AND** Run 档位 MUST NOT 依赖 Shift 持续按住
 
 #### Scenario: 上下文承载移动参数
 - **WHEN** 角色执行基础移动命令后
@@ -159,19 +160,19 @@ TBD - created by archiving change add-basic-locomotion-animation. Update Purpose
 - **AND** MUST 另建或更新 OpenSpec proposal 说明位移权威边界变化
 
 ### Requirement: 基础移动动画配置校验
-系统 MUST 提供基础移动 Run-only alias 配置的校验能力，帮助设计者在普通 Inspector 或轻量 editor 中发现缺失 alias 和逻辑退出时长问题，但该校验 MUST NOT 接管 Animancer TransitionAsset 的播放参数编辑。
+系统 MUST 提供基础移动 Walk/Run alias 配置的校验能力，帮助设计者在普通 Inspector 或轻量 editor 中发现缺失 alias、缺失 motion profile 绑定和逻辑退出策略问题，但该校验 MUST NOT 接管 Animancer TransitionAsset 的播放参数编辑。
 
 #### Scenario: 空 alias 报错
-- **WHEN** `Idle / RunStart / RunLoop / RunEnd` 任一 alias key 为空
+- **WHEN** `Idle / WalkStart / WalkLoop / WalkEnd / RunStart / RunLoop / RunEnd` 任一必需 alias key 为空
 - **THEN** 校验结果 MUST 报告对应 alias 缺失
 
 #### Scenario: 必需退出时长报错
-- **WHEN** 校验要求 `RunEnd` 必须显式配置退出时长
-- **AND** `RunEnd` 退出时长缺失
-- **THEN** 校验结果 MUST 报告 `RunEnd` 退出时长缺失
+- **WHEN** 校验要求某个基础移动阶段必须显式配置退出时长
+- **AND** 对应 Walk 或 Run 阶段的退出时长缺失
+- **THEN** 校验结果 MUST 报告对应 gait 和 phase 的退出时长缺失
 
 #### Scenario: 不校验 Animancer 播放参数
-- **WHEN** 设计者运行项目侧 Run 配置校验
+- **WHEN** 设计者运行项目侧基础移动配置校验
 - **THEN** 校验器 MUST NOT 把 Animancer TransitionAsset 的 fade、speed 或 normalized start time 作为本配置的错误来源
 
 ### Requirement: 基础移动动画阶段退出策略
@@ -308,4 +309,3 @@ TBD - created by archiving change add-basic-locomotion-animation. Update Purpose
 - **AND** MUST NOT 读取 `AnimationClip`
 - **AND** MUST NOT 调用 `CharacterController.Move`
 - **AND** MUST NOT 写 Transform
-

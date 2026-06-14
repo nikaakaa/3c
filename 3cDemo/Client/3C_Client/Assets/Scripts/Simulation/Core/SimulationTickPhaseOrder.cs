@@ -12,8 +12,8 @@ namespace ThirdPersonSimulation
             SimulationTickPhase.GameplayDecision,
             SimulationTickPhase.BuildMotion,
             SimulationTickPhase.ExecuteMotion,
-            SimulationTickPhase.WriteSnapshotAndEvents,
-            SimulationTickPhase.PresentationBridge
+            SimulationTickPhase.PresentationBridge,
+            SimulationTickPhase.WriteSnapshotAndEvents
         };
 
         public static IReadOnlyList<SimulationTickPhase> Phases { get; } = Array.AsReadOnly(OrderedPhases);

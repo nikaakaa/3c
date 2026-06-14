@@ -1,9 +1,10 @@
+using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace ThirdPersonMovement
 {
     [RequireComponent(typeof(CharacterController))]
-    public sealed class CharacterMotionDriver : MonoBehaviour, IBasicLocomotionMotionExecutor, IActionMovementExecutor
+    public sealed class CharacterMotionDriver : MonoBehaviour, IBasicLocomotionMotionExecutor, IActionMovementExecutor, IMotionExecutorRollbackStateProvider
     {
         [SerializeField] Transform rotationRoot;
         [SerializeField] bool applyGravity = true;
@@ -15,6 +16,19 @@ namespace ThirdPersonMovement
 
         public Vector3 LastWorldDirection => executor != null ? executor.LastWorldDirection : Vector3.zero;
         public float CurrentSpeed => executor != null ? executor.CurrentSpeed : 0f;
+
+        public MotionExecutorRollbackState CaptureRollbackState()
+        {
+            EnsureReady();
+            return executor != null ? executor.CaptureRollbackState() : MotionExecutorRollbackState.Empty;
+        }
+
+        public void RestoreRollbackState(in MotionExecutorRollbackState state)
+        {
+            EnsureReady();
+            if (executor != null)
+                executor.RestoreRollbackState(in state);
+        }
 
         void Awake()
         {

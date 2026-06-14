@@ -7,7 +7,7 @@ namespace ThirdPersonAnimation.EditorTools
 {
     public sealed class LocomotionMotionProfileBakerWindow : EditorWindow
     {
-        const string DefaultOutputPath = "Assets/Configs/3C/Locomotion/DefaultRunEndMotionProfile.asset";
+        const string DefaultOutputPath = "Assets/Configs/3C/Animation/Locomotion/Corin/Bake/DefaultRunEndMotionProfile.asset";
 
         GameObject targetPrefab;
         AnimationClip animationClip;
@@ -16,6 +16,7 @@ namespace ThirdPersonAnimation.EditorTools
         string aliasKey = "RunEnd";
         string motionRootPath = "Bip001";
         int sampleRate = 60;
+        float clipEndTime;
         string outputPath = DefaultOutputPath;
         LocomotionMotionProfileSO outputProfile;
 
@@ -34,6 +35,7 @@ namespace ThirdPersonAnimation.EditorTools
             aliasKey = EditorGUILayout.TextField("Alias Key", aliasKey);
             motionRootPath = EditorGUILayout.TextField("Motion Root Path", motionRootPath);
             sampleRate = EditorGUILayout.IntSlider("Sample Rate", sampleRate, 15, 120);
+            clipEndTime = EditorGUILayout.FloatField("Clip End Time", Mathf.Max(0f, clipEndTime));
             outputProfile = (LocomotionMotionProfileSO)EditorGUILayout.ObjectField("Existing Profile", outputProfile, typeof(LocomotionMotionProfileSO), false);
 
             using (new EditorGUI.DisabledScope(outputProfile != null))
@@ -65,7 +67,8 @@ namespace ThirdPersonAnimation.EditorTools
                 gait,
                 aliasKey,
                 motionRootPath,
-                sampleRate);
+                sampleRate,
+                clipEndTime);
 
             if (outputProfile != null)
             {

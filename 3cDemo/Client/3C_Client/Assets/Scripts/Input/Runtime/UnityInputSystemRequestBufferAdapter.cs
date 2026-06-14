@@ -1,11 +1,12 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using ThirdPersonSimulation;
 
 namespace ThirdPersonInput
 {
     [DefaultExecutionOrder(-20)]
     [DisallowMultipleComponent]
-    public sealed class UnityInputSystemRequestBufferAdapter : MonoBehaviour
+    public sealed class UnityInputSystemRequestBufferAdapter : MonoBehaviour, IPredictionButtonFrameSource
     {
         [SerializeField] InputRequestBufferComponent bufferComponent;
         [SerializeField] InputActionAsset inputActions;
@@ -62,6 +63,37 @@ namespace ThirdPersonInput
             if (advanceStepOnUpdate)
                 bufferComponent.AdvanceStep();
 
+            WriteCurrentButtonState();
+        }
+
+        public void Tick(int step)
+        {
+            ResolveBuffer();
+            if (bufferComponent == null)
+                return;
+
+            bufferComponent.SetStep(step);
+            WriteCurrentButtonState();
+        }
+
+        public bool TryReadPredictionButtons(
+            out PredictionButtonFrame dodge,
+            out PredictionButtonFrame attack,
+            out PredictionButtonFrame jump,
+            out PredictionButtonFrame interact)
+        {
+            InputAction action = ResolveDodgeAction();
+            bool dodgeHeld = action != null && action.IsPressed();
+            InputButtonState dodgeState = InputButtonState.FromHeld(previousDodgeHeld, dodgeHeld);
+            dodge = new PredictionButtonFrame(dodgeState.Pressed, dodgeState.Held, dodgeState.Released);
+            attack = PredictionButtonFrame.None;
+            jump = PredictionButtonFrame.None;
+            interact = PredictionButtonFrame.None;
+            return true;
+        }
+
+        void WriteCurrentButtonState()
+        {
             InputAction action = ResolveDodgeAction();
             bool dodgeHeld = action != null && action.IsPressed();
             bufferComponent.AddButtonState(InputButtonKind.Dodge, InputButtonState.FromHeld(previousDodgeHeld, dodgeHeld));

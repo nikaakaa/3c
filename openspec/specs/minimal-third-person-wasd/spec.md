@@ -1,7 +1,7 @@
 # minimal-third-person-wasd Specification
 
 ## Purpose
-TBD - created by archiving change add-minimal-third-person-wasd. Update Purpose after archive.
+定义最小第三人称 WASD 移动、相机相对方向、基础移动输入和演示角色装配的初始能力，作为后续 Locomotion 管线的可玩地基。
 ## Requirements
 ### Requirement: 最小 Cinemachine 第三人称相机
 系统 MUST 提供一个最小第三人称相机链路，该链路使用 Cinemachine 虚拟相机跟随标准 `CameraTarget`，并由轻量控制层维护 yaw/pitch、`CameraPlanarForward` 和 `CameraPlanarRight`。
@@ -77,4 +77,3 @@ TBD - created by archiving change add-minimal-third-person-wasd. Update Purpose 
 - **WHEN** 场景中绑定了角色、相机目标、Move 输入和 Look 输入
 - **THEN** 玩家可以用鼠标调整第三人称视角
 - **AND** 可以用 WASD 按相机相对方向移动角色
-

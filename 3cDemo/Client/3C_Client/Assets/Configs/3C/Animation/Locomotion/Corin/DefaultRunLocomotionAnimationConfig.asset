@@ -52,6 +52,10 @@ MonoBehaviour:
     aliasKey: RunEnd
     exitPolicy: 2
     exitDuration: 0
+  turnBack:
+    aliasKey: Locomotion.Turn.Back
+    exitPolicy: 2
+    exitDuration: 0
   motionProfiles:
   - phase: 3
     gait: 1
@@ -68,3 +72,8 @@ MonoBehaviour:
     aliasKey: RunLoop
     profile: {fileID: 11400000, guid: 9345d4cf726de644fb37029cc0feed38, type: 2}
     motionMode: 0
+  - phase: 4
+    gait: 1
+    aliasKey: Locomotion.Turn.Back
+    profile: {fileID: 11400000, guid: b5b41379037e4e745a41e917f27bc4bb, type: 2}
+    motionMode: 1

@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using ThirdPersonDiagnostics;
 
 public static class HasteHumanoidAvatarBuilder
 {
@@ -52,7 +53,7 @@ public static class HasteHumanoidAvatarBuilder
             WriteReport();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log("[HasteHumanoidAvatarBuilder] Built Humanoid avatar and preview prefabs.");
+         RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(RuntimeDiagnosticLogCategory.Editor, RuntimeDiagnosticLogLevel.Info, "avatar-built", "", "", 0, Time.frameCount, "[HasteHumanoidAvatarBuilder] Built Humanoid avatar and preview prefabs."));
         }
         finally
         {
@@ -79,7 +80,7 @@ public static class HasteHumanoidAvatarBuilder
 
             if (avatar.isValid && avatar.isHuman)
             {
-                Debug.Log($"[HasteHumanoidAvatarBuilder] Humanoid mapping: {labels[i]}");
+         RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(RuntimeDiagnosticLogCategory.Editor, RuntimeDiagnosticLogLevel.Info, "avatar-mapping", "", "", 0, Time.frameCount, $"[HasteHumanoidAvatarBuilder] Humanoid mapping: {labels[i]}"));
                 return avatar;
             }
 

@@ -14,10 +14,13 @@ namespace ThirdPersonRendering.Tests
         const string PerformantRendererPath = "Assets/Settings/URP-Performant-Renderer.asset";
         const string ProfilePath = "Assets/Settings/SampleSceneProfile.asset";
         const string GlobalSettingsPath = "Assets/Settings/UniversalRenderPipelineGlobalSettings.asset";
+        const string ShaderPath = "Assets/Shader/PostProcessing/Glitch/Glitch.shader";
+        const string SlashTearPreviewPrefabPath = "Assets/Prefabs/Rendering/GlitchSlashTearPreview.prefab";
         const string FeatureScriptGuid = "17863a8457c84489a443192465eef6bc";
         const string VolumeScriptGuid = "1d25830a28aa416695e8702a935bdb4d";
         const string ShaderGuid = "f3ca4285bcfb4073a1d0d7edfe0cba29";
         const string MaskShaderGuid = "3ad786e179c1482da3dcc22ec570e72e";
+        const string SlashTearPreviewMaterialGuid = "37995dcb93c549f690dd9ac5e56f4821";
 
         [Test]
         public void DefaultSettingsDoNotActivateGlitch()
@@ -47,6 +50,88 @@ namespace ThirdPersonRendering.Tests
             Assert.True(settings.UseTargetMask);
             Assert.AreEqual(GlitchSettings.MaxMaskInfluence, settings.MaskInfluence);
             Assert.AreEqual(GlitchSettings.MaxMaskExpansion, settings.MaskExpansion);
+            Assert.AreEqual(GlitchMode.DigitalGlitch, settings.Mode);
+        }
+
+        [Test]
+        public void SlashTearSettingsClampToSafeRanges()
+        {
+            GlitchSettings settings = new GlitchSettings(
+                GlitchMode.SlashTear,
+                0.5f,
+                48f,
+                0.02f,
+                0.01f,
+                0.35f,
+                24f,
+                false,
+                1f,
+                0.04f,
+                9999f,
+                999f,
+                999f,
+                999f,
+                999f);
+
+            Assert.AreEqual(GlitchMode.SlashTear, settings.Mode);
+            Assert.AreEqual(GlitchSettings.MaxSlashSliceDensity, settings.SlashSliceDensity);
+            Assert.AreEqual(GlitchSettings.MaxSlashSmearWidth, settings.SlashSmearWidth);
+            Assert.AreEqual(GlitchSettings.MaxSlashHighlightStretch, settings.SlashHighlightStretch);
+            Assert.AreEqual(GlitchSettings.MaxSlashDirection, settings.SlashDirection);
+            Assert.AreEqual(GlitchSettings.MaxSlashBlend, settings.SlashBlend);
+        }
+
+        [Test]
+        public void SlashTearSettingsNormalizeAsDistinctMode()
+        {
+            GlitchSettings settings = new GlitchSettings(
+                GlitchMode.SlashTear,
+                0.5f,
+                48f,
+                0.02f,
+                0.01f,
+                0.35f,
+                24f,
+                true,
+                1f,
+                0.04f,
+                420f,
+                0.06f,
+                1.2f,
+                -1f,
+                0.75f);
+
+            Assert.AreEqual(GlitchMode.SlashTear, settings.Mode);
+            Assert.AreEqual(420f, settings.SlashSliceDensity);
+            Assert.AreEqual(0.06f, settings.SlashSmearWidth);
+            Assert.AreEqual(1.2f, settings.SlashHighlightStretch);
+            Assert.AreEqual(-1f, settings.SlashDirection);
+            Assert.AreEqual(0.75f, settings.SlashBlend);
+            Assert.AreEqual((float)GlitchMode.SlashTear, settings.ModeParams.x);
+            Assert.AreEqual(0.75f, settings.ModeParams.y);
+        }
+
+        [Test]
+        public void InvalidModeFallsBackToDigitalGlitch()
+        {
+            GlitchSettings settings = new GlitchSettings(
+                (GlitchMode)99,
+                0.5f,
+                48f,
+                0.02f,
+                0.01f,
+                0.35f,
+                24f,
+                false,
+                1f,
+                0.04f,
+                360f,
+                0.04f,
+                0.8f,
+                1f,
+                1f);
+
+            Assert.AreEqual(GlitchMode.DigitalGlitch, settings.Mode);
         }
 
         [Test]
@@ -56,6 +141,7 @@ namespace ThirdPersonRendering.Tests
             try
             {
                 Assert.False(glitch.NormalizedSettings.UseTargetMask);
+                Assert.AreEqual(GlitchMode.DigitalGlitch, glitch.NormalizedSettings.Mode);
             }
             finally
             {
@@ -153,18 +239,48 @@ namespace ThirdPersonRendering.Tests
         }
 
         [Test]
+        public void ShaderContainsSlashTearMode()
+        {
+            string shader = ReadAssetYaml(ShaderPath);
+
+            StringAssert.Contains("_GlitchSlashParams", shader);
+            StringAssert.Contains("_GlitchModeParams", shader);
+            StringAssert.Contains("slashSliceDensity", shader);
+            StringAssert.Contains("slashSmearWidth", shader);
+            StringAssert.Contains("slashHighlightStretch", shader);
+            StringAssert.Contains("slashModeWeight", shader);
+        }
+
+        [Test]
         public void SampleSceneProfileContainsGlitchVolume()
         {
             string yaml = ReadAssetYaml(ProfilePath);
 
             StringAssert.Contains($"guid: {VolumeScriptGuid}", yaml);
             StringAssert.Contains("m_Name: Glitch", yaml);
+            StringAssert.Contains("mode:", yaml);
             StringAssert.Contains("horizontalJitter:", yaml);
             StringAssert.Contains("rgbSplit:", yaml);
             StringAssert.Contains("scanLineIntensity:", yaml);
             StringAssert.Contains("useTargetMask:", yaml);
             StringAssert.Contains("maskInfluence:", yaml);
             StringAssert.Contains("maskExpansion:", yaml);
+            StringAssert.Contains("slashSliceDensity:", yaml);
+            StringAssert.Contains("slashSmearWidth:", yaml);
+            StringAssert.Contains("slashHighlightStretch:", yaml);
+            StringAssert.Contains("slashDirection:", yaml);
+            StringAssert.Contains("slashBlend:", yaml);
+        }
+
+        [Test]
+        public void SlashTearPreviewPrefabUsesGlitchTargetRenderingLayer()
+        {
+            string yaml = ReadAssetYaml(SlashTearPreviewPrefabPath);
+
+            StringAssert.Contains("m_Name: GlitchSlashTearPreview", yaml);
+            StringAssert.Contains("m_IsActive: 0", yaml);
+            StringAssert.Contains("m_RenderingLayerMask: 2", yaml);
+            StringAssert.Contains($"guid: {SlashTearPreviewMaterialGuid}", yaml);
         }
 
         [Test]

@@ -1,0 +1,22 @@
+{
+  "name": "sc.stylizedgrassshader",
+  "description": "Stylized grass shader for the Universal Render Pipeline",
+  "version": "1.4.7",
+  "unity": "2021.3",
+  "displayName": "Stylized Grass Shader (Unity 2021-2023)",
+  "dependencies": {
+    "com.unity.render-pipelines.universal": "12.1.8"
+  },
+  "author": {
+    "name": "Staggart Creations",
+    "email": "contact@staggart.xyz",
+    "url": "http://staggart.xyz/"
+  },
+  "keywords": [
+    "grass",
+    "shader",
+    "stylized",
+    "wind",
+    "urp"
+  ]
+}

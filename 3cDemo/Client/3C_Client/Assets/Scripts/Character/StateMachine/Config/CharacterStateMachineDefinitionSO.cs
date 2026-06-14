@@ -9,16 +9,18 @@ namespace ThirdPersonCharacterStateMachine
         [SerializeField] string initialStateId = "FullBody/Locomotion/Idle";
         [SerializeField] CharacterStateNodeDefinition[] nodes = Array.Empty<CharacterStateNodeDefinition>();
         [SerializeField] CharacterStateTransitionDefinition[] transitions = Array.Empty<CharacterStateTransitionDefinition>();
+        [SerializeField] StateTimelinePolicyDefinition[] timelinePolicies = Array.Empty<StateTimelinePolicyDefinition>();
 
         public IReadOnlyListWrapper<CharacterStateNodeDefinition> Nodes => new IReadOnlyListWrapper<CharacterStateNodeDefinition>(nodes);
         public IReadOnlyListWrapper<CharacterStateTransitionDefinition> Transitions => new IReadOnlyListWrapper<CharacterStateTransitionDefinition>(transitions);
+        public IReadOnlyListWrapper<StateTimelinePolicyDefinition> TimelinePolicies => new IReadOnlyListWrapper<StateTimelinePolicyDefinition>(timelinePolicies);
 
         public CharacterStateMachineDefinition ToDefinition()
         {
             if ((nodes == null || nodes.Length == 0) && (transitions == null || transitions.Length == 0))
-                return CharacterStateMachineDefinition.CreateDefault();
+                throw new InvalidOperationException("Character state machine asset has no configured nodes or transitions.");
 
-            return new CharacterStateMachineDefinition(new CharacterStateId(initialStateId), nodes, transitions);
+            return new CharacterStateMachineDefinition(new CharacterStateId(initialStateId), nodes, transitions, timelinePolicies);
         }
 
         public CharacterStateMachineValidationResult Validate()
@@ -26,34 +28,6 @@ namespace ThirdPersonCharacterStateMachine
             return ToDefinition().Validate();
         }
 
-        public void ResetToDefault()
-        {
-            CharacterStateMachineDefinition definition = CharacterStateMachineDefinition.CreateDefault();
-            initialStateId = definition.InitialState.Value;
-            nodes = CopyNodes(definition);
-            transitions = CopyTransitions(definition);
-        }
-
-        public static CharacterStateMachineDefinition CreateDefaultDefinition()
-        {
-            return CharacterStateMachineDefinition.CreateDefault();
-        }
-
-        static CharacterStateNodeDefinition[] CopyNodes(CharacterStateMachineDefinition definition)
-        {
-            CharacterStateNodeDefinition[] copy = new CharacterStateNodeDefinition[definition.Nodes.Count];
-            for (int i = 0; i < copy.Length; i++)
-                copy[i] = definition.Nodes[i];
-            return copy;
-        }
-
-        static CharacterStateTransitionDefinition[] CopyTransitions(CharacterStateMachineDefinition definition)
-        {
-            CharacterStateTransitionDefinition[] copy = new CharacterStateTransitionDefinition[definition.Transitions.Count];
-            for (int i = 0; i < copy.Length; i++)
-                copy[i] = definition.Transitions[i];
-            return copy;
-        }
     }
 
     public readonly struct IReadOnlyListWrapper<T> : System.Collections.Generic.IReadOnlyList<T>

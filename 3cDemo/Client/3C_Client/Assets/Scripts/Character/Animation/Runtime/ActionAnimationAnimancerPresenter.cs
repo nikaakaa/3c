@@ -9,17 +9,20 @@ namespace ThirdPersonAnimation
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AnimancerComponent))]
-    public sealed class ActionAnimationAnimancerPresenter : MonoBehaviour, IActionAnimationPresenter
+    public sealed class ActionAnimationAnimancerPresenter : MonoBehaviour, IActionAnimationPresenter, IActionAnimationPlaybackProgressController
     {
         [SerializeField] AnimancerComponent animancer;
         [SerializeField] bool disableAnimatorRootMotion = true;
 
+        AnimatorRootMotionController rootMotionController;
         AnimancerState currentState;
         ActionAnimationKey currentKey;
 
         public ActionAnimationKey CurrentKey => currentKey;
         public float CurrentNormalizedTime => currentState != null ? currentState.NormalizedTime : 0f;
         public bool HasValidPlayback => currentState != null && currentKey.IsValid;
+        public ActionAnimationPlaybackProgress CurrentPlaybackProgress =>
+            new ActionAnimationPlaybackProgress(currentKey, CurrentNormalizedTime, HasValidPlayback, HasValidPlayback && CurrentNormalizedTime >= 1f);
         public string CurrentAnimationName
         {
             get
@@ -100,6 +103,27 @@ namespace ThirdPersonAnimation
             LogClear(previousKey, previousState);
         }
 
+        public bool RestorePlaybackProgress(in ActionAnimationPlaybackProgress progress, string animationName)
+        {
+            if (!progress.HasValidPlayback)
+            {
+                Clear();
+                return true;
+            }
+
+            if (!EnsureAnimancer())
+                return false;
+
+            AnimancerState state = TryPlayKey(progress.Key);
+            if (state == null)
+                return false;
+
+            currentKey = progress.Key;
+            currentState = state;
+            currentState.NormalizedTime = progress.NormalizedTime;
+            return true;
+        }
+
         AnimancerState PlayBinding(CharacterStateAnimationBinding binding)
         {
             if (binding.TransitionAsset is TransitionAssetBase asset && asset.IsValid)
@@ -119,20 +143,50 @@ namespace ThirdPersonAnimation
             return null;
         }
 
+        AnimancerState TryPlayKey(ActionAnimationKey key)
+        {
+            if (!key.IsValid)
+                return null;
+
+            StringReference libraryKey = StringReference.Get(key.Value);
+            return animancer.TryPlay(libraryKey);
+        }
+
+        bool EnsureAnimancer()
+        {
+            if (animancer == null)
+                animancer = GetComponent<AnimancerComponent>();
+
+            if (animancer == null)
+                return false;
+
+            ApplyRootMotionPolicy();
+            return true;
+        }
+
         static void ApplyPlaybackParameters(in CharacterStateAnimationRequest request, AnimancerState state)
         {
             if (state == null)
                 return;
 
             state.Speed = request.Binding.Speed;
-            if (request.Binding.StartTime > 0f)
-                state.Time = request.Binding.StartTime;
+            state.Time = request.Binding.StartTime;
         }
 
         void ApplyRootMotionPolicy()
         {
-            if (disableAnimatorRootMotion && animancer != null && animancer.Animator != null)
-                animancer.Animator.applyRootMotion = false;
+            AnimatorRootMotionController controller = ResolveRootMotionController();
+            if (controller != null)
+                controller.SetActionRootMotionDisabled(disableAnimatorRootMotion, "action-animation");
+        }
+
+        AnimatorRootMotionController ResolveRootMotionController()
+        {
+            if (rootMotionController != null)
+                return rootMotionController;
+
+            rootMotionController = AnimatorRootMotionController.Resolve(animancer);
+            return rootMotionController;
         }
 
         void LogPlayback(

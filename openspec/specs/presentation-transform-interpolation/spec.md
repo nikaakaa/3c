@@ -1,7 +1,7 @@
 # presentation-transform-interpolation Specification
 
 ## Purpose
-TBD - created by archiving change add-presentation-transform-interpolation. Update Purpose after archive.
+定义表现层 Transform 插值的快照、插值窗口、视觉平滑和不改变模拟权威的边界，确保渲染表现可平滑但不写回逻辑状态。
 ## Requirements
 ### Requirement: 表现 Transform 插值边界
 系统 MUST 提供通用表现层 Transform 插值能力，使渲染帧表现对象基于 simulation tick 后的真实 pose 样本输出连续 visual pose，同时不得接管 gameplay 位移权威。
@@ -90,4 +90,3 @@ TBD - created by archiving change add-presentation-transform-interpolation. Upda
 - **WHEN** 用户在 `Sandbox` 中以高刷新率或解除 VSync 持续 WASD 直线移动
 - **THEN** 角色可见模型和相机跟随 MUST 不再表现为 60Hz 阶梯抖动
 - **AND** 将表现层插值临时关闭后 SHOULD 能复现 tick 阶梯抖动，作为对照验证
-

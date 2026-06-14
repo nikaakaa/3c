@@ -7,8 +7,11 @@ namespace ThirdPersonMovement
     {
         public static Vector3 Resolve(in MovementInputIntent intent, ICameraMovementBasisProvider basisProvider)
         {
-            if (!intent.HasMoveIntent || basisProvider == null)
+            if (!intent.HasMoveIntent)
                 return Vector3.zero;
+
+            if (basisProvider == null)
+                return Resolve(intent.NormalizedInput, Vector3.forward, Vector3.right);
 
             return Resolve(intent.NormalizedInput, basisProvider.CameraPlanarForward, basisProvider.CameraPlanarRight);
         }

@@ -3,6 +3,8 @@ using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using ThirdPersonAction;
+using ThirdPersonCharacterStateMachine;
+using UnityEditor;
 using UnityEngine;
 
 namespace ThirdPersonAction.Tests
@@ -147,6 +149,96 @@ namespace ThirdPersonAction.Tests
         }
 
         [Test]
+        public void ValidatorReportsMissingTimelineWindowReference()
+        {
+            ActionInterruptPolicySet set = new ActionInterruptPolicySet(new[]
+            {
+                Definition("Action.Attack01", "Action.Dodge", 30, windowId: "attack-dodge-cancel")
+            });
+            StateTimelinePolicyDefinition[] timelinePolicies =
+            {
+                new StateTimelinePolicyDefinition(
+                    "Action.Attack01",
+                    0,
+                    0,
+                    new[]
+                    {
+                        new StateTimelineWindowDefinition(
+                            "attack-exit",
+                            StateTimelineWindowKind.Exit,
+                            StateTimelineTimeDomain.Normalized,
+                            0.8f,
+                            1f)
+                    })
+            };
+
+            ActionInterruptPolicyValidationResult result = ActionInterruptPolicyValidator.Validate(set, timelinePolicies);
+
+            Assert.True(result.HasErrors);
+            Assert.That(result.DescribeErrors(), Does.Contain("missing timeline window"));
+        }
+
+        [Test]
+        public void ValidatorRejectsPolicyReferenceToNaturalExitWindow()
+        {
+            ActionInterruptPolicySet set = new ActionInterruptPolicySet(new[]
+            {
+                Definition("Action.Attack01", "Action.Dodge", 30, windowId: "attack-exit")
+            });
+            StateTimelinePolicyDefinition[] timelinePolicies =
+            {
+                new StateTimelinePolicyDefinition(
+                    "Action.Attack01",
+                    0,
+                    0,
+                    new[]
+                    {
+                        new StateTimelineWindowDefinition(
+                            "attack-exit",
+                            StateTimelineWindowKind.Exit,
+                            StateTimelineTimeDomain.Normalized,
+                            0.8f,
+                            1f)
+                    })
+            };
+
+            ActionInterruptPolicyValidationResult result = ActionInterruptPolicyValidator.Validate(set, timelinePolicies);
+
+            Assert.True(result.HasErrors);
+            Assert.That(result.DescribeErrors(), Does.Contain("non-request timeline window"));
+        }
+
+        [Test]
+        public void ValidatorAcceptsPolicyReferenceToRequestWindow()
+        {
+            ActionInterruptPolicySet set = new ActionInterruptPolicySet(new[]
+            {
+                Definition("Action.Attack01", "Action.Dodge", 30, windowId: "attack-dodge-cancel")
+            });
+            StateTimelinePolicyDefinition[] timelinePolicies =
+            {
+                new StateTimelinePolicyDefinition(
+                    "Action.Attack01",
+                    0,
+                    0,
+                    new[]
+                    {
+                        new StateTimelineWindowDefinition(
+                            "attack-dodge-cancel",
+                            StateTimelineWindowKind.Cancel,
+                            StateTimelineTimeDomain.Normalized,
+                            0.2f,
+                            0.6f,
+                            requestType: ActionRequestType.Dodge)
+                    })
+            };
+
+            ActionInterruptPolicyValidationResult result = ActionInterruptPolicyValidator.Validate(set, timelinePolicies);
+
+            Assert.False(result.HasErrors);
+        }
+
+        [Test]
         public void ScriptableObjectConvertsToPolicySet()
         {
             ActionInterruptPolicySetSO asset = ScriptableObject.CreateInstance<ActionInterruptPolicySetSO>();
@@ -170,6 +262,24 @@ namespace ThirdPersonAction.Tests
             {
                 Object.DestroyImmediate(asset);
             }
+        }
+
+        [Test]
+        public void DefaultTurnBackPoliciesAllowMoveStartAndMoveLoopThroughTimelineWindow()
+        {
+            ActionInterruptPolicySetSO asset = AssetDatabase.LoadAssetAtPath<ActionInterruptPolicySetSO>(
+                "Assets/Configs/3C/Action/DefaultDodgeInterruptPolicySet.asset");
+            Assert.NotNull(asset);
+
+            ActionInterruptPolicy[] turnBackPolicies = asset.CompilePolicies()
+                .Where(policy => policy.TargetState.Value == CharacterStateIds.TurnBack.Value)
+                .ToArray();
+
+            CollectionAssert.AreEquivalent(
+                new[] { CharacterStateIds.MoveStart.Value, CharacterStateIds.MoveLoop.Value },
+                turnBackPolicies.Select(policy => policy.FromState.Value).ToArray());
+            Assert.True(turnBackPolicies.All(policy => policy.MinPriority == 20));
+            Assert.True(turnBackPolicies.All(policy => policy.WindowId == "turnback-enter"));
         }
 
         [Test]
@@ -234,6 +344,49 @@ namespace ThirdPersonAction.Tests
             Assert.That(presenter, Does.Not.Contain("ActionInterruptPolicySet"));
         }
 
+        [Test]
+        public void DodgeToDodgePolicyHasAfterElapsedTimeProtection()
+        {
+            ActionInterruptPolicySetSO asset = ScriptableObject.CreateInstance<ActionInterruptPolicySetSO>();
+            try
+            {
+                ActionInterruptPolicyDefinition dodgeToDodge = Definition(
+                    ActionStateIds.Dodge.Value,
+                    ActionStateIds.Dodge.Value,
+                    30,
+                    ActionInterruptTimingRule.AfterElapsedTime,
+                    0.35f);
+                SetAssetPolicies(asset, new[]
+                {
+                    Definition(ActionStateIds.None.Value, ActionStateIds.Dodge.Value, 30, ActionInterruptTimingRule.AfterElapsedTime, 0.35f),
+                    dodgeToDodge
+                });
+
+                var policies = asset.CompilePolicies();
+                ActionInterruptRequest request = new ActionInterruptRequest(
+                    requestId: 1,
+                    requestType: ActionRequestType.Dodge,
+                    targetState: Dodge,
+                    priority: 30,
+                    sourceOrder: 0,
+                    originTick: 0);
+
+                ActionInterruptContext tooEarly = new ActionInterruptContext(Dodge, 0.1f, 0, 0);
+                ActionInterruptDecision early = ActionInterruptArbiter.Arbitrate(tooEarly, new[] { request }, policies);
+                Assert.False(early.Accepted);
+                Assert.AreEqual(ActionInterruptRejectReason.TimingNotSatisfied, early.RejectReason);
+
+                ActionInterruptContext onTime = new ActionInterruptContext(Dodge, 0.35f, 0, 0);
+                ActionInterruptDecision accepted = ActionInterruptArbiter.Arbitrate(onTime, new[] { request }, policies);
+                Assert.True(accepted.Accepted);
+                Assert.AreEqual(Dodge, accepted.TargetState);
+            }
+            finally
+            {
+                Object.DestroyImmediate(asset);
+            }
+        }
+
         static ActionInterruptPolicyDefinition Definition(
             string from,
             string target,
@@ -241,9 +394,10 @@ namespace ThirdPersonAction.Tests
             ActionInterruptTimingRule timingRule = ActionInterruptTimingRule.Always,
             float windowStart = 0f,
             float windowEnd = 0f,
-            bool force = false)
+            bool force = false,
+            string windowId = "")
         {
-            return new ActionInterruptPolicyDefinition(from, target, minPriority, timingRule, windowStart, windowEnd, force);
+            return new ActionInterruptPolicyDefinition(from, target, minPriority, timingRule, windowStart, windowEnd, force, windowId);
         }
 
         static void SetAssetPolicies(ActionInterruptPolicySetSO asset, ActionInterruptPolicyDefinition[] policies)

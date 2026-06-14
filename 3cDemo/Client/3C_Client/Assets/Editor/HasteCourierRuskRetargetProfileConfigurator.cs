@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using KINEMATION.RetargetPro.Runtime;
@@ -8,6 +8,7 @@ using KINEMATION.RetargetPro.Runtime.Features.IKRetargeting;
 using KINEMATION.Shared.KAnimationCore.Runtime.Rig;
 using UnityEditor;
 using UnityEngine;
+using ThirdPersonDiagnostics;
 
 public static class HasteCourierRuskRetargetProfileConfigurator
 {
@@ -44,7 +45,7 @@ public static class HasteCourierRuskRetargetProfileConfigurator
         EditorUtility.SetDirty(profile);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"[HasteCourierRuskRetargetProfileConfigurator] Configured {profile.name}.");
+         RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(RuntimeDiagnosticLogCategory.Editor, RuntimeDiagnosticLogLevel.Info, "retarget-profile-configured", "", "", 0, Time.frameCount, $"[HasteCourierRuskRetargetProfileConfigurator] Configured {profile.name}."));
     }
 
     public static ConfigureResult Configure(RetargetProfile profile)

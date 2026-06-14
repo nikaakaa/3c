@@ -1,4 +1,7 @@
+﻿using System;
+using System.Collections.Generic;
 using ThirdPersonAnimation;
+using ThirdPersonCharacterConfig;
 using ThirdPersonCharacterStateMachine;
 using ThirdPersonDiagnostics;
 using ThirdPersonInput;
@@ -13,7 +16,11 @@ namespace ThirdPersonAction
     {
         [SerializeField] InputRequestBufferComponent inputBufferComponent;
         [SerializeField] PlayerLocomotionController locomotionController;
+        [SerializeField] CharacterConfigSO characterConfig;
+        [Obsolete("Legacy serialized field; runtime reads CharacterConfigSO only.")]
         [SerializeField] CharacterStateMachineDefinitionSO stateMachineDefinition;
+        [SerializeField] ActionInterruptPolicySetSO interruptPolicySet;
+        [SerializeField] DodgeActionConfigSO dodgeActionConfig;
         [SerializeField] MonoBehaviour facingProviderBehaviour;
         [SerializeField] MonoBehaviour actionMovementExecutorBehaviour;
         [SerializeField] MonoBehaviour animationPresenterBehaviour;
@@ -24,8 +31,11 @@ namespace ThirdPersonAction
 
         CharacterStateMachineRunner stateMachine;
         IActionMovementExecutor actionMovementExecutor;
-        IFacingDirectionProvider facingProvider;
         IActionAnimationPresenter animationPresenter;
+        IActionAnimationPlaybackProgressController actionPlaybackProgressController;
+        IReadOnlyList<ActionInterruptPolicy> runtimeInterruptPolicies = Array.Empty<ActionInterruptPolicy>();
+        ActionInterruptPolicySetSO cachedInterruptPolicySet;
+        bool interruptPoliciesCompiled;
         CharacterStateMachineSnapshot currentStateSnapshot = CharacterStateMachineSnapshot.Inactive;
         string lastLoggedFullBodyPath = string.Empty;
         string lastLoggedPendingTransitionPath = string.Empty;
@@ -34,13 +44,17 @@ namespace ThirdPersonAction
         bool loggedInitialLocomotionState = true;
         bool hadPreviousLocomotionAutoUpdate;
         bool previousLocomotionAutoUpdate;
+        readonly FullBodyFramePipeline framePipeline = new FullBodyFramePipeline();
 
         public bool AutoUpdate { get => autoUpdate; set => autoUpdate = value; }
-        public CharacterStateMachineDefinitionSO StateMachineDefinition { get => stateMachineDefinition; set { stateMachineDefinition = value; RebuildStateMachine(false); } }
+        public CharacterConfigSO CharacterConfig { get => characterConfig; set { characterConfig = value; RebuildStateMachine(false); } }
+        public CharacterStateMachineDefinitionSO StateMachineDefinition { get => ResolveStateMachineDefinition(); set { RebuildStateMachine(false); } }
         public PlayerLocomotionController LocomotionController { get => locomotionController; set => locomotionController = value; }
         public InputRequestBufferComponent InputBufferComponent { get => inputBufferComponent; set => inputBufferComponent = value; }
+        public ActionInterruptPolicySetSO InterruptPolicySet { get => interruptPolicySet; set { interruptPolicySet = value; ClearInterruptPolicyCache(); } }
+        public DodgeActionConfigSO DodgeActionConfigAsset { get => dodgeActionConfig; set => dodgeActionConfig = value; }
         public MonoBehaviour ActionMovementExecutorBehaviour { get => actionMovementExecutorBehaviour; set { actionMovementExecutorBehaviour = value; actionMovementExecutor = value as IActionMovementExecutor; } }
-        public MonoBehaviour FacingProviderBehaviour { get => facingProviderBehaviour; set { facingProviderBehaviour = value; facingProvider = value as IFacingDirectionProvider; } }
+        public MonoBehaviour FacingProviderBehaviour { get => facingProviderBehaviour; set => facingProviderBehaviour = value; }
         public MonoBehaviour AnimationPresenterBehaviour { get => animationPresenterBehaviour; set { animationPresenterBehaviour = value; ResolveAnimationPresenter(); } }
         public CharacterStateMachineRunner StateMachine => stateMachine;
         public FullBodyOwner CurrentOwner => currentStateSnapshot.Owner;
@@ -49,6 +63,7 @@ namespace ThirdPersonAction
         public string PendingFullBodyTransitionPath => currentStateSnapshot.PendingTransitionPath;
         public CharacterStateMachineFrame LastStateFrame { get; private set; }
         public BasicLocomotionFrame LastLocomotionFrame { get; private set; }
+        public FullBodyFrameResult LastFramePipelineResult { get; private set; }
 
         void Reset()
         {
@@ -78,14 +93,8 @@ namespace ThirdPersonAction
 
         public bool Tick(float deltaTime)
         {
-            ResolveReferences();
-            if (!EnsureStateMachine())
-                return false;
-
-            if (locomotionController == null)
-                return false;
-
-            if (!locomotionController.TryReadInput(deltaTime, out BasicLocomotionInputSnapshot input))
+            int step = inputBufferComponent != null ? inputBufferComponent.CurrentStep : Time.frameCount;
+            if (!TryReadFrameInputFromSource(deltaTime, step, out FullBodyFrameInput input))
                 return false;
 
             return Tick(in input);
@@ -93,64 +102,286 @@ namespace ThirdPersonAction
 
         public bool Tick(in BasicLocomotionInputSnapshot input)
         {
+            int step = inputBufferComponent != null ? inputBufferComponent.CurrentStep : Time.frameCount;
+            FullBodyFrameInput frameInput = FullBodyFrameInput.FromLocomotionInput(step, in input);
+            return Tick(in frameInput);
+        }
+
+        public bool Tick(in FullBodyFrameInput input)
+        {
+            ResolveReferences();
+            bool success = framePipeline.Tick(this, in input, out FullBodyFrameResult result);
+            LastFramePipelineResult = result;
+            return success;
+        }
+
+        public ActionInterruptPolicyValidationResult ValidateActionInterruptPolicies()
+        {
+            ActionInterruptPolicyValidationResult result = new ActionInterruptPolicyValidationResult();
+            bool hasDodgeConfig = TryResolveDodgeActionConfig(out DodgeActionConfig config);
+            if (!hasDodgeConfig)
+                result.AddError("Dodge action config is missing.");
+
+            if (interruptPolicySet == null)
+            {
+                result.AddError("FullBody Action interrupt policy set is missing.");
+                return result;
+            }
+
+            IReadOnlyList<ActionInterruptPolicy> policies = ResolveInterruptPolicies();
+            CharacterStateMachineDefinitionSO definitionAsset = ResolveStateMachineDefinition();
+            ActionInterruptPolicyValidationResult validation = definitionAsset != null
+                ? ActionInterruptPolicyValidator.Validate(policies, definitionAsset.TimelinePolicies)
+                : ActionInterruptPolicyValidator.Validate(policies);
+            for (int i = 0; i < validation.Errors.Count; i++)
+                result.AddError(validation.Errors[i]);
+            for (int i = 0; i < validation.Warnings.Count; i++)
+                result.AddWarning(validation.Warnings[i]);
+
+            if (hasDodgeConfig && !FullBodyActionInterruptGate.HasDodgePolicy(policies, in config))
+                result.AddError("FullBody Action interrupt policy set is missing Action.None -> Action.Dodge or Action.Dodge -> Action.Dodge policy. Both are required for dodge initiation and chain dodge.");
+
+            return result;
+        }
+
+        public bool TryResolveDodgeActionConfig(out DodgeActionConfig config)
+        {
+            if (dodgeActionConfig != null)
+            {
+                config = dodgeActionConfig.ToConfig();
+                return true;
+            }
+
+            config = default;
+            return false;
+        }
+
+        [Obsolete("Use TryResolveDodgeActionConfig.")]
+        public DodgeActionConfig ResolveDodgeActionConfig()
+        {
+            if (TryResolveDodgeActionConfig(out DodgeActionConfig config))
+                return config;
+
+            throw new InvalidOperationException("Dodge action config is missing. Assign a DodgeActionConfigSO asset.");
+        }
+
+        public int ResolveCurrentActionResistance()
+        {
+            if (!TryResolveDodgeActionConfig(out DodgeActionConfig config))
+                return 0;
+
+            return ResolveCurrentActionResistance(in currentStateSnapshot, in config);
+        }
+
+        public static int ResolveCurrentActionResistance(in CharacterStateMachineSnapshot snapshot, in DodgeActionConfig config)
+        {
+            if (!snapshot.Owner.IsAction)
+                return 0;
+
+            return snapshot.ActionState == ActionStateIds.Dodge ? config.Resistance : 0;
+        }
+
+        public FullBodyActionRestoreState CaptureRestoreState()
+        {
+            ResolveReferences();
+            if (!EnsureStateMachine())
+                return FullBodyActionRestoreState.Inactive;
+
+            FullBodyActionGameplayRestoreState gameplay = new FullBodyActionGameplayRestoreState(
+                stateMachine.CaptureRestoreState());
+            FullBodyActionDiagnosticRestoreState diagnostic = new FullBodyActionDiagnosticRestoreState(
+                debugFullBodyStatePath,
+                debugPendingTransitionPath,
+                lastLoggedFullBodyPath,
+                lastLoggedPendingTransitionPath,
+                lastLoggedLocomotionPath,
+                lastLoggedLocomotionPhase,
+                loggedInitialLocomotionState);
+            return new FullBodyActionRestoreState(gameplay, diagnostic);
+        }
+
+        public bool Restore(in FullBodyActionRestoreState restoreState)
+        {
             ResolveReferences();
             if (!EnsureStateMachine())
                 return false;
 
-            if (locomotionController == null)
+            if (!stateMachine.Restore(restoreState.StateMachine))
                 return false;
 
-            int step = inputBufferComponent != null ? inputBufferComponent.CurrentStep : Time.frameCount;
-            BasicMovementSettings settings = BasicMovementSettings.FromConfig(locomotionController.Config);
-            CharacterInputRequestFact inputRequest = FullBodyActionInputRequestBuilder.BuildDodgeRequestFact(
-                inputBufferComponent != null ? inputBufferComponent.Buffer : null,
-                step,
-                in input,
-                in settings,
-                locomotionController.RunLatchActive,
-                locomotionController.CameraController,
-                facingProvider,
-                DodgeActionConfig.Default);
-            if (!locomotionController.TryEvaluateWithStateMachine(
-                    in input,
-                    stateMachine,
-                    in inputRequest,
-                    step,
-                    out BasicLocomotionFrame locomotionFrame,
-                    out CharacterStateMachineFrame stateFrame))
-            {
-                return false;
-            }
-
-            LastLocomotionFrame = locomotionFrame;
-            LastStateFrame = stateFrame;
-            ApplyStateFrameOutputs(in stateFrame, in locomotionFrame, step);
-            UpdateStateSnapshot(in stateFrame, step);
-
-            locomotionController.CompleteLocomotionTick();
-            LogDiagnosticTickSnapshots(step);
+            currentStateSnapshot = stateMachine.Snapshot;
+            FullBodyActionDiagnosticRestoreState diagnostic = restoreState.Diagnostic;
+            debugFullBodyStatePath = string.IsNullOrEmpty(diagnostic.DebugFullBodyStatePath)
+                ? currentStateSnapshot.ActivePath
+                : diagnostic.DebugFullBodyStatePath;
+            debugPendingTransitionPath = string.IsNullOrEmpty(diagnostic.DebugPendingTransitionPath)
+                ? currentStateSnapshot.PendingTransitionPath
+                : diagnostic.DebugPendingTransitionPath;
+            lastLoggedFullBodyPath = diagnostic.LastLoggedFullBodyPath;
+            lastLoggedPendingTransitionPath = diagnostic.LastLoggedPendingTransitionPath;
+            lastLoggedLocomotionPath = diagnostic.LastLoggedLocomotionPath;
+            lastLoggedLocomotionPhase = diagnostic.LastLoggedLocomotionPhase;
+            loggedInitialLocomotionState = diagnostic.LoggedInitialLocomotionState;
             return true;
         }
 
-        void ApplyStateFrameOutputs(in CharacterStateMachineFrame stateFrame, in BasicLocomotionFrame locomotionFrame, int step)
+        public void RestoreActionAnimationPlayback(in ActionAnimationPlaybackProgress progress, string animationName)
         {
-            if (stateFrame.ConsumeInputRequest && inputBufferComponent != null)
-                inputBufferComponent.Buffer.TryConsume(stateFrame.ConsumedRequestKind, step, out _);
-
-            if (stateFrame.HasAnimationRequest && animationPresenter != null)
-                animationPresenter.Present(stateFrame.AnimationRequest);
-
-            if (currentStateSnapshot.Owner.IsAction && !stateFrame.Owner.IsAction && animationPresenter != null)
+            ResolveAnimationPresenter();
+            if (actionPlaybackProgressController != null)
+                actionPlaybackProgressController.RestorePlaybackProgress(in progress, animationName);
+            else if (!progress.HasValidPlayback && animationPresenter != null)
                 animationPresenter.Clear();
+        }
+
+        internal bool TryReadFrameInputFromSource(float deltaTime, int step, out FullBodyFrameInput input)
+        {
+            ResolveReferences();
+            if (!EnsureStateMachine() || locomotionController == null)
+            {
+                input = default;
+                return false;
+            }
+
+            locomotionController.ReleaseRollbackCameraBasisOverride();
+            if (!locomotionController.TryReadInput(deltaTime, out BasicLocomotionInputSnapshot locomotionInput))
+            {
+                input = default;
+                return false;
+            }
+
+            input = FullBodyFrameInput.FromLocomotionInput(step, in locomotionInput);
+            return true;
+        }
+
+        internal bool PrepareFramePipelineAdapters()
+        {
+            ResolveReferences();
+            return EnsureStateMachine() && locomotionController != null;
+        }
+
+        internal IReadOnlyList<ActionInterruptPolicy> ResolveInterruptPoliciesForPipeline()
+        {
+            return ResolveInterruptPolicies();
+        }
+
+        internal void SetLastFrameOutputsForPipeline(
+            in BasicLocomotionFrame locomotionFrame,
+            in CharacterStateMachineFrame stateFrame)
+        {
+            LastLocomotionFrame = locomotionFrame;
+            LastStateFrame = stateFrame;
+        }
+
+        internal bool ConsumeStateFrameInputRequestForPipeline(in CharacterStateMachineFrame stateFrame, int step)
+        {
+            if (!stateFrame.ConsumeInputRequest || inputBufferComponent == null)
+                return false;
+
+            return inputBufferComponent.Buffer.TryConsume(stateFrame.ConsumedRequestKind, step, out _);
+        }
+
+        internal void ExecuteStateFrameMotionForPipeline(
+            in CharacterStateMachineFrame stateFrame,
+            in BasicLocomotionFrame locomotionFrame,
+            out bool actionMovementExecuted,
+            out bool basicMovementExecuted)
+        {
+            actionMovementExecuted = false;
+            basicMovementExecuted = false;
 
             if (stateFrame.HasActionMovement && actionMovementExecutor != null)
+            {
                 actionMovementExecutor.ExecuteActionMovement(stateFrame.ActionMovementCommand);
+                actionMovementExecuted = true;
+            }
 
-            if (stateFrame.ExecuteBasicMovement)
+            if (stateFrame.ExecuteBasicMovement && locomotionController != null)
+            {
                 locomotionController.ExecuteLocomotionMotion(in locomotionFrame);
+                basicMovementExecuted = true;
+            }
+        }
 
-            if (stateFrame.PresentLocomotionAnimation)
+        internal void PresentStateFrameAnimationForPipeline(
+            in CharacterStateMachineFrame stateFrame,
+            in BasicLocomotionFrame locomotionFrame,
+            bool exitedToLocomotion,
+            out bool actionAnimationPresented,
+            out bool locomotionAnimationPresented)
+        {
+            actionAnimationPresented = false;
+            locomotionAnimationPresented = false;
+
+            if (stateFrame.Owner.IsAction && stateFrame.HasAnimationRequest && animationPresenter != null)
+            {
+                animationPresenter.Present(stateFrame.AnimationRequest);
+                actionAnimationPresented = true;
+            }
+
+            if (exitedToLocomotion && animationPresenter != null)
+                animationPresenter.Clear();
+
+            if (stateFrame.PresentLocomotionAnimation && locomotionController != null)
+            {
                 locomotionController.PresentLocomotionAnimation(in locomotionFrame);
+                locomotionAnimationPresented = true;
+            }
+        }
+
+        internal void WriteStateFrameActionFactsForPipeline(
+            in CharacterStateMachineFrame stateFrame,
+            bool exitedToLocomotion,
+            int step)
+        {
+            if (locomotionController == null)
+                return;
+
+            locomotionController.WriteActionFacts(CharacterRuntimeActionFacts.FromStateFrame(
+                in stateFrame,
+                exitedToLocomotion,
+                step));
+        }
+
+        internal void UpdateStateSnapshotForPipeline(in CharacterStateMachineFrame stateFrame, int step)
+        {
+            UpdateStateSnapshot(in stateFrame, step);
+        }
+
+        internal void WriteAnimationRuntimeFactsForPipeline(int step)
+        {
+            WriteAnimationRuntimeFacts(step);
+        }
+
+        internal void CompleteLocomotionTickForPipeline()
+        {
+            if (locomotionController != null)
+                locomotionController.CompleteLocomotionTick();
+        }
+
+        internal void LogDiagnosticTickSnapshotsForPipeline(int step)
+        {
+            LogDiagnosticTickSnapshots(step);
+        }
+
+        void WriteAnimationRuntimeFacts(int step)
+        {
+            if (locomotionController == null)
+                return;
+
+            AnimationPhasePlaybackProgress locomotionProgress = locomotionController.CurrentAnimationPlaybackProgress;
+            string locomotionAnimationName = locomotionController.CurrentAnimationName;
+            ActionAnimationPlaybackProgress actionProgress = animationPresenter != null
+                ? animationPresenter.CurrentPlaybackProgress
+                : ActionAnimationPlaybackProgress.Invalid;
+            string actionAnimationName = animationPresenter != null ? animationPresenter.CurrentAnimationName : string.Empty;
+
+            locomotionController.WriteAnimationFacts(new CharacterRuntimeAnimationFacts(
+                locomotionProgress,
+                locomotionAnimationName,
+                actionProgress,
+                actionAnimationName,
+                step));
         }
 
         void UpdateStateSnapshot(in CharacterStateMachineFrame stateFrame, int step)
@@ -311,7 +542,7 @@ namespace ThirdPersonAction
                 $"owner={currentStateSnapshot.Owner.Kind} fullBodyPath={currentStateSnapshot.ActivePath} " +
                 $"locomotionPhase={currentStateSnapshot.LocomotionPhase} locomotionGait={LastLocomotionFrame.Command.Gait} " +
                 $"locomotionAlias={locomotionProgress.AliasKey} locomotionAnimation={locomotionAnimationName} locomotionNormalized={locomotionProgress.NormalizedTime:F3} locomotionValid={locomotionProgress.HasValidPlayback} locomotionEnded={locomotionProgress.IsEnded} " +
-                $"actionKey={(animationPresenter != null ? animationPresenter.CurrentKey.Value : string.Empty)} actionAnimation={(animationPresenter != null ? animationPresenter.CurrentAnimationName : string.Empty)} actionNormalized={(animationPresenter != null ? animationPresenter.CurrentNormalizedTime : 0f):F3} actionValid={(animationPresenter != null && animationPresenter.HasValidPlayback)}";
+                $"actionKey={(animationPresenter != null ? animationPresenter.CurrentKey.Value : string.Empty)} actionAnimation={(animationPresenter != null ? animationPresenter.CurrentAnimationName : string.Empty)} actionNormalized={(animationPresenter != null ? animationPresenter.CurrentNormalizedTime : 0f):F3} actionValid={(animationPresenter != null && animationPresenter.HasValidPlayback)} actionEnded={(animationPresenter != null && animationPresenter.CurrentPlaybackProgress.IsEnded)}";
         }
 
         bool EnsureStateMachine()
@@ -328,16 +559,26 @@ namespace ThirdPersonAction
 
             try
             {
-                CharacterStateMachineDefinition definition = stateMachineDefinition != null
-                    ? stateMachineDefinition.ToDefinition()
-                    : CharacterStateMachineDefinition.CreateDefault();
+                CharacterStateMachineDefinitionSO definitionAsset = ResolveStateMachineDefinition();
+                if (definitionAsset == null)
+                    throw new InvalidOperationException("Character state machine config is missing. Assign CharacterConfigSO.StateMachine.");
+
+                CharacterStateMachineDefinition definition = definitionAsset.ToDefinition();
                 stateMachine = new CharacterStateMachineRunner(definition);
             }
             catch (System.Exception exception)
             {
                 SetInactiveStateSnapshot();
                 if (logErrors)
-                    Debug.LogError("Character state machine definition is invalid:\n" + exception.Message, this);
+                    RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                         RuntimeDiagnosticLogCategory.FullBody,
+                         RuntimeDiagnosticLogLevel.Error,
+                         "state-machine-definition-invalid",
+                         "",
+                         "",
+                         0,
+                         Time.frameCount,
+                         "Character state machine definition is invalid:\n" + exception.Message));
                 return false;
             }
 
@@ -400,7 +641,6 @@ namespace ThirdPersonAction
 
             if (facingProviderBehaviour == null)
                 facingProviderBehaviour = GetComponent<TransformFacingDirectionProvider>();
-            facingProvider = facingProviderBehaviour as IFacingDirectionProvider;
 
             if (animationPresenterBehaviour == null && TryResolveComponentInterface(out IActionAnimationPresenter resolvedPresenter, out MonoBehaviour presenterBehaviour))
                 animationPresenterBehaviour = presenterBehaviour;
@@ -411,6 +651,41 @@ namespace ThirdPersonAction
         void ResolveAnimationPresenter()
         {
             animationPresenter = animationPresenterBehaviour as IActionAnimationPresenter;
+            actionPlaybackProgressController = animationPresenterBehaviour as IActionAnimationPlaybackProgressController;
+        }
+
+        CharacterConfigSO ResolveCharacterConfig()
+        {
+            if (characterConfig != null)
+                return characterConfig;
+
+            return locomotionController != null ? locomotionController.CharacterConfig : null;
+        }
+
+        CharacterStateMachineDefinitionSO ResolveStateMachineDefinition()
+        {
+            CharacterConfigSO config = ResolveCharacterConfig();
+            return config != null ? config.StateMachine : null;
+        }
+
+        IReadOnlyList<ActionInterruptPolicy> ResolveInterruptPolicies()
+        {
+            if (interruptPoliciesCompiled && cachedInterruptPolicySet == interruptPolicySet)
+                return runtimeInterruptPolicies ?? Array.Empty<ActionInterruptPolicy>();
+
+            cachedInterruptPolicySet = interruptPolicySet;
+            runtimeInterruptPolicies = interruptPolicySet != null
+                ? interruptPolicySet.CompilePolicies()
+                : Array.Empty<ActionInterruptPolicy>();
+            interruptPoliciesCompiled = true;
+            return runtimeInterruptPolicies;
+        }
+
+        void ClearInterruptPolicyCache()
+        {
+            cachedInterruptPolicySet = null;
+            runtimeInterruptPolicies = Array.Empty<ActionInterruptPolicy>();
+            interruptPoliciesCompiled = false;
         }
 
         bool TryResolveLocomotionActionExecutor(out IActionMovementExecutor executor, out MonoBehaviour executorBehaviour)

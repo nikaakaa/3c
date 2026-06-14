@@ -3371,7 +3371,6 @@ GameObject:
   - component: {fileID: 660000000000000002}
   - component: {fileID: 660000000000000003}
   - component: {fileID: 660000000000000006}
-  - component: {fileID: 1163322499474974915}
   m_Layer: 7
   m_Name: "\u53EF\u7433"
   m_TagString: Untagged
@@ -3453,6 +3452,7 @@ MonoBehaviour:
   motionExecutorBehaviour: {fileID: 4023038247487794117}
   cameraController: {fileID: 0}
   locomotionPresenter: {fileID: 818273645900000002}
+  characterConfig: {fileID: 11400000, guid: 63497093817ee2f429be83dd3bf6dea1, type: 2}
   runAnimationConfig: {fileID: 11400000, guid: bdf1c9cfe4f94c56a30668b3f734ff6c, type: 2}
   config: {fileID: 11400000, guid: 1f4ac8a4ba65c6648afa001a33f4e022, type: 2}
   stateMachineDefinition: {fileID: 11400000, guid: 56b3ba24b8384921bdfbde2c9c9e0632, type: 2}
@@ -3540,27 +3540,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   inputBufferComponent: {fileID: 660000000000000001}
   locomotionController: {fileID: 5494524903482959332}
+  characterConfig: {fileID: 11400000, guid: 63497093817ee2f429be83dd3bf6dea1, type: 2}
   stateMachineDefinition: {fileID: 11400000, guid: 56b3ba24b8384921bdfbde2c9c9e0632, type: 2}
+  interruptPolicySet: {fileID: 11400000, guid: 7f8f409d7ad84c849b43d6f7a1a11842, type: 2}
+  dodgeActionConfig: {fileID: 11400000, guid: 2d4bd37b76ac4cbf90181a8c64f42773, type: 2}
   facingProviderBehaviour: {fileID: 660000000000000003}
   actionMovementExecutorBehaviour: {fileID: 4023038247487794117}
   animationPresenterBehaviour: {fileID: 660000000000000005}
   autoUpdate: 1
   restoreLocomotionAutoUpdateOnDisable: 1
---- !u!114 &1163322499474974915
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4431764778241071157}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0cfcb781fc314bfda705d6f8277c97c5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  tickDriver: {fileID: 0}
-  locomotionController: {fileID: 5494524903482959332}
-  restoreAutoUpdateOnDisable: 1
 --- !u!1 &4463732290386427757
 GameObject:
   m_ObjectHideFlags: 0
@@ -5350,7 +5338,7 @@ Animator:
   m_Controller: {fileID: 9100000, guid: 62340845ebf23eb49a158df4fc8400cc, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
-  m_ApplyRootMotion: 0
+  m_ApplyRootMotion: 1
   m_LinearVelocityBlending: 0
   m_StabilizeFeet: 0
   m_WarningMessage: 

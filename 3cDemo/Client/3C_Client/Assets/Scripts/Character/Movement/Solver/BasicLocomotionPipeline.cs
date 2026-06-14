@@ -1,6 +1,3 @@
-using ThirdPersonCamera;
-using UnityEngine;
-
 namespace ThirdPersonMovement
 {
     public sealed class BasicLocomotionPipeline
@@ -8,54 +5,36 @@ namespace ThirdPersonMovement
         public BasicLocomotionFrame Tick(
             in BasicLocomotionInputSnapshot input,
             in BasicMovementSettings settings,
-            ICameraMovementBasisProvider cameraBasisProvider,
+            in LocomotionDecisionFacts decisionFacts,
             BasicMovementPhase phase)
         {
-            MovementInputIntent intent = MovementInputIntent.FromRaw(input.Move, settings.InputDeadZone, input.RunHeld);
-            Vector3 worldDirection = CameraRelativeMovementResolver.Resolve(intent, cameraBasisProvider);
-            MovementCommand command = MovementCommandBuilder.Build(worldDirection, intent, phase, input.DeltaTime, settings);
-
-            return new BasicLocomotionFrame(input, settings, intent, worldDirection, phase, command);
+            return Tick(in input, in settings, in decisionFacts, phase, BasicMovementMotionFacts.None(phase));
         }
 
         public BasicLocomotionFrame Tick(
             in BasicLocomotionInputSnapshot input,
             in BasicMovementSettings settings,
-            ICameraMovementBasisProvider cameraBasisProvider,
+            in LocomotionDecisionFacts decisionFacts,
             BasicMovementPhase phase,
-            BasicMovementPhaseFacts phaseFacts)
-        {
-            MovementInputIntent intent = MovementInputIntent.FromRaw(input.Move, settings.InputDeadZone, input.RunHeld);
-            Vector3 worldDirection = CameraRelativeMovementResolver.Resolve(intent, cameraBasisProvider);
-            MovementCommand command = MovementCommandBuilder.Build(worldDirection, intent, phase, input.DeltaTime, settings);
-
-            return new BasicLocomotionFrame(input, settings, intent, worldDirection, phase, command);
-        }
-
-        public BasicLocomotionFrame Tick(
-            in BasicLocomotionInputSnapshot input,
-            in BasicMovementSettings settings,
-            ICameraMovementBasisProvider cameraBasisProvider,
-            BasicMovementPhase phase,
-            BasicMovementPhaseFacts phaseFacts,
             BasicMovementMotionFacts motionFacts)
         {
-            MovementInputIntent intent = MovementInputIntent.FromRaw(input.Move, settings.InputDeadZone, input.RunHeld);
-            BasicMovementGait frameGait = intent.HasMoveIntent ? intent.Gait : BasicMovementGait.Walk;
-            return Tick(in input, in settings, cameraBasisProvider, phase, phaseFacts, motionFacts, frameGait);
+            MovementInputIntent intent = decisionFacts.MoveIntent;
+            UnityEngine.Vector3 worldDirection = decisionFacts.SpatialFacts.WorldMoveDirection;
+            MovementCommand command = MovementCommandBuilder.Build(worldDirection, intent, phase, input.DeltaTime, settings);
+
+            return new BasicLocomotionFrame(input, settings, intent, worldDirection, phase, command);
         }
 
         public BasicLocomotionFrame Tick(
             in BasicLocomotionInputSnapshot input,
             in BasicMovementSettings settings,
-            ICameraMovementBasisProvider cameraBasisProvider,
+            in LocomotionDecisionFacts decisionFacts,
             BasicMovementPhase phase,
-            BasicMovementPhaseFacts phaseFacts,
             BasicMovementMotionFacts motionFacts,
             BasicMovementGait frameGait)
         {
-            MovementInputIntent intent = MovementInputIntent.FromRaw(input.Move, settings.InputDeadZone, input.RunHeld);
-            Vector3 worldDirection = CameraRelativeMovementResolver.Resolve(intent, cameraBasisProvider);
+            MovementInputIntent intent = decisionFacts.MoveIntent;
+            UnityEngine.Vector3 worldDirection = decisionFacts.SpatialFacts.WorldMoveDirection;
             BasicMovementGait commandGait = intent.HasMoveIntent ? intent.Gait : frameGait;
             MovementCommand command = MovementCommandBuilder.Build(worldDirection, intent, phase, input.DeltaTime, settings, motionFacts, commandGait);
 

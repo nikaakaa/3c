@@ -87,7 +87,11 @@ MonoBehaviour:
   - {fileID: -1878332245247344467}
   - {fileID: -7332468173589272911}
   - {fileID: -7332468173589272909}
-  m_RendererFeatureMap: adc0de57c6d2eee5b1a65a920bd73d9ab3a65a920bd73d9a
+  - {fileID: 7457765709763255134}
+  - {fileID: 5394318256320000001}
+  - {fileID: 6504318256320000001}
+  - {fileID: 7604318256320000001}
+  m_RendererFeatureMap: adc0de57c6d2eee5b1a65a920bd73d9ab3a65a920bd73d9a5e1b876c664e7f6701b05bb1df77dc4a01b00a26fefa435a01b0f82a2af78769
   m_UseNativeRenderPass: 0
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
@@ -136,3 +140,63 @@ MonoBehaviour:
   m_CopyDepthMode: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 1
+--- !u!114 &5394318256320000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 070bb63e8c9a4d10b7c428f48a3b5825, type: 3}
+  m_Name: 3C Edge Scan
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  shader: {fileID: 4800000, guid: 2b23266d39e54f869c6782515becc274, type: 3}
+  injectionPoint: 550
+--- !u!114 &6504318256320000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e18b08e353f34dbd88e84cdb1ef3189f, type: 3}
+  m_Name: 3C Block Impact
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  shader: {fileID: 4800000, guid: a05ef7bd7ed24ab28fa86e457398bf34, type: 3}
+  injectionPoint: 550
+--- !u!114 &7457765709763255134
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3027c54bb40843fca68718d6bb1e2f88, type: 3}
+  m_Name: 3C Local Heat Distortion
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  shader: {fileID: 4800000, guid: b4e9ce9f5575465b91b8df197b211e9f, type: 3}
+  injectionPoint: 550
+--- !u!114 &7604318256320000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a104c47cc4f24fdcb896006090d3ca16, type: 3}
+  m_Name: 3C Black White Flash
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  shader: {fileID: 4800000, guid: 9824e2c884d842149a735f0eca663321, type: 3}
+  injectionPoint: 500

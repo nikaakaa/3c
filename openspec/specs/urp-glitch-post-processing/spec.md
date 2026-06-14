@@ -1,7 +1,7 @@
 # urp-glitch-post-processing Specification
 
 ## Purpose
-TBD - created by archiving change add-urp-glitch-post-processing. Update Purpose after archive.
+定义 URP Glitch 后处理的 Volume 参数、目标遮罩语义、Renderer Feature 接入和默认安全状态。
 ## Requirements
 ### Requirement: URP Glitch Volume 参数
 系统 SHALL 提供一个 URP VolumeComponent，用于配置 Glitch 后处理的强度、块大小、水平抖动、RGB 分离、扫描线强度和速度。
@@ -72,4 +72,3 @@ TBD - created by archiving change add-urp-glitch-post-processing. Update Purpose
 #### Scenario: 局部手动验证
 - **WHEN** 将一个目标 Renderer 的 `Rendering Layer Mask` 勾选 `Glitch Target` 并启用 Glitch 目标遮罩模式
 - **THEN** Game View 应只在该物体附近出现故障效果，背景不应全屏故障
-

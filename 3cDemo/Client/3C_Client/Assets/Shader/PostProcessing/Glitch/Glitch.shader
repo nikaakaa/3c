@@ -23,6 +23,8 @@ Shader "Hidden/3C/PostProcessing/Glitch"
             float4 _GlitchParams;
             float4 _GlitchSecondaryParams;
             float4 _GlitchMaskParams;
+            float4 _GlitchSlashParams;
+            float4 _GlitchModeParams;
             float _GlitchTime;
             TEXTURE2D_X(_GlitchMaskTexture);
             SAMPLER(sampler_GlitchMaskTexture);
@@ -46,6 +48,8 @@ Shader "Hidden/3C/PostProcessing/Glitch"
                 float useTargetMask = saturate(_GlitchSecondaryParams.z);
                 float maskInfluence = saturate(_GlitchSecondaryParams.w);
                 float maskExpansion = _GlitchMaskParams.x;
+                float glitchMode = _GlitchModeParams.x;
+                float slashBlend = saturate(_GlitchModeParams.y);
                 float timeStep = floor(_GlitchTime * speed);
 
                 float2 blockUv = floor(uv * blockSize);
@@ -71,12 +75,40 @@ Shader "Hidden/3C/PostProcessing/Glitch"
                 half green = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, distortedUv).g;
                 half blue = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, saturate(distortedUv - float2(split, 0.0))).b;
                 half4 source = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv);
-                half4 glitched = half4(red, green, blue, source.a);
-                glitched.rgb *= scanDarken;
+                half4 digitalGlitch = half4(red, green, blue, source.a);
+                digitalGlitch.rgb *= scanDarken;
 
                 float noiseFlash = (Hash21(blockUv + timeStep) - 0.5) * 0.2 * glitchMask;
-                glitched.rgb += noiseFlash;
+                digitalGlitch.rgb += noiseFlash;
 
+                float slashModeWeight = step(0.5, glitchMode) * slashBlend;
+                half4 glitched = digitalGlitch;
+                if (slashModeWeight > 0.0)
+                {
+                    float slashSliceDensity = max(_GlitchSlashParams.x, 1.0);
+                    float slashSmearWidth = _GlitchSlashParams.y;
+                    float slashHighlightStretch = _GlitchSlashParams.z;
+                    float slashDirection = _GlitchSlashParams.w >= 0.0 ? 1.0 : -1.0;
+                    float slashLine = floor(uv.y * slashSliceDensity);
+                    float slashNoise = Hash21(float2(slashLine, timeStep * 1.91));
+                    float slashGate = step(0.28, slashNoise);
+                    float slashOffset = (slashNoise * 2.0 - 1.0) * slashSmearWidth * intensity * slashGate * slashDirection;
+                    float2 slashUv = saturate(uv + float2(slashOffset, 0.0));
+                    float smearStep = slashSmearWidth * intensity * slashDirection;
+
+                    half4 smearA = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, slashUv);
+                    half4 smearB = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, saturate(slashUv + float2(smearStep * 0.5, 0.0)));
+                    half4 smearC = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, saturate(slashUv + float2(smearStep, 0.0)));
+                    half4 smearD = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, saturate(slashUv + float2(smearStep * 1.75, 0.0)));
+                    half4 slashTear = smearA * 0.42 + smearB * 0.25 + smearC * 0.2 + smearD * 0.13;
+                    float highlight = saturate(max(max(slashTear.r, slashTear.g), slashTear.b) - 0.62);
+                    slashTear.rgb += highlight * slashHighlightStretch * slashGate;
+                    slashTear.rgb *= scanDarken;
+                    slashTear.r = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, saturate(slashUv + float2(rgbSplit * intensity, 0.0))).r;
+                    slashTear.b = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, saturate(slashUv - float2(rgbSplit * intensity, 0.0))).b;
+                    slashTear.a = source.a;
+                    glitched = lerp(digitalGlitch, slashTear, slashModeWeight);
+                }
                 return lerp(source, glitched, intensity * finalInfluence);
             }
             ENDHLSL

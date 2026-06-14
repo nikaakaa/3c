@@ -39,7 +39,7 @@ namespace ThirdPersonMovement
 
         static bool ShouldUseMotionFacts(in MovementInputIntent intent, BasicMovementPhase phase, in BasicMovementMotionFacts motionFacts)
         {
-            if (!motionFacts.HasAnimationMotion)
+            if (!motionFacts.HasAnimationMotion && !motionFacts.SuppressInputRotation && !motionFacts.SuppressInputPlanarMovement)
                 return false;
 
             if (motionFacts.SourcePhase == phase)

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
+using ThirdPersonAction;
 using ThirdPersonInput;
+using ThirdPersonMovement;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -225,6 +227,19 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
+        public void PhaseOrderRunsPresentationBeforeSnapshot()
+        {
+            IReadOnlyList<SimulationTickPhase> phases = SimulationTickPhaseOrder.Phases;
+
+            Assert.Less(
+                IndexOf(phases, SimulationTickPhase.ExecuteMotion),
+                IndexOf(phases, SimulationTickPhase.PresentationBridge));
+            Assert.Less(
+                IndexOf(phases, SimulationTickPhase.PresentationBridge),
+                IndexOf(phases, SimulationTickPhase.WriteSnapshotAndEvents));
+        }
+
+        [Test]
         public void RunnerPassesSameContextToHandlers()
         {
             SimulationTickRunner runner = new SimulationTickRunner();
@@ -314,6 +329,41 @@ namespace ThirdPersonSimulation.Tests
             Assert.AreEqual(1, handler.Phases.Count);
         }
 
+        [Test]
+        public void FullBodyFrameInputSanitizesInvalidStepDeltaAndAxes()
+        {
+            BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(
+                -1f,
+                new Vector2(float.NaN, float.PositiveInfinity),
+                new Vector2(float.NegativeInfinity, 0.5f),
+                true);
+
+            FullBodyFrameInput frameInput = FullBodyFrameInput.FromLocomotionInput(-4, in input);
+
+            Assert.AreEqual(0, frameInput.Step);
+            Assert.AreEqual(0f, frameInput.DeltaTime);
+            Assert.AreEqual(Vector2.zero, frameInput.LocomotionInput.Move);
+            Assert.AreEqual(new Vector2(0f, 0.5f), frameInput.LocomotionInput.Look);
+            Assert.True(frameInput.LocomotionInput.RunHeld);
+            Assert.False(frameInput.HasBufferedButtonFacts);
+        }
+
+        [Test]
+        public void FullBodyFrameContextStartsUncompleted()
+        {
+            FullBodyFrameInput input = FullBodyFrameInput.FromLocomotionInput(
+                3,
+                new BasicLocomotionInputSnapshot(0.016f, Vector2.up, Vector2.zero));
+
+            FullBodyFrameContext context = new FullBodyFrameContext(input);
+            FullBodyFrameResult result = new FullBodyFrameResult(in context);
+
+            Assert.AreEqual(FullBodyFramePipelineStep.None, context.CurrentStep);
+            Assert.False(result.Success);
+            Assert.False(result.SnapshotEventsReady);
+            Assert.AreEqual(3, result.Step);
+        }
+
         static List<SimulationTickPhase> RunPhaseRecord()
         {
             SimulationTickRunner runner = new SimulationTickRunner();
@@ -325,6 +375,17 @@ namespace ThirdPersonSimulation.Tests
             runner.Run(new SimulationTickContext(new SimulationTick(1), SimulationTickRate.Default, SimulationTickRole.Client));
 
             return handler.Phases;
+        }
+
+        static int IndexOf(IReadOnlyList<SimulationTickPhase> phases, SimulationTickPhase phase)
+        {
+            for (int i = 0; i < phases.Count; i++)
+            {
+                if (phases[i] == phase)
+                    return i;
+            }
+
+            return -1;
         }
 
         sealed class RecordingHandler : ISimulationTickPhaseHandler

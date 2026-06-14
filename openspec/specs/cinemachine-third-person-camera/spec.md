@@ -1,7 +1,7 @@
 # cinemachine-third-person-camera Specification
 
 ## Purpose
-TBD - created by archiving change refactor-camera-to-cinemachine-freelook. Update Purpose after archive.
+定义 Cinemachine 第三人称相机接入、输入适配、跟随目标、Look 控制和现有相机主线边界。
 ## Requirements
 ### Requirement: FreeLook 主相机
 系统 MUST 使用 `CinemachineFreeLook` 作为 Free 第三人称模式的主相机真相源，并 MUST 避免旧 yaw/pitch 目标控制器与 FreeLook 同时驱动 Free 模式视角。
@@ -135,4 +135,3 @@ TBD - created by archiving change refactor-camera-to-cinemachine-freelook. Updat
 - **WHEN** 相机消费表现层输出
 - **THEN** `CameraArmCollisionConstraint` MUST 继续在 Cinemachine 管线边界内修正最终相机位置
 - **AND** 表现层插值 MUST NOT 新增第二套相机碰撞或缩臂路径
-

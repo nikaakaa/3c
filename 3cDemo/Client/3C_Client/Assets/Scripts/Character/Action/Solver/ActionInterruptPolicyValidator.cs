@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ThirdPersonCharacterStateMachine;
 
 namespace ThirdPersonAction
 {
@@ -16,11 +17,20 @@ namespace ThirdPersonAction
                 ActionInterruptPolicy policy = ActionInterruptPolicySetCompiler.Compile(policySet[i]);
                 ValidatePolicy(policy, i, result);
 
-                string key = $"{policy.FromState.Value}->{policy.TargetState.Value}:{policy.TimingRule}";
+                string key = $"{policy.FromState.Value}->{policy.TargetState.Value}:{policy.TimingRule}:{policy.WindowId}";
                 if (!keys.Add(key))
                     result.AddWarning($"Policy {i} duplicates an earlier policy: {key}.");
             }
 
+            return result;
+        }
+
+        public static ActionInterruptPolicyValidationResult Validate(
+            ActionInterruptPolicySet policySet,
+            IReadOnlyList<StateTimelinePolicyDefinition> timelinePolicies)
+        {
+            ActionInterruptPolicyValidationResult result = Validate(policySet);
+            ValidateTimelineWindowReferences(result, Compile(policySet), timelinePolicies);
             return result;
         }
 
@@ -36,7 +46,7 @@ namespace ThirdPersonAction
                 ActionInterruptPolicy policy = policies[i];
                 ValidatePolicy(policy, i, result);
 
-                string key = $"{policy.FromState.Value}->{policy.TargetState.Value}:{policy.TimingRule}";
+                string key = $"{policy.FromState.Value}->{policy.TargetState.Value}:{policy.TimingRule}:{policy.WindowId}";
                 if (!keys.Add(key))
                     result.AddWarning($"Policy {i} duplicates an earlier policy: {key}.");
             }
@@ -44,9 +54,23 @@ namespace ThirdPersonAction
             return result;
         }
 
+        public static ActionInterruptPolicyValidationResult Validate(
+            IReadOnlyList<ActionInterruptPolicy> policies,
+            IReadOnlyList<StateTimelinePolicyDefinition> timelinePolicies)
+        {
+            ActionInterruptPolicyValidationResult result = Validate(policies);
+            ValidateTimelineWindowReferences(result, policies, timelinePolicies);
+            return result;
+        }
+
         public static bool IsPolicyValid(ActionInterruptPolicy policy)
         {
             return ValidateSingle(policy).HasErrors == false;
+        }
+
+        static IReadOnlyList<ActionInterruptPolicy> Compile(ActionInterruptPolicySet policySet)
+        {
+            return policySet == null ? null : ActionInterruptPolicySetCompiler.Compile(policySet);
         }
 
         static ActionInterruptPolicyValidationResult ValidateSingle(ActionInterruptPolicy policy)
@@ -85,6 +109,57 @@ namespace ThirdPersonAction
                     result.AddError($"Policy {index} timing rule is invalid.");
                     break;
             }
+        }
+
+        static void ValidateTimelineWindowReferences(
+            ActionInterruptPolicyValidationResult result,
+            IReadOnlyList<ActionInterruptPolicy> policies,
+            IReadOnlyList<StateTimelinePolicyDefinition> timelinePolicies)
+        {
+            if (policies == null || policies.Count == 0)
+                return;
+
+            for (int i = 0; i < policies.Count; i++)
+            {
+                ActionInterruptPolicy policy = policies[i];
+                if (!policy.RequiresTimelineWindow)
+                    continue;
+
+                if (!TryFindTimelineWindow(policy.WindowId, timelinePolicies, out StateTimelineWindowDefinition window))
+                {
+                    result.AddError($"Policy {i} references missing timeline window '{policy.WindowId}'.");
+                    continue;
+                }
+
+                if (!window.IsRequestWindow)
+                    result.AddError($"Policy {i} references non-request timeline window '{policy.WindowId}'.");
+            }
+        }
+
+        static bool TryFindTimelineWindow(
+            string windowId,
+            IReadOnlyList<StateTimelinePolicyDefinition> timelinePolicies,
+            out StateTimelineWindowDefinition window)
+        {
+            if (timelinePolicies != null)
+            {
+                for (int i = 0; i < timelinePolicies.Count; i++)
+                {
+                    StateTimelinePolicyDefinition policy = timelinePolicies[i];
+                    for (int j = 0; j < policy.Windows.Count; j++)
+                    {
+                        StateTimelineWindowDefinition candidate = policy.Windows[j];
+                        if (string.Equals(candidate.WindowId, windowId, System.StringComparison.Ordinal))
+                        {
+                            window = candidate;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            window = default;
+            return false;
         }
     }
 }

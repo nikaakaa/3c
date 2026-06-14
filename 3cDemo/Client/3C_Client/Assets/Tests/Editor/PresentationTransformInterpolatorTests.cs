@@ -134,6 +134,43 @@ namespace ThirdPersonPresentation.Tests
         }
 
         [Test]
+        public void CorrectionBlendsVisualTargetTowardCorrectedSource()
+        {
+            GameObject sourceObject = new GameObject("Source");
+            GameObject visualObject = new GameObject("Visual");
+            GameObject interpolatorObject = new GameObject("Interpolator");
+            try
+            {
+                sourceObject.transform.SetPositionAndRotation(new Vector3(10f, 0f, 0f), Quaternion.Euler(0f, 90f, 0f));
+                visualObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                PresentationTransformInterpolator interpolator = interpolatorObject.AddComponent<PresentationTransformInterpolator>();
+                interpolator.Source = sourceObject.transform;
+                interpolator.VisualTarget = visualObject.transform;
+
+                interpolator.BeginCorrection(PresentationPose.FromTransform(visualObject.transform), 1f);
+                interpolator.AdvanceCorrection(0.5f);
+                interpolator.UpdateVisualTarget();
+
+                Assert.AreEqual(new Vector3(10f, 0f, 0f), sourceObject.transform.position);
+                Assert.AreEqual(new Vector3(5f, 0f, 0f), visualObject.transform.position);
+                Assert.That(Quaternion.Angle(Quaternion.Euler(0f, 45f, 0f), visualObject.transform.rotation), Is.LessThan(0.001f));
+
+                interpolator.AdvanceCorrection(0.5f);
+                interpolator.UpdateVisualTarget();
+
+                Assert.False(interpolator.IsCorrectionActive);
+                Assert.AreEqual(new Vector3(10f, 0f, 0f), visualObject.transform.position);
+                Assert.That(Quaternion.Angle(Quaternion.Euler(0f, 90f, 0f), visualObject.transform.rotation), Is.LessThan(0.001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(interpolatorObject);
+                Object.DestroyImmediate(visualObject);
+                Object.DestroyImmediate(sourceObject);
+            }
+        }
+
+        [Test]
         public void ControllerLateUpdateRefreshesTargetsWhenAutoTickIsDisabled()
         {
             GameObject rigObject = new GameObject("Rig");

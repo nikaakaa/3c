@@ -116,6 +116,26 @@ namespace ThirdPersonDiagnostics.Tests
         }
 
         [Test]
+        public void FormatPreservesTurnBackRootMotionKeyword()
+        {
+            RuntimeDiagnosticLogEvent diagnosticEvent = new RuntimeDiagnosticLogEvent(
+                RuntimeDiagnosticLogCategory.Locomotion,
+                RuntimeDiagnosticLogLevel.Trace,
+                "turnback-root-motion-consumed",
+                "/FullBody/Locomotion/TurnBack",
+                string.Empty,
+                7,
+                42,
+                "[TURNBACK_RM_CHAIN] stage=controller alias=Locomotion.Turn.Back bakedMotion=True yawDelta=3.5");
+
+            string formatted = RuntimeDiagnosticLog.Format(in diagnosticEvent);
+
+            StringAssert.Contains("TURNBACK_RM_CHAIN", formatted);
+            StringAssert.Contains("stage=controller", formatted);
+            StringAssert.Contains("message=turnback-root-motion-consumed", formatted);
+        }
+
+        [Test]
         public void RuntimeDiagnosticLogUsesBuildDefineForUnityOutput()
         {
             string source = File.ReadAllText(SourcePath("RuntimeDiagnosticLog.cs"));
@@ -229,6 +249,16 @@ namespace ThirdPersonDiagnostics.Tests
             string[] keys = RuntimeDiagnosticLog.Filter.GetKnownChannelKeys();
 
             CollectionAssert.Contains(keys, "Input.input-request-added");
+        }
+
+        [Test]
+        public void ResetRestoresUnityOutputMinimumLevel()
+        {
+            RuntimeDiagnosticLog.MinimumUnityLogLevel = RuntimeDiagnosticLogLevel.Warning;
+
+            RuntimeDiagnosticLog.Reset();
+
+            Assert.AreEqual(RuntimeDiagnosticLogLevel.Info, RuntimeDiagnosticLog.MinimumUnityLogLevel);
         }
 
         [Test]

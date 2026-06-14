@@ -2,6 +2,7 @@ using Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
+using ThirdPersonDiagnostics;
 
 namespace ThirdPersonCamera
 {
@@ -119,7 +120,17 @@ namespace ThirdPersonCamera
 
         public void ResetState(float yawValue, float pitchValue)
         {
-            fallbackState.Reset(yawValue, pitchValue, PitchLimits);
+            Vector2 limits = PitchLimits;
+            float yaw = Mathf.Repeat(yawValue, 360f);
+            float pitch = Mathf.Clamp(pitchValue, limits.x, limits.y);
+            fallbackState.Reset(yaw, pitch, limits);
+            if (freeLook != null)
+            {
+                freeLook.m_XAxis.Value = yaw;
+                freeLook.m_YAxis.Value = Mathf.InverseLerp(limits.x, limits.y, pitch);
+                freeLook.PreviousStateIsValid = false;
+            }
+
             Output(ReadFollowAnchor());
         }
 
@@ -341,13 +352,20 @@ namespace ThirdPersonCamera
             if (!ShouldLog(ref nextInputDebugLogTime, lookDelta.sqrMagnitude > 0.000001f))
                 return;
 
-            Debug.Log(
-                $"[DEBUG-CAM-CHAIN] controller.input frame={Time.frameCount} autoTick={autoTick} " +
-                $"look={lookDelta.ToString("F3")} sensitivity={sensitivity.ToString("F3")} pitchLimits={PitchLimits.ToString("F3")} " +
-                $"yaw={previousYaw:F3}->{currentYaw:F3} pitch={previousPitch:F3}->{currentPitch:F3} " +
-                $"followAnchor={followAnchor.Position.ToString("F3")} followSource={TargetName(followAnchorSource)} " +
-                $"freeLook={TargetName(freeLook != null ? freeLook.transform : null)} freeLookFollow={TargetName(freeLook != null ? freeLook.Follow : null)} " +
-                $"freeLookLookAt={TargetName(freeLook != null ? freeLook.LookAt : null)}");
+             RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                 RuntimeDiagnosticLogCategory.Camera,
+                 RuntimeDiagnosticLogLevel.Info,
+                 "camera-input",
+                 "",
+                 "",
+                 0,
+                 Time.frameCount,
+                 $"[DEBUG-CAM-CHAIN] controller.input frame={Time.frameCount} autoTick={autoTick} " +
+                 $"look={lookDelta.ToString("F3")} sensitivity={sensitivity.ToString("F3")} pitchLimits={PitchLimits.ToString("F3")} " +
+                 $"yaw={previousYaw:F3}->{currentYaw:F3} pitch={previousPitch:F3}->{currentPitch:F3} " +
+                 $"followAnchor={followAnchor.Position.ToString("F3")} followSource={TargetName(followAnchorSource)} " +
+                 $"freeLook={TargetName(freeLook != null ? freeLook.transform : null)} freeLookFollow={TargetName(freeLook != null ? freeLook.Follow : null)} " +
+                 $"freeLookLookAt={TargetName(freeLook != null ? freeLook.LookAt : null)}"));
         }
 
         void LogOutput(CameraFollowAnchor followAnchor, CameraResolveResult result)
@@ -355,10 +373,17 @@ namespace ThirdPersonCamera
             if (!ShouldLog(ref nextOutputDebugLogTime, false))
                 return;
 
-            Debug.Log(
-                $"[DEBUG-CAM-CHAIN] controller.output frame={Time.frameCount} autoTick={autoTick} " +
-                $"anchor={followAnchor.Position.ToString("F3")} aimPoint={result.AimPoint.ToString("F3")} lookDir={result.LookDirection.ToString("F3")} " +
-                $"planarForward={result.CameraPlanarForward.ToString("F3")} planarRight={result.CameraPlanarRight.ToString("F3")}");
+             RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+                 RuntimeDiagnosticLogCategory.Camera,
+                 RuntimeDiagnosticLogLevel.Info,
+                 "camera-output",
+                 "",
+                 "",
+                 0,
+                 Time.frameCount,
+                 $"[DEBUG-CAM-CHAIN] controller.output frame={Time.frameCount} autoTick={autoTick} " +
+                 $"anchor={followAnchor.Position.ToString("F3")} aimPoint={result.AimPoint.ToString("F3")} lookDir={result.LookDirection.ToString("F3")} " +
+                 $"planarForward={result.CameraPlanarForward.ToString("F3")} planarRight={result.CameraPlanarRight.ToString("F3")}"));
         }
 
         bool ShouldLog(ref float nextLogTime, bool force)

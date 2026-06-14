@@ -1,7 +1,7 @@
 # local-preinput-buffer Specification
 
 ## Purpose
-TBD - created by archiving change add-local-preinput-buffer. Update Purpose after archive.
+定义本地预输入缓冲的请求记录、过期、消费、确定性顺序和与输入适配层的边界，支撑 Action 请求在固定 tick 中稳定处理。
 ## Requirements
 ### Requirement: 离散按钮事实
 系统 MUST 使用纯数据模型表达离散按钮在本地输入 step 上的 pressed、held、released 事实，使输入缓冲能与 Unity Input System adapter 和未来玩法消费层解耦。
@@ -49,7 +49,7 @@ TBD - created by archiving change add-local-preinput-buffer. Update Purpose afte
 - **THEN** 输入请求缓冲 MUST 避免同一请求在同次模拟中再次被消费
 
 ### Requirement: 预输入消费边界
-系统 MUST 将预输入定义为输入请求在短窗口内等待玩法消费层消费，而不是输入层提前决定未来动作结果。
+系统 MUST 将预输入定义为输入请求在短窗口内等待玩法消费层消费，而不是输入层提前决定未来动作结果。FullBody Action 请求 MUST 只有在动作打断仲裁 accepted 后才被消费；rejected 请求 MUST 保留到过期或后续合法消费。
 
 #### Scenario: 按下时不确定未来动作 step
 - **WHEN** 玩家在 step N 提前按下 Attack
@@ -66,6 +66,19 @@ TBD - created by archiving change add-local-preinput-buffer. Update Purpose afte
 - **THEN** 只有状态机、ActionArbiter 或等价玩法仲裁层 MUST 决定是否消费
 - **AND** Input System adapter MUST NOT 直接消费请求
 - **AND** Locomotion 输入读取 MUST NOT 直接消费 Attack、Dodge、Jump 或 Interact 请求
+
+#### Scenario: FullBody Action accepted 后消费
+- **GIVEN** 输入缓冲中存在未过期 Dodge 请求
+- **AND** 动作打断仲裁入口返回 accepted decision
+- **WHEN** FullBody Action 请求门面把该请求转为状态机输入事实
+- **THEN** 对应输入请求 MUST 被消费
+
+#### Scenario: FullBody Action rejected 后保留
+- **GIVEN** 输入缓冲中存在未过期 Dodge 请求
+- **AND** 动作打断仲裁入口返回 rejected decision
+- **WHEN** FullBody Action 请求门面处理本帧输入
+- **THEN** 对应输入请求 MUST NOT 被消费
+- **AND** 后续帧在请求过期前 MAY 再次参与仲裁
 
 ### Requirement: 缓冲窗口配置
 系统 MUST 支持按请求种类配置本地预输入窗口长度，使不同输入请求能拥有不同的短窗口。
@@ -127,4 +140,3 @@ TBD - created by archiving change add-local-preinput-buffer. Update Purpose afte
 - **THEN** 实施 MUST NOT 新增预测回滚驱动
 - **AND** MUST NOT 新增状态快照历史
 - **AND** MUST NOT 新增服务器权威校正流程
-

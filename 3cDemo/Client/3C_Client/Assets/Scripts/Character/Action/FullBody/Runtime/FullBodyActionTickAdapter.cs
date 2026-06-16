@@ -1,6 +1,5 @@
 using ThirdPersonInput;
 using ThirdPersonMovement;
-using ThirdPersonDiagnostics;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -20,9 +19,8 @@ namespace ThirdPersonAction
         bool previousAutoUpdate;
         bool hadPreviousRequestBufferAdvance;
         bool previousRequestBufferAdvance;
-        readonly FullBodyFramePipeline framePipeline = new FullBodyFramePipeline();
-        FullBodyFrameContext frameContext;
-        FullBodyFrameResult lastFrameResult;
+        CharacterFrameContext frameContext;
+        CharacterFrameResult lastFrameResult;
         bool hasFrameContext;
 
         static readonly SimulationTickPhase[] RegisteredPhases =
@@ -42,7 +40,7 @@ namespace ThirdPersonAction
         public bool RestoreAutoUpdateOnDisable { get => restoreAutoUpdateOnDisable; set => restoreAutoUpdateOnDisable = value; }
         public bool RestoreRequestBufferAdvanceOnDisable { get => restoreRequestBufferAdvanceOnDisable; set => restoreRequestBufferAdvanceOnDisable = value; }
         public bool IsRegistered => registered;
-        public FullBodyFrameResult LastFrameResult => lastFrameResult;
+        public CharacterFrameResult LastFrameResult => lastFrameResult;
 
         void Reset()
         {
@@ -121,14 +119,14 @@ namespace ThirdPersonAction
                     !fullBodyActionController.TryReadFrameInputFromSource(
                         context.FixedDeltaSecondsFloat,
                         context.TickValue,
-                        out FullBodyFrameInput input))
+                        out CharacterFrameInput input))
                 {
                     hasFrameContext = false;
                     return;
                 }
 
                 hasFrameContext = true;
-                frameContext = framePipeline.BeginFrame(in input);
+                frameContext = fullBodyActionController.FramePipelineHost.BeginFrame(in input);
             }
 
             if (!hasFrameContext)
@@ -140,9 +138,9 @@ namespace ThirdPersonAction
             if (fullBodyActionController == null)
                 return;
 
-            framePipeline.RunPhase(fullBodyActionController, phase, ref frameContext, out lastFrameResult);
+            fullBodyActionController.FramePipelineHost.RunPhase(fullBodyActionController.RuntimePort, phase, ref frameContext, out lastFrameResult);
             if (phase == SimulationTickPhase.WriteSnapshotAndEvents ||
-                frameContext.CurrentStep == FullBodyFramePipelineStep.Failed)
+                frameContext.CurrentStep == CharacterFramePipelineStep.Failed)
             {
                 hasFrameContext = false;
             }
@@ -182,15 +180,10 @@ namespace ThirdPersonAction
 
         void ReportDriverConflict(LocomotionTickAdapter adapter)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.FullBody,
-                RuntimeDiagnosticLogLevel.Error,
-                "fullbody-driver-conflict",
-                string.Empty,
-                string.Empty,
-                0,
-                Time.frameCount,
-                $"FullBodyActionTickAdapter and LocomotionTickAdapter both target {fullBodyActionController.LocomotionController.name}. Disable one gameplay driver. conflict={adapter.name}"));
+            string targetName = fullBodyActionController != null && fullBodyActionController.LocomotionController != null
+                ? fullBodyActionController.LocomotionController.name
+                : name;
+            FullBodyDiagnostics.LogDriverConflict(targetName, adapter != null ? adapter.name : string.Empty);
         }
 
         static bool IsActiveLocomotionDriver(LocomotionTickAdapter adapter)

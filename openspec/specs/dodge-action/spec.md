@@ -128,23 +128,36 @@
 - **AND** 系统 MUST NOT 因 accidental resistance、旧请求残留或错误过期规则造成只能 Shift 一次
 
 ### Requirement: FullBody 动作配置参数
-系统 MUST 通过配置资产或等价数据源提供 Directional 和 Backstep 的距离、时长、优先级、抗性和旋转策略。代码 MAY 提供保守 fallback，但 gameplay 手感参数 MUST NOT 只能通过修改代码调整。
+系统 MUST 通过正式动作逻辑配置资产或批准的等价数据源提供 Directional 和 Backstep 的距离、时长、优先级、抗性和旋转策略。正式 gameplay 路径 MUST NOT 通过代码 fallback、状态机旧 `output` 字段或场景临时字段补齐缺失的动作手感参数。
 
 #### Scenario: 配置提供 Directional 参数
 - **WHEN** 设计者配置 Directional 变体
 - **THEN** 配置 MUST 能表达 duration、distance、priority、resistance 和 rotateToDirection
-- **AND** Directional 第一版默认可使用约 0.35s、4m、priority 30、resistance 20、rotateToDirection true
+- **AND** Directional 默认正式配置 MAY 使用约 0.35s、4m、priority 30、resistance 20、rotateToDirection true
+- **AND** 这些参数 MUST 能从 Action 逻辑配置入口追踪
 
 #### Scenario: 配置提供 Backstep 参数
 - **WHEN** 设计者配置 Backstep 变体
 - **THEN** 配置 MUST 能表达 duration、distance、priority、resistance 和 rotateToDirection
-- **AND** Backstep 第一版默认可使用约 0.30s、2m-2.5m、priority 30、resistance 20、rotateToDirection false
+- **AND** Backstep 默认正式配置 MAY 使用约 0.30s、2m-2.5m、priority 30、resistance 20、rotateToDirection false
+- **AND** 这些参数 MUST 能从 Action 逻辑配置入口追踪
 
-#### Scenario: 非法配置安全处理
+#### Scenario: 缺失配置不 fallback
+- **GIVEN** 正式 Action 逻辑配置缺失 Dodge motion 参数
+- **WHEN** 系统尝试构建 Dodge motion 输出
+- **THEN** 系统 MUST 报告配置错误或拒绝该动作输出
+- **AND** MUST NOT 使用代码内置默认值、状态机旧 `output` 字段、场景临时字段或 Resources 资产继续运行
+
+#### Scenario: 非法配置被校验报告
 - **GIVEN** 配置中存在负时长、负距离、负优先级或负抗性
-- **WHEN** 系统读取动作配置
-- **THEN** 运行时 MUST 使用非负安全值
-- **AND** 配置校验 SHOULD 报告对应问题
+- **WHEN** 系统校验动作配置
+- **THEN** 校验 MUST 报告对应问题
+- **AND** 正式 gameplay 路径 MUST NOT 静默把非法值改成另一套隐藏默认手感
+
+#### Scenario: 状态机不复制动作手感参数
+- **WHEN** 设计者检查 `FullBody/Action/Dodge` 状态节点
+- **THEN** 状态机节点 MAY 保存 action state id、variant key、animation key、request/timeline/output module 绑定
+- **AND** 状态机节点 MUST NOT 并行保存决定 Directional 或 Backstep motion duration/distance 的第二套正式参数
 
 ### Requirement: FullBody Action 装配闭环
 系统 SHOULD 提供明确的 FullBody Action 装配闭环，使设计者能追踪 Shift FullBody 动作的逻辑配置和动画表现配置。动作逻辑入口 MAY 引用或内嵌运动参数、打断策略和未来 cooldown/cost 配置；动作动画表现 MUST 通过独立动作动画绑定入口或等价边界解析。系统 MUST NOT 要求设计者只能在多个互不关联的散配置资产之间手工同步 Dodge。
@@ -272,3 +285,4 @@
 - **WHEN** 用户在 Play Mode 中不按方向只按 Shift
 - **THEN** 角色 MUST 执行后闪
 - **AND** 后闪结束后 MUST NOT 强制进入 Run 档位
+

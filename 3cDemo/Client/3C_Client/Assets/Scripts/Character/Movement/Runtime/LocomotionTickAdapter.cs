@@ -1,5 +1,4 @@
 using ThirdPersonAction;
-using ThirdPersonDiagnostics;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -97,15 +96,7 @@ namespace ThirdPersonMovement
         void ReportDriverConflict(FullBodyActionTickAdapter adapter)
         {
             string targetName = locomotionController != null ? locomotionController.name : name;
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Error,
-                "locomotion-driver-conflict",
-                string.Empty,
-                string.Empty,
-                0,
-                Time.frameCount,
-                $"LocomotionTickAdapter and FullBodyActionTickAdapter both target {targetName}. Disable one gameplay driver. conflict={adapter.name}"));
+            LocomotionDiagnostics.SubmitDriverConflict(targetName, adapter != null ? adapter.name : string.Empty);
         }
 
         void ReportRetiredDriver()
@@ -115,15 +106,7 @@ namespace ThirdPersonMovement
 
             loggedRetiredDriver = true;
             string targetName = locomotionController != null ? locomotionController.name : name;
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Error,
-                "locomotion-tick-adapter-retired",
-                string.Empty,
-                string.Empty,
-                0,
-                Time.frameCount,
-                $"LocomotionTickAdapter is retired and cannot drive gameplay ticks. Drive {targetName} through FullBodyActionTickAdapter."));
+            LocomotionDiagnostics.SubmitRetiredTickAdapter(targetName);
         }
 
         static bool IsActiveFullBodyDriver(FullBodyActionTickAdapter adapter)

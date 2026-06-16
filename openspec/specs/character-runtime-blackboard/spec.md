@@ -144,3 +144,110 @@
 - **THEN** WASD Idle、MoveStart、MoveLoop、MoveStop MUST 保持可用
 - **AND** Shift 跑步松开后 RunEnd MUST 保持可用
 - **AND** Dodge 后返回 Idle 或 MoveLoop 的现有行为 MUST 保持可用
+
+### Requirement: Runtime facts 从模块输出派生
+系统 MUST 允许 runtime blackboard facts 从状态节点模块输出和 adapter 回传 facts 派生，而不是从互斥 `Locomotion / Action` owner 分支直接推导。Blackboard MUST 保持纯数据边界，并继续支持预测回滚 snapshot/restore。
+
+#### Scenario: Action facts 从动作模块输出派生
+- **WHEN** 当前节点具备 Dodge 动作请求或动作位移模块
+- **THEN** action runtime facts MUST 能派生当前 action state、variant、完成事实和 source step
+- **AND** MUST NOT 依赖独立 Action runtime 作为第二状态权威
+
+#### Scenario: Locomotion facts 从移动模块和 adapter facts 派生
+- **WHEN** 当前节点具备 Locomotion phase 模块
+- **THEN** locomotion runtime facts MUST 能派生 phase、gait、move intent 和 motion facts
+- **AND** MUST NOT 通过第二 Locomotion 状态机决定 phase
+
+#### Scenario: 回滚快照保持纯数据
+- **WHEN** 捕获 rollback snapshot
+- **THEN** snapshot MUST 保存 active state、state time、variant、模块必要 payload 和 runtime facts
+- **AND** MUST NOT 保存 Unity 对象、Animancer state 或模块实例对象引用
+
+### Requirement: 黑板保存 Locomotion 脚相位事实
+系统 SHALL 扩展角色运行时黑板的 Animation facts，使其可以保存当前 locomotion 脚相位和最近一次 locomotion 退出脚相位。脚相位 facts SHALL 是纯数据，可 snapshot/restore，不得保存 Unity 场景实例或 Animancer runtime 对象。
+
+#### Scenario: 当前脚相位写入黑板
+- **WHEN** animation facts adapter 从当前 locomotion 播放进度采样到有效脚相位
+- **THEN** 黑板 Animation facts MUST 保存当前 alias key、normalized time、foot phase、是否有效和 source step
+
+#### Scenario: TurnBack 退出脚相位写入黑板
+- **GIVEN** 当前 locomotion phase 为 `TurnBack`
+- **AND** 当前脚相位 sample 有效
+- **WHEN** 系统确认 TurnBack 将退出到 `MoveLoop + Run`
+- **THEN** 黑板 Animation facts MUST 保存最近一次 locomotion exit foot phase
+
+#### Scenario: 无效脚相位不伪造事实
+- **WHEN** 当前播放进度无效或缺少有效 foot phase profile
+- **THEN** 黑板 Animation facts MUST 标记当前脚相位无效
+- **AND** MUST NOT 用 `Unknown` 伪装成可匹配脚相位
+
+### Requirement: 脚相位事实 Snapshot / Restore
+系统 SHALL 将 locomotion 脚相位 facts 纳入黑板 snapshot/restore，使本地回放、预测恢复和同步测试能恢复相同的相位匹配输入。
+
+#### Scenario: Snapshot 捕获脚相位
+- **GIVEN** 黑板中存在有效当前脚相位和 exit foot phase
+- **WHEN** 系统捕获黑板 snapshot
+- **THEN** snapshot MUST 包含这些脚相位 facts
+- **AND** snapshot MUST 不包含 Unity 对象引用
+
+#### Scenario: Restore 恢复脚相位
+- **GIVEN** 系统已经捕获包含脚相位 facts 的 snapshot
+- **WHEN** 系统 restore 该 snapshot
+- **THEN** 黑板 MUST 恢复相同的当前脚相位和 exit foot phase
+- **AND** 重复 restore 同一 snapshot MUST 得到一致结果
+
+#### Scenario: Restore 不触发表现副作用
+- **WHEN** 系统 restore 包含脚相位 facts 的黑板 snapshot
+- **THEN** restore MUST NOT 播放动画
+- **AND** restore MUST NOT 调用 `CharacterController.Move`
+- **AND** restore MUST NOT 写入角色 Transform
+
+### Requirement: 脚相位写入权威
+系统 SHALL 明确脚相位 facts 的写入权威。只有 animation facts adapter MAY 将播放进度和脚相位 profile 采样结果写入黑板；Presenter、状态机 runner 和 movement executor MUST NOT 直接改写脚相位 facts。
+
+#### Scenario: Adapter 写入脚相位
+- **WHEN** 动画播放进度需要转换为脚相位事实
+- **THEN** animation facts adapter MAY 写入黑板 Animation facts
+- **AND** 写入内容 MUST 是纯数据 sample
+
+#### Scenario: Presenter 不写黑板
+- **WHEN** `BasicLocomotionAnimancerPresenter` 播放 RunLoop 并应用 start override
+- **THEN** Presenter MUST NOT 直接写入黑板
+- **AND** Presenter MUST NOT 通过黑板请求状态切换
+
+#### Scenario: 状态机不维护脚相位
+- **WHEN** 统一状态机 runner 推进状态
+- **THEN** runner MUST NOT 直接计算或改写脚相位 facts
+- **AND** runner MAY 读取黑板 snapshot 中已有的脚相位 facts 作为条件或输出输入
+
+### Requirement: 黑板 facts 的回滚权威分类
+角色运行时黑板 MUST 支持或可被外部 resolver 映射到回滚权威分类。Locomotion facts、Action facts 和 Animation facts MUST 能被区分为 strict gameplay、presentation drift、predictive gameplay 或 ignored。黑板自身 MUST 继续只保存 facts，不得成为第二状态机或 comparer 策略实现。
+
+#### Scenario: Locomotion facts 默认为 strict
+- **WHEN** comparer 比较 locomotion phase、gait、world direction 或 move intent facts
+- **THEN** 这些 facts MUST 默认属于 strict gameplay
+- **AND** 差异 MUST 导致 strict mismatch
+
+#### Scenario: Action facts 默认为 strict
+- **WHEN** comparer 比较 action active、state、completed 或 movement facts
+- **THEN** 这些 facts MUST 默认属于 strict gameplay
+- **AND** 差异 MUST 导致 strict mismatch
+
+#### Scenario: Animation facts 可分层
+- **WHEN** comparer 比较 animation facts
+- **THEN** profile-driven playback facts MUST 能标记为 strict gameplay
+- **AND** visual-only playback facts MUST 能标记为 presentation drift
+
+### Requirement: 黑板不决定比较策略
+黑板 MUST NOT 自行决定 F6/F8 是否失败。比较策略 MUST 由 rollback authority/scope resolver、state policy 或等价外部纯数据规则处理。黑板 MAY 提供 phase、alias、action key、normalized time 等事实供 resolver 判断。
+
+#### Scenario: 黑板只提供事实
+- **WHEN** comparer 需要判断某 animation fact 的 compare scope
+- **THEN** 黑板 snapshot MAY 提供 phase、alias 和 action key
+- **AND** 黑板 MUST NOT 持有 comparer 或 runner 实例
+
+#### Scenario: Restore 不触发 scope 副作用
+- **WHEN** 系统恢复黑板 snapshot
+- **THEN** restore MUST 只恢复事实值
+- **AND** MUST NOT 因 scope 分类播放动画、移动角色或切换状态
+

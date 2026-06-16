@@ -309,3 +309,230 @@
 - **AND** MUST NOT 读取 `AnimationClip`
 - **AND** MUST NOT 调用 `CharacterController.Move`
 - **AND** MUST NOT 写 Transform
+
+### Requirement: Locomotion 动画不由状态节点万能动画字段配置
+系统 MUST 继续通过 Locomotion phase、运行时 gait facts、基础移动动画配置和 Animancer presenter 解析基础移动动画。普通 Locomotion 状态节点 MUST NOT 通过万能 animation binding 字段配置具体动画 key；如 TurnBack 等特殊 Locomotion 状态需要 timeline alias 或 motion alias，MUST 通过明确的 Locomotion animation alias / TurnBack motion policy 模块表达。
+
+#### Scenario: MoveLoop 使用 phase 和 gait
+- **WHEN** 当前状态节点具备 `MoveLoop` Locomotion phase 模块
+- **AND** 运行时 gait fact 为 Run
+- **THEN** 基础移动动画系统 MUST 使用 `MoveLoop + Run` 或等价 facts 解析 Animancer key
+- **AND** `MoveLoop` 节点 MUST NOT 需要配置独立 action animation key
+
+#### Scenario: TurnBack 使用单一 alias 来源
+- **WHEN** 当前状态节点具备 TurnBack motion policy 模块
+- **THEN** TurnBack 播放、timeline binding 和 baked motion profile MUST 使用同一正式 alias 来源或明确映射
+- **AND** 配置者 MUST NOT 在状态节点万能 animation 字段和 TurnBack policy 字段重复填写同一个 alias
+
+#### Scenario: gait 不进入状态图
+- **WHEN** 角色从 Walk 切换到 Run
+- **THEN** 状态路径 MUST NOT 因 gait 变化变成 WalkLoop 或 RunLoop
+- **AND** gait MUST 作为运行时事实进入动画和运动解析
+
+### Requirement: TurnBack Intent 保持候选事实边界
+基础移动系统 MUST 可以继续计算 `LocomotionTurnBackIntent` 来表达 `MoveStart` 或 `MoveLoop` 反向输入候选，但该 intent MUST 只作为状态请求仲裁入口的输入。基础移动系统 MUST NOT 因 intent 本身直接切换到 TurnBack、播放 TurnBack 动画或提交 TurnBack motion。
+
+#### Scenario: Locomotion 只产出候选 intent
+- **GIVEN** 当前基础移动 phase 为 MoveStart 或 MoveLoop
+- **AND** 当前 gait 为 Run
+- **AND** 输入方向与角色朝向满足反向阈值
+- **WHEN** 基础移动系统派生 locomotion decision facts
+- **THEN** 它 MAY 产出有效 `LocomotionTurnBackIntent`
+- **AND** MUST NOT 在该阶段直接切换逻辑状态
+
+#### Scenario: intent 不直接驱动运动输出
+- **GIVEN** locomotion facts 中存在有效 `LocomotionTurnBackIntent`
+- **AND** 统一状态机当前状态尚未进入 `FullBody/Locomotion/TurnBack`
+- **WHEN** 基础移动系统构建本帧运动
+- **THEN** 系统 MUST NOT 采样 TurnBack baked motion
+- **AND** MUST NOT 因 intent 本身锁定普通输入旋转或平面位移
+
+#### Scenario: TurnBack 状态后才消费窗口运动
+- **GIVEN** 统一状态机已经通过 accepted TurnBack request fact 进入 `FullBody/Locomotion/TurnBack`
+- **AND** 当前 timeline facts 表示 motion window active
+- **WHEN** 基础移动系统构建本帧运动
+- **THEN** 系统 MUST 通过 TurnBack motion policy 采样 configured baked motion
+- **AND** input lock 行为 MUST 由 timeline facts 和 TurnBack motion policy 决定
+
+### Requirement: 已审批动画运动源边界
+系统 MUST 允许经 OpenSpec 审批的基础移动或 FullBody locomotion 状态通过通用动画运动源管线贡献运动。第一版贡献 MUST 在 `TickSampledMotion` 模式下转换为纯数据 movement facts 并由统一 motion executor 应用。该能力不得改变普通 Walk/Run 动画只负责表现的默认边界。
+
+#### Scenario: 普通基础移动仍只表现
+- **WHEN** 角色播放 Idle、MoveStart、MoveLoop 或 MoveStop 的普通 Walk/Run 动画
+- **THEN** 动画外观层 MUST 继续只消费移动动画上下文和暴露只读播放进度
+- **AND** MUST NOT 直接移动角色根
+
+#### Scenario: 已审批状态使用动画运动源
+- **GIVEN** 当前逻辑状态声明了通用动画运动源策略
+- **WHEN** 动画播放进度产生本 tick 采样窗口
+- **THEN** 基础移动动画系统 MUST 能按策略提供该状态的 yaw 或 translation 数据
+- **AND** MUST 提交为 movement facts
+
+#### Scenario: TurnBack 作为首个使用者
+- **GIVEN** 当前逻辑状态为 `FullBody/Locomotion/TurnBack`
+- **WHEN** TurnBack 配置启用通用动画运动源策略
+- **THEN** 系统 MUST 使用该通用策略解析 `Locomotion.Turn.Back` 的动画运动贡献
+- **AND** 默认 MUST 选择 `TickSampledMotion` 以支持后续预测、回滚和预测矫正
+- **AND** MUST NOT 依赖 TurnBack 专用 pending runtime root delta 分支作为默认运动来源
+
+### Requirement: 基础移动脚相位 Profile 绑定
+系统 MUST 允许基础移动动画配置绑定 Locomotion 脚相位 Profile，使 `TurnBack` 和 `RunLoop` 能通过正式配置参与脚相位匹配。该绑定 MUST 归属于现有基础移动动画配置或其明确子配置，不得新增游离全局配置或 Resources 隐式加载路径。
+
+#### Scenario: RunLoop 绑定脚相位 Profile
+- **GIVEN** 当前角色基础移动动画配置包含 `RunLoop` alias
+- **WHEN** 设计者为 `MoveLoop + Run + RunLoop` 绑定脚相位 Profile
+- **THEN** 运行时 MUST 能通过 phase、gait 和 alias key 解析到该 profile
+
+#### Scenario: TurnBack 绑定脚相位 Profile
+- **GIVEN** 当前角色基础移动动画配置包含 `Locomotion.Turn.Back` alias
+- **WHEN** 设计者为 `TurnBack + Run + Locomotion.Turn.Back` 绑定脚相位 Profile
+- **THEN** 运行时 MUST 能通过 phase、gait 和 alias key 解析到该 profile
+
+#### Scenario: 不新增隐式配置路径
+- **WHEN** 当前配置未绑定脚相位 Profile
+- **THEN** 系统 MUST 报告配置缺失或匹配无效
+- **AND** MUST NOT 通过 `Resources.Load`、全局单例或硬编码路径寻找 profile
+
+### Requirement: 移动动画上下文携带相位匹配请求
+系统 MUST 扩展移动动画上下文，使其可以携带纯数据脚相位匹配请求或匹配结果。该上下文 MUST 不携带脚相位 Profile、Animancer runtime、AnimationClip、TransitionAsset、Transform、CharacterController 或 InputAction。
+
+#### Scenario: TurnBack 后 RunLoop 上下文携带匹配结果
+- **GIVEN** 黑板中存在有效 TurnBack exit foot phase
+- **AND** RunLoop profile 解析出有效 start normalized time
+- **WHEN** 系统构建 `MoveLoop + Run` 的移动动画上下文
+- **THEN** 上下文 MUST 携带有效的 RunLoop start normalized time override
+
+#### Scenario: 普通移动上下文不携带匹配请求
+- **GIVEN** 当前不是从 TurnBack 进入 RunLoop
+- **WHEN** 系统构建移动动画上下文
+- **THEN** 上下文 MUST 标记为没有脚相位匹配 override
+
+#### Scenario: 上下文保持纯数据
+- **WHEN** 动画外观层读取移动动画上下文
+- **THEN** 它 MUST NOT 能通过上下文访问脚相位 Profile 资产
+- **AND** MUST NOT 能访问 Unity 场景对象或 Animancer runtime
+
+### Requirement: Animancer RunLoop 起播相位应用
+Animancer 基础移动外观层 MUST 在新进入 `MoveLoop + RunLoop` 时消费脚相位匹配结果，并设置一次目标 state 的 normalized time。外观层 MUST NOT 因脚相位匹配决定逻辑状态、移动命令或 TurnBack 退出。
+
+#### Scenario: 新播放 RunLoop 应用 start override
+- **GIVEN** 移动动画上下文阶段为 `MoveLoop`
+- **AND** gait 为 `Run`
+- **AND** alias key 解析为 `RunLoop`
+- **AND** 上下文携带有效 start normalized time override
+- **WHEN** Presenter 新播放 RunLoop
+- **THEN** Presenter MUST 设置新 state 的 `NormalizedTime` 为该 override
+- **AND** MUST 记录诊断说明该 override 已应用
+
+#### Scenario: 相同 RunLoop 不重复应用 start override
+- **GIVEN** 当前 Presenter 已经在播放 `MoveLoop + RunLoop`
+- **AND** 下一帧收到相同 phase、gait 和 alias key
+- **WHEN** 上下文仍携带 start normalized time override
+- **THEN** Presenter MUST 保持现有播放进度
+- **AND** MUST NOT 每帧重设 `NormalizedTime`
+
+#### Scenario: 无效 override 不改变播放
+- **GIVEN** 上下文没有有效 start normalized time override
+- **WHEN** Presenter 新播放 RunLoop
+- **THEN** Presenter MUST 使用现有 Animancer 播放行为
+- **AND** MUST NOT 猜测脚相位起播点
+
+### Requirement: 基础移动脚相位自动测试和手动验证
+系统 MUST 为基础移动脚相位匹配提供 EditMode 测试和手动验证步骤，证明 TurnBack 后 RunLoop 起播相位被正确应用，且普通移动动画不受影响。
+
+#### Scenario: 自动测试覆盖 Presenter 起播
+- **WHEN** 运行基础移动动画 EditMode 测试
+- **THEN** 测试 MUST 覆盖 RunLoop 新进入时应用 start override
+- **AND** MUST 覆盖相同 RunLoop 连续帧不重复应用 override
+
+#### Scenario: 手动验证 TurnBack 衔接
+- **GIVEN** 用户在 Sandbox 使用当前 Corin 角色
+- **AND** Locomotion 与 Animation 诊断日志已启用
+- **WHEN** 用户从 RunLoop 触发 TurnBack 并继续移动
+- **THEN** TurnBack 退出后 MUST 回到 RunLoop
+- **AND** 日志 MUST 能显示 exit foot phase 和 RunLoop matched start normalized time
+
+### Requirement: TurnBack 动画运动策略
+系统 MUST 为 `FullBody/Locomotion/TurnBack` 提供独立于普通 Walk/Run 基础移动的动画运动策略。该策略 MUST 允许 TurnBack 在转身窗口内使用 baked motion profile 或等价采样事实驱动根位移和朝向，并允许第一版忽略 TurnBack 动画平移尾巴，转完后交还普通 MoveLoop。该策略 MUST 使用烘焙运动数据入口，使编辑器可以生成 yaw、translation、marker、entry timing 和 exit timing 的纯数据资产。
+
+#### Scenario: TurnBack 播放配置 alias
+- **GIVEN** 当前逻辑状态为 `FullBody/Locomotion/TurnBack`
+- **WHEN** 系统构建移动动画上下文
+- **THEN** 动画外观层 MUST 播放 `Locomotion.Turn.Back` 或配置中等价 alias
+- **AND** 该 alias MUST 来自现有动画配置或状态输出绑定
+
+#### Scenario: TurnBack yaw 作为纯数据事实
+- **GIVEN** TurnBack 动画包含转身 yaw
+- **WHEN** 动画外观层或采样器读取本帧播放窗口
+- **THEN** 系统 MUST 产出本帧 yaw 贡献作为纯数据事实
+- **AND** 该事实 MUST 不携带 Animancer runtime state
+- **AND** 该事实 MUST 不直接写 Transform
+
+#### Scenario: TurnBack 可消费烘焙运动数据
+- **GIVEN** TurnBack motion policy 引用了有效 baked motion profile
+- **WHEN** 运行时采样当前播放窗口
+- **THEN** 系统 MUST 能从 baked profile 读取 yaw、translation 或 marker 事实
+- **AND** 采样结果 MUST 仍以纯数据 movement facts 进入运动命令
+- **AND** 运行时 sampler MUST NOT 依赖 UnityEditor API
+
+#### Scenario: TurnBack 第一版只消费烘焙转身窗口平移
+- **GIVEN** `Locomotion.Turn.Back` 动画包含转身后的继续跑动位移
+- **WHEN** TurnBack motion policy 的 translation source 为 baked motion profile 或等价配置
+- **THEN** 系统 MUST 只将烘焙转身窗口内的平面位移作为 TurnBack 平面位移贡献
+- **AND** MUST NOT 将该跑步尾巴平移作为 TurnBack 平面位移贡献
+- **AND** 转完后 MUST 由普通 MoveLoop 位移重新接管
+
+#### Scenario: Presenter 不拥有 TurnBack 逻辑
+- **WHEN** Animancer 外观层播放 TurnBack 动画
+- **THEN** 外观层 MUST 只负责播放、暴露进度、采样或转发 root motion 事实
+- **AND** MUST NOT 决定 TurnBack 是否进入
+- **AND** MUST NOT 决定 TurnBack 是否退出
+- **AND** MUST NOT 调用 motion executor 或 `CharacterController.Move`
+
+#### Scenario: 不靠手工删除源曲线修复 RootT 基线
+- **GIVEN** TurnBack 动画 RootT 存在非零基线或预览偏移
+- **WHEN** 运行时 TurnBack motion policy 使用 baked motion profile
+- **THEN** 系统 MUST 通过 motion policy 消费生成后的纯数据平移和 yaw
+- **AND** MAY 使用工具生成不带平面漂移的视觉 clip
+- **AND** MUST NOT 要求用户手工删除源 RootT、RootQ 或 skeleton 根位移曲线作为正确运行前提
+
+### Requirement: TurnBack 动画退出事实
+系统 MUST 能基于 TurnBack policy 的进入/退出时间、转完点或等价 marker 产生动画退出事实，使 TurnBack 可以在转身完成后退出，而不是必须等待整段动画自然结束。
+
+#### Scenario: 进入时间由 policy 表达
+- **GIVEN** TurnBack policy 配置了 start normalized time、fade 或 lock window
+- **WHEN** TurnBack 状态进入
+- **THEN** 动画请求 MUST 使用这些进入时间参数或其等价配置
+- **AND** 输入锁定窗口 MUST 与 policy 中的时间事实一致
+
+#### Scenario: 转完点产生 can exit
+- **GIVEN** 当前状态为 `FullBody/Locomotion/TurnBack`
+- **AND** policy 配置了 turn complete normalized time
+- **WHEN** 当前 `Locomotion.Turn.Back` 播放进度达到该 normalized time
+- **THEN** 动画事实层 MUST 产出 TurnBack 可退出事实
+
+#### Scenario: 未到转完点不能退出
+- **GIVEN** 当前状态为 `FullBody/Locomotion/TurnBack`
+- **AND** 当前播放进度未达到 turn complete normalized time
+- **WHEN** 状态机评估 TurnBack 退出 transition
+- **THEN** `LocomotionAnimationCanExit` 或等价条件 MUST 为 false
+
+#### Scenario: 整段播放结束仍兼容
+- **GIVEN** TurnBack policy 未配置有效 turn complete normalized time
+- **WHEN** `Locomotion.Turn.Back` 播放到自然结束
+- **THEN** 系统 MAY 使用现有动画结束事实允许退出
+- **AND** MUST 输出诊断说明使用了 fallback 退出方式
+
+### Requirement: TurnBack 编辑器预留边界
+系统 MUST 为 TurnBack animation motion policy 保留编辑器 authoring 边界。编辑器 MAY 在后续变更中从 animation clip 提取 root yaw、root translation、turn complete marker、entry timing、exit timing 和校验报告，但运行时 MUST 只依赖生成后的纯数据资产或配置。
+
+#### Scenario: 编辑器生成数据不进入运行时依赖
+- **WHEN** 后续编辑器工具生成 TurnBack baked motion profile
+- **THEN** 生成结果 MUST 是运行时可读取的纯数据资产或等价配置
+- **AND** 运行时代码 MUST NOT 引用 UnityEditor 命名空间
+
+#### Scenario: 编辑器可校验动画窗口
+- **WHEN** 设计者使用后续 TurnBack 编辑器检查动画
+- **THEN** 编辑器 MAY 报告 RootT 基线、turn complete marker、entry timing、exit timing 和 yaw 累计值
+- **AND** 这些报告 MUST NOT 改变运行时状态权威
+

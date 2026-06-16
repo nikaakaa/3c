@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
@@ -377,10 +377,10 @@ namespace ThirdPersonAction.Tests
         }
 
         [Test]
-        public void DefaultTurnBackPoliciesAllowMoveStartAndMoveLoopThroughTimelineWindow()
+        public void CorinFullBodyStateRequestPoliciesAllowMoveStartAndMoveLoopThroughTimelineWindow()
         {
             ActionInterruptPolicySetSO asset = AssetDatabase.LoadAssetAtPath<ActionInterruptPolicySetSO>(
-                "Assets/Configs/3C/Action/DefaultDodgeInterruptPolicySet.asset");
+                "Assets/Configs/3C/Action/FullBody/RequestPolicy/CorinFullBodyStateRequestPolicySet.asset");
             Assert.NotNull(asset);
 
             ActionInterruptPolicy[] turnBackPolicies = asset.CompilePolicies()
@@ -536,3 +536,4 @@ namespace ThirdPersonAction.Tests
         }
     }
 }
+

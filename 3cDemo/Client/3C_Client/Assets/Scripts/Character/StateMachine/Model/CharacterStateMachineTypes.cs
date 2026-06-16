@@ -378,6 +378,26 @@ namespace ThirdPersonCharacterStateMachine
         AnimationDrivenLocomotion
     }
 
+    public enum CharacterStateModuleType
+    {
+        LocomotionPhase = 0,
+        InputDrivenMotion = 1,
+        ConfiguredActionMotion = 2,
+        ActionAnimation = 3,
+        LocomotionAnimationAlias = 4,
+        TurnBackMotionPolicy = 5,
+        InputConsume = 6,
+        RunLatch = 7,
+        TimelineWindow = 8
+    }
+
+    public enum CharacterStatePlaybackFactSource
+    {
+        None = 0,
+        Locomotion = 1,
+        Action = 2
+    }
+
     [Serializable]
     public struct CharacterActionMovementDefinition
     {
@@ -406,7 +426,7 @@ namespace ThirdPersonCharacterStateMachine
         public float Distance => Mathf.Max(0f, distance);
         public bool RotateToDirection => rotateToDirection;
         public bool SetRunLatchOnComplete => setRunLatchOnComplete;
-        public bool IsValid => Duration > 0f || Distance > 0f;
+        public bool IsValid => variant != CharacterStateVariant.None || Duration > 0f || Distance > 0f || setRunLatchOnComplete;
     }
 
     [Serializable]
@@ -479,49 +499,33 @@ namespace ThirdPersonCharacterStateMachine
     public struct CharacterStateAnimationBinding
     {
         [SerializeField] string animationKey;
-        [SerializeField] AnimationClip clip;
-        [SerializeField] UnityEngine.Object transitionAsset;
-        [SerializeField] string transitionLibraryKey;
-        [SerializeField, Min(0f)] float fadeDuration;
-        [SerializeField, Min(0f)] float speed;
-        [SerializeField, Min(0f)] float startTime;
+        [SerializeField] string timelineBindingKey;
         [SerializeField] string debugName;
 
         public CharacterStateAnimationBinding(
             string animationKey,
-            AnimationClip clip,
-            UnityEngine.Object transitionAsset,
-            string transitionLibraryKey,
-            float fadeDuration,
-            float speed,
-            float startTime,
+            string timelineBindingKey,
             string debugName)
         {
             this.animationKey = (animationKey ?? string.Empty).Trim();
-            this.clip = clip;
-            this.transitionAsset = transitionAsset;
-            this.transitionLibraryKey = (transitionLibraryKey ?? string.Empty).Trim();
-            this.fadeDuration = Mathf.Max(0f, fadeDuration);
-            this.speed = speed <= 0f ? 1f : speed;
-            this.startTime = Mathf.Max(0f, startTime);
+            this.timelineBindingKey = (timelineBindingKey ?? string.Empty).Trim();
             this.debugName = debugName ?? string.Empty;
         }
 
         public ActionAnimationKey Key => new ActionAnimationKey(animationKey);
         public string KeyValue => animationKey ?? string.Empty;
-        public AnimationClip Clip => clip;
-        public UnityEngine.Object TransitionAsset => transitionAsset;
-        public string TransitionLibraryKey => transitionLibraryKey ?? string.Empty;
-        public float FadeDuration => Mathf.Max(0f, fadeDuration);
-        public float Speed => speed <= 0f ? 1f : speed;
-        public float StartTime => Mathf.Max(0f, startTime);
+        public string TimelineBindingKey => string.IsNullOrWhiteSpace(timelineBindingKey) ? KeyValue : timelineBindingKey;
         public string DebugName => debugName ?? string.Empty;
         public bool HasKey => Key.IsValid;
-        public bool HasAnimationReference => clip != null || transitionAsset != null || !string.IsNullOrWhiteSpace(TransitionLibraryKey);
+
+        public static CharacterStateAnimationBinding FromKey(string key, string debugName)
+        {
+            return new CharacterStateAnimationBinding(key, key, debugName);
+        }
 
         public static CharacterStateAnimationBinding FromLibraryKey(string key, string debugName)
         {
-            return new CharacterStateAnimationBinding(key, null, null, key, 0.08f, 1f, 0f, debugName);
+            return FromKey(key, debugName);
         }
     }
 
@@ -634,15 +638,177 @@ namespace ThirdPersonCharacterStateMachine
     }
 
     [Serializable]
+    public sealed class CharacterStateModuleDefinition
+    {
+        [SerializeField] CharacterStateModuleType moduleType;
+        [SerializeField] BasicMovementPhase locomotionPhase;
+        [SerializeField] InputRequestKind requestKind;
+        [SerializeField] CharacterStatePlaybackFactSource playbackFactSource;
+        [SerializeField] CharacterStateAnimationBinding animation;
+        [SerializeField] CharacterStateVariantDefinition[] variants = Array.Empty<CharacterStateVariantDefinition>();
+        [SerializeField] CharacterActionMovementDefinition[] actionMovements = Array.Empty<CharacterActionMovementDefinition>();
+        [SerializeField] TurnBackMotionPolicy turnBackMotionPolicy;
+        [SerializeField] bool resetRunLatchOnEnter;
+        [SerializeField] bool setRunLatchOnComplete;
+        [SerializeField] StateTimelineWindowDefinition[] timelineWindows = Array.Empty<StateTimelineWindowDefinition>();
+
+        public CharacterStateModuleDefinition()
+        {
+        }
+
+        CharacterStateModuleDefinition(CharacterStateModuleType moduleType)
+        {
+            this.moduleType = moduleType;
+        }
+
+        public CharacterStateModuleType ModuleType => moduleType;
+        public BasicMovementPhase LocomotionPhase => locomotionPhase;
+        public InputRequestKind RequestKind => requestKind;
+        public CharacterStatePlaybackFactSource PlaybackFactSource => playbackFactSource;
+        public CharacterStateAnimationBinding Animation => animation;
+        public IReadOnlyList<CharacterStateVariantDefinition> Variants => variants ?? Array.Empty<CharacterStateVariantDefinition>();
+        public IReadOnlyList<CharacterActionMovementDefinition> ActionMovements => actionMovements ?? Array.Empty<CharacterActionMovementDefinition>();
+        public TurnBackMotionPolicy TurnBackMotionPolicy =>
+            turnBackMotionPolicy.IsEnabled ? turnBackMotionPolicy : ThirdPersonMovement.TurnBackMotionPolicy.Default;
+        public bool HasTurnBackMotionPolicy => turnBackMotionPolicy.IsEnabled;
+        public bool ResetRunLatchOnEnter => resetRunLatchOnEnter;
+        public bool SetRunLatchOnComplete => setRunLatchOnComplete;
+        public IReadOnlyList<StateTimelineWindowDefinition> TimelineWindows => timelineWindows ?? Array.Empty<StateTimelineWindowDefinition>();
+
+        public bool TryResolveVariant(CharacterStateVariant variant, out CharacterStateVariantDefinition definition)
+        {
+            CharacterStateVariantDefinition[] source = variants;
+            if (source != null)
+            {
+                for (int i = 0; i < source.Length; i++)
+                {
+                    if (source[i].Variant == variant)
+                    {
+                        definition = source[i];
+                        return true;
+                    }
+                }
+            }
+
+            definition = default;
+            return false;
+        }
+
+        public bool TryResolveActionMovement(CharacterStateVariant variant, out CharacterActionMovementDefinition movement)
+        {
+            CharacterActionMovementDefinition[] source = actionMovements;
+            if (source != null)
+            {
+                for (int i = 0; i < source.Length; i++)
+                {
+                    if (source[i].Variant == variant && source[i].IsValid)
+                    {
+                        movement = source[i];
+                        return true;
+                    }
+                }
+
+                for (int i = 0; i < source.Length; i++)
+                {
+                    if (source[i].Variant == CharacterStateVariant.None && source[i].IsValid)
+                    {
+                        movement = source[i];
+                        return true;
+                    }
+                }
+            }
+
+            movement = default;
+            return false;
+        }
+
+        public static CharacterStateModuleDefinition LocomotionPhaseModule(BasicMovementPhase phase)
+        {
+            return new CharacterStateModuleDefinition(CharacterStateModuleType.LocomotionPhase)
+            {
+                locomotionPhase = phase
+            };
+        }
+
+        public static CharacterStateModuleDefinition InputDrivenMotion()
+        {
+            return new CharacterStateModuleDefinition(CharacterStateModuleType.InputDrivenMotion);
+        }
+
+        public static CharacterStateModuleDefinition ConfiguredActionMotion(params CharacterActionMovementDefinition[] movements)
+        {
+            return new CharacterStateModuleDefinition(CharacterStateModuleType.ConfiguredActionMotion)
+            {
+                actionMovements = movements ?? Array.Empty<CharacterActionMovementDefinition>()
+            };
+        }
+
+        public static CharacterStateModuleDefinition ActionAnimation(
+            CharacterStateAnimationBinding animation,
+            CharacterStateVariantDefinition[] variants = null)
+        {
+            return new CharacterStateModuleDefinition(CharacterStateModuleType.ActionAnimation)
+            {
+                playbackFactSource = CharacterStatePlaybackFactSource.Action,
+                animation = animation,
+                variants = variants ?? Array.Empty<CharacterStateVariantDefinition>()
+            };
+        }
+
+        public static CharacterStateModuleDefinition LocomotionAnimationAlias(CharacterStateAnimationBinding animation)
+        {
+            return new CharacterStateModuleDefinition(CharacterStateModuleType.LocomotionAnimationAlias)
+            {
+                playbackFactSource = CharacterStatePlaybackFactSource.Locomotion,
+                animation = animation
+            };
+        }
+
+        public static CharacterStateModuleDefinition TurnBackMotionPolicyModule(TurnBackMotionPolicy policy)
+        {
+            return new CharacterStateModuleDefinition(CharacterStateModuleType.TurnBackMotionPolicy)
+            {
+                turnBackMotionPolicy = policy.IsEnabled ? policy : ThirdPersonMovement.TurnBackMotionPolicy.Default
+            };
+        }
+
+        public static CharacterStateModuleDefinition InputConsume(InputRequestKind kind)
+        {
+            return new CharacterStateModuleDefinition(CharacterStateModuleType.InputConsume)
+            {
+                requestKind = kind
+            };
+        }
+
+        public static CharacterStateModuleDefinition RunLatch(bool resetOnEnter, bool setOnComplete)
+        {
+            return new CharacterStateModuleDefinition(CharacterStateModuleType.RunLatch)
+            {
+                resetRunLatchOnEnter = resetOnEnter,
+                setRunLatchOnComplete = setOnComplete
+            };
+        }
+
+        public static CharacterStateModuleDefinition TimelineWindow(params StateTimelineWindowDefinition[] windows)
+        {
+            return new CharacterStateModuleDefinition(CharacterStateModuleType.TimelineWindow)
+            {
+                timelineWindows = windows ?? Array.Empty<StateTimelineWindowDefinition>()
+            };
+        }
+    }
+
+    [Serializable]
     public sealed class CharacterStateNodeDefinition
     {
         [SerializeField] string stateId;
         [SerializeField] string parentStateId;
         [SerializeField] string pathSegment;
         [SerializeField] CharacterStateTag[] tags = Array.Empty<CharacterStateTag>();
-        [SerializeField] CharacterStateVariantDefinition[] variants = Array.Empty<CharacterStateVariantDefinition>();
-        [SerializeField] CharacterStateOutputDefinition output;
-        [SerializeField] CharacterStateAnimationBinding animation;
+        [SerializeField, HideInInspector] CharacterStateVariantDefinition[] variants = Array.Empty<CharacterStateVariantDefinition>();
+        [SerializeField, HideInInspector] CharacterStateOutputDefinition output;
+        [SerializeField, HideInInspector] CharacterStateAnimationBinding animation;
+        [SerializeField] CharacterStateModuleDefinition[] modules = Array.Empty<CharacterStateModuleDefinition>();
 
         public CharacterStateNodeDefinition()
         {
@@ -664,6 +830,7 @@ namespace ThirdPersonCharacterStateMachine
             this.output = output;
             this.animation = animation;
             this.variants = variants ?? Array.Empty<CharacterStateVariantDefinition>();
+            modules = BuildModulesFromLegacy(this.stateId, output, animation, this.variants);
         }
 
         public CharacterStateId StateId => new CharacterStateId(stateId);
@@ -673,6 +840,7 @@ namespace ThirdPersonCharacterStateMachine
         public IReadOnlyList<CharacterStateVariantDefinition> Variants => variants ?? Array.Empty<CharacterStateVariantDefinition>();
         public CharacterStateOutputDefinition Output => output ?? new CharacterStateOutputDefinition();
         public CharacterStateAnimationBinding Animation => animation;
+        public IReadOnlyList<CharacterStateModuleDefinition> Modules => modules ?? Array.Empty<CharacterStateModuleDefinition>();
 
         public bool HasTag(CharacterStateTag tag)
         {
@@ -691,21 +859,189 @@ namespace ThirdPersonCharacterStateMachine
 
         public bool TryResolveVariant(CharacterStateVariant variant, out CharacterStateVariantDefinition definition)
         {
+            if (TryGetModule(CharacterStateModuleType.ActionAnimation, out CharacterStateModuleDefinition actionAnimation) &&
+                actionAnimation.TryResolveVariant(variant, out definition))
+            {
+                return true;
+            }
+
             CharacterStateVariantDefinition[] source = variants;
             if (source != null)
             {
                 for (int i = 0; i < source.Length; i++)
-                {
                     if (source[i].Variant == variant)
                     {
                         definition = source[i];
                         return true;
                     }
-                }
             }
 
             definition = default;
             return false;
+        }
+
+        public bool HasModule(CharacterStateModuleType moduleType)
+        {
+            return TryGetModule(moduleType, out _);
+        }
+
+        public bool TryGetModule(CharacterStateModuleType moduleType, out CharacterStateModuleDefinition module)
+        {
+            CharacterStateModuleDefinition[] source = modules;
+            if (source != null)
+            {
+                for (int i = 0; i < source.Length; i++)
+                {
+                    if (source[i] != null && source[i].ModuleType == moduleType)
+                    {
+                        module = source[i];
+                        return true;
+                    }
+                }
+            }
+
+            module = null;
+            return false;
+        }
+
+        public bool TryResolveActionMovement(CharacterStateVariant variant, out CharacterActionMovementDefinition movement)
+        {
+            if (TryGetModule(CharacterStateModuleType.ConfiguredActionMotion, out CharacterStateModuleDefinition module))
+                return module.TryResolveActionMovement(variant, out movement);
+
+            movement = default;
+            return false;
+        }
+
+        public bool TryResolveAnimationBinding(
+            CharacterStateVariant variant,
+            out CharacterStateAnimationBinding binding,
+            out CharacterStatePlaybackFactSource playbackFactSource)
+        {
+            if (TryGetModule(CharacterStateModuleType.ActionAnimation, out CharacterStateModuleDefinition actionAnimation))
+            {
+                binding = actionAnimation.Animation;
+                if (variant != CharacterStateVariant.None && actionAnimation.TryResolveVariant(variant, out CharacterStateVariantDefinition variantDefinition))
+                    binding = variantDefinition.Animation;
+
+                playbackFactSource = actionAnimation.PlaybackFactSource;
+                return binding.HasKey;
+            }
+
+            if (TryGetModule(CharacterStateModuleType.LocomotionAnimationAlias, out CharacterStateModuleDefinition locomotionAnimation))
+            {
+                binding = locomotionAnimation.Animation;
+                playbackFactSource = locomotionAnimation.PlaybackFactSource;
+                return binding.HasKey;
+            }
+
+            binding = default;
+            playbackFactSource = CharacterStatePlaybackFactSource.None;
+            return false;
+        }
+
+        public bool TryGetTurnBackMotionPolicy(out TurnBackMotionPolicy policy)
+        {
+            if (TryGetModule(CharacterStateModuleType.TurnBackMotionPolicy, out CharacterStateModuleDefinition module) &&
+                module.HasTurnBackMotionPolicy)
+            {
+                policy = module.TurnBackMotionPolicy;
+                return true;
+            }
+
+            policy = default;
+            return false;
+        }
+
+        public bool TryGetInputConsumeKind(out InputRequestKind kind)
+        {
+            if (TryGetModule(CharacterStateModuleType.InputConsume, out CharacterStateModuleDefinition module))
+            {
+                kind = module.RequestKind;
+                return true;
+            }
+
+            kind = default;
+            return false;
+        }
+
+        public bool ResetRunLatchOnEnterFromModules =>
+            TryGetModule(CharacterStateModuleType.RunLatch, out CharacterStateModuleDefinition module) && module.ResetRunLatchOnEnter;
+
+        public bool IsActionCapabilityState =>
+            HasModule(CharacterStateModuleType.ConfiguredActionMotion) ||
+            HasModule(CharacterStateModuleType.ActionAnimation) ||
+            HasModule(CharacterStateModuleType.InputConsume);
+
+        public bool IsLocomotionPlaybackState =>
+            HasModule(CharacterStateModuleType.LocomotionPhase) ||
+            HasModule(CharacterStateModuleType.InputDrivenMotion) ||
+            HasModule(CharacterStateModuleType.LocomotionAnimationAlias) ||
+            HasModule(CharacterStateModuleType.TurnBackMotionPolicy);
+
+        public bool HasOutputModule =>
+            HasModule(CharacterStateModuleType.InputDrivenMotion) ||
+            HasModule(CharacterStateModuleType.ConfiguredActionMotion) ||
+            HasModule(CharacterStateModuleType.LocomotionAnimationAlias) ||
+            HasModule(CharacterStateModuleType.TurnBackMotionPolicy) ||
+            HasModule(CharacterStateModuleType.InputConsume) ||
+            HasModule(CharacterStateModuleType.RunLatch);
+
+        static CharacterStateModuleDefinition[] BuildModulesFromLegacy(
+            string stateId,
+            CharacterStateOutputDefinition output,
+            CharacterStateAnimationBinding animation,
+            CharacterStateVariantDefinition[] variants)
+        {
+            List<CharacterStateModuleDefinition> result = new List<CharacterStateModuleDefinition>();
+            CharacterStateId id = new CharacterStateId(stateId);
+            BasicMovementPhase phase = ResolveLocomotionPhase(id);
+            if (phase != BasicMovementPhase.Idle || id == CharacterStateIds.Idle)
+                result.Add(CharacterStateModuleDefinition.LocomotionPhaseModule(phase));
+
+            CharacterStateOutputDefinition outputDefinition = output ?? new CharacterStateOutputDefinition();
+            if (outputDefinition.MotionOutput == CharacterStateMotionOutputKind.InputDrivenMovement)
+                result.Add(CharacterStateModuleDefinition.InputDrivenMotion());
+            if (outputDefinition.MotionOutput == CharacterStateMotionOutputKind.ConfiguredActionMovement)
+                result.Add(CharacterStateModuleDefinition.ConfiguredActionMotion(ToArray(outputDefinition.ActionMovements)));
+            if (outputDefinition.MotionOutput == CharacterStateMotionOutputKind.AnimationDrivenLocomotion)
+                result.Add(CharacterStateModuleDefinition.LocomotionAnimationAlias(animation));
+            if (outputDefinition.HasTurnBackMotionPolicy)
+                result.Add(CharacterStateModuleDefinition.TurnBackMotionPolicyModule(outputDefinition.TurnBackMotionPolicy));
+            if (outputDefinition.ConsumeInputRequest)
+                result.Add(CharacterStateModuleDefinition.InputConsume(outputDefinition.ConsumeRequestKind));
+            if (outputDefinition.ResetRunLatchOnEnter)
+                result.Add(CharacterStateModuleDefinition.RunLatch(true, false));
+
+            bool hasActionAnimation = animation.HasKey || (variants != null && variants.Length > 0);
+            if (hasActionAnimation && outputDefinition.MotionOutput == CharacterStateMotionOutputKind.ConfiguredActionMovement)
+                result.Add(CharacterStateModuleDefinition.ActionAnimation(animation, variants));
+
+            return result.ToArray();
+        }
+
+        static CharacterActionMovementDefinition[] ToArray(IReadOnlyList<CharacterActionMovementDefinition> source)
+        {
+            if (source == null || source.Count == 0)
+                return Array.Empty<CharacterActionMovementDefinition>();
+
+            CharacterActionMovementDefinition[] result = new CharacterActionMovementDefinition[source.Count];
+            for (int i = 0; i < source.Count; i++)
+                result[i] = source[i];
+            return result;
+        }
+
+        static BasicMovementPhase ResolveLocomotionPhase(CharacterStateId id)
+        {
+            if (id == CharacterStateIds.MoveStart)
+                return BasicMovementPhase.MoveStart;
+            if (id == CharacterStateIds.MoveLoop)
+                return BasicMovementPhase.MoveLoop;
+            if (id == CharacterStateIds.MoveStop)
+                return BasicMovementPhase.MoveStop;
+            if (id == CharacterStateIds.TurnBack)
+                return BasicMovementPhase.TurnBack;
+            return BasicMovementPhase.Idle;
         }
     }
 

@@ -1,4 +1,4 @@
- using NUnit.Framework;
+﻿ using NUnit.Framework;
  using System.Collections.Generic;
  using ThirdPersonCharacterConfig;
  using ThirdPersonCharacterStateMachine;
@@ -105,7 +105,7 @@
                  PlayerLocomotionController controller = go.AddComponent<PlayerLocomotionController>();
                  CharacterConfigSO config = ScriptableObject.CreateInstance<CharacterConfigSO>();
                  CharacterStateMachineDefinitionSO stateMachineDef = AssetDatabase.LoadAssetAtPath<CharacterStateMachineDefinitionSO>(
-                     "Assets/Configs/3C/Statemachine/DefaultCharacterStateMachine.asset");
+                    "Assets/Configs/3C/StateMachine/FullBody/CorinFullBodyStateMachine.asset");
                  Assert.NotNull(stateMachineDef);
 
                  var field = config.GetType().GetField("stateMachine",
@@ -133,3 +133,4 @@
          }
      }
  }
+

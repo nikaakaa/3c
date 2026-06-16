@@ -1,17 +1,24 @@
-# UnityHFSM 使用指南
+# UnityHFSM 历史参考
 
-本文给后续 agent 和自己继续做状态机相关任务时先读。项目已经通过 UPM 引入 `com.inspiaaa.unityhfsm`，版本为 `2.3.0`，来源见 `3cDemo/Client/3C_Client/Packages/manifest.json`。
+本文只作为第三方库 API 对照和历史参考。项目已经通过 UPM 引入 `com.inspiaaa.unityhfsm`，版本为 `2.3.0`，来源见 `3cDemo/Client/3C_Client/Packages/manifest.json`。
 
-本项目后续状态机优先使用 UnityHFSM，不再扩展自研 `Assets/Scripts/FSM/Core/HFSM.cs` 作为角色业务主线。自研 HFSM 可暂时保留为实验代码，除非用户明确要求清理。
+当前角色业务主线不使用 UnityHFSM。正式主线是项目自研统一分层状态机：`CharacterStateMachineDefinitionSO -> CharacterStateMachineRunner -> CharacterStateMachineFrame`。未经新的 OpenSpec 审批，不得把 UnityHFSM 接入为角色业务状态机 engine，也不得让 UnityHFSM 和自研 runner 同时成为双状态权威。
+
+阅读优先级：
+
+1. 当前实现和 OpenSpec：`unified-character-state-machine`、`refactor-character-hierarchical-state-runtime`。
+2. `docs/agents/character-animation-state-roadmap.md`。
+3. 本文，仅在需要理解 UnityHFSM API 或对照第三方库时阅读。
 
 ## 项目接入原则
 
-- UnityHFSM 只是状态机内核，不直接承载角色业务边界。
-- 角色聚合点仍应是当前项目自己的角色入口，不新增未审批的独立角色控制器。
+- UnityHFSM 只是第三方状态机内核参考，不是当前角色主线。
+- 角色主线必须继续通过当前项目自己的 FullBody pipeline，不新增未审批的独立角色控制器。
 - 动画播放仍通过 Animancer 外观层收敛，状态不要散落大量 Animancer 细节。
 - 位移权威仍进入统一运动驱动出口，状态不要直接四处调用 `CharacterController.Move`。
 - 输入、意图、状态、动画命令、运动命令分层处理，不把所有逻辑塞进一个 MonoBehaviour。
 - 新能力接入角色主状态机前必须走 OpenSpec，中文说明、细任务、测试和验证步骤齐全。
+- 如确实要把 UnityHFSM 接入正式角色业务，必须另开 proposal，说明如何保持 snapshot/restore、预测回滚、纯数据 frame 输出和单一状态权威。
 
 ## 最小 API
 
@@ -225,7 +232,7 @@ fsm.StateChanged += state => Debug.Log(fsm.GetActiveHierarchyPath());
 
 ## 本项目推荐封装
 
-不要让 MonoBehaviour 直接堆一堆 `AddState`。推荐后续按这个形状落地：
+以下封装形状仅作为未来另行审批的 UnityHFSM adapter 参考，不是当前角色主线。当前主线应继续围绕 `CharacterStateMachineRunner` 和自研状态图运行时重构。
 
 ```text
 CharacterHfsmDriver
@@ -246,6 +253,8 @@ CharacterStateId / CharacterEventId
   - enum ID
   - 后续可映射到网络稳定 ID
 ```
+
+当前正式实现不得因为本文示例新增 `CharacterHfsmDriver`、第二个 runner owner、第二套状态图配置或 fallback 路径。
 
 ## 和 BBB 参考的关系
 
@@ -285,4 +294,3 @@ Unity 测试优先用 MCP 跑定向 EditMode。若 Unity MCP 不可用，必须�
 - `AddTransitionFromAny` 过多：容易把优先级藏在注册顺序里，后续难维护。
 - 业务状态直接引用 Animancer、CharacterController、Camera：会绕过本项目的外观层、运动驱动和相机边界。
 - 用 string ID 写大型角色状态机：拼写错误运行时才炸，优先用 enum。
-

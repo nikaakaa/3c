@@ -5,6 +5,73 @@ using UnityEngine;
 
 namespace ThirdPersonCharacterStateMachine
 {
+    public enum StateTimelineFactsSource
+    {
+        None = 0,
+        Current = 1,
+        Projected = 2,
+        Target = 3
+    }
+
+    public readonly struct StateTimelineFactsTrace
+    {
+        readonly string factsId;
+
+        public StateTimelineFactsTrace(
+            StateTimelineFactsSource source,
+            StateTimelineWindowFacts facts,
+            int sourceStep,
+            ActionRequestType requestType = ActionRequestType.None)
+        {
+            Source = source;
+            Facts = facts;
+            SourceStep = Mathf.Max(0, sourceStep);
+            RequestType = requestType;
+            factsId = BuildFactsId(source, facts, SourceStep);
+        }
+
+        public StateTimelineFactsSource Source { get; }
+        public StateTimelineWindowFacts Facts { get; }
+        public int SourceStep { get; }
+        public ActionRequestType RequestType { get; }
+        public string FactsId => factsId ?? string.Empty;
+        public bool HasFacts => Source != StateTimelineFactsSource.None && Facts.StateId.IsValid;
+
+        public static StateTimelineFactsTrace None => default;
+
+        public static StateTimelineFactsTrace Current(
+            StateTimelineWindowFacts facts,
+            int sourceStep,
+            ActionRequestType requestType = ActionRequestType.None)
+        {
+            return new StateTimelineFactsTrace(StateTimelineFactsSource.Current, facts, sourceStep, requestType);
+        }
+
+        public static StateTimelineFactsTrace Projected(
+            StateTimelineWindowFacts facts,
+            int sourceStep,
+            ActionRequestType requestType = ActionRequestType.None)
+        {
+            return new StateTimelineFactsTrace(StateTimelineFactsSource.Projected, facts, sourceStep, requestType);
+        }
+
+        public static StateTimelineFactsTrace Target(
+            StateTimelineWindowFacts facts,
+            int sourceStep,
+            ActionRequestType requestType = ActionRequestType.None)
+        {
+            return new StateTimelineFactsTrace(StateTimelineFactsSource.Target, facts, sourceStep, requestType);
+        }
+
+        static string BuildFactsId(StateTimelineFactsSource source, StateTimelineWindowFacts facts, int sourceStep)
+        {
+            if (source == StateTimelineFactsSource.None)
+                return string.Empty;
+
+            return $"{source}:{sourceStep}:{facts.StateId.Value}:{facts.ElapsedSeconds:F6}:{facts.NormalizedTime:F6}:{facts.ActiveWindowIds}:{facts.RequestWindowIds}:{facts.ActiveFactIds}:{facts.RequestFactIds}";
+        }
+    }
+
     public readonly struct CharacterStateMachineContext
     {
         public CharacterStateMachineContext(
@@ -65,6 +132,29 @@ namespace ThirdPersonCharacterStateMachine
             CharacterInputRequestFact inputRequest,
             CharacterRuntimeBlackboardSnapshot runtimeBlackboard,
             StateTimelineWindowFacts timelineFacts)
+            : this(
+                deltaTime,
+                currentStep,
+                in locomotionFacts,
+                inputRequest,
+                runtimeBlackboard,
+                StateTimelineFactsTrace.Current(timelineFacts, currentStep),
+                StateTimelineFactsTrace.Current(timelineFacts, currentStep),
+                StateTimelineFactsTrace.None,
+                StateTimelineFactsTrace.None)
+        {
+        }
+
+        CharacterStateMachineContext(
+            float deltaTime,
+            int currentStep,
+            in LocomotionDecisionFacts locomotionFacts,
+            CharacterInputRequestFact inputRequest,
+            CharacterRuntimeBlackboardSnapshot runtimeBlackboard,
+            StateTimelineFactsTrace timelineFactsTrace,
+            StateTimelineFactsTrace currentTimelineFactsTrace,
+            StateTimelineFactsTrace projectedTimelineFactsTrace,
+            StateTimelineFactsTrace targetTimelineFactsTrace)
         {
             DeltaTime = Mathf.Max(0f, deltaTime);
             CurrentStep = Mathf.Max(0, currentStep);
@@ -75,7 +165,10 @@ namespace ThirdPersonCharacterStateMachine
             PhaseFacts = locomotionFacts.PhaseFacts;
             InputRequest = inputRequest;
             RuntimeBlackboard = runtimeBlackboard;
-            TimelineFacts = timelineFacts;
+            TimelineFactsTrace = timelineFactsTrace;
+            CurrentTimelineFactsTrace = currentTimelineFactsTrace;
+            ProjectedTimelineFactsTrace = projectedTimelineFactsTrace;
+            TargetTimelineFactsTrace = targetTimelineFactsTrace;
         }
 
         public CharacterStateMachineContext(
@@ -140,13 +233,16 @@ namespace ThirdPersonCharacterStateMachine
             PhaseFacts = phaseFacts;
             InputRequest = inputRequest;
             RuntimeBlackboard = runtimeBlackboard;
-            TimelineFacts = timelineFacts;
             LocomotionFacts = new LocomotionDecisionFacts(
                 MoveIntent,
                 MoveIntent.HasMoveIntent ? MoveIntent.Gait : BasicMovementGait.Walk,
                 PhaseFacts,
                 new LocomotionSpatialFacts(WorldMoveDirection, FacingForward, Vector3.zero, Vector3.zero),
                 LocomotionTurnBackIntent.None);
+            TimelineFactsTrace = StateTimelineFactsTrace.Current(timelineFacts, CurrentStep);
+            CurrentTimelineFactsTrace = TimelineFactsTrace;
+            ProjectedTimelineFactsTrace = StateTimelineFactsTrace.None;
+            TargetTimelineFactsTrace = StateTimelineFactsTrace.None;
         }
 
         public float DeltaTime { get; }
@@ -158,11 +254,49 @@ namespace ThirdPersonCharacterStateMachine
         public BasicMovementPhaseFacts PhaseFacts { get; }
         public CharacterInputRequestFact InputRequest { get; }
         public CharacterRuntimeBlackboardSnapshot RuntimeBlackboard { get; }
-        public StateTimelineWindowFacts TimelineFacts { get; }
+        public StateTimelineFactsTrace TimelineFactsTrace { get; }
+        public StateTimelineFactsTrace CurrentTimelineFactsTrace { get; }
+        public StateTimelineFactsTrace ProjectedTimelineFactsTrace { get; }
+        public StateTimelineFactsTrace TargetTimelineFactsTrace { get; }
+        public StateTimelineWindowFacts TimelineFacts => TimelineFactsTrace.Facts;
+        public StateTimelineWindowFacts CurrentTimelineFacts => CurrentTimelineFactsTrace.Facts;
+        public StateTimelineWindowFacts ProjectedTimelineFacts => ProjectedTimelineFactsTrace.Facts;
+        public StateTimelineWindowFacts TargetTimelineFacts => TargetTimelineFactsTrace.Facts;
         public bool HasMoveIntent => MoveIntent.HasMoveIntent;
         public bool StateCanExit => PhaseFacts.PhaseCanExit;
 
         public CharacterStateMachineContext WithTimelineFacts(StateTimelineWindowFacts timelineFacts)
+        {
+            return WithCurrentTimelineFacts(timelineFacts);
+        }
+
+        public CharacterStateMachineContext WithCurrentTimelineFacts(StateTimelineWindowFacts timelineFacts)
+        {
+            StateTimelineFactsTrace trace = StateTimelineFactsTrace.Current(timelineFacts, CurrentStep);
+            return Rebuild(trace, trace, ProjectedTimelineFactsTrace, TargetTimelineFactsTrace);
+        }
+
+        public CharacterStateMachineContext WithProjectedTimelineFacts(
+            StateTimelineWindowFacts timelineFacts,
+            ActionRequestType requestType = ActionRequestType.None)
+        {
+            StateTimelineFactsTrace trace = StateTimelineFactsTrace.Projected(timelineFacts, CurrentStep, requestType);
+            return Rebuild(trace, CurrentTimelineFactsTrace, trace, TargetTimelineFactsTrace);
+        }
+
+        public CharacterStateMachineContext WithTargetTimelineFacts(
+            StateTimelineWindowFacts timelineFacts,
+            ActionRequestType requestType = ActionRequestType.None)
+        {
+            StateTimelineFactsTrace trace = StateTimelineFactsTrace.Target(timelineFacts, CurrentStep, requestType);
+            return Rebuild(trace, CurrentTimelineFactsTrace, ProjectedTimelineFactsTrace, trace);
+        }
+
+        CharacterStateMachineContext Rebuild(
+            StateTimelineFactsTrace timelineFactsTrace,
+            StateTimelineFactsTrace currentTimelineFactsTrace,
+            StateTimelineFactsTrace projectedTimelineFactsTrace,
+            StateTimelineFactsTrace targetTimelineFactsTrace)
         {
             LocomotionDecisionFacts locomotionFacts = LocomotionFacts;
             return new CharacterStateMachineContext(
@@ -171,7 +305,10 @@ namespace ThirdPersonCharacterStateMachine
                 in locomotionFacts,
                 InputRequest,
                 RuntimeBlackboard,
-                timelineFacts);
+                timelineFactsTrace,
+                currentTimelineFactsTrace,
+                projectedTimelineFactsTrace,
+                targetTimelineFactsTrace);
         }
 
         static Vector3 NormalizePlanarOrZero(Vector3 value)
@@ -206,27 +343,6 @@ namespace ThirdPersonCharacterStateMachine
         public string PendingTransitionPath { get; }
         public IReadOnlyListWrapper<CharacterStateTag> Tags { get; }
         public bool HasPendingTransition => !string.IsNullOrEmpty(PendingTransitionPath);
-        public bool IsAction => (ActivePath ?? string.Empty).StartsWith(CharacterStateIds.Action.Value + "/", System.StringComparison.Ordinal);
-        public bool IsLocomotion => (ActivePath ?? string.Empty).StartsWith(CharacterStateIds.Locomotion.Value + "/", System.StringComparison.Ordinal);
-
-        public BasicMovementPhase LocomotionPhase
-        {
-            get
-            {
-                if (ActiveState == CharacterStateIds.MoveStart)
-                    return BasicMovementPhase.MoveStart;
-                if (ActiveState == CharacterStateIds.MoveLoop)
-                    return BasicMovementPhase.MoveLoop;
-                if (ActiveState == CharacterStateIds.MoveStop)
-                    return BasicMovementPhase.MoveStop;
-                if (ActiveState == CharacterStateIds.TurnBack)
-                    return BasicMovementPhase.TurnBack;
-                return BasicMovementPhase.Idle;
-            }
-        }
-
-        public ActionStateId ActionState => IsAction ? new ActionStateId("Action." + LastPathSegment(ActivePath)) : ActionStateIds.None;
-        public FullBodyOwner Owner => !ActiveState.IsValid ? FullBodyOwner.None : IsAction ? FullBodyOwner.Action(ActionState) : FullBodyOwner.Locomotion;
 
         public static CharacterStateMachineSnapshot Inactive => new CharacterStateMachineSnapshot(
             default,
@@ -234,6 +350,138 @@ namespace ThirdPersonCharacterStateMachine
             CharacterStateVariant.None,
             string.Empty,
             System.Array.Empty<CharacterStateTag>());
+    }
+
+    public readonly struct FullBodyStateView
+    {
+        FullBodyStateView(
+            CharacterStateMachineSnapshot snapshot,
+            FullBodyOwner owner,
+            ActionStateId actionState,
+            BasicMovementPhase locomotionPhase,
+            bool isAction,
+            bool isLocomotion)
+        {
+            Snapshot = snapshot;
+            Owner = owner;
+            ActionState = actionState;
+            LocomotionPhase = locomotionPhase;
+            IsAction = isAction;
+            IsLocomotion = isLocomotion;
+        }
+
+        public CharacterStateMachineSnapshot Snapshot { get; }
+        public FullBodyOwner Owner { get; }
+        public ActionStateId ActionState { get; }
+        public BasicMovementPhase LocomotionPhase { get; }
+        public bool IsAction { get; }
+        public bool IsLocomotion { get; }
+
+        public static FullBodyStateView FromSnapshot(in CharacterStateMachineSnapshot snapshot)
+        {
+            return FromSnapshotAndNode(in snapshot, null);
+        }
+
+        public static FullBodyStateView FromSnapshotAndMetadata(
+            in CharacterStateMachineSnapshot snapshot,
+            in CharacterStateNodeMetadata metadata)
+        {
+            if (!snapshot.ActiveState.IsValid || !metadata.NodeId.IsValid)
+            {
+                return new FullBodyStateView(
+                    snapshot,
+                    FullBodyOwner.None,
+                    ActionStateIds.None,
+                    BasicMovementPhase.Idle,
+                    false,
+                    false);
+            }
+
+            bool isAction = metadata.IsActionCapabilityState || metadata.Owner.IsAction;
+            bool isLocomotion = metadata.IsLocomotionPlaybackState || metadata.Owner.IsLocomotion;
+            ActionStateId actionState = isAction ? metadata.ActionState : ActionStateIds.None;
+            FullBodyOwner owner = isAction ? FullBodyOwner.Action(actionState) :
+                isLocomotion ? FullBodyOwner.Locomotion : FullBodyOwner.None;
+
+            return new FullBodyStateView(
+                snapshot,
+                owner,
+                actionState,
+                metadata.LocomotionPhase,
+                isAction,
+                isLocomotion);
+        }
+
+        public static FullBodyStateView FromSnapshotAndNode(
+            in CharacterStateMachineSnapshot snapshot,
+            CharacterStateNodeDefinition node)
+        {
+            if (!snapshot.ActiveState.IsValid)
+            {
+                return new FullBodyStateView(
+                    snapshot,
+                    FullBodyOwner.None,
+                    ActionStateIds.None,
+                    BasicMovementPhase.Idle,
+                    false,
+                    false);
+            }
+
+            bool isAction = HasTag(in snapshot, CharacterStateTag.Action) ||
+                            IsKnownActionState(snapshot.ActiveState) ||
+                            (node != null && node.IsActionCapabilityState);
+            bool isLocomotion = HasTag(in snapshot, CharacterStateTag.Locomotion) ||
+                                (node != null && node.IsLocomotionPlaybackState) ||
+                                (!isAction && HasTag(in snapshot, CharacterStateTag.FullBody));
+            ActionStateId actionState = isAction ? ResolveActionState(snapshot.ActiveState, snapshot.ActivePath) : ActionStateIds.None;
+            FullBodyOwner owner = isAction ? FullBodyOwner.Action(actionState) : FullBodyOwner.Locomotion;
+            BasicMovementPhase locomotionPhase = ResolveLocomotionPhase(snapshot.ActiveState, node);
+
+            return new FullBodyStateView(
+                snapshot,
+                owner,
+                actionState,
+                locomotionPhase,
+                isAction,
+                isLocomotion || !isAction);
+        }
+
+        static bool HasTag(in CharacterStateMachineSnapshot snapshot, CharacterStateTag tag)
+        {
+            for (int i = 0; i < snapshot.Tags.Count; i++)
+            {
+                if (snapshot.Tags[i] == tag)
+                    return true;
+            }
+
+            return false;
+        }
+
+        static BasicMovementPhase ResolveLocomotionPhase(
+            CharacterStateId activeState,
+            CharacterStateNodeDefinition node)
+        {
+            if (node != null &&
+                node.TryGetModule(CharacterStateModuleType.LocomotionPhase, out CharacterStateModuleDefinition module))
+            {
+                return module.LocomotionPhase;
+            }
+
+            if (activeState == CharacterStateIds.MoveStart)
+                return BasicMovementPhase.MoveStart;
+            if (activeState == CharacterStateIds.MoveLoop)
+                return BasicMovementPhase.MoveLoop;
+            if (activeState == CharacterStateIds.MoveStop)
+                return BasicMovementPhase.MoveStop;
+            if (activeState == CharacterStateIds.TurnBack)
+                return BasicMovementPhase.TurnBack;
+            return BasicMovementPhase.Idle;
+        }
+
+        static bool IsKnownActionState(CharacterStateId activeState)
+        {
+            return activeState == CharacterStateIds.Dodge;
+        }
 
         static string LastPathSegment(string path)
         {
@@ -243,77 +491,39 @@ namespace ThirdPersonCharacterStateMachine
             int index = path.LastIndexOf('/');
             return index >= 0 && index < path.Length - 1 ? path.Substring(index + 1) : path;
         }
+
+        static ActionStateId ResolveActionState(CharacterStateId activeState, string activePath)
+        {
+            string segment = LastPathSegment(activePath);
+            if (string.IsNullOrWhiteSpace(segment))
+                segment = LastPathSegment(activeState.Value);
+
+            return string.IsNullOrWhiteSpace(segment)
+                ? ActionStateIds.None
+                : new ActionStateId("Action." + segment);
+        }
     }
 
-    public readonly struct CharacterStateMachineRestoreState
+    public readonly struct CharacterStatePayload
     {
-        public CharacterStateMachineRestoreState(
-            CharacterStateMachineSnapshot snapshot,
-            Vector3 actionWorldDirection,
-            bool animationRequestedForState,
-            bool consumeRequestOnStateEnter,
-            bool resetRunLatchOnStateEnter,
-            bool setRunLatchOnTransition)
-            : this(
-                snapshot,
-                actionWorldDirection,
-                Vector3.zero,
-                Vector3.zero,
-                animationRequestedForState,
-                consumeRequestOnStateEnter,
-                resetRunLatchOnStateEnter,
-                setRunLatchOnTransition)
+        public CharacterStatePayload(
+            Vector3 primaryWorldDirection,
+            Vector3 secondaryWorldDirection,
+            Vector3 entryBasisForward)
         {
+            PrimaryWorldDirection = NormalizePlanarOrZero(primaryWorldDirection);
+            SecondaryWorldDirection = NormalizePlanarOrZero(secondaryWorldDirection);
+            EntryBasisForward = NormalizePlanarOrZero(entryBasisForward);
         }
 
-        public CharacterStateMachineRestoreState(
-            CharacterStateMachineSnapshot snapshot,
-            Vector3 actionWorldDirection,
-            Vector3 turnBackWorldDirection,
-            bool animationRequestedForState,
-            bool consumeRequestOnStateEnter,
-            bool resetRunLatchOnStateEnter,
-            bool setRunLatchOnTransition)
-            : this(
-                snapshot,
-                actionWorldDirection,
-                turnBackWorldDirection,
-                Vector3.zero,
-                animationRequestedForState,
-                consumeRequestOnStateEnter,
-                resetRunLatchOnStateEnter,
-                setRunLatchOnTransition)
-        {
-        }
+        public Vector3 PrimaryWorldDirection { get; }
+        public Vector3 SecondaryWorldDirection { get; }
+        public Vector3 EntryBasisForward { get; }
+        public bool HasPrimaryWorldDirection => PrimaryWorldDirection.sqrMagnitude > 0.000001f;
+        public bool HasSecondaryWorldDirection => SecondaryWorldDirection.sqrMagnitude > 0.000001f;
+        public bool HasEntryBasisForward => EntryBasisForward.sqrMagnitude > 0.000001f;
 
-        public CharacterStateMachineRestoreState(
-            CharacterStateMachineSnapshot snapshot,
-            Vector3 actionWorldDirection,
-            Vector3 turnBackWorldDirection,
-            Vector3 turnBackEntryBasisForward,
-            bool animationRequestedForState,
-            bool consumeRequestOnStateEnter,
-            bool resetRunLatchOnStateEnter,
-            bool setRunLatchOnTransition)
-        {
-            Snapshot = snapshot;
-            ActionWorldDirection = NormalizePlanarOrZero(actionWorldDirection);
-            TurnBackWorldDirection = NormalizePlanarOrZero(turnBackWorldDirection);
-            TurnBackEntryBasisForward = NormalizePlanarOrZero(turnBackEntryBasisForward);
-            AnimationRequestedForState = animationRequestedForState;
-            ConsumeRequestOnStateEnter = consumeRequestOnStateEnter;
-            ResetRunLatchOnStateEnter = resetRunLatchOnStateEnter;
-            SetRunLatchOnTransition = setRunLatchOnTransition;
-        }
-
-        public CharacterStateMachineSnapshot Snapshot { get; }
-        public Vector3 ActionWorldDirection { get; }
-        public Vector3 TurnBackWorldDirection { get; }
-        public Vector3 TurnBackEntryBasisForward { get; }
-        public bool AnimationRequestedForState { get; }
-        public bool ConsumeRequestOnStateEnter { get; }
-        public bool ResetRunLatchOnStateEnter { get; }
-        public bool SetRunLatchOnTransition { get; }
+        public static CharacterStatePayload Empty => default;
 
         static Vector3 NormalizePlanarOrZero(Vector3 value)
         {
@@ -323,19 +533,106 @@ namespace ThirdPersonCharacterStateMachine
         }
     }
 
+    public readonly struct CharacterStateMachineRestoreState
+    {
+        public CharacterStateMachineRestoreState(
+            CharacterStateMachineSnapshot snapshot,
+            Vector3 actionWorldDirection,
+            bool animationRequestedForState,
+            bool legacyConsumeRequest,
+            bool legacyResetRunLatch,
+            bool legacySetRunLatch)
+            : this(
+                snapshot,
+                new CharacterStatePayload(actionWorldDirection, Vector3.zero, Vector3.zero),
+                animationRequestedForState,
+                legacyConsumeRequest,
+                legacyResetRunLatch,
+                legacySetRunLatch)
+        {
+        }
+
+        public CharacterStateMachineRestoreState(
+            CharacterStateMachineSnapshot snapshot,
+            CharacterStatePayload statePayload,
+            bool animationRequestedForState,
+            bool legacyConsumeRequest,
+            bool legacyResetRunLatch,
+            bool legacySetRunLatch)
+        {
+            Snapshot = snapshot;
+            StatePayload = statePayload;
+            AnimationRequestedForState = animationRequestedForState;
+        }
+
+        public CharacterStateMachineRestoreState(
+            CharacterStateMachineSnapshot snapshot,
+            Vector3 actionWorldDirection,
+            Vector3 turnBackWorldDirection,
+            bool animationRequestedForState,
+            bool legacyConsumeRequest,
+            bool legacyResetRunLatch,
+            bool legacySetRunLatch)
+            : this(
+                snapshot,
+                actionWorldDirection,
+                turnBackWorldDirection,
+                Vector3.zero,
+                animationRequestedForState,
+                legacyConsumeRequest,
+                legacyResetRunLatch,
+                legacySetRunLatch)
+        {
+        }
+
+        public CharacterStateMachineRestoreState(
+            CharacterStateMachineSnapshot snapshot,
+            Vector3 actionWorldDirection,
+            Vector3 turnBackWorldDirection,
+            Vector3 turnBackEntryBasisForward,
+            bool animationRequestedForState,
+            bool legacyConsumeRequest,
+            bool legacyResetRunLatch,
+            bool legacySetRunLatch)
+        {
+            Snapshot = snapshot;
+            StatePayload = new CharacterStatePayload(actionWorldDirection, turnBackWorldDirection, turnBackEntryBasisForward);
+            AnimationRequestedForState = animationRequestedForState;
+        }
+
+        public CharacterStateMachineSnapshot Snapshot { get; }
+        public CharacterStatePayload StatePayload { get; }
+        public Vector3 ActionWorldDirection => StatePayload.PrimaryWorldDirection;
+        public Vector3 TurnBackWorldDirection => StatePayload.SecondaryWorldDirection;
+        public Vector3 TurnBackEntryBasisForward => StatePayload.EntryBasisForward;
+        public bool AnimationRequestedForState { get; }
+    }
+
     public readonly struct CharacterStateAnimationRequest
     {
         public CharacterStateAnimationRequest(CharacterStateAnimationBinding binding, int sourceStep)
+            : this(binding, CharacterStatePlaybackFactSource.Action, sourceStep)
+        {
+        }
+
+        public CharacterStateAnimationRequest(
+            CharacterStateAnimationBinding binding,
+            CharacterStatePlaybackFactSource playbackFactSource,
+            int sourceStep)
         {
             Binding = binding;
+            PlaybackFactSource = playbackFactSource;
             SourceStep = Mathf.Max(0, sourceStep);
         }
 
         public CharacterStateAnimationBinding Binding { get; }
+        public CharacterStatePlaybackFactSource PlaybackFactSource { get; }
         public ActionAnimationKey Key => Binding.Key;
         public int SourceStep { get; }
         public bool HasKey => Binding.HasKey;
-        public bool HasAnimationReference => Binding.HasAnimationReference;
+        public string TimelineBindingKey => Binding.TimelineBindingKey;
+        public bool IsActionAnimation => PlaybackFactSource == CharacterStatePlaybackFactSource.Action;
+        public bool IsLocomotionAnimation => PlaybackFactSource == CharacterStatePlaybackFactSource.Locomotion;
     }
 
     public readonly struct CharacterStateMachineFrame
@@ -348,16 +645,19 @@ namespace ThirdPersonCharacterStateMachine
             InputRequestKind consumedRequestKind,
             bool setRunLatch,
             bool resetRunLatch,
-            ActionMovementCommand actionMovementCommand,
-            bool hasActionMovement,
-            bool actionCompleted,
+            ActionMotionSpec actionMotionSpec,
             CharacterStateAnimationRequest animationRequest,
             bool hasAnimationRequest,
+            CharacterStatePayload statePayload,
             TurnBackMotionPolicy turnBackMotionPolicy = default,
             bool hasTurnBackMotionPolicy = false,
             Vector3 turnBackWorldDirection = default,
             Vector3 turnBackEntryBasisForward = default,
-            StateTimelineWindowFacts timelineFacts = default)
+            StateTimelineWindowFacts timelineFacts = default,
+            CharacterStateTransitionConditionTrace[] conditionTraces = null,
+            StateTimelineFactsTrace currentTimelineFactsTrace = default,
+            StateTimelineFactsTrace projectedTimelineFactsTrace = default,
+            StateTimelineFactsTrace targetTimelineFactsTrace = default)
         {
             Snapshot = snapshot;
             ExecuteBasicMovement = executeBasicMovement;
@@ -366,38 +666,59 @@ namespace ThirdPersonCharacterStateMachine
             ConsumedRequestKind = consumedRequestKind;
             SetRunLatch = setRunLatch;
             ResetRunLatch = resetRunLatch;
-            ActionMovementCommand = actionMovementCommand;
-            HasActionMovement = hasActionMovement;
-            ActionCompleted = actionCompleted;
+            ActionMotionSpec = actionMotionSpec;
+            ActionMovementCommand = default;
+            HasActionMovement = false;
+            ActionCompleted = false;
             AnimationRequest = animationRequest;
             HasAnimationRequest = hasAnimationRequest;
+            StatePayload = statePayload;
             TurnBackMotionPolicy = turnBackMotionPolicy;
             HasTurnBackMotionPolicy = hasTurnBackMotionPolicy && turnBackMotionPolicy.IsEnabled;
             TurnBackWorldDirection = NormalizePlanarOrZero(turnBackWorldDirection);
             TurnBackEntryBasisForward = NormalizePlanarOrZero(turnBackEntryBasisForward);
             TimelineFacts = timelineFacts;
+            ConditionTraces = new IReadOnlyListWrapper<CharacterStateTransitionConditionTrace>(
+                conditionTraces ?? System.Array.Empty<CharacterStateTransitionConditionTrace>());
+            CurrentTimelineFactsTrace = currentTimelineFactsTrace;
+            ProjectedTimelineFactsTrace = projectedTimelineFactsTrace;
+            TargetTimelineFactsTrace = targetTimelineFactsTrace;
         }
 
         public CharacterStateMachineSnapshot Snapshot { get; }
-        public BasicMovementPhase LocomotionPhase => Snapshot.LocomotionPhase;
-        public FullBodyOwner Owner => Snapshot.Owner;
-        public ActionStateId ActionState => Snapshot.ActionState;
+        public FullBodyStateView StateView
+        {
+            get
+            {
+                CharacterStateMachineSnapshot snapshot = Snapshot;
+                return FullBodyStateView.FromSnapshot(in snapshot);
+            }
+        }
+        public BasicMovementPhase LocomotionPhase => StateView.LocomotionPhase;
+        public FullBodyOwner Owner => StateView.Owner;
+        public ActionStateId ActionState => StateView.ActionState;
         public bool ExecuteBasicMovement { get; }
         public bool PresentLocomotionAnimation { get; }
         public bool ConsumeInputRequest { get; }
         public InputRequestKind ConsumedRequestKind { get; }
         public bool SetRunLatch { get; }
         public bool ResetRunLatch { get; }
+        public ActionMotionSpec ActionMotionSpec { get; }
         public ActionMovementCommand ActionMovementCommand { get; }
         public bool HasActionMovement { get; }
         public bool ActionCompleted { get; }
         public CharacterStateAnimationRequest AnimationRequest { get; }
         public bool HasAnimationRequest { get; }
+        public CharacterStatePayload StatePayload { get; }
         public TurnBackMotionPolicy TurnBackMotionPolicy { get; }
         public bool HasTurnBackMotionPolicy { get; }
         public Vector3 TurnBackWorldDirection { get; }
         public Vector3 TurnBackEntryBasisForward { get; }
         public StateTimelineWindowFacts TimelineFacts { get; }
+        public IReadOnlyListWrapper<CharacterStateTransitionConditionTrace> ConditionTraces { get; }
+        public StateTimelineFactsTrace CurrentTimelineFactsTrace { get; }
+        public StateTimelineFactsTrace ProjectedTimelineFactsTrace { get; }
+        public StateTimelineFactsTrace TargetTimelineFactsTrace { get; }
 
         static Vector3 NormalizePlanarOrZero(Vector3 value)
         {

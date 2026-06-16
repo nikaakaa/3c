@@ -4,13 +4,13 @@
 定义 FullBody 动作动画 Profile 的稳定 key、角色级替换边界、Locomotion 配置分离规则和动作表现校验要求。
 ## Requirements
 ### Requirement: 动作动画 Profile 数据源
-系统 MUST 提供动作动画 Profile 数据源，用于把稳定 action animation key 映射到具体动画表现。动作逻辑 MUST 只输出 action animation key，不得写死具体角色 clip、可琳动画名或 BBB 运行时资源路径。
+系统 MUST 提供动作动画 Profile 数据源，用于把稳定 action animation key 映射到具体动画表现。动作逻辑、状态生命周期接口和统一状态机输出 MUST 只输出 action animation key，不得写死具体角色 clip、可琳动画名、Animancer transition asset 或 BBB 运行时资源路径。
 
 #### Scenario: Profile 保存动作动画条目
 - **WHEN** 设计者配置动作动画 Profile
 - **THEN** Profile entry MUST 能保存 action animation key
 - **AND** MUST 能保存具体动画引用或等价 Animancer transition 引用
-- **AND** MAY 保存 fade 参数和调试名
+- **AND** MAY 保存 fade 参数、播放参数和调试名
 
 #### Scenario: Profile 不是 FullBody 状态机
 - **WHEN** 动作动画 Profile 配置 `Action.Dodge.Directional` 或 `Action.Dodge.Backstep`
@@ -24,6 +24,12 @@
 - **AND** 设计者 SHOULD 能通过 FullBody 主调度入口追踪到 Directional 和 Backstep 的动画表现资源
 - **AND** 动作动画 Profile MUST NOT 被要求成为和动作逻辑入口、动画绑定入口无绑定关系的游离配置
 
+#### Scenario: 状态生命周期不写死 clip
+- **WHEN** `Enter`、`Tick` 或 `Exit` 生命周期产出动作动画请求
+- **THEN** 生命周期输出 MUST 使用 `Action.Dodge.Directional`、`Action.Dodge.Backstep` 或等价稳定 key
+- **AND** 生命周期实现 MUST NOT 直接引用具体 `AnimationClip`
+- **AND** 生命周期实现 MUST NOT 直接引用具体 Animancer transition asset
+
 #### Scenario: 动作逻辑不写死 clip
 - **WHEN** Shift FullBody 动作请求动画表现
 - **THEN** 动作逻辑 MUST 输出 `Action.Dodge.Directional` 或 `Action.Dodge.Backstep` key
@@ -31,10 +37,10 @@
 - **AND** 动作逻辑 MUST NOT 直接引用具体角色动画资源名
 
 #### Scenario: 角色可替换动画套件
-- **GIVEN** 同一个 Shift FullBody 动作逻辑
+- **GIVEN** 同一个 Shift FullBody 动作逻辑和状态生命周期输出
 - **WHEN** 设计者替换动作动画 Profile 中的 Directional 或 Backstep 动画引用
 - **THEN** 系统 MUST 使用新的动画表现
-- **AND** 不需要修改动作逻辑代码
+- **AND** 不需要修改动作逻辑代码或状态机资产
 
 ### Requirement: Shift FullBody 动画 Key
 系统 MUST 为 Shift FullBody 动作第一版提供两个稳定动作动画 key：方向冲刺和后闪。key MUST 表达动作语义，而不是表达具体角色、clip 文件名或导入来源。
@@ -123,3 +129,19 @@
 - **WHEN** 用户替换 Profile 中 `Action.Dodge.Directional` 或 `Action.Dodge.Backstep` 的动画引用
 - **THEN** Play Mode 中对应动作表现 MUST 使用替换后的动画
 - **AND** 动作方向、输入消费、Run latch 和基础移动恢复规则 MUST 不需要修改代码
+
+### Requirement: 动作动画模块只保存稳定语义 key
+系统 MUST 允许动作状态节点通过动作动画模块保存稳定 animation key 或 timeline binding key，用于产出动作动画请求。具体 Clip、TransitionAsset、fade、speed、start time 和 Animancer runtime state MUST 继续归属 Action Animation Profile、Animancer TransitionLibrary 或等价表现配置入口。
+
+#### Scenario: Dodge 变体输出动作动画 key
+- **WHEN** `Dodge` 节点的 Directional 变体进入
+- **THEN** 动作动画模块 MUST 产出 `Action.Dodge.Directional` 或等价稳定 key
+- **AND** 动作动画 Presenter MUST 只消费该 key 对应的播放请求
+- **AND** 状态节点 MUST NOT 保存具体 AnimationClip 或 TransitionAsset
+
+#### Scenario: 连续 Dodge 仍重播同 key
+- **WHEN** `Dodge -> Dodge` transition 进入同一动作动画 key
+- **THEN** 动作动画模块 MUST 再次产出动作动画请求
+- **AND** Presenter MUST 将其视为新的播放意图
+- **AND** 该行为 MUST NOT 依赖新建第二播放路径
+

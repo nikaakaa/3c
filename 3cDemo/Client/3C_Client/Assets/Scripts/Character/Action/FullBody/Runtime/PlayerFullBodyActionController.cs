@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using ThirdPersonAnimation;
 using ThirdPersonCharacterConfig;
@@ -43,7 +43,11 @@ namespace ThirdPersonAction
         bool loggedInitialLocomotionState = true;
         bool hadPreviousLocomotionAutoUpdate;
         bool previousLocomotionAutoUpdate;
-        readonly FullBodyFramePipeline framePipeline = new FullBodyFramePipeline();
+        readonly FullBodySubmissionBuilder frameSubmissionBuilder = new FullBodySubmissionBuilder();
+        CharacterFramePipelineHost framePipelineHost;
+        FullBodyRuntimePortAdapter runtimePort;
+        FullBodyOutputRuntime outputRuntime;
+        FullBodyOutputRuntimeHost outputRuntimeHost;
 
         public bool AutoUpdate { get => autoUpdate; set => autoUpdate = value; }
         public CharacterConfigSO CharacterConfig { get => characterConfig; set { characterConfig = value; RebuildStateMachine(false); } }
@@ -56,13 +60,17 @@ namespace ThirdPersonAction
         public MonoBehaviour FacingProviderBehaviour { get => facingProviderBehaviour; set => facingProviderBehaviour = value; }
         public MonoBehaviour AnimationPresenterBehaviour { get => animationPresenterBehaviour; set { animationPresenterBehaviour = value; ResolveAnimationPresenter(); } }
         public CharacterStateMachineRunner StateMachine => stateMachine;
-        public FullBodyOwner CurrentOwner => currentStateSnapshot.Owner;
+        public FullBodyOwner CurrentOwner => FullBodyStateView.FromSnapshot(in currentStateSnapshot).Owner;
         public CharacterStateMachineSnapshot CurrentStateSnapshot => currentStateSnapshot;
         public string ActiveFullBodyStatePath => currentStateSnapshot.ActivePath;
         public string PendingFullBodyTransitionPath => currentStateSnapshot.PendingTransitionPath;
         public CharacterStateMachineFrame LastStateFrame { get; private set; }
         public BasicLocomotionFrame LastLocomotionFrame { get; private set; }
-        public FullBodyFrameResult LastFramePipelineResult { get; private set; }
+        public ActionMotionResolveResult LastActionMotionResult { get; private set; }
+        public CharacterFrameResult LastFramePipelineResult => FramePipelineHost.LastFrameResult;
+        public ICharacterFrameRuntimePort RuntimePort => runtimePort ?? (runtimePort = new FullBodyRuntimePortAdapter(this));
+        internal FullBodyOutputRuntime OutputRuntime => outputRuntime ?? (outputRuntime = CreateOutputRuntime());
+        internal CharacterFramePipelineHost FramePipelineHost => framePipelineHost ?? (framePipelineHost = CreateFramePipelineHost());
 
         void Reset()
         {
@@ -93,7 +101,7 @@ namespace ThirdPersonAction
         public bool Tick(float deltaTime)
         {
             int step = inputBufferComponent != null ? inputBufferComponent.CurrentStep : Time.frameCount;
-            if (!TryReadFrameInputFromSource(deltaTime, step, out FullBodyFrameInput input))
+            if (!TryReadFrameInputFromSource(deltaTime, step, out CharacterFrameInput input))
                 return false;
 
             return Tick(in input);
@@ -102,16 +110,33 @@ namespace ThirdPersonAction
         public bool Tick(in BasicLocomotionInputSnapshot input)
         {
             int step = inputBufferComponent != null ? inputBufferComponent.CurrentStep : Time.frameCount;
-            FullBodyFrameInput frameInput = FullBodyFrameInput.FromLocomotionInput(step, in input);
+            CharacterFrameInput frameInput = CharacterFrameInput.FromLocomotionInput(step, in input);
             return Tick(in frameInput);
         }
 
-        public bool Tick(in FullBodyFrameInput input)
+        public bool Tick(in CharacterFrameInput input)
         {
             ResolveReferences();
-            bool success = framePipeline.Tick(this, in input, out FullBodyFrameResult result);
-            LastFramePipelineResult = result;
-            return success;
+            return FramePipelineHost.Tick(RuntimePort, in input, out _);
+        }
+
+        CharacterFramePipelineHost CreateFramePipelineHost()
+        {
+            return new CharacterFramePipelineHost(frameSubmissionBuilder, frameSubmissionBuilder);
+        }
+
+        FullBodyOutputRuntime CreateOutputRuntime()
+        {
+            outputRuntimeHost ??= new FullBodyOutputRuntimeHost(this);
+            FullBodyDiagnosticSubmitter diagnostics = new FullBodyDiagnosticSubmitter(outputRuntimeHost, outputRuntimeHost);
+            return new FullBodyOutputRuntime(
+                new FullBodyOutputCacheWriter(outputRuntimeHost),
+                new FullBodyInputRequestConsumer(outputRuntimeHost),
+                new FullBodyMotionOutputApplier(outputRuntimeHost),
+                new FullBodyAnimationOutputPresenter(outputRuntimeHost),
+                new FullBodyRuntimeFactsWriter(outputRuntimeHost),
+                new FullBodySnapshotWriter(outputRuntimeHost, diagnostics),
+                diagnostics);
         }
 
         public ActionInterruptPolicyValidationResult ValidateActionInterruptPolicies()
@@ -137,7 +162,7 @@ namespace ThirdPersonAction
             for (int i = 0; i < validation.Warnings.Count; i++)
                 result.AddWarning(validation.Warnings[i]);
 
-            if (hasDodgeConfig && !FullBodyActionInterruptGate.HasDodgePolicy(policies, in config))
+            if (hasDodgeConfig && !FullBodyActionInterruptRequestFactory.HasDodgePolicy(policies, in config))
                 result.AddError("FullBody Action interrupt policy set is missing Action.None -> Action.Dodge or Action.Dodge -> Action.Dodge policy. Both are required for dodge initiation and chain dodge.");
 
             return result;
@@ -174,10 +199,11 @@ namespace ThirdPersonAction
 
         public static int ResolveCurrentActionResistance(in CharacterStateMachineSnapshot snapshot, in DodgeActionConfig config)
         {
-            if (!snapshot.Owner.IsAction)
+            FullBodyStateView stateView = FullBodyStateView.FromSnapshot(in snapshot);
+            if (!stateView.Owner.IsAction)
                 return 0;
 
-            return snapshot.ActionState == ActionStateIds.Dodge ? config.Resistance : 0;
+            return stateView.ActionState == ActionStateIds.Dodge ? config.Resistance : 0;
         }
 
         public FullBodyActionRestoreState CaptureRestoreState()
@@ -233,7 +259,7 @@ namespace ThirdPersonAction
                 animationPresenter.Clear();
         }
 
-        internal bool TryReadFrameInputFromSource(float deltaTime, int step, out FullBodyFrameInput input)
+        internal bool TryReadFrameInputFromSource(float deltaTime, int step, out CharacterFrameInput input)
         {
             ResolveReferences();
             if (!EnsureStateMachine() || locomotionController == null)
@@ -249,7 +275,7 @@ namespace ThirdPersonAction
                 return false;
             }
 
-            input = FullBodyFrameInput.FromLocomotionInput(step, in locomotionInput);
+            input = CharacterFrameInput.FromLocomotionInput(step, in locomotionInput);
             return true;
         }
 
@@ -264,137 +290,6 @@ namespace ThirdPersonAction
             return ResolveInterruptPolicies();
         }
 
-        internal void SetLastFrameOutputsForPipeline(
-            in BasicLocomotionFrame locomotionFrame,
-            in CharacterStateMachineFrame stateFrame)
-        {
-            LastLocomotionFrame = locomotionFrame;
-            LastStateFrame = stateFrame;
-        }
-
-        internal bool ConsumeStateFrameInputRequestForPipeline(in CharacterStateMachineFrame stateFrame, int step)
-        {
-            if (!stateFrame.ConsumeInputRequest || inputBufferComponent == null)
-                return false;
-
-            return inputBufferComponent.Buffer.TryConsume(stateFrame.ConsumedRequestKind, step, out _);
-        }
-
-        internal void ExecuteStateFrameMotionForPipeline(
-            in CharacterStateMachineFrame stateFrame,
-            in BasicLocomotionFrame locomotionFrame,
-            out bool actionMovementExecuted,
-            out bool basicMovementExecuted)
-        {
-            actionMovementExecuted = false;
-            basicMovementExecuted = false;
-
-            if (stateFrame.HasActionMovement && actionMovementExecutor != null)
-            {
-                actionMovementExecutor.ExecuteActionMovement(stateFrame.ActionMovementCommand);
-                actionMovementExecuted = true;
-            }
-
-            if (stateFrame.ExecuteBasicMovement && locomotionController != null)
-            {
-                locomotionController.ExecuteLocomotionMotion(in locomotionFrame);
-                basicMovementExecuted = true;
-            }
-        }
-
-        internal void PresentStateFrameAnimationForPipeline(
-            in CharacterStateMachineFrame stateFrame,
-            in BasicLocomotionFrame locomotionFrame,
-            bool exitedToLocomotion,
-            out bool actionAnimationPresented,
-            out bool locomotionAnimationPresented)
-        {
-            actionAnimationPresented = false;
-            locomotionAnimationPresented = false;
-
-            if (stateFrame.Owner.IsAction && stateFrame.HasAnimationRequest && animationPresenter != null)
-            {
-                animationPresenter.Present(stateFrame.AnimationRequest);
-                actionAnimationPresented = true;
-            }
-
-            if (exitedToLocomotion && animationPresenter != null)
-                animationPresenter.Clear();
-
-            if (stateFrame.PresentLocomotionAnimation && locomotionController != null)
-            {
-                locomotionController.PresentLocomotionAnimation(in locomotionFrame);
-                locomotionAnimationPresented = true;
-            }
-        }
-
-        internal void WriteStateFrameActionFactsForPipeline(
-            in CharacterStateMachineFrame stateFrame,
-            bool exitedToLocomotion,
-            int step)
-        {
-            if (locomotionController == null)
-                return;
-
-            locomotionController.WriteActionFacts(CharacterRuntimeActionFacts.FromStateFrame(
-                in stateFrame,
-                exitedToLocomotion,
-                step));
-        }
-
-        internal void UpdateStateSnapshotForPipeline(in CharacterStateMachineFrame stateFrame, int step)
-        {
-            UpdateStateSnapshot(in stateFrame, step);
-        }
-
-        internal void WriteAnimationRuntimeFactsForPipeline(int step)
-        {
-            WriteAnimationRuntimeFacts(step);
-        }
-
-        internal void CompleteLocomotionTickForPipeline()
-        {
-            if (locomotionController != null)
-                locomotionController.CompleteLocomotionTick();
-        }
-
-        internal void LogDiagnosticTickSnapshotsForPipeline(int step)
-        {
-            LogDiagnosticTickSnapshots(step);
-        }
-
-        void WriteAnimationRuntimeFacts(int step)
-        {
-            if (locomotionController == null)
-                return;
-
-            AnimationPhasePlaybackProgress locomotionProgress = locomotionController.CurrentAnimationPlaybackProgress;
-            string locomotionAnimationName = locomotionController.CurrentAnimationName;
-            ActionAnimationPlaybackProgress actionProgress = animationPresenter != null
-                ? animationPresenter.CurrentPlaybackProgress
-                : ActionAnimationPlaybackProgress.Invalid;
-            string actionAnimationName = animationPresenter != null ? animationPresenter.CurrentAnimationName : string.Empty;
-
-            locomotionController.WriteAnimationFacts(new CharacterRuntimeAnimationFacts(
-                locomotionProgress,
-                locomotionAnimationName,
-                actionProgress,
-                actionAnimationName,
-                step));
-        }
-
-        void UpdateStateSnapshot(in CharacterStateMachineFrame stateFrame, int step)
-        {
-            CharacterStateMachineSnapshot previousSnapshot = currentStateSnapshot;
-            currentStateSnapshot = stateFrame.Snapshot;
-            debugFullBodyStatePath = currentStateSnapshot.ActivePath;
-            debugPendingTransitionPath = currentStateSnapshot.PendingTransitionPath;
-
-            LogFullBodySnapshotChange(in previousSnapshot, in currentStateSnapshot, step);
-            LogLocomotionStateChange(in currentStateSnapshot, step);
-            LogActionDecision(in previousSnapshot, in currentStateSnapshot, in stateFrame, step);
-        }
-
         void SetInactiveStateSnapshot()
         {
             currentStateSnapshot = CharacterStateMachineSnapshot.Inactive;
@@ -405,98 +300,6 @@ namespace ThirdPersonAction
             lastLoggedLocomotionPath = string.Empty;
             lastLoggedLocomotionPhase = BasicMovementPhase.Idle;
             loggedInitialLocomotionState = true;
-        }
-
-        void LogFullBodySnapshotChange(
-            in CharacterStateMachineSnapshot previousSnapshot,
-            in CharacterStateMachineSnapshot snapshot,
-            int step)
-        {
-            if (snapshot.ActivePath != lastLoggedFullBodyPath)
-            {
-                FullBodyDiagnostics.LogFullBodyPathChanged(in previousSnapshot, in snapshot, step);
-                lastLoggedFullBodyPath = snapshot.ActivePath;
-            }
-
-            if (snapshot.PendingTransitionPath == lastLoggedPendingTransitionPath)
-                return;
-
-            FullBodyDiagnostics.LogFullBodyPendingTransitionChanged(in previousSnapshot, in snapshot, step);
-            lastLoggedPendingTransitionPath = snapshot.PendingTransitionPath;
-        }
-
-        void LogLocomotionStateChange(in CharacterStateMachineSnapshot snapshot, int step)
-        {
-            string locomotionPath = snapshot.IsLocomotion ? snapshot.ActivePath : lastLoggedLocomotionPath;
-            if (loggedInitialLocomotionState &&
-                snapshot.LocomotionPhase == lastLoggedLocomotionPhase &&
-                locomotionPath == lastLoggedLocomotionPath)
-                return;
-
-            FullBodyDiagnostics.LogLocomotionPhaseChanged(
-                locomotionPath,
-                lastLoggedLocomotionPath,
-                lastLoggedLocomotionPhase,
-                LastLocomotionFrame.Command.Gait,
-                in snapshot,
-                step);
-            lastLoggedLocomotionPhase = snapshot.LocomotionPhase;
-            lastLoggedLocomotionPath = locomotionPath;
-            loggedInitialLocomotionState = true;
-        }
-
-        void LogActionDecision(
-            in CharacterStateMachineSnapshot previousSnapshot,
-            in CharacterStateMachineSnapshot snapshot,
-            in CharacterStateMachineFrame frame,
-            int step)
-        {
-            if (!frame.ConsumeInputRequest)
-                return;
-
-            FullBodyDiagnostics.LogActionAccepted(in previousSnapshot, in snapshot, in frame, step);
-        }
-
-        void LogDiagnosticTickSnapshots(int step)
-        {
-            LogFullBodyTickSnapshot(step);
-            if (locomotionController != null)
-                locomotionController.LogDiagnosticTickSnapshot(step);
-            LogAnimationTickSnapshot(step);
-        }
-
-        void LogFullBodyTickSnapshot(int step)
-        {
-            FullBodyDiagnostics.LogFullBodyTickSnapshot(in currentStateSnapshot, step, BuildFullBodyTickContext());
-        }
-
-        void LogAnimationTickSnapshot(int step)
-        {
-            FullBodyDiagnostics.LogAnimationTickSnapshot(currentStateSnapshot.ActivePath, step, BuildAnimationTickContext());
-        }
-
-        string BuildFullBodyTickContext()
-        {
-            return
-                $"owner={currentStateSnapshot.Owner.Kind} ownerAction={currentStateSnapshot.ActionState.Value} " +
-                $"stateTime={currentStateSnapshot.StateTime:F3} pending={currentStateSnapshot.PendingTransitionPath} variant={currentStateSnapshot.Variant} " +
-                $"locomotionPhase={currentStateSnapshot.LocomotionPhase} locomotionPath={currentStateSnapshot.ActivePath} locomotionGait={LastLocomotionFrame.Command.Gait} " +
-                $"hasMove={LastLocomotionFrame.Intent.HasMoveIntent} moveStrength={LastLocomotionFrame.Intent.Strength:F3} worldDirection={LastLocomotionFrame.WorldDirection.ToString("F3")} " +
-                $"actionFrameActive={LastStateFrame.Owner.IsAction} actionFrameCompleted={LastStateFrame.ActionCompleted} actionMove={LastStateFrame.ActionMovementCommand.PlanarDistance:F3} actionRotate={LastStateFrame.ActionMovementCommand.RotateToDirection}";
-        }
-
-        string BuildAnimationTickContext()
-        {
-            AnimationPhasePlaybackProgress locomotionProgress = locomotionController != null
-                ? locomotionController.CurrentAnimationPlaybackProgress
-                : AnimationPhasePlaybackProgress.Invalid(currentStateSnapshot.LocomotionPhase);
-            string locomotionAnimationName = locomotionController != null ? locomotionController.CurrentAnimationName : string.Empty;
-
-            return
-                $"owner={currentStateSnapshot.Owner.Kind} fullBodyPath={currentStateSnapshot.ActivePath} " +
-                $"locomotionPhase={currentStateSnapshot.LocomotionPhase} locomotionGait={LastLocomotionFrame.Command.Gait} " +
-                $"locomotionAlias={locomotionProgress.AliasKey} locomotionAnimation={locomotionAnimationName} locomotionNormalized={locomotionProgress.NormalizedTime:F3} locomotionValid={locomotionProgress.HasValidPlayback} locomotionEnded={locomotionProgress.IsEnded} " +
-                $"actionKey={(animationPresenter != null ? animationPresenter.CurrentKey.Value : string.Empty)} actionAnimation={(animationPresenter != null ? animationPresenter.CurrentAnimationName : string.Empty)} actionNormalized={(animationPresenter != null ? animationPresenter.CurrentNormalizedTime : 0f):F3} actionValid={(animationPresenter != null && animationPresenter.HasValidPlayback)} actionEnded={(animationPresenter != null && animationPresenter.CurrentPlaybackProgress.IsEnded)}";
         }
 
         bool EnsureStateMachine()
@@ -529,11 +332,12 @@ namespace ThirdPersonAction
             }
 
             currentStateSnapshot = stateMachine.Snapshot;
+            FullBodyStateView stateView = FullBodyStateView.FromSnapshot(in currentStateSnapshot);
             debugFullBodyStatePath = currentStateSnapshot.ActivePath;
             debugPendingTransitionPath = currentStateSnapshot.PendingTransitionPath;
             lastLoggedFullBodyPath = currentStateSnapshot.ActivePath;
             lastLoggedPendingTransitionPath = currentStateSnapshot.PendingTransitionPath;
-            lastLoggedLocomotionPhase = currentStateSnapshot.LocomotionPhase;
+            lastLoggedLocomotionPhase = stateView.LocomotionPhase;
             lastLoggedLocomotionPath = currentStateSnapshot.ActivePath;
             loggedInitialLocomotionState = true;
             return true;
@@ -624,6 +428,132 @@ namespace ThirdPersonAction
             cachedInterruptPolicySet = null;
             runtimeInterruptPolicies = Array.Empty<ActionInterruptPolicy>();
             interruptPoliciesCompiled = false;
+        }
+
+        sealed class FullBodyOutputRuntimeHost :
+            IFullBodyOutputFrameCache,
+            IFullBodyInputRequestConsumerDependencies,
+            IFullBodyMotionOutputDependencies,
+            IFullBodyAnimationOutputDependencies,
+            IFullBodyRuntimeFactsDependencies,
+            IFullBodySnapshotOutputState,
+            IFullBodyDiagnosticDependencies
+        {
+            readonly PlayerFullBodyActionController controller;
+
+            public FullBodyOutputRuntimeHost(PlayerFullBodyActionController controller)
+            {
+                this.controller = controller ?? throw new ArgumentNullException(nameof(controller));
+            }
+
+            public BasicLocomotionFrame LastLocomotionFrame
+            {
+                get => controller.LastLocomotionFrame;
+                set => controller.LastLocomotionFrame = value;
+            }
+
+            public CharacterStateMachineFrame LastStateFrame
+            {
+                get => controller.LastStateFrame;
+                set => controller.LastStateFrame = value;
+            }
+
+            public ActionMotionResolveResult LastActionMotionResult
+            {
+                get => controller.LastActionMotionResult;
+                set => controller.LastActionMotionResult = value;
+            }
+
+            public CharacterStateMachineSnapshot CurrentStateSnapshot
+            {
+                get => controller.currentStateSnapshot;
+                set => controller.currentStateSnapshot = value;
+            }
+
+            public string DebugFullBodyStatePath
+            {
+                get => controller.debugFullBodyStatePath;
+                set => controller.debugFullBodyStatePath = value ?? string.Empty;
+            }
+
+            public string DebugPendingTransitionPath
+            {
+                get => controller.debugPendingTransitionPath;
+                set => controller.debugPendingTransitionPath = value ?? string.Empty;
+            }
+
+            public string LastLoggedFullBodyPath
+            {
+                get => controller.lastLoggedFullBodyPath;
+                set => controller.lastLoggedFullBodyPath = value ?? string.Empty;
+            }
+
+            public string LastLoggedPendingTransitionPath
+            {
+                get => controller.lastLoggedPendingTransitionPath;
+                set => controller.lastLoggedPendingTransitionPath = value ?? string.Empty;
+            }
+
+            public string LastLoggedLocomotionPath
+            {
+                get => controller.lastLoggedLocomotionPath;
+                set => controller.lastLoggedLocomotionPath = value ?? string.Empty;
+            }
+
+            public BasicMovementPhase LastLoggedLocomotionPhase
+            {
+                get => controller.lastLoggedLocomotionPhase;
+                set => controller.lastLoggedLocomotionPhase = value;
+            }
+
+            public bool LoggedInitialLocomotionState
+            {
+                get => controller.loggedInitialLocomotionState;
+                set => controller.loggedInitialLocomotionState = value;
+            }
+
+            public InputRequestBuffer InputRequestBuffer =>
+                controller.inputBufferComponent != null ? controller.inputBufferComponent.Buffer : null;
+
+            public IActionMovementExecutor ActionMovementExecutor => controller.actionMovementExecutor;
+            public ILocomotionOutputRuntimePort LocomotionOutputRuntime => controller.locomotionController;
+            public IActionAnimationPresenter ActionAnimationPresenter => controller.animationPresenter;
+
+            public AnimationPhasePlaybackProgress LocomotionAnimationPlaybackProgress
+            {
+                get
+                {
+                    if (controller.locomotionController != null)
+                        return controller.locomotionController.CurrentAnimationPlaybackProgress;
+
+                    CharacterStateMachineSnapshot snapshot = controller.currentStateSnapshot;
+                    return AnimationPhasePlaybackProgress.Invalid(FullBodyStateView.FromSnapshot(in snapshot).LocomotionPhase);
+                }
+            }
+
+            public string LocomotionAnimationName =>
+                controller.locomotionController != null ? controller.locomotionController.CurrentAnimationName : string.Empty;
+
+            public ActionAnimationKey ActionAnimationKey =>
+                controller.animationPresenter != null ? controller.animationPresenter.CurrentKey : default;
+
+            public float ActionAnimationNormalizedTime =>
+                controller.animationPresenter != null ? controller.animationPresenter.CurrentNormalizedTime : 0f;
+
+            public bool ActionAnimationHasValidPlayback =>
+                controller.animationPresenter != null && controller.animationPresenter.HasValidPlayback;
+
+            public bool ActionAnimationPlaybackEnded =>
+                controller.animationPresenter != null && controller.animationPresenter.CurrentPlaybackProgress.IsEnded;
+
+            public string ActionAnimationName =>
+                controller.animationPresenter != null ? controller.animationPresenter.CurrentAnimationName : string.Empty;
+
+            public void LogLocomotionDiagnosticTickSnapshot(int step)
+            {
+                if (controller.locomotionController != null)
+                    controller.locomotionController.LogDiagnosticTickSnapshot(step);
+            }
         }
 
     }

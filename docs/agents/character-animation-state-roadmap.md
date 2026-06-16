@@ -20,17 +20,21 @@ PlayerFullBodyActionController
 当前已具备的能力：
 
 - 输入快照、移动意图、相机相对方向、移动命令和动画上下文已经分层。
-- `CharacterConfigSO` 是角色正式根配置入口，`CharacterStateMachineDefinitionSO` 作为其 StateMachine 子配置提供 FullBody base layer 的统一状态树，默认资产为 `Assets/Configs/3C/Statemachine/DefaultCharacterStateMachine.asset`。
+- `CharacterConfigSO` 是角色正式根配置入口，`CharacterStateMachineDefinitionSO` 作为其 StateMachine 子配置提供 FullBody base layer 的统一状态树，默认资产为 `Assets/Configs/3C/StateMachine/DefaultCharacterStateMachine.asset`。
 - 默认统一状态树显式包含 `FullBody/Locomotion/Idle`、`MoveStart`、`MoveLoop`、`MoveStop` 和 `FullBody/Action/Dodge`。
 - `PlayerFullBodyActionController` 是唯一创建并推进 `CharacterStateMachineRunner` 的运行时 owner；`PlayerLocomotionController` 只作为 FullBody pipeline 下的 Locomotion adapter。
 - Locomotion 四阶段和 Dodge 进入/退出 transition 都在同一张状态机配置中可见，不再由 Locomotion 特化状态机、Dodge runtime 或 FullBody 缝合 driver 分别决定。
-- `CharacterStateMachineRunner` 只读取 `CharacterStateMachineContext` 中的纯数据事实：移动意图、输入请求、phase can exit、状态时间、请求优先级、当前状态标签和只读 runtime blackboard snapshot。
-- `CharacterStateMachineFrame` 统一产出当前状态快照、基础移动输出、通用动作移动输出、动画请求、输入请求消费、Run latch 写入和状态事实。
+- `CharacterStateMachineRunner` 只读取 `CharacterStateMachineContext` 中的纯数据事实，解释状态图并维护 active state、state time、variant、方向 payload、pending transition 和 snapshot/restore。
+- `FullBodyFramePipeline` 在 Action request gate 前生成 current timeline facts；Action request gate、transition evaluator 和 output resolver 消费同一个 current facts trace，projected/target facts 只作为 runner trace 显式出现。
+- Transition condition 配置只保存受控 condition key 和纯数据参数；运行时通过 `CharacterStateTransitionEvaluatorCollection` 的 Core / Locomotion / Animation / Action adapter 求值。新增业务条件不得改 runner 选边循环。
+- `CharacterStateNodeLifecycle` 在 runner 内部提供 `Enter / Tick / Exit`，只向 frame builder 写纯数据输出，不执行 Unity 副作用。
+- `CharacterStateOutputResolver` 将 active state 输出解析成 `CharacterStateMachineFrame`，统一包含当前状态快照、基础移动输出意图、Action motion spec、动画请求、输入请求消费、Run latch 写入和状态事实；动作本帧距离不在 output resolver 中计算。
+- `ActionMotionResolver` 在 FullBody BuildMotion 阶段把 Action motion spec 转换成 `ActionMovementCommand`、completed 和 run latch 派生，结果进入 FullBody frame result、runtime blackboard action facts 和 rollback strict comparison。
 - `PlayerLocomotionController` 保留输入读取、相机 Look、基础移动帧构建、运动 adapter 和基础移动动画 adapter，不再拥有独立状态切换权威。
 - `PlayerLocomotionController` 持有 `CharacterRuntimeBlackboard`，作为第一版 Locomotion facts 写入权威和其它 runtime facts 的受控提交点。
 - `FullBodyActionRequestGate` 复用动作侧 planner，把缓冲中的 Dodge 请求和 Locomotion TurnBack intent 映射为统一状态机 `CharacterInputRequestFact`；FullBody 控制器不内联单个动作的方向解析或优先级规则。
 - `PlayerFullBodyActionController` 是 FullBody frame pipeline 的装配层，兼容 `Tick` 入口只调用同一条 pipeline。
-- `FullBodyFramePipeline` 按 `ReadInput -> UpdateInputBuffer -> GameplayDecision -> BuildMotion -> ExecuteMotion -> PresentationBridge -> WriteSnapshotAndEvents` 编排一帧，统一状态机仍是状态权威。
+- `FullBodyFramePipeline` 按 `ReadInput -> UpdateInputBuffer -> GameplayDecision -> BuildMotion -> ExecuteMotion -> PresentationBridge -> WriteSnapshotAndEvents` 编排一帧；`GameplayDecision` 内先准备 current timeline facts，再执行 Action request gate，然后推进统一状态机。
 - `PlayerFullBodyActionController` 只把 `CharacterStateMachineFrame` 和动作 Presenter 的只读播放进度转换为 Action / Animation facts，不直接持有可变黑板实例。
 - `CharacterRuntimeBlackboard` 是 typed facts blackboard，第一版包含 Locomotion、Action、Animation、Debug facts；它保存纯数据 snapshot / restore state，不保存 Animancer runtime、UnityEngine.Object、Transform、Camera、CharacterController、InputAction、AnimationClip 或 TransitionAsset。
 - Animancer TransitionLibrary alias 表负责基础移动动画资源和过渡参数。
@@ -48,17 +52,17 @@ PlayerFullBodyActionController
 - `BasicLocomotionAnimancerPresenter` 负责 Animancer 播放并暴露只读播放进度，不负责业务仲裁或状态切换。
 - `BasicMovementConfigSO` 负责基础移动 Walk/Run 数值。
 - Shift 写入 `InputRequestBuffer` 后只作为 Dodge 请求事实进入统一状态机；是否消费请求由 `Locomotion/* -> Dodge` transition 和状态输出决定。
-- `Dodge` 状态包含 `Directional` 和 `Backstep` 变体，运动距离/时长、立即转向、输入请求消费、Run latch 写入和动画 key 都通过状态机中的通用动作移动定义跟随状态或变体配置。
+- `Dodge` 状态包含 `Directional` 和 `Backstep` 变体，运动距离/时长、立即转向、输入请求消费和 Run latch 策略通过状态机中的通用动作移动定义跟随状态或变体配置；状态输出只产 Action motion spec，具体帧距离由 `ActionMotionResolver` 计算。
 - `CharacterStateMachineRunner` 只解释状态输出中的通用动作移动定义，不直接读取 `DodgeActionConfig` 或 Dodge 专用距离/时长结构。
-- `ActionAnimationAnimancerPresenter` 只消费统一状态机产出的 `CharacterStateAnimationRequest`，不再通过游离 `ActionAnimationProfileSO` 入口选择 Dodge 动画。
+- `ActionAnimationAnimancerPresenter` 只消费统一状态机产出的动作动画语义 key / 请求；具体 Dodge 动画资源、过渡、fade、speed 和 start time 归 Animancer TransitionLibrary、动作动画配置入口或等价正式配置解析，不回写状态机权威。
 - 旧 `BasicLocomotionStateMachine`、`LocomotionStateGraphConfigSO`、`DodgeActionRuntime`、`DodgeFullBodyActionModule`、`FullBodyHfsmStateTreeBuilder/Driver`、`FullBodyActionSetSO` 和 `FullBodyActionAnimationSetSO` 已从运行时代码和 prefab 入口删除。
-- 动作位移通过 `ActionMovementCommand -> IActionMovementExecutor` 进入 `CharacterMotionDriver`，动画 Presenter 不写 Transform，也不调用 `CharacterController.Move`。
+- 动作位移通过 `ActionMotionSpec -> ActionMotionResolver -> ActionMovementCommand -> IActionMovementExecutor` 进入 `CharacterMotionDriver`，动画 Presenter 不写 Transform，也不调用 `CharacterController.Move`。
 
 当前缺口：
 
 - Walk/Run 已作为基础移动档位接入，普通移动为 Walk，Shift Directional Dodge 完成后的 Run latch 可进入 Run；Shift held 不再直接决定基础移动 Run。
 - 已有最小统一 `Dodge` 闭环，但还没有 Roll、Jump、Attack、Hit、Death 的具体状态内容。
-- 统一状态机已有最小 transition 条件和输出模型，后续还需要补齐打断窗口、事件窗口、运动窗口和编辑器校验视图。
+- 统一状态机已有受控 transition condition adapter、最小输出模型和配置校验；后续还需要补齐打断窗口、事件窗口、运动窗口和编辑器校验视图。
 - 还没有 UpperBody / LowerBody / Additive / Weapon 等并行层级抽象。
 - 还没有 IK 目标、权重曲线和动画事件的统一归属。
 - 已有第一版角色运行时黑板 snapshot / restore，可随 `CharacterSimulationSnapshot` 进入本地预测回放；后续仍需要把 hitbox、timeline window、upper body 和表现事件 sequence 扩进去。
@@ -158,7 +162,7 @@ MoveStop + RunEnd playback progress
 关键原则：
 
 - 状态机不直接问 Animancer 当前动画是否播完，只读取 `PhaseCanExit` 纯数据事实。
-- 状态机不读取具体动画 key、clip 名或 alias 表。
+- 状态机不读取具体 clip 名、Animancer transition asset 或 alias 表；状态机只允许持有动画语义 key / timeline binding key，用于请求表现和匹配播放进度事实。
 - 动画层只根据 phase + gait 解析 alias key、请求 Animancer 播放并暴露播放进度快照。
 - 动画事实层把 `Manual / AfterDuration / OnAnimationEnd` 采样成 `CanExit`。
 - 烘焙运动事实只影响本帧如何移动，不决定是否切状态。
@@ -227,6 +231,7 @@ InterruptPolicy
 - Shift pressed 生成 Dodge 请求，有方向时 Directional 冲刺，无方向时 Backstep 后闪。
 - Dodge 可从 `FullBody/Locomotion/*` 进入，并通过统一状态机 transition 与请求消费输出处理输入请求。
 - Directional 完成后设置 Run latch；Backstep 完成后不强制进入 Run。
+- 轻攻击、跳跃、受击等新增 Action 条件必须先新增或复用 Action / Animation evaluator adapter，并由 validator 覆盖 condition key，不得把条件分支写回 `CharacterStateMachineRunner`。
 - Death 可强制打断任何状态。
 - Attack 只能在 cancel window 后被 Dodge 打断。
 

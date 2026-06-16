@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
@@ -314,6 +314,45 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
+        public void SnapshotComparisonDoesNotIgnoreStrictActionMotionResult()
+        {
+            CharacterRuntimeActionFacts expectedAction = new CharacterRuntimeActionFacts(
+                true,
+                ActionStateIds.Dodge,
+                false,
+                false,
+                true,
+                Vector3.forward,
+                1.1f,
+                true,
+                12);
+            CharacterRuntimeActionFacts actualAction = new CharacterRuntimeActionFacts(
+                true,
+                ActionStateIds.Dodge,
+                true,
+                false,
+                true,
+                Vector3.right,
+                0.7f,
+                false,
+                12);
+            CharacterSimulationSnapshot expected = SnapshotWithActionFacts(expectedAction);
+            CharacterSimulationSnapshot actual = SnapshotWithActionFacts(actualAction);
+
+            CharacterSimulationSnapshotComparison comparison = CharacterSimulationSnapshotComparer.Compare(
+                in expected,
+                in actual,
+                CharacterSimulationSnapshotTolerance.Default);
+
+            Assert.False(comparison.Matches);
+            Assert.That(comparison.Differences, Does.Contain("blackboard.action.completed"));
+            Assert.That(comparison.Differences, Does.Contain("blackboard.action.worldDirection"));
+            Assert.That(comparison.Differences, Does.Contain("blackboard.action.planarDistance"));
+            Assert.That(comparison.Differences, Does.Contain("blackboard.action.rotateToDirection"));
+            Assert.IsEmpty(comparison.PresentationDifferences);
+        }
+
+        [Test]
         public void RollbackScopeResolverDoesNotReferencePresentationRuntimeObjects()
         {
             string root = Path.Combine(
@@ -420,7 +459,9 @@ namespace ThirdPersonSimulation.Tests
             Assert.True(entered.HasAnimationRequest);
             Assert.AreEqual(originalNext.Snapshot.ActiveState, restoredNext.Snapshot.ActiveState);
             Assert.AreEqual(originalNext.Snapshot.StateTime, restoredNext.Snapshot.StateTime, 0.0001f);
-            Assert.AreEqual(originalNext.ActionMovementCommand.WorldDirection, restoredNext.ActionMovementCommand.WorldDirection);
+            Assert.AreEqual(
+                ResolveActionMotion(in originalNext, 0.1f).MovementCommand.WorldDirection,
+                ResolveActionMotion(in restoredNext, 0.1f).MovementCommand.WorldDirection);
             Assert.False(restoredNext.HasAnimationRequest);
         }
 
@@ -432,7 +473,7 @@ namespace ThirdPersonSimulation.Tests
         static CharacterStateMachineDefinitionSO LoadConfiguredStateMachineDefinitionAsset()
         {
             CharacterStateMachineDefinitionSO asset = AssetDatabase.LoadAssetAtPath<CharacterStateMachineDefinitionSO>(
-                "Assets/Configs/3C/Statemachine/DefaultCharacterStateMachine.asset");
+                "Assets/Configs/3C/StateMachine/FullBody/CorinFullBodyStateMachine.asset");
             Assert.NotNull(asset);
             return asset;
         }
@@ -447,7 +488,7 @@ namespace ThirdPersonSimulation.Tests
         static CharacterConfigSO LoadConfiguredCharacterConfigAsset()
         {
             CharacterConfigSO asset = AssetDatabase.LoadAssetAtPath<CharacterConfigSO>(
-                "Assets/Configs/3C/CharacterConfig.asset");
+                "Assets/Configs/3C/Character/Corin/CorinCharacterConfig.asset");
             Assert.NotNull(asset);
             Assert.NotNull(asset.StateMachine);
             Assert.NotNull(asset.Movement);
@@ -1514,6 +1555,38 @@ namespace ThirdPersonSimulation.Tests
                 0f);
         }
 
+        static CharacterSimulationSnapshot SnapshotWithActionFacts(CharacterRuntimeActionFacts actionFacts)
+        {
+            CharacterRuntimeBlackboard blackboard = new CharacterRuntimeBlackboard();
+            blackboard.WriteActionFacts(in actionFacts);
+            CharacterStateMachineSnapshot state = new CharacterStateMachineSnapshot(
+                CharacterStateIds.Dodge,
+                0.1f,
+                CharacterStateVariant.Directional,
+                string.Empty,
+                Array.Empty<CharacterStateTag>());
+
+            return new CharacterSimulationSnapshot(
+                new SimulationTick(actionFacts.SourceStep),
+                Vector3.zero,
+                0f,
+                new CharacterStateMachineRestoreState(
+                    state,
+                    actionFacts.WorldDirection,
+                    false,
+                    false,
+                    false,
+                    false),
+                false,
+                BasicMovementGait.Walk,
+                Vector3.zero,
+                BasicMovementPhase.Idle,
+                BasicMovementGait.Walk,
+                string.Empty,
+                0f,
+                blackboard.CaptureRestoreState());
+        }
+
         static CharacterSimulationSnapshot SnapshotWithAnimation(
             int tick,
             BasicMovementPhase phase,
@@ -1618,6 +1691,23 @@ namespace ThirdPersonSimulation.Tests
                 30,
                 variant,
                 direction);
+        }
+
+        static ActionMotionResolveResult ResolveActionMotion(in CharacterStateMachineFrame frame, float deltaTime)
+        {
+            DodgeActionConfigSO dodgeAction = LoadConfiguredCharacterConfigAsset().DodgeAction;
+            bool hasDodgeAction = dodgeAction != null;
+            DodgeActionConfig dodgeConfig = hasDodgeAction ? dodgeAction.ToConfig() : default;
+            ActionMotionSpec spec = DodgeActionMotionSpecAdapter.Resolve(
+                frame.ActionMotionSpec,
+                hasDodgeAction,
+                in dodgeConfig);
+            ActionMotionResolveInput input = new ActionMotionResolveInput(
+                spec,
+                deltaTime,
+                frame.TimelineFacts,
+                CharacterRuntimeActionFacts.Default);
+            return ActionMotionResolver.Resolve(in input);
         }
 
         sealed class FakeMotionExecutor : IBasicLocomotionMotionExecutor
@@ -1818,3 +1908,4 @@ namespace ThirdPersonSimulation.Tests
         }
     }
 }
+

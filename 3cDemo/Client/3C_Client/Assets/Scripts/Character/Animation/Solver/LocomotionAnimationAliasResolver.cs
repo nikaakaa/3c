@@ -56,9 +56,16 @@ namespace ThirdPersonAnimation
             string aliasKey,
             BasicMovementGait fallback)
         {
-            if (string.Equals(aliasKey, ResolveAliasKey(config, phase, BasicMovementGait.Walk), System.StringComparison.Ordinal))
+            string walkAlias = ResolveAliasKey(config, phase, BasicMovementGait.Walk);
+            string runAlias = ResolveAliasKey(config, phase, BasicMovementGait.Run);
+            bool matchesWalk = string.Equals(aliasKey, walkAlias, System.StringComparison.Ordinal);
+            bool matchesRun = string.Equals(aliasKey, runAlias, System.StringComparison.Ordinal);
+
+            if (matchesWalk && matchesRun)
+                return fallback;
+            if (matchesWalk)
                 return BasicMovementGait.Walk;
-            if (string.Equals(aliasKey, ResolveAliasKey(config, phase, BasicMovementGait.Run), System.StringComparison.Ordinal))
+            if (matchesRun)
                 return BasicMovementGait.Run;
 
             return fallback;

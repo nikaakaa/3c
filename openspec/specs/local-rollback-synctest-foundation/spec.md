@@ -153,3 +153,186 @@
 - **THEN** 系统 MUST 从历史 tick 快照恢复
 - **AND** MUST 用已记录输入重放到当前可恢复 tick
 - **AND** MUST 在 Console 输出 PASS 或包含 reason/differences 的失败诊断
+
+### Requirement: 严格逐 Tick 一致性
+系统 MUST 提供用于预测回滚验收的严格 synctest 语义。严格语义下，最终快照比较必须一致，且首个 restore/replay mismatch MUST 不存在；如果 `FirstMismatch.HasMismatch` 为 true，则本次 synctest MUST 失败，即使 end tick 快照最终重新收敛。
+
+#### Scenario: 中间分叉但最终收敛
+- **GIVEN** replay 从 tick A 恢复并重放到 tick B
+- **AND** tick K 的重放快照与历史快照不一致
+- **AND** tick B 的最终快照又与历史快照一致
+- **WHEN** 严格 synctest 计算结果
+- **THEN** 结果 MUST 失败
+- **AND** first mismatch MUST 指向 tick K
+- **AND** final comparison MUST 仍保留为匹配，供诊断说明“最终收敛但中间分叉”
+
+#### Scenario: Restore 阶段分叉
+- **GIVEN** synctest 从 tick A 快照恢复
+- **WHEN** 恢复后立即 capture 的快照与 tick A 历史快照不一致
+- **THEN** 结果 MUST 失败
+- **AND** first mismatch stage MUST 为 `Restore`
+- **AND** replay 阶段 MAY 继续执行以收集最终 comparison，但不得覆盖首个 mismatch
+
+#### Scenario: 无中间分叉且最终一致
+- **GIVEN** replay 每个可比较 tick 都与历史快照一致
+- **AND** end tick 最终快照一致
+- **WHEN** 严格 synctest 计算结果
+- **THEN** 结果 MUST 通过
+- **AND** first mismatch MUST 为空
+
+### Requirement: First mismatch 字段级诊断
+系统 MUST 为 synctest 的首个分叉输出结构化诊断，至少包含 stage、tick、restore tick、end tick、输入帧摘要、expected 快照摘要、actual 快照摘要和字段级 differences。诊断 MUST 能区分 restore mismatch、replay mismatch、缺失输入和缺失快照。
+
+#### Scenario: Replay 分叉输出输入帧
+- **GIVEN** first mismatch stage 为 `Replay`
+- **WHEN** debug runner 输出失败日志
+- **THEN** 日志 MUST 包含 mismatch tick
+- **AND** MUST 包含该 tick 的 `PredictionInputFrame` 摘要
+- **AND** MUST 包含 differences 字段列表
+
+#### Scenario: Restore 分叉不伪造输入帧
+- **GIVEN** first mismatch stage 为 `Restore`
+- **WHEN** debug runner 输出失败日志
+- **THEN** 日志 MUST 标记该 mismatch 没有关联输入帧
+- **AND** MUST 包含 restore tick 的 expected/actual 摘要
+
+#### Scenario: 缺失数据诊断
+- **GIVEN** synctest 缺少恢复快照或输入帧
+- **WHEN** runner 返回失败
+- **THEN** failure reason MUST 包含缺失的 tick
+- **AND** MUST NOT 把缺失数据伪装成 snapshot mismatch
+
+### Requirement: Soak 严格窗口验收
+系统 MUST 让本地 rollback soak 使用严格 synctest 语义。任一窗口出现 first mismatch 时，soak 结果 MUST 失败，并 MUST 保留首个失败窗口的 seed、restore tick、end tick、stage、mismatch tick 和 differences。
+
+#### Scenario: 首个窗口分叉时停止
+- **GIVEN** soak 配置 `stopOnFailure=true`
+- **AND** 第一个失败窗口存在 first mismatch
+- **WHEN** soak runner 执行
+- **THEN** runner MUST 停止后续窗口
+- **AND** result success MUST 为 false
+- **AND** first failure MUST 指向该窗口
+
+#### Scenario: 继续模式保留首个分叉
+- **GIVEN** soak 配置 `stopOnFailure=false`
+- **AND** 多个窗口存在 mismatch
+- **WHEN** soak runner 执行完全部窗口
+- **THEN** result success MUST 为 false
+- **AND** first failure MUST 保留最早发现的严格失败窗口
+
+#### Scenario: 所有窗口逐 Tick 一致
+- **GIVEN** 所有 soak 窗口没有 first mismatch
+- **AND** 所有 end tick 最终快照一致
+- **WHEN** soak runner 执行完成
+- **THEN** result success MUST 为 true
+
+### Requirement: 严格工具不新增推进路径
+系统 MUST 通过现有 `ILocalRollbackSynctestSimulation`、FullBody 主线、Locomotion 主线和 motion executor 边界执行严格验证。严格模式不得直接调用 `BasicLocomotionPipeline`、`CharacterController.Move`、Animancer runtime 或 Input System adapter。
+
+#### Scenario: 严格模式复用现有接口
+- **WHEN** synctest、soak 或 debug runner 执行 restore、advance、capture
+- **THEN** 它们 MUST 通过 `ILocalRollbackSynctestSimulation` 或既有 adapter 边界执行
+- **AND** MUST NOT 新增第二套角色推进路径
+
+#### Scenario: 静态边界验证
+- **WHEN** 运行 rollback core 静态边界测试
+- **THEN** 测试 MUST 证明 core 不引用表现层和 Unity 运行时控制对象
+- **AND** 失败信息 MUST 指出违规文件和违规类型
+
+### Requirement: 本地回滚分层 Contract
+系统 MUST 将本地回滚相关代码按 Rollback Core、Simulation Adapter、Gameplay Runtime、Simulation State、Presentation Local-Only 和 Debug Tooling 分层维护。Rollback Core MUST 只依赖纯数据和算法；Simulation Adapter MUST 负责把 core 接到现有角色主线；Presentation Local-Only MUST 不进入 gameplay rollback snapshot。
+
+#### Scenario: Core 不拥有 Unity 表现对象
+- **WHEN** 检查 Rollback Core 模块
+- **THEN** 它 MUST NOT 引用 Cinemachine、Animancer runtime、Input System adapter、`CharacterController`、`Transform` 写入逻辑或 presentation interpolator
+- **AND** 它 MUST 通过纯数据输入、快照和比较结果表达行为
+
+#### Scenario: Adapter 接入现有主线
+- **WHEN** 本地 replay 需要推进角色
+- **THEN** Simulation Adapter MUST 调用现有 FullBody 或 Locomotion 主线入口
+- **AND** 它 MUST NOT 新增第二套 movement controller、第二套状态机或直接移动真实根的旁路
+
+#### Scenario: Debug Tooling 不成为 gameplay 状态
+- **WHEN** F6/F8 工具为了保护现场捕获 presentation、visual 或 camera probe 数据
+- **THEN** 这些数据 MUST 只属于 Debug Tooling
+- **AND** 它们 MUST NOT 写入 `CharacterSimulationSnapshot`
+- **AND** 它们 MUST NOT 作为后续网络同步或 gameplay rollback 状态传播
+
+### Requirement: Debug Runner 职责拆分
+系统 MUST 将本地 synctest debug runner 的触发编排、presentation restore、timing probe 和日志格式化拆成可独立测试的 Module。F6/F8 默认 hidden 模式 MUST 在结束时恢复触发前现场，并以固定日志标记输出结果。
+
+#### Scenario: Synctest runner 只编排测试
+- **WHEN** 用户触发 F6 synctest
+- **THEN** debug runner MUST 负责选择 restore/end tick、调用 synctest core 并恢复现场
+- **AND** presentation restore、timing probe 和日志格式化 SHOULD 由独立 Module 承担
+
+#### Scenario: Hidden replay 恢复现场
+- **GIVEN** debug runner 未启用 apply replay result
+- **WHEN** hidden replay 完成或失败
+- **THEN** 系统 MUST 恢复触发前最新 live simulation snapshot
+- **AND** MUST 恢复 Debug Tooling 捕获的 presentation 现场
+- **AND** MUST NOT 将 replay 过程中间态永久留在 source、visual 或 camera target 上
+
+#### Scenario: 固定日志标记
+- **WHEN** F6/F8 输出诊断
+- **THEN** 日志 MUST 保留可搜索标记 `[rollback-synctest]`、`ROLLBACK_TIMING_PROBE`、`ROLLBACK_SOAK_RESULT` 或 `ROLLBACK_SOAK_FIRST_MISMATCH`
+- **AND** timing 或长跑相关日志 MUST 带固定标记，便于过滤刷屏日志
+
+### Requirement: Scoped 快照比较结果
+本地 synctest snapshot comparison MUST 支持 scoped comparison result。结果 MUST 至少包含 strict gameplay differences 和 presentation differences 两组字段；`Matches` 或等价 success 判定 MUST 只由 strict gameplay differences 决定。
+
+#### Scenario: 只有表现漂移时通过
+- **GIVEN** replay 后没有 strict gameplay differences
+- **AND** 存在 animation normalized time presentation drift
+- **WHEN** synctest runner 生成结果
+- **THEN** result MUST 为成功
+- **AND** result MUST 保留 presentation differences
+
+#### Scenario: Strict 差异时失败
+- **GIVEN** replay 后存在 position、yaw、状态机或 motion executor strict 差异
+- **WHEN** synctest runner 生成结果
+- **THEN** result MUST 为失败
+- **AND** failure reason MUST 不被 presentation drift 覆盖
+
+#### Scenario: First drift 不覆盖 first mismatch
+- **GIVEN** replay 区间内先出现 presentation drift，后出现 strict mismatch
+- **WHEN** runner 记录 first difference
+- **THEN** strict mismatch MUST 作为失败依据
+- **AND** presentation drift MAY 作为辅助诊断保留
+
+### Requirement: Scoped F6/F8 诊断日志
+本地 F6/F8 诊断日志 MUST 明确输出 strict differences 与 presentation differences。只有 presentation drift 时，日志 MAY 输出 PASS 但 MUST 附带 drift 字段；strict mismatch 时日志 MUST 输出 FAIL 和 strict differences。
+
+#### Scenario: F6 输出 presentation drift
+- **GIVEN** F6 replay 只有视觉动画 drift
+- **WHEN** debug runner 输出结果
+- **THEN** Console MUST 包含 `presentationDifferences` 或等价字段
+- **AND** MUST NOT 输出 strict failure
+
+#### Scenario: F6 输出 strict failure
+- **GIVEN** F6 replay 存在 gameplay mismatch
+- **WHEN** debug runner 输出结果
+- **THEN** Console MUST 包含 strict differences
+- **AND** MUST 标记 `[rollback-synctest] FAIL`
+
+#### Scenario: F8 汇总 drift
+- **GIVEN** F8 soak 的某些窗口只有 presentation drift
+- **WHEN** soak 输出结果
+- **THEN** 输出 MUST 能诊断 drift 窗口
+- **AND** MUST NOT 将其计入 strict failure
+
+### Requirement: Scope Resolver 可测试
+本地 synctest 的字段分类 MUST 通过可测试的 resolver、policy 或等价纯数据表完成。Resolver MUST 能解释当前字段属于 strict gameplay、presentation drift、predictive gameplay 或 ignored，并且 MUST 支持后续状态/动画配置扩展。
+
+#### Scenario: TurnBack 字段归类 strict
+- **WHEN** resolver 收到 TurnBack profile-driven playback progress 字段
+- **THEN** resolver MUST 返回 strict gameplay scope
+
+#### Scenario: MoveLoop 字段归类 presentation
+- **WHEN** resolver 收到 MoveLoop 视觉 playback normalized time 字段
+- **THEN** resolver MUST 返回 presentation drift scope
+
+#### Scenario: Resolver 不依赖表现层对象
+- **WHEN** 检查 resolver 模型
+- **THEN** resolver MUST NOT 保存 Animancer state、Animator、AnimationClip、TransitionAsset 或 Unity 场景对象引用
+

@@ -22,7 +22,7 @@
 - 相机相对方向计算。
 - Idle / MoveStart / MoveLoop / MoveStop 状态闭环。
 - Animancer 播放动画和过渡。
-- 位移权威统一进入 MotionDriver 或当前已审批的运动驱动层。
+- 位移权威统一进入当前运动 executor / `CharacterMotionDriver` 或已审批的运动驱动层。
 - Root Motion 策略明确：基础循环优先输入驱动；起步、急停、闪避、翻越等再考虑烘焙曲线或 Warp。
 - 配套 EditMode 测试；手动端到端验证只在交付说明中给出建议，不写成 OpenSpec 阻塞任务。
 
@@ -36,13 +36,16 @@
 - 不删除已有 log，除非用户明确要求。
 
 ## 状态机库选择
-- 后续角色业务状态机优先使用项目已安装的 `com.inspiaaa.unityhfsm`。
-- 使用前先阅读 `docs/agents/unityhfsm-usage-guide.md`。
-- 自研 `Assets/Scripts/FSM/Core/HFSM.cs` 暂作实验代码，不作为角色业务主线继续扩展，除非用户明确重新批准。
+- 当前角色业务主线使用项目自研统一分层状态机：`CharacterStateMachineDefinitionSO -> CharacterStateMachineRunner -> CharacterStateMachineFrame`。
+- `FullBody/Locomotion/...` 与 `FullBody/Action/...` 必须归属同一棵状态树，不得恢复 Locomotion、Action 两套状态机再外层缝合的分裂路径。
+- 状态机代码按 `Model / Config / Solver/Runtime|Timeline|Transition|Output|Validation` 归档，中心状态机配置资产放在 `Assets/Configs/3C/StateMachine/`。
+- 实现状态机 runtime、timeline facts 或输出解析前先读 `docs/agents/character-hierarchical-state-runtime-guide.md`。
+- `com.inspiaaa.unityhfsm` 仍在包依赖中，但当前只作为第三方库参考；未经新的 OpenSpec 审批，不得接入为正式角色状态机 engine。
+- `docs/agents/unityhfsm-usage-guide.md` 只作为历史参考和 API 对照，不作为当前角色业务主线指南。
 
 ## Root Motion 策略
 - 基础移动循环默认不使用完整 Root Motion。
-- 起步、急停、转身可参考 BBB 的离线 Root Motion 烘焙方式：把动画轨迹采样成速度曲线、旋转曲线和脚相位，再由 MotionDriver 执行。
+- 起步、急停、转身可参考 BBB 的离线 Root Motion 烘焙方式：把动画轨迹采样成速度曲线、旋转曲线和脚相位，再由当前运动 executor / `CharacterMotionDriver` 执行。
 - 闪避、翻滚、翻越、攀爬等强位移动作可使用 Warped Motion 或明确的动作位移数据。
 - 完整 `Animator.applyRootMotion` 只适合短时全身接管动作，必须有进入和退出清理。
 - 不在多个状态里随意直接调用 `CharacterController.Move(animator.deltaPosition)`，除非该路径已经被明确设计为统一运动驱动的一部分。

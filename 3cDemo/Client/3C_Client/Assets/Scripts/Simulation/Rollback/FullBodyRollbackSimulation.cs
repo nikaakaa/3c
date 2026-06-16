@@ -64,7 +64,7 @@ namespace ThirdPersonSimulation
             if (input.HasCameraBasis && locomotionController != null)
                 locomotionController.RollbackCameraBasisProvider.Override(input.CameraBasisState);
 
-            FullBodyFrameInput frameInput = FullBodyFrameInput.FromPredictionInputFrame(in input, ResolveDeltaTime());
+            CharacterFrameInput frameInput = CharacterFrameInput.FromPredictionInputFrame(in input, ResolveDeltaTime());
             fullBodyActionController.Tick(in frameInput);
         }
 

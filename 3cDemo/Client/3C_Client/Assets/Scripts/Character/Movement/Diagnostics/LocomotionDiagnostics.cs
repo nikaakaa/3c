@@ -9,10 +9,12 @@ namespace ThirdPersonMovement
     {
         const string TurnBackRootMotionLogKeyword = "TURNBACK_RM_CHAIN";
         const string TurnBackDirectionDebugChannel = "Locomotion.turnback-direction-debug";
+        static readonly LocomotionDiagnosticAdapter defaultAdapter =
+            new LocomotionDiagnosticAdapter(RuntimeDiagnosticLogCharacterSink.Instance);
 
         public static void SubmitLegacyPlayerEnabled()
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Error,
                 "legacy-player-enabled",
@@ -25,7 +27,7 @@ namespace ThirdPersonMovement
 
         public static void SubmitInputSourceMissing()
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Error,
                 "input-source-missing",
@@ -38,7 +40,7 @@ namespace ThirdPersonMovement
 
         public static void SubmitMotionExecutorMissing()
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Error,
                 "motion-executor-missing",
@@ -51,7 +53,7 @@ namespace ThirdPersonMovement
 
         public static void SubmitFormalConfigMissing(string activeStatePath, string eventId, string message)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Error,
                 eventId,
@@ -64,7 +66,7 @@ namespace ThirdPersonMovement
 
         public static void SubmitRetiredDirectTick(string activeStatePath, int step)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Error,
                 "locomotion-direct-driver-retired",
@@ -72,12 +74,38 @@ namespace ThirdPersonMovement
                 string.Empty,
                 step,
                 Time.frameCount,
-                "PlayerLocomotionController direct gameplay tick is retired. Drive locomotion through PlayerFullBodyActionController and FullBodyFramePipeline."));
+                "PlayerLocomotionController direct gameplay tick is retired. Drive locomotion through PlayerFullBodyActionController and CharacterFramePipeline."));
+        }
+
+        public static void SubmitDriverConflict(string targetName, string conflictName)
+        {
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
+                RuntimeDiagnosticLogCategory.Locomotion,
+                RuntimeDiagnosticLogLevel.Error,
+                "locomotion-driver-conflict",
+                string.Empty,
+                string.Empty,
+                0,
+                Time.frameCount,
+                $"LocomotionTickAdapter and FullBodyActionTickAdapter both target {targetName}. Disable one gameplay driver. conflict={conflictName}"));
+        }
+
+        public static void SubmitRetiredTickAdapter(string targetName)
+        {
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
+                RuntimeDiagnosticLogCategory.Locomotion,
+                RuntimeDiagnosticLogLevel.Error,
+                "locomotion-tick-adapter-retired",
+                string.Empty,
+                string.Empty,
+                0,
+                Time.frameCount,
+                $"LocomotionTickAdapter is retired and cannot drive gameplay ticks. Drive {targetName} through FullBodyActionTickAdapter."));
         }
 
         public static void LogTickSnapshot(string activeStatePath, int step, string context)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Trace,
                 "locomotion-tick-snapshot",
@@ -96,7 +124,7 @@ namespace ThirdPersonMovement
             bool runLatchBefore,
             string animationName)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Info,
                 "locomotion-run-latch-reset-after-idle",
@@ -115,7 +143,7 @@ namespace ThirdPersonMovement
             string cameraAutoTick,
             Vector3 followPosition)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Info,
                 "movement-camera-input",
@@ -138,7 +166,7 @@ namespace ThirdPersonMovement
             CharacterStateVariant stateVariant,
             bool actionCompleted)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Info,
                 "locomotion-run-latch-output-applied",
@@ -172,7 +200,7 @@ namespace ThirdPersonMovement
                 return;
             }
 
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Trace,
                 "locomotion-state-machine-output-probe",
@@ -189,7 +217,7 @@ namespace ThirdPersonMovement
             BasicMovementPhase phaseBeforeTick,
             in LocomotionDecisionFacts facts)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Trace,
                 "locomotion-decision-pipeline",
@@ -213,7 +241,7 @@ namespace ThirdPersonMovement
             in LocomotionTurnBackIntent intent,
             float observedAngle = -1f)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Trace,
                 "locomotion-turnback-intent",
@@ -240,7 +268,7 @@ namespace ThirdPersonMovement
             in StateTimelineWindowFacts timelineFacts)
         {
             Vector3 entryPlanarBasisRight = ResolvePlanarRightOrZero(entryPlanarBasisForward);
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Info,
                 "turnback-root-motion-consumed",
@@ -279,7 +307,7 @@ namespace ThirdPersonMovement
                 ? Quaternion.LookRotation(entryDirection, Vector3.up).eulerAngles.y
                 : 0f;
             bool canExit = progress.HasValidPlayback && progress.NormalizedTime >= policy.TurnCompleteNormalizedTime;
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Info,
                 "locomotion-turnback-state-policy",
@@ -305,7 +333,7 @@ namespace ThirdPersonMovement
             string aliasKey,
             in Vector3 rejectedPlanarDelta)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Warning,
                 "turnback-entry-basis-missing",
@@ -335,7 +363,7 @@ namespace ThirdPersonMovement
                 return;
 
             MovementCommand command = frame.Command;
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
+            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Info,
                 "turnback-frame-summary",
@@ -359,6 +387,11 @@ namespace ThirdPersonMovement
             return TryNormalizePlanar(forward, out Vector3 normalizedForward)
                 ? Vector3.Cross(Vector3.up, normalizedForward).normalized
                 : Vector3.zero;
+        }
+
+        static void SubmitDiagnostic(RuntimeDiagnosticLogEvent diagnosticEvent)
+        {
+            defaultAdapter.Submit(in diagnosticEvent);
         }
 
         static bool TryNormalizePlanar(Vector3 value, out Vector3 normalized)

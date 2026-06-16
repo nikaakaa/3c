@@ -1,24 +1,20 @@
-using ThirdPersonAnimation;
+using System.Collections.Generic;
 using ThirdPersonCharacterStateMachine;
 using ThirdPersonDiagnostics;
 using ThirdPersonMovement;
-using UnityEngine;
 
 namespace ThirdPersonAction
 {
     public static class FullBodyDiagnostics
     {
+        static readonly FullBodyDiagnosticAdapter defaultAdapter =
+            new FullBodyDiagnosticAdapter(RuntimeDiagnosticLogCharacterSink.Instance);
+
+        public static FullBodyDiagnosticAdapter DefaultAdapter => defaultAdapter;
+
         public static void LogPipelineSnapshot(string activePath, int step, string diagnosticSummary)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.FullBody,
-                RuntimeDiagnosticLogLevel.Trace,
-                "fullbody-frame-pipeline",
-                activePath ?? string.Empty,
-                string.Empty,
-                step,
-                Time.frameCount,
-                diagnosticSummary ?? string.Empty));
+            defaultAdapter.LogPipelineSnapshot(activePath, step, diagnosticSummary);
         }
 
         public static void LogFullBodyPathChanged(
@@ -26,15 +22,7 @@ namespace ThirdPersonAction
             in CharacterStateMachineSnapshot snapshot,
             int step)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.FullBody,
-                RuntimeDiagnosticLogLevel.Info,
-                "fullbody-path-changed",
-                snapshot.ActivePath,
-                previousSnapshot.ActivePath,
-                step,
-                Time.frameCount,
-                $"owner={snapshot.Owner.Kind} action={snapshot.ActionState.Value} stateTime={snapshot.StateTime:F3} variant={snapshot.Variant}"));
+            defaultAdapter.LogFullBodyPathChanged(in previousSnapshot, in snapshot, step);
         }
 
         public static void LogFullBodyPendingTransitionChanged(
@@ -42,15 +30,7 @@ namespace ThirdPersonAction
             in CharacterStateMachineSnapshot snapshot,
             int step)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.FullBody,
-                RuntimeDiagnosticLogLevel.Trace,
-                "fullbody-pending-transition-changed",
-                snapshot.PendingTransitionPath,
-                previousSnapshot.PendingTransitionPath,
-                step,
-                Time.frameCount,
-                $"owner={snapshot.Owner.Kind} action={snapshot.ActionState.Value}"));
+            defaultAdapter.LogFullBodyPendingTransitionChanged(in previousSnapshot, in snapshot, step);
         }
 
         public static void LogLocomotionPhaseChanged(
@@ -61,15 +41,13 @@ namespace ThirdPersonAction
             in CharacterStateMachineSnapshot snapshot,
             int step)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Info,
-                "locomotion-phase-changed",
+            defaultAdapter.LogLocomotionPhaseChanged(
                 locomotionPath,
                 lastLoggedLocomotionPath,
-                step,
-                Time.frameCount,
-                $"fromPhase={lastLoggedLocomotionPhase} toPhase={snapshot.LocomotionPhase} gait={gait} phaseTime={snapshot.StateTime:F3}"));
+                lastLoggedLocomotionPhase,
+                gait,
+                in snapshot,
+                step);
         }
 
         public static void LogActionAccepted(
@@ -78,15 +56,7 @@ namespace ThirdPersonAction
             in CharacterStateMachineFrame frame,
             int step)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Action,
-                RuntimeDiagnosticLogLevel.Info,
-                "action-accepted",
-                snapshot.ActivePath,
-                previousSnapshot.ActivePath,
-                step,
-                Time.frameCount,
-                $"owner={snapshot.Owner.Kind} action={snapshot.ActionState.Value} variant={snapshot.Variant} animation={(frame.HasAnimationRequest ? frame.AnimationRequest.Key.Value : string.Empty)}"));
+            defaultAdapter.LogActionAccepted(in previousSnapshot, in snapshot, in frame, step);
         }
 
         public static void LogFullBodyTickSnapshot(
@@ -94,15 +64,7 @@ namespace ThirdPersonAction
             int step,
             string context)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.FullBody,
-                RuntimeDiagnosticLogLevel.Trace,
-                "fullbody-tick-snapshot",
-                snapshot.ActivePath,
-                string.Empty,
-                step,
-                Time.frameCount,
-                context));
+            defaultAdapter.LogFullBodyTickSnapshot(in snapshot, step, context);
         }
 
         public static void LogAnimationTickSnapshot(
@@ -110,28 +72,27 @@ namespace ThirdPersonAction
             int step,
             string context)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Animation,
-                RuntimeDiagnosticLogLevel.Trace,
-                "animation-tick-snapshot",
-                activePath,
-                string.Empty,
-                step,
-                Time.frameCount,
-                context));
+            defaultAdapter.LogAnimationTickSnapshot(activePath, step, context);
         }
 
         public static void LogStateMachineDefinitionInvalid(string message)
         {
-            RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.FullBody,
-                RuntimeDiagnosticLogLevel.Error,
-                "state-machine-definition-invalid",
-                string.Empty,
-                string.Empty,
-                0,
-                Time.frameCount,
-                "Character state machine definition is invalid:\n" + message));
+            defaultAdapter.LogStateMachineDefinitionInvalid(message);
+        }
+
+        public static void LogTimelineFactsTrace(StateTimelineFactsTrace trace)
+        {
+            defaultAdapter.LogTimelineFactsTrace(trace);
+        }
+
+        public static void LogTransitionConditionTraces(IReadOnlyList<CharacterStateTransitionConditionTrace> traces)
+        {
+            defaultAdapter.LogTransitionConditionTraces(traces);
+        }
+
+        public static void LogDriverConflict(string targetName, string conflictName)
+        {
+            defaultAdapter.LogDriverConflict(targetName, conflictName);
         }
     }
 }

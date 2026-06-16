@@ -209,17 +209,27 @@ namespace ThirdPersonCharacterStateMachine
             bool exitedToLocomotion,
             int sourceStep)
         {
-            ActionMovementCommand command = frame.ActionMovementCommand;
+            ActionMotionResolveResult result = ActionMotionResolveResult.None(sourceStep);
+            return FromStateFrame(in frame, in result, exitedToLocomotion, sourceStep);
+        }
+
+        public static CharacterRuntimeActionFacts FromStateFrame(
+            in CharacterStateMachineFrame frame,
+            in ActionMotionResolveResult actionMotionResult,
+            bool exitedToLocomotion,
+            int sourceStep)
+        {
+            ActionMovementCommand command = actionMotionResult.MovementCommand;
             return new CharacterRuntimeActionFacts(
                 frame.Owner.IsAction,
                 frame.ActionState,
-                frame.ActionCompleted,
+                actionMotionResult.ActionCompleted,
                 exitedToLocomotion,
-                frame.HasActionMovement,
+                actionMotionResult.HasActionMovement,
                 command.WorldDirection,
                 command.PlanarDistance,
                 command.RotateToDirection,
-                sourceStep);
+                actionMotionResult.SourceStep);
         }
 
         static Vector3 NormalizePlanarOrZero(Vector3 value)

@@ -1,10 +1,11 @@
-using System.IO;
+﻿using System.IO;
 using Animancer;
 using Animancer.TransitionLibraries;
 using NUnit.Framework;
 using ThirdPersonAnimation;
 using ThirdPersonCharacterStateMachine;
 using ThirdPersonMovement;
+using UnityEditor;
 using UnityEngine;
 
 namespace Tests.Editor
@@ -334,6 +335,52 @@ namespace Tests.Editor
             }
         }
 
+        [Test]
+        public void SharedTurnBackAliasKeepsFallbackGaitForFootPhaseProfile()
+        {
+            RunLocomotionAnimationConfigSO config = ScriptableObject.CreateInstance<RunLocomotionAnimationConfigSO>();
+            LocomotionFootPhaseProfileSO turnBack = CreateTurnBackProfile();
+            try
+            {
+                config.SetFootPhaseProfileBindings(new LocomotionPhaseFootPhaseProfileBinding(
+                    BasicMovementPhase.TurnBack,
+                    BasicMovementGait.Run,
+                    "Locomotion.Turn.Back",
+                    turnBack));
+
+                BasicMovementGait gait = LocomotionAnimationAliasResolver.ResolveGaitForAlias(
+                    config,
+                    BasicMovementPhase.TurnBack,
+                    "Locomotion.Turn.Back",
+                    BasicMovementGait.Run);
+                LocomotionFootPhaseProfileSO resolved = config.ResolveFootPhaseProfile(
+                    BasicMovementPhase.TurnBack,
+                    gait,
+                    "Locomotion.Turn.Back");
+
+                Assert.AreEqual(BasicMovementGait.Run, gait);
+                Assert.AreSame(turnBack, resolved);
+            }
+            finally
+            {
+                Object.DestroyImmediate(config);
+                Object.DestroyImmediate(turnBack);
+            }
+        }
+
+        [Test]
+        public void CorinConfigResolvesStartAndLoopFootPhaseProfiles()
+        {
+            RunLocomotionAnimationConfigSO config = AssetDatabase.LoadAssetAtPath<RunLocomotionAnimationConfigSO>(
+                "Assets/Configs/3C/Animation/Corin/Locomotion/CorinLocomotionAnimationConfig.asset");
+
+            Assert.NotNull(config);
+            AssertResolvesProfile(config, BasicMovementPhase.MoveStart, BasicMovementGait.Walk, "WalkStart");
+            AssertResolvesProfile(config, BasicMovementPhase.MoveLoop, BasicMovementGait.Walk, "WalkLoop");
+            AssertResolvesProfile(config, BasicMovementPhase.MoveStart, BasicMovementGait.Run, "RunStart");
+            AssertResolvesProfile(config, BasicMovementPhase.MoveLoop, BasicMovementGait.Run, "RunLoop");
+        }
+
         static LocomotionFootPhaseMatchRequest CreateMatchRequest(LocomotionFootPhase phase)
         {
             return new LocomotionFootPhaseMatchRequest(
@@ -365,6 +412,22 @@ namespace Tests.Editor
                 false,
                 result,
                 hasRequest);
+        }
+
+        static void AssertResolvesProfile(
+            RunLocomotionAnimationConfigSO config,
+            BasicMovementPhase phase,
+            BasicMovementGait gait,
+            string aliasKey)
+        {
+            LocomotionFootPhaseProfileSO profile = config.ResolveFootPhaseProfile(phase, gait, aliasKey);
+
+            Assert.NotNull(profile, $"{phase}/{gait}/{aliasKey}");
+            Assert.True(profile.EnablePhaseMatching);
+            Assert.AreEqual(phase, profile.Phase);
+            Assert.AreEqual(gait, profile.Gait);
+            Assert.AreEqual(aliasKey, profile.AliasKey);
+            Assert.GreaterOrEqual(profile.Markers.Length, 2);
         }
 
         static LocomotionFootPhaseProfileSO CreateRunLoopProfile(bool enabled = true)
@@ -424,3 +487,4 @@ namespace Tests.Editor
         }
     }
 }
+

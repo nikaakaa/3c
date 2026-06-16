@@ -77,14 +77,16 @@ namespace ThirdPersonMovement
             int currentStep,
             in LocomotionDecisionFacts facts,
             in CharacterInputRequestFact inputRequest,
-            in CharacterRuntimeBlackboardSnapshot blackboardBeforeTick)
+            in CharacterRuntimeBlackboardSnapshot blackboardBeforeTick,
+            StateTimelineWindowFacts currentTimelineFacts = default)
         {
             return new CharacterStateMachineContext(
                 input.DeltaTime,
                 currentStep,
                 in facts,
                 inputRequest,
-                blackboardBeforeTick);
+                blackboardBeforeTick,
+                currentTimelineFacts);
         }
     }
 }

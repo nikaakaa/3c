@@ -330,7 +330,7 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
-        public void FullBodyFrameInputSanitizesInvalidStepDeltaAndAxes()
+        public void CharacterFrameInputSanitizesInvalidStepDeltaAndAxes()
         {
             BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(
                 -1f,
@@ -338,7 +338,7 @@ namespace ThirdPersonSimulation.Tests
                 new Vector2(float.NegativeInfinity, 0.5f),
                 true);
 
-            FullBodyFrameInput frameInput = FullBodyFrameInput.FromLocomotionInput(-4, in input);
+            CharacterFrameInput frameInput = CharacterFrameInput.FromLocomotionInput(-4, in input);
 
             Assert.AreEqual(0, frameInput.Step);
             Assert.AreEqual(0f, frameInput.DeltaTime);
@@ -349,16 +349,16 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
-        public void FullBodyFrameContextStartsUncompleted()
+        public void CharacterFrameContextStartsUncompleted()
         {
-            FullBodyFrameInput input = FullBodyFrameInput.FromLocomotionInput(
+            CharacterFrameInput input = CharacterFrameInput.FromLocomotionInput(
                 3,
                 new BasicLocomotionInputSnapshot(0.016f, Vector2.up, Vector2.zero));
 
-            FullBodyFrameContext context = new FullBodyFrameContext(input);
-            FullBodyFrameResult result = new FullBodyFrameResult(in context);
+            CharacterFrameContext context = new CharacterFrameContext(input);
+            CharacterFrameResult result = new CharacterFrameResult(in context);
 
-            Assert.AreEqual(FullBodyFramePipelineStep.None, context.CurrentStep);
+            Assert.AreEqual(CharacterFramePipelineStep.None, context.CurrentStep);
             Assert.False(result.Success);
             Assert.False(result.SnapshotEventsReady);
             Assert.AreEqual(3, result.Step);

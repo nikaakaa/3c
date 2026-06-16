@@ -201,10 +201,13 @@ UpdateInputBuffer
   更新预输入请求
 
 GameplayDecision
-  FullBodyFramePipeline 准备 Locomotion facts、执行 Action request gate、推进统一状态机
+  FullBodyFramePipeline 准备 Locomotion facts 和 current timeline facts、执行 Action request gate、通过受控 condition evaluator 推进统一状态机
+  request gate、transition evaluator 和 output resolver 消费同一个 current timeline facts trace；transition 预判只使用 projected facts trace
 
 BuildMotion
-  FullBodyFramePipeline 将状态机输出构建为 Locomotion/Action 运动命令
+  FullBodyFramePipeline 读取状态机输出的 Action motion spec
+  调用 ActionMotionResolver 生成 ActionMovementCommand / completed / run latch 派生
+  同阶段继续构建 Locomotion frame
 
 ExecuteMotion
   只通过当前 owner 的 motion executor 提交运动
@@ -217,6 +220,21 @@ WriteSnapshotAndEvents
 ```
 
 这说明预测回滚应该是 tick runner 外围的编排层，不是新 gameplay 主线。
+
+Action facts 的 strict gameplay 来源：
+
+```text
+CharacterStateMachineFrame
+  提供 action state、variant、locked direction、state time、source step 和 Action motion spec
+
+ActionMotionResolver
+  提供本帧 movement command、has movement、completed、run latch 派生和 diagnostic summary
+
+CharacterRuntimeBlackboard.Action
+  只写入 frame + resolver result 的纯数据事实
+```
+
+Rollback comparison 必须比较 action completed、movement direction、planar distance 和 rotate-to-direction 等 strict action motion result 字段；不得通过忽略 action facts 让 replay 通过。
 
 ## 目标架构
 
@@ -429,11 +447,10 @@ currentNode
 currentState
 currentVariant
 actionWorldDirection
+turnBackWorldDirection
+turnBackEntryBasisForward
 pendingTransitionPath
 animationRequestedForState
-consumeRequestOnStateEnter
-resetRunLatchOnStateEnter
-setRunLatchOnTransition
 StateTime
 ```
 
@@ -441,10 +458,11 @@ StateTime
 
 ```text
 状态名一样，但动画请求重复发
-输入消费重复发生
 动作方向丢失
-Run latch 漂移
+TurnBack 锁定方向丢失
 ```
+
+输入消费、Run latch 写入和离开状态的一次性输出不再作为 runner 的长期 restore 字段保存。它们由状态生命周期在实际 Enter / Exit 帧写入 `CharacterStateMachineFrameBuilder`，再由 `CharacterStateOutputResolver` 合并为单个 `CharacterStateMachineFrame`。
 
 运动执行器也要恢复：
 
@@ -631,6 +649,10 @@ Tests.Editor.InputRequestBufferTests
 
 截至 2026-06-14，rollback 验收口径改为严格 first mismatch：`LocalRollbackSynctestRunner`、F6 debug runner 和 F8 soak runner 只要发现 restore/replay 过程中任一 tick 的 `FirstMismatch.HasMismatch=true`，本次检查就必须失败，即使最终 end tick 快照又重新收敛。Console 搜索 `rollback-synctest`、`first-mismatch`、`differences` 可以定位首个分叉；F8 搜索 `ROLLBACK_SOAK_RESULT` 和 `ROLLBACK_SOAK_FIRST_MISMATCH`。F7 latency/reconciliation 需要区分 `PredictionCorrection` 与 `ReplayNondeterminism`：前者表示预测输入和确认输入不同但 resolved input replay 确定，后者表示同一段 resolved input 重放仍分叉，必须按 rollback 状态缺失或非确定性处理。
 
+截至 2026-06-15，transition condition 求值已拆成受控 adapter collection。回滚和 synctest 只需要保存状态机 snapshot、runtime blackboard facts、输入历史和运动结果；condition trace 是本帧可诊断输出，不作为恢复状态权威。新增 Attack/Jump/HitReact 条件时必须新增对应 evaluator adapter 和测试，不能为了回滚或网络预测在 runner 外另建状态选择路径。
+
+截至 2026-06-15，FullBody 帧内 timeline facts 权威收口到 `FullBodyFramePipeline`：current facts 在 request gate 前生成并进入 `FullBodyFrameResult` / `CharacterStateMachineFrame` trace，projected facts 只用于 transition evaluation，target facts 只表示切换后目标状态进入帧。回滚 characterization 需要比较 current facts 的 state、source step、elapsed seconds 和 active facts，不能把表现层播放进度漂移当作逻辑 facts 分歧，也不能让 request gate 和 transition 在 replay 时各自重新采样 current facts。
+
 当前 full-body replay 已覆盖：
 
 ```text
@@ -730,7 +752,7 @@ ring buffer 裁剪
 
 ```text
 CharacterStateMachineRunner.LoadSnapshot
-MotionDriver restore adapter
+motion executor restore adapter
 Animation fact restore adapter
 ```
 

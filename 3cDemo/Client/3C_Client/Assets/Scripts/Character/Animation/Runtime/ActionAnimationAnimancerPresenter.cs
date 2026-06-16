@@ -59,12 +59,6 @@ namespace ThirdPersonAnimation
                 return false;
             }
 
-            if (!request.HasAnimationReference)
-            {
-                LogPlayback("action-animation-missing-binding", RuntimeDiagnosticLogLevel.Warning, in request, null);
-                return false;
-            }
-
             if (animancer == null)
                 animancer = GetComponent<AnimancerComponent>();
 
@@ -76,16 +70,16 @@ namespace ThirdPersonAnimation
                 return false;
             }
 
-            AnimancerState nextState = PlayBinding(request.Binding);
+            AnimancerState nextState = TryPlayKey(request.Key);
             if (nextState == null)
             {
                 LogPlayback("action-animation-play-failed", RuntimeDiagnosticLogLevel.Warning, in request, null);
                 return false;
             }
 
+            nextState.NormalizedTime = 0f;
             currentKey = request.Key;
             currentState = nextState;
-            ApplyPlaybackParameters(in request, nextState);
             LogPlayback("action-animation-played", RuntimeDiagnosticLogLevel.Info, in request, nextState);
             return true;
         }
@@ -124,25 +118,6 @@ namespace ThirdPersonAnimation
             return true;
         }
 
-        AnimancerState PlayBinding(CharacterStateAnimationBinding binding)
-        {
-            if (binding.TransitionAsset is TransitionAssetBase asset && asset.IsValid)
-                return animancer.Play(asset.GetTransition());
-
-            if (!string.IsNullOrWhiteSpace(binding.TransitionLibraryKey))
-            {
-                StringReference key = StringReference.Get(binding.TransitionLibraryKey);
-                AnimancerState libraryState = animancer.TryPlay(key);
-                if (libraryState != null)
-                    return libraryState;
-            }
-
-            if (binding.Clip != null)
-                return animancer.Play(binding.Clip, binding.FadeDuration);
-
-            return null;
-        }
-
         AnimancerState TryPlayKey(ActionAnimationKey key)
         {
             if (!key.IsValid)
@@ -162,15 +137,6 @@ namespace ThirdPersonAnimation
 
             ApplyRootMotionPolicy();
             return true;
-        }
-
-        static void ApplyPlaybackParameters(in CharacterStateAnimationRequest request, AnimancerState state)
-        {
-            if (state == null)
-                return;
-
-            state.Speed = request.Binding.Speed;
-            state.Time = request.Binding.StartTime;
         }
 
         void ApplyRootMotionPolicy()
@@ -204,7 +170,7 @@ namespace ThirdPersonAnimation
                 currentKey.Value,
                 request.SourceStep,
                 Time.frameCount,
-                $"key={request.Key.Value} previousKey={currentKey.Value} sourceStep={request.SourceStep} clip={(binding.Clip != null ? binding.Clip.name : "null")} transition={(binding.TransitionAsset != null ? binding.TransitionAsset.name : "null")} libraryKey={binding.TransitionLibraryKey} debugName={binding.DebugName} fade={binding.FadeDuration:F3} speed={binding.Speed:F3} start={binding.StartTime:F3} currentAnimation={CurrentAnimationName} nextAnimation={AnimationName(state)} normalized={(state != null ? state.NormalizedTime : 0f):F3} rootMotionDisabled={disableAnimatorRootMotion}"));
+                $"key={request.Key.Value} previousKey={currentKey.Value} sourceStep={request.SourceStep} timelineBinding={binding.TimelineBindingKey} debugName={binding.DebugName} currentAnimation={CurrentAnimationName} nextAnimation={AnimationName(state)} normalized={(state != null ? state.NormalizedTime : 0f):F3} rootMotionDisabled={disableAnimatorRootMotion}"));
         }
 
         void LogClear(ActionAnimationKey previousKey, AnimancerState previousState)

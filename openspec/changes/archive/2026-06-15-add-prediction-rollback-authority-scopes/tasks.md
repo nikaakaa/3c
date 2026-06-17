@@ -57,13 +57,13 @@
 - [x] 7.5 运行 OpenSpec 校验：`openspec validate add-prediction-rollback-authority-scopes --strict --no-interactive`。
 
 ## 8. Manual Verification
-- [ ] 8.1 Play Mode 触发 F6，确认只有 WalkLoop/Action animation drift 时输出 PASS + presentationDifferences。
-- [ ] 8.2 Play Mode 制造或复现 TurnBack playback/profile 分叉，确认 F6 仍 FAIL。
-- [ ] 8.3 Play Mode 触发 F8 soak，确认 presentation drift 不作为 failure，strict mismatch 仍停止或报告。
-- [ ] 8.4 手动验证 WASD、Run、TurnBack、Dodge、Action 现有视觉行为不回退。
-- [ ] 8.5 若失败，复制 `Simulation.synctest-first-mismatch`、`Simulation.synctest-fail-detail`、`Simulation.rollback-soak-result` 日志。
+- [x] 8.1 Play Mode 触发 F6，确认只有 WalkLoop/Action animation drift 时输出 PASS + presentationDifferences。
+- [x] 8.2 Play Mode 制造或复现 TurnBack playback/profile 分叉，确认 F6 仍 FAIL。
+- [x] 8.3 Play Mode 触发 F8 soak，确认 presentation drift 不作为 failure，strict mismatch 仍停止或报告。
+- [x] 8.4 手动验证 WASD、Run、TurnBack、Dodge、Action 现有视觉行为不回退。
+- [x] 8.5 若失败，复制 `Simulation.synctest-first-mismatch`、`Simulation.synctest-fail-detail`、`Simulation.rollback-soak-result` 日志。
 
 ## 9. Completion
 - [x] 9.1 确认没有新增第二套角色控制器、第二套 replay 或未审批 fallback。
 - [x] 9.2 确认没有删除现有诊断日志。
-- [ ] 9.3 确认 tasks.md 只在全部完成后统一勾选。
+- [x] 9.3 确认 tasks.md 只在全部完成后统一勾选。

@@ -67,7 +67,7 @@ TBD - created by archiving change add-prediction-rollback-authority-scopes. Upda
 
 #### Scenario: Scope 不产生第二控制器
 - **WHEN** 某状态被标记为 `PresentationDrift`
-- **THEN** replay MUST 仍走同一 FullBody/Locomotion 主线
+- **THEN** replay MUST 仍走同一 Character/Locomotion 主线
 - **AND** MUST NOT 创建单独的表现层 replay controller
 
 #### Scenario: Strict 状态不绕过主线

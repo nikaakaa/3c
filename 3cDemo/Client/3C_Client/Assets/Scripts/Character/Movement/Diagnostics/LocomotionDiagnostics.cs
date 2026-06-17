@@ -12,19 +12,6 @@ namespace ThirdPersonMovement
         static readonly LocomotionDiagnosticAdapter defaultAdapter =
             new LocomotionDiagnosticAdapter(RuntimeDiagnosticLogCharacterSink.Instance);
 
-        public static void SubmitLegacyPlayerEnabled()
-        {
-            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Error,
-                "legacy-player-enabled",
-                string.Empty,
-                string.Empty,
-                0,
-                Time.frameCount,
-                "Legacy Player path is enabled. Player locomotion is disabled to avoid double movement input."));
-        }
-
         public static void SubmitInputSourceMissing()
         {
             SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
@@ -62,45 +49,6 @@ namespace ThirdPersonMovement
                 0,
                 Time.frameCount,
                 message));
-        }
-
-        public static void SubmitRetiredDirectTick(string activeStatePath, int step)
-        {
-            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Error,
-                "locomotion-direct-driver-retired",
-                activeStatePath,
-                string.Empty,
-                step,
-                Time.frameCount,
-                "PlayerLocomotionController direct gameplay tick is retired. Drive locomotion through PlayerFullBodyActionController and CharacterFramePipeline."));
-        }
-
-        public static void SubmitDriverConflict(string targetName, string conflictName)
-        {
-            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Error,
-                "locomotion-driver-conflict",
-                string.Empty,
-                string.Empty,
-                0,
-                Time.frameCount,
-                $"LocomotionTickAdapter and FullBodyActionTickAdapter both target {targetName}. Disable one gameplay driver. conflict={conflictName}"));
-        }
-
-        public static void SubmitRetiredTickAdapter(string targetName)
-        {
-            SubmitDiagnostic(new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.Locomotion,
-                RuntimeDiagnosticLogLevel.Error,
-                "locomotion-tick-adapter-retired",
-                string.Empty,
-                string.Empty,
-                0,
-                Time.frameCount,
-                $"LocomotionTickAdapter is retired and cannot drive gameplay ticks. Drive {targetName} through FullBodyActionTickAdapter."));
         }
 
         public static void LogTickSnapshot(string activeStatePath, int step, string context)

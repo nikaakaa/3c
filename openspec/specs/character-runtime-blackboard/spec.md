@@ -13,10 +13,10 @@
 - **AND** 黑板核心模型 MUST NOT 暴露 `object` 值字典作为主要读写接口
 
 #### Scenario: 黑板不是第二状态机
-- **WHEN** 统一状态机 runner 推进状态
+- **WHEN** 状态图 runtime 推进状态
 - **THEN** 黑板 MUST NOT 自行执行状态转移
-- **AND** 黑板 MUST NOT 保存一套独立于统一状态机的 active state path 作为状态权威
-- **AND** 统一状态机 snapshot 仍 MUST 是逻辑状态权威
+- **AND** 黑板 MUST NOT 保存一套独立于状态图 runtime 的 active state path 作为状态权威
+- **AND** 状态图 snapshot 仍 MUST 是逻辑状态权威
 
 ### Requirement: 黑板纯数据边界
 系统 SHALL 保证角色运行时黑板不保存 Unity 场景实例、Animancer 运行时对象或输入系统对象。黑板只能保存可测试、可快照、可恢复的纯数据。
@@ -83,13 +83,14 @@
 - **AND** restore MUST NOT 写入角色 Transform
 
 ### Requirement: 状态机读取黑板快照
-系统 SHALL 允许统一状态机 context 读取黑板 snapshot 中的纯数据 facts，用于后续方向起步、脚步相位、转身和转角等条件判断。状态机 runner 自身 SHALL NOT 成为黑板字段维护器。
+系统 SHALL 允许状态图 context 读取黑板 snapshot 中的纯数据 facts，用于后续方向起步、脚步相位、转身和转角等条件判断。状态机 runner 自身 SHALL NOT 成为黑板字段维护器。context 组装 MUST 来自角色级 runtime、状态机 runtime 或 Locomotion/Action 窄模块，而不是旧 FullBody controller。
 
 #### Scenario: Context 承载黑板 snapshot
-- **WHEN** `PlayerFullBodyActionController` 或 locomotion runtime 组装 `CharacterStateMachineContext`
+- **WHEN** `CharacterFrameRuntimeController`、`CharacterStateMachineRuntime`、Locomotion runtime 或 Action runtime 组装 `CharacterStateMachineContext`
 - **THEN** context MAY 携带黑板 snapshot 或等价只读 facts view
 - **AND** transition evaluator MUST 只读取该只读 facts view
 - **AND** evaluator MUST NOT 读取黑板可变实例
+- **AND** context 组装 MUST NOT 依赖 `PlayerFullBodyActionController`
 
 #### Scenario: Runner 不维护黑板
 - **WHEN** `CharacterStateMachineRunner` tick 一帧
@@ -119,7 +120,7 @@
 - **AND** MUST NOT 在本变更中改变现有 Dodge 动画配置入口
 
 ### Requirement: 黑板可测试和可诊断
-系统 SHALL 为角色运行时黑板提供自动测试和运行时诊断路径，证明黑板不会破坏统一状态机、动画表现层和运动执行端口的既有边界。
+系统 SHALL 为角色运行时黑板提供自动测试和运行时诊断路径，证明黑板不会破坏状态图 runtime、动画表现层和运动执行端口的既有边界。
 
 #### Scenario: 自动测试覆盖默认值和写入规则
 - **WHEN** 运行 EditMode 测试
@@ -216,7 +217,7 @@
 - **AND** Presenter MUST NOT 通过黑板请求状态切换
 
 #### Scenario: 状态机不维护脚相位
-- **WHEN** 统一状态机 runner 推进状态
+- **WHEN** 状态图 runtime 推进状态
 - **THEN** runner MUST NOT 直接计算或改写脚相位 facts
 - **AND** runner MAY 读取黑板 snapshot 中已有的脚相位 facts 作为条件或输出输入
 
@@ -251,3 +252,25 @@
 - **THEN** restore MUST 只恢复事实值
 - **AND** MUST NOT 因 scope 分类播放动画、移动角色或切换状态
 
+### Requirement: Action Facts 来自 Action Motion Resolver Result
+角色运行时黑板 MUST 从状态机 frame 和 Action motion resolver result 写入 Action facts。黑板写入 MUST NOT 从状态输出解析层重新计算动作位移、完成状态或 run latch 派生。
+
+#### Scenario: 写入动作位移事实
+- **GIVEN** Action motion resolver 产出本帧动作运动结果
+- **WHEN** FullBody 管线写入 runtime blackboard
+- **THEN** Action facts MUST 使用 resolver result 中的 movement command、has movement、completed 和 source step
+- **AND** MUST NOT 调用 `CharacterStateOutputResolver` 重算本帧距离
+
+#### Scenario: 无动作规格写入空事实
+- **GIVEN** 当前状态没有 action motion spec
+- **WHEN** FullBody 管线写入 runtime blackboard
+- **THEN** Action facts MUST 表示无 active action movement
+- **AND** MUST NOT 使用上一帧 resolver result 伪造当前帧动作位移
+
+### Requirement: Action Facts 保持纯数据
+Action facts MUST 保持可复制纯数据，不得持有 motion executor、Transform、CharacterController、Animator、Animancer state、AnimationClip 或 UnityEngine.Object。
+
+#### Scenario: 静态边界验证
+- **WHEN** 检查 runtime blackboard 与 action facts 源码
+- **THEN** 源码 MUST NOT 保存 Unity 场景实例引用
+- **AND** MUST NOT 保存动画 runtime 对象

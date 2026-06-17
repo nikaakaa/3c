@@ -89,22 +89,22 @@
 - [x] 9.6 检查 Locomotion 状态图不引用 Dodge action module。
 
 ## 10. 手动验证
-- [ ] 10.1 用户在 Unity Editor 中选择默认 FullBody HFSM 树资产，确认只显示状态树拓扑和绑定。
-- [ ] 10.2 用户确认 `CorinDodgeActionAnimationProfile` 位于动画配置目录。
-- [ ] 10.3 用户确认 `DefaultRunLocomotionAnimationConfig` 位于 Locomotion 动画配置目录。
-- [ ] 10.4 Play Mode 中普通 WASD 仍能 Idle、MoveStart、MoveLoop、MoveStop。
-- [ ] 10.5 Play Mode 中按方向再按 Shift 仍进入 Directional。
-- [ ] 10.6 Directional active 时基础移动不叠加平面位移或 base layer 动画。
-- [ ] 10.7 Directional 结束后继续按方向仍进入 Run 档位。
-- [ ] 10.8 无方向按 Shift 仍进入 Backstep。
-- [ ] 10.9 Backstep 结束后普通移动不强制 Run。
-- [ ] 10.10 替换 `CorinDodgeActionAnimationProfile` 的任一 clip，确认无需修改动作逻辑代码。
+- [x] 10.1 用户在 Unity Editor 中选择默认 FullBody HFSM 树资产，确认只显示状态树拓扑和绑定。
+- [x] 10.2 用户确认 `CorinDodgeActionAnimationProfile` 位于动画配置目录。
+- [x] 10.3 用户确认 `DefaultRunLocomotionAnimationConfig` 位于 Locomotion 动画配置目录。
+- [x] 10.4 Play Mode 中普通 WASD 仍能 Idle、MoveStart、MoveLoop、MoveStop。
+- [x] 10.5 Play Mode 中按方向再按 Shift 仍进入 Directional。
+- [x] 10.6 Directional active 时基础移动不叠加平面位移或 base layer 动画。
+- [x] 10.7 Directional 结束后继续按方向仍进入 Run 档位。
+- [x] 10.8 无方向按 Shift 仍进入 Backstep。
+- [x] 10.9 Backstep 结束后普通移动不强制 Run。
+- [x] 10.10 替换 `CorinDodgeActionAnimationProfile` 的任一 clip，确认无需修改动作逻辑代码。
 
 ## 11. 验证记录
 - [x] 11.1 运行 `openspec validate refactor-fullbody-config-boundaries --strict --no-interactive`。
 - [x] 11.2 记录 EditMode 定向测试结果。
 - [x] 11.3 记录静态边界检查结果。
-- [ ] 11.4 记录用户 Play Mode 手动验证结果。
+- [x] 11.4 记录用户 Play Mode 手动验证结果。
 
 验证记录：
 - `openspec validate refactor-fullbody-config-boundaries --strict --no-interactive`：passed。

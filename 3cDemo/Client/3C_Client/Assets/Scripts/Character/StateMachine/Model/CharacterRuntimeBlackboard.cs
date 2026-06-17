@@ -10,12 +10,14 @@ namespace ThirdPersonCharacterStateMachine
         CharacterRuntimeLocomotionFacts locomotionFacts = CharacterRuntimeLocomotionFacts.Default;
         CharacterRuntimeActionFacts actionFacts = CharacterRuntimeActionFacts.Default;
         CharacterRuntimeAnimationFacts animationFacts = CharacterRuntimeAnimationFacts.Default;
+        LocomotionPreemptionFact locomotionPreemptionFact = LocomotionPreemptionFact.None;
         CharacterRuntimeDebugFacts debugFacts = CharacterRuntimeDebugFacts.Default;
 
         public CharacterRuntimeBlackboardSnapshot Snapshot => new CharacterRuntimeBlackboardSnapshot(
             locomotionFacts,
             actionFacts,
             animationFacts,
+            locomotionPreemptionFact,
             debugFacts);
 
         public CharacterRuntimeBlackboardRestoreState CaptureRestoreState()
@@ -28,6 +30,7 @@ namespace ThirdPersonCharacterStateMachine
             locomotionFacts = CharacterRuntimeLocomotionFacts.Default;
             actionFacts = CharacterRuntimeActionFacts.Default;
             animationFacts = CharacterRuntimeAnimationFacts.Default;
+            locomotionPreemptionFact = LocomotionPreemptionFact.None;
             debugFacts = CharacterRuntimeDebugFacts.Default;
         }
 
@@ -41,6 +44,7 @@ namespace ThirdPersonCharacterStateMachine
             locomotionFacts = snapshot.Locomotion;
             actionFacts = snapshot.Action;
             animationFacts = snapshot.Animation;
+            locomotionPreemptionFact = snapshot.LocomotionPreemption;
             debugFacts = snapshot.Debug;
         }
 
@@ -61,6 +65,12 @@ namespace ThirdPersonCharacterStateMachine
             animationFacts = facts;
             debugFacts = CharacterRuntimeDebugFacts.Record("Animation", facts.SourceStep);
         }
+
+        public void WriteLocomotionPreemptionFact(in LocomotionPreemptionFact fact)
+        {
+            locomotionPreemptionFact = fact;
+            debugFacts = CharacterRuntimeDebugFacts.Record("LocomotionPreemption", fact.SourceStep);
+        }
     }
 
     public readonly struct CharacterRuntimeBlackboardSnapshot
@@ -70,23 +80,91 @@ namespace ThirdPersonCharacterStateMachine
             CharacterRuntimeActionFacts action,
             CharacterRuntimeAnimationFacts animation,
             CharacterRuntimeDebugFacts debug)
+            : this(
+                locomotion,
+                action,
+                animation,
+                LocomotionPreemptionFact.None,
+                debug)
+        {
+        }
+
+        public CharacterRuntimeBlackboardSnapshot(
+            CharacterRuntimeLocomotionFacts locomotion,
+            CharacterRuntimeActionFacts action,
+            CharacterRuntimeAnimationFacts animation,
+            LocomotionPreemptionFact locomotionPreemption,
+            CharacterRuntimeDebugFacts debug)
         {
             Locomotion = locomotion;
             Action = action;
             Animation = animation;
+            LocomotionPreemption = locomotionPreemption;
             Debug = debug;
         }
 
         public CharacterRuntimeLocomotionFacts Locomotion { get; }
         public CharacterRuntimeActionFacts Action { get; }
         public CharacterRuntimeAnimationFacts Animation { get; }
+        public LocomotionPreemptionFact LocomotionPreemption { get; }
         public CharacterRuntimeDebugFacts Debug { get; }
 
         public static CharacterRuntimeBlackboardSnapshot Empty => new CharacterRuntimeBlackboardSnapshot(
             CharacterRuntimeLocomotionFacts.Default,
             CharacterRuntimeActionFacts.Default,
             CharacterRuntimeAnimationFacts.Default,
+            LocomotionPreemptionFact.None,
             CharacterRuntimeDebugFacts.Default);
+    }
+
+    public enum LocomotionPreemptionReason
+    {
+        None = 0,
+        FullBodyActionStarted = 1
+    }
+
+    public readonly struct LocomotionPreemptionFact
+    {
+        public LocomotionPreemptionFact(
+            CharacterStateId sourceLocomotionState,
+            ActionStateId sourceActionId,
+            int sourceStep,
+            LocomotionPreemptionReason reason)
+        {
+            SourceLocomotionState = sourceLocomotionState;
+            SourceActionId = sourceActionId.IsValid ? sourceActionId : ActionStateIds.None;
+            SourceStep = Mathf.Max(0, sourceStep);
+            Reason = reason;
+        }
+
+        public CharacterStateId SourceLocomotionState { get; }
+        public ActionStateId SourceActionId { get; }
+        public int SourceStep { get; }
+        public LocomotionPreemptionReason Reason { get; }
+        public bool HasPreemption =>
+            SourceLocomotionState.IsValid &&
+            SourceActionId.IsValid &&
+            SourceActionId != ActionStateIds.None &&
+            Reason != LocomotionPreemptionReason.None;
+
+        public bool MatchesSource(CharacterStateId stateId)
+        {
+            return HasPreemption && SourceLocomotionState == stateId;
+        }
+
+        public static LocomotionPreemptionFact None => default;
+
+        public static LocomotionPreemptionFact FullBodyActionStarted(
+            CharacterStateId sourceLocomotionState,
+            ActionStateId sourceActionId,
+            int sourceStep)
+        {
+            return new LocomotionPreemptionFact(
+                sourceLocomotionState,
+                sourceActionId,
+                sourceStep,
+                LocomotionPreemptionReason.FullBodyActionStarted);
+        }
     }
 
     public readonly struct CharacterRuntimeBlackboardRestoreState
@@ -220,8 +298,9 @@ namespace ThirdPersonCharacterStateMachine
             int sourceStep)
         {
             ActionMovementCommand command = actionMotionResult.MovementCommand;
+            bool hasActionState = frame.ActionState.IsValid && frame.ActionState != ActionStateIds.None;
             return new CharacterRuntimeActionFacts(
-                frame.Owner.IsAction,
+                hasActionState,
                 frame.ActionState,
                 actionMotionResult.ActionCompleted,
                 exitedToLocomotion,
@@ -230,6 +309,29 @@ namespace ThirdPersonCharacterStateMachine
                 command.PlanarDistance,
                 command.RotateToDirection,
                 actionMotionResult.SourceStep);
+        }
+
+        public static CharacterRuntimeActionFacts FromActionMotionResult(
+            in ActionMotionResolveResult actionMotionResult,
+            bool exitedToLocomotion,
+            int sourceStep)
+        {
+            ActionMovementCommand command = actionMotionResult.MovementCommand;
+            bool hasActionState =
+                actionMotionResult.HasSpec &&
+                !actionMotionResult.ActionCompleted &&
+                actionMotionResult.Spec.ActionState.IsValid &&
+                actionMotionResult.Spec.ActionState != ActionStateIds.None;
+            return new CharacterRuntimeActionFacts(
+                hasActionState,
+                hasActionState ? actionMotionResult.Spec.ActionState : ActionStateIds.None,
+                actionMotionResult.ActionCompleted,
+                exitedToLocomotion,
+                actionMotionResult.HasActionMovement,
+                command.WorldDirection,
+                command.PlanarDistance,
+                command.RotateToDirection,
+                sourceStep);
         }
 
         static Vector3 NormalizePlanarOrZero(Vector3 value)
@@ -339,17 +441,35 @@ namespace ThirdPersonCharacterStateMachine
             float normalizedTime,
             bool hasValidPlayback,
             bool isEnded)
+            : this(
+                key,
+                normalizedTime,
+                hasValidPlayback,
+                isEnded,
+                ActionAnimationPlaybackIntent.Invalid)
+        {
+        }
+
+        public ActionAnimationPlaybackProgress(
+            ActionAnimationKey key,
+            float normalizedTime,
+            bool hasValidPlayback,
+            bool isEnded,
+            ActionAnimationPlaybackIntent playbackIntent)
         {
             Key = key;
             NormalizedTime = normalizedTime < 0f ? 0f : normalizedTime;
             HasValidPlayback = hasValidPlayback && key.IsValid;
             IsEnded = HasValidPlayback && isEnded;
+            PlaybackIntent = playbackIntent;
         }
 
         public ActionAnimationKey Key { get; }
         public float NormalizedTime { get; }
         public bool HasValidPlayback { get; }
         public bool IsEnded { get; }
+        public ActionAnimationPlaybackIntent PlaybackIntent { get; }
+        public bool HasPlaybackIntent => PlaybackIntent.IsValid;
 
         public static ActionAnimationPlaybackProgress Invalid =>
             new ActionAnimationPlaybackProgress(default, 0f, false, false);

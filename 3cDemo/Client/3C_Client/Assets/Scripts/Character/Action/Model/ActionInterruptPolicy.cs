@@ -15,7 +15,8 @@ namespace ThirdPersonAction
             float windowEnd = 0f,
             bool force = false,
             string windowId = "",
-            string requiredFactId = "")
+            string requiredFactId = "",
+            ActionRequestType requestType = ActionRequestType.None)
         {
             FromState = fromState;
             TargetState = targetState;
@@ -26,10 +27,12 @@ namespace ThirdPersonAction
             WindowId = windowId ?? string.Empty;
             RequiredFactId = new TimelineFactId(requiredFactId);
             Force = force;
+            RequestType = requestType;
         }
 
         public ActionStateId FromState { get; }
         public ActionStateId TargetState { get; }
+        public ActionRequestType RequestType { get; }
         public int MinPriority { get; }
         public ActionInterruptTimingRule TimingRule { get; }
         public float WindowStart { get; }
@@ -42,7 +45,9 @@ namespace ThirdPersonAction
 
         public bool Matches(ActionInterruptContext context, ActionInterruptRequest request)
         {
-            return FromState.Matches(context.CurrentState) && TargetState.Matches(request.TargetState);
+            return FromState.Matches(context.CurrentState) &&
+                   TargetState.Matches(request.TargetState) &&
+                   (RequestType == ActionRequestType.None || RequestType == request.RequestType);
         }
     }
 }

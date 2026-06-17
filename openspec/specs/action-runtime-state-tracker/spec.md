@@ -1,7 +1,7 @@
 # action-runtime-state-tracker Specification
 
 ## Purpose
-定义 Action runtime facts 的记录、同步和边界，确保当前 Action 状态由统一状态机快照派生而非形成第二状态权威。
+定义 Action runtime facts 的记录、同步和边界，确保当前 Action 状态由 Action lifecycle 或等价运行时事实表达，而不是形成第二角色状态权威。
 ## Requirements
 ### Requirement: Action 运行时状态快照
 系统 MUST 提供纯数据 Action 运行时状态快照，用于表达当前 action state、elapsed seconds、current resistance 和 current tick。快照 MUST NOT 依赖 Unity 场景对象、Animancer、Animator、AnimationClip、CharacterController、Input System 或 BBB 运行时类型。
@@ -92,12 +92,12 @@
 - **THEN** tracker current state MUST 进入 decision target state
 
 ### Requirement: 现有运行时边界保持
-系统 MUST 保持当前统一状态机、输入缓冲和动画 Presenter 边界。Action runtime tracker MAY 作为纯数据事实 helper 保留，但 MUST NOT 接管基础移动，不得改变 `FullBody/Locomotion/Idle|MoveStart|MoveLoop|MoveStop` transition，也不得成为 `MoveStop -> MoveStart` 的必需依赖。
+系统 MUST 保持当前 Locomotion 状态图、输入缓冲和动画 Presenter 边界。Action runtime tracker MAY 作为纯数据事实 helper 保留，但 MUST NOT 接管基础移动，不得改变 `Locomotion.Idle|Locomotion.MoveStart|Locomotion.MoveLoop|Locomotion.MoveStop` transition，也不得成为 `MoveStop -> MoveStart` 的必需依赖。
 
 #### Scenario: Locomotion 不依赖 Action tracker
-- **WHEN** 当前统一状态机处理移动输入和停止输入
-- **THEN** `FullBody/Locomotion/Idle|MoveStart|MoveLoop|MoveStop` 流转 MUST 继续由统一状态机 transition 处理
-- **AND** 统一状态机 runner MUST NOT 依赖 Action runtime tracker
+- **WHEN** 当前 Locomotion 状态图处理移动输入和停止输入
+- **THEN** `Locomotion.Idle|Locomotion.MoveStart|Locomotion.MoveLoop|Locomotion.MoveStop` 流转 MUST 继续由 Locomotion 状态图 transition 处理
+- **AND** 状态图 runtime MUST NOT 依赖 Action runtime tracker
 
 #### Scenario: 输入缓冲不被本变更消费
 - **WHEN** 本变更实现完成
@@ -125,28 +125,36 @@
 - **THEN** 行为 MUST 不因新增 Action runtime tracker 发生变化
 
 ### Requirement: Action facts 同步权威
-系统 MUST 以统一角色状态机快照作为当前 FullBody Action state 的权威。`ActionRuntimeStateTracker` 或等价 helper MAY 保存当前 Action facts，但 MUST 由统一状态机快照同步或派生，不得独立驱动状态、自动退出、消费输入或决定 transition。
+
+系统 MUST 以 Action domain facts、action instance state 或等价纯数据 action snapshot 作为当前 Action state 的直接事实来源。`ActionRuntimeStateTracker` 或等价 helper MAY 保存当前 Action facts，但 MUST 由 Action request resolver、Action lifecycle 或 Character frame pipeline 明确更新；它不得独立驱动角色帧、消费输入、执行运动、播放动画或决定 Locomotion 状态。
 
 #### Scenario: Locomotion 派生为空 Action
-- **GIVEN** 统一状态机当前 owner 为 Locomotion
-- **WHEN** FullBody Action 请求门面构建仲裁上下文
+- **GIVEN** 当前没有 active action instance
+- **WHEN** Action 请求门面构建仲裁上下文
 - **THEN** 当前 action state MUST 为 `Action.None`
 - **AND** current resistance MUST 为 0
+- **AND** 该事实 MUST NOT 依赖 `FullBodyOwnerKind.Locomotion`
 
 #### Scenario: Dodge 派生为 Action.Dodge
-- **GIVEN** 统一状态机当前 owner 为 Action
-- **AND** 当前 action state 为 `Action.Dodge`
+- **GIVEN** Action domain 当前 active action 为 `Action.Dodge`
 - **AND** Dodge 动作配置 resistance 为 40
-- **WHEN** FullBody Action 请求门面构建仲裁上下文
+- **WHEN** Action 请求门面构建仲裁上下文
 - **THEN** 当前 action state MUST 为 `Action.Dodge`
 - **AND** current resistance MUST 为 40
+- **AND** 该事实 MUST NOT 依赖 `Action.Dodge` 诊断路径
 
 #### Scenario: tracker 不成为第二状态机
 - **WHEN** 检查 `ActionRuntimeStateTracker` 或等价 helper 的运行时接入
-- **THEN** 它 MUST NOT 调用统一状态机 transition
+- **THEN** 它 MUST NOT 调用 Locomotion 状态 transition
 - **AND** MUST NOT 调用动画播放 API
 - **AND** MUST NOT 直接读取或消费输入缓冲
 - **AND** MUST NOT 因 duration、动画结束或隐藏规则自动退出当前 action
+
+#### Scenario: Action facts 通过角色帧提交
+- **WHEN** Action domain facts 在 tick N 发生变化
+- **THEN** Action submitter MUST 将变化作为纯数据提交给 Character frame pipeline
+- **AND** runtime facts 写入 MUST 仍发生在角色级 output apply 阶段
+- **AND** Action facts MUST NOT 绕过 Character frame pipeline 写入 Unity 场景对象
 
 ### Requirement: 当前 resistance 事实来源
 系统 MUST 通过动作配置或等价纯数据表解析当前 Action resistance。解析过程 MUST NOT 依赖 Animator、Animancer、AnimationClip、CharacterController、Input System、Cinemachine 或 BBB 运行时类型。

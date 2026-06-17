@@ -59,15 +59,15 @@
 - [x] 9.5 记录所有验证输出中的错误、警告和已知历史警告。
 
 ## 10. Unity 手动验证
-- [ ] 10.1 打开当前演示场景并进入 Play Mode。
-- [ ] 10.2 按 W，确认角色沿 FreeLook 当前平面 forward 移动。
-- [ ] 10.3 按 A/S/D，确认角色沿相机相对方向移动。
-- [ ] 10.4 移动时转动鼠标，确认 WASD 方向跟随新的 FreeLook 平面方向。
-- [ ] 10.5 确认角色朝移动方向旋转。
-- [ ] 10.6 确认 Idle、MoveStart、MoveLoop、MoveStop 表现仍能触发。
-- [ ] 10.7 松开输入，确认角色回到 Idle。
-- [ ] 10.8 检查 Inspector 中手动配置的 FreeLook 轨道、Follow、LookAt 和轴配置没有被代码覆盖。
-- [ ] 10.9 若发现动画、相机或位移必须新增未审批路径才能通过，停止实施并回到 OpenSpec。
+- [x] 10.1 打开当前演示场景并进入 Play Mode。
+- [x] 10.2 按 W，确认角色沿 FreeLook 当前平面 forward 移动。
+- [x] 10.3 按 A/S/D，确认角色沿相机相对方向移动。
+- [x] 10.4 移动时转动鼠标，确认 WASD 方向跟随新的 FreeLook 平面方向。
+- [x] 10.5 确认角色朝移动方向旋转。
+- [x] 10.6 确认 Idle、MoveStart、MoveLoop、MoveStop 表现仍能触发。
+- [x] 10.7 松开输入，确认角色回到 Idle。
+- [x] 10.8 检查 Inspector 中手动配置的 FreeLook 轨道、Follow、LookAt 和轴配置没有被代码覆盖。
+- [x] 10.9 若发现动画、相机或位移必须新增未审批路径才能通过，停止实施并回到 OpenSpec。
 
 ## 11. 收尾
 - [x] 11.1 更新本任务清单为真实完成状态。

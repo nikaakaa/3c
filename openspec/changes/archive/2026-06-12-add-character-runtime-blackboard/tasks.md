@@ -37,13 +37,13 @@
 - [x] 6.7 运行 `dotnet build .\Assembly-CSharp-Editor.csproj --no-restore /m:1 /nr:false /p:UseSharedCompilation=false /clp:ErrorsOnly`。
 
 ## 7. 手动验证
-- [ ] 7.1 Unity Play Mode 下验证 WASD Idle、MoveStart、MoveLoop、RunEnd、WalkEnd 表现不回退。
-- [ ] 7.2 验证 Shift 跑步后松开移动仍播放 RunEnd 并回 Idle。
-- [ ] 7.3 验证 Dodge 后无输入回 Idle，Dodge 后有输入回 MoveLoop，连续 Dodge 后 RunLoop 能恢复。
-- [ ] 7.4 在日志中确认黑板 snapshot/facts 可见，且没有新增第二状态机入口。
+- [x] 7.1 Unity Play Mode 下验证 WASD Idle、MoveStart、MoveLoop、RunEnd、WalkEnd 表现不回退。
+- [x] 7.2 验证 Shift 跑步后松开移动仍播放 RunEnd 并回 Idle。
+- [x] 7.3 验证 Dodge 后无输入回 Idle，Dodge 后有输入回 MoveLoop，连续 Dodge 后 RunLoop 能恢复。
+- [x] 7.4 在日志中确认黑板 snapshot/facts 可见，且没有新增第二状态机入口。
 - [x] 7.5 不运行 Unity batchmode。
 
 ## 8. 文档和归档准备
 - [x] 8.1 更新相关 Path/架构文档，说明黑板是 typed facts blackboard，不是 BBB RuntimeData。
 - [x] 8.2 在完成实现后运行 `openspec validate add-character-runtime-blackboard --strict --no-interactive`。
-- [ ] 8.3 用户手动验证通过后再归档。
+- [x] 8.3 用户手动验证通过后再归档。

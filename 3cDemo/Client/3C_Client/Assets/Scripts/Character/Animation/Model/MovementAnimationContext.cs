@@ -68,6 +68,33 @@ namespace ThirdPersonAnimation
             bool hasTurnBackMotionPolicy,
             LocomotionFootPhaseMatchResult entryFootPhaseMatchResult,
             bool hasEntryFootPhaseMatchRequest)
+            : this(
+                phase,
+                gait,
+                hasMoveIntent,
+                inputStrength,
+                worldDirection,
+                planarSpeed,
+                turnBackMotionPolicy,
+                hasTurnBackMotionPolicy,
+                entryFootPhaseMatchResult,
+                hasEntryFootPhaseMatchRequest,
+                null)
+        {
+        }
+
+        public MovementAnimationContext(
+            BasicMovementPhase phase,
+            BasicMovementGait gait,
+            bool hasMoveIntent,
+            float inputStrength,
+            Vector3 worldDirection,
+            float planarSpeed,
+            TurnBackMotionPolicy turnBackMotionPolicy,
+            bool hasTurnBackMotionPolicy,
+            LocomotionFootPhaseMatchResult entryFootPhaseMatchResult,
+            bool hasEntryFootPhaseMatchRequest,
+            RunLocomotionAnimationConfigSO animationConfig)
         {
             Phase = phase;
             Gait = gait;
@@ -81,6 +108,7 @@ namespace ThirdPersonAnimation
             EntryFootPhaseMatchResult = hasEntryFootPhaseMatchRequest
                 ? entryFootPhaseMatchResult
                 : LocomotionFootPhaseMatchResult.NotRequested;
+            AnimationConfig = animationConfig;
         }
 
         public BasicMovementPhase Phase { get; }
@@ -92,6 +120,7 @@ namespace ThirdPersonAnimation
         public TurnBackMotionPolicy TurnBackMotionPolicy { get; }
         public bool HasTurnBackMotionPolicy { get; }
         public LocomotionFootPhaseMatchResult EntryFootPhaseMatchResult { get; }
+        public RunLocomotionAnimationConfigSO AnimationConfig { get; }
         public bool HasEntryFootPhaseMatchRequest { get; }
         public bool HasEntryStartNormalizedTimeOverride => HasEntryFootPhaseMatchRequest && EntryFootPhaseMatchResult.IsValid;
     }

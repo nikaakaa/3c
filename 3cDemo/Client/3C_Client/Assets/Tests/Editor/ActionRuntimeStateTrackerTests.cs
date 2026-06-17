@@ -253,11 +253,11 @@ namespace ThirdPersonAction.Tests
             string movementRoot = Path.Combine(Application.dataPath, "Scripts/Character/Movement");
             string stateMachineRoot = Path.Combine(Application.dataPath, "Scripts/Character/StateMachine");
             string stateMachine = string.Join("\n", Directory.GetFiles(stateMachineRoot, "*.cs", SearchOption.AllDirectories).Select(File.ReadAllText));
-            string controller = File.ReadAllText(Path.Combine(movementRoot, "Runtime/PlayerLocomotionController.cs"));
-            string presenter = File.ReadAllText(Path.Combine(Application.dataPath, "Scripts/Character/Animation/Runtime/BasicLocomotionAnimancerPresenter.cs"));
+            string locomotionRuntime = File.ReadAllText(Path.Combine(movementRoot, "Runtime/LocomotionRuntimeModule.cs"));
+            string presenter = File.ReadAllText(Path.Combine(Application.dataPath, "Scripts/Character/Animation/Runtime/CharacterAnimancerPresenter.cs"));
 
             Assert.That(stateMachine, Does.Not.Contain("ActionRuntimeStateTracker"));
-            Assert.That(controller, Does.Not.Contain("ActionRuntimeStateTracker"));
+            Assert.That(locomotionRuntime, Does.Not.Contain("ActionRuntimeStateTracker"));
             Assert.That(presenter, Does.Not.Contain("ActionRuntimeStateTracker"));
         }
 

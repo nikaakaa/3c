@@ -117,14 +117,14 @@
 
 ## 13. 手动验证
 > 待用户在 Unity Editor 中手动验证；自动化测试已通过，下面步骤用于最终体感和日志确认。
-- [ ] 13.1 在 Unity Editor 打开 Sandbox 场景。
-- [ ] 13.2 启用 Locomotion 与 Animation 诊断日志。
-- [ ] 13.3 操作角色进入 RunLoop。
-- [ ] 13.4 从前跑切反向输入触发 TurnBack。
-- [ ] 13.5 观察 TurnBack 退出后 RunLoop 不出现明显左右脚交错糊脚。
-- [ ] 13.6 查看日志包含 TurnBack exit foot phase。
-- [ ] 13.7 查看日志包含 RunLoop phase matched start normalized time。
-- [ ] 13.8 再测普通 Idle/MoveStart/MoveLoop/MoveStop 不受 phase matching override 影响。
+- [x] 13.1 在 Unity Editor 打开 Sandbox 场景。
+- [x] 13.2 启用 Locomotion 与 Animation 诊断日志。
+- [x] 13.3 操作角色进入 RunLoop。
+- [x] 13.4 从前跑切反向输入触发 TurnBack。
+- [x] 13.5 观察 TurnBack 退出后 RunLoop 不出现明显左右脚交错糊脚。
+- [x] 13.6 查看日志包含 TurnBack exit foot phase。
+- [x] 13.7 查看日志包含 RunLoop phase matched start normalized time。
+- [x] 13.8 再测普通 Idle/MoveStart/MoveLoop/MoveStop 不受 phase matching override 影响。
 
 ## 14. 验证命令
 - [x] 14.1 运行 `openspec validate add-locomotion-foot-phase-matching --strict --no-interactive`。

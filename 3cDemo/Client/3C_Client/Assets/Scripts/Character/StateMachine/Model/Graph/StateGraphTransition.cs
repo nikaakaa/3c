@@ -37,6 +37,12 @@ namespace ThirdPersonCharacterStateMachine
                 return currentNode.Value.StartsWith(prefix, StringComparison.Ordinal);
             }
 
+            if (source.EndsWith(".*", StringComparison.Ordinal))
+            {
+                string prefix = source.Substring(0, source.Length - 1);
+                return currentNode.Value.StartsWith(prefix, StringComparison.Ordinal);
+            }
+
             return string.Equals(source, currentNode.Value, StringComparison.Ordinal);
         }
     }

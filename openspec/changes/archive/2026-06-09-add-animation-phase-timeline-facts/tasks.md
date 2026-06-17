@@ -1,4 +1,4 @@
-﻿## 0. 审批前检查
+## 0. 审批前检查
 - [x] 0.1 确认 `add-locomotion-animation-phase-exit-policy` 已完成用户验证或明确允许作为依赖继续实现。
 - [x] 0.2 确认本变更不实现可视化 Timeline 编辑器。
 - [x] 0.3 确认本变更不新增 `Walk` 逻辑状态。
@@ -146,17 +146,17 @@
 - [x] 15.4 记录 Unity MCP 可用，并已运行同名测试；未使用 Unity batchmode。
 
 ## 16. 手动验证
-- [ ] 16.1 打开当前 3C 演示场景。
-- [ ] 16.2 确认角色绑定 `DefaultRunLocomotionAnimationConfig` 或等价 Run 配置。
-- [ ] 16.3 确认 `MoveStop` 配置为 `OnAnimationEnd`。
-- [ ] 16.4 进入 Play Mode。
-- [ ] 16.5 按住移动键进入 `MoveLoop`。
-- [ ] 16.6 松开移动键，观察播放 `RunEnd`。
-- [ ] 16.7 不再输入，确认 `RunEnd` 播放结束后进入 `Idle`。
-- [ ] 16.8 再次移动后松开，在 `RunEnd` 未播完时重新输入移动。
-- [ ] 16.9 确认角色立即进入 `MoveStart` 或等价起步阶段。
-- [ ] 16.10 确认中途输入不等待 `RunEnd` 播完。
-- [ ] 16.11 确认没有额外角色控制器或第二套状态机参与。
+- [x] 16.1 打开当前 3C 演示场景。
+- [x] 16.2 确认角色绑定 `DefaultRunLocomotionAnimationConfig` 或等价 Run 配置。
+- [x] 16.3 确认 `MoveStop` 配置为 `OnAnimationEnd`。
+- [x] 16.4 进入 Play Mode。
+- [x] 16.5 按住移动键进入 `MoveLoop`。
+- [x] 16.6 松开移动键，观察播放 `RunEnd`。
+- [x] 16.7 不再输入，确认 `RunEnd` 播放结束后进入 `Idle`。
+- [x] 16.8 再次移动后松开，在 `RunEnd` 未播完时重新输入移动。
+- [x] 16.9 确认角色立即进入 `MoveStart` 或等价起步阶段。
+- [x] 16.10 确认中途输入不等待 `RunEnd` 播完。
+- [x] 16.11 确认没有额外角色控制器或第二套状态机参与。
 
 ## 17. 文档更新
 - [x] 17.1 更新 `docs/agents/character-animation-state-roadmap.md` 当前基线。
@@ -165,7 +165,7 @@
 - [x] 17.4 明确后续 `OnMarker`、cancel window、IK window 需要单独 OpenSpec。
 
 ## 18. 完成状态
-- [ ] 18.1 确认所有实现任务完成后再更新本清单。
-- [ ] 18.2 确认自动测试、静态验证和手动验证结果已记录。
-- [ ] 18.3 将所有已完成任务标记为 `- [x]`。
+- [x] 18.1 确认所有实现任务完成后再更新本清单。
+- [x] 18.2 确认自动测试、静态验证和手动验证结果已记录。
+- [x] 18.3 将所有已完成任务标记为 `- [x]`。
 

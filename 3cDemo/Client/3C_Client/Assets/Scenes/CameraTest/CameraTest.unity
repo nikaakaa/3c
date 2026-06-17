@@ -331,8 +331,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 72ece51f2901e7445ab60da3685d6b5f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   m_ShowDebugText: 0
   m_ShowCameraFrustum: 1
   m_IgnoreTimeScale: 0
@@ -365,8 +365,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   m_RenderShadows: 1
   m_RequiresDepthTextureOption: 2
   m_RequiresOpaqueTextureOption: 2
@@ -479,7 +479,6 @@ GameObject:
   - component: {fileID: 1641292773}
   - component: {fileID: 1641292772}
   - component: {fileID: 1641292771}
-  - component: {fileID: 1641292775}
   - component: {fileID: 1641292774}
   - component: {fileID: 1641292776}
   m_Layer: 0
@@ -590,33 +589,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9cd9b7f214069924e8a2a7f3ac7a8bfe, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   rotationRoot: {fileID: 1641292770}
   applyGravity: 1
   gravity: -20
   groundedVerticalVelocity: -2
---- !u!114 &1641292775
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1641292769}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d9147fe7289b8de4091089d2785daa85, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  inputSourceBehaviour: {fileID: 1641292776}
-  motionExecutorBehaviour: {fileID: 1641292774}
-  cameraController: {fileID: 8057016014541010202}
-  locomotionPresenter: {fileID: 0}
-  config: {fileID: 11400000, guid: 1f4ac8a4ba65c6648afa001a33f4e022, type: 2}
-  stateGraphConfig: {fileID: 11400000, guid: f3bb0b90921cfcd4db67f9a27c511fd0, type: 2}
-  autoUpdate: 1
-  debugCameraLog: 1
-  debugCameraLogInterval: 0.1
 --- !u!114 &1641292776
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -627,13 +605,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 64115ba33e5c5e54f8911c4e9e0fa9b9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  inputActions: {fileID: -944628639613478452, guid: ea97b05a2d14465449e741dc51ff44fe,
-    type: 3}
-  actionMapName: Player
-  moveActionName: Move
-  lookActionName: Look
+  m_Name:
+  m_EditorClassIdentifier:
+  inputActions: {fileID: 0}
+  actionMapName:
+  moveActionName:
+  lookActionName:
   enableInputOnEnable: 1
 --- !u!134 &1678860395
 PhysicMaterial:
@@ -641,7 +618,7 @@ PhysicMaterial:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: 
+  m_Name:
   dynamicFriction: 0.6
   staticFriction: 0.6
   bounciness: 0
@@ -752,8 +729,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   m_Version: 3
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -866,7 +843,7 @@ PrefabInstance:
     - target: {fileID: 5809153073416674383, guid: dc40cf040b4978a4a97b58692002db85,
         type: 3}
       propertyPath: followAnchorSource
-      value: 
+      value:
       objectReference: {fileID: 1641292770}
     - target: {fileID: 5919837085699730752, guid: dc40cf040b4978a4a97b58692002db85,
         type: 3}
@@ -888,8 +865,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fcb4e1f57b5735a4b91d80084e21f5eb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

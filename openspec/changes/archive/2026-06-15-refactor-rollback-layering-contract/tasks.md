@@ -46,5 +46,5 @@
 - [x] 7.3 运行 Editor `dotnet build`。
 - [x] 7.4 运行相关 EditMode tests：`LocalRollbackSynctestFoundationTests`、`FullBodyRollbackReplayTests`、`PresentationTransformInterpolatorTests`。
 - [x] 7.5 运行 rollback 工具脚本自检：`Test-RollbackWiring.ps1`、`Test-RollbackHitlScripts.ps1`、`Test-UnityEditorCompileLog.ps1`。
-- [ ] 7.6 手动 Play Mode 触发 F6，确认 hidden 模式画面不永久变化，并复制最近一次 `[rollback-synctest]` 结果。
-- [ ] 7.7 手动 Play Mode 触发 F8，确认 `ROLLBACK_SOAK_RESULT` 可搜索且 hidden 模式画面不永久变化。
+- [x] 7.6 手动 Play Mode 触发 F6，确认 hidden 模式画面不永久变化，并复制最近一次 `[rollback-synctest]` 结果。
+- [x] 7.7 手动 Play Mode 触发 F8，确认 `ROLLBACK_SOAK_RESULT` 可搜索且 hidden 模式画面不永久变化。

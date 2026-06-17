@@ -1,4 +1,4 @@
-﻿## 1. Scope 确认
+## 1. Scope 确认
 
 - [x] 1.1 读取本 change 的 `proposal.md`、`design.md` 和 spec delta。
 - [x] 1.2 确认本变更只实现纯逻辑 `ActionInterruptArbiter`。
@@ -144,7 +144,7 @@
 ## 10. 手动验证
 
 - [x] 10.1 在 Unity Test Runner 中确认 `ActionInterruptArbiterTests` 全部通过。
-- [ ] 10.2 打开当前演示场景，确认 WASD、Look、Idle、MoveStart、MoveLoop、MoveStop 行为没有因为新增模块变化。
-- [ ] 10.3 确认 `MoveStop` 中重新输入仍立即进入 `MoveStart`。
+- [x] 10.2 打开当前演示场景，确认 WASD、Look、Idle、MoveStart、MoveLoop、MoveStop 行为没有因为新增模块变化。
+- [x] 10.3 确认 `MoveStop` 中重新输入仍立即进入 `MoveStart`。
 - [x] 10.4 确认没有新增需要手动挂到角色 prefab 的仲裁组件。
 - [x] 10.5 确认没有新增第二套角色控制器或第二条基础移动入口。

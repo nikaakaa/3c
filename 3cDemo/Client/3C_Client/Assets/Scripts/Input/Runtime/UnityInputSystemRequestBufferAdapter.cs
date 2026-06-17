@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using ThirdPersonCharacterConfig;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonInput
@@ -23,6 +24,34 @@ namespace ThirdPersonInput
         public string ActionMapName { get => actionMapName; set { actionMapName = value; dodgeAction = null; } }
         public string DodgeActionName { get => dodgeActionName; set { dodgeActionName = value; dodgeAction = null; } }
         public bool AdvanceStepOnUpdate { get => advanceStepOnUpdate; set => advanceStepOnUpdate = value; }
+
+        public void ApplyFormalInputConfig(CharacterConfigSO config)
+        {
+            if (config == null)
+                return;
+
+            InputAction previousAction = dodgeAction;
+            InputActionAsset formalInputActions = config.InputActions;
+            string formalActionMapName = ResolveActionMapName(config.DodgeInputAction);
+            string formalDodgeActionName = ResolveActionName(config.DodgeInputAction);
+            bool changed = inputActions != formalInputActions ||
+                           actionMapName != formalActionMapName ||
+                           dodgeActionName != formalDodgeActionName;
+
+            if (changed)
+            {
+                if (enableInputOnEnable && isActiveAndEnabled)
+                    SetActionEnabled(previousAction, false);
+
+                inputActions = formalInputActions;
+                actionMapName = formalActionMapName;
+                dodgeActionName = formalDodgeActionName;
+                dodgeAction = null;
+            }
+
+            if (enableInputOnEnable && isActiveAndEnabled)
+                SetActionEnabled(ResolveDodgeAction(), true);
+        }
 
         void Reset()
         {
@@ -137,6 +166,17 @@ namespace ThirdPersonInput
                 action.Enable();
             else
                 action.Disable();
+        }
+
+        static string ResolveActionName(InputActionReference reference)
+        {
+            return reference != null && reference.action != null ? reference.action.name : string.Empty;
+        }
+
+        static string ResolveActionMapName(InputActionReference reference)
+        {
+            InputAction action = reference != null ? reference.action : null;
+            return action != null && action.actionMap != null ? action.actionMap.name : string.Empty;
         }
     }
 }

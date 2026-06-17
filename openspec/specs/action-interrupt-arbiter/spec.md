@@ -97,12 +97,12 @@
 - **THEN** 该请求 MUST 不得成为 accepted decision 的 selected request
 
 ### Requirement: 与现有 Locomotion 边界
-系统 MUST 保持当前统一状态机对 `FullBody/Locomotion/Idle|MoveStart|MoveLoop|MoveStop` 的流转职责。动作打断仲裁模块 MAY 作为 FullBody Action 请求进入统一状态机前的纯数据准入门，但 MUST NOT 接管当前 `MoveStop -> MoveStart` 或 `MoveStop -> Idle` 路径。
+系统 MUST 保持当前 Locomotion 状态图对 `Locomotion.Idle|Locomotion.MoveStart|Locomotion.MoveLoop|Locomotion.MoveStop` 的流转职责。动作打断仲裁模块 MAY 作为 Action 请求进入 Action lifecycle 或 Locomotion 状态图前的纯数据准入门，但 MUST NOT 接管当前 `MoveStop -> MoveStart` 或 `MoveStop -> Idle` 路径。
 
 #### Scenario: MoveStop 重新输入仍由状态图处理
 - **GIVEN** 当前基础移动阶段为 `MoveStop`
 - **WHEN** 本帧重新出现移动输入
-- **THEN** `MoveStop -> MoveStart` MUST 继续由统一角色逻辑状态机 transition 处理
+- **THEN** `MoveStop -> MoveStart` MUST 继续由 Locomotion 状态图 transition 处理
 - **AND** 本仲裁模块 MUST NOT 成为该流转的必需依赖
 
 #### Scenario: Presenter 不依赖仲裁器
@@ -110,11 +110,11 @@
 - **THEN** Presenter MUST NOT 调用动作打断仲裁器
 - **AND** Presenter MUST NOT 决定业务打断是否允许
 
-#### Scenario: 动作请求准入发生在状态机之前
-- **GIVEN** 输入缓冲中存在 Dodge、Attack 或等价 FullBody Action 请求
-- **WHEN** 请求需要进入统一状态机
+#### Scenario: 动作请求准入发生在领域运行时之前
+- **GIVEN** 输入缓冲中存在 Dodge、Attack 或等价 Action 请求
+- **WHEN** 请求需要进入 Action lifecycle 或 Locomotion 状态图
 - **THEN** 请求 MUST 先经过动作打断仲裁入口
-- **AND** 只有 accepted 请求 MAY 被转换为状态机输入事实
+- **AND** 只有 accepted 请求 MAY 被转换为领域运行时输入事实
 
 ### Requirement: 模块边界和 BBB 参考边界
 系统 MAY 参考 BBB 的 priority、resistance、interceptor 和 override 思路，但 MUST NOT 复制 BBB 运行时代码或依赖 BBB 运行时路径。动作打断仲裁模块 MUST 保持纯逻辑边界，供未来状态机、输入缓冲、tick 和编辑器消费。
@@ -151,108 +151,126 @@
 - **WHEN** 检查动作打断仲裁模块源码
 - **THEN** 静态搜索 MUST 能确认该模块不引用 Animancer、AnimationClip、Animator、CharacterController、Cinemachine、Input System 或 `BBBNexus`
 
-### Requirement: FullBody Action 运行时准入门
-系统 MUST 将 FullBody Action 请求进入统一状态机之前的准入裁决交给 `ActionInterruptArbiter` 或等价动作打断仲裁入口。优先级、抗性、force 和时间窗口 MUST 在生成可被状态机消费的动作请求事实之前完成裁决。
+### Requirement: Action 运行时准入门
+系统 MUST 将 Action 请求进入 Action lifecycle 之前的准入裁决交给 `ActionInterruptArbiter` 或等价动作打断仲裁入口。优先级、抗性、force 和时间窗口 MUST 在创建 accepted resolved action 或 Action lifecycle seed 之前完成裁决。accepted Dodge MUST NOT 生成要求默认 Locomotion graph 进入 `Action.Dodge` 的状态请求事实。
 
-#### Scenario: accepted decision 生成状态机请求事实
+#### Scenario: accepted decision 生成 Action lifecycle submission
 - **GIVEN** 输入缓冲中存在未过期 Dodge 请求
 - **AND** 当前动作上下文、请求和策略集合使 `ActionInterruptArbiter` 返回 accepted decision
-- **WHEN** FullBody Action 请求门面处理本帧输入
-- **THEN** 系统 MUST 生成可被统一状态机消费的 Dodge 请求事实
-- **AND** 该请求事实 MUST 保留动作变体和世界方向
-- **AND** 统一状态机 MAY 通过 `HasInputRequest(Dodge)` 进入 `FullBody/Action/Dodge`
+- **WHEN** Action 请求门面处理本帧输入
+- **THEN** 系统 MUST 生成 accepted resolved action 或等价 Action lifecycle submission
+- **AND** 该 submission MUST 保留动作变体、世界方向、priority、source step 和 motion/animation seed
+- **AND** 默认 Locomotion graph MUST NOT 通过 `HasInputRequest(Dodge)` 进入 `Action.Dodge`
 
-#### Scenario: rejected decision 不生成状态机请求事实
+#### Scenario: rejected decision 不生成 Action lifecycle submission
 - **GIVEN** 输入缓冲中存在未过期 Dodge 请求
 - **AND** `ActionInterruptArbiter` 返回 rejected decision
-- **WHEN** FullBody Action 请求门面处理本帧输入
-- **THEN** 系统 MUST NOT 生成可被统一状态机消费的 Dodge 请求事实
-- **AND** 统一状态机 MUST NOT 因该 rejected 请求进入 `FullBody/Action/Dodge`
+- **WHEN** Action 请求门面处理本帧输入
+- **THEN** 系统 MUST NOT 生成 accepted resolved action
+- **AND** Action lifecycle MUST NOT active `Action.Dodge`
 - **AND** 输入缓冲中的请求 MUST 保留到过期或后续合法消费
 
 #### Scenario: 仲裁日志可追踪准入结果
-- **WHEN** FullBody Action 请求门面调用 `ActionInterruptArbiter`
+- **WHEN** Action 请求门面调用 `ActionInterruptArbiter`
 - **THEN** 系统 MUST 保留 accepted 或 rejected 诊断日志
-- **AND** 日志 MUST 能说明目标状态、请求优先级、策略最小优先级和拒绝原因
+- **AND** 日志 MUST 能说明 action id、请求优先级、策略最小优先级和拒绝原因
+- **AND** 日志 MUST NOT 依赖默认 graph target state 才能解释结果
 
 ### Requirement: 默认动作入口不得绕过仲裁器
-系统 MUST NOT 在默认 FullBody Action 入口中使用状态机 transition 条件直接裁决动作请求优先级、抗性、force 或时间窗口。统一状态机 MUST 只消费已经过动作仲裁入口接受的请求事实。
+系统 MUST NOT 在默认 Action 入口中使用 Locomotion graph transition 条件直接裁决动作请求优先级、抗性、force 或时间窗口。默认 Locomotion graph MUST 不包含 Dodge 入口 transition；Action lifecycle MUST 只消费已经过动作仲裁入口接受的纯数据 submission。
 
 #### Scenario: Dodge 入口不直接判断优先级
-- **WHEN** 默认统一状态机配置表达 `Locomotion/* -> FullBody/Action/Dodge`
-- **THEN** 该 transition MUST NOT 通过 `RequestPriorityAtLeast` 或等价状态机条件直接判断请求优先级
+- **WHEN** 默认 Corin Locomotion graph 表达基础移动 transition
+- **THEN** graph MUST NOT 包含 `Locomotion.* -> Action.Dodge`
+- **AND** graph MUST NOT 包含 `Locomotion.* -> Action.Dodge`
 - **AND** 优先级 MUST 由 `ActionInterruptArbiter` 或等价动作打断仲裁入口裁决
 
 #### Scenario: 状态机 solver 不依赖仲裁器实现
-- **WHEN** 检查统一状态机 runner 和 transition evaluator 源码
+- **WHEN** 检查 Locomotion graph runner 和 transition evaluator 源码
 - **THEN** 它们 MUST NOT 引用 `ActionInterruptArbiter`
 - **AND** MUST NOT 读取 `ActionInterruptPolicySetSO`
 - **AND** MUST NOT 执行动作策略匹配
 
-#### Scenario: 保留纯数据状态机输入边界
-- **GIVEN** FullBody Action 请求已经被仲裁接受
-- **WHEN** 统一状态机推进本帧状态
-- **THEN** 状态机 MUST 只读取纯数据输入事实
+#### Scenario: 保留纯数据 Action lifecycle 输入边界
+- **GIVEN** Action 请求已经被仲裁接受
+- **WHEN** Action lifecycle 推进本帧状态
+- **THEN** Action lifecycle MUST 只读取纯数据 resolved action 或 lifecycle restore facts
 - **AND** MUST NOT 直接读取输入缓冲、ScriptableObject 策略资产或 MonoBehaviour 请求门面
 
-### Requirement: FullBody Action 准入上下文收口
-系统 MUST 在 FullBody Action 请求进入统一状态机之前构建完整的动作仲裁上下文。该上下文 MUST 包含当前 action state、当前 action elapsed seconds、当前 action resistance 和当前 tick。priority、resistance、force 和 timing window 的裁决 MUST 只发生在动作仲裁入口，不得分散到状态机 transition 条件中。
+### Requirement: Action 准入上下文收口
+系统 MUST 在 Action 请求进入 Action lifecycle 之前构建完整的动作仲裁上下文。该上下文 MUST 包含当前 action state、当前 action elapsed seconds、当前 action resistance 和当前 tick。priority、resistance、force 和 timing window 的裁决 MUST 只发生在动作仲裁入口，不得分散到 Locomotion graph transition 条件中。
 
 #### Scenario: Dodge 请求使用配置化 priority 和 resistance
 - **GIVEN** 默认角色绑定了 Dodge 动作配置
 - **AND** 输入缓冲中存在 Dodge 请求
-- **WHEN** FullBody Action 请求门面构建仲裁请求和上下文
+- **WHEN** Action 请求门面构建仲裁请求和上下文
 - **THEN** 请求 priority MUST 来自 Dodge 动作配置
-- **AND** 当前 state 为 `Action.Dodge` 时 context resistance MUST 来自 Dodge 动作配置
-- **AND** 当前 state 为 `Action.None` 时 context resistance MUST 为 0
+- **AND** 当前 action 为 `Action.Dodge` 时 context resistance MUST 来自 Dodge 动作配置
+- **AND** 当前 action 为 `Action.None` 时 context resistance MUST 为 0
 
-#### Scenario: 状态机不裁决动作请求 priority
-- **WHEN** 默认 FullBody Action 入口处理 Dodge 请求
-- **THEN** 状态机 transition MUST NOT 使用 `RequestPriorityAtLeast` 或等价条件判断请求 priority
+#### Scenario: Locomotion graph 不裁决动作请求 priority
+- **WHEN** 默认 Action 入口处理 Dodge 请求
+- **THEN** Locomotion graph transition MUST NOT 使用 `RequestPriorityAtLeast` 或等价条件判断请求 priority
 - **AND** `ActionInterruptArbiter` MUST 是该请求 priority、resistance、force 和 timing window 的唯一准入裁决入口
 
-#### Scenario: rejected 请求不生成状态机事实
+#### Scenario: rejected 请求不生成 Action lifecycle facts
 - **GIVEN** Dodge 请求被当前 resistance、policy min priority 或 timing window 拒绝
-- **WHEN** FullBody Action 请求门面完成本帧处理
-- **THEN** 系统 MUST NOT 生成可被统一状态机消费的 Dodge input fact
-- **AND** 状态机 MUST NOT 因该 rejected 请求进入 `FullBody/Action/Dodge`
+- **WHEN** Action 请求门面完成本帧处理
+- **THEN** 系统 MUST NOT 生成 accepted Dodge lifecycle seed
+- **AND** Action lifecycle MUST NOT 因该 rejected 请求 active `Action.Dodge`
 
-### Requirement: Dodge 作为 FullBody Action 管线实例
-系统 MUST 将 Dodge 作为 FullBody Action 管线的一个动作实例处理。Dodge 可以拥有自己的实例配置、请求参数、方向/后撤变体、动作位移配置、转向配置、run latch 和返回 Locomotion 规则，但这些差异 MUST 通过同一条 FullBody Action 管线表达。
+### Requirement: Dodge 作为 Action 管线实例
+系统 MUST 将 Dodge 作为统一 request submission、action resolver、Action lifecycle 和 frame output 的一个动作实例处理。Dodge 可以拥有自己的实例配置、请求参数、方向/后撤变体、动作位移配置、转向配置、Run latch completion policy 和返回 Locomotion 规则，但这些差异 MUST 通过统一请求/打断仲裁、Action lifecycle 和 `CharacterFrameSubmission` 输出提交表达，不得形成 Dodge 专用准入管线或输出管线。
 
 #### Scenario: Dodge 实例行为仍走同一准入
 - **GIVEN** 输入缓冲中存在 Dodge 请求
 - **WHEN** 系统处理该请求
 - **THEN** 系统 MAY 使用 Dodge 实例逻辑解析 Directional 或 Backstep
 - **AND** MAY 使用 Dodge 实例配置决定位移、转向和 resistance
-- **BUT** 请求进入统一状态机前 MUST 仍经过 `CharacterActionRequestSubmissionArbiter` 和 `ActionInterruptArbiter`
+- **BUT** 请求进入 Action lifecycle 前 MUST 作为 request submission 进入统一请求/打断仲裁
 
-#### Scenario: Dodge 输出仍由统一状态机负责
+#### Scenario: Dodge 输出由 Action lifecycle 和角色提交负责
 - **GIVEN** Dodge 请求已被仲裁接受
-- **WHEN** 统一状态机进入 `FullBody/Action/Dodge`
-- **THEN** Dodge 的动作位移、动画请求、输入消费和返回 Locomotion MUST 仍由统一状态机输出及其现有执行边界负责
+- **WHEN** Action lifecycle active `Action.Dodge`
+- **THEN** Dodge 的动作位移、动画请求、输入消费和完成事实 MUST 由 Action lifecycle 与 `CharacterFrameSubmission` 或等价角色级输出提交表达
 - **AND** 仲裁器 MUST NOT 直接播放 Dodge 动画或执行 Dodge 位移
+- **AND** 默认 Locomotion graph MUST NOT 持有 Dodge 输出配置
+
+#### Scenario: Directional completion policy 写 Run latch
+- **GIVEN** Dodge resolved action 为 Directional
+- **AND** completion frame 仍有移动输入
+- **WHEN** Action motion resolver 判定 Directional 完成
+- **THEN** frame output MUST 请求写 Locomotion Run latch
+- **AND** 该请求 MUST 不依赖继续按住 Shift
+
+#### Scenario: 无移动 Dodge completion 等待动作动画
+- **GIVEN** Dodge resolved action 为 Backstep，或 Directional completion frame 没有移动输入
+- **AND** Dodge 动作位移 duration 已达到
+- **WHEN** 匹配 Action 动作动画尚未播放完成
+- **THEN** Action lifecycle MUST 保持 active
+- **AND** frame output MUST NOT 写 Run latch
+- **AND** 仲裁器 MUST NOT 通过额外 Dodge 专用出口放行动作
 
 ### Requirement: 动作准入条件不得回流状态机
-系统 MUST 防止动作请求 priority 条件重新成为统一状态机 transition 的一部分。状态机 transition 的 `priority` 字段 MAY 继续用于多个 transition 同时满足时的选择顺序，但 MUST NOT 表达动作请求的准入优先级。
+系统 MUST 防止动作请求 priority 条件重新成为 Locomotion graph transition 的一部分。Locomotion graph transition 的 `priority` 字段 MAY 继续用于多个 transition 同时满足时的选择顺序，但 MUST NOT 表达动作请求的准入优先级。
 
 #### Scenario: transition priority 仍用于状态图选边
-- **GIVEN** 同一个当前状态存在多条条件已满足的 transition
-- **WHEN** 统一状态机 runner 解析 transition
+- **GIVEN** 同一个当前 Locomotion state 存在多条条件已满足的 transition
+- **WHEN** graph runner 解析 transition
 - **THEN** runner MUST 使用 transition 自身 priority 选择要执行的 transition
 - **AND** 该 priority MUST NOT 替代动作请求 priority、policy min priority 或 current resistance
 
 #### Scenario: 默认动作入口没有请求优先级条件
-- **WHEN** 检查默认状态机定义和默认状态机资产
-- **THEN** `Locomotion/* -> FullBody/Action/Dodge` transition MUST 只消费已被仲裁接受的 Dodge input fact
-- **AND** MUST NOT 包含 `RequestPriorityAtLeast`、`minPriority` 动作准入条件或等价状态机条件
+- **WHEN** 检查默认 Locomotion graph 定义和默认 graph 资产
+- **THEN** graph MUST NOT 包含 `Locomotion.* -> Action.Dodge`
+- **AND** graph MUST NOT 包含 `RequestPriorityAtLeast`、`minPriority` 动作准入条件或等价状态机条件
 
 ### Requirement: TurnBack Intent 到请求事实的单向准入
-状态请求仲裁入口 MUST 将 `LocomotionTurnBackIntent` 视为 TurnBack 请求的候选输入，并在 priority、resistance、force、过期和 timeline window 规则全部通过后，才生成可被统一状态机消费的 TurnBack request fact。仲裁 rejected 时 MUST NOT 生成 accepted request fact。
+状态请求仲裁入口 MUST 将 `LocomotionTurnBackIntent` 视为 TurnBack 请求的候选输入，并在 priority、resistance、force、过期和 timeline window 规则全部通过后，才生成可被 Locomotion 状态图消费的 TurnBack request fact。仲裁 rejected 时 MUST NOT 生成 accepted request fact。
 
 #### Scenario: intent 构建候选请求
 - **GIVEN** locomotion facts 中存在有效 `LocomotionTurnBackIntent`
-- **AND** 当前状态为 `FullBody/Locomotion/MoveStart` 或 `FullBody/Locomotion/MoveLoop`
+- **AND** 当前状态为 `Locomotion.MoveStart` 或 `Locomotion.MoveLoop`
 - **AND** gait 和时间窗口允许 TurnBack 候选请求被提交
 - **WHEN** 状态请求仲裁入口处理本帧请求
 - **THEN** 系统 MUST 构建 TurnBack 候选 request
@@ -270,7 +288,7 @@
 - **AND** `ActionInterruptArbiter` 因优先级、抗性、过期、策略缺失或 window 条件拒绝该 request
 - **WHEN** 状态请求仲裁入口返回本帧结果
 - **THEN** 结果 MUST NOT 包含 accepted TurnBack request fact
-- **AND** 统一状态机 MUST 无法因该 rejected request 进入 TurnBack
+- **AND** Locomotion 状态图 MUST 无法因该 rejected request 进入 TurnBack
 
 ### Requirement: 请求候选构建与仲裁分离
 系统 MUST 将请求候选构建和请求准入仲裁分离。request candidate builder MAY 读取自身需要的输入 buffer、Locomotion facts、Action 配置和 current timeline facts 来构建候选请求；`ActionInterruptArbiter` 或等价仲裁入口 MUST 仍是 priority、resistance、force、policy、timeline window 和过期规则的唯一准入裁决者。
@@ -296,3 +314,90 @@
 - **AND** 同 priority MUST 使用 builder 顺序、origin step 或等价稳定 tie-break
 - **AND** 相同输入序列 MUST 产生相同 accepted request fact 序列
 
+### Requirement: 仲裁入口只消费预采样 Timeline Facts
+动作打断仲裁入口 MUST 将 timeline facts 视为外部输入事实。仲裁入口 MUST NOT 自行根据状态机 definition、snapshot、动画播放进度或 timeline policy 采样窗口。
+
+#### Scenario: 仲裁入口不采样窗口
+- **GIVEN** 当前帧已经提供 current `StateTimelineWindowFacts`
+- **WHEN** 仲裁入口处理 Dodge、TurnBack、Attack 或等价请求
+- **THEN** 仲裁入口 MUST 只读取传入 facts
+- **AND** MUST NOT 调用状态机 runner 或 timeline sampler 来生成 current facts
+
+#### Scenario: 缺少 facts 不使用 fallback
+- **GIVEN** 某个请求策略要求 timeline fact
+- **AND** 当前帧未提供有效 current timeline facts
+- **WHEN** 仲裁入口处理该请求
+- **THEN** 请求 MUST 被拒绝或配置校验 MUST 报错
+- **AND** 系统 MUST NOT 使用 elapsed time fallback 伪造窗口事实
+
+### Requirement: 仲裁器消费窗口事实而不拥有窗口时间
+状态请求仲裁入口 MUST 将窗口时间视为外部事实。仲裁器 MAY 使用 `StateTimelineWindowFacts` 中的 active facts、request window、min priority、resistance 和 force 参与裁决，但 MUST NOT 自己计算状态 normalized time、动画 normalized time、clip length 或窗口 start/end。新增状态请求准入 MUST 优先依赖 required fact id 与 window facts；旧 elapsed time timing rule 只作为迁移兼容。
+
+#### Scenario: required window 未激活时拒绝
+- **GIVEN** 请求策略要求 `attack-combo` window
+- **AND** `StateTimelineWindowFacts` 中没有 active `attack-combo` request window
+- **WHEN** 仲裁器处理该请求
+- **THEN** 裁决 MUST 为 rejected
+- **AND** 拒绝原因 MUST 能诊断为窗口未满足或 timing 未满足
+
+#### Scenario: required fact 未激活时拒绝
+- **GIVEN** 请求策略要求 `ComboInputOpen` fact
+- **AND** `StateTimelineWindowFacts` 中没有 active `ComboInputOpen`
+- **WHEN** 仲裁器处理 LightAttack 请求
+- **THEN** 裁决 MUST 为 rejected
+- **AND** 仲裁器 MUST NOT 尝试读取 Attack01 的窗口 start/end
+
+#### Scenario: 仲裁器不读取动画时间
+- **WHEN** 仲裁器处理 TurnBack、Dodge 或 Attack 请求
+- **THEN** 仲裁器 MUST NOT 读取 Animancer state
+- **AND** MUST NOT 读取 Animator state
+- **AND** MUST NOT 读取 AnimationClip length
+
+### Requirement: 状态请求打断仲裁入口
+系统 MUST 将现有动作打断仲裁能力扩展为状态请求准入入口，能够处理 TurnBack、Dodge、Attack、HitReact 或等价 Action 状态请求。仲裁入口 MUST 继续保持纯数据边界，并 MUST NOT 直接切换状态图或 Action lifecycle、播放动画或提交运动命令。
+
+#### Scenario: TurnBack 请求经过仲裁
+- **GIVEN** 当前状态为 `Locomotion.MoveLoop`
+- **AND** 当前 gait 为 Run
+- **AND** 输入方向与角色朝向满足 TurnBack 请求条件
+- **WHEN** 状态请求仲裁入口处理请求
+- **THEN** TurnBack 请求 MUST 按 priority、resistance 和 timeline window policy 被 accepted 或 rejected
+- **AND** 只有 accepted 请求 MAY 进入状态请求事实
+
+#### Scenario: Dodge 继续走同一仲裁
+- **GIVEN** 输入缓冲中存在 Dodge 请求
+- **WHEN** 状态请求仲裁入口处理请求
+- **THEN** Dodge MUST 继续使用 priority、resistance、force 和 timing/window 规则
+- **AND** 系统 MUST NOT 新增 Dodge 专用状态准入路径
+
+#### Scenario: 仲裁器不接管状态机
+- **WHEN** 仲裁入口接受某个状态请求
+- **THEN** 仲裁结果 MUST 只返回纯数据 decision
+- **AND** MUST NOT 调用 `ChangeState`
+- **AND** MUST NOT 写入动画或运动输出
+
+### Requirement: Window Facts 驱动时间许可
+状态请求仲裁入口 MUST 能使用 timeline window facts 判断请求是否位于允许窗口。第一版 MAY 保留 elapsed time 规则以兼容现有 ActionInterruptPolicy，但新增状态窗口判断 MUST 通过 facts 进入仲裁器，而不是让状态机 transition evaluator 或 MonoBehaviour 重复判断。
+
+#### Scenario: 窗口未开启时拒绝
+- **GIVEN** 当前请求匹配到需要 `TurnBackInterrupt` 或等价 window 的策略
+- **AND** timeline window facts 表示该窗口未 active
+- **WHEN** 仲裁入口执行裁决
+- **THEN** 裁决 MUST 为 rejected
+- **AND** 拒绝原因 MUST 能表达时间窗口未满足
+
+#### Scenario: 窗口开启且优先级满足时接受
+- **GIVEN** 当前请求匹配到一个 active window
+- **AND** 请求 priority 满足策略 min priority
+- **AND** 请求 priority 高于当前 resistance 或策略 force 为 true
+- **WHEN** 仲裁入口执行裁决
+- **THEN** 裁决 MUST 为 accepted
+
+### Requirement: 状态请求仲裁诊断
+系统 MUST 为状态请求仲裁输出可追踪日志，说明 request kind、from state、target state、priority、resistance、matched policy、window id 和 rejected reason。
+
+#### Scenario: TurnBack 被窗口拒绝可诊断
+- **GIVEN** 玩家输入满足 TurnBack 几何条件
+- **AND** 当前不在允许 TurnBack 的状态或窗口
+- **WHEN** 仲裁入口拒绝请求
+- **THEN** 诊断日志 MUST 能说明拒绝发生在状态/window/priority/resistance 哪一层

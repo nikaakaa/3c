@@ -4,7 +4,6 @@ using ThirdPersonAction;
 using ThirdPersonInput;
 using ThirdPersonMovement;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace ThirdPersonCharacterStateMachine
 {
@@ -367,15 +366,8 @@ namespace ThirdPersonCharacterStateMachine
         CurrentStateHasTag = 6,
         MoveTurnBackRequested = 7,
         LocomotionAnimationCanExit = 8,
-        ActionCanExit = 9
-    }
-
-    public enum CharacterStateMotionOutputKind
-    {
-        None,
-        InputDrivenMovement,
-        ConfiguredActionMovement,
-        AnimationDrivenLocomotion
+        ActionCanExit = 9,
+        LocomotionPreemptionPending = 10
     }
 
     public enum CharacterStateModuleType
@@ -477,7 +469,7 @@ namespace ThirdPersonCharacterStateMachine
             if (string.IsNullOrWhiteSpace(raw))
                 return string.Empty;
 
-            string[] parts = raw.Replace('\\', '/').Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = raw.Trim().Replace('\\', '/').Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             return string.Join("/", parts);
         }
     }
@@ -485,14 +477,14 @@ namespace ThirdPersonCharacterStateMachine
     public static class CharacterStateIds
     {
         public static readonly CharacterStateId FullBody = new CharacterStateId("FullBody");
-        public static readonly CharacterStateId Locomotion = new CharacterStateId("FullBody/Locomotion");
-        public static readonly CharacterStateId Idle = new CharacterStateId("FullBody/Locomotion/Idle");
-        public static readonly CharacterStateId MoveStart = new CharacterStateId("FullBody/Locomotion/MoveStart");
-        public static readonly CharacterStateId MoveLoop = new CharacterStateId("FullBody/Locomotion/MoveLoop");
-        public static readonly CharacterStateId MoveStop = new CharacterStateId("FullBody/Locomotion/MoveStop");
-        public static readonly CharacterStateId TurnBack = new CharacterStateId("FullBody/Locomotion/TurnBack");
-        public static readonly CharacterStateId Action = new CharacterStateId("FullBody/Action");
-        public static readonly CharacterStateId Dodge = new CharacterStateId("FullBody/Action/Dodge");
+        public static readonly CharacterStateId Locomotion = new CharacterStateId("Locomotion");
+        public static readonly CharacterStateId Idle = new CharacterStateId("Locomotion.Idle");
+        public static readonly CharacterStateId MoveStart = new CharacterStateId("Locomotion.MoveStart");
+        public static readonly CharacterStateId MoveLoop = new CharacterStateId("Locomotion.MoveLoop");
+        public static readonly CharacterStateId MoveStop = new CharacterStateId("Locomotion.MoveStop");
+        public static readonly CharacterStateId TurnBack = new CharacterStateId("Locomotion.TurnBack");
+        public static readonly CharacterStateId Action = new CharacterStateId("Action");
+        public static readonly CharacterStateId Dodge = new CharacterStateId("Action.Dodge");
     }
 
     [Serializable]
@@ -543,98 +535,6 @@ namespace ThirdPersonCharacterStateMachine
 
         public CharacterStateVariant Variant => variant;
         public CharacterStateAnimationBinding Animation => animation;
-    }
-
-    [Serializable]
-    public sealed class CharacterStateOutputDefinition
-    {
-        [SerializeField] CharacterStateMotionOutputKind motionOutput;
-        [SerializeField] bool consumeInputRequest;
-        [SerializeField] InputRequestKind consumeRequestKind;
-        [SerializeField] bool resetRunLatchOnEnter;
-        [SerializeField] TurnBackMotionPolicy turnBackMotionPolicy;
-        [FormerlySerializedAs("actionDisplacements")]
-        [SerializeField] CharacterActionMovementDefinition[] actionMovements = Array.Empty<CharacterActionMovementDefinition>();
-
-        public CharacterStateOutputDefinition()
-        {
-        }
-
-        public CharacterStateOutputDefinition(CharacterStateMotionOutputKind motionOutput)
-        {
-            this.motionOutput = motionOutput;
-        }
-
-        public CharacterStateMotionOutputKind MotionOutput => motionOutput;
-        public bool ConsumeInputRequest => consumeInputRequest;
-        public InputRequestKind ConsumeRequestKind => consumeRequestKind;
-        public bool ResetRunLatchOnEnter => resetRunLatchOnEnter;
-        public TurnBackMotionPolicy TurnBackMotionPolicy =>
-            turnBackMotionPolicy.IsEnabled ? turnBackMotionPolicy : ThirdPersonMovement.TurnBackMotionPolicy.Default;
-        public bool HasTurnBackMotionPolicy => turnBackMotionPolicy.IsEnabled || motionOutput == CharacterStateMotionOutputKind.AnimationDrivenLocomotion;
-        public IReadOnlyList<CharacterActionMovementDefinition> ActionMovements =>
-            actionMovements ?? Array.Empty<CharacterActionMovementDefinition>();
-
-        public bool TryResolveActionMovement(CharacterStateVariant variant, out CharacterActionMovementDefinition movement)
-        {
-            CharacterActionMovementDefinition[] source = actionMovements;
-            if (source != null)
-            {
-                for (int i = 0; i < source.Length; i++)
-                {
-                    if (source[i].Variant == variant && source[i].IsValid)
-                    {
-                        movement = source[i];
-                        return true;
-                    }
-                }
-
-                for (int i = 0; i < source.Length; i++)
-                {
-                    if (source[i].Variant == CharacterStateVariant.None && source[i].IsValid)
-                    {
-                        movement = source[i];
-                        return true;
-                    }
-                }
-            }
-
-            movement = default;
-            return false;
-        }
-
-        public static CharacterStateOutputDefinition InputDrivenMovement()
-        {
-            return new CharacterStateOutputDefinition(CharacterStateMotionOutputKind.InputDrivenMovement);
-        }
-
-        public static CharacterStateOutputDefinition TurnBackMotion(TurnBackMotionPolicy policy)
-        {
-            return new CharacterStateOutputDefinition(CharacterStateMotionOutputKind.AnimationDrivenLocomotion)
-            {
-                turnBackMotionPolicy = policy.IsEnabled ? policy : ThirdPersonMovement.TurnBackMotionPolicy.Default
-            };
-        }
-
-        public static CharacterStateOutputDefinition IdleReset()
-        {
-            return new CharacterStateOutputDefinition(CharacterStateMotionOutputKind.None)
-            {
-                resetRunLatchOnEnter = true
-            };
-        }
-
-        public static CharacterStateOutputDefinition ActionMovement(
-            InputRequestKind consumeRequestKind,
-            params CharacterActionMovementDefinition[] actionMovements)
-        {
-            return new CharacterStateOutputDefinition(CharacterStateMotionOutputKind.ConfiguredActionMovement)
-            {
-                consumeInputRequest = true,
-                consumeRequestKind = consumeRequestKind,
-                actionMovements = actionMovements ?? Array.Empty<CharacterActionMovementDefinition>()
-            };
-        }
     }
 
     [Serializable]
@@ -805,9 +705,6 @@ namespace ThirdPersonCharacterStateMachine
         [SerializeField] string parentStateId;
         [SerializeField] string pathSegment;
         [SerializeField] CharacterStateTag[] tags = Array.Empty<CharacterStateTag>();
-        [SerializeField, HideInInspector] CharacterStateVariantDefinition[] variants = Array.Empty<CharacterStateVariantDefinition>();
-        [SerializeField, HideInInspector] CharacterStateOutputDefinition output;
-        [SerializeField, HideInInspector] CharacterStateAnimationBinding animation;
         [SerializeField] CharacterStateModuleDefinition[] modules = Array.Empty<CharacterStateModuleDefinition>();
 
         public CharacterStateNodeDefinition()
@@ -819,27 +716,19 @@ namespace ThirdPersonCharacterStateMachine
             CharacterStateId parentStateId,
             string pathSegment,
             CharacterStateTag[] tags,
-            CharacterStateOutputDefinition output,
-            CharacterStateAnimationBinding animation,
-            CharacterStateVariantDefinition[] variants = null)
+            CharacterStateModuleDefinition[] modules)
         {
             this.stateId = stateId.Value;
             this.parentStateId = parentStateId.Value;
             this.pathSegment = pathSegment ?? string.Empty;
             this.tags = tags ?? Array.Empty<CharacterStateTag>();
-            this.output = output;
-            this.animation = animation;
-            this.variants = variants ?? Array.Empty<CharacterStateVariantDefinition>();
-            modules = BuildModulesFromLegacy(this.stateId, output, animation, this.variants);
+            this.modules = modules ?? Array.Empty<CharacterStateModuleDefinition>();
         }
 
         public CharacterStateId StateId => new CharacterStateId(stateId);
         public CharacterStateId ParentStateId => new CharacterStateId(parentStateId);
         public string PathSegment => pathSegment ?? string.Empty;
         public IReadOnlyList<CharacterStateTag> Tags => tags ?? Array.Empty<CharacterStateTag>();
-        public IReadOnlyList<CharacterStateVariantDefinition> Variants => variants ?? Array.Empty<CharacterStateVariantDefinition>();
-        public CharacterStateOutputDefinition Output => output ?? new CharacterStateOutputDefinition();
-        public CharacterStateAnimationBinding Animation => animation;
         public IReadOnlyList<CharacterStateModuleDefinition> Modules => modules ?? Array.Empty<CharacterStateModuleDefinition>();
 
         public bool HasTag(CharacterStateTag tag)
@@ -863,17 +752,6 @@ namespace ThirdPersonCharacterStateMachine
                 actionAnimation.TryResolveVariant(variant, out definition))
             {
                 return true;
-            }
-
-            CharacterStateVariantDefinition[] source = variants;
-            if (source != null)
-            {
-                for (int i = 0; i < source.Length; i++)
-                    if (source[i].Variant == variant)
-                    {
-                        definition = source[i];
-                        return true;
-                    }
             }
 
             definition = default;
@@ -987,50 +865,6 @@ namespace ThirdPersonCharacterStateMachine
             HasModule(CharacterStateModuleType.InputConsume) ||
             HasModule(CharacterStateModuleType.RunLatch);
 
-        static CharacterStateModuleDefinition[] BuildModulesFromLegacy(
-            string stateId,
-            CharacterStateOutputDefinition output,
-            CharacterStateAnimationBinding animation,
-            CharacterStateVariantDefinition[] variants)
-        {
-            List<CharacterStateModuleDefinition> result = new List<CharacterStateModuleDefinition>();
-            CharacterStateId id = new CharacterStateId(stateId);
-            BasicMovementPhase phase = ResolveLocomotionPhase(id);
-            if (phase != BasicMovementPhase.Idle || id == CharacterStateIds.Idle)
-                result.Add(CharacterStateModuleDefinition.LocomotionPhaseModule(phase));
-
-            CharacterStateOutputDefinition outputDefinition = output ?? new CharacterStateOutputDefinition();
-            if (outputDefinition.MotionOutput == CharacterStateMotionOutputKind.InputDrivenMovement)
-                result.Add(CharacterStateModuleDefinition.InputDrivenMotion());
-            if (outputDefinition.MotionOutput == CharacterStateMotionOutputKind.ConfiguredActionMovement)
-                result.Add(CharacterStateModuleDefinition.ConfiguredActionMotion(ToArray(outputDefinition.ActionMovements)));
-            if (outputDefinition.MotionOutput == CharacterStateMotionOutputKind.AnimationDrivenLocomotion)
-                result.Add(CharacterStateModuleDefinition.LocomotionAnimationAlias(animation));
-            if (outputDefinition.HasTurnBackMotionPolicy)
-                result.Add(CharacterStateModuleDefinition.TurnBackMotionPolicyModule(outputDefinition.TurnBackMotionPolicy));
-            if (outputDefinition.ConsumeInputRequest)
-                result.Add(CharacterStateModuleDefinition.InputConsume(outputDefinition.ConsumeRequestKind));
-            if (outputDefinition.ResetRunLatchOnEnter)
-                result.Add(CharacterStateModuleDefinition.RunLatch(true, false));
-
-            bool hasActionAnimation = animation.HasKey || (variants != null && variants.Length > 0);
-            if (hasActionAnimation && outputDefinition.MotionOutput == CharacterStateMotionOutputKind.ConfiguredActionMovement)
-                result.Add(CharacterStateModuleDefinition.ActionAnimation(animation, variants));
-
-            return result.ToArray();
-        }
-
-        static CharacterActionMovementDefinition[] ToArray(IReadOnlyList<CharacterActionMovementDefinition> source)
-        {
-            if (source == null || source.Count == 0)
-                return Array.Empty<CharacterActionMovementDefinition>();
-
-            CharacterActionMovementDefinition[] result = new CharacterActionMovementDefinition[source.Count];
-            for (int i = 0; i < source.Count; i++)
-                result[i] = source[i];
-            return result;
-        }
-
         static BasicMovementPhase ResolveLocomotionPhase(CharacterStateId id)
         {
             if (id == CharacterStateIds.MoveStart)
@@ -1118,6 +952,11 @@ namespace ThirdPersonCharacterStateMachine
         {
             return new CharacterStateTransitionCondition(CharacterStateTransitionConditionKind.ActionCanExit);
         }
+
+        public static CharacterStateTransitionCondition LocomotionPreemptionPending()
+        {
+            return new CharacterStateTransitionCondition(CharacterStateTransitionConditionKind.LocomotionPreemptionPending);
+        }
     }
 
     [Serializable]
@@ -1157,6 +996,12 @@ namespace ThirdPersonCharacterStateMachine
                 return true;
 
             if (source.EndsWith("/*", StringComparison.Ordinal))
+            {
+                string prefix = source.Substring(0, source.Length - 1);
+                return currentState.Value.StartsWith(prefix, StringComparison.Ordinal);
+            }
+
+            if (source.EndsWith(".*", StringComparison.Ordinal))
             {
                 string prefix = source.Substring(0, source.Length - 1);
                 return currentState.Value.StartsWith(prefix, StringComparison.Ordinal);

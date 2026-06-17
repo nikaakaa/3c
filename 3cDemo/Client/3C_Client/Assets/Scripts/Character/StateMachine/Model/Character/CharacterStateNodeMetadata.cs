@@ -88,8 +88,7 @@ namespace ThirdPersonCharacterStateMachine
                 ? resolvedPhase
                 : BasicMovementPhase.Idle;
             ActionStateId actionState = isAction ? ResolveActionState(node.StateId.Value) : ActionStateIds.None;
-            FullBodyOwner owner = isAction ? FullBodyOwner.Action(actionState) :
-                isLocomotion || HasTag(node.Tags, CharacterStateTag.FullBody) ? FullBodyOwner.Locomotion : FullBodyOwner.None;
+            FullBodyOwner owner = isAction ? FullBodyOwner.Action(actionState) : FullBodyOwner.None;
 
             return new CharacterStateNodeMetadata(
                 new StateGraphNodeId(node.StateId.Value),
@@ -156,6 +155,9 @@ namespace ThirdPersonCharacterStateMachine
         {
             if (string.IsNullOrWhiteSpace(path))
                 return ActionStateIds.None;
+
+            if (path.StartsWith("Action.", StringComparison.Ordinal))
+                return new ActionStateId(path);
 
             int index = path.LastIndexOf('/');
             string segment = index >= 0 && index < path.Length - 1 ? path.Substring(index + 1) : path;

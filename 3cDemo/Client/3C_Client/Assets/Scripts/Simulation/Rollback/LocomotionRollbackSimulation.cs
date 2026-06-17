@@ -1,3 +1,4 @@
+using ThirdPersonAction;
 using ThirdPersonMovement;
 using UnityEngine;
 
@@ -6,10 +7,10 @@ namespace ThirdPersonSimulation
     [DisallowMultipleComponent]
     public sealed class LocomotionRollbackSimulation : MonoBehaviour, ILocalRollbackSynctestSimulation, ILocalRollbackDebugRestoreCleanup
     {
-        [SerializeField] PlayerLocomotionController locomotionController;
+        [SerializeField] CharacterFrameRuntimeController runtimeController;
         [SerializeField, Min(1)] int ticksPerSecond = SimulationTickRate.DefaultTicksPerSecond;
 
-        public PlayerLocomotionController LocomotionController { get => locomotionController; set => locomotionController = value; }
+        public CharacterFrameRuntimeController RuntimeController { get => runtimeController; set => runtimeController = value; }
 
         void Reset()
         {
@@ -19,35 +20,38 @@ namespace ThirdPersonSimulation
         public CharacterSimulationSnapshot CaptureSnapshot(SimulationTick tick)
         {
             ResolveReferences();
-            return locomotionController != null
-                ? locomotionController.CaptureSimulationSnapshot(tick)
-                : default;
+            if (runtimeController != null)
+                return runtimeController.CaptureSimulationSnapshot(tick);
+
+            return default;
         }
 
         public void Restore(in CharacterSimulationSnapshot snapshot)
         {
             ResolveReferences();
-            if (locomotionController != null)
-                locomotionController.RestoreSimulationSnapshot(in snapshot);
+            if (runtimeController != null)
+                runtimeController.RestoreSimulationSnapshot(in snapshot);
         }
 
         public void Advance(in PredictionInputFrame input)
         {
             ResolveReferences();
-            if (locomotionController == null)
+            if (runtimeController != null)
+            {
+                if (input.HasCameraBasis)
+                    runtimeController.RollbackCameraBasisProvider.Override(input.CameraBasisState);
+
+                CharacterFrameInput frameInput = CharacterFrameInput.FromPredictionInputFrame(in input, ResolveDeltaTime());
+                runtimeController.Tick(in frameInput);
                 return;
-
-            if (input.HasCameraBasis)
-                locomotionController.RollbackCameraBasisProvider.Override(input.CameraBasisState);
-
-            locomotionController.Tick(input.ToLocomotionInput(ResolveDeltaTime()), input.Tick.Value);
+            }
         }
 
         public void CompleteDebugRestore()
         {
             ResolveReferences();
-            if (locomotionController != null)
-                locomotionController.ReleaseRollbackCameraBasisOverride();
+            if (runtimeController != null)
+                runtimeController.ReleaseRollbackCameraBasisOverride();
         }
 
         float ResolveDeltaTime()
@@ -58,12 +62,13 @@ namespace ThirdPersonSimulation
 
         void ResolveReferences()
         {
-            if (locomotionController == null)
+            if (runtimeController == null)
             {
-                locomotionController = GetComponent<PlayerLocomotionController>();
-                if (locomotionController == null)
-                    locomotionController = GetComponentInParent<PlayerLocomotionController>();
+                runtimeController = GetComponent<CharacterFrameRuntimeController>();
+                if (runtimeController == null)
+                    runtimeController = GetComponentInParent<CharacterFrameRuntimeController>();
             }
+
         }
     }
 

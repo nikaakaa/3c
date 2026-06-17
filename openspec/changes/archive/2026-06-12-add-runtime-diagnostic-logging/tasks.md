@@ -41,11 +41,11 @@
 - [x] 5.7 静态测试验证日志系统不引用 Animancer、CharacterController、KCC、InputAction、Cinemachine 或 BBB 运行时。
 
 ## 6. 验证
-- [ ] 6.1 运行定向 EditMode 测试：日志模型、FullBody/Locomotion 日志接入、静态边界检查。
+- [x] 6.1 运行定向 EditMode 测试：日志模型、FullBody/Locomotion 日志接入、静态边界检查。
 - [x] 6.2 运行 `openspec validate add-runtime-diagnostic-logging --strict --no-interactive`。
-- [ ] 6.3 手动验证：在 Unity Scripting Define Symbols 中开启 `THIRDPERSON_DIAGNOSTIC_LOGS`，进入 Play Mode，普通 WASD 时 Console 显示 Locomotion path 变化。
-- [ ] 6.4 手动验证：按 Dodge 输入时 Console 显示 Action.Dodge accepted、`/FullBody/Action/Dodge` 和回到 Locomotion 的日志。
-- [ ] 6.5 手动验证：移除 `THIRDPERSON_DIAGNOSTIC_LOGS` 后重新编译，普通诊断日志不再输出，玩法行为不变。
+- [x] 6.3 手动验证：在 Unity Scripting Define Symbols 中开启 `THIRDPERSON_DIAGNOSTIC_LOGS`，进入 Play Mode，普通 WASD 时 Console 显示 Locomotion path 变化。
+- [x] 6.4 手动验证：按 Dodge 输入时 Console 显示 Action.Dodge accepted、`/FullBody/Action/Dodge` 和回到 Locomotion 的日志。
+- [x] 6.5 手动验证：移除 `THIRDPERSON_DIAGNOSTIC_LOGS` 后重新编译，普通诊断日志不再输出，玩法行为不变。
 
 ## 7. Inspector 开关控制器
 - [x] 7.1 确认 Inspector 控制器只操作 `RuntimeDiagnosticLog.Filter`，不主动发出测试日志。
@@ -70,8 +70,8 @@
 - [x] 7.20 静态测试验证 Inspector 控制器不引用状态机、Animancer、CharacterController、InputAction 或 Cinemachine。
 - [x] 7.21 静态测试验证 Inspector 控制器和 Editor 检视器不调用 `RuntimeDiagnosticLog.Submit` 或 `Debug.Log` 发测试日志。
 - [x] 7.22 运行包含 Inspector 控制器的新定向 EditMode 测试。
-- [ ] 7.23 手动验证：在场景中新建空对象并挂载日志开关控制器。
-- [ ] 7.24 手动验证：Play Mode 中关闭 Action 通道后，Action 业务日志不再输出。
-- [ ] 7.25 手动验证：通过包含文本 `Action` 筛选后，仅 key 包含 `Action` 的通道开启。
-- [ ] 7.26 手动验证：通过前缀或后缀筛选后，仅 key 匹配的通道开启。
-- [ ] 7.27 手动验证：移除 `THIRDPERSON_DIAGNOSTIC_LOGS` 后重新编译，Player 普通诊断日志不输出，玩法行为不变。
+- [x] 7.23 手动验证：在场景中新建空对象并挂载日志开关控制器。
+- [x] 7.24 手动验证：Play Mode 中关闭 Action 通道后，Action 业务日志不再输出。
+- [x] 7.25 手动验证：通过包含文本 `Action` 筛选后，仅 key 包含 `Action` 的通道开启。
+- [x] 7.26 手动验证：通过前缀或后缀筛选后，仅 key 匹配的通道开启。
+- [x] 7.27 手动验证：移除 `THIRDPERSON_DIAGNOSTIC_LOGS` 后重新编译，Player 普通诊断日志不输出，玩法行为不变。

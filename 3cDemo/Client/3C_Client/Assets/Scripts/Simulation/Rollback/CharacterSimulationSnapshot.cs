@@ -1,4 +1,4 @@
-﻿using ThirdPersonAction;
+using ThirdPersonAction;
 using ThirdPersonCharacterStateMachine;
 using ThirdPersonInput;
 using ThirdPersonMovement;
@@ -24,7 +24,7 @@ namespace ThirdPersonSimulation
                 tick,
                 position,
                 yaw,
-                new CharacterStateMachineRestoreState(stateMachine, Vector3.zero, false, false, false, false),
+                new CharacterStateMachineRestoreState(stateMachine, Vector3.zero, false),
                 runLatchActive,
                 lastMovingGait,
                 currentWorldDirection,

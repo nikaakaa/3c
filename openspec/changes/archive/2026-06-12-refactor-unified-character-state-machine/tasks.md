@@ -143,18 +143,18 @@
 - [x] 12.19 静态测试项目运行时代码不再引用旧分裂路径类型。
 
 ## 13. 手动验证
-- [ ] 13.1 在 Unity Editor 打开可琳角色，确认只有统一状态机入口负责 FullBody base layer。
-- [ ] 13.2 在统一状态机资产中看到 Locomotion 四阶段和 Dodge 状态。
-- [ ] 13.3 在同一状态机资产中看到 Dodge 进入和退出 transition。
-- [ ] 13.4 在 Dodge 状态或变体配置中看到 Directional/Backstep 的 Animancer transition。
-- [ ] 13.5 Play Mode 中普通 WASD 能走 Idle/MoveStart/MoveLoop/MoveStop。
-- [ ] 13.6 Play Mode 中有方向按 Shift 进入 Dodge Directional 并向输入方向冲刺。
-- [ ] 13.7 Directional 结束后继续按方向键进入 Run。
-- [ ] 13.8 Play Mode 中无方向按 Shift 进入 Dodge Backstep 且不强制 Run。
-- [ ] 13.9 Dodge active 时基础移动不叠加额外位移或 base layer 动画。
-- [ ] 13.10 动作期间相机 Look 继续响应。
-- [ ] 13.11 松开移动回 Idle 后再次普通移动默认 Walk。
-- [ ] 13.12 替换 Dodge 动画 transition 后无需修改逻辑代码。
+- [x] 13.1 在 Unity Editor 打开可琳角色，确认只有统一状态机入口负责 FullBody base layer。
+- [x] 13.2 在统一状态机资产中看到 Locomotion 四阶段和 Dodge 状态。
+- [x] 13.3 在同一状态机资产中看到 Dodge 进入和退出 transition。
+- [x] 13.4 在 Dodge 状态或变体配置中看到 Directional/Backstep 的 Animancer transition。
+- [x] 13.5 Play Mode 中普通 WASD 能走 Idle/MoveStart/MoveLoop/MoveStop。
+- [x] 13.6 Play Mode 中有方向按 Shift 进入 Dodge Directional 并向输入方向冲刺。
+- [x] 13.7 Directional 结束后继续按方向键进入 Run。
+- [x] 13.8 Play Mode 中无方向按 Shift 进入 Dodge Backstep 且不强制 Run。
+- [x] 13.9 Dodge active 时基础移动不叠加额外位移或 base layer 动画。
+- [x] 13.10 动作期间相机 Look 继续响应。
+- [x] 13.11 松开移动回 Idle 后再次普通移动默认 Walk。
+- [x] 13.12 替换 Dodge 动画 transition 后无需修改逻辑代码。
 
 ## 14. 文档和 OpenSpec
 - [x] 14.1 更新 `docs/agents/character-animation-state-roadmap.md`，记录统一状态机口径。
@@ -162,7 +162,7 @@
 - [x] 14.3 更新最终 specs，移除与统一状态机冲突的 Action/Dodge 特化要求。
 - [x] 14.4 运行 `openspec validate refactor-unified-character-state-machine --strict --no-interactive`。
 - [x] 14.5 运行相关 EditMode 测试并记录命令和结果。
-- [ ] 14.6 记录用户 Play Mode 手动验证结果。
+- [x] 14.6 记录用户 Play Mode 手动验证结果。
 
 ## 15. 验证记录
 - [x] 15.1 `dotnet build .\Assembly-CSharp.csproj --no-restore /m:1 /nr:false /p:UseSharedCompilation=false /clp:ErrorsOnly`：通过，0 个错误。

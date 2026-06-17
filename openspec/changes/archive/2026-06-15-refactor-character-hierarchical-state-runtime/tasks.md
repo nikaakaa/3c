@@ -124,8 +124,8 @@
 - [x] 11.5 运行动作动画 Profile 相关 EditMode 测试。
 - [x] 11.6 运行基础移动动画配置相关 EditMode 测试。
 - [x] 11.7 运行静态边界检查脚本。
-- [ ] 11.8 运行 `dotnet build .\Assembly-CSharp.csproj --no-restore /m:1 /nr:false /p:UseSharedCompilation=false /clp:ErrorsOnly`。
-- [ ] 11.9 运行 `dotnet build .\Assembly-CSharp-Editor.csproj --no-restore /m:1 /nr:false /p:UseSharedCompilation=false /clp:ErrorsOnly`。
+- [x] 11.8 运行 `dotnet build .\Assembly-CSharp.csproj --no-restore /m:1 /nr:false /p:UseSharedCompilation=false /clp:ErrorsOnly`。
+- [x] 11.9 运行 `dotnet build .\Assembly-CSharp-Editor.csproj --no-restore /m:1 /nr:false /p:UseSharedCompilation=false /clp:ErrorsOnly`。
 - [x] 11.10 运行 `openspec validate refactor-character-hierarchical-state-runtime --strict --no-interactive`。
 
 ## 12. 手动验证说明

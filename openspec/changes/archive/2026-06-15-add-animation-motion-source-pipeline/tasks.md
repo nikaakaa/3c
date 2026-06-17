@@ -68,22 +68,22 @@
 - [x] 6.7 不运行 Unity batchmode。
 
 ## 7. 手动验证
-- [ ] 7.1 打开 Sandbox 场景并使用当前可琳角色。
-- [ ] 7.2 启用 Locomotion、Animation 相关诊断 channel。
-- [ ] 7.3 按 W 进入 RunLoop 后切 S，确认进入 `FullBody/Locomotion/TurnBack`。
-- [ ] 7.4 确认 TurnBack 动画播放 `Locomotion.Turn.Back`。
-- [ ] 7.5 搜索 `turnback-root-motion-consumed`，确认 `appliedYawSource=BakedMotionProfile`。
-- [ ] 7.6 搜索 `turnback-root-motion-consumed`，确认 `appliedTranslationSource=BakedMotionProfile`。
-- [ ] 7.7 搜索 `presenter-delta-ignored`，确认 Animator delta 只作为诊断存在。
-- [ ] 7.8 确认运行日志不再出现 Animator pending delta 被 controller 消费的链路。
-- [ ] 7.9 观察角色朝向随 TurnBack sampled profile 稳定转身。
-- [ ] 7.10 观察 TurnBack 期间普通输入位移和旋转不叠加。
-- [ ] 7.11 观察 motion window 结束后不继续应用 TurnBack root motion。
-- [ ] 7.12 观察 exit window 后回到 MoveLoop 或 Idle。
-- [ ] 7.13 验证 Walk、MoveStart、MoveStop、Idle 不误触发 TurnBack。
-- [ ] 7.14 验证 A/D 横向切换不误触发前后 TurnBack。
+- [x] 7.1 打开 Sandbox 场景并使用当前可琳角色。
+- [x] 7.2 启用 Locomotion、Animation 相关诊断 channel。
+- [x] 7.3 按 W 进入 RunLoop 后切 S，确认进入 `FullBody/Locomotion/TurnBack`。
+- [x] 7.4 确认 TurnBack 动画播放 `Locomotion.Turn.Back`。
+- [x] 7.5 搜索 `turnback-root-motion-consumed`，确认 `appliedYawSource=BakedMotionProfile`。
+- [x] 7.6 搜索 `turnback-root-motion-consumed`，确认 `appliedTranslationSource=BakedMotionProfile`。
+- [x] 7.7 搜索 `presenter-delta-ignored`，确认 Animator delta 只作为诊断存在。
+- [x] 7.8 确认运行日志不再出现 Animator pending delta 被 controller 消费的链路。
+- [x] 7.9 观察角色朝向随 TurnBack sampled profile 稳定转身。
+- [x] 7.10 观察 TurnBack 期间普通输入位移和旋转不叠加。
+- [x] 7.11 观察 motion window 结束后不继续应用 TurnBack root motion。
+- [x] 7.12 观察 exit window 后回到 MoveLoop 或 Idle。
+- [x] 7.13 验证 Walk、MoveStart、MoveStop、Idle 不误触发 TurnBack。
+- [x] 7.14 验证 A/D 横向切换不误触发前后 TurnBack。
 
 ## 8. OpenSpec 收尾
 - [x] 8.1 对照 proposal 确认没有实现未审批旁路。
 - [x] 8.2 检查是否需要更新 Path 文档，结果为 `no-op`：现有 Path 文档目录属于 DG_Entity，未发现 3C TurnBack/animation motion 对应文档；链接检查器只发现 DG_Entity 既有反向依赖缺失，和本变更无关。
-- [ ] 8.3 完成验证后再统一归档本 change。
+- [x] 8.3 完成验证后再统一归档本 change。

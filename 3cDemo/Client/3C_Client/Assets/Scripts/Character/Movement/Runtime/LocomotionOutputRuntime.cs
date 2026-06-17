@@ -30,6 +30,7 @@ namespace ThirdPersonMovement
         BasicMovementGait CurrentGait { get; }
         void WriteActionFactsToBlackboard(in CharacterRuntimeActionFacts facts);
         void WriteAnimationFactsToBlackboard(in CharacterRuntimeAnimationFacts facts);
+        void WriteLocomotionPreemptionFactToBlackboard(in LocomotionPreemptionFact fact);
     }
 
     internal interface ILocomotionOutputCompletionDependencies
@@ -71,6 +72,11 @@ namespace ThirdPersonMovement
             animationOutputPresenter.Present(in frame);
         }
 
+        public void SetRunLatchActive(bool active)
+        {
+            outputCompletion.SetRunLatchActive(active);
+        }
+
         public void WriteActionFacts(in CharacterRuntimeActionFacts facts)
         {
             blackboardWriter.WriteActionFacts(in facts);
@@ -79,6 +85,11 @@ namespace ThirdPersonMovement
         public void WriteAnimationFacts(in CharacterRuntimeAnimationFacts facts)
         {
             blackboardWriter.WriteAnimationFacts(in facts);
+        }
+
+        public void WriteLocomotionPreemptionFact(in LocomotionPreemptionFact fact)
+        {
+            blackboardWriter.WriteLocomotionPreemptionFact(in fact);
         }
 
         public void CompleteLocomotionTick()
@@ -106,6 +117,11 @@ namespace ThirdPersonMovement
             runtime.PresentLocomotionAnimation(in frame);
         }
 
+        public void SetRunLatchActive(bool active)
+        {
+            runtime.SetRunLatchActive(active);
+        }
+
         public void WriteActionFacts(in CharacterRuntimeActionFacts facts)
         {
             runtime.WriteActionFacts(in facts);
@@ -114,6 +130,11 @@ namespace ThirdPersonMovement
         public void WriteAnimationFacts(in CharacterRuntimeAnimationFacts facts)
         {
             runtime.WriteAnimationFacts(in facts);
+        }
+
+        public void WriteLocomotionPreemptionFact(in LocomotionPreemptionFact fact)
+        {
+            runtime.WriteLocomotionPreemptionFact(in fact);
         }
 
         public void CompleteLocomotionTick()
@@ -182,7 +203,8 @@ namespace ThirdPersonMovement
                 frame.Command.TurnBackMotionPolicy,
                 frame.Command.HasTurnBackMotionPolicy,
                 entryFootPhaseMatchResult,
-                hasEntryFootPhaseMatchRequest);
+                hasEntryFootPhaseMatchRequest,
+                dependencies.AnimationConfig);
         }
 
         bool TryResolveRunLoopEntryFootPhaseMatch(
@@ -243,6 +265,11 @@ namespace ThirdPersonMovement
         {
             CharacterRuntimeAnimationFacts resolvedFacts = ResolveLocomotionFootPhaseAnimationFacts(in facts);
             dependencies.WriteAnimationFactsToBlackboard(in resolvedFacts);
+        }
+
+        public void WriteLocomotionPreemptionFact(in LocomotionPreemptionFact fact)
+        {
+            dependencies.WriteLocomotionPreemptionFactToBlackboard(in fact);
         }
 
         CharacterRuntimeAnimationFacts ResolveLocomotionFootPhaseAnimationFacts(in CharacterRuntimeAnimationFacts facts)
@@ -367,6 +394,11 @@ namespace ThirdPersonMovement
 
             dependencies.SyncRollbackCameraBasis();
             ResetRunLatchAfterIdle();
+        }
+
+        public void SetRunLatchActive(bool active)
+        {
+            dependencies.StateStore.SetRunLatchActive(active);
         }
 
         void ResetRunLatchAfterIdle()

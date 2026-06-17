@@ -79,7 +79,7 @@
 - **THEN** 它们 MUST NOT 要求持有 ScriptableObject、MonoBehaviour、Transform、AnimationClip 或 Animancer 对象
 
 ### Requirement: 现有运行时边界保持
-系统 MUST 保持当前 Locomotion、Animancer Presenter 和动作打断仲裁器的边界。动作打断策略集合 MAY 作为 FullBody Action 请求准入配置接入运行时，但 MUST NOT 改变 `Idle / MoveStart / MoveLoop / MoveStop` 状态图，也不得让配置数据成为 `MoveStop -> MoveStart` 的必需依赖。
+系统 MUST 保持当前 Locomotion、Animancer Presenter 和动作打断仲裁器的边界。动作打断策略集合 MAY 作为 Action 请求准入配置接入运行时，但 MUST NOT 改变 `Idle / MoveStart / MoveLoop / MoveStop` 状态图，也不得让配置数据成为 `MoveStop -> MoveStart` 的必需依赖。
 
 #### Scenario: 基础移动不依赖策略集合
 - **WHEN** 当前基础移动状态机处理 `MoveStop` 中重新输入
@@ -91,8 +91,8 @@
 - **THEN** Presenter MUST NOT 读取动作打断策略集合
 - **AND** Presenter MUST NOT 通过策略集合决定业务打断
 
-#### Scenario: FullBody Action 准入读取策略集合
-- **WHEN** FullBody Action 请求门面处理 Dodge 或后续 Action 请求
+#### Scenario: Action 准入读取策略集合
+- **WHEN** Action 请求门面处理 Dodge 或后续 Action 请求
 - **THEN** 它 MAY 读取动作打断策略集合并编译 runtime policy
 - **AND** 该读取 MUST 只用于动作请求仲裁
 - **AND** MUST NOT 直接提交运动命令或动画播放命令
@@ -113,17 +113,17 @@
 - **THEN** 用户 MUST 能在 Inspector 中配置策略
 - **AND** 不需要把动画 clip、角色 prefab 或场景对象拖入该资产
 
-### Requirement: FullBody Action 策略装配入口
-系统 MUST 为 FullBody Action 运行时准入提供明确的策略集合装配入口。该入口 MAY 位于 FullBody Action 控制器、角色动作配置或等价主装配点，但 MUST NOT 位于 Locomotion controller、movement pipeline 或 animation presenter。
+### Requirement: Action 策略装配入口
+系统 MUST 为 Action 运行时准入提供明确的策略集合装配入口。该入口 MAY 位于 Action 控制器、角色动作配置或等价主装配点，但 MUST NOT 位于 Locomotion controller、movement pipeline 或 animation presenter。
 
 #### Scenario: FullBody 控制器定位策略集合
-- **WHEN** 角色 FullBody Action 请求门面处理 Dodge 请求
+- **WHEN** 角色 Action 请求门面处理 Dodge 请求
 - **THEN** 它 MUST 能定位用于 `ActionInterruptArbiter` 的策略集合
 - **AND** 策略集合 MUST 编译为纯 runtime policy 列表后再参与仲裁
 
 #### Scenario: 缺失策略集合可诊断
 - **GIVEN** 角色没有配置策略集合或策略集合无法编译
-- **WHEN** 玩家提交 FullBody Action 请求
+- **WHEN** 玩家提交 Action 请求
 - **THEN** 系统 MUST 产生 rejected decision 或配置错误诊断
 - **AND** 系统 MUST NOT 绕过策略集合直接让状态机进入动作
 
@@ -140,33 +140,87 @@
 - **GIVEN** 当前动作状态为空 Action 或等价可允许状态
 - **AND** Dodge 请求优先级满足策略最小优先级
 - **AND** 当前 resistance 不阻挡请求
-- **WHEN** FullBody Action 请求门面执行仲裁
+- **WHEN** Action 请求门面执行仲裁
 - **THEN** `ActionInterruptArbiter` MUST 返回 accepted decision
 
 #### Scenario: 默认策略拒绝低优先级 Dodge
 - **GIVEN** 当前动作状态匹配默认 Dodge 策略
 - **AND** Dodge 请求优先级低于策略最小优先级
-- **WHEN** FullBody Action 请求门面执行仲裁
+- **WHEN** Action 请求门面执行仲裁
 - **THEN** `ActionInterruptArbiter` MUST 返回 rejected decision
 - **AND** 拒绝原因 MUST 表示优先级不足
 
-### Requirement: FullBody 请求策略集合命名和归属
-系统 MUST 将同时包含 Dodge、TurnBack 或后续 FullBody 状态请求策略的默认策略集合命名并归属为 `CorinFullBodyStateRequestPolicySet.asset` 或批准的等价 FullBody state request policy，而不是 Dodge-only policy。策略集合的名称、目录和根配置引用 MUST 反映其覆盖范围，避免设计者误判该资产只影响 `Action.Dodge`。
+### Requirement: Action Interrupt 策略集合命名和归属
+系统 MUST 将同时包含 Dodge、TurnBack 或后续动作中断请求策略的默认策略集合命名并归属为 `CorinActionInterruptPolicySet.asset` 或批准的等价 action interrupt policy，而不是 Dodge-only policy。策略集合的名称、目录和根配置引用 MUST 反映其覆盖范围，避免设计者误判该资产只影响 `Action.Dodge`。
 
 #### Scenario: 多请求策略集合不使用 Dodge-only 命名
-- **GIVEN** 默认策略集合同时包含 `Action.Dodge` 和 `FullBody/Locomotion/TurnBack` 或等价 TurnBack request policy
+- **GIVEN** 默认策略集合同时包含 `Action.Dodge` 和 `Locomotion.TurnBack` 或等价 TurnBack request policy
 - **WHEN** 检查该策略集合资产
-- **THEN** 资产名称 MUST 为 `CorinFullBodyStateRequestPolicySet.asset` 或批准的等价 FullBody state request policy 名称
+- **THEN** 资产名称 MUST 为 `CorinActionInterruptPolicySet.asset` 或批准的等价 action interrupt policy 名称
 - **AND** 资产 MUST NOT 使用 `DefaultDodgeInterruptPolicySet` 或等价 Dodge-only 名称作为正式资产名
 
 #### Scenario: 策略集合位于动作请求归属目录
 - **WHEN** 检查默认策略集合目录
-- **THEN** 策略集合 MUST 位于 `Assets/Configs/3C/Action/FullBody/RequestPolicy/` 或批准的等价 FullBody 请求策略目录
+- **THEN** 策略集合 MUST 位于 `Assets/Configs/3C/Action/Corin/InterruptPolicy/` 或批准的等价动作中断策略目录
 - **AND** 它 MUST NOT 放在 Locomotion animation、StateMachine topology 或 Animancer transition 目录下
 
 #### Scenario: 缺失策略集合不回退旧 Dodge 策略
-- **GIVEN** 角色配置根或正式装配点缺失 FullBody 请求策略集合
+- **GIVEN** 角色配置根或正式装配点缺失 Action Interrupt 策略集合
 - **WHEN** 请求准入需要 priority、resistance 或 timing window policy
 - **THEN** 系统 MUST 报告配置错误或拒绝对应请求
 - **AND** MUST NOT 自动查找旧 `DefaultDodgeInterruptPolicySet` 路径作为 fallback
+
+### Requirement: 状态请求策略不重复定义窗口时间
+系统 MUST 让状态请求策略只描述从当前状态到目标状态的准入关系、最小请求优先级、force 和 required fact id。新增状态请求策略 MUST NOT 重新定义同一个窗口的 start/end timing；窗口 timing MUST 来自 `StateTimelinePolicy`，并由 sampler 产出 active facts。旧 `ActionInterruptPolicy` 的 elapsed timing rule MAY 在迁移期保留，但不得作为 Attack combo、TurnBack 或后续 HitReact 新窗口的首选表达。
+
+#### Scenario: 新 Attack 策略只引用 combo window
+- **GIVEN** Attack01 的 timeline policy 定义了 `attack01-combo` window
+- **WHEN** 设计者配置 Attack01 到 Attack02 的请求策略
+- **THEN** 策略 MUST 能引用 `ComboInputOpen` 或等价 required fact id
+- **AND** 策略 MUST 配置 min priority 或 force
+- **AND** 策略 MUST NOT 配置另一份 combo window start/end
+
+#### Scenario: 旧 Dodge timing rule 是迁移兼容
+- **GIVEN** 现有 Dodge 策略使用 elapsed time timing rule
+- **WHEN** 本变更迁移策略数据源
+- **THEN** 系统 MAY 保留该规则以保护旧行为
+- **AND** 新增状态请求规范 MUST 推荐使用 required fact id
+
+### Requirement: 状态请求策略数据源
+系统 MUST 提供可配置的状态请求策略数据源，用于描述从当前状态到目标状态的请求准入规则。该数据源 MUST 能覆盖现有 ActionInterruptPolicy 的 priority、resistance、force 和 timing 语义，并 MUST 能引用或关联状态 timeline fact id。
+
+#### Scenario: TurnBack 策略引用窗口
+- **GIVEN** 策略 from state 为 `Locomotion.MoveLoop`
+- **AND** target state 为 `Locomotion.TurnBack`
+- **WHEN** 设计者配置策略
+- **THEN** 策略 MUST 能引用 TurnBack 允许进入事实或等价 fact id
+- **AND** MUST 能配置 min priority 和 force
+
+#### Scenario: Dodge 现有策略可迁移
+- **GIVEN** 当前已有 Dodge action interrupt policy
+- **WHEN** 系统迁移到状态请求策略数据源
+- **THEN** 现有 Dodge priority、timing rule 和 force 语义 MUST 能保持
+- **AND** 不需要状态机 transition 条件重新判断请求 priority
+
+### Requirement: 策略数据编译到纯 runtime 数据
+状态请求策略数据源 MUST 编译为纯 runtime policy 列表。编译器 MUST 只做数据转换和校验，不得调用状态机、Animancer、Animator、motion executor、CharacterController 或 Transform。
+
+#### Scenario: 编译 TurnBack 策略
+- **GIVEN** 一个 TurnBack 状态请求策略定义
+- **WHEN** 系统编译策略集合
+- **THEN** 输出 runtime policy MUST 包含 from state、target state、min priority、force 和 required fact id
+- **AND** 输出 policy MUST 不包含 Unity 对象引用
+
+#### Scenario: 缺失 fact 报告错误
+- **GIVEN** 策略引用了不存在的 required fact id
+- **WHEN** 系统校验策略集合
+- **THEN** 校验结果 MUST 包含错误
+
+### Requirement: 策略配置入口不污染 Locomotion
+状态请求策略配置 MAY 由角色 FullBody 配置、状态机配置或等价正式装配点引用，但 Locomotion movement pipeline、Animancer presenter 和 motion executor MUST NOT 直接读取策略 SO。
+
+#### Scenario: Presenter 不读取策略
+- **WHEN** 基础移动动画 Presenter 播放 TurnBack 或 MoveLoop 动画
+- **THEN** Presenter MUST NOT 读取状态请求策略资产
+- **AND** MUST NOT 由策略资产决定是否切换状态
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
@@ -405,9 +405,6 @@ namespace ThirdPersonSimulation.Tests
                 new CharacterStateMachineRestoreState(
                     CharacterStateMachineSnapshot.Inactive,
                     Vector3.zero,
-                    false,
-                    false,
-                    false,
                     false),
                 true,
                 BasicMovementGait.Run,
@@ -440,29 +437,32 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
-        public void CharacterStateMachineRestoreKeepsActionFactsForNextTick()
+        public void FullBodyActionLifecycleRestoreKeepsActionFactsForNextTick()
         {
-            CharacterStateMachineRunner original = new CharacterStateMachineRunner(LoadConfiguredStateMachineDefinition());
-            CharacterStateMachineFrame entered = original.Tick(Context(
-                true,
-                0.1f,
-                DodgeRequest(CharacterStateVariant.Directional, Vector3.forward)));
-            CharacterStateMachineRestoreState restoreState = original.CaptureRestoreState();
+            FullBodyActionRuntimeModule original = new FullBodyActionRuntimeModule();
+            Assert.True(original.Rebuild(LoadConfiguredStateMachineDefinitionAsset(), false));
+            CharacterResolvedAction action = ResolvedDodgeAction(CharacterStateVariant.Directional, Vector3.forward, 1);
+            ActionLifecycleFrame entered = original.TickActionLifecycle(in action, 0.1f, 1);
+            FullBodyActionRestoreState restoreState = original.CaptureRestoreState();
 
-            CharacterStateMachineRunner restored = new CharacterStateMachineRunner(LoadConfiguredStateMachineDefinition());
+            FullBodyActionRuntimeModule restored = new FullBodyActionRuntimeModule();
+            Assert.True(restored.Rebuild(LoadConfiguredStateMachineDefinitionAsset(), false));
             Assert.True(restored.Restore(in restoreState));
 
-            CharacterStateMachineFrame originalNext = original.Tick(Context(true, 0.1f));
-            CharacterStateMachineFrame restoredNext = restored.Tick(Context(true, 0.1f));
+            CharacterResolvedAction none = default;
+            ActionLifecycleFrame originalNext = original.TickActionLifecycle(in none, 0.1f, 2);
+            ActionLifecycleFrame restoredNext = restored.TickActionLifecycle(in none, 0.1f, 2);
 
-            Assert.AreEqual(CharacterStateIds.Dodge, entered.Snapshot.ActiveState);
+            Assert.AreEqual(ActionStateIds.Dodge, entered.ActionState);
             Assert.True(entered.HasAnimationRequest);
-            Assert.AreEqual(originalNext.Snapshot.ActiveState, restoredNext.Snapshot.ActiveState);
-            Assert.AreEqual(originalNext.Snapshot.StateTime, restoredNext.Snapshot.StateTime, 0.0001f);
+            Assert.AreEqual(originalNext.ActionState, restoredNext.ActionState);
+            Assert.AreEqual(originalNext.MotionSpec.StateTime, restoredNext.MotionSpec.StateTime, 0.0001f);
             Assert.AreEqual(
-                ResolveActionMotion(in originalNext, 0.1f).MovementCommand.WorldDirection,
-                ResolveActionMotion(in restoredNext, 0.1f).MovementCommand.WorldDirection);
-            Assert.False(restoredNext.HasAnimationRequest);
+                originalNext.MotionSpec.LockedWorldDirection,
+                restoredNext.MotionSpec.LockedWorldDirection);
+            Assert.AreEqual(
+                originalNext.AnimationRequest.ActionPlaybackIntent,
+                restoredNext.AnimationRequest.ActionPlaybackIntent);
         }
 
         static CharacterStateMachineDefinition LoadConfiguredStateMachineDefinition()
@@ -473,15 +473,16 @@ namespace ThirdPersonSimulation.Tests
         static CharacterStateMachineDefinitionSO LoadConfiguredStateMachineDefinitionAsset()
         {
             CharacterStateMachineDefinitionSO asset = AssetDatabase.LoadAssetAtPath<CharacterStateMachineDefinitionSO>(
-                "Assets/Configs/3C/StateMachine/FullBody/CorinFullBodyStateMachine.asset");
+                "Assets/Configs/3C/StateMachine/Locomotion/Corin/CorinLocomotionStateGraph.asset");
             Assert.NotNull(asset);
             return asset;
         }
 
-        static PlayerLocomotionController AddConfiguredLocomotionController(GameObject gameObject)
+        static CharacterFrameRuntimeController AddConfiguredRuntimeController(GameObject gameObject)
         {
-            PlayerLocomotionController controller = gameObject.AddComponent<PlayerLocomotionController>();
+            CharacterFrameRuntimeController controller = gameObject.AddComponent<CharacterFrameRuntimeController>();
             controller.CharacterConfig = LoadConfiguredCharacterConfigAsset();
+            controller.AutoUpdate = false;
             return controller;
         }
 
@@ -496,21 +497,20 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
-        public void PlayerLocomotionControllerRestoresSimulationSnapshot()
+        public void CharacterFrameRuntimeControllerRestoresSimulationSnapshot()
         {
             GameObject gameObject = new GameObject("rollback-locomotion-snapshot-test");
             gameObject.SetActive(false);
 
             try
             {
-                PlayerLocomotionController controller = AddConfiguredLocomotionController(gameObject);
-                controller.SetMotionExecutor(new FakeMotionExecutor());
+                CharacterFrameRuntimeController controller = AddConfiguredRuntimeController(gameObject);
                 gameObject.transform.SetPositionAndRotation(new Vector3(2f, 0f, 3f), Quaternion.Euler(0f, 45f, 0f));
-                controller.SetRunLatchActive(true);
+                controller.LocomotionModule.SetRunLatchActive(true);
 
                 CharacterSimulationSnapshot snapshot = controller.CaptureSimulationSnapshot(new SimulationTick(8));
                 gameObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-                controller.SetRunLatchActive(false);
+                controller.LocomotionModule.SetRunLatchActive(false);
 
                 Assert.True(controller.RestoreSimulationSnapshot(in snapshot));
                 CharacterSimulationSnapshot restored = controller.CaptureSimulationSnapshot(new SimulationTick(8));
@@ -527,16 +527,15 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
-        public void PlayerLocomotionControllerRestoresRuntimeBlackboardSnapshotIdempotently()
+        public void CharacterFrameRuntimeControllerRestoresRuntimeBlackboardSnapshotIdempotently()
         {
             GameObject gameObject = new GameObject("rollback-blackboard-snapshot-test");
             gameObject.SetActive(false);
 
             try
             {
-                PlayerLocomotionController controller = AddConfiguredLocomotionController(gameObject);
-                controller.SetMotionExecutor(new FakeMotionExecutor());
-                controller.WriteAnimationFacts(new CharacterRuntimeAnimationFacts(
+                CharacterFrameRuntimeController controller = AddConfiguredRuntimeController(gameObject);
+                controller.LocomotionModule.WriteAnimationFacts(new CharacterRuntimeAnimationFacts(
                     new AnimationPhasePlaybackProgress(BasicMovementPhase.MoveLoop, "RunLoop", 0.6f, true, false),
                     "RunLoop",
                     ActionAnimationKeys.DodgeDirectional,
@@ -547,7 +546,7 @@ namespace ThirdPersonSimulation.Tests
                     9));
 
                 CharacterSimulationSnapshot snapshot = controller.CaptureSimulationSnapshot(new SimulationTick(9));
-                controller.WriteAnimationFacts(CharacterRuntimeAnimationFacts.Default);
+                controller.LocomotionModule.WriteAnimationFacts(CharacterRuntimeAnimationFacts.Default);
 
                 Assert.True(controller.RestoreSimulationSnapshot(in snapshot));
                 CharacterSimulationSnapshot restoredOnce = controller.CaptureSimulationSnapshot(new SimulationTick(9));
@@ -584,11 +583,10 @@ namespace ThirdPersonSimulation.Tests
             try
             {
                 UnitySimulationTickDriver driver = gameObject.AddComponent<UnitySimulationTickDriver>();
-                PlayerLocomotionController controller = AddConfiguredLocomotionController(gameObject);
-                controller.SetMotionExecutor(new FakeMotionExecutor());
+                CharacterFrameRuntimeController controller = AddConfiguredRuntimeController(gameObject);
                 LocomotionSnapshotHistoryRecorder recorder = gameObject.AddComponent<LocomotionSnapshotHistoryRecorder>();
                 recorder.TickDriver = driver;
-                recorder.LocomotionController = controller;
+                recorder.RuntimeController = controller;
                 Assert.True(recorder.Register());
 
                 gameObject.transform.position = new Vector3(4f, 0f, 5f);
@@ -1027,45 +1025,29 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
-        public void SandboxSceneWiresLocalRollbackSoakDebugRunner()
+        public void RollbackDebugRigPrefabWiresLocalRollbackTools()
         {
-            string scenePath = Path.Combine(Application.dataPath, "Scenes", "Sandbox.unity");
-            string scene = File.ReadAllText(scenePath);
-            string runnerGuid = "f79063608d784da787c3554c8d0eda2d";
-            string fullBodySimulationFileId = "1761501684";
-            string presentationInterpolatorFileId = "108039801";
-            string cameraControllerFileId = "5809153074833929713";
+            string prefabPath = Path.Combine(Application.dataPath, "Prefabs", "Simulation", "RollbackDebugRig.prefab");
+            string prefab = File.ReadAllText(prefabPath, System.Text.Encoding.UTF8);
+            string inputRecorderFileId = "8801000000000000003";
+            string snapshotRecorderFileId = "8801000000000000004";
+            string simulationFileId = "8801000000000000005";
 
-            StringAssert.Contains($"guid: {runnerGuid}", scene);
-            StringAssert.Contains("addedObject: {fileID: 1761501686}", scene);
-            StringAssert.Contains($"simulationBehaviour: {{fileID: {fullBodySimulationFileId}}}", scene);
-            StringAssert.Contains("triggerKey: 289", scene);
-            StringAssert.Contains("applyReplayResultToScene: 0", scene);
-            AssertSceneToolWiring(scene, "triggerKey: 287", presentationInterpolatorFileId, cameraControllerFileId);
-            AssertSceneToolWiring(scene, "triggerKey: 289", presentationInterpolatorFileId, cameraControllerFileId);
+            StringAssert.Contains("guid: 76dd67150d57413e9cf41bca3e79f6ef", prefab);
+            StringAssert.Contains("guid: d43c4b24d029331458e709b1b3b82db2", prefab);
+            StringAssert.Contains("guid: f79063608d784da787c3554c8d0eda2d", prefab);
+            StringAssert.Contains($"inputRecorder: {{fileID: {inputRecorderFileId}}}", prefab);
+            StringAssert.Contains($"snapshotRecorder: {{fileID: {snapshotRecorderFileId}}}", prefab);
+            StringAssert.Contains($"simulationBehaviour: {{fileID: {simulationFileId}}}", prefab);
+            StringAssert.Contains("triggerKey: 287", prefab);
+            StringAssert.Contains("triggerKey: 288", prefab);
+            StringAssert.Contains("triggerKey: 289", prefab);
+            StringAssert.Contains("applyReplayResultToScene: 0", prefab);
 
             string runnerPath = Path.Combine(Application.dataPath, "Scripts", "Simulation", "Rollback", "LocalRollbackSoakDebugRunner.cs");
-            string runner = File.ReadAllText(runnerPath);
+            string runner = File.ReadAllText(runnerPath, System.Text.Encoding.UTF8);
             StringAssert.Contains("ROLLBACK_SOAK_RESULT", runner);
             StringAssert.Contains("ROLLBACK_SOAK_FIRST_MISMATCH", runner);
-        }
-
-        static void AssertSceneToolWiring(
-            string scene,
-            string triggerLine,
-            string presentationInterpolatorFileId,
-            string cameraControllerFileId)
-        {
-            int triggerIndex = scene.IndexOf(triggerLine, StringComparison.Ordinal);
-            Assert.That(triggerIndex, Is.GreaterThanOrEqualTo(0), triggerLine);
-            int blockStart = scene.LastIndexOf("--- !u!114", triggerIndex, StringComparison.Ordinal);
-            int blockEnd = scene.IndexOf("--- !u!", triggerIndex + triggerLine.Length, StringComparison.Ordinal);
-            if (blockEnd < 0)
-                blockEnd = scene.Length;
-
-            string block = scene.Substring(blockStart, blockEnd - blockStart);
-            StringAssert.Contains($"presentationInterpolator: {{fileID: {presentationInterpolatorFileId}}}", block);
-            StringAssert.Contains($"cameraController: {{fileID: {cameraControllerFileId}}}", block);
         }
 
         [Test]
@@ -1573,9 +1555,6 @@ namespace ThirdPersonSimulation.Tests
                 new CharacterStateMachineRestoreState(
                     state,
                     actionFacts.WorldDirection,
-                    false,
-                    false,
-                    false,
                     false),
                 false,
                 BasicMovementGait.Walk,
@@ -1630,7 +1609,8 @@ namespace ThirdPersonSimulation.Tests
                     actionKey,
                     actionNormalizedTime,
                     actionHasPlayback,
-                    false),
+                    false,
+                    actionHasPlayback ? new ActionAnimationPlaybackIntent(tick + 1) : ActionAnimationPlaybackIntent.Invalid),
                 actionHasPlayback ? actionKey.Value : string.Empty,
                 tick));
 
@@ -1646,9 +1626,6 @@ namespace ThirdPersonSimulation.Tests
                         string.Empty,
                         Array.Empty<CharacterStateTag>()),
                     Vector3.zero,
-                    false,
-                    false,
-                    false,
                     false),
                 false,
                 BasicMovementGait.Walk,
@@ -1693,20 +1670,68 @@ namespace ThirdPersonSimulation.Tests
                 direction);
         }
 
+        static CharacterResolvedAction ResolvedDodgeAction(
+            CharacterStateVariant variant,
+            Vector3 direction,
+            int sourceStep)
+        {
+            CharacterActionRequest request = new CharacterActionRequest(
+                CharacterFrameRequestProviderId.Dodge,
+                ActionRequestType.Dodge,
+                ThirdPersonInput.InputRequestKind.Dodge,
+                sourceStep,
+                sourceStep + 5,
+                30,
+                0,
+                variant,
+                direction);
+            CharacterInputRequestFact requestFact = new CharacterInputRequestFact(
+                true,
+                ThirdPersonInput.InputRequestKind.Dodge,
+                sourceStep,
+                sourceStep + 5,
+                30,
+                variant,
+                direction);
+            ActionMotionSpec motionSpec = new ActionMotionSpec(
+                ActionStateIds.Dodge,
+                CharacterStateIds.Dodge,
+                variant,
+                0.35f,
+                variant == CharacterStateVariant.Backstep ? 2.5f : 4f,
+                variant != CharacterStateVariant.Backstep,
+                false,
+                direction,
+                0f,
+                sourceStep);
+
+            return new CharacterResolvedAction(
+                CharacterFrameRequestProviderId.Dodge,
+                request,
+                requestFact,
+                new ActionInterruptRequest(sourceStep, ActionRequestType.Dodge, ActionStateIds.Dodge, 30, 0, sourceStep, sourceStep + 5),
+                new ActionInterruptContext(ActionStateIds.None, 0f, 0, sourceStep),
+                variant == CharacterStateVariant.Backstep ? ActionAnimationKeys.DodgeBackstep : ActionAnimationKeys.DodgeDirectional,
+                motionSpec);
+        }
+
         static ActionMotionResolveResult ResolveActionMotion(in CharacterStateMachineFrame frame, float deltaTime)
         {
-            DodgeActionConfigSO dodgeAction = LoadConfiguredCharacterConfigAsset().DodgeAction;
-            bool hasDodgeAction = dodgeAction != null;
-            DodgeActionConfig dodgeConfig = hasDodgeAction ? dodgeAction.ToConfig() : default;
+            CharacterActionCatalogSO actionCatalog = LoadConfiguredCharacterConfigAsset().ActionCatalog;
+            CharacterActionCatalog catalog = actionCatalog != null ? actionCatalog.ToCatalog() : CharacterActionCatalog.Empty;
+            DodgeActionTuning dodgeTuning = default;
+            bool hasDodgeAction = catalog.TryGetDodgeDefinition(out CharacterActionDefinition definition) &&
+                                  definition.TryGetDodgeTuning(out dodgeTuning);
             ActionMotionSpec spec = DodgeActionMotionSpecAdapter.Resolve(
                 frame.ActionMotionSpec,
                 hasDodgeAction,
-                in dodgeConfig);
+                in dodgeTuning);
             ActionMotionResolveInput input = new ActionMotionResolveInput(
                 spec,
                 deltaTime,
                 frame.TimelineFacts,
-                CharacterRuntimeActionFacts.Default);
+                CharacterRuntimeActionFacts.Default,
+                true);
             return ActionMotionResolver.Resolve(in input);
         }
 

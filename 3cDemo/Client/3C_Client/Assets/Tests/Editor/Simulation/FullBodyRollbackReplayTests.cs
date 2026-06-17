@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -195,85 +195,8 @@ namespace ThirdPersonSimulation.Tests
 
             AssertSynctestSuccess(in result);
         }
-
         [Test]
-        public void FullBodyRollbackSimulationReplaysTurnBackEntryLocalProfileToSameSnapshot()
-        {
-            using FullBodyRollbackFixture fixture = FullBodyRollbackFixture.Create();
-            RunLocomotionAnimationConfigSO config = ScriptableObject.CreateInstance<RunLocomotionAnimationConfigSO>();
-            LocomotionMotionProfileSO profile = ScriptableObject.CreateInstance<LocomotionMotionProfileSO>();
-            CharacterConfigSO characterConfig = null;
-            StepLocomotionPlaybackProgress playback = new StepLocomotionPlaybackProgress(
-                BasicMovementPhase.TurnBack,
-                TurnBackMotionPolicy.DefaultAliasKey,
-                0.2f,
-                0.1f);
-
-            try
-            {
-                profile.SetBakedData(
-                    BasicMovementPhase.TurnBack,
-                    BasicMovementGait.Run,
-                    TurnBackMotionPolicy.DefaultAliasKey,
-                    1f,
-                    AnimationCurve.Constant(0f, 1f, 0f),
-                    AnimationCurve.Linear(0f, 0f, 1f, 1.2f),
-                    AnimationCurve.Linear(0f, 0f, 1f, 180f),
-                    TurnBackMotionPolicy.DefaultAliasKey,
-                    string.Empty);
-                config.SetMotionProfileBindings(new LocomotionPhaseMotionProfileBinding(
-                    BasicMovementPhase.TurnBack,
-                    BasicMovementGait.Run,
-                    TurnBackMotionPolicy.DefaultAliasKey,
-                    profile));
-
-                AnimationMotionFakeDriver motionDriver = new AnimationMotionFakeDriver(fixture.Root.transform);
-                characterConfig = CreateCharacterConfig(LoadConfiguredStateMachineDefinitionAsset(), LoadConfiguredCharacterConfigAsset().Movement, config);
-                fixture.Locomotion.CharacterConfig = characterConfig;
-                fixture.Locomotion.SetMotionExecutor(motionDriver);
-                fixture.Locomotion.SetAnimationPlaybackProgressSource(playback);
-                CharacterSimulationSnapshot restoreSnapshot = CreateTurnBackSnapshot(new SimulationTick(10), 0.2f);
-                fixture.Simulation.Restore(in restoreSnapshot);
-
-                PredictionInputHistory inputHistory = new PredictionInputHistory(16);
-                PredictionSnapshotHistory snapshotHistory = new PredictionSnapshotHistory(16);
-                CharacterSimulationSnapshot start = fixture.Simulation.CaptureSnapshot(new SimulationTick(10));
-                snapshotHistory.Write(in start);
-
-                for (int tick = 11; tick <= 14; tick++)
-                {
-                    PredictionInputFrame frame = Input(tick, Vector2.down, true);
-                    inputHistory.Write(frame);
-                    fixture.Simulation.Advance(in frame);
-                    CharacterSimulationSnapshot snapshot = fixture.Simulation.CaptureSnapshot(frame.Tick);
-                    snapshotHistory.Write(in snapshot);
-                }
-
-                playback.Set(BasicMovementPhase.TurnBack, TurnBackMotionPolicy.DefaultAliasKey, 0.95f);
-                fixture.Root.transform.SetPositionAndRotation(new Vector3(20f, 0f, 20f), Quaternion.Euler(0f, 90f, 0f));
-
-                LocalRollbackSynctestRunner runner = new LocalRollbackSynctestRunner(inputHistory, snapshotHistory, fixture.Simulation);
-                LocalRollbackSynctestResult result = runner.Run(
-                    new SimulationTick(10),
-                    new SimulationTick(14),
-                    new SimulationTick(10),
-                    CharacterSimulationSnapshotTolerance.Default);
-
-                AssertSynctestSuccess(in result);
-                Assert.False(result.FirstMismatch.HasMismatch);
-                Assert.True(result.Comparison.Matches);
-                Assert.AreEqual(BasicMovementPhase.TurnBack, SnapshotHistoryLatest(snapshotHistory, new SimulationTick(14)).LocomotionPhase);
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(characterConfig);
-                UnityEngine.Object.DestroyImmediate(profile);
-                UnityEngine.Object.DestroyImmediate(config);
-            }
-        }
-
-        [Test]
-        public void FullBodyRollbackSimulationAdvanceUsesFullBodyActionController()
+        public void FullBodyRollbackSimulationAdvanceUsesCharacterFrameRuntimeController()
         {
             using FullBodyRollbackFixture fixture = FullBodyRollbackFixture.Create();
             PredictionInputFrame frame = Input(7, Vector2.up, true, true);
@@ -281,47 +204,13 @@ namespace ThirdPersonSimulation.Tests
             fixture.Simulation.Advance(in frame);
             CharacterSimulationSnapshot snapshot = fixture.Simulation.CaptureSnapshot(frame.Tick);
 
-            Assert.AreEqual(CharacterStateIds.Dodge, fixture.FullBody.CurrentStateSnapshot.ActiveState);
-            Assert.AreEqual(CharacterStateVariant.Directional, fixture.FullBody.CurrentStateSnapshot.Variant);
-            Assert.True(snapshot.FullBodyRestoreState.Snapshot.ActiveState.IsValid);
-            Assert.AreEqual(CharacterStateIds.Dodge, snapshot.FullBodyRestoreState.Snapshot.ActiveState);
+            CharacterStateId activeState = fixture.RuntimeController.FullBodyModule.CurrentStateSnapshot.ActiveState;
+            Assert.That(activeState.Value, Does.StartWith("Locomotion."));
+            Assert.AreEqual(snapshot.FullBodyRestoreState.Gameplay.Snapshot.ActiveState, activeState);
+            Assert.True(snapshot.FullBodyRestoreState.Gameplay.ActionLifecycle.HasActiveAction);
+            Assert.AreEqual(ActionStateIds.Dodge, snapshot.FullBodyRestoreState.Gameplay.ActionLifecycle.ActiveAction.MotionSpec.ActionState);
             Assert.AreEqual(7, snapshot.RuntimeBlackboard.Action.SourceStep);
             Assert.True(fixture.ActionPresenter.PresentCount > 0);
-        }
-
-        [Test]
-        public void FullBodyActionTickAdapterRunsPipelineWithSimulationTickAsSourceStep()
-        {
-            using FullBodyRollbackFixture fixture = FullBodyRollbackFixture.Create();
-            UnityInputSystemRequestBufferAdapter requestAdapter = fixture.Root.AddComponent<UnityInputSystemRequestBufferAdapter>();
-            FullBodyActionTickAdapter adapter = fixture.Root.AddComponent<FullBodyActionTickAdapter>();
-            SimulationTickContext context = new SimulationTickContext(
-                new SimulationTick(21),
-                SimulationTickRate.Default,
-                SimulationTickRole.Client);
-
-            fixture.InputSource.Input = new BasicLocomotionInputSnapshot(
-                SimulationTickRate.Default.FixedDeltaSecondsFloat,
-                Vector2.up,
-                Vector2.zero,
-                true);
-            requestAdapter.BufferComponent = fixture.InputBuffer;
-            fixture.InputBuffer.SetStep(21);
-            fixture.InputBuffer.Buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 21, 4);
-            adapter.FullBodyActionController = fixture.FullBody;
-            adapter.RequestBufferAdapter = requestAdapter;
-            RunFullBodyAdapterTick(adapter, in context);
-
-            CharacterSimulationSnapshot snapshot = fixture.Simulation.CaptureSnapshot(new SimulationTick(21));
-
-            Assert.AreEqual(21, fixture.InputBuffer.CurrentStep);
-            Assert.AreEqual(CharacterStateIds.Dodge, fixture.FullBody.CurrentStateSnapshot.ActiveState);
-            Assert.AreEqual(21, snapshot.RuntimeBlackboard.Action.SourceStep);
-            Assert.AreEqual(21, snapshot.RuntimeBlackboard.Animation.SourceStep);
-            Assert.True(adapter.LastFrameResult.Success);
-            Assert.True(adapter.LastFrameResult.BasicMovementExecuted || adapter.LastFrameResult.ActionMovementExecuted);
-            Assert.True(adapter.LastFrameResult.AnimationFactsWritten);
-            Assert.True(adapter.LastFrameResult.SnapshotEventsReady);
         }
 
         [Test]
@@ -337,17 +226,18 @@ namespace ThirdPersonSimulation.Tests
 
             Assert.False(fixture.InputBuffer.Buffer.TryPeek(InputRequestKind.Dodge, 31, out _));
 
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.ReadInput, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.UpdateInputBuffer, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.ReadInput, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.UpdateInputBuffer, ref context, out _);
 
             Assert.True(fixture.InputBuffer.Buffer.TryPeek(InputRequestKind.Dodge, 31, out _));
 
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.GameplayDecision, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.GameplayDecision, ref context, out _);
 
             Assert.True(context.InputRequest.HasRequest);
             Assert.AreEqual(InputRequestKind.Dodge, context.InputRequest.RequestKind);
             Assert.True(context.RequestSubmissions.HasAny);
-            Assert.AreEqual(CharacterStateIds.Dodge, context.StateFrame.Snapshot.ActiveState);
+            Assert.AreEqual(ActionStateIds.Dodge, context.ResolvedAction.MotionSpec.ActionState);
+            Assert.AreNotEqual(CharacterStateIds.Dodge, context.StateFrame.Snapshot.ActiveState);
         }
 
         [Test]
@@ -355,7 +245,7 @@ namespace ThirdPersonSimulation.Tests
         {
             using FullBodyRollbackFixture fixture = FullBodyRollbackFixture.Create();
             CharacterFramePipelineHost pipeline = CreateFramePipelineHost();
-            RecordingCharacterFrameRuntimePort runtime = new RecordingCharacterFrameRuntimePort(fixture.FullBody.RuntimePort);
+            RecordingCharacterFrameRuntimePort runtime = new RecordingCharacterFrameRuntimePort(fixture.RuntimeController.RuntimePort);
             PredictionInputFrame frame = Input(37, Vector2.up, true, true);
             CharacterFrameInput input = CharacterFrameInput.FromPredictionInputFrame(
                 in frame,
@@ -367,9 +257,9 @@ namespace ThirdPersonSimulation.Tests
             Assert.True(result.Success);
             Assert.Less(runtime.IndexOf("WriteBufferedInputFacts"), runtime.IndexOf("PrepareFrameRuntimeAdapters"));
             Assert.Less(runtime.IndexOf("PrepareFrameRuntimeAdapters"), runtime.IndexOf("SetLastFrameOutputs"));
-            Assert.Less(runtime.IndexOf("SetLastFrameOutputs"), runtime.IndexOf("ExecuteStateFrameMotion"));
-            Assert.Less(runtime.IndexOf("ExecuteStateFrameMotion"), runtime.IndexOf("PresentStateFrameAnimation"));
-            Assert.Less(runtime.IndexOf("PresentStateFrameAnimation"), runtime.IndexOf("UpdateStateSnapshot"));
+            Assert.Less(runtime.IndexOf("SetLastFrameOutputs"), runtime.IndexOf("ExecuteFrameMotion"));
+            Assert.Less(runtime.IndexOf("ExecuteFrameMotion"), runtime.IndexOf("PresentFrameAnimation"));
+            Assert.Less(runtime.IndexOf("PresentFrameAnimation"), runtime.IndexOf("UpdateStateSnapshot"));
             Assert.Less(runtime.IndexOf("UpdateStateSnapshot"), runtime.IndexOf("LogDiagnosticTickSnapshots"));
         }
 
@@ -378,7 +268,7 @@ namespace ThirdPersonSimulation.Tests
         {
             using FullBodyRollbackFixture fixture = FullBodyRollbackFixture.Create();
             CharacterFramePipelineHost pipeline = CreateFramePipelineHost();
-            RecordingCharacterFrameRuntimePort runtime = new RecordingCharacterFrameRuntimePort(fixture.FullBody.RuntimePort);
+            RecordingCharacterFrameRuntimePort runtime = new RecordingCharacterFrameRuntimePort(fixture.RuntimeController.RuntimePort);
             PredictionInputFrame frame = Input(38, Vector2.up, true, true);
             CharacterFrameInput input = CharacterFrameInput.FromPredictionInputFrame(
                 in frame,
@@ -390,18 +280,18 @@ namespace ThirdPersonSimulation.Tests
             pipeline.RunPhase(runtime, SimulationTickPhase.GameplayDecision, ref context, out _);
             pipeline.RunPhase(runtime, SimulationTickPhase.BuildMotion, ref context, out _);
 
-            Assert.AreEqual(-1, runtime.IndexOf("ExecuteStateFrameMotion"));
-            Assert.AreEqual(-1, runtime.IndexOf("PresentStateFrameAnimation"));
+            Assert.AreEqual(-1, runtime.IndexOf("ExecuteFrameMotion"));
+            Assert.AreEqual(-1, runtime.IndexOf("PresentFrameAnimation"));
 
             pipeline.RunPhase(runtime, SimulationTickPhase.ExecuteMotion, ref context, out _);
 
-            Assert.That(runtime.IndexOf("ExecuteStateFrameMotion"), Is.GreaterThanOrEqualTo(0));
-            Assert.AreEqual(-1, runtime.IndexOf("PresentStateFrameAnimation"));
+            Assert.That(runtime.IndexOf("ExecuteFrameMotion"), Is.GreaterThanOrEqualTo(0));
+            Assert.AreEqual(-1, runtime.IndexOf("PresentFrameAnimation"));
 
             pipeline.RunPhase(runtime, SimulationTickPhase.PresentationBridge, ref context, out _);
 
-            Assert.That(runtime.IndexOf("PresentStateFrameAnimation"), Is.GreaterThan(runtime.IndexOf("ExecuteStateFrameMotion")));
-            Assert.That(runtime.IndexOf("WriteStateFrameActionFacts"), Is.GreaterThan(runtime.IndexOf("PresentStateFrameAnimation")));
+            Assert.That(runtime.IndexOf("PresentFrameAnimation"), Is.GreaterThan(runtime.IndexOf("ExecuteFrameMotion")));
+            Assert.That(runtime.IndexOf("WriteStateFrameActionFacts"), Is.GreaterThan(runtime.IndexOf("PresentFrameAnimation")));
             Assert.That(runtime.IndexOf("UpdateStateSnapshot"), Is.GreaterThan(runtime.IndexOf("WriteStateFrameActionFacts")));
         }
 
@@ -416,9 +306,10 @@ namespace ThirdPersonSimulation.Tests
                 SimulationTickRate.Default.FixedDeltaSecondsFloat);
             CharacterFrameContext context = pipeline.BeginFrame(in input);
 
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.ReadInput, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.UpdateInputBuffer, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.GameplayDecision, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.ReadInput, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.UpdateInputBuffer, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.GameplayDecision, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.BuildMotion, ref context, out _);
 
             Assert.AreEqual(StateTimelineFactsSource.Current, context.CurrentTimelineFactsTrace.Source);
             Assert.AreEqual(context.Step, context.CurrentTimelineFactsTrace.SourceStep);
@@ -428,6 +319,9 @@ namespace ThirdPersonSimulation.Tests
             Assert.AreEqual(
                 context.CurrentTimelineFactsTrace.SourceStep,
                 context.StateFrame.CurrentTimelineFactsTrace.SourceStep);
+            Assert.AreEqual(
+                context.CurrentTimelineFactsTrace.FactsId,
+                context.FrameSubmission.CurrentTimelineFactsTrace.FactsId);
             Assert.AreEqual(StateTimelineFactsSource.Projected, context.StateFrame.ProjectedTimelineFactsTrace.Source);
         }
 
@@ -468,19 +362,19 @@ namespace ThirdPersonSimulation.Tests
                     Vector2.zero));
             CharacterFrameContext context = pipeline.BeginFrame(in input);
 
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.ReadInput, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.UpdateInputBuffer, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.GameplayDecision, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.BuildMotion, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.ReadInput, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.UpdateInputBuffer, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.GameplayDecision, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.BuildMotion, ref context, out _);
 
             Assert.AreEqual(0, fixture.Driver.TotalMoveCount);
 
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.ExecuteMotion, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.ExecuteMotion, ref context, out _);
 
             Assert.AreEqual(1, fixture.Driver.TotalMoveCount);
 
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.PresentationBridge, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.WriteSnapshotAndEvents, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.PresentationBridge, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.WriteSnapshotAndEvents, ref context, out _);
 
             Assert.AreEqual(1, fixture.Driver.TotalMoveCount);
         }
@@ -496,21 +390,22 @@ namespace ThirdPersonSimulation.Tests
                 SimulationTickRate.Default.FixedDeltaSecondsFloat);
             CharacterFrameContext context = pipeline.BeginFrame(in input);
 
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.ReadInput, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.UpdateInputBuffer, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.GameplayDecision, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.ReadInput, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.UpdateInputBuffer, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.GameplayDecision, ref context, out _);
 
-            Assert.True(context.StateFrame.ActionMotionSpec.HasSpec);
+            Assert.True(context.ResolvedAction.MotionSpec.HasSpec);
+            Assert.False(context.StateFrame.ActionMotionSpec.HasSpec);
             Assert.False(context.StateFrame.HasActionMovement);
 
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.BuildMotion, ref context, out CharacterFrameResult buildResult);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.BuildMotion, ref context, out CharacterFrameResult buildResult);
 
             Assert.True(context.ActionMotionResult.HasActionMovement);
             Assert.True(context.FrameSubmission.HasFrameOutput);
             Assert.AreEqual(context.ActionMotionResult.MovementCommand.PlanarDistance, buildResult.ActionMotionResult.MovementCommand.PlanarDistance, 0.0001f);
             Assert.AreEqual(0, fixture.Driver.TotalMoveCount);
 
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.ExecuteMotion, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.ExecuteMotion, ref context, out _);
 
             Assert.AreEqual(1, fixture.Driver.ActionMoveCount);
             Assert.AreEqual(context.ActionMotionResult.MovementCommand.WorldDirection, fixture.Driver.LastWorldDirection);
@@ -527,14 +422,14 @@ namespace ThirdPersonSimulation.Tests
                 SimulationTickRate.Default.FixedDeltaSecondsFloat);
             CharacterFrameContext context = pipeline.BeginFrame(in input);
 
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.ReadInput, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.UpdateInputBuffer, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.GameplayDecision, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.BuildMotion, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.ExecuteMotion, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.PresentationBridge, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.ReadInput, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.UpdateInputBuffer, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.GameplayDecision, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.BuildMotion, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.ExecuteMotion, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.PresentationBridge, ref context, out _);
 
-            CharacterRuntimeActionFacts facts = fixture.Locomotion.RuntimeBlackboardSnapshot.Action;
+            CharacterRuntimeActionFacts facts = fixture.RuntimeController.LocomotionModule.RuntimeBlackboardSnapshot.Action;
 
             Assert.True(facts.Active);
             Assert.AreEqual(context.ActionMotionResult.HasActionMovement, facts.HasMovement);
@@ -555,19 +450,19 @@ namespace ThirdPersonSimulation.Tests
                 SimulationTickRate.Default.FixedDeltaSecondsFloat);
             CharacterFrameContext context = pipeline.BeginFrame(in input);
 
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.ReadInput, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.UpdateInputBuffer, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.GameplayDecision, ref context, out _);
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.BuildMotion, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.ReadInput, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.UpdateInputBuffer, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.GameplayDecision, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.BuildMotion, ref context, out _);
 
             Assert.AreEqual(0, fixture.ActionPresenter.PresentCount);
 
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.ExecuteMotion, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.ExecuteMotion, ref context, out _);
 
             Assert.AreEqual(1, fixture.Driver.ActionMoveCount);
             Assert.AreEqual(0, fixture.ActionPresenter.PresentCount);
 
-            pipeline.RunPhase(fixture.FullBody.RuntimePort, SimulationTickPhase.PresentationBridge, ref context, out _);
+            pipeline.RunPhase(fixture.RuntimeController.RuntimePort, SimulationTickPhase.PresentationBridge, ref context, out _);
 
             Assert.AreEqual(1, fixture.ActionPresenter.PresentCount);
             Assert.True(context.AnimationFactsWritten);
@@ -589,8 +484,8 @@ namespace ThirdPersonSimulation.Tests
                 false,
                 default,
                 default,
-                true,
-                DodgeActionConfig.Default,
+                false,
+                CharacterActionCatalog.Empty,
                 0,
                 Array.Empty<ActionInterruptPolicy>());
 
@@ -644,7 +539,7 @@ namespace ThirdPersonSimulation.Tests
                 default,
                 default,
                 false,
-                default,
+                CharacterActionCatalog.Empty,
                 0,
                 new[] { new ActionInterruptPolicy(ActionStateIds.None, ActionStateIds.Dodge, 0) },
                 external);
@@ -703,57 +598,28 @@ namespace ThirdPersonSimulation.Tests
                     Vector2.up,
                     Vector2.zero));
 
-            Assert.True(fixture.FullBody.Tick(in input));
+            Assert.True(fixture.RuntimeController.Tick(in input));
 
             Assert.AreEqual(1, fixture.Driver.TotalMoveCount);
-            Assert.True(fixture.FullBody.LastFramePipelineResult.Success);
+            Assert.True(fixture.RuntimeController.LastFramePipelineResult.Success);
         }
 
         [Test]
-        public void FullBodyActionTickAdapterRegisterDisablesFullBodyAutoUpdate()
+        public void CharacterFrameRuntimeTickAdapterRegisterDisablesRuntimeControllerAutoUpdate()
         {
             using FullBodyRollbackFixture fixture = FullBodyRollbackFixture.Create();
             UnitySimulationTickDriver tickDriver = fixture.Root.AddComponent<UnitySimulationTickDriver>();
-            FullBodyActionTickAdapter adapter = fixture.Root.AddComponent<FullBodyActionTickAdapter>();
+            CharacterFrameRuntimeTickAdapter adapter = fixture.Root.AddComponent<CharacterFrameRuntimeTickAdapter>();
 
-            fixture.FullBody.AutoUpdate = true;
+            fixture.RuntimeController.AutoUpdate = true;
             adapter.TickDriver = tickDriver;
-            adapter.FullBodyActionController = fixture.FullBody;
+            adapter.RuntimeController = fixture.RuntimeController;
 
             Assert.True(adapter.Register());
-            Assert.False(fixture.FullBody.AutoUpdate);
+            Assert.False(fixture.RuntimeController.AutoUpdate);
 
             adapter.Unregister();
-            Assert.True(fixture.FullBody.AutoUpdate);
-        }
-
-        [Test]
-        public void FullBodyActionTickAdapterIgnoresUnregisteredRetiredLocomotionTickAdapter()
-        {
-            using FullBodyRollbackFixture fixture = FullBodyRollbackFixture.Create();
-            UnitySimulationTickDriver tickDriver = fixture.Root.AddComponent<UnitySimulationTickDriver>();
-            LocomotionTickAdapter locomotionAdapter = fixture.Root.AddComponent<LocomotionTickAdapter>();
-            FullBodyActionTickAdapter fullBodyAdapter = fixture.Root.AddComponent<FullBodyActionTickAdapter>();
-
-            fixture.InputSource.Input = new BasicLocomotionInputSnapshot(
-                SimulationTickRate.Default.FixedDeltaSecondsFloat,
-                Vector2.up,
-                Vector2.zero,
-                true);
-            locomotionAdapter.TickDriver = tickDriver;
-            locomotionAdapter.LocomotionController = fixture.Locomotion;
-            fullBodyAdapter.TickDriver = tickDriver;
-            fullBodyAdapter.FullBodyActionController = fixture.FullBody;
-
-            LogAssert.Expect(LogType.Error, new Regex(".*locomotion-tick-adapter-retired.*"));
-            Assert.False(locomotionAdapter.Register());
-
-            Assert.False(locomotionAdapter.IsRegistered);
-            Assert.True(fullBodyAdapter.Register());
-            Assert.True(fullBodyAdapter.IsRegistered);
-
-            fullBodyAdapter.Unregister();
-            locomotionAdapter.Unregister();
+            Assert.True(fixture.RuntimeController.AutoUpdate);
         }
 
         [Test]
@@ -772,8 +638,8 @@ namespace ThirdPersonSimulation.Tests
             fixture.Simulation.Restore(in snapshot);
 
             Assert.AreEqual(5, fixture.InputBuffer.CurrentStep);
-            Assert.AreEqual(snapshot.FullBodyRestoreState.Snapshot.ActiveState, fixture.FullBody.CurrentStateSnapshot.ActiveState);
-            Assert.AreEqual(snapshot.FullBodyRestoreState.Snapshot.StateTime, fixture.FullBody.CurrentStateSnapshot.StateTime, 0.0001f);
+            Assert.AreEqual(snapshot.FullBodyRestoreState.Snapshot.ActiveState, fixture.RuntimeController.FullBodyModule.CurrentStateSnapshot.ActiveState);
+            Assert.AreEqual(snapshot.FullBodyRestoreState.Snapshot.StateTime, fixture.RuntimeController.FullBodyModule.CurrentStateSnapshot.StateTime, 0.0001f);
             Assert.False(fixture.InputBuffer.Buffer.TryPeek(InputRequestKind.Dodge, 5, out _));
             Assert.AreEqual(snapshot.InputBufferRestoreState.Buffer.Requests.Count, fixture.InputBuffer.Buffer.Count);
         }
@@ -785,24 +651,26 @@ namespace ThirdPersonSimulation.Tests
             PredictionInputFrame frame = Input(5, Vector2.right, true, true);
             fixture.Simulation.Advance(in frame);
             CharacterSimulationSnapshot snapshot = fixture.Simulation.CaptureSnapshot(frame.Tick);
-            Vector3 expectedDirection = snapshot.FullBodyRestoreState.StateMachine.ActionWorldDirection;
+            ActionMotionSpec expectedSpec = snapshot.FullBodyRestoreState.Gameplay.ActionLifecycle.ActiveAction.MotionSpec;
+            Vector3 expectedDirection = expectedSpec.LockedWorldDirection;
 
-            Assert.AreEqual(CharacterStateVariant.Directional, snapshot.FullBodyRestoreState.Snapshot.Variant);
+            Assert.AreEqual(CharacterStateVariant.Directional, expectedSpec.Variant);
             Assert.AreEqual(Vector3.right, expectedDirection);
 
             FullBodyActionRestoreState divergent = CreateActionRestoreState(
                 CharacterStateVariant.Backstep,
                 Vector3.back,
                 0.5f);
-            Assert.True(fixture.FullBody.Restore(in divergent));
-            Assert.AreEqual(CharacterStateVariant.Backstep, fixture.FullBody.CurrentStateSnapshot.Variant);
+            Assert.True(fixture.RuntimeController.FullBodyModule.Restore(in divergent));
+            FullBodyActionRestoreState divergentCaptured = fixture.RuntimeController.FullBodyModule.CaptureRestoreState();
+            Assert.AreEqual(CharacterStateVariant.Backstep, divergentCaptured.Gameplay.ActionLifecycle.ActiveAction.MotionSpec.Variant);
 
             fixture.Simulation.Restore(in snapshot);
-            FullBodyActionRestoreState restored = fixture.FullBody.CaptureRestoreState();
+            FullBodyActionRestoreState restored = fixture.RuntimeController.FullBodyModule.CaptureRestoreState();
+            ActionMotionSpec restoredSpec = restored.Gameplay.ActionLifecycle.ActiveAction.MotionSpec;
 
-            Assert.AreEqual(CharacterStateVariant.Directional, fixture.FullBody.CurrentStateSnapshot.Variant);
-            Assert.AreEqual(CharacterStateVariant.Directional, restored.Snapshot.Variant);
-            Assert.AreEqual(expectedDirection, restored.StateMachine.ActionWorldDirection);
+            Assert.AreEqual(CharacterStateVariant.Directional, restoredSpec.Variant);
+            Assert.AreEqual(expectedDirection, restoredSpec.LockedWorldDirection);
         }
 
         [Test]
@@ -830,7 +698,7 @@ namespace ThirdPersonSimulation.Tests
                 BasicMovementPhase.TurnBack,
                 TurnBackMotionPolicy.DefaultAliasKey,
                 0.9f);
-            fixture.Locomotion.SetAnimationPlaybackProgressSource(playback);
+            fixture.LocomotionPresenter.SetPlayback(playback);
             CharacterSimulationSnapshot snapshot = CreateTurnBackSnapshot(new SimulationTick(12), 0.35f);
 
             fixture.Simulation.Restore(in snapshot);
@@ -844,30 +712,26 @@ namespace ThirdPersonSimulation.Tests
         [Test]
         public void MotionExecutorRollbackStateRoundTripsThroughLocomotionSnapshot()
         {
-            GameObject gameObject = new GameObject("rollback-motion-executor-state-test");
-            gameObject.SetActive(false);
+            using FullBodyRollbackFixture fixture = FullBodyRollbackFixture.Create();
+            MotionExecutorRollbackState initial = new MotionExecutorRollbackState(
+                5f,
+                Vector3.right,
+                0f,
+                new Vector3(2f, 0f, 3f),
+                45f,
+                true);
 
-            try
-            {
-                PlayerLocomotionController controller = AddConfiguredLocomotionController(gameObject);
-                RollbackStateFakeMotionExecutor executor = new RollbackStateFakeMotionExecutor();
-                controller.SetMotionExecutor(executor);
-                executor.RestoreRollbackState(new MotionExecutorRollbackState(5f, Vector3.right, -3f));
+            fixture.Driver.RestoreRollbackState(in initial);
+            CharacterSimulationSnapshot snapshot = fixture.RuntimeController.CaptureSimulationSnapshot(new SimulationTick(4));
+            fixture.Driver.RestoreRollbackState(MotionExecutorRollbackState.Empty);
 
-                CharacterSimulationSnapshot snapshot = controller.CaptureSimulationSnapshot(new SimulationTick(4));
-                executor.RestoreRollbackState(MotionExecutorRollbackState.Empty);
+            Assert.True(fixture.RuntimeController.RestoreSimulationSnapshot(in snapshot));
+            MotionExecutorRollbackState restored = fixture.Driver.CaptureRollbackState();
 
-                Assert.True(controller.RestoreSimulationSnapshot(in snapshot));
-                MotionExecutorRollbackState restored = executor.CaptureRollbackState();
-
-                Assert.AreEqual(5f, restored.CurrentSpeed, 0.0001f);
-                Assert.AreEqual(Vector3.right, restored.LastWorldDirection);
-                Assert.AreEqual(-3f, restored.VerticalVelocity, 0.0001f);
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(gameObject);
-            }
+            Assert.AreEqual(5f, restored.CurrentSpeed, 0.0001f);
+            Assert.AreEqual(Vector3.right, restored.LastWorldDirection);
+            Assert.AreEqual(initial.RootPosition, restored.RootPosition);
+            Assert.AreEqual(initial.RootYaw, restored.RootYaw, 0.0001f);
         }
 
         [Test]
@@ -890,16 +754,25 @@ namespace ThirdPersonSimulation.Tests
         public void DebugRunnerAcceptsFullBodyRollbackSimulationBehaviour()
         {
             using FullBodyRollbackFixture fixture = FullBodyRollbackFixture.Create();
-            PredictionInputHistoryTickRecorder inputRecorder = fixture.Root.AddComponent<PredictionInputHistoryTickRecorder>();
-            LocomotionSnapshotHistoryRecorder snapshotRecorder = fixture.Root.AddComponent<LocomotionSnapshotHistoryRecorder>();
-            LocalRollbackSynctestDebugRunner debugRunner = fixture.Root.AddComponent<LocalRollbackSynctestDebugRunner>();
+            GameObject debugRig = new GameObject("rollback-debug-rig-test");
+            try
+            {
+                PredictionInputHistoryTickRecorder inputRecorder = debugRig.AddComponent<PredictionInputHistoryTickRecorder>();
+                LocomotionSnapshotHistoryRecorder snapshotRecorder = debugRig.AddComponent<LocomotionSnapshotHistoryRecorder>();
+                LocalRollbackSynctestDebugRunner debugRunner = debugRig.AddComponent<LocalRollbackSynctestDebugRunner>();
 
-            debugRunner.InputRecorder = inputRecorder;
-            debugRunner.SnapshotRecorder = snapshotRecorder;
-            debugRunner.SimulationBehaviour = fixture.Simulation;
-            debugRunner.RunOnKeyDown = false;
+                debugRunner.InputRecorder = inputRecorder;
+                debugRunner.SnapshotRecorder = snapshotRecorder;
+                debugRunner.SimulationBehaviour = fixture.Simulation;
+                debugRunner.RunOnKeyDown = false;
 
-            Assert.AreSame(fixture.Simulation, debugRunner.Simulation);
+                Assert.AreNotSame(fixture.Root, debugRig);
+                Assert.AreSame(fixture.Simulation, debugRunner.Simulation);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(debugRig);
+            }
         }
 
         [Test]
@@ -911,7 +784,7 @@ namespace ThirdPersonSimulation.Tests
                 0f,
                 new CharacterStateMachineRestoreState(
                     CharacterStateMachineSnapshot.Inactive,
-                    Vector3.zero, false, false, false, false),
+                    Vector3.zero, false),
                 false,
                 BasicMovementGait.Walk,
                 Vector3.zero,
@@ -932,7 +805,7 @@ namespace ThirdPersonSimulation.Tests
                 0f,
                 new CharacterStateMachineRestoreState(
                     CharacterStateMachineSnapshot.Inactive,
-                    Vector3.zero, false, false, false, false),
+                    Vector3.zero, false),
                 false,
                 BasicMovementGait.Walk,
                 Vector3.zero,
@@ -960,7 +833,7 @@ namespace ThirdPersonSimulation.Tests
                 0f,
                 new CharacterStateMachineRestoreState(
                     CharacterStateMachineSnapshot.Inactive,
-                    Vector3.zero, false, false, false, false),
+                    Vector3.zero, false),
                 true,
                 BasicMovementGait.Run,
                 Vector3.forward,
@@ -1006,7 +879,7 @@ namespace ThirdPersonSimulation.Tests
                 0f,
                 new CharacterStateMachineRestoreState(
                     CharacterStateMachineSnapshot.Inactive,
-                    Vector3.zero, false, false, false, false),
+                    Vector3.zero, false),
                 false,
                 BasicMovementGait.Walk,
                 Vector3.zero,
@@ -1044,15 +917,14 @@ namespace ThirdPersonSimulation.Tests
             Assert.AreEqual(snapshot.CameraBasisState.Yaw, restored.CameraBasisState.Yaw, 0.0001f);
             Assert.AreEqual(snapshot.Position, restored.Position);
             Assert.AreEqual(180f, fixture.Camera.Yaw, 0.0001f);
-            AssertPlanarForward(45f, fixture.FullBody.LocomotionController.RollbackCameraBasisProvider.CameraPlanarForward);
+            AssertPlanarForward(45f, fixture.RuntimeController.RollbackCameraBasisProvider.CameraPlanarForward);
         }
 
         [Test]
         public void FullBodyRollbackSimulationResolvesCameraBasisWhenReferenceIsMissing()
         {
             using FullBodyRollbackFixture fixture = FullBodyRollbackFixture.Create();
-            fixture.FullBody.LocomotionController.CameraController = null;
-            fixture.FullBody.LocomotionController.RollbackCameraBasisProvider.Override(
+            fixture.RuntimeController.RollbackCameraBasisProvider.Override(
                 new RollbackCameraBasisState(
                     Quaternion.Euler(0f, 280f, 0f) * Vector3.forward,
                     Quaternion.Euler(0f, 280f, 0f) * Vector3.right,
@@ -1065,14 +937,14 @@ namespace ThirdPersonSimulation.Tests
             Assert.AreEqual(280f, snapshot.CameraBasisState.Yaw, 0.0001f);
             Assert.That(Vector3.Distance(
                 Quaternion.Euler(0f, 280f, 0f) * Vector3.forward,
-                fixture.FullBody.LocomotionController.CurrentWorldDirection),
+                fixture.RuntimeController.LocomotionModule.CurrentWorldDirection),
                 Is.LessThan(0.0001f));
 
             fixture.Camera.ResetState(0f, 0f);
             fixture.Simulation.Restore(in snapshot);
 
             Assert.AreEqual(0f, fixture.Camera.Yaw, 0.0001f);
-            AssertPlanarForward(280f, fixture.FullBody.LocomotionController.RollbackCameraBasisProvider.CameraPlanarForward);
+            AssertPlanarForward(280f, fixture.RuntimeController.RollbackCameraBasisProvider.CameraPlanarForward);
         }
 
         [Test]
@@ -1196,7 +1068,7 @@ namespace ThirdPersonSimulation.Tests
         public void FullBodyRollbackRestorePreservesLocomotionAnimationPhaseDuringAction()
         {
             using FullBodyRollbackFixture fixture = FullBodyRollbackFixture.Create();
-            fixture.Locomotion.SetAnimationPlaybackProgressSource(new ManualLocomotionPlaybackProgress(
+            fixture.LocomotionPresenter.SetPlayback(new ManualLocomotionPlaybackProgress(
                 BasicMovementPhase.MoveLoop,
                 "WalkLoop",
                 0.5f));
@@ -1218,75 +1090,6 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
-        public void LocomotionRestoreSeedsAnimationMotionPlaybackWindow()
-        {
-            GameObject root = new GameObject("locomotion-animation-restore-window-test");
-            RunLocomotionAnimationConfigSO config = ScriptableObject.CreateInstance<RunLocomotionAnimationConfigSO>();
-            LocomotionMotionProfileSO profile = ScriptableObject.CreateInstance<LocomotionMotionProfileSO>();
-            CharacterConfigSO characterConfig = null;
-
-            try
-            {
-                PlayerLocomotionController controller = AddConfiguredLocomotionController(root);
-                AnimationMotionFakeDriver driver = new AnimationMotionFakeDriver(root.transform);
-                ManualLocomotionPlaybackProgress playback = new ManualLocomotionPlaybackProgress(
-                    BasicMovementPhase.MoveLoop,
-                    "RunLoop",
-                    0.4f);
-
-                profile.SetBakedData(
-                    BasicMovementPhase.MoveLoop,
-                    BasicMovementGait.Run,
-                    "RunLoop",
-                    1f,
-                    AnimationCurve.Constant(0f, 1f, 0f),
-                    AnimationCurve.Linear(0f, 0f, 1f, 10f),
-                    AnimationCurve.Linear(0f, 0f, 1f, 90f),
-                    "RunLoop",
-                    string.Empty);
-                config.SetMotionProfileBindings(new LocomotionPhaseMotionProfileBinding(
-                    BasicMovementPhase.MoveLoop,
-                    BasicMovementGait.Run,
-                    "RunLoop",
-                    profile));
-
-                characterConfig = CreateCharacterConfig(LoadConfiguredStateMachineDefinitionAsset(), LoadConfiguredCharacterConfigAsset().Movement, config);
-                controller.CharacterConfig = characterConfig;
-                controller.SetMotionExecutor(driver);
-                controller.SetAnimationPlaybackProgressSource(playback);
-                CharacterSimulationSnapshot snapshot = CreateMoveLoopSnapshot(new SimulationTick(2), "RunLoop", 0.4f);
-                CharacterStateMachineRunner runner = new CharacterStateMachineRunner(LoadConfiguredStateMachineDefinitionAsset().ToDefinition());
-                Assert.True(runner.Restore(snapshot.FullBodyRestoreState.StateMachine));
-
-                root.transform.SetPositionAndRotation(new Vector3(30f, 0f, 30f), Quaternion.Euler(0f, 180f, 0f));
-                playback.Set(BasicMovementPhase.MoveLoop, "RunLoop", 0.9f);
-
-                Assert.True(controller.RestoreSimulationSnapshot(in snapshot));
-                playback.Set(BasicMovementPhase.MoveLoop, "RunLoop", 0.6f);
-                Assert.True(controller.TryEvaluateWithStateMachine(
-                    new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, true),
-                    runner,
-                    CharacterInputRequestFact.None(InputRequestKind.Dodge),
-                    3,
-                    out BasicLocomotionFrame frame,
-                    out _));
-
-                MovementCommand command = frame.Command;
-                Assert.True(command.HasAnimationMotion);
-                Assert.AreEqual("RunLoop", command.AnimationMotionSourceAliasKey);
-                Assert.AreEqual(2f, command.AnimationLocalPlanarDelta.z, 0.001f);
-                Assert.AreEqual(18f, command.AnimationYawDelta, 0.01f);
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(characterConfig);
-                UnityEngine.Object.DestroyImmediate(profile);
-                UnityEngine.Object.DestroyImmediate(config);
-                UnityEngine.Object.DestroyImmediate(root);
-            }
-        }
-
-        [Test]
         public void FullBodyRestoreStateDoesNotStoreUnityObjects()
         {
             var unityObjectProperties = typeof(FullBodyActionRestoreState)
@@ -1303,34 +1106,72 @@ namespace ThirdPersonSimulation.Tests
         {
             CharacterStateMachineRestoreState stateMachine = new CharacterStateMachineRestoreState(
                 new CharacterStateMachineSnapshot(
-                    CharacterStateIds.Dodge,
+                    CharacterStateIds.MoveLoop,
                     0.25f,
-                    CharacterStateVariant.Directional,
-                    "Action/Dodge",
+                    CharacterStateVariant.None,
+                    "Locomotion/MoveLoop",
                     Array.Empty<CharacterStateTag>()),
                 Vector3.forward,
-                true,
-                true,
-                false,
                 true);
-            FullBodyActionGameplayRestoreState gameplay = new FullBodyActionGameplayRestoreState(stateMachine);
+            CharacterInputRequestFact requestFact = new CharacterInputRequestFact(
+                true,
+                InputRequestKind.Dodge,
+                10,
+                12,
+                30,
+                CharacterStateVariant.Directional,
+                Vector3.forward);
+            CharacterActionRequest request = new CharacterActionRequest(
+                CharacterFrameRequestProviderId.Dodge,
+                ActionRequestType.Dodge,
+                InputRequestKind.Dodge,
+                10,
+                12,
+                30,
+                0,
+                CharacterStateVariant.Directional,
+                Vector3.forward);
+            ActionMotionSpec motionSpec = new ActionMotionSpec(
+                ActionStateIds.Dodge,
+                CharacterStateIds.MoveLoop,
+                CharacterStateVariant.Directional,
+                0.35f,
+                4f,
+                true,
+                true,
+                Vector3.forward,
+                0.25f,
+                10);
+            CharacterResolvedAction resolvedAction = new CharacterResolvedAction(
+                CharacterFrameRequestProviderId.Dodge,
+                request,
+                requestFact,
+                new ActionInterruptRequest(3, ActionRequestType.Dodge, ActionStateIds.Dodge, 30, 10),
+                new ActionInterruptContext(ActionStateIds.None, 0f, 0, 10),
+                ActionAnimationKeys.DodgeDirectional,
+                motionSpec);
+            FullBodyActionGameplayRestoreState gameplay = new FullBodyActionGameplayRestoreState(
+                stateMachine,
+                new ActionLifecycleRestoreState(true, resolvedAction, 0.25f, false, new ActionAnimationPlaybackIntent(1), 1));
             FullBodyActionDiagnosticRestoreState diagnostic = new FullBodyActionDiagnosticRestoreState(
-                "FullBody/Action/Dodge",
+                "Action.Dodge",
                 "pending",
                 "last-full",
                 "last-pending",
-                "FullBody/Locomotion/MoveLoop",
+                "Locomotion.MoveLoop",
                 BasicMovementPhase.MoveLoop,
                 false);
 
             FullBodyActionRestoreState restoreState = new FullBodyActionRestoreState(gameplay, diagnostic);
 
-            Assert.AreEqual(CharacterStateIds.Dodge, restoreState.Gameplay.Snapshot.ActiveState);
+            Assert.AreEqual(CharacterStateIds.MoveLoop, restoreState.Gameplay.Snapshot.ActiveState);
+            Assert.True(restoreState.Gameplay.ActionLifecycle.HasActiveAction);
+            Assert.AreEqual(ActionStateIds.Dodge, restoreState.Gameplay.ActionLifecycle.ActiveAction.MotionSpec.ActionState);
             Assert.AreEqual(Vector3.forward, restoreState.Gameplay.StateMachine.ActionWorldDirection);
-            Assert.AreEqual("FullBody/Action/Dodge", restoreState.Diagnostic.DebugFullBodyStatePath);
+            Assert.AreEqual("Action.Dodge", restoreState.Diagnostic.DebugFullBodyStatePath);
             Assert.AreEqual("last-full", restoreState.Diagnostic.LastLoggedFullBodyPath);
             Assert.False(restoreState.Diagnostic.LoggedInitialLocomotionState);
-            Assert.AreEqual(restoreState.Gameplay.Snapshot.ActiveState, restoreState.Snapshot.ActiveState);
+            Assert.AreEqual(CharacterStateIds.MoveLoop, restoreState.Snapshot.ActiveState);
         }
 
         [Test]
@@ -1344,9 +1185,6 @@ namespace ThirdPersonSimulation.Tests
                     string.Empty,
                     Array.Empty<CharacterStateTag>()),
                 Vector3.forward,
-                true,
-                true,
-                false,
                 true);
             FullBodyActionGameplayRestoreState gameplay = new FullBodyActionGameplayRestoreState(stateMachine);
             CharacterSimulationSnapshot expected = SnapshotWithFullBody(
@@ -1471,21 +1309,61 @@ namespace ThirdPersonSimulation.Tests
             Vector3 actionWorldDirection,
             float stateTime)
         {
+            DodgeActionVariant actionVariant = variant == CharacterStateVariant.Backstep
+                ? DodgeActionVariant.Backstep
+                : DodgeActionVariant.Directional;
+            DodgeActionTuning config = TestDodgeTuning();
             CharacterStateMachineSnapshot snapshot = new CharacterStateMachineSnapshot(
-                CharacterStateIds.Dodge,
+                CharacterStateIds.MoveLoop,
                 stateTime,
-                variant,
-                "FullBody/Action/Dodge",
+                CharacterStateVariant.None,
+                "Locomotion/MoveLoop",
                 Array.Empty<CharacterStateTag>());
             CharacterStateMachineRestoreState state = new CharacterStateMachineRestoreState(
                 snapshot,
                 actionWorldDirection,
+                true);
+            CharacterInputRequestFact requestFact = new CharacterInputRequestFact(
                 true,
+                InputRequestKind.Dodge,
+                5,
+                9,
+                config.Priority,
+                variant,
+                actionWorldDirection);
+            CharacterActionRequest request = new CharacterActionRequest(
+                CharacterFrameRequestProviderId.Dodge,
+                ActionRequestType.Dodge,
+                InputRequestKind.Dodge,
+                5,
+                9,
+                config.Priority,
+                0,
+                variant,
+                actionWorldDirection);
+            ActionMotionSpec motionSpec = new ActionMotionSpec(
+                ActionStateIds.Dodge,
+                CharacterStateIds.MoveLoop,
+                variant,
+                config.ResolveDuration(actionVariant),
+                config.ResolveDistance(actionVariant),
+                config.ShouldRotateToDirection(actionVariant),
                 false,
-                false,
-                false);
+                actionWorldDirection,
+                stateTime,
+                5);
+            CharacterResolvedAction resolvedAction = new CharacterResolvedAction(
+                CharacterFrameRequestProviderId.Dodge,
+                request,
+                requestFact,
+                new ActionInterruptRequest(0, ActionRequestType.Dodge, ActionStateIds.Dodge, config.Priority, 5),
+                new ActionInterruptContext(ActionStateIds.None, 0f, 0, 5),
+                DodgeActionPlanner.ResolveAnimationKey(actionVariant),
+                motionSpec);
             return new FullBodyActionRestoreState(
-                new FullBodyActionGameplayRestoreState(state),
+                new FullBodyActionGameplayRestoreState(
+                    state,
+                    new ActionLifecycleRestoreState(true, resolvedAction, stateTime, false, new ActionAnimationPlaybackIntent(1), 1)),
                 FullBodyActionDiagnosticRestoreState.Empty);
         }
 
@@ -1512,17 +1390,14 @@ namespace ThirdPersonSimulation.Tests
                 CharacterStateIds.TurnBack,
                 normalizedTime,
                 CharacterStateVariant.None,
-                "FullBody/Locomotion/TurnBack",
+                "Locomotion.TurnBack",
                 Array.Empty<CharacterStateTag>());
             CharacterStateMachineRestoreState state = new CharacterStateMachineRestoreState(
                 stateSnapshot,
                 Vector3.zero,
                 Vector3.back,
                 Vector3.forward,
-                true,
-                false,
-                false,
-                false);
+                true);
             CharacterRuntimeBlackboardSnapshot blackboard = new CharacterRuntimeBlackboardSnapshot(
                 new CharacterRuntimeLocomotionFacts(
                     BasicMovementPhase.TurnBack,
@@ -1585,14 +1460,11 @@ namespace ThirdPersonSimulation.Tests
                 CharacterStateIds.MoveLoop,
                 normalizedTime,
                 CharacterStateVariant.None,
-                "FullBody/Locomotion/MoveLoop",
+                "Locomotion.MoveLoop",
                 Array.Empty<CharacterStateTag>());
             CharacterStateMachineRestoreState state = new CharacterStateMachineRestoreState(
                 stateSnapshot,
                 Vector3.zero,
-                false,
-                false,
-                false,
                 false);
             CharacterRuntimeBlackboardSnapshot blackboard = new CharacterRuntimeBlackboardSnapshot(
                 new CharacterRuntimeLocomotionFacts(
@@ -1658,7 +1530,7 @@ namespace ThirdPersonSimulation.Tests
             {
                 PredictionInputFrame input = inputs[i];
                 fixture.Simulation.Advance(in input);
-                traces[i] = TimelineTraceFrame.From(fixture.FullBody.LastFramePipelineResult);
+                traces[i] = TimelineTraceFrame.From(fixture.RuntimeController.LastFramePipelineResult);
             }
 
             return traces;
@@ -1694,43 +1566,31 @@ namespace ThirdPersonSimulation.Tests
             Assert.AreEqual(expected.RequestFactIds, actual.RequestFactIds, $"{label} request facts");
         }
 
-        static void RunFullBodyAdapterTick(FullBodyActionTickAdapter adapter, in SimulationTickContext context)
-        {
-            adapter.Tick(SimulationTickPhase.ReadInput, in context);
-            adapter.Tick(SimulationTickPhase.UpdateInputBuffer, in context);
-            adapter.Tick(SimulationTickPhase.GameplayDecision, in context);
-            adapter.Tick(SimulationTickPhase.BuildMotion, in context);
-            adapter.Tick(SimulationTickPhase.ExecuteMotion, in context);
-            adapter.Tick(SimulationTickPhase.PresentationBridge, in context);
-            adapter.Tick(SimulationTickPhase.WriteSnapshotAndEvents, in context);
-        }
-
         static CharacterFramePipelineHost CreateFramePipelineHost()
         {
-            FullBodySubmissionBuilder builder = new FullBodySubmissionBuilder();
-            return new CharacterFramePipelineHost(builder, builder);
+            CharacterFrameSubmitterGraph submitterGraph = CharacterFrameSubmitterGraph.CreateDefault();
+            return new CharacterFramePipelineHost(submitterGraph, submitterGraph);
         }
 
         static void AssertCompatibleTickMatchesPhasePipeline(in CharacterFrameInput input)
         {
             using FullBodyRollbackFixture compatible = FullBodyRollbackFixture.Create();
             using FullBodyRollbackFixture phased = FullBodyRollbackFixture.Create();
-            CharacterFramePipelineHost pipeline = CreateFramePipelineHost();
-            CharacterFrameContext context = pipeline.BeginFrame(in input);
+            CharacterFrameContext context = phased.RuntimeController.BeginFrame(in input);
 
-            Assert.True(compatible.FullBody.Tick(in input));
-            pipeline.RunPhase(phased.FullBody.RuntimePort, SimulationTickPhase.ReadInput, ref context, out _);
-            pipeline.RunPhase(phased.FullBody.RuntimePort, SimulationTickPhase.UpdateInputBuffer, ref context, out _);
-            pipeline.RunPhase(phased.FullBody.RuntimePort, SimulationTickPhase.GameplayDecision, ref context, out _);
-            pipeline.RunPhase(phased.FullBody.RuntimePort, SimulationTickPhase.BuildMotion, ref context, out _);
-            pipeline.RunPhase(phased.FullBody.RuntimePort, SimulationTickPhase.ExecuteMotion, ref context, out _);
-            pipeline.RunPhase(phased.FullBody.RuntimePort, SimulationTickPhase.PresentationBridge, ref context, out _);
-            pipeline.RunPhase(phased.FullBody.RuntimePort, SimulationTickPhase.WriteSnapshotAndEvents, ref context, out CharacterFrameResult phaseResult);
+            Assert.True(compatible.RuntimeController.Tick(in input));
+            phased.RuntimeController.RunPhase(SimulationTickPhase.ReadInput, ref context, out _);
+            phased.RuntimeController.RunPhase(SimulationTickPhase.UpdateInputBuffer, ref context, out _);
+            phased.RuntimeController.RunPhase(SimulationTickPhase.GameplayDecision, ref context, out _);
+            phased.RuntimeController.RunPhase(SimulationTickPhase.BuildMotion, ref context, out _);
+            phased.RuntimeController.RunPhase(SimulationTickPhase.ExecuteMotion, ref context, out _);
+            phased.RuntimeController.RunPhase(SimulationTickPhase.PresentationBridge, ref context, out _);
+            phased.RuntimeController.RunPhase(SimulationTickPhase.WriteSnapshotAndEvents, ref context, out CharacterFrameResult phaseResult);
 
-            CharacterFrameResult compatibleResult = compatible.FullBody.LastFramePipelineResult;
+            CharacterFrameResult compatibleResult = compatible.RuntimeController.LastFramePipelineResult;
             Assert.True(phaseResult.Success);
-            Assert.AreEqual(phaseResult.StateFrame.Snapshot.ActiveState, compatible.FullBody.CurrentStateSnapshot.ActiveState);
-            Assert.AreEqual(phaseResult.StateFrame.Snapshot.Variant, compatible.FullBody.CurrentStateSnapshot.Variant);
+            Assert.AreEqual(phaseResult.StateFrame.Snapshot.ActiveState, compatible.RuntimeController.FullBodyModule.CurrentStateSnapshot.ActiveState);
+            Assert.AreEqual(phaseResult.StateFrame.Snapshot.Variant, compatible.RuntimeController.FullBodyModule.CurrentStateSnapshot.Variant);
             Assert.AreEqual(phaseResult.StateFrame.Owner.Kind, compatibleResult.StateFrame.Owner.Kind);
             Assert.AreEqual(phaseResult.InputRequest.RequestKind, compatibleResult.InputRequest.RequestKind);
             Assert.AreEqual(phaseResult.InputRequest.HasRequest, compatibleResult.InputRequest.HasRequest);
@@ -1872,7 +1732,7 @@ namespace ThirdPersonSimulation.Tests
             public CharacterStateMachineRunner StateMachine => inner.StateMachine;
             public CharacterStateMachineSnapshot CurrentStateSnapshot => inner.CurrentStateSnapshot;
             public InputRequestBuffer InputRequestBuffer => inner.InputRequestBuffer;
-            public string ActiveFullBodyStatePath => inner.ActiveFullBodyStatePath;
+            public string ActiveFrameStatePath => inner.ActiveFrameStatePath;
 
             public int IndexOf(string call)
             {
@@ -1891,9 +1751,30 @@ namespace ThirdPersonSimulation.Tests
                 return inner.PrepareFrameRuntimeAdapters();
             }
 
-            public bool TryResolveDodgeActionConfig(out DodgeActionConfig config)
+            public bool TryResolveActionCatalog(out CharacterActionCatalog catalog)
             {
-                return inner.TryResolveDodgeActionConfig(out config);
+                return inner.TryResolveActionCatalog(out catalog);
+            }
+
+            public bool TryResolveBodyClaimPolicy(out BodyClaimPolicy policy)
+            {
+                return inner.TryResolveBodyClaimPolicy(out policy);
+            }
+
+            public ActionLifecycleFrame TickActionLifecycle(
+                in CharacterResolvedAction acceptedAction,
+                in CharacterActionCatalog actionCatalog,
+                float deltaTime,
+                int step)
+            {
+                calls.Add("TickActionLifecycle");
+                return inner.TickActionLifecycle(in acceptedAction, in actionCatalog, deltaTime, step);
+            }
+
+            public void CompleteActionLifecycle(in ActionMotionResolveResult result, bool requireAnimationEnded)
+            {
+                calls.Add("CompleteActionLifecycle");
+                inner.CompleteActionLifecycle(in result, requireAnimationEnded);
             }
 
             public int ResolveCurrentActionResistance()
@@ -1915,40 +1796,34 @@ namespace ThirdPersonSimulation.Tests
                 inner.SetLastFrameOutputs(in locomotionFrame, in stateFrame, in actionMotionResult);
             }
 
-            public bool ConsumeStateFrameInputRequest(in CharacterStateMachineFrame stateFrame, int step)
+            public bool ConsumeFrameInputRequest(in CharacterFrameInputConsumeSubmission inputConsume)
             {
-                calls.Add("ConsumeStateFrameInputRequest");
-                return inner.ConsumeStateFrameInputRequest(in stateFrame, step);
+                calls.Add("ConsumeFrameInputRequest");
+                return inner.ConsumeFrameInputRequest(in inputConsume);
             }
 
-            public void ExecuteStateFrameMotion(
-                in CharacterStateMachineFrame stateFrame,
-                in BasicLocomotionFrame locomotionFrame,
-                in ActionMotionResolveResult actionMotionResult,
+            public void ExecuteFrameMotion(
+                in CharacterFrameMovementSubmission movement,
                 out bool actionMovementExecuted,
                 out bool basicMovementExecuted)
             {
-                calls.Add("ExecuteStateFrameMotion");
-                inner.ExecuteStateFrameMotion(
-                    in stateFrame,
-                    in locomotionFrame,
-                    in actionMotionResult,
+                calls.Add("ExecuteFrameMotion");
+                inner.ExecuteFrameMotion(
+                    in movement,
                     out actionMovementExecuted,
                     out basicMovementExecuted);
             }
 
-            public void PresentStateFrameAnimation(
-                in CharacterStateMachineFrame stateFrame,
+            public void PresentFrameAnimation(
+                in CharacterFrameAnimationSubmission animation,
                 in BasicLocomotionFrame locomotionFrame,
-                bool exitedToLocomotion,
                 out bool actionAnimationPresented,
                 out bool locomotionAnimationPresented)
             {
-                calls.Add("PresentStateFrameAnimation");
-                inner.PresentStateFrameAnimation(
-                    in stateFrame,
+                calls.Add("PresentFrameAnimation");
+                inner.PresentFrameAnimation(
+                    in animation,
                     in locomotionFrame,
-                    exitedToLocomotion,
                     out actionAnimationPresented,
                     out locomotionAnimationPresented);
             }
@@ -1961,6 +1836,12 @@ namespace ThirdPersonSimulation.Tests
             {
                 calls.Add("WriteStateFrameActionFacts");
                 inner.WriteStateFrameActionFacts(in stateFrame, in actionMotionResult, exitedToLocomotion, step);
+            }
+
+            public void WriteLocomotionPreemptionFact(in LocomotionPreemptionFact fact)
+            {
+                calls.Add("WriteLocomotionPreemptionFact");
+                inner.WriteLocomotionPreemptionFact(in fact);
             }
 
             public void UpdateStateSnapshot(in CharacterStateMachineFrame stateFrame, int step)
@@ -1993,35 +1874,35 @@ namespace ThirdPersonSimulation.Tests
             FullBodyRollbackFixture(
                 GameObject root,
                 FullBodyRollbackSimulation simulation,
-                PlayerFullBodyActionController fullBody,
-                PlayerLocomotionController locomotion,
+                CharacterFrameRuntimeController runtimeController,
                 ThirdPersonCameraController camera,
                 InputRequestBufferComponent inputBuffer,
                 FakeLocomotionInputSource inputSource,
                 FakeFullBodyDriver driver,
+                FakeLocomotionAnimationPresenter locomotionPresenter,
                 FakeActionAnimationPresenter actionPresenter,
                 ScriptableObject[] assets)
             {
                 Root = root;
                 Simulation = simulation;
-                FullBody = fullBody;
-                Locomotion = locomotion;
+                RuntimeController = runtimeController;
                 Camera = camera;
                 InputBuffer = inputBuffer;
                 InputSource = inputSource;
                 Driver = driver;
+                LocomotionPresenter = locomotionPresenter;
                 ActionPresenter = actionPresenter;
                 Assets = assets;
             }
 
             public GameObject Root { get; }
             public FullBodyRollbackSimulation Simulation { get; }
-            public PlayerFullBodyActionController FullBody { get; }
-            public PlayerLocomotionController Locomotion { get; }
+            public CharacterFrameRuntimeController RuntimeController { get; }
             public ThirdPersonCameraController Camera { get; }
             public InputRequestBufferComponent InputBuffer { get; }
             public FakeLocomotionInputSource InputSource { get; }
             public FakeFullBodyDriver Driver { get; }
+            public FakeLocomotionAnimationPresenter LocomotionPresenter { get; }
             public FakeActionAnimationPresenter ActionPresenter { get; }
             ScriptableObject[] Assets { get; }
 
@@ -2032,46 +1913,50 @@ namespace ThirdPersonSimulation.Tests
 
                 InputRequestBufferComponent inputBuffer = root.AddComponent<InputRequestBufferComponent>();
                 FakeLocomotionInputSource inputSource = root.AddComponent<FakeLocomotionInputSource>();
-                PlayerLocomotionController locomotion = AddConfiguredLocomotionController(root);
                 ThirdPersonCameraController camera = root.AddComponent<ThirdPersonCameraController>();
                 FakeFullBodyDriver driver = root.AddComponent<FakeFullBodyDriver>();
+                FakeLocomotionAnimationPresenter locomotionPresenter = root.AddComponent<FakeLocomotionAnimationPresenter>();
                 FakeActionAnimationPresenter actionPresenter = root.AddComponent<FakeActionAnimationPresenter>();
-                PlayerFullBodyActionController fullBody = root.AddComponent<PlayerFullBodyActionController>();
+                CharacterFrameRuntimeController runtimeController = root.AddComponent<CharacterFrameRuntimeController>();
                 FullBodyRollbackSimulation simulation = root.AddComponent<FullBodyRollbackSimulation>();
                 ActionInterruptPolicySetSO policySet = CreatePolicySet();
-                DodgeActionConfigSO dodgeConfig = ScriptableObject.CreateInstance<DodgeActionConfigSO>();
+                CharacterActionDefinitionSO actionDefinition = CreateDodgeDefinition(TestDodgeTuning());
+                CharacterActionCatalogSO actionCatalog = CreateCatalog(actionDefinition);
+                CharacterConfigSO baseConfig = LoadConfiguredCharacterConfigAsset();
+                CharacterConfigSO characterConfig = CreateCharacterConfig(
+                    baseConfig.StateMachine,
+                    baseConfig.Movement,
+                    baseConfig.LocomotionAnimation,
+                    policySet,
+                    actionCatalog);
 
                 camera.AutoTick = false;
                 camera.DebugLog = false;
                 camera.ResetState(0f, 0f);
-                locomotion.AutoUpdate = false;
-                locomotion.CameraController = camera;
-                locomotion.SetMotionExecutor(driver);
-                locomotion.SetInputSource(inputSource);
-                fullBody.AutoUpdate = false;
-                fullBody.CharacterConfig = locomotion.CharacterConfig;
-                fullBody.LocomotionController = locomotion;
-                fullBody.InputBufferComponent = inputBuffer;
-                fullBody.ActionMovementExecutorBehaviour = driver;
-                fullBody.FacingProviderBehaviour = driver;
-                fullBody.AnimationPresenterBehaviour = actionPresenter;
-                fullBody.InterruptPolicySet = policySet;
-                fullBody.DodgeActionConfigAsset = dodgeConfig;
-                simulation.FullBodyActionController = fullBody;
-                simulation.LocomotionController = locomotion;
+                runtimeController.AutoUpdate = false;
+                runtimeController.CharacterConfig = characterConfig;
+                runtimeController.InputBufferComponent = inputBuffer;
+                runtimeController.InputSourceBehaviour = inputSource;
+                runtimeController.MotionExecutorBehaviour = driver;
+                runtimeController.FacingProviderBehaviour = driver;
+                runtimeController.CameraController = camera;
+                runtimeController.LocomotionPresenterBehaviour = locomotionPresenter;
+                runtimeController.ActionMovementExecutorBehaviour = driver;
+                runtimeController.AnimationPresenterBehaviour = actionPresenter;
+                simulation.RuntimeController = runtimeController;
                 simulation.InputBufferComponent = inputBuffer;
 
                 return new FullBodyRollbackFixture(
                     root,
                     simulation,
-                    fullBody,
-                    locomotion,
+                    runtimeController,
                     camera,
                     inputBuffer,
                     inputSource,
                     driver,
+                    locomotionPresenter,
                     actionPresenter,
-                    new ScriptableObject[] { policySet, dodgeConfig });
+                    new ScriptableObject[] { policySet, actionDefinition, actionCatalog, characterConfig });
             }
 
             public void Dispose()
@@ -2098,13 +1983,42 @@ namespace ThirdPersonSimulation.Tests
                 field.SetValue(policySet, policies);
                 return policySet;
             }
+
+            static CharacterActionCatalogSO CreateCatalog(CharacterActionDefinitionSO definition)
+            {
+                CharacterActionCatalogSO catalog = ScriptableObject.CreateInstance<CharacterActionCatalogSO>();
+                SetPrivateField(catalog, "definitions", new[] { definition });
+                return catalog;
+            }
+
+            static CharacterActionDefinitionSO CreateDodgeDefinition(in DodgeActionTuning config)
+            {
+                CharacterActionDefinitionSO definition = ScriptableObject.CreateInstance<CharacterActionDefinitionSO>();
+                SetPrivateField(definition, "actionStateId", ActionStateIds.Dodge.Value);
+                SetPrivateField(definition, "requestType", ActionRequestType.Dodge);
+                SetPrivateField(definition, "sourceInputKind", InputRequestKind.Dodge);
+                SetPrivateField(definition, "motionSourceStateId", CharacterStateIds.Dodge.Value);
+                SetPrivateField(definition, "priority", config.Priority);
+                SetPrivateField(definition, "resistance", config.Resistance);
+                SetPrivateField(definition, "directionalDodge", new DodgeActionVariantAuthoring(
+                    DodgeActionVariant.Directional,
+                    config.DirectionalDuration,
+                    config.DirectionalDistance,
+                    config.DirectionalRotateToDirection,
+                    ActionAnimationKeys.DodgeDirectional.Value));
+                SetPrivateField(definition, "backstepDodge", new DodgeActionVariantAuthoring(
+                    DodgeActionVariant.Backstep,
+                    config.BackstepDuration,
+                    config.BackstepDistance,
+                    config.BackstepRotateToDirection,
+                    ActionAnimationKeys.DodgeBackstep.Value));
+                return definition;
+            }
         }
 
-        static PlayerLocomotionController AddConfiguredLocomotionController(GameObject gameObject)
+        static DodgeActionTuning TestDodgeTuning()
         {
-            PlayerLocomotionController controller = gameObject.AddComponent<PlayerLocomotionController>();
-            controller.CharacterConfig = LoadConfiguredCharacterConfigAsset();
-            return controller;
+            return new DodgeActionTuning(0.35f, 4f, 0.35f, 3f, 30, 20, true, false);
         }
 
         static CharacterConfigSO LoadConfiguredCharacterConfigAsset()
@@ -2120,7 +2034,7 @@ namespace ThirdPersonSimulation.Tests
         static CharacterStateMachineDefinitionSO LoadConfiguredStateMachineDefinitionAsset()
         {
             CharacterStateMachineDefinitionSO asset = AssetDatabase.LoadAssetAtPath<CharacterStateMachineDefinitionSO>(
-                "Assets/Configs/3C/StateMachine/FullBody/CorinFullBodyStateMachine.asset");
+                "Assets/Configs/3C/StateMachine/Locomotion/Corin/CorinLocomotionStateGraph.asset");
             Assert.NotNull(asset);
             return asset;
         }
@@ -2130,10 +2044,35 @@ namespace ThirdPersonSimulation.Tests
             BasicMovementConfigSO movement,
             RunLocomotionAnimationConfigSO locomotionAnimation)
         {
+            CharacterConfigSO baseConfig = LoadConfiguredCharacterConfigAsset();
+            return CreateCharacterConfig(
+                stateMachine,
+                movement,
+                locomotionAnimation,
+                baseConfig.ActionInterruptPolicy,
+                baseConfig.ActionCatalog);
+        }
+
+        static CharacterConfigSO CreateCharacterConfig(
+            CharacterStateMachineDefinitionSO stateMachine,
+            BasicMovementConfigSO movement,
+            RunLocomotionAnimationConfigSO locomotionAnimation,
+            ActionInterruptPolicySetSO policySet,
+            CharacterActionCatalogSO actionCatalog)
+        {
             CharacterConfigSO config = ScriptableObject.CreateInstance<CharacterConfigSO>();
+            CharacterConfigSO baseConfig = LoadConfiguredCharacterConfigAsset();
             SetPrivateField(config, "stateMachine", stateMachine);
             SetPrivateField(config, "movement", movement);
             SetPrivateField(config, "locomotionAnimation", locomotionAnimation);
+            SetPrivateField(config, "actionInterruptPolicy", policySet);
+            SetPrivateField(config, "bodyClaimPolicy", baseConfig.BodyClaimPolicy);
+            SetPrivateField(config, "actionCatalog", actionCatalog);
+            SetPrivateField(config, "inputActions", baseConfig.InputActions);
+            SetPrivateField(config, "moveAction", baseConfig.MoveAction);
+            SetPrivateField(config, "runAction", baseConfig.RunAction);
+            SetPrivateField(config, "lookAction", baseConfig.LookAction);
+            SetPrivateField(config, "cameraConfig", baseConfig.CameraConfig);
             return config;
         }
 
@@ -2413,6 +2352,67 @@ namespace ThirdPersonSimulation.Tests
             }
         }
 
+        sealed class FakeLocomotionAnimationPresenter : MonoBehaviour, ILocomotionAnimationPresenter
+        {
+            ILocomotionAnimationPlaybackProgressController playback;
+            AnimationPhasePlaybackProgress progress = AnimationPhasePlaybackProgress.Invalid(BasicMovementPhase.Idle);
+
+            public AnimationPhasePlaybackProgress CurrentPlaybackProgress =>
+                playback != null ? playback.CurrentPlaybackProgress : progress;
+            public string CurrentAnimationName { get; private set; } = string.Empty;
+            public BasicMovementGait LastRestoreGait { get; private set; } = BasicMovementGait.Walk;
+
+            public void SetPlayback(ILocomotionAnimationPlaybackProgressController source)
+            {
+                playback = source;
+                progress = source != null ? source.CurrentPlaybackProgress : AnimationPhasePlaybackProgress.Invalid(BasicMovementPhase.Idle);
+                CurrentAnimationName = progress.AliasKey;
+            }
+
+            public void Present(in MovementAnimationContext context)
+            {
+                if (playback != null)
+                    return;
+
+                string aliasKey = LocomotionAnimationAliasResolver.ResolveAliasKey(context.AnimationConfig, in context);
+                progress = new AnimationPhasePlaybackProgress(context.Phase, aliasKey, 0f, true, false);
+                CurrentAnimationName = aliasKey;
+            }
+
+            public bool RestorePlaybackProgress(in AnimationPhasePlaybackProgress restoredProgress)
+            {
+                progress = restoredProgress;
+                CurrentAnimationName = restoredProgress.AliasKey;
+                if (playback != null)
+                    return playback.RestorePlaybackProgress(in restoredProgress);
+
+                return true;
+            }
+
+            public bool RestorePlaybackProgress(in AnimationPhasePlaybackProgress restoredProgress, BasicMovementGait gait)
+            {
+                LastRestoreGait = gait;
+                progress = restoredProgress;
+                CurrentAnimationName = restoredProgress.AliasKey;
+                if (playback != null)
+                    return playback.RestorePlaybackProgress(in restoredProgress, gait);
+
+                return true;
+            }
+
+            public AnimationPhasePlaybackProgress AdvancePlayback(float deltaTime)
+            {
+                if (playback != null)
+                {
+                    progress = playback.AdvancePlayback(deltaTime);
+                    CurrentAnimationName = progress.AliasKey;
+                    return progress;
+                }
+
+                return progress;
+            }
+        }
+
         static void AssertPlanarForward(float yaw, Vector3 actual)
         {
             Vector3 expected = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
@@ -2421,17 +2421,41 @@ namespace ThirdPersonSimulation.Tests
             Assert.That(Vector3.Distance(expected, actual), Is.LessThan(0.0001f));
         }
 
-        sealed class FakeActionAnimationPresenter : MonoBehaviour, IActionAnimationPresenter, IActionAnimationPlaybackProgressController
+        sealed class FakeActionAnimationPresenter : MonoBehaviour, IActionAnimationPresenter, IActionAnimationPlaybackProgressController, ICharacterAnimationOutputPresenter
         {
             public ActionAnimationKey CurrentKey { get; private set; }
+            public ActionAnimationPlaybackIntent PlaybackIntent { get; private set; }
             public float CurrentNormalizedTime { get; private set; }
             public bool HasValidPlayback { get; private set; }
             public ActionAnimationPlaybackProgress CurrentPlaybackProgress =>
                 HasValidPlayback
-                    ? new ActionAnimationPlaybackProgress(CurrentKey, CurrentNormalizedTime, true, false)
+                    ? new ActionAnimationPlaybackProgress(CurrentKey, CurrentNormalizedTime, true, false, PlaybackIntent)
                     : ActionAnimationPlaybackProgress.Invalid;
             public string CurrentAnimationName { get; private set; } = string.Empty;
             public int PresentCount { get; private set; }
+            public int SourceStep { get; private set; }
+            public CharacterAnimationPlaybackSnapshot CurrentSnapshot => new CharacterAnimationPlaybackSnapshot(
+                HasValidPlayback ? CharacterAnimationPlaybackDomain.Action : CharacterAnimationPlaybackDomain.None,
+                CurrentAnimationName,
+                AnimationPhasePlaybackProgress.Invalid(BasicMovementPhase.Idle),
+                string.Empty,
+                CurrentPlaybackProgress,
+                CurrentAnimationName,
+                SourceStep);
+
+            public void PresentLocomotion(in MovementAnimationContext context)
+            {
+            }
+
+            public bool PresentAction(in CharacterStateAnimationRequest request)
+            {
+                return Present(in request);
+            }
+
+            public void ClearActionPlayback()
+            {
+                Clear();
+            }
 
             public bool Present(in CharacterStateAnimationRequest request)
             {
@@ -2439,9 +2463,11 @@ namespace ThirdPersonSimulation.Tests
                     return false;
 
                 CurrentKey = request.Key;
+                PlaybackIntent = request.ActionPlaybackIntent;
                 CurrentNormalizedTime = 0f;
                 HasValidPlayback = true;
                 CurrentAnimationName = request.Key.Value;
+                SourceStep = request.SourceStep;
                 PresentCount++;
                 return true;
             }
@@ -2449,9 +2475,11 @@ namespace ThirdPersonSimulation.Tests
             public void Clear()
             {
                 CurrentKey = default;
+                PlaybackIntent = ActionAnimationPlaybackIntent.Invalid;
                 CurrentNormalizedTime = 0f;
                 HasValidPlayback = false;
                 CurrentAnimationName = string.Empty;
+                SourceStep = 0;
             }
 
             public bool RestorePlaybackProgress(in ActionAnimationPlaybackProgress progress, string animationName)
@@ -2463,6 +2491,7 @@ namespace ThirdPersonSimulation.Tests
                 }
 
                 CurrentKey = progress.Key;
+                PlaybackIntent = progress.PlaybackIntent;
                 CurrentNormalizedTime = progress.NormalizedTime;
                 HasValidPlayback = true;
                 CurrentAnimationName = animationName;

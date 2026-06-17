@@ -44,4 +44,43 @@ namespace ThirdPersonAction
             return success;
         }
     }
+
+    public sealed class CharacterFrameRuntimeHost
+    {
+        readonly CharacterFramePipelineHost pipelineHost;
+
+        public CharacterFrameRuntimeHost(
+            ICharacterFrameRequestSubmitter requestSubmitter,
+            ICharacterFrameOutputSubmitter outputSubmitter)
+        {
+            pipelineHost = new CharacterFramePipelineHost(
+                requestSubmitter ?? throw new ArgumentNullException(nameof(requestSubmitter)),
+                outputSubmitter ?? throw new ArgumentNullException(nameof(outputSubmitter)));
+        }
+
+        public CharacterFramePipelineHost PipelineHost => pipelineHost;
+        public CharacterFrameResult LastFrameResult => pipelineHost.LastFrameResult;
+
+        public bool Tick(
+            ICharacterFrameRuntimePort runtime,
+            in CharacterFrameInput input,
+            out CharacterFrameResult result)
+        {
+            return pipelineHost.Tick(runtime, in input, out result);
+        }
+
+        public CharacterFrameContext BeginFrame(in CharacterFrameInput input)
+        {
+            return pipelineHost.BeginFrame(in input);
+        }
+
+        public bool RunPhase(
+            ICharacterFrameRuntimePort runtime,
+            SimulationTickPhase phase,
+            ref CharacterFrameContext context,
+            out CharacterFrameResult result)
+        {
+            return pipelineHost.RunPhase(runtime, phase, ref context, out result);
+        }
+    }
 }

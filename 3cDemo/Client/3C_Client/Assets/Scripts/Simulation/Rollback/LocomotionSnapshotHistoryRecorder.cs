@@ -1,4 +1,4 @@
-using ThirdPersonAction;
+﻿using ThirdPersonAction;
 using ThirdPersonInput;
 using ThirdPersonMovement;
 using UnityEngine;
@@ -9,8 +9,7 @@ namespace ThirdPersonSimulation
     public sealed class LocomotionSnapshotHistoryRecorder : MonoBehaviour, ISimulationTickPhaseHandler
     {
         [SerializeField] UnitySimulationTickDriver tickDriver;
-        [SerializeField] PlayerLocomotionController locomotionController;
-        [SerializeField] PlayerFullBodyActionController fullBodyActionController;
+        [SerializeField] CharacterFrameRuntimeController runtimeController;
         [SerializeField] InputRequestBufferComponent inputBufferComponent;
         [SerializeField, Min(1)] int capacity = 120;
 
@@ -18,8 +17,7 @@ namespace ThirdPersonSimulation
         bool registered;
 
         public UnitySimulationTickDriver TickDriver { get => tickDriver; set => tickDriver = value; }
-        public PlayerLocomotionController LocomotionController { get => locomotionController; set => locomotionController = value; }
-        public PlayerFullBodyActionController FullBodyActionController { get => fullBodyActionController; set => fullBodyActionController = value; }
+        public CharacterFrameRuntimeController RuntimeController { get => runtimeController; set => runtimeController = value; }
         public InputRequestBufferComponent InputBufferComponent { get => inputBufferComponent; set => inputBufferComponent = value; }
         public PredictionSnapshotHistory History => history ?? (history = new PredictionSnapshotHistory(Mathf.Max(1, capacity)));
         public bool IsRegistered => registered;
@@ -45,7 +43,7 @@ namespace ThirdPersonSimulation
                 return true;
 
             ResolveReferences();
-            if (tickDriver == null || locomotionController == null)
+            if (tickDriver == null || runtimeController == null)
                 return false;
 
             tickDriver.Runner.Register(SimulationTickPhase.WriteSnapshotAndEvents, this);
@@ -69,69 +67,28 @@ namespace ThirdPersonSimulation
             if (phase != SimulationTickPhase.WriteSnapshotAndEvents)
                 return;
 
-            if (locomotionController == null)
+            if (runtimeController == null)
                 ResolveReferences();
 
-            if (locomotionController != null)
+            if (runtimeController != null)
             {
-                CharacterSimulationSnapshot snapshot = locomotionController.CaptureSimulationSnapshot(context.Tick);
-                snapshot = EnrichFullBodyState(in snapshot);
+                CharacterSimulationSnapshot snapshot = runtimeController.CaptureSimulationSnapshot(context.Tick);
                 History.Write(in snapshot);
             }
         }
 
-        CharacterSimulationSnapshot EnrichFullBodyState(in CharacterSimulationSnapshot snapshot)
-        {
-            if (fullBodyActionController == null)
-                ResolveReferences();
-
-            FullBodyActionRestoreState fullBodyState = fullBodyActionController != null
-                ? fullBodyActionController.CaptureRestoreState()
-                : FullBodyActionRestoreState.Inactive;
-            InputRequestBufferComponentRestoreState inputBufferState = inputBufferComponent != null
-                ? inputBufferComponent.CaptureRestoreState()
-                : InputRequestBufferComponentRestoreState.Empty;
-
-            return snapshot.WithFullBodyState(in fullBodyState, in inputBufferState);
-        }
-
         void ResolveReferences()
         {
-            if (locomotionController == null)
-            {
-                locomotionController = GetComponent<PlayerLocomotionController>();
-                if (locomotionController == null)
-                    locomotionController = GetComponentInParent<PlayerLocomotionController>();
-                if (locomotionController == null)
-                    locomotionController = GetComponentInChildren<PlayerLocomotionController>(true);
-            }
-
-            if (fullBodyActionController == null)
-            {
-                fullBodyActionController = GetComponent<PlayerFullBodyActionController>();
-                if (fullBodyActionController == null)
-                    fullBodyActionController = GetComponentInParent<PlayerFullBodyActionController>();
-                if (fullBodyActionController == null)
-                    fullBodyActionController = GetComponentInChildren<PlayerFullBodyActionController>(true);
-            }
+            if (runtimeController == null)
+                runtimeController = GetComponent<CharacterFrameRuntimeController>();
 
             if (inputBufferComponent == null)
-            {
+                inputBufferComponent = runtimeController != null ? runtimeController.InputBufferComponent : null;
+            if (inputBufferComponent == null)
                 inputBufferComponent = GetComponent<InputRequestBufferComponent>();
-                if (inputBufferComponent == null)
-                    inputBufferComponent = GetComponentInParent<InputRequestBufferComponent>();
-                if (inputBufferComponent == null)
-                    inputBufferComponent = GetComponentInChildren<InputRequestBufferComponent>(true);
-            }
 
             if (tickDriver == null)
-            {
                 tickDriver = GetComponent<UnitySimulationTickDriver>();
-                if (tickDriver == null)
-                    tickDriver = GetComponentInParent<UnitySimulationTickDriver>();
-                if (tickDriver == null)
-                    tickDriver = GetComponentInChildren<UnitySimulationTickDriver>(true);
-            }
         }
     }
 }

@@ -300,6 +300,17 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
+                    "action": "Run",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "2c6f2d37-674f-42cf-9443-725c6b1d34bf",
+                    "path": "<Keyboard>/shift",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
                     "action": "Dodge",
                     "isComposite": false,
                     "isPartOfComposite": false

@@ -41,19 +41,31 @@ namespace ThirdPersonMovement
             return resolvedBehaviour as IFacingDirectionProvider;
         }
 
-        public static BasicLocomotionAnimancerPresenter ResolveLocomotionPresenter(
+        public static ILocomotionAnimationPresenter ResolveLocomotionPresenter(
             Component owner,
+            out MonoBehaviour presenterBehaviour,
             out ILocomotionAnimationPlaybackProgressController playbackProgressController)
         {
-            if (owner.TryGetComponent(out BasicLocomotionAnimancerPresenter directPresenter))
+            if (TryResolveComponentInterface(owner, out ILocomotionAnimationPresenter directPresenter, out presenterBehaviour))
             {
                 playbackProgressController = directPresenter;
                 return directPresenter;
             }
 
-            BasicLocomotionAnimancerPresenter presenter = owner.GetComponentInChildren<BasicLocomotionAnimancerPresenter>(true);
-            playbackProgressController = presenter as ILocomotionAnimationPlaybackProgressController;
-            return presenter;
+            MonoBehaviour[] behaviours = owner.GetComponentsInChildren<MonoBehaviour>(true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                if (behaviours[i] is ILocomotionAnimationPresenter presenter)
+                {
+                    presenterBehaviour = behaviours[i];
+                    playbackProgressController = presenter;
+                    return presenter;
+                }
+            }
+
+            presenterBehaviour = null;
+            playbackProgressController = null;
+            return null;
         }
 
         public static ThirdPersonCameraController ResolveCameraController(Component owner)

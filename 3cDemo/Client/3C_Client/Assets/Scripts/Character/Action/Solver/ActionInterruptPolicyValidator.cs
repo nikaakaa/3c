@@ -17,7 +17,7 @@ namespace ThirdPersonAction
                 ActionInterruptPolicy policy = ActionInterruptPolicySetCompiler.Compile(policySet[i]);
                 ValidatePolicy(policy, i, result);
 
-                string key = $"{policy.FromState.Value}->{policy.TargetState.Value}:{policy.TimingRule}:{policy.WindowId}:{policy.RequiredFactId.Value}";
+                string key = $"{policy.FromState.Value}->{policy.TargetState.Value}:{policy.RequestType}:{policy.TimingRule}:{policy.WindowId}:{policy.RequiredFactId.Value}";
                 if (!keys.Add(key))
                     result.AddWarning($"Policy {i} duplicates an earlier policy: {key}.");
             }
@@ -46,7 +46,7 @@ namespace ThirdPersonAction
                 ActionInterruptPolicy policy = policies[i];
                 ValidatePolicy(policy, i, result);
 
-                string key = $"{policy.FromState.Value}->{policy.TargetState.Value}:{policy.TimingRule}:{policy.WindowId}:{policy.RequiredFactId.Value}";
+                string key = $"{policy.FromState.Value}->{policy.TargetState.Value}:{policy.RequestType}:{policy.TimingRule}:{policy.WindowId}:{policy.RequiredFactId.Value}";
                 if (!keys.Add(key))
                     result.AddWarning($"Policy {i} duplicates an earlier policy: {key}.");
             }
@@ -87,6 +87,9 @@ namespace ThirdPersonAction
 
             if (!policy.TargetState.IsValid)
                 result.AddError($"Policy {index} target state is invalid.");
+
+            if (!System.Enum.IsDefined(typeof(ActionRequestType), policy.RequestType))
+                result.AddError($"Policy {index} request type is invalid.");
 
             if (policy.MinPriority < 0)
                 result.AddError($"Policy {index} min priority is invalid.");

@@ -100,6 +100,9 @@ namespace ThirdPersonMovement
                 in stateFrame,
                 input.CurrentStep,
                 in inputRuntimeState);
+            bool consumedLocomotionPreemption = DidConsumeLocomotionPreemption(in stateFrame);
+            if (consumedLocomotionPreemption)
+                runtimeState = runtimeState.WithPendingTurnBackIntent(LocomotionTurnBackIntent.None);
             runtimeState = ApplyStateMachineOutputs(in stateFrame, in runtimeState);
             stateDecision = new LocomotionStateDecisionFrame(
                 decisionFrame,
@@ -110,7 +113,8 @@ namespace ThirdPersonMovement
                 decisionFrame.PhaseFacts,
                 decisionFrame.Facts,
                 blackboardBeforeTick,
-                runLatchBeforeStateTick);
+                runLatchBeforeStateTick,
+                consumedLocomotionPreemption);
             result = LocomotionFrameBuilderResult.Evaluated(in stateDecision, in runtimeState);
             return true;
         }
@@ -257,6 +261,21 @@ namespace ThirdPersonMovement
                 in consumedIntent);
             LocomotionTurnBackIntent clearedIntent = LocomotionTurnBackIntent.None;
             return runtimeState.WithPendingTurnBackIntent(in clearedIntent);
+        }
+
+        static bool DidConsumeLocomotionPreemption(in CharacterStateMachineFrame stateFrame)
+        {
+            for (int i = 0; i < stateFrame.ConditionTraces.Count; i++)
+            {
+                CharacterStateTransitionConditionTrace trace = stateFrame.ConditionTraces[i];
+                if (trace.ConditionKind == CharacterStateTransitionConditionKind.LocomotionPreemptionPending &&
+                    trace.Passed)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         static LocomotionFrameRuntimeState ApplyStateMachineOutputs(

@@ -31,6 +31,13 @@ CBUFFER_START(UnityPerMaterial)
 
     half    _OutlineWidth;
     half4   _OutlineColor;
+
+    half    _ScreenDotTransparencyEnabled;
+    half    _ScreenDotCoverage;
+    float   _ScreenDotSpacingPixels;
+    half    _ScreenDotRadius;
+    half    _ScreenDotHardness;
+    float4  _ScreenDotOffsetPixels;
 CBUFFER_END
 
 TEXTURE2D(_BaseMap);            SAMPLER(sampler_BaseMap);

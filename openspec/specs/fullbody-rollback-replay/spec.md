@@ -4,19 +4,20 @@
 定义 FullBody 回滚重放主线、输入帧回灌、状态 Capture/Restore、runtime facts 收敛和 Fantasy 接入前的边界。
 ## Requirements
 ### Requirement: FullBody 回滚重放主入口
-系统 MUST 提供 FullBody 回滚重放能力，使本地 synctest 的 replay 能通过当前 `PlayerFullBodyActionController` 主线推进动作、移动、动作事实和动画事实。该能力 MUST 复用现有 `PlayerFullBodyActionController`、`PlayerLocomotionController`、`InputRequestBuffer` 和统一状态机，不得新增第二套角色控制器或第二套状态机。
+系统 MUST 提供 FullBody 回滚重放能力，使本地 synctest 的 replay 能通过当前 Character frame pipeline 主线推进动作、移动、动作事实和动画事实。该能力 MUST 复用现有角色 runtime 入口、PlayerLocomotionController adapter、InputRequestBuffer、Locomotion graph 和 Action lifecycle，不得新增第二套角色控制器、第二套 gameplay tick 入口或默认 mixed 状态图。
 
-#### Scenario: 重放走 FullBody 主线
+#### Scenario: 重放走 Character frame 主线
 - **GIVEN** replay adapter 收到 tick N 的 `PredictionInputFrame`
 - **WHEN** replay 推进 tick N
 - **THEN** 系统 MUST 将输入帧转换为 `BasicLocomotionInputSnapshot`
-- **AND** MUST 调用 `PlayerFullBodyActionController.Tick(...)` 或等价当前 FullBody 主入口
+- **AND** MUST 调用 Character frame pipeline 或等价当前正式 FullBody 主线
 - **AND** MUST NOT 只调用 `PlayerLocomotionController.Tick(...)` 作为 FullBody replay 的最终路径
+- **AND** MUST NOT 通过默认 graph active `Action.Dodge` 表达 Dodge lifecycle
 
 #### Scenario: 保留 locomotion-only adapter
 - **GIVEN** 现有 locomotion-only synctest 测试仍需要窄范围验证
 - **WHEN** 用户选择 locomotion-only replay adapter
-- **THEN** 系统 MAY 继续只通过 `PlayerLocomotionController` 重放
+- **THEN** 系统 MAY 继续只通过 `PlayerLocomotionController` 或 Movement module 重放
 - **AND** 该 adapter MUST 明确标识为 locomotion-only，不得作为 Sandbox 动作 demo 的完整回滚验收
 
 #### Scenario: 不创建分裂控制路径
@@ -51,18 +52,22 @@
 - **AND** 过期请求 MUST 基于 N 裁剪
 
 ### Requirement: FullBody 状态 Capture/Restore
-系统 MUST 定义 FullBody action 运行时状态的纯数据 capture/restore 边界，使 replay 从历史 tick 恢复时，FullBody 当前状态、动作状态、pending transition 和影响下一 tick 输出的事实能回到快照时刻。restore state MUST NOT 保存 Unity Object、Animancer runtime object、Animator、AnimationClip、InputAction 或场景实例引用。
+系统 MUST 定义 FullBody action 运行时状态的纯数据 capture/restore 边界，使 replay 从历史 tick 恢复时，Locomotion graph restore state、Action lifecycle restore state、input buffer restore state、pending frame facts 和影响下一 tick 输出的事实能回到快照时刻。restore state MUST NOT 保存 Unity Object、Animancer runtime object、Animator、AnimationClip、InputAction 或场景实例引用。
 
-#### Scenario: 捕获 FullBody 状态
+#### Scenario: 捕获 Locomotion 与 Action 状态
 - **WHEN** tick N 的角色模拟快照被创建
-- **THEN** 系统 MUST 能捕获当前 FullBody owner、action state、state time、variant 和 pending transition 或等价事实
+- **THEN** 系统 MUST 能捕获当前 Locomotion graph active state、state time、variant 和 pending transition 或等价 facts
+- **AND** MUST 能捕获 Action lifecycle active action、variant、state time、source step、completion state 和 pending release 或等价 facts
 - **AND** 捕获结果 MUST 是纯数据
+- **AND** active Dodge MUST NOT 要求 Locomotion graph active state 为 `Action.Dodge`
 
-#### Scenario: 恢复 FullBody 状态
+#### Scenario: 恢复 active Dodge
 - **GIVEN** 系统持有 tick N 的 FullBody restore state
+- **AND** restore state 中 Action lifecycle active action 为 `Action.Dodge`
 - **WHEN** replay 从 tick N 恢复
-- **THEN** `PlayerFullBodyActionController` MUST 恢复到该 restore state
-- **AND** 恢复后下一 tick 的 FullBody active state MUST 与恢复前同一输入序列一致
+- **THEN** Action module MUST 恢复到 active Dodge lifecycle state
+- **AND** Locomotion graph MUST 恢复到自己的 Locomotion state
+- **AND** 恢复后下一 tick 的 Action facts 与恢复前同一输入序列一致
 
 #### Scenario: 不污染输入历史
 - **WHEN** replay 恢复 FullBody 状态
@@ -70,23 +75,24 @@
 - **AND** 后续 replay MUST 仍从原始输入帧重新推导动作请求
 
 ### Requirement: FullBody Runtime Facts 收敛
-系统 MUST 在 FullBody replay 中重新写入 action facts、animation facts 和 runtime blackboard facts，使同一输入序列重放后的最终快照能与原始快照在定义容差内比较。若 animation facts 仍受表现层播放进度影响，系统 MUST 输出字段级 differences 以定位缺口。
+系统 MUST 在 FullBody replay 中重新写入 action facts、locomotion facts、animation facts 和 runtime blackboard facts，使同一输入序列重放后的最终快照能与原始快照在定义容差内比较。Action facts MUST 从 Action lifecycle 或 action output 派生；Locomotion facts MUST 从 Movement module 派生；若 animation facts 仍受表现层播放进度影响，系统 MUST 输出字段级 differences 以定位缺口。
 
 #### Scenario: Action facts 重放收敛
 - **GIVEN** 原始运行中 Dodge 请求被 FullBody 主线接受
 - **WHEN** replay 使用同一段输入重放到同一 end tick
 - **THEN** replay 后的 action active/state/completed/sourceStep MUST 与原始快照一致或输出明确 differences
+- **AND** 比较 MUST 不要求默认 graph active state 为 `Action.Dodge`
+
+#### Scenario: Locomotion facts 重放收敛
+- **GIVEN** 原始运行中 Locomotion graph 处于 `Locomotion.MoveLoop`
+- **WHEN** replay 使用同一段输入重放到同一 end tick
+- **THEN** replay 后的 locomotion phase、state time 和输出候选 facts MUST 与原始快照一致或输出明确 differences
+- **AND** 比较 MUST 区分 Locomotion facts 与 Action lifecycle facts
 
 #### Scenario: Animation facts 通过可控事实源测试
 - **GIVEN** 自动测试使用 fake animation presenter 或 fake playback progress source
 - **WHEN** replay 使用同一段输入重放
 - **THEN** replay 后的 animation key、normalized time 和 sourceStep MUST 与原始快照一致
-
-#### Scenario: 手动场景保留动画差异诊断
-- **GIVEN** Sandbox 使用真实 Animancer 播放外观
-- **WHEN** replay 后 animation facts 无法收敛
-- **THEN** Console MUST 输出 `blackboard.animation.*` 或等价字段级 differences
-- **AND** 诊断 MUST 区分 animation fact 差异与 position/yaw/action replay 差异
 
 ### Requirement: Debug Runner FullBody 验证
 系统 MUST 让 Play Mode debug runner 可用 FullBody replay adapter 执行本地 synctest，并保持安全探针和可见 correction 两种调试语义。
@@ -147,7 +153,7 @@
 - **AND** 工具 MUST NOT 只输出笼统的 snapshot mismatch
 
 ### Requirement: Profile 驱动动画状态可严格重放
-系统 MUST 能用严格 synctest 验证 profile 驱动的 FullBody/Locomotion 动画状态。TurnBack EntryLocal 或等价 profile 驱动状态 MUST 通过正式 FullBody replay 主线恢复、重放和比较，不得在测试中直接绕过主线采样器。
+系统 MUST 能用严格 synctest 验证 profile 驱动的 Locomotion 动画状态。TurnBack EntryLocal 或等价 profile 驱动状态 MUST 通过正式 FullBody replay 主线恢复、重放和比较，不得在测试中直接绕过主线采样器。
 
 #### Scenario: TurnBack EntryLocal 重放一致
 - **GIVEN** TurnBack 使用 profile 采样产生位移和 yaw
@@ -204,18 +210,19 @@
 - **AND** 文档 MUST 标明它不提供本地预测确定性保证
 
 ### Requirement: Replay 复用 FullBody Frame Pipeline
-系统 MUST 让 FullBody replay、synctest 和本地高延迟校正复用 live gameplay 使用的 FullBody frame pipeline。Replay adapter MAY 从 `PredictionInputFrame` 构造 pipeline 输入，但 MUST NOT 通过另一套手工顺序直接拼接 input buffer、controller Tick、状态恢复和动画播放事实。
+系统 MUST 让 FullBody replay、synctest 和本地高延迟校正复用 live gameplay 使用的 `CharacterFramePipelineHost -> CharacterFramePipeline` 主线。Replay adapter MAY 从 `PredictionInputFrame` 构造 pipeline 输入，但 MUST NOT 通过另一套手工顺序直接拼接 input buffer、controller Tick、状态恢复和动画播放事实。Replay adapter MUST NOT 直接创建 `CharacterFramePipeline`、FullBody submitter、第二 runner、第二 motion executor 或第二 animation presenter。
 
-#### Scenario: PredictionInputFrame 进入 Pipeline
+#### Scenario: PredictionInputFrame 进入 Host 和 Pipeline
 - **GIVEN** replay adapter 收到 tick N 的 `PredictionInputFrame`
 - **WHEN** replay 推进 tick N
-- **THEN** 系统 MUST 将该输入帧作为 `CharacterFramePipeline` 的输入
+- **THEN** 系统 MUST 将该输入帧作为 `CharacterFramePipelineHost` 的输入
+- **AND** host MUST 通过同一个 `CharacterFramePipeline` 推进
 - **AND** 离散按钮事实 MUST 在 `CharacterFramePipeline` 的输入缓冲步骤写入 `InputRequestBuffer`
 - **AND** Move/Look/Run facts MUST 在 `CharacterFramePipeline` 的输入或 facts 步骤进入 Locomotion decision
 
 #### Scenario: Replay 不绕过 GameplayDecision
 - **WHEN** replay 推进 Dodge、TurnBack 或未来 Attack 输入
-- **THEN** 请求 MUST 重新经过 `CharacterActionRequestSubmissionArbiter` 和统一状态机
+- **THEN** 请求 MUST 重新经过 `CharacterActionRequestSubmissionArbiter` 和对应领域 runtime
 - **AND** replay MUST NOT 直接写入“已进入某动作”的结果
 - **AND** replay MUST NOT 直接调用 `BasicLocomotionPipeline` 作为 FullBody 最终路径
 
@@ -224,8 +231,14 @@
 - **THEN** 快照 MUST 来自同一 `CharacterFramePipeline` 写入的 FullBody 状态、runtime blackboard、input buffer restore state 和 motion executor restore state
 - **AND** 快照 recorder MUST 不需要额外 enrich 一条独立 FullBody gameplay truth
 
+#### Scenario: Replay 不创建分裂持有者
+- **WHEN** FullBody replay 或 synctest 构造推进入口
+- **THEN** replay MUST 使用角色正式 `CharacterFramePipelineHost`
+- **AND** MUST NOT 为 replay 单独创建第二个 `CharacterFramePipeline`
+- **AND** MUST NOT 直接调用 FullBody submitter 具体实现来绕过 host
+
 ### Requirement: Pipeline Replay 可诊断
-系统 MUST 为 pipeline replay 提供字段级 diagnostics，使 replay mismatch 能区分输入回灌、Action 仲裁、统一状态机、运动执行、动画事实和 snapshot capture 的差异。
+系统 MUST 为 pipeline replay 提供字段级 diagnostics，使 replay mismatch 能区分输入回灌、Action 仲裁、状态图 runtime、运动执行、动画事实和 snapshot capture 的差异。
 
 #### Scenario: Replay mismatch 标记阶段
 - **WHEN** FullBody synctest 发现原始运行和 replay 不一致
@@ -330,3 +343,85 @@ FullBody replay MUST NOT 因项目暂时偏向 MOBA/MMO 或格斗而写死一套
 - **WHEN** 两个状态使用不同 compare scope
 - **THEN** 它们 MUST 仍通过同一 FullBody replay adapter 推进
 - **AND** MUST NOT 为某个业务类型创建第二套 replay 主线
+
+### Requirement: FullBody Replay Adapter 属于 Debug Rig
+`FullBodyRollbackSimulation` 或等价 `ILocalRollbackSynctestSimulation` Unity adapter MUST 作为独立 `RollbackDebugRig` prefab 的 simulation adapter 存在。该 adapter MUST 通过显式目标角色引用调用当前 `CharacterFrameRuntimeController`、`CharacterFramePipelineHost` 或等价正式角色帧入口推进 replay。正式角色 prefab MUST NOT 依赖该 adapter 作为 gameplay runtime 组件，也 MUST NOT 因该 adapter 缺失而影响正常 Play Mode 移动、动作或动画输出。
+
+#### Scenario: Adapter 推进正式角色帧主线
+- **GIVEN** `RollbackDebugRig` prefab 实例中的 FullBody replay adapter 已显式引用目标角色 runtime
+- **WHEN** replay adapter 收到 tick N 的 `PredictionInputFrame`
+- **THEN** adapter MUST 构造正式角色帧输入
+- **AND** MUST 通过目标角色的 `CharacterFrameRuntimeController`、`CharacterFramePipelineHost` 或等价角色级主入口推进
+- **AND** MUST NOT 直接创建第二个 `CharacterFramePipeline`
+
+#### Scenario: 正式角色缺少 Adapter 不影响 gameplay
+- **WHEN** 正式 Corin 角色 prefab 或正式场景实例未挂载 FullBody replay adapter
+- **THEN** 角色正式 gameplay MUST 仍通过 `CharacterFrameRuntimeController` 推进
+- **AND** Move、Run、TurnBack、Dodge 或后续 Action 不得依赖 replay adapter 才能运行
+
+#### Scenario: Adapter 不创建分裂持有者
+- **WHEN** FullBody replay adapter 执行 capture、restore 或 advance
+- **THEN** adapter MUST 复用目标角色已有 runtime、state machine runner、motion executor 和 animation presenter
+- **AND** MUST NOT new 第二套 runtime host、状态机 runner、motion executor 或 animation presenter
+- **AND** MUST NOT 通过 fallback 配置补齐缺失目标角色引用
+
+#### Scenario: 测试可临时创建 Adapter
+- **WHEN** EditMode 测试需要验证 FullBody replay
+- **THEN** 测试 MAY 在 fixture 中临时创建 FullBody replay adapter
+- **AND** fixture MUST 显式注入目标角色 runtime 依赖
+- **AND** fixture MUST NOT 替代 `RollbackDebugRig` prefab 作为 Play Mode 工具入口
+- **AND** 测试 MUST 证明 replay 仍走同一角色帧主线
+
+### Requirement: Dodge Run latch 回滚收敛
+系统 MUST 在 FullBody replay 和本地回滚中保持 Directional Dodge 完成后的 Run latch 行为确定。Run latch MUST 作为 Locomotion runtime state capture/restore 的一部分参与比较；Action lifecycle restore 只恢复动作状态，不得用默认 graph active `Action.Dodge` 或 Action facts 代替 Run latch。
+
+#### Scenario: Directional 完成后 Run latch replay 收敛
+- **GIVEN** 原始运行中 Directional Dodge 完成帧仍有移动输入
+- **AND** 原始运行通过 frame output 写入 Run latch
+- **WHEN** replay 从动作前或动作中快照恢复并重放同一输入序列
+- **THEN** replay 后 Locomotion runtime Run latch MUST 与原始运行一致
+- **AND** 后续保持移动输入时 gait MUST 同样解析为 Run
+- **AND** 比较 MUST 不要求默认 graph active state 为 `Action.Dodge`
+
+#### Scenario: 无移动完成或 Backstep 不产生 Run latch
+- **GIVEN** 原始运行中 Directional Dodge 完成帧没有移动输入或 Dodge 变体为 Backstep
+- **WHEN** replay 重放同一输入序列
+- **THEN** replay 后 Locomotion runtime Run latch MUST 保持 false
+- **AND** 后续 Locomotion phase/gait MUST 与原始运行一致
+
+#### Scenario: Backstep 无输入重放等待动作动画完成
+- **GIVEN** 原始运行中 Backstep Dodge 已达到动作位移 duration
+- **AND** 本帧没有移动输入
+- **AND** 匹配 `Action.Dodge.Backstep` 动作动画尚未播放完成
+- **WHEN** replay 重放到同一 tick
+- **THEN** Action lifecycle MUST 仍保持 active `Action.Dodge`
+- **AND** replay MUST NOT 提前清除 action animation playback
+- **AND** Locomotion runtime Run latch MUST 保持 false
+
+#### Scenario: 停止清 latch 参与快照
+- **GIVEN** Run latch 曾因 Directional Dodge 完成而 active
+- **AND** 玩家停止移动并完成 RunEnd/Idle 收尾
+- **WHEN** 系统 capture tick N 的 FullBody restore state
+- **THEN** restore state MUST 记录清除后的 Run latch
+- **AND** replay 从 tick N 恢复后的下一次移动 MUST 从 Walk 起步
+
+### Requirement: Action Motion Resolver Result 参与回放一致性
+FullBody rollback replay MUST 将 Action motion resolver result 视为 strict gameplay facts 的一部分。预测路径和正式路径 MUST 使用同一 action motion spec 与 resolver 输入，产出一致的 movement command、completed 和 run latch 派生。
+
+#### Scenario: Dodge replay 结果一致
+- **GIVEN** 相同输入序列触发 Dodge Directional
+- **WHEN** rollback replay 从历史 tick 恢复并重放
+- **THEN** replay 的 action motion resolver result MUST 与正式路径一致
+- **AND** movement command planar distance、world direction、completed 和 source step MUST 匹配
+
+#### Scenario: Backstep 不写 Run latch 保持一致
+- **GIVEN** 相同输入序列触发 Dodge Backstep
+- **WHEN** rollback replay 比较正式路径和重放路径
+- **THEN** 两条路径 MUST 都不产生 run latch on complete
+- **AND** 不得通过忽略 action facts 让测试通过
+
+#### Scenario: Resolver 输入缺失时诊断失败
+- **GIVEN** replay 恢复后缺少必要 action motion spec 或 locked direction
+- **WHEN** resolver 无法产生 strict gameplay result
+- **THEN** replay MUST 报告可读差异
+- **AND** MUST NOT 使用默认 direction、默认 distance 或上一帧 result 作为 fallback

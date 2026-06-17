@@ -12,20 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3ed8c21865cd0574aa394eec93540dde, type: 3}
   m_Name: CorinCharacterConfig
   m_EditorClassIdentifier: 
-  stateMachine: {fileID: 11400000, guid: 56b3ba24b8384921bdfbde2c9c9e0632, type: 2}
+  stateMachine: {fileID: 11400000, guid: 74f48c859eb941b0a582d75b981ba5db, type: 2}
   movement: {fileID: 11400000, guid: 1f4ac8a4ba65c6648afa001a33f4e022, type: 2}
   locomotionAnimation: {fileID: 11400000, guid: bdf1c9cfe4f94c56a30668b3f734ff6c,
     type: 2}
-  fullBodyStateRequestPolicy: {fileID: 11400000, guid: 7f8f409d7ad84c849b43d6f7a1a11842,
+  actionInterruptPolicy: {fileID: 11400000, guid: 7f8f409d7ad84c849b43d6f7a1a11842,
     type: 2}
-  dodgeAction: {fileID: 11400000, guid: 2d4bd37b76ac4cbf90181a8c64f42773, type: 2}
-  fullBodyActionAnimation: {fileID: 11400000, guid: 2f00f00b4bd9cb6469fdc58157281094,
+  bodyClaimPolicy: {fileID: 11400000, guid: b892fb77e23b46738bd42a92127ab675,
     type: 2}
-  animancerRigVariant: {fileID: 11400000, guid: 2f00f00b4bd9cb6469fdc58157281094,
+  actionCatalog: {fileID: 11400000, guid: 03f3a6d2b33f4cdb9f6588fcdb95dbfc,
     type: 2}
   inputActions: {fileID: -944628639613478452, guid: ea97b05a2d14465449e741dc51ff44fe,
     type: 3}
   moveAction: {fileID: 11400000, guid: 1cb0c15a8813495ba44da60ffe1e3cc9, type: 2}
   runAction: {fileID: 11400000, guid: f5dc755e5d204150a737316748a5a1cc, type: 2}
   lookAction: {fileID: 11400000, guid: 33bfbd90b3454414864add35e055632e, type: 2}
+  dodgeInputAction: {fileID: 11400000, guid: fed3169034a049199e43f86578ecaaf5, type: 2}
   cameraConfig: {fileID: 11400000, guid: 757adc3729320984b9742a3c3183f585, type: 2}

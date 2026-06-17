@@ -97,8 +97,8 @@ namespace ThirdPersonDiagnostics.Tests
                 RuntimeDiagnosticLogCategory.FullBody,
                 RuntimeDiagnosticLogLevel.Info,
                 "fullbody-path-changed",
-                "/FullBody/Action/Dodge",
-                "/FullBody/Locomotion/MoveStart",
+                "Action.Dodge",
+                "Locomotion.MoveStart",
                 3,
                 9,
                 "owner=Action action=Action.Dodge");
@@ -109,8 +109,8 @@ namespace ThirdPersonDiagnostics.Tests
             StringAssert.Contains("[FullBody.fullbody-path-changed]", formatted);
             StringAssert.Contains("frame=9", formatted);
             StringAssert.Contains("step=3", formatted);
-            StringAssert.Contains("from=/FullBody/Locomotion/MoveStart", formatted);
-            StringAssert.Contains("path=/FullBody/Action/Dodge", formatted);
+            StringAssert.Contains("from=Locomotion.MoveStart", formatted);
+            StringAssert.Contains("path=Action.Dodge", formatted);
             StringAssert.Contains("message=fullbody-path-changed", formatted);
             StringAssert.Contains("owner=Action action=Action.Dodge", formatted);
         }
@@ -122,7 +122,7 @@ namespace ThirdPersonDiagnostics.Tests
                 RuntimeDiagnosticLogCategory.Locomotion,
                 RuntimeDiagnosticLogLevel.Trace,
                 "turnback-root-motion-consumed",
-                "/FullBody/Locomotion/TurnBack",
+                "Locomotion.TurnBack",
                 string.Empty,
                 7,
                 42,

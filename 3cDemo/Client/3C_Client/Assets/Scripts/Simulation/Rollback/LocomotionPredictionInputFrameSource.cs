@@ -1,3 +1,4 @@
+using ThirdPersonAction;
 using ThirdPersonMovement;
 using UnityEngine;
 
@@ -6,10 +7,10 @@ namespace ThirdPersonSimulation
     [DisallowMultipleComponent]
     public sealed class LocomotionPredictionInputFrameSource : MonoBehaviour, IPredictionInputFrameSource, IPredictionInputCameraBasisSource
     {
-        [SerializeField] PlayerLocomotionController locomotionController;
+        [SerializeField] CharacterFrameRuntimeController runtimeController;
         [SerializeField] MonoBehaviour buttonSourceBehaviour;
 
-        public PlayerLocomotionController LocomotionController { get => locomotionController; set => locomotionController = value; }
+        public CharacterFrameRuntimeController RuntimeController { get => runtimeController; set => runtimeController = value; }
         public MonoBehaviour ButtonSourceBehaviour { get => buttonSourceBehaviour; set => buttonSourceBehaviour = value; }
 
         void Reset()
@@ -20,7 +21,7 @@ namespace ThirdPersonSimulation
         public bool TryReadPredictionInput(in SimulationTickContext context, out PredictionInputFrame frame)
         {
             ResolveReferences();
-            if (locomotionController == null || !locomotionController.TryReadInput(context.FixedDeltaSecondsFloat, out BasicLocomotionInputSnapshot input))
+            if (runtimeController == null || !runtimeController.TryReadInput(context.FixedDeltaSecondsFloat, out BasicLocomotionInputSnapshot input))
             {
                 frame = default;
                 return false;
@@ -44,8 +45,8 @@ namespace ThirdPersonSimulation
         public RollbackCameraBasisState CapturePredictionCameraBasis()
         {
             ResolveReferences();
-            return locomotionController != null
-                ? locomotionController.CaptureRollbackCameraBasisState()
+            return runtimeController != null
+                ? runtimeController.CaptureRollbackCameraBasisState()
                 : RollbackCameraBasisState.Default;
         }
 
@@ -69,44 +70,11 @@ namespace ThirdPersonSimulation
 
         void ResolveReferences()
         {
-            if (locomotionController == null)
-            {
-                locomotionController = GetComponent<PlayerLocomotionController>();
-                if (locomotionController == null)
-                    locomotionController = GetComponentInParent<PlayerLocomotionController>();
-            }
+            if (runtimeController == null)
+                runtimeController = GetComponent<CharacterFrameRuntimeController>();
 
             if (buttonSourceBehaviour == null && TryResolveComponentInterface(out IPredictionButtonFrameSource _, out MonoBehaviour sourceBehaviour))
-            {
                 buttonSourceBehaviour = sourceBehaviour;
-                return;
-            }
-
-            if (buttonSourceBehaviour == null)
-            {
-                MonoBehaviour[] parentBehaviours = GetComponentsInParent<MonoBehaviour>(true);
-                for (int i = 0; i < parentBehaviours.Length; i++)
-                {
-                    if (parentBehaviours[i] is IPredictionButtonFrameSource)
-                    {
-                        buttonSourceBehaviour = parentBehaviours[i];
-                        return;
-                    }
-                }
-            }
-
-            if (buttonSourceBehaviour == null)
-            {
-                MonoBehaviour[] childBehaviours = GetComponentsInChildren<MonoBehaviour>(true);
-                for (int i = 0; i < childBehaviours.Length; i++)
-                {
-                    if (childBehaviours[i] is IPredictionButtonFrameSource)
-                    {
-                        buttonSourceBehaviour = childBehaviours[i];
-                        return;
-                    }
-                }
-            }
         }
 
         bool TryResolveComponentInterface<T>(out T service, out MonoBehaviour serviceBehaviour) where T : class

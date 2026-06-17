@@ -44,7 +44,7 @@ namespace ThirdPersonAction
                 context.CurrentState.Value,
                 context.CurrentTick,
                 0,
-                $"request={request.RequestType} id={request.RequestId} origin={request.OriginTick} expire={request.ExpireTick} priority={request.Priority} sourceOrder={request.SourceOrder} policyIndex={policyIndex} policyFrom={policy.FromState.Value} policyTarget={policy.TargetState.Value} minPriority={policy.MinPriority} timing={policy.TimingRule} windowStart={policy.WindowStart:F3} windowEnd={policy.WindowEnd:F3} windowId={policy.WindowId} requiredFactId={policy.RequiredFactId.Value} force={policy.Force} elapsed={context.CurrentStateElapsedSeconds:F3} resistance={context.CurrentStateResistance} timelineWindows={context.TimelineFacts.ActiveWindowIds} requestWindows={context.TimelineFacts.RequestWindowIds} timelineFacts={context.TimelineFacts.ActiveFactIds} requestFacts={context.TimelineFacts.RequestFactIds} timelineMinPriority={context.TimelineFacts.MinPriority} timelineResistance={context.TimelineFacts.Resistance}"));
+                $"request={request.RequestType} id={request.RequestId} origin={request.OriginTick} expire={request.ExpireTick} priority={request.Priority} sourceOrder={request.SourceOrder} policyIndex={policyIndex} policyFrom={policy.FromState.Value} policyTarget={policy.TargetState.Value} policyRequestType={policy.RequestType} minPriority={policy.MinPriority} timing={policy.TimingRule} windowStart={policy.WindowStart:F3} windowEnd={policy.WindowEnd:F3} windowId={policy.WindowId} requiredFactId={policy.RequiredFactId.Value} force={policy.Force} elapsed={context.CurrentStateElapsedSeconds:F3} resistance={context.CurrentStateResistance} timelineWindows={context.TimelineFacts.ActiveWindowIds} requestWindows={context.TimelineFacts.RequestWindowIds} timelineFacts={context.TimelineFacts.ActiveFactIds} requestFacts={context.TimelineFacts.RequestFactIds} timelineMinPriority={context.TimelineFacts.MinPriority} timelineResistance={context.TimelineFacts.Resistance}"));
         }
 
         public void LogRequestRejected(
@@ -55,7 +55,7 @@ namespace ThirdPersonAction
             ActionInterruptPolicy policy)
         {
             string policyContext = policyIndex >= 0
-                ? $" policyIndex={policyIndex} policyFrom={policy.FromState.Value} policyTarget={policy.TargetState.Value} minPriority={policy.MinPriority} timing={policy.TimingRule} windowStart={policy.WindowStart:F3} windowEnd={policy.WindowEnd:F3} windowId={policy.WindowId} requiredFactId={policy.RequiredFactId.Value} force={policy.Force}"
+                ? $" policyIndex={policyIndex} policyFrom={policy.FromState.Value} policyTarget={policy.TargetState.Value} policyRequestType={policy.RequestType} minPriority={policy.MinPriority} timing={policy.TimingRule} windowStart={policy.WindowStart:F3} windowEnd={policy.WindowEnd:F3} windowId={policy.WindowId} requiredFactId={policy.RequiredFactId.Value} force={policy.Force}"
                 : " policyIndex=none";
             Submit(new RuntimeDiagnosticLogEvent(
                 RuntimeDiagnosticLogCategory.Action,

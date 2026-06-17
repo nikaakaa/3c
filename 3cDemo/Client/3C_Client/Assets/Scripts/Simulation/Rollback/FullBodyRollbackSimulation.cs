@@ -8,13 +8,11 @@ namespace ThirdPersonSimulation
     [DisallowMultipleComponent]
     public sealed class FullBodyRollbackSimulation : MonoBehaviour, ILocalRollbackSynctestSimulation, ILocalRollbackDebugRestoreCleanup
     {
-        [SerializeField] PlayerFullBodyActionController fullBodyActionController;
-        [SerializeField] PlayerLocomotionController locomotionController;
+        [SerializeField] CharacterFrameRuntimeController runtimeController;
         [SerializeField] InputRequestBufferComponent inputBufferComponent;
         [SerializeField, Min(1)] int ticksPerSecond = SimulationTickRate.DefaultTicksPerSecond;
 
-        public PlayerFullBodyActionController FullBodyActionController { get => fullBodyActionController; set => fullBodyActionController = value; }
-        public PlayerLocomotionController LocomotionController { get => locomotionController; set => locomotionController = value; }
+        public CharacterFrameRuntimeController RuntimeController { get => runtimeController; set => runtimeController = value; }
         public InputRequestBufferComponent InputBufferComponent { get => inputBufferComponent; set => inputBufferComponent = value; }
 
         void Reset()
@@ -25,54 +23,41 @@ namespace ThirdPersonSimulation
         public CharacterSimulationSnapshot CaptureSnapshot(SimulationTick tick)
         {
             ResolveReferences();
-            if (locomotionController == null)
-                return default;
+            if (runtimeController != null)
+                return runtimeController.CaptureSimulationSnapshot(tick);
 
-            CharacterSimulationSnapshot snapshot = locomotionController.CaptureSimulationSnapshot(tick);
-            FullBodyActionRestoreState fullBodyState = fullBodyActionController != null
-                ? fullBodyActionController.CaptureRestoreState()
-                : FullBodyActionRestoreState.Inactive;
-            InputRequestBufferComponentRestoreState inputBufferState = inputBufferComponent != null
-                ? inputBufferComponent.CaptureRestoreState()
-                : InputRequestBufferComponentRestoreState.Empty;
-
-            return snapshot.WithFullBodyState(in fullBodyState, in inputBufferState);
+            return default;
         }
 
         public void Restore(in CharacterSimulationSnapshot snapshot)
         {
             ResolveReferences();
-            if (fullBodyActionController != null && snapshot.FullBodyRestoreState.Snapshot.ActiveState.IsValid)
-                fullBodyActionController.Restore(snapshot.FullBodyRestoreState);
-            if (inputBufferComponent != null)
-                inputBufferComponent.Restore(snapshot.InputBufferRestoreState);
-            if (locomotionController != null)
-                locomotionController.RestoreSimulationSnapshot(in snapshot);
-            if (fullBodyActionController != null)
-                fullBodyActionController.RestoreActionAnimationPlayback(
-                    snapshot.RuntimeBlackboard.Animation.ActionProgress,
-                    snapshot.RuntimeBlackboard.Animation.ActionAnimationName);
+            if (runtimeController != null)
+            {
+                runtimeController.RestoreSimulationSnapshot(in snapshot);
+                return;
+            }
 
         }
 
         public void Advance(in PredictionInputFrame input)
         {
             ResolveReferences();
-            if (fullBodyActionController == null)
+            if (runtimeController == null)
                 return;
 
-            if (input.HasCameraBasis && locomotionController != null)
-                locomotionController.RollbackCameraBasisProvider.Override(input.CameraBasisState);
+            if (input.HasCameraBasis)
+                runtimeController.RollbackCameraBasisProvider.Override(input.CameraBasisState);
 
             CharacterFrameInput frameInput = CharacterFrameInput.FromPredictionInputFrame(in input, ResolveDeltaTime());
-            fullBodyActionController.Tick(in frameInput);
+            runtimeController.Tick(in frameInput);
         }
 
         public void CompleteDebugRestore()
         {
             ResolveReferences();
-            if (locomotionController != null)
-                locomotionController.ReleaseRollbackCameraBasisOverride();
+            if (runtimeController != null)
+                runtimeController.ReleaseRollbackCameraBasisOverride();
         }
 
         float ResolveDeltaTime()
@@ -83,36 +68,13 @@ namespace ThirdPersonSimulation
 
         void ResolveReferences()
         {
-            if (fullBodyActionController == null)
-            {
-                fullBodyActionController = GetComponent<PlayerFullBodyActionController>();
-                if (fullBodyActionController == null)
-                    fullBodyActionController = GetComponentInParent<PlayerFullBodyActionController>();
-                if (fullBodyActionController == null)
-                    fullBodyActionController = GetComponentInChildren<PlayerFullBodyActionController>(true);
-            }
+            if (runtimeController == null)
+                runtimeController = GetComponent<CharacterFrameRuntimeController>();
 
-            if (locomotionController == null && fullBodyActionController != null)
-                locomotionController = fullBodyActionController.LocomotionController;
-            if (locomotionController == null)
-            {
-                locomotionController = GetComponent<PlayerLocomotionController>();
-                if (locomotionController == null)
-                    locomotionController = GetComponentInParent<PlayerLocomotionController>();
-                if (locomotionController == null)
-                    locomotionController = GetComponentInChildren<PlayerLocomotionController>(true);
-            }
-
-            if (inputBufferComponent == null && fullBodyActionController != null)
-                inputBufferComponent = fullBodyActionController.InputBufferComponent;
+            if (inputBufferComponent == null && runtimeController != null)
+                inputBufferComponent = runtimeController.InputBufferComponent;
             if (inputBufferComponent == null)
-            {
                 inputBufferComponent = GetComponent<InputRequestBufferComponent>();
-                if (inputBufferComponent == null)
-                    inputBufferComponent = GetComponentInParent<InputRequestBufferComponent>();
-                if (inputBufferComponent == null)
-                    inputBufferComponent = GetComponentInChildren<InputRequestBufferComponent>(true);
-            }
         }
     }
 }

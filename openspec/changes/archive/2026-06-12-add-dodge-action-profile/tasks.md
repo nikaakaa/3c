@@ -1,4 +1,4 @@
-﻿## 1. 现状确认
+## 1. 现状确认
 > 已被 `refactor-unified-character-state-machine` 部分接管：依赖 Dodge runtime、FullBody Action Set、独立 Action Animation Profile 的运行时和配置任务需要被统一状态机替换。
 
 - [x] 1.1 确认 Shift 当前通过 `UnityInputSystemLocomotionInputSource.RunActionName` 作为 held Run 输入。
@@ -94,14 +94,14 @@
 - [x] 8.8 动作动画 Profile 不替代基础移动 Walk/Run alias 配置。
 
 ## 8A. FullBody Action 装配闭环
-- [ ] 8A.1 定义 `Action.Dodge` 的动作逻辑入口或等价配置入口。
-- [ ] 8A.2 动作逻辑入口能定位 Directional/Backstep 的运动参数配置。
-- [ ] 8A.3 动作逻辑入口能定位 `Action.Dodge` 的打断策略配置。
-- [ ] 8A.4 动作动画绑定入口能定位 Directional/Backstep 的动画表现 Profile 或等价 per-character override。
-- [ ] 8A.5 动作逻辑入口校验缺失运动参数或打断策略，动作动画绑定入口校验缺失动画 Profile 或必要动画 key。
-- [ ] 8A.6 保留 `DodgeActionConfigSO`、`ActionInterruptPolicySetSO`、`ActionAnimationProfileSO` 等子配置的复用能力，但它们必须通过动作逻辑入口、动作动画绑定入口和 FullBody 装配点形成闭环。
-- [ ] 8A.7 明确基础 Locomotion 状态图、Walk/Run alias 和 TransitionLibrary 仍属于 Locomotion 配置入口，不并入 Dodge 动作逻辑入口。
-- [ ] 8A.8 测试 FullBody 装配闭环能发现 Dodge 逻辑配置和动画绑定配置是否完整。
+- [x] 8A.1 定义 `Action.Dodge` 的动作逻辑入口或等价配置入口。
+- [x] 8A.2 动作逻辑入口能定位 Directional/Backstep 的运动参数配置。
+- [x] 8A.3 动作逻辑入口能定位 `Action.Dodge` 的打断策略配置。
+- [x] 8A.4 动作动画绑定入口能定位 Directional/Backstep 的动画表现 Profile 或等价 per-character override。
+- [x] 8A.5 动作逻辑入口校验缺失运动参数或打断策略，动作动画绑定入口校验缺失动画 Profile 或必要动画 key。
+- [x] 8A.6 保留 `DodgeActionConfigSO`、`ActionInterruptPolicySetSO`、`ActionAnimationProfileSO` 等子配置的复用能力，但它们必须通过动作逻辑入口、动作动画绑定入口和 FullBody 装配点形成闭环。
+- [x] 8A.7 明确基础 Locomotion 状态图、Walk/Run alias 和 TransitionLibrary 仍属于 Locomotion 配置入口，不并入 Dodge 动作逻辑入口。
+- [x] 8A.8 测试 FullBody 装配闭环能发现 Dodge 逻辑配置和动画绑定配置是否完整。
 
 ## 9. 动作动画表现层
 - [x] 9.1 新增或扩展动作动画 Presenter，只消费动作动画命令。
@@ -153,9 +153,9 @@
 - [x] 11.29 静态测试 Locomotion 子图和 Dodge action/module 通过统一运动出口提交位移。
 - [x] 11.30 测试 FullBody Dodge active 期间基础 Locomotion 不同时输出平面位移。
 - [x] 11.31 测试动作动画 Presenter 只消费命令和输出播放进度，不切换 FullBody 状态。
-- [ ] 11.32 测试 FullBody Action 逻辑入口能定位运动参数和打断策略，动作动画绑定入口能定位动画 Profile。
-- [ ] 11.33 测试动作逻辑入口或动作动画绑定入口缺失必要子配置时校验失败。
-- [ ] 11.34 测试动作动画 Profile 可作为动画绑定入口的子配置或引用，不要求游离配置。
+- [x] 11.32 测试 FullBody Action 逻辑入口能定位运动参数和打断策略，动作动画绑定入口能定位动画 Profile。
+- [x] 11.33 测试动作逻辑入口或动作动画绑定入口缺失必要子配置时校验失败。
+- [x] 11.34 测试动作动画 Profile 可作为动画绑定入口的子配置或引用，不要求游离配置。
 
 ## 12. 手动验证
 - [x] 12.1 在 Unity Editor 中把 Shift 绑定为该 FullBody 动作输入。
@@ -171,7 +171,7 @@
 - [x] 12.11 松开移动直到回 Idle 后再次移动，确认默认回 Walk。
 - [x] 12.12 替换其中一个动作动画 clip，确认无需修改动作逻辑代码。
 - [x] 12.13 MoveStop 期间重新输入移动，确认仍立即回到起步/移动，不被该动作方案破坏。
-- [ ] 12.14 Directional 或 Backstep 动作结束后松开并再次按 Shift，确认可以重新触发 Directional 或 Backstep。
+- [x] 12.14 Directional 或 Backstep 动作结束后松开并再次按 Shift，确认可以重新触发 Directional 或 Backstep。
 
 ## 13. 文档和边界复查
 - [x] 13.1 更新相关路线文档中该 FullBody 动作所属阶段。
@@ -190,7 +190,7 @@
 - [x] 14.2 修复动作结束后再次 Shift 触发后，Unity MCP 定向 EditMode 测试通过。
 - [x] 14.3 静态检查确认没有 `Action.Sprint`、没有 `BBBNexus` 动作依赖、动作动画 Presenter 不调用 `CharacterController.Move` 或写 Transform。
 - [x] 14.4 静态检查确认 `CharactorInput.inputactions` 中 Shift 只绑定到 `Dodge`，主角色 Prefab 和 `CameraTest` 场景的 `runActionName` 已清空。
-- [ ] 14.5 需用户在 Unity Editor Play Mode 中执行手动验证：按住方向键再按 Shift 确认方向冲刺，松开 Shift 后继续按方向键确认保持 Run；松开移动回 Idle 后再次移动确认默认 Walk；Directional 或 Backstep 动作结束后松开并再次按 Shift 确认可以重新触发；无方向按 Shift 确认后闪且不强制 Run；移动鼠标/右摇杆确认动作期间相机 Look 继续响应；替换 `CorinDodgeActionAnimationProfile` 任一 clip 确认无需改动作逻辑。
+- [x] 14.5 需用户在 Unity Editor Play Mode 中执行手动验证：按住方向键再按 Shift 确认方向冲刺，松开 Shift 后继续按方向键确认保持 Run；松开移动回 Idle 后再次移动确认默认 Walk；Directional 或 Backstep 动作结束后松开并再次按 Shift 确认可以重新触发；无方向按 Shift 确认后闪且不强制 Run；移动鼠标/右摇杆确认动作期间相机 Look 继续响应；替换 `CorinDodgeActionAnimationProfile` 任一 clip 确认无需改动作逻辑。
 - [x] 14.6 FullBody 主行为域收束完成后，重新运行 `openspec validate add-dodge-action-profile --strict --no-interactive`。
 - [x] 14.7 FullBody 主行为域收束完成后，重新运行相关 EditMode 测试并记录结果。
 

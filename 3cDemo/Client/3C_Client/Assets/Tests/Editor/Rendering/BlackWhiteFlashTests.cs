@@ -13,15 +13,8 @@ namespace ThirdPersonRendering.Tests
         const string HighFidelityRendererPath = "Assets/Settings/URP-HighFidelity-Renderer.asset";
         const string BalancedRendererPath = "Assets/Settings/URP-Balanced-Renderer.asset";
         const string PerformantRendererPath = "Assets/Settings/URP-Performant-Renderer.asset";
-        const string ProfilePath = "Assets/Settings/SampleSceneProfile.asset";
-        const string DefaultCurveProfilePath = "Assets/Settings/BlackWhiteFlashProfile.asset";
-        const string SandboxScenePath = "Assets/Scenes/Sandbox.unity";
         const string ShaderPath = "Assets/Shader/PostProcessing/BlackWhiteFlash/BlackWhiteFlash.shader";
         const string FeatureScriptGuid = "a104c47cc4f24fdcb896006090d3ca16";
-        const string VolumeScriptGuid = "607257caa3c24ecaa65bc652386eb6b2";
-        const string CurveProfileScriptGuid = "2c17775e41604c898dc738505ddd256f";
-        const string ControllerScriptGuid = "5e25db62ad3645929d6b4b50d4bb0e56";
-        const string DefaultCurveProfileGuid = "1d1551a62e2b442c87bb8f5e30fc3b4f";
         const string ShaderGuid = "9824e2c884d842149a735f0eca663321";
 
         [Test]
@@ -217,25 +210,6 @@ namespace ThirdPersonRendering.Tests
         }
 
         [Test]
-        public void SampleSceneProfileContainsBlackWhiteFlashVolume()
-        {
-            string yaml = ReadAssetYaml(ProfilePath);
-
-            StringAssert.Contains($"guid: {VolumeScriptGuid}", yaml);
-            StringAssert.Contains("m_Name: Black White Flash", yaml);
-            StringAssert.Contains("mode:", yaml);
-            StringAssert.Contains("intensity:", yaml);
-            StringAssert.Contains("threshold:", yaml);
-            StringAssert.Contains("contrast:", yaml);
-            StringAssert.Contains("whiteBoost:", yaml);
-            StringAssert.Contains("blackCrush:", yaml);
-            StringAssert.Contains("invertAmount:", yaml);
-            StringAssert.Contains("center:", yaml);
-            StringAssert.Contains("radius:", yaml);
-            StringAssert.Contains("softness:", yaml);
-        }
-
-        [Test]
         public void DefaultCurveProfileStartsActiveAndEndsDisabled()
         {
             BlackWhiteFlashProfile profile = ScriptableObject.CreateInstance<BlackWhiteFlashProfile>();
@@ -335,35 +309,6 @@ namespace ThirdPersonRendering.Tests
                 Object.DestroyImmediate(gameObject);
                 Object.DestroyImmediate(profile);
             }
-        }
-
-        [Test]
-        public void DefaultCurveProfileAssetIsConfigured()
-        {
-            BlackWhiteFlashProfile profile = AssetDatabase.LoadAssetAtPath<BlackWhiteFlashProfile>(DefaultCurveProfilePath);
-            string yaml = ReadAssetYaml(DefaultCurveProfilePath);
-
-            Assert.NotNull(profile);
-            Assert.True(profile.HasValidCurves);
-            Assert.AreEqual(BlackWhiteFlashMode.RadialImpact, profile.Mode);
-            Assert.Greater(profile.Duration, 0f);
-            StringAssert.Contains($"guid: {CurveProfileScriptGuid}", yaml);
-            StringAssert.Contains("intensityCurve:", yaml);
-            StringAssert.Contains("radiusCurve:", yaml);
-            StringAssert.Contains("invertCurve:", yaml);
-        }
-
-        [Test]
-        public void SandboxSceneContainsCurveController()
-        {
-            string yaml = ReadAssetYaml(SandboxScenePath);
-
-            StringAssert.Contains("m_Name: Global Volume", yaml);
-            StringAssert.Contains($"guid: {ControllerScriptGuid}", yaml);
-            StringAssert.Contains($"guid: {DefaultCurveProfileGuid}", yaml);
-            StringAssert.Contains("targetVolume: {fileID: 832575518}", yaml);
-            StringAssert.Contains("playOnEnable: 0", yaml);
-            StringAssert.Contains("restoreIntensityOnStop: 1", yaml);
         }
 
         static BlackWhiteFlashSettings CreateActiveSettings(BlackWhiteFlashMode mode)

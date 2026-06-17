@@ -64,10 +64,7 @@ namespace ThirdPersonCharacterStateMachine
             return new CharacterStateMachineRestoreState(
                 BuildSnapshot(),
                 statePayload,
-                animationRequestedForState,
-                false,
-                false,
-                false);
+                animationRequestedForState);
         }
 
         public bool Restore(in CharacterStateMachineRestoreState restoreState)

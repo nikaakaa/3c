@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using Animancer;
 using Animancer.TransitionLibraries;
 using NUnit.Framework;
@@ -225,7 +225,7 @@ namespace Tests.Editor
         [Test]
         public void PresenterAppliesRunLoopStartOverrideOnNewPlayback()
         {
-            CreatePresenterRig(out GameObject gameObject, out BasicLocomotionAnimancerPresenter presenter, out AnimancerComponent animancer, out AnimationClip runClip);
+            CreatePresenterRig(out GameObject gameObject, out CharacterAnimancerPresenter presenter, out AnimancerComponent animancer, out AnimationClip runClip);
             try
             {
                 MovementAnimationContext context = CreateRunLoopContext(
@@ -248,7 +248,7 @@ namespace Tests.Editor
         [Test]
         public void PresenterDoesNotRepeatRunLoopStartOverrideOnSamePlayback()
         {
-            CreatePresenterRig(out GameObject gameObject, out BasicLocomotionAnimancerPresenter presenter, out AnimancerComponent animancer, out AnimationClip runClip);
+            CreatePresenterRig(out GameObject gameObject, out CharacterAnimancerPresenter presenter, out AnimancerComponent animancer, out AnimationClip runClip);
             try
             {
                 MovementAnimationContext context = CreateRunLoopContext(
@@ -460,14 +460,14 @@ namespace Tests.Editor
 
         static void CreatePresenterRig(
             out GameObject gameObject,
-            out BasicLocomotionAnimancerPresenter presenter,
+            out CharacterAnimancerPresenter presenter,
             out AnimancerComponent animancer,
             out AnimationClip runClip)
         {
             gameObject = new GameObject("foot-phase-presenter-rig");
             gameObject.AddComponent<Animator>();
             animancer = gameObject.AddComponent<AnimancerComponent>();
-            presenter = gameObject.AddComponent<BasicLocomotionAnimancerPresenter>();
+            presenter = gameObject.AddComponent<CharacterAnimancerPresenter>();
             AnimatorRootMotionController.Resolve(animancer);
             runClip = new AnimationClip { name = "RunLoop" };
             runClip.legacy = false;

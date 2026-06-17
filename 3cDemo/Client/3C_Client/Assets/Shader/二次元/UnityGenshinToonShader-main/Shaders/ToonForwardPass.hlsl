@@ -1,6 +1,7 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
+#include "ToonScreenDotTransparency.hlsl"
 
 struct Attributes
 {
@@ -130,6 +131,7 @@ half4 ForwardPassFragment(Varyings input, FRONT_FACE_TYPE facing : FRONT_FACE_SE
     half4 baseMap = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
     half3 albedo = baseMap.rgb * _BaseColor.rgb;
     half alpha = baseMap.a * _BaseColor.a;
+    ApplyScreenDotTransparencyClip(input.positionCS);
 
 #if _IS_FACE
     albedo = lerp(albedo, _FaceBlushColor.rgb, _FaceBlushStrength * alpha);

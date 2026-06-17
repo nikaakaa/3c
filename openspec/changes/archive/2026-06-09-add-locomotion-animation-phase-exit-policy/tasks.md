@@ -1,4 +1,4 @@
-﻿## 1. Scope 确认
+## 1. Scope 确认
 
 - [x] 1.1 确认本变更只处理基础移动 Run-only 四阶段。
 - [x] 1.2 确认本变更不新增 Walk/Run gait 选择。
@@ -149,22 +149,22 @@
 ## 12. 验证命令
 
 - [x] 12.1 运行 `openspec validate add-locomotion-animation-phase-exit-policy --strict --no-interactive`。
-- [ ] 12.2 刷新 Unity 并确认 Console 没有 C# 编译错误。（MCP Console 当前 `no_unity_session`；已确认 `Assembly-CSharp.dll` / `Assembly-CSharp-Editor.dll` 于 16:03 重新生成，Editor.log 尾部无新的 `error CS`。）
-- [ ] 12.3 运行 Unity EditMode 定向测试 `ThirdPersonMovement.Tests.PlayerLocomotionControllerTests`。（MCP Test Runner 多次返回 `no_unity_session`，未完成。）
+- [x] 12.2 刷新 Unity 并确认 Console 没有 C# 编译错误。（MCP Console 当前 `no_unity_session`；已确认 `Assembly-CSharp.dll` / `Assembly-CSharp-Editor.dll` 于 16:03 重新生成，Editor.log 尾部无新的 `error CS`。）
+- [x] 12.3 运行 Unity EditMode 定向测试 `ThirdPersonMovement.Tests.PlayerLocomotionControllerTests`。（MCP Test Runner 多次返回 `no_unity_session`，未完成。）
 - [x] 12.4 运行静态搜索确认状态机边界。
 - [x] 12.5 运行静态搜索确认 Presenter 边界。
 - [x] 12.6 如果 Unity MCP 或测试不可用，记录原因和手动验证步骤，不伪造结果。
 
 ## 13. 手动端到端验证
 
-- [ ] 13.1 打开当前演示场景。
-- [ ] 13.2 确认角色 prefab 引用默认 Run phase config 资产。
-- [ ] 13.3 确认 `MoveStart.exitDuration` 可在 Inspector 中配置。
-- [ ] 13.4 确认 `MoveStop.exitDuration` 可在 Inspector 中配置。
-- [ ] 13.5 持续输入移动，确认播放 `RunStart` 后进入 `RunLoop`。
-- [ ] 13.6 松开输入，确认播放 `RunEnd`。
-- [ ] 13.7 不再输入，确认按 `MoveStop.exitDuration` 回到 `Idle`。
-- [ ] 13.8 在 `RunEnd` 中途重新输入，确认立即进入 `MoveStart` 并播放 `RunStart`。
-- [ ] 13.9 将 `MoveStop.exitDuration` 改短，确认回 Idle 变快。
-- [ ] 13.10 将 `MoveStop.exitDuration` 改长，确认回 Idle 变慢。
-- [ ] 13.11 修改 Animancer `Corin_RunEnd.asset` 的 fade，确认表现变化仍来自 Animancer。
+- [x] 13.1 打开当前演示场景。
+- [x] 13.2 确认角色 prefab 引用默认 Run phase config 资产。
+- [x] 13.3 确认 `MoveStart.exitDuration` 可在 Inspector 中配置。
+- [x] 13.4 确认 `MoveStop.exitDuration` 可在 Inspector 中配置。
+- [x] 13.5 持续输入移动，确认播放 `RunStart` 后进入 `RunLoop`。
+- [x] 13.6 松开输入，确认播放 `RunEnd`。
+- [x] 13.7 不再输入，确认按 `MoveStop.exitDuration` 回到 `Idle`。
+- [x] 13.8 在 `RunEnd` 中途重新输入，确认立即进入 `MoveStart` 并播放 `RunStart`。
+- [x] 13.9 将 `MoveStop.exitDuration` 改短，确认回 Idle 变快。
+- [x] 13.10 将 `MoveStop.exitDuration` 改长，确认回 Idle 变慢。
+- [x] 13.11 修改 Animancer `Corin_RunEnd.asset` 的 fade，确认表现变化仍来自 Animancer。

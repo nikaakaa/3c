@@ -7,6 +7,12 @@ Shader "savglasstest" {
 		_circleoffset ("circle offset", Float) = 0
 		_circlesizeouter ("circle size outer", Float) = 1.05
 		_circlesizeinner ("circle size inner", Float) = 0.23
+		[HideInInspector] _ScreenDotTransparencyEnabled ("Screen Dot Transparency Enabled", Float) = 0
+		[HideInInspector] _ScreenDotCoverage ("Screen Dot Coverage", Range(0, 1)) = 0
+		[HideInInspector] _ScreenDotSpacingPixels ("Screen Dot Spacing Pixels", Float) = 12
+		[HideInInspector] _ScreenDotRadius ("Screen Dot Radius", Range(0, 1)) = 0.45
+		[HideInInspector] _ScreenDotHardness ("Screen Dot Hardness", Range(0, 1)) = 1
+		[HideInInspector] _ScreenDotOffsetPixels ("Screen Dot Offset Pixels", Vector) = (0,0,0,0)
 		[HideInInspector] _texcoord ("", 2D) = "white" {}
 		[HideInInspector] __dirty ("", Float) = 1
 	}
@@ -23,6 +29,14 @@ Shader "savglasstest" {
 
 			float4x4 unity_ObjectToWorld;
 			float4x4 unity_MatrixVP;
+			float _ScreenDotTransparencyEnabled;
+			float _ScreenDotCoverage;
+			float _ScreenDotSpacingPixels;
+			float _ScreenDotRadius;
+			float _ScreenDotHardness;
+			float4 _ScreenDotOffsetPixels;
+
+			#include "Assets/Shader/ScreenSpaceDotTransparency/ScreenSpaceDotTransparency.hlsl"
 
 			struct Vertex_Stage_Input
 			{
@@ -43,7 +57,8 @@ Shader "savglasstest" {
 
 			float4 frag(Vertex_Stage_Output input) : SV_TARGET
 			{
-				return float4(1.0, 1.0, 1.0, 1.0); // RGBA
+				ApplyScreenDotTransparencyClip(input.pos);
+				return float4(1.0, 1.0, 1.0, 1.0);
 			}
 
 			ENDHLSL

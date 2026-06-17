@@ -17,7 +17,7 @@ TurnBack 使用 `TickSampledMotion` profile 后，动画 normalized time 和 pre
 
 ## Non-Goals
 
-- 不改变 EntryLocal 坐标空间语义；该内容仍归属 `add-entry-local-animation-motion-space`。
+- 不改变当前 `fullbody-rollback-replay` 和 `animation-motion-source-pipeline` 规格中的 EntryLocal 坐标空间语义。
 - 不重新设计 `TickSampledMotion` / `AnimatorDirect` 的模式选择。
 - 不把 Animator runtime root delta 作为预测回滚权威。
 - 不新增完整网络预测、服务端校正或 Fantasy 协议字段。
@@ -32,12 +32,14 @@ TurnBack 使用 `TickSampledMotion` profile 后，动画 normalized time 和 pre
   - `fullbody-rollback-replay`
 - Affected code:
   - `3cDemo/Client/3C_Client/Assets/Scripts/Character/Animation/Runtime/BasicLocomotionAnimancerPresenter.cs`
-  - `3cDemo/Client/3C_Client/Assets/Scripts/Character/Movement/Runtime/PlayerLocomotionController.cs`
+  - `3cDemo/Client/3C_Client/Assets/Scripts/Character/Pipeline/Runtime/CharacterRuntimeCore.cs`
+  - `3cDemo/Client/3C_Client/Assets/Scripts/Character/Pipeline/Runtime/CharacterFrameRuntimeController.cs`
+  - `3cDemo/Client/3C_Client/Assets/Scripts/Character/Movement/Runtime/LocomotionRuntimeModule.cs`
   - `3cDemo/Client/3C_Client/Assets/Scripts/Simulation/Rollback/LocomotionRuntimeRollbackState.cs`
   - `3cDemo/Client/3C_Client/Assets/Scripts/Simulation/Rollback/CharacterSimulationSnapshot.cs`
   - `3cDemo/Client/3C_Client/Assets/Scripts/Simulation/Rollback/FullBodyRollbackSimulation.cs`
   - `3cDemo/Client/3C_Client/Assets/Tests/Editor/Simulation`
-- Related active changes:
-  - `add-animation-motion-source-pipeline` 定义 TickSampledMotion 作为回滚友好的动画运动源。
-  - `add-entry-local-animation-motion-space` 定义 TurnBack profile translation 的 EntryLocal 空间。
-  - `harden-local-prediction-rollback-tooling` 提供严格 F6/F8 工具验收和 first mismatch 诊断。
+- Current spec boundaries:
+  - `animation-motion-source-pipeline` 定义 TickSampledMotion 作为回滚友好的动画运动源。
+  - `fullbody-rollback-replay` 定义 TurnBack profile translation 的 EntryLocal 空间和正式 replay 入口。
+  - `local-rollback-synctest-foundation` 提供严格 F6/F8 工具验收和 first mismatch 诊断。

@@ -1,4 +1,4 @@
-﻿# 正式化 TurnBack Locomotion 状态任务
+# 正式化 TurnBack Locomotion 状态任务
 
 ## 1. 现状确认
 - [x] 1.1 读取本变更 `proposal.md`、`design.md` 和全部 spec delta。
@@ -113,22 +113,22 @@
 - [x] 9.8 搜索确认状态机 `CreateDefault`、`CreateDefaultDefinition`、`ResetToDefault` fallback 入口已移除。
 
 ## 10. Sandbox 手动验证
-- [ ] 10.1 打开 Sandbox 场景并使用 Generic 可琳。
-- [ ] 10.2 启用 Locomotion、Animation 相关诊断日志。
-- [ ] 10.3 按 W 跑动后切 S，确认进入 `FullBody/Locomotion/TurnBack`。
-- [ ] 10.4 在 Walk 或未进入 RunLoop 时前后切换，确认不触发 TurnBack 动画。
-- [ ] 10.5 在 MoveStart 和 MoveStop 窗口前后切换，确认不直接触发 TurnBack 动画。
-- [ ] 10.6 TurnBack 期间确认普通输入位移和普通输入旋转均被抑制。
-- [ ] 10.7 观察角色朝向完成约 180 度反向。
-- [ ] 10.8 观察到转完点后快速回到 MoveLoop，不继续拖动画跑步尾巴。
-- [ ] 10.9 持续按反向输入时确认回到普通移动速度，不再慢速倒走。
-- [ ] 10.10 松开输入时确认 TurnBack 转完后回 Idle。
-- [ ] 10.11 横向 A/D 切换不应误触发前后 TurnBack。
-- [ ] 10.12 复制搜索 `locomotion-turnback-state-policy|turnback-root-motion-consumed|animation-motion-executor|locomotion-animation-played` 验证日志。
+- [x] 10.1 打开 Sandbox 场景并使用 Generic 可琳。
+- [x] 10.2 启用 Locomotion、Animation 相关诊断日志。
+- [x] 10.3 按 W 跑动后切 S，确认进入 `FullBody/Locomotion/TurnBack`。
+- [x] 10.4 在 Walk 或未进入 RunLoop 时前后切换，确认不触发 TurnBack 动画。
+- [x] 10.5 在 MoveStart 和 MoveStop 窗口前后切换，确认不直接触发 TurnBack 动画。
+- [x] 10.6 TurnBack 期间确认普通输入位移和普通输入旋转均被抑制。
+- [x] 10.7 观察角色朝向完成约 180 度反向。
+- [x] 10.8 观察到转完点后快速回到 MoveLoop，不继续拖动画跑步尾巴。
+- [x] 10.9 持续按反向输入时确认回到普通移动速度，不再慢速倒走。
+- [x] 10.10 松开输入时确认 TurnBack 转完后回 Idle。
+- [x] 10.11 横向 A/D 切换不应误触发前后 TurnBack。
+- [x] 10.12 复制搜索 `locomotion-turnback-state-policy|turnback-root-motion-consumed|animation-motion-executor|locomotion-animation-played` 验证日志。
 
 ## 11. 收尾
 - [x] 11.1 运行 `openspec validate formalize-turnback-locomotion-state --strict --no-interactive`。
 - [x] 11.2 更新相关调试文档，记录 TurnBack 正式状态链路。
 - [x] 11.3 检查是否需要更新 Path 文档；纯日志或测试不更新。
 - [x] 11.4 确认没有恢复 TurnInPlace、MovingPivotTurn 或旧的散落式 baked yaw/profile 路线。
-- [ ] 11.5 确认全部任务真实完成后再将 checklist 标为 `- [x]`。
+- [x] 11.5 确认全部任务真实完成后再将 checklist 标为 `- [x]`。

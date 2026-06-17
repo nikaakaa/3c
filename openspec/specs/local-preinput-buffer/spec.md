@@ -49,7 +49,7 @@
 - **THEN** 输入请求缓冲 MUST 避免同一请求在同次模拟中再次被消费
 
 ### Requirement: 预输入消费边界
-系统 MUST 将预输入定义为输入请求在短窗口内等待玩法消费层消费，而不是输入层提前决定未来动作结果。FullBody Action 请求 MUST 只有在动作打断仲裁 accepted 后才被消费；rejected 请求 MUST 保留到过期或后续合法消费。
+系统 MUST 将预输入定义为输入请求在短窗口内等待玩法消费层消费，而不是输入层提前决定未来动作结果。Action 请求 MUST 只有在动作打断仲裁 accepted 后才被消费；rejected 请求 MUST 保留到过期或后续合法消费。
 
 #### Scenario: 按下时不确定未来动作 step
 - **WHEN** 玩家在 step N 提前按下 Attack
@@ -67,16 +67,16 @@
 - **AND** Input System adapter MUST NOT 直接消费请求
 - **AND** Locomotion 输入读取 MUST NOT 直接消费 Attack、Dodge、Jump 或 Interact 请求
 
-#### Scenario: FullBody Action accepted 后消费
+#### Scenario: Action accepted 后消费
 - **GIVEN** 输入缓冲中存在未过期 Dodge 请求
 - **AND** 动作打断仲裁入口返回 accepted decision
-- **WHEN** FullBody Action 请求门面把该请求转为状态机输入事实
+- **WHEN** Action 请求门面把该请求转为状态机输入事实
 - **THEN** 对应输入请求 MUST 被消费
 
-#### Scenario: FullBody Action rejected 后保留
+#### Scenario: Action rejected 后保留
 - **GIVEN** 输入缓冲中存在未过期 Dodge 请求
 - **AND** 动作打断仲裁入口返回 rejected decision
-- **WHEN** FullBody Action 请求门面处理本帧输入
+- **WHEN** Action 请求门面处理本帧输入
 - **THEN** 对应输入请求 MUST NOT 被消费
 - **AND** 后续帧在请求过期前 MAY 再次参与仲裁
 
@@ -140,3 +140,25 @@
 - **THEN** 实施 MUST NOT 新增预测回滚驱动
 - **AND** MUST NOT 新增状态快照历史
 - **AND** MUST NOT 新增服务器权威校正流程
+
+### Requirement: 输入请求种类只作为缓冲键
+`InputRequestKind` MUST 只表示输入缓冲中的请求键。系统 MUST NOT 将 `InputRequestKind.Attack`、`InputRequestKind.Dodge`、`InputRequestKind.Jump` 或其它输入请求种类直接当作目标 action state、动画 key、motion spec 或连段阶段。动作语义 MUST 由后续 action request resolver 基于正式配置和当前上下文解析。
+
+#### Scenario: Attack 输入不携带连段阶段
+- **GIVEN** 玩家按下 Attack
+- **WHEN** 输入缓冲记录该输入
+- **THEN** 缓冲记录 MUST 只包含 `InputRequestKind.Attack`、origin step、expire step 和消费状态
+- **AND** 缓冲记录 MUST NOT 包含 `Action.Attack01`、`Action.Attack02`、`Action.Attack03` 或动画 key
+
+#### Scenario: Dodge 输入不携带最终动作输出
+- **GIVEN** 玩家按下 Dodge
+- **WHEN** 输入缓冲记录该输入
+- **THEN** 缓冲记录 MUST 只包含 `InputRequestKind.Dodge`、origin step、expire step 和消费状态
+- **AND** directional/backstep、target state、motion seed 和 animation seed MUST 由后续 resolver 决定
+
+#### Scenario: Rejected 请求保持输入语义
+- **GIVEN** 某个 buffered input request 被 action resolver 或 arbiter 拒绝
+- **WHEN** 请求仍未过期
+- **THEN** 输入缓冲 MAY 保留该请求供后续帧重新评估
+- **AND** 保留的数据 MUST 仍是输入请求键而不是 resolved action
+

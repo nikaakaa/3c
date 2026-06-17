@@ -135,10 +135,10 @@
 
 ## 12. 手动验证
 
-- [ ] 12.1 在 Unity Project 面板中创建 `ActionInterruptPolicySetSO` 资产。
-- [ ] 12.2 在 Inspector 中添加一条 `Action.Attack01 -> Action.Dodge` 策略。
-- [ ] 12.3 确认该资产不要求拖入动画 clip、角色 prefab 或场景对象。
-- [ ] 12.4 在 Unity Test Runner 中确认 `ActionInterruptPolicyDataTests` 全部通过。
-- [ ] 12.5 打开当前演示场景，确认 WASD、Look、Idle、MoveStart、MoveLoop、MoveStop 行为没有因为新增配置数据变化。
-- [ ] 12.6 确认没有新增需要手动挂到角色 prefab 的运行时仲裁组件。
-- [ ] 12.7 确认没有新增第二套角色控制器或第二条基础移动入口。
+- [x] 12.1 在 Unity Project 面板中创建 `ActionInterruptPolicySetSO` 资产。
+- [x] 12.2 在 Inspector 中添加一条 `Action.Attack01 -> Action.Dodge` 策略。
+- [x] 12.3 确认该资产不要求拖入动画 clip、角色 prefab 或场景对象。
+- [x] 12.4 在 Unity Test Runner 中确认 `ActionInterruptPolicyDataTests` 全部通过。
+- [x] 12.5 打开当前演示场景，确认 WASD、Look、Idle、MoveStart、MoveLoop、MoveStop 行为没有因为新增配置数据变化。
+- [x] 12.6 确认没有新增需要手动挂到角色 prefab 的运行时仲裁组件。
+- [x] 12.7 确认没有新增第二套角色控制器或第二条基础移动入口。

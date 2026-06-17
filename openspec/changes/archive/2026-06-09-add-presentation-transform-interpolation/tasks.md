@@ -108,11 +108,11 @@
 - [x] 7.15 为相机 AutoTick 关闭时每帧刷新目标代理增加 EditMode 测试。
 - [x] 7.16 为角色 prefab 真实根与表现根分离增加结构测试。
 - [x] 7.17 为相机跟随来源接入表现层输出增加结构测试。
-- [ ] 7.18 运行表现插值相关定向 EditMode 测试。
-- [ ] 7.19 运行 simulation tick alpha 相关定向 EditMode 测试。
-- [ ] 7.20 运行现有 `SimulationTickSystemTests`。
-- [ ] 7.21 运行现有 `PlayerLocomotionControllerTests` 中 tick locomotion 相关测试。
-- [ ] 7.22 运行相机目标代理相关定向 EditMode 测试。
+- [x] 7.18 运行表现插值相关定向 EditMode 测试。
+- [x] 7.19 运行 simulation tick alpha 相关定向 EditMode 测试。
+- [x] 7.20 运行现有 `SimulationTickSystemTests`。
+- [x] 7.21 运行现有 `PlayerLocomotionControllerTests` 中 tick locomotion 相关测试。
+- [x] 7.22 运行相机目标代理相关定向 EditMode 测试。
 
 ## 8. 静态验证
 - [x] 8.1 搜索确认表现插值模块不在 movement 目录中实现。
@@ -122,28 +122,28 @@
 - [x] 8.5 搜索确认没有新增 `CharacterController.Move` 旁路。
 - [x] 8.6 搜索确认没有新增绕过 `PlayerLocomotionController` 的移动入口。
 - [x] 8.7 搜索确认没有业务系统直接写相机目标代理。
-- [ ] 8.8 检查 prefab diff 只包含本变更需要的表现根和引用迁移。
-- [ ] 8.9 检查 scene diff 只包含本变更需要的实例引用迁移。
+- [x] 8.8 检查 prefab diff 只包含本变更需要的表现根和引用迁移。
+- [x] 8.9 检查 scene diff 只包含本变更需要的实例引用迁移。
 
 ## 9. 手动验证
-- [ ] 9.1 打开 `Sandbox.unity`。
-- [ ] 9.2 进入 Play Mode。
-- [ ] 9.3 设置或确认 tick rate 为 60。
-- [ ] 9.4 在高刷新率或解除 VSync 下持续按 W 直线移动。
-- [ ] 9.5 观察角色可见模型是否不再出现 60Hz 阶梯抖动。
-- [ ] 9.6 观察相机跟随是否不再出现 60Hz 阶梯抖动。
-- [ ] 9.7 同时移动和 Look，确认移动方向仍相机相对正确。
-- [ ] 9.8 从静止到起步，确认 MoveStart 动画正常。
-- [ ] 9.9 持续移动，确认 MoveLoop 动画正常。
-- [ ] 9.10 松开移动，确认 MoveStop 动画正常。
-- [ ] 9.11 靠近墙体测试相机碰撞约束仍工作。
-- [ ] 9.12 临时禁用表现插值组件，对比 60 tick 阶梯抖动是否复现。
-- [ ] 9.13 恢复表现插值组件，确认抖动再次消失。
-- [ ] 9.14 将 tick rate 提高到 256 作为对照，确认 60 tick 下也不再依赖高 tick rate 才平滑。
+- [x] 9.1 打开 `Sandbox.unity`。
+- [x] 9.2 进入 Play Mode。
+- [x] 9.3 设置或确认 tick rate 为 60。
+- [x] 9.4 在高刷新率或解除 VSync 下持续按 W 直线移动。
+- [x] 9.5 观察角色可见模型是否不再出现 60Hz 阶梯抖动。
+- [x] 9.6 观察相机跟随是否不再出现 60Hz 阶梯抖动。
+- [x] 9.7 同时移动和 Look，确认移动方向仍相机相对正确。
+- [x] 9.8 从静止到起步，确认 MoveStart 动画正常。
+- [x] 9.9 持续移动，确认 MoveLoop 动画正常。
+- [x] 9.10 松开移动，确认 MoveStop 动画正常。
+- [x] 9.11 靠近墙体测试相机碰撞约束仍工作。
+- [x] 9.12 临时禁用表现插值组件，对比 60 tick 阶梯抖动是否复现。
+- [x] 9.13 恢复表现插值组件，确认抖动再次消失。
+- [x] 9.14 将 tick rate 提高到 256 作为对照，确认 60 tick 下也不再依赖高 tick rate 才平滑。
 
 ## 10. OpenSpec 和收尾
 - [x] 10.1 更新本变更的 tasks 完成状态，只有真实完成后才勾选。
 - [x] 10.2 运行 `openspec validate add-presentation-transform-interpolation --strict --no-interactive`。
 - [x] 10.3 修复所有 OpenSpec 校验问题。
 - [x] 10.4 向用户说明自动测试命令和手动验证步骤。
-- [ ] 10.5 等用户确认验证通过后再归档。
+- [x] 10.5 等用户确认验证通过后再归档。

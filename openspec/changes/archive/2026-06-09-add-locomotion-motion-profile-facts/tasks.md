@@ -175,19 +175,19 @@
 - [x] 15.4 记录是否使用 Unity MCP；不得使用 Unity batchmode。
 
 ## 16. 手动验证
-- [ ] 16.1 打开当前 3C 演示场景。
-- [ ] 16.2 确认角色绑定 Run 配置。
-- [ ] 16.3 确认 `MoveStop / RunEnd` 绑定 motion profile。
-- [ ] 16.4 进入 Play Mode。
-- [ ] 16.5 按住移动键进入 `MoveLoop`。
-- [ ] 16.6 松开移动键进入 `MoveStop`。
-- [ ] 16.7 确认播放 `RunEnd`。
-- [ ] 16.8 观察胶囊随 RunEnd 烘焙位移继续刹车。
-- [ ] 16.9 确认 RunEnd 播完后进入 `Idle`。
-- [ ] 16.10 再次进入 RunEnd 后中途输入移动。
-- [ ] 16.11 确认立即进入 `MoveStart`。
-- [ ] 16.12 确认旧 RunEnd 剩余位移不再继续推动角色。
-- [ ] 16.13 确认没有额外角色控制器或第二套状态机参与。
+- [x] 16.1 打开当前 3C 演示场景。
+- [x] 16.2 确认角色绑定 Run 配置。
+- [x] 16.3 确认 `MoveStop / RunEnd` 绑定 motion profile。
+- [x] 16.4 进入 Play Mode。
+- [x] 16.5 按住移动键进入 `MoveLoop`。
+- [x] 16.6 松开移动键进入 `MoveStop`。
+- [x] 16.7 确认播放 `RunEnd`。
+- [x] 16.8 观察胶囊随 RunEnd 烘焙位移继续刹车。
+- [x] 16.9 确认 RunEnd 播完后进入 `Idle`。
+- [x] 16.10 再次进入 RunEnd 后中途输入移动。
+- [x] 16.11 确认立即进入 `MoveStart`。
+- [x] 16.12 确认旧 RunEnd 剩余位移不再继续推动角色。
+- [x] 16.13 确认没有额外角色控制器或第二套状态机参与。
 
 ## 17. 文档更新
 - [x] 17.1 更新 `docs/agents/character-animation-state-roadmap.md` 当前基线。

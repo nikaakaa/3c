@@ -8,7 +8,7 @@ namespace ThirdPersonAction
     public enum CharacterFrameSubmissionSource
     {
         None = 0,
-        FullBody = 1
+        CharacterRuntimeGraph = 1
     }
 
     public enum CharacterFrameRequestProviderId
@@ -160,6 +160,69 @@ namespace ThirdPersonAction
         public bool HasInputConsume => ConsumeInputRequest;
     }
 
+    public readonly struct CharacterFrameActionOutputSubmission
+    {
+        public CharacterFrameActionOutputSubmission(
+            CharacterStateAnimationRequest animationRequest,
+            bool hasAnimationRequest,
+            bool consumeInputRequest,
+            InputRequestKind consumedRequestKind,
+            bool exitedToLocomotion,
+            int step)
+            : this(
+                animationRequest,
+                hasAnimationRequest,
+                consumeInputRequest,
+                consumedRequestKind,
+                exitedToLocomotion,
+                step,
+                ActionBranchOutcome.None(step))
+        {
+        }
+
+        public CharacterFrameActionOutputSubmission(
+            CharacterStateAnimationRequest animationRequest,
+            bool hasAnimationRequest,
+            bool consumeInputRequest,
+            InputRequestKind consumedRequestKind,
+            bool exitedToLocomotion,
+            int step,
+            ActionBranchOutcome actionBranchOutcome)
+        {
+            int sanitizedStep = step < 0 ? 0 : step;
+            AnimationRequest = animationRequest;
+            HasAnimationRequest = hasAnimationRequest;
+            ConsumeInputRequest = consumeInputRequest;
+            ConsumedRequestKind = consumedRequestKind;
+            ExitedToLocomotion = exitedToLocomotion;
+            Step = sanitizedStep;
+            ActionBranchOutcome = actionBranchOutcome.HasOutcome
+                ? actionBranchOutcome
+                : ActionBranchOutcome.None(sanitizedStep);
+        }
+
+        public CharacterStateAnimationRequest AnimationRequest { get; }
+        public bool HasAnimationRequest { get; }
+        public bool ConsumeInputRequest { get; }
+        public InputRequestKind ConsumedRequestKind { get; }
+        public bool ExitedToLocomotion { get; }
+        public int Step { get; }
+        public ActionBranchOutcome ActionBranchOutcome { get; }
+        public ActionTimelineOutcome ActionTimelineOutcome => ActionBranchOutcome.TimelineOutcome;
+        public bool HasActionBranchOutcome => ActionBranchOutcome.HasOutcome;
+
+        public static CharacterFrameActionOutputSubmission None(int step)
+        {
+            return new CharacterFrameActionOutputSubmission(
+                default,
+                false,
+                false,
+                default,
+                false,
+                step);
+        }
+    }
+
     public readonly struct CharacterFrameRuntimeFactsSubmission
     {
         public CharacterFrameRuntimeFactsSubmission(
@@ -167,22 +230,50 @@ namespace ThirdPersonAction
             ActionMotionResolveResult actionMotionResult,
             bool exitedToLocomotion,
             int step)
+            : this(
+                stateFrame,
+                actionMotionResult,
+                exitedToLocomotion,
+                LocomotionPreemptionFact.None,
+                step)
+        {
+        }
+
+        public CharacterFrameRuntimeFactsSubmission(
+            CharacterStateMachineFrame stateFrame,
+            ActionMotionResolveResult actionMotionResult,
+            bool exitedToLocomotion,
+            LocomotionPreemptionFact locomotionPreemption,
+            int step)
         {
             StateFrame = stateFrame;
             ActionMotionResult = actionMotionResult;
             ExitedToLocomotion = exitedToLocomotion;
+            LocomotionPreemption = locomotionPreemption;
             Step = step < 0 ? 0 : step;
         }
 
         public CharacterStateMachineFrame StateFrame { get; }
         public ActionMotionResolveResult ActionMotionResult { get; }
         public bool ExitedToLocomotion { get; }
+        public LocomotionPreemptionFact LocomotionPreemption { get; }
         public int Step { get; }
         public bool WriteActionFacts => StateFrame.Snapshot.ActiveState.IsValid || ActionMotionResult.HasSpec;
         public bool WriteAnimationFacts => StateFrame.Snapshot.ActiveState.IsValid;
+        public bool WriteLocomotionPreemption => LocomotionPreemption.HasPreemption;
         public bool UpdateStateSnapshot => StateFrame.Snapshot.ActiveState.IsValid;
         public bool CompleteLocomotionTick => StateFrame.Snapshot.ActiveState.IsValid;
-        public bool HasRuntimeFacts => WriteActionFacts || WriteAnimationFacts || UpdateStateSnapshot || CompleteLocomotionTick;
+        public bool HasRuntimeFacts => WriteActionFacts || WriteAnimationFacts || WriteLocomotionPreemption || UpdateStateSnapshot || CompleteLocomotionTick;
+
+        public CharacterFrameRuntimeFactsSubmission WithLocomotionPreemption(in LocomotionPreemptionFact fact)
+        {
+            return new CharacterFrameRuntimeFactsSubmission(
+                StateFrame,
+                ActionMotionResult,
+                ExitedToLocomotion,
+                fact,
+                Step);
+        }
     }
 
     public readonly struct CharacterFrameDiagnosticsSubmission
@@ -246,6 +337,106 @@ namespace ThirdPersonAction
             StateTimelineFactsTrace currentTimelineFactsTrace,
             CharacterStateMachineSnapshot previousStateSnapshot,
             bool exitedToLocomotion)
+            : this(
+                source,
+                step,
+                locomotionDecision,
+                stateDecision,
+                locomotionFrame,
+                stateFrame,
+                actionMotionResult,
+                inputRequest,
+                actionDecision,
+                currentTimelineFactsTrace,
+                previousStateSnapshot,
+                exitedToLocomotion,
+                CharacterFrameActionOutputSubmission.None(step),
+                CharacterFrameArbitrationInput.None(step))
+        {
+        }
+
+        public CharacterFrameSubmission(
+            CharacterFrameSubmissionSource source,
+            int step,
+            LocomotionDecisionFrame locomotionDecision,
+            LocomotionStateDecisionFrame stateDecision,
+            BasicLocomotionFrame locomotionFrame,
+            CharacterStateMachineFrame stateFrame,
+            ActionMotionResolveResult actionMotionResult,
+            CharacterInputRequestFact inputRequest,
+            ActionInterruptDecision actionDecision,
+            StateTimelineFactsTrace currentTimelineFactsTrace,
+            CharacterStateMachineSnapshot previousStateSnapshot,
+            bool exitedToLocomotion,
+            CharacterFrameArbitrationInput arbitrationInput)
+            : this(
+                source,
+                step,
+                locomotionDecision,
+                stateDecision,
+                locomotionFrame,
+                stateFrame,
+                actionMotionResult,
+                inputRequest,
+                actionDecision,
+                currentTimelineFactsTrace,
+                previousStateSnapshot,
+                exitedToLocomotion,
+                CharacterFrameActionOutputSubmission.None(step),
+                arbitrationInput)
+        {
+        }
+
+        public CharacterFrameSubmission(
+            CharacterFrameSubmissionSource source,
+            int step,
+            LocomotionDecisionFrame locomotionDecision,
+            LocomotionStateDecisionFrame stateDecision,
+            BasicLocomotionFrame locomotionFrame,
+            CharacterStateMachineFrame stateFrame,
+            ActionMotionResolveResult actionMotionResult,
+            CharacterInputRequestFact inputRequest,
+            ActionInterruptDecision actionDecision,
+            StateTimelineFactsTrace currentTimelineFactsTrace,
+            CharacterStateMachineSnapshot previousStateSnapshot,
+            bool exitedToLocomotion,
+            CharacterFrameActionOutputSubmission actionOutput,
+            CharacterFrameArbitrationInput arbitrationInput)
+            : this(
+                source,
+                step,
+                locomotionDecision,
+                stateDecision,
+                locomotionFrame,
+                stateFrame,
+                actionMotionResult,
+                inputRequest,
+                actionDecision,
+                currentTimelineFactsTrace,
+                previousStateSnapshot,
+                exitedToLocomotion,
+                actionOutput,
+                arbitrationInput,
+                LocomotionPreemptionFact.None)
+        {
+        }
+
+        public CharacterFrameSubmission(
+            CharacterFrameSubmissionSource source,
+            int step,
+            LocomotionDecisionFrame locomotionDecision,
+            LocomotionStateDecisionFrame stateDecision,
+            BasicLocomotionFrame locomotionFrame,
+            CharacterStateMachineFrame stateFrame,
+            ActionMotionResolveResult actionMotionResult,
+            CharacterInputRequestFact inputRequest,
+            ActionInterruptDecision actionDecision,
+            StateTimelineFactsTrace currentTimelineFactsTrace,
+            CharacterStateMachineSnapshot previousStateSnapshot,
+            bool exitedToLocomotion,
+            CharacterFrameActionOutputSubmission actionOutput,
+            CharacterFrameArbitrationInput arbitrationInput,
+            LocomotionPreemptionFact locomotionPreemption)
         {
             Source = source;
             Step = step < 0 ? 0 : step;
@@ -259,6 +450,9 @@ namespace ThirdPersonAction
             CurrentTimelineFactsTrace = currentTimelineFactsTrace;
             PreviousStateSnapshot = previousStateSnapshot;
             ExitedToLocomotion = exitedToLocomotion;
+            ActionOutput = actionOutput;
+            ArbitrationInput = arbitrationInput;
+            LocomotionPreemption = locomotionPreemption;
         }
 
         public CharacterFrameSubmissionSource Source { get; }
@@ -274,20 +468,23 @@ namespace ThirdPersonAction
         public StateTimelineWindowFacts CurrentTimelineFacts => CurrentTimelineFactsTrace.Facts;
         public CharacterStateMachineSnapshot PreviousStateSnapshot { get; }
         public bool ExitedToLocomotion { get; }
+        public CharacterFrameActionOutputSubmission ActionOutput { get; }
+        public CharacterFrameArbitrationInput ArbitrationInput { get; }
+        public LocomotionPreemptionFact LocomotionPreemption { get; }
         public CharacterFrameMovementSubmission Movement => new CharacterFrameMovementSubmission(
             LocomotionFrame,
             ActionMotionResult,
             StateFrame.ExecuteBasicMovement,
             ActionMotionResult.HasActionMovement);
         public CharacterFrameAnimationSubmission Animation => new CharacterFrameAnimationSubmission(
-            StateFrame.AnimationRequest,
-            StateFrame.HasAnimationRequest,
+            ActionOutput.HasAnimationRequest ? ActionOutput.AnimationRequest : StateFrame.AnimationRequest,
+            ActionOutput.HasAnimationRequest || StateFrame.HasAnimationRequest,
             StateFrame.PresentLocomotionAnimation,
-            ExitedToLocomotion);
+            ExitedToLocomotion || ActionOutput.ExitedToLocomotion);
         public CharacterFrameInputConsumeSubmission InputConsume => new CharacterFrameInputConsumeSubmission(
             InputRequest,
-            StateFrame.ConsumeInputRequest,
-            StateFrame.ConsumedRequestKind,
+            ActionOutput.ConsumeInputRequest || StateFrame.ConsumeInputRequest,
+            ActionOutput.ConsumeInputRequest ? ActionOutput.ConsumedRequestKind : StateFrame.ConsumedRequestKind,
             Step);
         public CharacterFrameRuntimeFactsSubmission RuntimeFacts => new CharacterFrameRuntimeFactsSubmission(
             StateFrame,

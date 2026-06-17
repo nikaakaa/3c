@@ -53,6 +53,14 @@ Shader "URPGenshinToon"
         [Header(Outline)]
         _OutlineWidth("Outline Width", Float) = 1
         _OutlineColor("Outline Color", Color) = (0,0,0,1)
+
+        [Header(Screen Dot Transparency)]
+        [ToggleUI] _ScreenDotTransparencyEnabled("Screen Dot Transparency Enabled", Float) = 0
+        _ScreenDotCoverage("Screen Dot Coverage", Range(0, 1)) = 0
+        _ScreenDotSpacingPixels("Screen Dot Spacing Pixels", Range(2, 96)) = 12
+        _ScreenDotRadius("Screen Dot Radius", Range(0, 1)) = 0.45
+        _ScreenDotHardness("Screen Dot Hardness", Range(0, 1)) = 1
+        _ScreenDotOffsetPixels("Screen Dot Offset Pixels", Vector) = (0,0,0,0)
     }
 
     Subshader
@@ -127,8 +135,8 @@ Shader "URPGenshinToon"
             #pragma vertex DepthOnlyVertex
             #pragma fragment DepthOnlyFragment
 
-            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/Shaders/DepthOnlyPass.hlsl"
+            #include "ToonInput.hlsl"
+            #include "ToonDepthOnlyPass.hlsl"
 
             ENDHLSL
         }
@@ -146,8 +154,8 @@ Shader "URPGenshinToon"
             #pragma vertex DepthNormalsVertex
             #pragma fragment DepthNormalsFragment
 
-            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitDepthNormalsPass.hlsl"
+            #include "ToonInput.hlsl"
+            #include "ToonDepthNormalsPass.hlsl"
 
             ENDHLSL
         }

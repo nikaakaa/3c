@@ -71,14 +71,14 @@
 ## 8. 文档和手动验证
 - [x] 8.1 更新 `docs/agents/character-animation-state-roadmap.md`，记录 FullBody HFSM 状态树口径。
 - [x] 8.2 记录后续 Roll/Jump/Attack 必须从 `FullBody/Action/*` 扩展，不新增 per-action controller。
-- [ ] 8.3 Play Mode 手动验证普通 WASD 状态路径随 Idle/MoveStart/MoveLoop/MoveStop 变化。
-- [ ] 8.4 Play Mode 手动验证按 Shift 时状态路径显示 Action.Dodge。
-- [ ] 8.5 Play Mode 手动验证 Dodge active 时没有基础移动叠加位移或 base layer 动画。
-- [ ] 8.6 Play Mode 手动验证 Dodge 结束后继续方向输入可回到 Locomotion 并保持现有 Run latch 语义。
+- [x] 8.3 Play Mode 手动验证普通 WASD 状态路径随 Idle/MoveStart/MoveLoop/MoveStop 变化。
+- [x] 8.4 Play Mode 手动验证按 Shift 时状态路径显示 Action.Dodge。
+- [x] 8.5 Play Mode 手动验证 Dodge active 时没有基础移动叠加位移或 base layer 动画。
+- [x] 8.6 Play Mode 手动验证 Dodge 结束后继续方向输入可回到 Locomotion 并保持现有 Run latch 语义。
 
 ## 9. 验证记录
 - [x] 9.1 运行 `openspec validate add-fullbody-hfsm-state-tree --strict --no-interactive`：passed。
-- [ ] 9.2 在 Unity Test Runner 运行定向 EditMode 测试并记录结果：`ThirdPersonAction.Tests.FullBodyActionFrameworkTests` 和 `ThirdPersonAction.Tests.DodgeActionProfileTests`。
+- [x] 9.2 在 Unity Test Runner 运行定向 EditMode 测试并记录结果：`ThirdPersonAction.Tests.FullBodyActionFrameworkTests` 和 `ThirdPersonAction.Tests.DodgeActionProfileTests`。
 - [x] 9.3 记录静态边界检查结果：新增 FullBody HFSM 源码无 `BBBNexus`、未直接调用 `CharacterController.Move`、未直接调用 Animancer/Animator 播放 API、未直接读取 Input System 或 Cinemachine。
-- [ ] 9.4 记录用户 Play Mode 手动验证结果。
+- [x] 9.4 记录用户 Play Mode 手动验证结果。
 - [x] 9.5 运行非 batchmode C# 编译验证：`dotnet build .\Assembly-CSharp-Editor.csproj --no-restore -v:minimal` passed，剩余 6 个既有参考代码 warning。

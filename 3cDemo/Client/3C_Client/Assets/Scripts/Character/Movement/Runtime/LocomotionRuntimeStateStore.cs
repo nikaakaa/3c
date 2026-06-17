@@ -89,6 +89,12 @@ namespace ThirdPersonMovement
             LastMovingGait = BasicMovementGait.Walk;
         }
 
+        public void ClearTurnBackPreemptionResidue()
+        {
+            PendingTurnBackIntent = LocomotionTurnBackIntent.None;
+            ResetMotionPlaybackWindow(BasicMovementPhase.TurnBack);
+        }
+
         public LocomotionRuntimeRollbackState CaptureRollbackState()
         {
             MovementInputIntent currentIntent = CurrentIntent;

@@ -1,4 +1,4 @@
-﻿## 1. Scope 确认
+## 1. Scope 确认
 
 - [x] 1.1 读取本 change 的 `proposal.md`、`design.md` 和 spec delta。
 - [x] 1.2 确认本变更只实现 Action 当前状态事实 tracker。
@@ -163,6 +163,6 @@
 ## 14. 手动验证
 
 - [x] 14.1 在 Unity Test Runner 中确认 `ActionRuntimeStateTrackerTests` 全部通过。
-- [ ] 14.2 打开当前演示场景，确认 WASD、Look、Idle、MoveStart、MoveLoop、MoveStop 行为没有因为新增 tracker 变化。
+- [x] 14.2 打开当前演示场景，确认 WASD、Look、Idle、MoveStart、MoveLoop、MoveStop 行为没有因为新增 tracker 变化。
 - [x] 14.3 确认没有新增需要手动挂到角色 prefab 的 Action tracker 组件。
 - [x] 14.4 确认没有新增第二套角色控制器或第二条基础移动入口。

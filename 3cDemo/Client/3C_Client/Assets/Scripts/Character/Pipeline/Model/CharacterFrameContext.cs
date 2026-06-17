@@ -12,6 +12,7 @@ namespace ThirdPersonAction
             Input = input;
             CurrentStep = CharacterFramePipelineStep.None;
             LocomotionDecision = default;
+            HasLocomotionDecision = false;
             CurrentTimelineFactsTrace = StateTimelineFactsTrace.None;
             RequestSubmissions = CharacterFrameRequestSubmissionSet.Empty;
             StateDecision = default;
@@ -19,9 +20,11 @@ namespace ThirdPersonAction
             StateFrame = default;
             ActionMotionResult = ActionMotionResolveResult.None(input.Step);
             FrameSubmission = CharacterFrameSubmission.None(input.Step);
+            FramePlan = CharacterFramePlan.None(input.Step);
             Output = default;
             InputRequest = CharacterInputRequestFact.None(InputRequestKind.Dodge);
             ActionDecision = ActionInterruptDecision.Reject(ActionInterruptRejectReason.NoRequest);
+            ResolvedAction = default;
             PreviousStateSnapshot = CharacterStateMachineSnapshot.Inactive;
             ExitedToLocomotion = false;
             InputRequestConsumed = false;
@@ -38,6 +41,7 @@ namespace ThirdPersonAction
         public CharacterFrameInput Input { get; private set; }
         public CharacterFramePipelineStep CurrentStep { get; private set; }
         public LocomotionDecisionFrame LocomotionDecision { get; private set; }
+        public bool HasLocomotionDecision { get; private set; }
         public StateTimelineFactsTrace CurrentTimelineFactsTrace { get; private set; }
         public StateTimelineWindowFacts CurrentTimelineFacts => CurrentTimelineFactsTrace.Facts;
         public CharacterFrameRequestSubmissionSet RequestSubmissions { get; private set; }
@@ -46,9 +50,11 @@ namespace ThirdPersonAction
         public CharacterStateMachineFrame StateFrame { get; private set; }
         public ActionMotionResolveResult ActionMotionResult { get; private set; }
         public CharacterFrameSubmission FrameSubmission { get; private set; }
+        public CharacterFramePlan FramePlan { get; private set; }
         public CharacterFrameOutput Output { get; private set; }
         public CharacterInputRequestFact InputRequest { get; private set; }
         public ActionInterruptDecision ActionDecision { get; private set; }
+        public CharacterResolvedAction ResolvedAction { get; private set; }
         public CharacterStateMachineSnapshot PreviousStateSnapshot { get; private set; }
         public bool ExitedToLocomotion { get; private set; }
         public bool InputRequestConsumed { get; private set; }
@@ -70,6 +76,7 @@ namespace ThirdPersonAction
         internal void SetLocomotionDecision(in LocomotionDecisionFrame decision)
         {
             LocomotionDecision = decision;
+            HasLocomotionDecision = true;
         }
 
         internal void SetCurrentTimelineFacts(StateTimelineFactsTrace trace)
@@ -82,9 +89,19 @@ namespace ThirdPersonAction
             in ActionInterruptDecision decision,
             CharacterFrameRequestSubmissionSet requestSubmissions)
         {
+            SetInputRequest(in request, in decision, requestSubmissions, default);
+        }
+
+        internal void SetInputRequest(
+            in CharacterInputRequestFact request,
+            in ActionInterruptDecision decision,
+            CharacterFrameRequestSubmissionSet requestSubmissions,
+            in CharacterResolvedAction resolvedAction)
+        {
             InputRequest = request;
             ActionDecision = decision;
             RequestSubmissions = requestSubmissions;
+            ResolvedAction = resolvedAction;
         }
 
         internal void SetStateDecision(
@@ -95,8 +112,11 @@ namespace ThirdPersonAction
             StateDecision = decision;
             StateFrame = decision.StateFrame;
             PreviousStateSnapshot = previousSnapshot;
+            bool hasActionState =
+                decision.StateFrame.ActionState.IsValid &&
+                decision.StateFrame.ActionState != ActionStateIds.None;
             ExitedToLocomotion = previousActionCapabilityState &&
-                                  !decision.StateFrame.Owner.IsAction &&
+                                  !hasActionState &&
                                   !decision.StateFrame.AnimationRequest.IsActionAnimation;
         }
 
@@ -115,12 +135,14 @@ namespace ThirdPersonAction
         {
             FrameSubmission = submission;
             LocomotionDecision = submission.LocomotionDecision;
+            HasLocomotionDecision = true;
             StateDecision = submission.StateDecision;
             LocomotionFrame = submission.LocomotionFrame;
             StateFrame = submission.StateFrame;
             ActionMotionResult = submission.ActionMotionResult;
             InputRequest = submission.InputRequest;
             ActionDecision = submission.ActionDecision;
+            ResolvedAction = default;
             CurrentTimelineFactsTrace = submission.CurrentTimelineFactsTrace;
             PreviousStateSnapshot = submission.PreviousStateSnapshot;
             ExitedToLocomotion = submission.ExitedToLocomotion;
@@ -129,6 +151,7 @@ namespace ThirdPersonAction
         internal void SetOutput(in CharacterFrameOutput output)
         {
             Output = output;
+            FramePlan = output.Plan;
         }
 
         internal void MarkInputRequestConsumed()

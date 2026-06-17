@@ -1,7 +1,7 @@
 # Project Context
 
 ## Purpose
-本项目是在 Unity 6000 客户端中构建复杂动画 3C demo，并逐步接入 Fantasy 网络同步、客户端预测和回滚。目标不是另起一套角色控制器，而是把当前角色 `CharacterFramePipeline`、FullBody 提交域、自研统一分层状态机、运动驱动和 Animancer 表现层扩展成可展示、可测试、可同步的动画技术样板。
+本项目是在 Unity 6000 客户端中构建复杂动画 3C demo，并逐步接入 Fantasy 网络同步、客户端预测和回滚。目标不是另起一套角色控制器，而是把当前角色 `CharacterFramePipeline`、Locomotion 领域模块、Action 领域模块、运动驱动和 Animancer 表现层扩展成可展示、可测试、可同步的动画技术样板。
 
 ## Tech Stack
 - Unity 6000 系列项目：`3cDemo/Client/3C_Client`
@@ -20,10 +20,12 @@
 - 不删除现有 log，除非用户明确要求。
 
 ### Architecture Patterns
-- 角色帧最高调度入口是 `CharacterFramePipeline`；`PlayerFullBodyActionController` 只是兼容入口，FullBody 行为域通过 `FullBodySubmissionBuilder` 提交结果。
+- 角色帧最高调度入口是 `CharacterFramePipeline`；Locomotion 与 Action 必须作为 sibling submitter 或等价领域模块提交纯数据候选输出。
 - 角色级帧管线代码必须位于 `Assets/Scripts/Character/Pipeline/Model|Runtime|Contracts/...`；`Assets/Scripts/Character/Action/FullBody/...` 只承载 FullBody submitter、provider、factory、adapter 和领域实现。
-- FullBody base layer 状态权威是项目自研统一分层状态机：`CharacterStateMachineDefinitionSO -> CharacterStateMachineRunner -> CharacterStateMachineFrame`。
-- `FullBody/Locomotion/...` 与 `FullBody/Action/...` 属于同一棵状态树，不得恢复独立 Locomotion 状态机、Action runtime 或外层缝合器作为第二状态权威。
+- Locomotion 是移动领域模块，负责移动状态演进、移动事实和移动候选输出；它可以内部使用状态图，但不属于 FullBody 子树。
+- Action 是动作领域模块，负责动作请求、打断、生命周期、body/channel claim、动作运动和动作动画候选输出；Action 不要求成为统一角色状态树叶子。
+- FullBody 只表达 body/channel claim 或动画层语义，不是 Locomotion owner、状态树根或第二个角色帧权威。
+- 正式状态 ID 使用 `Locomotion.Idle`、`Locomotion.MoveLoop`、`Action.Dodge` 这类领域 ID；`FullBody/Locomotion/...` 与 `FullBody/Action/...` 只允许作为遗留迁移输入或历史文档出现。
 - `com.inspiaaa.unityhfsm` 可以保留为第三方库参考，但未经新的 OpenSpec 审批不得接入为正式角色状态机 engine。
 - `CharacterStateMachineRunner` 只解释状态图、选择 transition、维护 active state / state time / variant / pending transition 和纯数据 snapshot/restore。
 - 状态机运行时代码目录为 `Assets/Scripts/Character/StateMachine/Model|Config|Solver/...`，中心配置资产目录为 `Assets/Configs/3C/StateMachine/`；旧 `Statemachine` 拼法不得作为并行入口保留。

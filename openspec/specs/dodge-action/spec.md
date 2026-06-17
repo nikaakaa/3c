@@ -30,33 +30,6 @@
 - **AND** 该动作 MUST NOT 新增为 `BasicMovementPhase`
 - **AND** 该动作 MUST NOT 新增为 Walk/Run gait
 
-### Requirement: FullBody 行为域和层级状态机边界
-系统 MUST 将基础移动和 Shift FullBody 动作收束到同一个 FullBody 行为域。基础 Locomotion 局部状态图 MAY 作为模块或子图存在，但 MUST NOT 和 Dodge/FullBody Action 形成两套平级、同时争夺 base layer 动画或角色平面位移的状态路径。本变更 MUST NOT 引入 UpperBody、Facial、IK、Additive 或等价并行表现状态层。
-
-#### Scenario: Dodge 属于 FullBody 主层
-- **WHEN** `Action.Dodge` 仲裁被接受
-- **THEN** Dodge 执行 MUST 归属于 FullBody 主行为域中的状态或模块
-- **AND** 它 MUST 接管本次 base layer 动作动画命令和动作位移输出
-- **AND** 它 MUST NOT 作为独立于 FullBody 主层的第二套 WASD/Action 状态机运行
-
-#### Scenario: Locomotion 局部图是 FullBody 子职责
-- **WHEN** 没有 FullBody 动作接管 base layer
-- **THEN** 基础 Locomotion 局部状态图 MAY 继续决定 `Idle / MoveStart / MoveLoop / MoveStop`
-- **AND** 该局部图 MUST 通过 FullBody 行为域或等价统一调度入口输出运动和动画命令
-- **AND** 该局部图 MUST NOT 绕过 Action 仲裁自行处理 Shift FullBody 动作
-
-#### Scenario: 当前不实现并行表现层
-- **WHEN** 实现 Shift FullBody 动作
-- **THEN** 系统 MUST NOT 创建 UpperBody、Facial、IK、Additive 或等价并行表现状态层
-- **AND** MUST NOT 使用并行表现层决定 `Action.Dodge` 是否进入、结束或转入 Run latch
-- **AND** 后续如需这些层 MUST 另开 OpenSpec
-
-#### Scenario: 模块化不等于分裂路径
-- **WHEN** 系统为 Dodge 提供独立类、配置资产、测试夹具或内部 runner
-- **THEN** 这些实现单元 MUST 被视为 FullBody 行为域内部模块
-- **AND** 它们 MUST 通过统一输入、仲裁、运动和动画端口协作
-- **AND** 它们 MUST NOT 形成独立角色控制器、独立 Transform 写入路径或独立 base layer 状态权威
-
 ### Requirement: Shift 输入消费和仲裁
 系统 MUST 通过现有输入缓冲和 Action 打断仲裁地基消费 Shift FullBody 动作请求。输入层只记录请求，是否消费 MUST 由玩法层基于 Action 仲裁结果决定。Shift held MUST NOT 直接决定基础移动 Run 档位。
 
@@ -155,16 +128,16 @@
 - **AND** 正式 gameplay 路径 MUST NOT 静默把非法值改成另一套隐藏默认手感
 
 #### Scenario: 状态机不复制动作手感参数
-- **WHEN** 设计者检查 `FullBody/Action/Dodge` 状态节点
+- **WHEN** 设计者检查 `Action.Dodge` 状态节点
 - **THEN** 状态机节点 MAY 保存 action state id、variant key、animation key、request/timeline/output module 绑定
 - **AND** 状态机节点 MUST NOT 并行保存决定 Directional 或 Backstep motion duration/distance 的第二套正式参数
 
-### Requirement: FullBody Action 装配闭环
-系统 SHOULD 提供明确的 FullBody Action 装配闭环，使设计者能追踪 Shift FullBody 动作的逻辑配置和动画表现配置。动作逻辑入口 MAY 引用或内嵌运动参数、打断策略和未来 cooldown/cost 配置；动作动画表现 MUST 通过独立动作动画绑定入口或等价边界解析。系统 MUST NOT 要求设计者只能在多个互不关联的散配置资产之间手工同步 Dodge。
+### Requirement: Action 装配闭环
+系统 SHOULD 提供明确的 Action 装配闭环，使设计者能追踪 Shift FullBody 动作的逻辑配置和动画表现配置。动作逻辑入口 MAY 引用或内嵌运动参数、打断策略和未来 cooldown/cost 配置；动作动画表现 MUST 通过独立动作动画绑定入口或等价边界解析。系统 MUST NOT 要求设计者只能在多个互不关联的散配置资产之间手工同步 Dodge。
 
 #### Scenario: 动作逻辑入口聚合 Dodge 逻辑配置
 - **WHEN** 设计者检查或配置 `Action.Dodge`
-- **THEN** 系统 SHOULD 提供一个 FullBody Action 定义、Dodge Action Profile 或等价动作逻辑入口
+- **THEN** 系统 SHOULD 提供一个 Action 定义、Dodge Action Profile 或等价动作逻辑入口
 - **AND** 该动作逻辑入口 SHOULD 能定位 Directional/Backstep 的运动参数和打断策略
 - **AND** 该动作逻辑入口 MUST NOT 直接持有动作动画 Profile
 
@@ -175,7 +148,7 @@
 - **AND** 动作动画 Profile MUST NOT 成为动作进入条件、运动参数或状态树拓扑的权威
 
 #### Scenario: 子配置可以继续分层
-- **WHEN** 动作逻辑入口引用 `DodgeActionConfigSO`、`ActionInterruptPolicySetSO` 或等价子资产，动作动画绑定入口引用 `ActionAnimationProfileSO` 或等价子资产
+- **WHEN** 动作逻辑入口引用 `CharacterActionCatalogSO`、`CharacterActionDefinitionSO`、`ActionInterruptPolicySetSO` 或等价子资产，动作动画绑定入口引用 `ActionAnimationProfileSO` 或等价子资产
 - **THEN** 这些子资产 MAY 保持独立文件以支持复用和角色 override
 - **AND** 它们 MUST 通过动作逻辑入口、动作动画绑定入口和 FullBody 装配点组成一个 Dodge 配置闭环
 - **AND** 它们 MUST NOT 成为互相不知道存在的游离配置
@@ -285,4 +258,63 @@
 - **WHEN** 用户在 Play Mode 中不按方向只按 Shift
 - **THEN** 角色 MUST 执行后闪
 - **AND** 后闪结束后 MUST NOT 强制进入 Run 档位
+
+### Requirement: Dodge 通过 Action Catalog 配置
+`Action.Dodge` 的正式动作逻辑配置 MUST 通过 Character Action Catalog 或批准的等价 ActionSet 进入运行时。Dodge 的 Directional/Backstep variant、duration、distance、priority、resistance、rotateToDirection 和动作动画 key seed MUST 能从该 catalog entry 或其正式子配置追踪。`CharacterConfigSO.DodgeAction` MUST NOT 作为正式 gameplay 解析入口或缺失 catalog 时的 fallback。
+
+#### Scenario: Dodge definition 包含两个变体
+- **WHEN** 设计者检查 `Action.Dodge` definition
+- **THEN** definition MUST 包含 Directional variant 配置
+- **AND** MUST 包含 Backstep variant 配置
+- **AND** 两个 variant MUST 都能配置 duration、distance、priority、resistance 和 rotateToDirection
+- **AND** 缺失任一必要字段 MUST 被配置校验报告
+
+#### Scenario: Directional Dodge 行为保持
+- **GIVEN** Action Catalog 包含有效 `Action.Dodge` definition
+- **AND** 输入缓冲中存在 Dodge 输入且当前移动事实支持 directional dodge
+- **WHEN** 通用 provider/resolver 路径处理该请求
+- **THEN** Dodge resolver MUST 输出 directional dodge resolved action
+- **AND** accepted 后进入的 target state、request fact、motion seed 和 animation key seed MUST 与迁移前一致
+
+#### Scenario: Backstep Dodge 行为保持
+- **GIVEN** Action Catalog 包含有效 `Action.Dodge` definition
+- **AND** 输入缓冲中存在 Dodge 输入且当前移动事实支持 backstep
+- **WHEN** 通用 provider/resolver 路径处理该请求
+- **THEN** Dodge resolver MUST 输出 backstep dodge resolved action
+- **AND** accepted 后进入的 target state、request fact、motion seed 和 animation key seed MUST 与迁移前一致
+
+#### Scenario: 缺失 catalog 不使用旧 Dodge 字段
+- **GIVEN** `CharacterConfigSO` 缺失 Action Catalog
+- **OR** Action Catalog 缺失 `Action.Dodge` definition
+- **WHEN** 正式 gameplay 路径尝试处理 Dodge 输入
+- **THEN** 系统 MUST 报告配置错误或拒绝动作输出
+- **AND** MUST NOT 从 `CharacterConfigSO.DodgeAction`、Resources、全局单例或代码默认值继续运行
+
+### Requirement: Dodge 属于 Action domain
+
+系统 MUST 将 Shift Dodge 视为 Action domain 中的全身动作。Dodge lifecycle MAY 使用 action instance、timeline 或局部 FSM/HFSM；对外 MUST 输出 `Action.Dodge`、action facts、body/channel claim、motion candidate 和 animation candidate。基础 Locomotion MUST 作为独立领域提交移动 facts 和候选输出。二者最终输出 MUST 由 Character frame plan 仲裁。
+
+#### Scenario: Dodge accepted 进入 Action domain
+- **WHEN** `Action.Dodge` 仲裁被接受
+- **THEN** Dodge MUST 作为 Action domain 的 action state、action instance 或 resolved action id 运行
+- **AND** 它 MUST 提交 full-body 或等价 body/channel claim
+- **AND** 它 MUST NOT 要求 Locomotion 处于 FullBody 子树才能执行
+
+#### Scenario: Locomotion 是独立基础移动领域
+- **WHEN** 没有 active Dodge 或其它 full-body claim
+- **THEN** Locomotion module MUST 继续决定 `Locomotion.Idle`、`Locomotion.MoveStart`、`Locomotion.MoveLoop`、`Locomotion.MoveStop` 或 `Locomotion.TurnBack`
+- **AND** Locomotion module MUST 继续提交基础移动 motion 和 animation candidate
+- **AND** Locomotion module MUST NOT 被表达为 `FullBodyOwnerKind.Locomotion`
+
+#### Scenario: 模块化不等于分裂路径
+- **WHEN** 系统为 Dodge 提供独立类、配置资产、测试夹具、action instance 或内部 lifecycle
+- **THEN** 这些实现单元 MUST 被视为 Action domain submitter 的内部职责
+- **AND** 它们 MUST 通过统一输入、仲裁、body claim、motion candidate 和 animation candidate 协作
+- **AND** 它们 MUST NOT 形成独立角色控制器、独立 Transform 写入路径或独立 frame pipeline
+
+#### Scenario: 当前不实现并行表现层
+- **WHEN** 实现 Shift Dodge 的归属迁移
+- **THEN** 系统 MUST NOT 创建 UpperBody、Facial、IK、Additive 或等价并行表现状态层
+- **AND** MUST NOT 使用并行表现层决定 `Action.Dodge` 是否进入、结束或转入 Run latch
+- **AND** 后续如需这些层 MUST 另开 OpenSpec
 

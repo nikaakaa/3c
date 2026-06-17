@@ -1,5 +1,6 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+#include "ToonScreenDotTransparency.hlsl"
 
 struct Attributes
 {
@@ -38,5 +39,6 @@ Varyings OutlinePassVertex(Attributes input)
 
 half4 OutlinePassFragment(Varyings input) : SV_TARGET
 {
+    ApplyScreenDotTransparencyClip(input.positionCS);
     return _OutlineColor;
 }

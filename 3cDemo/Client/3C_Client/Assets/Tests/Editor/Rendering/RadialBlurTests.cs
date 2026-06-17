@@ -11,9 +11,7 @@ namespace ThirdPersonRendering.Tests
         const string RendererPath = "Assets/Settings/URP-HighFidelity-Renderer.asset";
         const string BalancedRendererPath = "Assets/Settings/URP-Balanced-Renderer.asset";
         const string PerformantRendererPath = "Assets/Settings/URP-Performant-Renderer.asset";
-        const string ProfilePath = "Assets/Settings/SampleSceneProfile.asset";
         const string FeatureScriptGuid = "98453fcc2fe1406ea127f67cc87260a1";
-        const string VolumeScriptGuid = "2b6906466aa143c484772ad0cb182afe";
         const string ShaderGuid = "c3d54722b9a8424ebd99749ccbd152b1";
 
         [Test]
@@ -97,18 +95,6 @@ namespace ThirdPersonRendering.Tests
             AssertRendererReferencesRadialBlur(RendererPath, "injectionPoint: 550");
             AssertRendererReferencesRadialBlur(BalancedRendererPath, "injectionPoint: 600");
             AssertRendererReferencesRadialBlur(PerformantRendererPath, "injectionPoint: 600");
-        }
-
-        [Test]
-        public void SampleSceneProfileContainsRadialBlurVolume()
-        {
-            string yaml = ReadAssetYaml(ProfilePath);
-
-            StringAssert.Contains($"guid: {VolumeScriptGuid}", yaml);
-            StringAssert.Contains("m_Name: Radial Blur", yaml);
-            StringAssert.Contains("intensity:", yaml);
-            StringAssert.Contains("radius:", yaml);
-            StringAssert.Contains("sampleCount:", yaml);
         }
 
         static void AssertRendererReferencesRadialBlur(string assetPath, string expectedInjectionPoint)

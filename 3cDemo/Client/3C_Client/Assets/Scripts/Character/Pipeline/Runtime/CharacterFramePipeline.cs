@@ -105,7 +105,8 @@ namespace ThirdPersonAction
             if (!outputSubmitter.TrySubmitFrameOutput(runtime, ref context, out CharacterFrameSubmission submission))
                 return;
 
-            CharacterFrameOutput output = outputComposer.Compose(in submission);
+            CharacterFramePlan plan = outputComposer.CreatePlan(in submission);
+            CharacterFrameOutput output = outputComposer.Compose(in submission, in plan);
             context.SetOutput(in output);
             outputApplier.ApplyFrameCache(runtime, in output);
         }
@@ -139,7 +140,7 @@ namespace ThirdPersonAction
             context.MarkStep(CharacterFramePipelineStep.WriteSnapshotAndEvents);
             context.MarkSnapshotEventsReady();
             FullBodyDiagnostics.LogPipelineSnapshot(
-                runtime != null ? runtime.ActiveFullBodyStatePath : string.Empty,
+                runtime != null ? runtime.ActiveFrameStatePath : string.Empty,
                 context.Step,
                 new CharacterFrameResult(in context).DiagnosticSummary);
             context.MarkCompleted();
@@ -148,15 +149,39 @@ namespace ThirdPersonAction
 
     public sealed class CharacterFrameOutputComposer
     {
-        public CharacterFrameOutput Compose(in CharacterFrameSubmission submission)
+        readonly IBodyArbiter bodyArbiter;
+
+        public CharacterFrameOutputComposer()
+            : this(DefaultBodyArbiter.Instance)
         {
-            return new CharacterFrameOutput(submission);
+        }
+
+        public CharacterFrameOutputComposer(IBodyArbiter bodyArbiter)
+        {
+            this.bodyArbiter = bodyArbiter ?? throw new ArgumentNullException(nameof(bodyArbiter));
+        }
+
+        public CharacterFramePlan CreatePlan(in CharacterFrameSubmission submission)
+        {
+            return bodyArbiter.CreatePlan(in submission);
+        }
+
+        public CharacterFrameOutput Compose(
+            in CharacterFrameSubmission submission,
+            in CharacterFramePlan plan)
+        {
+            return new CharacterFrameOutput(submission, plan);
+        }
+
+        public CharacterFrameOutput Compose(in CharacterFramePlan plan)
+        {
+            return new CharacterFrameOutput(plan);
         }
     }
 
     public sealed class CharacterFrameOutputApplier
     {
-        public void ApplyFrameCache(IFullBodyOutputRuntimePort runtime, in CharacterFrameOutput output)
+        public void ApplyFrameCache(ICharacterFrameOutputRuntimePort runtime, in CharacterFrameOutput output)
         {
             if (runtime == null || !output.HasSubmission)
                 return;
@@ -169,7 +194,7 @@ namespace ThirdPersonAction
                 movement.ActionMotionResult);
         }
 
-        public void ApplyMotion(IFullBodyOutputRuntimePort runtime, ref CharacterFrameContext context)
+        public void ApplyMotion(ICharacterFrameOutputRuntimePort runtime, ref CharacterFrameContext context)
         {
             CharacterFrameOutput output = context.Output;
             if (!output.HasSubmission)
@@ -179,22 +204,19 @@ namespace ThirdPersonAction
             }
 
             CharacterFrameRuntimeFactsSubmission runtimeFacts = output.RuntimeFacts;
-            CharacterStateMachineFrame stateFrame = runtimeFacts.StateFrame;
             CharacterFrameInputConsumeSubmission inputConsume = output.InputConsume;
-            if (inputConsume.HasInputConsume && runtime.ConsumeStateFrameInputRequest(in stateFrame, inputConsume.Step))
+            if (inputConsume.HasInputConsume && runtime.ConsumeFrameInputRequest(in inputConsume))
                 context.MarkInputRequestConsumed();
 
             CharacterFrameMovementSubmission movement = output.Movement;
-            runtime.ExecuteStateFrameMotion(
-                in stateFrame,
-                movement.LocomotionFrame,
-                movement.ActionMotionResult,
+            runtime.ExecuteFrameMotion(
+                in movement,
                 out bool actionMovementExecuted,
                 out bool basicMovementExecuted);
             context.MarkMotionExecuted(actionMovementExecuted, basicMovementExecuted);
         }
 
-        public void ApplyPresentationAndFacts(IFullBodyOutputRuntimePort runtime, ref CharacterFrameContext context)
+        public void ApplyPresentationAndFacts(ICharacterFrameOutputRuntimePort runtime, ref CharacterFrameContext context)
         {
             CharacterFrameOutput output = context.Output;
             if (!output.HasSubmission)
@@ -207,10 +229,10 @@ namespace ThirdPersonAction
             CharacterFrameAnimationSubmission animation = output.Animation;
             CharacterFrameMovementSubmission movement = output.Movement;
             CharacterStateMachineFrame stateFrame = runtimeFacts.StateFrame;
-            runtime.PresentStateFrameAnimation(
-                in stateFrame,
-                movement.LocomotionFrame,
-                animation.ExitedToLocomotion,
+            BasicLocomotionFrame locomotionFrame = movement.LocomotionFrame;
+            runtime.PresentFrameAnimation(
+                in animation,
+                in locomotionFrame,
                 out bool actionAnimationPresented,
                 out bool locomotionAnimationPresented);
             runtime.WriteStateFrameActionFacts(
@@ -218,6 +240,11 @@ namespace ThirdPersonAction
                 runtimeFacts.ActionMotionResult,
                 runtimeFacts.ExitedToLocomotion,
                 runtimeFacts.Step);
+            if (runtimeFacts.WriteLocomotionPreemption)
+            {
+                LocomotionPreemptionFact locomotionPreemption = runtimeFacts.LocomotionPreemption;
+                runtime.WriteLocomotionPreemptionFact(in locomotionPreemption);
+            }
             runtime.UpdateStateSnapshot(in stateFrame, runtimeFacts.Step);
             runtime.WriteAnimationRuntimeFacts(runtimeFacts.Step);
             runtime.CompleteLocomotionTick();

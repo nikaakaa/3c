@@ -233,33 +233,17 @@ namespace ThirdPersonSimulation
         {
             if (inputRecorder == null)
                 inputRecorder = GetComponent<PredictionInputHistoryTickRecorder>();
-            if (inputRecorder == null)
-                inputRecorder = GetComponentInParent<PredictionInputHistoryTickRecorder>();
-            if (inputRecorder == null)
-                inputRecorder = GetComponentInChildren<PredictionInputHistoryTickRecorder>(true);
 
             if (snapshotRecorder == null)
                 snapshotRecorder = GetComponent<LocomotionSnapshotHistoryRecorder>();
-            if (snapshotRecorder == null)
-                snapshotRecorder = GetComponentInParent<LocomotionSnapshotHistoryRecorder>();
-            if (snapshotRecorder == null)
-                snapshotRecorder = GetComponentInChildren<LocomotionSnapshotHistoryRecorder>(true);
 
             if (simulation == null)
                 ResolveSimulationFromBehaviour();
             if (simulation == null)
                 ResolveSimulationFromComponents(GetComponents<MonoBehaviour>());
-            if (simulation == null)
-                ResolveSimulationFromComponents(GetComponentsInParent<MonoBehaviour>(true));
-            if (simulation == null)
-                ResolveSimulationFromComponents(GetComponentsInChildren<MonoBehaviour>(true));
 
             if (presentationInterpolator == null)
                 presentationInterpolator = GetComponent<PresentationTransformInterpolator>();
-            if (presentationInterpolator == null)
-                presentationInterpolator = GetComponentInParent<PresentationTransformInterpolator>();
-            if (presentationInterpolator == null)
-                presentationInterpolator = GetComponentInChildren<PresentationTransformInterpolator>(true);
         }
 
         void ResolveSimulationFromBehaviour()

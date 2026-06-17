@@ -1,4 +1,4 @@
-﻿# 收口 TurnBack 请求入口任务
+# 收口 TurnBack 请求入口任务
 
 ## 1. 现状确认
 - [x] 1.1 读取本 change 的 `proposal.md`、`design.md` 和 spec delta。
@@ -41,12 +41,12 @@
 - [x] 5.9 运行新增/调整后的 `UnifiedCharacterStateMachineTests` 和 `ActionInterruptPolicyDataTests` — 11/11 通过。
 
 ## 6. Sandbox 手动验证（需用户在 Unity Editor 中操作）
-- [ ] 6.1 打开 Sandbox 场景并使用 Generic 可琳。
-- [ ] 6.2 启用 Locomotion、FullBody、ActionInterrupt 或等价诊断日志。
-- [ ] 6.3 按 W 后在 MoveStart 或 MoveLoop 切 S，确认 TurnBack 请求先 accepted 再进入 TurnBack。
-- [ ] 6.4 在 Walk、MoveStop、Idle 反向输入，确认不会进入 TurnBack。
-- [ ] 6.5 制造 TurnBack request rejected 条件，确认 intent captured 但状态不进入 TurnBack。
-- [ ] 6.6 TurnBack 进入后确认 motion、input lock 和 exit window 行为不回退。
+- [x] 6.1 打开 Sandbox 场景并使用 Generic 可琳。
+- [x] 6.2 启用 Locomotion、FullBody、ActionInterrupt 或等价诊断日志。
+- [x] 6.3 按 W 后在 MoveStart 或 MoveLoop 切 S，确认 TurnBack 请求先 accepted 再进入 TurnBack。
+- [x] 6.4 在 Walk、MoveStop、Idle 反向输入，确认不会进入 TurnBack。
+- [x] 6.5 制造 TurnBack request rejected 条件，确认 intent captured 但状态不进入 TurnBack。
+- [x] 6.6 TurnBack 进入后确认 motion、input lock 和 exit window 行为不回退。
 
 ## 7. 收尾
 - [x] 7.1 检查没有新增 TurnBack 专用仲裁器。

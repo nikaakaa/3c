@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -17,10 +17,10 @@ public static class CorinHumanoidPresentationAssembler
     const string SourcePrefabPath = "Assets/Prefabs/Character/可琳.prefab";
     const string OutputPrefabPath = "Assets/Prefabs/Character/可琳_Humanoid.prefab";
     const string HumanoidModelPath = "Assets/Art/Model/ZZZ/可琳/可琳Humanoid.fbx";
-    const string HumanoidConfigRoot = "Assets/Configs/3C/Animacer/Corin/Humanoid";
+    const string HumanoidConfigRoot = "Assets/Configs/3C/Animation/Corin/Animancer/Reference/Humanoid";
     const string TransitionFolder = HumanoidConfigRoot + "/TransitionAsset";
     const string LibraryPath = HumanoidConfigRoot + "/CorinHumanoid_TransitionLib.asset";
-    const string AliasFolder = "Assets/Configs/3C/Animacer/Corin/Pramater";
+    const string AliasFolder = "Assets/Configs/3C/Animation/Corin/Animancer/Parameters";
     const string RunOnceMarkerPath = "Assets/Editor/CorinHumanoidPresentationAssembler.runonce";
 
     static readonly TransitionSpec[] TransitionSpecs =
@@ -33,6 +33,7 @@ public static class CorinHumanoidPresentationAssembler
         new("CorinHumanoid_WalkLoop", "Corin_Walk_Inplace.anim", 0.25f),
         new("CorinHumanoid_DodgeDirectional", "Corin_Evade_Front_Inplace.anim", 0.25f),
         new("CorinHumanoid_DodgeBackstep", "Corin_Evade_Back_Inplace.anim", 0.25f),
+        new("CorinHumanoid_TurnBack", "Corin_TurnBack_Inplace.anim", 0.25f),
     };
 
     static readonly AliasSpec[] AliasSpecs =
@@ -46,6 +47,7 @@ public static class CorinHumanoidPresentationAssembler
         new("WalkLoop", 5),
         new("Action.Dodge.Directional", 6),
         new("Action.Dodge.Backstep", 7),
+        new("Locomotion.Turn.Back", 8),
     };
 
     static readonly TransitionModifierDefinition[] Modifiers =
@@ -128,21 +130,17 @@ public static class CorinHumanoidPresentationAssembler
         if (animancer.Transitions != library)
             throw new InvalidOperationException($"{OutputPrefabPath} does not use {LibraryPath}.");
 
-        BasicLocomotionAnimancerPresenter locomotionPresenter = animator.GetComponent<BasicLocomotionAnimancerPresenter>();
-        if (locomotionPresenter == null)
-            throw new InvalidOperationException($"{OutputPrefabPath} has no BasicLocomotionAnimancerPresenter on the model root.");
+        CharacterAnimancerPresenter presenter = animator.GetComponent<CharacterAnimancerPresenter>();
+        if (presenter == null)
+            throw new InvalidOperationException($"{OutputPrefabPath} has no CharacterAnimancerPresenter on the model root.");
 
-        ActionAnimationAnimancerPresenter actionPresenter = animator.GetComponent<ActionAnimationAnimancerPresenter>();
-        if (actionPresenter == null)
-            throw new InvalidOperationException($"{OutputPrefabPath} has no ActionAnimationAnimancerPresenter on the model root.");
-
-        PlayerLocomotionController locomotionController = prefab.GetComponent<PlayerLocomotionController>();
-        if (locomotionController != null && locomotionController.LocomotionPresenter != locomotionPresenter)
-            throw new InvalidOperationException($"{OutputPrefabPath} locomotion presenter reference is not rewired.");
-
-        PlayerFullBodyActionController actionController = prefab.GetComponent<PlayerFullBodyActionController>();
-        if (actionController != null && actionController.AnimationPresenterBehaviour != actionPresenter)
-            throw new InvalidOperationException($"{OutputPrefabPath} action presenter reference is not rewired.");
+        CharacterFrameRuntimeController runtimeController = prefab.GetComponent<CharacterFrameRuntimeController>();
+        if (runtimeController != null &&
+            (runtimeController.LocomotionPresenterBehaviour != presenter ||
+             runtimeController.AnimationPresenterBehaviour != presenter))
+        {
+            throw new InvalidOperationException($"{OutputPrefabPath} runtime presenter references are not rewired.");
+        }
 
         if (library.Definition.Transitions.Length != TransitionSpecs.Length)
             throw new InvalidOperationException($"{LibraryPath} transition count is invalid.");
@@ -297,9 +295,6 @@ public static class CorinHumanoidPresentationAssembler
                 throw new InvalidOperationException($"{SourcePrefabPath} has no CharacterVisualRoot.");
 
             int visualLayer = ResolveVisualLayer(visualRoot);
-            BasicLocomotionAnimancerPresenter oldLocomotionPresenter = visualRoot.GetComponent<BasicLocomotionAnimancerPresenter>();
-            RunLocomotionAnimationConfigSO runAnimationConfig = oldLocomotionPresenter != null ? oldLocomotionPresenter.RunAnimationConfig : null;
-
             RemoveAnimationOutputComponents(visualRoot.gameObject);
             ClearChildren(visualRoot);
 
@@ -333,17 +328,11 @@ public static class CorinHumanoidPresentationAssembler
             animancer.Animator = animator;
             animancer.Transitions = library;
 
-            BasicLocomotionAnimancerPresenter locomotionPresenter = modelInstance.GetComponent<BasicLocomotionAnimancerPresenter>();
-            if (locomotionPresenter == null)
-                locomotionPresenter = modelInstance.AddComponent<BasicLocomotionAnimancerPresenter>();
+            CharacterAnimancerPresenter presenter = modelInstance.GetComponent<CharacterAnimancerPresenter>();
+            if (presenter == null)
+                presenter = modelInstance.AddComponent<CharacterAnimancerPresenter>();
 
-            locomotionPresenter.RunAnimationConfig = runAnimationConfig;
-
-            ActionAnimationAnimancerPresenter actionPresenter = modelInstance.GetComponent<ActionAnimationAnimancerPresenter>();
-            if (actionPresenter == null)
-                actionPresenter = modelInstance.AddComponent<ActionAnimationAnimancerPresenter>();
-
-            RewireControllers(instance, locomotionPresenter, actionPresenter);
+            RewireControllers(instance, presenter);
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(instance, OutputPrefabPath);
             if (prefab == null)
@@ -378,8 +367,7 @@ public static class CorinHumanoidPresentationAssembler
 
     static void RemoveAnimationOutputComponents(GameObject target)
     {
-        RemoveComponent<BasicLocomotionAnimancerPresenter>(target);
-        RemoveComponent<ActionAnimationAnimancerPresenter>(target);
+        RemoveComponent<CharacterAnimancerPresenter>(target);
         RemoveComponent<AnimancerComponent>(target);
         RemoveComponent<Animator>(target);
     }
@@ -393,16 +381,14 @@ public static class CorinHumanoidPresentationAssembler
 
     static void RewireControllers(
         GameObject root,
-        BasicLocomotionAnimancerPresenter locomotionPresenter,
-        ActionAnimationAnimancerPresenter actionPresenter)
+        CharacterAnimancerPresenter presenter)
     {
-        PlayerLocomotionController locomotionController = root.GetComponent<PlayerLocomotionController>();
-        if (locomotionController != null)
-            locomotionController.LocomotionPresenter = locomotionPresenter;
-
-        PlayerFullBodyActionController actionController = root.GetComponent<PlayerFullBodyActionController>();
-        if (actionController != null)
-            actionController.AnimationPresenterBehaviour = actionPresenter;
+        CharacterFrameRuntimeController runtimeController = root.GetComponent<CharacterFrameRuntimeController>();
+        if (runtimeController != null)
+        {
+            runtimeController.LocomotionPresenterBehaviour = presenter;
+            runtimeController.AnimationPresenterBehaviour = presenter;
+        }
     }
 
     static int ResolveVisualLayer(Transform visualRoot)

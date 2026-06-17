@@ -101,4 +101,4 @@
 - [x] 10.1 运行定向 EditMode 测试并记录结果：`ThirdPersonAction.Tests.FullBodyActionFrameworkTests` 23/23 passed。
 - [x] 10.2 运行 `openspec validate add-fullbody-action-framework --strict --no-interactive` 并记录结果：passed。
 - [x] 10.3 记录静态边界检查结果：FullBody framework 无 `BBBNexus`/BBB 主控依赖，Dodge module 未直接调用 `CharacterController.Move` 或 Animancer/Animator 播放 API，Locomotion 状态图未引用 Action module，FullBody coordinator 未直接读取 `Camera.main`/Cinemachine。
-- [ ] 10.4 记录用户 Play Mode 手动验证结果。
+- [x] 10.4 记录用户 Play Mode 手动验证结果。

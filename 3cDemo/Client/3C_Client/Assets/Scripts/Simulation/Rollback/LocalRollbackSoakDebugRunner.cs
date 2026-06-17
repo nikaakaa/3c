@@ -260,10 +260,6 @@ namespace ThirdPersonSimulation
                 ResolveCameraFromSimulation();
             if (cameraController == null)
                 cameraController = GetComponent<ThirdPersonCameraController>();
-            if (cameraController == null)
-                cameraController = GetComponentInParent<ThirdPersonCameraController>(true);
-            if (cameraController == null)
-                cameraController = GetComponentInChildren<ThirdPersonCameraController>(true);
 
             return cameraController;
         }
@@ -271,17 +267,17 @@ namespace ThirdPersonSimulation
         void ResolveCameraFromSimulation()
         {
             if (simulation is FullBodyRollbackSimulation fullBodySimulation &&
-                fullBodySimulation.LocomotionController != null)
+                fullBodySimulation.RuntimeController != null)
             {
-                cameraController = fullBodySimulation.LocomotionController.CameraController;
+                cameraController = fullBodySimulation.RuntimeController.CameraController;
                 if (cameraController != null)
                     return;
             }
 
             if (simulation is LocomotionRollbackSimulation locomotionSimulation &&
-                locomotionSimulation.LocomotionController != null)
+                locomotionSimulation.RuntimeController != null)
             {
-                cameraController = locomotionSimulation.LocomotionController.CameraController;
+                cameraController = locomotionSimulation.RuntimeController.CameraController;
             }
         }
 
@@ -291,17 +287,9 @@ namespace ThirdPersonSimulation
                 ResolveSimulationFromBehaviour();
             if (simulation == null)
                 ResolveSimulationFromComponents(GetComponents<MonoBehaviour>());
-            if (simulation == null)
-                ResolveSimulationFromComponents(GetComponentsInParent<MonoBehaviour>(true));
-            if (simulation == null)
-                ResolveSimulationFromComponents(GetComponentsInChildren<MonoBehaviour>(true));
 
             if (presentationInterpolator == null)
                 presentationInterpolator = GetComponent<PresentationTransformInterpolator>();
-            if (presentationInterpolator == null)
-                presentationInterpolator = GetComponentInParent<PresentationTransformInterpolator>();
-            if (presentationInterpolator == null)
-                presentationInterpolator = GetComponentInChildren<PresentationTransformInterpolator>(true);
 
             if (cameraController == null)
                 ResolveCameraFromSimulation();

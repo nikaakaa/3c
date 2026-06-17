@@ -1,4 +1,4 @@
-﻿## 1. 现状确认
+## 1. 现状确认
 - [x] 1.1 读取本变更 `proposal.md`、`design.md` 和全部 spec delta。
 - [x] 1.2 确认 `refactor-locomotion-decision-pipeline` 已提供 `LocomotionDecisionFrame` / `LocomotionDecisionFacts`。
 - [x] 1.3 确认 `formalize-turnback-locomotion-state` 已完成并保留 TurnBack motion policy 行为。
@@ -95,13 +95,13 @@
 - [x] 9.10 新增 `PlayerLocomotionPreservesReverseTurnBackIntentUntilRunLoopAfterInputRotation` 回归测试并通过 C# assembly build；当前会话未暴露 Unity MCP Test Runner，需在 Unity Editor 内重跑定向测试确认运行结果。
 
 ## 10. 手动验证
-- [ ] 10.1 打开 Sandbox 场景。
-- [ ] 10.2 确认当前角色只有一条 FullBody 驱动路径 active。
-- [ ] 10.3 WASD 移动仍能进入 Idle、MoveStart、MoveLoop、MoveStop。
-- [ ] 10.4 RunLoop 反向输入仍按 `formalize-turnback-locomotion-state` 语义进入 TurnBack。
-- [ ] 10.5 Shift Dodge Directional 和 Backstep 仍可触发并恢复 Locomotion。
-- [ ] 10.6 F6 FullBody synctest 仍能通过或输出可读 differences。
-- [ ] 10.7 观察诊断日志能按 phase 看出本帧输入、决策、运动、表现和快照顺序。
+- [x] 10.1 打开 Sandbox 场景。
+- [x] 10.2 确认当前角色只有一条 FullBody 驱动路径 active。
+- [x] 10.3 WASD 移动仍能进入 Idle、MoveStart、MoveLoop、MoveStop。
+- [x] 10.4 RunLoop 反向输入仍按 `formalize-turnback-locomotion-state` 语义进入 TurnBack。
+- [x] 10.5 Shift Dodge Directional 和 Backstep 仍可触发并恢复 Locomotion。
+- [x] 10.6 F6 FullBody synctest 仍能通过或输出可读 differences。
+- [x] 10.7 观察诊断日志能按 phase 看出本帧输入、决策、运动、表现和快照顺序。
 
 ## 11. 收尾
 - [x] 11.1 调试文档 `docs/agents/turnback-rootmotion-debug-log.md` 已记录 FullBody frame pipeline 阶段顺序。

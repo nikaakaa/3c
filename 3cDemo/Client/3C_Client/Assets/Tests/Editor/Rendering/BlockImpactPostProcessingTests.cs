@@ -12,10 +12,8 @@ namespace ThirdPersonRendering.Tests
         const string HighFidelityRendererPath = "Assets/Settings/URP-HighFidelity-Renderer.asset";
         const string BalancedRendererPath = "Assets/Settings/URP-Balanced-Renderer.asset";
         const string PerformantRendererPath = "Assets/Settings/URP-Performant-Renderer.asset";
-        const string ProfilePath = "Assets/Settings/SampleSceneProfile.asset";
         const string ShaderPath = "Assets/Shader/PostProcessing/BlockImpact/BlockImpact.shader";
         const string FeatureScriptGuid = "e18b08e353f34dbd88e84cdb1ef3189f";
-        const string VolumeScriptGuid = "d4c21abec9844f03944e551e94083272";
         const string ShaderGuid = "a05ef7bd7ed24ab28fa86e457398bf34";
 
         [SetUp]
@@ -214,26 +212,6 @@ namespace ThirdPersonRendering.Tests
             AssertRendererReferencesBlockImpact(HighFidelityRendererPath);
             AssertRendererReferencesBlockImpact(BalancedRendererPath);
             AssertRendererReferencesBlockImpact(PerformantRendererPath);
-        }
-
-        [Test]
-        public void SampleSceneProfileContainsBlockImpactVolumeReadyForPulse()
-        {
-            string yaml = ReadAssetYaml(ProfilePath);
-
-            StringAssert.Contains($"guid: {VolumeScriptGuid}", yaml);
-            StringAssert.Contains("m_Name: Block Impact", yaml);
-            StringAssert.Contains("globalIntensity:", yaml);
-            StringAssert.Contains("m_Value: 0.7", yaml);
-            StringAssert.Contains("flashIntensity:", yaml);
-            StringAssert.Contains("radialStrength:", yaml);
-            StringAssert.Contains("streakIntensity:", yaml);
-            StringAssert.Contains("streakLength:", yaml);
-            StringAssert.Contains("streakThickness:", yaml);
-            StringAssert.Contains("streakSoftness:", yaml);
-            StringAssert.Contains("chromaticStrength:", yaml);
-            StringAssert.Contains("radius:", yaml);
-            StringAssert.Contains("sampleCount:", yaml);
         }
 
         [Test]

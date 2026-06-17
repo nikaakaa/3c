@@ -13,27 +13,37 @@
          [SerializeField] CharacterStateMachineDefinitionSO stateMachine;
          [SerializeField] BasicMovementConfigSO movement;
          [SerializeField] RunLocomotionAnimationConfigSO locomotionAnimation;
-         [SerializeField] ActionInterruptPolicySetSO fullBodyStateRequestPolicy;
-         [SerializeField] DodgeActionConfigSO dodgeAction;
-         [SerializeField] Object fullBodyActionAnimation;
-         [SerializeField] Object animancerRigVariant;
+         [SerializeField] ActionInterruptPolicySetSO actionInterruptPolicy;
+         [SerializeField] BodyClaimPolicySO bodyClaimPolicy;
+         [SerializeField] CharacterActionCatalogSO actionCatalog;
          [SerializeField] InputActionAsset inputActions;
          [SerializeField] InputActionReference moveAction;
          [SerializeField] InputActionReference runAction;
          [SerializeField] InputActionReference lookAction;
+         [SerializeField] InputActionReference dodgeInputAction;
          [SerializeField] Object cameraConfig;
 
          public CharacterStateMachineDefinitionSO StateMachine => stateMachine;
          public BasicMovementConfigSO Movement => movement;
          public RunLocomotionAnimationConfigSO LocomotionAnimation => locomotionAnimation;
-         public ActionInterruptPolicySetSO FullBodyStateRequestPolicy => fullBodyStateRequestPolicy;
-         public DodgeActionConfigSO DodgeAction => dodgeAction;
-         public Object FullBodyActionAnimation => fullBodyActionAnimation;
-         public Object AnimancerRigVariant => animancerRigVariant;
+         public ActionInterruptPolicySetSO ActionInterruptPolicy => actionInterruptPolicy;
+         public BodyClaimPolicySO BodyClaimPolicy => bodyClaimPolicy;
+         public CharacterActionCatalogSO ActionCatalog => actionCatalog;
          public InputActionAsset InputActions => inputActions;
          public InputActionReference MoveAction => moveAction;
          public InputActionReference RunAction => runAction;
          public InputActionReference LookAction => lookAction;
+         public InputActionReference DodgeInputAction => dodgeInputAction;
          public Object CameraConfig => cameraConfig;
+
+         public CharacterActionCatalogValidationResult ValidateActionCatalog()
+         {
+             if (actionCatalog != null)
+                 return actionCatalog.Validate();
+
+             CharacterActionCatalogValidationResult result = new CharacterActionCatalogValidationResult();
+             result.AddError("Character config action catalog is missing.");
+             return result;
+         }
      }
  }

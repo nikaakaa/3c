@@ -31,6 +31,12 @@ Shader "W/savCharacterNEW" {
 		_EmissionIntensity ("Emission Intensity", Float) = 0
 		_RimColorIntensity ("Rim Color Intensity", Range(0, 1)) = 0.252771
 		[HDR] _RimColor ("Rim Color", Vector) = (0.6075471,0.6075471,0.6075471,0)
+		[HideInInspector] _ScreenDotTransparencyEnabled ("Screen Dot Transparency Enabled", Float) = 0
+		[HideInInspector] _ScreenDotCoverage ("Screen Dot Coverage", Range(0, 1)) = 0
+		[HideInInspector] _ScreenDotSpacingPixels ("Screen Dot Spacing Pixels", Float) = 12
+		[HideInInspector] _ScreenDotRadius ("Screen Dot Radius", Range(0, 1)) = 0.45
+		[HideInInspector] _ScreenDotHardness ("Screen Dot Hardness", Range(0, 1)) = 1
+		[HideInInspector] _ScreenDotOffsetPixels ("Screen Dot Offset Pixels", Vector) = (0,0,0,0)
 		[HideInInspector] _texcoord ("", 2D) = "white" {}
 		[HideInInspector] __dirty ("", Float) = 1
 	}
@@ -48,6 +54,14 @@ Shader "W/savCharacterNEW" {
 			float4x4 unity_ObjectToWorld;
 			float4x4 unity_MatrixVP;
 			float4 _MainTex_ST;
+			float _ScreenDotTransparencyEnabled;
+			float _ScreenDotCoverage;
+			float _ScreenDotSpacingPixels;
+			float _ScreenDotRadius;
+			float _ScreenDotHardness;
+			float4 _ScreenDotOffsetPixels;
+
+			#include "Assets/Shader/ScreenSpaceDotTransparency/ScreenSpaceDotTransparency.hlsl"
 
 			struct Vertex_Stage_Input
 			{
@@ -75,10 +89,12 @@ Shader "W/savCharacterNEW" {
 			struct Fragment_Stage_Input
 			{
 				float2 uv : TEXCOORD0;
+				float4 pos : SV_POSITION;
 			};
 
 			float4 frag(Fragment_Stage_Input input) : SV_TARGET
 			{
+				ApplyScreenDotTransparencyClip(input.pos);
 				return _MainTex.Sample(sampler_MainTex, input.uv.xy);
 			}
 

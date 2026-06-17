@@ -75,13 +75,7 @@ namespace ThirdPersonSimulation
         void ResolveReferences()
         {
             if (tickDriver == null)
-            {
                 tickDriver = GetComponent<UnitySimulationTickDriver>();
-                if (tickDriver == null)
-                    tickDriver = GetComponentInParent<UnitySimulationTickDriver>();
-                if (tickDriver == null)
-                    tickDriver = GetComponentInChildren<UnitySimulationTickDriver>(true);
-            }
 
             if (inputSourceBehaviour == null && TryResolveComponentInterface(out IPredictionInputFrameSource _, out MonoBehaviour sourceBehaviour))
                 inputSourceBehaviour = sourceBehaviour;

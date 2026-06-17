@@ -69,11 +69,11 @@
 - [x] 9.1 打开 Sandbox 场景。
 - [x] 9.2 确认当前角色只有 `FullBodyActionTickAdapter` 或等价 FullBody 正式 driver active。
 - [x] 9.3 确认当前角色正式绑定 `CharacterConfigSO` 及必需子配置。
-- [ ] 9.4 WASD 移动仍进入 Idle、MoveStart、MoveLoop、MoveStop。
-- [ ] 9.5 RunLoop 反向输入仍进入 TurnBack，并保持 motion/input lock 语义。
-- [ ] 9.6 Shift Dodge Directional 和 Backstep 仍可触发并恢复 Locomotion。
-- [ ] 9.7 故意移除一个必需配置，确认系统报清晰诊断且不使用 fallback 继续运行。
-- [ ] 9.8 观察诊断日志，确认每帧状态路径来自 FullBody runner。
+- [x] 9.4 WASD 移动仍进入 Idle、MoveStart、MoveLoop、MoveStop。
+- [x] 9.5 RunLoop 反向输入仍进入 TurnBack，并保持 motion/input lock 语义。
+- [x] 9.6 Shift Dodge Directional 和 Backstep 仍可触发并恢复 Locomotion。
+- [x] 9.7 故意移除一个必需配置，确认系统报清晰诊断且不使用 fallback 继续运行。
+- [x] 9.8 观察诊断日志，确认每帧状态路径来自 FullBody runner。
 
 ## 10. 收尾
 - [x] 10.1 检查没有新增第二套状态机 runner owner。
@@ -81,4 +81,4 @@
 - [x] 10.3 检查没有新增绕过 motion executor 的运动路径。
 - [x] 10.4 检查没有删除用户未要求删除的 log。
 - [x] 10.5 更新相关调试文档或 Path 文档中关于正式 driver / runtime authority 的说明。
-- [ ] 10.6 全部任务真实完成后再将 checklist 标为 `- [x]`。
+- [x] 10.6 全部任务真实完成后再将 checklist 标为 `- [x]`。

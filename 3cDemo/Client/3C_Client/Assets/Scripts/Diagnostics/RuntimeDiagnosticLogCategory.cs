@@ -9,7 +9,6 @@
          Input = 4,
          Animation = 5,
          Simulation = 6,
-         Editor = 7,
-         Legacy = 8
+         Editor = 7
      }
  }

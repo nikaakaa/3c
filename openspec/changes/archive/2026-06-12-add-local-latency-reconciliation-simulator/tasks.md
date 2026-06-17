@@ -88,35 +88,35 @@
 - [x] 9.9 不修改现有 `LocalRollbackSynctestDebugRunner` 的 F6 行为。
 
 ## 10. 静态边界验证
-- [ ] 10.1 搜索 reconciliation core 不引用 Fantasy。
-- [ ] 10.2 搜索 reconciliation core 不引用协议 DTO。
-- [ ] 10.3 搜索 reconciliation core 不引用 Animancer runtime object。
-- [ ] 10.4 搜索 reconciliation core 不引用 Cinemachine。
-- [ ] 10.5 搜索 reconciliation core 不直接调用 `CharacterController.Move`。
-- [ ] 10.6 搜索 reconciliation core 不引用 `BasicLocomotionPipeline`。
-- [ ] 10.7 搜索未新增第二套 player controller。
-- [ ] 10.8 搜索未修改 `NetworkProtocol/*.proto`。
+- [x] 10.1 搜索 reconciliation core 不引用 Fantasy。
+- [x] 10.2 搜索 reconciliation core 不引用协议 DTO。
+- [x] 10.3 搜索 reconciliation core 不引用 Animancer runtime object。
+- [x] 10.4 搜索 reconciliation core 不引用 Cinemachine。
+- [x] 10.5 搜索 reconciliation core 不直接调用 `CharacterController.Move`。
+- [x] 10.6 搜索 reconciliation core 不引用 `BasicLocomotionPipeline`。
+- [x] 10.7 搜索未新增第二套 player controller。
+- [x] 10.8 搜索未修改 `NetworkProtocol/*.proto`。
 
 ## 11. 手动验证
-- [ ] 11.1 打开 `Assets/Scenes/Sandbox.unity`。
-- [ ] 11.2 挂载 `LocalLatencyReconciliationDebugRunner` 到角色（含 `FullBodyRollbackSimulation`、recorder）。
-- [ ] 11.3 设置 `LatencyTicks = 3`。
-- [ ] 11.4 进入 Play Mode，移动、Run、Dodge 积累历史。
-- [ ] 11.5 按 F7 触发 reconciliation。
-- [ ] 11.6 验证 Console 输出 PASS 或 FAIL + differences。
-- [ ] 11.7 验证不启用可见 correction 时角色不产生视觉跳变。
-- [ ] 11.8 启用可见 correction 时验证差值插值平滑。
-- [ ] 11.9 验证现有 F6 synctest 行为不变（无延迟的理想条件测试）。
+- [x] 11.1 打开 `Assets/Scenes/Sandbox.unity`。
+- [x] 11.2 挂载 `LocalLatencyReconciliationDebugRunner` 到角色（含 `FullBodyRollbackSimulation`、recorder）。
+- [x] 11.3 设置 `LatencyTicks = 3`。
+- [x] 11.4 进入 Play Mode，移动、Run、Dodge 积累历史。
+- [x] 11.5 按 F7 触发 reconciliation。
+- [x] 11.6 验证 Console 输出 PASS 或 FAIL + differences。
+- [x] 11.7 验证不启用可见 correction 时角色不产生视觉跳变。
+- [x] 11.8 启用可见 correction 时验证差值插值平滑。
+- [x] 11.9 验证现有 F6 synctest 行为不变（无延迟的理想条件测试）。
 
 ## 12. 验证命令
-- [ ] 12.1 运行 `openspec validate add-local-latency-reconciliation-simulator --strict --no-interactive`。
-- [ ] 12.2 运行 Unity Editor 编译，确认 Console 无编译错误。
-- [ ] 12.3 运行定向 EditMode 测试 `ThirdPersonSimulation.Tests.LocalRollbackSynctestFoundationTests`。
-- [ ] 12.4 运行定向 EditMode 测试 `ThirdPersonSimulation.Tests.FullBodyRollbackReplayTests`。
-- [ ] 12.5 运行新写的延迟模拟和 reconciliation 测试。
-- [ ] 12.6 不使用 Unity batchmode。
+- [x] 12.1 运行 `openspec validate add-local-latency-reconciliation-simulator --strict --no-interactive`。
+- [x] 12.2 运行 Unity Editor 编译，确认 Console 无编译错误。
+- [x] 12.3 运行定向 EditMode 测试 `ThirdPersonSimulation.Tests.LocalRollbackSynctestFoundationTests`。
+- [x] 12.4 运行定向 EditMode 测试 `ThirdPersonSimulation.Tests.FullBodyRollbackReplayTests`。
+- [x] 12.5 运行新写的延迟模拟和 reconciliation 测试。
+- [x] 12.6 不使用 Unity batchmode。
 
 ## 13. 后续交接
-- [ ] 13.1 在 `docs/agents/action-fighting-prediction-rollback-guide.md` 更新阶段状态。
-- [ ] 13.2 明确本变更完成后再规划 Fantasy 接入。
-- [ ] 13.3 确认 reconciliation 接口保持不变，后续替换远端输入源为 Fantasy 时无需架构变化。
+- [x] 13.1 在 `docs/agents/action-fighting-prediction-rollback-guide.md` 更新阶段状态。
+- [x] 13.2 明确本变更完成后再规划 Fantasy 接入。
+- [x] 13.3 确认 reconciliation 接口保持不变，后续替换远端输入源为 Fantasy 时无需架构变化。

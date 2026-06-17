@@ -88,7 +88,7 @@
 - [x] 9.4 运行现有 `PlayerLocomotionControllerTests`。
 - [x] 9.5 运行现有 `SimulationTickSystemTests`。
 - [x] 9.6 运行 `openspec validate integrate-simulation-tick-locomotion --strict --no-interactive`。
-- [ ] 9.7 本轮修复 `Sandbox` 场景 driver 空引用并新增回归测试后，重新运行 Unity EditMode 测试复验。
+- [x] 9.7 本轮修复 `Sandbox` 场景 driver 空引用并新增回归测试后，重新运行 Unity EditMode 测试复验。
 
 ## 10. Play Mode 烟测与用户复验
 - [x] 10.1 确认当前活动场景为 `Sandbox`。
@@ -107,4 +107,4 @@
 - [x] 11.3 记录静态验证结果：tick core/driver 未反向依赖 Locomotion、Animancer、Cinemachine、CharacterController 或 Input System，未修改 Fantasy proto/server，未新增 rollback runtime。
 - [x] 11.4 记录 Play Mode 烟测结果：进入并退出 `Sandbox` Play Mode，Console entries=5121、errors=0、warnings=0；WASD/Look/动画表现由用户按步骤复验。
 - [x] 11.5 向用户说明哪些内容已真正接入、哪些仍未接入。
-- [ ] 11.6 Unity MCP 重新连接后，记录本轮场景绑定修复后的 EditMode/Console 复验结果。
+- [x] 11.6 Unity MCP 重新连接后，记录本轮场景绑定修复后的 EditMode/Console 复验结果。

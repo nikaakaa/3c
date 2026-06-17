@@ -1,3 +1,4 @@
+using System;
 using ThirdPersonAction;
 using ThirdPersonInput;
 using ThirdPersonMovement;
@@ -397,11 +398,12 @@ namespace ThirdPersonCharacterStateMachine
                     false);
             }
 
-            bool isAction = metadata.IsActionCapabilityState || metadata.Owner.IsAction;
-            bool isLocomotion = metadata.IsLocomotionPlaybackState || metadata.Owner.IsLocomotion;
+            bool isAction =
+                metadata.IsActionCapabilityState ||
+                (metadata.ActionState.IsValid && metadata.ActionState != ActionStateIds.None);
+            bool isLocomotion = metadata.IsLocomotionPlaybackState;
             ActionStateId actionState = isAction ? metadata.ActionState : ActionStateIds.None;
-            FullBodyOwner owner = isAction ? FullBodyOwner.Action(actionState) :
-                isLocomotion ? FullBodyOwner.Locomotion : FullBodyOwner.None;
+            FullBodyOwner owner = isAction ? FullBodyOwner.Action(actionState) : FullBodyOwner.None;
 
             return new FullBodyStateView(
                 snapshot,
@@ -431,10 +433,10 @@ namespace ThirdPersonCharacterStateMachine
                             IsKnownActionState(snapshot.ActiveState) ||
                             (node != null && node.IsActionCapabilityState);
             bool isLocomotion = HasTag(in snapshot, CharacterStateTag.Locomotion) ||
-                                (node != null && node.IsLocomotionPlaybackState) ||
-                                (!isAction && HasTag(in snapshot, CharacterStateTag.FullBody));
+                                IsKnownLocomotionState(snapshot.ActiveState) ||
+                                (node != null && node.IsLocomotionPlaybackState);
             ActionStateId actionState = isAction ? ResolveActionState(snapshot.ActiveState, snapshot.ActivePath) : ActionStateIds.None;
-            FullBodyOwner owner = isAction ? FullBodyOwner.Action(actionState) : FullBodyOwner.Locomotion;
+            FullBodyOwner owner = isAction ? FullBodyOwner.Action(actionState) : FullBodyOwner.None;
             BasicMovementPhase locomotionPhase = ResolveLocomotionPhase(snapshot.ActiveState, node);
 
             return new FullBodyStateView(
@@ -443,7 +445,7 @@ namespace ThirdPersonCharacterStateMachine
                 actionState,
                 locomotionPhase,
                 isAction,
-                isLocomotion || !isAction);
+                isLocomotion);
         }
 
         static bool HasTag(in CharacterStateMachineSnapshot snapshot, CharacterStateTag tag)
@@ -483,6 +485,15 @@ namespace ThirdPersonCharacterStateMachine
             return activeState == CharacterStateIds.Dodge;
         }
 
+        static bool IsKnownLocomotionState(CharacterStateId activeState)
+        {
+            return activeState == CharacterStateIds.Idle ||
+                   activeState == CharacterStateIds.MoveStart ||
+                   activeState == CharacterStateIds.MoveLoop ||
+                   activeState == CharacterStateIds.MoveStop ||
+                   activeState == CharacterStateIds.TurnBack;
+        }
+
         static string LastPathSegment(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
@@ -497,6 +508,9 @@ namespace ThirdPersonCharacterStateMachine
             string segment = LastPathSegment(activePath);
             if (string.IsNullOrWhiteSpace(segment))
                 segment = LastPathSegment(activeState.Value);
+
+            if (segment.StartsWith("Action.", System.StringComparison.Ordinal))
+                return new ActionStateId(segment);
 
             return string.IsNullOrWhiteSpace(segment)
                 ? ActionStateIds.None
@@ -538,27 +552,18 @@ namespace ThirdPersonCharacterStateMachine
         public CharacterStateMachineRestoreState(
             CharacterStateMachineSnapshot snapshot,
             Vector3 actionWorldDirection,
-            bool animationRequestedForState,
-            bool legacyConsumeRequest,
-            bool legacyResetRunLatch,
-            bool legacySetRunLatch)
+            bool animationRequestedForState)
             : this(
                 snapshot,
                 new CharacterStatePayload(actionWorldDirection, Vector3.zero, Vector3.zero),
-                animationRequestedForState,
-                legacyConsumeRequest,
-                legacyResetRunLatch,
-                legacySetRunLatch)
+                animationRequestedForState)
         {
         }
 
         public CharacterStateMachineRestoreState(
             CharacterStateMachineSnapshot snapshot,
             CharacterStatePayload statePayload,
-            bool animationRequestedForState,
-            bool legacyConsumeRequest,
-            bool legacyResetRunLatch,
-            bool legacySetRunLatch)
+            bool animationRequestedForState)
         {
             Snapshot = snapshot;
             StatePayload = statePayload;
@@ -569,19 +574,13 @@ namespace ThirdPersonCharacterStateMachine
             CharacterStateMachineSnapshot snapshot,
             Vector3 actionWorldDirection,
             Vector3 turnBackWorldDirection,
-            bool animationRequestedForState,
-            bool legacyConsumeRequest,
-            bool legacyResetRunLatch,
-            bool legacySetRunLatch)
+            bool animationRequestedForState)
             : this(
                 snapshot,
                 actionWorldDirection,
                 turnBackWorldDirection,
                 Vector3.zero,
-                animationRequestedForState,
-                legacyConsumeRequest,
-                legacyResetRunLatch,
-                legacySetRunLatch)
+                animationRequestedForState)
         {
         }
 
@@ -590,10 +589,7 @@ namespace ThirdPersonCharacterStateMachine
             Vector3 actionWorldDirection,
             Vector3 turnBackWorldDirection,
             Vector3 turnBackEntryBasisForward,
-            bool animationRequestedForState,
-            bool legacyConsumeRequest,
-            bool legacyResetRunLatch,
-            bool legacySetRunLatch)
+            bool animationRequestedForState)
         {
             Snapshot = snapshot;
             StatePayload = new CharacterStatePayload(actionWorldDirection, turnBackWorldDirection, turnBackEntryBasisForward);
@@ -608,6 +604,49 @@ namespace ThirdPersonCharacterStateMachine
         public bool AnimationRequestedForState { get; }
     }
 
+    public readonly struct ActionAnimationPlaybackIntent : IEquatable<ActionAnimationPlaybackIntent>
+    {
+        public ActionAnimationPlaybackIntent(int value)
+        {
+            Value = value < 0 ? 0 : value;
+        }
+
+        public int Value { get; }
+        public bool IsValid => Value > 0;
+
+        public bool Equals(ActionAnimationPlaybackIntent other)
+        {
+            return Value == other.Value;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is ActionAnimationPlaybackIntent other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return Value;
+        }
+
+        public override string ToString()
+        {
+            return Value.ToString();
+        }
+
+        public static ActionAnimationPlaybackIntent Invalid => default;
+
+        public static bool operator ==(ActionAnimationPlaybackIntent left, ActionAnimationPlaybackIntent right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(ActionAnimationPlaybackIntent left, ActionAnimationPlaybackIntent right)
+        {
+            return !left.Equals(right);
+        }
+    }
+
     public readonly struct CharacterStateAnimationRequest
     {
         public CharacterStateAnimationRequest(CharacterStateAnimationBinding binding, int sourceStep)
@@ -617,19 +656,39 @@ namespace ThirdPersonCharacterStateMachine
 
         public CharacterStateAnimationRequest(
             CharacterStateAnimationBinding binding,
+            int sourceStep,
+            ActionAnimationPlaybackIntent actionPlaybackIntent)
+            : this(binding, CharacterStatePlaybackFactSource.Action, sourceStep, actionPlaybackIntent)
+        {
+        }
+
+        public CharacterStateAnimationRequest(
+            CharacterStateAnimationBinding binding,
             CharacterStatePlaybackFactSource playbackFactSource,
             int sourceStep)
+            : this(binding, playbackFactSource, sourceStep, ActionAnimationPlaybackIntent.Invalid)
+        {
+        }
+
+        public CharacterStateAnimationRequest(
+            CharacterStateAnimationBinding binding,
+            CharacterStatePlaybackFactSource playbackFactSource,
+            int sourceStep,
+            ActionAnimationPlaybackIntent actionPlaybackIntent)
         {
             Binding = binding;
             PlaybackFactSource = playbackFactSource;
             SourceStep = Mathf.Max(0, sourceStep);
+            ActionPlaybackIntent = actionPlaybackIntent;
         }
 
         public CharacterStateAnimationBinding Binding { get; }
         public CharacterStatePlaybackFactSource PlaybackFactSource { get; }
         public ActionAnimationKey Key => Binding.Key;
         public int SourceStep { get; }
+        public ActionAnimationPlaybackIntent ActionPlaybackIntent { get; }
         public bool HasKey => Binding.HasKey;
+        public bool HasActionPlaybackIntent => ActionPlaybackIntent.IsValid;
         public string TimelineBindingKey => Binding.TimelineBindingKey;
         public bool IsActionAnimation => PlaybackFactSource == CharacterStatePlaybackFactSource.Action;
         public bool IsLocomotionAnimation => PlaybackFactSource == CharacterStatePlaybackFactSource.Locomotion;

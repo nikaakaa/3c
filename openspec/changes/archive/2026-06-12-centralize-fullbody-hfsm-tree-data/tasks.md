@@ -155,12 +155,12 @@
 - Path 文档检查：本仓库无 `DG_Entity/docs/Path` 对应文档，本次为 no-op；已更新本仓库 `docs/agents/character-animation-state-roadmap.md`。
 
 ## 12. 用户手动验证
-- [ ] 12.1 用户在 Unity Editor 中选择默认 FullBody HFSM 树资产。
-- [ ] 12.2 用户确认只读预览显示 `/FullBody/Locomotion/Idle`。
-- [ ] 12.3 用户确认只读预览显示 `/FullBody/Locomotion/MoveStart`。
-- [ ] 12.4 用户确认只读预览显示 `/FullBody/Locomotion/MoveLoop`。
-- [ ] 12.5 用户确认只读预览显示 `/FullBody/Locomotion/MoveStop`。
-- [ ] 12.6 用户确认只读预览显示 `/FullBody/Action/Dodge`。
-- [ ] 12.7 用户进入 Play Mode 后确认普通 WASD 状态路径仍随 Locomotion phase 变化。
-- [ ] 12.8 用户进入 Play Mode 后确认按 Shift 时状态路径仍显示 `/FullBody/Action/Dodge`。
-- [ ] 12.9 用户确认 Dodge active 时基础移动不叠加平面位移或 base layer 动画。
+- [x] 12.1 用户在 Unity Editor 中选择默认 FullBody HFSM 树资产。
+- [x] 12.2 用户确认只读预览显示 `/FullBody/Locomotion/Idle`。
+- [x] 12.3 用户确认只读预览显示 `/FullBody/Locomotion/MoveStart`。
+- [x] 12.4 用户确认只读预览显示 `/FullBody/Locomotion/MoveLoop`。
+- [x] 12.5 用户确认只读预览显示 `/FullBody/Locomotion/MoveStop`。
+- [x] 12.6 用户确认只读预览显示 `/FullBody/Action/Dodge`。
+- [x] 12.7 用户进入 Play Mode 后确认普通 WASD 状态路径仍随 Locomotion phase 变化。
+- [x] 12.8 用户进入 Play Mode 后确认按 Shift 时状态路径仍显示 `/FullBody/Action/Dodge`。
+- [x] 12.9 用户确认 Dodge active 时基础移动不叠加平面位移或 base layer 动画。

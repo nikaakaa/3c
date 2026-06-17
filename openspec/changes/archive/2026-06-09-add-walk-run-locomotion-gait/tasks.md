@@ -96,22 +96,22 @@
 ## 9. 验证命令
 
 - [x] 9.1 运行 `openspec validate add-walk-run-locomotion-gait --strict --no-interactive`。
-- [ ] 9.2 运行 Unity EditMode 定向测试 `ThirdPersonMovement.Tests.PlayerLocomotionControllerTests`。
-- [ ] 9.3 运行新增或更新的 Walk/Run 定向 EditMode 测试。
-- [ ] 9.4 检查 Unity Console 没有 C# 编译错误。
+- [x] 9.2 运行 Unity EditMode 定向测试 `ThirdPersonMovement.Tests.PlayerLocomotionControllerTests`。
+- [x] 9.3 运行新增或更新的 Walk/Run 定向 EditMode 测试。
+- [x] 9.4 检查 Unity Console 没有 C# 编译错误。
 - [x] 9.5 如果 Unity MCP 或 Unity 测试不可用，记录原因和手动验证步骤，不伪造结果。
 
 ## 10. 手动端到端验证
 
-- [ ] 10.1 打开当前 3C 演示场景。
-- [ ] 10.2 不按 Shift，仅按 W/A/S/D，确认角色进入 WalkStart 后进入 WalkLoop。
-- [ ] 10.3 普通移动松开输入，确认进入 MoveStop 并播放 WalkEnd。
-- [ ] 10.4 按住 Shift + W/A/S/D，确认角色进入 RunStart 后进入 RunLoop。
-- [ ] 10.5 Run 移动松开输入，确认进入 MoveStop 并播放 RunEnd。
-- [ ] 10.6 MoveLoop 中按下 Shift，确认表现切到 RunLoop 且逻辑 phase 仍为 MoveLoop。
-- [ ] 10.7 MoveLoop 中松开 Shift，确认表现切到 WalkLoop 且逻辑 phase 仍为 MoveLoop。
-- [ ] 10.8 WalkEnd 或 RunEnd 未结束时重新输入，确认立即进入 MoveStart。
-- [ ] 10.9 确认没有第二套角色控制器、第二套移动入口或 BBB 运行时依赖参与。
+- [x] 10.1 打开当前 3C 演示场景。
+- [x] 10.2 不按 Shift，仅按 W/A/S/D，确认角色进入 WalkStart 后进入 WalkLoop。
+- [x] 10.3 普通移动松开输入，确认进入 MoveStop 并播放 WalkEnd。
+- [x] 10.4 按住 Shift + W/A/S/D，确认角色进入 RunStart 后进入 RunLoop。
+- [x] 10.5 Run 移动松开输入，确认进入 MoveStop 并播放 RunEnd。
+- [x] 10.6 MoveLoop 中按下 Shift，确认表现切到 RunLoop 且逻辑 phase 仍为 MoveLoop。
+- [x] 10.7 MoveLoop 中松开 Shift，确认表现切到 WalkLoop 且逻辑 phase 仍为 MoveLoop。
+- [x] 10.8 WalkEnd 或 RunEnd 未结束时重新输入，确认立即进入 MoveStart。
+- [x] 10.9 确认没有第二套角色控制器、第二套移动入口或 BBB 运行时依赖参与。
 
 ## 11. 文档收口
 

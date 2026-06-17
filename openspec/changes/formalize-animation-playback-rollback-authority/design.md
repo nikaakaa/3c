@@ -74,7 +74,7 @@ rollback restore 到 TurnBack 中段：
 - 首次进入 TurnBack 从 start normalized time 开始。
 - restore 到 TurnBack 中段后不会归零。
 - previous/current sampling window restore 后第一 replay tick 采样同一段。
-- `FullBodyRollbackSimulation` 走正式 FullBody 主线，而不是直接调用底层 sampler。
+- `FullBodyRollbackSimulation` 或批准的 rollback adapter 走正式 Character frame runtime 主线，而不是直接调用底层 sampler。
 
 ## Risks / Trade-offs
 
@@ -93,6 +93,14 @@ rollback restore 到 TurnBack 中段：
 4. 确保 `BuildMotionPlaybackWindow` 在 restore 后使用恢复的 previous window。
 5. 增加自动测试覆盖中段 restore、采样窗口和 FullBody replay。
 6. 运行定向 EditMode 测试和 F6/F8 手动验收，复制 `[rollback-synctest] PASS` 或 first mismatch 日志。
+
+## Verification Notes
+
+- Play Mode 触发 TurnBack，确认首次进入仍从动画开头播放。
+- TurnBack 中段按 F6，确认 `[rollback-synctest] PASS` 或 first mismatch 不再是 `animationNormalizedTime=0`。
+- TurnBack 中段连续触发 F6 多次，确认 replay 后画面不会逐次漂移。
+- 触发 F8 soak，确认 TurnBack 窗口不因 playback/window 分叉失败。
+- 若失败，复制 `Simulation.synctest-first-mismatch`、`Simulation.synctest-fail-detail` 和 `TURNBACK_RM_CHAIN` 日志。
 
 ## Open Questions
 

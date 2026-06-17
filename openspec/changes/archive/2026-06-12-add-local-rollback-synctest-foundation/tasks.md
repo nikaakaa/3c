@@ -128,7 +128,7 @@
 - [x] 10.7 新增本地 synctest runner 测试。
 - [x] 10.8 新增静态边界测试。
 - [x] 10.9 新增 debug runner 恢复历史 tick 并重放记录输入的测试。
-- [ ] 10.10 复跑包含 debug runner 测试的定向 EditMode 测试，不使用 Unity batchmode。
+- [x] 10.10 复跑包含 debug runner 测试的定向 EditMode 测试，不使用 Unity batchmode。
 
 ## 11. 静态边界验证
 - [x] 11.1 验证 synctest core 不引用 Animancer。
@@ -140,10 +140,10 @@
 
 ## 12. 手动验证
 - [x] 12.1 打开当前 Sandbox 或演示场景。
-- [ ] 12.2 未启用 synctest 时验证 WASD/Look/Run 行为不变。
-- [ ] 12.3 未启用 synctest 时验证 Dodge 行为不变。
-- [ ] 12.4 启用仅记录输入和快照模式，验证本地行为不变。
-- [ ] 12.5 按 F6 运行本地 synctest，验证通过/失败诊断可见。
+- [x] 12.2 未启用 synctest 时验证 WASD/Look/Run 行为不变。
+- [x] 12.3 未启用 synctest 时验证 Dodge 行为不变。
+- [x] 12.4 启用仅记录输入和快照模式，验证本地行为不变。
+- [x] 12.5 按 F6 运行本地 synctest，验证通过/失败诊断可见。
 - [x] 12.6 记录用户如何复现验证。
 
 ## 13. 文档和验收

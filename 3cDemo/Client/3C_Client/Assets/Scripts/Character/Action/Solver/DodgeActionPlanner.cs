@@ -12,10 +12,40 @@ namespace ThirdPersonAction
             in MovementInputIntent movementIntent,
             Vector3 currentWorldMoveDirection,
             Vector3 facingForward,
-            in DodgeActionConfig config,
+            in DodgeActionTuning tuning,
             out DodgeActionRequest request)
         {
             if (inputBuffer == null || !inputBuffer.TryPeek(InputRequestKind.Dodge, currentStep, out BufferedInputRequest inputRequest))
+            {
+                request = default;
+                return false;
+            }
+
+            CharacterActionRequest actionRequest = CharacterActionRequest.FromBufferedInput(
+                CharacterFrameRequestProviderId.Dodge,
+                ActionRequestType.Dodge,
+                in inputRequest,
+                inputRequest.OriginStep);
+            return TryResolveRequest(
+                in actionRequest,
+                in movementIntent,
+                currentWorldMoveDirection,
+                facingForward,
+                in tuning,
+                out request);
+        }
+
+        public static bool TryResolveRequest(
+            in CharacterActionRequest actionRequest,
+            in MovementInputIntent movementIntent,
+            Vector3 currentWorldMoveDirection,
+            Vector3 facingForward,
+            in DodgeActionTuning tuning,
+            out DodgeActionRequest request)
+        {
+            if (!actionRequest.HasRequest ||
+                actionRequest.RequestType != ActionRequestType.Dodge ||
+                actionRequest.SourceInputKind != InputRequestKind.Dodge)
             {
                 request = default;
                 return false;
@@ -30,10 +60,10 @@ namespace ThirdPersonAction
             request = new DodgeActionRequest(
                 variant,
                 worldDirection,
-                inputRequest.OriginStep,
-                inputRequest.ExpireStep,
-                config.Priority,
-                inputRequest.OriginStep,
+                actionRequest.OriginStep,
+                actionRequest.ExpireStep,
+                tuning.Priority,
+                actionRequest.SourceOrder,
                 ActionStateIds.Dodge);
             return true;
         }

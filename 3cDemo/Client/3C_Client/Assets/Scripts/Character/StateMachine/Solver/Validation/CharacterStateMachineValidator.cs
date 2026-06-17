@@ -69,6 +69,8 @@ namespace ThirdPersonCharacterStateMachine
             StateTimelinePolicyValidationResult timelineValidation = StateTimelinePolicyValidator.Validate(definition.TimelinePolicies);
             for (int i = 0; i < timelineValidation.Errors.Count; i++)
                 result.AddError(timelineValidation.Errors[i]);
+            for (int i = 0; i < timelineValidation.Warnings.Count; i++)
+                result.AddWarning(timelineValidation.Warnings[i]);
 
             if (ids.Contains(CharacterStateIds.TurnBack) &&
                 !definition.TryGetTimelinePolicy(CharacterStateIds.TurnBack, out _))
@@ -218,7 +220,9 @@ namespace ThirdPersonCharacterStateMachine
 
         static bool IsWildcardSource(string source)
         {
-            return source == "*" || source.EndsWith("/*", System.StringComparison.Ordinal);
+            return source == "*" ||
+                   source.EndsWith("/*", System.StringComparison.Ordinal) ||
+                   source.EndsWith(".*", System.StringComparison.Ordinal);
         }
     }
 
@@ -270,6 +274,12 @@ namespace ThirdPersonCharacterStateMachine
 
                 if (!window.FactId.IsValid)
                     result.AddError($"Timeline policy {index} window '{window.WindowId}' fact id is missing.");
+
+                if (!System.Enum.IsDefined(typeof(StateTimelineWindowKind), window.Kind))
+                    result.AddError($"Timeline policy {index} window '{window.WindowId}' kind is invalid.");
+
+                if (!System.Enum.IsDefined(typeof(StateTimelineTimeDomain), window.TimeDomain))
+                    result.AddError($"Timeline policy {index} window '{window.WindowId}' time domain is invalid.");
 
                 if (window.Start < 0f)
                     result.AddError($"Timeline policy {index} window '{window.WindowId}' start is invalid.");

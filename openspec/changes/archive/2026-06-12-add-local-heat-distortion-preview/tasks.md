@@ -75,19 +75,19 @@
 - [x] 8.18 测试 shader 引用相机深度贴图并执行深度比较。
 
 ## 9. 手动验证
-- [ ] 9.1 打开 `Assets/Scenes/Sandbox.unity`。
-- [ ] 9.2 启用 `LocalHeatDistortionPreviewArea`。
-- [ ] 9.3 在 Volume Profile 中启用 `Local Heat Distortion`，将强度从 0 提高到 0.2。
-- [ ] 9.4 逐个切换热浪折射、螺旋风压、脉冲冲击、纵向上升气流，确认 Game View 画面有不同区域扭曲。
-- [ ] 9.5 分别开启对应 ParticleSystem，确认可见气流和后处理折射属于同一片区域。
-- [ ] 9.6 移动、缩放、旋转预览区域，确认扭曲区域随区域源变化。
-- [ ] 9.7 关闭粒子可见层，确认后处理折射仍可独立观察。
-- [ ] 9.8 将强度调回 0，确认画面恢复无扭曲。
-- [ ] 9.9 在区域源和相机之间放置墙体或不透明立方体，确认前景物体不被后方扭曲覆盖。
-- [ ] 9.10 将区域源移动到无遮挡位置，确认扭曲重新可见。
-- [ ] 9.11 记录用户选择的候选模式，作为后续动作事件接入变更输入。
+- [x] 9.1 打开 `Assets/Scenes/Sandbox.unity`。
+- [x] 9.2 启用 `LocalHeatDistortionPreviewArea`。
+- [x] 9.3 在 Volume Profile 中启用 `Local Heat Distortion`，将强度从 0 提高到 0.2。
+- [x] 9.4 逐个切换热浪折射、螺旋风压、脉冲冲击、纵向上升气流，确认 Game View 画面有不同区域扭曲。
+- [x] 9.5 分别开启对应 ParticleSystem，确认可见气流和后处理折射属于同一片区域。
+- [x] 9.6 移动、缩放、旋转预览区域，确认扭曲区域随区域源变化。
+- [x] 9.7 关闭粒子可见层，确认后处理折射仍可独立观察。
+- [x] 9.8 将强度调回 0，确认画面恢复无扭曲。
+- [x] 9.9 在区域源和相机之间放置墙体或不透明立方体，确认前景物体不被后方扭曲覆盖。
+- [x] 9.10 将区域源移动到无遮挡位置，确认扭曲重新可见。
+- [x] 9.11 记录用户选择的候选模式，作为后续动作事件接入变更输入。
 
 ## 10. 校验
 - [x] 10.1 运行 `openspec validate add-local-heat-distortion-preview --strict --no-interactive`。
-- [ ] 10.2 使用 Unity Test Runner 运行 `ThirdPersonRendering.Tests.LocalHeatDistortionTests`。
+- [x] 10.2 使用 Unity Test Runner 运行 `ThirdPersonRendering.Tests.LocalHeatDistortionTests`。
 - [x] 10.3 不运行 Unity batchmode。

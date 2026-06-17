@@ -7,6 +7,7 @@ namespace ThirdPersonAction
     {
         public string fromStateId;
         public string targetStateId;
+        public ActionRequestType requestType;
         public int minPriority;
         public ActionInterruptTimingRule timingRule;
         public float windowStart;
@@ -26,10 +27,12 @@ namespace ThirdPersonAction
             bool force = false,
             string windowId = "",
             string requiredFactId = "",
-            string note = "")
+            string note = "",
+            ActionRequestType requestType = ActionRequestType.None)
         {
             this.fromStateId = fromStateId ?? string.Empty;
             this.targetStateId = targetStateId ?? string.Empty;
+            this.requestType = requestType;
             this.minPriority = minPriority;
             this.timingRule = timingRule;
             this.windowStart = windowStart;
@@ -42,6 +45,7 @@ namespace ThirdPersonAction
 
         public string FromStateId => fromStateId ?? string.Empty;
         public string TargetStateId => targetStateId ?? string.Empty;
+        public ActionRequestType RequestType => requestType;
         public int MinPriority => minPriority;
         public ActionInterruptTimingRule TimingRule => timingRule;
         public float WindowStart => windowStart;

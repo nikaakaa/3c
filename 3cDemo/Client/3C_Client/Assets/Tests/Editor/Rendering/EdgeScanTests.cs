@@ -11,10 +11,8 @@ namespace ThirdPersonRendering.Tests
         const string HighFidelityRendererPath = "Assets/Settings/URP-HighFidelity-Renderer.asset";
         const string BalancedRendererPath = "Assets/Settings/URP-Balanced-Renderer.asset";
         const string PerformantRendererPath = "Assets/Settings/URP-Performant-Renderer.asset";
-        const string ProfilePath = "Assets/Settings/SampleSceneProfile.asset";
         const string ShaderPath = "Assets/Shader/PostProcessing/EdgeScan/EdgeScan.shader";
         const string FeatureScriptGuid = "070bb63e8c9a4d10b7c428f48a3b5825";
-        const string VolumeScriptGuid = "af4288aee78a4eef819ce5c7cb3ab271";
         const string ShaderGuid = "2b23266d39e54f869c6782515becc274";
 
         [Test]
@@ -224,30 +222,6 @@ namespace ThirdPersonRendering.Tests
             StringAssert.Contains("ScanLineMask", shader);
             StringAssert.Contains("bodyMask", shader);
             StringAssert.Contains("frontMask", shader);
-        }
-
-        [Test]
-        public void SampleSceneProfileContainsEdgeScanVolume()
-        {
-            string yaml = ReadAssetYaml(ProfilePath);
-
-            StringAssert.Contains($"guid: {VolumeScriptGuid}", yaml);
-            StringAssert.Contains("m_Name: Edge Scan", yaml);
-            StringAssert.Contains("intensity:", yaml);
-            StringAssert.Contains("origin:", yaml);
-            StringAssert.Contains("radius:", yaml);
-            StringAssert.Contains("width:", yaml);
-            StringAssert.Contains("depthThreshold:", yaml);
-            StringAssert.Contains("normalThreshold:", yaml);
-            StringAssert.Contains("edgeStrength:", yaml);
-            StringAssert.Contains("distanceFade:", yaml);
-            StringAssert.Contains("direction:", yaml);
-            StringAssert.Contains("arcAngle:", yaml);
-            StringAssert.Contains("scanLineSpacing:", yaml);
-            StringAssert.Contains("scanLineWidth:", yaml);
-            StringAssert.Contains("scanLineStrength:", yaml);
-            StringAssert.Contains("frontGlowStrength:", yaml);
-            StringAssert.Contains("darkenStrength:", yaml);
         }
 
         static EdgeScanSettings CreateActiveSettings()

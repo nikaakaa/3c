@@ -1,15 +1,15 @@
 ## 1. Scope Review
 - [ ] 1.1 读取本 proposal、design 和 spec deltas，确认只实现动画播放进度回滚权威。
-- [ ] 1.2 对照 `add-entry-local-animation-motion-space`，确认本变更不修改 EntryLocal 坐标空间定义。
-- [ ] 1.3 对照 `harden-local-prediction-rollback-tooling`，确认 F6/F8 工具只作为验收入口，不新增第二套 replay。
+- [ ] 1.2 对照当前 `fullbody-rollback-replay` 和 `animation-motion-source-pipeline` 规格，确认本变更不修改 EntryLocal 坐标空间定义。
+- [ ] 1.3 对照当前 `local-rollback-synctest-foundation` 规格，确认 F6/F8 工具只作为验收入口，不新增第二套 replay。
 - [ ] 1.4 记录当前 F6 mismatch 样本中的 first mismatch 字段，作为回归前置证据。
 
 ## 2. Runtime State Audit
 - [ ] 2.1 审计 `CharacterSimulationSnapshot` 中 animation progress 字段。
 - [ ] 2.2 审计 `LocomotionRuntimeRollbackState` 中 previous motion playback progress 字段。
 - [ ] 2.3 审计 `CharacterRuntimeBlackboardRestoreState` 中 locomotion animation facts。
-- [ ] 2.4 审计 `PlayerLocomotionController.CaptureSimulationSnapshot` 的 capture 顺序。
-- [ ] 2.5 审计 `PlayerLocomotionController.RestoreSimulationSnapshot` 的 restore 顺序。
+- [ ] 2.4 审计 `CharacterFrameRuntimeController.CaptureSimulationSnapshot` 的 capture 顺序。
+- [ ] 2.5 审计 `CharacterFrameRuntimeController.RestoreSimulationSnapshot` 的 restore 顺序。
 - [ ] 2.6 审计 `BasicLocomotionAnimancerPresenter.RestorePlaybackProgress` 的 current state 重建行为。
 - [ ] 2.7 审计 `BasicLocomotionAnimancerPresenter.Present` 的 same alias early-return 条件。
 - [ ] 2.8 审计 `RestartOneShotStateIfNeeded` 的归零触发条件。
@@ -50,14 +50,7 @@
 - [ ] 6.4 运行新增 TurnBack playback rollback 测试。
 - [ ] 6.5 运行 OpenSpec 校验：`openspec validate formalize-animation-playback-rollback-authority --strict --no-interactive`。
 
-## 7. Manual Verification
-- [ ] 7.1 Play Mode 触发 TurnBack，确认首次进入仍从动画开头播放。
-- [ ] 7.2 TurnBack 中段按 F6，确认 `[rollback-synctest] PASS` 或 first mismatch 不再是 `animationNormalizedTime=0`。
-- [ ] 7.3 TurnBack 中段连续触发 F6 多次，确认 replay 后画面不会逐次漂移。
-- [ ] 7.4 触发 F8 soak，确认 TurnBack 窗口不因 playback/window 分叉失败。
-- [ ] 7.5 若失败，复制 `Simulation.synctest-first-mismatch`、`Simulation.synctest-fail-detail` 和 `TURNBACK_RM_CHAIN` 日志。
-
-## 8. Completion
-- [ ] 8.1 确认所有实现任务完成且没有新增未审批 fallback 配置。
-- [ ] 8.2 确认没有删除现有诊断日志。
-- [ ] 8.3 确认 tasks.md 只在全部完成后统一勾选。
+## 7. Completion
+- [ ] 7.1 确认所有实现任务完成且没有新增未审批 fallback 配置。
+- [ ] 7.2 确认没有删除现有诊断日志。
+- [ ] 7.3 确认 tasks.md 只在全部完成后统一勾选。

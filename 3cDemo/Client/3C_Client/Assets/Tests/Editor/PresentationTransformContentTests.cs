@@ -33,11 +33,11 @@ namespace ThirdPersonPresentation.Tests
             Assert.NotNull(character.GetComponent<CharacterController>());
             Assert.Null(character.GetComponent<Animator>());
             Assert.Null(character.GetComponent<AnimancerComponent>());
-            Assert.Null(character.GetComponent<BasicLocomotionAnimancerPresenter>());
+            Assert.Null(character.GetComponent<CharacterAnimancerPresenter>());
 
             Assert.NotNull(visualRoot.GetComponent<Animator>());
             Assert.NotNull(visualRoot.GetComponent<AnimancerComponent>());
-            Assert.NotNull(visualRoot.GetComponent<BasicLocomotionAnimancerPresenter>());
+            Assert.NotNull(visualRoot.GetComponent<CharacterAnimancerPresenter>());
         }
 
         [Test]

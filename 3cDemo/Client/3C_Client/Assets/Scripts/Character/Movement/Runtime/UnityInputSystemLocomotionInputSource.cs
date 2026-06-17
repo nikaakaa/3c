@@ -1,10 +1,11 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using ThirdPersonCharacterConfig;
 
 namespace ThirdPersonMovement
 {
     [DisallowMultipleComponent]
-    public sealed class UnityInputSystemLocomotionInputSource : MonoBehaviour, IBasicLocomotionInputSource
+    public sealed class UnityInputSystemLocomotionInputSource : MonoBehaviour, IBasicLocomotionInputSource, IFormalLocomotionInputConfigReceiver
     {
         [SerializeField] InputActionAsset inputActions;
         [SerializeField] string actionMapName = "Player";
@@ -25,6 +26,46 @@ namespace ThirdPersonMovement
         public InputAction MoveAction => ResolveMoveAction();
         public InputAction LookAction => ResolveLookAction();
         public InputAction RunAction => ResolveRunAction();
+
+        public void ApplyFormalInputConfig(CharacterConfigSO config)
+        {
+            if (config == null)
+                return;
+
+            InputAction previousMoveAction = moveAction;
+            InputAction previousLookAction = lookAction;
+            InputAction previousRunAction = runAction;
+            InputActionAsset formalInputActions = config.InputActions;
+            string formalActionMapName = ResolveActionMapName(config.MoveAction, config.RunAction, config.LookAction);
+            string formalMoveActionName = ResolveActionName(config.MoveAction);
+            string formalRunActionName = ResolveActionName(config.RunAction);
+            string formalLookActionName = ResolveActionName(config.LookAction);
+            bool changed = inputActions != formalInputActions ||
+                           actionMapName != formalActionMapName ||
+                           moveActionName != formalMoveActionName ||
+                           runActionName != formalRunActionName ||
+                           lookActionName != formalLookActionName;
+
+            if (changed)
+            {
+                if (enableInputOnEnable && isActiveAndEnabled)
+                {
+                    SetActionEnabled(previousMoveAction, false);
+                    SetActionEnabled(previousLookAction, false);
+                    SetActionEnabled(previousRunAction, false);
+                }
+
+                inputActions = formalInputActions;
+                actionMapName = formalActionMapName;
+                moveActionName = formalMoveActionName;
+                runActionName = formalRunActionName;
+                lookActionName = formalLookActionName;
+                ClearCachedActions();
+            }
+
+            if (enableInputOnEnable && isActiveAndEnabled)
+                SetInputEnabled(true);
+        }
 
         void OnValidate()
         {
@@ -107,6 +148,23 @@ namespace ThirdPersonMovement
                 action.Enable();
             else
                 action.Disable();
+        }
+
+        static string ResolveActionName(InputActionReference reference)
+        {
+            return reference != null && reference.action != null ? reference.action.name : string.Empty;
+        }
+
+        static string ResolveActionMapName(params InputActionReference[] references)
+        {
+            for (int i = 0; i < references.Length; i++)
+            {
+                InputAction action = references[i] != null ? references[i].action : null;
+                if (action != null && action.actionMap != null)
+                    return action.actionMap.name;
+            }
+
+            return string.Empty;
         }
     }
 }

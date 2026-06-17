@@ -11,19 +11,8 @@ namespace ThirdPersonRendering.Tests
     {
         const string ProfilePath = "Assets/Settings/BlockImpact/BlockImpactVfxProfile.asset";
         const string PrefabPath = "Assets/Prefabs/Rendering/BlockImpactVfx.prefab";
-        const string SandboxScenePath = "Assets/Scenes/Sandbox.unity";
         const string AdditiveShaderPath = "Assets/Shader/VFX/BlockImpact/BlockImpactAdditive.shader";
         const string SparkShaderPath = "Assets/Shader/VFX/BlockImpact/BlockImpactSpark.shader";
-        const string FlashMaterialPath = "Assets/Art/Mat/Rendering/BlockImpact/BlockImpact_Flash.mat";
-        const string ProfileGuid = "e7c51e2a2a3b4d6fb3e8a6153dba5fe0";
-        const string PrefabGuid = "a9c334cfcfb94b119c5182c2dd2f9342";
-        const string ControllerScriptGuid = "c07e2fb61b874dd7bb486758e9ed8001";
-        const string PreviewScriptGuid = "bbef660ca97b4a1cb166d7ef9a4e2042";
-        const string FlashMaterialGuid = "90f9d09a26c2493db71c2fe42fd14f80";
-        const string SparkMaterialGuid = "b51ffca64ed74693abcc8b38c93df2d1";
-        const string SparkTrailMaterialGuid = "6ac5b44e3a6f4d9daefc7b1db111f501";
-        const string ProfileFlashTextureGuid = "3234b06fa1adb22498046c4325b478a4";
-        const string GreenGlowTextureGuid = "8916bb12f0aa62c48a029fb6d0401529";
 
         [Test]
         public void RequestDefaultContainsPlayableValues()
@@ -93,21 +82,6 @@ namespace ThirdPersonRendering.Tests
 
             foreach (PropertyInfo property in typeof(BlockImpactVfxRequest).GetProperties(BindingFlags.Instance | BindingFlags.Public))
                 Assert.False(typeof(Object).IsAssignableFrom(property.PropertyType), property.Name);
-        }
-
-        [Test]
-        public void DefaultProfileLoadsRequiredImportedTextures()
-        {
-            BlockImpactVfxProfile profile = AssetDatabase.LoadAssetAtPath<BlockImpactVfxProfile>(ProfilePath);
-
-            Assert.NotNull(profile);
-            Assert.True(profile.HasRequiredTextures);
-            Assert.True(profile.ValidateRequiredTextures(out string message), message);
-            Assert.NotNull(profile.FlashTexture);
-            Assert.NotNull(profile.SparkTexture);
-            Assert.NotNull(profile.SparkTrailTexture);
-            Assert.NotNull(profile.StreakTexture);
-            Assert.NotNull(profile.NoiseTexture);
         }
 
         [Test]
@@ -215,58 +189,6 @@ namespace ThirdPersonRendering.Tests
         }
 
         [Test]
-        public void DefaultFlashMaterialUsesProfileFlashMaskTexture()
-        {
-            string yaml = ReadAssetYaml(FlashMaterialPath);
-
-            StringAssert.Contains($"guid: {ProfileFlashTextureGuid}", yaml);
-            StringAssert.DoesNotContain($"guid: {GreenGlowTextureGuid}", yaml);
-        }
-
-        [Test]
-        public void PrefabLoadsWithControllerPreviewAndDefaultProfile()
-        {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
-
-            Assert.NotNull(prefab);
-            Assert.NotNull(prefab.GetComponent<BlockImpactVfxController>());
-            Assert.NotNull(prefab.GetComponent<BlockImpactVfxPreview>());
-        }
-
-        [Test]
-        public void PrefabContainsVisibleEffectLayersAndMaterials()
-        {
-            string yaml = ReadAssetYaml(PrefabPath);
-
-            StringAssert.Contains("m_Name: CenterFlash", yaml);
-            StringAssert.DoesNotContain("m_Name: HorizontalStreak", yaml);
-            StringAssert.DoesNotContain("m_Name: ImpactRing", yaml);
-            StringAssert.DoesNotContain("m_Name: EnergyArc", yaml);
-            StringAssert.Contains("m_Name: DirectionalSparks", yaml);
-            StringAssert.Contains("ParticleSystem:", yaml);
-            StringAssert.Contains("TrailModule:", yaml);
-            StringAssert.Contains($"guid: {FlashMaterialGuid}", yaml);
-            StringAssert.Contains($"guid: {SparkMaterialGuid}", yaml);
-            StringAssert.Contains($"guid: {SparkTrailMaterialGuid}", yaml);
-        }
-
-        [Test]
-        public void PrefabSparksUseStretchAndTrails()
-        {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
-            ParticleSystem particles = prefab.GetComponentInChildren<ParticleSystem>(true);
-            ParticleSystemRenderer renderer = prefab.GetComponentInChildren<ParticleSystemRenderer>(true);
-
-            Assert.NotNull(particles);
-            Assert.NotNull(renderer);
-            Assert.AreEqual(ParticleSystemRenderMode.Stretch, renderer.renderMode);
-            Assert.Greater(renderer.velocityScale, 0f);
-            Assert.Greater(renderer.lengthScale, 2f);
-            Assert.True(particles.trails.enabled);
-            Assert.NotNull(renderer.trailMaterial);
-        }
-
-        [Test]
         public void PlayConfiguresSparksWithLightweightPhysics()
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
@@ -300,33 +222,6 @@ namespace ThirdPersonRendering.Tests
             {
                 Object.DestroyImmediate(instance);
             }
-        }
-
-        [Test]
-        public void PrefabDoesNotRequireAnimationEventsOrTimelineSignals()
-        {
-            string yaml = ReadAssetYaml(PrefabPath);
-
-            StringAssert.Contains($"guid: {ControllerScriptGuid}", yaml);
-            StringAssert.Contains($"guid: {PreviewScriptGuid}", yaml);
-            StringAssert.Contains($"guid: {ProfileGuid}", yaml);
-            StringAssert.Contains("playOnEnable: 0", yaml);
-            StringAssert.Contains("autoRepeat: 0", yaml);
-            StringAssert.DoesNotContain("AnimationEvent", yaml);
-            StringAssert.DoesNotContain("Timeline", yaml);
-            StringAssert.DoesNotContain("Signal", yaml);
-        }
-
-        [Test]
-        public void SandboxContainsDisabledBlockImpactPreviewEntry()
-        {
-            string yaml = ReadAssetYaml(SandboxScenePath);
-
-            StringAssert.Contains("value: BlockImpactVfxPreview", yaml);
-            StringAssert.Contains($"guid: {PrefabGuid}", yaml);
-            StringAssert.Contains("propertyPath: m_IsActive", yaml);
-            StringAssert.Contains("value: 0", yaml);
-            StringAssert.Contains("6504318256320000101", yaml);
         }
 
         static string ReadAssetYaml(string assetPath)

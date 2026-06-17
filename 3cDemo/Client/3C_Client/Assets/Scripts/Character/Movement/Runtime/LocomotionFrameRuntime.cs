@@ -7,6 +7,7 @@ namespace ThirdPersonMovement
     {
         CharacterRuntimeBlackboardSnapshot RuntimeBlackboardSnapshot { get; }
         void WriteLocomotionFacts(in CharacterRuntimeLocomotionFacts facts);
+        void WriteLocomotionPreemptionFact(in LocomotionPreemptionFact fact);
     }
 
     internal sealed class LocomotionFrameRuntime
@@ -124,6 +125,12 @@ namespace ThirdPersonMovement
             }
 
             stateStore.ApplyFrameState(result.RuntimeState);
+            if (stateDecision.ConsumedLocomotionPreemption)
+            {
+                LocomotionPreemptionFact none = LocomotionPreemptionFact.None;
+                stateStore.ClearTurnBackPreemptionResidue();
+                host.WriteLocomotionPreemptionFact(in none);
+            }
             return true;
         }
 

@@ -50,6 +50,30 @@ namespace ThirdPersonAction.Tests
         }
 
         [Test]
+        public void PolicyRequestTypeFiltersMatchingRequests()
+        {
+            ActionInterruptPolicy policy = new ActionInterruptPolicy(
+                Attack01,
+                Dodge,
+                1,
+                requestType: ActionRequestType.Dodge);
+
+            ActionInterruptDecision mismatch = ActionInterruptArbiter.Arbitrate(
+                Context(Attack01),
+                new[] { Request(Dodge, 50, requestType: ActionRequestType.HitReact) },
+                new[] { policy });
+            ActionInterruptDecision matched = ActionInterruptArbiter.Arbitrate(
+                Context(Attack01),
+                new[] { Request(Dodge, 50, requestType: ActionRequestType.Dodge) },
+                new[] { policy });
+
+            Assert.False(mismatch.Accepted);
+            Assert.AreEqual(ActionInterruptRejectReason.NoPolicy, mismatch.RejectReason);
+            Assert.True(matched.Accepted);
+            Assert.AreEqual(Dodge, matched.TargetState);
+        }
+
+        [Test]
         public void ExpiredRequestIsRejected()
         {
             ActionInterruptRequest request = Request(Dodge, 10, sourceOrder: 0, expireTick: 3);
@@ -505,7 +529,7 @@ namespace ThirdPersonAction.Tests
         {
             string stateMachineRoot = Path.Combine(Application.dataPath, "Scripts/Character/StateMachine");
             string stateMachine = string.Join("\n", Directory.GetFiles(stateMachineRoot, "*.cs", SearchOption.AllDirectories).Select(File.ReadAllText));
-            string presenter = File.ReadAllText(Path.Combine(Application.dataPath, "Scripts/Character/Animation/Runtime/BasicLocomotionAnimancerPresenter.cs"));
+            string presenter = File.ReadAllText(Path.Combine(Application.dataPath, "Scripts/Character/Animation/Runtime/CharacterAnimancerPresenter.cs"));
 
             Assert.That(stateMachine, Does.Not.Contain("ActionInterruptArbiter"));
             Assert.That(presenter, Does.Not.Contain("ActionInterruptArbiter"));

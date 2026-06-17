@@ -6,7 +6,7 @@ namespace ThirdPersonCharacterStateMachine
     [CreateAssetMenu(fileName = "CharacterStateMachineDefinition", menuName = "3C/StateMachine/CharacterStateMachineDefinition")]
     public sealed class CharacterStateMachineDefinitionSO : ScriptableObject
     {
-        [SerializeField] string initialStateId = "FullBody/Locomotion/Idle";
+        [SerializeField] string initialStateId = "Locomotion.Idle";
         [SerializeField] CharacterStateNodeDefinition[] nodes = Array.Empty<CharacterStateNodeDefinition>();
         [SerializeField] CharacterStateTransitionDefinition[] transitions = Array.Empty<CharacterStateTransitionDefinition>();
         [SerializeField] StateTimelinePolicyDefinition[] timelinePolicies = Array.Empty<StateTimelinePolicyDefinition>();

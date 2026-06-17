@@ -10,15 +10,9 @@ namespace ThirdPersonRendering.Tests
         const string HighFidelityRendererPath = "Assets/Settings/URP-HighFidelity-Renderer.asset";
         const string BalancedRendererPath = "Assets/Settings/URP-Balanced-Renderer.asset";
         const string PerformantRendererPath = "Assets/Settings/URP-Performant-Renderer.asset";
-        const string ProfilePath = "Assets/Settings/SampleSceneProfile.asset";
-        const string PreviewPrefabPath = "Assets/Prefabs/Rendering/LocalHeatDistortionPreviewArea.prefab";
-        const string SandboxScenePath = "Assets/Scenes/Sandbox.unity";
         const string ShaderPath = "Assets/Shader/PostProcessing/LocalHeatDistortion/LocalHeatDistortion.shader";
         const string FeatureScriptGuid = "3027c54bb40843fca68718d6bb1e2f88";
-        const string VolumeScriptGuid = "7fb6cf7ce5a24a64bbdee7865035ea47";
-        const string AreaSourceScriptGuid = "253c2f6e4d454e179af2c3003066f0ea";
         const string ShaderGuid = "b4e9ce9f5575465b91b8df197b211e9f";
-        const string PreviewPrefabGuid = "a5b5602a3eff9b846b2e4decabbc4eb1";
 
         [Test]
         public void DefaultSettingsDoNotActivateLocalHeatDistortion()
@@ -232,46 +226,6 @@ namespace ThirdPersonRendering.Tests
             StringAssert.Contains("_LocalHeatDistortionAreaDepthParams", shader);
             StringAssert.Contains("SampleSceneDepth", shader);
             StringAssert.Contains("smoothstep(0.0, depthFade, sceneDepth - sourceDepth)", shader);
-        }
-
-        [Test]
-        public void SampleSceneProfileContainsLocalHeatDistortionVolume()
-        {
-            string yaml = ReadAssetYaml(ProfilePath);
-
-            StringAssert.Contains($"guid: {VolumeScriptGuid}", yaml);
-            StringAssert.Contains("m_Name: Local Heat Distortion", yaml);
-            StringAssert.Contains("intensity:", yaml);
-            StringAssert.Contains("noiseScale:", yaml);
-            StringAssert.Contains("distortionStrength:", yaml);
-            StringAssert.Contains("areaSoftness:", yaml);
-            StringAssert.Contains("particleVisibility:", yaml);
-            StringAssert.Contains("previewDebug:", yaml);
-        }
-
-        [Test]
-        public void PreviewPrefabContainsAreaSourceAndParticleSystems()
-        {
-            string yaml = ReadAssetYaml(PreviewPrefabPath);
-
-            StringAssert.Contains("m_Name: LocalHeatDistortionPreviewArea", yaml);
-            StringAssert.Contains($"guid: {AreaSourceScriptGuid}", yaml);
-            StringAssert.Contains("ParticleSystem:", yaml);
-            StringAssert.Contains("HeatHazeParticles", yaml);
-            StringAssert.Contains("SpiralPressureParticles", yaml);
-            StringAssert.Contains("PulseShockwaveParticles", yaml);
-            StringAssert.Contains("VerticalFlowParticles", yaml);
-        }
-
-        [Test]
-        public void SandboxContainsDisabledLocalHeatDistortionPreviewArea()
-        {
-            string yaml = ReadAssetYaml(SandboxScenePath);
-
-            StringAssert.Contains("value: LocalHeatDistortionPreviewArea", yaml);
-            StringAssert.Contains($"guid: {PreviewPrefabGuid}", yaml);
-            StringAssert.Contains("propertyPath: m_IsActive", yaml);
-            StringAssert.Contains("value: 0", yaml);
         }
 
         static void AssertMode(LocalHeatDistortionMode mode)

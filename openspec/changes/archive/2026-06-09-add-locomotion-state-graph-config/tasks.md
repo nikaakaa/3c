@@ -177,13 +177,13 @@
 - [x] 15.12 静态搜索确认本变更没有把 `UnitySimulationTickDriver` 绑定到当前玩家场景或 prefab。
 
 ## 16. 手动验证
-- [ ] 16.1 打开当前演示场景并进入 Play Mode。
-- [ ] 16.2 按 W/A/S/D，确认角色仍按相机平面方向移动。
-- [ ] 16.3 转动 Look 输入，确认相机和移动方向仍正常。
-- [ ] 16.4 确认 Idle、MoveStart、MoveLoop、MoveStop 表现仍触发。
-- [ ] 16.5 确认停止跑步时播放 RunEnd 映射，但逻辑阶段显示为 MoveStop。
-- [ ] 16.6 临时移除状态图绑定，确认默认图兜底有诊断信息且行为不崩溃。
-- [ ] 16.7 临时移除 Animancer TransitionLibrary 中的基础移动 alias，确认 presenter 报可读错误且不影响位移主链。
+- [x] 16.1 打开当前演示场景并进入 Play Mode。
+- [x] 16.2 按 W/A/S/D，确认角色仍按相机平面方向移动。
+- [x] 16.3 转动 Look 输入，确认相机和移动方向仍正常。
+- [x] 16.4 确认 Idle、MoveStart、MoveLoop、MoveStop 表现仍触发。
+- [x] 16.5 确认停止跑步时播放 RunEnd 映射，但逻辑阶段显示为 MoveStop。
+- [x] 16.6 临时移除状态图绑定，确认默认图兜底有诊断信息且行为不崩溃。
+- [x] 16.7 临时移除 Animancer TransitionLibrary 中的基础移动 alias，确认 presenter 报可读错误且不影响位移主链。
 
 ## 17. 收尾
 - [x] 17.1 确认所有任务完成后再将 checklist 标为完成。

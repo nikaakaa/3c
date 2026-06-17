@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
@@ -65,6 +65,20 @@ namespace ThirdPersonAction.Tests
 
             Assert.AreEqual(TimelineFactIds.CancelableToDodge, policies[0].RequiredFactId);
             Assert.True(policies[0].RequiresTimelineFact);
+        }
+
+        [Test]
+        public void DefinitionCompilesRequestType()
+        {
+            ActionInterruptPolicyDefinition definition = Definition(
+                "Action.Attack01",
+                "Action.Dodge",
+                30,
+                requestType: ActionRequestType.Dodge);
+
+            var policies = ActionInterruptPolicySetCompiler.Compile(new ActionInterruptPolicySet(new[] { definition }));
+
+            Assert.AreEqual(ActionRequestType.Dodge, policies[0].RequestType);
         }
 
         [Test]
@@ -377,22 +391,27 @@ namespace ThirdPersonAction.Tests
         }
 
         [Test]
-        public void CorinFullBodyStateRequestPoliciesAllowMoveStartAndMoveLoopThroughTimelineWindow()
+        public void CorinActionInterruptPoliciesAllowMoveStartAndMoveLoopThroughTimelineWindow()
         {
             ActionInterruptPolicySetSO asset = AssetDatabase.LoadAssetAtPath<ActionInterruptPolicySetSO>(
-                "Assets/Configs/3C/Action/FullBody/RequestPolicy/CorinFullBodyStateRequestPolicySet.asset");
+                "Assets/Configs/3C/Action/Corin/InterruptPolicy/CorinActionInterruptPolicySet.asset");
             Assert.NotNull(asset);
 
             ActionInterruptPolicy[] turnBackPolicies = asset.CompilePolicies()
                 .Where(policy => policy.TargetState.Value == CharacterStateIds.TurnBack.Value)
+                .ToArray();
+            ActionInterruptPolicy[] dodgePolicies = asset.CompilePolicies()
+                .Where(policy => policy.TargetState.Value == ActionStateIds.Dodge.Value)
                 .ToArray();
 
             CollectionAssert.AreEquivalent(
                 new[] { CharacterStateIds.MoveStart.Value, CharacterStateIds.MoveLoop.Value },
                 turnBackPolicies.Select(policy => policy.FromState.Value).ToArray());
             Assert.True(turnBackPolicies.All(policy => policy.MinPriority == 20));
+            Assert.True(turnBackPolicies.All(policy => policy.RequestType == ActionRequestType.Locomotion));
             Assert.True(turnBackPolicies.All(policy => policy.WindowId == "turnback-enter"));
             Assert.True(turnBackPolicies.All(policy => policy.RequiredFactId == TimelineFactIds.TurnBackEnterOpen));
+            Assert.True(dodgePolicies.All(policy => policy.RequestType == ActionRequestType.Dodge));
         }
 
         [Test]
@@ -449,11 +468,11 @@ namespace ThirdPersonAction.Tests
             string movementRoot = Path.Combine(Application.dataPath, "Scripts/Character/Movement");
             string stateMachineRoot = Path.Combine(Application.dataPath, "Scripts/Character/StateMachine");
             string stateMachine = string.Join("\n", Directory.GetFiles(stateMachineRoot, "*.cs", SearchOption.AllDirectories).Select(File.ReadAllText));
-            string controller = File.ReadAllText(Path.Combine(movementRoot, "Runtime/PlayerLocomotionController.cs"));
-            string presenter = File.ReadAllText(Path.Combine(Application.dataPath, "Scripts/Character/Animation/Runtime/BasicLocomotionAnimancerPresenter.cs"));
+            string locomotionRuntime = File.ReadAllText(Path.Combine(movementRoot, "Runtime/LocomotionRuntimeModule.cs"));
+            string presenter = File.ReadAllText(Path.Combine(Application.dataPath, "Scripts/Character/Animation/Runtime/CharacterAnimancerPresenter.cs"));
 
             Assert.That(stateMachine, Does.Not.Contain("ActionInterruptPolicySet"));
-            Assert.That(controller, Does.Not.Contain("ActionInterruptPolicySet"));
+            Assert.That(locomotionRuntime, Does.Not.Contain("ActionInterruptPolicySet"));
             Assert.That(presenter, Does.Not.Contain("ActionInterruptPolicySet"));
         }
 
@@ -509,9 +528,10 @@ namespace ThirdPersonAction.Tests
             float windowEnd = 0f,
             bool force = false,
             string windowId = "",
-            string requiredFactId = "")
+            string requiredFactId = "",
+            ActionRequestType requestType = ActionRequestType.None)
         {
-            return new ActionInterruptPolicyDefinition(from, target, minPriority, timingRule, windowStart, windowEnd, force, windowId, requiredFactId);
+            return new ActionInterruptPolicyDefinition(from, target, minPriority, timingRule, windowStart, windowEnd, force, windowId, requiredFactId, requestType: requestType);
         }
 
         static void SetAssetPolicies(ActionInterruptPolicySetSO asset, ActionInterruptPolicyDefinition[] policies)

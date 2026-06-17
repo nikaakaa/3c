@@ -18,6 +18,7 @@ namespace ThirdPersonAction
             StateFrame = context.StateFrame;
             ActionMotionResult = context.ActionMotionResult;
             FrameSubmission = context.FrameSubmission;
+            FramePlan = context.FramePlan;
             Output = context.Output;
             InputRequest = context.InputRequest;
             InputRequestConsumed = context.InputRequestConsumed;
@@ -41,6 +42,7 @@ namespace ThirdPersonAction
         public CharacterStateMachineFrame StateFrame { get; }
         public ActionMotionResolveResult ActionMotionResult { get; }
         public CharacterFrameSubmission FrameSubmission { get; }
+        public CharacterFramePlan FramePlan { get; }
         public CharacterFrameOutput Output { get; }
         public CharacterInputRequestFact InputRequest { get; }
         public bool InputRequestConsumed { get; }

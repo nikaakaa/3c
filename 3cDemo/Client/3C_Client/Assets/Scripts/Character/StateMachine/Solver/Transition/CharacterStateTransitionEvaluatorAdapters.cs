@@ -67,7 +67,8 @@ namespace ThirdPersonCharacterStateMachine
     {
         static readonly CharacterStateTransitionConditionKind[] supported =
         {
-            CharacterStateTransitionConditionKind.MoveTurnBackRequested
+            CharacterStateTransitionConditionKind.MoveTurnBackRequested,
+            CharacterStateTransitionConditionKind.LocomotionPreemptionPending
         };
 
         public string Name => "Locomotion";
@@ -75,24 +76,35 @@ namespace ThirdPersonCharacterStateMachine
 
         public CharacterStateTransitionConditionEvaluationResult Evaluate(in CharacterStateTransitionConditionEvaluationInput input)
         {
-            if (input.Condition.Kind != CharacterStateTransitionConditionKind.MoveTurnBackRequested)
-                return CharacterStateTransitionConditionEvaluationResult.From(in input, false, "unsupported-locomotion-condition");
-
             CharacterStateMachineContext context = input.Context;
-            LocomotionTurnBackIntent intent = context.LocomotionFacts.TurnBackIntent;
-            bool passed = context.LocomotionFacts.GaitCandidate == BasicMovementGait.Run &&
-                          intent.IsValidAt(context.CurrentStep) &&
-                          intent.HasWorldMoveDirection &&
-                          intent.HasFacingForward &&
-                          intent.Angle >= input.Condition.MinSeconds;
+            switch (input.Condition.Kind)
+            {
+                case CharacterStateTransitionConditionKind.MoveTurnBackRequested:
+                    LocomotionTurnBackIntent intent = context.LocomotionFacts.TurnBackIntent;
+                    bool turnBackPassed = context.LocomotionFacts.GaitCandidate == BasicMovementGait.Run &&
+                                          intent.IsValidAt(context.CurrentStep) &&
+                                          intent.HasWorldMoveDirection &&
+                                          intent.HasFacingForward &&
+                                          intent.Angle >= input.Condition.MinSeconds;
 
-            return CharacterStateTransitionConditionEvaluationResult.From(
-                in input,
-                passed,
-                passed ? "turnback-intent-accepted" : "turnback-intent-blocked",
-                $"from={input.SourceStatePath} to={input.TargetStatePath} priority={input.TransitionPriority} hasMove={context.HasMoveIntent} worldMove={context.WorldMoveDirection.ToString("F3")} facing={context.FacingForward.ToString("F3")} intentValid={intent.IsValidAt(context.CurrentStep)} intentOrigin={intent.OriginStep} intentExpire={intent.ExpireStep} angle={intent.Angle:F3} threshold={input.Condition.MinSeconds:F3} passed={passed} stateTime={input.StateTime:F3} projectedStateTime={input.ProjectedStateTime:F3} phaseCanExit={context.StateCanExit} locomotionPhase={context.RuntimeBlackboard.Locomotion.Phase} blackboardHasMove={context.RuntimeBlackboard.Locomotion.HasMoveIntent} blackboardWorld={context.RuntimeBlackboard.Locomotion.WorldDirection.ToString("F3")}",
-                true,
-                "locomotion-turnback-condition");
+                    return CharacterStateTransitionConditionEvaluationResult.From(
+                        in input,
+                        turnBackPassed,
+                        turnBackPassed ? "turnback-intent-accepted" : "turnback-intent-blocked",
+                        $"from={input.SourceStatePath} to={input.TargetStatePath} priority={input.TransitionPriority} hasMove={context.HasMoveIntent} worldMove={context.WorldMoveDirection.ToString("F3")} facing={context.FacingForward.ToString("F3")} intentValid={intent.IsValidAt(context.CurrentStep)} intentOrigin={intent.OriginStep} intentExpire={intent.ExpireStep} angle={intent.Angle:F3} threshold={input.Condition.MinSeconds:F3} passed={turnBackPassed} stateTime={input.StateTime:F3} projectedStateTime={input.ProjectedStateTime:F3} phaseCanExit={context.StateCanExit} locomotionPhase={context.RuntimeBlackboard.Locomotion.Phase} blackboardHasMove={context.RuntimeBlackboard.Locomotion.HasMoveIntent} blackboardWorld={context.RuntimeBlackboard.Locomotion.WorldDirection.ToString("F3")}",
+                        true,
+                        "locomotion-turnback-condition");
+                case CharacterStateTransitionConditionKind.LocomotionPreemptionPending:
+                    LocomotionPreemptionFact preemption = context.RuntimeBlackboard.LocomotionPreemption;
+                    bool preemptionPassed = preemption.MatchesSource(input.CurrentState);
+                    return CharacterStateTransitionConditionEvaluationResult.From(
+                        in input,
+                        preemptionPassed,
+                        preemptionPassed ? "locomotion-preemption-accepted" : "locomotion-preemption-missing",
+                        $"from={input.SourceStatePath} to={input.TargetStatePath} sourceState={preemption.SourceLocomotionState.Value} sourceAction={preemption.SourceActionId.Value} reason={preemption.Reason} sourceStep={preemption.SourceStep}");
+                default:
+                    return CharacterStateTransitionConditionEvaluationResult.From(in input, false, "unsupported-locomotion-condition");
+            }
         }
     }
 

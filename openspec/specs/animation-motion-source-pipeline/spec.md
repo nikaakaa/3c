@@ -34,7 +34,7 @@ TBD - created by archiving change add-animation-motion-source-pipeline. Update P
 - **AND** MUST NOT 要求 `OnAnimatorMove` 与 simulation tick 一一对应
 
 #### Scenario: TurnBack 默认使用 TickSampledMotion
-- **GIVEN** 当前状态为 `FullBody/Locomotion/TurnBack`
+- **GIVEN** 当前状态为 `Locomotion.TurnBack`
 - **AND** TurnBack 需要兼容后续预测、回滚和预测矫正
 - **WHEN** pipeline 解析 TurnBack 动画运动源策略
 - **THEN** TurnBack 默认 MUST 使用 `TickSampledMotion`

@@ -1,4 +1,4 @@
-﻿## 1. Scope 确认
+## 1. Scope 确认
 
 - [x] 1.1 确认本变更不新增 Walk/Run gait 选择。
 - [x] 1.2 确认本变更不新增攻击、闪避、受击等动作状态。
@@ -125,13 +125,13 @@
 
 ## 11. 手动端到端验证
 
-- [ ] 11.1 打开当前演示场景。
-- [ ] 11.2 确认角色 prefab 引用 Run 配置资产。
-- [ ] 11.3 确认 Animancer TransitionLibrary alias 能找到 `Idle / RunStart / RunLoop / RunEnd`。
-- [ ] 11.4 持续输入移动，确认播放 `RunStart` 后进入 `RunLoop`。
-- [ ] 11.5 松开输入，确认播放 `RunEnd`。
-- [ ] 11.6 不再输入，确认按 RunEnd exit duration 回到 `Idle`。
-- [ ] 11.7 在 RunEnd 中途重新输入，确认立即进入 `MoveStart` 并播放 `RunStart`。
-- [ ] 11.8 修改 Animancer `Corin_RunEnd.asset` 的 fade，确认表现变化来自 Animancer。
-- [ ] 11.9 修改 Run 配置的 RunEnd exit duration，确认逻辑回 Idle 时间变化。
+- [x] 11.1 打开当前演示场景。
+- [x] 11.2 确认角色 prefab 引用 Run 配置资产。
+- [x] 11.3 确认 Animancer TransitionLibrary alias 能找到 `Idle / RunStart / RunLoop / RunEnd`。
+- [x] 11.4 持续输入移动，确认播放 `RunStart` 后进入 `RunLoop`。
+- [x] 11.5 松开输入，确认播放 `RunEnd`。
+- [x] 11.6 不再输入，确认按 RunEnd exit duration 回到 `Idle`。
+- [x] 11.7 在 RunEnd 中途重新输入，确认立即进入 `MoveStart` 并播放 `RunStart`。
+- [x] 11.8 修改 Animancer `Corin_RunEnd.asset` 的 fade，确认表现变化来自 Animancer。
+- [x] 11.9 修改 Run 配置的 RunEnd exit duration，确认逻辑回 Idle 时间变化。
 

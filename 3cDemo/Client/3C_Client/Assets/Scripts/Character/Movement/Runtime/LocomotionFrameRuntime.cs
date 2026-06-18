@@ -105,7 +105,7 @@ namespace ThirdPersonMovement
             BasicLocomotionInputSnapshot frameInput = decisionFrame.Input;
             BasicMovementSettings settings = decisionFrame.Settings;
             CharacterStateMachineSnapshot runnerSnapshot = runner.Snapshot;
-            BasicMovementPhase runnerPhase = FullBodyStateView.FromSnapshot(in runnerSnapshot).LocomotionPhase;
+            BasicMovementPhase runnerPhase = CharacterStateDomainView.FromSnapshot(in runnerSnapshot).LocomotionPhase;
             LocomotionFrameBuilderInput builderInput = BuildFrameInput(
                 in frameInput,
                 currentStep,

@@ -120,7 +120,7 @@ namespace ThirdPersonAction
 
         public static CharacterActionRequestSubmissionResult Evaluate(in CharacterActionRequestSubmissionInput input)
         {
-            ICharacterFrameRequestSubmissionProvider[] providers = FullBodyActionRequestSubmissionProviderCollection.Default;
+            ICharacterFrameRequestSubmissionProvider[] providers = CommittedActionRequestSubmissionProviderCollection.Default;
             return Evaluate(in input, providers);
         }
 

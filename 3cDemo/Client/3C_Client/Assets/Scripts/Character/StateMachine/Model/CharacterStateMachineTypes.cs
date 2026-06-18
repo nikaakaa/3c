@@ -342,7 +342,7 @@ namespace ThirdPersonCharacterStateMachine
 
     public enum CharacterStateTag
     {
-        FullBody,
+        Character,
         Locomotion,
         Action,
         Dodge,
@@ -476,7 +476,6 @@ namespace ThirdPersonCharacterStateMachine
 
     public static class CharacterStateIds
     {
-        public static readonly CharacterStateId FullBody = new CharacterStateId("FullBody");
         public static readonly CharacterStateId Locomotion = new CharacterStateId("Locomotion");
         public static readonly CharacterStateId Idle = new CharacterStateId("Locomotion.Idle");
         public static readonly CharacterStateId MoveStart = new CharacterStateId("Locomotion.MoveStart");
@@ -893,7 +892,7 @@ namespace ThirdPersonCharacterStateMachine
             InputRequestKind requestKind = InputRequestKind.Dodge,
             float minSeconds = 0f,
             int minPriority = 0,
-            CharacterStateTag tag = CharacterStateTag.FullBody)
+            CharacterStateTag tag = CharacterStateTag.Character)
         {
             this.kind = kind;
             this.requestKind = requestKind;

@@ -6,7 +6,7 @@ namespace ThirdPersonAction
     {
         None = 0,
         Locomotion = 1,
-        FullBodyAction = 2,
+        CommittedAction = 2,
         UpperBody = 3
     }
 
@@ -56,10 +56,10 @@ namespace ThirdPersonAction
                 sourceStep);
         }
 
-        public static BodyOccupancyClaim FullBodyAction(int sourceStep)
+        public static BodyOccupancyClaim CommittedActionFullBody(int sourceStep)
         {
             return new BodyOccupancyClaim(
-                CharacterBodyDomain.FullBodyAction,
+                CharacterBodyDomain.CommittedAction,
                 BodyOccupancyKind.FullBody,
                 CharacterFrameOutputChannel.Motion | CharacterFrameOutputChannel.Animation,
                 sourceStep);
@@ -112,13 +112,13 @@ namespace ThirdPersonAction
                 sourceStep);
         }
 
-        public static CharacterFrameCandidateOutput FullBodyAction(
+        public static CharacterFrameCandidateOutput CommittedAction(
             bool hasMotionCandidate,
             bool hasAnimationCandidate,
             int sourceStep)
         {
             return new CharacterFrameCandidateOutput(
-                CharacterBodyDomain.FullBodyAction,
+                CharacterBodyDomain.CommittedAction,
                 hasMotionCandidate,
                 hasAnimationCandidate,
                 sourceStep);
@@ -142,26 +142,26 @@ namespace ThirdPersonAction
         public CharacterFrameArbitrationInput(
             BodyOccupancyClaim occupancyClaim,
             CharacterFrameCandidateOutput locomotionCandidate,
-            CharacterFrameCandidateOutput fullBodyActionCandidate,
+            CharacterFrameCandidateOutput committedActionCandidate,
             CharacterFrameCandidateOutput upperBodyCandidate,
             int sourceStep)
         {
             OccupancyClaim = occupancyClaim;
             LocomotionCandidate = locomotionCandidate;
-            FullBodyActionCandidate = fullBodyActionCandidate;
+            CommittedActionCandidate = committedActionCandidate;
             UpperBodyCandidate = upperBodyCandidate;
             SourceStep = sourceStep < 0 ? 0 : sourceStep;
         }
 
         public BodyOccupancyClaim OccupancyClaim { get; }
         public CharacterFrameCandidateOutput LocomotionCandidate { get; }
-        public CharacterFrameCandidateOutput FullBodyActionCandidate { get; }
+        public CharacterFrameCandidateOutput CommittedActionCandidate { get; }
         public CharacterFrameCandidateOutput UpperBodyCandidate { get; }
         public int SourceStep { get; }
         public bool HasInput =>
             OccupancyClaim.HasClaim ||
             LocomotionCandidate.HasAnyCandidate ||
-            FullBodyActionCandidate.HasAnyCandidate ||
+            CommittedActionCandidate.HasAnyCandidate ||
             UpperBodyCandidate.HasAnyCandidate;
 
         public static CharacterFrameArbitrationInput FromSubmission(in CharacterFrameSubmission submission)
@@ -174,7 +174,7 @@ namespace ThirdPersonAction
             return new CharacterFrameArbitrationInput(
                 BodyOccupancyClaim.None(sourceStep),
                 CharacterFrameCandidateOutput.None(CharacterBodyDomain.Locomotion, sourceStep),
-                CharacterFrameCandidateOutput.None(CharacterBodyDomain.FullBodyAction, sourceStep),
+                CharacterFrameCandidateOutput.None(CharacterBodyDomain.CommittedAction, sourceStep),
                 CharacterFrameCandidateOutput.None(CharacterBodyDomain.UpperBody, sourceStep),
                 sourceStep);
         }
@@ -183,16 +183,16 @@ namespace ThirdPersonAction
     public readonly struct BodyOccupancyDecision
     {
         public BodyOccupancyDecision(
-            CharacterBodyDomain baseLayerOwner,
-            CharacterBodyDomain upperBodyOwner,
+            CharacterBodyDomain baseSlotOwner,
+            CharacterBodyDomain upperBodySlotOwner,
             bool fullBodyClaimAccepted,
             bool suppressLocomotionMotion,
             bool suppressLocomotionAnimation,
             bool allowUpperBody,
             int sourceStep)
         {
-            BaseLayerOwner = baseLayerOwner;
-            UpperBodyOwner = upperBodyOwner;
+            BaseSlotOwner = baseSlotOwner;
+            UpperBodySlotOwner = upperBodySlotOwner;
             FullBodyClaimAccepted = fullBodyClaimAccepted;
             SuppressLocomotionMotion = suppressLocomotionMotion;
             SuppressLocomotionAnimation = suppressLocomotionAnimation;
@@ -200,16 +200,17 @@ namespace ThirdPersonAction
             SourceStep = sourceStep < 0 ? 0 : sourceStep;
         }
 
-        public CharacterBodyDomain BaseLayerOwner { get; }
-        public CharacterBodyDomain UpperBodyOwner { get; }
+        public CharacterBodyDomain BaseSlotOwner { get; }
+        public CharacterBodyDomain UpperBodySlotOwner { get; }
         public bool FullBodyClaimAccepted { get; }
         public bool SuppressLocomotionMotion { get; }
         public bool SuppressLocomotionAnimation { get; }
         public bool AllowUpperBody { get; }
+        public bool UpperBodySlotSuppressed => FullBodyClaimAccepted && !AllowUpperBody;
         public int SourceStep { get; }
         public bool HasDecision =>
-            BaseLayerOwner != CharacterBodyDomain.None ||
-            UpperBodyOwner != CharacterBodyDomain.None ||
+            BaseSlotOwner != CharacterBodyDomain.None ||
+            UpperBodySlotOwner != CharacterBodyDomain.None ||
             FullBodyClaimAccepted;
 
         public static BodyOccupancyDecision None(int sourceStep = 0)

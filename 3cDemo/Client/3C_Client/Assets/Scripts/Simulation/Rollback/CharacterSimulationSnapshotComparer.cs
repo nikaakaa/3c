@@ -92,6 +92,12 @@ namespace ThirdPersonSimulation
             if (Mathf.Abs(expected.AnimationNormalizedTime - actual.AnimationNormalizedTime) > tolerance.AnimationTime)
                 AddScopedDifference("animationNormalizedTime", animationScope, differences, presentationDifferences);
             CompareMotionExecutorState(expected.MotionExecutorState, actual.MotionExecutorState, in tolerance, differences);
+            CompareLocomotionRuntimeState(
+                expected.LocomotionRuntimeState,
+                actual.LocomotionRuntimeState,
+                in tolerance,
+                differences,
+                presentationDifferences);
             CompareRuntimeBlackboard(in expected, in actual, in tolerance, animationScope, differences, presentationDifferences);
 
             return new CharacterSimulationSnapshotComparison(differences.ToArray(), presentationDifferences.ToArray());
@@ -99,8 +105,8 @@ namespace ThirdPersonSimulation
 
         static CharacterStateMachineSnapshot ResolveComparedState(in CharacterSimulationSnapshot snapshot)
         {
-            CharacterStateMachineSnapshot fullBody = snapshot.FullBodyRestoreState.Snapshot;
-            return fullBody.ActiveState.IsValid ? fullBody : snapshot.StateMachine;
+            CharacterStateMachineSnapshot committedAction = snapshot.CommittedActionRestoreState.Snapshot;
+            return committedAction.ActiveState.IsValid ? committedAction : snapshot.StateMachine;
         }
 
         static void CompareRuntimeBlackboard(
@@ -140,6 +146,65 @@ namespace ThirdPersonSimulation
                 if (Mathf.Abs(Mathf.DeltaAngle(expected.RootYaw, actual.RootYaw)) > tolerance.Yaw)
                     differences.Add("motionExecutor.rootYaw");
             }
+        }
+
+        static void CompareLocomotionRuntimeState(
+            LocomotionRuntimeRollbackState expected,
+            LocomotionRuntimeRollbackState actual,
+            in CharacterSimulationSnapshotTolerance tolerance,
+            List<string> differences,
+            List<string> presentationDifferences)
+        {
+            RollbackCompareScope playbackScope = ResolvePlaybackScope(
+                expected.PreviousMotionPlaybackProgress,
+                actual.PreviousMotionPlaybackProgress);
+            if (expected.HasPreviousMotionPlaybackProgress != actual.HasPreviousMotionPlaybackProgress)
+                AddScopedDifference("locomotionRuntime.hasPreviousMotionPlaybackProgress", playbackScope, differences, presentationDifferences);
+
+            if (!expected.HasPreviousMotionPlaybackProgress && !actual.HasPreviousMotionPlaybackProgress)
+                return;
+
+            ComparePlaybackProgress(
+                expected.PreviousMotionPlaybackProgress,
+                actual.PreviousMotionPlaybackProgress,
+                "locomotionRuntime.previousMotionPlayback",
+                playbackScope,
+                in tolerance,
+                differences,
+                presentationDifferences);
+        }
+
+        static void ComparePlaybackProgress(
+            AnimationPhasePlaybackProgress expected,
+            AnimationPhasePlaybackProgress actual,
+            string prefix,
+            RollbackCompareScope scope,
+            in CharacterSimulationSnapshotTolerance tolerance,
+            List<string> differences,
+            List<string> presentationDifferences)
+        {
+            if (expected.Phase != actual.Phase)
+                AddScopedDifference($"{prefix}Phase", scope, differences, presentationDifferences);
+            if (!string.Equals(expected.AliasKey, actual.AliasKey, System.StringComparison.Ordinal))
+                AddScopedDifference($"{prefix}Alias", scope, differences, presentationDifferences);
+            if (Mathf.Abs(expected.NormalizedTime - actual.NormalizedTime) > tolerance.AnimationTime)
+                AddScopedDifference($"{prefix}NormalizedTime", scope, differences, presentationDifferences);
+            if (expected.HasValidPlayback != actual.HasValidPlayback)
+                AddScopedDifference($"{prefix}HasValidPlayback", scope, differences, presentationDifferences);
+            if (expected.IsEnded != actual.IsEnded)
+                AddScopedDifference($"{prefix}IsEnded", scope, differences, presentationDifferences);
+        }
+
+        static RollbackCompareScope ResolvePlaybackScope(
+            AnimationPhasePlaybackProgress expected,
+            AnimationPhasePlaybackProgress actual)
+        {
+            PredictionRollbackAuthorityPolicy expectedPolicy = PredictionRollbackScopeResolver.ResolveLocomotionPlayback(expected.Phase, expected.AliasKey);
+            PredictionRollbackAuthorityPolicy actualPolicy = PredictionRollbackScopeResolver.ResolveLocomotionPlayback(actual.Phase, actual.AliasKey);
+            return PredictionRollbackScopeResolver.IsStrict(in expectedPolicy) ||
+                   PredictionRollbackScopeResolver.IsStrict(in actualPolicy)
+                ? RollbackCompareScope.StrictGameplay
+                : RollbackCompareScope.PresentationDrift;
         }
 
         static void CompareLocomotionFacts(

@@ -81,7 +81,7 @@ namespace ThirdPersonMovement
 
             BasicLocomotionInputSnapshot frameInput = decisionFrame.Input;
             CharacterStateMachineSnapshot snapshotBeforeTick = runner.Snapshot;
-            BasicMovementPhase phaseBeforeTick = FullBodyStateView.FromSnapshot(in snapshotBeforeTick).LocomotionPhase;
+            BasicMovementPhase phaseBeforeTick = CharacterStateDomainView.FromSnapshot(in snapshotBeforeTick).LocomotionPhase;
             CharacterRuntimeBlackboardSnapshot blackboardBeforeTick = input.BlackboardSnapshot;
             LocomotionDecisionFacts decisionFacts = decisionFrame.Facts;
             CharacterInputRequestFact inputRequest = input.InputRequest;

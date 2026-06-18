@@ -29,7 +29,40 @@ namespace ThirdPersonAction
                 definition.Force,
                 definition.WindowId,
                 definition.RequiredFactId,
-                definition.RequestType);
+                definition.RequestType,
+                definition.ResistanceRule);
+        }
+
+        public static IReadOnlyList<ActionInterruptPolicy> Compile(
+            ActionTransitionPolicyMatrixDefinition matrix,
+            ActionFactCompileContext factContext,
+            out ActionInterruptPolicyValidationResult validation)
+        {
+            validation = ActionTransitionPolicyMatrixValidator.Validate(matrix, factContext);
+            if (validation.HasErrors || matrix.Rows.Count == 0)
+                return Array.Empty<ActionInterruptPolicy>();
+
+            ActionInterruptPolicy[] result = new ActionInterruptPolicy[matrix.Rows.Count];
+            for (int i = 0; i < matrix.Rows.Count; i++)
+                result[i] = Compile(matrix.Rows[i]);
+
+            return result;
+        }
+
+        public static ActionInterruptPolicy Compile(ActionTransitionPolicyRowDefinition row)
+        {
+            return new ActionInterruptPolicy(
+                ToStateId(row.FromActionId),
+                ToStateId(row.ToActionId),
+                row.MinPriority,
+                ActionInterruptTimingRule.Always,
+                0f,
+                0f,
+                row.Force,
+                string.Empty,
+                row.RequiredFactId,
+                row.RequestType,
+                row.ResistanceRule);
         }
 
         static ActionStateId ToStateId(string value)

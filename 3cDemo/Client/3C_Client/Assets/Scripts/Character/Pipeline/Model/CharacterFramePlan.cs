@@ -23,8 +23,9 @@ namespace ThirdPersonAction
         public bool HasPlan => OccupancyDecision.HasDecision;
         public bool SuppressesLocomotionMotion => OccupancyDecision.SuppressLocomotionMotion;
         public bool SuppressesLocomotionAnimation => OccupancyDecision.SuppressLocomotionAnimation;
-        public CharacterBodyDomain BaseLayerOwner => OccupancyDecision.BaseLayerOwner;
-        public CharacterBodyDomain UpperBodyOwner => OccupancyDecision.UpperBodyOwner;
+        public CharacterBodyDomain BaseSlotOwner => OccupancyDecision.BaseSlotOwner;
+        public CharacterBodyDomain UpperBodySlotOwner => OccupancyDecision.UpperBodySlotOwner;
+        public bool UpperBodySlotSuppressed => OccupancyDecision.UpperBodySlotSuppressed;
 
         public static CharacterFramePlan None(int sourceStep = 0)
         {

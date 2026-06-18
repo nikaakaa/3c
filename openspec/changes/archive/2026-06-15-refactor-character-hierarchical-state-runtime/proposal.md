@@ -36,4 +36,4 @@
 - Related active changes:
   - `refactor-state-machine-runtime-authority` 已约束唯一 runner owner，本变更不重复该目标，只收窄 runner 内部职责。
   - `refactor-character-runtime-adapter-layers` 已约束 Runtime/Model/Solver/Diagnostics 分层，本变更把状态机 runtime 纳入同一分层口径。
-  - `refactor-fullbody-frame-pipeline` 和 `refactor-locomotion-frame-pipeline-mainline` 已定义 pipeline 顺序，本变更不得改变正式推进顺序。
+  - `refactor-character-frame-pipeline` 和 `refactor-locomotion-frame-pipeline-mainline` 已定义 pipeline 顺序，本变更不得改变正式推进顺序。

@@ -12,7 +12,7 @@
 - **AND** 该上下文 MUST 不包含 Animancer 运行时类型
 
 #### Scenario: 上下文承载 Walk/Run 档位
-- **WHEN** 普通移动选择 Walk 或 Shift FullBody 动作 `Directional` 完成后的 Run latch 选择 Run
+- **WHEN** 普通移动选择 Walk 或 `Action.Dodge` Directional 完成后的 Run latch 选择 Run
 - **THEN** 移动动画上下文 MUST 记录当前基础移动档位
 - **AND** Walk/Run MUST NOT 替代 `BasicMovementPhase`
 - **AND** Run 档位 MUST NOT 依赖 Shift 持续按住
@@ -47,7 +47,7 @@
 - **AND** 当角色从 Run 移动进入 `MoveStop` 时 MUST 使用 `MoveStop + Run` 解析 RunEnd alias 和退出策略
 
 ### Requirement: Animancer 基础移动外观层
-系统 MUST 通过统一 FullBody Animancer 表现入口消费移动动画上下文，并根据 `phase + gait` 解析和播放 Walk/Run 基础移动动画。该表现入口 MUST 只负责动画播放和播放进度暴露，不负责状态机切换或位移执行。
+系统 MUST 通过正式 animation presenter / Presentation Layer 消费移动动画上下文，并根据 `phase + gait` 解析和播放 Walk/Run 基础移动动画。该表现入口 MUST 只负责动画播放和播放进度暴露，不负责状态机切换或位移执行。
 
 #### Scenario: 阶段和档位驱动动画播放
 - **WHEN** 移动动画上下文阶段为 `MoveLoop` 且档位为 Walk
@@ -108,11 +108,11 @@
 - **AND** 创建或更新 OpenSpec proposal 说明运动权威边界变化
 
 ### Requirement: 角色基础移动动画表归属
-系统 MUST 将当前角色的 Walk/Run 基础移动动画表归属到角色 prefab 上的统一 FullBody Animancer 表现入口或其绑定配置，而不是要求每个场景实例重复维护基础移动动画配置。
+系统 MUST 将当前角色的 Walk/Run 基础移动动画表归属到角色正式 animation presenter 绑定配置，而不是要求每个场景实例重复维护基础移动动画配置。
 
 #### Scenario: 角色 prefab 持有 Walk/Run 动画表
 - **WHEN** 设计者配置当前演示角色的基础移动动画
-- **THEN** 角色 prefab 上的统一 Animancer 表现入口 MUST 引用对应的 Walk/Run 基础移动动画配置
+- **THEN** 角色 prefab 上的正式 animation presenter 绑定配置 MUST 引用对应的 Walk/Run 基础移动动画配置
 - **AND** 配置 MUST 提供 `Idle / WalkStart / WalkLoop / WalkEnd / RunStart / RunLoop / RunEnd`
 
 #### Scenario: 场景不重复维护动画 Clip
@@ -120,27 +120,29 @@
 - **THEN** 场景实例 MUST NOT 需要分别维护一套 Walk/Run 基础移动动画引用才能播放移动动画
 - **AND** 场景仍 MAY 维护输入、相机和移动参数等场景装配引用
 
-### Requirement: WASD 自动发现动画外观层
-系统 MUST 允许当前基础移动运行时组装入口在未显式绑定动画表现入口时，从当前角色对象层级内发现现有统一 FullBody Animancer 表现入口并提交移动动画上下文。
+### Requirement: WASD 动画外观层显式绑定
+系统 MUST 要求当前基础移动运行时组装入口通过正式角色配置、prefab binding 或批准的等价装配点获得 animation presenter。缺失绑定时 MUST 报告明确配置错误或跳过动画提交，MUST NOT 通过层级扫描、Resources 或全局单例隐式发现表现入口。
 
-#### Scenario: 同对象发现 Presenter
-- **WHEN** `PlayerLocomotionController` 的动画表现入口未绑定
-- **AND** 同一 GameObject 上存在统一 FullBody Animancer 表现入口
-- **THEN** 基础移动入口 MUST 使用该表现入口接收 `MovementAnimationContext`
+#### Scenario: 同对象显式绑定 Presenter
+- **WHEN** 基础移动运行时组装入口的动画表现入口未绑定
+- **AND** 同一 GameObject 上存在 animation presenter
+- **THEN** 基础移动入口 MUST NOT 自动扫描并绑定该表现入口
+- **AND** 系统 MUST 要求通过正式配置或 prefab binding 显式连接
 
-#### Scenario: 子对象发现 Presenter
-- **WHEN** `PlayerLocomotionController` 的动画表现入口未绑定
+#### Scenario: 子对象不隐式发现 Presenter
+- **WHEN** 基础移动运行时组装入口的动画表现入口未绑定
 - **AND** 同一 GameObject 上不存在表现入口
-- **AND** 当前角色子层级内存在统一 FullBody Animancer 表现入口
-- **THEN** 基础移动入口 MUST 使用该子层级表现入口接收 `MovementAnimationContext`
+- **AND** 当前角色子层级内存在 animation presenter
+- **THEN** 基础移动入口 MUST NOT 通过子层级扫描连接该表现入口
+- **AND** 系统 MUST 报告缺失正式绑定或跳过动画提交
 
 #### Scenario: 禁止跨角色全局查找
-- **WHEN** `PlayerLocomotionController` 自动发现动画外观层
-- **THEN** 自动发现 MUST 限制在当前角色对象层级内
-- **AND** MUST NOT 使用全场景查找连接其他角色的 Presenter
+- **WHEN** 基础移动运行时组装入口缺失动画外观层绑定
+- **THEN** 系统 MUST NOT 使用全场景查找连接其他角色的 Presenter
+- **AND** MUST NOT 使用当前角色层级扫描作为 fallback
 
 #### Scenario: 不隐式创建配置路径
-- **WHEN** 当前角色对象层级内没有统一 FullBody Animancer 表现入口
+- **WHEN** 当前角色缺失正式 animation presenter 绑定
 - **THEN** 基础位移 MUST 仍可按现有逻辑运行
 - **AND** 基础移动入口 MUST NOT 自动创建 Presenter、AnimancerComponent 或动画配置资产
 - **AND** 基础移动入口 MUST NOT 通过 `Resources.Load` 或全局单例隐式加载动画表
@@ -218,7 +220,7 @@
 - **AND** MUST NOT 要求填写 Animancer speed
 - **AND** MUST NOT 要求填写 normalized start time
 
-#### Scenario: AfterDuration 兼容保留
+#### Scenario: AfterDuration 作为正式时间退出策略
 - **WHEN** `MoveStart` 或其它 phase config 继续使用 `AfterDuration`
 - **THEN** 系统 MUST 继续使用 phaseTime 和 exit duration 产出 `CanExit`
 - **AND** 不需要对应 phase 存在有效 Animancer 播放进度
@@ -355,7 +357,7 @@
 - **AND** input lock 行为 MUST 由 timeline facts 和 TurnBack motion policy 决定
 
 ### Requirement: 已审批动画运动源边界
-系统 MUST 允许经 OpenSpec 审批的基础移动或 FullBody locomotion 状态通过通用动画运动源管线贡献运动。第一版贡献 MUST 在 `TickSampledMotion` 模式下转换为纯数据 movement facts 并由统一 motion executor 应用。该能力不得改变普通 Walk/Run 动画只负责表现的默认边界。
+系统 MUST 允许经 OpenSpec 审批的基础移动或 Locomotion 逻辑状态通过通用动画运动源管线贡献运动。第一版贡献 MUST 在 `TickSampledMotion` 模式下转换为纯数据 movement facts 并由统一 motion executor 应用。该能力不得改变普通 Walk/Run 动画只负责表现的默认边界。
 
 #### Scenario: 普通基础移动仍只表现
 - **WHEN** 角色播放 Idle、MoveStart、MoveLoop 或 MoveStop 的普通 Walk/Run 动画
@@ -517,11 +519,12 @@ Animancer 基础移动外观层 MUST 在新进入 `MoveLoop + RunLoop` 时消费
 - **WHEN** 状态机评估 TurnBack 退出 transition
 - **THEN** `LocomotionAnimationCanExit` 或等价条件 MUST 为 false
 
-#### Scenario: 整段播放结束仍兼容
-- **GIVEN** TurnBack policy 未配置有效 turn complete normalized time
+#### Scenario: 自然结束必须是正式退出策略
+- **GIVEN** TurnBack policy 显式配置 `NaturalEndExit` 或批准等价正式退出策略
 - **WHEN** `Locomotion.Turn.Back` 播放到自然结束
 - **THEN** 系统 MAY 使用现有动画结束事实允许退出
-- **AND** MUST 输出诊断说明使用了 fallback 退出方式
+- **AND** MUST 输出诊断说明使用了自然结束退出策略
+- **AND** 缺失 turn complete marker 时 MUST NOT 静默回退到自然结束退出
 
 ### Requirement: TurnBack 编辑器预留边界
 系统 MUST 为 TurnBack animation motion policy 保留编辑器 authoring 边界。编辑器 MAY 在后续变更中从 animation clip 提取 root yaw、root translation、turn complete marker、entry timing、exit timing 和校验报告，但运行时 MUST 只依赖生成后的纯数据资产或配置。
@@ -539,8 +542,8 @@ Animancer 基础移动外观层 MUST 在新进入 `MoveLoop + RunLoop` 时消费
 ### Requirement: Corin Prefab Locomotion 动画绑定迁移
 系统 MUST 让 Corin prefab 的 Locomotion 动画绑定从正式角色配置根和正式 animation presenter 路径解析。Prefab 迁移 MUST NOT 通过旧 `runAnimationConfig` 字段形成第二动画配置权威。
 
-#### Scenario: Locomotion controller 从根配置解析动画配置
-- **WHEN** 自动校验 Corin prefab 上的 `PlayerLocomotionController`
+#### Scenario: Locomotion module 从根配置解析动画配置
+- **WHEN** 自动校验 Corin prefab 的正式角色 runtime 装配
 - **THEN** `characterConfig.LocomotionAnimation` MUST 是正式 Locomotion 动画配置来源
 - **AND** 旧 `runAnimationConfig` 字段 MUST NOT 作为正式 fallback
 - **AND** 缺失 Locomotion 动画配置 MUST 被报告为配置错误
@@ -551,7 +554,50 @@ Animancer 基础移动外观层 MUST 在新进入 `MoveLoop + RunLoop` 时消费
 - **AND** 状态机、motion executor 和 prefab 迁移逻辑 MUST NOT 直接调用 Animancer runtime 对象
 
 #### Scenario: Locomotion 运行时引用保持可解析
-- **WHEN** 自动校验 Corin prefab 上的 `PlayerLocomotionController`
+- **WHEN** 自动校验 Corin prefab 的 Locomotion Unity-facing adapters
 - **THEN** input source、motion executor、facing provider、camera reference 和 locomotion presenter 引用 MUST 保持可解析或明确为空且由正式 resolver 处理
 - **AND** 迁移 MUST NOT 新增跨角色全局查找来补齐这些引用
 
+### Requirement: 采样型播放恢复与首次进入分离
+当基础移动状态声明使用 `TickSampledMotion`、root motion profile 或等价 animation-driven sampled motion 时，基础移动动画外观层 MUST 区分“首次进入或真实新播放”与“从 rollback snapshot 恢复后继续播放”。`RestorePlaybackProgress` 或等价恢复入口 MUST 将外观层 seek 到给定 phase/alias/normalized time，并建立后续同 alias `Present` 可识别的恢复播放段；同一播放段的后续 `Present` MUST NOT 执行 one-shot restart 或将 normalized time 重置为 start normalized time。纯表现动画 MAY 不执行该恢复流程。
+
+#### Scenario: Restore 后同 alias 不归零
+- **GIVEN** `TurnBack` 声明使用 sampled motion
+- **AND** 外观层已通过 restore 恢复到 `TurnBack` alias 的 normalized time `0.35`
+- **WHEN** 下一次 `Present` 收到相同 phase、gait 和 alias
+- **THEN** 外观层 MUST 保持恢复后的播放段
+- **AND** MUST NOT 将 normalized time 重置为 `0`
+- **AND** MUST NOT 将该状态当作首次进入 TurnBack
+
+#### Scenario: 真实新进入仍归零
+- **GIVEN** 角色从非 TurnBack 状态真实进入 TurnBack
+- **WHEN** 外观层播放 TurnBack alias
+- **THEN** one-shot restart MAY 将 normalized time 设置为 policy start normalized time
+- **AND** 该行为 MUST 不依赖 rollback debug runner 或 F6 特判
+
+#### Scenario: 恢复入口不泄漏 Animancer 对象
+- **WHEN** 逻辑层请求恢复基础移动播放进度
+- **THEN** 请求 MUST 使用纯数据 playback progress
+- **AND** 逻辑层 MUST NOT 读取或保存 `AnimancerState`、`AnimationClip`、`TransitionAsset` 或 Animator 引用
+
+#### Scenario: 纯表现动画不强制恢复
+- **GIVEN** 某基础移动动画只负责视觉 blend 或过渡表现
+- **AND** 该动画播放进度未被 motion source 声明为 sampled motion 输入
+- **WHEN** rollback restore 恢复角色 simulation 状态
+- **THEN** 外观层 MAY 使用自身表现策略继续播放
+- **AND** 该播放进度 MUST NOT 覆盖 sampled motion playback window、motion facts 或 runtime blackboard 权威事实
+
+### Requirement: 基础移动外观层不覆盖 TickSampledMotion 权威
+当基础移动状态声明使用 `TickSampledMotion` 或等价 profile-driven motion 时，外观层 MUST 只表现 simulation 提供的 sampled motion playback window。外观层 MAY 暴露只读播放进度给事实采样器，但不得在 rollback restore/replay 后用自身播放起点覆盖 simulation 的 playback progress 或 sampling window。
+
+#### Scenario: Simulation 恢复进度后外观层跟随
+- **GIVEN** simulation restore state 指定 phase、alias 和 normalized time
+- **WHEN** 外观层恢复播放状态
+- **THEN** 外观层 MUST seek 到该 normalized time
+- **AND** 后续同 tick 的 animation facts MUST 与恢复进度一致
+
+#### Scenario: 外观层不成为运动 source
+- **GIVEN** 当前状态的位移或 yaw 来自 profile sampling
+- **WHEN** 外观层播放对应视觉动画
+- **THEN** 外观层 MUST NOT 通过 `OnAnimatorMove`、pending delta、Transform 写入或 motion executor 调用贡献 simulation movement facts
+- **AND** profile sampling window MUST 来自 simulation playback state

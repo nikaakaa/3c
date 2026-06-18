@@ -81,9 +81,9 @@ namespace ThirdPersonAction
                 stateMachine.Definition.TryGetNode(previousSnapshot.ActiveState, out CharacterStateNodeDefinition previousNode) &&
                 previousNode.IsActionCapabilityState;
             context.SetStateDecision(in stateDecision, in previousSnapshot, previousActionCapabilityState);
-            FullBodyDiagnostics.LogTimelineFactsTrace(context.CurrentTimelineFactsTrace);
-            FullBodyDiagnostics.LogTimelineFactsTrace(stateDecision.StateFrame.ProjectedTimelineFactsTrace);
-            FullBodyDiagnostics.LogTimelineFactsTrace(stateDecision.StateFrame.TargetTimelineFactsTrace);
+            CharacterFrameDiagnostics.LogTimelineFactsTrace(context.CurrentTimelineFactsTrace);
+            CharacterFrameDiagnostics.LogTimelineFactsTrace(stateDecision.StateFrame.ProjectedTimelineFactsTrace);
+            CharacterFrameDiagnostics.LogTimelineFactsTrace(stateDecision.StateFrame.TargetTimelineFactsTrace);
 
             if (!locomotion.TryBuildMotionFromStateDecision(
                     in stateDecision,

@@ -55,17 +55,19 @@ namespace ThirdPersonAction
         [SerializeField, Min(0)] int resistance;
         [SerializeField] DodgeActionVariantAuthoring directionalDodge;
         [SerializeField] DodgeActionVariantAuthoring backstepDodge;
-        [SerializeField] ActionBranchTimelineAuthoring actionBranchTimeline;
+        [SerializeField] CommittedActionBranchAuthoring committedActionBranch;
 
         public ActionStateId ActionState => new ActionStateId(actionStateId);
         public ActionRequestType RequestType => requestType;
         public InputRequestKind SourceInputKind => sourceInputKind;
-        public ActionBranchTimelineAuthoring ActionBranchTimeline => actionBranchTimeline;
+        public CommittedActionBranchAuthoring CommittedActionBranch => committedActionBranch;
 
-        public CharacterActionDefinition ToDefinition()
+        public CharacterActionDefinition ToDefinition(in ActionTimelineCompileContext compileContext)
         {
             ActionStateId actionState = new ActionStateId(actionStateId);
             CharacterStateId motionSourceState = new CharacterStateId(motionSourceStateId);
+            CommittedActionBranchDefinition branch =
+                committedActionBranch.ToCommittedActionBranchDefinition(actionState, 0, in compileContext);
             return new CharacterActionDefinition(
                 actionState,
                 requestType,
@@ -75,20 +77,23 @@ namespace ThirdPersonAction
                 resistance,
                 directionalDodge.ToDefinition(),
                 backstepDodge.ToDefinition(),
-                actionBranchTimeline.ToBranchDefinition(actionState, 0));
+                branch);
         }
 
-        public CharacterActionCatalogValidationResult Validate()
+        public CharacterActionCatalogValidationResult Validate(in ActionTimelineCompileContext compileContext)
         {
             CharacterActionCatalogValidationResult result = new CharacterActionCatalogValidationResult();
-            ValidateInto(result, name);
+            ValidateInto(result, name, in compileContext);
             return result;
         }
 
-        public void ValidateInto(CharacterActionCatalogValidationResult result, string owner)
+        public void ValidateInto(
+            CharacterActionCatalogValidationResult result,
+            string owner,
+            in ActionTimelineCompileContext compileContext)
         {
             string prefix = string.IsNullOrWhiteSpace(owner) ? "Action definition" : owner;
-            CharacterActionDefinition definition = ToDefinition();
+            CharacterActionDefinition definition = ToDefinition(in compileContext);
             if (!definition.ActionState.IsValid)
                 result.AddError($"{prefix} action id is missing.");
             if (definition.RequestBinding.RequestType == ActionRequestType.None)
@@ -106,7 +111,7 @@ namespace ThirdPersonAction
                 ValidateDodgeVariant(result, prefix, backstepDodge, DodgeActionVariant.Backstep);
             }
 
-            actionBranchTimeline.ValidateInto(result, prefix, definition.ActionState, 0);
+            committedActionBranch.ValidateInto(result, prefix, definition.ActionState, 0, in compileContext);
         }
 
         static void ValidateDodgeVariant(

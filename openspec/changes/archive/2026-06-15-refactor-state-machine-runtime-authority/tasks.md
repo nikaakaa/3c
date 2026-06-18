@@ -1,6 +1,6 @@
 ## 1. 现状确认
 - [x] 1.1 读取本变更 `proposal.md`、`design.md` 和全部 spec delta。
-- [x] 1.2 确认 `refactor-fullbody-frame-pipeline` 的 phase pipeline 已是当前 FullBody 主线。
+- [x] 1.2 确认 `refactor-character-frame-pipeline` 的 phase pipeline 已是当前 FullBody 主线。
 - [x] 1.3 确认 `refactor-locomotion-decision-pipeline` 的 Locomotion facts 可被 FullBody pipeline 直接消费。
 - [x] 1.4 搜索 `new CharacterStateMachineRunner`，列出所有运行时创建点。
 - [x] 1.5 搜索 `LocomotionTickAdapter` 和 `FullBodyActionTickAdapter`，列出当前场景/测试/代码引用。

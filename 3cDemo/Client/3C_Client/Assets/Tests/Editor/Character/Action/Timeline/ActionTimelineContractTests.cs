@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System;
 using System.Reflection;
 using ThirdPersonAction;
 using ThirdPersonCharacterStateMachine;
@@ -31,7 +32,7 @@ namespace Tests.Editor.Character.Action.Timeline
             ActionTimelineValidationResult result = ActionTimelineValidator.Validate(timeline);
 
             Assert.True(result.HasErrors);
-            CollectionAssert.Contains(result.Errors, "clip-range-invalid:0:0");
+            CollectionAssert.Contains(result.Errors, "clip-tick-range-invalid:0:0");
         }
 
         [Test]
@@ -46,7 +47,7 @@ namespace Tests.Editor.Character.Action.Timeline
         }
 
         [Test]
-        public void EvaluatorOutputsActiveTimelineDataForCurrentFrame()
+        public void EvaluatorOutputsActiveTimelineDataForCurrentTick()
         {
             ActionTimelineDefinition timeline = new ActionTimelineDefinition(
                 ActionStateIds.Dodge,
@@ -118,7 +119,7 @@ namespace Tests.Editor.Character.Action.Timeline
         }
 
         [Test]
-        public void ActionBranchTimelineNodeProducesCandidateWithoutWritingFacts()
+        public void CommittedActionBranchTimelineNodeProducesCandidateWithoutWritingFacts()
         {
             ActionTimelineDefinition timeline = new ActionTimelineDefinition(
                 ActionStateIds.Dodge,
@@ -146,14 +147,14 @@ namespace Tests.Editor.Character.Action.Timeline
                                 ActionTimelineClipPayload.Motion(CreateMotionSpec()))
                         })
                 });
-            ActionBranchDefinition branch = ActionBranchDefinition.Define(
+            CommittedActionBranchDefinition branch = CommittedActionBranchDefinition.Define(
                 "action",
                 ActionStateIds.Dodge,
-                ActionNodeDefinition.Timeline("dodge-timeline", timeline),
-                BodyOccupancyClaim.FullBodyAction(30));
+                CommittedActionNodeDefinition.Timeline("dodge-timeline", timeline),
+                BodyOccupancyClaim.CommittedActionFullBody(30));
 
-            ActionBranchOutcome outcome = ActionBranchEvaluator.Evaluate(
-                new ActionBranchEvaluationInput(branch, 1, 30));
+            CommittedActionBranchOutcome outcome = CommittedActionBranchEvaluator.Evaluate(
+                new CommittedActionBranchEvaluationInput(branch, 1, 30));
 
             Assert.True(outcome.HasOutcome);
             Assert.True(outcome.Candidate.HasMotionCandidate);
@@ -162,7 +163,7 @@ namespace Tests.Editor.Character.Action.Timeline
         }
 
         [Test]
-        public void EvaluatorUsesStartInclusiveEndExclusiveFrameBoundaries()
+        public void EvaluatorUsesStartInclusiveEndExclusiveTickBoundaries()
         {
             ActionTimelineDefinition timeline = new ActionTimelineDefinition(
                 ActionStateIds.Dodge,
@@ -224,36 +225,139 @@ namespace Tests.Editor.Character.Action.Timeline
         }
 
         [Test]
-        public void EvaluationInputResolvesAuthorityFrameFromStateTimeAndTickInterval()
+        public void QuantizerCompilesSecondsToAuthorityTicks()
         {
-            ActionTimelineDefinition timeline = new ActionTimelineDefinition(
-                ActionStateIds.Dodge,
-                12,
-                new[]
-                {
-                    new ActionTimelineTrackDefinition(
-                        ActionTimelineTrackKind.Animation,
-                        new[]
-                        {
-                            new ActionTimelineClipDefinition(
-                                ActionTimelineClipKind.AnimationKey,
-                                5,
-                                6,
-                                ActionTimelineClipPayload.Animation(ActionAnimationKeys.DodgeDirectional))
-                        })
-                });
+            ActionTimelineCompileContext context = new ActionTimelineCompileContext(1f / 60f);
 
-            ActionTimelineOutcome outcome = ActionTimelineEvaluator.Evaluate(
-                new ActionTimelineEvaluationInput(timeline, 0.1f, 0.02f, 19));
-
-            Assert.AreEqual(5, outcome.CurrentFrame);
-            Assert.True(outcome.HasAnimation);
-            Assert.AreEqual(0, ActionTimelineEvaluationInput.ResolveFrame(-1f, 0.02f));
-            Assert.AreEqual(0, ActionTimelineEvaluationInput.ResolveFrame(0.1f, 0f));
+            Assert.AreEqual(21, ActionTimelineQuantizer.QuantizeSecondsToTick(0.35f, in context));
+            Assert.AreEqual(3, ActionTimelineQuantizer.QuantizeSecondsToTick(0.05f, in context));
+            Assert.AreEqual(5, ActionTimelineQuantizer.QuantizeSecondsToTick(0.08f, in context));
+            Assert.AreEqual(12, ActionTimelineQuantizer.LegacyFrameToTick(12, in context));
+            Assert.AreEqual(0.2f, ActionTimelineQuantizer.LegacyFrameToSeconds(12, in context), 0.0001f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => ActionTimelineQuantizer.QuantizeSecondsToTick(-0.01f, in context));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new ActionTimelineCompileContext(0f));
         }
 
         [Test]
-        public void CueTriggersOnlyAtStartFrameAndEvaluatorKeepsNoStaticState()
+        public void AuthoringSecondsCompileToRuntimeTicks()
+        {
+            ActionTimelineCompileContext context = new ActionTimelineCompileContext(1f / 60f);
+            CommittedActionBranchTimelineAuthoring authoring = new CommittedActionBranchTimelineAuthoring(
+                true,
+                "action.dodge",
+                "timeline.dodge",
+                0.35f,
+                BodyOccupancyKind.FullBody,
+                CharacterFrameOutputChannel.Motion | CharacterFrameOutputChannel.Animation,
+                new[]
+                {
+                    new ActionTimelineTrackAuthoring(
+                        ActionTimelineTrackKind.Animation,
+                        new[]
+                        {
+                            new ActionTimelineClipAuthoring(
+                                ActionTimelineClipKind.AnimationKey,
+                                4f / 60f,
+                                13f / 60f,
+                                ActionTimelineClipPayloadAuthoring.Animation(ActionAnimationKeys.DodgeDirectional.Value))
+                        }),
+                    new ActionTimelineTrackAuthoring(
+                        ActionTimelineTrackKind.Cue,
+                        new[]
+                        {
+                            new ActionTimelineClipAuthoring(
+                                ActionTimelineClipKind.Cue,
+                                5f / 60f,
+                                5f / 60f,
+                                ActionTimelineClipPayloadAuthoring.Cue("cue.dodge.flash"))
+                        })
+                });
+
+            ActionTimelineDefinition timeline = authoring
+                .ToCommittedActionBranchDefinition(ActionStateIds.Dodge, 17, in context)
+                .RootNode
+                .TimelineNode
+                .Timeline;
+
+            Assert.AreEqual(21, timeline.DurationTicks);
+            Assert.AreEqual(4, timeline.Tracks[0].Clips[0].StartTick);
+            Assert.AreEqual(13, timeline.Tracks[0].Clips[0].EndTick);
+            Assert.AreEqual(5, timeline.Tracks[1].Clips[0].StartTick);
+            Assert.AreEqual(5, timeline.Tracks[1].Clips[0].EndTick);
+        }
+
+        [Test]
+        public void CompileDoesNotFallbackToLegacyFrameFieldsWhenSecondsAreMissing()
+        {
+            ActionTimelineCompileContext context = new ActionTimelineCompileContext(1f / 60f);
+            ActionTimelineClipAuthoring clip = new ActionTimelineClipAuthoring(
+                ActionTimelineClipKind.AnimationKey,
+                0f,
+                0f,
+                ActionTimelineClipPayloadAuthoring.Animation(ActionAnimationKeys.DodgeDirectional.Value));
+            SetStructField(ref clip, "legacyStartFrame", 4);
+            SetStructField(ref clip, "legacyEndFrame", 13);
+            CommittedActionBranchTimelineAuthoring authoring = new CommittedActionBranchTimelineAuthoring(
+                true,
+                "action.dodge",
+                "timeline.dodge",
+                0f,
+                BodyOccupancyKind.FullBody,
+                CharacterFrameOutputChannel.Animation,
+                new[]
+                {
+                    new ActionTimelineTrackAuthoring(
+                        ActionTimelineTrackKind.Animation,
+                        new[] { clip })
+                });
+            SetStructField(ref authoring, "legacyDurationFrames", 21);
+
+            ActionTimelineDefinition timeline = authoring
+                .ToCommittedActionBranchDefinition(ActionStateIds.Dodge, 17, in context)
+                .RootNode
+                .TimelineNode
+                .Timeline;
+
+            Assert.AreEqual(0, timeline.DurationTicks);
+            Assert.AreEqual(0, timeline.Tracks[0].Clips[0].StartTick);
+            Assert.AreEqual(0, timeline.Tracks[0].Clips[0].EndTick);
+            Assert.False(ActionTimelineEvaluator.Evaluate(new ActionTimelineEvaluationInput(timeline, 5, 17)).HasAnimation);
+        }
+
+        [Test]
+        public void AuthoringValidatorRejectsInvalidSecondsBeforeTickCompilation()
+        {
+            ActionTimelineCompileContext context = new ActionTimelineCompileContext(1f / 60f);
+            CommittedActionBranchTimelineAuthoring authoring = new CommittedActionBranchTimelineAuthoring(
+                true,
+                "action.dodge",
+                "timeline.dodge",
+                0.35f,
+                BodyOccupancyKind.FullBody,
+                CharacterFrameOutputChannel.Animation,
+                new[]
+                {
+                    new ActionTimelineTrackAuthoring(
+                        ActionTimelineTrackKind.Animation,
+                        new[]
+                        {
+                            new ActionTimelineClipAuthoring(
+                                ActionTimelineClipKind.AnimationKey,
+                                0.2f,
+                                0.1f,
+                                ActionTimelineClipPayloadAuthoring.Animation(ActionAnimationKeys.DodgeDirectional.Value))
+                        })
+                });
+            CharacterActionCatalogValidationResult result = new CharacterActionCatalogValidationResult();
+
+            authoring.ValidateInto(result, "Dodge", ActionStateIds.Dodge, 17, in context);
+
+            Assert.True(result.HasErrors);
+            CollectionAssert.Contains(result.Errors, "Dodge clip seconds range is invalid:0:0.");
+        }
+
+        [Test]
+        public void CueTriggersOnlyAtStartTickAndEvaluatorKeepsNoStaticState()
         {
             ActionTimelineDefinition timeline = new ActionTimelineDefinition(
                 ActionStateIds.Dodge,
@@ -301,6 +405,15 @@ namespace Tests.Editor.Character.Action.Timeline
                 Vector3.forward,
                 0f,
                 0);
+        }
+
+        static void SetStructField<T>(ref T value, string fieldName, object fieldValue) where T : struct
+        {
+            object boxed = value;
+            FieldInfo field = typeof(T).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(field, fieldName);
+            field.SetValue(boxed, fieldValue);
+            value = (T)boxed;
         }
     }
 }

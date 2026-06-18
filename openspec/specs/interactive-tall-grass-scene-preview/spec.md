@@ -1,7 +1,7 @@
 # interactive-tall-grass-scene-preview Specification
 
 ## Purpose
-TBD - created by archiving change add-interactive-tall-grass-preview. Update Purpose after archive.
+定义高草丛预览场景的 shader、配置抽象、角色交互、Sandbox 展示、性能预期和验证边界，确保该表现只作为场景预览能力接入当前项目。
 ## Requirements
 ### Requirement: 高草丛预览接入
 系统 MUST 提供一个可在 Sandbox 或独立预览场景中摆放的高草丛预览能力，并且 MUST NOT 新增角色控制器、独立相机路径或未审批的玩法逻辑入口。
@@ -72,4 +72,3 @@ TBD - created by archiving change add-interactive-tall-grass-preview. Update Pur
 - **WHEN** 用户打开预览场景或 Sandbox 中的高草丛预览对象
 - **THEN** 用户 MUST 能观察草丛高度、密度、风摆和颜色风格
 - **AND** 用户 MUST 能用角色或指定 Transform 穿过草丛观察交互压弯
-

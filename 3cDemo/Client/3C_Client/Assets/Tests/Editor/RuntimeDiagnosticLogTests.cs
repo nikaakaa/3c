@@ -34,13 +34,13 @@ namespace ThirdPersonDiagnostics.Tests
                     RuntimeDiagnosticLogLevel.Info,
                     "locomotion-phase-changed"));
                 RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                    RuntimeDiagnosticLogCategory.FullBody,
+                    RuntimeDiagnosticLogCategory.CharacterFrame,
                     RuntimeDiagnosticLogLevel.Info,
-                    "fullbody-path-changed"));
+                    "character-frame-path-changed"));
             }
 
             Assert.AreEqual(1, events.Count);
-            Assert.AreEqual(RuntimeDiagnosticLogCategory.FullBody, events[0].Category);
+            Assert.AreEqual(RuntimeDiagnosticLogCategory.CharacterFrame, events[0].Category);
         }
 
         [Test]
@@ -94,9 +94,9 @@ namespace ThirdPersonDiagnostics.Tests
         public void FormatIncludesStableContextFields()
         {
             RuntimeDiagnosticLogEvent diagnosticEvent = new RuntimeDiagnosticLogEvent(
-                RuntimeDiagnosticLogCategory.FullBody,
+                RuntimeDiagnosticLogCategory.CharacterFrame,
                 RuntimeDiagnosticLogLevel.Info,
-                "fullbody-path-changed",
+                "character-frame-path-changed",
                 "Action.Dodge",
                 "Locomotion.MoveStart",
                 3,
@@ -105,13 +105,13 @@ namespace ThirdPersonDiagnostics.Tests
 
             string formatted = RuntimeDiagnosticLog.Format(in diagnosticEvent);
 
-            StringAssert.Contains("[3C-DIAG][Info][FullBody]", formatted);
-            StringAssert.Contains("[FullBody.fullbody-path-changed]", formatted);
+            StringAssert.Contains("[3C-DIAG][Info][CharacterFrame]", formatted);
+            StringAssert.Contains("[CharacterFrame.character-frame-path-changed]", formatted);
             StringAssert.Contains("frame=9", formatted);
             StringAssert.Contains("step=3", formatted);
             StringAssert.Contains("from=Locomotion.MoveStart", formatted);
             StringAssert.Contains("path=Action.Dodge", formatted);
-            StringAssert.Contains("message=fullbody-path-changed", formatted);
+            StringAssert.Contains("message=character-frame-path-changed", formatted);
             StringAssert.Contains("owner=Action action=Action.Dodge", formatted);
         }
 
@@ -164,13 +164,13 @@ namespace ThirdPersonDiagnostics.Tests
             RuntimeDiagnosticLogInspectorController controller = CreateController();
             RuntimeDiagnosticLog.RegisterChannel("Action.Dodge.Accepted");
             RuntimeDiagnosticLog.RegisterChannel("Animation.Motion.Window");
-            RuntimeDiagnosticLog.RegisterChannel("FullBody.Path.Changed");
+            RuntimeDiagnosticLog.RegisterChannel("CharacterFrame.Path.Changed");
 
             controller.ApplyContainsFilter("Dodge");
 
             Assert.True(RuntimeDiagnosticLog.Filter.IsChannelEnabled("Action.Dodge.Accepted"));
             Assert.False(RuntimeDiagnosticLog.Filter.IsChannelEnabled("Animation.Motion.Window"));
-            Assert.False(RuntimeDiagnosticLog.Filter.IsChannelEnabled("FullBody.Path.Changed"));
+            Assert.False(RuntimeDiagnosticLog.Filter.IsChannelEnabled("CharacterFrame.Path.Changed"));
         }
 
         [Test]
@@ -179,13 +179,13 @@ namespace ThirdPersonDiagnostics.Tests
             RuntimeDiagnosticLogInspectorController controller = CreateController();
             RuntimeDiagnosticLog.RegisterChannel("Action.Dodge.Accepted");
             RuntimeDiagnosticLog.RegisterChannel("Animation.Motion.Window");
-            RuntimeDiagnosticLog.RegisterChannel("FullBody.Path.Changed");
+            RuntimeDiagnosticLog.RegisterChannel("CharacterFrame.Path.Changed");
 
             controller.ApplyPrefixFilter("Action.");
 
             Assert.True(RuntimeDiagnosticLog.Filter.IsChannelEnabled("Action.Dodge.Accepted"));
             Assert.False(RuntimeDiagnosticLog.Filter.IsChannelEnabled("Animation.Motion.Window"));
-            Assert.False(RuntimeDiagnosticLog.Filter.IsChannelEnabled("FullBody.Path.Changed"));
+            Assert.False(RuntimeDiagnosticLog.Filter.IsChannelEnabled("CharacterFrame.Path.Changed"));
         }
 
         [Test]
@@ -194,13 +194,13 @@ namespace ThirdPersonDiagnostics.Tests
             RuntimeDiagnosticLogInspectorController controller = CreateController();
             RuntimeDiagnosticLog.RegisterChannel("Action.Dodge.Accepted");
             RuntimeDiagnosticLog.RegisterChannel("Animation.Motion.Window");
-            RuntimeDiagnosticLog.RegisterChannel("FullBody.Path.Changed");
+            RuntimeDiagnosticLog.RegisterChannel("CharacterFrame.Path.Changed");
 
             controller.ApplySuffixFilter(".Changed");
 
             Assert.False(RuntimeDiagnosticLog.Filter.IsChannelEnabled("Action.Dodge.Accepted"));
             Assert.False(RuntimeDiagnosticLog.Filter.IsChannelEnabled("Animation.Motion.Window"));
-            Assert.True(RuntimeDiagnosticLog.Filter.IsChannelEnabled("FullBody.Path.Changed"));
+            Assert.True(RuntimeDiagnosticLog.Filter.IsChannelEnabled("CharacterFrame.Path.Changed"));
         }
 
         [Test]
@@ -213,14 +213,14 @@ namespace ThirdPersonDiagnostics.Tests
             SetSerializedChannel(channels.GetArrayElementAtIndex(0), "Action.Dodge.Accepted", false);
             SetSerializedChannel(channels.GetArrayElementAtIndex(1), "Action.Dodge.Accepted", true);
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
-            RuntimeDiagnosticLog.RegisterChannel("FullBody.Path.Changed");
+            RuntimeDiagnosticLog.RegisterChannel("CharacterFrame.Path.Changed");
 
             controller.SynchronizeChannels();
 
             Assert.AreEqual(2, controller.Channels.Count);
             Assert.AreEqual(1, CountChannel(controller, "Action.Dodge.Accepted"));
             Assert.False(FindChannel(controller, "Action.Dodge.Accepted").Enabled);
-            Assert.True(FindChannel(controller, "FullBody.Path.Changed").Enabled);
+            Assert.True(FindChannel(controller, "CharacterFrame.Path.Changed").Enabled);
         }
 
         [Test]

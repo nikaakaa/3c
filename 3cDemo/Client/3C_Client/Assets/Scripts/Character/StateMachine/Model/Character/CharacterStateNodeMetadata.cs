@@ -14,7 +14,7 @@ namespace ThirdPersonCharacterStateMachine
             StateGraphNodeId nodeId,
             CharacterStateTag[] tags,
             CharacterStateCapabilityModule[] capabilities,
-            FullBodyOwner owner,
+            CharacterStateOwner owner,
             ActionStateId actionState,
             BasicMovementPhase locomotionPhase,
             bool isActionCapabilityState,
@@ -33,7 +33,7 @@ namespace ThirdPersonCharacterStateMachine
         public StateGraphNodeId NodeId { get; }
         public IReadOnlyList<CharacterStateTag> Tags => tags;
         public IReadOnlyList<CharacterStateCapabilityModule> Capabilities => capabilities;
-        public FullBodyOwner Owner { get; }
+        public CharacterStateOwner Owner { get; }
         public ActionStateId ActionState { get; }
         public BasicMovementPhase LocomotionPhase { get; }
         public bool IsActionCapabilityState { get; }
@@ -88,7 +88,7 @@ namespace ThirdPersonCharacterStateMachine
                 ? resolvedPhase
                 : BasicMovementPhase.Idle;
             ActionStateId actionState = isAction ? ResolveActionState(node.StateId.Value) : ActionStateIds.None;
-            FullBodyOwner owner = isAction ? FullBodyOwner.Action(actionState) : FullBodyOwner.None;
+            CharacterStateOwner owner = isAction ? CharacterStateOwner.Action(actionState) : CharacterStateOwner.None;
 
             return new CharacterStateNodeMetadata(
                 new StateGraphNodeId(node.StateId.Value),

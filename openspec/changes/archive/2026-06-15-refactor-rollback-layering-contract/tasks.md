@@ -1,7 +1,7 @@
 ## 0. 准备和冲突检查
 - [x] 0.1 确认 `add-local-rollback-soak-runner` 的最新文件状态，避免覆盖未归档的 F8 工具改动。
 - [x] 0.2 记录当前 F6/F8 关键日志搜索词：`[rollback-synctest]`、`ROLLBACK_TIMING_PROBE`、`ROLLBACK_SOAK_RESULT`。
-- [x] 0.3 运行 `rg` 静态扫描当前 `CameraYaw`、`WithCameraYaw`、`PresentationTransformRollbackState`、`FullBodyActionRestoreState` 引用点。
+- [x] 0.3 运行 `rg` 静态扫描当前 `CameraYaw`、`WithCameraYaw`、`PresentationTransformRollbackState`、`CommittedActionRestoreState` 引用点。
 
 ## 1. Rollback Core 分层
 - [x] 1.1 新增或调整测试，证明 `LocalRollbackSynctestRunner` 不引用 presentation、camera、Animancer、Input System adapter 或 `CharacterController`。
@@ -23,7 +23,7 @@
 
 ## 4. FullBody Action Restore 拆分
 - [x] 4.1 新增测试，区分 action gameplay restore state 与 diagnostic log restore state。
-- [x] 4.2 将 `FullBodyActionRestoreState` 中影响下一 tick 输出的字段保留在 gameplay restore state。
+- [x] 4.2 将 `CommittedActionRestoreState` 中影响下一 tick 输出的字段保留在 gameplay restore state。
 - [x] 4.3 将 `lastLogged...`、debug path 等诊断字段迁移到 diagnostic restore state。
 - [x] 4.4 确认 snapshot compare 默认比较 gameplay 事实，不因为诊断日志字段导致 synctest 失败。
 

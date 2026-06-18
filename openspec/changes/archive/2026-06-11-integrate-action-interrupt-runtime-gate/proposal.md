@@ -15,7 +15,7 @@
 - Affected specs: `action-interrupt-arbiter`, `action-interrupt-policy-data`, `local-preinput-buffer`
 - Affected code:
   - `Assets/Scripts/Character/Action/FullBody/Runtime/PlayerFullBodyActionController.cs`
-  - `Assets/Scripts/Character/Action/FullBody/Solver/FullBodyActionInputRequestBuilder.cs`
+  - `Assets/Scripts/Character/Action/FullBody/Solver/CommittedActionInputRequestBuilder.cs`
   - `Assets/Scripts/Character/Action/Config/ActionInterruptPolicySetSO.cs`
   - `Assets/Scripts/Character/StateMachine/Model/CharacterStateMachineDefinition.cs`
   - `Assets/Scripts/Character/StateMachine/Model/CharacterStateMachineTypes.cs`

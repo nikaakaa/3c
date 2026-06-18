@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7dc59135332d45eaa94f5ee4b5815187, type: 3}
+  m_Name: DefaultCharacterBehaviorAuthoring
+  m_EditorClassIdentifier: 
+  schemaVersion: 1
+  stableAssetId: character.behavior.default
+  nodes:
+  - stableId: behavior.root
+    kind: 1
+    editorPosition: {x: 0, y: 0}
+  - stableId: behavior.parallel
+    kind: 2
+    editorPosition: {x: 320, y: 0}
+  - stableId: source.locomotion
+    kind: 3
+    editorPosition: {x: 660, y: -120}
+  - stableId: source.committed-action
+    kind: 4
+    editorPosition: {x: 660, y: 120}
+  edges:
+  - parentNodeId: behavior.root
+    childNodeId: behavior.parallel
+    outputPortId: children
+    inputPortId: in
+  - parentNodeId: behavior.parallel
+    childNodeId: source.locomotion
+    outputPortId: children
+    inputPortId: in
+  - parentNodeId: behavior.parallel
+    childNodeId: source.committed-action
+    outputPortId: children
+    inputPortId: in

@@ -7,35 +7,17 @@ namespace ThirdPersonAction
     {
         public ActionTimelineEvaluationInput(
             ActionTimelineDefinition timeline,
-            int currentFrame,
+            int localTick,
             int sourceStep)
         {
             Timeline = timeline;
-            CurrentFrame = currentFrame < 0 ? 0 : currentFrame;
+            LocalTick = localTick < 0 ? 0 : localTick;
             SourceStep = sourceStep < 0 ? 0 : sourceStep;
         }
 
-        public ActionTimelineEvaluationInput(
-            ActionTimelineDefinition timeline,
-            float activeStateTimeSeconds,
-            float tickIntervalSeconds,
-            int sourceStep)
-            : this(timeline, ResolveFrame(activeStateTimeSeconds, tickIntervalSeconds), sourceStep)
-        {
-        }
-
         public ActionTimelineDefinition Timeline { get; }
-        public int CurrentFrame { get; }
+        public int LocalTick { get; }
         public int SourceStep { get; }
-
-        public static int ResolveFrame(float activeStateTimeSeconds, float tickIntervalSeconds)
-        {
-            if (activeStateTimeSeconds <= 0f || tickIntervalSeconds <= 0f)
-                return 0;
-
-            double frame = activeStateTimeSeconds / tickIntervalSeconds;
-            return Math.Max(0, (int)Math.Floor(frame + 0.000001d));
-        }
     }
 
     public static class ActionTimelineEvaluator
@@ -44,7 +26,7 @@ namespace ThirdPersonAction
         {
             ActionTimelineDefinition timeline = input.Timeline;
             if (timeline == null || !timeline.IsDefined)
-                return ActionTimelineOutcome.None(input.CurrentFrame, input.SourceStep);
+                return ActionTimelineOutcome.None(input.LocalTick, input.SourceStep);
 
             ActionAnimationKey animationKey = default;
             bool hasAnimation = false;
@@ -61,12 +43,12 @@ namespace ThirdPersonAction
                     ActionTimelineClipDefinition clip = track.Clips[clipIndex];
                     if (clip.Kind == ActionTimelineClipKind.Cue)
                     {
-                        if (clip.TriggersAtFrame(input.CurrentFrame) && !string.IsNullOrWhiteSpace(clip.Payload.CueId))
-                            cueRequests.Add(new ActionCueRequest(clip.Payload.CueId, input.CurrentFrame, input.SourceStep));
+                        if (clip.TriggersAtTick(input.LocalTick) && !string.IsNullOrWhiteSpace(clip.Payload.CueId))
+                            cueRequests.Add(new ActionCueRequest(clip.Payload.CueId, input.LocalTick, input.SourceStep));
                         continue;
                     }
 
-                    if (!clip.ContainsFrame(input.CurrentFrame))
+                    if (!clip.ContainsTick(input.LocalTick))
                         continue;
 
                     switch (clip.Kind)
@@ -95,7 +77,7 @@ namespace ThirdPersonAction
             }
 
             return new ActionTimelineOutcome(
-                input.CurrentFrame,
+                input.LocalTick,
                 input.SourceStep,
                 animationKey,
                 hasAnimation,

@@ -1,5 +1,6 @@
 using ThirdPersonCharacterStateMachine;
 using ThirdPersonMovement;
+using ThirdPersonMotionWarping;
 using UnityEngine;
 
 namespace ThirdPersonAction
@@ -17,6 +18,33 @@ namespace ThirdPersonAction
             Vector3 lockedWorldDirection,
             float stateTime,
             int sourceStep)
+            : this(
+                actionState,
+                sourceState,
+                variant,
+                duration,
+                distance,
+                rotateToDirection,
+                setRunLatchOnComplete,
+                lockedWorldDirection,
+                stateTime,
+                sourceStep,
+                MotionWarpPayload.None)
+        {
+        }
+
+        public ActionMotionSpec(
+            ActionStateId actionState,
+            CharacterStateId sourceState,
+            CharacterStateVariant variant,
+            float duration,
+            float distance,
+            bool rotateToDirection,
+            bool setRunLatchOnComplete,
+            Vector3 lockedWorldDirection,
+            float stateTime,
+            int sourceStep,
+            MotionWarpPayload motionWarpPayload)
         {
             ActionState = actionState.IsValid ? actionState : ActionStateIds.None;
             SourceState = sourceState;
@@ -28,6 +56,7 @@ namespace ThirdPersonAction
             LockedWorldDirection = NormalizePlanarOrZero(lockedWorldDirection);
             StateTime = Mathf.Max(0f, stateTime);
             SourceStep = Mathf.Max(0, sourceStep);
+            MotionWarpPayload = motionWarpPayload;
         }
 
         public ActionStateId ActionState { get; }
@@ -40,6 +69,7 @@ namespace ThirdPersonAction
         public Vector3 LockedWorldDirection { get; }
         public float StateTime { get; }
         public int SourceStep { get; }
+        public MotionWarpPayload MotionWarpPayload { get; }
         public bool HasSpec => ActionState.IsValid && ActionState != ActionStateIds.None;
 
         public static ActionMotionSpec None(int sourceStep = 0)
@@ -54,7 +84,8 @@ namespace ThirdPersonAction
                 false,
                 Vector3.zero,
                 0f,
-                sourceStep);
+                sourceStep,
+                MotionWarpPayload.None);
         }
 
         static Vector3 NormalizePlanarOrZero(Vector3 value)
@@ -73,12 +104,33 @@ namespace ThirdPersonAction
             StateTimelineWindowFacts timelineFacts,
             CharacterRuntimeActionFacts previousActionFacts,
             bool hasMoveIntentAtCompletion)
+            : this(
+                spec,
+                deltaTime,
+                timelineFacts,
+                previousActionFacts,
+                hasMoveIntentAtCompletion,
+                MotionWarpRootSnapshot.Invalid(spec.SourceStep),
+                MotionWarpTargetSnapshot.Invalid(spec.MotionWarpPayload.TargetBindingId, spec.SourceStep))
+        {
+        }
+
+        public ActionMotionResolveInput(
+            ActionMotionSpec spec,
+            float deltaTime,
+            StateTimelineWindowFacts timelineFacts,
+            CharacterRuntimeActionFacts previousActionFacts,
+            bool hasMoveIntentAtCompletion,
+            MotionWarpRootSnapshot warpRootSnapshot,
+            MotionWarpTargetSnapshot warpTargetSnapshot)
         {
             Spec = spec;
             DeltaTime = Mathf.Max(0f, deltaTime);
             TimelineFacts = timelineFacts;
             PreviousActionFacts = previousActionFacts;
             HasMoveIntentAtCompletion = hasMoveIntentAtCompletion;
+            WarpRootSnapshot = warpRootSnapshot;
+            WarpTargetSnapshot = warpTargetSnapshot;
         }
 
         public ActionMotionSpec Spec { get; }
@@ -86,6 +138,8 @@ namespace ThirdPersonAction
         public StateTimelineWindowFacts TimelineFacts { get; }
         public CharacterRuntimeActionFacts PreviousActionFacts { get; }
         public bool HasMoveIntentAtCompletion { get; }
+        public MotionWarpRootSnapshot WarpRootSnapshot { get; }
+        public MotionWarpTargetSnapshot WarpTargetSnapshot { get; }
     }
 
     public readonly struct ActionMotionResolveResult
@@ -98,6 +152,30 @@ namespace ThirdPersonAction
             bool setRunLatch,
             int sourceStep,
             string diagnosticSummary)
+            : this(
+                spec,
+                movementCommand,
+                hasActionMovement,
+                actionCompleted,
+                setRunLatch,
+                sourceStep,
+                diagnosticSummary,
+                MotionWarpResult.None(
+                    spec.MotionWarpPayload.Policy.PolicyId,
+                    spec.MotionWarpPayload.TargetBindingId,
+                    sourceStep))
+        {
+        }
+
+        public ActionMotionResolveResult(
+            ActionMotionSpec spec,
+            ActionMovementCommand movementCommand,
+            bool hasActionMovement,
+            bool actionCompleted,
+            bool setRunLatch,
+            int sourceStep,
+            string diagnosticSummary,
+            MotionWarpResult motionWarpResult)
         {
             Spec = spec;
             MovementCommand = movementCommand;
@@ -106,6 +184,7 @@ namespace ThirdPersonAction
             SetRunLatch = setRunLatch;
             SourceStep = Mathf.Max(0, sourceStep);
             DiagnosticSummary = diagnosticSummary ?? string.Empty;
+            MotionWarpResult = motionWarpResult;
         }
 
         public ActionMotionSpec Spec { get; }
@@ -116,6 +195,7 @@ namespace ThirdPersonAction
         public bool SetRunLatch { get; }
         public int SourceStep { get; }
         public string DiagnosticSummary { get; }
+        public MotionWarpResult MotionWarpResult { get; }
 
         public static ActionMotionResolveResult None(int sourceStep = 0)
         {
@@ -127,7 +207,8 @@ namespace ThirdPersonAction
                 false,
                 false,
                 sourceStep,
-                $"actionMotion=none sourceStep={Mathf.Max(0, sourceStep)}");
+                $"actionMotion=none sourceStep={Mathf.Max(0, sourceStep)}",
+                MotionWarpResult.None(MotionWarpPolicyId.None, MotionWarpTargetBindingId.None, sourceStep));
         }
     }
 }

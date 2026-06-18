@@ -27,7 +27,7 @@
   - `unified-character-state-machine`
 - Affected code:
   - `Assets/Scripts/Character/Action/FullBody/Solver/CharacterActionRequestSubmissionArbiter.cs`
-  - `Assets/Scripts/Character/Action/FullBody/Solver/FullBodyActionInterruptRequestFactory.cs`
+  - `Assets/Scripts/Character/Action/FullBody/Solver/CommittedActionInterruptRequestFactory.cs`
   - `Assets/Scripts/Character/Action/FullBody/Solver/ActionMotionResolver.cs`
   - `Assets/Scripts/Character/Action/FullBody/Model/ActionMotionTypes.cs`
   - `Assets/Scripts/Character/StateMachine/Solver/Runtime/CharacterStateMachineRunner.cs`

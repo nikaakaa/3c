@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Text;
 using NUnit.Framework;
 using ThirdPersonAction;
 using ThirdPersonCharacterStateMachine;
@@ -15,16 +16,18 @@ namespace Tests.Editor
         public void BodyArbiterSuppressesLocomotionWhenFullBodyClaimWins()
         {
             CharacterFrameArbitrationInput input = new CharacterFrameArbitrationInput(
-                BodyOccupancyClaim.FullBodyAction(12),
+                BodyOccupancyClaim.CommittedActionFullBody(12),
                 CharacterFrameCandidateOutput.Locomotion(true, true, 12),
-                CharacterFrameCandidateOutput.FullBodyAction(true, true, 12),
+                CharacterFrameCandidateOutput.CommittedAction(true, true, 12),
                 CharacterFrameCandidateOutput.None(CharacterBodyDomain.UpperBody, 12),
                 12);
 
             BodyOccupancyDecision decision = DefaultBodyArbiter.Instance.Decide(in input);
 
             Assert.True(decision.FullBodyClaimAccepted);
-            Assert.AreEqual(CharacterBodyDomain.FullBodyAction, decision.BaseLayerOwner);
+            Assert.AreEqual(CharacterBodyDomain.CommittedAction, decision.BaseSlotOwner);
+            Assert.AreEqual(CharacterBodyDomain.None, decision.UpperBodySlotOwner);
+            Assert.True(decision.UpperBodySlotSuppressed);
             Assert.True(decision.SuppressLocomotionMotion);
             Assert.True(decision.SuppressLocomotionAnimation);
             Assert.False(decision.AllowUpperBody);
@@ -36,16 +39,54 @@ namespace Tests.Editor
             CharacterFrameArbitrationInput input = new CharacterFrameArbitrationInput(
                 BodyOccupancyClaim.None(13),
                 CharacterFrameCandidateOutput.Locomotion(true, true, 13),
-                CharacterFrameCandidateOutput.None(CharacterBodyDomain.FullBodyAction, 13),
+                CharacterFrameCandidateOutput.None(CharacterBodyDomain.CommittedAction, 13),
                 CharacterFrameCandidateOutput.None(CharacterBodyDomain.UpperBody, 13),
                 13);
 
             BodyOccupancyDecision decision = DefaultBodyArbiter.Instance.Decide(in input);
 
             Assert.False(decision.FullBodyClaimAccepted);
-            Assert.AreEqual(CharacterBodyDomain.Locomotion, decision.BaseLayerOwner);
+            Assert.AreEqual(CharacterBodyDomain.Locomotion, decision.BaseSlotOwner);
+            Assert.False(decision.UpperBodySlotSuppressed);
             Assert.False(decision.SuppressLocomotionMotion);
             Assert.False(decision.SuppressLocomotionAnimation);
+        }
+
+        [Test]
+        public void DodgeFullBodyClaimSelectsActionSideBaseSlotOwner()
+        {
+            CharacterFrameArbitrationInput input = new CharacterFrameArbitrationInput(
+                BodyOccupancyClaim.CommittedActionFullBody(16),
+                CharacterFrameCandidateOutput.Locomotion(true, true, 16),
+                CharacterFrameCandidateOutput.CommittedAction(true, true, 16),
+                CharacterFrameCandidateOutput.UpperBody(false, true, 16),
+                16);
+
+            CharacterFramePlan plan = new CharacterFramePlan(DefaultBodyArbiter.Instance.Decide(in input));
+
+            Assert.True(plan.OccupancyDecision.FullBodyClaimAccepted);
+            Assert.AreEqual(CharacterBodyDomain.CommittedAction, plan.BaseSlotOwner);
+            Assert.AreEqual(CharacterBodyDomain.None, plan.UpperBodySlotOwner);
+            Assert.True(plan.UpperBodySlotSuppressed);
+            Assert.False(plan.OccupancyDecision.AllowUpperBody);
+        }
+
+        [Test]
+        public void LocomotionOwnsBaseSlotWhenFullBodyClaimIsAbsent()
+        {
+            CharacterFrameArbitrationInput input = new CharacterFrameArbitrationInput(
+                BodyOccupancyClaim.None(17),
+                CharacterFrameCandidateOutput.Locomotion(true, true, 17),
+                CharacterFrameCandidateOutput.None(CharacterBodyDomain.CommittedAction, 17),
+                CharacterFrameCandidateOutput.None(CharacterBodyDomain.UpperBody, 17),
+                17);
+
+            CharacterFramePlan plan = new CharacterFramePlan(DefaultBodyArbiter.Instance.Decide(in input));
+
+            Assert.False(plan.OccupancyDecision.FullBodyClaimAccepted);
+            Assert.AreEqual(CharacterBodyDomain.Locomotion, plan.BaseSlotOwner);
+            Assert.AreEqual(CharacterBodyDomain.None, plan.UpperBodySlotOwner);
+            Assert.False(plan.UpperBodySlotSuppressed);
         }
 
         [Test]
@@ -54,17 +95,43 @@ namespace Tests.Editor
             CharacterFrameArbitrationInput input = new CharacterFrameArbitrationInput(
                 BodyOccupancyClaim.UpperBody(14),
                 CharacterFrameCandidateOutput.Locomotion(true, true, 14),
-                CharacterFrameCandidateOutput.None(CharacterBodyDomain.FullBodyAction, 14),
+                CharacterFrameCandidateOutput.None(CharacterBodyDomain.CommittedAction, 14),
                 CharacterFrameCandidateOutput.UpperBody(false, true, 14),
                 14);
 
             BodyOccupancyDecision decision = DefaultBodyArbiter.Instance.Decide(in input);
 
-            Assert.AreEqual(CharacterBodyDomain.Locomotion, decision.BaseLayerOwner);
-            Assert.AreEqual(CharacterBodyDomain.UpperBody, decision.UpperBodyOwner);
+            Assert.AreEqual(CharacterBodyDomain.Locomotion, decision.BaseSlotOwner);
+            Assert.AreEqual(CharacterBodyDomain.UpperBody, decision.UpperBodySlotOwner);
             Assert.True(decision.AllowUpperBody);
+            Assert.False(decision.UpperBodySlotSuppressed);
             Assert.False(decision.SuppressLocomotionMotion);
             Assert.False(decision.SuppressLocomotionAnimation);
+        }
+
+        [Test]
+        public void RuntimeBodyModelDoesNotDefineUnapprovedFacialArbitrationTerms()
+        {
+            string source = ReadCharacterRuntimeSource();
+
+            Assert.That(source, Does.Not.Contain("FaceBody"));
+            Assert.That(source, Does.Not.Contain("FacialOwner"));
+            Assert.That(source, Does.Not.Contain("FacialCandidate"));
+            Assert.That(source, Does.Not.Contain("FacialClaim"));
+            Assert.That(source, Does.Not.Contain("FacialSlot"));
+        }
+
+        [Test]
+        public void DodgeDoesNotUseFullBodyBehaviorNodeOrLegacyFullBodyTree()
+        {
+            string source = ReadCharacterRuntimeSource();
+
+            Assert.That(source, Does.Not.Contain("FullBodyBehaviorNode"));
+            Assert.That(source, Does.Not.Contain("FullBodyNode"));
+            Assert.That(source, Does.Not.Contain("FullBodyStateTree"));
+            Assert.That(source, Does.Not.Contain("FullBodyHfsmStateTree"));
+            Assert.That(source, Does.Not.Contain("PlayerFullBody" + "ActionController"));
+            Assert.That(source, Does.Not.Contain("DodgeFullBody" + "ActionModule"));
         }
 
         [Test]
@@ -77,7 +144,8 @@ namespace Tests.Editor
             CharacterFrameOutput output = composer.Compose(in submission, in plan);
 
             Assert.True(output.Plan.OccupancyDecision.FullBodyClaimAccepted);
-            Assert.AreEqual(CharacterBodyDomain.FullBodyAction, output.Plan.BaseLayerOwner);
+            Assert.AreEqual(CharacterBodyDomain.CommittedAction, output.Plan.BaseSlotOwner);
+            Assert.True(output.Plan.UpperBodySlotSuppressed);
             Assert.False(output.Movement.ExecuteBasicMovement);
             Assert.True(output.Movement.ExecuteActionMovement);
             Assert.False(output.Animation.PresentLocomotionAnimation);
@@ -115,7 +183,7 @@ namespace Tests.Editor
 
             Assert.True(resolved);
             Assert.True(claim.ClaimsFullBody);
-            Assert.AreEqual(CharacterBodyDomain.FullBodyAction, claim.Domain);
+            Assert.AreEqual(CharacterBodyDomain.CommittedAction, claim.Domain);
             Assert.AreEqual(CharacterFrameOutputChannel.Motion | CharacterFrameOutputChannel.Animation, claim.Channels);
         }
 
@@ -189,7 +257,7 @@ namespace Tests.Editor
         [Test]
         public void ActionLifecycleReusesPlaybackIntentWhileActionActive()
         {
-            FullBodyActionRuntimeModule module = new FullBodyActionRuntimeModule();
+            CommittedActionRuntimeModule module = new CommittedActionRuntimeModule();
             CharacterResolvedAction action = CreateResolvedDodgeAction(CharacterStateVariant.Directional, ActionAnimationKeys.DodgeDirectional, 31);
 
             ActionLifecycleFrame first = module.TickActionLifecycle(in action, 0.016f, 31);
@@ -204,7 +272,7 @@ namespace Tests.Editor
         [Test]
         public void ActionLifecycleChangesPlaybackIntentForNewAcceptedDirectionalDodge()
         {
-            FullBodyActionRuntimeModule module = new FullBodyActionRuntimeModule();
+            CommittedActionRuntimeModule module = new CommittedActionRuntimeModule();
             CharacterResolvedAction firstAction = CreateResolvedDodgeAction(CharacterStateVariant.Directional, ActionAnimationKeys.DodgeDirectional, 31);
             CharacterResolvedAction secondAction = CreateResolvedDodgeAction(CharacterStateVariant.Directional, ActionAnimationKeys.DodgeDirectional, 40);
 
@@ -219,7 +287,7 @@ namespace Tests.Editor
         [Test]
         public void ActionLifecycleChangesPlaybackIntentForNewAcceptedBackstepDodge()
         {
-            FullBodyActionRuntimeModule module = new FullBodyActionRuntimeModule();
+            CommittedActionRuntimeModule module = new CommittedActionRuntimeModule();
             CharacterResolvedAction firstAction = CreateResolvedDodgeAction(CharacterStateVariant.Backstep, ActionAnimationKeys.DodgeBackstep, 31);
             CharacterResolvedAction secondAction = CreateResolvedDodgeAction(CharacterStateVariant.Backstep, ActionAnimationKeys.DodgeBackstep, 40);
 
@@ -260,7 +328,7 @@ namespace Tests.Editor
             CharacterFramePlan plan = new CharacterFrameOutputComposer().CreatePlan(in submission);
 
             Assert.False(plan.OccupancyDecision.FullBodyClaimAccepted);
-            Assert.AreEqual(CharacterBodyDomain.None, plan.BaseLayerOwner);
+            Assert.AreEqual(CharacterBodyDomain.None, plan.BaseSlotOwner);
         }
 
         [Test]
@@ -323,8 +391,8 @@ namespace Tests.Editor
                 hasActionMovement ? CharacterStateVariant.Directional : CharacterStateVariant.None,
                 string.Empty,
                 hasActionMovement
-                    ? new[] { CharacterStateTag.FullBody, CharacterStateTag.Action, CharacterStateTag.Dodge }
-                    : new[] { CharacterStateTag.FullBody, CharacterStateTag.Locomotion, CharacterStateTag.Movement });
+                    ? new[] { CharacterStateTag.Character, CharacterStateTag.Action, CharacterStateTag.Dodge }
+                    : new[] { CharacterStateTag.Character, CharacterStateTag.Locomotion, CharacterStateTag.Movement });
             CharacterStateMachineFrame stateFrame = new CharacterStateMachineFrame(
                 snapshot,
                 executeBasicMovement,
@@ -352,9 +420,9 @@ namespace Tests.Editor
                 : ActionMotionResolveResult.None(step);
 
             CharacterFrameArbitrationInput arbitrationInput = new CharacterFrameArbitrationInput(
-                hasActionMovement ? BodyOccupancyClaim.FullBodyAction(step) : BodyOccupancyClaim.None(step),
+                hasActionMovement ? BodyOccupancyClaim.CommittedActionFullBody(step) : BodyOccupancyClaim.None(step),
                 CharacterFrameCandidateOutput.Locomotion(executeBasicMovement, presentLocomotionAnimation, step),
-                CharacterFrameCandidateOutput.FullBodyAction(hasActionMovement, hasActionMovement, step),
+                CharacterFrameCandidateOutput.CommittedAction(hasActionMovement, hasActionMovement, step),
                 CharacterFrameCandidateOutput.None(CharacterBodyDomain.UpperBody, step),
                 step);
             return CreateSubmissionWithArbitration(
@@ -413,8 +481,8 @@ namespace Tests.Editor
                 hasActionMovement ? CharacterStateVariant.Directional : CharacterStateVariant.None,
                 string.Empty,
                 hasActionMovement
-                    ? new[] { CharacterStateTag.FullBody, CharacterStateTag.Action, CharacterStateTag.Dodge }
-                    : new[] { CharacterStateTag.FullBody, CharacterStateTag.Locomotion, CharacterStateTag.Movement });
+                    ? new[] { CharacterStateTag.Character, CharacterStateTag.Action, CharacterStateTag.Dodge }
+                    : new[] { CharacterStateTag.Character, CharacterStateTag.Locomotion, CharacterStateTag.Movement });
             CharacterStateMachineFrame stateFrame = new CharacterStateMachineFrame(
                 snapshot,
                 executeBasicMovement,
@@ -500,6 +568,24 @@ namespace Tests.Editor
                 new ActionInterruptContext(ActionStateIds.None, 0f, 0, sourceStep),
                 animationKey,
                 motionSpec);
+        }
+
+        static string ReadCharacterRuntimeSource()
+        {
+            string root = Path.Combine(Application.dataPath, "Scripts/Character");
+            StringBuilder builder = new StringBuilder();
+            foreach (string file in Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories))
+            {
+                string normalized = file.Replace('\\', '/');
+                if (normalized.Contains("/Editor/"))
+                {
+                    continue;
+                }
+
+                builder.AppendLine(File.ReadAllText(file, Encoding.UTF8));
+            }
+
+            return builder.ToString();
         }
 
     }

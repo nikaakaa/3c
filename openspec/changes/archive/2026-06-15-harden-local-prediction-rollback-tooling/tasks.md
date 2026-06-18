@@ -1,7 +1,7 @@
 ## 1. 准备和复现
 - [x] 1.1 读取本变更 `proposal.md`、`design.md`、`tasks.md` 和 spec deltas。
 - [x] 1.2 读取相关现有 specs：`local-rollback-synctest-foundation`、`fullbody-rollback-replay`、`local-latency-reconciliation`。
-- [x] 1.3 检查同时进行中的 `add-entry-local-animation-motion-space`、`add-local-rollback-soak-runner`、`refactor-fullbody-frame-pipeline` 是否有重叠任务。
+- [x] 1.3 检查同时进行中的 `add-entry-local-animation-motion-space`、`add-local-rollback-soak-runner`、`refactor-character-frame-pipeline` 是否有重叠任务。
 - [x] 1.4 定位当前 `LocalRollbackSynctestRunner`、`LocalRollbackSoakRunner`、`LocalLatencyReconciliationRunner`、`FullBodyRollbackSimulation` 实现。
 - [x] 1.5 复现或构造“最终快照一致但 `FirstMismatch.HasMismatch=true`”的最小测试用例。
 - [x] 1.6 记录该用例的 expected/actual differences，作为后续严格模式回归测试输入。

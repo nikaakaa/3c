@@ -31,7 +31,7 @@
   - `Assets/Scripts/Character/Action/FullBody/Runtime/PlayerFullBodyActionController.cs`
   - `Assets/Scripts/Character/Pipeline/Runtime/CharacterFramePipeline.cs`
   - `Assets/Scripts/Character/Action/FullBody/Runtime/FullBodyActionTickAdapter.cs`
-  - `Assets/Scripts/Character/Action/FullBody/Diagnostics/FullBodyDiagnostics.cs`
+  - `Assets/Scripts/Character/Action/FullBody/Diagnostics/CharacterFrameDiagnostics.cs`
   - `Assets/Tests/Editor/Simulation/FullBodyRollbackReplayTests.cs`
   - `Assets/Tests/Editor/UnifiedCharacterStateMachineTests.cs`
 

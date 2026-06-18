@@ -23,7 +23,7 @@
 ## Impact
 - 主要影响 `fullbody-action-framework`、`local-preinput-buffer`、`character-frame-pipeline` 三个能力规格。
 - 该 change 是 `add-light-attack-combo-action` 的前置边界收敛：攻击动作实现应在本 change apply 后再基于 resolved action 接入。
-- 运行时代码实现阶段需要对 `CharacterActionRequestSubmissionArbiter`、`FullBodyActionRequestSubmissionProviders`、`FullBodyActionInputRequestBuilder`、Dodge request/config 相关符号分别做 GitNexus impact analysis。
+- 运行时代码实现阶段需要对 `CharacterActionRequestSubmissionArbiter`、`CommittedActionRequestSubmissionProviders`、`CommittedActionInputRequestBuilder`、Dodge request/config 相关符号分别做 GitNexus impact analysis。
 
 ## Open Questions
 - 第一版 resolved action 是否需要把 combo stage 作为通用 payload，还是由 Attack 专用 resolver 输出具体 target state。本文档倾向后者：request 保持通用，resolver 输出具体纯数据结果。

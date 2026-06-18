@@ -81,7 +81,7 @@
 - **WHEN** PresentationBridge phase 运行
 - **THEN** ExecuteMotion phase MUST 已在同一 tick 内完成
 
-#### Scenario: 快照晚于 FullBody 输出
+#### Scenario: 快照晚于 Character 输出
 - **WHEN** WriteSnapshotAndEvents phase 运行
 - **THEN** ExecuteMotion 和 PresentationBridge phase MUST 已在同一 tick 内完成
 
@@ -121,16 +121,16 @@
 - **AND** MUST NOT 修改网络协议 DTO
 
 ### Requirement: Locomotion 主线保持
-系统 MUST 让 tick 系统调度现有 Locomotion 主线，而不是新增绕过 `PlayerLocomotionController`、`BasicLocomotionPipeline` 或 motion executor 的第二套基础移动路径。
+系统 MUST 让 tick 系统调度现有 Character frame pipeline 主线，而不是新增绕过 `CharacterFrameRuntimeController`、`LocomotionRuntimeModule` 或 motion executor 的第二套基础移动路径。
 
 #### Scenario: 现有主线仍是移动入口
 - **WHEN** 基础移动在 simulation tick 中执行
-- **THEN** 系统 MUST 继续通过现有 `PlayerLocomotionController` 或等价 adapter 调用 `BasicLocomotionPipeline`
-- **AND** MUST 继续通过 `IBasicLocomotionMotionExecutor` 提交移动
+- **THEN** 系统 MUST 继续通过 `CharacterFrameRuntimeController` 或等价角色级入口推进 `CharacterFramePipeline`
+- **AND** MUST 继续通过 `IBasicLocomotionMotionExecutor` 或等价正式运动端口提交移动
 
 #### Scenario: 不新增第二控制入口
 - **WHEN** 实施 tick 系统
-- **THEN** 系统 MUST NOT 新增绕过当前 Locomotion pipeline 的 player movement controller
+- **THEN** 系统 MUST NOT 新增绕过当前 Character frame pipeline 的 player movement controller
 
 #### Scenario: 表现层仍只读结果
 - **WHEN** PresentationBridge phase 更新动画表现
@@ -193,50 +193,50 @@
 - **THEN** simulation core MUST NOT 引用 Cinemachine、相机 runtime、Animancer、VFX、UI 或场景 Transform 类型
 - **AND** 表现层适配 MUST 位于 runtime adapter 边界
 
-### Requirement: FullBody Gameplay Phase 接入
-系统 MUST 让当前 FullBody gameplay 主线通过唯一 Character frame pipeline 接入 `SimulationTickPhase` 的固定顺序，而不是将输入缓冲更新、玩法判定、运动构建、运动执行和表现提交整包放入单个 `ExecuteMotion` handler。tick runner 仍只负责调度，具体玩法逻辑必须位于 Character frame pipeline、FullBody 提交职责或其 adapter 中。
+### Requirement: Character Gameplay Phase 接入
+系统 MUST 让当前角色 gameplay 主线通过唯一 `CharacterFramePipeline` 接入 `SimulationTickPhase` 的固定顺序，而不是将输入缓冲更新、玩法判定、运动构建、运动执行和表现提交整包放入单个 `ExecuteMotion` handler。tick runner 仍只负责调度，具体玩法逻辑必须位于 Character frame pipeline、LocomotionSource、CommittedActionSource 或其 adapter 中。
 
 #### Scenario: 输入缓冲早于玩法判定
 - **WHEN** tick runner 执行 tick N
-- **THEN** FullBody 输入请求缓冲更新 MUST 发生在 `UpdateInputBuffer` phase
+- **THEN** 输入请求缓冲更新 MUST 发生在 `UpdateInputBuffer` phase
 - **AND** Action 请求仲裁 MUST 发生在 `GameplayDecision` phase 或之后
 - **AND** Action 仲裁 MUST 能看到同 tick 写入的输入请求
 - **AND** 这些 phase MUST 由 Character frame pipeline 统一推进
 
 #### Scenario: 状态决策早于运动执行
 - **WHEN** tick runner 执行 tick N
-- **THEN** FullBody 状态图 runtime 推进 MUST 发生在 `GameplayDecision` phase
+- **THEN** Locomotion local graph 和 Action lifecycle 的 gameplay decision MUST 发生在 `GameplayDecision` phase
 - **AND** 运动命令构建 MUST 发生在 `BuildMotion` phase
 - **AND** motion executor 调用 MUST 只发生在 `ExecuteMotion` phase
 - **AND** motion executor 调用 MUST 来自 Character frame pipeline 的统一 output applier
 
 #### Scenario: 表现提交不早于运动执行
 - **WHEN** tick runner 执行 tick N
-- **THEN** FullBody base layer 动画命令提交 MUST 发生在运动命令已构建之后
+- **THEN** base layer 动画命令提交 MUST 发生在运动命令已构建之后
 - **AND** 动画播放事实写入 MUST 不作为同 tick 状态进入的前置权威
 - **AND** 动画提交 MUST 来自 Character frame pipeline 的统一 output applier
 
 #### Scenario: 快照晚于 Character 输出
 - **WHEN** `WriteSnapshotAndEvents` phase 捕获角色快照
-- **THEN** 本 tick 的 FullBody 状态、输入消费、运动执行结果和 runtime facts 写入 MUST 已完成
+- **THEN** 本 tick 的 Character frame plan、输入消费、运动执行结果和 runtime facts 写入 MUST 已完成
 - **AND** 快照 recorder MUST NOT 需要主动重跑 gameplay 逻辑来补齐状态
 - **AND** snapshot/events commit MUST 发生在 Character frame pipeline 的统一提交阶段
 
 ### Requirement: Phase Handler 不形成旁路
-系统 MUST 防止 FullBody phase handler、Locomotion-only phase handler、rollback/debug phase handler 和未来身体域 handler 形成多条 gameplay 推进路径。保留的 handler MUST 明确标识用途，并且不得在同一角色同一 tick 中重复推进状态机或重复执行运动。正式 gameplay handler MUST 进入唯一 Character frame pipeline。
+系统 MUST 防止旧 FullBody phase handler、Locomotion-only phase handler、rollback/debug phase handler 和未来身体域 handler 形成多条 gameplay 推进路径。保留的 handler MUST 明确标识用途，并且不得在同一角色同一 tick 中重复推进状态机或重复执行运动。正式 gameplay handler MUST 进入唯一 Character frame pipeline。
 
 #### Scenario: Character handler 是动作 demo 主路径
-- **GIVEN** 当前 Sandbox 使用 FullBody 动作 demo
+- **GIVEN** 当前 Sandbox 使用 Character frame 动作 demo
 - **WHEN** tick driver 推进角色
 - **THEN** Character frame pipeline handler MUST 是 Move、TurnBack、Dodge 和后续 Attack 的主 gameplay 推进路径
-- **AND** FullBody MUST 作为该管线下的提交来源
+- **AND** CommittedActionSource MAY 提交 FullBody claim，但 FullBody MUST NOT 作为该管线下的 source
 - **AND** locomotion-only handler MUST 不同时推进同一角色
 
 #### Scenario: Locomotion-only handler 明确窄用途
 - **GIVEN** 测试或诊断需要 locomotion-only replay
 - **WHEN** 使用 locomotion-only handler
 - **THEN** handler MUST 明确标识为 locomotion-only
-- **AND** MUST NOT 被作为 FullBody 动作 demo 的完整验收路径
+- **AND** MUST NOT 被作为 Character frame 动作 demo 的完整验收路径
 - **AND** MUST NOT 与 Character frame pipeline 同 tick 推进同一角色
 
 #### Scenario: Debug handler 不推进 gameplay
@@ -253,11 +253,11 @@ simulation tick system MUST 通过 Character 级 runtime tick adapter 推进正�
 - **WHEN** tick runner 执行角色 gameplay phases
 - **THEN** phase handler MUST 调用 `CharacterFrameRuntimeController` 或等价角色级 runtime controller
 - **AND** MUST 使用同一个 `CharacterFrameRuntimeHost`
-- **AND** MUST NOT 通过 `PlayerFullBodyActionController.FramePipelineHost` 作为正式路径推进
+- **AND** MUST NOT 通过 旧 FullBody action controller FramePipelineHost 作为正式路径推进
 
 #### Scenario: FullBody tick adapter 退役
 - **WHEN** 检查正式 Corin simulation tick 装配
-- **THEN** `FullBodyActionTickAdapter` MUST 不作为正式注册者
+- **THEN** 旧 FullBody action tick adapter MUST 不作为正式注册者
 - **AND** 它 MAY 被删除、标记 obsolete 或转发到角色级 tick adapter
 - **AND** 它 MUST NOT 创建独立 frame context 或 runtime host
 
@@ -266,4 +266,3 @@ simulation tick system MUST 通过 Character 级 runtime tick adapter 推进正�
 - **THEN** 该 adapter MUST NOT 与 Character runtime tick adapter 同时推进 gameplay
 - **AND** 冲突 MUST 被装配校验或自动测试捕获
 - **AND** 系统 MUST NOT 依赖运行时互相压制来维持长期正确性
-

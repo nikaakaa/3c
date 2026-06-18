@@ -15,7 +15,7 @@ namespace ThirdPersonAction
     public sealed class CharacterFrameRuntimeController :
         MonoBehaviour,
         ILocomotionRuntimeUnityAdapter,
-        IFullBodyActionRuntimeUnityAdapter
+        ICommittedActionRuntimeUnityAdapter
     {
         [SerializeField] CharacterConfigSO characterConfig;
         [SerializeField] InputRequestBufferComponent inputBufferComponent;
@@ -63,7 +63,7 @@ namespace ThirdPersonAction
         public bool SuppressLocomotionAnimationPresentation { get => suppressLocomotionAnimationPresentation; set => suppressLocomotionAnimationPresentation = value; }
         public CharacterRuntimeCore RuntimeCore => runtimeCore ?? (runtimeCore = CreateRuntimeCore());
         public LocomotionRuntimeModule LocomotionModule => RuntimeCore.LocomotionModule;
-        public FullBodyActionRuntimeModule FullBodyModule => RuntimeCore.FullBodyModule;
+        public CommittedActionRuntimeModule CommittedActionModule => RuntimeCore.CommittedActionModule;
         public CharacterFrameResult LastFramePipelineResult => RuntimeCore.LastFramePipelineResult;
         public ICharacterFrameRuntimePort RuntimePort => RuntimeCore.RuntimePort;
         public AnimationPhasePlaybackProgress CurrentAnimationPlaybackProgress => ResolveCurrentAnimationPlaybackProgress();
@@ -90,7 +90,7 @@ namespace ThirdPersonAction
             RestoreUnityAdapters();
             LocomotionModule.ResetAfterLifecycleDisable();
             ResetMotionPlaybackWindow();
-            FullBodyModule.Reset();
+            CommittedActionModule.Reset();
         }
 
         void Update()
@@ -191,7 +191,7 @@ namespace ThirdPersonAction
         {
             ResolveReferences();
             UpdateRuntimeDependencies();
-            FullBodyModule.EnsureStateMachine(characterConfig != null ? characterConfig.StateMachine : null, true);
+            CommittedActionModule.EnsureStateMachine(characterConfig != null ? characterConfig.StateMachine : null, true);
 
             if (motionExecutor == null)
                 ResolveMotionExecutor();
@@ -199,7 +199,7 @@ namespace ThirdPersonAction
             AnimationPhasePlaybackProgress progress = CurrentAnimationPlaybackProgress;
             RollbackCameraBasisState cameraBasisState = CaptureRollbackCameraBasisState();
             LocomotionRuntimeRollbackState locomotionRuntimeState = LocomotionModule.CaptureRollbackState();
-            FullBodyActionRestoreState fullBodyState = FullBodyModule.CaptureRestoreState();
+            CommittedActionRestoreState committedActionState = CommittedActionModule.CaptureRestoreState();
             InputRequestBufferComponentRestoreState inputBufferState = inputBufferComponent != null
                 ? inputBufferComponent.CaptureRestoreState()
                 : InputRequestBufferComponentRestoreState.Empty;
@@ -214,7 +214,7 @@ namespace ThirdPersonAction
                 tick,
                 transform.position,
                 transform.eulerAngles.y,
-                fullBodyState.StateMachine,
+                committedActionState.StateMachine,
                 LocomotionModule.RunLatchActive,
                 LocomotionModule.LastMovingGait,
                 LocomotionModule.CurrentWorldDirection,
@@ -223,7 +223,7 @@ namespace ThirdPersonAction
                 progress.AliasKey,
                 progress.NormalizedTime,
                 LocomotionModule.CaptureBlackboard(),
-                fullBodyState,
+                committedActionState,
                 inputBufferState,
                 cameraBasisState.Yaw,
                 cameraBasisState,
@@ -236,14 +236,14 @@ namespace ThirdPersonAction
             ResolveReferences();
             UpdateRuntimeDependencies();
 
-            if (!FullBodyModule.EnsureStateMachine(characterConfig != null ? characterConfig.StateMachine : null, true))
+            if (!CommittedActionModule.EnsureStateMachine(characterConfig != null ? characterConfig.StateMachine : null, true))
                 return false;
 
-            FullBodyActionRestoreState fullBodyRestoreState = snapshot.FullBodyRestoreState;
-            if (fullBodyRestoreState.Snapshot.ActiveState.IsValid ||
-                fullBodyRestoreState.Gameplay.ActionLifecycle.HasActiveAction)
+            CommittedActionRestoreState committedActionRestoreState = snapshot.CommittedActionRestoreState;
+            if (committedActionRestoreState.Snapshot.ActiveState.IsValid ||
+                committedActionRestoreState.Gameplay.ActionLifecycle.HasActiveAction)
             {
-                FullBodyModule.Restore(in fullBodyRestoreState);
+                CommittedActionModule.Restore(in committedActionRestoreState);
             }
 
             if (inputBufferComponent != null)
@@ -256,7 +256,7 @@ namespace ThirdPersonAction
                 snapshot.RunLatchActive,
                 snapshot.LastMovingGait,
                 snapshot.CurrentWorldDirection,
-                snapshot.FullBodyRestoreState.Snapshot.ActivePath);
+                snapshot.CommittedActionRestoreState.Snapshot.ActivePath);
             if (motionExecutor == null)
                 ResolveMotionExecutor();
             if (motionExecutor is IMotionExecutorRollbackStateProvider stateProvider)
@@ -284,8 +284,6 @@ namespace ThirdPersonAction
             RestoreActionAnimationPlayback(
                 snapshot.RuntimeBlackboard.Animation.ActionProgress,
                 snapshot.RuntimeBlackboard.Animation.ActionAnimationName);
-            if (!LocomotionModule.HasPreviousMotionPlaybackProgress)
-                SeedMotionPlaybackWindow(in restoredProgress);
             return true;
         }
 
@@ -455,7 +453,7 @@ namespace ThirdPersonAction
                 return;
             }
 
-            if (FullBodyReferenceResolver.TryResolveComponentInterface(this, out IActionMovementExecutor resolvedExecutor, out MonoBehaviour executorBehaviour))
+            if (CharacterRuntimeReferenceResolver.TryResolveComponentInterface(this, out IActionMovementExecutor resolvedExecutor, out MonoBehaviour executorBehaviour))
             {
                 actionMovementExecutor = resolvedExecutor;
                 actionMovementExecutorBehaviour = executorBehaviour;
@@ -493,7 +491,7 @@ namespace ThirdPersonAction
                 animationPresenterBehaviour = locomotionPresenter;
 
             if (animationPresenterBehaviour == null &&
-                FullBodyReferenceResolver.TryResolveComponentInterface(this, out ICharacterAnimationOutputPresenter _, out MonoBehaviour presenterBehaviour))
+                CharacterRuntimeReferenceResolver.TryResolveComponentInterface(this, out ICharacterAnimationOutputPresenter _, out MonoBehaviour presenterBehaviour))
             {
                 animationPresenterBehaviour = presenterBehaviour;
             }
@@ -581,17 +579,6 @@ namespace ThirdPersonAction
         void ResetMotionPlaybackWindow()
         {
             LocomotionModule.ResetMotionPlaybackWindow(LocomotionModule.CurrentPhase);
-        }
-
-        void SeedMotionPlaybackWindow(in AnimationPhasePlaybackProgress progress)
-        {
-            if (!progress.HasValidPlayback)
-            {
-                ResetMotionPlaybackWindow();
-                return;
-            }
-
-            LocomotionModule.SeedMotionPlaybackWindow(in progress, LocomotionModule.CurrentPhase);
         }
 
         float ResolveCameraPlanarYaw()
@@ -685,8 +672,8 @@ namespace ThirdPersonAction
 
         static float ResolveSnapshotPhaseTime(in CharacterSimulationSnapshot snapshot)
         {
-            CharacterStateMachineSnapshot fullBody = snapshot.FullBodyRestoreState.Snapshot;
-            return fullBody.ActiveState.IsValid ? fullBody.StateTime : snapshot.StateMachine.StateTime;
+            CharacterStateMachineSnapshot committedAction = snapshot.CommittedActionRestoreState.Snapshot;
+            return committedAction.ActiveState.IsValid ? committedAction.StateTime : snapshot.StateMachine.StateTime;
         }
 
         static AnimationPhasePlaybackProgress ResolveSnapshotAnimationPlaybackProgress(in CharacterSimulationSnapshot snapshot)
@@ -731,12 +718,12 @@ namespace ThirdPersonAction
             locomotionAnimationPresenter?.Present(in context);
         }
 
-        InputRequestBufferComponent IFullBodyActionRuntimeUnityAdapter.InputBufferComponent => inputBufferComponent;
-        ILocomotionOutputRuntimePort IFullBodyActionRuntimeUnityAdapter.LocomotionOutputRuntime => RuntimeCore.LocomotionOutputRuntime;
-        AnimationPhasePlaybackProgress IFullBodyActionRuntimeUnityAdapter.LocomotionAnimationPlaybackProgress => ResolveCurrentAnimationPlaybackProgress();
-        string IFullBodyActionRuntimeUnityAdapter.LocomotionAnimationName => CurrentAnimationName;
-        IActionMovementExecutor IFullBodyActionRuntimeUnityAdapter.ActionMovementExecutor => actionMovementExecutor;
-        ICharacterAnimationOutputPresenter IFullBodyActionRuntimeUnityAdapter.AnimationPresenter => animationPresenter;
-        void IFullBodyActionRuntimeUnityAdapter.LogLocomotionDiagnosticTickSnapshot(int step) => LogDiagnosticTickSnapshot(step);
+        InputRequestBufferComponent ICommittedActionRuntimeUnityAdapter.InputBufferComponent => inputBufferComponent;
+        ILocomotionOutputRuntimePort ICommittedActionRuntimeUnityAdapter.LocomotionOutputRuntime => RuntimeCore.LocomotionOutputRuntime;
+        AnimationPhasePlaybackProgress ICommittedActionRuntimeUnityAdapter.LocomotionAnimationPlaybackProgress => ResolveCurrentAnimationPlaybackProgress();
+        string ICommittedActionRuntimeUnityAdapter.LocomotionAnimationName => CurrentAnimationName;
+        IActionMovementExecutor ICommittedActionRuntimeUnityAdapter.ActionMovementExecutor => actionMovementExecutor;
+        ICharacterAnimationOutputPresenter ICommittedActionRuntimeUnityAdapter.AnimationPresenter => animationPresenter;
+        void ICommittedActionRuntimeUnityAdapter.LogLocomotionDiagnosticTickSnapshot(int step) => LogDiagnosticTickSnapshot(step);
     }
 }

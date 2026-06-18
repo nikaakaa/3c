@@ -108,7 +108,6 @@ namespace Tests.Editor
         [Test]
         public void DodgeResolverPreservesDirectionalResolvedAction()
         {
-            DodgeActionTuning config = CatalogDodgeTuning();
             InputRequestBuffer buffer = new InputRequestBuffer();
             buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 2, 4);
             CharacterActionRequestSubmissionInput input = SubmissionInput(buffer, 2, DirectionalFacts(Vector3.forward));
@@ -129,15 +128,14 @@ namespace Tests.Editor
             Assert.True(action.MotionSpec.HasSpec);
             Assert.AreEqual(ActionStateIds.Dodge, action.MotionSpec.ActionState);
             Assert.AreEqual(ThirdPersonCharacterStateMachine.CharacterStateIds.Dodge, action.MotionSpec.SourceState);
-            Assert.AreEqual(config.DirectionalDuration, action.MotionSpec.Duration, 0.0001f);
-            Assert.AreEqual(config.DirectionalDistance, action.MotionSpec.Distance, 0.0001f);
-            Assert.True(action.MotionSpec.SetRunLatchOnComplete);
+            Assert.AreEqual(0f, action.MotionSpec.Duration, 0.0001f);
+            Assert.AreEqual(0f, action.MotionSpec.Distance, 0.0001f);
+            Assert.False(action.MotionSpec.SetRunLatchOnComplete);
         }
 
         [Test]
         public void DodgeResolverPreservesBackstepResolvedAction()
         {
-            DodgeActionTuning config = CatalogDodgeTuning();
             InputRequestBuffer buffer = new InputRequestBuffer();
             buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 3, 4);
             CharacterActionRequestSubmissionInput input = SubmissionInput(buffer, 3, BackstepFacts());
@@ -152,8 +150,8 @@ namespace Tests.Editor
             Assert.AreEqual(CharacterStateVariant.Backstep, action.RequestFact.Variant);
             Assert.AreEqual(Vector3.back, action.RequestFact.WorldDirection);
             Assert.AreEqual(ActionAnimationKeys.DodgeBackstep, action.AnimationKey);
-            Assert.AreEqual(config.BackstepDuration, action.MotionSpec.Duration, 0.0001f);
-            Assert.AreEqual(config.BackstepDistance, action.MotionSpec.Distance, 0.0001f);
+            Assert.AreEqual(0f, action.MotionSpec.Duration, 0.0001f);
+            Assert.AreEqual(0f, action.MotionSpec.Distance, 0.0001f);
             Assert.False(action.MotionSpec.SetRunLatchOnComplete);
         }
 
@@ -368,8 +366,86 @@ namespace Tests.Editor
                         config.BackstepDuration,
                         config.BackstepDistance,
                         config.BackstepRotateToDirection,
-                        ActionAnimationKeys.DodgeBackstep))
+                        ActionAnimationKeys.DodgeBackstep),
+                    CreateDodgeBranch(config))
             });
+        }
+
+        static CommittedActionBranchDefinition CreateDodgeBranch(DodgeActionTuning config)
+        {
+            CommittedActionNodeDefinition directionalCondition = CommittedActionNodeDefinition.ConditionNode(
+                "condition.directional",
+                CommittedActionConditionDefinition.ActionVariant(CharacterStateVariant.Directional),
+                new CommittedActionNodeId("timeline.directional"));
+            CommittedActionNodeDefinition backstepCondition = CommittedActionNodeDefinition.ConditionNode(
+                "condition.backstep",
+                CommittedActionConditionDefinition.ActionVariant(CharacterStateVariant.Backstep),
+                new CommittedActionNodeId("timeline.backstep"));
+            return CommittedActionBranchDefinition.Define(
+                "action.dodge",
+                ActionStateIds.Dodge,
+                CommittedActionNodeDefinition.Selector(
+                    "selector.dodge",
+                    directionalCondition.NodeId,
+                    backstepCondition.NodeId),
+                BodyOccupancyClaim.CommittedActionFullBody(0),
+                new[]
+                {
+                    directionalCondition,
+                    backstepCondition,
+                    CommittedActionNodeDefinition.Timeline(
+                        "timeline.directional",
+                        CreateTimeline(ActionAnimationKeys.DodgeDirectional, CharacterStateVariant.Directional, config.DirectionalDuration, config.DirectionalDistance, true, true)),
+                    CommittedActionNodeDefinition.Timeline(
+                        "timeline.backstep",
+                        CreateTimeline(ActionAnimationKeys.DodgeBackstep, CharacterStateVariant.Backstep, config.BackstepDuration, config.BackstepDistance, false, false))
+                });
+        }
+
+        static ActionTimelineDefinition CreateTimeline(
+            ActionAnimationKey animationKey,
+            CharacterStateVariant variant,
+            float duration,
+            float distance,
+            bool rotateToDirection,
+            bool setRunLatch)
+        {
+            return new ActionTimelineDefinition(
+                ActionStateIds.Dodge,
+                21,
+                new[]
+                {
+                    new ActionTimelineTrackDefinition(
+                        ActionTimelineTrackKind.Animation,
+                        new[]
+                        {
+                            new ActionTimelineClipDefinition(
+                                ActionTimelineClipKind.AnimationKey,
+                                0,
+                                21,
+                                ActionTimelineClipPayload.Animation(animationKey))
+                        }),
+                    new ActionTimelineTrackDefinition(
+                        ActionTimelineTrackKind.Motion,
+                        new[]
+                        {
+                            new ActionTimelineClipDefinition(
+                                ActionTimelineClipKind.Motion,
+                                0,
+                                21,
+                                ActionTimelineClipPayload.Motion(new ActionMotionSpec(
+                                    ActionStateIds.Dodge,
+                                    CharacterStateIds.Dodge,
+                                    variant,
+                                    duration,
+                                    distance,
+                                    rotateToDirection,
+                                    setRunLatch,
+                                    Vector3.zero,
+                                    0f,
+                                    0)))
+                        })
+                });
         }
 
         static DodgeActionTuning CatalogDodgeTuning()
@@ -476,7 +552,7 @@ namespace Tests.Editor
                     request.SourceOrder,
                     request.OriginStep,
                     request.ExpireStep);
-                ActionInterruptContext interruptContext = FullBodyActionInterruptRequestFactory.CreateContext(
+                ActionInterruptContext interruptContext = CommittedActionInterruptRequestFactory.CreateContext(
                     context.Snapshot,
                     context.CurrentStep,
                     context.CurrentActionResistance,
@@ -567,7 +643,7 @@ namespace Tests.Editor
                     sourceOrder,
                     input.CurrentStep,
                     input.CurrentStep + 2);
-                ActionInterruptContext interruptContext = FullBodyActionInterruptRequestFactory.CreateContext(
+                ActionInterruptContext interruptContext = CommittedActionInterruptRequestFactory.CreateContext(
                     input.Snapshot,
                     input.CurrentStep,
                     0,

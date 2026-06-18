@@ -58,7 +58,7 @@ namespace ThirdPersonCharacterStateMachine
                 input.CurrentNode.TryResolveActionMovement(input.CurrentVariant, out CharacterActionMovementDefinition movement))
             {
                 CharacterStateMachineSnapshot snapshot = input.Snapshot;
-                FullBodyStateView stateView = FullBodyStateView.FromSnapshotAndNode(in snapshot, input.CurrentNode);
+                CharacterStateDomainView stateView = CharacterStateDomainView.FromSnapshotAndNode(in snapshot, input.CurrentNode);
                 actionMotionSpec = new ActionMotionSpec(
                     stateView.ActionState,
                     input.CurrentState,

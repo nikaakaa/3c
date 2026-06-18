@@ -132,7 +132,7 @@ namespace ThirdPersonMovement
                 return;
 
             float deltaTime = command.DeltaTime;
-            if (deltaTime <= 0f || !command.HasMovement)
+            if (deltaTime <= 0f || !command.HasMotion)
                 return;
 
             Vector3 worldDirection = command.WorldDirection;
@@ -142,6 +142,8 @@ namespace ThirdPersonMovement
 
             if (command.RotateToDirection)
                 RotateImmediate(worldDirection);
+            if (command.HasWarpYaw)
+                RotateByAnimationYaw(command.YawDelta);
 
             Vector3 planarVelocity = worldDirection * (command.PlanarDistance / deltaTime);
             Move(planarVelocity, Vector3.zero, deltaTime);

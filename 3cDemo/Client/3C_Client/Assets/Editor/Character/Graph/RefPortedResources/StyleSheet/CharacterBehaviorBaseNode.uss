@@ -1,0 +1,148 @@
+.node {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+#node-border {
+    border-left-color: rgb(34, 34, 34);
+    border-right-color: rgb(34, 34, 34);
+    border-top-color: rgb(34, 34, 34);
+    border-bottom-color: rgb(34, 34, 34);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    background-color: rgb(56, 56, 56);
+}
+
+#node-state {
+    position: absolute;
+    left: -2px;
+    top: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    border-left-color: rgba(0, 0, 0, 0);
+    border-right-color: rgba(0, 0, 0, 0);
+    border-top-color: rgba(0, 0, 0, 0);
+    border-bottom-color: rgba(0, 0, 0, 0);
+}
+
+:selected > #node-selection-border {
+    border-left-color: rgb(68, 192, 255);
+    border-right-color: rgb(68, 192, 255);
+    border-top-color: rgb(68, 192, 255);
+    border-bottom-color: rgb(68, 192, 255);
+    display: flex;
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+:hover > #node-selection-border {
+    border-left-color: rgb(200, 200, 200);
+    border-right-color: rgb(200, 200, 200);
+    border-top-color: rgb(200, 200, 200);
+    border-bottom-color: rgb(200, 200, 200);
+    display: flex;
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+#node-selection-border {
+    display: none;
+}
+
+#title {
+    min-width: 120px;
+    min-height: 25px;
+    flex-direction: row;
+}
+
+#title-button-container {
+    width: 25px;
+    height: 25px;
+}
+
+#collapse-button {
+    flex-grow: 1;
+    background-image: resource('d_icon dropdown@2x');
+    -unity-background-image-tint-color: rgb(34, 34, 34);
+}
+
+#title-label {
+    flex-grow: 1;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 10px;
+    padding-right: 10px;
+    -unity-font-style: bold-and-italic;
+    font-size: 14px;
+    color: rgb(34, 34, 34);
+    -unity-text-align: middle-center;
+}
+
+#panel-button-container {
+    width: 25px;
+    height: 25px;
+}
+
+#panel-button {
+    background-image: resource('d__Popup@2x');
+    flex-grow: 1;
+    -unity-background-image-tint-color: rgb(34, 34, 34);
+}
+
+#top {
+    flex-direction: row;
+}
+
+#input {
+    flex-grow: 1;
+}
+
+#output {
+    flex-grow: 1;
+}
+
+#node-input-field-container {
+    position: absolute;
+    right: 100%;
+    top: 28px;
+    color: rgb(190, 190, 190);
+    background-color: rgba(20, 20, 20, 0.85);
+    padding-left: 6px;
+    padding-right: 6px;
+}

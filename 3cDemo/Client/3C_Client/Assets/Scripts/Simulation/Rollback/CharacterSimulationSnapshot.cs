@@ -33,7 +33,7 @@ namespace ThirdPersonSimulation
                 animationKey,
                 animationNormalizedTime,
                 CharacterRuntimeBlackboardRestoreState.Empty,
-                FullBodyActionRestoreState.Inactive,
+                CommittedActionRestoreState.Inactive,
                 InputRequestBufferComponentRestoreState.Empty,
                 0f)
         {
@@ -64,7 +64,7 @@ namespace ThirdPersonSimulation
                 animationKey,
                 animationNormalizedTime,
                 CharacterRuntimeBlackboardRestoreState.Empty,
-                FullBodyActionRestoreState.Inactive,
+                CommittedActionRestoreState.Inactive,
                 InputRequestBufferComponentRestoreState.Empty,
                 0f)
         {
@@ -96,7 +96,7 @@ namespace ThirdPersonSimulation
                 animationKey,
                 animationNormalizedTime,
                 runtimeBlackboardRestoreState,
-                FullBodyActionRestoreState.Inactive,
+                CommittedActionRestoreState.Inactive,
                 InputRequestBufferComponentRestoreState.Empty,
                 0f)
         {
@@ -129,7 +129,7 @@ namespace ThirdPersonSimulation
                 animationKey,
                 animationNormalizedTime,
                 runtimeBlackboardRestoreState,
-                FullBodyActionRestoreState.Inactive,
+                CommittedActionRestoreState.Inactive,
                 InputRequestBufferComponentRestoreState.Empty,
                 cameraYaw)
         {
@@ -148,7 +148,7 @@ namespace ThirdPersonSimulation
             string animationKey,
             float animationNormalizedTime,
             CharacterRuntimeBlackboardRestoreState runtimeBlackboardRestoreState,
-            FullBodyActionRestoreState fullBodyRestoreState,
+            CommittedActionRestoreState committedActionRestoreState,
             InputRequestBufferComponentRestoreState inputBufferRestoreState,
             float cameraYaw = 0f,
             RollbackCameraBasisState cameraBasisState = default,
@@ -160,7 +160,7 @@ namespace ThirdPersonSimulation
             Yaw = SanitizeAngle(yaw);
             StateMachineRestoreState = stateMachineRestoreState;
             RuntimeBlackboardRestoreState = runtimeBlackboardRestoreState;
-            FullBodyRestoreState = fullBodyRestoreState;
+            CommittedActionRestoreState = committedActionRestoreState;
             InputBufferRestoreState = inputBufferRestoreState;
             RunLatchActive = runLatchActive;
             LastMovingGait = lastMovingGait;
@@ -191,7 +191,7 @@ namespace ThirdPersonSimulation
 
         public CharacterStateMachineRestoreState StateMachineRestoreState { get; }
         public CharacterRuntimeBlackboardRestoreState RuntimeBlackboardRestoreState { get; }
-        public FullBodyActionRestoreState FullBodyRestoreState { get; }
+        public CommittedActionRestoreState CommittedActionRestoreState { get; }
         public InputRequestBufferComponentRestoreState InputBufferRestoreState { get; }
         public CharacterStateMachineSnapshot StateMachine => StateMachineRestoreState.Snapshot;
         public CharacterRuntimeBlackboardSnapshot RuntimeBlackboard => RuntimeBlackboardRestoreState.Snapshot;
@@ -209,8 +209,8 @@ namespace ThirdPersonSimulation
         public LocomotionRuntimeRollbackState LocomotionRuntimeState { get; }
         public MotionExecutorRollbackState MotionExecutorState { get; }
 
-        public CharacterSimulationSnapshot WithFullBodyState(
-            in FullBodyActionRestoreState fullBodyRestoreState,
+        public CharacterSimulationSnapshot WithCommittedActionState(
+            in CommittedActionRestoreState committedActionRestoreState,
             in InputRequestBufferComponentRestoreState inputBufferRestoreState)
         {
             return new CharacterSimulationSnapshot(
@@ -226,7 +226,7 @@ namespace ThirdPersonSimulation
                 AnimationKey,
                 AnimationNormalizedTime,
                 RuntimeBlackboardRestoreState,
-                fullBodyRestoreState,
+                committedActionRestoreState,
                 inputBufferRestoreState,
                 CameraBasisState.Yaw,
                 CameraBasisState,
@@ -249,7 +249,7 @@ namespace ThirdPersonSimulation
                 AnimationKey,
                 AnimationNormalizedTime,
                 RuntimeBlackboardRestoreState,
-                FullBodyRestoreState,
+                CommittedActionRestoreState,
                 InputBufferRestoreState,
                 cameraBasisState.Yaw,
                 cameraBasisState,
@@ -272,7 +272,7 @@ namespace ThirdPersonSimulation
                 AnimationKey,
                 AnimationNormalizedTime,
                 RuntimeBlackboardRestoreState,
-                FullBodyRestoreState,
+                CommittedActionRestoreState,
                 InputBufferRestoreState,
                 CameraBasisState.Yaw,
                 CameraBasisState,
@@ -295,7 +295,7 @@ namespace ThirdPersonSimulation
                 AnimationKey,
                 AnimationNormalizedTime,
                 RuntimeBlackboardRestoreState,
-                FullBodyRestoreState,
+                CommittedActionRestoreState,
                 InputBufferRestoreState,
                 CameraBasisState.Yaw,
                 CameraBasisState,

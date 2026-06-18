@@ -1,7 +1,9 @@
  using ThirdPersonAction;
  using ThirdPersonAnimation;
- using ThirdPersonMovement;
- using ThirdPersonCharacterStateMachine;
+ using ThirdPersonCharacterBehavior;
+using ThirdPersonMovement;
+using ThirdPersonCharacterStateMachine;
+using ThirdPersonSimulation;
  using UnityEngine;
  using UnityEngine.InputSystem;
 
@@ -16,6 +18,7 @@
          [SerializeField] ActionInterruptPolicySetSO actionInterruptPolicy;
          [SerializeField] BodyClaimPolicySO bodyClaimPolicy;
          [SerializeField] CharacterActionCatalogSO actionCatalog;
+         [SerializeField] CharacterBehaviorRuntimeDefinitionSO behaviorRuntimeDefinition;
          [SerializeField] InputActionAsset inputActions;
          [SerializeField] InputActionReference moveAction;
          [SerializeField] InputActionReference runAction;
@@ -29,6 +32,7 @@
          public ActionInterruptPolicySetSO ActionInterruptPolicy => actionInterruptPolicy;
          public BodyClaimPolicySO BodyClaimPolicy => bodyClaimPolicy;
          public CharacterActionCatalogSO ActionCatalog => actionCatalog;
+         public CharacterBehaviorRuntimeDefinitionSO BehaviorRuntimeDefinition => behaviorRuntimeDefinition;
          public InputActionAsset InputActions => inputActions;
          public InputActionReference MoveAction => moveAction;
          public InputActionReference RunAction => runAction;
@@ -39,7 +43,10 @@
          public CharacterActionCatalogValidationResult ValidateActionCatalog()
          {
              if (actionCatalog != null)
-                 return actionCatalog.Validate();
+             {
+                 ActionTimelineCompileContext compileContext = ActionTimelineCompileContext.FromTickRate(SimulationTickRate.Default);
+                 return actionCatalog.Validate(in compileContext);
+             }
 
              CharacterActionCatalogValidationResult result = new CharacterActionCatalogValidationResult();
              result.AddError("Character config action catalog is missing.");

@@ -29,12 +29,22 @@
 ## OpenSpec 工作流
 
 - 涉及新能力、破坏性变更、架构调整、计划、proposal、spec 或含糊的大改动时，先读取 `openspec/AGENTS.md` 和 `openspec/project.md`。
+- 当前架构真相以 `openspec/specs/` 和 `openspec/project.md` 为准；`openspec/changes/archive/` 只作为历史记录，不作为当前目标架构依据。
+- 如果根目录说明、历史归档或旧文档与当前 OpenSpec 冲突，先停下来说明冲突，并按当前 OpenSpec 修正文档后再继续规划。
 - OpenSpec 的说明、proposal、design、tasks 和 spec 内容除固定格式关键字外使用中文。
 - 创建或修改 OpenSpec change 时必须包含测试设计或自动化测试任务。
 - 不把手动验证写入 OpenSpec 的 `tasks.md`。
 - 交付时必须明确告诉用户怎么验证，包括自动化测试命令和必要的 Unity 内手动验证步骤。
 - 用户说已经 archive，视为用户已经测试过，直接归档，不额外设置阻塞条件。
 - 实现前把任务拆细，按 OpenSpec 任务顺序逐项完成。
+
+## OpenSpec 清理规则
+
+- 当前 specs 已经完全覆盖的旧 archive 不再作为知识入口；清理时优先删除会误导后续实现的旧 archive，而不是继续在 archive 内补丁式维护。
+- 删除 archive 前必须确认它不被 active change、当前 specs、`openspec/project.md`、根目录 `AGENTS.md` 或正在执行的迁移任务引用为当前依据。
+- 删除当前 `openspec/specs/` 下的能力规格必须先确认它已被其它当前 spec 完整吸收，或已经没有对应运行时目标；不要留下“废弃但仍在 current specs”的占位规格。
+- 迁移和重构时不保留兼容 spec、fallback spec 或旧命名镜像 spec；能合并就合并到正式 spec，确定不用就删除。
+- 清理完成后至少运行 `openspec validate --specs --strict --no-interactive`；若同时有 active changes，再运行 `openspec validate --all --strict --no-interactive`。若验证失败，必须说明失败来自本次清理还是既有未完成迁移。
 
 ## 参考目录
 
@@ -61,20 +71,29 @@
 ## 架构原则
 
 - 不另起一套未审批的角色控制器路径。
-- 不绕过当前系统做临时方案；凡是需要绕过现有聚合点、状态机、动画外观层或运动驱动层的实现，必须停止并说明原因。
+- 不绕过当前系统做临时方案；凡是需要绕过 `CharacterFramePipeline`、Locomotion / Action 领域模块、动画外观层或运动驱动层的实现，必须停止并说明原因。
 - 抽象和实现分离。输入、意图、状态、运动、动画播放、表现事件不要塞进同一个 MonoBehaviour。
 - 配置优先。动画资源、速度参数、过渡参数、动作窗口、IK 曲线等应进入 ScriptableObject 或明确的数据模块。
 - 动画播放通过 Animancer 外观层收敛，不让业务状态直接散落大量 Animancer 细节。
 - 物理位移权威只能有一条主路径。基础移动、动作位移、Root Motion 采样、Warp 修正最终都应进入同一个运动驱动出口。
 
-## 状态机库选择
+## 角色帧架构
 
-- 当前角色业务主线使用项目自研统一分层状态机：`CharacterStateMachineDefinitionSO -> CharacterStateMachineRunner -> CharacterStateMachineFrame`。
-- `FullBody/Locomotion/...` 与 `FullBody/Action/...` 必须归属同一棵状态树，不得恢复 Locomotion、Action 两套状态机再外层缝合的分裂路径。
+- 当前角色最高调度入口是 `CharacterFramePipeline`。Locomotion 与 Action 是 Character frame owner 下的 sibling 领域模块，提交纯数据候选、facts、claim 和 outcome。
+- Locomotion 是 Movement module，可以内部使用 `CharacterStateMachineDefinitionSO -> CharacterStateMachineRunner -> CharacterStateMachineFrame` 解释 `Locomotion.*` local graph，但不属于 `FullBody` 子树。
+- Action 是 Action domain，负责请求解析、打断、lifecycle、body/channel claim、动作运动和动作动画候选；Action 不要求成为统一角色状态树叶子。
+- `FullBody` 只表达 body/channel claim、动作输出占用或动画层语义，不是 Locomotion owner、状态树根、runtime source、rollback adapter 名或第二个角色帧权威。
+- 正式状态 ID 使用 `Locomotion.Idle`、`Locomotion.MoveLoop`、`Action.Dodge` 等领域 ID；`FullBody/Locomotion/...` 与 `FullBody/Action/...` 只允许作为遗留迁移输入或历史文档出现。
+- 讨论角色身体数据模型时必须区分六层：Source、Action、Claim、Slot、Channel、Presentation Layer。
+- Source 表示谁提交候选，例如 LocomotionSource、CommittedActionSource；Action 表示动作语义，例如 `Action.Dodge`；Claim 表示身体占用声明，例如 FullBody claim、UpperBody claim。
+- Slot 表示角色级仲裁后的资源位置。当前正式讨论用 `BaseSlot` 和 `UpperBodySlot`；`CharacterFramePlan` / `BodyOccupancyDecision` 的正式读取面是 `BaseSlotOwner`、`UpperBodySlotOwner` 和 `UpperBodySlotSuppressed`；`FullBody` 不是 slot，Dodge 的 FullBody claim 表示 CommittedAction 接管 BaseSlot 并压制 UpperBodySlot。
+- `BaseLayerOwner` 是旧的错误口径：它把 gameplay slot owner 写成了 animation layer owner。后续所谓“更新身体数据模型”指迁移到 `BaseSlotOwner` / `UpperBodySlotOwner` / claim / channel 的正式 contract，不是新增动画层 owner 字段。
+- Channel 表示输出类型，例如 Motion、Animation、Window、Cue、facts；Presentation Layer 表示执行表现，例如 motion executor、Animancer layer、AvatarMask、VFX/SFX/Camera presenter。
+- Animancer layer、Timeline track、GraphView lane、Editor node 不是 gameplay slot，也不是 claim 权威；它们只能展示或消费 `CharacterFramePlan` / frame output 的结果。
+- `UpperBody` 当前是已预留 claim/slot 语义和扩展位，不代表 UpperBody runtime source 已实现；`Facial`、`FaceBody` 或 facial slot 未经新的 OpenSpec 批准不得进入 BodyArbiter 或正式 frame plan。
 - 状态机代码按 `Model / Config / Solver/Runtime|Timeline|Transition|Output|Validation` 归档，中心状态机配置资产放在 `Assets/Configs/3C/StateMachine/`。
-- 实现状态机 runtime、timeline facts 或输出解析前先读 `docs/agents/character-hierarchical-state-runtime-guide.md`。
+- 实现状态机 runtime、timeline facts 或输出解析前，先读 `openspec/project.md` 与相关 `openspec/specs/`，再检查是否存在当前 change；不要引用归档 change 作为目标架构。
 - `com.inspiaaa.unityhfsm` 仍在包依赖中，但当前只作为第三方库参考；未经新的 OpenSpec 审批，不得接入为正式角色状态机 engine。
-- `docs/agents/unityhfsm-usage-guide.md` 只作为历史参考和 API 对照，不作为当前角色业务主线指南。
 
 ## Root Motion 策略
 
@@ -105,45 +124,45 @@
 优先做能体现深度的能力：输入意图管线、状态分层、Animancer 外观层、运动驱动、Root Motion 烘焙、Motion Warping、IK、动作仲裁、相机模式、测试和可视化调试。
 
 <!-- gitnexus:start -->
-## GitNexus 代码智能
+# GitNexus — Code Intelligence
 
-本项目已经被 GitNexus 索引为 **3c**，当前索引包含 43055 个符号、81481 条关系和 300 条执行流。理解代码、评估影响和安全导航时优先使用 GitNexus MCP 工具。
+This project is indexed by GitNexus as **3c** (44898 symbols, 84855 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-如果索引过期，在项目根目录运行 `node .gitnexus/run.cjs analyze`，它会自动选择可用 runner。如果还没有 `.gitnexus/run.cjs`，运行 `npx gitnexus analyze`；如果遇到 npm 11 崩溃，先执行 `npm i -g gitnexus`。
+> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
-### 必须做
+## Always Do
 
-- 修改任何函数、类或方法前，必须先运行 `impact({target: "symbolName", direction: "upstream"})`，并向用户报告影响范围：直接调用方、受影响执行流和风险等级。
-- 提交前必须运行 `detect_changes()`，确认改动只影响预期符号和执行流。做回归审查时使用 `detect_changes({scope: "compare", base_ref: "main"})`。
-- 如果 impact 返回 HIGH 或 CRITICAL，继续编辑前必须先警告用户。
-- 探索陌生代码时，优先使用 `query({query: "concept"})` 查找执行流，而不是只靠文本搜索。
-- 需要理解某个符号的完整上下文时，使用 `context({name: "symbolName"})` 查看调用方、被调用方和参与的执行流。
+- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
+- **MUST run `detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows. For regression review, compare against the default branch: `detect_changes({scope: "compare", base_ref: "main"})`.
+- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
+- When exploring unfamiliar code, use `query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
+- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `context({name: "symbolName"})`.
 
-### 禁止做
+## Never Do
 
-- 未运行 impact 分析前，不要编辑函数、类或方法。
-- 不要忽略 HIGH 或 CRITICAL 风险。
-- 不要用普通查找替换来重命名符号；重命名使用 GitNexus `rename`。
-- 未运行 `detect_changes()` 前不要提交。
+- NEVER edit a function, class, or method without first running `impact` on it.
+- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
+- NEVER rename symbols with find-and-replace — use `rename` which understands the call graph.
+- NEVER commit changes without running `detect_changes()` to check affected scope.
 
-### 资源
+## Resources
 
-| 资源 | 用途 |
-| --- | --- |
-| `gitnexus://repo/3c/context` | 代码库概览和索引新鲜度 |
-| `gitnexus://repo/3c/clusters` | 全部功能区域 |
-| `gitnexus://repo/3c/processes` | 全部执行流 |
-| `gitnexus://repo/3c/process/{name}` | 单个执行流的逐步追踪 |
+| Resource | Use for |
+|----------|---------|
+| `gitnexus://repo/3c/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/3c/clusters` | All functional areas |
+| `gitnexus://repo/3c/processes` | All execution flows |
+| `gitnexus://repo/3c/process/{name}` | Step-by-step execution trace |
 
-### CLI 参考
+## CLI
 
-| 任务 | 读取技能文件 |
-| --- | --- |
-| 理解架构或“X 是怎么工作的” | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| 影响分析或“改 X 会破坏什么” | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| 追踪 bug 或“为什么 X 会失败” | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| 重命名、抽取、拆分、重构 | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| 工具、资源和 schema 参考 | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| 索引、状态、清理、wiki CLI 命令 | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+| Task | Read this skill file |
+|------|---------------------|
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
+| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
+| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
+| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
+| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->

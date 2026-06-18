@@ -82,8 +82,7 @@ namespace ThirdPersonAction
             if (!request.HasRequest ||
                 request.RequestType != ActionRequestType.Dodge ||
                 request.SourceInputKind != InputRequestKind.Dodge ||
-                !context.ActionCatalog.TryGetDodgeDefinition(out CharacterActionDefinition definition) ||
-                !definition.TryGetDodgeTuning(out DodgeActionTuning tuning))
+                !context.ActionCatalog.TryGetDodgeDefinition(out CharacterActionDefinition definition))
             {
                 return false;
             }
@@ -96,7 +95,7 @@ namespace ThirdPersonAction
                     in moveIntent,
                     spatialFacts.WorldMoveDirection,
                     spatialFacts.FacingForward,
-                    in tuning,
+                    definition.Priority,
                     out DodgeActionRequest dodgeRequest))
             {
                 return false;
@@ -105,24 +104,22 @@ namespace ThirdPersonAction
             CharacterStateVariant variant = dodgeRequest.Variant == DodgeActionVariant.Backstep
                 ? CharacterStateVariant.Backstep
                 : CharacterStateVariant.Directional;
-            CharacterInputRequestFact requestFact = FullBodyActionInputRequestBuilder.ToInputRequestFact(in dodgeRequest);
-            ActionInterruptContext interruptContext = FullBodyActionInterruptRequestFactory.CreateContext(
+            CharacterInputRequestFact requestFact = CommittedActionInputRequestBuilder.ToInputRequestFact(in dodgeRequest);
+            ActionInterruptContext interruptContext = CommittedActionInterruptRequestFactory.CreateContext(
                 context.Snapshot,
                 context.CurrentStep,
                 context.CurrentActionResistance,
                 context.CurrentTimelineFacts);
             ActionInterruptRequest interruptRequest = dodgeRequest.ToInterruptRequest();
-            if (!definition.TryGetDodgeVariant(dodgeRequest.Variant, out DodgeActionVariantDefinition variantDefinition))
-                return false;
 
             ActionMotionSpec motionSpec = new ActionMotionSpec(
                 definition.ActionState,
                 definition.MotionSourceState,
                 variant,
-                tuning.ResolveDuration(dodgeRequest.Variant),
-                tuning.ResolveDistance(dodgeRequest.Variant),
-                tuning.ShouldRotateToDirection(dodgeRequest.Variant),
-                dodgeRequest.Variant == DodgeActionVariant.Directional,
+                0f,
+                0f,
+                false,
+                false,
                 dodgeRequest.WorldDirection,
                 0f,
                 context.CurrentStep);
@@ -133,7 +130,7 @@ namespace ThirdPersonAction
                 requestFact,
                 interruptRequest,
                 interruptContext,
-                variantDefinition.AnimationKey,
+                DodgeActionPlanner.ResolveAnimationKey(dodgeRequest.Variant),
                 motionSpec);
             return true;
         }

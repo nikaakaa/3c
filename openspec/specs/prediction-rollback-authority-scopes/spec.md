@@ -1,7 +1,7 @@
 # prediction-rollback-authority-scopes Specification
 
 ## Purpose
-TBD - created by archiving change add-prediction-rollback-authority-scopes. Update Purpose after archive.
+定义预测/回滚权威域、回滚比较域、状态权威矩阵和单一角色控制器路径边界，为后续本地预测和同步测试提供稳定分层依据。
 ## Requirements
 ### Requirement: 预测回滚权威域
 系统 MUST 提供预测回滚权威域，用纯数据描述状态、动画播放进度、运动来源和 runtime facts 的权威来源。权威域 MUST 至少区分纯表现、逻辑计时、Profile 驱动和 Animator runtime direct 这几类语义，并且 MUST NOT 依赖 Unity Object、Animancer runtime state、AnimationClip、TransitionAsset 或场景实例引用。
@@ -74,4 +74,3 @@ TBD - created by archiving change add-prediction-rollback-authority-scopes. Upda
 - **WHEN** 某状态被标记为 `StrictGameplay`
 - **THEN** replay MUST 仍通过正式 state machine、motion source 和 motion executor 产生结果
 - **AND** MUST NOT 直接写 Transform 或直接调用底层 sampler 制造收敛
-

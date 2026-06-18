@@ -77,7 +77,7 @@
 - [x] 8.2 replay 的输入请求写入在 `UpdateInputBuffer` step 通过 `PredictionInputFrameInputBufferReplay.WriteToInputBuffer`。
 - [x] 8.3 replay 调用 `fullBodyActionController.Tick` 而不是直接 `PlayerLocomotionController.Tick`。
 - [x] 8.4 replay 不使用手工拼接 action playback（先 restore 再 advance 通过 pipeline）。
-- [x] 8.5 `CaptureSnapshot` 包含 `FullBodyActionRestoreState` + `InputRequestBufferComponentRestoreState`。
+- [x] 8.5 `CaptureSnapshot` 包含 `CommittedActionRestoreState` + `InputRequestBufferComponentRestoreState`。
 - [x] 8.6 `FullBodyRollbackSimulationReplaysMoveRunAndDodgeToSameSnapshot` synctest 覆盖。
 - [x] 8.7 `FullBodyRollbackSimulationRestoreRestoresFullBodyStateAndInputBuffer` 确认消费状态。
 - [x] 8.8 `FullBodyRollbackCoreDoesNotReferenceForbiddenIntegrationTypes` + `SnapshotComparerReportsMotionRootPoseDifferences` 覆盖。
@@ -91,7 +91,7 @@
 - [x] 9.6 Unity Test Runner 定向运行 InputRequestBuffer 测试（17 passed）。
 - [x] 9.7 Unity Console 清除后 error 为 0（仅预期 driver-conflict 错误由 LogAssert 消费）。
 - [x] 9.8 未运行 Unity batchmode。
-- [x] 9.9 `openspec validate refactor-fullbody-frame-pipeline --strict --no-interactive` 通过。
+- [x] 9.9 `openspec validate refactor-character-frame-pipeline --strict --no-interactive` 通过。
 - [x] 9.10 新增 `PlayerLocomotionPreservesReverseTurnBackIntentUntilRunLoopAfterInputRotation` 回归测试并通过 C# assembly build；当前会话未暴露 Unity MCP Test Runner，需在 Unity Editor 内重跑定向测试确认运行结果。
 
 ## 10. 手动验证

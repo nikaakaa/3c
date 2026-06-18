@@ -1,7 +1,7 @@
 # state-timeline-policy Specification
 
 ## Purpose
-TBD - created by archiving change add-configurable-state-interrupt-windows. Update Purpose after archive.
+定义状态 Timeline Policy 的 typed facts、窗口时间域、退出/打断职责分离、正式装配和校验边界。
 ## Requirements
 ### Requirement: Timeline Fact 使用类型化标识
 系统 MUST 将 timeline window 的运行时输出表达为稳定 `TimelineFactId` 或等价类型化 tag。window id MAY 用于编辑器定位、诊断和校验；仲裁、自然退出、输入锁和运动输出 MUST 消费 active facts，而不是重新读取 window start/end 或依赖临时字符串。fact 标识 MUST 保持纯数据边界，并 MUST NOT 持有 Unity 对象引用。
@@ -144,4 +144,3 @@ TBD - created by archiving change add-configurable-state-interrupt-windows. Upda
 - **WHEN** 设计者运行角色配置校验
 - **THEN** 校验结果 MUST 能定位当前角色绑定的 timeline policy 资产
 - **AND** MUST 能报告缺失或非法窗口
-

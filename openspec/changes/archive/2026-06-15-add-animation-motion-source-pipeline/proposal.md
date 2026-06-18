@@ -45,4 +45,4 @@
   - `Assets/Configs/3C/Animation/Locomotion/Corin/DefaultRunLocomotionAnimationConfig.asset`
   - `Assets/Tests/Editor`
 - Related active changes:
-  - Must remain compatible with `refactor-turnback-request-entry` and `refactor-fullbody-frame-pipeline`.
+  - Must remain compatible with `refactor-turnback-request-entry` and `refactor-character-frame-pipeline`.

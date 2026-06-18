@@ -1,4 +1,4 @@
-﻿## 1. Apply 阶段准备
+## 1. Apply 阶段准备
 - [x] 1.1 读取本 change 的 `proposal.md`。
 - [x] 1.2 读取本 change 的 `design.md`。
 - [x] 1.3 读取本 change 的 `tasks.md`。
@@ -57,7 +57,7 @@
 ## 6. FullBody 提交者适配
 - [x] 6.1 将现有 FullBody request submission 逻辑接入 request submitter Interface。
 - [x] 6.2 将现有 FullBody frame output submission 逻辑接入 output submitter Interface。
-- [x] 6.3 保持 action request 仍经过 `FullBodyActionRequestSubmissionResolver` 和统一状态机。
+- [x] 6.3 保持 action request 仍经过 `CommittedActionRequestSubmissionResolver` 和统一状态机。
 - [x] 6.4 保持 action motion resolve 仍在 frame output submission 阶段生成纯数据。
 - [x] 6.5 确认 FullBody request submitter 不执行 motion。
 - [x] 6.6 确认 FullBody request submitter 不播放 animation。

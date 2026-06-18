@@ -19,12 +19,12 @@
 - **AND** Locomotion 不得在 Character frame pipeline 外额外执行第二次 gameplay tick
 
 ### Requirement: 防止 Locomotion 双驱动
-系统 MUST 防止同一个角色同时被 Unity frame `Update`、`LocomotionTickAdapter`、`FullBodyActionTickAdapter` 或 Character frame pipeline 之外的其它 handler 驱动。正式当前角色装配 MUST 只使用进入 Character frame pipeline 的 gameplay driver；Locomotion 直接 tick 入口只能作为迁移诊断或测试工具存在。
+系统 MUST 防止同一个角色同时被 Unity frame `Update`、`LocomotionTickAdapter`、旧 FullBody action tick adapter 或 Character frame pipeline 之外的其它 handler 驱动。正式当前角色装配 MUST 只使用进入 Character frame pipeline 的 gameplay driver；Locomotion 直接 tick 入口只能作为迁移诊断或测试工具存在。
 
 #### Scenario: Character adapter 接管时关闭 frame Update
 - **WHEN** Character gameplay tick adapter 接管某个角色
 - **THEN** 该角色的自动 frame Update gameplay 驱动 MUST 被关闭或跳过
-- **AND** 被引用的 `PlayerLocomotionController` MUST NOT 通过自己的 frame Update 推进 gameplay
+- **AND** 旧 Locomotion direct Update 或等价旧 facade MUST NOT 通过自己的 frame Update 推进 gameplay
 
 #### Scenario: Locomotion adapter 不作为正式 driver
 - **WHEN** 当前角色处于正式 gameplay 装配
@@ -33,8 +33,8 @@
 - **AND** 旧 Locomotion tick 入口 MUST NOT 继续推进状态机 runner 或提交 motion executor
 
 #### Scenario: 关闭自动 Update 不读输入
-- **WHEN** controller 自动 Update 被关闭
-- **THEN** controller 的 Unity frame `Update` MUST NOT 读取 input source
+- **WHEN** 旧 direct Update 被关闭
+- **THEN** 旧 direct Update 的 Unity frame `Update` MUST NOT 读取 input source
 - **AND** MUST NOT 提交 motion executor
 
 ### Requirement: Tick Adapter 边界
@@ -47,7 +47,7 @@
 
 #### Scenario: driver 不依赖 Locomotion
 - **WHEN** `UnitySimulationTickDriver` 编译或运行
-- **THEN** driver MUST NOT 直接引用 `PlayerLocomotionController`
+- **THEN** driver MUST NOT 直接引用具体 Locomotion runtime implementation
 - **AND** MUST NOT 直接引用 `ThirdPersonMovement` 命名空间
 
 #### Scenario: adapter 不绕过主线
@@ -59,8 +59,8 @@
 
 #### Scenario: adapter 驱动统一决策管线
 - **WHEN** adapter 执行 tick
-- **THEN** adapter MUST 调用 `PlayerLocomotionController` 的统一 Locomotion 主入口或等价入口
-- **AND** 该入口 MUST 负责读取或接收输入快照、构建 Locomotion 决策事实、推进 Locomotion 状态图或等价 runtime、构建运动命令并提交外围 adapter
+- **THEN** adapter MUST 调用 `CharacterFrameRuntimeController`、`CharacterRuntimeCore` 或等价角色级入口
+- **AND** 该入口 MUST 负责读取或接收输入快照、构建 Locomotion 决策事实、推进 Locomotion 状态图或等价 runtime、构建运动候选并交给角色帧输出阶段
 
 ### Requirement: Scene Tick 组装
 系统 MUST 在当前演示场景中提供明确的 tick driver 组装点，并将当前角色 gameplay 接入 Character frame pipeline。Action 和 Locomotion 是当前角色帧管线内的提交来源，不能通过独立 FullBody controller 或 Locomotion tick adapter 接入场景 tick driver。
@@ -73,12 +73,12 @@
 - **WHEN** 当前演示角色存在 `CharacterFrameRuntimeController` 或等价角色级 runtime owner
 - **THEN** 该角色 MUST 通过 Character frame pipeline 接入场景 tick driver
 - **AND** MUST NOT 同时由 frame Update 直接驱动
-- **AND** MUST NOT 同时由 `LocomotionTickAdapter`、`FullBodyActionTickAdapter` 或 `PlayerFullBodyActionController` 驱动
+- **AND** MUST NOT 同时由 `LocomotionTickAdapter`、旧 FullBody action tick adapter 或 旧 FullBody action controller 驱动
 
 #### Scenario: 没有第二控制路径
 - **WHEN** 场景完成 tick 接入
 - **THEN** 场景 MUST NOT 新增绕过 `CharacterFramePipeline`、`CharacterFrameRuntimeController` 或 motion executor 的第二套移动控制路径
-- **AND** 场景 MUST NOT 保留 `PlayerFullBodyActionController` 作为装配 adapter
+- **AND** 场景 MUST NOT 保留 旧 FullBody action controller 作为装配 adapter
 
 ### Requirement: 当前 Locomotion 行为保持
 系统 MUST 在 tick 接入后保持当前基础 WASD/Look 和四阶段 Locomotion 行为不回退。
@@ -140,4 +140,3 @@
 - **THEN** Locomotion builder MUST 从 TurnBack motion profile 或等价 tick 对齐数据采样 yaw 和 translation
 - **AND** MUST 作为 Character frame output 的 movement submission 进入统一 output composer/applier
 - **AND** MUST NOT 从 `OnAnimatorMove` pending buffer 消费 runtime root delta
-

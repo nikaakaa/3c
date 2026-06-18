@@ -11,7 +11,7 @@ namespace ThirdPersonAction
             if (input.OccupancyClaim.ClaimsFullBody)
             {
                 return new BodyOccupancyDecision(
-                    CharacterBodyDomain.FullBodyAction,
+                    CharacterBodyDomain.CommittedAction,
                     CharacterBodyDomain.None,
                     true,
                     input.LocomotionCandidate.HasMotionCandidate,
@@ -22,8 +22,8 @@ namespace ThirdPersonAction
 
             CharacterBodyDomain baseOwner = input.LocomotionCandidate.HasAnyCandidate
                 ? CharacterBodyDomain.Locomotion
-                : input.FullBodyActionCandidate.HasAnyCandidate
-                    ? CharacterBodyDomain.FullBodyAction
+                : input.CommittedActionCandidate.HasAnyCandidate
+                    ? CharacterBodyDomain.CommittedAction
                     : CharacterBodyDomain.None;
             CharacterBodyDomain upperBodyOwner = input.UpperBodyCandidate.HasAnyCandidate ||
                                                 input.OccupancyClaim.ClaimsUpperBody

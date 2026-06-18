@@ -123,15 +123,15 @@
 - **AND** Idle、MoveStart、MoveLoop、MoveStop 表现 MUST 仍能触发
 - **AND** FreeLook 手动配置 MUST 不被运行时代码覆盖
 
-### Requirement: FullBody 框架接入后的 Locomotion 模块边界
-系统 MUST 允许现有 WASD/Locomotion 主链在 Action 框架接入后作为统一角色状态机的 Locomotion 决策管线被调度。该模块负责读取或接收移动输入快照、解析移动意图、解析空间事实、派生 Locomotion 决策事实、构建状态机 context、根据状态机输出构建运动命令和动画上下文；最终运动提交和 base layer 动画提交 MUST 服从 FullBody 主调度入口的 owner 选择。
+### Requirement: Character Frame 接入后的 Locomotion 模块边界
+系统 MUST 允许现有 WASD/Locomotion 主链在 Action 框架接入后作为 `CharacterFramePipeline` 下的 Locomotion 决策管线被调度。该模块负责读取或接收移动输入快照、解析移动意图、解析空间事实、派生 Locomotion 决策事实、构建状态机 context、根据状态机输出构建运动候选和动画候选；最终 motion 和 base layer animation 是否执行 MUST 服从 `CharacterFramePlan` 的 slot/claim 仲裁结果。
 
-#### Scenario: Locomotion 可被 FullBody 调度
-- **WHEN** FullBody 主调度入口请求 Locomotion 本帧结果
+#### Scenario: Locomotion 可被角色帧管线调度
+- **WHEN** Character frame 需要 Locomotion 本帧结果
 - **THEN** Locomotion 模块 MUST 能提供移动意图和世界方向事实
 - **AND** MUST 能提供 Locomotion 决策事实
 - **AND** MUST 能提供当前基础移动 phase
-- **AND** MAY 提供基础移动运动命令和动画上下文供 FullBody 主调度入口选择提交
+- **AND** MAY 提供基础移动 motion candidate 和 animation candidate 供 `CharacterFramePlan` 仲裁
 
 #### Scenario: Dodge request 使用统一 Locomotion facts
 - **WHEN** Action gate 构建 Dodge 输入请求事实
@@ -141,7 +141,7 @@
 - **AND** Action gate MUST NOT 重新从 raw Move 输入、相机 basis 或 facing provider 解析移动方向
 
 #### Scenario: Action active 时不提交 Locomotion 输出
-- **GIVEN** FullBody 主调度入口选择 active Action 作为本帧 owner
+- **GIVEN** `CharacterFramePlan` 选择 CommittedAction 接管 BaseSlot 或压制 Locomotion 输出
 - **WHEN** Locomotion 模块已经生成基础移动运动命令或动画上下文
 - **THEN** 系统 MUST NOT 将该基础移动运动命令提交给 motion executor
 - **AND** MUST NOT 将该基础移动动画上下文提交给 base layer presenter
@@ -155,7 +155,7 @@
 #### Scenario: 不恢复第二主入口
 - **WHEN** Action framework 接入完成
 - **THEN** 系统 MUST NOT 同时保留一套独立 WASD 主入口和一套独立 Action 主入口共同提交平面位移
-- **AND** 系统 MUST NOT 让 `PlayerDodgeActionController` 或等价 per-action controller 长期绕过 FullBody 主调度入口提交 base layer 动画或平面位移
+- **AND** 系统 MUST NOT 让 `PlayerDodgeActionController` 或等价 per-action controller 长期绕过 `CharacterFramePipeline` / `CharacterFramePlan` 提交 base layer 动画或平面位移
 
 ### Requirement: TurnBack 运动命令权威
 系统 MUST 在 TurnBack 状态期间通过统一运动命令表达动画驱动转身，而不是让普通输入运动、动画外观层和 root motion 采样各自成为位移或旋转权威。TurnBack 的动画运动贡献或烘焙运动贡献 MUST 转换为 movement facts、movement submission 或等价纯数据，再由 Character frame pipeline 的 output applier 通过现有 motion executor 执行。
@@ -184,7 +184,7 @@
 #### Scenario: TurnBack 没有第二运动出口
 - **WHEN** TurnBack 状态执行中
 - **THEN** `CharacterController.Move` MUST 仍只通过现有 motion executor 或等价运动端口调用
-- **AND** Locomotion builder MUST NOT 新增绕过 `PlayerLocomotionController` 或 Character output applier 的 TurnBack 控制器
+- **AND** Locomotion builder MUST NOT 新增绕过 `CharacterFramePipeline`、`LocomotionRuntimeModule` 或 Character output applier 的 TurnBack 控制器
 - **AND** Locomotion builder MUST NOT 恢复 TurnInPlace、MovingPivotTurn 或旧的散落式 baked yaw/profile 运行路径
 
 ### Requirement: TurnBack 手动验证闭环
@@ -215,19 +215,19 @@
 - **THEN** 用户 MUST 能通过 `locomotion-turnback-state-policy|turnback-root-motion-consumed|animation-motion-executor|locomotion-animation-played` 或等价关键字找到 TurnBack 状态、动画和运动命令链路
 
 ### Requirement: Locomotion Frame Runtime 模块化
-系统 MUST 将 Locomotion prepare/evaluate/build 的运行时实现拆分为明确的 frame runtime modules。`ILocomotionFrameRuntimePort` MUST 保持为 FullBody submission builder 访问 Locomotion 子职责的唯一入口；该入口背后的实现 MUST NOT 长期由 `PlayerLocomotionController` 独自承载。纯 `LocomotionFrameBuilder` MUST 继续只处理纯数据构建，不得接管 Unity 引用解析、运动执行、动画表现或状态机 runner ownership。
+系统 MUST 将 Locomotion prepare/evaluate/build 的运行时实现拆分为明确的 frame runtime modules。`ILocomotionFrameRuntimePort` MUST 保持为 Character frame submitters 访问 Locomotion 子职责的唯一入口；该入口背后的实现 MUST 由 `CharacterRuntimeCore` 组合的 `LocomotionRuntimeModule` 或批准等价模块承载。纯 `LocomotionFrameBuilder` MUST 继续只处理纯数据构建，不得接管 Unity 引用解析、运动执行、动画表现或状态机 runner ownership。
 
-#### Scenario: FullBody 只看 frame runtime port
-- **WHEN** `FullBodySubmissionBuilder` 需要 Locomotion decision 或 motion frame
+#### Scenario: submitter 只看 frame runtime port
+- **WHEN** Character frame submitter 需要 Locomotion decision 或 motion frame
 - **THEN** 它 MUST 只调用 `ILocomotionFrameRuntimePort`
 - **AND** MUST NOT 引用 `PlayerLocomotionController`
 - **AND** MUST NOT 读取 Locomotion controller 的 Unity scene object
 
-#### Scenario: Frame runtime 迁出 controller
+#### Scenario: Frame runtime 由 module 承载
 - **WHEN** Locomotion frame runtime 执行 prepare/evaluate/build
 - **THEN** 具体实现 MUST 位于 `LocomotionFrameRuntime`、adapter 或等价模块中
-- **AND** `PlayerLocomotionController` MUST 只负责装配和兼容入口委托
-- **AND** controller MUST NOT 继续复制完整 frame runtime 操作面板
+- **AND** `LocomotionRuntimeModule` MUST 持有正式 Locomotion runtime state
+- **AND** 旧 controller 或 facade MUST NOT 继续复制完整 frame runtime 操作面板
 
 #### Scenario: Pure builder 不执行副作用
 - **WHEN** `LocomotionFrameBuilder` 构建 decision 或 motion frame
@@ -237,7 +237,7 @@
 
 #### Scenario: Runtime state restore 保持一致
 - **WHEN** Locomotion runtime state 被 capture 后 restore
-- **THEN** run latch、last moving gait、current intent、current frame、phase time、previous direction 和 pending TurnBack intent MUST 与迁移前保持等价
+- **THEN** run latch、last moving gait、current intent、current tick、phase time、previous direction 和 pending TurnBack intent MUST 与迁移前保持等价
 - **AND** rollback/replay tests MUST 能证明 restore 后同输入序列结果一致
 
 ### Requirement: Locomotion Frame Runtime 职责分层
@@ -259,14 +259,14 @@
 #### Scenario: State store 是唯一 Locomotion 局部状态来源
 - **WHEN** run latch、last moving gait、previous direction 或 pending TurnBack intent 被读取或写入
 - **THEN** 访问 MUST 经过 Locomotion runtime state store 或等价集中 Module
-- **AND** controller MUST NOT 同时保存第二份 authoritative value
+- **AND** 旧 controller 或 Unity-facing adapter MUST NOT 同时保存第二份 authoritative value
 - **AND** rollback capture/restore MUST 使用同一状态来源
 
 ### Requirement: Locomotion Frame Runtime 不得恢复分裂主线
-系统 MUST 保持 FullBody submission builder 通过 `ILocomotionFrameRuntimePort` 向 Locomotion 提交数据请求。Locomotion frame runtime MUST NOT 重新成为独立最终输出管线，也不得绕过统一角色帧 pipeline。
+系统 MUST 保持 Character frame submitters 通过 `ILocomotionFrameRuntimePort` 向 Locomotion 提交数据请求。Locomotion frame runtime MUST NOT 重新成为独立最终输出管线，也不得绕过统一角色帧 pipeline。
 
 #### Scenario: Locomotion 只提交 frame 数据
-- **WHEN** FullBody 状态机需要 Locomotion 数据
+- **WHEN** Character frame submission 需要 Locomotion 数据
 - **THEN** Locomotion frame runtime MUST 返回 decision/motion frame 数据
 - **AND** MUST NOT 自己写入最终 `CharacterFrameSubmission`
 - **AND** MUST NOT 自己调用 final output applier
@@ -277,7 +277,7 @@
 - **AND** MUST NOT 与 unified character frame pipeline 竞争 authoritative output
 
 ### Requirement: Locomotion Output Runtime 模块化
-系统 MUST 将 Locomotion 输出副作用拆分为明确的 output runtime modules。`ILocomotionOutputRuntimePort` MUST 作为 FullBody 输出层访问基础移动 motion execution、locomotion animation presentation、runtime facts 写入和 output completion 的唯一入口。输出模块 MUST NOT 选择逻辑状态、创建状态机 runner 或重算 frame decision。
+系统 MUST 将 Locomotion 输出副作用拆分为明确的 output runtime modules。`ILocomotionOutputRuntimePort` MUST 作为 Character frame output runtime 访问基础移动 motion execution、locomotion animation presentation、runtime facts 写入和 output completion 的唯一入口。输出模块 MUST NOT 选择逻辑状态、创建状态机 runner 或重算 frame decision。
 
 #### Scenario: Motion execution 只经 motion executor
 - **WHEN** Locomotion output runtime 执行基础移动位移
@@ -322,7 +322,7 @@
 - **WHEN** output completion module 同步 camera basis 或 reset run latch
 - **THEN** 它 MUST NOT 读取新输入
 - **AND** MUST NOT 重新构建 Locomotion frame
-- **AND** MUST NOT 触发 FullBody 状态机 transition
+- **AND** MUST NOT 触发状态机 transition
 
 ### Requirement: Locomotion Output Runtime 不得创建新执行出口
 系统 MUST 保持现有 motion executor、animation presenter 和 unified character frame pipeline 为正式执行出口。Locomotion output moduleization MUST NOT 引入 fallback executor、parallel presenter 或直接 scene mutation path。
@@ -359,7 +359,7 @@ Locomotion 在目标架构中 MUST 作为 Character frame owner 下的 sibling s
 #### Scenario: Locomotion 不读取 FullBody 私有状态
 - **WHEN** Locomotion 判断本帧是否应提交候选输出
 - **THEN** 它 MAY 读取角色级 frame context、accepted request facts 或 arbitration result
-- **AND** MUST NOT 直接读取 `PlayerFullBodyActionController`、`FullBodySubmissionBuilder` 或 FullBody 私有字段作为压制权威
+- **AND** MUST NOT 直接读取旧 FullBody controller、旧 FullBody builder 或 FullBody 私有字段作为压制权威
 
 #### Scenario: Direct tick 只保留非正式用途
 - **WHEN** 项目保留 Locomotion direct tick、诊断或测试入口
@@ -381,41 +381,41 @@ Locomotion runtime MUST 在 Corin 正式主线中作为 `CharacterFrameRuntimeCo
 - **WHEN** output applier 执行本帧
 - **THEN** Locomotion motion candidate MUST NOT 被提交给 motion executor
 - **AND** Locomotion animation candidate MUST NOT 被提交给 presenter
-- **AND** `PlayerLocomotionController` direct tick MUST NOT 在管线外补交输出
+- **AND** 旧 Locomotion direct tick MUST NOT 在管线外补交输出
 
 #### Scenario: Direct tick 保留为非正式诊断
-- **WHEN** 项目保留 `PlayerLocomotionController.Tick`、`TickFromInputSource` 或等价 direct tick API
+- **WHEN** 项目保留旧 Locomotion direct tick 或等价诊断 API
 - **THEN** 这些 API MUST 标记为非正式 gameplay 主线
 - **AND** MUST NOT 与 `CharacterFrameRuntimeController` 竞争 movement、animation 或 camera output
 - **AND** MUST 可通过静态测试证明 Corin 正式 prefab/scene 不依赖 direct tick
 
-### Requirement: Locomotion Controller 降级为 Adapter
-`PlayerLocomotionController` MUST 在正式角色主线中作为 Locomotion runtime adapter、output adapter 或 diagnostic view 存在。它 MUST NOT 作为正式 Unity `Update` gameplay driver、状态机 owner 或 Character frame owner。
+### Requirement: Locomotion Unity-facing Adapter 不拥有主线
+Locomotion 的 Unity-facing adapter MAY 提供输入、facing、camera basis、motion executor、animation presenter 或 diagnostics seam，但 MUST NOT 作为正式 Unity `Update` gameplay driver、状态机 owner 或 Character frame owner。正式 Locomotion runtime MUST 由 `CharacterRuntimeCore` 组合的 `LocomotionRuntimeModule` 或批准等价模块持有。
 
 #### Scenario: AutoUpdate 不作为正式主线
 - **WHEN** 检查 Corin 正式 prefab/scene
-- **THEN** `PlayerLocomotionController.AutoUpdate` MUST 不作为正式 gameplay driver
+- **THEN** 旧 Locomotion `AutoUpdate` 或等价 direct driver MUST 不作为正式 gameplay driver
 - **AND** frame update MUST 从 `CharacterFrameRuntimeController` 进入
 - **AND** simulation tick MUST 从角色级 tick adapter 进入
 
 #### Scenario: Locomotion 不创建 runner
-- **WHEN** Locomotion submitter 或 controller 参与 Character frame
+- **WHEN** Locomotion submitter 或 Locomotion Unity-facing adapter 参与 Character frame
 - **THEN** 它 MUST NOT 创建、重置或推进第二个 `CharacterStateMachineRunner`
 - **AND** 状态权威 MUST 来自 Character runtime controller 装配的唯一 runner
 - **AND** Locomotion phase view MUST 从 frame data、runtime state store 或Locomotion 状态图输出派生
 
 ### Requirement: Locomotion Runtime 迁出 Mono Adapter
-Locomotion 的正式运行时状态、frame runtime host、output runtime host、snapshot/restore 和 diagnostics state MUST 由 core-owned Movement/Locomotion runtime module 持有。`PlayerLocomotionController` MAY 作为 Unity adapter 或迁移期 facade 保留，但 MUST NOT 作为正式 Locomotion state owner 或正式 tick owner。
+Locomotion 的正式运行时状态、frame runtime host、output runtime host、snapshot/restore 和 diagnostics state MUST 由 core-owned Movement/Locomotion runtime module 持有。旧 Locomotion controller/facade 不得作为正式 Locomotion state owner 或正式 tick owner 保留；Unity-facing adapter 只能满足场景依赖注入和诊断 seam。
 
 #### Scenario: State Store 归属 Pure Runtime
 - **WHEN** Locomotion module 在角色帧内运行
 - **THEN** `LocomotionRuntimeStateStore` MUST 由 `CharacterRuntimeCore` 组合的 Locomotion runtime module 持有
-- **AND** `PlayerLocomotionController` MUST NOT 成为该 store 的 authoritative owner
+- **AND** 旧 Locomotion controller/facade MUST NOT 成为该 store 的 authoritative owner
 
 #### Scenario: Blackboard 归属 Pure Runtime
 - **WHEN** Locomotion facts builder 需要读取 runtime blackboard snapshot
 - **THEN** snapshot MUST 来自 core-owned Locomotion runtime module
-- **AND** `PlayerLocomotionController` MUST NOT 通过自身字段成为 blackboard authoritative owner
+- **AND** 旧 Locomotion controller/facade MUST NOT 通过自身字段成为 blackboard authoritative owner
 
 #### Scenario: Mono Controller 只桥接 Unity 依赖
 - **GIVEN** Locomotion 需要 Transform、camera basis、motion executor 或 animation presenter
@@ -424,14 +424,14 @@ Locomotion 的正式运行时状态、frame runtime host、output runtime host�
 - **AND** adapter MUST NOT 直接执行正式 frame decision 或 output application
 
 #### Scenario: Direct Tick 仍非正式
-- **WHEN** `PlayerLocomotionController.AutoUpdate`、`LocomotionTickAdapter` 或兼容 direct tick 入口存在
+- **WHEN** 旧 Locomotion AutoUpdate、`LocomotionTickAdapter` 或兼容 direct tick 入口存在
 - **THEN** 它们 MUST NOT 作为正式 gameplay 主线
 - **AND** 正式 Move、Run、TurnBack、Dodge 压制关系 MUST 经 `CharacterRuntimeCore` 和 `CharacterFramePipeline` 推进
 
 #### Scenario: Snapshot Restore 不依赖 Mono 生命周期
 - **WHEN** rollback/replay 或测试对 Locomotion runtime 执行 capture/restore
 - **THEN** capture/restore MUST 作用于 core-owned pure runtime state
-- **AND** MUST NOT 依赖启用、禁用或重新创建 `PlayerLocomotionController` 才能恢复一致状态
+- **AND** MUST NOT 依赖启用、禁用或重新创建旧 Locomotion controller/facade 才能恢复一致状态
 
 ### Requirement: Locomotion 决策事实
 系统 MUST 在Locomotion 状态图 tick 前构建 Locomotion 决策事实。该事实 MUST 由输入意图、空间事实、当前 phase、动画/phase 可退出事实和运行时配置派生，并作为纯数据进入 `CharacterStateMachineContext` 或等价 context。
@@ -460,10 +460,12 @@ Locomotion 的正式运行时状态、frame runtime host、output runtime host�
 - **THEN** transition evaluator MUST 从 context 中读取 Locomotion 决策事实
 - **AND** MUST NOT 直接读取相机或人物 Transform 来重新构造这些事实
 
-#### Scenario: TurnBack root motion 由代码接管
+#### Scenario: TurnBack 动画运动源由 TickSampledMotion 接管
 - **WHEN** Locomotion 状态图进入移动 TurnBack phase
-- **THEN** 系统 MUST 打开 Animator root motion 评价入口以产出 `deltaPosition` 和 `deltaRotation`
-- **AND** `OnAnimatorMove()` MUST 采集 TurnBack root motion delta
-- **AND** 输入旋转和输入平面位移 MUST 被 suppress
-- **AND** motion executor MUST 是唯一把 TurnBack root motion delta 应用到角色运动根的出口
-- **AND** 系统 MUST NOT 使用 baked yaw/profile 或 TurnInPlace/MovingPivot 路线替代该链路
+- **THEN** 系统 MUST 使用已审批的 `TickSampledMotion` 动画运动源策略或批准的等价 tick 采样策略
+- **AND** 采样输入 MUST 来自可恢复的播放进度、previous/current sampling window 和正式 motion profile
+- **AND** 输入旋转和输入平面位移 MUST 按 timeline facts / motion policy 被 suppress
+- **AND** sampled yaw、translation 或等价 movement facts MUST 由统一 motion executor 应用到角色运动根
+- **AND** `OnAnimatorMove()` runtime root delta MAY 只用于诊断或对比日志
+- **AND** `OnAnimatorMove()` runtime root delta MUST NOT 通过 source、pending buffer 或 rollback state 成为 simulation tick motion source
+- **AND** 系统 MUST NOT 恢复 AnimatorDirect、pending runtime root delta、TurnInPlace、MovingPivotTurn 或旧散落式 baked yaw/profile 路线作为正式 TurnBack 运动权威

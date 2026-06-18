@@ -12,7 +12,7 @@
 - 将本变更限定为规格、校验和测试口径，不迁移具体 Corin 资产，不修改 prefab 或 scene。
 
 ## Current Findings
-- `CharacterConfigSO` 已包含 `stateMachine`、`movement`、`locomotionAnimation`、`fullBodyStateRequestPolicy`、`dodgeAction`、`fullBodyActionAnimation`、`animancerRigVariant`、`inputActions`、`moveAction`、`runAction`、`lookAction` 和 `cameraConfig`。
+- `CharacterConfigSO` 已包含 `stateMachine`、`movement`、`locomotionAnimation`、`committedActionStateRequestPolicy`、`dodgeAction`、`fullBodyActionAnimation`、`animancerRigVariant`、`inputActions`、`moveAction`、`runAction`、`lookAction` 和 `cameraConfig`。
 - `PlayerLocomotionController` 和 `PlayerFullBodyActionController` 已从 `characterConfig` 读取正式配置，但代码中仍保留迁移用旧平铺字段。
 - `project-structure` 现有规格仍描述 `Assets/Configs/3C/Animacer/<角色>/`，而 `fullbody-config-boundaries` 已将旧 `Animacer` 拼写标记为不得作为正式入口。
 - prefab/scene 中还存在旧字段序列化值，因此必须先明确“旧字段有数据不等于正式 fallback”。

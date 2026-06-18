@@ -1,0 +1,116 @@
+.timelineClip {
+    height: 30px;
+    position: absolute;
+    flex-direction: row;
+    border-left-color: rgb(37, 37, 37);
+    border-right-color: rgb(37, 37, 37);
+    border-top-color: rgb(37, 37, 37);
+    border-bottom-color: rgb(37, 37, 37);
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+}
+
+.selected.timelineClip {
+    border-left-color: rgb(68, 192, 255);
+    border-right-color: rgb(68, 192, 255);
+    border-top-color: rgb(68, 192, 255);
+    border-bottom-color: rgb(68, 192, 255);
+}
+
+.previewActive.timelineClip {
+    border-left-color: rgb(242, 210, 63);
+    border-right-color: rgb(242, 210, 63);
+    border-top-color: rgb(242, 210, 63);
+    border-bottom-color: rgb(242, 210, 63);
+}
+
+.selected.previewActive.timelineClip {
+    border-left-color: rgb(68, 192, 255);
+    border-right-color: rgb(68, 192, 255);
+    border-top-color: rgb(68, 192, 255);
+    border-bottom-color: rgb(68, 192, 255);
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-width: 2px;
+}
+
+.invalid.timelineClip {
+    border-left-color: rgb(210, 72, 72);
+    border-right-color: rgb(210, 72, 72);
+    border-top-color: rgb(210, 72, 72);
+    border-bottom-color: rgb(210, 72, 72);
+}
+
+#content {
+    background-color: rgb(88, 88, 88);
+    height: 100%;
+    width: 100%;
+    flex-direction: row;
+}
+
+#title {
+    overflow: hidden;
+    flex-direction: row;
+    flex-grow: 1;
+    flex-shrink: 1;
+    height: 100%;
+}
+
+#clip-name {
+    margin-top: 0;
+    margin-right: 0;
+    margin-bottom: 0;
+    margin-left: 0;
+    padding-top: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+    -unity-text-align: middle-center;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+#left-clip-in {
+    height: 12px;
+    margin-top: 1px;
+    margin-left: 2px;
+    width: 12px;
+    top: 8px;
+    flex-shrink: 0;
+}
+
+#right-clip-in {
+    height: 12px;
+    margin-top: 1px;
+    margin-right: 2px;
+    width: 12px;
+    top: 8px;
+    flex-shrink: 0;
+}
+
+#left-mixer,
+#right-mixer {
+    height: 100%;
+    width: 10px;
+    cursor: resize-horizontal;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#bottom-line {
+    background-color: rgb(255, 255, 255);
+    height: 5px;
+    width: 100%;
+    position: absolute;
+    bottom: 0;
+}
+
+#draw-box {
+    position: absolute;
+    display: none;
+    background-color: rgb(127, 253, 228);
+}

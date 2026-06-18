@@ -66,7 +66,7 @@ namespace ThirdPersonMovement
             BasicMovementSettings baseSettings = BasicMovementSettings.FromConfig(movementConfig);
             host.AdvanceAnimationPlaybackProgress(input.DeltaTime);
             CharacterStateMachineSnapshot runnerSnapshot = runner.Snapshot;
-            BasicMovementPhase currentPhase = FullBodyStateView.FromSnapshot(in runnerSnapshot).LocomotionPhase;
+            BasicMovementPhase currentPhase = CharacterStateDomainView.FromSnapshot(in runnerSnapshot).LocomotionPhase;
             LocomotionFrameBuilderInput builderInput = new LocomotionFrameBuilderInput(
                 input,
                 currentStep,

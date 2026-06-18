@@ -266,10 +266,10 @@ namespace ThirdPersonSimulation
 
         void ResolveCameraFromSimulation()
         {
-            if (simulation is FullBodyRollbackSimulation fullBodySimulation &&
-                fullBodySimulation.RuntimeController != null)
+            if (simulation is CharacterFrameRollbackSimulation characterFrameSimulation &&
+                characterFrameSimulation.RuntimeController != null)
             {
-                cameraController = fullBodySimulation.RuntimeController.CameraController;
+                cameraController = characterFrameSimulation.RuntimeController.CameraController;
                 if (cameraController != null)
                     return;
             }

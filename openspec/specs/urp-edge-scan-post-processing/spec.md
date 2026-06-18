@@ -1,7 +1,7 @@
 # urp-edge-scan-post-processing Specification
 
 ## Purpose
-TBD - created by archiving change add-urp-edge-scan-post-processing. Update Purpose after archive.
+定义 URP 边缘扫描波的接入方式、参数抽象、世界空间扫描、深度法线边缘检测、渲染顺序、非球体主路径和验证边界。
 ## Requirements
 ### Requirement: URP 边缘扫描波接入
 系统 MUST 通过当前 URP Renderer Feature 链路接入边缘扫描波后处理，并且 MUST NOT 使用 `OnRenderImage`、额外相机叠加、独立 CommandBuffer 管线或球体网格材质作为主渲染出口。
@@ -125,4 +125,3 @@ TBD - created by archiving change add-urp-edge-scan-post-processing. Update Purp
 - **THEN** Game View MUST 出现从扫描源向外扩散的边缘高亮
 - **AND** 高亮 MUST 主要落在轮廓、高差、墙角和遮挡边界上
 - **AND** 将强度调回 0 后画面 MUST 恢复无扫描效果
-

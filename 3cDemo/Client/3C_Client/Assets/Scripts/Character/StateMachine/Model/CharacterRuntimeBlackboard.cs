@@ -120,7 +120,7 @@ namespace ThirdPersonCharacterStateMachine
     public enum LocomotionPreemptionReason
     {
         None = 0,
-        FullBodyActionStarted = 1
+        CommittedActionStarted = 1
     }
 
     public readonly struct LocomotionPreemptionFact
@@ -154,7 +154,7 @@ namespace ThirdPersonCharacterStateMachine
 
         public static LocomotionPreemptionFact None => default;
 
-        public static LocomotionPreemptionFact FullBodyActionStarted(
+        public static LocomotionPreemptionFact CommittedActionStarted(
             CharacterStateId sourceLocomotionState,
             ActionStateId sourceActionId,
             int sourceStep)
@@ -163,7 +163,7 @@ namespace ThirdPersonCharacterStateMachine
                 sourceLocomotionState,
                 sourceActionId,
                 sourceStep,
-                LocomotionPreemptionReason.FullBodyActionStarted);
+                LocomotionPreemptionReason.CommittedActionStarted);
         }
     }
 

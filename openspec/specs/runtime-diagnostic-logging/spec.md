@@ -7,7 +7,7 @@
 系统 MUST 提供项目自有的运行时诊断日志入口，用于输出可过滤、可测试、格式稳定的调试信息。业务模块 MUST 通过该入口提交常规诊断日志，不得在新增状态机调试逻辑中直接散落 `Debug.Log` 调用。
 
 #### Scenario: 业务模块提交诊断日志
-- **WHEN** FullBody、Locomotion 或 Action 模块需要输出常规诊断信息
+- **WHEN** CharacterFrame、Locomotion 或 Action 模块需要输出常规诊断信息
 - **THEN** 模块 MUST 通过统一日志入口提交日志事件
 - **AND** 日志事件 MUST 包含分类、等级、消息和稳定通道 key
 - **AND** 日志格式 MUST 能稳定表达状态路径、step/frame 或等价上下文
@@ -43,7 +43,7 @@
 - **AND** 不得为了宏裁切吞掉必须暴露的错误报告
 
 ### Requirement: 运行时分类开关
-系统 MUST 在宏开启后支持按分类和通道 key 两层过滤日志，第一版至少覆盖 FullBody、Locomotion、Action 和 Camera 分类。分类过滤和通道过滤 MUST 是日志输出层行为，不得改变业务执行。
+系统 MUST 在宏开启后支持按分类和通道 key 两层过滤日志，第一版至少覆盖 CharacterFrame、Locomotion、Action 和 Camera 分类。分类过滤和通道过滤 MUST 是日志输出层行为，不得改变业务执行。历史 FullBody channel key MAY 作为兼容别名保留，但不得作为新的正式分类语义。
 
 #### Scenario: 分类关闭时不输出
 - **GIVEN** `THIRDPERSON_DIAGNOSTIC_LOGS` 已开启
@@ -52,13 +52,13 @@
 - **THEN** 系统 MUST 不输出 Locomotion 分类日志
 - **AND** Locomotion 状态机 MUST 仍按原规则切换
 
-#### Scenario: 分类开启时输出
+#### Scenario: CharacterFrame 分类开启时输出
 - **GIVEN** `THIRDPERSON_DIAGNOSTIC_LOGS` 已开启
-- **AND** FullBody 分类被开启
+- **AND** CharacterFrame 分类被开启
 - **AND** 对应通道 key 被开启
-- **WHEN** FullBody active path 从 Locomotion 切到 Action.Dodge
-- **THEN** 系统 MUST 输出 FullBody 分类日志
-- **AND** 日志 MUST 包含新的 active path
+- **WHEN** Character frame plan 从 Locomotion base output 切到 Action.Dodge output
+- **THEN** 系统 MUST 输出 CharacterFrame 分类日志
+- **AND** 日志 MUST 包含新的 owner、action state 或等价 active frame context
 
 #### Scenario: 通道关闭时不输出
 - **GIVEN** `THIRDPERSON_DIAGNOSTIC_LOGS` 已开启
@@ -100,8 +100,8 @@
 ### Requirement: 状态机日志只读接入
 系统 MUST 通过现有状态快照、phase、path、Action tracker snapshot 或仲裁结果输出状态机日志。日志系统 MUST NOT 成为第二状态权威，MUST NOT 读取 UnityHFSM 内部对象或 Unity 表现对象。
 
-#### Scenario: FullBody 状态路径变化日志
-- **GIVEN** FullBody 主调度入口已经生成 `FullBodyStateSnapshot` 或等价快照
+#### Scenario: Character 状态路径变化日志
+- **GIVEN** Character frame 主线已经生成 `CharacterStateMachineSnapshot` 或等价快照
 - **WHEN** active path 发生变化
 - **THEN** 日志系统 MUST 读取该快照输出旧 path、新 path、owner、Action state 和状态持续时间
 - **AND** 日志系统 MUST NOT 调用状态机 transition API
@@ -122,19 +122,19 @@
 #### Scenario: Dodge 请求接受
 - **GIVEN** 输入缓冲存在有效 Dodge 请求
 - **AND** Action 仲裁接受该请求
-- **WHEN** FullBody 主调度入口进入 Action.Dodge
-- **THEN** 系统 MUST 输出 Action 或 FullBody 分类日志
-- **AND** 日志 MUST 包含请求 step、目标 Action state、当前 owner 和 active path
+- **WHEN** Action lifecycle 进入 `Action.Dodge` 且 Character frame plan 采纳其 FullBody claim
+- **THEN** 系统 MUST 输出 Action 或 CharacterFrame 分类日志
+- **AND** 日志 MUST 包含请求 step、目标 Action state、当前 slot owner 和 active frame context
 
 #### Scenario: Dodge 请求拒绝
 - **GIVEN** 输入缓冲存在 Dodge 请求
 - **AND** Action 仲裁拒绝该请求
-- **WHEN** FullBody 主调度入口保留 Locomotion owner
+- **WHEN** Character frame plan 保持 Locomotion base slot owner
 - **THEN** 系统 MUST 输出 Action 分类日志
 - **AND** 日志 MUST 包含 reject reason、当前 Action state 和请求 step
 
 #### Scenario: Dodge 完成回到 Locomotion
-- **GIVEN** 当前 FullBody owner 为 Action.Dodge
+- **GIVEN** 当前 BaseSlot owner 为 Action.Dodge，且 Dodge 提交了 FullBody claim
 - **WHEN** Dodge module 报告完成并回到 Locomotion
 - **THEN** 系统 MUST 输出状态回退日志
 - **AND** 日志 MUST 包含新 active path 和 Action state 清空结果
@@ -149,7 +149,7 @@
 - **AND** MUST 覆盖同一状态路径不会重复刷屏
 
 #### Scenario: 自动测试覆盖状态机日志
-- **WHEN** 运行 FullBody 和 Locomotion 日志接入测试
+- **WHEN** 运行 CharacterFrame 和 Locomotion 日志接入测试
 - **THEN** 测试 MUST 覆盖 Locomotion path 变化日志
 - **AND** MUST 覆盖 Dodge accepted 日志
 - **AND** MUST 覆盖 Dodge rejected 日志
@@ -213,7 +213,7 @@
 系统 MUST 为每个角色 runtime diagnostic event family 指定唯一 adapter/formatter owner。迁移后同一个 event family MUST NOT 同时从 runtime core 和 diagnostic adapter 两处提交，避免重复日志和顺序歧义。
 
 #### Scenario: Event family 只有一个 submit owner
-- **WHEN** FullBody path、action accepted、timeline facts、condition probe 或 Locomotion phase event 被提交
+- **WHEN** Character state path、action accepted、timeline facts、condition probe 或 Locomotion phase event 被提交
 - **THEN** 该 event family MUST 有唯一 adapter/formatter owner
 - **AND** runtime core MUST NOT 提交同名 event
 - **AND** tests MUST 能通过 fake sink 观察该 event family
@@ -237,4 +237,3 @@ Timeline facts、projected facts、target facts 和 transition facts trace 的�
 - **WHEN** diagnostics adapter 处理 runner trace
 - **THEN** 日志 MUST 能区分 projected facts 和 target facts
 - **AND** 日志 MUST NOT 要求 runner 直接调用 `RuntimeDiagnosticLog.Submit`
-

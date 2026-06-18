@@ -110,7 +110,7 @@ namespace ThirdPersonAction
                 resistance,
                 directionalDodge,
                 backstepDodge,
-                ActionBranchDefinition.Empty)
+                CommittedActionBranchDefinition.Empty)
         {
         }
 
@@ -123,7 +123,7 @@ namespace ThirdPersonAction
             int resistance,
             DodgeActionVariantDefinition directionalDodge,
             DodgeActionVariantDefinition backstepDodge,
-            ActionBranchDefinition actionBranch)
+            CommittedActionBranchDefinition committedActionBranch)
         {
             ActionState = actionState;
             RequestBinding = new CharacterActionRequestBinding(requestType, sourceInputKind);
@@ -132,7 +132,7 @@ namespace ThirdPersonAction
             Resistance = Math.Max(0, resistance);
             DirectionalDodge = directionalDodge.WithInterruptValues(Priority, Resistance);
             BackstepDodge = backstepDodge.WithInterruptValues(Priority, Resistance);
-            ActionBranch = actionBranch;
+            CommittedActionBranch = committedActionBranch;
         }
 
         public ActionStateId ActionState { get; }
@@ -142,14 +142,14 @@ namespace ThirdPersonAction
         public int Resistance { get; }
         public DodgeActionVariantDefinition DirectionalDodge { get; }
         public DodgeActionVariantDefinition BackstepDodge { get; }
-        public ActionBranchDefinition ActionBranch { get; }
+        public CommittedActionBranchDefinition CommittedActionBranch { get; }
         public bool HasDefinition => ActionState.IsValid && RequestBinding.IsValid;
         public bool IsDodge => ActionState.Matches(ActionStateIds.Dodge);
-        public bool HasActionBranch => ActionBranch.CanEvaluate;
+        public bool HasCommittedActionBranch => CommittedActionBranch.CanEvaluate;
 
-        public bool TryGetActionBranch(out ActionBranchDefinition definition)
+        public bool TryGetCommittedActionBranch(out CommittedActionBranchDefinition definition)
         {
-            definition = ActionBranch;
+            definition = CommittedActionBranch;
             return definition.CanEvaluate;
         }
 
@@ -237,18 +237,20 @@ namespace ThirdPersonAction
 
         public bool TryGetDodgeDefinition(out CharacterActionDefinition definition)
         {
-            return TryGetDefinition(ActionStateIds.Dodge, out definition) && definition.TryGetDodgeTuning(out _);
+            return TryGetDefinition(ActionStateIds.Dodge, out definition) &&
+                   definition.IsDodge &&
+                   definition.HasCommittedActionBranch;
         }
 
-        public bool TryGetActionBranch(ActionStateId actionState, out ActionBranchDefinition branch)
+        public bool TryGetCommittedActionBranch(ActionStateId actionState, out CommittedActionBranchDefinition branch)
         {
             if (TryGetDefinition(actionState, out CharacterActionDefinition definition) &&
-                definition.TryGetActionBranch(out branch))
+                definition.TryGetCommittedActionBranch(out branch))
             {
                 return true;
             }
 
-            branch = ActionBranchDefinition.Empty;
+            branch = CommittedActionBranchDefinition.Empty;
             return false;
         }
 

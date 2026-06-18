@@ -1,0 +1,469 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a705aab74584a30bd9d3b17f9cd9dfb, type: 3}
+  m_Name: CorinDodgeActionDefinition
+  m_EditorClassIdentifier: 
+  actionStateId: Action.Dodge
+  requestType: 3
+  sourceInputKind: 1
+  motionSourceStateId: Action.Dodge
+  priority: 30
+  resistance: 20
+  directionalDodge:
+    variant: 0
+    duration: 0.35
+    distance: 4
+    rotateToDirection: 1
+    animationKey: Action.Dodge.Directional
+  backstepDodge:
+    variant: 1
+    duration: 0.35
+    distance: 3
+    rotateToDirection: 0
+    animationKey: Action.Dodge.Backstep
+  committedActionBranch:
+    schemaVersion: 1
+    required: 1
+    branchId: action.dodge
+    rootNodeId: selector.dodge
+    defaultBodyKind: 1
+    defaultChannels: -1
+    nodes:
+    - nodeId: selector.dodge
+      kind: 2
+      condition:
+        kind: 0
+        expectedVariant: 0
+        expectedBool: 0
+        requestKind: 0
+        requiredFactId: 
+      timeline:
+        required: 0
+        branchId: 
+        timelineNodeId: 
+        durationSeconds: 0
+        legacyDurationFrames: 0
+        defaultBodyKind: 0
+        defaultChannels: 0
+        tracks: []
+      childNodeIds:
+      - condition.dodge.directional
+      - condition.dodge.backstep
+      editorPosition: {x: 34.666668, y: -11.333336}
+    - nodeId: condition.dodge.directional
+      kind: 3
+      condition:
+        kind: 1
+        expectedVariant: 1
+        expectedBool: 0
+        requestKind: 0
+        requiredFactId: 
+      timeline:
+        required: 0
+        branchId: 
+        timelineNodeId: 
+        durationSeconds: 0
+        legacyDurationFrames: 0
+        defaultBodyKind: 0
+        defaultChannels: 0
+        tracks: []
+      childNodeIds:
+      - timeline.dodge.directional
+      editorPosition: {x: 260, y: -90}
+    - nodeId: condition.dodge.backstep
+      kind: 3
+      condition:
+        kind: 1
+        expectedVariant: 2
+        expectedBool: 0
+        requestKind: 0
+        requiredFactId: 
+      timeline:
+        required: 0
+        branchId: 
+        timelineNodeId: 
+        durationSeconds: 0
+        legacyDurationFrames: 0
+        defaultBodyKind: 0
+        defaultChannels: 0
+        tracks: []
+      childNodeIds:
+      - timeline.dodge.backstep
+      editorPosition: {x: 260, y: 90}
+    - nodeId: timeline.dodge.directional
+      kind: 1
+      condition:
+        kind: 0
+        expectedVariant: 0
+        expectedBool: 0
+        requestKind: 0
+        requiredFactId: 
+      timeline:
+        required: 1
+        branchId: action.dodge.directional
+        timelineNodeId: timeline.dodge.directional
+        durationSeconds: 0.35
+        legacyDurationFrames: 0
+        defaultBodyKind: 1
+        defaultChannels: 3
+        tracks:
+        - stableId: track.d373c1e8b31842008b9e586d4a864e5b
+          kind: 1
+          clips:
+          - stableId: clip.02f22aebbb7845d3903725cf8094f63f
+            kind: 1
+            startSeconds: 0
+            endSeconds: 0.35
+            legacyStartFrame: 0
+            legacyEndFrame: 0
+            payload:
+              animationKey: Action.Dodge.Directional
+              motionSourceStateId: 
+              motionVariant: 0
+              motionDuration: 0
+              motionDistance: 0
+              rotateToDirection: 0
+              setRunLatchOnComplete: 0
+              warpPolicyId: 
+              warpTargetBindingId: 
+              warpMotionProfileId: 
+              warpAttackMagnet: 0
+              warpFacingCorrection: 0
+              warpRequireTarget: 0
+              warpRequireMotionProfile: 0
+              warpAxisMask: 0
+              warpRotationPolicy: 0
+              warpMaxPlanarDelta: 0
+              warpStoppingDistance: 0
+              warpMaxYawDeltaDegrees: 0
+              warpTranslationWeight: 0
+              warpRotationWeight: 0
+              factId: 
+              cueId: 
+        - stableId: track.8bba78470ecc4845bb5f3d8f84f0edf9
+          kind: 2
+          clips:
+          - stableId: clip.b7b118c8829b44aeb81466471422b357
+            kind: 2
+            startSeconds: 0
+            endSeconds: 0.35
+            legacyStartFrame: 0
+            legacyEndFrame: 0
+            payload:
+              animationKey: 
+              motionSourceStateId: Action.Dodge
+              motionVariant: 1
+              motionDuration: 0.35
+              motionDistance: 4
+              rotateToDirection: 1
+              setRunLatchOnComplete: 1
+              warpPolicyId: 
+              warpTargetBindingId: 
+              warpMotionProfileId: 
+              warpAttackMagnet: 0
+              warpFacingCorrection: 0
+              warpRequireTarget: 0
+              warpRequireMotionProfile: 0
+              warpAxisMask: 0
+              warpRotationPolicy: 0
+              warpMaxPlanarDelta: 0
+              warpStoppingDistance: 0
+              warpMaxYawDeltaDegrees: 0
+              warpTranslationWeight: 0
+              warpRotationWeight: 0
+              factId: 
+              cueId: 
+        - stableId: track.b78a6a22ece24401919f6ffed0ea6488
+          kind: 3
+          clips:
+          - stableId: clip.5c2c702a3be84fa0907acca5d69f8fd9
+            kind: 3
+            startSeconds: 0.06666667
+            endSeconds: 0.2166667
+            legacyStartFrame: 0
+            legacyEndFrame: 0
+            payload:
+              animationKey: 
+              motionSourceStateId: 
+              motionVariant: 0
+              motionDuration: 0
+              motionDistance: 0
+              rotateToDirection: 0
+              setRunLatchOnComplete: 0
+              warpPolicyId: 
+              warpTargetBindingId: 
+              warpMotionProfileId: 
+              warpAttackMagnet: 0
+              warpFacingCorrection: 0
+              warpRequireTarget: 0
+              warpRequireMotionProfile: 0
+              warpAxisMask: 0
+              warpRotationPolicy: 0
+              warpMaxPlanarDelta: 0
+              warpStoppingDistance: 0
+              warpMaxYawDeltaDegrees: 0
+              warpTranslationWeight: 0
+              warpRotationWeight: 0
+              factId: window.dodge.hurtbox
+              cueId: 
+        - stableId: track.773a3563059448af81c4620dddbf63e6
+          kind: 4
+          clips:
+          - stableId: clip.1654168e3cd54474a95f1c5b553de5cd
+            kind: 4
+            startSeconds: 0.21666667
+            endSeconds: 0.33333337
+            legacyStartFrame: 0
+            legacyEndFrame: 0
+            payload:
+              animationKey: 
+              motionSourceStateId: 
+              motionVariant: 0
+              motionDuration: 0
+              motionDistance: 0
+              rotateToDirection: 0
+              setRunLatchOnComplete: 0
+              warpPolicyId: 
+              warpTargetBindingId: 
+              warpMotionProfileId: 
+              warpAttackMagnet: 0
+              warpFacingCorrection: 0
+              warpRequireTarget: 0
+              warpRequireMotionProfile: 0
+              warpAxisMask: 0
+              warpRotationPolicy: 0
+              warpMaxPlanarDelta: 0
+              warpStoppingDistance: 0
+              warpMaxYawDeltaDegrees: 0
+              warpTranslationWeight: 0
+              warpRotationWeight: 0
+              factId: cancel.dodge.recover
+              cueId: 
+        - stableId: track.315900963253498c9bd958ded623d2fd
+          kind: 5
+          clips:
+          - stableId: clip.ecacbc9b2e114c4ba5c68568185978a8
+            kind: 5
+            startSeconds: 0
+            endSeconds: 0
+            legacyStartFrame: 0
+            legacyEndFrame: 0
+            payload:
+              animationKey: 
+              motionSourceStateId: 
+              motionVariant: 0
+              motionDuration: 0
+              motionDistance: 0
+              rotateToDirection: 0
+              setRunLatchOnComplete: 0
+              warpPolicyId: 
+              warpTargetBindingId: 
+              warpMotionProfileId: 
+              warpAttackMagnet: 0
+              warpFacingCorrection: 0
+              warpRequireTarget: 0
+              warpRequireMotionProfile: 0
+              warpAxisMask: 0
+              warpRotationPolicy: 0
+              warpMaxPlanarDelta: 0
+              warpStoppingDistance: 0
+              warpMaxYawDeltaDegrees: 0
+              warpTranslationWeight: 0
+              warpRotationWeight: 0
+              factId: 
+              cueId: cue.dodge.flash
+      childNodeIds: []
+      editorPosition: {x: 560, y: -90}
+    - nodeId: timeline.dodge.backstep
+      kind: 1
+      condition:
+        kind: 0
+        expectedVariant: 0
+        expectedBool: 0
+        requestKind: 0
+        requiredFactId: 
+      timeline:
+        required: 1
+        branchId: action.dodge.backstep
+        timelineNodeId: timeline.dodge.backstep
+        durationSeconds: 0.35
+        legacyDurationFrames: 0
+        defaultBodyKind: 1
+        defaultChannels: 3
+        tracks:
+        - stableId: track.3082bb13c8d440bab519d2c064ba2475
+          kind: 1
+          clips:
+          - stableId: clip.906179f04c984cf0b2bddff4f88bc353
+            kind: 1
+            startSeconds: 0
+            endSeconds: 0.35
+            legacyStartFrame: 0
+            legacyEndFrame: 0
+            payload:
+              animationKey: Action.Dodge.Backstep
+              motionSourceStateId: 
+              motionVariant: 0
+              motionDuration: 0
+              motionDistance: 0
+              rotateToDirection: 0
+              setRunLatchOnComplete: 0
+              warpPolicyId: 
+              warpTargetBindingId: 
+              warpMotionProfileId: 
+              warpAttackMagnet: 0
+              warpFacingCorrection: 0
+              warpRequireTarget: 0
+              warpRequireMotionProfile: 0
+              warpAxisMask: 0
+              warpRotationPolicy: 0
+              warpMaxPlanarDelta: 0
+              warpStoppingDistance: 0
+              warpMaxYawDeltaDegrees: 0
+              warpTranslationWeight: 0
+              warpRotationWeight: 0
+              factId: 
+              cueId: 
+        - stableId: track.dfa98bd36944472b8b26f95b36ad1e3f
+          kind: 2
+          clips:
+          - stableId: clip.945b942c06644a30996719472296d81a
+            kind: 2
+            startSeconds: 0
+            endSeconds: 0.35
+            legacyStartFrame: 0
+            legacyEndFrame: 0
+            payload:
+              animationKey: 
+              motionSourceStateId: Action.Dodge
+              motionVariant: 2
+              motionDuration: 0.35
+              motionDistance: 3
+              rotateToDirection: 0
+              setRunLatchOnComplete: 0
+              warpPolicyId: 
+              warpTargetBindingId: 
+              warpMotionProfileId: 
+              warpAttackMagnet: 0
+              warpFacingCorrection: 0
+              warpRequireTarget: 0
+              warpRequireMotionProfile: 0
+              warpAxisMask: 0
+              warpRotationPolicy: 0
+              warpMaxPlanarDelta: 0
+              warpStoppingDistance: 0
+              warpMaxYawDeltaDegrees: 0
+              warpTranslationWeight: 0
+              warpRotationWeight: 0
+              factId: 
+              cueId: 
+        - stableId: track.2b0e051660ab4d68b88f2c5f49c403e0
+          kind: 3
+          clips:
+          - stableId: clip.53733c8c8d064b4b83c7afea0eaeb1f0
+            kind: 3
+            startSeconds: 0.08333334
+            endSeconds: 0.23333333
+            legacyStartFrame: 0
+            legacyEndFrame: 0
+            payload:
+              animationKey: 
+              motionSourceStateId: 
+              motionVariant: 0
+              motionDuration: 0
+              motionDistance: 0
+              rotateToDirection: 0
+              setRunLatchOnComplete: 0
+              warpPolicyId: 
+              warpTargetBindingId: 
+              warpMotionProfileId: 
+              warpAttackMagnet: 0
+              warpFacingCorrection: 0
+              warpRequireTarget: 0
+              warpRequireMotionProfile: 0
+              warpAxisMask: 0
+              warpRotationPolicy: 0
+              warpMaxPlanarDelta: 0
+              warpStoppingDistance: 0
+              warpMaxYawDeltaDegrees: 0
+              warpTranslationWeight: 0
+              warpRotationWeight: 0
+              factId: window.dodge.backstep.hurtbox
+              cueId: 
+        - stableId: track.c1ef775d8bcc4ce78dabd87f588c6daf
+          kind: 4
+          clips:
+          - stableId: clip.d600f44137bb49efa17c382ed747a451
+            kind: 4
+            startSeconds: 0.21666667
+            endSeconds: 0.35
+            legacyStartFrame: 0
+            legacyEndFrame: 0
+            payload:
+              animationKey: 
+              motionSourceStateId: 
+              motionVariant: 0
+              motionDuration: 0
+              motionDistance: 0
+              rotateToDirection: 0
+              setRunLatchOnComplete: 0
+              warpPolicyId: 
+              warpTargetBindingId: 
+              warpMotionProfileId: 
+              warpAttackMagnet: 0
+              warpFacingCorrection: 0
+              warpRequireTarget: 0
+              warpRequireMotionProfile: 0
+              warpAxisMask: 0
+              warpRotationPolicy: 0
+              warpMaxPlanarDelta: 0
+              warpStoppingDistance: 0
+              warpMaxYawDeltaDegrees: 0
+              warpTranslationWeight: 0
+              warpRotationWeight: 0
+              factId: cancel.dodge.backstep.recover
+              cueId: 
+        - stableId: track.5cb16fcaf38546faa2d195e11a7f15c4
+          kind: 5
+          clips:
+          - stableId: clip.a1f45f7dcbd44759b90998107e327a50
+            kind: 5
+            startSeconds: 0.03333334
+            endSeconds: 0.03333334
+            legacyStartFrame: 0
+            legacyEndFrame: 0
+            payload:
+              animationKey: 
+              motionSourceStateId: 
+              motionVariant: 0
+              motionDuration: 0
+              motionDistance: 0
+              rotateToDirection: 0
+              setRunLatchOnComplete: 0
+              warpPolicyId: 
+              warpTargetBindingId: 
+              warpMotionProfileId: 
+              warpAttackMagnet: 0
+              warpFacingCorrection: 0
+              warpRequireTarget: 0
+              warpRequireMotionProfile: 0
+              warpAxisMask: 0
+              warpRotationPolicy: 0
+              warpMaxPlanarDelta: 0
+              warpStoppingDistance: 0
+              warpMaxYawDeltaDegrees: 0
+              warpTranslationWeight: 0
+              warpRotationWeight: 0
+              factId: 
+              cueId: cue.dodge.backstep.flash
+      childNodeIds: []
+      editorPosition: {x: 560, y: 90}

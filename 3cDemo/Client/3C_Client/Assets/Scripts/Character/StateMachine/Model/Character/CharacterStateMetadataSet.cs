@@ -28,13 +28,13 @@ namespace ThirdPersonCharacterStateMachine
             return metadataByNode.TryGetValue(nodeId, out metadata);
         }
 
-        public bool TryDeriveFullBodyStateView(
+        public bool TryDeriveStateDomainView(
             in CharacterStateMachineSnapshot snapshot,
-            out FullBodyStateView view)
+            out CharacterStateDomainView view)
         {
             if (TryGetNode(new StateGraphNodeId(snapshot.ActivePath), out CharacterStateNodeMetadata metadata))
             {
-                view = FullBodyStateView.FromSnapshotAndMetadata(in snapshot, in metadata);
+                view = CharacterStateDomainView.FromSnapshotAndMetadata(in snapshot, in metadata);
                 return true;
             }
 

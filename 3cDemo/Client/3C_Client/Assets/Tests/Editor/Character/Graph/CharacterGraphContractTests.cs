@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using System;
+using System.Reflection;
 using ThirdPersonAction;
 using ThirdPersonCharacterGraph;
 using ThirdPersonCharacterStateMachine;
@@ -12,7 +13,7 @@ namespace Tests.Editor.Character.Graph
         [Test]
         public void EmptyCharacterGraphHasTypedEmptyBranches()
         {
-            CharacterGraphDefinition graph = CharacterGraphDefinition.Empty;
+            CharacterBehaviorGraphDefinition graph = CharacterBehaviorGraphDefinition.Empty;
 
             Assert.False(graph.HasAnyBranch);
             Assert.False(graph.Locomotion.IsDefined);
@@ -22,20 +23,11 @@ namespace Tests.Editor.Character.Graph
         }
 
         [Test]
-        public void CharacterGraphCarriesFormalBranchDefinitions()
+        public void CharacterGraphCarriesOnlySourceBranchDefinitions()
         {
-            ActionTimelineDefinition timeline = new ActionTimelineDefinition(
-                ActionStateIds.Dodge,
-                12,
-                new[] { new ActionTimelineTrackDefinition(ActionTimelineTrackKind.Cue, System.Array.Empty<ActionTimelineClipDefinition>()) });
-            ActionBranchDefinition action = ActionBranchDefinition.Define(
-                "action",
-                ActionStateIds.Dodge,
-                ActionNodeDefinition.Timeline("dodge-timeline", timeline),
-                BodyOccupancyClaim.FullBodyAction(7));
-            CharacterGraphDefinition graph = new CharacterGraphDefinition(
+            CharacterBehaviorGraphDefinition graph = new CharacterBehaviorGraphDefinition(
                 LocomotionBranchDefinition.Define("locomotion"),
-                action,
+                ActionBranchDefinition.Define("action"),
                 UpperBodyBranchDefinition.Define("upper-body", false),
                 CueBranchDefinition.Define("cue", false));
 
@@ -44,6 +36,36 @@ namespace Tests.Editor.Character.Graph
             Assert.True(graph.Action.CanEvaluate);
             Assert.False(graph.UpperBody.CanEvaluate);
             Assert.False(graph.Cue.CanEvaluate);
+            Assert.AreEqual(CharacterGraphBranchKind.Action, graph.Action.Branch.Kind);
+            Assert.AreEqual("action", graph.Action.Branch.BranchId.Value);
+        }
+
+        [Test]
+        public void CharacterBehaviorGraphDefinitionIsNotRuntimeRunner()
+        {
+            Type graphType = typeof(CharacterBehaviorGraphDefinition);
+
+            Assert.False(typeof(ICharacterExecutionNodeEvaluator).IsAssignableFrom(graphType));
+            MethodInfo[] methods = graphType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+            for (int i = 0; i < methods.Length; i++)
+            {
+                Assert.AreNotEqual("Evaluate", methods[i].Name);
+                Assert.AreNotEqual("Tick", methods[i].Name);
+                Assert.AreNotEqual("Run", methods[i].Name);
+            }
+        }
+
+        [Test]
+        public void CharacterBehaviorGraphDefinitionDoesNotExposeActionTimelinePayload()
+        {
+            Type graphType = typeof(CharacterBehaviorGraphDefinition);
+
+            Assert.AreEqual(typeof(ActionBranchDefinition), graphType.GetProperty("Action").PropertyType);
+            Assert.IsFalse(typeof(CommittedActionBranchDefinition).IsAssignableFrom(graphType.GetProperty("Action").PropertyType));
+            Assert.IsFalse(typeof(ActionTimelineDefinition).IsAssignableFrom(graphType.GetProperty("Action").PropertyType));
+            Assert.IsNull(graphType.GetProperty("DodgeCommittedActionBranch"));
+            Assert.IsNull(graphType.GetProperty("DirectionalTimeline"));
+            Assert.IsNull(graphType.GetProperty("BackstepTimeline"));
         }
 
         [Test]
@@ -67,7 +89,7 @@ namespace Tests.Editor.Character.Graph
             CharacterExecutionNodeId parallelId = new CharacterExecutionNodeId("parallel");
             CharacterExecutionNodeId locomotionId = new CharacterExecutionNodeId("locomotion");
             CharacterExecutionNodeId actionId = new CharacterExecutionNodeId("action");
-            CharacterExecutionNodeTree tree = new CharacterExecutionNodeTree(
+            CharacterBehaviorExecutionTree tree = new CharacterBehaviorExecutionTree(
                 new CharacterExecutionNodeId("root"),
                 new[]
                 {
@@ -77,7 +99,7 @@ namespace Tests.Editor.Character.Graph
                     CharacterExecutionNodeDefinition.Branch("action", CharacterGraphBranchKind.Action)
                 });
 
-            CharacterExecutionNodeTreeValidationResult result = CharacterExecutionNodeTreeValidator.Validate(tree);
+            CharacterBehaviorExecutionTreeValidationResult result = CharacterBehaviorExecutionTreeValidator.Validate(tree);
 
             Assert.False(result.HasErrors, string.Join(",", result.Errors));
         }
@@ -85,8 +107,8 @@ namespace Tests.Editor.Character.Graph
         [Test]
         public void EmptyExecutionNodeTreeAndGraphStateAreValidEmptyContracts()
         {
-            CharacterExecutionNodeTreeValidationResult result =
-                CharacterExecutionNodeTreeValidator.Validate(CharacterExecutionNodeTree.Empty);
+            CharacterBehaviorExecutionTreeValidationResult result =
+                CharacterBehaviorExecutionTreeValidator.Validate(CharacterBehaviorExecutionTree.Empty);
             CharacterGraphState state = CharacterGraphState.Empty;
 
             Assert.False(result.HasErrors);
@@ -139,7 +161,7 @@ namespace Tests.Editor.Character.Graph
             CharacterExecutionNodeId childId = new CharacterExecutionNodeId("shared-action");
             CharacterExecutionNodeId leftId = new CharacterExecutionNodeId("left");
             CharacterExecutionNodeId rightId = new CharacterExecutionNodeId("right");
-            CharacterExecutionNodeTree tree = new CharacterExecutionNodeTree(
+            CharacterBehaviorExecutionTree tree = new CharacterBehaviorExecutionTree(
                 new CharacterExecutionNodeId("root"),
                 new[]
                 {
@@ -149,7 +171,7 @@ namespace Tests.Editor.Character.Graph
                     CharacterExecutionNodeDefinition.Branch("shared-action", CharacterGraphBranchKind.Action)
                 });
 
-            CharacterExecutionNodeTreeValidationResult result = CharacterExecutionNodeTreeValidator.Validate(tree);
+            CharacterBehaviorExecutionTreeValidationResult result = CharacterBehaviorExecutionTreeValidator.Validate(tree);
 
             Assert.True(result.HasErrors);
             CollectionAssert.Contains(result.Errors, "node-multiple-parents:shared-action");
@@ -158,10 +180,10 @@ namespace Tests.Editor.Character.Graph
         [Test]
         public void GraphFrameResultBuildsPipelineArbitrationInput()
         {
-            ActionBranchOutcome action = new ActionBranchOutcome(
+            CommittedActionBranchOutcome action = new CommittedActionBranchOutcome(
                 ActionTimelineOutcome.None(0, 9),
-                CharacterFrameCandidateOutput.FullBodyAction(true, true, 9),
-                BodyOccupancyClaim.FullBodyAction(9),
+                CharacterFrameCandidateOutput.CommittedAction(true, true, 9),
+                BodyOccupancyClaim.CommittedActionFullBody(9),
                 9);
             CharacterGraphFrameResult result = new CharacterGraphFrameResult(
                 CharacterFrameCandidateOutput.Locomotion(true, true, 9),
@@ -176,7 +198,7 @@ namespace Tests.Editor.Character.Graph
 
             Assert.True(input.OccupancyClaim.ClaimsFullBody);
             Assert.True(input.LocomotionCandidate.HasAnyCandidate);
-            Assert.True(input.FullBodyActionCandidate.HasAnyCandidate);
+            Assert.True(input.CommittedActionCandidate.HasAnyCandidate);
             Assert.False(input.UpperBodyCandidate.HasAnyCandidate);
         }
 
@@ -198,7 +220,7 @@ namespace Tests.Editor.Character.Graph
         [Test]
         public void BranchClaimDescriptorsExpressChannelsNotGameplayOwners()
         {
-            CharacterBranchClaimDescriptor fullBody = CharacterBranchClaimDescriptor.FullBodyAction(5);
+            CharacterBranchClaimDescriptor fullBody = CharacterBranchClaimDescriptor.CommittedActionFullBody(5);
             CharacterBranchClaimDescriptor upperBody = CharacterBranchClaimDescriptor.UpperBody(5);
             CharacterBranchClaimDescriptor lowerBody = CharacterBranchClaimDescriptor.LowerBodyLocomotion(5);
 
@@ -216,13 +238,13 @@ namespace Tests.Editor.Character.Graph
             {
                 CharacterGraphFrameResult frameResult = new CharacterGraphFrameResult(
                     CharacterFrameCandidateOutput.Locomotion(true, false, input.SourceStep),
-                    ActionBranchOutcome.None(input.SourceStep),
-                CharacterFrameCandidateOutput.None(CharacterBodyDomain.UpperBody, input.SourceStep),
-                CueOutcome.None(input.SourceStep),
-                BodyOccupancyClaim.None(input.SourceStep),
-                Array.Empty<string>(),
-                input.SourceStep);
-            CharacterExecutionNodeStateWrite stateWrite = new CharacterExecutionNodeStateWrite(
+                    CommittedActionBranchOutcome.None(input.SourceStep),
+                    CharacterFrameCandidateOutput.None(CharacterBodyDomain.UpperBody, input.SourceStep),
+                    CueOutcome.None(input.SourceStep),
+                    BodyOccupancyClaim.None(input.SourceStep),
+                    Array.Empty<string>(),
+                    input.SourceStep);
+                CharacterExecutionNodeStateWrite stateWrite = new CharacterExecutionNodeStateWrite(
                     input.Node.Id,
                     new CharacterGraphNodeState(input.Node.Id, input.SourceStep));
 

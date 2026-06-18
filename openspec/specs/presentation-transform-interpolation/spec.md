@@ -16,7 +16,7 @@
 - **WHEN** 表现层 Transform 输出 visual pose
 - **THEN** 它 MUST NOT 修改角色真实模拟根 Transform
 - **AND** 它 MUST NOT 调用 `CharacterController.Move`
-- **AND** 它 MUST NOT 绕过 `PlayerLocomotionController`、`BasicLocomotionPipeline` 或 `IBasicLocomotionMotionExecutor`
+- **AND** 它 MUST NOT 绕过 `CharacterFramePipeline`、`LocomotionRuntimeModule` 或 `IBasicLocomotionMotionExecutor`
 
 #### Scenario: 首帧和样本缺失安全退化
 - **WHEN** 表现层 Transform 缺少上一 tick 样本、当前 tick 样本或 tick driver
@@ -109,4 +109,3 @@
 - **WHEN** 表现恢复状态类型或方法被命名
 - **THEN** 命名 SHOULD 表达 debug restore 或 local presentation restore 语义
 - **AND** SHOULD 避免让调用方误以为该状态属于预测 gameplay rollback snapshot
-

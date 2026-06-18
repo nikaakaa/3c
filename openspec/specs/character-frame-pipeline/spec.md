@@ -1,17 +1,17 @@
 # character-frame-pipeline Specification
 
 ## Purpose
-TBD - created by archiving change refactor-character-frame-submission-pipeline. Update Purpose after archive.
+定义唯一 `CharacterFramePipeline` 的帧阶段、请求提交、行为提交、`CharacterFramePlan` 合成和 output applier 副作用边界。
 ## Requirements
 ### Requirement: 唯一 Character Frame Pipeline
-系统 MUST 只有一个正式角色帧管线拥有单个角色在一个 simulation tick 或兼容 frame tick 内的 phase 顺序。FullBody、Locomotion、Action、UpperBody、LowerBody 或其它身体域 MUST NOT 拥有独立 phase owner；它们只能在唯一角色帧管线指定的阶段提交请求候选或纯数据帧输出。`PlayerFullBodyActionController` MUST NOT 作为兼容入口、转发入口或旧 Tick owner 保留在正式运行时。
+系统 MUST 只有一个正式角色帧管线拥有单个角色在一个 simulation tick 或兼容 frame tick 内的 phase 顺序。FullBody、Locomotion、Action、UpperBody、LowerBody 或其它身体域 MUST NOT 拥有独立 phase owner；它们只能在唯一角色帧管线指定的阶段提交请求候选或纯数据帧输出。旧 FullBody action controller MUST NOT 作为兼容入口、转发入口或旧 Tick owner 保留在正式运行时。
 
-#### Scenario: FullBody-only 也通过唯一管线
-- **GIVEN** 当前角色仍然只有 FullBody 行为域
+#### Scenario: CommittedAction 也通过唯一管线
+- **GIVEN** 当前角色存在 CommittedAction 提交源
 - **WHEN** 角色推进 tick N
 - **THEN** 系统 MUST 通过 `CharacterFramePipeline` 或等价唯一角色帧管线推进
-- **AND** FullBody MUST 作为提交来源参与该管线
-- **AND** FullBody MUST NOT 自行拥有正式最高 phase 顺序
+- **AND** CommittedAction MUST 作为 sibling submitter 参与该管线
+- **AND** FullBody claim MUST NOT 自行拥有正式最高 phase 顺序
 
 #### Scenario: 后续身体域只提交
 - **GIVEN** 后续新增 UpperBody、LowerBody 或其它身体域
@@ -20,7 +20,7 @@ TBD - created by archiving change refactor-character-frame-submission-pipeline. 
 - **AND** MUST NOT 自行执行 motion、播放动画、消费输入或写 runtime blackboard
 
 #### Scenario: 旧 FullBody controller 不再作为兼容入口
-- **WHEN** 旧 `PlayerFullBodyActionController.Tick`、旧 FullBody tick adapter 或旧 rollback 入口仍被代码、测试、prefab 或 scene 引用
+- **WHEN** 旧 FullBody action controller tick、旧 FullBody tick adapter 或旧 rollback 入口仍被代码、测试、prefab 或 scene 引用
 - **THEN** 实施 MUST 删除或迁移该引用
 - **AND** 正式推进 MUST 进入 `CharacterFrameRuntimeController -> CharacterFrameRuntimeHost -> CharacterFramePipeline`
 - **AND** 系统 MUST NOT 通过保留 controller 转发来延长第二入口寿命
@@ -56,8 +56,8 @@ TBD - created by archiving change refactor-character-frame-submission-pipeline. 
 ### Requirement: Character Frame Submission 模型
 系统 MUST 使用 `CharacterFrameSubmission` 或等价 Character 语义提交模型表达各身体域或 adapter 的状态机后本帧结果。提交内容 MUST 是纯数据，MAY 包含状态帧、运动提案、动画提案、输入消费提案、runtime facts 提案、snapshot/events 提案和 diagnostics trace，但 MUST NOT 直接执行副作用。request submission MUST NOT 与 `CharacterFrameSubmission` 混用。
 
-#### Scenario: FullBody 提交当前结果
-- **WHEN** 当前 FullBody 行为域完成本帧状态和运动构建
+#### Scenario: 行为提交源提交当前结果
+- **WHEN** 当前 Locomotion 或 CommittedAction 提交源完成本帧状态和运动构建
 - **THEN** 它 MUST 产出 `CharacterFrameSubmission` 或等价角色级帧提交
 - **AND** MUST 提交 `CharacterStateMachineFrame` 或等价状态结果
 - **AND** MUST 提交 `BasicLocomotionFrame` 或等价基础移动结果
@@ -78,16 +78,16 @@ TBD - created by archiving change refactor-character-frame-submission-pipeline. 
 - **AND** 请求准入 MUST 已经在状态机推进前完成
 
 ### Requirement: 输出合成先于输出应用
-系统 MUST 在执行任何运动、动画、输入消费、Run latch 写入、runtime facts 写入或 snapshot/events commit 之前，先由角色级 output composer 合成本帧最终输出。第一版 composer MAY 只接收 FullBody 一个 `CharacterFrameSubmission` 来源，但仍 MUST 是副作用应用前的唯一裁决位置。
+系统 MUST 在执行任何运动、动画、输入消费、Run latch 写入、runtime facts 写入或 snapshot/events commit 之前，先由角色级 output composer 合成本帧最终输出。第一版 composer MAY 只接收 Locomotion 与 CommittedAction 产生的最小 `CharacterFrameSubmission` 来源，但仍 MUST 是副作用应用前的唯一裁决位置。
 
-#### Scenario: 单一 FullBody 来源仍经过 composer
-- **GIVEN** 本帧只有 FullBody 提交
+#### Scenario: 单一候选来源仍经过 composer
+- **GIVEN** 本帧只有一个行为提交源产出候选
 - **WHEN** 角色帧管线进入输出合成阶段
-- **THEN** composer MUST 从 FullBody 提交中选择最终 movement 输出
-- **AND** MUST 从 FullBody 提交中选择最终 animation 输出
-- **AND** MUST 从 FullBody 提交中选择最终 input consume 输出
-- **AND** MUST 从 FullBody 提交中选择最终 runtime facts 输出
-- **AND** MUST 从 FullBody 提交中选择最终 Run latch 输出
+- **THEN** composer MUST 从角色级提交中选择最终 movement 输出
+- **AND** MUST 从角色级提交中选择最终 animation 输出
+- **AND** MUST 从角色级提交中选择最终 input consume 输出
+- **AND** MUST 从角色级提交中选择最终 runtime facts 输出
+- **AND** MUST 从角色级提交中选择最终 Run latch 输出
 
 #### Scenario: 副作用只在 apply 阶段发生
 - **WHEN** 角色帧管线应用 composer 结果
@@ -97,8 +97,8 @@ TBD - created by archiving change refactor-character-frame-submission-pipeline. 
 - **AND** Run latch 写入 MUST 只发生在角色级 output applier 或等价提交阶段
 - **AND** runtime blackboard 写入 MUST 只发生在角色级 output applier 或等价提交阶段
 
-### Requirement: FullBody 兼容迁移行为保持
-系统 MUST 在迁移到唯一角色帧管线时保持当前 FullBody-only 行为输出一致，同时采用新的 Locomotion graph 与 Action lifecycle 分离口径。Idle、MoveStart、MoveLoop、MoveStop、TurnBack、Directional Dodge 和 Backstep Dodge 的输入消费、运动执行、动画提交、runtime facts 和诊断 trace MUST 可测试；Dodge active state MUST 由 Action lifecycle 表达，不再要求默认 graph active path 为 `/FullBody/Action/Dodge`。
+### Requirement: 旧集成路径兼容迁移行为保持
+系统 MUST 在迁移到唯一角色帧管线时保持当前旧集成路径行为输出一致，同时采用新的 Locomotion graph 与 Action lifecycle 分离口径。Idle、MoveStart、MoveLoop、MoveStop、TurnBack、Directional Dodge 和 Backstep Dodge 的输入消费、运动执行、动画提交、runtime facts 和诊断 trace MUST 可测试；Dodge active state MUST 由 Action lifecycle 表达，不再要求默认 graph active path 为 `/FullBody/Action/Dodge`。
 
 #### Scenario: 基础移动行为保持
 - **WHEN** 使用相同 WASD 输入、相同配置和相同 tick 序列运行迁移前后路径
@@ -147,11 +147,11 @@ TBD - created by archiving change refactor-character-frame-submission-pipeline. 
 - **AND** MUST NOT 在本变更中实现多身体域合成策略
 
 ### Requirement: 局部 Pipeline 直接改名
-系统 MUST 在唯一角色帧管线中移除 FullBody 和 Locomotion 的正式 pipeline 命名。FullBody 侧正式入口 MUST 是 `FullBodySubmissionBuilder` 或等价提交构建器；Locomotion 侧正式入口 MUST 是 `LocomotionFrameBuilder` 或等价局部帧构建器。正式路径 MUST NOT 保留 obsolete pipeline 外壳作为 phase owner。
+系统 MUST 在唯一角色帧管线中移除旧 FullBody 和 Locomotion 的正式 pipeline 命名。CommittedAction 侧正式提交入口 MUST 是 `CommittedActionFrameSubmitter`、`CharacterBehaviorSubmissionRunner` 下的 committed action leaf 或批准的等价提交构建器；Locomotion 侧正式入口 MUST 是 `LocomotionFrameBuilder` 或等价局部帧构建器。正式路径 MUST NOT 保留 obsolete pipeline 外壳作为 phase owner。
 
-#### Scenario: FullBody 不再叫 Pipeline
+#### Scenario: CommittedAction 不再叫 FullBody Pipeline
 - **WHEN** 实施唯一角色帧管线迁移
-- **THEN** FullBody 侧正式职责 MUST 由 `FullBodySubmissionBuilder` 或等价提交构建器承担
+- **THEN** CommittedAction 侧正式职责 MUST 由 `CommittedActionFrameSubmitter`、`CharacterBehaviorSubmissionRunner` 下的 committed action leaf 或批准的等价提交构建器承担
 - **AND** 该构建器 MUST NOT 拥有 phase switch
 - **AND** 该构建器 MUST NOT 执行输出副作用
 
@@ -191,23 +191,29 @@ TBD - created by archiving change refactor-character-frame-submission-pipeline. 
 - **AND** 身体占用、互斥和叠加规则 MUST 位于 BodyArbiter 或等价策略 module
 
 ### Requirement: CharacterFramePlan 先于新身体层
-系统 MUST 在新增正式 UpperBody、HitReact、Aim 或等价身体层 runtime 前，先提供角色级 `CharacterFramePlan` 或等价一帧计划契约。新身体层 MUST 通过 plan 参与 output composer/applier，不能直接绕过角色级管线。
+系统 MUST 在新增正式 UpperBody、HitReact、Aim 或等价身体层 runtime 前，先提供角色级 `CharacterFramePlan` 或等价一帧计划契约。该计划 MUST 能表达 `BaseSlot`、`UpperBodySlot` 或经批准的等价 slot owner，并且 MUST 区分 source、action、claim、slot、channel 与 presentation layer。新身体层 MUST 通过该计划参与 output composer/applier，不能直接绕过角色级管线。
+
+`CharacterFramePlan` 的正式身体结果契约 MUST 使用 slot 口径。正式读取面 MUST 使用 `BaseSlotOwner`、`UpperBodySlotOwner` 和 `UpperBodySlotSuppressed` 或经批准的等价 slot contract。系统 MUST NOT 保留 `BaseLayerOwner`、`UpperBodyOwner` 或等价旧 layer 口径兼容属性。
 
 #### Scenario: 新 UpperBody 需要计划契约
-- **WHEN** 后续 proposal 准备新增正式 UpperBody runtime
-- **THEN** proposal MUST 依赖已定义的 CharacterFramePlan 或等价 frame plan contract
-- **AND** UpperBody MUST 作为 sibling submitter 接入
-- **AND** UpperBody MUST NOT 直接读取 FullBody controller 或 builder 内部状态作为上级权威
+- **WHEN** 要实现 UpperBody Aim 或 UpperBody HitReact
+- **THEN** 设计必须先定义它如何向 `CharacterFramePlan` 提交候选
+- **AND** 定义它如何与 Locomotion / Action 的 body claim 合成或冲突
 
 #### Scenario: Plan 是纯数据
-- **WHEN** BodyArbiter 产出 CharacterFramePlan
-- **THEN** plan MUST 只包含决策、输出选择、压制关系、source step 和诊断事实
-- **AND** plan MUST NOT 持有 `Transform`、`CharacterController`、Animator、Animancer runtime object 或 Unity input object
+- **WHEN** `CharacterFramePipeline` 生成一帧计划
+- **THEN** 计划只能包含候选、claim、slot owner、权重、优先级、窗口、事件与输出意图等纯数据
+- **AND** 不能直接执行动画播放、移动、IK 或黑板写入
 
 #### Scenario: Output applier 仍唯一执行副作用
-- **WHEN** CharacterFramePlan 选中本帧 motion 或 animation output
-- **THEN** 最终副作用 MUST 仍通过 Character output applier 提交给正式 motion executor、Presenter、runtime facts writer 或 camera adapter
-- **AND** submitter 和 arbiter MUST NOT 直接执行 movement 或播放 animation
+- **WHEN** 计划被提交到输出层
+- **THEN** 只有既有 motion executor、animation presenter、blackboard writer 或经批准的 presenter/applier 可以执行副作用
+- **AND** 不得新增第二 motion executor、第二 animation presenter 或第二 blackboard writer
+
+#### Scenario: Plan 表达 slot 而不是表现层
+- **WHEN** FullBody claim 赢得本帧仲裁
+- **THEN** `CharacterFramePlan` MUST 表达 `BaseSlot` 由 Action-side owner 接管，并表达 `UpperBodySlot` 是否被压制
+- **AND** 计划 MUST NOT 把 Animancer layer、timeline track、GraphView node 或 editor view 当作 gameplay slot
 
 ### Requirement: Character Frame Pipeline 只消费动作请求解析结果
 `CharacterFramePipeline` MUST 只消费 request submission 阶段输出的纯数据结果。动作请求的收集、解析和准入 MUST 在 pipeline 的 request submission 边界内完成；pipeline 主体 MUST NOT 直接读取 Attack、Dodge、Jump 或 HitReact 配置，也 MUST NOT 直接决定这些动作的 target graph state、动画 key 或 motion spec。
@@ -231,48 +237,48 @@ TBD - created by archiving change refactor-character-frame-submission-pipeline. 
 - **AND** MUST NOT 新增第二 pipeline、第二 runner、第二 motion executor 或第二 animation presenter
 
 ### Requirement: Character runtime controller 驱动唯一角色帧
-系统 MUST 将 `CharacterFrameRuntimeController` 或等价角色级 runtime controller 作为正式 Unity frame update 和 runtime tick 入口。`CharacterFramePipeline` MUST 继续是唯一角色帧管线；FullBody、Locomotion、Action 或其它身体域 MUST NOT 作为正式顶层 tick owner 直接推进 gameplay。
+系统 MUST 将 `CharacterFrameRuntimeController` 或等价角色级 runtime controller 作为正式 Unity frame update 和 runtime tick 入口。`CharacterFramePipeline` MUST 继续是唯一角色帧管线；FullBody claim、Locomotion、Action 或其它身体域 MUST NOT 作为正式顶层 tick owner 直接推进 gameplay。
 
 #### Scenario: Unity Update 从 Character 入口进入
 - **GIVEN** 当前场景未启用 simulation tick driver
 - **WHEN** Corin 正式 playable 角色在 frame update 中推进
 - **THEN** tick MUST 从 `CharacterFrameRuntimeController` 或等价角色级入口进入
 - **AND** MUST 进入同一个 `CharacterFramePipeline`
-- **AND** MUST NOT 从 `PlayerFullBodyActionController.Update` 作为正式主线进入
+- **AND** MUST NOT 从 旧 FullBody action controller Update 作为正式主线进入
 
 #### Scenario: Runtime Tick 从 Character 入口进入
 - **GIVEN** 当前场景启用 simulation tick driver
 - **WHEN** tick driver 推进角色 gameplay phase
 - **THEN** phase handler MUST 调用 `CharacterFrameRuntimeController` 或等价角色级入口
 - **AND** MUST 复用同一个角色帧 context 和 runtime host
-- **AND** MUST NOT 通过 `FullBodyActionTickAdapter` 作为正式 registration owner
+- **AND** MUST NOT 通过 旧 FullBody action tick adapter 作为正式 registration owner
 
-#### Scenario: 兼容入口不恢复 FullBody 主线
-- **WHEN** 旧兼容 API 调用 `PlayerFullBodyActionController.Tick`
-- **THEN** 该 API MAY 转发到角色级 runtime controller
-- **AND** MUST NOT 自己创建正式 `CharacterFrameRuntimeHost`
+#### Scenario: 旧兼容入口必须删除或迁移
+- **WHEN** 旧兼容 API、旧 FullBody action controller tick 或旧 FullBody tick adapter 仍被代码、测试、prefab 或 scene 引用
+- **THEN** 实施 MUST 删除该入口或迁移引用到 `CharacterFrameRuntimeController` 或等价角色级入口
+- **AND** MUST NOT 通过保留旧 controller 转发来延长第二入口寿命
 - **AND** MUST NOT 维护独立 phase 顺序
 
-### Requirement: 角色帧 Submitter Graph
-系统 MUST 使用 Character 级 submitter graph 或等价组合 module 汇集本帧 sibling submitters。Locomotion submitter、Action submitter 和后续 UpperBody、HitReact、Aim 或其它 submitter MUST 作为兄弟节点提交请求、事实、占用声明或候选输出。submitter graph MUST NOT 把 Locomotion 建模为 FullBody 的长期子职责。
+### Requirement: 角色帧 Behavior Submission
+系统 MUST 使用 Character 级 behavior submission runner 或等价组合 module 汇集本帧 sibling submitters。Locomotion submitter、Action submitter 和后续 UpperBody、HitReact、Aim 或其它 submitter MUST 作为兄弟提交者提交请求、事实、占用声明或候选输出。behavior submission runner MUST NOT 把 Locomotion 建模为 FullBody 的长期子职责。
 
 #### Scenario: Locomotion 和 Action 并列提交
 - **GIVEN** Locomotion submitter 产生基础移动候选输出
 - **AND** Action submitter 产生 full-body 或等价 body/channel claim
 - **WHEN** Character frame pipeline 收集本帧提交
-- **THEN** 两者 MUST 作为 sibling submissions 进入 submitter graph
+- **THEN** 两者 MUST 作为 sibling submissions 进入 behavior submission runner
 - **AND** MUST 由角色级 `BodyArbiter` 或等价 module 生成 `CharacterFramePlan`
 - **AND** Action submitter MUST NOT 直接拥有 Locomotion runtime
 
 #### Scenario: Future submitter 不塞回 integrated builder
 - **WHEN** 后续新增 Attack、Jump、UpperBody、HitReact 或 Aim submitter
-- **THEN** 新 submitter MUST 接入 Character 级 submitter graph
-- **AND** MUST NOT 被塞入 `FullBodyIntegratedFrameAdapter`
+- **THEN** 新 submitter MUST 接入 Character 级 behavior submission runner
+- **AND** MUST NOT 被塞入 旧 FullBody integrated frame adapter
 - **AND** MUST NOT 要求旧 FullBody controller 成为上级 owner
 
 #### Scenario: Graph 不执行副作用
-- **WHEN** submitter graph 收集和合并本帧请求或候选输出
-- **THEN** graph MUST 只产生纯数据 submission、claim、candidate 或 plan input
+- **WHEN** behavior submission runner 收集和合并本帧请求或候选输出
+- **THEN** runner MUST 只产生纯数据 submission、claim、candidate 或 plan input
 - **AND** MUST NOT 调用 motion executor
 - **AND** MUST NOT 调用 animation presenter
 - **AND** MUST NOT 消费 input buffer 或写 runtime blackboard
@@ -309,7 +315,7 @@ TBD - created by archiving change refactor-character-frame-submission-pipeline. 
 - **WHEN** 该 submission 进入 output composer
 - **THEN** composer MAY 将它转换为 `CharacterFramePlan`
 - **AND** 该路径 MUST 被标记为 legacy 或 integrated adapter
-- **AND** 后续新增身体域 MUST NOT 依赖该单一 FullBody source 参与正式仲裁
+- **AND** 后续新增身体域 MUST NOT 依赖任何单一旧 source 参与正式仲裁
 
 ### Requirement: Output composer 不得长期保持 pass-through
 系统 MUST 让角色级 output composer 承担 plan 合成或 plan 选择职责。若保留 `Compose(CharacterFrameSubmission)` 或等价 legacy overload，它 MUST 只作为迁移 Adapter，并且 MUST 有自动测试覆盖其删除条件。
@@ -320,24 +326,24 @@ TBD - created by archiving change refactor-character-frame-submission-pipeline. 
 - **AND** MUST 保留 body occupancy、motion 选择、animation 选择、input consume 和 runtime facts 的最终选择结果
 
 #### Scenario: Legacy overload 有删除条件
-- **WHEN** 代码中仍存在从单个 FullBody submission 到 output 的 overload
+- **WHEN** 代码中仍存在从单个旧 submission 到 output 的 overload
 - **THEN** 测试 MUST 标记该 overload 为 legacy adapter
 - **AND** MUST 证明正式 plan path 已覆盖 Corin 当前 Locomotion 与 Action 主线
 - **AND** 后续迁移完成后该 overload MUST 被删除或移出正式运行时路径
 
 ### Requirement: 角色级管线不承担身体域退役策略
-`CharacterFramePipeline` MUST 继续只负责 phase 顺序、调用 submitter/composer/applier 和传播结果。FullBody 集成路径退役、Locomotion submitter 拆分、Action submitter 拆分和 body occupancy 规则 MUST 位于独立 module 或 spec 约束中，不得写成 pipeline 本体的特殊分支。
+`CharacterFramePipeline` MUST 继续只负责 phase 顺序、调用 submitter/composer/applier 和传播结果。旧 FullBody 集成路径退役、Locomotion submitter 拆分、CommittedAction submitter 拆分和 body occupancy 规则 MUST 位于独立 module 或 spec 约束中，不得写成 pipeline 本体的特殊分支。
 
 #### Scenario: Pipeline 不硬编码退役分支
 - **WHEN** 检查 `CharacterFramePipeline` 核心逻辑
-- **THEN** pipeline MUST NOT 通过具体 `FullBodySubmissionBuilder` 类型判断退役路径
+- **THEN** pipeline MUST NOT 通过具体旧 FullBody builder 类型判断退役路径
 - **AND** MUST NOT 通过具体 `CharacterFrameSubmissionSource.FullBody` 判断最终输出
 - **AND** MUST NOT 在 phase switch 中写入 Action、body/channel claim 或 Locomotion 的业务优先级
 
-### Requirement: FullBody 抢占 Locomotion transient 的帧事实
-系统 MUST 在 Character frame pipeline 内提供纯数据 Locomotion preemption fact，用于表达 Action 已抢占当前 Locomotion transient motion source。该 fact MUST 由 submitter、plan、output 或等价 frame data contract 传递，不得通过 pipeline 核心硬编码具体 Action 或具体 Locomotion 状态完成状态切换。
+### Requirement: CommittedAction 抢占 Locomotion transient 的帧事实
+系统 MUST 在 Character frame pipeline 内提供纯数据 Locomotion preemption fact，用于表达 CommittedAction 已抢占当前 Locomotion transient motion source。该 fact MUST 由 submitter、plan、output 或等价 frame data contract 传递，不得通过 pipeline 核心硬编码具体 Action 或具体 Locomotion 状态完成状态切换。
 
-#### Scenario: FullBody claim 抢占 TurnBack 时产出事实
+#### Scenario: FullBody claim 被 CommittedAction 采纳时产出事实
 - **GIVEN** Locomotion submitter 已提交 `Locomotion.TurnBack` 候选输出
 - **AND** Action submitter 在同一帧开始 `Action.Dodge`
 - **AND** `Action.Dodge` 的 full-body claim 被接受
@@ -386,11 +392,11 @@ TBD - created by archiving change refactor-character-frame-submission-pipeline. 
 
 #### Scenario: Locomotion 与 Action 独立提交
 - **GIVEN** tick N 同时存在 Locomotion 输入和 Dodge 请求
-- **WHEN** `CharacterFrameSubmitterGraph` 构建提交
+- **WHEN** `CharacterBehaviorSubmissionRunner` 构建提交
 - **THEN** Locomotion submitter MUST 提交 Locomotion 候选
 - **AND** Action submitter MUST 提交 Dodge 或等价 action 候选
 - **AND** 两者 MUST 由 `CharacterFramePipeline` 仲裁
-- **AND** 任一 submitter MUST NOT 通过共享 FullBody 集成 builder 替另一个 submitter 决定 winning output
+- **AND** 任一 submitter MUST NOT 通过共享旧集成 builder 替另一个 submitter 决定 winning output
 
 ### Requirement: Frame Output Source 不表达旧 FullBody 权威
 角色帧输出来源 MUST 表达角色级候选、仲裁结果或具体提交域，而不是表达旧 FullBody 集成路径权威。正式路径 MUST NOT 继续使用 `LegacyFullBodyIntegrated` 作为 winning frame output source、diagnostic authority 或测试断言的正式身份。
@@ -401,3 +407,45 @@ TBD - created by archiving change refactor-character-frame-submission-pipeline. 
 - **AND** 输出来源 MUST NOT 被标记为 `LegacyFullBodyIntegrated`
 - **AND** diagnostics MAY 显示具体 submitter 名称，但 MUST NOT 把旧 FullBody 集成路径标记为正式来源
 
+### Requirement: Motion Warping 结果作为候选输出参与 Plan
+Motion Warping result MUST 在角色级输出应用前被转换为 motion candidate 或等价 frame submission 数据，并参与 `CharacterFramePlan` 或批准的等价角色级计划。Character frame output applier MUST 只执行计划选择后的 warped motion，不得在 output apply 阶段临时解析 warp target 或运行 solver。
+
+#### Scenario: Action warped motion 进入提交
+- **GIVEN** Action Motion clip 通过 Motion Warping solver 生成 action motion result
+- **WHEN** Action submitter 构建本帧 `CharacterFrameSubmission`
+- **THEN** submission MUST 携带该 action motion candidate
+- **AND** BodyArbiter 或等价 plan builder MUST 能决定该 candidate 是否成为本帧最终 motion
+- **AND** output applier MUST 不重新运行 solver
+
+#### Scenario: Action 使用共享 solver result 但保留 Action command
+- **GIVEN** MotionWarpSolver 为 Action 攻击吸附或转向修正输出 MotionWarpResult
+- **WHEN** Action motion resolve 构建本帧提交
+- **THEN** 该 result MUST 被适配为 `ActionMovementCommand` 或批准的等价 Action motion candidate
+- **AND** 系统 MUST NOT 要求 `MovementCommand` 与 `ActionMovementCommand` 在本变更中合并
+
+#### Scenario: Locomotion warped motion 进入提交
+- **GIVEN** Locomotion 状态通过动画运动源或 Motion Warping solver 生成 movement facts
+- **WHEN** Locomotion submitter 构建本帧候选输出
+- **THEN** movement facts MUST 进入 Locomotion motion candidate 或等价 frame data
+- **AND** 最终是否执行 MUST 服从 `CharacterFramePlan`
+
+#### Scenario: Output apply 不解析 target
+- **WHEN** output applier 执行本帧 motion
+- **THEN** 它 MUST 只消费已经求解好的 command 或 motion result
+- **AND** MUST NOT 解析 warp target binding
+- **AND** MUST NOT 查询场景目标
+- **AND** MUST NOT 读取 ActionTimeline clip payload 来补算 motion
+
+### Requirement: Motion Warping 不改变角色帧 phase 顺序
+引入 Motion Warping MUST 不改变唯一 `CharacterFramePipeline` 的 phase owner 或输出副作用顺序。request submission、state/lifecycle 推进、motion resolve、plan 合成和 output apply 的职责 MUST 保持分离。
+
+#### Scenario: Motion resolve 在 output apply 前完成
+- **GIVEN** 本帧存在需要 Motion Warping 的 Action 或 Locomotion motion intent
+- **WHEN** 角色帧管线进入 output compose / plan 阶段
+- **THEN** warp result MUST 已经作为候选纯数据存在
+- **AND** output apply 阶段 MUST 只应用最终计划选择的结果
+
+#### Scenario: 不新增第二帧循环
+- **WHEN** 新增 Motion Warping runtime 代码
+- **THEN** 系统 MUST NOT 新增 MonoBehaviour Update、独立 tick adapter、第二 `CharacterFramePipeline` 或第二 output applier 来驱动 warped motion
+- **AND** 正式推进 MUST 继续从现有角色帧主线进入

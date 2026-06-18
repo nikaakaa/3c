@@ -18,7 +18,7 @@ namespace Tests.Editor
         public void LocomotionPreemptionFactDefaultsToNoneAndCarriesSourceFields()
         {
             LocomotionPreemptionFact none = LocomotionPreemptionFact.None;
-            LocomotionPreemptionFact fact = LocomotionPreemptionFact.FullBodyActionStarted(
+            LocomotionPreemptionFact fact = LocomotionPreemptionFact.CommittedActionStarted(
                 CharacterStateIds.TurnBack,
                 ActionStateIds.Dodge,
                 42);
@@ -30,7 +30,7 @@ namespace Tests.Editor
             Assert.AreEqual(CharacterStateIds.TurnBack, fact.SourceLocomotionState);
             Assert.AreEqual(ActionStateIds.Dodge, fact.SourceActionId);
             Assert.AreEqual(42, fact.SourceStep);
-            Assert.AreEqual(LocomotionPreemptionReason.FullBodyActionStarted, fact.Reason);
+            Assert.AreEqual(LocomotionPreemptionReason.CommittedActionStarted, fact.Reason);
         }
 
         [Test]
@@ -49,12 +49,12 @@ namespace Tests.Editor
         [Test]
         public void FramePlanAndOutputCarryPreemptionOnlyAfterFullBodyClaimAccepted()
         {
-            LocomotionPreemptionFact fact = LocomotionPreemptionFact.FullBodyActionStarted(
+            LocomotionPreemptionFact fact = LocomotionPreemptionFact.CommittedActionStarted(
                 CharacterStateIds.TurnBack,
                 ActionStateIds.Dodge,
                 7);
             CharacterFrameSubmission acceptedSubmission = CreateSubmission(
-                BodyOccupancyClaim.FullBodyAction(7),
+                BodyOccupancyClaim.CommittedActionFullBody(7),
                 fact,
                 7);
             CharacterFrameSubmission rejectedSubmission = CreateSubmission(
@@ -76,7 +76,7 @@ namespace Tests.Editor
         public void RuntimeBlackboardSnapshotAndRestorePreservePreemptionFact()
         {
             CharacterRuntimeBlackboard blackboard = new CharacterRuntimeBlackboard();
-            LocomotionPreemptionFact fact = LocomotionPreemptionFact.FullBodyActionStarted(
+            LocomotionPreemptionFact fact = LocomotionPreemptionFact.CommittedActionStarted(
                 CharacterStateIds.TurnBack,
                 ActionStateIds.Dodge,
                 11);
@@ -94,7 +94,7 @@ namespace Tests.Editor
         [Test]
         public void LocomotionPreemptionConditionReadsOnlyContextFacts()
         {
-            LocomotionPreemptionFact fact = LocomotionPreemptionFact.FullBodyActionStarted(
+            LocomotionPreemptionFact fact = LocomotionPreemptionFact.CommittedActionStarted(
                 CharacterStateIds.TurnBack,
                 ActionStateIds.Dodge,
                 12);
@@ -144,7 +144,7 @@ namespace Tests.Editor
         {
             CharacterStateMachineRunner runner = CreateRunner();
             EnterTurnBack(runner);
-            LocomotionPreemptionFact fact = LocomotionPreemptionFact.FullBodyActionStarted(
+            LocomotionPreemptionFact fact = LocomotionPreemptionFact.CommittedActionStarted(
                 CharacterStateIds.TurnBack,
                 ActionStateIds.Dodge,
                 20);
@@ -166,7 +166,7 @@ namespace Tests.Editor
         {
             CharacterStateMachineRunner runner = CreateRunner();
             EnterTurnBack(runner);
-            LocomotionPreemptionFact fact = LocomotionPreemptionFact.FullBodyActionStarted(
+            LocomotionPreemptionFact fact = LocomotionPreemptionFact.CommittedActionStarted(
                 CharacterStateIds.TurnBack,
                 ActionStateIds.Dodge,
                 24);
@@ -192,7 +192,7 @@ namespace Tests.Editor
             BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero, true);
             BasicMovementSettings settings = BasicMovementSettings.FromConfig(null);
             MovementInputIntent intent = MovementInputIntent.FromRaw(input.Move, settings.InputDeadZone, true);
-            LocomotionPreemptionFact preemption = LocomotionPreemptionFact.FullBodyActionStarted(
+            LocomotionPreemptionFact preemption = LocomotionPreemptionFact.CommittedActionStarted(
                 CharacterStateIds.TurnBack,
                 ActionStateIds.Dodge,
                 31);
@@ -260,7 +260,7 @@ namespace Tests.Editor
         public void PreemptionBoundariesAvoidDodgeNodesFallbackAndDirectCleanup()
         {
             string graphAsset = ReadProjectFile(LocomotionStateGraphAssetPath);
-            string submitter = ReadProjectFile("Assets/Scripts/Character/Action/Runtime/FullBodyActionFrameSubmitter.cs");
+            string submitter = ReadProjectFile("Assets/Scripts/Character/Action/Runtime/CommittedActionFrameSubmitter.cs");
             string resolver = ReadProjectFile("Assets/Scripts/Character/Movement/Solver/TurnBack/TurnBackMotionResolver.cs");
 
             Assert.That(graphAsset, Does.Not.Contain("Action.Dodge"));
@@ -281,7 +281,7 @@ namespace Tests.Editor
             CharacterFrameArbitrationInput arbitrationInput = new CharacterFrameArbitrationInput(
                 claim,
                 CharacterFrameCandidateOutput.Locomotion(true, true, step),
-                CharacterFrameCandidateOutput.FullBodyAction(true, true, step),
+                CharacterFrameCandidateOutput.CommittedAction(true, true, step),
                 CharacterFrameCandidateOutput.None(CharacterBodyDomain.UpperBody, step),
                 step);
             CharacterStateMachineSnapshot snapshot = new CharacterStateMachineSnapshot(

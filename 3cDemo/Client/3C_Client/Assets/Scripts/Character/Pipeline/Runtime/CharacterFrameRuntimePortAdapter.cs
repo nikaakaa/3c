@@ -16,7 +16,7 @@ namespace ThirdPersonAction
             this.core = core;
         }
 
-        FullBodyOutputRuntime OutputRuntime =>
+        CharacterFrameOutputRuntime OutputRuntime =>
             core != null ? core.ActionOutputRuntime : null;
 
         public ILocomotionFrameRuntimePort LocomotionFrameRuntime =>
@@ -100,7 +100,7 @@ namespace ThirdPersonAction
 
         public bool ConsumeFrameInputRequest(in CharacterFrameInputConsumeSubmission inputConsume)
         {
-            FullBodyOutputRuntime outputRuntime = OutputRuntime;
+            CharacterFrameOutputRuntime outputRuntime = OutputRuntime;
             return outputRuntime != null && outputRuntime.ConsumeFrameInputRequest(in inputConsume);
         }
 
@@ -109,7 +109,7 @@ namespace ThirdPersonAction
             out bool actionMovementExecuted,
             out bool basicMovementExecuted)
         {
-            FullBodyOutputRuntime outputRuntime = OutputRuntime;
+            CharacterFrameOutputRuntime outputRuntime = OutputRuntime;
             if (outputRuntime != null)
             {
                 outputRuntime.ExecuteFrameMotion(
@@ -129,7 +129,7 @@ namespace ThirdPersonAction
             out bool actionAnimationPresented,
             out bool locomotionAnimationPresented)
         {
-            FullBodyOutputRuntime outputRuntime = OutputRuntime;
+            CharacterFrameOutputRuntime outputRuntime = OutputRuntime;
             if (outputRuntime != null)
             {
                 outputRuntime.PresentFrameAnimation(

@@ -4,7 +4,7 @@
 定义角色配置根 `CharacterConfigSO` 的归属、子配置解析顺序和旧场景兼容边界，避免新模块继续在控制器上扩散平铺配置入口。
 ## Requirements
 ### Requirement: 角色配置根 SO
-系统 MUST 提供一个 `CharacterConfigSO` 作为角色配置的根入口。角色子系统配置 MUST 通过根 SO 的命名子模块引用访问；`PlayerLocomotionController` 上的旧平铺序列化字段 MAY 暂时保留为迁移遗留数据，但 MUST NOT 成为正式运行时解析来源，也 MUST NOT 成为新增模块的扩展方式。默认 Corin 配置中的状态图引用 MUST 被正式解释为 Locomotion graph 引用，Action lifecycle、Dodge action config、Action animation config 和 BodyClaimPolicy MUST 通过 Action 相关子配置解析。
+系统 MUST 提供一个 `CharacterConfigSO` 作为角色配置的根入口。角色子系统配置 MUST 通过根 SO 的命名子模块引用访问；旧 controller/facade 上的平铺序列化字段不得成为正式运行时解析来源，也不得成为新增模块的扩展方式。默认 Corin 配置中的状态图引用 MUST 被正式解释为 Locomotion graph 引用，Action lifecycle、Dodge action config、Action animation config 和 BodyClaimPolicy MUST 通过 Action 相关子配置解析。
 
 #### Scenario: 根 SO 包含预定子模块
 - **WHEN** 设计者打开 `CharacterConfigSO` 资产
@@ -24,18 +24,18 @@
 - **AND** 再将子 SO 拖入根 SO 的子模块引用字段
 - **AND** Action lifecycle config 和 BodyClaimPolicy MUST 不被塞回 Locomotion graph
 
-### Requirement: PlayerLocomotionController 从根 SO 解析子配置
-`PlayerLocomotionController` MUST 提供 `characterConfig` 序列化字段作为角色配置根入口。运行时读取子配置 MUST 通过该根 SO 解引用；旧平铺子模块序列化字段 MAY 保留为迁移遗留，但不得作为 fallback，也不得覆盖根 SO 的解析结果。
+### Requirement: Character runtime 从根 SO 解析子配置
+`CharacterFrameRuntimeController` 或批准的等价正式角色入口 MUST 提供 `characterConfig` 序列化字段作为角色配置根入口。运行时读取子配置 MUST 通过该根 SO 解引用；旧平铺子模块序列化字段不得作为 fallback，也不得覆盖根 SO 的解析结果。
 
 #### Scenario: 运行时解引用根 SO
-- **GIVEN** `PlayerLocomotionController` 已赋值 `characterConfig`
+- **GIVEN** `CharacterFrameRuntimeController` 已赋值 `characterConfig`
 - **AND** `characterConfig` 的各子模块引用非空
-- **WHEN** 控制器一帧内需要读取移动配置、动画配置或状态机定义
+- **WHEN** 角色 runtime 一帧内需要读取移动配置、动画配置或状态机定义
 - **THEN** 它 MUST 从 `characterConfig.Movement`、`characterConfig.LocomotionAnimation` 和 `characterConfig.StateMachine` 获取
 - **AND** MUST NOT 通过独立的 `stateMachineDefinition`、`runAnimationConfig` 或 `config` 字段覆盖根 SO 的非空子配置
 
 #### Scenario: 缺失正式配置时报错
-- **GIVEN** `PlayerLocomotionController` 加载时
+- **GIVEN** `CharacterFrameRuntimeController` 加载时
 - **AND** `characterConfig` 为空或必需子模块为空
 - **WHEN** 正式 gameplay 路径需要对应配置
 - **THEN** 系统 MUST 输出明确配置错误诊断
@@ -45,13 +45,13 @@
 #### Scenario: 新增模块时不需修改 Controller 字段
 - **WHEN** 后续新增 `AimingSO` 或 `ActionSO` 等子模块
 - **THEN** 开发者在 `CharacterConfigSO` 上增加一个引用字段即可
-- **AND** `PlayerLocomotionController` 不应再新增对应的平铺序列化字段
+- **AND** `CharacterFrameRuntimeController` 或 Locomotion/Action Unity-facing adapter 不应再新增对应的平铺序列化字段
 
 ### Requirement: 向后兼容
 系统 MUST 确保现有场景资产、预制体和运行时引用在升级本变更后不产生硬加载错误或序列化数据丢失。兼容目标是保留可迁移数据并给出清晰诊断，而不是通过旧字段 fallback 继续正式运行。
 
 #### Scenario: 旧场景加载兼容
-- **GIVEN** 现有场景 `Sandbox.unity` 中的 `PlayerLocomotionController` 持有旧平铺序列化字段
+- **GIVEN** 现有场景 `Sandbox.unity` 中存在旧平铺序列化字段
 - **WHEN** 变更后的代码首次加载该场景
 - **THEN** 旧序列化数据 MUST 不丢失
 - **AND** 系统 MUST 能提示需要迁移到 `CharacterConfigSO`
@@ -69,7 +69,7 @@
 #### Scenario: 自动测试覆盖配置解析
 - **WHEN** 运行 EditMode 测试
 - **THEN** 测试 MUST 覆盖 `CharacterConfigSO` 空引用会产生配置错误
-- **AND** MUST 覆盖 `PlayerLocomotionController` 从根 SO 解析子配置
+- **AND** MUST 覆盖 `CharacterFrameRuntimeController` 从根 SO 解析子配置
 - **AND** MUST 覆盖旧字段不会作为 fallback 被运行时读取
 
 #### Scenario: 编译和 OpenSpec 校验
@@ -117,7 +117,7 @@
 系统 MUST 将 `CharacterConfigSO` 视为角色配置作者总入口。controller 上的旧平铺序列化字段 MUST 从正式运行时类型和正式 prefab/scene 序列化中退役，不得作为正式运行时配置入口、fallback 或新增模块扩展方式。系统 MUST 提供自动校验报告旧字段、第二正式入口和缺失根配置。
 
 #### Scenario: 旧字段不保留在正式运行时
-- **WHEN** 检查 `PlayerLocomotionController`、`FullBodyActionRuntime`、角色 prefab 或正式 scene
+- **WHEN** 检查 `CharacterFrameRuntimeController`、Locomotion/Action Unity-facing adapters、角色 prefab 或正式 scene
 - **THEN** `characterConfig` MUST 指向正式角色根配置
 - **AND** `runAnimationConfig`、`config`、`stateMachineDefinition`、`interruptPolicySet`、`dodgeActionConfig` 等旧平铺字段 MUST NOT 作为正式类型字段或正式序列化键存在
 - **AND** 系统 MUST NOT 通过这些旧字段补齐缺失的根配置子模块
@@ -160,9 +160,9 @@
 
 #### Scenario: Prefab 绑定同一根配置
 - **WHEN** 自动校验 `Assets/Prefabs/Character/可琳.prefab` 和 `Assets/Prefabs/Character/可琳_Humanoid.prefab`
-- **THEN** `PlayerLocomotionController.characterConfig` MUST 指向 `CorinCharacterConfig.asset`
-- **AND** `FullBodyActionRuntime.characterConfig` 和 `CharacterFrameRuntimeController.characterConfig` MUST 指向同一个 `CorinCharacterConfig.asset`
-- **AND** 两个 controller MUST NOT 通过各自平铺字段解析不同子配置
+- **THEN** `CharacterFrameRuntimeController.characterConfig` MUST 指向 `CorinCharacterConfig.asset`
+- **AND** Locomotion/Action runtime modules MUST 从同一个 `CorinCharacterConfig.asset` 解析子配置
+- **AND** runtime controller 与 Unity-facing adapters MUST NOT 通过各自平铺字段解析不同子配置
 
 #### Scenario: Scene override 不恢复旧入口
 - **WHEN** 自动校验正式场景中的 Corin 角色实例
@@ -171,7 +171,7 @@
 
 #### Scenario: Humanoid Prefab 不保留重复根字段
 - **WHEN** 自动校验 `Assets/Prefabs/Character/可琳_Humanoid.prefab`
-- **THEN** `PlayerLocomotionController` 的有效 `characterConfig` MUST 指向 `CorinCharacterConfig.asset`
+- **THEN** `CharacterFrameRuntimeController` 的有效 `characterConfig` MUST 指向 `CorinCharacterConfig.asset`
 - **AND** YAML 或 SerializedObject 校验 MUST NOT 发现第二个会覆盖正式根配置的同名残留字段
 
 ### Requirement: Character Runtime Controller 使用根配置
@@ -292,4 +292,3 @@
 - **WHEN** Action lifecycle 完成该动作
 - **THEN** 输入配置 MUST NOT 通过隐藏 Run fallback 强制进入 Run
 - **AND** Locomotion MUST 能按正式状态回到 Idle 或 Walk 起步
-

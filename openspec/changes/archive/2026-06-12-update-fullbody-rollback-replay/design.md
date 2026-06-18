@@ -78,7 +78,7 @@ Synctest replay
 
 ## Risks / Trade-offs
 - Risk: `PlayerFullBodyActionController` 当前缺少 restore API。
-  - Mitigation: 先定义最小 `FullBodyActionRestoreState`，只包含影响 replay 的纯数据；若需要恢复 animation presenter 内部状态，记录为后续表现层/动画事实变更，不直接保存 Animancer 对象。
+  - Mitigation: 先定义最小 `CommittedActionRestoreState`，只包含影响 replay 的纯数据；若需要恢复 animation presenter 内部状态，记录为后续表现层/动画事实变更，不直接保存 Animancer 对象。
 
 - Risk: `InputRequestBufferComponent.CurrentStep` 与 `SimulationTick` step 不一致。
   - Mitigation: replay 时用 input tick 显式 `SetStep(input.Tick.Value)`，并测试 Dodge pressed 在同 tick 可被 action gate 消费。

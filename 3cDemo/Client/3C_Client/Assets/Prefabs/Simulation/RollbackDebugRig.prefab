@@ -50,7 +50,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 21976d05acaa4f3e911bd23075f5668a, type: 3}
   m_Name:
   m_EditorClassIdentifier:
-  locomotionController: {fileID: 0}
+  runtimeController: {fileID: 0}
   buttonSourceBehaviour: {fileID: 0}
 --- !u!114 &8801000000000000003
 MonoBehaviour:
@@ -80,8 +80,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier:
   tickDriver: {fileID: 0}
-  locomotionController: {fileID: 0}
-  fullBodyActionRuntime: {fileID: 0}
+  runtimeController: {fileID: 0}
   inputBufferComponent: {fileID: 0}
   capacity: 120
 --- !u!114 &8801000000000000005
@@ -96,9 +95,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 73bce0421eee1d84096242add6027c57, type: 3}
   m_Name:
   m_EditorClassIdentifier:
-  fullBodyActionRuntime: {fileID: 0}
   runtimeController: {fileID: 0}
-  locomotionController: {fileID: 0}
   inputBufferComponent: {fileID: 0}
   ticksPerSecond: 60
 --- !u!114 &8801000000000000006

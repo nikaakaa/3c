@@ -1,0 +1,44 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement name="top">
+        <ui:Label name="target-field" text="Dodge Selector Timeline" />
+        <ui:Button name="play-button" />
+        <ui:Button name="pause-button" />
+        <ui:VisualElement name="play-speed">
+            <ui:VisualElement name="play-speed-icon" />
+            <uie:FloatField value="1" name="play-speed-field" />
+        </ui:VisualElement>
+        <ui:Label name="preview-summary" text="Preview 0s / tick 0 | active clips 0" />
+    </ui:VisualElement>
+    <ui:VisualElement name="track-container">
+        <ui:VisualElement name="left-panel">
+            <ui:VisualElement name="track-hierarchy">
+                <ui:VisualElement name="tool-bar">
+                    <ui:VisualElement name="add-track-button">
+                        <ui:Label text="Tracks" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="track-handle-container" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="left-panel-resizer" class="horizontal-resizer" />
+        <ui:VisualElement name="field-view">
+            <ui:ScrollView horizontal-scroller-visibility="Auto" vertical-scroller-visibility="Auto" name="track-scroll">
+                <ui:VisualElement name="field-content">
+                    <ui:VisualElement name="track-field" />
+                    <ui:VisualElement name="marker-field">
+                        <ui:VisualElement name="time-locater">
+                            <ui:VisualElement name="time-locater-icon" />
+                            <ui:Label text="0" name="time-locater-frame-label" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="draw-frame-line-field" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:ScrollView>
+            <ui:VisualElement name="inspector-resizer" class="horizontal-resizer" />
+            <ui:ScrollView horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Auto" name="inspector-scroll">
+                <ui:VisualElement name="clip-inspector" />
+            </ui:ScrollView>
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="track-inspector" />
+</ui:UXML>

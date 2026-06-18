@@ -33,7 +33,7 @@ namespace ThirdPersonAction
         public BodyOccupancyClaim ToClaim(int sourceStep)
         {
             return new BodyOccupancyClaim(
-                Kind == BodyOccupancyKind.UpperBody ? CharacterBodyDomain.UpperBody : CharacterBodyDomain.FullBodyAction,
+                Kind == BodyOccupancyKind.UpperBody ? CharacterBodyDomain.UpperBody : CharacterBodyDomain.CommittedAction,
                 Kind,
                 channels,
                 sourceStep);

@@ -1,7 +1,7 @@
 # locomotion-foot-phase-matching Specification
 
 ## Purpose
-TBD - created by archiving change add-locomotion-foot-phase-matching. Update Purpose after archive.
+定义 Locomotion 脚相位 Profile、采样、TurnBack 到 RunLoop 相位匹配、诊断和验证边界。
 ## Requirements
 ### Requirement: Locomotion 脚相位 Profile
 系统 MUST 提供运行时可读的 Locomotion 脚相位 Profile，用于描述某个 `BasicMovementPhase + BasicMovementGait + alias key` 的脚相位 marker。Profile MUST 是纯数据配置，不得保存 Animancer runtime、AnimationClip、Transform、CharacterController、InputAction 或场景实例引用。
@@ -107,4 +107,3 @@ TBD - created by archiving change add-locomotion-foot-phase-matching. Update Pur
 - **WHEN** 系统解析匹配结果
 - **THEN** 诊断 MUST 包含失败原因
 - **AND** MUST NOT 删除现有 locomotion animation playback 日志
-

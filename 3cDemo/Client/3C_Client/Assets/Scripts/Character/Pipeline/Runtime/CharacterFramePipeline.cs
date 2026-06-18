@@ -139,7 +139,7 @@ namespace ThirdPersonAction
         {
             context.MarkStep(CharacterFramePipelineStep.WriteSnapshotAndEvents);
             context.MarkSnapshotEventsReady();
-            FullBodyDiagnostics.LogPipelineSnapshot(
+            CharacterFrameDiagnostics.LogPipelineSnapshot(
                 runtime != null ? runtime.ActiveFrameStatePath : string.Empty,
                 context.Step,
                 new CharacterFrameResult(in context).DiagnosticSummary);

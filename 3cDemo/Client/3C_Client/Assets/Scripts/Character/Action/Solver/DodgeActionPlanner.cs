@@ -43,6 +43,23 @@ namespace ThirdPersonAction
             in DodgeActionTuning tuning,
             out DodgeActionRequest request)
         {
+            return TryResolveRequest(
+                in actionRequest,
+                in movementIntent,
+                currentWorldMoveDirection,
+                facingForward,
+                tuning.Priority,
+                out request);
+        }
+
+        public static bool TryResolveRequest(
+            in CharacterActionRequest actionRequest,
+            in MovementInputIntent movementIntent,
+            Vector3 currentWorldMoveDirection,
+            Vector3 facingForward,
+            int priority,
+            out DodgeActionRequest request)
+        {
             if (!actionRequest.HasRequest ||
                 actionRequest.RequestType != ActionRequestType.Dodge ||
                 actionRequest.SourceInputKind != InputRequestKind.Dodge)
@@ -62,7 +79,7 @@ namespace ThirdPersonAction
                 worldDirection,
                 actionRequest.OriginStep,
                 actionRequest.ExpireStep,
-                tuning.Priority,
+                priority,
                 actionRequest.SourceOrder,
                 ActionStateIds.Dodge);
             return true;

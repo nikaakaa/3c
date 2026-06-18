@@ -41,7 +41,7 @@ namespace ThirdPersonCharacterGraph
                 sourceStep);
         }
 
-        public static CharacterBranchClaimDescriptor FullBodyAction(int sourceStep)
+        public static CharacterBranchClaimDescriptor CommittedActionFullBody(int sourceStep)
         {
             return new CharacterBranchClaimDescriptor(
                 CharacterGraphBranchKind.Action,

@@ -1,7 +1,7 @@
 # locomotion-turnback-root-motion Specification
 
 ## Purpose
-TBD - created by archiving change add-moving-pivot-turn. Update Purpose after archive.
+定义 TurnBack root motion 迁移、旧转身运行系统删除、逻辑状态和统一运动权威边界。
 ## Requirements
 ### Requirement: 删除旧转身运行系统
 系统 MUST 删除旧 `TurnInPlace` 原地转身运行系统和旧 `MovingPivotTurn` baked yaw 运行系统。普通 locomotion frame、animation context、状态机 frame、runtime blackboard 和 rollback state MUST NOT 携带旧 TurnInPlace/MovingPivot plan。
@@ -88,4 +88,3 @@ TBD - created by archiving change add-moving-pivot-turn. Update Purpose after ar
 - **WHEN** locomotion controller 在 `TurnBack` phase 构建 movement command
 - **THEN** command MUST 携带该 animation delta
 - **AND** movement executor MUST 通过通用 animation-motion 分支应用该 delta
-

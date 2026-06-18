@@ -1,7 +1,7 @@
 # urp-black-white-flash-post-processing Specification
 
 ## Purpose
-TBD - created by archiving change add-urp-black-white-flash-post-processing. Update Purpose after archive.
+定义 URP 黑白闪后处理的 Volume 参数、Renderer 接入、shader 行为、参数安全范围、曲线播放和验证边界。
 ## Requirements
 ### Requirement: URP 黑白闪 Volume 参数
 系统 MUST 提供一个 URP VolumeComponent，用于配置黑白闪后处理的强度、模式、灰度阈值、对比度、白场增强、暗部压黑、反白程度、径向中心、径向半径和径向软边。
@@ -119,4 +119,3 @@ TBD - created by archiving change add-urp-black-white-flash-post-processing. Upd
 - **WHEN** 在 Sandbox 的 Black White Flash Controller 上执行默认播放
 - **THEN** Game View MUST 出现一次随曲线衰减的黑白闪
 - **AND** 用户调整默认 Profile 的曲线或参数后，再次播放 MUST 观察到对应变化
-

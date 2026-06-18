@@ -97,6 +97,127 @@ namespace ThirdPersonAction.Tests
         }
 
         [Test]
+        public void MatrixRowsCompileToRuntimePoliciesAndKeepOrder()
+        {
+            ActionTransitionPolicyMatrixDefinition matrix = new ActionTransitionPolicyMatrixDefinition(new[]
+            {
+                MatrixRow("Action.Block", "Action.GuardCounter", ActionRequestType.Attack, "window.counter.open", 40, true),
+                MatrixRow("Action.Attack01", "Action.Dodge", ActionRequestType.Dodge, TimelineFactIds.CancelableToDodge.Value, 30)
+            });
+
+            var policies = ActionInterruptPolicySetCompiler.Compile(matrix, FactContext("window.counter.open", TimelineFactIds.CancelableToDodge.Value), out ActionInterruptPolicyValidationResult validation);
+
+            Assert.False(validation.HasErrors, validation.DescribeErrors());
+            Assert.AreEqual(2, policies.Count);
+            Assert.AreEqual(new ActionStateId("Action.Block"), policies[0].FromState);
+            Assert.AreEqual(new ActionStateId("Action.GuardCounter"), policies[0].TargetState);
+            Assert.AreEqual(ActionRequestType.Attack, policies[0].RequestType);
+            Assert.AreEqual(new TimelineFactId("window.counter.open"), policies[0].RequiredFactId);
+            Assert.AreEqual(40, policies[0].MinPriority);
+            Assert.True(policies[0].Force);
+            Assert.AreEqual(ActionTransitionResistanceRule.UseCurrentState, policies[0].ResistanceRule);
+            Assert.AreEqual(ActionInterruptTimingRule.Always, policies[0].TimingRule);
+            Assert.AreEqual(string.Empty, policies[0].WindowId);
+            Assert.AreEqual(Dodge, policies[1].TargetState);
+        }
+
+        [Test]
+        public void MatrixCompilerDoesNotOutputPoliciesWhenValidationHasErrors()
+        {
+            ActionTransitionPolicyMatrixDefinition matrix = new ActionTransitionPolicyMatrixDefinition(new[]
+            {
+                MatrixRow("Action.Block", "Action.GuardCounter", ActionRequestType.Attack, "window.missing", 40)
+            });
+
+            var policies = ActionInterruptPolicySetCompiler.Compile(matrix, FactContext("window.counter.open"), out ActionInterruptPolicyValidationResult validation);
+
+            Assert.True(validation.HasErrors);
+            Assert.AreEqual(0, policies.Count);
+        }
+
+        [Test]
+        public void MatrixValidatorRejectsInvalidScopeAndPayload()
+        {
+            ActionTransitionPolicyMatrixDefinition matrix = new ActionTransitionPolicyMatrixDefinition(new[]
+            {
+                MatrixRow("", "Action.GuardCounter", ActionRequestType.Attack, "window.counter.open", 40),
+                MatrixRow("Action.Block", "", ActionRequestType.Attack, "window.counter.open", 40),
+                MatrixRow("Action.Block", "Action.GuardCounter", ActionRequestType.None, "window.counter.open", 40),
+                MatrixRow("Action.Block", "Locomotion.TurnBack", ActionRequestType.Attack, "window.counter.open", 40),
+                MatrixRow("Action.Block", "Action.GuardCounter.Loop", ActionRequestType.Attack, "window.counter.open", 40),
+                MatrixRow("Action.Block", "Action.GuardCounter", ActionRequestType.Attack, "", 40),
+                MatrixRow("Action.Block", "Action.GuardCounter", ActionRequestType.Attack, "window.counter.open", -1)
+            });
+
+            ActionInterruptPolicyValidationResult result =
+                ActionTransitionPolicyMatrixValidator.Validate(matrix, FactContext("window.counter.open"));
+
+            Assert.True(result.HasErrors);
+            Assert.That(result.DescribeErrors(), Does.Contain("from action id is missing"));
+            Assert.That(result.DescribeErrors(), Does.Contain("to action id is missing"));
+            Assert.That(result.DescribeErrors(), Does.Contain("request kind is missing"));
+            Assert.That(result.DescribeErrors(), Does.Contain("outside Action scope:Locomotion.TurnBack"));
+            Assert.That(result.DescribeErrors(), Does.Contain("outside Action scope:Action.GuardCounter.Loop"));
+            Assert.That(result.DescribeErrors(), Does.Contain("required fact id is missing"));
+            Assert.That(result.DescribeErrors(), Does.Contain("min priority"));
+        }
+
+        [Test]
+        public void MatrixValidatorUsesExactSharedFactResolver()
+        {
+            ActionTransitionPolicyMatrixDefinition valid = new ActionTransitionPolicyMatrixDefinition(new[]
+            {
+                MatrixRow("Action.Block", "Action.GuardCounter", ActionRequestType.Attack, "window.counter.open", 40)
+            });
+            ActionTransitionPolicyMatrixDefinition prefixOnly = new ActionTransitionPolicyMatrixDefinition(new[]
+            {
+                MatrixRow("Action.Block", "Action.GuardCounter", ActionRequestType.Attack, "window.counter", 40)
+            });
+
+            ActionInterruptPolicyValidationResult validResult =
+                ActionTransitionPolicyMatrixValidator.Validate(valid, FactContext("window.counter.open"));
+            ActionInterruptPolicyValidationResult prefixResult =
+                ActionTransitionPolicyMatrixValidator.Validate(prefixOnly, FactContext("window.counter.open"));
+
+            Assert.False(validResult.HasErrors, validResult.DescribeErrors());
+            Assert.True(prefixResult.HasErrors);
+            Assert.That(prefixResult.DescribeErrors(), Does.Contain("missing from action fact context:window.counter"));
+        }
+
+        [Test]
+        public void MatrixValidatorReportsDuplicateAndConflictingRows()
+        {
+            ActionTransitionPolicyRowDefinition first =
+                MatrixRow("Action.Block", "Action.GuardCounter", ActionRequestType.Attack, "window.counter.open", 40);
+            ActionTransitionPolicyMatrixDefinition matrix = new ActionTransitionPolicyMatrixDefinition(new[]
+            {
+                first,
+                first,
+                MatrixRow("Action.Block", "Action.GuardCounter", ActionRequestType.Attack, "window.counter.open", 80)
+            });
+
+            ActionInterruptPolicyValidationResult result =
+                ActionTransitionPolicyMatrixValidator.Validate(matrix, FactContext("window.counter.open"));
+
+            Assert.True(result.HasErrors);
+            Assert.That(result.Warnings, Has.Some.Contains("duplicates"));
+            Assert.That(result.DescribeErrors(), Does.Contain("conflicts"));
+        }
+
+        [Test]
+        public void MatrixRowDoesNotCarryWindowTimingFields()
+        {
+            string[] fieldNames = typeof(ActionTransitionPolicyRowDefinition)
+                .GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .Select(field => field.Name)
+                .ToArray();
+
+            CollectionAssert.DoesNotContain(fieldNames, "windowStart");
+            CollectionAssert.DoesNotContain(fieldNames, "windowEnd");
+            CollectionAssert.DoesNotContain(fieldNames, "windowId");
+        }
+
+        [Test]
         public void ValidatorReportsInvalidFromStateId()
         {
             ActionInterruptPolicySet set = new ActionInterruptPolicySet(new[]
@@ -439,6 +560,50 @@ namespace ThirdPersonAction.Tests
         }
 
         [Test]
+        public void MatrixPoliciesAreConsumedByArbiterThroughRequiredFacts()
+        {
+            ActionTransitionPolicyMatrixDefinition matrix = new ActionTransitionPolicyMatrixDefinition(new[]
+            {
+                MatrixRow("Action.Block", "Action.GuardCounter", ActionRequestType.Attack, "window.counter.open", 40)
+            });
+            var policies = ActionInterruptPolicySetCompiler.Compile(matrix, FactContext("window.counter.open"), out ActionInterruptPolicyValidationResult validation);
+            ActionInterruptRequest request = new ActionInterruptRequest(
+                requestId: 1,
+                requestType: ActionRequestType.Attack,
+                targetState: new ActionStateId("Action.GuardCounter"),
+                priority: 40,
+                sourceOrder: 0,
+                originTick: 0);
+
+            ActionInterruptDecision accepted = ActionInterruptArbiter.Arbitrate(
+                ContextWithRequestFact("Action.Block", "window.counter.open"),
+                new[] { request },
+                policies);
+            ActionInterruptDecision missingFact = ActionInterruptArbiter.Arbitrate(
+                ContextWithRequestFact("Action.Block", string.Empty),
+                new[] { request },
+                policies);
+            ActionInterruptRequest weakRequest = new ActionInterruptRequest(
+                requestId: 2,
+                requestType: ActionRequestType.Attack,
+                targetState: new ActionStateId("Action.GuardCounter"),
+                priority: 39,
+                sourceOrder: 0,
+                originTick: 0);
+            ActionInterruptDecision weak = ActionInterruptArbiter.Arbitrate(
+                ContextWithRequestFact("Action.Block", "window.counter.open"),
+                new[] { weakRequest },
+                policies);
+
+            Assert.False(validation.HasErrors, validation.DescribeErrors());
+            Assert.True(accepted.Accepted);
+            Assert.False(missingFact.Accepted);
+            Assert.AreEqual(ActionInterruptRejectReason.TimingNotSatisfied, missingFact.RejectReason);
+            Assert.False(weak.Accepted);
+            Assert.AreEqual(ActionInterruptRejectReason.PriorityTooLow, weak.RejectReason);
+        }
+
+        [Test]
         public void PolicyDataDoesNotNeedUnitySceneObjects()
         {
             AssertNoUnityObjectFields(typeof(ActionInterruptPolicyDefinition));
@@ -474,6 +639,18 @@ namespace ThirdPersonAction.Tests
             Assert.That(stateMachine, Does.Not.Contain("ActionInterruptPolicySet"));
             Assert.That(locomotionRuntime, Does.Not.Contain("ActionInterruptPolicySet"));
             Assert.That(presenter, Does.Not.Contain("ActionInterruptPolicySet"));
+        }
+
+        [Test]
+        public void BranchDataDoesNotHoldCrossActionTargets()
+        {
+            string branchRoot = Path.Combine(Application.dataPath, "Scripts/Character/Action/Branch");
+            string source = string.Join("\n", Directory.GetFiles(branchRoot, "*.cs", SearchOption.AllDirectories)
+                .Select(File.ReadAllText));
+
+            Assert.That(source, Does.Not.Contain("toActionId"));
+            Assert.That(source, Does.Not.Contain("targetActionId"));
+            Assert.That(source, Does.Not.Contain("ActionTransitionPolicyMatrix"));
         }
 
         [Test]
@@ -532,6 +709,61 @@ namespace ThirdPersonAction.Tests
             ActionRequestType requestType = ActionRequestType.None)
         {
             return new ActionInterruptPolicyDefinition(from, target, minPriority, timingRule, windowStart, windowEnd, force, windowId, requiredFactId, requestType: requestType);
+        }
+
+        static ActionTransitionPolicyRowDefinition MatrixRow(
+            string from,
+            string to,
+            ActionRequestType requestType,
+            string requiredFactId,
+            int minPriority,
+            bool force = false)
+        {
+            return new ActionTransitionPolicyRowDefinition(
+                from,
+                to,
+                requestType,
+                requiredFactId,
+                minPriority,
+                force,
+                ActionTransitionResistanceRule.UseCurrentState,
+                "display only");
+        }
+
+        static ActionFactCompileContext FactContext(params string[] factIds)
+        {
+            ActionFactDeclaration[] declarations = new ActionFactDeclaration[factIds.Length];
+            for (int i = 0; i < factIds.Length; i++)
+            {
+                declarations[i] = new ActionFactDeclaration(
+                    new TimelineFactId(factIds[i]),
+                    ActionFactSourceKind.TimelineWindow,
+                    true);
+            }
+
+            return new ActionFactCompileContext(declarations);
+        }
+
+        static ActionInterruptContext ContextWithRequestFact(string actionId, string requestFactId)
+        {
+            StateTimelineWindowFacts facts = new StateTimelineWindowFacts(
+                default,
+                0f,
+                false,
+                0f,
+                false,
+                false,
+                false,
+                false,
+                0,
+                0,
+                0,
+                false,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                requestFactId);
+            return new ActionInterruptContext(new ActionStateId(actionId), 0f, 0, 0, facts);
         }
 
         static void SetAssetPolicies(ActionInterruptPolicySetSO asset, ActionInterruptPolicyDefinition[] policies)

@@ -2,7 +2,7 @@
 当前项目已有统一日志出口：
 
 ```text
-FullBodyDiagnostics / LocomotionDiagnostics
+CharacterFrameDiagnostics / LocomotionDiagnostics
   -> RuntimeDiagnosticLog.Submit
   -> RuntimeDiagnosticLog.Filter
   -> Unity Console / tests
@@ -24,7 +24,7 @@ Runtime core produces trace
 - 保留现有 event id，避免调试工具失效。
 
 ## Non-Goals
-- 不取消 `FullBodyDiagnostics` / `LocomotionDiagnostics` 名称；可迁移为 adapter/facade。
+- 不取消 `CharacterFrameDiagnostics` / `LocomotionDiagnostics` 名称；可迁移为 adapter/facade。
 - 不改变日志输出格式到无法搜索旧 key。
 - 不要求一次迁移所有旧工具日志。
 - 不把 manual debug log 纳入 gameplay 验收任务。
@@ -39,8 +39,8 @@ Character/Diagnostics/
   RuntimeDiagnosticLogCharacterSink.cs
 
 Character/Action/FullBody/Diagnostics/
-  FullBodyDiagnosticAdapter.cs
-  FullBodyDiagnosticEventFormatter.cs
+  CharacterFrameDiagnosticAdapter.cs
+  CharacterFrameDiagnosticEventFormatter.cs
 
 Character/Movement/Diagnostics/
   LocomotionDiagnosticAdapter.cs
@@ -56,7 +56,7 @@ Character/Movement/Diagnostics/
 ## Decisions
 
 ### Decision: 保留现有 event id
-迁移不得删除 `fullbody-path-changed`、`locomotion-phase-changed`、`action-accepted` 等现有 key。
+迁移不得删除 `character-frame-path-changed`、`locomotion-phase-changed`、`action-accepted` 等现有 key。
 
 理由：用户和测试已经依赖这些 key 搜索链路。
 
@@ -88,7 +88,7 @@ trace 不允许保存 MonoBehaviour、Transform、Animancer state、CharacterCon
   - Mitigation: 静态测试禁止 core 模块直接提交，允许 facade 只做 adapter 包装。
 
 ## Open Questions
-- `FullBodyDiagnostics` 是否保留为 public facade，还是完全替换为 adapter？
+- `CharacterFrameDiagnostics` 是否保留为 public facade，还是完全替换为 adapter？
 - condition trace 是否跟 timeline trace 共用同一个 frame trace type？
 - diagnostics adapter 是否应进入 `ICharacterFrameRuntimePort`，还是由 output runtime 持有？
 
@@ -114,7 +114,7 @@ trace 不允许保存 MonoBehaviour、Transform、Animancer state、CharacterCon
 - Forbidden: evaluating gameplay conditions.
 - Test surface: event id presence tests and filter tests.
 
-### `FullBodyDiagnosticAdapter`
+### `CharacterFrameDiagnosticAdapter`
 - Interface: accepts FullBody frame/path/action/timeline/condition traces.
 - Invariant: adapter formats, it does not compute state transitions.
 - Output: formatted diagnostic events through sink.

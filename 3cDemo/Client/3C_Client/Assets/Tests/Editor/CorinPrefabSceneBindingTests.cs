@@ -29,7 +29,7 @@ namespace Tests.Editor
                 Assert.True(result.Success, result.FailureReason);
                 Assert.AreEqual(CharacterFramePipelineStep.Completed, result.CompletedStep);
                 Assert.True(result.Output.HasSubmission);
-                Assert.AreEqual(CharacterBodyDomain.Locomotion, result.FramePlan.BaseLayerOwner);
+                Assert.AreEqual(CharacterBodyDomain.Locomotion, result.FramePlan.BaseSlotOwner);
             }
             finally
             {
@@ -60,7 +60,8 @@ namespace Tests.Editor
 
                 CharacterFrameResult result = runtime.LastFramePipelineResult;
                 Assert.True(result.Success, result.FailureReason);
-                Assert.AreEqual(CharacterBodyDomain.FullBodyAction, result.FramePlan.BaseLayerOwner);
+                Assert.AreEqual(CharacterBodyDomain.CommittedAction, result.FramePlan.BaseSlotOwner);
+                Assert.True(result.FramePlan.UpperBodySlotSuppressed);
                 Assert.False(result.Output.Movement.ExecuteBasicMovement);
                 Assert.True(result.Output.Movement.ExecuteActionMovement);
             }

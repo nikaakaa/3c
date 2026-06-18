@@ -176,7 +176,7 @@ namespace ThirdPersonAction
                 consumedRequestKind,
                 exitedToLocomotion,
                 step,
-                ActionBranchOutcome.None(step))
+                CommittedActionBranchOutcome.None(step))
         {
         }
 
@@ -187,7 +187,7 @@ namespace ThirdPersonAction
             InputRequestKind consumedRequestKind,
             bool exitedToLocomotion,
             int step,
-            ActionBranchOutcome actionBranchOutcome)
+            CommittedActionBranchOutcome committedActionBranchOutcome)
         {
             int sanitizedStep = step < 0 ? 0 : step;
             AnimationRequest = animationRequest;
@@ -196,9 +196,9 @@ namespace ThirdPersonAction
             ConsumedRequestKind = consumedRequestKind;
             ExitedToLocomotion = exitedToLocomotion;
             Step = sanitizedStep;
-            ActionBranchOutcome = actionBranchOutcome.HasOutcome
-                ? actionBranchOutcome
-                : ActionBranchOutcome.None(sanitizedStep);
+            CommittedActionBranchOutcome = committedActionBranchOutcome.HasOutcome
+                ? committedActionBranchOutcome
+                : CommittedActionBranchOutcome.None(sanitizedStep);
         }
 
         public CharacterStateAnimationRequest AnimationRequest { get; }
@@ -207,9 +207,9 @@ namespace ThirdPersonAction
         public InputRequestKind ConsumedRequestKind { get; }
         public bool ExitedToLocomotion { get; }
         public int Step { get; }
-        public ActionBranchOutcome ActionBranchOutcome { get; }
-        public ActionTimelineOutcome ActionTimelineOutcome => ActionBranchOutcome.TimelineOutcome;
-        public bool HasActionBranchOutcome => ActionBranchOutcome.HasOutcome;
+        public CommittedActionBranchOutcome CommittedActionBranchOutcome { get; }
+        public ActionTimelineOutcome ActionTimelineOutcome => CommittedActionBranchOutcome.TimelineOutcome;
+        public bool HasCommittedActionBranchOutcome => CommittedActionBranchOutcome.HasOutcome;
 
         public static CharacterFrameActionOutputSubmission None(int step)
         {

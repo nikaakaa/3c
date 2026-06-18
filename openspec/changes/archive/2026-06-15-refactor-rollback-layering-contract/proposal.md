@@ -9,7 +9,7 @@
 - 将 debug runner 中 presentation 现场恢复、相机 timing probe、日志格式化从 synctest orchestration 中拆出。
 - 将 `CharacterSimulationSnapshot` 从平铺字段整理为语义清晰的 simulation 子状态，并为 `CameraYaw`、`WithCameraYaw()` 等兼容字段制定删除路径。
 - 将 `PresentationTransformRollbackState` 的语义收窄为 debug restore state，不作为预测回滚状态。
-- 将 `FullBodyActionRestoreState` 中 gameplay restore 与诊断日志 restore 拆分，避免诊断字段污染模拟真相。
+- 将 `CommittedActionRestoreState` 中 gameplay restore 与诊断日志 restore 拆分，避免诊断字段污染模拟真相。
 
 ## Impact
 - Affected specs: `local-rollback-synctest-foundation`, `fullbody-rollback-replay`, `presentation-transform-interpolation`, `cinemachine-third-person-camera`

@@ -21,7 +21,7 @@ namespace ThirdPersonAction
                 startedThisFrame,
                 exitedThisFrame,
                 sourceStep,
-                ActionBranchOutcome.None(sourceStep))
+                CommittedActionBranchOutcome.None(sourceStep))
         {
         }
 
@@ -33,7 +33,7 @@ namespace ThirdPersonAction
             bool startedThisFrame,
             bool exitedThisFrame,
             int sourceStep,
-            ActionBranchOutcome actionBranchOutcome)
+            CommittedActionBranchOutcome committedActionBranchOutcome)
         {
             int sanitizedSourceStep = sourceStep < 0 ? 0 : sourceStep;
             Action = action;
@@ -43,22 +43,22 @@ namespace ThirdPersonAction
             StartedThisFrame = startedThisFrame;
             ExitedThisFrame = exitedThisFrame;
             SourceStep = sanitizedSourceStep;
-            ActionBranchOutcome = actionBranchOutcome.HasOutcome
-                ? actionBranchOutcome
-                : ActionBranchOutcome.None(sanitizedSourceStep);
+            CommittedActionBranchOutcome = committedActionBranchOutcome.HasEvaluation
+                ? committedActionBranchOutcome
+                : CommittedActionBranchOutcome.None(sanitizedSourceStep);
         }
 
         public CharacterResolvedAction Action { get; }
         public ActionMotionSpec MotionSpec { get; }
         public CharacterStateAnimationRequest AnimationRequest { get; }
-        public ActionBranchOutcome ActionBranchOutcome { get; }
+        public CommittedActionBranchOutcome CommittedActionBranchOutcome { get; }
         public bool HasAnimationRequest { get; }
         public bool StartedThisFrame { get; }
         public bool ExitedThisFrame { get; }
         public int SourceStep { get; }
         public bool HasAction => Action.HasResolvedAction && MotionSpec.HasSpec;
         public ActionStateId ActionState => HasAction ? MotionSpec.ActionState : ActionStateIds.None;
-        public bool HasActionBranchOutcome => ActionBranchOutcome.HasOutcome;
+        public bool HasCommittedActionBranchOutcome => CommittedActionBranchOutcome.HasOutcome;
 
         public static ActionLifecycleFrame None(int sourceStep, bool exitedThisFrame = false)
         {
@@ -79,12 +79,19 @@ namespace ThirdPersonAction
             bool exitedThisFrame,
             int sourceStep,
             ActionAnimationPlaybackIntent playbackIntent = default,
-            ActionBranchOutcome actionBranchOutcome = default)
+            CommittedActionBranchOutcome committedActionBranchOutcome = default)
         {
-            ActionTimelineOutcome timelineOutcome = actionBranchOutcome.TimelineOutcome;
+            ActionTimelineOutcome timelineOutcome = committedActionBranchOutcome.TimelineOutcome;
+            bool timelineEvaluated = committedActionBranchOutcome.HasEvaluation;
             ActionMotionSpec spec = timelineOutcome.HasMotion
                 ? timelineOutcome.MotionSpec
-                : action.MotionSpec;
+                : timelineEvaluated
+                    ? ActionMotionSpec.None(sourceStep)
+                    : action.MotionSpec;
+            Vector3 lockedWorldDirection = timelineOutcome.HasMotion &&
+                                           spec.LockedWorldDirection.sqrMagnitude > 0.000001f
+                ? spec.LockedWorldDirection
+                : action.MotionSpec.LockedWorldDirection;
             ActionMotionSpec motionSpec = new ActionMotionSpec(
                 spec.ActionState,
                 spec.SourceState,
@@ -93,12 +100,14 @@ namespace ThirdPersonAction
                 spec.Distance,
                 spec.RotateToDirection,
                 spec.SetRunLatchOnComplete,
-                spec.LockedWorldDirection,
+                lockedWorldDirection,
                 stateTime,
                 sourceStep);
             ActionAnimationKey animationKey = timelineOutcome.HasAnimation
                 ? timelineOutcome.AnimationKey
-                : action.AnimationKey;
+                : timelineEvaluated
+                    ? default
+                    : action.AnimationKey;
             CharacterStateAnimationRequest animationRequest = default;
             bool hasAnimation = animationKey.IsValid;
             if (hasAnimation)
@@ -120,10 +129,10 @@ namespace ThirdPersonAction
                 startedThisFrame,
                 exitedThisFrame,
                 sourceStep,
-                actionBranchOutcome);
+                committedActionBranchOutcome);
         }
 
-        public ActionLifecycleFrame WithActionBranchOutcome(ActionBranchOutcome actionBranchOutcome)
+        public ActionLifecycleFrame WithCommittedActionBranchOutcome(CommittedActionBranchOutcome committedActionBranchOutcome)
         {
             return new ActionLifecycleFrame(
                 Action,
@@ -133,7 +142,7 @@ namespace ThirdPersonAction
                 StartedThisFrame,
                 ExitedThisFrame,
                 SourceStep,
-                actionBranchOutcome);
+                committedActionBranchOutcome);
         }
     }
 
@@ -150,6 +159,7 @@ namespace ThirdPersonAction
                 stateTime,
                 exitedThisFrame,
                 ActionAnimationPlaybackIntent.Invalid,
+                0,
                 0)
         {
         }
@@ -161,6 +171,25 @@ namespace ThirdPersonAction
             bool exitedThisFrame,
             ActionAnimationPlaybackIntent activePlaybackIntent,
             int nextPlaybackIntentValue)
+            : this(
+                hasActiveAction,
+                activeAction,
+                stateTime,
+                exitedThisFrame,
+                activePlaybackIntent,
+                nextPlaybackIntentValue,
+                0)
+        {
+        }
+
+        public ActionLifecycleRestoreState(
+            bool hasActiveAction,
+            CharacterResolvedAction activeAction,
+            float stateTime,
+            bool exitedThisFrame,
+            ActionAnimationPlaybackIntent activePlaybackIntent,
+            int nextPlaybackIntentValue,
+            int actionStartStep)
         {
             HasActiveAction = hasActiveAction && activeAction.HasResolvedAction;
             ActiveAction = HasActiveAction ? activeAction : default;
@@ -168,6 +197,7 @@ namespace ThirdPersonAction
             ExitedThisFrame = exitedThisFrame;
             ActivePlaybackIntent = HasActiveAction ? activePlaybackIntent : ActionAnimationPlaybackIntent.Invalid;
             NextPlaybackIntentValue = Mathf.Max(nextPlaybackIntentValue, ActivePlaybackIntent.Value);
+            ActionStartStep = Mathf.Max(0, actionStartStep);
         }
 
         public bool HasActiveAction { get; }
@@ -176,6 +206,7 @@ namespace ThirdPersonAction
         public bool ExitedThisFrame { get; }
         public ActionAnimationPlaybackIntent ActivePlaybackIntent { get; }
         public int NextPlaybackIntentValue { get; }
+        public int ActionStartStep { get; }
 
         public static ActionLifecycleRestoreState Inactive =>
             new ActionLifecycleRestoreState(false, default, 0f, false);
@@ -189,6 +220,7 @@ namespace ThirdPersonAction
         bool hasActiveAction;
         bool exitedThisFrame;
         int nextPlaybackIntentValue;
+        int actionStartStep;
 
         public bool IsActive => hasActiveAction;
         public ActionStateId ActiveActionState => hasActiveAction
@@ -218,6 +250,7 @@ namespace ThirdPersonAction
                 activeAction = acceptedAction;
                 activePlaybackIntent = CreateNextPlaybackIntent();
                 stateTime = 0f;
+                actionStartStep = Mathf.Max(0, sourceStep);
                 hasActiveAction = true;
                 started = true;
                 exited = false;
@@ -227,11 +260,11 @@ namespace ThirdPersonAction
                 return ActionLifecycleFrame.None(sourceStep, exited);
 
             float tickInterval = Mathf.Max(0f, deltaTime);
-            stateTime = Mathf.Max(0f, stateTime + tickInterval);
-            ActionBranchOutcome actionBranchOutcome = EvaluateActionBranch(
+            int localTick = ResolveLocalTick(sourceStep);
+            stateTime = Mathf.Max(0f, (localTick + 1) * tickInterval);
+            CommittedActionBranchOutcome committedActionBranchOutcome = EvaluateCommittedActionBranch(
                 in actionCatalog,
-                stateTime,
-                tickInterval,
+                localTick,
                 sourceStep);
             return ActionLifecycleFrame.FromResolvedAction(
                 in activeAction,
@@ -240,7 +273,7 @@ namespace ThirdPersonAction
                 exited,
                 sourceStep,
                 activePlaybackIntent,
-                actionBranchOutcome);
+                committedActionBranchOutcome);
         }
 
         public void Complete(
@@ -278,7 +311,8 @@ namespace ThirdPersonAction
                 stateTime,
                 exitedThisFrame,
                 activePlaybackIntent,
-                nextPlaybackIntentValue);
+                nextPlaybackIntentValue,
+                actionStartStep);
         }
 
         public void Restore(in ActionLifecycleRestoreState restoreState)
@@ -289,6 +323,7 @@ namespace ThirdPersonAction
             stateTime = restoreState.StateTime;
             exitedThisFrame = restoreState.ExitedThisFrame;
             nextPlaybackIntentValue = Mathf.Max(restoreState.NextPlaybackIntentValue, activePlaybackIntent.Value);
+            actionStartStep = restoreState.ActionStartStep;
             if (!hasActiveAction)
                 ResetActiveAction();
         }
@@ -299,6 +334,7 @@ namespace ThirdPersonAction
             activePlaybackIntent = ActionAnimationPlaybackIntent.Invalid;
             stateTime = 0f;
             hasActiveAction = false;
+            actionStartStep = 0;
         }
 
         ActionAnimationPlaybackIntent CreateNextPlaybackIntent()
@@ -307,22 +343,27 @@ namespace ThirdPersonAction
             return new ActionAnimationPlaybackIntent(nextPlaybackIntentValue);
         }
 
-        ActionBranchOutcome EvaluateActionBranch(
+        CommittedActionBranchOutcome EvaluateCommittedActionBranch(
             in CharacterActionCatalog actionCatalog,
-            float currentStateTime,
-            float tickInterval,
+            int localTick,
             int sourceStep)
         {
             if (!hasActiveAction ||
                 !actionCatalog.HasCatalog ||
-                !actionCatalog.TryGetActionBranch(activeAction.MotionSpec.ActionState, out ActionBranchDefinition branch))
+                !actionCatalog.TryGetCommittedActionBranch(activeAction.MotionSpec.ActionState, out CommittedActionBranchDefinition branch))
             {
-                return ActionBranchOutcome.None(sourceStep);
+                return CommittedActionBranchOutcome.None(sourceStep);
             }
 
-            float frameStartTime = Mathf.Max(0f, currentStateTime - tickInterval);
-            int currentFrame = ActionTimelineEvaluationInput.ResolveFrame(frameStartTime, tickInterval);
-            return ActionBranchEvaluator.Evaluate(new ActionBranchEvaluationInput(branch, currentFrame, sourceStep));
+            CommittedActionBranchEvaluationContext context =
+                CommittedActionBranchEvaluationContext.FromActiveAction(in activeAction, sourceStep);
+            return CommittedActionBranchEvaluator.Evaluate(
+                new CommittedActionBranchEvaluationInput(branch, localTick, sourceStep, context));
+        }
+
+        int ResolveLocalTick(int sourceStep)
+        {
+            return Mathf.Max(0, Mathf.Max(0, sourceStep) - actionStartStep);
         }
 
         bool MatchesActiveActionAnimationEnd(in ActionAnimationPlaybackProgress actionProgress)

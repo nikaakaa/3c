@@ -8,8 +8,8 @@ namespace ThirdPersonAction
             if (timeline == null || !timeline.IsDefined)
                 return result;
 
-            if (timeline.DurationFrames < 0)
-                result.AddError("timeline-duration-negative");
+            if (timeline.DurationTicks < 0)
+                result.AddError("timeline-duration-ticks-negative");
 
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
@@ -22,11 +22,11 @@ namespace ThirdPersonAction
                     ActionTimelineClipDefinition clip = track.Clips[clipIndex];
                     if (!clip.IsDefined)
                         result.AddError($"clip-kind-invalid:{trackIndex}:{clipIndex}");
-                    if (clip.StartFrame < 0)
-                        result.AddError($"clip-start-negative:{trackIndex}:{clipIndex}");
-                    if (clip.EndFrame < clip.StartFrame)
-                        result.AddError($"clip-range-invalid:{trackIndex}:{clipIndex}");
-                    if (timeline.DurationFrames >= 0 && clip.EndFrame > timeline.DurationFrames)
+                    if (clip.StartTick < 0)
+                        result.AddError($"clip-start-tick-negative:{trackIndex}:{clipIndex}");
+                    if (clip.EndTick < clip.StartTick)
+                        result.AddError($"clip-tick-range-invalid:{trackIndex}:{clipIndex}");
+                    if (timeline.DurationTicks >= 0 && clip.EndTick > timeline.DurationTicks)
                         result.AddWarning($"clip-exceeds-duration:{trackIndex}:{clipIndex}");
                     ValidatePayload(trackIndex, clipIndex, in clip, result);
                 }
@@ -50,6 +50,7 @@ namespace ThirdPersonAction
                 case ActionTimelineClipKind.Motion:
                     if (!clip.Payload.MotionSpec.HasSpec)
                         result.AddError($"clip-motion-spec-missing:{trackIndex}:{clipIndex}");
+                    ValidateMotionWarpPayload(trackIndex, clipIndex, in clip, result);
                     break;
                 case ActionTimelineClipKind.HitboxWindow:
                 case ActionTimelineClipKind.CancelWindow:
@@ -61,6 +62,23 @@ namespace ThirdPersonAction
                         result.AddError($"clip-cue-missing:{trackIndex}:{clipIndex}");
                     break;
             }
+        }
+
+        static void ValidateMotionWarpPayload(
+            int trackIndex,
+            int clipIndex,
+            in ActionTimelineClipDefinition clip,
+            ActionTimelineValidationResult result)
+        {
+            if (!clip.Payload.MotionWarpPayload.HasWarp)
+                return;
+
+            if (!clip.Payload.MotionWarpPayload.IsValid)
+                result.AddError($"clip-motion-warp-policy-missing:{trackIndex}:{clipIndex}");
+            if (!clip.Payload.MotionWarpPayload.HasRequiredTargetBinding)
+                result.AddError($"clip-motion-warp-target-binding-missing:{trackIndex}:{clipIndex}");
+            if (!clip.Payload.MotionWarpPayload.HasRequiredMotionProfile)
+                result.AddError($"clip-motion-warp-profile-missing:{trackIndex}:{clipIndex}");
         }
     }
 }

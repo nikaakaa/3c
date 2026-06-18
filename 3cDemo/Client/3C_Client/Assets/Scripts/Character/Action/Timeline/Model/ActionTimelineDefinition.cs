@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonMotionWarping;
 
 namespace ThirdPersonAction
 {
@@ -30,9 +31,32 @@ namespace ThirdPersonAction
             ActionMotionSpec motionSpec,
             string factId,
             string cueId)
+            : this(animationKey, motionSpec, factId, cueId, MotionWarpPayload.None)
+        {
+        }
+
+        public ActionTimelineClipPayload(
+            ActionAnimationKey animationKey,
+            ActionMotionSpec motionSpec,
+            string factId,
+            string cueId,
+            MotionWarpPayload motionWarpPayload)
         {
             AnimationKey = animationKey;
-            MotionSpec = motionSpec;
+            MotionSpec = motionSpec.HasSpec && motionWarpPayload.HasWarp
+                ? new ActionMotionSpec(
+                    motionSpec.ActionState,
+                    motionSpec.SourceState,
+                    motionSpec.Variant,
+                    motionSpec.Duration,
+                    motionSpec.Distance,
+                    motionSpec.RotateToDirection,
+                    motionSpec.SetRunLatchOnComplete,
+                    motionSpec.LockedWorldDirection,
+                    motionSpec.StateTime,
+                    motionSpec.SourceStep,
+                    motionWarpPayload)
+                : motionSpec;
             FactId = (factId ?? string.Empty).Trim();
             CueId = (cueId ?? string.Empty).Trim();
         }
@@ -41,6 +65,7 @@ namespace ThirdPersonAction
         public ActionMotionSpec MotionSpec { get; }
         public string FactId { get; }
         public string CueId { get; }
+        public MotionWarpPayload MotionWarpPayload => MotionSpec.MotionWarpPayload;
 
         public static ActionTimelineClipPayload Animation(ActionAnimationKey key)
         {
@@ -50,6 +75,11 @@ namespace ThirdPersonAction
         public static ActionTimelineClipPayload Motion(ActionMotionSpec spec)
         {
             return new ActionTimelineClipPayload(default, spec, string.Empty, string.Empty);
+        }
+
+        public static ActionTimelineClipPayload Motion(ActionMotionSpec spec, MotionWarpPayload warpPayload)
+        {
+            return new ActionTimelineClipPayload(default, spec, string.Empty, string.Empty, warpPayload);
         }
 
         public static ActionTimelineClipPayload Fact(string factId)
@@ -67,30 +97,30 @@ namespace ThirdPersonAction
     {
         public ActionTimelineClipDefinition(
             ActionTimelineClipKind kind,
-            int startFrame,
-            int endFrame,
+            int startTick,
+            int endTick,
             ActionTimelineClipPayload payload)
         {
             Kind = kind;
-            StartFrame = startFrame;
-            EndFrame = endFrame;
+            StartTick = startTick;
+            EndTick = endTick;
             Payload = payload;
         }
 
         public ActionTimelineClipKind Kind { get; }
-        public int StartFrame { get; }
-        public int EndFrame { get; }
+        public int StartTick { get; }
+        public int EndTick { get; }
         public ActionTimelineClipPayload Payload { get; }
         public bool IsDefined => Kind != ActionTimelineClipKind.None;
 
-        public bool ContainsFrame(int frame)
+        public bool ContainsTick(int tick)
         {
-            return IsDefined && StartFrame <= frame && frame < EndFrame;
+            return IsDefined && StartTick <= tick && tick < EndTick;
         }
 
-        public bool TriggersAtFrame(int frame)
+        public bool TriggersAtTick(int tick)
         {
-            return IsDefined && StartFrame == frame;
+            return IsDefined && StartTick == tick;
         }
     }
 
@@ -117,16 +147,16 @@ namespace ThirdPersonAction
 
         public ActionTimelineDefinition(
             ActionStateId actionState,
-            int durationFrames,
+            int durationTicks,
             ActionTimelineTrackDefinition[] tracks)
         {
             ActionState = actionState.IsValid ? actionState : ActionStateIds.None;
-            DurationFrames = durationFrames;
+            DurationTicks = durationTicks;
             this.tracks = tracks ?? Array.Empty<ActionTimelineTrackDefinition>();
         }
 
         public ActionStateId ActionState { get; }
-        public int DurationFrames { get; }
+        public int DurationTicks { get; }
         public IReadOnlyList<ActionTimelineTrackDefinition> Tracks => tracks ?? Array.Empty<ActionTimelineTrackDefinition>();
         public bool IsDefined => ActionState.IsValid && ActionState != ActionStateIds.None;
 

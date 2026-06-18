@@ -90,7 +90,7 @@
 - **THEN** context MAY 携带黑板 snapshot 或等价只读 facts view
 - **AND** transition evaluator MUST 只读取该只读 facts view
 - **AND** evaluator MUST NOT 读取黑板可变实例
-- **AND** context 组装 MUST NOT 依赖 `PlayerFullBodyActionController`
+- **AND** context 组装 MUST NOT 依赖 旧 FullBody action controller
 
 #### Scenario: Runner 不维护黑板
 - **WHEN** `CharacterStateMachineRunner` tick 一帧

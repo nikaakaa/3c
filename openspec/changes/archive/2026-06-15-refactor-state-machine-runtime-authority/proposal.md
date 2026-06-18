@@ -22,6 +22,6 @@
   - `Assets/Scripts/Character/Config/CharacterConfigSO.cs`
   - 相关 EditMode tests 和 Sandbox/Prefab 装配资产
 - Related active changes:
-  - `refactor-fullbody-frame-pipeline` 已经引入 FullBody phase pipeline，本变更把迁移期双 driver 校验推进为正式唯一入口。
+  - `refactor-character-frame-pipeline` 已经引入 FullBody phase pipeline，本变更把迁移期双 driver 校验推进为正式唯一入口。
   - `refactor-locomotion-decision-pipeline` 已经把 Locomotion facts 显式化，本变更把这些 facts 固定为 FullBody pipeline 的输入，而不是独立状态机入口。
   - `refactor-turnback-request-entry` 已经把 TurnBack request 收进统一请求事实，本变更保证请求事实只进入唯一 runner。

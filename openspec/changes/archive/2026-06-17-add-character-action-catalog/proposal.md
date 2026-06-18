@@ -24,9 +24,8 @@
   - `3cDemo/Client/3C_Client/Assets/Scripts/Character/Action/Config/*`
   - `3cDemo/Client/3C_Client/Assets/Scripts/Character/Action/Model/*`
   - `3cDemo/Client/3C_Client/Assets/Scripts/Character/Action/Solver/CharacterActionRequestResolution.cs`
-  - `3cDemo/Client/3C_Client/Assets/Scripts/Character/Action/Solver/FullBodyActionRequestSubmissionProviders.cs`
+  - `3cDemo/Client/3C_Client/Assets/Scripts/Character/Action/Solver/CommittedActionRequestSubmissionProviders.cs`
   - `3cDemo/Client/3C_Client/Assets/Scripts/Character/Pipeline/Runtime/CharacterRuntimeCore.cs`
   - `3cDemo/Client/3C_Client/Assets/Configs/3C/Character/Corin/CorinCharacterConfig.asset`
   - `3cDemo/Client/3C_Client/Assets/Configs/3C/Action/Corin/**`
   - `3cDemo/Client/3C_Client/Assets/Tests/Editor/*`
-

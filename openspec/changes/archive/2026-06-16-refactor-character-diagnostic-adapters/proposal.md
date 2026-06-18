@@ -1,7 +1,7 @@
 # Change: 拆分角色诊断 Adapter
 
 ## Why
-当前 diagnostics 已经通过 `FullBodyDiagnostics` 和 `RuntimeDiagnosticLog` 统一输出，但触发点仍分散在 runner、pipeline、FullBody host 和 Locomotion controller 附近。随着 timeline facts trace、condition trace、frame output trace 和 rollback trace 增加，如果各模块继续直接提交日志，会让诊断系统重新绑定运行时核心。
+当前 diagnostics 已经通过 `CharacterFrameDiagnostics` 和 `RuntimeDiagnosticLog` 统一输出，但触发点仍分散在 runner、pipeline、FullBody host 和 Locomotion controller 附近。随着 timeline facts trace、condition trace、frame output trace 和 rollback trace 增加，如果各模块继续直接提交日志，会让诊断系统重新绑定运行时核心。
 
 本阶段要把“产生 trace”和“提交日志”分开：runner/pipeline/output modules 只产出纯数据 trace 或调用窄 diagnostic port，外围 diagnostic adapter 负责格式化和提交 `RuntimeDiagnosticLog`。
 
@@ -27,7 +27,7 @@
   - `unified-character-state-machine`
   - `simulation-tick-system`
 - Affected code:
-  - `Assets/Scripts/Character/Action/FullBody/Diagnostics/FullBodyDiagnostics.cs`
+  - `Assets/Scripts/Character/Action/FullBody/Diagnostics/CharacterFrameDiagnostics.cs`
   - `Assets/Scripts/Diagnostics/*`
   - `Assets/Scripts/Character/Action/FullBody/Runtime/*`
   - `Assets/Scripts/Character/StateMachine/Solver/Runtime/*`
@@ -54,7 +54,7 @@
 | Event formatting | Convert trace data into existing diagnostic event ids and payloads. | Changing gameplay decisions to make logs easier. | Event-id tests prove old keys still exist. |
 | Log submission | Submit formatted events through `RuntimeDiagnosticLog` via sink. | Direct `RuntimeDiagnosticLog.Submit` from core runtime. | Static tests forbid direct submit in runner/pipeline/evaluator/sampler. |
 | Test sink | Provide fake sink for EditMode tests. | Requiring Unity Console text as the only assertion source. | Tests assert captured trace/event records. |
-| Existing facades | Keep or wrap `FullBodyDiagnostics` and `LocomotionDiagnostics` as adapters/facades. | Duplicating event ids in multiple submission paths. | Search shows one formal submit path per event family. |
+| Existing facades | Keep or wrap `CharacterFrameDiagnostics` and `LocomotionDiagnostics` as adapters/facades. | Duplicating event ids in multiple submission paths. | Search shows one formal submit path per event family. |
 | Filtering | Preserve macro/filter/channel behavior. | Letting filter state affect gameplay state. | Behavior tests compare with diagnostics on/off. |
 
 ## Diagnostic Flow Contract

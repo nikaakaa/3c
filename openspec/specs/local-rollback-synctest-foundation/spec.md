@@ -88,7 +88,7 @@
 
 #### Scenario: 不创建第二路径
 - **WHEN** 本地状态恢复执行
-- **THEN** 系统 MUST NOT 新增绕过 `PlayerLocomotionController` 的 movement controller
+- **THEN** 系统 MUST NOT 新增绕过 `CharacterRuntimeCore`、`CharacterFramePipeline` 或 `LocomotionRuntimeModule` 的 movement controller
 - **AND** MUST NOT 通过旧 FullBody/HFSM/Dodge 缝合路径恢复状态权威
 
 ### Requirement: 本地 Synctest 重放
@@ -117,7 +117,7 @@
 
 #### Scenario: 重放继续走现有主线
 - **WHEN** synctest 重放 tick
-- **THEN** 重放 MUST 继续通过现有 simulation tick runner、状态图 runtime 和 `PlayerLocomotionController` 主线执行
+- **THEN** 重放 MUST 继续通过现有 simulation tick runner、状态图 runtime、`CharacterRuntimeCore` 和 `CharacterFramePipeline` 主线执行
 - **AND** MUST NOT 直接调用 `BasicLocomotionPipeline`
 - **AND** MUST NOT 直接调用 `CharacterController.Move`
 
@@ -227,7 +227,7 @@
 - **THEN** result success MUST 为 true
 
 ### Requirement: 严格工具不新增推进路径
-系统 MUST 通过现有 `ILocalRollbackSynctestSimulation`、FullBody 主线、Locomotion 主线和 motion executor 边界执行严格验证。严格模式不得直接调用 `BasicLocomotionPipeline`、`CharacterController.Move`、Animancer runtime 或 Input System adapter。
+系统 MUST 通过现有 `ILocalRollbackSynctestSimulation`、Character frame 主线、Locomotion 主线和 motion executor 边界执行严格验证。严格模式不得直接调用 `BasicLocomotionPipeline`、`CharacterController.Move`、Animancer runtime 或 Input System adapter。
 
 #### Scenario: 严格模式复用现有接口
 - **WHEN** synctest、soak 或 debug runner 执行 restore、advance、capture
@@ -249,7 +249,7 @@
 
 #### Scenario: Adapter 接入现有主线
 - **WHEN** 本地 replay 需要推进角色
-- **THEN** Simulation Adapter MUST 调用现有 FullBody 或 Locomotion 主线入口
+- **THEN** Simulation Adapter MUST 调用现有 Character frame 或 Locomotion 主线入口
 - **AND** 它 MUST NOT 新增第二套 movement controller、第二套状态机或直接移动真实根的旁路
 
 #### Scenario: Debug Tooling 不成为 gameplay 状态
@@ -346,7 +346,7 @@
 - **AND** MUST NOT 挂载 `LocalRollbackSoakDebugRunner`
 - **AND** MUST NOT 挂载 `PredictionInputHistoryTickRecorder`
 - **AND** MUST NOT 挂载 `LocomotionSnapshotHistoryRecorder`
-- **AND** MUST NOT 挂载 `FullBodyRollbackSimulation`
+- **AND** MUST NOT 挂载 `CharacterFrameRollbackSimulation`
 
 #### Scenario: Debug Rig 显式连接目标角色
 - **GIVEN** 场景中存在独立 `RollbackDebugRig` prefab 实例
@@ -396,7 +396,7 @@
 #### Scenario: Sandbox 接线可静态验证
 - **GIVEN** Unity Editor 当前会话不可用或无法运行 Unity Test Runner
 - **WHEN** 开发者需要确认本地 rollback debug 入口没有断线
-- **THEN** 系统 MUST 提供本地静态检查方式，确认 Sandbox 中 F6 和 F8 runner 处于 hidden 模式，并引用 FullBody simulation、presentation interpolator 和 camera controller
+- **THEN** 系统 MUST 提供本地静态检查方式，确认 Sandbox 中 F6 和 F8 runner 处于 hidden 模式，并引用 Character frame simulation、presentation interpolator 和 camera controller
 - **AND** 检查结果 MUST 输出包含 `ROLLBACK_WIRING_CHECK` 的单行结果
 
 #### Scenario: F8 soak 结果可本地断言
@@ -447,4 +447,3 @@
 - **WHEN** soak 触发后内部执行多次 restore/replay
 - **THEN** 结束后真实模拟根 MUST 恢复到触发前现场
 - **AND** 已配置的表现插值状态和相机 controller 表现状态 MUST 恢复到触发前状态
-

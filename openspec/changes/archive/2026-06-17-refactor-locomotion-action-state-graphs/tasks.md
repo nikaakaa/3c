@@ -78,7 +78,7 @@
 
 ## 7. 回滚与恢复
 
-- [x] 7.1 确认 `FullBodyActionRestoreState.Gameplay` 包含 Action lifecycle restore 数据。
+- [x] 7.1 确认 `CommittedActionRestoreState.Gameplay` 包含 Action lifecycle restore 数据。
 - [x] 7.2 确认 restore active Dodge 不要求 state machine snapshot active state 为 `Action.Dodge`。
 - [x] 7.3 更新 rollback 测试 expected snapshot 口径。
 - [x] 7.4 覆盖 accepted Dodge 后 capture/restore lifecycle active state。

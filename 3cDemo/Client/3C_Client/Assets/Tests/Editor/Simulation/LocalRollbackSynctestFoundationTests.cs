@@ -235,6 +235,119 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
+        public void SnapshotComparisonKeepsTurnBackPreviousMotionPlaybackWindowStrict()
+        {
+            CharacterSimulationSnapshot expected = SnapshotWithAnimation(
+                4,
+                BasicMovementPhase.TurnBack,
+                TurnBackMotionPolicy.DefaultAliasKey,
+                0.35f)
+                .WithLocomotionRuntimeState(CreateRuntimeStateWithPreviousMotionPlayback(
+                    BasicMovementPhase.TurnBack,
+                    TurnBackMotionPolicy.DefaultAliasKey,
+                    0.25f,
+                    true));
+            CharacterSimulationSnapshot actual = SnapshotWithAnimation(
+                4,
+                BasicMovementPhase.TurnBack,
+                TurnBackMotionPolicy.DefaultAliasKey,
+                0.35f)
+                .WithLocomotionRuntimeState(CreateRuntimeStateWithPreviousMotionPlayback(
+                    BasicMovementPhase.TurnBack,
+                    TurnBackMotionPolicy.DefaultAliasKey,
+                    0f,
+                    true));
+
+            CharacterSimulationSnapshotComparison comparison = CharacterSimulationSnapshotComparer.Compare(
+                in expected,
+                in actual,
+                CharacterSimulationSnapshotTolerance.Default);
+
+            Assert.False(comparison.Matches);
+            CollectionAssert.Contains(comparison.Differences.ToArray(), "locomotionRuntime.previousMotionPlaybackNormalizedTime");
+            CollectionAssert.DoesNotContain(comparison.PresentationDifferences.ToArray(), "locomotionRuntime.previousMotionPlaybackNormalizedTime");
+        }
+
+        [Test]
+        public void SnapshotComparisonClassifiesVisualPreviousMotionPlaybackWindowAsPresentationDrift()
+        {
+            CharacterSimulationSnapshot expected = SnapshotWithAnimation(
+                4,
+                BasicMovementPhase.MoveLoop,
+                "RunLoop",
+                0.35f)
+                .WithLocomotionRuntimeState(CreateRuntimeStateWithPreviousMotionPlayback(
+                    BasicMovementPhase.MoveLoop,
+                    "RunLoop",
+                    0.25f,
+                    true));
+            CharacterSimulationSnapshot actual = SnapshotWithAnimation(
+                4,
+                BasicMovementPhase.MoveLoop,
+                "RunLoop",
+                0.35f)
+                .WithLocomotionRuntimeState(CreateRuntimeStateWithPreviousMotionPlayback(
+                    BasicMovementPhase.MoveLoop,
+                    "RunLoop",
+                    0f,
+                    true));
+
+            CharacterSimulationSnapshotComparison comparison = CharacterSimulationSnapshotComparer.Compare(
+                in expected,
+                in actual,
+                CharacterSimulationSnapshotTolerance.Default);
+
+            Assert.True(comparison.Matches, string.Join(", ", comparison.Differences));
+            CollectionAssert.Contains(comparison.PresentationDifferences.ToArray(), "locomotionRuntime.previousMotionPlaybackNormalizedTime");
+        }
+
+        [Test]
+        public void AnimationMotionProfileSamplerUsesRestoredPreviousCurrentWindowForDelta()
+        {
+            LocomotionMotionProfileSO profile = ScriptableObject.CreateInstance<LocomotionMotionProfileSO>();
+            try
+            {
+                profile.SetBakedData(
+                    BasicMovementPhase.TurnBack,
+                    BasicMovementGait.Run,
+                    TurnBackMotionPolicy.DefaultAliasKey,
+                    1f,
+                    LinearCurve(0f, 1f),
+                    LinearCurve(0f, 2f),
+                    LinearCurve(0f, 90f),
+                    "turnback",
+                    "test-guid");
+                AnimationMotionPlaybackWindow restoredWindow = new AnimationMotionPlaybackWindow(
+                    BasicMovementPhase.TurnBack,
+                    BasicMovementGait.Run,
+                    TurnBackMotionPolicy.DefaultAliasKey,
+                    0.25f,
+                    0.4f,
+                    true);
+                AnimationMotionPlaybackWindow fromZeroWindow = new AnimationMotionPlaybackWindow(
+                    BasicMovementPhase.TurnBack,
+                    BasicMovementGait.Run,
+                    TurnBackMotionPolicy.DefaultAliasKey,
+                    0f,
+                    0.4f,
+                    true);
+
+                AnimationMotionProfileSample restoredSample = AnimationMotionProfileSampler.Sample(profile, in restoredWindow);
+                AnimationMotionProfileSample fromZeroSample = AnimationMotionProfileSampler.Sample(profile, in fromZeroWindow);
+
+                Assert.True(restoredSample.HasMotionContribution);
+                Assert.That(Vector3.Distance(new Vector3(0.15f, 0f, 0.3f), restoredSample.LocalPlanarDelta), Is.LessThan(0.0001f));
+                Assert.AreEqual(13.5f, restoredSample.YawDelta, 0.0001f);
+                Assert.AreNotEqual(fromZeroSample.LocalPlanarDelta, restoredSample.LocalPlanarDelta);
+                Assert.AreNotEqual(fromZeroSample.YawDelta, restoredSample.YawDelta);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(profile);
+            }
+        }
+
+        [Test]
         public void SnapshotComparisonClassifiesActionPlaybackAsPresentationDrift()
         {
             CharacterSimulationSnapshot expected = SnapshotWithAnimation(
@@ -437,15 +550,15 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
-        public void FullBodyActionLifecycleRestoreKeepsActionFactsForNextTick()
+        public void CommittedActionLifecycleRestoreKeepsActionFactsForNextTick()
         {
-            FullBodyActionRuntimeModule original = new FullBodyActionRuntimeModule();
+            CommittedActionRuntimeModule original = new CommittedActionRuntimeModule();
             Assert.True(original.Rebuild(LoadConfiguredStateMachineDefinitionAsset(), false));
             CharacterResolvedAction action = ResolvedDodgeAction(CharacterStateVariant.Directional, Vector3.forward, 1);
             ActionLifecycleFrame entered = original.TickActionLifecycle(in action, 0.1f, 1);
-            FullBodyActionRestoreState restoreState = original.CaptureRestoreState();
+            CommittedActionRestoreState restoreState = original.CaptureRestoreState();
 
-            FullBodyActionRuntimeModule restored = new FullBodyActionRuntimeModule();
+            CommittedActionRuntimeModule restored = new CommittedActionRuntimeModule();
             Assert.True(restored.Rebuild(LoadConfiguredStateMachineDefinitionAsset(), false));
             Assert.True(restored.Restore(in restoreState));
 
@@ -1354,6 +1467,58 @@ namespace ThirdPersonSimulation.Tests
         }
 
         [Test]
+        public void LogFormatterOutputsPreviousMotionPlaybackWindowInFirstMismatchSnapshot()
+        {
+            CharacterSimulationSnapshot expected = SnapshotWithAnimation(
+                2,
+                BasicMovementPhase.TurnBack,
+                TurnBackMotionPolicy.DefaultAliasKey,
+                0.35f)
+                .WithLocomotionRuntimeState(CreateRuntimeStateWithPreviousMotionPlayback(
+                    BasicMovementPhase.TurnBack,
+                    TurnBackMotionPolicy.DefaultAliasKey,
+                    0.25f,
+                    true));
+            CharacterSimulationSnapshot actual = SnapshotWithAnimation(
+                2,
+                BasicMovementPhase.TurnBack,
+                TurnBackMotionPolicy.DefaultAliasKey,
+                0.35f)
+                .WithLocomotionRuntimeState(CreateRuntimeStateWithPreviousMotionPlayback(
+                    BasicMovementPhase.TurnBack,
+                    TurnBackMotionPolicy.DefaultAliasKey,
+                    0f,
+                    true));
+            CharacterSimulationSnapshotComparison comparison = CharacterSimulationSnapshotComparer.Compare(
+                in expected,
+                in actual,
+                CharacterSimulationSnapshotTolerance.Default);
+            LocalRollbackSynctestFirstMismatch firstMismatch = new LocalRollbackSynctestFirstMismatch(
+                LocalRollbackSynctestMismatchStage.Replay,
+                new SimulationTick(2),
+                true,
+                Input(2, Vector2.down, true),
+                expected,
+                actual,
+                comparison);
+            LocalRollbackSynctestResult result = new LocalRollbackSynctestResult(
+                false,
+                new SimulationTick(1),
+                new SimulationTick(2),
+                SimulationTick.Zero,
+                "first mismatch and snapshot mismatch",
+                comparison,
+                in firstMismatch);
+
+            string firstStrict = LocalRollbackSynctestLogFormatter.FormatFirstMismatch(in result);
+
+            StringAssert.Contains("differences=locomotionRuntime.previousMotionPlaybackNormalizedTime", firstStrict);
+            StringAssert.Contains("prevMotion=True/TurnBack/Locomotion.Turn.Back/0.250000", firstStrict);
+            StringAssert.Contains("prevMotion=True/TurnBack/Locomotion.Turn.Back/0.000000", firstStrict);
+            StringAssert.Contains("bbAnim=TurnBack/Locomotion.Turn.Back/0.350000", firstStrict);
+        }
+
+        [Test]
         public void DebugRunnerCanApplyReplayResultWithPresentationCorrection()
         {
             GameObject gameObject = new GameObject("rollback-debug-runner-visible-test");
@@ -1637,6 +1802,32 @@ namespace ThirdPersonSimulation.Tests
                 blackboard.CaptureRestoreState());
         }
 
+        static LocomotionRuntimeRollbackState CreateRuntimeStateWithPreviousMotionPlayback(
+            BasicMovementPhase phase,
+            string aliasKey,
+            float normalizedTime,
+            bool hasPreviousPlayback)
+        {
+            return new LocomotionRuntimeRollbackState(
+                MovementInputIntent.FromRaw(Vector2.zero, 0f, false),
+                Vector3.zero,
+                new AnimationPhasePlaybackProgress(
+                    phase,
+                    aliasKey,
+                    normalizedTime,
+                    hasPreviousPlayback,
+                    false),
+                hasPreviousPlayback,
+                false,
+                BasicMovementGait.Walk,
+                LocomotionTurnBackIntent.None);
+        }
+
+        static AnimationCurve LinearCurve(float start, float end)
+        {
+            return new AnimationCurve(new Keyframe(0f, start), new Keyframe(1f, end));
+        }
+
         static CharacterStateMachineContext Context(
             bool move,
             float deltaTime,
@@ -1718,7 +1909,8 @@ namespace ThirdPersonSimulation.Tests
         static ActionMotionResolveResult ResolveActionMotion(in CharacterStateMachineFrame frame, float deltaTime)
         {
             CharacterActionCatalogSO actionCatalog = LoadConfiguredCharacterConfigAsset().ActionCatalog;
-            CharacterActionCatalog catalog = actionCatalog != null ? actionCatalog.ToCatalog() : CharacterActionCatalog.Empty;
+            ActionTimelineCompileContext compileContext = ActionTimelineCompileContext.FromTickRate(SimulationTickRate.Default);
+            CharacterActionCatalog catalog = actionCatalog != null ? actionCatalog.ToCatalog(in compileContext) : CharacterActionCatalog.Empty;
             DodgeActionTuning dodgeTuning = default;
             bool hasDodgeAction = catalog.TryGetDodgeDefinition(out CharacterActionDefinition definition) &&
                                   definition.TryGetDodgeTuning(out dodgeTuning);

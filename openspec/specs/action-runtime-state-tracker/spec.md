@@ -133,7 +133,7 @@
 - **WHEN** Action 请求门面构建仲裁上下文
 - **THEN** 当前 action state MUST 为 `Action.None`
 - **AND** current resistance MUST 为 0
-- **AND** 该事实 MUST NOT 依赖 `FullBodyOwnerKind.Locomotion`
+- **AND** 该事实 MUST NOT 依赖 FullBody-as-owner 或 Locomotion-as-action-owner 兼容枚举
 
 #### Scenario: Dodge 派生为 Action.Dodge
 - **GIVEN** Action domain 当前 active action 为 `Action.Dodge`

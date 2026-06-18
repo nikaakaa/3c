@@ -1,7 +1,7 @@
 # urp-block-impact-post-processing Specification
 
 ## Purpose
-TBD - created by archiving change add-block-impact-vfx. Update Purpose after archive.
+定义 URP 格挡屏幕冲击后处理的接入方式、参数抽象、shader 行为、与现有后处理共存和验证边界。
 ## Requirements
 ### Requirement: URP 格挡屏幕冲击接入
 系统 MUST 通过当前 URP Renderer Feature 链路接入格挡屏幕冲击后处理，并且 MUST NOT 使用 `OnRenderImage`、额外相机叠加、独立 CommandBuffer 管线或角色脚本作为主要渲染出口。
@@ -72,4 +72,3 @@ TBD - created by archiving change add-block-impact-vfx. Update Purpose after arc
 - **WHEN** 用户在 Sandbox 中启用格挡屏幕冲击并触发 `BlockImpactVfx` Prefab 预览
 - **THEN** Game View MUST 出现短暂白闪、径向冲击、横向光带或轻微色散
 - **AND** 用户将全局强度或脉冲强度调回 0 后画面 MUST 恢复无屏幕冲击
-

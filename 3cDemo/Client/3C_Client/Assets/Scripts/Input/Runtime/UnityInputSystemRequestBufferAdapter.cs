@@ -80,6 +80,9 @@ namespace ThirdPersonInput
 
         void Update()
         {
+            if (!advanceStepOnUpdate)
+                return;
+
             Tick();
         }
 
@@ -111,10 +114,7 @@ namespace ThirdPersonInput
             out PredictionButtonFrame jump,
             out PredictionButtonFrame interact)
         {
-            InputAction action = ResolveDodgeAction();
-            bool dodgeHeld = action != null && action.IsPressed();
-            InputButtonState dodgeState = InputButtonState.FromHeld(previousDodgeHeld, dodgeHeld);
-            dodge = new PredictionButtonFrame(dodgeState.Pressed, dodgeState.Held, dodgeState.Released);
+            dodge = ReadCurrentDodgeButtonFrame();
             attack = PredictionButtonFrame.None;
             jump = PredictionButtonFrame.None;
             interact = PredictionButtonFrame.None;
@@ -123,10 +123,22 @@ namespace ThirdPersonInput
 
         void WriteCurrentButtonState()
         {
+            PredictionButtonFrame frame = ReadCurrentDodgeButtonFrame();
+            bufferComponent.AddButtonState(InputButtonKind.Dodge, ToInputButtonState(in frame));
+            previousDodgeHeld = frame.Held;
+        }
+
+        PredictionButtonFrame ReadCurrentDodgeButtonFrame()
+        {
             InputAction action = ResolveDodgeAction();
             bool dodgeHeld = action != null && action.IsPressed();
-            bufferComponent.AddButtonState(InputButtonKind.Dodge, InputButtonState.FromHeld(previousDodgeHeld, dodgeHeld));
-            previousDodgeHeld = dodgeHeld;
+            InputButtonState state = InputButtonState.FromHeld(previousDodgeHeld, dodgeHeld);
+            return new PredictionButtonFrame(state.Pressed, state.Held, state.Released);
+        }
+
+        static InputButtonState ToInputButtonState(in PredictionButtonFrame frame)
+        {
+            return new InputButtonState(frame.Pressed, frame.Held, frame.Released);
         }
 
         InputAction ResolveDodgeAction()

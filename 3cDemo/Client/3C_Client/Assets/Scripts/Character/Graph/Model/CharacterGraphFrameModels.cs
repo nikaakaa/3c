@@ -81,7 +81,7 @@ namespace ThirdPersonCharacterGraph
 
         public CharacterGraphFrameResult(
             CharacterFrameCandidateOutput locomotionCandidate,
-            ActionBranchOutcome actionOutcome,
+            CommittedActionBranchOutcome actionOutcome,
             CharacterFrameCandidateOutput upperBodyCandidate,
             CueOutcome cueOutcome,
             BodyOccupancyClaim occupancyClaim,
@@ -98,7 +98,7 @@ namespace ThirdPersonCharacterGraph
         }
 
         public CharacterFrameCandidateOutput LocomotionCandidate { get; }
-        public ActionBranchOutcome ActionOutcome { get; }
+        public CommittedActionBranchOutcome ActionOutcome { get; }
         public CharacterFrameCandidateOutput UpperBodyCandidate { get; }
         public CueOutcome CueOutcome { get; }
         public BodyOccupancyClaim OccupancyClaim { get; }
@@ -125,7 +125,7 @@ namespace ThirdPersonCharacterGraph
         {
             return new CharacterGraphFrameResult(
                 CharacterFrameCandidateOutput.None(CharacterBodyDomain.Locomotion, sourceStep),
-                ActionBranchOutcome.None(sourceStep),
+                CommittedActionBranchOutcome.None(sourceStep),
                 CharacterFrameCandidateOutput.None(CharacterBodyDomain.UpperBody, sourceStep),
                 CueOutcome.None(sourceStep),
                 BodyOccupancyClaim.None(sourceStep),

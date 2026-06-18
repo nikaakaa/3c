@@ -1,10 +1,10 @@
 ## 1. Context Lock
 - [x] 1.1 读取 `runtime-diagnostic-logging` 当前 spec。
-- [x] 1.2 读取 `FullBodyDiagnostics` 所有 event id。
+- [x] 1.2 读取 `CharacterFrameDiagnostics` 所有 event id。
 - [x] 1.3 读取 `LocomotionDiagnostics` 所有 event id。
 - [x] 1.4 搜索 `RuntimeDiagnosticLog.Submit` 当前调用点。
 - [x] 1.5 读取 active timeline facts 和 condition evaluator proposals 的 trace 约束。
-- [x] 1.6 对 `FullBodyDiagnostics` 运行 GitNexus impact analysis。
+- [x] 1.6 对 `CharacterFrameDiagnostics` 运行 GitNexus impact analysis。
 - [x] 1.7 对 `RuntimeDiagnosticLog` 运行 GitNexus impact analysis。
 - [x] 1.8 记录 HIGH/CRITICAL 风险并等待用户确认后再实施。
 

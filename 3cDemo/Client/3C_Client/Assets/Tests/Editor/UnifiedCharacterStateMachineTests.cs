@@ -32,7 +32,7 @@ namespace Tests.Editor
             Assert.AreEqual(CharacterStateIds.Idle, runner.Snapshot.ActiveState);
             Assert.AreEqual("Locomotion.Idle", runner.Snapshot.ActivePath);
             CharacterStateMachineSnapshot snapshot = runner.Snapshot;
-            Assert.AreEqual(BasicMovementPhase.Idle, FullBodyStateView.FromSnapshot(in snapshot).LocomotionPhase);
+            Assert.AreEqual(BasicMovementPhase.Idle, CharacterStateDomainView.FromSnapshot(in snapshot).LocomotionPhase);
         }
 
         [Test]
@@ -551,7 +551,7 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyStateViewCanBeDerivedFromCharacterMetadata()
+        public void CharacterStateDomainViewCanBeDerivedFromCharacterMetadata()
         {
             CharacterStateMachineDefinition definition = LoadConfiguredStateMachineDefinition();
             Assert.True(definition.TryGetNode(CharacterStateIds.MoveLoop, out CharacterStateNodeDefinition moveLoopNode));
@@ -561,9 +561,9 @@ namespace Tests.Editor
                 CharacterStateVariant.None,
                 string.Empty,
                 new[] { CharacterStateTag.Locomotion, CharacterStateTag.Movement });
-            FullBodyStateView legacyView = FullBodyStateView.FromSnapshotAndNode(in snapshot, moveLoopNode);
+            CharacterStateDomainView legacyView = CharacterStateDomainView.FromSnapshotAndNode(in snapshot, moveLoopNode);
 
-            Assert.True(definition.CharacterMetadata.TryDeriveFullBodyStateView(in snapshot, out FullBodyStateView view));
+            Assert.True(definition.CharacterMetadata.TryDeriveStateDomainView(in snapshot, out CharacterStateDomainView view));
 
             Assert.AreEqual(legacyView.IsAction, view.IsAction);
             Assert.AreEqual(legacyView.IsLocomotion, view.IsLocomotion);
@@ -584,7 +584,7 @@ namespace Tests.Editor
             Assert.That(graphSources, Does.Not.Contain("RunLatch"));
             Assert.That(graphSources, Does.Not.Contain("BasicMovementGait"));
             Assert.That(graphSources, Does.Not.Contain("ActionMovementCommand"));
-            Assert.That(graphSources, Does.Not.Contain("FullBodyOwner"));
+            Assert.That(graphSources, Does.Not.Contain("CharacterStateOwner"));
             Assert.That(graphSources, Does.Not.Contain("ActionStateId"));
             Assert.That(graphSources, Does.Not.Contain("CharacterStateModuleType"));
             Assert.That(graphSources, Does.Not.Contain("ThirdPersonAction"));
@@ -604,7 +604,7 @@ namespace Tests.Editor
                     "Scripts/Character/StateMachine/Model/Graph/StateGraphSnapshot.cs"),
                 System.Text.Encoding.UTF8);
 
-            Assert.That(snapshot, Does.Not.Contain("FullBodyOwner"));
+            Assert.That(snapshot, Does.Not.Contain("CharacterStateOwner"));
             Assert.That(snapshot, Does.Not.Contain("LocomotionPhase"));
             Assert.That(snapshot, Does.Not.Contain("ActionState"));
             Assert.That(snapshot, Does.Not.Contain("BasicMovementPhase"));
@@ -650,7 +650,7 @@ namespace Tests.Editor
                 CharacterStateIds.Idle,
                 default,
                 "Idle",
-                new[] { CharacterStateTag.FullBody, CharacterStateTag.Locomotion },
+                new[] { CharacterStateTag.Character, CharacterStateTag.Locomotion },
                 new CharacterStateModuleDefinition[0]);
             StateTimelinePolicyDefinition policy = new StateTimelinePolicyDefinition(
                 CharacterStateIds.Idle.Value,
@@ -792,7 +792,7 @@ namespace Tests.Editor
                 CharacterStateIds.Dodge,
                 CharacterStateIds.Action,
                 "Dodge",
-                new[] { CharacterStateTag.FullBody, CharacterStateTag.Action, CharacterStateTag.Dodge },
+                new[] { CharacterStateTag.Character, CharacterStateTag.Action, CharacterStateTag.Dodge },
                 new[]
                 {
                     CharacterStateModuleDefinition.ConfiguredActionMotion(
@@ -949,7 +949,7 @@ namespace Tests.Editor
         public void ConditionTraceCanBeSubmittedByDiagnosticAdapter()
         {
             FakeCharacterDiagnosticSink sink = new FakeCharacterDiagnosticSink();
-            FullBodyDiagnosticAdapter adapter = new FullBodyDiagnosticAdapter(sink);
+            CharacterFrameDiagnosticAdapter adapter = new CharacterFrameDiagnosticAdapter(sink);
             CharacterStateTransitionConditionTrace trace = new CharacterStateTransitionConditionTrace(
                 CharacterStateTransitionConditionKind.HasMoveIntent,
                 CharacterStateIds.Idle.Value,
@@ -976,7 +976,7 @@ namespace Tests.Editor
         public void TurnBackConditionProbeLogFieldsAreGeneratedFromTrace()
         {
             FakeCharacterDiagnosticSink sink = new FakeCharacterDiagnosticSink();
-            FullBodyDiagnosticAdapter adapter = new FullBodyDiagnosticAdapter(sink);
+            CharacterFrameDiagnosticAdapter adapter = new CharacterFrameDiagnosticAdapter(sink);
             CharacterStateTransitionConditionEvaluationResult result = EvaluateCondition(
                 CharacterStateTransitionCondition.MoveTurnBackRequested(120f),
                 Context(
@@ -1003,7 +1003,7 @@ namespace Tests.Editor
         public void CharacterDiagnosticAdaptersSupportFakeSinkEventObservation()
         {
             FakeCharacterDiagnosticSink sink = new FakeCharacterDiagnosticSink();
-            FullBodyDiagnosticAdapter fullBody = new FullBodyDiagnosticAdapter(sink);
+            CharacterFrameDiagnosticAdapter fullBody = new CharacterFrameDiagnosticAdapter(sink);
             ActionInterruptDiagnosticAdapter action = new ActionInterruptDiagnosticAdapter(sink);
             LocomotionDiagnosticAdapter locomotion = new LocomotionDiagnosticAdapter(sink);
             ActionInterruptContext context = new ActionInterruptContext(ActionStateIds.None, 0.25f, 0, 9);
@@ -1019,7 +1019,7 @@ namespace Tests.Editor
                 RuntimeDiagnosticLogLevel.Trace,
                 "turnback-frame-summary"));
 
-            Assert.True(sink.Events.Any(item => item.Message == "fullbody-frame-pipeline"));
+            Assert.True(sink.Events.Any(item => item.Message == "character-frame-pipeline"));
             Assert.True(sink.Events.Any(item => item.Message == "state-timeline-window-facts"));
             Assert.True(sink.Events.Any(item => item.Message == "interrupt-request-accepted"));
             Assert.True(sink.Events.Any(item => item.Message == "interrupt-request-rejected"));
@@ -1035,7 +1035,7 @@ namespace Tests.Editor
             BasicLocomotionInputSnapshot input = new BasicLocomotionInputSnapshot(0.1f, Vector2.up, Vector2.zero);
             LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
             DodgeActionTuning config = TestDodgeTuning();
-            CharacterInputRequestFact rejected = FullBodyActionInterruptRequestFactory.BuildDodgeRequestFact(
+            CharacterInputRequestFact rejected = CommittedActionInterruptRequestFactory.BuildDodgeRequestFact(
                 buffer,
                 5,
                 CharacterStateMachineSnapshot.Inactive,
@@ -1180,7 +1180,7 @@ namespace Tests.Editor
                 BasicMovementPhaseFacts.None,
                 new LocomotionSpatialFacts(Vector3.back, Vector3.forward, Vector3.forward, Vector3.right),
                 intent);
-            CharacterInputRequestFact rejectedFact = FullBodyActionInterruptRequestFactory.BuildTurnBackRequestFact(
+            CharacterInputRequestFact rejectedFact = CommittedActionInterruptRequestFactory.BuildTurnBackRequestFact(
                 1,
                 runner.Snapshot,
                 in facts,
@@ -1966,7 +1966,7 @@ namespace Tests.Editor
                 CharacterStateIds.Dodge,
                 CharacterStateIds.Action,
                 "Dodge",
-                new[] { CharacterStateTag.FullBody, CharacterStateTag.Action, CharacterStateTag.Dodge },
+                new[] { CharacterStateTag.Character, CharacterStateTag.Action, CharacterStateTag.Dodge },
                 new[]
                 {
                     CharacterStateModuleDefinition.ConfiguredActionMotion(
@@ -1999,7 +1999,7 @@ namespace Tests.Editor
                 new CharacterStateId("Action.Roll"),
                 CharacterStateIds.Action,
                 "Roll",
-                new[] { CharacterStateTag.FullBody, CharacterStateTag.Action },
+                new[] { CharacterStateTag.Character, CharacterStateTag.Action },
                 new[]
                 {
                     CharacterStateModuleDefinition.ConfiguredActionMotion(
@@ -2028,7 +2028,7 @@ namespace Tests.Editor
                 new CharacterStateId("Locomotion.DuplicateMotion"),
                 CharacterStateIds.Locomotion,
                 "DuplicateMotion",
-                new[] { CharacterStateTag.FullBody, CharacterStateTag.Locomotion },
+                new[] { CharacterStateTag.Character, CharacterStateTag.Locomotion },
                 new[]
                 {
                     CharacterStateModuleDefinition.InputDrivenMotion(),
@@ -2055,7 +2055,7 @@ namespace Tests.Editor
                 new CharacterStateId("Action.DuplicateAnimation"),
                 CharacterStateIds.Action,
                 "DuplicateAnimation",
-                new[] { CharacterStateTag.FullBody, CharacterStateTag.Action },
+                new[] { CharacterStateTag.Character, CharacterStateTag.Action },
                 new[]
                 {
                     CharacterStateModuleDefinition.ConfiguredActionMotion(
@@ -2078,7 +2078,7 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyActionInputRequestBuilderBuildsDirectionalDodgeRequest()
+        public void CommittedActionInputRequestBuilderBuildsDirectionalDodgeRequest()
         {
             InputRequestBuffer buffer = new InputRequestBuffer();
             buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 2, 4);
@@ -2087,7 +2087,7 @@ namespace Tests.Editor
             LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
             DodgeActionTuning config = TestDodgeTuning();
 
-            bool built = FullBodyActionInputRequestBuilder.TryBuildDodgeRequest(
+            bool built = CommittedActionInputRequestBuilder.TryBuildDodgeRequest(
                 buffer,
                 2,
                 in input,
@@ -2106,7 +2106,7 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyActionInputRequestBuilderUsesLocomotionDecisionFactsDirection()
+        public void CommittedActionInputRequestBuilderUsesLocomotionDecisionFactsDirection()
         {
             InputRequestBuffer buffer = new InputRequestBuffer();
             buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 2, 4);
@@ -2115,7 +2115,7 @@ namespace Tests.Editor
             LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.right, Vector3.forward);
             DodgeActionTuning config = TestDodgeTuning();
 
-            bool built = FullBodyActionInputRequestBuilder.TryBuildDodgeRequest(
+            bool built = CommittedActionInputRequestBuilder.TryBuildDodgeRequest(
                 buffer,
                 2,
                 in input,
@@ -2130,7 +2130,7 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyActionInputRequestBuilderBuildsBackstepDodgeRequest()
+        public void CommittedActionInputRequestBuilderBuildsBackstepDodgeRequest()
         {
             InputRequestBuffer buffer = new InputRequestBuffer();
             buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 3, 4);
@@ -2139,7 +2139,7 @@ namespace Tests.Editor
             LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.zero, Vector3.forward);
             DodgeActionTuning config = TestDodgeTuning();
 
-            bool built = FullBodyActionInputRequestBuilder.TryBuildDodgeRequest(
+            bool built = CommittedActionInputRequestBuilder.TryBuildDodgeRequest(
                 buffer,
                 3,
                 in input,
@@ -2154,7 +2154,7 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyActionInterruptRequestFactoryAcceptedDecisionBuildsDodgeFact()
+        public void CommittedActionInterruptRequestFactoryAcceptedDecisionBuildsDodgeFact()
         {
             InputRequestBuffer buffer = new InputRequestBuffer();
             buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 4, 4);
@@ -2163,7 +2163,7 @@ namespace Tests.Editor
             LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
             DodgeActionTuning config = TestDodgeTuning();
 
-            CharacterInputRequestFact fact = FullBodyActionInterruptRequestFactory.BuildDodgeRequestFact(
+            CharacterInputRequestFact fact = CommittedActionInterruptRequestFactory.BuildDodgeRequestFact(
                 buffer,
                 4,
                 CharacterStateMachineSnapshot.Inactive,
@@ -2183,7 +2183,7 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyActionInterruptRequestFactoryRejectedDecisionDoesNotBuildFact()
+        public void CommittedActionInterruptRequestFactoryRejectedDecisionDoesNotBuildFact()
         {
             InputRequestBuffer buffer = new InputRequestBuffer();
             buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 5, 4);
@@ -2192,7 +2192,7 @@ namespace Tests.Editor
             LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
             DodgeActionTuning config = TestDodgeTuning();
 
-            CharacterInputRequestFact fact = FullBodyActionInterruptRequestFactory.BuildDodgeRequestFact(
+            CharacterInputRequestFact fact = CommittedActionInterruptRequestFactory.BuildDodgeRequestFact(
                 buffer,
                 5,
                 CharacterStateMachineSnapshot.Inactive,
@@ -2211,7 +2211,7 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyActionInterruptRequestFactoryResistanceRejectsDodgeAndKeepsBufferRequest()
+        public void CommittedActionInterruptRequestFactoryResistanceRejectsDodgeAndKeepsBufferRequest()
         {
             InputRequestBuffer buffer = new InputRequestBuffer();
             buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 6, 4);
@@ -2220,7 +2220,7 @@ namespace Tests.Editor
             LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
             DodgeActionTuning config = TestDodgeTuning();
 
-            CharacterInputRequestFact fact = FullBodyActionInterruptRequestFactory.BuildDodgeRequestFact(
+            CharacterInputRequestFact fact = CommittedActionInterruptRequestFactory.BuildDodgeRequestFact(
                 buffer,
                 6,
                 CharacterStateMachineSnapshot.Inactive,
@@ -2239,7 +2239,7 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyActionInterruptRequestFactoryForcePolicyBypassesResistance()
+        public void CommittedActionInterruptRequestFactoryForcePolicyBypassesResistance()
         {
             InputRequestBuffer buffer = new InputRequestBuffer();
             buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 7, 4);
@@ -2248,7 +2248,7 @@ namespace Tests.Editor
             LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
             DodgeActionTuning config = TestDodgeTuning();
 
-            CharacterInputRequestFact fact = FullBodyActionInterruptRequestFactory.BuildDodgeRequestFact(
+            CharacterInputRequestFact fact = CommittedActionInterruptRequestFactory.BuildDodgeRequestFact(
                 buffer,
                 7,
                 CharacterStateMachineSnapshot.Inactive,
@@ -2265,7 +2265,7 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyActionInterruptRequestFactoryUsesDodgeTimelineWindow()
+        public void CommittedActionInterruptRequestFactoryUsesDodgeTimelineWindow()
         {
             InputRequestBuffer buffer = new InputRequestBuffer();
             buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 7, 4);
@@ -2289,7 +2289,7 @@ namespace Tests.Editor
                 "dodge-chain-cancel",
                 "dodge-chain-cancel");
 
-            CharacterInputRequestFact rejected = FullBodyActionInterruptRequestFactory.BuildDodgeRequestFact(
+            CharacterInputRequestFact rejected = CommittedActionInterruptRequestFactory.BuildDodgeRequestFact(
                 buffer,
                 7,
                 CharacterStateMachineSnapshot.Inactive,
@@ -2301,7 +2301,7 @@ namespace Tests.Editor
                 new[] { new ActionInterruptPolicy(ActionStateIds.None, ActionStateIds.Dodge, 30, windowId: "dodge-chain-cancel") },
                 default,
                 out ActionInterruptDecision rejectedDecision);
-            CharacterInputRequestFact accepted = FullBodyActionInterruptRequestFactory.BuildDodgeRequestFact(
+            CharacterInputRequestFact accepted = CommittedActionInterruptRequestFactory.BuildDodgeRequestFact(
                 buffer,
                 7,
                 CharacterStateMachineSnapshot.Inactive,
@@ -2321,7 +2321,7 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyActionInterruptRequestFactoryRejectsDodgeToDodgeWhenPriorityDoesNotBeatResistance()
+        public void CommittedActionInterruptRequestFactoryRejectsDodgeToDodgeWhenPriorityDoesNotBeatResistance()
         {
             InputRequestBuffer buffer = new InputRequestBuffer();
             buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 8, 4);
@@ -2331,7 +2331,7 @@ namespace Tests.Editor
             DodgeActionTuning config = new DodgeActionTuning(0.35f, 4f, 0.35f, 3f, 30, 40, true, false);
             LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
 
-            CharacterInputRequestFact fact = FullBodyActionInterruptRequestFactory.BuildDodgeRequestFact(
+            CharacterInputRequestFact fact = CommittedActionInterruptRequestFactory.BuildDodgeRequestFact(
                 buffer,
                 8,
                 in snapshot,
@@ -2350,7 +2350,7 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyActionInterruptRequestFactoryForceDodgeToDodgeBypassesCurrentResistance()
+        public void CommittedActionInterruptRequestFactoryForceDodgeToDodgeBypassesCurrentResistance()
         {
             InputRequestBuffer buffer = new InputRequestBuffer();
             buffer.AddRequest(InputRequestKind.Dodge, InputButtonKind.Dodge, 9, 4);
@@ -2360,7 +2360,7 @@ namespace Tests.Editor
             DodgeActionTuning config = new DodgeActionTuning(0.35f, 4f, 0.35f, 3f, 30, 40, true, false);
             LocomotionDecisionFacts facts = DecisionFacts(in input, in settings, Vector3.forward, Vector3.forward);
 
-            CharacterInputRequestFact fact = FullBodyActionInterruptRequestFactory.BuildDodgeRequestFact(
+            CharacterInputRequestFact fact = CommittedActionInterruptRequestFactory.BuildDodgeRequestFact(
                 buffer,
                 9,
                 in snapshot,
@@ -2757,7 +2757,7 @@ namespace Tests.Editor
                     20,
                     requiredFactId: TimelineFactIds.TurnBackEnterOpen.Value)
             };
-            FullBodyActionRequestSubmissionResolverInput input = new FullBodyActionRequestSubmissionResolverInput(
+            CommittedActionRequestSubmissionResolverInput input = new CommittedActionRequestSubmissionResolverInput(
                 null,
                 4,
                 0.1f,
@@ -2787,7 +2787,7 @@ namespace Tests.Editor
                 0,
                 policies);
 
-            CharacterActionRequestSubmissionResult result = FullBodyActionRequestSubmissionResolver.Resolve(in input);
+            CharacterActionRequestSubmissionResult result = CommittedActionRequestSubmissionResolver.Resolve(in input);
 
             Assert.True(result.Accepted);
             Assert.AreEqual(InputRequestKind.TurnBack, result.Request.RequestKind);
@@ -2816,7 +2816,7 @@ namespace Tests.Editor
                     20,
                     requiredFactId: TimelineFactIds.TurnBackEnterOpen.Value)
             };
-            FullBodyActionRequestSubmissionResolverInput input = new FullBodyActionRequestSubmissionResolverInput(
+            CommittedActionRequestSubmissionResolverInput input = new CommittedActionRequestSubmissionResolverInput(
                 null,
                 4,
                 0.1f,
@@ -2830,7 +2830,7 @@ namespace Tests.Editor
                 0,
                 policies);
 
-            CharacterActionRequestSubmissionResult result = FullBodyActionRequestSubmissionResolver.Resolve(in input);
+            CharacterActionRequestSubmissionResult result = CommittedActionRequestSubmissionResolver.Resolve(in input);
 
             Assert.False(result.Accepted);
             Assert.AreEqual(ActionInterruptRejectReason.TimingNotSatisfied, result.Decision.RejectReason);
@@ -2900,11 +2900,11 @@ namespace Tests.Editor
         {
             string outputRuntime = File.ReadAllText(Path.Combine(
                 Application.dataPath,
-                "Scripts/Character/Action/Runtime/FullBodyOutputRuntime.cs"));
+                "Scripts/Character/Action/Runtime/CharacterFrameOutputRuntime.cs"));
             string presenter = ExtractSourceBlock(
                 outputRuntime,
                 "internal sealed class CharacterAnimationOutputPresenter",
-                "internal sealed class FullBodyRuntimeFactsWriter");
+                "internal sealed class CharacterFrameRuntimeFactsWriter");
 
             Assert.That(presenter, Does.Contain("animationRequest.IsActionAnimation"));
             Assert.That(presenter, Does.Not.Contain("stateFrame.Owner.IsAction"));
@@ -3016,7 +3016,7 @@ namespace Tests.Editor
             string runner = File.ReadAllText(Path.Combine(root, "Runtime", "CharacterStateMachineRunner.cs"));
             string resolver = File.ReadAllText(Path.Combine(
                 Application.dataPath,
-                "Scripts/Character/Action/Solver/FullBodyActionRequestSubmissionResolver.cs"));
+                "Scripts/Character/Action/Solver/CommittedActionRequestSubmissionResolver.cs"));
 
             Assert.That(runner, Does.Contain("ICharacterStateLifecycle"));
             Assert.That(runner, Does.Contain("CharacterStateTimelineFactSampler.SampleCurrent"));
@@ -3130,15 +3130,15 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyActionOutputWritesCompletedDirectionalRunLatchToLocomotionRuntime()
+        public void CommittedActionOutputWritesCompletedDirectionalRunLatchToLocomotionRuntime()
         {
             string outputPort = File.ReadAllText(Path.Combine(
                     Application.dataPath,
                     "Scripts/Character/Movement/Contracts/ILocomotionOutputRuntimePort.cs"),
                 System.Text.Encoding.UTF8);
-            string fullBodyOutput = File.ReadAllText(Path.Combine(
+            string characterFrameOutput = File.ReadAllText(Path.Combine(
                     Application.dataPath,
-                    "Scripts/Character/Action/Runtime/FullBodyOutputRuntime.cs"),
+                    "Scripts/Character/Action/Runtime/CharacterFrameOutputRuntime.cs"),
                 System.Text.Encoding.UTF8);
             string locomotionOutput = File.ReadAllText(Path.Combine(
                     Application.dataPath,
@@ -3146,8 +3146,8 @@ namespace Tests.Editor
                 System.Text.Encoding.UTF8);
 
             Assert.That(outputPort, Does.Contain("void SetRunLatchActive(bool active);"));
-            Assert.That(fullBodyOutput, Does.Contain("if (actionMotionResult.SetRunLatch)"));
-            Assert.That(fullBodyOutput, Does.Contain("locomotionOutputRuntime.SetRunLatchActive(true);"));
+            Assert.That(characterFrameOutput, Does.Contain("if (actionMotionResult.SetRunLatch)"));
+            Assert.That(characterFrameOutput, Does.Contain("locomotionOutputRuntime.SetRunLatchActive(true);"));
             Assert.That(locomotionOutput, Does.Contain("public void SetRunLatchActive(bool active)"));
             Assert.That(locomotionOutput, Does.Contain("dependencies.StateStore.SetRunLatchActive(active);"));
         }
@@ -3160,7 +3160,7 @@ namespace Tests.Editor
                     "Scripts/Character/Action/Solver/CharacterActionRequestSubmissionArbiter.cs"),
                 System.Text.Encoding.UTF8);
 
-            Assert.That(arbiter, Does.Contain("FullBodyActionRequestSubmissionProviderCollection.Default"));
+            Assert.That(arbiter, Does.Contain("CommittedActionRequestSubmissionProviderCollection.Default"));
             Assert.That(arbiter, Does.Contain("ActionInterruptArbiter.Arbitrate"));
             Assert.That(arbiter, Does.Not.Contain("BuildDodgeRequestFact"));
             Assert.That(arbiter, Does.Not.Contain("BuildTurnBackRequestFact"));
@@ -3193,14 +3193,14 @@ namespace Tests.Editor
             string snapshotBody = ExtractSourceBlock(
                 runtimeTypes,
                 "public readonly struct CharacterStateMachineSnapshot",
-                "public readonly struct FullBodyStateView");
+                "public readonly struct CharacterStateDomainView");
 
-            Assert.That(runtimeTypes, Does.Contain("public readonly struct FullBodyStateView"));
+            Assert.That(runtimeTypes, Does.Contain("public readonly struct CharacterStateDomainView"));
             Assert.That(snapshotBody, Does.Not.Contain("IsAction"));
             Assert.That(snapshotBody, Does.Not.Contain("IsLocomotion"));
             Assert.That(snapshotBody, Does.Not.Contain("LocomotionPhase"));
             Assert.That(snapshotBody, Does.Not.Contain("ActionState"));
-            Assert.That(snapshotBody, Does.Not.Contain("FullBodyOwner"));
+            Assert.That(snapshotBody, Does.Not.Contain("CharacterStateOwner"));
         }
 
         [Test]
@@ -3258,7 +3258,7 @@ namespace Tests.Editor
                 0.1f,
                 CharacterStateVariant.Directional,
                 "Action.Dodge",
-                new[] { CharacterStateTag.FullBody, CharacterStateTag.Action, CharacterStateTag.Dodge });
+                new[] { CharacterStateTag.Character, CharacterStateTag.Action, CharacterStateTag.Dodge });
             CharacterStateMachineFrame frame = new CharacterStateMachineFrame(
                 snapshot,
                 false,
@@ -3326,9 +3326,9 @@ namespace Tests.Editor
             string actionRoot = Path.Combine(Application.dataPath, "Scripts/Character/Action");
             string runner = File.ReadAllText(Path.Combine(stateMachineRoot, "Solver/Runtime/CharacterStateMachineRunner.cs"));
             string sampler = File.ReadAllText(Path.Combine(stateMachineRoot, "Solver/Timeline/CharacterStateTimelineFactSampler.cs"));
-            string resolver = File.ReadAllText(Path.Combine(actionRoot, "Solver/FullBodyActionRequestSubmissionResolver.cs"));
+            string resolver = File.ReadAllText(Path.Combine(actionRoot, "Solver/CommittedActionRequestSubmissionResolver.cs"));
             string output = File.ReadAllText(Path.Combine(stateMachineRoot, "Solver/Output/CharacterStateOutputResolver.cs"));
-            string diagnostics = File.ReadAllText(Path.Combine(actionRoot, "Diagnostics/FullBodyDiagnosticAdapter.cs"));
+            string diagnostics = File.ReadAllText(Path.Combine(actionRoot, "Diagnostics/CharacterFrameDiagnosticAdapter.cs"));
 
             Assert.That(resolver, Does.Not.Contain("SampleCurrent"));
             Assert.That(resolver, Does.Not.Contain("StateMachineDefinition"));
@@ -3411,8 +3411,8 @@ namespace Tests.Editor
             string actionRoot = Path.Combine(Application.dataPath, "Scripts/Character/Action");
             string combined = string.Join("\n", new[]
             {
-                Path.Combine(actionRoot, "Solver/FullBodyActionInterruptRequestFactory.cs"),
-                Path.Combine(actionRoot, "Solver/FullBodyActionInputRequestBuilder.cs"),
+                Path.Combine(actionRoot, "Solver/CommittedActionInterruptRequestFactory.cs"),
+                Path.Combine(actionRoot, "Solver/CommittedActionInputRequestBuilder.cs"),
                 Path.Combine(actionRoot, "Solver/DodgeActionPlanner.cs"),
                 Path.Combine(actionRoot, "Solver/DodgeActionDirectionResolver.cs")
             }.Select(File.ReadAllText));
@@ -3576,20 +3576,20 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void RuntimeStateMachineRunnerHasSingleFullBodyOwner()
+        public void RuntimeStateMachineRunnerHasSingleCharacterStateOwner()
         {
             string runtimeController = File.ReadAllText(Path.Combine(
                 Application.dataPath,
                 "Scripts/Character/Pipeline/Runtime/CharacterFrameRuntimeController.cs"));
-            string fullBodyModule = File.ReadAllText(Path.Combine(
+            string committedActionModule = File.ReadAllText(Path.Combine(
                 Application.dataPath,
-                "Scripts/Character/Action/Runtime/FullBodyActionRuntimeModule.cs"));
+                "Scripts/Character/Action/Runtime/CommittedActionRuntimeModule.cs"));
             string stateMachineRuntime = File.ReadAllText(Path.Combine(
                 Application.dataPath,
                 "Scripts/Character/Action/Runtime/CharacterStateMachineRuntime.cs"));
 
             Assert.That(runtimeController, Does.Not.Contain("new CharacterStateMachineRunner"));
-            Assert.That(fullBodyModule, Does.Contain("CharacterStateMachineRuntime"));
+            Assert.That(committedActionModule, Does.Contain("CharacterStateMachineRuntime"));
             Assert.AreEqual(1, CountOccurrences(stateMachineRuntime, "new CharacterStateMachineRunner"));
         }
 
@@ -3605,7 +3605,7 @@ namespace Tests.Editor
                 "Runtime/CharacterFramePipeline.cs"));
             string actionSubmitter = File.ReadAllText(Path.Combine(
                 Application.dataPath,
-                "Scripts/Character/Action/Runtime/FullBodyActionFrameSubmitter.cs"));
+                "Scripts/Character/Action/Runtime/CommittedActionFrameSubmitter.cs"));
 
             Assert.That(host, Does.Contain("new CharacterFramePipeline("));
             Assert.That(pipeline, Does.Contain("SimulationTickPhaseOrder.Phases"));
@@ -3626,37 +3626,41 @@ namespace Tests.Editor
             string runtimeController = File.ReadAllText(Path.Combine(pipelineRoot, "Runtime/CharacterFrameRuntimeController.cs"));
             string runtimeCore = File.ReadAllText(Path.Combine(pipelineRoot, "Runtime/CharacterRuntimeCore.cs"));
             string runtimeTickAdapter = File.ReadAllText(Path.Combine(pipelineRoot, "Runtime/CharacterFrameRuntimeTickAdapter.cs"));
-            string actionSubmitter = File.ReadAllText(Path.Combine(actionRoot, "Runtime/FullBodyActionFrameSubmitter.cs"));
+            string actionSubmitter = File.ReadAllText(Path.Combine(actionRoot, "Runtime/CommittedActionFrameSubmitter.cs"));
             string locomotionSubmitter = File.ReadAllText(Path.Combine(movementRoot, "Runtime/LocomotionFrameSubmitter.cs"));
-            string submitterGraph = File.ReadAllText(Path.Combine(pipelineRoot, "Runtime/CharacterFrameSubmitterGraph.cs"));
             string characterPort = File.ReadAllText(Path.Combine(pipelineRoot, "Contracts/ICharacterFrameRuntimePort.cs"));
             string requestSubmitter = File.ReadAllText(Path.Combine(pipelineRoot, "Contracts/ICharacterFrameRequestSubmitter.cs"));
             string outputSubmitter = File.ReadAllText(Path.Combine(pipelineRoot, "Contracts/ICharacterFrameOutputSubmitter.cs"));
-            string fullBodyPortsPath = Path.Combine(actionRoot, "Contracts/FullBodyRuntimePorts.cs");
-            string fullBodyAdapterPath = Path.Combine(actionRoot, "Runtime/FullBodyRuntimePortAdapter.cs");
-            string fullBodyBuilderPath = Path.Combine(actionRoot, "Runtime/FullBodySubmissionBuilder.cs");
+            string legacyActionRuntime = "FullBody" + "ActionRuntime";
+            string legacySubmissionBuilder = "FullBody" + "SubmissionBuilder";
+            string legacyIntegratedAdapter = "FullBody" + "IntegratedFrameAdapter";
+            string legacySubmissionPort = "I" + "FullBody" + "SubmissionRuntimePort";
+            string legacyOutputPort = "I" + "FullBody" + "OutputRuntimePort";
+            string fullBodyPortsPath = Path.Combine(actionRoot, "Contracts/" + "FullBody" + "RuntimePorts.cs");
+            string fullBodyAdapterPath = Path.Combine(actionRoot, "Runtime/" + "FullBody" + "RuntimePortAdapter.cs");
+            string fullBodyBuilderPath = Path.Combine(actionRoot, "Runtime/" + legacySubmissionBuilder + ".cs");
             string adapter = File.ReadAllText(Path.Combine(pipelineRoot, "Runtime/CharacterFrameRuntimePortAdapter.cs"));
             string locomotionFramePort = File.ReadAllText(Path.Combine(movementRoot, "Contracts/ILocomotionFrameRuntimePort.cs"));
             string locomotionOutputPort = File.ReadAllText(Path.Combine(movementRoot, "Contracts/ILocomotionOutputRuntimePort.cs"));
             string allPorts = characterPort + "\n" + requestSubmitter + "\n" + outputSubmitter + "\n" + locomotionFramePort + "\n" + locomotionOutputPort;
 
-            Assert.That(pipeline, Does.Not.Contain("FullBodyActionRuntime"));
-            Assert.That(pipeline, Does.Not.Contain("FullBodySubmissionBuilder"));
+            Assert.That(pipeline, Does.Not.Contain(legacyActionRuntime));
+            Assert.That(pipeline, Does.Not.Contain(legacySubmissionBuilder));
             Assert.That(pipeline, Does.Contain("ICharacterFrameRequestSubmitter"));
             Assert.That(pipeline, Does.Contain("ICharacterFrameOutputSubmitter"));
             Assert.That(host, Does.Contain("new CharacterFramePipeline("));
-            Assert.That(host, Does.Not.Contain("FullBodySubmissionBuilder"));
+            Assert.That(host, Does.Not.Contain(legacySubmissionBuilder));
             Assert.That(runtimeController, Does.Contain("CharacterRuntimeCore"));
             Assert.That(runtimeController, Does.Not.Contain("CharacterFrameRuntimeHost"));
             Assert.That(runtimeController, Does.Not.Contain("new CharacterFrameRuntimeHost("));
             Assert.That(runtimeCore, Does.Contain("CharacterFrameRuntimeHost"));
             Assert.That(runtimeCore, Does.Contain("new CharacterFrameRuntimeHost("));
             Assert.That(runtimeTickAdapter, Does.Contain("CharacterFrameRuntimeController"));
-            Assert.That(actionSubmitter, Does.Not.Contain("FullBodyActionRuntime"));
+            Assert.That(actionSubmitter, Does.Not.Contain(legacyActionRuntime));
             Assert.That(actionSubmitter, Does.Not.Contain("PlayerLocomotionController"));
-            Assert.That(actionSubmitter, Does.Not.Contain("FullBodyIntegratedFrameAdapter"));
-            Assert.That(locomotionSubmitter, Does.Not.Contain("FullBodySubmissionBuilder"));
-            Assert.That(submitterGraph, Does.Not.Contain("FullBodySubmissionBuilder"));
+            Assert.That(actionSubmitter, Does.Not.Contain(legacyIntegratedAdapter));
+            Assert.That(locomotionSubmitter, Does.Not.Contain(legacySubmissionBuilder));
+            Assert.False(File.Exists(Path.Combine(pipelineRoot, "Runtime/CharacterFrameSubmitterChain.cs")));
             Assert.That(actionSubmitter, Does.Contain("ICharacterFrameRequestSubmitter"));
             Assert.That(actionSubmitter, Does.Contain("ICharacterFrameOutputSubmitter"));
             Assert.That(actionSubmitter, Does.Not.Contain("TryEvaluatePreparedGameplayDecision"));
@@ -3668,13 +3672,13 @@ namespace Tests.Editor
             Assert.That(actionSubmitter, Does.Contain("ICharacterFrameSubmissionRuntimePort"));
             Assert.That(actionSubmitter, Does.Contain("ILocomotionFrameRuntimePort"));
             Assert.That(adapter, Does.Contain("CharacterRuntimeCore"));
-            Assert.That(adapter, Does.Not.Contain("FullBodyActionRuntime"));
+            Assert.That(adapter, Does.Not.Contain(legacyActionRuntime));
             Assert.That(adapter, Does.Not.Contain("PlayerLocomotionController"));
             Assert.That(adapter, Does.Not.Contain("CharacterFrameRuntimeController"));
             Assert.That(adapter, Does.Contain("ICharacterFrameRuntimePort"));
             Assert.That(characterPort, Does.Contain("ICharacterFrameRuntimePort"));
-            Assert.That(characterPort, Does.Not.Contain("IFullBodySubmissionRuntimePort"));
-            Assert.That(characterPort, Does.Not.Contain("IFullBodyOutputRuntimePort"));
+            Assert.That(characterPort, Does.Not.Contain(legacySubmissionPort));
+            Assert.That(characterPort, Does.Not.Contain(legacyOutputPort));
             Assert.False(File.Exists(fullBodyPortsPath));
             Assert.False(File.Exists(fullBodyAdapterPath));
             Assert.False(File.Exists(fullBodyBuilderPath));
@@ -3683,7 +3687,7 @@ namespace Tests.Editor
             Assert.That(allPorts, Does.Not.Contain("CharacterController"));
             Assert.That(allPorts, Does.Not.Contain("Animancer"));
             Assert.That(allPorts, Does.Not.Contain("InputAction"));
-            Assert.That(allPorts, Does.Not.Contain("FullBodyActionRuntime"));
+            Assert.That(allPorts, Does.Not.Contain(legacyActionRuntime));
             Assert.That(allPorts, Does.Not.Contain("PlayerLocomotionController"));
             Assert.That(locomotionFramePort, Does.Not.Contain("ExecuteLocomotionMotion"));
             Assert.That(locomotionFramePort, Does.Not.Contain("PresentLocomotionAnimation"));
@@ -3693,14 +3697,14 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyOutputRuntimeModulesOwnOutputSideEffects()
+        public void CharacterFrameOutputRuntimeModulesOwnOutputSideEffects()
         {
             string actionRoot = Path.Combine(Application.dataPath, "Scripts/Character/Action");
             string pipelineRoot = Path.Combine(Application.dataPath, "Scripts/Character/Pipeline");
             string adapter = File.ReadAllText(Path.Combine(pipelineRoot, "Runtime/CharacterFrameRuntimePortAdapter.cs"));
-            string module = File.ReadAllText(Path.Combine(actionRoot, "Runtime/FullBodyActionRuntimeModule.cs"));
-            string outputRuntime = File.ReadAllText(Path.Combine(actionRoot, "Runtime/FullBodyOutputRuntime.cs"));
-            string outputHost = File.ReadAllText(Path.Combine(actionRoot, "Runtime/FullBodyOutputRuntimeHost.cs"));
+            string module = File.ReadAllText(Path.Combine(actionRoot, "Runtime/CommittedActionRuntimeModule.cs"));
+            string outputRuntime = File.ReadAllText(Path.Combine(actionRoot, "Runtime/CharacterFrameOutputRuntime.cs"));
+            string outputHost = File.ReadAllText(Path.Combine(actionRoot, "Runtime/CharacterFrameOutputRuntimeHost.cs"));
 
             Assert.That(adapter, Does.Contain("OutputRuntime"));
             Assert.That(adapter, Does.Not.Contain("SetLastFrameOutputsForPipeline"));
@@ -3713,27 +3717,27 @@ namespace Tests.Editor
             Assert.That(adapter, Does.Not.Contain("CompleteLocomotionTickForPipeline"));
             Assert.That(adapter, Does.Not.Contain("LogDiagnosticTickSnapshotsForPipeline"));
 
-            Assert.That(module, Does.Contain("FullBodyOutputRuntimeHost"));
-            Assert.That(outputHost, Does.Contain("internal sealed class FullBodyOutputRuntimeHost"));
+            Assert.That(module, Does.Contain("CharacterFrameOutputRuntimeHost"));
+            Assert.That(outputHost, Does.Contain("internal sealed class CharacterFrameOutputRuntimeHost"));
 
-            Assert.That(outputRuntime, Does.Contain("internal sealed class FullBodyOutputRuntime"));
-            Assert.That(outputRuntime, Does.Contain("internal sealed class FullBodyOutputCacheWriter"));
-            Assert.That(outputRuntime, Does.Contain("internal sealed class FullBodyInputRequestConsumer"));
-            Assert.That(outputRuntime, Does.Contain("internal sealed class FullBodyMotionOutputApplier"));
+            Assert.That(outputRuntime, Does.Contain("internal sealed class CharacterFrameOutputRuntime"));
+            Assert.That(outputRuntime, Does.Contain("internal sealed class CharacterFrameOutputCacheWriter"));
+            Assert.That(outputRuntime, Does.Contain("internal sealed class CharacterFrameInputRequestConsumer"));
+            Assert.That(outputRuntime, Does.Contain("internal sealed class CharacterFrameMotionOutputApplier"));
             Assert.That(outputRuntime, Does.Contain("internal sealed class CharacterAnimationOutputPresenter"));
-            Assert.That(outputRuntime, Does.Contain("internal sealed class FullBodyRuntimeFactsWriter"));
-            Assert.That(outputRuntime, Does.Contain("internal sealed class FullBodySnapshotWriter"));
-            Assert.That(outputRuntime, Does.Contain("internal sealed class FullBodyDiagnosticSubmitter"));
+            Assert.That(outputRuntime, Does.Contain("internal sealed class CharacterFrameRuntimeFactsWriter"));
+            Assert.That(outputRuntime, Does.Contain("internal sealed class CharacterFrameSnapshotWriter"));
+            Assert.That(outputRuntime, Does.Contain("internal sealed class CharacterFrameDiagnosticSubmitter"));
             Assert.That(outputRuntime, Does.Contain("ExecuteActionMovement"));
             Assert.That(outputRuntime, Does.Contain("PresentLocomotionAnimation"));
             Assert.That(outputRuntime, Does.Contain("WriteActionFacts"));
             Assert.That(outputRuntime, Does.Contain("WriteAnimationFacts"));
-            Assert.That(outputRuntime, Does.Not.Contain("FullBodyActionRuntime"));
+            Assert.That(outputRuntime, Does.Not.Contain("FullBody" + "ActionRuntime"));
             Assert.That(outputRuntime, Does.Not.Contain("CharacterController.Move"));
             Assert.That(outputRuntime, Does.Not.Contain("Animancer"));
             Assert.That(outputRuntime, Does.Not.Contain("CharacterStateMachineDefinition"));
             Assert.That(outputRuntime, Does.Not.Contain("TransitionEvaluator"));
-            Assert.That(outputRuntime, Does.Not.Contain("FullBodyActionRequestSubmissionResolver"));
+            Assert.That(outputRuntime, Does.Not.Contain("CommittedActionRequestSubmissionResolver"));
             Assert.That(outputRuntime, Does.Not.Contain("CharacterActionRequestSubmissionArbiter"));
         }
 
@@ -3748,9 +3752,9 @@ namespace Tests.Editor
             string outputRuntime = File.ReadAllText(Path.Combine(
                 movementRoot,
                 "Runtime/LocomotionOutputRuntime.cs"));
-            string fullBodyOutput = File.ReadAllText(Path.Combine(
+            string characterFrameOutput = File.ReadAllText(Path.Combine(
                 actionRoot,
-                "Runtime/FullBodyOutputRuntime.cs"));
+                "Runtime/CharacterFrameOutputRuntime.cs"));
 
             Assert.That(module, Does.Contain("LocomotionOutputRuntimeHost"));
 
@@ -3773,8 +3777,8 @@ namespace Tests.Editor
             Assert.That(outputRuntime, Does.Not.Contain("new CharacterStateMachineRunner"));
             Assert.That(outputRuntime, Does.Not.Contain("CharacterFramePipeline"));
             Assert.That(outputRuntime, Does.Not.Contain("PlayerLocomotionController"));
-            Assert.That(fullBodyOutput, Does.Contain("ILocomotionOutputRuntimePort"));
-            Assert.That(fullBodyOutput, Does.Not.Contain("PlayerLocomotionController"));
+            Assert.That(characterFrameOutput, Does.Contain("ILocomotionOutputRuntimePort"));
+            Assert.That(characterFrameOutput, Does.Not.Contain("PlayerLocomotionController"));
         }
 
         [Test]
@@ -3811,14 +3815,16 @@ namespace Tests.Editor
                 "Scripts/Character/Pipeline/Runtime/CharacterFramePipeline.cs"));
             string actionSubmitter = File.ReadAllText(Path.Combine(
                 Application.dataPath,
-                "Scripts/Character/Action/Runtime/FullBodyActionFrameSubmitter.cs"));
+                "Scripts/Character/Action/Runtime/CommittedActionFrameSubmitter.cs"));
+            string legacySubmissionBuilder = "FullBody" + "SubmissionBuilder";
+            string legacyIntegratedAdapter = "FullBody" + "IntegratedFrameAdapter";
 
             Assert.That(pipeline, Does.Contain("ICharacterFrameRequestSubmitter"));
             Assert.That(pipeline, Does.Contain("ICharacterFrameOutputSubmitter"));
-            Assert.That(pipeline, Does.Not.Contain("FullBodySubmissionBuilder"));
-            Assert.That(actionSubmitter, Does.Contain("FullBodyActionRequestSubmissionResolver.Resolve"));
-            Assert.That(actionSubmitter, Does.Not.Contain("FullBodyIntegratedFrameAdapter"));
-            Assert.That(pipeline, Does.Contain("FullBodyDiagnostics.LogPipelineSnapshot"));
+            Assert.That(pipeline, Does.Not.Contain(legacySubmissionBuilder));
+            Assert.That(actionSubmitter, Does.Contain("CommittedActionRequestSubmissionResolver.Resolve"));
+            Assert.That(actionSubmitter, Does.Not.Contain(legacyIntegratedAdapter));
+            Assert.That(pipeline, Does.Contain("CharacterFrameDiagnostics.LogPipelineSnapshot"));
             Assert.That(pipeline, Does.Not.Contain("CharacterActionRequestSubmissionInput submissionInput"));
             Assert.That(actionSubmitter, Does.Not.Contain("CharacterActionRequestSubmissionInput submissionInput"));
             Assert.That(pipeline, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
@@ -3896,7 +3902,7 @@ namespace Tests.Editor
         {
             string providers = File.ReadAllText(Path.Combine(
                 Application.dataPath,
-                "Scripts/Character/Action/Solver/FullBodyActionRequestSubmissionProviders.cs"));
+                "Scripts/Character/Action/Solver/CommittedActionRequestSubmissionProviders.cs"));
             string arbiter = File.ReadAllText(Path.Combine(
                 Application.dataPath,
                 "Scripts/Character/Action/Solver/CharacterActionRequestSubmissionArbiter.cs"));
@@ -3916,7 +3922,7 @@ namespace Tests.Editor
         {
             string actionSubmitter = File.ReadAllText(Path.Combine(
                 Application.dataPath,
-                "Scripts/Character/Action/Runtime/FullBodyActionFrameSubmitter.cs"));
+                "Scripts/Character/Action/Runtime/CommittedActionFrameSubmitter.cs"));
             string locomotionSubmitter = File.ReadAllText(Path.Combine(
                 Application.dataPath,
                 "Scripts/Character/Movement/Runtime/LocomotionFrameSubmitter.cs"));
@@ -3944,10 +3950,10 @@ namespace Tests.Editor
             Assert.False(File.Exists(Path.Combine(actionRoot, "Runtime/CharacterFramePipeline.cs")));
             Assert.False(File.Exists(Path.Combine(actionRoot, "Model/CharacterFramePipelineTypes.cs")));
             Assert.False(File.Exists(Path.Combine(actionRoot, "Contracts/ICharacterFrameRuntimePort.cs")));
-            Assert.False(File.Exists(Path.Combine(actionRoot, "Solver/FullBodyActionRequestGate.cs")));
+            Assert.False(File.Exists(Path.Combine(actionRoot, "Solver/FullBody" + "ActionRequestGate.cs")));
             Assert.False(File.Exists(Path.Combine(actionRoot, "Solver/FullBodyPipelineActionRequestResolver.cs")));
-            Assert.False(File.Exists(Path.Combine(actionRoot, "Solver/FullBodyActionRequestCandidates.cs")));
-            Assert.False(File.Exists(Path.Combine(actionRoot, "Solver/FullBodyActionInterruptGate.cs")));
+            Assert.False(File.Exists(Path.Combine(actionRoot, "Solver/FullBody" + "ActionRequestCandidates.cs")));
+            Assert.False(File.Exists(Path.Combine(actionRoot, "Solver/FullBody" + "ActionInterruptGate.cs")));
             Assert.False(File.Exists(Path.Combine(movementRoot, "Solver/LocomotionFramePipeline.cs")));
             Assert.False(File.Exists(Path.Combine(movementRoot, "Model/LocomotionFramePipelineInput.cs")));
             Assert.False(File.Exists(Path.Combine(movementRoot, "Model/LocomotionFramePipelineResult.cs")));
@@ -3964,7 +3970,7 @@ namespace Tests.Editor
                 "Scripts/Character/Movement/Solver/Motion/AnimationPlanarDeltaResolver.cs"));
             string actionSolver = File.ReadAllText(Path.Combine(
                 Application.dataPath,
-                "Scripts/Character/Action/Solver/FullBodyActionRequestSubmissionResolver.cs"));
+                "Scripts/Character/Action/Solver/CommittedActionRequestSubmissionResolver.cs"));
 
             Assert.That(animationSolver, Does.Not.Contain("Animancer"));
             Assert.That(animationSolver, Does.Not.Contain("Animator"));
@@ -3989,19 +3995,19 @@ namespace Tests.Editor
         }
 
         [Test]
-        public void FullBodyDiagnosticsUsesUnifiedLogOnly()
+        public void CharacterFrameDiagnosticsUsesUnifiedLogOnly()
         {
             string diagnostics = File.ReadAllText(Path.Combine(
                 Application.dataPath,
-                "Scripts/Character/Action/Diagnostics/FullBodyDiagnostics.cs"));
+                "Scripts/Character/Action/Diagnostics/CharacterFrameDiagnostics.cs"));
             string adapter = File.ReadAllText(Path.Combine(
                 Application.dataPath,
-                "Scripts/Character/Action/Diagnostics/FullBodyDiagnosticAdapter.cs"));
+                "Scripts/Character/Action/Diagnostics/CharacterFrameDiagnosticAdapter.cs"));
             string sink = File.ReadAllText(Path.Combine(
                 Application.dataPath,
                 "Scripts/Character/Diagnostics/RuntimeDiagnosticLogCharacterSink.cs"));
 
-            Assert.That(diagnostics, Does.Contain("FullBodyDiagnosticAdapter"));
+            Assert.That(diagnostics, Does.Contain("CharacterFrameDiagnosticAdapter"));
             Assert.That(diagnostics, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
             Assert.That(adapter, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
             Assert.That(sink, Does.Contain("RuntimeDiagnosticLog.Submit"));
@@ -4009,11 +4015,11 @@ namespace Tests.Editor
             Assert.That(diagnostics, Does.Not.Contain("new CharacterStateMachineRunner"));
             Assert.That(diagnostics, Does.Not.Contain(".Move("));
             Assert.That(diagnostics, Does.Not.Contain(".Present("));
-            Assert.That(adapter, Does.Contain("fullbody-path-changed"));
-            Assert.That(adapter, Does.Contain("fullbody-pending-transition-changed"));
+            Assert.That(adapter, Does.Contain("character-frame-path-changed"));
+            Assert.That(adapter, Does.Contain("character-frame-pending-transition-changed"));
             Assert.That(adapter, Does.Contain("locomotion-phase-changed"));
             Assert.That(adapter, Does.Contain("action-accepted"));
-            Assert.That(adapter, Does.Contain("fullbody-tick-snapshot"));
+            Assert.That(adapter, Does.Contain("character-frame-tick-snapshot"));
             Assert.That(adapter, Does.Contain("animation-tick-snapshot"));
             Assert.That(adapter, Does.Contain("state-machine-definition-invalid"));
         }
@@ -4026,17 +4032,17 @@ namespace Tests.Editor
             string transition = string.Join("\n", Directory.GetFiles(Path.Combine(characterRoot, "StateMachine/Solver/Transition"), "*.cs").Select(File.ReadAllText));
             string sampler = File.ReadAllText(Path.Combine(characterRoot, "StateMachine/Solver/Timeline/CharacterStateTimelineFactSampler.cs"));
             string pipeline = File.ReadAllText(Path.Combine(characterRoot, "Pipeline/Runtime/CharacterFramePipeline.cs"));
-            string fullBodyOutput = File.ReadAllText(Path.Combine(characterRoot, "Action/Runtime/FullBodyOutputRuntime.cs"));
+            string characterFrameOutput = File.ReadAllText(Path.Combine(characterRoot, "Action/Runtime/CharacterFrameOutputRuntime.cs"));
             string locomotionOutput = File.ReadAllText(Path.Combine(characterRoot, "Movement/Runtime/LocomotionOutputRuntime.cs"));
             string actionArbiter = File.ReadAllText(Path.Combine(characterRoot, "Action/Solver/ActionInterruptArbiter.cs"));
-            string fullBodyDiagnostics = File.ReadAllText(Path.Combine(characterRoot, "Action/Diagnostics/FullBodyDiagnostics.cs"));
+            string fullBodyDiagnostics = File.ReadAllText(Path.Combine(characterRoot, "Action/Diagnostics/CharacterFrameDiagnostics.cs"));
             string locomotionDiagnostics = File.ReadAllText(Path.Combine(characterRoot, "Movement/Diagnostics/LocomotionDiagnostics.cs"));
 
             Assert.That(runner, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
             Assert.That(transition, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
             Assert.That(sampler, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
             Assert.That(pipeline, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
-            Assert.That(fullBodyOutput, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
+            Assert.That(characterFrameOutput, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
             Assert.That(locomotionOutput, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
             Assert.That(actionArbiter, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
             Assert.That(fullBodyDiagnostics, Does.Not.Contain("RuntimeDiagnosticLog.Submit"));
@@ -4117,10 +4123,10 @@ namespace Tests.Editor
         {
             string module = File.ReadAllText(Path.Combine(
                 Application.dataPath,
-                "Scripts/Character/Action/Runtime/FullBodyActionRuntimeModule.cs"));
+                "Scripts/Character/Action/Runtime/CommittedActionRuntimeModule.cs"));
             string actionSubmitter = File.ReadAllText(Path.Combine(
                 Application.dataPath,
-                "Scripts/Character/Action/Runtime/FullBodyActionFrameSubmitter.cs"));
+                "Scripts/Character/Action/Runtime/CommittedActionFrameSubmitter.cs"));
 
             Assert.That(module, Does.Not.Contain("DodgeActionTuning.Default"));
             Assert.That(actionSubmitter, Does.Not.Contain("DodgeActionTuning.Default"));
@@ -4271,9 +4277,9 @@ namespace Tests.Editor
             Assert.That(combined, Does.Not.Contain("FullBodyHfsmStateTreeBuilder"));
             Assert.That(combined, Does.Not.Contain("FullBodyHfsmStateTreeDriver"));
             Assert.That(combined, Does.Not.Contain("DodgeActionRuntime"));
-            Assert.That(combined, Does.Not.Contain("DodgeFullBodyActionModule"));
-            Assert.That(combined, Does.Not.Contain("FullBodyActionSetSO"));
-            Assert.That(combined, Does.Not.Contain("FullBodyActionAnimationSetSO"));
+            Assert.That(combined, Does.Not.Contain("DodgeFullBody" + "ActionModule"));
+            Assert.That(combined, Does.Not.Contain("FullBody" + "ActionSetSO"));
+            Assert.That(combined, Does.Not.Contain("FullBody" + "ActionAnimationSetSO"));
             Assert.That(combined, Does.Not.Contain("ActionAnimationProfileSO"));
         }
 
@@ -4384,6 +4390,7 @@ namespace Tests.Editor
             SetPrivateField(config, "actionInterruptPolicy", baseConfig.ActionInterruptPolicy);
             SetPrivateField(config, "bodyClaimPolicy", baseConfig.BodyClaimPolicy);
             SetPrivateField(config, "actionCatalog", baseConfig.ActionCatalog);
+            SetPrivateField(config, "behaviorRuntimeDefinition", baseConfig.BehaviorRuntimeDefinition);
             SetPrivateField(config, "inputActions", baseConfig.InputActions);
             SetPrivateField(config, "moveAction", baseConfig.MoveAction);
             SetPrivateField(config, "runAction", baseConfig.RunAction);
@@ -4417,7 +4424,8 @@ namespace Tests.Editor
         static ActionMotionResolveResult ResolveActionMotion(in CharacterStateMachineFrame frame, float deltaTime)
         {
             CharacterActionCatalogSO actionCatalog = LoadConfiguredCharacterConfigAsset().ActionCatalog;
-            CharacterActionCatalog catalog = actionCatalog != null ? actionCatalog.ToCatalog() : CharacterActionCatalog.Empty;
+            ActionTimelineCompileContext compileContext = ActionTimelineCompileContext.FromTickRate(SimulationTickRate.Default);
+            CharacterActionCatalog catalog = actionCatalog != null ? actionCatalog.ToCatalog(in compileContext) : CharacterActionCatalog.Empty;
             DodgeActionTuning dodgeTuning = default;
             bool hasDodgeAction = catalog.TryGetDodgeDefinition(out CharacterActionDefinition definition) &&
                                   definition.TryGetDodgeTuning(out dodgeTuning);
@@ -4802,7 +4810,7 @@ namespace Tests.Editor
                 stateTime,
                 CharacterStateVariant.Directional,
                 string.Empty,
-                new[] { CharacterStateTag.FullBody, CharacterStateTag.Action, CharacterStateTag.Dodge });
+                new[] { CharacterStateTag.Character, CharacterStateTag.Action, CharacterStateTag.Dodge });
         }
 
         static int ResolveActionResistance(ActionStateId activeActionState, in DodgeActionTuning config)

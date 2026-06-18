@@ -1,0 +1,162 @@
+.timelineEditorWindow {
+    flex-grow: 1;
+    background-color: rgb(37, 37, 37);
+}
+
+#top {
+    height: 32px;
+    flex-direction: row;
+    background-color: rgb(48, 48, 48);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(24, 24, 24);
+}
+
+#target-field {
+    width: 220px;
+    -unity-text-align: middle-left;
+    margin-left: 8px;
+    color: rgb(210, 210, 210);
+}
+
+#play-button,
+#pause-button {
+    width: 25px;
+    height: 25px;
+    margin-top: 0;
+    margin-right: 0;
+    margin-bottom: 0;
+    margin-left: 0;
+    border-top-width: 0;
+    border-right-width: 1px;
+    border-bottom-width: 0;
+    border-left-width: 0;
+}
+
+#play-button {
+    background-image: resource('PlayButton On@2x');
+}
+
+#pause-button {
+    background-image: resource('PauseButton On@2x');
+}
+
+#play-speed {
+    flex-direction: row;
+    width: 76px;
+    border-right-width: 1px;
+    border-right-color: rgb(32, 32, 32);
+}
+
+#play-speed-icon {
+    background-image: resource('d_UnityEditor.ProfilerWindow@2x');
+    width: 25px;
+    margin-left: 2px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    margin-right: 0;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+#play-speed-field {
+    margin-top: 0;
+    margin-right: 0;
+    margin-bottom: 0;
+    margin-left: 0;
+    flex-grow: 1;
+}
+
+#preview-summary {
+    flex-grow: 1;
+    color: rgb(190, 190, 190);
+    -unity-text-align: middle-left;
+    margin-left: 8px;
+}
+
+#track-container {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+#left-panel {
+    width: 225px;
+    min-width: 160px;
+    max-width: 420px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    background-color: rgb(42, 42, 42);
+    border-right-width: 1px;
+    border-right-color: rgb(25, 25, 25);
+}
+
+.horizontal-resizer {
+    width: 5px;
+    min-width: 5px;
+    max-width: 5px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    background-color: rgb(30, 30, 30);
+    cursor: resize-horizontal;
+}
+
+.horizontal-resizer:hover,
+.horizontal-resizer.resizing {
+    background-color: rgb(68, 192, 255);
+    cursor: resize-horizontal;
+}
+
+#track-hierarchy {
+    flex-grow: 1;
+}
+
+#tool-bar {
+    height: 28px;
+    flex-direction: row;
+    background-color: rgb(52, 52, 52);
+}
+
+#add-track-button {
+    -unity-text-align: middle-center;
+    flex-grow: 1;
+    flex-direction: row;
+    color: rgb(210, 210, 210);
+    align-items: center;
+}
+
+#track-list-title {
+    flex-grow: 1;
+    margin-left: 8px;
+    -unity-text-align: middle-left;
+}
+
+#add-track-menu {
+    min-width: 88px;
+    height: 23px;
+    margin-top: 2px;
+    margin-right: 4px;
+    margin-bottom: 2px;
+    margin-left: 4px;
+}
+
+#field-view {
+    flex-grow: 1;
+    min-width: 0;
+    flex-direction: row;
+}
+
+#inspector-scroll {
+    width: 260px;
+    min-width: 260px;
+    max-width: 960px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    background-color: rgb(48, 48, 48);
+    border-left-width: 1px;
+    border-left-color: rgb(25, 25, 25);
+}
+
+#clip-inspector {
+    flex-grow: 1;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 8px;
+}

@@ -48,7 +48,7 @@ F6/F8 hidden replay 可以临时捕获并恢复 presentation state，用于保�
 - 删除或内联 `CharacterSimulationSnapshot.CameraYaw`，以 `CameraBasisState.Yaw` 作为唯一 yaw 派生来源。
 - 删除 `CharacterSimulationSnapshot.WithCameraYaw()`，调用方改用 `WithCameraBasis(...)`。
 - 将 `PresentationTransformRollbackState` 重命名或迁移为 debug restore state。
-- 将 `FullBodyActionRestoreState` 中诊断日志字段拆到单独 diagnostic restore state。
+- 将 `CommittedActionRestoreState` 中诊断日志字段拆到单独 diagnostic restore state。
 - 将 timing probe 结构和日志格式化从 `LocalRollbackSynctestDebugRunner` 拆出。
 - 保留但标注 `LocomotionRollbackSimulation` 为 locomotion-only narrow adapter，不作为 Sandbox FullBody demo 验收主路径。
 

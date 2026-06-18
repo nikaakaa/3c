@@ -113,8 +113,8 @@
 系统 MUST 保持当前 Locomotion 主线只消费 Move/Look 所需输入，不得因为输入缓冲层而新增第二套角色控制路径。
 
 #### Scenario: Locomotion 行为保持
-- **WHEN** `PlayerLocomotionController` 执行一帧移动 tick
-- **THEN** 它 MUST 继续通过现有输入端口或等价 adapter 获取 Move/Look
+- **WHEN** `CharacterFrameRuntimeController` 执行一帧角色 tick
+- **THEN** Locomotion runtime MUST 继续通过现有输入端口或等价 adapter 获取 Move/Look
 - **AND** MUST 继续通过现有 pipeline 生成移动意图、世界方向、阶段和运动命令
 
 #### Scenario: 输入缓冲不接管移动
@@ -125,7 +125,7 @@
 
 #### Scenario: 不新增第二控制入口
 - **WHEN** 实施输入缓冲层
-- **THEN** 系统 MUST NOT 新增绕过 `PlayerLocomotionController`、Locomotion pipeline 或当前运动执行端口的角色控制器入口
+- **THEN** 系统 MUST NOT 新增绕过 `CharacterFramePipeline`、Locomotion runtime module 或当前运动执行端口的角色控制器入口
 
 ### Requirement: 网络与预测回滚不进入本变更
 系统 MUST 将本变更限制为本地预输入和输入缓冲层，不得在本变更中实现网络同步、完整 tick 系统或预测回滚。
@@ -161,4 +161,3 @@
 - **WHEN** 请求仍未过期
 - **THEN** 输入缓冲 MAY 保留该请求供后续帧重新评估
 - **AND** 保留的数据 MUST 仍是输入请求键而不是 resolved action
-

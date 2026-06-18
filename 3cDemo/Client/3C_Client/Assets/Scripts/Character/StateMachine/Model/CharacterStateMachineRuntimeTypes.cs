@@ -353,11 +353,11 @@ namespace ThirdPersonCharacterStateMachine
             System.Array.Empty<CharacterStateTag>());
     }
 
-    public readonly struct FullBodyStateView
+    public readonly struct CharacterStateDomainView
     {
-        FullBodyStateView(
+        CharacterStateDomainView(
             CharacterStateMachineSnapshot snapshot,
-            FullBodyOwner owner,
+            CharacterStateOwner owner,
             ActionStateId actionState,
             BasicMovementPhase locomotionPhase,
             bool isAction,
@@ -372,26 +372,26 @@ namespace ThirdPersonCharacterStateMachine
         }
 
         public CharacterStateMachineSnapshot Snapshot { get; }
-        public FullBodyOwner Owner { get; }
+        public CharacterStateOwner Owner { get; }
         public ActionStateId ActionState { get; }
         public BasicMovementPhase LocomotionPhase { get; }
         public bool IsAction { get; }
         public bool IsLocomotion { get; }
 
-        public static FullBodyStateView FromSnapshot(in CharacterStateMachineSnapshot snapshot)
+        public static CharacterStateDomainView FromSnapshot(in CharacterStateMachineSnapshot snapshot)
         {
             return FromSnapshotAndNode(in snapshot, null);
         }
 
-        public static FullBodyStateView FromSnapshotAndMetadata(
+        public static CharacterStateDomainView FromSnapshotAndMetadata(
             in CharacterStateMachineSnapshot snapshot,
             in CharacterStateNodeMetadata metadata)
         {
             if (!snapshot.ActiveState.IsValid || !metadata.NodeId.IsValid)
             {
-                return new FullBodyStateView(
+                return new CharacterStateDomainView(
                     snapshot,
-                    FullBodyOwner.None,
+                    CharacterStateOwner.None,
                     ActionStateIds.None,
                     BasicMovementPhase.Idle,
                     false,
@@ -403,9 +403,9 @@ namespace ThirdPersonCharacterStateMachine
                 (metadata.ActionState.IsValid && metadata.ActionState != ActionStateIds.None);
             bool isLocomotion = metadata.IsLocomotionPlaybackState;
             ActionStateId actionState = isAction ? metadata.ActionState : ActionStateIds.None;
-            FullBodyOwner owner = isAction ? FullBodyOwner.Action(actionState) : FullBodyOwner.None;
+            CharacterStateOwner owner = isAction ? CharacterStateOwner.Action(actionState) : CharacterStateOwner.None;
 
-            return new FullBodyStateView(
+            return new CharacterStateDomainView(
                 snapshot,
                 owner,
                 actionState,
@@ -414,15 +414,15 @@ namespace ThirdPersonCharacterStateMachine
                 isLocomotion);
         }
 
-        public static FullBodyStateView FromSnapshotAndNode(
+        public static CharacterStateDomainView FromSnapshotAndNode(
             in CharacterStateMachineSnapshot snapshot,
             CharacterStateNodeDefinition node)
         {
             if (!snapshot.ActiveState.IsValid)
             {
-                return new FullBodyStateView(
+                return new CharacterStateDomainView(
                     snapshot,
-                    FullBodyOwner.None,
+                    CharacterStateOwner.None,
                     ActionStateIds.None,
                     BasicMovementPhase.Idle,
                     false,
@@ -436,10 +436,10 @@ namespace ThirdPersonCharacterStateMachine
                                 IsKnownLocomotionState(snapshot.ActiveState) ||
                                 (node != null && node.IsLocomotionPlaybackState);
             ActionStateId actionState = isAction ? ResolveActionState(snapshot.ActiveState, snapshot.ActivePath) : ActionStateIds.None;
-            FullBodyOwner owner = isAction ? FullBodyOwner.Action(actionState) : FullBodyOwner.None;
+            CharacterStateOwner owner = isAction ? CharacterStateOwner.Action(actionState) : CharacterStateOwner.None;
             BasicMovementPhase locomotionPhase = ResolveLocomotionPhase(snapshot.ActiveState, node);
 
-            return new FullBodyStateView(
+            return new CharacterStateDomainView(
                 snapshot,
                 owner,
                 actionState,
@@ -745,16 +745,16 @@ namespace ThirdPersonCharacterStateMachine
         }
 
         public CharacterStateMachineSnapshot Snapshot { get; }
-        public FullBodyStateView StateView
+        public CharacterStateDomainView StateView
         {
             get
             {
                 CharacterStateMachineSnapshot snapshot = Snapshot;
-                return FullBodyStateView.FromSnapshot(in snapshot);
+                return CharacterStateDomainView.FromSnapshot(in snapshot);
             }
         }
         public BasicMovementPhase LocomotionPhase => StateView.LocomotionPhase;
-        public FullBodyOwner Owner => StateView.Owner;
+        public CharacterStateOwner Owner => StateView.Owner;
         public ActionStateId ActionState => StateView.ActionState;
         public bool ExecuteBasicMovement { get; }
         public bool PresentLocomotionAnimation { get; }

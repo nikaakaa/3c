@@ -73,12 +73,12 @@
 - **AND** 本帧位移数学和执行 MUST 由 motion resolver/output applier 完成
 
 ### Requirement: Snapshot 与诊断 View 分离
-状态图 snapshot MUST 只保存恢复所需的 active id、state time、variant、payload、pending transition 和必要 trace。FullBody owner、旧 path、Action/Locomotion 兼容视图或调试标签 MAY 从领域 metadata 和 frame plan 派生，但 MUST NOT 成为 snapshot 核心权威。
+状态图 snapshot MUST 只保存恢复所需的 active id、state time、variant、payload、pending transition 和必要 trace。body claim / slot ownership、旧 path、Action/Locomotion 兼容视图或调试标签 MAY 从领域 metadata 和 frame plan 派生，但 MUST NOT 成为 snapshot 核心权威。
 
 #### Scenario: Snapshot 保持纯状态事实
 - **WHEN** 捕获 Locomotion graph snapshot
 - **THEN** snapshot MUST 保存恢复所需的状态推进事实
-- **AND** MUST NOT 保存 Unity 对象、动画 runtime object 或 FullBody owner
+- **AND** MUST NOT 保存 Unity 对象、动画 runtime object 或 body claim owner
 
 #### Scenario: View 不反向决定仲裁
 - **WHEN** 诊断面板显示当前 Locomotion state、Action state 或 body claim
@@ -108,5 +108,5 @@
 
 #### Scenario: 静态验证旧口径退役
 - **WHEN** 检查当前 specs、生产源码和测试断言
-- **THEN** 验证 MUST 确认新增正式配置不依赖旧 FullBody path
+- **THEN** 验证 MUST 确认新增正式配置不依赖旧 `/FullBody/...` 层级路径
 - **AND** MUST 确认状态图运行时不作为角色级统一大树或独立 gameplay pipeline

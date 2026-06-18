@@ -9,9 +9,9 @@ namespace ThirdPersonAction
     {
         CharacterStateMachineRunner stateMachine;
         CharacterStateMachineSnapshot currentStateSnapshot = CharacterStateMachineSnapshot.Inactive;
-        string debugFullBodyStatePath = CharacterStateMachineSnapshot.Inactive.ActivePath;
+        string debugStatePath = CharacterStateMachineSnapshot.Inactive.ActivePath;
         string debugPendingTransitionPath = CharacterStateMachineSnapshot.Inactive.PendingTransitionPath;
-        string lastLoggedFullBodyPath = CharacterStateMachineSnapshot.Inactive.ActivePath;
+        string lastLoggedStatePath = CharacterStateMachineSnapshot.Inactive.ActivePath;
         string lastLoggedPendingTransitionPath = CharacterStateMachineSnapshot.Inactive.PendingTransitionPath;
         string lastLoggedLocomotionPath = string.Empty;
         BasicMovementPhase lastLoggedLocomotionPhase = BasicMovementPhase.Idle;
@@ -23,11 +23,11 @@ namespace ThirdPersonAction
             get => currentStateSnapshot;
             internal set => currentStateSnapshot = value;
         }
-        public string ActiveFullBodyStatePath => currentStateSnapshot.ActivePath;
-        public string PendingFullBodyTransitionPath => currentStateSnapshot.PendingTransitionPath;
-        internal string DebugFullBodyStatePath { get => debugFullBodyStatePath; set => debugFullBodyStatePath = value ?? string.Empty; }
+        public string ActiveStatePath => currentStateSnapshot.ActivePath;
+        public string PendingStateTransitionPath => currentStateSnapshot.PendingTransitionPath;
+        internal string DebugStatePath { get => debugStatePath; set => debugStatePath = value ?? string.Empty; }
         internal string DebugPendingTransitionPath { get => debugPendingTransitionPath; set => debugPendingTransitionPath = value ?? string.Empty; }
-        internal string LastLoggedFullBodyPath { get => lastLoggedFullBodyPath; set => lastLoggedFullBodyPath = value ?? string.Empty; }
+        internal string LastLoggedStatePath { get => lastLoggedStatePath; set => lastLoggedStatePath = value ?? string.Empty; }
         internal string LastLoggedPendingTransitionPath { get => lastLoggedPendingTransitionPath; set => lastLoggedPendingTransitionPath = value ?? string.Empty; }
         internal string LastLoggedLocomotionPath { get => lastLoggedLocomotionPath; set => lastLoggedLocomotionPath = value ?? string.Empty; }
         internal BasicMovementPhase LastLoggedLocomotionPhase { get => lastLoggedLocomotionPhase; set => lastLoggedLocomotionPhase = value; }
@@ -49,15 +49,15 @@ namespace ThirdPersonAction
             {
                 SetInactive();
                 if (logErrors)
-                    FullBodyDiagnostics.LogStateMachineDefinitionInvalid(exception.Message);
+                    CharacterFrameDiagnostics.LogStateMachineDefinitionInvalid(exception.Message);
                 return false;
             }
 
             currentStateSnapshot = stateMachine.Snapshot;
-            FullBodyStateView stateView = FullBodyStateView.FromSnapshot(in currentStateSnapshot);
-            debugFullBodyStatePath = currentStateSnapshot.ActivePath;
+            CharacterStateDomainView stateView = CharacterStateDomainView.FromSnapshot(in currentStateSnapshot);
+            debugStatePath = currentStateSnapshot.ActivePath;
             debugPendingTransitionPath = currentStateSnapshot.PendingTransitionPath;
-            lastLoggedFullBodyPath = currentStateSnapshot.ActivePath;
+            lastLoggedStatePath = currentStateSnapshot.ActivePath;
             lastLoggedPendingTransitionPath = currentStateSnapshot.PendingTransitionPath;
             lastLoggedLocomotionPhase = stateView.LocomotionPhase;
             lastLoggedLocomotionPath = currentStateSnapshot.ActivePath;
@@ -73,38 +73,38 @@ namespace ThirdPersonAction
             SetInactive();
         }
 
-        public FullBodyActionRestoreState CaptureRestoreState()
+        public CommittedActionRestoreState CaptureRestoreState()
         {
             if (stateMachine == null)
-                return FullBodyActionRestoreState.Inactive;
+                return CommittedActionRestoreState.Inactive;
 
-            FullBodyActionGameplayRestoreState gameplay = new FullBodyActionGameplayRestoreState(
+            CommittedActionGameplayRestoreState gameplay = new CommittedActionGameplayRestoreState(
                 stateMachine.CaptureRestoreState());
-            FullBodyActionDiagnosticRestoreState diagnostic = new FullBodyActionDiagnosticRestoreState(
-                debugFullBodyStatePath,
+            CommittedActionDiagnosticRestoreState diagnostic = new CommittedActionDiagnosticRestoreState(
+                debugStatePath,
                 debugPendingTransitionPath,
-                lastLoggedFullBodyPath,
+                lastLoggedStatePath,
                 lastLoggedPendingTransitionPath,
                 lastLoggedLocomotionPath,
                 lastLoggedLocomotionPhase,
                 loggedInitialLocomotionState);
-            return new FullBodyActionRestoreState(gameplay, diagnostic);
+            return new CommittedActionRestoreState(gameplay, diagnostic);
         }
 
-        public bool Restore(in FullBodyActionRestoreState restoreState)
+        public bool Restore(in CommittedActionRestoreState restoreState)
         {
             if (stateMachine == null || !stateMachine.Restore(restoreState.StateMachine))
                 return false;
 
             currentStateSnapshot = stateMachine.Snapshot;
-            FullBodyActionDiagnosticRestoreState diagnostic = restoreState.Diagnostic;
-            debugFullBodyStatePath = string.IsNullOrEmpty(diagnostic.DebugFullBodyStatePath)
+            CommittedActionDiagnosticRestoreState diagnostic = restoreState.Diagnostic;
+            debugStatePath = string.IsNullOrEmpty(diagnostic.DebugStatePath)
                 ? currentStateSnapshot.ActivePath
-                : diagnostic.DebugFullBodyStatePath;
+                : diagnostic.DebugStatePath;
             debugPendingTransitionPath = string.IsNullOrEmpty(diagnostic.DebugPendingTransitionPath)
                 ? currentStateSnapshot.PendingTransitionPath
                 : diagnostic.DebugPendingTransitionPath;
-            lastLoggedFullBodyPath = diagnostic.LastLoggedFullBodyPath;
+            lastLoggedStatePath = diagnostic.LastLoggedStatePath;
             lastLoggedPendingTransitionPath = diagnostic.LastLoggedPendingTransitionPath;
             lastLoggedLocomotionPath = diagnostic.LastLoggedLocomotionPath;
             lastLoggedLocomotionPhase = diagnostic.LastLoggedLocomotionPhase;
@@ -115,9 +115,9 @@ namespace ThirdPersonAction
         void SetInactive()
         {
             currentStateSnapshot = CharacterStateMachineSnapshot.Inactive;
-            debugFullBodyStatePath = currentStateSnapshot.ActivePath;
+            debugStatePath = currentStateSnapshot.ActivePath;
             debugPendingTransitionPath = currentStateSnapshot.PendingTransitionPath;
-            lastLoggedFullBodyPath = currentStateSnapshot.ActivePath;
+            lastLoggedStatePath = currentStateSnapshot.ActivePath;
             lastLoggedPendingTransitionPath = currentStateSnapshot.PendingTransitionPath;
             lastLoggedLocomotionPath = string.Empty;
             lastLoggedLocomotionPhase = BasicMovementPhase.Idle;

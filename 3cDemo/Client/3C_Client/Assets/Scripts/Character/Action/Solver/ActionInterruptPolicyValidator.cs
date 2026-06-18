@@ -220,4 +220,106 @@ namespace ThirdPersonAction
             return interruptPolicy.FromState.Matches(new ActionStateId(timelinePolicy.StateId.Value));
         }
     }
+
+    public static class ActionTransitionPolicyMatrixValidator
+    {
+        public static ActionInterruptPolicyValidationResult Validate(
+            ActionTransitionPolicyMatrixDefinition matrix,
+            ActionFactCompileContext factContext)
+        {
+            ActionInterruptPolicyValidationResult result = new ActionInterruptPolicyValidationResult();
+            if (matrix.Rows.Count == 0)
+                return result;
+
+            HashSet<string> keys = new HashSet<string>();
+            Dictionary<string, ActionTransitionPolicyRowDefinition> firstByKey =
+                new Dictionary<string, ActionTransitionPolicyRowDefinition>();
+            for (int i = 0; i < matrix.Rows.Count; i++)
+            {
+                ActionTransitionPolicyRowDefinition row = matrix.Rows[i];
+                ValidateRow(row, i, factContext, result);
+                string key = $"{Normalize(row.FromActionId)}->{Normalize(row.ToActionId)}:{row.RequestType}:{Normalize(row.RequiredFactId)}";
+                if (keys.Add(key))
+                {
+                    firstByKey.Add(key, row);
+                    continue;
+                }
+
+                ActionTransitionPolicyRowDefinition first = firstByKey[key];
+                if (first.MinPriority == row.MinPriority &&
+                    first.Force == row.Force &&
+                    first.ResistanceRule == row.ResistanceRule)
+                {
+                    result.AddWarning($"Matrix row {i} duplicates an earlier row: {key}.");
+                }
+                else
+                {
+                    result.AddError($"Matrix row {i} conflicts with an earlier row: {key}.");
+                }
+            }
+
+            return result;
+        }
+
+        static void ValidateRow(
+            ActionTransitionPolicyRowDefinition row,
+            int index,
+            ActionFactCompileContext factContext,
+            ActionInterruptPolicyValidationResult result)
+        {
+            if (string.IsNullOrWhiteSpace(row.FromActionId))
+                result.AddError($"Matrix row {index} from action id is missing.");
+            else if (!IsMatrixActionId(row.FromActionId))
+                result.AddError($"Matrix row {index} from action id is outside Action scope:{row.FromActionId}.");
+
+            if (string.IsNullOrWhiteSpace(row.ToActionId))
+                result.AddError($"Matrix row {index} to action id is missing.");
+            else if (!IsMatrixActionId(row.ToActionId))
+                result.AddError($"Matrix row {index} to action id is outside Action scope:{row.ToActionId}.");
+
+            if (!System.Enum.IsDefined(typeof(ActionRequestType), row.RequestType) ||
+                row.RequestType == ActionRequestType.None)
+            {
+                result.AddError($"Matrix row {index} request kind is missing.");
+            }
+
+            if (row.MinPriority < 0)
+                result.AddError($"Matrix row {index} min priority is invalid.");
+
+            if (!System.Enum.IsDefined(typeof(ActionTransitionResistanceRule), row.ResistanceRule))
+                result.AddError($"Matrix row {index} resistance rule is invalid.");
+
+            TimelineFactId factId = new TimelineFactId(row.RequiredFactId);
+            if (!factId.IsValid)
+            {
+                result.AddError($"Matrix row {index} required fact id is missing.");
+                return;
+            }
+
+            if (!ActionFactIdResolver.IsValidFactId(factId.Value))
+            {
+                result.AddError($"Matrix row {index} required fact id is invalid:{factId.Value}.");
+                return;
+            }
+
+            if (!ActionFactIdResolver.TryResolve(factContext, factId, out _))
+                result.AddError($"Matrix row {index} required fact id is missing from action fact context:{factId.Value}.");
+        }
+
+        static bool IsMatrixActionId(string value)
+        {
+            string normalized = Normalize(value);
+            if (!normalized.StartsWith("Action.", System.StringComparison.Ordinal))
+                return false;
+
+            string tail = normalized.Substring("Action.".Length);
+            return !string.IsNullOrWhiteSpace(tail) &&
+                   tail.IndexOf('.', System.StringComparison.Ordinal) < 0;
+        }
+
+        static string Normalize(string value)
+        {
+            return (value ?? string.Empty).Trim();
+        }
+    }
 }

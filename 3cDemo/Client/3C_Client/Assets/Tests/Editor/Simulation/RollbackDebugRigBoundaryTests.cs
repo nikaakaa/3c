@@ -25,7 +25,7 @@ namespace ThirdPersonSimulation.Tests
         const string PredictionInputFrameSourceGuid = "21976d05acaa4f3e911bd23075f5668a";
         const string PredictionInputRecorderGuid = "f5b7ecfe7dcd45ae963f2a0af520c87a";
         const string SnapshotRecorderGuid = "6ebda9870bd945549299a11bbfb8de1c";
-        const string FullBodyRollbackSimulationGuid = "73bce0421eee1d84096242add6027c57";
+        const string CharacterFrameRollbackSimulationGuid = "73bce0421eee1d84096242add6027c57";
         const string SynctestRunnerGuid = "76dd67150d57413e9cf41bca3e79f6ef";
         const string LatencyRunnerGuid = "d43c4b24d029331458e709b1b3b82db2";
         const string SoakRunnerGuid = "f79063608d784da787c3554c8d0eda2d";
@@ -37,7 +37,6 @@ namespace ThirdPersonSimulation.Tests
         const string DebugRigLatencyRunnerFileId = "8801000000000000007";
         const string DebugRigSoakRunnerFileId = "8801000000000000008";
         const string SandboxLocomotionRefFileId = "8802000000000000100";
-        const string SandboxFullBodyRefFileId = "8802000000000000101";
         const string SandboxRuntimeRefFileId = "8802000000000000102";
         const string SandboxInputBufferRefFileId = "8802000000000000103";
         const string SandboxRequestBufferRefFileId = "8802000000000000104";
@@ -56,7 +55,7 @@ namespace ThirdPersonSimulation.Tests
             typeof(LocomotionPredictionInputFrameSource),
             typeof(PredictionInputHistoryTickRecorder),
             typeof(LocomotionSnapshotHistoryRecorder),
-            typeof(FullBodyRollbackSimulation),
+            typeof(CharacterFrameRollbackSimulation),
             typeof(LocalRollbackSynctestDebugRunner),
             typeof(LocalLatencyReconciliationDebugRunner),
             typeof(LocalRollbackSoakDebugRunner)
@@ -67,7 +66,7 @@ namespace ThirdPersonSimulation.Tests
             PredictionInputFrameSourceGuid,
             PredictionInputRecorderGuid,
             SnapshotRecorderGuid,
-            FullBodyRollbackSimulationGuid,
+            CharacterFrameRollbackSimulationGuid,
             SynctestRunnerGuid,
             LatencyRunnerGuid,
             SoakRunnerGuid
@@ -101,7 +100,7 @@ namespace ThirdPersonSimulation.Tests
             LocomotionPredictionInputFrameSource inputSource = SingleComponent<LocomotionPredictionInputFrameSource>(prefab);
             PredictionInputHistoryTickRecorder inputRecorder = SingleComponent<PredictionInputHistoryTickRecorder>(prefab);
             LocomotionSnapshotHistoryRecorder snapshotRecorder = SingleComponent<LocomotionSnapshotHistoryRecorder>(prefab);
-            FullBodyRollbackSimulation simulation = SingleComponent<FullBodyRollbackSimulation>(prefab);
+            CharacterFrameRollbackSimulation simulation = SingleComponent<CharacterFrameRollbackSimulation>(prefab);
             LocalRollbackSynctestDebugRunner synctest = SingleComponent<LocalRollbackSynctestDebugRunner>(prefab);
             LocalLatencyReconciliationDebugRunner latency = SingleComponent<LocalLatencyReconciliationDebugRunner>(prefab);
             LocalRollbackSoakDebugRunner soak = SingleComponent<LocalRollbackSoakDebugRunner>(prefab);
@@ -129,11 +128,11 @@ namespace ThirdPersonSimulation.Tests
             Assert.That(scene, Does.Not.Contain($"target: {{fileID: 7403338803726517453, guid: {CorinPrefabGuid}"));
             Assert.That(scene, Does.Not.Contain($"target: {{fileID: 7555210597970078956, guid: {CorinPrefabGuid}"));
             Assert.That(scene, Does.Not.Contain($"target: {{fileID: 9187719410922289072, guid: {CorinPrefabGuid}"));
-            Assert.That(scene, Does.Not.Contain("propertyPath: locomotionController"));
-            Assert.That(scene, Does.Not.Contain("propertyPath: fullBodyActionRuntime"));
+            AssertSceneOverride(scene, DebugRigInputSourceFileId, "runtimeController", SandboxRuntimeRefFileId);
             AssertSceneOverride(scene, DebugRigInputSourceFileId, "buttonSourceBehaviour", SandboxRequestBufferRefFileId);
             AssertSceneOverride(scene, DebugRigInputRecorderFileId, "tickDriver", SandboxTickDriverFileId);
             AssertSceneOverride(scene, DebugRigSnapshotRecorderFileId, "tickDriver", SandboxTickDriverFileId);
+            AssertSceneOverride(scene, DebugRigSnapshotRecorderFileId, "runtimeController", SandboxRuntimeRefFileId);
             AssertSceneOverride(scene, DebugRigSnapshotRecorderFileId, "inputBufferComponent", SandboxInputBufferRefFileId);
             AssertSceneOverride(scene, DebugRigReplayAdapterFileId, "runtimeController", SandboxRuntimeRefFileId);
             AssertSceneOverride(scene, DebugRigReplayAdapterFileId, "inputBufferComponent", SandboxInputBufferRefFileId);
@@ -153,7 +152,7 @@ namespace ThirdPersonSimulation.Tests
             {
                 character.AddComponent<PredictionInputHistoryTickRecorder>();
                 character.AddComponent<LocomotionSnapshotHistoryRecorder>();
-                character.AddComponent<FullBodyRollbackSimulation>();
+                character.AddComponent<CharacterFrameRollbackSimulation>();
                 LocalRollbackSynctestDebugRunner synctest = rig.AddComponent<LocalRollbackSynctestDebugRunner>();
                 LocalLatencyReconciliationDebugRunner latency = rig.AddComponent<LocalLatencyReconciliationDebugRunner>();
                 LocalRollbackSoakDebugRunner soak = rig.AddComponent<LocalRollbackSoakDebugRunner>();

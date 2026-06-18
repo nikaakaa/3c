@@ -1,0 +1,17 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="True">
+    <ui:VisualElement name="content">
+        <ui:VisualElement name="left-mixer">
+            <ui:VisualElement name="ease-in-handler" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement name="title">
+            <ui:VisualElement name="left-clip-in" picking-mode="Ignore" />
+            <ui:Label text="Label" name="clip-name" />
+            <ui:VisualElement name="right-clip-in" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement name="right-mixer">
+            <ui:VisualElement name="ease-out-handler" picking-mode="Ignore" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="bottom-line" picking-mode="Ignore" />
+    <ui:VisualElement name="draw-box" picking-mode="Ignore" />
+</ui:UXML>

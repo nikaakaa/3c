@@ -57,7 +57,7 @@
 - **AND** 这些资产 MUST NOT 替代 Locomotion 状态图配置
 
 #### Scenario: Movement 数值配置资产归属
-- **WHEN** 创建或迁移基础移动速度、加速度、起步时长或停止 fallback 时长配置
+- **WHEN** 创建或迁移基础移动速度、加速度、起步时长或停止阶段退出时长配置
 - **THEN** 资产 MUST 放在 `Assets/Configs/3C/Movement/`
 
 #### Scenario: Animancer 播放资产归属
@@ -187,7 +187,6 @@ Active specs 和新提案 MUST 不把旧 FullBody 主树、旧 Host Adapter、�
 #### Scenario: 新规格不复用旧 FullBody 主线
 
 - **GIVEN** active specs 和未归档变更被检查
-- **WHEN** 文档扫描发现 `Action/FullBody`、`StateMachine/FullBody`、`PlayerFullBodyActionController`、旧 tick adapter 或旧 presenter
+- **WHEN** 文档扫描发现 `Action/FullBody`、`StateMachine/FullBody`、旧 FullBody action controller、旧 tick adapter 或旧 presenter
 - **THEN** 每处引用必须处于历史、废弃、迁移或只读兼容语境
 - **AND** 不得作为未来动作实现或正式运行时接入路径
-

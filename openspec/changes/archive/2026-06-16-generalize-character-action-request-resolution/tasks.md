@@ -8,8 +8,8 @@
 
 ## 1. 影响面确认
 - [x] 1.1 对 `CharacterActionRequestSubmissionArbiter` 做 GitNexus impact analysis，并记录 blast radius。
-- [x] 1.2 对 `FullBodyActionRequestSubmissionProviderCollection` 做 GitNexus impact analysis，并记录 blast radius。
-- [x] 1.3 对 `FullBodyActionInputRequestBuilder` 做 GitNexus impact analysis，并记录 blast radius。
+- [x] 1.2 对 `CommittedActionRequestSubmissionProviderCollection` 做 GitNexus impact analysis，并记录 blast radius。
+- [x] 1.3 对 `CommittedActionInputRequestBuilder` 做 GitNexus impact analysis，并记录 blast radius。
 - [x] 1.4 对 `DodgeActionRequest` 与 `DodgeActionPlanner` 做 GitNexus impact analysis，并记录 blast radius。
 - [x] 1.5 如果出现 HIGH 或 CRITICAL impact，明确记录风险后继续按 proposal 实施。
 

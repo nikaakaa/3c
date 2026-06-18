@@ -1,7 +1,7 @@
 # action-interrupt-arbiter Specification
 
 ## Purpose
-定义 Action 打断仲裁的请求、上下文、优先级、抗性、force、timing window 和状态机准入边界。
+定义 Action 打断仲裁的请求、上下文、优先级、抗性、force、window facts 和状态机准入边界。
 ## Requirements
 ### Requirement: 纯数据动作打断输入
 系统 MUST 提供纯数据动作打断请求、当前状态上下文和裁决结果模型，用于在逻辑层表达“当前状态能否被某个动作请求打断”。这些模型 MUST NOT 依赖 Unity 场景对象、Animancer 运行时对象、AnimationClip、Animator、CharacterController、Input System 或 BBB 运行时类型。
@@ -20,7 +20,7 @@
 - **AND** 上下文 MUST NOT 持有 MonoBehaviour、Transform、Animator 或 Animancer 引用
 
 ### Requirement: 打断策略规则
-系统 MUST 使用显式策略描述从当前状态到目标状态的打断许可、最小优先级、时间规则和强制打断语义。没有匹配策略时，仲裁器 MUST 拒绝请求。
+系统 MUST 使用显式策略描述从当前状态到目标状态的打断许可、最小优先级、required fact id 和强制打断语义。没有匹配策略时，仲裁器 MUST 拒绝请求。
 
 #### Scenario: 无策略时拒绝
 - **GIVEN** 当前状态存在一个动作打断请求
@@ -45,12 +45,12 @@
 
 #### Scenario: 强制策略绕过抗性
 - **GIVEN** 请求匹配到一个显式强制策略
-- **AND** 请求满足策略最小优先级和时间规则
+- **AND** 请求满足策略最小优先级和 required fact 规则
 - **WHEN** 请求优先级小于或等于当前状态抗性
 - **THEN** 仲裁器 MAY 接受该请求
 
-### Requirement: 时间规则
-系统 MUST 支持基础时间规则 `Always`、`AfterElapsedTime` 和 `DuringElapsedTimeWindow`。第一版时间判断 MUST 基于当前逻辑状态 elapsed time，不得直接读取 Animancer 当前播放进度或 clip length。
+### Requirement: Fact 驱动准入规则
+系统 MUST 支持基础准入规则 `Always` 和 `RequiredFactActive` 或批准等价 fact predicate。正式时间窗口判断 MUST 基于预采样 timeline facts、window facts 或 required fact id；旧 `AfterElapsedTime`、`DuringElapsedTimeWindow` 或等价 elapsed timing 只能作为迁移输入，并 MUST 在进入正式 runtime policy 前转换为 fact 规则或报告迁移错误。仲裁器 MUST NOT 直接读取状态 elapsed time、Animancer 当前播放进度或 clip length 作为窗口来源。
 
 #### Scenario: Always 立即允许
 - **GIVEN** 请求匹配到 `Always` 策略
@@ -58,22 +58,23 @@
 - **WHEN** 仲裁器执行裁决
 - **THEN** 仲裁器 MUST 接受该请求
 
-#### Scenario: AfterElapsedTime 到时允许
-- **GIVEN** 请求匹配到 `AfterElapsedTime` 策略
-- **AND** 当前状态 elapsed time 小于策略要求时间
+#### Scenario: RequiredFactActive 命中时允许
+- **GIVEN** 请求匹配到 `RequiredFactActive` 或批准等价 fact predicate 策略
+- **AND** 当前 window facts 包含该策略要求的 fact id
+- **WHEN** 仲裁器执行裁决
+- **THEN** 仲裁器 MUST 在优先级和抗性规则满足时接受该请求
+
+#### Scenario: RequiredFactActive 缺失时拒绝
+- **GIVEN** 请求匹配到 `RequiredFactActive` 或批准等价 fact predicate 策略
+- **AND** 当前 window facts 不包含该策略要求的 fact id
 - **WHEN** 仲裁器执行裁决
 - **THEN** 仲裁器 MUST 拒绝该请求
-- **WHEN** 当前状态 elapsed time 大于或等于策略要求时间
-- **THEN** 仲裁器 MUST 接受该请求
 
-#### Scenario: DuringElapsedTimeWindow 只在窗口内允许
-- **GIVEN** 请求匹配到 `DuringElapsedTimeWindow` 策略
-- **WHEN** 当前状态 elapsed time 早于窗口开始
-- **THEN** 仲裁器 MUST 拒绝该请求
-- **WHEN** 当前状态 elapsed time 位于窗口开始和窗口结束之间
-- **THEN** 仲裁器 MUST 接受该请求
-- **WHEN** 当前状态 elapsed time 晚于窗口结束
-- **THEN** 仲裁器 MUST 拒绝该请求
+#### Scenario: 旧 elapsed timing 不进入正式仲裁
+- **GIVEN** 策略仍携带 `AfterElapsedTime`、`DuringElapsedTimeWindow` 或等价旧 elapsed timing 输入
+- **WHEN** 策略进入正式仲裁前的编译或校验阶段
+- **THEN** 系统 MUST 将其转换为 required fact 规则或报告迁移错误
+- **AND** 仲裁器 MUST NOT 直接用 elapsed time 判断窗口
 
 ### Requirement: 确定性仲裁结果
 系统 MUST 在同一帧多个候选请求中输出确定性的单一裁决。仲裁结果 MUST 说明是否接受、选择的请求、目标状态和拒绝原因。
@@ -138,21 +139,21 @@
 ### Requirement: 校验和测试
 系统 MUST 提供策略校验、自动测试和静态边界验证，证明仲裁规则可诊断、确定且不会污染现有动画与移动边界。
 
-#### Scenario: 策略校验报告非法窗口
-- **GIVEN** 一个 `DuringElapsedTimeWindow` 策略的结束时间早于开始时间
+#### Scenario: 策略校验报告旧 timing 输入
+- **GIVEN** 一个策略仍携带旧 elapsed timing 输入
 - **WHEN** 运行策略校验
-- **THEN** 校验结果 MUST 报告错误
+- **THEN** 校验结果 MUST 报告迁移诊断或错误
 
 #### Scenario: 自动测试覆盖核心规则
 - **WHEN** 运行动作打断仲裁 EditMode 测试
-- **THEN** 测试 MUST 覆盖无请求、无策略、过期、优先级不足、抗性阻挡、强制打断、三种时间规则、多请求最高优先级和同优先级稳定选择
+- **THEN** 测试 MUST 覆盖无请求、无策略、过期、优先级不足、抗性阻挡、强制打断、Always、RequiredFactActive、旧 elapsed timing 迁移诊断、多请求最高优先级和同优先级稳定选择
 
 #### Scenario: 静态验证纯逻辑边界
 - **WHEN** 检查动作打断仲裁模块源码
 - **THEN** 静态搜索 MUST 能确认该模块不引用 Animancer、AnimationClip、Animator、CharacterController、Cinemachine、Input System 或 `BBBNexus`
 
 ### Requirement: Action 运行时准入门
-系统 MUST 将 Action 请求进入 Action lifecycle 之前的准入裁决交给 `ActionInterruptArbiter` 或等价动作打断仲裁入口。优先级、抗性、force 和时间窗口 MUST 在创建 accepted resolved action 或 Action lifecycle seed 之前完成裁决。accepted Dodge MUST NOT 生成要求默认 Locomotion graph 进入 `Action.Dodge` 的状态请求事实。
+系统 MUST 将 Action 请求进入 Action lifecycle 之前的准入裁决交给 `ActionInterruptArbiter` 或等价动作打断仲裁入口。优先级、抗性、force 和 required facts MUST 在创建 accepted resolved action 或 Action lifecycle seed 之前完成裁决。accepted Dodge MUST NOT 生成要求默认 Locomotion graph 进入 `Action.Dodge` 的状态请求事实。
 
 #### Scenario: accepted decision 生成 Action lifecycle submission
 - **GIVEN** 输入缓冲中存在未过期 Dodge 请求
@@ -177,7 +178,7 @@
 - **AND** 日志 MUST NOT 依赖默认 graph target state 才能解释结果
 
 ### Requirement: 默认动作入口不得绕过仲裁器
-系统 MUST NOT 在默认 Action 入口中使用 Locomotion graph transition 条件直接裁决动作请求优先级、抗性、force 或时间窗口。默认 Locomotion graph MUST 不包含 Dodge 入口 transition；Action lifecycle MUST 只消费已经过动作仲裁入口接受的纯数据 submission。
+系统 MUST NOT 在默认 Action 入口中使用 Locomotion graph transition 条件直接裁决动作请求优先级、抗性、force 或 required facts。默认 Locomotion graph MUST 不包含 Dodge 入口 transition；Action lifecycle MUST 只消费已经过动作仲裁入口接受的纯数据 submission。
 
 #### Scenario: Dodge 入口不直接判断优先级
 - **WHEN** 默认 Corin Locomotion graph 表达基础移动 transition
@@ -198,7 +199,7 @@
 - **AND** MUST NOT 直接读取输入缓冲、ScriptableObject 策略资产或 MonoBehaviour 请求门面
 
 ### Requirement: Action 准入上下文收口
-系统 MUST 在 Action 请求进入 Action lifecycle 之前构建完整的动作仲裁上下文。该上下文 MUST 包含当前 action state、当前 action elapsed seconds、当前 action resistance 和当前 tick。priority、resistance、force 和 timing window 的裁决 MUST 只发生在动作仲裁入口，不得分散到 Locomotion graph transition 条件中。
+系统 MUST 在 Action 请求进入 Action lifecycle 之前构建完整的动作仲裁上下文。该上下文 MUST 包含当前 action state、当前 action resistance、当前 tick 和预采样 facts。priority、resistance、force 和 required facts 的裁决 MUST 只发生在动作仲裁入口，不得分散到 Locomotion graph transition 条件中。
 
 #### Scenario: Dodge 请求使用配置化 priority 和 resistance
 - **GIVEN** 默认角色绑定了 Dodge 动作配置
@@ -211,10 +212,10 @@
 #### Scenario: Locomotion graph 不裁决动作请求 priority
 - **WHEN** 默认 Action 入口处理 Dodge 请求
 - **THEN** Locomotion graph transition MUST NOT 使用 `RequestPriorityAtLeast` 或等价条件判断请求 priority
-- **AND** `ActionInterruptArbiter` MUST 是该请求 priority、resistance、force 和 timing window 的唯一准入裁决入口
+- **AND** `ActionInterruptArbiter` MUST 是该请求 priority、resistance、force 和 required facts 的唯一准入裁决入口
 
 #### Scenario: rejected 请求不生成 Action lifecycle facts
-- **GIVEN** Dodge 请求被当前 resistance、policy min priority 或 timing window 拒绝
+- **GIVEN** Dodge 请求被当前 resistance、policy min priority 或 required fact 拒绝
 - **WHEN** Action 请求门面完成本帧处理
 - **THEN** 系统 MUST NOT 生成 accepted Dodge lifecycle seed
 - **AND** Action lifecycle MUST NOT 因该 rejected 请求 active `Action.Dodge`
@@ -271,7 +272,7 @@
 #### Scenario: intent 构建候选请求
 - **GIVEN** locomotion facts 中存在有效 `LocomotionTurnBackIntent`
 - **AND** 当前状态为 `Locomotion.MoveStart` 或 `Locomotion.MoveLoop`
-- **AND** gait 和时间窗口允许 TurnBack 候选请求被提交
+- **AND** gait 和预采样 window facts 允许 TurnBack 候选请求被提交
 - **WHEN** 状态请求仲裁入口处理本帧请求
 - **THEN** 系统 MUST 构建 TurnBack 候选 request
 - **AND** 该 request MUST 携带 priority、origin tick、expire tick 和 world direction
@@ -302,7 +303,7 @@
 
 #### Scenario: 仲裁器产生 accepted/rejected 决策
 - **GIVEN** request candidate collection 提供 0..N 个候选请求
-- **WHEN** FullBody request submission arbiter 处理候选
+- **WHEN** request submission arbiter 处理候选
 - **THEN** 每个需要准入裁决的候选 MUST 经过 `ActionInterruptArbiter`
 - **AND** rejected 候选 MUST NOT 生成状态机 request fact
 - **AND** accepted 候选 MAY 参与本帧最高优先级选择
@@ -331,14 +332,14 @@
 - **AND** 系统 MUST NOT 使用 elapsed time fallback 伪造窗口事实
 
 ### Requirement: 仲裁器消费窗口事实而不拥有窗口时间
-状态请求仲裁入口 MUST 将窗口时间视为外部事实。仲裁器 MAY 使用 `StateTimelineWindowFacts` 中的 active facts、request window、min priority、resistance 和 force 参与裁决，但 MUST NOT 自己计算状态 normalized time、动画 normalized time、clip length 或窗口 start/end。新增状态请求准入 MUST 优先依赖 required fact id 与 window facts；旧 elapsed time timing rule 只作为迁移兼容。
+状态请求仲裁入口 MUST 将窗口时间视为外部事实。仲裁器 MAY 使用 `StateTimelineWindowFacts` 中的 active facts、request window、min priority、resistance 和 force 参与裁决，但 MUST NOT 自己计算状态 normalized time、动画 normalized time、clip length 或窗口 start/end。状态请求准入 MUST 依赖 required fact id 与 window facts；旧 elapsed time timing rule MUST 在进入正式仲裁前迁移为 fact 规则或报错。
 
 #### Scenario: required window 未激活时拒绝
 - **GIVEN** 请求策略要求 `attack-combo` window
 - **AND** `StateTimelineWindowFacts` 中没有 active `attack-combo` request window
 - **WHEN** 仲裁器处理该请求
 - **THEN** 裁决 MUST 为 rejected
-- **AND** 拒绝原因 MUST 能诊断为窗口未满足或 timing 未满足
+- **AND** 拒绝原因 MUST 能诊断为窗口事实未满足
 
 #### Scenario: required fact 未激活时拒绝
 - **GIVEN** 请求策略要求 `ComboInputOpen` fact
@@ -367,7 +368,7 @@
 #### Scenario: Dodge 继续走同一仲裁
 - **GIVEN** 输入缓冲中存在 Dodge 请求
 - **WHEN** 状态请求仲裁入口处理请求
-- **THEN** Dodge MUST 继续使用 priority、resistance、force 和 timing/window 规则
+- **THEN** Dodge MUST 继续使用 priority、resistance、force 和 window facts 规则
 - **AND** 系统 MUST NOT 新增 Dodge 专用状态准入路径
 
 #### Scenario: 仲裁器不接管状态机
@@ -377,7 +378,7 @@
 - **AND** MUST NOT 写入动画或运动输出
 
 ### Requirement: Window Facts 驱动时间许可
-状态请求仲裁入口 MUST 能使用 timeline window facts 判断请求是否位于允许窗口。第一版 MAY 保留 elapsed time 规则以兼容现有 ActionInterruptPolicy，但新增状态窗口判断 MUST 通过 facts 进入仲裁器，而不是让状态机 transition evaluator 或 MonoBehaviour 重复判断。
+状态请求仲裁入口 MUST 能使用 timeline window facts 判断请求是否位于允许窗口。状态窗口判断 MUST 通过 facts 进入仲裁器，而不是让状态机 transition evaluator、MonoBehaviour 或旧 elapsed timing 规则重复判断。
 
 #### Scenario: 窗口未开启时拒绝
 - **GIVEN** 当前请求匹配到需要 `TurnBackInterrupt` 或等价 window 的策略

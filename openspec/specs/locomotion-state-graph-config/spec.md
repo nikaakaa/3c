@@ -5,7 +5,7 @@
 ## Requirements
 ### Requirement: Locomotion 条件边界
 
-系统 SHALL 使用受控条件集合解析 Locomotion transition。条件 evaluator MUST 只读取 Locomotion context 中的纯数据移动 facts，不得通过任意运行时代码、任意 ScriptableObject 插件、Action 策略或 FullBody owner 执行转移逻辑。
+系统 SHALL 使用受控条件集合解析 Locomotion transition。条件 evaluator MUST 只读取 Locomotion context 中的纯数据移动 facts，不得通过任意运行时代码、任意 ScriptableObject 插件、Action 策略或 FullBody-as-owner 执行转移逻辑。
 
 #### Scenario: 移动意图条件
 - **GIVEN** 当前 Locomotion state 为 `Locomotion.Idle`
@@ -31,7 +31,7 @@
 
 ### Requirement: 状态机配置校验
 
-系统 SHALL 提供可测试的 Locomotion 配置校验能力，在运行前发现缺失状态、非法 transition、重复状态和缺失必要移动配置。校验 MUST 不依赖 Action 或 FullBody path。
+系统 SHALL 提供可测试的 Locomotion 配置校验能力，在运行前发现缺失状态、非法 transition、重复状态和缺失必要移动配置。校验 MUST 不依赖 Action 或旧 `/FullBody/...` 层级路径。
 
 #### Scenario: 缺失初始状态
 - **GIVEN** Locomotion 配置的初始状态不在节点列表中
@@ -43,8 +43,8 @@
 - **WHEN** 运行 validator
 - **THEN** validator MUST 返回错误
 
-#### Scenario: 禁止 FullBody path
-- **GIVEN** Locomotion 配置包含 `Locomotion.Idle`
+#### Scenario: 禁止旧 FullBody 层级路径
+- **GIVEN** Locomotion 配置包含 `FullBody/Locomotion/Idle`
 - **WHEN** 运行 validator
 - **THEN** validator MUST 返回错误或迁移诊断
 - **AND** 正式配置 MUST 使用 `Locomotion.Idle`
@@ -141,7 +141,7 @@ Locomotion graph MUST 能消费 Action 产生的一次性 Locomotion preemption 
 - **AND** graph MUST NOT 新增 `Action.Dodge -> Locomotion.*` transition
 
 ### Requirement: Locomotion graph 归属 Movement module
-系统 SHALL 将 Corin 默认基础移动状态图作为 Movement module 的 Locomotion 局部 graph implementation。该 graph 只表达基础移动 phase、Locomotion transition、Locomotion 条件和 Locomotion timeline facts；它 MUST NOT 作为全角色混合状态树、FullBody owner 树或 Action lifecycle 权威。
+系统 SHALL 将 Corin 默认基础移动状态图作为 Movement module 的 Locomotion 局部 graph implementation。该 graph 只表达基础移动 phase、Locomotion transition、Locomotion 条件和 Locomotion timeline facts；它 MUST NOT 作为全角色混合状态树、FullBody-as-owner 树或 Action lifecycle 权威。
 
 #### Scenario: 默认 Locomotion graph
 - **WHEN** 系统加载 Corin 默认 Locomotion graph

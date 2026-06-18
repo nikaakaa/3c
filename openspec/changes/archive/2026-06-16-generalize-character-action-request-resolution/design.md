@@ -5,9 +5,9 @@
 
 - `InputRequestBuffer` 记录 Attack、Dodge、Jump、Interact 等 buffered input request。
 - 本地回滚输入帧可以把 pressed button 写入输入缓冲。
-- `FullBodyActionRequestSubmissionProviderCollection` 已经要求通过 provider 集合扩展候选，arbiter 主流程不得手写 Dodge、TurnBack、Attack、Jump 分支。
+- `CommittedActionRequestSubmissionProviderCollection` 已经要求通过 provider 集合扩展候选，arbiter 主流程不得手写 Dodge、TurnBack、Attack、Jump 分支。
 - `CharacterFramePipeline` 已经要求 request submission 发生在统一 pipeline 内，accepted request 进入统一状态机事实。
-- Dodge 仍有专用 `DodgeActionRequest`、`DodgeActionPlanner`、`FullBodyActionInputRequestBuilder.TryBuildDodgeRequest` 和 `DodgeActionRequestSubmissionProvider`，provider 当前会直接形成 `CharacterInputRequestFact` 与 `ActionInterruptRequest`。
+- Dodge 仍有专用 `DodgeActionRequest`、`DodgeActionPlanner`、`CommittedActionInputRequestBuilder.TryBuildDodgeRequest` 和 `DodgeActionRequestSubmissionProvider`，provider 当前会直接形成 `CharacterInputRequestFact` 与 `ActionInterruptRequest`。
 
 这个设计补的是中间接口层：provider 不再直接决定 target action；resolver 才基于正式配置、当前状态和上下文，把请求解析成状态机、动画、motion 和仲裁可消费的纯数据结果。
 

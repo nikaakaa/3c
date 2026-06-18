@@ -1,7 +1,7 @@
 # screen-space-dot-transparency Specification
 
 ## Purpose
-TBD - created by archiving change add-screen-space-dot-transparency. Update Purpose after archive.
+定义屏幕空间点阵透明效果的渲染接入、屏幕固定点阵语义、cutout pass 一致性、材质参数抽象和可测试边界。
 ## Requirements
 ### Requirement: 屏幕空间点阵透明接入
 系统 MUST 在正式角色材质路径中提供屏幕空间点阵透明能力，至少覆盖当前场景使用的 Haste Diffuse 风格角色 shader，并保留项目 Toon shader 支持。该能力 MUST 只影响使用该材质和启用参数的 renderer，MUST NOT 通过全屏后处理、额外相机、独立 Renderer Feature 或第二套角色渲染路径实现。
@@ -101,4 +101,3 @@ TBD - created by archiving change add-screen-space-dot-transparency. Update Purp
 - **WHEN** 运行点阵透明相关 EditMode 测试
 - **THEN** 测试 MUST 验证默认 Profile、预览材质和 Sandbox 预览入口使用正式资产引用
 - **AND** 预览入口 MUST 默认关闭
-

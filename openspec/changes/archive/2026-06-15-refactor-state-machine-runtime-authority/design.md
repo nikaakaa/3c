@@ -34,7 +34,7 @@
   - Mitigation: 测试分两类处理：纯数据 helper 测试改用显式 runner 参数或测试构造器；runtime 行为测试改走 `PlayerFullBodyActionController.Tick`。
 - Risk: `character-config-root` 当前正式 spec 仍描述 fallback 兼容。
   - Mitigation: 本变更明确修改该 spec，兼容目标从“继续 fallback 运行”改为“序列化数据不丢失，但运行时报错并要求迁移正式配置”。
-- Risk: 活跃变更 `refactor-fullbody-frame-pipeline` 仍把双 driver 当迁移态。
+- Risk: 活跃变更 `refactor-character-frame-pipeline` 仍把双 driver 当迁移态。
   - Mitigation: 本变更依赖其 phase pipeline 产物，并把后续收尾目标推进为正式唯一 driver。
 
 ## Migration Plan

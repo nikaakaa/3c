@@ -5,15 +5,15 @@ namespace ThirdPersonAction
 {
     public readonly struct ActionCueRequest
     {
-        public ActionCueRequest(string cueId, int sourceFrame, int sourceStep)
+        public ActionCueRequest(string cueId, int sourceTick, int sourceStep)
         {
             CueId = (cueId ?? string.Empty).Trim();
-            SourceFrame = sourceFrame < 0 ? 0 : sourceFrame;
+            SourceTick = sourceTick < 0 ? 0 : sourceTick;
             SourceStep = sourceStep < 0 ? 0 : sourceStep;
         }
 
         public string CueId { get; }
-        public int SourceFrame { get; }
+        public int SourceTick { get; }
         public int SourceStep { get; }
         public bool IsValid => !string.IsNullOrWhiteSpace(CueId);
     }
@@ -24,7 +24,7 @@ namespace ThirdPersonAction
         readonly ActionCueRequest[] cueRequests;
 
         public ActionTimelineOutcome(
-            int currentFrame,
+            int localTick,
             int sourceStep,
             ActionAnimationKey animationKey,
             bool hasAnimation,
@@ -33,7 +33,7 @@ namespace ThirdPersonAction
             string[] activeWindowFactIds,
             ActionCueRequest[] cueRequests)
         {
-            CurrentFrame = currentFrame < 0 ? 0 : currentFrame;
+            LocalTick = localTick < 0 ? 0 : localTick;
             SourceStep = sourceStep < 0 ? 0 : sourceStep;
             AnimationKey = animationKey;
             HasAnimation = hasAnimation && animationKey.IsValid;
@@ -43,7 +43,7 @@ namespace ThirdPersonAction
             this.cueRequests = cueRequests ?? Array.Empty<ActionCueRequest>();
         }
 
-        public int CurrentFrame { get; }
+        public int LocalTick { get; }
         public int SourceStep { get; }
         public ActionAnimationKey AnimationKey { get; }
         public bool HasAnimation { get; }
@@ -54,10 +54,10 @@ namespace ThirdPersonAction
         public bool HasCue => CueRequests.Count > 0;
         public bool HasOutcome => HasAnimation || HasMotion || ActiveWindowFactIds.Count > 0 || HasCue;
 
-        public static ActionTimelineOutcome None(int currentFrame = 0, int sourceStep = 0)
+        public static ActionTimelineOutcome None(int localTick = 0, int sourceStep = 0)
         {
             return new ActionTimelineOutcome(
-                currentFrame,
+                localTick,
                 sourceStep,
                 default,
                 false,

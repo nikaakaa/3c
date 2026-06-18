@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonCharacterBehavior;
 using ThirdPersonCharacterConfig;
 using ThirdPersonCharacterStateMachine;
 using ThirdPersonInput;
@@ -14,20 +15,20 @@ namespace ThirdPersonAction
             CharacterConfigSO characterConfig,
             InputRequestBufferComponent inputBufferComponent,
             ILocomotionRuntimeUnityAdapter locomotionAdapter,
-            IFullBodyActionRuntimeUnityAdapter fullBodyActionAdapter,
+            ICommittedActionRuntimeUnityAdapter committedActionAdapter,
             UnityInputSystemRequestBufferAdapter requestBufferAdapter)
         {
             CharacterConfig = characterConfig;
             InputBufferComponent = inputBufferComponent;
             LocomotionAdapter = locomotionAdapter;
-            FullBodyActionAdapter = fullBodyActionAdapter;
+            CommittedActionAdapter = committedActionAdapter;
             RequestBufferAdapter = requestBufferAdapter;
         }
 
         public CharacterConfigSO CharacterConfig { get; }
         public InputRequestBufferComponent InputBufferComponent { get; }
         public ILocomotionRuntimeUnityAdapter LocomotionAdapter { get; }
-        public IFullBodyActionRuntimeUnityAdapter FullBodyActionAdapter { get; }
+        public ICommittedActionRuntimeUnityAdapter CommittedActionAdapter { get; }
         public UnityInputSystemRequestBufferAdapter RequestBufferAdapter { get; }
     }
 
@@ -35,14 +36,14 @@ namespace ThirdPersonAction
     {
         public CharacterRuntimeCoreRestoreState(
             LocomotionRuntimeModuleRestoreState locomotion,
-            FullBodyActionRestoreState fullBody)
+            CommittedActionRestoreState committedAction)
         {
             Locomotion = locomotion;
-            FullBody = fullBody;
+            CommittedAction = committedAction;
         }
 
         public LocomotionRuntimeModuleRestoreState Locomotion { get; }
-        public FullBodyActionRestoreState FullBody { get; }
+        public CommittedActionRestoreState CommittedAction { get; }
     }
 
     public sealed class CharacterRuntimeCore
@@ -51,7 +52,7 @@ namespace ThirdPersonAction
         CharacterFrameRuntimeHost frameRuntimeHost;
         CharacterFrameRuntimePortAdapter runtimePort;
         LocomotionRuntimeModule locomotionModule;
-        FullBodyActionRuntimeModule fullBodyModule;
+        CommittedActionRuntimeModule committedActionModule;
         IReadOnlyList<ActionInterruptPolicy> runtimeInterruptPolicies = Array.Empty<ActionInterruptPolicy>();
         ActionInterruptPolicySetSO cachedInterruptPolicySet;
         bool interruptPoliciesCompiled;
@@ -69,21 +70,24 @@ namespace ThirdPersonAction
         public CharacterFrameResult LastFramePipelineResult => FrameRuntimeHost.LastFrameResult;
         public ICharacterFrameRuntimePort RuntimePort => runtimePort ?? (runtimePort = new CharacterFrameRuntimePortAdapter(this));
         public LocomotionRuntimeModule LocomotionModule => locomotionModule ?? (locomotionModule = new LocomotionRuntimeModule());
-        public FullBodyActionRuntimeModule FullBodyModule => fullBodyModule ?? (fullBodyModule = new FullBodyActionRuntimeModule());
+        public CommittedActionRuntimeModule CommittedActionModule => committedActionModule ?? (committedActionModule = new CommittedActionRuntimeModule());
         public ILocomotionFrameRuntimePort LocomotionFrameRuntime => LocomotionModule.FrameRuntimePort;
         public ILocomotionOutputRuntimePort LocomotionOutputRuntime => LocomotionModule.OutputRuntimePort;
-        public CharacterStateMachineRunner StateMachine => FullBodyModule.StateMachine;
-        public CharacterStateMachineSnapshot CurrentStateSnapshot => FullBodyModule.CurrentStateSnapshot;
+        public CharacterStateMachineRunner StateMachine => CommittedActionModule.StateMachine;
+        public CharacterStateMachineSnapshot CurrentStateSnapshot => CommittedActionModule.CurrentStateSnapshot;
         public InputRequestBuffer InputRequestBuffer =>
             dependencies.InputBufferComponent != null ? dependencies.InputBufferComponent.Buffer : null;
-        public string ActiveFrameStatePath => FullBodyModule.ActiveFullBodyStatePath;
-        internal FullBodyOutputRuntime ActionOutputRuntime => FullBodyModule.OutputRuntime;
+        public string ActiveFrameStatePath => CommittedActionModule.ActiveStatePath;
+        internal CharacterFrameOutputRuntime ActionOutputRuntime => CommittedActionModule.OutputRuntime;
         internal CharacterFrameRuntimeHost FrameRuntimeHost => frameRuntimeHost ?? (frameRuntimeHost = CreateFrameRuntimeHost());
 
         public void UpdateDependencies(CharacterRuntimeCoreDependencies dependencies)
         {
             if (!ReferenceEquals(this.dependencies.CharacterConfig, dependencies.CharacterConfig))
+            {
                 ClearInterruptPolicyCache();
+                frameRuntimeHost = null;
+            }
 
             this.dependencies = dependencies;
             BindRuntimeModules();
@@ -125,23 +129,24 @@ namespace ThirdPersonAction
             return dependencies.CharacterConfig != null &&
                    dependencies.InputBufferComponent != null &&
                    dependencies.LocomotionAdapter != null &&
-                   dependencies.FullBodyActionAdapter != null &&
-                   FullBodyModule.EnsureStateMachine(dependencies.CharacterConfig.StateMachine, true);
+                   dependencies.CommittedActionAdapter != null &&
+                   TryResolveBehaviorRuntimeDefinition(out _) &&
+                   CommittedActionModule.EnsureStateMachine(dependencies.CharacterConfig.StateMachine, true);
         }
 
         public CharacterRuntimeCoreRestoreState CaptureRestoreState()
         {
             return new CharacterRuntimeCoreRestoreState(
                 LocomotionModule.CaptureRestoreState(),
-                FullBodyModule.CaptureRestoreState());
+                CommittedActionModule.CaptureRestoreState());
         }
 
         public bool Restore(in CharacterRuntimeCoreRestoreState state)
         {
             LocomotionRuntimeModuleRestoreState locomotion = state.Locomotion;
             LocomotionModule.Restore(in locomotion);
-            FullBodyActionRestoreState fullBody = state.FullBody;
-            return FullBodyModule.Restore(in fullBody) || !fullBody.Snapshot.ActiveState.IsValid;
+            CommittedActionRestoreState committedAction = state.CommittedAction;
+            return CommittedActionModule.Restore(in committedAction) || !committedAction.Snapshot.ActiveState.IsValid;
         }
 
         public bool TryResolveActionCatalog(out CharacterActionCatalog catalog)
@@ -149,7 +154,8 @@ namespace ThirdPersonAction
             CharacterActionCatalogSO asset = dependencies.CharacterConfig != null ? dependencies.CharacterConfig.ActionCatalog : null;
             if (asset != null)
             {
-                catalog = asset.ToCatalog();
+                ActionTimelineCompileContext compileContext = ActionTimelineCompileContext.FromTickRate(SimulationTickRate.Default);
+                catalog = asset.ToCatalog(in compileContext);
                 return catalog.HasCatalog;
             }
 
@@ -175,7 +181,7 @@ namespace ThirdPersonAction
             if (!TryResolveActionCatalog(out CharacterActionCatalog catalog))
                 return 0;
 
-            return FullBodyModule.ResolveCurrentActionResistance(in catalog);
+            return CommittedActionModule.ResolveCurrentActionResistance(in catalog);
         }
 
         public ActionLifecycleFrame TickActionLifecycle(
@@ -184,12 +190,12 @@ namespace ThirdPersonAction
             float deltaTime,
             int step)
         {
-            return FullBodyModule.TickActionLifecycle(in acceptedAction, in actionCatalog, deltaTime, step);
+            return CommittedActionModule.TickActionLifecycle(in acceptedAction, in actionCatalog, deltaTime, step);
         }
 
         public void CompleteActionLifecycle(in ActionMotionResolveResult result, bool requireAnimationEnded)
         {
-            FullBodyModule.CompleteActionLifecycle(in result, requireAnimationEnded);
+            CommittedActionModule.CompleteActionLifecycle(in result, requireAnimationEnded);
         }
 
         public IReadOnlyList<ActionInterruptPolicy> ResolveInterruptPolicies()
@@ -226,7 +232,7 @@ namespace ThirdPersonAction
         void BindRuntimeModules()
         {
             LocomotionModule.Bind(dependencies.LocomotionAdapter);
-            FullBodyModule.Bind(dependencies.FullBodyActionAdapter);
+            CommittedActionModule.Bind(dependencies.CommittedActionAdapter);
         }
 
         void ApplyFormalConfig()
@@ -246,10 +252,26 @@ namespace ThirdPersonAction
             interruptPoliciesCompiled = false;
         }
 
-        static CharacterFrameRuntimeHost CreateFrameRuntimeHost()
+        bool TryResolveBehaviorRuntimeDefinition(out CharacterBehaviorRuntimeDefinition definition)
         {
-            CharacterFrameSubmitterGraph submitterGraph = CharacterFrameSubmitterGraph.CreateDefault();
-            return new CharacterFrameRuntimeHost(submitterGraph, submitterGraph);
+            CharacterBehaviorRuntimeDefinitionSO asset = dependencies.CharacterConfig != null
+                ? dependencies.CharacterConfig.BehaviorRuntimeDefinition
+                : null;
+            if (asset == null)
+            {
+                definition = CharacterBehaviorRuntimeDefinition.Invalid("behavior-entry-definition-missing");
+                return false;
+            }
+
+            definition = asset.ToDefinition();
+            return definition.IsValid;
+        }
+
+        CharacterFrameRuntimeHost CreateFrameRuntimeHost()
+        {
+            TryResolveBehaviorRuntimeDefinition(out CharacterBehaviorRuntimeDefinition definition);
+            CharacterBehaviorSubmissionRunner runner = new CharacterBehaviorSubmissionRunner(definition);
+            return new CharacterFrameRuntimeHost(runner, runner);
         }
 
         static InputButtonState ToInputButtonState(PredictionButtonFrame frame)

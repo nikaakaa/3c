@@ -1,7 +1,7 @@
 # action-animation-profile Specification
 
 ## Purpose
-定义 FullBody 动作动画 Profile 的稳定 key、角色级替换边界、Locomotion 配置分离规则和动作表现校验要求。
+定义 Action 动画 Profile 的稳定 key、角色级替换边界、Locomotion 配置分离规则和动作表现校验要求。
 ## Requirements
 ### Requirement: 动作动画 Profile 数据源
 系统 MUST 提供动作动画 Profile 数据源，用于把稳定 action animation key 映射到具体动画表现。动作逻辑、状态生命周期接口和状态图或 Action 输出 MUST 只输出 action animation key，不得写死具体角色 clip、可琳动画名、Animancer transition asset 或 BBB 运行时资源路径。
@@ -12,16 +12,16 @@
 - **AND** MUST 能保存具体动画引用或等价 Animancer transition 引用
 - **AND** MAY 保存 fade 参数、播放参数和调试名
 
-#### Scenario: Profile 不是 FullBody 状态机
+#### Scenario: Profile 不是行为状态机
 - **WHEN** 动作动画 Profile 配置 `Action.Dodge.Directional` 或 `Action.Dodge.Backstep`
 - **THEN** Profile MUST 只表达动作语义 key 到动画表现资源的映射
 - **AND** Profile MAY 使用直接 clip、Animancer transition 或等价 transition asset
-- **AND** Profile MUST NOT 替代 FullBody 主行为域中的状态注册、进入条件、退出条件或运动权威
+- **AND** Profile MUST NOT 替代 Action lifecycle、行为图状态注册、进入条件、退出条件或运动权威
 
 #### Scenario: Profile 通过动画绑定入口接入
 - **WHEN** 系统提供 Action 动画绑定集或等价动画配置入口
 - **THEN** 动作动画 Profile MAY 作为该绑定入口的子配置或引用存在
-- **AND** 设计者 SHOULD 能通过 FullBody 主调度入口追踪到 Directional 和 Backstep 的动画表现资源
+- **AND** 设计者 SHOULD 能通过角色级 Action 动画绑定入口追踪到 Directional 和 Backstep 的动画表现资源
 - **AND** 动作动画 Profile MUST NOT 被要求成为和动作逻辑入口、动画绑定入口无绑定关系的游离配置
 
 #### Scenario: 状态生命周期不写死 clip
@@ -31,19 +31,19 @@
 - **AND** 生命周期实现 MUST NOT 直接引用具体 Animancer transition asset
 
 #### Scenario: 动作逻辑不写死 clip
-- **WHEN** Shift FullBody 动作请求动画表现
+- **WHEN** Shift Dodge 请求动画表现
 - **THEN** 动作逻辑 MUST 输出 `Action.Dodge.Directional` 或 `Action.Dodge.Backstep` key
 - **AND** 动作逻辑 MUST NOT 直接引用具体 `AnimationClip`
 - **AND** 动作逻辑 MUST NOT 直接引用具体角色动画资源名
 
 #### Scenario: 角色可替换动画套件
-- **GIVEN** 同一个 Shift FullBody 动作逻辑和状态生命周期输出
+- **GIVEN** 同一个 Shift Dodge 动作逻辑和 Action lifecycle 输出
 - **WHEN** 设计者替换动作动画 Profile 中的 Directional 或 Backstep 动画引用
 - **THEN** 系统 MUST 使用新的动画表现
 - **AND** 不需要修改动作逻辑代码或状态机资产
 
-### Requirement: Shift FullBody 动画 Key
-系统 MUST 为 Shift FullBody 动作第一版提供两个稳定动作动画 key：方向冲刺和后闪。key MUST 表达动作语义，而不是表达具体角色、clip 文件名或导入来源。
+### Requirement: Action.Dodge 动画 Key
+系统 MUST 为 Shift Dodge / `Action.Dodge` 第一版提供两个稳定动作动画 key：方向冲刺和后闪。key MUST 表达动作语义，而不是表达具体角色、clip 文件名或导入来源。
 
 #### Scenario: 方向冲刺 key
 - **WHEN** 动作变体为 `Directional`
@@ -79,7 +79,7 @@
 - **THEN** 校验结果 MUST 包含错误
 
 ### Requirement: 动作动画 Presenter 边界
-系统 MUST 通过统一 FullBody Animancer 表现入口消费动作动画命令并播放动画。该表现入口 MUST 只负责动画表现和只读播放进度，不得决定动作是否允许、不得切换业务状态、不得执行位移。
+系统 MUST 通过正式 Animancer 表现入口或等价 Action animation presenter 消费动作动画命令并播放动画。该表现入口 MUST 只负责动画表现和只读播放进度，不得决定动作是否允许、不得切换业务状态、不得执行位移。
 
 #### Scenario: Presenter 播放 Profile 动画
 - **GIVEN** 动作动画命令包含 `Action.Dodge.Directional`
@@ -114,7 +114,7 @@
 - **AND** MUST NOT 要求存在动作动画 Profile
 
 #### Scenario: 动作动画 Profile 不接管 Locomotion
-- **WHEN** 动作动画 Profile 配置 Shift FullBody 动画
+- **WHEN** 动作动画 Profile 配置 Shift Dodge 动画
 - **THEN** Profile MUST NOT 定义 `Idle / MoveStart / MoveLoop / MoveStop` 状态图规则
 - **AND** MUST NOT 决定 `MoveStop -> MoveStart` 或 `MoveStop -> Idle`
 
@@ -160,8 +160,8 @@
 系统 MUST 让 Corin prefab 的 Action 动画表现绑定通过正式 animation presenter 路径解析。Prefab 迁移 MUST NOT 新增第二个 Action animation presenter 或绕过 Character output apply 阶段。
 
 #### Scenario: Action presenter 引用保持唯一
-- **WHEN** 自动校验 Corin prefab 上的 `PlayerFullBodyActionController`
-- **THEN** `animationPresenterBehaviour` MUST 指向正式 action presenter 或已审批的统一 presenter
+- **WHEN** 自动校验 Corin prefab 上的 `CharacterFrameRuntimeController` 与 Action Unity-facing adapters
+- **THEN** Action animation presenter dependency MUST 指向正式 action presenter 或已审批的统一 presenter
 - **AND** prefab MUST NOT 同时启用两个正式 action animation presenter
 - **AND** Action animation 播放 MUST 仍由 Character frame output 阶段提交
 
@@ -213,4 +213,3 @@ Action 动画重播语义 MUST 不改变动作动画 Profile 的配置职责。P
 - **WHEN** Action 动画播放意图身份缺失或无效
 - **THEN** 系统 MUST 通过正式错误、拒绝播放或测试失败暴露问题
 - **AND** MUST NOT 自动查找备用 Profile、备用 Presenter 或代码内置动画 key 继续运行
-

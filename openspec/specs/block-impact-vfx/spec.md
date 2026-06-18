@@ -1,7 +1,7 @@
 # block-impact-vfx Specification
 
 ## Purpose
-TBD - created by archiving change refactor-block-impact-vfx-depth. Update Purpose after archive.
+定义格挡冲击 VFX 的轻量三层表现、后处理主路径、素材配置、Prefab 分层、生命周期控制和纯表现层播放请求边界。
 ## Requirements
 ### Requirement: 格挡冲击必须使用轻量三层表现
 系统 MUST 将 `BlockImpactVfx` 表现收缩为中心 HDR 核心、屏幕空间横向强光和方向火花三类基础层。每一层 MUST 能通过正式 Profile 或播放请求启停，且 MUST 继续使用现有 `BlockImpactVfx` Prefab 和播放入口。
@@ -109,7 +109,7 @@ TBD - created by archiving change refactor-block-impact-vfx-depth. Update Purpos
 #### Scenario: 代码实例化后可播放
 - **WHEN** 外部代码实例化 `BlockImpactVfx` Prefab 并提交播放请求
 - **THEN** Prefab MUST 根据请求中的命中点、方向、强度和持续时间播放一次特效
-- **AND** Prefab MUST NOT 修改 FullBody owner、Locomotion phase、Action tracker、伤害结果或输入缓冲
+- **AND** Prefab MUST NOT 修改 body claim、slot owner、Locomotion phase、Action tracker、伤害结果或输入缓冲
 
 ### Requirement: 纯表现层播放请求
 系统 MUST 使用纯表现层请求描述格挡冲击播放输入，包括世界命中点、攻击方向、屏幕中心、强度、持续时间、随机种子和表现层开关。请求 MUST NOT 携带 `GameObject`、`Transform`、`Collider`、Animancer 对象、状态机对象或场景实例引用作为必需输入。
@@ -213,4 +213,3 @@ TBD - created by archiving change refactor-block-impact-vfx-depth. Update Purpos
 - **WHEN** 用户在 Sandbox 中触发格挡冲击预览
 - **THEN** 用户 MUST 能看到中心强爆闪、方向性火花、短弧线或冲击环以及快速消失的光带
 - **AND** 用户将强度调为 0 后 MUST 能确认 Prefab 不再产生可见冲击效果
-

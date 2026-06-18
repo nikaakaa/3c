@@ -29,7 +29,7 @@
   - `runtime-diagnostic-logging`
 - Affected code:
   - `Assets/Scripts/Character/Action/FullBody/Runtime/FullBodySubmissionBuilder.cs`
-  - `Assets/Scripts/Character/Action/FullBody/Solver/FullBodyActionRequestSubmissionResolver.cs`
+  - `Assets/Scripts/Character/Action/FullBody/Solver/CommittedActionRequestSubmissionResolver.cs`
   - `Assets/Scripts/Character/StateMachine/Solver/Runtime/CharacterStateMachineRunner.cs`
   - `Assets/Scripts/Character/StateMachine/Solver/Timeline/*`
   - `Assets/Scripts/Character/StateMachine/Solver/Transition/*`

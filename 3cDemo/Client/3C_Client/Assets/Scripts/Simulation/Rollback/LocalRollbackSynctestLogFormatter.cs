@@ -83,16 +83,23 @@ namespace ThirdPersonSimulation
             var action = snapshot.RuntimeBlackboard.Action;
             var animation = snapshot.RuntimeBlackboard.Animation;
             var motion = snapshot.MotionExecutorState;
+            var locomotionRuntime = snapshot.LocomotionRuntimeState;
             return
                 $"pos={Format(snapshot.Position)} yaw={snapshot.Yaw:F3} cameraBasisYaw={snapshot.CameraBasisState.Yaw:F3} " +
                 $"world={Format(snapshot.CurrentWorldDirection)} phase={snapshot.LocomotionPhase} gait={snapshot.LocomotionGait} " +
                 $"animKey={snapshot.AnimationKey} animNorm={snapshot.AnimationNormalizedTime:F6} " +
+                $"prevMotion={locomotionRuntime.HasPreviousMotionPlaybackProgress}/{Format(locomotionRuntime.PreviousMotionPlaybackProgress)} " +
                 $"motionSpeed={motion.CurrentSpeed:F3} motionLast={Format(motion.LastWorldDirection)} motionY={motion.VerticalVelocity:F3} motionRoot={motion.HasRootPose}/{Format(motion.RootPosition)}/{motion.RootYaw:F3} " +
                 $"bbWorld={Format(locomotion.WorldDirection)} bbMove={locomotion.HasMoveIntent}/{locomotion.MoveStrength:F3} bbStep={locomotion.SourceStep} " +
                 $"bbAction={action.Active}/{action.State}/{action.HasMovement}/{Format(action.WorldDirection)}/{action.PlanarDistance:F3}/step={action.SourceStep} " +
                 $"bbActionAnim={animation.ActionKey}/{animation.ActionNormalizedTime:F6}/valid={animation.ActionHasValidPlayback}/ended={animation.ActionIsEnded}/name={animation.ActionAnimationName} " +
                 $"bbFoot={Format(animation.CurrentLocomotionFootPhase)} bbExitFoot={Format(animation.LastLocomotionExitFootPhase)} " +
                 $"bbAnim={animation.LocomotionProgress.Phase}/{animation.LocomotionProgress.AliasKey}/{animation.LocomotionProgress.NormalizedTime:F6}/valid={animation.LocomotionProgress.HasValidPlayback}/ended={animation.LocomotionProgress.IsEnded}/name={animation.LocomotionAnimationName}/step={animation.SourceStep}";
+        }
+
+        static string Format(AnimationPhasePlaybackProgress progress)
+        {
+            return $"{progress.Phase}/{progress.AliasKey}/{progress.NormalizedTime:F6}/valid={progress.HasValidPlayback}/ended={progress.IsEnded}";
         }
 
         static string Format(LocomotionFootPhaseSample sample)

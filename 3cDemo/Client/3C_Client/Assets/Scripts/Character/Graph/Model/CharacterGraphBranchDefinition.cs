@@ -140,6 +140,29 @@ namespace ThirdPersonCharacterGraph
         }
     }
 
+    public readonly struct ActionBranchDefinition
+    {
+        public ActionBranchDefinition(CharacterGraphBranchDefinition branch)
+        {
+            Branch = branch.Kind == CharacterGraphBranchKind.Action
+                ? branch
+                : CharacterGraphBranchDefinition.Empty(CharacterGraphBranchKind.Action);
+        }
+
+        public CharacterGraphBranchDefinition Branch { get; }
+        public bool IsDefined => Branch.IsDefined;
+        public bool CanEvaluate => Branch.CanEvaluate;
+
+        public static ActionBranchDefinition Empty =>
+            new ActionBranchDefinition(CharacterGraphBranchDefinition.Empty(CharacterGraphBranchKind.Action));
+
+        public static ActionBranchDefinition Define(string branchId, bool enabled = true)
+        {
+            return new ActionBranchDefinition(
+                CharacterGraphBranchDefinition.Define(CharacterGraphBranchKind.Action, branchId, enabled));
+        }
+    }
+
     public readonly struct UpperBodyBranchDefinition
     {
         public UpperBodyBranchDefinition(CharacterGraphBranchDefinition branch)

@@ -6,7 +6,7 @@
 - [x] 1.3 搜索当前代码与资产中的旧 ActionSet 半成品、旧 Dodge 平铺配置和旧根配置 Dodge 字段。
 - [x] 1.4 对 `CharacterConfigSO` 运行 GitNexus impact analysis，并记录 direct callers、affected processes 和 risk。
 - [x] 1.5 对 `CharacterActionRequestResolution` 运行 GitNexus impact analysis，并记录 direct callers、affected processes 和 risk。
-- [x] 1.6 对 `FullBodyActionRequestSubmissionProviderCollection` 运行 GitNexus impact analysis，并记录 direct callers、affected processes 和 risk。
+- [x] 1.6 对 `CommittedActionRequestSubmissionProviderCollection` 运行 GitNexus impact analysis，并记录 direct callers、affected processes 和 risk。
 
 ## 2. Action Catalog 数据合同
 - [x] 2.1 定义角色动作目录 runtime model，按稳定 `ActionStateId` 查询动作定义。

@@ -3,7 +3,7 @@
 
 本 change 实施前，FullBody 运行链路没有调用 `ActionInterruptArbiter`，Dodge 入口依赖状态机 transition 的 `RequestPriorityAtLeast`。这会让“动作仲裁”和“状态机 transition 条件”形成两套动作准入规则。
 
-本 change 实施后，默认 Dodge 动作准入已经收束为一条主线：`InputRequestBuffer -> FullBodyActionInputRequestBuilder.TryBuildDodgeRequest -> DodgeActionRequest -> FullBodyActionInterruptGate -> ActionInterruptArbiter -> accepted CharacterInputRequestFact -> unified CharacterStateMachine`。状态机只消费已被仲裁接受的动作请求事实，默认 `Locomotion/* -> Dodge` 入口不再使用 `RequestPriorityAtLeast`。
+本 change 实施后，默认 Dodge 动作准入已经收束为一条主线：`InputRequestBuffer -> CommittedActionInputRequestBuilder.TryBuildDodgeRequest -> DodgeActionRequest -> FullBodyActionInterruptGate -> ActionInterruptArbiter -> accepted CharacterInputRequestFact -> unified CharacterStateMachine`。状态机只消费已被仲裁接受的动作请求事实，默认 `Locomotion/* -> Dodge` 入口不再使用 `RequestPriorityAtLeast`。
 
 `RequestPriorityAtLeast` 仍作为迁移期通用状态机条件保留，但不属于默认 FullBody Action 准入主线；后续不能把它重新加回默认 Dodge、Attack、HitReact、Death 等动作入口来裁决 priority、resistance、force 或 timing window。
 

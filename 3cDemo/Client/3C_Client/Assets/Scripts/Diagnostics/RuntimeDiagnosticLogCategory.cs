@@ -2,7 +2,7 @@
  {
      public enum RuntimeDiagnosticLogCategory
      {
-         FullBody = 0,
+         CharacterFrame = 0,
          Locomotion = 1,
          Action = 2,
          Camera = 3,

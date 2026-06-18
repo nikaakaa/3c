@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using NUnit.Framework;
 using System.Collections.Generic;
+using System.IO;
 using ThirdPersonAction;
 using ThirdPersonCharacterConfig;
 using ThirdPersonCharacterStateMachine;
@@ -89,7 +90,8 @@ namespace Tests.Editor
             Assert.NotNull(config);
             Assert.NotNull(config.ActionCatalog);
             Assert.False(config.ValidateActionCatalog().HasErrors);
-            Assert.True(config.ActionCatalog.ToCatalog().TryGetDodgeDefinition(out CharacterActionDefinition definition));
+            ActionTimelineCompileContext compileContext = CompileContext();
+            Assert.True(config.ActionCatalog.ToCatalog(in compileContext).TryGetDodgeDefinition(out CharacterActionDefinition definition));
             Assert.AreEqual(ActionStateIds.Dodge, definition.ActionState);
         }
 
@@ -100,7 +102,8 @@ namespace Tests.Editor
             CharacterActionDefinitionSO second = CreateDodgeDefinitionAsset(35, 25);
             CharacterActionCatalogSO catalog = CreateCatalogAsset(first, second);
 
-            CharacterActionCatalogValidationResult result = catalog.Validate();
+            ActionTimelineCompileContext compileContext = CompileContext();
+            CharacterActionCatalogValidationResult result = catalog.Validate(in compileContext);
 
             Assert.True(result.HasErrors);
             Assert.That(result.DescribeErrors(), Does.Contain("duplicates action id 'Action.Dodge'"));
@@ -115,7 +118,8 @@ namespace Tests.Editor
         {
             CharacterActionCatalogSO catalog = CreateCatalogAsset();
 
-            CharacterActionCatalogValidationResult result = catalog.Validate();
+            ActionTimelineCompileContext compileContext = CompileContext();
+            CharacterActionCatalogValidationResult result = catalog.Validate(in compileContext);
 
             Assert.True(result.HasErrors);
             Assert.That(result.DescribeErrors(), Does.Contain("missing Action.Dodge definition"));
@@ -212,6 +216,18 @@ namespace Tests.Editor
             }
         }
 
+        [Test]
+        public void RequestBufferAdapterUsesTickDrivenButtonSamplingAuthority()
+        {
+            string sourcePath = Path.Combine(Application.dataPath, "Scripts/Input/Runtime/UnityInputSystemRequestBufferAdapter.cs");
+            string source = File.ReadAllText(sourcePath).Replace("\r\n", "\n");
+
+            Assert.That(source, Does.Contain("void Update()\n        {\n            if (!advanceStepOnUpdate)\n                return;\n\n            Tick();\n        }"));
+            Assert.That(source, Does.Contain("dodge = ReadCurrentDodgeButtonFrame();"));
+            Assert.That(source, Does.Contain("PredictionButtonFrame frame = ReadCurrentDodgeButtonFrame();"));
+            Assert.That(source, Does.Contain("previousDodgeHeld = frame.Held;"));
+        }
+
         static ActionInterruptPolicySetSO CreateDodgePolicyAsset(int minPriority)
         {
             ActionInterruptPolicySetSO asset = ScriptableObject.CreateInstance<ActionInterruptPolicySetSO>();
@@ -264,7 +280,116 @@ namespace Tests.Editor
                 2.75f,
                 false,
                 ActionAnimationKeys.DodgeBackstep.Value));
+            SetPrivateField(asset, "committedActionBranch", CreateDodgeBranchAuthoring());
             return asset;
+        }
+
+        static CommittedActionBranchAuthoring CreateDodgeBranchAuthoring()
+        {
+            return new CommittedActionBranchAuthoring(
+                1,
+                true,
+                "action.dodge",
+                "selector.dodge",
+                BodyOccupancyKind.FullBody,
+                CharacterFrameOutputChannel.Motion | CharacterFrameOutputChannel.Animation,
+                new[]
+                {
+                    CommittedActionBranchNodeAuthoring.Selector(
+                        "selector.dodge",
+                        new[] { "condition.directional", "condition.backstep" },
+                        Vector2.zero),
+                    CommittedActionBranchNodeAuthoring.ConditionNode(
+                        "condition.directional",
+                        new CommittedActionBranchConditionAuthoring(
+                            CommittedActionConditionKind.ActionVariantEquals,
+                            CharacterStateVariant.Directional,
+                            false),
+                        new[] { "timeline.directional" },
+                        Vector2.zero),
+                    CommittedActionBranchNodeAuthoring.ConditionNode(
+                        "condition.backstep",
+                        new CommittedActionBranchConditionAuthoring(
+                            CommittedActionConditionKind.ActionVariantEquals,
+                            CharacterStateVariant.Backstep,
+                            false),
+                        new[] { "timeline.backstep" },
+                        Vector2.zero),
+                    CommittedActionBranchNodeAuthoring.TimelineNode(
+                        "timeline.directional",
+                        CreateDodgeTimeline(
+                            "timeline.directional",
+                            CharacterStateVariant.Directional,
+                            ActionAnimationKeys.DodgeDirectional.Value,
+                            0.42f,
+                            5.5f,
+                            true,
+                            true),
+                        Vector2.zero),
+                    CommittedActionBranchNodeAuthoring.TimelineNode(
+                        "timeline.backstep",
+                        CreateDodgeTimeline(
+                            "timeline.backstep",
+                            CharacterStateVariant.Backstep,
+                            ActionAnimationKeys.DodgeBackstep.Value,
+                            0.61f,
+                            2.75f,
+                            false,
+                            false),
+                        Vector2.zero)
+                });
+        }
+
+        static CommittedActionBranchTimelineAuthoring CreateDodgeTimeline(
+            string timelineNodeId,
+            CharacterStateVariant variant,
+            string animationKey,
+            float duration,
+            float distance,
+            bool rotateToDirection,
+            bool setRunLatch)
+        {
+            return new CommittedActionBranchTimelineAuthoring(
+                true,
+                "action.dodge",
+                timelineNodeId,
+                duration,
+                BodyOccupancyKind.FullBody,
+                CharacterFrameOutputChannel.Motion | CharacterFrameOutputChannel.Animation,
+                new[]
+                {
+                    new ActionTimelineTrackAuthoring(
+                        ActionTimelineTrackKind.Animation,
+                        new[]
+                        {
+                            new ActionTimelineClipAuthoring(
+                                ActionTimelineClipKind.AnimationKey,
+                                0f,
+                                duration,
+                                ActionTimelineClipPayloadAuthoring.Animation(animationKey))
+                        }),
+                    new ActionTimelineTrackAuthoring(
+                        ActionTimelineTrackKind.Motion,
+                        new[]
+                        {
+                            new ActionTimelineClipAuthoring(
+                                ActionTimelineClipKind.Motion,
+                                0f,
+                                duration,
+                                ActionTimelineClipPayloadAuthoring.Motion(
+                                    CharacterStateIds.Dodge.Value,
+                                    variant,
+                                    duration,
+                                    distance,
+                                    rotateToDirection,
+                                    setRunLatch))
+                        })
+                });
+        }
+
+        static ActionTimelineCompileContext CompileContext()
+        {
+            return new ActionTimelineCompileContext(1f / 60f);
         }
 
         static void SetPrivateField(object target, string fieldName, object value)

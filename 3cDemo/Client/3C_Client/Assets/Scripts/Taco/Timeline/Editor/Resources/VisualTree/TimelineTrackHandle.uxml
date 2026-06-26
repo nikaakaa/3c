@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Addon/Taco/Timeline/Editor/Resources/StyleSheet/TimelineTrackHandle.uss?fileID=7433441132597879392&amp;guid=949ef23287cfb554abbff1a1b8888aaf&amp;type=3#TimelineTrackHandle" />
+    <ui:TextField placeholder-text="filler text" name="name-field" />
+    <ui:VisualElement name="icon" />
+</ui:UXML>

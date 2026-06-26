@@ -1,15 +1,15 @@
 {
     "Export": {
         "NetworkProtocolDirectory": {
-            "Value": "/Users/fantasy/Code/Git/Fantasy/Examples/Config/NetworkProtocol ",
+            "Value": "D:/Unity_Project_1/3C/3cDemo/Tools/NetworkProtocol",
             "Comment": "ProtoBuf文件所在的文件夹位置"
         },
         "NetworkProtocolServerDirectory": {
-            "Value": "/Users/fantasy/Code/Git/Fantasy/Examples/Server/Entity/Generate/NetworkProtocol",
+            "Value": "D:/Unity_Project_1/3C/3cDemo/Server/Entity/Generate/NetworkProtocol",
             "Comment": "ProtoBuf生成到服务端的文件夹位置"
         },
         "NetworkProtocolClientDirectory": {
-            "Value": "/Users/fantasy/Code/Git/Fantasy/Examples/Client/Unity/Assets/Scripts/Hotfix/Generate/NetworkProtocol",
+            "Value": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets/Generated/NetworkProtocol",
             "Comment": "ProtoBuf生成到客户端的文件夹位置"
         }
     }

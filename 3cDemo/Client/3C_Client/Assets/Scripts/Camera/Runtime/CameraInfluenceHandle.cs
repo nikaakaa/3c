@@ -21,11 +21,6 @@ namespace ThirdPersonCamera
                 CurrentRequest = request;
         }
 
-        public void Clear()
-        {
-            Set(default);
-        }
-
         public void Dispose()
         {
             if (disposed)

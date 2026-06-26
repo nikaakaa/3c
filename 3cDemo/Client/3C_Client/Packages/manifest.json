@@ -1,8 +1,23 @@
 {
+  "scopedRegistries": [
+    {
+      "name": "OpenUPM",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.fantasy",
+        "com.fantasy.unity"
+      ]
+    }
+  ],
   "dependencies": {
+    "com.alex.tengine": "file:com.alex.tengine",
+    "com.code-philosophy.hybridclr": "https://gitee.com/focus-creative-games/hybridclr_unity.git",
     "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
+    "com.cysharp.unitask": "file:UniTask",
+    "com.fantasy.unity": "2026.0.1020",
     "com.inspiaaa.unityhfsm": "https://github.com/Inspiaaa/UnityHFSM.git#upm",
     "com.janooba.kcc": "file:com.janooba.kcc",
+    "com.tuyoogame.yooasset": "file:YooAsset",
     "com.unity.burst": "1.8.29",
     "com.unity.cinemachine": "2.10.7",
     "com.unity.collab-proxy": "2.12.4",
@@ -12,6 +27,7 @@
     "com.unity.ide.vscode": "1.2.5",
     "com.unity.inputsystem": "1.14.2",
     "com.unity.mathematics": "1.3.3",
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
     "com.unity.render-pipelines.universal": "14.0.12",
     "com.unity.test-framework": "1.1.33",
     "com.unity.textmeshpro": "3.0.7",

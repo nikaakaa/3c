@@ -1,0 +1,20 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Addon/Taco/Timeline/Editor/Resources/StyleSheet/TimelineFieldView.uss?fileID=7433441132597879392&amp;guid=9c8d4116144c08b4e91da952e3e92561&amp;type=3#TimelineFieldView" />
+    <Taco.Editor.SplitView fixed-pane-index="1" fixed-pane-initial-dimension="200">
+        <ui:ScrollView vertical-scroller-visibility="Hidden" name="track-scroll">
+            <ui:VisualElement name="field-content">
+                <ui:VisualElement name="track-field" />
+                <ui:VisualElement name="marker-field">
+                    <ui:VisualElement name="time-locater">
+                        <ui:VisualElement name="time-locater-icon" />
+                        <ui:Label text="0" name="time-locater-frame-label" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="draw-frame-line-field" picking-mode="Ignore" />
+            </ui:VisualElement>
+        </ui:ScrollView>
+        <ui:ScrollView horizontal-scroller-visibility="Hidden" name="inspector-scroll">
+            <ui:VisualElement name="clip-inspector" style="flex-grow: 1;" />
+        </ui:ScrollView>
+    </Taco.Editor.SplitView>
+</ui:UXML>

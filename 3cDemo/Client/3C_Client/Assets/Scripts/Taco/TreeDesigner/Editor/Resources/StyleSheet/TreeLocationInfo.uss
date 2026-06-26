@@ -1,0 +1,62 @@
+#root {
+    flex-direction: row;
+}
+
+#root:hover {
+    background-color: rgba(78, 78, 78, 255);
+}
+
+#tree-name {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    -unity-text-align: middle-left;
+    min-width: 150px;
+}
+
+#tree-path {
+    margin-left: 5px;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    -unity-text-align: middle-left;
+}
+
+#lock-button {
+    width: 20px;
+    height: 20px;
+    background-image: resource('Icon/d_Favorite@2x');
+    -unity-background-image-tint-color: rgba(155, 155, 155, 255);
+    flex-shrink: 0;
+}
+
+#lock-button:hover {
+    -unity-background-image-tint-color: rgba(255, 255, 255, 255);
+}
+
+.locked #lock-button {
+    -unity-background-image-tint-color: rgba(255, 255, 255, 255);
+}
+
+#open-button {
+    background-image: resource('Icon/d_CustomTool@2x');
+    width: 20px;
+    height: 20px;
+    -unity-background-image-tint-color: rgba(155, 155, 155, 255);
+    flex-shrink: 0;
+}
+
+#open-button:hover {
+    width: 20px;
+    height: 20px;
+    -unity-background-image-tint-color: rgba(255, 255, 255, 255);
+}

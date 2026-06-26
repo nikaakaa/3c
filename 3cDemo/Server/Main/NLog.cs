@@ -24,27 +24,40 @@ namespace Fantasy
         /// 初始化方法
         /// </summary>
         /// <param name="processMode"></param>
+        public void Initialize()
+        {
+        }
+
+        public void Initialize(string name, ProcessMode processMode)
+        {
+            Initialize(processMode);
+        }
+
         public void Initialize(ProcessMode processMode)
         {
+            var configuration = LogManager.Configuration;
+            if (configuration == null)
+                return;
+
             // 非Benchmark模式、根据不同的运行模式来选择日志的方式
             switch (processMode)
             {
                 case ProcessMode.Develop:
                 {
-                    LogManager.Configuration.RemoveRuleByName("ServerDebug");
-                    LogManager.Configuration.RemoveRuleByName("ServerTrace");
-                    LogManager.Configuration.RemoveRuleByName("ServerInfo");
-                    LogManager.Configuration.RemoveRuleByName("ServerWarn");
-                    LogManager.Configuration.RemoveRuleByName("ServerError");
+                    configuration.RemoveRuleByName("ServerDebug");
+                    configuration.RemoveRuleByName("ServerTrace");
+                    configuration.RemoveRuleByName("ServerInfo");
+                    configuration.RemoveRuleByName("ServerWarn");
+                    configuration.RemoveRuleByName("ServerError");
                     break;
                 }
                 case ProcessMode.Release:
                 {
-                    LogManager.Configuration.RemoveRuleByName("ConsoleTrace");
-                    LogManager.Configuration.RemoveRuleByName("ConsoleDebug");
-                    LogManager.Configuration.RemoveRuleByName("ConsoleInfo");
-                    LogManager.Configuration.RemoveRuleByName("ConsoleWarn");
-                    LogManager.Configuration.RemoveRuleByName("ConsoleError");
+                    configuration.RemoveRuleByName("ConsoleTrace");
+                    configuration.RemoveRuleByName("ConsoleDebug");
+                    configuration.RemoveRuleByName("ConsoleInfo");
+                    configuration.RemoveRuleByName("ConsoleWarn");
+                    configuration.RemoveRuleByName("ConsoleError");
                     break;
                 }
             }
@@ -93,6 +106,31 @@ namespace Fantasy
         public void Error(string message)
         {
             _logger.Error(message);
+        }
+
+        public void Trace(string sceneName, string message)
+        {
+            _logger.Trace("[{0}] {1}", sceneName, message);
+        }
+
+        public void Warning(string sceneName, string message)
+        {
+            _logger.Warn("[{0}] {1}", sceneName, message);
+        }
+
+        public void Info(string sceneName, string message)
+        {
+            _logger.Info("[{0}] {1}", sceneName, message);
+        }
+
+        public void Debug(string sceneName, string message)
+        {
+            _logger.Debug("[{0}] {1}", sceneName, message);
+        }
+
+        public void Error(string sceneName, string message)
+        {
+            _logger.Error("[{0}] {1}", sceneName, message);
         }
 
         /// <summary>
@@ -152,6 +190,31 @@ namespace Fantasy
         public void Error(string message, params object[] args)
         {
             _logger.Error(message, args);
+        }
+
+        public void Trace(string sceneName, string message, params object[] args)
+        {
+            _logger.Trace("[{0}] {1}", sceneName, string.Format(message, args));
+        }
+
+        public void Warning(string sceneName, string message, params object[] args)
+        {
+            _logger.Warn("[{0}] {1}", sceneName, string.Format(message, args));
+        }
+
+        public void Info(string sceneName, string message, params object[] args)
+        {
+            _logger.Info("[{0}] {1}", sceneName, string.Format(message, args));
+        }
+
+        public void Debug(string sceneName, string message, params object[] args)
+        {
+            _logger.Debug("[{0}] {1}", sceneName, string.Format(message, args));
+        }
+
+        public void Error(string sceneName, string message, params object[] args)
+        {
+            _logger.Error("[{0}] {1}", sceneName, string.Format(message, args));
         }
 
         /// <summary>

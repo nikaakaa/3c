@@ -1,0 +1,18 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Addon/Taco/Timeline/Editor/Resources/StyleSheet/TimelineClipView.uss?fileID=7433441132597879392&amp;guid=2fb4391c3a681f64eabd49ec9fe8e6d2&amp;type=3#TimelineClipView" />
+    <ui:VisualElement name="content">
+        <ui:VisualElement name="left-mixer">
+            <ui:VisualElement name="ease-in-handler" style="position: absolute; background-image: resource(&apos;Icon/d_tab_next@2x&apos;); width: 12px; height: 12px; right: 6px; top: 8px; -unity-background-scale-mode: scale-and-crop; margin-top: 1px;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="title">
+            <ui:VisualElement name="left-clip-in" picking-mode="Ignore" />
+            <ui:Label text="Label" name="clip-name" />
+            <ui:VisualElement name="right-clip-in" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement name="right-mixer">
+            <ui:VisualElement name="ease-out-handler" style="position: absolute; background-image: resource(&apos;Icon/d_tab_prev@2x&apos;); width: 12px; height: 12px; -unity-background-scale-mode: scale-and-crop; margin-top: 1px; top: 8px; left: 6px;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="bottom-line" picking-mode="Ignore" />
+    <ui:VisualElement name="draw-box" picking-mode="Ignore" />
+</ui:UXML>

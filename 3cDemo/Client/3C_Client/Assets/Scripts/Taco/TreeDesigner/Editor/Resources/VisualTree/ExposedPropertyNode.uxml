@@ -1,0 +1,33 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Addon/Taco/TreeDesigner/Editor/Resources/StyleSheet/BaseNode.uss?fileID=7433441132597879392&amp;guid=f24502238ee8ac5478af96e8894528ee&amp;type=3#BaseNode" />
+    <Style src="project://database/Assets/Addon/Taco/TreeDesigner/Editor/Resources/StyleSheet/ExposedPropertyNode.uss?fileID=7433441132597879392&amp;guid=a6eaf0fb3724d4c4c83438a8ff902e57&amp;type=3#ExposedPropertyNode" />
+    <ui:VisualElement name="node-state" />
+    <ui:VisualElement name="node-selection-border" />
+    <ui:VisualElement name="node-border" picking-mode="Ignore">
+        <ui:VisualElement name="title" picking-mode="Ignore" style="flex-direction: row;">
+            <ui:VisualElement name="title-button-container" picking-mode="Ignore">
+                <ui:VisualElement name="collapse-button" />
+            </ui:VisualElement>
+            <ui:Label display-tooltip-when-elided="true" name="title-label" text="Node" />
+            <ui:VisualElement name="panel-button-container" picking-mode="Ignore">
+                <ui:VisualElement name="panel-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="contents" picking-mode="Ignore">
+            <ui:VisualElement name="divider" class="horizontal" style="border-bottom-width: 1px; height: 0.01px; border-left-color: rgb(34, 34, 34); border-right-color: rgb(34, 34, 34); border-top-color: rgb(34, 34, 34); border-bottom-color: rgb(34, 34, 34); background-color: rgba(35, 35, 35, 0.8);" />
+            <ui:VisualElement name="top" picking-mode="Ignore" style="flex-direction: row;">
+                <TreeDesigner.Editor.NodePortContainerView name="input" />
+                <ui:VisualElement name="space" style="flex-grow: 1;" />
+                <ui:VisualElement name="divider" class="vertical" style="border-right-width: 1px; width: 0.01px; background-color: rgba(35, 35, 35, 0.8); border-left-color: rgb(34, 34, 34); border-right-color: rgb(34, 34, 34); border-top-color: rgb(34, 34, 34); border-bottom-color: rgb(34, 34, 34);" />
+                <ui:VisualElement name="space" style="flex-grow: 1;" />
+                <TreeDesigner.Editor.NodePortContainerView name="output" />
+            </ui:VisualElement>
+            <ui:VisualElement name="bottom">
+                <Taco.Editor.EnumMenuView name="nodeType-field" />
+                <ui:Label text="Label" display-tooltip-when-elided="true" name="property-dropdown-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <TreeDesigner.Editor.NodePanelView name="node-panel" />
+    <TreeDesigner.Editor.NodeInputFieldContainerView name="node-input-field-container" picking-mode="Ignore" />
+</ui:UXML>

@@ -1,0 +1,334 @@
+.node {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+#node-border {
+    border-left-color: rgb(34, 34, 34);
+    border-right-color: rgb(34, 34, 34);
+    border-top-color: rgb(34, 34, 34);
+    border-bottom-color: rgb(34, 34, 34);
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    background-color: rgb(56, 56, 56);
+    width: auto;
+    height: auto;
+}
+
+#node-state {
+    position: absolute;
+    left: -2px;
+    top: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    border-left-color: rgba(0, 0, 0, 0);
+    border-right-color: rgba(0, 0, 0, 0);
+    border-top-color: rgba(0, 0, 0, 0);
+    border-bottom-color: rgba(0, 0, 0, 0);
+}
+
+.nodeState-Running #node-state {
+    border-left-color: rgb(242, 210, 63);
+    border-right-color: rgb(242, 210, 63);
+    border-top-color: rgb(242, 210, 63);
+    border-bottom-color: rgb(242, 210, 63);
+}
+
+.nodeState-Success #node-state {
+    border-left-color: rgb(65, 172, 66);
+    border-right-color: rgb(65, 172, 66);
+    border-top-color: rgb(65, 172, 66);
+    border-bottom-color: rgb(65, 172, 66);
+}
+
+.nodeState-Failure #node-state {
+    border-left-color: rgb(234, 62, 76);
+    border-right-color: rgb(234, 62, 76);
+    border-top-color: rgb(234, 62, 76);
+    border-bottom-color: rgb(234, 62, 76);
+}
+
+#node-selection-border {
+    position: absolute;
+    left: -2px;
+    top: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-left-width: 2px;
+    border-right-width: 2px;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    display: none;
+}
+
+.nodeState-None:hover > #node-selection-border {
+    border-left-color: rgb(200, 200, 200);
+    border-right-color: rgb(200, 200, 200);
+    border-top-color: rgb(200, 200, 200);
+    border-bottom-color: rgb(200, 200, 200);
+    display: flex;
+    position: absolute;
+    left: -2px;
+    top: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.nodeState-None:selected > #node-selection-border {
+    border-left-color: rgb(68, 192, 255);
+    border-right-color: rgb(68, 192, 255);
+    border-top-color: rgb(68, 192, 255);
+    border-bottom-color: rgb(68, 192, 255);
+    display: flex;
+    position: absolute;
+    left: -2px;
+    top: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+:hover > #node-selection-border {
+    border-left-color: rgb(200, 200, 200);
+    border-right-color: rgb(200, 200, 200);
+    border-top-color: rgb(200, 200, 200);
+    border-bottom-color: rgb(200, 200, 200);
+    display: flex;
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+:selected > #node-selection-border {
+    border-left-color: rgb(68, 192, 255);
+    border-right-color: rgb(68, 192, 255);
+    border-top-color: rgb(68, 192, 255);
+    border-bottom-color: rgb(68, 192, 255);
+    display: flex;
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+#title {
+    min-width: 100px;
+    min-height: 25px;
+}
+
+#contents {
+}
+
+#title-button-container {
+    width: 25px;
+    height: 25px;
+    border-left-color: rgb(34, 34, 34);
+    border-right-color: rgb(34, 34, 34);
+    border-top-color: rgb(34, 34, 34);
+    border-bottom-color: rgb(34, 34, 34);
+    border-right-width: 0;
+    border-left-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+}
+
+#collapse-button_ {
+    left: 5px;
+    top: 5px;
+    width: 15px;
+    height: 15px;
+    border-left-color: rgb(34, 34, 34);
+    border-right-color: rgb(34, 34, 34);
+    border-top-color: rgb(34, 34, 34);
+    border-bottom-color: rgb(34, 34, 34);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+#collapse-button {
+    flex-grow: 1;
+}
+
+.expanded #collapse-button {
+    background-image: resource('Icon/d_icon dropdown@2x');
+    margin-left: 3px;
+    margin-right: 3px;
+    margin-top: 0;
+    margin-bottom: 0;
+    -unity-background-image-tint-color: rgb(34, 34, 34);
+}
+
+.expanded #collapse-button:hover {
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+}
+
+.collapsed #collapse-button {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 3px;
+    margin-bottom: 3px;
+    background-image: resource('Icon/d_icon dropdown close@2x');
+    -unity-background-image-tint-color: rgb(34, 34, 34);
+}
+
+.collapsed #collapse-button:hover {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 3px;
+    margin-bottom: 3px;
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+}
+
+#title-label {
+    flex-grow: 1;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 10px;
+    padding-right: 10px;
+    -unity-font-style: bold-and-italic;
+    font-size: 14px;
+    color: rgb(34, 34, 34);
+    -unity-text-align: middle-center;
+}
+
+#panel-button-container {
+    width: 25px;
+    height: 25px;
+    display: flex;
+    border-left-width: 0;
+    border-left-color: rgb(34, 34, 34);
+    border-right-color: rgb(34, 34, 34);
+    border-top-color: rgb(34, 34, 34);
+    border-bottom-color: rgb(34, 34, 34);
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+}
+
+#panel-button_ {
+    left: 5px;
+    width: 15px;
+    height: 15px;
+    top: 5px;
+    border-left-color: rgb(34, 34, 34);
+    border-right-color: rgb(34, 34, 34);
+    border-top-color: rgb(34, 34, 34);
+    border-bottom-color: rgb(34, 34, 34);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+#panel-button {
+    background-image: resource('Icon/d__Popup@2x');
+    flex-grow: 1;
+    -unity-background-image-tint-color: rgb(34, 34, 34);
+}
+
+.hidePanel #panel-button {
+}
+
+.showPanel #panel-button {
+}
+
+#panel-button:hover {
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+}
+
+#input {
+}
+
+#output {
+}
+
+.port {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    height: 25px;
+    width: 100%;
+}
+
+.port.dragged {
+    background-color: rgb(65, 65, 65);
+}
+
+#node-panel {
+    position: absolute;
+    left: 100%;
+    top: 26px;
+}
+
+#node-input-field-container {
+    position: absolute;
+    right: 100%;
+    top: 28px;
+}
+
+.stacked {
+    position: relative;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}

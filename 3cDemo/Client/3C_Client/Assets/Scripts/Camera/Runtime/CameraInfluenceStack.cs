@@ -28,19 +28,13 @@ namespace ThirdPersonCamera
                 sources.Remove(source);
         }
 
-        public void Clear()
-        {
-            sources.Clear();
-            resolveBuffer.Clear();
-        }
-
-        public CameraInfluenceRequest Resolve(CameraInfluenceRequest fallback)
+        public CameraInfluenceRequest Resolve(CameraInfluenceRequest baseRequest)
         {
             resolveBuffer.Clear();
             for (int i = 0; i < sources.Count; i++)
                 resolveBuffer.Add(sources[i].CurrentRequest);
 
-            return CameraInfluenceResolver.Resolve(fallback, resolveBuffer);
+            return CameraInfluenceResolver.Resolve(baseRequest, resolveBuffer);
         }
     }
 }

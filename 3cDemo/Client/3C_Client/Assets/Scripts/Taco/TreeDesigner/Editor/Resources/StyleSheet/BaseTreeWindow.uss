@@ -1,0 +1,125 @@
+#right-panel {
+    flex-direction: column;
+}
+
+#tree-navigation-toolbar {
+    height: 26px;
+    min-height: 26px;
+    flex-direction: row;
+    align-items: center;
+    background-color: rgb(35, 35, 35);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(22, 22, 22);
+}
+
+#tree-navigation-back-button {
+    width: 24px;
+    min-width: 24px;
+    height: 22px;
+    margin-left: 3px;
+    margin-right: 3px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 1px;
+    -unity-text-align: middle-center;
+}
+
+#tree-navigation-breadcrumb {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: center;
+    overflow: hidden;
+}
+
+.tree-navigation-segment {
+    height: 22px;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 0;
+    padding-bottom: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    color: rgb(180, 180, 180);
+    -unity-text-align: middle-center;
+}
+
+.tree-navigation-current-segment {
+    height: 22px;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 3px;
+    padding-bottom: 0;
+    color: rgb(230, 230, 230);
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+}
+
+.tree-navigation-separator {
+    height: 22px;
+    margin-left: 1px;
+    margin-right: 1px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 3px;
+    padding-bottom: 0;
+    color: rgb(105, 105, 105);
+    -unity-text-align: middle-center;
+}
+
+#tree-view {
+    flex-grow: 1;
+}
+
+#tree-title {
+    display: none;
+}
+
+#tree-inspector {
+}
+
+#unity-dragline-anchor {
+    width: 2px;
+    background-color: rgb(25, 25, 25);
+}
+
+#node-description {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    position: absolute;
+    -unity-font-style: bold;
+    font-size: 14px;
+    white-space: normal;
+    max-width: 300px;
+    right: 0;
+}
+
+#nodeSearchContainer {
+    position: absolute;
+    bottom: 0;
+    padding-left: 5px;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 3px;
+}

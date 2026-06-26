@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Plugin/TreeDesigner/Editor/Resources/StyleSheet/TreeLocationInfo.uss?fileID=7433441132597879392&amp;guid=3b43089f00145f2438217116e25e0270&amp;type=3#TreeLocationInfo" />
+    <ui:VisualElement name="root">
+        <ui:Label text="Label" display-tooltip-when-elided="true" name="tree-name" />
+        <ui:VisualElement name="open-button" />
+        <ui:VisualElement name="lock-button" />
+        <ui:Label display-tooltip-when-elided="true" name="tree-path" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -80,7 +80,7 @@ PlayerSettings:
   androidPredictiveBackSupport: 1
   defaultIsNativeResolution: 1
   macRetinaSupport: 1
-  runInBackground: 0
+  runInBackground: 1
   captureSingleScreen: 0
   muteOtherAudioSources: 0
   Prepare IOS For Recording: 0
@@ -105,7 +105,7 @@ PlayerSettings:
   xboxEnableFitness: 0
   visibleInBackground: 1
   allowFullscreenSwitch: 1
-  fullscreenMode: 1
+  fullscreenMode: 3
   xboxSpeechDB: 0
   xboxEnableHeadOrientation: 0
   xboxEnableGuest: 0
@@ -812,7 +812,7 @@ PlayerSettings:
   webGLMemoryGeometricGrowthCap: 96
   webGLPowerPreference: 2
   scriptingDefineSymbols:
-    Standalone: BBBNEXUS_HAS_CINEMACHINE;MAGICACLOTH2
+    Standalone: BBBNEXUS_HAS_CINEMACHINE;MAGICACLOTH2;ODIN_INSPECTOR;ODIN_INSPECTOR_3;ODIN_INSPECTOR_3_1;ODIN_INSPECTOR_3_2;ODIN_INSPECTOR_3_3
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend: {}
@@ -844,8 +844,8 @@ PlayerSettings:
   apiCompatibilityLevelPerPlatform: {}
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: 3C_Client
-  metroPackageVersion: 
+  metroPackageName: 3CClient
+  metroPackageVersion: 1.0.0.0
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
@@ -853,7 +853,7 @@ PlayerSettings:
   metroCertificateNotAfter: 0000000000000000
   metroApplicationDescription: 3C_Client
   wsaImages: {}
-  metroTileShortName: 
+  metroTileShortName: 3C_Client
   metroTileShowName: 0
   metroMediumTileShowName: 0
   metroLargeTileShowName: 0

@@ -1,0 +1,3 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Plugin/TreeDesigner/Editor/Resources/StyleSheet/StackNode.uss?fileID=7433441132597879392&amp;guid=090da041346a0774097cf3d616182883&amp;type=3#StackNode" />
+</ui:UXML>

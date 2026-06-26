@@ -1,0 +1,65 @@
+#tool-bar {
+    margin-left: 0;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    flex-direction: row;
+}
+
+#type-filter {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-top: 0;
+    padding-bottom: 0;
+    -unity-text-align: middle-center;
+    background-color: rgba(42, 42, 42, 255);
+    -unity-font-style: bold;
+    font-size: 16px;
+}
+
+#type-filter:hover {
+    background-color: rgb(200, 200, 200);
+    color: rgb(40, 40, 40);
+}
+
+#tree-search-field {
+    border-left-width: 0;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-width: 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    height: 25px;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    background-color: rgba(34, 34, 34, 255);
+}
+
+#tree-search-field #unity-search {
+    height: 12px;
+    width: 12px;
+    margin-right: 5px;
+    margin-left: 5px;
+}
+
+#tree-search-field #unity-text-input {
+    height: 25px;
+    font-size: 16px;
+    background-color: rgba(34, 34, 34, 255);
+}
+
+#locked-container {
+    margin-bottom: 10px;
+    margin-left: 20px;
+}

@@ -1,0 +1,18 @@
+{
+    "name": "Taco.Timeline.Cinemachine",
+    "rootNamespace": "",
+    "references": [
+        "GUID:3af8e02729705434aa5c2d77c4a5103a",
+        "GUID:86c5ca7848482b044b178731a524146c",
+        "GUID:4307f53044263cf4b835bd812fc161a4"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

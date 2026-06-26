@@ -1,5 +1,18 @@
 {
   "dependencies": {
+    "com.alex.tengine": {
+      "version": "file:com.alex.tengine",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
+    "com.code-philosophy.hybridclr": {
+      "version": "https://gitee.com/focus-creative-games/hybridclr_unity.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "4df417e56ad827cd7e70a54662f0e8bab90aafe9"
+    },
     "com.coplaydev.unity-mcp": {
       "version": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
       "depth": 0,
@@ -9,6 +22,21 @@
         "com.unity.test-framework": "1.1.31"
       },
       "hash": "78ee5418415953b79c358bfe6355fcc3fde7912b"
+    },
+    "com.cysharp.unitask": {
+      "version": "file:UniTask",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
+    "com.fantasy.unity": {
+      "version": "2026.0.1020",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "3.2.1"
+      },
+      "url": "https://package.openupm.com"
     },
     "com.inspiaaa.unityhfsm": {
       "version": "https://github.com/Inspiaaa/UnityHFSM.git#upm",
@@ -29,6 +57,17 @@
       "source": "embedded",
       "dependencies": {
         "com.unity.modules.animation": "1.0.0"
+      }
+    },
+    "com.tuyoogame.yooasset": {
+      "version": "file:YooAsset",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.scriptablebuildpipeline": "1.21.25",
+        "com.unity.modules.assetbundle": "1.0.0",
+        "com.unity.modules.unitywebrequest": "1.0.0",
+        "com.unity.modules.unitywebrequestassetbundle": "1.0.0"
       }
     },
     "com.unity.burst": {
@@ -127,7 +166,7 @@
     },
     "com.unity.nuget.newtonsoft-json": {
       "version": "3.2.1",
-      "depth": 1,
+      "depth": 0,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.cn"
@@ -168,6 +207,16 @@
       "depth": 2,
       "source": "registry",
       "dependencies": {},
+      "url": "https://packages.unity.cn"
+    },
+    "com.unity.scriptablebuildpipeline": {
+      "version": "2.4.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.test-framework": "1.4.5",
+        "com.unity.modules.assetbundle": "1.0.0"
+      },
       "url": "https://packages.unity.cn"
     },
     "com.unity.shadergraph": {

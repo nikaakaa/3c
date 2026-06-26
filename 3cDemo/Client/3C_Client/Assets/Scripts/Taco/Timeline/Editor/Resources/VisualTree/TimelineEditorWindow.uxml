@@ -1,0 +1,26 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Addon/Taco/Timeline/Editor/Resources/StyleSheet/TimelineEditorWindow.uss?fileID=7433441132597879392&amp;guid=2a78834a1bf6bae4998fef8f94c3ec97&amp;type=3#TimelineEditorWindow" />
+    <ui:VisualElement name="top">
+        <uie:ObjectField name="target-field" />
+        <ui:Button name="play-button" />
+        <ui:Button name="pause-button" />
+        <ui:VisualElement name="play-speed">
+            <ui:VisualElement name="play-speed-icon" />
+            <ui:FloatField value="1" name="play-speed-field" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <Taco.Editor.SplitView name="track-container" fixed-pane-initial-dimension="225">
+        <ui:VisualElement name="left-panel">
+            <ui:VisualElement name="track-hierarchy" style="flex-grow: 1;">
+                <ui:VisualElement name="tool-bar">
+                    <ui:VisualElement name="add-track-button">
+                        <ui:VisualElement name="add-track-button-Icon" style="width: 25px; margin-left: 75px; background-image: resource(&apos;Icon/d_Toolbar Plus More@2x&apos;);" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="track-handle-container" style="flex-grow: 1;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <Taco.Timeline.Editor.TimelineFieldView name="field-view" />
+    </Taco.Editor.SplitView>
+    <ui:VisualElement name="track-inspector" />
+</ui:UXML>

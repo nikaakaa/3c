@@ -1,0 +1,13 @@
+#portHandle {
+    background-color: rgba(200, 200, 200, 255);
+    width: 10px;
+    height: 5px;
+}
+
+.inputPortHandle {
+    margin-left: 5px;
+}
+
+.outputPortHandle {
+    margin-right: 5px;
+}

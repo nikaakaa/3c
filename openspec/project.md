@@ -1,76 +1,100 @@
 # Project Context
 
 ## Purpose
-本项目是在 Unity 2022.3 LTS 客户端中构建复杂动画 3C demo，并逐步接入 Fantasy 网络同步、客户端预测和回滚。目标不是另起一套角色控制器，而是把当前角色 `CharacterFramePipeline`、Locomotion 领域模块、Action 领域模块、运动驱动和 Animancer 表现层扩展成可展示、可测试、可同步的动画技术样板。
+
+本项目是求职向 Gameplay 客户端程序 demo。目标不是完整 PvPvE 产品、MMO、纯网络框架或通用编辑器产品，而是展示第三人称动作客户端能力：输入响应、角色控制、相机、动作状态、动画表现、战斗窗口、受击反馈、调试可视化，以及在最小服务端权威压力下保持手感。
+
+当前真实重心是先把 Taco authoring 底座打干净，再用它承载 StateMachine、Timeline、Tree、Action 等玩法创作数据。Gameplay runtime 和网络演示要建立在这条干净数据链路上，不从旧 SO/config 分裂路径恢复。
+
+## Current State
+
+- 当前 active changes：无。
+- `openspec/specs/` 当前包含已归档 current spec：
+  - `taco-componentized-node-authoring`
+  - `taco-graph-core`
+  - `taco-input-action-node-authoring`
+  - `taco-runnable-timeline-node`
+  - `taco-sm-node-authoring`
+- 客户端主目录是 `3cDemo/Client/3C_Client`。
+- 当前脚本主模块是 `Camera`、`Rendering`、`Taco`；`Charactor` 只剩很薄的目录骨架，角色 gameplay runtime 还没有重新搭完整。
+- 服务端 `3cDemo/Server` 只保留 Fantasy 骨架，不再保留旧 FrameSyncAuthority 业务。
+- `Ref` 是参考代码来源，不是运行时依赖。
 
 ## Tech Stack
-- Unity 2022.3.62f2c1 项目：`3cDemo/Client/3C_Client`
-- C# / Unity Test Framework / EditMode tests
-- Animancer 作为动画播放外观层
-- ScriptableObject 配置驱动角色能力
-- Fantasy.Net 服务端与 Fantasy protocol export tool
-- OpenSpec 用于能力设计、审批和归档
 
-## Project Conventions
+- Unity 2022.3.62f2c1。
+- C#、UI Toolkit、GraphView。
+- URP 14、Cinemachine 2.10、Unity Input System、Unity Timeline。
+- Taco / TreeDesigner / Timeline 本地代码。
+- Fantasy.Unity / Fantasy.Net 骨架。
+- OpenSpec 用于能力规划和归档。
 
-### Code Style
-- 生成代码尽量少写注释；关键复杂逻辑可用少量中文注释解释。
-- 保持抽象和实现分离，避免把业务规则写死在 MonoBehaviour 细节里。
-- 配置驱动优先，动画资源和动作链路从 SO 模块进入运行时。
-- 不删除现有 log，除非用户明确要求。
+## Architecture
 
-### Architecture Patterns
-- 角色帧最高调度入口是 `CharacterFramePipeline`；`CharacterBehaviorSubmissionRunner` 或等价组合模块汇集 Locomotion、CommittedAction 和后续行为域的 sibling submissions。
-- 角色级帧管线代码必须位于 `Assets/Scripts/Character/Pipeline/Model|Runtime|Contracts/...`；Action 领域代码位于 `Assets/Scripts/Character/Action/Model|Runtime|Solver|Config|Diagnostics/...`，不得恢复 `Action/FullBody` 作为正式目录或主线入口。
-- Locomotion 是 Movement module，负责移动状态演进、移动事实和移动候选输出；它可以内部使用状态图，但不属于 `FullBody` 子树。
-- Action 是 Action domain，负责请求解析、打断、lifecycle、body/channel claim、动作运动和动作动画候选；Action 可使用已审批的领域局部 graph、timeline 或策略对象，但不要求成为角色级统一大状态树叶子。
-- `FullBody` 只表达 body/channel claim、动作输出占用或动画层语义，不是 Locomotion owner、状态树根、runtime source、rollback adapter 名或第二个角色帧权威。
-- 正式状态 ID 使用 `Locomotion.Idle`、`Locomotion.MoveLoop`、`Action.Dodge` 这类领域 ID；`FullBody/Locomotion/...` 与 `FullBody/Action/...` 只允许作为遗留迁移输入或归档历史出现，active specs 和新提案不得把它写成目标架构。
-- 角色身体数据模型使用六层术语：Source、Action、Claim、Slot、Channel、Presentation Layer。新 proposal、spec 和 design 必须说明自己修改的是哪一层。
-- Source 是提交候选的领域来源，例如 LocomotionSource、CommittedActionSource 和未来经批准的 UpperBodyActionSource；Action 是动作语义，例如 `Action.Dodge`、Attack、Shoot。
-- Claim 是身体占用声明，例如 FullBody claim 或 UpperBody claim；Slot 是角色级仲裁后的资源位置。当前正式讨论使用 `BaseSlot` 和 `UpperBodySlot`，`CharacterFramePlan` / `BodyOccupancyDecision` 的正式读取面是 `BaseSlotOwner`、`UpperBodySlotOwner` 和 `UpperBodySlotSuppressed`，不得把 `FullBody` 当成 slot、source、graph node 或 gameplay owner。
-- `BaseLayerOwner` / `UpperBodyOwner` 属于旧 layer 口径，不是正式 gameplay contract。涉及身体数据模型的更新必须把 runtime、compiler、editor adapter 和测试迁到 slot contract；只有表现层文档可以使用 animation layer 语义。
-- Channel 是输出类型，例如 Motion、Animation、Window、Cue、facts；Presentation Layer 是表现执行，例如 motion executor、Animancer layer、AvatarMask、Timeline view、VFX/SFX/Camera presenter。
-- Dodge 是 `Action.Dodge`，由 CommittedAction source 提交 FullBody claim；它不需要也不得重新引入 `FullBody` gameplay node、FullBody 主状态树或第二角色帧入口。
-- UpperBody 当前只作为 claim/slot 扩展位和未来 source 的设计边界存在；Facial、FaceBody、FacialOwner、FacialCandidate 或 facial slot 未经新的 OpenSpec 批准不得进入正式 BodyArbiter 或 frame plan。
-- `com.inspiaaa.unityhfsm` 可以保留为第三方库参考，但未经新的 OpenSpec 审批不得接入为正式角色状态机 engine。
-- `CharacterStateMachineRunner` 只解释状态图、选择 transition、维护 active state / state time / variant / pending transition 和纯数据 snapshot/restore。
-- 状态机运行时代码目录为 `Assets/Scripts/Character/StateMachine/Model|Config|Solver/...`，中心配置资产目录为 `Assets/Configs/3C/StateMachine/`；旧 `Statemachine` 拼法不得作为并行入口保留。
-- timeline facts、state output、motion command、animation request、input consume、run latch 和 diagnostics 必须位于明确外围模块或 runner 内明确子职责，不得回到混合式大 runner。
-- 物理位移权威通过当前运动 executor / `CharacterMotionDriver` 主线收敛，状态机和动画 Presenter 不直接调用 `CharacterController.Move`。
-- 动画播放外观是 Animancer Presenter；状态机输出动画语义 key / timeline binding key，具体 clip、transition、fade、speed、start time 归动画配置和 Animancer TransitionLibrary。
-- 输入、运动、动画、相机和诊断都是状态机外围 adapter，只提供纯数据 facts 或消费状态机 frame 输出。
-- 网络同步不得直接同步 Unity 对象、Animancer 内部对象或场景实例引用，必须先映射为稳定 ID 和纯数据快照。
+### Gameplay Client Direction
 
-### Testing Strategy
-- 实现代码必须配套 Unity EditMode 测试。
-- 每个 OpenSpec proposal 的任务清单必须包含自动测试和工具验证；手动验证方式可以写在 proposal/design 说明中，不写入 `tasks.md`。
-- 优先使用 Unity MCP 运行定向 EditMode 测试；全量测试若初始化超时，不视为替代定向测试失败。
-- OpenSpec 变更必须通过 `openspec validate <change-id> --strict --no-interactive`。
+- 对外作品口径是 `Network-aware Third Person Action Combat Prototype`。
+- 第一目标是 Gameplay 客户端纵切，不是完整网络产品。
+- 客户端主链路：`Input -> Action Request -> State/Graph Decision -> Timeline/Animation Presentation -> GameplayWindow Facts -> Prediction Presentation -> Server Result -> Correction Smoothing`。
+- Timeline 只产出动作事实和表现轨道，例如 AttackWindow、IFrameWindow、ParryWindow、ArmorWindow、CancelWindow、CostEvent、SpawnHitboxEvent、VFX/SFX/Camera Cue。
+- Timeline 不直接宣称命中成立；命中、伤害、目标归属必须由服务端或权威 gameplay solver 裁决。
 
-### OpenSpec Cleanup
-- `openspec/specs/` 和本文件是当前架构真相；`openspec/changes/archive/` 只保留仍有追溯价值的历史记录，不作为实现或规划依据。
-- 已被当前 specs 完整覆盖、已经明确被后续架构废弃、或会误导后续实现的 archive 可以删除，不需要在 archive 内维护兼容叙述。
-- 删除当前 spec 前必须确认该能力已经被其它当前 spec 完整吸收，或确认对应运行时目标已经退役；不得保留废弃占位 spec、旧命名镜像 spec 或 fallback spec。
-- 清理 archive 或 current specs 后必须运行 `openspec validate --specs --strict --no-interactive`；若同时有 active changes，再运行 `openspec validate --all --strict --no-interactive`，并说明任何失败是否来自既有未完成迁移。
+### Taco Authoring Direction
 
-### Git Workflow
-- 工作树可能包含用户或其他 agent 的未提交变更，不能回退未确认的改动。
-- 不使用破坏性 git 命令。
+- Taco 是当前 authoring 基座，不是必须照搬的 runtime。
+- `BaseGraph` 是图数据和结构编辑底座，`BaseTree` 继续作为当前可打开的 Unity asset / editor 入口。
+- `BaseNode` 是节点 authoring entity，可以承载 `NodeModule`。
+- 字段扫描走 `NodeFieldAccessor`，同时支持节点字段和模块字段。
+- Port 系统继续使用 Taco 原生 `PropertyPort` / `PropertyEdge`，连接身份使用稳定 `PortId`。
+- 不新增 `WorkbenchPortDescriptor`、并行注册表或并行 WorkbenchTree。
+- `StateMachineGraph : BaseTree`，`StateMachineNode` 表达父级行为图进入状态机图的入口，`StateNode` 表达状态机图内普通状态和状态行为边界。
+- `Enter`、`AnyState`、`Exit` 是 StateMachineGraph 层级控制节点，不是普通状态模块。
+- `StateNode` 可引用普通 `SubTree` 或 `StateBehaviorSubTree`；普通 `SubTree` 只执行 `RootNode`，`StateBehaviorSubTree` 使用 `OnEnter`、`RootNode`、`OnExit` 表达状态生命周期。
+- Transition 是 edge 语义，不新增 `TransitionNode`。
+- `TimelineNode : RunnableNode`，用于 Graph 驱动 Timeline；Timeline asset 仍是数据资产。
+- Taco 原有 `TreeTrack / TreeClip / TimelineRunningTree` 可以保留为 Timeline 驱动 Tree 的链路，但不替代 Graph 驱动 TimelineNode。
 
-## Domain Context
-- 复杂动画 demo 需要展示移动、起步、循环、急停、跳跃、落地、闪避、翻滚、翻越、装备、瞄准、近战连招、远程射击、受击、死亡、表情、音效、IK、RootQ 姿态和镜头事件。
-- 后续网络能力基于 `AnimationStateSnapshot`、Fantasy 协议 DTO、输入历史、快照历史、预测、回滚和事件去重。
-- `Ref` 目录可作为参考，不直接复制实现。可参考 UE/Animancer/ZZZ 类项目的动作节点、预输入、取消窗口、notify state、root motion 采样和服务端同步思路。
+### Network Boundary
 
-## Important Constraints
-- 新能力和架构变化必须先走 OpenSpec proposal，未经审批不得直接实现大功能。
-- 任务颗粒度要细。
-- 所有需要绕过当前系统额外做的路径必须停止，等待审批。
-- Demo 不新增未审批的独立角色控制器路径。
-- OpenSpec 内容使用中文书写。
+- 求职目标是 Gameplay 客户端程序，不是 Network Engineer。
+- 网络只做最小压力场景：两个玩家争夺一个怪物或目标点，玩家可互相打断，服务端裁决结果。
+- 本地玩家可以预测移动、转向、闪避、攻击启动、动画、特效和镜头表现。
+- 远端玩家使用服务器快照和插值，不复制完整本地预测。
+- 服务端裁决位置真值、动作真值、窗口真值、命中、伤害、目标归属、怪物状态和局内事件。
+- PvP 命中使用服务端权威加局部 combat rewind，只回溯 pose、hurtbox、action window，不回滚整个世界。
+- 不做全局帧同步、不做完整 rollback、不做客户端权威。
 
-## External Dependencies
-- Fantasy.Net 网络框架。
-- `3cDemo/Tools/NetworkProtocol` 下的 proto 协议。
-- `3cDemo/Tools/ProtocolExportTool` 用于生成客户端和服务端协议代码。
+## Code Organization
+
+- `Assets/Scripts/Taco/Scripts`：Taco 基础工具、反射、通用属性。
+- `Assets/Scripts/Taco/TreeDesigner/Scripts`：Graph、Tree、Node、Edge、PropertyPort、ExposedProperty。
+- `Assets/Scripts/Taco/TreeDesigner/Editor`：节点图窗口、节点视图、端口视图、搜索和 inspector。
+- `Assets/Scripts/Taco/Timeline/Scripts`：Timeline asset、Track、Clip、Playable、TimelineNode。
+- `Assets/Scripts/Camera`：第三人称相机模型、solver、runtime adapter。
+- `Assets/Scripts/Rendering`：动作表现相关后处理和 VFX runtime。
+- `3cDemo/Server`：Fantasy skeleton，只作为后续最小权威服务端基础。
+
+## Conventions
+
+- 生成代码尽量少写注释，只有关键复杂边界写少量注释。
+- 不做 fallback 配置、兼容镜像、临时桥接路径或双主线。
+- 旧数据、旧路径、旧命名确认不用就直接删除。
+- 修改代码不用 MCP 写文件；Unity MCP 只用于查看状态、console 或编辑器操作。
+- 永远不要运行 Unity batchmode。
+- 文档读取必须显式 UTF-8。
+- 默认不新增测试，除非用户明确要求。
+- 用户负责 Unity 端到端验证；不要把手动验证写进 OpenSpec task。
+
+## Cleanup Rules
+
+- 旧 Workbench 路径不恢复。
+- 旧 locomotion 特化 SO/config 不恢复。
+- 旧 action SO、footphase profile、bodyclaim policy、AnimationPresentationPolicy 等如果脱离节点/模块/Timeline 继续作为当前数据源，应迁移或删除。
+- `Ref` 中代码只能复制进正式模块后改名归属，不能作为运行时依赖。
+- archive 只查历史，不作为当前实现目标。
+
+## Open Questions
+
+- 动态 `List<PropertyPort>` 的通用编辑器 UI 还需要继续收口。
+- Gameplay runtime 的角色动作链路还没有从 authoring 数据正式落地。
+- 最小网络压力场景还没有开始实现。

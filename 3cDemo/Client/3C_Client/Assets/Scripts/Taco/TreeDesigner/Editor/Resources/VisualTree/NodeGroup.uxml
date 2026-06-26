@@ -1,0 +1,3 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Plugin/TreeDesigner/Editor/Resources/StyleSheet/NodeGroup.uss?fileID=7433441132597879392&amp;guid=de833120b9b3aa44dad7a7fba162bae2&amp;type=3#NodeGroup" />
+</ui:UXML>

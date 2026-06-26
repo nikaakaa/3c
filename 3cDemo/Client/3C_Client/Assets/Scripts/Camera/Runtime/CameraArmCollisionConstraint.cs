@@ -1,7 +1,5 @@
 ﻿using Cinemachine;
-using ThirdPersonPresentation;
 using UnityEngine;
-using ThirdPersonDiagnostics;
 
 namespace ThirdPersonCamera
 {
@@ -9,6 +7,7 @@ namespace ThirdPersonCamera
     public sealed class CameraArmCollisionConstraint : CinemachineExtension
     {
         [SerializeField] Transform anchor;
+        [SerializeField] Transform ignoredRoot;
         [SerializeField] LayerMask collisionMask = 513;
         [SerializeField, Min(0.01f)] float radius = 0.2f;
         [SerializeField, Min(0f)] float collisionSkin = 0.03f;
@@ -19,8 +18,6 @@ namespace ThirdPersonCamera
         [SerializeField] Vector3 anchorOffset;
         [SerializeField] QueryTriggerInteraction triggerInteraction = QueryTriggerInteraction.Ignore;
         [SerializeField] bool drawDebug;
-        [SerializeField] bool debugLog = true;
-        [SerializeField, Min(0f)] float debugLogInterval = 0.1f;
         [SerializeField] float debugCurrentDistance;
         [SerializeField] float debugTargetDistance;
         [SerializeField] bool debugHasHit;
@@ -30,12 +27,12 @@ namespace ThirdPersonCamera
         readonly Collider[] overlapHits = new Collider[32];
         float currentDistance;
         float distanceVelocity;
-        float nextDebugLogTime;
         bool hasCurrentDistance;
         bool wasConstrained;
         CameraArmCollisionState state;
 
         public Transform Anchor { get => anchor; set => anchor = value; }
+        public Transform IgnoredRoot { get => ignoredRoot; set => ignoredRoot = value; }
         public LayerMask CollisionMask { get => collisionMask; set => collisionMask = value; }
         public float Radius { get => radius; set => radius = Mathf.Max(0.01f, value); }
         public float CollisionSkin { get => collisionSkin; set => collisionSkin = Mathf.Max(0f, value); }
@@ -43,7 +40,6 @@ namespace ThirdPersonCamera
         public float ShrinkSmoothTime { get => shrinkSmoothTime; set => shrinkSmoothTime = Mathf.Max(0f, value); }
         public float RecoverSmoothTime { get => recoverSmoothTime; set => recoverSmoothTime = Mathf.Max(0f, value); }
         public Vector3 AnchorOffset { get => anchorOffset; set => anchorOffset = value; }
-        public bool DebugLog { get => debugLog; set => debugLog = value; }
         public CameraArmCollisionState State => state;
 
         void Reset()
@@ -92,7 +88,6 @@ namespace ThirdPersonCamera
                 hasCurrentDistance = true;
                 wasConstrained = false;
                 WriteState(hasHit, currentDistance, targetDistance, anchorPosition, desiredPosition, desiredPosition, hasHit ? hit.collider : null);
-                LogConstraint(vcam, desiredDistance, hitDistance, constrainedByHit, constrainedByOverlap, recovering, overlapCollider, ignoredRoot, ignoredHits, ignoredOverlaps, deltaTime);
                 return;
             }
 
@@ -111,7 +106,6 @@ namespace ThirdPersonCamera
             cameraState.RawPosition = resolvedPosition;
             wasConstrained = isConstrained || Mathf.Abs(currentDistance - targetDistance) > 0.001f;
             WriteState(hasHit, currentDistance, targetDistance, anchorPosition, desiredPosition, resolvedPosition, hasHit ? hit.collider : null);
-            LogConstraint(vcam, desiredDistance, hitDistance, constrainedByHit, constrainedByOverlap, recovering, overlapCollider, ignoredRoot, ignoredHits, ignoredOverlaps, deltaTime);
             if (drawDebug)
                 DrawDebug(state);
         }
@@ -221,18 +215,11 @@ namespace ThirdPersonCamera
 
         Transform ResolveIgnoredRoot()
         {
+            if (ignoredRoot != null)
+                return ignoredRoot;
+
             ThirdPersonCameraController controller = GetComponentInParent<ThirdPersonCameraController>(true);
-            if (controller == null)
-                return null;
-
-            Transform followAnchorSource = controller.FollowAnchorSource;
-            if (followAnchorSource == null)
-                return null;
-
-            PresentationTransformInterpolator interpolator = followAnchorSource.GetComponentInParent<PresentationTransformInterpolator>();
-            return interpolator != null && interpolator.Source != null
-                ? interpolator.Source
-                : followAnchorSource;
+            return controller != null ? controller.FollowAnchorSource : null;
         }
 
         Transform ResolveDefaultAnchor()
@@ -256,57 +243,6 @@ namespace ThirdPersonCamera
             debugHitName = state.HitName;
         }
 
-        void LogConstraint(
-            CinemachineVirtualCameraBase vcam,
-            float desiredDistance,
-            float hitDistance,
-            bool constrainedByHit,
-            bool constrainedByOverlap,
-            bool recovering,
-            Collider overlapCollider,
-            Transform ignoredRoot,
-            int ignoredHits,
-            int ignoredOverlaps,
-            float deltaTime)
-        {
-            if (!ShouldLog())
-                return;
-
-             RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                 RuntimeDiagnosticLogCategory.Camera,
-                 RuntimeDiagnosticLogLevel.Info,
-                 "camera-arm-constraint",
-                 "",
-                 "",
-                 0,
-                 Time.frameCount,
-                 $"[DEBUG-CAM-CHAIN] arm.constraint frame={Time.frameCount} " +
-                 $"vcam={TargetName(vcam != null ? vcam.transform : null)} " +
-                 $"reason={ConstraintReason(constrainedByHit, constrainedByOverlap, recovering)} " +
-                 $"desiredDistance={desiredDistance:F3} hitDistance={hitDistance:F3} " +
-                 $"targetDistance={state.TargetDistance:F3} currentDistance={state.CurrentDistance:F3} " +
-                 $"hit={state.HitName} overlap={(overlapCollider != null ? overlapCollider.name : string.Empty)} " +
-                 $"ignoredRoot={TargetName(ignoredRoot)} ignoredHits={ignoredHits} ignoredOverlaps={ignoredOverlaps} " +
-                 $"deltaTime={deltaTime:F4} mask={collisionMask.value} radius={radius:F3} skin={collisionSkin:F3} " +
-                 $"min={minDistance:F3}"));
-        }
-
-        bool ShouldLog()
-        {
-            if (!debugLog)
-                return false;
-
-            if (debugLogInterval <= 0f)
-                return true;
-
-            float now = Time.unscaledTime;
-            if (now < nextDebugLogTime)
-                return false;
-
-            nextDebugLogTime = now + debugLogInterval;
-            return true;
-        }
-
         static void DrawDebug(CameraArmCollisionState value)
         {
             Debug.DrawLine(value.AnchorPosition, value.DesiredPosition, Color.gray);
@@ -321,20 +257,5 @@ namespace ThirdPersonCamera
             return candidate == root || candidate.IsChildOf(root) || root.IsChildOf(candidate);
         }
 
-        static string ConstraintReason(bool constrainedByHit, bool constrainedByOverlap, bool recovering)
-        {
-            if (constrainedByHit && constrainedByOverlap)
-                return "hit+overlap";
-            if (constrainedByHit)
-                return "hit";
-            if (constrainedByOverlap)
-                return "overlap";
-            return recovering ? "recover" : "none";
-        }
-
-        static string TargetName(Transform target)
-        {
-            return target != null ? target.name : "null";
-        }
     }
 }

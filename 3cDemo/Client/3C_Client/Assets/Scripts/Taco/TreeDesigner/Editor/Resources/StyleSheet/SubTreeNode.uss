@@ -1,0 +1,32 @@
+.port-control-button {
+    font-size: 14px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    flex-grow: 1;
+    background-color: rgb(81, 81, 81);
+    align-items: center;
+}
+
+.port-control-button:hover {
+    background-color: rgb(88, 88, 88);
+}
+
+.collapsed #port-control-container {
+    display: none;
+}
+
+.input {
+    min-width: 40px;
+}
+
+.output {
+    min-width: 40px;
+}

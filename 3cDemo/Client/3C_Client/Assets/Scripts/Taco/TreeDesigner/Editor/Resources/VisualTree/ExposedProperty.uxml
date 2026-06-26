@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Plugin/TreeDesigner/Editor/Resources/StyleSheet/ExposedProperty.uss?fileID=7433441132597879392&amp;guid=27cd1f4ae947bba4eba9fc2e6fdc423a&amp;type=3#ExposedProperty" />
+    <ui:VisualElement name="property-border">
+        <ui:VisualElement name="property-handle" />
+        <ui:VisualElement name="property-info">
+            <ui:VisualElement name="property-title">
+                <ui:Button text="Title" display-tooltip-when-elided="true" name="property-title-button" />
+                <ui:Button display-tooltip-when-elided="true" name="property-remove-button" />
+            </ui:VisualElement>
+            <ui:VisualElement name="property-content" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,42 @@
+# Tasks
+
+- [ ] 1. 梳理当前 Transition 原型字段
+  - [ ] 1.1 定位 `BaseEdge` 上的 Transition 条件字段和菜单入口
+  - [ ] 1.2 定位 `StateMachineGraphRuntime` 的条件求值路径
+  - [ ] 1.3 定位 `StateMachineGraph.CanCreateNodeType()` 对条件节点的放行规则
+- [ ] 2. 定义规则图资产和节点范围
+  - [ ] 2.1 新增 `TransitionRuleGraph` 图类型
+  - [ ] 2.2 新增 `TransitionRuleResultNode`
+  - [ ] 2.3 让新建规则图默认包含一个结果节点
+  - [ ] 2.4 限制规则图只能创建纯值、输入、谓词、逻辑和结果节点
+  - [ ] 2.5 禁止规则图创建 `RunnableNode`、`TimelineNode`、`StateMachineNode`、`StateNode` 和状态机控制节点
+- [ ] 3. 收口 Transition edge 数据
+  - [ ] 3.1 在正式 Transition 边数据上保存规则图引用和优先级
+  - [ ] 3.2 移除旧 `TransitionConditionNodeGuid/PortId` 条件链路
+  - [ ] 3.3 定义无规则图 Transition 的合法语义
+  - [ ] 3.4 校验 `AnyState` Transition 必须配置规则图
+  - [ ] 3.5 校验规则图必须拥有且只能拥有一个结果节点
+- [ ] 4. 接入编辑器创作
+  - [ ] 4.1 在 Transition 边 Inspector 显示优先级和规则图引用状态
+  - [ ] 4.2 支持从 Transition 边打开对应规则图
+  - [ ] 4.3 支持为 Transition 边创建缺失的规则图
+  - [ ] 4.4 移除旧的 “选择同图 Bool port 作为条件” 菜单
+  - [ ] 4.5 在边视图显示规则图摘要、缺失状态和优先级
+- [ ] 5. 接入运行时求值
+  - [ ] 5.1 新增 `TransitionRuleGraph` 求值器
+  - [ ] 5.2 求值器读取结果节点 Bool 输入
+  - [ ] 5.3 求值器复用现有图上下文、黑板和输入来源
+  - [ ] 5.4 `StateMachineGraphRuntime` 通过规则图判断 Transition 是否可过
+  - [ ] 5.5 Transition 排序使用优先级，优先级相同再使用 flow order
+- [ ] 6. 调整图创建规则
+  - [ ] 6.1 `StateMachineGraph` 不再允许创建条件 `ValueNode`
+  - [ ] 6.2 `TransitionRuleGraph` 允许创建条件相关节点
+  - [ ] 6.3 拖拽 InputAction 到状态机图时不得直接创建条件节点
+  - [ ] 6.4 拖拽 InputAction 到规则图时创建正式输入值节点
+- [ ] 7. 清理旧数据和旧路径
+  - [ ] 7.1 删除旧 Transition BoolPort 条件菜单和序列化路径
+  - [ ] 7.2 删除无法迁移的旧测试资产条件数据
+  - [ ] 7.3 确认没有 Workbench、fallback 条件或并行端口协议残留
+- [ ] 8. 工具校验
+  - [ ] 8.1 运行 `openspec validate add-taco-transition-rule-graph-authoring --strict --no-interactive`
+  - [ ] 8.2 运行 `openspec validate --all --strict --no-interactive`

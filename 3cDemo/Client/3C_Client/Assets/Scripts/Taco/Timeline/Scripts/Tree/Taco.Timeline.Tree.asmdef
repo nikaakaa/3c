@@ -1,0 +1,19 @@
+{
+    "name": "Taco.Timeline.Tree",
+    "rootNamespace": "",
+    "references": [
+        "GUID:3af8e02729705434aa5c2d77c4a5103a",
+        "GUID:86c5ca7848482b044b178731a524146c",
+        "GUID:dbcec5c5c83b92c40956750ad4235b10",
+        "GUID:d64301999c8636b4c8ec42e0c4f9cad9"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

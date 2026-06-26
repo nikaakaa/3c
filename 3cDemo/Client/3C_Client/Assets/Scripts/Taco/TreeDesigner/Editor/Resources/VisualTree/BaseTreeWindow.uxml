@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Scripts/Taco/TreeDesigner/Editor/Resources/StyleSheet/BaseTreeWindow.uss?fileID=7433441132597879392&amp;guid=7b8201b9a9a5b144ea795721642514e3&amp;type=3#BaseTreeWindow" />
+    <Taco.Editor.SplitView name="window" fixed-pane-initial-dimension="200">
+        <ui:VisualElement name="left-panel" style="min-width: 200px; width: 200px;" />
+        <ui:VisualElement name="right-panel" style="min-width: 300px; width: 300px;">
+            <ui:VisualElement name="tree-navigation-toolbar">
+                <ui:Button name="tree-navigation-back-button" text="&lt;" />
+                <ui:VisualElement name="tree-navigation-breadcrumb" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </Taco.Editor.SplitView>
+</ui:UXML>

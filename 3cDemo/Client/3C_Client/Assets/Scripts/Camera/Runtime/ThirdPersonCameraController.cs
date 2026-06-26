@@ -1,8 +1,5 @@
 using Cinemachine;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.Serialization;
-using ThirdPersonDiagnostics;
 
 namespace ThirdPersonCamera
 {
@@ -10,40 +7,28 @@ namespace ThirdPersonCamera
     public sealed class ThirdPersonCameraController : MonoBehaviour, ICameraMovementBasisProvider, ICameraPitchProvider, ICameraInfluenceSink
     {
         [SerializeField] CinemachineFreeLook freeLook;
-        [FormerlySerializedAs("followRoot")]
         [SerializeField] Transform followAnchorSource;
         [SerializeField] Transform cameraFollowTarget;
         [SerializeField] Transform cameraAimTarget;
         [SerializeField] bool bindFreeLookToResolvedTargets = true;
-        [SerializeField] InputActionReference lookAction;
         [SerializeField] Vector2 sensitivity = new Vector2(0.12f, 0.12f);
         [SerializeField] Vector2 pitchLimits = new Vector2(-40f, 70f);
-        [SerializeField] bool enableInputOnEnable = true;
-        [SerializeField] bool autoTick = true;
-        [SerializeField] bool debugLog = true;
-        [SerializeField, Min(0f)] float debugLogInterval = 0.1f;
 
-        YawPitchState fallbackState;
+        YawPitchState localState;
         CameraResolveResult resolveResult;
         readonly CameraInfluenceStack influenceStack = new CameraInfluenceStack();
         CameraInfluenceRequest currentInfluence;
-        CameraInfluenceHandle legacyInfluenceHandle;
         CinemachineResolvedTargetAdapter targetAdapter;
         Vector2 currentLookInput;
         int currentLookInputFrame = -1;
-        float nextInputDebugLogTime;
-        float nextOutputDebugLogTime;
 
         public CinemachineFreeLook FreeLook { get => freeLook; set => freeLook = value; }
         public Transform FollowAnchorSource { get => followAnchorSource; set => followAnchorSource = value; }
         public Transform CameraFollowTarget { get => cameraFollowTarget; set { cameraFollowTarget = value; targetAdapter = null; } }
         public Transform CameraAimTarget { get => cameraAimTarget; set { cameraAimTarget = value; targetAdapter = null; } }
         public bool BindFreeLookToResolvedTargets { get => bindFreeLookToResolvedTargets; set => bindFreeLookToResolvedTargets = value; }
-        public InputActionReference LookAction { get => lookAction; set => lookAction = value; }
         public Vector2 Sensitivity { get => sensitivity; set => sensitivity = value; }
         public Vector2 PitchLimits { get => NormalizePitchLimits(pitchLimits); set => pitchLimits = NormalizePitchLimits(value); }
-        public bool AutoTick { get => autoTick; set => autoTick = value; }
-        public bool DebugLog { get => debugLog; set => debugLog = value; }
         public float Yaw => ResolveYaw();
         public float Pitch => ResolvePitch();
         public Vector3 CameraPlanarForward => resolveResult.CameraPlanarForward;
@@ -76,26 +61,8 @@ namespace ThirdPersonCamera
         {
             pitchLimits = NormalizePitchLimits(pitchLimits);
         }
-        void OnEnable() { if (enableInputOnEnable) ManualLookSource.Enable(lookAction); }
-        void OnDisable()
-        {
-            if (enableInputOnEnable)
-                ManualLookSource.Disable(lookAction);
-
-            if (legacyInfluenceHandle != null)
-            {
-                legacyInfluenceHandle.Dispose();
-                legacyInfluenceHandle = null;
-            }
-        }
         void LateUpdate()
         {
-            if (autoTick)
-            {
-                Tick(ManualLookSource.Read(lookAction));
-                return;
-            }
-
             Resolve();
         }
 
@@ -123,33 +90,12 @@ namespace ThirdPersonCamera
             Vector2 limits = PitchLimits;
             float yaw = Mathf.Repeat(yawValue, 360f);
             float pitch = Mathf.Clamp(pitchValue, limits.x, limits.y);
-            fallbackState.Reset(yaw, pitch, limits);
+            localState.Reset(yaw, pitch, limits);
             if (freeLook != null)
             {
                 freeLook.m_XAxis.Value = yaw;
                 freeLook.m_YAxis.Value = Mathf.InverseLerp(limits.x, limits.y, pitch);
                 freeLook.PreviousStateIsValid = false;
-            }
-
-            Output(ReadFollowAnchor());
-        }
-
-        public void SetInfluence(CameraInfluenceRequest request)
-        {
-            if (legacyInfluenceHandle == null)
-                legacyInfluenceHandle = influenceStack.CreateHandle(request);
-            else
-                legacyInfluenceHandle.Set(request);
-
-            Output(ReadFollowAnchor());
-        }
-
-        public void ClearInfluence()
-        {
-            if (legacyInfluenceHandle != null)
-            {
-                legacyInfluenceHandle.Dispose();
-                legacyInfluenceHandle = null;
             }
 
             Output(ReadFollowAnchor());
@@ -181,16 +127,13 @@ namespace ThirdPersonCamera
 
         public void ApplyLook(CameraLookIntent intent)
         {
-            float previousYaw = Yaw;
-            float previousPitch = Pitch;
             currentLookInput = intent.Delta;
             currentLookInputFrame = Time.frameCount;
             if (freeLook == null)
-                fallbackState.Apply(intent, sensitivity, PitchLimits);
+                localState.Apply(intent, sensitivity, PitchLimits);
             CameraFollowAnchor followAnchor = ReadFollowAnchor();
             resolveResult = ResolveData(followAnchor);
             ApplyTargets(resolveResult);
-            LogInput(intent.Delta, previousYaw, previousPitch, Yaw, Pitch, followAnchor);
         }
 
         public void Resolve(Vector3 followPosition)
@@ -226,14 +169,12 @@ namespace ThirdPersonCamera
         {
             resolveResult = ResolveData(followAnchor);
             ApplyTargets(resolveResult);
-            LogOutput(followAnchor, resolveResult);
         }
 
         CameraFollowAnchor ReadFollowAnchor()
         {
             Transform anchor = ResolveRuntimeAnchor();
-            Vector3 fallback = anchor != null ? anchor.position : transform.position;
-            return TransformFollowAnchorSource.Read(anchor, fallback);
+            return new CameraFollowAnchor(anchor != null ? anchor.position : transform.position);
         }
 
         void ResolveDefaultReferences()
@@ -283,7 +224,7 @@ namespace ThirdPersonCamera
         {
             Vector2 look = currentLookInputFrame == Time.frameCount
                 ? currentLookInput
-                : ManualLookSource.Read(lookAction).Delta;
+                : Vector2.zero;
 
             if (axis == 0)
                 return look.x;
@@ -322,7 +263,7 @@ namespace ThirdPersonCamera
         {
             if (freeLook != null)
                 return Mathf.Repeat(freeLook.m_XAxis.Value, 360f);
-            return fallbackState.Yaw;
+            return localState.Yaw;
         }
 
         float ResolvePitch()
@@ -333,78 +274,12 @@ namespace ThirdPersonCamera
                 return Mathf.Lerp(limits.x, limits.y, Mathf.Clamp01(freeLook.m_YAxis.Value));
             }
 
-            return fallbackState.Pitch;
+            return localState.Pitch;
         }
 
         static Vector2 NormalizePitchLimits(Vector2 value)
         {
             return value.x <= value.y ? value : new Vector2(value.y, value.x);
-        }
-
-        void LogInput(
-            Vector2 lookDelta,
-            float previousYaw,
-            float previousPitch,
-            float currentYaw,
-            float currentPitch,
-            CameraFollowAnchor followAnchor)
-        {
-            if (!ShouldLog(ref nextInputDebugLogTime, lookDelta.sqrMagnitude > 0.000001f))
-                return;
-
-             RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                 RuntimeDiagnosticLogCategory.Camera,
-                 RuntimeDiagnosticLogLevel.Info,
-                 "camera-input",
-                 "",
-                 "",
-                 0,
-                 Time.frameCount,
-                 $"[DEBUG-CAM-CHAIN] controller.input frame={Time.frameCount} autoTick={autoTick} " +
-                 $"look={lookDelta.ToString("F3")} sensitivity={sensitivity.ToString("F3")} pitchLimits={PitchLimits.ToString("F3")} " +
-                 $"yaw={previousYaw:F3}->{currentYaw:F3} pitch={previousPitch:F3}->{currentPitch:F3} " +
-                 $"followAnchor={followAnchor.Position.ToString("F3")} followSource={TargetName(followAnchorSource)} " +
-                 $"freeLook={TargetName(freeLook != null ? freeLook.transform : null)} freeLookFollow={TargetName(freeLook != null ? freeLook.Follow : null)} " +
-                 $"freeLookLookAt={TargetName(freeLook != null ? freeLook.LookAt : null)}"));
-        }
-
-        void LogOutput(CameraFollowAnchor followAnchor, CameraResolveResult result)
-        {
-            if (!ShouldLog(ref nextOutputDebugLogTime, false))
-                return;
-
-             RuntimeDiagnosticLog.Submit(new RuntimeDiagnosticLogEvent(
-                 RuntimeDiagnosticLogCategory.Camera,
-                 RuntimeDiagnosticLogLevel.Info,
-                 "camera-output",
-                 "",
-                 "",
-                 0,
-                 Time.frameCount,
-                 $"[DEBUG-CAM-CHAIN] controller.output frame={Time.frameCount} autoTick={autoTick} " +
-                 $"anchor={followAnchor.Position.ToString("F3")} aimPoint={result.AimPoint.ToString("F3")} lookDir={result.LookDirection.ToString("F3")} " +
-                 $"planarForward={result.CameraPlanarForward.ToString("F3")} planarRight={result.CameraPlanarRight.ToString("F3")}"));
-        }
-
-        bool ShouldLog(ref float nextLogTime, bool force)
-        {
-            if (!debugLog)
-                return false;
-
-            if (debugLogInterval <= 0f)
-                return true;
-
-            float now = Time.unscaledTime;
-            if (!force && now < nextLogTime)
-                return false;
-
-            nextLogTime = now + debugLogInterval;
-            return true;
-        }
-
-        static string TargetName(Transform target)
-        {
-            return target != null ? target.name : "null";
         }
     }
 }

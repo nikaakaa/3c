@@ -1,0 +1,29 @@
+{
+    "name": "TEngine.Runtime",
+    "rootNamespace": "TEngine",
+    "references": [
+        "YooAsset",
+        "YooAsset.RuntimeExtension",
+        "YooAsset.MiniGame",
+        "UniTask",
+        "UniTask.YooAsset",
+        "Unity.TextMeshPro",
+        "Unity.InputSystem",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "",
+            "define": "ENABLE_INPUT_SYSTEM"
+        }
+    ],
+    "noEngineReferences": false
+}

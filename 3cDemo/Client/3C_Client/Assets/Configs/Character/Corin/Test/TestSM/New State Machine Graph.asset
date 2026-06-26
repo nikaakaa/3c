@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c5c4ab29d39a014bb0927e214ae947a, type: 3}
+  m_Name: New State Machine Graph
+  m_EditorClassIdentifier: 
+  m_Nodes:
+  - rid: 3609675279003549758
+  - rid: 3609675279003549759
+  - rid: 3609675279003549760
+  - rid: 3609675279003549761
+  m_Edges:
+  - m_GUID: 249fced2-9dc6-47f7-adc1-d3ee35f388c8
+    m_StartNodeGUID: 0a40ab8b-b03d-47c4-90e2-84f4d19022a8
+    m_EndNodeGUID: 7479afd8-c8fd-4f9d-9475-e58794c844ff
+    m_StartPortName: StateOut
+    m_EndPortName: StateIn
+    m_FlowOrder: 0
+    m_TransitionPriority: 0
+  m_PropertyEdges: []
+  m_ExposedProperties: []
+  m_NodeGroups: []
+  m_StackNodes: []
+  references:
+    version: 2
+    RefIds:
+    - rid: 3609675279003549758
+      type: {class: StateMachineEnterNode, ns: TreeDesigner, asm: Taco.TreeDesigner}
+      data:
+        m_GUID: 0a40ab8b-b03d-47c4-90e2-84f4d19022a8
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 20, y: 0}
+    - rid: 3609675279003549759
+      type: {class: StateMachineAnyStateNode, ns: TreeDesigner, asm: Taco.TreeDesigner}
+      data:
+        m_GUID: 940f28d5-eb18-4e99-82bc-f7efa57e29f1
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 0, y: 180}
+    - rid: 3609675279003549760
+      type: {class: StateMachineExitNode, ns: TreeDesigner, asm: Taco.TreeDesigner}
+      data:
+        m_GUID: d8866751-3c6f-4919-85dd-934268467088
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 620.6667, y: 0}
+    - rid: 3609675279003549761
+      type: {class: StateNode, ns: TreeDesigner, asm: Taco.TreeDesigner}
+      data:
+        m_GUID: 7479afd8-c8fd-4f9d-9475-e58794c844ff
+        m_Modules:
+        - rid: 3609675279003549762
+        m_Expanded: 1
+        m_ShowPanel: 1
+        m_Position: {x: 261.33334, y: 0.66666794}
+        m_InputEdgeGUIDs:
+        - 249fced2-9dc6-47f7-adc1-d3ee35f388c8
+        m_OutputEdgeGUIDs: []
+    - rid: 3609675279003549762
+      type: {class: StateBehaviorGraphReferenceModule, ns: TreeDesigner, asm: Taco.TreeDesigner}
+      data:
+        m_ModuleId: stateBehaviorGraph
+        m_SubTree: {fileID: 11400000, guid: 746855dd3b7bfe54c955b4e2633a7fd6, type: 2}
+        m_ScopeId: 7479afd8-c8fd-4f9d-9475-e58794c844ff

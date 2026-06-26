@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Plugin/TreeDesigner/Editor/Resources/StyleSheet/BaseTreeInspectorOutside.uss?fileID=7433441132597879392&amp;guid=0e08cd5044397f14aae28bdd458e8391&amp;type=3#BaseTreeInspectorOutside" />
+    <ui:Label text="Open" display-tooltip-when-elided="true" name="open-tree-button" />
+    <ui:ScrollView name="property-scroll">
+        <ui:VisualElement name="property-container" />
+    </ui:ScrollView>
+    <ui:Label text="Exposed Property" display-tooltip-when-elided="true" name="exposed-property-title" style="font-size: 18px; -unity-text-align: middle-center; -unity-font-style: bold-and-italic; background-color: rgb(40, 40, 40); border-left-width: 1px; border-right-width: 1px; border-top-width: 1px; border-bottom-width: 1px; border-left-color: rgb(34, 34, 34); border-right-color: rgb(34, 34, 34); border-top-color: rgb(34, 34, 34); border-bottom-color: rgb(34, 34, 34); padding-left: 0; padding-right: 0; padding-top: 0; padding-bottom: 0;" />
+    <ui:VisualElement name="exposed-property-panel">
+        <ui:ScrollView name="exposed-property-scroll">
+            <ui:VisualElement name="exposed-property-container" />
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

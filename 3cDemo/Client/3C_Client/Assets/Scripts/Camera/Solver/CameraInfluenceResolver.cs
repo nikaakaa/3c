@@ -4,19 +4,19 @@ namespace ThirdPersonCamera
 {
     public static class CameraInfluenceResolver
     {
-        public static CameraInfluenceRequest Resolve(CameraInfluenceRequest fallback, params CameraInfluenceRequest[] requests)
+        public static CameraInfluenceRequest Resolve(CameraInfluenceRequest baseRequest, params CameraInfluenceRequest[] requests)
         {
-            return ResolveRequests(fallback, requests);
+            return ResolveRequests(baseRequest, requests);
         }
 
-        public static CameraInfluenceRequest Resolve(CameraInfluenceRequest fallback, IReadOnlyList<CameraInfluenceRequest> requests)
+        public static CameraInfluenceRequest Resolve(CameraInfluenceRequest baseRequest, IReadOnlyList<CameraInfluenceRequest> requests)
         {
-            return ResolveRequests(fallback, requests);
+            return ResolveRequests(baseRequest, requests);
         }
 
-        static CameraInfluenceRequest ResolveRequests(CameraInfluenceRequest fallback, IReadOnlyList<CameraInfluenceRequest> requests)
+        static CameraInfluenceRequest ResolveRequests(CameraInfluenceRequest baseRequest, IReadOnlyList<CameraInfluenceRequest> requests)
         {
-            CameraInfluenceRequest selected = fallback;
+            CameraInfluenceRequest selected = baseRequest;
             if (requests == null)
                 return selected;
 

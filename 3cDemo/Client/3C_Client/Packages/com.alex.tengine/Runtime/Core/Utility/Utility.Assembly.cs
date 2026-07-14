@@ -10,13 +10,7 @@ namespace TEngine
         /// </summary>
         public static class Assembly
         {
-            private static readonly System.Reflection.Assembly[] _assemblies = null;
             private static readonly Dictionary<string, Type> _cachedTypes = new Dictionary<string, Type>(StringComparer.Ordinal);
-
-            static Assembly()
-            {
-                _assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            }
 
             /// <summary>
             /// 获取已加载的程序集。
@@ -24,7 +18,7 @@ namespace TEngine
             /// <returns>已加载的程序集。</returns>
             public static System.Reflection.Assembly[] GetAssemblies()
             {
-                return _assemblies;
+                return AppDomain.CurrentDomain.GetAssemblies();
             }
 
             /// <summary>
@@ -34,7 +28,7 @@ namespace TEngine
             public static Type[] GetTypes()
             {
                 List<Type> results = new List<Type>();
-                foreach (System.Reflection.Assembly assembly in _assemblies)
+                foreach (System.Reflection.Assembly assembly in GetAssemblies())
                 {
                     results.AddRange(assembly.GetTypes());
                 }
@@ -54,7 +48,7 @@ namespace TEngine
                 }
 
                 results.Clear();
-                foreach (System.Reflection.Assembly assembly in _assemblies)
+                foreach (System.Reflection.Assembly assembly in GetAssemblies())
                 {
                     results.AddRange(assembly.GetTypes());
                 }
@@ -85,7 +79,7 @@ namespace TEngine
                     return type;
                 }
 
-                foreach (System.Reflection.Assembly assembly in _assemblies)
+                foreach (System.Reflection.Assembly assembly in GetAssemblies())
                 {
                     type = Type.GetType(Text.Format("{0}, {1}", typeName, assembly.FullName));
                     if (type != null)

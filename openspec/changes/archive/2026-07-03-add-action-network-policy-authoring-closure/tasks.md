@@ -1,0 +1,29 @@
+# Tasks
+
+- [x] 1. 梳理 `ActionProfile`、`ActionPolicyTypes`、`ActionProfileEditor` 当前字段和 Inspector 展示。
+- [x] 2. 梳理 `ActionProfile` 注册到 `ActionRuntime` 的链路，确认缺失和重复 action id 的配置错误入口。
+- [x] 3. 梳理 Graph action request 节点当前 UI，确认作者只需要选择 ActionProfile 和 Action Context 输出。
+- [x] 4. 梳理 Timeline window clip 和非 Timeline window 输出，确认它们只保存输出事实。
+- [x] 5. 定义 effective network policy 只读结果类型，覆盖 activation、lifecycle、window、motion、cue、gameplay result。
+- [x] 6. 定义 `ActionNetworkPolicyResolver` 或等价服务接口。
+- [x] 7. 让 resolver 从 `ActionProfile` 解析 action-level policy。
+- [x] 8. 让 resolver 从 `ActionProfile + WindowType` 解析 window policy。
+- [x] 9. 让 resolver 从 `ActionProfile + MotionSourceType` 解析 motion policy。
+- [x] 10. 让 resolver 从 `ActionProfile + CueType/CueId` 解析 cue policy。
+- [x] 11. 补齐 gameplay result 策略配置和解析入口。
+- [x] 12. 明确缺失策略、重复策略和未知输出类型的配置错误，不做 fallback。
+- [x] 13. 为 ActionProfile 增加显式策略模板创建入口或等价初始化入口。
+- [x] 14. 确保模板只写入正式字段，运行时不读取模板。
+- [x] 15. 重整 ActionProfile Inspector 分区：Identity、Network Overview、Windows、Motion、Cues、Gameplay Result、Preview、Debug。
+- [x] 16. 在 ActionProfile Inspector 显示 resolved policy 摘要。
+- [x] 17. 在 ActionProfile Inspector 显示 expected SyncFacts 和 SyncDomain packet 预览。
+- [x] 18. 在 Timeline window Inspector 增加只读策略预览入口。
+- [x] 19. 确保 Timeline window Inspector 不保存完整网络策略字段。
+- [x] 20. 在 Graph action request Inspector 中移除或避免暴露完整网络策略。
+- [x] 21. 确保作者 UI 使用 Action Context 口径，不暴露内部 handle/slot/key。
+- [x] 22. 将 Character outgoing adapter 的 action/window/motion/cue/result 映射改为消费 resolved policy。
+- [x] 23. 确保 adapter 不直接读取 Graph、Timeline 或作者配置资产。
+- [x] 24. 补齐 Runtime Debug 数据，按 ActionInstance 展示 resolved policy、SyncFacts、outgoing packets、incoming decisions。
+- [x] 25. 清理旧的硬编码策略判断、旧命名或误导性内部字段展示。
+- [x] 26. 运行可用的非 Unity batchmode 编译或静态检查入口。
+- [x] 27. 运行 `openspec validate add-action-network-policy-authoring-closure --strict --no-interactive`。

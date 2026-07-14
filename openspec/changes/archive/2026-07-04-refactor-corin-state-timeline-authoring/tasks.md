@@ -1,0 +1,69 @@
+# Tasks
+
+- [x] 1. 确认 `add-state-machine-runtime-facts` 已完成或当前实现已有等价能力。
+- [x] 2. 确认 `add-timeline-action-fact-authoring` 已完成或当前实现已有等价能力。
+- [x] 3. 搜索并记录当前 Corin RootTree 节点结构。
+- [x] 4. 搜索并记录当前 Corin Attack Timeline 轨道结构。
+- [x] 5. 盘点 Corin 当前 ActionProfile 和 ActionContextSlot。
+- [x] 6. 盘点 `Idle` 可用动画 clip。
+- [x] 7. 盘点 `WalkStart` 可用动画 clip。
+- [x] 8. 盘点 `WalkLoop` 可用动画 clip。
+- [x] 9. 盘点 `WalkEnd` 可用动画 clip。
+- [x] 10. 盘点 `RunStart` 可用动画 clip。
+- [x] 11. 盘点 `RunLoop` 可用动画 clip。
+- [x] 12. 盘点 `RunEnd` 可用动画 clip。
+- [x] 13. 盘点 `MovingTurn` 可用动画 clip。
+- [x] 14. 盘点 `Attack1` 可用动画 clip。
+- [x] 15. 盘点 `Attack2` 可用动画 clip。
+- [x] 16. 如果任一必需资源缺失，停下来列出缺口。
+
+## 实施调整记录
+
+- 动画资源缺口由用户确认不作为本次实施阻断；本次创建正式 Timeline 槽位，不绑定 fallback AnimationTrack，后续由用户在 Timeline 中手调动画。
+- `MovingTurn` transition 已补正式 `CharacterInputVector2AngleDeltaConditionNode`，继续走输入值映射，不使用 signal、临时 Bool 或字符串条件。
+- inline `StateMachineGraph` 生成依据 `Graphs/Test/New OneRootTree.asset` 样例完成，状态 body 均为 `StateNode` inline graph，没有创建一次性 SubTree asset。
+- [x] 17. 创建或调整 locomotion Timeline 资产。
+- [x] 18. 创建或调整 Attack1 Timeline 资产。
+- [x] 19. 创建或调整 Attack2 Timeline 资产。
+- [x] 20. 在攻击 Timeline 中配置 ActionWindowTrack。
+- [x] 21. 在攻击 Timeline 中配置 ActionCueTrack。
+- [x] 22. 调整 Corin ActionProfile，使 Attack1/Attack2 策略和 Timeline 输出一致。
+- [x] 23. 将 Corin RootTree 改为 Runtime Loop + Gameplay Parallel。
+- [x] 24. 在 Corin RootTree 中创建 Locomotion StateMachineNode。
+- [x] 25. 在 Corin RootTree 中创建 Action StateMachineNode。
+- [x] 26. 创建 Locomotion 状态 `Idle`。
+- [x] 27. 创建 Locomotion 状态 `WalkStart`。
+- [x] 28. 创建 Locomotion 状态 `WalkLoop`。
+- [x] 29. 创建 Locomotion 状态 `WalkEnd`。
+- [x] 30. 创建 Locomotion 状态 `RunStart`。
+- [x] 31. 创建 Locomotion 状态 `RunLoop`。
+- [x] 32. 创建 Locomotion 状态 `RunEnd`。
+- [x] 33. 创建 Locomotion 状态 `MovingTurn`。
+- [x] 34. 为每个 locomotion 状态配置 inline StateBehaviorSubTree。
+- [x] 35. 为每个 locomotion 状态配置 TimelineNode。
+- [x] 36. 配置 locomotion move magnitude transition。
+- [x] 37. 配置 locomotion StateRootCompleted transition。
+- [x] 38. 创建 Action 状态 `None`。
+- [x] 39. 创建 Action 状态 `Attack1`。
+- [x] 40. 创建 Action 状态 `Attack2`。
+- [x] 41. 为 `Attack1` 配置 OnEnter action activation。
+- [x] 42. 为 `Attack1` 配置 Root TimelineNode(Action Context)。
+- [x] 43. 为 `Attack1` 配置 OnExit lifecycle transition。
+- [x] 44. 为 `Attack2` 配置 OnEnter action activation。
+- [x] 45. 为 `Attack2` 配置 Root TimelineNode(Action Context)。
+- [x] 46. 为 `Attack2` 配置 OnExit lifecycle transition。
+- [x] 47. 配置 `None -> Attack1` transition。
+- [x] 48. 配置 `Attack1 -> Attack2` transition。
+- [x] 49. 配置 `Attack1 -> None` transition。
+- [x] 50. 配置 `Attack2 -> None` transition。
+- [x] 51. 删除 Corin RootTree 中平铺的 `Activate Attack` 节点。
+- [x] 52. 删除 Corin RootTree 中平铺的 `Play Attack Timeline` 节点。
+- [x] 53. 删除 Corin RootTree 中平铺的 `Submit Attack Window` 节点。
+- [x] 54. 删除 Corin RootTree 中平铺的 `Submit Attack Cue` 节点。
+- [x] 55. 删除 Corin RootTree 中平铺的 `Submit Loopback Result` 节点。
+- [x] 56. 搜索确认 Corin RootTree 不再包含具体攻击 body 的 action activation、Timeline、window、cue 或 result 节点。
+- [x] 57. 搜索确认没有创建一次性 SubTree asset。
+- [x] 58. 搜索确认没有新增业务特化节点类。
+- [x] 59. 搜索确认没有恢复旧 locomotion/action SO 或 fallback 配置。
+- [x] 60. 运行 `dotnet build 3cDemo/Client/3C_Client/Assembly-CSharp.csproj -nologo -v:minimal`。
+- [x] 61. 运行 `openspec validate refactor-corin-state-timeline-authoring --strict --no-interactive`。

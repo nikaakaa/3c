@@ -1,0 +1,21 @@
+# Tasks
+
+- [x] 1. 搜索 `NetworkOutput`、`.Output.Network`、`network outputs`、`action end`、`EndRequests` 等旧口径入口并列出影响文件。
+- [x] 2. 将 `NetworkOutput` 类型重命名为 `CharacterSyncFacts` 或等价正式类型。
+- [x] 3. 将 `CharacterPipelineOutput.Network` 属性重命名为 `SyncFacts`，不保留 `Network` 兼容属性。
+- [x] 4. 将 `CharacterPipelineOutput.Clear()` 和 frame 清理链路改为清理 `SyncFacts`。
+- [x] 5. 将 `CollectInputFrame` 或等价输入 command 收集入口移动到 `SyncFacts` 口径。
+- [x] 6. 将 GraphContext 写入 action activation、lifecycle transition、window、motion、cue、gameplay result 的位置从 `.Output.Network` 改为 `.Output.SyncFacts`。
+- [x] 7. 将 Motion、GameplayResult、StateEffect、Presentation 等其他 pipeline 写入点从 `.Output.Network` 改为 `.Output.SyncFacts`。
+- [x] 8. 调整 `CharacterNetworkSendStage`，使它只从 `frame.Output.SyncFacts` 收集数据。
+- [x] 9. 保持 `CharacterNetworkSendStage` 不直接认识 peer、transport、Fantasy 或 loopback。
+- [x] 10. 调整 `CharacterGameplaySyncAdapter`，使它从 send stage 的 SyncFacts 数据映射 GameplaySync packets。
+- [x] 11. 将 adapter 文案和调试命名中的 `network outputs` 改为 `sync facts` 或 SyncDomain facts。
+- [x] 12. 为 action activation 定义 `ActionActivationOutcome` 或等价结果，携带激活结果、handle 和 runtime 生成的 lifecycle transitions。
+- [x] 13. 调整新 action 覆盖旧 action 流程，使 `Cancel(CancelledByNewAction)` 只由 `ActionRuntime` 生成并应用。
+- [x] 14. 调整 `CharacterGraphContext`，让它只转发 activation outcome 中的 generated lifecycle transitions 到 `SyncFacts.Action.LifecycleTransitions`。
+- [x] 15. 删除 GraphContext 中根据 previous context 重新构造 cancel transition 的逻辑。
+- [x] 16. 搜索并清理正式代码中的 `NetworkOutput`、`.Output.Network` 和 `ActionEnd` 残留。
+- [x] 17. 更新相关 OpenSpec current spec 或 change delta 中的旧 `NetworkOutput` 文案。
+- [x] 18. 运行 `dotnet build Assembly-CSharp.csproj -nologo -v:minimal`。
+- [x] 19. 运行 `openspec validate separate-sync-facts-from-network-output --strict --no-interactive`。

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64845f53b38e4b67a9f43c62c720f2b4, type: 3}
+  m_Name: CorinHealthAttribute
+  m_EditorClassIdentifier:
+  m_AttributeId:
+    m_Value: Health
+  m_DisplayName: Health
+  m_DebugCategory: Combat
+  m_Minimum:
+    m_Enabled: 1
+    m_Source: 0
+    m_Constant: 0
+    m_AttributeId:
+      m_Value:
+  m_Maximum:
+    m_Enabled: 1
+    m_Source: 0
+    m_Constant: 100
+    m_AttributeId:
+      m_Value:

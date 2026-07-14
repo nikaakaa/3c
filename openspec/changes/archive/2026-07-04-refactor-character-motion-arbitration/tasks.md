@@ -1,0 +1,29 @@
+# Tasks
+
+- [x] 1. 搜索并列出现有 `MotionIntent` 写入点、`MotionContribution` 创建点、`MotionResolver` 调用点和 `SetPositionAndRotation` correction 入口。
+- [x] 2. 定义 `MotionChannel`，第一阶段包含 `Locomotion`、`Action`、`GameplayResult` 和 `Correction`。
+- [x] 3. 定义 `MotionBlendMode`，第一阶段包含 `Additive`、`WeightedBlend` 和 `Override`。
+- [x] 4. 扩展 `MotionContribution` 字段，加入 channel、blend mode、source type、consume lower channels 和 debug source identity。
+- [x] 5. 保留 `MotionContributionSpace`，确认 local/world 转换仍只发生在 resolver 内。
+- [x] 6. 增加 `MotionContribution` 工厂方法，用于创建 input locomotion、action root motion、gameplay result 和 correction 来源。
+- [x] 7. 将 `SetMotionIntentFromInputNode` 改为提交 `Locomotion` channel contribution。
+- [x] 8. 清理输入节点直接写入 `StrictGameplay.MotionIntent` 的路径。
+- [x] 9. 调整 `TimelinePlaybackScheduler.SubmitRootMotion`，让 root motion contribution 使用 `Action` channel。
+- [x] 10. 让 Timeline root motion contribution 携带 source type、priority、weight 和可追踪 source identity。
+- [x] 11. 保持 `TimelinePlaybackScheduler.SubmitMotionWarp` 写入 `MotionWarpWindow`，不把 MotionWarp 改成普通 contribution。
+- [x] 12. 重构 `MotionResolver`，按固定 channel 顺序解析 `Locomotion -> Action -> GameplayResult`。
+- [x] 13. 实现同 channel 内 `Override` 规则，按 priority 选择赢家，并处理同 priority 的稳定 tie break。
+- [x] 14. 实现同 channel 内 `WeightedBlend` 规则，按 weight 归一化混合位移和 yaw。
+- [x] 15. 实现同 channel 内 `Additive` 规则，将有效 contribution 按 weight 累加。
+- [x] 16. 实现 `ConsumeLowerChannels`，让高层 override contribution 可以清除或覆盖低层结果。
+- [x] 17. 调整 `CharacterMotionStage`，让 `MotionIntent` 只接收 resolver 输出。
+- [x] 18. 调整 `CharacterMotionStage` 顺序为 contribution resolve、motion modifier、correction phase、Move。
+- [x] 19. 删除 resolver 前直接硬设 Transform 的 network correction 正式路径。
+- [x] 20. 实现 correction phase，区分 smooth correction 和 force correction。
+- [x] 21. 保持 correction acknowledgement 通过 `SyncFacts.Motion.CorrectionAcknowledgements` 收集。
+- [x] 22. 增加 motion resolve debug 数据结构，记录 contribution 列表、获胜 channel/source、modifier delta 和 correction delta。
+- [x] 23. 将 debug 数据写入 `StrictGameplayOutput` 或等价正式 runtime debug 输出。
+- [x] 24. 搜索并删除旧 motion 仲裁中的无效 priority 字段使用假象或重复命名。
+- [x] 25. 搜索确认正式 runtime 不引用旧 BBB motion 数据源、旧 locomotion SO 或旧 action/bodyclaim/footphase 配置。
+- [x] 26. 运行 `dotnet build 3cDemo/Client/3C_Client/Assembly-CSharp.csproj -nologo -v:minimal`。
+- [x] 27. 运行 `openspec validate refactor-character-motion-arbitration --strict --no-interactive`。

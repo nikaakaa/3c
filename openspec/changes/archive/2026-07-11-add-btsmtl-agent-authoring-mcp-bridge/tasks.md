@@ -1,0 +1,35 @@
+# Tasks
+
+- [x] 1. 定义 `AgentAuthoringAction`，只包含 `ExportSnapshot`、`DryRunPatch`、`ApplyPatch`、`Validate`。
+- [x] 2. 定义 `AgentAuthoringRequest`，明确 action、`definitionAssetPath` 和可选 `patchJson`。
+- [x] 3. 定义 `AgentAuthoringResponse`，区分 bridge 错误、snapshot、compile report、applied 和 saved 状态。
+- [x] 4. 实现 definition 精确路径校验，只接受 `Assets/...` 下的 `CharacterPipelineDefinition`。
+- [x] 5. 实现 Unity Editor 状态门禁，编译、asset update、Play Mode 或 Play Mode 切换期间拒绝执行。
+- [x] 6. 实现 `AgentPatchAuthoringService.ExportSnapshot` 编排，复用紧凑 `AgentGraphSnapshotExporter.Export`。
+- [x] 7. 实现 Patch JSON 解析编排，复用 `AgentAuthoringJsonUtility` 并保留机器可读 parse report。
+- [x] 8. 实现 `AgentPatchAuthoringService.DryRunPatch` 编排，复用当前 snapshot 和 `AgentPatchCompiler` dry-run。
+- [x] 9. 实现可达 graph serialized owner 收集，覆盖 definition、RootTree、inline graph owner 和 shared graph owner。
+- [x] 10. 实现单 Undo group 事务注册，修改前为全部 owner 注册完整 Undo。
+- [x] 11. 实现 `AgentPatchAuthoringService.ApplyPatch` 的强制 dry-run 门禁。
+- [x] 12. 实现事务内 `AgentPatchCompiler` apply，不复制 operation 或 emitter 逻辑。
+- [x] 13. 实现 apply 后 `AgentGraphValidator` 调用，并把验证消息合并到同一 compile report。
+- [x] 14. 实现 apply/validate 失败和异常时的 Undo group 回滚，禁止保存部分结果。
+- [x] 15. 实现 apply 成功时折叠 Undo group并调用 `AssetDatabase.SaveAssets()`。
+- [x] 16. 实现 `AgentPatchAuthoringService.Validate` 编排，保证只读且返回完整 report。
+- [x] 17. 删除 `AgentPatchIR.definitionAssetPath`，让 Patch 与目标 definition 解耦。
+- [x] 18. 删除 `Apply Agent Patch From Clipboard` 菜单、快捷键、剪贴板读取和其重复生命周期。
+- [x] 19. 将 `AgentCharacterControllerSynthesisWindow` 的 Patch dry-run、apply 和 validate 改为调用统一 service。
+- [x] 20. 保持窗口 Intent 输入先由 `AgentMacroLibrary` 展开，再把 Patch 交给统一 service。
+- [x] 21. 新增 `ManageBtsmtlAgentAuthoringMcpTool` 并用 `[McpForUnityTool]` 注册唯一 MCP 工具名。
+- [x] 22. 为 MCP 工具声明 `action`、`definition_asset_path`、`patch_json` 参数 metadata。
+- [x] 23. 实现 MCP snake_case 参数到强类型 request 的严格映射，拒绝未知 action 和缺失必需参数。
+- [x] 24. 实现 `export_snapshot` MCP response，返回紧凑 snapshot 且不输出 full debug dump。
+- [x] 25. 实现 `dry_run_patch` MCP response，返回 planned diff、messages 和 metrics。
+- [x] 26. 实现 `apply_patch` MCP response，明确 applied、saved 和最终 validation 结果。
+- [x] 27. 实现 `validate` MCP response，返回机器可读 graph validation report。
+- [x] 28. 确认 MCP handler 不直接修改 BTSMTL graph、不读取文件/剪贴板、不启动进程。
+- [x] 29. 使用带 `--disable-build-servers`、`/nr:false`、`/p:UseSharedCompilation=false` 的项目编译命令检查 Editor assembly，并立即执行 `dotnet build-server shutdown`。
+- [x] 30. 从 `mcpforunity://custom-tools` 检查 `manage_btsmtl_agent_authoring` 已由当前 Unity Editor 自动发现。
+- [x] 31. 通过 MCP 调用 `export_snapshot` 和 `dry_run_patch`，确认响应可序列化且资产未变脏。
+- [x] 32. 对照 `btsmtl-graph-core`、`character-gameplay-pipeline-closure` 和历史 `agent-character-controller-synthesis` 规格检查未产生第二套 compiler、graph 数据或资产解析路径。
+- [x] 33. 运行 `openspec validate add-btsmtl-agent-authoring-mcp-bridge --strict --no-interactive` 并解决全部问题。

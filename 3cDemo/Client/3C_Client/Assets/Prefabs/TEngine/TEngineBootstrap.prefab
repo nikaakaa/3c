@@ -243,7 +243,7 @@ GameObject:
   - component: {fileID: 7696541955266276701}
   - component: {fileID: 7696541955266276690}
   m_Layer: 0
-  m_Name: GameEntry
+  m_Name: TEngineBootstrap
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -279,9 +279,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 7696541955266276702}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9cdc4a1084443e8408c7e46ec9e661c7, type: 3}
+  m_Script: {fileID: 11500000, guid: 2e691a4580514cfda63e2215c3dd758c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  dontDestroyOnLoad: 1
 --- !u!114 &7696541955266276690
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -10,11 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0320e56ed14c4f7981ce8f4d27b13316, type: 3}
-  m_Name: UpdateSetting
+  m_Name: TEngineUpdateSettings
   m_EditorClassIdentifier: 
-  projectName: Demo
+  projectName: 3C
   HotUpdateAssemblies:
+  - GameBase.dll
   - GameProto.dll
+  - BattleCore.dll
   - GameLogic.dll
   AOTMetaAssemblies:
   - mscorlib.dll
@@ -23,14 +25,16 @@ MonoBehaviour:
   - TEngine.Runtime.dll
   - UniTask.dll
   - YooAsset.dll
+  - Fantasy.Unity.dll
+  - Newtonsoft.Json.dll
   - UnityEngine.CoreModule.dll
   LogicMainDllName: GameLogic.dll
   AssemblyTextAssetExtension: .bytes
-  AssemblyTextAssetPath: AssetRaw/DLL
+  AssemblyTextAssetPath: AssetRaw/HotUpdate/DLL
   UpdateStyle: 1
   UpdateNotice: 1
-  ResDownLoadPath: http://127.0.0.1:8081
-  FallbackResDownLoadPath: http://127.0.0.1:8082
+  ResDownLoadPath: 
+  FallbackResDownLoadPath: 
   LoadResWayWebGL: 0
   isAutoAssetCopeToBuildAddress: 0
   BuildAddress: ../../Builds/Unity_Data/StreamingAssets

@@ -1,0 +1,38 @@
+﻿# Tasks
+
+- [x] 1. 定义 Agent authoring 文件布局和 asmdef 归属，区分 BTSMTL 通用编译模块与 Character 宏模块。
+- [x] 2. 定义 `AgentGraphSnapshot` 数据结构，覆盖 graph kind、节点、flow 边、property 边、inline/shared ownership 和资产引用摘要。
+- [x] 3. 实现 `AgentGraphSnapshotExporter`，从 `CharacterPipelineDefinition` 导出 RootTree、StateMachine、StateBehaviorSubTree 和 TransitionRuleGraph 摘要。
+- [x] 4. 在 snapshot 中加入 `CharacterInputProfile` 的 input value/action request 摘要。
+- [x] 5. 在 snapshot 中加入 `ActionProfile` 和 Timeline asset 的可引用身份摘要。
+- [x] 6. 定义 `AgentControllerIntent` schema，覆盖 locomotion、单段动作、二连击、取消和受击反应意图。
+- [x] 7. 定义 `AgentPatchIR` schema，覆盖 ensure state、ensure transition、ensure rule、ensure behavior node、bind asset、link flow 和 link property 操作。
+- [x] 8. 定义 `AgentCompileReport` 数据结构，覆盖错误路径、错误类型、建议修复、diff 摘要和评估指标。
+- [x] 9. 实现 `AgentAssetResolver`，只从当前 `CharacterPipelineDefinition` 和 snapshot 解析 Input、ActionProfile、Timeline、RootTree，不做目录扫描 fallback。
+- [x] 10. 实现 `NodeEmitterRegistry`，用白名单登记第一阶段允许生成的节点和参数。
+- [x] 11. 为 `StateMachineNode`、`StateNode`、Transition edge、TransitionRuleGraph 编写 emitter，统一走 `BaseGraph.CreateNode` 和 `BaseGraph.Link`。
+- [x] 12. 为 `TimelineNode` 编写 emitter，绑定 Timeline asset 和 Action Context。
+- [x] 13. 为 action activation 和 lifecycle transition 节点编写 emitter，绑定 ActionProfile、source request 和 Action Context。
+- [x] 14. 为 input request/value 查询节点编写 emitter，绑定 `CharacterInputProfile` 稳定 id。
+- [x] 15. 实现 `AgentMacroLibrary` 的 `single_timeline_action` 宏。
+- [x] 16. 实现 `AgentMacroLibrary` 的 `two_hit_combo` 宏。
+- [x] 17. 实现 `AgentMacroLibrary` 的 `dodge_cancel` 宏。
+- [x] 18. 实现 `AgentMacroLibrary` 的 `hit_reaction` 宏。
+- [x] 19. 实现 `AgentMacroLibrary` 的第一版 locomotion 状态机宏。
+- [x] 20. 实现 `AgentPatchCompiler` dry-run，输出计划 diff 但不修改 asset。
+- [x] 21. 实现 `AgentPatchCompiler` apply，按 Patch IR 调用正式 BTSMTL authoring API 修改 graph。
+- [x] 22. 实现 apply 后刷新和 dirty 标记，确保 BaseTreeAsset、inline graph 和 shared graph 的编辑状态一致。
+- [x] 23. 实现 `AgentGraphValidator` 的图类型规则校验。
+- [x] 24. 实现 `AgentGraphValidator` 的 ActionProfile、Timeline、Input request 引用校验。
+- [x] 25. 实现 `AgentGraphValidator` 的 Action Context 链路校验。
+- [x] 26. 实现 `AgentGraphValidator` 的 inline/shared ownership 校验。
+- [x] 27. 实现 report 到 JSON 的导出，供 Codex/LLM 下一轮修复读取。
+- [x] 28. 增加 Editor 入口：从 `CharacterPipelineDefinition` 导出 snapshot。
+- [x] 29. 增加 Editor 入口：导入 Agent Intent/Patch，先 dry-run 并显示 compile report。
+- [x] 30. 增加 Editor 入口：确认后 apply Patch。
+- [x] 31. 增加第一批评估样例：locomotion、单段轻攻击、二连击、闪避取消、受击打断。
+- [x] 32. 增加评估命令或面板，统计 schema 合法率、编译成功率、语义合法率、修复轮数和 diff size。
+- [x] 33. 增加一份 Agent 生成提示模板，说明 snapshot、Intent、Patch IR、错误修复和禁止事项。
+- [x] 34. 整理文档，说明 Agent JSON 是中间层，不是正式策划 DSL，也不是 runtime 数据。
+- [x] 35. 对照 `btsmtl-graph-core`、`btsmtl-sm-node-authoring`、`btsmtl-runnable-timeline-node`、`character-action-authoring-closure` 和 `character-state-timeline-authoring-loop` 检查实现是否产生分裂路径。
+

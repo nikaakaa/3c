@@ -1,0 +1,25 @@
+# Tasks
+
+- [x] 1. 搜索 `StateMachineGraphRuntime`、`StateNode.UpdateState`、`TransitionRuleGraphRuntime` 的现有调用链。
+- [x] 2. 定义状态运行事实数据结构。
+- [x] 3. 在进入 active state 时记录 state identity。
+- [x] 4. 在进入 active state 时重置 elapsed ticks。
+- [x] 5. 在进入 active state 时重置 elapsed seconds。
+- [x] 6. 每次状态机 tick 时推进 elapsed ticks。
+- [x] 7. 每次状态机 tick 时推进 elapsed seconds。
+- [x] 8. 记录 active `StateNode` root last status。
+- [x] 9. 将 root `Success` 映射为 `StateRootCompleted`。
+- [x] 10. 确认 root `Failure` 不被误记为 completed。
+- [x] 11. 在 pending transition 流程中保持 exiting state facts 可调试。
+- [x] 12. 在 transition 完成时切换 active state facts。
+- [x] 13. 在 reset/stop/dispose 时清理 runtime facts。
+- [x] 14. 为 TransitionRuleGraph evaluation 提供状态运行事实上下文。
+- [x] 15. 新增 `State Elapsed Seconds` value node。
+- [x] 16. 新增 `State Elapsed Ticks` value node。
+- [x] 17. 新增 `State Root Completed` value node。
+- [x] 18. 确认新增 value node 可在 TransitionRuleGraph 中创建。
+- [x] 19. 确认新增 value node 不能在 StateMachineGraph 本层创建。
+- [x] 20. 确认新增 value node 不继承 RunnableNode。
+- [x] 21. 搜索确认没有新增业务状态节点类。
+- [x] 22. 运行 `dotnet build 3cDemo/Client/3C_Client/Assembly-CSharp.csproj -nologo -v:minimal`。
+- [x] 23. 运行 `openspec validate add-state-machine-runtime-facts --strict --no-interactive`。

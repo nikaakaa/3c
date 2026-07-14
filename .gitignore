@@ -77,7 +77,6 @@ Desktop.ini
 node_modules/
 
 # Local environment files
-.codegraph/
 .env
 .env.*
 !.env.example

@@ -1,0 +1,64 @@
+# Tasks
+
+- [x] 1. 梳理当前 Transition 原型字段
+  - [x] 1.1 定位 `BaseEdge` 上的 Transition 条件字段和菜单入口
+  - [x] 1.2 定位 `StateMachineGraphRuntime` 的条件求值路径
+  - [x] 1.3 定位 `StateMachineGraph.CanCreateNodeType()` 对条件节点的放行规则
+- [x] 2. 定义规则图资产和节点范围
+  - [x] 2.1 新增 `TransitionRuleGraph` 图类型
+  - [x] 2.2 新增 `TransitionRuleResultNode`
+  - [x] 2.3 让新建规则图默认包含一个结果节点
+  - [x] 2.4 限制规则图只能创建纯值、输入、谓词、逻辑和结果节点
+  - [x] 2.5 禁止规则图创建 `RunnableNode`、`TimelineNode`、`StateMachineNode`、`StateNode` 和状态机控制节点
+- [x] 3. 收口 Transition edge 数据
+  - [x] 3.1 在正式 Transition 边数据上保存规则图引用和优先级
+  - [x] 3.2 移除旧 `TransitionConditionNodeGuid/PortId` 条件链路
+  - [x] 3.3 定义无规则图 Transition 的合法语义
+  - [x] 3.4 校验 `AnyState` Transition 必须配置规则图
+  - [x] 3.5 校验规则图必须拥有且只能拥有一个结果节点
+- [x] 4. 接入编辑器创作
+  - [x] 4.1 在 Transition 边视图和菜单显示优先级、规则图引用状态
+  - [x] 4.2 支持从 Transition 边打开对应规则图
+  - [x] 4.3 支持为 Transition 边创建缺失的规则图
+  - [x] 4.4 移除旧的 “选择同图 Bool port 作为条件” 菜单
+  - [x] 4.5 在边视图显示规则图摘要、缺失状态和优先级
+- [x] 5. 接入运行时求值
+  - [x] 5.1 新增 `TransitionRuleGraph` 求值器
+  - [x] 5.2 求值器读取结果节点 Bool 输入
+  - [x] 5.3 求值器复用现有图上下文、黑板和输入来源
+  - [x] 5.4 `StateMachineGraphRuntime` 通过规则图判断 Transition 是否可过
+  - [x] 5.5 Transition 排序使用优先级，优先级相同再使用 flow order
+- [x] 6. 调整图创建规则
+  - [x] 6.1 `StateMachineGraph` 不再允许创建条件 `ValueNode`
+  - [x] 6.2 `TransitionRuleGraph` 允许创建条件相关节点
+  - [x] 6.3 拖拽 InputAction 到状态机图时不得直接创建条件节点
+  - [x] 6.4 拖拽 InputAction 到规则图时创建正式输入值节点
+- [x] 7. 清理旧数据和旧路径
+  - [x] 7.1 删除旧 Transition BoolPort 条件菜单和序列化路径
+  - [x] 7.2 删除无法迁移的旧测试资产条件数据
+  - [x] 7.3 确认没有 Workbench、fallback 条件或并行端口协议残留
+- [x] 8. 工具校验
+  - [x] 8.1 运行 `openspec validate add-btsmtl-transition-rule-graph-authoring --strict --no-interactive`
+  - [x] 8.2 运行 `openspec validate --all --strict --no-interactive`
+- [x] 9. 收口规则图归属模型
+  - [x] 9.1 将 `Create Rule` 默认创建路径改为 `StateMachineGraph` 内嵌 sub-asset
+  - [x] 9.2 移除双击或 `Open Rule` 缺失时的隐式创建行为
+  - [x] 9.3 在边 Inspector 显示 `None`、`Embedded`、`Shared Asset` 和非法外部 embedded 状态
+  - [x] 9.4 支持将 embedded 规则图抽取为独立 shared asset
+  - [x] 9.5 清理 embedded 规则图时删除 sub-asset，清理 shared 规则图时只断开引用
+  - [x] 9.6 校验引用其它 asset 内 embedded 规则图的非法结构
+- [x] 10. 归属模型校验
+  - [x] 10.1 编译 `BTSMTL.TreeDesigner.Editor.csproj`
+  - [x] 10.2 运行 `openspec validate add-btsmtl-transition-rule-graph-authoring --strict --no-interactive`
+  - [x] 10.3 运行 `openspec validate --all --strict --no-interactive`
+- [x] 11. 收口删除交互
+  - [x] 11.1 让 Inspector 对象字段清空和替换规则图时复用 ownership 删除语义
+  - [x] 11.2 将 embedded 规则图删除按钮改成明确的删除文案
+  - [x] 11.3 删除非空 embedded 规则图前弹出确认
+  - [x] 11.4 删除 Transition 边时同步删除 owned embedded 规则图
+  - [x] 11.5 删除 StateNode 等节点连带 Transition 时同步清理 owned embedded 规则图
+  - [x] 11.6 加强 embedded sub-asset 删除后的 dirty/save/import
+- [x] 12. 删除交互校验
+  - [x] 12.1 编译 `BTSMTL.TreeDesigner.Editor.csproj`
+  - [x] 12.2 运行 `openspec validate add-btsmtl-transition-rule-graph-authoring --strict --no-interactive`
+  - [x] 12.3 运行 `openspec validate --all --strict --no-interactive`

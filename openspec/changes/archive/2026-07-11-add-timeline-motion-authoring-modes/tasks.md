@@ -1,0 +1,33 @@
+# Tasks
+
+- [x] 读取并确认 `character-root-motion-curves`、`character-motion-semantics`、`character-animation-pipeline`、`btsmtl-runnable-timeline-node` 当前 spec 约束。
+- [x] 检查 `RootMotionCurveAsset` 当前序列化字段和求值器输入输出。
+- [x] 检查 `RootMotionCurveBakerWindow` 当前采样流程和输出资产写入点。
+- [x] 检查 `Timeline.AnimationClip.RootMotionCurve` 当前采样入口。
+- [x] 检查 `TimelinePlaybackScheduler` 当前 root motion contribution 提交流程。
+- [x] 检查 `MotionWarpTrack` 和 `MotionWarpModifier` 当前边界。
+- [x] 为 `RootMotionCurveAsset` 增加正式求值模式字段。
+- [x] 让旧曲线资产默认保持 `FullLocalDelta` 语义。
+- [x] 为 root motion baker 增加 bake mode 选择。
+- [x] 在完整模式下保持现有 local XYZ + yaw 输出。
+- [x] 在前向模式下输出累计 forward distance + yaw。
+- [x] 让 `RootMotionCurveEvaluator` 按求值模式输出 delta。
+- [x] 移除 `Timeline.AnimationClip.RootMotionCurve` 作为运行时位移入口。
+- [x] 移除 `TimelineRootMotionContribution` 数据结构。
+- [x] 移除 `TimelinePlaybackScheduler` 的 animation root motion sample buffer 和 `SubmitRootMotion` 分支。
+- [x] 移除 Timeline preview 的 root motion buffer。
+- [x] 清理 Corin Timeline 资产中的旧空 `RootMotionCurve` 字段。
+- [x] 新增 Timeline motion curve sample 数据结构。
+- [x] 新增 `MotionCurveTrack`。
+- [x] 新增 `MotionCurveClip`。
+- [x] 让 `MotionCurveClip` 支持 Local / World 空间配置。
+- [x] 让 `MotionCurveClip` 支持 channel、blend mode、priority、weight 和 consume lower channels 配置。
+- [x] 让 `TimelinePlaybackScheduler` 采样 `MotionCurveTrack` 并提交 `MotionContribution`。
+- [x] 保持 MotionWarp 只提交 window 并由 `MotionWarpModifier` 处理。
+- [x] 补充 motion debug source identity，区分 motion curve track 和 motion warp。
+- [x] 检查正式代码不引用 BBB motion 数据类型或旧 SO/config。
+- [x] 检查没有新增命名自动查找、场景搜索或 fallback 配置。
+- [x] 更新相关 asmdef 引用或 csproj 收录关系（如实现需要）。
+- [x] 运行 `dotnet build 3cDemo/Client/3C_Client/3C_Client.sln --disable-build-servers /nr:false /p:UseSharedCompilation=false`。
+- [x] 运行 `dotnet build-server shutdown`。
+- [x] 运行 `openspec validate add-timeline-motion-authoring-modes --strict --no-interactive`。

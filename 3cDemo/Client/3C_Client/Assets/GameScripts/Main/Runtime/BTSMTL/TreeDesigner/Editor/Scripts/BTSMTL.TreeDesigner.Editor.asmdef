@@ -1,0 +1,23 @@
+﻿{
+    "name": "BTSMTL.TreeDesigner.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:3af8e02729705434aa5c2d77c4a5103a",
+        "GUID:349d62e8ffbe48b8ad6e03ccd8cbaf71",
+        "GUID:d29a36fc3af64c7a9c0ed51cc35110bd",
+        "GUID:4bc7b3aab6fa118449e1df49b33fa56c",
+        "GUID:dbcec5c5c83b92c40956750ad4235b10",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

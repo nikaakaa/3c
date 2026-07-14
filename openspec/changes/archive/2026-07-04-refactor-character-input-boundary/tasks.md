@@ -1,0 +1,28 @@
+# Tasks
+
+- [x] 1. 搜索 current specs 和 active changes 中的 `signal`、`continuous command`、`input command` 和 `command` 外露口径。
+- [x] 2. 列出代码中 `CharacterInputSignalDefinition`、`m_Signals`、`CharacterInputCommand` 和 `ContinuousCommand` 相关类型或字段。
+- [x] 3. 确认 `ClientCommand`、`ClientCommandFrame`、`InputSequence` 只在 SyncFacts/Network/Prediction 语境中保留。
+- [x] 4. 将 `CharacterInputSignalDefinition` 规划为 `CharacterInputValueDefinition` 或等价正式输入值定义。
+- [x] 5. 将 `CharacterInputProfile.m_Signals` 规划为 `m_InputValues` 或等价正式字段。
+- [x] 6. 将连续输入 frame 容器规划为 input values，不使用 command 命名暴露给 Graph。
+- [x] 7. 保留 `CharacterInputRequestDefinition` 作为离散动作请求配置。
+- [x] 8. 明确 ActionRequest buffer 的查询、过期、消费和 debug 语义不变。
+- [x] 9. 将 BTSMTL 语义输入节点规划为输入信息节点，不再称为 signal 节点。
+- [x] 10. 规划从 InputSystem/InputProfile 自动生成或刷新 InputValueInfo 和 ActionRequestInfo 节点。
+- [x] 11. 明确输入信息节点保存输入定义稳定身份或引用，不保存第二份 InputAction 配置。
+- [x] 12. 将 editor 拖拽规划为创建对应输入信息节点，并复用稳定身份避免重复节点。
+- [x] 13. 明确 TransitionRuleGraph 只允许查询 ActionRequest，不允许消费。
+- [x] 14. 明确状态行为、Action 接受点或正式动作管线才允许消费 ActionRequest。
+- [x] 15. 将 locomotion 节点规划为连接或引用 `MoveAxis` 输入信息节点，而不是手写 signal id 或 command id。
+- [x] 16. 将 motion arbitration 变更中的输入来源描述改为 input value source。
+- [x] 17. 将 NetworkSendStage 规划为从 `CharacterInputFrame` 生成 `ClientCommandFrame` 或等价 sync fact。
+- [x] 18. 明确 Graph 不生成 input command，也不读取 ClientCommand。
+- [x] 19. 规划 Corin 输入资产迁移：`Move` 连续输入语义改成 `MoveAxis` 或等价 input value。
+- [x] 20. 规划 Corin RootTree 迁移：从输入配置生成 `MoveAxis` 输入信息节点，并让移动模块读取该节点输出。
+- [x] 21. 规划旧 serialized 字段的激进迁移，不保留长期 fallback 或兼容双字段。
+- [x] 22. 更新相关 editor UI 文案，去掉 Signal/Command 外露词。
+- [x] 23. 更新 runtime debug 文案，输入层显示 input value 和 action request，网络层显示 ClientCommandFrame。
+- [x] 24. 搜索确认 BTSMTL authoring 文档不再把 command 当作节点概念。
+- [x] 25. 搜索确认 current specs 不再要求 gameplay、Tree 使用 network command 语义。
+- [x] 26. 运行 `openspec validate refactor-character-input-boundary --strict --no-interactive`。

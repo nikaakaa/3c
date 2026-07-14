@@ -1,0 +1,29 @@
+# Tasks
+
+- [x] 1. 对照 current specs 列出本 change 涉及的正式能力：input、action、Timeline、motion、presentation、sync、debug。
+- [x] 2. 搜索并记录当前角色管线阶段顺序，确认没有第二套 tick 或第二套 Timeline 播放入口参与正式 runtime。
+- [x] 3. 搜索并记录 `CharacterPipelineDefinition` 当前装配字段，确认 RootTree、InputProfile、ActionProfile 和 AnimationLayers 都来自同一正式定义。
+- [x] 4. 搜索并记录 BTSMTL 输入节点到 `CharacterInputFrame` 的链路，确认 authoring 不暴露 `ClientCommand`。
+- [x] 5. 搜索并记录 ActionRequest 创建、缓存、消费和进入 `SyncFacts.Action.ActionRequests` 的链路。
+- [x] 6. 搜索并记录 `ActivateActionInstanceNode` 到 `ActionRuntime.ActivateAction` 的链路。
+- [x] 7. 确认 `ActionActivationOutput` 写入 `SyncFacts.Action.ActivationOutputs`，并能被 `CharacterGameplaySyncAdapter` 收集。
+- [x] 8. 确认 Action Context 从激活节点传给 TimelineNode，不通过节点结构身份或旧 ActionSO 推断。
+- [x] 9. 搜索并记录 `TimelinePlaybackScheduler` 当前输出 animation、root motion、motion warp、window 和 cue 的路径。
+- [x] 10. 确认 Timeline 输出 ActionWindow 和 ActionCue 时必须携带有效 Action Context。
+- [x] 11. 补齐缺失的非 Timeline gameplay fact 提交节点或正式 context 方法清单，只规划正式主线，不新增临时桥接。
+- [x] 12. 等 `refactor-character-motion-arbitration` 完成后，接入本闭环的 motion 验收点：输入 locomotion、Timeline root motion、gameplay result motion、motion warp、correction phase。
+- [x] 13. 确认 `CharacterMotionStage` 输出 `MotionResult` 后，debug 能追踪本帧 motion 来源、赢家、modifier 和 correction。
+- [x] 14. 搜索并记录 `AnimationContribution -> CharacterAnimationLayerRuntime -> AnimationLayerPlaybackPlan -> AnimancerAnimationPresenter` 的表现链路。
+- [x] 15. 确认 PresentationStage 不自主推进 Timeline，不读取 gameplay transport，不直接做动作决策。
+- [x] 16. 搜索并记录 `SyncFacts` 到 `CharacterNetworkSendStage` 的所有 fact 类型收集路径。
+- [x] 17. 搜索并记录 `CharacterGameplaySyncAdapter` 对 activation、lifecycle、window、motion、cue、gameplay result、state effect 和 correction ack 的 policy 解析路径。
+- [x] 18. 扩展或确认 `GameplaySyncRuntime` debug record 能按 SyncDomain、policy、ActionInstanceId 和 fact kind 查看链路。
+- [x] 19. 扩展或确认 `LocalGameplaySyncLoopbackPeer` 能模拟动作确认、动作拒绝、motion correction 和 gameplay result。
+- [x] 20. 定义第一阶段 2v2vE demo 的最小 actor identity 字段映射，不引入完整房间、匹配或账号系统。
+- [x] 21. 定义第一阶段 2v2vE demo 的最小 objective/result fact 清单，只走 server event replication 口径。
+- [x] 22. 确认 `CharacterGameplaySyncDriver` 只暴露正式 `None` 和 `LocalLoopback` 后端，不新增 fake Fantasy 配置。
+- [x] 23. 删除或改名任何实现过程中发现的旧 `NetworkOutput`、旧 ActionSO、旧 locomotion SO、旧 bodyclaim/footphase 正式引用。
+- [x] 24. 汇总 runtime debug 展示字段：input sequence、action instance、window、motion source、result、policy decision、correction。
+- [x] 25. 更新相关 current specs 或新增 spec delta 中要求的正式字段和链路命名，保持中文口径统一。
+- [x] 26. 运行 `dotnet build 3cDemo/Client/3C_Client/Assembly-CSharp.csproj -nologo -v:minimal`。
+- [x] 27. 运行 `openspec validate add-character-gameplay-pipeline-closure --strict --no-interactive`。

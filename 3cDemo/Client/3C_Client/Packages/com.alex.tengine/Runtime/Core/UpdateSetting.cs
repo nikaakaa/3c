@@ -54,7 +54,7 @@ namespace TEngine
         /// 项目名称。
         /// </summary>
         [SerializeField]
-        private string projectName = "Demo";
+        private string projectName = "3C";
 
         public bool Enable
         {
@@ -69,10 +69,10 @@ namespace TEngine
         }
 
         [Header("Auto sync with [HybridCLRGlobalSettings]")]
-        public List<string> HotUpdateAssemblies = new List<string>() {"GameProto.dll", "GameLogic.dll" };
+        public List<string> HotUpdateAssemblies = new List<string>() { "GameBase.dll", "GameProto.dll", "BattleCore.dll", "GameLogic.dll" };
 
         [Header("Need manual setting!")]
-        public List<string> AOTMetaAssemblies = new List<string>() { "mscorlib.dll", "System.dll", "System.Core.dll", "TEngine.Runtime.dll" ,"UniTask.dll", "YooAsset.dll"};
+        public List<string> AOTMetaAssemblies = new List<string>() { "mscorlib.dll", "System.dll", "System.Core.dll", "TEngine.Runtime.dll", "UniTask.dll", "YooAsset.dll", "Fantasy.Unity.dll", "Newtonsoft.Json.dll", "UnityEngine.CoreModule.dll" };
 
         /// <summary>
         /// Dll of main business logic assembly
@@ -87,7 +87,7 @@ namespace TEngine
         /// <summary>
         /// 程序集文本资产资源目录
         /// </summary>
-        public string AssemblyTextAssetPath = "AssetRaw/DLL";
+        public string AssemblyTextAssetPath = "AssetRaw/HotUpdate/DLL";
 
         [Header("更新设置")]
         public UpdateStyle UpdateStyle = UpdateStyle.Force;
@@ -98,13 +98,13 @@ namespace TEngine
         /// 资源服务器地址。
         /// </summary>
         [SerializeField]
-        private string ResDownLoadPath = "http://127.0.0.1:8081";
+        private string ResDownLoadPath = "";
 
         /// <summary>
         /// 资源服务备用地址。
         /// </summary>
         [SerializeField]
-        private string FallbackResDownLoadPath = "http://127.0.0.1:8082";
+        private string FallbackResDownLoadPath = "";
 
         /// <summary>
         /// WebGL平台加载本地资源/加载远程资源。
@@ -166,6 +166,11 @@ namespace TEngine
         /// </summary>
         public string GetResDownLoadPath()
         {
+            if (string.IsNullOrWhiteSpace(ResDownLoadPath))
+            {
+                throw new GameFrameworkException("Primary resource endpoint is not configured.");
+            }
+
             return Path.Combine(ResDownLoadPath, projectName, GetPlatformName()).Replace("\\", "/");
         }
 
@@ -174,6 +179,11 @@ namespace TEngine
         /// </summary>
         public string GetFallbackResDownLoadPath()
         {
+            if (string.IsNullOrWhiteSpace(FallbackResDownLoadPath))
+            {
+                throw new GameFrameworkException("Fallback resource endpoint is not configured.");
+            }
+
             return Path.Combine(FallbackResDownLoadPath, projectName, GetPlatformName()).Replace("\\", "/");
         }
 

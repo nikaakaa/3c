@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7af36541d69a48f0a7c4d77ee212fd49, type: 3}
+  m_Name: CorinCharacterInputProfile
+  m_EditorClassIdentifier: 
+  m_SourceAsset: {fileID: -944628639613478452, guid: 1949afa4194c50648a6e39fd2d067d67,
+    type: 3}
+  m_InputHistoryCapacity: 120
+  m_InputValues:
+  - m_InputValueId: MoveAxis
+    m_ValueType: 2
+    m_SourceAction: {fileID: 11400000, guid: 73cefb543257c0a458a0ee0caadbcff1, type: 2}
+  - m_InputValueId: LookAxis
+    m_ValueType: 2
+    m_SourceAction: {fileID: 11400000, guid: 50ae9dbcb8b780942864fce5bf43a906, type: 2}
+  m_ActionRequests:
+  - m_RequestId: Attack
+    m_SourceAction: {fileID: 11400000, guid: 5856b69fba455c741bebbee39121527b, type: 2}
+    m_BufferSeconds: 0.2
+    m_Priority: 0
+  - m_RequestId: Dodge
+    m_SourceAction: {fileID: 11400000, guid: 7f4d7ad1b0794b64aa322b392f77bdb1, type: 2}
+    m_BufferSeconds: 0.2
+    m_Priority: 100

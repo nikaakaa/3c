@@ -242,7 +242,10 @@ namespace TEngine
                 return;
             }
 
-            if (PlayMode == EPlayMode.EditorSimulateMode)
+            EPlayMode currentPlayMode = PlayMode;
+            LoadResWayWebGL loadResWayWebGL = Settings.UpdateSetting.GetLoadResWayWebGL();
+
+            if (currentPlayMode == EPlayMode.EditorSimulateMode)
             {
                 Log.Info("During this run, ResourceModule will use editor resource files, which you should validate first.");
 #if !UNITY_EDITOR
@@ -251,13 +254,16 @@ namespace TEngine
             }
 
             _resourceModule.DefaultPackageName = PackageName;
-            _resourceModule.PlayMode = PlayMode;
+            _resourceModule.PlayMode = currentPlayMode;
             _resourceModule.EncryptionType = encryptionType;
             _resourceModule.Milliseconds = milliseconds;
             _resourceModule.AutoUnloadBundleWhenUnused = autoUnloadBundleWhenUnused;
-            _resourceModule.HostServerURL = Settings.UpdateSetting.GetResDownLoadPath();
-            _resourceModule.FallbackHostServerURL = Settings.UpdateSetting.GetFallbackResDownLoadPath();
-            _resourceModule.LoadResWayWebGL=Settings.UpdateSetting.GetLoadResWayWebGL();
+            if (ShouldConfigureRemoteEndpoint(currentPlayMode, loadResWayWebGL))
+            {
+                _resourceModule.HostServerURL = Settings.UpdateSetting.GetResDownLoadPath();
+                _resourceModule.FallbackHostServerURL = Settings.UpdateSetting.GetFallbackResDownLoadPath();
+            }
+            _resourceModule.LoadResWayWebGL = loadResWayWebGL;
             _resourceModule.DownloadingMaxNum = DownloadingMaxNum;
             _resourceModule.FailedTryAgain = FailedTryAgain;
             _resourceModule.UpdatableWhilePlaying = UpdatableWhilePlaying;
@@ -267,7 +273,26 @@ namespace TEngine
             _resourceModule.AssetExpireTime = assetExpireTime;
             _resourceModule.AssetPriority = assetPriority;
             _resourceModule.SetForceUnloadUnusedAssetsAction(ForceUnloadUnusedAssets);
-            Log.Info($"ResourceModule Run Mode：{PlayMode}");
+            Log.Info($"ResourceModule Run Mode：{currentPlayMode}");
+        }
+
+        private static bool ShouldConfigureRemoteEndpoint(EPlayMode currentPlayMode, LoadResWayWebGL loadResWayWebGL)
+        {
+            if (currentPlayMode == EPlayMode.HostPlayMode)
+            {
+                return true;
+            }
+
+            if (currentPlayMode != EPlayMode.WebPlayMode)
+            {
+                return false;
+            }
+
+#if UNITY_WEBGL && WEIXINMINIGAME && !UNITY_EDITOR
+            return true;
+#else
+            return loadResWayWebGL == LoadResWayWebGL.Remote;
+#endif
         }
 
         #region 释放资源

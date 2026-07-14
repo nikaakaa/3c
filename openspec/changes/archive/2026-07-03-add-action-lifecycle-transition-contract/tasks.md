@@ -1,0 +1,26 @@
+# Tasks
+
+- [x] 1. 搜索并列出现有 `ActionEndRequest`、`EndRequests`、`Action Handle Slot` 和 action decision ack 的代码入口。
+- [x] 2. 定义 `ActionLifecycleTransitionType`，覆盖 `Confirm`、`Complete`、`Cancel`、`Interrupt`、`Reject`、`Correct` 和 `Abort`。
+- [x] 3. 定义 `ActionLifecycleTransition` 或等价请求/输出 value type，包含 instance id、transition type、reason、tick、input sequence 和 source identity。
+- [x] 4. 将旧 `ActionEndRequest` 语义迁移为 `ActionLifecycleTransition(Complete)`，不保留并行正式输出路径。
+- [x] 5. 调整 `ActionRuntime`，让它通过 lifecycle transition 更新 `ActionInstance` 的 state、phase 和 last reason。
+- [x] 6. 调整 terminal transition，使 `Complete/Cancel/Interrupt/Reject/Abort` 关闭 active action instance。
+- [x] 7. 调整 non-terminal transition，使 `Confirm/Correct` 能更新状态但不默认关闭 active instance。
+- [x] 8. 调整 Graph context 中 Action Context 的读取规则，使 terminal transition 后旧 context 立即失效。
+- [x] 9. 将作者可见字段从 `Action Handle Slot` 改为 `Action Context`，清理 handle/slot 的主要 UI 文案。
+- [x] 10. 调整动作输出节点，使 Timeline、Window、Motion、Cue、GameplayResult 都以 Action Context 作为归属输入。
+- [x] 11. 增加动作生命周期提交节点或等价节点能力，支持提交 `Complete`、`Cancel`、`Interrupt` 和 `Abort`。
+- [x] 12. 调整 Timeline 播放完成链路，使带 Action Context 的动作 Timeline 可以提交 `Complete` 或交由明确节点提交，不靠没 tick 推断。
+- [x] 13. 调整新动作覆盖旧动作路径，使旧动作产生 `Cancel(CancelledByNewAction)` transition。
+- [x] 14. 调整网络 resolve 路径，使服务端 `Confirm/Reject/Correct` 映射为 lifecycle transition。
+- [x] 15. 调整 Network Action domain 输出，使其收集 lifecycle transition，而不是只收集 end request。
+- [x] 16. 调整 Runtime Debug，按 ActionInstance 展示 lifecycle transition 历史、reason、tick 和 source。
+- [x] 17. 搜索并删除旧 `ActionEndRequest` 作为正式网络输出的残留命名。
+- [x] 18. 删除动作激活节点中的手填 `ActionId` 兜底，使动作身份只来自正式 `ActionProfile`。
+- [x] 19. 将低层激活节点收敛为 `Activate Action Instance`，避免作者把 request 当成动作主体。
+- [x] 20. 将 lifecycle transition 提交节点移到低层 Action 菜单，保留为调试和高级出口。
+- [x] 21. 调整 action activation outcome，使新动作覆盖旧动作时由 `ActionRuntime` 返回同一条 `Cancel(CancelledByNewAction)` transition。
+- [x] 22. 调整 Graph/Pipeline 输出，使它只转发 runtime activation outcome 中的替换 transition，不重新构造等价事实。
+- [x] 23. 运行 `dotnet build Assembly-CSharp.csproj -nologo -v:minimal`。
+- [x] 24. 运行 `openspec validate add-action-lifecycle-transition-contract --strict --no-interactive`。

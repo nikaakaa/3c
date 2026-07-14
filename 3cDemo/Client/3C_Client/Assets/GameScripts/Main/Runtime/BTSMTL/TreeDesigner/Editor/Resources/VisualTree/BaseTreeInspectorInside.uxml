@@ -1,0 +1,51 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Plugin/TreeDesigner/Editor/Resources/StyleSheet/BaseTreeInspectorInside.uss?fileID=7433441132597879392&amp;guid=09545bb8e6cdc1147a02111bb8e96ea4&amp;type=3#BaseTreeInspectorInside" />
+    <ui:VisualElement name="inspector-tab-bar">
+        <ui:Button text="Data" display-tooltip-when-elided="true" name="data-tab-button" class="inspector-tab-button" />
+        <ui:Button text="Inspector" display-tooltip-when-elided="true" name="selection-tab-button" class="inspector-tab-button" />
+    </ui:VisualElement>
+    <ui:VisualElement name="data-page">
+        <ui:VisualElement name="graph-data-section">
+            <ui:VisualElement name="graph-data-header">
+                <ui:Label text="Graph Data" display-tooltip-when-elided="true" name="graph-data-title" />
+                <ui:Button tooltip="Create blackboard declaration" display-tooltip-when-elided="true" name="graph-data-add-button" class="graph-data-header-button" />
+            </ui:VisualElement>
+            <ui:VisualElement name="graph-data-panel">
+                <ui:VisualElement name="graph-data-filter-bar">
+                    <uie:ToolbarSearchField name="graph-data-search" />
+                    <ui:VisualElement name="graph-data-filter-toolbar">
+                        <ui:VisualElement name="graph-data-source-segment">
+                            <ui:Button text="All" name="graph-data-source-all-button" class="graph-data-source-button first" />
+                            <ui:Button text="Input" name="graph-data-source-input-button" class="graph-data-source-button" />
+                            <ui:Button text="Blackboard" name="graph-data-source-blackboard-button" class="graph-data-source-button last" />
+                        </ui:VisualElement>
+                        <ui:Button tooltip="Show blackboard filters" display-tooltip-when-elided="true" name="graph-data-blackboard-filter-button" class="graph-data-filter-toggle-button" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="graph-data-blackboard-filter-panel">
+                        <ui:EnumField label="Context" name="graph-data-context-filter" />
+                        <ui:EnumField label="Scope" name="graph-data-scope-filter" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="graph-data-creation-bar">
+                    <ui:TextField label="Name" name="graph-data-create-name" />
+                    <ui:VisualElement name="graph-data-creation-options">
+                        <ui:DropdownField label="Scope" name="graph-data-create-scope" />
+                        <ui:DropdownField label="Type" name="graph-data-create-type" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="graph-data-creation-actions">
+                        <ui:Button tooltip="Create declaration" name="graph-data-create-button" class="graph-data-creation-icon-button" />
+                        <ui:Button tooltip="Cancel" name="graph-data-cancel-button" class="graph-data-creation-icon-button" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:ScrollView name="graph-data-scroll">
+                    <ui:VisualElement name="graph-data-catalog-container" />
+                </ui:ScrollView>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="selection-inspector-page">
+        <ui:ScrollView name="selection-inspector-scroll">
+            <ui:VisualElement name="selection-inspector-container" />
+        </ui:ScrollView>
+    </ui:VisualElement>
+</ui:UXML>

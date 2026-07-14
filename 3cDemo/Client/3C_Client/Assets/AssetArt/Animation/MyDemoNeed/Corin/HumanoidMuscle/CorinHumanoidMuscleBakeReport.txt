@@ -1,0 +1,79 @@
+﻿Corin humanoid muscle clip bake report
+2026-06-12 09:32:49
+Source: Assets/AssetArt/Animation/ZZZ/可琳
+Avatar: Assets/AssetArt/Model/ZZZ/可琳/可琳Humanoid.fbx
+Output: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle
+Scope: Unity Humanoid Animator RootT/RootQ/muscle curves. Skirt, hair, weapon, and other non-human chains are not baked into these clips.
+clipCount: 9
+
+Corin_Evade_Back
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Evade_Back
+  rootmotion: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Rootmotion/Corin_Evade_Back_Rootmotion.anim
+  inplace: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Inplace/Corin_Evade_Back_Inplace.anim
+  humanMotion: True
+  rootmotionCurves: 102
+  inplaceCurves: 102
+
+Corin_Evade_Front
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Evade_Front
+  rootmotion: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Rootmotion/Corin_Evade_Front_Rootmotion.anim
+  inplace: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Inplace/Corin_Evade_Front_Inplace.anim
+  humanMotion: True
+  rootmotionCurves: 102
+  inplaceCurves: 102
+
+Corin_Idle
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Idle
+  rootmotion: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Rootmotion/Corin_Idle_Rootmotion.anim
+  inplace: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Inplace/Corin_Idle_Inplace.anim
+  humanMotion: True
+  rootmotionCurves: 102
+  inplaceCurves: 102
+
+Corin_RunLoop
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Run
+  rootmotion: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Rootmotion/Corin_RunLoop_Rootmotion.anim
+  inplace: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Inplace/Corin_RunLoop_Inplace.anim
+  humanMotion: True
+  rootmotionCurves: 102
+  inplaceCurves: 102
+
+Corin_RunStart
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳补充.fbx :: Avatar_Female_Size01_Corin_Ani_Run_Start
+  rootmotion: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Rootmotion/Corin_RunStart_Rootmotion.anim
+  inplace: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Inplace/Corin_RunStart_Inplace.anim
+  humanMotion: True
+  rootmotionCurves: 102
+  inplaceCurves: 102
+
+Corin_Run_End
+  source: Assets/AssetArt/Animation/ZZZ/可琳/Avatar_Female_Size01_Corin_Ani_Run_End.anim :: Avatar_Female_Size01_Corin_Ani_Run_End
+  rootmotion: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Rootmotion/Corin_Run_End_Rootmotion.anim
+  inplace: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Inplace/Corin_Run_End_Inplace.anim
+  humanMotion: True
+  rootmotionCurves: 102
+  inplaceCurves: 102
+
+Corin_TurnBack
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_TurnBack
+  rootmotion: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Rootmotion/Corin_TurnBack_Rootmotion.anim
+  inplace: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Inplace/Corin_TurnBack_Inplace.anim
+  humanMotion: True
+  rootmotionCurves: 102
+  inplaceCurves: 102
+
+Corin_Walk
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Walk
+  rootmotion: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Rootmotion/Corin_Walk_Rootmotion.anim
+  inplace: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Inplace/Corin_Walk_Inplace.anim
+  humanMotion: True
+  rootmotionCurves: 102
+  inplaceCurves: 102
+
+Corin_Walk_Start
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳补充.fbx :: Avatar_Female_Size01_Corin_Ani_Walk_Start
+  rootmotion: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Rootmotion/Corin_Walk_Start_Rootmotion.anim
+  inplace: Assets/AssetArt/Animation/MyDemoNeed/Corin/HumanoidMuscle/Inplace/Corin_Walk_Start_Inplace.anim
+  humanMotion: True
+  rootmotionCurves: 102
+  inplaceCurves: 102

@@ -1,0 +1,314 @@
+﻿Corin humanoid animation split report
+2026-06-09 23:33:21
+Source: Assets/AssetArt/Animation/ZZZ/可琳
+Output: Assets/AssetArt/Animation/MyDemoNeed/Corin/Humanoid
+Scope: humanoid skeleton only; skirt, hair/accessory chains, face attachment, and weapon curves are excluded.
+clipCount: 44
+
+Corin_Attack_Branch_01
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Branch_01
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Branch_01_End
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Branch_01_End
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Branch_01_Explode
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Branch_01_Explode
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Branch_02
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Branch_02
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Branch_02_End
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Branch_02_End
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Branch_02_Explode
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Branch_02_Explode
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Branch_Loop
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Branch_Loop
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Branch_Walk
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳技能.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Branch_Walk
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Counter
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Counter
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Counter_End
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Counter_End
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Counter_Explode
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Counter_Explode
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Normal_01
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Normal_01
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Normal_01_End
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Normal_01_End
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Normal_02
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Normal_02
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Normal_02_End
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Normal_02_End
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Normal_03
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Normal_03
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Normal_03_End
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Normal_03_End
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Normal_03_Explode
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Normal_03_Explode
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Normal_04
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Normal_04
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Normal_04_End
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Normal_04_End
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Normal_05
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Normal_05
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Normal_05_B
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Normal_05_B
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Normal_05_End
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Normal_05_End
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Rush
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Rush
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Rush_End
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Rush_End
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Attack_Rush_Explode
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Attack_Rush_Explode
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Evade_Back
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Evade_Back
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Evade_Front
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Evade_Front
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Idle
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Idle
+  sourceCurves: 2058
+  rootmotionCurves: 797
+  inplaceCurves: 797
+  excludedCurves: 1261
+
+Corin_Idle_AFK
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Idle_AFK
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_RunEnd
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳补充.fbx :: Avatar_Female_Size01_Corin_Ani_Run_Start_End
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_RunLoop
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Run
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_RunStart
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳补充.fbx :: Avatar_Female_Size01_Corin_Ani_Run_Start
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Run_End
+  source: Assets/AssetArt/Animation/ZZZ/可琳/Avatar_Female_Size01_Corin_Ani_Run_End.anim :: Avatar_Female_Size01_Corin_Ani_Run_End
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_SiwtchIn_Normal
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_SiwtchIn_Normal
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_SwitchIn_Attack_02
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_02
+  sourceCurves: 1997
+  rootmotionCurves: 787
+  inplaceCurves: 787
+  excludedCurves: 1210
+
+Corin_SwitchIn_Attack_02_End
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_02_End
+  sourceCurves: 1997
+  rootmotionCurves: 787
+  inplaceCurves: 787
+  excludedCurves: 1210
+
+Corin_SwitchIn_Attack_Ex
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_Ex
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_SwitchIn_Attack_Ex_End
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_Ex_End
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_SwitchIn_Attack_Ex_Start
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（攻击动作）.fbx :: Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_Ex_Start
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_SwitchOut_Normal
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_SwitchOut_Normal
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_TurnBack
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_TurnBack
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Walk
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳（基本动作）.fbx :: Avatar_Female_Size01_Corin_Ani_Walk
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261
+
+Corin_Walk_Start
+  source: Assets/AssetArt/Animation/ZZZ/可琳/可琳补充.fbx :: Avatar_Female_Size01_Corin_Ani_Walk_Start
+  sourceCurves: 2068
+  rootmotionCurves: 807
+  inplaceCurves: 807
+  excludedCurves: 1261

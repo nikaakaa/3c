@@ -24,6 +24,8 @@ namespace TEngine.Editor.Inspector
             "文件流加密",
         };
 
+        private const string EditorPlayModeKey = "EditorPlayMode";
+
         private SerializedProperty m_playMode;
         private SerializedProperty m_encryptionType;
         private SerializedProperty m_updatableWhilePlaying;
@@ -145,8 +147,7 @@ namespace TEngine.Editor.Inspector
                         int selectedIndex = EditorGUILayout.Popup("运行模式", m_playModeIndex, m_playModeNames);
                         if (selectedIndex != m_playModeIndex)
                         {
-                            m_playModeIndex = selectedIndex;
-                            m_playMode.enumValueIndex = selectedIndex;
+                            SetEditorPlayMode(selectedIndex);
                         }
                     }
 
@@ -559,6 +560,7 @@ namespace TEngine.Editor.Inspector
 
                         if (GUILayout.Button("保存配置", GUILayout.Height(25)))
                         {
+                            SetEditorPlayMode(m_playModeIndex);
                             serializedObject.ApplyModifiedProperties();
                             Debug.Log("资源模块配置已保存");
                         }
@@ -628,8 +630,18 @@ namespace TEngine.Editor.Inspector
 
         private void RefreshPlayModeNames()
         {
-            m_playModeIndex = m_playMode.enumValueIndex > 0 ? m_playMode.enumValueIndex : 0;
+            int editorPlayMode = EditorPrefs.GetInt(EditorPlayModeKey, m_playMode.enumValueIndex);
+            m_playModeIndex = Mathf.Clamp(editorPlayMode, 0, m_playModeNames.Length - 1);
+            m_playMode.enumValueIndex = m_playModeIndex;
+            EditorPrefs.SetInt(EditorPlayModeKey, m_playModeIndex);
             m_encryptionNameIndex = m_encryptionType.enumValueIndex > 0 ? m_encryptionType.enumValueIndex : 0;
+        }
+
+        private void SetEditorPlayMode(int playModeIndex)
+        {
+            m_playModeIndex = Mathf.Clamp(playModeIndex, 0, m_playModeNames.Length - 1);
+            m_playMode.enumValueIndex = m_playModeIndex;
+            EditorPrefs.SetInt(EditorPlayModeKey, m_playModeIndex);
         }
     }
 }

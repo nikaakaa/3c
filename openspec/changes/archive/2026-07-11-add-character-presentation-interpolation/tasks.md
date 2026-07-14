@@ -1,0 +1,38 @@
+# Tasks
+
+- [x] 1. 读取 proposal、design 和 tasks，确认本 change 只实现表现插值，不改变 gameplay facts 发生时机。
+- [x] 2. 复查 `CharacterPipeline` 的 `LogicTick`、`PresentationFrame` 和 transient 清理顺序。
+- [x] 3. 复查 `CharacterMotionStage` 的 Move、correction phase 和 `MotionResult` 输出。
+- [x] 4. 复查 `CharacterPresentationStage`、`CharacterAnimationLayerRuntime` 和 `AnimancerAnimationPresenter` 的当前职责。
+- [x] 5. 复查 `CharacterPipelineHost` 当前 Unity 绑定字段和 Corin prefab/scene 绑定需求。
+- [x] 6. 设计最小 presentation sample 数据结构，包含 tick、logic pose 和 animation sample。
+- [x] 7. 设计 visual pose 数据结构，明确 world position、world rotation、grounded/debug 字段。
+- [x] 8. 设计 animation visual sample 数据结构，避免直接依赖 transient output 生命周期。
+- [x] 9. 设计 animation plan 稳定 key，覆盖 source、track、clip、layer 和 blend 语义。
+- [x] 10. 在 presentation runtime 中增加 previous/current logic sample 缓存。
+- [x] 11. 在 logic tick 结束前捕获本 tick logic pose。
+- [x] 12. 在 logic tick 结束前捕获本 tick animation contribution 或 playback plan。
+- [x] 13. 确保 sample 捕获不写入 SyncFacts。
+- [x] 14. 确保 sample 捕获不重新 tick BTSMTL 或 Timeline。
+- [x] 15. 扩展 `CharacterPipelineHost`，加入正式 visual root / model root 绑定字段。
+- [x] 16. 将 visual root 绑定传入 `CharacterPipeline` 和 `CharacterPresentationStage`。
+- [x] 17. 缺少 visual root 时报告正式配置错误。
+- [x] 18. 禁止把 logic root 静默作为 visual root fallback。
+- [x] 19. 在 `CharacterPresentationStage` 中使用 `InterpolationAlpha` 生成 visual pose。
+- [x] 20. 将 visual pose 应用到 visual root，不写回 `CharacterController.transform`。
+- [x] 21. 处理 previous sample 缺失时的首帧贴合。
+- [x] 22. 处理 correction 距离过大时的正式贴合或限制策略。
+- [x] 23. 在表现层根据 previous/current animation samples 生成 visual playback plans。
+- [x] 24. 同 key animation plan 使用 alpha 插值 `clipTime`、`normalizedTime` 和 `weight`。
+- [x] 25. current-only animation plan 使用正式进入策略。
+- [x] 26. previous-only animation plan 使用正式退出策略。
+- [x] 27. 确保 visual animation plan 不改变 Timeline playback status。
+- [x] 28. 确保 visual animation plan 不产生 window、cue、root motion 或 motion warp。
+- [x] 29. 调整 `AnimancerAnimationPresenter` 只消费 visual playback plan。
+- [x] 30. 保持 `CharacterAnimationLayerRuntime` 的仲裁职责，不把插值规则塞进 Animancer adapter。
+- [x] 31. 清理或改名实现中出现的临时 visual/interpolation 类型，确保命名表达正式职责。
+- [x] 32. 搜索并确认没有新增自主 Timeline 播放、Animator fallback 或 presentation Move 路径。
+- [x] 33. 检查 Corin Host/Prefab 配置引用路径，必要时只做正式 visual root 绑定，不创建兼容配置。
+- [x] 34. 运行 C# 编译校验。
+- [x] 35. 运行 `openspec validate add-character-presentation-interpolation --strict --no-interactive`。
+- [x] 36. 更新 tasks 为 `[x]`，并在最终说明代码链路、输入输出和处理前后变化。

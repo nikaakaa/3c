@@ -1,0 +1,31 @@
+# Tasks
+
+- [x] 1. 读取 `CharacterPipelineDefinition`、`CharacterPipelineHost` 和 Corin pipeline 资产，列出当前 input profile 引用位置。
+- [x] 2. 在 `CharacterPipelineDefinition` 增加正式 `CharacterInputProfile` 字段和只读属性。
+- [x] 3. 更新 `CharacterPipelineDefinition.CollectConfigurationErrors`，把 input profile 缺失和 profile 配置错误纳入 definition 配置错误。
+- [x] 4. 更新 `CharacterPipelineDefinitionEditor`，显示 input profile 字段，并提供从 definition 打开 RootTree 的正式入口。
+- [x] 5. 删除 `CharacterPipelineHost` 上独立 input profile 字段。
+- [x] 6. 更新 pipeline 创建链路，让 Host 从 `CharacterPipelineDefinition.InputProfile` 传入 `CharacterPipeline`。
+- [x] 7. 迁移 Corin pipeline definition，写入当前 `CorinCharacterInputProfile` 引用。
+- [x] 8. 迁移 Corin host 或 prefab/scene，删除旧独立 input profile 引用。
+- [x] 9. 在 `BaseTreeWindow` 增加 editor-only authoring context，不序列化到 `BaseGraph`。
+- [x] 10. 让 `BaseTreeWindow` 根页面和下钻页面都能访问同一个 authoring context。
+- [x] 11. 新增从 `CharacterPipelineDefinition` 打开 RootTree 时传入 authoring context 的 editor utility。
+- [x] 12. 在 `BaseTreeInspectorView` 的 `Graph` 页内增加与 ExposedProperty 同级的 `Input` 素材区和 input definition container。
+- [x] 13. 实现 `Input` 素材区缺少 authoring context 时的只读空状态，不提供手动 profile picker。
+- [x] 14. 新增 input value 分组渲染，显示 id 和 value type。
+- [x] 15. 新增 action request 分组渲染，显示 request id。
+- [x] 16. 新增 `CharacterInputDefinitionView` 或等价列表项，交互模式对齐 `ExposedPropertyView`。
+- [x] 17. 将 input definition 列表项拖到当前 TreeView 时创建新的输入信息节点。
+- [x] 18. 抽取或新增 `CharacterInputInfoNodeFactory`，集中处理节点类型选择、创建和绑定。
+- [x] 19. 确认 `MoveAxis : Vector2` 创建 `CharacterInputVector2InfoNode`。
+- [x] 20. 确认 `Attack` 创建 `CharacterActionRequestInfoNode`。
+- [x] 21. 确认重复拖拽同 id 同类型输入会生成另一个绑定同一 id 的读取节点。
+- [x] 22. 删除 `CharacterInputProfileEditor` 中直接拖拽创建 Graph 节点的旧入口。
+- [x] 23. 删除或收敛 `InputActionNodeDragFactory` 中直接从 `CharacterInputProfile` asset 创建输入信息节点的并行入口。
+- [x] 24. 保留 raw `InputActionReference` 拖拽创建 `InputActionValueNode` 的调试路径。
+- [x] 25. 更新 Corin RootTree，确保移动模块通过 `MoveAxis` 输入信息节点的 property edge 读取输入。
+- [x] 26. 搜索确认 Graph authoring UI 中没有 `Signal`、`Command` 作为输入定义入口文案。
+- [x] 27. 搜索确认没有新的 graph 内 input profile/object fallback 配置。
+- [x] 28. 运行 `dotnet build 3C_Client.sln --no-restore`。
+- [x] 29. 运行 `openspec validate add-character-input-authoring-palette --strict --no-interactive`。

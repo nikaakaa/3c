@@ -10,18 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1587cae710f84819b0056e98344f204d, type: 3}
-  m_Name: ProcedureSetting
+  m_Name: TEngineProcedureSettings
   m_EditorClassIdentifier: 
   availableProcedureTypeNames:
-  - Procedure.ProcedureClearCache
-  - Procedure.ProcedureCreateDownloader
-  - Procedure.ProcedureDownloadFile
-  - Procedure.ProcedureDownloadOver
+  - Procedure.ProcedureLaunch
   - Procedure.ProcedureInitPackage
   - Procedure.ProcedureInitResources
-  - Procedure.ProcedureLaunch
   - Procedure.ProcedureLoadAssembly
-  - Procedure.ProcedurePreload
-  - Procedure.ProcedureSplash
   - Procedure.ProcedureStartGame
   entranceProcedureTypeName: Procedure.ProcedureLaunch

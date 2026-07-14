@@ -1,0 +1,9 @@
+﻿Haste retarget preview report
+2026-06-10 16:25:05
+Target: Rusk_ver1.1
+Target Asset: Assets/AssetArt/Model/Rusk/Rusk_ver1.1.fbx
+Avatar: Rusk_ver1.1Avatar
+Clip: Humanoid_A_Courier_Coffe_Sit_Start
+Clip Asset: Assets/AssetArt/Animation/Haste/HasteMainCharacter/HUMANOID/HumanoidClips/Humanoid_A_Courier_Coffe_Sit_Start.anim
+Controller: Assets/AssetArt/Animation/Haste/HasteMainCharacter/HUMANOID/RetargetPreviews/Rusk_ver1_1/Preview_Rusk_ver1_1_Humanoid_A_Courier_Coffe_Sit_Start.controller
+Preview Prefab: Assets/AssetArt/Animation/Haste/HasteMainCharacter/HUMANOID/RetargetPreviews/Rusk_ver1_1/Preview_Rusk_ver1_1_Humanoid_A_Courier_Coffe_Sit_Start.prefab

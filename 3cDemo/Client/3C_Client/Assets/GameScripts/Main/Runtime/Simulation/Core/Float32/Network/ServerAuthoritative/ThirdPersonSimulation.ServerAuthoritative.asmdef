@@ -1,0 +1,17 @@
+{
+    "name": "ThirdPersonSimulation.ServerAuthoritative",
+    "rootNamespace": "ThirdPersonSimulation.ServerAuthoritative",
+    "references": [
+        "ThirdPersonSimulation.Core",
+        "ThirdPersonSimulation.Float32"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

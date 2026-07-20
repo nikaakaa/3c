@@ -2,6 +2,44 @@ using System.Collections.Generic;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    public readonly struct AnimationPoseContribution
+    {
+        public AnimationPoseContribution(
+            string layerId,
+            int programProducerIndex,
+            AnimationPlaybackId playbackId,
+            float visualSampleTime,
+            float normalizedTime,
+            int cycle,
+            float weight)
+        {
+            LayerId = layerId ?? string.Empty;
+            ProgramProducerIndex = programProducerIndex;
+            PlaybackId = playbackId;
+            VisualSampleTime = visualSampleTime;
+            NormalizedTime = normalizedTime;
+            Cycle = cycle;
+            Weight = weight;
+        }
+
+        public string LayerId { get; }
+        public int ProgramProducerIndex { get; }
+        public AnimationProducerId ProducerId => PlaybackId.ProducerId;
+        public AnimationPlaybackId PlaybackId { get; }
+        public float VisualSampleTime { get; }
+        public float NormalizedTime { get; }
+        public int Cycle { get; }
+        public float Weight { get; }
+        public bool IsValid => !string.IsNullOrEmpty(LayerId) &&
+                               ProgramProducerIndex >= 0 &&
+                               PlaybackId.IsValid &&
+                               !float.IsNaN(VisualSampleTime) &&
+                               !float.IsInfinity(VisualSampleTime) &&
+                               NormalizedTime >= 0f && NormalizedTime <= 1f &&
+                               Cycle >= 0 &&
+                               Weight > 0f && Weight <= 1f;
+    }
+
     public readonly struct AnimationPlaybackVisualSnapshot
     {
         public AnimationPlaybackVisualSnapshot(string stateKey, float sampleTime)
@@ -46,6 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         bool TryGetVisualSnapshot(
             AnimationPlaybackId playbackId,
             out AnimationPlaybackVisualSnapshot snapshot);
+        void CollectPoseContributions(string layerId, List<AnimationPoseContribution> destination);
         void Release(AnimationPlaybackId playbackId);
         void Clear();
     }

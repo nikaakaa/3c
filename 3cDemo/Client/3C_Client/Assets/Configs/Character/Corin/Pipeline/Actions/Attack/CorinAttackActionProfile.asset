@@ -15,13 +15,16 @@ MonoBehaviour:
   m_ActionId: Attack
   m_DisplayName: Attack
   m_DebugCategory: Local
-  m_Tags: []
+  m_Tags:
+  - m_Value: Attack
   m_BlockTags:
     m_All: []
     m_Any: []
     m_None: []
   m_CancelTags:
     m_All: []
-    m_Any: []
+    m_Any:
+    - m_Value: Attack
+    - m_Value: Dodge
     m_None: []
-  m_TargetPolicy: Self
+  m_TargetRequirement: 2

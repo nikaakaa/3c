@@ -146,21 +146,21 @@ BT edge abort MUST 只停止被抢占或失效的 child 分支。它 MUST 通过
 #### Scenario: 新分支显式提交动作取消
 - **WHEN** Dodge Branch 需要取消当前攻击动作
 - **THEN** Dodge Branch 或正式状态流程 MUST 通过 Action lifecycle 节点提交 `Cancel`
-- **AND** 该 lifecycle fact MUST 进入正式 `SyncFacts`
+- **AND** 该 lifecycle fact MUST 进入正式 `SimulationActorTickResult.GameplayFacts`
 
 ### Requirement: BT edge decorator 必须保持网络后端无关
 
-BT edge decorator、Composite runtime 和 ConditionRuleGraph MUST 不引用 Network Model、model policy、model packet、endpoint、transport、SessionHost 或 model runtime。网络可见结果 MUST 只来自显式 gameplay facts，并由 Character fact stage 与 model-owned adapter 接入当前模型。BTSMTL MUST 不因 endpoint 或 Network Model 改变而修改 edge 条件执行。
+BT edge decorator、Composite runtime 和 ConditionRuleGraph MUST 不引用 Network Model、model policy、model packet、endpoint、transport、SessionHost 或 model runtime。网络可见结果 MUST只来自显式 gameplay facts，并由 Model Source与 Pipeline Pass接入当前模型。BTSMTL MUST 不因 endpoint 或 Network Model 改变而修改 edge 条件执行。
 
-#### Scenario: LocalLoopback 下执行 Selector
+#### Scenario: 不同 Session Source 下执行 Selector
 
-- **WHEN** Session 使用 ServerAuthoritativeHybrid + LocalLoopback
+- **WHEN** 同一 Program分别由 Local Source或后续 Network Model Source执行
 - **THEN** Selector MUST 只按 edge condition 和 AbortPolicy 执行
-- **AND** MUST 不访问 model endpoint 或 packet queue
+- **AND** MUST不访问 Source、Endpoint或模型队列
 
-#### Scenario: 未来接入 Fantasy endpoint
+#### Scenario: 使用 Fantasy ServerAuthoritative endpoint
 
-- **WHEN** 后续 change 将 endpoint 改为 Fantasy
+- **WHEN** 同一 Program 由 Fantasy ServerAuthoritative Source执行
 - **THEN** BT edge runtime MUST 不需要修改
 - **AND** gameplay facts MUST 继续从正式 Character 边界进入同一模型 adapter
 
@@ -176,4 +176,3 @@ BT edge decorator、Composite runtime 和 ConditionRuleGraph MUST 不引用 Netw
 - **WHEN** 校验发现 Graph 中存在 `IfNode`
 - **THEN** 校验 MUST 报告非法结构
 - **AND** runtime MUST NOT 使用 `IfNode` 作为 fallback 条件执行路径
-

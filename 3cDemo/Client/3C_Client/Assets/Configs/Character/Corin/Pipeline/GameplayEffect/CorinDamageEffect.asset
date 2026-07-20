@@ -45,7 +45,6 @@ MonoBehaviour:
   m_OverflowPolicy: 0
   m_SetByCallerParameters:
   - m_ParameterId: Damage
-    m_Required: 1
   m_Components:
   - rid: 736190001000000001
   - rid: 736190001000000002

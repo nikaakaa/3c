@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository-policy:
+    name: Repository Policy
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v7
+      - name: Validate repository policy
+        shell: pwsh
+        run: ./Tools/CI/Test-RepositoryPolicy.ps1
+
+  openspec-validation:
+    name: OpenSpec Validation
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v7
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.19.0
+          package-manager-cache: false
+      - name: Validate OpenSpec
+        shell: pwsh
+        run: npx --yes @fission-ai/openspec@0.23.0 validate --all --strict --no-interactive
+
+  portable-unit-tests:
+    name: Portable Unit Tests
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+      - name: Run portable unit tests
+        shell: pwsh
+        run: >-
+          dotnet test
+          Tools/ThirdPersonSimulation.Portable/ThirdPersonSimulation.Tests/ThirdPersonSimulation.Tests.csproj
+          --disable-build-servers
+          /nr:false
+          /p:UseSharedCompilation=false
+          --logger "trx;LogFileName=portable-unit-tests.trx"
+          --results-directory "${{ runner.temp }}/portable-test-results"
+      - name: Shutdown .NET build servers
+        if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: dotnet build-server shutdown
+      - name: Upload portable test results
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v6
+        with:
+          name: portable-unit-test-results
+          path: ${{ runner.temp }}/portable-test-results/**/*.trx
+          if-no-files-found: warn
+          retention-days: 7

@@ -27,6 +27,7 @@ namespace TreeDesigner
                    IsValidTransitionEnd(endNode);
         }
 
+#if UNITY_EDITOR
         bool InitializeNewConditionRuleGraph(BaseEdge edge)
         {
             if (!IsTransitionEdge(edge) || edge.HasConditionRuleGraphConfiguration)
@@ -35,6 +36,7 @@ namespace TreeDesigner
             edge.SetConditionRuleGraph(ConditionRuleGraph.CreateDefaultGraph(UniqueConditionRuleGraphName(edge)));
             return true;
         }
+#endif
 
         public override bool CanCreateNodeType(Type type)
         {
@@ -68,7 +70,22 @@ namespace TreeDesigner
 #if UNITY_EDITOR
         public override BaseEdge Link(BaseNode startNode, BaseNode endNode, string startPortName, string endPortName)
         {
-            BaseEdge edge = base.Link(startNode, endNode, startPortName, endPortName);
+            bool transition = startPortName == StateMachinePorts.StateOut &&
+                              endPortName == StateMachinePorts.StateIn &&
+                              IsValidTransitionStart(startNode) &&
+                              IsValidTransitionEnd(endNode);
+            BaseEdge edge;
+            if (transition)
+            {
+                edge = new BaseEdge(startNode, endNode, startPortName, endPortName);
+                AddLink(edge);
+                startNode.OnOutputLinked(edge);
+                endNode.OnInputLinked(edge);
+            }
+            else
+            {
+                edge = base.Link(startNode, endNode, startPortName, endPortName);
+            }
             if (IsTransitionEdge(edge))
                 InitializeNewConditionRuleGraph(edge);
             return edge;

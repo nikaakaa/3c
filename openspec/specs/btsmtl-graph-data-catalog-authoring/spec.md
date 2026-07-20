@@ -5,26 +5,25 @@
 ## Requirements
 ### Requirement: Graph Data Catalog 必须编辑 Blackboard fact projection
 
-唯一 Graph Data Catalog MUST 在本地 Blackboard declaration 的展开详情中提供可选 fact projection 编辑。Projection 默认 MUST 为 None；ActionWindow projection MUST 只保存 WindowType、WindowId 和 Digest，并 MUST 清楚显示其要求的 Bool、Frame/Frame 和 SyncFact 约束。继承 declaration MUST 只读显示 projection 并 MAY 提供定位 owner；系统 MUST NOT 新增独立 Window panel、Window asset editor 或 TreeClip 内的第二份 projection 配置。完整网络策略 MUST 由当前 Network Model profile 按稳定 ActionId 解析，Catalog、Blackboard declaration 和 ActionProfile MUST NOT 保存或编辑该策略。
+Graph Data Catalog MUST 在 owner-local Blackboard declaration 上编辑唯一 fact projection。ActionWindow projection MUST 只保存 WindowType、WindowId、Digest 和 Action Context provenance，并要求 Bool、Frame/Frame、SyncFact；Projection=None MUST 保持普通本地变量。继承 declaration MUST 只读并可定位 owner。系统 MUST NOT 新增 Window panel、Window asset、TreeClip projection 副本、cache 或 registry；网络策略 MUST 只属于当前 Network Model profile。
 
-#### Scenario: 配置攻击命中窗口变量
+#### Scenario: 配置动作窗口
 
-- **WHEN** 作者展开 `Attack1Hit` declaration 并选择 ActionWindow projection
-- **THEN** Catalog MUST 允许编辑稳定 WindowType、WindowId 和 Digest
-- **AND** 完整网络策略 MUST 保持位于当前 Network Model profile
+- **WHEN** 作者展开 owner-local `HitWindow` 或 `RecoveryOpen` declaration
+- **THEN** Catalog MUST 显示并编辑稳定 WindowType、WindowId、Digest 和 Action Context provenance
+- **AND** 作者 MUST 能定位使用同一 WindowType 的纯条件查询
 
-#### Scenario: 配置本地状态门
+#### Scenario: 配置普通本地状态门
 
-- **WHEN** 作者展开 `CanDodgeMoveCancel` declaration
+- **WHEN** 作者展开普通 owner-local Bool Frame declaration
 - **THEN** 作者 MUST 能保持 Projection=None
-- **AND** 该 variable 的 true 值 MUST NOT 产生 ActionWindowSample
+- **AND** 该变量 MUST NOT 产生 `ActionWindowFact` 或被 `ActionWindowActiveInfoNode` 匹配
 
 #### Scenario: 非法 projection
 
-- **WHEN** 作者为非 Bool、非 Frame/Frame 或非 SyncFact declaration 选择 ActionWindow projection
-- **THEN** Catalog 与 Validator MUST 报告非法组合
-- **AND** 系统 MUST NOT 静默修改 scope、lifetime、类型或 projection
-
+- **WHEN** declaration 不满足 Bool、Frame/Frame、SyncFact 或 Action Context provenance 约束
+- **THEN** Catalog 与 Validator MUST 报错
+- **AND** 系统 MUST NOT 静默改写类型、scope、lifetime、projection 或 owner
 ### Requirement: Tree Inspector 必须提供唯一 Graph Data Catalog
 
 系统 MUST 在 Tree Inspector 的 `Data` 页中提供唯一 `Graph Data Catalog`，统一列出当前 authoring context 可用于图编辑的正式数据来源。Input 与 Pipeline Blackboard MUST 使用同一目录外壳、搜索入口、分组规则和条目视觉语法。`Inspector` 页 MUST NOT 同时显示、复制或嵌入 Catalog。系统 MUST NOT 同时保留独立 Input 素材区、独立 ExposedProperty 列表或其它并行的正式 Graph 数据目录。
@@ -197,4 +196,4 @@ Tag、Attribute 和 Effect 的 identity 与 definition 编辑 MUST 归属其正�
 - **WHEN** Graph node 引用的 EffectId 不属于当前角色可见 registry
 - **THEN** Catalog 和 validation MUST 显示明确无效引用
 - **AND** MUST NOT 按名称搜索其它资产自动补齐
-
+                                                                                                                       

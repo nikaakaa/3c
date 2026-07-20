@@ -19,6 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             RuntimeDiagnosticsContext diagnostics,
             IReadOnlyList<AnimationPlaybackCommand> commands,
             IReadOnlyList<AnimationPlaybackLifecycleSnapshot> snapshots,
+            IReadOnlyList<AnimationMarkerSyncRelationSnapshot> markerSyncSnapshots,
             IReadOnlyList<AnimationPlaybackId> retiredPlaybacks)
         {
             diagnostics ??= m_DiagnosticsSource?.Invoke();
@@ -34,6 +35,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             {
                 for (int i = 0; i < snapshots.Count; i++)
                     PublishSnapshot(diagnostics, snapshots[i]);
+            }
+            if (markerSyncSnapshots != null)
+            {
+                for (int i = 0; i < markerSyncSnapshots.Count; i++)
+                    PublishMarkerSync(diagnostics, markerSyncSnapshots[i]);
             }
             if (retiredPlaybacks != null)
             {
@@ -69,6 +75,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     SecondaryTime = presentationDeltaSeconds,
                     Detail = $"{previousLogicTick}->{currentLogicTick}",
                     Value = DebugValueSnapshot.Capture(visualPosition)
+                });
+        }
+
+        public void PublishMarkerSyncFailure(
+            RuntimeDiagnosticsContext diagnostics,
+            AnimationMarkerSyncException failure,
+            AnimationMarkerSyncRawSample sample)
+        {
+            if (failure == null)
+                throw new ArgumentNullException(nameof(failure));
+            diagnostics ??= m_DiagnosticsSource?.Invoke();
+            if (diagnostics == null || !diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, RuntimeTraceEventKind.AnimationMarkerSync))
+                return;
+
+            diagnostics.Publish(
+                RuntimeTraceChannel.Animation,
+                RuntimeTraceDomain.Presentation,
+                RuntimeTraceEventKind.AnimationMarkerSync,
+                RuntimeSourceElementHandle.Invalid,
+                ResolveInstance(diagnostics, failure.PlaybackId),
+                new RuntimeTracePayload
+                {
+                    LayerId = sample.LayerId,
+                    Name = sample.Binding?.CanonicalGroupId ?? string.Empty,
+                    Status = failure.Reason.ToString(),
+                    OwnerId = failure.PlaybackId.ToString(),
+                    Time = (float)sample.ContinuousTime,
+                    Cycle = sample.Cycle,
+                    Detail = $"Invalid | Reason={failure.Reason} | Playback={failure.PlaybackId}"
                 });
         }
 
@@ -224,6 +259,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 {
                     Status = AnimationPlaybackLifecyclePhase.Retired.ToString(),
                     OwnerId = playbackId.ToString()
+                });
+        }
+
+        static void PublishMarkerSync(
+            RuntimeDiagnosticsContext diagnostics,
+            AnimationMarkerSyncRelationSnapshot snapshot)
+        {
+            if (!diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, RuntimeTraceEventKind.AnimationMarkerSync))
+                return;
+            diagnostics.Publish(
+                RuntimeTraceChannel.Animation,
+                RuntimeTraceDomain.Presentation,
+                RuntimeTraceEventKind.AnimationMarkerSync,
+                RuntimeSourceElementHandle.Invalid,
+                ResolveInstance(diagnostics, snapshot.Target),
+                new RuntimeTracePayload
+                {
+                    LayerId = snapshot.LayerId,
+                    Name = snapshot.SyncGroupId,
+                    Status = snapshot.Reason.ToString(),
+                    OwnerId = snapshot.Target.ToString(),
+                    RelatedElementId = snapshot.Source.ToString(),
+                    Time = (float)snapshot.TargetEffectiveTime,
+                    SecondaryTime = (float)snapshot.TargetRawTime,
+                    NormalizedTime = snapshot.Fraction,
+                    Cycle = snapshot.TargetEffectiveCycle,
+                    Detail = $"{snapshot.PreviousMarkerId}->{snapshot.NextMarkerId} | Occurrence={snapshot.TargetOccurrenceIndex} | Depth={snapshot.RelationDepth} | Lifecycle={snapshot.TargetLifecyclePhase} | Source={snapshot.SourceRawTime:F4}->{snapshot.SourceEffectiveTime:F4}"
                 });
         }
 

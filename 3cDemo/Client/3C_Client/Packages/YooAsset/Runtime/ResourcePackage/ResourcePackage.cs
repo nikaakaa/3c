@@ -6,6 +6,20 @@ using UnityEngine.SceneManagement;
 
 namespace YooAsset
 {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    public readonly struct CachedBundleFileInfo
+    {
+        public CachedBundleFileInfo(string bundleId, long size)
+        {
+            BundleId = bundleId;
+            Size = size;
+        }
+
+        public string BundleId { get; }
+        public long Size { get; }
+    }
+#endif
+
     public class ResourcePackage
     {
         private bool _isInitialize = false;
@@ -49,6 +63,49 @@ namespace YooAsset
         {
             PackageName = packageName;
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public IReadOnlyList<CachedBundleFileInfo> GetCachedBundleFileInfos()
+        {
+            var result = new List<CachedBundleFileInfo>();
+            if (_playModeImpl is not PlayModeImpl playMode)
+            {
+                return result;
+            }
+
+            foreach (IFileSystem fileSystem in playMode.FileSystems)
+            {
+                if (fileSystem is DefaultCacheFileSystem cacheFileSystem)
+                {
+                    result.AddRange(cacheFileSystem.GetCachedBundleFileInfos());
+                }
+            }
+            result.Sort((left, right) => string.CompareOrdinal(left.BundleId, right.BundleId));
+            return result;
+        }
+
+        public bool CorruptCachedBundleFile(string bundleId)
+        {
+            if (string.IsNullOrWhiteSpace(bundleId))
+            {
+                throw new ArgumentException("Bundle id is required.", nameof(bundleId));
+            }
+            if (_playModeImpl is not PlayModeImpl playMode)
+            {
+                return false;
+            }
+
+            foreach (IFileSystem fileSystem in playMode.FileSystems)
+            {
+                if (fileSystem is DefaultCacheFileSystem cacheFileSystem &&
+                    cacheFileSystem.CorruptCachedBundleFile(bundleId))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+#endif
 
         /// <summary>
         /// 销毁资源包裹

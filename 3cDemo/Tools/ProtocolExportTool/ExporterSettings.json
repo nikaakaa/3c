@@ -5,7 +5,7 @@
             "Comment": "ProtoBuf文件所在的文件夹位置"
         },
         "NetworkProtocolServerDirectory": {
-            "Value": "D:/Unity_Project_1/3C/3cDemo/Server/Entity/Generate/NetworkProtocol",
+            "Value": "D:/Unity_Project_1/3C/3cDemo/Server/Gate/Entity/Generate/NetworkProtocol",
             "Comment": "ProtoBuf生成到服务端的文件夹位置"
         },
         "NetworkProtocolClientDirectory": {

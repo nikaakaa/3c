@@ -1,0 +1,8 @@
+{
+  "name": "DotRecast.Core",
+  "rootNamespace": "DotRecast.Core",
+  "references": [],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": true
+}

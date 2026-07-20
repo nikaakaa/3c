@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64e2d3694c8fae746acec02bbf8309e1, type: 3}
+  m_Name: CorinNavigationSurfaceAuthoring
+  m_EditorClassIdentifier: 
+  m_MapId: Corin.Navigation.World
+  m_WorldRevision: Corin.ServerAuthoritative.World.v1
+  m_GeometryPrefab: {fileID: 8347996123281902773, guid: 897384c07dbf45a419bfefa4e6db42e1,
+    type: 3}
+  m_IncludedLayers:
+    serializedVersion: 2
+    m_Bits: 1
+  m_RequireStatic: 0
+  m_OutputAssetPath: Assets/Configs/Simulation/Navigation/CorinNavigationSurface.asset
+  m_CellSize: 0.3
+  m_CellHeight: 0.2
+  m_AgentHeight: 2
+  m_AgentRadius: 0.5
+  m_AgentMaxClimb: 0.5
+  m_AgentMaxSlope: 45
+  m_RegionMinSize: 8
+  m_RegionMergeSize: 20
+  m_EdgeMaxLength: 12
+  m_EdgeMaxError: 1.3
+  m_VerticesPerPolygon: 6
+  m_DetailSampleDistance: 6
+  m_DetailSampleMaxError: 1
+  m_NearestExtentX: 2
+  m_NearestExtentY: 4
+  m_NearestExtentZ: 2
+  m_ProjectionTolerance: 2
+  m_HeightTolerance: 2
+  m_MaximumDisplacement: 3
+  m_BoundaryInset: 0.01
+  m_MaximumVisitedPolygons: 64
+  m_IncludeFlags: 1

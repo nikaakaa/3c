@@ -73,6 +73,8 @@ namespace BTSMTL.Timeline
                 if (track == null)
                     continue;
                 changed |= track.EnsureAuthoringIdentity();
+                if (track is ITimelineTrackOwnedAuthoringIdentity identityOwner)
+                    changed |= identityOwner.EnsureOwnedAuthoringIdentities();
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                     changed |= track.Clips[clipIndex]?.EnsureAuthoringIdentity() ?? false;
             }
@@ -88,6 +90,8 @@ namespace BTSMTL.Timeline
                 if (track == null)
                     continue;
                 track.RegenerateAuthoringIdentity();
+                if (track is ITimelineTrackOwnedAuthoringIdentity identityOwner)
+                    identityOwner.RegenerateOwnedAuthoringIdentities();
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                 {
                     Clip clip = track.Clips[clipIndex];
@@ -149,6 +153,14 @@ namespace BTSMTL.Timeline
     {
 #if UNITY_EDITOR
         void RegenerateOwnedAuthoringIdentity();
+#endif
+    }
+
+    public interface ITimelineTrackOwnedAuthoringIdentity
+    {
+#if UNITY_EDITOR
+        bool EnsureOwnedAuthoringIdentities();
+        void RegenerateOwnedAuthoringIdentities();
 #endif
     }
 }

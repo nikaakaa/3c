@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using TEngine;
 using UnityEngine;
@@ -17,104 +18,164 @@ namespace Procedure
         }
 
         public Assembly MainAssembly { get; }
-
         public IReadOnlyList<Assembly> HotUpdateAssemblies { get; }
     }
 
     public static class HotUpdateAssemblyLoader
     {
-        public static async UniTask<HotUpdateAssemblyLoadResult> LoadAsync(IResourceModule resourceModule, UpdateSetting setting)
+        public static async UniTask<HotUpdateAssemblyLoadResult> LoadAsync(
+            IResourceModule resourceModule,
+            UpdateSetting setting,
+            CancellationToken cancellationToken = default)
         {
-            if (setting == null)
-            {
-                Log.Fatal("TEngine update setting is missing.");
-                return new HotUpdateAssemblyLoadResult(null, Array.Empty<Assembly>());
-            }
-
-            await LoadAotMetadataAsync(resourceModule, setting);
+            if (resourceModule == null) throw new ArgumentNullException(nameof(resourceModule));
+            if (setting == null) throw new InvalidOperationException("TEngine update setting is missing.");
 
             if (!setting.Enable || resourceModule.PlayMode == EPlayMode.EditorSimulateMode)
             {
-                return FindLoadedAssemblies(setting);
+                var loadedResult = FindLoadedAssemblies(setting);
+                ValidateResult(setting, loadedResult);
+                return loadedResult;
             }
 
-            return await LoadHotUpdateAssembliesAsync(resourceModule, setting);
+            var hotUpdateBytes = await LoadAssemblyAssetsAsync(
+                resourceModule,
+                setting,
+                setting.HotUpdateAssemblies,
+                cancellationToken);
+
+#if !UNITY_EDITOR
+            var aotMetadataBytes = await LoadAssemblyAssetsAsync(
+                resourceModule,
+                setting,
+                setting.AOTMetaAssemblies,
+                cancellationToken);
+            for (var index = 0; index < setting.AOTMetaAssemblies.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                HybridClrRuntimeBridge.LoadMetadataForAOTAssembly(
+                    aotMetadataBytes[index],
+                    setting.AOTMetaAssemblies[index]);
+            }
+#endif
+
+            var result = LoadHotUpdateAssemblies(setting, hotUpdateBytes, cancellationToken);
+            ValidateResult(setting, result);
+            return result;
         }
 
-        private static HotUpdateAssemblyLoadResult FindLoadedAssemblies(UpdateSetting setting)
+        static HotUpdateAssemblyLoadResult FindLoadedAssemblies(UpdateSetting setting)
         {
-            Assembly mainAssembly = null;
-            var hotUpdateAssemblies = new List<Assembly>();
-
+            var assembliesByName = new Dictionary<string, Assembly>(StringComparer.Ordinal);
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                var dllName = $"{assembly.GetName().Name}.dll";
+                assembliesByName[$"{assembly.GetName().Name}.dll"] = assembly;
+            }
+
+            Assembly mainAssembly = null;
+            var hotUpdateAssemblies = new List<Assembly>(setting.HotUpdateAssemblies.Count);
+            foreach (var dllName in setting.HotUpdateAssemblies)
+            {
+                if (!assembliesByName.TryGetValue(dllName, out var assembly))
+                {
+                    throw new InvalidOperationException($"Loaded hot-update assembly is missing: {dllName}");
+                }
+
+                hotUpdateAssemblies.Add(assembly);
                 if (dllName == setting.LogicMainDllName)
                 {
                     mainAssembly = assembly;
-                }
-
-                if (setting.HotUpdateAssemblies.Contains(dllName))
-                {
-                    hotUpdateAssemblies.Add(assembly);
                 }
             }
 
             return new HotUpdateAssemblyLoadResult(mainAssembly, hotUpdateAssemblies);
         }
 
-        private static async UniTask<HotUpdateAssemblyLoadResult> LoadHotUpdateAssembliesAsync(IResourceModule resourceModule, UpdateSetting setting)
+        static async UniTask<List<byte[]>> LoadAssemblyAssetsAsync(
+            IResourceModule resourceModule,
+            UpdateSetting setting,
+            IReadOnlyList<string> assemblyNames,
+            CancellationToken cancellationToken)
         {
-            Assembly mainAssembly = null;
-            var hotUpdateAssemblies = new List<Assembly>();
-
-            foreach (var hotUpdateDllName in setting.HotUpdateAssemblies)
+            var assemblyBytes = new List<byte[]>(assemblyNames.Count);
+            foreach (var assemblyName in assemblyNames)
             {
-                var textAsset = await resourceModule.LoadAssetAsync<TextAsset>(hotUpdateDllName);
+                cancellationToken.ThrowIfCancellationRequested();
+                var textAsset = await resourceModule.LoadAssetAsync<TextAsset>(
+                    GetAssemblyLocation(setting, assemblyName),
+                    cancellationToken);
                 if (textAsset == null)
                 {
-                    Log.Fatal($"Load hot update assembly failed: {hotUpdateDllName}");
-                    continue;
+                    throw new InvalidOperationException($"Assembly asset is missing: {assemblyName}");
                 }
 
-                var assembly = Assembly.Load(textAsset.bytes);
+                try
+                {
+                    var bytes = textAsset.bytes;
+                    if (bytes == null || bytes.Length == 0)
+                    {
+                        throw new InvalidOperationException($"Assembly asset is empty: {assemblyName}");
+                    }
+
+                    assemblyBytes.Add(bytes);
+                }
+                finally
+                {
+                    resourceModule.UnloadAsset(textAsset);
+                }
+            }
+
+            return assemblyBytes;
+        }
+
+        static HotUpdateAssemblyLoadResult LoadHotUpdateAssemblies(
+            UpdateSetting setting,
+            IReadOnlyList<byte[]> assemblyBytes,
+            CancellationToken cancellationToken)
+        {
+            Assembly mainAssembly = null;
+            var hotUpdateAssemblies = new List<Assembly>(assemblyBytes.Count);
+            for (var index = 0; index < assemblyBytes.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var assembly = Assembly.Load(assemblyBytes[index]);
                 var loadedDllName = $"{assembly.GetName().Name}.dll";
+                if (!string.Equals(loadedDllName, setting.HotUpdateAssemblies[index], StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Hot-update assembly identity mismatch: expected {setting.HotUpdateAssemblies[index]}, loaded {loadedDllName}");
+                }
+
                 if (loadedDllName == setting.LogicMainDllName)
                 {
                     mainAssembly = assembly;
                 }
 
                 hotUpdateAssemblies.Add(assembly);
-                resourceModule.UnloadAsset(textAsset);
             }
 
             return new HotUpdateAssemblyLoadResult(mainAssembly, hotUpdateAssemblies);
         }
 
-        private static async UniTask LoadAotMetadataAsync(IResourceModule resourceModule, UpdateSetting setting)
+        static void ValidateResult(UpdateSetting setting, HotUpdateAssemblyLoadResult result)
         {
-#if UNITY_EDITOR
-            await UniTask.CompletedTask;
-#else
-            if (!setting.Enable)
+            if (result.MainAssembly == null)
             {
-                await UniTask.CompletedTask;
-                return;
+                throw new InvalidOperationException($"Main logic assembly is missing: {setting.LogicMainDllName}");
             }
 
-            foreach (var aotDllName in setting.AOTMetaAssemblies)
+            if (result.HotUpdateAssemblies == null ||
+                result.HotUpdateAssemblies.Count != setting.HotUpdateAssemblies.Count)
             {
-                var textAsset = await resourceModule.LoadAssetAsync<TextAsset>(aotDllName);
-                if (textAsset == null)
-                {
-                    Log.Fatal($"Load AOT metadata failed: {aotDllName}");
-                    continue;
-                }
-
-                HybridClrRuntimeBridge.LoadMetadataForAOTAssembly(textAsset.bytes, textAsset.name);
-                resourceModule.UnloadAsset(textAsset);
+                throw new InvalidOperationException("Hot-update assembly set is incomplete.");
             }
-#endif
+        }
+
+        static string GetAssemblyLocation(UpdateSetting setting, string dllName)
+        {
+            var assetPath = setting.AssemblyTextAssetPath.Trim().Trim('/', '\\');
+            var extension = setting.AssemblyTextAssetExtension.Trim();
+            return $"Assets/{assetPath}/{dllName}{extension}";
         }
     }
 }

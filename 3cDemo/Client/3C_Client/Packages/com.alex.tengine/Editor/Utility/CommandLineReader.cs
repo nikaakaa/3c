@@ -9,17 +9,6 @@ Definition:
 Example:
                 C:\Program Files (x86)\Unity\Editor\Unity.exe [ProjectLocation] -executeMethod [Your entrypoint] -quit -CustomArgs:Language=en_US;Version=1.02
                 
-Example1:
-                set WORKSPACE=.
-                set UNITYEDITOR_PATH=G:/UnityEditor/2021.3.20f1c1/Editor
-                set LOGFILE=./build.log
-                set BUILDROOT=G:/github/TEngine/UnityProject/Bundles
-
-                %UNITYEDITOR_PATH%/Unity.exe %WORKSPACE%/UnityProject -logFile %LOGFILE% -executeMethod TEngine.ReleaseTools.BuildPackage -quit -batchmode -CustomArgs:Language=en_US;Version=1.02;outputRoot=%BUILDROOT%
-
-                @REM for /f "delims=[" %%i in (%LOGFILE%) do echo %%i
-
-                pause
 ************************************************************************************************************/
 #endregion
 

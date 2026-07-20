@@ -11,13 +11,15 @@ namespace BTSMTL.Diagnostics
             RuntimeSourceElementKey source,
             RuntimeSourceElementHandle parent,
             string displayName,
-            string contentHash)
+            string contentHash,
+            RuntimeSourceTarget target)
         {
             Handle = handle;
             Source = source;
             Parent = parent;
             DisplayName = displayName ?? string.Empty;
             ContentHash = contentHash ?? string.Empty;
+            Target = target;
         }
 
         public RuntimeSourceElementHandle Handle { get; }
@@ -25,6 +27,7 @@ namespace BTSMTL.Diagnostics
         public RuntimeSourceElementHandle Parent { get; }
         public string DisplayName { get; }
         public string ContentHash { get; }
+        public RuntimeSourceTarget Target { get; }
     }
 
     public interface IDebugSourceMap
@@ -33,6 +36,7 @@ namespace BTSMTL.Diagnostics
         IReadOnlyList<DebugSourceMapEntry> Entries { get; }
         bool TryGet(RuntimeSourceElementHandle handle, out DebugSourceMapEntry entry);
         bool TryGetHandle(RuntimeSourceElementKey source, out RuntimeSourceElementHandle handle);
+        bool TryGetProgramTarget(RuntimeSourceTarget target, out RuntimeSourceElementHandle handle);
         IReadOnlyList<RuntimeSourceElementHandle> FindHandles(RuntimeSourceElementKey source);
     }
 
@@ -41,6 +45,7 @@ namespace BTSMTL.Diagnostics
         readonly List<DebugSourceMapEntry> m_Entries = new List<DebugSourceMapEntry>();
         readonly Dictionary<int, DebugSourceMapEntry> m_ByHandle = new Dictionary<int, DebugSourceMapEntry>();
         readonly Dictionary<RuntimeSourceElementKey, List<RuntimeSourceElementHandle>> m_BySource = new Dictionary<RuntimeSourceElementKey, List<RuntimeSourceElementHandle>>();
+        readonly Dictionary<RuntimeSourceTarget, RuntimeSourceElementHandle> m_ByProgramTarget = new Dictionary<RuntimeSourceTarget, RuntimeSourceElementHandle>();
         bool m_Sealed;
 
         public DebugSourceMap(RuntimeProgramRevision revision)
@@ -56,7 +61,8 @@ namespace BTSMTL.Diagnostics
             RuntimeSourceElementKey source,
             RuntimeSourceElementHandle parent,
             string displayName,
-            string contentHash)
+            string contentHash,
+            RuntimeSourceTarget target)
         {
             if (m_Sealed)
                 throw new InvalidOperationException("Debug Source Map is sealed.");
@@ -64,7 +70,7 @@ namespace BTSMTL.Diagnostics
                 throw new InvalidOperationException("Debug Source Map source identity is invalid.");
 
             var handle = new RuntimeSourceElementHandle(m_Entries.Count + 1, source.Kind);
-            var entry = new DebugSourceMapEntry(handle, source, parent, displayName, contentHash);
+            var entry = new DebugSourceMapEntry(handle, source, parent, displayName, contentHash, target);
             m_Entries.Add(entry);
             m_ByHandle.Add(handle.Value, entry);
             if (!m_BySource.TryGetValue(source, out List<RuntimeSourceElementHandle> handles))
@@ -73,6 +79,8 @@ namespace BTSMTL.Diagnostics
                 m_BySource.Add(source, handles);
             }
             handles.Add(handle);
+            if (target.IsProgramTarget && !m_ByProgramTarget.TryAdd(target, handle))
+                throw new InvalidOperationException($"Debug Source Map Program target is duplicated: {target}.");
             return handle;
         }
 
@@ -116,6 +124,14 @@ namespace BTSMTL.Diagnostics
             return m_BySource.TryGetValue(source, out List<RuntimeSourceElementHandle> handles)
                 ? handles
                 : Array.Empty<RuntimeSourceElementHandle>();
+        }
+
+        public bool TryGetProgramTarget(RuntimeSourceTarget target, out RuntimeSourceElementHandle handle)
+        {
+            if (target.IsProgramTarget && m_ByProgramTarget.TryGetValue(target, out handle))
+                return true;
+            handle = default;
+            return false;
         }
     }
 

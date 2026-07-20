@@ -1,0 +1,10 @@
+{
+  "name": "DotRecast.Detour",
+  "rootNamespace": "DotRecast.Detour",
+  "references": [
+    "DotRecast.Core"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": true
+}

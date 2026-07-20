@@ -14,7 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_SourceAsset: {fileID: -944628639613478452, guid: 1949afa4194c50648a6e39fd2d067d67,
     type: 3}
-  m_InputHistoryCapacity: 120
   m_InputValues:
   - m_InputValueId: MoveAxis
     m_ValueType: 2
@@ -27,7 +26,9 @@ MonoBehaviour:
     m_SourceAction: {fileID: 11400000, guid: 5856b69fba455c741bebbee39121527b, type: 2}
     m_BufferSeconds: 0.2
     m_Priority: 0
+    m_TimingClass: 2
   - m_RequestId: Dodge
     m_SourceAction: {fileID: 11400000, guid: 7f4d7ad1b0794b64aa322b392f77bdb1, type: 2}
     m_BufferSeconds: 0.2
     m_Priority: 100
+    m_TimingClass: 1

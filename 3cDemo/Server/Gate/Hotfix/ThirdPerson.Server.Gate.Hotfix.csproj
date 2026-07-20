@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>ThirdPerson.Server.Gate.Hotfix</AssemblyName>
+    <RootNamespace>Fantasy</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Entity\ThirdPerson.Server.Gate.Entity.csproj" />
+    <ProjectReference Include="..\..\..\..\Tools\ThirdPersonSimulation.Portable\ThirdPersonSimulation.Core\ThirdPersonSimulation.Core.csproj" />
+  </ItemGroup>
+</Project>

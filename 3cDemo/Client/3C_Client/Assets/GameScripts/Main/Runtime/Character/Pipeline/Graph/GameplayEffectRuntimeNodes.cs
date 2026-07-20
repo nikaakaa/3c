@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.GameplayEffect;
@@ -21,17 +22,11 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Has Tag"), ReadOnly]
         BoolPropertyPort m_Result = new BoolPropertyPort();
 
+        public GameplayTagId Tag => m_Tag;
+
         protected override void OutputValue()
         {
-            base.OutputValue();
-            m_Result.Value = TryGetGraphContext(out CharacterGraphContext context) &&
-                             context.GameplayEffectQueries.TagReader.HasTag(m_Tag);
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext context)
-        {
-            context = null;
-            return Owner != null && Owner.TryGetUser(out context) && context != null;
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -46,17 +41,11 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Matches"), ReadOnly]
         BoolPropertyPort m_Result = new BoolPropertyPort();
 
+        public GameplayTagQuery Query => m_Query;
+
         protected override void OutputValue()
         {
-            base.OutputValue();
-            m_Result.Value = TryGetGraphContext(out CharacterGraphContext context) &&
-                             context.GameplayEffectQueries.TagReader.Matches(m_Query);
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext context)
-        {
-            context = null;
-            return Owner != null && Owner.TryGetUser(out context) && context != null;
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -77,24 +66,11 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Current Value"), ReadOnly]
         FloatPropertyPort m_CurrentValue = new FloatPropertyPort();
 
+        public GameplayAttributeId Attribute => m_Attribute;
+
         protected override void OutputValue()
         {
-            base.OutputValue();
-            m_Valid.Value = false;
-            m_BaseValue.Value = 0f;
-            m_CurrentValue.Value = 0f;
-            if (!TryGetGraphContext(out CharacterGraphContext context) ||
-                !context.GameplayEffectQueries.AttributeReader.TryGetValue(m_Attribute, out GameplayAttributeValue value))
-                return;
-            m_Valid.Value = true;
-            m_BaseValue.Value = value.BaseValue;
-            m_CurrentValue.Value = value.CurrentValue;
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext context)
-        {
-            context = null;
-            return Owner != null && Owner.TryGetUser(out context) && context != null;
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -118,39 +94,16 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Applied"), ReadOnly]
         BoolPropertyPort m_Applied = new BoolPropertyPort();
 
+        public GameplayEffectDefinition Effect => m_Effect;
+        public ActionContextSlot ActionContext => m_ActionContext;
+        public bool Predicted => m_Predicted;
+        public IReadOnlyList<GameplaySetByCallerValue> SetByCallerValues => m_SetByCallerValues ?? Array.Empty<GameplaySetByCallerValue>();
+
         public override State ReturnState => m_Applied.Value ? State.Success : State.Failure;
 
         protected override void DoAction()
         {
-            m_Applied.Value = false;
-            if (!m_Effect || !TryGetGraphContext(out CharacterGraphContext context))
-                return;
-            ulong actionInstanceId = 0;
-            ulong predictionKey = 0;
-            if (context.TryGetActionContextHandle(m_ActionContext, out ActionInstanceHandle handle))
-            {
-                actionInstanceId = handle.ActionInstanceId;
-                predictionKey = handle.PredictionKey;
-            }
-            if (m_Predicted && (actionInstanceId == 0 || predictionKey == 0))
-                return;
-            GameplayEffectApplyResult result = context.GameplayEffectCommands.ApplySelf(
-                new CharacterGameplayEffectSelfApplyRequest(
-                m_Effect.EffectId,
-                m_Effect.DefinitionRevision,
-                actionInstanceId,
-                predictionKey,
-                0,
-                context.LocalLogicTick,
-                m_Predicted ? GameplayEffectApplicationMode.Predicted : GameplayEffectApplicationMode.Confirmed,
-                m_SetByCallerValues));
-            m_Applied.Value = result.Succeeded;
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext context)
-        {
-            context = null;
-            return Owner != null && Owner.TryGetUser(out context) && context != null;
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -174,40 +127,16 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Removed"), ReadOnly]
         BoolPropertyPort m_Removed = new BoolPropertyPort();
 
+        public GameplayEffectRemoveSelector Selector => m_Selector;
+        public ulong Handle => m_Handle;
+        public GameplayEffectDefinition Effect => m_Effect;
+        public GameplayTagQuery EffectTagQuery => m_EffectTagQuery;
+
         public override State ReturnState => m_Removed.Value ? State.Success : State.Failure;
 
         protected override void DoAction()
         {
-            m_Removed.Value = false;
-            if (!TryGetGraphContext(out CharacterGraphContext context))
-                return;
-            CharacterGameplayEffectSelfRemoveRequest request;
-            switch (m_Selector)
-            {
-                case GameplayEffectRemoveSelector.Handle:
-                    request = new CharacterGameplayEffectSelfRemoveRequest(m_Selector, handle: new GameplayEffectHandle(m_Handle));
-                    break;
-                case GameplayEffectRemoveSelector.EffectId:
-                    if (!m_Effect)
-                        return;
-                    request = new CharacterGameplayEffectSelfRemoveRequest(m_Selector, effectId: m_Effect.EffectId);
-                    break;
-                case GameplayEffectRemoveSelector.SourceActorId:
-                    request = new CharacterGameplayEffectSelfRemoveRequest(m_Selector);
-                    break;
-                case GameplayEffectRemoveSelector.EffectTagQuery:
-                    request = new CharacterGameplayEffectSelfRemoveRequest(m_Selector, effectTagQuery: m_EffectTagQuery);
-                    break;
-                default:
-                    return;
-            }
-            m_Removed.Value = context.GameplayEffectCommands.RemoveSelf(request).RemovedAny;
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext context)
-        {
-            context = null;
-            return Owner != null && Owner.TryGetUser(out context) && context != null;
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 }

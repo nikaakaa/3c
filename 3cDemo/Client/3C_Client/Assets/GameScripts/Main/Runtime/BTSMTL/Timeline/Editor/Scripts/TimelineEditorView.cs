@@ -9,7 +9,7 @@ using BTSMTL.Editor;
 
 namespace BTSMTL.Timeline.Editor
 {
-    public sealed class TimelineEditorView : VisualElement, ISelection, IDisposable
+    public sealed class TimelineEditorView : VisualElement, IDisposable
     {
         VisualElement m_Top;
         VisualElement m_LeftPanel;
@@ -20,11 +20,10 @@ namespace BTSMTL.Timeline.Editor
         Button m_PlayButton;
         Button m_PauseButton;
         FloatField m_PlaySpeedField;
+        Label m_PreviewErrorLabel;
         TimelineFieldView m_TimelineField;
         IVisualElementScheduledItem m_UpdateSchedule;
         readonly TimelinePreviewSession m_PreviewSession = new TimelinePreviewSession();
-        readonly List<ISelectable> m_Elements = new List<ISelectable>();
-        readonly List<ISelectable> m_Selections = new List<ISelectable>();
         bool m_LiveDebug;
         string m_PendingFocusTrackAuthoringId = string.Empty;
         string m_PendingFocusClipAuthoringId = string.Empty;
@@ -81,6 +80,12 @@ namespace BTSMTL.Timeline.Editor
                 m_PreviewSession.PlaySpeed = evt.newValue;
                 m_PlaySpeedField.SetValueWithoutNotify(m_PreviewSession.PlaySpeed);
             });
+            m_PreviewErrorLabel = new Label();
+            m_PreviewErrorLabel.style.marginLeft = 6f;
+            m_PreviewErrorLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            m_PreviewErrorLabel.style.color = new Color(1f, 0.48f, 0.36f);
+            m_PreviewErrorLabel.style.flexGrow = 1f;
+            m_Top.Add(m_PreviewErrorLabel);
 
             m_LeftPanel = this.Q("left-panel");
             m_LeftPanel.SetEnabled(false);
@@ -152,16 +157,13 @@ namespace BTSMTL.Timeline.Editor
         public void PopulateView()
         {
             m_TrackHandleContainer.Clear();
-            m_Elements.Clear();
-            m_Selections.Clear();
             if (Timeline == null)
                 return;
             foreach (TimelineTrackView trackView in m_TimelineField.TrackViews)
             {
-                TimelineTrackHandle trackHandle = new TimelineTrackHandle(trackView) { SelectionContainer = this };
+                TimelineTrackHandle trackHandle = new TimelineTrackHandle(trackView) { SelectionContainer = m_TimelineField };
                 trackHandle.SetRuntimeReadOnly(m_LiveDebug);
                 m_TrackHandleContainer.Add(trackHandle);
-                m_Elements.Add(trackHandle);
             }
         }
 
@@ -171,8 +173,8 @@ namespace BTSMTL.Timeline.Editor
                 return;
             Timeline.ApplyModify(() =>
             {
-                foreach (TimelineTrackHandle trackHandle in Selections.OfType<TimelineTrackHandle>().ToArray())
-                    Timeline.RemoveTrack(trackHandle.Track);
+                foreach (TimelineTrackView trackView in m_TimelineField.Selections.OfType<TimelineTrackView>().ToArray())
+                    Timeline.RemoveTrack(trackView.Track);
             }, "Remove");
         }
 
@@ -251,6 +253,15 @@ namespace BTSMTL.Timeline.Editor
             m_PauseButton.SetEnabled(canPreview);
             m_PlaySpeedField.SetEnabled(canPreview);
             m_TargetField.SetEnabled(!m_LiveDebug && !Application.isPlaying);
+            string previewStatus = m_PreviewSession.Status;
+            m_PreviewErrorLabel.text = previewStatus;
+            m_PreviewErrorLabel.tooltip = previewStatus;
+            m_PreviewErrorLabel.style.color = string.IsNullOrEmpty(m_PreviewSession.Error)
+                ? new Color(0.72f, 0.72f, 0.72f)
+                : new Color(1f, 0.48f, 0.36f);
+            m_PreviewErrorLabel.style.display = string.IsNullOrEmpty(previewStatus)
+                ? DisplayStyle.None
+                : DisplayStyle.Flex;
             m_AddTrackButton.SetEnabled(!m_LiveDebug);
         }
 
@@ -279,32 +290,13 @@ namespace BTSMTL.Timeline.Editor
         {
             if (!m_LiveDebug)
                 return;
-            m_TimelineField.SetRuntimeVisualTime(visualTime);
-            for (int trackIndex = 0; trackIndex < m_TimelineField.TrackViews.Count; trackIndex++)
-            {
-                TimelineTrackView trackView = m_TimelineField.TrackViews[trackIndex];
-                string trackStatus = string.Empty;
-                bool trackActive = activeTracks != null && activeTracks.TryGetValue(trackView.Track.AuthoringId, out trackStatus);
-                trackView.SetRuntimeDebugState(trackActive, trackStatus);
-                for (int clipIndex = 0; clipIndex < trackView.ClipViews.Count; clipIndex++)
-                {
-                    TimelineClipView clipView = trackView.ClipViews[clipIndex];
-                    string clipStatus = string.Empty;
-                    bool clipActive = activeClips != null && activeClips.TryGetValue(clipView.Clip.AuthoringId, out clipStatus);
-                    clipView.SetRuntimeDebugState(clipActive, clipStatus);
-                }
-            }
+            m_TimelineField.ApplyRuntimeOverlay(
+                new TimelineRuntimeOverlayModel(visualTime, activeTracks, activeClips));
         }
 
         public void ClearRuntimeOverlay()
         {
-            for (int trackIndex = 0; trackIndex < m_TimelineField.TrackViews.Count; trackIndex++)
-            {
-                TimelineTrackView trackView = m_TimelineField.TrackViews[trackIndex];
-                trackView.SetRuntimeDebugState(false, string.Empty);
-                for (int clipIndex = 0; clipIndex < trackView.ClipViews.Count; clipIndex++)
-                    trackView.ClipViews[clipIndex].SetRuntimeDebugState(false, string.Empty);
-            }
+            m_TimelineField.ClearRuntimeOverlay();
         }
 
         public bool FocusSource(string trackAuthoringId, string clipAuthoringId)
@@ -404,26 +396,7 @@ namespace BTSMTL.Timeline.Editor
             OpenClipRequested = null;
         }
 
-        public VisualElement ContentContainer => m_TrackHandleContainer;
-        public List<ISelectable> Elements => m_Elements;
-        public List<ISelectable> Selections => m_Selections;
 
-        public void AddToSelection(ISelectable selectable)
-        {
-            m_Selections.Add(selectable);
-            selectable.Select();
-        }
-
-        public void RemoveFromSelection(ISelectable selectable)
-        {
-            selectable?.Unselect();
-            m_Selections.Remove(selectable);
-        }
-
-        public void ClearSelection()
-        {
-            m_Selections.ForEach(item => item.Unselect());
-            m_Selections.Clear();
-        }
     }
 }
+

@@ -29,7 +29,7 @@ Tree Inspector MUST提供 Data 与 Inspector 两个互斥工作页。Data 页 MU
 #### Scenario: 打开动画表现配置
 
 - **WHEN** 作者需要调整 producer transition 或 animation layer
-- **THEN** 系统 MUST定位 CharacterPipelineDefinition Inspector 或 Animancer Transition Library 正式入口
+- **THEN** 系统 MUST从 CharacterPipelineDefinition 引用导航到 CharacterAnimationPresentationProfile Inspector 或 Animancer Transition Library 正式入口
 - **AND** Tree Inspector MUST不创建同一数据的第二写入口
 
 ### Requirement: Graph Authoring Settings 必须排除运行时生命周期字段

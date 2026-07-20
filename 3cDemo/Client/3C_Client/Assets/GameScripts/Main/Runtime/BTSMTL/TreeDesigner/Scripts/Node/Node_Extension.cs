@@ -26,12 +26,6 @@ namespace TreeDesigner
     public abstract partial class BaseNode
     {
         [SerializeField]
-        protected string m_DisplayName;
-        public string DisplayName { get => m_DisplayName; set => m_DisplayName = value ?? string.Empty; }
-        public string ResolvedDisplayName => string.IsNullOrWhiteSpace(m_DisplayName) ? NodeTypeDisplayName : m_DisplayName;
-        public string NodeTypeDisplayName => ResolveNodeTypeDisplayName();
-
-        [SerializeField]
         protected bool m_Expanded;
         public bool Expanded { get => m_Expanded; set => m_Expanded = value; }
 
@@ -55,20 +49,6 @@ namespace TreeDesigner
                                                         NodeCapabilities.Snappable |
                                                         NodeCapabilities.Groupable;
         public virtual bool Single => false;
-
-        string ResolveNodeTypeDisplayName()
-        {
-            NodeNameAttribute nodeNameAttribute = this.GetAttribute<NodeNameAttribute>();
-            if (nodeNameAttribute == null)
-                return GetType().Name;
-
-            MethodInfo methodInfo = this.GetMethod(nodeNameAttribute.Name);
-            if (methodInfo == null || methodInfo.ReturnType != typeof(string) || methodInfo.GetParameters().Length != 0)
-                return nodeNameAttribute.Name;
-
-            string value = methodInfo.Invoke(this, null) as string;
-            return string.IsNullOrEmpty(value) ? nodeNameAttribute.Name : value;
-        }
 
         public virtual IEnumerable<FlowPortDeclaration> GetFlowPortDeclarations(BaseGraph owner)
         {

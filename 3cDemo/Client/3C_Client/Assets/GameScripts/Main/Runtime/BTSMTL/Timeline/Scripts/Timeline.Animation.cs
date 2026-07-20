@@ -64,7 +64,7 @@ namespace BTSMTL.Timeline
     }
 
     [TrackGroup("Base"), ScriptGuid("3f0d14cafa6f2c84389c42789ec00083"), IconGuid("e6435fa591ae4414eb0f26dc6410086e"), Ordered(0), Color(127, 253, 228)]
-    public class AnimationTrack : Track
+    public partial class AnimationTrack : Track, ITimelineTrackOwnedAuthoringIdentity
     {
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public string LayerId = "Base";
@@ -183,7 +183,7 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("3f0d14cafa6f2c84389c42789ec00083"), Color(127, 253, 228)]
-    public class AnimationClip : Clip
+    public partial class AnimationClip : Clip
     {
         [ShowInInspector, OnValueChanged("OnClipChanged", "RebindTimeline")]
         public UnityEngine.AnimationClip Clip;
@@ -195,6 +195,48 @@ namespace BTSMTL.Timeline
         public AnimationCurve EaseInCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public AnimationCurve EaseOutCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+        [ShowInInspector, Group("Foot Placement"), OnValueChanged("RebindTimeline"), InspectorName("Foot Placement Weight")]
+        public AnimationCurve FootPlacementCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
+
+        public void RequireFootPlacementWeightCurve()
+        {
+            RequireNormalizedCurve(FootPlacementCurve, nameof(FootPlacementCurve));
+        }
+
+#if UNITY_EDITOR
+        public void ConfigureFootPlacementWeightCurve(AnimationCurve curve)
+        {
+            FootPlacementCurve = CopyNormalizedCurve(curve, nameof(FootPlacementCurve));
+            RebindTimeline();
+        }
+
+        static AnimationCurve CopyNormalizedCurve(AnimationCurve source, string field)
+        {
+            RequireNormalizedCurve(source, field);
+            return new AnimationCurve(source.keys)
+            {
+                preWrapMode = source.preWrapMode,
+                postWrapMode = source.postWrapMode
+            };
+        }
+#endif
+
+        static void RequireNormalizedCurve(AnimationCurve curve, string field)
+        {
+            if (curve == null || curve.length == 0)
+                throw new InvalidOperationException($"Animation Clip '{field}' requires at least one key.");
+            Keyframe[] keys = curve.keys;
+            for (int i = 0; i < keys.Length; i++)
+            {
+                Keyframe key = keys[i];
+                if (!IsNormalized(key.time) || !IsNormalized(key.value) ||
+                    i > 0 && key.time < keys[i - 1].time)
+                    throw new InvalidOperationException($"Animation Clip '{field}' key {i} is outside normalized ordered range.");
+            }
+        }
+
+        static bool IsNormalized(float value) =>
+            !float.IsNaN(value) && !float.IsInfinity(value) && value >= 0f && value <= 1f;
 
 #if UNITY_EDITOR
 

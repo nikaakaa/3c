@@ -655,6 +655,7 @@ namespace BTSMTL.Diagnostics
                 RuntimeTraceEventKind.AnimationPlaybackOutgoing or
                 RuntimeTraceEventKind.AnimationPlaybackRetired or
                 RuntimeTraceEventKind.AnimationFade or
+                RuntimeTraceEventKind.AnimationMarkerSync or
                 RuntimeTraceEventKind.PresentationInterpolated or
                 RuntimeTraceEventKind.CameraSnapshot or
                 RuntimeTraceEventKind.CameraRequest => RuntimeDiagnosticsCaptureDetail.Continuous,

@@ -9,6 +9,15 @@ EditorBuildSettings:
     path: Assets/Scenes/Bootstrap.unity
     guid: 93b48c2d132499640810111c71f32d4e
   - enabled: 1
-    path: Assets/Scenes/Sandbox/SandBox.unity
-    guid: 13147eabf67393f49975780565fe8916
+    path: Assets/Scenes/Standalone/StandaloneGameplay.unity
+    guid: 9b627e1c4e8b46bb843c561619ca5b90
+  - enabled: 1
+    path: Assets/Scenes/ServerAuthoritative/ServerAuthoritativeNetworkTestBootstrap.unity
+    guid: 8b10000000004d259d15000000000003
+  - enabled: 1
+    path: Assets/Scenes/ServerAuthoritative/ServerAuthoritativeClient.unity
+    guid: 8b10000000004d259d15000000000001
+  - enabled: 1
+    path: Assets/Scenes/ServerAuthoritative/ServerAuthoritativeAuthorityWorker.unity
+    guid: 8b10000000004d259d15000000000002
   m_configObjects: {}

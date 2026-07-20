@@ -1,0 +1,17 @@
+{
+    "name": "ThirdPersonSimulation.Unity",
+    "rootNamespace": "ThirdPersonCharacter.Pipeline.Simulation",
+    "references": [
+        "ThirdPersonSimulation.Core",
+        "ThirdPersonSimulation.Float32"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

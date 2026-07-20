@@ -22,10 +22,12 @@ namespace BTSMTL.Timeline.Editor
 
         DropdownMenuHandler MenuHandler;
         bool m_RuntimeReadOnly;
-
-        float TopOffset = 5;
-        float YminOffset = -77;
-        float Interval = 40;
+        Label m_MarkerSyncSummary;
+        VisualElement m_AnimationCurvesHeader;
+        VisualElement m_CurveChannelLabels;
+        Label m_AnimationCurvesFold;
+        readonly System.Collections.Generic.List<TimelineCurveChannelDescriptor> m_CurveChannels =
+            new System.Collections.Generic.List<TimelineCurveChannelDescriptor>();
         
         public TimelineTrackHandle()
         {
@@ -37,31 +39,77 @@ namespace BTSMTL.Timeline.Editor
         public TimelineTrackHandle(TimelineTrackView trackView) : this()
         {
             TrackView = trackView;
-            TrackView.OnSelected = () =>
-            {
-                SelectionContainer.AddToSelection(this);
-            };
-            TrackView.OnUnselected = () =>
-            {
-                SelectionContainer.RemoveFromSelection(this);
-            };
+            TrackView.OnSelected = Select;
+            TrackView.OnUnselected = Unselect;
+            if (TrackView.IsSelected())
+                Select();
 
             style.borderLeftColor = Track.Color();
 
             NameField = this.Q<TextField>();
             SerializedProperty serializedProperty = TimelineData.SerializedData.FindPropertyRelative("m_Tracks");
             serializedProperty = serializedProperty.GetArrayElementAtIndex(TimelineData.Tracks.IndexOf(Track));
-            NameField.bindingPath =  serializedProperty.FindPropertyRelative("Name").propertyPath;
-            NameField.Bind(TimelineData.SerializedTimeline);
+            NameField.BindProperty(serializedProperty.FindPropertyRelative("Name"));
 
             Icon = this.Q("icon");
             Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GUIDToAssetPath(IconGuidAttribute.Guid(Track.GetType())));
             if (texture)
                 Icon.style.backgroundImage = texture;
 
+            style.height = TimelineTrackLayout.ContentHeight(Track);
+            m_MarkerSyncSummary = this.Q<Label>("marker-sync-summary");
+            m_MarkerSyncSummary.pickingMode = PickingMode.Ignore;
+            m_AnimationCurvesHeader = this.Q("animation-curves-header");
+            m_AnimationCurvesHeader.pickingMode = PickingMode.Position;
+            m_AnimationCurvesFold = this.Q<Label>("animation-curves-fold");
+            m_AnimationCurvesFold.pickingMode = PickingMode.Ignore;
+            m_CurveChannelLabels = this.Q("curve-channel-labels");
+            m_CurveChannelLabels.pickingMode = PickingMode.Ignore;
+            if (Track is AnimationTrack animationTrack)
+            {
+                m_MarkerSyncSummary.style.display = DisplayStyle.Flex;
+                m_MarkerSyncSummary.text = MarkerHeaderText(animationTrack);
+                m_MarkerSyncSummary.style.top = TimelineTrackLayout.MarkerHeaderTop;
+                m_MarkerSyncSummary.style.height = TimelineTrackLayout.MarkerHeaderHeight;
+                m_MarkerSyncSummary.pickingMode = PickingMode.Position;
+                TrackView.MarkerSyncSummaryChanged += RefreshMarkerSyncSummary;
+                m_MarkerSyncSummary.RegisterCallback<PointerDownEvent>(evt =>
+                {
+                    if (evt.button != 0)
+                        return;
+                    TrackView.ToggleMarkerLane();
+                    evt.StopImmediatePropagation();
+                });
+            }
+            TimelineCurveChannelCatalog.CollectForTrack(Track, m_CurveChannels);
+            if (m_CurveChannels.Count > 0)
+            {
+                m_AnimationCurvesHeader.style.display = DisplayStyle.Flex;
+                m_AnimationCurvesHeader.style.top = TimelineTrackLayout.CurveHeaderTop(Track);
+                bool expanded = TimelineTrackLayout.CurvesExpanded(Track);
+                m_AnimationCurvesFold.text = expanded ? "v" : ">";
+                m_AnimationCurvesHeader.RegisterCallback<PointerDownEvent>(evt =>
+                {
+                    if (evt.button == 0)
+                        TrackView.ToggleCurveLanes();
+                    else if (evt.button == 1)
+                        ShowCurveChannelMenu();
+                    else
+                        return;
+                    evt.StopImmediatePropagation();
+                });
+                m_CurveChannelLabels.style.display = expanded ? DisplayStyle.Flex : DisplayStyle.None;
+                m_CurveChannelLabels.style.top = TimelineTrackLayout.CurveHeaderTop(Track) + TimelineTrackLayout.CurveHeaderHeight;
+                PopulateCurveChannelLabels();
+            }
+
             FieldView.OnGeometryChangedCallback += OnGeometryChanged;
             this.RegisterCallbackOnce<GeometryChangedEvent>((e) => OnGeometryChanged());
-            RegisterCallback<DetachFromPanelEvent>((e) => FieldView.OnGeometryChangedCallback -= OnGeometryChanged);
+            RegisterCallback<DetachFromPanelEvent>((e) =>
+            {
+                FieldView.OnGeometryChangedCallback -= OnGeometryChanged;
+                TrackView.MarkerSyncSummaryChanged -= RefreshMarkerSyncSummary;
+            });
             //RegisterCallback<PointerDownEvent>(OnPointerDown);
 
             MenuHandler = new DropdownMenuHandler(MenuBuilder);
@@ -95,12 +143,19 @@ namespace BTSMTL.Timeline.Editor
             (e) =>
             {
                 float targetY = transform.position.y + e.y;
-                targetY = Mathf.Clamp(targetY, TopOffset, (TimelineData.Tracks.Count - 1) * Interval + TopOffset);
+                float maximum = Mathf.Max(
+                    TimelineTrackLayout.VerticalMargin,
+                    TimelineTrackLayout.TotalHeight(TimelineData.Tracks) -
+                    TimelineTrackLayout.Stride(Track) +
+                    TimelineTrackLayout.VerticalMargin);
+                targetY = Mathf.Clamp(targetY, TimelineTrackLayout.VerticalMargin, maximum);
                 transform.position = new Vector3(0, targetY, 0);
-                TrackView.transform.position = new Vector3(0, targetY - TopOffset, 0);
+                TrackView.transform.position = new Vector3(0, targetY - TimelineTrackLayout.VerticalMargin, 0);
 
                 int index = TimelineData.Tracks.IndexOf(Track);
-                int targetIndex = Mathf.FloorToInt(targetY / Interval);
+                int targetIndex = TimelineTrackLayout.IndexAt(
+                    TimelineData.Tracks,
+                    targetY + TimelineTrackLayout.ContentHeight(Track) * 0.5f);
                 if(index != targetIndex)
                 {
                     TimelineData.Tracks.Remove(Track);
@@ -114,9 +169,67 @@ namespace BTSMTL.Timeline.Editor
             this.AddManipulator(DragManipulator);
         }
 
+        void RefreshMarkerSyncSummary(string summary)
+        {
+            if (m_MarkerSyncSummary != null && Track is AnimationTrack animationTrack)
+                m_MarkerSyncSummary.text = MarkerHeaderText(animationTrack);
+        }
+
+        string MarkerHeaderText(AnimationTrack track) =>
+            $"{(TimelineTrackLayout.MarkersExpanded(track) ? "v" : ">") } SYNC MARKERS  {TimelineTrackView.MarkerSyncSummary(track)}";
+
+        void PopulateCurveChannelLabels()
+        {
+            m_CurveChannelLabels.Clear();
+            for (int i = 0; i < m_CurveChannels.Count; i++)
+            {
+                TimelineCurveChannelDescriptor descriptor = m_CurveChannels[i];
+                if (!TimelineCurveEditorSession.IsChannelVisible(Track, descriptor.ChannelId))
+                    continue;
+                var row = new VisualElement();
+                row.AddToClassList("curveChannelRow");
+                row.pickingMode = PickingMode.Ignore;
+                var swatch = new VisualElement();
+                swatch.AddToClassList("curveChannelSwatch");
+                swatch.style.backgroundColor = descriptor.Color;
+                swatch.pickingMode = PickingMode.Ignore;
+                var label = new Label(descriptor.DisplayName);
+                label.AddToClassList("curveChannelLabel");
+                label.pickingMode = PickingMode.Ignore;
+                var range = new Label(descriptor.ValueDomain.Summary);
+                range.AddToClassList("curveChannelRange");
+                range.pickingMode = PickingMode.Ignore;
+                row.Add(swatch);
+                row.Add(label);
+                row.Add(range);
+                m_CurveChannelLabels.Add(row);
+            }
+        }
+
+        void ShowCurveChannelMenu()
+        {
+            var menu = new GenericMenu();
+            for (int i = 0; i < m_CurveChannels.Count; i++)
+            {
+                TimelineCurveChannelDescriptor descriptor = m_CurveChannels[i];
+                bool visible = TimelineCurveEditorSession.IsChannelVisible(Track, descriptor.ChannelId);
+                menu.AddItem(new GUIContent(descriptor.DisplayName), visible, () => TrackView.ToggleCurveChannel(descriptor.ChannelId));
+            }
+            menu.ShowAsContext();
+        }
+
         void OnGeometryChanged()
         {
-            transform.position = new Vector3(0, TrackView.worldBound.yMin + YminOffset, 0);
+            if (parent == null || TrackView == null)
+                return;
+
+            float targetY = parent.WorldToLocal(
+                new Vector2(parent.worldBound.xMin, TrackView.worldBound.yMin)).y;
+            float currentY = parent.WorldToLocal(
+                new Vector2(parent.worldBound.xMin, worldBound.yMin)).y;
+            Vector3 position = transform.position;
+            position.y += targetY - currentY;
+            transform.position = position;
         }
         void MenuBuilder(DropdownMenu menu)
         {
@@ -124,7 +237,7 @@ namespace BTSMTL.Timeline.Editor
             {
                 TimelineData.ApplyModify(() =>
                 {
-                    FieldView.AddClip(Track, FieldView.GetRightEdgeFrame(Track));
+                    FieldView.AddClip(Track, FieldView.Geometry.GetRightEdgeFrame(Track));
                 }, "Add Clip");
             });
             menu.AppendAction("Remove Track", (e) =>
@@ -171,11 +284,11 @@ namespace BTSMTL.Timeline.Editor
                 {
                     if (e.actionKey)
                     {
-                        FieldView.RemoveFromSelection(this);
+                        FieldView.RemoveFromSelection(TrackView);
                     }
                 }
                 if (!m_RuntimeReadOnly)
-                    DragManipulator.DragBeginForce(e, this.WorldToLocal(e.position));
+                    DragManipulator.DragBeginForce(e);
                 e.StopImmediatePropagation();
             }
             else if (e.button == 1)
@@ -209,13 +322,17 @@ namespace BTSMTL.Timeline.Editor
             var trackHandles = parent.Query<TimelineTrackHandle>().ToList();
             foreach (var trackHandle in trackHandles)
             {
-                trackHandle.NameField.bindingPath = TimelineData.GetSerializedPropertyPath(
-                    $"m_Tracks.Array.data[{TimelineData.Tracks.IndexOf(trackHandle.Track)}].Name");
-                trackHandle.NameField.Bind(TimelineData.SerializedTimeline);
+                SerializedProperty nameProperty = TimelineData.SerializedData.FindPropertyRelative("m_Tracks")
+                    .GetArrayElementAtIndex(TimelineData.Tracks.IndexOf(trackHandle.Track))
+                    .FindPropertyRelative("Name");
+                trackHandle.NameField.Unbind();
+                trackHandle.NameField.BindProperty(nameProperty);
 
                 if (!trackHandle.Draging)
                 {
-                    float targetY = TimelineData.Tracks.IndexOf(trackHandle.Track) * Interval + TopOffset;
+                    float targetY = TimelineTrackLayout.Top(
+                        TimelineData.Tracks,
+                        TimelineData.Tracks.IndexOf(trackHandle.Track)) + TimelineTrackLayout.VerticalMargin;
                     float currentY = trackHandle.transform.position.y;
                     if(Mathf.Abs(currentY - targetY) > 1f)
                     {
@@ -223,7 +340,10 @@ namespace BTSMTL.Timeline.Editor
                         targetY = Mathf.Lerp(currentY, targetY, 0.05f);
                     }
                     trackHandle.transform.position = new Vector3(0, targetY, 0);
-                    trackHandle.TrackView.transform.position = new Vector3(0, targetY - TopOffset, 0);
+                    trackHandle.TrackView.transform.position = new Vector3(
+                        0,
+                        targetY - TimelineTrackLayout.VerticalMargin,
+                        0);
                 }
             }
             if (Tweening)

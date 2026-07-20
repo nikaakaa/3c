@@ -1,0 +1,13 @@
+{
+  "name": "DotRecast.Recast",
+  "rootNamespace": "DotRecast.Recast",
+  "references": [
+    "DotRecast.Core"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": true
+}

@@ -1,0 +1,34 @@
+syntax = "proto3";
+package Fantasy.Network.Message;
+
+enum AuthErrorCode
+{
+    AuthSuccess = 0;
+    AuthInvalidRequest = 1;
+    AuthClientBuildUnsupported = 2;
+    AuthProtocolMismatch = 3;
+    AuthGatewayUnavailable = 4;
+}
+
+message C2G_GuestLoginRequest // IRequest,G2C_GuestLoginResponse
+{
+    string GuestAccountId = 1;
+    string ClientInstanceId = 2;
+    string ClientBuildVersion = 3;
+    uint32 AuthProtocolVersion = 4;
+}
+
+message G2C_GuestLoginResponse // IResponse
+{
+    int32 ResultCode = 1;
+    string AccountId = 2;
+    uint64 SessionGeneration = 3;
+    string SessionToken = 4;
+    int64 TokenExpiresAt = 5;
+}
+
+message G2C_AccountSessionReplaced // IMessage
+{
+    string Reason = 1;
+    uint64 NewSessionGeneration = 2;
+}

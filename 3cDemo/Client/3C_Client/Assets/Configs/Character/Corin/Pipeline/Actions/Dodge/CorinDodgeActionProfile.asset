@@ -23,6 +23,8 @@ MonoBehaviour:
     m_None: []
   m_CancelTags:
     m_All: []
-    m_Any: []
+    m_Any:
+    - m_Value: Attack
+    - m_Value: Dodge
     m_None: []
-  m_TargetPolicy: Self
+  m_TargetRequirement: 0

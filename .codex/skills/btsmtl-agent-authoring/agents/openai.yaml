@@ -1,0 +1,4 @@
+interface:
+  display_name: "BTSMTL Agent Authoring"
+  short_description: "通过正式 Agent 工具修改并同步 BTSMTL authoring"
+  default_prompt: "Use $btsmtl-agent-authoring to modify BTSMTL assets through snapshot, typed Patch IR, transactional apply, and validation."

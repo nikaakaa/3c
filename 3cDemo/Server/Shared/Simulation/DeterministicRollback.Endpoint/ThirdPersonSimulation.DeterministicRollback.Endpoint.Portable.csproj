@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>ThirdPersonSimulation.DeterministicRollback.Endpoint</AssemblyName>
+    <RootNamespace>ThirdPersonSimulation.DeterministicRollback</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\..\Client\3C_Client\Assets\GameScripts\Main\Runtime\Simulation\DeterministicRollback.Endpoint\**\*.cs" />
+    <ProjectReference Include="..\Core\ThirdPersonSimulation.Core.Portable.csproj" />
+    <ProjectReference Include="..\Fixed\ThirdPersonSimulation.Fixed.Portable.csproj" />
+    <ProjectReference Include="..\DeterministicRollback\ThirdPersonSimulation.DeterministicRollback.Portable.csproj" />
+  </ItemGroup>
+</Project>

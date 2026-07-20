@@ -1,30 +1,17 @@
 # character-pipeline-blackboard Specification
 
 ## Purpose
-定义角色 Pipeline Blackboard 的声明、类型、作用域、运行时读写、ConditionRuleGraph 读取和 SyncFacts 边界。
+定义角色 Pipeline Blackboard 的声明、类型、作用域、运行时读写、ConditionRuleGraph 读取和 GameplayFact 投影边界。
 ## Requirements
 ### Requirement: Pipeline Blackboard 必须统一图变量和运行时黑板
 
-系统 MUST 使用 Pipeline Blackboard 作为角色 pipeline 内部的统一变量模型。BTSMTL declaration、角色 pipeline 运行时变量和可调参数 MUST 解析到同一套 declaration/reference/runtime 服务。系统 MUST NOT 长期保留一套 graph exposed property、一套 runtime dictionary、一套局部状态变量和一套网络变量的分裂真相。单节点常量和单次求值中间值 MUST 能继续使用节点字段、`PropertyPort` 默认值或 ValueNode/PropertyEdge，而不要求声明 Blackboard variable。
+Blackboard declaration、ExposedProperty authoring、Graph Data Catalog 和 scope/lifetime 语义 MUST继续是唯一黑板数据源。Compiler MUST将 declaration/reference 解析为 Program layout，Kernel MUST只通过 CharacterSimulationState Blackboard slots 读写。
 
-#### Scenario: 作者声明共享移动阈值
+#### Scenario: Compiled ValueNode 读取变量
 
-- **WHEN** 作者为 Corin locomotion 配置会被多个 Transition 读取的 `WalkThreshold` 或 `RunThreshold`
-- **THEN** 该值 MUST 作为 RootTree Character scope 的 Pipeline Blackboard declaration
-- **AND** Graph、ConditionRuleGraph 和 Runtime Debug MUST 通过同一 declaration identity 和类型读取它
-- **AND** 系统 MUST NOT 要求状态行为 Graph 复制同 key declaration
-
-#### Scenario: 节点只使用一个常量
-
-- **WHEN** 某个数值只被一个节点或一次 PropertyEdge 求值链使用
-- **THEN** 作者 MUST 能把它保留为节点字段、端口默认值或 ValueNode 输出
-- **AND** 系统 MUST NOT 要求该数值进入 Pipeline Blackboard
-
-#### Scenario: 动作节点写入临时运行值
-
-- **WHEN** Action 或 Timeline 节点写入当前 ActionInstance 的临时值
-- **THEN** 该值 MUST 写入同一 Pipeline Blackboard runtime instance 的目标 ActionInstance bucket
-- **AND** 该写入 MUST 受 declaration scope、lifetime 和当前 `ActionInstanceId` 约束
+- **WHEN** ConditionRuleGraph operation 读取 Blackboard declaration
+- **THEN** MUST通过 compiled address 访问 CharacterSimulationState
+- **AND** MUST不反射 authoring ExposedProperty object
 
 ### Requirement: Blackboard Variable 必须声明类型、作用域和生命周期
 
@@ -58,28 +45,13 @@
 
 ### Requirement: ExposedProperty 必须成为 Pipeline Blackboard 的 authoring 表面
 
-角色 pipeline 图中的 `BaseExposedProperty` MUST 被定义为 Pipeline Blackboard declaration 的 authoring/serialization 表面。Character declaration MUST 归属 RootTree；局部 declaration MUST 归属当前 inline/shared Graph。下钻 Graph MAY 显式引用可见的上层 declaration，但 MUST NOT 为跨 Graph 访问复制同 key declaration。系统 MUST NOT 让 ExposedProperty、CharacterGraphContext dictionary 和局部状态字段形成多套互不映射的变量系统。
+BaseExposedProperty MUST继续是 Pipeline Blackboard declaration 的唯一 authoring/serialization 表面。Compiler MUST将 declaration owner、reference、scope、lifetime、default value 与 projection 编译进 Program layout；Runtime MUST不同时维护 CharacterGraphContext dictionary、局部散字段或第二 Blackboard service。
 
-#### Scenario: 当前状态创建局部变量
+#### Scenario: State body 创建 Local 变量
 
-- **WHEN** 作者在某个 StateNode 的 inline state body 中创建 State scope variable
-- **THEN** declaration MUST 保存于该 state body Graph
-- **AND** UI MUST 显示该 declaration 为 `Local`
-- **AND** 其它无 owner 关系的 Graph MUST NOT 自动看到该 declaration
-
-#### Scenario: 状态 body 引用 Character variable
-
-- **WHEN** Dodge state body 需要写 RootTree 的 Character `IsDodging`
-- **THEN** 节点 MUST 保存对 RootTree declaration 的显式 reference
-- **AND** UI MUST 显示该 declaration 为 `Inherited` 及其 owner
-- **AND** state body MUST NOT 创建第二份 `IsDodging` declaration
-
-#### Scenario: UI 显示变量
-
-- **WHEN** 作者在角色 pipeline Graph 或 Transition rule 中查看 Pipeline Blackboard
-- **THEN** UI MUST 通过同一面板按 scope、当前上下文、category path 和搜索展示可见 declarations
-- **AND** UI MUST 区分 Local 与 Inherited declaration
-- **AND** 系统 MUST NOT 同时暴露两个需要重复维护的变量面板
+- **WHEN** 作者在 inline State body 创建 State scope declaration
+- **THEN** declaration MUST仍归属该 Graph authoring
+- **AND** Compiler MUST生成对应 owner/layout entry
 
 ### Requirement: Transition Rule 必须通过纯 ValueNode 读取黑板
 
@@ -101,48 +73,41 @@ ConditionRuleGraph 中读取 Pipeline Blackboard variable 的节点 MUST 是纯 
 
 ### Requirement: Runtime Fact 和 Blackboard Variable 必须命名分层
 
-系统 MUST 将 Blackboard variable 作为运行时变量、调参入口或当前作用域状态，将 SyncFacts 作为本 Tick 已发生且可被记录、调试、回放、loopback 或网络 backend 消费的事实。Graph 内部临时读写 MUST 命名为 Blackboard，已经输出的同步事实 MUST 命名为 fact。Blackboard value MUST NOT 因 key、category、类型或 true 值自动成为事实；只有 declaration 明确配置合法 fact projection 且当前写入具备所需 provenance 时，统一 projection stage 才能产生对应正式 SyncFact。
+Blackboard variable MUST只表达 Program 内运行变量、调参值或当前 scope state；`SimulationActorTickResult` typed gameplay fact MUST表达当前 Tick 已发生、可记录、调试或由模型消费的事实。只有正式 fact projection MAY从当前 Blackboard write provenance 生成 typed fact。Model adapter 与 Committer MUST不直接读取 Blackboard key/value。
 
 #### Scenario: Timeline 产出攻击窗口
 
-- **WHEN** Decision TreeClip 写入显式 ActionWindow-bound `Attack1Hit=true`
-- **THEN** 同一 variable MUST 可供后续 Graph 读取
-- **AND** 统一 projection MUST 将该次写入转换为 `SyncFacts.Action.WindowSamples`
-- **AND** NetworkSendStage MUST NOT 直接读取 Blackboard key/value
+- **WHEN** Decision TreeClip 写入合法 ActionWindow-bound Frame variable
+- **THEN** Program MUST让后续 operation 读取该 variable
+- **AND** projection MUST另外产生带 ActionInstance 与 EventId 的 ActionWindow fact
 
-#### Scenario: 调参变量参与本地条件
+#### Scenario: 本地调参变量
 
-- **WHEN** `RunThreshold` 被 ConditionRuleGraph 用于判断跑步
-- **THEN** 该 variable MUST 保持 Config Blackboard 语义
-- **AND** 它 MUST NOT 被当成本 Tick运行事实写入 SyncFacts
-
-#### Scenario: 本地时间门参与状态转换
-
-- **WHEN** `CanDodgeMoveCancel=true` 且 declaration 的 projection 为 None
-- **THEN** Transition MUST 能读取该 Frame variable
-- **AND** 系统 MUST NOT 产生 ActionWindowSample
+- **WHEN** RunThreshold 只参与 ConditionRuleGraph
+- **THEN** MUST保持 Config Blackboard 语义
+- **AND** MUST不自动成为 `SimulationActorTickResult.GameplayFacts` 中的 fact
 
 ### Requirement: Runtime value 必须按 declaration 与 scope owner 共同寻址
 
-Pipeline Blackboard runtime MUST 使用 declaration identity 与实际 scope owner identity 共同生成 value address。Character、Graph、State、ActionInstance 和 Frame MUST 分别使用 Character runtime、Graph runtime instance、完整 `StateMachineExecutionScope`、`ActionInstanceId` 和 local logic tick 作为 owner。系统 MUST NOT 使用裸 `BlackboardKey` 作为全角色 runtime value 主键。
+Compiler MUST为declaration identity、Character、Graph activation、State execution path、ActionInstance和Frame owner生成稳定compiled address rule。Program layout MUST为每个scope owner分配稳定CompiledOwnerIndex；Kernel MUST使用`ScopeKind + CompiledOwnerIndex + Generation`的typed owner token隔离实例，MUST不使用runtime object reference、dictionary object identity、拼接字符串或显示路径作为真值地址。Character与Graph Config owner MUST在初始State建立；Graph、State和Action generation MUST来自各自正式lifecycle；Frame generation MUST来自当前SimulationTick。需要fact projection的真实写入 MUST保存typed write stamp，人类可读owner/provenance只能由diagnostics按需格式化。
 
-#### Scenario: 并行状态机退出状态
+#### Scenario: 两次State activation
 
-- **WHEN** Action StateMachine 的 Attack1 scope 退出，而 Locomotion StateMachine 的 RunLoop scope 仍 active
-- **THEN** runtime MUST 只清理 Attack1 execution scope 的 State values
-- **AND** RunLoop scope 的 values MUST 保持不变
+- **WHEN** 同一State第二次进入
+- **THEN** 新owner generation MUST与上一次State activation隔离
+- **AND** Runtime MUST不通过字符串execution path比较或旧value清零来建立隔离
 
-#### Scenario: 清理一个 ActionInstance
+#### Scenario: 两个ActionInstance使用同一declaration
 
-- **WHEN** `ActionInstanceId=42` 进入 terminal 并请求清理
-- **THEN** runtime MUST 只清理 owner 为 42 的 ActionInstance values
-- **AND** 其它 active ActionInstance values MUST 保持不变
+- **WHEN** 同一Action-scoped declaration先后由两个ActionInstance写入
+- **THEN** typed owner token MUST使用各自ActionInstance generation
+- **AND** 后一个instance MUST不读取或投影前一个instance的值
 
-#### Scenario: shared graph 多实例
+#### Scenario: Diagnostics显示State owner
 
-- **WHEN** 两个 runtime instance 同时执行同一 shared graph declaration
-- **THEN** Graph scope values MUST 按各自 Graph runtime identity 隔离
-- **AND** 一个 instance 的写入 MUST NOT 修改另一个 instance
+- **WHEN** diagnostics实际请求Blackboard owner或write provenance
+- **THEN** formatter MAY通过Program SourceMap和typed token生成可读路径
+- **AND** 关闭diagnostics的正常Tick MUST不构造该字符串
 
 ### Requirement: Pipeline Blackboard authoring 必须提供上下文化分类视图
 
@@ -163,27 +128,32 @@ Pipeline Blackboard authoring MUST 提供 scope、当前上下文、层级 `Cate
 
 ### Requirement: Decision TreeClip 必须通过声明式 Frame Blackboard 输出决策
 
-Decision TreeClip 写入的变量 MUST 来自 ExposedProperty 对应的 Pipeline Blackboard declaration，并且 MUST 使用 `Frame` scope 和 `Frame` lifetime。运行时 MUST 在 Frame 开始清理旧值，在当前 clip active 时重新求值并写入，在 State.OnExit 完成后的 Frame 结束统一清理。Decision Blackboard 写入 MUST NOT 自动产生 SyncFact。
+Decision TreeClip写入的变量 MUST来自ExposedProperty对应的Pipeline Blackboard declaration，并且 MUST使用`Frame` scope和`Frame` lifetime。Runtime MUST在Frame开始推进当前Frame generation，在当前clip active时重新求值并写入，并在State.OnExit完成后的Frame结束统一flush当前generation的projection candidate。Frame value读取发现owner generation不匹配时 MUST表现为declaration default且不得物理写入State；只有当前Frame第一次真实写入才可materialize value、typed owner token与write stamp。Frame结束 MUST使该generation后续不可读、不可投影，但 MUST不通过遍历全部Frame group写默认值或清空State实现。Projection=None的写入 MUST保持本地；显式ActionWindow projection MUST继续通过唯一projection stage暂存candidate并在EndFrame生成正式fact。
 
-#### Scenario: Dodge 恢复段开放移动取消
+#### Scenario: Dodge恢复段开放动作切换
 
-- **WHEN** Dodge Timeline 的 Decision TreeClip 在当前 Tick active
-- **THEN** Tree MUST 写入声明为 Bool 的 `CanDodgeMoveCancel=true`
-- **AND** Dodge Transition ConditionRuleGraph MUST 能在同一 Tick通过纯 ValueNode 读取该值
-- **AND** 该写入 MUST NOT 产生 ActionWindowSample
+- **WHEN** Dodge Timeline的`RecoveryOpen` Decision TreeClip在当前Tick active
+- **THEN** Tree MUST写入owner-local Bool Frame declaration
+- **AND** 唯一projection stage MUST暂存当前ActionInstance的ActionWindow candidate
+- **AND** Dodge Transition MUST能在同一Tick通过`ActionWindowActiveInfoNode`读取该WindowType
 
-#### Scenario: Decision clip 不再 active
+#### Scenario: Decision clip不再active
 
-- **WHEN** 新 logic frame 中 Decision TreeClip 不在 active 时间范围
-- **THEN** Frame Blackboard MUST 不保留上一 Tick的 true 值
-- **AND** runtime MUST NOT 依赖 OnDisable 写 false 才能清理 gate
+- **WHEN** 新logic frame中Decision TreeClip不在active时间范围
+- **THEN** Frame Blackboard MUST把上一generation的true表现为declaration default
+- **AND** Runtime MUST NOT依赖OnDisable写false或EndFrame物理清零才能关闭gate
+
+#### Scenario: 当前Frame没有Decision写入
+
+- **WHEN** 当前Tick没有任何Decision TreeClip写入某个Frame declaration
+- **THEN** 读取 MUST返回declaration default且不能生成write provenance或projection
+- **AND** 该declaration的value、owner、provenance和candidate state MUST不因Frame begin/end被标记dirty
 
 #### Scenario: 声明策略冲突
 
-- **WHEN** Timeline inline Tree 与 RootTree 对同一 Blackboard key 声明不同类型、scope、lifetime、authority 或 sync policy
-- **THEN** validator 或 runtime MUST 报告配置错误
-- **AND** 系统 MUST NOT 选择任一声明作为 fallback
-
+- **WHEN** Timeline inline Tree与RootTree对同一Blackboard key声明不同类型、scope、lifetime、authority或sync policy
+- **THEN** validator或runtime MUST报告配置错误
+- **AND** 系统 MUST NOT选择任一声明作为fallback
 ### Requirement: Decision TreeClip 必须保持纯决策边界
 
 Decision TreeClip graph MUST 只包含允许的纯读取、值转换、条件组合和 Blackboard 写入能力。它 MUST NOT 包含跨 Tick Running、Wait、TimelineNode、Action lifecycle、Motion、Cue、Camera、GameplayResult、网络发送或场景副作用节点。
@@ -196,15 +166,15 @@ Decision TreeClip graph MUST 只包含允许的纯读取、值转换、条件组
 
 ### Requirement: Blackboard declaration 必须显式声明 fact projection
 
-Pipeline Blackboard declaration MAY 保存一个显式 fact projection。ActionWindow projection MUST 只允许 Bool、Frame scope、Frame lifetime 和 SyncFact policy，并 MUST 保存稳定 WindowType、WindowId 与 Digest。Projection MUST NOT 保存完整网络 policy；ActionWindowSample 的 effective policy MUST 由当前 Network Model adapter 使用 ActionInstance 对应的稳定 ActionId 从 model profile 解析。ActionProfile、Blackboard declaration、Graph 与 Timeline MUST NOT 复制该策略。非法 projection MUST 由 authoring validator 和 runtime 拒绝，不得 fallback 为普通变量或默认 Window。
+Pipeline Blackboard declaration MAY保存一个显式fact projection。ActionWindow projection MUST只允许Bool、Frame scope、Frame lifetime和SyncFact policy，并 MUST保存稳定WindowType、WindowId与Digest。Projection MUST不保存Network Model policy；Program MUST只负责产生带ActionInstance与EventId的 `ActionWindowFact`。具体Model Egress只有在自己的正式fact-kind coverage支持ActionWindow时才可消费；ActionProfile、Blackboard declaration、Graph与Timeline MUST不复制模型配置。非法projection MUST由authoring validator和runtime拒绝，不得fallback为普通变量或默认Window。
 
 #### Scenario: ActionWindow-bound Frame variable
 
 - **WHEN** active Decision TreeClip 在当前 Tick 写入合法 ActionWindow-bound variable=true
 - **AND** 写入 provenance 包含有效 Action Context
 - **THEN** runtime MUST 记录一个本帧 projection candidate
-- **AND** RootTree 决策后的统一 projection MUST 最多生成一个对应 ActionWindowSample
-- **AND** 后续网络处理 MUST 从当前 Network Model profile 解析 effective policy
+- **AND** Program 决策完成后的统一 projection MUST 最多生成一个对应 `ActionWindowFact`
+- **AND** 当前ServerAuthoritative模型没有ActionWindow packet映射时 MUST保持该fact为本地Gameplay输出，不得推导默认packet
 
 #### Scenario: 缺失 Action Context
 
@@ -236,23 +206,23 @@ Pipeline Blackboard declaration MAY 保存一个显式 fact projection。ActionW
 
 ### Requirement: Pipeline Blackboard declaration 必须作为 Graph Data Catalog 的正式来源
 
-Pipeline Blackboard authoring MUST 将当前 authoring context 可见的 `BaseExposedProperty` declaration 投影到统一 `Graph Data Catalog`。每个条目 MUST 保留 declaration identity、实际 owner、local/inherited 可见性、值类型、scope、lifetime、authority、sync policy、category 和默认值语义。该投影 MUST NOT 复制 declaration，也 MUST NOT 建立 ExposedProperty 与 Pipeline Blackboard 之外的第二套变量配置。
+Pipeline Blackboard MUST 将当前 context 可见的 `BaseExposedProperty` declaration 投影到唯一 `Graph Data Catalog`，保留 identity、真实 owner、local/inherited、类型、scope、lifetime、authority、sync policy、category、projection 和默认值。Catalog MUST NOT 复制 declaration 或建立第二套变量、窗口配置。
 
-#### Scenario: 显示当前 Graph 本地 declaration
+#### Scenario: 显示 inline Timeline 本地 declaration
 
-- **WHEN** 作者打开拥有本地 `CanDodgeMoveCancel` declaration 的 Dodge state body
-- **THEN** 目录 MUST 将其显示为当前 owner 的 local editable Blackboard 条目
+- **WHEN** 作者打开拥有 local `RecoveryOpen` declaration 的 inline Timeline
+- **THEN** Catalog MUST 显示 Timeline owner 的 local editable 条目
+- **AND** 显示 ActionWindow projection、WindowType 与稳定 identity
 
 #### Scenario: 显示 RootTree declaration
 
-- **WHEN** inline state body 可见 RootTree 声明的 `RunThreshold`
-- **THEN** 目录 MUST 将其显示为 inherited read-only 条目并标明真实 owner
+- **WHEN** inline state body 可见 RootTree 的 `RunThreshold`
+- **THEN** Catalog MUST 显示 inherited read-only 条目和真实 owner
 
 #### Scenario: 同 key 不同 owner
 
-- **WHEN** 两个合法 owner 各自存在显示名相同但 identity 不同的 declaration
-- **THEN** 目录 MUST 通过 declaration identity 和 owner 区分条目，MUST NOT 按显示名合并
-
+- **WHEN** 两个 owner 有同名但不同 identity 的 declaration
+- **THEN** Catalog MUST 按 identity 和 owner 区分，MUST NOT 合并
 ### Requirement: Blackboard Catalog source 必须按 declaration 所有权限制写操作
 
 Blackboard catalog source MUST 只允许作者编辑或删除当前 owner 持有的本地 declaration。继承 declaration MUST 是只读投影，并 MAY 提供定位原 owner 的命令。新增 declaration MUST 使用当前 owner 的正式 authoring API，并 MUST 遵守既有 scope/lifetime 合法组合。系统 MUST NOT 在当前 Graph 复制继承 declaration、静默改变 owner 或使用 fallback scope。
@@ -293,49 +263,36 @@ Blackboard catalog source MUST 复用 Pipeline Blackboard 已有的 Graph/Transi
 
 ### Requirement: 嵌套状态机必须按 declaration owner 解析 State activation frame
 
-Pipeline Blackboard access context MUST 携带完整 StateMachine execution path。读取或写入 State scope declaration 时，resolver MUST 根据 declaration owner 和 Graph ownership 选择唯一对应 activation frame，而不是始终使用最内层 frame。找不到或找到多个候选 frame MUST 作为配置/runtime 错误，MUST NOT fallback 到 Character、Graph 或栈顶 State scope。
+Nested StateMachine MUST使用 Program 中编译的 declaration owner 和完整 execution path 定位 State frame。Runtime MUST不从 Graph clone 或显示名推断 owner。
 
-#### Scenario: 外层 Attack 状态变量跨连段保持
+#### Scenario: 内层 State 读取自己的 Frame
 
-- **WHEN** declaration 归属外层 Attack State body
-- **AND** 内层状态从 Attack1 切换到 Attack2
-- **THEN** 该 declaration MUST 继续绑定外层 Attack activation bucket
-- **AND** Attack1 exit MUST NOT 清理该值
-- **AND** 外层 Attack exit MUST 清理该值
-
-#### Scenario: Attack1 局部状态变量退出清理
-
-- **WHEN** declaration 归属 Attack1 State body
-- **AND** Attack1 退出到 Attack2
-- **THEN** runtime MUST 只清理 Attack1 activation bucket
-- **AND** 外层 Attack bucket 与 Attack2 bucket MUST 保持独立
-
-#### Scenario: 内层引用外层 declaration
-
-- **WHEN** Attack2 ConditionRuleGraph 显式引用外层 Attack body declaration
-- **THEN** resolver MUST 使用 declaration owner 定位外层 Attack frame
-- **AND** 系统 MUST NOT 复制同 key declaration 到 Attack2 graph
-- **AND** 系统 MUST NOT 按最近 key 隐式 shadow
-
-#### Scenario: declaration owner 不在 execution path
-
-- **WHEN** State declaration reference 的 owner 不对应当前 execution path 中任何 frame
-- **THEN** access MUST 失败并报告 owner/path 断裂
-- **AND** Compare、And、Or 或 lifecycle 节点 MUST NOT 获得默认值继续执行
+- **WHEN** 内层 State operation 读取 State-scoped variable
+- **THEN** MUST命中完整 outer-to-inner path 对应的 owner bucket
 
 ### Requirement: Gameplay Effect 不得存入 Pipeline Blackboard
 
-GameplayTag、Attribute Base/Current、ActiveGameplayEffect、stack、duration、period、inhibition 和 prediction journal MUST 由通用 `GameplayEffectRuntime` 正式持有。CharacterGameplayEffectAdapter 只委托端口和投影 ChangeSet；Blackboard MAY 保存 Graph 局部计算值或显式 fact projection，但 MUST NOT 作为上述 Gameplay Effect 的真相源、缓存副本或双写目标。
+GameplayTag、Attribute、ActiveEffect、stack、duration、period、inhibition 与 journal MUST只存在于 CharacterSimulationState 的正式 GE slots。Blackboard MAY保存局部计算值或 fact projection source，但 MUST不复制 GE 真值。Value operation MUST通过正式 GE query读取 Attribute/Tag。
 
 #### Scenario: Graph 读取 Health
 
-- **WHEN** ValueNode 需要当前 Health
-- **THEN** 它 MUST 通过 Gameplay Attribute 查询接口读取
-- **AND** MUST NOT 从同名 Blackboard variable 读取或回写同步
+- **WHEN** compiled Value operation读取当前 Health
+- **THEN** MUST通过 GE state query读取
+- **AND** MUST不从同名 Blackboard slot读取
 
-#### Scenario: Transition 使用临时比较结果
+### Requirement: InputDerived Blackboard 必须从正式 portable input 投影
 
-- **WHEN** Graph 把 `Health < Threshold` 的本地计算结果写入 Frame Blackboard
-- **THEN** Blackboard MAY 保存该临时 Bool
-- **AND** Health 的 Base、Current 与 Revision MUST 仍只归属 Gameplay Effect
+`InputDerived` declaration MUST显式保存唯一 `InputValueId`，并且只允许 Character scope、Spawn lifetime。Compiler MUST将 declaration、Program input catalog kind与typed Character State address编译为唯一 input-to-state binding；Float32与Fixed Evaluate MUST在Timeline Decision和Graph control之前，把当前 Tick同名同类型的portable input写入该slot。系统 MUST不按Blackboard key猜input，不从Presentation或Scene对象补值，也 MUST不在Host中建立第二条Blackboard直写路径。
 
+#### Scenario: 投影攻击目标输入
+
+- **WHEN**当前 Tick包含`ActionTargetSnapshot` input且Corin declaration绑定同一`InputValueId`
+- **THEN**InputDerived阶段 MUST在Action admission和activation之前写入该目标快照
+- **AND**`CanActivateAction`与`ActivateActionInstance` MUST读取同一Character State transaction中的值
+
+#### Scenario: 输入类型与声明不一致
+
+- **WHEN**Program binding要求`ActionTargetSnapshot`但输入提交其它value kind
+- **THEN**当前 Evaluate MUST明确失败
+- **AND**系统 MUST不写入默认对象、裸字符串或上一 Tick残留值后继续执行
+                                                                                                

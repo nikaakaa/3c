@@ -54,9 +54,11 @@ namespace TEngine
         /// <summary>
         /// 初始化操作。
         /// </summary>
-        /// <param name="customPackageName">资源包名称。</param>
-        /// <param name="needInitMainFest">是否需要直接初始化资源清单。（单机OtherPackage使用）</param>
-        UniTask<InitializationOperation> InitPackage(string customPackageName, bool needInitMainFest = false);
+        /// <param name="options">资源包初始化参数。</param>
+        /// <param name="verificationProgress">缓存校验进度。</param>
+        UniTask<ResourcePackageInitializationResult> InitPackage(
+            ResourcePackageInitializationOptions options,
+            Action<float> verificationProgress = null);
 
         /// <summary>
         /// 默认资源包名称。
@@ -72,16 +74,6 @@ namespace TEngine
         /// 自动释放资源引用计数为0的资源包
         /// </summary>
         bool AutoUnloadBundleWhenUnused { get; set; }
-
-        /// <summary>
-        /// 热更链接URL。
-        /// </summary>
-        string HostServerURL { get; set; }
-
-        /// <summary>
-        /// 备用热更URL。
-        /// </summary>
-        string FallbackHostServerURL { get; set; }
 
         /// <summary>
         /// WebGL平台加载本地资源/加载远程资源。
@@ -333,13 +325,6 @@ namespace TEngine
         /// <param name="timeout">超时时间（默认值：60秒）</param>
         /// <param name="customPackageName">指定资源包的名称。不传使用默认资源包</param>
         UpdatePackageManifestOperation UpdatePackageManifestAsync(string packageVersion, int timeout = 60, string customPackageName = "");
-
-        /// <summary>
-        /// 设置远程服务Url。
-        /// </summary>
-        /// <param name="defaultHostServer">默认远端资源地址。</param>
-        /// <param name="fallbackHostServer">备用远端资源地址。</param>
-        void SetRemoteServicesUrl(string defaultHostServer, string fallbackHostServer);
 
         /// <summary>
         /// 低内存行为。

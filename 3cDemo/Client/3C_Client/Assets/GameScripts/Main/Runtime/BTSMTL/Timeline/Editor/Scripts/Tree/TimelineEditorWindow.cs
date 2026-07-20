@@ -44,6 +44,8 @@ namespace BTSMTL.Timeline.Editor
         TimelineWindowMode m_Mode;
         ToolbarToggle m_AuthoringToggle;
         ToolbarToggle m_LiveDebugToggle;
+        ObjectField m_SharedTimelineField;
+        Label m_SourceSummary;
         ToolbarMenu m_TargetMenu;
         ToolbarMenu m_PlaybackMenu;
         ToolbarToggle m_FollowToggle;
@@ -87,10 +89,17 @@ namespace BTSMTL.Timeline.Editor
                 return null;
 
             TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
-            window.Bind(asset.Data, asset, "m_Data", "Shared Asset", null, null, string.Empty);
+            window.BindAsset(asset);
             window.Show();
             window.Focus();
             return window;
+        }
+
+        void BindAsset(TimelineAsset asset)
+        {
+            if (!asset)
+                throw new ArgumentNullException(nameof(asset));
+            Bind(asset.Data, asset, "m_Data", "Shared Asset", null, null, string.Empty);
         }
 
         public static void RebindIfOpen(TimelineNode node)
@@ -111,11 +120,23 @@ namespace BTSMTL.Timeline.Editor
         public void CreateGUI()
         {
             TryRestoreBinding();
+            if (m_View == null)
+                BuildUnboundView();
         }
 
         void OnEnable()
         {
             RuntimeDebugSession.Shared.Changed += OnRuntimeDebugSessionChanged;
+        }
+
+        [MenuItem("Tools/TreeDesigner/Timeline Editor", false, 3)]
+        public static void OpenStandalone()
+        {
+            TimelineEditorWindow window = GetWindow<TimelineEditorWindow>();
+            if (window.m_View == null)
+                window.BuildUnboundView();
+            window.Show();
+            window.Focus();
         }
 
         void BindNode(BaseTreeWindow sourceGraphWindow, TimelineNode node)
@@ -162,7 +183,7 @@ namespace BTSMTL.Timeline.Editor
             m_SourceNodeGuid = sourceNodeGuid ?? string.Empty;
             m_AuthoringContext = sourceGraphWindow ? sourceGraphWindow.AuthoringContext : null;
 
-            titleContent = new GUIContent(timeline.Name);
+            titleContent = new GUIContent("Timeline Editor");
             m_View = new TimelineEditorView();
             Label ownership = new Label($"Timeline Ownership: {m_OwnershipLabel}");
             ownership.style.unityFontStyleAndWeight = FontStyle.Bold;
@@ -180,6 +201,33 @@ namespace BTSMTL.Timeline.Editor
             m_DebugDetails.style.minHeight = 80;
             rootVisualElement.Add(m_DebugDetails);
             SetMode(m_Mode);
+        }
+
+        void BuildUnboundView()
+        {
+            titleContent = new GUIContent("Timeline Editor");
+            rootVisualElement.Clear();
+            rootVisualElement.Add(CreateModeToolbar());
+            m_DebugDetails = null;
+            SetMode(m_Mode);
+        }
+
+        void ClearBinding()
+        {
+            DisposeView();
+            m_DebugBinding?.Dispose(RuntimeDebugSession.Shared);
+            m_DebugBinding = null;
+            m_HasDebugRequest = false;
+            InvalidateLiveDebugOverlay();
+            m_SerializedOwner = null;
+            m_SerializedPropertyPath = string.Empty;
+            m_OwnershipLabel = string.Empty;
+            m_SourceNodeGuid = string.Empty;
+            m_SourceGraphWindow = null;
+            m_SourceGraphOwner = null;
+            m_SourceNode = null;
+            m_AuthoringContext = null;
+            BuildUnboundView();
         }
 
         void TryRestoreBinding()
@@ -268,6 +316,17 @@ namespace BTSMTL.Timeline.Editor
             var toolbar = new Toolbar();
             m_AuthoringToggle = new ToolbarToggle { text = "Authoring Preview" };
             m_LiveDebugToggle = new ToolbarToggle { text = "Live Debug" };
+            m_SharedTimelineField = new ObjectField("Shared Timeline")
+            {
+                objectType = typeof(TimelineAsset),
+                allowSceneObjects = false
+            };
+            m_SharedTimelineField.style.width = 280f;
+            m_SharedTimelineField.SetValueWithoutNotify(m_SerializedOwner as TimelineAsset);
+            m_SharedTimelineField.RegisterValueChangedCallback(OnSharedTimelineChanged);
+            m_SourceSummary = new Label(CurrentSourceSummary());
+            m_SourceSummary.style.minWidth = 180f;
+            m_SourceSummary.style.marginLeft = 6f;
             m_TargetMenu = new ToolbarMenu { text = "Target" };
             m_PlaybackMenu = new ToolbarMenu { text = "Playback" };
             m_FollowToggle = new ToolbarToggle { text = "Follow Timeline" };
@@ -278,7 +337,9 @@ namespace BTSMTL.Timeline.Editor
                 if (session.IsCaptureRecording)
                     session.EndCapture();
                 else
-                    session.BeginCapture(RuntimeTraceChannel.Timeline | RuntimeTraceChannel.Animation, RuntimeDiagnosticsCaptureDetail.Continuous);
+                    session.BeginCapture(
+                        RuntimeTraceChannel.Timeline | RuntimeTraceChannel.Animation | RuntimeTraceChannel.Motion,
+                        RuntimeDiagnosticsCaptureDetail.Continuous);
             }) { text = "Capture" };
             m_HistorySlider = new SliderInt(0, 511);
             m_HistorySlider.style.width = 110;
@@ -327,6 +388,8 @@ namespace BTSMTL.Timeline.Editor
 
             toolbar.Add(m_AuthoringToggle);
             toolbar.Add(m_LiveDebugToggle);
+            toolbar.Add(m_SharedTimelineField);
+            toolbar.Add(m_SourceSummary);
             toolbar.Add(m_TargetMenu);
             toolbar.Add(m_PlaybackMenu);
             toolbar.Add(m_FollowToggle);
@@ -335,6 +398,29 @@ namespace BTSMTL.Timeline.Editor
             toolbar.Add(m_HistorySlider);
             toolbar.Add(m_Status);
             return toolbar;
+        }
+
+        void OnSharedTimelineChanged(ChangeEvent<UnityEngine.Object> evt)
+        {
+            TimelineAsset asset = evt.newValue as TimelineAsset;
+            if (asset)
+            {
+                BindAsset(asset);
+                return;
+            }
+
+            if (m_SerializedOwner is TimelineAsset)
+                ClearBinding();
+            else
+                m_SharedTimelineField.SetValueWithoutNotify(null);
+        }
+
+        string CurrentSourceSummary()
+        {
+            if (m_View?.Timeline == null)
+                return "Source: None";
+            string ownership = string.IsNullOrWhiteSpace(m_OwnershipLabel) ? "Timeline" : m_OwnershipLabel;
+            return $"Source: {ownership} / {m_View.Timeline.Name}";
         }
 
         void SetMode(TimelineWindowMode mode)
@@ -375,7 +461,9 @@ namespace BTSMTL.Timeline.Editor
             RuntimeDebugViewBinding binding = GetRuntimeDebugBinding(out _);
             if (binding == null)
                 return;
-            RuntimeDebugTargetResolution resolution = binding.Refresh(session, RuntimeTraceChannel.Timeline | RuntimeTraceChannel.Animation);
+            RuntimeDebugTargetResolution resolution = binding.Refresh(
+                session,
+                RuntimeTraceChannel.Timeline | RuntimeTraceChannel.Animation | RuntimeTraceChannel.Motion);
             RuntimeDebugViewModel view = session.ViewModel;
             RefreshMenus(view, binding);
             RefreshLiveDebugControls(session);
@@ -450,7 +538,11 @@ namespace BTSMTL.Timeline.Editor
                 }
                 m_View.ApplyRuntimeOverlay(visualTime, tracks, clips);
                 m_DebugDetails.Clear();
-                PopulateDebugDetails(timelineEvents, latestLogic, latestPresentation);
+                PopulateDebugDetails(
+                    timelineEvents,
+                    view.GetCurrentEvents(RuntimeTraceChannel.Motion),
+                    latestLogic,
+                    latestPresentation);
             }
 
             string terminalText = summary.IsTerminal
@@ -578,7 +670,11 @@ namespace BTSMTL.Timeline.Editor
             return $"source {provenance.SourceGraphAuthoringId}/{provenance.SourceNodeAuthoringId} #{provenance.SourceActivationGeneration}{state}";
         }
 
-        void PopulateDebugDetails(IReadOnlyList<RuntimeDebugEventView> events, ulong latestLogic, ulong latestPresentation)
+        void PopulateDebugDetails(
+            IReadOnlyList<RuntimeDebugEventView> events,
+            IReadOnlyList<RuntimeDebugEventView> motionEvents,
+            ulong latestLogic,
+            ulong latestPresentation)
         {
             for (int i = 0; i < events.Count; i++)
             {
@@ -596,11 +692,39 @@ namespace BTSMTL.Timeline.Editor
                 if (!visible)
                     continue;
                 RuntimeTracePayload payload = eventView.Event.Payload;
-                string text = eventView.Event.Channel == RuntimeTraceChannel.Animation
-                    ? $"{eventView.Event.Kind} | {payload.Name} | owner {payload.OwnerId} | P{payload.Priority} | w {payload.Weight:0.###} -> {payload.FinalWeight:0.###}"
-                    : $"{eventView.Event.Kind} | {eventView.SourceName} | {payload.Status} | {payload.Cause}";
+                string text;
+                if (eventView.Event.Kind == RuntimeTraceEventKind.AnimationMarkerSync)
+                {
+                    text = $"MarkerSync | {payload.Name} | {payload.SecondaryTime:0.000}s -> {payload.Time:0.000}s | " +
+                           $"fraction {payload.NormalizedTime:0.###} | cycle {payload.Cycle} | {payload.Status} | {payload.Detail}";
+                }
+                else
+                {
+                    text = eventView.Event.Channel == RuntimeTraceChannel.Animation
+                        ? $"{eventView.Event.Kind} | {payload.Name} | owner {payload.OwnerId} | P{payload.Priority} | w {payload.Weight:0.###} -> {payload.FinalWeight:0.###}"
+                        : $"{eventView.Event.Kind} | {eventView.SourceName} | {payload.Status} | {payload.Cause}";
+                }
                 m_DebugDetails.Add(new Label(text));
             }
+
+            for (int i = 0; i < motionEvents.Count; i++)
+            {
+                RuntimeDebugEventView eventView = motionEvents[i];
+                if (eventView.Event.Domain != RuntimeTraceDomain.Logic ||
+                    eventView.Event.Position != latestLogic ||
+                    !IsTimelineMotionTrace(eventView))
+                    continue;
+                RuntimeTracePayload payload = eventView.Event.Payload;
+                m_DebugDetails.Add(new Label(
+                    $"{eventView.Event.Kind} | {payload.Name} | {payload.Detail}"));
+            }
+        }
+
+        bool IsTimelineMotionTrace(RuntimeDebugEventView eventView)
+        {
+            if (string.Equals(eventView.Source.TimelineAuthoringId, Timeline.AuthoringId, StringComparison.Ordinal))
+                return true;
+            return string.Equals(eventView.Event.Payload.Name, "world_result_applied", StringComparison.Ordinal);
         }
 
         void SetStatus(string value)

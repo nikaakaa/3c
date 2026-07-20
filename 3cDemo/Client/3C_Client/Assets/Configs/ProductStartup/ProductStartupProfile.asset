@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b55d74a74d43468097529a6376803507, type: 3}
+  m_Name: ProductStartupProfile
+  m_EditorClassIdentifier:
+  m_ResourceEndpoint:
+  m_AuthEndpoint:
+  m_ClientBuildVersion: 1.0.0
+  m_AuthProtocolVersion: 1
+  m_RequestTimeoutSeconds: 30
+  m_DownloadMaxConcurrency: 8
+  m_DownloadRetryCount: 3
+  m_DownloadMaxRequestPerFrame: 4
+  m_DownloadWatchDogSeconds: 30
+  m_CacheVerifyMaxConcurrency: 4
+  m_ResumeDownloadMinimumBytes: 1048576
+  m_ResumeDownloadResponseCodes:
+  - 206
+  m_DiskSafetyMarginBytes: 536870912
+  m_PlatformMemoryBudget: {fileID: 11400000, guid: 9b8e0939a97b47c8b7c2a5bdce86d30e, type: 2}

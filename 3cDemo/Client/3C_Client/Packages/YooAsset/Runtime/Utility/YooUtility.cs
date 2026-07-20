@@ -152,11 +152,8 @@ namespace YooAsset
         /// </summary>
         public static void WriteAllText(string filePath, string content)
         {
-            // 创建文件夹路径
-            CreateFileDirectory(filePath);
-
             byte[] bytes = Encoding.UTF8.GetBytes(content);
-            File.WriteAllBytes(filePath, bytes); //避免写入BOM标记
+            WriteAllBytes(filePath, bytes);
         }
 
         /// <summary>
@@ -164,10 +161,51 @@ namespace YooAsset
         /// </summary>
         public static void WriteAllBytes(string filePath, byte[] data)
         {
-            // 创建文件夹路径
             CreateFileDirectory(filePath);
 
+            if (HasSameContent(filePath, data))
+                return;
+
             File.WriteAllBytes(filePath, data);
+        }
+
+        private static bool HasSameContent(string filePath, byte[] data)
+        {
+            if (File.Exists(filePath) == false)
+                return false;
+
+            try
+            {
+                using (FileStream stream = new FileStream(
+                    filePath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete))
+                {
+                    if (stream.Length != data.Length)
+                        return false;
+
+                    byte[] buffer = new byte[Math.Min(81920, data.Length)];
+                    int offset = 0;
+                    while (offset < data.Length)
+                    {
+                        int read = stream.Read(buffer, 0, Math.Min(buffer.Length, data.Length - offset));
+                        if (read == 0)
+                            return false;
+                        for (int i = 0; i < read; i++)
+                        {
+                            if (buffer[i] != data[offset + i])
+                                return false;
+                        }
+                        offset += read;
+                    }
+                    return stream.ReadByte() == -1;
+                }
+            }
+            catch (IOException)
+            {
+                return false;
+            }
         }
 
         /// <summary>

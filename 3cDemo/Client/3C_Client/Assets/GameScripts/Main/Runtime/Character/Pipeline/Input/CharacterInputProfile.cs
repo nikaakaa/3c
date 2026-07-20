@@ -5,16 +5,20 @@ using UnityEngine.InputSystem;
 
 namespace ThirdPersonCharacter.Pipeline.Input
 {
+    public enum CharacterActionRequestTimingClass : byte
+    {
+        Immediate = 1,
+        Offensive = 2
+    }
+
     [CreateAssetMenu(fileName = "CharacterInputProfile", menuName = "3C/Character/Input Profile")]
     public sealed class CharacterInputProfile : ScriptableObject
     {
         [SerializeField] InputActionAsset m_SourceAsset;
-        [SerializeField, Min(1)] int m_InputHistoryCapacity = 120;
         [SerializeField] List<CharacterInputValueDefinition> m_InputValues = new List<CharacterInputValueDefinition>();
         [SerializeField] List<CharacterActionRequestDefinition> m_ActionRequests = new List<CharacterActionRequestDefinition>();
 
         public InputActionAsset SourceAsset => m_SourceAsset;
-        public int InputHistoryCapacity => Mathf.Max(1, m_InputHistoryCapacity);
         public IReadOnlyList<CharacterInputValueDefinition> InputValues => m_InputValues;
         public IReadOnlyList<CharacterActionRequestDefinition> ActionRequests => m_ActionRequests;
 
@@ -79,6 +83,12 @@ namespace ThirdPersonCharacter.Pipeline.Input
                     valid = false;
                 }
 
+                if (!Enum.IsDefined(typeof(CharacterActionRequestTimingClass), request.TimingClass))
+                {
+                    errors?.Add($"{name}: action request '{request.RequestId}' timing class is invalid.");
+                    valid = false;
+                }
+
                 if (!request.TryResolveAction(m_SourceAsset, out _, out string error))
                 {
                     errors?.Add($"{name}: action request '{request.RequestId}' {error}");
@@ -92,7 +102,6 @@ namespace ThirdPersonCharacter.Pipeline.Input
 #if UNITY_EDITOR
         void OnValidate()
         {
-            m_InputHistoryCapacity = Mathf.Max(1, m_InputHistoryCapacity);
             for (int i = 0; i < m_ActionRequests.Count; i++)
                 m_ActionRequests[i]?.Clamp();
         }
@@ -123,11 +132,13 @@ namespace ThirdPersonCharacter.Pipeline.Input
         [SerializeField] InputActionReference m_SourceAction;
         [SerializeField, Min(0f)] float m_BufferSeconds = 0.2f;
         [SerializeField] int m_Priority;
+        [SerializeField] CharacterActionRequestTimingClass m_TimingClass = CharacterActionRequestTimingClass.Immediate;
 
         public string RequestId => m_RequestId;
         public InputActionReference SourceAction => m_SourceAction;
         public float BufferSeconds => Mathf.Max(0f, m_BufferSeconds);
         public int Priority => m_Priority;
+        public CharacterActionRequestTimingClass TimingClass => m_TimingClass;
 
         public bool TryResolveAction(InputActionAsset sourceAsset, out InputAction action, out string error)
         {

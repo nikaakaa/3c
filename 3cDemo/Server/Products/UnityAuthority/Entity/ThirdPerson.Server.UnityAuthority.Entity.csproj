@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>ThirdPerson.Server.UnityAuthority.Entity</AssemblyName>
+    <RootNamespace>Fantasy</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Gate\Entity\ThirdPerson.Server.Gate.Entity.csproj" />
+    <ProjectReference Include="..\..\..\..\..\Tools\ThirdPersonSimulation.Portable\ThirdPersonSimulation.UnityAuthority\ThirdPersonSimulation.UnityAuthority.csproj" />
+  </ItemGroup>
+</Project>

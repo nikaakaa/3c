@@ -252,9 +252,6 @@ namespace TreeDesigner
             {
                 if (tree.GetOutputEdges(exitNode, StateMachinePorts.StateOut).Any())
                     result.Add(new NestedGraphValidationIssue(NestedGraphValidationIssueKind.InvalidStateMachineBoundary, tree, exitNode, exitNode.GUID, "Exit node cannot have output transitions."));
-
-                if (!tree.GetInputEdges(exitNode, StateMachinePorts.StateIn).Any())
-                    result.Add(new NestedGraphValidationIssue(NestedGraphValidationIssueKind.InvalidStateMachineBoundary, tree, exitNode, exitNode.GUID, "Exit node requires at least one input transition."));
             }
         }
 

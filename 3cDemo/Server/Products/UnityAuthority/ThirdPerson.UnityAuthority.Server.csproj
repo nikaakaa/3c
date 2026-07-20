@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>ThirdPerson.UnityAuthority.Server</AssemblyName>
+    <RootNamespace>ThirdPerson.UnityAuthority.Server</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PublishAot>false</PublishAot>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Entity\**\*.cs" />
+    <Compile Remove="Hotfix\**\*.cs" />
+    <ProjectReference Include="..\..\Shared\Host\ThirdPerson.Server.Host.csproj" />
+    <ProjectReference Include="..\..\Gate\Entity\ThirdPerson.Server.Gate.Entity.csproj" />
+    <ProjectReference Include="Entity\ThirdPerson.Server.UnityAuthority.Entity.csproj" />
+    <ProjectReference Include="..\..\Gate\Hotfix\ThirdPerson.Server.Gate.Hotfix.csproj" />
+    <ProjectReference Include="Hotfix\ThirdPerson.Server.UnityAuthority.Hotfix.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\Shared\Host\NLog.config" Link="NLog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+    <None Update="Fantasy.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+</Project>

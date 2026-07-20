@@ -1,11 +1,11 @@
 # gameplay-attribute-runtime Specification
 
 ## Purpose
-TBD - created by archiving change add-character-gameplay-effect-system. Update Purpose after archive.
+定义 Gameplay Attribute 的稳定身份、有限数值、基础值与当前值、revision、modifier 聚合和 Gameplay Effect transaction 写入边界。
 ## Requirements
 ### Requirement: Gameplay Attribute 必须保存 Base Current 与 Revision
 
-系统 MUST 使用稳定 GameplayAttributeId 保存 float BaseValue、CurrentValue 和 ValueRevision。BaseValue MUST 表达持久资源或基础数值；CurrentValue MUST 表达聚合 Active Modifier 后的当前结果。系统 MUST NOT 用 Blackboard、字符串子属性或多个隐藏 Property 节点保存同一 Attribute 真相。
+系统 MUST使用稳定GameplayAttributeId保存Target-typed BaseValue、CurrentValue和ValueRevision。Float32使用`Float32Scalar`，Fixed使用`FixedScalar`；两者共享语义但不共享状态ABI。系统 MUST不使用Blackboard或隐藏Property保存第二份Attribute真相。                                                    
 
 #### Scenario: 角色受到伤害
 
@@ -16,7 +16,7 @@ TBD - created by archiving change add-character-gameplay-effect-system. Update P
 #### Scenario: Graph 读取耐力
 
 - **WHEN** BTSMTL 读取 Stamina
-- **THEN** ValueNode MUST 返回 GameplayAttributeStore 的 CurrentValue
+- **THEN** MUST返回Target aggregate的CurrentValue                    
 - **AND** MUST NOT 从 Blackboard 中查找另一份 Stamina
 
 ### Requirement: Attribute 聚合顺序必须固定
@@ -88,4 +88,3 @@ Effect magnitude MUST 只使用 Constant、已声明 SetByCaller、Source/Target
 - **WHEN** 作者配置 MoveSpeed
 - **THEN** 系统 MUST 创建一个 MoveSpeed Attribute 与其 Modifier 聚合
 - **AND** MUST NOT 要求作者维护一组隐藏字符串子属性
-

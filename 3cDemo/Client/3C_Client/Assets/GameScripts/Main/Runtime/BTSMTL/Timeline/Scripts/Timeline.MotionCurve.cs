@@ -203,7 +203,7 @@ namespace BTSMTL.Timeline
     }
 
     [ScriptGuid("6f2a51d8c9b34d5f8a0e7b4c2d9f136a"), Color(126, 220, 146)]
-    public sealed class MotionCurveClip : Clip
+    public sealed partial class MotionCurveClip : Clip
     {
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public string CurveId = "MotionCurve";

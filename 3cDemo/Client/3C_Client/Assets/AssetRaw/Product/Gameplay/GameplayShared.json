@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "identity": "gameplay.shared",
+  "scene": "StandaloneGameplay",
+  "sessionOwner": "SimulationSessionHost"
+}

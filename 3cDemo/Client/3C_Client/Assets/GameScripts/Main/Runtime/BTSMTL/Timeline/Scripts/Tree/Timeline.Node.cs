@@ -92,16 +92,6 @@ namespace BTSMTL.Timeline
     #region Action
     public abstract class TimelineActionNode : ActionNode
     {
-        public TimelineRunningTree TimelineRunningTree { get; private set; }
-        public TimelineTreeClipRuntimeContext ClipContext => TimelineRunningTree?.ClipContext;
-        public TreeClip Clip => ClipContext?.Clip;
-        public TimelineData Timeline => ClipContext?.Timeline;
-
-        public override void Init(BaseGraph tree)
-        {
-            base.Init(tree);
-            TimelineRunningTree = Owner as TimelineRunningTree;
-        }
     }
 
     #endregion
@@ -109,10 +99,6 @@ namespace BTSMTL.Timeline
     #region Value
     public abstract class TimelineValueNode :ValueNode
     {
-        public TimelineRunningTree TimelineRunningTree => Owner as TimelineRunningTree;
-        public TimelineTreeClipRuntimeContext ClipContext => TimelineRunningTree?.ClipContext;
-        public TreeClip Clip => ClipContext?.Clip;
-        public TimelineData Timeline => ClipContext?.Timeline;
     }
 
     [NodeName("TimelineTime")]
@@ -126,12 +112,8 @@ namespace BTSMTL.Timeline
 
         protected override void OutputValue()
         {
-            base.OutputValue();
-            if (ClipContext == null)
-                return;
-
-            m_TimelineTime.Value = ClipContext.TimelineTime;
-            m_ClipTime.Value = ClipContext.ClipTime;
+            throw new InvalidOperationException(
+                "TimelineTimeNode is authoring-only and must execute through a compiled Character Simulation Program.");
         }
     }
     #endregion

@@ -1,0 +1,17 @@
+{
+    "name": "ThirdPersonSimulation.DeterministicKcc",
+    "rootNamespace": "ThirdPersonSimulation.DeterministicKcc",
+    "references": [
+        "ThirdPersonSimulation.Core",
+        "ThirdPersonSimulation.Fixed"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

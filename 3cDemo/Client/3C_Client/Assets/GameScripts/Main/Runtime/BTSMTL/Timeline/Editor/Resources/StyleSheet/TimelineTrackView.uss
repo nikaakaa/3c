@@ -11,3 +11,87 @@
 .timelineTrack.selected {
     background-color: rgba(68, 192, 255, 0.29);
 }
+
+.animationMarkerSyncHeader {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.animationMarkerSyncLane {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.28);
+}
+
+.animationMarkerSyncLane--enabled {
+    background-color: rgba(26, 101, 108, 0.22);
+}
+
+.animationMarkerSyncLaneSummary {
+    position: absolute;
+    right: 6px;
+    top: 3px;
+    font-size: 10px;
+    color: rgba(205, 220, 222, 0.72);
+    -unity-text-align: middle-right;
+}
+
+.timelineCurveChannelLane {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 72px;
+    background-color: rgba(0, 0, 0, 0.32);
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.animationCurvesHeader {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 22px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 7px;
+    padding-right: 7px;
+    background-color: rgba(0, 0, 0, 0.24);
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.animationCurvesHeaderLabel {
+    flex-grow: 1;
+    font-size: 9px;
+    color: rgba(220, 220, 220, 0.72);
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+}
+
+.animationCurvesHeaderFold {
+    width: 12px;
+    font-size: 10px;
+    color: rgba(220, 220, 220, 0.82);
+    -unity-text-align: middle-left;
+}
+
+.animationCurvesHeaderRange {
+    font-size: 8px;
+    color: rgba(180, 180, 180, 0.55);
+    -unity-text-align: middle-right;
+}
+
+.timelineCurveChannelLane:hover {
+    background-color: rgba(255, 255, 255, 0.07);
+}
+
+.animationMarkerTextEntry {
+    position: absolute;
+    height: 22px;
+    z-index: 20;
+}

@@ -258,11 +258,6 @@ namespace TEngine
             _resourceModule.EncryptionType = encryptionType;
             _resourceModule.Milliseconds = milliseconds;
             _resourceModule.AutoUnloadBundleWhenUnused = autoUnloadBundleWhenUnused;
-            if (ShouldConfigureRemoteEndpoint(currentPlayMode, loadResWayWebGL))
-            {
-                _resourceModule.HostServerURL = Settings.UpdateSetting.GetResDownLoadPath();
-                _resourceModule.FallbackHostServerURL = Settings.UpdateSetting.GetFallbackResDownLoadPath();
-            }
             _resourceModule.LoadResWayWebGL = loadResWayWebGL;
             _resourceModule.DownloadingMaxNum = DownloadingMaxNum;
             _resourceModule.FailedTryAgain = FailedTryAgain;
@@ -274,25 +269,6 @@ namespace TEngine
             _resourceModule.AssetPriority = assetPriority;
             _resourceModule.SetForceUnloadUnusedAssetsAction(ForceUnloadUnusedAssets);
             Log.Info($"ResourceModule Run Mode：{currentPlayMode}");
-        }
-
-        private static bool ShouldConfigureRemoteEndpoint(EPlayMode currentPlayMode, LoadResWayWebGL loadResWayWebGL)
-        {
-            if (currentPlayMode == EPlayMode.HostPlayMode)
-            {
-                return true;
-            }
-
-            if (currentPlayMode != EPlayMode.WebPlayMode)
-            {
-                return false;
-            }
-
-#if UNITY_WEBGL && WEIXINMINIGAME && !UNITY_EDITOR
-            return true;
-#else
-            return loadResWayWebGL == LoadResWayWebGL.Remote;
-#endif
         }
 
         #region 释放资源

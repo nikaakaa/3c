@@ -1,16 +1,31 @@
 using System;
 using BTSMTL.Timeline;
 using ThirdPersonCamera;
-using ThirdPersonCharacter.ActionSystem;
 using TreeDesigner;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Graph
 {
     [Serializable]
+    public abstract class CharacterSimulationOperationNode : ActionNode
+    {
+        protected sealed override void DoAction()
+        {
+        }
+    }
+
+    [Serializable]
+    public abstract class CharacterSimulationValueNode : ValueNode
+    {
+        protected sealed override void OutputValue()
+        {
+        }
+    }
+
+    [Serializable]
     [NodeName("Request Camera State")]
     [NodePath("Base/Action/Camera/Request Camera State")]
-    public sealed class RequestCameraStateNode : ActionNode
+    public sealed class RequestCameraStateNode : CharacterSimulationOperationNode
     {
         [SerializeField, ShowInPanel("Mode")]
         CameraMode m_Mode = CameraMode.FreeLook;
@@ -39,50 +54,22 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Submitted"), ReadOnly]
         BoolPropertyPort m_Submitted = new BoolPropertyPort();
 
+        public CameraMode Mode => m_Mode;
+        public int Priority => m_Priority;
+        public float Weight => m_Weight;
+        public float BlendInSeconds => m_BlendInSeconds;
+        public float BlendOutSeconds => m_BlendOutSeconds;
+        public string TargetKey => m_TargetKey;
+        public ActionContextSlot ActionContext => m_ActionContext;
+        public CameraInterruptPolicy InterruptPolicy => m_InterruptPolicy;
         public override State ReturnState => m_Submitted.Value ? State.Success : State.Failure;
 
-        protected override void DoAction()
-        {
-            m_Submitted.Value = false;
-            if (!TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            ulong actionInstanceId = ResolveActionInstanceId(context);
-            m_Submitted.Value = context.SubmitCameraStateRequest(new CameraStateRequest(
-                m_Mode,
-                m_Priority,
-                m_Weight,
-                m_BlendInSeconds,
-                m_BlendOutSeconds,
-                m_TargetKey,
-                GUID,
-                GetType().Name,
-                actionInstanceId,
-                m_InterruptPolicy));
-        }
-
-        ulong ResolveActionInstanceId(CharacterGraphContext context)
-        {
-            return context.TryGetActionContextHandle(m_ActionContext, out ActionInstanceHandle handle)
-                ? handle.ActionInstanceId
-                : 0;
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext context)
-        {
-            context = null;
-            if (Owner != null && Owner.TryGetUser(out context) && context != null)
-                return true;
-
-            Debug.LogError($"{GetType().Name}: CharacterGraphContext is missing from graph user.");
-            return false;
-        }
     }
 
     [Serializable]
     [NodeName("Emit Camera Cue")]
     [NodePath("Base/Action/Camera/Emit Camera Cue")]
-    public sealed class EmitCameraCueNode : ActionNode
+    public sealed class EmitCameraCueNode : CharacterSimulationOperationNode
     {
         [SerializeField, ShowInPanel("Cue Id")]
         string m_CueId = "CameraCue";
@@ -108,49 +95,21 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Submitted"), ReadOnly]
         BoolPropertyPort m_Submitted = new BoolPropertyPort();
 
+        public string CueId => m_CueId;
+        public CameraCueKind CueKind => m_CueKind;
+        public string CueType => m_CueType;
+        public float Intensity => m_Intensity;
+        public float DurationSeconds => m_DurationSeconds;
+        public int Priority => m_Priority;
+        public ActionContextSlot ActionContext => m_ActionContext;
         public override State ReturnState => m_Submitted.Value ? State.Success : State.Failure;
 
-        protected override void DoAction()
-        {
-            m_Submitted.Value = false;
-            if (!TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            ulong actionInstanceId = ResolveActionInstanceId(context);
-            m_Submitted.Value = context.SubmitCameraCue(new CameraCue(
-                m_CueId,
-                m_CueKind,
-                m_CueType,
-                m_Intensity,
-                m_DurationSeconds,
-                m_Priority,
-                GUID,
-                GetType().Name,
-                actionInstanceId));
-        }
-
-        ulong ResolveActionInstanceId(CharacterGraphContext context)
-        {
-            return context.TryGetActionContextHandle(m_ActionContext, out ActionInstanceHandle handle)
-                ? handle.ActionInstanceId
-                : 0;
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext context)
-        {
-            context = null;
-            if (Owner != null && Owner.TryGetUser(out context) && context != null)
-                return true;
-
-            Debug.LogError($"{GetType().Name}: CharacterGraphContext is missing from graph user.");
-            return false;
-        }
     }
 
     [Serializable]
     [NodeName("Set Camera Response")]
     [NodePath("Base/Action/Camera/Set Camera Response")]
-    public sealed class SetCameraResponseNode : ActionNode
+    public sealed class SetCameraResponseNode : CharacterSimulationOperationNode
     {
         [SerializeField, ShowInPanel("Look Response")]
         CameraLookResponseMode m_LookResponse = CameraLookResponseMode.Full;
@@ -176,48 +135,21 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Submitted"), ReadOnly]
         BoolPropertyPort m_Submitted = new BoolPropertyPort();
 
+        public CameraLookResponseMode LookResponse => m_LookResponse;
+        public float ManualOrbitWeight => m_ManualOrbitWeight;
+        public float PitchResponseWeight => m_PitchResponseWeight;
+        public float YawResponseWeight => m_YawResponseWeight;
+        public int Priority => m_Priority;
+        public float Weight => m_Weight;
+        public ActionContextSlot ActionContext => m_ActionContext;
         public override State ReturnState => m_Submitted.Value ? State.Success : State.Failure;
 
-        protected override void DoAction()
-        {
-            m_Submitted.Value = false;
-            if (!TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            ulong actionInstanceId = ResolveActionInstanceId(context);
-            m_Submitted.Value = context.SubmitCameraResponsePolicy(new CameraResponsePolicy(
-                m_LookResponse,
-                m_ManualOrbitWeight,
-                m_PitchResponseWeight,
-                m_YawResponseWeight,
-                m_Priority,
-                m_Weight,
-                GUID,
-                actionInstanceId));
-        }
-
-        ulong ResolveActionInstanceId(CharacterGraphContext context)
-        {
-            return context.TryGetActionContextHandle(m_ActionContext, out ActionInstanceHandle handle)
-                ? handle.ActionInstanceId
-                : 0;
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext context)
-        {
-            context = null;
-            if (Owner != null && Owner.TryGetUser(out context) && context != null)
-                return true;
-
-            Debug.LogError($"{GetType().Name}: CharacterGraphContext is missing from graph user.");
-            return false;
-        }
     }
 
     [Serializable]
     [NodeName("Set Camera Target")]
     [NodePath("Base/Action/Camera/Set Camera Target")]
-    public sealed class SetCameraTargetNode : ActionNode
+    public sealed class SetCameraTargetNode : CharacterSimulationOperationNode
     {
         [SerializeField, ShowInPanel("Target Key")]
         string m_TargetKey;
@@ -243,48 +175,21 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Submitted"), ReadOnly]
         BoolPropertyPort m_Submitted = new BoolPropertyPort();
 
+        public string TargetKey => m_TargetKey;
+        public string AnchorKey => m_AnchorKey;
+        public string AimPointKey => m_AimPointKey;
+        public string PreferredBoneKey => m_PreferredBoneKey;
+        public int Priority => m_Priority;
+        public float Weight => m_Weight;
+        public ActionContextSlot ActionContext => m_ActionContext;
         public override State ReturnState => m_Submitted.Value ? State.Success : State.Failure;
 
-        protected override void DoAction()
-        {
-            m_Submitted.Value = false;
-            if (!TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            ulong actionInstanceId = ResolveActionInstanceId(context);
-            m_Submitted.Value = context.SubmitCameraTargetRequest(new CameraTargetRequest(
-                m_TargetKey,
-                m_AnchorKey,
-                m_AimPointKey,
-                m_PreferredBoneKey,
-                m_Priority,
-                m_Weight,
-                GUID,
-                actionInstanceId));
-        }
-
-        ulong ResolveActionInstanceId(CharacterGraphContext context)
-        {
-            return context.TryGetActionContextHandle(m_ActionContext, out ActionInstanceHandle handle)
-                ? handle.ActionInstanceId
-                : 0;
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext context)
-        {
-            context = null;
-            if (Owner != null && Owner.TryGetUser(out context) && context != null)
-                return true;
-
-            Debug.LogError($"{GetType().Name}: CharacterGraphContext is missing from graph user.");
-            return false;
-        }
     }
 
     [Serializable]
     [NodeName("Read Camera Basis")]
     [NodePath("Base/Value/Camera/Read Camera Basis")]
-    public sealed class ReadCameraBasisNode : ValueNode
+    public sealed class ReadCameraBasisNode : CharacterSimulationValueNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Valid"), ReadOnly]
         BoolPropertyPort m_Valid = new BoolPropertyPort();
@@ -307,45 +212,5 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Pitch"), ReadOnly]
         FloatPropertyPort m_Pitch = new FloatPropertyPort();
 
-        protected override void OutputValue()
-        {
-            base.OutputValue();
-            ClearOutputs();
-
-            if (!TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            if (!context.TryReadCameraBasisSnapshot(out CameraBasisSnapshot snapshot))
-                return;
-
-            m_Valid.Value = true;
-            m_PlanarForward.Value = snapshot.PlanarForward;
-            m_PlanarRight.Value = snapshot.PlanarRight;
-            m_LookDirection.Value = snapshot.LookDirection;
-            m_AimPoint.Value = snapshot.AimPoint;
-            m_Yaw.Value = snapshot.Yaw;
-            m_Pitch.Value = snapshot.Pitch;
-        }
-
-        void ClearOutputs()
-        {
-            m_Valid.Value = false;
-            m_PlanarForward.Value = Vector3.zero;
-            m_PlanarRight.Value = Vector3.zero;
-            m_LookDirection.Value = Vector3.forward;
-            m_AimPoint.Value = Vector3.zero;
-            m_Yaw.Value = 0f;
-            m_Pitch.Value = 0f;
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext context)
-        {
-            context = null;
-            if (Owner != null && Owner.TryGetUser(out context) && context != null)
-                return true;
-
-            Debug.LogError($"{GetType().Name}: CharacterGraphContext is missing from graph user.");
-            return false;
-        }
     }
 }

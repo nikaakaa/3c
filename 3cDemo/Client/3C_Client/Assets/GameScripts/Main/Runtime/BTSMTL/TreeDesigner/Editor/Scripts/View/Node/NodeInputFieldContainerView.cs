@@ -85,8 +85,7 @@ namespace TreeDesigner.Editor
                     SerializedProperty serializedProperty = GetPortValueSerializedProperty(item.Key);
                     if (serializedProperty == null)
                         continue;
-                    propertyField.bindingPath = serializedProperty.propertyPath;
-                    propertyField.Bind(m_Node.GetSerializedTree());
+                    propertyField.BindProperty(serializedProperty);
                 }
             }
         }
@@ -119,7 +118,7 @@ namespace TreeDesigner.Editor
             container.RegisterCallback<MouseDownEvent>((e) => e.StopPropagation());
 
             PropertyField propertyField = new PropertyField(serializedProperty, string.Empty);
-            propertyField.Bind(serializedProperty.serializedObject);
+            propertyField.BindProperty(serializedProperty);
             propertyField.style.borderTopColor = propertyField.style.borderBottomColor = propertyField.style.borderLeftColor = propertyField.style.borderRightColor = propertyPort.Color();
             container.Add(propertyField);
 

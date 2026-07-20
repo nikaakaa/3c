@@ -1,115 +1,129 @@
 # gameplay-network-model-boundary Specification
 
 ## Purpose
-TBD - created by archiving change refactor-gameplay-network-model-boundary. Update Purpose after archive.
+定义唯一 SimulationSessionHost、GameplayNetworkModelDefinition、model-owned Session Source/Pipeline、Actor roster与具体 protocol/history/endpoint实现之间的插件边界。
 ## Requirements
 ### Requirement: Gameplay Network Model 必须是 Session 级唯一装配
 
-系统 MUST 使用 `GameplayNetworkSessionHost`、`GameplayNetworkModelDefinition` 或等价边界，在一个 gameplay Session 启动前装配唯一完整 Network Model。Model MUST 决定同步输入、历史、确认、修正、Remote 推进和副作用提交规则。系统 MUST NOT 按 Character、Graph、State、Action 或 Timeline 分别选择模型，也 MUST NOT 在 Session 运行中切换模型。
+Gameplay Network Model MUST作为`SimulationSessionSourceDefinition`的一种实现，通过实际runtime factory创建model session、Endpoint、history、显式Source ports与匹配Target ABI的Runtime Launcher。唯一`SimulationSessionHost` MUST使用同一Composition Definition将该Source与显式Program Runtime、Execution Backend、Pipeline Definition、WorldSolver、ProgramCatalog、roster、Committer和diagnostics组合。Common Host、target-specific Unity Composer与通用Pipeline runtime package builder MUST不硬编码已知Model、Prepared Source或Pipeline Definition具体类型。Character、Graph、Program、Kernel、Pipeline Backend和WorldSolver MUST不保存Model selection。Local Source MUST可独立使用同一Session Host，但 MUST不被声明为Network Model。
 
-#### Scenario: Session 启动当前模型
+#### Scenario: 新增完整Float32 Network Model
 
-- **WHEN** Sandbox 启动 gameplay Session
-- **THEN** SessionHost MUST 只创建一个 `ServerAuthoritativeHybrid` model session
-- **AND** 所有 Character bindings MUST 归属该 model session
+- **WHEN** 新模型提供Source preparation、Endpoint、Pipeline Runtime Package、Pass factories与Runtime Launcher
+- **THEN** MUST可通过现有五项Composition和公共Unity Float32 request lowering进入唯一portable Composer
+- **AND** MUST不修改公共Session Host、Unity Float32 Composer或通用Package Builder
 
-#### Scenario: 运行中修改模型
+#### Scenario: 当前核心运行Local Session
 
-- **WHEN** model session 已连接、绑定 actor 或开始 tick
-- **THEN** 系统 MUST 拒绝更换 model definition
-- **AND** MUST 不迁移未确认事务或 history 到另一模型
+- **WHEN** 已安装Network Model都没有完整Source factory、Runtime Launcher与合法Pipeline Runtime Package
+- **THEN** Local Session MUST通过显式Local Source、Standard Launcher和Standard Local Pipeline正常创建
+- **AND** Host MUST不创建GameplayNetworkModelSession或把Local当作fallback Model
 
 ### Requirement: Model、Endpoint 和 Transport 必须分层
 
-系统 MUST 区分 Network Model、model Endpoint 和底层 Transport。Model MUST 表达 gameplay 同步规则；Endpoint MUST 表达该模型消息的远端实现；Transport MUST 只负责连接、序列化和收发。未配置 endpoint 的 disconnected 状态、`LocalLoopback` 和未来 `Fantasy` MUST NOT 被描述为三个同步模型。
+每个 GameplayNetworkModelDefinition MUST通过自己的 EndpointDefinition与 runtime factory创建 endpoint/protocol adapter、history和 Source ports。Model模块 MAY提供模型专属 Pass Definition与 Pipeline Definition，但 Composition MUST显式选择 Pipeline，Model MUST不在 Host中隐藏注入。WorldSolver implementation、Program Runtime、Character authoring、Execution Backend和 Presentation playback MUST不归 Model。Endpoint/Transport MUST不改变模型的 input/history/restore/commit语义。
 
-#### Scenario: 选择 LocalLoopback
+#### Scenario: ServerAuthoritative 使用不同服务端 Solver
 
-- **WHEN** `ServerAuthoritativeHybrid` 使用 LocalLoopback endpoint
-- **THEN** gameplay prediction、correction、snapshot 和 action decision 语义 MUST 保持属于该模型
-- **AND** Loopback MUST 只在进程内模拟模型远端
-
-#### Scenario: 后续切换 Fantasy
-
-- **WHEN** 后续 change 实现 Fantasy endpoint
-- **THEN** 它 MUST 替换同一模型的 endpoint
-- **AND** 该替换 MUST 不被宣传为 network model 切换
+- **WHEN** 同一 ServerAuthoritative Model与同一模型 Pipeline分别搭配 Unity authoritative Solver或 DotRecast authoritative Solver
+- **THEN** ModelId、packet/history、Source ports与客户端 correction语义 MUST保持同一实现
+- **AND** Solver backend MUST由服务端 Composition显式选择，不得生成 DotRecastNetworkModel
 
 ### Requirement: 只允许选择完整实现的 Network Model
 
-Model authoring UI MUST 只显示已安装、可创建 runtime 且配置闭环的 model definition。系统 MUST NOT 暴露 `Rollback`、`Lockstep`、`Snapshot` 或其它只有 enum、空 factory、空 profile 或占位 runtime 的选项。
+Network Model只有在 ModelDefinition、Source runtime factory、EndpointDefinition、protocol capability、所选 Pipeline及全部模型 Pass factory、Program Runtime/Backend requirement、Solver capability requirement与 preparation合同完整时才 MAY被 Session composition选择。手写 capability位、存在 packet/session类、空 factory、旧 adapter或只有 Pipeline显示名 MUST不能让 Model被视为完整。Host MUST在 preparation Ready与 Pipeline compile后再次校验实际 LaunchPlan。
 
-#### Scenario: 当前查看模型配置
+#### Scenario: ServerAuthoritative 缺少 Correction Pass factory
 
-- **WHEN** 作者查看 SessionHost model 配置
-- **THEN** 可用正式模型 MUST 只有 `ServerAuthoritativeHybrid`
-- **AND** UI MUST 不显示尚未实现的 Rollback
-
-#### Scenario: 未来增加第二模型
-
-- **WHEN** 后续 change 完整实现另一模型的 runtime、配置、actor binding 和 tick integration
-- **THEN** 该模型 MAY 作为新的 definition 类型进入 Session 装配
-- **AND** CharacterPipeline MUST 不增加 model id switch 才能使用它
+- **WHEN** ServerAuthoritative模块只有 packet、queue、history、Endpoint与 Source factory，但所选 Prediction Pipeline的一个 Pass factory缺失
+- **THEN** composition MUST报告缺少精确 Pass/version
+- **AND** MUST不回退旧 NetworkStage、Local Pipeline或 capability位伪装可用
 
 ### Requirement: Common Session Host 不得解释模型消息
 
-Common SessionHost MUST 只管理 model definition、model session lifecycle 和唯一 ownership。它 MUST NOT 引用 MotionCommand、Snapshot、Correction、ActionDecision、Rollback input bundle、world snapshot 或 model policy 类型。
+SimulationSessionHost MUST只管理 Composition Definition、preparation lifecycle、compiled Pipeline identity、numeric-neutral runtime handle、Actor registration与 Tick registration。Packet、canonical input、history、correction、rollback、snapshot recovery、hash exchange、ack和模型 commit policy MUST归具体 Model Source与模型 Pass。Common Host MUST不解析 Model Message，也 MUST不把消息转换成 Character input或 Pipeline product。
 
-#### Scenario: Model Session 产生 packet
+#### Scenario: Endpoint 收到 Model Message
 
-- **WHEN** 当前模型构造 MotionCommand 或 ActionActivation packet
-- **THEN** packet MUST 只存在于 `ServerAuthoritativeHybrid` 模块
-- **AND** common SessionHost MUST 不读取 packet kind 或 payload
+- **WHEN** 当前 Endpoint收到 ServerAuthoritative或 Rollback消息
+- **THEN** MUST交给对应 Model Source runtime及显式 Ingress/Schedule Pass处理
+- **AND** Session Host MUST只观察 preparation/runtime lifecycle与 Pipeline diagnostics
 
 ### Requirement: Character Runtime 必须通过事实和语义输入连接模型
 
-CharacterPipeline MUST 向模型暴露 canonical input frame、resolved motion、Action lifecycle、window、result、state、cue 和 correction application result 等事实，并只接收 Character/gameplay 语义输入。CharacterPipeline MUST NOT 持有 model packet、model history、endpoint、transport 或服务端 simulation backend。Model adapter MUST 区分用于权威端独立模拟的 canonical input/action request 与用于预测对账的 resolved motion result。
+Character Core MUST只暴露 CharacterSimulationInput、typed SimulationIngress、SimulationStepResult、Session Snapshot、typed Gameplay facts、body observations与 EventId commands。Model Source与模型 Pass MUST通过正式 Source ports、Pipeline products、ExecutionPlan和 Egress disposition连接，MUST不让 Kernel引用 packet、history、policy、server tick或 correction DTO。
 
-#### Scenario: Owner 完成本 tick 运动
+#### Scenario: Model 接入角色模拟
 
-- **WHEN** CharacterMotionStage 完成 LocalSolver 结算
-- **THEN** Pipeline MUST 输出 resolved motion fact
-- **AND** ServerAuthoritative adapter MAY 保存该 fact 作为 prediction comparison metadata
-- **AND** 服务端 canonical motion MUST 从 canonical input/action state 独立生成
-- **AND** Pipeline MUST 不直接创建 MotionCommand packet
-
-#### Scenario: 收到动作确认
-
-- **WHEN** ServerAuthoritative model 收到 ActionDecision packet
-- **THEN** model adapter MUST 先转换为 Character 已有的 `ActionLifecycleTransition`
-- **AND** prediction key、authority tick 和 defense-favor metadata MUST 留在模型内部
-- **AND** CharacterNetworkReceiveStage MUST 不保存 model packet payload
-
-#### Scenario: 替换服务端运动模拟实现
-
-- **WHEN** ServerAuthoritativeHybrid 从 Unity authoritative process 改为纯 CSharp KCC server
-- **THEN** CharacterPipeline facts 和语义输入合同 MUST 保持不变
-- **AND** backend 选择 MUST 位于 model/server composition root
-- **AND** Graph、Timeline、Action 和 client CharacterPipeline MUST 不增加 backend switch
+- **WHEN** 后续完整 Model绑定 Actor roster
+- **THEN** MUST通过 Ingress products、Schedule plan、Snapshot restore和 Egress products接入
+- **AND** MUST不恢复 Character NetworkSend/ReceiveStage或私有 replay runner
 
 ### Requirement: Character 输入来源与运动权威必须正交
 
-系统 MUST 使用独立的 `CharacterInputSource` 与 `CharacterMotionAuthority` 或等价合同表达角色输入和位姿结算。GameplayTickSystem 和 CharacterPipeline MUST NOT 依赖 `LocalPredicted`、`RemoteProxy` 或具体 network model 枚举决定全部行为。
+Actor control input MUST由当前Source与Ingress/Schedule Pass产生；world constraint与body result MUST由Session装配的唯一WorldSolver和正式WorldSolve Pass产生。Program与Character state MUST不使用authority总控枚举或具体Network Model分支。Network Model Schedule MAY把权威观察到的非Program Actor轨迹编译为model-neutral、tick-bound World constraint，但 MUST不自行求解接触、不提交Body，也 MUST不让Packet、Endpoint或Presentation Transform进入Solver。后续模型 MAY为不同Program Actor提供不同input/ingress，但同一SimulationStep的world mutation仍必须经过统一batch Solver。
 
-#### Scenario: 服务端权威 Owner
+#### Scenario: Local Session Owner
 
-- **WHEN** 当前 Session 创建本地 Owner
-- **THEN** Character MUST 使用 LocalDevice input source
-- **AND** MUST 使用 LocalSolver motion authority
+- **WHEN** Local Session创建Corin且没有外部观察Actor
+- **THEN** Local Source与Local Input Pass MUST提供设备input
+- **AND** Step MUST携带正式空观察frame
+- **AND** Unity WorldSolver与WorldSolve Pass MUST提供body result
 
-#### Scenario: 未来 Rollback 远端 Actor
+#### Scenario: ServerAuthoritative Prediction观察远端Actor
 
-- **WHEN** 后续完整 Rollback 模型在本地模拟远端 actor
-- **THEN** 它 MUST 能使用 ExternalFacts input source + LocalSolver motion authority
-- **AND** CharacterPipeline MUST 不需要把该 actor 伪装成 ServerAuthoritative RemoteProxy
+- **WHEN** Model Source拥有远端Actor的权威Body timeline但没有其canonical input
+- **THEN** 声明观察接触能力的Schedule MAY产生ObservedKinematic World constraint
+- **AND** 唯一WorldSolver MUST只为本地Program actor提交FinalBody
+- **AND** MUST不把远端Actor伪装成CharacterPipeline RemoteProxy或第二Program actor
+
+#### Scenario: Model拥有远端canonical input
+
+- **WHEN** 另一个Network Model为远端Actor提供正式canonical input与typed ingress
+- **THEN** 该Actor MAY通过完整roster进入Program执行
+- **AND** MUST不与ObservedKinematic约束使用同一ActorId双重注册
+
+### Requirement: 观察World约束必须是Step级正式输入
+
+Float32 Simulation Step MUST显式携带按tick绑定、按ActorId稳定排序的`ObservedWorldConstraintFrame`。该frame MUST进入World request canonical bytes与RequestHash，并 MUST验证与active roster不重复。每个observed参与者 MUST携带Solver锁定接触形状的configuration hash；具体形状数据 MUST继续由WorldSolver configuration拥有。空frame MUST是带tick的正式值；系统 MUST不使用`null`、隐藏Source状态、MonoBehaviour集合或Presentation缓存表示约束缺失。
+
+#### Scenario: Pipeline构造无观察Actor的Authority step
+
+- **WHEN** Authority完整roster已经由active Character requests表达
+- **THEN** Schedule MUST显式提供空观察frame
+- **AND** WorldSolve Pass MUST不从Network Model类型猜测约束
+
+#### Scenario: Pipeline构造带观察Actor的Prediction step
+
+- **WHEN** Schedule为Actor B选择了合法远端Body轨迹且Composition声明观察接触能力
+- **THEN** 观察frame MUST随该step进入唯一World batch和request hash
+- **AND** Replay MUST能从History恢复同一frame
 
 ### Requirement: BTSMTL Authoring 不得拥有 Network Model 配置
 
-BTSMTL Graph、StateMachine、Timeline、TreeClip、Blackboard、Animation authoring 和 Agent Patch MUST 只表达 gameplay 结构、身份和事实。它们 MUST NOT 保存 model id、endpoint、transport、prediction、snapshot、correction、replication 或 rollback 配置。
+Graph、StateMachine、Timeline、TreeClip、Blackboard、Action、Behavior、GameplayEffect 和 CharacterSimulationProgram MUST不保存 ModelId、Endpoint、Transport、history、correction、rollback 或 WorldSolver implementation selection。Program MAY只声明 model-neutral required capabilities。
 
-#### Scenario: 作者配置攻击窗口
+#### Scenario: 复用同一 Program
 
-- **WHEN** 作者在 Timeline TreeClip 配置 Attack HitWindow
-- **THEN** TreeClip MUST 只表达时间、WindowType、WindowId 和 gameplay fact projection
-- **AND** ServerAuthoritative model policy MUST 由模型专属 profile 解析
+- **WHEN** 同一 Program被 Local Source与后续 Network Model Source使用
+- **THEN** BTSMTL authoring MUST保持不变
 
+### Requirement: Network Model Pipeline 必须显式可见且可独立替换
+
+一个 Network Model模块 MAY交付多个合法 Pipeline Definition用于不同实验，但每个 Session Composition MUST显式选择一个完整 Pipeline。Model Source MUST声明 required Pass/Product/Backend/Solver capability，Pipeline Compiler MUST验证匹配。模型切换或 Pipeline切换 MUST销毁并重建 Session；不得在 Active状态按 packet、Actor或 correction结果热插拔 Pass。
+
+#### Scenario: 对比 Prediction 与 Rollback Pipeline
+
+- **WHEN** 用户分别创建 ServerAuthoritative Prediction Composition与 Deterministic Rollback Composition
+- **THEN** 两者 MUST显示不同 Source、PipelineId/Hash、Backend与 Solver组合
+- **AND** 两者 MUST复用同一 Common Session Host合同而不覆盖对方代码
+
+### Requirement: Network Model插件边界必须具有物理程序集所有权
+
+model-neutral Network Model Definition与具体Model Unity实现 MUST位于不同程序集。具体Model程序集 MAY引用公共Simulation、model-neutral Definition、自己的portable Model与Transport程序集以及所需Host adapter，但公共Simulation、model-neutral Definition、Program、Kernel和WorldSolver合同程序集 MUST不反向引用具体Model程序集。
+
+#### Scenario: 增加第二个Unity Network Model
+
+- **WHEN** 第二个Network Model提供自己的Endpoint、Source、Pipeline与Runtime Launcher
+- **THEN** 它 MUST以独立模型程序集接入现有公共Composition
+- **AND** MUST不修改或重新编译公共程序集源码来登记模型类型

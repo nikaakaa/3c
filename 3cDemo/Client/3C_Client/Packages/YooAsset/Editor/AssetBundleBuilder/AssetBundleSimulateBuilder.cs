@@ -22,7 +22,7 @@ namespace YooAsset.Editor
                 buildParameters.BuildBundleType = (int)EBuildBundleType.VirtualBundle;
                 buildParameters.BuildTarget = EditorUserBuildSettings.activeBuildTarget;
                 buildParameters.PackageName = packageName;
-                buildParameters.PackageVersion = "Simulate";
+                buildParameters.PackageVersion = $"Simulate-{AssetDatabase.GlobalArtifactDependencyVersion}";
                 buildParameters.FileNameStyle = EFileNameStyle.HashName;
                 buildParameters.BuildinFileCopyOption = EBuildinFileCopyOption.None;
                 buildParameters.BuildinFileCopyParams = string.Empty;

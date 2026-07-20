@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>ThirdPersonSimulation.DotRecastAuthority</AssemblyName>
+    <RootNamespace>ThirdPersonSimulation.DotRecastAuthority</RootNamespace>
+    <SimulationSourceRoot>$(MSBuildThisFileDirectory)..\..\..\3cDemo\Client\3C_Client\Assets\GameScripts\Main\Runtime\Simulation\DotRecastAuthority</SimulationSourceRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(SimulationSourceRoot)\**\*.cs" LinkBase="Source" />
+    <ProjectReference Include="..\ThirdPersonSimulation.Core\ThirdPersonSimulation.Core.csproj" />
+    <ProjectReference Include="..\ThirdPersonSimulation.Float32\ThirdPersonSimulation.Float32.csproj" />
+    <ProjectReference Include="..\ThirdPersonSimulation.ServerAuthoritative\ThirdPersonSimulation.ServerAuthoritative.csproj" />
+    <ProjectReference Include="..\ThirdPersonSimulation.ServerAuthoritative.Transport\ThirdPersonSimulation.ServerAuthoritative.Transport.csproj" />
+    <ProjectReference Include="..\ThirdPersonSimulation.DotRecast\ThirdPersonSimulation.DotRecast.csproj" />
+  </ItemGroup>
+</Project>

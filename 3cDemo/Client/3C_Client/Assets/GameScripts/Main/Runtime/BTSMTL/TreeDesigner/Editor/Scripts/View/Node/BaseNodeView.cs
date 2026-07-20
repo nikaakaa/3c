@@ -340,7 +340,6 @@ namespace TreeDesigner.Editor
         }
         public virtual void SyncSerializedPropertyPathes()
         {
-            //int nodeIndex = m_Node.GameplayTagContainerOwner.Nodes.FindIndex(i => i == m_Node);
             //if (nodeIndex == -1)
             //    return;
 

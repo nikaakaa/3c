@@ -23,21 +23,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         readonly HashSet<AnimationPlaybackId> m_EmptyFadePlaybacks =
             new HashSet<AnimationPlaybackId>();
         readonly bool m_ManageGraphClock;
+        readonly AnimationTransitionEvaluationMode m_TransitionEvaluationMode;
 
         bool m_Disposed;
 
         public AnimancerPlaybackAdapter(
             AnimancerComponent animancer,
             CharacterAnimationPresentationBindingIndex bindings,
-            bool manageGraphClock)
+            bool manageGraphClock,
+            AnimationTransitionEvaluationMode transitionEvaluationMode)
         {
             m_Animancer = animancer ? animancer : throw new ArgumentNullException(nameof(animancer));
             m_Bindings = bindings ?? throw new ArgumentNullException(nameof(bindings));
             if (!bindings.IsValid || !bindings.TransitionLibrary || bindings.TransitionLibrary.Library == null)
                 throw new ArgumentException("Animation Presentation bindings are invalid.", nameof(bindings));
+            if (!Enum.IsDefined(typeof(AnimationTransitionEvaluationMode), transitionEvaluationMode))
+                throw new ArgumentOutOfRangeException(nameof(transitionEvaluationMode), transitionEvaluationMode, null);
 
             m_TransitionLibrary = bindings.TransitionLibrary.Library;
             m_ManageGraphClock = manageGraphClock;
+            m_TransitionEvaluationMode = transitionEvaluationMode;
             m_Animancer.Graph.Transitions = m_TransitionLibrary;
             if (m_ManageGraphClock)
                 m_Animancer.Graph.PauseGraph();
@@ -69,7 +74,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     m_EmptyFadePlaybacks.Remove(sourceVisual.BoundPlayback);
             }
 
-            float duration = m_TransitionLibrary.GetFadeDuration(sourceTransitionKey, binding.Transition);
+            float duration = m_TransitionEvaluationMode == AnimationTransitionEvaluationMode.Timed
+                ? m_TransitionLibrary.GetFadeDuration(sourceTransitionKey, binding.Transition)
+                : 0f;
             AnimancerState played = animancerLayer.Play(visual.State, duration, binding.Transition.FadeMode);
             if (!ReferenceEquals(played, visual.State))
                 throw new InvalidOperationException(
@@ -95,7 +102,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             if (animancerLayer.CurrentState != null &&
                 m_StateVisuals.TryGetValue(animancerLayer.CurrentState, out ProducerVisual current))
             {
-                duration = current.Binding.Transition.FadeDuration;
+                if (m_TransitionEvaluationMode == AnimationTransitionEvaluationMode.Timed)
+                    duration = current.Binding.Transition.FadeDuration;
                 if (current.BoundPlayback.IsValid)
                     m_EmptyFadePlaybacks.Add(current.BoundPlayback);
             }
@@ -168,6 +176,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             return false;
         }
 
+        public void CollectPoseContributions(
+            string layerId,
+            List<AnimationPoseContribution> destination)
+        {
+            if (destination == null)
+                throw new ArgumentNullException(nameof(destination));
+            destination.Clear();
+            foreach (KeyValuePair<AnimationPlaybackId, ProducerVisual> pair in m_PlaybackVisuals)
+            {
+                ProducerVisual visual = pair.Value;
+                if (!visual.HasSample ||
+                    !visual.BoundPlayback.Equals(pair.Key) ||
+                    !string.Equals(visual.Layer.Id, layerId, StringComparison.Ordinal))
+                    continue;
+                float weight = GetWeight(pair.Key);
+                if (weight <= 0.0001f)
+                    continue;
+                destination.Add(new AnimationPoseContribution(
+                    visual.Layer.Id,
+                    visual.ProgramProducerIndex,
+                    pair.Key,
+                    visual.SampleTime,
+                    visual.NormalizedTime,
+                    visual.Cycle,
+                    Mathf.Clamp01(weight)));
+            }
+            destination.Sort(AnimationPoseContributionComparer.Instance);
+        }
+
         public void Release(AnimationPlaybackId playbackId)
         {
             m_PlaybackVisuals.Remove(playbackId);
@@ -177,22 +214,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
         public void Clear()
         {
-            foreach (ProducerVisual visual in m_ProducerVisuals.Values)
+            if (m_Animancer)
             {
-                if (visual.State.IsValid())
-                    visual.State.Stop();
-                visual.BoundPlayback = default;
-            }
-            foreach (ResolvedAnimationLayer layer in m_Bindings.Layers.Values)
-            {
-                AnimancerLayer animancerLayer = m_Animancer.Layers[layer.AnimancerLayerIndex];
-                animancerLayer.CancelFade();
-                animancerLayer.Weight = layer.OutputPolicy == AnimationLayerOutputPolicy.AllowEmpty ? 0f : 1f;
+                foreach (ProducerVisual visual in m_ProducerVisuals.Values)
+                {
+                    if (visual.State.IsValid())
+                        visual.State.Stop();
+                    visual.BoundPlayback = default;
+                }
+                foreach (ResolvedAnimationLayer layer in m_Bindings.Layers.Values)
+                {
+                    AnimancerLayer animancerLayer = m_Animancer.Layers[layer.AnimancerLayerIndex];
+                    animancerLayer.CancelFade();
+                    animancerLayer.Weight = layer.OutputPolicy == AnimationLayerOutputPolicy.AllowEmpty ? 0f : 1f;
+                }
+                m_Animancer.Evaluate(0f);
             }
             m_PlaybackVisuals.Clear();
             m_SupersededPlaybacks.Clear();
             m_EmptyFadePlaybacks.Clear();
-            m_Animancer.Evaluate(0f);
         }
 
         public void Dispose()
@@ -210,7 +250,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_StateVisuals.Clear();
             m_SupersededPlaybacks.Clear();
             m_EmptyFadePlaybacks.Clear();
-            if (m_ManageGraphClock && m_Animancer.IsGraphInitialized)
+            if (m_ManageGraphClock && m_Animancer && m_Animancer.IsGraphInitialized)
                 m_Animancer.Graph.UnpauseGraph();
         }
 
@@ -237,7 +277,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 state = m_Animancer.Layers[layer.AnimancerLayerIndex].GetOrCreateState(key, clip);
             }
 
-            visual = new ProducerVisual(layer, binding, state, mixer);
+            visual = new ProducerVisual(
+                layer,
+                binding,
+                ResolveProgramProducerIndex(binding.ProducerId),
+                state,
+                mixer);
             m_ProducerVisuals.Add(binding.ProducerId, visual);
             m_StateVisuals[state] = visual;
             return visual;
@@ -257,7 +302,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         static void ApplySample(ProducerVisual visual, AnimationProducerSample sample)
         {
             visual.SampleTime = sample.SampleTime;
+            visual.Cycle = sample.Cycle;
             visual.HasSample = true;
+            float normalizedWeight = 0f;
+            float normalizedTime = 0f;
+            for (int i = 0; i < sample.Clips.Count; i++)
+            {
+                normalizedTime += sample.Clips[i].NormalizedTime * sample.Clips[i].Weight;
+                normalizedWeight += sample.Clips[i].Weight;
+            }
+            visual.NormalizedTime = normalizedWeight > 0f
+                ? Mathf.Clamp01(normalizedTime / normalizedWeight)
+                : 0f;
             if (visual.Mixer == null)
             {
                 if (sample.Clips.Count != 1 || !ReferenceEquals(visual.State.Clip, sample.Clips[0].Clip))
@@ -304,16 +360,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 animancerLayer.Weight = 0f;
         }
 
+        int ResolveProgramProducerIndex(AnimationProducerId producerId)
+        {
+            IReadOnlyList<CharacterPresentationProducerEntry> producers = m_Bindings.Projection.Producers;
+            for (int i = 0; i < producers.Count; i++)
+            {
+                CharacterPresentationProducerEntry producer = producers[i];
+                if (producer.Kind == CharacterPresentationProducerKind.Animation &&
+                    producer.ProducerId.Equals(producerId))
+                    return producer.ProgramProducerIndex;
+            }
+            throw new InvalidOperationException(
+                $"Animation producer '{producerId}' is absent from the compiled Projection.");
+        }
+
         sealed class ProducerVisual
         {
             public ProducerVisual(
                 ResolvedAnimationLayer layer,
                 ResolvedAnimationProducerBinding binding,
+                int programProducerIndex,
                 AnimancerState state,
                 ManualMixerState mixer)
             {
                 Layer = layer;
                 Binding = binding;
+                ProgramProducerIndex = programProducerIndex;
                 State = state;
                 Mixer = mixer;
                 StateKey = state.Key?.ToString() ?? binding.ProducerId.ToString();
@@ -321,14 +393,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
             public ResolvedAnimationLayer Layer { get; }
             public ResolvedAnimationProducerBinding Binding { get; }
+            public int ProgramProducerIndex { get; }
             public AnimancerState State { get; set; }
             public ManualMixerState Mixer { get; }
             public string StateKey { get; }
             public AnimationPlaybackId BoundPlayback { get; set; }
             public float SampleTime { get; set; }
+            public float NormalizedTime { get; set; }
+            public int Cycle { get; set; }
             public bool HasSample { get; set; }
             public Dictionary<string, ClipState> Children { get; } =
                 new Dictionary<string, ClipState>(StringComparer.Ordinal);
+        }
+
+        sealed class AnimationPoseContributionComparer : IComparer<AnimationPoseContribution>
+        {
+            public static readonly AnimationPoseContributionComparer Instance =
+                new AnimationPoseContributionComparer();
+
+            public int Compare(AnimationPoseContribution left, AnimationPoseContribution right)
+            {
+                int producer = left.ProgramProducerIndex.CompareTo(right.ProgramProducerIndex);
+                return producer != 0
+                    ? producer
+                    : left.PlaybackId.Generation.CompareTo(right.PlaybackId.Generation);
+            }
         }
 
         sealed class AnimationProducerStateKey

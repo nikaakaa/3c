@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using ThirdPersonGameplay.Effects;
 using UnityEngine;
 
 namespace ThirdPersonGameplay.Attributes
@@ -93,7 +92,11 @@ namespace ThirdPersonGameplay.Attributes
             return valid;
         }
 
-        bool ValidateBound(GameplayAttributeBoundDefinition bound, string label, ISet<GameplayAttributeId> registeredAttributes, List<string> errors)
+        bool ValidateBound(
+            GameplayAttributeBoundDefinition bound,
+            string label,
+            ISet<GameplayAttributeId> registeredAttributes,
+            List<string> errors)
         {
             if (bound == null || !bound.Enabled)
                 return true;
@@ -128,73 +131,6 @@ namespace ThirdPersonGameplay.Attributes
         public float BaseValue => m_BaseValue;
     }
 
-    public readonly struct GameplayAttributeBoundData
-    {
-        public GameplayAttributeBoundData(bool enabled, GameplayAttributeBoundSource source, float constant, GameplayAttributeId attributeId)
-        {
-            Enabled = enabled;
-            Source = source;
-            Constant = constant;
-            AttributeId = attributeId;
-        }
-
-        public bool Enabled { get; }
-        public GameplayAttributeBoundSource Source { get; }
-        public float Constant { get; }
-        public GameplayAttributeId AttributeId { get; }
-    }
-
-    public sealed class GameplayAttributeDefinitionData
-    {
-        public GameplayAttributeDefinitionData(
-            GameplayAttributeId attributeId,
-            string displayName,
-            string debugCategory,
-            GameplayAttributeBoundData minimum,
-            GameplayAttributeBoundData maximum)
-        {
-            AttributeId = attributeId;
-            DisplayName = displayName ?? string.Empty;
-            DebugCategory = debugCategory ?? string.Empty;
-            Minimum = minimum;
-            Maximum = maximum;
-        }
-
-        public GameplayAttributeId AttributeId { get; }
-        public string DisplayName { get; }
-        public string DebugCategory { get; }
-        public GameplayAttributeBoundData Minimum { get; }
-        public GameplayAttributeBoundData Maximum { get; }
-    }
-
-    public readonly struct GameplayAttributeInitialValueData
-    {
-        public GameplayAttributeInitialValueData(GameplayAttributeId attributeId, float baseValue)
-        {
-            AttributeId = attributeId;
-            BaseValue = baseValue;
-        }
-
-        public GameplayAttributeId AttributeId { get; }
-        public float BaseValue { get; }
-    }
-
-    public readonly struct GameplayAttributeValue
-    {
-        public GameplayAttributeValue(GameplayAttributeId attributeId, float baseValue, float currentValue, ulong revision)
-        {
-            AttributeId = attributeId;
-            BaseValue = baseValue;
-            CurrentValue = currentValue;
-            Revision = revision;
-        }
-
-        public GameplayAttributeId AttributeId { get; }
-        public float BaseValue { get; }
-        public float CurrentValue { get; }
-        public ulong Revision { get; }
-    }
-
     public enum GameplayModifierOperation : byte
     {
         Additive,
@@ -207,122 +143,5 @@ namespace ThirdPersonGameplay.Attributes
     {
         Minimum,
         Maximum
-    }
-
-    public readonly struct GameplayModifierHandle : IEquatable<GameplayModifierHandle>
-    {
-        public GameplayModifierHandle(
-            ulong value,
-            GameplayEffectHandle sourceEffect,
-            int priority,
-            ulong insertionSequence)
-        {
-            Value = value;
-            SourceEffect = sourceEffect;
-            Priority = priority;
-            InsertionSequence = insertionSequence;
-        }
-
-        public ulong Value { get; }
-        public GameplayEffectHandle SourceEffect { get; }
-        public int Priority { get; }
-        public ulong InsertionSequence { get; }
-        public bool IsValid => Value != 0 && SourceEffect.IsValid;
-        public bool Equals(GameplayModifierHandle other) => Value == other.Value;
-        public override bool Equals(object obj) => obj is GameplayModifierHandle other && Equals(other);
-        public override int GetHashCode() => Value.GetHashCode();
-        public override string ToString() => Value.ToString();
-    }
-
-    public readonly struct GameplayAttributeModifier
-    {
-        public GameplayAttributeModifier(
-            GameplayModifierHandle handle,
-            GameplayAttributeId attributeId,
-            GameplayModifierOperation operation,
-            float magnitude,
-            GameplayClampBound clampBound,
-            GameplayAttributeId liveMagnitudeAttribute,
-            float liveCoefficient,
-            float livePostAdd)
-        {
-            Handle = handle;
-            AttributeId = attributeId;
-            Operation = operation;
-            Magnitude = magnitude;
-            ClampBound = clampBound;
-            LiveMagnitudeAttribute = liveMagnitudeAttribute;
-            LiveCoefficient = liveCoefficient;
-            LivePostAdd = livePostAdd;
-        }
-
-        public GameplayModifierHandle Handle { get; }
-        public GameplayAttributeId AttributeId { get; }
-        public GameplayModifierOperation Operation { get; }
-        public float Magnitude { get; }
-        public GameplayClampBound ClampBound { get; }
-        public GameplayAttributeId LiveMagnitudeAttribute { get; }
-        public float LiveCoefficient { get; }
-        public float LivePostAdd { get; }
-        public bool HasLiveMagnitude => LiveMagnitudeAttribute.IsValid;
-    }
-
-    public readonly struct GameplayAttributeMutation
-    {
-        public GameplayAttributeMutation(
-            GameplayAttributeId attributeId,
-            GameplayModifierOperation operation,
-            float magnitude,
-            GameplayClampBound clampBound = GameplayClampBound.Maximum)
-        {
-            AttributeId = attributeId;
-            Operation = operation;
-            Magnitude = magnitude;
-            ClampBound = clampBound;
-        }
-
-        public GameplayAttributeId AttributeId { get; }
-        public GameplayModifierOperation Operation { get; }
-        public float Magnitude { get; }
-        public GameplayClampBound ClampBound { get; }
-    }
-
-    public readonly struct GameplayAttributeChange
-    {
-        public GameplayAttributeChange(
-            GameplayAttributeId attributeId,
-            float beforeBase,
-            float afterBase,
-            float beforeCurrent,
-            float afterCurrent,
-            ulong revision,
-            GameplayEffectHandle causeEffect)
-        {
-            AttributeId = attributeId;
-            BeforeBase = beforeBase;
-            AfterBase = afterBase;
-            BeforeCurrent = beforeCurrent;
-            AfterCurrent = afterCurrent;
-            Revision = revision;
-            CauseEffect = causeEffect;
-        }
-
-        public GameplayAttributeId AttributeId { get; }
-        public float BeforeBase { get; }
-        public float AfterBase { get; }
-        public float BeforeCurrent { get; }
-        public float AfterCurrent { get; }
-        public ulong Revision { get; }
-        public GameplayEffectHandle CauseEffect { get; }
-    }
-
-    public readonly struct GameplayAttributeStateSnapshot
-    {
-        public GameplayAttributeStateSnapshot(GameplayAttributeValue value)
-        {
-            Value = value;
-        }
-
-        public GameplayAttributeValue Value { get; }
     }
 }

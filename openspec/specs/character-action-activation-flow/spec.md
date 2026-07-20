@@ -1,168 +1,190 @@
 # character-action-activation-flow Specification
 
 ## Purpose
-定义 Graph/BTSMTL 如何通过动作激活请求建立 `ActionInstance`，以及 Timeline、Motion、Cue、GameplayResult 输出如何在运行时关联该实例。
+定义 Graph 如何建立 ActionInstance、显式传递 Action Context，并以唯一准入与 lifecycle 规则驱动 Timeline、窗口、Motion、Cue 和 GameplayResult。
+
 ## Requirements
-### Requirement: Graph 必须通过 ActionActivationRequest 产生 ActionInstance
-系统 MUST 让 Graph/BTSMTL 通过正式 `ActionActivationRequest` 提交一次动作激活意图。`ActionRuntime` MUST 在接受请求后创建 `ActionInstance`，并 MUST 返回可被后续 Timeline、Graph 输出或 SyncDomain output 显式携带的 action runtime context 或 handle。系统 MUST NOT 通过静态标记 Tree、SubTree、StateNode、TimelineNode 或节点模块来表达某个结构“属于某个动作”。
 
-#### Scenario: 格挡反击启动
-- **WHEN** Graph 消费 `Guard` 输入 request 并确认 `ReceivedAttackInParryWindow` 成立
-- **THEN** Graph MUST 提交 `ActionActivationRequest(ActionId = Guard.ParryCounter, SourceInputRequest = Guard, TargetKey = LastAttacker)`
-- **AND** `ActionRuntime` 接受后 MUST 返回包含 instance id、prediction key、input sequence、start tick 和 target snapshot 的显式 action runtime context
+### Requirement: Graph 必须通过 ActivateActionInstance operation 产生 ActionInstance
 
-#### Scenario: 普通 locomotion graph
-- **WHEN** Graph 只读取移动输入并提交 locomotion motion intent
-- **THEN** 系统 MUST NOT 强制创建 `ActionInstance`
-- **AND** 该 Graph MUST NOT 被标记为 action tree、ability tree 或 networked tree
+Graph MUST 通过 `ActivateActionInstanceNode` 发射正式 operation。激活成功后 MUST 创建 ActionInstance，并写入后续输出显式引用的 Action Context。Tree、SubTree、StateNode、TimelineNode 或节点 membership MUST NOT 成为动作身份。
 
-### Requirement: ActionActivationRequest 必须携带动作事务来源
+#### Scenario: 从输入启动动作
 
-`ActionActivationRequest` MUST 表达 action id 或 action profile identity、source input request id、input sequence、local logic tick、target key、target snapshot 和 source graph identity。系统 MUST 使用这些字段把输入、Graph 决策、本地预测动作和服务端确认关联起来。服务端确认或拒绝 MAY 额外携带 `ServerTick`，但 `ActionActivationRequest` 的本地来源 tick MUST NOT 使用服务端 tick。
+- **WHEN** Graph 接受 LightAttack request 并激活 Attack profile
+- **THEN** operation MUST 创建 ActionInstance 和 Action Context
+- **AND** 普通 locomotion graph MUST NOT 被迫创建 ActionInstance
 
-#### Scenario: 从输入 request 启动作
+### Requirement: ActivateActionInstance 必须携带动作事务来源
 
-- **WHEN** Graph 使用 `TryConsumeInputRequest("LightAttack")` 后提交攻击激活
-- **THEN** `ActionActivationRequest` MUST 携带 source input request id、input sequence 和 local logic tick
-- **AND** Debug MUST 能显示该 `ActionInstance` 来自哪次输入 request
+operation MUST 携带 ActionProfile identity、source request、InputSequence、source logic tick、target snapshot 和 source operation identity。服务端 tick MAY 出现在模型 decision 中，但 MUST NOT 替代本地来源 tick。
 
-#### Scenario: 从非输入条件激活动作
+#### Scenario: 调试动作来源
 
-- **WHEN** Graph 因 `ReceivedAttackInParryWindow`、资源条件或 AI 决策激活动作
-- **THEN** `ActionActivationRequest` MUST 允许 source input request id 为空
-- **AND** MUST 仍携带 source graph identity 和 local logic tick 便于 debug
+- **WHEN** 动作来自输入、AI 或资源条件
+- **THEN** Debug MUST 能定位 source operation、logic tick 和可选 input request
 
 ### Requirement: Timeline 必须只是可选动作输出来源
 
-Timeline MAY 在播放请求中携带显式 Action Context，使 Decision TreeClip 写入的 projected scope variable 生成带 ActionInstanceId 的 Window sample，并使其它正式 Track 生成 motion sample 或 cue event。Timeline MUST NOT 自动创建 ActionInstance，也 MUST NOT 通过 ambient current action、Timeline asset membership、TreeClip membership 或 declaration owner 自动继承动作归属。Timeline 与 ActionProfile MUST NOT 保存 WindowType 对应的网络策略；当前 Network Model adapter MUST 使用 Action Context 对应的稳定 ActionId 从 model profile 解析 effective policy。
+Timeline MAY 接收显式 Action Context，使 TreeClip、Motion、Cue 与 GameplayResult 输出关联 ActionInstance。Timeline MUST NOT 创建 ActionInstance，也 MUST NOT 从 ambient active action 或资产 membership 猜归属。Network Model 只消费 Finalize 后的显式 GameplayFact。
 
 #### Scenario: Timeline 攻击
 
-- **WHEN** Graph 激活 `Attack.Light.01` 后播放 `LightAttack01Timeline`
-- **THEN** Timeline playback request MUST 携带该 Action Context
-- **AND** Hit/Cancel Decision TreeClip 的 projected variable MUST 使用该 context 生成 ActionWindowSample
-- **AND** RootMotion 和 Cue 输出 MAY 使用相同 context 写入 ActionInstanceId
-- **AND** 后续网络策略解析 MUST 由当前 Network Model adapter 完成
-
-#### Scenario: 普通 Timeline 表现
-
-- **WHEN** Graph 播放不属于动作事务的普通表现 Timeline
-- **THEN** Timeline MUST 继续正常播放
-- **AND** Projection=None 的 TreeClip variable MAY 作为本地条件
-- **AND** ActionWindow-bound variable MUST 因缺少 Action Context 而拒绝事实投影
+- **WHEN** Attack ActionInstance 播放 inline Timeline
+- **THEN** playback MUST 携带 Action Context
+- **AND** projected window、motion、cue 与 result MAY 写同一 ActionInstanceId
 
 ### Requirement: 非 Timeline 动作必须能使用同一 ActionInstance
 
-系统 MUST 支持没有 Timeline 的动作事务通过 Graph 写入有 scope 的 Blackboard variable，并通过相同显式 fact projection 产出动作输出。需要 ActionWindow projection 的写入 MUST 携带显式 Action Context；系统 MUST NOT保留 SubmitActionWindowSampleNode，也 MUST NOT默认读取 ambient current active action。
+没有 Timeline 的动作 MAY 在持有 Action Context 时写 owner-local scope variable，并通过同一 projection stage 生成输出。系统 MUST NOT 恢复 `SubmitActionWindowSampleNode` 或 ambient action fallback。
 
 #### Scenario: 持续格挡
 
-- **WHEN** Graph 激活 `Guard.Hold` 后没有播放 Timeline
-- **THEN** Graph MAY 在持有显式 Action Context 时每 Tick写入 Guard window Frame variable
-- **AND** 相同 projection stage MUST 生成携带 `Guard.Hold` ActionInstanceId 的 sample
+- **WHEN** Guard Action 没有 Timeline
+- **THEN** Graph MAY 写 projected Guard window
+- **AND** 缺少 Action Context 时 projection MUST 失败
 
-#### Scenario: 输出缺少动作上下文
+### Requirement: Action operation runtime 必须保持事务层职责
 
-- **WHEN** Graph 或 Timeline 写入 ActionWindow-bound variable
-- **AND** 没有提供有效 Action Context
-- **THEN** 系统 MUST 拒绝该 action-scoped projection
-- **AND** 系统 MUST NOT自动使用当前 active action 补齐归属
-
-### Requirement: ActionRuntime 必须保持事务层职责
-`ActionRuntime` MUST 只负责 profile 查询、activation 验证、ActionInstance 创建和 lifecycle transition 状态流转。`ActionRuntime` MUST NOT tick Graph、播放 Timeline、采样 Motion、播放 Cue 或裁决命中。
-
-#### Scenario: 动作激活成功
-- **WHEN** `ActionRuntime` 接受 `ActionActivationRequest`
-- **THEN** 它 MUST 创建 `ActionInstance` 并更新 ActionContext
-- **AND** 后续 Timeline 播放、Motion 结算和 GameplayResult 裁决 MUST 由对应 stage 或 Graph 继续处理
+Action runtime MUST 只负责 catalog/profile 查询、准入、ActionInstance 创建和 lifecycle 状态流转。Graph tick、Timeline、Motion、Cue、命中与世界求解 MUST 由各自正式模块处理。
 
 #### Scenario: 动作校正
-- **WHEN** 服务端 correction 到达
-- **THEN** `ActionRuntime` MUST 只更新 `ActionInstance` 的 corrected 状态和原因
-- **AND** Motion 或 Presentation 修正 MUST 由后续 stage 根据 correction 输出处理
+
+- **WHEN** typed correction ingress 到达
+- **THEN** Action operation MUST 只更新实例状态与原因
+- **AND** world restore 与 visual recovery MUST 留在各自模块
 
 ### Requirement: 系统不得恢复结构身份式 ActionModule
-系统 MUST NOT 恢复旧 `ActionModule`、`ActionSubTreeNode`、`ActionStateNode`、节点 action identity、ActionTree、AbilityTree 或 node membership table。任何 editor authoring 元素都 MUST 表达 action activation request 或 action output，不得表达结构归属。
 
-#### Scenario: 作者配置轻攻击
-- **WHEN** 作者在 Graph 中配置轻攻击启动
-- **THEN** 作者 MUST 配置提交 `ActionActivationRequest`
-- **AND** MUST NOT 把 LightAttack SubTree 或 StateNode 标记为 `Attack.Light.01`
+系统 MUST NOT 恢复 ActionModule、ActionSubTree、ActionStateNode、ActionTree、AbilityTree 或 membership table。作者元素只表达 activation request 或 action output。
 
-#### Scenario: 同一状态有多个事务
-- **WHEN** 一个 GuardState 中既可以激活 `Combat.Guard` 又可以激活 `Combat.ParryCounter`
-- **THEN** 系统 MUST 支持 Graph 在不同分支提交不同 action activation request
-- **AND** MUST NOT 要求 GuardState 静态绑定唯一 ActionProfile
+#### Scenario: 同一状态启动不同动作
 
-### Requirement: 动作生命周期变化必须通过 ActionLifecycleTransition 表达
+- **WHEN** GuardState 可启动 Guard 或 ParryCounter
+- **THEN** 分支 MUST 提交不同 activation request
+- **AND** StateNode MUST NOT 静态绑定唯一 ActionProfile
 
-系统 MUST 使用 `ActionLifecycleTransition` 或等价生命周期事实表达动作事务的确认、完成、取消、打断、拒绝、修正和中止。系统 MUST NOT 因为 Graph、StateMachine 或 Timeline 在某一 tick 没有继续 tick 到某个节点，就隐式关闭 action context 或 action instance。
+### Requirement: 动作生命周期必须通过 typed transition 表达
 
-#### Scenario: Timeline 正常完成
+Complete、Cancel、Interrupt、Reject、Correct 与 Abort MUST 通过 `ActionLifecycleTransition` 或等价 typed operation/fact 表达。外部 decision MUST 先转为 SimulationIngress；节点某 Tick 未执行 MUST NOT 隐式关闭 ActionInstance。
 
-- **WHEN** 带 Action Context 的攻击 Timeline 播放完成并需要结束该动作
-- **THEN** Graph、Timeline 调度器或明确生命周期节点 MUST 提交 `ActionLifecycleTransition(Complete, reason = TimelineCompleted)`
-- **AND** `ActionRuntime` MUST 将对应 `ActionInstance` 标记为完成并关闭 active context
+#### Scenario: 动作被取消
 
-#### Scenario: 闪避取消攻击
+- **WHEN** StateMachine 决定替换 active Action
+- **THEN** source MUST 显式提交 terminal transition
+- **AND** target MUST 创建独立 ActionInstance
 
-- **WHEN** 作者配置攻击可被闪避取消，并且 Graph 决定从攻击流程切到闪避流程
-- **THEN** 系统 MUST 对旧攻击提交 `ActionLifecycleTransition(Cancel, reason = DodgeCancel)`
-- **AND** 新闪避动作 MAY 通过新的 `ActionActivationRequest` 创建新的 `ActionInstance`
+### Requirement: Action Context 必须是动作输出的显式输入
 
-#### Scenario: 受击打断动作
+Timeline、Window、Motion、Cue、GameplayResult 和 lifecycle 节点只有显式接收有效 Action Context 时，才 MAY 产出带 ActionInstanceId 的输出。terminal 后旧 Context MUST 失效。
 
-- **WHEN** 角色在动作期间收到受击、硬直、击飞或控制结果
-- **THEN** 系统 MUST 对当前动作提交 `ActionLifecycleTransition(Interrupt, reason = HitReact)` 或等价业务 reason
-- **AND** 后续 hit react 或 knockback 输出 MUST NOT 自动继承被打断动作的 ActionInstanceId
+#### Scenario: 读取已结束 Context
 
-#### Scenario: 服务端拒绝或修正
+- **WHEN** 对应 ActionInstance 已进入 terminal
+- **THEN** 后续读取 MUST 失败
+- **AND** MUST NOT 继续输出旧 ActionInstanceId
 
-- **WHEN** NetworkReceiveStage 收到服务端对某次预测动作的 reject 或 correct decision
-- **THEN** 系统 MUST 提交 `ActionLifecycleTransition(Reject)` 或 `ActionLifecycleTransition(Correct)`
-- **AND** reject MUST 关闭对应 active context，correct 默认保留 context，只有 incoming decision 明确携带终止语义时才关闭
+### Requirement: Action 必须使用统一 Gameplay Effect 状态
 
-#### Scenario: 系统中止
+Action admission 和 lifecycle MUST 读取 CharacterSimulationState 中唯一 Gameplay Effect Tag/Attribute/Effect 状态。Action runtime MUST NOT 建私有 tag 集合、字符串 SetTag、effect tick 或 attribute store。
 
-- **WHEN** actor despawn、组件禁用、场景切换或 pipeline dispose 时仍有 active action
-- **THEN** 系统 MUST 提交或记录 `ActionLifecycleTransition(Abort, reason = SystemAbort)`
-- **AND** 系统 MUST 清理该 action context，避免后续输出继续挂到旧实例
+#### Scenario: Stun 阻止攻击
 
-### Requirement: Action Context 必须是动作期间输出的显式输入
+- **WHEN**统一 Tag Container 包含 Stunned
+- **THEN** Attack admission MUST 拒绝
+- **AND** Graph 与 admission MUST 读取同一状态
 
-系统 MUST 让 action activation 成功后产生可传递的 Action Context。Timeline、Window、Motion、Cue、GameplayResult 和生命周期 transition 节点只有在显式接收到 Action Context 时，才 MAY 产出带 `ActionInstanceId` 的动作归属输出。系统 MUST NOT 默认读取 ambient current active action 作为输出归属来源。
+### Requirement: 动作准入查询与激活提交必须共享唯一规则
 
-#### Scenario: 轻攻击动作过程
+numeric-neutral admission evaluator MUST 同时服务 `CanActivateAction` 与 `ActivateActionInstance`，读取同一 catalog/profile、Gameplay Effect state、active ActionInstance、block query 和 cancel query。Float32 与 Fixed 只提供窄状态端口。纯查询 MUST NOT 消费 request、创建实例、提交 lifecycle 或跨 Tick缓存。
 
-- **WHEN** Graph 激活 `Attack.Light.01` 并得到 Action Context
-- **THEN** 后续 Timeline、HitWindow、RootMotion、Cue 和 GameplayResult 输出 MAY 使用该 Action Context 写入同一个 `ActionInstanceId`
-- **AND** 这些输出 MUST 能被 Runtime Debug 按同一次 ActionInstance 聚合显示
+ActionInstance 成功创建时，profile granted tags MUST 以 `action:<ActionInstanceId>` source 写入唯一 Tag Container；Complete、Cancel、Interrupt、Abort 或 teardown MUST 精确撤销该 source。
 
-#### Scenario: 普通 Timeline 表现
+#### Scenario: Transition 预览 Dodge
 
-- **WHEN** Graph 播放一个没有 Action Context 的普通表现 Timeline
-- **THEN** Timeline MUST 正常输出 animation/cue 表现
-- **AND** 系统 MUST NOT 自动把这些输出挂到当前 active action 上
+- **WHEN** active Attack 满足 Dodge cancel query 且没有 block 条件
+- **THEN** `CanActivateAction` 与最终 activation MUST 得到相同准入结果
+- **AND** preview MUST 不改变输入、实例或 Tag 状态
 
-#### Scenario: 生命周期结束后读取旧 Context
+#### Scenario: Numeric Target 对等
 
-- **WHEN** 某个 Action Context 对应的 ActionInstance 已经 Complete、Cancel、Interrupt、Reject 或 Abort
-- **THEN** 后续节点读取该 Action Context MUST 失败
-- **AND** 系统 MUST NOT 继续产出带旧 ActionInstanceId 的动作 window、motion、cue 或 result
+- **WHEN** Float32 与 Fixed 对相同 Program/state 查询准入
+- **THEN** MUST 得到相同 allowed/rejected 结果与原因
 
-### Requirement: Action 必须使用统一 Gameplay Effect 作为玩法状态输入
+### Requirement: Target activation 不得隐式结束 Source Action
 
-Action activation 和 lifecycle 决策 MUST 从角色统一 Gameplay Effect 读取 tag、attribute 与 effect 事实。`ActionRuntime` MUST 删除私有字符串 tag 集合、`SetTag` 和等价状态副本，并 MUST NOT 承担 effect tick、modifier 聚合或 attribute 存储。
+`ActivateActionInstance` MUST 只在没有 active source Action 时创建 target。replacement MUST 先经过 source stop barrier 和 OnExit，由显式 lifecycle operation 关闭 source，再激活 target。系统 MUST NOT 自动 Cancel、覆盖 Context 或吞掉重复 terminal。
 
-#### Scenario: Graph 判断动作是否可激活
+#### Scenario: Source 尚未关闭
 
-- **WHEN** 动作要求 `State.Grounded`、不存在 `State.CrowdControl.Stun` 且 Stamina 足够
-- **THEN** Graph MUST 从统一 Gameplay Effect 读取这些条件后提交 `ActionActivationRequest`
-- **AND** `ActionRuntime` MUST 只处理事务 profile、验证结果和实例生命周期
+- **WHEN** target activation 时仍有 active source
+- **THEN** operation MUST 返回 `SourceActionStillActive` 或等价 typed reason
+- **AND** source、Context 和 Tag source MUST 保持不变
 
-#### Scenario: Action 生命周期结束
+#### Scenario: Recovery 后启动 Dodge
 
-- **WHEN** ActionInstance 完成且存在以该 ActionInstanceId 为 source 的临时 effect
-- **THEN** 正式协调边界 MAY 按显式 removal policy 移除对应 effect
-- **AND** `ActionRuntime` MUST NOT 遍历或直接修改 active effect collection
+- **WHEN** Attack 到 Dodge replacement 提交
+- **THEN** Attack OnExit MUST 先 `Cancel(RecoveryCancel)`
+- **AND** Dodge target MUST 随后创建独立 ActionInstance
 
+### Requirement: ActionProfile 必须类型化声明目标快照要求
+
+ActionProfile MUST使用`ActionTargetRequirement`明确声明`None`、`OptionalSnapshot`或`SnapshotRequired`，MUST不使用自由字符串TargetPolicy。Action catalog、Semantic IR和两个Numeric Target MUST保存同一typed值。未知值或缺失值 MUST在artifact发布前失败。配置MotionWarp的动作 MUST声明`OptionalSnapshot`或`SnapshotRequired`；声明`None`时 MUST在发布前失败。
+
+`OptionalSnapshot` MUST表达正式业务策略：有候选目标时ActionInstance固定保存目标快照并允许MotionWarp；无候选目标时动作仍可激活，MotionWarp MUST保留源MotionCurve并输出typed原因。该语义 MUST不通过捕获异常、静默禁用或运行时fallback实现。
+
+#### Scenario: 普通无目标闪避
+
+- **WHEN** Dodge ActionProfile声明`None`
+- **THEN** admission MAY在没有target snapshot时成功
+- **AND** 该动作 MUST不包含需要目标的MotionWarp
+
+#### Scenario: 目标攻击缺少快照
+
+- **WHEN** ActionProfile声明`SnapshotRequired`
+- **AND** candidate target snapshot为None
+- **THEN** admission MUST返回`TargetSnapshotRequired`或等价typed原因
+- **AND** MUST不创建ActionInstance或启动Timeline
+
+#### Scenario: 可选目标攻击没有目标
+
+- **WHEN** Attack ActionProfile声明`OptionalSnapshot`
+- **AND** candidate target snapshot为None
+- **THEN** admission MUST允许创建无目标快照的ActionInstance
+- **AND** 对应MotionWarp MUST保留源MotionCurve
+
+#### Scenario: 可选目标攻击获得目标
+
+- **WHEN** Attack ActionProfile声明`OptionalSnapshot`
+- **AND** candidate target snapshot有效
+- **THEN** admission MUST允许动作激活
+- **AND** ActionInstance MUST固定保存该快照供MotionWarp使用
+
+### Requirement: 动作准入查询与提交必须读取同一目标候选
+
+`CanActivateAction`与`ActivateActionInstance` MUST把同一显式Blackboard ActionTargetSnapshot或显式None传入唯一portable admission evaluator。纯查询与最终提交 MUST对`None`、`OptionalSnapshot`和`SnapshotRequired`得到相同结果；系统 MUST不允许查询忽略目标而提交阶段再失败，也 MUST不在激活后从Scene、Transform、Presentation或registry补查目标。
+
+#### Scenario: Transition 查询通过后激活动作
+
+- **WHEN** transition条件使用CanActivateAction检查target-required动作
+- **AND** target snapshot在同一准入输入中有效
+- **THEN** 最终ActivateActionInstance MUST使用同一候选快照
+- **AND** 创建的ActionInstance MUST固定保存该快照
+
+#### Scenario: Transition 查询通过后激活可选目标动作
+
+- **WHEN** transition条件使用CanActivateAction检查`OptionalSnapshot`动作
+- **THEN** 最终ActivateActionInstance MUST读取同一Blackboard declaration
+- **AND** 查询与提交 MUST对目标存在或缺失得到相同语义
+
+### Requirement: MotionWarp 必须消费 ActionInstance 的固定目标快照
+
+MotionWarp MUST只读取显式Action Context对应ActionInstance在激活时保存的target snapshot。运行期间target实体移动、消失或Presentation更新 MUST不改变该ActionInstance的Warp目标。MotionWarp MUST不按TargetId查询Transform、scene registry、Network Model或其它ambient状态。
+
+#### Scenario: 目标在动作期间移动
+
+- **WHEN** ActionInstance已经捕获target snapshot
+- **AND** 目标实体随后移动
+- **THEN** 当前动作的MotionWarp MUST继续使用已捕获pose
+- **AND** 新目标位置只 MAY由后续正式Action activation重新捕获
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               

@@ -3,7 +3,6 @@
 ## Purpose
 定义 BTSMTL 状态机创作链路：普通行为图通过 `StateMachineNode` 进入 `StateMachineGraph`；创建 `StateMachineNode` 时默认自动拥有并绑定私有 inline `StateMachineGraph` 数据，用户不需要先手动创建或拖拽状态机资产；`StateMachineGraph` 只表达状态关系；`StateNode` 和 Transition edge 是状态机图内联数据；状态具体行为在 `StateNode` resolved `SubTree` 或 `StateBehaviorSubTree` 中编辑。
 ## Requirements
-
 ### Requirement: 状态机层级角色分离
 
 系统 MUST 使用 `StateMachineNode` 表达父级行为图进入状态机图的入口，使用 `StateMachineGraph` 表达同层状态结构，使用 `StateNode` 表达状态机图内普通状态。`StateMachineGraph` MUST NOT 直接包含另一个 `StateMachineNode`；需要嵌套状态机时，作者 MUST 在某个 StateNode 的 resolved `SubTree` 或 `StateBehaviorSubTree` 行为图中创建普通 `StateMachineNode`。每个 StateMachineNode 默认拥有的 StateMachineGraph MUST 是该节点内部的普通 C# inline graph data，只有显式复用时才可提升为 shared asset。
@@ -148,48 +147,6 @@
 - **AND** runtime MUST 使该 Transition 条件失败
 - **AND** 作者只能显式替换 shared asset 或执行 Use Inline 才能恢复该 Transition
 
-### Requirement: 状态机运行时解释
-
-系统 MUST 让 `StateMachineNode` 驱动自己 resolved `StateMachineGraph` 数据，并让 `StateMachineGraphRuntime` 以 `StateNode` 作为 active state。解释器 MUST 从 `Enter` 读取初始 Transition，并在每帧写入当前运行工作副本的 `BaseGraph.DeltaTime`。运行时 MUST 从 inline 或 shared authoring graph data 创建隔离工作副本。状态 root 完成 MUST 是可查询事实而不是所有 Transition 的隐式前置条件。State Transition 和父 Tree graceful stop MUST 复用统一 source-exit 内核。
-
-#### Scenario: 父级 tick 状态机入口
-
-- **WHEN** 父级行为图 tick 到 `StateMachineNode`
-- **THEN** `StateMachineNode` MUST 进入 resolved `StateMachineGraph` 运行工作副本
-- **AND** 父级行为图 MUST 只看到该节点的 `Running/Success/Failure`
-
-#### Scenario: active state tick
-
-- **WHEN** 状态机已有 active state
-- **THEN** 本帧 MUST 只 tick active StateNode 状态行为工作副本
-- **AND** 其它状态 MUST NOT 被 tick，除非 Transition 切换 active state
-
-#### Scenario: AnyState 和 Exit
-
-- **WHEN** 状态机已有 active state
-- **THEN** runtime MUST 在 tick active state 前检查 `AnyState` Transition
-- **AND** 命中 `Exit` MUST 让本层状态机返回 `Success`
-
-#### Scenario: 未完成状态被 Transition 抢占
-
-- **WHEN** active State root 仍为 Running
-- **AND** 某条出边 ConditionRuleGraph 返回 true
-- **THEN** runtime MUST 按 priority 和 flow order 选择 Transition
-- **AND** MUST NOT 隐式等待 StateRootCompleted
-
-#### Scenario: 父 Tree graceful stop
-
-- **WHEN** StateMachineNode 收到 graceful stop request
-- **THEN** runtime MUST 请求没有 target 的 active State exit
-- **AND** OnExit Running 时 SMNode stop status MUST 保持 Running
-- **AND** OnExit 完成后 MUST 发布 owner release 并 StopCompleted
-
-#### Scenario: ForceStop
-
-- **WHEN** StateMachineNode 因 Shutdown、Dispose 或强制 Reset 被 ForceStop
-- **THEN** runtime MUST 立即停止 active State 和释放 owner
-- **AND** MUST NOT 运行 gameplay OnExit 或进入 target State
-
 ### Requirement: Timeline 和输入通过正式状态行为链路接入
 系统 MUST NOT 将 `TimelineNode` 或 InputAction 节点作为 `StateMachineGraph` 同层状态或 Transition flow 端点。Timeline MUST 通过 `StateNode` 下钻的状态行为 `SubTree` 接入；InputAction 值 MUST 在 `ConditionRuleGraph` 中作为条件输入接入。
 
@@ -309,35 +266,21 @@ Transition 的优先级和同优先级稳定排序 MUST 属于边调度数据。
 
 ### Requirement: StateMachine runtime 必须暴露状态运行事实
 
-系统 MUST 在 `StateMachineGraphRuntime` 的运行工作副本中维护当前 active state 的运行事实。运行事实至少 MUST 包含 active state identity、进入状态后的 elapsed ticks、elapsed seconds、状态 root 上次返回状态和状态 root 是否完成。运行事实 MUST 属于 runtime working copy，MUST NOT 写回 authoring graph data。
+Compiled StateMachine operation MUST在正式 decision、enter、update、exit barrier、complete 和 interruption 边界输出结构化 state lifecycle facts。Fact MUST包含 Program/source identity、ActorId、activation identity、execution path 和 SimulationTick，MUST不依赖 runtime clone reference。
 
-#### Scenario: RunStart 状态运行中
+#### Scenario: Transition 成立
 
-- **WHEN** `RunStart` 是当前 active `StateNode`
-- **THEN** runtime MUST 能报告 `RunStart` 的 elapsed seconds 和 elapsed ticks
-- **AND** runtime MUST 能报告该状态行为 root 最近一次返回 `Running`、`Success` 或 `Failure`
-- **AND** authoring graph asset MUST NOT 因这些 runtime 值变脏
-
-#### Scenario: 状态切换
-
-- **WHEN** 状态机从 `WalkStart` 切换到 `WalkLoop`
-- **THEN** runtime MUST 重置 active state elapsed 计数
-- **AND** runtime MUST 将 active state identity 更新为 `WalkLoop`
-- **AND** 旧状态的运行事实 MUST NOT 被新状态 transition rule 当作当前状态事实读取
+- **WHEN** compiled ConditionRuleGraph 选中 Transition
+- **THEN** Kernel MUST输出可反查 authoring edge 的 decision/exit/enter facts
 
 ### Requirement: ConditionRuleGraph 必须能读取当前状态运行事实
-系统 MUST 提供正式 value node 或等价只读接口，让状态机 Transition 使用的 `ConditionRuleGraph` 能读取当前 `StateMachineGraphRuntime` 的状态运行事实。该能力 MUST 保持条件图的纯条件求值语义，MUST NOT tick 状态行为 SubTree、Timeline 或 Action 节点。
 
-#### Scenario: Start 状态完成后切换 Loop
-- **WHEN** 作者配置 `RunStart -> RunLoop`
-- **THEN** `ConditionRuleGraph` MUST 能读取 `StateRootCompleted`
-- **AND** `ConditionRuleGraph` MUST 能组合 `MoveMagnitude >= RunThreshold`
-- **AND** runtime MUST 只在两者都成立时允许 transition
+Compiled ConditionRuleGraph operation MUST通过只读 Operation Execution Context 读取当前 State execution path、StateRootCompleted 和 Blackboard state slots。Condition operation MUST保持纯条件求值，MUST不执行 State body、Timeline、Action 或 WorldSolver。
 
-#### Scenario: End 状态完成后回 Idle
-- **WHEN** 作者配置 `RunEnd -> Idle`
-- **THEN** `ConditionRuleGraph` MUST 能读取 `StateRootCompleted`
-- **AND** transition rule MUST NOT 通过 Timeline asset membership 或节点路径判断完成
+#### Scenario: RunStart 完成后切换 RunLoop
+
+- **WHEN** RunStart StateRootCompleted 且 MoveMagnitude 达到阈值
+- **THEN** compiled rule MUST只在两项条件都成立时选择 transition
 
 ### Requirement: StateBehaviorSubTree root 完成不自动退出状态
 
@@ -408,55 +351,44 @@ Tree Inspector、EdgeView、StateMachineNode Inspector和Graph context menu MUST
 
 ### Requirement: StateMachine runtime 必须向作用域服务发布完整状态激活身份
 
-StateMachineGraphRuntime MUST使用完整 StateMachineExecutionScope(RuntimeId, StateId, ActivationGeneration) 维护 State Blackboard、状态运行事实与 nested execution path。该 scope 只属于状态逻辑，不得复制成动画 owner、animation ready、Tree animation activation 或 presentation lineage。
+CharacterSimulationState MUST使用由 Program handle、StateId、outer-to-inner execution path 与 ActivationGeneration 构成的稳定 State execution scope，维护 State Blackboard、状态运行事实和 nested path。该 scope MUST不复制成动画 owner、ready 或 presentation lineage。
 
-#### Scenario: target 首次执行
-
-- **WHEN** target StateNode 首次获得正式 state body update
-- **THEN** State 事实 MUST记录该 State execution scope 已执行
-- **AND** 系统 MUST不从该 executed 事实推导动画已采样或动画可切换
-
-#### Scenario: 同一状态再次进入
+#### Scenario: 同一 State 再次进入
 
 - **WHEN** StateMachine 离开 Attack1 后再次进入 Attack1
-- **THEN** StateMachineExecutionScope MUST使用新的 activation generation
-- **AND** 旧 activation 的 State Blackboard 数据 MUST不泄漏到新 activation
-
-#### Scenario: Transition rule 求值
-
-- **WHEN** runtime 求值当前 active State 的 ConditionRuleGraph
-- **THEN** evaluation context MUST携带当前完整 execution scope
-- **AND** rule 中的 State scope variable MUST解析到该 activation
+- **THEN** MUST分配新的 ActivationGeneration
+- **AND** 旧 State Blackboard slots MUST不泄漏
 
 #### Scenario: ForceStop
 
-- **WHEN** StateMachine runtime 被强制停止
-- **THEN** scope service MUST收到目标 execution scope 的释放通知
-- **AND** scope service MUST只清理该 execution scope 的逻辑 runtime data
+- **WHEN** compiled StateMachine 被 ForceStop
+- **THEN** lifecycle operation MUST只清理目标 execution scope 的 Character state slots
 
 ### Requirement: StateMachine上层停止必须使用普通Runnable release链
 
-parent Tree的Self、LowerPriority或ExplicitParentStop停止StateMachineNode时，StateMachineNode和全部active State descendants MUST复用通用graceful stop与Runnable Released事实。NodeStopContext MUST只携带结构cause和replacement provenance。系统 MUST不发布StateMachine专用external animation transition或读取external-exit Driver definition。
+上层 Tree interruption、graceful stop 与 ForceStop MUST通过统一 compiled Runnable lifecycle 传播到 StateMachine、State body 与 nested StateMachine。StateMachine operation MUST不维护第二套停止或表现等待生命周期。
 
-#### Scenario: parent replacement
+#### Scenario: 上层 LowerPriority 打断
 
-- **WHEN** Selector LowerPriority replacement停止StateMachineNode
-- **THEN** stop cause MUST沿StateMachineNode、active State和State body descendants保持不变
-- **AND** 每层activation MUST按barrier顺序发布Released
-- **AND** 动画策略 MUST由上层Presentation Adapter基于通用sites解析
+- **WHEN** 上层 compiled Tree 要求释放正在运行的 StateMachine
+- **THEN** release MUST按 outer-to-inner path 到达 active State body
+- **AND** 逻辑退出 MUST不等待动画 fade
 
 ### Requirement: 嵌套 StateMachine runtime 必须维护完整 execution path
 
-系统 MUST为嵌套StateMachine维护outer-to-inner State execution path，同时让StateNode、StateBehaviorSubTree和内部Runnable descendants进入通用Tree activation parent chain。状态body update、OnExit、ConditionRuleGraph、Timeline request和Blackboard access MUST使用同一State path；Animation lineage MUST来自通用Runnable facts，BTSMTL path MUST不维护可见动画后代状态。
+Program MUST为嵌套 StateMachine 编译稳定 outer-to-inner execution path。CharacterSimulationState MUST按 Actor/Graph activation/path 隔离 State slot 与 Blackboard State frame，不得按 runtime object identity 寻址。
 
-#### Scenario: Attack1 在 Attack 状态中运行
+#### Scenario: 内外层同名 State
 
-- **WHEN** 外层Action StateMachine的Attack active且内层Attack1 active
-- **THEN** State path MUST包含outer Attack和inner Attack1 scope
-- **AND** Runnable parent chain MUST连接外层State body、内层StateMachineNode、Attack1及其TimelineNode
+- **WHEN** 两个层级包含同名 State
+- **THEN** Kernel MUST以 compiled path/handle 定位不同 State slot
 
-#### Scenario: 嵌套 scope 栈不匹配
+### Requirement: StateMachine 运行时必须由 Compiled Operation 执行
 
-- **WHEN** runtime pop的State或Runnable frame不是当前最内层frame
-- **THEN** runtime MUST报告明确stack mismatch
-- **AND** MUST不静默删除其它active frame
+StateMachineNode、StateMachineGraph、StateNode、TransitionEdge 和 ConditionRuleGraph MUST编译为 CharacterSimulationProgram operation/table。Active、pending、exiting、transition、nested path 和 stop barrier MUST存入 CharacterSimulationState slot，MUST不由 StateMachineGraph runtime clone 持有。
+
+#### Scenario: 进入嵌套状态机
+
+- **WHEN** compiled State body 进入内层 StateMachineNode
+- **THEN** Kernel MUST以稳定 execution path 访问内层 state slot
+- **AND** MUST不创建 runtime Graph clone

@@ -19,9 +19,9 @@
 - **THEN** authoring validation MUST 报告明确错误并阻止构建 runtime
 - **AND** 系统 MUST NOT 创建空配置 fallback
 
-### Requirement: Gameplay 标识、引用闭包与数值必须在 authoring 阶段严格校验
+### Requirement: Gameplay 标识与引用闭包必须在 authoring 阶段严格校验
 
-系统 MUST 对 GameplayTag、Attribute 和 GameplayEffect 使用稳定正式标识，并 MUST 校验重复标识、未知标识、父级 tag、attribute bound、effect requirement、component 引用、Additional Effect 引用闭包和全部 authoring float。Attribute initial value、constant bound 与 Magnitude constant/coefficient/post-add MUST 为有限数值。运行时 MUST 使用已经校验的 registry/index 解析，不得按资产名称、路径、显示文本或 Addressables key 猜测对象，也不得把非法数值替换为默认值。
+系统 MUST 对 GameplayTag、Attribute 和 GameplayEffect 使用稳定正式标识，并 MUST 校验重复标识、未知标识、父级 tag、attribute bound、effect requirement、component 引用、Additional Effect 引用闭包和全部 authoring float。Attribute initial value、constant bound 与 Magnitude constant/coefficient/post-add MUST 为有限数值。SetByCaller 声明 MUST 使用精确必填参数集合，不得保存可选标记。Additional Effect 参数绑定 MUST 校验子参数完整且不重复、父参数来源已声明、常量来源有限。运行时 MUST 使用已经校验的 registry/index 解析，不得按资产名称、路径、显示文本或 Addressables key 猜测对象，也不得把非法数值替换为默认值。
 
 #### Scenario: Effect 引用未知 Attribute
 
@@ -45,17 +45,23 @@
 
 - **WHEN** CharacterGameplayEffectProfile 的 Initial Attribute 包含 NaN
 - **THEN** authoring validation MUST 报告该 Attribute
-- **AND** GameplayAttributeStore MUST NOT 被创建
+- **AND** MUST NOT 创建 runtime state            
+
+#### Scenario: Additional Effect 缺少子参数绑定
+
+- **WHEN** 子 Effect 声明 SetByCaller 参数但 Additional Effect 引用没有完整绑定
+- **THEN** Runtime Definition build MUST 精确报告父 Effect、子 Effect 和缺失参数
+- **AND** 系统 MUST NOT 通过同名复制或默认值补齐
 
 ### Requirement: GameplayEffectDefinition 必须直接提供 Effect Behavior 身份
 
-每个 `GameplayEffectDefinition` MUST 直接实现 Gameplay Contracts 中 Effect 类 `IGameplayBehaviorProfile` 或等价身份合同，并 MUST 使用 `EffectId` 作为唯一 `BehaviorId`。Definition MUST 只保存 gameplay identity、Tag 和 Effect 规则，不得保存 ServerAuthoritative prediction、authority、replication、history、packet 或 endpoint policy。当前网络模型的完整 Effect policy MUST 唯一保存在 `ServerAuthoritativeCharacterSyncProfile` 并按 Effect BehaviorId 引用。系统 MUST NOT 要求作者为同一个 Effect 再创建 generic BehaviorProfile。
+每个 `GameplayEffectDefinition` MUST直接实现Effect类 `IGameplayBehaviorProfile`，并使用 `EffectId`作为唯一 `BehaviorId`。Definition MUST只保存gameplay identity、Tag和Effect规则，不得保存Network Model参数。具体Model Egress MUST只按显式fact-kind coverage消费已提交GameplayFact；系统 MUST不要求同一Effect再创建generic BehaviorProfile，也 MUST不虚构逐Effect网络策略表。                                                                                                                                                          
 
-#### Scenario: 配置预测 stamina cost
+#### Scenario: 配置 stamina cost      
 
-- **WHEN** 作者为一个 Instant stamina cost effect 配置 ClientPredicted Effect policy
+- **WHEN** 作者配置一个 Instant stamina cost effect                                  
 - **THEN** EffectDefinition MUST 只提供对应 BehaviorId 和 Effect kind
-- **AND** 作者 MUST 在 `ServerAuthoritativeCharacterSyncProfile` 中按该 BehaviorId 配置完整模型策略
+- **AND** ServerAuthoritative复制需求 MUST由Effect fact-kind coverage统一表达                          
 - **AND** registry MUST NOT 存在同身份的额外 generic profile
 
 #### Scenario: Effect 身份重复
@@ -71,7 +77,7 @@ Effect definition MUST 以类型化 component authoring 声明 modifier、grante
 #### Scenario: 新增周期伤害效果
 
 - **WHEN** 作者配置 duration、periodic execution 和 Health modifier component
-- **THEN** runtime state MUST 位于 `ActiveGameplayEffect`
+- **THEN** runtime state MUST 位于 Target aggregate      
 - **AND** component asset MUST 在多个角色之间安全复用
 
 #### Scenario: Component 保存角色引用
@@ -82,19 +88,18 @@ Effect definition MUST 以类型化 component authoring 声明 modifier、grante
 
 ### Requirement: Gameplay Effect authoring 必须构建不可变 Runtime Definition
 
-CharacterPipeline 创建运行时前，系统 MUST 将 `CharacterGameplayEffectProfile`、Tag Catalog、Attribute Definition 和 Effect Definition 闭包校验并构建为不可变 `GameplayEffectRuntimeDefinition`。GameplayEffectRuntime MUST 只持有该运行数据，不得回读 CharacterPipelineDefinition、ScriptableObject authoring graph、Inspector context、asset path 或 Addressables key。构建失败 MUST 阻止创建角色运行时，不得创建空 registry 或默认 Effect fallback。
+Compiler MUST在生成 CharacterSimulationProgram 前闭包校验 CharacterGameplayEffectProfile、Tag Catalog、Attribute Definition 和 Effect Definition，并将其编译为不可变 portable GameplayEffect catalog/operation data。Runtime MUST不回读 CharacterPipelineDefinition、ScriptableObject、asset path 或 Inspector context，也 MUST不创建空 registry/default Effect fallback。
 
-#### Scenario: 创建角色 Gameplay Effect
+#### Scenario: 编译角色 Gameplay Effect
 
-- **WHEN** CharacterPipelineDefinition 的 Gameplay Effect 配置闭包完整且通过校验
-- **THEN** Builder MUST 生成不可变 runtime definition
-- **AND** CharacterGameplayEffectAdapter MUST 使用该 runtime definition 创建 GameplayEffectRuntime
+- **WHEN** CharacterPipelineDefinition 的 GE 配置闭包完整
+- **THEN** Compiler MUST将 catalog写入 Program canonical bytes
+- **AND** CharacterSimulationState MUST按对应 layout创建 GE slots
 
 #### Scenario: Definition 闭包不完整
 
-- **WHEN** Effect 引用了不在当前 registry 中的 Tag、Attribute 或 Additional Effect
-- **THEN** runtime definition 构建 MUST 失败并报告精确引用
-- **AND** Adapter MUST NOT 在运行时搜索其他资产补齐
+- **WHEN** Effect 引用未注册 Tag、Attribute 或 Additional Effect
+- **THEN** Program build MUST失败并报告精确 authoring identity
 
 ### Requirement: 旧轻量 GE 只能作为迁移参考
 

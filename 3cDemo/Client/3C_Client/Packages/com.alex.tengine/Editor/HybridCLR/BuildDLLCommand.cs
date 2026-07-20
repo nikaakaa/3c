@@ -87,6 +87,7 @@ public static class BuildDLLCommand
     public static void BuildAndCopyDlls()
     {
 #if ENABLE_HYBRIDCLR
+        UpdateSettingEditor.ForceUpdateAssemblies();
         BuildTarget target = EditorUserBuildSettings.activeBuildTarget;
         CompileDllCommand.CompileDll(target);
         CopyAOTHotUpdateDlls(target);
@@ -96,6 +97,7 @@ public static class BuildDLLCommand
     public static void BuildAndCopyDlls(BuildTarget target)
     {
 #if ENABLE_HYBRIDCLR
+        UpdateSettingEditor.ForceUpdateAssemblies();
         CompileDllCommand.CompileDll(target);
         CopyAOTHotUpdateDlls(target);
 #endif
@@ -103,8 +105,8 @@ public static class BuildDLLCommand
 
     public static void CopyAOTHotUpdateDlls(BuildTarget target)
     {
-        CopyAOTAssembliesToAssetPath();
-        CopyHotUpdateAssembliesToAssetPath();
+        CopyAOTAssembliesToAssetPath(target);
+        CopyHotUpdateAssembliesToAssetPath(target);
         
 #if ENABLE_HYBRIDCLR && ENABLE_OBFUZ
         CompileDllCommand.CompileDll(target);
@@ -133,20 +135,19 @@ public static class BuildDLLCommand
         AssetDatabase.Refresh();
     }
 
-    public static void CopyAOTAssembliesToAssetPath()
+    public static void CopyAOTAssembliesToAssetPath(BuildTarget target)
     {
 #if ENABLE_HYBRIDCLR
-        var target = EditorUserBuildSettings.activeBuildTarget;
         string aotAssembliesSrcDir = SettingsUtil.GetAssembliesPostIl2CppStripDir(target);
         string aotAssembliesDstDir = Application.dataPath +"/"+ TEngine.Settings.UpdateSetting.AssemblyTextAssetPath;
+        Directory.CreateDirectory(aotAssembliesDstDir);
 
         foreach (var dll in TEngine.Settings.UpdateSetting.AOTMetaAssemblies)
         {
             string srcDllPath = $"{aotAssembliesSrcDir}/{dll}";
             if (!System.IO.File.Exists(srcDllPath))
             {
-                Debug.LogError($"ab中添加AOT补充元数据dll:{srcDllPath} 时发生错误,文件不存在。裁剪后的AOT dll在BuildPlayer时才能生成，因此需要你先构建一次游戏App后再打包。");
-                continue;
+                throw new FileNotFoundException($"缺少目标平台 {target} 的 AOT 补充元数据程序集。请先构建一次该平台 Player。", srcDllPath);
             }
             string dllBytesPath = $"{aotAssembliesDstDir}/{dll}.bytes";
             System.IO.File.Copy(srcDllPath, dllBytesPath, true);
@@ -155,13 +156,12 @@ public static class BuildDLLCommand
 #endif
     }
 
-    public static void CopyHotUpdateAssembliesToAssetPath()
+    public static void CopyHotUpdateAssembliesToAssetPath(BuildTarget target)
     {
 #if ENABLE_HYBRIDCLR
-        var target = EditorUserBuildSettings.activeBuildTarget;
-
         string hotfixDllSrcDir = SettingsUtil.GetHotUpdateDllsOutputDirByTarget(target);
         string hotfixAssembliesDstDir = Application.dataPath +"/"+ TEngine.Settings.UpdateSetting.AssemblyTextAssetPath;
+        Directory.CreateDirectory(hotfixAssembliesDstDir);
         foreach (var dll in SettingsUtil.HotUpdateAssemblyFilesExcludePreserved)
         {
             string dllPath = $"{hotfixDllSrcDir}/{dll}";

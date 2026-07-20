@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Behavior;
-using ThirdPersonCharacter.Pipeline.Input;
-using ThirdPersonCharacter.Pipeline.Network;
 using TreeDesigner;
 using UnityEngine;
 
@@ -77,72 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         protected override void DoAction()
         {
-            m_Result = ActionActivationResult.InvalidRequest;
-            m_Activated.Value = false;
-
-            if (!TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            if (!m_ActionProfile || string.IsNullOrEmpty(m_ActionProfile.ActionId))
-                return;
-
-            if (!TryResolveSourceRequest(context, out string sourceInputRequestId, out ulong inputSequence))
-                return;
-
-            ActionTargetSnapshot targetSnapshot = ResolveTargetSnapshot(context);
-            ActionActivationRequest request = new ActionActivationRequest(
-                m_ActionProfile.ActionId,
-                sourceInputRequestId,
-                inputSequence,
-                context.LocalLogicTick,
-                m_TargetKey,
-                targetSnapshot,
-                Owner != null ? Owner.GraphAuthoringId : string.Empty,
-                GUID,
-                GetType().Name);
-
-            m_Result = context.SubmitActionActivation(request, out ActionInstanceHandle handle);
-            m_Activated.Value = m_Result == ActionActivationResult.Activated;
-            if (m_Activated.Value)
-                context.SetActionContext(m_ActionContext, handle);
-        }
-
-        bool TryResolveSourceRequest(CharacterGraphContext context, out string sourceInputRequestId, out ulong inputSequence)
-        {
-            sourceInputRequestId = string.Empty;
-            inputSequence = context.TickContext.InputSequence;
-            if (string.IsNullOrEmpty(m_SourceInputRequestId))
-                return true;
-
-            CharacterInputRequest request;
-            bool found = m_ConsumeSourceInputRequest
-                ? context.TryConsumeInputRequest(m_SourceInputRequestId, out request)
-                : context.TryGetInputRequest(m_SourceInputRequestId, out request);
-            if (!found)
-                return false;
-
-            sourceInputRequestId = request.RequestId;
-            inputSequence = request.InputSequence;
-            return true;
-        }
-
-        ActionTargetSnapshot ResolveTargetSnapshot(CharacterGraphContext context)
-        {
-            if (m_TargetSnapshotVariable.IsValid &&
-                context.TryGetBlackboardValue(Owner, m_TargetSnapshotVariable, out ActionTargetSnapshot snapshot))
-                return snapshot;
-
-            return ActionTargetSnapshot.None;
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext context)
-        {
-            context = null;
-            if (Owner != null && Owner.TryGetUser(out context) && context != null)
-                return true;
-
-            Debug.LogError($"{GetType().Name}: CharacterGraphContext is missing from graph user.");
-            return false;
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -193,180 +126,77 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         protected override void DoAction()
         {
-            m_Submitted.Value = false;
-            if (!TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            if (!context.TryGetActionContextHandle(m_ActionContext, out ActionInstanceHandle handle))
-                return;
-
-            var transition = new ActionLifecycleTransition(
-                handle.ActionInstanceId,
-                m_TransitionType,
-                context.LocalLogicTick,
-                handle.InputSequence,
-                m_Reason,
-                Owner != null ? Owner.GraphAuthoringId : string.Empty,
-                GUID,
-                GetType().Name);
-            m_Submitted.Value = context.SubmitActionLifecycleTransition(transition);
-            if (m_Submitted.Value)
-                m_LastSubmissionDebug = $"{handle.ActionInstanceId} {m_TransitionType} {m_Reason} tick:{context.LocalLogicTick}";
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext context)
-        {
-            context = null;
-            if (Owner != null && Owner.TryGetUser(out context) && context != null)
-                return true;
-
-            Debug.LogError($"{GetType().Name}: CharacterGraphContext is missing from graph user.");
-            return false;
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
     [Serializable]
-    [NodeName("Submit Gameplay Cue")]
-    [NodePath("Base/Action/Output/Submit Gameplay Cue")]
-    public sealed class SubmitGameplayCueNode : ActionNode
+    [NodeName("Action Window Active Info")]
+    [NodePath("Base/Value/Action/Window Active")]
+    public sealed class ActionWindowActiveInfoNode : ValueNode
     {
-        [SerializeField]
-        PipelineBlackboardVariableReference m_BlackboardVariable;
+        [SerializeField, ShowInPanel("Window Type")]
+        string m_WindowType;
 
-        [SerializeField, ShowInPanel("Action Context")]
-        ActionContextSlot m_ActionContext;
+        [SerializeField, PropertyPort(PortDirection.Output, "Active"), ReadOnly]
+        BoolPropertyPort m_Output = new BoolPropertyPort();
 
-        [SerializeField, ShowInPanel("Cue Id")]
-        string m_CueId;
+        public string WindowType => m_WindowType ?? string.Empty;
 
-        [SerializeField, ShowInPanel("Cue Type")]
-        string m_CueType;
-
-        [SerializeField, PropertyPort(PortDirection.Output, "Submitted"), ReadOnly]
-        BoolPropertyPort m_Submitted = new BoolPropertyPort();
-
-        public override State ReturnState => m_Submitted.Value ? State.Success : State.Failure;
-        public PipelineBlackboardVariableReference BlackboardVariable => m_BlackboardVariable;
-
-        protected override void DoAction()
+#if UNITY_EDITOR
+        public void ConfigureAuthoring(string windowType)
         {
-            m_Submitted.Value = false;
-            if (!TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            if (!context.TryGetActionContextHandle(m_ActionContext, out ActionInstanceHandle handle))
-                return;
-
-            var cue = new GameplayCueFact(
-                handle.ActionId,
-                m_CueId,
-                m_CueType,
-                handle.ActionInstanceId,
-                default,
-                default,
-                default,
-                context.LocalLogicTick);
-            m_Submitted.Value = context.SubmitGameplayCue(Owner, m_BlackboardVariable, cue);
+            m_WindowType = string.IsNullOrWhiteSpace(windowType) ? string.Empty : windowType.Trim();
+            OnNodeChangedCallback();
         }
+#endif
 
-        bool TryGetGraphContext(out CharacterGraphContext context)
+        protected override void OutputValue()
         {
-            context = null;
-            if (Owner != null && Owner.TryGetUser(out context) && context != null)
-                return true;
-
-            Debug.LogError($"{GetType().Name}: CharacterGraphContext is missing from graph user.");
-            return false;
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
     [Serializable]
-    [NodeName("Submit Gameplay Result Event")]
-    [NodePath("Base/Action/Output/Submit Gameplay Result Event")]
-    public sealed class SubmitGameplayResultEventNode : ActionNode
+    [NodeName("Can Activate Action Info")]
+    [NodePath("Base/Value/Action/Can Activate")]
+    public sealed class CanActivateActionInfoNode : ValueNode
     {
+        [SerializeField, ShowInPanel("Target Action Profile")]
+        ActionProfile m_ActionProfile;
+
         [SerializeField]
-        PipelineBlackboardVariableReference m_BlackboardVariable;
+        PipelineBlackboardVariableReference m_TargetSnapshotVariable;
 
-        [SerializeField, ShowInPanel("Action Context")]
-        ActionContextSlot m_ActionContext;
+        [SerializeField, PropertyPort(PortDirection.Output, "Allowed"), ReadOnly]
+        BoolPropertyPort m_Output = new BoolPropertyPort();
 
-        [SerializeField, ShowInPanel("Require Action Context")]
-        bool m_RequireActionContext = true;
+        public ActionProfile ActionProfile => m_ActionProfile;
+        public PipelineBlackboardVariableReference TargetSnapshotVariable => m_TargetSnapshotVariable;
 
-        [SerializeField, ShowInPanel("Behavior Profile")]
-        GameplayBehaviorProfile m_BehaviorProfile;
-
-        [SerializeField, ShowInPanel("Result Type")]
-        string m_ResultType = "ActionWindowResult";
-
-        [SerializeField, ShowInPanel("Window Id")]
-        string m_WindowId;
-
-        [SerializeField, ShowInPanel("Target Id")]
-        string m_TargetId;
-
-        [SerializeField, PropertyPort(PortDirection.Output, "Submitted"), ReadOnly]
-        BoolPropertyPort m_Submitted = new BoolPropertyPort();
-
-        public override State ReturnState => m_Submitted.Value ? State.Success : State.Failure;
-        public PipelineBlackboardVariableReference BlackboardVariable => m_BlackboardVariable;
-
-        protected override void DoAction()
+#if UNITY_EDITOR
+        public void ConfigureAuthoring(
+            ActionProfile actionProfile,
+            PipelineBlackboardVariableReference targetSnapshotVariable)
         {
-            m_Submitted.Value = false;
-            if (!TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            ulong actionInstanceId = 0;
-            if (context.TryGetActionContextHandle(m_ActionContext, out ActionInstanceHandle handle))
-                actionInstanceId = handle.ActionInstanceId;
-            else if (m_RequireActionContext)
-                return;
-
-            string behaviorId = actionInstanceId == 0 && m_BehaviorProfile ? m_BehaviorProfile.BehaviorId : string.Empty;
-            GameplayResultEvent resultEvent = new GameplayResultEvent(
-                behaviorId,
-                BuildResultId(actionInstanceId, context.LocalLogicTick, GUID),
-                actionInstanceId,
-                m_WindowId,
-                m_TargetId,
-                m_ResultType,
-                context.LocalLogicTick);
-            m_Submitted.Value = context.SubmitGameplayResultEvent(Owner, m_BlackboardVariable, resultEvent);
+            m_ActionProfile = actionProfile;
+            m_TargetSnapshotVariable = targetSnapshotVariable;
+            OnNodeChangedCallback();
         }
 
-        static ulong BuildResultId(ulong actionInstanceId, ulong localLogicTick, string sourceId)
+        public override IEnumerable<NodeAssetReference> GetAssetReferences()
         {
-            ulong sourceHash = StableHash(sourceId);
-            return (actionInstanceId != 0 ? actionInstanceId : sourceHash) * 1000003UL + localLogicTick;
+            foreach (NodeAssetReference reference in base.GetAssetReferences())
+                yield return reference;
+
+            yield return new NodeAssetReference(this, "m_ActionProfile", "Target Action Profile", m_ActionProfile, true);
         }
+#endif
 
-        static ulong StableHash(string value)
+        protected override void OutputValue()
         {
-            const ulong offset = 14695981039346656037UL;
-            const ulong prime = 1099511628211UL;
-            ulong hash = offset;
-            if (!string.IsNullOrEmpty(value))
-            {
-                for (int i = 0; i < value.Length; i++)
-                {
-                    hash ^= value[i];
-                    hash *= prime;
-                }
-            }
-
-            return hash == 0 ? 1UL : hash;
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext context)
-        {
-            context = null;
-            if (Owner != null && Owner.TryGetUser(out context) && context != null)
-                return true;
-
-            Debug.LogError($"{GetType().Name}: CharacterGraphContext is missing from graph user.");
-            return false;
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
+
 }

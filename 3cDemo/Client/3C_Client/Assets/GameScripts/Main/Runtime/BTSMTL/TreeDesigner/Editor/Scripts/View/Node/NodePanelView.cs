@@ -233,8 +233,7 @@ namespace TreeDesigner.Editor
                     SerializedProperty serializedProperty = GetBoundSerializedProperty(item.Key);
                     if (serializedProperty == null)
                         continue;
-                    propertyField.bindingPath = serializedProperty.propertyPath;
-                    propertyField.Bind(m_Node.GetSerializedTree());
+                    propertyField.BindProperty(serializedProperty);
                 }
             }
         }
@@ -252,7 +251,7 @@ namespace TreeDesigner.Editor
             if (serializedProperty == null)
                 return null;
             PropertyField field = new PropertyField(serializedProperty, labelName);
-            field.Bind(serializedProperty.serializedObject);
+            field.BindProperty(serializedProperty);
             AddField(accessor.FieldKey, field);
             field.SetEnabled(!accessor.IsReadOnly());
             return field;
@@ -260,7 +259,7 @@ namespace TreeDesigner.Editor
         public PropertyField AddPropertyPortField(SerializedProperty serializedProperty, PropertyPort propertyPort, string labelName)
         {
             PropertyField field = new PropertyField(serializedProperty, labelName);
-            field.Bind(serializedProperty.serializedObject);
+            field.BindProperty(serializedProperty);
             AddField(propertyPort.PortId, field);
             return field;
         }

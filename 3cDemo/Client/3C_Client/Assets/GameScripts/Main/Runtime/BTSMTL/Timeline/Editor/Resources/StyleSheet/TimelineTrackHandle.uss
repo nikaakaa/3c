@@ -19,14 +19,13 @@
 }
 
 #name-field {
-    flex-grow: 1;
+    height: 30px;
     margin-top: 5px;
     margin-bottom: 5px;
     right: 20px;
     left: 0;
     position: absolute;
     top: 0;
-    bottom: 0;
     margin-left: 28px;
 }
 
@@ -39,4 +38,98 @@
     height: 20px;
     margin-top: 5px;
     margin-left: 5px;
+}
+
+#marker-sync-summary {
+    display: none;
+    position: absolute;
+    left: 5px;
+    right: 5px;
+    top: 34px;
+    height: 16px;
+    font-size: 10px;
+    color: rgba(205, 220, 222, 0.72);
+    -unity-text-align: middle-left;
+    overflow: hidden;
+}
+
+#curve-channel-labels {
+    display: none;
+    position: absolute;
+    left: 5px;
+    right: 5px;
+    flex-direction: column;
+}
+
+.curveChannelRow {
+    height: 72px;
+    min-height: 72px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 6px;
+    padding-right: 6px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.curveChannelSwatch {
+    width: 8px;
+    height: 8px;
+    margin-right: 7px;
+    border-top-left-radius: 1px;
+    border-top-right-radius: 1px;
+    border-bottom-left-radius: 1px;
+    border-bottom-right-radius: 1px;
+}
+
+.curveChannelLabel {
+    flex-grow: 1;
+    font-size: 11px;
+    color: rgb(214, 214, 214);
+    -unity-text-align: middle-left;
+    overflow: hidden;
+}
+
+.curveChannelRange {
+    width: 32px;
+    font-size: 9px;
+    color: rgba(190, 190, 190, 0.6);
+    -unity-text-align: middle-right;
+}
+
+#animation-curves-header {
+    display: none;
+    position: absolute;
+    left: 5px;
+    right: 5px;
+    top: 54px;
+    height: 22px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 6px;
+    padding-right: 6px;
+    background-color: rgba(0, 0, 0, 0.24);
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+#animation-curves-title {
+    flex-grow: 1;
+    font-size: 9px;
+    color: rgba(220, 220, 220, 0.72);
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+}
+
+#animation-curves-fold {
+    width: 12px;
+    font-size: 10px;
+    color: rgba(220, 220, 220, 0.82);
+    -unity-text-align: middle-left;
+}
+
+#animation-curves-value {
+    font-size: 8px;
+    color: rgba(180, 180, 180, 0.55);
+    -unity-text-align: middle-right;
 }

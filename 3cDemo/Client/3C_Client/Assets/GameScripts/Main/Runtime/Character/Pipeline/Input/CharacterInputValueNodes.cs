@@ -1,6 +1,5 @@
 using System;
 using BTSMTL.Timeline;
-using ThirdPersonCharacter.Pipeline.Graph;
 using TreeDesigner;
 using UnityEngine;
 
@@ -27,16 +26,6 @@ namespace ThirdPersonCharacter.Pipeline.Input
 #if UNITY_EDITOR
             OnNodeChangedCallback();
 #endif
-        }
-
-        protected bool TryGetGraphContext(out CharacterGraphContext graphContext)
-        {
-            graphContext = null;
-            if (Owner != null && Owner.TryGetUser(out graphContext) && graphContext != null)
-                return true;
-
-            ReportSourceError("CharacterGraphContext is missing from graph user.");
-            return false;
         }
 
         protected bool TryGetInputValueId(out string inputValueId)
@@ -84,16 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            base.OutputValue();
-            m_Output.Value = false;
-
-            if (!TryGetInputValueId(out string inputValueId) || !TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            if (context.TryReadInputValueBool(inputValueId, out bool value))
-                m_Output.Value = value;
-            else
-                ReportReadError($"Could not read bool input value '{inputValueId}'.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -107,16 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            base.OutputValue();
-            m_Output.Value = 0f;
-
-            if (!TryGetInputValueId(out string inputValueId) || !TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            if (context.TryReadInputValueFloat(inputValueId, out float value))
-                m_Output.Value = value;
-            else
-                ReportReadError($"Could not read float input value '{inputValueId}'.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -130,16 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            base.OutputValue();
-            m_Output.Value = Vector2.zero;
-
-            if (!TryGetInputValueId(out string inputValueId) || !TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            if (context.TryReadInputValueVector2(inputValueId, out Vector2 value))
-                m_Output.Value = value;
-            else
-                ReportReadError($"Could not read Vector2 input value '{inputValueId}'.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -153,16 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            base.OutputValue();
-            m_Output.Value = 0f;
-
-            if (!TryGetInputValueId(out string inputValueId) || !TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            if (context.TryReadInputValueVector2(inputValueId, out Vector2 value))
-                m_Output.Value = value.magnitude;
-            else
-                ReportReadError($"Could not read Vector2 input value '{inputValueId}'.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -197,37 +150,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected bool TryReadBlackboardValue<T>(out T value)
         {
-            value = default;
-            if (!m_BlackboardVariable.IsValid)
-            {
-                ReportReadError("blackboard declaration reference is missing.");
-                return false;
-            }
-
-            if (!TryGetGraphContext(out CharacterGraphContext context))
-                return false;
-
-            if (context.TryGetBlackboardValue(Owner, m_BlackboardVariable, out value))
-                return true;
-
-            if (Owner != null && Owner.TryGetEvaluationContext(out ConditionRuleEvaluationContext evaluationContext))
-                evaluationContext.Fail($"Could not read {m_BlackboardVariable.DisplayKey}.");
-            ReportReadError($"Could not read {typeof(T).Name} blackboard value '{m_BlackboardVariable.DisplayKey}'.");
-            return false;
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext graphContext)
-        {
-            graphContext = null;
-            if (Owner != null && Owner.TryGetUser(out graphContext) && graphContext != null)
-                return true;
-
-            if (!m_ReportedSourceError)
-            {
-                m_ReportedSourceError = true;
-                Debug.LogError($"{GetType().Name}: CharacterGraphContext is missing from graph user.");
-            }
-            return false;
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
 
         void ReportReadError(string message)
@@ -378,29 +301,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            base.OutputValue();
-            m_Output.Value = false;
-
-            if (string.IsNullOrEmpty(m_RequestId))
-            {
-                ReportReadError("action request id is missing.");
-                return;
-            }
-
-            if (!TryGetGraphContext(out CharacterGraphContext context))
-                return;
-
-            m_Output.Value = context.HasInputRequest(m_RequestId);
-        }
-
-        bool TryGetGraphContext(out CharacterGraphContext graphContext)
-        {
-            graphContext = null;
-            if (Owner != null && Owner.TryGetUser(out graphContext) && graphContext != null)
-                return true;
-
-            ReportSourceError("CharacterGraphContext is missing from graph user.");
-            return false;
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
 
         void ReportSourceError(string message)
@@ -451,11 +352,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            base.OutputValue();
-            m_Output.Value = Owner != null &&
-                             Owner.TryGetUser(out IStateExitContextRuntimeAccess access) &&
-                             access.TryGetStateExitContext(out StateExitContext context) &&
-                             context.Cause == m_Cause;
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -482,10 +379,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            base.OutputValue();
-            m_Output.Value = Owner != null &&
-                             Owner.TryGetUser(out CharacterGraphContext context) &&
-                             context.TryGetActionContextHandle(m_ActionContext, out _);
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 

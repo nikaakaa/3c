@@ -5,64 +5,177 @@ using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
-using ThirdPersonCharacter.Pipeline.Network;
-using ThirdPersonCharacter.Pipeline.Motion;
-using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
+using ThirdPersonCharacter.Pipeline.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Graph;
+using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonCamera;
+using ThirdPersonSimulation;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace ThirdPersonCharacter.Pipeline
 {
     [DisallowMultipleComponent]
-    public sealed class CharacterPipelineHost : TimelinePreviewTarget
+    public sealed class CharacterPipelineHost : TimelinePreviewTarget, ITimelineAnimationMarkerSyncAuthoringContext
     {
         [SerializeField] CharacterPipelineDefinition m_Definition;
+        [SerializeField] SimulationSessionHost m_SessionHost;
         [SerializeField] string m_ActorId;
+        [SerializeField] CharacterControlSource m_ControlSource;
+        [SerializeField] CharacterPresentationRole m_PresentationRole = CharacterPresentationRole.LocalOwner;
         [SerializeField] AnimancerComponent m_Animancer;
-        [SerializeField] MonoBehaviour m_LogicPoseAdapter;
-        [SerializeField] MonoBehaviour m_MotionExecutorAdapter;
+        [SerializeField] Float32WorldBodyBinding m_WorldBodyBinding;
         [SerializeField] Transform m_VisualRoot;
+        [SerializeField] CharacterBodyPresentationProfile m_BodyPresentationProfile;
+        [SerializeField] CharacterFootPlacementComposition m_FootPlacement;
         [SerializeField] ThirdPersonCameraController m_CameraRig;
         [SerializeField] Transform m_CameraFollowAnchor;
         [SerializeField] Transform m_CameraAimAnchor;
+        [SerializeField] List<CameraTargetBinding> m_CameraTargetBindings = new List<CameraTargetBinding>();
         [SerializeField] string m_CameraLookInputValueId;
-        [SerializeField] CharacterInputSource m_InputSource = CharacterInputSource.LocalDevice;
-        [SerializeField] CharacterMotionAuthority m_MotionAuthority = CharacterMotionAuthority.LocalSolver;
 
-        CharacterPipeline m_Pipeline;
-        CharacterPipelineDefinition m_PreviewDefinition;
-        AnimancerComponent m_PreviewAnimancer;
-        PreviewSession m_PreviewSession;
-        Guid m_PreviewSessionId;
-        ulong m_PreviewGeneration;
-        bool m_OwnsPreviewGraphClock;
+        CharacterSimulationActorRegistration m_Registration;
+        CharacterPipelinePreviewController m_PreviewController;
 
         public CharacterPipelineDefinition Definition => m_Definition;
+        public SimulationSessionHost SessionHost => m_SessionHost;
         public string ActorId => string.IsNullOrWhiteSpace(m_ActorId) ? string.Empty : m_ActorId.Trim();
+        public CharacterControlSource ControlSource => m_ControlSource;
+        public CharacterPresentationRole PresentationRole => m_PresentationRole;
+        public string WorldRevision => m_SessionHost && m_SessionHost.Composition
+            ? m_SessionHost.Composition.WorldRevision
+            : string.Empty;
         public AnimancerComponent Animancer => m_Animancer;
-        public MonoBehaviour LogicPoseAdapter => m_LogicPoseAdapter;
-        public MonoBehaviour MotionExecutorAdapter => m_MotionExecutorAdapter;
+        public Float32WorldBodyBinding WorldBodyBinding => m_WorldBodyBinding;
         public Transform VisualRoot => m_VisualRoot;
+        public CharacterBodyPresentationProfile BodyPresentationProfile => m_BodyPresentationProfile;
+        public CharacterFootPlacementComposition FootPlacement => m_FootPlacement;
         public ThirdPersonCameraController CameraRig => m_CameraRig;
         public Transform CameraFollowAnchor => m_CameraFollowAnchor;
         public Transform CameraAimAnchor => m_CameraAimAnchor;
-        public CharacterInputSource InputSource => m_InputSource;
-        public CharacterMotionAuthority MotionAuthority => m_MotionAuthority;
-        public CharacterPipeline Pipeline => m_Pipeline;
+        public CharacterSimulationActorRegistration Registration => m_Registration;
         public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> PreviewAnimationSnapshot =>
-            m_PreviewSession != null
-                ? m_PreviewSession.Engine.Snapshots
+            m_PreviewController != null
+                ? m_PreviewController.AnimationSnapshots
                 : Array.Empty<AnimationPlaybackLifecycleSnapshot>();
-        public override bool CanPreviewTimeline => !Application.isPlaying && m_Definition && m_Animancer;
+        public override bool CanPreviewTimeline =>
+            !Application.isPlaying &&
+            m_Definition &&
+            m_Definition.AnimationPresentationProfile &&
+            m_Definition.SimulationProgram &&
+            m_Definition.PresentationProjection &&
+            m_Animancer &&
+            m_VisualRoot;
+        public override string PreviewStatus =>
+            "Animation and authored MotionCurve preview. MotionWarp, collision, and Foot Placement require a formal runtime session.";
 
-        public bool EnsurePipeline()
+        public void CollectAnimationMarkerSyncAuthoringIssues(
+            TimelineData timeline,
+            string targetTrackAuthoringId,
+            List<TimelineAnimationMarkerSyncAuthoringIssue> destination)
         {
-            if (m_Pipeline != null)
+            if (destination == null)
+                throw new ArgumentNullException(nameof(destination));
+            destination.Clear();
+            if (!m_Definition || !m_Definition.RootTreeAsset || m_Definition.RootTreeAsset.Tree == null || timeline == null)
+                return;
+
+            var topologyErrors = new List<string>();
+            CharacterAuthoringTopologyProjection topology = CharacterAuthoringTopologyProjection.Build(
+                m_Definition.RootTreeAsset.Tree,
+                topologyErrors);
+            for (int i = 0; i < topologyErrors.Count; i++)
+            {
+                destination.Add(new TimelineAnimationMarkerSyncAuthoringIssue(
+                    "character_authoring_topology",
+                    topologyErrors[i],
+                    m_Definition.RootTreeAsset.name,
+                    string.Empty));
+            }
+            if (!topology.IsValid)
+                return;
+
+            var issues = new List<AnimationMarkerSyncAuthoringIssue>();
+            CharacterAnimationMarkerSyncAuthoringContext.ValidateTrackContext(
+                topology,
+                timeline.AuthoringId,
+                targetTrackAuthoringId,
+                issues);
+            for (int i = 0; i < issues.Count; i++)
+            {
+                AnimationMarkerSyncAuthoringIssue issue = issues[i];
+                destination.Add(new TimelineAnimationMarkerSyncAuthoringIssue(
+                    issue.Code,
+                    issue.Message,
+                    issue.AuthoringPath,
+                    issue.RelatedIdentity));
+            }
+        }
+
+        public void CollectAnimationMarkerSyncGroupMembers(
+            TimelineData timeline,
+            string targetTrackAuthoringId,
+            List<TimelineAnimationMarkerSyncGroupMember> destination)
+        {
+            if (destination == null)
+                throw new ArgumentNullException(nameof(destination));
+            destination.Clear();
+            if (!m_Definition || !m_Definition.RootTreeAsset || m_Definition.RootTreeAsset.Tree == null || timeline == null)
+                return;
+
+            var topologyErrors = new List<string>();
+            CharacterAuthoringTopologyProjection topology = CharacterAuthoringTopologyProjection.Build(
+                m_Definition.RootTreeAsset.Tree,
+                topologyErrors);
+            if (!topology.IsValid)
+                return;
+            CharacterAnimationMarkerSyncAuthoringContext.CollectGroupMembers(
+                topology,
+                timeline.AuthoringId,
+                targetTrackAuthoringId,
+                destination);
+        }
+
+        public void BindSessionActor(SimulationSessionHost sessionHost, ActorId actorId)
+        {
+            if (m_Registration != null)
+                throw new InvalidOperationException("Character Actor identity cannot change after registration.");
+            if (!sessionHost || !actorId.IsValid || !m_WorldBodyBinding)
+                throw new ArgumentException("Character Session Actor binding is incomplete.");
+            m_SessionHost = sessionHost;
+            m_ActorId = actorId.Value;
+            m_WorldBodyBinding.BindSessionActor(actorId);
+        }
+
+        public bool EnsureRegistration()
+        {
+            if (m_Registration != null)
                 return true;
+            if (!m_Definition)
+            {
+                Debug.LogError("CharacterPipelineHost requires an explicit CharacterPipelineDefinition.", this);
+                return false;
+            }
             if (string.IsNullOrEmpty(ActorId))
             {
                 Debug.LogError("CharacterPipelineHost requires an explicit ActorId.", this);
+                return false;
+            }
+            if (!m_SessionHost)
+            {
+                Debug.LogError("CharacterPipelineHost requires an explicit SimulationSessionHost.", this);
+                return false;
+            }
+            if (!m_ControlSource)
+            {
+                Debug.LogError("CharacterPipelineHost requires an explicit Character control source.", this);
+                return false;
+            }
+            if (!Enum.IsDefined(typeof(CharacterPresentationRole), m_PresentationRole))
+            {
+                Debug.LogError("CharacterPipelineHost requires a valid Presentation role.", this);
                 return false;
             }
             if (!m_Animancer)
@@ -70,25 +183,33 @@ namespace ThirdPersonCharacter.Pipeline
                 Debug.LogError("CharacterPipelineHost requires an AnimancerComponent.", this);
                 return false;
             }
-            ICharacterLogicPosePort logicPosePort = m_LogicPoseAdapter as ICharacterLogicPosePort;
-            if (logicPosePort == null)
+            if (!m_WorldBodyBinding)
             {
-                Debug.LogError("CharacterPipelineHost requires an explicit Logic Pose Adapter.", this);
+                Debug.LogError("CharacterPipelineHost requires an explicit Float32 World body binding.", this);
                 return false;
             }
-            ICharacterMotionExecutor motionExecutor = null;
-            if (m_MotionAuthority == CharacterMotionAuthority.LocalSolver)
+            try
             {
-                motionExecutor = m_MotionExecutorAdapter as ICharacterMotionExecutor;
-                if (motionExecutor == null)
-                {
-                    Debug.LogError("CharacterPipelineHost LocalSolver requires an explicit Motion Executor Adapter.", this);
-                    return false;
-                }
+                m_WorldBodyBinding.RequireValid();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception, this);
+                return false;
             }
             if (!m_VisualRoot)
             {
                 Debug.LogError("CharacterPipelineHost requires an explicit visual root.", this);
+                return false;
+            }
+            if (!m_BodyPresentationProfile)
+            {
+                Debug.LogError("CharacterPipelineHost requires an explicit Body Presentation Profile.", this);
+                return false;
+            }
+            if (!m_FootPlacement)
+            {
+                Debug.LogError("CharacterPipelineHost requires an explicit Foot Placement Composition.", this);
                 return false;
             }
             if (!m_Animancer.Animator)
@@ -101,53 +222,135 @@ namespace ThirdPersonCharacter.Pipeline
                 Debug.LogError("CharacterPipelineHost requires VisualRoot to be the Animancer Animator transform.", this);
                 return false;
             }
-            if (m_VisualRoot == m_LogicPoseAdapter.transform)
+            if (m_WorldBodyBinding is UnityCharacterControllerWorldBodyBinding ccBinding &&
+                m_VisualRoot == ccBinding.LogicRoot)
             {
                 Debug.LogError("CharacterPipelineHost visual root must be separate from the logic pose root.", this);
                 return false;
             }
-            if (!m_CameraRig)
+            if (m_PresentationRole == CharacterPresentationRole.LocalOwner &&
+                (!m_CameraRig || !m_CameraFollowAnchor || !m_CameraAimAnchor || string.IsNullOrEmpty(m_CameraLookInputValueId)))
             {
-                Debug.LogError("CharacterPipelineHost requires an explicit camera rig.", this);
+                Debug.LogError("LocalOwner CharacterPipelineHost requires explicit camera rig, follow anchor, aim anchor, and look input id.", this);
                 return false;
             }
-            if (!m_CameraFollowAnchor)
+            if (!m_Definition.SimulationProgram || !m_Definition.PresentationProjection)
             {
-                Debug.LogError("CharacterPipelineHost requires an explicit camera follow anchor.", this);
-                return false;
-            }
-            if (!m_CameraAimAnchor)
-            {
-                Debug.LogError("CharacterPipelineHost requires an explicit camera aim anchor.", this);
-                return false;
-            }
-            if (string.IsNullOrEmpty(m_CameraLookInputValueId))
-            {
-                Debug.LogError("CharacterPipelineHost requires an explicit camera look input value id.", this);
-                return false;
-            }
-            if (!GameplayTickSystem.IsInitialized)
-            {
-                Debug.LogError("CharacterPipelineHost requires GameplayTickSystem before pipeline creation.", this);
+                Debug.LogError("CharacterPipelineHost requires compiled Program and Presentation Projection assets.", this);
                 return false;
             }
 
-            m_CameraRig.SnapTargets(m_CameraFollowAnchor.position, m_CameraAimAnchor.position);
-            m_Pipeline = new CharacterPipeline(
-                m_Definition,
-                ActorId,
-                m_Animancer,
-                logicPosePort,
-                motionExecutor,
-                m_VisualRoot,
-                m_CameraRig,
-                m_CameraFollowAnchor,
-                m_CameraAimAnchor,
-                m_CameraLookInputValueId,
-                GameplayTickSystem.Current.Settings.LocalLogicTickRate,
-                m_InputSource,
-                m_MotionAuthority);
-            return true;
+            IUnityCharacterSimulationInputAdapter inputAdapter = null;
+            ICharacterPresentationRuntime presentationRuntime = null;
+            RuntimeDiagnosticsTarget diagnosticsTarget = null;
+            CharacterSimulationActorRegistration registration = null;
+            try
+            {
+                var actorId = new ActorId(ActorId);
+                if (m_WorldBodyBinding.ActorId != actorId)
+                    throw new InvalidOperationException("CharacterPipelineHost ActorId does not match its World body binding.");
+                CharacterSimulationProgram program = m_Definition.SimulationProgram.Load();
+                CharacterPresentationProjection projection = m_Definition.PresentationProjection.Load(program);
+                CharacterRuntimeDebugProgram debugProgram = CharacterRuntimeDebugProgramBuilder.Build(program);
+                var diagnosticsContext = new RuntimeDiagnosticsContext(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    debugProgram.Revision,
+                    debugProgram.SourceMap,
+                    new RuntimeDiagnosticsStore());
+                var diagnosticsAdapter = new CharacterSimulationDiagnosticsAdapter(diagnosticsContext, program);
+                diagnosticsTarget = new RuntimeDiagnosticsTarget(name, GetInstanceID(), diagnosticsContext);
+                int tickRate = m_SessionHost.Composition
+                    ? m_SessionHost.Composition.TickRate
+                    : throw new InvalidOperationException("SimulationSessionHost requires an explicit Composition Definition.");
+                if (program.Manifest.TickRate != tickRate || m_Definition.SimulationTickRate != tickRate)
+                    throw new InvalidOperationException("Program, Character Definition, and Session Composition Tick rates must match exactly.");
+
+                inputAdapter = m_ControlSource.Create(new CharacterControlSourceContext(this, m_Definition, program));
+                if (inputAdapter == null)
+                    throw new InvalidOperationException("Character control source returned no input adapter.");
+                WorldBodyState initialBody = m_WorldBodyBinding.InitialBody;
+                ICharacterFootPlacementSolver footPlacementSolver = m_FootPlacement.RequireSolver(m_VisualRoot);
+                PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
+                CharacterPresentationRuntimeBinding presentationBinding;
+                if (m_PresentationRole == CharacterPresentationRole.LocalOwner)
+                {
+                    if (!(inputAdapter is ICharacterPresentationLookInput lookInput))
+                        throw new InvalidOperationException("LocalOwner control source must provide Presentation look input.");
+                    presentationBinding = CharacterPresentationRuntimeFactory.CreateLocalOwner(
+                        CharacterPresentationProgramIdentity.From(program),
+                        tickRate,
+                        projection,
+                        actorId,
+                        m_Animancer,
+                        m_VisualRoot,
+                        CharacterPresentationBodyState.FromFloat32(initialBody),
+                        m_BodyPresentationProfile,
+                        m_FootPlacement.Profile,
+                        m_FootPlacement.Rig,
+                        footPlacementSolver,
+                        physicsScene,
+                        m_CameraRig,
+                        m_CameraFollowAnchor,
+                        m_CameraAimAnchor,
+                        m_CameraTargetBindings,
+                        lookInput,
+                        m_CameraLookInputValueId,
+                        diagnosticsContext);
+                }
+                else
+                {
+                    presentationBinding = CharacterPresentationRuntimeFactory.CreateSimulatedActor(
+                        CharacterPresentationProgramIdentity.From(program),
+                        tickRate,
+                        projection,
+                        actorId,
+                        m_Animancer,
+                        m_VisualRoot,
+                        CharacterPresentationBodyState.FromFloat32(initialBody),
+                        m_BodyPresentationProfile,
+                        m_FootPlacement.Profile,
+                        m_FootPlacement.Rig,
+                        footPlacementSolver,
+                        physicsScene,
+                        diagnosticsContext);
+                }
+                presentationRuntime = presentationBinding.Runtime;
+                var gameplayOutput = new CharacterSimulationGameplayOutputBuffer();
+                registration = new CharacterSimulationActorRegistration(
+                    GetInstanceID(),
+                    name,
+                    actorId,
+                    m_Definition.SimulationProgram,
+                    program,
+                    m_Definition.PresentationProjection,
+                    projection,
+                    m_WorldBodyBinding,
+                    initialBody,
+                    inputAdapter,
+                    gameplayOutput,
+                    presentationRuntime,
+                    diagnosticsAdapter,
+                    diagnosticsTarget,
+                    m_VisualRoot);
+                inputAdapter = null;
+                presentationRuntime = null;
+                diagnosticsTarget = null;
+                m_SessionHost.RegisterActor(registration);
+                m_Registration = registration;
+                registration = null;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                registration?.Dispose();
+                presentationRuntime?.Dispose();
+                inputAdapter?.Dispose();
+                diagnosticsTarget?.Terminate();
+                diagnosticsTarget?.Dispose();
+                Debug.LogException(exception, this);
+                return false;
+            }
         }
 
         public override void EvaluateTimelinePreview(
@@ -161,337 +364,124 @@ namespace ThirdPersonCharacter.Pipeline
             float presentationDeltaSeconds,
             bool resetLifecycle)
         {
-            EnsurePreviewInfrastructure();
             if (sessionId == Guid.Empty || timeline == null || !CanPreviewTimeline)
             {
                 ClearTimelinePreview(sessionId);
                 return;
             }
-            if (evaluationTick == 0)
-                throw new InvalidOperationException("Timeline preview evaluation tick must be non-zero.");
-
-            if (m_PreviewSession != null && m_PreviewSessionId != sessionId)
-                throw new InvalidOperationException(
-                    $"Timeline preview target '{name}' is already owned by session '{m_PreviewSessionId}'.");
-
-            bool created = m_PreviewSession == null;
-            if (created)
-            {
-                m_PreviewSession = new PreviewSession(
-                    NextPreviewGeneration(),
-                    new PreviewPlaybackEngine(m_Definition, m_Animancer));
-                m_PreviewSessionId = sessionId;
-                AcquirePreviewGraphClock();
-            }
-
-            if (resetLifecycle && !created)
-            {
-                m_PreviewSession.Engine.Reset();
-                m_PreviewSession.Generation = NextPreviewGeneration();
-            }
-
-            m_PreviewSession.Capture(
+            EnsurePreviewController().Evaluate(
+                sessionId,
                 timeline,
                 previousTime,
                 currentTime,
                 sourceId,
                 sourceName,
                 evaluationTick,
-                Mathf.Max(0f, presentationDeltaSeconds));
-            m_PreviewSession.Engine.Evaluate(m_PreviewSession);
+                presentationDeltaSeconds,
+                resetLifecycle);
         }
 
         public override void ClearTimelinePreview(Guid sessionId)
         {
-            if (sessionId == Guid.Empty || m_PreviewSession == null || m_PreviewSessionId != sessionId)
-                return;
-            m_PreviewSession.Dispose();
-            m_PreviewSession = null;
-            m_PreviewSessionId = Guid.Empty;
-            ReleasePreviewGraphClock();
+            m_PreviewController?.Clear(sessionId);
+        }
+
+        public override void CollectAnimationMarkerSyncPreviewSources(
+            TimelineData timeline,
+            string targetTrackAuthoringId,
+            List<TimelineAnimationMarkerSyncPreviewCandidate> destination)
+        {
+            EnsurePreviewController().CollectMarkerSyncSources(timeline, targetTrackAuthoringId, destination);
+        }
+
+        public override void ConfigureAnimationMarkerSyncPreviewSource(
+            Guid sessionId,
+            string targetTimelineAuthoringId,
+            string targetTrackAuthoringId,
+            string sourceTimelineAuthoringId,
+            string sourceTrackAuthoringId)
+        {
+            EnsurePreviewController().ConfigureMarkerSyncSource(
+                sessionId,
+                targetTimelineAuthoringId,
+                targetTrackAuthoringId,
+                sourceTimelineAuthoringId,
+                sourceTrackAuthoringId);
+        }
+
+        public override bool TryGetAnimationMarkerSyncPreviewState(
+            Guid sessionId,
+            string targetTrackAuthoringId,
+            out TimelineAnimationMarkerSyncPreviewState state)
+        {
+            if (m_PreviewController != null)
+                return m_PreviewController.TryGetMarkerSyncPreviewState(sessionId, targetTrackAuthoringId, out state);
+            state = default;
+            return false;
         }
 
         void Awake()
         {
             ClearAllTimelinePreviews();
-            EnsurePipeline();
+            EnsureRegistration();
         }
 
         void Reset()
         {
             m_Animancer = GetComponent<AnimancerComponent>();
-            m_CameraRig = GetComponentInChildren<ThirdPersonCameraController>(true);
         }
 
         void OnValidate()
         {
             if (!m_Animancer)
                 m_Animancer = GetComponent<AnimancerComponent>();
-            if (!m_CameraRig)
-                m_CameraRig = GetComponentInChildren<ThirdPersonCameraController>(true);
         }
 
         void OnEnable()
         {
-            if (!EnsurePipeline())
-                return;
-            m_Pipeline.RegisterDiagnosticsTarget(name, GetInstanceID());
-            m_Pipeline.Activate();
-            GameplayTickSystem.RegisterTarget(m_Pipeline);
+            EnsureRegistration();
         }
 
         void OnDisable()
         {
             ClearAllTimelinePreviews();
-            GameplayTickSystem.UnregisterTarget(m_Pipeline);
-            m_Pipeline?.Deactivate();
-            m_Pipeline?.UnregisterDiagnosticsTarget();
+            DisposeRegistration();
         }
 
         void OnDestroy()
         {
             ClearAllTimelinePreviews();
-            m_Pipeline?.Dispose();
-            m_Pipeline = null;
+            DisposeRegistration();
         }
 
-        void EnsurePreviewInfrastructure()
+        void DisposeRegistration()
         {
-            if (m_PreviewDefinition == m_Definition &&
-                m_PreviewAnimancer == m_Animancer)
+            if (m_Registration == null)
                 return;
+            CharacterSimulationActorRegistration registration = m_Registration;
+            m_Registration = null;
+            if (m_SessionHost)
+            {
+                m_SessionHost.Stop();
+                m_SessionHost.ReleaseActor(registration);
+            }
+            else
+                registration.Dispose();
+        }
 
+        CharacterPipelinePreviewController EnsurePreviewController()
+        {
+            if (m_PreviewController != null && m_PreviewController.Matches(m_Definition, m_Animancer))
+                return m_PreviewController;
             ClearAllTimelinePreviews();
-            m_PreviewDefinition = m_Definition;
-            m_PreviewAnimancer = m_Animancer;
+            m_PreviewController = new CharacterPipelinePreviewController(this);
+            return m_PreviewController;
         }
 
         void ClearAllTimelinePreviews()
         {
-            m_PreviewSession?.Dispose();
-            m_PreviewSession = null;
-            m_PreviewSessionId = Guid.Empty;
-            ReleasePreviewGraphClock();
-        }
-
-        void AcquirePreviewGraphClock()
-        {
-            if (m_OwnsPreviewGraphClock)
-                return;
-            m_Animancer.Graph.PauseGraph();
-            m_OwnsPreviewGraphClock = true;
-        }
-
-        void ReleasePreviewGraphClock()
-        {
-            if (!m_OwnsPreviewGraphClock)
-                return;
-            if (!Application.isPlaying && m_PreviewAnimancer && m_PreviewAnimancer.IsGraphInitialized)
-                m_PreviewAnimancer.Graph.UnpauseGraph();
-            m_OwnsPreviewGraphClock = false;
-        }
-
-        ulong NextPreviewGeneration()
-        {
-            m_PreviewGeneration++;
-            if (m_PreviewGeneration == 0)
-                m_PreviewGeneration++;
-            return m_PreviewGeneration;
-        }
-
-        sealed class PreviewSession : IDisposable
-        {
-            public PreviewSession(ulong generation, PreviewPlaybackEngine engine)
-            {
-                Generation = generation;
-                Engine = engine ?? throw new ArgumentNullException(nameof(engine));
-            }
-
-            public PreviewPlaybackEngine Engine { get; }
-            public ulong Generation { get; set; }
-            public TimelineData Timeline { get; private set; }
-            public float PreviousTime { get; private set; }
-            public float CurrentTime { get; private set; }
-            public string SourceId { get; private set; }
-            public string SourceName { get; private set; }
-            public ulong EvaluationTick { get; private set; }
-            public float PresentationDeltaSeconds { get; private set; }
-            public bool HasEvaluation => Timeline != null && EvaluationTick != 0;
-
-            public void Capture(
-                TimelineData timeline,
-                float previousTime,
-                float currentTime,
-                string sourceId,
-                string sourceName,
-                ulong evaluationTick,
-                float presentationDeltaSeconds)
-            {
-                Timeline = timeline;
-                PreviousTime = previousTime;
-                CurrentTime = currentTime;
-                SourceId = sourceId ?? string.Empty;
-                SourceName = sourceName ?? string.Empty;
-                EvaluationTick = evaluationTick;
-                PresentationDeltaSeconds = Mathf.Max(0f, presentationDeltaSeconds);
-            }
-
-            public void Dispose()
-            {
-                Engine.Dispose();
-            }
-        }
-
-        sealed class PreviewPlaybackEngine : IDisposable
-        {
-            readonly CharacterAnimationPresentationBindingIndex m_Bindings;
-            readonly AnimancerPlaybackAdapter m_Adapter;
-            readonly AnimationPlaybackLifecycle m_Lifecycle;
-            readonly CharacterAnimationPlaybackCommandQueue m_Commands =
-                new CharacterAnimationPlaybackCommandQueue();
-            readonly List<TimelineAnimationContribution> m_TimelineSamples =
-                new List<TimelineAnimationContribution>();
-            readonly List<AnimationClipSample> m_ClipSamples = new List<AnimationClipSample>();
-            readonly List<AnimationProducerSample> m_ProducerSamples = new List<AnimationProducerSample>();
-            readonly List<AnimationPlaybackCommand> m_CommandBuffer = new List<AnimationPlaybackCommand>();
-            readonly List<AnimationPlaybackId> m_Retired = new List<AnimationPlaybackId>();
-            readonly List<AnimationPlaybackLifecycleSnapshot> m_Snapshots =
-                new List<AnimationPlaybackLifecycleSnapshot>();
-            readonly HashSet<string> m_SelectedLayers = new HashSet<string>(StringComparer.Ordinal);
-            ulong m_SelectionSequence;
-
-            public PreviewPlaybackEngine(CharacterPipelineDefinition definition, AnimancerComponent animancer)
-            {
-                var errors = new List<string>();
-                m_Bindings = CharacterAnimationPresentationBindingIndex.Build(
-                    definition.AnimationPresentation,
-                    definition.RootTree,
-                    errors);
-                if (!m_Bindings.IsValid)
-                    throw new InvalidOperationException(string.Join("\n", errors));
-                m_Adapter = new AnimancerPlaybackAdapter(animancer, m_Bindings, false);
-                m_Lifecycle = new AnimationPlaybackLifecycle(m_Bindings, m_Adapter);
-            }
-
-            public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> Snapshots => m_Snapshots;
-
-            public void Evaluate(PreviewSession session)
-            {
-                if (session == null || !session.HasEvaluation)
-                    throw new ArgumentException("Timeline preview session has no evaluation.", nameof(session));
-
-                m_SelectedLayers.Clear();
-                m_ProducerSamples.Clear();
-                for (int trackIndex = 0; trackIndex < session.Timeline.Tracks.Count; trackIndex++)
-                {
-                    if (session.Timeline.Tracks[trackIndex] is not AnimationTrack track)
-                        continue;
-
-                    var producerId = new AnimationProducerId(session.Timeline.AuthoringId, track.AuthoringId);
-                    if (!m_Bindings.TryGetBinding(producerId, out ResolvedAnimationProducerBinding binding))
-                        throw new InvalidOperationException($"Timeline preview producer '{producerId}' has no presentation binding.");
-                    if (!m_SelectedLayers.Add(binding.LayerId))
-                        throw new InvalidOperationException(
-                            $"Timeline preview contains multiple selected producers for layer '{binding.LayerId}'.");
-
-                    var playbackId = new AnimationPlaybackId(producerId, session.Generation);
-                    m_TimelineSamples.Clear();
-                    track.Sample(
-                        session.PreviousTime,
-                        session.CurrentTime,
-                        trackIndex,
-                        session.SourceId,
-                        session.SourceName,
-                        m_TimelineSamples);
-                    m_ClipSamples.Clear();
-                    for (int i = 0; i < m_TimelineSamples.Count; i++)
-                    {
-                        TimelineAnimationContribution clipSample = m_TimelineSamples[i];
-                        m_ClipSamples.Add(new AnimationClipSample(
-                            clipSample.ClipAuthoringId,
-                            RuntimeSourceElementHandle.Invalid,
-                            clipSample.Clip,
-                            clipSample.ClipTime,
-                            clipSample.NormalizedTime,
-                            clipSample.Weight,
-                            clipSample.IsLooping,
-                            clipSample.ClipLoopStartTime,
-                            clipSample.ClipLoopDuration,
-                            clipSample.ContinuousClipTime));
-                    }
-                    var producerSample = new AnimationProducerSample(
-                        playbackId,
-                        binding.LayerId,
-                        session.SourceId,
-                        session.SourceName,
-                        track.Name,
-                        session.CurrentTime,
-                        0,
-                        m_ClipSamples);
-                    if (!producerSample.IsValid)
-                        throw new InvalidOperationException(
-                            $"Timeline preview producer '{producerId}' produced an invalid sample.");
-                    m_ProducerSamples.Add(producerSample);
-                }
-
-                for (int i = 0; i < m_ProducerSamples.Count; i++)
-                {
-                    AnimationProducerSample sample = m_ProducerSamples[i];
-                    m_Commands.EnqueueSelection(AnimationLayerSelection.Select(
-                        sample.LayerId,
-                        sample.PlaybackId,
-                        session.EvaluationTick,
-                        NextSelectionSequence()));
-                    m_Commands.EnqueueSample(session.EvaluationTick, sample);
-                }
-
-                foreach (ResolvedAnimationLayer layer in m_Bindings.Layers.Values)
-                {
-                    if (!m_SelectedLayers.Contains(layer.Id))
-                    {
-                        m_Commands.EnqueueSelection(AnimationLayerSelection.Empty(
-                            layer.Id,
-                            session.EvaluationTick,
-                            NextSelectionSequence()));
-                    }
-                }
-
-                m_Commands.CopyPendingTo(m_CommandBuffer);
-                m_Lifecycle.Apply(
-                    m_CommandBuffer,
-                    session.PresentationDeltaSeconds,
-                    m_Retired);
-                m_Lifecycle.BuildSnapshot(m_Snapshots);
-                m_Commands.Acknowledge(m_CommandBuffer);
-                m_CommandBuffer.Clear();
-            }
-
-            public void Reset()
-            {
-                m_Commands.Clear();
-                m_Lifecycle.Reset();
-                m_TimelineSamples.Clear();
-                m_ClipSamples.Clear();
-                m_ProducerSamples.Clear();
-                m_CommandBuffer.Clear();
-                m_Retired.Clear();
-                m_Snapshots.Clear();
-                m_SelectedLayers.Clear();
-            }
-
-            public void Dispose()
-            {
-                Reset();
-                m_Adapter.Dispose();
-            }
-
-            ulong NextSelectionSequence()
-            {
-                m_SelectionSequence++;
-                if (m_SelectionSequence == 0)
-                    m_SelectionSequence++;
-                return m_SelectionSequence;
-            }
+            m_PreviewController?.Dispose();
+            m_PreviewController = null;
         }
     }
 }

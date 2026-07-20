@@ -2,12 +2,20 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using BTSMTL.Diagnostics;
 using UnityEngine;
 
 namespace TreeDesigner 
 {
     public partial class BaseEdge
     {
+        public void SetAuthoringId(string authoringId)
+        {
+            if (!AuthoringIdentity.IsValid(authoringId))
+                throw new ArgumentException($"Invalid edge authoring identity: {authoringId}", nameof(authoringId));
+            m_GUID = authoringId;
+        }
+
         public virtual bool Check(BaseGraph tree, ref bool dirty)
         {
             m_Owner = tree;

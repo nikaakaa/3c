@@ -12,6 +12,7 @@ namespace TreeDesigner
 
         [SerializeField, ShowInPanel("StopType")]
         StopType m_StopType;
+        public StopType LoopStopType => m_StopType;
 
         protected override State OnUpdate()
         {

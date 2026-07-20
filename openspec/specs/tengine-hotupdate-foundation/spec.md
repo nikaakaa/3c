@@ -60,7 +60,7 @@
 
 ### Requirement: TEngine 启动流程不得替代 gameplay tick 权威
 
-项目 MUST 保持 TEngine 作为启动、资源、热更和 frame source 底座。Gameplay tick 权威 MUST 位于 `GameplayTickSystem`。TEngine Procedure、TEngine FSM、TEngine TimerModule 和 TEngine UpdateDriver MUST NOT 直接 tick BTSMTL gameplay graph、单个 `CharacterPipeline`、ActionRuntime、MotionStage、网络 peer 或 Timeline runtime。
+项目 MUST 保持 TEngine 作为启动、资源、热更和 frame source 底座。Gameplay tick 权威 MUST 位于 `GameplayTickSystem`。TEngine Procedure、TEngine FSM、TEngine TimerModule 和 TEngine UpdateDriver MUST NOT 直接 tick BTSMTL authoring object、单个 Character actor、SimulationKernel operation、Network Model session 或 Timeline preview runtime。
 
 #### Scenario: 进入角色 runtime
 
@@ -78,14 +78,13 @@
 
 ### Requirement: BTSMTL authoring 和 runtime 主线必须保持统一
 
-项目 MUST 保持 BTSMTL 作为 graph、state machine、transition rule 和 timeline authoring/runtime 主线。TEngine FSM 和 GameEvent 不得绕过 BTSMTL 图。
+项目 MUST保持 BTSMTL 作为 Graph、StateMachine、ConditionRuleGraph 与 Timeline 的唯一 authoring source，并以该 source编译出的 CharacterSimulationProgram作为正式 Character runtime主线。TEngine FSM/GameEvent MUST不绕过 Program operation直接驱动角色状态、Timeline、WorldSolver或Action lifecycle。
 
-#### Scenario: 状态机跳转求值
+#### Scenario: 状态机 Transition 求值
 
-- **WHEN** 状态机需要判断 Transition
-- **THEN** runtime 使用 BTSMTL `ConditionRuleGraph` 求值
-- **AND** runtime 不得用 TEngine FSM 替代 `StateMachineGraphRuntime`
-- **AND** runtime 不得用 TEngine GameEvent 直接驱动状态跳转
+- **WHEN** Corin runtime判断 Transition
+- **THEN** MUST执行由 BTSMTL ConditionRuleGraph编译的 operation
+- **AND** MUST不使用 TEngine FSM或旧 StateMachineGraphRuntime替代
 
 ### Requirement: Fantasy 必须保持最小权威服务端边界
 

@@ -4,7 +4,7 @@
 定义动作 profile、Graph activation request、Timeline Decision TreeClip 时间事实、Blackboard fact projection 和 Runtime Debug 的作者闭环。
 ## Requirements
 ### Requirement: CharacterPipelineDefinition 必须配置 ActionProfile 库
-系统 MUST 让 `CharacterPipelineDefinition` 或等价角色管线配置持有正式 ActionProfile 列表。Pipeline 初始化时 MUST 将这些 profile 注册到 `ActionRuntime`。缺失、空 action id 或重复 action id MUST 作为配置错误报告，不得通过字符串全局搜索或 fallback profile 继续运行。
+系统 MUST让 `CharacterPipelineDefinition` 持有正式 ActionProfile 列表。Compiler MUST将这些 profile 编译为 Program Action catalog，CharacterSimulationState 的 Action operation MUST只读取该 catalog。缺失、空 action id 或重复 action id MUST作为编译错误报告，不得通过字符串全局搜索或 fallback profile 继续运行。
 
 #### Scenario: 角色配置动作库
 - **WHEN** 作者打开 `CharacterPipelineDefinition`
@@ -27,18 +27,18 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 
 #### Scenario: 编辑网络策略
 - **WHEN** 作者选中 Graph 中的 action activation request 提交入口
-- **THEN** UI MUST NOT 暴露 HitWindow authority、Motion network visibility 或 Cue playback policy
-- **AND** 作者 MUST 到 ActionProfile Inspector 中修改这些策略
+- **THEN** UI MUST不暴露Action级网络策略                                                     
+- **AND** Model Definition只配置fact-kind与producer coverage       
 
 ### Requirement: ActionProfile Inspector 必须是策略主编辑入口
 
-`ActionProfile` Inspector MUST 是 gameplay 动作定义主入口，按 Identity、Tags、Block/Cancel、Target 和 Debug 分区展示。它 MUST 不编辑任何具体 Network Model 的 prediction、authority、replication、window/motion/cue/result 网络策略，也 MUST 不提供 packet preview。模型策略 MUST 由对应 model profile Inspector 编辑。
+`ActionProfile` Inspector MUST是gameplay动作定义主入口，按Identity、Tags、Block/Cancel、Target和Debug分区展示。它 MUST不编辑Network Model的prediction、authority、replication、history或packet参数，也 MUST不提供packet preview或逐Action model policy导航。                                                                      
 
 #### Scenario: 编辑 Attack ActionProfile
 
 - **WHEN** 作者选中 Attack ActionProfile
 - **THEN** UI MUST 展示动作身份与 gameplay 约束
-- **AND** MUST 提供到已绑定 model policy 的只读导航或缺失提示，而不是内联编辑网络字段
+- **AND** MUST不显示逐Action网络字段或虚构的policy绑定                                             
 
 ### Requirement: Runtime Debug 必须展示 request 到 outputs 的完整链路
 系统 MUST 提供或预留 Runtime Debug 数据，按 input request、action activation request、ActionInstance、window sample、motion sample、gameplay result、cue event 和 network result 展示链路。
@@ -68,7 +68,7 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 
 - **WHEN** 作者配置持续格挡
 - **THEN** Graph MUST 能在持有显式 Action Context 时写入 Guard window scope variable
-- **AND** 相同 projection stage MUST 生成 Guard ActionWindowSample
+- **AND** 相同 projection stage MUST 生成 Guard `ActionWindowFact`
 
 ### Requirement: 作者 UI 必须使用 Action Context 口径
 
@@ -97,13 +97,12 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 - **THEN** root 或等价生命周期节点 MUST 提交 `Complete`
 - **AND** 完成 Transition MUST NOT 再提交第二条 terminal transition
 
-#### Scenario: CancelWindow 连段
+#### Scenario: 语义窗口替换动作
 
-- **WHEN** Attack1 或 Attack2 在 root 完成前通过 CancelWindow Transition 离开
-- **THEN** source State.OnExit MUST 在 target Action 激活前提交 `Cancel(ComboWindow)`
-- **AND** source Timeline MUST 通过 State Root stop 取消
-- **AND** target State MUST 使用新的 Action Context
-
+- **WHEN** Attack leaf 在 root 完成前通过 ComboAccept、RecoveryEarly 或 RecoveryLate 离开
+- **THEN** source State.OnExit MUST 在 target 激活前提交 `Cancel(RecoveryCancel)`
+- **AND** source Timeline MUST 通过 State root stop 取消
+- **AND** target MUST 使用新的 Action Context
 #### Scenario: Parent Tree abort 攻击 SMNode
 
 - **WHEN** 攻击 StateMachineNode 因 Self、LowerPriority 或 Parent abort graceful stop
@@ -136,88 +135,95 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 
 ### Requirement: 作者 UI 必须能从 ActionProfile 追到输出预览
 
-作者 MUST 能从 ActionProfile、Graph request、TreeClip projection 和 Runtime Debug 追踪 ActionId/ActionInstanceId 与 gameplay outputs。网络 packet preview MUST 只出现在显式选择的 model profile/Debug 中，并通过稳定 ActionId 关联；ActionProfile MUST 不持有 expected packet 配置。
+作者 MUST从ActionProfile、Graph request、TreeClip projection和Runtime Debug追踪ActionId/ActionInstanceId与gameplay outputs。Model Debug MAY显示fact kind、ProducerId、packet与发送结果；ActionProfile MUST不持有expected packet或逐Action网络策略。                                         
 
 #### Scenario: 从 TreeClip 查看 HitWindow
 
 - **WHEN** 作者查看 Attack HitWindow projection
 - **THEN** UI MUST 显示 WindowType、WindowId 和 Action identity
-- **AND** MAY 导航到 ServerAuthoritative model policy 的只读匹配结果
-- **AND** MUST 不把该 model policy 复制到 TreeClip
+- **AND** MAY导航到Model的fact-kind与producer coverage                   
+- **AND** MUST不把Model配置复制到TreeClip        
 
 ### Requirement: 非 Timeline 输出必须共享同一套策略解析
 
-Timeline 与非 Timeline 动作 MUST 继续产生相同 gameplay facts，并通过 ActionId/ActionInstanceId 关联。具体网络策略 MUST 由当前 model profile/resolver 统一解析；ActionProfile、Node 和 Blackboard declaration MUST 不成为第二 policy 来源。
+Timeline与非Timeline动作 MUST产生相同GameplayFacts并以ActionId/ActionInstanceId关联。Model Egress MUST只按显式fact kind与producer coverage消费Finalize输出；ActionProfile、Node和Blackboard MUST不成为网络配置来源。                            
 
 #### Scenario: 非 Timeline GuardWindow
 
 - **WHEN** 非 Timeline 动作产生 GuardWindow fact
 - **THEN** fact MUST 使用正式 Action Context
-- **AND** ServerAuthoritative adapter MUST 从 model Action policy 解析网络行为
+- **AND** 未映射ActionWindow packet时 MUST保留为本地Gameplay输出          
 
 ### Requirement: Runtime Debug 必须展示配置和运行事实的差异
 
-Runtime Debug MUST 按 `ActionInstance` 展示 resolved policy、实际产生的 SyncFacts、adapter 生成的 outgoing packets、incoming decision，以及被过滤或未发送的原因。Motion correction application 与 acknowledgement MUST 在 Motion/Network debug 中按 actor、input sequence 和 server tick 展示。Debug MUST 帮助作者判断是配置问题、输出事实缺失，还是网络映射问题。
+Runtime Debug MUST按 `ActionInstance` 展示GameplayFact、PresentationCommand与incoming ingress。Model Debug MUST按actor、input sequence、server tick、fact kind与ProducerId展示packet、过滤原因、reconciliation和ack。Debug MUST区分动作输出缺失、模型coverage不支持与网络运行错误。                                                                                                                                                   
 
 #### Scenario: Window 没有发送
 
 - **WHEN** 作者预期 HitWindow 会同步但运行时没有 outgoing packet
 - **THEN** Debug MUST 能显示该 ActionInstance 是否产生了 HitWindow SyncFact
-- **AND** MUST 能显示 resolver 是否将该 window 标记为 local only、digest only 或 missing policy
+- **AND** MUST显示Model是否正式支持ActionWindow fact kind                                          
 
 #### Scenario: 服务端纠正动作
 
 - **WHEN** 收到 ActionInstance Correct 或 Reject decision
 - **THEN** Debug MUST 显示对应 ActionProfile、ActionInstance、prediction key、incoming transition 和 reason
-- **AND** 如果同 tick 另有 actor motion correction，Debug MUST 通过 MotionSyncDomain 记录其 application result 与 acknowledgement
+- **AND** 同tick存在body correction时Model Debug MUST记录restore/replay与ack                                                          
 
 ### Requirement: Timeline 攻击闭环不得依赖 RootTree 平铺测试输出
 
-作者配置 Timeline 攻击时，攻击时间事实 MUST 由 Timeline 内的 Decision TreeClip 写入 scope variable；Cue 仍由其正式 Timeline/Graph 输出模型表达。RootTree 主流程 MUST NOT 平铺 `SubmitActionWindowSample`、`SubmitGameplayCueNode` 或测试 GameplayResult 节点补充动作 body 事实，系统也 MUST NOT保留 ActionWindowTrack 作为另一条 Timeline Window 作者路径。
+Timeline 攻击的时间事实 MUST 由 inline Timeline Decision TreeClip 写 owner-local scope variable；Cue 由正式 Timeline/Graph 输出。RootTree MUST NOT 平铺 window、cue 或测试 GameplayResult 节点，也 MUST NOT 保留 ActionWindowTrack 第二路径。
 
-#### Scenario: Corin Attack1
+#### Scenario: Corin Attack1..5
 
-- **WHEN** 作者配置 `Attack1` 为 Timeline 攻击
-- **THEN** Hit/Cancel 时间范围 MUST 位于 `Attack1` Timeline 的 Decision TreeClip
-- **AND** TreeClip MUST 写入对应 Bool Frame variables
-- **AND** Gameplay/VFX/Camera cue MUST 继续位于其正式 Timeline 输出
-- **AND** RootTree 主流程 MUST NOT平铺窗口、Cue 或结果测试节点
+- **WHEN** 作者配置五段 Timeline 攻击
+- **THEN** Hit、ComboAccept、RecoveryEarly 与 RecoveryLate MUST 位于各自 inline Timeline TreeClip
+- **AND** TreeClip MUST 写对应 owner-local Bool Frame declaration
+- **AND** RootTree MUST NOT 平铺窗口、Cue 或结果测试节点
 
 #### Scenario: 非 Timeline 动作
 
-- **WHEN** 作者配置不播放 Timeline 的持续格挡或其它动作
-- **THEN** Graph MAY 写入具有显式 projection 的 scope variable
-- **AND** 输出仍 MUST 使用 Action Context 和 ActionProfile 策略解析
+- **WHEN** 作者配置非 Timeline 持续动作
+- **THEN** Graph MAY 写具有显式 Action Context projection 的 scope variable
+- **AND** 输出仍 MUST 使用正式 Action Context
+### Requirement: Full-body Action 必须通过唯一 pipeline blackboard 事实公布 locomotion ownership
 
-### Requirement: Dodge Action 必须通过 pipeline blackboard 公布 locomotion ownership
+Attack、Dodge 与未来 full-body Action MUST 只通过 pipeline Blackboard `HasActionLocomotionOwnership` 让渡 locomotion。ActionInstance 成功激活后写 true，所有 source exit 对称写 false。Locomotion MUST 只读 ownership，不得复制 request、ActionProfile、Timeline、motion、window 或 lifecycle。系统 MUST 删除按动作种类选择恢复状态的路由事实。
 
-Corin DodgeForward 和 DodgeBack MUST 保持为 Action StateMachine 中唯一 Dodge 业务状态。Dodge OnEnter MUST 在 ActionInstance 成功激活后写入 pipeline blackboard `IsDodging=true`；所有 source-exit 的 OnExit MUST 写入 `IsDodging=false`。Dodge Timeline 的移动恢复门和 IFrame 时间范围 MUST 都由 Decision TreeClip 写入 Bool Frame variables：`CanDodgeMoveCancel` 保持 Projection=None，Dodge IFrame declaration 使用显式 ActionWindow projection。Locomotion MUST 只读取 ownership fact，不得复制 Dodge request、ActionProfile、Timeline、motion curve、IFrame 或恢复门。
+#### Scenario: Full-body Action 激活
 
-#### Scenario: Dodge 激活后让渡 locomotion 所有权
+- **WHEN** Attack 或 Dodge 激活成功
+- **THEN** OnEnter MUST 写 `HasActionLocomotionOwnership=true`
+- **AND** Locomotion MUST 进入无表现输出的 ActionOverride
 
-- **WHEN** DodgeForward 或 DodgeBack 成功激活 ActionInstance
-- **THEN** 对应 OnEnter MUST 写入 `IsDodging=true`
-- **AND** Locomotion StateMachine MUST 能读取该值进入 ActionOverride
+#### Scenario: Full-body Action 结束
 
-#### Scenario: Dodge 正常完成或被打断
+- **WHEN** Action 完成、被替换或被上层 stop
+- **THEN** OnExit MUST 写 `HasActionLocomotionOwnership=false`
+- **AND** Locomotion MUST 按 Move input 进入 RunLoop 或 Idle
 
-- **WHEN** Dodge state 正常完成、被 State transition 抢占或被上层 tree stop
-- **THEN** source OnExit MUST 写入 `IsDodging=false`
-- **AND** Locomotion MUST 能按当前 MoveAxis 收回所有权
+#### Scenario: 单一 Action 真相
 
-#### Scenario: 单一 Dodge 动作真相
-
-- **WHEN** Locomotion 处理 Dodge 活跃期间的所有权
-- **THEN** Locomotion MUST NOT创建第二个 Dodge action state 或引用 Dodge Timeline
-- **AND** Dodge request MUST 继续只由 Action 激活接受点消费
-- **AND** Dodge IFrame MUST 由 Decision TreeClip scope variable projection 产生，不得保留 ActionWindowTrack
-
+- **WHEN** Locomotion 处理 ownership
+- **THEN** MUST NOT 创建第二个 Action state 或引用 Action Timeline
+- **AND** request MUST 只由 target activation 消费
 ### Requirement: TreeClip 与 Scope Variable 必须是 Timeline Window 唯一作者入口
 
-Decision TreeClip 与 Bool Frame scope variable MUST 继续作为 Timeline Window 唯一时间作者入口。Projection MUST 只保存 WindowType、WindowId 和 Digest gameplay fact 声明；authority、history、replication 和 packet policy MUST 来自当前 Network Model profile，不得保存在 ActionProfile、TreeClip 或 declaration。
+Decision TreeClip 与 owner-local Bool Frame scope variable MUST 是 Timeline Window 唯一时间入口。Projection MUST 只保存 WindowType、WindowId、Digest 和 Action Context provenance；网络策略只属于当前 Network Model。ConditionRuleGraph MAY 用 `ActionWindowActiveInfoNode` 只读同帧 candidate，但 MUST NOT 建第二份 fact、Blackboard key、cache 或 registry。RootTree MUST NOT 暴露逐段 Cancel/MoveCancel declaration。
 
 #### Scenario: Attack HitWindow
 
-- **WHEN** TreeClip 在本 tick 写入 HitWindow declaration
-- **THEN** projection MUST 生成对应 ActionWindow fact
-- **AND** ServerAuthoritative model policy MUST 决定是否进入 history/packet
+- **WHEN** TreeClip 写 HitWindow declaration
+- **THEN** projection MUST 生成同一 ActionInstance 的 Window fact
+- **AND** Network Model 决定 history 与 packet
+
+#### Scenario: Transition 读取 RecoveryEarly
+
+- **WHEN** TreeClip 写 projected `RecoveryEarly`
+- **THEN** typed query MUST 同帧读取同一 ActionInstance、WindowId 和 Digest
+
+#### Scenario: Projection=None
+
+- **WHEN** TreeClip 写普通本地变量
+- **THEN** ValueNode MAY 读取
+- **AND** typed WindowType query MUST NOT 命中                                                                                                                                                                                                                                                                                               

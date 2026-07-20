@@ -1,0 +1,11 @@
+{
+  "name": "ThirdPersonSimulation.UnityAuthority",
+  "rootNamespace": "ThirdPersonSimulation.UnityAuthority",
+  "references": [
+    "ThirdPersonSimulation.Core",
+    "ThirdPersonSimulation.ServerAuthoritative"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": true
+}

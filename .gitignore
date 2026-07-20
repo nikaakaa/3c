@@ -5,12 +5,15 @@
 [Bb]in/
 [Bb]uild/
 [Bb]uilds/
+[Bb]undles/
+[Hh]ybrid[Cc][Ll][Rr][Dd]ata/
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
 [Mm]emoryCaptures/
 
 # Keep reference material out of the repository
 [Rr]ef/
+[Rr]ef.meta
 
 # Unity generated files
 *.csproj
@@ -19,6 +22,7 @@
 !3cDemo/[Ss]erver/**/*.sln
 !3cDemo/[Ss]erver/*.csproj
 !3cDemo/[Ss]erver/**/*.csproj
+!Tools/ThirdPersonSimulation.Portable/**/*.csproj
 *.suo
 *.tmp
 *.user

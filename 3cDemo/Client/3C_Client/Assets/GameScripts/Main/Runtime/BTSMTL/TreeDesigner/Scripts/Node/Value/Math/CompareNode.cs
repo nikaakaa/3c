@@ -21,6 +21,7 @@ namespace TreeDesigner
         protected PropertyPort m_InputValue2 = new PropertyPort();
         [SerializeField, PropertyPort(PortDirection.Output, "Result"), ReadOnly]
         protected BoolPropertyPort m_Result = new BoolPropertyPort();
+        public CompareType Comparison => m_CompareType;
 
 #if UNITY_EDITOR
         public void ConfigureAuthoring(CompareType compareType)

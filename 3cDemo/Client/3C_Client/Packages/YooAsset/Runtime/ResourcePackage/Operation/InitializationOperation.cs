@@ -21,6 +21,9 @@ namespace YooAsset
         private FSInitializeFileSystemOperation _initFileSystemOp;
         private ESteps _steps = ESteps.None;
 
+        public int ValidCacheFileCount { get; private set; } = -1;
+        public int InvalidCacheFileCount { get; private set; } = -1;
+
         internal InitializationOperation(PlayModeImpl impl, List<FileSystemParameters> parametersList)
         {
             _impl = impl;
@@ -107,6 +110,12 @@ namespace YooAsset
                 Progress = _initFileSystemOp.Progress;
                 if (_initFileSystemOp.IsDone == false)
                     return;
+
+                if (_initFileSystemOp is DCFSInitializeOperation cacheInitialization)
+                {
+                    ValidCacheFileCount = cacheInitialization.ValidCacheFileCount;
+                    InvalidCacheFileCount = cacheInitialization.InvalidCacheFileCount;
+                }
 
                 if (_initFileSystemOp.Status == EOperationStatus.Succeed)
                 {

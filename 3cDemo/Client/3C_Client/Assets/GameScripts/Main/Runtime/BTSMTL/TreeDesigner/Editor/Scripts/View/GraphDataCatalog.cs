@@ -3,9 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEditor;
+using UnityEditor.UIElements;
 
 namespace TreeDesigner.Editor
 {
+    public enum GraphDataCatalogSourceFilter { All, Input, Blackboard }
+    public enum PipelineBlackboardScopeFilter { All, Character, Graph, State, ActionInstance, Frame }
+    public enum PipelineBlackboardContextFilter { AllVisible, CurrentContext, Local, Inherited }
+
     public enum GraphDataCatalogSourceKind
     {
         Input,
@@ -208,6 +214,506 @@ namespace TreeDesigner.Editor
                 .Where(i => i != null)
                 .OrderBy(i => i.Order)
                 .ToArray();
+        }
+    }
+
+    internal sealed class GraphDataCatalogController
+    {
+        readonly BaseTreeInspectorView m_Root;
+        readonly Action m_ShowDataTab;
+        readonly List<BaseTree> m_VisibleBlackboardTrees = new List<BaseTree>();
+        readonly Dictionary<string, bool> m_FoldoutStates = new Dictionary<string, bool>(StringComparer.Ordinal);
+        readonly HashSet<string> m_ExpandedEntries = new HashSet<string>(StringComparer.Ordinal);
+        readonly List<IGraphDataCatalogSource> m_Sources = new List<IGraphDataCatalogSource>();
+        readonly VisualElement m_CatalogContainer;
+        readonly VisualElement m_CreationBar;
+        readonly VisualElement m_BlackboardFilterPanel;
+        readonly Button m_AddButton;
+        readonly Button m_CreateButton;
+        readonly Button m_CancelButton;
+        readonly Button m_AllSourceButton;
+        readonly Button m_InputSourceButton;
+        readonly Button m_BlackboardSourceButton;
+        readonly Button m_BlackboardFilterButton;
+        readonly TextField m_NameField;
+        readonly DropdownField m_ScopeField;
+        readonly DropdownField m_TypeField;
+        readonly EnumField m_ScopeFilterField;
+        readonly EnumField m_ContextFilterField;
+        readonly ToolbarSearchField m_SearchField;
+
+        IReadOnlyList<GraphDataCatalogCreationOption> m_ScopeOptions = Array.Empty<GraphDataCatalogCreationOption>();
+        IReadOnlyList<GraphDataCatalogCreationOption> m_TypeOptions = Array.Empty<GraphDataCatalogCreationOption>();
+        GraphDataCatalogContext m_Context;
+        GraphDataCatalogSourceFilter m_SourceFilter = GraphDataCatalogSourceFilter.All;
+        object m_AuthoringContext;
+        int m_Generation;
+        bool m_RefreshScheduled;
+        bool m_BlackboardFiltersExpanded;
+
+        public GraphDataCatalogController(BaseTreeInspectorView root, Action showDataTab)
+        {
+            m_Root = root;
+            m_ShowDataTab = showDataTab;
+            m_CatalogContainer = root.Q("graph-data-catalog-container");
+            m_CreationBar = root.Q("graph-data-creation-bar");
+            m_BlackboardFilterPanel = root.Q("graph-data-blackboard-filter-panel");
+            m_NameField = root.Q<TextField>("graph-data-create-name");
+            m_ScopeField = root.Q<DropdownField>("graph-data-create-scope");
+            m_TypeField = root.Q<DropdownField>("graph-data-create-type");
+            m_ScopeFilterField = root.Q<EnumField>("graph-data-scope-filter");
+            m_ContextFilterField = root.Q<EnumField>("graph-data-context-filter");
+            m_SearchField = root.Q<ToolbarSearchField>("graph-data-search");
+            m_AllSourceButton = root.Q<Button>("graph-data-source-all-button");
+            m_InputSourceButton = root.Q<Button>("graph-data-source-input-button");
+            m_BlackboardSourceButton = root.Q<Button>("graph-data-source-blackboard-button");
+            m_BlackboardFilterButton = root.Q<Button>("graph-data-blackboard-filter-button");
+            m_AddButton = root.Q<Button>("graph-data-add-button");
+            m_CreateButton = root.Q<Button>("graph-data-create-button");
+            m_CancelButton = root.Q<Button>("graph-data-cancel-button");
+
+            m_ScopeFilterField?.Init(PipelineBlackboardScopeFilter.All);
+            m_ContextFilterField?.Init(PipelineBlackboardContextFilter.AllVisible);
+            m_ScopeFilterField?.RegisterValueChangedCallback(_ => OnBlackboardFiltersChanged());
+            m_ContextFilterField?.RegisterValueChangedCallback(_ => OnBlackboardFiltersChanged());
+            m_SearchField?.RegisterValueChangedCallback(_ => RequestRefresh());
+            m_AllSourceButton.clicked += () => SetSourceFilter(GraphDataCatalogSourceFilter.All);
+            m_InputSourceButton.clicked += () => SetSourceFilter(GraphDataCatalogSourceFilter.Input);
+            m_BlackboardSourceButton.clicked += () => SetSourceFilter(GraphDataCatalogSourceFilter.Blackboard);
+            m_BlackboardFilterButton.clicked += ToggleBlackboardFilters;
+            m_AddButton.clicked += ToggleCreation;
+            m_CreateButton.clicked += CreateDeclaration;
+            m_CancelButton.clicked += HideCreation;
+
+            AddButtonIcon(m_BlackboardFilterButton, "d_FilterByType");
+            AddButtonIcon(m_CreateButton, "TestPassed");
+            AddButtonIcon(m_CancelButton, "d_winbtn_win_close");
+            m_CreationBar.style.display = DisplayStyle.None;
+            RefreshFilterPresentation();
+
+            root.RegisterCallback<AttachToPanelEvent>(_ => Attach());
+            root.RegisterCallback<DetachFromPanelEvent>(_ => Detach());
+        }
+
+        public IEnumerable<BaseExposedProperty> VisibleBlackboardDeclarations =>
+            m_VisibleBlackboardTrees.SelectMany(i => i.ExposedProperties);
+
+        public void SetAuthoringContext(object authoringContext)
+        {
+            m_AuthoringContext = authoringContext;
+        }
+
+        public void SetVisibleBlackboardSources(IEnumerable<BaseTree> trees)
+        {
+            m_VisibleBlackboardTrees.Clear();
+            if (trees == null)
+                return;
+
+            foreach (BaseTree tree in trees)
+            {
+                if (tree != null && !m_VisibleBlackboardTrees.Contains(tree))
+                    m_VisibleBlackboardTrees.Add(tree);
+            }
+        }
+
+        public void Bind(BaseTree tree)
+        {
+            Clear();
+            if (tree != null && !m_VisibleBlackboardTrees.Contains(tree))
+                m_VisibleBlackboardTrees.Add(tree);
+
+            m_Context = new GraphDataCatalogContext(
+                tree,
+                m_AuthoringContext,
+                m_VisibleBlackboardTrees,
+                ++m_Generation);
+            RefreshCreationOptions();
+            Rebuild();
+        }
+
+        public void Clear()
+        {
+            m_CatalogContainer.Clear();
+            m_Context = null;
+        }
+
+        public bool FocusBlackboardDeclaration(string graphAuthoringId, string declarationId)
+        {
+            BaseExposedProperty declaration = VisibleBlackboardDeclarations.FirstOrDefault(i =>
+                i != null &&
+                string.Equals(i.Owner?.GraphAuthoringId, graphAuthoringId, StringComparison.Ordinal) &&
+                string.Equals(i.DeclarationId, declarationId, StringComparison.Ordinal));
+            if (declaration == null)
+                return false;
+
+            string stableId = $"blackboard:{graphAuthoringId}:{declarationId}";
+            m_ShowDataTab();
+            m_SearchField?.SetValueWithoutNotify(string.Empty);
+            m_ScopeFilterField?.SetValueWithoutNotify(PipelineBlackboardScopeFilter.All);
+            m_ContextFilterField?.SetValueWithoutNotify(PipelineBlackboardContextFilter.AllVisible);
+            m_ExpandedEntries.Add(stableId);
+            SetSourceFilter(GraphDataCatalogSourceFilter.Blackboard);
+            Rebuild();
+            m_Root.schedule.Execute(() =>
+            {
+                GraphDataCatalogEntryView target = m_CatalogContainer
+                    .Query<GraphDataCatalogEntryView>()
+                    .ToList()
+                    .FirstOrDefault(i => string.Equals(i.StableId, stableId, StringComparison.Ordinal));
+                if (target != null)
+                    m_Root.Q<ScrollView>("graph-data-scroll")?.ScrollTo(target);
+            });
+            return true;
+        }
+
+        void Attach()
+        {
+            GraphDataCatalogSourceRegistry.Changed -= RebuildSources;
+            GraphDataCatalogSourceRegistry.Changed += RebuildSources;
+            RebuildSources();
+        }
+
+        void Detach()
+        {
+            GraphDataCatalogSourceRegistry.Changed -= RebuildSources;
+            DisposeSources();
+        }
+
+        IReadOnlyList<IGraphDataCatalogSource> GetSources()
+        {
+            if (m_Sources.Count == 0)
+                RebuildSources();
+            return m_Sources;
+        }
+
+        void RebuildSources()
+        {
+            DisposeSources();
+            m_Sources.Add(new BlackboardGraphDataCatalogSource());
+            m_Sources.AddRange(GraphDataCatalogSourceRegistry.CreateSources());
+            m_Sources.Sort((left, right) => left.Order.CompareTo(right.Order));
+            foreach (IGraphDataCatalogSource source in m_Sources)
+                source.Changed += RequestRefresh;
+
+            if (m_Context != null)
+            {
+                RefreshCreationOptions();
+                RequestRefresh();
+            }
+        }
+
+        void DisposeSources()
+        {
+            foreach (IGraphDataCatalogSource source in m_Sources)
+            {
+                source.Changed -= RequestRefresh;
+                source.Dispose();
+            }
+            m_Sources.Clear();
+        }
+
+        void RequestRefresh()
+        {
+            if (m_Context == null || m_RefreshScheduled)
+                return;
+
+            m_RefreshScheduled = true;
+            m_Root.schedule.Execute(() =>
+            {
+                m_RefreshScheduled = false;
+                Rebuild();
+            });
+        }
+
+        void Rebuild()
+        {
+            if (m_CatalogContainer == null || m_Context == null)
+                return;
+
+            CaptureEntryStates();
+            m_CatalogContainer.Clear();
+            Dictionary<string, Foldout> groups = new Dictionary<string, Foldout>(StringComparer.Ordinal);
+            List<GraphDataCatalogEntry> entries = new List<GraphDataCatalogEntry>();
+            foreach (IGraphDataCatalogSource source in GetSources())
+            {
+                List<GraphDataCatalogEntry> sourceEntries = source.GetEntries(m_Context)?.Where(i => i != null).ToList()
+                    ?? new List<GraphDataCatalogEntry>();
+                if (sourceEntries.Count == 0)
+                {
+                    sourceEntries.Add(new GraphDataCatalogEntry(
+                        source,
+                        $"{source.Kind}:empty",
+                        GraphDataCatalogEntryKind.Status,
+                        source.Kind == GraphDataCatalogSourceKind.Blackboard ? "No declarations." : "No entries.",
+                        string.Empty,
+                        source.DisplayName,
+                        source.Kind == GraphDataCatalogSourceKind.Input
+                            ? GraphDataCatalogOwnership.External
+                            : GraphDataCatalogOwnership.Local,
+                        source.DisplayName,
+                        string.Empty,
+                        new Color(0.35f, 0.35f, 0.35f),
+                        GraphDataCatalogCapability.None,
+                        null,
+                        m_Context.Generation));
+                }
+                entries.AddRange(sourceEntries);
+            }
+
+            List<GraphDataCatalogEntry> visible = entries
+                .Where(IsEntryVisible)
+                .OrderBy(i => i.Source.Order)
+                .ThenBy(i => i.GroupPath, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(i => i.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (visible.Count == 0)
+            {
+                AddMessage("No matching graph data.");
+                return;
+            }
+
+            foreach (GraphDataCatalogEntry entry in visible)
+            {
+                VisualElement parent = ResolveGroup(entry.GroupPath, groups);
+                GraphDataCatalogEntryView view = new GraphDataCatalogEntryView(
+                    entry,
+                    m_Context,
+                    m_ExpandedEntries.Contains(entry.StableId),
+                    SetEntryExpanded,
+                    RequestRefresh,
+                    ReportError);
+                parent.Add(view);
+            }
+        }
+
+        void CaptureEntryStates()
+        {
+            List<GraphDataCatalogEntryView> views = m_CatalogContainer
+                .Query<GraphDataCatalogEntryView>()
+                .ToList();
+            foreach (GraphDataCatalogEntryView view in views)
+                SetEntryExpanded(view.StableId, view.Expanded);
+        }
+
+        VisualElement ResolveGroup(string groupPath, Dictionary<string, Foldout> groups)
+        {
+            VisualElement parent = m_CatalogContainer;
+            string currentPath = string.Empty;
+            foreach (string rawSegment in (groupPath ?? string.Empty).Split('/'))
+            {
+                string segment = rawSegment.Trim();
+                if (segment.Length == 0)
+                    continue;
+
+                currentPath = currentPath.Length == 0 ? segment : $"{currentPath}/{segment}";
+                if (!groups.TryGetValue(currentPath, out Foldout foldout))
+                {
+                    string stateKey = currentPath;
+                    bool expanded = !m_FoldoutStates.TryGetValue(stateKey, out bool saved) || saved;
+                    foldout = new Foldout { text = segment, value = expanded };
+                    foldout.AddToClassList(currentPath.Contains("/")
+                        ? "graph-data-category-foldout"
+                        : "graph-data-source-foldout");
+                    foldout.RegisterValueChangedCallback(evt => m_FoldoutStates[stateKey] = evt.newValue);
+                    groups.Add(currentPath, foldout);
+                    parent.Add(foldout);
+                }
+                parent = foldout.contentContainer;
+            }
+            return parent;
+        }
+
+        bool IsEntryVisible(GraphDataCatalogEntry entry)
+        {
+            if (m_SourceFilter != GraphDataCatalogSourceFilter.All &&
+                !string.Equals(m_SourceFilter.ToString(), entry.Source.Kind.ToString(), StringComparison.Ordinal))
+                return false;
+
+            PipelineBlackboardScopeFilter scopeFilter = m_ScopeFilterField?.value is PipelineBlackboardScopeFilter scope
+                ? scope
+                : PipelineBlackboardScopeFilter.All;
+            PipelineBlackboardContextFilter contextFilter = m_ContextFilterField?.value is PipelineBlackboardContextFilter context
+                ? context
+                : PipelineBlackboardContextFilter.AllVisible;
+            bool blackboardSpecificFilter = scopeFilter != PipelineBlackboardScopeFilter.All ||
+                                            contextFilter != PipelineBlackboardContextFilter.AllVisible;
+            if (entry.Source.Kind == GraphDataCatalogSourceKind.Input && blackboardSpecificFilter)
+                return false;
+
+            if (entry.Source.Kind == GraphDataCatalogSourceKind.Blackboard)
+            {
+                if (entry.IsStatus && blackboardSpecificFilter)
+                    return false;
+                if (entry.Payload is BaseExposedProperty declaration &&
+                    scopeFilter != PipelineBlackboardScopeFilter.All &&
+                    !string.Equals(scopeFilter.ToString(), declaration.BlackboardScope.ToString(), StringComparison.Ordinal))
+                    return false;
+                if (contextFilter == PipelineBlackboardContextFilter.CurrentContext ||
+                    contextFilter == PipelineBlackboardContextFilter.Local)
+                {
+                    if (entry.Ownership != GraphDataCatalogOwnership.Local)
+                        return false;
+                }
+                else if (contextFilter == PipelineBlackboardContextFilter.Inherited &&
+                         entry.Ownership != GraphDataCatalogOwnership.Inherited)
+                {
+                    return false;
+                }
+            }
+
+            return entry.Matches(m_SearchField?.value);
+        }
+
+        void SetEntryExpanded(string stableId, bool expanded)
+        {
+            if (expanded)
+                m_ExpandedEntries.Add(stableId);
+            else
+                m_ExpandedEntries.Remove(stableId);
+        }
+
+        void SetSourceFilter(GraphDataCatalogSourceFilter sourceFilter)
+        {
+            m_SourceFilter = sourceFilter;
+            if (sourceFilter == GraphDataCatalogSourceFilter.Input)
+            {
+                m_ScopeFilterField?.SetValueWithoutNotify(PipelineBlackboardScopeFilter.All);
+                m_ContextFilterField?.SetValueWithoutNotify(PipelineBlackboardContextFilter.AllVisible);
+                m_BlackboardFiltersExpanded = false;
+            }
+
+            if (sourceFilter == GraphDataCatalogSourceFilter.Blackboard)
+                m_BlackboardFiltersExpanded = true;
+
+            RefreshFilterPresentation();
+            RequestRefresh();
+        }
+
+        void ToggleBlackboardFilters()
+        {
+            if (m_SourceFilter == GraphDataCatalogSourceFilter.Input)
+                return;
+
+            m_BlackboardFiltersExpanded = !m_BlackboardFiltersExpanded;
+            RefreshFilterPresentation();
+        }
+
+        void OnBlackboardFiltersChanged()
+        {
+            RefreshFilterPresentation();
+            RequestRefresh();
+        }
+
+        void RefreshFilterPresentation()
+        {
+            bool blackboardFilterAvailable = m_SourceFilter != GraphDataCatalogSourceFilter.Input;
+            bool hasBlackboardFilters =
+                (m_ScopeFilterField?.value is PipelineBlackboardScopeFilter scope && scope != PipelineBlackboardScopeFilter.All) ||
+                (m_ContextFilterField?.value is PipelineBlackboardContextFilter context && context != PipelineBlackboardContextFilter.AllVisible);
+
+            m_AllSourceButton.EnableInClassList("selected", m_SourceFilter == GraphDataCatalogSourceFilter.All);
+            m_InputSourceButton.EnableInClassList("selected", m_SourceFilter == GraphDataCatalogSourceFilter.Input);
+            m_BlackboardSourceButton.EnableInClassList("selected", m_SourceFilter == GraphDataCatalogSourceFilter.Blackboard);
+            m_BlackboardFilterButton.style.display = blackboardFilterAvailable ? DisplayStyle.Flex : DisplayStyle.None;
+            m_BlackboardFilterButton.EnableInClassList("selected", hasBlackboardFilters);
+            m_BlackboardFilterButton.tooltip = m_BlackboardFiltersExpanded
+                ? "Hide blackboard filters"
+                : "Show blackboard filters";
+            m_BlackboardFilterPanel.style.display = blackboardFilterAvailable && m_BlackboardFiltersExpanded
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
+        }
+
+        void ToggleCreation()
+        {
+            bool show = m_CreationBar.resolvedStyle.display == DisplayStyle.None;
+            m_CreationBar.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
+            if (show)
+                m_NameField.Focus();
+        }
+
+        void HideCreation()
+        {
+            m_CreationBar.style.display = DisplayStyle.None;
+            m_NameField.SetValueWithoutNotify(string.Empty);
+        }
+
+        void RefreshCreationOptions()
+        {
+            IGraphDataCatalogCreationSource source = GetSources().OfType<IGraphDataCatalogCreationSource>().FirstOrDefault();
+            m_ScopeOptions = source?.GetScopeOptions(m_Context) ?? Array.Empty<GraphDataCatalogCreationOption>();
+            m_TypeOptions = source?.GetTypeOptions(m_Context) ?? Array.Empty<GraphDataCatalogCreationOption>();
+
+            m_ScopeField.choices = m_ScopeOptions.Select(i => i.DisplayName).ToList();
+            m_TypeField.choices = m_TypeOptions.Select(i => i.DisplayName).ToList();
+            if (m_ScopeField.choices.Count > 0 && !m_ScopeField.choices.Contains(m_ScopeField.value))
+                m_ScopeField.SetValueWithoutNotify(m_ScopeField.choices[0]);
+            if (m_TypeField.choices.Count > 0 && !m_TypeField.choices.Contains(m_TypeField.value))
+                m_TypeField.SetValueWithoutNotify(m_TypeField.choices[0]);
+
+            bool canCreate = source != null && m_ScopeOptions.Count > 0 && m_TypeOptions.Count > 0;
+            m_AddButton.SetEnabled(canCreate);
+            m_CreateButton.SetEnabled(canCreate);
+            if (!canCreate)
+                HideCreation();
+        }
+
+        void CreateDeclaration()
+        {
+            IGraphDataCatalogCreationSource source = GetSources().OfType<IGraphDataCatalogCreationSource>().FirstOrDefault();
+            GraphDataCatalogCreationOption scope = m_ScopeOptions.FirstOrDefault(i => i.DisplayName == m_ScopeField.value);
+            GraphDataCatalogCreationOption type = m_TypeOptions.FirstOrDefault(i => i.DisplayName == m_TypeField.value);
+            if (source == null || scope == null || type == null)
+            {
+                ReportError("Blackboard creation options are unavailable for the current graph.");
+                return;
+            }
+
+            GraphDataCatalogCreateRequest request = new GraphDataCatalogCreateRequest(
+                m_NameField.value,
+                scope.Id,
+                type.Id);
+            if (!source.TryCreate(request, m_Context, out string error))
+            {
+                ReportError(error);
+                return;
+            }
+
+            HideCreation();
+            Rebuild();
+        }
+
+        void AddMessage(string text, bool error = false)
+        {
+            Label label = new Label(text);
+            label.AddToClassList("graph-data-message");
+            if (error)
+                label.AddToClassList("graph-data-error");
+            m_CatalogContainer.Add(label);
+        }
+
+        void ReportError(string error)
+        {
+            if (string.IsNullOrWhiteSpace(error))
+                return;
+
+            Debug.LogError($"Graph Data Catalog: {error}");
+            Label label = new Label(error);
+            label.AddToClassList("graph-data-message");
+            label.AddToClassList("graph-data-error");
+            m_CatalogContainer.Insert(0, label);
+        }
+
+        static void AddButtonIcon(Button button, string iconName)
+        {
+            Image image = new Image
+            {
+                image = EditorGUIUtility.IconContent(iconName).image,
+                scaleMode = ScaleMode.ScaleToFit
+            };
+            image.AddToClassList("graph-data-button-icon");
+            button.Add(image);
         }
     }
 

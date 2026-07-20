@@ -35,7 +35,7 @@ public class DragManipulator : IManipulator
     }
     protected static readonly CustomStyleProperty<bool> draggableEnabledProperty
       = new CustomStyleProperty<bool>("--draggable-enabled");
-    protected Vector3 offset;
+    private Vector3 m_PointerStartPosition;
     private bool isDragging = false;
     private VisualElement lastDroppable = null;
     private string _droppableId = "droppable";
@@ -101,33 +101,13 @@ public class DragManipulator : IManipulator
         lastPickingMode = target.pickingMode;
         target.pickingMode = PickingMode.Ignore;
         isDragging = true;
-        //offset = ev.localPosition;
+        m_PointerStartPosition = ev.position;
         target.CapturePointer(ev.pointerId);
         
         OnDrag?.Invoke(ev);
+        ev.StopImmediatePropagation();
+        ev.PreventDefault();
     }
-    public void DragBeginForce(PointerDownEvent ev,Vector2 localPosition)
-    {
-        if (!enabled)
-            return;
-        target.AddToClassList("draggable--dragging");
-
-        if (removeClassOnDrag != null)
-        {
-            removedClass = target.ClassListContains(removeClassOnDrag);
-            if (removedClass)
-                target.RemoveFromClassList(removeClassOnDrag);
-        }
-
-        lastPickingMode = target.pickingMode;
-        target.pickingMode = PickingMode.Ignore;
-        isDragging = true;
-        offset = localPosition;
-        target.CapturePointer(ev.pointerId);
-
-        OnDrag?.Invoke(ev);
-    }
-
     public void DragBegin(PointerDownEvent ev)
     {
         if (!enabled)
@@ -148,10 +128,12 @@ public class DragManipulator : IManipulator
         lastPickingMode = target.pickingMode;
         target.pickingMode = PickingMode.Ignore;
         isDragging = true;
-        offset = ev.localPosition;
+        m_PointerStartPosition = ev.position;
         target.CapturePointer(ev.pointerId);
         
         OnDrag?.Invoke(ev);
+        ev.StopImmediatePropagation();
+        ev.PreventDefault();
     }
     private void DragEnd(IPointerEvent ev)
     {
@@ -256,7 +238,7 @@ public class DragManipulator : IManipulator
             return;
         }
 
-        Vector3 delta = ev.localPosition - (Vector3)offset;
+        Vector3 delta = ev.position - m_PointerStartPosition;
         OnMove?.Invoke(delta);
         
         

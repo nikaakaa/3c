@@ -1,0 +1,9 @@
+{
+  "title": "Commercial Client Startup",
+  "transportStatus": "Transport: HTTPS   Manifest publisher signature: not implemented",
+  "errorPrefix": "Error",
+  "retryLabel": "Retry",
+  "exitLabel": "Exit",
+  "downloadConsent": "Core files require network download. Confirm to continue.",
+  "downloadLabel": "Download"
+}

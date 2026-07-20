@@ -6,3 +6,214 @@ package Sining.Message;
 // 使用方式:
 // 在message协议上方添加// Protocol+空格+协议名字
 // 例如:// Protocol ProtoBuf 或 // Protocol MemoryPack
+
+message ServerAuthoritativeInnerHostIdentity
+{
+    string HostProductId = 1;
+    string HostId = 2;
+    int32 RouteKind = 3;
+    string RoomId = 4;
+}
+
+message ServerAuthoritativeInnerProtocolIdentity
+{
+    uint32 ModelProtocolVersion = 1;
+    string ModelId = 2;
+    string ModelConfigurationHash = 3;
+    string EndpointId = 4;
+}
+
+message ServerAuthoritativeInnerProgramIdentity
+{
+    string ProgramId = 1;
+    string ProgramHash = 2;
+    string LayoutHash = 3;
+    string OperationSetId = 4;
+    string OperationSetVersion = 5;
+}
+
+message ServerAuthoritativeInnerPipelineIdentity
+{
+    string PipelineId = 1;
+    string PipelineHash = 2;
+    string BackendId = 3;
+    string SolverId = 4;
+    string SolverVersion = 5;
+    uint32 TickRate = 6;
+    uint64 SolverCapabilities = 7;
+    uint64 SolverFeatures = 8;
+}
+
+message ServerAuthoritativeInnerWorldIdentity
+{
+    string SolverId = 1;
+    string SolverVersion = 2;
+    uint64 SolverCapabilities = 3;
+    uint64 SolverFeatures = 4;
+    string WorldId = 5;
+    string MapId = 6;
+    string WorldRevision = 7;
+    string WorldConfigurationHash = 8;
+    string NavigationSurfaceArtifactHash = 9;
+    string QueryProfileHash = 10;
+}
+
+message ServerAuthoritativeInnerDataEndpoint
+{
+    string Host = 1;
+    uint32 Port = 2;
+}
+
+message ServerAuthoritativeInnerRosterMember
+{
+    string PlayerId = 1;
+    string ActorId = 2;
+    int32 ProcessRole = 3;
+}
+
+message ServerAuthoritativeInnerDataPlaneTicket
+{
+    string TicketId = 1;
+    string RoomId = 2;
+    string SessionId = 3;
+    string PlayerId = 4;
+    string ActorId = 5;
+    ServerAuthoritativeInnerHostIdentity Host = 6;
+    string Nonce = 7;
+    int64 ExpiresAtUnixMilliseconds = 8;
+}
+
+message ServerAuthoritativeInnerReliableGameplayEvent
+{
+    string ActorId = 1;
+    string EventId = 2;
+    uint64 EventSequence = 3;
+    uint64 AuthorityTick = 4;
+    string EventKind = 5;
+    uint32 PayloadSchemaVersion = 6;
+    uint32 PayloadLength = 7;
+    repeatedArray byte Payload = 8;
+}
+
+message A2G_ServerAuthoritativeAuthoritySceneRegisterRequest // IAddressRequest,G2A_ServerAuthoritativeAuthoritySceneRegisterResponse
+{
+    int64 AuthorityAddress = 1;
+    ServerAuthoritativeInnerHostIdentity Host = 2;
+    ServerAuthoritativeInnerProtocolIdentity Protocol = 3;
+    ServerAuthoritativeInnerProgramIdentity Program = 4;
+    ServerAuthoritativeInnerPipelineIdentity AuthorityPipeline = 5;
+    string PredictionPipelineId = 6;
+    string PredictionPipelineHash = 7;
+    ServerAuthoritativeInnerDataEndpoint DataEndpoint = 8;
+    ServerAuthoritativeInnerWorldIdentity World = 9;
+}
+
+message G2A_ServerAuthoritativeAuthoritySceneRegisterResponse // IAddressResponse
+{
+    int32 ResultCode = 1;
+    uint64 RoomRevision = 2;
+    string SessionId = 3;
+    string FailureReason = 4;
+}
+
+message G2A_ServerAuthoritativeAuthoritySceneRosterLock // IAddressMessage
+{
+    ServerAuthoritativeInnerHostIdentity Host = 1;
+    string SessionId = 2;
+    uint64 RoomRevision = 3;
+    repeated ServerAuthoritativeInnerRosterMember Members = 4;
+}
+
+message G2A_ServerAuthoritativeAuthoritySceneDataPlaneTicket // IAddressMessage
+{
+    ServerAuthoritativeInnerDataPlaneTicket Ticket = 1;
+}
+
+message A2G_ServerAuthoritativeAuthoritySceneTicketConsumed // IAddressMessage
+{
+    ServerAuthoritativeInnerHostIdentity Host = 1;
+    string SessionId = 2;
+    string PlayerId = 3;
+    string TicketId = 4;
+    int64 AuthorityAddress = 5;
+}
+
+message A2G_ServerAuthoritativeAuthoritySceneHeartbeat // IAddressMessage
+{
+    ServerAuthoritativeInnerHostIdentity Host = 1;
+    string SessionId = 2;
+    uint64 Sequence = 3;
+    int64 SentUnixMilliseconds = 4;
+    uint64 LatestAuthorityTick = 5;
+    int64 AuthorityAddress = 6;
+}
+
+message G2A_ServerAuthoritativeAuthoritySceneHeartbeatAck // IAddressMessage
+{
+    ServerAuthoritativeInnerHostIdentity Host = 1;
+    string SessionId = 2;
+    uint64 Sequence = 3;
+    int64 SentUnixMilliseconds = 4;
+    int64 ServerUnixMilliseconds = 5;
+}
+
+message A2G_ServerAuthoritativeAuthoritySceneReliableGameplayEventBatch // IAddressMessage
+{
+    ServerAuthoritativeInnerHostIdentity Host = 1;
+    string SessionId = 2;
+    string RecipientActorId = 3;
+    repeated ServerAuthoritativeInnerReliableGameplayEvent Events = 4;
+    int64 AuthorityAddress = 5;
+}
+
+message G2A_ServerAuthoritativeAuthoritySceneFullCheckpointRequest // IAddressMessage
+{
+    ServerAuthoritativeInnerHostIdentity Host = 1;
+    string SessionId = 2;
+    string PlayerId = 3;
+    string ActorId = 4;
+    uint64 RequestSequence = 5;
+}
+
+message A2G_ServerAuthoritativeAuthoritySceneFullCheckpointResponse // IAddressMessage
+{
+    ServerAuthoritativeInnerHostIdentity Host = 1;
+    string SessionId = 2;
+    string PlayerId = 3;
+    string ActorId = 4;
+    uint64 RequestSequence = 5;
+    uint64 AuthorityTick = 6;
+    uint64 ConfirmedInputSequence = 7;
+    uint64 ReliableEventHorizon = 8;
+    string CheckpointLayoutHash = 9;
+    string CheckpointHash = 10;
+    uint32 CheckpointLength = 11;
+    repeatedArray byte Checkpoint = 12;
+    uint64 SnapshotSequence = 13;
+    int64 AuthorityAddress = 14;
+}
+
+message A2G_ServerAuthoritativeAuthoritySceneLeave // IAddressMessage
+{
+    ServerAuthoritativeInnerHostIdentity Host = 1;
+    string SessionId = 2;
+    string Reason = 3;
+    int64 AuthorityAddress = 4;
+}
+
+message A2G_ServerAuthoritativeAuthoritySceneFailure // IAddressMessage
+{
+    ServerAuthoritativeInnerHostIdentity Host = 1;
+    string SessionId = 2;
+    string Code = 3;
+    string Reason = 4;
+    int64 AuthorityAddress = 5;
+}
+
+message G2A_ServerAuthoritativeAuthoritySceneFailure // IAddressMessage
+{
+    ServerAuthoritativeInnerHostIdentity Host = 1;
+    string SessionId = 2;
+    int32 ResultCode = 3;
+    string Reason = 4;
+}

@@ -39,11 +39,13 @@ namespace TreeDesigner
             yield return new StateBehaviorGraphReferenceModule();
         }
 
+#if UNITY_EDITOR
         public override void OnCreated()
         {
             base.OnCreated();
             EnsureInlineStateBehaviorGraph();
         }
+#endif
 
         public override void Init(BaseGraph tree)
         {
@@ -219,6 +221,7 @@ namespace TreeDesigner
             m_RuntimeSubTree.InitTree(Owner.User, Owner, route);
         }
 
+#if UNITY_EDITOR
         void EnsureInlineStateBehaviorGraph()
         {
             StateBehaviorGraphReferenceModule module = GetModule<StateBehaviorGraphReferenceModule>();
@@ -243,6 +246,7 @@ namespace TreeDesigner
             tree.OnExitGUID = onExitNode.GUID;
             return tree;
         }
+#endif
 
         void BeginRuntimeSubTree()
         {

@@ -1,0 +1,350 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+
+namespace ThirdPersonSimulation
+{
+    public enum SemanticValueKind : byte
+    {
+        Boolean = 1,
+        Int32 = 2,
+        UInt64 = 3,
+        Number = 4,
+        Vector2 = 5,
+        Vector3 = 6,
+        Yaw = 7,
+        Identity = 8
+    }
+
+    public enum OperationValuePortConstraint : byte
+    {
+        Fixed = 1,
+        BooleanLike = 2,
+        NumericLike = 3,
+        Dynamic = 4
+    }
+
+    public enum CompiledValueInputSourceKind : byte
+    {
+        Operation = 1,
+        Constant = 2
+    }
+
+    public readonly struct OperationValueInputRange
+    {
+        public OperationValueInputRange(int offset, int count)
+        {
+            if (offset < 0 || count < 0)
+                throw new ArgumentOutOfRangeException();
+            Offset = offset;
+            Count = count;
+        }
+
+        public int Offset { get; }
+        public int Count { get; }
+    }
+
+    public readonly struct CompiledValueInputBinding
+    {
+        public CompiledValueInputBinding(
+            int targetPortIndex,
+            SemanticValueKind resolvedValueKind,
+            CompiledValueInputSourceKind sourceKind,
+            OperationHandle sourceOperation,
+            int sourceOutputPortIndex,
+            int constantIndex)
+        {
+            if (targetPortIndex < 0 || sourceOutputPortIndex < -1 || constantIndex < -1)
+                throw new ArgumentOutOfRangeException();
+            if (!Enum.IsDefined(typeof(SemanticValueKind), resolvedValueKind) ||
+                !Enum.IsDefined(typeof(CompiledValueInputSourceKind), sourceKind))
+                throw new ArgumentOutOfRangeException();
+            if (sourceKind == CompiledValueInputSourceKind.Operation && (!sourceOperation.IsValid || sourceOutputPortIndex < 0 || constantIndex >= 0))
+                throw new ArgumentException("Operation Value source is incomplete.");
+            if (sourceKind == CompiledValueInputSourceKind.Constant && (sourceOperation.IsValid || sourceOutputPortIndex >= 0 || constantIndex < 0))
+                throw new ArgumentException("Constant Value source is incomplete.");
+            TargetPortIndex = targetPortIndex;
+            ResolvedValueKind = resolvedValueKind;
+            SourceKind = sourceKind;
+            SourceOperation = sourceOperation;
+            SourceOutputPortIndex = sourceOutputPortIndex;
+            ConstantIndex = constantIndex;
+        }
+
+        public int TargetPortIndex { get; }
+        public SemanticValueKind ResolvedValueKind { get; }
+        public CompiledValueInputSourceKind SourceKind { get; }
+        public OperationHandle SourceOperation { get; }
+        public int SourceOutputPortIndex { get; }
+        public int ConstantIndex { get; }
+    }
+
+    public sealed class OperationValuePortDefinition
+    {
+        public OperationValuePortDefinition(
+            string identity,
+            int order,
+            OperationValuePortConstraint constraint,
+            SemanticValueKind fixedKind = default,
+            string constraintGroup = "")
+        {
+            Identity = SimulationIdentity.Require(identity, nameof(identity));
+            if (order < 0)
+                throw new ArgumentOutOfRangeException(nameof(order));
+            if (!Enum.IsDefined(typeof(OperationValuePortConstraint), constraint))
+                throw new ArgumentOutOfRangeException(nameof(constraint));
+            if (constraint == OperationValuePortConstraint.Fixed && !Enum.IsDefined(typeof(SemanticValueKind), fixedKind))
+                throw new ArgumentOutOfRangeException(nameof(fixedKind));
+            Order = order;
+            Constraint = constraint;
+            FixedKind = fixedKind;
+            ConstraintGroup = constraintGroup ?? string.Empty;
+        }
+
+        public string Identity { get; }
+        public int Order { get; }
+        public OperationValuePortConstraint Constraint { get; }
+        public SemanticValueKind FixedKind { get; }
+        public string ConstraintGroup { get; }
+
+        public bool Accepts(SemanticValueKind kind)
+        {
+            if (!Enum.IsDefined(typeof(SemanticValueKind), kind))
+                return false;
+            return Constraint switch
+            {
+                OperationValuePortConstraint.Fixed => kind == FixedKind,
+                OperationValuePortConstraint.BooleanLike => IsBooleanLike(kind),
+                OperationValuePortConstraint.NumericLike => IsNumericLike(kind),
+                OperationValuePortConstraint.Dynamic => true,
+                _ => false
+            };
+        }
+
+        public SemanticValueKind Resolve(SemanticValueKind actualKind)
+        {
+            if (!Accepts(actualKind))
+                throw new InvalidOperationException($"Value kind '{actualKind}' is not accepted by port '{Identity}' ({Constraint}).");
+            return Constraint == OperationValuePortConstraint.Fixed ? FixedKind : actualKind;
+        }
+
+        public static bool IsBooleanLike(SemanticValueKind kind) =>
+            kind == SemanticValueKind.Boolean ||
+            kind == SemanticValueKind.Int32 ||
+            kind == SemanticValueKind.UInt64 ||
+            kind == SemanticValueKind.Number ||
+            kind == SemanticValueKind.Identity;
+
+        public static bool IsNumericLike(SemanticValueKind kind) =>
+            kind == SemanticValueKind.Boolean ||
+            kind == SemanticValueKind.Int32 ||
+            kind == SemanticValueKind.UInt64 ||
+            kind == SemanticValueKind.Number;
+    }
+
+    public sealed class OperationValuePortContract
+    {
+        readonly ReadOnlyCollection<OperationValuePortDefinition> m_Inputs;
+        readonly ReadOnlyCollection<OperationValuePortDefinition> m_Outputs;
+        readonly Dictionary<string, OperationValuePortDefinition> m_InputByIdentity;
+        readonly Dictionary<string, OperationValuePortDefinition> m_OutputByIdentity;
+
+        public OperationValuePortContract(
+            SimulationOperationCode operationCode,
+            IEnumerable<OperationValuePortDefinition> inputs,
+            IEnumerable<OperationValuePortDefinition> outputs)
+        {
+            OperationCode = operationCode;
+            m_Inputs = Build(inputs, out m_InputByIdentity, "input");
+            m_Outputs = Build(outputs, out m_OutputByIdentity, "output");
+        }
+
+        public SimulationOperationCode OperationCode { get; }
+        public IReadOnlyList<OperationValuePortDefinition> Inputs => m_Inputs;
+        public IReadOnlyList<OperationValuePortDefinition> Outputs => m_Outputs;
+
+        public OperationValuePortDefinition RequireInput(string identity) => Require(m_InputByIdentity, identity, "input");
+        public OperationValuePortDefinition RequireOutput(string identity) => Require(m_OutputByIdentity, identity, "output");
+
+        static ReadOnlyCollection<OperationValuePortDefinition> Build(
+            IEnumerable<OperationValuePortDefinition> source,
+            out Dictionary<string, OperationValuePortDefinition> byIdentity,
+            string direction)
+        {
+            var values = new List<OperationValuePortDefinition>(source ?? Array.Empty<OperationValuePortDefinition>());
+            values.Sort((left, right) =>
+            {
+                int byOrder = left.Order.CompareTo(right.Order);
+                return byOrder != 0 ? byOrder : string.CompareOrdinal(left.Identity, right.Identity);
+            });
+            byIdentity = new Dictionary<string, OperationValuePortDefinition>(StringComparer.Ordinal);
+            for (int i = 0; i < values.Count; i++)
+            {
+                OperationValuePortDefinition value = values[i] ?? throw new InvalidOperationException($"Value {direction} contract contains null.");
+                if (value.Order != i)
+                    throw new InvalidOperationException($"Value {direction} contract orders must be contiguous from zero.");
+                if (!byIdentity.TryAdd(value.Identity, value))
+                    throw new InvalidOperationException($"Value {direction} port '{value.Identity}' is duplicated.");
+            }
+            return values.AsReadOnly();
+        }
+
+        OperationValuePortDefinition Require(
+            IReadOnlyDictionary<string, OperationValuePortDefinition> values,
+            string identity,
+            string direction)
+        {
+            string key = identity ?? string.Empty;
+            if (!values.TryGetValue(key, out OperationValuePortDefinition value))
+                throw new InvalidOperationException($"Operation '{OperationCode}' has no Value {direction} port '{key}'.");
+            return value;
+        }
+    }
+
+    public static class CharacterGameplayValuePortContracts
+    {
+        static readonly ReadOnlyDictionary<SimulationOperationCode, OperationValuePortContract> s_Contracts = Build();
+
+        public static OperationValuePortContract Require(SimulationOperationCode code)
+        {
+            if (!s_Contracts.TryGetValue(code, out OperationValuePortContract contract))
+                throw new InvalidOperationException($"Operation '{code}' has no Value port contract in '{CharacterGameplayOperationSet.Version.Value}'.");
+            return contract;
+        }
+
+        public static SemanticValueKind FromLiteral(SemanticLiteralKind kind)
+        {
+            return kind switch
+            {
+                SemanticLiteralKind.Boolean => SemanticValueKind.Boolean,
+                SemanticLiteralKind.Int32 => SemanticValueKind.Int32,
+                SemanticLiteralKind.UInt64 => SemanticValueKind.UInt64,
+                SemanticLiteralKind.Number => SemanticValueKind.Number,
+                SemanticLiteralKind.Vector2 => SemanticValueKind.Vector2,
+                SemanticLiteralKind.Vector3 => SemanticValueKind.Vector3,
+                SemanticLiteralKind.Yaw => SemanticValueKind.Yaw,
+                SemanticLiteralKind.String => SemanticValueKind.Identity,
+                _ => throw new InvalidOperationException($"Semantic literal kind '{kind}' cannot enter the Value graph.")
+            };
+        }
+
+        public static SemanticValueKind FromState(ProgramStateValueKind kind)
+        {
+            return kind switch
+            {
+                ProgramStateValueKind.Boolean => SemanticValueKind.Boolean,
+                ProgramStateValueKind.Int32 => SemanticValueKind.Int32,
+                ProgramStateValueKind.UInt64 => SemanticValueKind.UInt64,
+                ProgramStateValueKind.Scalar => SemanticValueKind.Number,
+                ProgramStateValueKind.Vector2 => SemanticValueKind.Vector2,
+                ProgramStateValueKind.Vector3 => SemanticValueKind.Vector3,
+                ProgramStateValueKind.Yaw => SemanticValueKind.Yaw,
+                ProgramStateValueKind.Identity => SemanticValueKind.Identity,
+                _ => throw new InvalidOperationException($"Program state kind '{kind}' cannot enter the Value graph.")
+            };
+        }
+
+        static ReadOnlyDictionary<SimulationOperationCode, OperationValuePortContract> Build()
+        {
+            var values = new Dictionary<SimulationOperationCode, OperationValuePortContract>();
+            for (int i = 0; i < CharacterGameplayOperationSet.Operations.Count; i++)
+            {
+                SimulationOperationCode code = CharacterGameplayOperationSet.Operations[i];
+                values.Add(code, Empty(code));
+            }
+
+            Set(values, Output(SimulationOperationCode.StateRootCompleted, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.StateExitCause, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.BlackboardGet, Dynamic("m_Output", 0)));
+            Set(values, Input(SimulationOperationCode.BlackboardSet, Dynamic("m_Value", 0)));
+            Set(values, Output(SimulationOperationCode.InputBoolean, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.InputScalar, Fixed("m_Output", 0, SemanticValueKind.Number)));
+            Set(values, Output(SimulationOperationCode.InputVector2, Fixed("m_Output", 0, SemanticValueKind.Vector2)));
+            Set(values, Output(SimulationOperationCode.InputVector2Magnitude, Fixed("m_Output", 0, SemanticValueKind.Number)));
+            Set(values, Output(SimulationOperationCode.InputRequest, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+            Set(values, Both(SimulationOperationCode.MoveFacingAngle,
+                new[] { Fixed("m_MoveInput", 0, SemanticValueKind.Vector2) },
+                new[] { Fixed("m_Output", 0, SemanticValueKind.Number) }));
+            Set(values, Output(SimulationOperationCode.ActivateActionInstance, Fixed("m_Activated", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.ActionContextActive, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.SubmitActionLifecycle, Fixed("m_Submitted", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.ActionWindowActive, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.CanActivateAction, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+            Set(values, Input(SimulationOperationCode.LocomotionInputMotion, Fixed("m_MoveInput", 0, SemanticValueKind.Vector2)));
+            Set(values, Input(SimulationOperationCode.ConditionResult, BooleanLike("m_Result", 0)));
+            Set(values, Both(SimulationOperationCode.Compare,
+                new[] { NumericLike("m_InputValue1", 0, "compare"), NumericLike("m_InputValue2", 1, "compare") },
+                new[] { Fixed("m_Result", 0, SemanticValueKind.Boolean) }));
+            Set(values, Both(SimulationOperationCode.And,
+                new[] { BooleanLike("m_Input1", 0), BooleanLike("m_Input2", 1) },
+                new[] { Fixed("m_Output", 0, SemanticValueKind.Boolean) }));
+            Set(values, Both(SimulationOperationCode.Or,
+                new[] { BooleanLike("m_Input1", 0), BooleanLike("m_Input2", 1) },
+                new[] { Fixed("m_Output", 0, SemanticValueKind.Boolean) }));
+            Set(values, Both(SimulationOperationCode.Not,
+                new[] { BooleanLike("m_Input", 0) },
+                new[] { Fixed("m_Output", 0, SemanticValueKind.Boolean) }));
+            Set(values, Output(SimulationOperationCode.Constant, Dynamic("m_Output", 0)));
+            Set(values, Output(SimulationOperationCode.GameplayEffectHasTag, Fixed("m_Result", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.GameplayEffectMatchTags, Fixed("m_Result", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.GameplayAttributeRead,
+                Fixed("m_Valid", 0, SemanticValueKind.Boolean),
+                Fixed("m_BaseValue", 1, SemanticValueKind.Number),
+                Fixed("m_CurrentValue", 2, SemanticValueKind.Number)));
+            Set(values, Output(SimulationOperationCode.GameplayEffectApply, Fixed("m_Applied", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.GameplayEffectRemove, Fixed("m_Removed", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.CameraBasisRead,
+                Fixed(CameraProgramOperationSchema.BasisValidPortId, 0, SemanticValueKind.Boolean),
+                Fixed(CameraProgramOperationSchema.BasisPlanarForwardPortId, 1, SemanticValueKind.Vector3),
+                Fixed(CameraProgramOperationSchema.BasisPlanarRightPortId, 2, SemanticValueKind.Vector3),
+                Fixed(CameraProgramOperationSchema.BasisLookDirectionPortId, 3, SemanticValueKind.Vector3),
+                Fixed(CameraProgramOperationSchema.BasisAimPointPortId, 4, SemanticValueKind.Vector3),
+                Fixed(CameraProgramOperationSchema.BasisYawPortId, 5, SemanticValueKind.Yaw),
+                Fixed(CameraProgramOperationSchema.BasisPitchPortId, 6, SemanticValueKind.Number)));
+            Set(values, Output(SimulationOperationCode.ReadEquipmentIdentity, Fixed("m_Output", 0, SemanticValueKind.Identity)));
+            Set(values, Output(SimulationOperationCode.ReadEquipmentParameter, Dynamic("m_Output", 0)));
+            Set(values, Output(SimulationOperationCode.RequestEquipmentChange, Fixed("m_Accepted", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.BeginEquipmentChange, Fixed("m_Begun", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.CommitEquipmentChange, Fixed("m_Committed", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.CancelEquipmentChange, Fixed("m_Cancelled", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.EnterEquipmentFeatureHost, Fixed("m_Entered", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.ExitEquipmentFeatureHost, Fixed("m_Exited", 0, SemanticValueKind.Boolean)));
+            Set(values, Output(SimulationOperationCode.ResolveEquipmentActionRoute, Fixed("m_Resolved", 0, SemanticValueKind.Boolean)));
+
+            if (values.Count != CharacterGameplayOperationSet.Operations.Count)
+                throw new InvalidOperationException("Value port contract table is incomplete.");
+            return new ReadOnlyDictionary<SimulationOperationCode, OperationValuePortContract>(values);
+        }
+
+        static void Set(Dictionary<SimulationOperationCode, OperationValuePortContract> values, OperationValuePortContract contract)
+        {
+            if (!values.ContainsKey(contract.OperationCode))
+                throw new InvalidOperationException($"Value port contract targets unknown operation '{contract.OperationCode}'.");
+            values[contract.OperationCode] = contract;
+        }
+
+        static OperationValuePortContract Empty(SimulationOperationCode code) =>
+            new OperationValuePortContract(code, Array.Empty<OperationValuePortDefinition>(), Array.Empty<OperationValuePortDefinition>());
+
+        static OperationValuePortContract Input(SimulationOperationCode code, params OperationValuePortDefinition[] inputs) =>
+            new OperationValuePortContract(code, inputs, Array.Empty<OperationValuePortDefinition>());
+
+        static OperationValuePortContract Output(SimulationOperationCode code, params OperationValuePortDefinition[] outputs) =>
+            new OperationValuePortContract(code, Array.Empty<OperationValuePortDefinition>(), outputs);
+
+        static OperationValuePortContract Both(SimulationOperationCode code, OperationValuePortDefinition[] inputs, OperationValuePortDefinition[] outputs) =>
+            new OperationValuePortContract(code, inputs, outputs);
+
+        static OperationValuePortDefinition Fixed(string identity, int order, SemanticValueKind kind) =>
+            new OperationValuePortDefinition(identity, order, OperationValuePortConstraint.Fixed, kind);
+
+        static OperationValuePortDefinition BooleanLike(string identity, int order) =>
+            new OperationValuePortDefinition(identity, order, OperationValuePortConstraint.BooleanLike);
+
+        static OperationValuePortDefinition NumericLike(string identity, int order, string group) =>
+            new OperationValuePortDefinition(identity, order, OperationValuePortConstraint.NumericLike, constraintGroup: group);
+
+        static OperationValuePortDefinition Dynamic(string identity, int order) =>
+            new OperationValuePortDefinition(identity, order, OperationValuePortConstraint.Dynamic);
+    }
+}

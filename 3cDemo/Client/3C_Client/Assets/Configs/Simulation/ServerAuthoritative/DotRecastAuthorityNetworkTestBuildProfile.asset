@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0b0000000004d259d15000000000001, type: 3}
+  m_Name: DotRecastAuthorityNetworkTestBuildProfile
+  m_EditorClassIdentifier:
+  m_CharacterDefinition: {fileID: 11400000, guid: c7a7c1e3f7e64d81b5a04a90cbeb8d4e, type: 2}
+  m_AuthoritySource: {fileID: 11400000, guid: 8a10000000004d259d15000000000008, type: 2}
+  m_ExecutionBackend: {fileID: 11400000, guid: 57a1000000004d259d15000000000001, type: 2}
+  m_WorldSolver: {fileID: 11400000, guid: 30a4000000004d259d15000000000005, type: 2}
+  m_Endpoint: {fileID: 11400000, guid: 8a10000000004d259d15000000000001, type: 2}
+  m_HostId: corin-dotrecast-authority-scene
+  m_FantasyProcessConfigId: 1
+  m_AuthoritySceneConfigId: 1002
+  m_AuthoritySceneType: DotRecastAuthority
+  m_RoomId: corin-server-authoritative-demo
+  m_DataHost: 127.0.0.1
+  m_DataPort: 21000
+  m_SessionId: Corin.DotRecastAuthority.Server
+  m_WorldId: Corin.ServerAuthoritative.World
+  m_SourceClockId: Corin.DotRecastAuthority.AuthorityClock
+  m_Actors:
+  - m_PlayerId: corin-player-a
+    m_ActorId: corin-actor-a
+    m_ClientRole: 2
+    m_WorldBodyBindingId: Corin.DotRecast.Body.A
+    m_InitialPosition: {x: 1.5, y: 0, z: -5.27}
+    m_InitialYawDegrees: 0
+    m_InitialGrounded: 1
+    m_ContactRadius: 0.3
+    m_ContactHeight: 2
+    m_ContactSkinWidth: 0.08
+  - m_PlayerId: corin-player-b
+    m_ActorId: corin-actor-b
+    m_ClientRole: 3
+    m_WorldBodyBindingId: Corin.DotRecast.Body.B
+    m_InitialPosition: {x: -1.5, y: 0, z: -5.27}
+    m_InitialYawDegrees: 0
+    m_InitialGrounded: 1
+    m_ContactRadius: 0.3
+    m_ContactHeight: 2
+    m_ContactSkinWidth: 0.08

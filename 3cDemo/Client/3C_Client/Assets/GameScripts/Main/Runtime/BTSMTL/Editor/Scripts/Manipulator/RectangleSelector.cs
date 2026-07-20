@@ -224,17 +224,24 @@ namespace BTSMTL.Editor
             selectionRect = ComputeAxisAlignedBound(selectionRect, selection.ContentContainer.transform.matrix.inverse);
             
             List<ISelectable> newSelection = new List<ISelectable>();
-            selection.Elements.ForEach(delegate (ISelectable child)
+            for (int elementIndex = 0; elementIndex < selection.Elements.Count; elementIndex++)
             {
+                ISelectable child = selection.Elements[elementIndex];
                 Rect rectangle = base.target.ChangeCoordinatesTo(child as VisualElement, selectionRect);
                 if (child.IsSelectable() && child.Overlaps(rectangle))
-                {
                     newSelection.Add(child);
-                }
-            });
+            }
             foreach (ISelectable item in newSelection)
             {
-                if (selection.Selections.Contains(item))
+                bool selected = false;
+                for (int selectionIndex = 0; selectionIndex < selection.Selections.Count; selectionIndex++)
+                {
+                    if (!ReferenceEquals(selection.Selections[selectionIndex], item))
+                        continue;
+                    selected = true;
+                    break;
+                }
+                if (selected)
                 {
                     if (e.actionKey)
                     {

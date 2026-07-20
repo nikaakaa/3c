@@ -1,244 +1,151 @@
 # character-motion-semantics Specification
 
 ## Purpose
-定义角色运动语义：上游通过 `MotionContribution`、`MotionIntent`、`MotionModifier` 和 `MotionResult` 表达输入移动、Timeline motion curve、gameplay result、motion warp 和网络校正，最终 Transform 应用仍由正式 MotionStage 负责。
+定义角色运动的唯一执行语义：Target operation产生`SimulationMotionContribution`，Target Motion accumulator先解析channel并执行Program Motion Modifier，再生成`ResolvedGameplayMotion`；Target Body Motion Integrator执行Prepare后生成唯一`CharacterMotionRequest`，WorldSolver返回实际body result，Body Motion Finalize提交垂直动力状态，Program Finalize提交`CharacterBodySample`与Motion GameplayFact；Unity Transform只在Solver/Presentation边界对齐。
+
 ## Requirements
-### Requirement: Motion 语义使用 Contribution、Intent、Modifier 和 Result
-系统 MUST 使用 `MotionContribution`、`MotionIntent`、`MotionModifier` 和 `MotionResult` 表达角色运动链路。`MotionProposal` MUST 被重命名为 `MotionIntent`，系统 MUST NOT 长期保留 `MotionProposal` 兼容别名或并行字段。
 
-#### Scenario: 上游提交运动来源
-- **WHEN** Timeline、Graph、输入移动、gameplay result 或 network correction 产生运动来源
-- **THEN** 该来源 MUST 进入 `MotionContribution`、modifier 数据或 runtime context data
-- **AND** 它 MUST NOT 直接调用 `CharacterController.Move` 或修改 Transform
+### Requirement: Motion 必须经过 Contribution、Request、Solver Result 和 Body Sample
 
-#### Scenario: MotionStage 生成最终意图
-- **WHEN** MotionStage 执行本帧运动结算
-- **THEN** 它 MUST 将所有正式 motion 来源合成为 `MotionIntent`
-- **AND** `MotionIntent` MUST 表达 Move 前的最终 displacement、velocity 和 yaw intent
+Compiled Locomotion与Timeline MotionCurve operation MUST只提交当前Numeric Target的`SimulationMotionContribution`。同一Actor/Tick的全部contribution MUST由唯一Target Motion accumulator按固定channel解析为`ResolvedMotionChannel`；每个channel MUST经过Operation Set规定的唯一Motion Modifier阶段，再由固定channel合成为`ResolvedGameplayMotion`。唯一Target Body Motion Integrator MUST读取committed `WorldBodyState`、compiled Body Motion descriptor与TickDelta，在Solver前产生唯一`CharacterMotionRequest`和同Step plan。正式WorldSolve Pass MUST把Session全部Actor request组成唯一batch；Solver返回实际结果后 MUST由同一Target Integrator Finalize垂直动力状态，随后Program Finalize MUST更新Character state并产生committed body observation。Graph、Timeline、Action、Modifier、Presentation与concrete Solver MUST不直接实现重力、写Transform或调用其它Solver。没有eligible Modifier时，ResolvedGameplayMotion MUST与原Contribution仲裁结果逐字段一致。
 
-### Requirement: CharacterMotionStage 是 motion modifier 和 Move 的唯一边界
+#### Scenario: Locomotion、Dodge 和 MotionWarp 同 Tick 输出
 
-系统 MUST 让 `CharacterMotionStage` 成为角色最终运动修正与运动执行编排的唯一 gameplay 边界。MotionStage MUST 在执行前完成 modifier 和 correction plan，并把最终 `MotionIntent` 交给正式 Motion Executor。Motion Executor MUST 返回实际执行结果；MotionStage MUST 据此写入 `MotionResult`。MotionStage MUST NOT 直接持有或调用 `CharacterController`、Transform 或具体 KCC 实现。
+- **WHEN** Locomotion与Dodge Timeline同Tick提交motion contribution
+- **AND** Dodge source成为Action channel resolved owner且其MotionWarp eligible
+- **THEN** 唯一Motion accumulator MUST先按channel、priority、weight与blend规则解析channel
+- **AND** MotionWarp MUST只修正resolved Action channel
+- **AND** Body Motion Integrator MUST在全部Modifier之后加入重力
+- **AND** WorldSolver MUST只消费最终唯一request
 
-#### Scenario: 执行 motion modifier
+#### Scenario: Program 没有 Motion Modifier
 
-- **WHEN** MotionStage 已经从 resolver 得到 raw `MotionIntent`
-- **THEN** MotionStage MUST 在调用正式 Motion Executor 前应用 `MotionModifier`
-- **AND** modifier 输出 MUST 是新的 `MotionIntent` 或等价的 intent 变化
+- **WHEN** Program不包含eligible Motion Modifier operation
+- **THEN** channel合成与ResolvedGameplayMotion MUST与迁移前玩法Motion结果逐字段一致
+- **AND** CharacterMotionRequest MUST继续由Body Motion Prepare唯一生成
 
-#### Scenario: 写入运动结果
+### Requirement: MotionContribution 必须携带完整仲裁语义
 
-- **WHEN** Motion Executor 完成一次世界约束运动步骤
-- **THEN** executor MUST 返回正式 Motion Execution Result
-- **AND** MotionStage MUST 从该结果写入 `MotionResult`
-- **AND** `MotionResult` MUST 记录请求位移、实际位移、位置、grounded 状态、请求 yaw 和实际 yaw
+`SimulationMotionContribution` MUST表达稳定 source identity、displacement、yaw、ActorLocal或World space、weight、priority、channel、blend mode与ConsumeLowerChannels。字段 MUST实际参与 accumulator解析；系统 MUST不保存只用于展示却不参与运行结果的 priority、weight或consume配置。
 
-### Requirement: MotionModifier 来源可以来自 Timeline、Action、World、GameplayResult 或 Network
-系统 MUST 允许 motion modifier 数据来自不同业务来源，但所有来源 MUST 汇入同一个 MotionStage 执行链路。Timeline 只表达时间窗口和采样数据；外部目标、world context data、gameplay result 和网络修正 MUST 来自 runtime context。
+#### Scenario: Timeline MotionCurve 提交位移
 
-#### Scenario: Timeline-scoped modifier
-- **WHEN** Timeline 表达某段攻击、闪避或翻越允许 motion warp
-- **THEN** BTSMTL 内部 TimelinePlaybackScheduler MUST 采样并提交 motion modifier 数据或窗口
-- **AND** TimelinePlaybackScheduler MUST NOT 直接改写角色 Transform
+- **WHEN** Timeline MotionCurve clip在当前Tick产生delta
+- **THEN** contribution MUST携带其Timeline/Track/Clip source identity和完整仲裁字段
+- **AND** MUST不绕过accumulator覆盖最终request
 
-#### Scenario: 外部上下文影响 modifier
-- **WHEN** motion warp 需要当前攻击目标、锁定目标、障碍物点、平台速度或服务器修正
-- **THEN** MotionStage MUST 通过正式 runtime context 读取这些数据
-- **AND** modifier 数据 MUST 使用 target key 或 blackboard key 引用外部上下文，而不是持有场景对象 fallback
+### Requirement: MotionContribution 必须区分 Delta 与低层 Channel 占用
 
-### Requirement: MotionWarp 是 Move 前 modifier
-
-系统 MUST 将 motion warp 实现为运动执行前的 `MotionModifier`。MotionWarp MUST 基于 raw `MotionIntent`、warp window、target context data 和限制参数生成修正后的 `MotionIntent`，并继续通过正式 Motion Executor 执行。
-
-#### Scenario: 攻击吸附目标
-
-- **WHEN** 当前动作 Timeline 采样到 motion warp window 且 runtime context 提供目标位置
-- **THEN** MotionWarp MUST 在 motion execution 前修正 displacement 或 yaw intent
-- **AND** 修正结果 MUST 继续通过当前 LocalSolver 的正式 Motion Executor 应用
-
-#### Scenario: 目标缺失
-
-- **WHEN** motion warp window 存在但 target context data 缺失
-- **THEN** MotionWarp MUST 按正式缺失策略处理
-- **AND** 系统 MUST NOT 使用场景搜索、`Camera.main`、`FindObjectOfType` 或隐藏 fallback 补齐目标
-
-### Requirement: Motion modifier 第一阶段使用固定顺序
-系统 MUST 在第一阶段使用固定 motion modifier 顺序，而不是动态插件注册表。固定顺序 MUST 由 MotionStage 或等价 motion pipeline 显式维护，便于调试和网络校验。
-
-#### Scenario: 多个 modifier 同帧存在
-- **WHEN** 同一帧同时存在 Timeline warp、gameplay result knockback、world/platform motion 或 network correction
-- **THEN** MotionStage MUST 按固定顺序处理
-- **AND** 顺序 MUST 能从代码和调试输出中明确追踪
-
-### Requirement: 旧 motion 命名和旧 BBB 数据源必须清理
-系统 MUST 清理正式 runtime 和文档中的旧 motion 命名。正式 Character runtime MUST NOT 引用 `BBBNexus.MotionClipData`、`BBBNexus.WarpedMotionData` 或旧 `PlayerSO` motion 配置。
-
-#### Scenario: 清理 MotionProposal
-- **WHEN** 本变更实现完成
-- **THEN** 正式 runtime 中 MUST 不再存在 `MotionProposal`
-- **AND** OpenSpec 当前口径 MUST 使用 `MotionIntent`
-
-#### Scenario: 禁止旧 BBB motion 数据
-- **WHEN** 实现 root motion、motion warp、dodge、roll 或 vault
-- **THEN** 系统 MAY 参考 BBB 算法
-- **AND** 正式代码 MUST NOT 复制或引用 BBB 旧 motion 数据类型作为 runtime 数据源
-
-### Requirement: MotionContribution 必须携带仲裁语义
-系统 MUST 让 `MotionContribution` 携带正式仲裁语义，包括 motion channel、blend mode、priority、weight、source type、source identity 和是否消费低层 channel。输入移动、Timeline motion curve、gameplay result 和 correction 等来源都 MUST 使用同一贡献合同或正式 modifier 合同。系统 MUST NOT 只依赖字段存在却不参与 resolver 的无效 priority。
-
-#### Scenario: 输入移动提交运动来源
-- **WHEN** 输入节点根据移动输入产生本帧位移
-- **THEN** 它 MUST 提交 `Locomotion` channel 的 `MotionContribution`
-- **AND** 它 MUST NOT 直接把输入移动写成最终 `MotionIntent`
-
-#### Scenario: Timeline 动画轨不提交运动来源
-- **WHEN** Timeline 采样到 `AnimationTrack`
-- **THEN** 它 MUST 只提交动画表现贡献
-- **AND** 它 MUST NOT 从 `AnimationClip` 字段提交 root motion contribution
-
-#### Scenario: Timeline motion curve 提交运动来源
-- **WHEN** Timeline 采样到 MotionCurve clip
-- **THEN** 它 MUST 按 clip 配置提交正式 `MotionContribution`
-- **AND** contribution MUST 携带 channel、blend mode、priority、weight、space 和可追踪 source identity
-- **AND** contribution MUST NOT 绕过 MotionResolver 直接覆盖最终位移
-
-### Requirement: MotionContribution 必须区分位移 Delta 与低层 Channel 占用
-
-MotionContribution 与 TimelineMotionCurveContribution MUST分别表达本 tick 是否包含位移 delta，以及是否通过 Override + ConsumeLowerChannels 占用并消费低层 channel。零 delta Override claim MUST可以成为当前 channel winner 并清空已累计低层 motion；零 delta Additive 或 WeightedBlend MUST不产生 channel claim。
+Contribution MUST分别表达本Tick是否具有有效位移/yaw delta，以及是否通过 `Override + ConsumeLowerChannels` 声明channel占用。零delta Override claim MUST可以成为winner并清除已累计低层motion；零delta Additive或WeightedBlend MUST被忽略且不得消费低层channel。
 
 #### Scenario: 攻击 Recovery 保持原地
 
-- **WHEN** Attack MotionCurve 已到达累计曲线终点
-- **AND** MotionCurveClip 仍在正式占权区间且配置 ConsumeLowerChannels
-- **THEN** Timeline MUST提交零 delta Action channel claim
-- **AND** MotionResolver MUST阻止 Locomotion contribution 在该 tick 生效
-
-#### Scenario: 零 Additive Contribution
-
-- **WHEN** Additive 或 WeightedBlend contribution 的 displacement 与 yaw 都为零
-- **THEN** MotionResolver MUST忽略该 contribution
-- **AND** MUST不消费低层 channel
+- **WHEN** Attack MotionCurve已经到达累计曲线终点
+- **AND** clip仍处于正式占权区间且配置ConsumeLowerChannels
+- **THEN** Timeline MUST提交零delta Action channel claim
+- **AND** Locomotion contribution MUST在该Tick被消费
 
 ### Requirement: MotionCurveClip 必须分开曲线结束与占权结束
 
-MotionCurveClip MUST显式保存满足 `StartFrame < CurveEndFrame <= EndFrame` 的 CurveEndFrame。累计位置与 yaw 曲线 MUST在 StartFrame 到 CurveEndFrame 之间采样；CurveEndFrame 到 EndFrame 之间 MUST保持曲线终值，并按 Override/ConsumeLowerChannels 配置继续提交零 delta claim。缺失或非法 CurveEndFrame MUST作为配置错误，系统 MUST不按 EndFrame 猜测或兼容补齐。
+`MotionCurveClip` MUST显式保存满足 `StartFrame < CurveEndFrame <= EndFrame` 的CurveEndFrame。累计位置与yaw曲线 MUST只在StartFrame到CurveEndFrame之间采样；CurveEndFrame到EndFrame之间 MUST保持曲线终值，并按Override/ConsumeLowerChannels配置继续提交零delta claim。非法CurveEndFrame MUST作为配置或编译错误，不得按EndFrame猜测补齐。
 
-#### Scenario: Corin Attack 曲线早于 Recovery 结束
+#### Scenario: 位移曲线早于 Recovery 结束
 
-- **WHEN** Attack1/Attack2 的位移曲线分别在 49/48 帧结束
-- **AND** 动作 recovery 在 80 帧结束
-- **THEN** 曲线 delta MUST保持原有 49/48 帧时序
-- **AND** Action channel claim MUST持续到 80 帧
+- **WHEN** 攻击位移曲线先于Timeline clip结束
+- **THEN** delta MUST在CurveEndFrame停止
+- **AND** Action channel ownership MAY按clip配置持续到EndFrame
 
-### Requirement: MotionResolver 必须使用固定 channel 顺序仲裁
-系统 MUST 使用固定 channel 顺序把多个 motion 来源仲裁为 `MotionIntent`。第一阶段顺序 MUST 至少覆盖 `Locomotion -> Action -> GameplayResult`，并且 MUST 由 `MotionResolver` 或等价正式 motion pipeline 显式维护。
+### Requirement: Motion accumulator 必须使用固定 Channel 与 Blend 规则
 
-#### Scenario: 攻击 motion curve 覆盖输入移动
-- **WHEN** 同一帧存在 `Locomotion` 输入移动和 `Action` motion curve
-- **AND** action contribution 使用 override 并消费低层 channel
-- **THEN** resolver MUST 使用 action motion curve 作为主要位移来源
-- **AND** 输入移动 MUST NOT 被简单相加到最终位移中
+Target Motion accumulator MUST按 `Locomotion -> Action -> GameplayResult` 的稳定channel顺序解析，且只支持 `Additive`、`WeightedBlend` 与 `Override`。Override winner MUST按priority选择；同priority MUST保持Program traversal产生的稳定顺序。系统 MUST不引入脚本公式、动态resolver注册或按Network Model改变仲裁规则。
 
-#### Scenario: 受击击退覆盖动作位移
-- **WHEN** 同一帧存在 `Action` motion curve 和 `GameplayResult` 击退
-- **AND** gameplay result contribution 使用 override
-- **THEN** resolver MUST 让 gameplay result 高于 action 生效
-- **AND** 最终 `MotionIntent` MUST 能追踪到击退来源
+#### Scenario: GameplayResult 覆盖动作位移
 
-### Requirement: MotionResolver 必须支持有限 blend mode
-系统 MUST 支持有限 `MotionBlendMode`，第一阶段至少包含 `Additive`、`WeightedBlend` 和 `Override`。系统 MUST NOT 在第一阶段引入任意公式编辑器、脚本表达式或动态插件注册表来决定 motion 混合。
+- **WHEN** Action与GameplayResult channel同时具有合法Override contribution
+- **THEN** GameplayResult channel MUST在Action之后解析
+- **AND** ConsumeLowerChannels MUST决定是否替换已累计低层结果
 
-#### Scenario: 同层多个 additive 来源
-- **WHEN** 同一 channel 中存在多个 `Additive` contribution
-- **THEN** resolver MUST 按 weight 累加有效位移和 yaw
-- **AND** 结果 MUST 可从 debug 数据中追踪每个来源的贡献量
+### Requirement: Timeline MotionCurve 必须是动画位移的唯一事实来源
 
-#### Scenario: 同层多个 override 来源
-- **WHEN** 同一 channel 中存在多个 `Override` contribution
-- **THEN** resolver MUST 按 priority 选择生效来源
-- **AND** 同 priority 情况 MUST 使用稳定规则处理，避免同一输入在不同机器得到不同结果
+Compiled Timeline MotionCurve operation MUST按SimulationTick与canonical fraction求值并产生motion contribution。AnimationTrack、AnimationClip、Animancer fade、PresentationFrame与Animator root motion MUST不产生或修改Gameplay位移。
 
-### Requirement: MotionWarp 必须保持为 Move 前 modifier
-系统 MUST 保持 MotionWarp 为 Move 前 `MotionModifier`，并在固定顺序中运行于 gameplay contribution 仲裁之后、network correction 之前。系统 MUST NOT 将 MotionWarp 伪装成普通 motion contribution 或直接修改 Transform。
+#### Scenario: Dodge Timeline 同时包含动画和MotionCurve
 
-#### Scenario: 攻击吸附发生在 action intent 之后
-- **WHEN** action motion curve 已经被 resolver 仲裁为 raw `MotionIntent`
-- **AND** 当前 Timeline 采样到 MotionWarp window
-- **THEN** MotionWarp MUST 基于 raw `MotionIntent`、target context 和窗口限制生成修正后的 intent
-- **AND** 修正结果 MUST 继续交给 MotionStage 后续阶段处理
+- **WHEN** Dodge Timeline采样AnimationTrack与MotionCurve
+- **THEN** AnimationTrack MUST只生成Presentation producer command
+- **AND** MotionCurve MUST独立进入统一motion accumulator
 
-### Requirement: Network correction 必须进入正式 correction phase
+### Requirement: Motion 来源必须可追踪
 
-系统 MUST 将 incoming network correction 纳入 `CharacterMotionStage` 的正式 correction phase，并输出 `MotionCorrectionApplicationResult`。可参与世界约束执行的 correction delta MUST 合入唯一 execution intent；需要显式重定位的完整 correction MUST 通过 Logic Pose Port 应用。系统 MUST NOT 从 ActionProfile、Action Context、GameplayBehaviorProfile 或 debug snapshot 读取 correction application strategy，也 MUST NOT 绕过 MotionStage 直接修改 logic Transform。当前 correction 数值行为 MUST 只有 MotionStage 编排的这一条执行路径，不得成为 Pipeline authoring policy或 Motion Executor policy。
+Structured Trace与Source Map MUST关联source operation、Timeline/Track/Clip identity、ActionInstance、contribution、ResolvedGameplayMotion、Body Motion Prepare、final request、World batch、solver result、Body Motion Finalize与committed body sample。Diagnostics MUST不读取pending evaluation私有集合、mutable integration plan或Solver mutable object。
 
-#### Scenario: 本 tick 部分应用误差
+#### Scenario: 排查 Dodge 覆盖 Locomotion
 
-- **WHEN** MotionStage 按当前单一实现只应用 authoritative position/yaw error 的一部分
-- **THEN** correction phase MUST 在 gameplay intent 和 motion modifier 之后将该 delta 合入 execution intent
-- **AND** Motion Executor 返回的 actual result MUST 决定实际 delta 与 application extent
-- **AND** input sequence 和 server tick MUST 写入正式 result
-- **AND** 成功应用后 MUST 产生独立 MotionCorrectionAcknowledgement SyncFact
+- **WHEN** Dodge contribution消费Locomotion channel
+- **THEN** Trace MUST显示winning source、consume原因、最终request与actual result
 
-#### Scenario: 本 tick 完整应用误差
+### Requirement: 旧 BBB Motion 数据不得恢复
 
-- **WHEN** MotionStage 按当前单一实现应用完整 authoritative position/yaw error
-- **THEN** correction phase MUST 通过 Logic Pose Port 执行正式重定位
-- **AND** MUST 记录完整应用的实际 delta 和 application extent
-- **AND** 系统 MUST 记录这是 authority correction，而不是普通 action motion 来源
-- **AND** 同一 correction MUST 不再由 Motion Executor 重复应用
+正式 Character runtime MUST不引用 `BBBNexus.MotionClipData`、`BBBNexus.WarpedMotionData`、旧 `PlayerSO` motion配置、`MotionProposal` 或以AnimationClip root motion作为Gameplay位移数据源。需要新运动行为时 MUST通过Semantic IR operation、Timeline MotionCurve或正式World request扩展当前链路。
 
-#### Scenario: 作者查看 correction 配置
+#### Scenario: 新增动作位移
 
-- **WHEN** 作者查看 ActionProfile、GameplayBehaviorProfile 或 CharacterPipelineDefinition
-- **THEN** 这些资产 MUST NOT 暴露当前 partial fraction、单 tick clamp 或 full-application threshold
-- **AND** 系统 MUST NOT 新增 direct correction profile、executor policy 或 backend-specific correction 配置
+- **WHEN** 作者为新攻击或闪避配置位移
+- **THEN** MUST使用当前MotionCurve与Program编译链
+- **AND** MUST不复制旧BBB motion资产或恢复第二套motion runtime
 
-### Requirement: Motion debug 必须解释仲裁结果
-系统 MUST 提供或预留 motion resolve debug 数据，说明本帧 contribution、channel、blend mode、priority、weight、source identity、modifier delta、correction delta 和最终获胜来源。调试信息 MUST 服务于动作手感和网络纠偏排查。
+### Requirement: Motion Modifier 必须是固定且可追踪的 Program 阶段
 
-#### Scenario: 查看攻击帧位移来源
-- **WHEN** 本帧同时存在输入移动、攻击 motion curve 和 MotionWarp
-- **THEN** debug MUST 能显示输入 contribution、action motion contribution、MotionWarp delta 和最终 `MotionIntent`
-- **AND** debug MUST 能说明输入是否被 action 消费
+Motion Modifier的类型、channel与执行顺序 MUST由版本化Operation Set和compiled Program descriptor声明。Runtime MUST不通过反射、字符串handler、ScriptableObject resolver、Network Model或Solver类型动态选择Modifier。Modifier MUST只读取resolved channel、committed Character state、显式Action Context、Program constants与自身typed state，并输出修正后的同一channel。
 
-### Requirement: Timeline 必须支持直接 MotionCurve 位移轨
-系统 MUST 支持 Timeline 通过正式 MotionCurve 轨道直接输出 motion contribution。该轨道 MUST 表达位移曲线、yaw 曲线、空间、channel、blend mode、priority、weight 和是否消费低层 channel。轨道 MUST NOT 直接调用 `CharacterController.Move`、修改 Transform、驱动 Animator root motion 或绕过 MotionResolver。
+#### Scenario: 新增 WorldSolver 实现
 
-#### Scenario: 攻击前踏使用手画曲线
-- **WHEN** 攻击 Timeline 的 MotionCurve clip 覆盖当前播放时间
-- **THEN** TimelinePlaybackScheduler MUST 采样该 clip 的位移和 yaw 曲线
-- **AND** Scheduler MUST 提交正式 `MotionContribution`
-- **AND** `CharacterMotionStage` MUST 通过 MotionResolver 仲裁后应用最终移动
+- **WHEN** Session选择新的WorldSolver backend
+- **THEN** Motion Modifier顺序与结果 MUST不改变
+- **AND** 新Solver MUST只实现现有World request/result合同
 
-#### Scenario: 本地空间曲线
-- **WHEN** MotionCurve clip 配置为 Local space
-- **THEN** MotionResolver MUST 按角色当前 rotation 把 displacement 转为世界位移
-- **AND** 该行为 MUST 与其它 local motion contribution 使用同一解释规则
+### Requirement: MotionWarp 必须只修正匹配的 Action channel owner
 
-#### Scenario: 世界空间曲线
-- **WHEN** MotionCurve clip 配置为 World space
-- **THEN** MotionResolver MUST 直接使用该 displacement
-- **AND** Timeline 轨道 MUST NOT 自己读取场景对象或 camera 作为方向 fallback
+TimelineMotionWarp MUST显式引用一个MotionCurve operation。只有该source成为当前Tick Action channel的resolved owner、Warp窗口active且Action Context有效时，Warp才 MAY修正该channel。同一Actor、Action channel与Tick最多 MUST有一个eligible Warp；动态歧义 MUST fail-stop，不得用priority或遍历顺序挑选。GameplayResult channel MUST在Warp后的Action channel之后按现有规则合成，因此受击或其它GameplayResult motion MUST不被动作Warp扭曲。
 
-### Requirement: Timeline 位移来源必须可追踪
-系统 MUST 让 Timeline 产生的直接 motion curve 和 motion warp 在 debug 数据中保持可区分来源。debug source identity MUST 至少能表达 Timeline source、track、clip 或曲线模式，以及关联的 ActionInstance（如果存在）。动画派生位移若进入 Timeline 运行时，MUST 以 MotionCurveTrack 或等价正式 motion fact 来源被追踪，而不是隐藏在 AnimationClip 字段中。
+#### Scenario: Warp source 输掉 Action channel 仲裁
 
-#### Scenario: 同帧存在多个 Timeline 位移来源
-- **WHEN** 同一帧存在 MotionCurveTrack 和 MotionWarp window
-- **THEN** motion debug MUST 能显示 motion curve contribution
-- **AND** motion debug MUST 能显示 MotionWarp modifier delta
-- **AND** 作者 MUST 能判断最终 motion intent 由哪个 channel 和 priority 获胜
+- **WHEN** Warp引用的MotionCurve没有成为Action channel resolved owner
+- **THEN** Warp MUST不修改其它winner
+- **AND** Trace MUST记录`SourceNotResolved`或等价typed原因
 
-### Requirement: MotionWarp 必须保持为目标对齐 modifier
-系统 MUST 保持 MotionWarp 为 Move 前 modifier。MotionWarpTrack MUST 只表达时间窗口、目标 key、权重和限制参数；目标位置和目标 yaw MUST 来自正式 runtime context。MotionWarpTrack MUST NOT 直接保存场景对象引用、输出固定 displacement，或伪装成普通 motion contribution。
+#### Scenario: GameplayResult 覆盖 Warped Action
 
-#### Scenario: 目标 key 有效
-- **WHEN** Timeline 采样到 MotionWarp window 且 runtime context 提供目标 key
-- **THEN** MotionWarpModifier MUST 基于 raw MotionIntent 计算 position/yaw 修正
-- **AND** 修正后的 intent MUST 继续通过 CharacterMotionStage 应用
+- **WHEN** Action channel已被MotionWarp修正
+- **AND** GameplayResult channel提交ConsumeLowerChannels的Override
+- **THEN** GameplayResult MUST按现有高层channel规则覆盖Warp后的Action结果
 
-#### Scenario: 目标 key 缺失
-- **WHEN** Timeline 采样到 MotionWarp window 但 runtime context 不提供目标 key
-- **THEN** MotionWarpModifier MUST 跳过该 window 或按正式错误策略报告
-- **AND** 系统 MUST NOT 使用场景搜索、默认目标、Camera.main 或隐藏 fallback 补齐目标
+### Requirement: MotionWarp 必须在窗口进入时固定总修正
 
+Warp窗口首次active时，Runtime MUST从committed body、源MotionCurve剩余累计轨迹和对应ActionInstance的immutable target snapshot计算nominal authored end、desired target pose及clamped total correction，并写入typed Program state。后续Tick MUST按canonical累计progress差应用position/yaw增量。Timeline generation、ActionInstance或window lifecycle变化时 MUST按typed规则重建或清理状态。
+
+#### Scenario: Rollback 恢复到 Warp 窗口中间
+
+- **WHEN** Snapshot恢复到MotionWarp窗口中间
+- **THEN** 下一Tick MUST从保存的generation、总修正和last progress继续
+- **AND** MUST不重复应用窗口前半段修正
+
+### Requirement: WorldSolver 必须对 Warped request 保持最终碰撞权威
+
+MotionWarp MUST只修改Body Motion Prepare之前的`ResolvedGameplayMotion`。Solver input/output MUST不增加MotionWarp、Timeline、Action或target字段。碰撞阻止Warp请求时，Body Motion Finalize与Program Finalize MUST提交Solver actual body result；任何阶段 MUST不在Solver之后补偿目标差值。
+
+#### Scenario: 目标位于墙后
+
+- **WHEN** Warped request试图穿过墙体到达目标
+- **THEN** WorldSolver MAY阻止实际位移
+- **AND** Presentation MUST显示actual body result
+- **AND** Warp MUST不在Finalize或Presentation中把角色拉到目标
+
+### Requirement: Motion Modifier来源必须进入结构化 Trace
+
+Trace MUST关联raw contribution、resolved channel owner、modifier operation、source MotionCurve、ActionInstance、target snapshot、nominal end、desired pose、total/current correction、final request与actual solver result。Diagnostics MUST不读取mutable accumulator、Unity Transform或Solver私有对象。
+
+#### Scenario: 排查目标攻击没有贴近
+
+- **WHEN** 动作未到达目标
+- **THEN** Trace MUST能区分source未赢得仲裁、目标缺失、修正被clamp与Solver碰撞阻挡

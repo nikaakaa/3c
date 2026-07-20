@@ -15,6 +15,7 @@ namespace TreeDesigner
             return ResultNode != null && ResultNode.Evaluate();
         }
 
+#if UNITY_EDITOR
         public static ConditionRuleGraph CreateDefaultGraph(string graphName)
         {
             ConditionRuleGraph graph = new ConditionRuleGraph();
@@ -30,6 +31,7 @@ namespace TreeDesigner
 #endif
             return graph;
         }
+#endif
 
         public override bool CanCreateNodeType(Type type)
         {

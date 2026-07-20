@@ -72,11 +72,13 @@ namespace TreeDesigner
             m_StateMachineRuntime = null;
         }
 
+#if UNITY_EDITOR
         public override void OnCreated()
         {
             base.OnCreated();
             EnsureInlineStateMachineGraph();
         }
+#endif
 
         protected override void OnStart()
         {
@@ -167,6 +169,7 @@ namespace TreeDesigner
             m_StateMachineRuntime = new StateMachineGraphRuntime(m_RuntimeGraph);
         }
 
+#if UNITY_EDITOR
         void EnsureInlineStateMachineGraph()
         {
             ScopedGraphReferenceModule module = GetModule<ScopedGraphReferenceModule>();
@@ -193,6 +196,7 @@ namespace TreeDesigner
             graph.Link(enterNode, stateNode, StateMachinePorts.StateOut, StateMachinePorts.StateIn);
             return graph;
         }
+#endif
 
         void DisposeRuntimeGraph()
         {

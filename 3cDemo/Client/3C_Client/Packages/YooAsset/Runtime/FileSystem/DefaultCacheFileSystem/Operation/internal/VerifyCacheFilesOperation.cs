@@ -30,6 +30,9 @@ namespace YooAsset
         private int _failedCount;
         private ESteps _steps = ESteps.None;
 
+        internal int SucceedCount => _succeedCount;
+        internal int FailedCount => _failedCount;
+
 
         internal VerifyCacheFilesOperation(DefaultCacheFileSystem fileSystem, List<VerifyFileElement> elements)
         {

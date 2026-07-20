@@ -17,17 +17,17 @@
 - **THEN** 编辑器 MUST 创建 action request 信息节点或 request 查询节点
 - **AND** 节点 MUST 通过现有 `BoolPropertyPort` 输出查询结果
 
-### Requirement: Input value 信息节点读取 CharacterInputFrame
-系统 MUST 使用 input value 信息节点读取 `CharacterInputFrame` 中的 typed input value。节点 MUST 保存输入定义稳定身份或引用和期望值类型，MUST NOT 直接保存或解析 Unity InputAction 名称作为 gameplay 语义，也 MUST NOT 把 input value 暴露为 continuous command。
+### Requirement: Input value 信息节点必须编译为 CharacterSimulationInput 读取 operation
+系统 MUST 将 input value 信息节点编译为从当前 Actor `CharacterSimulationInput.Values` 读取 typed input value 的 operation。节点 MUST 保存输入定义稳定身份或引用和期望值类型，MUST NOT 直接保存或解析 Unity InputAction 名称作为 gameplay 语义，也 MUST NOT 把 input value 暴露为 continuous command。
 
 #### Scenario: Vector2 input value 信息节点
 - **WHEN** `MoveAxis` input value 信息节点被请求输出值
-- **THEN** 节点 MUST 从 graph context 当前 `CharacterInputFrame` 读取 `MoveAxis`
+- **THEN** compiled operation MUST 从当前 Actor `CharacterSimulationInput` 读取 `MoveAxis`
 - **AND** 读取失败时 MUST 输出 Vector2 默认值并报告缺失来源
 
 #### Scenario: Bool held input value 信息节点
 - **WHEN** `SprintHeld` input value 信息节点被请求输出值
-- **THEN** 节点 MUST 从 graph context 当前 `CharacterInputFrame` 读取 bool 值
+- **THEN** compiled operation MUST 从当前 Actor `CharacterSimulationInput` 读取 bool 值
 - **AND** 多次读取 MUST NOT 消费或改变该输入
 
 ### Requirement: Request 查询节点在规则图中保持纯求值
@@ -90,12 +90,12 @@
 
 ### Requirement: BTSMTL 输入 authoring 不得暴露 ClientCommand
 
-BTSMTL 输入 authoring MUST 只创建和读取 CharacterInputFrame values、action requests 与 request buffer。它 MUST NOT 创建、读取、保存或显示 ClientCommandFrame、MotionCommand、Rollback input bundle、model packet 或 endpoint。Model command preview MUST 只存在于对应 model profile/Runtime Debug，不得进入 Graph Data Catalog 的输入节点列表。
+BTSMTL 输入 authoring MUST 只创建可编译为 `CharacterSimulationInput` value/request 读取 operation 的节点。它 MUST NOT 创建、读取、保存或显示 ClientCommandFrame、MotionCommand、Rollback input bundle、model packet 或 endpoint。Model command preview MUST 只存在于对应 model profile/Runtime Debug，不得进入 Graph Data Catalog 的输入节点列表。
 
 #### Scenario: 创建 MoveAxis 节点
 
 - **WHEN** 作者从输入配置创建 MoveAxis ValueNode
-- **THEN** 节点 MUST 读取 CharacterInputFrame
+- **THEN** 节点 MUST 编译为当前 Actor `CharacterSimulationInput` 读取 operation
 - **AND** MUST 不提供 ServerAuthoritative MotionCommand 节点
 
 #### Scenario: 查看模型 packet preview
@@ -122,4 +122,3 @@ BTSMTL 输入 authoring MUST 只创建和读取 CharacterInputFrame values、act
 
 - **WHEN** 用户从目录中的 Input 条目选择定位来源
 - **THEN** 编辑器 MAY 定位该 `CharacterInputProfile`，但 MUST NOT 创建第二个编辑入口
-

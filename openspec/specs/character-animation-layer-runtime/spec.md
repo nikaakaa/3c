@@ -3,29 +3,28 @@
 ## Purpose
 定义角色动画层运行时：逻辑侧为每层提交唯一 `AnimationLayerSelection`，Timeline 在表现帧提供匹配 generation 的 `AnimationProducerSample`，`AnimationPlaybackLifecycle` 管理可见 producer 寿命，Animancer 负责实际 state、layer 与 fade，避免逻辑优先级和动画混合形成两套仲裁真相。
 ## Requirements
-
 ### Requirement: 动画层定义来自管线定义
 
-系统 MUST使用 CharacterPipelineDefinition 内联的 CharacterAnimationPresentationDefinition 作为角色动画 Layer catalog 的唯一来源。每个 layer MUST显式保存 identity、order、Animancer layer index、mask、blend mode 与 AnimationLayerOutputPolicy。正式 catalog 中的每个 layer MUST由 Animancer adapter 应用，不得保存无运行语义的 apply flag。Timeline、Graph、Presenter、旧 SO 或独立 Layer asset MUST不保存另一份 layer 真数据。
+`CharacterPipelineDefinition` 引用的 `CharacterAnimationPresentationProfile` MUST作为动画 Layer catalog 与 producer resource binding 的唯一 authoring 来源。Compiler MUST将 layer identity、order、Animancer layer index、mask、blend mode、output policy 和 producer binding 编入 `CharacterPresentationProjection`；Runtime MUST只读取匹配 ProgramHash/source revision 的 Projection。Definition、Timeline、Graph、Presenter、旧 SO 或独立 Layer asset MUST不保存另一份 layer 真数据。
 
 #### Scenario: Base layer 要求持续输出
 
-- **WHEN** Corin Base layer 配置为 RequireOutput
-- **THEN** 正常激活期间该层 MUST拥有 Current、PendingFirstSample 或明确 Invalid 状态
-- **AND** 系统 MUST不静默把该层解释为 Empty
+- **WHEN** Corin Base layer 在 Profile 中配置为 RequireOutput 并编入 Projection
+- **THEN** 正常激活期间该层 MUST 拥有 Current、PendingFirstSample 或明确 Invalid 状态
+- **AND** 系统 MUST 不静默把该层解释为 Empty
 
 #### Scenario: Optional layer 允许为空
 
-- **WHEN** 某 layer 显式配置为 AllowEmpty
-- **THEN** 逻辑层 MAY选择 None
-- **AND** Animancer MUST按正式 transition 将该层淡出到空
-- **AND** 系统 MUST不创建 fallback clip
+- **WHEN** 某 layer 在 Profile 中显式配置为 AllowEmpty 并编入 Projection
+- **THEN** Program MAY 输出该层 None command
+- **AND** Animancer MUST 按正式 transition 将该层淡出到空
+- **AND** 系统 MUST 不创建 fallback clip
 
-#### Scenario: selection 引用缺失 layer
+#### Scenario: producer command 引用缺失 layer
 
-- **WHEN** AnimationLayerSelection 或 producer binding 的 LayerId 不存在
-- **THEN** Pipeline MUST报告配置错误
-- **AND** 对应 selection MUST不进入播放生命周期
+- **WHEN** committed producer command 或 Projection binding 的 LayerId 不存在
+- **THEN** Program/Projection 组合校验 MUST 报告配置错误
+- **AND** 对应 command MUST 不进入播放生命周期
 
 ### Requirement: 基础姿态必须由正式来源输出
 
@@ -63,20 +62,18 @@ Base pose、Idle、Move 与其它基础动画 MUST来自正式 Graph/State/Actio
 
 ### Requirement: 循环动画必须由连续 visual Timeline time 重采样
 
-循环 Timeline/clip 的 continuous visual time MUST由 TimelinePlaybackScheduler 的 logic time、cycle 与 PresentationFrame interpolation 计算。AnimationPlaybackLifecycle MUST只关联 selected/current/outgoing producer，不得自行推进 Timeline clock或在两个离散 clip time 之间插值。
+循环 producer 的 continuous visual time MUST由 committed Timeline logic sample、cycle identity 与 PresentationFrame interpolation计算。AnimationPlaybackLifecycle MUST只关联 selected/current/outgoing producer，不得推进 CharacterSimulationState Timeline clock。逻辑 producer release 后，只要视觉生命周期仍持有该 playback，PresentationRetention MUST继续 animation-only sampling，且 MUST不执行 Gameplay operation。
 
 #### Scenario: 循环回绕
 
-- **WHEN** loop Timeline 从末尾回绕到开头
-- **THEN** AnimationTrack MUST使用连续 visual Timeline time 重采样同一 playback generation
-- **AND** Animancer state time MUST使用本帧正式 sample 更新
+- **WHEN** committed loop sample 从末尾回绕到开头
+- **THEN** animation track MUST使用连续 visual time重采样同一 playback generation
 
-#### Scenario: source 已停止
+#### Scenario: Source 已停止
 
-- **WHEN** 循环 source 的逻辑所有权已 release
-- **AND** 其 Animancer state 仍为 Outgoing
-- **THEN** Scheduler MAY通过 PresentationRetention 继续 animation-only sampling
-- **AND** Timeline gameplay tracks MUST不再推进
+- **WHEN** producer Gameplay ownership 已 release 且 Animancer state仍 Outgoing
+- **THEN** Presentation MAY继续 animation-only sample
+- **AND** TreeClip、Motion、Window 与 Cue fact MUST不再产生
 
 ### Requirement: 动画片段 membership 必须显式提交和释放
 
@@ -98,26 +95,17 @@ Timeline producer MUST显式提交 AnimationProducerSample、Complete 与 Releas
 
 ### Requirement: 动画层输入必须是已解析播放选择与正式采样
 
-Animation 模块 MUST只接收逻辑层已经解析完成的 AnimationLayerSelection，以及 TimelinePlaybackScheduler 生成的 AnimationProducerSample、Complete 和 Release。每个 selection MUST表达 LayerId、AnimationPlaybackId、generation、logic tick 与 sequence，MUST不携带 Priority、authority、Tree route、Driver 或候选列表。每个 sample MUST表达同一 playback 在该 layer 内部的 clip time、loop context 与 clip weights。
+Animation module MUST只接收 Program Finalize 已解析的 Layer selection command，以及 Presentation sampler 生成的 ProducerSample、Complete 和 Release。Selection MUST表达 LayerId、PlaybackId、generation、SimulationTick、sequence 与 EventId，MUST不携带 Priority、Driver、Tree route 或候选列表。
 
-#### Scenario: Base 收到唯一 target
+#### Scenario: Base 收到唯一 Target
 
-- **WHEN** 逻辑层在一次提交中为 Base 选择一个 AnimationPlaybackId
-- **THEN** Animation 模块 MUST只等待和播放该 target
-- **AND** MUST不扫描其它 active Timeline producer 重新选赢家
+- **WHEN** committed batch 为 Base 选择一个 PlaybackId
+- **THEN** Animation module MUST只等待和播放该 target
 
 #### Scenario: 同层重复选择
 
-- **WHEN** 同一次逻辑提交为同一 LayerId 提供两个不同 playback
-- **THEN** Pipeline MUST报告逻辑配置错误并拒绝该批选择
-- **AND** Animation 模块 MUST不按 Priority、sequence 或提交顺序选择其中一个
-
-#### Scenario: RequireOutput 本 tick 没有选择变化
-
-- **WHEN** RequireOutput layer 已有 Current，且本次逻辑提交没有该 LayerId 的 selection
-- **THEN** lifecycle MUST继续保留当前正式 selection 与 Current
-- **AND** Pipeline MUST不把“无变更”转换为 Empty
-- **AND** 若该 layer 首次启动既无 Current 也无 selection，lifecycle MUST明确报错
+- **WHEN** 同一 Tick result 为同一 LayerId 输出两个不同 target
+- **THEN** Finalize MUST报告逻辑冲突并拒绝 Tick
 
 ### Requirement: 动画播放生命周期必须只管理可见 producer 寿命
 
@@ -159,18 +147,139 @@ Animancer MUST负责 state/mixer 创建后的 layer 混合、fade weight、重�
 - **THEN** Adapter MUST从 Animancer 当前视觉状态播放 C
 - **AND** 项目 MUST不建立 handoff stack 或恢复中间逻辑状态
 
+### Requirement: 同组 producer handoff 必须按 Marker Segment 映射
+
+当同一Layer从outgoing Current切换到incoming target，且两者Projection binding均为MarkerGroup并拥有相同canonical SyncGroupId时，Animation Runtime MUST只从AnimationPlaybackLifecycle取得这两个真实playback，并按两侧SyncRole解析唯一leader与follower。默认由outgoing领导；incoming为AlwaysLeader或outgoing为AlwaysFollower时 MUST反向由incoming领导。Runtime MUST按leader effective time所在的有向MarkerId pair与segment fraction映射follower Timeline time，不得使用StateMachine上一状态、Graph edge、producer显示名、clip名称、Action名称、逻辑priority或Animancer weight推导方向。
+
+#### Scenario: WalkLoop切换RunLoop
+
+- **WHEN** Base层实际Current为WalkLoop且incoming target为同组RunLoop
+- **THEN** Runtime MUST读取WalkLoop当前effective marker segment与fraction
+- **AND** MUST在RunLoop的相同有向marker pair occurrence中计算target effective time
+
+#### Scenario: source或target显式None
+
+- **WHEN** source或target AnimationTrack的Projection binding为None
+- **THEN** Runtime MUST明确记录NotApplicable
+- **AND** target effective time MUST等于其raw visual time
+
+#### Scenario: 同组数据损坏
+
+- **WHEN** source与target声明同组但Projection缺少segment、duration或sampling state
+- **THEN** Animation Runtime MUST进入明确Invalid并报告稳定diagnostic code
+- **AND** MUST不静默退回normalized time、隐藏Idle或Animancer自动同步
+
+#### Scenario: incoming finite producer要求领导
+
+- **WHEN** outgoing Current为CanBeLeader且incoming target为AlwaysLeader
+- **THEN** Runtime MUST建立`incoming -> outgoing` relation
+- **AND** incoming MUST继续使用自己的raw表现节奏
+
+#### Scenario: handoff角色冲突
+
+- **WHEN** 两侧同时为AlwaysLeader或同时为AlwaysFollower
+- **THEN** Runtime MUST以typed invalid reason失败
+- **AND** 不得静默选择outgoing或incoming
+
+### Requirement: Marker Sync 必须在共同可见期间持续求值
+
+Marker Sync MUST在source与target共同可见的每个PresentationFrame重新使用source effective marker segment求target effective time，不得仅在target首样本时保存固定phase offset。target MUST以mapped time重新采样整个producer，包括所有AnimationClip membership、ClipIn、ease和内部weight。Gameplay提交的raw Timeline sample、cycle和logic completion MUST保持不变。
+
+#### Scenario: 不同时长循环动画fade
+
+- **WHEN** 1.0秒WalkLoop与0.6秒RunLoop在Animancer fade期间共同可见
+- **THEN** RunLoop MUST在每个PresentationFrame持续对齐WalkLoop marker fraction
+- **AND** MUST不因两个producer各自速度不同而在fade后半段重新漂移
+
+#### Scenario: 多clip target producer
+
+- **WHEN** target AnimationTrack在mapped time采样到两个重叠AnimationClip
+- **THEN** 两个clip的membership、time与内部weight MUST由同一个effective Timeline time重新采样
+- **AND** Marker Sync MUST不选择某一个clip作为第二phase authority
+
+#### Scenario: Gameplay状态立即切换
+
+- **WHEN** Program在logic tick将状态从Walk切换到Run
+- **THEN** Gameplay state、Motion与World request MUST在该tick按原规则推进
+- **AND** Presentation MUST不等待marker边界后才提交状态切换
+
+### Requirement: Finite 与 Cyclic producer 必须使用明确拓扑映射
+
+Runtime MUST支持`Cyclic -> Cyclic`、`Cyclic -> Finite`、`Finite -> Cyclic`和`Finite -> Finite`同组映射。Cyclic source/target MAY按duration回绕并保持展开cycle；Finite source/target MUST不回绕，target occurrence MUST单调前进。target首次存在多个相同有向pair occurrence时，Runtime MUST按与raw target time最小距离选择，并以frame和MarkerAuthoringId稳定破同；relation存活期间 MUST保持该occurrence连续性。
+
+#### Scenario: RunLoop进入RunEnd
+
+- **WHEN** Cyclic RunLoop切换到同组Finite RunEnd
+- **THEN** Runtime MUST选择RunEnd中与当前raw time最近的兼容marker pair occurrence
+- **AND** 后续共同可见帧 MUST沿RunEnd有限序列向前推进
+
+#### Scenario: Finite source返回循环移动
+
+- **WHEN** 同组Finite Turn或End producer切换到Cyclic locomotion producer
+- **THEN** Runtime MUST从Finite source当前非回绕segment映射target最近展开cycle
+- **AND** target成为独立Current后 MUST继续该展开cycle而不跳回cycle 0
+
+#### Scenario: Finite覆盖耗尽
+
+- **WHEN** relation要求Finite target前进到其marker coverage之外
+- **THEN** Runtime MUST报告FiniteCoverageExceeded
+- **AND** MUST不回绕Finite producer或静默解除同步
+
+### Requirement: Sync relation 必须服从播放生命周期并连续脱离
+
+Sync relation MUST以完整AnimationPlaybackId为key，并且只依赖AnimationPlaybackLifecycle的Current、PendingFirstSample、Outgoing与Retired事实。快速连续切换 MUST按实际relation依赖形成无环effective-time图并拓扑求值，不得假设leader generation一定早于follower。source正式Retired时，Runtime MUST以target最后effective time和raw time建立continuation anchor，删除relation，并让target按后续raw delta连续推进。Reset、target Retired和Dispose MUST清除对应relation与anchor。
+
+#### Scenario: 连续A到B到C
+
+- **WHEN** B仍跟随Outgoing A时Current B又切换到C
+- **THEN** 当帧求值顺序 MUST为`A effective -> B effective -> C effective`
+- **AND** C MUST读取B的effective time而不是B未经映射的raw time
+
+#### Scenario: source淡出完成
+
+- **WHEN** Animancer与lifecycle将source正式标记Retired
+- **THEN** target MUST从最后mapped effective time建立continuation anchor
+- **AND** 下一帧 MUST按target raw delta连续推进而不跳回原始Timeline time
+
+#### Scenario: relation拓扑非法
+
+- **WHEN** Runtime检测到relation环、同一target拥有两个source或跨Layer依赖
+- **THEN** 对应Layer MUST进入明确Invalid
+- **AND** MUST不依赖集合遍历顺序选择任意relation
+
 ### Requirement: outgoing producer 必须使用纯表现 retention
 
-逻辑 producer release 后，AnimationPlaybackLifecycle MAY持有只读 PresentationRetention 让 TimelinePlaybackScheduler 继续生成 outgoing animation sample，直到 Animancer fade 完成。retention MUST不恢复 producer 的逻辑 membership，也 MUST不重新运行 TreeClip、Motion、root motion、window、cue 或 SyncFacts。
+逻辑 producer release 后，只要该 playback 仍为 Selected、PendingFirstSample、Current 或 Outgoing，AnimationPlaybackLifecycle MUST持有只读 PresentationRetention，让纯表现 sampler继续生成 animation sample直到视觉生命周期真正 Retired。Runtime MUST不因逻辑 SampleProducer event 先于视觉 fade 退役而删除该 sampling state。Retention MUST不恢复 Program membership，也 MUST不运行 TreeClip、Motion、root motion、window或cue operation，且 MUST不生成GameplayFact或新的PresentationCommand。
 
-#### Scenario: 攻击逻辑已结束但动画仍淡出
+#### Scenario: 攻击逻辑结束但动画淡出
 
-- **WHEN** Attack playback 已停止 gameplay 输出且其 Animancer state 仍为 Outgoing
-- **THEN** scheduler MUST只推进该 playback 的 animation visual sample
-- **AND** Attack window、motion 和 hit facts MUST不再产生
+- **WHEN** Attack playback Gameplay 已停止且 Animancer state仍 Outgoing
+- **THEN** sampler MUST只推进 animation visual sample
 
-#### Scenario: Pipeline deactivate
+#### Scenario: 逻辑采样先于淡出退役
 
-- **WHEN** pipeline deactivate 或 dispose
-- **THEN** lifecycle MUST立即清理 Current、Outgoing、PendingFirstSample 与全部 retention
-- **AND** MUST不等待 fade duration
+- **GIVEN** outgoing playback 仍由 AnimationPlaybackLifecycle 持有
+- **WHEN** 对应逻辑 SampleProducer event 已 release
+- **THEN** PresentationRetention MUST继续按表现时间产生该 playback 的 animation-only sample
+- **AND** sampling state MUST只在视觉生命周期进入 Retired 后删除
+
+#### Scenario: Session dispose
+
+- **WHEN** Actor/Session dispose
+- **THEN** lifecycle MUST立即清理 Current、Outgoing、PendingFirstSample 与 retention
+
+### Requirement: Animancer 必须继续独占 Fade 与最终 Pose
+
+MarkerSyncRuntime MUST只提供producer effective sample time。Animancer MUST继续独占state/mixer、TransitionLibrary、FadeMode、duration modifier、easing、layer weight、outgoing retirement与最终pose；AnimancerPlaybackAdapter MUST继续对Timeline控制的child使用`DontSynchronize`。项目 MUST不新增自定义crossfade weight、Animancer automatic synchronization或第二动画时钟。
+
+#### Scenario: 同步target开始播放
+
+- **WHEN** matched target首份合法sample进入lifecycle
+- **THEN** Adapter MUST通过正式Animancer transition播放target
+- **AND** MarkerSyncRuntime MUST不写入fade progress或state weight
+
+#### Scenario: source retirement由Animancer确认
+
+- **WHEN** source逻辑ownership已释放但Animancer仍在淡出
+- **THEN** source MUST继续通过PresentationRetention提供animation-only sample与effective time
+- **AND** relation MUST只在正式Retired后脱离

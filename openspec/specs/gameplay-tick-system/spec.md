@@ -1,72 +1,78 @@
 # gameplay-tick-system Specification
 
 ## Purpose
-定义 gameplay 层统一 tick 系统：`GameplayTickSystem` 区分 `LocalLogicTick`、`RenderFrame` 和 `ServerTick`，使用正式 tick settings 推进本地逻辑和表现帧，并通过 `IGameplayTickTarget` 调度角色管线和后续 gameplay 消费者。
+定义 gameplay 层统一 tick 系统：`GameplayTickSystem` 区分 `LocalLogicTick`、`RenderFrame` 和模型输入中的 `ServerTick`，并分别通过 render input、logic 和 presentation target 接口调度正式 Session 与表现消费者。
 ## Requirements
 ### Requirement: Gameplay Tick 系统必须区分本地逻辑 tick、表现帧和服务端 tick
 
-系统 MUST 明确区分 `LocalLogicTick`、`RenderFrame` 和 `ServerTick`。`LocalLogicTick` 表达客户端本地固定步长逻辑推进；`RenderFrame` 表达本地表现帧；`ServerTick` 表达服务端权威快照、确认、拒绝或校正来源。系统 MUST NOT 使用单一 `SimulationTick` 同时表达这三类时间。
+GameplayTickSystem MUST继续区分 fixed LocalLogicTick、PresentationFrame和网络 Source中的 ServerTick。SimulationTick MUST是 Session ExecutionPlan内部 step identity，由唯一 Schedule Pass显式映射 source clock；系统 MUST不假定 LocalLogicTick、ServerTick与 SimulationTick数值相同，PresentationFrame MUST不产生 SimulationTick。一次 LocalLogicTick MAY对应零个、一个或多个内部 SimulationTick。DeterministicRollback Source/Schedule Pass MUST在 model内将 outer fixed tick映射为 predicted/confirmed SimulationTick并标记 forward/replay step；ServerTick MUST不被伪装为 Rollback canonical tick或直接写入 Kernel。
 
-#### Scenario: 本地高帧率表现和服务端低频快照并存
+#### Scenario: Local Simulation
 
-- **WHEN** 客户端以 120fps 渲染
-- **AND** 本地逻辑以 60Hz 推进
-- **AND** 服务端以 20Hz 下发快照
-- **THEN** `RenderFrame` MUST 按本地表现帧递增
-- **AND** `LocalLogicTick` MUST 按本地固定逻辑步长递增
-- **AND** `ServerTick` MUST 只来自服务端或 loopback packet
-- **AND** 系统 MUST NOT 把 `RenderFrame` 或 `LocalLogicTick` 写成服务端权威 tick
+- **WHEN** GameplayTickSystem产生一个 fixed LocalLogicTick
+- **THEN** Local Schedule Pass MUST将其映射为当前 Local Session的下一个 SimulationTick
+- **AND** Program/Kernel MUST不读取 Unity frame time或 ServerTick
+
+#### Scenario: Replay 一段 Tick
+
+- **WHEN** Rollback Pipeline重演 Tick T到 N
+- **THEN** MUST使用 model-owned SimulationTick/step context通过 compiled Pipeline调用 Kernel
+- **AND** GameplayTickSystem MUST不伪造多个 render frame
 
 ### Requirement: GameplayTickSystem 必须由 TEngine frame source 驱动
 
-系统 MUST 使用 `GameplayTickSystem` 作为 gameplay 的统一 tick 调度系统。`GameplayTickSystem` MUST 由 TEngine `RootModule`、`UpdateDriver` 或项目正式 runtime 入口提供 frame source。TEngine MUST NOT 直接 tick BTSMTL Graph、Timeline、ActionRuntime、MotionStage、网络 peer 或单个 `CharacterPipeline`。
+GameplayTickSystem MUST继续由 TEngine RootModule、UpdateDriver 或正式 runtime entry 提供 frame source。TEngine MUST不直接 Tick Program operation、单个 Character、WorldSolver、Network Model 或 Presentation adapter。Simulation Session logic target 与 Presentation target MUST通过 GameplayTickSystem 调度。
 
-#### Scenario: TEngine 驱动角色 tick 系统
+#### Scenario: TEngine 驱动 Local Session
 
 - **WHEN** 项目 runtime 已通过 TEngine 启动
-- **THEN** 正式 bootstrap MUST 将 TEngine frame source 接入 `GameplayTickSystem.FrameUpdate`
-- **AND** 正式 bootstrap MUST 将 TEngine late frame source 接入 `GameplayTickSystem.FrameLateUpdate`
-- **AND** `CharacterPipeline` MUST 只作为 `IGameplayTickTarget` 被 `GameplayTickSystem` 调度
+- **THEN** FrameUpdate MUST推进 GameplayTickSystem accumulator
+- **AND** fixed Tick MUST调用唯一 Local Simulation Session target
+- **AND** FrameLateUpdate MUST调用 Presentation target
 
 #### Scenario: 缺少 TickSystem
 
-- **WHEN** `CharacterPipelineHost` 启用但 `GameplayTickSystem` 未初始化
-- **THEN** Host MUST 报告正式配置或启动顺序错误
-- **AND** 系统 MUST NOT 自动创建 fallback runner 或角色私有 tick source
+- **WHEN** Simulation Session Host 启用但 GameplayTickSystem 未初始化
+- **THEN** Host MUST报告启动顺序错误
+- **AND** MUST不创建私有 runner
 
 ### Requirement: GameplayTickSystem 必须使用固定步长推进本地逻辑
 
-系统 MUST 使用固定步长 accumulator 推进 `LocalLogicTick`。本地逻辑 tick rate 和 tick time source MUST 来自正式 `GameplayTickSettings` 或等价配置。系统 MUST 限制单帧 catch-up tick 数，避免卡顿后无限补帧。
+系统 MUST使用固定步长 accumulator推进 `LocalLogicTick`。本地逻辑 tick rate和 tick time source MUST来自正式 `GameplayTickSettings`或等价配置。系统 MUST限制单帧 catch-up tick数，避免卡顿后无限补帧。Rollback forward/replay MUST使用与 Program TickRate匹配的固定 step；Source/Schedule Pass MUST不以 render delta、Unity `Time.deltaTime`、网络到包时间或自适应浮点 step推进 deterministic gameplay。
 
 #### Scenario: 一帧内推进多个本地逻辑 tick
 
-- **WHEN** 当前帧配置 time source 对应的 delta 大于本地 fixed delta
-- **THEN** `GameplayTickSystem` MUST 按 fixed delta 循环推进一个或多个 `LocalLogicTick`
-- **AND** 每次推进 MUST 调用已注册 `IGameplayTickTarget` 的 `LogicTick`
-- **AND** 每帧推进次数 MUST 不超过正式配置的最大 catch-up tick 数
+- **WHEN** 当前帧配置 time source对应的 delta大于本地 fixed delta
+- **THEN** `GameplayTickSystem` MUST按 fixed delta循环推进一个或多个 `LocalLogicTick`
+- **AND** 每次推进 MUST调用已注册 `IGameplayLogicTickTarget`的 `LogicTick`
+- **AND** 每帧推进次数 MUST不超过正式配置的最大 catch-up tick数
 
 #### Scenario: 计算表现插值
 
-- **WHEN** 本帧本地逻辑 tick 推进完成
-- **THEN** `GameplayTickSystem` MUST 根据剩余 accumulator 计算 interpolation alpha
-- **AND** `PresentationFrame` MUST 能读取该 alpha
+- **WHEN** 本帧本地逻辑 tick推进完成
+- **THEN** `GameplayTickSystem` MUST根据剩余 accumulator计算 interpolation alpha
+- **AND** `PresentationFrame` MUST能读取该 alpha
+
+#### Scenario: 网络包在表现帧中到达
+
+- **WHEN** canonical bundle 在任意 render frame 到达
+- **THEN** Rollback Pipeline MUST在正式 fixed simulation boundary处理 forward/rollback
 
 ### Requirement: GameplayTickSystem 必须通过 target 接口调度业务对象
 
-系统 MUST 定义 `IGameplayTickTarget` 或等价接口作为 gameplay tick 消费边界。`GameplayTickSystem` MUST 注册和调度该接口，而不是直接持有 `CharacterPipeline` 专用列表。`CharacterPipeline` MAY 实现该接口成为首个消费者；后续网络本地 peer、投射物、战斗历史或 AI MAY 接入同一个 tick system，但 MUST NOT 创建第二套本地逻辑 tick。
+GameplayTickSystem MUST以 SimulationSessionHost/runtime handle作为每个 Session唯一 Input/Logic target，而不是为同一 Session中的 Character、Pass、Session Source、Endpoint或 Network Model分别注册 LogicTick。Target在 Preparing状态 MAY推进正式 preparation但 MUST不执行 Program；进入 Active后 MUST将每个 source tick只交给 runtime handle一次，Pipeline Runtime再按 compiled ExecutionPlan推进 roster、内部 step和 world batch。
 
-#### Scenario: 角色管线作为 tick target
+#### Scenario: 双 Actor Session 被调度
 
-- **WHEN** `CharacterPipelineHost` 启用
-- **THEN** Host 创建的 `CharacterPipeline` MUST 作为 `IGameplayTickTarget` 注册到 `GameplayTickSystem`
-- **AND** `GameplayTickSystem` MUST 通过 target 接口调用 `BeginRenderFrame`、`LogicTick` 和 `PresentationFrame`
-- **AND** `GameplayTickSystem` MUST NOT 调用 Character 专用 API 才能推进 tick
+- **WHEN** 同一 Session roster包含 ActorA与 ActorB
+- **THEN** GameplayTickSystem MUST只调用一次 Session logic target
+- **AND** 每个内部 Step MUST按 stable ActorId顺序处理两个 Actor
 
-#### Scenario: 未来网络消费者接入同一 tick
+#### Scenario: Network Model 尚在 Preparing
 
-- **WHEN** 后续本地 loopback peer 或 Fantasy adapter 需要按 gameplay tick pump
-- **THEN** 该消费者 MUST 复用 `GameplayTickSystem` 的 `LocalLogicTick` 或 hook
-- **AND** 系统 MUST NOT 为网络额外自增第二套 local logic tick
+- **WHEN** Session preparation正在等待 endpoint handshake、launch roster或 Pipeline factory
+- **THEN** GameplayTickSystem MAY推进一次 preparation step
+- **AND** MUST不创建 SimulationTick、执行 Kernel或注册第二个 Model/Pipeline runner
 
 ### Requirement: GameplayTickSettings 必须显式配置 tick time source
 
@@ -86,35 +92,38 @@
 
 ### Requirement: GameplayTickSystem 必须每表现帧推进 PresentationFrame
 
-系统 MUST 在每个本地表现帧推进 `PresentationFrame`。表现帧 MAY 使用 scaled delta、unscaled delta、最近 local logic tick 和 interpolation alpha，MAY 基于最近 logic snapshot 重新采样 Timeline 动画姿态。表现帧 MUST NOT 创建新的本地逻辑输入、ActionActivationRequest、ClientCommand 或 gameplay window 事实。
+PresentationFrame MUST继续以 render/presentation delta推进 visual interpolation、Timeline visual sampling、Animancer fade、Camera和 committed command lifecycle。Rollback replay MUST只产生 EventId output replacement，MUST不直接把 PresentationFrame回卷或用 logic tick代替 render delta。PresentationFrame MUST不调用 Kernel Evaluate/Finalize、WorldSolver.ResolveBatch或修改 Character/World state。
 
-#### Scenario: 表现帧高于本地逻辑 tick
+#### Scenario: 高渲染帧率下的表现帧
 
-- **WHEN** 当前渲染帧没有新的 `LocalLogicTick`
-- **THEN** `GameplayTickSystem` 仍 MUST 调用 `PresentationFrame`
-- **AND** Presentation MUST 使用最近的 logic snapshot、interpolation alpha、active Timeline presentation sampling 或网络 snapshot buffer 平滑表现
-- **AND** Presentation MUST NOT 再次 tick BTSMTL RootTree
+- **WHEN** 两个 SimulationTick之间发生多个 PresentationFrame
+- **THEN** 表现 MUST继续插值和淡入淡出
+- **AND** Session runtime handle MUST不被额外推进
+
+#### Scenario: Replay 后替换动画选择
+
+- **WHEN** Output Disposition Pass产生 EventId replacement
+- **THEN** PresentationFrame MUST从当前视觉状态处理新 command
+- **AND** MUST继续以 presentation delta 推进 Animancer
 
 ### Requirement: 服务端 tick 必须只通过网络输入进入角色管线
 
-系统 MUST 让 `ServerTick` 只通过 `ServerSnapshot`、`Correction`、Action decision 或后续 Fantasy/loopback incoming packet 进入角色管线。`GameplayTickSystem` MUST NOT 自增 `ServerTick`，`CharacterPipeline` MUST NOT 从本地 frame 推导 `ServerTick`。
+ServerTick MUST只存在于具体 Network Model Source/packet/history或被转换后的 Pipeline source product、ExecutionPlan provenance中。GameplayTickSystem MUST不自增 ServerTick，Local Source/Schedule Pass MUST不从 LocalLogicTick推导 ServerTick，Kernel MUST不读取 ServerTick作为 Program时间。
 
-#### Scenario: 收到服务器校正
+#### Scenario: 后续模型收到权威 observation
 
-- **WHEN** Fantasy adapter 或 loopback peer 收到 correction packet
-- **THEN** packet MUST 携带 `ServerTick`
-- **AND** packet SHOULD 携带 `InputSequence` 或等价已处理输入身份
-- **AND** NetworkReceiveStage MUST 将其作为网络输入缓存
-- **AND** 本地 `LocalLogicTick` MUST NOT 因该 packet 被重写
+- **WHEN** Model Endpoint收到携带 ServerTick的消息
+- **THEN** Model Source MUST在自己的 ExternalSource state中保存 ServerTick
+- **AND** 只把 model-neutral ingress、restore directive或 schedule provenance交给 Pipeline
 
-### Requirement: 网络发送 MUST 使用 InputSequence 和 LocalLogicTick
+### Requirement: 模型输入命令必须保留 InputSequence 和 LocalLogicTick
 
-系统 MUST 让本地预测产生的 `ClientCommand` 使用 `InputSequence` 和 `LocalLogicTick` 作为本地身份。系统 MAY 在后续网络 peer 中按 20/30Hz flush 多个 command，但 flush 频率 MUST NOT 改变本地逻辑 tick 语义。
+具体 Network Model Source/Ingress Pass MUST从 portable CharacterSimulationInput构造模型输入命令，并保留 InputSequence与来源 LocalLogicTick。模型 Endpoint MAY按 20/30Hz flush多个 command，但 flush频率 MUST NOT改变 LocalLogicTick或 Schedule Pass产生的 SimulationTick语义。
 
 #### Scenario: 本地 60Hz 逻辑与 20Hz 网络发送
 
-- **WHEN** `GameplayTickSystem` 以 60Hz 生成本地 `ClientCommand`
-- **AND** 网络 peer 以 20Hz flush
-- **THEN** 每个 command MUST 保留自己的 `InputSequence` 和 `LocalLogicTick`
-- **AND** peer MAY 在一包中发送多个 command
-- **AND** 系统 MUST NOT 把网络 flush 序号当作 `LocalLogicTick`
+- **WHEN** Input Adapter/Ingress Pass以 60Hz生成带 InputSequence的 CharacterSimulationInput
+- **AND** 网络 peer以 20Hz flush
+- **THEN** 每个 command MUST保留自己的 InputSequence与 LocalLogicTick
+- **AND** peer MAY在一包中发送多个 command，MUST不把 flush序号当作 SimulationTick
+

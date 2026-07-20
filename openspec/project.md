@@ -2,68 +2,32 @@
 
 ## Purpose
 
-本项目是求职向 Gameplay 客户端程序 demo。目标不是完整 PvPvE 产品、MMO、纯网络框架或通用编辑器产品，而是展示第三人称动作客户端能力：输入响应、角色控制、相机、动作状态、动画表现、战斗窗口、受击反馈、调试可视化，以及在 `2v2vE / 2v2 + PvE` 服务端权威压力下保持手感。
+本项目是求职向 Gameplay 客户端程序 demo。目标不是完整 PvPvE 产品、MMO、纯网络框架或通用编辑器产品，而是展示第三人称动作客户端能力：输入响应、角色控制、相机、动作状态、动画表现、战斗窗口、受击反馈、调试可视化，以及网络模型压力下仍可拆分、替换和审查的玩法模拟边界。
 
-当前真实重心是先把 BTSMTL authoring 底座打干净，再用它承载 StateMachine、Timeline、Tree、Action 等玩法创作数据。Gameplay runtime 和网络演示要建立在这条干净数据链路上，不从旧 SO/config 分裂路径恢复。
+业务压力场景固定为一个 2v2vE 动作战斗技术演示：两名真人玩家、两名使用同一角色管线的玩家角色 Bot，以及不属于双方队伍的中立怪。重点不是完整比赛规则，而是动画表现、操作手感、伤害结算，以及两名真人玩家围绕同一个战斗事件进行高实时互动。正式范围与验收口径见 `openspec/2v2ve-gameplay-client-demo.md`。
+
+当前重心是以 BTSMTL 作为 authoring 底座，将 Graph、StateMachine、Timeline、TreeClip、Blackboard、Action、GameplayEffect 和 motion 数据编译成 portable Gameplay Program。Unity 角色表现、世界求解和后续网络模型必须装配在同一条 Program/Session 链路上，不恢复旧 SO/config、对象解释器或 Character stage 分裂路径。
 
 ## Current State
 
-- `refactor-pipeline-blackboard-owned-scopes`、`restore-timeline-treeclip-pipeline-runtime`、Timeline inline/TreeClip 收口、Corin nested Attack 重构、`refactor-gameplay-network-model-boundary`、Gameplay Effect/Tag/Attribute runtime 与 `refactor-character-motion-simulation-boundary` 均已归档，其 delta 已合并进 current specs。
-- `refactor-animation-presentation-authoring-boundary`、`refactor-runtime-diagnostics-capture-lifecycle`、`refactor-network-correction-policy-boundaries`、`refactor-live-debug-view-bindings` 与 `refactor-gameplay-effect-runtime-integration` 已完成但尚待归档。
-- `add-local-two-client-gameplay-network-closure` 的运动边界前置条件已经完成，仍需先选择并实现唯一正式服务端权威运动 backend。
-- `openspec/specs/` 当前包含 48 个已归档 current spec：
-  - `agent-character-controller-synthesis`
-  - `btsmtl-agent-authoring-mcp-bridge`
-  - `btsmtl-bt-edge-condition-decorators`
-  - `btsmtl-componentized-node-authoring`
-  - `btsmtl-graph-core`
-  - `btsmtl-graph-data-catalog-authoring`
-  - `btsmtl-input-action-node-authoring`
-  - `btsmtl-node-interruption-lifecycle`
-  - `btsmtl-runnable-timeline-node`
-  - `btsmtl-runtime-diagnostics`
-  - `btsmtl-sm-node-authoring`
-  - `btsmtl-timeline-editor-preview`
-  - `btsmtl-tree-inspector-information-architecture`
-  - `character-action-activation-flow`
-  - `character-action-authoring-closure`
-  - `character-action-instance-runtime`
-  - `character-action-network-policy-authoring`
-  - `character-animation-layer-runtime`
-  - `character-animation-pipeline`
-  - `character-animation-presentation-authoring`
-  - `character-camera-pipeline`
-  - `character-gameplay-pipeline-closure`
-  - `character-gameplay-effect-authoring`
-  - `character-gameplay-effect-integration`
-  - `character-gameplay-sync-adapter`
-  - `character-input-node-authoring`
-  - `character-input-pipeline`
-  - `character-motion-semantics`
-  - `character-motion-simulation-boundary`
-  - `character-network-sync-domain-contract`
-  - `character-pipeline-blackboard`
-  - `character-pipeline-runtime`
-  - `character-presentation-interpolation`
-  - `character-root-motion-curves`
-  - `character-state-interruption-authoring`
-  - `character-state-timeline-authoring-loop`
-  - `character-syncfact-behavior-binding`
-  - `gameplay-behavior-policy-model`
-  - `gameplay-attribute-runtime`
-  - `gameplay-effect-runtime`
-  - `gameplay-network-model-boundary`
-  - `gameplay-sync-backend-selection`
-  - `gameplay-sync-runtime`
-  - `gameplay-tag-runtime`
-  - `gameplay-tick-system`
-  - `local-gameplay-sync-loopback`
-  - `server-authoritative-hybrid-sync-model`
-  - `tengine-hotupdate-foundation`
-- 客户端主目录是 `3cDemo/Client/3C_Client`。
-- 当前稳定脚本主模块位于 `Assets/GameScripts/Main/Runtime`，包括 `Camera`、`Rendering`、`BTSMTL`、`Gameplay`、`Networking/GameplayNetwork`、`Networking/ServerAuthoritativeHybrid` 和 `Character/Pipeline`；旧 `Assets/Scripts` 不再作为正式代码根目录。
-- 服务端 `3cDemo/Server` 只保留 Fantasy 骨架，不再保留旧 FrameSyncAuthority 业务。
-- `Ref` 是参考代码来源，不是运行时依赖。
+- `openspec/specs/` 当前包含 61 个 current spec，并与本文件共同表达已安装架构。active change 记录实施增量；是否 archive 不决定代码是否已安装。
+- Corin RootTree、nested StateMachine、Timeline、TreeClip、Blackboard、Action、GameplayEffect、motion curve 已由唯一 Frontend 编译为 numeric-neutral Semantic IR。其 canonical artifact 固定写入 `Library/CharacterSimulation/SemanticIr/<definition-guid>.csir`，Float32 Target 再生成正式 `Library/CharacterSimulation/Programs/<definition-guid>/<numeric-profile>-abi<version>.csim`、exact-byte `CharacterSimulationProgramAsset` wrapper 与 `CharacterPresentationProjectionAsset`。
+- `CharacterPipelineDefinition` 已收敛为角色配置装配根；动画表现 authoring 由其引用的 `CharacterAnimationPresentationProfile` 唯一保存 Layer、TransitionLibrary 与 producer binding，垂直动力 authoring 由其引用的 `CharacterBodyMotionProfile` 唯一保存 GravityAcceleration 与 MaximumFallSpeed，Definition 不再内联这些数据。
+- 当前正式单机链路是 `GameplayTickSystem -> SimulationSessionHost -> Local Source -> compiled Standard Local Pipeline -> Ingress -> Schedule -> Evaluate -> World ResolveBatch -> Finalize -> Egress -> atomic Commit -> Presentation`。
+- 普通产品场景链固定为 `Toolbar Launcher / Player -> Bootstrap -> ProductBootstrapRunner -> GameApp.Entrance -> ProductStartupCoordinator -> ProductShell -> WSS Guest Login -> Home -> Gameplay Preload -> Assets/Scenes/Sandbox/SandBox.unity`。Bootstrap UI 属于 Player 内置闭包；ProductShell/HotFix 属于 DefaultPackage `Core`，SandBox 及玩法依赖属于 `Gameplay`，真实可选主页主题属于 `OptionalHD`。AOT Procedure 在 `ProcedureProductRuntime` 停留，不再决定登录、主页或玩法场景。SandBox 是本地 Gameplay 闭环与通用角色移动测试共用的唯一正式场景，不保留独立的作者观察场景入口。
+- 客户端正式构建产物只使用 `Build` 根，并严格分为 `Build/Content/<BuildTarget>/DefaultPackage/<ResourcePackageVersion>`、`Build/Players/<BuildTarget>/<ClientBuildVersion>` 与既有 `Build/Network`。`Build/.Workspace` 只保存商业构建原始输出、OutputCache、BuildReport 和候选目录；YooAsset 默认 Builder 与 EditorSimulate 只写 `Library/YooAsset/BuildOutput`。`Builds`、根 `Bundles` 和无版本普通 Player 目录已删除，不提供迁移、镜像或 fallback。
+- `SimulationSessionHost` 是唯一运行装配根，显式组合 Program Runtime、Execution Backend、Pipeline、Session Source 与 WorldSolver，拥有 preparation、compiled runtime handle、锁定 roster、Input/Logic target、World state 和销毁顺序。
+- Float32 的唯一正式组合入口位于 portable Float32 source set：它编译 Pipeline、创建 Backend request 与 LaunchPlan。每份 Float32 Pipeline Definition显式提供包含descriptor、portable factories、runtime factories与Product runtime的neutral package；Prepared Source显式提供一次性Runtime Launcher。Unity Composer只把五项Definition、Actor port、Source、Solver、输出和诊断降低为一个portable request并调用该Launcher，不识别具体Network Model或拥有第二套组合规则。
+- `CharacterPipelineHost` 只负责 Actor registration 与 Presentation：绑定 Program/Projection、Input Adapter、Actor body、visual/camera 和 diagnostics ports，再向显式 Session Host 注册；它不创建 Source、Kernel、Solver、Backend、Pipeline runtime 或 Logic target。
+- Gameplay可变状态集中在typed immutable `CharacterSimulationState`与`WorldSimulationState`。Runnable、StateMachine、Timeline、Blackboard、Input request、Action和GameplayEffect都由Program operation与typed state address推进；每个Actor/Step只创建一个target-specific State Transaction，并从Evaluate延续到Finalize后唯一Commit。
+- 当前安装 Float32 Numeric Target与DeterministicRollback专属FixedQ32.32 Target。两者拥有独立Program/State/Numeric ABI，但复用portable Runnable/StateMachine、Timeline、GameplayEffect准入/生命周期与Pipeline Transaction控制；Target只实现数值、曲线、typed state和输出投影。ProgramExecutionServices按Program构建一次，Session/Actor workspace复用Tick容量，跨事务Snapshot、history与输出在发布前独立冻结。Fixed Program/State/Kernel、包含`ActorCollision`的Deterministic KCC、canonical input、完整world snapshot history/replay/hash与EventId output disposition已通过独立Rollback组合接入；Fixed ABI不进入Local、ServerAuthoritative或DotRecast组合。Rollback KCC使用Fixed upright capsule对Plane、Box和one-sided indexed Triangle执行closest-feature保守推进cast、初始去穿透、多平面slide、稳定ground/坡面、事务式step与受上一支持面约束的ground snap；Mesh与Terrain在Editor统一降低为带stable feature和adjacency的artifact v2，旋转Box按固定winding降低为同一triangle surface。Deterministic Peer Scene与本地SandBox复用`CharacterMovementTestEnvironment`灰盒Prefab，Peer Scene中唯一World Authoring与显式Surface marker是可见几何到Fixed Artifact的唯一来源，不存在隐藏临时测试地图。每个Actor拥有预分配Motor/query workspace，batch再按stable ActorId pair执行`SolidBodyBlock`、同一Motor静态重约束和原子提交。DotRecast authoritative backend继续通过同一Float32 Program、Pipeline和Session Composer接入。
+- 当前安装显式 Float32 Local、ServerAuthoritative Prediction 与 ServerAuthoritative Authority 三类正式 Pipeline。ServerAuthoritativeHybrid同时提供Unity Authority四进程纵切和DotRecast Authority三进程纵切；两者复用同一网络模型、Source、Pipeline、Checkpoint、Correction与UDP数据面，旧 LocalLoopback capability与实现均已删除。
+- Fantasy Server 已拆成共享 `ThirdPerson.Server.Host`、共享 Gate Entity/Hotfix 和两个产品专属模块。Unity Authority 由 `ThirdPerson.UnityAuthority.Server` 发布，只包含 Gate 与 external Worker route；DotRecast Authority 由 `ThirdPerson.DotRecastAuthority.Server` 发布，包含 Gate、进程内 Authority Scene 与 portable DotRecast 闭包。两者没有通用 `Main.exe`、运行时产品切换或共享 concrete Router。
+- 三个 Network Test Product 通过唯一Editor-only `NetworkTestProductBuildWorkflow`和显式adapter构建，分别发布到互不覆盖的`Build/Network/UnityAuthority`、`Build/Network/DotRecastAuthority`与`Build/Network/DeterministicRollback`。公共workflow唯一拥有外部进程、临时目录、原子替换、exact file closure与产品manifest校验；`ServerProductBuildManifestUtility`唯一拥有Fantasy服务端manifest/hash。Unity Authority与DotRecast adapter各自发布匹配的Fantasy Server产品，Rollback adapter发布独立的纯.NET Dedicated Relay Server artifact与portable runtime manifest。Run只验证并启动既有产物，不编译、不publish、不修复目录；所有Server文件日志必须写入当次`Build/Network/RunLogs/<Model>/<RunId>`，不得修改已校验的ProductRoot。
+- `refactor-gameplay-session-composition-boundary`已归档；公共 composition基座已成为 current spec，可供后续网络模型复用。DotRecast与 Deterministic Rollback不得复制 Host、Pipeline compiler或 Actor registration。
+- GitHub CI 由三个无依赖并行 job 组成：`Repository Policy` 校验 Git 跟踪边界和 Unity `.meta` 配对，`OpenSpec Validation` 严格校验全部 current specs/change，`Portable Unit Tests` 编译 Core/Float32 并运行 NUnit 合同测试。
+- portable NUnit 当前覆盖 CanonicalData 非法输入与 round-trip、StableHash/EventId identity、ProgramCurve 排序/求值/codec；测试工程只引用 Core 与 Float32，不引用 Reader、Unity 生成工程或 Unity API。
+- 客户端主目录是 `3cDemo/Client/3C_Client`；服务端代码按 `3cDemo/Server/Shared`、`Gate`、`Products/UnityAuthority`、`Products/DotRecastAuthority` 与 `Startup` 分层。`ThirdPerson.Startup.Server` 只装配 AuthGateway、Auth Entity/Hotfix、正式 Outer 协议与共享 Server Host，不进入 Network Test Product catalog。AuthGateway 只保证单 Scene 内 `AccountId -> Session identity + ClientInstanceId + Generation + token identity` 的唯一当前记录。Fantasy Gate Scene继续拥有 ServerAuthoritative Demo Room和控制路由但不执行 Gameplay；独立DotRecast Authority Scene继续拥有portable Program、Pipeline、Source、Solver、World与UDP数据面。Entity 目录中的 `Fantasy.config` 只服务代码生成并被产品排除发布，各产品目录中的源 `Fantasy.config` 才是部署真相；`Ref`仅作为参考代码，不是运行时依赖。
 
 ## Tech Stack
 
@@ -71,128 +35,152 @@
 - C#、UI Toolkit、GraphView。
 - URP 14、Cinemachine 2.10、Unity Input System、Unity Timeline。
 - BTSMTL / TreeDesigner / Timeline 本地代码。
+- Animancer 负责动画状态、层混合和 fade 执行。
 - Fantasy.Unity / Fantasy.Net 骨架。
-- OpenSpec 用于能力规划和归档。
+- OpenSpec 用于能力规划、实施和归档。
+- GitHub Actions 使用显式 `windows-2025` runner；OpenSpec job 固定 Node 20.19.0 与 `@fission-ai/openspec` 0.23.0。
+- portable 测试使用 .NET 8、NUnit 4.6.1、NUnit3TestAdapter 6.2.0 与 Microsoft.NET.Test.Sdk 18.8.1，不进入 Unity Test Framework。
 
 ## Architecture
 
 ### Gameplay Client Direction
 
-- 对外作品口径是 `Network-aware Third Person Action Combat Prototype`。
-- 第一目标是 Gameplay 客户端纵切，不是完整网络产品。
-- 客户端主链路：`Input -> Action Request -> State/Graph Decision -> Timeline/Animation Presentation -> GameplayWindow Facts -> Prediction Presentation -> Server Result -> Motion Correction Application -> Presentation Sampling`。
-- 动画表现主链路：`State/Action 逻辑所有权 -> per-layer AnimationLayerSelection -> TimelinePlaybackScheduler visual sample -> CharacterAnimationPlaybackCommandQueue -> AnimationPlaybackLifecycle -> AnimancerPlaybackAdapter -> Animancer layer/state/fade -> output`。CharacterPipeline 唯一构造 Queue；逻辑侧每层只提交一个已解析 playback，PresentationFrame 原子消费 selection、sample、complete 与 release，不从 Tree 结构再次推断赢家。
-- Timeline Scheduler 只收集活跃 animation producer；逻辑选择器以 ActionRuntime 当前唯一 ActionInstance 解析动作覆盖，并在动作 Timeline 已结束但 terminal lifecycle 尚未提交时保持已有选择。启动时保存的 ActionContext 不等于当前所有权，也不能作为表现赢家判断。
-- `CharacterPipelineDefinition.AnimationPresentation` 是角色动画 Layer catalog、唯一 Animancer `TransitionLibraryAsset` 引用和 Timeline producer binding 的唯一正式来源。Layer 显式保存 OutputPolicy；producer binding 使用稳定 Timeline/Track identity 绑定 Animancer transition 与 easing。Priority、Tree site、Driver、source-target transition table 和运行时 lifecycle 不进入该配置。
-- 表现插值只对 logic pose 生成 visual root；Timeline 动画在表现帧按 visual Timeline time 重采样，Animancer fade 按真实 presentation delta 独立推进。`AnimationPlaybackLifecycle` 只管理 PendingFirstSample、Current、Outgoing、Retired 与纯表现 retention；Animancer 是状态复用、层混合、权重和淡入淡出的唯一执行权威。
-- 本地相机链路：`CameraStateRequest / CameraCue / CameraResponsePolicy / CameraTargetRequest -> CharacterCameraStage -> CameraPosePlan -> CameraRigAdapter`；相机状态不进入 gameplay 同步真相。
-- CharacterPipeline 不解析网络策略。当前唯一 `ServerAuthoritativeHybrid` 模型通过 `ServerAuthoritativeCharacterSyncProfile` 保存 Behavior/Action policy，并由模型专属 Behavior/Transaction resolver 构造 packet；ActionProfile、GameplayBehaviorProfile、Graph、Timeline 与 Blackboard 不保存该模型策略。
-- Action decision、actor 逻辑位姿 correction 与表现采样使用独立合同：Reject/Correct 只改变 ActionInstance lifecycle，incoming Correction 只进入 CharacterMotionStage，Presentation 只消费正式 `MotionCorrectionApplicationResult`，不得从 MotionDebug 反向读取运行决策。
-- 角色运动链路固定为 `MotionContribution -> MotionResolver/Modifier -> MotionIntent -> Motion Executor -> MotionResult`。`CharacterMotionStage` 只编排 gameplay intent、correction 和结果；正式 Logic Pose Port 唯一读写逻辑位姿；当前 Unity `CharacterController.Move` 只允许存在于 `UnityCharacterControllerMotionExecutor` adapter 内。Graph、Timeline、Action、Presentation 和 Network Model 不直接调用具体运动组件。
-- Timeline 的时间窗口统一由 Decision TreeClip 写入 Bool Frame/Frame Pipeline Blackboard variable；需要动作事实的 declaration 通过显式 ActionWindow projection，在 RootTree 决策后生成 `ActionWindowSample`。Timeline 不再提供 ActionWindowTrack/Clip 或专用 Window reader。
-- ActionWindow projection 只保存 WindowType、WindowId 和 Digest；ActionInstance 来自 playback/Graph 的显式 Action Context。NetworkSendStage 只收集 SyncFacts，完整网络策略由绑定角色的 `ServerAuthoritativeCharacterSyncProfile` 解析。
-- Timeline 不直接宣称命中成立；命中、伤害、目标归属必须由服务端或权威 gameplay solver 裁决。
-- Gameplay Effect 通用模块只拥有 Tag、Attribute、ActiveEffect、PredictionJournal 和每 tick ChangeSet；它不引用 Character、BTSMTL、Network Model、Presentation 或 Diagnostics。`GameplayEffectRuntime` 是五个窄合同的门面，Spec 构建、应用事务、生命周期、Component 执行、预测协调和变更记录由内部协作者完成。
-- Character 通过 `CharacterGameplayEffectAdapter` 接入 GE。Graph 只获得不可变的 Tag Reader、Attribute Reader 和 Effect Command Sink；incoming lifecycle、attribute 与 result application 由 InputMapper 转为 authority input；同一 ChangeSet 在 commit 时只 drain 一次，再分别投影为正式 Effect/Attribute facts、Gameplay Cue 和结构化 diagnostics。
+- 对外作品口径是 `Network-aware Third Person Action Combat Prototype`，第一目标是可运行、可调试的 Gameplay 客户端纵切。
+- Authoring 编译链固定为 `CharacterPipelineDefinition -> Authoring Discovery -> Semantic Emission -> validated .csir artifact -> Numeric Target Lowering -> CharacterSimulationProgram + CharacterPresentationProjection`。Definition 只装配正式 Config 引用；Animation Presentation Profile 作为唯一表现 authoring 输入参与 source revision。`.csir` 是可删除、可重建、不进入 Assets/Player 的 generated artifact，不是第二份 authoring 真相。Semantic IR 只存在于 Editor/普通 .NET 编译和诊断边界，Runtime 不解释 IR，也不在 Program 过期时回退 authoring object。
+- Program 是 Gameplay 真相，Projection 是 Unity 表现资源绑定。二者记录同一 source revision，并在 Host 创建 Session 前严格校验；Program 缺失、过期、ABI 不匹配或 Projection 不匹配都直接拒绝启动。
+- 每个 Session 锁定 Program Runtime、Execution Backend、Pipeline、Session Source、WorldSolver、ProgramCatalog、Snapshot codec 与 Actor roster。Runtime 不按 Network Model、Actor、Node、packet 或 Tick 切换组合或数值 backend。
+- Session 在 Active 前把 portable Pipeline descriptor 编译为 immutable plan。每个 outer LogicTick 依次执行 Ingress、唯一 Schedule producer、零到多个有序 Step、Egress 与一次 atomic Commit；任一阶段失败都不得发布部分 Character/World state 或外部输出。
+- Session 的 Tick 0 Pipeline state 必须从已经 Activate 的 SnapshotParticipant 正式捕获，或从调用方显式提供的完整 snapshot 原子恢复后重新捕获；不得用空 participant 数组伪造初始 Pipeline state。
+- Session Source 只拥有输入、端点、外部队列、模型 history 资源和 Source ports；Pipeline Pass 显式决定 ingress、restore/replay/current schedule、Evaluate/WorldSolve/Finalize 及 output disposition。Source 和 Pass 都不得直接执行 operation、修改 Transform 或播放表现。
+- 本地 Input Adapter 将设备输入降低为 Float32 `CharacterSimulationInput`。Graph/StateMachine/Timeline/Action 读取 Program input/state，不直接读取 InputAction、Unity Time 或场景对象。
+- Gameplay Effect与Action生命周期已进入同一个typed `CharacterSimulationState` layout；Input request、Action request/instance/reference、target snapshot与唯一GameplayEffect aggregate都有明确value kind。`Float32OperationEvaluator`通过窄领域port读写同一`Float32CharacterStateTransaction`并输出稳定EventId的GameplayFact、PresentationCommand与Trace，不再由Character stage、Builder或opaque bytes持有第二份运行状态。
+- Numeric-neutral Value Port Contract是Value输入的唯一类型真相。Frontend将已连接输入编译为Value edge、未连接输入编译为结构化constant-input binding；Float32/Fixed Program Layout在composition阶段建立连续input span、Timeline/State owner、reference、named constant、catalog和SourceMap索引，Tick内不得再解析字符串端口、排序或扫描完整Program。
+- Program固有的`ProgramExecutionLayout`与backend固有的`KernelProgramBinding`分离；Kernel只接受与Program/Layout/backend identity精确匹配的binding。Float32 Program使用ABI 6，committed State使用`character-state/float32/v6` canonical codec；Fixed Q32.32 Program使用ABI 5，committed State使用`character-state/fixed-q32.32/v5` canonical codec。Float32 WorldState/WorldSnapshot/SessionSnapshot分别使用v3/v3/v2；Fixed WorldState/WorldSnapshot/SessionSnapshot分别使用v3/v4/v3。
+- Evaluate通过Actor workspace持有page ownership transaction、typed Blackboard owner/provenance与唯一output lease；Finalize成功后一次冻结最终Result并发布唯一canonical Pipeline candidate。Snapshot、Hash与Network Baseline只读取Finalize成功后的committed State并保存Program/Layout/codec identity；active Transaction、Pending lease、GameplayEffect working view与当前Step Motion transient不得进入History、packet或Snapshot。
 
-### BTSMTL Authoring Direction
+### Motion Direction
 
-- BTSMTL 是当前 authoring 基座，不是必须照搬的 runtime。
-- `BaseGraph` 是图数据和结构编辑底座，`BaseTree` 继续作为图数据类型，`BaseTreeAsset` 是当前可打开的 Unity asset / editor 入口。
-- `BaseNode` 是节点 authoring entity，可以承载 `NodeModule`。
-- 字段扫描走 `NodeFieldAccessor`，同时支持节点字段和模块字段。
-- Port 系统继续使用 BTSMTL 原生 `PropertyPort` / `PropertyEdge`，连接身份使用稳定 `PortId`。
-- 不新增 `WorkbenchPortDescriptor`、并行注册表或并行 WorkbenchTree。
-- 默认创作心智是 private-first：节点、边、模块和端口默认内联在所属 Graph；可下钻 Graph 默认作为 owner 内部普通 C# inline graph data 自动创建和绑定；需要复用时才显式提升或分配 shared `BaseTreeAsset`。
-- Unity sub-asset 不再表达 BTSMTL 私有下钻 Graph ownership；SMNode -> SMGraph、TransitionEdge -> ConditionRuleGraph 等关系必须通过 inline/shared 引用、ownership 和校验维护。
-- `StateMachineGraph : BaseTree`，`StateMachineNode` 表达父级行为图进入状态机图的入口；创建 `StateMachineNode` MUST 自动创建并绑定 inline `StateMachineGraph`，用户不需要先手动创建或拖拽引用。
-- 嵌套 StateMachine 通过 StateNode 的 inline StateBehaviorSubTree Root 内普通 `StateMachineNode` 表达；runtime 使用 outer-to-inner `StateMachineExecutionPath` 按 declaration owner 解析 State Blackboard frame。StateMachine 只负责 transition decision、State scope、source exit barrier 和状态运行事实，不创建动画 owner、ready、control-flow topology、可见 leaf 或专用动画 lifecycle。
-- Animation incoming readiness 只来自所选 Timeline producer 的第一份合法表现 Sample，不来自 Runnable executed 或额外 ready fact。逻辑 playback complete/release 后，outgoing 只通过 `PresentationRetention` 继续采样 animation track，不能继续执行 TreeClip、Motion、root motion、window 或 sync facts；Animancer fade 完成后 lifecycle 将其 Retired。
-- Corin 外层 Action StateMachine 只包含 `None`、`Attack`、`DodgeBack`、`DodgeForward`；`Attack` body 内的 inline `Attack Combo StateMachine` 包含 `Attack1`、`Attack2` 与 Exit，具体攻击 leaf 独占 Action activation、Action Context、inline Timeline、Hit/Cancel TreeClip 和 terminal lifecycle。
-- `StateNode` 表达状态机图内普通状态和状态行为边界，它本身与 Transition edge 都是 `StateMachineGraph` 内联数据，不是独立 asset。
-- `Enter`、`AnyState`、`Exit` 是 StateMachineGraph 层级控制节点，不是普通状态模块。
-- `StateNode` 可引用普通 `SubTree` 或 `StateBehaviorSubTree`；普通 `SubTree` 只执行 `RootNode`，`StateBehaviorSubTree` 使用 `OnEnter`、`RootNode`、`OnExit` 表达状态生命周期。
-- Transition 是 edge 语义，不新增 `TransitionNode`；Transition 条件通过 edge 内部 inline `ConditionRuleGraph` 或显式 shared `ConditionRuleGraph` asset 表达，不回退到同层 BoolPort 条件。
-- Graph Editor 中的 Node、Edge 和 StateMachine Transition 只保存逻辑结构、条件、优先级、打断与 ownership；`CharacterPipelineDefinition` Inspector 是 Layer catalog、producer binding 和 Animancer library 定位的唯一 Presentation 配置入口，只按 RootTree 正式 producer identity 显示绑定，不复制逻辑 flow。Graph 数据不保存动画策略，不存在独立 Animation Presentation 窗口。
-- 普通 Tree、StateMachine、graceful stop 与 ForceStop 只发布和消费逻辑执行事实。State/Action 逻辑在所有权决策后通过 `CharacterGraphContext` 提交每层唯一 `AnimationLayerSelection`；Tree priority 和 interruption 不进入 Animation 合同，逻辑 State 在 stop barrier 内退出且不等待表现淡出。
-- 动画转场时长、transition source 与 easing 由 Animancer 原生 TransitionLibrary、state 和 FadeGroup 执行；项目不维护自有 CrossFade/Inertialization 状态机。动画表现不得写 root motion、逻辑 Transform、MotionCurve、黑板或同步事实。
-- BT Composite child 条件与 StateMachine Transition 共用 `ConditionRuleGraph`；`IfNode` 和状态机专属 `TransitionRuleGraph` 不再保留。
-- Runnable stop 使用自然完成、graceful stop 和 force stop 分层协议；State Transition 与父 Tree abort 共用 source-exit 和 OnExit 内核。
-- `TimelineNode : RunnableNode`，用于 Graph 驱动 Timeline；默认唯一持有 inline `TimelineData`，只有作者显式 Use Shared 或 Extract Shared 时才引用 `TimelineAsset`，inline/shared 不允许双写。
-- `BaseTreeWindow` 的页面栈只承载 Graph 与 TreeClip resolved Graph，Timeline 不进入 Graph breadcrumb；`TimelineEditorWindow` 独立绑定 TimelineNode/TimelineAsset 的 TimelineData，使 Graph 与 Timeline 可同时观察。Timeline 中打开 TreeClip 时由来源 Graph 窗口下钻，并显式传递 Character authoring context，不复制 Blackboard declaration。
-- Graph、Node、Edge、Timeline、Track、Clip 和 Blackboard declaration 使用稳定 authoring identity；runtime clone 保留 source identity，但每个 Character、Graph、State activation、Timeline playback 和 TreeClip cycle 使用独立 runtime instance identity。
-- BTSMTL 运行调试边界固定为 `Authoring Source -> Debug Source Map -> structured Trace -> RuntimeDebugSession -> Graph/Timeline/Host view`。Graph channel 显示逻辑 child 选择、Runnable result 与 stop；StateMachine channel 只显示 transition decision、State scope 与 exit barrier；Animation channel 显示 selection、Timeline sample、PendingFirstSample、Current、Outgoing、Retired 与 Animancer fade。Editor 不绑定 runtime clone，也不重建第二份 selection、Timeline 时间或播放生命周期。
-- 每个 active CharacterPipeline 注册独立 diagnostics target，默认不启用采集。Graph、StateMachine、Timeline、Blackboard、Motion、Animation 六类 channel 由 Graph、Timeline、Host Inspector 的 target-level Live interest 取并集；Live State 只保存当前事实。作者显式开始 Capture 后才建立有界 segment history，停止后由 Graph、Timeline 与 Host Inspector 共享同一冻结 Capture position。Graph 和 Timeline 分别在各自 editor-only binding 中保存 Follow/Pin 与 runtime instance；Host Inspector 只读共享 provider，不拥有 Graph 或 Timeline 实例选择。
-- BTSMTL `TreeTrack / TreeClip / TimelineRunningTree` 已接入 `TimelinePlaybackScheduler` 唯一运行权威：Decision 在 RootTree tick 前无状态求值并只写 Frame Blackboard，Commit 在 RootTree tick 后保持 Enter/Update/Exit/Destroy 与 stop 生命周期；不恢复 `Timeline.Bind/Evaluate/Unbind` 自主播放路径。
-- Decision TreeClip 按每次 logic tick 穿过的 Timeline segment 求值；Loop 跨边界时拆分尾段、中间 cycle 与头段，不能只检查 target time。`BaseGraph.InitTree` 使用统一非虚入口，TimelineRunningTree 必须先提供正式 TreeClip runtime context。
-- Motion contribution 明确区分位移 delta 与 Override channel claim。MotionCurveClip 的 `CurveEndFrame` 决定位移曲线终点，`EndFrame` 决定贡献/占权终点；零 delta Action claim 可以在 recovery 中消费 Locomotion，但 Additive/WeightedBlend 零值不占权。
-- TreeClip 默认在 Timeline managed-reference 中拥有 inline `TimelineRunningTree`，复用时才显式 Extract Shared，inline/shared 只能保留一个真数据来源；Corin Attack Hit/Cancel、Dodge IFrame 与恢复段都由 Decision TreeClip 写 Root-owned Frame variable，状态边和 OnExit 统一通过 Blackboard ValueNode 读取。
-- Blackboard fact projection 的运行顺序固定为 `BeginFrame -> Decision TreeClip write -> RootTree/StateMachine decision -> WindowFactProjection -> Timeline Commit -> SyncFacts/NetworkSendStage`；projection candidate 只保存当前帧写入 provenance，不是第二套 Blackboard。
-- Pipeline Blackboard 继续使用 `BaseExposedProperty` 作为唯一 declaration/调参表面；Character declaration 归属 RootTree，Graph、State、ActionInstance、Frame declaration 归属实际使用它们的 Graph，不创建第二套 Blackboard asset 或局部字典服务。
-- Blackboard 节点保存 declaration identity 与 declaration owner 的显式 reference，`BlackboardKey` 只在同一 owner 内唯一并用于作者显示；下钻 Graph 读取上层可见 declaration 时只建立引用，不复制 declaration，也不按名称隐式 shadow。
-- Blackboard runtime address 由 declaration identity 与 Character runtime、Graph runtime instance、完整 `StateMachineExecutionScope`、`ActionInstanceId` 或 local logic tick owner 共同组成；State、ActionInstance、Frame 和 GraphInstance 清理只能命中对应 owner bucket。
-- 正式 scope/lifetime 组合固定为 Character 的 Config/Spawn/ManualClear、Graph 的 Config/GraphInstance、State 的 StateEnterToExit、ActionInstance 的 ActionInstance、Frame 的 Frame；Config 在 runtime 只读，缺失 owner、断裂引用和类型错误直接失败。
-- Agent authoring 是 editor-only 编译链路：`Snapshot -> Intent/Macro -> Patch IR -> Compiler -> Validator -> Report -> BTSMTL assets`；schema v6 输出完整 Graph、Node、Edge、Graph reference、Timeline、Track、Clip、Blackboard declaration 与 animation producer 稳定 identity，并只读展示 Layer、TransitionLibrary 与 producer binding。Patch IR 只修改正式 Graph、StateMachine、Timeline 和 Blackboard authoring，不提供 `configure_animation_layer`，也不编辑动画 Priority、Tree presentation site、Animancer transition 或播放 lifecycle；Validator 不建立第二套 Presentation 校验。不保留 v5、path/index、display-name apply fallback、旧动画字段或双写入口。
+- Program Evaluate先收集输入locomotion、Timeline MotionCurve与业务位移的`SimulationMotionContribution`，按固定channel解析为`ResolvedMotionChannel`，执行Operation Set声明的Motion Modifier，再按固定channel顺序合成唯一`ResolvedGameplayMotion`，全过程不修改Transform。`TimelineMotionWarp`是当前唯一正式Modifier，只修正成为Action channel resolved owner的显式source MotionCurve；它从对应ActionInstance读取激活时固定的目标快照，将跨Tick generation、总修正和累计progress保存在typed Character State。raw contribution、resolved channel、resolved gameplay motion、Body Motion plan与最终request等同Tick transient不进入committed State、Snapshot或StateHash。
+- 当前Numeric Target的唯一Body Motion Integrator在全部玩法Motion与Modifier完成后执行Prepare：读取compiled `CharacterBodyMotionProfile` descriptor、committed `WorldBodyState.VerticalVelocity`与TickDelta，以半隐式恒加速度积分生成唯一`CharacterMotionRequest`及同Step plan。正式World ResolveBatch Step Pass将同一内部SimulationTick的全部Actor request组成batch并交给Session唯一`ICharacterWorldSolver`；Solver只约束完整XYZ request并返回actual displacement、稳定Grounded与方向性Collision，Target唯一Finalize再提交actual Velocity与下一Tick VerticalVelocity，Program Finalize Pass最后生成Character state、body sample和motion fact。
+- 当前 Unity 实现只在 `UnityCharacterControllerWorldSolver` 内调用 `CharacterController.Move`。Host、Kernel、Graph、Timeline、Action、Presentation 和 Network Model 都不能直接调用具体运动组件。
+- 逻辑 body 属于 World state，visual root 属于 Presentation。不存在 `CharacterMotionStage`、`CharacterMotionAuthority`、`ExternalPose`、Motion Executor/Logic Pose Port 双路径或 Transform fallback。
+- Standard Local Pipeline 不保存 rollback history。需要 prediction/reconciliation 或 rollback 的模型必须通过自己的 Source ports 及声明为 SnapshotParticipant 的 Pass 提供 typed ingress、restore、history/replay 和 EventId disposition，并使用匹配 NumericProfile/ABI/capability 的 Solver。Unity CharacterController与Deterministic KCC声明`AirborneVerticalMotion`；当前DotRecast Navigation Surface Solver不声明该能力，要求空中垂直动力的Program在Runtime创建前必须被Composition拒绝。
+- Output disposition 同时携带 EventId 与 ActorId，Committer 按当前 batch 精确校验归属。需要 Replace、Retire 或 Suppress 历史的模型必须在自己的 SnapshotParticipant journal 中保存有界 EventId 历史，Unity 输出 aggregate 不保存无界 owner ledger。
+
+### Presentation Direction
+
+- `CharacterAnimationPresentationProfile` 是Layer catalog、Animancer TransitionLibrary与稳定producer binding的唯一动画播放authoring真相。`CharacterFootPlacementProfile`只保存角色级Trace、Contact、Prediction、Constraint、Pelvis、Rotation和Smoothing参数；每个Timeline Animation Clip独占一条normalized `Foot Placement Weight`曲线，Prediction、Pelvis与Foot Rotation继续由Profile和planner负责。AnimationTrack Marker Sync使用独立的命名Point Marker，不读取Foot Placement曲线作为步调相位。Definition Inspector只显示Profile引用和generated artifact状态，Runtime不读取authoring Profile。
+- Program/Projection 只输出带稳定 producer、layer、EventId、generation 和 sample time 的 `PresentationCommand`；逻辑优先级、Tree site 和 StateMachine transition 不进入动画层配置。
+- 角色表现装配链固定为 `Host / Actor Registration -> CharacterPresentationRuntimeFactory -> CharacterSimulationPresentationRuntime -> CharacterBodyPresentationRuntime / CharacterAnimationPlaybackRuntime / CharacterFootPlacementRuntime / CharacterCameraPresentationRuntime`；Factory只在Actor注册时创建一次Runtime，不参与逐帧命令传递。
+- 角色表现运行链固定为 `SimulationCommitter / Model Egress -> 已注册的 CharacterSimulationPresentationRuntime -> Body / Animation / Pose Post Process / Camera`；协调器每个PresentationFrame固定执行Body、Animancer Evaluate、唯一Foot Placement Pass和Camera，再清理帧信号。
+- `CharacterPresentationRuntimeFactory` 是唯一运行时组合入口：本地 owner 使用 `CommittedStream + Direct + RequireCommittedSelection + Camera`，完整模拟的无相机 Actor 显式选择 `CommittedStream + Direct|BoundedCorrection + RequireCommittedSelection`，只观察外部状态的 Actor 使用 `SelectedStream + BoundedCorrection + AwaitCommittedSelection`。Source 与 Trajectory Profile 分开配置，不由相机、Actor 名称或 Network Model 推断。
+- `CharacterAnimationPlaybackRuntime -> CharacterAnimationPlaybackCommandQueue -> AnimationPlaybackLifecycle -> AnimancerPlaybackAdapter` 是唯一动画播放消费链。
+- `CharacterAnimationPlaybackRuntime` 同时服务正式运行与纯动画 Timeline Preview，统一处理 select、sample、release、seek generation、Current/Outgoing/Retired 和 Animancer fade；Preview 不直接 `Play` Clip，也不创建隐藏 gameplay producer。
+- Animancer 是动画状态复用、layer weight、fade 和最终 pose 的执行权威。Gameplay root motion 只来自 Program 的显式 motion operation，不能从动画混合结果反推。
+- PresentationFrame按真实frame delta推进动画。`CharacterBodyPresentationRuntime`是committed/selected interval、target轨迹采样、表现时钟、分支替换、Visual Trajectory Follower和VisualRoot运行时写入的唯一owner。正常连续区间直接重采样target，不做第二次低通；只有branch replacement或显式Reset按`CharacterBodyPresentationProfile`执行有界纠偏。Foot Placement只读取同帧Body、Animancer最终姿势、visible contribution、角色Profile、显式rig和本地PhysicsScene；它只写骨骼与pelvis局部offset，不写VisualRoot、Character/World state、Blackboard、Action、GameplayEffect、Snapshot、Hash或网络输出。远端角色只消费Prediction Schedule已提交的selected Body区间与显式Reset；canonical contact、可靠事件horizon和WorldSolver始终使用原selected Body。
+- Camera 已闭合为正式 Presentation consumer。Cue、VFX 与 UI 当前只进入逐帧表现信号路由，尚无最终 consumer；Audio 尚无正式 Presentation command。后续补齐这些 consumer 时仍不得反向决定 Gameplay state。
+
+### BTSMTL Authoring And Runtime Direction
+
+- BTSMTL 是 authoring 基座，不是 Character Gameplay runtime。`BaseGraph`、Node、Edge、StateMachineGraph、TimelineData、TreeClip 和 `BaseExposedProperty` 继续承载编辑数据与稳定 authoring identity。
+- Character Runtime 不创建 `RunnableTree`、`StateMachineGraphRuntime`、`TimelineRunningTree` 或 TimelineData runtime clone。Compiler 将它们降低为 Program operation、control-flow edge、state slot、catalog、producer 和 source map。
+- `StateMachineNode` 与 nested StateMachine 继续使用 inline/shared authoring ownership；Runtime 的 enter/update/exit、transition、interrupt、graceful stop 和 force stop 由 Program operation set 唯一实现。
+- TimelineNode 默认拥有 inline TimelineData，显式共享时才引用 TimelineAsset。TreeClip 的 Decision/Commit、window variable、cue、motion 和 animation producer 都编译进同一 Program/Projection，不保留 scheduler 或独立 TreeClip runtime。Action Window 由 source State body 的 local Frame declaration 和 Decision TreeClip 写入，Transition 通过 `WindowType + current ActionInstanceId + current Tick` 查询同一 staged projection candidate；不保留按动作命名的 RootTree cancel key、窗口 registry 或历史 cache。
+- Pipeline Blackboard 使用 `BaseExposedProperty` 作为唯一 authoring declaration。Character、Graph、State、ActionInstance、Frame scope 会编译成明确 state layout 和 owner address，不创建运行时局部字典服务或按名称 fallback。
+- ActionProfile 的 granted tags 以 `action:<ActionInstanceId>` source 进入唯一 Gameplay Effect Tag Container，并在 Complete、Cancel、Interrupt、Abort 或 teardown 时撤销。ActionProfile使用类型化`ActionTargetRequirement`声明`None`、`OptionalSnapshot`或`SnapshotRequired`；Transition 的 `CanActivateAction` 纯查询与最终 activation读取同一个显式目标候选并复用唯一portable admission evaluator。`OptionalSnapshot`有目标时固定快照并执行Warp，无目标时仍允许动作并保留源MotionCurve。ActionInstance只保存激活时的不可变目标快照，不按TargetId查询scene或Presentation。source State OnExit必须先结束旧ActionInstance，target activation不负责隐式取消source。
+- Character Gameplay operation set 当前为 `/8`；`ActionWindowActive`、`CanActivateAction`与`TimelineMotionWarp`是numeric-neutral operation。Float32与Fixed target分别实现数值、曲线和typed state端口，并复用portable Action admission、Motion Modifier eligibility和lifecycle语义，不复制业务规则。`ActionTargetSnapshot`作为portable input kind经InputDerived Blackboard binding在Graph control前进入同一Character State Transaction，Float32、Fixed和两种Network Model的codec/hash/history保存同一字段顺序。
+- Agent authoring 是 editor-only 的 `v14 Snapshot -> Intent/Patch IR -> typed command plan -> handler preflight/apply -> generic Validator -> Report -> BTSMTL assets`。Patch 宽 DTO 只存在于 JSON 与 lowering 边界，dry-run 与 apply 复用同一 immutable plan。Agent v14从authoring topology与Presentation Profile投影stable identity、Input、Action、Blackboard、Timeline、AnimationTrack Marker Sync和全部registered Timeline Curve Channel；curve输出typed domain、wrap mode与完整Keyframe字段。Marker和Curve mutation只调用Timeline正式authoring API与Curve Channel MutationAdapter，不生成第二份Semantic IR、operation table、Numeric Target schema或Presentation写入口，也不保留v13 reader、Foot Placement专用curve operation、converter或alias。
+- Timeline Authoring Preview只消费Projection与共享动画playback runtime，按作者时间采样AnimationTrack；每个AnimationTrack在独立Timeline Editor中拥有固定Marker Sync子轨投影，`None`显示禁用摘要，`MarkerGroup`显示group、topology、SyncRole与marker，但子轨不进入`TimelineData.Tracks`也不执行Tick。Marker Sync handoff只在真实outgoing Current与incoming target之间按SyncRole解析方向，通过同Projection、同Layer、同Group的stable producer identity生成既有selection/sample命令，并持续复用正式MarkerSyncRuntime与lifecycle。单来源MotionCurve可按Timeline帧率从零绝对求值，并把累计位移与朝向只读投影到visual root，结束预览时恢复原姿态；该投影不产生MotionRequest，也不修改logic root、CharacterController或Simulation body。TreeClip、Action Cue、跨来源Motion仲裁与MotionWarp只显示和编辑，不执行Gameplay或WorldSolver。Live Debug只消费正式Timeline、Motion、Animation与Marker relation trace，真实Gameplay预览不再创建独立Preview Simulation Session。Timeline Editor内部由只读selection/interaction owner、frame geometry、显式render input renderer和window/session adapter组成；`TimelineFieldView`只转发UI事件与承载控件。Tree Editor内部由graph mutation、selection inspector、data catalog、navigation和runtime overlay owner组成，公开窗口、Undo和stable asset identity不变。
+- Corin Standalone当前注册玩家与`corin-training-enemy`两个同Session Actor。玩家使用显式Player control source、`LocalOwner`表现和绑定训练敌人的Session Actor target provider；训练敌人使用Neutral control source与`SimulatedActor`表现，两者复用同一Corin Program、Projection、WorldSolver和Presenter。Corin Attack Profile为`OptionalSnapshot`，Attack1到Attack5主MotionCurve各有一条可调MotionWarp，Dodge保持无目标；该样例尚不包含敌人AI、命中、伤害或受击闭环。
+
+### Diagnostics Direction
+
+- 调试链固定为 `Authoring identity -> Program source map -> operation/boundary Trace -> diagnostics sink -> RuntimeDebugSession -> Graph/Timeline/Host view`。
+- Compiler、Pipeline preparation/compile、Ingress/Schedule/Step/Egress、restore/world batch/state publish/commit、Solver 与 Presentation 分别在自己的边界发布结构化 Trace。
+- Trace 保存 source clock、SimulationTick、Actor/Program、operation/state slot、CharacterStateHash、WorldHash validity、Solver capability、snapshot identity 和输出 disposition。
+- Diagnostics 是只读观察面，不持有 runtime clone、不暴露 mutable state、不改变 Source/Pipeline policy、World solve、output disposition 或表现结果。
 
 ### Network Boundary
 
-- 求职目标是 Gameplay 客户端程序，不是 Network Engineer。
-- 网络压力场景按 `2v2vE / 2v2 + PvE` 设计：两队玩家在共享空间内互相打断、支援、集火，并争夺 PvE 单位或目标点。
-- 网络架构是混合模型：不做全局确定性帧同步，也不是纯 snapshot；owner actor 使用 tick command prediction/reconciliation，动作使用 ActionInstance transaction sync，combat 使用 window/history rewind，远端 actor 使用 snapshot interpolation，PvE/objective 使用 server event replication。
-- 网络装配边界固定为 `GameplayNetworkSessionHost -> GameplayNetworkModelDefinition -> model session`。一个 Session 只装配一个完整模型，Character、Graph、State、Action 和 Timeline 不选择模型；当前唯一完整模型是 `ServerAuthoritativeHybrid`。
-- `ServerAuthoritativeHybridSession` 唯一拥有 packet、精确 SubjectActorId 队列、history、debug 和 endpoint。Character binding 只保存 SessionHost、CharacterPipelineHost、SubjectActorId 与模型 profile；多个角色共享同一 session runtime。
-- CharacterPipeline 只输出 CharacterInputFrame、ResolvedCharacterMotionFact、Action/window/result、GameplayEffect lifecycle、Attribute value、GameplayCue 与 correction application result，并只接收 `ActionLifecycleTransition`、external pose、result、GameplayEffect lifecycle、Attribute value 与 GameplayCue 等语义输入。`ResolvedCharacterMotionFact` 表达客户端本地已发生的 prediction result，只用于预测对账、诊断或 correction provenance，不是服务端 canonical motion intent。`PredictionKey` 仍是 ActionRuntime 生成的动作事务关联身份，并由模型 adapter 复制到模型 envelope；authority tick、defense-favor、packet identity 与网络裁决 metadata 留在模型内部。
-- `ServerAuthoritativeHybrid` 按每条 Effect fact 的 `BehaviorId` 解析生命周期策略，Effect 引起的 Attribute fact 按 cause BehaviorId 解析，无 Effect cause 的 Attribute correction 必须使用显式 fact binding。模型使用类型化 lifecycle、attribute 与 cue payload；Character 与 GE 不保存 packet、模型 policy 或 history。
-- endpoint 由模型专属 EndpointDefinition 创建。未配置表示明确 disconnected；当前唯一实现是 LocalLoopback；未来 Fantasy 必须增加独立 EndpointDefinition，不修改模型核心 enum/switch，也不得在连接失败时回退 Loopback。
-- 模型队列区分业务可靠性：MotionCommand/MotionSnapshot 只可替换同 actor 同类旧流样本；Action、Result、CorrectionAck 等事务事实容量不足时明确失败，不能静默丢弃。
-- 本地玩家可以预测自己控制 actor 的移动、转向、闪避、防守、攻击启动、支援动作、动画、特效和镜头表现。
-- 队友玩家、敌方玩家和 PvE 单位使用服务器快照、确认动作事件和插值，不复制完整本地预测。
-- 服务端裁决位置真值、动作真值、窗口真值、命中、伤害、目标归属、怪物状态和局内事件。权威位置必须由服务端从 canonical input、accepted action state、角色配置和当前 body state 独立生成 motion intent，再由唯一正式 simulation backend 求解；不得把客户端 applied displacement 累加为 canonical pose。
-- 当前 owner 位姿 correction 只保留 CharacterMotionStage 内部唯一 correction phase：partial delta 进入正式 Motion Executor，full relocation 进入 Logic Pose Port；不在 ActionProfile、GameplayBehaviorProfile 或 CharacterPipelineDefinition 暴露算法配置。每次成功应用后只输出包含 input sequence 与 server tick 的独立 acknowledgement。
-- PvPvE 局内业务压力包括 team/player/actor ownership、objective ownership、capture/contest、PvE aggro/threat/break、assist/rescue、resource/cooldown、downed/revive/respawn 和 score/result event。
-- PvP 命中使用服务端权威加局部 combat rewind，只回溯 pose、hurtbox、action window，不回滚整个世界。
-- 防守相关动作采用“模糊边界防守优先，明确命中攻击成立”的裁决策略：本地防守立即预测，服务端在可配置模糊窗口内优先承认防守，命中、伤害和目标归属仍由服务端确认。
-- `ServerAuthoritativeHybrid` 后续可选择 Unity authoritative process 或 Fantasy 纯 C# KCC 作为一次实现中的唯一权威运动 backend；两者共享 canonical input/action 与 snapshot/correction 模型语义，但不能同场双算或互为 fallback。DotRecast 只提供导航查询，不等于 KCC。
-- 确定性 KCC、lockstep 或 rollback 必须作为另一完整 Network Model，拥有自己的定点数、world state、input history、replay 和 side-effect commit；在完整实现前不进入当前配置。当前不做全局帧同步、不做完整 rollback、不做客户端权威。
+- Simulation Core 只声明 Program、Input、State、Pipeline descriptor/product/plan/snapshot、Source port、World request/result、Fact、Solver、Commit 与 outer runtime handle 合同；不引用 packet、endpoint、transport、具体 Network Model policy 或 Unity API。
+- Network Model 通过自己的 Session Source、phase-specific Pass 和 Pipeline Definition 将 packet 降低为 typed product、restore/replay plan 与 EventId disposition。Character、Graph、Timeline、Action 和 GameplayEffect 不选择模型，也不保存模型策略。
+  - 当前可运行Gameplay组合包括Local Unity CC、ServerAuthoritative Prediction Unity CC、ServerAuthoritative Authority Unity CC，以及隔离的DeterministicRollback FixedQ32.32 + Deterministic KCC对比Demo。DotRecast Prediction/Authority产品边界仍保留为Float32 Navigation Surface后端，但当前Solver不支持`AirborneVerticalMotion`，因此不能与已要求该能力的Corin Program组成Active Session；后续必须补正式空中World backend，不能丢弃Y、假Grounded或关闭Body Motion绕过。ServerAuthoritative仍是作品主线；Rollback Demo由一个纯.NET Dedicated Relay Server和两个Unity Peer进程组成，Relay只负责输入立即转发、canonical排序、confirmation与hash/snapshot路由，不执行Program、KCC、WorldState或Presentation。Rollback只复用公共authoring、Semantic IR、SessionHost与Actor registration合同，不复用Float32 Program、Authority correction或DotRecast world execution。每个可运行ServerAuthoritative测试环境的Prediction与Authority使用相同ProgramHash/LayoutHash、显式兼容的不同PipelineHash和相同Solver/World identity；具体Solver只由Composition或Authority Scene manifest选择，旧LocalLoopback不存在，也不得重新引入。
+- ServerAuthoritative Prediction通过唯一`ServerAuthoritativePredictionState` aggregate root协调内部Confirmation/Request、History、Disposition Journal与无状态Reconciler；三个Pass不得直接持有子模块或复制cursor。History模块拥有唯一Remote Body timeline、每Tick owner input、完整committed world snapshot、Pipeline state projection、已选择观察frame和journal cursor；Correction Schedule是唯一restore/replay/current ExecutionPlan与Remote Body tick选择producer，Replay必须复用History保存的精确观察frame。Output Disposition是唯一EventId journal owner。Ack、baseline与restore先生成完整候选checkpoint和restore plan，再提交模块状态；Correction v4、History v3与Journal v2是当前Participant identity和canonical schema，Body恢复状态包含独立VerticalVelocity。
+- Fantasy Gate/Room只拥有控制连接、固定双人 roster、identity校验、一次性data-plane ticket、可靠Event/Full Checkpoint精确路由和Session失败传播。Portable ServerAuthoritative模块唯一拥有Authority Pipeline catalog、每Actor command queue、authority clock、每Client checkpoint baseline、snapshot sequence、reliable/full-checkpoint output queue与direct UDP数据面；Unity Authority Worker和Fantasy DotRecast Authority Scene只提供各自Host adapter、显式Solver与lifecycle装配，并通过`ServerAuthoritativeAuthorityHostLaunchRequest`调用唯一Float32 Composer。Gate Scene不读取gameplay datagram或Character state；DotRecast Authority Scene不引用Unity。
+- Unity authoritative process、DotRecast/C# authoritative server 和 deterministic rollback 是不同完整组合，可以共享同一 authoring、Semantic IR、portable descriptor 与公共 Host，但必须各自提供匹配的 Program Runtime、Backend、Source、Pipeline 和 WorldSolver，不能同场双算或互为 fallback。
+  - FixedQ32.32 只属于已安装的 DeterministicRollback target，不是公共 Gameplay Core 的强制数值格式。Fixed backend复用同一 versioned operation set与 portable control runtime，并通过独立 Fixed Program/State/Kernel ABI执行 numeric/domain leaf；项目不得新增 DeterministicMoveNode、RollbackTimelineRuntime 或第二套业务 evaluator。
+- DeterministicRollback 的 Fixed KCC 与 DotRecast Float32 Solver 只共享 `SolidBodyBlock` 业务语义，不共享 contact implementation、request ABI、history、runtime 或 world state。Rollback Fixed KCC只快照下一Tick会读取的grounded与stable support primitive/feature/normal；query candidate、contact manifold、ledge/step诊断和iteration统计不进入Snapshot或Hash。Rollback batch 中两个Actor都是Fixed Active body；ServerAuthoritative客户端的remote actor不运行Program、不拥有Character state。Prediction Schedule从唯一Remote Body timeline选择其Body，声明`ObservedKinematicActorContact`能力的Composition把该选择作为只读观察约束送入唯一WorldSolver，未声明能力的Composition提交正式空观察frame；同一selected Body流驱动Remote Presentation。
+- DotRecast静态查询只负责Navigation Surface，完整`DotRecastWorldSolver.ResolveBatch`再通过唯一portable `ActorContactSolver`裁决同batch Actor硬接触。Authority的active/active保持对称裁剪；Prediction的active/observed使用相对扫掠且只修正active一侧，observed不产生Result、不进入NextWorldState。正式顺序固定为全部Surface candidate、垂直区间过滤、稳定pair连续圆盘扫掠、闭合法向裁剪、Surface重新约束、最终间距校验和原子FinalBody；Network Model、Authority Scene、Presentation与场景Collider不执行第二次碰撞。
+- 共享 DotRecast Navigation Solver 使用同一份 portable adapter、`ActorContactSolver`和exact-byte `NavigationSurfaceArtifact`同时服务Unity Prediction与普通.NET Authority Host；它只接受显式contact shape的state-only world body binding，禁止引用`CharacterController`、`Rigidbody`、Scene Transform真值、Runtime烘焙或跨Tick polygon/contact cache。Unity CharacterController Solver仅属于既有Unity Authority对照组合。
+- 当前 DotRecast Float32 Solver 与 Rollback Fixed KCC 分别实现同一种运动学 `SolidBodyBlock` 业务规则：静止 Actor 不会被主动撞入者转换成推行位移，双方运动时裁剪闭合法向并保留切向滑动。两者不共享实现，也都不提供攻击推人、击退、霸体、ghost、队伍穿透、动态障碍、刚体或RVO避障；这些业务以后必须通过各 Target 正式 Motion/World request 进入对应 Solver，不能按 Action、Tag 或动画 producer 硬编码。
+- `NavigationGeometryArtifact -> NavigationBuildTool -> NavigationSurfaceArtifact -> NavigationSurfaceAsset -> DotRecastWorldSolverDefinition` 是唯一导航烘焙与加载链。业务 Ground area `0` 只在 Detour polygon catalog 中使用，Recast 构建阶段必须使用其内部 Walkable area，不能混用编号。
+- 命中、伤害、目标归属、跨角色 GameplayResult 和局部 combat rewind 尚未闭环，不允许用 Character 脚本或 GE 直连碰撞绕过 Session/World 边界。
+
+### Network Model Test Environments
+
+- 网络模型使用相互隔离的测试 Scene。Bootstrap Scene 只按显式 TestScenarioId 跳转到目标 Scene，不创建 Program Runtime、Backend、Pipeline、Source、Solver、Endpoint、Actor registration 或 Session。
+- ServerAuthoritative Player启动必须同时提供 `--network-test-scenario=server-authoritative-client|unity-authority-worker|dotrecast-authority-client` 与匹配的 `--server-authoritative-role=authority|client-a|client-b`；场景与角色、Launch锁定的HostProfile不匹配时直接拒绝启动。
+- Local、ServerAuthoritative Client、Unity Authority Worker、DotRecast Client 与 DeterministicRollback Peer 分别使用明确的测试 Scene/launch profile。Client A/B 或 Rollback Peer A/B 可以复用同一角色 Scene，但必须由不同的显式 process role/player identity 启动，不能按连接顺序、对象名或默认值猜测身份。
+- 每个角色 Scene 显式引用完整 Session Composition、Actor/出生点、World binding、Endpoint/launch profile、Camera 与 diagnostics。Scene 不内联五项组合规则，也不通过运行时下拉、enum switch、场景搜索或 fallback 改写活动 Session。
+- 三个Network Test Product使用schema v2 manifest的`NetworkModelIdentity + RuntimeTopologyIdentity + artifacts[]`表达运行闭包。Unity Authority为Fantasy Gate Server加Unity Authority Worker与两个Client的四进程产品，DotRecast Authority为包含DotRecast Authority Scene的Fantasy Server加两个Client的三进程产品，DeterministicRollback为纯.NET Relay Server加两个Unity Peer的三进程产品；公共Build Workflow不认识具体Network Model或Server类型。
+- DeterministicRollback Player Build必须先从当前Character Definition生成Semantic IR与Presentation Projection，再由唯一Fixed Compiler生成匹配Fixed Program；ProgramId、SourceRevision、SemanticHash或producer identity不一致时必须在Player Build前失败，禁止静默打包旧图产物。
+- DeterministicRollback Peer Scene复用`Assets/Scenes/Shared/CharacterMovementTestEnvironment.prefab`，但运行时只读取Build前由该Scene显式World/Surface authoring烘焙出的Fixed Collision Artifact；可见Collider与artifact作者数据不得分裂。
+- 场景切换必须先销毁旧 `SimulationSessionHost`、Actor registration、Endpoint 和模型资源，再在新 Scene 创建新 Session。Session、Actor、Solver 与网络队列不得通过 `DontDestroyOnLoad` 跨测试 Scene 存活。
+- Unity Authority Worker使用独立Unity Scene和独立OS进程；DotRecast Authority运行在Fantasy Server内的独立MultiThread Authority Scene，不是额外OS进程。对应客户端Scene只引用匹配的Composition、endpoint、launch profile与地图identity。
+- Bootstrap 跳转是测试环境选择，不是 Active Session 热切换。返回 Bootstrap 后再次进入其它模型时必须形成新的 composition identity 和完整 lifecycle。
 
 ## Code Organization
 
-- `Assets/GameScripts/Main`：TEngine AOT 启动入口和 Procedure 流程。
-- `Assets/GameScripts/Main/Runtime/BTSMTL/Scripts`：BTSMTL 基础工具、反射、通用属性。
-- `Assets/GameScripts/Main/Runtime/BTSMTL/Diagnostics`：编译无关 source identity、Source Map、按需 Live State/显式 Capture store、共享增量 Editor Session 和只读 view model。
-- `Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Scripts`：Graph、Tree、Node、Edge、PropertyPort、ExposedProperty。
-- `Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor`：节点图窗口、节点视图、端口视图、搜索和 inspector。
-- `Assets/GameScripts/Main/Runtime/BTSMTL/Timeline/Scripts`：`TimelineData`、显式共享 `TimelineAsset`、Track、Clip、Playable、TimelineNode。
-- `Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation`：角色动画公共合同，以及 Lifecycle、Diagnostics 的正式业务实现；不包含候选 Arbitration 或第二套混合器。
-- `Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation`：表现帧事务聚合、logic pose 插值与具体 Animancer adapter；不承载 Action/Cue 同步事实或动画业务仲裁合同。
-- `Assets/GameScripts/Main/Runtime/Character/Pipeline` 其它目录：角色 pipeline 稳定入口、Graph/Logic/Motion/Network、Unity 绑定和资产引用类型。
-- `Assets/GameScripts/Main/Runtime/Camera`：第三人称相机模型、solver、runtime adapter。
-- `Assets/GameScripts/Main/Runtime/Rendering`：动作表现相关后处理和 VFX runtime。
-- `Assets/GameScripts/Main/Runtime/Networking/GameplayNetwork`：model-neutral model definition、model session 和 SessionHost 生命周期边界，不包含具体 packet/policy。
-- `Assets/GameScripts/Main/Runtime/Networking/ServerAuthoritativeHybrid`：当前模型的 profile/resolver、Character adapter/binding、packet、queue、history/debug、EndpointDefinition 与 LocalLoopback endpoint。
-- `Assets/GameScripts/HotFix`：TEngine 热更程序集目录，按 `GameBase`、`GameProto`、`BattleCore`、`GameLogic` 分层。
-- `3cDemo/Server`：Fantasy skeleton，只作为后续最小权威服务端基础。
+- `Assets/GameScripts/Main/Runtime/Simulation/Core`：portable Semantic IR schema/canonical codec、跨Target identity、operation-set、Pipeline descriptor/product/plan/state合同、outer runtime handle、不可变`OperationExecutionTopology`、唯一portable Runnable/StateMachine control、Timeline control、GameplayEffect准入/生命周期、Pipeline Transaction coordinator与workspace合同；不引用Float32、Fixed具体ABI、Unity、Presentation或具体Host Product。
+- `Assets/GameScripts/Main/Runtime/Simulation/Core/Float32`：Float32 Program、State、Kernel、Snapshot、标准 Step Pass、Pipeline transaction/backend/runtime handle 与执行实现；`Float32OperationEvaluator` 是唯一 Actor/Tick operation 入口。Program composition建立结构化Value input span、typed catalog字段、Action profile、Timeline/State owner、named constant和state address索引；领域模块只消费validated Program layout与当前transaction state，不读取authoring或在Tick内重建静态关系。
+- `Assets/GameScripts/Main/Runtime/Simulation/Core/Fixed`：Fixed Q32.32 Program、State、Kernel、Snapshot、标准Step Pass与执行实现；与Float32共享同一Semantic Operation Set和portable control合同，但拥有独立ABI、ProgramHash、LayoutHash、State codec与Target-specific Program layout。
+- `Assets/GameScripts/Main/Runtime/Simulation/Unity`：由`ThirdPersonSimulation.Unity`唯一拥有五项Composition Definition、Local/Preview Source与Pipeline authoring、Float32 Composer/Backend、CharacterController WorldSolver、body binding和Unity数值边界；不得引用Character Presentation、具体Network Model、Fantasy或DotRecast Unity实现。
+- `Assets/GameScripts/Main/Runtime/Simulation/Unity/DotRecast`：由`ThirdPersonSimulation.DotRecast.Unity`唯一拥有Navigation Surface资产、state-only body binding与DotRecast Solver Definition；portable查询和artifact继续属于`ThirdPersonSimulation.DotRecast`。
+- `Assets/GameScripts/Main/Runtime/Simulation/DotRecast`：portable Navigation artifact codec、显式contact shape的state-only binding descriptor、共享query solver、ActorContactSolver与结构化查询/接触诊断；不引用Unity、CharacterController、Fantasy、Graph、Action、Presentation、Recast build API、Crowd或TileCache。
+- `Assets/GameScripts/Main/Runtime/Simulation/DeterministicKcc`：Fixed Collision World query、Fixed contact shape codec、stable ActorId pair sweep、`SolidBodyBlock`、静态重约束与结构化接触诊断；只引用 Core 与 Fixed Target，不引用 DotRecast、Unity、Network Model、Graph、Action 或 Presentation。
+- `Assets/GameScripts/Main/Editor/CharacterSimulation`：Authoring Discovery、Semantic Emitter、Frontend、`.csir` store/Inspector、正式`.csim` store、Float32 Target publish transaction、Program/Projection exact-byte wrapper、Pipeline/Composition Inspector，以及唯一Network Test Product Build Workflow与三个显式Product adapter。公共workflow和utility不依赖任一具体adapter，具体adapter之间也不得互相调用。
+- `Tools/ThirdPersonSimulation.Portable/ThirdPersonSimulation.NavigationBuildTool`：唯一 Recast build-only 入口；读取 canonical `.navgeom` 并输出 canonical `.navsurface`，Player 与普通 authority runtime 不引用 Recast builder。
+- `Tools/ThirdPersonSimulation.Portable/ThirdPersonSimulation.Reader`：受版本控制的普通.NET artifact检查入口；显式读取`.csir`、Float32 `.csim`与Fixed `.fixed-program`，输出identity、table summary和结构化Value inputs，不引用Unity、反射authoring或重建缺失binding。
+- `Assets/GameScripts/Main/Runtime/BTSMTL`：Graph、Tree、Node、Edge、ExposedProperty、Timeline authoring 与通用编辑器/诊断基础。
+- `Assets/GameScripts/Main/Runtime/Character`：由`ThirdPersonClient.Runtime`唯一拥有Character、Camera、Animation、Presentation、`SimulationSessionHost`、Actor registration与隔离Preview host；只通过公共Composition入口启动Session，不反向引用具体Network Model程序集。
+- `Assets/GameScripts/Main/Editor`：由`ThirdPersonClient.Editor`唯一拥有Character、Simulation、Agent、Inspector与Exporter编辑器代码，显式引用正式Runtime程序集，不再借用`Assembly-CSharp-Editor`。
+- `Assets/GameScripts/Main/Editor/ProductBuild`：唯一商业客户端构建入口、固定产物 layout、Content/Player staging、StartupPolicy writer、release manifest、hash/exact closure 校验与原子发布；TEngine Editor 只执行显式请求的 HotFix、YooAsset 和 Unity Player 底层构建，不拥有项目版本与正式目录。
+- `Assets/GameScripts/Main/Runtime/Character/Pipeline/Animation`：Animation Presentation Profile、Projection、producer/layer binding、动画 lifecycle 和 source-map contracts。
+- `Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation`：唯一Presentation Factory/协调器、Body source cursor、target轨迹采样、通用Visual Trajectory Follower、角色级Body Presentation Profile、共享动画playback runtime、vendor-neutral Pose Post Process/Foot Placement planner、可选Camera runtime与Cue路由；Final IK adapter位于独立`ThirdPersonCharacter.Presentation.FinalIK`程序集，Network Model不拥有visual correction、IK算法或VisualRoot运行时写入。
+- `Assets/GameScripts/Main/Runtime/Character/Pipeline/Diagnostics`：Simulation/Presentation Trace 到 RuntimeDebugSession 的只读 adapter。
+- `Assets/GameScripts/Main/Runtime/Networking/GameplayNetwork`：由`ThirdPersonGameplay.NetworkModel.Unity`唯一拥有model-neutral `GameplayNetworkModelDefinition`、Session Source基类和preparation requirement；不拥有公共Host、Pipeline compiler、Kernel、Solver或具体模型类型。
+- `Assets/GameScripts/Main/Runtime/Networking/GameplayNetwork/ServerAuthoritative`：由`ThirdPersonSimulation.ServerAuthoritative.Unity`唯一拥有Fantasy Endpoint、Prediction/Authority Source preparation、host-neutral control transport的Unity adapter、launch identity、remote presentation registration与隔离测试Scene入口；不拥有Authority queue/clock、Pipeline catalog，也不执行Program或WorldSolver。
+- `Assets/Generated/NetworkProtocol`：由`ThirdPersonGameplay.FantasyProtocol`唯一拥有Fantasy生成协议类型；协议仍只通过正式ProtocolExportTool生成，模型Unity程序集显式引用该生成程序集。
+- `Assets/GameScripts/Main/Runtime/Simulation/Core/Float32/Network/ServerAuthoritative`：模型产品、canonical codec、Prediction history/correction/output disposition、Authority Pipeline catalog、Source policy/runtime、control/data transport合同、Host launch request及 Authority input schedule/replication Pass；不引用 Fantasy message或 Unity对象。
+- `Assets/GameScripts/HotFix`：TEngine 热更程序集目录。
+- `Assets/GameScripts/Main/Runtime/ProductStartup`：AOT 启动合同、ProductStartupProfile、StartupPolicy、只读 snapshot、generation/cancellation runner、资源初始化 adapter 与内置 Bootstrap view；只拥有 HotFix 可用前的启动状态。
+- `Assets/GameScripts/HotFix/GameLogic/ProductStartup`：唯一 ProductStartupCoordinator、ProductShell 登录/Home/Gameplay 子状态和场景进入；不创建第二 Gameplay runtime。
+- `Assets/GameScripts/HotFix/GameLogic/ProductResource`：项目层 Global/Home/Gameplay/Transient ResourceScope、logical lease、in-flight physical load 合并、业务 PreloadPlan 与安全点回收。
+- `Assets/GameScripts/HotFix/GameLogic/ProductDiagnostics`：启动、资源、认证和公开 Unity 内存指标的只读 snapshot，以及仅 Editor/Development Build 的 Fault Lab 边界。
+- `3cDemo/Server`：Fantasy Gate Scene拥有Room、generated Outer/Inner协议、固定roster、Host route和控制路由；DotRecast Authority Scene通过portable manifest/runtime launcher拥有该Host的Program、Source、Pipeline、Solver、World和UDP端点；Startup AuthGateway独立拥有游客认证Registry。Gate不拥有Gameplay state，Authority Scene不拥有Client控制Session或Presentation，Startup不引用Authority与Gameplay portable runtime。
 
 ## Conventions
 
-- 生成代码尽量少写注释，只有关键复杂边界写少量注释。
+- 生成代码尽量少写注释，只在关键复杂边界写少量注释。
 - 不做 fallback 配置、兼容镜像、临时桥接路径或双主线。
 - 旧数据、旧路径、旧命名确认不用就直接删除。
-- 修改代码不用 MCP 写文件；Unity MCP 只用于查看状态、console 或编辑器操作。
+- 修改代码不用 MCP 写文件；Unity MCP 只用于刷新、查看状态和 Console。
 - 永远不要运行 Unity batchmode。
 - 文档读取必须显式 UTF-8。
 - 默认不新增测试，除非用户明确要求。
-- 用户负责 Unity 端到端验证；不要把手动验证写进 OpenSpec task。
+- 用户负责 Unity 端到端验收；不要把手动验证写进 OpenSpec task。
+- 绿色 CI 只表示仓库策略、OpenSpec 严格校验和 portable 单元测试通过，不表示 Unity Editor import、Unity Test Framework、Player build 或 Gameplay 实机测试通过。
+- 当前没有 CD、Unity 云端构建、EditMode/PlayMode、AI 审查或 AI 实机测试；需要这些能力时单独建立正式 change，不保留占位配置。
 
 ## Cleanup Rules
 
-- 旧 Workbench 路径不恢复。
-- 旧 locomotion 特化 SO/config 不恢复。
-- 旧 action SO、footphase profile、bodyclaim policy、AnimationPresentationPolicy 等如果脱离节点/模块/Timeline 继续作为当前数据源，应迁移或删除。
-- `Ref` 中代码只能复制进正式模块后改名归属，不能作为运行时依赖。
-- archive 只查历史，不作为当前实现目标。
+- 旧 Workbench、旧 locomotion/action/footphase/bodyclaim 数据源不恢复。
+- Character Gameplay 不恢复对象解释器、runtime Graph/Timeline clone、stage 私有状态、ExternalPose 或 MotionStage correction。
+- Program/Projection 迁移不保留 runtime compile、stale artifact fallback、默认 Solver、Transform 搜索或双写资产。
+- `Ref` 中代码只能迁入正式模块后改名归属，不能作为运行时依赖。
+- archive 只作历史追溯，不作为当前实现目标。
 
-## Open Questions
+## Pending Work
 
-- 动态 `List<PropertyPort>` 的通用编辑器 UI 还需要继续收口。
-- 最小网络压力场景仍停留在 disconnected/LocalLoopback endpoint；真实 Fantasy EndpointDefinition、生成协议、服务端双人 Room、远端角色 roster 与快照表现纵切尚未实现，后继 change 是 `add-local-two-client-gameplay-network-closure`。远端角色必须复用 `ExternalFacts + ExternalPose`，不得恢复 `RemoteProxy` 总控枚举或每角色网络 runtime。
+- 当前没有正式命中 solver、目标 registry、跨角色 GameplayResult 与完整 combat closure；不得由 Character、GE 或网络 Handler 旁路补齐。
+- GameplayCue 尚缺统一 VFX/Audio consumer；动态 `List<PropertyPort>` UI 仍需收口。

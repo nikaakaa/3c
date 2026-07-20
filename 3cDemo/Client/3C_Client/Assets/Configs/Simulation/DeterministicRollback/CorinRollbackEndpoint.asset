@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e1eb701bb01455db09dff1110fa615b, type: 3}
+  m_Name: CorinRollbackEndpoint
+  m_EditorClassIdentifier: 
+  m_RelayServerAddress: 127.0.0.1
+  m_RelayServerPort: 24100
+  m_RelayServerPeerId: rollback-input-relay
+  m_SessionId: corin-deterministic-rollback-demo
+  m_MaximumDatagramBytes: 1200
+  m_MaximumQueuedMessages: 512
+  m_MaximumFragmentsPerMessage: 512
+  m_ReliableResendMilliseconds: 50
+  m_InputRedundancyCount: 4
+  m_MaximumPreparationTicks: 1200
+  m_PeerProfiles:
+  - m_ProfileId: peer-a
+    m_PeerId: rollback-peer-a
+    m_PlayerId: rollback-player-a
+    m_ActorId: rollback-actor-a
+    m_LocalAddress: 127.0.0.1
+    m_LocalPort: 24101
+  - m_ProfileId: peer-b
+    m_PeerId: rollback-peer-b
+    m_PlayerId: rollback-player-b
+    m_ActorId: rollback-actor-b
+    m_LocalAddress: 127.0.0.1
+    m_LocalPort: 24102

@@ -1,0 +1,171 @@
+{
+    "FileVersion": "1.0.0",
+    "PackageName": "DefaultPackage",
+    "PackageVersion": "2026-07-16-1321",
+    "Wrappers": [
+        {
+            "BundleGUID": "1659b99632a1e40163ed3a3360f3e30a",
+            "FileName": "assets_assetraw_hotupdate_dll_battlecore_dll_1659b99632a1e40163ed3a3360f3e30a.bundle"
+        },
+        {
+            "BundleGUID": "fe2d79263bd1f7cafc4d7ab47c648ba3",
+            "FileName": "assets_assetraw_hotupdate_dll_fantasy_unity_dll_fe2d79263bd1f7cafc4d7ab47c648ba3.bundle"
+        },
+        {
+            "BundleGUID": "c5221cb24e2ce352426150ee28ffc882",
+            "FileName": "assets_assetraw_hotupdate_dll_gamebase_dll_c5221cb24e2ce352426150ee28ffc882.bundle"
+        },
+        {
+            "BundleGUID": "a663f9dbab0723f389437bc0ad2719cb",
+            "FileName": "assets_assetraw_hotupdate_dll_gamelogic_dll_a663f9dbab0723f389437bc0ad2719cb.bundle"
+        },
+        {
+            "BundleGUID": "44abf65b837385e2cfb747e09f90bfe1",
+            "FileName": "assets_assetraw_hotupdate_dll_gameproto_dll_44abf65b837385e2cfb747e09f90bfe1.bundle"
+        },
+        {
+            "BundleGUID": "8600d23688cf4a69392d60c5c0b91e50",
+            "FileName": "assets_assetraw_hotupdate_dll_mscorlib_dll_8600d23688cf4a69392d60c5c0b91e50.bundle"
+        },
+        {
+            "BundleGUID": "1ea8bd2e2ae6b58332742cacc3cb9a51",
+            "FileName": "assets_assetraw_hotupdate_dll_newtonsoft_json_dll_1ea8bd2e2ae6b58332742cacc3cb9a51.bundle"
+        },
+        {
+            "BundleGUID": "06d9a0ad3d919c118f20b600b8f9aa95",
+            "FileName": "assets_assetraw_hotupdate_dll_system_core_dll_06d9a0ad3d919c118f20b600b8f9aa95.bundle"
+        },
+        {
+            "BundleGUID": "35505ff768aa5e3513420221e3eeaf63",
+            "FileName": "assets_assetraw_hotupdate_dll_system_dll_35505ff768aa5e3513420221e3eeaf63.bundle"
+        },
+        {
+            "BundleGUID": "55fd015a3c284c62b58285c24acbbc73",
+            "FileName": "assets_assetraw_hotupdate_dll_tengine_runtime_dll_55fd015a3c284c62b58285c24acbbc73.bundle"
+        },
+        {
+            "BundleGUID": "9791fcbb4007df9420b1fa41782398ac",
+            "FileName": "assets_assetraw_hotupdate_dll_unitask_dll_9791fcbb4007df9420b1fa41782398ac.bundle"
+        },
+        {
+            "BundleGUID": "69bd0f26015b54f4476ac9c7efcf09b3",
+            "FileName": "assets_assetraw_hotupdate_dll_unityengine_coremodule_dll_69bd0f26015b54f4476ac9c7efcf09b3.bundle"
+        },
+        {
+            "BundleGUID": "b8cffbdbcfb43efbaf895bbf7460af46",
+            "FileName": "assets_assetraw_hotupdate_dll_yooasset_dll_b8cffbdbcfb43efbaf895bbf7460af46.bundle"
+        },
+        {
+            "BundleGUID": "70aaa1e1f5081578dd2aab605d4c08df",
+            "FileName": "assets_scenes_sandbox_sandbox_70aaa1e1f5081578dd2aab605d4c08df.bundle"
+        },
+        {
+            "BundleGUID": "426416f3c20d5d35dd04dac804287e6e",
+            "FileName": "share_assets_assetart_animation_mydemoneed_corin_pipelineinplace_426416f3c20d5d35dd04dac804287e6e.bundle"
+        },
+        {
+            "BundleGUID": "e9f96a661426cb3a54c09324e9e3069b",
+            "FileName": "share_assets_assetart_mat_scene_e9f96a661426cb3a54c09324e9e3069b.bundle"
+        },
+        {
+            "BundleGUID": "d77ec96c284f2756d7e3676844ff4b64",
+            "FileName": "share_assets_assetart_model_zzz_可琳_d77ec96c284f2756d7e3676844ff4b64.bundle"
+        },
+        {
+            "BundleGUID": "afbbb55f5d969c7a6d0018ef0e9b2b05",
+            "FileName": "share_assets_assetart_model_zzz_可琳_可琳tex_afbbb55f5d969c7a6d0018ef0e9b2b05.bundle"
+        },
+        {
+            "BundleGUID": "6b5a87bdfb6683f83e77aa5f69a9b6c2",
+            "FileName": "share_assets_assetart_model_zzz_可琳_可琳tex_materials_6b5a87bdfb6683f83e77aa5f69a9b6c2.bundle"
+        },
+        {
+            "BundleGUID": "9a80d3bfb76263256c9e9a45ae6ddbd2",
+            "FileName": "share_assets_assetart_tex_test_9a80d3bfb76263256c9e9a45ae6ddbd2.bundle"
+        },
+        {
+            "BundleGUID": "16f1ff6cb73c2421655ffab99fc896ae",
+            "FileName": "share_assets_configs_character_corin_pipeline_actions_attack_16f1ff6cb73c2421655ffab99fc896ae.bundle"
+        },
+        {
+            "BundleGUID": "8c033860030228502333fc5b3e675b68",
+            "FileName": "share_assets_configs_character_corin_pipeline_actions_dodge_8c033860030228502333fc5b3e675b68.bundle"
+        },
+        {
+            "BundleGUID": "c69d5d0d545f752167b5cb13516840f2",
+            "FileName": "share_assets_configs_character_corin_pipeline_animation_c69d5d0d545f752167b5cb13516840f2.bundle"
+        },
+        {
+            "BundleGUID": "a474069aa3f077c52cd6ce2cb6bd567e",
+            "FileName": "share_assets_configs_character_corin_pipeline_behavior_a474069aa3f077c52cd6ce2cb6bd567e.bundle"
+        },
+        {
+            "BundleGUID": "4315e507ec9bed49a8a569adcdfb9a38",
+            "FileName": "share_assets_configs_character_corin_pipeline_definition_4315e507ec9bed49a8a569adcdfb9a38.bundle"
+        },
+        {
+            "BundleGUID": "ed3810c942b6226432b8a7382f460c5a",
+            "FileName": "share_assets_configs_character_corin_pipeline_definition_generated_ed3810c942b6226432b8a7382f460c5a.bundle"
+        },
+        {
+            "BundleGUID": "3f712cc8c8b5cd1d15cee04af173fe6a",
+            "FileName": "share_assets_configs_character_corin_pipeline_gameplayeffect_3f712cc8c8b5cd1d15cee04af173fe6a.bundle"
+        },
+        {
+            "BundleGUID": "2e2eedd60cee821a78251a1935a945dc",
+            "FileName": "share_assets_configs_character_corin_pipeline_graphs_2e2eedd60cee821a78251a1935a945dc.bundle"
+        },
+        {
+            "BundleGUID": "c976e87677ebbd4d0da1577713a18cd4",
+            "FileName": "share_assets_configs_character_corin_pipeline_input_c976e87677ebbd4d0da1577713a18cd4.bundle"
+        },
+        {
+            "BundleGUID": "b676dce3583d3d236177273bb72fe02c",
+            "FileName": "share_assets_configs_character_corin_pipeline_input_references_b676dce3583d3d236177273bb72fe02c.bundle"
+        },
+        {
+            "BundleGUID": "c7e3727774736a8f08275abb83ae6bcc",
+            "FileName": "share_assets_configs_input_c7e3727774736a8f08275abb83ae6bcc.bundle"
+        },
+        {
+            "BundleGUID": "b39dab4a4c82d1f0d682b2db3f103f52",
+            "FileName": "share_assets_configs_simulation_executionbackends_b39dab4a4c82d1f0d682b2db3f103f52.bundle"
+        },
+        {
+            "BundleGUID": "bb01bac90e5aa3c755cc4c7801c66fb9",
+            "FileName": "share_assets_configs_simulation_pipelines_preview_bb01bac90e5aa3c755cc4c7801c66fb9.bundle"
+        },
+        {
+            "BundleGUID": "579686439604d6d45fcf8e8d9663e344",
+            "FileName": "share_assets_configs_simulation_pipelines_standardlocal_579686439604d6d45fcf8e8d9663e344.bundle"
+        },
+        {
+            "BundleGUID": "256ddcf056e15111ad224d47f9020189",
+            "FileName": "share_assets_configs_simulation_programruntimes_256ddcf056e15111ad224d47f9020189.bundle"
+        },
+        {
+            "BundleGUID": "568938daa59825339680ac4619016e41",
+            "FileName": "share_assets_configs_simulation_sessionsources_568938daa59825339680ac4619016e41.bundle"
+        },
+        {
+            "BundleGUID": "8557378307840b99c6d78937d883ad75",
+            "FileName": "share_assets_configs_simulation_worldsolvers_8557378307840b99c6d78937d883ad75.bundle"
+        },
+        {
+            "BundleGUID": "7e3ce75ec3f882781d60f96ae6737ee1",
+            "FileName": "share_assets_prefabs_env_7e3ce75ec3f882781d60f96ae6737ee1.bundle"
+        },
+        {
+            "BundleGUID": "7067305c7e8cd5ded0a35495c146b700",
+            "FileName": "share_assets_settings_7067305c7e8cd5ded0a35495c146b700.bundle"
+        },
+        {
+            "BundleGUID": "c71094e56a1472daf21dfb3d99dad718",
+            "FileName": "share_packages_com_unity_render-pipelines_universal_runtime_materials_c71094e56a1472daf21dfb3d99dad718.bundle"
+        },
+        {
+            "BundleGUID": "03c156d061303d2afcd24942e547e8d7",
+            "FileName": "unityshaders_03c156d061303d2afcd24942e547e8d7.bundle"
+        }
+    ]
+}

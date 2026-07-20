@@ -45,12 +45,6 @@
       "dependencies": {},
       "hash": "f8fdc2efb862522acd26fab6cd940886c84cde37"
     },
-    "com.janooba.kcc": {
-      "version": "file:com.janooba.kcc",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {}
-    },
     "com.kybernetik.animancer": {
       "version": "file:com.kybernetik.animancer",
       "depth": 0,
@@ -58,6 +52,12 @@
       "dependencies": {
         "com.unity.modules.animation": "1.0.0"
       }
+    },
+    "com.thirdperson.dotrecast": {
+      "version": "file:com.thirdperson.dotrecast",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
     },
     "com.tuyoogame.yooasset": {
       "version": "file:YooAsset",

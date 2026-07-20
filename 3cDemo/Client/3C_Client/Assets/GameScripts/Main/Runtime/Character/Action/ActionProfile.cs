@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonGameplay.Contracts;
 using ThirdPersonGameplay.Tags;
+using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.ActionSystem
@@ -13,9 +14,10 @@ namespace ThirdPersonCharacter.ActionSystem
         [SerializeField] string m_DisplayName;
         [SerializeField] string m_DebugCategory;
         [SerializeField] GameplayTagId[] m_Tags = Array.Empty<GameplayTagId>();
+        [SerializeField] GameplayTagQuery m_RequiredTags = new GameplayTagQuery();
         [SerializeField] GameplayTagQuery m_BlockTags = new GameplayTagQuery();
         [SerializeField] GameplayTagQuery m_CancelTags = new GameplayTagQuery();
-        [SerializeField] string m_TargetPolicy;
+        [SerializeField] ActionTargetRequirement m_TargetRequirement;
 
         public string ActionId => m_ActionId;
         public string BehaviorId => m_ActionId;
@@ -23,9 +25,10 @@ namespace ThirdPersonCharacter.ActionSystem
         public string DisplayName => m_DisplayName;
         public string DebugCategory => m_DebugCategory;
         public IReadOnlyList<GameplayTagId> Tags => m_Tags ?? Array.Empty<GameplayTagId>();
+        public GameplayTagQuery RequiredTags => m_RequiredTags;
         public GameplayTagQuery BlockTags => m_BlockTags;
         public GameplayTagQuery CancelTags => m_CancelTags;
-        public string TargetPolicy => m_TargetPolicy;
+        public ActionTargetRequirement TargetRequirement => m_TargetRequirement;
 
         public bool ContainsTag(GameplayTagId tag)
         {
@@ -45,6 +48,11 @@ namespace ThirdPersonCharacter.ActionSystem
                 errors?.Add($"{name}: display name is missing.");
                 valid = false;
             }
+            if (!Enum.IsDefined(typeof(ActionTargetRequirement), m_TargetRequirement))
+            {
+                errors?.Add($"{name}: target requirement '{(int)m_TargetRequirement}' is invalid.");
+                valid = false;
+            }
 
             valid &= ValidateUniqueTags(Tags, errors);
             return valid;
@@ -61,6 +69,7 @@ namespace ThirdPersonCharacter.ActionSystem
                     valid = false;
                 }
             }
+            valid &= m_RequiredTags != null && m_RequiredTags.CollectConfigurationErrors(catalog, name, errors);
             valid &= m_BlockTags != null && m_BlockTags.CollectConfigurationErrors(catalog, name, errors);
             valid &= m_CancelTags != null && m_CancelTags.CollectConfigurationErrors(catalog, name, errors);
             return valid;
@@ -71,7 +80,6 @@ namespace ThirdPersonCharacter.ActionSystem
             m_ActionId = Normalize(m_ActionId);
             m_DisplayName = Normalize(m_DisplayName);
             m_DebugCategory = Normalize(m_DebugCategory);
-            m_TargetPolicy = Normalize(m_TargetPolicy);
         }
 
         bool ValidateUniqueTags(IReadOnlyList<GameplayTagId> values, List<string> errors)

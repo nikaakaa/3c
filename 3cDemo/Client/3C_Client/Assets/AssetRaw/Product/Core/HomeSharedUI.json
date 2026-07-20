@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "identity": "home.shared-ui",
+  "features": ["guest-login", "download-consent", "diagnostics"]
+}

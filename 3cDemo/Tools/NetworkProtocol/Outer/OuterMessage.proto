@@ -1,178 +1,372 @@
 syntax = "proto3";
 package Fantasy.Network.Message;
 
-message FrameSyncVector2
+enum ServerAuthoritativeProcessRole
 {
-    float X = 1;
-    float Y = 2;
+    ServerAuthoritativeProcessRoleNone = 0;
+    ServerAuthoritativeProcessRoleAuthorityWorker = 1;
+    ServerAuthoritativeProcessRoleClientA = 2;
+    ServerAuthoritativeProcessRoleClientB = 3;
 }
 
-message FrameSyncVector3
+enum ServerAuthoritativeErrorCode
 {
-    float X = 1;
-    float Y = 2;
-    float Z = 3;
+    ServerAuthoritativeSuccess = 0;
+    ServerAuthoritativeInvalidProtocol = 1;
+    ServerAuthoritativeInvalidIdentity = 2;
+    ServerAuthoritativeWorkerUnavailable = 3;
+    ServerAuthoritativeWorkerAlreadyRegistered = 4;
+    ServerAuthoritativeRoomFull = 5;
+    ServerAuthoritativeRosterIncomplete = 6;
+    ServerAuthoritativeOwnerMismatch = 7;
+    ServerAuthoritativeQueueOverflow = 8;
+    ServerAuthoritativeSessionClosed = 9;
+    ServerAuthoritativeTicketInvalid = 10;
+    ServerAuthoritativeTicketExpired = 11;
+    ServerAuthoritativeTicketReused = 12;
+    ServerAuthoritativeDataPlaneFailed = 13;
+    ServerAuthoritativeCheckpointRejected = 14;
 }
 
-message FrameSyncButtonFactMessage
+message ServerAuthoritativeProtocolIdentityMessage
 {
-    bool Pressed = 1;
-    bool Held = 2;
-    bool Released = 3;
+    uint32 ModelProtocolVersion = 1;
+    string ModelId = 2;
+    string ModelConfigurationHash = 3;
+    string EndpointId = 4;
 }
 
-message FrameSyncTargetIntentMessage
+message ServerAuthoritativeProgramIdentityMessage
 {
-    uint32 TargetId = 1;
-    FrameSyncVector2 AimIntent = 2;
+    string ProgramId = 1;
+    string ProgramHash = 2;
+    string LayoutHash = 3;
+    string OperationSetId = 4;
+    string OperationSetVersion = 5;
 }
 
-message FrameSyncCameraBasisMessage
+message ServerAuthoritativePipelineIdentityMessage
 {
-    FrameSyncVector3 PlanarForward = 1;
-    FrameSyncVector3 PlanarRight = 2;
-    float Yaw = 3;
+    string PipelineId = 1;
+    string PipelineHash = 2;
+    string BackendId = 3;
+    string SolverId = 4;
+    string SolverVersion = 5;
+    uint32 TickRate = 6;
+    uint64 SolverCapabilities = 7;
+    uint64 SolverFeatures = 8;
 }
 
-message FrameSyncActionRequestMessage
+message ServerAuthoritativeAuthorityHostIdentityMessage
 {
-    int32 Kind = 1;
-    string StableActionId = 2;
-    uint32 RequestSequence = 3;
-    FrameSyncButtonFactMessage Button = 4;
-    FrameSyncTargetIntentMessage TargetIntent = 5;
+    string HostProductId = 1;
+    string HostId = 2;
+    int32 RouteKind = 3;
+    string RoomId = 4;
 }
 
-message FrameSyncInputFrameMessage
+message ServerAuthoritativeWorldIdentityMessage
 {
-    int32 Tick = 1;
-    uint32 PlayerId = 2;
-    uint32 UnitId = 3;
-    uint32 LocalInputSequence = 4;
-    FrameSyncVector2 MoveIntent = 5;
-    int32 MoveIntentSpace = 6;
-    FrameSyncVector2 LookIntent = 7;
-    int32 LookIntentSpace = 8;
-    bool RunHeld = 9;
-    FrameSyncButtonFactMessage Dodge = 10;
-    FrameSyncButtonFactMessage Attack = 11;
-    FrameSyncButtonFactMessage Jump = 12;
-    FrameSyncButtonFactMessage Interact = 13;
-    repeated FrameSyncActionRequestMessage ActionRequests = 14;
-    FrameSyncTargetIntentMessage TargetIntent = 15;
-    FrameSyncCameraBasisMessage CameraBasis = 16;
-    bool HasCameraBasis = 17;
+    string SolverId = 1;
+    string SolverVersion = 2;
+    uint64 SolverCapabilities = 3;
+    uint64 SolverFeatures = 4;
+    string WorldId = 5;
+    string MapId = 6;
+    string WorldRevision = 7;
+    string WorldConfigurationHash = 8;
+    string NavigationSurfaceArtifactHash = 9;
+    string QueryProfileHash = 10;
 }
 
-message FrameSyncManifestMessage
+message ServerAuthoritativeDataEndpointMessage
 {
-    uint32 ProtocolVersion = 1;
-    uint32 InputSchemaVersion = 2;
-    uint32 ChecksumSchemaVersion = 3;
-    uint32 BehaviorRuntimeDefinitionHash = 4;
-    uint32 LocomotionConfigHash = 5;
-    uint32 MotionProfileHash = 7;
-    uint32 InputMappingVersion = 8;
+    string Host = 1;
+    uint32 Port = 2;
 }
 
-message C2G_FrameSyncHandshakeRequest // IMessage
+message ServerAuthoritativeRosterMemberMessage
 {
-    uint32 PlayerId = 1;
-    uint32 UnitId = 2;
-    uint32 ClientSequence = 3;
-    uint32 ProtocolVersion = 4;
-    uint32 InputSchemaVersion = 5;
-    uint32 ChecksumSchemaVersion = 6;
-    uint32 BehaviorRuntimeDefinitionHash = 7;
-    uint32 LocomotionConfigHash = 8;
-    uint32 MotionProfileHash = 10;
-    uint32 InputMappingVersion = 11;
+    string PlayerId = 1;
+    string ActorId = 2;
+    int32 ProcessRole = 3;
 }
 
-message G2C_FrameSyncHandshakeResponse // IMessage
+message ServerAuthoritativeRosterMessage
 {
-    uint32 ErrorCode = 1;
-    bool Accepted = 2;
-    repeated int32 FailureReasons = 3;
-    uint32 AssignedPlayerId = 4;
-    uint32 AssignedUnitId = 5;
+    string RoomId = 1;
+    string SessionId = 2;
+    uint64 Revision = 3;
+    repeated ServerAuthoritativeRosterMemberMessage Members = 4;
+    bool Locked = 5;
+    string HostId = 6;
 }
 
-message C2G_FrameSyncInput // IMessage
+message ServerAuthoritativeDataPlaneTicketMessage
 {
-    FrameSyncInputFrameMessage Input = 1;
+    string TicketId = 1;
+    string RoomId = 2;
+    string SessionId = 3;
+    string PlayerId = 4;
+    string ActorId = 5;
+    string HostId = 6;
+    ServerAuthoritativeDataEndpointMessage AuthorityEndpoint = 7;
+    string Nonce = 8;
+    int64 ExpiresAtUnixMilliseconds = 9;
 }
 
-message G2C_FrameSyncInputAck // IMessage
+message ServerAuthoritativeReliableGameplayEventMessage
 {
-    int32 Tick = 1;
-    uint32 PlayerId = 2;
-    uint32 UnitId = 3;
-    uint32 LocalInputSequence = 4;
-    uint32 ServerSequence = 5;
-    bool Accepted = 6;
+    string ActorId = 1;
+    string EventId = 2;
+    uint64 EventSequence = 3;
+    uint64 AuthorityTick = 4;
+    string EventKind = 5;
+    uint32 PayloadSchemaVersion = 6;
+    uint32 PayloadLength = 7;
+    repeatedArray byte Payload = 8;
 }
 
-message G2C_FrameSyncConfirmedInputSet // IMessage
+message W2G_ServerAuthoritativeAuthorityRegisterRequest // IRequest,G2W_ServerAuthoritativeAuthorityRegisterResponse
 {
-    int32 Tick = 1;
-    uint32 ServerSequence = 2;
-    uint32 ProtocolVersion = 3;
-    uint32 ConfigHash = 4;
-    repeated FrameSyncInputFrameMessage Inputs = 5;
-    repeated FrameSyncConfirmedInputDiagnosticMessage Diagnostics = 6;
-    int32 ConfirmedTick = 7;
-    repeated int32 InputTicks = 8;
-    repeated uint32 InputPlayerIds = 9;
-    repeated uint32 InputUnitIds = 10;
-    repeated uint32 InputLocalInputSequences = 11;
+    string RoomId = 1;
+    ServerAuthoritativeAuthorityHostIdentityMessage Host = 2;
+    int32 ProcessRole = 3;
+    ServerAuthoritativeProtocolIdentityMessage Protocol = 4;
+    ServerAuthoritativeProgramIdentityMessage Program = 5;
+    ServerAuthoritativePipelineIdentityMessage AuthorityPipeline = 6;
+    string PredictionPipelineId = 7;
+    string PredictionPipelineHash = 8;
+    ServerAuthoritativeDataEndpointMessage DataEndpoint = 9;
+    ServerAuthoritativeWorldIdentityMessage World = 10;
 }
 
-message FrameSyncConfirmedInputDiagnosticMessage
+message G2W_ServerAuthoritativeAuthorityRegisterResponse // IResponse
 {
-    int32 Kind = 1;
-    int32 Tick = 2;
-    uint32 PlayerId = 3;
-    uint32 UnitId = 4;
-    uint32 LocalInputSequence = 5;
-    string Message = 6;
+    int32 ResultCode = 1;
+    uint64 RoomRevision = 2;
+    string SessionId = 3;
+    string FailureReason = 4;
 }
 
-message C2G_FrameSyncChecksum // IMessage
+message C2G_ServerAuthoritativeClientJoinRequest // IRequest,G2C_ServerAuthoritativeClientJoinResponse
 {
-    int32 Tick = 1;
-    uint32 PlayerId = 2;
-    uint32 Checksum = 3;
-    uint32 SnapshotHash = 4;
+    string RoomId = 1;
+    string PlayerId = 2;
+    int32 ProcessRole = 3;
+    ServerAuthoritativeProtocolIdentityMessage Protocol = 4;
+    ServerAuthoritativeProgramIdentityMessage Program = 5;
+    string PredictionPipelineId = 6;
+    string PredictionPipelineHash = 7;
+    ServerAuthoritativeWorldIdentityMessage PredictionWorld = 8;
 }
 
-message G2C_FrameSyncCorrection // IMessage
+message G2C_ServerAuthoritativeClientJoinResponse // IResponse
 {
-    int32 Tick = 1;
-    int32 RestoreTick = 2;
-    uint32 ExpectedChecksum = 3;
-    uint32 ActualChecksum = 4;
-    string Reason = 5;
+    int32 ResultCode = 1;
+    string SessionId = 2;
+    string OwnedActorId = 3;
+    ServerAuthoritativeRosterMessage Roster = 4;
+    uint64 LatestAuthorityTick = 5;
+    string FailureReason = 6;
+    ServerAuthoritativeAuthorityHostIdentityMessage AuthorityHost = 7;
+    ServerAuthoritativeWorldIdentityMessage AuthorityWorld = 8;
+    ServerAuthoritativePipelineIdentityMessage AuthorityPipeline = 9;
 }
 
-message G2C_FrameSyncDiagnostic // IMessage
+message C2G_ServerAuthoritativeClientJoinAccepted // IMessage
 {
-    int32 Kind = 1;
-    int32 Tick = 2;
-    uint32 PlayerId = 3;
-    uint32 UnitId = 4;
-    string DiagnosticMessage = 5;
+    string RoomId = 1;
+    string SessionId = 2;
+    string PlayerId = 3;
+    string HostId = 4;
 }
 
-message C2G_FrameSyncReady // IMessage
+message G2C_ServerAuthoritativeRosterChanged // IMessage
 {
-    uint32 PlayerId = 1;
-    uint32 UnitId = 2;
+    ServerAuthoritativeRosterMessage Roster = 1;
 }
 
-message C2G_FrameSyncLeave // IMessage
+message G2W_ServerAuthoritativeRosterChanged // IMessage
 {
-    uint32 PlayerId = 1;
-    uint32 UnitId = 2;
-    string Reason = 3;
+    ServerAuthoritativeRosterMessage Roster = 1;
+}
+
+message G2C_ServerAuthoritativeDataPlaneTicketIssued // IMessage
+{
+    ServerAuthoritativeDataPlaneTicketMessage Ticket = 1;
+}
+
+message G2W_ServerAuthoritativeDataPlaneTicketIssued // IMessage
+{
+    ServerAuthoritativeDataPlaneTicketMessage Ticket = 1;
+}
+
+message C2G_ServerAuthoritativeDataPlaneTicketConsumed // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    string PlayerId = 3;
+    string TicketId = 4;
+}
+
+message W2G_ServerAuthoritativeDataPlaneTicketConsumed // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    string HostId = 3;
+    string PlayerId = 4;
+    string TicketId = 5;
+}
+
+message G2C_ServerAuthoritativeDataPlaneTicketRevoked // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    string TicketId = 3;
+    string Reason = 4;
+}
+
+message G2W_ServerAuthoritativeDataPlaneTicketRevoked // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    string TicketId = 3;
+    string Reason = 4;
+}
+
+message C2G_ServerAuthoritativeControlHeartbeat // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    string PlayerId = 3;
+    uint64 Sequence = 4;
+    int64 ClientUnixMilliseconds = 5;
+}
+
+message G2C_ServerAuthoritativeControlHeartbeatAck // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    uint64 Sequence = 3;
+    int64 ClientUnixMilliseconds = 4;
+    int64 ServerUnixMilliseconds = 5;
+}
+
+message W2G_ServerAuthoritativeControlHeartbeat // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    string HostId = 3;
+    uint64 Sequence = 4;
+    int64 ClientUnixMilliseconds = 5;
+}
+
+message G2W_ServerAuthoritativeControlHeartbeatAck // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    uint64 Sequence = 3;
+    int64 ClientUnixMilliseconds = 4;
+    int64 ServerUnixMilliseconds = 5;
+}
+
+message W2G_ServerAuthoritativeReliableGameplayEventBatch // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    string RecipientActorId = 3;
+    repeated ServerAuthoritativeReliableGameplayEventMessage Events = 4;
+}
+
+message G2C_ServerAuthoritativeReliableGameplayEventBatch // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    repeated ServerAuthoritativeReliableGameplayEventMessage Events = 3;
+}
+
+message C2G_ServerAuthoritativeFullCheckpointRequest // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    string PlayerId = 3;
+    string ActorId = 4;
+    uint64 LastUsableSnapshotSequence = 5;
+    string Reason = 6;
+}
+
+message G2W_ServerAuthoritativeFullCheckpointRequest // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    string PlayerId = 3;
+    string ActorId = 4;
+    uint64 RequestSequence = 5;
+    uint64 LastUsableSnapshotSequence = 6;
+    string Reason = 7;
+}
+
+message W2G_ServerAuthoritativeFullCheckpointResponse // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    string PlayerId = 3;
+    string ActorId = 4;
+    uint64 RequestSequence = 5;
+    uint64 AuthorityTick = 6;
+    uint64 ConfirmedInputSequence = 7;
+    uint64 ReliableEventHorizon = 8;
+    string CheckpointLayoutHash = 9;
+    string CheckpointHash = 10;
+    uint32 CheckpointLength = 11;
+    repeatedArray byte Checkpoint = 12;
+    uint64 SnapshotSequence = 13;
+}
+
+message G2C_ServerAuthoritativeFullCheckpointResponse // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    string ActorId = 3;
+    uint64 AuthorityTick = 4;
+    uint64 ConfirmedInputSequence = 5;
+    uint64 ReliableEventHorizon = 6;
+    string CheckpointLayoutHash = 7;
+    string CheckpointHash = 8;
+    uint32 CheckpointLength = 9;
+    repeatedArray byte Checkpoint = 10;
+    uint64 SnapshotSequence = 11;
+}
+
+message G2C_ServerAuthoritativeSessionFailed // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    int32 ResultCode = 3;
+    string Reason = 4;
+}
+
+message G2W_ServerAuthoritativeSessionFailed // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    int32 ResultCode = 3;
+    string Reason = 4;
+}
+
+message C2G_ServerAuthoritativeLeave // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    string PlayerId = 3;
+    string Reason = 4;
+}
+
+message W2G_ServerAuthoritativeLeave // IMessage
+{
+    string RoomId = 1;
+    string SessionId = 2;
+    string HostId = 3;
+    string Reason = 4;
 }

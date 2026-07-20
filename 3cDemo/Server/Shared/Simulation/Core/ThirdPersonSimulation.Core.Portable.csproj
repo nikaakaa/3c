@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>ThirdPersonSimulation.Core</AssemblyName>
+    <RootNamespace>ThirdPersonSimulation</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\..\Client\3C_Client\Assets\GameScripts\Main\Runtime\Simulation\Core\**\*.cs"
+             Exclude="..\..\..\..\Client\3C_Client\Assets\GameScripts\Main\Runtime\Simulation\Core\Fixed\**\*.cs;..\..\..\..\Client\3C_Client\Assets\GameScripts\Main\Runtime\Simulation\Core\Float32\**\*.cs" />
+  </ItemGroup>
+</Project>

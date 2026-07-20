@@ -12,6 +12,7 @@ namespace TreeDesigner
 
         [SerializeField, ShowInPanel("ParallelType")]
         ParallelType m_ParallelType;
+        public ParallelType Mode => m_ParallelType;
 
         List<RunnableNode> m_CompletedChildren = new List<RunnableNode>();
         readonly List<ChildSlot> m_PendingStopSlots = new List<ChildSlot>();

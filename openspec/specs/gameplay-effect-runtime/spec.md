@@ -5,74 +5,94 @@
 ## Requirements
 ### Requirement: Gameplay Effect Runtime 必须形成独立编译模块
 
-系统 MUST 在正式 `Runtime/Gameplay` 目录使用独立 `ThirdPersonGameplay` 程序集承载通用 Behavior identity contract、Tag、Attribute、Effect 和 `GameplayEffectRuntime`。该程序集 MUST NOT 引用 Character、BTSMTL、Character SyncFacts、Networking、Presentation 或 Diagnostics；Character 与其他业务模块 MAY 单向依赖该程序集。独立程序集只建立代码依赖边界，MUST NOT 创建独立 Tick、Manager 或网络 Runtime。
+portable Core MUST唯一拥有Gameplay Effect contracts、application admission与lifecycle control；Float32和Fixed Target MUST分别拥有typed aggregate、transaction view、codec与evaluator，并通过同一`GameplayEffectApplicationAdmissionRuntime`和`GameplayEffectControlRuntime`端口执行相同准入、stack、period、expire、remove和prediction语义。各模块 MUST不引用BTSMTL authoring、Networking、Presentation或UnityEngine，不创建独立Tick、Manager、隐藏mutable runtime或第二份GE状态。
 
-#### Scenario: EffectDefinition 提供 Effect Behavior 身份
+#### Scenario: Character 编译 GE
 
-- **WHEN** `GameplayEffectDefinition` 实现 `IGameplayBehaviorProfile`
-- **THEN** `IGameplayBehaviorProfile` 与 `GameplayBehaviorKind` MUST 位于通用 Gameplay Contracts
-- **AND** Gameplay 程序集 MUST NOT 为引用该合同依赖 Character 命名空间或程序集
+- **WHEN** Character Compiler引用通用Effect compiler contracts
+- **THEN** MUST生成匹配Target的typed state declaration
+- **AND** Gameplay Effect模块 MUST不引用CharacterPipeline或GraphContext
 
-#### Scenario: Character 接入 GE
+#### Scenario: 双Target GE
 
-- **WHEN** CharacterPipeline 需要角色 Gameplay Effect
-- **THEN** Character 接入层 MUST 单向引用 `ThirdPersonGameplay`
-- **AND** Gameplay 程序集 MUST NOT 引用 CharacterPipeline、CharacterGraphContext 或 CharacterPipelineFrame
+- **WHEN** Float32与Fixed Kernel执行同一GE operation
+- **THEN** MUST复用同一portable admission与control
+- **AND** MUST使用Target state/codec
 
-### Requirement: Gameplay Effect Runtime 必须通过窄端口和单 Tick ChangeSet 交换数据
+### Requirement: Gameplay Effect 状态必须使用类型化 Character State Aggregate
 
-`GameplayEffectRuntime` MUST 只接收不可变 runtime definition、Gameplay Effect tick context、类型化 Apply/Remove request 和 authority input，并 MUST 使用窄合同暴露能力。Runtime MUST 以 `BeginLogicTick -> mutation -> DrainChangeSet` 表达唯一单 Tick 事务；上一 Tick 未 Drain 时 MUST 拒绝下一次 Begin，Tick 外 MUST 拒绝 Apply/Remove，Drain 后 MUST 关闭当前 Tick。Runtime MUST 把 Effect、Attribute、Tag、Cue 和本地 execution failure 写入当前 Tick 唯一 `GameplayEffectChangeSet`，MUST NOT 直接写 Character frame、SyncFacts、网络对象或消费者回调。
+每个Actor的GameplayEffect committed状态 MUST由Character State Layout中的唯一typed aggregate拥有，包含canonical ordered Tag sources、Attributes/Modifiers、Active Effects、Period schedule、Prediction journal、lifecycle revisions与change cursor。GE Runtime MUST通过当前Character State Transaction取得typed view并直接读写，不得在每次Evaluate加载或保存多份opaque bytes。Effect Apply、Remove、Period和Additional Effect的局部原子失败 MUST使用同一State Transaction的typed savepoint恢复，不得使用canonical Snapshot codec作为业务undo机制。
 
-#### Scenario: 上一 Tick 未提交
+#### Scenario: 当前 Tick 没有 Effect 变化
 
-- **WHEN** 调用者在当前 Tick 尚未 DrainChangeSet 时再次 BeginLogicTick
-- **THEN** Runtime MUST 明确失败
-- **AND** 两个 Tick 的 ChangeSet MUST NOT 被合并或改写 Tick 身份
+- **WHEN** Actor当前Tick没有Tag、Attribute、ActiveEffect、Period或Journal变化
+- **THEN** State Commit MUST复用原GameplayEffect aggregate
+- **AND** MUST不解码或重新编码GE状态
 
-#### Scenario: Tick 外应用 Effect
+#### Scenario: Additional Effect 失败
 
-- **WHEN** 调用者在 BeginLogicTick 之前或 DrainChangeSet 之后调用 Apply/Remove
-- **THEN** Runtime MUST 明确失败
-- **AND** Attribute、Tag、ActiveEffect 和 ChangeSet MUST 保持不变
+- **WHEN** Additional Effect在父Effect事务中失败
+- **THEN** GE Runtime MUST恢复typed savepoint中的aggregate与change cursor
+- **AND** 当前Character State Transaction其它合法领域写入 MUST不被错误回滚
+
+### Requirement: Gameplay Effect Runtime 必须通过窄端口和 ChangeSet 交换数据
+
+Target GE evaluator MUST只接收Program definition、SimulationTick、typed operation和`SimulationIngress`。它 MUST通过portable admission/control端口读写当前Character State Transaction；Finalize唯一冻结Effect、Attribute、Tag、Cue与failure journal。operation异常时control恢复typed savepoint，outer transaction失败时阻止状态提交。GE control MUST不直接写Unity、网络对象或消费者回调。
+
+#### Scenario: Tick 未完成
+
+- **WHEN** GE changes尚未Finalize/Commit
+- **THEN** Pipeline MUST不推进下一Tick
+- **AND** MUST不合并两个Tick的journal
+
+#### Scenario: Evaluate 外写入
+
+- **WHEN** 调用者绕过Program operation与State Transaction直接Apply/Remove
+- **THEN** runtime MUST没有该写入口或明确失败
+- **AND** GE state与journal MUST保持不变
+
+#### Scenario: Operation 异常
+
+- **WHEN** Apply、Remove、Advance或Additional Effect抛出异常
+- **THEN** control MUST恢复operation savepoint
+- **AND** outer transaction失败时 MUST不发布该Tick状态或journal
 
 #### Scenario: 增加新的 Character 输出消费者
 
 - **WHEN** Character 需要把同一 ChangeSet 投影到新的只读调试视图
 - **THEN** 系统 MUST 在 Character 接入层新增或扩展 Projector
-- **AND** MUST NOT 修改 GameplayEffectRuntime 以引用该消费者或发布全局事件
+- **AND** MUST NOT修改portable GE control以引用消费者
 
-### Requirement: Effect 必须分离 Definition Spec 与 Active Instance
+### Requirement: Effect 必须分离 Definition、Spec 与 Active State
 
-系统 MUST 使用 GameplayEffectDefinition 表达无状态作者定义，使用 GameplayEffectSpec 表达一次应用锁定的 Context、参数和快照，使用 ActiveGameplayEffect 表达目标角色上的 Duration/Infinite 运行状态。Definition 和 Component Definition MUST NOT 保存运行时层数、时间、来源或 Modifier handle。
+`GameplayEffectDefinition` MUST 只表达无状态 authoring。每次应用 MUST 在所选 Numeric Target 中建立独立 `PortableEffectSpecState`，Duration/Infinite 实例 MUST 保存为同一 `GameplayEffectStateAggregate` 内的 `PortableActiveEffectState`。Definition 与 Component Definition MUST NOT 保存 stack、tick、source 或 modifier handle。
 
 #### Scenario: 同一定义应用到两个角色
 
-- **WHEN** 同一个 Stun Definition 被应用到两个不同 Character
-- **THEN** 系统 MUST 创建两个独立 Spec 和 Active Instance
-- **AND** Definition MUST 保持只读且不共享运行状态
+- **WHEN** 同一 Stun Definition 应用到两个 Actor
+- **THEN** 两个 Target aggregate MUST 各自创建 Spec 与 Active State
+- **AND** Definition MUST 保持只读
 
 #### Scenario: Instant Effect
 
-- **WHEN** Damage Definition 的 DurationPolicy 为 Instant
-- **THEN** Runtime MUST 执行 Spec 的 mutation 和 lifecycle
-- **AND** MUST NOT 把它加入 Active Effect Container
-
+- **WHEN** Damage 的 DurationPolicy 为 Instant
+- **THEN** Target evaluator MUST 执行 Spec mutation 与 lifecycle
+- **AND** MUST NOT 创建 PortableActiveEffectState
 ### Requirement: Effect Context 必须保存稳定业务来源
 
-GameplayEffectContext MUST 保存 source/target actor identity、source ActionInstanceId、PredictionKey、GameplayResultId 和 source logic tick。Context MUST NOT 保存 GameObject、Graph runtime clone、Timeline clip、Network Model packet 或 transport object。
+`SimulationGameplayEffectContext` MUST 保存 source/target ActorId、source ActionInstanceId、PredictionKey、GameplayResultId、source tick 与 application mode。Context MUST NOT 保存 GameObject、Graph clone、Timeline clip、Network packet 或 transport object。Float32 与 Fixed MUST 使用语义相同的 Target contract。
 
-#### Scenario: 攻击资源消耗
+#### Scenario: 预测资源消耗
 
-- **WHEN** Attack ActionInstance 预测应用 Stamina Cost Effect
-- **THEN** Context MUST 保存该 ActionInstanceId 和 PredictionKey
-- **AND** 后续 Confirm/Reject MUST 能定位同一 Effect mutation
+- **WHEN** Attack 预测应用 Stamina Cost
+- **THEN** Context MUST 保存 ActionInstanceId、PredictionKey 与 source tick
+- **AND** Confirm/Reject MUST 能定位同一 mutation
 
 #### Scenario: 环境伤害
 
-- **WHEN** 环境伤害应用 Damage Effect
+- **WHEN** 环境应用 Damage
 - **THEN** Context MAY 没有 ActionInstanceId
-- **AND** 必须仍能通过 source actor、GameplayResultId 和 tick 表达来源
-
+- **AND** source Actor、GameplayResultId 与 tick MUST 仍完整
 ### Requirement: Effect 时间必须由固定 Logic Tick 推进
 
 Duration、Period、首次 Period 和 Expire MUST 使用 Gameplay Logic Tick。Authoring 秒数必须通过正式 Tick 配置转换为整数 Tick；GE MUST NOT 读取 Unity Time、启动 Coroutine、使用 WaitForSeconds 或拥有 MonoBehaviour Update。
@@ -105,9 +125,9 @@ GameplayEffectDefinition MUST 使用类型化 Component Definition 表达 Modifi
 - **THEN** 配置校验 MUST 失败
 - **AND** Runtime MUST NOT 用最大递归深度掩盖配置环
 
-### Requirement: Effect 应用和生命周期必须使用可观察的原子事务
+### Requirement: Effect 应用必须使用固定事务顺序
 
-系统 MUST 依次解析 Definition、校验 Context/参数、捕获 Tag/Attribute、执行 Application Requirement、解析 StackKey、创建或更新实例、应用 Modifier/Tag 并产生 lifecycle result。任一步失败 MUST 不留下部分 Attribute、Tag、Stack 或 Cue 修改。生命周期阶段触发 Additional Effect 失败时，系统 MUST 回滚该次生命周期事务，并 MUST 在当前 ChangeSet 产生包含 owner effect、instance、trigger、requested effect、failure code 和 reason 的结构化 execution failure。
+系统 MUST 依次解析 Definition、校验 Context/参数、捕获 Tag/Attribute、执行 Application Requirement、解析 StackKey、创建或更新实例、应用 Modifier/Tag 并产生 lifecycle result。同一次 Apply MUST 只构建一次 Spec 并只执行一次 Application Requirement。Effect 声明的 SetByCaller 参数 MUST 全部提供，额外、重复或缺失参数 MUST 拒绝 Spec；Component magnitude 无法解析时 MUST 失败并回滚，MUST NOT 跳过局部修改后仍产生 Applied。Additional Effect MUST 为子 Effect 的全部声明参数提供恰好一次显式绑定，绑定来源 MUST 是父 Effect 已声明 SetByCaller 或有限常量，MUST NOT 隐式复制父参数全集。任一步失败 MUST 不留下部分 Attribute、Tag、Stack 或 Cue 修改。生命周期阶段触发 Additional Effect 失败时，系统 MUST 回滚该次生命周期事务，并 MUST 在当前 ChangeSet 产生包含 owner effect、instance、trigger、requested effect、failure code 和 reason 的结构化 execution failure。显式 Remove MUST 区分 Removed、NoMatch、ExecutionFailed、InvalidRequest 和 Disposed；Removal Additional Effect 失败 MUST 回滚全部匹配实例的移除，并把同一 execution failure 写入 RemoveResult 与当前 ChangeSet。
 
 #### Scenario: 应用条件失败
 
@@ -128,7 +148,20 @@ GameplayEffectDefinition MUST 使用类型化 Component Definition 表达 Modifi
 - **AND** ChangeSet MUST 包含可诊断的 execution failure
 - **AND** Scheduler MUST NOT 静默吞掉失败原因
 
-### Requirement: Effect 必须支持来源隔离的正式叠层和溢出策略
+#### Scenario: 显式移除触发的 Additional Effect 失败
+
+- **WHEN** Remove 找到 ActiveEffect，但其 Removal Additional Effect 被拒绝
+- **THEN** RemoveResult MUST 返回 ExecutionFailed 而不是 NoMatch
+- **AND** 全部匹配 ActiveEffect、Modifier、Tag 和 Cue MUST 回滚
+- **AND** 当前 ChangeSet MUST 包含与 RemoveResult 相同的结构化 execution failure
+
+#### Scenario: Additional Effect 参数集合不同
+
+- **WHEN** 父 Effect 的 Additional Effect 引用一个参数集合不同的子 Effect
+- **THEN** authoring MUST 显式绑定子 Effect 的每个声明参数
+- **AND** 子 ApplyRequest MUST 只包含绑定后的子参数，不得携带父 Effect 的其它参数
+
+### Requirement: Effect 必须支持正式叠层和溢出策略
 
 系统 MUST 支持 Independent、AggregateBySource 和 AggregateByTarget，并显式配置 MaxStacks、Duration Keep/Refresh/Extend、Period Keep/Reset 与 Overflow Reject/ReplaceOldest/AdditionalEffects。聚合 Stack MUST 使用稳定 StackKey；AggregateBySource 的 MaxStacks MUST 只约束对应 source 的当前 Stack。ReplaceOldest MUST 替换达到上限的当前聚合 Stack，不得删除其他 source 的同 Effect 实例。
 
@@ -201,10 +234,13 @@ Predicted Spec MUST 携带 ActionInstanceId 和 PredictionKey，并记录自己�
 
 ### Requirement: Effect 生命周期必须产生结构化结果
 
-系统 MUST 至少产生 Applied、Confirmed、Rejected、StackChanged、Inhibited、Resumed、PeriodExecuted、Removed、Expired 和 Corrected 生命周期结果。结果 MUST 包含 EffectId、EffectInstanceId、tick、stack、revision 和来源 Context，并能投影到 SyncFacts、Cue 和 Diagnostics。无法完成的生命周期 Additional Effect MUST 另产生结构化 execution failure，MUST NOT 伪装成已成功 lifecycle fact。
+系统 MUST 至少产生 Applied、Confirmed、Rejected、StackChanged、Inhibited、Resumed、PeriodExecuted、Removed、Expired 和 Corrected 生命周期结果。结果 MUST 包含 EffectId、EffectInstanceId、tick、stack、revision 和来源 Context，并能投影为 `GameplayEffectFact`、`GameplayCueFact` 和 Diagnostics。无法完成的生命周期 Additional Effect MUST 另产生结构化 execution failure，MUST NOT 伪装成已成功 lifecycle fact。
 
 #### Scenario: Duration Effect 到期
 
 - **WHEN** Active Effect 到达 EndTick
 - **THEN** Runtime MUST 产生 Expired 结果
 - **AND** Attribute Modifier、Granted Tag、WhileActive cue 和 Active Container 必须在同一事务中收口
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             

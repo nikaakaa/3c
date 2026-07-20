@@ -11,19 +11,19 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6700f63bfdbb44b78754e2818dced24d, type: 3}
   m_Name: CorinGameplayTagCatalog
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   m_Tags:
   - m_TagId:
       m_Value: Dodge
     m_DisplayName: Dodge
     m_ParentTag:
-      m_Value:
+      m_Value: 
     m_DebugCategory: Action
   - m_TagId:
       m_Value: Movement
     m_DisplayName: Movement
     m_ParentTag:
-      m_Value:
+      m_Value: 
     m_DebugCategory: Motion
   - m_TagId:
       m_Value: Locomotion
@@ -41,7 +41,7 @@ MonoBehaviour:
       m_Value: State
     m_DisplayName: State
     m_ParentTag:
-      m_Value:
+      m_Value: 
     m_DebugCategory: State
   - m_TagId:
       m_Value: Effect
@@ -61,3 +61,9 @@ MonoBehaviour:
     m_ParentTag:
       m_Value: Effect.Combat
     m_DebugCategory: Combat
+  - m_TagId:
+      m_Value: Attack
+    m_DisplayName: Attack
+    m_ParentTag:
+      m_Value: 
+    m_DebugCategory: Action

@@ -1,0 +1,18 @@
+{
+    "name": "ThirdPersonGameplay.NetworkModel.Unity",
+    "rootNamespace": "ThirdPersonGameplay.Networking",
+    "references": [
+        "ThirdPersonSimulation.Core",
+        "ThirdPersonSimulation.Float32",
+        "ThirdPersonSimulation.Unity"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

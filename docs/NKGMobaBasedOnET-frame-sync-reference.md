@@ -1,98 +1,133 @@
-# NKGMobaBasedOnET 参考评估
+# NKGMobaBasedOnET 帧同步参考评估
 
 ## 结论
 
-`Ref/NKGMobaBasedOnET` 只提供输入历史、确认、校正和调试机制参考，不是 3C 的运行时依赖，也不是当前网络架构模板。
+`Ref/NKGMobaBasedOnET` 只用于参考输入历史、确认、回放和同步诊断，不是 3C 的运行时依赖，也不是要整体移植的网络架构。
 
 可以借鉴：
 
-- 输入 sequence、历史与确认的组织方式。
-- 本地预测误差、服务端确认和校正记录。
-- 逻辑 tick 与表现帧分离。
-- 有界历史、差量记录和同步诊断。
+- 输入 sequence、Tick、确认游标和有界历史的组织方式。
+- predicted input 与 canonical input 的关联方式。
+- 状态快照、恢复、重演和 hash 诊断的职责拆分。
+- 逻辑 Tick 与表现帧分离，回放不重复触发外部副作用。
 
 不能照搬：
 
-- 全局确定性帧同步、完整世界 rollback。
-- ET Entity、NPBehave Blackboard、Box2D/寻路和 MOBA 技能类型体系。
-- 服务端复制客户端 CharacterPipeline、BTSMTL Graph、Timeline 或 Animancer。
-- 把相机、动画状态、VFX、Timeline 播放状态或编辑器状态作为网络真相。
+- ET Entity、NPBehave Blackboard、MOBA 技能和地图业务类型。
+- 参考项目自己的全局帧同步 Runtime、物理和寻路实现。
+- 把 BTSMTL authoring object、Unity Graph、Timeline asset 或 Animancer state 放进网络协议。
+- 为网络模型复制一套 Character Program、Action、GameplayEffect 或 motion evaluator。
 
-## 当前边界
+## 当前真实状态
 
-3C 当前只实现一个完整 Network Model：`ServerAuthoritativeHybrid`。正式链路是：
+当前可运行组合只有 Float32 Program Runtime + Float32 Pass Backend + Standard Local Pipeline + Local Source + Unity CharacterController Solver。正式链路是：
 
 ```text
-GameplayTickSystem
--> CharacterPipeline 产生 model-neutral gameplay facts
--> CharacterServerAuthoritativeBinding
--> CharacterServerAuthoritativeAdapter
--> shared ServerAuthoritativeHybridSession
--> ServerAuthoritativeEndpointDefinition
--> disconnected 或 LocalServerAuthoritativeEndpoint
+UnityCharacterSimulationInputAdapter
+-> CharacterSimulationInput
+-> Local Session Source
+-> compiled Standard Local Pipeline
+-> Local Input Ingress Pass
+-> Local Single Step Schedule Pass
+-> Float32 Program Evaluate Pass
+-> World ResolveBatch Pass
+-> Program Finalize Pass
+-> Local Immediate Output Pass
+-> atomic state publish
+-> Float32PipelineCommitter
+-> CharacterSimulationPresentationRuntime
 ```
 
-`GameplayNetworkSessionHost` 只装配一个模型。多个角色 binding 共享同一个 model session，并使用精确 `SubjectActorId` 路由。Character、Graph、Timeline、Blackboard 和 ActionProfile 不选择模型，也不保存该模型的 packet、history、endpoint 或网络策略。
+`CharacterSimulationProgram` 负责 gameplay operation，`CharacterSimulationState` 与 `WorldSimulationState` 保存可变状态。网络模型只能通过自己的 Session Source、typed Pipeline product、SnapshotParticipant、ExecutionPlan 和 output disposition 接入，不能进入 Program operation 或 WorldSolver 内部。
 
-`ServerAuthoritativePacket`、queue、history、policy resolver 和 endpoint 都属于 `ServerAuthoritativeHybrid`。它们不是 generic GameplaySync 合同。当前没有 `GameplaySyncRuntime`、每角色 peer、backend enum 或第二套网络模型。
+旧 `ServerAuthoritativeHybrid` packet、policy、history、LocalLoopback endpoint 和 session facade 已删除。正式 Prediction/Authority Source、Pipeline、Fantasy 协议和 Unity Authority Worker 尚未实现，因此该模型仍不可选择，也不能称为已闭环网络模型。当前没有可运行的 Fantasy 双客户端 Demo。
+
+`refactor-gameplay-session-composition-boundary` 已建立三个网络方向共用的唯一 `SimulationSessionHost`、Actor registration、正式 `.csim` artifact、Float32 Composer、Source preparation 和 Pipeline compiler。后续模型只能增加自己的 Source、Pass、Pipeline、协议与 Solver，不得创建模型专用 SessionHost 或复制 composition。
 
 ## 可吸收机制
 
-### 输入历史与关联身份
+### 输入身份与历史
 
-本地输入由 `CharacterInputFrame`、`CharacterInputHistory`、`InputSequence` 和 `LocalLogicTick` 组织。`PredictionKey` 是 ActionRuntime 的动作事务关联身份；模型 adapter 可以把它复制进模型 envelope，但 Character 不读取 packet identity、authority tick 或服务端裁决 metadata。
+3C 的正式输入是 `CharacterSimulationInput`：
 
-边界：
+- `Sequence` 标识输入样本顺序。
+- `SimulationInputRequest.Sequence` 标识离散 request 顺序。
+- `SimulationInputRequest.SourceTick` 保留请求来源 Tick。
+- Action 事实使用 `ActionInstanceId`、`PredictionKey` 和 `InputSequence` 关联预测事务。
 
-- Input System 只由 LocalDevice 输入路径读取。
-- 网络 endpoint 不读取 InputAction，也不 tick Graph。
-- `ServerTick` 只来自模型 snapshot、correction 或 action decision。
-- 远端角色后续使用 `ExternalFacts + ExternalPose`，不复制本地输入控制器。
+未来 ServerAuthoritative Prediction Pipeline 可以在自己的 SnapshotParticipant 中保存 owner input/state history，并使用 server tick、ack 和 snapshot 对齐；未来 DeterministicRollback Pipeline 可以按 Tick 与 stable ActorId 组装 canonical input bundle。两者复用输入语义，但不共享 history 实现或 correction policy。
 
-### 预测与校正
+### ServerAuthoritative 预测与校正
 
-Owner 角色继续使用 `LocalDevice + LocalSolver` 立即运行输入、Graph、Timeline、Motion 和动画。模型收到服务端结果后：
-
-- Action decision 由 adapter 转换成 `ActionLifecycleTransition`。
-- Pose correction 转换成 Character semantic correction input。
-- `CharacterMotionStage` 是位姿校正的唯一应用位置。
-- `MotionCorrectionApplicationResult` 再由 adapter 转成模型 acknowledgement。
-
-不做全局 rollback，不回滚整个世界。后续 PvP 命中若实现，只允许服务端权威加局部 pose/hurtbox/action-window rewind。
-
-### 事实、模型包与调试
-
-CharacterNetworkSendStage 只收集 Character 事实：resolved motion、Action/window、GameplayResult、StateEffect 和 Cue。模型 adapter 根据 `ServerAuthoritativeCharacterSyncProfile` 将这些事实映射为当前模型 packet。
+ServerAuthoritative 的目标链路应是：
 
 ```text
-Character fact
--> model profile policy
--> ServerAuthoritativePacket
--> model queue/history/endpoint
+owner CharacterSimulationInput
+-> Prediction Source command port
+-> Prediction Pipeline input/history products
+-> authoritative observation ingress
+-> correction schedule restore + replay or hard recovery
+-> output disposition
+-> atomic Commit
 ```
 
-反向链路先把模型 payload 转成 Character 语义输入，再交给 NetworkReceiveStage、ActionRuntime 或 MotionStage。Character 不保存或解释模型 packet。
+校正属于模型 Prediction Pipeline：有状态 Schedule/History Pass 产生完整 snapshot restore directive，并安排未确认输入重放。它不直接改 Transform，不生成 ExternalPose，不调用已删除的 MotionStage correction，也不让 Presentation 反向写 gameplay state。
 
-调试也分两层：Character diagnostics 展示输入、动作生命周期、运动与表现；ServerAuthoritative diagnostics 展示 model id、policy、packet、queue、history 和 endpoint health。两层通过稳定 actor/action/input identity 关联，不复制运行时状态。
+远端角色的 gameplay 真相来自服务端 observation。remote presentation 可以消费 body/action/effect samples，但不得伪造 owner input 或创建第二套 Character operation runtime。
+
+### Deterministic Rollback
+
+参考项目的 canonical input、snapshot ring、restore/replay 和 state hash 可以用于 `add-deterministic-rollback-kcc-model`，但 3C 必须从同一 `.csir` 生成独立 Fixed Program/State/Kernel ABI，并提供自己的 Deterministic KCC 与 Fixed Session Composer。
+
+Fixed backend 仍应保持核心世界所有权形状：
+
+```text
+SimulationWorldStateSet
+-> WorldSimulationState
+-> SimulationWorldSnapshot
+```
+
+Rollback 恢复的是完整 Tick、全部 Actor、KCC、RNG 和 command cursor，不额外发明平行 `SimulationWorldState` aggregate，也不只回滚 Transform 或单个 Action。
+
+### 事实与副作用
+
+Program 输出 `SimulationActorTickResult`，其中包含 typed GameplayFacts、PresentationCommands、BodySample 和稳定 EventId。模型 adapter 只消费这些结果，不读取 Blackboard slots、Graph 节点或 GameplayEffect 内部容器。
+
+```text
+SimulationActorTickResult
+-> model-owned policy
+-> packet/history/confirmation
+-> SimulationOutputPlan
+-> SimulationCommitter
+```
+
+ServerAuthoritative 使用 EventId 防止 reconciliation 重复提交；DeterministicRollback 将输出分为可替换的 predicted output 与 confirmed-only output。两者都不能把 packet DTO 变成 Character Core 合同。
 
 ## 不采用的路线
 
-- 不新增全局 FrameSync contract。
-- 不恢复 generic `GameplaySyncPacket` 或 `IGameplaySyncPeer`。
-- 不把 LocalLoopback 与未来 Fantasy 写成 backend enum；它们是同一模型下不同的 EndpointDefinition。
-- 不让连接失败回退 LocalLoopback。
-- 不把动画 producer、Animancer transition、Timeline asset 或 Graph 节点路径写入网络协议。
-- 不让服务端运行 Unity physics、CharacterController 或表现逻辑来重演客户端。
+- 不新增跨所有模型共享的 packet、peer、history 或 correction Runtime。
+- 不把 Local Source/Pipeline 伪装成 Network Model，也不把连接失败回退为 Local。
+- 不用 endpoint enum、solver enum 或运行时 backend switch 选择组合。
+- 不同步 AnimationClip、Animancer transition、Timeline visual time、Camera、VFX 或 UI state。
+- 不上传客户端 resolved displacement 作为服务端 canonical pose。
+- 不为 rollback 新增专用 BTSMTL 节点、Timeline evaluator 或第二份业务图。
 
-## 后续使用
+## 实施顺序
 
-需要网络参考时，先对齐：
+1. `refactor-gameplay-session-composition-boundary` 已完成公共 Host、Source preparation、Pipeline compiler、Actor registration 与 Float32 Composer。
+2. `refactor-server-authoritative-hybrid-runtime` 实现 Prediction/Authority Source 与 Pipeline、Fantasy endpoint、Room、Unity authoritative worker、owner reconciliation 与 remote presentation。
+3. `add-dotrecast-authoritative-server-backend` 只替换 ServerAuthoritative 的服务端 Host/WorldSolver，不创建第二个网络模型。
+4. `add-deterministic-rollback-kcc-model` 独立实现 Fixed Target、Fixed Composer、Deterministic KCC、Rollback Source/Pass/Pipeline 与协议。
+
+## 当前依据
 
 - `openspec/project.md`
-- `openspec/changes/refactor-gameplay-network-model-boundary/specs/gameplay-network-model-boundary/spec.md`
-- `openspec/changes/refactor-gameplay-network-model-boundary/specs/server-authoritative-hybrid-sync-model/spec.md`
+- `openspec/specs/character-simulation-kernel/spec.md`
+- `openspec/specs/gameplay-network-model-boundary/spec.md`
+- `openspec/specs/server-authoritative-hybrid-sync-model/spec.md`
 - `openspec/specs/character-network-sync-domain-contract/spec.md`
-- `openspec/specs/gameplay-tick-system/spec.md`
-- `openspec/changes/add-local-two-client-gameplay-network-closure/proposal.md`
+- `openspec/changes/refactor-gameplay-session-composition-boundary/`
+- `openspec/changes/refactor-server-authoritative-hybrid-runtime/`
+- `openspec/changes/add-deterministic-rollback-kcc-model/`
 
-`refactor-gameplay-network-model-boundary` 归档后，应以合并后的 current specs 取代其 change delta 引用。参考项目只能帮助解释机制，不能成为新增第二条 runtime 链路的理由。
+参考项目只能帮助解释机制。任何机制进入 3C 前，都必须落在现有 Program Runtime、Session Source、Pipeline Pass、WorldSolver、Snapshot、OutputDisposition 与 Presentation 边界内，不能成为第二条运行链路。

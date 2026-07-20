@@ -147,6 +147,32 @@ namespace TreeDesigner
                     throw new ArgumentOutOfRangeException(nameof(scope), scope, null);
             }
         }
+
+        public static bool TryValidateInputBinding(BaseExposedProperty declaration, out string error)
+        {
+            error = string.Empty;
+            if (declaration == null)
+            {
+                error = "Blackboard declaration is missing.";
+                return false;
+            }
+            bool inputDerived = declaration.BlackboardSyncPolicy == PipelineBlackboardVariableSyncPolicy.InputDerived;
+            if (!inputDerived)
+            {
+                if (!string.IsNullOrWhiteSpace(declaration.InputValueId))
+                    error = "Only InputDerived Blackboard declarations may retain an InputValueId.";
+                return string.IsNullOrEmpty(error);
+            }
+            if (string.IsNullOrWhiteSpace(declaration.InputValueId))
+                error = "InputDerived Blackboard declaration requires a stable InputValueId.";
+            else if (declaration.BlackboardScope != PipelineBlackboardVariableScope.Character)
+                error = "InputDerived Blackboard declaration requires Character scope.";
+            else if (declaration.BlackboardLifetime != PipelineBlackboardVariableLifetime.Spawn)
+                error = "InputDerived Blackboard declaration requires Spawn lifetime.";
+            else if (declaration.BlackboardAuthority == PipelineBlackboardVariableAuthority.PresentationOnly)
+                error = "InputDerived Blackboard declaration cannot use PresentationOnly authority.";
+            return string.IsNullOrEmpty(error);
+        }
     }
 
     [Serializable]
@@ -180,6 +206,10 @@ namespace TreeDesigner
         [SerializeField]
         protected PipelineBlackboardVariableSyncPolicy m_BlackboardSyncPolicy = PipelineBlackboardVariableSyncPolicy.None;
         public PipelineBlackboardVariableSyncPolicy BlackboardSyncPolicy => m_BlackboardSyncPolicy;
+
+        [SerializeField]
+        protected string m_InputValueId;
+        public string InputValueId => m_InputValueId ?? string.Empty;
 
         [SerializeField]
         protected PipelineBlackboardFactProjectionKind m_BlackboardFactProjection;
@@ -231,6 +261,7 @@ namespace TreeDesigner
             PipelineBlackboardVariableLifetime lifetime,
             PipelineBlackboardVariableAuthority authority,
             PipelineBlackboardVariableSyncPolicy syncPolicy,
+            string inputValueId,
             string categoryPath)
         {
             m_BlackboardKey = key ?? string.Empty;
@@ -238,6 +269,7 @@ namespace TreeDesigner
             m_BlackboardLifetime = lifetime;
             m_BlackboardAuthority = authority;
             m_BlackboardSyncPolicy = syncPolicy;
+            m_InputValueId = inputValueId ?? string.Empty;
             m_BlackboardCategoryPath = categoryPath ?? string.Empty;
         }
 

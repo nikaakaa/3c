@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>ThirdPerson.Server.UnityAuthority.Hotfix</AssemblyName>
+    <RootNamespace>Fantasy</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Gate\Hotfix\ThirdPerson.Server.Gate.Hotfix.csproj" />
+    <ProjectReference Include="..\Entity\ThirdPerson.Server.UnityAuthority.Entity.csproj" />
+  </ItemGroup>
+</Project>

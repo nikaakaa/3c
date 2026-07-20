@@ -1,0 +1,17 @@
+{
+    "name": "ThirdPersonCharacter.Presentation.FinalIK",
+    "rootNamespace": "ThirdPersonCharacter.Pipeline.Presentation.FinalIK",
+    "references": [
+        "ThirdPersonClient.Runtime",
+        "RootMotion"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

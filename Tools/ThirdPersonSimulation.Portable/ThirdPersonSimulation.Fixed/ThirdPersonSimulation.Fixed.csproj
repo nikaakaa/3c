@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>ThirdPersonSimulation.Fixed</AssemblyName>
+    <RootNamespace>ThirdPersonSimulation.Fixed</RootNamespace>
+    <SimulationSourceRoot>$(MSBuildThisFileDirectory)..\..\..\3cDemo\Client\3C_Client\Assets\GameScripts\Main\Runtime\Simulation\Core\Fixed</SimulationSourceRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(SimulationSourceRoot)\**\*.cs" LinkBase="Source" />
+    <ProjectReference Include="..\ThirdPersonSimulation.Core\ThirdPersonSimulation.Core.csproj" />
+  </ItemGroup>
+</Project>

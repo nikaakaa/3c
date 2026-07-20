@@ -23,7 +23,6 @@ namespace BTSMTL.Timeline.Editor
         public TimelineFieldView FieldView => SelectionContainer as TimelineFieldView;
         public TimelineEditorView EditorWindow => FieldView.EditorWindow;
         public TimelineData TimelineData => EditorWindow.Timeline;
-        public Dictionary<int, float> FramePosMap => FieldView.FramePosMap;
 
         public Clip Clip { get; private set; }
         public TimelineTrackView TrackView { get; private set; }
@@ -57,6 +56,14 @@ namespace BTSMTL.Timeline.Editor
         VisualElement m_RightClipIn;
         VisualElement m_BottomLine;
         VisualElement m_DrawBox;
+
+        internal VisualElement ContentElement => m_Content;
+        internal VisualElement LeftMixerElement => m_LeftMixer;
+        internal VisualElement RightMixerElement => m_RightMixer;
+        internal VisualElement TitleElement => m_Title;
+        internal VisualElement LeftClipInElement => m_LeftClipIn;
+        internal VisualElement RightClipInElement => m_RightClipIn;
+        internal VisualElement BottomLineElement => m_BottomLine;
 
         public bool SelfEaseIn
         {
@@ -138,21 +145,21 @@ namespace BTSMTL.Timeline.Editor
                 m_LeftResizeDragLine = new DragLineManipulator(DragLineDirection.Left,
                 (e) =>
                 {
-                    FieldView.ResizeClip(this, 0, e.x);
+                    FieldView.Interaction.UpdateResize(e.x);
+                },
+                (e) =>
+                {
+                    FieldView.Interaction.BeginResize(this, 0);
                     if (!IsSelected())
                     {
                         SelectionContainer.ClearSelection();
                         SelectionContainer.AddToSelection(this);
                     }
-                    FieldView.DrawFrameLine(StartFrame);
-                },
-                (e) =>
-                {
-                    FieldView.DrawFrameLine(StartFrame);
+                    FieldView.SetEditFrames(StartFrame);
                 },
                 () =>
                 {
-                    FieldView.DrawFrameLine();
+                    FieldView.Interaction.CommitEdit("Resize Clip");
                 });
                 m_LeftResizeDragLine.Size = 4;
                 this.AddManipulator(m_LeftResizeDragLine);
@@ -160,21 +167,21 @@ namespace BTSMTL.Timeline.Editor
                 m_RightResizeDragLine = new DragLineManipulator(DragLineDirection.Right,
                 (e) =>
                 {
-                    FieldView.ResizeClip(this, 1, e.x);
+                    FieldView.Interaction.UpdateResize(e.x);
+                },
+                (e) =>
+                {
+                    FieldView.Interaction.BeginResize(this, 1);
                     if (!IsSelected())
                     {
                         SelectionContainer.ClearSelection();
                         SelectionContainer.AddToSelection(this);
                     }
-                    FieldView.DrawFrameLine(EndFrame);
-                },
-                (e) =>
-                {
-                    FieldView.DrawFrameLine(EndFrame);
+                    FieldView.SetEditFrames(EndFrame);
                 },
                 () =>
                 {
-                    FieldView.DrawFrameLine();
+                    FieldView.Interaction.CommitEdit("Resize Clip");
                 });
                 m_RightResizeDragLine.Size = 4;
                 this.AddManipulator(m_RightResizeDragLine);
@@ -185,16 +192,16 @@ namespace BTSMTL.Timeline.Editor
                 m_SelfEaseInDragLine = new DragLineManipulator(DragLineDirection.Right,
                 (e) =>
                 {
-                    FieldView.AdjustSelfEase(this, 0, e.x);
-                    FieldView.DrawFrameLine(StartFrame + SelfEaseInFrame);
+                    FieldView.Interaction.UpdateEase(e.x);
                 },
                 (e) =>
                 {
-                    FieldView.DrawFrameLine(StartFrame + SelfEaseInFrame);
+                    FieldView.Interaction.BeginEase(this, 0);
+                    FieldView.SetEditFrames(StartFrame + SelfEaseInFrame);
                 },
                 () =>
                 {
-                    FieldView.DrawFrameLine();
+                    FieldView.Interaction.CommitEdit("Resize Clip");
                 });
                 m_SelfEaseInDragLine.Size = 4;
                 m_LeftMixer.AddManipulator(m_SelfEaseInDragLine);
@@ -203,16 +210,16 @@ namespace BTSMTL.Timeline.Editor
                 m_SelfEaseOutDragLine = new DragLineManipulator(DragLineDirection.Left,
                 (e) =>
                 {
-                    FieldView.AdjustSelfEase(this, 1, e.x);
-                    FieldView.DrawFrameLine(EndFrame - SelfEaseOutFrame);
+                    FieldView.Interaction.UpdateEase(e.x);
                 },
                 (e) =>
                 {
-                    FieldView.DrawFrameLine(EndFrame - SelfEaseOutFrame);
+                    FieldView.Interaction.BeginEase(this, 1);
+                    FieldView.SetEditFrames(EndFrame - SelfEaseOutFrame);
                 },
                 () =>
                 {
-                    FieldView.DrawFrameLine();
+                    FieldView.Interaction.CommitEdit("Resize Clip");
                 });
                 m_SelfEaseOutDragLine.Size = 4;
                 m_RightMixer.AddManipulator(m_SelfEaseOutDragLine);
@@ -259,66 +266,15 @@ namespace BTSMTL.Timeline.Editor
         }
         public void Refresh()
         {
-            style.left = FramePosMap[StartFrame];
-            style.width = FramePosMap[EndFrame] - FramePosMap[StartFrame];
-
-            m_LeftClipIn.style.display = Clip.ClipInFrame > 0 ? DisplayStyle.Flex : DisplayStyle.None;
-            m_RightClipIn.style.display = (Clip.ClipInFrame + WidthFrame) < Clip.Length ? DisplayStyle.Flex : DisplayStyle.None;
-
-
-            if (Clip.Invalid)
-                AddToClassList("invalid");
-            else
-                RemoveFromClassList("invalid");
-
-            if (EaseInFrame > 0)
-                AddToClassList("mixLeft");
-            else
-                RemoveFromClassList("mixLeft");
-
-            if (EaseOutFrame > 0)
-                AddToClassList("mixRight");
-            else
-                RemoveFromClassList("mixRight");
-
-            if (OtherEaseInFrame > 0)
-                SelfEaseIn = false;
-            if (OtherEaseOutFrame > 0)
-                SelfEaseOut = false;
-
-            if (Clip.Invalid)
-            {
-                m_Content.style.left = 0;
-                m_Content.style.width = m_Title.style.width = WidthFrame * FieldView.OneFrameWidth;
-                m_LeftMixer.style.width = m_RightMixer.style.width = 0;
-            }
-            else
-            {
-                int offset = OtherEaseInFrame > 0 ? (OtherEaseOutFrame > 0 ? 0 : -2) : 0;
-
-                float left = OtherEaseInFrame > 0 ? (float)OtherEaseInFrame / 2 * FieldView.OneFrameWidth + offset : 0;
-                m_Content.style.left = left;
-
-                float width = (WidthFrame - (OtherEaseInFrame > 0 ? (float)OtherEaseInFrame / 2 : 0) - (OtherEaseOutFrame > 0 ? (float)OtherEaseOutFrame / 2 : 0)) * FieldView.OneFrameWidth;
-                m_Content.style.width = width;
-
-                m_Title.style.width = (WidthFrame - EaseInFrame - EaseOutFrame) * FieldView.OneFrameWidth;
-
-                float leftWidth = (OtherEaseInFrame > 0 ? (float)OtherEaseInFrame / 2 : Clip.SelfEaseInFrame) * FieldView.OneFrameWidth;
-                m_LeftMixer.style.width = leftWidth;
-
-                float rightWidth = (OtherEaseOutFrame > 0 ? (float)OtherEaseOutFrame / 2 : Clip.SelfEaseOutFrame) * FieldView.OneFrameWidth;
-                m_RightMixer.style.width = rightWidth;
-
-                //m_Content.style.left = OtherEaseInFrame * FieldView.OneFrameWidth / 2 + offset;
-                //m_Content.style.width = (WidthFrame - (float)OtherEaseInFrame / 2 - (float)OtherEaseOutFrame / 2) * FieldView.OneFrameWidth;
-                //m_Title.style.width = (WidthFrame - OtherEaseInFrame - OtherEaseOutFrame) * FieldView.OneFrameWidth;
-                //m_LeftMixer.style.width = OtherEaseInFrame * FieldView.OneFrameWidth / 2;
-                //m_RightMixer.style.width = OtherEaseOutFrame * FieldView.OneFrameWidth / 2;
-            }
+            FieldView.Rendering.ApplyClipAuthoring(this, new TimelineClipRenderInput(this));
         }
 
         #region Selectable
+        public override bool Overlaps(Rect rectangle)
+        {
+            return FieldView.Geometry.HitTest(localBound, rectangle);
+        }
+
         public virtual bool IsSelectable()
         {
             return true;
@@ -375,7 +331,7 @@ namespace BTSMTL.Timeline.Editor
                 if (!m_RuntimeReadOnly)
                 {
                     m_MoveDrag.enabled = true;
-                    m_MoveDrag.DragBeginForce(e, this.WorldToLocal(e.position));
+                    m_MoveDrag.DragBeginForce(e);
                 }
             }
             else if (e.button == 1)
@@ -494,40 +450,23 @@ namespace BTSMTL.Timeline.Editor
                 m_SelfEaseOutDragLine.Enable = !readOnly && SelfEaseOut;
         }
 
-        public void SetRuntimeDebugState(bool active, string status)
-        {
-            m_BottomLine.style.height = active ? 4f : 1f;
-            m_BottomLine.style.backgroundColor = active ? new Color(0.25f, 0.9f, 0.55f, 1f) : Clip.Color();
-            tooltip = active ? status ?? string.Empty : string.Empty;
-        }
         void OnStartDrag(PointerDownEvent ev)
         {
             Clip.Invalid = false;
-            FieldView.StartMove(this);
+            FieldView.Interaction.BeginMove(this);
         }
         void OnStopDrag()
         {
             Clip.Invalid = false;
-            FieldView.ApplyMove();
+            FieldView.Interaction.CommitEdit("Move Clip");
         }
         void OnDragMove(Vector2 deltaPosition)
         {
-            FieldView.MoveClips(deltaPosition.x);
+            FieldView.Interaction.UpdateMove(deltaPosition.x);
         }
         void OnDrawBoxGenerateVisualContent(MeshGenerationContext mgc)
         {
-            if (Hovered)
-            {
-                var paint2D = mgc.painter2D;
-                paint2D.strokeColor = new Color(68, 192, 255, 255);
-                paint2D.BeginPath();
-                paint2D.MoveTo(new Vector2(0, 0));
-                paint2D.LineTo(new Vector2(worldBound.width, 0));
-                paint2D.LineTo(new Vector2(worldBound.width, worldBound.height));
-                paint2D.LineTo(new Vector2(0, worldBound.height));
-                paint2D.LineTo(new Vector2(0, 0));
-                paint2D.Stroke();
-            }
+            FieldView.Rendering.DrawClipSelection(this, mgc);
         }
 
 

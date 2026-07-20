@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e381b64b19ae421aa92161f8c0cbd5d4, type: 3}
+  m_Name: CorinClientBPredictionComposition
+  m_EditorClassIdentifier: 
+  m_SessionId: Corin.ServerAuthoritative.ClientB
+  m_WorldId: Corin.ServerAuthoritative.World
+  m_MapId: Corin.Navigation.World
+  m_WorldRevision: Corin.ServerAuthoritative.World.v1
+  m_SourceClockId: Corin.ServerAuthoritative.ClientB.LocalLogic
+  m_TickRate: 60
+  m_ProgramRuntime: {fileID: 11400000, guid: a04d371ecd5c45a6a4c0fbf4e36fb9c8, type: 2}
+  m_ExecutionBackend: {fileID: 11400000, guid: 57a1000000004d259d15000000000001, type: 2}
+  m_Pipeline: {fileID: 11400000, guid: 8a20000000004d259d15000000000020, type: 2}
+  m_SessionSource: {fileID: 11400000, guid: 8a10000000004d259d15000000000007, type: 2}
+  m_WorldSolver: {fileID: 11400000, guid: 610e9f11a8c548179c0cf5f98380ca33, type: 2}

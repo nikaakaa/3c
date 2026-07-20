@@ -46,7 +46,7 @@ namespace BTSMTL.Timeline
     [ScriptGuid("31085f11443fe1347b871c5d69db3774"), ClipInspectorView("TreeClipInspectorView"), Color(201, 060, 032)]
     public partial class TreeClip : Clip, ITimelineOwnedAuthoringIdentity
     {
-        [SerializeField, ShowInInspector, OnValueChanged(nameof(OnClipChanged), nameof(RepaintInspector))]
+        [SerializeField, ShowInInspector, OnValueChanged("OnClipChanged", "RepaintInspector")]
         TimelineTreeExecutionPhase m_ExecutionPhase = TimelineTreeExecutionPhase.Commit;
 
         [SerializeReference]

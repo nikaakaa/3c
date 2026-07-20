@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace BTSMTL.Timeline.Editor
@@ -10,10 +11,14 @@ namespace BTSMTL.Timeline.Editor
 
         Guid m_SessionId = Guid.NewGuid();
         TimelineData m_SourceTimeline;
-        TimelineData m_RuntimeTimeline;
         TimelinePreviewTarget m_Target;
         ulong m_EvaluationTick;
         float m_PlaySpeed = 1f;
+        string m_MarkerSyncTargetTrackId = string.Empty;
+        string m_MarkerSyncSourceTimelineId = string.Empty;
+        string m_MarkerSyncSourceTrackId = string.Empty;
+        readonly List<TimelineAnimationMarkerSyncPreviewCandidate> m_MarkerSyncSources =
+            new List<TimelineAnimationMarkerSyncPreviewCandidate>();
 
         public TimelineData Timeline => m_SourceTimeline;
         public Guid SessionId => m_SessionId;
@@ -28,7 +33,17 @@ namespace BTSMTL.Timeline.Editor
         public bool HasTimeline => m_SourceTimeline != null;
         public bool HasTarget => m_Target && m_Target.CanPreviewTimeline;
         public bool CanPreview => HasTimeline && HasTarget;
+        public string Status => !string.IsNullOrEmpty(Error)
+            ? Error
+            : m_Target
+                ? m_Target.PreviewStatus
+                : string.Empty;
         public int Frame => Mathf.RoundToInt(Time * TimelineUtility.FrameRate);
+        public string Error { get; private set; } = string.Empty;
+        public string MarkerSyncTargetTrackId => m_MarkerSyncTargetTrackId;
+        public string MarkerSyncSourceTimelineId => m_MarkerSyncSourceTimelineId;
+        public string MarkerSyncSourceTrackId => m_MarkerSyncSourceTrackId;
+        public IReadOnlyList<TimelineAnimationMarkerSyncPreviewCandidate> MarkerSyncSources => m_MarkerSyncSources;
 
         public event Action Evaluated;
 
@@ -48,6 +63,10 @@ namespace BTSMTL.Timeline.Editor
             }
 
             m_SourceTimeline = timeline;
+            m_MarkerSyncTargetTrackId = string.Empty;
+            m_MarkerSyncSourceTimelineId = string.Empty;
+            m_MarkerSyncSourceTrackId = string.Empty;
+            m_MarkerSyncSources.Clear();
             if (resetTime)
                 Time = 0f;
 
@@ -59,7 +78,6 @@ namespace BTSMTL.Timeline.Editor
             if (resetTime)
                 Time = 0f;
 
-            ReleaseRuntimeTimeline();
             if (m_SourceTimeline == null)
             {
                 IsPlaying = false;
@@ -68,8 +86,6 @@ namespace BTSMTL.Timeline.Editor
                 return;
             }
 
-            m_RuntimeTimeline = m_SourceTimeline.Clone();
-            m_RuntimeTimeline.Init();
             Time = ClampTime(Time);
             EvaluateAt(Time, Time, 0f, true);
         }
@@ -83,7 +99,45 @@ namespace BTSMTL.Timeline.Editor
             m_SessionId = Guid.NewGuid();
             m_EvaluationTick = 0;
             m_Target = target;
+            RefreshMarkerSyncSources();
             EvaluateAt(Time, Time, 0f, true);
+        }
+
+        public void SetMarkerSyncTargetTrack(string trackAuthoringId)
+        {
+            string canonical = trackAuthoringId ?? string.Empty;
+            if (string.Equals(m_MarkerSyncTargetTrackId, canonical, StringComparison.Ordinal))
+                return;
+            m_MarkerSyncTargetTrackId = canonical;
+            m_MarkerSyncSourceTimelineId = string.Empty;
+            m_MarkerSyncSourceTrackId = string.Empty;
+            RefreshMarkerSyncSources();
+            ConfigureMarkerSyncSource();
+            EvaluateAt(Time, Time, 0f, true);
+        }
+
+        public void SetMarkerSyncSource(string timelineAuthoringId, string trackAuthoringId)
+        {
+            string timelineId = timelineAuthoringId ?? string.Empty;
+            string trackId = trackAuthoringId ?? string.Empty;
+            if (string.Equals(m_MarkerSyncSourceTimelineId, timelineId, StringComparison.Ordinal) &&
+                string.Equals(m_MarkerSyncSourceTrackId, trackId, StringComparison.Ordinal))
+                return;
+            m_MarkerSyncSourceTimelineId = timelineId;
+            m_MarkerSyncSourceTrackId = trackId;
+            ConfigureMarkerSyncSource();
+            EvaluateAt(Time, Time, 0f, true);
+        }
+
+        public bool TryGetMarkerSyncPreviewState(out TimelineAnimationMarkerSyncPreviewState state)
+        {
+            if (m_Target && !string.IsNullOrEmpty(m_MarkerSyncTargetTrackId))
+                return m_Target.TryGetAnimationMarkerSyncPreviewState(
+                    m_SessionId,
+                    m_MarkerSyncTargetTrackId,
+                    out state);
+            state = default;
+            return false;
         }
 
         public void Play()
@@ -118,7 +172,7 @@ namespace BTSMTL.Timeline.Editor
 
         public void SetTime(float time)
         {
-            SetTimeInternal(time, 0f, true);
+            SetTimeInternal(time, 0f, false);
         }
 
         void SetTimeInternal(float time, float presentationDeltaSeconds, bool resetLifecycle)
@@ -132,9 +186,9 @@ namespace BTSMTL.Timeline.Editor
         {
             Pause();
             ClearPreviewOutput();
-            ReleaseRuntimeTimeline();
             m_SourceTimeline = null;
             m_Target = null;
+            m_MarkerSyncSources.Clear();
             Evaluated = null;
         }
 
@@ -144,27 +198,42 @@ namespace BTSMTL.Timeline.Editor
             float presentationDeltaSeconds,
             bool resetLifecycle)
         {
-            if (m_RuntimeTimeline == null)
+            if (m_SourceTimeline == null)
             {
+                Error = string.Empty;
                 m_Target?.ClearTimelinePreview(m_SessionId);
                 Evaluated?.Invoke();
                 return;
             }
 
-            m_RuntimeTimeline.Time = currentTime;
             if (CanPreview)
-                m_Target.EvaluateTimelinePreview(
-                    m_SessionId,
-                    m_RuntimeTimeline,
-                    previousTime,
-                    currentTime,
-                    SourceId,
-                    SourceName,
-                    NextEvaluationTick(),
-                    presentationDeltaSeconds,
-                    resetLifecycle);
+            {
+                try
+                {
+                    m_Target.EvaluateTimelinePreview(
+                        m_SessionId,
+                        m_SourceTimeline,
+                        previousTime,
+                        currentTime,
+                        SourceId,
+                        SourceName,
+                        NextEvaluationTick(),
+                        presentationDeltaSeconds,
+                        resetLifecycle);
+                    Error = string.Empty;
+                }
+                catch (InvalidOperationException exception)
+                {
+                    Error = exception.Message;
+                    IsPlaying = false;
+                    m_Target.ClearTimelinePreview(m_SessionId);
+                }
+            }
             else
+            {
+                Error = string.Empty;
                 m_Target?.ClearTimelinePreview(m_SessionId);
+            }
             Evaluated?.Invoke();
         }
 
@@ -181,6 +250,29 @@ namespace BTSMTL.Timeline.Editor
             m_Target?.ClearTimelinePreview(m_SessionId);
         }
 
+        void RefreshMarkerSyncSources()
+        {
+            m_MarkerSyncSources.Clear();
+            if (!m_Target || m_SourceTimeline == null || string.IsNullOrEmpty(m_MarkerSyncTargetTrackId))
+                return;
+            m_Target.CollectAnimationMarkerSyncPreviewSources(
+                m_SourceTimeline,
+                m_MarkerSyncTargetTrackId,
+                m_MarkerSyncSources);
+        }
+
+        void ConfigureMarkerSyncSource()
+        {
+            if (!m_Target || m_SourceTimeline == null)
+                return;
+            m_Target.ConfigureAnimationMarkerSyncPreviewSource(
+                m_SessionId,
+                m_SourceTimeline.AuthoringId,
+                m_MarkerSyncTargetTrackId,
+                m_MarkerSyncSourceTimelineId,
+                m_MarkerSyncSourceTrackId);
+        }
+
         float ClampTime(float time)
         {
             float duration = GetDuration();
@@ -189,17 +281,7 @@ namespace BTSMTL.Timeline.Editor
 
         float GetDuration()
         {
-            if (m_RuntimeTimeline != null)
-                return Mathf.Max(0f, m_RuntimeTimeline.Duration);
             return m_SourceTimeline != null ? Mathf.Max(0f, m_SourceTimeline.Duration) : 0f;
         }
-
-        void ReleaseRuntimeTimeline()
-        {
-            if (m_RuntimeTimeline == null)
-                return;
-            m_RuntimeTimeline = null;
-        }
-
     }
 }

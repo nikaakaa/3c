@@ -15,6 +15,12 @@ namespace TreeDesigner
         protected string m_GUID;
         public string GUID { get => m_GUID; set => m_GUID = value; }
 
+        [SerializeField]
+        protected string m_DisplayName;
+        public string DisplayName { get => m_DisplayName; set => m_DisplayName = value ?? string.Empty; }
+        public string ResolvedDisplayName => string.IsNullOrWhiteSpace(m_DisplayName) ? NodeTypeDisplayName : m_DisplayName;
+        public string NodeTypeDisplayName => ResolveNodeTypeDisplayName();
+
         [NonSerialized]
         protected BaseGraph m_Owner;
         public BaseGraph Owner { get => m_Owner; set => m_Owner = value; }
@@ -154,6 +160,20 @@ namespace TreeDesigner
         public virtual void OnSpawn() { }
         public virtual void OnUnspawn() { }
         public virtual void OnCreated() { }
+
+        string ResolveNodeTypeDisplayName()
+        {
+            NodeNameAttribute nodeNameAttribute = this.GetAttribute<NodeNameAttribute>();
+            if (nodeNameAttribute == null)
+                return GetType().Name;
+
+            MethodInfo methodInfo = this.GetMethod(nodeNameAttribute.Name);
+            if (methodInfo == null || methodInfo.ReturnType != typeof(string) || methodInfo.GetParameters().Length != 0)
+                return nodeNameAttribute.Name;
+
+            string value = methodInfo.Invoke(this, null) as string;
+            return string.IsNullOrEmpty(value) ? nodeNameAttribute.Name : value;
+        }
 
 #if UNITY_EDITOR
         public virtual void RegenerateOwnedAuthoringIdentities()

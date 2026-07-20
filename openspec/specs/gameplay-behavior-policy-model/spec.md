@@ -1,117 +1,66 @@
 # gameplay-behavior-policy-model Specification
 
 ## Purpose
-定义 Transaction、Stream、Effect 和 Event 行为的统一 BehaviorId、BehaviorKind、authoring profile 与网络策略解析模型。
+定义 Gameplay 行为身份目录：Action、通用 Stream/Event 与 Gameplay Effect 使用稳定 BehaviorId、BehaviorKind、Tag 和调试元数据进入同一 Program catalog；网络策略继续归具体 Network Model，不由 BehaviorProfile 执行或隐式推导。
+
 ## Requirements
-### Requirement: Gameplay Behavior 必须提供统一行为身份
 
-系统 MUST 使用 Gameplay Behavior 或等价模型为所有 gameplay 行为提供统一作者身份。每个 behavior MUST 至少声明稳定 `BehaviorId`、`BehaviorKind`、tags、display name、debug category 和网络策略摘要。Gameplay Behavior MUST 是作者和策略层身份，MUST NOT 直接替代 Graph 节点、Timeline clip、ActionInstance、MotionContribution、GameplayEffectLifecycleFact 或 CueEvent。
+### Requirement: Gameplay Behavior 必须提供稳定作者身份
 
-#### Scenario: 作者配置轻攻击
+系统 MUST使用 `IGameplayBehaviorProfile` 或等价合同表达稳定 BehaviorId、BehaviorKind、display name、debug category 与 gameplay tags。Transaction MUST由 `ActionProfile` 提供，Effect MUST由 `GameplayEffectDefinition` 提供，通用 Stream/Event MAY由 `GameplayBehaviorProfile` 提供。Behavior identity MUST不替代 Graph operation、ActionInstance、GameplayFact、PresentationCommand 或 World request。
 
-- **WHEN** 作者配置 `Attack.Light.01`
-- **THEN** 该行为 MUST 有稳定 `BehaviorId = Attack.Light.01`
-- **AND** 该行为 MUST 标记为 `BehaviorKind.Transaction`
-- **AND** 它的运行时执行 MUST 继续通过 ActionInstance 和 ActionSyncDomain，而不是通过 Graph 路径或 Timeline asset 身份同步
+#### Scenario: 注册普通移动行为
 
-#### Scenario: 作者配置普通移动
+- **WHEN** `CharacterPipelineDefinition` 注册 `Movement.Locomotion.Move`
+- **THEN** 该行为 MUST具有稳定 BehaviorId 与 `GameplayBehaviorKind.Stream`
+- **AND** 普通移动 MUST继续由 input、Program operation 与 motion contribution执行
 
-- **WHEN** 作者配置普通 locomotion 或移动输入行为
-- **THEN** 该行为 MUST 有稳定 BehaviorId，例如 `Movement.Locomotion.Move`
-- **AND** 该行为 MUST 标记为 `BehaviorKind.Stream`
-- **AND** 系统 MUST NOT 为每一帧普通移动创建 ActionInstance
+### Requirement: Transaction 与 Effect 身份不得复制
 
-### Requirement: BehaviorKind 必须决定运行时同步单位
+`ActionProfile.ActionId` MUST同时作为 Transaction BehaviorId；`GameplayEffectDefinition.EffectId` MUST同时作为 Effect BehaviorId。系统 MUST不要求同一 Action 或 Effect 再创建 generic `GameplayBehaviorProfile`，统一 registry MUST拒绝跨三类来源的重复 BehaviorId。
 
-系统 MUST 使用 `BehaviorKind` 决定 behavior 的运行时同步单位。`Transaction` MUST 使用 ActionInstance 和 ActionSyncDomain；`Stream` MUST 使用 input command、MotionSyncDomain、snapshot 和 correction；`Effect` MUST 使用 EffectInstanceId 和 GameplayEffectSyncDomain；`Event` MUST 根据 policy 使用 GameplayResultSyncDomain 或 PresentationSyncDomain。系统 MUST NOT 把所有 behavior 强制映射到同一种 runtime identity。
+#### Scenario: Effect 与通用 Behavior 重名
 
-#### Scenario: 连续移动和攻击同帧发生
+- **WHEN** GameplayEffectDefinition 与 GameplayBehaviorProfile 声明相同 BehaviorId
+- **THEN** `CharacterPipelineDefinition` 配置校验 MUST报告重复身份
+- **AND** Compiler MUST不按资产顺序选择其中一个
 
-- **WHEN** 本地玩家同一 tick 内持续移动并启动轻攻击
-- **THEN** 移动 behavior MUST 通过 Stream 语义进入 MotionSyncDomain
-- **AND** 攻击 behavior MUST 通过 Transaction 语义进入 ActionSyncDomain
-- **AND** 两者 MAY 共享 input sequence 或 actor identity，但 MUST 使用不同同步单位
+### Requirement: Behavior identity 必须进入不可变 Program catalog
 
-#### Scenario: Effect 来源于动作
+Compiler MUST把 Action、generic Behavior 与 Gameplay Effect 的 BehaviorKind、display、debug category 与 tags 编译进目标 Program catalog。Target runtime MAY按明确 operation读取其需要的 Action或Effect catalog；generic Behavior catalog MUST不凭自身存在自动创建 operation、状态、fact 或网络消息。
 
-- **WHEN** `Guard.Counter` 成功后产生短暂无敌 Effect
-- **THEN** 无敌 MUST 作为 Effect behavior 进入 GameplayEffectSyncDomain
-- **AND** 它 MAY 记录来源 `ActionInstanceId`
-- **AND** 它自身 EffectInstance 生命周期 MUST NOT 等同于来源 ActionInstance
+#### Scenario: 编译 Corin 行为目录
 
-### Requirement: ActionProfile 必须收敛为 Transaction behavior 入口
+- **WHEN** Character Frontend 编译 Corin Definition
+- **THEN** Program catalog MUST保存全部已注册行为的稳定 identity 与元数据
+- **AND** 未被任何 operation引用的 generic Behavior MUST不产生隐藏执行路径
 
-ActionProfile MUST 继续作为 Transaction gameplay identity 与动作定义入口，并使用 ActionId 作为 BehaviorId。ActionProfile MUST 保存 gameplay tags、block/cancel 和 target 语义，但 MUST 不保存任何具体 Network Model 的 prediction、authority、replication、window/motion/cue/result 网络策略。
+### Requirement: BehaviorKind 只分类作者身份
 
-#### Scenario: Attack.Light.01
+`GameplayBehaviorKind` MUST只表达 Transaction、Stream、Effect 与 Event 的业务分类。它 MUST不直接决定 packet kind、prediction、authority、history、snapshot、correction、replication 或 Presentation 执行，也 MUST不恢复已删除的 SyncDomain 分类层。
 
-- **WHEN** CharacterPipelineDefinition 注册 `Attack.Light.01` ActionProfile
-- **THEN** ActionRuntime MUST 使用它建立动作身份和 gameplay 约束
-- **AND** ServerAuthoritative model MUST 通过 ActionId 在自己的 profile 中解析网络策略
+#### Scenario: Stream 行为进入 ServerAuthoritative
 
-### Requirement: Stream behavior 必须显式配置连续运动网络策略
+- **WHEN** ServerAuthoritative Source发送角色输入并复制 body observation
+- **THEN** command、snapshot 与 acknowledgement语义 MUST来自该模型的 Source和Pass
+- **AND** MUST不由 `GameplayBehaviorKind.Stream` 自动选择网络消息
 
-需要进入 ServerAuthoritative 模型的 Stream behavior MUST 在 `ServerAuthoritativeCharacterSyncProfile` 中显式配置 command send、prediction、authority、snapshot、remote presentation、replication 和 history。Gameplay behavior identity MUST 不保存这些字段，且模型 profile 缺失时 MUST 配置失败。
+### Requirement: Network Model 策略必须保持模型专属
 
-#### Scenario: Locomotion Stream policy
+具体 Network Model MUST在自己的 Definition、Source 与 Pipeline Pass中显式保存并执行协议、history、correction与replication策略。当前 ServerAuthoritative 模型 MUST以显式 `GameplayFactKind` coverage和 Program ProducerId coverage决定可靠事实与producer输出；系统 MUST不虚构通用 Behavior policy resolver、逐Action policy表或逐Effect policy表。
 
-- **WHEN** Locomotion resolved motion 需要进入当前模型
-- **THEN** model profile MUST 存在对应 BehaviorId 的 Stream policy
-- **AND** adapter MUST 不从 GameplayBehavior identity 读取默认策略
+#### Scenario: ServerAuthoritative 校验复制覆盖
 
-### Requirement: Behavior policy resolver 必须输出统一 effective policy
+- **WHEN** Model Definition 与当前 Program 建立 compatibility identity
+- **THEN** `ServerAuthoritativeReplicationPolicy` MUST校验所需 GameplayFactKind 与全部 Program ProducerId coverage
+- **AND** 缺失覆盖 MUST使配置失败，不得从 BehaviorProfile推导默认策略
 
-每个 Network Model MUST 提供自己的 Behavior policy resolver。ServerAuthoritative resolver MUST 使用 model profile、BehaviorId、BehaviorKind、fact kind 和可选输出类型解析 effective packet policy。系统 MUST 不提供跨所有模型的统一 packet resolver，也 MUST 不让 CharacterPipeline 调用 model resolver。
+### Requirement: Behavior authoring 不得暴露模型执行参数
 
-#### Scenario: 解析 resolved motion
+ActionProfile、GameplayBehaviorProfile 与 GameplayEffectDefinition Inspector MUST只编辑 gameplay identity、tags和各自业务规则。Tick rate、packet cadence、history capacity、correction tolerance、reliable fact kinds 与 producer coverage MUST只出现在具体 Network Model authoring中。
 
-- **WHEN** ServerAuthoritative adapter 处理 resolved motion fact
-- **THEN** resolver MUST 从当前 model profile 解析是否发送、history 和 packet kind
-- **AND** 其它模型 MUST 不需要复用该 effective policy 类型
+#### Scenario: 编辑 Gameplay Effect
 
-### Requirement: BehaviorId 不得替代 SyncFacts 边界
-
-BehaviorId MUST 只作为 gameplay identity 与 model policy lookup key。Graph、Timeline 和 runtime MUST 继续产生正式 facts；model adapter MUST 不因为拥有 BehaviorId 而重新读取 Graph 或凭空构造未发生的事实。
-
-#### Scenario: Window policy 存在但窗口未发生
-
-- **WHEN** ServerAuthoritative profile 配置了 HitWindow policy，但本 tick 没有 HitWindow fact
-- **THEN** adapter MUST 不生成 window packet
-- **AND** policy MUST 不驱动 Timeline 或 Blackboard
-
-### Requirement: Authoring 和 Debug 必须按 Behavior 展示同步闭环
-
-Gameplay behavior authoring MUST 展示 identity 和 gameplay kind；model-specific authoring MUST 在自己的 profile Inspector 展示 prediction、authority、replication、history、snapshot 和 expected packet。Runtime Debug MUST 同时显示 BehaviorId 与 ModelId，避免把 model policy 误认为 gameplay identity 自身字段。
-
-#### Scenario: 查看 Locomotion policy
-
-- **WHEN** 作者查看 ServerAuthoritative Character Sync Profile 中的 Locomotion
-- **THEN** UI MUST 显示引用的 gameplay BehaviorId
-- **AND** MUST 显示该模型的 effective policy 与 packet preview
-
-### Requirement: Effect behavior 必须由 GameplayEffectDefinition 直接提供
-
-`GameplayBehaviorKind.Effect` 的正式 gameplay identity profile MUST 由 `GameplayEffectDefinition` 直接实现。`EffectId` MUST 等于该 profile 的 `BehaviorId`，并由统一 gameplay registry 参与重复身份与 runtime lookup 校验。EffectDefinition MUST NOT 保存任何具体 Network Model policy；模型 Profile MUST 使用该 BehaviorId 完成自己的 coverage、policy 完整性与 resolver lookup。系统 MUST NOT 为同一 Effect 建立 generic BehaviorProfile 副本。
-
-#### Scenario: 解析眩晕同步策略
-
-- **WHEN** GameplayEffectLifecycleFact 引用 `Effect.CrowdControl.Stun`
-- **THEN** GameplayEffectDefinition MUST 提供对应 Effect BehaviorId
-- **AND** ServerAuthoritative resolver MUST 通过模型 Profile 中该 BehaviorId 的条目解析有效 Effect policy
-- **AND** Graph、GE Runtime 或 Character Adapter MUST NOT 硬编码该 Effect 的网络策略
-
-#### Scenario: Generic profile 与 Effect 身份冲突
-
-- **WHEN** generic BehaviorProfile 和 GameplayEffectDefinition 声明同一 BehaviorId
-- **THEN** authoring validation MUST 报告重复身份并拒绝 registry
-- **AND** resolver MUST NOT 按注册顺序挑选 profile
-
-### Requirement: 旧 State behavior kind 必须删除
-
-系统 MUST 将 `GameplayBehaviorKind.State` 一次性改名为 `GameplayBehaviorKind.Effect`，并更新 registry、resolver、Inspector、diagnostics 与模型 Profile。系统 MUST NOT 保留 State 枚举别名、兼容 switch 分支或把 objective state 继续解释为 Effect behavior。
-
-#### Scenario: 解析旧 State 枚举值
-
-- **WHEN** 迁移完成后的配置或运行时数据仍引用 GameplayBehaviorKind.State
-- **THEN** 配置构建 MUST 报告已经删除的旧行为种类
-- **AND** 系统 MUST NOT 自动映射或 fallback 到 GameplayBehaviorKind.Effect
+- **WHEN** 作者选中一个 GameplayEffectDefinition
+- **THEN** Inspector MUST显示 Effect identity与Gameplay Effect规则
+- **AND** MUST不显示 ServerAuthoritative packet或history参数

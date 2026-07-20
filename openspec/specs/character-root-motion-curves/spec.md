@@ -1,9 +1,8 @@
 # character-root-motion-curves Specification
 
 ## Purpose
-定义 root motion 曲线资产和烘焙链路：从指定 `AnimationClip` 和采样 Prefab 生成 `RootMotionCurveAsset`，保存累计位移与 yaw 曲线，作为离线 authoring 数据供作者生成、检查和重烘焙。Timeline 运行时位移 MUST 通过内联 `MotionCurveClip`、独立 `MotionCurveTrack` 或等价正式 motion fact 轨道进入 MotionStage，不从 `RootMotionCurveAsset` 或 AnimationClip 字段自动采样，不恢复旧 BBB motion 配置或 footphase/body claim 数据源。
+定义 root motion 曲线资产和烘焙链路：从指定 `AnimationClip` 和采样 Prefab 生成 `RootMotionCurveAsset`，保存累计位移与 yaw 曲线，作为离线 authoring 数据供作者生成、检查和重烘焙。Compiler MUST将 Timeline 正式引用的曲线降低为 Program constant 与 MotionCurve operation，Runtime MUST经 CharacterMotionRequest 和 WorldSolver 应用，不从 AnimationClip 自动采样，也不恢复旧 BBB motion 配置或 footphase/body claim 数据源。
 ## Requirements
-
 ### Requirement: Root Motion 曲线资产表达动画派生位移
 系统 MUST 使用独立 `RootMotionCurveAsset` 表达从 `AnimationClip` 派生出的 root motion 曲线。该资产 MUST 保存源动画、时长、采样率和显式有效的求值模式。`Unspecified`、缺失字段、默认零值和未知枚举值均为配置错误，MUST NOT 被解释为其它模式。完整本地位移模式 MUST 保存累计本地位置 XYZ 曲线和累计 yaw 曲线；前向距离模式 MUST 保存累计前向距离和累计 yaw，并在运行时按角色 forward 解释位移。该资产 MUST NOT 保存 footphase、动作窗口、body claim、locomotion state 或旧 BBB motion 配置。
 
@@ -88,45 +87,38 @@
 - **AND** 系统 MUST NOT 推断曲线模式、自动写回资产或改用其它 motion 来源
 
 ### Requirement: RootMotionCurveAsset 与 Timeline 内联位移必须保持单向边界
-`RootMotionCurveAsset` 是离线烘焙、检查和重烘焙动画派生曲线的 authoring 数据；`MotionCurveClip` 是 Timeline Runtime 实际提交的 motion fact。`MotionCurveTrack` MUST 只采样自己的内联曲线，MUST NOT 自动读取、按名称查找或隐式引用 `RootMotionCurveAsset`。系统 MUST NOT 创建资产到 Timeline 的自动同步、双写或运行时导入路径。
 
-#### Scenario: Timeline 采样内联 MotionCurveClip
-- **WHEN** `TimelinePlaybackScheduler` 推进一个包含 `MotionCurveTrack` 的 Timeline
-- **THEN** 轨道 MUST 从该 Timeline 内联 `MotionCurveClip` 采样位移与 yaw
-- **AND** 轨道 MUST NOT 读取未被显式转写的 `RootMotionCurveAsset`
-- **AND** 最终位移 MUST 继续通过正式 motion 管线提交
+RootMotionCurveAsset MUST继续作为动画派生累计曲线 authoring source；Compiler MUST将 Timeline 正式引用的曲线编译为 portable Program constants。Runtime MUST只读取 compiled constants，MUST不同时读取 RootMotionCurveAsset 与另一份 inline runtime curve。
 
-#### Scenario: 独立烘焙资产没有 Timeline 引用
-- **WHEN** 项目中存在没有被任何 Timeline 显式转写的 `RootMotionCurveAsset`
-- **THEN** 该资产 MUST NOT 自动影响角色 Runtime 位移
-- **AND** 系统 MUST NOT 根据动画名称、目录或曲线内容建立隐式关联
+#### Scenario: 编译 Dodge 曲线
+
+- **WHEN** Dodge Timeline 引用 RootMotionCurveAsset
+- **THEN** Compiler MUST生成唯一 portable curve constant
+- **AND** Kernel MUST不读取 Unity AnimationCurve asset
 
 ### Requirement: Timeline 不得通过动画片段直接提交 Root Motion
-系统 MUST NOT 使用 `Timeline.AnimationClip.RootMotionCurve` 或等价字段作为运行时 motion contribution 入口。Timeline 中的 `AnimationTrack` MUST 只提交动画表现贡献。动画派生的位移曲线若要影响角色运动，MUST 被显式配置为 `MotionCurveTrack` 或等价正式 motion fact 轨道，并继续通过 `MotionResolver` 和 `CharacterMotionStage` 应用。
 
-#### Scenario: 动画片段播放
-- **WHEN** Timeline 的 `AnimationTrack` 采样到动画片段
-- **THEN** 系统 MUST 只提交动画表现贡献
-- **AND** 系统 MUST NOT 从该动画片段读取 root motion 曲线并提交 motion contribution
+Compiled Timeline MUST只通过正式 MotionCurve operation 产生 MotionContribution。AnimationClip、Animancer state、fade 与 sampled pose MUST不进入 WorldRequest 或 WorldSimulationState。
 
-#### Scenario: 烘焙曲线用于动作位移
-- **WHEN** 作者需要使用从动画派生的位移曲线驱动动作
-- **THEN** 作者 MUST 通过显式 `MotionCurveTrack` 或正式 motion fact 轨道配置该位移
-- **AND** 系统 MUST NOT 通过动画名称、目录、同名 asset、AnimationClip 字段或旧 SO/config 自动查找并应用曲线
+#### Scenario: Attack 动画包含 Root Transform
+
+- **WHEN** Presentation 播放带 Root Transform 的动画片段
+- **THEN** 逻辑位移 MUST仍只来自 compiled MotionCurve
 
 ### Requirement: Root Motion 通过角色 motion 管线应用
-系统 MUST 将动画派生位移或手画位移作为正式 motion contribution 或 modifier 提交到角色 motion 管线，由正式 motion resolver 或 `CharacterMotionStage` 生成并应用最终移动。Timeline 轨道、采样器、动画表现层、Animator 或 Animancer adapter MUST NOT 直接修改角色 Transform 来应用 root motion 或 motion curve。
 
-#### Scenario: Timeline 采样 MotionCurve
-- **WHEN** `TimelinePlaybackScheduler` 推进 active Timeline 并采样 `MotionCurveTrack`
-- **THEN** 系统 MUST 根据本帧时间区间计算 motion curve delta
-- **AND** 系统 MUST 将 delta 转成正式 motion contribution
-- **AND** 最终位移 MUST 通过角色 motion 管线应用
+Root Motion curve delta MUST作为原始动画派生位移进入 Kernel Evaluate 的统一 contribution resolve。已解析channel MAY由Operation Set声明的正式Motion Modifier在WorldSolver前修正，再生成portable WorldRequest，并由Session WorldSolver batch产生actual body result。MotionCurve、Modifier与Timeline MUST不直接写Transform或调用CharacterController；AnimationClip、Animancer与Presentation MUST不成为Gameplay修正来源。
 
-#### Scenario: 多个 motion 来源同帧存在
-- **WHEN** 同一帧存在输入移动、Timeline motion curve、击退或其它 motion 来源
-- **THEN** 系统 MUST 通过正式 motion 仲裁规则生成最终 `MotionIntent`
-- **AND** 系统 MUST NOT 让任意来源绕过管线直接移动角色
+#### Scenario: Root Motion 被墙阻挡
+
+- **WHEN** compiled curve 请求的位移穿过墙面
+- **THEN** WorldSolver actual result MUST决定 WorldSimulationState
+
+#### Scenario: 目标 Warp 修正动作曲线
+
+- **WHEN** Action MotionCurve的resolved channel具有合法的compiled MotionWarp Modifier
+- **THEN** Modifier MUST只修正该resolved channel后再构造唯一WorldRequest
+- **AND** 原始MotionCurve constant与raw contribution MUST保持不变
 
 ### Requirement: 旧 BBB Root Motion 数据链路不得进入正式运行时
 系统 MAY 参考 `Assets/Ref/BBB` 中的 root motion 采样算法，但正式实现 MUST 位于 `Assets/GameScripts/Main` 下，并使用项目命名空间和角色管线类型。系统 MUST NOT 从正式运行时代码引用 BBB 旧数据结构。
@@ -139,12 +131,33 @@
 
 ### Requirement: 动画表现淡入淡出不得成为 Root Motion 路径
 
-Animancer transition、state blending 与 FadeGroup MUST只影响 visual animation pose 和 layer/state weight，MUST不从动画混合结果推导 gameplay 位移，不提交 motion contribution，也 MUST不修改逻辑 Transform。动画派生位移仍 MUST由显式 MotionCurveTrack、MotionResolver 与 CharacterMotionStage 处理。
+Animancer fade、animation state weight、Presentation retention 和 visual Timeline sample MUST不改变 compiled MotionCurve contribution、WorldRequest 或 Character/World state。Gameplay 位移权重只能来自 Program authoring 规则。
 
-#### Scenario: 闪避 Fade 与 MotionCurve 同时运行
+#### Scenario: 攻击动画淡出
 
-- **WHEN** 闪避 Timeline 的 MotionCurveTrack 提交逻辑 motion
-- **AND** Animancer 对动画 state 执行 transition/fade
-- **THEN** CharacterMotionStage MUST只应用正式 motion contribution
-- **AND** 动画 fade MUST只改变 visual pose 权重
-- **AND** 角色逻辑位移 MUST不被重复计算
+- **WHEN** Attack animation 仍在 Outgoing fade
+- **THEN** Presentation MAY继续采样 pose
+- **AND** MUST不继续产生 Gameplay Root Motion
+
+### Requirement: MotionCurve Clip控制曲线必须进入typed Curve Channel Catalog
+
+Timeline中的MotionCurve Clip MUST继续唯一保存Weight、Position X/Y/Z、Yaw与Ease In/Out曲线，并 MUST通过显式registered ChannelId进入同一个Timeline Curve Editor。Position channel MUST声明meter单位与unbounded value domain，Yaw MUST声明degree单位与unbounded value domain，Weight和Ease MUST声明`[0,1]` bounded domain。Curve Editor MUST只调用MotionCurve Clip正式mutation API；Compiler MUST继续把这些曲线降低为既有portable Program constant与MotionCurve operation，不得新增Generic Curve Runtime、第二份inline curve或Presentation motion路径。
+
+#### Scenario: 在Timeline编辑Position Z
+
+- **WHEN** 作者展开MotionCurve Clip的Position Z channel并移动key
+- **THEN** Curve Editor MUST按Clip-local time与meter value显示和提交完整curve
+- **AND** Semantic Compiler MUST沿既有MotionCurve operation重新编译该curve
+- **AND** Animation、Marker Sync与Presentation MUST不成为该位移的第二消费者
+
+#### Scenario: MotionCurve引用RootMotionCurveAsset
+
+- **WHEN** MotionCurve作者数据来自正式RootMotionCurveAsset
+- **THEN** RootMotionCurveAsset MUST继续是外部烘焙source
+- **AND** Timeline Curve Catalog MUST不复制该资产全部曲线形成第二份authoring
+
+#### Scenario: Position curve超出权重范围
+
+- **WHEN** Position X key值大于1或小于0
+- **THEN** Curve Editor MUST按unbounded meter domain显示与编辑
+- **AND** MUST不Clamp到`[0,1]`

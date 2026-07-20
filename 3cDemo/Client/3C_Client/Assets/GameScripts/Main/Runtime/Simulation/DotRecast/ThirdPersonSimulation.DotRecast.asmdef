@@ -1,0 +1,13 @@
+{
+  "name": "ThirdPersonSimulation.DotRecast",
+  "rootNamespace": "ThirdPersonSimulation.DotRecast",
+  "references": [
+    "ThirdPersonSimulation.Core",
+    "ThirdPersonSimulation.Float32",
+    "DotRecast.Core",
+    "DotRecast.Detour"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": true
+}

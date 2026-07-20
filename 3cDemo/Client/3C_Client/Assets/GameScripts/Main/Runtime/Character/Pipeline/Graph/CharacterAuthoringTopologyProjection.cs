@@ -129,7 +129,8 @@ namespace ThirdPersonCharacter.Pipeline.Graph
                     edge.GUID,
                     conditionGraph.GraphAuthoringId,
                     ownership));
-                valid &= Visit(conditionGraph, conditionRoute, edge, visibleGraphs, recursionPath, errors);
+                IReadOnlyList<BaseGraph> conditionVisibleGraphs = BuildConditionVisibleGraphs(edge, visibleGraphs);
+                valid &= Visit(conditionGraph, conditionRoute, edge, conditionVisibleGraphs, recursionPath, errors);
             }
 
             recursionPath.Remove(graph);
@@ -186,6 +187,17 @@ namespace ThirdPersonCharacter.Pipeline.Graph
                     return true;
             }
             return false;
+        }
+
+        static IReadOnlyList<BaseGraph> BuildConditionVisibleGraphs(BaseEdge edge, IReadOnlyList<BaseGraph> visibleGraphs)
+        {
+            if (edge.StartNode is not StateNode sourceState || sourceState.SubTree == null)
+                return visibleGraphs;
+
+            var result = new List<BaseGraph>(visibleGraphs);
+            if (!result.Contains(sourceState.SubTree))
+                result.Add(sourceState.SubTree);
+            return result;
         }
     }
 

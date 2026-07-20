@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &9000000000000011003
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 8267017062934195806, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+      propertyPath: m_Name
+      value: Corin Training Enemy
+      objectReference: {fileID: 0}
+    - target: {fileID: 4670986396098666090, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+      propertyPath: m_ActorId
+      value: corin-training-enemy
+      objectReference: {fileID: 0}
+    - target: {fileID: 4670986396098666090, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+      propertyPath: m_ControlSource
+      value: 
+      objectReference: {fileID: 9000000000000011005}
+    - target: {fileID: 4670986396098666090, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+      propertyPath: m_PresentationRole
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4670986396098666090, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+      propertyPath: m_CameraRig
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 4670986396098666090, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+      propertyPath: m_CameraFollowAnchor
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 4670986396098666090, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+      propertyPath: m_CameraAimAnchor
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 4670986396098666090, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+      propertyPath: m_CameraLookInputValueId
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 4383252199776149867, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+      propertyPath: m_BindingId
+      value: Corin.TrainingEnemyBody
+      objectReference: {fileID: 0}
+    - target: {fileID: 4383252199776149867, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+      propertyPath: m_ActorId
+      value: corin-training-enemy
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 9000000000000011001, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+    - {fileID: 9000000000000011002, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8267017062934195806, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 9000000000000011005}
+  m_SourcePrefab: {fileID: 100100000, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+--- !u!1 &9000000000000011004 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8267017062934195806, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+  m_PrefabInstance: {fileID: 9000000000000011003}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &9000000000000011005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9000000000000011004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adc586ea959b43a59b9cb153d26579ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

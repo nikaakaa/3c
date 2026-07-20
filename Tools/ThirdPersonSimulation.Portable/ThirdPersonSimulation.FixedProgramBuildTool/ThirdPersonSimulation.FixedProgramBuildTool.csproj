@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>ThirdPersonSimulation.FixedProgramBuildTool</AssemblyName>
+    <RootNamespace>ThirdPersonSimulation.FixedProgramBuildTool</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ThirdPersonSimulation.Core\ThirdPersonSimulation.Core.csproj" />
+    <ProjectReference Include="..\ThirdPersonSimulation.Fixed\ThirdPersonSimulation.Fixed.csproj" />
+    <ProjectReference Include="..\ThirdPersonSimulation.Fixed.Compiler\ThirdPersonSimulation.Fixed.Compiler.csproj" />
+  </ItemGroup>
+</Project>

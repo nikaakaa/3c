@@ -1,0 +1,14 @@
+{
+  "name": "ThirdPersonSimulation.DotRecastAuthority",
+  "rootNamespace": "ThirdPersonSimulation.DotRecastAuthority",
+  "references": [
+    "ThirdPersonSimulation.Core",
+    "ThirdPersonSimulation.Float32",
+    "ThirdPersonSimulation.ServerAuthoritative",
+    "ThirdPersonSimulation.ServerAuthoritative.Transport",
+    "ThirdPersonSimulation.DotRecast"
+  ],
+  "autoReferenced": true,
+  "overrideReferences": false,
+  "noEngineReferences": true
+}

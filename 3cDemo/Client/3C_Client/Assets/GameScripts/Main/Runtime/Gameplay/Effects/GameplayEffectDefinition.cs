@@ -45,10 +45,8 @@ namespace ThirdPersonGameplay.Effects
     public sealed class GameplaySetByCallerParameterDefinition
     {
         [SerializeField] string m_ParameterId;
-        [SerializeField] bool m_Required = true;
 
         public string ParameterId => string.IsNullOrWhiteSpace(m_ParameterId) ? string.Empty : m_ParameterId.Trim();
-        public bool Required => m_Required;
     }
 
     public enum GameplayEffectStackingPolicy : byte
@@ -123,8 +121,6 @@ namespace ThirdPersonGameplay.Effects
     [Serializable]
     public abstract class GameplayEffectComponentDefinition
     {
-        internal abstract GameplayEffectComponentData BuildData();
-        internal abstract void CollectReferences(GameplayEffectReferenceCollector collector);
     }
 
     public enum GameplayModifierApplication : byte
@@ -152,23 +148,6 @@ namespace ThirdPersonGameplay.Effects
         public GameplayClampBound ClampBound => m_ClampBound;
         public bool ScaleWithStack => m_ScaleWithStack;
 
-        internal override GameplayEffectComponentData BuildData()
-        {
-            return new GameplayModifierComponentData(
-                m_AttributeId,
-                m_Application,
-                m_Operation,
-                GameplayMagnitudeData.From(m_Magnitude),
-                m_Priority,
-                m_ClampBound,
-                m_ScaleWithStack);
-        }
-
-        internal override void CollectReferences(GameplayEffectReferenceCollector collector)
-        {
-            collector.AddAttribute(m_AttributeId);
-            collector.AddMagnitude(m_Magnitude, m_Application == GameplayModifierApplication.CurrentValue ? m_AttributeId : default);
-        }
     }
 
     [Serializable]
@@ -178,24 +157,6 @@ namespace ThirdPersonGameplay.Effects
 
         public IReadOnlyList<GameplayTagId> Tags => m_Tags ?? Array.Empty<GameplayTagId>();
 
-        internal override GameplayEffectComponentData BuildData()
-        {
-            return new GrantedTagsComponentData(Copy(Tags));
-        }
-
-        internal override void CollectReferences(GameplayEffectReferenceCollector collector)
-        {
-            for (int i = 0; i < Tags.Count; i++)
-                collector.AddTag(Tags[i]);
-        }
-
-        static GameplayTagId[] Copy(IReadOnlyList<GameplayTagId> values)
-        {
-            var copy = new GameplayTagId[values.Count];
-            for (int i = 0; i < values.Count; i++)
-                copy[i] = values[i];
-            return copy;
-        }
     }
 
     public enum GameplayEffectRequirementPhase : byte
@@ -216,16 +177,6 @@ namespace ThirdPersonGameplay.Effects
         public GameplayTagQuery Source => m_Source;
         public GameplayTagQuery Target => m_Target;
 
-        internal override GameplayEffectComponentData BuildData()
-        {
-            return new GameplayTagRequirementsComponentData(m_Phase, m_Source, m_Target);
-        }
-
-        internal override void CollectReferences(GameplayEffectReferenceCollector collector)
-        {
-            collector.AddQuery(m_Source);
-            collector.AddQuery(m_Target);
-        }
     }
 
     public enum GameplayEffectAttributeSource : byte
@@ -259,21 +210,6 @@ namespace ThirdPersonGameplay.Effects
         public GameplayAttributeComparison Comparison => m_Comparison;
         public GameplayMagnitudeDefinition Threshold => m_Threshold;
 
-        internal override GameplayEffectComponentData BuildData()
-        {
-            return new GameplayAttributeRequirementsComponentData(
-                m_Phase,
-                m_Source,
-                m_AttributeId,
-                m_Comparison,
-                GameplayMagnitudeData.From(m_Threshold));
-        }
-
-        internal override void CollectReferences(GameplayEffectReferenceCollector collector)
-        {
-            collector.AddAttribute(m_AttributeId);
-            collector.AddMagnitude(m_Threshold, default);
-        }
     }
 
     [Serializable]
@@ -297,32 +233,6 @@ namespace ThirdPersonGameplay.Effects
 
         public IReadOnlyList<GameplayExecutionMutationDefinition> Mutations => m_Mutations ?? Array.Empty<GameplayExecutionMutationDefinition>();
 
-        internal override GameplayEffectComponentData BuildData()
-        {
-            var values = new GameplayExecutionMutationData[Mutations.Count];
-            for (int i = 0; i < values.Length; i++)
-            {
-                GameplayExecutionMutationDefinition value = Mutations[i];
-                values[i] = new GameplayExecutionMutationData(
-                    value.AttributeId,
-                    value.Operation,
-                    GameplayMagnitudeData.From(value.Magnitude),
-                    value.ClampBound);
-            }
-            return new GameplayEffectExecutionComponentData(values);
-        }
-
-        internal override void CollectReferences(GameplayEffectReferenceCollector collector)
-        {
-            for (int i = 0; i < Mutations.Count; i++)
-            {
-                GameplayExecutionMutationDefinition value = Mutations[i];
-                if (value == null)
-                    continue;
-                collector.AddAttribute(value.AttributeId);
-                collector.AddMagnitude(value.Magnitude, default);
-            }
-        }
     }
 
     public enum GameplayAdditionalEffectTrigger : byte
@@ -333,14 +243,36 @@ namespace ThirdPersonGameplay.Effects
         Overflow
     }
 
+    public enum GameplayAdditionalEffectParameterSource : byte
+    {
+        ParentSetByCaller,
+        Constant
+    }
+
+    [Serializable]
+    public sealed class GameplayAdditionalEffectParameterBindingDefinition
+    {
+        [SerializeField] string m_ChildParameterId;
+        [SerializeField] GameplayAdditionalEffectParameterSource m_Source;
+        [SerializeField] string m_ParentParameterId;
+        [SerializeField] float m_Constant;
+
+        public string ChildParameterId => string.IsNullOrWhiteSpace(m_ChildParameterId) ? string.Empty : m_ChildParameterId.Trim();
+        public GameplayAdditionalEffectParameterSource Source => m_Source;
+        public string ParentParameterId => string.IsNullOrWhiteSpace(m_ParentParameterId) ? string.Empty : m_ParentParameterId.Trim();
+        public float Constant => m_Constant;
+    }
+
     [Serializable]
     public sealed class GameplayAdditionalEffectDefinition
     {
         [SerializeField] GameplayAdditionalEffectTrigger m_Trigger;
         [SerializeField] GameplayEffectDefinition m_Effect;
+        [SerializeField] GameplayAdditionalEffectParameterBindingDefinition[] m_ParameterBindings = Array.Empty<GameplayAdditionalEffectParameterBindingDefinition>();
 
         public GameplayAdditionalEffectTrigger Trigger => m_Trigger;
         public GameplayEffectDefinition Effect => m_Effect;
+        public IReadOnlyList<GameplayAdditionalEffectParameterBindingDefinition> ParameterBindings => m_ParameterBindings ?? Array.Empty<GameplayAdditionalEffectParameterBindingDefinition>();
     }
 
     [Serializable]
@@ -350,27 +282,6 @@ namespace ThirdPersonGameplay.Effects
 
         public IReadOnlyList<GameplayAdditionalEffectDefinition> Effects => m_Effects ?? Array.Empty<GameplayAdditionalEffectDefinition>();
 
-        internal override GameplayEffectComponentData BuildData()
-        {
-            var values = new GameplayAdditionalEffectData[Effects.Count];
-            for (int i = 0; i < values.Length; i++)
-            {
-                GameplayAdditionalEffectDefinition value = Effects[i];
-                values[i] = new GameplayAdditionalEffectData(
-                    value != null ? value.Trigger : GameplayAdditionalEffectTrigger.Applied,
-                    value != null && value.Effect ? value.Effect.EffectId : default);
-            }
-            return new AdditionalEffectsComponentData(values);
-        }
-
-        internal override void CollectReferences(GameplayEffectReferenceCollector collector)
-        {
-            for (int i = 0; i < Effects.Count; i++)
-            {
-                GameplayAdditionalEffectDefinition value = Effects[i];
-                collector.AddAdditionalEffect(value != null && value.Effect ? value.Effect.EffectId : default);
-            }
-        }
     }
 
     [Serializable]
@@ -382,64 +293,5 @@ namespace ThirdPersonGameplay.Effects
         public string CueId => string.IsNullOrWhiteSpace(m_CueId) ? string.Empty : m_CueId.Trim();
         public GameplayCueTrigger Trigger => m_Trigger;
 
-        internal override GameplayEffectComponentData BuildData()
-        {
-            return new GameplayCueBindingComponentData(CueId, m_Trigger);
-        }
-
-        internal override void CollectReferences(GameplayEffectReferenceCollector collector)
-        {
-            if (string.IsNullOrEmpty(CueId))
-                collector.AddError("cue id is missing");
-        }
-    }
-
-    internal sealed class GameplayEffectReferenceCollector
-    {
-        public List<GameplayTagId> Tags { get; } = new List<GameplayTagId>();
-        public List<GameplayAttributeId> Attributes { get; } = new List<GameplayAttributeId>();
-        public List<GameplayEffectId> AdditionalEffects { get; } = new List<GameplayEffectId>();
-        public List<AttributeDependency> AttributeDependencies { get; } = new List<AttributeDependency>();
-        public List<GameplayMagnitudeDefinition> Magnitudes { get; } = new List<GameplayMagnitudeDefinition>();
-        public List<string> Errors { get; } = new List<string>();
-
-        public void AddTag(GameplayTagId tagId) => Tags.Add(tagId);
-        public void AddAttribute(GameplayAttributeId attributeId) => Attributes.Add(attributeId);
-        public void AddAdditionalEffect(GameplayEffectId effectId) => AdditionalEffects.Add(effectId);
-        public void AddQuery(GameplayTagQuery query)
-        {
-            if (query == null)
-                return;
-            for (int i = 0; i < query.All.Count; i++) AddTag(query.All[i]);
-            for (int i = 0; i < query.Any.Count; i++) AddTag(query.Any[i]);
-            for (int i = 0; i < query.None.Count; i++) AddTag(query.None[i]);
-        }
-        public void AddMagnitude(GameplayMagnitudeDefinition magnitude, GameplayAttributeId dependent)
-        {
-            if (magnitude == null)
-            {
-                AddError("magnitude is missing");
-                return;
-            }
-            Magnitudes.Add(magnitude);
-            if (magnitude.Source == GameplayMagnitudeSource.SourceAttributeSnapshot ||
-                magnitude.Source == GameplayMagnitudeSource.TargetAttributeSnapshot ||
-                magnitude.Source == GameplayMagnitudeSource.TargetAttributeLive)
-                AddAttribute(magnitude.AttributeId);
-            if (dependent.IsValid && magnitude.Source == GameplayMagnitudeSource.TargetAttributeLive)
-                AttributeDependencies.Add(new AttributeDependency(magnitude.AttributeId, dependent));
-        }
-        public void AddError(string error) => Errors.Add(error ?? string.Empty);
-    }
-
-    internal readonly struct AttributeDependency
-    {
-        public AttributeDependency(GameplayAttributeId source, GameplayAttributeId dependent)
-        {
-            Source = source;
-            Dependent = dependent;
-        }
-        public GameplayAttributeId Source { get; }
-        public GameplayAttributeId Dependent { get; }
     }
 }

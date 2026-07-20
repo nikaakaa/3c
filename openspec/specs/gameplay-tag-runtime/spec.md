@@ -1,7 +1,7 @@
 # gameplay-tag-runtime Specification
 
 ## Purpose
-TBD - created by archiving change add-character-gameplay-effect-system. Update Purpose after archive.
+定义 Gameplay Tag 的稳定身份、Tag Container、requirement query、Gameplay Effect 授予与移除以及 Action operation 只读查询边界。
 ## Requirements
 ### Requirement: Gameplay Tag 必须来自唯一正式 Catalog
 
@@ -37,35 +37,32 @@ TBD - created by archiving change add-character-gameplay-effect-system. Update P
 
 ### Requirement: Runtime Tag 必须按来源计数
 
-Gameplay Tag Container MUST 使用稳定 source handle 记录 Character 初始来源、ActionInstance 来源和 ActiveGameplayEffect 来源。移除来源时 MUST 只撤销该来源授予的 Tag；同一 Tag 的其他来源仍存在时 Tag MUST 保持有效。
+Tag Container MUST 以稳定 source handle 记录 Character、ActionInstance 和 Active Effect 来源。ActionInstance 成功时 MUST 以 `action:<ActionInstanceId>` 授予 profile tags；Complete、Cancel、Interrupt、Abort 或 teardown 时 MUST 精确撤销。移除一个来源 MUST NOT 撤销其它来源的同名 Tag。Float32 与 Fixed MUST 使用相同 source identity。
 
-#### Scenario: 两个 Effect 同时授予眩晕
+#### Scenario: 多来源同名 Tag
 
-- **WHEN** 两个不同 Active Effect 都授予 `State.Control.Stunned`
-- **AND** 其中一个 Effect 被移除
-- **THEN** Tag source count MUST 从二变为一
-- **AND** 角色 MUST 继续拥有 `State.Control.Stunned`
+- **WHEN** 两个 Effect 都授予 Stunned 且移除一个
+- **THEN** Tag source count MUST 从二变一
+- **AND** Stunned MUST 保持有效
 
-#### Scenario: ActionInstance 结束
+#### Scenario: ActionInstance 激活与结束
 
-- **WHEN** ActionInstance 进入终态
-- **THEN** Runtime MUST 精确移除该 ActionInstance source handle 的 Tags
-- **AND** MUST NOT 移除 Character 或 Effect 来源的同名 Tag
-
+- **WHEN** Dodge ActionInstance 激活后结束
+- **THEN**唯一 Container MUST 先加入再移除对应 `action:<ActionInstanceId>` source
+- **AND** MUST NOT 移除 Character 或 Effect 来源
 ### Requirement: Action 与 Effect 必须共用唯一 Tag 状态
 
-系统 MUST 删除 `ActionRuntime` 私有 Tag 集合和字符串 `SetTag` 路径。ActionRuntime MAY 通过只读 Tag 查询验证 activation，并 MAY 通过 source sink 管理当前 ActionInstance Tags；它 MUST NOT 创建第二份角色 Tag 真相。
+系统 MUST NOT 存在 Action 私有持久 Tag 集合或字符串 `SetTag`。Action admission、BTSMTL Tag query 与 Gameplay Effect requirement MUST 读取 CharacterSimulationState 的唯一 Tag Container。Active source cancel query MAY 读取 ActionProfile 不可变 tag 定义，但 MUST NOT 保存第二份角色状态。
 
-#### Scenario: Stun 阻止攻击激活
+#### Scenario: Stun 阻止攻击
 
-- **WHEN** Active Effect 授予 `State.Control.Stunned`
-- **AND** Attack ActionProfile 的 Block Query 命中该 Tag
-- **THEN** ActionRuntime MUST 拒绝 activation
-- **AND** 判断 MUST 通过 `IGameplayTagReader` 来自 GameplayEffectRuntime 的统一 Tag Container
+- **WHEN** Effect source 授予 Stunned 且 Attack Block Query 命中
+- **THEN** preview 与 activation MUST 都拒绝
+- **AND** 判断 MUST 读取唯一 Tag Container
 
-#### Scenario: 迁移旧 Action 标签
+#### Scenario: BTSMTL 查询 Action Tag
 
-- **WHEN** ActionProfile 已迁移到正式 TagId
-- **THEN** 旧 `List<string>` Tag 字段、`m_Tags` 和 `SetTag()` MUST 被删除
-- **AND** 系统 MUST NOT 保留兼容读取或双写
-
+- **WHEN** active Action source 授予 Attack
+- **THEN** `HasGameplayTagNode(Attack)` MUST 为 true
+- **AND** admission MUST NOT 合并私有 owned-tag 副本
+           

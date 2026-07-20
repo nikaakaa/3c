@@ -69,7 +69,7 @@ namespace TreeDesigner.Editor
             SerializedProperty serializedValueProperty = exposedProperty.GetExposedPropertySerializedProperty("m_Value");
             PropertyField exposedPropertyValue = new PropertyField(serializedValueProperty,exposedProperty.Name);
             exposedPropertyValue.name = "exposed-property-field";
-            exposedPropertyValue.Bind(serializedValueProperty.serializedObject);
+            exposedPropertyValue.BindProperty(serializedValueProperty);
             exposedPropertyView.Add(exposedPropertyValue);
             if (!exposedProperty.CanEdit)
                 exposedPropertyView.SetEnabled(false);
@@ -117,7 +117,7 @@ namespace TreeDesigner.Editor
                         });
                     }
 
-                    propertyField.Bind(serializedProperty.serializedObject);
+                    propertyField.BindProperty(serializedProperty);
                     propertyField.name = showInInspectorAttribute.Priority.ToString();
                     container.Add(propertyField);
                 }

@@ -1,24 +1,16 @@
 # btsmtl-runtime-diagnostics Specification
 
 ## Purpose
-TBD - created by archiving change add-btsmtl-compiled-runtime-debugging. Update Purpose after archive.
+定义 Authoring identity、Program source map、Simulation/Presentation Trace、RuntimeDebugSession 与编辑器视图之间的只读诊断链路。
 ## Requirements
 ### Requirement: Runtime diagnostics 必须与执行对象布局解耦
 
-系统 MUST 让运行时调试只依赖稳定 source identity、runtime instance identity、Debug Source Map 和结构化 Trace。Editor MUST NOT 通过持有、反射或轮询 runtime `BaseGraph`、`BaseNode`、Track、Clip 或未来 compiled instruction 对象来表达正式调试状态。
+Runtime diagnostics MUST只依赖稳定 source identity、Program revision、operation handle、Actor/activation identity、SimulationTick、Debug Source Map 和 structured Trace。Editor MUST不持有或轮询 Character/World state mutable view、pending evaluation、runtime clone 或 WorldSolver object。
 
-#### Scenario: 当前解释执行器运行 Graph
+#### Scenario: Graph Editor 跟随 Runtime
 
-- **WHEN** 当前 Graph runtime 从 authoring data 创建工作副本并执行
-- **THEN** runtime MUST 通过正式 Trace contract 发布执行事件
-- **AND** Graph editor MUST 通过 source identity 映射事件
-- **AND** Graph editor MUST NOT 直接绑定 runtime clone
-
-#### Scenario: 未来编译执行器替换解释执行
-
-- **WHEN** 后续 compiler 将相同 authoring source 编译为其它 runtime IR
-- **THEN** compiled executor MUST 继续发布同一种 Trace contract
-- **AND** editor diagnostics MUST NOT 因 runtime 对象类型变化重写 Graph/Timeline view contract
+- **WHEN** Editor 显示 compiled operation 的当前状态
+- **THEN** MUST通过 Source Map 和 Trace 反查 authoring element
 
 ### Requirement: Source identity 与 runtime instance identity 必须分离
 
@@ -44,20 +36,12 @@ Diagnostics MUST继续使用稳定authoring source与独立runtime instance iden
 
 ### Requirement: Debug Source Map 必须严格映射执行元素到 authoring source
 
-系统 MUST 为每个 Program revision 提供只读 Debug Source Map。Source Map MUST 将 execution element handle 映射到 Graph、Node、Edge、Timeline、Track、Clip 或 declaration authoring identity，并携带 ProgramId、CompilationRevision 和 SourceContentHash。
+Compiler MUST为 operation、state slot、scope、Timeline segment、TreeClip、Action/Effect definition 和 presentation producer 生成严格 Source Map。断裂、歧义或 duplicate identity MUST使 Program build 失败。
 
-#### Scenario: 一个 Node 编译成多个执行元素
+#### Scenario: 定位 Timeline Window
 
-- **WHEN** compiler 或解释执行准备阶段为同一 authoring Node 生成多个 execution elements
-- **THEN** Source Map MUST 允许这些 handles 映射回同一 Node source
-- **AND** editor MUST 能把聚合状态叠加到该 Node
-
-#### Scenario: Source revision 不一致
-
-- **WHEN** 当前 authoring source hash 与 Trace 的 Source Map 不一致
-- **THEN** Debug Session MUST 停止 source overlay
-- **AND** UI MUST 显示明确 revision mismatch
-- **AND** 系统 MUST NOT 按名称、index 或近似 path fallback
+- **WHEN** Trace 包含 ActionWindow EventId
+- **THEN** Source Map MUST唯一定位原 Timeline/TreeClip/declaration
 
 ### Requirement: Trace 必须使用结构化事件和稳定时序
 
@@ -77,37 +61,13 @@ Diagnostics MUST继续使用稳定authoring source与独立runtime instance iden
 
 ### Requirement: Runtime producer 必须在正式生命周期边界发布 Trace
 
-Graph、RunnableNode、Composite、StateMachine、ConditionRuleGraph、Timeline scheduler、TreeClip、Pipeline Blackboard、Animation Playback Lifecycle 与 Animancer adapter MUST在各自正式边界发布对应 channel 事件。Graph Trace MUST观察逻辑 child 选择、Runnable result 和 stop；StateMachine Trace MUST观察 transition decision、State scope 与 barrier；Animation Trace MUST观察逻辑 selection、Timeline sample、PendingFirstSample、Current、Outgoing、Retired 和 Animancer fade。Producer MUST不为调试新增第二套 selection、Timeline 时间、播放生命周期或混合权威。
+SimulationKernel、Pipeline Runtime/Pass、Session Source、WorldSolver adapter和 Committer MUST分别在自己的正式边界发布 Trace。Trace MUST记录 BackendId、PipelineHash、PassId、product、outer source tick、内部 SimulationStep、成功、失败、restore、replay与 OutputDisposition；Egress disposition MUST不能通过 Publish、Replace、Retire或 Suppress隐藏 Trace。Trace MUST不反向驱动 Character/World/Pipeline state、Source policy或 Presentation result。
 
-#### Scenario: 普通 Selector replacement
+#### Scenario: 一次 Motion 执行
 
-- **WHEN** Selector 停止旧 child 并启动 replacement child
-- **THEN** Graph channel MUST显示 stop cause、source、replacement 和逻辑顺序
-- **AND** Graph channel MUST不伪造动画 owner change 或 Driver
-
-#### Scenario: State transition
-
-- **WHEN** StateMachine 提交 edge 并激活 target StateNode
-- **THEN** StateMachine channel MUST显示 condition、source scope、target scope 与 barrier
-- **AND** Animation channel MUST只在逻辑层另行提交 AnimationLayerSelection 后显示选择变化
-
-#### Scenario: 逻辑选择动画 producer
-
-- **WHEN** 逻辑层为 Base 提交唯一 AnimationPlaybackId
-- **THEN** Animation channel MUST显示 LayerId、playback generation、logic tick 与 selection source
-- **AND** diagnostics MUST不比较 Priority 或推断第二个赢家
-
-#### Scenario: Timeline clip membership 变化
-
-- **WHEN** 正式 Timeline scheduler 进入、保持或离开 Track/Clip
-- **THEN** Timeline channel MUST从 scheduler 的正式 sample/release 发布事件
-- **AND** diagnostics MUST不独立重采样 Timeline
-
-#### Scenario: Animancer 淡出完成
-
-- **WHEN** Animancer 报告 outgoing state fade 完成
-- **THEN** Animation channel MUST显示对应 producer 从 Outgoing 进入 Retired
-- **AND** 该事件 MUST不反向改变 Tree 或 State 结果
+- **WHEN** Program Evaluate Pass生成 request且 WorldSolve Pass取得 Solver result
+- **THEN** Trace MUST区分 operation、Pass、request、solver result、Finalize、published body sample与 OutputDisposition
+- **AND** MUST保留当前 PipelineHash和内部 Step provenance
 
 ### Requirement: Trace channel 必须控制调试采集成本
 
@@ -139,27 +99,14 @@ Graph、RunnableNode、Composite、StateMachine、ConditionRuleGraph、Timeline 
 
 ### Requirement: 每个 runtime target 必须拥有按需 Live State 与显式 Capture
 
-每个 Character runtime diagnostics target MUST 注册 metadata、program revision、Source Map 与默认 `None` 的 diagnostics store。Live State MUST 只保存稳定键对应的当前事实；只有作者显式开始 Capture 时才创建独立有界 Capture segment store。Capture 达到容量后 MUST 按完整 tick/frame segment 丢弃最旧数据。target 结束时 runtime MUST 释放 store；Editor MUST 只保留已冻结的 current state 或 Capture snapshot，不得继续持有 runtime target 或可写 store。
+每个 Character Session diagnostics target MUST注册 metadata、Program revision、Pipeline/Backend identity、Source Map与默认 `None` 的 diagnostics store。Live State MUST只保存稳定键对应的当前事实；只有作者显式开始 Capture时才创建独立有界 Capture segment store。Capture达到容量后 MUST按完整 outer tick、SimulationStep或 presentation frame segment丢弃最旧数据。target结束时 runtime MUST释放 store；Editor MUST只保留已冻结的 current state或 Capture snapshot，不得继续持有 runtime target、Pass runtime或可写 store。
 
-#### Scenario: 没有观察者
+#### Scenario: Session Pipeline Runtime 结束
 
-- **WHEN** target 没有有效 Live interest 且没有 active Capture
-- **THEN** effective channel MUST 为 `None`
-- **AND** runtime MUST NOT 因 diagnostics 构造高频 Graph、Timeline、Animation、Motion 或 Blackboard payload
-
-#### Scenario: Capture 达到容量
-
-- **WHEN** 新事件进入已经达到容量的 Capture segment store
-- **THEN** store MUST 丢弃最旧完整 frame 或 tick segment
-- **AND** MUST NOT 留下无法重建的半个 segment
-- **AND** gameplay runtime MUST 继续执行
-
-#### Scenario: runtime target 销毁
-
-- **WHEN** CharacterPipeline deactivate 或 dispose
-- **THEN** diagnostics store MUST 失效全部 interest 并发布 target lifecycle 终止
-- **AND** editor Session MUST 冻结最后一个 source-mapped current state 和 active Capture
-- **AND** Ended view MUST 不接收新事件或持有 runtime store
+- **WHEN** CharacterPipelineHost deactivate或 Session runtime handle dispose
+- **THEN** diagnostics store MUST失效全部 interest并发布 target lifecycle终止
+- **AND** Editor Session MUST冻结最后一个 source-mapped current state、Pipeline identity和 active Capture
+- **AND** Ended view MUST不接收新事件或持有 runtime store
 
 ### Requirement: RuntimeDebugSession 必须统一目标、interest、Capture 与只读视图
 
@@ -238,7 +185,7 @@ Graph 或 Timeline 进入 Live Debug 时 MUST 用当前 source identity 与 cont
 
 ### Requirement: Diagnostics 必须保持只读且不影响结果
 
-Runtime diagnostics、Debug Session 和 editor overlay MUST NOT 写入 Graph state、Timeline time、Blackboard、ActionRuntime、Motion、AnimationPlaybackLifecycle、Animancer state、SyncFacts 或作者资产。关闭或打开 diagnostics 后，相同输入和 tick 序列 MUST 产生相同 gameplay 与 presentation 结果。
+Runtime diagnostics、Debug Session 和 editor overlay MUST NOT 写入 Program state、Timeline operation time、Blackboard slots、Action instance state、Motion state、AnimationPlaybackLifecycle、Animancer state、GameplayFacts 或作者资产。关闭或打开 diagnostics 后，相同输入和 tick 序列 MUST 产生相同 gameplay 与 presentation 结果。
 
 #### Scenario: 在历史位置 scrub
 

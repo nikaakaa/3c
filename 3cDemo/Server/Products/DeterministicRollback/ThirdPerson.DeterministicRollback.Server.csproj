@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>ThirdPerson.DeterministicRollback.Server</AssemblyName>
+    <RootNamespace>ThirdPerson.DeterministicRollback.Server</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PublishAot>false</PublishAot>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Shared\Simulation\Core\ThirdPersonSimulation.Core.Portable.csproj" />
+    <ProjectReference Include="..\..\Shared\Simulation\Fixed\ThirdPersonSimulation.Fixed.Portable.csproj" />
+    <ProjectReference Include="..\..\Shared\Simulation\DeterministicRollback\ThirdPersonSimulation.DeterministicRollback.Portable.csproj" />
+    <ProjectReference Include="..\..\Shared\Simulation\DeterministicRollback.Endpoint\ThirdPersonSimulation.DeterministicRollback.Endpoint.Portable.csproj" />
+  </ItemGroup>
+</Project>

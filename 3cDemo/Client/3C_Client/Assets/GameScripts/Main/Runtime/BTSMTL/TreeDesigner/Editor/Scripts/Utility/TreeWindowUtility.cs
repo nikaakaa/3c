@@ -51,12 +51,20 @@ namespace TreeDesigner.Editor
         }
         public static T GetWindow<T>(BaseTreeAsset treeAsset) where T : BaseTreeWindow
         {
-            T treeWindow = GetWindow<T>(treeAsset ? treeAsset.Tree : null);
+            T treeWindow = AcquireWindow<T>();
             if (treeAsset)
                 treeWindow.ReplaceNavigationRoot(treeAsset);
             return treeWindow;
         }
         public static T GetWindow<T>(BaseTree tree = null) where T : BaseTreeWindow
+        {
+            T treeWindow = AcquireWindow<T>();
+            if (tree != null)
+                treeWindow.ReplaceNavigationRoot(tree);
+            return treeWindow;
+        }
+
+        static T AcquireWindow<T>() where T : BaseTreeWindow
         {
             if (s_TreeWindowTypeMap.ContainsKey(typeof(T)))
             {
@@ -69,7 +77,6 @@ namespace TreeDesigner.Editor
                 }
                 treeWindow.Show();
                 treeWindow.Focus();
-                treeWindow.ReplaceNavigationRoot(tree);
 
                 if (!s_ActiveWindows.Contains(treeWindow))
                     s_ActiveWindows.Add(treeWindow);
@@ -83,7 +90,6 @@ namespace TreeDesigner.Editor
 
                 treeWindow.Show();
                 treeWindow.Focus();
-                treeWindow.ReplaceNavigationRoot(tree);
 
                 if (!s_ActiveWindows.Contains(treeWindow))
                     s_ActiveWindows.Add(treeWindow);
@@ -178,7 +184,7 @@ namespace TreeDesigner.Editor
             TreeWindowAttribute treeWindowAttribute = treeWindowAttributes[treeWindowAttributes.Length - 1];
 
             MethodInfo methodInfo = ReflectionUtility.GetMethod(s_TreeWindowUtilityInstance, treeWindowAttribute.Label);
-            BaseTreeWindow treeWindow = methodInfo.Invoke(s_TreeWindowUtilityInstance, new object[] { tree }) as BaseTreeWindow;
+            BaseTreeWindow treeWindow = methodInfo.Invoke(s_TreeWindowUtilityInstance, new object[] { null }) as BaseTreeWindow;
             treeWindow.ReplaceNavigationRoot(tree, authoringContext);
             NotifyOpened(treeWindow, tree);
             return treeWindow;
@@ -198,7 +204,7 @@ namespace TreeDesigner.Editor
             TreeWindowAttribute treeWindowAttribute = treeWindowAttributes[treeWindowAttributes.Length - 1];
 
             MethodInfo methodInfo = ReflectionUtility.GetMethod(s_TreeWindowUtilityInstance, treeWindowAttribute.Label);
-            BaseTreeWindow treeWindow = methodInfo.Invoke(s_TreeWindowUtilityInstance, new object[] { tree }) as BaseTreeWindow;
+            BaseTreeWindow treeWindow = methodInfo.Invoke(s_TreeWindowUtilityInstance, new object[] { null }) as BaseTreeWindow;
             treeWindow.ReplaceNavigationRoot(treeAsset, authoringContext);
             NotifyOpened(treeWindow, tree);
             return treeWindow;

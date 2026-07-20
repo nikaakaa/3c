@@ -2,12 +2,15 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Behavior;
+using ThirdPersonCharacter.Equipment;
 using ThirdPersonGameplay.Contracts;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.GameplayEffect;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonGameplay.Effects;
+using ThirdPersonGameplay.Tags;
 using ThirdPersonGameplay.Tick;
+using ThirdPersonCharacter.Pipeline.Simulation;
 using TreeDesigner;
 using UnityEngine;
 
@@ -17,17 +20,30 @@ namespace ThirdPersonCharacter.Pipeline
     public sealed class CharacterPipelineDefinition : ScriptableObject
     {
         [SerializeField] BaseTreeAsset m_RootTreeAsset;
+        [SerializeField, Min(1)] int m_SimulationTickRate = GameplayTickSettings.DefaultLocalLogicTickRate;
+        [SerializeField] CharacterSimulationProgramAsset m_SimulationProgram;
+        [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
         [SerializeField] CharacterInputProfile m_InputProfile;
         [SerializeField] CharacterGameplayEffectProfile m_GameplayEffectProfile;
-        [SerializeField] CharacterAnimationPresentationDefinition m_AnimationPresentation = new CharacterAnimationPresentationDefinition();
+        [SerializeField] CharacterBodyMotionProfile m_BodyMotionProfile;
+        [SerializeField] CharacterAnimationPresentationProfile m_AnimationPresentationProfile;
+        [SerializeField] bool m_EquipmentCapabilityEnabled;
+        [SerializeField] CharacterEquipmentProfile m_EquipmentProfile;
+        [SerializeField] CharacterEquipmentPresentationProfile m_EquipmentPresentationProfile;
         [SerializeField] ActionProfile[] m_ActionProfiles = Array.Empty<ActionProfile>();
         [SerializeField] GameplayBehaviorProfile[] m_BehaviorProfiles = Array.Empty<GameplayBehaviorProfile>();
 
         public BaseTreeAsset RootTreeAsset => m_RootTreeAsset;
-        public RunnableTree RootTree => m_RootTreeAsset ? m_RootTreeAsset.Tree as RunnableTree : null;
+        public int SimulationTickRate => Math.Max(1, m_SimulationTickRate);
+        public CharacterSimulationProgramAsset SimulationProgram => m_SimulationProgram;
+        public CharacterPresentationProjectionAsset PresentationProjection => m_PresentationProjection;
         public CharacterInputProfile InputProfile => m_InputProfile;
         public CharacterGameplayEffectProfile GameplayEffectProfile => m_GameplayEffectProfile;
-        public CharacterAnimationPresentationDefinition AnimationPresentation => m_AnimationPresentation;
+        public CharacterBodyMotionProfile BodyMotionProfile => m_BodyMotionProfile;
+        public CharacterAnimationPresentationProfile AnimationPresentationProfile => m_AnimationPresentationProfile;
+        public bool EquipmentCapabilityEnabled => m_EquipmentCapabilityEnabled;
+        public CharacterEquipmentProfile EquipmentProfile => m_EquipmentProfile;
+        public CharacterEquipmentPresentationProfile EquipmentPresentationProfile => m_EquipmentPresentationProfile;
         public IReadOnlyList<ActionProfile> ActionProfiles =>
             m_ActionProfiles ?? Array.Empty<ActionProfile>();
         public IReadOnlyList<GameplayBehaviorProfile> BehaviorProfiles =>
@@ -47,6 +63,27 @@ namespace ThirdPersonCharacter.Pipeline
                 {
                     profile = actionProfile;
                     return true;
+                }
+            }
+
+            if (m_EquipmentCapabilityEnabled && m_EquipmentProfile)
+            {
+                IReadOnlyList<CharacterEquipmentFeatureDefinition> features = m_EquipmentProfile.Features;
+                for (int featureIndex = 0; featureIndex < features.Count; featureIndex++)
+                {
+                    CharacterEquipmentFeatureDefinition feature = features[featureIndex];
+                    if (!feature)
+                        continue;
+                    IReadOnlyList<EquipmentFeatureRouteImplementation> routes = feature.RouteImplementations;
+                    for (int routeIndex = 0; routeIndex < routes.Count; routeIndex++)
+                    {
+                        ActionProfile actionProfile = routes[routeIndex]?.ActionProfile;
+                        if (actionProfile && string.Equals(actionProfile.BehaviorId, behaviorId, StringComparison.Ordinal))
+                        {
+                            profile = actionProfile;
+                            return true;
+                        }
+                    }
                 }
             }
 
@@ -98,8 +135,28 @@ namespace ThirdPersonCharacter.Pipeline
                 valid &= m_InputProfile.CollectConfigurationErrors(errors);
             }
 
+            if (!m_BodyMotionProfile)
+            {
+                errors?.Add($"{name}: Body Motion profile is missing.");
+                valid = false;
+            }
+            else
+            {
+                valid &= m_BodyMotionProfile.CollectConfigurationErrors(errors);
+            }
+
+            if (!m_AnimationPresentationProfile)
+            {
+                errors?.Add($"{name}: Animation Presentation profile is missing.");
+                valid = false;
+            }
+            else
+            {
+                valid &= m_AnimationPresentationProfile.CollectConfigurationErrors(errors);
+            }
+
             HashSet<string> ids = new HashSet<string>(StringComparer.Ordinal);
-            GameplayEffectRuntimeDefinition gameplayEffectDefinition = null;
+            GameplayTagCatalogRuntimeData gameplayTagCatalog = null;
             if (!m_GameplayEffectProfile)
             {
                 errors?.Add($"{name}: Gameplay Effect profile is missing.");
@@ -107,18 +164,11 @@ namespace ThirdPersonCharacter.Pipeline
             }
             else
             {
-                valid &= m_GameplayEffectProfile.TryBuildRuntimeDefinition(
-                    GameplayTickSettings.DefaultLocalLogicTickRate,
-                    out gameplayEffectDefinition,
-                    errors);
+                valid &= m_GameplayEffectProfile.CollectConfigurationErrors(out gameplayTagCatalog, errors);
             }
             IReadOnlyList<GameplayEffectDefinition> effectDefinitions = m_GameplayEffectProfile
                 ? m_GameplayEffectProfile.EffectDefinitions
                 : Array.Empty<GameplayEffectDefinition>();
-            valid &= CharacterAnimationPresentationBindingIndex.Build(
-                m_AnimationPresentation,
-                RootTree,
-                errors).IsValid;
             for (int i = 0; i < profiles.Count; i++)
             {
                 ActionProfile profile = profiles[i];
@@ -130,8 +180,8 @@ namespace ThirdPersonCharacter.Pipeline
                 }
 
                 valid &= profile.CollectConfigurationErrors(errors);
-                if (gameplayEffectDefinition != null)
-                    valid &= profile.CollectTagConfigurationErrors(gameplayEffectDefinition.TagCatalog, errors);
+                if (gameplayTagCatalog != null)
+                    valid &= profile.CollectTagConfigurationErrors(gameplayTagCatalog, errors);
                 if (string.IsNullOrEmpty(profile.ActionId))
                     continue;
 
@@ -153,8 +203,8 @@ namespace ThirdPersonCharacter.Pipeline
                 }
 
                 valid &= profile.CollectConfigurationErrors(errors);
-                if (gameplayEffectDefinition != null)
-                    valid &= profile.CollectTagConfigurationErrors(gameplayEffectDefinition.TagCatalog, errors);
+                if (gameplayTagCatalog != null)
+                    valid &= profile.CollectTagConfigurationErrors(gameplayTagCatalog, errors);
                 if (string.IsNullOrEmpty(profile.BehaviorId))
                     continue;
 
@@ -179,5 +229,17 @@ namespace ThirdPersonCharacter.Pipeline
 
             return valid;
         }
+
+#if UNITY_EDITOR
+        public void SetSimulationProgram(CharacterSimulationProgramAsset simulationProgram)
+        {
+            m_SimulationProgram = simulationProgram;
+        }
+
+        public void SetPresentationProjection(CharacterPresentationProjectionAsset presentationProjection)
+        {
+            m_PresentationProjection = presentationProjection;
+        }
+#endif
     }
 }

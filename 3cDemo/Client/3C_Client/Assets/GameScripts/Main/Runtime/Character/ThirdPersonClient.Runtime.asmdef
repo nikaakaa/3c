@@ -1,0 +1,28 @@
+{
+    "name": "ThirdPersonClient.Runtime",
+    "rootNamespace": "ThirdPersonCharacter",
+    "references": [
+        "ThirdPersonSimulation.Core",
+        "ThirdPersonSimulation.Float32",
+        "ThirdPersonSimulation.Unity",
+        "ThirdPersonGameplay",
+        "ThirdPersonCharacter.Pipeline.RootMotion",
+        "BTSMTL",
+        "BTSMTL.Diagnostics",
+        "BTSMTL.Timeline",
+        "BTSMTL.Timeline.Tree",
+        "BTSMTL.TreeDesigner",
+        "Kybernetik.Animancer",
+        "Cinemachine",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

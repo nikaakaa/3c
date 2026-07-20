@@ -16,8 +16,7 @@ public class ObjectFieldDrawer : PropertyDrawer
         ObjectField propertyField = new ObjectField();
         if (string.IsNullOrEmpty(attribute.BindPath))
         {
-            propertyField.bindingPath = property.propertyPath;
-            propertyField.Bind(property.serializedObject);
+            propertyField.BindProperty(property);
         }
         else
         {

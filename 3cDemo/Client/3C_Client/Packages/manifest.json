@@ -16,7 +16,7 @@
     "com.cysharp.unitask": "file:UniTask",
     "com.fantasy.unity": "2026.0.1020",
     "com.inspiaaa.unityhfsm": "https://github.com/Inspiaaa/UnityHFSM.git#upm",
-    "com.janooba.kcc": "file:com.janooba.kcc",
+    "com.thirdperson.dotrecast": "file:com.thirdperson.dotrecast",
     "com.tuyoogame.yooasset": "file:YooAsset",
     "com.unity.burst": "1.8.29",
     "com.unity.cinemachine": "2.10.7",

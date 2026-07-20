@@ -1,113 +1,59 @@
 # character-motion-simulation-boundary Specification
 
 ## Purpose
-TBD - created by archiving change refactor-character-motion-simulation-boundary. Update Purpose after archive.
+定义 Character Program 产生 portable motion request、Simulation Session 批量调用唯一 WorldSolver、World state 保存逻辑 body 真值以及 Network Model 装配独立运动后端的边界。
 ## Requirements
 ### Requirement: 运动语义、世界约束执行和逻辑位姿必须分层
 
-系统 MUST 将角色运动拆分为 gameplay `MotionIntent`、world-constrained Motion Executor 和 Logic Pose Port。`CharacterMotionStage` MUST 负责将 gameplay 来源解析为最终执行意图，并使用 executor result 生成 `MotionResult`；Motion Executor MUST 只负责在具体世界约束下执行运动；Logic Pose Port MUST 作为逻辑位姿读写入口。系统 MUST NOT 让 Graph、Timeline、Action 或 Network Model 直接调用具体运动组件。
+Compiled motion operations MUST在Evaluate阶段产生当前Numeric Target的contribution；唯一Motion accumulator MUST按Channel、Priority、Weight、BlendMode与ConsumeLowerChannels将Locomotion和Timeline contribution解析为每Actor唯一`ResolvedGameplayMotion`。当前Target唯一Body Motion Integrator MUST在全部Program Motion Modifier之后，根据committed `WorldBodyState`与compiled descriptor生成每Actor唯一`CharacterMotionRequest`和同Step plan。正式Execution Backend的WorldSolve Pass MUST汇总当前Step全部Actor request并调用一次`ICharacterWorldSolver.ResolveBatch`；Solver提供真实applied displacement、稳定Grounded与Collision后 MUST通过Target唯一Body Motion Finalize提交VerticalVelocity，Program Finalize MUST再产生唯一`CharacterBodySample`与Motion GameplayFact。Graph、Timeline、Action、Source、Presentation与concrete Solver MUST不拥有第二份Motion仲裁、重力积分或逻辑Transform真值。
 
-#### Scenario: LocalSolver 执行一帧运动
+#### Scenario: Timeline MotionCurve 提交位移
 
-- **WHEN** MotionStage 已完成 contribution 仲裁、modifier 和 correction plan
-- **THEN** MotionStage MUST 将最终 `MotionIntent` 交给正式 Motion Executor
-- **AND** executor MUST 返回实际执行结果
-- **AND** MotionStage MUST 从该结果生成唯一 `MotionResult`
+- **WHEN** compiled Timeline 在当前 Tick 产生 Action motion contribution
+- **THEN** Timeline module MUST只提交带稳定 source、channel、priority、weight、space 与 blend mode 的 contribution
+- **AND** 唯一Target Motion accumulator MUST与同Tick Locomotion contribution一起解析出ResolvedGameplayMotion
+- **AND** Body Motion Integrator MUST把玩法Y与环境gravity delta合成为一个CharacterMotionRequest
+- **AND** request MUST与同 Tick其它 Actor request 一起进入唯一 ResolveBatch
+- **AND** Finalize MUST记录Solver actual result与committed VerticalVelocity
 
-#### Scenario: Timeline 提交动作位移
+#### Scenario: Timeline 与 Locomotion 同 Tick 提交
 
-- **WHEN** Timeline MotionCurve 提交 Action channel contribution
-- **THEN** 该 contribution MUST 继续进入 MotionResolver
-- **AND** Timeline MUST NOT 选择 executor、physics backend 或 logic pose implementation
+- **WHEN** Timeline Action channel 与普通 Locomotion channel 在同一 Tick 都有 contribution
+- **THEN** MUST由同一个 Motion accumulator 按正式 channel 消费和混合规则处理
+- **AND** Timeline、StateMachine 或 Action module MUST不各自生成竞争的 WorldRequest
 
-### Requirement: Motion Executor 合同不得依赖 Unity 或业务作者结构
+### Requirement: WorldSolver 合同不得依赖 Unity 或业务作者结构
 
-Motion Executor 的正式合同 MUST 使用项目自有的逻辑体状态、执行输入和执行结果。合同 MUST NOT 暴露 `CharacterController`、`Transform`、Unity collision type、Graph、Timeline、Action、Animancer、Network Model packet 或 transport。执行结果 MUST 至少表达 requested/actual displacement、最终 position/rotation、velocity、grounded 和可诊断碰撞摘要。
+ICharacterWorldSolver contract shape MUST只使用当前 NumericProfile 的 portable world state、batch request/result、capability 和 Tick identity。UnityCharacterControllerWorldSolver MUST实现 Float32 target ABI并 MAY在 adapter 内使用 Unity API，但 Program、Kernel 和合同 assembly MUST不引用 CharacterController、Transform 或 UnityEngine 数值类型。
 
-#### Scenario: Unity CharacterController 实现 executor
+#### Scenario: Unity Solver
 
-- **WHEN** 当前 Unity LocalSolver 执行运动
-- **THEN** Unity adapter MAY 在实现内部调用 `CharacterController.Move`
-- **AND** adapter MUST 将 Unity 结果转换为正式 Motion Execution Result
-- **AND** CharacterMotionStage MUST NOT 读取 concrete `CharacterController`
+- **WHEN** Local Session 调用 UnityCharacterControllerWorldSolver
+- **THEN** CharacterController.Move MUST只出现在该 adapter concrete implementation 内
+- **AND** adapter MUST返回 portable batch result
 
-#### Scenario: 后续纯 CSharp KCC 实现 executor
+### Requirement: WorldSimulationState 必须唯一拥有逻辑位姿读写
 
-- **WHEN** 后续服务端模块提供纯 CSharp KCC
-- **THEN** 该实现 MAY 消费同一业务执行输入并产生同一语义结果
-- **AND** Character Graph、Timeline 和 Action authoring MUST 不因 backend 改变
+WorldSimulationState中的 BodyState MUST替代 Logic Pose Port/Transform作为 Core逻辑位姿真值。Unity Host MUST只在 WorldSolver binding与 Presentation adapter边界将 committed BodyState对齐到场景对象，MUST不让 Transform、Character stage、Session Source、其它 Pipeline Pass或 Presentation保存第二份可反写逻辑真值。
 
-### Requirement: Logic Pose Port 必须唯一拥有逻辑位姿读写
+#### Scenario: 应用 Solver Result
 
-系统 MUST 使用正式 Logic Pose Port 读取当前逻辑体状态，并应用 ExternalPose 或显式 authority correction 重定位。Presentation MUST 只写 visual root，不得通过 Logic Pose Port 反写表现插值。系统 MUST NOT 从 Host transform、Animancer transform、场景搜索或默认组件猜测 logic root。
-
-#### Scenario: ExternalPose 应用远端样本
-
-- **WHEN** Character motion authority 为 ExternalPose 且收到合法 external pose sample
-- **THEN** MotionStage MUST 通过 Logic Pose Port 应用样本
-- **AND** MUST 不调用 Motion Executor
-- **AND** MUST 不要求 `CharacterController`
-
-#### Scenario: 缺少 Logic Pose Port
-
-- **WHEN** 当前 authority mode 需要读取或写入逻辑位姿但未配置 Logic Pose Port
-- **THEN** Host/Pipeline 初始化 MUST 失败并报告明确配置来源
-- **AND** MUST 不使用 GameObject transform 作为 fallback
-
-### Requirement: CharacterMotionAuthority 必须决定所需运动端口
-
-`LocalSolver` MUST 要求 Logic Pose Port 和 Motion Executor；`ExternalPose` MUST 只要求 Logic Pose Port并禁止调用 LocalSolver executor；`None` MUST 不执行 gameplay motion。Host MUST 在 pipeline 创建前验证组合，运行时 MUST NOT 自动创建、切换或搜索 adapter。
-
-#### Scenario: LocalSolver 缺少 executor
-
-- **WHEN** Host 配置 LocalSolver 但没有正式 Motion Executor
-- **THEN** pipeline 创建 MUST 失败
-- **AND** MUST 不自动寻找 `CharacterController` 或创建默认 motor
-
-#### Scenario: ExternalPose 配置了 Unity executor
-
-- **WHEN** Host 配置 ExternalPose 且 scene 上仍存在 Unity executor component
-- **THEN** Pipeline MUST 不调用该 executor
-- **AND** external pose MUST 保持唯一逻辑位姿来源
-
-### Requirement: Correction 必须由 MotionStage 编排并通过正式端口应用
-
-MotionStage MUST 继续拥有 correction phase、application extent 和 acknowledgement provenance。可参与碰撞的 correction delta MUST 进入唯一 execution intent；需要显式重定位的正式 correction MUST 通过 Logic Pose Port 应用。Motion Executor MUST NOT 读取 server tick、input sequence、ack、prediction policy 或 Network Model 类型。
-
-#### Scenario: 部分 correction 参与碰撞执行
-
-- **WHEN** correction plan 选择本 tick 应用部分 position/yaw error
-- **THEN** 该 delta MUST 在 MotionStage 中合入最终 execution intent
-- **AND** executor actual result MUST 决定实际 application extent
-- **AND** 同一 correction MUST 不再通过 pose port 重复应用
-
-#### Scenario: 完整 correction 显式重定位
-
-- **WHEN** correction plan 选择正式完整重定位
-- **THEN** MotionStage MUST 通过 Logic Pose Port 应用目标 pose
-- **AND** correction result MUST 记录实际 pose、input sequence 和 server tick
-- **AND** Presentation MUST 不执行第二次逻辑重定位
+- **WHEN** WorldSolve Pass返回 Actor的 actual body result且 outer transaction成功
+- **THEN** Execution Backend MUST在最终 Commit前更新唯一 WorldSimulationState
+- **AND** Presentation MUST只从 committed body sample驱动 visual root
 
 ### Requirement: Unity CharacterController 必须只存在于正式 adapter 内
 
-当前 Unity 实现 MUST 使用唯一 `UnityCharacterControllerMotionExecutor` 或等价正式 adapter 包装 `CharacterController.Move`、rotation、grounded 和碰撞结果。`CharacterPipelineHost`、`CharacterPipeline` 和 `CharacterMotionStage` MUST NOT 持有 concrete `CharacterController` 依赖。迁移后 MUST 删除旧序列化字段、构造参数、direct Move 和 direct Transform 路径。
+Unity CharacterController引用、Move调用和场景 body binding MUST只存在于 UnityCharacterControllerWorldSolver/Host adapter内。Graph、Timeline、Kernel、Session Source、Pipeline Pass、Execution Backend、Network Model、Committer和 Diagnostics MUST不直接调用它。
 
-#### Scenario: Sandbox Corin 使用 LocalSolver
+#### Scenario: 搜索 CharacterController.Move
 
-- **WHEN** Sandbox 创建 Corin pipeline
-- **THEN** Host MUST 显式装配 Logic Pose Port 与 Unity Motion Executor
-- **AND** executor MUST 显式绑定现有 `CharacterController`
-- **AND** Host MUST 不保存第二份 `m_CharacterController` 引用
-
-#### Scenario: 搜索直接 Move 调用
-
-- **WHEN** 迁移完成后检查 CharacterPipeline 主线
-- **THEN** `CharacterController.Move` MUST 只存在于正式 Unity executor implementation
-- **AND** Graph、Timeline、MotionStage、Network 和 Presentation MUST 不直接调用它
+- **WHEN** 迁移完成后检查 Character Gameplay主线
+- **THEN** concrete Move调用 MUST只存在正式 Unity WorldSolver implementation
 
 ### Requirement: 权威服务端必须独立生成并执行 canonical motion
 
-服务端权威运动 MUST 从服务端接受的 canonical input、action state 和配置生成 motion intent，并使用选定 authoritative simulation backend 得到 canonical pose。客户端 `ResolvedCharacterMotionFact` MAY 用于 prediction comparison、diagnostics 或 correction calculation，但 MUST NOT 作为服务端唯一 canonical displacement 或 canonical pose 来源。
+服务端权威运动 MUST从服务端接受的canonical input、Action state与Program配置生成 `CharacterMotionRequest`，并使用选定authoritative WorldSolver得到canonical body。客户端预测的request、body sample或Transform MAY用于prediction comparison与diagnostics，但 MUST NOT成为服务端canonical displacement或body来源。
 
 #### Scenario: Unity 权威服务端
 
@@ -115,26 +61,66 @@ MotionStage MUST 继续拥有 correction phase、application extent 和 acknowle
 - **THEN** 服务端 MUST 独立推进 canonical input/action motion 语义
 - **AND** MUST 使用服务端 Unity executor 产生 canonical pose
 
-#### Scenario: 纯 CSharp 权威服务端
+#### Scenario: DotRecast 权威服务端
 
-- **WHEN** ServerAuthoritativeHybrid 选择纯 CSharp KCC backend
+- **WHEN** ServerAuthoritativeHybrid 选择InProcess DotRecast authority backend
 - **THEN** 服务端 MUST 独立推进 canonical input/action motion 语义
-- **AND** MUST 使用纯 CSharp world constraint implementation 产生 canonical pose
-- **AND** DotRecast navigation query MUST NOT 被当作完整 KCC
+- **AND** MUST使用正式 `DotRecastWorldSolver` 完成navigation surface、ground、slope、step、wall slide与actor contact约束
+- **AND** MUST不把单独的navigation query或客户端body当作完整Solver结果
 
 ### Requirement: 确定性模拟必须属于独立完整 Network Model
 
-确定性 KCC、lockstep 或 rollback MUST 作为独立完整 Network Model 设计，拥有自己的确定性数值、world state、input history、replay 和 side-effect commit 规则。当前 float Motion Executor 合同 MUST NOT 暴露未实现 deterministic enum、空 backend、量化 fallback 或运行时模型切换。
+Deterministic KCC、CollisionWorldArtifact、canonical input bundle、Fixed Program/State/Kernel、Fixed `SimulationWorldStateSet/WorldSimulationState/SimulationWorldSnapshot` history、restore/replay、state hash、snapshot recovery 和 side-effect commit MUST共同属于完整 DeterministicRollback Network Model。该模型 MUST从与 Float32 模型相同的 validated Semantic IR artifact 生成独立 Fixed ABI，但 MUST不复用 Float32 CharacterSimulationProgram/SimulationKernel，也 MUST不使用 Unity CharacterController、DotRecast 或 ServerAuthoritative correction 作为 deterministic world execution。
 
-#### Scenario: 当前查看 Network Model 配置
+#### Scenario: 完整安装 Rollback Model
 
-- **WHEN** 确定性模型尚未完整实现
-- **THEN** authoring UI MUST 不显示 deterministic/rollback 选项
-- **AND** CharacterPipeline MUST 不增加 model switch
+- **WHEN** ModelDefinition、Endpoint、History、KCC、Collision World、Replay、Hash、Recovery 和 Committer 全部可用
+- **THEN** DeterministicRollback MAY出现在 SessionHost authoring UI
 
-#### Scenario: 后续实现确定性模型
+### Requirement: World Solver 必须一次处理当前 Session 的 Actor batch
 
-- **WHEN** 后续 change 完成确定性 runtime、配置、actor binding 和 tick integration
-- **THEN** 它 MAY 复用 gameplay identity 与 authoring facts
-- **AND** MUST 不被迫通过 float executor contract 表达确定性内部状态
+正式 WorldSolve Pass MUST按 stable ActorId顺序构造 WorldSolveBatchRequest，并在当前 SimulationStep全部 Actor Evaluate完成后调用一次当前唯一 WorldSolver。Solver MAY按自己的正式语义顺序处理角色或共同求解，但 MUST返回与 request set精确一一对应的 result。其它 Pass和 Character Host MUST不直接调用 world mutation。
 
+#### Scenario: 两个 Actor 同 Tick 请求移动
+
+- **WHEN** ActorA与 ActorB在同一 SimulationTick都产生 MotionRequest
+- **THEN** 两个 request MUST进入同一个 batch
+- **AND** MUST不由两个 Character runtime各自独立调用 world mutation
+
+#### Scenario: Rollback batch 中两个 Active Actor 接触
+
+- **WHEN** Fixed Rollback batch 中两个 Active Actor 的静态世界 candidate 在同一 Tick 发生接触
+- **THEN** Deterministic KCC MUST按 stable ActorId pair order执行连续 sweep、初始重叠去穿透和 `SolidBodyBlock`
+- **AND** MUST在 Actor contact 后重新约束静态世界并验证最终间距
+- **AND** MUST只在全部 Actor 成功后原子提交完整 batch body result
+- **AND** MUST不调用 DotRecast ActorContactSolver、Unity Physics 或 Presentation correction
+
+### Requirement: Model Correction 必须由具体 Source 与 Pipeline Pass 拥有
+
+Prediction reconciliation、authoritative restore、ack和 visual recovery policy MUST归需要它们的具体 Network Model Source及显式 Ingress/Schedule/Egress Pass。Kernel、motion operation、Common Host和 WorldSolver MUST不读取 server tick、ack、correction packet或 model policy。Schedule Pass只能通过完整 restore directive和 ordered SimulationStep影响 working state，MUST不向 motion contribution注入公共 correction。
+
+#### Scenario: ServerAuthoritative 发现预测差异
+
+- **WHEN** 后续 ServerAuthoritative Source/Pass发现 authoritative observation与预测状态不同
+- **THEN** MUST在 model-owned history与 Schedule plan中决定 restore/replay sequence
+- **AND** MUST不恢复 Character内部 correction branch或直接修改 Transform
+
+### Requirement: WorldCapability与WorldFeature必须表达不同层级
+
+WorldCapability MUST表达Program/Pipeline依赖的通用结果合同，WorldFeature MUST表达Solver具体世界机制。BodyMotion、Grounding、Collision、Reconstructible与AirborneVerticalMotion MUST作为通用capability；NavigationSurface、Ground、Slope、Step、WallSlide、DynamicObstacle与ActorCollision MUST作为feature。Composer MUST分别校验两者。AirborneVerticalMotion MUST只由完整消费XYZ request、报告稳定Grounded和方向性Above/Below并进入统一Body Motion Finalize的Solver声明。
+
+#### Scenario: Composition要求NavigationSurface
+
+- **WHEN** Program capability满足但Solver没有NavigationSurface feature
+- **THEN** Composition MUST失败
+- **AND** MUST不把通用Collision当作NavigationSurface
+
+### Requirement: 同一WorldSolver实现必须可服务不同Session Source
+
+WorldSolver MUST只消费portable WorldState与CharacterMotionRequest并返回portable batch result，MUST不读取Session Source、Network Model、packet、ack、history或Presentation。同一Solver实现 MAY装配到Local、Prediction或Authority Session，但每个Session MUST拥有独立runtime实例与WorldState。
+
+#### Scenario: 两个Session使用DotRecast
+
+- **WHEN** 两个不同Source的Float32 Session选择相同DotRecast Solver Definition
+- **THEN** 两者 MUST执行同一Solver语义
+- **AND** MUST不共享mutable query或WorldState

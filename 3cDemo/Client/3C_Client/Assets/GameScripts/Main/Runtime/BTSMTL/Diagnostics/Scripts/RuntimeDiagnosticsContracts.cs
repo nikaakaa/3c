@@ -5,23 +5,23 @@ namespace BTSMTL.Diagnostics
 {
     public readonly struct RuntimeProgramRevision : IEquatable<RuntimeProgramRevision>
     {
-        public RuntimeProgramRevision(string programId, ulong compilationRevision, string sourceContentHash)
+        public RuntimeProgramRevision(string programId, string sourceRevision, string programHash)
         {
             ProgramId = programId ?? string.Empty;
-            CompilationRevision = compilationRevision;
-            SourceContentHash = sourceContentHash ?? string.Empty;
+            SourceRevision = sourceRevision ?? string.Empty;
+            ProgramHash = programHash ?? string.Empty;
         }
 
         public string ProgramId { get; }
-        public ulong CompilationRevision { get; }
-        public string SourceContentHash { get; }
-        public bool IsValid => !string.IsNullOrEmpty(ProgramId) && CompilationRevision != 0 && !string.IsNullOrEmpty(SourceContentHash);
+        public string SourceRevision { get; }
+        public string ProgramHash { get; }
+        public bool IsValid => !string.IsNullOrEmpty(ProgramId) && !string.IsNullOrEmpty(SourceRevision) && !string.IsNullOrEmpty(ProgramHash);
 
         public bool Equals(RuntimeProgramRevision other)
         {
-            return CompilationRevision == other.CompilationRevision &&
-                   string.Equals(ProgramId, other.ProgramId, StringComparison.Ordinal) &&
-                   string.Equals(SourceContentHash, other.SourceContentHash, StringComparison.Ordinal);
+            return string.Equals(ProgramId, other.ProgramId, StringComparison.Ordinal) &&
+                   string.Equals(SourceRevision, other.SourceRevision, StringComparison.Ordinal) &&
+                   string.Equals(ProgramHash, other.ProgramHash, StringComparison.Ordinal);
         }
 
         public override bool Equals(object obj) => obj is RuntimeProgramRevision other && Equals(other);
@@ -31,13 +31,47 @@ namespace BTSMTL.Diagnostics
             unchecked
             {
                 int hash = ProgramId?.GetHashCode() ?? 0;
-                hash = hash * 31 + CompilationRevision.GetHashCode();
-                hash = hash * 31 + (SourceContentHash?.GetHashCode() ?? 0);
+                hash = hash * 31 + (SourceRevision?.GetHashCode() ?? 0);
+                hash = hash * 31 + (ProgramHash?.GetHashCode() ?? 0);
                 return hash;
             }
         }
 
-        public override string ToString() => $"{ProgramId}@{CompilationRevision}:{SourceContentHash}";
+        public override string ToString() => $"{ProgramId}@{SourceRevision}:{ProgramHash}";
+    }
+
+    public enum RuntimeSourceTargetKind
+    {
+        Source,
+        Operation,
+        Constant,
+        StateSlot,
+        Reference,
+        Producer,
+        CatalogEntry,
+        BodyMotion
+    }
+
+    public readonly struct RuntimeSourceTarget : IEquatable<RuntimeSourceTarget>
+    {
+        public RuntimeSourceTarget(RuntimeSourceTargetKind kind, int index)
+        {
+            if (kind == RuntimeSourceTargetKind.Source && index != -1)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            if (kind != RuntimeSourceTargetKind.Source && index < 0)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            Kind = kind;
+            Index = index;
+        }
+
+        public RuntimeSourceTargetKind Kind { get; }
+        public int Index { get; }
+        public bool IsProgramTarget => Kind != RuntimeSourceTargetKind.Source;
+        public static RuntimeSourceTarget Source => new RuntimeSourceTarget(RuntimeSourceTargetKind.Source, -1);
+        public bool Equals(RuntimeSourceTarget other) => Kind == other.Kind && Index == other.Index;
+        public override bool Equals(object obj) => obj is RuntimeSourceTarget other && Equals(other);
+        public override int GetHashCode() => (int)Kind * 397 ^ Index;
+        public override string ToString() => IsProgramTarget ? $"{Kind}:{Index}" : "Source";
     }
 
     public enum RuntimeSourceElementKind
@@ -50,7 +84,8 @@ namespace BTSMTL.Diagnostics
         Timeline,
         Track,
         Clip,
-        TreeClip
+        TreeClip,
+        BodyMotionProfile
     }
 
     public readonly struct RuntimeSourceElementKey : IEquatable<RuntimeSourceElementKey>
@@ -78,7 +113,9 @@ namespace BTSMTL.Diagnostics
         public string TrackAuthoringId { get; }
         public string ClipAuthoringId { get; }
         public bool IsValid => Kind != RuntimeSourceElementKind.None &&
-                               (!string.IsNullOrEmpty(GraphAuthoringId) || !string.IsNullOrEmpty(TimelineAuthoringId));
+                               (!string.IsNullOrEmpty(GraphAuthoringId) ||
+                                !string.IsNullOrEmpty(TimelineAuthoringId) ||
+                                Kind == RuntimeSourceElementKind.BodyMotionProfile && !string.IsNullOrEmpty(ElementAuthoringId));
 
         public bool Equals(RuntimeSourceElementKey other)
         {
@@ -114,6 +151,8 @@ namespace BTSMTL.Diagnostics
         public static RuntimeSourceElementKey Track(string timelineId, string trackId) => new RuntimeSourceElementKey(RuntimeSourceElementKind.Track, timelineAuthoringId: timelineId, trackAuthoringId: trackId);
         public static RuntimeSourceElementKey Clip(string timelineId, string trackId, string clipId, bool treeClip = false) =>
             new RuntimeSourceElementKey(treeClip ? RuntimeSourceElementKind.TreeClip : RuntimeSourceElementKind.Clip, timelineAuthoringId: timelineId, trackAuthoringId: trackId, clipAuthoringId: clipId);
+        public static RuntimeSourceElementKey BodyMotionProfile(string assetPath) =>
+            new RuntimeSourceElementKey(RuntimeSourceElementKind.BodyMotionProfile, elementAuthoringId: assetPath);
     }
 
     public readonly struct RuntimeSourceElementHandle : IEquatable<RuntimeSourceElementHandle>
@@ -245,7 +284,9 @@ namespace BTSMTL.Diagnostics
         Animation = 1 << 4,
         Motion = 1 << 5,
         GameplayEffect = 1 << 6,
-        All = Graph | StateMachine | Timeline | Blackboard | Animation | Motion | GameplayEffect
+        Network = 1 << 7,
+        FootPlacement = 1 << 8,
+        All = Graph | StateMachine | Timeline | Blackboard | Animation | Motion | GameplayEffect | Network | FootPlacement
     }
 
     public enum RuntimeTraceEventKind
@@ -308,10 +349,21 @@ namespace BTSMTL.Diagnostics
         AnimationPlaybackOutgoing,
         AnimationPlaybackRetired,
         AnimationFade,
+        AnimationMarkerSync,
         PresentationInterpolated,
         CameraSnapshot,
         CameraRequest,
-        CameraCue
+        CameraCue,
+        SimulationTick,
+        SimulationRestore,
+        SimulationEvaluate,
+        SimulationWorldBatch,
+        SimulationFinalize,
+        SimulationStatePublished,
+        SimulationCommit,
+        SimulationFailure,
+        SimulationNetworkModel,
+        FootPlacementSnapshot
     }
 
     public enum DebugValueKind
@@ -510,3 +562,5 @@ namespace BTSMTL.Diagnostics
         IDebugSourceMap SourceMap { get; }
     }
 }
+
+

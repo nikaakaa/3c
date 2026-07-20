@@ -403,6 +403,39 @@ namespace YooAsset
         {
             return _records.Keys.ToList();
         }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public List<CachedBundleFileInfo> GetCachedBundleFileInfos()
+        {
+            var result = new List<CachedBundleFileInfo>(_records.Count);
+            foreach (KeyValuePair<string, RecordFileElement> pair in _records)
+            {
+                result.Add(new CachedBundleFileInfo(pair.Key, pair.Value.DataFileSize));
+            }
+            return result;
+        }
+
+        public bool CorruptCachedBundleFile(string bundleGUID)
+        {
+            if (!_records.TryGetValue(bundleGUID, out RecordFileElement element) ||
+                !File.Exists(element.DataFilePath))
+            {
+                return false;
+            }
+
+            using (var stream = new FileStream(element.DataFilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                int value = stream.ReadByte();
+                if (value < 0)
+                {
+                    return false;
+                }
+                stream.Position = 0;
+                stream.WriteByte((byte)(value ^ 0xFF));
+                stream.Flush();
+            }
+            return true;
+        }
+#endif
         public RecordFileElement GetRecordFileElement(PackageBundle bundle)
         {
             if (_records.TryGetValue(bundle.BundleGUID, out RecordFileElement element))

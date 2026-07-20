@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>ThirdPersonSimulation.NavigationBuildTool</AssemblyName>
+    <RootNamespace>ThirdPersonSimulation.NavigationBuildTool</RootNamespace>
+    <DotRecastSourceRoot>$(MSBuildThisFileDirectory)..\..\..\3cDemo\Client\3C_Client\Packages\com.thirdperson.dotrecast\Runtime</DotRecastSourceRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="NavigationSurfaceBuilder.cs" />
+    <Compile Include="$(DotRecastSourceRoot)\DotRecast.Recast\**\*.cs" LinkBase="DotRecast.Recast" />
+    <ProjectReference Include="..\ThirdPersonSimulation.DotRecast\ThirdPersonSimulation.DotRecast.csproj" />
+  </ItemGroup>
+</Project>

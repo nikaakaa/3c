@@ -15,7 +15,7 @@ public class ScriptableObjectField : VisualElement
     SerializedProperty m_SerializedProperty;
     UnityEngine.Object m_Owner;
 
-    public ScriptableObjectField(Type targetType, string bindPath, SerializedProperty serializedProperty)
+    public ScriptableObjectField(Type targetType, SerializedProperty serializedProperty)
     {
         var visualTree = Resources.Load<VisualTreeAsset>("VisualTree/ScriptableObjectField");
         visualTree?.CloneTree(this);
@@ -38,8 +38,7 @@ public class ScriptableObjectField : VisualElement
         m_ObjectField = new ObjectField();
         m_ObjectField.name = "objectField";
         m_ObjectField.objectType = targetType;
-        m_ObjectField.bindingPath = bindPath;
-        m_ObjectField.Bind(m_SerializedProperty.serializedObject);
+        m_ObjectField.BindProperty(m_SerializedProperty);
         m_ObjectField.RegisterValueChangedCallback(OnValueChanged);
         top.Add(m_ObjectField);
 
@@ -80,7 +79,7 @@ public class ScriptableObjectField : VisualElement
                     if (serializedProperty != null)
                     {
                         PropertyField propertyField = new PropertyField(serializedProperty);
-                        propertyField.Bind(serializedObject);
+                        propertyField.BindProperty(serializedProperty);
                         m_ScriptableObjectView.Add(propertyField);
                     }
                 }
@@ -111,7 +110,7 @@ public class ScriptableObjectDrawer : PropertyDrawer
     public override VisualElement CreatePropertyGUI(SerializedProperty property)
     {
         var attribute = fieldInfo.GetCustomAttribute<ScriptableObjectFieldAttribute>();
-        ScriptableObjectField scriptableObjectField = new ScriptableObjectField(attribute.Type, property.propertyPath, property);
+        ScriptableObjectField scriptableObjectField = new ScriptableObjectField(attribute.Type, property);
         return scriptableObjectField;
     }
 }

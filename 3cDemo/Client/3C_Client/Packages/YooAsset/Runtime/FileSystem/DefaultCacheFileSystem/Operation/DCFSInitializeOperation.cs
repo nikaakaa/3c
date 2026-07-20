@@ -18,6 +18,9 @@ namespace YooAsset
         private VerifyCacheFilesOperation _verifyCacheFilesOp;
         private ESteps _steps = ESteps.None;
 
+        internal int ValidCacheFileCount => _verifyCacheFilesOp?.SucceedCount ?? 0;
+        internal int InvalidCacheFileCount => _verifyCacheFilesOp?.FailedCount ?? 0;
+
 
         internal DCFSInitializeOperation(DefaultCacheFileSystem fileSystem)
         {

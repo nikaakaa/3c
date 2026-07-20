@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>ThirdPerson.Server.Gate.Entity</AssemblyName>
+    <RootNamespace>Fantasy</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Fantasy-Net" Version="2026.0.1020" />
+  </ItemGroup>
+  <Target Name="ExcludeGateAuthoringConfigurationFromOutput"
+          BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <None Update="$(ProjectDir)Fantasy.config"
+            CopyToOutputDirectory="Never"
+            CopyToPublishDirectory="Never" />
+      <None Update="$(ProjectDir)Fantasy.xsd"
+            CopyToOutputDirectory="Never"
+            CopyToPublishDirectory="Never" />
+    </ItemGroup>
+  </Target>
+</Project>

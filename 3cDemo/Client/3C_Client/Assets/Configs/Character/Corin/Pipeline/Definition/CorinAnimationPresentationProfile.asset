@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 248c097b8659488296c54f95ad0de83b, type: 3}
+  m_Name: CorinAnimationPresentationProfile
+  m_EditorClassIdentifier: 
+  m_Layers:
+  - m_Id: Base
+    m_AnimancerLayerIndex: 0
+    m_AvatarMask: {fileID: 0}
+    m_BlendMode: 0
+    m_OutputPolicy: 1
+  m_TransitionLibrary: {fileID: 11400000, guid: 52cbd9f7448a4f36b46ae5a7e279ace1,
+    type: 2}
+  m_ProducerBindings:
+  - m_TimelineAuthoringId: c6e83124-336e-4405-8d9d-0e6b28fd8103
+    m_TrackAuthoringId: dc73675d-ae72-48f0-9e57-edcbd0bb55ad
+    m_Transition: {fileID: 11400001, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6
+  - m_TimelineAuthoringId: fd83f793-f3c3-4d28-abec-ccbef3f0f3d5
+    m_TrackAuthoringId: 9f166e87-b3bc-48ca-a90a-7ef476cfe3bd
+    m_Transition: {fileID: 11400002, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6
+  - m_TimelineAuthoringId: e7ea1649-1085-47f2-b9ab-4b013ecb78b3
+    m_TrackAuthoringId: 762b4d39-92af-42f3-b8c0-7ac9be15afb7
+    m_Transition: {fileID: 11400003, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6
+  - m_TimelineAuthoringId: 4e832b73-5961-4eb3-875d-d729555d1aa9
+    m_TrackAuthoringId: 7e3c2795-f922-44d1-bb5b-b1dbe5baf99a
+    m_Transition: {fileID: 11400004, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6
+  - m_TimelineAuthoringId: 68286aed-b84f-4b77-8906-a43806c41bfa
+    m_TrackAuthoringId: e9e8b58c-4813-4b9f-9e32-8b9f2b57d3f9
+    m_Transition: {fileID: 11400005, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6
+  - m_TimelineAuthoringId: 1fd891af-e93c-4208-b2d3-7f448e87d97a
+    m_TrackAuthoringId: 681cd134-2253-4956-8ffb-55a893974192
+    m_Transition: {fileID: 11400006, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6
+  - m_TimelineAuthoringId: 04758f73-9b79-4142-ab05-5c4159ea6ba8
+    m_TrackAuthoringId: e1e9df79-5033-4856-857e-0060a28517f2
+    m_Transition: {fileID: 11400007, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6
+  - m_TimelineAuthoringId: 10f4cb90-8b9a-4944-b77c-14efc9a3124d
+    m_TrackAuthoringId: 0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_Transition: {fileID: 11400008, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6
+  - m_TimelineAuthoringId: 40908a3b-5568-459b-b4f0-b871155dc226
+    m_TrackAuthoringId: 321b312e-7450-4482-b10e-11066d42129c
+    m_Transition: {fileID: 11400009, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6
+  - m_TimelineAuthoringId: 1ec9175b-a959-4960-af6b-4177f601425f
+    m_TrackAuthoringId: ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_Transition: {fileID: 11400010, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6
+  - m_TimelineAuthoringId: 86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27
+    m_TrackAuthoringId: ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_Transition: {fileID: 11400011, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6
+  - m_TimelineAuthoringId: 001b250e-9f1c-44ab-a170-c43896e756ac
+    m_TrackAuthoringId: 5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_Transition: {fileID: 11400009, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6
+  - m_TimelineAuthoringId: 9fa96566-14a4-47e4-b6ea-c6c710ffbbcf
+    m_TrackAuthoringId: 1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_Transition: {fileID: 11400009, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6
+  - m_TimelineAuthoringId: 7b4f6ad5-7513-4a00-92f3-d34c3761d2f9
+    m_TrackAuthoringId: ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_Transition: {fileID: 11400009, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
+    m_Easing: 6

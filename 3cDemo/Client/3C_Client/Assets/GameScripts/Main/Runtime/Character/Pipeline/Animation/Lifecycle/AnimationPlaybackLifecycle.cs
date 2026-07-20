@@ -44,6 +44,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public bool HasVisualSample { get; }
     }
 
+    public readonly struct AnimationLayerPlaybackVisibility
+    {
+        public AnimationLayerPlaybackVisibility(
+            string layerId,
+            AnimationPlaybackId current,
+            AnimationPlaybackId pending,
+            IReadOnlyCollection<AnimationPlaybackId> outgoing)
+        {
+            LayerId = layerId ?? string.Empty;
+            Current = current;
+            Pending = pending;
+            Outgoing = outgoing;
+        }
+
+        public string LayerId { get; }
+        public AnimationPlaybackId Current { get; }
+        public AnimationPlaybackId Pending { get; }
+        public IReadOnlyCollection<AnimationPlaybackId> Outgoing { get; }
+    }
+
     public sealed class AnimationPlaybackLifecycle
     {
         readonly CharacterAnimationPresentationBindingIndex m_Bindings;
@@ -75,6 +95,64 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_LayersById.Add(layer.Id, state);
             }
             m_Layers.Sort((left, right) => left.Layer.Order.CompareTo(right.Layer.Order));
+        }
+
+        public bool TryGetCurrentPlayback(string layerId, out AnimationPlaybackId playbackId)
+        {
+            if (m_LayersById.TryGetValue(layerId ?? string.Empty, out LayerState layer) && layer.Current.IsValid)
+            {
+                playbackId = layer.Current;
+                return true;
+            }
+            playbackId = default;
+            return false;
+        }
+
+        public bool TryGetPendingPlayback(string layerId, out AnimationPlaybackId playbackId)
+        {
+            if (m_LayersById.TryGetValue(layerId ?? string.Empty, out LayerState layer) && layer.Pending.IsValid)
+            {
+                playbackId = layer.Pending;
+                return true;
+            }
+            playbackId = default;
+            return false;
+        }
+
+        public bool Retains(AnimationPlaybackId playbackId)
+        {
+            if (!playbackId.IsValid)
+                return false;
+            for (int i = 0; i < m_Layers.Count; i++)
+            {
+                LayerState layer = m_Layers[i];
+                if (layer.Current.Equals(playbackId) ||
+                    layer.Pending.Equals(playbackId) ||
+                    layer.Selection.HasPlayback && layer.Selection.PlaybackId.Equals(playbackId) ||
+                    layer.Outgoing.Contains(playbackId))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public void BuildVisibilitySnapshot(List<AnimationLayerPlaybackVisibility> destination)
+        {
+            if (destination == null)
+                throw new ArgumentNullException(nameof(destination));
+            destination.Clear();
+            for (int i = 0; i < m_Layers.Count; i++)
+            {
+                LayerState layer = m_Layers[i];
+                var outgoing = new AnimationPlaybackId[layer.Outgoing.Count];
+                layer.Outgoing.CopyTo(outgoing);
+                destination.Add(new AnimationLayerPlaybackVisibility(
+                    layer.Layer.Id,
+                    layer.Current,
+                    layer.Pending,
+                    outgoing));
+            }
         }
 
         public void CollectSampleDemand(

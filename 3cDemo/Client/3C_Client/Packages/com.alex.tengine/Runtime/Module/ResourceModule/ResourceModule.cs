@@ -53,13 +53,6 @@ namespace TEngine
         }
 
         /// <summary>
-        /// 资源服务器地址。
-        /// </summary>
-        public string HostServerURL { get; set; }
-
-        public string FallbackHostServerURL { get; set; }
-
-        /// <summary>
         /// WebGL：加载资源方式
         /// </summary>
         public LoadResWayWebGL LoadResWayWebGL { get; set; }
@@ -137,7 +130,9 @@ namespace TEngine
             SetObjectPoolModule(objectPoolManager);
         }
 
-        public async UniTask<InitializationOperation> InitPackage(string packageName, bool needInitMainFest = false)
+        public async UniTask<ResourcePackageInitializationResult> InitPackage(
+            ResourcePackageInitializationOptions options,
+            Action<float> verificationProgress = null)
         {
 #if UNITY_EDITOR
             //编辑器模式使用。
@@ -147,13 +142,16 @@ namespace TEngine
             //运行时使用。
             EPlayMode playMode = (EPlayMode)PlayMode;
 #endif
+            if (options == null) throw new ArgumentNullException(nameof(options));
+            options.Validate(playMode);
+            string packageName = options.PackageName;
 
             if (PackageMap.TryGetValue(packageName, out var resourcePackage))
             {
                 if (resourcePackage.InitializeStatus is EOperationStatus.Processing or EOperationStatus.Succeed)
                 {
                     Log.Error($"ResourceSystem has already init package : {packageName}");
-                    return null;
+                    return new ResourcePackageInitializationResult(null, -1, -1);
                 }
                 else
                 {
@@ -188,7 +186,7 @@ namespace TEngine
             if (playMode == EPlayMode.OfflinePlayMode)
             {
                 var createParameters = new OfflinePlayModeParameters();
-                createParameters.BuildinFileSystemParameters = FileSystemParameters.CreateDefaultBuildinFileSystemParameters(decryptionServices);
+                createParameters.BuildinFileSystemParameters = CreateBuildinFileSystemParameters(options, decryptionServices);
                 createParameters.AutoUnloadBundleWhenUnused = AutoUnloadBundleWhenUnused;
                 initializationOperation = package.InitializeAsync(createParameters);
             }
@@ -196,12 +194,10 @@ namespace TEngine
             // 联机运行模式
             if (playMode == EPlayMode.HostPlayMode)
             {
-                string defaultHostServer = HostServerURL;
-                string fallbackHostServer = FallbackHostServerURL;
-                IRemoteServices remoteServices = new RemoteServices(defaultHostServer, fallbackHostServer);
+                IRemoteServices remoteServices = new SingleEndpointRemoteServices(options.ResourceEndpoint);
                 var createParameters = new HostPlayModeParameters();
-                createParameters.BuildinFileSystemParameters = FileSystemParameters.CreateDefaultBuildinFileSystemParameters(decryptionServices);
-                createParameters.CacheFileSystemParameters = FileSystemParameters.CreateDefaultCacheFileSystemParameters(remoteServices, decryptionServices);
+                createParameters.BuildinFileSystemParameters = CreateBuildinFileSystemParameters(options, decryptionServices);
+                createParameters.CacheFileSystemParameters = CreateCacheFileSystemParameters(options, remoteServices, decryptionServices);
                 createParameters.AutoUnloadBundleWhenUnused = AutoUnloadBundleWhenUnused;
                 initializationOperation = package.InitializeAsync(createParameters);
             }
@@ -211,9 +207,7 @@ namespace TEngine
             {
                 var createParameters = new WebPlayModeParameters();
                 IWebDecryptionServices webDecryptionServices = CreateWebDecryptionServices();
-                string defaultHostServer = HostServerURL;
-                string fallbackHostServer = FallbackHostServerURL;
-                IRemoteServices remoteServices = new RemoteServices(defaultHostServer, fallbackHostServer);
+                IRemoteServices remoteServices = new SingleEndpointRemoteServices(options.ResourceEndpoint);
 #if UNITY_WEBGL && WEIXINMINIGAME && !UNITY_EDITOR
                 Log.Info("=======================WEIXINMINIGAME=======================");
                 // 注意：如果有子目录，请修改此处！
@@ -232,32 +226,56 @@ namespace TEngine
                 initializationOperation = package.InitializeAsync(createParameters);
             }
 
-            await initializationOperation.ToUniTask();
-
-            Log.Info($"Init resource package version : {initializationOperation?.Status}");
-
-            if (needInitMainFest)
+            if (initializationOperation == null)
             {
-                // 2. 请求资源清单的版本信息
-                var requestPackageVersionOperation = package.RequestPackageVersionAsync();
-                await requestPackageVersionOperation;
-                if (requestPackageVersionOperation.Status == EOperationStatus.Succeed)
-                {
-                    // 3. 传入的版本信息更新资源清单
-                    var updatePackageManifestAsync = package.UpdatePackageManifestAsync(requestPackageVersionOperation.PackageVersion);
-                    await updatePackageManifestAsync;
-                    if (updatePackageManifestAsync.Status == EOperationStatus.Failed)
-                    {
-                        Log.Fatal($"Update package manifest failed : {updatePackageManifestAsync.Status}");
-                    }
-                }
-                else
-                {
-                    Log.Fatal($"Request package version failed : {requestPackageVersionOperation.Status}");
-                }
+                throw new NotSupportedException($"Unsupported resource play mode: {playMode}.");
             }
 
-            return initializationOperation;
+            verificationProgress?.Invoke(0f);
+            while (!initializationOperation.IsDone)
+            {
+                verificationProgress?.Invoke(Mathf.Clamp01(initializationOperation.Progress));
+                await UniTask.Yield(PlayerLoopTiming.Update);
+            }
+            verificationProgress?.Invoke(1f);
+
+            Log.Info($"Init resource package version : {initializationOperation.Status}");
+            return new ResourcePackageInitializationResult(
+                initializationOperation,
+                initializationOperation.ValidCacheFileCount,
+                initializationOperation.InvalidCacheFileCount);
+        }
+
+        private static FileSystemParameters CreateBuildinFileSystemParameters(
+            ResourcePackageInitializationOptions options,
+            IDecryptionServices decryptionServices)
+        {
+            FileSystemParameters parameters = FileSystemParameters.CreateDefaultBuildinFileSystemParameters(decryptionServices);
+            ApplyVerificationParameters(parameters, options);
+            return parameters;
+        }
+
+        private static FileSystemParameters CreateCacheFileSystemParameters(
+            ResourcePackageInitializationOptions options,
+            IRemoteServices remoteServices,
+            IDecryptionServices decryptionServices)
+        {
+            FileSystemParameters parameters = FileSystemParameters.CreateDefaultCacheFileSystemParameters(remoteServices, decryptionServices);
+            ApplyVerificationParameters(parameters, options);
+            parameters.AddParameter(FileSystemParametersDefine.DOWNLOAD_MAX_CONCURRENCY, options.DownloadMaxConcurrency);
+            parameters.AddParameter(FileSystemParametersDefine.DOWNLOAD_MAX_REQUEST_PER_FRAME, options.DownloadMaxRequestPerFrame);
+            parameters.AddParameter(FileSystemParametersDefine.DOWNLOAD_WATCH_DOG_TIME, options.DownloadWatchDogTimeSeconds);
+            parameters.AddParameter(FileSystemParametersDefine.RESUME_DOWNLOAD_MINMUM_SIZE, options.ResumeDownloadMinimumSize);
+            parameters.AddParameter(FileSystemParametersDefine.RESUME_DOWNLOAD_RESPONSE_CODES, options.CopyResumeDownloadResponseCodes());
+            return parameters;
+        }
+
+        private static void ApplyVerificationParameters(
+            FileSystemParameters parameters,
+            ResourcePackageInitializationOptions options)
+        {
+            parameters.AddParameter(FileSystemParametersDefine.FILE_VERIFY_LEVEL, options.FileVerifyLevel);
+            parameters.AddParameter(FileSystemParametersDefine.FILE_VERIFY_MAX_CONCURRENCY, options.FileVerifyMaxConcurrency);
         }
 
         /// <summary>
@@ -318,12 +336,6 @@ namespace TEngine
                 ? YooAssets.GetPackage(DefaultPackageName)
                 : YooAssets.GetPackage(customPackageName);
             return package.RequestPackageVersionAsync(appendTimeTicks, timeout);
-        }
-
-        public void SetRemoteServicesUrl(string defaultHostServer, string fallbackHostServer)
-        {
-            HostServerURL = defaultHostServer;
-            FallbackHostServerURL = fallbackHostServer;
         }
 
         /// <summary>
@@ -1233,20 +1245,6 @@ namespace TEngine
             YooAssets.SetDownloadSystemUnityWebRequest(downloadSystemUnityWebRequest);
         }
 
-        public UnityEngine.Networking.UnityWebRequest CustomWebRequester(string url)
-        {
-            var request = new UnityEngine.Networking.UnityWebRequest(url, UnityEngine.Networking.UnityWebRequest.kHttpVerbGET);
-            var authorization = GetAuthorization("Admin", "12345");
-            request.SetRequestHeader("AUTHORIZATION", authorization);
-            return request;
-        }
-
-        private string GetAuthorization(string userName, string password)
-        {
-            string auth = $"{userName}:{password}";
-            var bytes = System.Text.Encoding.GetEncoding("ISO-8859-1").GetBytes(auth);
-            return $"Basic {Convert.ToBase64String(bytes)}";
-        }
 
         #endregion
     }

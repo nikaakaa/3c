@@ -17,7 +17,7 @@ MonoBehaviour:
   UniqueBundleName: 0
   Packages:
   - PackageName: DefaultPackage
-    PackageDesc: Main gameplay package
+    PackageDesc: Commercial startup and gameplay package
     EnableAddressable: 0
     SupportExtensionless: 1
     LocationToLower: 0
@@ -25,16 +25,102 @@ MonoBehaviour:
     AutoCollectShaders: 1
     IgnoreRuleName: NormalIgnoreRule
     Groups:
-    - GroupName: Scenes
-      GroupDesc: Main gameplay scenes
-      AssetTags: 
+    - GroupName: CoreProductShell
+      GroupDesc: Core product shell scene
+      AssetTags: Core
       ActiveRuleName: EnableGroup
       Collectors:
-      - CollectPath: Assets/Scenes/Sandbox/SandBox.unity
-        CollectorGUID: 13147eabf67393f49975780565fe8916
+      - CollectPath: Assets/Scenes/Product/ProductShell.unity
+        CollectorGUID: 68cf94012d1949e39b48a0ab91d856a2
         CollectorType: 0
         AddressRuleName: AddressByFileName
         PackRuleName: PackSeparately
         FilterRuleName: CollectScene
-        AssetTags: 
+        AssetTags: Core
+        UserData: 
+    - GroupName: GameplayScene
+      GroupDesc: Standalone gameplay scene and dependency closure
+      AssetTags: Gameplay
+      ActiveRuleName: EnableGroup
+      Collectors:
+      - CollectPath: Assets/Scenes/Standalone/StandaloneGameplay.unity
+        CollectorGUID: 9b627e1c4e8b46bb843c561619ca5b90
+        CollectorType: 0
+        AddressRuleName: AddressByFileName
+        PackRuleName: PackSeparately
+        FilterRuleName: CollectScene
+        AssetTags: Gameplay
+        UserData: 
+    - GroupName: CoreHomeData
+      GroupDesc: Core Home preload barriers
+      AssetTags: Core
+      ActiveRuleName: EnableGroup
+      Collectors:
+      - CollectPath: Assets/AssetRaw/Product/Core
+        CollectorGUID: 67c2875d82ce4a10b8371805f3482099
+        CollectorType: 0
+        AddressRuleName: AddressByFileName
+        PackRuleName: PackDirectory
+        FilterRuleName: CollectAll
+        AssetTags: Core
+        UserData: 
+    - GroupName: GameplayShared
+      GroupDesc: Gameplay preload contract data
+      AssetTags: Gameplay
+      ActiveRuleName: EnableGroup
+      Collectors:
+      - CollectPath: Assets/AssetRaw/Product/Gameplay
+        CollectorGUID: 2259164fbeab4cd293656730100b4ce2
+        CollectorType: 0
+        AddressRuleName: AddressByFileName
+        PackRuleName: PackDirectory
+        FilterRuleName: CollectAll
+        AssetTags: Gameplay
+        UserData: 
+    - GroupName: GameplayCorin
+      GroupDesc: Corin player and training target presentation assets
+      AssetTags: Gameplay
+      ActiveRuleName: EnableGroup
+      Collectors:
+      - CollectPath: Assets/Prefabs/Characters/RuntimeProfiles/CorinStandalonePlayer.prefab
+        CollectorGUID: 67b20b0165b77b44f8cf0cfa9ae33f19
+        CollectorType: 0
+        AddressRuleName: AddressByFileName
+        PackRuleName: PackGroup
+        FilterRuleName: CollectAll
+        AssetTags: Gameplay
+        UserData: 
+      - CollectPath: Assets/Prefabs/Characters/RuntimeProfiles/CorinStandaloneTrainingEnemy.prefab
+        CollectorGUID: 92b30edb28014fe8a1c58b893df987d4
+        CollectorType: 0
+        AddressRuleName: AddressByFileName
+        PackRuleName: PackGroup
+        FilterRuleName: CollectAll
+        AssetTags: Gameplay
+        UserData: 
+    - GroupName: HotUpdateAssemblies
+      GroupDesc: Core hot update and AOT metadata assemblies
+      AssetTags: Core
+      ActiveRuleName: EnableGroup
+      Collectors:
+      - CollectPath: Assets/AssetRaw/HotUpdate/DLL
+        CollectorGUID: ea72205a59bc42e4ba6b5913be4b2e28
+        CollectorType: 0
+        AddressRuleName: AddressByFileName
+        PackRuleName: PackSeparately
+        FilterRuleName: CollectAll
+        AssetTags: Core
+        UserData: 
+    - GroupName: OptionalHD
+      GroupDesc: Optional product presentation resources
+      AssetTags: OptionalHD
+      ActiveRuleName: EnableGroup
+      Collectors:
+      - CollectPath: Assets/AssetRaw/Product/OptionalHD
+        CollectorGUID: d299af39716b46a1adf6e62ebd6eb1fd
+        CollectorType: 0
+        AddressRuleName: AddressByFileName
+        PackRuleName: PackDirectory
+        FilterRuleName: CollectAll
+        AssetTags: OptionalHD
         UserData: 

@@ -51,13 +51,14 @@ namespace TreeDesigner.Editor
                     capabilities |= GraphDataCatalogCapability.DragCreateNode;
 
                 string category = NormalizeCategory(declaration.BlackboardCategoryPath);
+                bool actionWindow = declaration.BlackboardFactProjection == PipelineBlackboardFactProjectionKind.ActionWindow;
                 yield return new GraphDataCatalogEntry(
                     this,
                     $"blackboard:{declaration.Owner?.GraphAuthoringId}:{declaration.DeclarationId}",
                     GraphDataCatalogEntryKind.BlackboardDeclaration,
                     declaration.Name,
-                    declaration.ValueType?.Name ?? "Unknown",
-                    $"Blackboard/{category}",
+                    actionWindow ? "ActionWindow Bool Query" : declaration.ValueType?.Name ?? "Unknown",
+                    actionWindow ? $"Blackboard/Action Windows/{category}" : $"Blackboard/{category}",
                     local ? GraphDataCatalogOwnership.Local : GraphDataCatalogOwnership.Inherited,
                     DisplayName,
                     declaration.Owner?.name ?? "Unknown",
@@ -66,7 +67,7 @@ namespace TreeDesigner.Editor
                     declaration,
                     context.Generation,
                     unavailableReason,
-                    declaration.BlackboardKey);
+                    $"{declaration.BlackboardKey} {declaration.BlackboardFactProjection} {declaration.ActionWindowType} {declaration.ActionWindowId} {declaration.ActionWindowDigest}");
             }
         }
 
@@ -90,6 +91,8 @@ namespace TreeDesigner.Editor
             AddEditableField(details, declaration, "m_BlackboardLifetime", "Lifetime", requestRefresh);
             AddEditableField(details, declaration, "m_BlackboardAuthority", "Authority", requestRefresh);
             AddEditableField(details, declaration, "m_BlackboardSyncPolicy", "Sync Policy", requestRefresh);
+            if (declaration.BlackboardSyncPolicy == PipelineBlackboardVariableSyncPolicy.InputDerived)
+                AddEditableField(details, declaration, "m_InputValueId", "Input Value Id", requestRefresh);
             AddEditableField(details, declaration, "m_BlackboardFactProjection", "Projection", requestRefresh);
             if (declaration.BlackboardFactProjection == PipelineBlackboardFactProjectionKind.ActionWindow)
             {
@@ -99,6 +102,8 @@ namespace TreeDesigner.Editor
             }
             if (!PipelineBlackboardFactProjectionPolicy.TryValidate(declaration, out string projectionError))
                 GraphDataCatalogDetails.AddRow(details, "Projection Error", projectionError);
+            if (!PipelineBlackboardVariablePolicy.TryValidateInputBinding(declaration, out string inputError))
+                GraphDataCatalogDetails.AddRow(details, "Input Error", inputError);
             AddEditableField(details, declaration, "m_BlackboardCategoryPath", "Category Path", requestRefresh);
             AddEditableField(details, declaration, "m_Value", declaration.ValueType?.Name ?? "Value", requestRefresh);
             return details;
@@ -236,6 +241,7 @@ namespace TreeDesigner.Editor
                     PipelineBlackboardVariablePolicy.DefaultLifetime(scope),
                     PipelineBlackboardVariableAuthority.LocalOnly,
                     PipelineBlackboardVariableSyncPolicy.None,
+                    string.Empty,
                     string.Empty);
                 context.Tree.GetNewSerializedTree();
                 context.Tree.OnExposedPropertyChanged?.Invoke();
@@ -271,6 +277,8 @@ namespace TreeDesigner.Editor
             GraphDataCatalogDetails.AddRow(details, "Lifetime", declaration.BlackboardLifetime.ToString());
             GraphDataCatalogDetails.AddRow(details, "Authority", declaration.BlackboardAuthority.ToString());
             GraphDataCatalogDetails.AddRow(details, "Sync Policy", declaration.BlackboardSyncPolicy.ToString());
+            if (declaration.BlackboardSyncPolicy == PipelineBlackboardVariableSyncPolicy.InputDerived)
+                GraphDataCatalogDetails.AddRow(details, "Input Value Id", declaration.InputValueId);
             GraphDataCatalogDetails.AddRow(details, "Projection", declaration.BlackboardFactProjection.ToString());
             if (declaration.BlackboardFactProjection == PipelineBlackboardFactProjectionKind.ActionWindow)
             {
@@ -280,6 +288,8 @@ namespace TreeDesigner.Editor
             }
             if (!PipelineBlackboardFactProjectionPolicy.TryValidate(declaration, out string projectionError))
                 GraphDataCatalogDetails.AddRow(details, "Projection Error", projectionError);
+            if (!PipelineBlackboardVariablePolicy.TryValidateInputBinding(declaration, out string inputError))
+                GraphDataCatalogDetails.AddRow(details, "Input Error", inputError);
             GraphDataCatalogDetails.AddRow(details, "Category Path", string.IsNullOrWhiteSpace(declaration.BlackboardCategoryPath) ? "Uncategorized" : declaration.BlackboardCategoryPath);
             GraphDataCatalogDetails.AddRow(details, declaration.ValueType?.Name ?? "Value", declaration.GetValue()?.ToString() ?? "null");
         }
@@ -298,7 +308,7 @@ namespace TreeDesigner.Editor
 
             PropertyField field = new PropertyField(serializedProperty, label);
             field.AddToClassList("graph-data-detail-field");
-            field.Bind(serializedProperty.serializedObject);
+            field.BindProperty(serializedProperty);
             field.schedule.Execute(() => field.RegisterCallback<SerializedPropertyChangeEvent>(_ =>
             {
                 if (normalizeName && declaration.Owner is BaseTree owner)

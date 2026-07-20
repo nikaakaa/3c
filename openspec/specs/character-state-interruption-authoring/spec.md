@@ -3,30 +3,30 @@
 ## Purpose
 定义State Transition与父Tree abort共用通用Runnable stop、source-exit、OnExit、Timeline cancel、Action lifecycle和Presentation Adapter的创作闭环。
 ## Requirements
-
 ### Requirement: 状态抢占必须复用分层停止协议
 
-状态抢占 MUST继续复用通用 Runnable stop、StateMachine transition、State.OnExit 与 Timeline producer release。逻辑层 MUST在 stop barrier 内关闭 source State、Action、Timeline gameplay output，并在完成 priority/ownership 决策后为受影响 LayerId 提交唯一 AnimationLayerSelection。系统 MUST不让 source 逻辑为 fade 继续 Running，也 MUST不使用 StateMachine external animation、Tree Driver 或 Animation priority。
+状态抢占 authoring MUST 继续表达通用 Runnable stop、StateMachine transition、State.OnExit 与 Timeline producer release。Compiler MUST 将其生成为统一 control-flow、stop barrier、ownership 与 release operation；Program MUST 在关闭 source State、Action 与 Timeline Gameplay output 后，为受影响 LayerId 输出唯一 producer command。系统 MUST 不让 source 逻辑为 fade 继续 active，也 MUST 不使用 StateMachine external animation、Tree Driver、Animation priority 或 CharacterGraphContext selection。
 
 #### Scenario: RunEnd 被输入抢占
 
-- **WHEN** RunEnd 命中更高优先级 State edge
-- **THEN** StateMachine MUST完成 source exit 与 target activation
-- **AND** Locomotion 逻辑 MUST选择 target playback
-- **AND** AnimationPlaybackLifecycle MUST只消费该 selection 与 sample
+- **WHEN** RunEnd compiled edge 命中更高优先级条件
+- **THEN** StateMachine operation MUST 完成 source exit 与 target activation
+- **AND** Locomotion operation MUST 输出 target producer command
+- **AND** AnimationPlaybackLifecycle MUST 只消费已提交 command 与 sample
 
 #### Scenario: 上层 Selector 抢占 StateMachineNode
 
-- **WHEN** LowerPriority replacement 停止整个 StateMachineNode
-- **THEN** stop cause MUST沿 StateMachineNode 与 active State descendants 传播
-- **AND** Action/Locomotion 逻辑 MUST在 barrier 完成后提交最终 selection
-- **AND** MUST不读取 StateMachineNode external animation definition
+- **WHEN** LowerPriority replacement 停止整个 StateMachine operation
+- **THEN** stop cause MUST 沿 active descendant operation 传播
+- **AND** Action/Locomotion operation MUST 在 barrier 完成后输出最终 producer command
+- **AND** MUST 不读取 StateMachineNode external animation definition
 
 #### Scenario: ForceStop
 
-- **WHEN** pipeline/host ForceStop、deactivate 或 dispose
-- **THEN** Pipeline MUST立即清理 logic owner、playback lifecycle、Animancer states 与 retention
-- **AND** MUST不读取 transition duration 或等待 fade
+- **WHEN** Session、Actor 或 Host ForceStop/deactivate/dispose
+- **THEN** Pipeline Runtime MUST立即关闭 logic activation并输出 retire lifecycle
+- **AND** Committer/Presentation MUST 清理 playback lifecycle、Animancer states 与 retention
+- **AND** MUST 不读取 transition duration 或等待 fade
 
 ### Requirement: StateExitContext 必须保持层间翻译边界
 
@@ -41,30 +41,27 @@ StateMachine runtime MUST 将 `NodeStopContext` 或 State Transition 选择翻�
 
 ### Requirement: 状态退出业务必须通过纯条件读取与显式 lifecycle 节点表达
 
-OnExit 与 Transition 条件 MUST 使用 `StateExitCauseInfoNode`、Action Context reader、Pipeline Blackboard ValueNode 和通用 Equal/And/Or/Not 等纯条件节点组合。所有 Timeline 时间门，包括需要 ActionInstance、策略解析或同步/debug 身份的动作窗口，都 MUST 由 Decision TreeClip 写入 scope variable；ConditionRuleGraph MUST NOT 使用 ActionWindow reader 或专用 timeline decision window cache。Action terminal lifecycle MUST 由显式 lifecycle 节点提交，StateMachine runtime MUST NOT 自动推导 Action lifecycle。
+Transition MUST 用 Action Context、Blackboard ValueNode、`ActionWindowActiveInfoNode`、`CanActivateActionInfoNode` 与通用逻辑节点组合。Timeline 时间门 MUST 只由 Decision TreeClip 写 owner-local declaration；ActionWindow projection MUST 是 WindowType、ActionInstance、WindowId 和 Digest 的唯一来源。条件只读当前帧 candidate，MUST NOT 建 cache、registry、历史副本或目标专用节点。source leaf MUST 显式提交 terminal；StateMachine 与 target activation MUST NOT 自动取消 source。
 
-#### Scenario: ComboWindow 离开攻击
+条件可见范围 MUST 只包含祖先 graph、所在 StateMachine 和 source StateNode 直接 body，不包含 target、兄弟 state 或后代 leaf。Compiler、Agent、Inspector、Validator 与 runtime MUST 同规则。内层 leaf 读本地 window；外层 category 只在 `state_root_completed` 后选目标，不得再读 leaf window。
 
-- **WHEN** Attack1 的 `Attack1Cancel` Decision TreeClip 在当前 Tick写入 true
-- **AND** Attack request 成立且 source Action Context 仍 active
-- **THEN** Attack1 Transition MUST 通过 Blackboard Bool reader 离开 source State
-- **AND** Attack1 OnExit MUST 显式提交 `Cancel(ComboWindow)`
-- **AND** 同一 declaration 的 ActionWindow projection MUST 保持 ActionInstance、policy 和 debug 身份
+#### Scenario: Source transition 读取本地窗口
 
-#### Scenario: Dodge 本地恢复门离开动作
+- **WHEN** source Timeline 投影 `RecoveryEarly`
+- **THEN** source Transition MUST 读取当前 ActionInstance 的同一 candidate
+- **AND** 其它 state 引用该 local declaration MUST 失败
 
-- **WHEN** Dodge Decision TreeClip 在当前 Tick写入 `CanDodgeMoveCancel=true`
-- **AND** 当前移动输入成立且 source Action Context 仍 active
-- **THEN** Dodge Transition MUST 能离开 source State
-- **AND** Dodge OnExit MUST 显式提交 `Cancel(DodgeMoveToRun)`
-- **AND** Projection=None 的本地 gate MUST NOT产生 ActionWindowSample
+#### Scenario: Action replacement
 
-#### Scenario: Locomotion 状态抢占
+- **WHEN** `ComboAccept` 或 `RecoveryEarly` 与 request、target admission 成立
+- **THEN** source MUST 显式 `Cancel(RecoveryCancel)` 后离开
+- **AND** target MUST 在 stop barrier 后消费 request，MUST NOT 自动取消 source
 
-- **WHEN** RunEnd 通过普通输入 Transition 离开
-- **THEN** runtime MUST处理状态退出并发布通用Runnable/EdgeCommit facts
-- **AND** MUST NOT生成 Action Cancel、Interrupt 或 Abort
+#### Scenario: Dodge RecoveryOpen
 
+- **WHEN** `RecoveryOpen` 与 Attack、Dodge 或 Move 条件成立
+- **THEN** StateMachine MUST 按 edge priority 选择唯一 target
+- **AND** MUST NOT 读取旧 cancel key
 ### Requirement: 状态退出逻辑屏障与表现收尾必须分离
 
 source State root、Action lifecycle、Timeline gameplay output 与逻辑所有权 MUST在 stop barrier 内关闭。AnimationPlaybackLifecycle MAY让已释放 source 以 Outgoing 视觉状态存在，并通过 PresentationRetention 接收 animation-only sample；Animancer MUST负责 fade。逻辑 release MUST不等于 outgoing visual retirement，但表现收尾 MUST不重新 tick source gameplay。
@@ -73,7 +70,7 @@ source State root、Action lifecycle、Timeline gameplay output 与逻辑所有�
 
 - **WHEN** source 已逻辑退出且 Animancer 正在淡出其 state
 - **THEN** source MAY保持 Outgoing 与只读 animation retention
-- **AND** source MUST不再产生 gameplay、Tree、Timeline logic、Motion、root motion 或 SyncFacts
+- **AND** source MUST不再产生 gameplay、Tree、Timeline logic、Motion、root motion 或 GameplayFacts
 
 #### Scenario: target 首样本延迟
 
@@ -129,3 +126,4 @@ Tree/StateMachine terminal MUST只由逻辑停止协议决定，MUST不等待 An
 - **THEN** runtime MUST 立即释放所有 descendant State、Timeline、Blackboard、Action Context 和 animation membership
 - **AND** runtime MUST NOT 伪造 gameplay Cancel、Interrupt 或 Abort
 - **AND** 不得残留 descendant execution path frame
+                                                 

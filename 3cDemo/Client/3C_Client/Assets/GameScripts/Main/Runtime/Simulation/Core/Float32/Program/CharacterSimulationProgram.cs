@@ -411,14 +411,13 @@ namespace ThirdPersonSimulation
                 {
                     throw new ArgumentException($"Motion modifier '{i}' state range is invalid.");
                 }
-                ValidateModifierConstant(descriptor.TargetLocalPlanarOffsetConstantIndex, ProgramConstantKind.Vector2, i, "target offset");
-                ValidateModifierConstant(descriptor.TargetYawOffsetConstantIndex, ProgramConstantKind.Scalar, i, "target yaw offset");
-                ValidateModifierConstant(descriptor.PositionWeightConstantIndex, ProgramConstantKind.Scalar, i, "position weight");
-                ValidateModifierConstant(descriptor.YawWeightConstantIndex, ProgramConstantKind.Scalar, i, "yaw weight");
-                ValidateModifierConstant(descriptor.MaximumPositionCorrectionConstantIndex, ProgramConstantKind.Scalar, i, "position clamp");
-                ValidateModifierConstant(descriptor.MaximumYawCorrectionConstantIndex, ProgramConstantKind.Scalar, i, "yaw clamp");
-                ValidateModifierConstant(descriptor.PositionProgressCurveConstantIndex, ProgramConstantKind.Bytes, i, "position progress curve");
-                ValidateModifierConstant(descriptor.YawProgressCurveConstantIndex, ProgramConstantKind.Bytes, i, "yaw progress curve");
+                ValidateOptionalModifierConstant(descriptor.TargetPlanarOffsetConstantIndex, ProgramConstantKind.Vector2, i, "target offset");
+                ValidateOptionalModifierConstant(descriptor.TargetYawOffsetConstantIndex, ProgramConstantKind.Scalar, i, "target yaw offset");
+                ValidateOptionalModifierConstant(descriptor.MaximumPositionCorrectionConstantIndex, ProgramConstantKind.Scalar, i, "position clamp");
+                ValidateOptionalModifierConstant(descriptor.MaximumYawCorrectionConstantIndex, ProgramConstantKind.Scalar, i, "yaw clamp");
+                ValidateOptionalModifierConstant(descriptor.MaximumYawRateConstantIndex, ProgramConstantKind.Scalar, i, "yaw rate");
+                ValidateOptionalModifierConstant(descriptor.PositionProgressCurveConstantIndex, ProgramConstantKind.Bytes, i, "position progress curve");
+                ValidateOptionalModifierConstant(descriptor.YawProgressCurveConstantIndex, ProgramConstantKind.Bytes, i, "yaw progress curve");
             }
         }
 
@@ -427,6 +426,12 @@ namespace ThirdPersonSimulation
             RequireIndex(index, m_Constants.Count, $"motion modifier {descriptorIndex} {label}");
             if (m_Constants[index].Kind != kind)
                 throw new ArgumentException($"Motion modifier '{descriptorIndex}' {label} constant has kind '{m_Constants[index].Kind}', expected '{kind}'.");
+        }
+
+        void ValidateOptionalModifierConstant(int index, ProgramConstantKind kind, int descriptorIndex, string label)
+        {
+            if (index >= 0)
+                ValidateModifierConstant(index, kind, descriptorIndex, label);
         }
 
         static void ValidateIndexes(IReadOnlyList<int> indexes, int count, string label)

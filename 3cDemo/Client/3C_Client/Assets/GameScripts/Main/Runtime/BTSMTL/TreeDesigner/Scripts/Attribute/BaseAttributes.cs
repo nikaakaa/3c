@@ -4,6 +4,75 @@ using UnityEngine.Search;
 
 namespace TreeDesigner
 {
+    public enum NodeAuthoringCapability : byte
+    {
+        SharedFlow = 1,
+        SharedPureValue = 2,
+        SharedBlackboard = 3,
+        CharacterExecution = 4,
+        TimelineDecision = 5,
+        AIObservation = 6,
+        AIMemory = 7,
+        AIIntent = 8,
+        EditorOnlyDebug = 9
+    }
+
+    public enum GraphAuthoringRole : byte
+    {
+        Character = 1,
+        StateMachine = 2,
+        ConditionRule = 3,
+        Timeline = 4,
+        AIController = 5
+    }
+
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+    public sealed class NodeAuthoringCapabilityAttribute : Attribute
+    {
+        public NodeAuthoringCapabilityAttribute(NodeAuthoringCapability capability)
+        {
+            Capability = capability;
+        }
+
+        public NodeAuthoringCapability Capability { get; }
+    }
+
+    public static class NodeAuthoringCapabilityPolicy
+    {
+        public static bool TryGetCapability(Type nodeType, out NodeAuthoringCapability capability)
+        {
+            capability = default;
+            if (nodeType == null || !typeof(BaseNode).IsAssignableFrom(nodeType))
+                return false;
+            var attribute = Attribute.GetCustomAttribute(
+                nodeType,
+                typeof(NodeAuthoringCapabilityAttribute),
+                false) as NodeAuthoringCapabilityAttribute;
+            if (attribute == null || !Enum.IsDefined(typeof(NodeAuthoringCapability), attribute.Capability))
+                return false;
+            capability = attribute.Capability;
+            return true;
+        }
+
+        public static bool Allows(GraphAuthoringRole role, NodeAuthoringCapability capability)
+        {
+            if (role == GraphAuthoringRole.AIController)
+            {
+                return capability == NodeAuthoringCapability.SharedFlow ||
+                       capability == NodeAuthoringCapability.SharedPureValue ||
+                       capability == NodeAuthoringCapability.SharedBlackboard ||
+                       capability == NodeAuthoringCapability.AIObservation ||
+                       capability == NodeAuthoringCapability.AIMemory ||
+                       capability == NodeAuthoringCapability.AIIntent ||
+                       capability == NodeAuthoringCapability.EditorOnlyDebug;
+            }
+
+            return capability != NodeAuthoringCapability.AIObservation &&
+                   capability != NodeAuthoringCapability.AIMemory &&
+                   capability != NodeAuthoringCapability.AIIntent;
+        }
+    }
+
     #region Node
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
     public class NodeNameAttribute : Attribute

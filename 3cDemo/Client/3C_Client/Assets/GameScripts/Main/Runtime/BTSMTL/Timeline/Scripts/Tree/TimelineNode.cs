@@ -105,6 +105,7 @@ namespace BTSMTL.Timeline
     [NodeName("Timeline")]
     [NodeColor(217, 187, 249)]
     [NodePath("Base/Action/Timeline")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.TimelineDecision)]
     [Input("Input")]
     public sealed class TimelineNode : RunnableNode
     {

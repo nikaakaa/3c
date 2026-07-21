@@ -118,20 +118,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         public CharacterSimulationBuildResult(
             CharacterSemanticIrArtifactDescriptor artifact,
-            ThirdPersonSimulation.CharacterSimulationProgram program,
+            IReadOnlyList<CharacterSimulationTargetBuildProduct> targetProducts,
             ThirdPersonCharacter.Pipeline.Animation.CharacterPresentationProjection presentationProjection,
             CharacterSimulationCompileReport report)
         {
             Artifact = artifact;
-            Program = program;
+            TargetProducts = targetProducts ?? Array.Empty<CharacterSimulationTargetBuildProduct>();
             PresentationProjection = presentationProjection;
             Report = report ?? throw new ArgumentNullException(nameof(report));
         }
 
         public CharacterSemanticIrArtifactDescriptor Artifact { get; }
-        public ThirdPersonSimulation.CharacterSimulationProgram Program { get; }
+        public IReadOnlyList<CharacterSimulationTargetBuildProduct> TargetProducts { get; }
         public ThirdPersonCharacter.Pipeline.Animation.CharacterPresentationProjection PresentationProjection { get; }
         public CharacterSimulationCompileReport Report { get; }
-        public bool IsValid => Artifact != null && Program != null && PresentationProjection != null && PresentationProjection.IsValid && Report.IsValid;
+        public bool IsValid => Artifact != null && TargetProducts.Count > 0 && PresentationProjection != null && PresentationProjection.IsValid && Report.IsValid;
     }
 }

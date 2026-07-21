@@ -306,7 +306,28 @@ namespace TreeDesigner.Editor
                 return;
             CopyPasteHelper data = JsonUtility.FromJson<CopyPasteHelper>(serializedData)
                 ?? throw new InvalidOperationException("Tree paste payload is invalid.");
+            ValidatePaste(data);
             Tree.ApplyModify(operationName, () => PasteInsideTransaction(data));
+        }
+
+        void ValidatePaste(CopyPasteHelper data)
+        {
+            HashSet<string> acceptablePaths = new HashSet<string>(
+                Tree.GetAttributes<AcceptableNodePathsAttribute>()
+                    .SelectMany(attribute => attribute.AcceptableNodePaths));
+            foreach (JsonElement copiedNode in data.copiedNodes)
+            {
+                BaseNode node = JsonSerializer.DeserializeNode(copiedNode);
+                if (node == null)
+                    throw new InvalidOperationException("Tree paste payload contains an invalid node.");
+
+                string rootPath = TreeDesignerUtility.GetNodePath(node.GetType()).Split('/')[0];
+                if (!acceptablePaths.Contains(rootPath) || !Tree.CanCreateNodeType(node.GetType()))
+                {
+                    throw new InvalidOperationException(
+                        $"{Tree.GetType().Name} cannot paste node type {node.GetType().Name}.");
+                }
+            }
         }
 
         void PasteInsideTransaction(CopyPasteHelper data)
@@ -315,16 +336,10 @@ namespace TreeDesigner.Editor
             Dictionary<string, StackNode> stackMap = new Dictionary<string, StackNode>();
             m_View.ClearSelection();
             Vector2 distance = m_View.LocalMousePosition - data.centerPosition;
-            HashSet<string> acceptablePaths = new HashSet<string>(
-                Tree.GetAttributes<AcceptableNodePathsAttribute>()
-                    .SelectMany(attribute => attribute.AcceptableNodePaths));
             foreach (var copiedNode in data.copiedNodes)
             {
                 BaseNode node = JsonSerializer.DeserializeNode(copiedNode);
                 if (node == null || node.Single && Tree.Nodes.Any(item => item.GetType() == node.GetType()))
-                    continue;
-                string rootPath = TreeDesignerUtility.GetNodePath(node.GetType()).Split('/')[0];
-                if (!acceptablePaths.Contains(rootPath) || !Tree.CanCreateNodeType(node.GetType()))
                     continue;
                 string sourceGuid = node.GUID;
                 node.GUID = Guid.NewGuid().ToString();

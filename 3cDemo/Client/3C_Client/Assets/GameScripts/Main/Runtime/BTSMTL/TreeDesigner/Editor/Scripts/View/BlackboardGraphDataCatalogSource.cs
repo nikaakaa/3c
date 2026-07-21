@@ -12,6 +12,7 @@ namespace TreeDesigner.Editor
     {
         IReadOnlyList<PipelineBlackboardVariableScope> GetAllowedBlackboardScopes(BaseTree currentTree);
         IEnumerable<BaseTree> GetAdditionalVisibleBlackboardSources(BaseTree currentTree);
+        bool IsBlackboardDeclarationTypeAllowed(Type exposedPropertyType, Type valueType);
     }
 
     public sealed class BlackboardGraphDataCatalogSource : IGraphDataCatalogSource, IGraphDataCatalogCreationSource
@@ -34,6 +35,7 @@ namespace TreeDesigner.Editor
             foreach (BaseExposedProperty declaration in context.VisibleBlackboardSources
                          .SelectMany(i => i.ExposedProperties)
                          .Where(i => i != null)
+                         .Where(i => IsTypeAllowed(context, i.GetType(), i.ValueType))
                          .OrderBy(i => i.Owner == context.Tree ? 0 : 1)
                          .ThenBy(i => i.BlackboardCategoryPath)
                          .ThenBy(i => i.Index))
@@ -196,6 +198,7 @@ namespace TreeDesigner.Editor
         public IReadOnlyList<GraphDataCatalogCreationOption> GetTypeOptions(GraphDataCatalogContext context)
         {
             return ExposedPropertyUtility.ExposedPropertyTypeMap
+                .Where(i => IsTypeAllowed(context, i.Key, i.Value.ValueType))
                 .OrderBy(i => i.Value.ValueType?.Name)
                 .Select(i => new GraphDataCatalogCreationOption(
                     i.Key.AssemblyQualifiedName,
@@ -220,7 +223,8 @@ namespace TreeDesigner.Editor
             }
 
             Type type = Type.GetType(request.TypeId, false);
-            if (type == null || !ExposedPropertyUtility.ExposedPropertyTypeMap.ContainsKey(type))
+            if (type == null || !ExposedPropertyUtility.ExposedPropertyTypeMap.TryGetValue(type, out BaseExposedProperty prototype) ||
+                !IsTypeAllowed(context, type, prototype.ValueType))
             {
                 error = "The selected declaration type is not available.";
                 return false;
@@ -267,6 +271,12 @@ namespace TreeDesigner.Editor
 
             string value = string.Join("/", path.Split('/').Select(i => i.Trim()).Where(i => i.Length > 0));
             return string.IsNullOrEmpty(value) ? "Uncategorized" : value;
+        }
+
+        static bool IsTypeAllowed(GraphDataCatalogContext context, Type exposedPropertyType, Type valueType)
+        {
+            return context?.AuthoringContext is not ITreeInspectorBlackboardAuthoringContext source ||
+                   source.IsBlackboardDeclarationTypeAllowed(exposedPropertyType, valueType);
         }
 
         static void AddReadOnlyDetails(VisualElement details, BaseExposedProperty declaration)

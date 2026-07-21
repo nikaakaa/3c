@@ -4,19 +4,6 @@ using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonSimulation.DeterministicRollback
 {
-    public interface IRollbackPresentationOutputPort : ISimulationPresentationOutputPort
-    {
-        void BeginCommit();
-        void CompleteCommit(ulong confirmedTick);
-        void AbortCommit();
-    }
-
-    public interface IRollbackCommitOutputPort :
-        IRollbackPresentationOutputPort,
-        IFixedPublishedActorResultObserver
-    {
-    }
-
     public readonly struct RollbackOutputLifecycleSnapshot
     {
         public RollbackOutputLifecycleSnapshot(
@@ -47,7 +34,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
     {
         readonly RollbackRuntimeState m_State;
         readonly int m_MaximumRecords;
-        readonly IRollbackCommitOutputPort m_Output;
+        readonly IFixedSimulationResultOutputPort m_Output;
         readonly IFixedSourceEgressOutputPort m_SourceEgress;
         readonly ISimulationDiagnosticsSink m_Diagnostics;
         Dictionary<RollbackOutputSlot, RollbackOutputRecord> m_Records =
@@ -61,7 +48,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             SimulationComponentIdentity identity,
             RollbackRuntimeState state,
             int maximumRecords,
-            IRollbackCommitOutputPort output,
+            IFixedSimulationResultOutputPort output,
             IFixedSourceEgressOutputPort sourceEgress,
             ISimulationDiagnosticsSink diagnostics)
         {

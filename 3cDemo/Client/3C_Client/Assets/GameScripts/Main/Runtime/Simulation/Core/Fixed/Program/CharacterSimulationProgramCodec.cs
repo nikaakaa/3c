@@ -115,10 +115,10 @@ namespace ThirdPersonSimulation.Fixed
     public static class CharacterSimulationProgramCodec
     {
         const uint ArtifactMagic = 0x58494643;
-        const int ArtifactVersion = 12;
-        const int ProgramFormatVersion = 14;
-        const int LayoutFormatVersion = 8;
-        const int SourceMapStringTableVersion = 2;
+        const int ArtifactVersion = 15;
+        const int ProgramFormatVersion = 16;
+        const int LayoutFormatVersion = 9;
+        const int SourceMapStringTableVersion = 3;
 
         public static CharacterSimulationProgramArtifactHeader ReadArtifactHeader(byte[] bytes)
         {
@@ -378,14 +378,16 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteInt32(value.CatalogEntryIndex);
             writer.WriteInt32(value.StateSlotStart);
             writer.WriteInt32(value.StateSlotCount);
-            writer.WriteByte((byte)value.PositionMode);
+            writer.WriteByte((byte)value.TranslationMode);
+            writer.WriteByte((byte)value.TargetOffsetSpace);
             writer.WriteByte((byte)value.RotationMode);
-            writer.WriteInt32(value.TargetLocalPlanarOffsetConstantIndex);
+            writer.WriteByte((byte)value.RotationMethod);
+            writer.WriteInt32(value.TargetPlanarOffsetConstantIndex);
             writer.WriteInt32(value.TargetYawOffsetConstantIndex);
-            writer.WriteInt32(value.PositionWeightConstantIndex);
-            writer.WriteInt32(value.YawWeightConstantIndex);
             writer.WriteInt32(value.MaximumPositionCorrectionConstantIndex);
             writer.WriteInt32(value.MaximumYawCorrectionConstantIndex);
+            writer.WriteInt32(value.MaximumYawRateConstantIndex);
+            writer.WriteByte((byte)value.LimitPolicy);
             writer.WriteInt32(value.PositionProgressCurveConstantIndex);
             writer.WriteInt32(value.YawProgressCurveConstantIndex);
         }
@@ -403,14 +405,16 @@ namespace ThirdPersonSimulation.Fixed
                 reader.ReadInt32(),
                 reader.ReadInt32(),
                 reader.ReadInt32(),
-                (ProgramMotionWarpPositionMode)reader.ReadByte(),
+                (ProgramMotionWarpTranslationMode)reader.ReadByte(),
+                (ProgramMotionWarpTargetOffsetSpace)reader.ReadByte(),
                 (ProgramMotionWarpRotationMode)reader.ReadByte(),
+                (ProgramMotionWarpRotationMethod)reader.ReadByte(),
                 reader.ReadInt32(),
                 reader.ReadInt32(),
                 reader.ReadInt32(),
                 reader.ReadInt32(),
                 reader.ReadInt32(),
-                reader.ReadInt32(),
+                (ProgramMotionWarpLimitPolicy)reader.ReadByte(),
                 reader.ReadInt32(),
                 reader.ReadInt32());
         }
@@ -442,6 +446,7 @@ namespace ThirdPersonSimulation.Fixed
                 strings.Add(value.TimelineId);
                 strings.Add(value.TrackId);
                 strings.Add(value.ClipId);
+                strings.Add(value.ContentHash);
                 string[] segments = SplitDisplayPath(value.DisplayPath);
                 for (int segmentIndex = 0; segmentIndex < segments.Length; segmentIndex++)
                     strings.Add(segments[segmentIndex]);
@@ -471,6 +476,7 @@ namespace ThirdPersonSimulation.Fixed
                 writer.WriteInt32(stringIndex[value.TimelineId]);
                 writer.WriteInt32(stringIndex[value.TrackId]);
                 writer.WriteInt32(stringIndex[value.ClipId]);
+                writer.WriteInt32(stringIndex[value.ContentHash]);
                 string[] segments = SplitDisplayPath(value.DisplayPath);
                 writer.WriteInt32(segments.Length);
                 for (int segmentIndex = 0; segmentIndex < segments.Length; segmentIndex++)
@@ -510,6 +516,7 @@ namespace ThirdPersonSimulation.Fixed
                 string timelineId = ReadSourceMapString(reader, strings);
                 string trackId = ReadSourceMapString(reader, strings);
                 string clipId = ReadSourceMapString(reader, strings);
+                string contentHash = ReadSourceMapString(reader, strings);
                 int segmentCount = ReadCount(reader);
                 var pathSegments = new string[segmentCount];
                 for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++)
@@ -526,7 +533,8 @@ namespace ThirdPersonSimulation.Fixed
                     timelineId,
                     trackId,
                     clipId,
-                    string.Join("/", pathSegments));
+                    string.Join("/", pathSegments),
+                    contentHash);
             }
             return entries;
         }

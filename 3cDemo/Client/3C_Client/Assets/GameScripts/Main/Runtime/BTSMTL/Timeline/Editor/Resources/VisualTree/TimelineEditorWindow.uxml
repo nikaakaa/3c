@@ -17,7 +17,9 @@
                         <ui:VisualElement name="add-track-button-Icon" style="width: 25px; margin-left: 75px; background-image: resource(&apos;Icon/d_Toolbar Plus More@2x&apos;);" />
                     </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:VisualElement name="track-handle-container" style="flex-grow: 1;" />
+                <ui:ScrollView name="track-handle-scroll" vertical-scroller-visibility="Hidden" horizontal-scroller-visibility="Hidden">
+                    <ui:VisualElement name="track-handle-container" />
+                </ui:ScrollView>
             </ui:VisualElement>
         </ui:VisualElement>
         <BTSMTL.Timeline.Editor.TimelineFieldView name="field-view" />

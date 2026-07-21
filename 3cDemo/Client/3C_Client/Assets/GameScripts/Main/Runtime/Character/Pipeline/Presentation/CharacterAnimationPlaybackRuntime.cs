@@ -45,30 +45,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         bool m_Disposed;
 
         public CharacterAnimationPlaybackRuntime(
-            CharacterSimulationProgram program,
-            CharacterPresentationProjection projection,
-            AnimancerComponent animancer,
-            bool ownsGraphClock,
-            AnimationTransitionEvaluationMode transitionEvaluationMode)
-            : this(RequireExactProgram(program, projection), projection, animancer, ownsGraphClock, transitionEvaluationMode)
-        {
-        }
-
-        public CharacterAnimationPlaybackRuntime(
-            CharacterPresentationProgramIdentity program,
+            CharacterPresentationSemanticContract contract,
             CharacterPresentationProjection projection,
             AnimancerComponent animancer,
             bool ownsGraphClock,
             AnimationTransitionEvaluationMode transitionEvaluationMode)
         {
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
+            if (contract == null)
+                throw new ArgumentNullException(nameof(contract));
             if (projection == null)
                 throw new ArgumentNullException(nameof(projection));
-            projection.RequireSemanticProgram(program);
+            projection.RequireContract(contract);
             var errors = new List<string>();
             CharacterAnimationPresentationBindingIndex bindings =
-                CharacterAnimationPresentationBindingIndex.Build(projection, program, errors);
+                CharacterAnimationPresentationBindingIndex.Build(projection, contract, errors);
             if (!bindings.IsValid)
                 throw new InvalidOperationException(string.Join("\n", errors));
             foreach (KeyValuePair<string, ResolvedAnimationLayer> pair in bindings.Layers)
@@ -83,18 +73,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ownsGraphClock,
                 transitionEvaluationMode);
             m_Lifecycle = new AnimationPlaybackLifecycle(bindings, m_Adapter);
-        }
-
-        static CharacterPresentationProgramIdentity RequireExactProgram(
-            CharacterSimulationProgram program,
-            CharacterPresentationProjection projection)
-        {
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
-            if (projection == null)
-                throw new ArgumentNullException(nameof(projection));
-            projection.RequireProgram(program);
-            return CharacterPresentationProgramIdentity.From(program);
         }
 
         public IReadOnlyList<AnimationPlaybackId> RetiredPlaybacks => m_RetiredPlaybacks;
@@ -328,7 +306,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     sampling.Producer,
                     playbackId,
                     effective.LocalTime,
-                    effective.Cycle);
+                    effective.Cycle,
+                    sampling.ResolveVisualTimeScale(effective, presentationDeltaSeconds));
                 if (sample.HasOutput)
                     m_Commands.EnqueueSample(latestSimulationTick, sample);
             }
@@ -523,6 +502,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong m_PreviousTick;
             ulong m_CurrentTick;
             ulong m_CurrentSequence;
+            double m_PreviousPresentedEffectiveTime;
+            bool m_HasPresentedEffectiveTime;
+            bool m_WasRebased;
 
             public AnimationSamplingState(CharacterPresentationProducerEntry producer, CharacterPresentationCommand command)
             {
@@ -539,6 +521,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_CurrentContinuousTime = ToContinuousTime(command.SampleTime, command.Cycle);
                 m_PreviousContinuousTime = m_CurrentContinuousTime;
                 m_VisualContinuousTime = m_CurrentContinuousTime;
+                m_PreviousPresentedEffectiveTime = m_CurrentContinuousTime;
             }
 
             public CharacterPresentationProducerEntry Producer { get; }
@@ -561,8 +544,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_CurrentContinuousTime = ToContinuousTime(command.SampleTime, command.Cycle);
             }
 
+            public float ResolveVisualTimeScale(
+                AnimationMarkerSyncEffectiveSample effective,
+                float presentationDeltaSeconds)
+            {
+                double current = effective.ContinuousTime;
+                if (double.IsNaN(current) || double.IsInfinity(current) || current < 0d)
+                    throw new InvalidOperationException($"Animation playback '{effective.PlaybackId}' produced an invalid effective time.");
+                bool beganRebase = effective.Rebased && !m_WasRebased;
+                m_WasRebased = effective.Rebased;
+                if (!m_HasPresentedEffectiveTime || beganRebase || presentationDeltaSeconds <= 0.000001f)
+                {
+                    m_PreviousPresentedEffectiveTime = current;
+                    m_HasPresentedEffectiveTime = true;
+                    return 0f;
+                }
+                double elapsed = current - m_PreviousPresentedEffectiveTime;
+                m_PreviousPresentedEffectiveTime = current;
+                if (elapsed < -0.000001d)
+                    throw new InvalidOperationException($"Animation playback '{effective.PlaybackId}' effective time moved backwards without a rebase.");
+                float scale = (float)(Math.Max(0d, elapsed) / presentationDeltaSeconds);
+                if (!float.IsFinite(scale))
+                    throw new InvalidOperationException($"Animation playback '{effective.PlaybackId}' produced an invalid visual time scale.");
+                return scale;
+            }
+
             public void Replace(CharacterPresentationCommand command)
             {
+                m_HasPresentedEffectiveTime = false;
+                m_WasRebased = false;
                 m_PreviousTime = m_VisualTime;
                 m_PreviousTick = command.Header.Tick.Value > 1
                     ? command.Header.Tick.Value - 1
@@ -643,11 +653,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             double ToContinuousTime(float sampleTime, int cycle)
             {
-                AnimationMarkerSyncBinding binding = Producer.Animation.MarkerSync;
-                return binding != null && binding.IsMarkerGroup &&
-                       binding.SequenceTopology == BTSMTL.Timeline.AnimationMarkerSequenceTopology.Cyclic
-                    ? Math.Max(0d, cycle * (double)binding.DurationSeconds + sampleTime)
-                    : Math.Max(0f, sampleTime);
+                return Math.Max(0d, cycle * (double)Producer.Animation.DurationSeconds + sampleTime);
             }
         }
 

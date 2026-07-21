@@ -9,6 +9,7 @@ namespace TreeDesigner
     [NodeName("Compare")]
     [NodePath("Base/Value/Math/Compare")]
     [NodeView("VariablePropertyNodeView")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.SharedPureValue)]
     public partial class CompareNode : ValueNode
     {
         public enum CompareType { Equal, NotEqual, Less, LessEqual, GreaterEqual, Greater }

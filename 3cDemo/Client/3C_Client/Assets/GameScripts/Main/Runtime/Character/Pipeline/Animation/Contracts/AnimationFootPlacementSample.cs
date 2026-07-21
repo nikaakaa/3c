@@ -8,14 +8,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         readonly bool m_IsSpecified;
 
-        public AnimationFootPlacementSample(float weight)
+        public AnimationFootPlacementSample(
+            float weight,
+            AnimationFootFeatureSample left,
+            AnimationFootFeatureSample right)
         {
             Weight = RequireWeight(weight, nameof(weight));
+            if (!left.IsValid || !right.IsValid)
+                throw new ArgumentException("Animation Foot Placement sample requires both generated foot features.");
+            Left = left;
+            Right = right;
             m_IsSpecified = true;
         }
 
         public float Weight { get; }
-        public bool IsValid => m_IsSpecified;
+        public AnimationFootFeatureSample Left { get; }
+        public AnimationFootFeatureSample Right { get; }
+        public bool IsValid => m_IsSpecified && Left.IsValid && Right.IsValid;
 
         static float RequireWeight(float value, string field)
         {

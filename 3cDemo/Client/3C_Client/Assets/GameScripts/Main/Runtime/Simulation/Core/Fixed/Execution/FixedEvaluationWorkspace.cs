@@ -44,7 +44,7 @@ namespace ThirdPersonSimulation.Fixed
         public HashSet<FixedValueEvaluationKey> ValueStack { get; } = new HashSet<FixedValueEvaluationKey>();
         public List<FixedValueInputBuffer> ValueBuffers { get; } = new List<FixedValueInputBuffer>();
         public List<SimulationMotionContribution> MotionContributions => m_Motion.Contributions;
-        public List<MotionWarpSample<FixedScalar>> MotionWarpSamples => m_Motion.WarpSamples;
+        public List<MotionWarpSample<FixedScalar, FixedActionInstanceState>> MotionWarpSamples => m_Motion.WarpSamples;
         public List<SimulationActionWindowProjectionCandidate> ActionWindowProjections { get; } =
             new List<SimulationActionWindowProjectionCandidate>();
         public HashSet<string> ActionWindowProjectionKeys { get; } = new HashSet<string>(StringComparer.Ordinal);
@@ -173,8 +173,8 @@ namespace ThirdPersonSimulation.Fixed
     {
         public List<SimulationMotionContribution> Contributions { get; } =
             new List<SimulationMotionContribution>();
-        public List<MotionWarpSample<FixedScalar>> WarpSamples { get; } =
-            new List<MotionWarpSample<FixedScalar>>();
+        public List<MotionWarpSample<FixedScalar, FixedActionInstanceState>> WarpSamples { get; } =
+            new List<MotionWarpSample<FixedScalar, FixedActionInstanceState>>();
 
         public void Reset()
         {

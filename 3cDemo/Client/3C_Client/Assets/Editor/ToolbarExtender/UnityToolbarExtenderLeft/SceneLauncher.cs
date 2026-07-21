@@ -22,9 +22,9 @@ namespace TEngine
             };
 
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button(new GUIContent("Launcher", EditorGUIUtility.FindTexture("PlayButton"), "Open gameplay test launcher"), _buttonGuiStyle))
+            if (GUILayout.Button(new GUIContent("Launcher", EditorGUIUtility.FindTexture("PlayButton"), "Open 3C launcher"), _buttonGuiStyle))
             {
-                GameplayTestLauncherWindow.Open();
+                GameplayLauncherWindow.Open();
             }
         }
     }

@@ -1,3 +1,4 @@
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,14 +9,21 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-        const int Version = 6;
-        public const string CodecIdentity = "character-state/float32/v6";
+        const int Version = 8;
+        public const string CodecIdentity = "character-state/float32/v8";
+        const string HashIdentity = "character-state-hash/float32/v7";
 
         public static byte[] Write(CharacterSimulationState state)
         {
             if (state == null)
                 throw new ArgumentNullException(nameof(state));
             using var writer = new CanonicalWriter();
+            WriteCanonical(writer, state);
+            return writer.ToArray();
+        }
+
+        static void WriteCanonical(CanonicalWriter writer, CharacterSimulationState state)
+        {
             writer.WriteUInt32(Magic);
             writer.WriteInt32(Version);
             writer.WriteString(CodecIdentity);
@@ -30,11 +38,8 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < state.SlotCount; i++)
             {
                 ProgramStateSlot slot = layout.Program.StateSlots[i];
-                writer.WriteInt32(i);
-                writer.WriteString(slot.StateCodecIdentity);
                 WriteValue(writer, state.Get(i, slot.ValueKind), layout);
             }
-            return writer.ToArray();
         }
 
         public static CharacterSimulationState Read(byte[] bytes, CharacterSimulationProgram program)
@@ -66,12 +71,6 @@ namespace ThirdPersonSimulation
             var values = new CharacterStateValue[count];
             for (int i = 0; i < count; i++)
             {
-                int slotIndex = reader.ReadInt32();
-                if (slotIndex != i)
-                    throw new InvalidDataException("Character state slots are duplicated or not canonically ordered.");
-                ProgramStateSlot slot = program.StateSlots[i];
-                if (!string.Equals(reader.ReadString(), slot.StateCodecIdentity, StringComparison.Ordinal))
-                    throw new InvalidDataException($"Character state slot '{i}' codec identity does not match Program layout.");
                 values[i] = ReadValue(reader, layout);
                 if (values[i].Kind != program.StateSlots[i].ValueKind)
                     throw new InvalidDataException($"Character state slot '{i}' kind does not match Program layout.");
@@ -86,22 +85,9 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(state));
             if (state.TryGetStateHash(out CharacterStateHash stateHash))
                 return stateHash;
-            return ComputeHash(state, Write(state));
-        }
-
-        internal static CharacterStateHash ComputeHash(CharacterSimulationState state, byte[] encodedState)
-        {
-            if (state == null)
-                throw new ArgumentNullException(nameof(state));
-            if (encodedState == null)
-                throw new ArgumentNullException(nameof(encodedState));
             using var writer = new CanonicalWriter();
-            writer.WriteString(CodecIdentity);
-            SimulationNumericProfileCodec.Write(writer, state.NumericProfile);
-            writer.WriteInt32(state.NumericProfile.AbiVersion.Value);
-            writer.WriteString(state.ProgramHash.ToString());
-            writer.WriteString(state.LayoutHash.ToString());
-            writer.WriteBytes(encodedState);
+            writer.WriteString(HashIdentity);
+            WriteCanonical(writer, state);
             return state.CacheStateHash(new CharacterStateHash(writer.ComputeHash()));
         }
 
@@ -130,6 +116,9 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.ActionTargetSnapshot: WriteTargetSnapshot(writer, value.ActionTargetSnapshot); break;
                 case ProgramStateValueKind.GameplayEffectAggregate:
                     GameplayEffectStateAggregateCodec.Write(writer, value.GameplayEffectAggregate, layout.GameplayEffectProgram);
+                    break;
+                case ProgramStateValueKind.EquipmentAggregate:
+                    EquipmentStateAggregateCodec.Write(writer, value.EquipmentAggregate);
                     break;
                 default: throw new InvalidDataException($"Unsupported Character state value kind '{value.Kind}'.");
             }
@@ -160,6 +149,9 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.GameplayEffectAggregate:
                     return CharacterStateValue.FromGameplayEffectAggregate(
                         GameplayEffectStateAggregateCodec.Read(reader, layout.GameplayEffectProgram));
+                case ProgramStateValueKind.EquipmentAggregate:
+                    return CharacterStateValue.FromEquipmentAggregate(
+                        EquipmentStateAggregateCodec.Read(reader, layout.Equipment));
                 default: throw new InvalidDataException($"Unsupported Character state value kind '{kind}'.");
             }
         }
@@ -252,6 +244,7 @@ namespace ThirdPersonSimulation
             writer.WriteString(value.TargetKey);
             WriteTargetSnapshot(writer, value.TargetSnapshot);
             writer.WriteInt32(value.SourceOperation.Value);
+            EquipmentActionContextCodec.Write(writer, value.EquipmentContext);
         }
 
         static Float32ActionActivationRequestState ReadActionRequest(
@@ -268,6 +261,7 @@ namespace ThirdPersonSimulation
             string targetKey = reader.ReadString();
             SimulationActionTargetSnapshot target = ReadTargetSnapshot(reader);
             OperationHandle source = ReadOperation(reader, layout);
+            EquipmentActionContext equipmentContext = EquipmentActionContextCodec.Read(reader, layout.Equipment);
             return new Float32ActionActivationRequestState(
                 actionId,
                 contextId,
@@ -276,7 +270,8 @@ namespace ThirdPersonSimulation
                 startTick,
                 targetKey,
                 target,
-                source);
+                source,
+                equipmentContext);
         }
 
         static void WriteActionInstance(CanonicalWriter writer, Float32ActionInstanceState value)
@@ -300,6 +295,7 @@ namespace ThirdPersonSimulation
             writer.WriteUInt64(value.LastTransitionTick);
             writer.WriteUInt64(value.LastTransitionSourceTick);
             writer.WriteString(value.Reason);
+            EquipmentActionContextCodec.Write(writer, value.EquipmentContext);
         }
 
         static Float32ActionInstanceState ReadActionInstance(
@@ -324,7 +320,8 @@ namespace ThirdPersonSimulation
                 ReadEnum<SimulationActionLifecycleTransitionType>(reader.ReadByte()),
                 reader.ReadUInt64(),
                 reader.ReadUInt64(),
-                reader.ReadString());
+                reader.ReadString(),
+                EquipmentActionContextCodec.Read(reader, layout.Equipment));
             if (!value.IsValid)
                 throw new InvalidDataException("Character state Action instance identity is invalid.");
             return value;
@@ -483,6 +480,21 @@ namespace ThirdPersonSimulation
             if (state == null)
                 throw new ArgumentNullException(nameof(state));
             using var writer = new CanonicalWriter();
+            WriteCanonical(writer, state);
+            return writer.ToArray();
+        }
+
+        public static StableHash ComputeHash(WorldSimulationState state)
+        {
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
+            using var writer = new CanonicalWriter();
+            WriteCanonical(writer, state);
+            return writer.ComputeHash();
+        }
+
+        static void WriteCanonical(CanonicalWriter writer, WorldSimulationState state)
+        {
             writer.WriteUInt32(Magic);
             writer.WriteInt32(Version);
             SimulationNumericProfileCodec.Write(writer, state.NumericProfile);
@@ -502,8 +514,7 @@ namespace ThirdPersonSimulation
                 writer.WriteBoolean(body.Grounded);
                 writer.WriteUInt32((uint)body.Collision);
             }
-            writer.WriteBytes(state.SolverStatePayload.ToArray());
-            return writer.ToArray();
+            writer.WriteBytes(state.SolverStatePayload.Span);
         }
 
         public static WorldSimulationState Read(
@@ -551,3 +562,5 @@ namespace ThirdPersonSimulation
         }
     }
 }
+
+                                                                                                                                                           

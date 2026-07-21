@@ -99,6 +99,7 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("Input Button")]
     [NodePath("Base/Value/Input/Button")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class InputActionButtonNode : InputActionValueNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Pressed"), ReadOnly]
@@ -122,6 +123,7 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("Input Float")]
     [NodePath("Base/Value/Input/Float")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class InputActionFloatNode : InputActionValueNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Value"), ReadOnly]
@@ -145,6 +147,7 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("Input Vector2")]
     [NodePath("Base/Value/Input/Vector2")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class InputActionVector2Node : InputActionValueNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Value"), ReadOnly]

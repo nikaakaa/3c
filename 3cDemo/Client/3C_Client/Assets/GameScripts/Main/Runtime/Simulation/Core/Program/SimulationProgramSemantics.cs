@@ -53,10 +53,20 @@ namespace ThirdPersonSimulation
         Override = 2
     }
 
-    public enum ProgramMotionWarpPositionMode : byte
+    public enum ProgramMotionWarpTranslationMode : byte
     {
         Disabled = 0,
-        MatchTargetPlanarPosition = 1
+        ScaleToTarget = 1,
+        SkewToTarget = 2,
+        LinearToTarget = 3
+    }
+
+    public enum ProgramMotionWarpTargetOffsetSpace : byte
+    {
+        TargetLocal = 0,
+        ApproachDirection = 1,
+        ActorStartLocal = 2,
+        World = 3
     }
 
     public enum ProgramMotionWarpRotationMode : byte
@@ -66,9 +76,29 @@ namespace ThirdPersonSimulation
         MatchTargetYaw = 2
     }
 
+    public enum ProgramMotionWarpRotationMethod : byte
+    {
+        ProgressCurve = 0,
+        ConstantRate = 1,
+        ScaleSourceYaw = 2
+    }
+
+    public enum ProgramMotionWarpLimitPolicy : byte
+    {
+        ApplyClamped = 0,
+        PreserveSource = 1
+    }
+
+    public enum ProgramMotionWarpLimitResult : byte
+    {
+        Applied = 0,
+        AppliedClamped = 1,
+        PreservedByLimitPolicy = 2
+    }
+
     public sealed class ProgramMotionModifierDescriptor
     {
-        public const int MotionWarpStateSlotCount = 11;
+        public const int MotionWarpStateSlotCount = 16;
 
         public ProgramMotionModifierDescriptor(
             int index,
@@ -81,36 +111,56 @@ namespace ThirdPersonSimulation
             int catalogEntryIndex,
             int stateSlotStart,
             int stateSlotCount,
-            ProgramMotionWarpPositionMode positionMode,
+            ProgramMotionWarpTranslationMode translationMode,
+            ProgramMotionWarpTargetOffsetSpace targetOffsetSpace,
             ProgramMotionWarpRotationMode rotationMode,
-            int targetLocalPlanarOffsetConstantIndex,
+            ProgramMotionWarpRotationMethod rotationMethod,
+            int targetPlanarOffsetConstantIndex,
             int targetYawOffsetConstantIndex,
-            int positionWeightConstantIndex,
-            int yawWeightConstantIndex,
             int maximumPositionCorrectionConstantIndex,
             int maximumYawCorrectionConstantIndex,
+            int maximumYawRateConstantIndex,
+            ProgramMotionWarpLimitPolicy limitPolicy,
             int positionProgressCurveConstantIndex,
             int yawProgressCurveConstantIndex)
         {
             if (index < 0 || !operation.IsValid || !sourceMotionOperation.IsValid || !timelineOwnerOperation.IsValid ||
                 catalogEntryIndex < 0 || stateSlotStart < 0 || stateSlotCount <= 0 ||
-                targetLocalPlanarOffsetConstantIndex < 0 || targetYawOffsetConstantIndex < 0 ||
-                positionWeightConstantIndex < 0 || yawWeightConstantIndex < 0 ||
-                maximumPositionCorrectionConstantIndex < 0 || maximumYawCorrectionConstantIndex < 0 ||
-                positionProgressCurveConstantIndex < 0 || yawProgressCurveConstantIndex < 0)
+                targetPlanarOffsetConstantIndex < -1 || targetYawOffsetConstantIndex < -1 ||
+                maximumPositionCorrectionConstantIndex < -1 || maximumYawCorrectionConstantIndex < -1 ||
+                maximumYawRateConstantIndex < -1 || positionProgressCurveConstantIndex < -1 || yawProgressCurveConstantIndex < -1)
             {
                 throw new ArgumentOutOfRangeException();
             }
             if (!Enum.IsDefined(typeof(ProgramMotionModifierKind), kind) ||
                 !Enum.IsDefined(typeof(ProgramMotionModifierChannel), channel) ||
-                !Enum.IsDefined(typeof(ProgramMotionWarpPositionMode), positionMode) ||
-                !Enum.IsDefined(typeof(ProgramMotionWarpRotationMode), rotationMode))
+                !Enum.IsDefined(typeof(ProgramMotionWarpTranslationMode), translationMode) ||
+                !Enum.IsDefined(typeof(ProgramMotionWarpTargetOffsetSpace), targetOffsetSpace) ||
+                !Enum.IsDefined(typeof(ProgramMotionWarpRotationMode), rotationMode) ||
+                !Enum.IsDefined(typeof(ProgramMotionWarpRotationMethod), rotationMethod) ||
+                !Enum.IsDefined(typeof(ProgramMotionWarpLimitPolicy), limitPolicy))
             {
                 throw new ArgumentOutOfRangeException();
             }
+            bool hasTranslation = translationMode != ProgramMotionWarpTranslationMode.Disabled;
+            bool hasRotation = rotationMode != ProgramMotionWarpRotationMode.Disabled;
+            bool usesPositionProgress = translationMode is ProgramMotionWarpTranslationMode.SkewToTarget or ProgramMotionWarpTranslationMode.LinearToTarget;
+            bool usesYawProgress = hasRotation && rotationMethod == ProgramMotionWarpRotationMethod.ProgressCurve;
+            bool usesYawRate = hasRotation && rotationMethod == ProgramMotionWarpRotationMethod.ConstantRate;
             if (kind != ProgramMotionModifierKind.MotionWarp || channel != ProgramMotionModifierChannel.Action ||
                 stateSlotCount != MotionWarpStateSlotCount ||
-                positionMode == ProgramMotionWarpPositionMode.Disabled && rotationMode == ProgramMotionWarpRotationMode.Disabled)
+                !hasTranslation && !hasRotation ||
+                hasTranslation &&
+                    (targetPlanarOffsetConstantIndex < 0 || maximumPositionCorrectionConstantIndex < 0) ||
+                !hasTranslation &&
+                    (targetPlanarOffsetConstantIndex >= 0 || maximumPositionCorrectionConstantIndex >= 0 || positionProgressCurveConstantIndex >= 0) ||
+                usesPositionProgress != (positionProgressCurveConstantIndex >= 0) ||
+                hasRotation &&
+                    (targetYawOffsetConstantIndex < 0 || maximumYawCorrectionConstantIndex < 0) ||
+                !hasRotation &&
+                    (targetYawOffsetConstantIndex >= 0 || maximumYawCorrectionConstantIndex >= 0 || maximumYawRateConstantIndex >= 0 || yawProgressCurveConstantIndex >= 0) ||
+                usesYawProgress != (yawProgressCurveConstantIndex >= 0) ||
+                usesYawRate != (maximumYawRateConstantIndex >= 0))
             {
                 throw new ArgumentException("Motion modifier descriptor is inconsistent.");
             }
@@ -124,14 +174,16 @@ namespace ThirdPersonSimulation
             CatalogEntryIndex = catalogEntryIndex;
             StateSlotStart = stateSlotStart;
             StateSlotCount = stateSlotCount;
-            PositionMode = positionMode;
+            TranslationMode = translationMode;
+            TargetOffsetSpace = targetOffsetSpace;
             RotationMode = rotationMode;
-            TargetLocalPlanarOffsetConstantIndex = targetLocalPlanarOffsetConstantIndex;
+            RotationMethod = rotationMethod;
+            TargetPlanarOffsetConstantIndex = targetPlanarOffsetConstantIndex;
             TargetYawOffsetConstantIndex = targetYawOffsetConstantIndex;
-            PositionWeightConstantIndex = positionWeightConstantIndex;
-            YawWeightConstantIndex = yawWeightConstantIndex;
             MaximumPositionCorrectionConstantIndex = maximumPositionCorrectionConstantIndex;
             MaximumYawCorrectionConstantIndex = maximumYawCorrectionConstantIndex;
+            MaximumYawRateConstantIndex = maximumYawRateConstantIndex;
+            LimitPolicy = limitPolicy;
             PositionProgressCurveConstantIndex = positionProgressCurveConstantIndex;
             YawProgressCurveConstantIndex = yawProgressCurveConstantIndex;
         }
@@ -146,14 +198,16 @@ namespace ThirdPersonSimulation
         public int CatalogEntryIndex { get; }
         public int StateSlotStart { get; }
         public int StateSlotCount { get; }
-        public ProgramMotionWarpPositionMode PositionMode { get; }
+        public ProgramMotionWarpTranslationMode TranslationMode { get; }
+        public ProgramMotionWarpTargetOffsetSpace TargetOffsetSpace { get; }
         public ProgramMotionWarpRotationMode RotationMode { get; }
-        public int TargetLocalPlanarOffsetConstantIndex { get; }
+        public ProgramMotionWarpRotationMethod RotationMethod { get; }
+        public int TargetPlanarOffsetConstantIndex { get; }
         public int TargetYawOffsetConstantIndex { get; }
-        public int PositionWeightConstantIndex { get; }
-        public int YawWeightConstantIndex { get; }
         public int MaximumPositionCorrectionConstantIndex { get; }
         public int MaximumYawCorrectionConstantIndex { get; }
+        public int MaximumYawRateConstantIndex { get; }
+        public ProgramMotionWarpLimitPolicy LimitPolicy { get; }
         public int PositionProgressCurveConstantIndex { get; }
         public int YawProgressCurveConstantIndex { get; }
     }
@@ -223,13 +277,71 @@ namespace ThirdPersonSimulation
         CancelEquipmentChange = 135,
         EnterEquipmentFeatureHost = 136,
         ExitEquipmentFeatureHost = 137,
-        ResolveEquipmentActionRoute = 138
+        ResolveEquipmentActionRoute = 138,
+        AIReadSelfObservation = 200,
+        AIEnumerateConfiguredCandidates = 201,
+        AISelectNearestCandidate = 202,
+        AIReadTargetDistance = 203,
+        AIReadTargetDirection = 204,
+        AIReadMemory = 205,
+        AIWriteMemory = 206,
+        AIWriteContinuousInput = 207,
+        AIWriteActionTargetSnapshot = 208,
+        AISubmitActionRequest = 209,
+        AIReadSelectedTargetSnapshot = 210,
+        AIWaitTicks = 211
+    }
+
+    public static class AIIntentOperationSet
+    {
+        public const string Id = "ai-intent-operations";
+        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/3");
+        static readonly ReadOnlyCollection<SimulationOperationCode> s_Operations = Array.AsReadOnly(new[]
+        {
+            SimulationOperationCode.Root,
+            SimulationOperationCode.Loop,
+            SimulationOperationCode.Parallel,
+            SimulationOperationCode.Sequence,
+            SimulationOperationCode.Selector,
+            SimulationOperationCode.Succeed,
+            SimulationOperationCode.Compare,
+            SimulationOperationCode.And,
+            SimulationOperationCode.Or,
+            SimulationOperationCode.Not,
+            SimulationOperationCode.Constant,
+            SimulationOperationCode.AIReadSelfObservation,
+            SimulationOperationCode.AIEnumerateConfiguredCandidates,
+            SimulationOperationCode.AISelectNearestCandidate,
+            SimulationOperationCode.AIReadTargetDistance,
+            SimulationOperationCode.AIReadTargetDirection,
+            SimulationOperationCode.AIReadSelectedTargetSnapshot,
+            SimulationOperationCode.AIReadMemory,
+            SimulationOperationCode.AIWriteMemory,
+            SimulationOperationCode.AIWriteContinuousInput,
+            SimulationOperationCode.AIWriteActionTargetSnapshot,
+            SimulationOperationCode.AISubmitActionRequest,
+            SimulationOperationCode.AIWaitTicks
+        });
+
+        public static IReadOnlyList<SimulationOperationCode> Operations => s_Operations;
+
+        public static void RequireVersion(OperationSetVersion version)
+        {
+            if (!version.Equals(Version))
+                throw new InvalidOperationException($"AI operation set '{version.Value}' is unsupported; expected '{Version.Value}'.");
+        }
+
+        public static void RequireOperation(SimulationOperationCode code)
+        {
+            if (!s_Operations.Contains(code))
+                throw new InvalidOperationException($"Operation code '{(ushort)code}' is not supported by '{Version.Value}'.");
+        }
     }
 
     public static class CharacterGameplayOperationSet
     {
         public const string Id = "character-gameplay-operations";
-        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/9");
+        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/11");
 
         static readonly ReadOnlyCollection<SimulationOperationCode> s_Operations =
             Array.AsReadOnly(new[]
@@ -338,7 +450,7 @@ namespace ThirdPersonSimulation
     public static class CameraProgramOperationSchema
     {
         public const int PayloadVersion = 1;
-        public const string LayerId = "Camera";
+        public static readonly AnimationChannelId ChannelId = new AnimationChannelId("Camera");
         public const string OutputPortId = "Submitted";
         public const string BasisValidPortId = "Valid";
         public const string BasisPlanarForwardPortId = "Planar Forward";
@@ -748,13 +860,18 @@ namespace ThirdPersonSimulation
         MotionWarpInitialized = 46,
         MotionWarpPlaybackGeneration = 47,
         MotionWarpActionInstance = 48,
-        MotionWarpWindowStartPosition = 49,
-        MotionWarpWindowStartYaw = 50,
-        MotionWarpTotalPlanarCorrection = 51,
-        MotionWarpTotalYawCorrection = 52,
-        MotionWarpLastPositionProgress = 53,
-        MotionWarpLastYawProgress = 54,
-        MotionWarpSourceOperation = 55,
+        MotionWarpStartBodyPosition = 49,
+        MotionWarpStartBodyYaw = 50,
+        MotionWarpSourceWindowStartPosition = 51,
+        MotionWarpSourceWindowStartYaw = 52,
+        MotionWarpResolvedTargetPosition = 53,
+        MotionWarpResolvedTargetYaw = 54,
+        MotionWarpLimitResult = 55,
+        MotionWarpPreviousWarpedPosition = 56,
+        MotionWarpPreviousWarpedYaw = 57,
+        MotionWarpLastPositionProgress = 58,
+        MotionWarpLastYawProgress = 59,
+        MotionWarpSourceOperation = 62,
         BlackboardValue = 60,
         BlackboardOwnerToken = 61,
         BlackboardLifetime = 63,
@@ -768,7 +885,8 @@ namespace ThirdPersonSimulation
         EquipmentLocalState = 111,
         RandomState = 122,
         HandleAllocator = 123,
-        FactSequence = 124
+        FactSequence = 124,
+        AIWaitElapsedTicks = 130
     }
 
     public sealed class ProgramStateSlot
@@ -849,6 +967,7 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.RunnableChildCursor => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Runnable,
                 ProgramStateSemantic.RunnableStopBarrier => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Runnable,
                 ProgramStateSemantic.RunnableActivationGeneration => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Runnable,
+                ProgramStateSemantic.AIWaitElapsedTicks => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Runnable,
                 ProgramStateSemantic.StateMachineActive => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.StateMachine,
                 ProgramStateSemantic.StateMachinePending => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.StateMachine,
                 ProgramStateSemantic.StateMachineExiting => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.StateMachine,
@@ -863,10 +982,15 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.MotionWarpInitialized => kind == ProgramStateValueKind.Boolean && owner == ProgramStateOwnerKind.MotionModifier,
                 ProgramStateSemantic.MotionWarpPlaybackGeneration => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.MotionModifier,
                 ProgramStateSemantic.MotionWarpActionInstance => kind == ProgramStateValueKind.ActionInstanceReference && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpWindowStartPosition => kind == ProgramStateValueKind.Vector3 && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpWindowStartYaw => kind == ProgramStateValueKind.Yaw && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpTotalPlanarCorrection => kind == ProgramStateValueKind.Vector3 && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpTotalYawCorrection => kind == ProgramStateValueKind.Yaw && owner == ProgramStateOwnerKind.MotionModifier,
+                ProgramStateSemantic.MotionWarpStartBodyPosition => kind == ProgramStateValueKind.Vector3 && owner == ProgramStateOwnerKind.MotionModifier,
+                ProgramStateSemantic.MotionWarpStartBodyYaw => kind == ProgramStateValueKind.Yaw && owner == ProgramStateOwnerKind.MotionModifier,
+                ProgramStateSemantic.MotionWarpSourceWindowStartPosition => kind == ProgramStateValueKind.Vector3 && owner == ProgramStateOwnerKind.MotionModifier,
+                ProgramStateSemantic.MotionWarpSourceWindowStartYaw => kind == ProgramStateValueKind.Scalar && owner == ProgramStateOwnerKind.MotionModifier,
+                ProgramStateSemantic.MotionWarpResolvedTargetPosition => kind == ProgramStateValueKind.Vector3 && owner == ProgramStateOwnerKind.MotionModifier,
+                ProgramStateSemantic.MotionWarpResolvedTargetYaw => kind == ProgramStateValueKind.Yaw && owner == ProgramStateOwnerKind.MotionModifier,
+                ProgramStateSemantic.MotionWarpLimitResult => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.MotionModifier,
+                ProgramStateSemantic.MotionWarpPreviousWarpedPosition => kind == ProgramStateValueKind.Vector3 && owner == ProgramStateOwnerKind.MotionModifier,
+                ProgramStateSemantic.MotionWarpPreviousWarpedYaw => kind == ProgramStateValueKind.Yaw && owner == ProgramStateOwnerKind.MotionModifier,
                 ProgramStateSemantic.MotionWarpLastPositionProgress => kind == ProgramStateValueKind.Scalar && owner == ProgramStateOwnerKind.MotionModifier,
                 ProgramStateSemantic.MotionWarpLastYawProgress => kind == ProgramStateValueKind.Scalar && owner == ProgramStateOwnerKind.MotionModifier,
                 ProgramStateSemantic.MotionWarpSourceOperation => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.MotionModifier,
@@ -1080,69 +1204,79 @@ namespace ThirdPersonSimulation
         BodyMotion = 7
     }
 
-    public sealed class ProgramSourceMapEntry
-    {
-        public ProgramSourceMapEntry(
-            ProgramSourceTargetKind targetKind,
-            int targetIndex,
-            string sourceType,
-            string graphId,
-            string nodeId,
-            string portId,
-            string edgeId,
-            string declarationId,
-            string timelineId,
-            string trackId,
-            string clipId,
-            string displayPath)
-        {
-            if (targetIndex < 0)
-                throw new ArgumentOutOfRangeException(nameof(targetIndex));
-            TargetKind = targetKind;
-            TargetIndex = targetIndex;
-            SourceType = SimulationIdentity.Require(sourceType, nameof(sourceType));
-            GraphId = graphId ?? string.Empty;
-            NodeId = nodeId ?? string.Empty;
-            PortId = portId ?? string.Empty;
-            EdgeId = edgeId ?? string.Empty;
-            DeclarationId = declarationId ?? string.Empty;
-            TimelineId = timelineId ?? string.Empty;
-            TrackId = trackId ?? string.Empty;
-            ClipId = clipId ?? string.Empty;
-            DisplayPath = displayPath ?? string.Empty;
-            if (GraphId.Length == 0 && TimelineId.Length == 0 && targetKind != ProgramSourceTargetKind.BodyMotion)
-                throw new ArgumentException("Source map entry requires a graph or timeline identity.");
-        }
+	public sealed class ProgramSourceMapEntry
+	{
+		public ProgramSourceMapEntry(
+			ProgramSourceTargetKind targetKind,
+			int targetIndex,
+			string sourceType,
+			string graphId,
+			string nodeId,
+			string portId,
+			string edgeId,
+			string declarationId,
+			string timelineId,
+			string trackId,
+			string clipId,
+			string displayPath,
+			string contentHash)
+		{
+			if (targetIndex < 0)
+				throw new ArgumentOutOfRangeException(nameof(targetIndex));
+			TargetKind = targetKind;
+			TargetIndex = targetIndex;
+			SourceType = SimulationIdentity.Require(sourceType, nameof(sourceType));
+			GraphId = graphId ?? string.Empty;
+			NodeId = nodeId ?? string.Empty;
+			PortId = portId ?? string.Empty;
+			EdgeId = edgeId ?? string.Empty;
+			DeclarationId = declarationId ?? string.Empty;
+			TimelineId = timelineId ?? string.Empty;
+			TrackId = trackId ?? string.Empty;
+			ClipId = clipId ?? string.Empty;
+			DisplayPath = displayPath ?? string.Empty;
+			ContentHash = contentHash ?? string.Empty;
+			if (GraphId.Length == 0 && TimelineId.Length == 0 && targetKind != ProgramSourceTargetKind.BodyMotion)
+				throw new ArgumentException("Source map entry requires a graph or timeline identity.");
+		}
 
-        public ProgramSourceTargetKind TargetKind { get; }
-        public int TargetIndex { get; }
-        public string SourceType { get; }
-        public string GraphId { get; }
-        public string NodeId { get; }
-        public string PortId { get; }
-        public string EdgeId { get; }
-        public string DeclarationId { get; }
-        public string TimelineId { get; }
-        public string TrackId { get; }
-        public string ClipId { get; }
-        public string DisplayPath { get; }
-    }
+		public ProgramSourceTargetKind TargetKind { get; }
+		public int TargetIndex { get; }
+		public string SourceType { get; }
+		public string GraphId { get; }
+		public string NodeId { get; }
+		public string PortId { get; }
+		public string EdgeId { get; }
+		public string DeclarationId { get; }
+		public string TimelineId { get; }
+		public string TrackId { get; }
+		public string ClipId { get; }
+		public string DisplayPath { get; }
+		public string ContentHash { get; }
+	}
 
     public sealed class ProgramProducer
     {
-        public ProgramProducer(int index, string identity, string layerId, string sourceIdentity, ProgramOutputChannelKind channelKind)
+        public ProgramProducer(
+            int index,
+            string identity,
+            AnimationChannelId animationChannelId,
+            string sourceIdentity,
+            ProgramOutputChannelKind channelKind)
         {
             if (index < 0)
                 throw new ArgumentOutOfRangeException(nameof(index));
+            if (!animationChannelId.IsValid)
+                throw new ArgumentException("Program Producer Animation Channel identity is invalid.", nameof(animationChannelId));
             Index = index;
             Identity = SimulationIdentity.Require(identity, nameof(identity));
-            LayerId = SimulationIdentity.Require(layerId, nameof(layerId));
+            AnimationChannelId = animationChannelId;
             SourceIdentity = SimulationIdentity.Require(sourceIdentity, nameof(sourceIdentity));
             ChannelKind = channelKind;
         }
         public int Index { get; }
         public string Identity { get; }
-        public string LayerId { get; }
+        public AnimationChannelId AnimationChannelId { get; }
         public string SourceIdentity { get; }
         public ProgramOutputChannelKind ChannelKind { get; }
     }
@@ -1264,3 +1398,4 @@ namespace ThirdPersonSimulation
         }
     }
 }
+                                                                                                                                                                                                                                                         

@@ -117,7 +117,7 @@ Character Gameplay Operation Set MUST为每个operation code声明numeric-neutra
 
 ### Requirement: MotionWarp authoring 必须编译为唯一 numeric-neutral operation
 
-Frontend MUST为每个合法MotionWarpClip生成唯一`TimelineMotionWarp` Semantic operation，并保存position/rotation mode、target offset、weight、clamp、两条canonical progress curve、Timeline/Action Context provenance及到源MotionCurve operation的typed reference。IR MUST不保存Unity Transform、GameObject、AnimationCurve对象或Solver类型。
+Frontend MUST为每个合法MotionWarpClip生成唯一`TimelineMotionWarp` Semantic operation，并保存Translation Mode、Target Offset Space、Target Pose参数、Rotation Mode、Rotation Method、Limit Policy、当前mode实际消费的curve/rate、Timeline/Action Context provenance及到源MotionCurve operation的typed reference。IR MUST不保存Unity Transform、GameObject、AnimationCurve对象、Float32/Fixed累计pose或Solver类型，也 MUST不保存PositionWeight、YawWeight及其它未消费字段。
 
 #### Scenario: 编译带 MotionWarp 的动作 Timeline
 
@@ -125,6 +125,23 @@ Frontend MUST为每个合法MotionWarpClip生成唯一`TimelineMotionWarp` Seman
 - **THEN** Semantic IR MUST包含两个独立operation
 - **AND** MotionWarp operation MUST通过typed reference唯一指向MotionCurve operation
 - **AND** SourceMap MUST能返回两个authoring clip
+
+### Requirement: MotionWarp轨迹solver必须保持Numeric-Neutral
+
+Gameplay Semantic IR MUST以typed字段表达MotionWarp source reference、Translation Mode、Target Offset Space、Target Pose参数、Rotation Mode、Rotation Method、Limit Policy及条件curve/rate。IR MUST不保存Float32/Fixed累计pose、Unity Transform、Animator Bone或运行时target对象。Float32与Fixed Target MUST从同一validated descriptor降低各自Program与state schema，不得重新遍历Timeline或发明Target专用mode。
+
+#### Scenario: 同一Corin IR降低两个Numeric Target
+
+- **WHEN** Corin IR包含SkewToTarget、ApproachDirection与ProgressCurve rotation
+- **THEN** Float32与Fixed Program MUST包含相同业务mode、offset空间、窗口和Limit Policy
+- **AND** 两者 MAY使用各自数值常量、curve codec和state slot identity
+- **AND** Fixed Target MUST不降级为旧总残差算法
+
+#### Scenario: IR包含未消费字段
+
+- **WHEN** Translation Mode或Rotation Method不消费某条curve或rate
+- **THEN** Frontend MUST拒绝含糊配置或从canonical descriptor中排除该字段
+- **AND** SemanticHash MUST不依赖Editor残留的未消费数据
 
 ### Requirement: MotionWarp 必须成为两个 Numeric Target 的显式 capability
 
@@ -146,3 +163,52 @@ Frontend MUST验证MotionWarp source、Timeline owner、窗口、Action channel�
 - **WHEN** 一个包含MotionWarp的shared Timeline同时被动作状态和无Action Context状态引用
 - **THEN** Frontend MUST拒绝该Program
 - **AND** MUST不假定运行时只会走合法call site
+
+### Requirement: Semantic IR必须表达Character composition roots
+
+Validated Semantic IR MUST包含canonical root catalog，区分Character Root、Equipment Persistent与Equipment Route root，并保存root identity、serialized owner、FeatureId、RouteId、entry operation和source map。全部root MUST共享同一Operation Set、Graph identity规则、control topology验证和Value port contract。Semantic IR MUST不保存Unity Graph对象或为Feature建立第二种flow IR。
+
+#### Scenario: 编译多个Feature root
+
+- **WHEN** Equipment Profile包含Sawblade与Gun Feature
+- **THEN** Semantic IR MUST按稳定identity包含二者的Persistent/Route roots
+- **AND** 所有entry MUST指向同一validated operation table
+
+#### Scenario: Feature使用非法控制边
+
+- **WHEN** Feature graph包含RootTree同样不允许的control cycle
+- **THEN** 共享Semantic validation MUST拒绝
+- **AND** MUST不由Equipment compiler放宽规则
+
+### Requirement: Semantic IR必须使用numeric-neutral Equipment schema
+
+Semantic IR MUST表达Slot、Route、Equipment、Feature、Parameter schema/value、Initial Loadout、Presentation requirement、Action binding、Tag/Effect contribution、local state declaration、equipment operation与capability union。Scalar/Vector/Yaw值 MUST使用numeric-neutral canonical representation，并由Target lowering选择具体ABI。IR MUST不包含Float32 runtime类型、Unity asset引用、Network Model或visual instance。
+
+#### Scenario: 同一Corin源生成双Target
+
+- **WHEN** Float32与Fixed Compiler消费同一validated Semantic IR
+- **THEN** 两者 MUST解析相同Equipment/Feature/Route业务identity
+- **AND** numeric value MUST分别降低到目标类型
+
+#### Scenario: Target不支持Equipment operation
+
+- **WHEN** Fixed Target operation manifest缺少Feature实际使用的operation
+- **THEN** Target compile MUST拒绝整个Program
+- **AND** MUST不从IR删除该Feature或operation
+
+### Requirement: Equipment operation必须进入版本化Operation Set
+
+Operation Set MUST为Equipment identity/parameter read、change begin/commit/cancel、host entry/exit与route resolution声明稳定opcode、typed ports、state requirement、reference kind和failure result。Frontend、Float32与Fixed backend MUST使用同一semantic contract；新增或改变contract MUST提升Operation Set版本，MUST不通过字符串operation、反射或Feature回调扩展。
+
+#### Scenario: ReadEquipmentParameter端口
+
+- **WHEN** Graph读取Scalar参数
+- **THEN** Frontend MUST验证Context/Slot input、Parameter reference和Scalar output port
+- **AND** IR MUST保存稳定ParameterId而不是显示名
+
+#### Scenario: 未知Equipment opcode
+
+- **WHEN** Program target遇到未登记Equipment opcode
+- **THEN** compile/load MUST明确失败
+- **AND** runtime MUST不将其视为成功no-op
+

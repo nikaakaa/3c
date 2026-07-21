@@ -5,7 +5,9 @@ namespace ThirdPersonSimulation
 {
     public static class StandardFloat32PipelinePassContracts
     {
-        public const string ImplementationVersion = "2";
+        public const string ImplementationVersion = "4";
+        public const string LocalControlInputStateSchemaId = "float32-local-control-input-state";
+        public const int LocalControlInputStateSchemaVersion = 1;
         public const string LocalInputIngressPassId = "thirdperson.simulation.local-input-ingress";
         public const string LocalSingleStepSchedulePassId = "thirdperson.simulation.local-single-step-schedule";
         public const string ProgramEvaluatePassId = "thirdperson.simulation.float32-program-evaluate";
@@ -23,8 +25,8 @@ namespace ThirdPersonSimulation
             LocalInputIngressPassId,
             SimulationPipelinePhase.Ingress,
             SimulationPipelineExecutionSupport.Forward,
-            SimulationPipelinePassStateClass.ExternalSource,
-            "local-session-source",
+            SimulationPipelinePassStateClass.SnapshotParticipant,
+            "local-control-input",
             new[]
             {
                 Produce(SimulationPipelineProducts.CanonicalInputs),
@@ -33,7 +35,8 @@ namespace ThirdPersonSimulation
             new[]
             {
                 Float32LocalInputSourcePortContract.Requirement,
-                Target(Float32PipelineRuntimePortIds.ProgramRuntime, Float32PipelineRuntimePortIds.ProgramRuntimeSchema)
+                Target(Float32PipelineRuntimePortIds.ProgramRuntime, Float32PipelineRuntimePortIds.ProgramRuntimeSchema),
+                Target(Float32PipelineRuntimePortIds.CommittedObservation, Float32PipelineRuntimePortIds.CommittedObservationSchema)
             });
 
         static readonly SimulationPipelinePassDescriptor s_LocalSingleStepSchedule = Create(
@@ -132,6 +135,7 @@ namespace ThirdPersonSimulation
         {
             if (descriptor == null)
                 throw new ArgumentNullException(nameof(descriptor));
+            bool stateful = descriptor.StateClass == SimulationPipelinePassStateClass.SnapshotParticipant;
             return new SimulationPipelinePassFactoryDescriptor(
                 new SimulationPipelinePassFactoryIdentity(
                     descriptor.PassId,
@@ -144,9 +148,11 @@ namespace ThirdPersonSimulation
                 descriptor.ConfigurationHash,
                 descriptor.ExecutionSupport,
                 false,
+                stateful,
+                stateful,
                 false,
-                false,
-                false);
+                stateful ? LocalControlInputStateSchemaId : string.Empty,
+                stateful ? LocalControlInputStateSchemaVersion : 0);
         }
 
         static SimulationPipelinePassDescriptor Create(

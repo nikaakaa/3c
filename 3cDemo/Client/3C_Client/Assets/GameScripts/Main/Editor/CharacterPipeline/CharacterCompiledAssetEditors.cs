@@ -46,7 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorGUILayout.LabelField("Operation / Source", $"{descriptor.Operation.Value} / {descriptor.SourceMotionOperation.Value}");
                 EditorGUILayout.LabelField("Timeline Owner", descriptor.TimelineOwnerOperation.Value.ToString());
                 EditorGUILayout.LabelField("Action Context", descriptor.ActionContextIdentity);
-                EditorGUILayout.LabelField("Modes", $"{descriptor.PositionMode} / {descriptor.RotationMode}");
+                EditorGUILayout.LabelField("Modes", $"{descriptor.TranslationMode} / {descriptor.TargetOffsetSpace} / {descriptor.RotationMode} / {descriptor.RotationMethod} / {descriptor.LimitPolicy}");
                 EditorGUILayout.LabelField("State Range", $"{descriptor.StateSlotStart}..{descriptor.StateSlotStart + descriptor.StateSlotCount - 1} ({descriptor.StateSlotCount})");
             }
         }
@@ -84,7 +84,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
 
-            SerializedProperty layers = projection.FindPropertyRelative("m_Layers");
+            SerializedProperty blendSlots = projection.FindPropertyRelative("m_BlendSlots");
+            SerializedProperty curveCatalog = projection.FindPropertyRelative("m_BlendCurveCatalog")?.FindPropertyRelative("m_Entries");
+            SerializedProperty profileCatalog = projection.FindPropertyRelative("m_BlendProfileCatalog")?.FindPropertyRelative("m_Entries");
             SerializedProperty producers = projection.FindPropertyRelative("m_Producers");
             int animationCount = 0;
             int cameraCount = 0;
@@ -100,14 +102,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     cueCount++;
             }
 
-            EditorGUILayout.LabelField("Numeric Target", projection.FindPropertyRelative("m_NumericProfileId").stringValue);
-            EditorGUILayout.LabelField("Target ABI", projection.FindPropertyRelative("m_TargetAbiVersion").intValue.ToString());
-            EditorGUILayout.LabelField("Layers", layers.arraySize.ToString());
+            EditorGUILayout.LabelField("Semantic Contract", projection.FindPropertyRelative("m_ContractHash").stringValue);
+            EditorGUILayout.LabelField("Projection Revision", projection.FindPropertyRelative("m_ProjectionRevision").stringValue);
+            EditorGUILayout.LabelField("Pose Slots", (blendSlots?.arraySize ?? 0).ToString());
+            EditorGUILayout.LabelField("Blend Curves", (curveCatalog?.arraySize ?? 0).ToString());
+            EditorGUILayout.LabelField("Blend Profiles", (profileCatalog?.arraySize ?? 0).ToString());
             EditorGUILayout.LabelField("Animation Producers", animationCount.ToString());
             EditorGUILayout.LabelField("Camera Producers", cameraCount.ToString());
             EditorGUILayout.LabelField("Cue Producers", cueCount.ToString());
-            using (new EditorGUI.DisabledScope(true))
-                EditorGUILayout.PropertyField(projection.FindPropertyRelative("m_TransitionLibrary"), new GUIContent("Transition Library"));
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Animation Marker Sync", EditorStyles.boldLabel);
@@ -120,7 +122,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (markerSync == null)
                     continue;
                 string producerIdentity = producer.FindPropertyRelative("m_ProgramProducerIdentity").stringValue;
-                string layerId = producer.FindPropertyRelative("m_LayerId").stringValue;
+                string animationChannelId = producer.FindPropertyRelative("m_AnimationChannelId").stringValue;
                 SerializedProperty mode = markerSync.FindPropertyRelative("m_Mode");
                 SerializedProperty topology = markerSync.FindPropertyRelative("m_SequenceTopology");
                 SerializedProperty role = markerSync.FindPropertyRelative("m_SyncRole");
@@ -128,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 SerializedProperty segments = markerSync.FindPropertyRelative("m_Segments");
                 EditorGUILayout.LabelField(producerIdentity, EditorStyles.miniBoldLabel);
                 EditorGUI.indentLevel++;
-                EditorGUILayout.LabelField("Layer / Group", $"{layerId} / {markerSync.FindPropertyRelative("m_CanonicalGroupId").stringValue}");
+                EditorGUILayout.LabelField("Channel / Group", $"{animationChannelId} / {markerSync.FindPropertyRelative("m_CanonicalGroupId").stringValue}");
                 EditorGUILayout.LabelField(
                     "Mode / Topology / Role",
                     $"{mode.enumDisplayNames[mode.enumValueIndex]} / {topology.enumDisplayNames[topology.enumValueIndex]} / {role.enumDisplayNames[role.enumValueIndex]}");

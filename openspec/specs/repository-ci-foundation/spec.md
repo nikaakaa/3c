@@ -42,7 +42,7 @@ workflow MUST提供名称稳定且互不依赖的 repository policy、OpenSpec v
 
 ### Requirement: 仓库策略必须只验证被跟踪的正式文件
 
-系统 MUST提供唯一只读 PowerShell 仓库策略脚本，并以 Git 索引中的被跟踪文件为判定输入。脚本 MUST验证 Unity Project/Packages 关键文件、Assets 文件与 `.meta` 配对、禁止的生成路径和客户端生成 project/solution 文件。脚本 MUST为正式 Fantasy Server solution/project 与 portable Simulation project 使用精确允许路径，MUST不使用宽泛扩展名 fallback。脚本 MUST汇总全部违规后返回非零退出码，MUST不自动修改工作区或索引。
+系统 MUST提供唯一只读 PowerShell 仓库策略脚本，并以 Git 索引中的被跟踪文件为判定输入。脚本 MUST验证 Unity Project/Packages 关键文件、Assets 文件与 `.meta` 配对、禁止的生成路径和客户端生成 project/solution 文件。脚本 MUST将客户端 `Build`、旧 `Builds`、旧 `Bundles` 与 `HybridCLRData` 作为禁止跟踪的生成根，并 MUST为正式 Fantasy Server solution/project 与 portable Simulation project 使用精确允许路径，MUST不使用宽泛扩展名 fallback。脚本 MUST汇总全部违规后返回非零退出码，MUST不自动修改工作区或索引。
 
 #### Scenario: 被跟踪的 Unity 资产缺少 meta
 
@@ -50,9 +50,15 @@ workflow MUST提供名称稳定且互不依赖的 repository policy、OpenSpec v
 - **THEN** repository policy job MUST列出该资产并失败
 - **AND** MUST不在云端生成 `.meta` 后继续
 
+#### Scenario: 客户端生成根被跟踪
+
+- **WHEN** 候选提交包含位于客户端 `Build`、`Builds`、`Bundles` 或 `HybridCLRData` 下的文件
+- **THEN** repository policy job MUST列出每个违规路径并失败
+- **AND** MUST不因为文件是 version、manifest、DLL 或调试信息而接受
+
 #### Scenario: 本地存在未跟踪开发文件
 
-- **WHEN** 开发者本地工作区存在尚未纳入候选提交的普通文件
+- **WHEN** 开发者本地工作区存在尚未纳入候选提交的普通文件或本机构建缓存
 - **THEN** 仓库策略 MUST不把该文件作为候选提交违规
 - **AND** CI 的判断 MUST只反映 Git 索引中的正式内容
 
@@ -115,3 +121,4 @@ workflow MUST只申请读取仓库内容所需的权限，为各 job 设置有�
 - **WHEN** portable unit tests 超过 job 的正式超时
 - **THEN** GitHub Actions MUST终止该 job 并使 workflow 失败
 - **AND** MUST不启动另一个无超时 runner 重试
+

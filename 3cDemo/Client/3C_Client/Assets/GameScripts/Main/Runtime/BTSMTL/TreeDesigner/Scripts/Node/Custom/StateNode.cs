@@ -9,6 +9,7 @@ namespace TreeDesigner
     [NodeName("State")]
     [NodeColor(118, 167, 255)]
     [NodePath("Base/StateMachine/State")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public class StateNode : RunnableNode
     {
         [SerializeField]

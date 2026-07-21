@@ -379,7 +379,7 @@ Corin 每个正式 Timeline animation producer MUST拥有稳定 presentation key
 - **THEN** runtime MUST报告明确配置错误
 - **AND** MUST不使用默认 Idle、当前 clip 或 Immediate fallback
 
-### Requirement: Corin Marker Sync 配置必须通过正式 Agent v14 迁移
+### Requirement: Corin Marker Sync 配置必须通过正式 Agent v15 迁移
 
 Corin AnimationTrack的sync mode、group、topology、SyncRole与marker，以及Timeline Clip已登记的Curve Channel MUST通过v14 `export_snapshot -> dry_run_patch -> apply_patch -> export_snapshot -> validate`流程写入。实现 MUST不直接修改CorinPlayableRootTree或shared Timeline YAML，不创建一次性migrator。迁移完成后 MUST重新生成匹配source revision的CharacterPresentationProjection及Float32/Fixed Program wrapper。
 

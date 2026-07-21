@@ -10,7 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         public int PendingCount => m_Commands.Count;
 
-        public void EnqueueSelection(AnimationLayerSelection selection)
+        public void EnqueueSelection(AnimationChannelSelection selection)
         {
             if (!selection.IsValid)
                 throw new ArgumentException("Animation selection is invalid.", nameof(selection));

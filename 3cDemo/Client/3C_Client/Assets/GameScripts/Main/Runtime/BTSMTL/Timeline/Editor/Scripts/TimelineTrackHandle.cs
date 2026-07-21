@@ -102,7 +102,6 @@ namespace BTSMTL.Timeline.Editor
                 m_CurveChannelLabels.style.top = TimelineTrackLayout.CurveHeaderTop(Track) + TimelineTrackLayout.CurveHeaderHeight;
                 PopulateCurveChannelLabels();
             }
-
             FieldView.OnGeometryChangedCallback += OnGeometryChanged;
             this.RegisterCallbackOnce<GeometryChangedEvent>((e) => OnGeometryChanged());
             RegisterCallback<DetachFromPanelEvent>((e) =>

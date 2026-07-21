@@ -113,8 +113,8 @@ namespace ThirdPersonSimulation
     public static class CharacterGameplaySemanticIrCodec
     {
         const uint ArtifactMagic = 0x52495343;
-        const int ArtifactVersion = 9;
-        const int PayloadVersion = 9;
+        const int ArtifactVersion = 11;
+        const int PayloadVersion = 11;
 
         public static byte[] WriteArtifact(CharacterGameplaySemanticIr semanticIr)
         {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
@@ -10,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public static class CharacterSemanticFrontendCompiler
     {
-        public const string CompilerVersion = "character-simulation-compiler/19";
+        public const string CompilerVersion = "character-simulation-compiler/21";
         public static readonly OperationSetVersion OperationSetVersion = CharacterGameplayOperationSet.Version;
 
         public static CharacterSemanticFrontendResult Compile(CharacterPipelineDefinition definition)
@@ -102,28 +103,43 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         string.Empty,
                         string.Empty,
                         string.Empty,
-                        AssetDatabase.GetAssetPath(model.BodyMotionProfile)));
+                        AssetDatabase.GetAssetPath(model.BodyMotionProfile),
+                        contentHash: model.BodyMotionContentRevision.ToString()));
                 var catalogCompiler = new CharacterSimulationCatalogCompiler(model, builder, report);
                 CharacterSimulationCatalogIndex catalog = catalogCompiler.Compile();
                 var emitter = new CharacterSemanticEmitter(model, builder, report, catalog);
-                OperationHandle rootOperation = emitter.Emit();
-                if (rootOperation.IsValid)
+                IReadOnlyDictionary<string, OperationHandle> rootOperations = emitter.EmitCompositionRoots();
+                for (int rootIndex = 0; rootIndex < model.Roots.Count; rootIndex++)
                 {
+                    CharacterCompositionRoot root = model.Roots[rootIndex];
+                    if (!rootOperations.TryGetValue(root.Identity, out OperationHandle rootOperation) || !rootOperation.IsValid)
+                        continue;
                     var source = new CharacterSimulationSourceLocation(
-                        model.Root.Graph.GetType().FullName,
-                        model.Root.Graph.GraphAuthoringId,
+                        root.Occurrence.Graph.GetType().FullName,
+                        root.Occurrence.Graph.GraphAuthoringId,
                         string.Empty,
                         string.Empty,
                         string.Empty,
                         string.Empty,
-                        model.Root.Route);
+                        root.SourcePath,
+                        contentHash: GraphAuthoringFingerprint.Compute(root.Occurrence.Graph));
                     builder.DeclareReference(
-                        "program:root-operation",
+                        $"program:composition-root:{root.Identity}",
                         OperationHandle.Invalid,
                         ProgramReferenceKind.Operation,
                         rootOperation.Value,
-                        model.Root.Graph.GraphAuthoringId,
+                        root.Identity,
                         source);
+                    if (root.Role == CharacterCompositionRootRole.Character)
+                    {
+                        builder.DeclareReference(
+                            "program:root-operation",
+                            OperationHandle.Invalid,
+                            ProgramReferenceKind.Operation,
+                            rootOperation.Value,
+                            root.Identity,
+                            source);
+                    }
                 }
                 return builder.Build();
             }

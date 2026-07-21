@@ -30,6 +30,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterVisualTrajectoryMode trajectoryMode,
             CharacterVisualTrajectorySample target,
             CharacterVisualTrajectoryResult visible,
+            Vector3 sourceTranslationDelta,
+            Vector3 visibleTranslationDelta,
+            bool groundedBefore,
+            bool groundedAfter,
             ulong resetSequence,
             CharacterBodyPresentationResetReason resetReason)
         {
@@ -43,6 +47,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             VisibleRotation = visible.Rotation;
             VisibleVelocity = visible.Velocity;
             VisibleYawVelocityDegreesPerSecond = visible.YawVelocityDegreesPerSecond;
+            SourceTranslationDelta = sourceTranslationDelta;
+            VisibleTranslationDelta = visibleTranslationDelta;
+            GroundedBefore = groundedBefore;
+            GroundedAfter = groundedAfter;
             TargetPosition = target.Position;
             TargetRotation = target.Rotation;
             TargetVelocity = target.LinearVelocity;
@@ -72,6 +80,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Quaternion VisibleRotation { get; }
         public Vector3 VisibleVelocity { get; }
         public float VisibleYawVelocityDegreesPerSecond { get; }
+        public Vector3 SourceTranslationDelta { get; }
+        public Vector3 VisibleTranslationDelta { get; }
+        public bool GroundedBefore { get; }
+        public bool GroundedAfter { get; }
         public Vector3 TargetPosition { get; }
         public Quaternion TargetRotation { get; }
         public Vector3 TargetVelocity { get; }
@@ -489,13 +501,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 previousTick,
                 currentTick,
                 clampedAlpha,
-                sample);
+                sample,
+                currentBody.Position - previousBody.Position,
+                previousBody.Grounded,
+                currentBody.Grounded);
         }
 
         CharacterBodyPresentationFrame BuildFrame(
             CharacterBodyTargetFrame target,
             CharacterVisualTrajectoryResult visible)
         {
+            Vector3 visibleTranslationDelta = m_LastPresentedFrame.IsValid &&
+                                              m_LastPresentedFrame.ResetSequence == m_ResetSequence
+                ? visible.Position - m_LastPresentedFrame.VisiblePosition
+                : Vector3.zero;
             return new CharacterBodyPresentationFrame(
                 target.PreviousTick,
                 target.CurrentTick,
@@ -504,6 +523,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Follower.Mode,
                 target.Sample,
                 visible,
+                target.SourceTranslationDelta,
+                visibleTranslationDelta,
+                target.GroundedBefore,
+                target.GroundedAfter,
                 m_ResetSequence,
                 m_ResetReason);
         }
@@ -535,7 +558,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Status = frame.CorrectionActive ? "Correcting" : "Settled",
                     Time = frame.SampleAlpha,
                     SecondaryTime = presentationDeltaSeconds,
-                    Detail = $"{frame.PreviousTick}->{frame.CurrentTick};source={frame.SourceMode};trajectory={frame.TrajectoryMode};target={frame.TargetPosition};targetYaw={frame.TargetRotation.eulerAngles.y:0.###};targetVelocity={frame.TargetVelocity};targetYawVelocity={frame.TargetYawVelocityDegreesPerSecond:0.###};grounded={frame.TargetGrounded};visual={frame.VisiblePosition};visualYaw={frame.VisibleRotation.eulerAngles.y:0.###};visualVelocity={frame.VisibleVelocity};visualYawVelocity={frame.VisibleYawVelocityDegreesPerSecond:0.###};positionError={frame.PositionError:0.####};yawError={frame.RotationError:0.###};correctionVelocity={frame.CorrectionPositionVelocity};yawCorrectionVelocity={frame.CorrectionYawVelocityDegreesPerSecond:0.###};active={frame.CorrectionActive};clamped={frame.CorrectionClamped};settled={frame.CorrectionSettled};branchRevision={frame.ResetSequence};resetReason={frame.ResetReason}",
+                    Detail = $"{frame.PreviousTick}->{frame.CurrentTick};source={frame.SourceMode};trajectory={frame.TrajectoryMode};target={frame.TargetPosition};targetYaw={frame.TargetRotation.eulerAngles.y:0.###};targetVelocity={frame.TargetVelocity};targetYawVelocity={frame.TargetYawVelocityDegreesPerSecond:0.###};grounded={frame.TargetGrounded};groundedInterval={frame.GroundedBefore}->{frame.GroundedAfter};sourceDelta={frame.SourceTranslationDelta};visibleDelta={frame.VisibleTranslationDelta};visual={frame.VisiblePosition};visualYaw={frame.VisibleRotation.eulerAngles.y:0.###};visualVelocity={frame.VisibleVelocity};visualYawVelocity={frame.VisibleYawVelocityDegreesPerSecond:0.###};positionError={frame.PositionError:0.####};yawError={frame.RotationError:0.###};correctionVelocity={frame.CorrectionPositionVelocity};yawCorrectionVelocity={frame.CorrectionYawVelocityDegreesPerSecond:0.###};active={frame.CorrectionActive};clamped={frame.CorrectionClamped};settled={frame.CorrectionSettled};branchRevision={frame.ResetSequence};resetReason={frame.ResetReason}",
                     Value = DebugValueSnapshot.Capture(frame.VisiblePosition)
                 });
         }
@@ -648,18 +671,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ulong previousTick,
                 ulong currentTick,
                 float sampleAlpha,
-                CharacterVisualTrajectorySample sample)
+                CharacterVisualTrajectorySample sample,
+                Vector3 sourceTranslationDelta,
+                bool groundedBefore,
+                bool groundedAfter)
             {
                 PreviousTick = previousTick;
                 CurrentTick = currentTick;
                 SampleAlpha = sampleAlpha;
                 Sample = sample;
+                SourceTranslationDelta = sourceTranslationDelta;
+                GroundedBefore = groundedBefore;
+                GroundedAfter = groundedAfter;
             }
 
             public ulong PreviousTick { get; }
             public ulong CurrentTick { get; }
             public float SampleAlpha { get; }
             public CharacterVisualTrajectorySample Sample { get; }
+            public Vector3 SourceTranslationDelta { get; }
+            public bool GroundedBefore { get; }
+            public bool GroundedAfter { get; }
         }
     }
 }

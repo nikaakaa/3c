@@ -8,6 +8,7 @@ namespace BTSMTL.Timeline
     [Serializable]
     [NodeName("NodeName")]
     [NodeColor(217, 187, 249)]
+    [NodeAuthoringCapability(NodeAuthoringCapability.TimelineDecision)]
     [Output("Output", PortCapacity.Single)]
     public class TimelineEnterNode : RunnableNode
     {
@@ -103,6 +104,7 @@ namespace BTSMTL.Timeline
 
     [NodeName("TimelineTime")]
     [NodePath("Timeline/Value/TimelineTime")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.TimelineDecision)]
     public class TimelineTimeNode : TimelineValueNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "TimelineTime"), TreeDesigner.ReadOnly]

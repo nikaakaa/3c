@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.DeterministicRollback;
 using ThirdPersonSimulation.Fixed;
@@ -121,7 +122,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 $"Rollback local Actor '{local.ActorId}' has no local input adapter.");
         }
 
-        IRollbackLocalInputAdapter LocalInput { get; }
+        IFixedCharacterControlSourceRuntime LocalInput { get; }
         public SimulationSessionPreparationStatus Status { get; private set; } = SimulationSessionPreparationStatus.Pending;
         public SimulationSessionFailure Failure { get; private set; }
         public SimulationSessionSourceDescriptor Descriptor => m_Model.SourceDescriptor;
@@ -296,32 +297,70 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             m_Input = input ?? throw new ArgumentNullException(nameof(input));
             m_Restore = restore ?? throw new ArgumentNullException(nameof(restore));
             m_Peer = peer ?? throw new ArgumentNullException(nameof(peer));
-            RuntimeLauncher = new DeterministicRollbackRuntimeLauncher(Descriptor);
         }
 
         public DeterministicRollbackModelDefinition ModelDefinition { get; }
         public string LocalPeerId => m_Peer?.LocalPeerId ?? throw new ObjectDisposedException(nameof(DeterministicRollbackPreparedSource));
         public SimulationSessionSourceDescriptor Descriptor { get; }
         public SimulationRuntimePortSet RuntimePorts { get; }
-        public IFixedSimulationSessionRuntimeLauncher RuntimeLauncher { get; }
-        public IFixedSimulationRestoreSource RestoreSource => m_Restore;
-        public IFixedSourceEgressOutputPort SourceEgress => m_RuntimeBridge ??
-            throw new InvalidOperationException("Rollback prepared Source Runtime bridge is not bound.");
+        public int MaximumBodySamplesPerActor => ModelDefinition.Policy.HistoryLengthTicks;
 
-        public IFixedSourceEgressOutputPort BindRuntime(
-            RollbackRuntimeState state,
-            IFixedSimulationSessionSnapshotCodec snapshotCodec,
-            DeterministicRollbackModelPolicy policy)
+        public FixedSimulationSourceRuntimeBinding BindRuntime(FixedSimulationSourceRuntimeBindingRequest request)
         {
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
             if (m_Disposed)
                 throw new ObjectDisposedException(nameof(DeterministicRollbackPreparedSource));
             if (m_RuntimeBridge != null)
                 throw new InvalidOperationException("Rollback prepared Source Runtime is already bound.");
+            if (request.PipelineDefinition is not DeterministicRollbackPipelineDefinition pipeline)
+                throw new InvalidOperationException("Rollback prepared Source requires the Deterministic Rollback Pipeline Definition.");
+            DeterministicRollbackModelPolicy policy = pipeline.BuildPolicy();
+            if (!ModelDefinition.Policy.ConfigurationHash.Equals(policy.ConfigurationHash))
+                throw new InvalidOperationException("Rollback prepared Source policy does not match the selected Pipeline Definition.");
+            var roster = new SimulationActorRosterDescriptor(ActorIds(request.Registrations));
+            var state = new RollbackRuntimeState(policy, roster.RosterHash, LocalPeerId);
             m_Restore.Bind(state);
             state.BindInputSource(m_Input);
-            m_RuntimeBridge = new RollbackEndpointRuntimeBridge(m_Peer, state, snapshotCodec, policy);
+            m_RuntimeBridge = new RollbackEndpointRuntimeBridge(m_Peer, state, request.SnapshotCodec, policy);
             m_Input.BindRuntimeBridge(m_RuntimeBridge);
-            return m_RuntimeBridge;
+            FixedSimulationPipelineRuntimePackage runtimePackage = pipeline.BuildRuntimePackage(state);
+            var outputCommitter = new RollbackOutputCommitter(
+                request.CommitterIdentity,
+                state,
+                policy.MaximumOutputRecords,
+                request.Output,
+                m_RuntimeBridge,
+                request.Diagnostics);
+            BindRuntimeDiagnostics(request.Registrations, state, outputCommitter, m_RuntimeBridge);
+            return new FixedSimulationSourceRuntimeBinding(
+                new DeterministicRollbackRuntimeLauncher(Descriptor),
+                runtimePackage,
+                m_Restore,
+                new RollbackHistoryCommitter(outputCommitter, state, policy.HistoryLengthTicks),
+                ThirdPersonSimulation.Fixed.SimulationPipelineInitialStateSource.CaptureActivatedDefaults);
+        }
+
+        static IReadOnlyList<ActorId> ActorIds(IReadOnlyList<IFixedSimulationActorRegistration> registrations)
+        {
+            var values = new ActorId[registrations.Count];
+            for (int i = 0; i < registrations.Count; i++)
+                values[i] = registrations[i].ActorId;
+            return values;
+        }
+
+        static void BindRuntimeDiagnostics(
+            IReadOnlyList<IFixedSimulationActorRegistration> registrations,
+            RollbackRuntimeState state,
+            RollbackOutputCommitter outputCommitter,
+            IRollbackNetworkDiagnosticsSource networkDiagnostics)
+        {
+            for (int i = 0; i < registrations.Count; i++)
+            {
+                if (registrations[i] is not IDeterministicRollbackSimulationActorRegistration registration)
+                    throw new InvalidOperationException($"Rollback Actor '{registrations[i].ActorId}' has no Rollback diagnostics extension.");
+                registration.BindRuntimeDiagnostics(state, outputCommitter, networkDiagnostics);
+            }
         }
 
         public void Dispose()

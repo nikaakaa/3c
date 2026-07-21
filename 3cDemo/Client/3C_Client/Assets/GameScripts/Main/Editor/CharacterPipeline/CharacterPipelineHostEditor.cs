@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
+using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEditor;
 using UnityEngine;
@@ -32,6 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
 
             DrawFootPlacementConfiguration(host);
+            DrawEquipmentConfiguration(host);
             RuntimeDebugSession session = RuntimeDebugSession.Shared;
             RuntimeDebugViewModel view = session.ViewModel;
             EditorGUILayout.Space(8f);
@@ -64,6 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawGraphLifecycle(view);
             DrawStateMachine(view);
             DrawAction(view);
+            DrawEquipment(view);
             DrawBlackboard(view);
             DrawMotion(view);
             DrawCamera(view);
@@ -105,6 +108,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 EditorGUILayout.HelpBox(exception.Message, MessageType.Error);
             }
+        }
+
+        static void DrawEquipmentConfiguration(CharacterPipelineHost host)
+        {
+            if (!host.Definition || !host.Definition.EquipmentCapabilityEnabled)
+                return;
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("Equipment", EditorStyles.boldLabel);
+            CharacterEquipmentRigBindingCatalog catalog = host.EquipmentRigBindings;
+            using (new EditorGUI.DisabledScope(true))
+                EditorGUILayout.ObjectField("Rig Bindings", catalog, typeof(CharacterEquipmentRigBindingCatalog), true);
+            if (!catalog)
+            {
+                EditorGUILayout.HelpBox("Equipment-enabled Character Host requires an explicit Rig Binding Catalog.", MessageType.Error);
+                return;
+            }
+            var errors = new List<string>();
+            if (catalog.CollectConfigurationErrors(errors))
+            {
+                EditorGUILayout.HelpBox("Equipment Rig and Socket bindings are valid.", MessageType.Info);
+                return;
+            }
+            for (int i = 0; i < errors.Count; i++)
+                EditorGUILayout.HelpBox(errors[i], MessageType.Error);
         }
 
         static void DrawSimulation(RuntimeDebugViewModel view)
@@ -235,6 +262,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 RuntimeTracePayload payload = eventView.Event.Payload;
                 return $"{eventView.SourceName} | {eventView.Event.Kind} | {payload.Value.DisplayValue()} | {payload.Status} {payload.Cause}";
+            });
+        }
+
+        static void DrawEquipment(RuntimeDebugViewModel view)
+        {
+            DrawEventSection("Equipment", view.GetCurrentEvents(RuntimeTraceChannel.Equipment), eventView =>
+            {
+                RuntimeTracePayload payload = eventView.Event.Payload;
+                return $"{eventView.Event.Kind} | {payload.Status} | slot {payload.OwnerId} | {payload.Name} | {payload.RelatedElementId} | {payload.Cause} | {payload.Detail}";
             });
         }
 

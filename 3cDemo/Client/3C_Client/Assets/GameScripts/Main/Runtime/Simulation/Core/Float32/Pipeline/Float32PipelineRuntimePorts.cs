@@ -12,6 +12,8 @@ namespace ThirdPersonSimulation
         public const string WorkingStateSchema = "float32-working-state-read";
         public const string CompletedSteps = "simulation.target.float32-completed-steps";
         public const string CompletedStepsSchema = "float32-completed-step-read";
+        public const string CommittedObservation = "simulation.target.float32-committed-actor-observation";
+        public const string CommittedObservationSchema = "committed-actor-pose-observation";
         public const string WorldSolver = "simulation.solver.float32-world";
         public const string WorldSolverSchema = "float32-world-solver";
         public const string Diagnostics = "simulation.diagnostics.session";

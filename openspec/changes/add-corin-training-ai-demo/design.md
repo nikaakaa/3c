@@ -8,16 +8,18 @@ Standalone已经注册玩家和`corin-training-enemy`两个Actor。训练敌人�
 
 ```text
 Root
-  -> Read Configured Player Target
-  -> Write CurrentTarget
-  -> Write ActionTargetSnapshot
-  -> Selector
-       -> If Distance > AttackRange
-            -> Write MoveAxis toward target
-       -> If Attack request eligible
-            -> Write zero MoveAxis
-            -> Submit Attack once
-       -> Write zero MoveAxis
+  -> Loop
+       -> Sequence
+            -> Select Configured Player Target
+            -> Write CurrentTarget
+            -> Write ActionTargetSnapshot
+            -> Selector
+                 -> If Distance > AttackRange [Abort Both]
+                      -> Write MoveAxis toward target
+                 -> If Distance <= AttackRange [Abort Self]
+                      -> Write zero MoveAxis
+                      -> Submit Attack once
+                      -> Wait AttackCooldownTicks
 ```
 
 AI只决定输入。Attack是否准入、进入哪段状态、窗口、后摇、MotionWarp与动画仍由Corin Character Program决定。
@@ -28,11 +30,17 @@ AI只决定输入。Attack是否准入、进入哪段状态、窗口、后摇、
 
 ## Request Lifecycle
 
-`SubmitActionRequest`按节点activation只提交一次。持续Running不会每Tick重复Attack；重新攻击由Tree中显式重入或冷却条件形成新activation。阈值和重入数据属于AI Blackboard或Definition，不硬编码在节点类。
+`SubmitActionRequest`按节点activation只提交一次。持续Running不会每Tick重复Attack；`WaitTicks`消费Controller-scope冷却值，完成后由Loop产生新的攻击activation。阈值和重入数据属于AI Blackboard或Definition，不硬编码在节点类。
 
 ## Movement Boundary
 
 AI输出目标平面方向的MoveAxis。Character Program负责Locomotion，WorldSolver负责碰撞，Presentation负责动画。没有寻路时AI可能被墙挡住，这是演示边界，不通过Transform、teleport或关闭碰撞绕过。
+
+## Enemy Presentation
+
+训练敌人继续使用Corin Character Definition和Presentation Projection，但Host的VisualRoot改为怪兽FBX实例。怪兽与Corin均使用Generic `Bip001`骨架路径，因此同一Animancer输出可以驱动该VisualRoot；旧Corin VisualRoot在训练敌人prefab中显式停用，不能形成第二个动画驱动。
+
+首版不声明怪兽专用Timeline动画映射。Foot Placement仍走正式Pose Post Process合同，但使用Passthrough solver保留动画姿态，不假装已经完成怪兽FinalIK调校。若Generic骨架路径在运行时无法消费现有Projection，必须停止并新增正式Presentation variant能力，禁止回退Animator Controller或双写动画。
 
 ## Asset Authoring
 
@@ -49,6 +57,8 @@ Agent v15 export_snapshot
 
 不保留Patch文件监听、一次性migrator、YAML写入或Neutral fallback。训练敌人prefab只在AI资产与Program全部可用后原子迁移Control Source引用。
 
+`AIControllerDefinition`必须位于同名独立C#文件。UnityEngine.Object authoring类型不得与另一个可创建ScriptableObject共享脚本文件后仍假定其MonoScript identity稳定；Definition在domain reload后必须继续由AssetDatabase解析为`AIControllerDefinition`，否则正式Agent根不存在。
+
 ## Tradeoffs
 
 ### 显式单目标
@@ -63,3 +73,6 @@ Agent v15 export_snapshot
 
 优点是先验证Local核心，不提前决定Authority Bot或Rollback Bot所有权。代价是三个网络产品暂时不能带该AI Actor，配置时必须明确拒绝。
 
+### 复用Corin Projection驱动怪兽Generic Rig
+
+优点是只替换表现骨架，AI输入、Character Program、Timeline事实和动画生命周期仍是唯一链路。代价是首版动作仍来自Corin Projection，不是怪兽FBX中的专用攻击组；怪兽专用动作需要独立Presentation variant change，不能塞回AI Tree。

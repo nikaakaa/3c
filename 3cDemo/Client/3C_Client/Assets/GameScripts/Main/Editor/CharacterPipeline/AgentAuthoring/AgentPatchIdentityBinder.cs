@@ -39,6 +39,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report?.Error("identity-binding", "full_snapshot_required", "Macro identity binding 必须使用 Full Snapshot。");
                 return false;
             }
+            if (!string.Equals(patch.domain, snapshot.domain, StringComparison.Ordinal) ||
+                !string.Equals(patch.rootIdentity, snapshot.rootIdentity, StringComparison.Ordinal) ||
+                !string.Equals(patch.sourceRevision, snapshot.sourceRevision, StringComparison.Ordinal))
+            {
+                report?.Error("identity-binding", "binding_source_mismatch", "Patch 与 Snapshot 的 domain、rootIdentity 或 sourceRevision 不一致。");
+                return false;
+            }
+            if (!string.Equals(patch.domain, AgentAuthoringSchema.CharacterControllerDomain, StringComparison.Ordinal))
+            {
+                report?.Error("identity-binding", "macro_binding_domain_unsupported", "显示名 macro identity binding 只允许 CharacterController；AIController 必须直接使用 stable identity。");
+                return false;
+            }
 
             for (int i = 0; i < snapshot.graphs.Count; i++)
             {

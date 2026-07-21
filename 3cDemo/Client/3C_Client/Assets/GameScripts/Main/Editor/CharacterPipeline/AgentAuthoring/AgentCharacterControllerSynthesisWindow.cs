@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline;
 using UnityEditor;
 using UnityEngine;
@@ -14,7 +15,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             Patch
         }
 
-        CharacterPipelineDefinition m_Definition;
+        enum ControllerDomain
+        {
+            CharacterController,
+            AIController
+        }
+
+        ControllerDomain m_Domain;
+        UnityEngine.Object m_Root;
         InputKind m_InputKind;
         string m_Json = string.Empty;
         Vector2 m_Scroll;
@@ -23,14 +31,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public static void Open(CharacterPipelineDefinition definition)
         {
             AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Controller");
-            window.m_Definition = definition;
+            window.m_Domain = ControllerDomain.CharacterController;
+            window.m_Root = definition;
+            window.Show();
+        }
+
+        public static void Open(AIControllerDefinition definition)
+        {
+            AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Controller");
+            window.m_Domain = ControllerDomain.AIController;
+            window.m_Root = definition;
             window.Show();
         }
 
         void OnGUI()
         {
             m_Scroll = EditorGUILayout.BeginScrollView(m_Scroll);
-            m_Definition = EditorGUILayout.ObjectField("Definition", m_Definition, typeof(CharacterPipelineDefinition), false) as CharacterPipelineDefinition;
+            m_Domain = (ControllerDomain)EditorGUILayout.EnumPopup("Domain", m_Domain);
+            System.Type rootType = m_Domain == ControllerDomain.CharacterController ? typeof(CharacterPipelineDefinition) : typeof(AIControllerDefinition);
+            if (m_Root && !rootType.IsInstanceOfType(m_Root))
+                m_Root = null;
+            m_Root = EditorGUILayout.ObjectField("Root Definition", m_Root, rootType, false);
+            EditorGUILayout.LabelField("Schema", AgentAuthoringSchema.Version);
             m_InputKind = (InputKind)EditorGUILayout.EnumPopup("Input", m_InputKind);
 
             EditorGUILayout.BeginHorizontal();
@@ -54,8 +76,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 Run(true);
             if (GUILayout.Button("Validate"))
                 Validate();
-            if (GUILayout.Button("Evaluate"))
-                Evaluate();
+            using (new EditorGUI.DisabledScope(m_Domain != ControllerDomain.CharacterController))
+            {
+                if (GUILayout.Button("Evaluate"))
+                    Evaluate();
+            }
             EditorGUILayout.EndHorizontal();
 
             DrawReport();
@@ -64,20 +89,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         void ExportSnapshot()
         {
-            if (!m_Definition)
+            if (!m_Root)
                 return;
-
-            AgentGraphSnapshot snapshot = new AgentGraphSnapshotExporter().Export(m_Definition);
-            AgentAuthoringJsonUtility.SaveJsonPanel("Export Agent Snapshot", $"{m_Definition.name}_AgentSnapshot", snapshot);
+            AgentAuthoringResponse response = Execute(AgentAuthoringAction.ExportSnapshot);
+            if (response.success)
+                AgentAuthoringJsonUtility.SaveJsonPanel("Export Agent Snapshot", $"{m_Root.name}_AgentSnapshot", response.snapshot);
+            m_LastReport = response.report;
         }
 
         void ExportFullDebugSnapshot()
         {
-            if (!m_Definition)
+            if (!m_Root)
                 return;
-
-            AgentGraphSnapshot snapshot = new AgentGraphSnapshotExporter().ExportFull(m_Definition);
-            AgentAuthoringJsonUtility.SaveJsonPanel("Export Full Agent Snapshot", $"{m_Definition.name}_AgentSnapshot_FullDebug", snapshot);
+            AgentAuthoringResponse response = Execute(AgentAuthoringAction.ExportSnapshot);
+            if (response.success)
+                AgentAuthoringJsonUtility.SaveJsonPanel("Export Full Agent Snapshot", $"{m_Root.name}_AgentSnapshot_FullDebug", response.snapshot);
+            m_LastReport = response.report;
         }
 
         void LoadJson()
@@ -100,21 +127,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         void Run(bool apply)
         {
             m_LastReport = new AgentCompileReport { success = true };
-            if (!m_Definition)
+            if (!m_Root)
             {
-                m_LastReport.Error("definition", "missing_definition", "CharacterPipelineDefinition 缺失。");
+                m_LastReport.Error("definition", "missing_definition", "Controller root definition 缺失。");
                 return;
             }
 
             if (!TryBuildPatchJson(out string patchJson, m_LastReport))
                 return;
 
-            AgentAuthoringResponse response = new AgentPatchAuthoringService().Execute(new AgentAuthoringRequest
-            {
-                action = apply ? AgentAuthoringAction.ApplyPatch : AgentAuthoringAction.DryRunPatch,
-                definitionAssetPath = AssetDatabase.GetAssetPath(m_Definition),
-                patchJson = patchJson
-            });
+            AgentAuthoringResponse response = Execute(apply ? AgentAuthoringAction.ApplyPatch : AgentAuthoringAction.DryRunPatch, patchJson);
             m_LastReport = response.report;
         }
 
@@ -127,7 +149,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (!AgentAuthoringJsonUtility.TryFromJson(m_Json, out AgentControllerIntent intent, report, "intent-json"))
                 return false;
 
-            AgentGraphSnapshot snapshot = new AgentGraphSnapshotExporter().ExportFull(m_Definition);
+            AgentAuthoringResponse response = Execute(AgentAuthoringAction.ExportSnapshot);
+            if (!response.success)
+            {
+                m_LastReport = response.report;
+                return false;
+            }
+            AgentGraphSnapshot snapshot = response.snapshot;
             if (!new AgentMacroLibrary().TryExpand(intent, snapshot, out AgentPatchIR patch, report))
                 return false;
 
@@ -137,28 +165,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         void Validate()
         {
-            if (!m_Definition)
+            if (!m_Root)
             {
                 m_LastReport = new AgentCompileReport { success = false };
-                m_LastReport.Error("definition", "missing_definition", "CharacterPipelineDefinition 缺失。");
+                m_LastReport.Error("definition", "missing_definition", "Controller root definition 缺失。");
                 return;
             }
 
-            AgentAuthoringResponse response = new AgentPatchAuthoringService().Execute(new AgentAuthoringRequest
-            {
-                action = AgentAuthoringAction.Validate,
-                definitionAssetPath = AssetDatabase.GetAssetPath(m_Definition)
-            });
+            AgentAuthoringResponse response = Execute(AgentAuthoringAction.Validate);
             m_LastReport = response.report;
         }
 
         void Evaluate()
         {
-            m_LastReport = !m_Definition
+            m_LastReport = m_Root is not CharacterPipelineDefinition definition
                 ? new AgentCompileReport { success = false }
-                : new AgentSynthesisEvaluator().EvaluateDefaultSamples(m_Definition);
-            if (!m_Definition)
-                m_LastReport.Error("definition", "missing_definition", "CharacterPipelineDefinition 缺失。");
+                : new AgentSynthesisEvaluator().EvaluateDefaultSamples(definition);
+            if (m_Root is not CharacterPipelineDefinition)
+                m_LastReport.Error("definition", "evaluation_domain_unsupported", "Evaluate samples 只适用于 CharacterController domain。");
+        }
+
+        AgentAuthoringResponse Execute(AgentAuthoringAction action, string patchJson = null)
+        {
+            return new AgentPatchAuthoringService().Execute(new AgentAuthoringRequest
+            {
+                action = action,
+                domain = m_Domain.ToString(),
+                rootAssetPath = m_Root ? AssetDatabase.GetAssetPath(m_Root) : string.Empty,
+                patchJson = patchJson
+            });
         }
 
         void DrawReport()

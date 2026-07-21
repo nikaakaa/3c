@@ -32,6 +32,7 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("State Elapsed Seconds")]
     [NodePath("Base/Value/StateMachine/ElapsedSeconds")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class StateElapsedSecondsNode : StateMachineRuntimeFactNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Seconds"), ReadOnly]
@@ -47,6 +48,7 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("State Elapsed Ticks")]
     [NodePath("Base/Value/StateMachine/ElapsedTicks")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class StateElapsedTicksNode : StateMachineRuntimeFactNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Ticks"), ReadOnly]
@@ -62,6 +64,7 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("State Root Completed")]
     [NodePath("Base/Value/StateMachine/RootCompleted")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class StateRootCompletedNode : StateMachineRuntimeFactNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Completed"), ReadOnly]

@@ -4,6 +4,7 @@ namespace TreeDesigner
 {
     [NodeName("Sequence")]
     [NodePath("Base/Composite/Sequence")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.SharedFlow)]
     public class SequenceNode : CompositeNode
     {
         [NonSerialized]

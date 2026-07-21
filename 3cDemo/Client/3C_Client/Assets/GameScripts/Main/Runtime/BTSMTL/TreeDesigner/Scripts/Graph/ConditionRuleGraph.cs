@@ -8,6 +8,9 @@ namespace TreeDesigner
     [AcceptableNodePaths("Base")]
     public sealed class ConditionRuleGraph : BaseTree
     {
+        [SerializeField] GraphAuthoringRole m_AuthoringRole = GraphAuthoringRole.Character;
+
+        public override GraphAuthoringRole AuthoringRole => m_AuthoringRole;
         public ConditionRuleResultNode ResultNode => Nodes.OfType<ConditionRuleResultNode>().FirstOrDefault();
 
         public bool Evaluate()
@@ -16,10 +19,13 @@ namespace TreeDesigner
         }
 
 #if UNITY_EDITOR
-        public static ConditionRuleGraph CreateDefaultGraph(string graphName)
+        public static ConditionRuleGraph CreateDefaultGraph(
+            string graphName,
+            GraphAuthoringRole authoringRole = GraphAuthoringRole.Character)
         {
             ConditionRuleGraph graph = new ConditionRuleGraph();
             graph.name = string.IsNullOrEmpty(graphName) ? "Condition Rule" : graphName;
+            graph.m_AuthoringRole = authoringRole;
             ConditionRuleResultNode resultNode = graph.CreateNode(typeof(ConditionRuleResultNode)) as ConditionRuleResultNode;
             resultNode?.SetDefaultResult(true);
 #if UNITY_EDITOR
@@ -50,7 +56,10 @@ namespace TreeDesigner
                 IsTimelineValueNode(type))
                 return false;
 
-            return typeof(ValueNode).IsAssignableFrom(type);
+            return typeof(ValueNode).IsAssignableFrom(type) &&
+                   (AuthoringRole != GraphAuthoringRole.AIController ||
+                    NodeAuthoringCapabilityPolicy.TryGetCapability(type, out NodeAuthoringCapability capability) &&
+                    NodeAuthoringCapabilityPolicy.Allows(AuthoringRole, capability));
         }
 
         static bool IsTimelineValueNode(Type type)

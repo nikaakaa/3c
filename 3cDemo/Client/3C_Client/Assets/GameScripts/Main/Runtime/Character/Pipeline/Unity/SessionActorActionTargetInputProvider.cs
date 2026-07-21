@@ -7,35 +7,36 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     [DisallowMultipleComponent]
     public sealed class SessionActorActionTargetInputProvider : CharacterActionTargetInputProvider
     {
-        [SerializeField] CharacterPipelineHost m_Target;
+        [SerializeField] MonoBehaviour m_Target;
 
-        public CharacterPipelineHost Target => m_Target;
-        public override string ProviderIdentity => m_Target
-            ? $"session-actor-target/{m_Target.ActorId}"
+        public ISimulationSessionActorHost Target => m_Target as ISimulationSessionActorHost;
+        public override string ProviderIdentity => Target != null
+            ? $"session-actor-target/{Target.SimulationActorId}"
             : "session-actor-target/unbound";
 
-        public override bool TryCapture(CharacterPipelineHost owner, out CharacterActionTargetInputSample sample)
+        public override bool TryGetTargetActorId(ISimulationSessionActorHost owner, out ActorId actorId)
         {
-            sample = default;
-            if (!owner || !m_Target)
+            actorId = default;
+            if (owner == null || Target == null)
                 return false;
-            if (ReferenceEquals(owner, m_Target))
+            if (ReferenceEquals(owner, Target))
                 throw new InvalidOperationException("Action target provider cannot target its owner Character host.");
-            if (!owner.SessionHost || owner.SessionHost != m_Target.SessionHost)
+            if (!owner.SessionHost || owner.SessionHost != Target.SessionHost)
                 throw new InvalidOperationException("Action target provider owner and target must belong to the same SimulationSessionHost.");
-            var ownerId = new ActorId(owner.ActorId);
-            var targetId = new ActorId(m_Target.ActorId);
-            if (!ownerId.IsValid || !targetId.IsValid || ownerId == targetId)
+            ActorId ownerId = owner.SimulationActorId;
+            actorId = Target.SimulationActorId;
+            if (!ownerId.IsValid || !actorId.IsValid || ownerId == actorId)
                 throw new InvalidOperationException("Action target provider requires distinct valid owner and target ActorIds.");
-            CharacterSimulationActorRegistration registration = m_Target.Registration;
-            if (registration == null || !registration.TryGetLatestCommittedBody(out WorldBodyState body, out SimulationTick tick))
-                return false;
-            sample = new CharacterActionTargetInputSample(
-                targetId,
-                new Vector3(body.Position.X.Value, body.Position.Y.Value, body.Position.Z.Value),
-                body.Yaw.Degrees.Value,
-                tick.Value);
             return true;
         }
+
+#if UNITY_EDITOR
+        public void SetAuthoring(MonoBehaviour target)
+        {
+            if (target is not ISimulationSessionActorHost)
+                throw new ArgumentException("Action target must implement the Simulation Session Actor Host contract.", nameof(target));
+            m_Target = target;
+        }
+#endif
     }
 }

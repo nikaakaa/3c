@@ -36,11 +36,41 @@ Corin Training AI Tree MUST读取AIPerceptionProfile显式绑定的玩家ActorId
 
 Corin Training AI Definition、Tree、Blackboard、Perception和Intent配置 MUST通过Agent v15 Snapshot、dry-run、同Patch apply、re-export与validate流程写入。系统 MUST不直接编辑managed-reference YAML，也 MUST不保留一次性migrator、临时菜单、Patch watcher或旧Neutral fallback配置。
 
+`AIControllerDefinition` MUST拥有可在Unity domain reload后恢复的正式MonoScript identity。Definition MUST位于与类型同名的独立脚本资产中，MUST NOT依赖同一脚本文件中另一个ScriptableObject的MonoScript引用。
+
 #### Scenario: 创建训练AI资产
 
 - **WHEN** Agent应用Corin Training AI Patch
 - **THEN** dry-run与apply MUST消费同一immutable typed plan
 - **AND** re-export MUST以stable identity显示全部正式配置
+
+#### Scenario: 审查AI条件控制流
+
+- **WHEN** Agent导出Corin Training AI完整Snapshot
+- **THEN** Snapshot MUST显示Loop stop类型、Compare类型、ConditionRuleGraph identity和Edge AbortPolicy
+- **AND** Agent不得把已经序列化的条件边投影为空
+
+#### Scenario: Unity重新加载脚本域
+
+- **WHEN** 创建训练AI资产后发生Unity domain reload
+- **THEN** AssetDatabase MUST继续把Definition解析为`AIControllerDefinition`
+- **AND** Agent export MUST继续从同一路径加载该正式根
+
+### Requirement: Corin训练敌人必须使用唯一怪兽表现根
+
+Standalone训练敌人 MUST将怪兽FBX作为唯一激活的VisualRoot，并由CharacterPipelineHost绑定的同一Animancer与Presentation Projection驱动。旧Corin VisualRoot MUST显式停用。怪兽Animator MUST不绑定Animator Controller fallback，也 MUST不申请Root Motion移动所有权。
+
+#### Scenario: 创建训练敌人表现
+
+- **WHEN** Standalone加载`corin-training-enemy`
+- **THEN** Host的Animancer、VisualRoot和Foot Placement MUST全部指向怪兽VisualRoot
+- **AND** 怪兽姿态 MUST只由正式Presentation链输出
+
+#### Scenario: 怪兽未配置专用脚底IK
+
+- **WHEN** 怪兽首版Presentation执行Pose Post Process
+- **THEN** 系统 MUST通过显式Passthrough solver保留动画姿态并履行统一生命周期
+- **AND** MUST NOT复用Corin FinalIK骨骼引用或跳过Host的正式Foot Placement合同
 
 ### Requirement: 训练AI不得伪装寻路或Combat闭环
 
@@ -51,4 +81,3 @@ Corin Training AI Definition、Tree、Blackboard、Perception和Intent配置 MUS
 - **WHEN** 训练AI的直接移动被WorldSolver障碍阻挡
 - **THEN** 角色 MUST保持正式碰撞结果
 - **AND** 系统 MUST不启动隐藏寻路或Transform修正
-

@@ -2271,6 +2271,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a3c39cdfd41b4342b556357440fb8df6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  m_Calibration: {fileID: 11400000, guid: 471a3432ddd640c187b4ebfdf8c94e69, type: 2}
   m_VisualRoot: {fileID: 8301054601070386138}
   m_Pelvis: {fileID: 334373269997075400}
   m_LeftHip: {fileID: 2808246467070286756}
@@ -2281,12 +2282,6 @@ MonoBehaviour:
   m_RightKnee: {fileID: 1224122829547735076}
   m_RightAnkle: {fileID: 5661467912676223938}
   m_RightToe: {fileID: 4769495069066468673}
-  m_LeftHeelSoleOffset: {x: 0, y: 0, z: 0}
-  m_LeftToeSoleOffset: {x: 0, y: 0, z: 0}
-  m_RightHeelSoleOffset: {x: 0, y: 0, z: 0}
-  m_RightToeSoleOffset: {x: 0, y: 0, z: 0}
-  m_LeftFootForwardAxis: {x: -0.722, y: 0.692, z: 0}
-  m_RightFootForwardAxis: {x: -0.722, y: 0.692, z: 0}
   m_SelfColliderRoot: {fileID: 640945827232343004}
 --- !u!114 &9201613645525773173
 MonoBehaviour:

@@ -5,6 +5,7 @@ using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline
@@ -44,13 +45,15 @@ namespace ThirdPersonCharacter.Pipeline
                 throw new ArgumentException("Timeline preview identity is incomplete.");
             m_Program = program;
             m_Projection = projection;
-            m_Projection.RequireProgram(m_Program);
+            CharacterPresentationSemanticContract contract =
+                Float32CharacterPresentationContractAdapter.Create(m_Program);
+            m_Projection.RequireContract(contract);
             m_PreviewActorId = new ActorId($"TimelinePreview/{previewSessionId:N}");
             m_TimelineOperation = CharacterPipelinePreviewProgram.FindTimelineOperation(
                 m_Program,
                 timeline.AuthoringId);
             m_Playback = new CharacterAnimationPlaybackRuntime(
-                m_Program,
+                contract,
                 m_Projection,
                 animancer,
                 false,
@@ -122,7 +125,7 @@ namespace ThirdPersonCharacter.Pipeline
                 var playbackId = new AnimationPlaybackId(producer.ProducerId, session.Generation);
                 m_TargetPlaybacks[track.AuthoringId] = playbackId;
                 AnimationProducerSample probe =
-                    producer.Animation.Sample(producer, playbackId, session.CurrentTime, 0);
+                    producer.Animation.Sample(producer, playbackId, session.CurrentTime, 0, 1f);
                 if (!probe.IsValid)
                     throw new InvalidOperationException(
                         $"Timeline preview producer '{producer.ProducerId}' produced an invalid sample.");

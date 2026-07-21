@@ -4,3 +4,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("ThirdPersonSimulation.Fixed")]
 [assembly: InternalsVisibleTo("ThirdPersonSimulation.DeterministicKcc")]
 [assembly: InternalsVisibleTo("ThirdPersonSimulation.DeterministicRollback")]
+[assembly: InternalsVisibleTo("ThirdPersonClient.Editor")]

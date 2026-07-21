@@ -20,39 +20,60 @@
 - **AND** Presentation camera resolver 的本地状态 MUST不被复制
 
 ### Requirement: BTSMTL 和 Timeline 必须只提交相机请求
-系统 MUST 让 BTSMTL 自定义节点和 Timeline 相机轨道只提交强类型相机输出，包括 `CameraStateRequest`、`CameraCue`、`CameraResponsePolicy`、`CameraTargetRequest` 或读取 `CameraBasisSnapshot`。BTSMTL 节点、Timeline clip 和 compiled Action operation MUST NOT 直接控制 Cinemachine、Unity Camera、camera Transform 或 virtual camera priority。
+
+系统 MUST让 BTSMTL 自定义节点和 Timeline 相机轨道只提交强类型相机输出，包括 `CameraStateRequest`、`CameraCue`、`CameraResponsePolicy`、`CameraTargetRequest` 或读取 `CameraBasisSnapshot`。每个已公开 Camera Graph node MUST由唯一 Compiler emitter 降低为 versioned Program operation，并保留 Graph/Node authoring identity、端口与 Source Map；Float32与Fixed Target MUST按同一 operation 语义将其提交为现有 PresentationCommand。BTSMTL 节点、Timeline clip、compiled Camera operation 和 Action operation MUST NOT直接控制 Cinemachine、Unity Camera、camera Transform 或 virtual camera priority，也 MUST不把 Camera runtime state写入 Character/World simulation state。缺失字段、未知 operation 或 Target 未实现 MUST在 build/composition 明确失败，不得跳过或使用 runtime fallback。
 
 #### Scenario: BTSMTL 请求瞄准相机
-- **WHEN** Aim 状态节点运行
-- **THEN** 节点 MUST 提交 `CameraStateRequest(Aim)`
-- **AND** 节点 MUST NOT 调用 `CinemachineFreeLook`、`Camera.main` 或 scene camera object
+
+- **WHEN** Aim 状态中的 RequestCameraState node 通过 Character Simulation Compiler 编译
+- **THEN** emitter MUST生成带稳定 Source Map 的 `CameraStateRequest(Aim)` Program operation
+- **AND** Target leaf MUST通过 PresentationCommand 提交该请求
+- **AND** 节点 MUST NOT调用 `CinemachineFreeLook`、`Camera.main` 或 scene camera object
 
 #### Scenario: Timeline 触发技能特写
+
 - **WHEN** Timeline camera clip 采样到 SkillCloseup 窗口
-- **THEN** clip MUST 输出 `CameraStateRequest(SkillCloseup)` 或等价 sample
-- **AND** Timeline MUST NOT 直接修改 Cinemachine virtual camera priority
+- **THEN** clip MUST输出 `CameraStateRequest(SkillCloseup)` 或等价 sample
+- **AND** Timeline MUST NOT直接修改 Cinemachine virtual camera priority
+
+#### Scenario: Camera node 缺少目标配置
+
+- **WHEN** SetCameraTarget node 缺少正式 target identity或包含未知 target kind
+- **THEN** Compiler preflight MUST报告 node source identity并拒绝生成 Program
+- **AND** runtime MUST不把该 node 当成 Success 或选择默认 CameraTarget
+
+#### Scenario: Fixed Target 编译 Camera operation
+
+- **WHEN** Fixed Program 包含当前 operation-set version 的 Camera operation
+- **THEN** Fixed Target MUST输出与 Float32 相同语义的强类型 PresentationCommand
+- **AND** Camera request MUST不进入 deterministic CharacterState、WorldState或Snapshot
 
 ### Requirement: CharacterSimulationPresentationRuntime 必须是相机 runtime 唯一边界
-系统 MUST使用 `CharacterSimulationPresentationRuntime` 作为角色相机 runtime 的唯一公开编排边界。该协调器 MAY拥有不可被 Host、Network adapter 或 Gameplay 代码直接访问的内部 `CharacterCameraPresentationRuntime`；内部 Camera Runtime MUST唯一拥有 Camera State/Response/Target/Cue lifecycle、resolver、look input、bind offset 和 `ICameraRigAdapter` 调用。协调器 MUST在 `PresentationFrame` 中使用同一 `CharacterBodyPresentationFrame` 的 visible pose 推进 Animation 与 Camera，并把 Camera 结果交给 rig adapter。Camera capability MUST通过 Factory 的完整显式 binding 创建，MUST不决定 Body clock 策略。系统 MUST不保留 Camera MonoBehaviour 自主 `LateUpdate`、外部 Camera resolver 调用或无相机 Actor 分配 Camera 容器的路径。
 
-#### Scenario: Local Owner 推进相机
-- **WHEN** `CharacterPresentationFrameTarget` 调用唯一 `ICharacterPresentationRuntime.Present`
-- **THEN** 协调器 MUST先取得本帧唯一 Body visible pose
-- **AND** 内部 Camera Runtime MUST使用该 pose、已提交 camera command、target binding 和 look input 生成并应用 CameraPosePlan
+系统 MUST使用 `CharacterSimulationPresentationRuntime` 作为角色相机runtime的唯一公开编排边界。该协调器 MAY拥有不可被Host、Network adapter或Gameplay代码直接访问的内部 `CharacterCameraPresentationRuntime`；内部Camera Runtime MUST唯一拥有Camera State/Response/Target/Cue lifecycle、resolver、look input、bind offset和`ICameraRigAdapter`调用。协调器 MUST在`PresentationFrame`中使用同一 `CharacterBodyPresentationFrame` 的visible pose推进Animation与Camera，并把Camera结果交给rig adapter。Camera capability MUST通过Factory的完整显式binding创建，MUST不决定Body clock策略。系统 MUST不保留Camera MonoBehaviour自主`LateUpdate`、外部Camera resolver调用或无相机Actor分配Camera容器的路径。
+
+#### Scenario: Local Owner推进相机
+
+- **WHEN** `CharacterPresentationFrameTarget`调用唯一 `ICharacterPresentationRuntime.Present`
+- **THEN** 协调器 MUST先取得本帧唯一Body visible pose
+- **AND** 内部Camera Runtime MUST使用该pose、已提交camera command、target binding和look input生成并应用CameraPosePlan
 
 #### Scenario: 无相机 Simulated Actor
-- **WHEN** Factory 创建一个完整模拟但不拥有本地相机的 Actor
-- **THEN** MUST不创建 Camera Runtime、request 容器或 resolver
-- **AND** 该 Actor 仍 MUST使用其显式 Body clock 策略
 
-#### Scenario: 无 Camera 组合收到 Camera 命令
-- **WHEN** observed 或 simulated 无 Camera Actor 收到 Camera PresentationCommand
+- **WHEN** Factory创建一个完整模拟但不拥有本地相机的Actor
+- **THEN** MUST不创建Camera Runtime、request容器或resolver
+- **AND** 该Actor仍 MUST使用其显式Body clock策略
+
+#### Scenario: 无Camera组合收到Camera命令
+
+- **WHEN** observed或simulated无Camera Actor收到Camera PresentationCommand
 - **THEN** 唯一协调器 MUST报告明确配置错误
-- **AND** MUST不搜索场景相机或创建默认 Camera Runtime
+- **AND** MUST不搜索场景相机或创建默认Camera Runtime
 
 #### Scenario: 禁止双驱动
-- **WHEN** camera rig 已由内部 Camera Runtime 驱动
-- **THEN** Host、Network adapter 和旧相机控制器 MUST不再修改同一个 follow、aim、FOV 或 priority 状态
+
+- **WHEN** camera rig已由内部Camera Runtime驱动
+- **THEN** Host、Network adapter和旧相机控制器 MUST不再修改同一个follow、aim、FOV或priority状态
 
 ### Requirement: CameraStateResolver 必须使用有限状态仲裁
 系统 MUST 使用有限 camera mode 和稳定仲裁规则决定当前相机状态。第一阶段 camera mode MUST 至少覆盖 `FreeLook`、`Aim`、`LockOn`、`ActionFocus` 和 `SkillCloseup`。Resolver MUST 支持 priority、weight、source identity、action instance lifecycle 和 blend 参数。系统 MUST NOT 使用动态脚本公式或场景对象 priority 作为相机状态真相。
@@ -194,3 +215,4 @@ CameraStateClip与CameraResponseClip的Weight、Ease In与Ease Out曲线 MUST通
 - **WHEN** 作者修改Camera Weight或Ease channel
 - **THEN** Curve Editor MUST只修改Camera Clip authoring
 - **AND** MUST不直接访问Cinemachine组件或写Camera Transform
+

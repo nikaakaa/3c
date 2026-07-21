@@ -48,12 +48,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             m_ProjectedGraphPaths.Clear();
 
             AgentGraphSnapshot snapshot = new AgentGraphSnapshot();
+            snapshot.domain = AgentAuthoringSchema.CharacterControllerDomain;
             snapshot.exportMode = mode.ToString();
             if (!definition)
                 return snapshot;
 
             snapshot.definitionName = definition.name;
             snapshot.definitionAssetPath = AssetDatabase.GetAssetPath(definition);
+            snapshot.rootAssetPath = snapshot.definitionAssetPath;
+            snapshot.rootIdentity = AssetDatabase.AssetPathToGUID(snapshot.definitionAssetPath);
             snapshot.rootTreeAssetPath = definition.RootTreeAsset ? AssetDatabase.GetAssetPath(definition.RootTreeAsset) : string.Empty;
 
             ExportBodyMotion(definition.BodyMotionProfile, mode, snapshot);
@@ -227,6 +230,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             snapshot.presentation.transitionLibraryAssetGuid = string.IsNullOrEmpty(libraryPath)
                 ? string.Empty
                 : AssetDatabase.AssetPathToGUID(libraryPath);
+            snapshot.presentation.footAnalysisMode = presentation.FootPlacementAnalysisMode.ToString();
+            snapshot.presentation.footAnalysisSourceAssetGuid = presentation.FootPlacementAnalysisSourceAssetGuid;
+            if (CharacterFootPlacementAnalysisSource.IsAssetGuid(presentation.FootPlacementAnalysisSourceAssetGuid))
+            {
+                string sourcePath = AssetDatabase.GUIDToAssetPath(presentation.FootPlacementAnalysisSourceAssetGuid);
+                CharacterFootPlacementAnalysisSource source =
+                    AssetDatabase.LoadAssetAtPath<CharacterFootPlacementAnalysisSource>(sourcePath);
+                if (source)
+                {
+                    snapshot.presentation.footAnalysisSourceId = source.AnalysisSourceId.Value;
+                    snapshot.presentation.footAnalysisSourceVersion = source.AnalysisVersion;
+                    snapshot.presentation.footAnalysisAlgorithmVersion = CharacterFootPlacementAnalysisSource.AlgorithmVersion;
+                }
+            }
             for (int i = 0; i < layers.Count; i++)
             {
                 CharacterAnimationLayerDefinition layer = layers[i];
@@ -811,18 +828,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         clipSnapshot.motionWarpClip = true;
                         clipSnapshot.sourceMotionClipAuthoringId = warp.SourceMotionClipId;
                         clipSnapshot.sourceMotionClipPath = ResolveTimelineClipPath(timeline, warp.SourceMotionClipId);
-                        clipSnapshot.positionMode = warp.PositionMode.ToString();
+                        clipSnapshot.translationMode = warp.TranslationMode.ToString();
+                        clipSnapshot.targetOffsetSpace = warp.TargetOffsetSpace.ToString();
                         clipSnapshot.rotationMode = warp.RotationMode.ToString();
-                        clipSnapshot.targetLocalPlanarOffset = new AgentSnapshotVector2
+                        clipSnapshot.rotationMethod = warp.RotationMethod.ToString();
+                        clipSnapshot.targetPlanarOffset = new AgentSnapshotVector2
                         {
-                            x = warp.TargetLocalPlanarOffset.x,
-                            y = warp.TargetLocalPlanarOffset.y
+                            x = warp.TargetPlanarOffset.x,
+                            y = warp.TargetPlanarOffset.y
                         };
                         clipSnapshot.targetYawOffsetDegrees = warp.TargetYawOffsetDegrees;
-                        clipSnapshot.positionWeight = warp.PositionWeight;
-                        clipSnapshot.yawWeight = warp.YawWeight;
                         clipSnapshot.maxTotalPositionCorrection = warp.MaxTotalPositionCorrection;
                         clipSnapshot.maxTotalYawCorrectionDegrees = warp.MaxTotalYawCorrectionDegrees;
+                        clipSnapshot.maximumYawRateDegreesPerSecond = warp.MaximumYawRateDegreesPerSecond;
+                        clipSnapshot.limitPolicy = warp.LimitPolicy.ToString();
                     }
                     for (int channelIndex = 0; channelIndex < TimelineCurveChannelCatalog.All.Count; channelIndex++)
                     {
@@ -1074,6 +1093,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     endPort = edge.EndPortName,
                     flowOrder = edge.FlowOrder,
                     transitionPriority = edge.TransitionPriority,
+                    abortPolicy = edge.AbortPolicy.ToString(),
                     conditionRuleGraphAuthoringId = edge.ConditionRuleGraph ? GraphId(FindGraphPath(edge.ConditionRuleGraph), edge.ConditionRuleGraph) : string.Empty,
                     conditionRuleGraphPath = FindGraphPath(edge.ConditionRuleGraph)
                 });
@@ -1111,6 +1131,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     y = node.Position.y
                 }
             };
+
+            if (node is LoopNode loopNode)
+                result.loopStopType = loopNode.LoopStopType.ToString();
+            else if (node is CompareNode compareNode)
+                result.compareType = compareNode.Comparison.ToString();
 
             if (node is ExposedPropertyNode setter &&
                 setter.NodeType == ExposedPropertyNodeType.Set &&

@@ -11,6 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Activate Action Instance")]
     [NodePath("Base/Action/Low Level/Activate Action Instance")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class ActivateActionInstanceNode : ActionNode
     {
         [SerializeField, ShowInPanel("Action Profile")]
@@ -82,6 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Submit Action Lifecycle Transition")]
     [NodePath("Base/Action/Low Level/Submit Action Lifecycle Transition")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class SubmitActionLifecycleTransitionNode : ActionNode
     {
         [SerializeField, ShowInPanel("Action Context")]
@@ -133,6 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Action Window Active Info")]
     [NodePath("Base/Value/Action/Window Active")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class ActionWindowActiveInfoNode : ValueNode
     {
         [SerializeField, ShowInPanel("Window Type")]
@@ -160,6 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Can Activate Action Info")]
     [NodePath("Base/Value/Action/Can Activate")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class CanActivateActionInfoNode : ValueNode
     {
         [SerializeField, ShowInPanel("Target Action Profile")]

@@ -244,77 +244,79 @@ namespace ThirdPersonSimulation
             };
         }
 
-        static ReadOnlyDictionary<SimulationOperationCode, OperationValuePortContract> Build()
-        {
-            var values = new Dictionary<SimulationOperationCode, OperationValuePortContract>();
-            for (int i = 0; i < CharacterGameplayOperationSet.Operations.Count; i++)
-            {
-                SimulationOperationCode code = CharacterGameplayOperationSet.Operations[i];
-                values.Add(code, Empty(code));
-            }
+		static ReadOnlyDictionary<SimulationOperationCode, OperationValuePortContract> Build()
+		{
+			var values = new Dictionary<SimulationOperationCode, OperationValuePortContract>();
+			for (int i = 0; i < CharacterGameplayOperationSet.Operations.Count; i++)
+			{
+				SimulationOperationCode code = CharacterGameplayOperationSet.Operations[i];
+				values.Add(code, Empty(code));
+			}
 
-            Set(values, Output(SimulationOperationCode.StateRootCompleted, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.StateExitCause, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.BlackboardGet, Dynamic("m_Output", 0)));
-            Set(values, Input(SimulationOperationCode.BlackboardSet, Dynamic("m_Value", 0)));
-            Set(values, Output(SimulationOperationCode.InputBoolean, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.InputScalar, Fixed("m_Output", 0, SemanticValueKind.Number)));
-            Set(values, Output(SimulationOperationCode.InputVector2, Fixed("m_Output", 0, SemanticValueKind.Vector2)));
-            Set(values, Output(SimulationOperationCode.InputVector2Magnitude, Fixed("m_Output", 0, SemanticValueKind.Number)));
-            Set(values, Output(SimulationOperationCode.InputRequest, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
-            Set(values, Both(SimulationOperationCode.MoveFacingAngle,
-                new[] { Fixed("m_MoveInput", 0, SemanticValueKind.Vector2) },
-                new[] { Fixed("m_Output", 0, SemanticValueKind.Number) }));
-            Set(values, Output(SimulationOperationCode.ActivateActionInstance, Fixed("m_Activated", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.ActionContextActive, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.SubmitActionLifecycle, Fixed("m_Submitted", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.ActionWindowActive, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.CanActivateAction, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
-            Set(values, Input(SimulationOperationCode.LocomotionInputMotion, Fixed("m_MoveInput", 0, SemanticValueKind.Vector2)));
-            Set(values, Input(SimulationOperationCode.ConditionResult, BooleanLike("m_Result", 0)));
-            Set(values, Both(SimulationOperationCode.Compare,
-                new[] { NumericLike("m_InputValue1", 0, "compare"), NumericLike("m_InputValue2", 1, "compare") },
-                new[] { Fixed("m_Result", 0, SemanticValueKind.Boolean) }));
-            Set(values, Both(SimulationOperationCode.And,
-                new[] { BooleanLike("m_Input1", 0), BooleanLike("m_Input2", 1) },
-                new[] { Fixed("m_Output", 0, SemanticValueKind.Boolean) }));
-            Set(values, Both(SimulationOperationCode.Or,
-                new[] { BooleanLike("m_Input1", 0), BooleanLike("m_Input2", 1) },
-                new[] { Fixed("m_Output", 0, SemanticValueKind.Boolean) }));
-            Set(values, Both(SimulationOperationCode.Not,
-                new[] { BooleanLike("m_Input", 0) },
-                new[] { Fixed("m_Output", 0, SemanticValueKind.Boolean) }));
-            Set(values, Output(SimulationOperationCode.Constant, Dynamic("m_Output", 0)));
-            Set(values, Output(SimulationOperationCode.GameplayEffectHasTag, Fixed("m_Result", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.GameplayEffectMatchTags, Fixed("m_Result", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.GameplayAttributeRead,
-                Fixed("m_Valid", 0, SemanticValueKind.Boolean),
-                Fixed("m_BaseValue", 1, SemanticValueKind.Number),
-                Fixed("m_CurrentValue", 2, SemanticValueKind.Number)));
-            Set(values, Output(SimulationOperationCode.GameplayEffectApply, Fixed("m_Applied", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.GameplayEffectRemove, Fixed("m_Removed", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.CameraBasisRead,
-                Fixed(CameraProgramOperationSchema.BasisValidPortId, 0, SemanticValueKind.Boolean),
-                Fixed(CameraProgramOperationSchema.BasisPlanarForwardPortId, 1, SemanticValueKind.Vector3),
-                Fixed(CameraProgramOperationSchema.BasisPlanarRightPortId, 2, SemanticValueKind.Vector3),
-                Fixed(CameraProgramOperationSchema.BasisLookDirectionPortId, 3, SemanticValueKind.Vector3),
-                Fixed(CameraProgramOperationSchema.BasisAimPointPortId, 4, SemanticValueKind.Vector3),
-                Fixed(CameraProgramOperationSchema.BasisYawPortId, 5, SemanticValueKind.Yaw),
-                Fixed(CameraProgramOperationSchema.BasisPitchPortId, 6, SemanticValueKind.Number)));
-            Set(values, Output(SimulationOperationCode.ReadEquipmentIdentity, Fixed("m_Output", 0, SemanticValueKind.Identity)));
-            Set(values, Output(SimulationOperationCode.ReadEquipmentParameter, Dynamic("m_Output", 0)));
-            Set(values, Output(SimulationOperationCode.RequestEquipmentChange, Fixed("m_Accepted", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.BeginEquipmentChange, Fixed("m_Begun", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.CommitEquipmentChange, Fixed("m_Committed", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.CancelEquipmentChange, Fixed("m_Cancelled", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.EnterEquipmentFeatureHost, Fixed("m_Entered", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.ExitEquipmentFeatureHost, Fixed("m_Exited", 0, SemanticValueKind.Boolean)));
-            Set(values, Output(SimulationOperationCode.ResolveEquipmentActionRoute, Fixed("m_Resolved", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.StateRootCompleted, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.StateExitCause, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.BlackboardGet, Dynamic("m_Output", 0)));
+			Set(values, Input(SimulationOperationCode.BlackboardSet, Dynamic("m_Value", 0)));
+			Set(values, Output(SimulationOperationCode.InputBoolean, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.InputScalar, Fixed("m_Output", 0, SemanticValueKind.Number)));
+			Set(values, Output(SimulationOperationCode.InputVector2, Fixed("m_Output", 0, SemanticValueKind.Vector2)));
+			Set(values, Output(SimulationOperationCode.InputVector2Magnitude, Fixed("m_Output", 0, SemanticValueKind.Number)));
+			Set(values, Output(SimulationOperationCode.InputRequest, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+			Set(values, Both(SimulationOperationCode.MoveFacingAngle,
+				new[] { Fixed("m_MoveInput", 0, SemanticValueKind.Vector2) },
+				new[] { Fixed("m_Output", 0, SemanticValueKind.Number) }));
+			Set(values, Output(SimulationOperationCode.ActivateActionInstance, Fixed("m_Activated", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.ActionContextActive, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.SubmitActionLifecycle, Fixed("m_Submitted", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.ActionWindowActive, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.CanActivateAction, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+			Set(values, Input(SimulationOperationCode.LocomotionInputMotion, Fixed("m_MoveInput", 0, SemanticValueKind.Vector2)));
+			Set(values, Input(SimulationOperationCode.ConditionResult, BooleanLike("m_Result", 0)));
+			Set(values, Both(SimulationOperationCode.Compare,
+				new[] { NumericLike("m_InputValue1", 0, "compare"), NumericLike("m_InputValue2", 1, "compare") },
+				new[] { Fixed("m_Result", 0, SemanticValueKind.Boolean) }));
+			Set(values, Both(SimulationOperationCode.And,
+				new[] { BooleanLike("m_Input1", 0), BooleanLike("m_Input2", 1) },
+				new[] { Fixed("m_Output", 0, SemanticValueKind.Boolean) }));
+			Set(values, Both(SimulationOperationCode.Or,
+				new[] { BooleanLike("m_Input1", 0), BooleanLike("m_Input2", 1) },
+				new[] { Fixed("m_Output", 0, SemanticValueKind.Boolean) }));
+			Set(values, Both(SimulationOperationCode.Not,
+				new[] { BooleanLike("m_Input", 0) },
+				new[] { Fixed("m_Output", 0, SemanticValueKind.Boolean) }));
+			Set(values, Output(SimulationOperationCode.Constant, Dynamic("m_Output", 0)));
+			Set(values, Output(SimulationOperationCode.GameplayEffectHasTag, Fixed("m_Result", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.GameplayEffectMatchTags, Fixed("m_Result", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.GameplayAttributeRead,
+				Fixed("m_Valid", 0, SemanticValueKind.Boolean),
+				Fixed("m_BaseValue", 1, SemanticValueKind.Number),
+				Fixed("m_CurrentValue", 2, SemanticValueKind.Number)));
+			Set(values, Output(SimulationOperationCode.GameplayEffectApply, Fixed("m_Applied", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.GameplayEffectRemove, Fixed("m_Removed", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.CameraBasisRead,
+				Fixed(CameraProgramOperationSchema.BasisValidPortId, 0, SemanticValueKind.Boolean),
+				Fixed(CameraProgramOperationSchema.BasisPlanarForwardPortId, 1, SemanticValueKind.Vector3),
+				Fixed(CameraProgramOperationSchema.BasisPlanarRightPortId, 2, SemanticValueKind.Vector3),
+				Fixed(CameraProgramOperationSchema.BasisLookDirectionPortId, 3, SemanticValueKind.Vector3),
+				Fixed(CameraProgramOperationSchema.BasisAimPointPortId, 4, SemanticValueKind.Vector3),
+				Fixed(CameraProgramOperationSchema.BasisYawPortId, 5, SemanticValueKind.Yaw),
+				Fixed(CameraProgramOperationSchema.BasisPitchPortId, 6, SemanticValueKind.Number)));
+			Set(values, Output(
+				SimulationOperationCode.ReadEquipmentIdentity,
+				Fixed("m_Equipment", 0, SemanticValueKind.Identity),
+				Fixed("m_Feature", 1, SemanticValueKind.Identity),
+				Fixed("m_Revision", 2, SemanticValueKind.UInt64),
+				Fixed("m_Equipped", 3, SemanticValueKind.Boolean)));
+			Set(values, Both(SimulationOperationCode.ReadEquipmentParameter, new[] { Fixed("m_ExpectedRevision", 0, SemanticValueKind.UInt64) }, new[] { Dynamic("m_Output", 0) }));
+			Set(values, Both(SimulationOperationCode.RequestEquipmentChange, new[] { Fixed("m_ExpectedRevision", 0, SemanticValueKind.UInt64) }, new[] { Fixed("m_Accepted", 0, SemanticValueKind.Boolean), Fixed("m_Failure", 1, SemanticValueKind.Int32) }));
+			Set(values, Both(SimulationOperationCode.BeginEquipmentChange, new[] { Fixed("m_ExpectedRevision", 0, SemanticValueKind.UInt64) }, new[] { Fixed("m_Begun", 0, SemanticValueKind.Boolean), Fixed("m_ChangeId", 1, SemanticValueKind.UInt64), Fixed("m_Failure", 2, SemanticValueKind.Int32) }));
+			Set(values, Both(SimulationOperationCode.CommitEquipmentChange, new[] { Fixed("m_ChangeId", 0, SemanticValueKind.UInt64) }, new[] { Fixed("m_Committed", 0, SemanticValueKind.Boolean), Fixed("m_Failure", 1, SemanticValueKind.Int32) }));
+			Set(values, Both(SimulationOperationCode.CancelEquipmentChange, new[] { Fixed("m_ChangeId", 0, SemanticValueKind.UInt64) }, new[] { Fixed("m_Cancelled", 0, SemanticValueKind.Boolean), Fixed("m_Failure", 1, SemanticValueKind.Int32) }));
 
-            if (values.Count != CharacterGameplayOperationSet.Operations.Count)
-                throw new InvalidOperationException("Value port contract table is incomplete.");
-            return new ReadOnlyDictionary<SimulationOperationCode, OperationValuePortContract>(values);
-        }
+			if (values.Count != CharacterGameplayOperationSet.Operations.Count)
+				throw new InvalidOperationException("Value port contract table is incomplete.");
+			return new ReadOnlyDictionary<SimulationOperationCode, OperationValuePortContract>(values);
+		}
 
         static void Set(Dictionary<SimulationOperationCode, OperationValuePortContract> values, OperationValuePortContract contract)
         {
@@ -348,3 +350,4 @@ namespace ThirdPersonSimulation
             new OperationValuePortDefinition(identity, order, OperationValuePortConstraint.Dynamic);
     }
 }
+                                                                                                                                                                                                                                                                                                                                                                                         

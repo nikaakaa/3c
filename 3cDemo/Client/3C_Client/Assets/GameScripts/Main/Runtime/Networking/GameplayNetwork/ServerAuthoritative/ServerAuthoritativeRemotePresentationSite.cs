@@ -56,7 +56,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             CharacterSimulationProgram program = m_CharacterDefinition.SimulationProgram.Load();
             if (!program.ProgramHash.Equals(ownerProgram.ProgramHash) || !program.LayoutHash.Equals(ownerProgram.LayoutHash))
                 throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' Program does not match the owner Session Program.");
-            CharacterPresentationProjection projection = m_CharacterDefinition.PresentationProjection.Load(program);
+            CharacterPresentationProjection projection = m_CharacterDefinition.PresentationProjection.Load(
+                Float32CharacterPresentationContractAdapter.Create(program));
             GameObject visualObject = Instantiate(m_VisualTemplate, m_SpawnPosition, Quaternion.Euler(m_SpawnEulerAngles));
             visualObject.name = $"{m_VisualTemplate.name} [Remote {actorId.Value}]";
             AnimancerComponent animancer = visualObject.GetComponent<AnimancerComponent>();
@@ -95,7 +96,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             {
                 CharacterPresentationRuntimeBinding presentationBinding =
                     CharacterPresentationRuntimeFactory.CreateObservedActor(
-                    CharacterPresentationProgramIdentity.From(program),
+                    Float32CharacterPresentationContractAdapter.Create(program),
                     tickRate,
                     projection,
                     actorId,

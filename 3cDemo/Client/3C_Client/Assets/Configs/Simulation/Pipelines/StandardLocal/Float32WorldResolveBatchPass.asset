@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: Float32WorldResolveBatchPass
   m_EditorClassIdentifier: 
   m_PassId: thirdperson.simulation.float32-world-resolve-batch
-  m_ImplementationVersion: 2
+  m_ImplementationVersion: 4

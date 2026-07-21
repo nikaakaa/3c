@@ -39,6 +39,12 @@ Environment
 - 技术演示只强制启动两名真人客户端，不要求四个真人客户端。
 - 角色、美术、地图和怪物种类的数量不是验收重点；允许复用同一角色配置并使用最小演示场地。
 
+### 当前实现边界
+
+项目已经安装通用BTSMTL AI authoring、portable AI Program、独立AI State、committed Actor Observation与Local Float32 Control Source事务链。AI只产生与玩家相同类型的`CharacterSimulationInput`，不会直接执行Action、Timeline、Motion、伤害或动画。
+
+当前Corin训练敌人仍使用Neutral Control Source，Agent仍是只编辑Character Controller的v14；本文中的Ally Bot、中立怪AI、Team/Faction感知、Authority AI和具体AI资产尚未作为演示内容完成。后续场景资产必须从正式AI Definition编译并进入同一Session，不能用MonoBehaviour Bot、Scene查询或客户端本地推断代替。
+
 ## 核心战斗范围
 
 玩家角色的最小可演示能力包括：
@@ -159,4 +165,3 @@ Character Input / Bot Intent
 - 命中、格挡、打断、伤害、Health 与死亡由唯一 GameplayResult/Effect/Attribute 链处理。
 - 同一战斗事件在两个客户端具有一致身份，可通过 diagnostics 追溯到输入、ActionInstance、Window、Result、Attribute 和 Presentation。
 - 没有为了 Demo 新增 fallback、兼容路径、临时桥接、双写入口或第二套玩法逻辑。
-

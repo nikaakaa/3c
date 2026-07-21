@@ -27,6 +27,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 session.Report.Error(property.Path, "property_port_not_found", $"property port 无法解析：{property.StartPropertyPort} -> {property.EndPropertyPort}");
                 valid = false;
             }
+            if (valid && command is AgentLinkFlowCommand flow && source is CompositeNode && target is not RunnableNode &&
+                string.Equals(flow.StartPort, "Output", StringComparison.Ordinal) &&
+                string.Equals(flow.EndPort, "Input", StringComparison.Ordinal))
+            {
+                session.Report.Error(flow.Path, "flow_target_not_runnable", $"Composite flow target 必须是 RunnableNode，当前为 {target.GetType().Name}。ValueNode 应放入边的 ConditionRuleGraph。 ");
+                valid = false;
+            }
             session.AddPlanned(command, graph, $"{link.Source.Identity}->{link.Target.Identity}", command.OperationName);
             return valid;
         }
@@ -127,6 +134,59 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return;
             }
             session.AddApplied(command, graph, edge, "property");
+        }
+    }
+
+    public sealed class AgentBTConditionRuleCommandHandler : IAgentPatchCommandHandler
+    {
+        readonly AgentConditionRuleBuilder m_Builder;
+
+        public AgentBTConditionRuleCommandHandler(AgentConditionRuleBuilder builder)
+        {
+            m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
+        }
+
+        public bool Preflight(AgentPatchCompileSession session, AgentPatchCommand command)
+        {
+            if (command is not AgentEnsureBTConditionRuleCommand condition)
+                throw new InvalidOperationException($"Unsupported BT condition command: {command.Kind}");
+            if (!session.TryResolveGraph(condition.Graph, condition.Path, out BaseTree graph))
+                return false;
+            if (graph != null && graph is StateMachineGraph)
+            {
+                session.Report.Error(condition.Path, "bt_condition_wrong_graph", "BT edge condition 不能配置到 StateMachineGraph。");
+                return false;
+            }
+            BaseEdge edge = null;
+            bool valid = graph == null || session.TryResolveFlowEdge(graph, condition.Edge, condition.Path, out edge);
+            if (valid && edge != null && (edge.StartNode is not CompositeNode || edge.EndNode is not RunnableNode))
+            {
+                session.Report.Error(condition.Path, "bt_condition_wrong_edge", "ConditionRuleGraph 只能配置在 Composite 到 RunnableNode 的 flow edge。");
+                valid = false;
+            }
+            valid &= m_Builder.Preflight(session, condition.Groups, condition.Path);
+            session.AddPlanned(condition, graph, condition.Edge.Identity, condition.AbortPolicy.ToString());
+            return valid;
+        }
+
+        public void Apply(AgentPatchCompileSession session, AgentPatchCommand command)
+        {
+            AgentEnsureBTConditionRuleCommand condition = command as AgentEnsureBTConditionRuleCommand ??
+                throw new InvalidOperationException($"Unsupported BT condition command: {command.Kind}");
+            if (!session.TryResolveGraph(condition.Graph, condition.Path, out BaseTree graph) ||
+                !session.TryResolveFlowEdge(graph, condition.Edge, condition.Path, out BaseEdge edge))
+                return;
+            if (edge.StartNode is not CompositeNode || edge.EndNode is not RunnableNode)
+            {
+                session.Report.Error(condition.Path, "bt_condition_wrong_edge", "ConditionRuleGraph 只能配置在 Composite 到 RunnableNode 的 flow edge。");
+                return;
+            }
+            if (!edge.HasConditionRuleGraphConfiguration)
+                edge.SetConditionRuleGraph(ConditionRuleGraph.CreateDefaultGraph($"{edge.StartNode.ResolvedDisplayName} To {edge.EndNode.ResolvedDisplayName} Condition", graph.AuthoringRole));
+            edge.AbortPolicy = condition.AbortPolicy;
+            if (!m_Builder.BuildFlowRule(session, edge, condition.Groups, condition.Path))
+                return;
+            session.AddApplied(condition, graph, edge, condition.AbortPolicy.ToString());
         }
     }
 }

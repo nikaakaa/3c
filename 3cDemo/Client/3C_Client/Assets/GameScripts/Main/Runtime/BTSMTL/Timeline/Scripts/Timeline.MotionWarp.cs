@@ -5,10 +5,20 @@ using UnityEngine;
 
 namespace BTSMTL.Timeline
 {
-    public enum MotionWarpPositionMode : byte
+    public enum MotionWarpTranslationMode : byte
     {
         Disabled = 0,
-        MatchTargetPlanarPosition = 1
+        ScaleToTarget = 1,
+        SkewToTarget = 2,
+        LinearToTarget = 3
+    }
+
+    public enum MotionWarpTargetOffsetSpace : byte
+    {
+        TargetLocal = 0,
+        ApproachDirection = 1,
+        ActorStartLocal = 2,
+        World = 3
     }
 
     public enum MotionWarpRotationMode : byte
@@ -16,6 +26,19 @@ namespace BTSMTL.Timeline
         Disabled = 0,
         FaceTarget = 1,
         MatchTargetYaw = 2
+    }
+
+    public enum MotionWarpRotationMethod : byte
+    {
+        ProgressCurve = 0,
+        ConstantRate = 1,
+        ScaleSourceYaw = 2
+    }
+
+    public enum MotionWarpLimitPolicy : byte
+    {
+        ApplyClamped = 0,
+        PreserveSource = 1
     }
 
     [TrackGroup("Base"), ScriptGuid("79b8da4acfeb4d1994d019eacf6d5de3"), Ordered(1), Color(248, 177, 91)]
@@ -33,22 +56,22 @@ namespace BTSMTL.Timeline
         string m_SourceMotionClipId;
 
         [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public MotionWarpPositionMode PositionMode = MotionWarpPositionMode.MatchTargetPlanarPosition;
+        public MotionWarpTranslationMode TranslationMode = MotionWarpTranslationMode.SkewToTarget;
+
+        [ShowInInspector, ShowIf(nameof(HasPositionWarp)), OnValueChanged("RebindTimeline")]
+        public MotionWarpTargetOffsetSpace TargetOffsetSpace = MotionWarpTargetOffsetSpace.ApproachDirection;
 
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public MotionWarpRotationMode RotationMode = MotionWarpRotationMode.FaceTarget;
 
+        [ShowInInspector, ShowIf(nameof(HasYawWarp)), OnValueChanged("RebindTimeline")]
+        public MotionWarpRotationMethod RotationMethod = MotionWarpRotationMethod.ProgressCurve;
+
         [ShowInInspector, ShowIf(nameof(HasPositionWarp)), OnValueChanged("RebindTimeline")]
-        public Vector2 TargetLocalPlanarOffset;
+        public Vector2 TargetPlanarOffset;
 
         [ShowInInspector, ShowIf(nameof(HasYawWarp)), OnValueChanged("RebindTimeline")]
         public float TargetYawOffsetDegrees;
-
-        [ShowInInspector, ShowIf(nameof(HasPositionWarp)), OnValueChanged("RebindTimeline")]
-        public float PositionWeight = 1f;
-
-        [ShowInInspector, ShowIf(nameof(HasYawWarp)), OnValueChanged("RebindTimeline")]
-        public float YawWeight = 1f;
 
         [ShowInInspector, ShowIf(nameof(HasPositionWarp)), OnValueChanged("RebindTimeline")]
         public float MaxTotalPositionCorrection = 1f;
@@ -56,15 +79,24 @@ namespace BTSMTL.Timeline
         [ShowInInspector, ShowIf(nameof(HasYawWarp)), OnValueChanged("RebindTimeline")]
         public float MaxTotalYawCorrectionDegrees = 45f;
 
-        [ShowInInspector, ShowIf(nameof(HasPositionWarp)), OnValueChanged("RebindTimeline")]
+        [ShowInInspector, ShowIf(nameof(UsesMaximumYawRate)), OnValueChanged("RebindTimeline")]
+        public float MaximumYawRateDegreesPerSecond = 360f;
+
+        [ShowInInspector, OnValueChanged("RebindTimeline")]
+        public MotionWarpLimitPolicy LimitPolicy = MotionWarpLimitPolicy.ApplyClamped;
+
+        [ShowInInspector, ShowIf(nameof(UsesPositionProgress)), OnValueChanged("RebindTimeline")]
         public AnimationCurve PositionProgressCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
-        [ShowInInspector, ShowIf(nameof(HasYawWarp)), OnValueChanged("RebindTimeline")]
+        [ShowInInspector, ShowIf(nameof(UsesYawProgress)), OnValueChanged("RebindTimeline")]
         public AnimationCurve YawProgressCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
         public string SourceMotionClipId => m_SourceMotionClipId ?? string.Empty;
-        public bool HasPositionWarp => PositionMode != MotionWarpPositionMode.Disabled;
+        public bool HasPositionWarp => TranslationMode != MotionWarpTranslationMode.Disabled;
         public bool HasYawWarp => RotationMode != MotionWarpRotationMode.Disabled;
+        public bool UsesPositionProgress => TranslationMode == MotionWarpTranslationMode.SkewToTarget || TranslationMode == MotionWarpTranslationMode.LinearToTarget;
+        public bool UsesYawProgress => HasYawWarp && RotationMethod == MotionWarpRotationMethod.ProgressCurve;
+        public bool UsesMaximumYawRate => HasYawWarp && RotationMethod == MotionWarpRotationMethod.ConstantRate;
 
 #if UNITY_EDITOR
         public override string Name
@@ -84,25 +116,29 @@ namespace BTSMTL.Timeline
         }
 
         public void ConfigureAuthoring(
-            MotionWarpPositionMode positionMode,
+            MotionWarpTranslationMode translationMode,
+            MotionWarpTargetOffsetSpace targetOffsetSpace,
             MotionWarpRotationMode rotationMode,
-            Vector2 targetLocalPlanarOffset,
+            MotionWarpRotationMethod rotationMethod,
+            Vector2 targetPlanarOffset,
             float targetYawOffsetDegrees,
-            float positionWeight,
-            float yawWeight,
             float maxTotalPositionCorrection,
             float maxTotalYawCorrectionDegrees,
+            float maximumYawRateDegreesPerSecond,
+            MotionWarpLimitPolicy limitPolicy,
             AnimationCurve positionProgressCurve,
             AnimationCurve yawProgressCurve)
         {
-            PositionMode = positionMode;
+            TranslationMode = translationMode;
+            TargetOffsetSpace = targetOffsetSpace;
             RotationMode = rotationMode;
-            TargetLocalPlanarOffset = targetLocalPlanarOffset;
+            RotationMethod = rotationMethod;
+            TargetPlanarOffset = targetPlanarOffset;
             TargetYawOffsetDegrees = targetYawOffsetDegrees;
-            PositionWeight = positionWeight;
-            YawWeight = yawWeight;
             MaxTotalPositionCorrection = maxTotalPositionCorrection;
             MaxTotalYawCorrectionDegrees = maxTotalYawCorrectionDegrees;
+            MaximumYawRateDegreesPerSecond = maximumYawRateDegreesPerSecond;
+            LimitPolicy = limitPolicy;
             PositionProgressCurve = CloneCurve(positionProgressCurve);
             YawProgressCurve = CloneCurve(yawProgressCurve);
             RebindTimeline();
@@ -307,6 +343,16 @@ namespace BTSMTL.Timeline
                     Add(issues, "motion_warp_source_blend_invalid", $"MotionWarp source '{source.AuthoringId}' must use Override blend mode.", warp, source);
                     valid = false;
                 }
+                if (source.Space != TimelineMotionContributionSpace.Local)
+                {
+                    Add(issues, "motion_warp_source_space_invalid", $"MotionWarp source '{source.AuthoringId}' must use ActorLocal contribution space.", warp, source);
+                    valid = false;
+                }
+                if (!HasUnitGameplayWeight(source))
+                {
+                    Add(issues, "motion_warp_source_weight_invalid", $"MotionWarp source '{source.AuthoringId}' must use unit Gameplay weight with no ease. Animation blending belongs to Presentation.", warp, source);
+                    valid = false;
+                }
                 if (warp.StartFrame < source.StartFrame || warp.EndFrame > source.CurveEndFrame)
                 {
                     Add(issues, "motion_warp_window_outside_source", $"MotionWarp '{warp.AuthoringId}' must stay inside source frames {source.StartFrame}..{source.CurveEndFrame}.", warp, source);
@@ -319,14 +365,16 @@ namespace BTSMTL.Timeline
                 valid = false;
             }
             valid &= ValidateConfiguration(
-                warp.PositionMode,
+                warp.TranslationMode,
+                warp.TargetOffsetSpace,
                 warp.RotationMode,
-                warp.TargetLocalPlanarOffset,
+                warp.RotationMethod,
+                warp.TargetPlanarOffset,
                 warp.TargetYawOffsetDegrees,
-                warp.PositionWeight,
-                warp.YawWeight,
                 warp.MaxTotalPositionCorrection,
                 warp.MaxTotalYawCorrectionDegrees,
+                warp.MaximumYawRateDegreesPerSecond,
+                warp.LimitPolicy,
                 warp.PositionProgressCurve,
                 warp.YawProgressCurve,
                 issues,
@@ -336,14 +384,16 @@ namespace BTSMTL.Timeline
         }
 
         public static bool ValidateConfiguration(
-            MotionWarpPositionMode positionMode,
+            MotionWarpTranslationMode translationMode,
+            MotionWarpTargetOffsetSpace targetOffsetSpace,
             MotionWarpRotationMode rotationMode,
-            Vector2 targetLocalPlanarOffset,
+            MotionWarpRotationMethod rotationMethod,
+            Vector2 targetPlanarOffset,
             float targetYawOffsetDegrees,
-            float positionWeight,
-            float yawWeight,
             float maxTotalPositionCorrection,
             float maxTotalYawCorrectionDegrees,
+            float maximumYawRateDegreesPerSecond,
+            MotionWarpLimitPolicy limitPolicy,
             AnimationCurve positionProgressCurve,
             AnimationCurve yawProgressCurve,
             List<MotionWarpAuthoringIssue> issues,
@@ -352,42 +402,69 @@ namespace BTSMTL.Timeline
         {
             string identity = warp?.AuthoringId ?? "pending";
             bool valid = true;
-            bool positionDefined = Enum.IsDefined(typeof(MotionWarpPositionMode), positionMode);
+            bool translationDefined = Enum.IsDefined(typeof(MotionWarpTranslationMode), translationMode);
+            bool offsetSpaceDefined = Enum.IsDefined(typeof(MotionWarpTargetOffsetSpace), targetOffsetSpace);
             bool rotationDefined = Enum.IsDefined(typeof(MotionWarpRotationMode), rotationMode);
-            if (!positionDefined || !rotationDefined)
+            bool rotationMethodDefined = Enum.IsDefined(typeof(MotionWarpRotationMethod), rotationMethod);
+            bool limitPolicyDefined = Enum.IsDefined(typeof(MotionWarpLimitPolicy), limitPolicy);
+            if (!translationDefined || !offsetSpaceDefined || !rotationDefined || !rotationMethodDefined || !limitPolicyDefined)
             {
                 Add(issues, "motion_warp_mode_invalid", $"MotionWarp '{identity}' contains an unknown mode.", warp, source);
                 valid = false;
             }
-            else if (positionMode == MotionWarpPositionMode.Disabled && rotationMode == MotionWarpRotationMode.Disabled)
+            else if (translationMode == MotionWarpTranslationMode.Disabled && rotationMode == MotionWarpRotationMode.Disabled)
             {
                 Add(issues, "motion_warp_mode_disabled", $"MotionWarp '{identity}' has both position and rotation disabled.", warp, source);
                 valid = false;
             }
-            if (!Finite(targetLocalPlanarOffset.x) || !Finite(targetLocalPlanarOffset.y) || !Finite(targetYawOffsetDegrees))
+            if (translationDefined && translationMode != MotionWarpTranslationMode.Disabled &&
+                (!Finite(targetPlanarOffset.x) || !Finite(targetPlanarOffset.y)))
             {
-                Add(issues, "motion_warp_target_offset_invalid", $"MotionWarp '{identity}' target offset must be finite.", warp, source);
+                Add(issues, "motion_warp_target_offset_invalid", $"MotionWarp '{identity}' target planar offset must be finite.", warp, source);
                 valid = false;
             }
-            if (!Unit(positionWeight) || !Unit(yawWeight))
+            if (rotationDefined && rotationMode != MotionWarpRotationMode.Disabled && !Finite(targetYawOffsetDegrees))
             {
-                Add(issues, "motion_warp_weight_invalid", $"MotionWarp '{identity}' weights must be in [0,1].", warp, source);
+                Add(issues, "motion_warp_target_yaw_invalid", $"MotionWarp '{identity}' target yaw offset must be finite.", warp, source);
                 valid = false;
             }
-            if (!Finite(maxTotalPositionCorrection) || maxTotalPositionCorrection < 0f)
+            if (translationDefined && translationMode != MotionWarpTranslationMode.Disabled &&
+                (!Finite(maxTotalPositionCorrection) || maxTotalPositionCorrection < 0f))
             {
                 Add(issues, "motion_warp_position_clamp_invalid", $"MotionWarp '{identity}' position correction limit must be finite and non-negative.", warp, source);
                 valid = false;
             }
-            if (!Finite(maxTotalYawCorrectionDegrees) || maxTotalYawCorrectionDegrees < 0f || maxTotalYawCorrectionDegrees > 180f)
+            if (rotationDefined && rotationMode != MotionWarpRotationMode.Disabled &&
+                (!Finite(maxTotalYawCorrectionDegrees) || maxTotalYawCorrectionDegrees < 0f || maxTotalYawCorrectionDegrees > 180f))
             {
                 Add(issues, "motion_warp_yaw_clamp_invalid", $"MotionWarp '{identity}' yaw correction limit must be in [0,180].", warp, source);
                 valid = false;
             }
-            if (positionDefined && positionMode != MotionWarpPositionMode.Disabled)
+            if (rotationDefined && rotationMode != MotionWarpRotationMode.Disabled &&
+                rotationMethodDefined && rotationMethod == MotionWarpRotationMethod.ConstantRate &&
+                (!Finite(maximumYawRateDegreesPerSecond) || maximumYawRateDegreesPerSecond <= 0f))
+            {
+                Add(issues, "motion_warp_yaw_rate_invalid", $"MotionWarp '{identity}' maximum yaw rate must be finite and positive.", warp, source);
+                valid = false;
+            }
+            if (translationDefined && (translationMode == MotionWarpTranslationMode.SkewToTarget || translationMode == MotionWarpTranslationMode.LinearToTarget))
                 valid &= ValidateProgressCurve(positionProgressCurve, "position", warp, source, issues);
-            if (rotationDefined && rotationMode != MotionWarpRotationMode.Disabled)
+            if (rotationDefined && rotationMode != MotionWarpRotationMode.Disabled &&
+                rotationMethodDefined && rotationMethod == MotionWarpRotationMethod.ProgressCurve)
                 valid &= ValidateProgressCurve(yawProgressCurve, "yaw", warp, source, issues);
+            if (warp != null && source != null && translationDefined && translationMode == MotionWarpTranslationMode.ScaleToTarget &&
+                SourceWindowPlanarMagnitude(source, warp) <= Epsilon)
+            {
+                Add(issues, "motion_warp_scale_source_zero", $"MotionWarp '{identity}' ScaleToTarget requires a non-zero source window planar endpoint.", warp, source);
+                valid = false;
+            }
+            if (warp != null && source != null && rotationDefined && rotationMode != MotionWarpRotationMode.Disabled &&
+                rotationMethodDefined && rotationMethod == MotionWarpRotationMethod.ScaleSourceYaw &&
+                Mathf.Abs(SourceWindowYaw(source, warp)) <= Epsilon)
+            {
+                Add(issues, "motion_warp_scale_yaw_source_zero", $"MotionWarp '{identity}' ScaleSourceYaw requires non-zero source window yaw.", warp, source);
+                valid = false;
+            }
             return valid;
         }
 
@@ -447,7 +524,45 @@ namespace BTSMTL.Timeline
             return false;
         }
 
-        static bool Unit(float value) => Finite(value) && value >= 0f && value <= 1f;
+        static float SourceWindowPlanarMagnitude(MotionCurveClip source, MotionWarpClip warp)
+        {
+            Vector2 start = SourcePosition(source, warp.StartFrame);
+            Vector2 end = SourcePosition(source, warp.EndFrame);
+            return (end - start).magnitude;
+        }
+
+        static float SourceWindowYaw(MotionCurveClip source, MotionWarpClip warp) =>
+            source.Yaw.Evaluate(SourceNormalizedTime(source, warp.EndFrame)) -
+            source.Yaw.Evaluate(SourceNormalizedTime(source, warp.StartFrame));
+
+        static Vector2 SourcePosition(MotionCurveClip source, int frame)
+        {
+            float normalized = SourceNormalizedTime(source, frame);
+            return new Vector2(source.PositionX.Evaluate(normalized), source.PositionZ.Evaluate(normalized));
+        }
+
+        static float SourceNormalizedTime(MotionCurveClip source, int frame)
+        {
+            int duration = source.CurveEndFrame - source.StartFrame;
+            return duration <= 0 ? 0f : Mathf.Clamp01((frame - source.StartFrame) / (float)duration);
+        }
+
+        static bool HasUnitGameplayWeight(MotionCurveClip source)
+        {
+            if (source.EaseInFrame != 0 || source.EaseOutFrame != 0 || source.WeightCurve == null || source.WeightCurve.length == 0)
+                return false;
+            Keyframe[] keys = source.WeightCurve.keys;
+            for (int i = 0; i < keys.Length; i++)
+            {
+                if (!Finite(keys[i].value) || Mathf.Abs(keys[i].value - 1f) > Epsilon ||
+                    !Finite(keys[i].inTangent) || Mathf.Abs(keys[i].inTangent) > Epsilon ||
+                    !Finite(keys[i].outTangent) || Mathf.Abs(keys[i].outTangent) > Epsilon ||
+                    keys[i].weightedMode != WeightedMode.None)
+                    return false;
+            }
+            return true;
+        }
+
         static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
         static void Add(

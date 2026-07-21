@@ -6,10 +6,14 @@ using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Float32CommittedActorPose = ThirdPersonSimulation.CommittedActorPose<ThirdPersonSimulation.Float32Vector3, ThirdPersonSimulation.Float32Yaw>;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation
 {
-    public sealed class UnityCharacterSimulationInputAdapter : IUnityCharacterSimulationInputAdapter, ICharacterPresentationLookInput
+    public sealed class UnityCharacterSimulationInputAdapter :
+        IUnityCharacterControlSourceRuntime,
+        ICharacterPresentationLookInput,
+        ICharacterControlSourceRosterRuntime
     {
         readonly CharacterInputProfile m_Profile;
         readonly CharacterSimulationProgram m_Program;
@@ -31,7 +35,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         ulong m_RenderFrame;
         ulong m_RequestSequence;
         CameraBasisSnapshot m_LatchedCameraBasis;
-        CharacterActionTargetInputSample m_LatchedActionTarget;
         bool m_Active;
         bool m_Disposed;
 
@@ -61,9 +64,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             ResolveDirectionSpaces();
         }
 
-        public string AdapterIdentity =>
+        public string SourceIdentity =>
             $"UnityInputSystem/Float32/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
         public SimulationNumericProfile NumericProfile => Float32SimulationNumericProfile.Value;
+        public ProgramId CharacterProgramId => m_Program.Manifest.ProgramId;
+        public ProgramHash CharacterProgramHash => m_Program.ProgramHash;
+        public CharacterControlSourceCapability Capabilities => m_ActionTargetProvider == null
+            ? CharacterControlSourceCapability.None
+            : CharacterControlSourceCapability.CommittedObservation;
         public InputActionAsset Actions => m_Profile.SourceAsset;
 
         public void Activate()
@@ -85,7 +93,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             m_InputValues.Clear();
             m_InputRequests.Clear();
             m_LatchedCameraBasis = default;
-            m_LatchedActionTarget = default;
             m_RenderFrame = 0;
             m_Active = false;
         }
@@ -103,9 +110,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 m_LatchedValues.Add(pair.Key, ReadValue(pair.Value));
             if (m_RequiresCameraBasis)
                 m_LatchedCameraBasis = m_CameraRig.BasisSnapshot;
-            m_LatchedActionTarget = m_ActionTargetProvider != null && m_ActionTargetProvider.TryCapture(m_Owner, out CharacterActionTargetInputSample sample)
-                ? sample
-                : default;
             for (int i = 0; i < m_RequestBindings.Count; i++)
             {
                 RequestBinding binding = m_RequestBindings[i];
@@ -135,7 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 AppendCameraBasis(m_InputValues, m_LatchedCameraBasis);
             m_InputValues.Add(SimulationInputValue.FromActionTargetSnapshot(
                 m_ActionTargetInputValueId,
-                ToSimulationActionTarget(m_LatchedActionTarget)));
+                ResolveActionTarget(context)));
 
             m_InputRequests.Clear();
             for (int i = 0; i < m_PendingRequests.Count; i++)
@@ -155,10 +159,30 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             return new CharacterSimulationInput(
                 NumericProfile,
                 context.Source,
-                AdapterIdentity,
+                SourceIdentity,
                 context.InputSequence,
                 m_InputValues,
                 m_InputRequests);
+        }
+
+        public void ValidateRoster(
+            ActorId actorId,
+            IReadOnlyList<ActorId> roster,
+            StableHash committedObservationCapability)
+        {
+            if (actorId != new ActorId(m_Owner.ActorId) || roster == null ||
+                !committedObservationCapability.Equals(CommittedActorObservationSchema.CapabilityHash))
+            {
+                throw new InvalidOperationException("Unity player Control Source roster or committed observation capability is incompatible.");
+            }
+            if (m_ActionTargetProvider == null || !m_ActionTargetProvider.TryGetTargetActorId(m_Owner, out ActorId targetId))
+                return;
+            for (int i = 0; i < roster.Count; i++)
+            {
+                if (roster[i] == targetId)
+                    return;
+            }
+            throw new InvalidOperationException($"Unity player target Actor '{targetId}' is absent from its locked roster.");
         }
 
         public bool TryGetLatchedVector2(string inputId, out Vector2 value)
@@ -412,14 +436,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 Float32ScalarBoundary.ConvertExternal(value.z, $"{inputId}/z"));
         }
 
-        static SimulationActionTargetSnapshot ToSimulationActionTarget(CharacterActionTargetInputSample sample)
+        SimulationActionTargetSnapshot ResolveActionTarget(SimulationInputBuildContext context)
         {
-            if (!sample.IsValid)
+            if (m_ActionTargetProvider == null || !m_ActionTargetProvider.TryGetTargetActorId(m_Owner, out ActorId targetId))
                 return SimulationActionTargetSnapshot.None;
+            Float32CommittedActorPose target = context.CommittedObservation.GetRequiredActor(targetId);
             return new SimulationActionTargetSnapshot(
-                sample.TargetId.Value,
-                ToSimulationVector3(sample.Position, $"action-target:{sample.TargetId.Value}/position"),
-                new Float32Yaw(Float32ScalarBoundary.ConvertExternal(sample.Yaw, $"action-target:{sample.TargetId.Value}/yaw")));
+                targetId.Value,
+                target.Position,
+                target.Yaw);
         }
 
         ulong NextRequestSequence()

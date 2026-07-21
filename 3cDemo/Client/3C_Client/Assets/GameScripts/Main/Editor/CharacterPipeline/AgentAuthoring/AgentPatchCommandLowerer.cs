@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BTSMTL.Timeline;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
@@ -30,7 +31,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     "patch.schemaVersion",
                     "unsupported_schema_version",
                     $"Patch schema 必须是 {AgentAuthoringSchema.Version}，当前为 {patch.schemaVersion}。",
-                    "重新导出 v13 Snapshot 并生成新的 v13 Patch。");
+                    "重新导出 v15 Snapshot 并生成新的 v15 Patch。");
+                report.metrics.schemaInvalidCount++;
+                return false;
+            }
+            report.domain = patch.domain ?? string.Empty;
+            report.rootIdentity = patch.rootIdentity ?? string.Empty;
+            if (!AgentAuthoringSchema.IsDomain(patch.domain))
+            {
+                report.Error("patch.domain", "unsupported_domain", $"Patch domain 无效：{patch.domain}");
+                report.metrics.schemaInvalidCount++;
+                return false;
+            }
+            if (string.IsNullOrWhiteSpace(patch.rootIdentity) || string.IsNullOrWhiteSpace(patch.sourceRevision))
+            {
+                report.Error("patch", "patch_source_identity_missing", "v15 Patch 必须显式提供 rootIdentity 和 sourceRevision。");
                 report.metrics.schemaInvalidCount++;
                 return false;
             }
@@ -56,7 +71,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 if (string.IsNullOrWhiteSpace(operation.id))
                 {
-                    report.Error(path, "operation_id_missing", "schema v13 要求每个 operation 使用唯一 id。");
+                    report.Error(path, "operation_id_missing", "schema v15 要求每个 operation 使用唯一 id。");
                     report.metrics.schemaInvalidCount++;
                     continue;
                 }
@@ -69,6 +84,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (string.IsNullOrWhiteSpace(operation.op) || !AgentPatchOperationCatalog.TryGet(operation.op, out AgentPatchOperationDescriptor descriptor))
                 {
                     report.Error(path, "unknown_operation", $"未知 Patch operation：{operation.op}");
+                    report.metrics.schemaInvalidCount++;
+                    continue;
+                }
+                if (!descriptor.Allows(patch.domain))
+                {
+                    report.Error(path, "operation_domain_mismatch", $"Operation '{operation.op}' 不允许用于 {patch.domain} domain。");
                     report.metrics.schemaInvalidCount++;
                     continue;
                 }
@@ -95,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (report.HasErrors())
                 return false;
 
-            plan = new AgentPatchCommandPlan(commands, symbols, patch.sourceMacro, patch.sourceMacroVersion);
+            plan = new AgentPatchCommandPlan(commands, symbols, patch.domain, patch.rootIdentity, patch.sourceRevision, patch.sourceMacro, patch.sourceMacroVersion);
             return true;
         }
     }
@@ -141,9 +162,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 ["set_action_profile_cancel_query"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.SetActionProfileCancelQuery, AgentPatchOutputKind.None, LowerSetActionProfileCancelQuery),
                 ["set_action_profile_target_requirement"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.SetActionProfileTargetRequirement, AgentPatchOutputKind.None, LowerSetActionProfileTargetRequirement),
                 ["set_action_request_timing_class"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.SetActionRequestTimingClass, AgentPatchOutputKind.None, LowerSetActionRequestTimingClass),
+                ["ensure_ai_controller_definition"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.EnsureAIControllerDefinition, AgentPatchOutputKind.None, LowerEnsureAIControllerDefinition, AgentPatchDomainMask.AIController),
+                ["ensure_ai_controller_tree"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.EnsureAIControllerTree, AgentPatchOutputKind.None, LowerEnsureAIControllerTree, AgentPatchDomainMask.AIController),
+                ["bind_ai_controller_assets"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.BindAIControllerAssets, AgentPatchOutputKind.None, LowerBindAIControllerAssets, AgentPatchDomainMask.AIController),
+                ["configure_ai_candidates"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.ConfigureAICandidates, AgentPatchOutputKind.None, LowerConfigureAICandidates, AgentPatchDomainMask.AIController),
+                ["ensure_ai_blackboard_declaration"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.EnsureAIBlackboardDeclaration, AgentPatchOutputKind.BlackboardDeclaration, LowerEnsureAIBlackboardDeclaration, AgentPatchDomainMask.AIController),
+                ["ensure_ai_shared_node"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.EnsureAISharedNode, AgentPatchOutputKind.Node, LowerEnsureAISharedNode, AgentPatchDomainMask.AIController),
+                ["ensure_ai_observation_node"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.EnsureAIObservationNode, AgentPatchOutputKind.Node, LowerEnsureAIObservationNode, AgentPatchDomainMask.AIController),
+                ["ensure_ai_memory_node"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.EnsureAIMemoryNode, AgentPatchOutputKind.Node, LowerEnsureAIMemoryNode, AgentPatchDomainMask.AIController),
+                ["ensure_ai_continuous_input"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.EnsureAIContinuousInput, AgentPatchOutputKind.Node, LowerEnsureAIContinuousInput, AgentPatchDomainMask.AIController),
+                ["ensure_ai_action_target"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.EnsureAIActionTarget, AgentPatchOutputKind.Node, LowerEnsureAIActionTarget, AgentPatchDomainMask.AIController),
+                ["ensure_ai_action_request"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.EnsureAIActionRequest, AgentPatchOutputKind.Node, LowerEnsureAIActionRequest, AgentPatchDomainMask.AIController),
+                ["ensure_bt_condition_rule"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.EnsureBTConditionRule, AgentPatchOutputKind.FlowEdge, LowerEnsureBTConditionRule, AgentPatchDomainMask.AIController),
                 ["delete_flow_edge"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.DeleteFlowEdge, AgentPatchOutputKind.None, LowerDeleteFlowEdge),
-                ["link_flow"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.LinkFlow, AgentPatchOutputKind.FlowEdge, LowerLinkFlow),
-                ["link_property"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.LinkProperty, AgentPatchOutputKind.PropertyEdge, LowerLinkProperty)
+                ["link_flow"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.LinkFlow, AgentPatchOutputKind.FlowEdge, LowerLinkFlow, AgentPatchDomainMask.Both),
+                ["link_property"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.LinkProperty, AgentPatchOutputKind.PropertyEdge, LowerLinkProperty, AgentPatchDomainMask.Both)
             };
 
         public static bool TryGet(string operationName, out AgentPatchOperationDescriptor descriptor)
@@ -448,10 +481,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static AgentPatchCommand LowerConfigureMotionWarpParameters(AgentPatchLoweringContext context, AgentPatchOperation operation)
         {
             AgentTimelineTargetReference target = LowerMotionWarpClipTarget(context, operation);
-            if (!Enum.TryParse(operation.positionMode, true, out MotionWarpPositionMode positionMode) || !Enum.IsDefined(typeof(MotionWarpPositionMode), positionMode))
-                context.Error("positionMode", "motion_warp_position_mode_invalid", $"MotionWarp position mode 无效：{operation.positionMode}");
+            if (!Enum.TryParse(operation.translationMode, true, out MotionWarpTranslationMode translationMode) || !Enum.IsDefined(typeof(MotionWarpTranslationMode), translationMode))
+                context.Error("translationMode", "motion_warp_translation_mode_invalid", $"MotionWarp translation mode 无效：{operation.translationMode}");
+            if (!Enum.TryParse(operation.targetOffsetSpace, true, out MotionWarpTargetOffsetSpace targetOffsetSpace) || !Enum.IsDefined(typeof(MotionWarpTargetOffsetSpace), targetOffsetSpace))
+                context.Error("targetOffsetSpace", "motion_warp_target_offset_space_invalid", $"MotionWarp target offset space 无效：{operation.targetOffsetSpace}");
             if (!Enum.TryParse(operation.rotationMode, true, out MotionWarpRotationMode rotationMode) || !Enum.IsDefined(typeof(MotionWarpRotationMode), rotationMode))
                 context.Error("rotationMode", "motion_warp_rotation_mode_invalid", $"MotionWarp rotation mode 无效：{operation.rotationMode}");
+            if (!Enum.TryParse(operation.rotationMethod, true, out MotionWarpRotationMethod rotationMethod) || !Enum.IsDefined(typeof(MotionWarpRotationMethod), rotationMethod))
+                context.Error("rotationMethod", "motion_warp_rotation_method_invalid", $"MotionWarp rotation method 无效：{operation.rotationMethod}");
+            if (!Enum.TryParse(operation.limitPolicy, true, out MotionWarpLimitPolicy limitPolicy) || !Enum.IsDefined(typeof(MotionWarpLimitPolicy), limitPolicy))
+                context.Error("limitPolicy", "motion_warp_limit_policy_invalid", $"MotionWarp limit policy 无效：{operation.limitPolicy}");
             AnimationCurve positionCurve = LowerAnimationCurve(context, operation.positionProgressCurve, "positionProgressCurve", 2, false);
             AnimationCurve yawCurve = LowerAnimationCurve(context, operation.yawProgressCurve, "yawProgressCurve", 2, false);
             return context.IsValid
@@ -459,14 +498,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     operation.id,
                     context.Path,
                     target,
-                    positionMode,
+                    translationMode,
+                    targetOffsetSpace,
                     rotationMode,
-                    operation.targetLocalPlanarOffset,
+                    rotationMethod,
+                    operation.targetPlanarOffset,
                     operation.targetYawOffsetDegrees,
-                    operation.positionWeight,
-                    operation.yawWeight,
                     operation.maxTotalPositionCorrection,
                     operation.maxTotalYawCorrectionDegrees,
+                    operation.maximumYawRateDegreesPerSecond,
+                    limitPolicy,
                     positionCurve,
                     yawCurve)
                 : null;
@@ -802,6 +843,135 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 : null;
         }
 
+        static AgentPatchCommand LowerEnsureAIControllerDefinition(AgentPatchLoweringContext context, AgentPatchOperation operation)
+        {
+            string controllerId = context.RequiredText(operation.controllerId, string.Empty, "controllerId", "ensure_ai_controller_definition 缺少 ControllerId。");
+            if (!string.Equals(controllerId, controllerId.Trim(), StringComparison.Ordinal))
+                context.Error("controllerId", "ai_controller_id_invalid", "ControllerId 不能包含首尾空白。");
+            return context.IsValid ? new AgentEnsureAIControllerDefinitionCommand(operation.id, context.Path, controllerId) : null;
+        }
+
+        static AgentPatchCommand LowerEnsureAIControllerTree(AgentPatchLoweringContext context, AgentPatchOperation operation)
+        {
+            string path = context.RequiredText(operation.rootTreeAssetPath, string.Empty, "rootTreeAssetPath", "ensure_ai_controller_tree 缺少精确的 RootTree 资产路径。");
+            return context.IsValid ? new AgentEnsureAIControllerTreeCommand(operation.id, context.Path, path) : null;
+        }
+
+        static AgentPatchCommand LowerBindAIControllerAssets(AgentPatchLoweringContext context, AgentPatchOperation operation)
+        {
+            if (string.IsNullOrEmpty(operation.controlledCharacterAssetPath) && string.IsNullOrEmpty(operation.controlledCharacterAssetGuid))
+                context.Error("controlledCharacter", "controlled_character_reference_missing", "bind_ai_controller_assets 缺少 Character Definition 资产引用。");
+            if (string.IsNullOrEmpty(operation.perceptionProfileAssetPath) && string.IsNullOrEmpty(operation.perceptionProfileAssetGuid))
+                context.Error("perceptionProfile", "perception_profile_reference_missing", "bind_ai_controller_assets 缺少 Perception Profile 资产引用。");
+            return context.IsValid
+                ? new AgentBindAIControllerAssetsCommand(
+                    operation.id,
+                    context.Path,
+                    new AgentAssetReference(string.Empty, operation.controlledCharacterAssetPath, operation.controlledCharacterAssetGuid),
+                    new AgentAssetReference(string.Empty, operation.perceptionProfileAssetPath, operation.perceptionProfileAssetGuid))
+                : null;
+        }
+
+        static AgentPatchCommand LowerConfigureAICandidates(AgentPatchLoweringContext context, AgentPatchOperation operation)
+        {
+            TryParseEnum(context, operation.candidateOrdering, "candidateOrdering", out AICandidateOrdering ordering);
+            var values = new List<string>();
+            var unique = new HashSet<string>(StringComparer.Ordinal);
+            if (operation.candidateActorIds == null)
+            {
+                context.Error("candidateActorIds", "candidate_actor_ids_missing", "configure_ai_candidates 缺少显式候选 ActorId 列表。");
+            }
+            else
+            {
+                for (int i = 0; i < operation.candidateActorIds.Count; i++)
+                {
+                    string actorId = operation.candidateActorIds[i];
+                    if (string.IsNullOrWhiteSpace(actorId) || !string.Equals(actorId, actorId.Trim(), StringComparison.Ordinal) || !unique.Add(actorId))
+                        context.Error($"candidateActorIds[{i}]", "candidate_actor_id_invalid", $"候选 ActorId 缺失、重复或包含首尾空白：{actorId}");
+                    else
+                        values.Add(actorId);
+                }
+            }
+            return context.IsValid ? new AgentConfigureAICandidatesCommand(operation.id, context.Path, ordering, values) : null;
+        }
+
+        static AgentPatchCommand LowerEnsureAIBlackboardDeclaration(AgentPatchLoweringContext context, AgentPatchOperation operation)
+        {
+            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphOperationId, "graph");
+            AgentElementTargetReference existing = context.OptionalElement(operation.declarationAuthoringId, operation.declarationOperationId, "declaration", true);
+            string key = context.RequiredText(operation.blackboardKey, operation.displayName, "blackboardKey", "ensure_ai_blackboard_declaration 缺少 Blackboard key。");
+            Type valueType = ParseBlackboardValueType(context, operation.blackboardValueType);
+            TryParseEnum(context, operation.blackboardScope, "blackboardScope", out PipelineBlackboardVariableScope scope);
+            if (scope != PipelineBlackboardVariableScope.AIController && scope != PipelineBlackboardVariableScope.AITick && scope != PipelineBlackboardVariableScope.Graph)
+                context.Error("blackboardScope", "ai_blackboard_scope_invalid", $"AI Blackboard 不允许 scope：{scope}");
+            return context.IsValid
+                ? new AgentEnsureAIBlackboardDeclarationCommand(operation.id, context.Path, graph, existing, key, valueType, scope, AIBlackboardDefault(operation, valueType))
+                : null;
+        }
+
+        static AgentPatchCommand LowerEnsureAISharedNode(AgentPatchLoweringContext context, AgentPatchOperation operation)
+        {
+            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphOperationId, "graph");
+            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetOperationId, "targetElement", true);
+            TryParseEnum(context, operation.aiNodeKind, "aiNodeKind", out AgentAISharedNodeKind nodeKind);
+            LoopNode.StopType loopStopType = LoopNode.StopType.None;
+            CompareNode.CompareType compareType = CompareNode.CompareType.Equal;
+            if (nodeKind == AgentAISharedNodeKind.Loop)
+                TryParseEnum(context, operation.loopStopType, "loopStopType", out loopStopType);
+            if (nodeKind == AgentAISharedNodeKind.Compare)
+                TryParseEnum(context, operation.compareType, "compareType", out compareType);
+            return context.IsValid
+                ? new AgentEnsureAISharedNodeCommand(operation.id, context.Path, graph, existing, nodeKind, loopStopType, compareType, operation.position)
+                : null;
+        }
+
+        static AgentPatchCommand LowerEnsureAIObservationNode(AgentPatchLoweringContext context, AgentPatchOperation operation)
+        {
+            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphOperationId, "graph");
+            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetOperationId, "targetElement", true);
+            TryParseEnum(context, operation.aiNodeKind, "aiNodeKind", out AgentAIObservationNodeKind kind);
+            return context.IsValid ? new AgentEnsureAIObservationNodeCommand(operation.id, context.Path, graph, existing, kind, operation.position) : null;
+        }
+
+        static AgentPatchCommand LowerEnsureAIMemoryNode(AgentPatchLoweringContext context, AgentPatchOperation operation)
+        {
+            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphOperationId, "graph");
+            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetOperationId, "targetElement", true);
+            AgentAuthoringReference declaration = context.RequiredDeclaration(operation.declarationAuthoringId, operation.declarationOperationId, "declaration");
+            TryParseEnum(context, operation.aiNodeKind, "aiNodeKind", out AgentAIMemoryNodeKind nodeKind);
+            TryParseEnum(context, operation.aiMemoryValueKind, "aiMemoryValueKind", out AIMemoryValueKind valueKind);
+            return context.IsValid ? new AgentEnsureAIMemoryNodeCommand(operation.id, context.Path, graph, existing, declaration, nodeKind, valueKind, operation.position) : null;
+        }
+
+        static AgentPatchCommand LowerEnsureAIContinuousInput(AgentPatchLoweringContext context, AgentPatchOperation operation)
+        {
+            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphOperationId, "graph");
+            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetOperationId, "targetElement", true);
+            string inputId = context.RequiredText(operation.inputId, string.Empty, "inputId", "ensure_ai_continuous_input 缺少 InputId。");
+            return context.IsValid ? new AgentEnsureAIContinuousInputCommand(operation.id, context.Path, graph, existing, inputId, operation.position) : null;
+        }
+
+        static AgentPatchCommand LowerEnsureAIActionTarget(AgentPatchLoweringContext context, AgentPatchOperation operation)
+        {
+            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphOperationId, "graph");
+            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetOperationId, "targetElement", true);
+            string inputId = context.RequiredText(operation.inputId, string.Empty, "inputId", "ensure_ai_action_target 缺少 InputId。");
+            return context.IsValid ? new AgentEnsureAIActionTargetCommand(operation.id, context.Path, graph, existing, inputId, operation.position) : null;
+        }
+
+        static AgentPatchCommand LowerEnsureAIActionRequest(AgentPatchLoweringContext context, AgentPatchOperation operation)
+        {
+            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphOperationId, "graph");
+            AgentElementTargetReference existing = context.OptionalElement(operation.targetElementAuthoringId, operation.targetOperationId, "targetElement", true);
+            string requestId = context.RequiredText(operation.request, string.Empty, "request", "ensure_ai_action_request 缺少 RequestId。");
+            TryParseEnum(context, operation.aiRequestRepeatPolicy, "aiRequestRepeatPolicy", out AIRequestRepeatPolicy repeatPolicy);
+            if (operation.requestBufferSeconds < 0f)
+                context.Error("requestBufferSeconds", "ai_request_buffer_invalid", "Action Request buffer seconds 不能小于 0。");
+            return context.IsValid
+                ? new AgentEnsureAIActionRequestCommand(operation.id, context.Path, graph, existing, requestId, operation.requestBufferSeconds, operation.requestPriority, repeatPolicy, operation.position)
+                : null;
+        }
+
         static AgentPatchCommand LowerDeleteFlowEdge(AgentPatchLoweringContext context, AgentPatchOperation operation)
         {
             AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphOperationId, "graph");
@@ -828,6 +998,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string endPort = context.RequiredText(operation.endPropertyPort, string.Empty, "endPropertyPort", "link_property 缺少 endPropertyPort。");
             return context.IsValid
                 ? new AgentLinkPropertyCommand(operation.id, context.Path, graph, source, target, startPort, endPort)
+                : null;
+        }
+
+        static AgentPatchCommand LowerEnsureBTConditionRule(AgentPatchLoweringContext context, AgentPatchOperation operation)
+        {
+            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphOperationId, "graph");
+            AgentFlowEdgeTargetReference edge = context.RequiredFlowEdge(operation.flowEdgeAuthoringId, operation.flowEdgeOperationId, "flowEdge");
+            TryParseEnum(context, operation.abortPolicy, "abortPolicy", out BTAbortPolicy abortPolicy);
+            List<AgentConditionGroupCommand> groups = context.RequiredConditionGroups(operation.conditionGroups, operation);
+            return context.IsValid
+                ? new AgentEnsureBTConditionRuleCommand(operation.id, context.Path, graph, edge, abortPolicy, groups)
                 : null;
         }
 
@@ -872,10 +1053,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 case "vector2": return typeof(Vector2);
                 case "vector3": return typeof(Vector3);
                 case "actiontargetsnapshot": case "action_target_snapshot": return typeof(ActionTargetSnapshot);
+                case "aiactorid": case "ai_actor_id": return typeof(AIActorIdValue);
+                case "aiactiontargetsnapshot": case "ai_action_target_snapshot": return typeof(AIActionTargetSnapshotValue);
                 default:
                     context.Error("blackboardValueType", "blackboard_value_type_invalid", $"不支持的 Blackboard value type：{value}");
                     return null;
             }
+        }
+
+        static object AIBlackboardDefault(AgentPatchOperation operation, Type valueType)
+        {
+            if (valueType == typeof(bool)) return operation.blackboardBoolValue;
+            if (valueType == typeof(int)) return operation.blackboardIntValue;
+            if (valueType == typeof(float)) return operation.blackboardFloatValue;
+            if (valueType == typeof(Vector2)) return operation.blackboardVector2Value;
+            if (valueType == typeof(Vector3)) return operation.blackboardVector3Value;
+            if (valueType == typeof(AIActorIdValue)) return new AIActorIdValue(operation.blackboardActorIdValue);
+            if (valueType == typeof(AIActionTargetSnapshotValue))
+            {
+                return new AIActionTargetSnapshotValue(
+                    new AIActorIdValue(operation.blackboardTargetActorIdValue),
+                    operation.blackboardTargetPositionValue,
+                    operation.blackboardTargetYawValue);
+            }
+            throw new InvalidOperationException($"Unsupported AI Blackboard value type: {valueType?.FullName}");
         }
 
         static void ValidateInputDerived(
@@ -908,6 +1109,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
     }
 
+    [Flags]
+    public enum AgentPatchDomainMask
+    {
+        CharacterController = 1,
+        AIController = 2,
+        Both = CharacterController | AIController
+    }
+
     public sealed class AgentPatchOperationDescriptor
     {
         readonly Func<AgentPatchLoweringContext, AgentPatchOperation, AgentPatchCommand> m_Lower;
@@ -915,15 +1124,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         internal AgentPatchOperationDescriptor(
             AgentPatchCommandKind kind,
             AgentPatchOutputKind outputKind,
-            Func<AgentPatchLoweringContext, AgentPatchOperation, AgentPatchCommand> lower)
+            Func<AgentPatchLoweringContext, AgentPatchOperation, AgentPatchCommand> lower,
+            AgentPatchDomainMask domains = AgentPatchDomainMask.CharacterController)
         {
             Kind = kind;
             OutputKind = outputKind;
             m_Lower = lower;
+            Domains = domains;
         }
 
         public AgentPatchCommandKind Kind { get; }
         public AgentPatchOutputKind OutputKind { get; }
+        public AgentPatchDomainMask Domains { get; }
+        public bool Allows(string domain)
+        {
+            return string.Equals(domain, AgentAuthoringSchema.CharacterControllerDomain, StringComparison.Ordinal)
+                ? (Domains & AgentPatchDomainMask.CharacterController) != 0
+                : string.Equals(domain, AgentAuthoringSchema.AIControllerDomain, StringComparison.Ordinal) &&
+                  (Domains & AgentPatchDomainMask.AIController) != 0;
+        }
         internal AgentPatchCommand Lower(AgentPatchLoweringContext context, AgentPatchOperation operation) => m_Lower(context, operation);
     }
 
@@ -941,7 +1160,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 ["state_root_completed"] = AgentConditionTermKind.StateRootCompleted,
                 ["action_request"] = AgentConditionTermKind.ActionRequest,
                 ["action_window_active"] = AgentConditionTermKind.ActionWindowActive,
-                ["action_can_activate"] = AgentConditionTermKind.CanActivateAction
+                ["action_can_activate"] = AgentConditionTermKind.CanActivateAction,
+                ["ai_target_distance_compare_blackboard"] = AgentConditionTermKind.AITargetDistanceCompareBlackboard
             };
 
         readonly AgentCompileReport m_Report;
@@ -1027,6 +1247,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentElementTargetReference OptionalElement(string authoringId, string operationId, string label, bool allowSelf = false)
         {
             return new AgentElementTargetReference(OptionalReference(authoringId, operationId, label, allowSelf, AgentPatchOutputKind.StateMachine, AgentPatchOutputKind.State, AgentPatchOutputKind.Node));
+        }
+
+        public AgentFlowEdgeTargetReference RequiredFlowEdge(string authoringId, string operationId, string label)
+        {
+            return new AgentFlowEdgeTargetReference(RequiredReference(authoringId, operationId, label, AgentPatchOutputKind.FlowEdge));
         }
 
         public AgentAuthoringReference RequiredDeclaration(string authoringId, string operationId, string label)
@@ -1139,6 +1364,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     Error($"{termField}.actionProfile", "action_profile_missing", "action_can_activate condition 缺少 ActionProfile identity。");
                     continue;
                 }
+                CompareNode.CompareType compareType = CompareNode.CompareType.Equal;
+                if (kind == AgentConditionTermKind.AITargetDistanceCompareBlackboard)
+                {
+                    if (!HasValue(blackboardKey))
+                    {
+                        Error($"{termField}.blackboardKey", "blackboard_key_missing", "ai_target_distance_compare_blackboard condition 缺少 blackboardKey。");
+                        continue;
+                    }
+                    if (!Enum.TryParse(source.compareType, true, out compareType))
+                    {
+                        Error($"{termField}.compareType", "compare_type_invalid", $"CompareType 无效：{source.compareType}");
+                        continue;
+                    }
+                }
                 result.Add(new AgentConditionTermCommand(
                     kind,
                     blackboardKey,
@@ -1146,7 +1385,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     request,
                     source.windowType,
                     new AgentAssetReference(source.actionProfile, source.actionProfileAssetPath, source.actionProfileAssetGuid),
-                    source.targetSnapshotBlackboardKey));
+                    source.targetSnapshotBlackboardKey,
+                    compareType));
             }
             return result;
         }
@@ -1199,6 +1439,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     ValidateOwnedReference(link.Source.Value, command.OwnerScope, "sourceElement");
                     ValidateOwnedReference(link.Target.Value, command.OwnerScope, "targetElement");
                     break;
+                case AgentEnsureAIBlackboardDeclarationCommand declaration:
+                    ValidateOwnedReference(declaration.Graph.Value, command.OwnerScope, "graph");
+                    ValidateOwnedReference(declaration.ExistingDeclaration.Value, command.OwnerScope, "targetElement");
+                    break;
+                case AgentEnsureAISharedNodeCommand shared:
+                    ValidateOwnedReference(shared.Graph.Value, command.OwnerScope, "graph");
+                    ValidateOwnedReference(shared.ExistingNode.Value, command.OwnerScope, "targetElement");
+                    break;
+                case AgentEnsureAIObservationNodeCommand observation:
+                    ValidateOwnedReference(observation.Graph.Value, command.OwnerScope, "graph");
+                    ValidateOwnedReference(observation.ExistingNode.Value, command.OwnerScope, "targetElement");
+                    break;
+                case AgentEnsureAIMemoryNodeCommand memory:
+                    ValidateOwnedReference(memory.Graph.Value, command.OwnerScope, "graph");
+                    ValidateOwnedReference(memory.ExistingNode.Value, command.OwnerScope, "targetElement");
+                    ValidateOwnedReference(memory.Declaration, command.OwnerScope, "declaration");
+                    break;
+                case AgentEnsureAIContinuousInputCommand continuousInput:
+                    ValidateOwnedReference(continuousInput.Graph.Value, command.OwnerScope, "graph");
+                    ValidateOwnedReference(continuousInput.ExistingNode.Value, command.OwnerScope, "targetElement");
+                    break;
+                case AgentEnsureAIActionTargetCommand actionTarget:
+                    ValidateOwnedReference(actionTarget.Graph.Value, command.OwnerScope, "graph");
+                    ValidateOwnedReference(actionTarget.ExistingNode.Value, command.OwnerScope, "targetElement");
+                    break;
+                case AgentEnsureAIActionRequestCommand actionRequest:
+                    ValidateOwnedReference(actionRequest.Graph.Value, command.OwnerScope, "graph");
+                    ValidateOwnedReference(actionRequest.ExistingNode.Value, command.OwnerScope, "targetElement");
+                    break;
             }
         }
 
@@ -1220,7 +1489,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             AgentAuthoringReference reference = OptionalReference(authoringId, operationId, label, allowSelf, expectedKinds);
             if (!reference.IsValid && !(allowSelf && IsSelfReference(operationId)))
-                Error(label, $"{label}_identity_missing", $"schema v13 operation 缺少 {label} authoring identity/operation reference。");
+                Error(label, $"{label}_identity_missing", $"schema v15 operation 缺少 {label} authoring identity/operation reference。");
             return reference;
         }
 

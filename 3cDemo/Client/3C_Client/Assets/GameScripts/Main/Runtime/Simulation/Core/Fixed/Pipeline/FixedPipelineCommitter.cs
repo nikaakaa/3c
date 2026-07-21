@@ -14,6 +14,19 @@ namespace ThirdPersonSimulation.Fixed
         void ObservePublished(SimulationActorTickResult result);
     }
 
+    public interface IFixedPresentationCommitOutputPort : ISimulationPresentationOutputPort
+    {
+        void BeginCommit();
+        void CompleteCommit(ulong committedTick);
+        void AbortCommit();
+    }
+
+    public interface IFixedSimulationResultOutputPort :
+        IFixedPresentationCommitOutputPort,
+        IFixedPublishedActorResultObserver
+    {
+    }
+
     public sealed class NullFixedSourceEgressOutputPort : IFixedSourceEgressOutputPort
     {
         public static readonly NullFixedSourceEgressOutputPort Instance = new NullFixedSourceEgressOutputPort();

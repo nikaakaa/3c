@@ -205,9 +205,9 @@ namespace BTSMTL.Timeline
             D(MotionEaseIn, typeof(MotionCurveClip), "Ease In", C(93, 189, 141), Unit, ZeroOne),
             D(MotionEaseOut, typeof(MotionCurveClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
             D(MotionWarpPositionProgress, typeof(MotionWarpClip), "Position Progress", C(238, 156, 72), Unit, ZeroOne,
-                clip => ((MotionWarpClip)clip).HasPositionWarp),
+                clip => ((MotionWarpClip)clip).UsesPositionProgress),
             D(MotionWarpYawProgress, typeof(MotionWarpClip), "Yaw Progress", C(232, 110, 101), Unit, ZeroOne,
-                clip => ((MotionWarpClip)clip).HasYawWarp),
+                clip => ((MotionWarpClip)clip).UsesYawProgress),
             D(CameraStateWeight, typeof(CameraStateClip), "Weight", C(184, 161, 252), Unit, One),
             D(CameraStateEaseIn, typeof(CameraStateClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
             D(CameraStateEaseOut, typeof(CameraStateClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
@@ -255,8 +255,8 @@ namespace BTSMTL.Timeline
                 MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionYaw => clip.Yaw,
                 MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionEaseIn => clip.EaseInCurve,
                 MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionEaseOut => clip.EaseOutCurve,
-                MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpPositionProgress && clip.HasPositionWarp => clip.PositionProgressCurve,
-                MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpYawProgress && clip.HasYawWarp => clip.YawProgressCurve,
+                MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpPositionProgress && clip.UsesPositionProgress => clip.PositionProgressCurve,
+                MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpYawProgress && clip.UsesYawProgress => clip.YawProgressCurve,
                 CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateWeight => clip.WeightCurve,
                 CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateEaseIn => clip.EaseInCurve,
                 CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateEaseOut => clip.EaseOutCurve,
@@ -308,8 +308,10 @@ namespace BTSMTL.Timeline
                 AnimationCurve position = channelId == TimelineCurveChannelCatalog.MotionWarpPositionProgress ? curve : warp.PositionProgressCurve;
                 AnimationCurve yaw = channelId == TimelineCurveChannelCatalog.MotionWarpYawProgress ? curve : warp.YawProgressCurve;
                 if (!MotionWarpAuthoring.ValidateConfiguration(
-                        warp.PositionMode, warp.RotationMode, warp.TargetLocalPlanarOffset, warp.TargetYawOffsetDegrees,
-                        warp.PositionWeight, warp.YawWeight, warp.MaxTotalPositionCorrection, warp.MaxTotalYawCorrectionDegrees,
+                        warp.TranslationMode, warp.TargetOffsetSpace, warp.RotationMode, warp.RotationMethod,
+                        warp.TargetPlanarOffset, warp.TargetYawOffsetDegrees,
+                        warp.MaxTotalPositionCorrection, warp.MaxTotalYawCorrectionDegrees,
+                        warp.MaximumYawRateDegreesPerSecond, warp.LimitPolicy,
                         position, yaw, null, warp))
                     throw new InvalidOperationException($"MotionWarp curve '{channelId}' violates its owner validation contract.");
                 return;

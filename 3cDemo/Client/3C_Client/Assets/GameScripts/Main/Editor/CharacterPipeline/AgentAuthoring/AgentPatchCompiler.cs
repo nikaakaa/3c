@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ThirdPersonCharacter.AI;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
@@ -63,6 +64,70 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 preparation.Plan,
                 report,
                 true);
+            if (!session.Initialize() || !preparation.Boundary.Validate(definition, session, report))
+                return new AgentPatchApplyResult(report, session.TouchedOwners.ToArray());
+
+            for (int i = 0; i < preparation.Plan.Commands.Count; i++)
+            {
+                AgentPatchCommand command = preparation.Plan.Commands[i];
+                m_Handlers.Get(command.Kind).Apply(session, command);
+                if (report.HasErrors())
+                    break;
+            }
+
+            report.metrics.diffSize = report.appliedDiff.Count;
+            report.applied = !report.HasErrors();
+            report.success = !report.HasErrors();
+            return new AgentPatchApplyResult(report, session.TouchedOwners.ToArray());
+        }
+
+        public AgentPatchPreparation Prepare(
+            AIControllerDefinition definition,
+            AgentGraphSnapshot snapshot,
+            AgentPatchIR patch)
+        {
+            var report = new AgentCompileReport
+            {
+                success = true,
+                applied = false,
+                domain = AgentAuthoringSchema.AIControllerDomain,
+                rootIdentity = definition ? definition.ControllerId : string.Empty
+            };
+            if (!m_Lowerer.TryLower(patch, report, out AgentPatchCommandPlan plan))
+                return new AgentPatchPreparation(null, snapshot, null, report);
+
+            var session = new AgentPatchCompileSession(definition, snapshot, plan, report, false);
+            if (!session.Initialize())
+                return new AgentPatchPreparation(plan, snapshot, null, report);
+
+            for (int i = 0; i < plan.Commands.Count; i++)
+                m_Handlers.Get(plan.Commands[i].Kind).Preflight(session, plan.Commands[i]);
+
+            report.metrics.diffSize = report.plannedDiff.Count;
+            report.success = !report.HasErrors();
+            AgentPatchBoundaryIdentity boundary = report.HasErrors() ? null : AgentPatchBoundaryIdentity.Capture(session);
+            return new AgentPatchPreparation(plan, snapshot, boundary, report);
+        }
+
+        public AgentPatchApplyResult Apply(
+            AIControllerDefinition definition,
+            AgentPatchPreparation preparation)
+        {
+            var report = new AgentCompileReport
+            {
+                success = true,
+                applied = false,
+                domain = AgentAuthoringSchema.AIControllerDomain,
+                rootIdentity = definition ? definition.ControllerId : string.Empty
+            };
+            if (preparation == null || !preparation.IsValid)
+            {
+                report.Error("patch", "patch_not_prepared", "Patch 必须先完成无错误的 typed plan preflight。");
+                return new AgentPatchApplyResult(report, Array.Empty<UnityEngine.Object>());
+            }
+
+            CopyPreparationReport(preparation.Report, report);
+            var session = new AgentPatchCompileSession(definition, preparation.Snapshot, preparation.Plan, report, true);
             if (!session.Initialize() || !preparation.Boundary.Validate(definition, session, report))
                 return new AgentPatchApplyResult(report, session.TouchedOwners.ToArray());
 

@@ -71,8 +71,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly List<LayerState> m_Layers = new List<LayerState>();
         readonly Dictionary<string, LayerState> m_LayersById =
             new Dictionary<string, LayerState>(StringComparer.Ordinal);
-        readonly Dictionary<string, AnimationLayerSelection> m_LatestSelections =
-            new Dictionary<string, AnimationLayerSelection>(StringComparer.Ordinal);
+        readonly Dictionary<string, AnimationChannelSelection> m_LatestSelections =
+            new Dictionary<string, AnimationChannelSelection>(StringComparer.Ordinal);
         readonly Dictionary<AnimationPlaybackId, AnimationProducerSample> m_LatestSamples =
             new Dictionary<AnimationPlaybackId, AnimationProducerSample>();
         readonly HashSet<AnimationPlaybackId> m_TerminalPlaybacks =
@@ -184,7 +184,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 foreach (AnimationPlaybackId outgoing in layer.Outgoing)
                     destination.Add(outgoing);
 
-                AnimationLayerSelection selection = m_LatestSelections.TryGetValue(layer.Layer.Id, out AnimationLayerSelection latest)
+                AnimationChannelSelection selection = m_LatestSelections.TryGetValue(layer.Layer.Id, out AnimationChannelSelection latest)
                     ? latest
                     : layer.Selection;
                 if (selection.HasPlayback && selection.PlaybackId.IsValid)
@@ -272,7 +272,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         void ValidateBatch()
         {
-            foreach (KeyValuePair<string, AnimationLayerSelection> pair in m_LatestSelections)
+            foreach (KeyValuePair<string, AnimationChannelSelection> pair in m_LatestSelections)
             {
                 if (!m_LayersById.ContainsKey(pair.Key) || !pair.Value.IsValid)
                     throw new InvalidOperationException($"Animation selection targets unknown layer '{pair.Key}'.");
@@ -290,7 +290,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             for (int i = 0; i < m_Layers.Count; i++)
             {
                 LayerState layer = m_Layers[i];
-                AnimationLayerSelection selection = m_LatestSelections.TryGetValue(layer.Layer.Id, out AnimationLayerSelection latest)
+                AnimationChannelSelection selection = m_LatestSelections.TryGetValue(layer.Layer.Id, out AnimationChannelSelection latest)
                     ? latest
                     : layer.Selection;
                 if (!selection.IsValid)
@@ -338,7 +338,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             for (int i = 0; i < m_Layers.Count; i++)
             {
                 LayerState layer = m_Layers[i];
-                if (m_LatestSelections.TryGetValue(layer.Layer.Id, out AnimationLayerSelection latest))
+                if (m_LatestSelections.TryGetValue(layer.Layer.Id, out AnimationChannelSelection latest))
                     layer.Selection = latest;
                 if (!layer.Selection.IsValid)
                     continue;
@@ -498,7 +498,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
 
             public ResolvedAnimationLayer Layer { get; }
-            public AnimationLayerSelection Selection { get; set; }
+            public AnimationChannelSelection Selection { get; set; }
             public AnimationPlaybackId Pending { get; set; }
             public AnimationPlaybackId Current { get; set; }
             public HashSet<AnimationPlaybackId> Outgoing { get; } = new HashSet<AnimationPlaybackId>();

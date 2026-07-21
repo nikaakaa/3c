@@ -5,6 +5,7 @@
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Fixed",
         "ThirdPersonSimulation.Unity",
+        "ThirdPersonSimulation.Fixed.Unity",
         "ThirdPersonSimulation.DeterministicKcc",
         "ThirdPersonSimulation.DeterministicRollback",
         "ThirdPersonSimulation.DeterministicRollback.Endpoint",

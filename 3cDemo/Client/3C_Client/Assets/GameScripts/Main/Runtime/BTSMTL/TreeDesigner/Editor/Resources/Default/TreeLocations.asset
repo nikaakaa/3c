@@ -18,6 +18,11 @@ MonoBehaviour:
     name: New OneRootTree
     type: BaseTree
     locked: 0
+  - guid: 85b261b17e94e1c4784c45be082f5101
+    path: Assets/Configs/Character/Corin/Pipeline/Definition/CorinTrainingAIController.AIRootTree.asset
+    name: CorinTrainingAIController.AIRootTree
+    type: AIControllerTree
+    locked: 0
   FolderInfos:
   - path: Assets
     expanded: 0
@@ -31,8 +36,12 @@ MonoBehaviour:
     expanded: 0
   - path: Assets/Configs/Character/Corin/Pipeline/Graphs
     expanded: 0
+  - path: Assets/Configs/Character/Corin/Pipeline/Definition
+    expanded: 0
   ShowInfos:
   - type: SubTree
     show: 1
   - type: BaseTree
+    show: 1
+  - type: AIControllerTree
     show: 1

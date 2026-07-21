@@ -1,31 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    [InitializeOnLoad]
     public static class CharacterSimulationProgramBuildService
     {
         static bool s_Building;
-        static bool s_Scheduled;
-        static bool s_CheckSourceRevision;
-
-        static CharacterSimulationProgramBuildService()
-        {
-            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            ScheduleBuildAllStale(false);
-        }
-
-        static void OnPlayModeStateChanged(PlayModeStateChange state)
-        {
-            if (state == PlayModeStateChange.EnteredEditMode && s_CheckSourceRevision)
-                ScheduleBuildAllStale();
-        }
 
         [MenuItem("Assets/3C/Compile Character Simulation Program", true)]
         static bool CanCompileSelected()
@@ -38,6 +23,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             foreach (CharacterPipelineDefinition definition in Selection.objects.OfType<CharacterPipelineDefinition>())
                 Build(definition, true);
+        }
+
+        [MenuItem("Tools/3C/Build/Compile All Stale Character Simulation Programs")]
+        static void CompileAllStale()
+        {
+            BuildAllStale();
         }
 
         public static bool Build(CharacterPipelineDefinition definition, bool logReport)
@@ -69,28 +60,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return AuthoringBuildRetention.Acquire();
         }
 
-        internal static void ScheduleBuildAllStale(bool checkSourceRevision = true)
+        static void BuildAllStale()
         {
-            s_CheckSourceRevision |= checkSourceRevision;
-            if (s_Scheduled)
-                return;
-            s_Scheduled = true;
-            EditorApplication.delayCall += () =>
+            string[] guids = AssetDatabase.FindAssets("t:CharacterPipelineDefinition");
+            Array.Sort(guids, StringComparer.Ordinal);
+            for (int i = 0; i < guids.Length; i++)
             {
-                s_Scheduled = false;
-                if (EditorApplication.isPlayingOrWillChangePlaymode || s_Building)
-                    return;
-                bool inspectSourceRevision = s_CheckSourceRevision;
-                s_CheckSourceRevision = false;
-                string[] guids = AssetDatabase.FindAssets("t:CharacterPipelineDefinition");
-                Array.Sort(guids, StringComparer.Ordinal);
-                for (int i = 0; i < guids.Length; i++)
-                {
-                    CharacterPipelineDefinition definition = AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(AssetDatabase.GUIDToAssetPath(guids[i]));
-                    if (definition && (inspectSourceRevision ? IsStale(definition) : !HasPublishedArtifactMetadata(definition)))
-                        Build(definition, true);
-                }
-            };
+                CharacterPipelineDefinition definition = AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(AssetDatabase.GUIDToAssetPath(guids[i]));
+                if (definition && IsStale(definition))
+                    Build(definition, true);
+            }
         }
 
         public static bool IsStale(CharacterPipelineDefinition definition)
@@ -104,12 +83,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 ProgramId expectedProgramId = CharacterSemanticFrontendCompiler.ComputeProgramId(definition);
                 ProgramRevision revision = CharacterSemanticFrontendCompiler.ComputeSourceRevision(definition);
-                return !string.Equals(asset.ProgramId, expectedProgramId.Value, StringComparison.Ordinal) ||
-                       !string.Equals(projection.ProgramId, expectedProgramId.Value, StringComparison.Ordinal) ||
-                       !string.Equals(asset.SourceRevision, revision.Value, StringComparison.Ordinal) ||
-                       !string.Equals(projection.SourceRevision, revision.Value, StringComparison.Ordinal) ||
-                       !string.Equals(projection.ProgramHash, asset.ProgramHash, StringComparison.Ordinal) ||
-                       !HasCurrentTargetArtifact(definition, asset);
+                if (!string.Equals(asset.ProgramId, expectedProgramId.Value, StringComparison.Ordinal) ||
+                    !string.Equals(projection.ProgramId, expectedProgramId.Value, StringComparison.Ordinal) ||
+                    !string.Equals(asset.SourceRevision, revision.Value, StringComparison.Ordinal) ||
+                    !string.Equals(projection.SourceRevision, revision.Value, StringComparison.Ordinal))
+                    return true;
+                CharacterSimulationProgram program = asset.Load();
+                CharacterPresentationSemanticContract contract =
+                    Float32CharacterPresentationContractAdapter.Create(program);
+                var publishedProjection = projection.Load(contract);
+                if (!CharacterPresentationProjectionCompiler.TryComputePublishedRevision(
+                        definition,
+                        contract,
+                        publishedProjection,
+                        out string expectedProjectionRevision) ||
+                    !string.Equals(projection.ProjectionRevision, expectedProjectionRevision, StringComparison.Ordinal))
+                    return true;
+                return !HasCurrentTargetArtifact(definition, asset);
             }
             catch
             {
@@ -134,34 +124,47 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public static bool HasPublishedArtifactMetadata(CharacterPipelineDefinition definition)
         {
-            if (!definition)
+            if (!HasPublishedArtifactHeader(definition))
                 return false;
             CharacterSimulationProgramAsset asset = definition.SimulationProgram;
             CharacterPresentationProjectionAsset projection = definition.PresentationProjection;
-            if (!asset || !projection ||
-                !string.Equals(asset.CompilerVersion, CharacterSemanticFrontendCompiler.CompilerVersion, StringComparison.Ordinal) ||
-                !string.Equals(asset.OperationSetVersion, CharacterSemanticFrontendCompiler.OperationSetVersion.Value, StringComparison.Ordinal) ||
-                string.IsNullOrEmpty(asset.SourceRevision) ||
-                string.IsNullOrEmpty(asset.SemanticHash) ||
-                string.IsNullOrEmpty(asset.ProgramHash) ||
-                string.IsNullOrEmpty(asset.LayoutHash) ||
-                string.IsNullOrEmpty(asset.CanonicalBytesHash))
-                return false;
             try
             {
                 string programId = CharacterSemanticFrontendCompiler.ComputeProgramId(definition).Value;
+                CharacterPresentationSemanticContract contract =
+                    Float32CharacterPresentationContractAdapter.Create(asset.Load());
                 return string.Equals(asset.ProgramId, programId, StringComparison.Ordinal) &&
                        string.Equals(projection.ProgramId, programId, StringComparison.Ordinal) &&
-                       string.Equals(projection.ProgramHash, asset.ProgramHash, StringComparison.Ordinal) &&
                        string.Equals(projection.SourceRevision, asset.SourceRevision, StringComparison.Ordinal) &&
                        string.Equals(projection.SemanticHash, asset.SemanticHash, StringComparison.Ordinal) &&
-                       string.Equals(projection.NumericProfileId, asset.NumericProfileId, StringComparison.Ordinal) &&
-                       projection.TargetAbiVersion == asset.TargetAbiVersion;
+                       string.Equals(projection.ContractHash, contract.ContractHash.ToString(), StringComparison.Ordinal);
             }
             catch
             {
                 return false;
             }
+        }
+
+        public static bool HasPublishedArtifactHeader(CharacterPipelineDefinition definition)
+        {
+            if (!definition)
+                return false;
+            CharacterSimulationProgramAsset asset = definition.SimulationProgram;
+            CharacterPresentationProjectionAsset projection = definition.PresentationProjection;
+            return asset && projection &&
+                   string.Equals(asset.CompilerVersion, CharacterSemanticFrontendCompiler.CompilerVersion, StringComparison.Ordinal) &&
+                   string.Equals(asset.OperationSetVersion, CharacterSemanticFrontendCompiler.OperationSetVersion.Value, StringComparison.Ordinal) &&
+                   !string.IsNullOrEmpty(asset.ProgramId) &&
+                   !string.IsNullOrEmpty(asset.SourceRevision) &&
+                   !string.IsNullOrEmpty(asset.SemanticHash) &&
+                   !string.IsNullOrEmpty(asset.ProgramHash) &&
+                   !string.IsNullOrEmpty(asset.LayoutHash) &&
+                   !string.IsNullOrEmpty(asset.CanonicalBytesHash) &&
+                   !string.IsNullOrEmpty(projection.ProgramId) &&
+                   !string.IsNullOrEmpty(projection.SourceRevision) &&
+                   !string.IsNullOrEmpty(projection.SemanticHash) &&
+                   !string.IsNullOrEmpty(projection.ContractHash) &&
+                   !string.IsNullOrEmpty(projection.ProjectionRevision);
         }
 
         static void LogReport(CharacterPipelineDefinition definition, CharacterSimulationCompileReport report)
@@ -262,26 +265,4 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
     }
 
-    public sealed class CharacterSimulationProgramAssetPostprocessor : AssetPostprocessor
-    {
-        static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
-        {
-            if (importedAssets.Any(IsRelevant) || deletedAssets.Any(IsRelevant) || movedAssets.Any(IsRelevant) || movedFromAssetPaths.Any(IsRelevant))
-                CharacterSimulationProgramBuildService.ScheduleBuildAllStale();
-        }
-
-        static bool IsRelevant(string path)
-        {
-            if (string.IsNullOrEmpty(path) || !path.StartsWith("Assets/", StringComparison.Ordinal))
-                return false;
-            string extension = Path.GetExtension(path);
-            if (string.Equals(extension, ".inputactions", StringComparison.OrdinalIgnoreCase))
-                return true;
-            if (!string.Equals(extension, ".asset", StringComparison.OrdinalIgnoreCase))
-                return false;
-            Type type = AssetDatabase.GetMainAssetTypeAtPath(path);
-            return type != typeof(CharacterSimulationProgramAsset) &&
-                   type != typeof(CharacterPresentationProjectionAsset);
-        }
-    }
 }

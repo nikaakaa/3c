@@ -343,7 +343,9 @@ namespace TreeDesigner.Editor
             if (!(m_Edge.Owner is BaseTree owner))
                 return null;
 
-            return ConditionRuleGraph.CreateDefaultGraph(UniqueInlineRuleGraphName(owner, RuleGraphBaseName()));
+            return ConditionRuleGraph.CreateDefaultGraph(
+                UniqueInlineRuleGraphName(owner, RuleGraphBaseName()),
+                owner.AuthoringRole);
         }
 
         public void ExtractSharedConditionRuleGraph()

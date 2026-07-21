@@ -6,6 +6,7 @@ namespace TreeDesigner
 {
     [NodeName("Parallel")]
     [NodePath("Base/Composite/Parallel")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.SharedFlow)]
     public class ParallelNode : CompositeNode
     {
         public enum ParallelType { JumpComplete, UpdateAll }

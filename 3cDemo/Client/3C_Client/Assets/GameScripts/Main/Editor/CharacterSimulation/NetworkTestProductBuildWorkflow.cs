@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -374,6 +375,56 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return build?.RequireSuccess(productId) ?? string.Empty;
         }
 
+        public void StopProcessesUnder(string root)
+        {
+            string normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+                Path.DirectorySeparatorChar;
+            foreach (Process process in Process.GetProcesses())
+            {
+                using (process)
+                {
+                    string executablePath = TryGetExecutablePath(process);
+                    if (executablePath == null || !executablePath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    try
+                    {
+                        process.Kill();
+                        if (!process.WaitForExit(5000))
+                            throw new InvalidOperationException($"Process did not exit: {process.ProcessName} ({process.Id}).");
+                    }
+                    catch (InvalidOperationException) when (process.HasExited)
+                    {
+                    }
+                    catch (Exception exception)
+                    {
+                        throw new InvalidOperationException(
+                            $"Network Test Product process could not be stopped: {process.ProcessName} ({process.Id}).",
+                            exception);
+                    }
+                }
+            }
+        }
+
+        static string TryGetExecutablePath(Process process)
+        {
+            try
+            {
+                return process.MainModule?.FileName is string path ? Path.GetFullPath(path) : null;
+            }
+            catch (Win32Exception)
+            {
+                return null;
+            }
+            catch (InvalidOperationException)
+            {
+                return null;
+            }
+            catch (NotSupportedException)
+            {
+                return null;
+            }
+        }
+
         public static string Quote(string value)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -619,6 +670,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException("Network Test Product output root has no parent directory.");
             string backupRoot = CreateTransientRoot(networkRoot, "p");
             bool hadPrevious = Directory.Exists(finalRoot);
+            processes.StopProcessesUnder(finalRoot);
             if (hadPrevious)
                 Directory.Move(finalRoot, backupRoot);
             try

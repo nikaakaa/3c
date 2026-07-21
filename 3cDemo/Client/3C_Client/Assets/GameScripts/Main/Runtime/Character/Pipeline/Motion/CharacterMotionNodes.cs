@@ -7,6 +7,7 @@ namespace ThirdPersonCharacter.Pipeline.Motion
     [Serializable]
     [NodeName("Locomotion Input Motion")]
     [NodePath("Base/Locomotion/Locomotion Input Motion")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class LocomotionInputMotionNode : ActionNode
     {
         [SerializeField, PropertyPort(PortDirection.Input, "Move Input")]
@@ -50,6 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Motion
     [Serializable]
     [NodeName("Character Move Facing Angle")]
     [NodePath("Base/Value/Locomotion/Move Facing Angle")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class CharacterMoveFacingAngleInfoNode : ValueNode
     {
         [SerializeField, PropertyPort(PortDirection.Input, "Move Input")]

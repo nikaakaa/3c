@@ -211,6 +211,35 @@ namespace ThirdPersonCharacter.Editor.ProductBuild
             }
         }
 
+        internal static CommercialPublishedPlayer ValidatePublishedPlayer(BuildTarget target, string clientBuildVersion)
+        {
+            ClientBuildArtifactLayout.ValidateTarget(target);
+            ClientBuildArtifactLayout.ValidateIdentity(clientBuildVersion, nameof(clientBuildVersion));
+            string playerRoot = ClientBuildArtifactLayout.GetPlayerVersionRoot(target, clientBuildVersion);
+            string playerManifestPath = Path.Combine(playerRoot, ClientBuildArtifactLayout.PlayerReleaseManifestFileName);
+            CommercialPlayerReleaseManifest playerManifest = ReadJson<CommercialPlayerReleaseManifest>(playerManifestPath);
+            if (playerManifest == null || playerManifest.SchemaVersion != CommercialPlayerReleaseManifest.CurrentSchemaVersion ||
+                playerManifest.BuildTarget != target.ToString() || playerManifest.ClientBuildVersion != clientBuildVersion ||
+                playerManifest.PackageName != ClientBuildArtifactLayout.DefaultPackageName)
+            {
+                throw new BuildFailedException("Player 发布清单身份无效。");
+            }
+            ClientBuildArtifactLayout.ValidateIdentity(playerManifest.ResourcePackageVersion, nameof(playerManifest.ResourcePackageVersion));
+            string contentRoot = ClientBuildArtifactLayout.GetContentVersionRoot(target, playerManifest.ResourcePackageVersion);
+            string contentManifestPath = Path.Combine(contentRoot, ClientBuildArtifactLayout.ContentReleaseManifestFileName);
+            CommercialContentReleaseManifest contentManifest = ReadJson<CommercialContentReleaseManifest>(contentManifestPath);
+            ValidateContentCandidate(contentRoot, contentManifest, target, playerManifest.ResourcePackageVersion);
+            string contentManifestHash = ComputeSha256(contentManifestPath);
+            ValidatePlayerCandidate(
+                playerRoot,
+                playerManifest,
+                target,
+                clientBuildVersion,
+                playerManifest.ResourcePackageVersion,
+                contentManifestHash);
+            return new CommercialPublishedPlayer(playerRoot, ResolveContainedPath(playerRoot, playerManifest.EntryPath));
+        }
+
         static void ValidateContentCandidate(string root, CommercialContentReleaseManifest manifest, BuildTarget target, string resourceVersion)
         {
             if (manifest == null || manifest.SchemaVersion != CommercialContentReleaseManifest.CurrentSchemaVersion || manifest.BuildTarget != target.ToString() ||

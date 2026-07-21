@@ -10,7 +10,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
     public sealed class ServerAuthoritativePredictionSessionSourceDefinition : GameplayNetworkModelSessionSourceDefinition
     {
         public const string ComponentId = "thirdperson.session-source.server-authoritative-prediction";
-        public const string SemanticVersion = "1";
+        public const string SemanticVersion = "2";
 
         [SerializeField] ServerAuthoritativeHybridModelDefinition m_Model;
         [SerializeField] ServerAuthoritativeLaunchDefinition m_Launch;

@@ -13,6 +13,8 @@ namespace ThirdPersonSimulation.Fixed
         public const string WorkingStateSchema = "fixed-working-state-read";
         public const string CompletedSteps = "simulation.target.fixed-completed-steps";
         public const string CompletedStepsSchema = "fixed-completed-step-read";
+        public const string CommittedObservation = "simulation.target.fixed-committed-actor-observation";
+        public const string CommittedObservationSchema = "committed-actor-pose-observation";
         public const string WorldSolver = "simulation.solver.fixed-world";
         public const string WorldSolverSchema = "fixed-world-solver";
         public const string Diagnostics = "simulation.diagnostics.session";

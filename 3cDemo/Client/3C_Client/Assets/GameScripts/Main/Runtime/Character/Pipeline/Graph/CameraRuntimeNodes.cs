@@ -25,6 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Request Camera State")]
     [NodePath("Base/Action/Camera/Request Camera State")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class RequestCameraStateNode : CharacterSimulationOperationNode
     {
         [SerializeField, ShowInPanel("Mode")]
@@ -69,6 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Emit Camera Cue")]
     [NodePath("Base/Action/Camera/Emit Camera Cue")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class EmitCameraCueNode : CharacterSimulationOperationNode
     {
         [SerializeField, ShowInPanel("Cue Id")]
@@ -109,6 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Set Camera Response")]
     [NodePath("Base/Action/Camera/Set Camera Response")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class SetCameraResponseNode : CharacterSimulationOperationNode
     {
         [SerializeField, ShowInPanel("Look Response")]
@@ -149,6 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Set Camera Target")]
     [NodePath("Base/Action/Camera/Set Camera Target")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class SetCameraTargetNode : CharacterSimulationOperationNode
     {
         [SerializeField, ShowInPanel("Target Key")]
@@ -189,6 +193,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Read Camera Basis")]
     [NodePath("Base/Value/Camera/Read Camera Basis")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class ReadCameraBasisNode : CharacterSimulationValueNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Valid"), ReadOnly]

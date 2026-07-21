@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b61b86c6e6224e32876583a33d386d6f, type: 3}
+  m_Name: CorinFootPlacementRigCalibration
+  m_EditorClassIdentifier:
+  m_CalibrationId: Corin.FootPlacementRig
+  m_SchemaVersion: 1
+  m_ContentRevision: 57d707ff8f86229addb0b61f4684bfefd64a2d25eee2d175e2ecd4c40d7c2e92
+  m_LeftHeelSoleLocalOffset: {x: -0.04198565, y: -0.04380997, z: 0.03844352}
+  m_LeftToeSoleLocalOffset: {x: 0, y: 0, z: 0}
+  m_LeftSemanticForwardLocalAxis: {x: -0.721978, y: 0.6919159, z: 0.000002898526}
+  m_LeftSemanticUpLocalAxis: {x: 0.5844878, y: 0.6098844, z: -0.5351774}
+  m_LeftKneePoleVisualRootLocalDirection: {x: 0.8833327, y: 0.1110292, z: 0.4554073}
+  m_RightHeelSoleLocalOffset: {x: 0.004580016, y: 0.004779012, z: -0.09867499}
+  m_RightToeSoleLocalOffset: {x: 0, y: 0, z: 0}
+  m_RightSemanticForwardLocalAxis: {x: -0.7219803, y: 0.6919137, z: 0.0000001811588}
+  m_RightSemanticUpLocalAxis: {x: -0.04631108, y: -0.04832324, z: 0.9977575}
+  m_RightKneePoleVisualRootLocalDirection: {x: 0.1279817, y: -0.07740312, z: 0.9887515}

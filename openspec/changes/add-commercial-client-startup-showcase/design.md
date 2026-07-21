@@ -17,7 +17,7 @@
 - 不把项目改造成完整在线游戏或账号平台。
 - 不给 Gameplay Program、SimulationSessionHost、Network Model 或 WorldSolver 增加启动职责。
 - 不建立备用端点、离线入口、无服务器快速进入、旧 Procedure 兼容或 mock 登录。
-- 不删除 Editor 直接运行 Sandbox/Standalone 场景的本地玩法开发能力；它不是产品入口。
+- 不删除Editor直接运行Gameplay Lab的本地玩法开发能力；它不是产品入口。
 - 不让 Fault Lab 参与普通 Release Player 的策略选择。
 
 ## 当前问题
@@ -96,7 +96,7 @@ Core 下载和完整性满足前，`HotUpdateAssemblyLoader` 不得运行。AOT 
 
 业务收益是启动失败始终可解释，旧热更代码不会在新 Manifest 尚未完整激活时提前运行。代价是 Bootstrap UI 必须保持小且稳定，更新它需要发新 Player，而不是资源热更。
 
-Editor 本地玩法验证使用独立 `Tools/3C/Local Play/Sandbox` 菜单直接打开并运行当前正式 `Assets/Scenes/Sandbox/SandBox.unity`。菜单只在 Editor 程序集存在，运行前校验场景包含可琳正式 Prefab、Foot Placement composition 与 FinalIK solver，退出 Play 后恢复原场景。它不复制第二份场景配置，不修改 Build Settings、不加载 ProductBootstrap、不填充假 endpoint，也不进入 Release Player。当前仓库没有 Motion Matching、Pose Search 或 Pose Database，因此本地入口只能按真实能力标为 IK、Motion Warp 与角色管线验证。
+Editor只保留`Tools/3C/Launcher`一个入口，并按业务目的固定为四组：`单机 / Gameplay Lab`直接运行Local Float32或Local Fixed且不进入资源与认证链；`双端验证 / Network Test Products`分别Prepare、Build、Run网络测试产品；`正式启动 / Published Player`构建并运行正式Content与Player发布闭包；`编辑器启动 / Bootstrap Play`在Editor中从Bootstrap进入同一正式资源、认证与Gameplay链。Gameplay Lab使用`Assets/Scenes/GameplayLab/GameplayLab.unity`，复用正式角色、Presentation与测试环境作者来源，但与产品`StandaloneGameplay`分责；它不修改Build Settings、不加载ProductBootstrap、不填充假endpoint，也不进入Release Player。当前仓库没有Motion Matching、Pose Search或Pose Database，因此本地入口只能按真实能力标为IK、步态相位匹配、Motion Warp、KCC与角色管线验证。
 
 ## 决策三：StartupPolicy、YooAsset 版本和 Auth Protocol 各自保存一个事实
 

@@ -86,6 +86,7 @@ namespace TreeDesigner
         public Guid RuntimeId => m_RuntimeId;
         public BaseGraph ParentRuntimeGraph => m_ParentRuntimeGraph;
         public TreeAuthoringRouteId AuthoringRoute => m_AuthoringRoute;
+        public virtual GraphAuthoringRole AuthoringRole => GraphAuthoringRole.Character;
 
         public virtual void BindSerializedOwner(UnityEngine.Object owner, string propertyPath)
         {
@@ -363,13 +364,16 @@ namespace TreeDesigner
 
         public virtual bool CanCreateNodeType(Type type)
         {
-            return type != null &&
-                   typeof(BaseNode).IsAssignableFrom(type) &&
-                   !typeof(StateMachineControlNode).IsAssignableFrom(type) &&
-                   !typeof(StateNode).IsAssignableFrom(type) &&
-                   !typeof(StateLifecycleNode).IsAssignableFrom(type) &&
-                   !typeof(StateMachineRuntimeFactNode).IsAssignableFrom(type) &&
-                   !typeof(ConditionRuleResultNode).IsAssignableFrom(type);
+            if (type == null || !typeof(BaseNode).IsAssignableFrom(type) ||
+                typeof(StateMachineControlNode).IsAssignableFrom(type) ||
+                typeof(StateNode).IsAssignableFrom(type) ||
+                typeof(StateLifecycleNode).IsAssignableFrom(type) ||
+                typeof(StateMachineRuntimeFactNode).IsAssignableFrom(type) ||
+                typeof(ConditionRuleResultNode).IsAssignableFrom(type))
+                return false;
+
+            return !NodeAuthoringCapabilityPolicy.TryGetCapability(type, out NodeAuthoringCapability capability) ||
+                   NodeAuthoringCapabilityPolicy.Allows(AuthoringRole, capability);
         }
 
         public string GetNodeSerializedPropertyPath(BaseNode node)

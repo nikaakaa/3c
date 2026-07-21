@@ -6,6 +6,26 @@
 
 ## Requirements
 
+### Requirement: Rig Calibration必须同时约束Editor分析与Runtime Solver
+
+Editor Foot Analyzer的Sampling Rig与Runtime `CharacterFootPlacementRig` MUST引用同一Calibration identity和content revision。Projection MUST保存该identity，Runtime composition MUST在创建Foot Placement前精确匹配。Calibration变化 MUST使Projection stale；系统 MUST不允许Editor与Runtime分别维护sole offset、semantic frame或pole方向。
+
+#### Scenario: 作者修改Corin左脚toe sole offset
+
+- **WHEN** Calibration content revision改变
+- **THEN** 全部引用该Calibration的Definition Projection MUST变为Stale
+- **AND** 全部Runtime Prefab MUST继续引用同一资产而不复制新值
+
+### Requirement: Foot Rotation必须应用语义foot frame差值
+
+Planner MUST从动画ankle rotation与Calibration计算Animated Semantic Foot Frame，再从CurrentSupport normal、动画semantic forward和Profile限制计算Desired Semantic Foot Frame，并以两者旋转差生成目标ankle rotation。速度响应、ascent/descent alignment与ankle twist reduction MUST在该语义空间中有界应用。Planner MUST不把`Quaternion.LookRotation`产生的semantic surface frame直接赋给ankle骨。
+
+#### Scenario: Corin ankle骨轴不是标准forward/up
+
+- **WHEN** Calibration声明的semantic frame与ankle骨局部轴不同
+- **THEN** 目标鞋底 MUST按support normal对齐
+- **AND** ankle骨 MUST保留rig-specific固定旋转关系
+
 ### Requirement: Foot Placement 必须是唯一 Presentation Pose Post Process Pass
 
 `CharacterSimulationPresentationRuntime` MUST在每个合法PresentationFrame中按 `Body -> Animation/Animancer Evaluate -> Foot Placement -> Camera` 固定顺序推进角色表现。Foot Placement MUST由该runtime显式创建、更新、reset和dispose，MUST不依赖Final IK、Animator、MonoBehaviour或其它manager的自主`Update`、`LateUpdate`或`FixedUpdate`形成第二个姿势写入路径。
@@ -24,77 +44,110 @@
 
 ### Requirement: Foot Placement 必须只消费表现帧正式输入
 
-Foot Placement MUST只读取同帧`CharacterBodyPresentationFrame`、Animancer Evaluate后的骨骼姿势、只读visible playback contribution、显式`CharacterFootPlacementProfile`、显式rig binding和当前Unity PhysicsScene查询结果。它 MUST不读取BTSMTL runtime、State、Action、Blackboard、GameplayTag、MotionWarp target、WorldSolver对象、Network Model私有状态或logic Transform作为替代真相。
+Foot Placement MUST只读取同帧`CharacterBodyPresentationFrame`、Animancer Evaluate后的最终骨骼姿势、只读visible playback contribution、与每个contribution精确匹配的Projection生成每脚特征、显式`CharacterFootPlacementProfile`、显式rig binding、同identity Rig Calibration和当前Unity PhysicsScene查询结果。它 MUST不读取BTSMTL runtime、State、Action、Blackboard、GameplayTag、Animation Marker语义、MotionWarp target、WorldSolver对象、Network Model私有状态、logic Transform或运行时AnimationClip分析作为替代真相。
 
-#### Scenario: 读取网络ObservedActor
+#### Scenario: 读取CrossFade中的两个producer
 
-- **WHEN** ObservedActor从SelectedStream得到一个Body frame
-- **THEN** Foot Placement MUST使用该frame的visible pose、velocity、Grounded和reset identity
-- **AND** MUST不回到authority packet或Prediction history选择另一Body tick
+- **WHEN** Outgoing与Current producer同时对Base层最终姿势有可见贡献
+- **THEN** Foot Placement MUST按两者各自VisualSampleTime与Cycle采样Projection生成特征
+- **AND** MUST按Animancer实际visible weight合成后再处理最终世界姿势
+
+#### Scenario: Runtime Projection缺少生成特征
+
+- **WHEN** 启用Foot Placement的角色加载不含匹配Calibration与clip feature的Projection
+- **THEN** Host创建 MUST失败并定位缺失identity
+- **AND** Runtime MUST不即时分析AnimationClip或退回最终姿势差分独占路径
 
 ### Requirement: Foot contact 必须由最终姿势运动学和表面距离判断
 
-每只脚 MUST在VisualRoot局部空间维护动画ankle/toe位置和相对速度，并结合下降趋势、sole到合法support的距离、Body Grounded、producer视觉权重以及显式enter/exit迟滞阈值判断plant/release。Foot Placement MUST不创建或读取第二份authoritative gait phase、Timeline Foot Window、Blackboard foot变量或按动画名称硬编码的接触表。
+每只脚 MUST在VisualRoot局部空间维护最终动画ankle/toe/sole姿势，并结合Projection按visible producer自身Marker Sync有效时间生成的sole局部速度、高度与plant confidence、当前sole到合法CurrentSupport的距离、Body Grounded、作者Foot Placement Weight以及显式enter/exit/replant迟滞判断plant/release。生成局部速度 MUST乘该producer本帧连续视觉时间倍率，再与Body visible线速度及yaw角速度在sole接触点产生的切向速度合成为世界接触速度；plant、release与Sliding稳定判断 MUST复用该世界速度。暂停、时间重定位或进入rebase的首帧 MUST重新锚定且不得伪造速度或未来落地；持续rebase后 MUST继续按有效时间差推进。最终混合姿势差分 MUST只用于非法姿势不连续、当前世界位置和生成特征偏差诊断，不得独占contact真相。Foot Placement MUST不创建或读取第二份authoritative gait phase、Timeline Foot Window、Blackboard foot变量、Marker语义或按动画名称硬编码的接触表。
 
-#### Scenario: 脚在楼梯踏面上减速
+#### Scenario: CrossFade制造最终姿势假速度
 
-- **WHEN** 脚处于下降阶段、相对速度低于plant阈值且sole进入合法support距离
-- **THEN** Contact classifier MUST允许该脚plant
-- **AND** 结果 MUST不依赖当前State或Action名称
+- **WHEN** 两个可见producer中的同一只脚均具有高plant confidence但最终混合姿势因fade发生位移
+- **THEN** Contact classifier MUST以各producer生成特征和当前合法support共同判断
+- **AND** MUST不只因最终混合姿势差分超过旧阈值而释放
+
+#### Scenario: InPlace动画随角色移动并改变播放速度
+
+- **WHEN** 生成脚轨迹位于VisualRoot局部空间、Body在世界移动且Marker Sync改变视觉时间推进速度
+- **THEN** Contact classifier MUST以缩放后的生成局部脚速、Body线速度和yaw接触点速度合成唯一世界脚速
+- **AND** MUST不把InPlace局部水平轨迹或暂停帧误判为世界Plant/Release
+
+#### Scenario: 生成特征显示接触但脚下无表面
+
+- **WHEN** plant confidence达到进入阈值但CurrentSupport缺失或Body未Grounded
+- **THEN** 该脚 MUST保持Free
+- **AND** 生成特征 MUST不成为Gameplay或世界接触事实
 
 #### Scenario: 阈值边缘轻微抖动
 
-- **WHEN** 已plant脚的速度在plant阈值附近波动但未超过release阈值
+- **WHEN** 已plant脚的confidence、速度或surface distance在进入阈值附近波动但未超过释放阈值
 - **THEN** 该脚 MUST保持已有约束状态
 - **AND** MUST不逐帧反复锁定和释放
 
 ### Requirement: Footprint prediction 必须保留动画水平脚步
 
-Footprint predictor MUST使用visible Body线速度和yaw速度、当前动画foot局部位置、foot相对速度以及Profile有限look-ahead计算预测落点。Free脚的预测 MUST只影响support选择、摆腿clearance和落脚准备；在进入约束前，脚的水平运动 MUST继续来自动画姿势，不得被替换为统一程序化步幅。
+Footprint predictor MUST只对具有非零next landing confidence的Projection样本使用下一落地delay与VisualRoot局部landing offset，并结合visible Body线速度、yaw速度、当前动画foot局部位置以及Profile有限时间、距离、角速度和reach边界计算预测落点。多个visible producer的landing MUST按visible weight与landing confidence合成；没有有效候选时 MUST返回明确invalid。`FutureLandingSupport` MUST只影响未来落面选择、Ground Envelope和落脚准备；Free脚的当前水平运动 MUST继续来自最终动画姿势，不得被替换为统一程序化步幅或提前牵引到未来踏面。
 
 #### Scenario: Corin向前跑上楼梯
 
-- **WHEN** Free脚沿动画轨迹向下一踏面摆动
-- **THEN** predictor MUST在该脚到达踏面前得到有限预测点
-- **AND** MUST保留该动画原有的左右偏移和步幅
+- **WHEN** Free脚沿动画轨迹摆向下一踏面且生成特征给出有限landing delay与offset
+- **THEN** predictor MUST在该脚到达踏面前得到有限Future Landing Support
+- **AND** 当前脚X/Z MUST继续保留动画原有左右偏移和步幅
+
+#### Scenario: 有限动画没有下一落地
+
+- **WHEN** Once或Hold动画在当前sample之后没有生成的下一landing segment
+- **THEN** predictor MUST返回明确的NoFutureLanding原因
+- **AND** MUST不回绕到clip开头或使用默认look-ahead伪造落点
 
 #### Scenario: 角色急转导致预测失效
 
-- **WHEN** 预测点超过Profile的look-ahead、角速度或可达限制
+- **WHEN** 预测点超过Profile的时间、距离、yaw速度或leg reach限制
 - **THEN** predictor MUST夹紧或拒绝该预测并记录原因
 - **AND** MUST不把脚瞬移到不可达位置
 
 ### Requirement: 地面查询必须形成有限连续 Support Envelope
 
-每只脚 MUST使用固定容量workspace，对当前heel/toe、路径采样点和预测落点执行NonAlloc Sphere/Capsule查询，并按layer、self-collider、有限值、最大坡度、最大step up/down、腿长可达性、相邻高度连续性与稳定surface identity过滤候选。最终support MUST来自该连续路径；正式实现 MUST不退化为只查询当前脚下的一条Ray，也 MUST不要求隐藏ramp collider作为fallback。
+每只脚 MUST使用固定容量workspace，分别对当前heel与toe执行NonAlloc Ray/Sphere查询并保留独立合法support，再对动画脚路径和Future Landing位置执行NonAlloc Ray/Sphere/Capsule查询。两个当前support同时合法时，Query MUST以heel/toe接触点构造唯一virtual support plane，并按明确高度与稳定identity选择移动surface owner；只有一侧合法时 MUST将该侧support plane投影到脚底中心。路径候选 MUST只按layer、self-collider、有限值、最大坡度、最大step up/down、腿长可达性、surface identity、edge gap与路径连续性构造有序Ground Envelope segment，不得覆盖Current Support。Query MUST分别输出heel support、toe support、`CurrentSupport`、`FutureLandingSupport`与每段minimum allowed sole height；virtual ground MUST来自合法有限命中，不得是隐藏Collider、默认平面或fallback。正式实现 MUST不退化为单Ray，也 MUST不把路径最远命中直接当作当前脚目标。
 
 #### Scenario: 脚跨过两个楼梯边缘
 
-- **WHEN** 当前脚与预测落点之间存在多个高度连续的合法踏面候选
-- **THEN** Support Envelope MUST保留路径顺序并选择可达终端support
-- **AND** 摆腿clearance MUST不低于路径中的合法envelope
+- **WHEN** 当前脚与预测落点之间存在多个高度连续的合法踏面
+- **THEN** Ground Envelope MUST保留surface和edge分段顺序
+- **AND** Free脚只在动画Y低于minimum envelope时抬高
+- **AND** 当前脚X/Z MUST不被FutureLandingSupport替换
 
 #### Scenario: 预测路径跨越不可达高差
 
-- **WHEN** 相邻候选高度超过Profile允许的step或leg reach
-- **THEN** 后续候选 MUST被拒绝
-- **AND** Foot Placement MUST记录明确的不可达原因
+- **WHEN** 相邻候选高度、edge gap或reach超过Profile允许范围
+- **THEN** 后续segment MUST被裁剪并记录明确原因
+- **AND** FutureLandingSupport MUST不跨越该中断
 
 ### Requirement: 每只脚必须使用有限约束生命周期
 
-每只脚 MUST且只能使用`Free`、`Locked`和`Sliding`表达约束所有权。Free到Locked MUST需要合法plant和support；Locked到Sliding MUST只在动画目标偏离lock但仍处于同一surface与允许slide/reach范围时发生；Locked或Sliding MUST在airborne、policy释放、surface失效、超过replant限制、腿不可达或reset时进入Free。Plant/release权重 MUST按presentation delta连续推进，不得增加隐藏状态或固定帧计时器。
+每只脚 MUST且只能使用`Free`、`Locked`和`Sliding`表达约束所有权。Free到Locked MUST需要合法生成plant倾向与CurrentSupport；Locked到Sliding MUST只在动画目标偏离lock但仍处于同一surface与允许slide/reach范围时发生；Locked或Sliding MUST在airborne、policy释放、surface失效、超过replant限制、腿不可达、过度ankle twist或reset时进入Free。双脚最小分离、heel lift、ankle twist reduction与速度响应 MUST作为有限Plan约束或权重，不得成为隐藏状态或固定帧计时器。不可达脚 MUST在发现当帧立即以零IK权重重建Plan。
 
-#### Scenario: 动画脚在锁点附近继续移动
+超过Replant限制释放旧锚点后，旧constraint solve weight MUST在Free中按release half-life连续衰减到零；在此之前 MUST禁止提交新Current Support。自由脚摆动clearance MAY继续求解，但 MUST不反向维持旧constraint weight，也不得在释放同一表现帧满权重重新锁定。
 
-- **WHEN** Locked脚的动画目标离开锁点但仍在允许slide范围内
-- **THEN** 该脚 MUST进入Sliding并在surface上受限移动
-- **AND** MUST不保持无限硬锁造成膝盖扭曲
+#### Scenario: 转身时双脚目标交叉
+
+- **WHEN** 左右计划目标低于Profile最小分离距离
+- **THEN** Constraint resolver MUST在有限reach内分离目标或释放次要支撑脚
+- **AND** MUST不增加Turn专用状态或按动画名称选择规则
 
 #### Scenario: 锁点超出腿长
 
 - **WHEN** hip到lock target超过Profile最大leg extension
-- **THEN** 该脚 MUST按`Unreachable`原因释放或replant
-- **AND** solver MUST不强拉骨骼到非法长度
+- **THEN** 该脚 MUST在同一render frame按Unreachable原因进入Free并输出零position/rotation weight
+- **AND** solver MUST不继续使用旧target拉扯一帧
+
+#### Scenario: Replant目标在释放帧已经可用
+
+- **WHEN** Locked脚超过Replant限制且同帧查询到另一个合法Current Support
+- **THEN** 该脚 MUST先进入Free并连续释放旧constraint solve weight
+- **AND** 只有旧权重归零后的后续表现帧才 MAY提交新锚点
 
 ### Requirement: Locked Foot 必须支持移动 Surface
 
@@ -108,42 +161,66 @@ Locked或Sliding脚 MUST将support point和normal保存为命中Collider Transfo
 
 ### Requirement: Pelvis 必须由支撑腿和腿长约束统一求解
 
-Pelvis resolver MUST从动画pelvis、双侧hip、计划foot target、leg length、plant weight和Profile ascent/descent限制计算唯一垂直offset。Resolver MUST优先选择最接近动画pelvis且满足主要支撑腿的可达区间，并以presentation delta和显式half-life做临界阻尼；上移、下移和速度 MUST有独立有限上限。第一版 MUST不旋转pelvis、spine或VisualRoot。
+Pelvis resolver MUST先确定主要支撑腿，再从动画pelvis、双侧hip、计划foot target、leg length、plant weight和可用heel lift计算独立Reach Offset。Body Presentation Frame MUST同时提供当前正式区间`SourceTranslationDelta`、Reset安全的当前表现帧`VisibleTranslationDelta`、`GroundedBefore/After`和`ResetSequence`，不得以`VisibleVelocity * deltaSeconds`近似实际Body位移。`CharacterFootPlacementProfile` MUST显式提供`ComponentSpace`、`WorldSpace`、`SuddenMotionOnly` Actor Movement Compensation模式，以及Sudden垂直阈值、补偿上限、half-life和maximum speed；Corin MUST使用`SuddenMotionOnly`。Resolver MUST分别维护Reach Offset与Actor Movement Compensation的offset/velocity，再合成唯一有界的VisualRoot组件空间竖直标量。骨骼solver MUST把`VisualRoot.up * offset`转换到pelvis父骨空间后再叠加本帧动画local position，不得把父骨local Y假定为角色竖直方向。Resolver MUST不读取KCC step phase、不产生水平pelvis位移，也 MUST不旋转pelvis、spine或VisualRoot。
+
+#### Scenario: Pelvis父骨带有预旋转
+
+- **WHEN** 角色骨架的pelvis父骨local Y不与VisualRoot up轴重合
+- **THEN** 同一个正负垂直offset MUST仍只沿VisualRoot组件竖直方向移动pelvis
+- **AND** solver MUST不把竖直补偿转成横向或前后位移
 
 #### Scenario: 左脚踏上更高台阶
 
-- **WHEN** 左脚成为高处主要支撑且右腿仍可达
-- **THEN** pelvis target MUST连续抬高以避免左腿过伸
-- **AND** 上半身与VisualRoot MUST不被Foot Placement旋转
+- **WHEN** 左脚成为高处主要支撑且heel lift仍有可用范围
+- **THEN** resolver MUST先使用有限heel lift再计算剩余pelvis上移
+- **AND** 右腿、上半身和VisualRoot MUST保持合法连续
 
-#### Scenario: 双腿可达区间不相交
+#### Scenario: Body沿平滑地面或移动平台连续移动
 
-- **WHEN** 两个leg reach区间没有合法交集
-- **THEN** pelvis target MUST按Profile边界夹紧
-- **AND** 不可达脚 MUST触发明确replant/release原因
+- **WHEN** `ComponentSpace`模式下可见Body本帧发生有限垂直移动
+- **THEN** Pelvis MUST跟随该Body移动且Actor Movement Compensation保持为零
+- **AND** Foot Placement MUST不产生第二份Body trajectory filter
+
+#### Scenario: 接地角色跨上离散台阶
+
+- **WHEN** `SuddenMotionOnly`模式下`GroundedBefore/After`均为真且正式区间垂直位移超过阈值
+- **THEN** Pelvis MUST按该区间内每个表现帧的`VisibleTranslationDelta.y`积累等量反向补偿
+- **AND** 补偿 MUST通过独立有界临界阻尼恢复为零
+
+#### Scenario: WorldSpace持续保持
+
+- **WHEN** `WorldSpace`模式下接地Body连续发生垂直移动
+- **THEN** Pelvis MUST对全部可见垂直位移积累反向补偿并由独立弹簧回收
+- **AND** Reach Offset状态 MUST不被该补偿覆盖
+
+#### Scenario: 表现流重置或角色离地
+
+- **WHEN** Body `ResetSequence`变化、动画输出缺失、Rig重建或`GroundedAfter`为假
+- **THEN** Foot Placement MUST清除Actor Movement Compensation及脚锁状态
+- **AND** MUST不把旧台阶偏移带入新分支、空中或下一段动作
 
 ### Requirement: Animation Clip Foot Placement曲线必须沿正式表现投影采样
 
-`CharacterFootPlacementProfile` MUST只声明PoseSourceLayerId和角色级算法参数。每个Timeline Animation Clip MUST以stable clip identity保存一条归一化`Foot Placement Weight`曲线，表达该动画时间点允许Foot Placement整体介入多少；Prediction、Pelvis和Foot Rotation MUST继续由Profile与planner算法负责，不得成为逐Clip重复作者曲线。Foot Placement Weight MUST作为Animation Clip typed Curve Channel进入通用Timeline Curve Editor，不得保留`TimelineFootPlacementWeightCurve`、Foot Placement专用Curve View或第二mutation入口。曲线 MUST随Timeline编译进Presentation Projection。Projection采样 MUST先按producer内部clip weight混合，Runtime再按Animancer实际visible state/layer weight混合`AnimationPoseContribution`。系统 MUST不使用Marker Sync作为Foot contact/plant真相，也 MUST不使用逻辑priority、State、Action、Tag、clip名、asset path或数组index选择策略。
+每个Timeline Animation Clip MUST继续唯一保存一条可写`Foot Placement Weight`曲线，表达Foot Placement总体介入量。左右脚sole速度、高度、plant confidence与landing feature MUST由Editor-only artifact生成并在Definition Build时嵌入Projection；它们不得成为Timeline Track lane、editable Curve Channel、Undo数据、Blackboard或Agent Patch字段。Player Runtime MUST只按visible producer的VisualSampleTime与连续视觉时间倍率采样Projection feature并与作者Weight组合。摆脚clearance、support target与rotation target MUST先生成完整几何结果；同一作者Weight对constraint position、rotation、free clearance与Pelvis各自最终求解链 MUST只应用一次，不得在目标生成、IK weight和Pelvis中重复相乘。
 
-#### Scenario: Attack淡出到Run
+#### Scenario: 编辑Foot Placement Weight
 
-- **WHEN** Attack Animation Clip的Foot Placement Weight从0恢复到1并与Run淡入重叠
-- **THEN** Foot Placement总权重 MUST先使用各自当前Animation Clip曲线采样，再按两者实际视觉weight连续混合
-- **AND** Marker Pair与fraction MUST不进入该权重计算
+- **WHEN** 作者在Timeline编辑Foot Placement Weight
+- **THEN** Timeline MUST只修改该Animation Clip作者曲线
+- **AND** generated artifact MUST不被当作可写曲线同步修改
 
-#### Scenario: 在通用Curve Lane编辑Foot Placement
+#### Scenario: 查看generated feature
 
-- **WHEN** 作者展开Animation Track的Foot Placement Weight channel
-- **THEN** 该channel MUST与Animation Weight和Ease复用同一Curve Renderer、key交互、Inspector与Undo事务
-- **AND** MUST继续调用Animation Clip正式Foot Placement mutation与validator
-- **AND** MUST不恢复Prediction、Pelvis或Rotation逐Clip曲线
+- **WHEN** 作者通过Animation Analysis面板查看Plant metric
+- **THEN** 面板 MUST读取精确artifact并保持只读
+- **AND** AnimationTrack主行与CURVES分组 MUST不增加generated channel
 
-#### Scenario: Curve Channel缺失或非法
+#### Scenario: Runtime采样Marker Sync后的时间
 
-- **WHEN** Foot Placement Weight curve缺少key、包含非有限值或超出`[0,1]`
-- **THEN** Timeline validation与Projection build MUST拒绝
-- **AND** Editor MUST不使用默认全1 curve作为fallback
+- **WHEN** Marker Sync改变某visible producer的VisualSampleTime
+- **THEN** Foot Placement MUST按该时间采样Projection feature
+- **AND** MUST按该producer有效时间差修正生成速度和landing delay
+- **AND** MUST不读取MarkerId作为plant/contact真相
 
 ### Requirement: Foot Placement Planner 与骨骼 Solver 必须分离
 
@@ -189,23 +266,29 @@ LocalOwner、SimulatedActor和ObservedActor MUST通过同一Factory、Profile、
 
 ### Requirement: Foot Placement 配置和Rig必须显式且可验证
 
-每个启用Foot Placement的角色表现装配 MUST显式提供`CharacterFootPlacementProfile`、实现`ICharacterFootPlacementSolver`的adapter、VisualRoot、pelvis、左右hip/knee/ankle/toe、sole offsets、self-collider root、PhysicsScene和非空Ground LayerMask。系统 MUST不使用Animator Humanoid映射、名称、层级扫描、`GetComponentInChildren`、Default layer或单Ray作为缺失配置fallback。
+每个启用Foot Placement的角色表现装配 MUST显式提供`CharacterFootPlacementProfile`、实现`ICharacterFootPlacementSolver`的adapter、`CharacterFootPlacementRig`、共享`CharacterFootPlacementRigCalibration`、VisualRoot、pelvis、左右hip/knee/ankle/toe、self-collider root、PhysicsScene和非空Ground LayerMask。Calibration MUST唯一提供左右heel/toe sole offset、semantic forward/up frame和knee pole方向；Runtime Rig Calibration identity MUST与Projection Foot Analysis Calibration identity完全匹配。系统 MUST不使用Animator Humanoid映射、名称、层级扫描、`GetComponentInChildren`、零offset、默认axis、Default layer或单Ray补全缺失配置。
 
-#### Scenario: Corin缺少右Toe绑定
+#### Scenario: Corin Runtime Prefab与Projection使用不同Calibration
 
-- **WHEN** Host创建Presentation runtime但rig没有显式右Toe
-- **THEN** configuration validation MUST报告精确缺失字段并拒绝创建
-- **AND** MUST不按骨骼名称自动搜索
+- **WHEN** Host创建Presentation runtime但Rig Calibration revision不匹配Projection
+- **THEN** configuration validation MUST报告两端identity并拒绝创建
+- **AND** MUST不以Prefab局部字段或旧Projection继续运行
+
+#### Scenario: semantic foot frame退化
+
+- **WHEN** 任一forward/up axis非有限、近零或不满足正交边界
+- **THEN** Calibration validation MUST拒绝保存或Build
+- **AND** Runtime MUST不使用Vector3.forward/up作为fallback
 
 ### Requirement: Foot Placement 必须提供统一诊断且保持热路径有界
 
-Runtime diagnostics MUST只读暴露Body tick/reset、visible producer weight、每只脚的constraint和transition reason、相对速度、surface distance、预测点、候选数、surface identity、lock/replant误差、最终权重、骨盆target/current offset、query计数和solver结果。Runtime MUST为Plan、Query和Solve提供Profiler marker，并复用固定容量query/candidate/snapshot workspace；表现热路径 MUST不使用LINQ、反射、字符串查找、临时List或每帧托管分配。Diagnostics和Scene gizmo MUST不重新query或修改计划。
+Runtime diagnostics MUST只读暴露Body tick/reset、Calibration/Analysis/Projection identity、visible producer weight、sample time与visual time scale、每只脚的生成plant confidence/局部速度/合成世界速度/高度/landing、heel/toe/current/future support identity、constraint和transition reason、Ground Envelope segment与拒绝原因、surface identity、lock/replant/twist/separation误差、heel lift、最终权重、pelvis target/current offset、query计数和solver结果。Runtime MUST为Feature Sample、Plan、Query和Solve提供Profiler marker，并复用固定容量contribution、feature、query、candidate、segment和snapshot workspace；表现热路径 MUST不采样AnimationClip，不使用LINQ、反射、字符串查找、临时List或每帧托管分配。Diagnostics和Scene gizmo MUST不重新分析动画、query或修改计划。
 
-#### Scenario: 排查楼梯上右脚滑动
+#### Scenario: 排查CrossFade误释放
 
-- **WHEN** 右脚从Locked进入Sliding
-- **THEN** Live Debug MUST显示surface、动画目标偏差、slide限制和transition reason
-- **AND** Debug读取 MUST不改变下一帧constraint状态
+- **WHEN** 一只脚在两个visible producer间从Locked进入Free
+- **THEN** Live Debug MUST同时显示两个producer的sample time、visible weight和生成confidence
+- **AND** Debug读取 MUST不改变下一帧特征混合或constraint状态
 
 ### Requirement: Preview 必须遵守正式世界上下文边界
 

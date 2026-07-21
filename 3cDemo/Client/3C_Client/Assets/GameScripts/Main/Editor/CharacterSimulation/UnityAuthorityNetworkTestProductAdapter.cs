@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using ThirdPersonCharacter.Pipeline;
+using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonGameplay.Networking.ServerAuthoritative;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.ServerAuthoritative;
@@ -48,6 +49,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         public void PrepareBuildInputs(NetworkTestProductContext context)
         {
+            CharacterPipelineDefinition definition =
+                NetworkTestProductAdapterUtility.RequireAsset<CharacterPipelineDefinition>(DefinitionPath);
+            CharacterSimulationBuildResult result = CharacterSimulationBuildOrchestrator.Build(
+                new CharacterSimulationBuildRequest(
+                    definition,
+                    CharacterSimulationBuildPublicationMode.Publish,
+                    new[] { CharacterSimulationTargetCatalog.Float32(definition) }));
+            if (!result.IsValid)
+                throw new InvalidOperationException("Unity Authority Float32 Character target failed to build.");
         }
 
         public NetworkTestProductDescriptor CreateDescriptor(NetworkTestProductContext context)
@@ -131,14 +141,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
     public static class UnityAuthorityNetworkTestBuildAndRun
     {
-        const string BuildMenuPath = "Tools/3C/Network Tests/Unity Authority/Build";
-        const string RunMenuPath = "Tools/3C/Network Tests/Unity Authority/Run";
-
-        [MenuItem(BuildMenuPath)]
         public static void Build() => NetworkTestProductBuildWorkflow.Build(
             new NetworkTestProductBuildRequest(NetworkTestProductAdapters.UnityAuthority));
 
-        [MenuItem(RunMenuPath)]
         public static void Run() => NetworkTestProductBuildWorkflow.Run(
             new NetworkTestProductRunRequest(NetworkTestProductAdapters.UnityAuthority, true));
     }

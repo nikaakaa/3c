@@ -110,13 +110,21 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateSemantic.MotionWarpInitialized,
                 ProgramStateSemantic.MotionWarpPlaybackGeneration,
                 ProgramStateSemantic.MotionWarpActionInstance,
-                ProgramStateSemantic.MotionWarpWindowStartPosition,
-                ProgramStateSemantic.MotionWarpWindowStartYaw,
-                ProgramStateSemantic.MotionWarpTotalPlanarCorrection,
-                ProgramStateSemantic.MotionWarpTotalYawCorrection,
+                ProgramStateSemantic.MotionWarpStartBodyPosition,
+                ProgramStateSemantic.MotionWarpStartBodyYaw,
+                ProgramStateSemantic.MotionWarpSourceWindowStartPosition,
+                ProgramStateSemantic.MotionWarpSourceWindowStartYaw,
+                ProgramStateSemantic.MotionWarpResolvedTargetPosition,
+                ProgramStateSemantic.MotionWarpResolvedTargetYaw,
+                ProgramStateSemantic.MotionWarpLimitResult,
+                ProgramStateSemantic.MotionWarpPreviousWarpedPosition,
+                ProgramStateSemantic.MotionWarpPreviousWarpedYaw,
                 ProgramStateSemantic.MotionWarpLastPositionProgress,
                 ProgramStateSemantic.MotionWarpLastYawProgress,
                 ProgramStateSemantic.MotionWarpSourceOperation);
+            EquipmentPolicy = new FixedStateAccessPolicy(
+                ProgramStateSemantic.EquipmentAggregate,
+                ProgramStateSemantic.EquipmentLocalState);
             Access = new FixedProgramAccess(program, layout, this);
         }
 
@@ -132,6 +140,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedStateAccessPolicy BlackboardPolicy { get; }
         public FixedStateAccessPolicy TimelinePolicy { get; }
         public FixedStateAccessPolicy MotionModifierPolicy { get; }
+        public FixedStateAccessPolicy EquipmentPolicy { get; }
 
         public string SourcePath(OperationHandle operation)
         {
@@ -519,5 +528,3 @@ namespace ThirdPersonSimulation.Fixed
     }
 
 }
-
-

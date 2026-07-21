@@ -75,7 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationMarkerSyncAuthoringInput input = inputs[i];
                 if (input.Track.SyncMode != AnimationSyncMode.MarkerGroup ||
-                    !string.Equals(input.Track.LayerId, target.Track.LayerId, StringComparison.Ordinal) ||
+                    input.Track.AnimationChannelId != target.Track.AnimationChannelId ||
                     !string.Equals(
                         AnimationMarkerSyncAuthoring.NormalizeId(input.Track.SyncGroupId),
                         AnimationMarkerSyncAuthoring.NormalizeId(target.Track.SyncGroupId),
@@ -84,7 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 destination.Add(new TimelineAnimationMarkerSyncGroupMember(
                     input.ProducerIdentity,
                     $"{input.Timeline.Name}/{input.Track.Name}",
-                    input.Track.LayerId,
+                    input.Track.AnimationChannelId,
                     AnimationMarkerSyncAuthoring.NormalizeId(input.Track.SyncGroupId),
                     BuildPairCoverage(input.Track),
                     input.Track.SyncMarkers
@@ -130,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationTrack track = inputs[i].Track;
                 if (track.SyncMode != AnimationSyncMode.MarkerGroup ||
-                    !string.Equals(track.LayerId, target.Track.LayerId, StringComparison.Ordinal) ||
+                    track.AnimationChannelId != target.Track.AnimationChannelId ||
                     !string.Equals(
                         AnimationMarkerSyncAuthoring.NormalizeId(track.SyncGroupId),
                         AnimationMarkerSyncAuthoring.NormalizeId(target.Track.SyncGroupId),

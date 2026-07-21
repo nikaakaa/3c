@@ -11,6 +11,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [CustomEditor(typeof(CharacterPipelineDefinition))]
     public sealed class CharacterPipelineDefinitionEditor : UnityEditor.Editor
     {
+        enum ArtifactStatus
+        {
+            Missing,
+            Invalid,
+            Unchecked,
+            NeedsCompile,
+            Ready,
+            Stale
+        }
+
         readonly List<string> m_ConfigurationErrors = new List<string>();
         SerializedProperty m_RootTreeAsset;
         SerializedProperty m_SimulationTickRate;
@@ -22,6 +32,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         SerializedProperty m_ActionProfiles;
         SerializedProperty m_BehaviorProfiles;
         SerializedProperty m_AnimationPresentationProfile;
+		SerializedProperty m_EquipmentCapabilityEnabled;
+		SerializedProperty m_EquipmentProfile;
+		SerializedProperty m_EquipmentPresentationProfile;
         CharacterSimulationCompileReport m_CompileReport;
         string m_DiagnosticsError = string.Empty;
         bool m_ConfigurationValidated;
@@ -31,7 +44,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         CharacterSemanticIrCacheStatus m_IrCacheStatus;
         string m_IrCacheMessage = string.Empty;
         bool m_IrCacheInitialized;
-        bool m_ArtifactsDirtyByInspectorEdit;
+        ArtifactStatus m_ArtifactStatus;
+        bool m_ArtifactStatusInitialized;
 
         void OnEnable()
         {
@@ -45,6 +59,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_ActionProfiles = serializedObject.FindProperty("m_ActionProfiles");
             m_BehaviorProfiles = serializedObject.FindProperty("m_BehaviorProfiles");
             m_AnimationPresentationProfile = serializedObject.FindProperty("m_AnimationPresentationProfile");
+			m_EquipmentCapabilityEnabled = serializedObject.FindProperty("m_EquipmentCapabilityEnabled");
+			m_EquipmentProfile = serializedObject.FindProperty("m_EquipmentProfile");
+			m_EquipmentPresentationProfile = serializedObject.FindProperty("m_EquipmentPresentationProfile");
+            RefreshArtifactHeaderStatus(target as CharacterPipelineDefinition);
         }
 
         public override void OnInspectorGUI()
@@ -58,7 +76,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_ConfigurationValid = false;
                 m_ConfigurationErrors.Clear();
                 m_IrCacheInitialized = false;
-                m_ArtifactsDirtyByInspectorEdit = true;
+                m_ArtifactStatus = ArtifactStatus.NeedsCompile;
+                m_ArtifactStatusInitialized = true;
             }
             DrawArtifactStatus();
             DrawNavigation();
@@ -79,6 +98,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.PropertyField(m_GameplayEffectProfile, new GUIContent("Gameplay Effect"));
             EditorGUILayout.PropertyField(m_BodyMotionProfile, new GUIContent("Body Motion"));
             EditorGUILayout.PropertyField(m_AnimationPresentationProfile, new GUIContent("Animation Presentation"));
+			EditorGUILayout.Space(3f);
+			EditorGUILayout.PropertyField(m_EquipmentCapabilityEnabled, new GUIContent("Equipment Capability"));
+			using (new EditorGUI.DisabledScope(!m_EquipmentCapabilityEnabled.boolValue))
+			{
+				EditorGUILayout.PropertyField(m_EquipmentProfile, new GUIContent("Equipment Gameplay"));
+				EditorGUILayout.PropertyField(m_EquipmentPresentationProfile, new GUIContent("Equipment Presentation"));
+			}
+			using (new EditorGUI.DisabledScope(true))
+			{
+				string equipmentState = !m_EquipmentCapabilityEnabled.boolValue
+					? "Disabled"
+					: m_EquipmentProfile.objectReferenceValue && m_EquipmentPresentationProfile.objectReferenceValue
+						? "Configured"
+						: "Incomplete";
+				EditorGUILayout.TextField("Equipment State", equipmentState);
+			}
             EditorGUILayout.PropertyField(m_ActionProfiles, new GUIContent("Actions"), true);
             EditorGUILayout.PropertyField(m_BehaviorProfiles, new GUIContent("Behaviors"), true);
             EditorGUILayout.Space(6f);
@@ -91,20 +126,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
 
             EditorGUILayout.LabelField("Artifact Status", EditorStyles.boldLabel);
-            string status = m_ArtifactsDirtyByInspectorEdit ? "Needs Compile" : ResolveArtifactStatus(definition);
+            if (!m_ArtifactStatusInitialized)
+                RefreshArtifactHeaderStatus(definition);
+            string status = GetArtifactStatusLabel(m_ArtifactStatus);
             EditorGUILayout.HelpBox(
-                $"Program / Projection: {status}",
-                status == "Ready" ? MessageType.Info : status == "Needs Compile" ? MessageType.Warning : MessageType.Error);
+                GetArtifactStatusMessage(status, m_ArtifactStatus),
+                GetArtifactStatusMessageType(m_ArtifactStatus));
 
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Compile"))
             {
                 if (CharacterSimulationProgramBuildService.Build(definition, true))
-                    m_ArtifactsDirtyByInspectorEdit = false;
+                {
+                    m_ArtifactStatus = ArtifactStatus.Ready;
+                    m_ArtifactStatusInitialized = true;
+                }
+                else if (m_ArtifactStatus != ArtifactStatus.NeedsCompile)
+                {
+                    RefreshArtifactHeaderStatus(definition);
+                }
                 m_CompileReport = null;
                 m_DiagnosticsError = string.Empty;
                 m_IrCacheInitialized = false;
             }
+            if (GUILayout.Button("Refresh Status"))
+                RefreshExactArtifactStatus(definition);
             if (GUILayout.Button("Diagnostics"))
                 RunDiagnostics(definition);
             EditorGUILayout.EndHorizontal();
@@ -130,13 +176,49 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.Space(6f);
         }
 
-        static string ResolveArtifactStatus(CharacterPipelineDefinition definition)
+        void RefreshArtifactHeaderStatus(CharacterPipelineDefinition definition)
         {
-            if (!definition.SimulationProgram || !definition.PresentationProjection)
-                return "Missing";
-            return CharacterSimulationProgramBuildService.HasPublishedArtifactMetadata(definition)
-                ? "Ready"
-                : "Invalid";
+            m_ArtifactStatusInitialized = true;
+            if (!definition || !definition.SimulationProgram || !definition.PresentationProjection)
+            {
+                m_ArtifactStatus = ArtifactStatus.Missing;
+                return;
+            }
+            m_ArtifactStatus = CharacterSimulationProgramBuildService.HasPublishedArtifactHeader(definition)
+                ? ArtifactStatus.Unchecked
+                : ArtifactStatus.Invalid;
+        }
+
+        void RefreshExactArtifactStatus(CharacterPipelineDefinition definition)
+        {
+            RefreshArtifactHeaderStatus(definition);
+            if (m_ArtifactStatus != ArtifactStatus.Unchecked)
+                return;
+            m_ArtifactStatus = CharacterSimulationProgramBuildService.IsStale(definition)
+                ? ArtifactStatus.Stale
+                : ArtifactStatus.Ready;
+        }
+
+        static string GetArtifactStatusLabel(ArtifactStatus status)
+        {
+            return status == ArtifactStatus.NeedsCompile ? "Needs Compile" : status.ToString();
+        }
+
+        static string GetArtifactStatusMessage(string label, ArtifactStatus status)
+        {
+            return status == ArtifactStatus.Unchecked
+                ? $"Program / Projection: {label}\nPublished headers exist. Use Refresh Status to compare the current authoring source."
+                : $"Program / Projection: {label}";
+        }
+
+        static MessageType GetArtifactStatusMessageType(ArtifactStatus status)
+        {
+            return status switch
+            {
+                ArtifactStatus.Ready => MessageType.Info,
+                ArtifactStatus.Unchecked or ArtifactStatus.NeedsCompile or ArtifactStatus.Stale => MessageType.Warning,
+                _ => MessageType.Error
+            };
         }
 
         static void DrawArtifactMetadata(CharacterPipelineDefinition definition)
@@ -152,7 +234,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorGUILayout.LabelField("Numeric Profile", $"{program.NumericProfileId} / ABI {program.TargetAbiVersion}");
                 DrawIdentity("Source Revision", program.SourceRevision);
                 DrawIdentity("Program Hash", program.ProgramHash);
-                DrawIdentity("Projection Hash", projection.ProgramHash);
+                DrawIdentity("Presentation Contract", projection.ContractHash);
+                DrawIdentity("Projection Revision", projection.ProjectionRevision);
             }
         }
 

@@ -1,0 +1,25 @@
+{
+    "name": "ThirdPersonSimulation.Fixed.Unity",
+    "rootNamespace": "ThirdPersonCharacter.Pipeline.Simulation.Fixed",
+    "references": [
+        "ThirdPersonSimulation.Core",
+        "ThirdPersonSimulation.Fixed",
+        "ThirdPersonSimulation.Unity",
+        "ThirdPersonSimulation.DeterministicKcc",
+        "ThirdPersonClient.Runtime",
+        "ThirdPersonGameplay",
+        "BTSMTL.Diagnostics",
+        "Kybernetik.Animancer",
+        "Cinemachine",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

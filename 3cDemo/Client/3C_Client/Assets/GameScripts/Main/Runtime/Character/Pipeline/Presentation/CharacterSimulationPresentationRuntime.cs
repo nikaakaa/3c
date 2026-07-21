@@ -26,6 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterBodyPresentationRuntime m_Body;
         readonly CharacterAnimationPlaybackRuntime m_Animation;
+        readonly CharacterEquipmentVisualRuntime m_Equipment;
         readonly CharacterFootPlacementRuntime m_FootPlacement;
         readonly CharacterCameraPresentationRuntime m_Camera;
         readonly string m_PoseSourceLayerId;
@@ -46,6 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationProjection projection,
             CharacterBodyPresentationRuntime body,
             CharacterAnimationPlaybackRuntime animation,
+            CharacterEquipmentVisualRuntime equipment,
             CharacterFootPlacementRuntime footPlacement,
             CharacterCameraPresentationRuntime camera,
             CharacterAnimationStartupPolicy animationStartupPolicy,
@@ -62,6 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             m_Body = body ?? throw new ArgumentNullException(nameof(body));
             m_Animation = animation ?? throw new ArgumentNullException(nameof(animation));
+            m_Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
             m_FootPlacement = footPlacement ?? throw new ArgumentNullException(nameof(footPlacement));
             m_Camera = camera;
             m_PoseSourceLayerId = footPlacement.PoseSourceLayerId;
@@ -79,6 +82,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> AnimationSnapshots => m_Animation.Snapshots;
+
+        public void CaptureEquipmentSelections(IReadOnlyList<EquipmentVisualSelection> selections)
+        {
+            RequireAlive();
+            m_Equipment.Capture(selections);
+        }
 
         public void CaptureBodyTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals)
         {
@@ -189,6 +198,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Diagnostics.BeginPresentationFrame(context.RenderFrame);
             try
             {
+                m_Equipment.Present();
                 CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
                 if (!bodyFrame.IsValid)
                 {
@@ -235,6 +245,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_Disposed)
                 return;
             m_CurrentFrameSignals.Clear();
+            m_Equipment.Reset();
             m_Camera?.Reset();
             m_FootPlacement.Reset(new CharacterPosePostProcessReset(
                 m_ActorId,
@@ -257,7 +268,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Disposed = true;
             m_CurrentFrameSignals.Clear();
             m_AnimationStarted = false;
-            CharacterPresentationModuleLifetime.Dispose(m_Camera, m_FootPlacement, m_Animation, m_Body);
+            CharacterPresentationModuleLifetime.Dispose(m_Camera, m_FootPlacement, m_Equipment, m_Animation, m_Body);
         }
 
         bool PresentAnimation(CharacterBodyPresentationFrame bodyFrame, float presentationDeltaSeconds)

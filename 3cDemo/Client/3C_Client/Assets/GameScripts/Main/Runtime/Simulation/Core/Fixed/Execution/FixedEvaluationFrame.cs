@@ -4,6 +4,18 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation.Fixed
 {
+    internal readonly struct FixedEvaluationOutputSavepoint
+    {
+        public FixedEvaluationOutputSavepoint(int factCount, int presentationCount)
+        {
+            FactCount = factCount;
+            PresentationCount = presentationCount;
+        }
+
+        public int FactCount { get; }
+        public int PresentationCount { get; }
+    }
+
     internal readonly struct CharacterOperationEvaluation
     {
         public CharacterOperationEvaluation(
@@ -123,6 +135,20 @@ namespace ThirdPersonSimulation.Fixed
         internal void AddFact(GameplayFact value) => m_Facts.Add(value);
         internal void AddPresentation(PresentationCommand value) => m_Presentation.Add(value);
         internal void AddTrace(SimulationTraceRecord value) => m_Trace.Add(value);
+
+        internal FixedEvaluationOutputSavepoint CreateOutputSavepoint() =>
+            new FixedEvaluationOutputSavepoint(m_Facts.Count, m_Presentation.Count);
+
+        internal void RestoreOutput(FixedEvaluationOutputSavepoint savepoint)
+        {
+            if (savepoint.FactCount < 0 || savepoint.FactCount > m_Facts.Count ||
+                savepoint.PresentationCount < 0 || savepoint.PresentationCount > m_Presentation.Count)
+            {
+                throw new InvalidOperationException("Fixed evaluation output savepoint is invalid.");
+            }
+            m_Facts.RemoveRange(savepoint.FactCount, m_Facts.Count - savepoint.FactCount);
+            m_Presentation.RemoveRange(savepoint.PresentationCount, m_Presentation.Count - savepoint.PresentationCount);
+        }
     }
 
     internal sealed class FixedOperationStateReset

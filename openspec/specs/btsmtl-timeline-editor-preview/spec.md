@@ -3,6 +3,55 @@
 ## Purpose
 定义 BTSMTL Timeline 编辑器预览的正式链路：编辑器预览由 `TimelinePreviewSession` 控制播放状态，预览目标通过 `TimelinePreviewTarget` 接入正式角色管线，复用 Timeline sampling、AnimationPlaybackLifecycle 和 AnimancerPlaybackAdapter，不恢复旧 `TimelinePlayer`、Registry/Arbitrator 或独立 PlayableGraph 预览权威。
 ## Requirements
+### Requirement: Timeline Animation Analysis必须是按需领域工具
+
+Timeline窗口 MAY通过显式Character Editor provider提供Animation Analysis面板。面板 MUST默认关闭，不占Track行；打开后 MUST显式显示当前AnimationClip、Analysis Source、artifact状态、Left/Right选择与单一metric选择。生成曲线 MUST只读且不得进入Timeline selection、Undo或Curve Channel Catalog。
+
+#### Scenario: 查看WalkLoop脚分析
+
+- **WHEN** 作者选中WalkLoop AnimationClip、选择匹配Analysis Source并打开Analysis
+- **THEN** 面板 MUST允许选择一只脚和一个metric查看
+- **AND** Timeline主时间轴 MUST不增加Sole Speed、Height、Plant或Landing行
+
+#### Scenario: 未选择Analysis Source
+
+- **WHEN** 独立Timeline打开Analysis但没有显式Source
+- **THEN** 面板 MUST显示Analysis Source Required
+- **AND** MUST不搜索引用该Timeline的Definition或Graph
+
+### Requirement: Timeline Analysis必须显示并显式应用脚接触候选
+
+Animation Analysis面板 MUST在artifact Ready时显示由左右脚PlantConfidence实际采样推导的contact候选及目标frame。候选 MUST保持瞬时只读，不得自动保存或成为第二份运行真相。作者确认目标AnimationTrack后，Apply MUST重新校验artifact、AnimationClip dependency、Analysis Source、Sampling Rig、Calibration、采样参数、Timeline映射和candidate revision，并通过Timeline正式mutation生成已有的AnimationSyncMarker作者数据。
+
+#### Scenario: 应用WalkLoop候选
+
+- **WHEN** 作者选择完整覆盖MarkerGroup/Cyclic AnimationTrack的WalkLoop Clip并确认Apply
+- **THEN** 面板 MUST把当前未过期候选写为正式LeftFootContact与RightFootContact Marker
+- **AND** MUST只替换这两类脚接触Marker、尽量保留匹配的stable marker identity并保留其它业务Marker
+- **AND** 写入 MUST进入既有Undo、dirty、validator、compiler与Agent v15链
+
+#### Scenario: 候选已经过期
+
+- **WHEN** 候选显示后artifact identity/content hash、Clip dependency或Timeline映射发生变化
+- **THEN** Apply MUST拒绝旧candidate revision
+- **AND** MUST不按缓存frame、clip名称或半周期假设继续写入Marker
+
+#### Scenario: producer级映射不唯一
+
+- **WHEN** 目标Track不是MarkerGroup/Cyclic，或存在多个AnimationClip，或单Clip没有完整覆盖Timeline
+- **THEN** 面板 MAY显示只读候选但 MUST禁用Apply并说明映射不唯一
+- **AND** MUST不选择权重最高Clip或按名称猜测Marker来源
+
+### Requirement: Timeline Analysis工具不得伪造Foot Placement世界
+
+Animation Analysis面板 MUST只显示离线AnimationClip局部特征。它 MUST不执行PhysicsScene查询、Foot Lock、Ground Envelope、Pelvis、Final IK或Camera，不得把离线plant confidence显示为Gameplay contact。
+
+#### Scenario: 预览Attack动画
+
+- **WHEN** 作者查看Attack的plant或landing metric
+- **THEN** 面板 MUST明确数据属于动画局部分析
+- **AND** MUST不显示虚构地面、锁脚或运行时IK结果
+
 ### Requirement: Timeline 编辑器预览使用管线预览会话
 
 系统 MUST 使用 editor-only TimelinePreviewSession 作为 TimelineEditorWindow 的播放、暂停、速度和游标预览控制器。TimelineEditorWindow MUST为当前绑定的 resolved TimelineData 建立唯一 preview session，并在窗口重绑或释放时正式释放旧 preview owner。TimelineEditorWindow MUST NOT直接控制 TimelinePlayer、PlayableGraph 或旧 Timeline autonomous playback。
@@ -348,25 +397,9 @@ Timeline Live Debug MUST从共享RuntimeDebugSession的正式Animation trace显�
 - **THEN** Live Debug MUST显示`TargetExplicitNone`
 - **AND** MUST继续显示target原始Timeline采样与普通Animancer lifecycle
 
-### Requirement: MotionWarp Gameplay Preview 必须显式提供目标快照
-
-Timeline Authoring Preview MAY在窗口session state中配置editor-only `ActionTargetSnapshot`，但该值 MUST不写入Timeline、Graph、ActionProfile或Blackboard资产。包含MotionWarp的完整Gameplay Preview MUST将该快照通过正式Action admission与ActionInstance链传入隔离Preview Session；缺失必需快照时 MUST停止并显示正式reject reason。
-
-#### Scenario: 预览目标攻击轨迹
-
-- **WHEN** 作者为Preview Session提供合法目标快照并播放包含MotionWarp的Timeline
-- **THEN** Preview MUST经过compiled Program、ActionInstance、Motion resolver、Modifier和Preview WorldSolver
-- **AND** MUST不直接修改preview target Transform来模拟Warp
-
-#### Scenario: 只采样动画资源
-
-- **WHEN** 用户处于没有Program、Action Context和WorldSolver的纯动画预览
-- **THEN** MotionWarp MUST不执行
-- **AND** UI MUST不把视觉Transform移动显示成Gameplay Warp结果
-
 ### Requirement: Timeline Live Debug 必须显示 MotionWarp 正式运行事实
 
-Live Debug MUST从正式runtime trace显示MotionWarp window、source MotionCurve、ActionInstance、target snapshot、nominal end、desired pose、position/yaw progress、total correction、final request和actual solver result。Live Debug MUST不重新计算Warp，也 MUST不读取mutable accumulator或scene target。
+Live Debug MUST从正式runtime trace显示MotionWarp window首尾、source MotionCurve首尾与当前累计pose、ActionInstance、target snapshot、Translation/Rotation mode、未限制Target Pose、有效Target Pose、Limit结果、position/yaw progress、previous/current Warped Cumulative Pose、当前correction、final Action channel request和actual solver result。Live Debug MUST不重新计算Warp，也 MUST不读取mutable accumulator或scene target。
 
 #### Scenario: Warp 请求被墙阻挡
 
@@ -479,3 +512,34 @@ Curve mutation MUST原子保存pre/post wrap mode及每个key的time、value、i
 - **WHEN** 某功能只提供显示名但没有registered ChannelId、owner mutation、validator或runtime consumer
 - **THEN** Curve Editor MUST拒绝创建该channel
 - **AND** MUST不保存未知AnimationCurve字段或fallback数据
+
+### Requirement: Timeline Field内部交互、几何与渲染必须分属明确模块
+
+Timeline Editor MUST保留现有TimelineEditorWindow、TimelineField、Inspector和Authoring Preview/Live Debug入口，但selection/drag/move/resize交互状态、time/frame/clip geometry与hit-test、track/clip/playhead/overlay rendering、preview/live binding MUST由职责独立的内部模块拥有。selection MUST只读暴露，外部 MUST通过selection命令修改；interaction MUST只依赖窄host port，不得持有完整TimelineField；rendering MUST显式消费frame range、viewport、playhead或overlay输入，不得反向读取完整TimelineField。interaction模块 MUST通过唯一authoring mutation/Undo入口修改Timeline；geometry与rendering MUST是输入驱动且不得写asset；preview/live binding MUST继续由窗口本地session adapter拥有。拆分 MUST不改变Timeline/Track/Clip identity、Source Map、右侧Inspector selection或双窗口页签行为。
+
+#### Scenario: Resize一个Animation Clip
+
+- **WHEN** 作者拖动Clip边缘改变范围
+- **THEN** interaction模块 MUST使用geometry模块的frame结果创建唯一mutation
+- **AND** mutation MUST在一个Undo边界更新原Clip identity对应的数据
+- **AND** rendering模块 MUST只根据新数据重绘
+
+#### Scenario: 点击右侧Inspector设置
+
+- **WHEN** 作者选择Clip后操作右侧Inspector字段
+- **THEN** selection owner MUST在字段提交期间保持同一Clip authoring identity
+- **AND** TimelineField重绘 MUST不把selection清空或切换到其它Clip
+
+#### Scenario: Authoring Preview切换Live Debug
+
+- **WHEN** TimelineEditor从Authoring Preview切换到Live Debug
+- **THEN** window/session adapter MUST停止preview binding并建立该窗口本地runtime binding
+- **AND** interaction模块 MUST进入只读状态
+- **AND** geometry与rendering模块 MUST复用同一authoring Timeline identity显示真实overlay
+
+#### Scenario: 多个playback overlay
+
+- **WHEN** 同一Timeline source存在多个runtime playback
+- **THEN** runtime overlay模块 MUST呈现各playback identity并服从Follow/Pin选择
+- **AND** rendering模块 MUST不按列表顺序静默选择赢家或调用preview evaluator
+

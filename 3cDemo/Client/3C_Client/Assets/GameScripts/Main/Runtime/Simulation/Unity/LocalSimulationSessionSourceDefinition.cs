@@ -98,14 +98,45 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             identityParts[1] = LocalSimulationSessionSourceDefinition.SemanticVersion;
             identityParts[2] = context.SourceClockId.Value;
             identityParts[3] = context.TickRate.ToString();
+            var roster = new ActorId[context.Registrations.Count];
             for (int i = 0; i < context.Registrations.Count; i++)
             {
                 ISimulationActorRegistration registration = context.Registrations[i] ??
                     throw new ArgumentException("Local Session Source roster contains a missing registration.", nameof(context));
-                if (registration is not ILocalSimulationActorRegistration local || local.LocalInput == null)
-                    throw new InvalidOperationException($"Local Actor '{registration.ActorId}' has no local input adapter port.");
-                inputBindings[i] = new LocalSimulationInputBinding(registration.ActorId, local.LocalInput);
-                identityParts[i + 4] = $"{registration.ActorId}:{local.LocalInput.AdapterIdentity}:{local.Program.ProgramHash}";
+                roster[i] = registration.ActorId;
+            }
+            for (int i = 0; i < context.Registrations.Count; i++)
+            {
+                ISimulationActorRegistration registration = context.Registrations[i] ??
+                    throw new ArgumentException("Local Session Source roster contains a missing registration.", nameof(context));
+                if (registration is not ILocalSimulationActorRegistration local || local.LocalControlSource == null)
+                    throw new InvalidOperationException($"Local Actor '{registration.ActorId}' has no Character Control Source.");
+                ICharacterControlSourceRuntime controlSource = local.LocalControlSource;
+                if (controlSource.NumericProfile != Float32SimulationNumericProfile.Value ||
+                    !controlSource.CharacterProgramId.Equals(local.Program.Manifest.ProgramId) ||
+                    !controlSource.CharacterProgramHash.Equals(local.Program.ProgramHash))
+                {
+                    throw new InvalidOperationException($"Local Actor '{registration.ActorId}' Control Source does not match its Character Program.");
+                }
+                const CharacterControlSourceCapability knownCapabilities =
+                    CharacterControlSourceCapability.CommittedObservation |
+                    CharacterControlSourceCapability.TransactionalState;
+                if ((controlSource.Capabilities & ~knownCapabilities) != 0)
+                    throw new InvalidOperationException($"Local Actor '{registration.ActorId}' Control Source declares unknown capabilities '{controlSource.Capabilities & ~knownCapabilities}'.");
+                if (controlSource.Capabilities.HasFlag(CharacterControlSourceCapability.CommittedObservation))
+                {
+                    if (controlSource is not ICharacterControlSourceRosterRuntime rosterRuntime)
+                        throw new InvalidOperationException($"Local Actor '{registration.ActorId}' Control Source requires committed observation without a roster contract.");
+                    rosterRuntime.ValidateRoster(
+                        registration.ActorId,
+                        roster,
+                        CommittedActorObservationSchema.CapabilityHash);
+                }
+                inputBindings[i] = new LocalSimulationInputBinding(registration.ActorId, controlSource);
+                string stateIdentity = controlSource is ICharacterControlSourceStateRuntime stateful
+                    ? $"{stateful.StateSchemaId}:{stateful.StateSchemaVersion}"
+                    : "stateless";
+                identityParts[i + 4] = $"{registration.ActorId}:{controlSource.SourceIdentity}:{controlSource.Capabilities}:{stateIdentity}:{local.Program.ProgramHash}";
             }
             var identity = new SimulationComponentIdentity(
                 SimulationComponentRole.SessionSource,

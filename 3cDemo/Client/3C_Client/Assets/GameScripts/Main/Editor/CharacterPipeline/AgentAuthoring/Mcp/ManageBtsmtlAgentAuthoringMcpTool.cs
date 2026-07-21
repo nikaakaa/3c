@@ -6,18 +6,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
 {
     [McpForUnityTool(
         "manage_btsmtl_agent_authoring",
-        Description = "Export a CharacterPipelineDefinition Agent snapshot, dry-run or transactionally apply Agent Patch IR, or validate the authored BTSMTL graph.")]
+        Description = "Bootstrap an AIController or export, dry-run, apply, and validate the v15 BTSMTL Agent contract for an explicit CharacterController or AIController root domain.")]
     public static class ManageBtsmtlAgentAuthoringMcpTool
     {
         public sealed class Parameters
         {
-            [ToolParameter("Action: export_snapshot, dry_run_patch, apply_patch, or validate.")]
+            [ToolParameter("Action: bootstrap_ai_controller, export_snapshot, dry_run_patch, apply_patch, or validate.")]
             public string action { get; set; }
 
-            [ToolParameter("Exact Assets/... path to a CharacterPipelineDefinition asset.")]
-            public string definition_asset_path { get; set; }
+            [ToolParameter("Root domain: CharacterController or AIController.")]
+            public string domain { get; set; }
 
-            [ToolParameter("Agent Patch IR JSON. Required for dry_run_patch and apply_patch.", Required = false)]
+            [ToolParameter("Exact Assets/... path to the domain root Definition asset.")]
+            public string root_asset_path { get; set; }
+
+            [ToolParameter("Agent Patch IR JSON, or AI bootstrap request JSON. Required for bootstrap_ai_controller, dry_run_patch and apply_patch.", Required = false)]
             public string patch_json { get; set; }
         }
 
@@ -33,17 +36,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
             if (!AgentAuthoringActionUtility.TryParse(actionValue, out AgentAuthoringAction action))
                 return new ErrorResponse("unsupported_action", new { action = actionValue });
 
-            if (!TryGetRequiredString(parameters, "definition_asset_path", out string definitionAssetPath))
-                return new ErrorResponse("definition_asset_path_required", new { action = actionValue });
+            if (!TryGetRequiredString(parameters, "domain", out string domain) || !AgentAuthoringSchema.IsDomain(domain))
+                return new ErrorResponse("domain_required", new { action = actionValue, domain });
+
+            if (!TryGetRequiredString(parameters, "root_asset_path", out string rootAssetPath))
+                return new ErrorResponse("root_asset_path_required", new { action = actionValue, domain });
 
             string patchJson = null;
             if (AgentAuthoringActionUtility.RequiresPatch(action) && !TryGetRequiredString(parameters, "patch_json", out patchJson))
-                return new ErrorResponse("patch_json_required", new { action = actionValue, definitionAssetPath });
+                return new ErrorResponse("patch_json_required", new { action = actionValue, domain, rootAssetPath });
 
             AgentAuthoringResponse response = new AgentPatchAuthoringService().Execute(new AgentAuthoringRequest
             {
                 action = action,
-                definitionAssetPath = definitionAssetPath,
+                domain = domain,
+                rootAssetPath = rootAssetPath,
                 patchJson = patchJson
             });
 

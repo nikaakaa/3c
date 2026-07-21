@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.DeterministicRollback;
@@ -44,6 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             string ownerName,
             ActorId actorId,
             FixedCharacterSimulationProgram program,
+            CharacterPresentationSemanticContract presentationContract,
             string worldBodyBindingId,
             FixedWorldBodyState initialBody,
             UnityFixedCharacterInputAdapter localInput,
@@ -69,6 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             OwnerName = ownerName.Trim();
             ActorId = actorId;
             Program = program ?? throw new ArgumentNullException(nameof(program));
+            PresentationContract = presentationContract ?? throw new ArgumentNullException(nameof(presentationContract));
             WorldBodyBindingId = worldBodyBindingId.Trim();
             InitialBody = initialBody;
             m_LocalInput = localInput;
@@ -100,12 +104,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public ActorId ActorId { get; }
         public FixedCharacterSimulationProgram Program { get; }
         public FixedSimulationActorBinding ProgramIdentity { get; }
+        public CharacterPresentationSemanticContract PresentationContract { get; }
         public string WorldBodyBindingId { get; }
         public FixedWorldBodyState InitialBody { get; }
         public RuntimeDiagnosticsContext DiagnosticsContext { get; }
         public SimulationOutputRouteDescriptor OutputRoute { get; }
-        public IRollbackLocalInputAdapter RollbackInput => m_LocalInput;
-        public IRollbackPresentationOutputPort PresentationOutput => m_PresentationOutput;
+        public IFixedCharacterControlSourceRuntime RollbackInput => m_LocalInput;
+        public IFixedPresentationCommitOutputPort PresentationOutput => m_PresentationOutput;
         public ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink SimulationDiagnostics => m_DiagnosticsAdapter;
         StableHash ISimulationActorRegistration.DiagnosticsConfigurationHash => StableHash.Compute(
             Program.Manifest.ProgramId.Value,

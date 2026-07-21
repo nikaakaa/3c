@@ -264,6 +264,7 @@ namespace BTSMTL.Timeline.Editor
             {
                 if (evt.button != 0)
                     return;
+                SelectTrackForMarkerAuthoring();
                 ToggleMarkerLane();
                 evt.StopImmediatePropagation();
             });
@@ -278,8 +279,17 @@ namespace BTSMTL.Timeline.Editor
                 m_MarkerLane.generateVisualContent += DrawMarkerCoverage;
                 m_MarkerLane.RegisterCallback<PointerDownEvent>(evt =>
                 {
-                    if (evt.button != 1 || m_RuntimeReadOnly)
+                    if (m_RuntimeReadOnly)
                         return;
+                    if (evt.button == 0)
+                    {
+                        SelectTrackForMarkerAuthoring();
+                        evt.StopImmediatePropagation();
+                        return;
+                    }
+                    if (evt.button != 1)
+                        return;
+                    SelectTrackForMarkerAuthoring();
                     m_MarkerContextFrame = FieldView.Geometry.PositionToClosestFrame(evt.localPosition.x);
                     ShowMarkerAddMenu(animationTrack);
                     evt.StopImmediatePropagation();
@@ -374,8 +384,16 @@ namespace BTSMTL.Timeline.Editor
 
         void ShowMarkerAddMenu(AnimationTrack track)
         {
+            if (track.SyncMode != AnimationSyncMode.MarkerGroup)
+            {
+                var unavailable = new GenericMenu();
+                unavailable.AddDisabledItem(new GUIContent("Configure MarkerGroup in Inspector first"));
+                unavailable.ShowAsContext();
+                return;
+            }
             var candidates = new List<string>();
-            if (EditorWindow.PreviewSession.Target is ITimelineAnimationMarkerSyncAuthoringContext context)
+            ITimelineAnimationMarkerSyncAuthoringContext context = EditorWindow.SessionContext?.MarkerTopologyContext;
+            if (context != null)
             {
                 var members = new List<TimelineAnimationMarkerSyncGroupMember>();
                 context.CollectAnimationMarkerSyncGroupMembers(track.Timeline, track.AuthoringId, members);
@@ -406,16 +424,21 @@ namespace BTSMTL.Timeline.Editor
             var field = new TextField
             {
                 value = marker?.MarkerId ?? string.Empty,
-                isDelayed = true
+                isDelayed = false
             };
             field.AddToClassList("animationMarkerTextEntry");
             field.style.left = FieldView.Geometry.FrameToPosition(marker?.Frame ?? m_MarkerContextFrame);
             field.style.top = TimelineTrackLayout.MarkerLaneTop;
             field.style.width = 150f;
             Add(field);
-            field.Focus();
+            field.BringToFront();
+            field.schedule.Execute(field.Focus);
+            bool closing = false;
             void Submit()
             {
+                if (closing)
+                    return;
+                closing = true;
                 string value = AnimationMarkerSyncAuthoring.NormalizeId(field.value);
                 field.RemoveFromHierarchy();
                 if (string.IsNullOrEmpty(value))
@@ -436,13 +459,14 @@ namespace BTSMTL.Timeline.Editor
                 }
                 else if (evt.keyCode == KeyCode.Escape)
                 {
+                    closing = true;
                     field.RemoveFromHierarchy();
                     evt.StopImmediatePropagation();
                 }
             });
             field.RegisterCallback<FocusOutEvent>(_ =>
             {
-                if (field.parent != null)
+                if (!closing && field.parent != null)
                     Submit();
             });
         }
@@ -456,6 +480,17 @@ namespace BTSMTL.Timeline.Editor
             FieldView.CommitAuthoringMutation(
                 () => track.AddMarker(markerId, frame),
                 "Add Animation Sync Marker");
+        }
+
+        void SelectTrackForMarkerAuthoring()
+        {
+            if (IsSelected())
+            {
+                FieldView.PopulateInspector(Track);
+                return;
+            }
+            FieldView.ClearSelection();
+            FieldView.AddToSelection(this);
         }
 
         void DrawMarkerCoverage(MeshGenerationContext context)

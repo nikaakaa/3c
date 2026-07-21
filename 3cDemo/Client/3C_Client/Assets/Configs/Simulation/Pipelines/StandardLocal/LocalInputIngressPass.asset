@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: LocalInputIngressPass
   m_EditorClassIdentifier: 
   m_PassId: thirdperson.simulation.local-input-ingress
-  m_ImplementationVersion: 2
+  m_ImplementationVersion: 4

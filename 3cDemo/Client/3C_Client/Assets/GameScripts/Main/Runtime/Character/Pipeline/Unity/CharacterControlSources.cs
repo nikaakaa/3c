@@ -7,42 +7,29 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation
 {
-    public interface IUnityCharacterSimulationInputAdapter : ISimulationInputAdapter, IDisposable
+    public interface ISimulationSessionActorHost
+    {
+        ActorId SimulationActorId { get; }
+        SimulationSessionHost SessionHost { get; }
+    }
+
+    public interface IUnityCharacterControlSourceRuntime : ICharacterControlSourceRuntime, IDisposable
     {
         void Activate();
         void Deactivate();
         void CaptureRenderFrame(ulong renderFrame);
     }
 
-    public readonly struct CharacterActionTargetInputSample
-    {
-        public CharacterActionTargetInputSample(ActorId targetId, Vector3 position, float yaw, ulong bodyTick)
-        {
-            if (!targetId.IsValid)
-                throw new ArgumentException("Action target input sample identity is incomplete.");
-            TargetId = targetId;
-            Position = position;
-            Yaw = yaw;
-            BodyTick = bodyTick;
-        }
-
-        public ActorId TargetId { get; }
-        public Vector3 Position { get; }
-        public float Yaw { get; }
-        public ulong BodyTick { get; }
-        public bool IsValid => TargetId.IsValid;
-    }
-
     public interface ICharacterActionTargetInputProvider
     {
         string ProviderIdentity { get; }
-        bool TryCapture(CharacterPipelineHost owner, out CharacterActionTargetInputSample sample);
+        bool TryGetTargetActorId(ISimulationSessionActorHost owner, out ActorId actorId);
     }
 
     public abstract class CharacterActionTargetInputProvider : MonoBehaviour, ICharacterActionTargetInputProvider
     {
         public abstract string ProviderIdentity { get; }
-        public abstract bool TryCapture(CharacterPipelineHost owner, out CharacterActionTargetInputSample sample);
+        public abstract bool TryGetTargetActorId(ISimulationSessionActorHost owner, out ActorId actorId);
     }
 
     public readonly struct CharacterControlSourceContext
@@ -65,13 +52,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     public abstract class CharacterControlSource : MonoBehaviour
     {
         public abstract string SourceIdentity { get; }
-        public abstract IUnityCharacterSimulationInputAdapter Create(CharacterControlSourceContext context);
+        public abstract IUnityCharacterControlSourceRuntime Create(CharacterControlSourceContext context);
     }
 
-    public sealed class NeutralCharacterSimulationInputAdapter : IUnityCharacterSimulationInputAdapter
+    public sealed class NeutralCharacterSimulationInputAdapter : IUnityCharacterControlSourceRuntime
     {
         const string InputPrefix = "input:value:";
         readonly List<SimulationInputValue> m_Values = new List<SimulationInputValue>();
+        readonly ProgramId m_ProgramId;
+        readonly ProgramHash m_ProgramHash;
         bool m_Active;
         bool m_Disposed;
         ulong m_RenderFrame;
@@ -82,6 +71,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 throw new ArgumentNullException(nameof(program));
             if (program.Manifest.NumericProfile != Float32SimulationNumericProfile.Value)
                 throw new ArgumentException("Neutral Character input requires a Float32 Program.", nameof(program));
+            m_ProgramId = program.Manifest.ProgramId;
+            m_ProgramHash = program.ProgramHash;
             for (int i = 0; i < program.CatalogEntries.Count; i++)
             {
                 ProgramCatalogEntry entry = program.CatalogEntries[i];
@@ -93,11 +84,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 m_Values.Add(CreateNeutralValue(program, entry, inputId));
             }
             m_Values.Sort((left, right) => string.CompareOrdinal(left.InputId, right.InputId));
-            AdapterIdentity = $"NeutralProgramInputs/Float32/{program.ProgramHash}";
+            SourceIdentity = $"NeutralProgramInputs/Float32/{program.ProgramHash}";
         }
 
-        public string AdapterIdentity { get; }
+        public string SourceIdentity { get; }
         public SimulationNumericProfile NumericProfile => Float32SimulationNumericProfile.Value;
+        public ProgramId CharacterProgramId => m_ProgramId;
+        public ProgramHash CharacterProgramHash => m_ProgramHash;
+        public CharacterControlSourceCapability Capabilities => CharacterControlSourceCapability.None;
 
         public void Activate()
         {
@@ -127,7 +121,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             return new CharacterSimulationInput(
                 NumericProfile,
                 context.Source,
-                AdapterIdentity,
+                SourceIdentity,
                 context.InputSequence,
                 m_Values,
                 Array.Empty<SimulationInputRequest>());

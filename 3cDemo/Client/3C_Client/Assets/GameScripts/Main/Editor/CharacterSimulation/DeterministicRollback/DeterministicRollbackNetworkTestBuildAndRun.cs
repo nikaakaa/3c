@@ -7,6 +7,7 @@ using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
+using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.DeterministicRollback;
 using ThirdPersonSimulation.Fixed;
@@ -21,9 +22,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
     public static class DeterministicRollbackNetworkTestBuildAndRun
     {
-        const string PrepareMenu = "Tools/3C/Network Tests/Deterministic Rollback/Prepare Assets and Scenes";
-        const string BuildMenu = "Tools/3C/Network Tests/Deterministic Rollback/Build";
-        const string RunMenu = "Tools/3C/Network Tests/Deterministic Rollback/Run";
         internal const string DefinitionPath = "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset";
         const string ConfigDirectory = "Assets/Configs/Simulation/DeterministicRollback";
         const string SceneDirectory = "Assets/Scenes/DeterministicRollback";
@@ -43,7 +41,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         internal static readonly string[] BuildScenes = { BootstrapScenePath, PeerScenePath };
 
-        [MenuItem(PrepareMenu)]
         public static void PrepareAssetsAndScenes()
         {
             RequireEditorIdle();
@@ -58,20 +55,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             EnsureDirectory(SceneDirectory);
 
             CharacterPipelineDefinition definition = AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(DefinitionPath);
-            if (!definition || !definition.InputProfile || !definition.PresentationProjection)
+            if (!definition || !definition.InputProfile)
                 throw new InvalidOperationException("Rollback Demo requires the complete Corin Character Pipeline Definition.");
-            if (!CharacterSimulationProgramBuildService.Build(definition, true))
-                throw new InvalidOperationException("Rollback Demo failed to compile the current Character Simulation Program.");
-
-            string definitionGuid = AssetDatabase.AssetPathToGUID(DefinitionPath);
-            if (string.IsNullOrWhiteSpace(definitionGuid))
-                throw new InvalidOperationException("Corin Definition GUID is unavailable.");
-
-            FixedCharacterSimulationProgramAsset fixedProgram = CreateOrLoad<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
-            fixedProgram.SetCompiledArtifact(BuildFixedProgram(definitionGuid));
-            EditorUtility.SetDirty(fixedProgram);
+            FixedCharacterSimulationProgramAsset fixedProgram =
+                FixedCharacterSimulationProgramBuildService.Build(definition, FixedProgramPath);
             ThirdPersonSimulation.Fixed.CharacterSimulationProgram program = fixedProgram.Load();
-            RequirePresentationIdentity(definition.PresentationProjection, program);
             int tickRate = program.Manifest.TickRate;
 
             FixedProgramRuntimeDefinition runtime = CreateOrLoad<FixedProgramRuntimeDefinition>(FixedRuntimePath);
@@ -123,66 +111,20 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Debug.Log($"Deterministic Rollback Demo prepared. Program={program.ProgramHash}; TickRate={tickRate}; World={persistedCollision.ContentHash}");
         }
 
-        [MenuItem(BuildMenu)]
         public static void Build() => NetworkTestProductBuildWorkflow.Build(
             new NetworkTestProductBuildRequest(NetworkTestProductAdapters.DeterministicRollback));
 
-        [MenuItem(RunMenu)]
         public static void Run() => NetworkTestProductBuildWorkflow.Run(
             new NetworkTestProductRunRequest(NetworkTestProductAdapters.DeterministicRollback, true));
 
-        static ThirdPersonSimulation.Fixed.LoadedCharacterTargetProgramArtifact BuildFixedProgram(string definitionGuid)
-        {
-            CharacterSemanticIrCacheResult semantic = CharacterSemanticIrArtifactStore.Inspect(definitionGuid);
-            if (!semantic.IsCurrent)
-                throw new InvalidOperationException($"Formal Semantic IR is unavailable: {semantic.Message}");
-            FixedProgramArtifactCompilationResult compilation =
-                FixedCharacterSimulationTargetCompiler.CompileArtifact(semantic.Artifact);
-            byte[] bytes = compilation.CopyCanonicalBytes();
-            ThirdPersonSimulation.Fixed.LoadedCharacterTargetProgramArtifact loaded =
-                ThirdPersonSimulation.Fixed.CharacterTargetProgramArtifactLoader.Inspect(definitionGuid, bytes);
-            if (!loaded.Program.ProgramHash.Equals(compilation.Program.ProgramHash) ||
-                !loaded.Program.LayoutHash.Equals(compilation.Program.LayoutHash))
-            {
-                throw new InvalidDataException("Fixed Program round-trip changed ProgramHash or LayoutHash.");
-            }
-            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            string artifactPath = Path.Combine(projectRoot, "Library", "CharacterSimulation", "Fixed", definitionGuid + ".fixed-program");
-            string directory = Path.GetDirectoryName(artifactPath) ??
-                throw new InvalidOperationException("Fixed Program artifact directory is unavailable.");
-            Directory.CreateDirectory(directory);
-            string temporaryPath = artifactPath + ".tmp";
-            try
-            {
-                File.WriteAllBytes(temporaryPath, bytes);
-                if (File.Exists(artifactPath))
-                    File.Replace(temporaryPath, artifactPath, null);
-                else
-                    File.Move(temporaryPath, artifactPath);
-            }
-            finally
-            {
-                if (File.Exists(temporaryPath))
-                    File.Delete(temporaryPath);
-            }
-            return ThirdPersonSimulation.Fixed.CharacterTargetProgramArtifactLoader.Inspect(
-                definitionGuid,
-                File.ReadAllBytes(artifactPath));
-        }
+        [MenuItem("Tools/3C/Internal/Prepare Deterministic Rollback")]
+        static void PrepareFromInternalMenu() => PrepareAssetsAndScenes();
 
-        static void RequirePresentationIdentity(
-            CharacterPresentationProjectionAsset projection,
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program)
-        {
-            var producers = new string[program.Producers.Count];
-            for (int i = 0; i < producers.Length; i++)
-                producers[i] = program.Producers[i].Identity;
-            projection.Load(new CharacterPresentationProgramIdentity(
-                program.Manifest.ProgramId.Value,
-                program.Manifest.SourceRevision.Value,
-                program.Manifest.SemanticHash.ToString(),
-                producers));
-        }
+        [MenuItem("Tools/3C/Internal/Build Deterministic Rollback")]
+        static void BuildFromInternalMenu() => Build();
+
+        [MenuItem("Tools/3C/Internal/Run Deterministic Rollback")]
+        static void RunFromInternalMenu() => Run();
 
         static void ConfigureEndpoint(RollbackEndpointAuthoringDefinition endpoint)
         {

@@ -609,14 +609,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (!TryResolveMotionWarpClip(session, command.Target, command.Path, out TimelineData timeline, out MotionWarpClip warp))
                 return;
             warp.ConfigureAuthoring(
-                command.PositionMode,
+                command.TranslationMode,
+                command.TargetOffsetSpace,
                 command.RotationMode,
-                command.TargetLocalPlanarOffset,
+                command.RotationMethod,
+                command.TargetPlanarOffset,
                 command.TargetYawOffsetDegrees,
-                command.PositionWeight,
-                command.YawWeight,
                 command.MaxTotalPositionCorrection,
                 command.MaxTotalYawCorrectionDegrees,
+                command.MaximumYawRateDegreesPerSecond,
+                command.LimitPolicy,
                 command.PositionProgressCurve,
                 command.YawProgressCurve);
             timeline.Init();
@@ -1183,14 +1185,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return false;
             var issues = new List<MotionWarpAuthoringIssue>();
             bool valid = MotionWarpAuthoring.ValidateConfiguration(
-                command.PositionMode,
+                command.TranslationMode,
+                command.TargetOffsetSpace,
                 command.RotationMode,
-                command.TargetLocalPlanarOffset,
+                command.RotationMethod,
+                command.TargetPlanarOffset,
                 command.TargetYawOffsetDegrees,
-                command.PositionWeight,
-                command.YawWeight,
                 command.MaxTotalPositionCorrection,
                 command.MaxTotalYawCorrectionDegrees,
+                command.MaximumYawRateDegreesPerSecond,
+                command.LimitPolicy,
                 command.PositionProgressCurve,
                 command.YawProgressCurve,
                 issues);

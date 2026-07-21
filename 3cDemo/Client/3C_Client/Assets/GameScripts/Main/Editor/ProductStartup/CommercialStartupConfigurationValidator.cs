@@ -69,8 +69,7 @@ namespace ThirdPersonCharacter.Editor.ProductStartup
             ValidateAll();
         }
 
-        [MenuItem("Tools/3C/Product Startup/Validate Configuration")]
-        private static void ValidateAll()
+        internal static void ValidateAll()
         {
             ValidateBuildSettings();
             ValidateBootstrapClosure();
@@ -103,14 +102,9 @@ namespace ThirdPersonCharacter.Editor.ProductStartup
         private static void ValidateBuildSettings()
         {
             var scenes = EditorBuildSettings.scenes.Where(scene => scene.enabled).Select(scene => scene.path).ToArray();
-            if (scenes.Length == 0 || !string.Equals(scenes[0], BootstrapScene, StringComparison.Ordinal))
+            if (scenes.Length != 1 || !string.Equals(scenes[0], BootstrapScene, StringComparison.Ordinal))
             {
-                throw new BuildFailedException($"普通产品唯一启动入口必须是 {BootstrapScene}。");
-            }
-
-            if (scenes.Contains(ProductShellScene, StringComparer.Ordinal))
-            {
-                throw new BuildFailedException("ProductShell 必须由 Core 资源包加载，不能进入 Player 内置场景闭包。");
+                throw new BuildFailedException($"普通产品 Player 只能内置 {BootstrapScene}；ProductShell 与 Gameplay 必须由 YooAsset 资源包加载。");
             }
         }
 

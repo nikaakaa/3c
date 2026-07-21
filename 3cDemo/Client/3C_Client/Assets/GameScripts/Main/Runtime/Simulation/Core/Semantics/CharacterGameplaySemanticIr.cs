@@ -619,10 +619,15 @@ namespace ThirdPersonSimulation
             ProgramStateSemantic.MotionWarpInitialized,
             ProgramStateSemantic.MotionWarpPlaybackGeneration,
             ProgramStateSemantic.MotionWarpActionInstance,
-            ProgramStateSemantic.MotionWarpWindowStartPosition,
-            ProgramStateSemantic.MotionWarpWindowStartYaw,
-            ProgramStateSemantic.MotionWarpTotalPlanarCorrection,
-            ProgramStateSemantic.MotionWarpTotalYawCorrection,
+            ProgramStateSemantic.MotionWarpStartBodyPosition,
+            ProgramStateSemantic.MotionWarpStartBodyYaw,
+            ProgramStateSemantic.MotionWarpSourceWindowStartPosition,
+            ProgramStateSemantic.MotionWarpSourceWindowStartYaw,
+            ProgramStateSemantic.MotionWarpResolvedTargetPosition,
+            ProgramStateSemantic.MotionWarpResolvedTargetYaw,
+            ProgramStateSemantic.MotionWarpLimitResult,
+            ProgramStateSemantic.MotionWarpPreviousWarpedPosition,
+            ProgramStateSemantic.MotionWarpPreviousWarpedYaw,
             ProgramStateSemantic.MotionWarpLastPositionProgress,
             ProgramStateSemantic.MotionWarpLastYawProgress,
             ProgramStateSemantic.MotionWarpSourceOperation
@@ -679,11 +684,27 @@ namespace ThirdPersonSimulation
             }
             ValidateSourceAndOwner(semanticIr, operation, catalog, sourceCatalog, new OperationHandle(timelineOwner));
             string actionContext = RequireIdentity(catalog, "ActionContext");
-            ProgramMotionWarpPositionMode positionMode = RequirePositionMode(operation, semanticIr, catalog);
+            ProgramMotionWarpTranslationMode translationMode = RequireTranslationMode(operation, semanticIr, catalog);
+            ProgramMotionWarpTargetOffsetSpace targetOffsetSpace = RequireEnumLiteral<ProgramMotionWarpTargetOffsetSpace>(semanticIr, catalog, "TargetOffsetSpace");
             ProgramMotionWarpRotationMode rotationMode = RequireRotationMode(operation, semanticIr, catalog);
-            if (positionMode == ProgramMotionWarpPositionMode.Disabled && rotationMode == ProgramMotionWarpRotationMode.Disabled)
+            ProgramMotionWarpRotationMethod rotationMethod = RequireEnumLiteral<ProgramMotionWarpRotationMethod>(semanticIr, catalog, "RotationMethod");
+            ProgramMotionWarpLimitPolicy limitPolicy = RequireEnumLiteral<ProgramMotionWarpLimitPolicy>(semanticIr, catalog, "LimitPolicy");
+            if (translationMode == ProgramMotionWarpTranslationMode.Disabled && rotationMode == ProgramMotionWarpRotationMode.Disabled)
                 throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' disables both correction modes.");
             int stateSlotStart = RequireMotionWarpStateLayout(semanticIr, operation);
+            bool hasTranslation = translationMode != ProgramMotionWarpTranslationMode.Disabled;
+            bool hasRotation = rotationMode != ProgramMotionWarpRotationMode.Disabled;
+            bool usesPositionProgress = translationMode is ProgramMotionWarpTranslationMode.SkewToTarget or ProgramMotionWarpTranslationMode.LinearToTarget;
+            bool usesYawProgress = hasRotation && rotationMethod == ProgramMotionWarpRotationMethod.ProgressCurve;
+            bool usesYawRate = hasRotation && rotationMethod == ProgramMotionWarpRotationMethod.ConstantRate;
+            ValidateScaleSource(
+                semanticIr,
+                operation,
+                catalog,
+                sourceCatalog,
+                translationMode,
+                rotationMode,
+                rotationMethod);
 
             return new ProgramMotionModifierDescriptor(
                 descriptorIndex,
@@ -696,16 +717,152 @@ namespace ThirdPersonSimulation
                 catalog.Index,
                 stateSlotStart,
                 ProgramMotionModifierDescriptor.MotionWarpStateSlotCount,
-                positionMode,
+                translationMode,
+                targetOffsetSpace,
                 rotationMode,
-                RequireLiteral(semanticIr, catalog, "TargetLocalPlanarOffset", SemanticLiteralKind.Vector2),
-                RequireLiteral(semanticIr, catalog, "TargetYawOffsetDegrees", SemanticLiteralKind.Number),
-                RequireLiteral(semanticIr, catalog, "PositionWeight", SemanticLiteralKind.Number),
-                RequireLiteral(semanticIr, catalog, "YawWeight", SemanticLiteralKind.Number),
-                RequireLiteral(semanticIr, catalog, "MaxTotalPositionCorrection", SemanticLiteralKind.Number),
-                RequireLiteral(semanticIr, catalog, "MaxTotalYawCorrectionDegrees", SemanticLiteralKind.Number),
-                RequireLiteral(semanticIr, catalog, "PositionProgressCurve", SemanticLiteralKind.Document),
-                RequireLiteral(semanticIr, catalog, "YawProgressCurve", SemanticLiteralKind.Document));
+                rotationMethod,
+                OptionalLiteral(semanticIr, catalog, "TargetPlanarOffset", SemanticLiteralKind.Vector2, hasTranslation),
+                OptionalLiteral(semanticIr, catalog, "TargetYawOffsetDegrees", SemanticLiteralKind.Number, hasRotation),
+                OptionalLiteral(semanticIr, catalog, "MaximumPlanarCorrection", SemanticLiteralKind.Number, hasTranslation),
+                OptionalLiteral(semanticIr, catalog, "MaximumYawCorrectionDegrees", SemanticLiteralKind.Number, hasRotation),
+                OptionalLiteral(semanticIr, catalog, "MaximumYawRateDegreesPerSecond", SemanticLiteralKind.Number, usesYawRate),
+                limitPolicy,
+                OptionalLiteral(semanticIr, catalog, "PositionProgressCurve", SemanticLiteralKind.Document, usesPositionProgress),
+                OptionalLiteral(semanticIr, catalog, "YawProgressCurve", SemanticLiteralKind.Document, usesYawProgress));
+        }
+
+        static void ValidateScaleSource(
+            CharacterGameplaySemanticIr semanticIr,
+            SemanticOperation operation,
+            ProgramCatalogEntry warpCatalog,
+            ProgramCatalogEntry sourceCatalog,
+            ProgramMotionWarpTranslationMode translationMode,
+            ProgramMotionWarpRotationMode rotationMode,
+            ProgramMotionWarpRotationMethod rotationMethod)
+        {
+            if (translationMode != ProgramMotionWarpTranslationMode.ScaleToTarget &&
+                (rotationMode == ProgramMotionWarpRotationMode.Disabled || rotationMethod != ProgramMotionWarpRotationMethod.ScaleSourceYaw))
+            {
+                return;
+            }
+
+            int sourceStartFrame = RequireInt32Literal(semanticIr, sourceCatalog, "StartFrame");
+            int sourceCurveEndFrame = RequireInt32Literal(semanticIr, sourceCatalog, "CurveEndFrame");
+            int warpStartFrame = RequireInt32Literal(semanticIr, warpCatalog, "StartFrame");
+            int warpEndFrame = RequireInt32Literal(semanticIr, warpCatalog, "EndFrame");
+            int sourceDuration = sourceCurveEndFrame - sourceStartFrame;
+            if (sourceDuration <= 0)
+                throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' source MotionCurve has a non-positive duration.");
+            double start = Clamp01((warpStartFrame - sourceStartFrame) / (double)sourceDuration);
+            double end = Clamp01((warpEndFrame - sourceStartFrame) / (double)sourceDuration);
+
+            if (translationMode == ProgramMotionWarpTranslationMode.ScaleToTarget)
+            {
+                double startX = EvaluateCurve(RequireDocumentLiteral(semanticIr, sourceCatalog, "PositionX"), start);
+                double startZ = EvaluateCurve(RequireDocumentLiteral(semanticIr, sourceCatalog, "PositionZ"), start);
+                double endX = EvaluateCurve(RequireDocumentLiteral(semanticIr, sourceCatalog, "PositionX"), end);
+                double endZ = EvaluateCurve(RequireDocumentLiteral(semanticIr, sourceCatalog, "PositionZ"), end);
+                double x = endX - startX;
+                double z = endZ - startZ;
+                if (x * x + z * z <= 0.000000000001d)
+                    throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' ScaleToTarget requires a non-zero source window planar endpoint.");
+            }
+
+            if (rotationMode != ProgramMotionWarpRotationMode.Disabled && rotationMethod == ProgramMotionWarpRotationMethod.ScaleSourceYaw)
+            {
+                SemanticDataDocument yaw = RequireDocumentLiteral(semanticIr, sourceCatalog, "Yaw");
+                if (Math.Abs(EvaluateCurve(yaw, end) - EvaluateCurve(yaw, start)) <= 0.000001d)
+                    throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' ScaleSourceYaw requires non-zero source window yaw.");
+            }
+        }
+
+        static SemanticDataDocument RequireDocumentLiteral(
+            CharacterGameplaySemanticIr semanticIr,
+            ProgramCatalogEntry catalog,
+            string name)
+        {
+            return semanticIr.Literals[RequireLiteral(semanticIr, catalog, name, SemanticLiteralKind.Document)].Document;
+        }
+
+        static double EvaluateCurve(SemanticDataDocument document, double time)
+        {
+            IReadOnlyList<SemanticDataToken> tokens = document?.Tokens ?? throw new InvalidDataException("MotionCurve document is missing.");
+            if (tokens.Count < 5 ||
+                tokens[0].Kind != SemanticDataTokenKind.UInt32 || tokens[0].UInt32 != 0x56525543 ||
+                tokens[1].Kind != SemanticDataTokenKind.Int32 || tokens[1].Int32 != 1 ||
+                tokens[2].Kind != SemanticDataTokenKind.Int32 ||
+                tokens[3].Kind != SemanticDataTokenKind.Int32 ||
+                tokens[4].Kind != SemanticDataTokenKind.Int32)
+            {
+                throw new InvalidDataException("MotionCurve document header is invalid.");
+            }
+            int count = tokens[4].Int32;
+            if (count <= 0 || tokens.Count != 5 + count * 7)
+                throw new InvalidDataException($"MotionCurve document key count '{count}' is invalid.");
+
+            var keys = new SemanticCurveKey[count];
+            int tokenIndex = 5;
+            for (int i = 0; i < count; i++)
+            {
+                for (int field = 0; field < 6; field++)
+                {
+                    if (tokens[tokenIndex + field].Kind != SemanticDataTokenKind.Number)
+                        throw new InvalidDataException($"MotionCurve key '{i}' field '{field}' is not numeric.");
+                }
+                if (tokens[tokenIndex + 6].Kind != SemanticDataTokenKind.Int32 || tokens[tokenIndex + 6].Int32 != 0)
+                    throw new InvalidDataException($"MotionCurve key '{i}' uses unsupported weighted tangents.");
+                keys[i] = new SemanticCurveKey(
+                    tokens[tokenIndex].Number,
+                    tokens[tokenIndex + 1].Number,
+                    tokens[tokenIndex + 2].Number,
+                    tokens[tokenIndex + 3].Number);
+                if (i > 0 && keys[i].Time <= keys[i - 1].Time)
+                    throw new InvalidDataException($"MotionCurve key '{i}' time must be greater than the previous key time.");
+                tokenIndex += 7;
+            }
+
+            if (count == 1 || time <= keys[0].Time)
+                return keys[0].Value;
+            if (time >= keys[count - 1].Time)
+                return keys[count - 1].Value;
+            int low = 0;
+            int high = count - 1;
+            while (high - low > 1)
+            {
+                int middle = low + (high - low) / 2;
+                if (keys[middle].Time <= time)
+                    low = middle;
+                else
+                    high = middle;
+            }
+            SemanticCurveKey from = keys[low];
+            SemanticCurveKey to = keys[high];
+            double duration = to.Time - from.Time;
+            double t = (time - from.Time) / duration;
+            double t2 = t * t;
+            double t3 = t2 * t;
+            return (2d * t3 - 3d * t2 + 1d) * from.Value +
+                   (t3 - 2d * t2 + t) * duration * from.OutTangent +
+                   (-2d * t3 + 3d * t2) * to.Value +
+                   (t3 - t2) * duration * to.InTangent;
+        }
+
+        static double Clamp01(double value) => value < 0d ? 0d : value > 1d ? 1d : value;
+
+        readonly struct SemanticCurveKey
+        {
+            public SemanticCurveKey(double time, double value, double inTangent, double outTangent)
+            {
+                Time = time;
+                Value = value;
+                InTangent = inTangent;
+                OutTangent = outTangent;
+            }
+
+            public double Time { get; }
+            public double Value { get; }
+            public double InTangent { get; }
+            public double OutTangent { get; }
         }
 
         static void ValidateSourceAndOwner(
@@ -740,10 +897,18 @@ namespace ThirdPersonSimulation
 
             int channel = RequireInt32Literal(semanticIr, sourceCatalog, "Channel");
             int blendMode = RequireInt32Literal(semanticIr, sourceCatalog, "BlendMode");
+            int space = RequireInt32Literal(semanticIr, sourceCatalog, "Space");
             if (channel != (int)ProgramMotionModifierChannel.Action ||
-                blendMode != (int)ProgramMotionSourceBlendMode.Override)
+                blendMode != (int)ProgramMotionSourceBlendMode.Override ||
+                space != 0)
             {
-                throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' source must use Action channel and Override blend mode.");
+                throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' source must use Action channel, Override blend mode, and ActorLocal space.");
+            }
+            if (RequireInt32Literal(semanticIr, sourceCatalog, "EaseInFrame") != 0 ||
+                RequireInt32Literal(semanticIr, sourceCatalog, "EaseOutFrame") != 0 ||
+                !IsUnitCurve(RequireDocumentLiteral(semanticIr, sourceCatalog, "WeightCurve")))
+            {
+                throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' source must use unit Gameplay weight with no ease.");
             }
 
             int sourceStartFrame = RequireInt32Literal(semanticIr, sourceCatalog, "StartFrame");
@@ -754,6 +919,28 @@ namespace ThirdPersonSimulation
             {
                 throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' window must be non-empty and remain within its source MotionCurve range.");
             }
+        }
+
+        static bool IsUnitCurve(SemanticDataDocument document)
+        {
+            IReadOnlyList<SemanticDataToken> tokens = document?.Tokens ?? throw new InvalidDataException("MotionCurve weight document is missing.");
+            if (tokens.Count < 12 ||
+                tokens[0].Kind != SemanticDataTokenKind.UInt32 || tokens[0].UInt32 != 0x56525543 ||
+                tokens[1].Kind != SemanticDataTokenKind.Int32 || tokens[1].Int32 != 1 ||
+                tokens[4].Kind != SemanticDataTokenKind.Int32 || tokens[4].Int32 <= 0 ||
+                tokens.Count != 5 + tokens[4].Int32 * 7)
+            {
+                throw new InvalidDataException("MotionCurve weight document header is invalid.");
+            }
+            for (int tokenIndex = 5; tokenIndex < tokens.Count; tokenIndex += 7)
+            {
+                if (tokens[tokenIndex + 1].Kind != SemanticDataTokenKind.Number || Math.Abs(tokens[tokenIndex + 1].Number - 1d) > 0.000001d ||
+                    tokens[tokenIndex + 2].Kind != SemanticDataTokenKind.Number || Math.Abs(tokens[tokenIndex + 2].Number) > 0.000001d ||
+                    tokens[tokenIndex + 3].Kind != SemanticDataTokenKind.Number || Math.Abs(tokens[tokenIndex + 3].Number) > 0.000001d ||
+                    tokens[tokenIndex + 6].Kind != SemanticDataTokenKind.Int32 || tokens[tokenIndex + 6].Int32 != 0)
+                    return false;
+            }
+            return true;
         }
 
         static ProgramCatalogEntry RequireOperationCatalog(
@@ -837,15 +1024,15 @@ namespace ThirdPersonSimulation
             return found ?? throw new InvalidDataException($"Operation '{operation}' has no {label} reference.");
         }
 
-        static ProgramMotionWarpPositionMode RequirePositionMode(
+        static ProgramMotionWarpTranslationMode RequireTranslationMode(
             SemanticOperation operation,
             CharacterGameplaySemanticIr semanticIr,
             ProgramCatalogEntry catalog)
         {
-            int value = RequireInt32Literal(semanticIr, catalog, "PositionMode");
-            ProgramMotionWarpPositionMode mode = (ProgramMotionWarpPositionMode)value;
-            if (value != operation.Integer0 || !Enum.IsDefined(typeof(ProgramMotionWarpPositionMode), mode))
-                throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' position mode is inconsistent.");
+            int value = RequireInt32Literal(semanticIr, catalog, "TranslationMode");
+            ProgramMotionWarpTranslationMode mode = (ProgramMotionWarpTranslationMode)value;
+            if (value != operation.Integer0 || !Enum.IsDefined(typeof(ProgramMotionWarpTranslationMode), mode))
+                throw new InvalidDataException($"MotionWarp operation '{operation.Handle}' translation mode is inconsistent.");
             return mode;
         }
 
@@ -891,6 +1078,42 @@ namespace ThirdPersonSimulation
             return semanticIr.Literals[index].Int32;
         }
 
+        static TEnum RequireEnumLiteral<TEnum>(
+            CharacterGameplaySemanticIr semanticIr,
+            ProgramCatalogEntry catalog,
+            string name)
+            where TEnum : struct, Enum
+        {
+            int value = RequireInt32Literal(semanticIr, catalog, name);
+            object candidate = Enum.ToObject(typeof(TEnum), value);
+            if (!Enum.IsDefined(typeof(TEnum), candidate))
+                throw new InvalidDataException($"MotionWarp catalog '{catalog.Identity}' field '{name}' has unknown value '{value}'.");
+            return (TEnum)candidate;
+        }
+
+        static int OptionalLiteral(
+            CharacterGameplaySemanticIr semanticIr,
+            ProgramCatalogEntry catalog,
+            string name,
+            SemanticLiteralKind kind,
+            bool required)
+        {
+            ProgramCatalogField field = FindField(catalog, name);
+            if (!required)
+            {
+                if (field != null)
+                    throw new InvalidDataException($"MotionWarp catalog '{catalog.Identity}' contains unconsumed field '{name}'.");
+                return -1;
+            }
+            if (field == null || field.Kind != ProgramCatalogFieldKind.Constant ||
+                field.ConstantIndex < 0 || field.ConstantIndex >= semanticIr.Literals.Count ||
+                semanticIr.Literals[field.ConstantIndex].Kind != kind)
+            {
+                throw new InvalidDataException($"MotionWarp catalog '{catalog.Identity}' field '{name}' requires literal kind '{kind}'.");
+            }
+            return field.ConstantIndex;
+        }
+
         static int RequireLiteral(
             CharacterGameplaySemanticIr semanticIr,
             ProgramCatalogEntry catalog,
@@ -916,17 +1139,25 @@ namespace ThirdPersonSimulation
             string name,
             ProgramCatalogFieldKind kind)
         {
+            ProgramCatalogField found = FindField(catalog, name);
+            if (found == null || found.Kind != kind)
+                throw new InvalidDataException($"MotionWarp catalog '{catalog.Identity}' is missing field '{name}' with kind '{kind}'.");
+            return found;
+        }
+
+        static ProgramCatalogField FindField(ProgramCatalogEntry catalog, string name)
+        {
             ProgramCatalogField found = null;
             for (int i = 0; i < catalog.Fields.Count; i++)
             {
                 ProgramCatalogField field = catalog.Fields[i];
                 if (!string.Equals(field.Name, name, StringComparison.Ordinal))
                     continue;
-                if (found != null || field.Kind != kind)
-                    throw new InvalidDataException($"MotionWarp catalog '{catalog.Identity}' field '{name}' is ambiguous or has the wrong kind.");
+                if (found != null)
+                    throw new InvalidDataException($"MotionWarp catalog '{catalog.Identity}' field '{name}' is ambiguous.");
                 found = field;
             }
-            return found ?? throw new InvalidDataException($"MotionWarp catalog '{catalog.Identity}' is missing field '{name}'.");
+            return found;
         }
     }
 }

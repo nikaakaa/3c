@@ -61,6 +61,8 @@ namespace BTSMTL.Timeline.Editor
 
         public Action OnPopulatedCallback;
         public Action OnGeometryChangedCallback;
+        public event Action<float> VerticalScrollChanged;
+        public event Action<object> SelectionChanged;
 
         internal TimelineFrameGeometry Geometry => m_Geometry;
         internal TimelineInteractionState Interaction => m_Interaction;
@@ -84,6 +86,7 @@ namespace BTSMTL.Timeline.Editor
             m_Rendering.SetMarkerTextFont(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
 
             TrackScrollView = this.Q<ScrollView>("track-scroll");
+            TrackScrollView.mode = ScrollViewMode.VerticalAndHorizontal;
             TrackScrollView.RegisterCallback<PointerDownEvent>((e) =>
             {
                 if (e.button == 2)
@@ -118,6 +121,7 @@ namespace BTSMTL.Timeline.Editor
                     FieldContent.style.width = ScrollViewContentWidth + ScrollViewContentOffset;
                 DrawTimeField();
             };
+            TrackScrollView.verticalScroller.valueChanged += OnVerticalScrollChanged;
 
             FieldContent = this.Q("field-content");
             FieldContent.RegisterCallback<GeometryChangedEvent>(OnTrackFieldGeometryChanged);
@@ -176,7 +180,7 @@ namespace BTSMTL.Timeline.Editor
             ClipInspector.RegisterCallback<MouseDownEvent>((e) => e.StopImmediatePropagation());
 
             RegisterCallback<CustomStyleResolvedEvent>(OnCustomStyleResolved);
-            RegisterCallback<WheelEvent>(OnlWheelEvent);
+            RegisterCallback<WheelEvent>(OnWheelEvent);
             RegisterCallback<KeyDownEvent>((e) =>
             {
                 switch (e.keyCode)
@@ -293,6 +297,7 @@ namespace BTSMTL.Timeline.Editor
             }
 
             OnPopulatedCallback?.Invoke();
+            OnVerticalScrollChanged(TrackScrollView.scrollOffset.y);
             RestorePendingCurveSelection();
         }
         public void PopulateInspector(object target)
@@ -764,8 +769,35 @@ namespace BTSMTL.Timeline.Editor
             if (evt.newRect.width > evt.oldRect.width)
                 m_Geometry.ResizeExtent(evt.newRect.width, ScrollViewContentWidth);
         }
-        void OnlWheelEvent(WheelEvent wheelEvent)
+        void OnVerticalScrollChanged(float offset)
         {
+            Vector3 pinnedPosition = new Vector3(0f, offset, 0f);
+            MarkerField.transform.position = pinnedPosition;
+            DrawFrameLineField.transform.position = pinnedPosition;
+            VerticalScrollChanged?.Invoke(offset);
+        }
+
+        public void SetVerticalScrollOffset(float offset)
+        {
+            TrackScrollView.scrollOffset = new Vector2(TrackScrollView.scrollOffset.x, Mathf.Max(0f, offset));
+        }
+
+        void OnWheelEvent(WheelEvent wheelEvent)
+        {
+            if (wheelEvent.shiftKey && !wheelEvent.ctrlKey && !wheelEvent.altKey)
+            {
+                float delta = Mathf.Abs(wheelEvent.delta.x) > Mathf.Abs(wheelEvent.delta.y)
+                    ? wheelEvent.delta.x
+                    : wheelEvent.delta.y;
+                TrackScrollView.scrollOffset = new Vector2(
+                    Mathf.Max(0f, TrackScrollView.scrollOffset.x + delta * 20f),
+                    TrackScrollView.scrollOffset.y);
+                wheelEvent.StopImmediatePropagation();
+                return;
+            }
+            if (!wheelEvent.ctrlKey || wheelEvent.altKey)
+                return;
+
             m_Geometry.Scale = Mathf.Min(MaxFieldScale, m_Geometry.Scale * (1f - wheelEvent.delta.y / 100f));
             TimelineData.Scale = m_Geometry.Scale;
 
@@ -797,6 +829,7 @@ namespace BTSMTL.Timeline.Editor
             }
 
             OnGeometryChangedCallback?.Invoke();
+            wheelEvent.StopImmediatePropagation();
         }
         #endregion
 
@@ -809,7 +842,11 @@ namespace BTSMTL.Timeline.Editor
         TimelineData ITimelineInteractionHost.TimelineData => TimelineData;
         int ITimelineInteractionHost.MinimumVisibleFrame => CurrentMinFrame;
         int ITimelineInteractionHost.MaximumVisibleFrame => CurrentMaxFrame;
-        void ITimelineInteractionHost.PresentSelection(object target) => PopulateInspector(target);
+        void ITimelineInteractionHost.PresentSelection(object target)
+        {
+            PopulateInspector(target);
+            SelectionChanged?.Invoke(target);
+        }
         void ITimelineInteractionHost.RefreshPreview() => EditorWindow.RefreshPreview();
 
         internal void SetEditFrames(params int[] frames)

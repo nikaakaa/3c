@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.Fixed
     public static class FixedPassExecutionBackend
     {
         public const string BackendId = "thirdperson.simulation.backend.fixed-pass";
-        public const string SemanticVersion = "1";
+        public const string SemanticVersion = "2";
 
         static readonly SimulationExecutionBackendDescriptor s_Descriptor =
             new SimulationExecutionBackendDescriptor(
@@ -103,18 +103,23 @@ namespace ThirdPersonSimulation.Fixed
                     resources.Register(SimulationSessionResourceReleasePhase.ActorAndPresentationRegistration, request.ActorResources[i]);
 
                 FixedPipelineProductStore products = request.ProductRuntimeFactories.CreateStore(request.CompiledPipeline.Products);
+                var stateStore = new SimulationWorldStateStore(request.Catalog, request.InitialState);
                 var programPort = new FixedProgramRuntimePort(
                     request.Descriptor.ProgramRuntime,
                     request.ProgramRuntime);
                 var workingStatePort = new FixedWorkingStatePort(request.Backend.Identity);
                 var completedStepPort = new FixedCompletedStepPort(request.Backend.Identity);
+                var committedObservationPort = new FixedCommittedActorObservationReadPort(
+                    request.Backend.Identity,
+                    stateStore);
                 var solverPort = new FixedWorldSolverRuntimePort(request.Descriptor.WorldSolver, request.Solver);
                 var diagnosticsPort = new FixedDiagnosticsRuntimePort(request.DiagnosticsIdentity, request.Diagnostics);
                 var targetPorts = new SimulationRuntimePortSet(new ISimulationRuntimePort[]
                 {
                     programPort,
                     workingStatePort,
-                    completedStepPort
+                    completedStepPort,
+                    committedObservationPort
                 });
                 var solverPorts = new SimulationRuntimePortSet(new ISimulationRuntimePort[] { solverPort });
                 var diagnosticsPorts = new SimulationRuntimePortSet(new ISimulationRuntimePort[] { diagnosticsPort });
@@ -182,7 +187,6 @@ namespace ThirdPersonSimulation.Fixed
                         "Activated Pipeline runtime did not restore the provided initial state exactly.");
                 }
                 SimulationSessionLaunchPlan launchPlan = BuildLaunchPlan(request, initialPipelineState);
-                var stateStore = new SimulationWorldStateStore(request.Catalog, request.InitialState);
                 var transaction = new FixedPipelineTransaction(
                     request.Descriptor,
                     request.CompiledPipeline,

@@ -111,9 +111,9 @@ Fault Lab 通过 YooAsset 的 Development-only 公开边界枚举已登记缓存
 
 ## 本地玩法开发入口
 
-本地验证 IK、Motion Warp 和角色管线不需要部署资源服务器或认证服务器。Unity Editor 使用 `Tools/3C/Local Play/Sandbox`；如只想检查依赖是否完整，使用 `Tools/3C/Local Play/Validate Local Gameplay Scenes`。
+Unity Editor 的唯一入口是 `Tools/3C/Launcher`。其中`单机 / Gameplay Lab`可选择 Local Float32 或 Local Fixed Variant，直接运行 `Assets/Scenes/GameplayLab/GameplayLab.unity`，不启动 CDN、Auth、Relay 或远端客户端。
 
-工具会先校验当前正式 `Assets/Scenes/Sandbox/SandBox.unity` 引用可琳 Prefab，且 Prefab 包含 Foot Placement composition 与 FinalIK solver；随后保存当前场景、直接运行目标场景，并在退出 Play 后恢复原场景。它复用产品当前唯一 Gameplay Scene 地址，不复制第二份场景配置，不修改 Build Settings、ProductStartupProfile 或 endpoint，也不会进入 Release Player。
+工具会先校验两个显式 Variant、完整 Session 组合、正式可琳玩家 Prefab、Foot Placement composition 与 FinalIK solver；随后保存当前场景、运行所选 Variant，并在退出 Play 后恢复原场景。它不修改 Build Settings、ProductStartupProfile 或 endpoint，也不会成为正式启动失败后的离线 fallback。
 
 当前仓库没有 Motion Matching、Pose Search 或 Pose Database。现有能力是 Motion Warp、Root Motion、动画状态管线和 Foot Placement/FinalIK，展示与文档不得把这些能力改名为 Motion Matching。
 

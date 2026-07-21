@@ -90,7 +90,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             new[]
             {
                 Float32LocalInputSourcePortContract.Requirement,
-                Target(Float32PipelineRuntimePortIds.ProgramRuntime, Float32PipelineRuntimePortIds.ProgramRuntimeSchema)
+                Target(Float32PipelineRuntimePortIds.ProgramRuntime, Float32PipelineRuntimePortIds.ProgramRuntimeSchema),
+                Target(Float32PipelineRuntimePortIds.CommittedObservation, Float32PipelineRuntimePortIds.CommittedObservationSchema)
             });
 
         public static SimulationPipelinePassDescriptor ObservationIngress(ServerAuthoritativeModelPolicy policy) => Create(

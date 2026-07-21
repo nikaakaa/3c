@@ -30,6 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public HashSet<string> EquipmentRoutes { get; } = new HashSet<string>(StringComparer.Ordinal);
         public HashSet<string> EquipmentFeatures { get; } = new HashSet<string>(StringComparer.Ordinal);
         public HashSet<string> EquipmentItems { get; } = new HashSet<string>(StringComparer.Ordinal);
+        public HashSet<string> EquipmentParameters { get; } = new HashSet<string>(StringComparer.Ordinal);
     }
 
     public sealed class CharacterSimulationCatalogCompiler
@@ -133,10 +134,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_Builder.DeclareCatalogEntry(
                     ProgramCatalogEntryKind.InputRequest,
                     $"input:request:{request.RequestId}",
-                    1,
+                    2,
                     Fields(
                         m_Builder.ConstantField(source, "BufferSeconds", request.BufferSeconds),
-                        m_Builder.ConstantField(source, "Priority", request.Priority)),
+                        m_Builder.ConstantField(source, "Priority", request.Priority),
+                        m_Builder.ConstantField(source, "TimingClass", request.TimingClass)),
                     source);
                 m_Builder.DeclareStandaloneStateSlot(
                     source,
@@ -319,7 +321,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         continue;
                     m_Builder.DeclareProducer(
                         $"producer:effect:{effect.EffectId.Value}:cue:{i}:{cue.CueId}",
-                        "Cue",
+                        new AnimationChannelId("Cue"),
                         $"effect:{effect.EffectId.Value}",
                         ProgramOutputChannelKind.Presentation,
                         source);
@@ -443,6 +445,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 source);
             foreach (EquipmentParameterSchema parameter in feature.Parameters.Where(value => value != null).OrderBy(value => value.ParameterIdValue, StringComparer.Ordinal))
             {
+                m_Index.EquipmentParameters.Add($"{feature.FeatureIdValue}:{parameter.ParameterIdValue}");
                 m_Builder.DeclareCatalogEntry(
                     ProgramCatalogEntryKind.EquipmentFeatureParameter,
                     $"equipment:feature:{feature.FeatureIdValue}:parameter:{parameter.ParameterIdValue}",

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BTSMTL.Timeline;
 using TreeDesigner;
 
@@ -17,20 +18,40 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         public static CharacterAuthoringTopologyProjection Build(BaseTree rootTree, List<string> errors)
         {
+            return Build(rootTree == null ? Array.Empty<BaseTree>() : new[] { rootTree }, errors);
+        }
+
+        public static CharacterAuthoringTopologyProjection Build(IEnumerable<BaseTree> rootTrees, List<string> errors)
+        {
             var projection = new CharacterAuthoringTopologyProjection();
-            if (rootTree == null || string.IsNullOrEmpty(rootTree.GraphAuthoringId))
+            BaseTree[] roots = (rootTrees ?? Array.Empty<BaseTree>())
+                .Where(value => value != null)
+                .OrderBy(value => value.GraphAuthoringId, StringComparer.Ordinal)
+                .ToArray();
+            if (roots.Length == 0)
             {
                 errors?.Add("Character authoring topology requires a RootTree with a GraphAuthoringId.");
                 return projection;
             }
-
-            projection.IsValid = projection.Visit(
-                rootTree,
-                TreeAuthoringRouteId.Root(rootTree.GraphAuthoringId),
-                null,
-                new List<BaseGraph>(),
-                new HashSet<BaseGraph>(),
-                errors);
+            var rootIds = new HashSet<string>(StringComparer.Ordinal);
+            projection.IsValid = true;
+            for (int i = 0; i < roots.Length; i++)
+            {
+                BaseTree root = roots[i];
+                if (string.IsNullOrEmpty(root.GraphAuthoringId) || !rootIds.Add(root.GraphAuthoringId))
+                {
+                    errors?.Add("Character authoring topology contains a missing or duplicated composition root GraphAuthoringId.");
+                    projection.IsValid = false;
+                    continue;
+                }
+                projection.IsValid &= projection.Visit(
+                    root,
+                    TreeAuthoringRouteId.Root(root.GraphAuthoringId),
+                    null,
+                    new List<BaseGraph>(),
+                    new HashSet<BaseGraph>(),
+                    errors);
+            }
             return projection;
         }
 

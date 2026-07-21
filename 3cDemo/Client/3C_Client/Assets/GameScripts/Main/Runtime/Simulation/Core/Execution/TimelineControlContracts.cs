@@ -126,26 +126,35 @@ namespace ThirdPersonSimulation
         public bool StartsCycle { get; }
     }
 
-    internal readonly struct MotionWarpSample<TTime>
+    internal readonly struct MotionWarpSample<TTime, TAction>
         where TTime : struct
+        where TAction : struct
     {
         public MotionWarpSample(
             OperationHandle operation,
             TimelineSegment<TTime> segment,
-            ulong playbackGeneration)
+            ulong playbackGeneration,
+            TimelineActionContextIdentity actionContext,
+            TAction action)
         {
             if (!operation.IsValid)
                 throw new ArgumentException("MotionWarp sample requires a valid operation.", nameof(operation));
             if (playbackGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(playbackGeneration));
+            if (!actionContext.IsValid)
+                throw new ArgumentException("MotionWarp sample requires a valid Action Context.", nameof(actionContext));
             Operation = operation;
             Segment = segment;
             PlaybackGeneration = playbackGeneration;
+            ActionContext = actionContext;
+            Action = action;
         }
 
         public OperationHandle Operation { get; }
         public TimelineSegment<TTime> Segment { get; }
         public ulong PlaybackGeneration { get; }
+        public TimelineActionContextIdentity ActionContext { get; }
+        public TAction Action { get; }
     }
 
     internal enum MotionWarpLifecycleDecision : byte
@@ -162,6 +171,13 @@ namespace ThirdPersonSimulation
         public const string AmbiguousModifier = "motion_warp_ambiguous_modifier";
         public const string InvalidState = "motion_warp_invalid_state";
         public const string FaceTargetZeroDirection = "motion_warp_face_target_zero_direction";
+        public const string ApproachDirectionZero = "motion_warp_approach_direction_zero";
+        public const string ScaleSourcePositionZero = "motion_warp_scale_source_position_zero";
+        public const string ScaleSourceYawZero = "motion_warp_scale_source_yaw_zero";
+        public const string TargetResolved = "motion_warp_target_resolved";
+        public const string Applied = "motion_warp_applied";
+        public const string AppliedClamped = "motion_warp_applied_clamped";
+        public const string PreservedByLimitPolicy = "motion_warp_preserved_by_limit_policy";
     }
 
     internal static class MotionWarpRuntimeSemantics
@@ -201,37 +217,39 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal interface IMotionModifierTarget<TTime, TChannel>
+    internal interface IMotionModifierTarget<TTime, TAction, TChannel>
         where TTime : struct
+        where TAction : struct
         where TChannel : struct
     {
         void Reset(ProgramMotionModifierDescriptor descriptor);
         void TraceSourceNotResolved(ProgramMotionModifierDescriptor descriptor, OperationHandle resolvedOwner);
         void ApplyMotionWarp(
             ProgramMotionModifierDescriptor descriptor,
-            MotionWarpSample<TTime> sample,
+            MotionWarpSample<TTime, TAction> sample,
             ref TChannel channel);
         void Fail(string code, ProgramMotionModifierDescriptor descriptor, string detail);
     }
 
     internal static class ProgramMotionModifierRuntime
     {
-        public static void ApplyActionWarp<TTime, TChannel, TTarget>(
+        public static void ApplyActionWarp<TTime, TAction, TChannel, TTarget>(
             ReadOnlySpan<ProgramMotionModifierDescriptor> descriptors,
-            IReadOnlyList<MotionWarpSample<TTime>> samples,
+            IReadOnlyList<MotionWarpSample<TTime, TAction>> samples,
             OperationHandle resolvedOwner,
             ref TChannel channel,
             TTarget target)
             where TTime : struct
+            where TAction : struct
             where TChannel : struct
-            where TTarget : IMotionModifierTarget<TTime, TChannel>
+            where TTarget : IMotionModifierTarget<TTime, TAction, TChannel>
         {
             int selectedDescriptor = -1;
             int selectedSample = -1;
             for (int descriptorIndex = 0; descriptorIndex < descriptors.Length; descriptorIndex++)
             {
                 ProgramMotionModifierDescriptor descriptor = descriptors[descriptorIndex];
-                int sampleIndex = FindOnlySample<TTime, TChannel, TTarget>(samples, descriptor.Operation, target, descriptor);
+                int sampleIndex = FindOnlySample<TTime, TAction, TChannel, TTarget>(samples, descriptor.Operation, target, descriptor);
                 if (sampleIndex < 0)
                 {
                     target.Reset(descriptor);
@@ -258,14 +276,15 @@ namespace ThirdPersonSimulation
                 target.ApplyMotionWarp(descriptors[selectedDescriptor], samples[selectedSample], ref channel);
         }
 
-        static int FindOnlySample<TTime, TChannel, TTarget>(
-            IReadOnlyList<MotionWarpSample<TTime>> samples,
+        static int FindOnlySample<TTime, TAction, TChannel, TTarget>(
+            IReadOnlyList<MotionWarpSample<TTime, TAction>> samples,
             OperationHandle operation,
             TTarget target,
             ProgramMotionModifierDescriptor descriptor)
             where TTime : struct
+            where TAction : struct
             where TChannel : struct
-            where TTarget : IMotionModifierTarget<TTime, TChannel>
+            where TTarget : IMotionModifierTarget<TTime, TAction, TChannel>
         {
             int found = -1;
             for (int i = 0; i < samples.Count; i++)
@@ -427,7 +446,10 @@ namespace ThirdPersonSimulation
             TimelineActionContextIdentity identity);
         void ResetTreeClipState(OperationHandle operation);
         void SampleMotionCurve(OperationHandle operation, TimelineSegment<TTime> segment);
-        void SampleMotionWarp(OperationHandle operation, TimelineSegment<TTime> segment);
+        void SampleMotionWarp(
+            OperationHandle operation,
+            TimelineSegment<TTime> segment,
+            TimelineActionContextIdentity actionContext);
         void EmitPresentation(TimelinePresentationOutput<TTime> output);
         void EmitCue(TimelineCueOutput<TTime> output);
         void EmitTrace(TimelineTraceOutput output);

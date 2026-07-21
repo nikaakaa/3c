@@ -205,52 +205,6 @@ namespace ThirdPersonCharacter.Equipment
     }
 
     [Serializable]
-    public sealed class EquipmentFeaturePresentationRequirement
-    {
-        [SerializeField] bool m_Enabled;
-        [SerializeField] string m_LayerId;
-        [SerializeField] EquipmentExpectedAnimationBlendMode m_BlendMode = EquipmentExpectedAnimationBlendMode.Override;
-        [SerializeField] EquipmentExpectedAnimationOutputPolicy m_OutputPolicy = EquipmentExpectedAnimationOutputPolicy.RequireOutput;
-        [SerializeField] string[] m_RequiredProducerIds = Array.Empty<string>();
-
-        public bool Enabled => m_Enabled;
-        public string LayerId => EquipmentSlotDefinition.Normalize(m_LayerId);
-        public EquipmentExpectedAnimationBlendMode BlendMode => m_BlendMode;
-        public EquipmentExpectedAnimationOutputPolicy OutputPolicy => m_OutputPolicy;
-        public IReadOnlyList<string> RequiredProducerIds => m_RequiredProducerIds ?? Array.Empty<string>();
-
-        internal bool CollectConfigurationErrors(string owner, List<string> errors)
-        {
-            if (!m_Enabled)
-                return true;
-            bool valid = true;
-            if (string.IsNullOrEmpty(LayerId))
-            {
-                errors?.Add($"{owner}: Equipment presentation LayerId is missing.");
-                valid = false;
-            }
-            if (!Enum.IsDefined(typeof(EquipmentExpectedAnimationBlendMode), m_BlendMode) ||
-                !Enum.IsDefined(typeof(EquipmentExpectedAnimationOutputPolicy), m_OutputPolicy))
-            {
-                errors?.Add($"{owner}: Equipment presentation policy is invalid.");
-                valid = false;
-            }
-            var producerIds = new HashSet<string>(StringComparer.Ordinal);
-            IReadOnlyList<string> values = RequiredProducerIds;
-            for (int i = 0; i < values.Count; i++)
-            {
-                string value = EquipmentSlotDefinition.Normalize(values[i]);
-                if (string.IsNullOrEmpty(value) || !producerIds.Add(value))
-                {
-                    errors?.Add($"{owner}: Equipment presentation producer #{i} is missing or duplicated.");
-                    valid = false;
-                }
-            }
-            return valid;
-        }
-    }
-
-    [Serializable]
     public sealed class EquipmentFeatureRouteImplementation
     {
         [SerializeField] string m_RouteId;
@@ -295,7 +249,6 @@ namespace ThirdPersonCharacter.Equipment
         [SerializeField] GameplayEffectDefinition[] m_PassiveEffects = Array.Empty<GameplayEffectDefinition>();
         [SerializeReference] SubTree m_PersistentGraph;
         [SerializeField] EquipmentFeatureRouteImplementation[] m_RouteImplementations = Array.Empty<EquipmentFeatureRouteImplementation>();
-        [SerializeField] EquipmentFeaturePresentationRequirement m_PresentationRequirement = new EquipmentFeaturePresentationRequirement();
         [SerializeField] string[] m_RequiredGameplayCapabilities = Array.Empty<string>();
         [SerializeField] WorldCapability m_RequiredWorldCapabilities;
 
@@ -308,7 +261,6 @@ namespace ThirdPersonCharacter.Equipment
         public IReadOnlyList<GameplayEffectDefinition> PassiveEffects => m_PassiveEffects ?? Array.Empty<GameplayEffectDefinition>();
         public SubTree PersistentGraph => m_PersistentGraph;
         public IReadOnlyList<EquipmentFeatureRouteImplementation> RouteImplementations => m_RouteImplementations ?? Array.Empty<EquipmentFeatureRouteImplementation>();
-        public EquipmentFeaturePresentationRequirement PresentationRequirement => m_PresentationRequirement;
         public IReadOnlyList<string> RequiredGameplayCapabilities => m_RequiredGameplayCapabilities ?? Array.Empty<string>();
         public WorldCapability RequiredWorldCapabilities => m_RequiredWorldCapabilities;
 
@@ -374,15 +326,6 @@ namespace ThirdPersonCharacter.Equipment
             }
             valid &= ValidateTagsAndEffects(definition, owner, errors);
             valid &= ValidateRoutes(equipmentProfile, owner, parameterIds, errors);
-            if (m_PresentationRequirement == null)
-            {
-                errors?.Add($"{owner}: Equipment presentation requirement is missing.");
-                valid = false;
-            }
-            else
-            {
-                valid &= m_PresentationRequirement.CollectConfigurationErrors(owner, errors);
-            }
             var capabilities = new HashSet<string>(StringComparer.Ordinal);
             IReadOnlyList<string> requiredCapabilities = RequiredGameplayCapabilities;
             for (int i = 0; i < requiredCapabilities.Count; i++)

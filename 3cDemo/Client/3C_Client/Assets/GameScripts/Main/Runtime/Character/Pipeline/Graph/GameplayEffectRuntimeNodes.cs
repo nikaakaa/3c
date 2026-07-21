@@ -14,6 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Has Gameplay Tag")]
     [NodePath("Base/Value/Gameplay Effect/Has Tag")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class HasGameplayTagNode : ValueNode
     {
         [SerializeField, ShowInPanel("Tag")]
@@ -33,6 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Match Gameplay Tag Query")]
     [NodePath("Base/Value/Gameplay Effect/Match Tag Query")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class MatchGameplayTagQueryNode : ValueNode
     {
         [SerializeField]
@@ -52,6 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Read Gameplay Attribute")]
     [NodePath("Base/Value/Gameplay Effect/Read Attribute")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class ReadGameplayAttributeNode : ValueNode
     {
         [SerializeField, ShowInPanel("Attribute")]
@@ -77,6 +80,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Apply Gameplay Effect")]
     [NodePath("Base/Action/Gameplay Effect/Apply")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class ApplyGameplayEffectNode : ActionNode
     {
         [SerializeField, ShowInPanel("Effect")]
@@ -110,6 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [Serializable]
     [NodeName("Remove Gameplay Effect")]
     [NodePath("Base/Action/Gameplay Effect/Remove")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class RemoveGameplayEffectNode : ActionNode
     {
         [SerializeField, ShowInPanel("Selector")]

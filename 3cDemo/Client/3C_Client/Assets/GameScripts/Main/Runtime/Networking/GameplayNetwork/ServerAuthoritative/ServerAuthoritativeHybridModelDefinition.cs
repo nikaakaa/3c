@@ -128,6 +128,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 outerTickKind == SimulationTickSourceKind.Authoritative
                     ? ServerAuthoritativeSolverCompatibilityContract.AuthorityRequiredCapabilities
                     : ServerAuthoritativeSolverCompatibilityContract.PredictionRequiredCapabilities,
+                CharacterControlSourceCapability.CommittedObservation,
                 passes,
                 sourcePorts);
         }

@@ -26,7 +26,7 @@ namespace ThirdPersonSimulation.Fixed
 
     internal interface IFixedMotionModifierSampleSink
     {
-        void Submit(MotionWarpSample<FixedScalar> sample);
+        void Submit(MotionWarpSample<FixedScalar, FixedActionInstanceState> sample);
     }
 
     internal interface IFixedActivationReader

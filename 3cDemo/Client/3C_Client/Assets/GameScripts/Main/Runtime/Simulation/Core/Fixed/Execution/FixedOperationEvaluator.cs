@@ -1,4 +1,4 @@
-﻿using ThirdPersonSimulation;
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 
@@ -62,7 +62,7 @@ namespace ThirdPersonSimulation.Fixed
                 producer = m_Program.Producers[references[i].TargetIndex];
             }
             if (producer == null ||
-                !string.Equals(producer.LayerId, CameraProgramOperationSchema.LayerId, StringComparison.Ordinal) ||
+                producer.AnimationChannelId != CameraProgramOperationSchema.ChannelId ||
                 producer.ChannelKind != ProgramOutputChannelKind.Presentation)
             {
                 throw new InvalidOperationException(
@@ -81,6 +81,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedBlackboardRuntime m_Blackboard;
         readonly FixedActionRuntime m_Actions;
         readonly FixedGameplayEffectOperationRuntime m_GameplayEffects;
+        readonly FixedEquipmentRuntime m_Equipment;
         readonly FixedCameraOperationRuntime m_Camera;
         readonly TimelineControlRuntime<FixedOperationTarget, FixedScalar> m_Timeline;
         readonly FixedLocomotionRuntime m_Locomotion;
@@ -95,6 +96,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedBlackboardRuntime blackboard,
             FixedActionRuntime actions,
             FixedGameplayEffectOperationRuntime gameplayEffects,
+            FixedEquipmentRuntime equipment,
             FixedCameraOperationRuntime camera,
             TimelineControlRuntime<FixedOperationTarget, FixedScalar> timeline,
             FixedLocomotionRuntime locomotion,
@@ -108,6 +110,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Blackboard = blackboard;
             m_Actions = actions;
             m_GameplayEffects = gameplayEffects;
+            m_Equipment = equipment;
             m_Camera = camera;
             m_Timeline = timeline;
             m_Locomotion = locomotion;
@@ -130,101 +133,112 @@ namespace ThirdPersonSimulation.Fixed
             return m_Values.EvaluateCondition(cursor, edge);
         }
 
-        public OperationExecutionResult ExecuteLeaf(
-            OperationControlCursor<FixedOperationTarget> cursor,
-            OperationExecutionDescriptor descriptor)
-        {
-            SimulationOperation operation = m_Access.Operation(descriptor.Handle);
-            switch (descriptor.Code)
-            {
-                case SimulationOperationCode.Timeline:
-                    return m_Timeline.TickTimeline(cursor, operation.Handle);
-                case SimulationOperationCode.BlackboardSet:
-                    return m_Values.SetBlackboard(cursor, operation)
-                        ? OperationExecutionResult.Success
-                        : OperationExecutionResult.Failure;
-                case SimulationOperationCode.ActivateActionInstance:
-                    return m_Actions.Activate(cursor, operation)
-                        ? OperationExecutionResult.Success
-                        : OperationExecutionResult.Failure;
-                case SimulationOperationCode.SubmitActionLifecycle:
-                    return m_Actions.SubmitLifecycle(operation)
-                        ? OperationExecutionResult.Success
-                        : OperationExecutionResult.Failure;
-                case SimulationOperationCode.GameplayEffectApply:
-                    return m_GameplayEffects.Apply(operation)
-                        ? OperationExecutionResult.Success
-                        : OperationExecutionResult.Failure;
-                case SimulationOperationCode.GameplayEffectRemove:
-                    return m_GameplayEffects.Remove(operation)
-                        ? OperationExecutionResult.Success
-                        : OperationExecutionResult.Failure;
-                case SimulationOperationCode.LocomotionInputMotion:
-                    m_Locomotion.Submit(cursor, operation);
-                    return (operation.Flags & 2U) != 0
-                        ? OperationExecutionResult.Running
-                        : OperationExecutionResult.Success;
-                case SimulationOperationCode.CameraStateRequest:
-                case SimulationOperationCode.CameraCue:
-                case SimulationOperationCode.CameraResponse:
-                case SimulationOperationCode.CameraTarget:
-                    m_Camera.Submit(operation);
-                    return OperationExecutionResult.Success;
-                case SimulationOperationCode.StateRootCompleted:
-                case SimulationOperationCode.StateExitCause:
-                case SimulationOperationCode.BlackboardGet:
-                case SimulationOperationCode.InputBoolean:
-                case SimulationOperationCode.InputScalar:
-                case SimulationOperationCode.InputVector2:
-                case SimulationOperationCode.InputVector2Magnitude:
-                case SimulationOperationCode.InputRequest:
-                case SimulationOperationCode.MoveFacingAngle:
-                case SimulationOperationCode.ActionContextActive:
-                case SimulationOperationCode.ActionWindowActive:
-                case SimulationOperationCode.CanActivateAction:
-                case SimulationOperationCode.GameplayEffectHasTag:
-                case SimulationOperationCode.GameplayEffectMatchTags:
-                case SimulationOperationCode.GameplayAttributeRead:
-                case SimulationOperationCode.CameraBasisRead:
-                case SimulationOperationCode.ConditionResult:
-                case SimulationOperationCode.Compare:
-                case SimulationOperationCode.And:
-                case SimulationOperationCode.Or:
-                case SimulationOperationCode.Not:
-                case SimulationOperationCode.Constant:
-                    return FixedValueRuntime.ToBoolean(m_Values.Evaluate(cursor, operation.Handle))
-                        ? OperationExecutionResult.Success
-                        : OperationExecutionResult.Failure;
-                case SimulationOperationCode.Root:
-                case SimulationOperationCode.Loop:
-                case SimulationOperationCode.Parallel:
-                case SimulationOperationCode.Sequence:
-                case SimulationOperationCode.Selector:
-                case SimulationOperationCode.Succeed:
-                case SimulationOperationCode.StateMachine:
-                case SimulationOperationCode.State:
-                case SimulationOperationCode.StateOnEnter:
-                case SimulationOperationCode.StateOnExit:
-                case SimulationOperationCode.TimelineEnter:
-                    throw new InvalidOperationException(
-                        $"Portable control operation '{descriptor.Code}' reached the Fixed leaf dispatcher.");
-                case SimulationOperationCode.StateEnter:
-                case SimulationOperationCode.StateAny:
-                case SimulationOperationCode.StateExit:
-                case SimulationOperationCode.TimelineAnimation:
-                case SimulationOperationCode.TimelineMotionCurve:
-                case SimulationOperationCode.TimelineTreeClip:
-                case SimulationOperationCode.TimelineCue:
-                case SimulationOperationCode.TimelineCameraState:
-                case SimulationOperationCode.TimelineCameraCue:
-                case SimulationOperationCode.TimelineCameraResponse:
-                    throw new InvalidOperationException(
-                        $"Descriptor operation '{descriptor.Code}' cannot execute as a Runnable leaf.");
-                default:
-                    throw new InvalidOperationException(
-                        $"Operation '{descriptor.Handle}' code '{descriptor.Code}' has no Fixed owner.");
-            }
-        }
+		public OperationExecutionResult ExecuteLeaf(
+			OperationControlCursor<FixedOperationTarget> cursor,
+			OperationExecutionDescriptor descriptor)
+		{
+			SimulationOperation operation = m_Access.Operation(descriptor.Handle);
+			switch (descriptor.Code)
+			{
+				case SimulationOperationCode.Timeline:
+					return m_Timeline.TickTimeline(cursor, operation.Handle);
+				case SimulationOperationCode.BlackboardSet:
+					return m_Values.SetBlackboard(cursor, operation)
+						? OperationExecutionResult.Success
+						: OperationExecutionResult.Failure;
+				case SimulationOperationCode.ActivateActionInstance:
+					return m_Actions.Activate(cursor, operation)
+						? OperationExecutionResult.Success
+						: OperationExecutionResult.Failure;
+				case SimulationOperationCode.SubmitActionLifecycle:
+					return m_Actions.SubmitLifecycle(operation)
+						? OperationExecutionResult.Success
+						: OperationExecutionResult.Failure;
+				case SimulationOperationCode.GameplayEffectApply:
+					return m_GameplayEffects.Apply(operation)
+						? OperationExecutionResult.Success
+						: OperationExecutionResult.Failure;
+				case SimulationOperationCode.GameplayEffectRemove:
+					return m_GameplayEffects.Remove(operation)
+						? OperationExecutionResult.Success
+						: OperationExecutionResult.Failure;
+				case SimulationOperationCode.RequestEquipmentChange:
+				case SimulationOperationCode.BeginEquipmentChange:
+				case SimulationOperationCode.CommitEquipmentChange:
+				case SimulationOperationCode.CancelEquipmentChange:
+				case SimulationOperationCode.EnterEquipmentFeatureHost:
+				case SimulationOperationCode.ExitEquipmentFeatureHost:
+				case SimulationOperationCode.ResolveEquipmentActionRoute:
+					using (FixedValueInputLease equipmentInputs = m_Values.ReadInputs(cursor, operation))
+						return m_Equipment.TickHost(cursor, operation, equipmentInputs);
+				case SimulationOperationCode.LocomotionInputMotion:
+					m_Locomotion.Submit(cursor, operation);
+					return (operation.Flags & 2U) != 0
+						? OperationExecutionResult.Running
+						: OperationExecutionResult.Success;
+				case SimulationOperationCode.CameraStateRequest:
+				case SimulationOperationCode.CameraCue:
+				case SimulationOperationCode.CameraResponse:
+				case SimulationOperationCode.CameraTarget:
+					m_Camera.Submit(operation);
+					return OperationExecutionResult.Success;
+				case SimulationOperationCode.StateRootCompleted:
+				case SimulationOperationCode.StateExitCause:
+				case SimulationOperationCode.BlackboardGet:
+				case SimulationOperationCode.InputBoolean:
+				case SimulationOperationCode.InputScalar:
+				case SimulationOperationCode.InputVector2:
+				case SimulationOperationCode.InputVector2Magnitude:
+				case SimulationOperationCode.InputRequest:
+				case SimulationOperationCode.MoveFacingAngle:
+				case SimulationOperationCode.ActionContextActive:
+				case SimulationOperationCode.ActionWindowActive:
+				case SimulationOperationCode.CanActivateAction:
+				case SimulationOperationCode.GameplayEffectHasTag:
+				case SimulationOperationCode.GameplayEffectMatchTags:
+				case SimulationOperationCode.GameplayAttributeRead:
+				case SimulationOperationCode.CameraBasisRead:
+				case SimulationOperationCode.ConditionResult:
+				case SimulationOperationCode.Compare:
+				case SimulationOperationCode.And:
+				case SimulationOperationCode.Or:
+				case SimulationOperationCode.Not:
+				case SimulationOperationCode.Constant:
+				case SimulationOperationCode.ReadEquipmentIdentity:
+				case SimulationOperationCode.ReadEquipmentParameter:
+					return FixedValueRuntime.ToBoolean(m_Values.Evaluate(cursor, operation.Handle))
+						? OperationExecutionResult.Success
+						: OperationExecutionResult.Failure;
+				case SimulationOperationCode.Root:
+				case SimulationOperationCode.Loop:
+				case SimulationOperationCode.Parallel:
+				case SimulationOperationCode.Sequence:
+				case SimulationOperationCode.Selector:
+				case SimulationOperationCode.Succeed:
+				case SimulationOperationCode.StateMachine:
+				case SimulationOperationCode.State:
+				case SimulationOperationCode.StateOnEnter:
+				case SimulationOperationCode.StateOnExit:
+				case SimulationOperationCode.TimelineEnter:
+					throw new InvalidOperationException(
+						$"Portable control operation '{descriptor.Code}' reached the Fixed leaf dispatcher.");
+				case SimulationOperationCode.StateEnter:
+				case SimulationOperationCode.StateAny:
+				case SimulationOperationCode.StateExit:
+				case SimulationOperationCode.TimelineAnimation:
+				case SimulationOperationCode.TimelineMotionCurve:
+				case SimulationOperationCode.TimelineTreeClip:
+				case SimulationOperationCode.TimelineCue:
+				case SimulationOperationCode.TimelineCameraState:
+				case SimulationOperationCode.TimelineCameraCue:
+				case SimulationOperationCode.TimelineCameraResponse:
+					throw new InvalidOperationException(
+						$"Descriptor operation '{descriptor.Code}' cannot execute as a Runnable leaf.");
+				default:
+					throw new InvalidOperationException(
+						$"Operation '{descriptor.Handle}' code '{descriptor.Code}' has no Fixed owner.");
+			}
+		}
 
         public void PrepareActivation(OperationExecutionDescriptor operation)
         {
@@ -258,6 +272,12 @@ namespace ThirdPersonSimulation.Fixed
             OperationExecutionDescriptor descriptor,
             OperationStopContext context)
         {
+            if (descriptor.Code == SimulationOperationCode.EnterEquipmentFeatureHost ||
+                descriptor.Code == SimulationOperationCode.ResolveEquipmentActionRoute)
+            {
+                m_Equipment.ForceStopHost(cursor, m_Access.Operation(descriptor.Handle), context);
+                return OperationStopStatus.Completed;
+            }
             if (descriptor.Code != SimulationOperationCode.Timeline)
                 throw new InvalidOperationException($"Leaf '{descriptor.Code}' does not own a graceful stop lifecycle.");
             return m_Timeline.ContinueTimelineStop(cursor, descriptor.Handle, context);
@@ -268,6 +288,12 @@ namespace ThirdPersonSimulation.Fixed
             OperationExecutionDescriptor descriptor,
             OperationStopContext context)
         {
+            if (descriptor.Code == SimulationOperationCode.EnterEquipmentFeatureHost ||
+                descriptor.Code == SimulationOperationCode.ResolveEquipmentActionRoute)
+            {
+                m_Equipment.ForceStopHost(cursor, m_Access.Operation(descriptor.Handle), context);
+                return;
+            }
             if (descriptor.Code != SimulationOperationCode.Timeline)
                 throw new InvalidOperationException($"Leaf '{descriptor.Code}' does not own a force-stop lifecycle.");
             m_Timeline.ForceStopTimeline(cursor, descriptor.Handle, context);
@@ -310,6 +336,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedBlackboardRuntime m_Blackboard;
         readonly FixedActionRuntime m_Actions;
         readonly FixedGameplayEffectOperationRuntime m_GameplayEffects;
+        readonly FixedEquipmentRuntime m_Equipment;
         readonly FixedInputRuntime m_Input;
         readonly FixedValueRuntime m_Values;
         readonly TimelineControlRuntime<FixedOperationTarget, FixedScalar> m_Timeline;
@@ -355,6 +382,16 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame.Presentation,
                 m_Frame.Trace,
                 workspace.GameplayEffects);
+            m_Equipment = new FixedEquipmentRuntime(
+                access,
+                m_Frame,
+                m_Frame.CreateStatePort("Equipment", services.EquipmentPolicy),
+                actionStore,
+                m_Input,
+                handles,
+                m_GameplayEffects,
+                m_Frame.Facts,
+                m_Frame.Trace);
             m_Actions = new FixedActionRuntime(
                 access,
                 m_Frame,
@@ -365,20 +402,21 @@ namespace ThirdPersonSimulation.Fixed
                 m_GameplayEffects,
                 handles,
                 m_Frame.Facts,
-                m_Frame.Trace);
+                m_Frame.Trace,
+                m_Equipment);
             m_Values = new FixedValueRuntime(
                 access,
                 m_Input,
                 actionStore,
                 m_Actions,
                 m_GameplayEffects,
+                m_Equipment,
                 m_Blackboard,
                 m_Frame,
                 workspace);
             m_Motion = new FixedMotionAccumulator(
                 access,
                 m_Frame,
-                actionStore,
                 m_Frame.CreateStatePort("MotionModifier", services.MotionModifierPolicy),
                 workspace.MotionContributions,
                 workspace.MotionWarpSamples);
@@ -410,6 +448,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_Blackboard,
                 m_Actions,
                 m_GameplayEffects,
+                m_Equipment,
                 camera,
                 m_Timeline,
                 locomotion,
@@ -448,6 +487,7 @@ namespace ThirdPersonSimulation.Fixed
                     m_Control.BeginEvaluation();
                     m_Values.BeginEvaluation();
                     m_GameplayEffects.BeginEvaluation();
+                    m_Equipment.BeginEvaluation();
                     m_Blackboard.BeginFrame();
                 }
                 using (request.Performance.Measure(SimulationPerformancePhase.OperationIngress))
@@ -463,6 +503,7 @@ namespace ThirdPersonSimulation.Fixed
                     m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
                 using (request.Performance.Measure(SimulationPerformancePhase.ControlTick))
                     m_Control.Tick(m_Frame.Layout.RootOperation);
+                m_Equipment.EndEvaluation();
                 ResolvedGameplayMotion motion;
                 using (request.Performance.Measure(SimulationPerformancePhase.MotionResolve))
                     motion = m_Motion.Resolve();
@@ -492,4 +533,3 @@ namespace ThirdPersonSimulation.Fixed
 
     }
 }
-

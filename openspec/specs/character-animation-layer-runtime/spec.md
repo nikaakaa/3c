@@ -5,7 +5,7 @@
 ## Requirements
 ### Requirement: 动画层定义来自管线定义
 
-`CharacterPipelineDefinition` 引用的 `CharacterAnimationPresentationProfile` MUST作为动画 Layer catalog 与 producer resource binding 的唯一 authoring 来源。Compiler MUST将 layer identity、order、Animancer layer index、mask、blend mode、output policy 和 producer binding 编入 `CharacterPresentationProjection`；Runtime MUST只读取匹配 ProgramHash/source revision 的 Projection。Definition、Timeline、Graph、Presenter、旧 SO 或独立 Layer asset MUST不保存另一份 layer 真数据。
+`CharacterPipelineDefinition` 引用的 `CharacterAnimationPresentationProfile` MUST作为动画 Layer catalog 与producer resource binding的唯一authoring来源。唯一Presentation Projection Compiler MUST将layer identity、order、Animancer layer index、mask、blend mode、output policy和producer binding编入target-neutral `CharacterPresentationProjection`；Runtime MUST只读取匹配`CharacterPresentationSemanticContract`、Gameplay SourceRevision与ProjectionRevision的Projection。ProgramHash、NumericProfile与Target ABI只属于目标Program和Session compatibility，MUST不进入Projection payload或动画层选择。Definition、Timeline、Graph、Presenter、旧SO或独立Layer asset MUST不保存另一份layer真数据。
 
 #### Scenario: Base layer 要求持续输出
 
@@ -25,6 +25,12 @@
 - **WHEN** committed producer command 或 Projection binding 的 LayerId 不存在
 - **THEN** Program/Projection 组合校验 MUST 报告配置错误
 - **AND** 对应 command MUST 不进入播放生命周期
+
+#### Scenario: Float32与Fixed复用动画层Projection
+
+- **WHEN** Float32与Fixed Program由相同SemanticHash和producer contract生成
+- **THEN** 两个Presentation contract Adapter MUST加载同一套Layer与producer binding
+- **AND** Runtime MUST不按ProgramHash复制、选择或降级Projection
 
 ### Requirement: 基础姿态必须由正式来源输出
 

@@ -25,6 +25,7 @@ namespace ThirdPersonSimulation.Reader
             "state-slots",
             "scopes",
             "motion-modifiers",
+            "equipment",
             "producers",
             "source-map",
             "all"
@@ -35,7 +36,7 @@ namespace ThirdPersonSimulation.Reader
             if (!TryParse(args, out ReaderRequest request, out string error))
             {
                 Console.Error.WriteLine(error);
-                Console.Error.WriteLine("Usage: ThirdPersonSimulation.Reader <semantic-ir|program|fixed-program> <artifact-path> [--section <summary|operations|value-inputs|control-flow|state-slots|scopes|motion-modifiers|producers|source-map|all>] [--format <text|json>]");
+                Console.Error.WriteLine("Usage: ThirdPersonSimulation.Reader <semantic-ir|program|fixed-program> <artifact-path> [--section <summary|operations|value-inputs|control-flow|state-slots|scopes|motion-modifiers|equipment|producers|source-map|all>] [--format <text|json>]");
                 return 2;
             }
 
@@ -309,6 +310,7 @@ namespace ThirdPersonSimulation.Reader
                     Console.WriteLine($"{value.TargetOperation.Value}\tport={Escape(value.TargetPort)}\tkind={value.ResolvedValueKind}\tconstant={value.ConstantIndex}\tsource={Escape(constant.Identity)}");
                 }
             }
+            WriteEquipmentText(ir.CatalogEntries, section);
             WriteCommonSectionsText(ir.ControlFlow, ir.StateDeclarations, ir.Scopes, ir.Producers, ir.SourceMap, section);
         }
 
@@ -344,6 +346,7 @@ namespace ThirdPersonSimulation.Reader
                 }
             }
             WriteMotionModifiersText(program.MotionModifiers, section);
+            WriteEquipmentText(program.CatalogEntries, section);
             WriteCommonSectionsText(program.ControlFlow, program.StateSlots, program.Scopes, program.Producers, program.SourceMap, section);
         }
 
@@ -379,7 +382,25 @@ namespace ThirdPersonSimulation.Reader
                 }
             }
             WriteMotionModifiersText(program.MotionModifiers, section);
+            WriteEquipmentText(program.CatalogEntries, section);
             WriteCommonSectionsText(program.ControlFlow, program.StateSlots, program.Scopes, program.Producers, program.SourceMap, section);
+        }
+
+        static void WriteEquipmentText(IReadOnlyList<ProgramCatalogEntry> catalog, string section)
+        {
+            if (section != "equipment" && section != "all")
+                return;
+            Console.WriteLine("[equipment]");
+            for (int i = 0; i < catalog.Count; i++)
+            {
+                ProgramCatalogEntry entry = catalog[i];
+                if (!IsEquipmentCatalogEntry(entry.Kind))
+                    continue;
+                string fields = string.Join(",", entry.Fields.Select(value => value.Kind == ProgramCatalogFieldKind.Constant
+                    ? $"{value.Name}=constant:{value.ConstantIndex.ToString(CultureInfo.InvariantCulture)}"
+                    : $"{value.Name}=identity:{Escape(value.Identity)}"));
+                Console.WriteLine($"{entry.Index}\t{entry.Kind}\t{Escape(entry.Identity)}\trevision={entry.Revision}\tfields={fields}");
+            }
         }
 
         static void WriteMotionModifiersText(IReadOnlyList<ProgramMotionModifierDescriptor> modifiers, string section)
@@ -390,7 +411,7 @@ namespace ThirdPersonSimulation.Reader
             for (int i = 0; i < modifiers.Count; i++)
             {
                 ProgramMotionModifierDescriptor value = modifiers[i];
-                Console.WriteLine($"{value.Index}\t{value.Kind}\tchannel={value.Channel}\toperation={value.Operation.Value}\tsource={value.SourceMotionOperation.Value}\ttimeline={value.TimelineOwnerOperation.Value}\taction-context={Escape(value.ActionContextIdentity)}\tcatalog={value.CatalogEntryIndex}\tstate={value.StateSlotStart}..{value.StateSlotStart + value.StateSlotCount - 1}\tposition={value.PositionMode}\trotation={value.RotationMode}\tconstants={value.TargetLocalPlanarOffsetConstantIndex},{value.TargetYawOffsetConstantIndex},{value.PositionWeightConstantIndex},{value.YawWeightConstantIndex},{value.MaximumPositionCorrectionConstantIndex},{value.MaximumYawCorrectionConstantIndex},{value.PositionProgressCurveConstantIndex},{value.YawProgressCurveConstantIndex}");
+                Console.WriteLine($"{value.Index}\t{value.Kind}\tchannel={value.Channel}\toperation={value.Operation.Value}\tsource={value.SourceMotionOperation.Value}\ttimeline={value.TimelineOwnerOperation.Value}\taction-context={Escape(value.ActionContextIdentity)}\tcatalog={value.CatalogEntryIndex}\tstate={value.StateSlotStart}..{value.StateSlotStart + value.StateSlotCount - 1}\ttranslation={value.TranslationMode}\toffset-space={value.TargetOffsetSpace}\trotation={value.RotationMode}\trotation-method={value.RotationMethod}\tlimit={value.LimitPolicy}\tconstants={value.TargetPlanarOffsetConstantIndex},{value.TargetYawOffsetConstantIndex},{value.MaximumPositionCorrectionConstantIndex},{value.MaximumYawCorrectionConstantIndex},{value.MaximumYawRateConstantIndex},{value.PositionProgressCurveConstantIndex},{value.YawProgressCurveConstantIndex}");
             }
         }
 
@@ -651,6 +672,7 @@ namespace ThirdPersonSimulation.Reader
                 }
                 writer.WriteEndArray();
             }
+            WriteEquipmentJson(writer, ir.CatalogEntries, section);
             WriteCommonSectionsJson(writer, ir.ControlFlow, ir.StateDeclarations, ir.Scopes, ir.Producers, ir.SourceMap, section);
         }
 
@@ -717,6 +739,7 @@ namespace ThirdPersonSimulation.Reader
                 writer.WriteEndArray();
             }
             WriteMotionModifiersJson(writer, program.MotionModifiers, section);
+            WriteEquipmentJson(writer, program.CatalogEntries, section);
             WriteCommonSectionsJson(writer, program.ControlFlow, program.StateSlots, program.Scopes, program.Producers, program.SourceMap, section);
         }
 
@@ -784,8 +807,48 @@ namespace ThirdPersonSimulation.Reader
                 writer.WriteEndArray();
             }
             WriteMotionModifiersJson(writer, program.MotionModifiers, section);
+            WriteEquipmentJson(writer, program.CatalogEntries, section);
             WriteCommonSectionsJson(writer, program.ControlFlow, program.StateSlots, program.Scopes, program.Producers, program.SourceMap, section);
         }
+
+        static void WriteEquipmentJson(Utf8JsonWriter writer, IReadOnlyList<ProgramCatalogEntry> catalog, string section)
+        {
+            if (section != "equipment" && section != "all")
+                return;
+            writer.WritePropertyName("equipment");
+            writer.WriteStartArray();
+            for (int i = 0; i < catalog.Count; i++)
+            {
+                ProgramCatalogEntry entry = catalog[i];
+                if (!IsEquipmentCatalogEntry(entry.Kind))
+                    continue;
+                writer.WriteStartObject();
+                writer.WriteNumber("index", entry.Index);
+                writer.WriteString("kind", entry.Kind.ToString());
+                writer.WriteString("identity", entry.Identity);
+                writer.WriteString("revision", entry.Revision.ToString());
+                writer.WritePropertyName("fields");
+                writer.WriteStartArray();
+                for (int fieldIndex = 0; fieldIndex < entry.Fields.Count; fieldIndex++)
+                {
+                    ProgramCatalogField field = entry.Fields[fieldIndex];
+                    writer.WriteStartObject();
+                    writer.WriteString("name", field.Name);
+                    writer.WriteString("kind", field.Kind.ToString());
+                    if (field.Kind == ProgramCatalogFieldKind.Constant)
+                        writer.WriteNumber("constantIndex", field.ConstantIndex);
+                    else
+                        writer.WriteString("identity", field.Identity);
+                    writer.WriteEndObject();
+                }
+                writer.WriteEndArray();
+                writer.WriteEndObject();
+            }
+            writer.WriteEndArray();
+        }
+
+        static bool IsEquipmentCatalogEntry(ProgramCatalogEntryKind kind) =>
+            kind >= ProgramCatalogEntryKind.CompositionRoot && kind <= ProgramCatalogEntryKind.EquipmentVisualBinding;
 
         static void WriteMotionModifiersJson(Utf8JsonWriter writer, IReadOnlyList<ProgramMotionModifierDescriptor> modifiers, string section)
         {
@@ -807,14 +870,16 @@ namespace ThirdPersonSimulation.Reader
                 writer.WriteNumber("catalogEntryIndex", value.CatalogEntryIndex);
                 writer.WriteNumber("stateSlotStart", value.StateSlotStart);
                 writer.WriteNumber("stateSlotCount", value.StateSlotCount);
-                writer.WriteString("positionMode", value.PositionMode.ToString());
+                writer.WriteString("translationMode", value.TranslationMode.ToString());
+                writer.WriteString("targetOffsetSpace", value.TargetOffsetSpace.ToString());
                 writer.WriteString("rotationMode", value.RotationMode.ToString());
-                writer.WriteNumber("targetLocalPlanarOffsetConstant", value.TargetLocalPlanarOffsetConstantIndex);
+                writer.WriteString("rotationMethod", value.RotationMethod.ToString());
+                writer.WriteString("limitPolicy", value.LimitPolicy.ToString());
+                writer.WriteNumber("targetPlanarOffsetConstant", value.TargetPlanarOffsetConstantIndex);
                 writer.WriteNumber("targetYawOffsetConstant", value.TargetYawOffsetConstantIndex);
-                writer.WriteNumber("positionWeightConstant", value.PositionWeightConstantIndex);
-                writer.WriteNumber("yawWeightConstant", value.YawWeightConstantIndex);
                 writer.WriteNumber("maximumPositionCorrectionConstant", value.MaximumPositionCorrectionConstantIndex);
                 writer.WriteNumber("maximumYawCorrectionConstant", value.MaximumYawCorrectionConstantIndex);
+                writer.WriteNumber("maximumYawRateConstant", value.MaximumYawRateConstantIndex);
                 writer.WriteNumber("positionProgressCurveConstant", value.PositionProgressCurveConstantIndex);
                 writer.WriteNumber("yawProgressCurveConstant", value.YawProgressCurveConstantIndex);
                 writer.WriteEndObject();

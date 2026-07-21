@@ -7,6 +7,7 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("Debug")]
     [NodePath("Base/Action/Debug")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.EditorOnlyDebug)]
     public class DebugNode : ActionNode
     {
         [SerializeField, PropertyPort(PortDirection.Input, "Log")]

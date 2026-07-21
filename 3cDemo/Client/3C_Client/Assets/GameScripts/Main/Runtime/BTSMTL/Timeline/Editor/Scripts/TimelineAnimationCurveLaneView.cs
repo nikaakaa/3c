@@ -60,8 +60,7 @@ namespace BTSMTL.Timeline.Editor
             Keys,
             Box,
             InTangent,
-            OutTangent,
-            VerticalPan
+            OutTangent
         }
 
         const float VerticalPadding = 6f;
@@ -308,11 +307,6 @@ namespace BTSMTL.Timeline.Editor
                 evt.StopImmediatePropagation();
                 return;
             }
-            if (evt.button == 2)
-            {
-                BeginGesture(evt, Gesture.VerticalPan);
-                return;
-            }
             if (evt.button != 0)
                 return;
 
@@ -376,9 +370,6 @@ namespace BTSMTL.Timeline.Editor
                 case Gesture.OutTangent:
                     UpdateTangent(m_Gesture == Gesture.OutTangent);
                     break;
-                case Gesture.VerticalPan:
-                    UpdateVerticalPan();
-                    break;
             }
             MarkDirtyRepaint();
             evt.StopImmediatePropagation();
@@ -408,7 +399,7 @@ namespace BTSMTL.Timeline.Editor
 
         void OnWheel(WheelEvent evt)
         {
-            if (m_Descriptor.ValueDomain.IsBounded)
+            if (!evt.altKey || m_Descriptor.ValueDomain.IsBounded)
                 return;
             TimelineCurveVerticalView view = VerticalView();
             float pivot = YToValue(evt.localMousePosition.y);
@@ -634,16 +625,6 @@ namespace BTSMTL.Timeline.Editor
             curve.MoveKey(m_TangentKey.KeyIndex, key);
             m_DraftCurves[m_TangentKey.Owner] = curve;
             m_Changed = true;
-        }
-
-        void UpdateVerticalPan()
-        {
-            if (m_Descriptor.ValueDomain.IsBounded)
-                return;
-            TimelineCurveVerticalView view = VerticalView();
-            float delta = (m_CurrentPointer.y - m_StartPointer.y) / Mathf.Max(1f, TimelineTrackLayout.CurveLaneHeight);
-            TimelineCurveEditorSession.SetVerticalView(m_TrackView.Track, m_Descriptor.ChannelId, view.Pan(delta));
-            m_StartPointer = m_CurrentPointer;
         }
 
         void CommitDraft(string undoName)

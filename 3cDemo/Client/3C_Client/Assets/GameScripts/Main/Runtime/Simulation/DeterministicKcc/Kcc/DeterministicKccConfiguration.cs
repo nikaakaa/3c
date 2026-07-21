@@ -128,7 +128,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
     {
         public const string ActorContactPolicyVersion = "solid-body-block/1";
         public const string QuerySemanticVersion = "fixed-capsule-conservative-cast/3";
-        public const string MotorSemanticVersion = "fixed-kcc-motor/2";
+        public const string MotorSemanticVersion = "fixed-kcc-motor/3";
 
         public DeterministicKccConfiguration(
             FixedScalar radius,
@@ -180,7 +180,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             MaximumActorContactIterations = maximumActorContactIterations;
             ActorContactResponse = actorContactResponse;
             ConfigurationHash = StableHash.Compute(
-                "deterministic-kcc-configuration/4",
+                "deterministic-kcc-configuration/5",
                 ActorContactShape.ConfigurationHash.Value,
                 minimumGroundNormalY.Raw.ToString(),
                 maximumStepHeight.Raw.ToString(),

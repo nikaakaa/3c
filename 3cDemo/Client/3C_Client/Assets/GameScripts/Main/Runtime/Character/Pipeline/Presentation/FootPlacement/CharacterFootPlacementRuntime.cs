@@ -51,7 +51,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ulong m_LastRenderFrame;
         ulong m_ResetSequence;
         float m_PelvisOffset;
-        float m_PelvisVelocity;
+        float m_PelvisReachOffset;
+        float m_PelvisReachVelocity;
+        float m_ActorMovementCompensationOffset;
+        float m_ActorMovementCompensationVelocity;
         bool m_Disposed;
 
         public CharacterFootPlacementRuntime(
@@ -111,7 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             FootConstraintTransitionReason.BodyReset,
                             true);
                     }
-                    CharacterFootPlacementPolicyWeight weight = ResolvePolicyWeight(frame.AnimationContributions);
+                    CharacterFootPlacementFeatureFrame features = ResolveAnimationFeatures(frame.AnimationContributions);
                     CharacterFootPlacementAnimatedPose pose = m_Solver.CaptureAnimatedPose(frame.RenderFrame);
                     float deltaSeconds = frame.PresentationDeltaSeconds;
                     FootKinematics leftKinematics = CaptureKinematics(m_Left, pose.Left, deltaSeconds);
@@ -128,22 +131,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         rightKinematics = CaptureKinematics(m_Right, pose.Right, deltaSeconds);
                     }
 
-                    ContactDecision leftContact = ClassifyContact(m_Left, leftKinematics, frame.Body, weight);
-                    ContactDecision rightContact = ClassifyContact(m_Right, rightKinematics, frame.Body, weight);
                     PredictedFootprint leftPrediction = Predict(
-                        m_Left,
                         pose.Left,
-                        leftKinematics,
+                        features.Left,
                         frame.Body,
                         m_Rig.LeftLegLength,
-                        weight.Value);
+                        features.Value);
                     PredictedFootprint rightPrediction = Predict(
-                        m_Right,
                         pose.Right,
-                        rightKinematics,
+                        features.Right,
                         frame.Body,
                         m_Rig.RightLegLength,
-                        weight.Value);
+                        features.Value);
                     FootPlacementSupportResult leftSupport;
                     FootPlacementSupportResult rightSupport;
                     using (QueryMarker.Auto())
@@ -151,6 +150,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         leftSupport = m_Query.Query(pose.Left, leftPrediction.Position, m_Rig.LeftLegLength);
                         rightSupport = m_Query.Query(pose.Right, rightPrediction.Position, m_Rig.RightLegLength);
                     }
+                    ContactDecision leftContact = ClassifyContact(pose.Left, features.Left, frame.Body, features, leftSupport);
+                    ContactDecision rightContact = ClassifyContact(pose.Right, features.Right, frame.Body, features, rightSupport);
                     ResolvedFoot left = ResolveFoot(
                         m_Left,
                         pose.Left,
@@ -158,8 +159,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         leftContact,
                         leftPrediction,
                         leftSupport,
+                        features.Left,
                         frame.Body,
-                        weight,
+                        features,
                         m_Rig.LeftLegLength,
                         deltaSeconds);
                     ResolvedFoot right = ResolveFoot(
@@ -169,11 +171,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         rightContact,
                         rightPrediction,
                         rightSupport,
+                        features.Right,
                         frame.Body,
-                        weight,
+                        features,
                         m_Rig.RightLegLength,
                         deltaSeconds);
-                    PelvisResolution pelvis = ResolvePelvis(pose, left, right, weight.Value, deltaSeconds);
+                    ApplyFootSeparation(ref left, ref right);
+                    PelvisResolution pelvis = ResolvePelvis(pose, left, right, frame.Body, deltaSeconds);
                     if (pelvis.UnreachableFoot == CharacterFootSide.Left)
                         left = MarkLegUnreachable(m_Left, left);
                     else if (pelvis.UnreachableFoot == CharacterFootSide.Right)
@@ -231,11 +235,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Disposed = true;
         }
 
-        CharacterFootPlacementPolicyWeight ResolvePolicyWeight(
+        CharacterFootPlacementFeatureFrame ResolveAnimationFeatures(
             IReadOnlyList<AnimationPoseContribution> contributions)
         {
             float visible = 0f;
             float weight = 0f;
+            var left = new AnimationFootFeatureBlendAccumulator();
+            var right = new AnimationFootFeatureBlendAccumulator();
             for (int i = 0; i < contributions.Count; i++)
             {
                 AnimationPoseContribution contribution = contributions[i];
@@ -251,10 +257,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float visualWeight = contribution.Weight;
                 visible += visualWeight;
                 weight += visualWeight * sample.Weight;
+                left.Add(sample.Left, visualWeight, contribution.VisualTimeScale);
+                right.Add(sample.Right, visualWeight, contribution.VisualTimeScale);
             }
             if (visible <= 0.0001f)
-                return default;
-            return new CharacterFootPlacementPolicyWeight(weight / visible, visible);
+                throw new InvalidOperationException("Foot Placement pose layer has no visible animation contribution.");
+            return new CharacterFootPlacementFeatureFrame(
+                weight / visible,
+                visible,
+                left.Resolve(),
+                right.Resolve());
         }
 
         FootKinematics CaptureKinematics(
@@ -297,33 +309,41 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         ContactDecision ClassifyContact(
-            FootRuntimeState state,
-            FootKinematics kinematics,
+            CharacterFootPlacementAnimatedFootPose pose,
+            AnimationFootFeatureSample feature,
             CharacterBodyPresentationFrame body,
-            CharacterFootPlacementPolicyWeight weight)
+            CharacterFootPlacementFeatureFrame frame,
+            FootPlacementSupportResult support)
         {
-            if (!kinematics.HasVelocityHistory || !state.HasSupportHistory)
-                return default;
-            float planar = new Vector2(kinematics.SoleVelocity.x, kinematics.SoleVelocity.z).magnitude;
-            float vertical = Mathf.Abs(kinematics.SoleVelocity.y);
+            Vector3 sole = (pose.HeelPosition + pose.ToePosition) * 0.5f;
+            Vector3 angularVelocity = Vector3.up *
+                                      (body.VisibleYawVelocityDegreesPerSecond * Mathf.Deg2Rad);
+            Vector3 worldVelocity = m_Rig.VisualRoot.TransformDirection(feature.SoleLocalVelocity) +
+                                    body.VisibleVelocity +
+                                    Vector3.Cross(angularVelocity, sole - m_Rig.VisualRoot.position);
+            float planar = new Vector2(worldVelocity.x, worldVelocity.z).magnitude;
+            float vertical = Mathf.Abs(worldVelocity.y);
             bool canPlant = body.TargetGrounded &&
-                            weight.Value >= m_Settings.Contact.MinimumPlacementWeight &&
-                            state.LastSupportDistance <= m_Settings.Contact.PlantDistance &&
+                            frame.Value >= m_Settings.Contact.MinimumPlacementWeight &&
+                            support.HasSupport &&
+                            support.SoleDistance <= m_Settings.Contact.PlantDistance &&
+                            feature.PlantConfidence >= m_Settings.Contact.PlantConfidenceEnter &&
                             planar <= m_Settings.Contact.PlantPlanarSpeed &&
                             vertical <= m_Settings.Contact.PlantVerticalSpeed &&
-                            kinematics.Descending;
+                            worldVelocity.y <= m_Settings.Contact.DescendingTolerance;
             bool shouldRelease = !body.TargetGrounded ||
-                                 weight.Value < m_Settings.Contact.MinimumPlacementWeight ||
-                                 state.LastSupportDistance > m_Settings.Contact.ReleaseDistance ||
+                                 frame.Value < m_Settings.Contact.MinimumPlacementWeight ||
+                                 !support.HasSupport ||
+                                 support.SoleDistance > m_Settings.Contact.ReleaseDistance ||
+                                 feature.PlantConfidence <= m_Settings.Contact.PlantConfidenceExit ||
                                  planar > m_Settings.Contact.ReleasePlanarSpeed ||
                                  vertical > m_Settings.Contact.ReleaseVerticalSpeed;
-            return new ContactDecision(canPlant, shouldRelease);
+            return new ContactDecision(canPlant, shouldRelease, worldVelocity);
         }
 
         PredictedFootprint Predict(
-            FootRuntimeState state,
             CharacterFootPlacementAnimatedFootPose pose,
-            FootKinematics kinematics,
+            AnimationFootFeatureSample feature,
             CharacterBodyPresentationFrame body,
             float legLength,
             float predictionWeight)
@@ -331,15 +351,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 currentSole = (pose.HeelPosition + pose.ToePosition) * 0.5f;
             if (predictionWeight <= 0f)
                 return new PredictedFootprint(currentSole, 0f, false, FootPredictionRejectReason.NoSupportEstimate);
-            float estimatedHorizon = m_Settings.Prediction.MaximumLookAheadSeconds;
-            if (state.HasSupportHistory && IsFinite(state.LastSupportDistance) && kinematics.SoleVelocity.y < -0.0001f)
-                estimatedHorizon = state.LastSupportDistance / -kinematics.SoleVelocity.y;
+            if (feature.NextLandingConfidence <= 0.0001f)
+                return new PredictedFootprint(currentSole, 0f, false, FootPredictionRejectReason.NoFutureLanding);
+            float estimatedHorizon = feature.NextLandingDelaySeconds;
             float clampedHorizon = Mathf.Clamp(
                 estimatedHorizon,
                 m_Settings.Prediction.MinimumLookAheadSeconds,
                 m_Settings.Prediction.MaximumLookAheadSeconds);
             bool horizonClamped = !Mathf.Approximately(estimatedHorizon, clampedHorizon);
-            float horizon = clampedHorizon * predictionWeight;
+            float horizon = clampedHorizon;
             if (Mathf.Abs(body.VisibleYawVelocityDegreesPerSecond) >
                 m_Settings.Prediction.MaximumYawVelocityDegreesPerSecond)
                 return new PredictedFootprint(currentSole, horizon, horizonClamped, FootPredictionRejectReason.AngularVelocityExceeded);
@@ -347,7 +367,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 rootPosition = m_Rig.VisualRoot.position + body.VisibleVelocity * horizon;
             Quaternion rootRotation = m_Rig.VisualRoot.rotation *
                                       Quaternion.Euler(0f, body.VisibleYawVelocityDegreesPerSecond * horizon, 0f);
-            Vector3 predictedLocal = kinematics.SoleLocal + kinematics.SoleLocalVelocity * horizon;
+            Vector3 currentLocal = m_Rig.VisualRoot.InverseTransformPoint(currentSole);
+            Vector3 predictedLocal = new Vector3(
+                feature.NextLandingLocalOffset.x,
+                currentLocal.y,
+                feature.NextLandingLocalOffset.y);
             Vector3 predicted = rootPosition + rootRotation * predictedLocal;
             if (!IsFinite(predicted))
                 return new PredictedFootprint(currentSole, horizon, horizonClamped, FootPredictionRejectReason.NonFinite);
@@ -366,8 +390,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactDecision contact,
             PredictedFootprint prediction,
             FootPlacementSupportResult support,
+            AnimationFootFeatureSample feature,
             CharacterBodyPresentationFrame body,
-            CharacterFootPlacementPolicyWeight weight,
+            CharacterFootPlacementFeatureFrame weight,
             float legLength,
             float deltaSeconds)
         {
@@ -407,7 +432,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             state.TransitionReason = FootConstraintTransitionReason.AnimationDrift;
                         }
                         if (state.ConstraintState == FootConstraintState.Sliding)
-                            UpdateSliding(state, support, kinematics, deltaSeconds);
+                            UpdateSliding(state, support, contact.WorldVelocity, deltaSeconds);
                     }
                 }
             }
@@ -416,6 +441,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 IsReachableAtPelvis(pose.HipPosition, support.Surface.Point, legLength))
                 state.ReachBlocked = false;
             if (state.ConstraintState == FootConstraintState.Free &&
+                state.TransitionReason == FootConstraintTransitionReason.None &&
+                state.SolveWeight <= 0.001f &&
                 !state.ReachBlocked &&
                 contact.CanPlant && support.HasSupport &&
                 Vector3.Distance(pose.HipPosition, support.Surface.Point) <=
@@ -434,10 +461,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.LastSupportDistance = support.SoleDistance;
             state.HasSupportHistory = support.HasSupport;
             FootPlacementSurface targetSurface = state.ConstraintState == FootConstraintState.Free
-                ? support.Surface
+                ? support.CurrentSupport
                 : state.Surface.Rebuild();
+            float surfaceHeightDelta = targetSurface.IsValid ? targetSurface.Point.y - animatedSole.y : 0f;
+            float heelLiftDistance = CharacterFootPlacementRotationPlanner.ResolveHeelLift(
+                pose,
+                support,
+                state.ConstraintState != FootConstraintState.Free,
+                m_Settings.Constraint);
             float desiredClearance = state.ConstraintState == FootConstraintState.Free
-                ? support.SwingClearance * weight.Value
+                ? support.SwingClearance
                 : 0f;
             state.Clearance = state.ConstraintState == FootConstraintState.Free
                 ? Decay(
@@ -448,28 +481,43 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : 0f;
             float clearance = state.Clearance;
             Vector3 targetPosition = pose.AnklePosition + Vector3.up * clearance;
-            float desiredPositionWeight = clearance > 0.0001f ? weight.Value : 0f;
-            if (targetSurface.IsValid)
+            float positionResponse = m_Settings.Rotation.SamplePositionResponse(body.VisibleVelocity.magnitude);
+            float freePositionWeight = clearance > 0.0001f ? weight.Value * positionResponse : 0f;
+            if (targetSurface.IsValid && state.ConstraintState != FootConstraintState.Free)
             {
                 Vector3 ankleFromSole = pose.AnklePosition - animatedSole;
-                targetPosition = targetSurface.Point + ankleFromSole + Vector3.up * clearance;
-                if (state.ConstraintState != FootConstraintState.Free)
-                    desiredPositionWeight = weight.Value;
+                targetPosition = targetSurface.Point + ankleFromSole + Vector3.up * (clearance - heelLiftDistance);
             }
+            else if (targetSurface.IsValid && state.SolveWeight <= 0.001f)
+            {
+                float lift = Mathf.Max(0f, targetSurface.Point.y - animatedSole.y);
+                targetPosition = pose.AnklePosition + Vector3.up * Mathf.Max(clearance, lift);
+                freePositionWeight = targetPosition.y > pose.AnklePosition.y + 0.0001f
+                    ? weight.Value * positionResponse
+                    : 0f;
+            }
+            float movementSpeed = body.VisibleVelocity.magnitude;
+            float desiredConstraintWeight = state.ConstraintState != FootConstraintState.Free && targetSurface.IsValid
+                ? weight.Value * positionResponse
+                : 0f;
             state.SolveWeight = Decay(
                 state.SolveWeight,
-                desiredPositionWeight,
-                desiredPositionWeight > state.SolveWeight
+                desiredConstraintWeight,
+                desiredConstraintWeight > state.SolveWeight
                     ? m_Settings.Smoothing.PlantHalfLifeSeconds
                     : m_Settings.Smoothing.ReleaseHalfLifeSeconds,
                 deltaSeconds);
+            float ankleTwistDegrees = 0f;
             Quaternion targetRotation = targetSurface.IsValid
-                ? ResolveFootRotation(
-                    pose.AnkleRotation,
-                    pose.SoleForward,
+                ? CharacterFootPlacementRotationPlanner.ResolveRotation(
+                    m_Rig.VisualRoot,
+                    pose,
                     targetSurface.Normal,
-                    targetSurface.Point.y - animatedSole.y,
-                    weight.Value)
+                    surfaceHeightDelta,
+                    heelLiftDistance,
+                    m_Settings.Constraint,
+                    m_Settings.Rotation,
+                    out ankleTwistDegrees)
                 : pose.AnkleRotation;
             state.TargetRotation = state.HasTargetRotation
                 ? Quaternion.Slerp(
@@ -479,14 +527,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : targetRotation;
             state.HasTargetRotation = true;
             state.TargetPosition = targetPosition;
-            float rotationWeight = targetSurface.IsValid
-                ? state.SolveWeight * weight.Value
+            float positionWeight = state.ConstraintState != FootConstraintState.Free
+                ? state.SolveWeight
+                : Mathf.Max(state.SolveWeight, freePositionWeight);
+            float rotationWeight = targetSurface.IsValid && state.ConstraintState != FootConstraintState.Free
+                ? state.SolveWeight * m_Settings.Rotation.SampleRotationResponse(movementSpeed)
                 : 0f;
+            Vector3 poleDirection = state.Side == CharacterFootSide.Left
+                ? m_Rig.LeftKneePoleLocalDirection
+                : m_Rig.RightKneePoleLocalDirection;
+            Vector3 bendGoal = pose.HipPosition +
+                               m_Rig.VisualRoot.TransformDirection(poleDirection) * legLength;
             var plan = new FootPlacementFootPlan(
                 state.Side,
                 targetPosition,
                 state.TargetRotation,
-                state.SolveWeight,
+                bendGoal,
+                positionWeight,
+                positionWeight,
                 rotationWeight,
                 state.ConstraintState,
                 state.TransitionReason);
@@ -496,16 +554,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 kinematics,
                 prediction,
                 support,
+                feature,
+                contact.WorldVelocity,
                 state.LockError,
                 state.ReplantError,
                 weight,
-                targetSurface.Identity);
+                targetSurface.Identity,
+                ankleTwistDegrees,
+                heelLiftDistance,
+                0f);
         }
 
         void UpdateSliding(
             FootRuntimeState state,
             FootPlacementSupportResult support,
-            FootKinematics kinematics,
+            Vector3 worldVelocity,
             float deltaSeconds)
         {
             if (support.HasSupport && support.Surface.Identity == state.Surface.Identity)
@@ -528,7 +591,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     movedWorld,
                     support.Surface.Normal);
             }
-            float planarSpeed = new Vector2(kinematics.SoleVelocity.x, kinematics.SoleVelocity.z).magnitude;
+            float planarSpeed = new Vector2(worldVelocity.x, worldVelocity.z).magnitude;
             if (state.ConstraintState == FootConstraintState.Sliding &&
                 state.LockError <= m_Settings.Constraint.SlideStopDistance &&
                 planarSpeed <= m_Settings.Contact.PlantPlanarSpeed)
@@ -542,15 +605,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedPose pose,
             ResolvedFoot left,
             ResolvedFoot right,
-            float pelvisPolicyWeight,
+            CharacterBodyPresentationFrame body,
             float deltaSeconds)
         {
             float leftWeight = left.Plan.ConstraintState == FootConstraintState.Free
                 ? 0f
-                : left.Plan.PositionWeight * pelvisPolicyWeight;
+                : left.Plan.PositionWeight;
             float rightWeight = right.Plan.ConstraintState == FootConstraintState.Free
                 ? 0f
-                : right.Plan.PositionWeight * pelvisPolicyWeight;
+                : right.Plan.PositionWeight;
             float leftDelta = left.Plan.Position.y - pose.Left.AnklePosition.y;
             float rightDelta = right.Plan.Position.y - pose.Right.AnklePosition.y;
             float total = leftWeight + rightWeight;
@@ -610,31 +673,105 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 desired = Mathf.Clamp(desired, rightInterval.Minimum, rightInterval.Maximum);
             else
                 desired = 0f;
-            desired = Mathf.Clamp(
+            float reachTarget = Mathf.Clamp(
                 desired,
                 -m_Settings.Pelvis.MaximumDownOffset,
                 m_Settings.Pelvis.MaximumUpOffset);
-            float previous = m_PelvisOffset;
+            float previousReach = m_PelvisReachOffset;
             DecayCritical(
-                ref m_PelvisOffset,
-                ref m_PelvisVelocity,
-                desired,
+                ref m_PelvisReachOffset,
+                ref m_PelvisReachVelocity,
+                reachTarget,
                 m_Settings.Pelvis.HalfLifeSeconds,
                 deltaSeconds);
-            float maximumDelta = m_Settings.Pelvis.MaximumSpeed * deltaSeconds;
-            m_PelvisOffset = Mathf.Clamp(m_PelvisOffset, previous - maximumDelta, previous + maximumDelta);
-            return new PelvisResolution(desired, m_PelvisOffset, supportFoot, unreachableFoot);
+            float maximumReachDelta = m_Settings.Pelvis.MaximumSpeed * deltaSeconds;
+            m_PelvisReachOffset = Mathf.Clamp(
+                m_PelvisReachOffset,
+                previousReach - maximumReachDelta,
+                previousReach + maximumReachDelta);
+            float compensationTarget = UpdateActorMovementCompensation(body, deltaSeconds);
+            float targetOffset = Mathf.Clamp(
+                reachTarget + compensationTarget,
+                -m_Settings.Pelvis.MaximumDownOffset,
+                m_Settings.Pelvis.MaximumUpOffset);
+            m_PelvisOffset = Mathf.Clamp(
+                m_PelvisReachOffset + m_ActorMovementCompensationOffset,
+                -m_Settings.Pelvis.MaximumDownOffset,
+                m_Settings.Pelvis.MaximumUpOffset);
+            return new PelvisResolution(
+                targetOffset,
+                m_PelvisOffset,
+                reachTarget,
+                m_PelvisReachOffset,
+                compensationTarget,
+                m_ActorMovementCompensationOffset,
+                m_ActorMovementCompensationVelocity,
+                supportFoot,
+                unreachableFoot);
+        }
+
+        float UpdateActorMovementCompensation(CharacterBodyPresentationFrame body, float deltaSeconds)
+        {
+            if (!body.GroundedBefore || !body.GroundedAfter)
+            {
+                ClearActorMovementCompensation();
+                return 0f;
+            }
+
+            FootPlacementActorMovementCompensationMode mode = m_Settings.Pelvis.ActorMovementCompensationMode;
+            if (mode == FootPlacementActorMovementCompensationMode.ComponentSpace)
+            {
+                ClearActorMovementCompensation();
+                return 0f;
+            }
+
+            bool shouldCompensate = mode == FootPlacementActorMovementCompensationMode.WorldSpace ||
+                                    Mathf.Abs(body.SourceTranslationDelta.y) >= m_Settings.Pelvis.SuddenVerticalThreshold;
+            float visibleVerticalDelta = body.VisibleTranslationDelta.y;
+            if (shouldCompensate && Mathf.Abs(visibleVerticalDelta) > 0.000001f)
+            {
+                m_ActorMovementCompensationOffset = Mathf.Clamp(
+                    m_ActorMovementCompensationOffset - visibleVerticalDelta,
+                    -m_Settings.Pelvis.MaximumActorMovementCompensation,
+                    m_Settings.Pelvis.MaximumActorMovementCompensation);
+                m_ActorMovementCompensationVelocity = 0f;
+                return m_ActorMovementCompensationOffset;
+            }
+
+            float target = m_ActorMovementCompensationOffset;
+            float previous = m_ActorMovementCompensationOffset;
+            DecayCritical(
+                ref m_ActorMovementCompensationOffset,
+                ref m_ActorMovementCompensationVelocity,
+                0f,
+                m_Settings.Pelvis.ActorMovementCompensationHalfLifeSeconds,
+                deltaSeconds);
+            float maximumDelta = m_Settings.Pelvis.ActorMovementCompensationMaximumSpeed * deltaSeconds;
+            m_ActorMovementCompensationOffset = Mathf.Clamp(
+                m_ActorMovementCompensationOffset,
+                previous - maximumDelta,
+                previous + maximumDelta);
+            return target;
+        }
+
+        void ClearActorMovementCompensation()
+        {
+            m_ActorMovementCompensationOffset = 0f;
+            m_ActorMovementCompensationVelocity = 0f;
         }
 
         ResolvedFoot MarkLegUnreachable(FootRuntimeState state, ResolvedFoot foot)
         {
             Release(state, FootConstraintTransitionReason.LegUnreachable);
+            state.SolveWeight = 0f;
             var plan = new FootPlacementFootPlan(
                 foot.Plan.Side,
-                foot.Plan.Position,
-                foot.Plan.Rotation,
-                foot.Plan.PositionWeight,
-                foot.Plan.RotationWeight,
+                foot.Pose.AnklePosition,
+                foot.Pose.AnkleRotation,
+                foot.Pose.KneePosition,
+                0f,
+                0f,
+                0f,
                 FootConstraintState.Free,
                 FootConstraintTransitionReason.LegUnreachable);
             return new ResolvedFoot(
@@ -643,39 +780,80 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 foot.Kinematics,
                 foot.Prediction,
                 foot.Support,
+                foot.Feature,
+                foot.WorldVelocity,
                 foot.LockError,
                 foot.ReplantError,
                 foot.Weight,
-                foot.SurfaceIdentity);
+                foot.SurfaceIdentity,
+                foot.AnkleTwistDegrees,
+                foot.HeelLiftDistance,
+                foot.SeparationCorrection);
         }
 
-        Quaternion ResolveFootRotation(
-            Quaternion animatedRotation,
-            Vector3 animatedForward,
-            Vector3 supportNormal,
-            float heightDelta,
-            float policyWeight)
+        void ApplyFootSeparation(ref ResolvedFoot left, ref ResolvedFoot right)
         {
-            Quaternion inverseRoot = Quaternion.Inverse(m_Rig.VisualRoot.rotation);
-            Vector3 localNormal = inverseRoot * supportNormal.normalized;
-            float pitch = Mathf.Clamp(
-                Mathf.Atan2(localNormal.z, Mathf.Max(0.0001f, localNormal.y)) * Mathf.Rad2Deg,
-                -m_Settings.Rotation.MaximumPitchDegrees,
-                m_Settings.Rotation.MaximumPitchDegrees);
-            float roll = Mathf.Clamp(
-                -Mathf.Atan2(localNormal.x, Mathf.Max(0.0001f, localNormal.y)) * Mathf.Rad2Deg,
-                -m_Settings.Rotation.MaximumRollDegrees,
-                m_Settings.Rotation.MaximumRollDegrees);
-            Vector3 clampedNormal = m_Rig.VisualRoot.rotation *
-                                    (Quaternion.Euler(pitch, 0f, roll) * Vector3.up);
-            Vector3 forward = Vector3.ProjectOnPlane(animatedForward, clampedNormal).normalized;
-            if (forward.sqrMagnitude <= 0.0001f)
-                forward = Vector3.ProjectOnPlane(m_Rig.VisualRoot.forward, clampedNormal).normalized;
-            Quaternion surfaceRotation = Quaternion.LookRotation(forward, clampedNormal);
-            float alignment = heightDelta >= 0f
-                ? m_Settings.Rotation.AscentSurfaceAlignment
-                : m_Settings.Rotation.DescentSurfaceAlignment;
-            return Quaternion.Slerp(animatedRotation, surfaceRotation, Mathf.Clamp01(alignment * policyWeight));
+            float minimum = m_Settings.Constraint.MinimumFootSeparation;
+            Vector3 delta = right.Plan.Position - left.Plan.Position;
+            delta.y = 0f;
+            float distance = delta.magnitude;
+            if (distance >= minimum)
+                return;
+            bool leftMovable = left.Plan.ConstraintState == FootConstraintState.Free;
+            bool rightMovable = right.Plan.ConstraintState == FootConstraintState.Free;
+            if (!leftMovable && !rightMovable)
+                return;
+            Vector3 direction = distance > 0.0001f ? delta / distance : ResolveSeparationDirection(left, right);
+            float correction = minimum - distance;
+            if (leftMovable && rightMovable)
+            {
+                left = WithPlanPosition(left, left.Plan.Position - direction * (correction * 0.5f), correction * 0.5f);
+                right = WithPlanPosition(right, right.Plan.Position + direction * (correction * 0.5f), correction * 0.5f);
+            }
+            else if (leftMovable)
+                left = WithPlanPosition(left, left.Plan.Position - direction * correction, correction);
+            else
+                right = WithPlanPosition(right, right.Plan.Position + direction * correction, correction);
+        }
+
+        Vector3 ResolveSeparationDirection(ResolvedFoot left, ResolvedFoot right)
+        {
+            Vector3 animated = right.Pose.AnklePosition - left.Pose.AnklePosition;
+            animated.y = 0f;
+            if (animated.sqrMagnitude > 0.0001f)
+                return animated.normalized;
+            Vector3 rightAxis = m_Rig.VisualRoot.right;
+            rightAxis.y = 0f;
+            return rightAxis.normalized;
+        }
+
+        static ResolvedFoot WithPlanPosition(ResolvedFoot foot, Vector3 position, float separationCorrection)
+        {
+            var plan = new FootPlacementFootPlan(
+                foot.Plan.Side,
+                position,
+                foot.Plan.Rotation,
+                foot.Plan.BendGoalPosition,
+                foot.Plan.BendGoalWeight,
+                foot.Plan.PositionWeight,
+                foot.Plan.RotationWeight,
+                foot.Plan.ConstraintState,
+                foot.Plan.TransitionReason);
+            return new ResolvedFoot(
+                plan,
+                foot.Pose,
+                foot.Kinematics,
+                foot.Prediction,
+                foot.Support,
+                foot.Feature,
+                foot.WorldVelocity,
+                foot.LockError,
+                foot.ReplantError,
+                foot.Weight,
+                foot.SurfaceIdentity,
+                foot.AnkleTwistDegrees,
+                foot.HeelLiftDistance,
+                foot.SeparationCorrection + separationCorrection);
         }
 
         void BuildSnapshot(
@@ -689,22 +867,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.AnimationContributions,
                 m_DiagnosticContributions);
             m_Snapshot = new CharacterFootPlacementFrameSnapshot(
-                m_ActorId,
-                frame.RenderFrame,
-                frame.Body.PreviousTick,
-                frame.Body.CurrentTick,
-                frame.Body.ResetSequence,
-                m_Settings.PoseSourceLayerId,
-                m_DiagnosticContributions,
-                Mathf.Min(frame.AnimationContributions.Count, m_DiagnosticContributions.Length),
+                m_ActorId, frame.RenderFrame,
+                frame.Body.PreviousTick, frame.Body.CurrentTick, frame.Body.ResetSequence,
+                m_Settings.PoseSourceLayerId, m_Settings.FootAnalysis.CalibrationId.Value,
+                m_Settings.FootAnalysis.CalibrationRevision, m_Settings.FootAnalysis.AnalysisSourceId, m_Settings.FootAnalysis.AnalysisVersion,
+                m_Settings.FootAnalysis.AlgorithmVersion,
+                m_DiagnosticContributions, Mathf.Min(frame.AnimationContributions.Count, m_DiagnosticContributions.Length),
                 BuildFootSnapshot(left),
                 BuildFootSnapshot(right),
+                m_Settings.Pelvis.ActorMovementCompensationMode,
+                frame.Body.SourceTranslationDelta,
+                frame.Body.VisibleTranslationDelta,
+                frame.Body.GroundedBefore,
+                frame.Body.GroundedAfter,
+                pelvis.ReachTargetOffset,
+                pelvis.ReachCurrentOffset,
+                pelvis.ActorMovementCompensationTargetOffset,
+                pelvis.ActorMovementCompensationCurrentOffset,
+                pelvis.ActorMovementCompensationVelocity,
                 pelvis.TargetOffset,
                 pelvis.CurrentOffset,
                 pelvis.SupportFoot,
                 solverResult);
         }
-
         FootPlacementFootFrameSnapshot BuildFootSnapshot(ResolvedFoot foot)
         {
             return new FootPlacementFootFrameSnapshot(
@@ -727,8 +912,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 foot.ReplantError,
                 foot.Weight.Value,
                 foot.Plan.PositionWeight,
-                foot.Plan.Position,
-                foot.Plan.Rotation);
+                foot.Feature.SoleLocalVelocity, foot.WorldVelocity, foot.Feature.SoleHeight, foot.Feature.PlantConfidence,
+                foot.Feature.NextLandingConfidence, foot.Feature.NextLandingDelaySeconds,
+                foot.Feature.NextLandingLocalOffset,
+                foot.Support.HeelSupport.Identity, foot.Support.ToeSupport.Identity,
+                foot.Support.CurrentSupport.Identity, foot.Support.FutureLandingSupport.Identity,
+                foot.Support.GroundEnvelope.Count, foot.Support.GroundEnvelope.RejectReason,
+                foot.AnkleTwistDegrees, foot.HeelLiftDistance, foot.SeparationCorrection,
+                foot.Plan.Position, foot.Plan.Rotation);
         }
 
         void PublishDiagnostics()
@@ -746,7 +937,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Name = m_ActorId.Value,
                     LayerId = m_Settings.PoseSourceLayerId,
                     Status = $"L:{m_Snapshot.Left.ConstraintState}/R:{m_Snapshot.Right.ConstraintState}",
-                    Detail = $"body={m_Snapshot.PreviousBodyTick}->{m_Snapshot.CurrentBodyTick};reset={m_Snapshot.ResetSequence};leftSurface={m_Snapshot.Left.SurfaceIdentity};rightSurface={m_Snapshot.Right.SurfaceIdentity};leftReason={m_Snapshot.Left.TransitionReason};rightReason={m_Snapshot.Right.TransitionReason};leftPrediction={m_Snapshot.Left.PredictionHorizon:0.####}/clamped:{m_Snapshot.Left.PredictionHorizonClamped}/reject:{m_Snapshot.Left.PredictionRejectReason};rightPrediction={m_Snapshot.Right.PredictionHorizon:0.####}/clamped:{m_Snapshot.Right.PredictionHorizonClamped}/reject:{m_Snapshot.Right.PredictionRejectReason};pelvis={m_Snapshot.PelvisCurrentOffset:0.####};support={m_Snapshot.SupportFoot};queries={m_Snapshot.Left.QueryCount + m_Snapshot.Right.QueryCount}",
+                    Detail = CharacterFootPlacementDiagnosticFormatter.Format(m_Snapshot),
                     Weight = m_Snapshot.Left.SolverWeight,
                     FinalWeight = m_Snapshot.Right.SolverWeight,
                     Time = m_Snapshot.PelvisTargetOffset,
@@ -767,7 +958,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Left.Reset(reason);
             m_Right.Reset(reason);
             m_PelvisOffset = 0f;
-            m_PelvisVelocity = 0f;
+            m_PelvisReachOffset = 0f;
+            m_PelvisReachVelocity = 0f;
+            ClearActorMovementCompensation();
             m_Snapshot = default;
             m_LastRenderFrame = renderFrame;
             m_ResetSequence = resetSequence;
@@ -894,13 +1087,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         readonly struct ContactDecision
         {
-            public ContactDecision(bool canPlant, bool shouldRelease)
+            public ContactDecision(bool canPlant, bool shouldRelease, Vector3 worldVelocity)
             {
                 CanPlant = canPlant;
                 ShouldRelease = shouldRelease;
+                WorldVelocity = worldVelocity;
             }
             public bool CanPlant { get; }
             public bool ShouldRelease { get; }
+            public Vector3 WorldVelocity { get; }
         }
 
         readonly struct FootKinematics
@@ -922,17 +1117,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         readonly struct ResolvedFoot
         {
-            public ResolvedFoot(FootPlacementFootPlan plan, CharacterFootPlacementAnimatedFootPose pose, FootKinematics kinematics, PredictedFootprint prediction, FootPlacementSupportResult support, float lockError, float replantError, CharacterFootPlacementPolicyWeight weight, int surfaceIdentity)
-            { Plan = plan; Pose = pose; Kinematics = kinematics; Prediction = prediction; Support = support; LockError = lockError; ReplantError = replantError; Weight = weight; SurfaceIdentity = surfaceIdentity; }
+            public ResolvedFoot(FootPlacementFootPlan plan, CharacterFootPlacementAnimatedFootPose pose, FootKinematics kinematics, PredictedFootprint prediction, FootPlacementSupportResult support, AnimationFootFeatureSample feature, Vector3 worldVelocity, float lockError, float replantError, CharacterFootPlacementFeatureFrame weight, int surfaceIdentity, float ankleTwistDegrees, float heelLiftDistance, float separationCorrection)
+            { Plan = plan; Pose = pose; Kinematics = kinematics; Prediction = prediction; Support = support; Feature = feature; WorldVelocity = worldVelocity; LockError = lockError; ReplantError = replantError; Weight = weight; SurfaceIdentity = surfaceIdentity; AnkleTwistDegrees = ankleTwistDegrees; HeelLiftDistance = heelLiftDistance; SeparationCorrection = separationCorrection; }
             public FootPlacementFootPlan Plan { get; }
             public CharacterFootPlacementAnimatedFootPose Pose { get; }
             public FootKinematics Kinematics { get; }
             public PredictedFootprint Prediction { get; }
             public FootPlacementSupportResult Support { get; }
+            public AnimationFootFeatureSample Feature { get; }
+            public Vector3 WorldVelocity { get; }
             public float LockError { get; }
             public float ReplantError { get; }
-            public CharacterFootPlacementPolicyWeight Weight { get; }
+            public CharacterFootPlacementFeatureFrame Weight { get; }
             public int SurfaceIdentity { get; }
+            public float AnkleTwistDegrees { get; }
+            public float HeelLiftDistance { get; }
+            public float SeparationCorrection { get; }
         }
 
         readonly struct VerticalInterval
@@ -944,10 +1144,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         readonly struct PelvisResolution
         {
-            public PelvisResolution(float targetOffset, float currentOffset, FootPlacementSupportFoot supportFoot, CharacterFootSide unreachableFoot)
-            { TargetOffset = targetOffset; CurrentOffset = currentOffset; SupportFoot = supportFoot; UnreachableFoot = unreachableFoot; }
+            public PelvisResolution(
+                float targetOffset,
+                float currentOffset,
+                float reachTargetOffset,
+                float reachCurrentOffset,
+                float actorMovementCompensationTargetOffset,
+                float actorMovementCompensationCurrentOffset,
+                float actorMovementCompensationVelocity,
+                FootPlacementSupportFoot supportFoot,
+                CharacterFootSide unreachableFoot)
+            {
+                TargetOffset = targetOffset;
+                CurrentOffset = currentOffset;
+                ReachTargetOffset = reachTargetOffset;
+                ReachCurrentOffset = reachCurrentOffset;
+                ActorMovementCompensationTargetOffset = actorMovementCompensationTargetOffset;
+                ActorMovementCompensationCurrentOffset = actorMovementCompensationCurrentOffset;
+                ActorMovementCompensationVelocity = actorMovementCompensationVelocity;
+                SupportFoot = supportFoot;
+                UnreachableFoot = unreachableFoot;
+            }
             public float TargetOffset { get; }
             public float CurrentOffset { get; }
+            public float ReachTargetOffset { get; }
+            public float ReachCurrentOffset { get; }
+            public float ActorMovementCompensationTargetOffset { get; }
+            public float ActorMovementCompensationCurrentOffset { get; }
+            public float ActorMovementCompensationVelocity { get; }
             public FootPlacementSupportFoot SupportFoot { get; }
             public CharacterFootSide UnreachableFoot { get; }
         }

@@ -3,6 +3,26 @@
 ## Purpose
 定义 Character authoring 经 validated Semantic IR artifact 和显式 Numeric Target 生成不可变 portable Simulation Program、ProgramCatalog 与 Presentation Projection 的正式编译和发布边界。
 ## Requirements
+### Requirement: Projection Foot Analysis必须拥有独立规范身份
+
+Projection Foot Analysis identity MUST包含其所消费artifact的canonical content hash，以及AnimationClip、Analysis Source、Sampling Rig、Calibration、采样参数和算法版本的规范identity。Library路径与Editor-only Source/Sampling Rig对象 MUST不进入Runtime Projection payload。Projection stale detector MUST按expected artifact identity与content hash判断，不得按名称、path、duration或文件时间匹配。
+
+#### Scenario: Artifact内容变化
+
+- **WHEN** AnimationClip或Analysis输入变化并生成新artifact
+- **THEN** ProjectionRevision MUST变化且旧Projection MUST变为Stale
+- **AND** Gameplay ProgramHash MUST保持不变
+
+### Requirement: Projection不得保存原始动画采样快照
+
+Foot Analysis MUST以经过确定性key reduction的有限curve set保存。Projection MUST不保存每帧骨骼Transform快照、Sampling Rig Prefab实例、Playable状态或可编辑左右脚Window资产。相同输入重复Build MUST生成相同canonical feature payload和ProjectionRevision。
+
+#### Scenario: 多个producer复用同一AnimationClip
+
+- **WHEN** Build在同一事务内分析相同clip与Source组合
+- **THEN** Editor MAY复用采样工作结果
+- **AND** 发布结果 MUST仍按每个stable clip binding精确引用而不产生运行时字符串字典
+
 ### Requirement: Character authoring 必须按显式 Numeric Target 生成 Simulation Program
 
 系统 MUST先以 CharacterPipelineDefinition 为唯一编译根运行 Character Semantic Frontend，生成经过 canonical 校验的 Gameplay Semantic IR artifact，再由显式 Numeric Target 生成 CharacterSimulationProgram。Target Compiler 的正式输入 MUST是 validated artifact，MUST不接收 CharacterPipelineDefinition、Graph、Node、Timeline、Unity object 或 Frontend 私有 discovered model。每个 target artifact MUST只包含一个 NumericProfile；同一 source MAY为不同 target 生成不同 Program，但 MUST不重新实现或改变 Semantic IR operation。Runtime MUST不直接从 authoring object 或 Semantic IR 创建 gameplay runtime clone。
@@ -89,15 +109,35 @@ Program manifest MUST声明 NumericProfile、scalar/vector ABI、operation-set v
 - **THEN** Host MUST拒绝创建 Session并报告 stale source
 - **AND** MUST不从 ProgramAsset metadata、旧 `.csim`或 `.csir`选择近似匹配结果
 
-### Requirement: Presentation Projection 必须与 Gameplay Program 分离
+### Requirement: Presentation Projection 必须与 Gameplay Numeric Target 分离
 
-Compiler MUST从同一 authoring root 生成 CharacterPresentationProjection，用于映射 Program producer identity 到 AnimationClip、Animancer、Camera 和 Cue 资源。Projection MUST不保存 Graph flow、State transition、Timeline Window、MotionCurve 或 GameplayEffect 真值。
+Compiler MUST从validated Gameplay Semantic IR artifact建立唯一target-neutral `CharacterPresentationSemanticContract`，并与同一authoring root的Presentation inventory及正式Animation Analysis artifacts生成`CharacterPresentationProjection`。Contract MUST规范保存ProgramId、Gameplay SourceRevision、SemanticHash、按index排序的producer contract与ContractHash。Projection MUST保存该ContractHash与独立ProjectionRevision，MUST不保存或接收Float32/Fixed ProgramHash、LayoutHash、NumericProfile、Target ABI、State codec或target-specific constant。Projection Compiler的正式输入 MUST不包含任何Numeric Target Program；Float32与Fixed Program只能在各自严格加载后通过Target Adapter生成同一Presentation contract。
+
+Projection用于映射producer identity到AnimationClip、Animancer、Camera、Cue、Equipment Visual资源，以及由显式Presentation Analysis Source生成的每脚动画特征。Projection MAY保存Calibration/Analysis identity和压缩后的表现feature curve，但 MUST不保存Graph flow、State transition、Timeline Window、MotionCurve、GameplayEffect真值、Gameplay contact、Sampling Rig实例或Editor采样状态。生成特征 MUST不进入Semantic IR、Numeric Program、Character State、Snapshot、Gameplay Hash或Network协议。
 
 #### Scenario: 客户端定位攻击动画
 
-- **WHEN** Program 输出 Attack producer command
-- **THEN** Presentation MUST通过 Projection 定位 Unity 动画资源
-- **AND** Projection MUST不决定 Attack 状态或 Window
+- **WHEN** 任一Numeric Target Program输出Attack producer command
+- **THEN** Presentation MUST通过Projection定位Unity动画资源并采样匹配的Foot Analysis
+- **AND** Projection MUST不决定Attack状态、Window或Gameplay命中
+
+#### Scenario: 同一语义生成Float32与Fixed Program
+
+- **WHEN** 同一validated Semantic IR生成Float32 Program与Fixed Program
+- **THEN** 两个Target Adapter MUST生成相同Presentation ContractHash并加载同一Projection
+- **AND** 两个Program MUST继续拥有各自不同的ProgramHash、LayoutHash、NumericProfile与ABI
+
+#### Scenario: 纯表现分析变化
+
+- **WHEN** AnimationClip内容、Analysis Source内容或Rig Calibration改变但Gameplay authoring语义不变
+- **THEN** ProjectionRevision MUST改变
+- **AND** Gameplay SourceRevision、Semantic operation、State layout、Numeric Program payload与各Target ProgramHash MUST保持不变
+
+#### Scenario: Graph Camera producer编译
+
+- **WHEN** Projection Compiler处理Graph来源的Camera producer
+- **THEN** MUST从validated Semantic IR operation、reference、source map与numeric-neutral literal生成Camera binding
+- **AND** MUST不先生成Float32或Fixed Program再反读target constant
 
 ### Requirement: Session ProgramCatalog 必须不可变且支持每 Actor 显式绑定
 
@@ -141,19 +181,25 @@ Compiler MUST从同一 authoring root 生成 CharacterPresentationProjection，�
 
 ### Requirement: Program 与 Projection 必须在同一 Build Transaction 中发布
 
-Character Simulation build MUST按 `Frontend artifact -> Numeric Target Program -> Presentation Projection -> identity validation -> asset publish` 顺序执行。Semantic IR artifact、Program 与 Projection MUST共享精确 ProgramId、SourceRevision、SemanticHash 与 operation/producer source identity；Projection MUST再匹配目标 ProgramHash。任一阶段失败时 MUST不把本次 Program 或 Projection 作为成功产物发布，也 MUST不更新一半 generated reference。
+Character Simulation Build MUST按`Frontend artifact -> Presentation contract -> resolve exact Animation Analysis artifacts -> independently compile Presentation Projection and requested Numeric Target Programs -> cross-artifact identity validation -> atomic publish`执行。ProjectionRevision MUST由Projection schema、Presentation ContractHash、Presentation authoring dependency与Analysis artifact identity/content hash规范计算，MUST不包含任一Target ProgramHash、NumericProfile或ABI。单clip artifact MAY在该事务之前独立生成，但Build MUST重新校验其完整identity和payload hash。Semantic IR cache、Projection、全部请求Target canonical artifact、Unity wrapper与generated reference MUST先完成stage和exact重读，再作为一个发布组提交；任一artifact、Target或Projection阶段失败 MUST恢复完整旧发布组，不得更新一半generated reference。
 
-#### Scenario: Projection Producer 缺失
+#### Scenario: Ready artifact被复用
 
-- **WHEN** Float32 Program 已成功生成但 Projection 缺少 Semantic IR 中声明的 animation producer
-- **THEN** 整个 build transaction MUST失败
-- **AND** Definition MUST不绑定新 Program 与旧 Projection 的混合组合
+- **WHEN** Build发现全部artifact Ready且精确匹配
+- **THEN** Build MAY跳过AnimationClip重新采样
+- **AND** Projection、请求Target Program发布事务和最终contract校验 MUST仍完整执行
 
-#### Scenario: 自动 stale build
+#### Scenario: Artifact损坏
 
-- **WHEN** Asset 变更使 Definition source revision 过期并触发自动 rebuild
-- **THEN** 自动 rebuild MUST调用与显式 Compile 命令相同的 Frontend、artifact、Target 和 Projection transaction
-- **AND** MUST不使用只在自动路径存在的内存 lowering 或旧 Program fallback
+- **WHEN** 任一artifact存在但codec或hash校验失败
+- **THEN** Build MUST失败并定位对应stable clip binding
+- **AND** MUST不使用旧Projection或默认feature继续发布
+
+#### Scenario: Fixed-only产品构建
+
+- **WHEN** Product Build显式只请求Fixed Numeric Target
+- **THEN** Build MUST从同一Frontend artifact生成唯一Projection与Fixed Program并验证相同Presentation contract
+- **AND** MUST不生成Float32 Program作为Projection编译的隐藏前置产物
 
 ### Requirement: Compiler Diagnostics 与 Agent 必须复用正式 Frontend 和 Target 阶段
 
@@ -231,7 +277,7 @@ Target Program MUST保存按channel索引的canonical Motion Modifier descriptor
 
 ### Requirement: MotionWarp 跨 Tick 数据必须进入 Character State Layout
 
-Program MUST为每个MotionWarp operation声明恢复后继续执行所需的typed state，包括active/generation、ActionInstance、窗口起始pose、总position/yaw correction与上一累计progress。同Step raw contribution、resolved channel、modifier output与CharacterMotionRequest MUST保持transient且不得进入committed state。
+Program MUST为每个MotionWarp operation声明恢复后继续执行所需的typed state，包括active/initialized、generation、ActionInstance、窗口开始Body pose、源窗口起始pose、有效Target Pose、Limit结果、previous Warped Cumulative Pose、上一position/yaw progress与source operation identity。同Step raw contribution、resolved channel、current modifier output与CharacterMotionRequest MUST保持transient且不得进入committed state。Program MUST不再保存冻结total position/yaw correction或nominal curve-end residual。
 
 #### Scenario: 检查 MotionWarp state layout
 
@@ -240,7 +286,7 @@ Program MUST为每个MotionWarp operation声明恢复后继续执行所需的typ
 
 ### Requirement: Program 必须声明Body Motion descriptor与能力身份
 
-Target Program MUST保存由Definition正式Profile降低得到的Body Motion descriptor，包括GravityAcceleration、MaximumFallSpeed与semantic version，并 MUST将其纳入canonical bytes、ProgramHash、source revision和required world capabilities。Float32与Fixed Program MUST从同一numeric-neutral descriptor产生各自Target数值payload。Runtime MUST不读取authoring Profile、Scene默认或Network Model配置补齐descriptor；旧ABI或缺失descriptor的artifact MUST被拒绝。当前Float32 Program ABI MUST为6，Fixed Q32.32 Program ABI MUST为5。
+Target Program MUST保存由Definition正式Profile降低得到的Body Motion descriptor，包括GravityAcceleration、MaximumFallSpeed与semantic version，并 MUST将其纳入canonical bytes、ProgramHash、source revision和required world capabilities。Float32与Fixed Program MUST从同一numeric-neutral descriptor产生各自Target数值payload。Runtime MUST不读取authoring Profile、Scene默认或Network Model配置补齐descriptor；旧ABI或缺失descriptor的artifact MUST被拒绝。当前Float32 Program ABI MUST为7，Fixed Q32.32 Program ABI MUST为6。
 
 #### Scenario: Fixed Program降低Body Motion配置
 
@@ -259,3 +305,52 @@ Target Program MUST保存由Definition正式Profile降低得到的Body Motion de
 - **WHEN** composition读取MotionWarp版本升级前的Program或State payload
 - **THEN** composition MUST在Session启动前明确失败
 - **AND** MUST不把缺失descriptor解释为无Modifier
+
+### Requirement: Compiled Program必须包含不可变Equipment catalog和layout
+
+Target Program MUST包含canonical Equipment Slot、Route、Equipment、Feature、Parameter constant、Action binding、graph entry、Tag/Effect contribution、Presentation requirement与Initial Loadout catalog，并为Equipment aggregate、Feature local state、pending change和Action Equipment Context分配类型化state layout。Catalog和layout MUST参与Program/Layout identity，Runtime MUST不从Unity authoring资产补建。
+
+#### Scenario: Program加载装备catalog
+
+- **WHEN** Runtime创建Corin ProgramCatalog
+- **THEN** MUST一次构建Equipment lookup和entry layout
+- **AND** 每Tick MUST不重扫Feature、Graph或Action列表
+
+#### Scenario: Equipment catalog bytes被修改
+
+- **WHEN** canonical equipment bytes与ProgramHash不匹配
+- **THEN** Program load MUST拒绝
+- **AND** MUST不只重算Equipment子表继续运行
+
+### Requirement: Program identity必须覆盖Equipment authoring真相
+
+SourceRevision、SemanticHash、ProgramHash与LayoutHash MUST按各自现行职责覆盖Equipment Profile及全部引用Feature/Graph/Timeline/parameter/Tag/Effect/Presentation requirement。相同source在Float32与Fixed MAY具有不同ProgramHash/LayoutHash，但 MUST具有可核对的同一SemanticHash；不同Equipment catalog的Program snapshot MUST不可交换。
+
+#### Scenario: 只修改武器参数
+
+- **WHEN** 作者修改Sawblade MotionScale
+- **THEN** SourceRevision、SemanticHash与目标ProgramHash MUST改变
+- **AND** 旧generated Program MUST被判定过期
+
+#### Scenario: 只修改Unity Prefab视觉资源
+
+- **WHEN** SpawnedVisualAsset引用或binding pose改变
+- **THEN** Presentation Projection identity MUST改变
+- **AND** 若Program只保存稳定VisualBindingId，Gameplay SemanticHash MUST不因Unity表现内容无意义改变
+
+### Requirement: Program Execution Layout必须预构建Equipment索引
+
+Program runtime initialization MUST按Program一次构建Slot/Route/Equipment/Feature/Parameter/entry和state address索引，并验证引用闭包。Actor/Tick热路径 MUST使用稳定index或typed handle，不得执行LINQ catalog重建、字符串查找、AssetDatabase访问或Feature list排序。
+
+#### Scenario: 每Tick解析PrimaryAction
+
+- **WHEN** Route Host解析MainWeapon PrimaryAction
+- **THEN** MUST通过预构建Slot/Route/Feature index定位entry
+- **AND** MUST不分配临时集合或按字符串扫描
+
+#### Scenario: 初始化发现悬空entry
+
+- **WHEN** Route catalog引用不存在的operation entry
+- **THEN** Program execution layout build MUST失败
+- **AND** Session MUST不进入Active
+

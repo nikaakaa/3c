@@ -30,6 +30,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
 
     public interface ILocalSimulationActorRegistration : IFloat32SimulationActorRegistration
     {
-        ISimulationInputAdapter LocalInput { get; }
+        ICharacterControlSourceRuntime LocalControlSource { get; }
     }
 }

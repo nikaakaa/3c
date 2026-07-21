@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.DeterministicRollback;
 using ThirdPersonSimulation.Fixed;
@@ -9,7 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
     [CreateAssetMenu(fileName = "DeterministicRollbackPipeline", menuName = "3C/Simulation/Deterministic Rollback/Pipeline")]
     public sealed class DeterministicRollbackPipelineDefinition :
         SimulationPipelineDefinition,
-        IDeterministicRollbackPipelineRuntimePackageProvider
+        IFixedSimulationPipelineDefinition
     {
         [SerializeField, Min(0)] int m_OffensiveRequestDelayTicks = 2;
         [SerializeField, Min(2)] int m_HistoryLengthTicks = 180;
@@ -48,5 +49,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 BuildPolicy(),
                 state ?? throw new ArgumentNullException(nameof(state)));
         }
+
+        public SimulationPipelinePassFactoryCatalog BuildFixedPortableFactoryCatalog() =>
+            RollbackPipelineRuntimePackageBuilder.CreatePortableFactoryCatalog(BuildPolicy());
     }
 }

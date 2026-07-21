@@ -104,6 +104,7 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("OnEnter")]
     [NodePath("Base/State/OnEnter")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class StateOnEnterNode : StateLifecycleNode
     {
     }
@@ -111,6 +112,7 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("OnExit")]
     [NodePath("Base/State/OnExit")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class StateOnExitNode : StateLifecycleNode
     {
     }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ThirdPersonSimulation;
 
 namespace BTSMTL.Timeline
 {
@@ -27,14 +28,14 @@ namespace BTSMTL.Timeline
         public TimelineAnimationMarkerSyncGroupMember(
             string producerIdentity,
             string displayName,
-            string layerId,
+            AnimationChannelId animationChannelId,
             string syncGroupId,
             string directedPairCoverage,
             IReadOnlyList<string> markerIds)
         {
             ProducerIdentity = producerIdentity ?? string.Empty;
             DisplayName = displayName ?? string.Empty;
-            LayerId = layerId ?? string.Empty;
+            AnimationChannelId = animationChannelId;
             SyncGroupId = syncGroupId ?? string.Empty;
             DirectedPairCoverage = directedPairCoverage ?? string.Empty;
             MarkerIds = markerIds ?? System.Array.Empty<string>();
@@ -42,7 +43,7 @@ namespace BTSMTL.Timeline
 
         public string ProducerIdentity { get; }
         public string DisplayName { get; }
-        public string LayerId { get; }
+        public AnimationChannelId AnimationChannelId { get; }
         public string SyncGroupId { get; }
         public string DirectedPairCoverage { get; }
         public IReadOnlyList<string> MarkerIds { get; }

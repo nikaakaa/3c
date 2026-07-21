@@ -28,11 +28,11 @@ Bootstrap Scene、启动 UI、最小字体、错误资源和 AOT 启动运行器
 
 ### Requirement: Editor 本地玩法入口必须与产品启动入口隔离
 
-项目 MUST保留 Editor-only 的正式 Sandbox Gameplay Scene 直接运行入口，用于验证 IK、Motion Warp 与角色管线。该入口 MUST复用产品当前唯一 Gameplay Scene 地址，MUST不复制第二份场景配置，MUST不修改普通 Player Build Settings、ProductStartupProfile、ResourceEndpoint 或 AuthEndpoint，MUST不进入 Release Player，也 MUST不在商业启动失败后成为离线 fallback。项目没有 Motion Matching、Pose Search 或 Pose Database 时，工具与文档 MUST不把现有 Motion Warp 或动画状态管线标为 Motion Matching。
+项目 MUST保留Editor-only的正式Gameplay Lab直接运行入口，用于验证IK、步态相位匹配、Motion Warp、KCC与角色管线。该入口 MUST使用独立`Assets/Scenes/GameplayLab/GameplayLab.unity`并复用正式角色、Presentation与测试环境作者来源，MUST不替换产品`StandaloneGameplay`，MUST不修改普通Player Build Settings、ProductStartupProfile、ResourceEndpoint或AuthEndpoint，MUST不进入Release Player，也 MUST不在商业启动失败后成为离线fallback。项目没有Motion Matching、Pose Search或Pose Database时，工具与文档 MUST不把现有Motion Warp或动画状态管线标为Motion Matching。
 
 #### Scenario: 开发者直接验证本地 IK
 
-- **WHEN** 开发者从 `Tools/3C/Local Play/Sandbox` 启动正式 Sandbox Gameplay Scene
+- **WHEN** 开发者从`Tools/3C/Launcher`的`单机 / Gameplay Lab`分组运行Gameplay Lab
 - **THEN** 工具 MUST先校验场景包含正式可琳 Prefab、Foot Placement composition 与 FinalIK solver
 - **AND** MUST直接运行目标场景而不经过 ProductBootstrap、资源版本同步或认证
 - **AND** 退出 Play 后 MUST恢复开发者原先打开的场景

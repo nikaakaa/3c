@@ -11,21 +11,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         PresentationMissing,
         ProgramMissing,
-        LayerMissing,
-        LayerDuplicate,
-        LayerInvalid,
-        TransitionLibraryMissing,
+        PosePayloadInvalid,
+        PoseSlotMissing,
+        PoseSlotDuplicate,
+        AnimationChannelDuplicate,
         ProducerIdentityInvalid,
         ProducerDuplicate,
-        ProducerLayerUnknown,
-        BindingMissing,
-        BindingDuplicate,
-        BindingOrphan,
-        BindingTransitionMissing,
-        BindingTransitionInvalid,
-        BindingTransitionNotInLibrary,
-        BindingFadeModeUnsupported,
-        BindingEasingInvalid,
+        ProducerChannelUnknown,
+        BindingSourceInvalid,
+        BindingDurationInvalid,
         BindingMarkerSyncInvalid,
         ProjectionInvalid
     }
@@ -36,104 +30,120 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPresentationValidationCode code,
             string message,
             AnimationProducerId producerId = default,
-            string layerId = "")
+            AnimationChannelId animationChannelId = default,
+            PoseSlotId poseSlotId = default)
         {
             Code = code;
             Message = message ?? string.Empty;
             ProducerId = producerId;
-            LayerId = layerId ?? string.Empty;
+            AnimationChannelId = animationChannelId;
+            PoseSlotId = poseSlotId;
         }
 
         public AnimationPresentationValidationCode Code { get; }
         public string Message { get; }
         public AnimationProducerId ProducerId { get; }
-        public string LayerId { get; }
+        public AnimationChannelId AnimationChannelId { get; }
+        public PoseSlotId PoseSlotId { get; }
+    }
+
+    public readonly struct ResolvedAnimationPoseSlot
+    {
+        public ResolvedAnimationPoseSlot(
+            int index,
+            CharacterPresentationPoseSlotProgramEntry programEntry,
+            AnimationBlendSlotPayload blendPayload)
+        {
+            if (index < 0 || programEntry == null || blendPayload == null ||
+                programEntry.Index != index || programEntry.PoseSlotId != blendPayload.PoseSlotId ||
+                programEntry.AnimationChannelId != blendPayload.AnimationChannelId ||
+                programEntry.OutputPolicy != blendPayload.OutputPolicy)
+            {
+                throw new ArgumentException("Resolved Animation Pose Slot is invalid.");
+            }
+            Index = index;
+            PoseSlotId = programEntry.PoseSlotId;
+            AnimationChannelId = programEntry.AnimationChannelId;
+            OutputPolicy = programEntry.OutputPolicy;
+            BlendPayload = blendPayload;
+        }
+
+        public int Index { get; }
+        public PoseSlotId PoseSlotId { get; }
+        public AnimationChannelId AnimationChannelId { get; }
+        public PoseSlotOutputPolicy OutputPolicy { get; }
+        public AnimationBlendSlotPayload BlendPayload { get; }
     }
 
     public readonly struct ResolvedAnimationProducerBinding
     {
         public ResolvedAnimationProducerBinding(
+            int programProducerIndex,
             AnimationProducerId producerId,
-            string layerId,
-            TransitionAssetBase transition,
-            Easing.Function easing,
+            AnimationChannelId animationChannelId,
+            PoseSlotId poseSlotId,
+            TransitionAssetBase source,
             int authoredClipCount)
         {
+            ProgramProducerIndex = programProducerIndex;
             ProducerId = producerId;
-            LayerId = layerId ?? string.Empty;
-            Transition = transition;
-            Easing = easing;
+            AnimationChannelId = animationChannelId;
+            PoseSlotId = poseSlotId;
+            Source = source;
             AuthoredClipCount = authoredClipCount;
         }
 
+        public int ProgramProducerIndex { get; }
         public AnimationProducerId ProducerId { get; }
-        public string LayerId { get; }
-        public TransitionAssetBase Transition { get; }
-        public Easing.Function Easing { get; }
+        public AnimationChannelId AnimationChannelId { get; }
+        public PoseSlotId PoseSlotId { get; }
+        public TransitionAssetBase Source { get; }
         public int AuthoredClipCount { get; }
         public bool UsesMixer => AuthoredClipCount > 1;
-        public bool IsValid => ProducerId.IsValid &&
-                               !string.IsNullOrEmpty(LayerId) &&
-                               Transition &&
-                               Transition.IsValid &&
-                               AuthoredClipCount > 0 &&
-                               Enum.IsDefined(typeof(Easing.Function), Easing);
+        public bool IsValid => ProgramProducerIndex >= 0 && ProducerId.IsValid && AnimationChannelId.IsValid &&
+                               PoseSlotId.IsValid && Source && Source.IsValid && AuthoredClipCount > 0;
     }
 
     public sealed class CharacterAnimationPresentationBindingIndex
     {
-        readonly Dictionary<string, ResolvedAnimationLayer> m_Layers =
-            new Dictionary<string, ResolvedAnimationLayer>(StringComparer.Ordinal);
+        readonly Dictionary<PoseSlotId, ResolvedAnimationPoseSlot> m_Slots =
+            new Dictionary<PoseSlotId, ResolvedAnimationPoseSlot>();
+        readonly Dictionary<AnimationChannelId, ResolvedAnimationPoseSlot> m_Channels =
+            new Dictionary<AnimationChannelId, ResolvedAnimationPoseSlot>();
         readonly Dictionary<AnimationProducerId, ResolvedAnimationProducerBinding> m_Bindings =
             new Dictionary<AnimationProducerId, ResolvedAnimationProducerBinding>();
         readonly List<AnimationPresentationValidationIssue> m_Issues =
             new List<AnimationPresentationValidationIssue>();
 
         public bool IsValid { get; private set; }
-        public TransitionLibraryAsset TransitionLibrary { get; private set; }
         public CharacterPresentationProjection Projection { get; private set; }
-        public IReadOnlyDictionary<string, ResolvedAnimationLayer> Layers => m_Layers;
+        public IReadOnlyDictionary<PoseSlotId, ResolvedAnimationPoseSlot> Slots => m_Slots;
+        public IReadOnlyDictionary<AnimationChannelId, ResolvedAnimationPoseSlot> Channels => m_Channels;
         public IReadOnlyDictionary<AnimationProducerId, ResolvedAnimationProducerBinding> Bindings => m_Bindings;
         public IReadOnlyList<AnimationPresentationValidationIssue> Issues => m_Issues;
 
-        public bool TryGetLayer(string layerId, out ResolvedAnimationLayer layer)
-        {
-            return m_Layers.TryGetValue(layerId ?? string.Empty, out layer);
-        }
+        public bool TryGetSlot(PoseSlotId poseSlotId, out ResolvedAnimationPoseSlot slot) =>
+            m_Slots.TryGetValue(poseSlotId, out slot);
 
-        public bool TryGetBinding(AnimationProducerId producerId, out ResolvedAnimationProducerBinding binding)
-        {
-            return m_Bindings.TryGetValue(producerId, out binding);
-        }
+        public bool TryGetSlot(AnimationChannelId animationChannelId, out ResolvedAnimationPoseSlot slot) =>
+            m_Channels.TryGetValue(animationChannelId, out slot);
 
-        public static CharacterAnimationPresentationBindingIndex Build(
-            CharacterPresentationProjection projection,
-            CharacterSimulationProgram program,
-            List<string> errors)
-        {
-            var index = new CharacterAnimationPresentationBindingIndex();
-            index.IsValid = index.BuildInternal(
-                projection,
-                program,
-                program == null ? null : CharacterPresentationProgramIdentity.From(program),
-                errors);
-            return index;
-        }
+        public bool TryGetBinding(AnimationProducerId producerId, out ResolvedAnimationProducerBinding binding) =>
+            m_Bindings.TryGetValue(producerId, out binding);
 
         public static CharacterAnimationPresentationBindingIndex Build(
             CharacterPresentationProjection projection,
-            CharacterPresentationProgramIdentity program,
+            CharacterPresentationSemanticContract contract,
             List<string> errors)
         {
             var index = new CharacterAnimationPresentationBindingIndex();
-            index.IsValid = index.BuildInternal(projection, null, program, errors);
+            index.IsValid = index.BuildInternal(projection, contract, errors);
             return index;
         }
 
         bool BuildInternal(
             CharacterPresentationProjection projection,
-            CharacterSimulationProgram exactProgram,
-            CharacterPresentationProgramIdentity program,
+            CharacterPresentationSemanticContract contract,
             List<string> errors)
         {
             if (projection == null)
@@ -142,7 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Character Presentation Projection is missing.", errors);
                 return false;
             }
-            if (program == null)
+            if (contract == null)
             {
                 Report(AnimationPresentationValidationCode.ProgramMissing,
                     "Animation Presentation validation requires a compiled Character Simulation Program.", errors);
@@ -150,10 +160,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             try
             {
-                if (exactProgram != null)
-                    projection.RequireProgram(exactProgram);
-                else
-                    projection.RequireSemanticProgram(program);
+                projection.RequireContract(contract);
+                projection.RequirePosePayload();
             }
             catch (Exception exception)
             {
@@ -162,28 +170,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             Projection = projection;
-            bool valid = CollectLayers(projection.Layers, errors);
-            TransitionLibrary = projection.TransitionLibrary;
-            if (!TransitionLibrary || TransitionLibrary.Library == null)
-            {
-                Report(AnimationPresentationValidationCode.TransitionLibraryMissing,
-                    "Character Presentation Projection requires one Animancer TransitionLibraryAsset.", errors);
-                valid = false;
-            }
-
-            if (projection.Producers.Count != program.ProducerIdentities.Count)
+            bool valid = CollectPoseSlots(projection, errors);
+            if (projection.Producers.Count != contract.Producers.Count)
             {
                 Report(AnimationPresentationValidationCode.ProjectionInvalid,
                     "Character Presentation Projection producer count does not match the Program manifest.", errors);
                 valid = false;
             }
+
             var producerIds = new HashSet<AnimationProducerId>();
             var markerPairSets = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             for (int i = 0; i < projection.Producers.Count; i++)
             {
                 CharacterPresentationProducerEntry producer = projection.Producers[i];
-                if (producer == null || producer.ProgramProducerIndex != i || i >= program.ProducerIdentities.Count ||
-                    !string.Equals(producer.ProgramProducerIdentity, program.ProducerIdentities[i], StringComparison.Ordinal))
+                if (producer == null || producer.ProgramProducerIndex != i || i >= contract.Producers.Count ||
+                    !string.Equals(producer.ProgramProducerIdentity, contract.Producers[i].Identity, StringComparison.Ordinal))
                 {
                     Report(AnimationPresentationValidationCode.ProjectionInvalid,
                         $"Character Presentation Projection producer #{i} does not match the Program manifest.", errors);
@@ -192,144 +193,138 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 if (producer.Kind != CharacterPresentationProducerKind.Animation)
                     continue;
+
                 AnimationProducerId producerId = producer.ProducerId;
                 CharacterPresentationAnimationBinding animation = producer.Animation;
                 if (!producerId.IsValid || !producerIds.Add(producerId))
                 {
                     Report(AnimationPresentationValidationCode.ProducerIdentityInvalid,
-                        $"Animation producer '{producer.ProgramProducerIdentity}' has an invalid or duplicate identity.", errors, producerId, producer.LayerId);
+                        $"Animation producer '{producer.ProgramProducerIdentity}' has an invalid or duplicate identity.",
+                        errors, producerId, producer.AnimationChannelId);
                     valid = false;
                     continue;
                 }
-                if (!m_Layers.ContainsKey(producer.LayerId))
+                if (!m_Channels.TryGetValue(producer.AnimationChannelId, out ResolvedAnimationPoseSlot slot))
                 {
-                    Report(AnimationPresentationValidationCode.ProducerLayerUnknown,
-                        $"Animation producer '{producerId}' references unknown layer '{producer.LayerId}'.", errors, producerId, producer.LayerId);
+                    Report(AnimationPresentationValidationCode.ProducerChannelUnknown,
+                        $"Animation producer '{producerId}' references unknown Animation Channel '{producer.AnimationChannelId}'.",
+                        errors, producerId, producer.AnimationChannelId);
                     valid = false;
                     continue;
                 }
-                if (animation == null || !animation.Transition || !animation.Transition.IsValid ||
-                    animation.Transition.Key == null || animation.Clips.Count == 0)
+                if (animation == null || !animation.Source || !animation.Source.IsValid || animation.Clips.Count == 0)
                 {
-                    Report(AnimationPresentationValidationCode.BindingTransitionInvalid,
-                        $"Animation producer '{producerId}' has an invalid compiled resource binding.", errors, producerId, producer.LayerId);
+                    Report(AnimationPresentationValidationCode.BindingSourceInvalid,
+                        $"Animation producer '{producerId}' has an invalid compiled source binding.",
+                        errors, producerId, producer.AnimationChannelId, slot.PoseSlotId);
+                    valid = false;
+                    continue;
+                }
+                if (!float.IsFinite(animation.DurationSeconds) || animation.DurationSeconds <= 0f)
+                {
+                    Report(AnimationPresentationValidationCode.BindingDurationInvalid,
+                        $"Animation producer '{producerId}' has an invalid compiled Timeline duration.",
+                        errors, producerId, producer.AnimationChannelId, slot.PoseSlotId);
                     valid = false;
                     continue;
                 }
                 AnimationMarkerSyncBinding markerSync = animation.MarkerSync;
-                if (markerSync == null)
+                string markerError = "binding is missing";
+                if (markerSync == null || !markerSync.TryValidate(out markerError))
                 {
                     Report(AnimationPresentationValidationCode.BindingMarkerSyncInvalid,
-                        $"Animation producer '{producerId}' has invalid marker sync data: Compiled marker sync binding is missing.", errors, producerId, producer.LayerId);
+                        $"Animation producer '{producerId}' has invalid marker sync data: {markerError}.",
+                        errors, producerId, producer.AnimationChannelId, slot.PoseSlotId);
                     valid = false;
                     continue;
                 }
-                if (!markerSync.TryValidate(out string markerError))
+                if (markerSync.IsMarkerGroup &&
+                    !ValidateMarkerGroup(producer, markerSync, markerPairSets, producerId, slot.PoseSlotId, errors))
                 {
-                    Report(AnimationPresentationValidationCode.BindingMarkerSyncInvalid,
-                        $"Animation producer '{producerId}' has invalid marker sync data: {markerError}", errors, producerId, producer.LayerId);
                     valid = false;
                     continue;
                 }
-                if (markerSync.IsMarkerGroup)
-                {
-                    string markerGroupKey = producer.LayerId + "\0" + markerSync.CanonicalGroupId;
-                    var directedPairs = new HashSet<string>(StringComparer.Ordinal);
-                    for (int segmentIndex = 0; segmentIndex < markerSync.Segments.Count; segmentIndex++)
-                    {
-                        AnimationMarkerSyncSegmentOccurrence segment = markerSync.Segments[segmentIndex];
-                        directedPairs.Add(AnimationMarkerSyncAuthoring.PairKey(
-                            segment.PreviousMarkerId,
-                            segment.NextMarkerId));
-                    }
-                    if (markerPairSets.TryGetValue(markerGroupKey, out HashSet<string> expectedPairs))
-                    {
-                        if (!expectedPairs.SetEquals(directedPairs))
-                        {
-                            Report(AnimationPresentationValidationCode.BindingMarkerSyncInvalid,
-                                $"Animation producer '{producerId}' does not match directed marker pairs for layer/group '{producer.LayerId}/{markerSync.CanonicalGroupId}'.",
-                                errors,
-                                producerId,
-                                producer.LayerId);
-                            valid = false;
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        markerPairSets.Add(markerGroupKey, directedPairs);
-                    }
-                }
-                if (!Enum.IsDefined(typeof(Easing.Function), animation.Easing) ||
-                    animation.Transition.FadeMode == FadeMode.FromStart ||
-                    animation.Transition.FadeMode == FadeMode.NormalizedFromStart ||
-                    !TransitionLibrary.Library.TryGetTransition(animation.Transition.Key, out _))
-                {
-                    Report(AnimationPresentationValidationCode.BindingTransitionInvalid,
-                        $"Animation producer '{producerId}' compiled transition policy is invalid.", errors, producerId, producer.LayerId);
-                    valid = false;
-                    continue;
-                }
-                m_Bindings.Add(producerId, new ResolvedAnimationProducerBinding(
-                    producerId,
-                    producer.LayerId,
-                    animation.Transition,
-                    animation.Easing,
-                    animation.Clips.Count));
-            }
 
+                var binding = new ResolvedAnimationProducerBinding(
+                    producer.ProgramProducerIndex,
+                    producerId,
+                    producer.AnimationChannelId,
+                    slot.PoseSlotId,
+                    animation.Source,
+                    animation.Clips.Count);
+                if (!binding.IsValid || !m_Bindings.TryAdd(producerId, binding))
+                {
+                    Report(AnimationPresentationValidationCode.ProducerDuplicate,
+                        $"Animation producer '{producerId}' cannot be indexed uniquely.",
+                        errors, producerId, producer.AnimationChannelId, slot.PoseSlotId);
+                    valid = false;
+                }
+            }
             return valid;
         }
 
-        bool CollectLayers(IReadOnlyList<CharacterAnimationLayerDefinition> layers, List<string> errors)
+        bool CollectPoseSlots(CharacterPresentationProjection projection, List<string> errors)
         {
-            if (layers.Count == 0)
-            {
-                Report(AnimationPresentationValidationCode.LayerMissing,
-                    "Animation Presentation requires at least one layer.", errors);
-                return false;
-            }
-
             bool valid = true;
-            var animancerIndices = new HashSet<int>();
-            for (int i = 0; i < layers.Count; i++)
+            for (int i = 0; i < projection.PoseProgram.Slots.Count; i++)
             {
-                CharacterAnimationLayerDefinition layer = layers[i];
-                if (layer == null || string.IsNullOrEmpty(layer.Id))
+                CharacterPresentationPoseSlotProgramEntry programSlot = projection.PoseProgram.Slots[i];
+                AnimationBlendSlotPayload blendSlot;
+                try
                 {
-                    Report(AnimationPresentationValidationCode.LayerMissing,
-                        $"Animation Presentation layer #{i} is missing or has no LayerId.", errors);
+                    blendSlot = projection.RequireBlendSlot(programSlot.PoseSlotId);
+                }
+                catch (Exception exception)
+                {
+                    Report(AnimationPresentationValidationCode.PosePayloadInvalid, exception.Message, errors);
                     valid = false;
                     continue;
                 }
-                if (m_Layers.ContainsKey(layer.Id))
+                var resolved = new ResolvedAnimationPoseSlot(i, programSlot, blendSlot);
+                if (!m_Slots.TryAdd(resolved.PoseSlotId, resolved))
                 {
-                    Report(AnimationPresentationValidationCode.LayerDuplicate,
-                        $"Animation Presentation contains duplicate LayerId '{layer.Id}'.", errors, layerId: layer.Id);
+                    Report(AnimationPresentationValidationCode.PoseSlotDuplicate,
+                        $"Animation Presentation duplicates Pose Slot '{resolved.PoseSlotId}'.",
+                        errors, poseSlotId: resolved.PoseSlotId);
                     valid = false;
-                    continue;
                 }
-                if (layer.AnimancerLayerIndex < 0 ||
-                    !animancerIndices.Add(layer.AnimancerLayerIndex) ||
-                    !Enum.IsDefined(typeof(AnimationBlendMode), layer.BlendMode) ||
-                    !Enum.IsDefined(typeof(AnimationLayerOutputPolicy), layer.OutputPolicy) ||
-                    layer.OutputPolicy == AnimationLayerOutputPolicy.Unspecified)
+                if (!m_Channels.TryAdd(resolved.AnimationChannelId, resolved))
                 {
-                    Report(AnimationPresentationValidationCode.LayerInvalid,
-                        $"Animation layer '{layer.Id}' has invalid runtime configuration.", errors, layerId: layer.Id);
+                    Report(AnimationPresentationValidationCode.AnimationChannelDuplicate,
+                        $"Animation Presentation duplicates Animation Channel '{resolved.AnimationChannelId}'.",
+                        errors, animationChannelId: resolved.AnimationChannelId, poseSlotId: resolved.PoseSlotId);
                     valid = false;
-                    continue;
                 }
-
-                m_Layers.Add(layer.Id, new ResolvedAnimationLayer(
-                    layer.Id,
-                    layer.AnimancerLayerIndex,
-                    layer.AvatarMask,
-                    layer.BlendMode,
-                    layer.OutputPolicy,
-                    i));
             }
             return valid;
+        }
+
+        bool ValidateMarkerGroup(
+            CharacterPresentationProducerEntry producer,
+            AnimationMarkerSyncBinding markerSync,
+            Dictionary<string, HashSet<string>> markerPairSets,
+            AnimationProducerId producerId,
+            PoseSlotId poseSlotId,
+            List<string> errors)
+        {
+            string markerGroupKey = producer.AnimationChannelId.Value + "\0" + markerSync.CanonicalGroupId;
+            var directedPairs = new HashSet<string>(StringComparer.Ordinal);
+            for (int segmentIndex = 0; segmentIndex < markerSync.Segments.Count; segmentIndex++)
+            {
+                AnimationMarkerSyncSegmentOccurrence segment = markerSync.Segments[segmentIndex];
+                directedPairs.Add(AnimationMarkerSyncAuthoring.PairKey(segment.PreviousMarkerId, segment.NextMarkerId));
+            }
+            if (!markerPairSets.TryGetValue(markerGroupKey, out HashSet<string> expectedPairs))
+            {
+                markerPairSets.Add(markerGroupKey, directedPairs);
+                return true;
+            }
+            if (expectedPairs.SetEquals(directedPairs))
+                return true;
+            Report(AnimationPresentationValidationCode.BindingMarkerSyncInvalid,
+                $"Animation producer '{producerId}' does not match directed marker pairs for Animation Channel/group '{producer.AnimationChannelId}/{markerSync.CanonicalGroupId}'.",
+                errors, producerId, producer.AnimationChannelId, poseSlotId);
+            return false;
         }
 
         void Report(
@@ -337,12 +332,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string message,
             List<string> errors,
             AnimationProducerId producerId = default,
-            string layerId = "")
+            AnimationChannelId animationChannelId = default,
+            PoseSlotId poseSlotId = default)
         {
-            var issue = new AnimationPresentationValidationIssue(code, message, producerId, layerId);
+            var issue = new AnimationPresentationValidationIssue(code, message, producerId, animationChannelId, poseSlotId);
             m_Issues.Add(issue);
             errors?.Add(issue.Message);
         }
     }
-
 }

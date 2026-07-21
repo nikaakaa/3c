@@ -4,6 +4,8 @@ using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.AI;
+using ThirdPersonCharacter.AI.Editor;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Graph;
@@ -12,6 +14,7 @@ using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
 using TreeDesigner;
+using UnityEditor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
@@ -32,7 +35,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentCompileReport Validate(CharacterPipelineDefinition definition)
         {
             m_Definition = definition;
-            m_Report = new AgentCompileReport { success = true };
+            string definitionPath = definition ? AssetDatabase.GetAssetPath(definition) : string.Empty;
+            m_Report = new AgentCompileReport
+            {
+                success = true,
+                domain = AgentAuthoringSchema.CharacterControllerDomain,
+                rootIdentity = AssetDatabase.AssetPathToGUID(definitionPath)
+            };
             m_Declarations.Clear();
             m_DeclarationOwnerIds.Clear();
             m_DuplicateDeclarationIds.Clear();
@@ -947,5 +956,98 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return false;
         }
 
+    }
+
+    public sealed class AgentAIControllerValidator
+    {
+        public AgentCompileReport Validate(AIControllerDefinition definition)
+        {
+            var report = new AgentCompileReport
+            {
+                success = true,
+                domain = AgentAuthoringSchema.AIControllerDomain,
+                rootIdentity = definition ? definition.ControllerId : string.Empty
+            };
+            if (!definition)
+            {
+                report.Error("definition", "ai_definition_missing", "AIControllerDefinition 缺失。");
+                return report;
+            }
+
+            var errors = new List<string>();
+            if (!definition.CollectConfigurationErrors(errors))
+            {
+                for (int i = 0; i < errors.Count; i++)
+                    report.Error("definition", "ai_definition_invalid", errors[i]);
+                report.metrics.semanticInvalidCount += errors.Count;
+                return report;
+            }
+
+            if (definition.RootTreeAsset.Tree is not AIControllerTree root)
+            {
+                report.Error("root", "ai_root_tree_invalid", "RootTree 不是 AIControllerTree。");
+                return report;
+            }
+            root.RebindReadOnlyViewReferences();
+            if (root.AuthoringRole != GraphAuthoringRole.AIController)
+                report.Error("root", "ai_graph_role_invalid", $"AI root graph role 无效：{root.AuthoringRole}");
+
+            var declarationIds = new HashSet<string>(StringComparer.Ordinal);
+            var declarationKeys = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < root.ExposedProperties.Count; i++)
+            {
+                BaseExposedProperty declaration = root.ExposedProperties[i];
+                string path = $"root.blackboard[{i}]";
+                if (declaration == null || !declarationIds.Add(declaration.DeclarationId) || !declarationKeys.Add(declaration.BlackboardKey))
+                {
+                    report.Error(path, "ai_blackboard_identity_invalid", "AI Blackboard declaration 缺失或 identity/key 重复。");
+                    continue;
+                }
+                if (declaration.BlackboardScope != PipelineBlackboardVariableScope.AIController &&
+                    declaration.BlackboardScope != PipelineBlackboardVariableScope.AITick &&
+                    declaration.BlackboardScope != PipelineBlackboardVariableScope.Graph)
+                {
+                    report.Error(path, "ai_blackboard_scope_invalid", $"AI Blackboard scope 不允许：{declaration.BlackboardScope}");
+                }
+                if (declaration.BlackboardLifetime != PipelineBlackboardVariablePolicy.DefaultLifetime(declaration.BlackboardScope) ||
+                    declaration.BlackboardAuthority != PipelineBlackboardVariableAuthority.LocalOnly ||
+                    declaration.BlackboardSyncPolicy != PipelineBlackboardVariableSyncPolicy.None)
+                {
+                    report.Error(path, "ai_blackboard_policy_invalid", "AI Blackboard lifetime、authority 或 sync policy 不符合正式策略。");
+                }
+            }
+
+            var nodeIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < root.Nodes.Count; i++)
+            {
+                BaseNode node = root.Nodes[i];
+                string path = $"root.nodes[{i}]";
+                if (node == null || !nodeIds.Add(node.GUID))
+                {
+                    report.Error(path, "ai_node_identity_invalid", "AI node 缺失或 identity 重复。");
+                    continue;
+                }
+                if (!NodeAuthoringCapabilityPolicy.TryGetCapability(node.GetType(), out NodeAuthoringCapability capability) ||
+                    !NodeAuthoringCapabilityPolicy.Allows(GraphAuthoringRole.AIController, capability))
+                {
+                    report.Error(path, "ai_node_capability_forbidden", $"AI Graph 禁止节点：{node.GetType().FullName}");
+                }
+            }
+
+            try
+            {
+                AIIntentProgramBuildService.Validate(definition);
+                report.metrics.compileSuccessCount++;
+                report.metrics.semanticValidCount++;
+            }
+            catch (Exception exception)
+            {
+                report.Error("compiler", "ai_intent_compile_validation_failed", exception.Message);
+                report.metrics.compileFailureCount++;
+                report.metrics.semanticInvalidCount++;
+            }
+            report.success = !report.HasErrors();
+            return report;
+        }
     }
 }

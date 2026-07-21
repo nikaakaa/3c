@@ -31,9 +31,9 @@ Presentation MUST从 Pipeline Egress允许并由 Committer提交的 BodyState in
 #### Scenario: 远端角色保持当前预测时间线
 
 - **WHEN** Peer使用last-known continuous input预测尚未到达的远端输入
-- **THEN** 远端Body与动画MUST继续消费predicted current timeline
+- **THEN** 远端Body与动画 MUST继续消费predicted current timeline
 - **AND** confirmed horizon MUST不被用作远端表现延迟缓冲
-- **AND** canonical差异到达后MUST通过同一原子Body/动画提交事务纠正
+- **AND** canonical差异到达后 MUST通过同一原子Body/动画提交事务纠正
 
 #### Scenario: Grounded target发生分支纠偏
 
@@ -109,22 +109,22 @@ PresentationFrame MUST保持为 committed/predicted presentation command 的消�
 
 #### Scenario: 排查 Action 与 Locomotion 快速切换
 
-- **WHEN** Action 结束、Locomotion selection 恢复且 MovingTurn 同 tick 生效
-- **THEN** Logic Trace MUST显示最终 Base selection
-- **AND** Timeline Trace MUST显示 target sample time
-- **AND** Animation Trace MUST显示 Current/Outgoing 与 Animancer fade
+- **WHEN** Action结束、Locomotion selection恢复且MovingTurn同tick生效
+- **THEN** Logic Trace MUST显示最终Base selection
+- **AND** Timeline Trace MUST显示target sample time
+- **AND** Animation Trace MUST显示Current/Outgoing与Animancer fade
 
 #### Scenario: duplicate selection
 
-- **WHEN** 同一 logic commit 为 Base 提交两个不同 playback
+- **WHEN** 同一logic commit为Base提交两个不同playback
 - **THEN** debug MUST显示两个逻辑来源与冲突
-- **AND** MUST不显示伪 Selected Driver 或动画侧 winner
+- **AND** MUST不显示伪Selected Driver或动画侧winner
 
 #### Scenario: missing first sample
 
-- **WHEN** selected target 在 release 前始终没有合法 sample
-- **THEN** debug MUST显示 playback generation、LayerId 与 lifecycle error
-- **AND** MUST不伪造 fallback output
+- **WHEN** selected target在release前始终没有合法sample
+- **THEN** debug MUST显示playback generation、LayerId与lifecycle error
+- **AND** MUST不伪造fallback output
 
 ### Requirement: Timeline pose time 与 Animancer fade time 必须独立连续推进
 
@@ -226,19 +226,21 @@ Remote Presentation MUST允许当前Body插值区间右端tick的SampleProducer�
 
 ### Requirement: Remote Body表现与预测接触必须消费同一选择流
 
-ServerAuthoritative Prediction Schedule MUST是Remote Body tick选择的唯一owner。Schedule为Current step产生并成功提交的selected Body frame MUST进入Remote Presentation Egress；声明`ObservedKinematicActorContact`能力的Composition还 MUST把同一选择转换为World观察约束。Network adapter MUST只向`CharacterBodyPresentationRuntime`提交canonical selected Body interval、显式Reset和Presentation-owned Profile引用，MUST不保存Follower状态、运行SmoothDamp或写visual root。`SelectedStream` Body Runtime MUST缓存相邻selected interval并在渲染帧重采样连续target；只有显式选择的`BoundedCorrection` Profile可以在selected interval被新权威信息替换后从当前visible pose/velocity有界接管。它 MUST不重新读取原始authority Body选择另一tick、不维护独立Body delay cursor，也 MUST不把visual root写回WorldSolver。
+ServerAuthoritative Prediction Schedule MUST是Remote Body tick选择的唯一owner。Schedule为Current step产生并成功提交的selected Body frame MUST进入Remote Presentation Egress；声明`ObservedKinematicActorContact`能力的Composition还 MUST把同一选择转换为World观察约束。Remote Presentation MUST通过唯一 presentation-only visual pose convergence/filter 消费相邻 committed selected frame，在渲染帧插值，并在selected target被新权威信息替换后从当前visual pose有界收敛。filter MAY在零Current step的表现帧继续朝既有committed target收敛，但 MUST不重新读取原始authority Body选择另一tick、不维护独立Body delay cursor、不改变可靠事件horizon，也 MUST不把visual pose、visual velocity或error写回WorldSolver、Prediction state或contact body。
 
 #### Scenario: 远端Actor阻挡本地owner
 
 - **WHEN** Prediction使用Actor B的selected frame裁剪Actor A位移
 - **THEN** Client A显示的Actor B Body target MUST来自同一selected frame
-- **AND** MUST不出现碰撞体使用外推位置而可见角色仍固定使用另一延迟时间线
+- **AND** visual filter MAY只改变到该target的渲染帧收敛过程
+- **AND** MUST不出现碰撞体使用外推位置而可见角色使用另一延迟时间线
 
 #### Scenario: 新权威样本替换短时外推
 
 - **WHEN** 新remote authority Body使后续selected frame改变
 - **THEN** canonical contact MUST从新frame立即参与后续World step
-- **AND** Presentation MAY只在visual root上平滑收敛
+- **AND** Presentation MUST从当前visual pose有界收敛到新selected target
+- **AND** 收敛参数 MUST来自Presentation Profile而不是Network Model
 
 #### Scenario: Restore后执行Replay与Current
 
@@ -249,15 +251,21 @@ ServerAuthoritative Prediction Schedule MUST是Remote Body tick选择的唯一ow
 #### Scenario: Prediction当前产生零Current step
 
 - **WHEN** clock correction使当前outer transaction没有新的Current step
-- **THEN** Remote Presentation MUST完成或保持已提交Body区间
+- **THEN** visual filter MAY继续朝已经提交的Body target收敛或保持
 - **AND** MUST不自行从原始authority样本选择新Body target
 
 #### Scenario: Prediction执行HardRecovery
 
 - **WHEN** formal HardRecovery替换当前Prediction分支
 - **THEN** Model Egress MUST显式重置Remote selected Body stream
-- **AND** 后续成功Current step MUST提交新anchor
-- **AND** Presentation MUST不根据Transform或旧buffer猜测恢复位置
+- **AND** visual filter MUST清除旧target、visual velocity和error state
+- **AND** 后续成功Current step MUST以显式新anchor建立视觉区间
+
+#### Scenario: 观察视觉误差
+
+- **WHEN** visual pose尚未收敛到当前selected target
+- **THEN** diagnostics MUST同时报告selected tick、target pose、visual pose和error
+- **AND** diagnostics MUST不反向修改filter、Prediction或World state
 
 ### Requirement: Remote可靠表现事件必须服从selected Body horizon
 
@@ -306,3 +314,4 @@ Rollback网络协议 MUST不发送AnimationClip、Animator state、Animancer sta
 - **WHEN** Relayed MoveAxis持续到达且Locomotion状态保持Run
 - **THEN** 远端Run producer MUST由本地模拟持续拥有
 - **AND** 网络协议 MUST不逐帧同步Run动画时间
+

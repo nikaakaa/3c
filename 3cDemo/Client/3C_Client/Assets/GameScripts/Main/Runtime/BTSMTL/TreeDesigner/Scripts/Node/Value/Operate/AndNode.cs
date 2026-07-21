@@ -6,6 +6,7 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("And")]
     [NodePath("Base/Value/Operate/And")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.SharedPureValue)]
     public class AndNode : ValueNode
     {
         [SerializeField, PropertyPort(PortDirection.Input, "Input1")]

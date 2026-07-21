@@ -2,7 +2,41 @@
 
 ## Purpose
 定义 Agent 在编辑器内通过 Snapshot、Intent、Macro、Patch IR、Compiler、Validator 和 Report 生成并修复正式 BTSMTL 角色控制器资产的唯一链路。
+
 ## Requirements
+
+### Requirement: Agent必须保持Generated Foot Analysis只读
+
+Agent v15 CharacterController Snapshot/Patch MUST继续只描述正式Graph、StateMachine、Timeline、Marker、registered editable Curve Channel和Profile只读identity。Animation Clip的Foot Placement Weight MUST继续作为完整可编辑curve进入Snapshot/Patch；Projection生成的左右脚sole speed、height、plant confidence、next landing confidence、delay与offset MUST不进入Patch operation、Curve Channel Catalog或可写Snapshot字段。Agent MUST不复制generated payload，也 MUST不创建Foot Analysis专用mutation。
+
+#### Scenario: Agent导出带Foot Analysis的Timeline
+
+- **WHEN** Definition拥有Ready Projection和生成Foot Analysis
+- **THEN** Snapshot MUST继续输出Animation Clip的Foot Placement Weight作者curve
+- **AND** MUST不把generated LeftPlant或Landing curve伪装为Timeline owner数据
+
+#### Scenario: Agent尝试写Generated channel
+
+- **WHEN** v15 Patch提交未登记的LeftPlant、RightPlant或Landing ChannelId
+- **THEN** Lowerer MUST按未知Curve Channel拒绝整个事务
+- **AND** MUST不修改Timeline、Projection或Analysis Source
+
+### Requirement: Agent Validator必须透传正式Foot Analysis编译诊断
+
+Agent Validator MUST透传正式Artifact Builder、Artifact Store、Projection binding与Build Transaction诊断，区分Missing、Stale、Corrupt、Source/Rig/Calibration不匹配和stable clip binding缺失。Agent MUST不采样AnimationClip、不写artifact、不输出feature payload，也不得新增Foot Analysis rebuild或generated curve mutation。
+
+#### Scenario: Agent修改Foot Placement Weight
+
+- **WHEN** 合法v15 Patch只修改现有Foot Placement Weight
+- **THEN** apply后正式Definition Build MUST重新校验所需artifact并发布Projection
+- **AND** Agent MUST不直接读取或修改artifact文件
+
+#### Scenario: Artifact损坏
+
+- **WHEN** Validator发现当前clip expected artifact为Corrupt
+- **THEN** Compile Report MUST定位Clip、Source、Rig、Calibration和artifact identity
+- **AND** Agent MUST不使用Timeline、Projection或默认feature修复该文件
+
 ### Requirement: Agent 生成链路必须是 editor-only authoring 编译链路
 
 系统 MUST将 Agent生成角色动作控制器实现为 editor-only authoring编译链路。Agent JSON、Intent、Macro和 Patch IR MUST只服务编辑期生成、修复和评估。运行时 MUST只执行由正式 BTSMTL asset编译得到的 `CharacterSimulationProgram`，并由 Session Pipeline的 Program Evaluate/Finalize Pass推进 Action operation、Timeline operation与 GameplayFacts。系统 MUST NOT在 Gameplay Runtime、Pipeline Pass、服务端或网络同步路径中执行 Agent JSON或调用 LLM。
@@ -55,7 +89,7 @@
 
 ### Requirement: Patch IR 必须是确定性的 graph 编辑指令
 
-系统 MUST使用schema v14 Agent Patch IR作为确定性的graph编辑指令边界。Patch IR MUST使用stable authoring id或前序operation output引用定位编辑目标，只能表达正式authoring操作，例如ensure state machine、ensure state、ensure transition、ensure condition rule、ensure state behavior node、ensure action activation/lifecycle、ensure timeline node、ensure input node、configure animation track marker sync与SyncRole、ensure/move/delete animation sync marker、configure registered timeline curve channel、link flow和link property。资产引用 MUST作为实际消费该资产的ensure command参数，由对应正式Emitter或handler原子解析和写入。Patch IR MUST不直接写Unity YAML、GUID映射集合、runtime状态或旧配置路径，也 MUST不提供独立通用`bind_asset_reference`操作。
+系统 MUST定义schema v15 Agent Patch IR作为CharacterController与AIController唯一确定性的graph编辑指令边界，并使用显式domain discriminator选择根合同。Patch IR MUST使用stable authoring id或前序operation output引用定位编辑目标，只能表达正式authoring操作。CharacterController domain MUST保留State、Action、Timeline、MotionWarp、Marker与Curve typed operation；AIController domain MUST只增加AI Definition、AI Graph、AI Blackboard、Configured Candidate、Observation、Memory与Intent operation。资产引用 MUST作为实际消费该资产的ensure command参数，由对应正式handler原子解析和写入。Patch IR MUST不直接写Unity YAML、GUID映射集合、runtime状态或旧配置路径，也 MUST不提供独立通用`bind_asset_reference`操作。
 
 #### Scenario: 添加状态
 
@@ -73,7 +107,7 @@
 
 #### Scenario: 请求独立资产绑定
 
-- **WHEN** schema v14 Patch包含`bind_asset_reference`
+- **WHEN** schema v15 Patch包含`bind_asset_reference`
 - **THEN** lowerer MUST将其作为未知operation拒绝
 - **AND** 系统 MUST不返回成功no-op
 - **AND** 资产绑定 MUST改由对应ensure command携带明确引用
@@ -251,7 +285,7 @@ Agent Snapshot MUST递归输出完整 RootTree authoring routes、普通 Runnabl
 
 ### Requirement: Agent Patch 编译必须维护 identity 生命周期
 
-Agent Patch compiler MUST在更新现有元素时保持其authoring identity，在创建新元素时生成新identity，在复制元素时生成新identity。系统 MUST只接受schema v14，不得保留v6至v13兼容解析或按path、display name猜测identity。Typed command lowering MUST在mutation前验证authoring identity格式、operation id唯一性和前序operation reference顺序。
+Agent Patch compiler MUST在更新现有元素时保持其authoring identity，在创建新元素时生成新identity，在复制元素时生成新identity。系统 MUST只接受schema v15，不得保留v14及更早兼容解析或按path、display name、Actor名称、Tag、列表index猜测identity。Typed command lowering MUST在mutation前验证domain、root identity、source revision、authoring identity格式、operation id唯一性和前序operation reference顺序。
 
 #### Scenario: 更新现有Timeline Clip
 
@@ -299,11 +333,11 @@ Agent Patch compiler MUST在更新现有元素时保持其authoring identity，�
 
 ### Requirement: Agent Patch Compiler内部必须使用唯一类型化命令计划
 
-系统 MUST将schema v14 `AgentPatchOperation`只作为editor-only JSON边界DTO，并通过唯一operation catalog与AgentPatchCommandLowerer一次降低为immutable typed command plan。Dry-run与apply MUST消费同一typed command plan和同一handler catalog；后续Planner、Handler与Condition builder MUST不再次按原始`op`字符串解释宽DTO。Typed plan MAY保存operation output的kind与owner scope symbol，但 MUST不复制Graph、Node、Edge、Timeline、Marker、Curve或Unity序列化对象形成第二份authoring模型。
+系统 MUST将schema v15 `AgentPatchOperation`只作为editor-only JSON边界DTO，并通过唯一operation catalog与AgentPatchCommandLowerer一次降低为immutable typed command plan。CharacterController与AIController domain MUST复用同一lowering、planning symbol、preflight、资产事务和handler catalog基础；领域handler只消费各自正式authoring API。Dry-run与apply MUST消费同一typed command plan；后续Planner与Handler MUST不再次按原始`op`字符串解释宽DTO，也不得建立AI专用Patch compiler或第二事务。
 
 #### Scenario: 同一Patch执行dry-run和apply
 
-- **WHEN** AgentPatchAuthoringService收到合法schema v14 Patch并请求apply
+- **WHEN** AgentPatchAuthoringService收到合法schema v15 Patch并请求apply
 - **THEN** service MUST先lower一次typed command plan并完成无副作用preflight
 - **AND** apply MUST在资产级事务中消费相同plan
 - **AND** MUST不重新解析出另一组operation语义
@@ -317,7 +351,7 @@ Agent Patch compiler MUST在更新现有元素时保持其authoring identity，�
 
 #### Scenario: 未知operation进入lowering
 
-- **WHEN** Patch包含schema v14 catalog未登记的operation
+- **WHEN** Patch包含schema v15 catalog未登记的operation
 - **THEN** lowerer MUST在任何资产mutation前返回结构化unknown operation错误
 - **AND** MUST不选择fallback handler或动态反射实现
 
@@ -355,15 +389,15 @@ Agent Patch compiler MUST在更新现有元素时保持其authoring identity，�
 - **AND**该检查 MUST只影响当前样例coverage report
 - **AND**普通Graph validate MUST不执行该业务规则
 
-### Requirement: Agent Snapshot schema v14 必须输出稳定 authoring identity
+### Requirement: Agent Snapshot schema v15 必须输出稳定 authoring identity
 
-Agent Snapshot MUST使用schema v14，并为Graph、Node、Edge、Timeline、Track、Clip、AnimationSyncMarker、Curve owner、Blackboard declaration、CharacterInputProfile request timing与Timeline animation producer输出正式稳定authoring identity。AnimationTrack 与 producer MUST额外输出 SyncRole；Curve channel MUST输出registered ChannelId与完整curve，不为Keyframe创建持久identity。Snapshot path和列表index MAY作为可读定位信息，但 MUST不取代identity。Snapshot MUST不输出Tree animation Driver、ExecutionLineage、LayerPlan、SyncRelation或runtime playback lifecycle。schema v14 Snapshot MUST成为生成v14 Patch的唯一上下文，不提供旧schema镜像输出。
+Agent Snapshot MUST使用schema v15和显式domain discriminator。CharacterController Snapshot MUST继续输出Graph、Node、Edge、Timeline、Track、Clip、AnimationSyncMarker、Curve owner、Blackboard declaration、CharacterInputProfile request timing与Timeline animation producer稳定identity。AIController Snapshot MUST输出AIControllerDefinition、AIControllerTree、Graph/Node/Edge、Node Capability、AI Blackboard declaration、显式候选Actor Perception binding、Character input/request binding与generated AI Program identity。Snapshot path和列表index MAY作为可读定位信息，但 MUST不取代identity；Snapshot MUST不输出runtime mutable state、AI candidate state或Perception缓存。v15 Snapshot MUST成为生成v15 Patch的唯一上下文，不提供v14镜像输出。
 
 #### Scenario: 导出Full Snapshot
 
 - **WHEN** Agent exporter导出CharacterPipelineDefinition Full Snapshot
 - **THEN** 每个Graph、Node、Edge、Timeline、Track、Clip、AnimationSyncMarker和animation producer MUST包含稳定authoring identity
-- **AND** snapshot MUST标记schema v14
+- **AND** snapshot MUST标记schema v15与明确domain
 - **AND** snapshot MUST输出当前source revision所需的逻辑与Timeline作者内容
 
 #### Scenario: Timeline元素重排后导出
@@ -420,7 +454,7 @@ Agent Validator MUST检查source identity、Timeline owner、窗口、Action cha
 
 ### Requirement: Agent 必须完整修改 Action target authoring
 
-Agent schema v14 Patch MUST提供类型化operation创建或配置`ActionTargetSnapshot` Blackboard declaration、保存InputDerived InputValueId、绑定准入与激活节点，以及设置ActionProfile的`None`、`OptionalSnapshot`或`SnapshotRequired`。Lowerer、Handler与Validator MUST调用正式authoring API，MUST不直接编辑YAML、不按显示名猜引用，也 MUST不形成第二个Action target配置入口。
+Agent schema v15 CharacterController Patch MUST提供类型化operation创建或配置`ActionTargetSnapshot` Blackboard declaration、保存InputDerived InputValueId、绑定准入与激活节点，以及设置ActionProfile的`None`、`OptionalSnapshot`或`SnapshotRequired`。Lowerer、Handler与Validator MUST调用正式authoring API，MUST不直接编辑YAML、不按显示名猜引用，也 MUST不形成第二个Action target配置入口。
 
 #### Scenario: 为攻击建立目标链
 
@@ -443,7 +477,7 @@ Agent schema v14 Patch MUST提供类型化operation创建或配置`ActionTargetS
 
 ### Requirement: Agent Snapshot必须只读投影Body Motion Profile
 
-Agent compact/full Snapshot MUST从显式`CharacterPipelineDefinition`引用只读输出Body Motion Profile stable identity、content revision、GravityAcceleration、MaximumFallSpeed、semantic version、required AirborneVerticalMotion capability与正式Compiler配置状态。Snapshot MUST不输出runtime VerticalVelocity、pending integration plan或Solver mutable state。Agent schema v14 Patch MUST不增加Profile字段修改、任意SerializedProperty或第二Profile写入口；MCP bridge MUST不增加Body Motion专用mutation action。
+Agent compact/full CharacterController Snapshot MUST从显式`CharacterPipelineDefinition`引用只读输出Body Motion Profile stable identity、content revision、GravityAcceleration、MaximumFallSpeed、semantic version、required AirborneVerticalMotion capability与正式Compiler配置状态。Snapshot MUST不输出runtime VerticalVelocity、pending integration plan或Solver mutable state。Agent schema v15 Patch MUST不增加Profile字段修改、任意SerializedProperty或第二Profile写入口；MCP bridge MUST不增加Body Motion专用mutation action。
 
 #### Scenario: 导出Corin Character Snapshot
 
@@ -452,9 +486,9 @@ Agent compact/full Snapshot MUST从显式`CharacterPipelineDefinition`引用只�
 - **AND** MUST显示Program是否要求AirborneVerticalMotion
 - **AND** Patch catalog MUST不提供修改Profile的操作
 
-### Requirement: Agent v14 必须完整读写 Timeline Marker 与 Curve Channel
+### Requirement: Agent v15 CharacterController 必须完整读写 Timeline Marker 与 Curve Channel
 
-Agent Snapshot/Patch schema MUST原子提升为`agent-character-controller-synthesis.v14`。Snapshot MUST按Timeline与Track稳定identity输出sync mode、sync group、Finite/Cyclic topology、SyncRole、call site playback mode，以及每个marker的AuthoringId、MarkerId和frame；还 MUST按Curve owner stable identity输出Catalog登记的ChannelId、time domain、value domain、unit、wrap mode与完整Keyframe字段。Patch MUST保留typed configure、ensure、move和delete marker操作，并 MUST使用唯一`configure_timeline_curve_channel`按`OwnerAuthoringId + ChannelId + Full Curve`原子替换typed curve。Lowerer MUST生成immutable command plan，dry-run与apply MUST消费同一plan，handler与Timeline Editor MUST只调用Timeline正式authoring API和Curve Channel MutationAdapter，Validator MUST复用Marker Sync及各curve领域唯一校验服务。Marker MUST保持离散Point Marker语义，不得被编码为Foot Placement、phase或Distance曲线。v13及更早reader、Foot Placement专用curve operation、operation alias、converter和兼容分支 MUST删除。
+Agent Snapshot/Patch schema MUST只接受`agent-character-controller-synthesis.v15`。CharacterController Snapshot MUST按Timeline与Track稳定identity输出sync mode、sync group、Finite/Cyclic topology、SyncRole、call site playback mode，以及每个marker的AuthoringId、MarkerId和frame；还 MUST按Curve owner stable identity输出Catalog登记的ChannelId、time domain、value domain、unit、wrap mode与完整Keyframe字段。Patch MUST保留typed configure、ensure、move和delete marker操作，并 MUST使用唯一`configure_timeline_curve_channel`按`OwnerAuthoringId + ChannelId + Full Curve`原子替换typed curve。Lowerer MUST生成immutable command plan，dry-run与apply MUST消费同一plan，handler与Timeline Editor MUST只调用Timeline正式authoring API和Curve Channel MutationAdapter，Validator MUST复用Marker Sync及各curve领域唯一校验服务。Marker MUST保持离散Point Marker语义。v14及更早reader、converter、operation alias和兼容分支 MUST删除。
 
 #### Scenario: Agent导出循环producer
 
@@ -470,7 +504,7 @@ Agent Snapshot/Patch schema MUST原子提升为`agent-character-controller-synth
 
 #### Scenario: Agent新增重复语义marker
 
-- **WHEN** v14 Patch为Finite track确保第二个LeftPlant marker
+- **WHEN** v15 Patch为Finite track确保第二个LeftPlant marker
 - **THEN** dry-run MUST按不同MarkerAuthoringId接受该occurrence
 - **AND** apply MUST通过同一plan创建稳定identity
 - **AND** 再次导出 MUST按frame稳定显示两个LeftPlant occurrence
@@ -484,13 +518,13 @@ Agent Snapshot/Patch schema MUST原子提升为`agent-character-controller-synth
 
 #### Scenario: Agent修改weighted curve
 
-- **WHEN** v14 Patch通过`configure_timeline_curve_channel`修改一个registered channel
+- **WHEN** v15 Patch通过`configure_timeline_curve_channel`修改一个registered channel
 - **THEN** Patch MUST提交完整curve并保留time、value、in/out tangent、in/out weight、WeightedMode与wrap mode
 - **AND** handler MUST只调用该descriptor的正式MutationAdapter
 
 #### Scenario: Agent提交未知curve channel
 
-- **WHEN** v14 Patch提交Catalog未登记的ChannelId
+- **WHEN** v15 Patch提交Catalog未登记的ChannelId
 - **THEN** lowerer MUST在mutation前拒绝
 - **AND** MUST不按字段名、显示名或AnimationCurve类型猜测目标
 

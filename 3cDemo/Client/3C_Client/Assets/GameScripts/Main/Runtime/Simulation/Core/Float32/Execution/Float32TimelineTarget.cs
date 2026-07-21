@@ -378,7 +378,10 @@ namespace ThirdPersonSimulation
                 m_Motion.Submit(contribution);
         }
 
-        public void SampleMotionWarp(OperationHandle operation, TimelineSegment<Float32Scalar> segment)
+        public void SampleMotionWarp(
+            OperationHandle operation,
+            TimelineSegment<Float32Scalar> segment,
+            TimelineActionContextIdentity actionContext)
         {
             Float32Scalar start = ClipTime(operation, TimelineClipTimePoint.Start);
             Float32Scalar end = ClipTime(operation, TimelineClipTimePoint.End);
@@ -389,13 +392,18 @@ namespace ThirdPersonSimulation
             if (previous == current)
                 return;
             OperationHandle timeline = TimelineOwner(operation);
+            Float32ActionInstanceState action = RequireAction(actionContext);
+            if (!action.IsActive)
+                throw new InvalidOperationException($"MotionWarp '{SourcePath(operation)}' lost its sampled Action instance.");
             ulong playbackGeneration = MotionWarpRuntimeSemantics.ComposePlaybackGeneration(
                 ReadActivationGeneration(timeline),
                 segment.Cycle);
-            m_MotionModifiers.Submit(new MotionWarpSample<Float32Scalar>(
+            m_MotionModifiers.Submit(new MotionWarpSample<Float32Scalar, Float32ActionInstanceState>(
                 operation,
                 new TimelineSegment<Float32Scalar>(previous, current, segment.Cycle, segment.StartsCycle),
-                playbackGeneration));
+                playbackGeneration,
+                actionContext,
+                action));
         }
 
         public void EmitPresentation(TimelinePresentationOutput<Float32Scalar> output)

@@ -6,6 +6,7 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("Loop")]
     [NodePath("Base/Decorator/Loop")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.SharedFlow)]
     public class LoopNode : DecoratorNode
     {
         public enum StopType { None, Success, Failure }
@@ -13,6 +14,13 @@ namespace TreeDesigner
         [SerializeField, ShowInPanel("StopType")]
         StopType m_StopType;
         public StopType LoopStopType => m_StopType;
+
+#if UNITY_EDITOR
+        public void ConfigureAuthoring(StopType stopType)
+        {
+            m_StopType = stopType;
+        }
+#endif
 
         protected override State OnUpdate()
         {

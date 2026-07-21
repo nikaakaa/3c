@@ -9,6 +9,7 @@ using ThirdPersonCharacter.Pipeline.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.DeterministicRollback;
 using ThirdPersonSimulation.Fixed;
@@ -112,7 +113,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             ICharacterFootPlacementSolver footPlacementSolver = footPlacement.RequireSolver(visualRoot);
             PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
             FixedCharacterSimulationProgram program = programAsset.Load();
-            string[] producerIdentities = BuildProducerIdentities(program);
             bool local = endpoint.ResolvePeerProfile().ActorId == actorId;
             UnityFixedCharacterInputAdapter input = null;
             ICharacterPresentationRuntime presentation = null;
@@ -134,11 +134,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     debugProgram.SourceMap,
                     new RuntimeDiagnosticsStore());
                 diagnosticsTarget = new RuntimeDiagnosticsTarget(name, GetInstanceID(), diagnosticsContext);
-                var presentationIdentity = new CharacterPresentationProgramIdentity(
-                    program.Manifest.ProgramId.Value,
-                    program.Manifest.SourceRevision.Value,
-                    program.Manifest.SemanticHash.ToString(),
-                    producerIdentities);
+                CharacterPresentationSemanticContract presentationContract =
+                    FixedCharacterPresentationContractAdapter.Create(program);
                 CharacterPresentationRuntimeBinding presentationBinding;
                 if (local)
                 {
@@ -151,7 +148,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     input = new UnityFixedCharacterInputAdapter(inputProfile, program, cameraRig);
                     presentationBinding = CharacterPresentationRuntimeFactory.CreateLocalOwner(
                         projectionAsset,
-                        presentationIdentity,
+                        presentationContract,
                         program.Manifest.TickRate,
                         actorId,
                         animancer,
@@ -174,7 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 {
                     presentationBinding = CharacterPresentationRuntimeFactory.CreateSimulatedActor(
                         projectionAsset,
-                        presentationIdentity,
+                        presentationContract,
                         program.Manifest.TickRate,
                         actorId,
                         animancer,
@@ -200,6 +197,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     name,
                     actorId,
                     program,
+                    presentationContract,
                     Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
                     initialBody,
                     input,
@@ -240,14 +238,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             {
                 registration.Dispose();
             }
-        }
-
-        static string[] BuildProducerIdentities(FixedCharacterSimulationProgram program)
-        {
-            var producers = new string[program.Producers.Count];
-            for (int i = 0; i < producers.Length; i++)
-                producers[i] = program.Producers[i].Identity;
-            return producers;
         }
 
         static FixedWorldBodyState BuildInitialBody(ActorId actorId, Transform spawn)

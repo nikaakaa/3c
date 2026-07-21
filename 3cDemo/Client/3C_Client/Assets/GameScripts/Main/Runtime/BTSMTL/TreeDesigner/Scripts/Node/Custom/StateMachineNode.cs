@@ -8,6 +8,7 @@ namespace TreeDesigner
     [NodeName("State Machine")]
     [NodeColor(118, 167, 255)]
     [NodePath("Base/Nesting/StateMachine")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     [Input("Input")]
     public sealed class StateMachineNode : RunnableNode
     {

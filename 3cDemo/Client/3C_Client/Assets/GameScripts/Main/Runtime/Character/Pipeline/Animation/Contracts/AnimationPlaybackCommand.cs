@@ -14,23 +14,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPlaybackCommandKind kind,
             ulong localLogicTick,
             ulong sequence,
-            AnimationLayerSelection selection,
-            AnimationProducerSample sample,
+            AnimationChannelSelection selection,
+            ResolvedAnimationPoseRequest poseRequest,
             AnimationPlaybackId playbackId)
         {
             Kind = kind;
             LocalLogicTick = localLogicTick;
             Sequence = sequence;
             Selection = selection;
-            Sample = sample;
+            PoseRequest = poseRequest;
             PlaybackId = playbackId;
         }
 
         public AnimationPlaybackCommandKind Kind { get; }
         public ulong LocalLogicTick { get; }
         public ulong Sequence { get; }
-        public AnimationLayerSelection Selection { get; }
-        public AnimationProducerSample Sample { get; }
+        public AnimationChannelSelection Selection { get; }
+        public ResolvedAnimationPoseRequest PoseRequest { get; }
         public AnimationPlaybackId PlaybackId { get; }
     }
 }

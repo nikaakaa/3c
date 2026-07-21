@@ -89,14 +89,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             RequireOpen();
             if (!m_Committed)
                 throw new InvalidOperationException("Target Program artifact transaction has not committed its staged bytes.");
-            for (int i = 0; i < m_ObsoletePaths.Length; i++)
-            {
-                if (File.Exists(m_ObsoletePaths[i]))
-                    File.Delete(m_ObsoletePaths[i]);
-            }
-            if (File.Exists(m_BackupPath))
-                File.Delete(m_BackupPath);
             m_Completed = true;
+            for (int i = 0; i < m_ObsoletePaths.Length; i++)
+                TryDelete(m_ObsoletePaths[i]);
+            TryDelete(m_BackupPath);
         }
 
         public void Rollback()
@@ -148,6 +144,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     return false;
             }
             return true;
+        }
+
+        static void TryDelete(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
         }
     }
 

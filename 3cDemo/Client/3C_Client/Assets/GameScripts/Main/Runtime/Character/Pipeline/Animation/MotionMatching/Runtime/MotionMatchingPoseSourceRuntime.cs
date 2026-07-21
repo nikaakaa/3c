@@ -1,0 +1,145 @@
+using System;
+using UnityEngine;
+
+namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
+{
+    public readonly struct MotionMatchingClipSamplePlan
+    {
+        public MotionMatchingClipSamplePlan(
+            CharacterMotionMatchingSourceClipId sourceClipId,
+            AnimationClip clip,
+            float sampleTime,
+            bool rootLocked)
+        {
+            if (!sourceClipId.IsValid || !clip || !float.IsFinite(sampleTime) || sampleTime < 0f || !rootLocked)
+                throw new ArgumentException("Motion Matching Clip Sample Plan is invalid.");
+            SourceClipId = sourceClipId;
+            Clip = clip;
+            SampleTime = sampleTime;
+            RootLocked = rootLocked;
+        }
+
+        public CharacterMotionMatchingSourceClipId SourceClipId { get; }
+        public AnimationClip Clip { get; }
+        public float SampleTime { get; }
+        public float Speed => 0f;
+        public bool RootLocked { get; }
+    }
+
+    public readonly struct MotionMatchingPoseParameterSample
+    {
+        public MotionMatchingPoseParameterSample(PoseParameterId parameterId, float value)
+        {
+            if (!parameterId.IsValid || !float.IsFinite(value) || value < 0f || value > 1f)
+                throw new ArgumentException("Motion Matching Pose Parameter sample is invalid.");
+            ParameterId = parameterId;
+            Value = value;
+        }
+
+        public PoseParameterId ParameterId { get; }
+        public float Value { get; }
+        public bool IsValid => ParameterId.IsValid && float.IsFinite(Value) && Value >= 0f && Value <= 1f;
+    }
+
+    public readonly struct MotionMatchingPoseSourceOutput
+    {
+        public MotionMatchingPoseSourceOutput(
+            AnimationChannelId animationChannelId,
+            PoseSlotId poseSlotId,
+            AnimationPlaybackId playbackId,
+            MotionMatchingSelectionGeneration selectionGeneration,
+            ulong presentationRequestSequence,
+            int programProducerIndex,
+            string programProducerId,
+            MotionMatchingClipSamplePlan clipSamplePlan,
+            MotionMatchingPoseParameterSample footPlacementWeight,
+            AnimationFootPlacementSample footFeatures,
+            CharacterMotionMatchingPlanId planId)
+        {
+            if (!animationChannelId.IsValid || !poseSlotId.IsValid || !playbackId.IsValid || !selectionGeneration.IsValid ||
+                presentationRequestSequence == 0 || programProducerIndex < 0 || string.IsNullOrWhiteSpace(programProducerId) ||
+                !footPlacementWeight.IsValid ||
+                !footPlacementWeight.ParameterId.Equals(MotionMatchingPoseSourceRuntime.FootPlacementWeightParameterId) ||
+                !footFeatures.IsValid || !planId.IsValid)
+                throw new ArgumentException("Motion Matching Pose Source output is incomplete.");
+            AnimationChannelId = animationChannelId;
+            PoseSlotId = poseSlotId;
+            PlaybackId = playbackId;
+            SelectionGeneration = selectionGeneration;
+            PresentationRequestSequence = presentationRequestSequence;
+            ProgramProducerIndex = programProducerIndex;
+            ProgramProducerId = programProducerId;
+            ClipSamplePlan = clipSamplePlan;
+            FootPlacementWeight = footPlacementWeight;
+            FootFeatures = footFeatures;
+            PlanId = planId;
+        }
+
+        public AnimationChannelId AnimationChannelId { get; }
+        public PoseSlotId PoseSlotId { get; }
+        public AnimationPlaybackId PlaybackId { get; }
+        public MotionMatchingPoseSourceKind PoseSourceKind => MotionMatchingPoseSourceKind.MotionMatching;
+        public MotionMatchingSelectionGeneration SelectionGeneration { get; }
+        public ulong PresentationRequestSequence { get; }
+        public int ProgramProducerIndex { get; }
+        public string ProgramProducerId { get; }
+        public MotionMatchingClipSamplePlan ClipSamplePlan { get; }
+        public MotionMatchingPoseParameterSample FootPlacementWeight { get; }
+        public AnimationFootPlacementSample FootFeatures { get; }
+        public CharacterMotionMatchingPlanId PlanId { get; }
+        public string ExactSelfTransitionIdentity => ProgramProducerId + "->" + ProgramProducerId;
+    }
+
+    public sealed class MotionMatchingPoseSourceRuntime
+    {
+        public const string FootPlacementWeightParameterName = MotionMatchingPoseSourceParameterContract.FootPlacementWeightName;
+        public static readonly PoseParameterId FootPlacementWeightParameterId = MotionMatchingPoseSourceParameterContract.FootPlacementWeightId;
+
+        readonly CharacterMotionMatchingRuntimeDatabase m_Database;
+
+        public MotionMatchingPoseSourceRuntime(CharacterMotionMatchingRuntimeDatabase database)
+        {
+            m_Database = database ?? throw new ArgumentNullException(nameof(database));
+        }
+
+        public MotionMatchingPoseSourceOutput Resolve(
+            MotionMatchingSelectionDecision selection,
+            AnimationChannelId animationChannelId,
+            PoseSlotId poseSlotId,
+            AnimationPlaybackId playbackId,
+            ulong presentationRequestSequence,
+            int programProducerIndex,
+            string programProducerId)
+        {
+            if (!selection.IsValid)
+                throw new InvalidOperationException($"Motion Matching Pose Source cannot lower invalid selection '{selection.InvalidReason}'.");
+            MotionMatchingSamplePayload sample = m_Database.GetSample(selection.SampleIndex);
+            MotionMatchingClipBindingPayload clip = m_Database.GetClipBinding(sample.ClipBindingIndex);
+            if (clip == null || !clip.RootLocked || !clip.Clip)
+                throw new InvalidOperationException("Motion Matching selected sample has no valid root-locked Clip binding.");
+            if (clip.FootPlacementWeightCurve == null ||
+                !clip.FootPlacementWeightCurve.ParameterId.Equals(FootPlacementWeightParameterId))
+                throw new InvalidOperationException($"Motion Matching Pose Source requires Projection parameter '{FootPlacementWeightParameterName}' for the selected Clip sample.");
+            float normalizedTime = clip.Clip.length <= 0f ? 0f : sample.SampleTime / clip.Clip.length;
+            var footPlacementWeight = new MotionMatchingPoseParameterSample(
+                FootPlacementWeightParameterId,
+                clip.FootPlacementWeightCurve.Sample(normalizedTime));
+            var footPlacement = new AnimationFootPlacementSample(
+                footPlacementWeight.Value,
+                sample.LeftFoot,
+                sample.RightFoot);
+            return new MotionMatchingPoseSourceOutput(
+                animationChannelId,
+                poseSlotId,
+                playbackId,
+                selection.Generation,
+                presentationRequestSequence,
+                programProducerIndex,
+                MotionMatchingIdentity.Require(programProducerId, nameof(programProducerId)),
+                new MotionMatchingClipSamplePlan(clip.SourceClipId, clip.Clip, sample.SampleTime, true),
+                footPlacementWeight,
+                footPlacement,
+                selection.Plan.PlanId);
+        }
+    }
+}

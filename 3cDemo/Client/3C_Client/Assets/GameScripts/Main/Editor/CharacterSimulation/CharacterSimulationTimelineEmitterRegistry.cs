@@ -142,6 +142,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     public sealed class CharacterSimulationTimelineEmitterContext
     {
         readonly TimelineData m_Timeline;
+        readonly string m_TimelineContentHash;
         readonly Track m_Track;
         readonly int m_TrackIndex;
         readonly string m_OwnerGraphId;
@@ -163,6 +164,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterSimulationTimelineEmissionSession session)
         {
             m_Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
+            m_TimelineContentHash = TimelineAuthoringFingerprint.Compute(m_Timeline);
             m_Track = track ?? throw new ArgumentNullException(nameof(track));
             m_TrackIndex = trackIndex;
             m_OwnerGraphId = string.IsNullOrEmpty(ownerGraphId)
@@ -193,7 +195,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Timeline.AuthoringId,
             string.Empty,
             $"{m_Route}/track:{m_Track.AuthoringId}",
-            trackId: m_Track.AuthoringId);
+            trackId: m_Track.AuthoringId,
+            contentHash: m_TimelineContentHash);
 
         public CharacterSimulationSourceLocation ClipSource(Clip clip)
         {
@@ -205,7 +208,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_Timeline.AuthoringId,
                 clip.AuthoringId,
                 $"{m_Route}/track:{m_Track.AuthoringId}/clip:{clip.AuthoringId}",
-                trackId: m_Track.AuthoringId);
+                trackId: m_Track.AuthoringId,
+                contentHash: m_TimelineContentHash);
         }
 
         public void DeclareTrackCatalog(params ProgramCatalogField[] fields)
@@ -372,10 +376,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             registry.Register(new SimpleTrackEmitter<AnimationTrack>(context =>
             {
                 var track = (AnimationTrack)context.Track;
-                context.DeclareTrackCatalog(context.Builder.ConstantField(context.TrackSource, "LayerId", track.LayerId));
+                context.DeclareTrackCatalog(context.Builder.ConstantField(context.TrackSource, "AnimationChannelId", track.AnimationChannelId));
                 context.Builder.DeclareProducer(
                     context.AnimationProducerIdentity,
-                    track.LayerId,
+                    new AnimationChannelId(track.AnimationChannelId),
                     context.TrackIdentity,
                     ProgramOutputChannelKind.Presentation,
                     context.TrackSource);
@@ -397,7 +401,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string producer = context.AnimationProducerIdentity;
                 int producerIndex = context.Builder.DeclareProducer(
                     producer,
-                    ((AnimationTrack)context.Track).LayerId,
+                    new AnimationChannelId(((AnimationTrack)context.Track).AnimationChannelId),
                     context.TrackIdentity,
                     ProgramOutputChannelKind.Presentation,
                     source);
@@ -458,28 +462,46 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (string.IsNullOrEmpty(context.ActionContextIdentity))
                     throw new InvalidOperationException($"MotionWarp '{clip.AuthoringId}' requires an explicit Timeline Action Context.");
                 context.Builder.RequireGameplayCapability("TimelineMotionWarp");
+                MotionWarpTargetOffsetSpace offsetSpace = clip.HasPositionWarp
+                    ? clip.TargetOffsetSpace
+                    : MotionWarpTargetOffsetSpace.TargetLocal;
+                MotionWarpRotationMethod rotationMethod = clip.HasYawWarp
+                    ? clip.RotationMethod
+                    : MotionWarpRotationMethod.ProgressCurve;
+                var fields = new List<ProgramCatalogField>
+                {
+                    context.Builder.IdentityField("SourceMotionClip", $"timeline:{context.Timeline.AuthoringId}/clip:{clip.SourceMotionClipId}"),
+                    context.Builder.IdentityField("TimelineOwner", $"timeline:{context.Timeline.AuthoringId}"),
+                    context.Builder.IdentityField("ActionContext", context.ActionContextIdentity),
+                    context.Builder.ConstantField(source, "TimelineOwnerOperation", context.TimelineOperation.Value),
+                    context.Builder.ConstantField(source, "TranslationMode", clip.TranslationMode),
+                    context.Builder.ConstantField(source, "TargetOffsetSpace", offsetSpace),
+                    context.Builder.ConstantField(source, "RotationMode", clip.RotationMode),
+                    context.Builder.ConstantField(source, "RotationMethod", rotationMethod),
+                    context.Builder.ConstantField(source, "LimitPolicy", clip.LimitPolicy)
+                };
+                if (clip.HasPositionWarp)
+                {
+                    fields.Add(context.Builder.ConstantField(source, "TargetPlanarOffset", clip.TargetPlanarOffset));
+                    fields.Add(context.Builder.ConstantField(source, "MaximumPlanarCorrection", clip.MaxTotalPositionCorrection));
+                }
+                if (clip.UsesPositionProgress)
+                    fields.Add(context.Builder.ConstantField(source, "PositionProgressCurve", context.BakeCurve(clip, "PositionProgressCurve", clip.PositionProgressCurve)));
+                if (clip.HasYawWarp)
+                {
+                    fields.Add(context.Builder.ConstantField(source, "TargetYawOffsetDegrees", clip.TargetYawOffsetDegrees));
+                    fields.Add(context.Builder.ConstantField(source, "MaximumYawCorrectionDegrees", clip.MaxTotalYawCorrectionDegrees));
+                }
+                if (clip.UsesYawProgress)
+                    fields.Add(context.Builder.ConstantField(source, "YawProgressCurve", context.BakeCurve(clip, "YawProgressCurve", clip.YawProgressCurve)));
+                if (clip.UsesMaximumYawRate)
+                    fields.Add(context.Builder.ConstantField(source, "MaximumYawRateDegreesPerSecond", clip.MaximumYawRateDegreesPerSecond));
                 OperationHandle operation = context.DeclareClipOperation(
                     clip,
                     SimulationOperationCode.TimelineMotionWarp,
-                    new[]
-                    {
-                        context.Builder.IdentityField("SourceMotionClip", $"timeline:{context.Timeline.AuthoringId}/clip:{clip.SourceMotionClipId}"),
-                        context.Builder.IdentityField("TimelineOwner", $"timeline:{context.Timeline.AuthoringId}"),
-                        context.Builder.IdentityField("ActionContext", context.ActionContextIdentity),
-                        context.Builder.ConstantField(source, "TimelineOwnerOperation", context.TimelineOperation.Value),
-                        context.Builder.ConstantField(source, "PositionMode", clip.PositionMode),
-                        context.Builder.ConstantField(source, "RotationMode", clip.RotationMode),
-                        context.Builder.ConstantField(source, "TargetLocalPlanarOffset", clip.TargetLocalPlanarOffset),
-                        context.Builder.ConstantField(source, "TargetYawOffsetDegrees", clip.TargetYawOffsetDegrees),
-                        context.Builder.ConstantField(source, "PositionWeight", clip.PositionWeight),
-                        context.Builder.ConstantField(source, "YawWeight", clip.YawWeight),
-                        context.Builder.ConstantField(source, "MaxTotalPositionCorrection", clip.MaxTotalPositionCorrection),
-                        context.Builder.ConstantField(source, "MaxTotalYawCorrectionDegrees", clip.MaxTotalYawCorrectionDegrees),
-                        context.Builder.ConstantField(source, "PositionProgressCurve", context.BakeCurve(clip, "PositionProgressCurve", clip.PositionProgressCurve)),
-                        context.Builder.ConstantField(source, "YawProgressCurve", context.BakeCurve(clip, "YawProgressCurve", clip.YawProgressCurve))
-                    },
+                    fields,
                     clip.SourceMotionClipId,
-                    integer0: (int)clip.PositionMode,
+                    integer0: (int)clip.TranslationMode,
                     integer1: (int)clip.RotationMode);
                 context.DeferMotionSourceReference(clip, operation);
                 return operation;
@@ -506,7 +528,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string producer = context.ProducerIdentity(clip);
                 int producerIndex = context.Builder.DeclareProducer(
                     producer,
-                    "Cue",
+                    new AnimationChannelId("Cue"),
                     context.ClipIdentity(clip),
                     ProgramOutputChannelKind.Presentation,
                     source);
@@ -601,7 +623,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string producer = context.ProducerIdentity(clip);
             int producerIndex = context.Builder.DeclareProducer(
                 producer,
-                "Camera",
+                CameraProgramOperationSchema.ChannelId,
                 context.ClipIdentity(clip),
                 ProgramOutputChannelKind.Presentation,
                 source);

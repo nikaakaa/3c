@@ -18,7 +18,7 @@
 - 增加独立 `ThirdPerson.Startup.Server` Fantasy 产品和单一 AuthGateway Scene。客户端固定通过 WSS 登录，服务端提供最小游客身份、SessionToken、单 AuthGateway 内的 AccountId 唯一 Session Generation、旧会话顶号推送和条件化断开清理。
 - 将 Fantasy 初始化与具体 Session 所有权分离：认证 Session 由产品认证模块持有，ServerAuthoritative Gameplay 控制 Session 继续由对应 Network Model 模块持有；两者不得通过一个全局 SessionFacade 相互断开。
 - 在项目业务层增加 ResourceScope/Lease 生命周期，并对 `Packages/com.alex.tengine` 的 ResourceModule 做窄公共初始化扩展。正式 scope 为 Global、Home、Gameplay 与 Transient；业务预加载显式声明顺序，底层 Bundle 依赖继续由 YooAsset 解析，业务状态和流程不得迁入 TEngine 包。
-- 保留 Editor-only 本地玩法开发入口，可直接运行当前正式 `Assets/Scenes/Sandbox/SandBox.unity` 验证 IK、Motion Warp 和角色管线；该入口不进入 Player、不修改普通 Build Settings，也不作为资源或认证失败后的产品 fallback。
+- 保留 Editor-only 本地玩法开发入口，直接打开独立的 `Assets/Scenes/GameplayLab/GameplayLab.unity` 验证IK、Motion Warp、KCC和角色管线；该入口不进入Player、不修改普通Build Settings，也不作为资源或认证失败后的产品fallback。
 - 增加只读启动、资源和内存诊断，展示 logical load、physical load、in-flight join、cache hit、active lease、scope、TEngine pool、YooAsset package、Unity memory 与阶段耗时；仅在 Editor/Development Build 提供取消下载、破坏缓存文件、同资源并发加载和释放 scope 的正式 Fault Lab。
 - 更新 `openspec/project.md` 中普通产品场景链和服务端代码组织；保持全部 Network Test Product、ServerAuthoritative KCP 控制面、UDP Gameplay 数据面、DeterministicRollback 和 Gameplay Session 语义不变。
 

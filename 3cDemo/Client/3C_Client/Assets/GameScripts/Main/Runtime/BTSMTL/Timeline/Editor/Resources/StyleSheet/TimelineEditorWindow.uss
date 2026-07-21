@@ -136,6 +136,8 @@
 }
 
 #track-hierarchy {
+    flex-grow: 1;
+    min-height: 0;
 }
 
 #tool-bar {
@@ -143,6 +145,22 @@
     background-color: rgb(56, 56, 56);
     height: 25px;
     overflow: hidden;
+    flex-shrink: 0;
+}
+
+#track-handle-scroll {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+#track-handle-scroll .unity-scroll-view__content-container {
+    min-height: 100%;
+}
+
+#track-handle-container {
+    position: relative;
+    width: 100%;
+    min-height: 100%;
 }
 
 #add-track-button {

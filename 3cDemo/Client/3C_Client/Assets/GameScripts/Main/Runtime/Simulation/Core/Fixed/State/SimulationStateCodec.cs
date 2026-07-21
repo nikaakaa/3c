@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation.Fixed
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-        const int Version = 7;
-        public const string CodecIdentity = "character-state/fixed-q32.32/v5";
-        const string HashIdentity = "character-state-hash/fixed-q32.32/v5";
+        const int Version = 9;
+        public const string CodecIdentity = "character-state/fixed-q32.32/v7";
+        const string HashIdentity = "character-state-hash/fixed-q32.32/v6";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -117,6 +117,9 @@ namespace ThirdPersonSimulation.Fixed
                 case ProgramStateValueKind.GameplayEffectAggregate:
                     GameplayEffectStateAggregateCodec.Write(writer, value.GameplayEffectAggregate, layout.GameplayEffectProgram);
                     break;
+                case ProgramStateValueKind.EquipmentAggregate:
+                    EquipmentStateAggregateCodec.Write(writer, value.EquipmentAggregate);
+                    break;
                 default: throw new InvalidDataException($"Unsupported Character state value kind '{value.Kind}'.");
             }
         }
@@ -146,6 +149,9 @@ namespace ThirdPersonSimulation.Fixed
                 case ProgramStateValueKind.GameplayEffectAggregate:
                     return CharacterStateValue.FromGameplayEffectAggregate(
                         GameplayEffectStateAggregateCodec.Read(reader, layout.GameplayEffectProgram));
+                case ProgramStateValueKind.EquipmentAggregate:
+                    return CharacterStateValue.FromEquipmentAggregate(
+                        EquipmentStateAggregateCodec.Read(reader, layout.Equipment));
                 default: throw new InvalidDataException($"Unsupported Character state value kind '{kind}'.");
             }
         }
@@ -238,6 +244,7 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteString(value.TargetKey);
             WriteTargetSnapshot(writer, value.TargetSnapshot);
             writer.WriteInt32(value.SourceOperation.Value);
+            EquipmentActionContextCodec.Write(writer, value.EquipmentContext);
         }
 
         static FixedActionActivationRequestState ReadActionRequest(
@@ -254,6 +261,7 @@ namespace ThirdPersonSimulation.Fixed
             string targetKey = reader.ReadString();
             SimulationActionTargetSnapshot target = ReadTargetSnapshot(reader);
             OperationHandle source = ReadOperation(reader, layout);
+            EquipmentActionContext equipmentContext = EquipmentActionContextCodec.Read(reader, layout.Equipment);
             return new FixedActionActivationRequestState(
                 actionId,
                 contextId,
@@ -262,7 +270,8 @@ namespace ThirdPersonSimulation.Fixed
                 startTick,
                 targetKey,
                 target,
-                source);
+                source,
+                equipmentContext);
         }
 
         static void WriteActionInstance(CanonicalWriter writer, FixedActionInstanceState value)
@@ -286,6 +295,7 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteUInt64(value.LastTransitionTick);
             writer.WriteUInt64(value.LastTransitionSourceTick);
             writer.WriteString(value.Reason);
+            EquipmentActionContextCodec.Write(writer, value.EquipmentContext);
         }
 
         static FixedActionInstanceState ReadActionInstance(
@@ -310,7 +320,8 @@ namespace ThirdPersonSimulation.Fixed
                 ReadEnum<SimulationActionLifecycleTransitionType>(reader.ReadByte()),
                 reader.ReadUInt64(),
                 reader.ReadUInt64(),
-                reader.ReadString());
+                reader.ReadString(),
+                EquipmentActionContextCodec.Read(reader, layout.Equipment));
             if (!value.IsValid)
                 throw new InvalidDataException("Character state Action instance identity is invalid.");
             return value;

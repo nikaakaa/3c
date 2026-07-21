@@ -6,6 +6,7 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("Not")]
     [NodePath("Base/Value/Operate/Not")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.SharedPureValue)]
     public sealed class NotNode : ValueNode
     {
         [SerializeField, PropertyPort(PortDirection.Input, "Input")]

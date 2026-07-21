@@ -4,6 +4,7 @@ namespace TreeDesigner
 {
     [NodeName("Selector")]
     [NodePath("Base/Composite/Selector")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.SharedFlow)]
     public class SelectorNode : CompositeNode
     {
         [NonSerialized]

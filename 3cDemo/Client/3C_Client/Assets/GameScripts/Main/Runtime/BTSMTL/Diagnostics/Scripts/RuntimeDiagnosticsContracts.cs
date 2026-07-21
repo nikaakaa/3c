@@ -286,7 +286,8 @@ namespace BTSMTL.Diagnostics
         GameplayEffect = 1 << 6,
         Network = 1 << 7,
         FootPlacement = 1 << 8,
-        All = Graph | StateMachine | Timeline | Blackboard | Animation | Motion | GameplayEffect | Network | FootPlacement
+        Equipment = 1 << 9,
+        All = Graph | StateMachine | Timeline | Blackboard | Animation | Motion | GameplayEffect | Network | FootPlacement | Equipment
     }
 
     public enum RuntimeTraceEventKind
@@ -363,7 +364,11 @@ namespace BTSMTL.Diagnostics
         SimulationCommit,
         SimulationFailure,
         SimulationNetworkModel,
-        FootPlacementSnapshot
+        FootPlacementSnapshot,
+        EquipmentSnapshot,
+        EquipmentChange,
+        EquipmentHost,
+        EquipmentVisual
     }
 
     public enum DebugValueKind
@@ -562,5 +567,4 @@ namespace BTSMTL.Diagnostics
         IDebugSourceMap SourceMap { get; }
     }
 }
-
 

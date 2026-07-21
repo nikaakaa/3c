@@ -23,6 +23,8 @@ namespace BTSMTL.Timeline.Editor
     internal sealed class TimelineAnimationMarkerView : VisualElement, ISelectable
     {
         readonly TimelineTrackView m_TrackView;
+        readonly VisualElement m_Line;
+        readonly VisualElement m_Cap;
         readonly Label m_Label;
         readonly TimelineDraftTransaction<int> m_Draft = new TimelineDraftTransaction<int>(value => value);
         bool m_Selected;
@@ -43,15 +45,32 @@ namespace BTSMTL.Timeline.Editor
             name = "animation-sync-marker";
             style.position = Position.Absolute;
             style.top = TimelineTrackLayout.MarkerLaneTop + 1f;
-            style.width = 5f;
+            style.width = 18f;
             style.height = TimelineTrackLayout.MarkerLaneHeight - 2f;
-            style.backgroundColor = new Color(0.15f, 0.85f, 0.92f, 0.9f);
             pickingMode = PickingMode.Position;
             tooltip = Marker.MarkerId;
 
+            m_Line = new VisualElement();
+            m_Line.style.position = Position.Absolute;
+            m_Line.style.left = 8f;
+            m_Line.style.top = 3f;
+            m_Line.style.width = 2f;
+            m_Line.style.bottom = 0f;
+            m_Line.pickingMode = PickingMode.Ignore;
+            Add(m_Line);
+
+            m_Cap = new VisualElement();
+            m_Cap.style.position = Position.Absolute;
+            m_Cap.style.left = 5f;
+            m_Cap.style.top = 0f;
+            m_Cap.style.width = 8f;
+            m_Cap.style.height = 7f;
+            m_Cap.pickingMode = PickingMode.Ignore;
+            Add(m_Cap);
+
             m_Label = new Label(Marker.MarkerId);
             m_Label.style.position = Position.Absolute;
-            m_Label.style.left = 6f;
+            m_Label.style.left = 13f;
             m_Label.style.top = 1f;
             m_Label.style.fontSize = 10f;
             m_Label.style.color = new Color(0.8f, 1f, 1f, 1f);
@@ -63,6 +82,7 @@ namespace BTSMTL.Timeline.Editor
             RegisterCallback<PointerUpEvent>(OnPointerUp);
             RegisterCallback<PointerCancelEvent>(OnPointerCancel);
             RegisterCallback<PointerCaptureOutEvent>(OnPointerCaptureOut);
+            ApplyColor(new Color(0.15f, 0.85f, 0.92f, 0.9f));
             Refresh();
         }
 
@@ -73,7 +93,7 @@ namespace BTSMTL.Timeline.Editor
 
         public void Refresh()
         {
-            style.left = m_TrackView.FieldView.Geometry.FrameToPosition(Marker.Frame) - 2f;
+            style.left = m_TrackView.FieldView.Geometry.FrameToPosition(Marker.Frame) - 9f;
             m_Label.text = Marker.MarkerId;
             tooltip = $"{Marker.MarkerId} · {Marker.Frame}F";
         }
@@ -119,15 +139,14 @@ namespace BTSMTL.Timeline.Editor
             int maximum = Track.SequenceTopology == AnimationMarkerSequenceTopology.Cyclic
                 ? Mathf.Max(0, Track.Timeline.MaxFrame - 1)
                 : Track.Timeline.MaxFrame;
-            Vector2 local = this.WorldToLocal(evt.position);
-            float pointerOnTrack = layout.x + local.x;
+            float pointerOnTrack = m_TrackView.WorldToLocal(evt.position).x;
             m_TargetFrame = Mathf.Clamp(
                 geometry.PositionToClosestFrame(pointerOnTrack),
                 0,
                 maximum);
             m_Draft.Update(m_TargetFrame);
             m_DragChanged = m_TargetFrame != m_OriginalFrame;
-            style.left = geometry.FrameToPosition(m_TargetFrame) - 2f;
+            style.left = geometry.FrameToPosition(m_TargetFrame) - 9f;
             tooltip = $"{Marker.MarkerId} · {m_TargetFrame}F";
             evt.StopImmediatePropagation();
         }
@@ -200,14 +219,20 @@ namespace BTSMTL.Timeline.Editor
         public void Select()
         {
             m_Selected = true;
-            style.backgroundColor = new Color(1f, 0.68f, 0.1f, 1f);
+            ApplyColor(new Color(1f, 0.68f, 0.1f, 1f));
             BringToFront();
         }
 
         public void Unselect()
         {
             m_Selected = false;
-            style.backgroundColor = new Color(0.15f, 0.85f, 0.92f, 0.9f);
+            ApplyColor(new Color(0.15f, 0.85f, 0.92f, 0.9f));
+        }
+
+        void ApplyColor(Color color)
+        {
+            m_Line.style.backgroundColor = color;
+            m_Cap.style.backgroundColor = color;
         }
     }
 
@@ -228,7 +253,7 @@ namespace BTSMTL.Timeline.Editor
         Label m_GroupCoverageLabel;
         Label m_PreviewStateLabel;
         string m_PreviewSourceSignature = string.Empty;
-        TimelinePreviewTarget m_LastAuthoringContextTarget;
+        ITimelineAnimationMarkerSyncAuthoringContext m_LastTopologyContext;
 
         public AnimationMarkerSyncTrackInspectorView(
             TimelineEditorView editor,
@@ -406,7 +431,8 @@ namespace BTSMTL.Timeline.Editor
             if (m_IssueContainer == null)
                 return;
             m_IssueContainer.Clear();
-            if (m_Editor.PreviewSession.Target is ITimelineAnimationMarkerSyncAuthoringContext context)
+            ITimelineAnimationMarkerSyncAuthoringContext context = m_Editor.SessionContext?.MarkerTopologyContext;
+            if (context != null)
             {
                 m_ContextIssues.Clear();
                 context.CollectAnimationMarkerSyncAuthoringIssues(
@@ -504,7 +530,8 @@ namespace BTSMTL.Timeline.Editor
             if (m_GroupCoverageLabel == null)
                 return;
             m_GroupMembers.Clear();
-            if (m_Editor.PreviewSession.Target is not ITimelineAnimationMarkerSyncAuthoringContext context)
+            ITimelineAnimationMarkerSyncAuthoringContext context = m_Editor.SessionContext?.MarkerTopologyContext;
+            if (context == null)
             {
                 m_GroupCoverageLabel.text = string.Empty;
                 return;
@@ -520,7 +547,7 @@ namespace BTSMTL.Timeline.Editor
                 lines.Add($"{member.DisplayName}: {member.DirectedPairCoverage}");
             }
             m_GroupCoverageLabel.text = string.Join("\n", lines);
-            m_GroupCoverageLabel.tooltip = $"{m_Track.LayerId}/{m_Track.SyncGroupId}";
+            m_GroupCoverageLabel.tooltip = $"{m_Track.AnimationChannelId}/{m_Track.SyncGroupId}";
         }
 
         void ApplyPreviewSource()
@@ -539,9 +566,10 @@ namespace BTSMTL.Timeline.Editor
 
         void UpdatePreviewState()
         {
-            if (!ReferenceEquals(m_LastAuthoringContextTarget, m_Editor.PreviewSession.Target))
+            ITimelineAnimationMarkerSyncAuthoringContext topology = m_Editor.SessionContext?.MarkerTopologyContext;
+            if (!ReferenceEquals(m_LastTopologyContext, topology))
             {
-                m_LastAuthoringContextTarget = m_Editor.PreviewSession.Target;
+                m_LastTopologyContext = topology;
                 RefreshIssues();
                 RefreshGroupCoverage();
             }
@@ -567,7 +595,7 @@ namespace BTSMTL.Timeline.Editor
                 : $"{state.PreviousMarkerId}->{state.NextMarkerId} {state.Fraction:0.000}";
             SetPreviewState(
                 $"{state.RawTime:0.000}s -> {state.EffectiveTime:0.000}s | {pair} | {state.Reason}",
-                $"Layer: {state.LayerId}\nGroup: {state.SyncGroupId}\n" +
+                $"Channel: {state.AnimationChannelId}\nGroup: {state.SyncGroupId}\n" +
                 $"Source: {state.SourceProducerId}\nTarget: {state.TargetProducerId}\n" +
                 $"Cycle: {state.EffectiveCycle}\nOccurrence: {state.TargetOccurrenceIndex}\n" +
                 $"Depth: {state.RelationDepth}\nLifecycle: {state.LifecyclePhase}\nReason: {state.Reason}");

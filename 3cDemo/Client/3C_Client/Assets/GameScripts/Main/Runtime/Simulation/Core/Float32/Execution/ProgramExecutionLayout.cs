@@ -112,6 +112,7 @@ namespace ThirdPersonSimulation
         readonly IReadOnlyList<InputDerivedStateBinding> m_InputDerivedBindings;
         readonly TypedStateAddress[] m_ActionTargetSnapshotByOperation;
         readonly TypedStateAddress m_GameplayEffectAggregate;
+        readonly TypedStateAddress m_EquipmentAggregate;
         readonly ProgramCatalogRuntimeIndex m_CatalogIndex;
         readonly TimelineAnimationProducerIndex m_TimelineAnimationProducers;
         readonly ProgramMotionModifierDescriptor[] m_MotionModifiers;
@@ -128,6 +129,7 @@ namespace ThirdPersonSimulation
             int stateSemanticCount = EnumValueCount(typeof(ProgramStateSemantic));
 
             m_CatalogIndex = new ProgramCatalogRuntimeIndex(operationCount, program.References, program.CatalogEntries);
+            Equipment = Float32EquipmentProgramLayoutCompiler.Compile(program);
             BuildMotionModifierRanges(program, out m_MotionModifiers, out m_MotionModifierRanges);
             string[] operationSourcePaths = BuildOperationSourcePaths(program);
             BuildValueInputs(program, out m_ValueInputRanges, out m_ValueInputs);
@@ -144,6 +146,10 @@ namespace ThirdPersonSimulation
                 out m_TimelineRetention,
                 out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots,
                 out m_GameplayEffectAggregate);
+            int equipmentSlot = FindStateSlot(ProgramStateSemantic.EquipmentAggregate, "equipment:aggregate");
+            if (Equipment.CapabilityEnabled != (equipmentSlot >= 0))
+                throw new InvalidDataException("Equipment Program catalog and state layout capability are inconsistent.");
+            m_EquipmentAggregate = equipmentSlot >= 0 ? m_TypedAddresses[equipmentSlot] : default;
             m_ActionTargetSnapshotByOperation = BuildActionTargetSnapshotIndex(program, actionTargetSnapshots);
             RootOperation = ResolveRootOperation(program);
             var topology = new OperationExecutionTopology(
@@ -174,6 +180,10 @@ namespace ThirdPersonSimulation
         internal Float32ProgramExecutionServices Services { get; }
         public IReadOnlyList<TypedStatePartitionDescriptor> StatePartitions => m_Partitions;
         public TypedStateAddress GameplayEffectAggregateAddress => m_GameplayEffectAggregate;
+        public EquipmentProgramLayout Equipment { get; }
+        public TypedStateAddress EquipmentAggregateAddress => Equipment.CapabilityEnabled
+            ? m_EquipmentAggregate
+            : throw new InvalidOperationException("Program does not install Equipment capability.");
         public IReadOnlyList<InputDerivedStateBinding> InputDerivedBindings => m_InputDerivedBindings;
 
         public static ProgramExecutionLayout GetOrCreate(CharacterSimulationProgram program)

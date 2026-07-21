@@ -6,6 +6,7 @@ namespace TreeDesigner
     [Serializable]
     [NodeName("Or")]
     [NodePath("Base/Value/Operate/Or")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.SharedPureValue)]
     public class OrNode : ValueNode
     {
         [SerializeField, PropertyPort(PortDirection.Input, "Input1")]

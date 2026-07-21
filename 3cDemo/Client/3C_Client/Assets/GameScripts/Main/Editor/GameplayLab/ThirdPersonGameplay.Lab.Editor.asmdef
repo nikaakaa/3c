@@ -1,0 +1,32 @@
+{
+    "name": "ThirdPersonGameplay.Lab.Editor",
+    "rootNamespace": "ThirdPersonGameplay.Editor.Lab",
+    "references": [
+        "ThirdPersonClient.Editor",
+        "ThirdPersonClient.Runtime",
+        "ThirdPersonSimulation.Core",
+        "ThirdPersonSimulation.Float32",
+        "ThirdPersonSimulation.Unity",
+        "ThirdPersonSimulation.Fixed",
+        "ThirdPersonSimulation.Fixed.Compiler",
+        "ThirdPersonSimulation.DeterministicKcc",
+        "ThirdPersonSimulation.Fixed.Unity",
+        "ThirdPersonGameplay",
+        "ThirdPersonCharacter.Presentation.FinalIK",
+        "ThirdPersonCharacter.Pipeline.RootMotion",
+        "BTSMTL.Timeline",
+        "Kybernetik.Animancer",
+        "Cinemachine"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

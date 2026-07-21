@@ -7,7 +7,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     {
         public override string SourceIdentity => "neutral-program-inputs/1";
 
-        public override IUnityCharacterSimulationInputAdapter Create(CharacterControlSourceContext context) =>
+        public override IUnityCharacterControlSourceRuntime Create(CharacterControlSourceContext context) =>
             new NeutralCharacterSimulationInputAdapter(context.Program);
     }
 }

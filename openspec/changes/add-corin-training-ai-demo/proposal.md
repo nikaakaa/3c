@@ -12,10 +12,14 @@ AI核心和Agent v15分别解决“系统能运行AI”和“工具能安全写A
 - 显式绑定玩家ActorId作为唯一候选目标，不按Team、Tag、名称或距离扫描选择敌我。
 - 配置Controller-scope CurrentTarget、AttackRange和攻击重入所需可调变量。
 - 配置目标获取、ActionTargetSnapshot、距离外MoveAxis、距离内停止和Attack request分支。
+- 增加通用WaitTicks语义，使攻击冷却由AI Tree显式编排，而不是由节点runtime硬编码。
+- 补齐AI Agent Snapshot中的Loop、Compare、ConditionRuleGraph和AbortPolicy投影，使工具可完整复核行为条件。
+- 将`AIControllerDefinition`拆为同名独立Unity脚本资产，保证Definition经过domain reload后仍能解析为正式类型。
 - 通过Agent v15执行export、dry-run、apply、re-export和validate，不直接编辑Graph YAML。
 - 编译并绑定Corin AIIntentProgram。
 - 将现有`corin-training-enemy`Control Source从Neutral迁移为AI，删除其Neutral序列化绑定。
-- 保持训练敌人的Corin Definition、Character Program、Projection、WorldSolver、Body binding和SimulatedActor Presentation不变。
+- 将训练敌人的VisualRoot迁移为`Assets/AssetArt/Animation/ZZZ/敌人/怪兽/怪兽.fbx`，由同一Animancer正式表现链驱动。
+- 保持训练敌人的Corin Definition、Character Program、Projection、WorldSolver、Body binding和SimulatedActor Presentation角色不变。
 
 ## Scope
 
@@ -25,6 +29,7 @@ AI核心和Agent v15分别解决“系统能运行AI”和“工具能安全写A
 - Standalone训练敌人Control Source迁移。
 - 直线接近、停止、普通攻击请求和显式目标快照。
 - 训练AI与玩家目标provider共用Committed Observation。
+- 训练敌人怪兽VisualRoot、Generic Rig绑定与显式无IK Foot Placement solver。
 
 ### Out of Scope
 
@@ -32,16 +37,21 @@ AI核心和Agent v15分别解决“系统能运行AI”和“工具能安全写A
 - NavMesh、DotRecast寻路、动态避障和绕障。
 - Hitbox、命中、伤害、受击、死亡和完整Combat结果。
 - ServerAuthoritative、DotRecast Authority或DeterministicRollback AI。
-- 新AI节点、新runtime路径或Agent schema修改。
+- 怪兽专用Character Program、怪兽专用Timeline动画映射和怪兽脚底IK调校。
 
 ## Impact
 
 - Affected specs:
   - `character-targeted-motion-warp-demo`
+  - `agent-ai-controller-synthesis`
   - 新增`corin-training-ai-demo`
 - Affected assets:
   - Corin Training AI Definition、Tree、Perception Profile与generated Program。
   - Corin Standalone训练敌人prefab/runtime profile。
+- Affected code:
+  - 通用AI WaitTicks operation及Agent v15 AI Snapshot完整性。
+  - AIControllerDefinition Unity脚本资产所有权。
+  - 通用Passthrough Foot Placement solver。
 - Breaking changes:
   - Standalone训练敌人不再使用Neutral Control Source。
   - AI配置失败时直接拒绝Session，不回退Neutral。
@@ -62,9 +72,11 @@ AI核心和Agent v15分别解决“系统能运行AI”和“工具能安全写A
 ## Success Criteria
 
 - Corin Training AI资产全部由Agent v15正式事务创建并可重新导出。
+- AI Definition经过Unity domain reload后仍保持有效MonoScript引用和类型身份。
 - 训练敌人使用AI Control Source且不存在Neutral fallback绑定。
 - 训练AI读取同一Committed Observation中的显式玩家Actor。
 - 目标距离外输出MoveAxis，攻击距离内停止并按一次性activation提交Attack。
+- AI Snapshot可以直接审查Loop、距离比较、条件子图和中止策略。
+- Standalone训练敌人只显示怪兽VisualRoot，且仍由同一Host、Animancer和Presentation Projection驱动。
 - 最终移动、状态、Timeline、MotionWarp、碰撞和动画继续由Corin Character Program、WorldSolver与Presentation处理。
 - 资产不包含Team、Tag、名称搜索、NavMesh、Transform移动或Combat伪结果。
-

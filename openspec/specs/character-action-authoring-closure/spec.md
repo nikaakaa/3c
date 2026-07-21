@@ -28,7 +28,7 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 #### Scenario: 编辑网络策略
 - **WHEN** 作者选中 Graph 中的 action activation request 提交入口
 - **THEN** UI MUST不暴露Action级网络策略                                                     
-- **AND** Model Definition只配置fact-kind与producer coverage       
+- **AND** Model Definition只配置fact-kind与producer coverage
 
 ### Requirement: ActionProfile Inspector 必须是策略主编辑入口
 
@@ -38,7 +38,7 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 
 - **WHEN** 作者选中 Attack ActionProfile
 - **THEN** UI MUST 展示动作身份与 gameplay 约束
-- **AND** MUST不显示逐Action网络字段或虚构的policy绑定                                             
+- **AND** MUST不显示逐Action网络字段或虚构的policy绑定
 
 ### Requirement: Runtime Debug 必须展示 request 到 outputs 的完整链路
 系统 MUST 提供或预留 Runtime Debug 数据，按 input request、action activation request、ActionInstance、window sample、motion sample、gameplay result、cue event 和 network result 展示链路。
@@ -142,7 +142,7 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 - **WHEN** 作者查看 Attack HitWindow projection
 - **THEN** UI MUST 显示 WindowType、WindowId 和 Action identity
 - **AND** MAY导航到Model的fact-kind与producer coverage                   
-- **AND** MUST不把Model配置复制到TreeClip        
+- **AND** MUST不把Model配置复制到TreeClip
 
 ### Requirement: 非 Timeline 输出必须共享同一套策略解析
 
@@ -152,7 +152,7 @@ Timeline与非Timeline动作 MUST产生相同GameplayFacts并以ActionId/ActionI
 
 - **WHEN** 非 Timeline 动作产生 GuardWindow fact
 - **THEN** fact MUST 使用正式 Action Context
-- **AND** 未映射ActionWindow packet时 MUST保留为本地Gameplay输出          
+- **AND** 未映射ActionWindow packet时 MUST保留为本地Gameplay输出
 
 ### Requirement: Runtime Debug 必须展示配置和运行事实的差异
 
@@ -168,7 +168,7 @@ Runtime Debug MUST按 `ActionInstance` 展示GameplayFact、PresentationCommand�
 
 - **WHEN** 收到 ActionInstance Correct 或 Reject decision
 - **THEN** Debug MUST 显示对应 ActionProfile、ActionInstance、prediction key、incoming transition 和 reason
-- **AND** 同tick存在body correction时Model Debug MUST记录restore/replay与ack                                                          
+- **AND** 同tick存在body correction时Model Debug MUST记录restore/replay与ack
 
 ### Requirement: Timeline 攻击闭环不得依赖 RootTree 平铺测试输出
 
@@ -186,6 +186,7 @@ Timeline 攻击的时间事实 MUST 由 inline Timeline Decision TreeClip 写 ow
 - **WHEN** 作者配置非 Timeline 持续动作
 - **THEN** Graph MAY 写具有显式 Action Context projection 的 scope variable
 - **AND** 输出仍 MUST 使用正式 Action Context
+
 ### Requirement: Full-body Action 必须通过唯一 pipeline blackboard 事实公布 locomotion ownership
 
 Attack、Dodge 与未来 full-body Action MUST 只通过 pipeline Blackboard `HasActionLocomotionOwnership` 让渡 locomotion。ActionInstance 成功激活后写 true，所有 source exit 对称写 false。Locomotion MUST 只读 ownership，不得复制 request、ActionProfile、Timeline、motion、window 或 lifecycle。系统 MUST 删除按动作种类选择恢复状态的路由事实。
@@ -207,6 +208,7 @@ Attack、Dodge 与未来 full-body Action MUST 只通过 pipeline Blackboard `Ha
 - **WHEN** Locomotion 处理 ownership
 - **THEN** MUST NOT 创建第二个 Action state 或引用 Action Timeline
 - **AND** request MUST 只由 target activation 消费
+
 ### Requirement: TreeClip 与 Scope Variable 必须是 Timeline Window 唯一作者入口
 
 Decision TreeClip 与 owner-local Bool Frame scope variable MUST 是 Timeline Window 唯一时间入口。Projection MUST 只保存 WindowType、WindowId、Digest 和 Action Context provenance；网络策略只属于当前 Network Model。ConditionRuleGraph MAY 用 `ActionWindowActiveInfoNode` 只读同帧 candidate，但 MUST NOT 建第二份 fact、Blackboard key、cache 或 registry。RootTree MUST NOT 暴露逐段 Cancel/MoveCancel declaration。
@@ -226,4 +228,53 @@ Decision TreeClip 与 owner-local Bool Frame scope variable MUST 是 Timeline Wi
 
 - **WHEN** TreeClip 写普通本地变量
 - **THEN** ValueNode MAY 读取
-- **AND** typed WindowType query MUST NOT 命中                                                                                                                                                                                                                                                                                               
+- **AND** typed WindowType query MUST NOT 命中
+
+### Requirement: ActionProfile authoring必须支持Required Tag Query
+
+ActionProfile Inspector、Validator、Compiler、Program diagnostics与source revision MUST支持类型化Required Tag Query，并与现有Owned/Block/Cancel Tag Query使用同一Tag catalog和query authoring。空Required Query MUST显式表示Always；无效Tag、循环query或未登记Tag MUST失败。系统 MUST不增加EquipmentId枚举、WeaponType字段或装备专用If节点替代该通用条件。
+
+#### Scenario: 配置Sawblade Attack要求
+
+- **WHEN** 作者为Sawblade Attack配置`Equipment.Feature.CorinSawblade`
+- **THEN** Inspector与Compiler MUST保存类型化Required Query
+- **AND** ActionProfile MUST不保存MainWeapon asset引用
+
+#### Scenario: Core Dodge无需装备
+
+- **WHEN** Core Dodge Required Query为空
+- **THEN** authoring MUST将其编译为Always
+- **AND** MUST不自动继承当前Feature Tag
+
+### Requirement: Equipment Route authoring必须引用正式ActionProfile和Input Request
+
+每个Feature Action Route MUST通过稳定RouteId引用一个正式ActionProfile，并由Profile Route catalog绑定现有Input RequestId和消费策略。Editor与Validator MUST显示和检查三者的精确identity；MUST不按Action显示名、InputAction名称、Graph节点名称或数组index匹配。
+
+#### Scenario: PrimaryAction绑定Attack请求
+
+- **WHEN** Corin MainWeapon PrimaryAction Route绑定现有Attack RequestId
+- **THEN** Sawblade Feature实现 MUST引用自己的正式Attack ActionProfile
+- **AND** Host节点 MUST消费该Route定义而不是新增Raw Shift/Mouse绑定
+
+#### Scenario: Route引用删除的Action
+
+- **WHEN** Feature Route的ActionProfile不在合并Action catalog中
+- **THEN** Validator MUST阻止发布
+- **AND** MUST不创建匿名ActionInstance
+
+### Requirement: Equipment Host节点必须保持通用authoring语义
+
+BTSMTL MUST提供通用Persistent Feature Host与Equipment Action Route Host authoring入口，节点只配置稳定SlotId/RouteId和正式输入输出端口。节点 MUST不包含Corin、Sawblade、Gun、武器枚举、动画clip或Prefab字段，也 MUST不展开Feature body为RootTree分支。
+
+#### Scenario: RootTree配置PrimaryAction Host
+
+- **WHEN** 作者在Corin Action主流程放置PrimaryAction Host
+- **THEN** 节点 MUST只引用MainWeapon/PrimaryAction identity
+- **AND** 新增Gun Feature MUST不修改该节点
+
+#### Scenario: Host节点配置未知Route
+
+- **WHEN** 节点RouteId不属于Character Equipment Profile
+- **THEN** Inspector与Compiler MUST失败
+- **AND** MUST不创建自由字符串Route
+

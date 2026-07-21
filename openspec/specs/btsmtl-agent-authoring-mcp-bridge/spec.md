@@ -21,7 +21,7 @@
 
 ### Requirement: MCP bridge 必须提供完整且受限的 authoring action 集合
 
-`manage_btsmtl_agent_authoring` MUST 只提供 `export_snapshot`、`dry_run_patch`、`apply_patch` 和 `validate` 四个 action。所有 action MUST 要求明确的 `definition_asset_path`；`dry_run_patch` 和 `apply_patch` 还 MUST 要求 `patch_json`。未知 action 或缺失参数 MUST 在修改资产前返回结构化错误。
+`manage_btsmtl_agent_authoring` MUST只提供`export_snapshot`、`dry_run_patch`、`apply_patch`和`validate`四个action。所有action MUST要求明确的`domain`与`root_asset_path`；`dry_run_patch`和`apply_patch`还 MUST要求`patch_json`。未知domain、未知action、domain/root类型不匹配或缺失参数 MUST在修改资产前返回结构化错误。
 
 #### Scenario: 导出当前 Agent Snapshot
 
@@ -111,7 +111,7 @@ MCP bridge MUST 复用 `AgentGraphSnapshotExporter`、`AgentPatchCompiler`、`Ag
 
 ### Requirement: Definition 目标必须由调用上下文显式提供
 
-MCP/Editor 请求 MUST 通过 `definition_asset_path` 显式选择 `CharacterPipelineDefinition`。路径 MUST 是 `Assets/` 下能精确解析为该类型的项目资产。`AgentPatchIR` MUST NOT 保存或解释目标 definition 路径。系统 MUST NOT 通过目录扫描、同名匹配、场景对象、剪贴板或旧配置寻找目标资产。
+MCP/Editor请求 MUST通过`domain`与`root_asset_path`显式选择`CharacterPipelineDefinition`或`AIControllerDefinition`。路径 MUST是`Assets/`下能精确解析为对应domain根类型的项目资产。`AgentPatchIR` MUST保存Snapshot提供的root identity与source revision，但 MUST NOT保存或解释项目资产路径。系统 MUST NOT通过目录扫描、同名匹配、场景对象、剪贴板或旧配置寻找目标资产。
 
 #### Scenario: Definition 路径合法
 
@@ -173,9 +173,9 @@ Bridge response MUST 保留 action、definition 路径、success、applied、sav
 - **THEN** MCP response MUST 包含最终 applied diff 和 validation 结果
 - **AND** response MUST 明确 `applied=true` 与 `saved=true`
 
-### Requirement: MCP bridge 必须透传同一 v14 Marker 与 Curve 事务
+### Requirement: MCP bridge 必须透传同一 v15 Character 与 AI 事务
 
-BTSMTL Agent MCP bridge MUST接受并返回`agent-character-controller-synthesis.v14` Snapshot、Patch与Validation结果，并允许generic Patch事务携带configure AnimationTrack Marker Sync、SyncRole、ensure/move/delete marker以及configure registered Timeline Curve Channel typed operation。Bridge MUST只调用正式Agent Snapshot、lowerer、dry-run、apply和validator入口，不得新增SerializedProperty、YAML、反射、任意字段写入或旧v13转换工具。Timeline UI完善 MUST复用同一authoring service，不得要求Bridge新增Marker或Curve专用action。
+BTSMTL Agent MCP bridge MUST接受并返回`agent-character-controller-synthesis.v15` Snapshot、Patch与Validation结果，并通过显式domain discriminator透传CharacterController或AIController generic事务。CharacterController事务继续携带Timeline、MotionWarp、Marker与registered Curve typed operation；AIController事务只携带AI Definition、Graph、Blackboard、Configured Candidate、Observation、Memory与Intent typed operation。Bridge MUST只调用正式Agent Snapshot、lowerer、dry-run、apply和validator入口，不得新增AI专用action、SerializedProperty、YAML、反射、任意字段写入或旧v14转换工具。
 
 #### Scenario: 通过bridge配置循环组
 
@@ -186,7 +186,7 @@ BTSMTL Agent MCP bridge MUST接受并返回`agent-character-controller-synthesis
 
 #### Scenario: 通过bridge配置有限序列
 
-- **WHEN** v14 Patch为Finite AnimationTrack提交frame 0到DurationFrame的marker序列与同步角色
+- **WHEN** v15 Patch为Finite AnimationTrack提交frame 0到DurationFrame的marker序列与同步角色
 - **THEN** bridge MUST保留重复MarkerId occurrence的独立AuthoringId
 - **AND** MUST返回call site Once与directed pair coverage结果
 
@@ -203,8 +203,14 @@ BTSMTL Agent MCP bridge MUST接受并返回`agent-character-controller-synthesis
 - **AND** lowerer与handler MUST调用同一Catalog descriptor和owner MutationAdapter
 - **AND** bridge MUST不按字段名寻找AnimationCurve
 
-#### Scenario: bridge收到v10请求
+#### Scenario: MCP提交AI Controller Patch
 
-- **WHEN** 调用方提交v10 Snapshot或Patch
+- **WHEN** 调用方通过MCP bridge提交合法v15 AI Controller Patch
+- **THEN** Bridge MUST把同一请求交给AgentPatchAuthoringService
+- **AND** MUST返回typed plan、事务与Validator产生的机器可读报告
+
+#### Scenario: bridge收到旧schema请求
+
+- **WHEN** 调用方提交v14或更早的Snapshot或Patch
 - **THEN** bridge MUST返回unsupported schema错误
-- **AND** MUST不转换为v14或调用旧reader
+- **AND** MUST不转换为v15或调用旧reader

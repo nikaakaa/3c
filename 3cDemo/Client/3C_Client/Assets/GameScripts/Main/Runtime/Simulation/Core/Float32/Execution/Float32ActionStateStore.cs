@@ -13,7 +13,8 @@ namespace ThirdPersonSimulation
             ulong startTick,
             string targetKey,
             SimulationActionTargetSnapshot targetSnapshot,
-            OperationHandle sourceOperation)
+            OperationHandle sourceOperation,
+            EquipmentActionContext equipmentContext = default)
         {
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
             ContextId = SimulationIdentity.Require(contextId, nameof(contextId));
@@ -25,6 +26,7 @@ namespace ThirdPersonSimulation
             TargetKey = targetKey ?? string.Empty;
             TargetSnapshot = targetSnapshot;
             SourceOperation = sourceOperation;
+            EquipmentContext = equipmentContext;
         }
 
         public string ActionId { get; }
@@ -35,6 +37,7 @@ namespace ThirdPersonSimulation
         public string TargetKey { get; }
         public SimulationActionTargetSnapshot TargetSnapshot { get; }
         public OperationHandle SourceOperation { get; }
+        public EquipmentActionContext EquipmentContext { get; }
         public bool IsValid =>
             !string.IsNullOrEmpty(ActionId) &&
             !string.IsNullOrEmpty(ContextId) &&
@@ -61,7 +64,8 @@ namespace ThirdPersonSimulation
             SimulationActionLifecycleTransitionType lastTransition,
             ulong lastTransitionTick,
             ulong lastTransitionSourceTick,
-            string reason)
+            string reason,
+            EquipmentActionContext equipmentContext = default)
         {
             ActionId = actionId ?? string.Empty;
             ContextId = contextId ?? string.Empty;
@@ -79,6 +83,7 @@ namespace ThirdPersonSimulation
             LastTransitionTick = lastTransitionTick;
             LastTransitionSourceTick = lastTransitionSourceTick;
             Reason = reason ?? string.Empty;
+            EquipmentContext = equipmentContext;
         }
 
         public string ActionId { get; }
@@ -97,6 +102,7 @@ namespace ThirdPersonSimulation
         public ulong LastTransitionTick { get; }
         public ulong LastTransitionSourceTick { get; }
         public string Reason { get; }
+        public EquipmentActionContext EquipmentContext { get; }
         public bool IsValid =>
             !string.IsNullOrEmpty(ActionId) &&
             !string.IsNullOrEmpty(ContextId) &&
@@ -137,7 +143,8 @@ namespace ThirdPersonSimulation
                 transition,
                 transitionTick,
                 sourceTick,
-                reason);
+                reason,
+                EquipmentContext);
         }
     }
 

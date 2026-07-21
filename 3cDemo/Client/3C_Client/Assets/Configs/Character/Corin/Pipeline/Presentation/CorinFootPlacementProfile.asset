@@ -29,6 +29,7 @@ MonoBehaviour:
     m_MaximumStepUp: 0.45
     m_MaximumStepDown: 0.65
     m_MaximumHeightDiscontinuity: 0.35
+    m_MaximumEdgeGap: 0.4
     m_MaximumSwingClearance: 0.16
   m_Contact:
     m_PlantDistance: 0.08
@@ -39,6 +40,8 @@ MonoBehaviour:
     m_ReleaseVerticalSpeed: 0.48
     m_DescendingTolerance: 0.04
     m_MinimumPlacementWeight: 0.05
+    m_PlantConfidenceEnter: 0.65
+    m_PlantConfidenceExit: 0.35
   m_Prediction:
     m_MinimumLookAheadSeconds: 0.04
     m_MaximumLookAheadSeconds: 0.22
@@ -53,17 +56,75 @@ MonoBehaviour:
     m_ReplantDistance: 0.3
     m_ReplantAngleDegrees: 32
     m_MaximumReachRatio: 0.99
+    m_MinimumFootSeparation: 0.12
+    m_MaximumHeelLiftDegrees: 20
+    m_MaximumHeelLiftDistance: 0.06
+    m_MaximumAnkleTwistDegrees: 35
   m_Pelvis:
     m_MaximumUpOffset: 0.18
     m_MaximumDownOffset: 0.32
     m_ReachSlack: 0.025
     m_HalfLifeSeconds: 0.08
     m_MaximumSpeed: 2
+    m_ActorMovementCompensationMode: 2
+    m_SuddenVerticalThreshold: 0.05
+    m_MaximumActorMovementCompensation: 0.3
+    m_ActorMovementCompensationHalfLifeSeconds: 0.12
+    m_ActorMovementCompensationMaximumSpeed: 2
   m_Rotation:
     m_MaximumPitchDegrees: 35
     m_MaximumRollDegrees: 28
     m_AscentSurfaceAlignment: 0.35
     m_DescentSurfaceAlignment: 0.85
+    m_MaximumResponseSpeed: 6
+    m_PositionResponseBySpeed:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: -0.65
+        outSlope: -0.65
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      - serializedVersion: 3
+        time: 1
+        value: 0.35
+        inSlope: -0.65
+        outSlope: -0.65
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_RotationResponseBySpeed:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: -0.8
+        outSlope: -0.8
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      - serializedVersion: 3
+        time: 1
+        value: 0.2
+        inSlope: -0.8
+        outSlope: -0.8
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
   m_Smoothing:
     m_PlantHalfLifeSeconds: 0.04
     m_ReleaseHalfLifeSeconds: 0.075

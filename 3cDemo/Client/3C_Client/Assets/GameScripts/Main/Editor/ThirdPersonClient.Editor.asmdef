@@ -16,6 +16,7 @@
         "ThirdPersonSimulation.DeterministicRollback",
         "ThirdPersonSimulation.DeterministicRollback.Endpoint",
         "ThirdPersonSimulation.DeterministicRollback.Unity",
+        "ThirdPersonSimulation.Fixed.Unity",
         "ThirdPersonSimulation.ServerAuthoritative",
         "ThirdPersonSimulation.ServerAuthoritative.Unity",
         "ThirdPersonGameplay",

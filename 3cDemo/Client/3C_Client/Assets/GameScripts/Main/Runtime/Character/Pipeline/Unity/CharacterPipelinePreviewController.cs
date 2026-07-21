@@ -4,6 +4,7 @@ using Animancer;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
+using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -38,8 +39,8 @@ namespace ThirdPersonCharacter.Pipeline
             if (!m_Definition.SimulationProgram || !m_Definition.PresentationProjection)
                 throw new InvalidOperationException("Timeline preview requires compiled Program and Presentation Projection assets.");
             m_Program = m_Definition.SimulationProgram.Load();
-            m_Projection = m_Definition.PresentationProjection.Load(m_Program);
-            m_Projection.RequireProgram(m_Program);
+            m_Projection = m_Definition.PresentationProjection.Load(
+                Float32CharacterPresentationContractAdapter.Create(m_Program));
         }
 
         public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> AnimationSnapshots =>

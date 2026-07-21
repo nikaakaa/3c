@@ -42,7 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         AngularVelocityExceeded = 2,
         DistanceExceeded = 3,
         ReachExceeded = 4,
-        NonFinite = 5
+        NonFinite = 5,
+        NoFutureLanding = 6
     }
 
     public enum FootPlacementSupportFoot : byte
@@ -63,7 +64,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 toePosition,
             Quaternion toeRotation,
             Vector3 heelPosition,
-            Vector3 soleForward)
+            Vector3 soleForward,
+            Vector3 soleUp,
+            Quaternion semanticRotation)
         {
             HipPosition = hipPosition;
             KneePosition = kneePosition;
@@ -73,6 +76,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ToeRotation = toeRotation;
             HeelPosition = heelPosition;
             SoleForward = soleForward;
+            SoleUp = soleUp;
+            SemanticRotation = semanticRotation;
         }
 
         public Vector3 HipPosition { get; }
@@ -83,6 +88,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Quaternion ToeRotation { get; }
         public Vector3 HeelPosition { get; }
         public Vector3 SoleForward { get; }
+        public Vector3 SoleUp { get; }
+        public Quaternion SemanticRotation { get; }
     }
 
     public readonly struct CharacterFootPlacementAnimatedPose
@@ -111,6 +118,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             Vector3 position,
             Quaternion rotation,
+            Vector3 bendGoalPosition,
+            float bendGoalWeight,
             float positionWeight,
             float rotationWeight,
             FootConstraintState constraintState,
@@ -119,6 +128,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Side = side;
             Position = position;
             Rotation = rotation;
+            BendGoalPosition = bendGoalPosition;
+            BendGoalWeight = Mathf.Clamp01(bendGoalWeight);
             PositionWeight = Mathf.Clamp01(positionWeight);
             RotationWeight = Mathf.Clamp01(rotationWeight);
             ConstraintState = constraintState;
@@ -128,6 +139,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootSide Side { get; }
         public Vector3 Position { get; }
         public Quaternion Rotation { get; }
+        public Vector3 BendGoalPosition { get; }
+        public float BendGoalWeight { get; }
         public float PositionWeight { get; }
         public float RotationWeight { get; }
         public FootConstraintState ConstraintState { get; }
@@ -142,14 +155,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong resetSequence,
             FootPlacementFootPlan left,
             FootPlacementFootPlan right,
-            float pelvisLocalVerticalOffset)
+            float pelvisComponentVerticalOffset)
         {
             ActorId = actorId;
             RenderFrame = renderFrame;
             ResetSequence = resetSequence;
             Left = left;
             Right = right;
-            PelvisLocalVerticalOffset = pelvisLocalVerticalOffset;
+            PelvisComponentVerticalOffset = pelvisComponentVerticalOffset;
         }
 
         public ActorId ActorId { get; }
@@ -157,11 +170,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong ResetSequence { get; }
         public FootPlacementFootPlan Left { get; }
         public FootPlacementFootPlan Right { get; }
-        public float PelvisLocalVerticalOffset { get; }
+        public float PelvisComponentVerticalOffset { get; }
         public bool IsValid => ActorId.IsValid && RenderFrame != 0 &&
                                IsFinite(Left.Position) && IsFinite(Right.Position) &&
+                               IsFinite(Left.BendGoalPosition) && IsFinite(Right.BendGoalPosition) &&
                                IsFinite(Left.Rotation) && IsFinite(Right.Rotation) &&
-                               IsFinite(PelvisLocalVerticalOffset);
+                               IsFinite(PelvisComponentVerticalOffset);
 
         static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         static bool IsFinite(Vector3 value) => IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z);

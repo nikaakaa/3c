@@ -77,3 +77,5 @@ MonoBehaviour:
     m_TrackAuthoringId: ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
     m_Transition: {fileID: 11400009, guid: 52cbd9f7448a4f36b46ae5a7e279ace1, type: 2}
     m_Easing: 6
+  m_FootPlacementAnalysisMode: 1
+  m_FootPlacementAnalysisSourceAssetGuid: 2487156154864bb5b49cb283c2583808

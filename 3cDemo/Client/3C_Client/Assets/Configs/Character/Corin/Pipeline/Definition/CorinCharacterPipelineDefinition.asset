@@ -21,14 +21,16 @@ MonoBehaviour:
   m_InputProfile: {fileID: 11400000, guid: be650df85b1e49ab9d1cefc91c6cc809, type: 2}
   m_GameplayEffectProfile: {fileID: 11400000, guid: 4a39b2d9de6248bc99baf9561c18716d,
     type: 2}
-  m_BodyMotionProfile: {fileID: 11400000, guid: f3b855f07e654466a8777141908fbef2, type: 2}
+  m_BodyMotionProfile: {fileID: 11400000, guid: f3b855f07e654466a8777141908fbef2,
+    type: 2}
   m_AnimationPresentationProfile: {fileID: 11400000, guid: 2fbcf34b8e3d4f46a91fd81d62b9241e,
     type: 2}
+  m_EquipmentCapabilityEnabled: 0
+  m_EquipmentProfile: {fileID: 0}
+  m_EquipmentPresentationProfile: {fileID: 0}
   m_ActionProfiles:
   - {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
   - {fileID: 11400000, guid: add8a25636588a543a6770231bea14b6, type: 2}
   m_BehaviorProfiles:
-  - {fileID: 11400000, guid: 99e9d56129664ebbb07fbaa1a0bb7c30,
-    type: 2}
-  - {fileID: 11400000, guid: 4e38e0339f0e431ba4c15c9575166034,
-    type: 2}
+  - {fileID: 11400000, guid: 99e9d56129664ebbb07fbaa1a0bb7c30, type: 2}
+  - {fileID: 11400000, guid: 4e38e0339f0e431ba4c15c9575166034, type: 2}

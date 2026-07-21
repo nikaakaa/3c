@@ -20,6 +20,8 @@
 - [ ] 2.7 在Profile显式绑定玩家ActorId候选。
 - [ ] 2.8 拒绝Team、Tag、名称、最近距离和Scene搜索配置。
 - [ ] 2.9 校验Definition、RootTree、Character与Perception引用完整。
+- [ ] 2.10 将AIControllerDefinition拆为同名独立Unity脚本资产。
+- [ ] 2.11 在domain reload后确认Definition仍可由AssetDatabase按正式类型加载。
 
 ## 3. AI Blackboard与Tree
 
@@ -37,6 +39,8 @@
 - [ ] 3.12 配置显式重入条件产生新activation。
 - [ ] 3.13 保持全部节点属于Shared或AI capability。
 - [ ] 3.14 确认Tree没有Character Action、Timeline、Motion或Transform节点。
+- [ ] 3.15 补齐AI Snapshot对LoopStopType、CompareType、ConditionRuleGraph和AbortPolicy的完整投影。
+- [ ] 3.16 更新Agent技能合同，列出AI Shared节点与BT ConditionRule正式operation。
 
 ## 4. Agent事务与Program
 
@@ -62,10 +66,14 @@
 - [ ] 5.6 保持训练敌人ActorId和InitialBody不变。
 - [ ] 5.7 保持Corin Character Definition和Program不变。
 - [ ] 5.8 保持Projection、World binding和WorldSolver不变。
-- [ ] 5.9 保持SimulatedActor Presentation和Foot Placement配置不变。
+- [ ] 5.9 保持SimulatedActor Presentation角色和正式Pose Post Process合同不变。
 - [ ] 5.10 保持训练敌人无玩家Camera和设备输入。
 - [ ] 5.11 更新Standalone Session roster的AI capability要求。
 - [ ] 5.12 确认不支持AI的Network composition继续在Active前拒绝该配置。
+- [ ] 5.13 将训练敌人VisualRoot替换为怪兽FBX实例并停用旧Corin VisualRoot。
+- [ ] 5.14 将Host的Animancer、VisualRoot和Foot Placement引用统一迁移到怪兽VisualRoot。
+- [ ] 5.15 配置怪兽Generic Bip001骨骼rig与Passthrough Foot Placement solver。
+- [ ] 5.16 确认怪兽Animator无Controller fallback且不申请Root Motion所有权。
 
 ## 6. 诊断与清理
 
@@ -78,6 +86,7 @@
 - [ ] 6.7 删除任何临时Patch、迁移器、菜单或YAML写入路径。
 - [ ] 6.8 更新openspec/project.md和2v2vE文档的训练AI现状。
 - [ ] 6.9 更新character-targeted-motion-warp-demo current spec的Neutral旧口径。
+- [ ] 6.10 更新agent-ai-controller-synthesis delta，锁定AI Shared节点与条件边authoring合同。
 
 ## 7. 编译与严格校验
 
@@ -89,4 +98,3 @@
 - [ ] 7.6 运行Agent v15正式validate。
 - [ ] 7.7 运行openspec validate add-corin-training-ai-demo --strict --no-interactive。
 - [ ] 7.8 核对tasks勾选与Corin唯一资产和运行链一致。
-

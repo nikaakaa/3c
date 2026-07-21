@@ -4,6 +4,13 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
+    public enum FootPlacementActorMovementCompensationMode : byte
+    {
+        ComponentSpace = 0,
+        WorldSpace = 1,
+        SuddenMotionOnly = 2
+    }
+
     [Serializable]
     public sealed class FootPlacementTraceSettings
     {
@@ -20,6 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_MaximumStepUp = 0.45f;
         [SerializeField] float m_MaximumStepDown = 0.65f;
         [SerializeField] float m_MaximumHeightDiscontinuity = 0.35f;
+        [SerializeField] float m_MaximumEdgeGap = 0.4f;
         [SerializeField] float m_MaximumSwingClearance = 0.16f;
 
         internal FootPlacementTraceRuntimeSettings Build(int rigCharacterLayer)
@@ -38,6 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_MaximumStepUp,
                 m_MaximumStepDown,
                 m_MaximumHeightDiscontinuity,
+                m_MaximumEdgeGap,
                 m_MaximumSwingClearance);
             value.RequireValid(rigCharacterLayer);
             return value;
@@ -55,6 +64,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_ReleaseVerticalSpeed = 0.48f;
         [SerializeField] float m_DescendingTolerance = 0.04f;
         [SerializeField, Range(0f, 1f)] float m_MinimumPlacementWeight = 0.05f;
+        [SerializeField, Range(0f, 1f)] float m_PlantConfidenceEnter = 0.65f;
+        [SerializeField, Range(0f, 1f)] float m_PlantConfidenceExit = 0.35f;
 
         internal FootPlacementContactRuntimeSettings Build()
         {
@@ -66,7 +77,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_PlantVerticalSpeed,
                 m_ReleaseVerticalSpeed,
                 m_DescendingTolerance,
-                m_MinimumPlacementWeight);
+                m_MinimumPlacementWeight,
+                m_PlantConfidenceEnter,
+                m_PlantConfidenceExit);
             value.RequireValid();
             return value;
         }
@@ -104,6 +117,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_ReplantDistance = 0.3f;
         [SerializeField] float m_ReplantAngleDegrees = 32f;
         [SerializeField, Range(0.5f, 1.2f)] float m_MaximumReachRatio = 0.99f;
+        [SerializeField] float m_MinimumFootSeparation = 0.12f;
+        [SerializeField] float m_MaximumHeelLiftDegrees = 20f;
+        [SerializeField] float m_MaximumHeelLiftDistance = 0.06f;
+        [SerializeField] float m_MaximumAnkleTwistDegrees = 35f;
 
         internal FootPlacementConstraintRuntimeSettings Build()
         {
@@ -114,7 +131,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_SlideSpeed,
                 m_ReplantDistance,
                 m_ReplantAngleDegrees,
-                m_MaximumReachRatio);
+                m_MaximumReachRatio,
+                m_MinimumFootSeparation,
+                m_MaximumHeelLiftDegrees,
+                m_MaximumHeelLiftDistance,
+                m_MaximumAnkleTwistDegrees);
             value.RequireValid();
             return value;
         }
@@ -128,6 +149,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_ReachSlack = 0.025f;
         [SerializeField] float m_HalfLifeSeconds = 0.08f;
         [SerializeField] float m_MaximumSpeed = 2f;
+        [SerializeField] FootPlacementActorMovementCompensationMode m_ActorMovementCompensationMode = FootPlacementActorMovementCompensationMode.SuddenMotionOnly;
+        [SerializeField] float m_SuddenVerticalThreshold = 0.05f;
+        [SerializeField] float m_MaximumActorMovementCompensation = 0.3f;
+        [SerializeField] float m_ActorMovementCompensationHalfLifeSeconds = 0.12f;
+        [SerializeField] float m_ActorMovementCompensationMaximumSpeed = 2f;
 
         internal FootPlacementPelvisRuntimeSettings Build()
         {
@@ -136,7 +162,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_MaximumDownOffset,
                 m_ReachSlack,
                 m_HalfLifeSeconds,
-                m_MaximumSpeed);
+                m_MaximumSpeed,
+                m_ActorMovementCompensationMode,
+                m_SuddenVerticalThreshold,
+                m_MaximumActorMovementCompensation,
+                m_ActorMovementCompensationHalfLifeSeconds,
+                m_ActorMovementCompensationMaximumSpeed);
             value.RequireValid();
             return value;
         }
@@ -149,6 +180,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_MaximumRollDegrees = 28f;
         [SerializeField, Range(0f, 1f)] float m_AscentSurfaceAlignment = 0.35f;
         [SerializeField, Range(0f, 1f)] float m_DescentSurfaceAlignment = 0.85f;
+        [SerializeField] float m_MaximumResponseSpeed = 6f;
+        [SerializeField] AnimationCurve m_PositionResponseBySpeed = AnimationCurve.Linear(0f, 1f, 1f, 0.35f);
+        [SerializeField] AnimationCurve m_RotationResponseBySpeed = AnimationCurve.Linear(0f, 1f, 1f, 0.2f);
 
         internal FootPlacementRotationRuntimeSettings Build()
         {
@@ -156,7 +190,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_MaximumPitchDegrees,
                 m_MaximumRollDegrees,
                 m_AscentSurfaceAlignment,
-                m_DescentSurfaceAlignment);
+                m_DescentSurfaceAlignment,
+                m_MaximumResponseSpeed,
+                m_PositionResponseBySpeed,
+                m_RotationResponseBySpeed);
             value.RequireValid();
             return value;
         }
@@ -234,6 +271,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             if (!layerFound)
                 throw new InvalidOperationException($"Foot Placement pose source layer '{layerId}' is absent from the Projection.");
+            AnimationFootAnalysisProjectionIdentity footAnalysis = projection.FootAnalysis;
+            if (footAnalysis == null || !footAnalysis.IsEnabled)
+                throw new InvalidOperationException("Foot Placement requires generated Foot Analysis in the Presentation Projection.");
+            footAnalysis.RequireValid();
+            if (footAnalysis.CalibrationId != rig.CalibrationId ||
+                !string.Equals(footAnalysis.CalibrationRevision, rig.CalibrationRevision, StringComparison.Ordinal))
+                throw new InvalidOperationException("Foot Placement Runtime Rig Calibration does not match the Presentation Projection.");
 
             int producerCapacity = projection.Producers.Count;
             int poseSourceProducerCount = 0;
@@ -255,6 +299,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             return new CharacterFootPlacementRuntimeSettings(
                 layerId,
+                footAnalysis,
                 m_Trace.Build(rig.CharacterLayer),
                 m_Contact.Build(),
                 m_Prediction.Build(),
@@ -279,6 +324,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootPlacementRuntimeSettings(
             string poseSourceLayerId,
+            AnimationFootAnalysisProjectionIdentity footAnalysis,
             FootPlacementTraceRuntimeSettings trace,
             FootPlacementContactRuntimeSettings contact,
             FootPlacementPredictionRuntimeSettings prediction,
@@ -289,6 +335,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationAnimationBinding[] animationBindings)
         {
             PoseSourceLayerId = poseSourceLayerId;
+            FootAnalysis = footAnalysis ?? throw new ArgumentNullException(nameof(footAnalysis));
+            FootAnalysis.RequireValid();
             Trace = trace;
             Contact = contact;
             Prediction = prediction;
@@ -302,6 +350,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public string PoseSourceLayerId { get; }
+        public AnimationFootAnalysisProjectionIdentity FootAnalysis { get; }
         public FootPlacementTraceRuntimeSettings Trace { get; }
         public FootPlacementContactRuntimeSettings Contact { get; }
         public FootPlacementPredictionRuntimeSettings Prediction { get; }
@@ -330,18 +379,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
     }
 
-    public readonly struct CharacterFootPlacementPolicyWeight
-    {
-        public CharacterFootPlacementPolicyWeight(float value, float visibleWeight)
-        {
-            Value = Mathf.Clamp01(value);
-            VisibleWeight = Mathf.Clamp01(visibleWeight);
-        }
-
-        public float Value { get; }
-        public float VisibleWeight { get; }
-    }
-
     public readonly struct FootPlacementTraceRuntimeSettings
     {
         public FootPlacementTraceRuntimeSettings(
@@ -358,6 +395,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float maximumStepUp,
             float maximumStepDown,
             float maximumHeightDiscontinuity,
+            float maximumEdgeGap,
             float maximumSwingClearance)
         {
             GroundLayerMask = groundLayerMask;
@@ -373,6 +411,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             MaximumStepUp = maximumStepUp;
             MaximumStepDown = maximumStepDown;
             MaximumHeightDiscontinuity = maximumHeightDiscontinuity;
+            MaximumEdgeGap = maximumEdgeGap;
             MaximumSwingClearance = maximumSwingClearance;
         }
 
@@ -389,6 +428,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float MaximumStepUp { get; }
         public float MaximumStepDown { get; }
         public float MaximumHeightDiscontinuity { get; }
+        public float MaximumEdgeGap { get; }
         public float MaximumSwingClearance { get; }
 
         public void RequireValid(int rigCharacterLayer)
@@ -410,14 +450,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementValidation.RequirePositive(MaximumStepUp, nameof(MaximumStepUp));
             CharacterFootPlacementValidation.RequirePositive(MaximumStepDown, nameof(MaximumStepDown));
             CharacterFootPlacementValidation.RequirePositive(MaximumHeightDiscontinuity, nameof(MaximumHeightDiscontinuity));
+            CharacterFootPlacementValidation.RequirePositive(MaximumEdgeGap, nameof(MaximumEdgeGap));
             CharacterFootPlacementValidation.RequirePositive(MaximumSwingClearance, nameof(MaximumSwingClearance));
         }
     }
 
     public readonly struct FootPlacementContactRuntimeSettings
     {
-        public FootPlacementContactRuntimeSettings(float plantDistance, float releaseDistance, float plantPlanarSpeed, float releasePlanarSpeed, float plantVerticalSpeed, float releaseVerticalSpeed, float descendingTolerance, float minimumPlacementWeight)
-        { PlantDistance = plantDistance; ReleaseDistance = releaseDistance; PlantPlanarSpeed = plantPlanarSpeed; ReleasePlanarSpeed = releasePlanarSpeed; PlantVerticalSpeed = plantVerticalSpeed; ReleaseVerticalSpeed = releaseVerticalSpeed; DescendingTolerance = descendingTolerance; MinimumPlacementWeight = minimumPlacementWeight; }
+        public FootPlacementContactRuntimeSettings(float plantDistance, float releaseDistance, float plantPlanarSpeed, float releasePlanarSpeed, float plantVerticalSpeed, float releaseVerticalSpeed, float descendingTolerance, float minimumPlacementWeight, float plantConfidenceEnter, float plantConfidenceExit)
+        { PlantDistance = plantDistance; ReleaseDistance = releaseDistance; PlantPlanarSpeed = plantPlanarSpeed; ReleasePlanarSpeed = releasePlanarSpeed; PlantVerticalSpeed = plantVerticalSpeed; ReleaseVerticalSpeed = releaseVerticalSpeed; DescendingTolerance = descendingTolerance; MinimumPlacementWeight = minimumPlacementWeight; PlantConfidenceEnter = plantConfidenceEnter; PlantConfidenceExit = plantConfidenceExit; }
         public float PlantDistance { get; }
         public float ReleaseDistance { get; }
         public float PlantPlanarSpeed { get; }
@@ -426,6 +467,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float ReleaseVerticalSpeed { get; }
         public float DescendingTolerance { get; }
         public float MinimumPlacementWeight { get; }
+        public float PlantConfidenceEnter { get; }
+        public float PlantConfidenceExit { get; }
         public void RequireValid()
         {
             CharacterFootPlacementValidation.RequireOrdered(0f, PlantDistance, ReleaseDistance, nameof(ReleaseDistance));
@@ -433,6 +476,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementValidation.RequireOrdered(0f, PlantVerticalSpeed, ReleaseVerticalSpeed, nameof(ReleaseVerticalSpeed));
             CharacterFootPlacementValidation.RequireNonNegative(DescendingTolerance, nameof(DescendingTolerance));
             CharacterFootPlacementValidation.RequireWeight(MinimumPlacementWeight, nameof(MinimumPlacementWeight));
+            CharacterFootPlacementValidation.RequireOrdered(0f, PlantConfidenceExit, PlantConfidenceEnter, nameof(PlantConfidenceEnter));
+            CharacterFootPlacementValidation.RequireWeight(PlantConfidenceEnter, nameof(PlantConfidenceEnter));
         }
     }
 
@@ -456,8 +501,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct FootPlacementConstraintRuntimeSettings
     {
-        public FootPlacementConstraintRuntimeSettings(float slideStartDistance, float slideStopDistance, float maximumSlideDistance, float slideSpeed, float replantDistance, float replantAngleDegrees, float maximumReachRatio)
-        { SlideStartDistance = slideStartDistance; SlideStopDistance = slideStopDistance; MaximumSlideDistance = maximumSlideDistance; SlideSpeed = slideSpeed; ReplantDistance = replantDistance; ReplantAngleDegrees = replantAngleDegrees; MaximumReachRatio = maximumReachRatio; }
+        public FootPlacementConstraintRuntimeSettings(float slideStartDistance, float slideStopDistance, float maximumSlideDistance, float slideSpeed, float replantDistance, float replantAngleDegrees, float maximumReachRatio, float minimumFootSeparation, float maximumHeelLiftDegrees, float maximumHeelLiftDistance, float maximumAnkleTwistDegrees)
+        { SlideStartDistance = slideStartDistance; SlideStopDistance = slideStopDistance; MaximumSlideDistance = maximumSlideDistance; SlideSpeed = slideSpeed; ReplantDistance = replantDistance; ReplantAngleDegrees = replantAngleDegrees; MaximumReachRatio = maximumReachRatio; MinimumFootSeparation = minimumFootSeparation; MaximumHeelLiftDegrees = maximumHeelLiftDegrees; MaximumHeelLiftDistance = maximumHeelLiftDistance; MaximumAnkleTwistDegrees = maximumAnkleTwistDegrees; }
         public float SlideStartDistance { get; }
         public float SlideStopDistance { get; }
         public float MaximumSlideDistance { get; }
@@ -465,6 +510,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float ReplantDistance { get; }
         public float ReplantAngleDegrees { get; }
         public float MaximumReachRatio { get; }
+        public float MinimumFootSeparation { get; }
+        public float MaximumHeelLiftDegrees { get; }
+        public float MaximumHeelLiftDistance { get; }
+        public float MaximumAnkleTwistDegrees { get; }
         public void RequireValid()
         {
             CharacterFootPlacementValidation.RequireOrdered(0f, SlideStopDistance, SlideStartDistance, nameof(SlideStartDistance));
@@ -472,18 +521,48 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementValidation.RequirePositive(SlideSpeed, nameof(SlideSpeed));
             CharacterFootPlacementValidation.RequireOrdered(0f, ReplantAngleDegrees, 180f, nameof(ReplantAngleDegrees));
             CharacterFootPlacementValidation.RequireOrdered(0f, MaximumReachRatio, 1.2f, nameof(MaximumReachRatio));
+            CharacterFootPlacementValidation.RequireNonNegative(MinimumFootSeparation, nameof(MinimumFootSeparation));
+            CharacterFootPlacementValidation.RequireOrdered(0f, MaximumHeelLiftDegrees, 60f, nameof(MaximumHeelLiftDegrees));
+            CharacterFootPlacementValidation.RequireNonNegative(MaximumHeelLiftDistance, nameof(MaximumHeelLiftDistance));
+            CharacterFootPlacementValidation.RequireOrdered(0f, MaximumAnkleTwistDegrees, 180f, nameof(MaximumAnkleTwistDegrees));
         }
     }
 
     public readonly struct FootPlacementPelvisRuntimeSettings
     {
-        public FootPlacementPelvisRuntimeSettings(float maximumUpOffset, float maximumDownOffset, float reachSlack, float halfLifeSeconds, float maximumSpeed)
-        { MaximumUpOffset = maximumUpOffset; MaximumDownOffset = maximumDownOffset; ReachSlack = reachSlack; HalfLifeSeconds = halfLifeSeconds; MaximumSpeed = maximumSpeed; }
+        public FootPlacementPelvisRuntimeSettings(
+            float maximumUpOffset,
+            float maximumDownOffset,
+            float reachSlack,
+            float halfLifeSeconds,
+            float maximumSpeed,
+            FootPlacementActorMovementCompensationMode actorMovementCompensationMode,
+            float suddenVerticalThreshold,
+            float maximumActorMovementCompensation,
+            float actorMovementCompensationHalfLifeSeconds,
+            float actorMovementCompensationMaximumSpeed)
+        {
+            MaximumUpOffset = maximumUpOffset;
+            MaximumDownOffset = maximumDownOffset;
+            ReachSlack = reachSlack;
+            HalfLifeSeconds = halfLifeSeconds;
+            MaximumSpeed = maximumSpeed;
+            ActorMovementCompensationMode = actorMovementCompensationMode;
+            SuddenVerticalThreshold = suddenVerticalThreshold;
+            MaximumActorMovementCompensation = maximumActorMovementCompensation;
+            ActorMovementCompensationHalfLifeSeconds = actorMovementCompensationHalfLifeSeconds;
+            ActorMovementCompensationMaximumSpeed = actorMovementCompensationMaximumSpeed;
+        }
         public float MaximumUpOffset { get; }
         public float MaximumDownOffset { get; }
         public float ReachSlack { get; }
         public float HalfLifeSeconds { get; }
         public float MaximumSpeed { get; }
+        public FootPlacementActorMovementCompensationMode ActorMovementCompensationMode { get; }
+        public float SuddenVerticalThreshold { get; }
+        public float MaximumActorMovementCompensation { get; }
+        public float ActorMovementCompensationHalfLifeSeconds { get; }
+        public float ActorMovementCompensationMaximumSpeed { get; }
         public void RequireValid()
         {
             CharacterFootPlacementValidation.RequireNonNegative(MaximumUpOffset, nameof(MaximumUpOffset));
@@ -491,23 +570,64 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementValidation.RequireNonNegative(ReachSlack, nameof(ReachSlack));
             CharacterFootPlacementValidation.RequirePositive(HalfLifeSeconds, nameof(HalfLifeSeconds));
             CharacterFootPlacementValidation.RequirePositive(MaximumSpeed, nameof(MaximumSpeed));
+            if (!Enum.IsDefined(typeof(FootPlacementActorMovementCompensationMode), ActorMovementCompensationMode))
+                throw new InvalidOperationException("Foot Placement Actor Movement Compensation mode is invalid.");
+            CharacterFootPlacementValidation.RequirePositive(SuddenVerticalThreshold, nameof(SuddenVerticalThreshold));
+            CharacterFootPlacementValidation.RequireNonNegative(MaximumActorMovementCompensation, nameof(MaximumActorMovementCompensation));
+            CharacterFootPlacementValidation.RequirePositive(ActorMovementCompensationHalfLifeSeconds, nameof(ActorMovementCompensationHalfLifeSeconds));
+            CharacterFootPlacementValidation.RequirePositive(ActorMovementCompensationMaximumSpeed, nameof(ActorMovementCompensationMaximumSpeed));
         }
     }
 
     public readonly struct FootPlacementRotationRuntimeSettings
     {
-        public FootPlacementRotationRuntimeSettings(float maximumPitchDegrees, float maximumRollDegrees, float ascentSurfaceAlignment, float descentSurfaceAlignment)
-        { MaximumPitchDegrees = maximumPitchDegrees; MaximumRollDegrees = maximumRollDegrees; AscentSurfaceAlignment = ascentSurfaceAlignment; DescentSurfaceAlignment = descentSurfaceAlignment; }
+        public FootPlacementRotationRuntimeSettings(float maximumPitchDegrees, float maximumRollDegrees, float ascentSurfaceAlignment, float descentSurfaceAlignment, float maximumResponseSpeed, AnimationCurve positionResponseBySpeed, AnimationCurve rotationResponseBySpeed)
+        { MaximumPitchDegrees = maximumPitchDegrees; MaximumRollDegrees = maximumRollDegrees; AscentSurfaceAlignment = ascentSurfaceAlignment; DescentSurfaceAlignment = descentSurfaceAlignment; MaximumResponseSpeed = maximumResponseSpeed; PositionResponseBySpeed = CopyCurve(positionResponseBySpeed); RotationResponseBySpeed = CopyCurve(rotationResponseBySpeed); }
         public float MaximumPitchDegrees { get; }
         public float MaximumRollDegrees { get; }
         public float AscentSurfaceAlignment { get; }
         public float DescentSurfaceAlignment { get; }
+        public float MaximumResponseSpeed { get; }
+        public AnimationCurve PositionResponseBySpeed { get; }
+        public AnimationCurve RotationResponseBySpeed { get; }
         public void RequireValid()
         {
             CharacterFootPlacementValidation.RequireOrdered(0f, MaximumPitchDegrees, 90f, nameof(MaximumPitchDegrees));
             CharacterFootPlacementValidation.RequireOrdered(0f, MaximumRollDegrees, 90f, nameof(MaximumRollDegrees));
             CharacterFootPlacementValidation.RequireWeight(AscentSurfaceAlignment, nameof(AscentSurfaceAlignment));
             CharacterFootPlacementValidation.RequireWeight(DescentSurfaceAlignment, nameof(DescentSurfaceAlignment));
+            CharacterFootPlacementValidation.RequirePositive(MaximumResponseSpeed, nameof(MaximumResponseSpeed));
+            RequireCurve(PositionResponseBySpeed, nameof(PositionResponseBySpeed));
+            RequireCurve(RotationResponseBySpeed, nameof(RotationResponseBySpeed));
+        }
+
+        public float SamplePositionResponse(float speed) =>
+            Mathf.Clamp01(PositionResponseBySpeed.Evaluate(Mathf.Clamp01(speed / MaximumResponseSpeed)));
+
+        public float SampleRotationResponse(float speed) =>
+            Mathf.Clamp01(RotationResponseBySpeed.Evaluate(Mathf.Clamp01(speed / MaximumResponseSpeed)));
+
+        static AnimationCurve CopyCurve(AnimationCurve source)
+        {
+            if (source == null)
+                return null;
+            return new AnimationCurve(source.keys)
+            {
+                preWrapMode = source.preWrapMode,
+                postWrapMode = source.postWrapMode
+            };
+        }
+
+        static void RequireCurve(AnimationCurve curve, string field)
+        {
+            if (curve == null || curve.length < 2)
+                throw new InvalidOperationException($"Foot Placement '{field}' requires a response curve.");
+            for (int i = 0; i < curve.length; i++)
+            {
+                Keyframe key = curve.keys[i];
+                CharacterFootPlacementValidation.RequireWeight(key.time, field);
+                CharacterFootPlacementValidation.RequireWeight(key.value, field);
+            }
         }
     }
 

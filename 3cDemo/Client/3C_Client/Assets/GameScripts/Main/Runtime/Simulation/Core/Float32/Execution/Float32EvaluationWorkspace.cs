@@ -43,7 +43,7 @@ namespace ThirdPersonSimulation
         public HashSet<Float32ValueEvaluationKey> ValueStack { get; } = new HashSet<Float32ValueEvaluationKey>();
         public List<Float32ValueInputBuffer> ValueBuffers { get; } = new List<Float32ValueInputBuffer>();
         public List<SimulationMotionContribution> MotionContributions => m_Motion.Contributions;
-        public List<MotionWarpSample<Float32Scalar>> MotionWarpSamples => m_Motion.WarpSamples;
+        public List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>> MotionWarpSamples => m_Motion.WarpSamples;
         public List<SimulationActionWindowProjectionCandidate> ActionWindowProjections { get; } =
             new List<SimulationActionWindowProjectionCandidate>();
         public HashSet<string> ActionWindowProjectionKeys { get; } = new HashSet<string>(StringComparer.Ordinal);
@@ -172,8 +172,8 @@ namespace ThirdPersonSimulation
     {
         public List<SimulationMotionContribution> Contributions { get; } =
             new List<SimulationMotionContribution>();
-        public List<MotionWarpSample<Float32Scalar>> WarpSamples { get; } =
-            new List<MotionWarpSample<Float32Scalar>>();
+        public List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>> WarpSamples { get; } =
+            new List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>>();
 
         public void Reset()
         {

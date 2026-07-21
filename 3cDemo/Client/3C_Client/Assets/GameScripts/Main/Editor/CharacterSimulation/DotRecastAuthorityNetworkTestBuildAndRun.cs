@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation.DotRecastAuthority;
 using UnityEditor;
 
@@ -27,6 +28,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         public void PrepareBuildInputs(NetworkTestProductContext context)
         {
+            DotRecastAuthorityNetworkTestBuildProfile profile = LoadBuildProfile();
+            DotRecastAuthoritySceneManifestExportRequest export = profile.BuildExportRequest(
+                Path.Combine(context.ProductRoot, "Server"));
+            CharacterSimulationBuildResult result = CharacterSimulationBuildOrchestrator.Build(
+                new CharacterSimulationBuildRequest(
+                    export.CharacterDefinition,
+                    CharacterSimulationBuildPublicationMode.Publish,
+                    new[] { CharacterSimulationTargetCatalog.Float32(export.CharacterDefinition) }));
+            if (!result.IsValid)
+                throw new InvalidOperationException("DotRecast Authority Float32 Character target failed to build.");
         }
 
         public NetworkTestProductDescriptor CreateDescriptor(NetworkTestProductContext context)
@@ -166,14 +177,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
     public static class DotRecastAuthorityNetworkTestBuildAndRun
     {
-        const string BuildMenuPath = "Tools/3C/Network Tests/DotRecast Authority/Build";
-        const string RunMenuPath = "Tools/3C/Network Tests/DotRecast Authority/Run";
-
-        [MenuItem(BuildMenuPath)]
         public static void Build() => NetworkTestProductBuildWorkflow.Build(
             new NetworkTestProductBuildRequest(NetworkTestProductAdapters.DotRecastAuthority));
 
-        [MenuItem(RunMenuPath)]
         public static void Run() => NetworkTestProductBuildWorkflow.Run(
             new NetworkTestProductRunRequest(NetworkTestProductAdapters.DotRecastAuthority, true));
     }

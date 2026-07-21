@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: LocalSingleStepSchedulePass
   m_EditorClassIdentifier: 
   m_PassId: thirdperson.simulation.local-single-step-schedule
-  m_ImplementationVersion: 2
+  m_ImplementationVersion: 4

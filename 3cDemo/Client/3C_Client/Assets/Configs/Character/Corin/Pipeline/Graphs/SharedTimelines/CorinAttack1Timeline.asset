@@ -21,7 +21,7 @@ MonoBehaviour:
     - rid: 665191780990845505
     - rid: 665191780990845503
     - rid: 665191780990845502
-    m_Scale: 0.6018334
+    m_Scale: 0.08019365
   references:
     version: 2
     RefIds:
@@ -162,8 +162,17 @@ MonoBehaviour:
           - serializedVersion: 3
             time: 0
             value: 0
-            inSlope: 0.34406167
-            outSlope: 0.34406167
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0.33333334
+            outWeight: 0.33333334
+          - serializedVersion: 3
+            time: 1
+            value: 0
+            inSlope: 0
+            outSlope: 0
             tangentMode: 0
             weightedMode: 0
             inWeight: 0.33333334
@@ -7219,30 +7228,50 @@ MonoBehaviour:
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: eb07c8dd-3527-4470-8bc4-c44f6665d937
-        StartFrame: 0
-        EndFrame: 49
+        StartFrame: 7
+        EndFrame: 32
         OtherEaseInFrame: 0
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_SourceMotionClipId: 142218e6-6644-479b-b721-19d91be03a15
-        PositionMode: 1
+        TranslationMode: 2
+        TargetOffsetSpace: 1
         RotationMode: 1
-        TargetLocalPlanarOffset: {x: 0, y: 1.25}
+        RotationMethod: 0
+        TargetPlanarOffset: {x: 0, y: 1.25}
         TargetYawOffsetDegrees: 0
-        PositionWeight: 1
-        YawWeight: 1
         MaxTotalPositionCorrection: 1.5
         MaxTotalYawCorrectionDegrees: 90
+        MaximumYawRateDegreesPerSecond: 0
+        LimitPolicy: 0
         PositionProgressCurve:
           serializedVersion: 2
           m_Curve:
           - serializedVersion: 3
             time: 0
             value: 0
-            inSlope: 1
-            outSlope: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.333333
+            value: 0.327076
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.666667
+            value: 0.710115
+            inSlope: 0
+            outSlope: 0
             tangentMode: 0
             weightedMode: 0
             inWeight: 0
@@ -7250,8 +7279,8 @@ MonoBehaviour:
           - serializedVersion: 3
             time: 1
             value: 1
-            inSlope: 1
-            outSlope: 1
+            inSlope: 0
+            outSlope: 0
             tangentMode: 0
             weightedMode: 0
             inWeight: 0
@@ -7265,8 +7294,26 @@ MonoBehaviour:
           - serializedVersion: 3
             time: 0
             value: 0
-            inSlope: 1
-            outSlope: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.333333
+            value: 0.571906
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.666667
+            value: 0.842683
+            inSlope: 0
+            outSlope: 0
             tangentMode: 0
             weightedMode: 0
             inWeight: 0
@@ -7274,8 +7321,8 @@ MonoBehaviour:
           - serializedVersion: 3
             time: 1
             value: 1
-            inSlope: 1
-            outSlope: 1
+            inSlope: 0
+            outSlope: 0
             tangentMode: 0
             weightedMode: 0
             inWeight: 0

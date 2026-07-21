@@ -66,6 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [Serializable]
     [NodeName("Character Input Value Info Bool")]
     [NodePath("Base/Value/Input/Input Value Info/Bool")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class CharacterInputBoolInfoNode : CharacterInputValueInfoNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Value"), ReadOnly]
@@ -80,6 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [Serializable]
     [NodeName("Character Input Value Info Float")]
     [NodePath("Base/Value/Input/Input Value Info/Float")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class CharacterInputFloatInfoNode : CharacterInputValueInfoNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Value"), ReadOnly]
@@ -94,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [Serializable]
     [NodeName("Character Input Value Info Vector2")]
     [NodePath("Base/Value/Input/Input Value Info/Vector2")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class CharacterInputVector2InfoNode : CharacterInputValueInfoNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Value"), ReadOnly]
@@ -108,6 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [Serializable]
     [NodeName("Character Input Value Info Vector2 Magnitude")]
     [NodePath("Base/Value/Input/Input Value Info/Vector2 Magnitude")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class CharacterInputVector2MagnitudeInfoNode : CharacterInputValueInfoNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Magnitude"), ReadOnly]
@@ -166,6 +170,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [Serializable]
     [NodeName("Pipeline Blackboard Bool")]
     [NodePath("Base/Value/Blackboard/Bool")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class PipelineBlackboardBoolInfoNode : PipelineBlackboardValueInfoNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Value"), ReadOnly]
@@ -184,6 +189,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [Serializable]
     [NodeName("Pipeline Blackboard Int")]
     [NodePath("Base/Value/Blackboard/Int")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class PipelineBlackboardIntInfoNode : PipelineBlackboardValueInfoNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Value"), ReadOnly]
@@ -202,6 +208,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [Serializable]
     [NodeName("Pipeline Blackboard Float")]
     [NodePath("Base/Value/Blackboard/Float")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class PipelineBlackboardFloatInfoNode : PipelineBlackboardValueInfoNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Value"), ReadOnly]
@@ -220,6 +227,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [Serializable]
     [NodeName("Pipeline Blackboard String")]
     [NodePath("Base/Value/Blackboard/String")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class PipelineBlackboardStringInfoNode : PipelineBlackboardValueInfoNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Value"), ReadOnly]
@@ -238,6 +246,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [Serializable]
     [NodeName("Pipeline Blackboard Vector2")]
     [NodePath("Base/Value/Blackboard/Vector2")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class PipelineBlackboardVector2InfoNode : PipelineBlackboardValueInfoNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Value"), ReadOnly]
@@ -256,6 +265,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [Serializable]
     [NodeName("Pipeline Blackboard Vector3")]
     [NodePath("Base/Value/Blackboard/Vector3")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class PipelineBlackboardVector3InfoNode : PipelineBlackboardValueInfoNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Value"), ReadOnly]
@@ -274,6 +284,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [Serializable]
     [NodeName("Character Action Request Info")]
     [NodePath("Base/Value/Input/Action Request Info/Has Request")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class CharacterActionRequestInfoNode : ValueNode
     {
         [SerializeField, ShowInPanel("Request Id"), ReadOnly]
@@ -332,6 +343,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [Serializable]
     [NodeName("State Exit Cause Info")]
     [NodePath("Base/Value/State/Exit Cause")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class StateExitCauseInfoNode : ValueNode
     {
         [SerializeField, ShowInPanel("Cause")]
@@ -359,6 +371,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
     [Serializable]
     [NodeName("Action Context Active Info")]
     [NodePath("Base/Value/Action/Context Active")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class ActionContextActiveInfoNode : ValueNode
     {
         [SerializeField, ShowInPanel("Action Context")]

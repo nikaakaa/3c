@@ -522,9 +522,21 @@
 ## 21. Editor 本地玩法开发入口
 
 - [x] 21.1 定义 Editor 本地玩法入口与普通产品入口的隔离边界。
-- [x] 21.2 增加唯一正式 Sandbox Gameplay Scene 直接运行菜单。
-- [x] 21.3 增加本地 Gameplay Scene 依赖校验菜单。
+- [x] 21.2 增加唯一正式 Gameplay Lab Scene 直接运行入口。
+- [x] 21.3 将本地 Gameplay Scene 依赖校验收口到统一Launcher。
 - [x] 21.4 在运行前校验可琳 Prefab、Foot Placement composition 与 FinalIK solver。
 - [x] 21.5 退出本地 Play 后恢复开发者原场景。
 - [x] 21.6 禁止本地入口修改 Build Settings、ProductStartupProfile 或正式 endpoint。
 - [x] 21.7 在规格和文档中明确当前没有 Motion Matching、Pose Search 或 Pose Database。
+- [x] 21.8 在统一Launcher中增加正式产品启动分组。
+- [x] 21.9 正式产品运行只进入Bootstrap与完整资源管理链。
+- [x] 21.10 Endpoint无效时禁用正式产品运行与构建按钮。
+- [x] 21.11 在统一Launcher中保留ResourcePackageVersion与MinimumClientBuildVersion输入。
+- [x] 21.12 在统一Launcher中保留Content、Player及组合构建操作。
+- [x] 21.13 删除旧独立Commercial Client Build窗口。
+- [x] 21.14 删除旧StandaloneGameplay直接运行菜单。
+- [x] 21.15 普通Player Build Settings只保留Bootstrap内置场景。
+- [x] 21.16 在统一Launcher中增加发布Player清单与哈希校验后的运行操作。
+- [x] 21.17 在统一Launcher中增加从Bootstrap进入正式链的Editor Play操作。
+- [x] 21.18 将单机、双端验证、正式启动与编辑器启动收口为四个固定业务分组。
+- [x] 21.19 删除网络测试产品的分散Editor菜单，仅保留统一Launcher操作。

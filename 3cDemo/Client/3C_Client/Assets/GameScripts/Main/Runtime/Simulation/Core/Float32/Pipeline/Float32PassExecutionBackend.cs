@@ -102,18 +102,23 @@ namespace ThirdPersonSimulation
                     resources.Register(SimulationSessionResourceReleasePhase.ActorAndPresentationRegistration, request.ActorResources[i]);
 
                 Float32PipelineProductStore products = request.ProductRuntimeFactories.CreateStore(request.CompiledPipeline.Products);
+                var stateStore = new SimulationWorldStateStore(request.Catalog, request.InitialState);
                 var programPort = new Float32ProgramRuntimePort(
                     request.Descriptor.ProgramRuntime,
                     request.ProgramRuntime);
                 var workingStatePort = new Float32WorkingStatePort(request.Backend.Identity);
                 var completedStepPort = new Float32CompletedStepPort(request.Backend.Identity);
+                var committedObservationPort = new Float32CommittedActorObservationReadPort(
+                    request.Backend.Identity,
+                    stateStore);
                 var solverPort = new Float32WorldSolverRuntimePort(request.Descriptor.WorldSolver, request.Solver);
                 var diagnosticsPort = new Float32DiagnosticsRuntimePort(request.DiagnosticsIdentity, request.Diagnostics);
                 var targetPorts = new SimulationRuntimePortSet(new ISimulationRuntimePort[]
                 {
                     programPort,
                     workingStatePort,
-                    completedStepPort
+                    completedStepPort,
+                    committedObservationPort
                 });
                 var solverPorts = new SimulationRuntimePortSet(new ISimulationRuntimePort[] { solverPort });
                 var diagnosticsPorts = new SimulationRuntimePortSet(new ISimulationRuntimePort[] { diagnosticsPort });
@@ -181,7 +186,6 @@ namespace ThirdPersonSimulation
                         "Activated Pipeline runtime did not restore the provided initial state exactly.");
                 }
                 SimulationSessionLaunchPlan launchPlan = BuildLaunchPlan(request, initialPipelineState);
-                var stateStore = new SimulationWorldStateStore(request.Catalog, request.InitialState);
                 var transaction = new Float32PipelineTransaction(
                     request.Descriptor,
                     request.CompiledPipeline,

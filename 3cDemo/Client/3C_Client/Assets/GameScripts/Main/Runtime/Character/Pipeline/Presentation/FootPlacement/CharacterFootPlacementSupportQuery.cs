@@ -39,14 +39,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal readonly struct FootPlacementSupportResult
     {
         public FootPlacementSupportResult(
-            FootPlacementSurface surface,
+            FootPlacementSurface heelSupport,
+            FootPlacementSurface toeSupport,
+            FootPlacementSurface currentSupport,
+            FootPlacementSurface futureLandingSupport,
+            FootPlacementGroundEnvelope groundEnvelope,
             float soleDistance,
             float swingClearance,
             int queryCount,
             int candidateCount,
             int rejectedCount)
         {
-            Surface = surface;
+            HeelSupport = heelSupport;
+            ToeSupport = toeSupport;
+            CurrentSupport = currentSupport;
+            FutureLandingSupport = futureLandingSupport;
+            GroundEnvelope = groundEnvelope;
             SoleDistance = soleDistance;
             SwingClearance = swingClearance;
             QueryCount = queryCount;
@@ -54,13 +62,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RejectedCount = rejectedCount;
         }
 
-        public FootPlacementSurface Surface { get; }
+        public FootPlacementSurface HeelSupport { get; }
+        public FootPlacementSurface ToeSupport { get; }
+        public FootPlacementSurface CurrentSupport { get; }
+        public FootPlacementSurface FutureLandingSupport { get; }
+        public FootPlacementGroundEnvelope GroundEnvelope { get; }
+        public FootPlacementSurface Surface => CurrentSupport;
         public float SoleDistance { get; }
         public float SwingClearance { get; }
         public int QueryCount { get; }
         public int CandidateCount { get; }
         public int RejectedCount { get; }
-        public bool HasSupport => Surface.IsValid;
+        public bool HasSupport => CurrentSupport.IsValid;
+        public bool HasFutureLandingSupport => FutureLandingSupport.IsValid;
     }
 
     internal sealed class CharacterFootPlacementSupportQuery
@@ -70,10 +84,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly FootPlacementTraceRuntimeSettings m_Settings;
         readonly RaycastHit[] m_Hits;
         readonly SupportCandidate[] m_Candidates;
+        readonly FootPlacementGroundEnvelopeSegment[] m_Segments;
         int m_CandidateCount;
         int m_RejectedCount;
         int m_QueryCount;
         float m_SwingClearance;
+        FootPlacementGroundEnvelopeRejectReason m_EnvelopeRejectReason;
 
         public CharacterFootPlacementSupportQuery(
             PhysicsScene physicsScene,
@@ -87,6 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Settings = settings;
             m_Hits = new RaycastHit[settings.HitCapacity];
             m_Candidates = new SupportCandidate[settings.CandidateCapacity];
+            m_Segments = new FootPlacementGroundEnvelopeSegment[settings.CandidateCapacity];
         }
 
         public FootPlacementSupportResult Query(
@@ -98,9 +115,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_RejectedCount = 0;
             m_QueryCount = 0;
             m_SwingClearance = 0f;
+            m_EnvelopeRejectReason = FootPlacementGroundEnvelopeRejectReason.None;
             Vector3 currentSole = (pose.HeelPosition + pose.ToePosition) * 0.5f;
-            QueryPoint(pose.HeelPosition, 0f, pose.HipPosition, legLength, currentSole.y);
-            QueryPoint(pose.ToePosition, 0f, pose.HipPosition, legLength, currentSole.y);
+            FootPlacementSurface heelSupport = QueryCurrentSupport(pose.HeelPosition, pose.HipPosition, legLength, currentSole.y, out float heelDistance);
+            FootPlacementSurface toeSupport = QueryCurrentSupport(pose.ToePosition, pose.HipPosition, legLength, currentSole.y, out float toeDistance);
+            FootPlacementSurface currentSupport = BuildCurrentSupport(pose, heelSupport, toeSupport);
+            float soleDistance = ResolveSoleDistance(heelDistance, toeDistance);
+            QueryPoint(currentSole, 0f, pose.HipPosition, legLength, currentSole.y);
             int pathSamples = m_Settings.PathSampleCount;
             for (int i = 1; i <= pathSamples; i++)
             {
@@ -116,49 +137,224 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QueryCapsulePath(currentSole, predictedSole);
             SortCandidates();
             CollapseSampleCandidates();
-            int continuousCount = FilterHeightContinuity();
+            int continuousCount = FilterEnvelopeContinuity();
             if (continuousCount == 0)
                 return new FootPlacementSupportResult(
+                    heelSupport,
+                    toeSupport,
+                    currentSupport,
                     default,
-                    float.PositiveInfinity,
+                    new FootPlacementGroundEnvelope(
+                        m_Segments,
+                        0,
+                        m_EnvelopeRejectReason == FootPlacementGroundEnvelopeRejectReason.None
+                            ? FootPlacementGroundEnvelopeRejectReason.NoCandidate
+                            : m_EnvelopeRejectReason),
+                    soleDistance,
                     0f,
                     m_QueryCount,
                     0,
                     m_RejectedCount);
 
-            SupportCandidate selected = m_Candidates[0];
-            SupportCandidate current = default;
-            bool hasCurrent = false;
+            SupportCandidate future = default;
+            bool hasFuture = false;
             float envelopeClearance = 0f;
             for (int i = 0; i < continuousCount; i++)
             {
                 SupportCandidate candidate = m_Candidates[i];
                 float sampledSoleHeight = Mathf.Lerp(currentSole.y, predictedSole.y, candidate.PathFraction);
                 envelopeClearance = Mathf.Max(envelopeClearance, candidate.Point.y - sampledSoleHeight);
-                if (candidate.PathFraction <= 0.0001f &&
-                    (!hasCurrent || candidate.Distance < current.Distance))
+                if (candidate.PathFraction >= 0.9999f &&
+                    (!hasFuture || candidate.Distance < future.Distance))
                 {
-                    current = candidate;
-                    hasCurrent = true;
+                    future = candidate;
+                    hasFuture = true;
                 }
-                if (candidate.PathFraction > selected.PathFraction ||
-                    Mathf.Approximately(candidate.PathFraction, selected.PathFraction) &&
-                    candidate.Distance < selected.Distance)
-                    selected = candidate;
             }
+            int segmentCount = BuildEnvelopeSegments(continuousCount);
             float clearance = Mathf.Clamp(
                 Mathf.Max(envelopeClearance, m_SwingClearance),
                 0f,
                 m_Settings.MaximumSwingClearance);
             return new FootPlacementSupportResult(
-                new FootPlacementSurface(selected.Collider, selected.Point, selected.Normal),
-                hasCurrent
-                    ? Mathf.Abs(currentSole.y - current.Point.y)
-                    : float.PositiveInfinity,
+                heelSupport,
+                toeSupport,
+                currentSupport,
+                hasFuture
+                    ? new FootPlacementSurface(future.Collider, future.Point, future.Normal)
+                    : default,
+                new FootPlacementGroundEnvelope(
+                    m_Segments,
+                    segmentCount,
+                    segmentCount > 0
+                        ? m_EnvelopeRejectReason
+                        : FootPlacementGroundEnvelopeRejectReason.SurfaceDiscontinuity),
+                soleDistance,
                 clearance,
                 m_QueryCount,
                 continuousCount,
                 m_RejectedCount);
+        }
+
+        FootPlacementSurface QueryCurrentSupport(
+            Vector3 solePoint,
+            Vector3 hip,
+            float legLength,
+            float currentSoleHeight,
+            out float soleDistance)
+        {
+            Vector3 origin = solePoint + Vector3.up * m_Settings.CastAbove;
+            float castDistance = m_Settings.CastAbove + m_Settings.CastBelow;
+            FootPlacementSurface selected = default;
+            soleDistance = float.PositiveInfinity;
+
+            m_QueryCount++;
+            int rayCount = m_PhysicsScene.Raycast(
+                origin,
+                Vector3.down,
+                m_Hits,
+                castDistance,
+                m_Settings.GroundLayerMask,
+                QueryTriggerInteraction.Ignore);
+            SelectCurrentSupport(
+                rayCount,
+                solePoint,
+                hip,
+                legLength,
+                currentSoleHeight,
+                ref selected,
+                ref soleDistance);
+
+            m_QueryCount++;
+            int sphereCount = m_PhysicsScene.SphereCast(
+                origin,
+                m_Settings.SphereRadius,
+                Vector3.down,
+                m_Hits,
+                castDistance,
+                m_Settings.GroundLayerMask,
+                QueryTriggerInteraction.Ignore);
+            SelectCurrentSupport(
+                sphereCount,
+                solePoint,
+                hip,
+                legLength,
+                currentSoleHeight,
+                ref selected,
+                ref soleDistance);
+            return selected;
+        }
+
+        void SelectCurrentSupport(
+            int hitCount,
+            Vector3 solePoint,
+            Vector3 hip,
+            float legLength,
+            float currentSoleHeight,
+            ref FootPlacementSurface selected,
+            ref float soleDistance)
+        {
+            int count = Mathf.Min(hitCount, m_Hits.Length);
+            for (int i = 0; i < count; i++)
+            {
+                RaycastHit hit = m_Hits[i];
+                if (!Accept(hit, hip, legLength, currentSoleHeight, out FootPlacementGroundEnvelopeRejectReason rejectReason))
+                {
+                    m_RejectedCount++;
+                    RecordRejectReason(rejectReason);
+                    continue;
+                }
+
+                float candidateDistance = Mathf.Abs(solePoint.y - hit.point.y);
+                int candidateIdentity = hit.collider.GetInstanceID();
+                if (candidateDistance > soleDistance ||
+                    Mathf.Approximately(candidateDistance, soleDistance) &&
+                    selected.IsValid &&
+                    candidateIdentity >= selected.Identity)
+                    continue;
+
+                selected = new FootPlacementSurface(hit.collider, hit.point, hit.normal.normalized);
+                soleDistance = candidateDistance;
+            }
+        }
+
+        static FootPlacementSurface BuildCurrentSupport(
+            CharacterFootPlacementAnimatedFootPose pose,
+            FootPlacementSurface heelSupport,
+            FootPlacementSurface toeSupport)
+        {
+            if (!heelSupport.IsValid && !toeSupport.IsValid)
+                return default;
+            Vector3 sole = (pose.HeelPosition + pose.ToePosition) * 0.5f;
+            if (!heelSupport.IsValid || !toeSupport.IsValid)
+            {
+                FootPlacementSurface support = heelSupport.IsValid ? heelSupport : toeSupport;
+                Vector3 probe = heelSupport.IsValid ? pose.HeelPosition : pose.ToePosition;
+                Vector3 projectedCenter = support.Point + Vector3.ProjectOnPlane(sole - probe, support.Normal);
+                return new FootPlacementSurface(support.Collider, projectedCenter, support.Normal);
+            }
+
+            FootPlacementSurface owner;
+            if (heelSupport.Point.y > toeSupport.Point.y + 0.0001f)
+                owner = heelSupport;
+            else if (toeSupport.Point.y > heelSupport.Point.y + 0.0001f)
+                owner = toeSupport;
+            else
+                owner = heelSupport.Identity <= toeSupport.Identity ? heelSupport : toeSupport;
+
+            Vector3 normal = (heelSupport.Normal + toeSupport.Normal).normalized;
+            Vector3 soleTangent = toeSupport.Point - heelSupport.Point;
+            if (soleTangent.sqrMagnitude > 0.000001f)
+            {
+                Vector3 fittedNormal = Vector3.ProjectOnPlane(normal, soleTangent.normalized).normalized;
+                if (fittedNormal.sqrMagnitude > 0.000001f)
+                    normal = fittedNormal.y >= 0f ? fittedNormal : -fittedNormal;
+            }
+            if (normal.sqrMagnitude <= 0.000001f)
+                normal = Vector3.up;
+            return new FootPlacementSurface(
+                owner.Collider,
+                (heelSupport.Point + toeSupport.Point) * 0.5f,
+                normal);
+        }
+
+        static float ResolveSoleDistance(float heelDistance, float toeDistance)
+        {
+            if (!IsFinite(heelDistance))
+                return toeDistance;
+            if (!IsFinite(toeDistance))
+                return heelDistance;
+            return Mathf.Min(heelDistance, toeDistance);
+        }
+
+        int BuildEnvelopeSegments(int candidateCount)
+        {
+            int count = 0;
+            for (int i = 0; i < candidateCount; i++)
+            {
+                SupportCandidate current = m_Candidates[i];
+                float start = i == 0
+                    ? 0f
+                    : (m_Candidates[i - 1].PathFraction + current.PathFraction) * 0.5f;
+                float end = i == candidateCount - 1
+                    ? 1f
+                    : (current.PathFraction + m_Candidates[i + 1].PathFraction) * 0.5f;
+                Vector3 edgeStart = i > 0
+                    ? Vector3.Lerp(m_Candidates[i - 1].Point, current.Point, 0.5f)
+                    : current.Point;
+                Vector3 edgeEnd = i + 1 < candidateCount
+                    ? Vector3.Lerp(current.Point, m_Candidates[i + 1].Point, 0.5f)
+                    : current.Point;
+                m_Segments[count++] = new FootPlacementGroundEnvelopeSegment(
+                    start,
+                    end,
+                    new FootPlacementSurface(current.Collider, current.Point, current.Normal),
+                    edgeStart,
+                    edgeEnd,
+                    Mathf.Max(current.Point.y, edgeStart.y, edgeEnd.y),
+                    end - start > 0.0001f);
+            }
+            return count;
         }
 
         void QueryPoint(
@@ -237,9 +433,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             for (int i = 0; i < count; i++)
             {
                 RaycastHit hit = m_Hits[i];
-                if (!Accept(hit, hip, legLength, currentSoleHeight))
+                if (!Accept(hit, hip, legLength, currentSoleHeight, out FootPlacementGroundEnvelopeRejectReason rejectReason))
                 {
                     m_RejectedCount++;
+                    RecordRejectReason(rejectReason);
                     continue;
                 }
                 if (m_CandidateCount >= m_Candidates.Length)
@@ -256,36 +453,83 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        bool Accept(RaycastHit hit, Vector3 hip, float legLength, float currentSoleHeight)
+        bool Accept(
+            RaycastHit hit,
+            Vector3 hip,
+            float legLength,
+            float currentSoleHeight,
+            out FootPlacementGroundEnvelopeRejectReason rejectReason)
         {
             if (!hit.collider || m_Rig.IsSelfCollider(hit.collider))
+            {
+                rejectReason = FootPlacementGroundEnvelopeRejectReason.InvalidCandidate;
                 return false;
+            }
             if (!IsFinite(hit.point) || !IsFinite(hit.normal) || hit.normal.sqrMagnitude <= 0.0001f)
+            {
+                rejectReason = FootPlacementGroundEnvelopeRejectReason.InvalidCandidate;
                 return false;
+            }
             if (Vector3.Angle(Vector3.up, hit.normal) > m_Settings.MaximumSlopeDegrees)
+            {
+                rejectReason = FootPlacementGroundEnvelopeRejectReason.SlopeExceeded;
                 return false;
+            }
             float heightDelta = hit.point.y - currentSoleHeight;
             if (heightDelta > m_Settings.MaximumStepUp || heightDelta < -m_Settings.MaximumStepDown)
+            {
+                rejectReason = FootPlacementGroundEnvelopeRejectReason.StepExceeded;
                 return false;
-            return Vector3.Distance(hip, hit.point) <= legLength * 1.05f;
+            }
+            if (Vector3.Distance(hip, hit.point) > legLength * 1.05f)
+            {
+                rejectReason = FootPlacementGroundEnvelopeRejectReason.ReachExceeded;
+                return false;
+            }
+            rejectReason = FootPlacementGroundEnvelopeRejectReason.None;
+            return true;
         }
 
-        int FilterHeightContinuity()
+        void RecordRejectReason(FootPlacementGroundEnvelopeRejectReason reason)
         {
-            if (m_CandidateCount <= 1)
+            if (reason != FootPlacementGroundEnvelopeRejectReason.None &&
+                m_EnvelopeRejectReason == FootPlacementGroundEnvelopeRejectReason.None)
+                m_EnvelopeRejectReason = reason;
+        }
+
+        int FilterEnvelopeContinuity()
+        {
+            if (m_CandidateCount == 0)
+            {
+                m_EnvelopeRejectReason = FootPlacementGroundEnvelopeRejectReason.NoCandidate;
+                return 0;
+            }
+            if (m_CandidateCount == 1)
                 return m_CandidateCount;
             int write = 1;
-            float previousHeight = m_Candidates[0].Point.y;
+            SupportCandidate previous = m_Candidates[0];
             for (int i = 1; i < m_CandidateCount; i++)
             {
                 SupportCandidate candidate = m_Candidates[i];
-                if (Mathf.Abs(candidate.Point.y - previousHeight) > m_Settings.MaximumHeightDiscontinuity)
+                float heightDelta = candidate.Point.y - previous.Point.y;
+                if (Mathf.Abs(heightDelta) > m_Settings.MaximumHeightDiscontinuity ||
+                    heightDelta > m_Settings.MaximumStepUp ||
+                    heightDelta < -m_Settings.MaximumStepDown)
                 {
-                    m_RejectedCount++;
-                    continue;
+                    m_EnvelopeRejectReason = FootPlacementGroundEnvelopeRejectReason.HeightDiscontinuity;
+                    m_RejectedCount += m_CandidateCount - i;
+                    break;
+                }
+                Vector2 previousPlanar = new Vector2(previous.Point.x, previous.Point.z);
+                Vector2 candidatePlanar = new Vector2(candidate.Point.x, candidate.Point.z);
+                if (Vector2.Distance(previousPlanar, candidatePlanar) > m_Settings.MaximumEdgeGap)
+                {
+                    m_EnvelopeRejectReason = FootPlacementGroundEnvelopeRejectReason.EdgeGap;
+                    m_RejectedCount += m_CandidateCount - i;
+                    break;
                 }
                 m_Candidates[write++] = candidate;
-                previousHeight = candidate.Point.y;
+                previous = candidate;
             }
             return write;
         }

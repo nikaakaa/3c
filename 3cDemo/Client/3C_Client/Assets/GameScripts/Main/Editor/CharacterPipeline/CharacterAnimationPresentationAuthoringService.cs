@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Simulation;
 using UnityEditor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
@@ -12,18 +13,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterAnimationPresentationProfile profile,
             CharacterPipelineDefinition definitionContext,
             AnimationProducerId producerId,
-            TransitionAssetBase transition,
-            Easing.Function easing)
+            TransitionAssetBase source)
         {
             RequireContext(profile, definitionContext);
             RequireProducer(definitionContext, producerId);
-            if (!transition || !transition.IsValid)
-                throw new ArgumentException("A valid Animancer transition asset is required.", nameof(transition));
-            if (!Enum.IsDefined(typeof(Easing.Function), easing))
-                throw new ArgumentOutOfRangeException(nameof(easing));
-            if (!profile.TransitionLibrary || profile.TransitionLibrary.Library == null ||
-                !profile.TransitionLibrary.Library.TryGetTransition(transition.Key, out _))
-                throw new InvalidOperationException("The transition must be registered in the configured Animancer TransitionLibrary.");
+            if (!source || !source.IsValid)
+                throw new ArgumentException("A valid Animancer source asset is required.", nameof(source));
 
             Undo.RecordObject(profile, "Configure Animation Producer Binding");
             AnimationProducerPresentationBinding binding = profile.FindProducerBinding(producerId);
@@ -33,7 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var bindings = new List<AnimationProducerPresentationBinding>(profile.ProducerBindings) { binding };
                 profile.SetProducerBindings(bindings.ToArray());
             }
-            binding.Configure(producerId, transition, easing);
+            binding.Configure(producerId, source);
             EditorUtility.SetDirty(profile);
         }
 
@@ -64,7 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!definition.SimulationProgram || !definition.PresentationProjection)
                 throw new InvalidOperationException($"CharacterPipelineDefinition '{definition.name}' has no compiled Program and Presentation Projection pair.");
             CharacterPresentationProjection projection = definition.PresentationProjection.Load(
-                definition.SimulationProgram.Load());
+                Float32CharacterPresentationContractAdapter.Create(definition.SimulationProgram.Load()));
             for (int i = 0; i < projection.AnimationProducers.Count; i++)
             {
                 if (projection.AnimationProducers[i].ProducerId.Equals(producerId))

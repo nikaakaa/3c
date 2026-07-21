@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
     public sealed class DeterministicKccWorldSolver : ICharacterWorldSolver
     {
         public const string SolverId = "thirdperson.simulation.solver.deterministic-kcc";
-        public const string SolverVersion = "5";
+        public const string SolverVersion = "6";
 
         static readonly SolverImplementationId s_ImplementationId = new SolverImplementationId(SolverId);
         readonly DeterministicCollisionWorldArtifact m_CollisionWorld;

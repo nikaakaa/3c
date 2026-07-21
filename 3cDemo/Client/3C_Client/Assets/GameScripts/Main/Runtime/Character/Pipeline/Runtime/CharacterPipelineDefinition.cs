@@ -17,7 +17,7 @@ using UnityEngine;
 namespace ThirdPersonCharacter.Pipeline
 {
     [CreateAssetMenu(fileName = "CharacterPipelineDefinition", menuName = "3C/Character/Pipeline Definition")]
-    public sealed class CharacterPipelineDefinition : ScriptableObject
+    public sealed partial class CharacterPipelineDefinition : ScriptableObject
     {
         [SerializeField] BaseTreeAsset m_RootTreeAsset;
         [SerializeField, Min(1)] int m_SimulationTickRate = GameplayTickSettings.DefaultLocalLogicTickRate;
@@ -226,6 +226,8 @@ namespace ThirdPersonCharacter.Pipeline
                     valid = false;
                 }
             }
+
+            valid &= CollectEquipmentConfigurationErrors(ids, gameplayTagCatalog, errors);
 
             return valid;
         }

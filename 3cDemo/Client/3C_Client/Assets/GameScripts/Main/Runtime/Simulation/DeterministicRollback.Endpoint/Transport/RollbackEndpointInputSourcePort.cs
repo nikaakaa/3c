@@ -4,60 +4,12 @@ using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonSimulation.DeterministicRollback
 {
-    public readonly struct RollbackLocalInputBuildContext
-    {
-        public RollbackLocalInputBuildContext(
-            ActorId actorId,
-            SimulationTick simulationTick,
-            SimulationTickSourceIdentity source,
-            ulong inputSequence,
-            int tickRate,
-            int offensiveRequestDelayTicks,
-            int maximumPendingRequests)
-        {
-            if (!actorId.IsValid || !simulationTick.IsValid || string.IsNullOrEmpty(source.ClockId) ||
-                source.SourceTick != simulationTick.Value || inputSequence == 0 || tickRate <= 0 ||
-                offensiveRequestDelayTicks < 0 || maximumPendingRequests <= 0)
-            {
-                throw new ArgumentException("Rollback local input build context is incomplete.");
-            }
-            ActorId = actorId;
-            SimulationTick = simulationTick;
-            Source = source;
-            InputSequence = inputSequence;
-            TickRate = tickRate;
-            OffensiveRequestDelayTicks = offensiveRequestDelayTicks;
-            MaximumPendingRequests = maximumPendingRequests;
-        }
-
-        public ActorId ActorId { get; }
-        public SimulationTick SimulationTick { get; }
-        public SimulationTickSourceIdentity Source { get; }
-        public ulong InputSequence { get; }
-        public int TickRate { get; }
-        public int OffensiveRequestDelayTicks { get; }
-        public int MaximumPendingRequests { get; }
-    }
-
-    public interface IRollbackLocalInputAdapterCheckpoint
-    {
-    }
-
-    public interface IRollbackLocalInputAdapter
-    {
-        string AdapterIdentity { get; }
-        CharacterSimulationInput BuildInput(RollbackLocalInputBuildContext context);
-        IRollbackLocalInputAdapterCheckpoint CaptureCheckpoint();
-        void RestoreCheckpoint(IRollbackLocalInputAdapterCheckpoint checkpoint);
-        RollbackLocalInputDiagnosticsSnapshot CaptureDiagnostics();
-    }
-
     public sealed class RollbackEndpointInputSourcePort : IRollbackInputSourcePort
     {
         sealed class Checkpoint : IRollbackInputSourceCheckpoint
         {
             public RollbackEndpointInputSourcePort Owner;
-            public IRollbackLocalInputAdapterCheckpoint Adapter;
+            public byte[] ControlSourceState;
             public Dictionary<ActorId, SortedDictionary<ulong, RollbackActorInputFrame>> Explicit;
             public Dictionary<ActorId, RollbackActorInputFrame> LastConfirmed;
             public SortedDictionary<ulong, RollbackCanonicalInputBundle> CanonicalPending;
@@ -79,7 +31,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         }
 
         readonly RollbackPeerEndpoint m_Peer;
-        readonly IRollbackLocalInputAdapter m_InputAdapter;
+        readonly IFixedCharacterControlSourceRuntime m_InputAdapter;
         readonly int m_TickRate;
         readonly DeterministicRollbackModelPolicy m_Policy;
         readonly string m_ClockId;
@@ -109,7 +61,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public RollbackEndpointInputSourcePort(
             SimulationComponentIdentity sessionSource,
             RollbackPeerEndpoint peer,
-            IRollbackLocalInputAdapter inputAdapter,
+            IFixedCharacterControlSourceRuntime inputAdapter,
             int tickRate,
             string clockId,
             DeterministicRollbackModelPolicy policy)
@@ -123,7 +75,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_TickRate = tickRate;
             m_Policy = policy ?? throw new ArgumentNullException(nameof(policy));
             m_ClockId = RollbackEndpointIdentity.Require(clockId, nameof(clockId));
-            m_PredictionSourceIdentity = $"{sessionSource.ComponentId}/{inputAdapter.AdapterIdentity}";
+            m_PredictionSourceIdentity = $"{sessionSource.ComponentId}/{inputAdapter.SourceIdentity}";
             Descriptor = new SimulationPortDescriptor(
                 RollbackSourcePortContracts.InputPortId,
                 RollbackSourcePortContracts.InputSchemaId,
@@ -133,7 +85,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 StableHash.Compute(
                     "deterministic-rollback-endpoint-input-port/3",
                     sessionSource.ToString(),
-                    inputAdapter.AdapterIdentity,
+                    inputAdapter.SourceIdentity,
                     tickRate.ToString(),
                     m_ClockId,
                     policy.ConfigurationHash.Value));
@@ -204,7 +156,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return new Checkpoint
             {
                 Owner = this,
-                Adapter = m_InputAdapter.CaptureCheckpoint(),
+                ControlSourceState = m_InputAdapter.CaptureState(),
                 Explicit = CloneExplicit(m_Explicit),
                 LastConfirmed = new Dictionary<ActorId, RollbackActorInputFrame>(m_LastConfirmed),
                 CanonicalPending = new SortedDictionary<ulong, RollbackCanonicalInputBundle>(m_CanonicalPending),
@@ -223,7 +175,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (checkpoint is not Checkpoint value || !ReferenceEquals(value.Owner, this))
                 throw new ArgumentException("Rollback input Source checkpoint belongs to another Source.", nameof(checkpoint));
-            m_InputAdapter.RestoreCheckpoint(value.Adapter);
+            m_InputAdapter.RestoreState(value.ControlSourceState);
+            m_InputAdapter.NotifyStateDisposition(FixedCharacterControlSourceStateDisposition.Discarded);
             RestoreExplicit(value.Explicit);
             m_LastConfirmed.Clear();
             foreach (KeyValuePair<ActorId, RollbackActorInputFrame> pair in value.LastConfirmed)
@@ -255,8 +208,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     pair.Value.LastArrivalDeltaTicks));
             }
             remote.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
+            FixedCharacterControlSourceDiagnosticsSnapshot local = m_InputAdapter.CaptureDiagnostics();
             return new RollbackInputSourceDiagnosticsSnapshot(
-                m_InputAdapter.CaptureDiagnostics(),
+                new RollbackLocalInputDiagnosticsSnapshot(
+                    local.PendingOffensiveRequestCount,
+                    local.OldestCaptureTick,
+                    local.OldestEligibleTick),
                 remote.ToArray(),
                 m_RelayedArrivalCount,
                 m_RelayedArrivalLeadCount,
@@ -268,7 +225,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             ulong inputSequence = m_NextInputSequence;
             m_NextInputSequence = checked(inputSequence + 1);
-            var context = new RollbackLocalInputBuildContext(
+            var context = new FixedCharacterInputBuildContext(
                 m_LocalActorId,
                 tick,
                 source,

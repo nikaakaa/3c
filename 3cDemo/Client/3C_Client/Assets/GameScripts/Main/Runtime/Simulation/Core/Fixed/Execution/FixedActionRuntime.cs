@@ -16,6 +16,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedHandleAllocator m_Handles;
         readonly FixedFactSink m_Facts;
         readonly FixedTraceSink m_Trace;
+        readonly IEquipmentActionContextProvider m_EquipmentContext;
         readonly ActionAdmissionControl m_Admission;
 
         public FixedActionRuntime(
@@ -28,7 +29,8 @@ namespace ThirdPersonSimulation.Fixed
             IFixedGameplayEffectActionPort gameplayEffectActions,
             FixedHandleAllocator handles,
             FixedFactSink facts,
-            FixedTraceSink trace)
+            FixedTraceSink trace,
+            IEquipmentActionContextProvider equipmentContext)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
@@ -40,6 +42,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
             m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
             m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
+            m_EquipmentContext = equipmentContext ?? throw new ArgumentNullException(nameof(equipmentContext));
             m_Admission = new ActionAdmissionControl(this);
         }
 
@@ -95,7 +98,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame.Tick.Value,
                 GetStringConstant(operation, OperationNamedConstant.TargetKey, string.Empty),
                 targetSnapshot,
-                operation.Handle);
+                operation.Handle,
+                m_EquipmentContext.Current);
             int requestSlot = m_Actions.RequireSlot(actionId, ProgramStateSemantic.ActionRequestBuffer);
             m_Actions.WriteRequest(requestSlot, request);
             try
@@ -119,12 +123,13 @@ namespace ThirdPersonSimulation.Fixed
                     SimulationActionLifecycleTransitionType.None,
                     staged.StartTick,
                     0,
-                    string.Empty);
+                    string.Empty,
+                    staged.EquipmentContext);
                 m_Actions.WriteState(instance);
                 m_GameplayEffectActions.SetActionTags(instanceId, profile.Tags);
                 EmitActionFact(operation, instance);
                 if (m_Trace.Enabled)
-                    m_Trace.Add(operation, "action_activated", SimulationTraceSeverity.Information, $"{actionId}:{instanceId}:request={requestId}:sequence={inputSequence}:requirement={profile.TargetRequirement}:candidate={targetSnapshot.TargetId}:captured={instance.TargetSnapshot.TargetId}");
+                    m_Trace.Add(operation, "action_activated", SimulationTraceSeverity.Information, $"{actionId}:{instanceId}:request={requestId}:sequence={inputSequence}:requirement={profile.TargetRequirement}:candidate={targetSnapshot.TargetId}:captured={instance.TargetSnapshot.TargetId}:captureTick={instance.StartTick}:targetPosition={instance.TargetSnapshot.Position}:targetYaw={instance.TargetSnapshot.Yaw}:equipment={instance.EquipmentContext}");
                 return true;
             }
             finally
@@ -258,7 +263,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Actions.WriteState(next);
             EmitActionFact(source, next);
             if (m_Trace.Enabled)
-                m_Trace.Add(source, "action_lifecycle", SimulationTraceSeverity.Information, $"{next.ActionId}:{next.InstanceId}:{transition}:{next.Reason}");
+                m_Trace.Add(source, "action_lifecycle", SimulationTraceSeverity.Information, $"{next.ActionId}:{next.InstanceId}:{transition}:{next.Reason}:equipment={next.EquipmentContext}");
             if (!next.IsActive)
             {
                 m_GameplayEffectActions.RemoveActionTags(next.InstanceId);
@@ -278,7 +283,8 @@ namespace ThirdPersonSimulation.Fixed
                 action.LastTransition,
                 action.Phase,
                 action.State,
-                action.Reason)));
+                action.Reason,
+                action.EquipmentContext)));
         }
 
         ActionAdmissionProfile RequireActionProfile(SimulationOperation operation) =>

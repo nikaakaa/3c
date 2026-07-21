@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback;
+using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonSimulation.DeterministicKcc;
 using ThirdPersonSimulation.Fixed;
 using UnityEditor;

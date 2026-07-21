@@ -189,6 +189,18 @@ namespace ThirdPersonSimulation.Fixed
             m_State.RemoveTagSource(GameplayTagSourceIdentity.ActionInstance(actionInstanceId));
         }
 
+        public void SetEquipmentTags(string sourceId, IEnumerable<string> tags)
+        {
+            EnsureWorkingState();
+            m_State.SetTagSource(SimulationIdentity.Require(sourceId, nameof(sourceId)), tags);
+        }
+
+        public void RemoveEquipmentTags(string sourceId)
+        {
+            EnsureWorkingState();
+            m_State.RemoveTagSource(SimulationIdentity.Require(sourceId, nameof(sourceId)));
+        }
+
         public IReadOnlyList<PortableEffectRuntimeChange> PendingChanges => m_Changes;
         public void ClearChanges() => m_Changes.Clear();
 

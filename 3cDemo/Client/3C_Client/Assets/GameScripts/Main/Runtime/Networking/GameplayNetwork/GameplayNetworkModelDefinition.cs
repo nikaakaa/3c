@@ -27,6 +27,7 @@ namespace ThirdPersonGameplay.Networking
             string requiredBackendId,
             SimulationPipelineId requiredPipelineId,
             WorldCapability requiredSolverCapabilities,
+            CharacterControlSourceCapability allowedLocalControlSourceCapabilities,
             IEnumerable<SimulationPipelinePassRequirement> requiredPasses,
             IEnumerable<SimulationPipelinePortRequirement> requiredSourcePorts)
         {
@@ -39,6 +40,11 @@ namespace ThirdPersonGameplay.Networking
             {
                 throw new ArgumentException("Network Model Source requirements are incomplete.");
             }
+            const CharacterControlSourceCapability knownControlSourceCapabilities =
+                CharacterControlSourceCapability.CommittedObservation |
+                CharacterControlSourceCapability.TransactionalState;
+            if ((allowedLocalControlSourceCapabilities & ~knownControlSourceCapabilities) != 0)
+                throw new ArgumentException("Network Model Source allows an unknown local Control Source capability.");
             Model = model;
             Protocol = protocol;
             Endpoint = endpoint;
@@ -52,6 +58,7 @@ namespace ThirdPersonGameplay.Networking
             RequiredBackendId = SimulationIdentityAuthoring.Require(requiredBackendId, nameof(requiredBackendId));
             RequiredPipelineId = requiredPipelineId;
             RequiredSolverCapabilities = requiredSolverCapabilities;
+            AllowedLocalControlSourceCapabilities = allowedLocalControlSourceCapabilities;
             m_RequiredPasses = FreezePasses(requiredPasses);
             m_RequiredSourcePorts = FreezePorts(requiredSourcePorts);
             if (m_RequiredPasses.Count == 0)
@@ -75,6 +82,7 @@ namespace ThirdPersonGameplay.Networking
         public string RequiredBackendId { get; }
         public SimulationPipelineId RequiredPipelineId { get; }
         public WorldCapability RequiredSolverCapabilities { get; }
+        public CharacterControlSourceCapability AllowedLocalControlSourceCapabilities { get; }
         public IReadOnlyList<SimulationPipelinePassRequirement> RequiredPasses => m_RequiredPasses;
         public IReadOnlyList<SimulationPipelinePortRequirement> RequiredSourcePorts => m_RequiredSourcePorts;
         public StableHash RequirementsHash { get; }
@@ -83,7 +91,7 @@ namespace ThirdPersonGameplay.Networking
         {
             var values = new List<string>
             {
-                "gameplay-network-model-source-requirements/1",
+                "gameplay-network-model-source-requirements/2",
                 Model.ToString(),
                 Protocol.ToString(),
                 Endpoint.ToString(),
@@ -96,7 +104,8 @@ namespace ThirdPersonGameplay.Networking
                 Deterministic ? "1" : "0",
                 RequiredBackendId,
                 RequiredPipelineId.Value,
-                Convert.ToUInt64(RequiredSolverCapabilities).ToString()
+                Convert.ToUInt64(RequiredSolverCapabilities).ToString(),
+                ((int)AllowedLocalControlSourceCapabilities).ToString()
             };
             for (int i = 0; i < m_RequiredPasses.Count; i++)
                 values.Add($"pass:{m_RequiredPasses[i]}");
@@ -236,11 +245,30 @@ namespace ThirdPersonGameplay.Networking
                     $"Network Model '{requirements.ModelId}' requires Target ABI '{requirements.TargetAbiVersion}', " +
                     $"but the selected Program Runtime provides '{context.ProgramRuntime.TargetAbiVersion}'.");
             }
+            ValidateLocalControlSourceCapabilities(context.Registrations, requirements);
             ISimulationSessionSourcePreparation preparation = CreateModelPreparation(
                 new GameplayNetworkModelPreparationContext(context),
                 requirements) ?? throw new InvalidOperationException(
                     $"Network Model '{requirements.ModelId}' returned no Source preparation.");
             return new GameplayNetworkModelSourcePreparationValidation(preparation, requirements);
+        }
+
+        static void ValidateLocalControlSourceCapabilities(
+            IReadOnlyList<ISimulationActorRegistration> registrations,
+            GameplayNetworkModelSourceRequirements requirements)
+        {
+            for (int i = 0; i < registrations.Count; i++)
+            {
+                if (registrations[i] is not ILocalSimulationActorRegistration local || local.LocalControlSource == null)
+                    continue;
+                CharacterControlSourceCapability unsupported =
+                    local.LocalControlSource.Capabilities & ~requirements.AllowedLocalControlSourceCapabilities;
+                if (unsupported != CharacterControlSourceCapability.None)
+                {
+                    throw new InvalidOperationException(
+                        $"Network Model '{requirements.ModelId}' does not support local Control Source capabilities '{unsupported}' for Actor '{local.ActorId}'.");
+                }
+            }
         }
 
         protected abstract GameplayNetworkModelSourceRequirements BuildRequirements();

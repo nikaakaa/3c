@@ -397,7 +397,8 @@ namespace ThirdPersonSimulation.Fixed
             SimulationActionLifecycleTransitionType transitionType,
             SimulationActionPhase phase,
             SimulationActionState state,
-            string reason)
+            string reason,
+            EquipmentActionContext equipmentContext = default)
         {
             if (actionInstanceId == 0 || predictionKey == 0 || inputSequence == 0)
                 throw new ArgumentException("Action fact identity is incomplete.");
@@ -409,6 +410,7 @@ namespace ThirdPersonSimulation.Fixed
             Phase = phase;
             State = state;
             Reason = reason ?? string.Empty;
+            EquipmentContext = equipmentContext;
         }
 
         public ulong ActionInstanceId { get; }
@@ -419,6 +421,7 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationActionPhase Phase { get; }
         public SimulationActionState State { get; }
         public string Reason { get; }
+        public EquipmentActionContext EquipmentContext { get; }
         public bool IsValid => ActionInstanceId != 0 && PredictionKey != 0 && InputSequence != 0 && !string.IsNullOrEmpty(ActionId);
     }
 

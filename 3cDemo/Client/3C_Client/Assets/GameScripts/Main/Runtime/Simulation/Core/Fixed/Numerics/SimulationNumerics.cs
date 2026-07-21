@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.Fixed
 {
     public static class FixedSimulationNumericProfile
     {
-        public const int AbiVersion = 5;
+        public const int AbiVersion = 6;
         public const int FractionalBits = 32;
 
         public static SimulationNumericProfile Value { get; } = new SimulationNumericProfile(

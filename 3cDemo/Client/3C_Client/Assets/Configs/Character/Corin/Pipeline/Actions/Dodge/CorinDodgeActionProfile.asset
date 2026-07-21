@@ -17,6 +17,10 @@ MonoBehaviour:
   m_DebugCategory: Local
   m_Tags:
   - m_Value: Dodge
+  m_RequiredTags:
+    m_All: []
+    m_Any: []
+    m_None: []
   m_BlockTags:
     m_All: []
     m_Any: []

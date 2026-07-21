@@ -7,6 +7,7 @@ namespace TreeDesigner
     [NodeName("Root")]
     [NodeColor(217, 187, 249)]
     [Output("Output", PortCapacity.Single)]
+    [NodeAuthoringCapability(NodeAuthoringCapability.SharedFlow)]
     public partial class RootNode : RunnableNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "DeltaTime")]

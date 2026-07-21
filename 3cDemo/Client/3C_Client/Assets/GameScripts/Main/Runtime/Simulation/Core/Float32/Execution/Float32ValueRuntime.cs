@@ -72,6 +72,7 @@ namespace ThirdPersonSimulation
         readonly IFloat32ActionContextReader m_Actions;
         readonly IFloat32ActionAdmissionQuery m_ActionAdmission;
         readonly IFloat32GameplayTagQuery m_GameplayTags;
+        readonly Float32EquipmentRuntime m_Equipment;
         readonly IFloat32BlackboardPort m_Blackboard;
         readonly Float32EvaluationFrame m_Frame;
         readonly HashSet<Float32ValueEvaluationKey> m_ValueStack;
@@ -84,6 +85,7 @@ namespace ThirdPersonSimulation
             IFloat32ActionContextReader actions,
             IFloat32ActionAdmissionQuery actionAdmission,
             IFloat32GameplayTagQuery gameplayTags,
+            Float32EquipmentRuntime equipment,
             IFloat32BlackboardPort blackboard,
             Float32EvaluationFrame frame,
             Float32EvaluationWorkspace workspace)
@@ -93,6 +95,7 @@ namespace ThirdPersonSimulation
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_ActionAdmission = actionAdmission ?? throw new ArgumentNullException(nameof(actionAdmission));
             m_GameplayTags = gameplayTags ?? throw new ArgumentNullException(nameof(gameplayTags));
+            m_Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
             m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             if (workspace == null)
@@ -107,78 +110,85 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Float32 value runtime retained recursion state across evaluations.");
         }
 
-        public CharacterStateValue Evaluate<TTarget>(
-            OperationControlCursor<TTarget> cursor,
-            OperationHandle handle,
-            string outputPort = "")
-            where TTarget : struct, IOperationControlTarget<TTarget>
-        {
-            cursor.RequireExecution(handle);
-            var valueKey = new Float32ValueEvaluationKey(handle.Value, outputPort);
-            if (!m_ValueStack.Add(valueKey))
-                throw new InvalidOperationException($"Value operation cycle reached '{handle}/{outputPort}'.");
-            try
-            {
-                SimulationOperation operation = Access.Operation(handle);
-                using Float32ValueInputLease inputs = ReadInputs(cursor, operation);
-                switch (operation.Code)
-                {
-                    case SimulationOperationCode.ConditionResult:
-                        return CharacterStateValue.FromBoolean(inputs.Count > 0 && ToBoolean(inputs[0]));
-                    case SimulationOperationCode.InputBoolean:
-                        return CharacterStateValue.FromBoolean(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Boolean).Boolean);
-                    case SimulationOperationCode.InputScalar:
-                        return CharacterStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Scalar).Scalar);
-                    case SimulationOperationCode.InputVector2:
-                        return CharacterStateValue.FromVector2(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Vector2).Vector2);
-                    case SimulationOperationCode.InputVector2Magnitude:
-                        return CharacterStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Vector2).Vector2.Magnitude);
-                    case SimulationOperationCode.InputRequest:
-                        return CharacterStateValue.FromBoolean(m_Input.HasRequest(operation.Text0, out _));
-                    case SimulationOperationCode.BlackboardGet:
-                        return ReadBlackboard(cursor, operation);
-                    case SimulationOperationCode.ActionContextActive:
-                        return CharacterStateValue.FromBoolean(m_Actions.IsContextActive(operation.Text0));
-                    case SimulationOperationCode.ActionWindowActive:
-                        return CharacterStateValue.FromBoolean(m_Blackboard.IsActionWindowActive(operation));
-                    case SimulationOperationCode.CanActivateAction:
-                        return CharacterStateValue.FromBoolean(m_ActionAdmission.PreviewActivation(cursor, operation).Allowed);
-                    case SimulationOperationCode.GameplayEffectHasTag:
-                        return CharacterStateValue.FromBoolean(m_GameplayTags.HasTag(operation.Text0));
-                    case SimulationOperationCode.GameplayEffectMatchTags:
-                        return CharacterStateValue.FromBoolean(
-                            m_GameplayTags.Matches(Access.Services.RequireTagQuery(operation.Handle)));
-                    case SimulationOperationCode.GameplayAttributeRead:
-                        return m_GameplayTags.ReadAttribute(operation, outputPort);
-                    case SimulationOperationCode.CameraBasisRead:
-                        return ReadCameraBasis(outputPort);
-                    case SimulationOperationCode.StateRootCompleted:
-                        return CharacterStateValue.FromBoolean(cursor.CurrentStateRootCompleted());
-                    case SimulationOperationCode.StateExitCause:
-                        return CharacterStateValue.FromBoolean(operation.Integer0 == cursor.CurrentStateExitCause());
-                    case SimulationOperationCode.MoveFacingAngle:
-                        return CharacterStateValue.FromScalar(ReadMoveFacingAngle(inputs));
-                    case SimulationOperationCode.Compare:
-                        return CharacterStateValue.FromBoolean(Compare(operation.Integer0, inputs));
-                    case SimulationOperationCode.And:
-                        return CharacterStateValue.FromBoolean(inputs.Count >= 2 && ToBoolean(inputs[0]) && ToBoolean(inputs[1]));
-                    case SimulationOperationCode.Or:
-                        return CharacterStateValue.FromBoolean(inputs.Count >= 2 && (ToBoolean(inputs[0]) || ToBoolean(inputs[1])));
-                    case SimulationOperationCode.Not:
-                        return CharacterStateValue.FromBoolean(inputs.Count == 0 || !ToBoolean(inputs[0]));
-                    case SimulationOperationCode.Constant:
-                        return operation.ConstantReferences.Count > 0
-                            ? ValueFromConstant(m_Program.Constants[operation.ConstantReferences[0]])
-                            : CharacterStateValue.FromBoolean(false);
-                    default:
-                        throw new InvalidOperationException($"Operation '{handle}' code '{operation.Code}' is not a value operation.");
-                }
-            }
-            finally
-            {
-                m_ValueStack.Remove(valueKey);
-            }
-        }
+		public CharacterStateValue Evaluate<TTarget>(
+			OperationControlCursor<TTarget> cursor,
+			OperationHandle handle,
+			string outputPort = "")
+			where TTarget : struct, IOperationControlTarget<TTarget>
+		{
+			cursor.RequireExecution(handle);
+			var valueKey = new Float32ValueEvaluationKey(handle.Value, outputPort);
+			if (!m_ValueStack.Add(valueKey))
+				throw new InvalidOperationException($"Value operation cycle reached '{handle}/{outputPort}'.");
+			try
+			{
+				SimulationOperation operation = Access.Operation(handle);
+				using Float32ValueInputLease inputs = ReadInputs(cursor, operation);
+				switch (operation.Code)
+				{
+					case SimulationOperationCode.ConditionResult:
+						return CharacterStateValue.FromBoolean(inputs.Count > 0 && ToBoolean(inputs[0]));
+					case SimulationOperationCode.InputBoolean:
+						return CharacterStateValue.FromBoolean(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Boolean).Boolean);
+					case SimulationOperationCode.InputScalar:
+						return CharacterStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Scalar).Scalar);
+					case SimulationOperationCode.InputVector2:
+						return CharacterStateValue.FromVector2(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Vector2).Vector2);
+					case SimulationOperationCode.InputVector2Magnitude:
+						return CharacterStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Vector2).Vector2.Magnitude);
+					case SimulationOperationCode.InputRequest:
+						return CharacterStateValue.FromBoolean(m_Input.HasRequest(operation.Text0, out _));
+					case SimulationOperationCode.BlackboardGet:
+						return ReadBlackboard(cursor, operation);
+					case SimulationOperationCode.ActionContextActive:
+						return CharacterStateValue.FromBoolean(m_Actions.IsContextActive(operation.Text0));
+					case SimulationOperationCode.ActionWindowActive:
+						return CharacterStateValue.FromBoolean(m_Blackboard.IsActionWindowActive(operation));
+					case SimulationOperationCode.CanActivateAction:
+						return CharacterStateValue.FromBoolean(m_ActionAdmission.PreviewActivation(cursor, operation).Allowed);
+					case SimulationOperationCode.GameplayEffectHasTag:
+						return CharacterStateValue.FromBoolean(m_GameplayTags.HasTag(operation.Text0));
+					case SimulationOperationCode.GameplayEffectMatchTags:
+						return CharacterStateValue.FromBoolean(
+							m_GameplayTags.Matches(Access.Services.RequireTagQuery(operation.Handle)));
+					case SimulationOperationCode.GameplayAttributeRead:
+						return m_GameplayTags.ReadAttribute(operation, outputPort);
+					case SimulationOperationCode.CameraBasisRead:
+						return ReadCameraBasis(outputPort);
+					case SimulationOperationCode.ReadEquipmentIdentity:
+					case SimulationOperationCode.ReadEquipmentParameter:
+					case SimulationOperationCode.RequestEquipmentChange:
+					case SimulationOperationCode.BeginEquipmentChange:
+					case SimulationOperationCode.CommitEquipmentChange:
+					case SimulationOperationCode.CancelEquipmentChange:
+						return m_Equipment.Evaluate(operation, outputPort, inputs);
+					case SimulationOperationCode.StateRootCompleted:
+						return CharacterStateValue.FromBoolean(cursor.CurrentStateRootCompleted());
+					case SimulationOperationCode.StateExitCause:
+						return CharacterStateValue.FromBoolean(operation.Integer0 == cursor.CurrentStateExitCause());
+					case SimulationOperationCode.MoveFacingAngle:
+						return CharacterStateValue.FromScalar(ReadMoveFacingAngle(inputs));
+					case SimulationOperationCode.Compare:
+						return CharacterStateValue.FromBoolean(Compare(operation.Integer0, inputs));
+					case SimulationOperationCode.And:
+						return CharacterStateValue.FromBoolean(inputs.Count >= 2 && ToBoolean(inputs[0]) && ToBoolean(inputs[1]));
+					case SimulationOperationCode.Or:
+						return CharacterStateValue.FromBoolean(inputs.Count >= 2 && (ToBoolean(inputs[0]) || ToBoolean(inputs[1])));
+					case SimulationOperationCode.Not:
+						return CharacterStateValue.FromBoolean(inputs.Count == 0 || !ToBoolean(inputs[0]));
+					case SimulationOperationCode.Constant:
+						return operation.ConstantReferences.Count > 0
+							? ValueFromConstant(m_Program.Constants[operation.ConstantReferences[0]])
+							: CharacterStateValue.FromBoolean(false);
+					default:
+						throw new InvalidOperationException($"Operation '{handle}' code '{operation.Code}' is not a value operation.");
+				}
+			}
+			finally
+			{
+				m_ValueStack.Remove(valueKey);
+			}
+		}
 
         public bool EvaluateCondition<TTarget>(
             OperationControlCursor<TTarget> cursor,
@@ -362,3 +372,4 @@ namespace ThirdPersonSimulation
         }
     }
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     

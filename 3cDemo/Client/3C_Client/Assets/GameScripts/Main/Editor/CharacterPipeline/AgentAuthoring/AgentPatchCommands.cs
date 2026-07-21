@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
@@ -48,6 +49,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         SetActionProfileCancelQuery,
         SetActionProfileTargetRequirement,
         SetActionRequestTimingClass,
+        EnsureAIControllerDefinition,
+        EnsureAIControllerTree,
+        BindAIControllerAssets,
+        ConfigureAICandidates,
+        EnsureAIBlackboardDeclaration,
+        EnsureAISharedNode,
+        EnsureAIObservationNode,
+        EnsureAIMemoryNode,
+        EnsureAIContinuousInput,
+        EnsureAIActionTarget,
+        EnsureAIActionRequest,
+        EnsureBTConditionRule,
         DeleteFlowEdge,
         LinkFlow,
         LinkProperty
@@ -68,6 +81,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         PropertyEdge
     }
 
+    public enum AgentAIObservationNodeKind
+    {
+        ReadSelf,
+        EnumerateConfiguredCandidates,
+        SelectNearestCandidate,
+        ReadTargetDistance,
+        ReadTargetDirection,
+        ReadSelectedTargetSnapshot
+    }
+
+    public enum AgentAISharedNodeKind
+    {
+        Loop,
+        Sequence,
+        Selector,
+        Compare,
+        WaitTicks
+    }
+
+    public enum AgentAIMemoryNodeKind
+    {
+        Read,
+        Write
+    }
+
     public enum AgentConditionTermKind
     {
         MoveStop,
@@ -79,7 +117,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         StateRootCompleted,
         ActionRequest,
         ActionWindowActive,
-        CanActivateAction
+        CanActivateAction,
+        AITargetDistanceCompareBlackboard
     }
 
     public readonly struct AgentOperationOutputReference
@@ -147,6 +186,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     public readonly struct AgentElementTargetReference
     {
         public AgentElementTargetReference(AgentAuthoringReference value) => Value = value;
+        public AgentAuthoringReference Value { get; }
+        public bool IsValid => Value.IsValid;
+        public string Identity => Value.Identity;
+    }
+
+    public readonly struct AgentFlowEdgeTargetReference
+    {
+        public AgentFlowEdgeTargetReference(AgentAuthoringReference value) => Value = value;
         public AgentAuthoringReference Value { get; }
         public bool IsValid => Value.IsValid;
         public string Identity => Value.Identity;
@@ -229,7 +276,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string request,
             string windowType,
             AgentAssetReference actionProfile,
-            string targetSnapshotBlackboardKey)
+            string targetSnapshotBlackboardKey,
+            CompareNode.CompareType compareType)
         {
             Kind = kind;
             BlackboardKey = blackboardKey ?? string.Empty;
@@ -238,6 +286,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             WindowType = windowType ?? string.Empty;
             ActionProfile = actionProfile;
             TargetSnapshotBlackboardKey = targetSnapshotBlackboardKey ?? string.Empty;
+            CompareType = compareType;
         }
 
         public AgentConditionTermKind Kind { get; }
@@ -247,6 +296,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string WindowType { get; }
         public AgentAssetReference ActionProfile { get; }
         public string TargetSnapshotBlackboardKey { get; }
+        public CompareNode.CompareType CompareType { get; }
     }
 
     public sealed class AgentConditionGroupCommand
@@ -858,38 +908,44 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string id,
             string path,
             AgentTimelineTargetReference target,
-            BTSMTL.Timeline.MotionWarpPositionMode positionMode,
+            BTSMTL.Timeline.MotionWarpTranslationMode translationMode,
+            BTSMTL.Timeline.MotionWarpTargetOffsetSpace targetOffsetSpace,
             BTSMTL.Timeline.MotionWarpRotationMode rotationMode,
-            Vector2 targetLocalPlanarOffset,
+            BTSMTL.Timeline.MotionWarpRotationMethod rotationMethod,
+            Vector2 targetPlanarOffset,
             float targetYawOffsetDegrees,
-            float positionWeight,
-            float yawWeight,
             float maxTotalPositionCorrection,
             float maxTotalYawCorrectionDegrees,
+            float maximumYawRateDegreesPerSecond,
+            BTSMTL.Timeline.MotionWarpLimitPolicy limitPolicy,
             AnimationCurve positionProgressCurve,
             AnimationCurve yawProgressCurve)
             : base(id, AgentPatchCommandKind.ConfigureMotionWarpParameters, "configure_motion_warp_parameters", AgentPatchOutputKind.None, path, target)
         {
-            PositionMode = positionMode;
+            TranslationMode = translationMode;
+            TargetOffsetSpace = targetOffsetSpace;
             RotationMode = rotationMode;
-            TargetLocalPlanarOffset = targetLocalPlanarOffset;
+            RotationMethod = rotationMethod;
+            TargetPlanarOffset = targetPlanarOffset;
             TargetYawOffsetDegrees = targetYawOffsetDegrees;
-            PositionWeight = positionWeight;
-            YawWeight = yawWeight;
             MaxTotalPositionCorrection = maxTotalPositionCorrection;
             MaxTotalYawCorrectionDegrees = maxTotalYawCorrectionDegrees;
+            MaximumYawRateDegreesPerSecond = maximumYawRateDegreesPerSecond;
+            LimitPolicy = limitPolicy;
             PositionProgressCurve = positionProgressCurve;
             YawProgressCurve = yawProgressCurve;
         }
 
-        public BTSMTL.Timeline.MotionWarpPositionMode PositionMode { get; }
+        public BTSMTL.Timeline.MotionWarpTranslationMode TranslationMode { get; }
+        public BTSMTL.Timeline.MotionWarpTargetOffsetSpace TargetOffsetSpace { get; }
         public BTSMTL.Timeline.MotionWarpRotationMode RotationMode { get; }
-        public Vector2 TargetLocalPlanarOffset { get; }
+        public BTSMTL.Timeline.MotionWarpRotationMethod RotationMethod { get; }
+        public Vector2 TargetPlanarOffset { get; }
         public float TargetYawOffsetDegrees { get; }
-        public float PositionWeight { get; }
-        public float YawWeight { get; }
         public float MaxTotalPositionCorrection { get; }
         public float MaxTotalYawCorrectionDegrees { get; }
+        public float MaximumYawRateDegreesPerSecond { get; }
+        public BTSMTL.Timeline.MotionWarpLimitPolicy LimitPolicy { get; }
         public AnimationCurve PositionProgressCurve { get; }
         public AnimationCurve YawProgressCurve { get; }
     }
@@ -1263,6 +1319,230 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string EndPropertyPort { get; }
     }
 
+    public sealed class AgentEnsureBTConditionRuleCommand : AgentPatchCommand
+    {
+        readonly ReadOnlyCollection<AgentConditionGroupCommand> m_Groups;
+
+        public AgentEnsureBTConditionRuleCommand(
+            string id,
+            string path,
+            AgentGraphTargetReference graph,
+            AgentFlowEdgeTargetReference edge,
+            BTAbortPolicy abortPolicy,
+            IList<AgentConditionGroupCommand> groups)
+            : base(id, AgentPatchCommandKind.EnsureBTConditionRule, "ensure_bt_condition_rule", AgentPatchOutputKind.FlowEdge, path, graph.Identity, Vector2.zero)
+        {
+            Graph = graph;
+            Edge = edge;
+            AbortPolicy = abortPolicy;
+            m_Groups = new ReadOnlyCollection<AgentConditionGroupCommand>(new List<AgentConditionGroupCommand>(groups));
+        }
+
+        public AgentGraphTargetReference Graph { get; }
+        public AgentFlowEdgeTargetReference Edge { get; }
+        public BTAbortPolicy AbortPolicy { get; }
+        public IReadOnlyList<AgentConditionGroupCommand> Groups => m_Groups;
+    }
+
+    public sealed class AgentEnsureAIControllerDefinitionCommand : AgentPatchCommand
+    {
+        public AgentEnsureAIControllerDefinitionCommand(string id, string path, string controllerId)
+            : base(id, AgentPatchCommandKind.EnsureAIControllerDefinition, "ensure_ai_controller_definition", AgentPatchOutputKind.None, path, controllerId, Vector2.zero)
+        {
+            ControllerId = controllerId;
+        }
+
+        public string ControllerId { get; }
+    }
+
+    public sealed class AgentEnsureAIControllerTreeCommand : AgentPatchCommand
+    {
+        public AgentEnsureAIControllerTreeCommand(string id, string path, string treeAssetPath)
+            : base(id, AgentPatchCommandKind.EnsureAIControllerTree, "ensure_ai_controller_tree", AgentPatchOutputKind.None, path, treeAssetPath, Vector2.zero)
+        {
+            TreeAssetPath = treeAssetPath;
+        }
+
+        public string TreeAssetPath { get; }
+    }
+
+    public sealed class AgentBindAIControllerAssetsCommand : AgentPatchCommand
+    {
+        public AgentBindAIControllerAssetsCommand(
+            string id,
+            string path,
+            AgentAssetReference controlledCharacter,
+            AgentAssetReference perceptionProfile)
+            : base(id, AgentPatchCommandKind.BindAIControllerAssets, "bind_ai_controller_assets", AgentPatchOutputKind.None, path, string.Empty, Vector2.zero)
+        {
+            ControlledCharacter = controlledCharacter;
+            PerceptionProfile = perceptionProfile;
+        }
+
+        public AgentAssetReference ControlledCharacter { get; }
+        public AgentAssetReference PerceptionProfile { get; }
+    }
+
+    public sealed class AgentConfigureAICandidatesCommand : AgentPatchCommand
+    {
+        readonly ReadOnlyCollection<string> m_CandidateActorIds;
+
+        public AgentConfigureAICandidatesCommand(
+            string id,
+            string path,
+            AICandidateOrdering ordering,
+            IList<string> candidateActorIds)
+            : base(id, AgentPatchCommandKind.ConfigureAICandidates, "configure_ai_candidates", AgentPatchOutputKind.None, path, string.Empty, Vector2.zero)
+        {
+            Ordering = ordering;
+            m_CandidateActorIds = new ReadOnlyCollection<string>(new List<string>(candidateActorIds));
+        }
+
+        public AICandidateOrdering Ordering { get; }
+        public IReadOnlyList<string> CandidateActorIds => m_CandidateActorIds;
+    }
+
+    public sealed class AgentEnsureAIBlackboardDeclarationCommand : AgentPatchCommand
+    {
+        public AgentEnsureAIBlackboardDeclarationCommand(
+            string id,
+            string path,
+            AgentGraphTargetReference graph,
+            AgentElementTargetReference existingDeclaration,
+            string key,
+            Type valueType,
+            PipelineBlackboardVariableScope scope,
+            object defaultValue)
+            : base(id, AgentPatchCommandKind.EnsureAIBlackboardDeclaration, "ensure_ai_blackboard_declaration", AgentPatchOutputKind.BlackboardDeclaration, path, graph.Identity, Vector2.zero)
+        {
+            Graph = graph;
+            ExistingDeclaration = existingDeclaration;
+            Key = key;
+            ValueType = valueType;
+            Scope = scope;
+            DefaultValue = defaultValue;
+        }
+
+        public AgentGraphTargetReference Graph { get; }
+        public AgentElementTargetReference ExistingDeclaration { get; }
+        public string Key { get; }
+        public Type ValueType { get; }
+        public PipelineBlackboardVariableScope Scope { get; }
+        public object DefaultValue { get; }
+    }
+
+    public sealed class AgentEnsureAIObservationNodeCommand : AgentPatchCommand
+    {
+        public AgentEnsureAIObservationNodeCommand(string id, string path, AgentGraphTargetReference graph, AgentElementTargetReference existingNode, AgentAIObservationNodeKind nodeKind, Vector2 position)
+            : base(id, AgentPatchCommandKind.EnsureAIObservationNode, "ensure_ai_observation_node", AgentPatchOutputKind.Node, path, graph.Identity, position)
+        {
+            Graph = graph;
+            ExistingNode = existingNode;
+            NodeKind = nodeKind;
+        }
+
+        public AgentGraphTargetReference Graph { get; }
+        public AgentElementTargetReference ExistingNode { get; }
+        public AgentAIObservationNodeKind NodeKind { get; }
+    }
+
+    public sealed class AgentEnsureAISharedNodeCommand : AgentPatchCommand
+    {
+        public AgentEnsureAISharedNodeCommand(
+            string id,
+            string path,
+            AgentGraphTargetReference graph,
+            AgentElementTargetReference existingNode,
+            AgentAISharedNodeKind nodeKind,
+            LoopNode.StopType loopStopType,
+            CompareNode.CompareType compareType,
+            Vector2 position)
+            : base(id, AgentPatchCommandKind.EnsureAISharedNode, "ensure_ai_shared_node", AgentPatchOutputKind.Node, path, graph.Identity, position)
+        {
+            Graph = graph;
+            ExistingNode = existingNode;
+            NodeKind = nodeKind;
+            LoopStopType = loopStopType;
+            CompareType = compareType;
+        }
+
+        public AgentGraphTargetReference Graph { get; }
+        public AgentElementTargetReference ExistingNode { get; }
+        public AgentAISharedNodeKind NodeKind { get; }
+        public LoopNode.StopType LoopStopType { get; }
+        public CompareNode.CompareType CompareType { get; }
+    }
+
+    public sealed class AgentEnsureAIMemoryNodeCommand : AgentPatchCommand
+    {
+        public AgentEnsureAIMemoryNodeCommand(string id, string path, AgentGraphTargetReference graph, AgentElementTargetReference existingNode, AgentAuthoringReference declaration, AgentAIMemoryNodeKind nodeKind, AIMemoryValueKind valueKind, Vector2 position)
+            : base(id, AgentPatchCommandKind.EnsureAIMemoryNode, "ensure_ai_memory_node", AgentPatchOutputKind.Node, path, graph.Identity, position)
+        {
+            Graph = graph;
+            ExistingNode = existingNode;
+            Declaration = declaration;
+            NodeKind = nodeKind;
+            ValueKind = valueKind;
+        }
+
+        public AgentGraphTargetReference Graph { get; }
+        public AgentElementTargetReference ExistingNode { get; }
+        public AgentAuthoringReference Declaration { get; }
+        public AgentAIMemoryNodeKind NodeKind { get; }
+        public AIMemoryValueKind ValueKind { get; }
+    }
+
+    public sealed class AgentEnsureAIContinuousInputCommand : AgentPatchCommand
+    {
+        public AgentEnsureAIContinuousInputCommand(string id, string path, AgentGraphTargetReference graph, AgentElementTargetReference existingNode, string inputId, Vector2 position)
+            : base(id, AgentPatchCommandKind.EnsureAIContinuousInput, "ensure_ai_continuous_input", AgentPatchOutputKind.Node, path, graph.Identity, position)
+        {
+            Graph = graph;
+            ExistingNode = existingNode;
+            InputId = inputId;
+        }
+
+        public AgentGraphTargetReference Graph { get; }
+        public AgentElementTargetReference ExistingNode { get; }
+        public string InputId { get; }
+    }
+
+    public sealed class AgentEnsureAIActionTargetCommand : AgentPatchCommand
+    {
+        public AgentEnsureAIActionTargetCommand(string id, string path, AgentGraphTargetReference graph, AgentElementTargetReference existingNode, string inputId, Vector2 position)
+            : base(id, AgentPatchCommandKind.EnsureAIActionTarget, "ensure_ai_action_target", AgentPatchOutputKind.Node, path, graph.Identity, position)
+        {
+            Graph = graph;
+            ExistingNode = existingNode;
+            InputId = inputId;
+        }
+
+        public AgentGraphTargetReference Graph { get; }
+        public AgentElementTargetReference ExistingNode { get; }
+        public string InputId { get; }
+    }
+
+    public sealed class AgentEnsureAIActionRequestCommand : AgentPatchCommand
+    {
+        public AgentEnsureAIActionRequestCommand(string id, string path, AgentGraphTargetReference graph, AgentElementTargetReference existingNode, string requestId, float bufferSeconds, int priority, AIRequestRepeatPolicy repeatPolicy, Vector2 position)
+            : base(id, AgentPatchCommandKind.EnsureAIActionRequest, "ensure_ai_action_request", AgentPatchOutputKind.Node, path, graph.Identity, position)
+        {
+            Graph = graph;
+            ExistingNode = existingNode;
+            RequestId = requestId;
+            BufferSeconds = bufferSeconds;
+            Priority = priority;
+            RepeatPolicy = repeatPolicy;
+        }
+
+        public AgentGraphTargetReference Graph { get; }
+        public AgentElementTargetReference ExistingNode { get; }
+        public string RequestId { get; }
+        public float BufferSeconds { get; }
+        public int Priority { get; }
+        public AIRequestRepeatPolicy RepeatPolicy { get; }
+    }
+
     public readonly struct AgentPlannedOutputSymbol
     {
         public AgentPlannedOutputSymbol(string operationId, AgentPatchOutputKind kind, string ownerScope)
@@ -1285,18 +1565,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentPatchCommandPlan(
             IList<AgentPatchCommand> commands,
             IDictionary<string, AgentPlannedOutputSymbol> symbols,
+            string domain,
+            string rootIdentity,
+            string sourceRevision,
             string sourceMacro,
             string sourceMacroVersion)
         {
             m_Commands = new ReadOnlyCollection<AgentPatchCommand>(new List<AgentPatchCommand>(commands));
             m_Symbols = new ReadOnlyDictionary<string, AgentPlannedOutputSymbol>(
                 new Dictionary<string, AgentPlannedOutputSymbol>(symbols, StringComparer.Ordinal));
+            Domain = domain;
+            RootIdentity = rootIdentity;
+            SourceRevision = sourceRevision;
             SourceMacro = sourceMacro ?? string.Empty;
             SourceMacroVersion = sourceMacroVersion ?? string.Empty;
         }
 
         public IReadOnlyList<AgentPatchCommand> Commands => m_Commands;
         public IReadOnlyDictionary<string, AgentPlannedOutputSymbol> Symbols => m_Symbols;
+        public string Domain { get; }
+        public string RootIdentity { get; }
+        public string SourceRevision { get; }
         public string SourceMacro { get; }
         public string SourceMacroVersion { get; }
     }

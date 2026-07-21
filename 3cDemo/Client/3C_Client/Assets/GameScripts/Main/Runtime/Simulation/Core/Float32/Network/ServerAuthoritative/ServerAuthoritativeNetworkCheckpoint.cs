@@ -275,7 +275,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             reader.RequireComplete();
             CharacterSimulationState state = DecodeState(layout, authorityTick, values);
             byte[] stateBytes = CharacterSimulationStateCodec.Write(state);
-            if (!CharacterSimulationStateCodec.ComputeHash(state, stateBytes).Equals(stateHash))
+            if (!CharacterSimulationStateCodec.ComputeHash(state).Equals(stateHash))
                 throw new InvalidDataException("Network Checkpoint delta reconstructed Character state hash is invalid.");
             if (remote.BodySamples.Count == 0)
                 throw new InvalidDataException("Network Checkpoint delta has no remote body sample.");
@@ -543,7 +543,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             CharacterSimulationState state = DecodeState(layout, tick, values);
             byte[] stateBytes = CharacterSimulationStateCodec.Write(state);
-            CharacterStateHash stateHash = CharacterSimulationStateCodec.ComputeHash(state, stateBytes);
+            CharacterStateHash stateHash = CharacterSimulationStateCodec.ComputeHash(state);
             if (!stateHash.Equals(expectedStateHash))
                 throw new InvalidDataException("Network Checkpoint reconstructed Character state hash is invalid.");
             return new AuthoritativeActorBaseline(

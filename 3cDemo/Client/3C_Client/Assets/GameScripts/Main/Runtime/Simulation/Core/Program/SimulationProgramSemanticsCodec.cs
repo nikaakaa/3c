@@ -187,6 +187,7 @@ namespace ThirdPersonSimulation
             writer.WriteString(value.TrackId);
             writer.WriteString(value.ClipId);
             writer.WriteString(value.DisplayPath);
+            writer.WriteString(value.ContentHash);
         }
 
         internal static ProgramSourceMapEntry ReadSourceMap(CanonicalReader reader)
@@ -203,6 +204,7 @@ namespace ThirdPersonSimulation
                 reader.ReadString(),
                 reader.ReadString(),
                 reader.ReadString(),
+                reader.ReadString(),
                 reader.ReadString());
         }
 
@@ -210,14 +212,19 @@ namespace ThirdPersonSimulation
         {
             writer.WriteInt32(value.Index);
             writer.WriteString(value.Identity);
-            writer.WriteString(value.LayerId);
+            writer.WriteString(value.AnimationChannelId.Value);
             writer.WriteString(value.SourceIdentity);
             writer.WriteByte((byte)value.ChannelKind);
         }
 
         internal static ProgramProducer ReadProducer(CanonicalReader reader)
         {
-            return new ProgramProducer(reader.ReadInt32(), reader.ReadString(), reader.ReadString(), reader.ReadString(), ReadEnum<ProgramOutputChannelKind>(reader.ReadByte()));
+            return new ProgramProducer(
+                reader.ReadInt32(),
+                reader.ReadString(),
+                new AnimationChannelId(reader.ReadString()),
+                reader.ReadString(),
+                ReadEnum<ProgramOutputChannelKind>(reader.ReadByte()));
         }
 
         internal static void WriteIntArray(CanonicalWriter writer, IReadOnlyList<int> values)

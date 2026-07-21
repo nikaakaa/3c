@@ -231,8 +231,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         {
             if (registrations == null || registrations.Count != 1 || registrations[0] is not ILocalSimulationActorRegistration owner)
                 throw new InvalidOperationException("Prediction Source requires exactly one local Float32 owner registration.");
-            if (owner.ActorId != Process.ActorId || owner.LocalInput == null)
-                throw new InvalidOperationException("Prediction Source owner registration does not match its launch ActorId or local input.");
+            if (owner.ActorId != Process.ActorId || owner.LocalControlSource == null)
+                throw new InvalidOperationException("Prediction Source owner registration does not match its launch ActorId or Control Source.");
             m_Owner = owner;
             return new IFloat32SimulationActorRegistration[] { owner };
         }
@@ -260,7 +260,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 throw new InvalidOperationException("Prediction Source received an Authority Endpoint connection.");
             var input = new Float32LocalInputSourcePort(
                 Descriptor.Identity,
-                new[] { new LocalSimulationInputBinding(m_Owner.ActorId, m_Owner.LocalInput) });
+                new[] { new LocalSimulationInputBinding(m_Owner.ActorId, m_Owner.LocalControlSource) });
             var observation = new ServerAuthoritativeObservationPort(Descriptor.Identity, prediction);
             var restore = new ServerAuthoritativePredictionRestorePort(Descriptor.Identity);
             ActorId remoteActorId = RequireRemoteActor(handshake);

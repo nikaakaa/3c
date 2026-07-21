@@ -7,6 +7,7 @@ namespace TreeDesigner
     [NodeName("Rule Result")]
     [NodeColor(245, 198, 92)]
     [NodePath("Base/ConditionRule/Result")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.SharedPureValue)]
     public sealed class ConditionRuleResultNode : ValueNode
     {
         [SerializeField, PropertyPort(PortDirection.Input, "Result")]

@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ThirdPersonCharacter.AI;
+using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Graph;
 using TreeDesigner;
+using UnityEditor;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
@@ -60,6 +64,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentPatchCommandKind.SetActionProfileCancelQuery,
                 AgentPatchCommandKind.SetActionProfileTargetRequirement,
                 AgentPatchCommandKind.SetActionRequestTimingClass);
+            Register(new AgentAIControllerCommandHandler(),
+                AgentPatchCommandKind.EnsureAIControllerDefinition,
+                AgentPatchCommandKind.EnsureAIControllerTree,
+                AgentPatchCommandKind.BindAIControllerAssets,
+                AgentPatchCommandKind.ConfigureAICandidates,
+                AgentPatchCommandKind.EnsureAIBlackboardDeclaration,
+                AgentPatchCommandKind.EnsureAISharedNode,
+                AgentPatchCommandKind.EnsureAIObservationNode,
+                AgentPatchCommandKind.EnsureAIMemoryNode,
+                AgentPatchCommandKind.EnsureAIContinuousInput,
+                AgentPatchCommandKind.EnsureAIActionTarget,
+                AgentPatchCommandKind.EnsureAIActionRequest);
+            Register(new AgentBTConditionRuleCommandHandler(conditionBuilder), AgentPatchCommandKind.EnsureBTConditionRule);
             Register(new AgentGraphLinkCommandHandler(), AgentPatchCommandKind.DeleteFlowEdge, AgentPatchCommandKind.LinkFlow, AgentPatchCommandKind.LinkProperty);
         }
 
@@ -78,6 +95,449 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     throw new InvalidOperationException($"Duplicate Agent Patch command handler: {kinds[i]}");
                 m_Handlers.Add(kinds[i], handler);
             }
+        }
+    }
+
+    public sealed class AgentAIControllerCommandHandler : IAgentPatchCommandHandler
+    {
+        public bool Preflight(AgentPatchCompileSession session, AgentPatchCommand command)
+        {
+            if (!session.AIDefinition)
+            {
+                session.Report.Error(command.Path, "ai_definition_missing", "AIController domain 缺少 AIControllerDefinition。");
+                return false;
+            }
+
+            bool valid = command switch
+            {
+                AgentEnsureAIControllerDefinitionCommand value => PreflightDefinition(session, value),
+                AgentEnsureAIControllerTreeCommand value => PreflightTree(session, value),
+                AgentBindAIControllerAssetsCommand value => PreflightBindings(session, value),
+                AgentConfigureAICandidatesCommand value => PreflightCandidates(session, value),
+                AgentEnsureAIBlackboardDeclarationCommand value => PreflightDeclaration(session, value),
+                AgentEnsureAISharedNodeCommand value => PreflightNode(session, value.Graph, value.ExistingNode, SharedType(value.NodeKind), value),
+                AgentEnsureAIObservationNodeCommand value => PreflightNode(session, value.Graph, value.ExistingNode, ObservationType(value.NodeKind), value),
+                AgentEnsureAIMemoryNodeCommand value => PreflightMemory(session, value),
+                AgentEnsureAIContinuousInputCommand value => PreflightContinuousInput(session, value),
+                AgentEnsureAIActionTargetCommand value => PreflightActionTarget(session, value),
+                AgentEnsureAIActionRequestCommand value => PreflightActionRequest(session, value),
+                _ => throw new InvalidOperationException($"Unsupported AI Controller command: {command.Kind}")
+            };
+            return valid;
+        }
+
+        public void Apply(AgentPatchCompileSession session, AgentPatchCommand command)
+        {
+            switch (command)
+            {
+                case AgentEnsureAIControllerDefinitionCommand value:
+                    session.AIDefinition.ConfigureAuthoring(value.ControllerId, session.AIDefinition.RootTreeAsset, session.AIDefinition.ControlledCharacter, session.AIDefinition.PerceptionProfile);
+                    session.AddAppliedAuthoring(value, session.AIDefinition, session.AIDefinition, value.ControllerId, "AI Controller Definition");
+                    break;
+                case AgentEnsureAIControllerTreeCommand value:
+                    session.AddAppliedAuthoring(value, session.AIDefinition.RootTreeAsset, session.RootTree, session.RootTree.GraphAuthoringId, value.TreeAssetPath);
+                    break;
+                case AgentBindAIControllerAssetsCommand value:
+                    ApplyBindings(session, value);
+                    break;
+                case AgentConfigureAICandidatesCommand value:
+                    session.AIDefinition.PerceptionProfile.ConfigureAuthoring(value.CandidateActorIds, value.Ordering);
+                    session.AddAppliedAuthoring(value, session.AIDefinition.PerceptionProfile, session.AIDefinition.PerceptionProfile, session.AIDefinition.PerceptionProfile.name, "Configured candidates");
+                    break;
+                case AgentEnsureAIBlackboardDeclarationCommand value:
+                    ApplyDeclaration(session, value);
+                    break;
+                case AgentEnsureAISharedNodeCommand value:
+                    ApplySharedNode(session, value);
+                    break;
+                case AgentEnsureAIObservationNodeCommand value:
+                    ApplyObservation(session, value);
+                    break;
+                case AgentEnsureAIMemoryNodeCommand value:
+                    ApplyMemory(session, value);
+                    break;
+                case AgentEnsureAIContinuousInputCommand value:
+                    ApplyContinuousInput(session, value);
+                    break;
+                case AgentEnsureAIActionTargetCommand value:
+                    ApplyActionTarget(session, value);
+                    break;
+                case AgentEnsureAIActionRequestCommand value:
+                    ApplyActionRequest(session, value);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unsupported AI Controller command: {command.Kind}");
+            }
+        }
+
+        static bool PreflightDefinition(AgentPatchCompileSession session, AgentEnsureAIControllerDefinitionCommand command)
+        {
+            if (!session.AIDefinition.RootTreeAsset || !session.AIDefinition.ControlledCharacter || !session.AIDefinition.PerceptionProfile)
+            {
+                session.Report.Error(command.Path, "ai_definition_incomplete", "ensure_ai_controller_definition 要求 RootTree、ControlledCharacter 与 PerceptionProfile 已正式绑定。");
+                return false;
+            }
+            session.AddPlanned(command, null, command.ControllerId, "AI Controller Definition");
+            return true;
+        }
+
+        static bool PreflightTree(AgentPatchCompileSession session, AgentEnsureAIControllerTreeCommand command)
+        {
+            string path = AssetDatabase.GetAssetPath(session.AIDefinition.RootTreeAsset);
+            if (!IsExactAssetPath(command.TreeAssetPath) || !string.Equals(path, command.TreeAssetPath, StringComparison.Ordinal))
+            {
+                session.Report.Error(command.Path, "ai_root_tree_path_mismatch", $"RootTree 资产路径与当前 Definition 不一致：{command.TreeAssetPath}");
+                return false;
+            }
+            session.AddPlanned(command, session.RootTree, session.RootTree.GraphAuthoringId, path);
+            return true;
+        }
+
+        static bool PreflightBindings(AgentPatchCompileSession session, AgentBindAIControllerAssetsCommand command)
+        {
+            bool characterResolved = ResolveAsset(command.ControlledCharacter, out CharacterPipelineDefinition character);
+            bool perceptionResolved = ResolveAsset(command.PerceptionProfile, out AIPerceptionProfile perception);
+            bool valid = characterResolved && perceptionResolved;
+            if (!valid)
+            {
+                session.Report.Error(command.Path, "ai_binding_asset_unresolved", "Controlled Character 或 Perception Profile 资产引用无法精确解析。");
+                return false;
+            }
+            if (!character.SimulationProgram)
+            {
+                session.Report.Error(command.Path, "controlled_character_program_missing", "Controlled Character 缺少正式 Simulation Program。");
+                return false;
+            }
+            session.AddPlanned(command, null, character.name, perception.name);
+            return true;
+        }
+
+        static bool PreflightCandidates(AgentPatchCompileSession session, AgentConfigureAICandidatesCommand command)
+        {
+            if (!session.AIDefinition.PerceptionProfile)
+            {
+                session.Report.Error(command.Path, "perception_profile_missing", "AIControllerDefinition 缺少 Perception Profile。");
+                return false;
+            }
+            session.AddPlanned(command, null, session.AIDefinition.PerceptionProfile.name, $"{command.Ordering} / {command.CandidateActorIds.Count}");
+            return true;
+        }
+
+        static bool PreflightDeclaration(AgentPatchCompileSession session, AgentEnsureAIBlackboardDeclarationCommand command)
+        {
+            if (!TryResolveAIGraph(session, command.Graph, command.Path, out BaseTree graph))
+                return false;
+            if (command.ExistingDeclaration.IsValid && !session.TryResolveDeclaration(graph, command.ExistingDeclaration.Value, command.Path, out _))
+                return false;
+            if (graph != null && graph.ExposedProperties.Any(value => value != null &&
+                    string.Equals(value.BlackboardKey, command.Key, StringComparison.Ordinal) &&
+                    (!command.ExistingDeclaration.IsValid || !string.Equals(value.DeclarationId, command.ExistingDeclaration.Identity, StringComparison.Ordinal))))
+            {
+                session.Report.Error(command.Path, "ai_blackboard_key_duplicate", $"AI Blackboard key 已存在：{command.Key}");
+                return false;
+            }
+            session.PlanBlackboardDeclaration(command.Id, command.Graph.Identity, command.ValueType, command.Key);
+            session.AddPlanned(command, graph, command.Key, $"{command.Scope}/{command.ValueType.Name}");
+            return true;
+        }
+
+        static bool PreflightMemory(AgentPatchCompileSession session, AgentEnsureAIMemoryNodeCommand command)
+        {
+            if (!PreflightNode(session, command.Graph, command.ExistingNode, command.NodeKind == AgentAIMemoryNodeKind.Read ? typeof(ReadAIMemoryNode) : typeof(WriteAIMemoryNode), command, false, out BaseTree graph))
+                return false;
+            BaseExposedProperty declaration = null;
+            if (graph != null && !session.TryResolveDeclaration(graph, command.Declaration, command.Path, out declaration))
+                return false;
+            if (graph != null && declaration != null && declaration.ValueType != MemoryValueType(command.ValueKind))
+            {
+                session.Report.Error(command.Path, "ai_memory_type_mismatch", $"Memory declaration 类型与 {command.ValueKind} 不一致。");
+                return false;
+            }
+            session.AddPlanned(command, graph, command.ExistingNode.Identity, command.ValueKind.ToString());
+            return true;
+        }
+
+        static bool PreflightContinuousInput(AgentPatchCompileSession session, AgentEnsureAIContinuousInputCommand command)
+        {
+            if (!TryGetInput(session, command.InputId, out string valueType) || string.Equals(valueType, "ActionTargetSnapshot", StringComparison.OrdinalIgnoreCase))
+            {
+                session.Report.Error(command.Path, "ai_input_binding_invalid", $"Continuous InputId 不在受控 Character catalog 中或类型不允许：{command.InputId}");
+                return false;
+            }
+            return PreflightNode(session, command.Graph, command.ExistingNode, typeof(WriteContinuousInputNode), command);
+        }
+
+        static bool PreflightActionTarget(AgentPatchCompileSession session, AgentEnsureAIActionTargetCommand command)
+        {
+            if (!TryGetInput(session, command.InputId, out string valueType) || !string.Equals(valueType, "ActionTargetSnapshot", StringComparison.OrdinalIgnoreCase))
+            {
+                session.Report.Error(command.Path, "ai_action_target_binding_invalid", $"Action Target InputId 不是 ActionTargetSnapshot：{command.InputId}");
+                return false;
+            }
+            return PreflightNode(session, command.Graph, command.ExistingNode, typeof(WriteActionTargetSnapshotNode), command);
+        }
+
+        static bool PreflightActionRequest(AgentPatchCompileSession session, AgentEnsureAIActionRequestCommand command)
+        {
+            if (session.Snapshot.aiController?.actionRequests == null || !session.Snapshot.aiController.actionRequests.Any(value => string.Equals(value.requestId, command.RequestId, StringComparison.Ordinal)))
+            {
+                session.Report.Error(command.Path, "ai_action_request_binding_invalid", $"RequestId 不在受控 Character catalog 中：{command.RequestId}");
+                return false;
+            }
+            return PreflightNode(session, command.Graph, command.ExistingNode, typeof(SubmitActionRequestNode), command);
+        }
+
+        static bool PreflightNode(AgentPatchCompileSession session, AgentGraphTargetReference graphReference, AgentElementTargetReference existingReference, Type expectedType, AgentPatchCommand command)
+        {
+            return PreflightNode(session, graphReference, existingReference, expectedType, command, true, out _);
+        }
+
+        static bool PreflightNode(AgentPatchCompileSession session, AgentGraphTargetReference graphReference, AgentElementTargetReference existingReference, Type expectedType, AgentPatchCommand command, bool addPlan, out BaseTree graph)
+        {
+            if (!TryResolveAIGraph(session, graphReference, command.Path, out graph))
+                return false;
+            if (graph != null && !graph.CanCreateNodeType(expectedType))
+            {
+                session.Report.Error(command.Path, "ai_node_capability_forbidden", $"AI Graph policy 禁止节点：{expectedType.Name}");
+                return false;
+            }
+            if (existingReference.IsValid && graph != null)
+            {
+                if (!session.TryResolveNode(graph, existingReference, command.Path, out BaseNode existing))
+                    return false;
+                if (existing != null && existing.GetType() != expectedType)
+                {
+                    session.Report.Error(command.Path, "ai_node_type_mismatch", $"现有节点类型不是 {expectedType.Name}。");
+                    return false;
+                }
+            }
+            if (addPlan)
+                session.AddPlanned(command, graph, existingReference.Identity, expectedType.Name);
+            return true;
+        }
+
+        static bool TryResolveAIGraph(AgentPatchCompileSession session, AgentGraphTargetReference reference, string path, out BaseTree graph)
+        {
+            if (!session.TryResolveGraph(reference, path, out graph))
+                return false;
+            if (graph != null && graph.AuthoringRole != GraphAuthoringRole.AIController)
+            {
+                session.Report.Error(path, "ai_graph_role_invalid", $"目标 Graph role 不是 AIController：{graph.AuthoringRole}");
+                return false;
+            }
+            return true;
+        }
+
+        static void ApplyBindings(AgentPatchCompileSession session, AgentBindAIControllerAssetsCommand command)
+        {
+            if (!ResolveAsset(command.ControlledCharacter, out CharacterPipelineDefinition character) ||
+                !ResolveAsset(command.PerceptionProfile, out AIPerceptionProfile perception))
+                throw new InvalidOperationException("AI Controller binding assets changed after preflight.");
+            session.AIDefinition.ConfigureAuthoring(session.AIDefinition.ControllerId, session.AIDefinition.RootTreeAsset, character, perception);
+            session.AddAppliedAuthoring(command, session.AIDefinition, session.AIDefinition, character.name, perception.name);
+        }
+
+        static void ApplyDeclaration(AgentPatchCompileSession session, AgentEnsureAIBlackboardDeclarationCommand command)
+        {
+            if (!session.TryResolveGraph(command.Graph, command.Path, out BaseTree graph))
+                return;
+            BaseExposedProperty declaration = null;
+            if (command.ExistingDeclaration.IsValid)
+                session.TryResolveDeclaration(graph, command.ExistingDeclaration.Value, command.Path, out declaration);
+            declaration ??= graph.CreateExposedProperty(ExposedPropertyType(command.ValueType));
+            declaration.Name = command.Key;
+            declaration.ConfigurePipelineBlackboard(
+                command.Key,
+                command.Scope,
+                PipelineBlackboardVariablePolicy.DefaultLifetime(command.Scope),
+                PipelineBlackboardVariableAuthority.LocalOnly,
+                PipelineBlackboardVariableSyncPolicy.None,
+                string.Empty,
+                "AI");
+            declaration.SetValue(command.DefaultValue ?? DefaultValue(command.ValueType));
+            session.AddAppliedAuthoring(command, graph.SerializedOwner, declaration, declaration.DeclarationId, command.Key);
+            session.RefreshIndex(command.Path);
+        }
+
+        static void ApplyObservation(AgentPatchCompileSession session, AgentEnsureAIObservationNodeCommand command)
+        {
+            BaseNode node = ResolveOrCreateNode(session, command.Graph, command.ExistingNode, ObservationType(command.NodeKind), command.Position, command.Path, out BaseTree graph);
+            if (node != null)
+                session.AddApplied(command, graph, node, command.NodeKind.ToString());
+        }
+
+        static void ApplySharedNode(AgentPatchCompileSession session, AgentEnsureAISharedNodeCommand command)
+        {
+            BaseNode node = ResolveOrCreateNode(session, command.Graph, command.ExistingNode, SharedType(command.NodeKind), command.Position, command.Path, out BaseTree graph);
+            if (node == null)
+                return;
+            if (node is LoopNode loop)
+                loop.ConfigureAuthoring(command.LoopStopType);
+            else if (node is CompareNode compare)
+                compare.ConfigureAuthoring(command.CompareType);
+            session.AddApplied(command, graph, node, command.NodeKind.ToString());
+        }
+
+        static void ApplyMemory(AgentPatchCompileSession session, AgentEnsureAIMemoryNodeCommand command)
+        {
+            Type type = command.NodeKind == AgentAIMemoryNodeKind.Read ? typeof(ReadAIMemoryNode) : typeof(WriteAIMemoryNode);
+            BaseNode node = ResolveOrCreateNode(session, command.Graph, command.ExistingNode, type, command.Position, command.Path, out BaseTree graph);
+            if (node == null || !session.TryResolveDeclaration(graph, command.Declaration, command.Path, out BaseExposedProperty declaration))
+                return;
+            if (node is ReadAIMemoryNode read)
+                read.ConfigureAuthoring(declaration, command.ValueKind);
+            else
+                ((WriteAIMemoryNode)node).ConfigureAuthoring(declaration, command.ValueKind);
+            node.RebindReadOnlyViewReferences(graph);
+            session.AddApplied(command, graph, node, command.ValueKind.ToString());
+        }
+
+        static void ApplyContinuousInput(AgentPatchCompileSession session, AgentEnsureAIContinuousInputCommand command)
+        {
+            BaseNode node = ResolveOrCreateNode(session, command.Graph, command.ExistingNode, typeof(WriteContinuousInputNode), command.Position, command.Path, out BaseTree graph);
+            if (node == null || !TryGetInput(session, command.InputId, out string valueType))
+                return;
+            ((WriteContinuousInputNode)node).ConfigureInput(command.InputId, InputPortType(valueType));
+            node.RebindReadOnlyViewReferences(graph);
+            session.AddApplied(command, graph, node, command.InputId);
+        }
+
+        static void ApplyActionTarget(AgentPatchCompileSession session, AgentEnsureAIActionTargetCommand command)
+        {
+            BaseNode node = ResolveOrCreateNode(session, command.Graph, command.ExistingNode, typeof(WriteActionTargetSnapshotNode), command.Position, command.Path, out BaseTree graph);
+            if (node == null)
+                return;
+            ((WriteActionTargetSnapshotNode)node).ConfigureInput(command.InputId);
+            session.AddApplied(command, graph, node, command.InputId);
+        }
+
+        static void ApplyActionRequest(AgentPatchCompileSession session, AgentEnsureAIActionRequestCommand command)
+        {
+            BaseNode node = ResolveOrCreateNode(session, command.Graph, command.ExistingNode, typeof(SubmitActionRequestNode), command.Position, command.Path, out BaseTree graph);
+            if (node == null)
+                return;
+            ((SubmitActionRequestNode)node).ConfigureRequest(command.RequestId, command.BufferSeconds, command.Priority, command.RepeatPolicy);
+            session.AddApplied(command, graph, node, command.RequestId);
+        }
+
+        static BaseNode ResolveOrCreateNode(AgentPatchCompileSession session, AgentGraphTargetReference graphReference, AgentElementTargetReference existingReference, Type type, Vector2 position, string path, out BaseTree graph)
+        {
+            graph = null;
+            if (!session.TryResolveGraph(graphReference, path, out graph))
+                return null;
+            BaseNode node = null;
+            if (existingReference.IsValid)
+                session.TryResolveNode(graph, existingReference, path, out node);
+            if (node == null)
+            {
+                node = graph.CreateNode(type);
+                node.Position = position;
+            }
+            return node;
+        }
+
+        static bool TryGetInput(AgentPatchCompileSession session, string inputId, out string valueType)
+        {
+            valueType = string.Empty;
+            AgentSnapshotInputValue entry = session.Snapshot.aiController?.inputValues?.FirstOrDefault(value => string.Equals(value.inputValueId, inputId, StringComparison.Ordinal));
+            if (entry == null)
+                return false;
+            valueType = entry.valueType;
+            return true;
+        }
+
+        static Type ObservationType(AgentAIObservationNodeKind kind)
+        {
+            return kind switch
+            {
+                AgentAIObservationNodeKind.ReadSelf => typeof(ReadSelfObservationNode),
+                AgentAIObservationNodeKind.EnumerateConfiguredCandidates => typeof(EnumerateConfiguredCandidatesNode),
+                AgentAIObservationNodeKind.SelectNearestCandidate => typeof(SelectNearestCandidateNode),
+                AgentAIObservationNodeKind.ReadTargetDistance => typeof(ReadTargetDistanceNode),
+                AgentAIObservationNodeKind.ReadTargetDirection => typeof(ReadTargetDirectionNode),
+                AgentAIObservationNodeKind.ReadSelectedTargetSnapshot => typeof(ReadSelectedTargetSnapshotNode),
+                _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+            };
+        }
+
+        static Type SharedType(AgentAISharedNodeKind kind)
+        {
+            return kind switch
+            {
+                AgentAISharedNodeKind.Loop => typeof(LoopNode),
+                AgentAISharedNodeKind.Sequence => typeof(SequenceNode),
+                AgentAISharedNodeKind.Selector => typeof(SelectorNode),
+                AgentAISharedNodeKind.Compare => typeof(CompareNode),
+                AgentAISharedNodeKind.WaitTicks => typeof(AIWaitTicksNode),
+                _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+            };
+        }
+
+        static Type MemoryValueType(AIMemoryValueKind kind)
+        {
+            return kind switch
+            {
+                AIMemoryValueKind.Boolean => typeof(bool),
+                AIMemoryValueKind.Integer => typeof(int),
+                AIMemoryValueKind.Scalar => typeof(float),
+                AIMemoryValueKind.Vector2 => typeof(Vector2),
+                AIMemoryValueKind.Vector3 => typeof(Vector3),
+                AIMemoryValueKind.ActorId => typeof(AIActorIdValue),
+                AIMemoryValueKind.ActionTargetSnapshot => typeof(AIActionTargetSnapshotValue),
+                _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+            };
+        }
+
+        static Type ExposedPropertyType(Type valueType)
+        {
+            if (valueType == typeof(bool)) return typeof(BoolExposedProperty);
+            if (valueType == typeof(int)) return typeof(IntExposedProperty);
+            if (valueType == typeof(float)) return typeof(FloatExposedProperty);
+            if (valueType == typeof(Vector2)) return typeof(Vector2ExposedProperty);
+            if (valueType == typeof(Vector3)) return typeof(Vector3ExposedProperty);
+            if (valueType == typeof(AIActorIdValue)) return typeof(AIActorIdExposedProperty);
+            if (valueType == typeof(AIActionTargetSnapshotValue)) return typeof(AIActionTargetSnapshotExposedProperty);
+            throw new InvalidOperationException($"Unsupported AI Blackboard value type: {valueType?.FullName}");
+        }
+
+        static Type InputPortType(string valueType)
+        {
+            return valueType switch
+            {
+                "Bool" or "Boolean" => typeof(BoolPropertyPort),
+                "Float" or "Scalar" or "Yaw" => typeof(FloatPropertyPort),
+                "Vector2" => typeof(Vector2PropertyPort),
+                "Vector3" => typeof(Vector3PropertyPort),
+                _ => throw new InvalidOperationException($"Unsupported AI continuous input type: {valueType}")
+            };
+        }
+
+        static object DefaultValue(Type valueType)
+        {
+            return valueType != null && valueType.IsValueType ? Activator.CreateInstance(valueType) : null;
+        }
+
+        static bool ResolveAsset<T>(AgentAssetReference reference, out T asset) where T : UnityEngine.Object
+        {
+            asset = null;
+            string path = reference.AssetPath;
+            if (!string.IsNullOrEmpty(reference.AssetGuid))
+            {
+                string guidPath = AssetDatabase.GUIDToAssetPath(reference.AssetGuid);
+                if (string.IsNullOrEmpty(path))
+                    path = guidPath;
+                else if (!string.Equals(path, guidPath, StringComparison.Ordinal))
+                    return false;
+            }
+            if (!IsExactAssetPath(path))
+                return false;
+            asset = AssetDatabase.LoadAssetAtPath<T>(path);
+            return asset && string.Equals(AssetDatabase.GetAssetPath(asset), path, StringComparison.Ordinal);
+        }
+
+        static bool IsExactAssetPath(string path)
+        {
+            return !string.IsNullOrEmpty(path) && path.StartsWith("Assets/", StringComparison.Ordinal) && !path.Contains("\\") && !path.Contains("/../");
         }
     }
 

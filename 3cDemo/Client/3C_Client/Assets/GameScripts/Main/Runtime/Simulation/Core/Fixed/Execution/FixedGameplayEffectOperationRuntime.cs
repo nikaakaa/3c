@@ -63,6 +63,55 @@ namespace ThirdPersonSimulation.Fixed
         public void RemoveActionTags(ulong actionInstanceId) => m_GameplayEffects.RemoveActionTags(actionInstanceId);
         public void ClearConfirmedAction(ulong actionInstanceId) => m_GameplayEffects.ClearConfirmedAction(actionInstanceId);
 
+        public void SetEquipmentTags(string sourceId, IEnumerable<string> tags) =>
+            m_GameplayEffects.SetEquipmentTags(sourceId, tags);
+
+        public void RemoveEquipmentTags(string sourceId) =>
+            m_GameplayEffects.RemoveEquipmentTags(sourceId);
+
+        public ulong ApplyEquipmentPassive(string effectId)
+        {
+            ProgramCatalogEntry definition = FindCatalog(ProgramCatalogEntryKind.GameplayEffect, effectId) ??
+                FindCatalog(ProgramCatalogEntryKind.GameplayEffect, $"effect:{effectId}") ??
+                throw new InvalidOperationException($"Equipment passive Effect '{effectId}' is absent from Program.");
+            var context = new SimulationGameplayEffectContext(
+                m_Frame.ActorId,
+                m_Frame.ActorId,
+                0,
+                0,
+                0,
+                m_Frame.Tick.Value,
+                SimulationGameplayEffectApplicationMode.Confirmed);
+            GameplayEffectApplyResult result = m_GameplayEffects.Apply(
+                SimulationGameplayEffectApplication.FromCompiled(
+                    definition.Identity,
+                    checked((uint)definition.Revision),
+                    context,
+                    Array.Empty<SimulationSetByCallerValue>()));
+            if (!result.Succeeded)
+                throw new InvalidOperationException($"Equipment passive Effect '{effectId}' failed: {result.Kind}/{result.Reason}.");
+            return result.Handle;
+        }
+
+        public void RemoveEquipmentPassive(ulong handle)
+        {
+            if (handle == 0)
+                throw new ArgumentOutOfRangeException(nameof(handle));
+            int removed = m_GameplayEffects.Remove(new GameplayEffectRemoveRequest<PortableTagQuery>(
+                GameplayEffectRemoveSelector.Handle,
+                handle,
+                string.Empty,
+                m_Frame.ActorId,
+                null));
+            if (removed != 1)
+                throw new InvalidOperationException($"Equipment passive Effect handle '{handle}' was not active.");
+        }
+
+        public void CommitEquipmentMutation(SimulationOperation source) =>
+            ProjectChanges(source, "equipment:commit");
+
+        public void CancelEquipmentMutation() => m_GameplayEffects.ClearChanges();
+
         public void ApplyIngress(SimulationIngress ingress)
         {
             if (ingress.Header.ActorId != m_Frame.ActorId)

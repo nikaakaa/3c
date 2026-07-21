@@ -6,6 +6,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     [DisallowMultipleComponent]
     public sealed class CharacterFootPlacementRig : MonoBehaviour
     {
+        [SerializeField] CharacterFootPlacementRigCalibration m_Calibration;
         [SerializeField] Transform m_VisualRoot;
         [SerializeField] Transform m_Pelvis;
         [SerializeField] Transform m_LeftHip;
@@ -16,14 +17,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] Transform m_RightKnee;
         [SerializeField] Transform m_RightAnkle;
         [SerializeField] Transform m_RightToe;
-        [SerializeField] Vector3 m_LeftHeelSoleOffset;
-        [SerializeField] Vector3 m_LeftToeSoleOffset;
-        [SerializeField] Vector3 m_RightHeelSoleOffset;
-        [SerializeField] Vector3 m_RightToeSoleOffset;
-        [SerializeField] Vector3 m_LeftFootForwardAxis = Vector3.forward;
-        [SerializeField] Vector3 m_RightFootForwardAxis = Vector3.forward;
         [SerializeField] Transform m_SelfColliderRoot;
 
+        public CharacterFootPlacementRigCalibration Calibration => m_Calibration;
         public Transform VisualRoot => m_VisualRoot;
         public Transform Pelvis => m_Pelvis;
         public Transform SelfColliderRoot => m_SelfColliderRoot;
@@ -31,6 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootPlacementRigBinding BuildBinding()
         {
             return new CharacterFootPlacementRigBinding(
+                m_Calibration,
                 m_VisualRoot,
                 m_Pelvis,
                 m_LeftHip,
@@ -41,12 +38,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_RightKnee,
                 m_RightAnkle,
                 m_RightToe,
-                m_LeftHeelSoleOffset,
-                m_LeftToeSoleOffset,
-                m_RightHeelSoleOffset,
-                m_RightToeSoleOffset,
-                m_LeftFootForwardAxis,
-                m_RightFootForwardAxis,
                 m_SelfColliderRoot);
         }
     }
@@ -54,6 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public sealed class CharacterFootPlacementRigBinding
     {
         public CharacterFootPlacementRigBinding(
+            CharacterFootPlacementRigCalibration calibration,
             Transform visualRoot,
             Transform pelvis,
             Transform leftHip,
@@ -64,14 +56,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Transform rightKnee,
             Transform rightAnkle,
             Transform rightToe,
-            Vector3 leftHeelSoleOffset,
-            Vector3 leftToeSoleOffset,
-            Vector3 rightHeelSoleOffset,
-            Vector3 rightToeSoleOffset,
-            Vector3 leftFootForwardAxis,
-            Vector3 rightFootForwardAxis,
             Transform selfColliderRoot)
         {
+            Calibration = calibration;
             VisualRoot = visualRoot;
             Pelvis = pelvis;
             LeftHip = leftHip;
@@ -82,14 +69,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RightKnee = rightKnee;
             RightAnkle = rightAnkle;
             RightToe = rightToe;
-            LeftHeelSoleOffset = leftHeelSoleOffset;
-            LeftToeSoleOffset = leftToeSoleOffset;
-            RightHeelSoleOffset = rightHeelSoleOffset;
-            RightToeSoleOffset = rightToeSoleOffset;
-            LeftFootForwardAxis = leftFootForwardAxis;
-            RightFootForwardAxis = rightFootForwardAxis;
             SelfColliderRoot = selfColliderRoot;
             RequireValid();
+            CalibrationId = Calibration.CalibrationId;
+            CalibrationRevision = Calibration.ContentRevision;
+            CharacterFootPlacementFootCalibration left = Calibration.Left;
+            CharacterFootPlacementFootCalibration right = Calibration.Right;
+            LeftHeelSoleOffset = left.HeelSoleLocalOffset;
+            LeftToeSoleOffset = left.ToeSoleLocalOffset;
+            RightHeelSoleOffset = right.HeelSoleLocalOffset;
+            RightToeSoleOffset = right.ToeSoleLocalOffset;
+            LeftSemanticForwardAxis = left.SemanticForwardLocalAxis;
+            LeftSemanticUpAxis = left.SemanticUpLocalAxis;
+            RightSemanticForwardAxis = right.SemanticForwardLocalAxis;
+            RightSemanticUpAxis = right.SemanticUpLocalAxis;
+            LeftKneePoleLocalDirection = left.KneePoleVisualRootLocalDirection;
+            RightKneePoleLocalDirection = right.KneePoleVisualRootLocalDirection;
             LeftLegLength = Vector3.Distance(LeftHip.position, LeftKnee.position) +
                             Vector3.Distance(LeftKnee.position, LeftAnkle.position);
             RightLegLength = Vector3.Distance(RightHip.position, RightKnee.position) +
@@ -99,6 +94,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException("Foot Placement rig leg lengths are degenerate.");
         }
 
+        public CharacterFootPlacementRigCalibration Calibration { get; }
+        public CharacterFootPlacementRigCalibrationId CalibrationId { get; }
+        public string CalibrationRevision { get; }
         public Transform VisualRoot { get; }
         public Transform Pelvis { get; }
         public Transform LeftHip { get; }
@@ -113,12 +111,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 LeftToeSoleOffset { get; }
         public Vector3 RightHeelSoleOffset { get; }
         public Vector3 RightToeSoleOffset { get; }
-        public Vector3 LeftFootForwardAxis { get; }
-        public Vector3 RightFootForwardAxis { get; }
+        public Vector3 LeftSemanticForwardAxis { get; }
+        public Vector3 LeftSemanticUpAxis { get; }
+        public Vector3 RightSemanticForwardAxis { get; }
+        public Vector3 RightSemanticUpAxis { get; }
+        public Vector3 LeftKneePoleLocalDirection { get; }
+        public Vector3 RightKneePoleLocalDirection { get; }
         public Transform SelfColliderRoot { get; }
         public float LeftLegLength { get; }
         public float RightLegLength { get; }
         public int CharacterLayer => SelfColliderRoot.gameObject.layer;
+
+        public Vector3 ResolvePelvisParentLocalVerticalOffset(float componentVerticalOffset)
+        {
+            Transform parent = Pelvis.parent;
+            if (!parent)
+                throw new InvalidOperationException("Foot Placement pelvis requires a parent transform.");
+            Vector3 offset = parent.InverseTransformVector(VisualRoot.up * componentVerticalOffset);
+            if (!IsFinite(offset.x) || !IsFinite(offset.y) || !IsFinite(offset.z))
+                throw new InvalidOperationException("Foot Placement pelvis component-space offset is not finite.");
+            return offset;
+        }
 
         public CharacterFootPlacementAnimatedPose CaptureAnimatedPose(ulong renderFrame)
         {
@@ -131,7 +144,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 LeftToe,
                 LeftHeelSoleOffset,
                 LeftToeSoleOffset,
-                LeftFootForwardAxis);
+                LeftSemanticForwardAxis,
+                LeftSemanticUpAxis);
             CharacterFootPlacementAnimatedFootPose right = CaptureFoot(
                 RightHip,
                 RightKnee,
@@ -139,7 +153,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 RightToe,
                 RightHeelSoleOffset,
                 RightToeSoleOffset,
-                RightFootForwardAxis);
+                RightSemanticForwardAxis,
+                RightSemanticUpAxis);
             var pose = new CharacterFootPlacementAnimatedPose(
                 renderFrame,
                 Pelvis.localPosition,
@@ -156,6 +171,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public void RequireValid()
         {
+            if (!Calibration)
+                throw new InvalidOperationException("Foot Placement rig requires a Rig Calibration.");
+            Calibration.RequireValid();
             Require(VisualRoot, nameof(VisualRoot));
             Require(Pelvis, nameof(Pelvis));
             Require(LeftHip, nameof(LeftHip));
@@ -169,18 +187,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Require(SelfColliderRoot, nameof(SelfColliderRoot));
             RequireDescendant(VisualRoot, SelfColliderRoot, nameof(SelfColliderRoot));
             RequireDescendant(Pelvis, VisualRoot, nameof(Pelvis));
+            if (!Pelvis.parent)
+                throw new InvalidOperationException("Foot Placement pelvis requires a parent transform.");
             RequireLeg(LeftHip, LeftKnee, LeftAnkle, LeftToe, VisualRoot, "Left");
             RequireLeg(RightHip, RightKnee, RightAnkle, RightToe, VisualRoot, "Right");
             if (LeftHip == RightHip || LeftKnee == RightKnee || LeftAnkle == RightAnkle || LeftToe == RightToe)
                 throw new InvalidOperationException("Foot Placement rig left and right chains share a bone.");
             if (Pelvis.IsChildOf(LeftAnkle) || Pelvis.IsChildOf(RightAnkle))
                 throw new InvalidOperationException("Foot Placement pelvis cannot be a foot descendant.");
-            RequireFinite(LeftHeelSoleOffset, nameof(LeftHeelSoleOffset));
-            RequireFinite(LeftToeSoleOffset, nameof(LeftToeSoleOffset));
-            RequireFinite(RightHeelSoleOffset, nameof(RightHeelSoleOffset));
-            RequireFinite(RightToeSoleOffset, nameof(RightToeSoleOffset));
-            RequireAxis(LeftFootForwardAxis, nameof(LeftFootForwardAxis));
-            RequireAxis(RightFootForwardAxis, nameof(RightFootForwardAxis));
+            RequirePole(LeftHip, LeftAnkle, Calibration.Left.KneePoleVisualRootLocalDirection, "Left");
+            RequirePole(RightHip, RightAnkle, Calibration.Right.KneePoleVisualRootLocalDirection, "Right");
         }
 
         static CharacterFootPlacementAnimatedFootPose CaptureFoot(
@@ -190,8 +206,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Transform toe,
             Vector3 heelSoleOffset,
             Vector3 toeSoleOffset,
-            Vector3 forwardAxis)
+            Vector3 forwardAxis,
+            Vector3 upAxis)
         {
+            Vector3 soleForward = ankle.TransformDirection(forwardAxis).normalized;
+            Vector3 soleUp = ankle.TransformDirection(upAxis).normalized;
             return new CharacterFootPlacementAnimatedFootPose(
                 hip.position,
                 knee.position,
@@ -200,7 +219,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 toe.TransformPoint(toeSoleOffset),
                 toe.rotation,
                 ankle.TransformPoint(heelSoleOffset),
-                ankle.TransformDirection(forwardAxis).normalized);
+                soleForward,
+                soleUp,
+                Quaternion.LookRotation(soleForward, soleUp));
         }
 
         static void RequireLeg(
@@ -229,11 +250,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException($"Foot Placement rig requires '{field}'.");
         }
 
-        static void RequireAxis(Vector3 value, string field)
+        void RequirePole(Transform hip, Transform ankle, Vector3 poleLocal, string side)
         {
-            RequireFinite(value, field);
-            if (value.sqrMagnitude <= 0.0001f)
-                throw new InvalidOperationException($"Foot Placement rig '{field}' is degenerate.");
+            Vector3 legLocal = VisualRoot.InverseTransformDirection(ankle.position - hip.position).normalized;
+            if (legLocal.sqrMagnitude <= 0.0001f || Mathf.Abs(Vector3.Dot(legLocal, poleLocal)) >= 0.98f)
+                throw new InvalidOperationException($"Foot Placement rig '{side}' knee pole is collinear with its leg chain.");
         }
 
         static void RequireFinite(Vector3 value, string field)

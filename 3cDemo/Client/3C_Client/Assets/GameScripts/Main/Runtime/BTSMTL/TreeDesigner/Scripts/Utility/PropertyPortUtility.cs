@@ -30,12 +30,12 @@ namespace TreeDesigner
         }
         static void AddPropertyPortInstance(Type type)
         {
-            if (!type.IsAbstract && !type.IsGenericType)
-            {
-                PropertyPort propertyPort = Activator.CreateInstance(type) as PropertyPort;
-                s_PropertyPortTypeMap[type] = propertyPort;
-                s_TargetTypeMap[type] = propertyPort.GetField("m_Value").FieldType;
-            }
+            if (type.IsAbstract || type.IsGenericType || type.GetConstructor(Type.EmptyTypes) == null)
+                return;
+
+            PropertyPort propertyPort = Activator.CreateInstance(type) as PropertyPort;
+            s_PropertyPortTypeMap[type] = propertyPort;
+            s_TargetTypeMap[type] = propertyPort.GetField("m_Value").FieldType;
         }
 
         public static Type GetElementPropertyPortType(this Type type)

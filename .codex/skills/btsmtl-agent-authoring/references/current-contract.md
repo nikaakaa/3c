@@ -4,7 +4,7 @@
 
 - 正式调用链
 - MCP action
-- schema v14 Patch operation
+- schema v15 Patch operation
 - Condition term 与节点白名单
 - 代码所有权地图
 - Patch 示例
@@ -15,18 +15,18 @@
 ```text
 manage_btsmtl_agent_authoring
   -> AgentPatchAuthoringService
-  -> AgentGraphSnapshotExporter.ExportFull
+  -> domain-aware Character/AI Snapshot exporter
   -> AgentPatchCommandLowerer
   -> immutable AgentPatchCommandPlan
   -> AgentPatchCompileSession preflight
-  -> AgentGraphTransactionOwnerCollector
+  -> domain-aware transaction owners
   -> one Undo transaction
   -> AgentPatchCompiler.Apply(same plan)
   -> typed handler + formal BTSMTL authoring API
-  -> AgentGraphValidator
+  -> domain-aware formal Validator
   -> dirty touched owners + SaveAssets
-  -> CharacterSimulationProgramBuildService
-  -> publish SimulationProgram + PresentationProjection
+  -> CharacterSimulationProgramBuildService or AIIntentProgramBuildService
+  -> publish domain generated product
 ```
 
 `AgentPatchCompiler` 不拥有 Undo、dirty、rollback 或 SaveAssets。MCP bridge 和 Editor Window 都调用同一个 `AgentPatchAuthoringService`。
@@ -35,16 +35,16 @@ manage_btsmtl_agent_authoring
 
 | action | 输入 | 副作用 | 输出重点 |
 |---|---|---|---|
-| `export_snapshot` | definition path | 无 | Full `AgentGraphSnapshot`，包含稳定 Graph/Node/Edge/Timeline/Track/Clip/Marker identity、Blackboard InputValueId、Action target declaration/call site/requirement、AnimationTrack Marker Sync，以及全部registered Timeline Curve Channel的domain、wrap mode和完整key；作者拓扑导出不要求旧Program或Projection先成功反序列化 |
-| `dry_run_patch` | definition path + Patch JSON | 无 | planned diff、message、metrics |
-| `apply_patch` | definition path + 同一 Patch JSON | 单一 Undo 事务，成功后保存 | applied diff、`applied`、`saved` |
-| `validate` | definition path | 无 | Graph validator + 正式 compiler report |
+| `export_snapshot` | domain + root asset path | 无 | v15 Full Snapshot；Character输出既有Graph/Timeline/MotionWarp/Marker/Curve合同，AI输出Definition/Tree/Capability/Blackboard/Perception/Character catalog/generated Program合同 |
+| `dry_run_patch` | domain + root asset path + Patch JSON | 无 | planned diff、message、metrics |
+| `apply_patch` | domain + root asset path + 同一 Patch JSON | 单一 Undo 事务，成功后保存 | applied diff、`applied`、`saved` |
+| `validate` | domain + root asset path | 无 | domain正式Validator + compiler report |
 
-Definition 路径必须是使用 `/` 的精确 `Assets/...` 路径。四个 action 在 Unity 编译、AssetDatabase 更新、Play Mode 或切换 Play Mode 时都会被拒绝。
+domain必须是`CharacterController`或`AIController`；root路径必须是使用`/`的精确`Assets/...`路径并解析成匹配Definition类型。四个action在Unity编译、AssetDatabase更新、Play Mode或切换Play Mode时都会被拒绝。
 
-## schema v14 Patch operation
+## schema v15 Patch operation
 
-当前 `AgentAuthoringSchema.Version`：`agent-character-controller-synthesis.v14`。v13及更早reader、writer、converter和operation alias已删除。
+当前`AgentAuthoringSchema.Version`：`agent-character-controller-synthesis.v15`。v14及更早reader、writer、converter和operation alias已删除。Patch根必须显式携带`domain`、`rootIdentity`与`sourceRevision`。
 
 | operation | typed command 业务 |
 |---|---|
@@ -60,7 +60,7 @@ Definition 路径必须是使用 `/` 的精确 `Assets/...` 路径。四个 acti
 | `ensure_motion_warp_track` | 在明确Timeline创建或幂等确认唯一MotionWarpTrack |
 | `ensure_motion_warp_clip` | 在明确MotionWarpTrack按stable identity创建或幂等确认Warp窗口 |
 | `configure_motion_warp_source` | 将Warp绑定到同一Timeline内明确stable identity的MotionCurveClip |
-| `configure_motion_warp_parameters` | 原子配置position/yaw mode、offset、weight、clamp与canonical progress curves |
+| `configure_motion_warp_parameters` | 原子配置TranslationMode、TargetOffsetSpace、RotationMode、RotationMethod、target offset、correction limits、yaw rate、LimitPolicy与canonical progress curves |
 | `ensure_action_activation` | 创建并配置 Action activation |
 | `ensure_action_lifecycle_transition` | 创建并配置单个 lifecycle submit 节点 |
 | `ensure_input_node` | 创建并绑定正式 Input/Action request node |
@@ -87,12 +87,25 @@ Definition 路径必须是使用 `/` 的精确 `Assets/...` 路径。四个 acti
 | `set_action_profile_cancel_query` | 原子替换 ActionProfile cancel query |
 | `set_action_profile_target_requirement` | 按当前Definition内明确ActionProfile原子配置`None`、`OptionalSnapshot`或`SnapshotRequired` |
 | `set_action_request_timing_class` | 按当前 Definition 的 request id 原子配置 `Immediate` 或 `Offensive` timing class |
+| `ensure_ai_controller_definition` | 在AIController domain通过正式Definition API确认ControllerId与完整绑定 |
+| `ensure_ai_controller_tree` | 确认Definition绑定的正式AIControllerTree资产与stable root identity |
+| `bind_ai_controller_assets` | 原子绑定受控Character Definition与Perception Profile |
+| `configure_ai_candidates` | 通过Perception Profile正式API原子替换候选ActorId与排序策略 |
+| `ensure_ai_blackboard_declaration` | 在AI Graph创建或配置AIController/AITick/Graph scope的typed memory declaration |
+| `ensure_ai_shared_node` | 在AI Graph创建Sequence、Selector、Loop、Compare或WaitTicks，并通过正式authoring API配置LoopStopType与CompareType |
+| `ensure_ai_observation_node` | 创建ReadSelf、ConfiguredCandidates、SelectNearest、TargetDistance或TargetDirection节点 |
+| `ensure_ai_memory_node` | 创建并绑定typed Read/Write AI Memory节点 |
+| `ensure_ai_continuous_input` | 按受控Character catalog绑定连续InputId |
+| `ensure_ai_action_target` | 按受控Character catalog绑定ActionTargetSnapshot InputId |
+| `ensure_ai_action_request` | 按受控Character catalog绑定RequestId、buffer、priority与repeat policy |
+| `ensure_bt_condition_rule` | 为AI Tree中明确的flow edge创建或配置ConditionRuleGraph与AbortPolicy；条件组内AND、组间OR |
 
 不存在按端点或显示名猜测的通用 `delete_edge`、任意 serialized field write 或 `bind_asset_reference`。Timeline Clip 只开放表格中的窄类型化编辑；需求超出表格时先扩展正式 Agent 工具，不得手改资产。
 
 ## Identity 规则
 
 - Snapshot path、display name 和列表 index 只用于阅读，不能替代 stable authoring identity。
+- Snapshot、Patch与Intent根的domain、rootIdentity和sourceRevision必须完全一致；不得从资产类型或内容推断domain。
 - State body 中的 Action activation 与 lifecycle transition 必须输出 `nodeAuthoringId`，迁移删除不得按显示名或 lifecycle 类型猜测节点。
 - 每个 Patch operation 必须有唯一 `id`。
 - 已存在对象使用 `*AuthoringId`。
@@ -133,6 +146,8 @@ Condition group 内使用 AND，group 间使用 OR，最终连接 `ConditionRule
 
 节点即使在白名单内，仍必须通过目标 graph 的 `CanCreateNodeType`。
 
+AIController节点catalog由正式`NodeAuthoringCapabilityPolicy`约束，包括SharedFlow/SharedPureValue/SharedBlackboard、AIObservation、AIMemory与AIIntent节点。CharacterExecution、Timeline、MotionWarp和Transform副作用节点禁止进入AI Graph。
+
 ## 代码所有权地图
 
 根目录：
@@ -141,16 +156,16 @@ Condition group 内使用 AND，group 间使用 OR，最终连接 `ConditionRule
 
 | 文件 | 所有权 |
 |---|---|
-| `Mcp/ManageBtsmtlAgentAuthoringMcpTool.cs` | 唯一 MCP 薄桥；只解析 action/path/patch_json |
-| `AgentPatchAuthoringService.cs` | parse、snapshot、preflight、Undo、apply、validate、rollback、dirty/save |
+| `Mcp/ManageBtsmtlAgentAuthoringMcpTool.cs` | 唯一MCP薄桥；只解析action/domain/root_asset_path/patch_json |
+| `AgentPatchAuthoringService.cs` | domain dispatch、Character/AI snapshot、preflight、Undo、apply、validate、rollback、dirty/save与正式产物发布 |
 | `AgentPatchAuthoringModels.cs` | 四个 MCP action 的 request/response |
 | `AgentAuthoringModels.cs` | schema version、Snapshot DTO、Intent、Patch DTO、Report |
-| `AgentGraphSnapshotExporter.cs` | Definition/Graph/Timeline/Presentation 的只读投影 |
+| `AgentGraphSnapshotExporter.cs` | Character Definition/Graph/Timeline/Presentation的只读投影 |
 | `AgentPatchCommandLowerer.cs` | 唯一 operation catalog、字段校验、DTO 到 typed command |
 | `AgentPatchCommands.cs` | typed command、target reference、plan 和 output kind |
 | `AgentPatchCompiler.cs` | Prepare/Apply facade，不保存跨调用状态 |
 | `AgentPatchCompileSession.cs` | 单次 Definition、Index、Resolver、symbol、diff、touched owner |
-| `AgentPatchCommandHandlers.cs` | handler catalog 与共享 graph authoring utility |
+| `AgentPatchCommandHandlers.cs` | domain handler catalog、AI typed handler与共享graph authoring utility |
 | `AgentStateMachineCommandHandler.cs` | StateMachine/State/Transition/ConditionRule mutation |
 | `AgentStateBehaviorCommandHandler.cs` | State body、Timeline、Activation、Lifecycle mutation |
 | `AgentActionEligibilityCommandHandler.cs` | Blackboard、TreeClip、tag、ActionProfile policy 与 transition 删除 mutation |
@@ -161,13 +176,14 @@ Condition group 内使用 AND，group 间使用 OR，最终连接 `ConditionRule
 | `AgentAssetResolver.cs` | 当前 Definition/Snapshot 范围内的资产解析 |
 | `AgentGraphAuthoringIndex.cs` | 当前正式 topology 的 stable identity 索引 |
 | `AgentGraphTransactionOwnerCollector.cs` | Definition、RootTree、全部可达 Graph/Timeline serialized owner |
-| `AgentGraphValidator.cs` | 通用 authoring 语义与正式 Simulation dry-run compile |
-| `AgentMacroLibrary.cs` | v14 明确拒绝旧 controller macro；业务迁移使用显式 typed Patch |
+| `AgentGraphValidator.cs` | Character/AI authoring语义与正式只读compiler validation |
+| `AgentMacroLibrary.cs` | v15明确拒绝带业务默认值的controller macro；业务迁移使用显式typed Patch |
 | `AgentMacroCoverageEvaluator.cs` | 无业务样例；不进入通用 validate |
 
 Current specs：
 
 - `openspec/specs/agent-character-controller-synthesis/spec.md`
+- `openspec/specs/agent-ai-controller-synthesis/spec.md`
 - `openspec/specs/btsmtl-agent-authoring-mcp-bridge/spec.md`
 
 ## Patch 示例
@@ -176,7 +192,10 @@ Current specs：
 
 ```json
 {
-  "schemaVersion": "agent-character-controller-synthesis.v14",
+  "schemaVersion": "agent-character-controller-synthesis.v15",
+  "domain": "CharacterController",
+  "rootIdentity": "<definition-asset-guid>",
+  "sourceRevision": "<snapshot-source-revision>",
   "operations": [
     {
       "id": "delete-empty-exit-node",
@@ -192,7 +211,10 @@ Current specs：
 
 ```json
 {
-  "schemaVersion": "agent-character-controller-synthesis.v14",
+  "schemaVersion": "agent-character-controller-synthesis.v15",
+  "domain": "CharacterController",
+  "rootIdentity": "<definition-asset-guid>",
+  "sourceRevision": "<snapshot-source-revision>",
   "operations": [
     {
       "id": "configure-marker-sync",
@@ -212,7 +234,10 @@ Current specs：
 
 ```json
 {
-  "schemaVersion": "agent-character-controller-synthesis.v14",
+  "schemaVersion": "agent-character-controller-synthesis.v15",
+  "domain": "CharacterController",
+  "rootIdentity": "<definition-asset-guid>",
+  "sourceRevision": "<snapshot-source-revision>",
   "operations": [
     {
       "id": "configure-animation-weight",
@@ -243,6 +268,7 @@ Current specs：
 - `Runtime/BTSMTL/TreeDesigner/` 的 Graph、Node、Edge、Port、StateMachine、ownership、identity。
 - `Runtime/BTSMTL/Timeline/` 的 TimelineNode、TimelineData、Track、Clip、TreeClip、serialized owner/path。
 - `Runtime/Character/Pipeline/` 的 Input、ActionProfile、ActionContext、Blackboard、authoring topology。
+- `Runtime/Character/AI/`与`Editor/AI/`的Definition、Tree、Capability、Blackboard、Perception、Intent与Compiler。
 - `Editor/CharacterSimulation/` 的 authoring discovery、semantic frontend、正式 compile 约束。
 - `Editor/CharacterPipeline/AgentAuthoring/` 的任何文件。
 

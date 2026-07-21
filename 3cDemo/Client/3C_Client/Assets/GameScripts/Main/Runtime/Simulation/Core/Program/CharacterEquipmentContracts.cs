@@ -254,7 +254,7 @@ namespace ThirdPersonSimulation
             ulong equipmentRevision,
             ulong sourceTick)
         {
-            if (!actorId.IsValid || !slotId.IsValid || !equipmentId.IsValid || !visualBindingId.IsValid || equipmentRevision == 0)
+            if (!actorId.IsValid || !slotId.IsValid || equipmentRevision == 0 || equipmentId.IsValid != visualBindingId.IsValid)
                 throw new ArgumentException("Equipment visual selection is incomplete.");
             ActorId = actorId;
             SlotId = slotId;
@@ -270,6 +270,7 @@ namespace ThirdPersonSimulation
         public EquipmentVisualBindingId VisualBindingId { get; }
         public ulong EquipmentRevision { get; }
         public ulong SourceTick { get; }
+        public bool IsEquipped => EquipmentId.IsValid;
         public bool Equals(EquipmentVisualSelection other) =>
             ActorId == other.ActorId && SlotId == other.SlotId && EquipmentId == other.EquipmentId &&
             VisualBindingId == other.VisualBindingId && EquipmentRevision == other.EquipmentRevision && SourceTick == other.SourceTick;

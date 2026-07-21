@@ -11,6 +11,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.FinalIK
         [SerializeField] LimbIK m_RightLeg;
 
         CharacterFootPlacementRigBinding m_Rig;
+        Transform m_LeftBendGoal;
+        Transform m_RightBendGoal;
         Vector3 m_AnimatedPelvisLocalPosition;
         ulong m_CapturedRenderFrame;
         ulong m_AppliedRenderFrame;
@@ -40,6 +42,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.FinalIK
             m_Rig = context.Rig;
             Initiate(m_LeftLeg, m_Rig.VisualRoot);
             Initiate(m_RightLeg, m_Rig.VisualRoot);
+            m_LeftBendGoal = CreateBendGoal("FootPlacement.LeftBendGoal", m_Rig.VisualRoot);
+            m_RightBendGoal = CreateBendGoal("FootPlacement.RightBendGoal", m_Rig.VisualRoot);
+            ConfigureBendGoal(m_LeftLeg.solver, m_LeftBendGoal);
+            ConfigureBendGoal(m_RightLeg.solver, m_RightBendGoal);
             IsInitialized = true;
         }
 
@@ -67,9 +73,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.FinalIK
                 return new CharacterFootPlacementSolverResult(plan.RenderFrame, false, true, "Duplicate render frame.");
 
             m_Rig.Pelvis.localPosition = m_AnimatedPelvisLocalPosition +
-                                         Vector3.up * plan.PelvisLocalVerticalOffset;
-            ApplyLimb(m_LeftLeg.solver, plan.Left);
-            ApplyLimb(m_RightLeg.solver, plan.Right);
+                                         m_Rig.ResolvePelvisParentLocalVerticalOffset(
+                                             plan.PelvisComponentVerticalOffset);
+            ApplyLimb(m_LeftLeg.solver, m_LeftBendGoal, plan.Left);
+            ApplyLimb(m_RightLeg.solver, m_RightBendGoal, plan.Right);
             m_AppliedRenderFrame = plan.RenderFrame;
             return new CharacterFootPlacementSolverResult(plan.RenderFrame, true, false, string.Empty);
         }
@@ -92,6 +99,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.FinalIK
             if (m_Disposed)
                 return;
             ResetPose(default);
+            DestroyBendGoal(ref m_LeftBendGoal);
+            DestroyBendGoal(ref m_RightBendGoal);
             IsInitialized = false;
             m_Rig = null;
             m_Disposed = true;
@@ -129,13 +138,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.FinalIK
             ClearLimb(limb.solver);
         }
 
-        static void ApplyLimb(IKSolverLimb solver, FootPlacementFootPlan plan)
+        static void ApplyLimb(IKSolverLimb solver, Transform bendGoal, FootPlacementFootPlan plan)
         {
             solver.IKPosition = plan.Position;
             solver.IKRotation = plan.Rotation;
             solver.IKPositionWeight = plan.PositionWeight;
             solver.IKRotationWeight = plan.RotationWeight;
-            solver.MaintainBend();
+            bendGoal.position = plan.BendGoalPosition;
+            solver.bendModifierWeight = plan.BendGoalWeight;
             solver.Update();
         }
 
@@ -143,6 +153,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.FinalIK
         {
             solver.IKPositionWeight = 0f;
             solver.IKRotationWeight = 0f;
+            solver.bendModifierWeight = 0f;
+        }
+
+        static Transform CreateBendGoal(string name, Transform parent)
+        {
+            var value = new GameObject(name)
+            {
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            value.transform.SetParent(parent, false);
+            return value.transform;
+        }
+
+        static void ConfigureBendGoal(IKSolverLimb solver, Transform bendGoal)
+        {
+            solver.bendGoal = bendGoal;
+            solver.bendModifier = IKSolverLimb.BendModifier.Goal;
+            solver.bendModifierWeight = 0f;
+        }
+
+        static void DestroyBendGoal(ref Transform value)
+        {
+            if (value)
+                Destroy(value.gameObject);
+            value = null;
         }
 
         void RequireInitialized()

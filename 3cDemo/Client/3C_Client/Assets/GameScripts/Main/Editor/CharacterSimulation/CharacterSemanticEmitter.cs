@@ -42,11 +42,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public OperationHandle Emit()
         {
+            IReadOnlyDictionary<string, OperationHandle> roots = EmitCompositionRoots();
+            return roots.TryGetValue(m_Model.Roots.Single(value => value.Role == CharacterCompositionRootRole.Character).Identity, out OperationHandle entry)
+                ? entry
+                : OperationHandle.Invalid;
+        }
+
+        public IReadOnlyDictionary<string, OperationHandle> EmitCompositionRoots()
+        {
             CompileDeclarationCatalogs();
-            OperationHandle entry = CompileGraph(m_Model.Root, OperationHandle.Invalid);
+            var entries = new SortedDictionary<string, OperationHandle>(StringComparer.Ordinal);
+            for (int i = 0; i < m_Model.Roots.Count; i++)
+            {
+                CharacterCompositionRoot root = m_Model.Roots[i];
+                entries.Add(root.Identity, CompileGraph(root.Occurrence, OperationHandle.Invalid));
+            }
             foreach (ScopeRecord scope in m_Scopes.Values.OrderBy(value => value.Identity, StringComparer.Ordinal))
                 m_Builder.DeclareScope(scope.Identity, scope.Kind, scope.OwnerIdentity, scope.OwnerOperation, scope.StateSlots, scope.Source);
-            return entry;
+            return entries;
         }
 
         void CompileDeclarationCatalogs()
@@ -297,7 +310,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     edge.GUID,
                     string.Empty,
                     string.Empty,
-                    edgeRoute));
+                    edgeRoute,
+                    contentHash: GraphAuthoringFingerprint.Compute(graph)));
         }
 
         void CompileTimeline(CharacterAuthoringTimelineRecord record, OperationHandle owner, OperationHandle stateScopeOwner)
@@ -313,7 +327,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string.Empty,
                 timeline.AuthoringId,
                 string.Empty,
-                route);
+                route,
+                contentHash: TimelineAuthoringFingerprint.Compute(timeline));
             int timelineCatalog = m_Builder.DeclareCatalogEntry(
                 ProgramCatalogEntryKind.Timeline,
                 $"timeline:{timeline.AuthoringId}",
@@ -458,6 +473,58 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 BindCatalog(node, operation, route, ProgramCatalogEntryKind.InputRequest, $"input:request:{request.RequestId}", m_CatalogIndex.InputRequests.Contains(request.RequestId));
                 return;
             }
+            if (node is ReadEquipmentIdentityNode equipmentIdentity)
+            {
+                BindEquipmentSlot(node, operation, route, equipmentIdentity.SlotId);
+                return;
+            }
+            if (node is ReadEquipmentParameterNode equipmentParameter)
+            {
+                BindEquipmentSlot(node, operation, route, equipmentParameter.SlotId);
+                string key = $"{equipmentParameter.FeatureId}:{equipmentParameter.ParameterId}";
+                BindCatalog(
+                    node,
+                    operation,
+                    route,
+                    ProgramCatalogEntryKind.EquipmentFeatureParameter,
+                    $"equipment:feature:{equipmentParameter.FeatureId}:parameter:{equipmentParameter.ParameterId}",
+                    m_CatalogIndex.EquipmentParameters.Contains(key),
+                    "equipment-parameter");
+                return;
+            }
+            if (node is EquipmentChangeOperationNode equipmentChange)
+            {
+                BindEquipmentSlot(node, operation, route, equipmentChange.SlotId);
+                if (!string.IsNullOrEmpty(equipmentChange.EquipmentId))
+                {
+                    BindCatalog(
+                        node,
+                        operation,
+                        route,
+                        ProgramCatalogEntryKind.EquipmentDefinition,
+                        $"equipment:item:{equipmentChange.EquipmentId}",
+                        m_CatalogIndex.EquipmentItems.Contains(equipmentChange.EquipmentId),
+                        "equipment-item");
+                }
+                return;
+            }
+            if (node is EquipmentSlotHostNode equipmentHost)
+            {
+                BindEquipmentSlot(node, operation, route, equipmentHost.SlotId);
+                return;
+            }
+            if (node is ResolveEquipmentActionRouteNode equipmentRoute)
+            {
+                BindCatalog(
+                    node,
+                    operation,
+                    route,
+                    ProgramCatalogEntryKind.EquipmentRoute,
+                    $"equipment:route:{equipmentRoute.RouteId}",
+                    m_CatalogIndex.EquipmentRoutes.Contains(equipmentRoute.RouteId),
+                    "equipment-route");
+                return;
+            }
             if (node is ActivateActionInstanceNode activate)
             {
                 string actionId = activate.ActionProfile ? activate.ActionProfile.ActionId : string.Empty;
@@ -537,6 +604,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
+        void BindEquipmentSlot(BaseNode node, OperationHandle operation, string route, string slotId)
+        {
+            BindCatalog(
+                node,
+                operation,
+                route,
+                ProgramCatalogEntryKind.EquipmentSlot,
+                $"equipment:slot:{slotId}",
+                m_CatalogIndex.EquipmentSlots.Contains(slotId),
+                "equipment-slot");
+        }
+
         void BindBlackboard(BaseNode node, OperationHandle operation, string route, PipelineBlackboardVariableReference reference)
         {
             string declarationIdentity = DeclarationIdentity(reference.DeclarationOwnerId, reference.DeclarationId);
@@ -598,7 +677,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string.Empty,
                 string.Empty,
                 string.Empty,
-                $"{route}/blackboard:{item.Declaration.DeclarationId}");
+                $"{route}/blackboard:{item.Declaration.DeclarationId}",
+                declarationId: item.Declaration.DeclarationId,
+                contentHash: GraphAuthoringFingerprint.Compute(item.Graph));
             int value = m_Builder.DeclareStandaloneStateSlot(
                 source,
                 valueKind,
@@ -724,7 +805,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string.Empty,
                 string.Empty,
                 string.Empty,
-                $"{route}/node:{node.GUID}");
+                $"{route}/node:{node.GUID}",
+                contentHash: GraphAuthoringFingerprint.Compute(graph ?? node.Owner));
         }
 
         static CharacterSimulationSourceLocation DeclarationSource(BlackboardDeclaration item)
@@ -737,7 +819,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string.Empty,
                 string.Empty,
                 $"{item.Route}/blackboard:{item.Declaration.DeclarationId}",
-                declarationId: item.Declaration.DeclarationId);
+                declarationId: item.Declaration.DeclarationId,
+                contentHash: GraphAuthoringFingerprint.Compute(item.Graph));
         }
 
         static ProgramCatalogField[] Fields(params ProgramCatalogField[] values) => values.Where(value => value != null).ToArray();

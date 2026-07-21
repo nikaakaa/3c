@@ -153,6 +153,12 @@ namespace ThirdPersonSimulation.DeterministicKcc
             int movementIterations = 0;
             FixedVector3 remaining = displacement;
             int planeCount = 0;
+            int supportPlaneIndex = -1;
+            if (previousState.Grounded && previousState.GroundNormal.SqrMagnitude != FixedScalar.Zero)
+            {
+                m_ConstraintPlanes[planeCount] = previousState.GroundNormal;
+                supportPlaneIndex = planeCount++;
+            }
             for (int iteration = 0; iteration < m_Configuration.MaximumSweepIterations; iteration++)
             {
                 movementIterations++;
@@ -180,11 +186,26 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 CopyOutputContacts(hitCount);
                 outputContactCount = hitCount;
                 bool hasSide = false;
+                bool hasStableGround = false;
+                DeterministicKccContact stableGroundContact = default;
+                FixedVector3 stableGroundNormal = FixedVector3.Zero;
                 for (int i = 0; i < hitCount; i++)
                 {
                     WorldCollisionSummary classification = ClassifyContact(m_HitContacts[i]);
                     collision |= classification;
                     hasSide |= (classification & WorldCollisionSummary.Sides) != 0;
+                    if (TryGetMovementGroundNormal(safePosition, m_HitContacts[i], out FixedVector3 groundNormal) &&
+                        (!hasStableGround || CompareGround(
+                            m_HitContacts[i],
+                            groundNormal,
+                            stableGroundContact,
+                            stableGroundNormal,
+                            previousState) < 0))
+                    {
+                        hasStableGround = true;
+                        stableGroundContact = m_HitContacts[i];
+                        stableGroundNormal = groundNormal;
+                    }
                 }
 
                 if (hasSide && previousState.Grounded && HasPlanarMovement(remaining) &&
@@ -211,9 +232,23 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 FixedVector3 travelled = safePosition - position;
                 position = safePosition;
                 FixedVector3 nextRemaining = remaining - travelled;
+                FixedVector3 constraintInput = nextRemaining;
+                if (hasStableGround)
+                {
+                    FixedVector3 supportConstraintNormal = stableGroundContact.Normal;
+                    bool supportChanged = supportPlaneIndex < 0 ||
+                        FixedVector3.Dot(m_ConstraintPlanes[supportPlaneIndex], supportConstraintNormal) < m_Configuration.NormalMergeDot;
+                    SetSupportConstraint(supportConstraintNormal, ref planeCount, ref supportPlaneIndex);
+                    if (supportChanged)
+                        constraintInput = ProjectAlongGround(nextRemaining, stableGroundNormal);
+                }
                 for (int i = 0; i < hitCount; i++)
+                {
+                    if (TryGetMovementGroundNormal(safePosition, m_HitContacts[i], out _))
+                        continue;
                     AddConstraintPlane(m_HitContacts[i].Normal, ref planeCount);
-                FixedVector3 projected = ProjectRemaining(nextRemaining, planeCount);
+                }
+                FixedVector3 projected = ProjectRemaining(constraintInput, planeCount);
                 if ((projected - nextRemaining).Magnitude <= m_Configuration.MinimumMovementDistance &&
                     travelled.Magnitude <= m_Configuration.MinimumMovementDistance)
                 {
@@ -383,11 +418,16 @@ namespace ThirdPersonSimulation.DeterministicKcc
             {
                 return displacement;
             }
+            return ProjectAlongGround(displacement, previousState.GroundNormal);
+        }
+
+        FixedVector3 ProjectAlongGround(FixedVector3 displacement, FixedVector3 groundNormal)
+        {
             FixedVector3 planar = new FixedVector3(displacement.X, FixedScalar.Zero, displacement.Z);
             FixedScalar planarMagnitude = planar.Magnitude;
             if (planarMagnitude <= m_Configuration.MinimumMovementDistance)
                 return displacement;
-            FixedVector3 projected = planar - Scale(previousState.GroundNormal, FixedVector3.Dot(planar, previousState.GroundNormal));
+            FixedVector3 projected = planar - Scale(groundNormal, FixedVector3.Dot(planar, groundNormal));
             FixedScalar projectedMagnitude = projected.Magnitude;
             if (projectedMagnitude <= m_Configuration.QueryTolerance)
                 throw new InvalidOperationException("Stable ground projection collapsed the planar displacement.");
@@ -486,6 +526,19 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 0,
                 summary);
             return true;
+        }
+
+        bool TryGetMovementGroundNormal(
+            FixedVector3 position,
+            DeterministicKccContact contact,
+            out FixedVector3 groundNormal)
+        {
+            if (contact.Normal.Y <= FixedScalar.Zero || !IsBottomSupport(position, contact))
+            {
+                groundNormal = FixedVector3.Zero;
+                return false;
+            }
+            return TryGetStableGroundNormal(contact, out groundNormal, out _);
         }
 
         bool TryGround(
@@ -718,6 +771,27 @@ namespace ThirdPersonSimulation.DeterministicKcc
             }
             if (planeCount < m_ConstraintPlanes.Length)
                 m_ConstraintPlanes[planeCount++] = normal;
+        }
+
+        void SetSupportConstraint(FixedVector3 normal, ref int planeCount, ref int supportPlaneIndex)
+        {
+            if (supportPlaneIndex >= 0)
+            {
+                m_ConstraintPlanes[supportPlaneIndex] = normal;
+                return;
+            }
+            for (int i = 0; i < planeCount; i++)
+            {
+                if (FixedVector3.Dot(m_ConstraintPlanes[i], normal) < m_Configuration.NormalMergeDot)
+                    continue;
+                m_ConstraintPlanes[i] = normal;
+                supportPlaneIndex = i;
+                return;
+            }
+            if (planeCount >= m_ConstraintPlanes.Length)
+                return;
+            supportPlaneIndex = planeCount;
+            m_ConstraintPlanes[planeCount++] = normal;
         }
 
         FixedVector3 ProjectRemaining(FixedVector3 remaining, int planeCount)

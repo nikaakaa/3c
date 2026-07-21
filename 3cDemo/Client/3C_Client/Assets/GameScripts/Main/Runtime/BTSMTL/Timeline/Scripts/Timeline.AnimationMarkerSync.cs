@@ -324,7 +324,7 @@ namespace BTSMTL.Timeline
                     continue;
                 if (input.Track.SyncMode != AnimationSyncMode.MarkerGroup)
                     continue;
-                string key = $"{input.Track.LayerId}\n{NormalizeId(input.Track.SyncGroupId)}";
+                string key = $"{input.Track.AnimationChannelId}\n{NormalizeId(input.Track.SyncGroupId)}";
                 if (!pairSets.TryGetValue(key, out PairSet expected))
                 {
                     pairSets.Add(key, new PairSet(input.ProducerIdentity, pairs));

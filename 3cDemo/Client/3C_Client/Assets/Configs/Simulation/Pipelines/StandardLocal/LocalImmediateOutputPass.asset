@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: LocalImmediateOutputPass
   m_EditorClassIdentifier: 
   m_PassId: thirdperson.simulation.local-immediate-output
-  m_ImplementationVersion: 2
+  m_ImplementationVersion: 4

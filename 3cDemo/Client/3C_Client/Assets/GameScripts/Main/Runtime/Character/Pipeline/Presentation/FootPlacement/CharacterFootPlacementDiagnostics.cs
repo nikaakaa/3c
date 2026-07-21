@@ -28,6 +28,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float replantError,
             float policyWeight,
             float solverWeight,
+            Vector3 generatedSoleLocalVelocity,
+            Vector3 generatedSoleWorldVelocity,
+            float generatedSoleHeight,
+            float generatedPlantConfidence,
+            float generatedLandingConfidence,
+            float generatedLandingDelay,
+            Vector2 generatedLandingOffset,
+            int heelSupportIdentity,
+            int toeSupportIdentity,
+            int currentSupportIdentity,
+            int futureSupportIdentity,
+            int groundEnvelopeSegmentCount,
+            FootPlacementGroundEnvelopeRejectReason groundEnvelopeRejectReason,
+            float ankleTwistDegrees,
+            float heelLiftDistance,
+            float separationCorrection,
             Vector3 targetPosition,
             Quaternion targetRotation)
         {
@@ -50,6 +66,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ReplantError = replantError;
             PolicyWeight = policyWeight;
             SolverWeight = solverWeight;
+            GeneratedSoleLocalVelocity = generatedSoleLocalVelocity;
+            GeneratedSoleWorldVelocity = generatedSoleWorldVelocity;
+            GeneratedSoleHeight = generatedSoleHeight;
+            GeneratedPlantConfidence = generatedPlantConfidence;
+            GeneratedLandingConfidence = generatedLandingConfidence;
+            GeneratedLandingDelay = generatedLandingDelay;
+            GeneratedLandingOffset = generatedLandingOffset;
+            HeelSupportIdentity = heelSupportIdentity;
+            ToeSupportIdentity = toeSupportIdentity;
+            CurrentSupportIdentity = currentSupportIdentity;
+            FutureSupportIdentity = futureSupportIdentity;
+            GroundEnvelopeSegmentCount = groundEnvelopeSegmentCount;
+            GroundEnvelopeRejectReason = groundEnvelopeRejectReason;
+            AnkleTwistDegrees = ankleTwistDegrees;
+            HeelLiftDistance = heelLiftDistance;
+            SeparationCorrection = separationCorrection;
             TargetPosition = targetPosition;
             TargetRotation = targetRotation;
         }
@@ -73,6 +105,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float ReplantError { get; }
         public float PolicyWeight { get; }
         public float SolverWeight { get; }
+        public Vector3 GeneratedSoleLocalVelocity { get; }
+        public Vector3 GeneratedSoleWorldVelocity { get; }
+        public float GeneratedSoleHeight { get; }
+        public float GeneratedPlantConfidence { get; }
+        public float GeneratedLandingConfidence { get; }
+        public float GeneratedLandingDelay { get; }
+        public Vector2 GeneratedLandingOffset { get; }
+        public int HeelSupportIdentity { get; }
+        public int ToeSupportIdentity { get; }
+        public int CurrentSupportIdentity { get; }
+        public int FutureSupportIdentity { get; }
+        public int GroundEnvelopeSegmentCount { get; }
+        public FootPlacementGroundEnvelopeRejectReason GroundEnvelopeRejectReason { get; }
+        public float AnkleTwistDegrees { get; }
+        public float HeelLiftDistance { get; }
+        public float SeparationCorrection { get; }
         public Vector3 TargetPosition { get; }
         public Quaternion TargetRotation { get; }
     }
@@ -88,10 +136,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong currentBodyTick,
             ulong resetSequence,
             string poseSourceLayerId,
+            string calibrationId,
+            string calibrationRevision,
+            string analysisSourceId,
+            int analysisVersion,
+            string analysisAlgorithmVersion,
             AnimationPoseContribution[] contributions,
             int contributionCount,
             FootPlacementFootFrameSnapshot left,
             FootPlacementFootFrameSnapshot right,
+            FootPlacementActorMovementCompensationMode actorMovementCompensationMode,
+            Vector3 bodySourceTranslationDelta,
+            Vector3 bodyVisibleTranslationDelta,
+            bool bodyGroundedBefore,
+            bool bodyGroundedAfter,
+            float pelvisReachTargetOffset,
+            float pelvisReachCurrentOffset,
+            float actorMovementCompensationTargetOffset,
+            float actorMovementCompensationCurrentOffset,
+            float actorMovementCompensationVelocity,
             float pelvisTargetOffset,
             float pelvisCurrentOffset,
             FootPlacementSupportFoot supportFoot,
@@ -103,10 +166,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CurrentBodyTick = currentBodyTick;
             ResetSequence = resetSequence;
             PoseSourceLayerId = poseSourceLayerId ?? string.Empty;
+            CalibrationId = calibrationId ?? string.Empty;
+            CalibrationRevision = calibrationRevision ?? string.Empty;
+            AnalysisSourceId = analysisSourceId ?? string.Empty;
+            AnalysisVersion = analysisVersion;
+            AnalysisAlgorithmVersion = analysisAlgorithmVersion ?? string.Empty;
             m_Contributions = contributions;
             ContributionCount = contributionCount;
             Left = left;
             Right = right;
+            ActorMovementCompensationMode = actorMovementCompensationMode;
+            BodySourceTranslationDelta = bodySourceTranslationDelta;
+            BodyVisibleTranslationDelta = bodyVisibleTranslationDelta;
+            BodyGroundedBefore = bodyGroundedBefore;
+            BodyGroundedAfter = bodyGroundedAfter;
+            PelvisReachTargetOffset = pelvisReachTargetOffset;
+            PelvisReachCurrentOffset = pelvisReachCurrentOffset;
+            ActorMovementCompensationTargetOffset = actorMovementCompensationTargetOffset;
+            ActorMovementCompensationCurrentOffset = actorMovementCompensationCurrentOffset;
+            ActorMovementCompensationVelocity = actorMovementCompensationVelocity;
             PelvisTargetOffset = pelvisTargetOffset;
             PelvisCurrentOffset = pelvisCurrentOffset;
             SupportFoot = supportFoot;
@@ -119,14 +197,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong CurrentBodyTick { get; }
         public ulong ResetSequence { get; }
         public string PoseSourceLayerId { get; }
+        public string CalibrationId { get; }
+        public string CalibrationRevision { get; }
+        public string AnalysisSourceId { get; }
+        public int AnalysisVersion { get; }
+        public string AnalysisAlgorithmVersion { get; }
         public int ContributionCount { get; }
         public FootPlacementFootFrameSnapshot Left { get; }
         public FootPlacementFootFrameSnapshot Right { get; }
+        public FootPlacementActorMovementCompensationMode ActorMovementCompensationMode { get; }
+        public Vector3 BodySourceTranslationDelta { get; }
+        public Vector3 BodyVisibleTranslationDelta { get; }
+        public bool BodyGroundedBefore { get; }
+        public bool BodyGroundedAfter { get; }
+        public float PelvisReachTargetOffset { get; }
+        public float PelvisReachCurrentOffset { get; }
+        public float ActorMovementCompensationTargetOffset { get; }
+        public float ActorMovementCompensationCurrentOffset { get; }
+        public float ActorMovementCompensationVelocity { get; }
         public float PelvisTargetOffset { get; }
         public float PelvisCurrentOffset { get; }
         public FootPlacementSupportFoot SupportFoot { get; }
         public CharacterFootPlacementSolverResult SolverResult { get; }
-        public bool IsValid => ActorId.IsValid && RenderFrame != 0;
+        public bool IsValid => RenderFrame != 0 && ActorId.IsValid;
 
         public AnimationPoseContribution GetContribution(int index)
         {

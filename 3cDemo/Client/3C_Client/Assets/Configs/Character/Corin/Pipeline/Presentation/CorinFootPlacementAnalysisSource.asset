@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8fb6cc693f440ff8ccb3648a3e40d34, type: 3}
+  m_Name: CorinFootPlacementAnalysisSource
+  m_EditorClassIdentifier:
+  m_AnalysisSourceId: Corin.FootPlacementAnalysis
+  m_AnalysisVersion: 1
+  m_SamplingRigAssetGuid: 846373e25bc0479cb06bd295c0103817
+  m_RigCalibration: {fileID: 11400000, guid: 471a3432ddd640c187b4ebfdf8c94e69, type: 2}
+  m_SampleRate: 60
+  m_Thresholds:
+    m_PlantEnterVerticalSpeed: 0.12
+    m_PlantExitVerticalSpeed: 0.28
+    m_PlantEnterHeight: 0.025
+    m_PlantExitHeight: 0.08
+    m_MinimumLandingSegmentSeconds: 0.05
+    m_MaximumLandingSearchSeconds: 1.5
+  m_Reduction:
+    m_VelocityTolerance: 0.002
+    m_HeightTolerance: 0.001
+    m_ConfidenceTolerance: 0.005
+    m_LandingDelayTolerance: 0.002
+    m_LandingOffsetTolerance: 0.001

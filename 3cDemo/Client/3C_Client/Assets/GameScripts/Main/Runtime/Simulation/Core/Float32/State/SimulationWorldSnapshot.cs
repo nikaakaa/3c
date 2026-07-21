@@ -53,7 +53,7 @@ namespace ThirdPersonSimulation
             if (program == null || program.Manifest.ProgramId != ProgramId || !program.ProgramHash.Equals(ProgramHash) || !program.LayoutHash.Equals(LayoutHash))
                 throw new InvalidDataException($"Actor '{ActorId}' snapshot Program binding is stale or mismatched.");
             CharacterSimulationState state = CharacterSimulationStateCodec.Read(m_StateBytes, program);
-            CharacterStateHash hash = CharacterSimulationStateCodec.ComputeHash(state, m_StateBytes);
+            CharacterStateHash hash = CharacterSimulationStateCodec.ComputeHash(state);
             if (!hash.Equals(StateHash))
                 throw new InvalidDataException($"Actor '{ActorId}' Character state hash is invalid.");
             return state;
@@ -162,7 +162,7 @@ namespace ThirdPersonSimulation
                     program.Manifest.ProgramId,
                     program.ProgramHash,
                     program.LayoutHash,
-                    CharacterSimulationStateCodec.ComputeHash(actor.State, stateBytes),
+                    CharacterSimulationStateCodec.ComputeHash(actor.State),
                     stateBytes);
                 programsDeterministic &= program.Manifest.NumericProfile.DeterministicReplay && program.Manifest.Capabilities.HasGameplayCapability("DeterministicReplay");
             }

@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using Animancer;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Editor;
+using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using TreeDesigner;
 using TreeDesigner.Editor;
 using UnityEditor;
@@ -25,6 +27,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             new Dictionary<AnimationProducerId, string>();
         SerializedProperty m_Layers;
         SerializedProperty m_TransitionLibrary;
+        SerializedProperty m_FootAnalysisMode;
+        SerializedProperty m_FootAnalysisSourceAssetGuid;
         CharacterPipelineDefinition m_InspectedContext;
         CharacterSimulationProgramAsset m_InspectedProgramAsset;
         CharacterPresentationProjectionAsset m_InspectedProjectionAsset;
@@ -41,6 +45,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             m_Layers = serializedObject.FindProperty("m_Layers");
             m_TransitionLibrary = serializedObject.FindProperty("m_TransitionLibrary");
+            m_FootAnalysisMode = serializedObject.FindProperty("m_FootPlacementAnalysisMode");
+            m_FootAnalysisSourceAssetGuid = serializedObject.FindProperty("m_FootPlacementAnalysisSourceAssetGuid");
             RefreshContexts();
         }
 
@@ -50,6 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.LabelField("Animation Presentation", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(m_Layers, new GUIContent("Layers"), true);
             EditorGUILayout.PropertyField(m_TransitionLibrary, new GUIContent("Transition Library"));
+            DrawFootAnalysis();
             bool changed = serializedObject.ApplyModifiedProperties();
             if (changed)
                 m_BindingError = string.Empty;
@@ -58,6 +65,51 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawConfigurationErrors();
             DrawContext();
             DrawProducerBindings();
+        }
+
+        void DrawFootAnalysis()
+        {
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField("Foot Analysis", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(m_FootAnalysisMode, new GUIContent("Mode"));
+            CharacterFootPlacementAnalysisMode mode =
+                (CharacterFootPlacementAnalysisMode)m_FootAnalysisMode.enumValueIndex;
+            if (mode == CharacterFootPlacementAnalysisMode.Disabled)
+            {
+                m_FootAnalysisSourceAssetGuid.stringValue = string.Empty;
+                return;
+            }
+
+            string guid = m_FootAnalysisSourceAssetGuid.stringValue;
+            CharacterFootPlacementAnalysisSource current = CharacterFootPlacementAnalysisSource.IsAssetGuid(guid)
+                ? AssetDatabase.LoadAssetAtPath<CharacterFootPlacementAnalysisSource>(AssetDatabase.GUIDToAssetPath(guid))
+                : null;
+            CharacterFootPlacementAnalysisSource next = EditorGUILayout.ObjectField(
+                "Analysis Source",
+                current,
+                typeof(CharacterFootPlacementAnalysisSource),
+                false) as CharacterFootPlacementAnalysisSource;
+            if (next != current)
+            {
+                string path = next ? AssetDatabase.GetAssetPath(next) : string.Empty;
+                m_FootAnalysisSourceAssetGuid.stringValue = next ? AssetDatabase.AssetPathToGUID(path) : string.Empty;
+            }
+            if (!next)
+            {
+                EditorGUILayout.HelpBox("Generated Foot Analysis requires an explicit Analysis Source asset.", MessageType.Error);
+                return;
+            }
+            try
+            {
+                next.RequireValid();
+                EditorGUILayout.HelpBox(
+                    $"Source Ready: {next.AnalysisSourceId.Value} / v{next.AnalysisVersion} / {CharacterFootPlacementAnalysisSource.AlgorithmVersion}",
+                    MessageType.Info);
+            }
+            catch (Exception exception)
+            {
+                EditorGUILayout.HelpBox($"Analysis Source Invalid: {exception.Message}", MessageType.Error);
+            }
         }
 
         void DrawTransitionLibraryNavigation()
@@ -132,6 +184,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
 
+            DrawEquipmentRequirements();
+
             m_ShowProducerBindings = EditorGUILayout.Foldout(
                 m_ShowProducerBindings,
                 $"Producer Bindings ({m_AnimationProducers.Count})",
@@ -170,7 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (m_InspectedProjection != null && m_InspectedContext == context &&
                 m_InspectedProgramAsset == programAsset && m_InspectedProjectionAsset == projectionAsset &&
                 string.Equals(m_InspectedProgramHash, programAsset.ProgramHash, StringComparison.Ordinal) &&
-                string.Equals(m_InspectedProjectionRevision, projectionAsset.SourceRevision, StringComparison.Ordinal))
+                string.Equals(m_InspectedProjectionRevision, projectionAsset.ProjectionRevision, StringComparison.Ordinal))
             {
                 error = string.Empty;
                 return true;
@@ -179,10 +233,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             InvalidateProjection();
             try
             {
-                m_InspectedProjection = projectionAsset.Inspect(programAsset);
+                m_InspectedProjection = projectionAsset.Load(
+                    Float32CharacterPresentationContractAdapter.Create(programAsset.Load()));
                 var topologyErrors = new List<string>();
                 CharacterAuthoringTopologyProjection topology = CharacterAuthoringTopologyProjection.Build(
-                    context.RootTreeAsset ? context.RootTreeAsset.Tree : null,
+                    CollectCompositionRoots(context),
                     topologyErrors);
                 if (!topology.IsValid)
                     throw new InvalidOperationException(string.Join("\n", topologyErrors));
@@ -201,7 +256,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_InspectedProgramAsset = programAsset;
                 m_InspectedProjectionAsset = projectionAsset;
                 m_InspectedProgramHash = programAsset.ProgramHash;
-                m_InspectedProjectionRevision = projectionAsset.SourceRevision;
+                m_InspectedProjectionRevision = projectionAsset.ProjectionRevision;
                 error = string.Empty;
                 return true;
             }
@@ -271,6 +326,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndVertical();
+        }
+
+        void DrawEquipmentRequirements()
+        {
+            if (m_InspectedProjection.EquipmentFeatureRequirements.Count == 0)
+                return;
+            EditorGUILayout.LabelField("Equipment Feature Requirements", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Projection Revision", m_InspectedProjection.ProjectionRevision);
+            for (int i = 0; i < m_InspectedProjection.EquipmentFeatureRequirements.Count; i++)
+            {
+                EquipmentFeaturePresentationResolution value = m_InspectedProjection.EquipmentFeatureRequirements[i];
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.LabelField(value.FeatureId.Value, EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Layer", $"{value.LayerId} / Animancer {value.AnimancerLayerIndex}");
+                EditorGUILayout.LabelField("Contract", $"{value.BlendMode} / {value.OutputPolicy}");
+                EditorGUILayout.LabelField("Resolved Producers", value.ProducerIds.Count == 0 ? "None" : string.Join("\n", value.ProducerIds), EditorStyles.wordWrappedLabel);
+                EditorGUILayout.EndVertical();
+            }
+        }
+
+        static IReadOnlyList<BaseTree> CollectCompositionRoots(CharacterPipelineDefinition definition)
+        {
+            var roots = new List<BaseTree>();
+            if (definition.RootTreeAsset && definition.RootTreeAsset.Tree)
+                roots.Add(definition.RootTreeAsset.Tree);
+            if (!definition.EquipmentCapabilityEnabled || !definition.EquipmentProfile)
+                return roots;
+            for (int featureIndex = 0; featureIndex < definition.EquipmentProfile.Features.Count; featureIndex++)
+            {
+                CharacterEquipmentFeatureDefinition feature = definition.EquipmentProfile.Features[featureIndex];
+                if (!feature)
+                    continue;
+                if (feature.PersistentGraph)
+                    roots.Add(feature.PersistentGraph);
+                for (int routeIndex = 0; routeIndex < feature.RouteImplementations.Count; routeIndex++)
+                {
+                    EquipmentFeatureRouteImplementation route = feature.RouteImplementations[routeIndex];
+                    if (route?.InlineGraph)
+                        roots.Add(route.InlineGraph);
+                }
+            }
+            return roots;
         }
 
         void RefreshContexts()

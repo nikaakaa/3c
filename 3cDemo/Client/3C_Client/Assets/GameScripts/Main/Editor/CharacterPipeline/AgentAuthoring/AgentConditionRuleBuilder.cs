@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
+using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
@@ -53,6 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             Register(new ActionRequestEmitter());
             Register(new ActionWindowActiveEmitter());
             Register(new CanActivateActionEmitter());
+            Register(new AITargetDistanceCompareBlackboardEmitter());
         }
 
         public bool Preflight(
@@ -85,24 +87,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             BaseEdge targetEdge,
             AgentEnsureConditionRuleCommand command)
         {
+            return BuildRule(session, targetEdge, command.Groups, command.Path);
+        }
+
+        public bool BuildFlowRule(
+            AgentPatchCompileSession session,
+            BaseEdge targetEdge,
+            IReadOnlyList<AgentConditionGroupCommand> groups,
+            string path)
+        {
+            return BuildRule(session, targetEdge, groups, path);
+        }
+
+        bool BuildRule(
+            AgentPatchCompileSession session,
+            BaseEdge targetEdge,
+            IReadOnlyList<AgentConditionGroupCommand> groups,
+            string path)
+        {
             ConditionRuleGraph target = targetEdge?.ConditionRuleGraph;
             if (!target)
             {
-                session.Report.Error(command.Path, "condition_rule_graph_missing", "目标 ConditionRuleGraph 缺失。");
+                session.Report.Error(path, "condition_rule_graph_missing", "目标 ConditionRuleGraph 缺失。");
                 return false;
             }
 
             Clear(target);
             var groupOutputs = new List<AgentConditionTermOutput>();
             int layoutIndex = 0;
-            for (int groupIndex = 0; groupIndex < command.Groups.Count; groupIndex++)
+            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
             {
-                IReadOnlyList<AgentConditionTermCommand> terms = command.Groups[groupIndex].Terms;
+                IReadOnlyList<AgentConditionTermCommand> terms = groups[groupIndex].Terms;
                 var termOutputs = new List<AgentConditionTermOutput>();
                 for (int termIndex = 0; termIndex < terms.Count; termIndex++)
                 {
                     AgentConditionTermCommand term = terms[termIndex];
-                    string termPath = $"{command.Path}.conditionGroups[{groupIndex}].terms[{termIndex}]";
+                    string termPath = $"{path}.conditionGroups[{groupIndex}].terms[{termIndex}]";
                     if (!m_Emitters.TryGetValue(term.Kind, out IAgentConditionTermEmitter emitter))
                     {
                         session.Report.Error(termPath, "condition_term_unsupported", $"Condition term 没有正式 emitter：{term.Kind}");
@@ -120,7 +140,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     true,
                     $"Group {groupIndex + 1} And",
                     new Vector2(40f, groupIndex * 180f),
-                    command.Path);
+                    path);
                 if (groupOutput.IsValid)
                     groupOutputs.Add(groupOutput);
             }
@@ -132,8 +152,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 false,
                 "Condition Groups Or",
                 new Vector2(260f, 40f),
-                command.Path);
-            return ConnectResult(session, target, combined, command.Path);
+                path);
+            return ConnectResult(session, target, combined, path);
         }
 
         public ConditionRuleGraph BuildActionExitRule(
@@ -313,6 +333,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 : default;
         }
 
+        internal static void ConfigureFloatInputs(CompareNode compare)
+        {
+            compare.SetPropertyPort("m_InputValue1", typeof(FloatPropertyPort), PortDirection.Input);
+            compare.SetPropertyPort("m_InputValue2", typeof(FloatPropertyPort), PortDirection.Input);
+        }
+
         static void Clear(ConditionRuleGraph graph)
         {
             foreach (PropertyEdge edge in graph.PropertyEdges.ToList())
@@ -385,6 +411,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             compareNode.DisplayName = "Compare";
             compareNode.Position = new Vector2(-240f, index * 100f + 20f);
             compareNode.ConfigureAuthoring(compareType);
+            AgentConditionRuleBuilder.ConfigureFloatInputs(compareNode);
 
             graph.LinkProperty(inputNode, compareNode, inputNode.PropertyPortMap["m_Output"], compareNode.PropertyPortMap["m_InputValue1"]);
             graph.LinkProperty(thresholdNode, compareNode, thresholdNode.PropertyPortMap["m_Output"], compareNode.PropertyPortMap["m_InputValue2"]);
@@ -460,6 +487,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             compareNode.DisplayName = "Facing Angle Threshold";
             compareNode.Position = new Vector2(-140f, index * 120f + 25f);
             compareNode.ConfigureAuthoring(CompareNode.CompareType.GreaterEqual);
+            AgentConditionRuleBuilder.ConfigureFloatInputs(compareNode);
 
             graph.LinkProperty(inputNode, angleNode, inputNode.PropertyPortMap["m_Output"], angleNode.PropertyPortMap["m_MoveInput"]);
             graph.LinkProperty(angleNode, compareNode, angleNode.PropertyPortMap["m_Output"], compareNode.PropertyPortMap["m_InputValue1"]);
@@ -629,5 +657,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             node.ConfigureAuthoring(profile, target);
             return ActionWindowActiveEmitter.ApplyNegate(session, graph, AgentConditionRuleBuilder.Output(node, "m_Output"), term.Negate, node.DisplayName, index, path);
         }
+    }
+
+    sealed class AITargetDistanceCompareBlackboardEmitter : IAgentConditionTermEmitter
+    {
+        public AgentConditionTermKind Kind => AgentConditionTermKind.AITargetDistanceCompareBlackboard;
+
+        public bool Preflight(AgentPatchCompileSession session, AgentConditionTermCommand term, string path)
+        {
+            if (session.Domain != AgentAuthoringSchema.AIControllerDomain)
+            {
+                session.Report.Error(path, "ai_condition_wrong_domain", "AI target distance condition 只能用于 AIController domain。");
+                return false;
+            }
+            return session.TryResolveBlackboardDeclaration(term.BlackboardKey, typeof(float), path, out _, out _);
+        }
+
+        public AgentConditionTermOutput Emit(AgentPatchCompileSession session, ConditionRuleGraph graph, AgentConditionTermCommand term, int index, string path)
+        {
+            if (!session.TryResolveBlackboardDeclaration(term.BlackboardKey, typeof(float), path, out _, out BaseExposedProperty declaration))
+                return default;
+
+            ReadTargetDistanceNode distance = graph.CreateNode(typeof(ReadTargetDistanceNode)) as ReadTargetDistanceNode;
+            distance.DisplayName = "Target Distance";
+            distance.Position = new Vector2(-520f, index * 100f);
+
+            ReadAIMemoryNode threshold = graph.CreateNode(typeof(ReadAIMemoryNode)) as ReadAIMemoryNode;
+            threshold.DisplayName = term.BlackboardKey;
+            threshold.Position = new Vector2(-520f, index * 100f + 50f);
+            threshold.ConfigureAuthoring(declaration, AIMemoryValueKind.Scalar);
+            threshold.RebindReadOnlyViewReferences(graph);
+
+            CompareNode compare = graph.CreateNode(typeof(CompareNode)) as CompareNode;
+            compare.DisplayName = "Compare Target Distance";
+            compare.Position = new Vector2(-240f, index * 100f + 20f);
+            compare.ConfigureAuthoring(term.CompareType);
+            AgentConditionRuleBuilder.ConfigureFloatInputs(compare);
+
+            graph.LinkProperty(distance, compare, distance.PropertyPortMap["m_Distance"], compare.PropertyPortMap["m_InputValue1"]);
+            graph.LinkProperty(threshold, compare, threshold.PropertyPortMap["m_Value"], compare.PropertyPortMap["m_InputValue2"]);
+            AgentConditionTermOutput output = AgentConditionRuleBuilder.Output(compare, "m_Result");
+            return ActionWindowActiveEmitter.ApplyNegate(session, graph, output, term.Negate, compare.DisplayName, index, path);
+        }
+
     }
 }

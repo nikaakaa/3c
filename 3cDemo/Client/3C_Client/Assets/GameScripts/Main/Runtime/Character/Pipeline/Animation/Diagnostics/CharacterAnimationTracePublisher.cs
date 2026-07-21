@@ -115,7 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 {
                     if (!diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, RuntimeTraceEventKind.AnimationSelectionSubmitted))
                         break;
-                    AnimationLayerSelection selection = command.Selection;
+                    AnimationChannelSelection selection = command.Selection;
                     diagnostics.Publish(
                         RuntimeTraceChannel.Animation,
                         RuntimeTraceDomain.Lifecycle,
@@ -124,7 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         ResolveInstance(diagnostics, selection.PlaybackId),
                         new RuntimeTracePayload
                         {
-                            LayerId = selection.LayerId,
+                            LayerId = selection.AnimationChannelId.Value,
                             Status = selection.HasPlayback ? "Selected" : "None",
                             OwnerId = selection.PlaybackId.ToString(),
                             Time = selection.LocalLogicTick,
@@ -149,7 +149,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         ResolveInstance(diagnostics, sample.PlaybackId),
                         new RuntimeTracePayload
                         {
-                            LayerId = sample.LayerId,
+                            LayerId = sample.AnimationChannelId.Value,
                             Name = sample.TrackName,
                             Status = sample.HasOutput ? "Output" : "Empty",
                             OwnerId = sample.PlaybackId.ToString(),

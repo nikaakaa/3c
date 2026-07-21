@@ -200,6 +200,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     visual.SampleTime,
                     visual.NormalizedTime,
                     visual.Cycle,
+                    visual.VisualTimeScale,
                     Mathf.Clamp01(weight)));
             }
             destination.Sort(AnimationPoseContributionComparer.Instance);
@@ -303,6 +304,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         {
             visual.SampleTime = sample.SampleTime;
             visual.Cycle = sample.Cycle;
+            visual.VisualTimeScale = sample.VisualTimeScale;
             visual.HasSample = true;
             float normalizedWeight = 0f;
             float normalizedTime = 0f;
@@ -401,6 +403,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             public float SampleTime { get; set; }
             public float NormalizedTime { get; set; }
             public int Cycle { get; set; }
+            public float VisualTimeScale { get; set; }
             public bool HasSample { get; set; }
             public Dictionary<string, ClipState> Children { get; } =
                 new Dictionary<string, ClipState>(StringComparer.Ordinal);

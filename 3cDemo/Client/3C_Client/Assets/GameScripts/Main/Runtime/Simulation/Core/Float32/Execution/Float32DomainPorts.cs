@@ -25,7 +25,7 @@ namespace ThirdPersonSimulation
 
     internal interface IFloat32MotionModifierSampleSink
     {
-        void Submit(MotionWarpSample<Float32Scalar> sample);
+        void Submit(MotionWarpSample<Float32Scalar, Float32ActionInstanceState> sample);
     }
 
     internal interface IFloat32ActivationReader

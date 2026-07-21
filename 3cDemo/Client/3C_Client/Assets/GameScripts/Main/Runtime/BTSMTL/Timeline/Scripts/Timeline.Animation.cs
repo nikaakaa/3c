@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace BTSMTL.Timeline
@@ -16,7 +17,7 @@ namespace BTSMTL.Timeline
             string sourceName,
             string trackName,
             UnityEngine.AnimationClip clip,
-            string layerId,
+            AnimationChannelId animationChannelId,
             float clipTime,
             float normalizedTime,
             float weight,
@@ -34,7 +35,9 @@ namespace BTSMTL.Timeline
             SourceName = sourceName;
             TrackName = trackName;
             Clip = clip;
-            LayerId = layerId;
+            AnimationChannelId = animationChannelId.IsValid
+                ? animationChannelId
+                : throw new ArgumentException("Animation Channel identity is invalid.", nameof(animationChannelId));
             ClipTime = clipTime;
             NormalizedTime = normalizedTime;
             Weight = weight;
@@ -53,7 +56,7 @@ namespace BTSMTL.Timeline
         public string SourceName { get; }
         public string TrackName { get; }
         public UnityEngine.AnimationClip Clip { get; }
-        public string LayerId { get; }
+        public AnimationChannelId AnimationChannelId { get; }
         public float ClipTime { get; }
         public float NormalizedTime { get; }
         public float Weight { get; }
@@ -66,8 +69,20 @@ namespace BTSMTL.Timeline
     [TrackGroup("Base"), ScriptGuid("3f0d14cafa6f2c84389c42789ec00083"), IconGuid("e6435fa591ae4414eb0f26dc6410086e"), Ordered(0), Color(127, 253, 228)]
     public partial class AnimationTrack : Track, ITimelineTrackOwnedAuthoringIdentity
     {
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public string LayerId = "Base";
+        [SerializeField, ShowInInspector, OnValueChanged("RebindTimeline")]
+        string m_AnimationChannelId = string.Empty;
+
+        public AnimationChannelId AnimationChannelId => string.IsNullOrWhiteSpace(m_AnimationChannelId)
+            ? default
+            : new AnimationChannelId(m_AnimationChannelId);
+
+        public void SetAnimationChannelId(AnimationChannelId animationChannelId)
+        {
+            m_AnimationChannelId = animationChannelId.IsValid
+                ? animationChannelId.Value
+                : throw new ArgumentException("Animation Channel identity is invalid.", nameof(animationChannelId));
+            RebindTimeline();
+        }
 
         public void Sample(float timelineTime, int trackIndex, string sourceId, string sourceName, ICollection<TimelineAnimationContribution> contributions)
         {
@@ -117,7 +132,7 @@ namespace BTSMTL.Timeline
                     sourceName,
                     Name,
                     animationClip.Clip,
-                    LayerId,
+                    AnimationChannelId,
                     clipTime,
                     normalizedTime,
                     weight,

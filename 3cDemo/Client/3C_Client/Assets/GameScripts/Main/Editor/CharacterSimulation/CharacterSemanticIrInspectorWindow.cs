@@ -351,10 +351,50 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (value.Code == SimulationOperationCode.TimelineMotionWarp)
                 {
                     IEnumerable<ProgramReference> references = m_SemanticIr.References.Where(reference => reference.SourceOperation.Equals(value.Handle));
-                    details += $"\nMotionWarp Source: {string.Join(", ", references.Where(reference => reference.Kind == ProgramReferenceKind.MotionSourceOperation).Select(reference => $"{reference.TargetIndex}:{reference.ExternalIdentity}"))}";
+                    details += BuildMotionWarpDetails(value, references);
                 }
                 AddTargetRow($"{value.Handle.Value:D4}  {value.Code}  {value.TemplateIdentity}", details, ProgramSourceTargetKind.Operation, value.Handle.Value);
             }
+        }
+
+        string BuildMotionWarpDetails(SemanticOperation operation, IEnumerable<ProgramReference> references)
+        {
+            string source = string.Join(", ", references
+                .Where(reference => reference.Kind == ProgramReferenceKind.MotionSourceOperation)
+                .Select(reference => $"{reference.TargetIndex}:{reference.ExternalIdentity}"));
+            if (operation.Unsigned0 >= (ulong)m_SemanticIr.CatalogEntries.Count)
+                return $"\nMotionWarp Source: {source}\nMotionWarp Catalog: invalid index {operation.Unsigned0}";
+            ProgramCatalogEntry catalog = m_SemanticIr.CatalogEntries[(int)operation.Unsigned0];
+            return
+                $"\nMotionWarp Source: {source}" +
+                $"\nAction Context: {CatalogField(catalog, "ActionContext")}" +
+                $"\nTranslation Mode: {(ProgramMotionWarpTranslationMode)operation.Integer0}" +
+                $"\nTarget Offset Space: {CatalogField(catalog, "TargetOffsetSpace")}" +
+                $"\nTarget Planar Offset: {CatalogField(catalog, "TargetPlanarOffset")}" +
+                $"\nPosition Progress: {CatalogField(catalog, "PositionProgressCurve")}" +
+                $"\nMaximum Planar Correction: {CatalogField(catalog, "MaximumPlanarCorrection")}" +
+                $"\nRotation Mode: {(ProgramMotionWarpRotationMode)operation.Integer1}" +
+                $"\nRotation Method: {CatalogField(catalog, "RotationMethod")}" +
+                $"\nTarget Yaw Offset: {CatalogField(catalog, "TargetYawOffsetDegrees")}" +
+                $"\nYaw Progress: {CatalogField(catalog, "YawProgressCurve")}" +
+                $"\nMaximum Yaw Correction: {CatalogField(catalog, "MaximumYawCorrectionDegrees")}" +
+                $"\nMaximum Yaw Rate: {CatalogField(catalog, "MaximumYawRateDegreesPerSecond")}" +
+                $"\nLimit Policy: {CatalogField(catalog, "LimitPolicy")}";
+        }
+
+        string CatalogField(ProgramCatalogEntry catalog, string name)
+        {
+            ProgramCatalogField field = catalog.Fields.SingleOrDefault(value => string.Equals(value.Name, name, StringComparison.Ordinal));
+            if (field == null)
+                return "(unused)";
+            if (field.Kind == ProgramCatalogFieldKind.Identity)
+                return field.Identity;
+            if (field.ConstantIndex < 0 || field.ConstantIndex >= m_SemanticIr.Literals.Count)
+                return $"invalid constant {field.ConstantIndex}";
+            SemanticLiteral literal = m_SemanticIr.Literals[field.ConstantIndex];
+            return literal.Kind == SemanticLiteralKind.Document
+                ? $"constant {field.ConstantIndex} / curve tokens {literal.Document.Tokens.Count}"
+                : $"constant {field.ConstantIndex} / {FormatLiteral(literal)}";
         }
 
         void BuildReferences()

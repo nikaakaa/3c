@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public CharacterActionTargetInputProvider ActionTargetProvider => m_ActionTargetProvider;
         public override string SourceIdentity => $"unity-player/{ActionTargetInputValueId}/{(m_ActionTargetProvider ? m_ActionTargetProvider.ProviderIdentity : "none")}";
 
-        public override IUnityCharacterSimulationInputAdapter Create(CharacterControlSourceContext context)
+        public override IUnityCharacterControlSourceRuntime Create(CharacterControlSourceContext context)
         {
             if (!context.Owner.CameraRig)
                 throw new InvalidOperationException("Player control source requires an explicit camera rig.");

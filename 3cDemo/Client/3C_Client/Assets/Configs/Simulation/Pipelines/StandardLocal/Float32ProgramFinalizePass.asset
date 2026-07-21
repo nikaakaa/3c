@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: Float32ProgramFinalizePass
   m_EditorClassIdentifier: 
   m_PassId: thirdperson.simulation.float32-program-finalize
-  m_ImplementationVersion: 2
+  m_ImplementationVersion: 4

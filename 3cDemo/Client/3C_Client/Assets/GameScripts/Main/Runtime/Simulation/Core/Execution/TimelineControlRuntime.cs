@@ -340,7 +340,10 @@ namespace ThirdPersonSimulation
                         m_Target.SampleMotionCurve(clip.Handle, segment);
                         break;
                     case SimulationOperationCode.TimelineMotionWarp:
-                        m_Target.SampleMotionWarp(clip.Handle, segment);
+                        m_Target.SampleMotionWarp(
+                            clip.Handle,
+                            segment,
+                            m_State.ReadRetainedActionContext(timeline));
                         break;
                     case SimulationOperationCode.TimelineTreeClip when clip.Integer0 == 1:
                         SampleCommitTreeClip(cursor, timeline, clip.Handle, segment);

@@ -18,6 +18,18 @@ namespace BTSMTL.Timeline.Editor
 
     public sealed class TimelineEditorWindow : EditorWindow
     {
+        sealed class TimelineRuntimeDebugBinding : ITimelineEditorRuntimeDebugBinding
+        {
+            public TimelineRuntimeDebugBinding(string timelineAuthoringId)
+            {
+                BindingId = string.IsNullOrWhiteSpace(timelineAuthoringId)
+                    ? throw new ArgumentException("Runtime Debug Timeline identity is invalid.", nameof(timelineAuthoringId))
+                    : timelineAuthoringId;
+            }
+
+            public string BindingId { get; }
+        }
+
         [SerializeField]
         UnityEngine.Object m_SerializedOwner;
 
@@ -37,7 +49,6 @@ namespace BTSMTL.Timeline.Editor
         UnityEngine.Object m_SourceGraphOwner;
 
         TimelineNode m_SourceNode;
-        object m_AuthoringContext;
         TimelineEditorView m_View;
 
         [SerializeField]
@@ -144,7 +155,6 @@ namespace BTSMTL.Timeline.Editor
             m_SourceNode = node;
             m_SourceGraphWindow = sourceGraphWindow;
             m_SourceGraphOwner = node.Owner?.SerializedOwner;
-            m_AuthoringContext = sourceGraphWindow ? sourceGraphWindow.AuthoringContext : null;
             Bind(
                 node.Timeline,
                 node.Timeline.SerializedOwner,
@@ -181,8 +191,6 @@ namespace BTSMTL.Timeline.Editor
             else if (string.IsNullOrEmpty(sourceNodeGuid))
                 m_SourceGraphOwner = null;
             m_SourceNodeGuid = sourceNodeGuid ?? string.Empty;
-            m_AuthoringContext = sourceGraphWindow ? sourceGraphWindow.AuthoringContext : null;
-
             titleContent = new GUIContent("Timeline Editor");
             m_View = new TimelineEditorView();
             Label ownership = new Label($"Timeline Ownership: {m_OwnershipLabel}");
@@ -191,7 +199,13 @@ namespace BTSMTL.Timeline.Editor
             ownership.style.paddingTop = 4f;
             ownership.style.paddingBottom = 4f;
             m_View.OpenClipRequested += OpenClip;
-            m_View.Init(timeline);
+            m_View.Init(TimelineEditorOpenRequestComposition.Create(
+                timeline,
+                serializedOwner,
+                serializedPropertyPath,
+                ownershipLabel,
+                sourceGraphWindow,
+                new TimelineRuntimeDebugBinding(timeline.AuthoringId)));
             rootVisualElement.Clear();
             rootVisualElement.Add(CreateModeToolbar());
             rootVisualElement.Add(ownership);
@@ -226,7 +240,6 @@ namespace BTSMTL.Timeline.Editor
             m_SourceGraphWindow = null;
             m_SourceGraphOwner = null;
             m_SourceNode = null;
-            m_AuthoringContext = null;
             BuildUnboundView();
         }
 
@@ -239,7 +252,6 @@ namespace BTSMTL.Timeline.Editor
             if (timeline == null)
                 return;
 
-            m_AuthoringContext = m_SourceGraphWindow ? m_SourceGraphWindow.AuthoringContext : null;
             Bind(
                 timeline,
                 m_SerializedOwner,
@@ -270,8 +282,8 @@ namespace BTSMTL.Timeline.Editor
             BaseTreeWindow graphWindow = m_SourceGraphWindow;
             if (!graphWindow)
                 graphWindow = TreeWindowUtility.TreeWindowUtilityInstance.OpenBaseTreeWindow();
-            if (m_AuthoringContext != null)
-                graphWindow.SetAuthoringContext(m_AuthoringContext);
+            if (m_SourceGraphWindow && m_SourceGraphWindow.AuthoringContext != null)
+                graphWindow.SetAuthoringContext(m_SourceGraphWindow.AuthoringContext);
 
             string identity = $"{treeClip.Track?.Name}:{treeClip.StartFrame}:{treeClip.Name}";
             graphWindow.PushTreePage(

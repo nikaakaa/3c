@@ -223,6 +223,15 @@ namespace TreeDesigner
 
         public virtual BaseEdge Link(BaseNode startNode, BaseNode endNode, string startPortName, string endPortName)
         {
+            if (!(this is StateMachineGraph) &&
+                startNode is CompositeNode &&
+                startPortName == "Output" &&
+                endPortName == "Input" &&
+                endNode is not RunnableNode)
+            {
+                throw new ArgumentException($"Composite flow target must be a RunnableNode: {endNode?.GetType().Name ?? "null"}", nameof(endNode));
+            }
+
             if (m_Edges.Any(i => i.StartNode == startNode && i.EndNode == endNode && i.StartPortName == startPortName && i.EndPortName == endPortName))
                 return null;
 
@@ -234,7 +243,9 @@ namespace TreeDesigner
                 startPortName == "Output" &&
                 endPortName == "Input")
             {
-                edge.SetConditionRuleGraph(ConditionRuleGraph.CreateDefaultGraph($"{startNode.ResolvedDisplayName}_To_{endNode.ResolvedDisplayName}_Rule"));
+                edge.SetConditionRuleGraph(ConditionRuleGraph.CreateDefaultGraph(
+                    $"{startNode.ResolvedDisplayName}_To_{endNode.ResolvedDisplayName}_Rule",
+                    AuthoringRole));
             }
             startNode.OnOutputLinked(edge);
             endNode.OnInputLinked(edge);

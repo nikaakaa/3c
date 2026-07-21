@@ -43,12 +43,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     public sealed class CharacterSimulationNodeEmitterContext
     {
         readonly BaseGraph m_Graph;
+        readonly string m_GraphContentHash;
         readonly string m_Route;
         readonly CharacterSimulationProgramBuilder m_Builder;
 
         public CharacterSimulationNodeEmitterContext(BaseGraph graph, string route, CharacterSimulationProgramBuilder builder)
         {
             m_Graph = graph ?? throw new ArgumentNullException(nameof(graph));
+            m_GraphContentHash = GraphAuthoringFingerprint.Compute(m_Graph);
             m_Route = route ?? string.Empty;
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
         }
@@ -110,7 +112,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 sourcePort.Length == 0
                     ? $"{m_Route}/node:{node.GUID}"
                     : $"{m_Route}/node:{node.GUID}/port:{sourcePort}",
-                portId: sourcePort);
+                portId: sourcePort,
+                contentHash: m_GraphContentHash);
         }
 
         public void RecordOutputPorts(BaseNode node, OperationHandle operation, params string[] portIds)
@@ -367,6 +370,30 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 text0: AttributeIdentity(node.Attribute.Value))));
             registry.Register(Simple<ApplyGameplayEffectNode>(ApplyGameplayEffect));
             registry.Register(Simple<RemoveGameplayEffectNode>(RemoveGameplayEffect));
+            registry.Register(Simple<ReadEquipmentIdentityNode>(node => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.ReadEquipmentIdentity,
+                text0: node.SlotId)));
+            registry.Register(Simple<ReadEquipmentParameterNode>(node => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.ReadEquipmentParameter,
+                integer0: (int)node.ValueKind,
+                text0: node.ParameterId)));
+            registry.Register(Simple<RequestEquipmentChangeNode>(node => EquipmentChange(
+                SimulationOperationCode.RequestEquipmentChange,
+                node)));
+            registry.Register(Simple<BeginEquipmentChangeNode>(node => EquipmentChange(
+                SimulationOperationCode.BeginEquipmentChange,
+                node)));
+            registry.Register(Simple<CommitEquipmentChangeNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.CommitEquipmentChange)));
+            registry.Register(Simple<CancelEquipmentChangeNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.CancelEquipmentChange)));
+            registry.Register(Simple<EnterEquipmentFeatureHostNode>(node => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.EnterEquipmentFeatureHost,
+                text0: node.SlotId)));
+            registry.Register(Simple<ExitEquipmentFeatureHostNode>(node => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.ExitEquipmentFeatureHost,
+                text0: node.SlotId)));
+            registry.Register(Simple<ResolveEquipmentActionRouteNode>(node => new CharacterSimulationNodeEmission(
+                SimulationOperationCode.ResolveEquipmentActionRoute,
+                text0: node.RouteId)));
             registry.Register(Simple<LocomotionInputMotionNode>(node => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.LocomotionInputMotion,
                 flags: (node.CameraRelative ? 1U : 0U) | (node.Continuous ? 2U : 0U),
@@ -385,6 +412,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 SimulationOperationCode.BlackboardGet,
                 text0: node.BlackboardVariable.DeclarationId,
                 constants: Fields(("DeclarationOwner", node.BlackboardVariable.DeclarationOwnerId)));
+        }
+
+        static CharacterSimulationNodeEmission EquipmentChange(SimulationOperationCode code, EquipmentChangeOperationNode node)
+        {
+            return new CharacterSimulationNodeEmission(
+                code,
+                text0: node.SlotId,
+                constants: Fields(("ActionContext", AssetIdentity(node.ActionContext))));
         }
 
         static CharacterSimulationNodeEmission ApplyGameplayEffect(ApplyGameplayEffectNode node)
@@ -622,7 +657,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string producerIdentity = $"camera:{source.TemplateIdentity}";
             int producer = context.Builder.DeclareProducer(
                 producerIdentity,
-                CameraProgramOperationSchema.LayerId,
+                CameraProgramOperationSchema.ChannelId,
                 source.TemplateIdentity,
                 ProgramOutputChannelKind.Presentation,
                 source);

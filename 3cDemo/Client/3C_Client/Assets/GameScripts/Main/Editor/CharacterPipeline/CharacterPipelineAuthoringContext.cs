@@ -8,20 +8,17 @@ using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Graph;
 using TreeDesigner;
 using TreeDesigner.Editor;
-
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
-    public sealed class CharacterPipelineAuthoringContext : ITreeInspectorBlackboardAuthoringContext
+    public sealed partial class CharacterPipelineAuthoringContext : ITreeInspectorBlackboardAuthoringContext
     {
         public CharacterPipelineAuthoringContext(CharacterPipelineDefinition definition)
         {
             Definition = definition;
         }
-
         public CharacterPipelineDefinition Definition { get; }
         public CharacterInputProfile InputProfile => Definition ? Definition.InputProfile : null;
         BaseTree RootTree => Definition && Definition.RootTreeAsset ? Definition.RootTreeAsset.Tree : null;
-
         public IReadOnlyList<PipelineBlackboardVariableScope> GetAllowedBlackboardScopes(BaseTree currentTree)
         {
             List<PipelineBlackboardVariableScope> scopes = new List<PipelineBlackboardVariableScope>
@@ -29,32 +26,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PipelineBlackboardVariableScope.Graph,
                 PipelineBlackboardVariableScope.Frame
             };
-
             if (RootTree == currentTree)
                 scopes.Insert(0, PipelineBlackboardVariableScope.Character);
-
             if (currentTree is StateBehaviorSubTree)
             {
                 scopes.Add(PipelineBlackboardVariableScope.State);
                 if (currentTree.Nodes.Any(i => i is ActivateActionInstanceNode))
                     scopes.Add(PipelineBlackboardVariableScope.ActionInstance);
             }
-
             return scopes;
         }
-
         public IEnumerable<BaseTree> GetAdditionalVisibleBlackboardSources(BaseTree currentTree)
         {
             if (RootTree && RootTree != currentTree)
                 yield return RootTree;
         }
+        public bool IsBlackboardDeclarationTypeAllowed(Type exposedPropertyType, Type valueType) => true;
     }
-
     public sealed class PipelineBlackboardValueNodeView : BaseNodeView
     {
         readonly PipelineBlackboardValueInfoNode m_BlackboardNode;
         readonly Label m_VariableLabel;
-
         public PipelineBlackboardValueNodeView(BaseNode node, BaseTreeWindow treeWindow) : base(node, treeWindow)
         {
             m_BlackboardNode = node as PipelineBlackboardValueInfoNode;
@@ -66,7 +58,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             titleContainer.Add(m_VariableLabel);
             RefreshVariableLabel();
         }
-
         void BuildVariableMenu(DropdownMenu menu)
         {
             foreach (BaseExposedProperty declaration in m_TreeWindow.GetVisibleExposedProperties()
@@ -92,7 +83,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     : DropdownMenuAction.Status.Normal);
             }
         }
-
         void RefreshVariableLabel()
         {
             PipelineBlackboardVariableReference reference = m_BlackboardNode.BlackboardVariable;

@@ -17,7 +17,8 @@ namespace ThirdPersonSimulation
         TargetBlocked = 1,
         ActiveSourceNotCancelable = 2,
         SourceActionStillActive = 3,
-        TargetSnapshotRequired = 4
+        TargetSnapshotRequired = 4,
+        RequiredTagsMissing = 5
     }
 
     internal readonly struct ActionAdmissionTargetCandidate
@@ -98,6 +99,7 @@ namespace ThirdPersonSimulation
             string actionId,
             ActionTargetRequirement targetRequirement,
             string[] tags,
+            ActionTagQuery required,
             ActionTagQuery block,
             ActionTagQuery cancel)
         {
@@ -106,6 +108,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentOutOfRangeException(nameof(targetRequirement));
             TargetRequirement = targetRequirement;
             Tags = tags ?? Array.Empty<string>();
+            Required = required ?? throw new ArgumentNullException(nameof(required));
             Block = block ?? throw new ArgumentNullException(nameof(block));
             Cancel = cancel ?? throw new ArgumentNullException(nameof(cancel));
         }
@@ -113,6 +116,7 @@ namespace ThirdPersonSimulation
         public string ActionId { get; }
         public ActionTargetRequirement TargetRequirement { get; }
         public string[] Tags { get; }
+        public ActionTagQuery Required { get; }
         public ActionTagQuery Block { get; }
         public ActionTagQuery Cancel { get; }
     }
@@ -131,6 +135,9 @@ namespace ThirdPersonSimulation
             if (readInt32Constant == null)
                 throw new ArgumentNullException(nameof(readInt32Constant));
             var tags = new List<string>();
+            var requiredAll = new List<string>();
+            var requiredAny = new List<string>();
+            var requiredNone = new List<string>();
             var blockAll = new List<string>();
             var blockAny = new List<string>();
             var blockNone = new List<string>();
@@ -157,6 +164,12 @@ namespace ThirdPersonSimulation
                     continue;
                 if (field.Name.StartsWith("Tag:", StringComparison.Ordinal))
                     tags.Add(field.Identity);
+                else if (field.Name.StartsWith("Required:All:", StringComparison.Ordinal))
+                    requiredAll.Add(field.Identity);
+                else if (field.Name.StartsWith("Required:Any:", StringComparison.Ordinal))
+                    requiredAny.Add(field.Identity);
+                else if (field.Name.StartsWith("Required:None:", StringComparison.Ordinal))
+                    requiredNone.Add(field.Identity);
                 else if (field.Name.StartsWith("Block:All:", StringComparison.Ordinal))
                     blockAll.Add(field.Identity);
                 else if (field.Name.StartsWith("Block:Any:", StringComparison.Ordinal))
@@ -176,6 +189,7 @@ namespace ThirdPersonSimulation
                 entry.Identity.Substring(ActionPrefix.Length),
                 targetRequirement,
                 tags.ToArray(),
+                new ActionTagQuery(requiredAll.ToArray(), requiredAny.ToArray(), requiredNone.ToArray()),
                 new ActionTagQuery(blockAll.ToArray(), blockAny.ToArray(), blockNone.ToArray()),
                 new ActionTagQuery(cancelAll.ToArray(), cancelAny.ToArray(), cancelNone.ToArray()));
         }
@@ -208,13 +222,20 @@ namespace ThirdPersonSimulation
             m_ActiveSourceTags.Clear();
             try
             {
+                foreach (string tag in m_Port.OwnedGameplayTags)
+                    AddTag(m_OwnedTags, tag);
+
+                if (!request.TargetProfile.Required.IsEmpty && !MatchesQuery(request.TargetProfile.Required, m_OwnedTags))
+                    return Reject(ActionAdmissionRejectReason.RequiredTagsMissing, string.Empty);
+
+                if (!request.TargetProfile.Block.IsEmpty && MatchesQuery(request.TargetProfile.Block, m_OwnedTags))
+                    return Reject(ActionAdmissionRejectReason.TargetBlocked, string.Empty);
+
                 if (request.TargetProfile.TargetRequirement == ActionTargetRequirement.SnapshotRequired &&
                     !request.TargetCandidate.HasTarget)
                 {
                     return Reject(ActionAdmissionRejectReason.TargetSnapshotRequired, string.Empty);
                 }
-                foreach (string tag in m_Port.OwnedGameplayTags)
-                    AddTag(m_OwnedTags, tag);
 
                 bool hasActiveSource = m_Port.TryGetActiveAction(out string activeSourceActionId);
                 if (hasActiveSource)
@@ -222,9 +243,6 @@ namespace ThirdPersonSimulation
                     ActionAdmissionProfile activeSourceProfile = m_Port.RequireActionProfile(activeSourceActionId);
                     AddTags(m_ActiveSourceTags, activeSourceProfile.Tags);
                 }
-
-                if (!request.TargetProfile.Block.IsEmpty && MatchesQuery(request.TargetProfile.Block, m_OwnedTags))
-                    return Reject(ActionAdmissionRejectReason.TargetBlocked, activeSourceActionId);
 
                 if (!hasActiveSource)
                     return new ActionAdmissionDecision(true, ActionAdmissionRejectReason.None, string.Empty);

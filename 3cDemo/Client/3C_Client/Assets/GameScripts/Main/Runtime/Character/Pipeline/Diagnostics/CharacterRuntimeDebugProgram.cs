@@ -47,16 +47,18 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 new StableHash(programHash).Value);
             var sourceMap = new DebugSourceMap(revision);
             var containers = new Dictionary<RuntimeSourceElementKey, RuntimeSourceElementHandle>();
+            Dictionary<RuntimeSourceElementKey, string> containerContentHashes = ResolveContainerContentHashes(entries);
             for (int i = 0; i < entries.Count; i++)
             {
                 ProgramSourceMapEntry entry = entries[i];
                 RuntimeSourceElementKey source = ResolveSource(entry);
-                RuntimeSourceElementHandle parent = EnsureParent(sourceMap, containers, source, programHash);
+                string contentHash = ResolveContentHash(source, entry.ContentHash, containerContentHashes, programHash);
+                RuntimeSourceElementHandle parent = EnsureParent(sourceMap, containers, source, containerContentHashes, programHash);
                 sourceMap.Add(
                     source,
                     parent,
                     string.IsNullOrEmpty(entry.DisplayPath) ? source.ToString() : entry.DisplayPath,
-                    programHash,
+                    contentHash,
                     ResolveTarget(entry));
             }
             sourceMap.Seal();
@@ -67,7 +69,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             DebugSourceMap map,
             Dictionary<RuntimeSourceElementKey, RuntimeSourceElementHandle> containers,
             RuntimeSourceElementKey source,
-            string contentHash)
+            IReadOnlyDictionary<RuntimeSourceElementKey, string> contentHashes,
+            string programHash)
         {
             switch (source.Kind)
             {
@@ -80,7 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                         RuntimeSourceElementKey.Graph(source.GraphAuthoringId),
                         default,
                         source.GraphAuthoringId,
-                        contentHash);
+                        ResolveContainerContentHash(RuntimeSourceElementKey.Graph(source.GraphAuthoringId), contentHashes, programHash));
                 case RuntimeSourceElementKind.Track:
                     return EnsureContainer(
                         map,
@@ -88,7 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                         RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId),
                         default,
                         source.TimelineAuthoringId,
-                        contentHash);
+                        ResolveContainerContentHash(RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId), contentHashes, programHash));
                 case RuntimeSourceElementKind.Clip:
                 case RuntimeSourceElementKind.TreeClip:
                     RuntimeSourceElementHandle timeline = EnsureContainer(
@@ -97,14 +100,14 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                         RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId),
                         default,
                         source.TimelineAuthoringId,
-                        contentHash);
+                        ResolveContainerContentHash(RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId), contentHashes, programHash));
                     return EnsureContainer(
                         map,
                         containers,
                         RuntimeSourceElementKey.Track(source.TimelineAuthoringId, source.TrackAuthoringId),
                         timeline,
                         source.TrackAuthoringId,
-                        contentHash);
+                        ResolveContainerContentHash(RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId), contentHashes, programHash));
                 default:
                     return default;
             }
@@ -125,16 +128,66 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             return handle;
         }
 
+        static Dictionary<RuntimeSourceElementKey, string> ResolveContainerContentHashes(IReadOnlyList<ProgramSourceMapEntry> entries)
+        {
+            var hashes = new Dictionary<RuntimeSourceElementKey, string>();
+            for (int i = 0; i < entries.Count; i++)
+            {
+                ProgramSourceMapEntry entry = entries[i];
+                if (string.IsNullOrEmpty(entry.ContentHash))
+                    continue;
+                RuntimeSourceElementKey container = !string.IsNullOrEmpty(entry.TimelineId)
+                    ? RuntimeSourceElementKey.Timeline(entry.TimelineId)
+                    : !string.IsNullOrEmpty(entry.GraphId)
+                        ? RuntimeSourceElementKey.Graph(entry.GraphId)
+                        : default;
+                if (!container.IsValid)
+                    continue;
+                if (hashes.TryGetValue(container, out string existing) && !string.Equals(existing, entry.ContentHash, StringComparison.Ordinal))
+                    throw new InvalidOperationException($"Program source '{container}' has conflicting content hashes.");
+                hashes[container] = entry.ContentHash;
+            }
+            return hashes;
+        }
+
+        static string ResolveContentHash(
+            RuntimeSourceElementKey source,
+            string contentHash,
+            IReadOnlyDictionary<RuntimeSourceElementKey, string> containerContentHashes,
+            string programHash)
+        {
+            if (!string.IsNullOrEmpty(contentHash))
+                return contentHash;
+            RuntimeSourceElementKey container = source.Kind switch
+            {
+                RuntimeSourceElementKind.Node or RuntimeSourceElementKind.Edge or RuntimeSourceElementKind.BlackboardDeclaration => RuntimeSourceElementKey.Graph(source.GraphAuthoringId),
+                RuntimeSourceElementKind.Timeline or RuntimeSourceElementKind.Track or RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip => RuntimeSourceElementKey.Timeline(source.TimelineAuthoringId),
+                _ => default
+            };
+            return ResolveContainerContentHash(container, containerContentHashes, programHash);
+        }
+
+        static string ResolveContainerContentHash(
+            RuntimeSourceElementKey source,
+            IReadOnlyDictionary<RuntimeSourceElementKey, string> contentHashes,
+            string programHash)
+        {
+            if (!source.IsValid)
+                return programHash;
+            if (contentHashes.TryGetValue(source, out string contentHash))
+                return contentHash;
+            if (source.Kind == RuntimeSourceElementKind.Graph &&
+                string.Equals(source.GraphAuthoringId, "Program", StringComparison.Ordinal))
+            {
+                return programHash;
+            }
+            throw new InvalidOperationException($"Program authoring container '{source}' has no content hash.");
+        }
+
         static RuntimeSourceElementKey ResolveSource(ProgramSourceMapEntry source)
         {
             if (source.TargetKind == ProgramSourceTargetKind.BodyMotion)
                 return RuntimeSourceElementKey.BodyMotionProfile(source.DisplayPath);
-            if (!string.IsNullOrEmpty(source.DeclarationId))
-                return RuntimeSourceElementKey.Declaration(source.GraphId, source.DeclarationId);
-            if (!string.IsNullOrEmpty(source.NodeId))
-                return RuntimeSourceElementKey.Node(source.GraphId, source.NodeId);
-            if (!string.IsNullOrEmpty(source.EdgeId))
-                return RuntimeSourceElementKey.Edge(source.GraphId, source.EdgeId);
             if (!string.IsNullOrEmpty(source.ClipId))
             {
                 bool treeClip = string.Equals(source.SourceType, typeof(TreeClip).FullName, StringComparison.Ordinal);
@@ -144,6 +197,12 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 return RuntimeSourceElementKey.Track(source.TimelineId, source.TrackId);
             if (!string.IsNullOrEmpty(source.TimelineId))
                 return RuntimeSourceElementKey.Timeline(source.TimelineId);
+            if (!string.IsNullOrEmpty(source.DeclarationId))
+                return RuntimeSourceElementKey.Declaration(source.GraphId, source.DeclarationId);
+            if (!string.IsNullOrEmpty(source.NodeId))
+                return RuntimeSourceElementKey.Node(source.GraphId, source.NodeId);
+            if (!string.IsNullOrEmpty(source.EdgeId))
+                return RuntimeSourceElementKey.Edge(source.GraphId, source.EdgeId);
             if (!string.IsNullOrEmpty(source.GraphId))
                 return RuntimeSourceElementKey.Graph(source.GraphId);
             throw new InvalidOperationException($"Program source '{source.TargetKind}:{source.TargetIndex}' has no source identity.");
@@ -166,5 +225,3 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         }
     }
 }
-
-

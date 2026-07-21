@@ -26,6 +26,7 @@ namespace TreeDesigner
     [NodeName("Enter")]
     [NodeColor(82, 214, 128)]
     [NodePath("Base/StateMachine/Enter")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     [Output(StateMachinePorts.StateOut, PortCapacity.Multi)]
     public sealed class StateMachineEnterNode : StateMachineControlNode
     {
@@ -35,6 +36,7 @@ namespace TreeDesigner
     [NodeName("Any State")]
     [NodeColor(80, 205, 210)]
     [NodePath("Base/StateMachine/AnyState")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     [Output(StateMachinePorts.StateOut, PortCapacity.Multi)]
     public sealed class StateMachineAnyStateNode : StateMachineControlNode
     {
@@ -44,6 +46,7 @@ namespace TreeDesigner
     [NodeName("Exit")]
     [NodeColor(240, 94, 94)]
     [NodePath("Base/StateMachine/Exit")]
+    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class StateMachineExitNode : StateMachineControlNode
     {
 #if UNITY_EDITOR

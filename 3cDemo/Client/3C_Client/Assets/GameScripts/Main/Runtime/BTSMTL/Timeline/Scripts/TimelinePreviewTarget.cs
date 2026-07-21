@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace BTSMTL.Timeline
@@ -10,20 +11,22 @@ namespace BTSMTL.Timeline
             string sourceTimelineAuthoringId,
             string sourceTrackAuthoringId,
             string displayName,
-            string layerId,
+            AnimationChannelId animationChannelId,
             string syncGroupId)
         {
             SourceTimelineAuthoringId = sourceTimelineAuthoringId ?? string.Empty;
             SourceTrackAuthoringId = sourceTrackAuthoringId ?? string.Empty;
             DisplayName = displayName ?? string.Empty;
-            LayerId = layerId ?? string.Empty;
+            AnimationChannelId = animationChannelId.IsValid
+                ? animationChannelId
+                : throw new ArgumentException("Animation Channel identity is invalid.", nameof(animationChannelId));
             SyncGroupId = syncGroupId ?? string.Empty;
         }
 
         public string SourceTimelineAuthoringId { get; }
         public string SourceTrackAuthoringId { get; }
         public string DisplayName { get; }
-        public string LayerId { get; }
+        public AnimationChannelId AnimationChannelId { get; }
         public string SyncGroupId { get; }
         public bool IsValid => !string.IsNullOrEmpty(SourceTimelineAuthoringId) &&
                                !string.IsNullOrEmpty(SourceTrackAuthoringId);
@@ -35,7 +38,7 @@ namespace BTSMTL.Timeline
             string targetTrackAuthoringId,
             string sourceProducerId,
             string targetProducerId,
-            string layerId,
+            AnimationChannelId animationChannelId,
             string syncGroupId,
             string previousMarkerId,
             string nextMarkerId,
@@ -51,7 +54,9 @@ namespace BTSMTL.Timeline
             TargetTrackAuthoringId = targetTrackAuthoringId ?? string.Empty;
             SourceProducerId = sourceProducerId ?? string.Empty;
             TargetProducerId = targetProducerId ?? string.Empty;
-            LayerId = layerId ?? string.Empty;
+            AnimationChannelId = animationChannelId.IsValid
+                ? animationChannelId
+                : throw new ArgumentException("Animation Channel identity is invalid.", nameof(animationChannelId));
             SyncGroupId = syncGroupId ?? string.Empty;
             PreviousMarkerId = previousMarkerId ?? string.Empty;
             NextMarkerId = nextMarkerId ?? string.Empty;
@@ -68,7 +73,7 @@ namespace BTSMTL.Timeline
         public string TargetTrackAuthoringId { get; }
         public string SourceProducerId { get; }
         public string TargetProducerId { get; }
-        public string LayerId { get; }
+        public AnimationChannelId AnimationChannelId { get; }
         public string SyncGroupId { get; }
         public string PreviousMarkerId { get; }
         public string NextMarkerId { get; }

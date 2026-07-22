@@ -16,7 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed partial class CharacterPresentationProjection
+    public sealed partial class CharacterPresentationProjection : ISerializationCallbackReceiver
     {
         [SerializeField] string m_ProgramId = string.Empty;
         [SerializeField] string m_SourceRevision = string.Empty;
@@ -128,6 +128,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_SourceIdentity = string.Empty;
         [SerializeField] ProgramOutputChannelKind m_ChannelKind;
         [SerializeField] CharacterPresentationProducerKind m_Kind;
+        [SerializeField] AnimationPoseSourceKind m_AnimationSourceKind;
         [SerializeField] string m_TimelineAuthoringId = string.Empty;
         [SerializeField] string m_TrackAuthoringId = string.Empty;
         [SerializeField] string m_AnimationChannelId = string.Empty;
@@ -146,6 +147,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string sourceIdentity,
             ProgramOutputChannelKind channelKind,
             CharacterPresentationProducerKind kind,
+            AnimationPoseSourceKind animationSourceKind,
             string timelineAuthoringId,
             string trackAuthoringId,
             AnimationChannelId animationChannelId,
@@ -165,6 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourceIdentity = sourceIdentity ?? string.Empty;
             m_ChannelKind = channelKind;
             m_Kind = kind;
+            m_AnimationSourceKind = animationSourceKind;
             m_TimelineAuthoringId = timelineAuthoringId ?? string.Empty;
             m_TrackAuthoringId = trackAuthoringId ?? string.Empty;
             m_AnimationChannelId = animationChannelId.Value;
@@ -183,6 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string SourceIdentity => m_SourceIdentity;
         public ProgramOutputChannelKind ChannelKind => m_ChannelKind;
         public CharacterPresentationProducerKind Kind => m_Kind;
+        public AnimationPoseSourceKind AnimationSourceKind => m_AnimationSourceKind;
         public AnimationProducerId ProducerId => new AnimationProducerId(m_TimelineAuthoringId, m_TrackAuthoringId);
         public AnimationChannelId AnimationChannelId => string.IsNullOrWhiteSpace(m_AnimationChannelId)
             ? default
@@ -202,7 +206,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                AnimationChannelId.IsValid &&
                                Enum.IsDefined(typeof(ProgramOutputChannelKind), m_ChannelKind) &&
                                Enum.IsDefined(typeof(CharacterPresentationProducerKind), m_Kind) &&
-                               (m_Kind == CharacterPresentationProducerKind.Animation && m_Animation != null ||
+                               (m_Kind == CharacterPresentationProducerKind.Animation &&
+                                Enum.IsDefined(typeof(AnimationPoseSourceKind), m_AnimationSourceKind) &&
+                                (m_AnimationSourceKind == AnimationPoseSourceKind.Timeline && m_Animation != null ||
+                                 m_AnimationSourceKind == AnimationPoseSourceKind.MotionMatching && m_Animation == null) ||
                                 m_Kind == CharacterPresentationProducerKind.Camera && m_Camera != null ||
                                 m_Kind == CharacterPresentationProducerKind.Cue && m_Cue != null);
     }

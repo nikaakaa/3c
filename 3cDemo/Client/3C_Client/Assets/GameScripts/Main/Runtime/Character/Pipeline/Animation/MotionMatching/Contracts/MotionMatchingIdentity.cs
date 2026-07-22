@@ -182,6 +182,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public static bool operator !=(MotionMatchingSelectionGeneration left, MotionMatchingSelectionGeneration right) => !left.Equals(right);
     }
 
+    public readonly struct MotionMatchingSelectionIdentity : IEquatable<MotionMatchingSelectionIdentity>
+    {
+        public MotionMatchingSelectionIdentity(
+            CharacterMotionMatchingDatabaseArtifactIdentity databaseIdentity,
+            MotionMatchingSelectionGeneration generation,
+            CharacterMotionMatchingPlanId planId,
+            CharacterMotionMatchingSampleId sampleId,
+            int sampleIndex)
+        {
+            DatabaseIdentity = databaseIdentity ?? throw new ArgumentNullException(nameof(databaseIdentity));
+            if (!generation.IsValid || !planId.IsValid || !sampleId.IsValid || sampleIndex < 0)
+                throw new ArgumentException("Motion Matching Selection identity is incomplete.");
+            Generation = generation;
+            PlanId = planId;
+            SampleId = sampleId;
+            SampleIndex = sampleIndex;
+        }
+
+        public CharacterMotionMatchingDatabaseArtifactIdentity DatabaseIdentity { get; }
+        public MotionMatchingSelectionGeneration Generation { get; }
+        public CharacterMotionMatchingPlanId PlanId { get; }
+        public CharacterMotionMatchingSampleId SampleId { get; }
+        public int SampleIndex { get; }
+        public bool IsValid => DatabaseIdentity != null && Generation.IsValid && PlanId.IsValid && SampleId.IsValid && SampleIndex >= 0;
+
+        public bool Equals(MotionMatchingSelectionIdentity other) =>
+            DatabaseIdentity != null && other.DatabaseIdentity != null &&
+            DatabaseIdentity.EqualsExact(other.DatabaseIdentity) && Generation.Equals(other.Generation) &&
+            PlanId.Equals(other.PlanId) && SampleId.Equals(other.SampleId) && SampleIndex == other.SampleIndex;
+
+        public override bool Equals(object obj) => obj is MotionMatchingSelectionIdentity other && Equals(other);
+        public override int GetHashCode() => unchecked(
+            (((DatabaseIdentity?.ContentHash.GetHashCode() ?? 0) * 397 ^ Generation.GetHashCode()) * 397 ^ PlanId.GetHashCode()) * 397 ^ SampleIndex);
+        public static bool operator ==(MotionMatchingSelectionIdentity left, MotionMatchingSelectionIdentity right) => left.Equals(right);
+        public static bool operator !=(MotionMatchingSelectionIdentity left, MotionMatchingSelectionIdentity right) => !left.Equals(right);
+    }
+
     public readonly struct MotionMatchingTrajectorySourceIdentity : IEquatable<MotionMatchingTrajectorySourceIdentity>, IComparable<MotionMatchingTrajectorySourceIdentity>
     {
         public MotionMatchingTrajectorySourceIdentity(string value) { Value = MotionMatchingIdentity.Require(value, nameof(value)); }

@@ -2,86 +2,86 @@
 
 ## 1. 基线与共同合同
 
-- [ ] 1.1 枚举Animancer state、Layer、FadeGroup、TransitionLibrary与最终Pose调用点。
-- [ ] 1.2 枚举Lifecycle Current、Outgoing、Retired、superseded和producer visual复用路径。
-- [ ] 1.3 枚举Marker Sync对Current/Outgoing和Animancer weight的读取点。
-- [ ] 1.4 枚举Foot Placement对Animancer scalar与visible contribution的读取点。
-- [ ] 1.5 枚举Preview、Trace与Debug重建fade/weight的路径。
-- [ ] 1.6 核对AnimationChannelId与PoseSlotId最终类型和Projection binding。
-- [ ] 1.7 核对Pose Graph change的PoseSlotFrame输入合同。
-- [ ] 1.8 核对Rig Definition与Pose Graph dense BoneId共同合同。
-- [ ] 1.9 建立旧Layer Stack、global compositor和Animancer transition待删除清单。
-- [ ] 1.10 标记并行Projection、Foot Analysis与Presentation Runtime改动边界。
+- [x] 1.1 枚举Animancer state、Layer、FadeGroup、TransitionLibrary与最终Pose调用点。
+- [x] 1.2 枚举Lifecycle Current、Outgoing、Retired、superseded和producer visual复用路径。
+- [x] 1.3 枚举Marker Sync对Current/Outgoing和Animancer weight的读取点。
+- [x] 1.4 枚举Foot Placement对Animancer scalar与visible contribution的读取点。
+- [x] 1.5 枚举Preview、Trace与Debug重建fade/weight的路径。
+- [x] 1.6 核对AnimationChannelId与PoseSlotId最终类型和Projection binding。
+- [x] 1.7 核对Pose Graph change的PoseSlotFrame输入合同。
+- [x] 1.8 核对Rig Definition与Pose Graph dense BoneId共同合同。
+- [x] 1.9 建立旧Layer Stack、global compositor和Animancer transition待删除清单。
+- [x] 1.10 标记并行Projection、Foot Analysis与Presentation Runtime改动边界。
 
 ## 2. Rig与Runtime Binding
 
-- [ ] 2.1 定义CharacterAnimationRigDefinition schema version。
-- [ ] 2.2 定义稳定RigId与content revision。
-- [ ] 2.3 定义稳定BoneId。
-- [ ] 2.4 定义父节点优先dense BoneId数组。
-- [ ] 2.5 定义ParentIndex约束。
-- [ ] 2.6 定义root motion exclusion。
-- [ ] 2.7 定义scale policy。
-- [ ] 2.8 定义LeftFoot语义BoneId。
-- [ ] 2.9 定义RightFoot语义BoneId。
-- [ ] 2.10 校验dense顺序、父索引、唯一根与无环。
-- [ ] 2.11 定义CharacterAnimationRigBinding组件。
-- [ ] 2.12 让Rig Binding按dense index显式保存Transform。
-- [ ] 2.13 校验Transform非空、唯一且属于同Animator。
-- [ ] 2.14 校验RigId/revision精确匹配。
-- [ ] 2.15 删除运行时Humanoid、名称、path和层级搜索补全。
+- [x] 2.1 定义CharacterAnimationRigDefinition schema version。
+- [x] 2.2 定义稳定RigId与content revision。
+- [x] 2.3 定义稳定BoneId。
+- [x] 2.4 定义父节点优先dense BoneId数组。
+- [x] 2.5 定义ParentIndex约束。
+- [x] 2.6 定义root motion exclusion。
+- [x] 2.7 定义scale policy。
+- [x] 2.8 定义LeftFoot语义BoneId。
+- [x] 2.9 定义RightFoot语义BoneId。
+- [x] 2.10 校验dense顺序、父索引、唯一根与无环。
+- [x] 2.11 定义CharacterAnimationRigBinding组件。
+- [x] 2.12 让Rig Binding按dense index显式保存Transform。
+- [x] 2.13 校验Transform非空、唯一且属于同Animator。
+- [x] 2.14 校验RigId/revision精确匹配。
+- [x] 2.15 删除运行时Humanoid、名称、path和层级搜索补全。
 
 ## 3. Per-Bone Blend Profile
 
-- [ ] 3.1 定义CharacterAnimationBlendProfile schema。
-- [ ] 3.2 定义ProfileId。
-- [ ] 3.3 保存RigId/revision引用。
-- [ ] 3.4 保存显式global duration multiplier。
-- [ ] 3.5 保存按BoneId override列表。
-- [ ] 3.6 校验global multiplier有限且为正。
-- [ ] 3.7 校验override BoneId存在且唯一。
-- [ ] 3.8 校验override multiplier有限且为正。
-- [ ] 3.9 将Profile展开为dense multiplier数组。
-- [ ] 3.10 将dense Profile纳入ProjectionRevision。
+- [x] 3.1 定义CharacterAnimationBlendProfile schema。
+- [x] 3.2 定义ProfileId。
+- [x] 3.3 保存RigId/revision引用。
+- [x] 3.4 保存显式global duration multiplier。
+- [x] 3.5 保存按BoneId override列表。
+- [x] 3.6 校验global multiplier有限且为正。
+- [x] 3.7 校验override BoneId存在且唯一。
+- [x] 3.8 校验override multiplier有限且为正。
+- [x] 3.9 将Profile展开为dense multiplier数组。
+- [x] 3.10 将dense Profile纳入ProjectionRevision。
 - [ ] 3.11 在Inspector显示Rig identity和最终multiplier。
-- [ ] 3.12 删除按骨骼名称或数组长度勉强应用路径。
+- [x] 3.12 删除按骨骼名称或数组长度勉强应用路径。
 
 ## 4. Blend Library与Transition Matrix
 
-- [ ] 4.1 将Blend Library owner key定义为PoseSlotId。
-- [ ] 4.2 定义MaxActiveSourceEntries字段。
-- [ ] 4.3 定义MaxBlendInTimeToReplaceNewest字段。
-- [ ] 4.4 定义DepthBlendTimeMultiplier字段。
-- [ ] 4.5 校验Stack容量至少为2。
-- [ ] 4.6 校验阈值与倍率有限合法。
-- [ ] 4.7 定义CrossFade technique。
-- [ ] 4.8 定义Inertial technique。
-- [ ] 4.9 定义transition duration。
-- [ ] 4.10 定义canonical transition curve引用。
-- [ ] 4.11 定义Blend Profile引用。
-- [ ] 4.12 定义每slot default transition rule。
-- [ ] 4.13 定义同slotsource-target exact override。
-- [ ] 4.14 校验override source/target属于同AnimationChannelId/PoseSlotId。
-- [ ] 4.15 枚举每slot全部可达producer与合法Empty组合。
-- [ ] 4.16 物化完整source-target transition matrix。
-- [ ] 4.17 拒绝duplicate、orphan、cross-slot与缺失pair。
-- [ ] 4.18 让Runtime只按stable producer index exact lookup。
-- [ ] 4.19 删除Runtime default rule与固定duration fallback。
-- [ ] 4.20 删除Animancer TransitionLibrary authoring引用。
+- [x] 4.1 将Blend Library owner key定义为PoseSlotId。
+- [x] 4.2 定义MaxActiveSourceEntries字段。
+- [x] 4.3 定义MaxBlendInTimeToReplaceNewest字段。
+- [x] 4.4 定义DepthBlendTimeMultiplier字段。
+- [x] 4.5 校验Stack容量至少为2。
+- [x] 4.6 校验阈值与倍率有限合法。
+- [x] 4.7 定义CrossFade technique。
+- [x] 4.8 定义Inertial technique。
+- [x] 4.9 定义transition duration。
+- [x] 4.10 定义canonical transition curve引用。
+- [x] 4.11 定义Blend Profile引用。
+- [x] 4.12 定义每slot default transition rule。
+- [x] 4.13 定义同slotsource-target exact override。
+- [x] 4.14 校验override source/target属于同AnimationChannelId/PoseSlotId。
+- [x] 4.15 枚举每slot全部可达producer与合法Empty组合。
+- [x] 4.16 物化完整source-target transition matrix。
+- [x] 4.17 拒绝duplicate、orphan、cross-slot与缺失pair。
+- [x] 4.18 让Runtime只按stable producer index exact lookup。
+- [x] 4.19 删除Runtime default rule与固定duration fallback。
+- [x] 4.20 删除Animancer TransitionLibrary authoring引用。
 - [x] 4.21 强制RequireOutput slot的Empty到producer exact transition为零时长。
 
 ## 5. Canonical Curve
 
-- [ ] 5.1 定义normalized curve schema。
-- [ ] 5.2 校验首key为0/0。
-- [ ] 5.3 校验末key为1/1。
-- [ ] 5.4 校验key time严格递增。
-- [ ] 5.5 校验value位于0到1。
-- [ ] 5.6 校验value单调不减。
-- [ ] 5.7 校验key与tangent有限。
-- [ ] 5.8 将curve编入Projection canonical payload。
-- [ ] 5.9 实现唯一AnimationBlendCurveEvaluator。
-- [ ] 5.10 删除Animancer easing与FadeGroup curve读取。
+- [x] 5.1 定义normalized curve schema。
+- [x] 5.2 校验首key为0/0。
+- [x] 5.3 校验末key为1/1。
+- [x] 5.4 校验key time严格递增。
+- [x] 5.5 校验value位于0到1。
+- [x] 5.6 校验value单调不减。
+- [x] 5.7 校验key与tangent有限。
+- [x] 5.8 将curve编入Projection canonical payload。
+- [x] 5.9 实现唯一AnimationBlendCurveEvaluator。
+- [x] 5.10 删除Animancer easing与FadeGroup curve读取。
 
 ## 6. Entry与Request合同
 
@@ -267,10 +267,10 @@
 - [ ] 15.9 更新Corin Profile引用Blend Library与Rig。
 - [ ] 15.10 重建Corin Presentation Projection。
 - [ ] 15.11 删除Corin Animancer TransitionLibrary引用。
-- [ ] 15.12 删除旧Animancer fade与Layer weight代码。
-- [ ] 15.13 删除旧LayerId Stack key与Layer compositor。
-- [ ] 15.14 删除旧AnimationBlendPoseEvaluator global output职责。
-- [ ] 15.15 删除旧single-scalar visible contribution schema。
-- [ ] 15.16 删除旧Projection Layer/transition字段与reader。
-- [ ] 15.17 删除FormerlySerializedAs、fallback与兼容转换。
-- [ ] 15.18 更新`openspec/project.md`中Animancer、Blend Stack与Pose Graph职责。
+- [x] 15.12 删除旧Animancer fade与Layer weight代码。
+- [x] 15.13 删除旧LayerId Stack key与Layer compositor。
+- [x] 15.14 删除旧AnimationBlendPoseEvaluator global output职责。
+- [x] 15.15 删除旧single-scalar visible contribution schema。
+- [x] 15.16 删除旧Projection Layer/transition字段与reader。
+- [x] 15.17 删除FormerlySerializedAs、fallback与兼容转换。
+- [x] 15.18 更新`openspec/project.md`中Animancer、Blend Stack与Pose Graph职责。

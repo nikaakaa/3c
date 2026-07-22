@@ -100,14 +100,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (style)
                 styleSheets.Add(style);
             Insert(0, new GridBackground());
-            AddManipulator(new ContentZoomer());
-            AddManipulator(new ContentDragger());
-            AddManipulator(new SelectionDragger());
-            AddManipulator(new RectangleSelector());
+            this.AddManipulator(new ContentZoomer());
+            this.AddManipulator(new ContentDragger());
+            this.AddManipulator(new SelectionDragger());
+            this.AddManipulator(new RectangleSelector());
             graphViewChanged = ApplyChange;
             RegisterCallback<MouseMoveEvent>(evt =>
             {
-                LocalMousePosition = contentViewContainer.WorldToLocal(evt.position);
+                LocalMousePosition = contentViewContainer.WorldToLocal(evt.originalMousePosition);
             });
         }
 

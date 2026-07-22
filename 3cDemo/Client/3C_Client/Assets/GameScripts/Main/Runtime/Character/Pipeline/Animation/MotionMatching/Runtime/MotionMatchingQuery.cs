@@ -43,19 +43,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             MotionMatchingTrajectoryEnvelope trajectoryEnvelope,
             MotionMatchingFloatBuffer normalizedFeatures,
             MotionMatchingContactProtection contactProtection,
-            int currentSampleIndex,
-            CharacterMotionMatchingPlanId currentPlanId,
+            MotionMatchingSelectionIdentity currentSelection,
             bool initialization,
             float secondsSinceLastJump,
             ulong resetSequence)
         {
             if (!queryId.IsValid || !profileId.IsValid || databaseIdentity == null || !searchDomainId.IsValid ||
                 !trajectorySourceIdentity.IsValid || trajectoryEnvelope == null || trajectoryEnvelope.Count == 0 ||
-                normalizedFeatures.Count == 0 || currentSampleIndex < -1 ||
+                normalizedFeatures.Count == 0 ||
                 !float.IsFinite(secondsSinceLastJump) || secondsSinceLastJump < 0f)
                 throw new ArgumentException("Motion Matching Query is incomplete.");
-            if (!initialization && currentSampleIndex < 0)
-                throw new ArgumentException("Non-initialization Motion Matching Query has no current sample.");
+            if (!initialization && !currentSelection.IsValid)
+                throw new ArgumentException("Non-initialization Motion Matching Query has no current Selection identity.");
             for (int i = 0; i < normalizedFeatures.Count; i++)
             {
                 if (!float.IsFinite(normalizedFeatures[i]))
@@ -69,8 +68,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             TrajectoryEnvelope = trajectoryEnvelope;
             NormalizedFeatures = normalizedFeatures;
             ContactProtection = contactProtection;
-            CurrentSampleIndex = currentSampleIndex;
-            CurrentPlanId = currentPlanId;
+            CurrentSelection = currentSelection;
             Initialization = initialization;
             SecondsSinceLastJump = secondsSinceLastJump;
             ResetSequence = resetSequence;
@@ -84,8 +82,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingTrajectoryEnvelope TrajectoryEnvelope { get; }
         public MotionMatchingFloatBuffer NormalizedFeatures { get; }
         public MotionMatchingContactProtection ContactProtection { get; }
-        public int CurrentSampleIndex { get; }
-        public CharacterMotionMatchingPlanId CurrentPlanId { get; }
+        public MotionMatchingSelectionIdentity CurrentSelection { get; }
+        public bool HasCurrentSelection => CurrentSelection.IsValid;
+        public bool CurrentSelectionInDatabase => HasCurrentSelection &&
+            CurrentSelection.DatabaseIdentity.EqualsExact(DatabaseIdentity);
+        public int CurrentSampleIndex => CurrentSelectionInDatabase ? CurrentSelection.SampleIndex : -1;
+        public CharacterMotionMatchingPlanId CurrentPlanId => CurrentSelectionInDatabase ? CurrentSelection.PlanId : default;
         public bool Initialization { get; }
         public float SecondsSinceLastJump { get; }
         public ulong ResetSequence { get; }
@@ -108,14 +110,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             MotionMatchingTrajectoryEnvelope envelope,
             CharacterMotionMatchingPoseHistory history,
             MotionMatchingContactProtection contactProtection,
-            int currentSampleIndex,
-            CharacterMotionMatchingPlanId currentPlanId,
+            MotionMatchingSelectionIdentity currentSelection,
             float secondsSinceLastJump,
             ulong resetSequence)
         {
             if (envelope == null || history == null)
                 throw new ArgumentNullException(envelope == null ? nameof(envelope) : nameof(history));
-            bool initialization = history.Count == 0 || history.HasGap || history.ResetSequence != resetSequence;
+            bool initialization = !currentSelection.IsValid || history.Count == 0 || history.HasGap || history.ResetSequence != resetSequence;
             if (!initialization)
             {
                 float requiredHistory = 0f;
@@ -163,8 +164,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 envelope,
                 normalized,
                 contactProtection,
-                initialization ? -1 : currentSampleIndex,
-                initialization ? default : currentPlanId,
+                initialization ? default : currentSelection,
                 initialization,
                 secondsSinceLastJump,
                 resetSequence);

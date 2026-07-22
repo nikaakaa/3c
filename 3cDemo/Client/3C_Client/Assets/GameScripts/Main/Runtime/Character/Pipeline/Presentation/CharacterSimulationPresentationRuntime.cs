@@ -4,6 +4,7 @@ using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonSimulation;
 using Unity.Profiling;
@@ -28,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterBodyPresentationRuntime m_Body;
         readonly CharacterAnimationPlaybackRuntime m_Animation;
+        readonly ICharacterMotionMatchingTrajectorySource m_MotionMatchingTrajectorySource;
         readonly CharacterEquipmentVisualRuntime m_Equipment;
         readonly CharacterFootPlacementRuntime m_FootPlacement;
         readonly CharacterCameraPresentationRuntime m_Camera;
@@ -41,12 +43,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ulong m_LastPoseResetSequence;
         ulong m_AnimationBranchReplacementCount;
         bool m_Disposed;
+        CharacterPresentationTrajectoryIntent m_LatestTrajectoryIntent;
+        bool m_HasTrajectoryIntent;
+        ulong m_SelectedTrajectorySequence;
 
         internal CharacterSimulationPresentationRuntime(
             ActorId actorId,
             CharacterPresentationProjection projection,
             CharacterBodyPresentationRuntime body,
             CharacterAnimationPlaybackRuntime animation,
+            ICharacterMotionMatchingTrajectorySource motionMatchingTrajectorySource,
             CharacterEquipmentVisualRuntime equipment,
             CharacterFootPlacementRuntime footPlacement,
             CharacterCameraPresentationRuntime camera,
@@ -64,11 +70,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             m_Body = body ?? throw new ArgumentNullException(nameof(body));
             m_Animation = animation ?? throw new ArgumentNullException(nameof(animation));
+            m_MotionMatchingTrajectorySource = motionMatchingTrajectorySource;
             m_Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
             m_FootPlacement = footPlacement ?? throw new ArgumentNullException(nameof(footPlacement));
             m_Camera = camera;
             m_AnimationStartupPolicy = animationStartupPolicy;
             m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+            if (m_Projection.MotionMatching != null)
+            {
+                bool sourceMatches = m_Body.SourceMode == CharacterBodyPresentationSourceMode.SelectedStream
+                    ? motionMatchingTrajectorySource is SelectedBodyMotionMatchingTrajectorySource
+                    : motionMatchingTrajectorySource is AcceptedIntentMotionMatchingTrajectorySource;
+                if (!sourceMatches)
+                    throw new InvalidOperationException("Motion Matching Trajectory Source does not match the Presentation Body source.");
+            }
+            else if (motionMatchingTrajectorySource != null)
+            {
+                throw new InvalidOperationException("Presentation without Motion Matching payload cannot allocate a Trajectory Source.");
+            }
         }
 
         public void CaptureBodyInterval(CharacterPresentationBodyInterval interval)
@@ -82,6 +101,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> AnimationSnapshots => m_Animation.Snapshots;
         public bool HasAnimationRuntimeSnapshot => m_Animation.HasRuntimeDiagnosticsSnapshot;
         public AnimationPresentationRuntimeSnapshot AnimationRuntimeSnapshot => m_Animation.RuntimeDiagnosticsSnapshot;
+        public bool AcceptsTrajectoryIntent => m_MotionMatchingTrajectorySource is AcceptedIntentMotionMatchingTrajectorySource;
+        public ulong BodyResetSequence => m_Body.ResetSequence;
 
         public bool TryGetAnimationPresentationSnapshot(out AnimationPresentationRuntimeSnapshot snapshot)
         {
@@ -98,6 +119,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             RequireAlive();
             m_Equipment.Capture(selections);
+        }
+
+        public void CaptureTrajectoryIntent(CharacterPresentationTrajectoryIntent intent)
+        {
+            RequireAlive();
+            if (!(m_MotionMatchingTrajectorySource is AcceptedIntentMotionMatchingTrajectorySource))
+                throw new InvalidOperationException("Selected Body Presentation does not accept an Accepted Intent trajectory input.");
+            if (intent.ActorId != m_ActorId)
+                throw new InvalidOperationException("Presentation Trajectory Intent targets another Actor.");
+            if (m_HasTrajectoryIntent && intent.SourceSequence <= m_LatestTrajectoryIntent.SourceSequence)
+                throw new InvalidOperationException("Presentation Trajectory Intent sequence did not advance.");
+            m_LatestTrajectoryIntent = intent;
+            m_HasTrajectoryIntent = true;
         }
 
         public void CaptureBodyTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals)
@@ -222,6 +256,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 if (bodyFrame.ResetSequence != m_LastPoseResetSequence)
                 {
+                    m_MotionMatchingTrajectorySource?.Reset(bodyFrame.ResetSequence);
+                    m_Animation.ResetPoseBranch(bodyFrame.ResetSequence);
                     m_FootPlacement.Reset(new CharacterPosePostProcessReset(
                         m_ActorId,
                         context.RenderFrame,
@@ -231,8 +267,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_LastPoseResetSequence = bodyFrame.ResetSequence;
                     m_PoseHasOutput = false;
                 }
+                MotionMatchingTrajectorySourceFrame? trajectoryFrame = PublishMotionMatchingTrajectory(bodyFrame);
                 FinalAnimationPoseFrame animationPose = PresentAnimation(
                     bodyFrame,
+                    context.RenderFrame,
+                    trajectoryFrame,
                     context.ScaledDeltaSeconds);
                 PresentPosePostProcess(bodyFrame, context, in animationPose);
                 m_Camera?.Present(bodyFrame, context.ScaledDeltaSeconds);
@@ -267,7 +306,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterPosePostProcessResetReason.PresentationReset,
                 CharacterBodyPresentationResetReason.Initialization));
             m_Animation.Reset();
+            m_MotionMatchingTrajectorySource?.Reset(0);
             m_Body.Reset();
+            m_LatestTrajectoryIntent = default;
+            m_HasTrajectoryIntent = false;
+            m_SelectedTrajectorySequence = 0;
             m_AnimationStarted = false;
             m_PoseHasOutput = false;
             m_LastPoseResetSequence = 0;
@@ -281,11 +324,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Disposed = true;
             m_CurrentFrameSignals.Clear();
             m_AnimationStarted = false;
-            CharacterPresentationModuleLifetime.Dispose(m_Camera, m_FootPlacement, m_Equipment, m_Animation, m_Body);
+            try
+            {
+                m_MotionMatchingTrajectorySource?.Dispose();
+            }
+            finally
+            {
+                CharacterPresentationModuleLifetime.Dispose(m_Camera, m_FootPlacement, m_Equipment, m_Animation, m_Body);
+            }
         }
 
         FinalAnimationPoseFrame PresentAnimation(
             CharacterBodyPresentationFrame bodyFrame,
+            ulong presentationFrame,
+            MotionMatchingTrajectorySourceFrame? motionMatchingTrajectory,
             float presentationDeltaSeconds)
         {
             if (m_AnimationStartupPolicy == CharacterAnimationStartupPolicy.AwaitCommittedSelection &&
@@ -298,11 +350,52 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             using (AnimationMarker.Auto())
             {
                 return m_Animation.Present(
+                    presentationFrame,
                     bodyFrame.AnimationSampleTick,
                     bodyFrame.AnimationSampleAlpha,
                     presentationDeltaSeconds,
+                    bodyFrame.ResetSequence,
+                    motionMatchingTrajectory,
                     m_Diagnostics);
             }
+        }
+
+        MotionMatchingTrajectorySourceFrame? PublishMotionMatchingTrajectory(CharacterBodyPresentationFrame bodyFrame)
+        {
+            if (m_MotionMatchingTrajectorySource == null)
+                return null;
+            if (m_MotionMatchingTrajectorySource is AcceptedIntentMotionMatchingTrajectorySource accepted)
+            {
+                if (!m_HasTrajectoryIntent)
+                    return null;
+                if (m_LatestTrajectoryIntent.ResetSequence != bodyFrame.ResetSequence ||
+                    m_LatestTrajectoryIntent.CurrentTick.Value > bodyFrame.CurrentTick)
+                    throw new InvalidOperationException("Accepted Intent trajectory input does not match the current Body presentation branch.");
+                accepted.Publish(
+                    m_LatestTrajectoryIntent,
+                    bodyFrame.VisiblePosition,
+                    bodyFrame.VisibleRotation,
+                    new UnityEngine.Vector2(bodyFrame.VisibleVelocity.x, bodyFrame.VisibleVelocity.z));
+            }
+            else if (m_MotionMatchingTrajectorySource is SelectedBodyMotionMatchingTrajectorySource selected)
+            {
+                if (m_SelectedTrajectorySequence == ulong.MaxValue)
+                    throw new InvalidOperationException("Selected Body trajectory sequence was exhausted.");
+                selected.PublishSelectedBody(
+                    m_ActorId,
+                    new SimulationTick(bodyFrame.CurrentTick),
+                    ++m_SelectedTrajectorySequence,
+                    bodyFrame.TargetPosition,
+                    bodyFrame.TargetRotation,
+                    new UnityEngine.Vector2(bodyFrame.TargetVelocity.x, bodyFrame.TargetVelocity.z),
+                    bodyFrame.TargetYawVelocityDegreesPerSecond,
+                    bodyFrame.TargetGrounded,
+                    0f,
+                    bodyFrame.ResetSequence);
+            }
+            return m_MotionMatchingTrajectorySource.TryGetFrame(out MotionMatchingTrajectorySourceFrame frame)
+                ? frame
+                : (MotionMatchingTrajectorySourceFrame?)null;
         }
 
         void PresentPosePostProcess(

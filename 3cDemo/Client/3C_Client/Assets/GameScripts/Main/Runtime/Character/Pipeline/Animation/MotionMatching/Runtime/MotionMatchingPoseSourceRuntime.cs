@@ -62,6 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
     public readonly struct MotionMatchingPoseSourceOutput
     {
         public MotionMatchingPoseSourceOutput(
+            CharacterMotionMatchingDatabaseArtifactIdentity databaseIdentity,
             AnimationChannelId animationChannelId,
             PoseSlotId poseSlotId,
             AnimationPlaybackId playbackId,
@@ -74,12 +75,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             AnimationFootPlacementSample footFeatures,
             CharacterMotionMatchingPlanId planId)
         {
-            if (!animationChannelId.IsValid || !poseSlotId.IsValid || !playbackId.IsValid || !selectionGeneration.IsValid ||
+            if (databaseIdentity == null || !animationChannelId.IsValid || !poseSlotId.IsValid || !playbackId.IsValid || !selectionGeneration.IsValid ||
                 presentationRequestSequence == 0 || programProducerIndex < 0 || string.IsNullOrWhiteSpace(programProducerId) ||
                 !footPlacementWeight.IsValid ||
                 !footPlacementWeight.ParameterId.Equals(MotionMatchingPoseSourceRuntime.FootPlacementWeightParameterId) ||
                 !footFeatures.IsValid || !planId.IsValid)
                 throw new ArgumentException("Motion Matching Pose Source output is incomplete.");
+            DatabaseIdentity = databaseIdentity;
             AnimationChannelId = animationChannelId;
             PoseSlotId = poseSlotId;
             PlaybackId = playbackId;
@@ -94,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             PlanId = planId;
         }
 
+        public CharacterMotionMatchingDatabaseArtifactIdentity DatabaseIdentity { get; }
         public AnimationChannelId AnimationChannelId { get; }
         public PoseSlotId PoseSlotId { get; }
         public AnimationPlaybackId PlaybackId { get; }
@@ -154,6 +157,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 sample.LeftFoot,
                 sample.RightFoot);
             return new MotionMatchingPoseSourceOutput(
+                m_Database.ArtifactIdentity,
                 animationChannelId,
                 poseSlotId,
                 playbackId,

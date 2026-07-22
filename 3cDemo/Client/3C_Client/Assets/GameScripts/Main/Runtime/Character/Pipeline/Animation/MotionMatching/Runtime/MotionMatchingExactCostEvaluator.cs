@@ -52,7 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                         throw new InvalidOperationException($"Cost group '{range.Group}' cannot own dense exact-cost features.");
                 }
             }
-            bool continuation = !query.Initialization && query.CurrentSampleIndex >= 0 &&
+            bool continuation = !query.Initialization && query.CurrentSelectionInDatabase && query.CurrentSampleIndex >= 0 &&
                 m_Database.GetSample(query.CurrentSampleIndex).NextSampleIndex == sampleIndex;
             float continuationCost = continuation ? 0f : m_Database.CostProfile.GetGroupWeight(MotionMatchingCostGroup.Continuation);
             float jumpCost = query.Initialization || continuation ? 0f : m_Database.CostProfile.GetGroupWeight(MotionMatchingCostGroup.Jump);

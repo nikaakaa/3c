@@ -5,6 +5,7 @@ using BTSMTL.Diagnostics;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -275,6 +276,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementRuntime footPlacement = null;
             CharacterCameraPresentationRuntime camera = null;
             CharacterEquipmentVisualRuntime equipment = null;
+            ICharacterMotionMatchingTrajectorySource motionMatchingTrajectorySource = null;
             try
             {
                 body = new CharacterBodyPresentationRuntime(
@@ -291,6 +293,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     animancer,
                     animationRigBinding,
                     true);
+                motionMatchingTrajectorySource = CreateMotionMatchingTrajectorySource(
+                    projection,
+                    bodySourceMode,
+                    actorId);
                 equipment = new CharacterEquipmentVisualRuntime(
                     actorId,
                     projection,
@@ -339,6 +345,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     projection,
                     body,
                     animation,
+                    motionMatchingTrajectorySource,
                     equipment,
                     footPlacement,
                     camera,
@@ -346,6 +353,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     diagnostics);
                 body = null;
                 animation = null;
+                motionMatchingTrajectorySource = null;
                 equipment = null;
                 footPlacement = null;
                 camera = null;
@@ -353,9 +361,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             catch
             {
-                CharacterPresentationModuleLifetime.Dispose(camera, footPlacement, equipment, animation, body);
+                try
+                {
+                    motionMatchingTrajectorySource?.Dispose();
+                }
+                finally
+                {
+                    CharacterPresentationModuleLifetime.Dispose(camera, footPlacement, equipment, animation, body);
+                }
                 throw;
             }
+        }
+
+        static ICharacterMotionMatchingTrajectorySource CreateMotionMatchingTrajectorySource(
+            CharacterPresentationProjection projection,
+            CharacterBodyPresentationSourceMode bodySourceMode,
+            ActorId actorId)
+        {
+            if (projection.MotionMatching == null)
+                return null;
+            string suffix = actorId.ToString();
+            return bodySourceMode == CharacterBodyPresentationSourceMode.SelectedStream
+                ? (ICharacterMotionMatchingTrajectorySource)new SelectedBodyMotionMatchingTrajectorySource(
+                    new MotionMatchingTrajectorySourceIdentity("selected-body/" + suffix))
+                : new AcceptedIntentMotionMatchingTrajectorySource(
+                    new MotionMatchingTrajectorySourceIdentity("accepted-intent/" + suffix));
         }
 
         static CharacterBodyPresentationSettings RequireBodySettings(CharacterBodyPresentationProfile profile)

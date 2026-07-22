@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
@@ -28,6 +29,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         readonly RollbackPresentationFrameTarget m_PresentationTarget;
         readonly SortedDictionary<ulong, FixedCharacterBodySample> m_PendingBodySamples =
             new SortedDictionary<ulong, FixedCharacterBodySample>();
+        readonly SortedDictionary<ulong, FixedSimulationActorTickResult> m_PendingTrajectoryResults =
+            new SortedDictionary<ulong, FixedSimulationActorTickResult>();
 
         RollbackRuntimeState m_RuntimeState;
         RollbackOutputCommitter m_OutputCommitter;
@@ -39,6 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         bool m_PresentationRegistered;
         bool m_ResultCommitActive;
         int m_MaximumBodySamples;
+        ulong m_TrajectoryIntentSequence;
         bool m_Disposed;
 
         public DeterministicRollbackCharacterRegistration(
@@ -211,6 +215,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             if (maximumBodySamples <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maximumBodySamples));
             m_PendingBodySamples.Clear();
+            m_PendingTrajectoryResults.Clear();
             m_MaximumBodySamples = maximumBodySamples;
             m_ResultCommitActive = true;
         }
@@ -224,6 +229,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 throw new ArgumentException("Rollback published result targets another Actor.", nameof(result));
             FixedCharacterBodySample sample = result.BodySample;
             m_PendingBodySamples[sample.Tick.Value] = sample;
+            if (m_PresentationRuntime.AcceptsTrajectoryIntent)
+                m_PendingTrajectoryResults[sample.Tick.Value] = result;
             if (m_PendingBodySamples.Count > m_MaximumBodySamples)
             {
                 throw new InvalidOperationException(
@@ -249,10 +256,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                         FixedUnityPresentationBoundary.Convert(sample.FinalBody)));
                 }
                 m_PresentationRuntime.CaptureBodyTransaction(intervals);
+                foreach (FixedSimulationActorTickResult result in m_PendingTrajectoryResults.Values)
+                {
+                    m_PresentationRuntime.CaptureTrajectoryIntent(
+                        CreateTrajectoryIntent(
+                            result,
+                            checked(++m_TrajectoryIntentSequence),
+                            m_PresentationRuntime.BodyResetSequence));
+                }
             }
             finally
             {
                 m_PendingBodySamples.Clear();
+                m_PendingTrajectoryResults.Clear();
                 m_MaximumBodySamples = 0;
                 m_ResultCommitActive = false;
             }
@@ -261,8 +277,34 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public void AbortResultCommit()
         {
             m_PendingBodySamples.Clear();
+            m_PendingTrajectoryResults.Clear();
             m_MaximumBodySamples = 0;
             m_ResultCommitActive = false;
+        }
+
+        static CharacterPresentationTrajectoryIntent CreateTrajectoryIntent(
+            FixedSimulationActorTickResult result,
+            ulong sourceSequence,
+            ulong resetSequence)
+        {
+            FixedVector3 velocity = result.Motion.RequestedVelocity;
+            UnityEngine.Quaternion rotation = UnityEngine.Quaternion.Euler(
+                0f,
+                result.BodySample.FinalBody.Yaw.Degrees.ToSingle(),
+                0f);
+            UnityEngine.Vector3 forward = rotation * UnityEngine.Vector3.forward;
+            return new CharacterPresentationTrajectoryIntent(
+                result.ActorId,
+                result.Tick.Value > 1 ? new SimulationTick(result.Tick.Value - 1) : default,
+                result.Tick,
+                sourceSequence,
+                new UnityEngine.Vector2(velocity.X.ToSingle(), velocity.Z.ToSingle()),
+                new UnityEngine.Vector2(forward.x, forward.z),
+                float.MaxValue,
+                float.MaxValue,
+                result.BodySample.FinalBody.Grounded,
+                result.Motion.SourceIdentity,
+                resetSequence);
         }
 
         public void Dispose()

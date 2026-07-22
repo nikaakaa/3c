@@ -6,6 +6,7 @@ using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonSimulation;
 
@@ -30,6 +31,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             new Dictionary<AnimationChannelId, AnimationSelectionState>();
         readonly Dictionary<AnimationPlaybackId, AnimationSamplingState> m_Sampling =
             new Dictionary<AnimationPlaybackId, AnimationSamplingState>();
+        readonly Dictionary<AnimationPlaybackId, CharacterPresentationProducerEntry> m_MotionMatchingSampling =
+            new Dictionary<AnimationPlaybackId, CharacterPresentationProducerEntry>();
+        readonly Dictionary<string, CharacterMotionMatchingProducerRuntime> m_MotionMatchingProducers =
+            new Dictionary<string, CharacterMotionMatchingProducerRuntime>(StringComparer.Ordinal);
+        readonly Dictionary<AnimationPoseSourceId, MotionMatchingPoseSourceOutput> m_MotionMatchingOutputs =
+            new Dictionary<AnimationPoseSourceId, MotionMatchingPoseSourceOutput>();
+        readonly HashSet<string> m_ResolvedMotionMatchingProducers = new HashSet<string>(StringComparer.Ordinal);
+        readonly List<MotionMatchingFrameSelection> m_MotionMatchingFrameSelections = new List<MotionMatchingFrameSelection>();
+        readonly List<AnimationPoseSourceId> m_RemoveMotionMatchingOutputs = new List<AnimationPoseSourceId>();
         readonly Dictionary<AnimationPlaybackId, AnimationMarkerSyncRawSample> m_RawSamples =
             new Dictionary<AnimationPlaybackId, AnimationMarkerSyncRawSample>();
         readonly Dictionary<AnimationPlaybackId, AnimationMarkerSyncEffectiveSample> m_EffectiveSamples =
@@ -43,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ulong m_PresentationRequestSequence;
         ulong m_SourceContinuityIdentity;
         ulong m_RequestWorkspaceCompletionIdentity;
+        ulong m_MotionMatchingResetSequence;
         bool m_Disposed;
 
         public CharacterAnimationPlaybackRuntime(
@@ -76,9 +87,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_Bindings,
                     ownsGraphClock);
                 m_Lifecycle = new AnimationPlaybackLifecycle(m_Bindings);
+                BuildMotionMatchingRuntimes(projection);
             }
             catch
             {
+                DisposeMotionMatchingRuntimes();
                 m_PoseRuntime?.Dispose();
                 m_RequestWorkspace?.Dispose();
                 throw;
@@ -101,7 +114,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     if (slot.OutputPolicy != PoseSlotOutputPolicy.RequireOutput)
                         continue;
                     if (!m_Selections.TryGetValue(slot.AnimationChannelId, out AnimationSelectionState selection) ||
-                        !selection.HasPlayback || !m_Sampling.ContainsKey(selection.PlaybackId))
+                        !selection.HasPlayback ||
+                        !m_Sampling.ContainsKey(selection.PlaybackId) && !m_MotionMatchingSampling.ContainsKey(selection.PlaybackId))
                     {
                         return false;
                     }
@@ -157,9 +171,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     }
                     break;
                 case CharacterPresentationCommandKind.SampleProducer:
-                    if (m_Sampling.TryGetValue(playbackId, out AnimationSamplingState sampling) &&
-                        sampling.EventId.Equals(command.Header.EventId) &&
-                        !IsSamplingRetained(playbackId))
+                    if (producer.AnimationSourceKind == AnimationPoseSourceKind.MotionMatching)
+                    {
+                        if (!IsSamplingRetained(playbackId))
+                            m_MotionMatchingSampling.Remove(playbackId);
+                    }
+                    else if (m_Sampling.TryGetValue(playbackId, out AnimationSamplingState sampling) &&
+                             sampling.EventId.Equals(command.Header.EventId) &&
+                             !IsSamplingRetained(playbackId))
                     {
                         m_Sampling.Remove(playbackId);
                     }
@@ -210,7 +229,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         replacement.ProducerGeneration);
                     if (!currentPlayback.Equals(replacementPlayback))
                         throw new InvalidOperationException("Animation sample replacement changed its playback identity.");
-                    if (m_Sampling.TryGetValue(currentPlayback, out AnimationSamplingState sampling))
+                    if (replacementProducer.AnimationSourceKind == AnimationPoseSourceKind.MotionMatching)
+                        m_MotionMatchingSampling[replacementPlayback] = replacementProducer;
+                    else if (m_Sampling.TryGetValue(currentPlayback, out AnimationSamplingState sampling))
                         sampling.Replace(replacement);
                     else
                         m_Sampling.Add(replacementPlayback, CreateSamplingState(replacementProducer, replacement));
@@ -233,13 +254,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public FinalAnimationPoseFrame Present(
+            ulong presentationFrame,
             ulong latestSimulationTick,
             float interpolationAlpha,
             float presentationDeltaSeconds,
+            ulong resetSequence,
+            MotionMatchingTrajectorySourceFrame? motionMatchingTrajectory,
             RuntimeDiagnosticsContext diagnostics = null)
         {
             RequireAlive();
-            if (!float.IsFinite(interpolationAlpha) || !float.IsFinite(presentationDeltaSeconds) ||
+            if (presentationFrame == 0 || !float.IsFinite(interpolationAlpha) || !float.IsFinite(presentationDeltaSeconds) ||
                 presentationDeltaSeconds < 0f)
             {
                 throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
@@ -279,8 +303,45 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PoseRuntime.Advance(presentationDeltaSeconds);
             m_RequestWorkspace.BeginFrame(NextRequestWorkspaceCompletionIdentity());
             m_ResolvedRequests.Clear();
+            m_ResolvedMotionMatchingProducers.Clear();
+            m_MotionMatchingFrameSelections.Clear();
+            if (m_MotionMatchingProducers.Count > 0 && resetSequence != m_MotionMatchingResetSequence)
+            {
+                foreach (CharacterMotionMatchingProducerRuntime runtime in m_MotionMatchingProducers.Values)
+                    runtime.Reset(resetSequence);
+                m_MotionMatchingResetSequence = resetSequence;
+            }
             foreach (AnimationPlaybackId playbackId in m_DemandedPlaybacks)
             {
+                if (!m_MotionMatchingSampling.TryGetValue(playbackId, out CharacterPresentationProducerEntry motionMatchingProducer) ||
+                    !IsSelectedPlayback(motionMatchingProducer.AnimationChannelId, playbackId))
+                    continue;
+                if (!motionMatchingTrajectory.HasValue)
+                    throw new InvalidOperationException("Motion Matching producer requires a canonical Trajectory Source frame.");
+                CharacterMotionMatchingProducerRuntime runtime = RequireMotionMatchingProducer(
+                    motionMatchingProducer.ProgramProducerIdentity);
+                AnimationBlendStackRuntime motionMatchingStack = m_PoseRuntime.RequireStack(
+                    motionMatchingProducer.AnimationChannelId);
+                MotionMatchingPoseSourceOutput output = runtime.Resolve(
+                    presentationFrame,
+                    presentationDeltaSeconds,
+                    motionMatchingTrajectory.Value,
+                    playbackId,
+                    NextPresentationRequestSequence(),
+                    motionMatchingProducer.ProgramProducerIndex);
+                var sourceId = new AnimationPoseSourceId(
+                    output.PlaybackId,
+                    AnimationPoseSourceKind.MotionMatching,
+                    new AnimationPoseSelectionGeneration(output.SelectionGeneration.Value));
+                m_MotionMatchingOutputs[sourceId] = output;
+                AddMotionMatchingRequest(output, motionMatchingStack, latestSimulationTick, true);
+                m_ResolvedMotionMatchingProducers.Add(runtime.ProgramProducerId);
+                m_MotionMatchingFrameSelections.Add(new MotionMatchingFrameSelection(runtime, playbackId));
+            }
+            foreach (AnimationPlaybackId playbackId in m_DemandedPlaybacks)
+            {
+                if (m_MotionMatchingSampling.ContainsKey(playbackId))
+                    continue;
                 if (!m_Sampling.TryGetValue(playbackId, out AnimationSamplingState sampling) ||
                     !m_EffectiveSamples.TryGetValue(playbackId, out AnimationMarkerSyncEffectiveSample effective))
                 {
@@ -308,6 +369,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Commands.EnqueuePoseRequest(latestSimulationTick, request);
             }
 
+            AddRetainedMotionMatchingRequests(latestSimulationTick);
+            foreach (CharacterMotionMatchingProducerRuntime runtime in m_MotionMatchingProducers.Values)
+            {
+                if (!m_ResolvedMotionMatchingProducers.Contains(runtime.ProgramProducerId))
+                    runtime.ReleaseDomain();
+            }
+
             m_Commands.CopyPendingTo(m_CommandBuffer);
             m_Lifecycle.Apply(
                 m_CommandBuffer,
@@ -316,6 +384,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FinalAnimationPoseFrame finalPose = m_PoseRuntime.Evaluate(
                 presentationDeltaSeconds,
                 m_ResolvedRequests);
+            AppendMotionMatchingHistory(presentationFrame);
             m_Lifecycle.BuildSnapshot(m_PoseRuntime.Stacks, m_Snapshots);
             m_PoseRuntime.PublishDiagnostics(m_Snapshots);
             m_MarkerSync.BuildPlaybackSnapshot(m_MarkerSyncPlaybackSnapshots);
@@ -334,6 +403,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             m_Commands.Acknowledge(m_CommandBuffer);
             m_CommandBuffer.Clear();
+            PruneMotionMatchingOutputs();
             return finalPose;
         }
 
@@ -353,12 +423,47 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_RetiredPlaybacks.Clear();
             m_Selections.Clear();
             m_Sampling.Clear();
+            m_MotionMatchingSampling.Clear();
             m_RawSamples.Clear();
             m_EffectiveSamples.Clear();
             m_ResolvedRequests.Clear();
+            m_MotionMatchingOutputs.Clear();
+            m_ResolvedMotionMatchingProducers.Clear();
+            m_MotionMatchingFrameSelections.Clear();
+            m_RemoveMotionMatchingOutputs.Clear();
+            foreach (CharacterMotionMatchingProducerRuntime runtime in m_MotionMatchingProducers.Values)
+                runtime.Reset(0);
+            m_MotionMatchingResetSequence = 0;
             m_RemoveSampling.Clear();
             m_MarkerSync.Reset();
             m_Terminals.Clear();
+        }
+
+        internal void ResetPoseBranch(ulong resetSequence)
+        {
+            RequireAlive();
+            m_PoseRuntime.Reset();
+            m_RequestWorkspace.Reset();
+            m_Commands.Clear();
+            m_Lifecycle.Reset();
+            m_CommandBuffer.Clear();
+            m_Snapshots.Clear();
+            m_MarkerSyncSnapshots.Clear();
+            m_MarkerSyncPlaybackSnapshots.Clear();
+            m_DemandedPlaybacks.Clear();
+            m_RetiredPlaybacks.Clear();
+            m_RawSamples.Clear();
+            m_EffectiveSamples.Clear();
+            m_ResolvedRequests.Clear();
+            m_MotionMatchingOutputs.Clear();
+            m_ResolvedMotionMatchingProducers.Clear();
+            m_MotionMatchingFrameSelections.Clear();
+            m_RemoveMotionMatchingOutputs.Clear();
+            m_MarkerSync.Reset();
+            m_Terminals.Clear();
+            foreach (CharacterMotionMatchingProducerRuntime runtime in m_MotionMatchingProducers.Values)
+                runtime.Reset(resetSequence);
+            m_MotionMatchingResetSequence = resetSequence;
         }
 
         public void Dispose()
@@ -367,6 +472,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             m_Disposed = true;
             Exception failure = null;
+            try
+            {
+                DisposeMotionMatchingRuntimes();
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+            }
             try
             {
                 m_PoseRuntime.Dispose();
@@ -464,6 +577,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         void PublishSample(CharacterPresentationCommand command, CharacterPresentationProducerEntry producer)
         {
             var playbackId = new AnimationPlaybackId(producer.ProducerId, command.ProducerGeneration);
+            if (producer.AnimationSourceKind == AnimationPoseSourceKind.MotionMatching)
+            {
+                m_MotionMatchingSampling[playbackId] = producer;
+                return;
+            }
             if (!m_Sampling.TryGetValue(playbackId, out AnimationSamplingState sampling))
             {
                 m_Sampling.Add(playbackId, CreateSamplingState(producer, command));
@@ -509,7 +627,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationCommandKind commandKind)
         {
             if (producer == null || producer.Kind != CharacterPresentationProducerKind.Animation ||
-                producer.Animation == null || !producer.AnimationChannelId.IsValid)
+                !producer.AnimationChannelId.IsValid ||
+                !Enum.IsDefined(typeof(AnimationPoseSourceKind), producer.AnimationSourceKind) ||
+                (producer.AnimationSourceKind == AnimationPoseSourceKind.Timeline && producer.Animation == null) ||
+                (producer.AnimationSourceKind == AnimationPoseSourceKind.MotionMatching && producer.Animation != null))
             {
                 throw new InvalidOperationException(
                     $"Presentation command '{commandKind}' targets a non-animation producer.");
@@ -534,6 +655,147 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Sampling.Remove(playbackId);
                 m_RetiredPlaybacks.Add(playbackId);
             }
+            m_RemoveSampling.Clear();
+            foreach (AnimationPlaybackId playbackId in m_MotionMatchingSampling.Keys)
+            {
+                if (!IsSamplingRetained(playbackId))
+                    m_RemoveSampling.Add(playbackId);
+            }
+            for (int i = 0; i < m_RemoveSampling.Count; i++)
+            {
+                AnimationPlaybackId playbackId = m_RemoveSampling[i];
+                m_MotionMatchingSampling.Remove(playbackId);
+                m_RetiredPlaybacks.Add(playbackId);
+            }
+        }
+
+        void BuildMotionMatchingRuntimes(CharacterPresentationProjection projection)
+        {
+            MotionMatchingProjectionPayload payload = projection.MotionMatching;
+            if (payload == null)
+                return;
+            for (int bindingIndex = 0; bindingIndex < payload.ProducerBindingCount; bindingIndex++)
+            {
+                MotionMatchingProducerBindingPayload binding = payload.GetProducerBinding(bindingIndex);
+                if (!projection.TryGetProducer(binding.ProgramProducerId, out CharacterPresentationProducerEntry producer) ||
+                    producer.Kind != CharacterPresentationProducerKind.Animation ||
+                    producer.AnimationSourceKind != AnimationPoseSourceKind.MotionMatching ||
+                    !producer.AnimationChannelId.Equals(binding.AnimationChannelId) ||
+                    !projection.PoseProgram.RequireSlot(binding.AnimationChannelId).PoseSlotId.Equals(binding.PoseSlotId))
+                {
+                    throw new InvalidOperationException($"Motion Matching producer binding '{binding.ProgramProducerId}' does not match the Projection producer.");
+                }
+                m_MotionMatchingProducers.Add(
+                    binding.ProgramProducerId,
+                    new CharacterMotionMatchingProducerRuntime(payload, binding, projection.Rig));
+            }
+        }
+
+        CharacterMotionMatchingProducerRuntime RequireMotionMatchingProducer(string programProducerId) =>
+            m_MotionMatchingProducers.TryGetValue(programProducerId, out CharacterMotionMatchingProducerRuntime runtime)
+                ? runtime
+                : throw new InvalidOperationException($"Motion Matching producer '{programProducerId}' has no compiled Runtime workspace.");
+
+        bool IsSelectedPlayback(AnimationChannelId channelId, AnimationPlaybackId playbackId) =>
+            m_Selections.TryGetValue(channelId, out AnimationSelectionState selection) &&
+            selection.HasPlayback && selection.PlaybackId.Equals(playbackId);
+
+        void AddMotionMatchingRequest(
+            in MotionMatchingPoseSourceOutput output,
+            AnimationBlendStackRuntime stack,
+            ulong latestSimulationTick,
+            bool enqueue)
+        {
+            var sourceId = new AnimationPoseSourceId(
+                output.PlaybackId,
+                AnimationPoseSourceKind.MotionMatching,
+                new AnimationPoseSelectionGeneration(output.SelectionGeneration.Value));
+            if (m_ResolvedRequests.ContainsKey(sourceId))
+                return;
+            AnimationBlendTransitionIdentity transition = stack.ResolveExpectedTransitionIdentity(
+                output.ProgramProducerIndex,
+                false);
+            ResolvedAnimationPoseRequest request = MotionMatchingResolvedPoseRequestFactory.Create(
+                in output,
+                m_Bindings.Projection.PoseProgram,
+                m_RequestWorkspace,
+                transition);
+            m_ResolvedRequests.Add(request.SourceId, request);
+            if (enqueue)
+                m_Commands.EnqueuePoseRequest(latestSimulationTick, request);
+        }
+
+        void AddRetainedMotionMatchingRequests(ulong latestSimulationTick)
+        {
+            for (int stackIndex = 0; stackIndex < m_PoseRuntime.Stacks.Count; stackIndex++)
+            {
+                AnimationBlendStackRuntime stack = m_PoseRuntime.Stacks[stackIndex];
+                for (int entryIndex = 0; entryIndex < stack.EntryCount; entryIndex++)
+                {
+                    AnimationBlendEntryId entry = stack.GetEntryId(entryIndex);
+                    if (entry.EmptyTarget || entry.SourceId.SourceKind != AnimationPoseSourceKind.MotionMatching ||
+                        m_ResolvedRequests.ContainsKey(entry.SourceId))
+                        continue;
+                    if (!m_MotionMatchingOutputs.TryGetValue(entry.SourceId, out MotionMatchingPoseSourceOutput output))
+                        throw new InvalidOperationException($"Retained Motion Matching Pose Source '{entry.SourceId}' has no frozen Selection output.");
+                    AddMotionMatchingRequest(in output, stack, latestSimulationTick, false);
+                }
+            }
+        }
+
+        void AppendMotionMatchingHistory(ulong presentationFrame)
+        {
+            for (int selectionIndex = 0; selectionIndex < m_MotionMatchingFrameSelections.Count; selectionIndex++)
+            {
+                MotionMatchingFrameSelection selection = m_MotionMatchingFrameSelections[selectionIndex];
+                CharacterMotionMatchingProducerRuntime runtime = selection.Runtime;
+                if (!m_PoseRuntime.TryCopySlotPose(
+                        runtime.PoseSlotId,
+                        runtime.FeatureRigBoneIndices,
+                        runtime.FeatureBonePositionWorkspace,
+                        out AnimationFootPlacementSample footPlacement))
+                {
+                    runtime.History.MarkGap(m_MotionMatchingResetSequence);
+                    continue;
+                }
+                runtime.AppendBasePose(presentationFrame, selection.PlaybackId, footPlacement);
+            }
+        }
+
+        void PruneMotionMatchingOutputs()
+        {
+            m_RemoveMotionMatchingOutputs.Clear();
+            foreach (AnimationPoseSourceId sourceId in m_MotionMatchingOutputs.Keys)
+            {
+                if (!IsMotionMatchingSourceRetained(sourceId))
+                    m_RemoveMotionMatchingOutputs.Add(sourceId);
+            }
+            for (int i = 0; i < m_RemoveMotionMatchingOutputs.Count; i++)
+                m_MotionMatchingOutputs.Remove(m_RemoveMotionMatchingOutputs[i]);
+        }
+
+        bool IsMotionMatchingSourceRetained(AnimationPoseSourceId sourceId)
+        {
+            for (int stackIndex = 0; stackIndex < m_PoseRuntime.Stacks.Count; stackIndex++)
+            {
+                AnimationBlendStackRuntime stack = m_PoseRuntime.Stacks[stackIndex];
+                for (int entryIndex = 0; entryIndex < stack.EntryCount; entryIndex++)
+                {
+                    AnimationBlendEntryId entry = stack.GetEntryId(entryIndex);
+                    if (!entry.EmptyTarget && entry.SourceId.Equals(sourceId))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        void DisposeMotionMatchingRuntimes()
+        {
+            foreach (CharacterMotionMatchingProducerRuntime runtime in m_MotionMatchingProducers.Values)
+                runtime.Dispose();
+            m_MotionMatchingProducers.Clear();
+            m_MotionMatchingSampling.Clear();
+            m_MotionMatchingOutputs.Clear();
         }
 
         ulong NextSelectionSequence() => Next(ref m_SelectionSequence, "selection");
@@ -773,6 +1035,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             double ToContinuousTime(float sampleTime, int cycle) =>
                 Math.Max(0d, cycle * (double)Producer.Animation.DurationSeconds + sampleTime);
+        }
+
+        readonly struct MotionMatchingFrameSelection
+        {
+            public MotionMatchingFrameSelection(
+                CharacterMotionMatchingProducerRuntime runtime,
+                AnimationPlaybackId playbackId)
+            {
+                Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+                PlaybackId = playbackId.IsValid
+                    ? playbackId
+                    : throw new ArgumentException("Motion Matching frame Playback identity is invalid.", nameof(playbackId));
+            }
+
+            public CharacterMotionMatchingProducerRuntime Runtime { get; }
+            public AnimationPlaybackId PlaybackId { get; }
         }
 
         readonly struct AnimationTerminalState

@@ -25,8 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             MotionMatchingTrajectoryEnvelopePoint[] trajectoryPoints,
             float[] normalizedFeatures,
             MotionMatchingContactProtection contactProtection,
-            int currentSampleIndex,
-            CharacterMotionMatchingPlanId currentPlanId,
+            MotionMatchingSelectionIdentity currentSelection,
             bool initialization,
             float secondsSinceLastJump,
             ulong resetSequence,
@@ -38,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             if (searchPolicyRevision <= 0 || !queryId.IsValid || !profileId.IsValid || !searchDomainId.IsValid ||
                 !trajectorySourceIdentity.IsValid || !trajectorySourceTick.IsValid || trajectorySourceSequence == 0 ||
                 !float.IsFinite(trajectorySourceAge) || trajectorySourceAge < 0f || trajectoryPoints == null || trajectoryPoints.Length == 0 ||
-                normalizedFeatures == null || normalizedFeatures.Length == 0 || currentSampleIndex < -1 ||
+                normalizedFeatures == null || normalizedFeatures.Length == 0 ||
                 !float.IsFinite(secondsSinceLastJump) || secondsSinceLastJump < 0f || !expectedDigest.IsValid)
                 throw new ArgumentException("Motion Matching Search Replay Artifact is incomplete.");
             m_TrajectoryPoints = (MotionMatchingTrajectoryEnvelopePoint[])trajectoryPoints.Clone();
@@ -57,8 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             TrajectorySourceSequence = trajectorySourceSequence;
             TrajectorySourceAge = trajectorySourceAge;
             ContactProtection = contactProtection;
-            CurrentSampleIndex = currentSampleIndex;
-            CurrentPlanId = currentPlanId;
+            CurrentSelection = currentSelection;
             Initialization = initialization;
             SecondsSinceLastJump = secondsSinceLastJump;
             ResetSequence = resetSequence;
@@ -79,8 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public int TrajectoryPointCount => m_TrajectoryPoints.Length;
         public int NormalizedFeatureCount => m_NormalizedFeatures.Length;
         public MotionMatchingContactProtection ContactProtection { get; }
-        public int CurrentSampleIndex { get; }
-        public CharacterMotionMatchingPlanId CurrentPlanId { get; }
+        public MotionMatchingSelectionIdentity CurrentSelection { get; }
         public bool Initialization { get; }
         public float SecondsSinceLastJump { get; }
         public ulong ResetSequence { get; }
@@ -118,8 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 trajectory,
                 features,
                 query.ContactProtection,
-                query.CurrentSampleIndex,
-                query.CurrentPlanId,
+                query.CurrentSelection,
                 query.Initialization,
                 query.SecondsSinceLastJump,
                 query.ResetSequence,
@@ -202,8 +198,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 m_Envelope,
                 new MotionMatchingFloatBuffer(m_Features, 0, m_Features.Length),
                 artifact.ContactProtection,
-                artifact.CurrentSampleIndex,
-                artifact.CurrentPlanId,
+                artifact.CurrentSelection,
                 artifact.Initialization,
                 artifact.SecondsSinceLastJump,
                 artifact.ResetSequence);

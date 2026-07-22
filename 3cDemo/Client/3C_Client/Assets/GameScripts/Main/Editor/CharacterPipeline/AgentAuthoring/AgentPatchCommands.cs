@@ -37,6 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         MoveTimelineClip,
         ConfigureTimelineClipEase,
         ConfigureTimelineCurveChannel,
+        ConfigureAnimationTrackChannel,
         ConfigureAnimationTrackMarkerSync,
         EnsureAnimationSyncMarker,
         MoveAnimationSyncMarker,
@@ -1024,6 +1025,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         public AgentTimelineTargetReference Target { get; }
+    }
+
+    public sealed class AgentConfigureAnimationTrackChannelCommand : AgentAnimationTrackCommand
+    {
+        public AgentConfigureAnimationTrackChannelCommand(
+            string id,
+            string path,
+            AgentTimelineTargetReference target,
+            AnimationChannelId animationChannelId)
+            : base(id, AgentPatchCommandKind.ConfigureAnimationTrackChannel, "configure_animation_track_channel", AgentPatchOutputKind.None, path, target)
+        {
+            AnimationChannelId = animationChannelId;
+        }
+
+        public AnimationChannelId AnimationChannelId { get; }
     }
 
     public sealed class AgentConfigureAnimationTrackMarkerSyncCommand : AgentAnimationTrackCommand

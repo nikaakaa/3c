@@ -236,6 +236,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     valid = false;
                     continue;
                 }
+                if (producer.AnimationSourceKind == AnimationPoseSourceKind.MotionMatching)
+                    continue;
                 if (animation == null || !animation.Source || !animation.Source.IsValid || animation.Clips.Count == 0)
                 {
                     Report(AnimationPresentationValidationCode.BindingSourceInvalid,

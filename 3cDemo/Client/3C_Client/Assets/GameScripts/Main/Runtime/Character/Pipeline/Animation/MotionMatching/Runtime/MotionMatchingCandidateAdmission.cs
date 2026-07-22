@@ -21,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 return Reject(MotionMatchingCandidateRejectReason.IdentityMismatch, out rejectReason);
             if (!candidate.SearchDomainId.Equals(query.SearchDomainId) || !query.SearchDomainId.Equals(m_Database.SearchDomainId))
                 return Reject(MotionMatchingCandidateRejectReason.SearchDomainMismatch, out rejectReason);
-            bool continuation = !query.Initialization && query.CurrentSampleIndex >= 0 &&
+            bool continuation = !query.Initialization && query.CurrentSelectionInDatabase && query.CurrentSampleIndex >= 0 &&
                 m_Database.GetSample(query.CurrentSampleIndex).NextSampleIndex == sampleIndex;
             if (query.Initialization && !candidate.CanInitialize)
                 return Reject(MotionMatchingCandidateRejectReason.InitializationNotAllowed, out rejectReason);

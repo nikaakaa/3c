@@ -313,6 +313,7 @@ namespace ThirdPersonSimulation.Fixed
                         pending.Tick,
                         finalState,
                         bodySample,
+                        expected.Motion,
                         facts,
                         actorEvaluator.Workspace.Presentation,
                         trace);

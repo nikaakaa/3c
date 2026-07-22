@@ -802,6 +802,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public int endFrame;
         public int markerFrame;
         public string markerId;
+        public string animationChannelId;
         public string animationSyncMode;
         public string animationSyncGroupId;
         public string animationMarkerSequenceTopology;

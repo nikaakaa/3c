@@ -6,6 +6,7 @@ using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
 using ThirdPersonSimulation;
+using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
@@ -31,12 +32,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimationMixerPlayable m_SourceFanIn;
         readonly Playable m_PreviousOutputSource;
         readonly bool m_ManagesGraphClock;
+        readonly int m_FootPlacementWeightParameterIndex;
 
         AnimationScriptPlayable[] m_SlotPlayables;
         AnimationScriptPlayable m_PoseGraphPlayable;
         AnimationScriptPlayable m_FinalWriterPlayable;
         ulong m_CompletionIdentity = 1;
         int m_ReleasedSourceCount;
+        CharacterPoseGraphNativeBinding m_LastCompletedFrame;
+        bool m_HasCompletedFrame;
         bool m_JobsInstalled;
         bool m_Disposed;
 
@@ -131,6 +135,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_SourceFanIn = sourceFanIn;
             m_PreviousOutputSource = previousOutputSource;
             m_ManagesGraphClock = managesGraphClock;
+            m_FootPlacementWeightParameterIndex = projection.PoseProgram.RequireParameterIndex(
+                AnimationPoseParameterIds.FootPlacementWeight);
         }
 
         internal IReadOnlyList<AnimationBlendStackRuntime> Stacks => m_Stacks;
@@ -203,10 +209,48 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             for (int i = 0; i < m_Stacks.Length; i++)
                 m_Stacks[i].CompleteFrame(completionIdentity);
             FinalAnimationPoseFrame result = m_FramePublisher.Publish(in finalRead, m_PhysicalSources);
+            m_LastCompletedFrame = frame;
+            m_HasCompletedFrame = true;
             m_DiagnosticsPublisher.BeginFrame(in frame, in finalRead, m_Stacks, m_PhysicalSources);
             m_ReleasedSourceCount = 0;
             ReleaseCompletedSources(completionIdentity, true);
             return result;
+        }
+
+        internal bool TryCopySlotPose(
+            PoseSlotId poseSlotId,
+            int[] rigBoneIndices,
+            Vector3[] positions,
+            out AnimationFootPlacementSample footPlacement)
+        {
+            RequireAlive();
+            if (!poseSlotId.IsValid || rigBoneIndices == null || positions == null ||
+                rigBoneIndices.Length == 0 || positions.Length != rigBoneIndices.Length)
+                throw new ArgumentException("Animation Pose Slot history copy input is invalid.");
+            if (!m_HasCompletedFrame || !m_Bindings.TryGetSlot(poseSlotId, out ResolvedAnimationPoseSlot slot))
+            {
+                footPlacement = default;
+                return false;
+            }
+            var read = new AnimationPoseSlotNativeWriteBinding(in m_LastCompletedFrame, slot.Index);
+            if (read.CompletedAt[0] != m_LastCompletedFrame.CompletionIdentity ||
+                read.Availability[0] != PoseSlotFrameAvailability.Pose || read.HasFootFeatures[0] == 0)
+            {
+                footPlacement = default;
+                return false;
+            }
+            for (int i = 0; i < rigBoneIndices.Length; i++)
+            {
+                int boneIndex = rigBoneIndices[i];
+                if ((uint)boneIndex >= (uint)read.DenseLocalPoses.Length)
+                    throw new InvalidOperationException("Motion Matching history Bone index is outside the completed Pose Slot.");
+                positions[i] = read.DenseLocalPoses[boneIndex].Position;
+            }
+            footPlacement = new AnimationFootPlacementSample(
+                read.PoseParameters[m_FootPlacementWeightParameterIndex],
+                read.LeftFootFeatures[0],
+                read.RightFootFeatures[0]);
+            return true;
         }
 
         internal void Reset()
@@ -215,6 +259,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_FramePublisher.Invalidate();
             m_DiagnosticsPublisher.Invalidate();
             m_ReleasedSourceCount = 0;
+            m_LastCompletedFrame = default;
+            m_HasCompletedFrame = false;
             ulong completionIdentity = NextCompletionIdentity();
             for (int i = 0; i < m_Stacks.Length; i++)
                 m_Stacks[i].Reset(completionIdentity);
@@ -235,6 +281,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return;
             m_Disposed = true;
             m_FramePublisher.Invalidate();
+            m_LastCompletedFrame = default;
+            m_HasCompletedFrame = false;
             Exception failure = null;
             DisposeStep(m_DiagnosticsPublisher.Dispose, ref failure);
             DisposeStep(RemoveJobs, ref failure);

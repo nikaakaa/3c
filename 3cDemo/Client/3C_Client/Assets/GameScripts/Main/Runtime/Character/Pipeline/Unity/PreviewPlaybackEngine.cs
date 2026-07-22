@@ -29,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline
         CharacterPresentationProducerEntry m_ComparisonSource;
         bool m_ComparisonSourceSeeded;
         ulong m_EventSequence;
+        ulong m_PresentationFrame;
 
         public PreviewPlaybackEngine(
             CharacterPipelineDefinition definition,
@@ -176,9 +177,12 @@ namespace ThirdPersonCharacter.Pipeline
             foreach (KeyValuePair<AnimationChannelId, ActivePreviewProducer> item in m_NextActive)
                 m_Active.Add(item.Key, item.Value);
             m_Playback.Present(
+                ++m_PresentationFrame,
                 session.EvaluationTick,
                 1f,
                 session.PresentationDeltaSeconds,
+                0,
+                null,
                 null);
         }
 
@@ -204,7 +208,7 @@ namespace ThirdPersonCharacter.Pipeline
                     active.Producer);
             }
             if (m_Active.Count > 0)
-                m_Playback.Present(tickValue, 1f, 0f, null);
+                m_Playback.Present(++m_PresentationFrame, tickValue, 1f, 0f, 0, null, null);
             m_Playback.Reset();
             m_Active.Clear();
             m_NextActive.Clear();
@@ -305,7 +309,7 @@ namespace ThirdPersonCharacter.Pipeline
                 m_ComparisonSource);
             if (!m_ComparisonSourceSeeded)
             {
-                m_Playback.Present(session.EvaluationTick, 1f, 0f, null);
+                m_Playback.Present(++m_PresentationFrame, session.EvaluationTick, 1f, 0f, 0, null, null);
                 m_ComparisonSourceSeeded = true;
             }
         }

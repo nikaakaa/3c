@@ -108,6 +108,7 @@ Patch 字段、operation 和当前代码地图见 [current-contract.md](referenc
 - `unsupported_schema_version`：重新导出当前snapshot，生成v16 Patch；不转换旧Patch。
 - Marker Sync迁移使用`configure_animation_track_marker_sync`、`ensure_animation_sync_marker`、`move_animation_sync_marker`与`delete_animation_sync_marker`；MarkerGroup配置必须显式携带`animationMarkerSyncRole`；handler只能调用AnimationTrack正式authoring API。
 - Timeline曲线修改使用唯一`configure_timeline_curve_channel`；目标必须来自v16 CharacterController Snapshot中的Timeline、Track、Clip stable identity与registered `curveChannelId`，payload必须完整携带wrap mode及全部Keyframe字段。禁止使用字段名、SerializedProperty path或key index作为外部identity。
+- AnimationTrack channel迁移使用唯一`configure_animation_track_channel`；目标必须来自v16 CharacterController Snapshot中的Timeline与Track stable identity，payload必须携带非空`animationChannelId`。handler只能调用`AnimationTrack.SetAnimationChannelId`，不得联动PoseSlot、Pose Graph或Profile。
 - `unknown_operation` / `unknown_node_type`：扩展正式 catalog/emitter 或承认当前工具不支持；禁止创建 placeholder。
 - `transaction_owner_*`：修复 ownership/topology，使全部 serialized owner 可进入同一事务；禁止缩小 Undo 范围。
 - apply 后 validator 失败：接受自动回滚，修 Patch 或 Agent 实现后重新从 snapshot 开始。

@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 {
@@ -7,13 +8,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         internal static ResolvedAnimationPoseRequest Create(
             in MotionMatchingPoseSourceOutput output,
             CharacterPresentationPoseProgram poseProgram,
-            ClipSamplePlan[] clipWorkspace,
-            int clipOffset,
-            float[] parameterWorkspace,
-            int parameterOffset,
+            AnimationPoseRequestWorkspace workspace,
             AnimationBlendTransitionIdentity exactTransitionIdentity)
         {
-            if (!output.AnimationChannelId.IsValid || !output.PoseSlotId.IsValid || !output.PlaybackId.IsValid ||
+            if (output.DatabaseIdentity == null || !output.AnimationChannelId.IsValid || !output.PoseSlotId.IsValid || !output.PlaybackId.IsValid ||
                 output.PoseSourceKind != MotionMatchingPoseSourceKind.MotionMatching || !output.SelectionGeneration.IsValid ||
                 output.SourcePoseContinuityIdentity == 0 || output.SourcePoseContinuityIdentity != output.SelectionGeneration.Value ||
                 output.PresentationRequestSequence == 0 || output.ProgramProducerIndex < 0 ||
@@ -84,21 +82,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             int footPlacementWeightIndex = poseProgram.RequireParameterIndex(AnimationPoseParameterIds.FootPlacementWeight);
             if ((uint)footPlacementWeightIndex >= (uint)parameterCount)
                 throw new InvalidOperationException("Pose Program Foot Placement Weight parameter index is outside the dense row.");
-            if (clipWorkspace == null)
-                throw new ArgumentNullException(nameof(clipWorkspace));
-            if ((uint)clipOffset >= (uint)clipWorkspace.Length)
-                throw new ArgumentOutOfRangeException(nameof(clipOffset));
-            if (parameterWorkspace == null)
-                throw new ArgumentNullException(nameof(parameterWorkspace));
-            if (parameterOffset < 0 || parameterOffset > parameterWorkspace.Length - parameterCount)
-                throw new ArgumentOutOfRangeException(nameof(parameterOffset));
+            if (workspace == null)
+                throw new ArgumentNullException(nameof(workspace));
             if (!exactTransitionIdentity.IsValid || !exactTransitionIdentity.PoseSlotId.Equals(output.PoseSlotId) ||
                 exactTransitionIdentity.TargetEmpty || exactTransitionIdentity.TargetProducerIndex != output.ProgramProducerIndex)
             {
                 throw new ArgumentException("Motion Matching exact transition does not target the selected Pose Slot producer.", nameof(exactTransitionIdentity));
             }
 
-            clipWorkspace[clipOffset] = new ClipSamplePlan(
+            var sourceId = new AnimationPoseSourceId(
+                output.PlaybackId,
+                AnimationPoseSourceKind.MotionMatching,
+                new AnimationPoseSelectionGeneration(output.SelectionGeneration.Value));
+            AnimationPoseRequestWorkspaceRow row = workspace.PrepareRow(sourceId);
+            workspace.RequireCurrent(row);
+            if (row.ClipCapacity < 1 || row.ParameterCount != parameterCount)
+                throw new InvalidOperationException("Motion Matching pose request workspace row does not match the compiled layout.");
+            row.Clips[row.ClipOffset] = new ClipSamplePlan(
                 sourceClip.ClipBindingIndex,
                 sourceClip.Clip,
                 sourceClip.ClipTime,
@@ -107,13 +107,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 1f,
                 sourceClip.IsLooping);
             for (int i = 0; i < parameterCount; i++)
-                parameterWorkspace[parameterOffset + i] = poseProgram.Parameters[i].DefaultValue;
-            parameterWorkspace[parameterOffset + footPlacementWeightIndex] = output.FootPlacementWeight.Value;
+                row.PoseParameters[row.ParameterOffset + i] = poseProgram.Parameters[i].DefaultValue;
+            row.PoseParameters[row.ParameterOffset + footPlacementWeightIndex] = output.FootPlacementWeight.Value;
+            workspace.RequireCurrent(row);
 
-            var sourceId = new AnimationPoseSourceId(
-                output.PlaybackId,
-                AnimationPoseSourceKind.MotionMatching,
-                new AnimationPoseSelectionGeneration(output.SelectionGeneration.Value));
             return new ResolvedAnimationPoseRequest(
                 output.AnimationChannelId,
                 output.PoseSlotId,
@@ -125,8 +122,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 sourceClip.ContinuousVisualTime,
                 sourceClip.Cycle,
                 sourceClip.VisualTimeScale,
-                new AnimationReadOnlyBuffer<ClipSamplePlan>(clipWorkspace, clipOffset, 1),
-                new AnimationReadOnlyBuffer<float>(parameterWorkspace, parameterOffset, parameterCount),
+                new AnimationReadOnlyBuffer<ClipSamplePlan>(
+                    row.Clips,
+                    row.ClipOffset,
+                    1,
+                    workspace,
+                    row.LeaseGeneration),
+                new AnimationReadOnlyBuffer<float>(
+                    row.PoseParameters,
+                    row.ParameterOffset,
+                    parameterCount,
+                    workspace,
+                    row.LeaseGeneration),
                 output.FootFeatures.Left,
                 output.FootFeatures.Right,
                 true,

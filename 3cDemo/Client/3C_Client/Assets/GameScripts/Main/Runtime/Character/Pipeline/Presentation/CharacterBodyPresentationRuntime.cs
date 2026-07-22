@@ -171,6 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public CharacterBodyPresentationSourceMode SourceMode => m_SourceMode;
         public ulong LatestTick => m_LatestTick;
+        public ulong ResetSequence => m_ResetSequence;
         public ulong BranchReplacementCount => m_BranchReplacementCount;
         public float FollowerPositionCorrectionMeters => m_LastPresentedFrame.PositionError;
         public float FollowerYawCorrectionDegrees => m_LastPresentedFrame.RotationError;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Animancer;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -10,12 +11,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] string m_TimelineAuthoringId;
         [SerializeField] string m_TrackAuthoringId;
+        [SerializeField] AnimationPoseSourceKind m_SourceKind;
         [SerializeField] TransitionAssetBase m_Source;
 
         public AnimationProducerId ProducerId => new AnimationProducerId(m_TimelineAuthoringId, m_TrackAuthoringId);
+        public AnimationPoseSourceKind SourceKind => m_SourceKind;
         public TransitionAssetBase Source => m_Source;
 
-        public void Configure(
+        public void ConfigureTimeline(
             AnimationProducerId producerId,
             TransitionAssetBase source)
         {
@@ -26,7 +29,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             m_TimelineAuthoringId = producerId.TimelineAuthoringId;
             m_TrackAuthoringId = producerId.TrackAuthoringId;
+            m_SourceKind = AnimationPoseSourceKind.Timeline;
             m_Source = source;
+        }
+
+        public void ConfigureMotionMatching(AnimationProducerId producerId)
+        {
+            if (!producerId.IsValid)
+                throw new ArgumentException("Animation producer id is invalid.", nameof(producerId));
+            m_TimelineAuthoringId = producerId.TimelineAuthoringId;
+            m_TrackAuthoringId = producerId.TrackAuthoringId;
+            m_SourceKind = AnimationPoseSourceKind.MotionMatching;
+            m_Source = null;
         }
     }
 
@@ -38,6 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterPresentationPoseGraphAsset m_PoseGraph;
         [SerializeField] CharacterAnimationBlendLibrary m_BlendLibrary;
         [SerializeField] CharacterAnimationRigDefinition m_RigDefinition;
+        [SerializeField] CharacterMotionMatchingProfile m_MotionMatchingProfile;
         [SerializeField] AnimationProducerPresentationBinding[] m_ProducerBindings =
             Array.Empty<AnimationProducerPresentationBinding>();
         [SerializeField] CharacterFootPlacementAnalysisMode m_FootPlacementAnalysisMode;
@@ -46,6 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterPresentationPoseGraphAsset PoseGraph => m_PoseGraph;
         public CharacterAnimationBlendLibrary BlendLibrary => m_BlendLibrary;
         public CharacterAnimationRigDefinition RigDefinition => m_RigDefinition;
+        public CharacterMotionMatchingProfile MotionMatchingProfile => m_MotionMatchingProfile;
         public IReadOnlyList<AnimationProducerPresentationBinding> ProducerBindings =>
             m_ProducerBindings ?? Array.Empty<AnimationProducerPresentationBinding>();
         public CharacterFootPlacementAnalysisMode FootPlacementAnalysisMode => m_FootPlacementAnalysisMode;
@@ -75,6 +91,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PoseGraph = poseGraph ? poseGraph : throw new ArgumentNullException(nameof(poseGraph));
             m_BlendLibrary = blendLibrary ? blendLibrary : throw new ArgumentNullException(nameof(blendLibrary));
             m_RigDefinition = rigDefinition ? rigDefinition : throw new ArgumentNullException(nameof(rigDefinition));
+        }
+
+        public void SetMotionMatchingProfile(CharacterMotionMatchingProfile profile)
+        {
+            m_MotionMatchingProfile = profile;
         }
 
         public void SetFootPlacementAnalysis(
@@ -138,15 +159,62 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             var producerIds = new HashSet<AnimationProducerId>();
+            var motionMatchingProducerIds = new HashSet<string>(StringComparer.Ordinal);
             IReadOnlyList<AnimationProducerPresentationBinding> bindings = ProducerBindings;
             for (int i = 0; i < bindings.Count; i++)
             {
                 AnimationProducerPresentationBinding binding = bindings[i];
                 if (binding == null || !binding.ProducerId.IsValid ||
                     !producerIds.Add(binding.ProducerId) ||
-                    !binding.Source || !binding.Source.IsValid)
+                    !Enum.IsDefined(typeof(AnimationPoseSourceKind), binding.SourceKind) ||
+                    binding.SourceKind == AnimationPoseSourceKind.Timeline && (!binding.Source || !binding.Source.IsValid) ||
+                    binding.SourceKind == AnimationPoseSourceKind.MotionMatching && binding.Source)
                 {
                     errors?.Add($"{name}: Animation producer binding #{i} is invalid or duplicated.");
+                    valid = false;
+                }
+                else if (binding.SourceKind == AnimationPoseSourceKind.MotionMatching)
+                {
+                    motionMatchingProducerIds.Add(binding.ProducerId.ProgramProducerIdentity);
+                }
+            }
+
+            if (motionMatchingProducerIds.Count == 0)
+            {
+                if (m_MotionMatchingProfile)
+                {
+                    errors?.Add($"{name}: Motion Matching Profile is set but no producer uses Motion Matching.");
+                    valid = false;
+                }
+            }
+            else if (!m_MotionMatchingProfile)
+            {
+                errors?.Add($"{name}: Motion Matching producers require one Motion Matching Profile.");
+                valid = false;
+            }
+            else
+            {
+                try
+                {
+                    m_MotionMatchingProfile.RequireValid();
+                    var profileProducerIds = new HashSet<string>(StringComparer.Ordinal);
+                    for (int i = 0; i < m_MotionMatchingProfile.ProducerBindings.Count; i++)
+                    {
+                        CharacterMotionMatchingProducerBinding binding = m_MotionMatchingProfile.ProducerBindings[i];
+                        profileProducerIds.Add(binding.ProgramProducerId);
+                        AnimationProducerPresentationBinding presentationBinding = FindBindingByProgramProducerId(binding.ProgramProducerId);
+                        if (presentationBinding == null || presentationBinding.SourceKind != AnimationPoseSourceKind.MotionMatching)
+                            throw new InvalidOperationException($"Motion Matching producer '{binding.ProgramProducerId}' is not declared by the Presentation Profile.");
+                        CharacterPoseSlotDeclaration slot = RequirePoseSlot(binding.AnimationChannelId);
+                        if (slot.PoseSlotId != binding.PoseSlotId)
+                            throw new InvalidOperationException($"Motion Matching producer '{binding.ProgramProducerId}' Pose Slot does not match the Presentation Pose Graph.");
+                    }
+                    if (!profileProducerIds.SetEquals(motionMatchingProducerIds))
+                        throw new InvalidOperationException("Motion Matching Profile producer declarations do not exactly match Presentation Profile Motion Matching producers.");
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add($"{name}: {exception.Message}");
                     valid = false;
                 }
             }
@@ -167,6 +235,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             return valid;
+        }
+
+        AnimationProducerPresentationBinding FindBindingByProgramProducerId(string programProducerId)
+        {
+            for (int i = 0; i < ProducerBindings.Count; i++)
+            {
+                AnimationProducerPresentationBinding binding = ProducerBindings[i];
+                if (binding != null && string.Equals(binding.ProducerId.ProgramProducerIdentity, programProducerId, StringComparison.Ordinal))
+                    return binding;
+            }
+            return null;
+        }
+
+        CharacterPoseSlotDeclaration RequirePoseSlot(ThirdPersonSimulation.AnimationChannelId channelId)
+        {
+            if (!m_PoseGraph || m_PoseGraph.Graph == null)
+                throw new InvalidOperationException("Presentation Pose Graph is required before Motion Matching producer validation.");
+            CharacterPoseSlotDeclaration result = null;
+            for (int i = 0; i < m_PoseGraph.Graph.PoseSlots.Count; i++)
+            {
+                CharacterPoseSlotDeclaration candidate = m_PoseGraph.Graph.PoseSlots[i];
+                if (candidate == null || candidate.AnimationChannelId != channelId)
+                    continue;
+                if (result != null)
+                    throw new InvalidOperationException($"Presentation Pose Graph duplicates Animation Channel '{channelId}'.");
+                result = candidate;
+            }
+            return result ?? throw new InvalidOperationException($"Presentation Pose Graph has no Pose Slot for Animation Channel '{channelId}'.");
         }
 
         static bool IsAssetGuid(string value)

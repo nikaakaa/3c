@@ -255,7 +255,7 @@ namespace BTSMTL.Diagnostics
                    string.Equals(left.Name, right.Name, StringComparison.Ordinal) &&
                    string.Equals(left.Detail, right.Detail, StringComparison.Ordinal) &&
                    string.Equals(left.Cause, right.Cause, StringComparison.Ordinal) &&
-                   string.Equals(left.LayerId, right.LayerId, StringComparison.Ordinal) &&
+                   string.Equals(left.AnimationChannelId, right.AnimationChannelId, StringComparison.Ordinal) &&
                    string.Equals(left.OwnerId, right.OwnerId, StringComparison.Ordinal) &&
                    string.Equals(left.RelatedElementId, right.RelatedElementId, StringComparison.Ordinal) &&
                    left.Time.Equals(right.Time) &&
@@ -651,10 +651,9 @@ namespace BTSMTL.Diagnostics
                 RuntimeTraceEventKind.ActionSnapshot or
                 RuntimeTraceEventKind.AnimationProducerSampled or
                 RuntimeTraceEventKind.AnimationPlaybackPending or
-                RuntimeTraceEventKind.AnimationPlaybackCurrent or
-                RuntimeTraceEventKind.AnimationPlaybackOutgoing or
+                RuntimeTraceEventKind.AnimationPlaybackSelected or
+                RuntimeTraceEventKind.AnimationPlaybackRetained or
                 RuntimeTraceEventKind.AnimationPlaybackRetired or
-                RuntimeTraceEventKind.AnimationFade or
                 RuntimeTraceEventKind.AnimationMarkerSync or
                 RuntimeTraceEventKind.PresentationInterpolated or
                 RuntimeTraceEventKind.CameraSnapshot or

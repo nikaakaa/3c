@@ -346,10 +346,9 @@ namespace BTSMTL.Diagnostics
         AnimationSelectionSubmitted,
         AnimationProducerSampled,
         AnimationPlaybackPending,
-        AnimationPlaybackCurrent,
-        AnimationPlaybackOutgoing,
+        AnimationPlaybackSelected,
+        AnimationPlaybackRetained,
         AnimationPlaybackRetired,
-        AnimationFade,
         AnimationMarkerSync,
         PresentationInterpolated,
         CameraSnapshot,
@@ -501,7 +500,7 @@ namespace BTSMTL.Diagnostics
         public string Name;
         public string Detail;
         public string Cause;
-        public string LayerId;
+        public string AnimationChannelId;
         public string OwnerId;
         public string RelatedElementId;
         public float Time;
@@ -567,4 +566,3 @@ namespace BTSMTL.Diagnostics
         IDebugSourceMap SourceMap { get; }
     }
 }
-

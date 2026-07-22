@@ -220,16 +220,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             snapshot.presentation.profileAssetGuid = string.IsNullOrEmpty(profilePath)
                 ? string.Empty
                 : AssetDatabase.AssetPathToGUID(profilePath);
-            IReadOnlyList<CharacterAnimationLayerDefinition> layers = presentation?.Layers;
-            if (layers == null)
+            if (!presentation)
                 return;
-            string libraryPath = presentation.TransitionLibrary
-                ? AssetDatabase.GetAssetPath(presentation.TransitionLibrary)
-                : string.Empty;
-            snapshot.presentation.transitionLibraryAssetPath = libraryPath;
-            snapshot.presentation.transitionLibraryAssetGuid = string.IsNullOrEmpty(libraryPath)
+
+            CharacterPresentationPoseGraphAsset poseGraph = presentation.PoseGraph;
+            string poseGraphPath = poseGraph ? AssetDatabase.GetAssetPath(poseGraph) : string.Empty;
+            snapshot.presentation.poseGraphAssetPath = poseGraphPath;
+            snapshot.presentation.poseGraphAssetGuid = string.IsNullOrEmpty(poseGraphPath)
                 ? string.Empty
-                : AssetDatabase.AssetPathToGUID(libraryPath);
+                : AssetDatabase.AssetPathToGUID(poseGraphPath);
+            snapshot.presentation.poseGraphId = poseGraph?.Graph?.GraphId ?? string.Empty;
+            snapshot.presentation.poseGraphRevision = poseGraph?.Graph?.ContentRevision ?? string.Empty;
+
+            CharacterAnimationBlendLibrary blendLibrary = presentation.BlendLibrary;
+            string blendLibraryPath = blendLibrary ? AssetDatabase.GetAssetPath(blendLibrary) : string.Empty;
+            snapshot.presentation.blendLibraryAssetPath = blendLibraryPath;
+            snapshot.presentation.blendLibraryAssetGuid = string.IsNullOrEmpty(blendLibraryPath)
+                ? string.Empty
+                : AssetDatabase.AssetPathToGUID(blendLibraryPath);
+            snapshot.presentation.blendLibraryId = blendLibrary?.LibraryId ?? string.Empty;
+            snapshot.presentation.blendLibraryRevision = blendLibrary?.Revision ?? string.Empty;
+
+            CharacterAnimationRigDefinition rig = presentation.RigDefinition;
+            string rigPath = rig ? AssetDatabase.GetAssetPath(rig) : string.Empty;
+            snapshot.presentation.rigAssetPath = rigPath;
+            snapshot.presentation.rigAssetGuid = string.IsNullOrEmpty(rigPath)
+                ? string.Empty
+                : AssetDatabase.AssetPathToGUID(rigPath);
+            snapshot.presentation.rigId = rig?.RigId ?? string.Empty;
+            snapshot.presentation.rigRevision = rig?.Revision ?? string.Empty;
+
             snapshot.presentation.footAnalysisMode = presentation.FootPlacementAnalysisMode.ToString();
             snapshot.presentation.footAnalysisSourceAssetGuid = presentation.FootPlacementAnalysisSourceAssetGuid;
             if (CharacterFootPlacementAnalysisSource.IsAssetGuid(presentation.FootPlacementAnalysisSourceAssetGuid))
@@ -244,22 +264,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     snapshot.presentation.footAnalysisAlgorithmVersion = CharacterFootPlacementAnalysisSource.AlgorithmVersion;
                 }
             }
-            for (int i = 0; i < layers.Count; i++)
+
+            var poseSlotsByChannel = new Dictionary<AnimationChannelId, PoseSlotId>();
+            IReadOnlyList<CharacterPoseSlotDeclaration> slots = poseGraph?.Graph?.PoseSlots;
+            if (slots != null)
             {
-                CharacterAnimationLayerDefinition layer = layers[i];
-                if (layer == null)
-                    continue;
-                string maskPath = layer.AvatarMask ? AssetDatabase.GetAssetPath(layer.AvatarMask) : string.Empty;
-                snapshot.presentation.layers.Add(new AgentSnapshotAnimationLayer
+                for (int i = 0; i < slots.Count; i++)
                 {
-                    layerId = layer.Id,
-                    order = i,
-                    animancerLayerIndex = layer.AnimancerLayerIndex,
-                    avatarMaskAssetPath = maskPath,
-                    avatarMaskAssetGuid = string.IsNullOrEmpty(maskPath) ? string.Empty : AssetDatabase.AssetPathToGUID(maskPath),
-                    blendMode = layer.BlendMode.ToString(),
-                    outputPolicy = layer.OutputPolicy.ToString()
-                });
+                    CharacterPoseSlotDeclaration slot = slots[i];
+                    if (slot == null)
+                        continue;
+                    AnimationChannelId channelId = slot.AnimationChannelId;
+                    PoseSlotId poseSlotId = slot.PoseSlotId;
+                    snapshot.presentation.channelBindings.Add(new AgentSnapshotAnimationChannelBinding
+                    {
+                        animationChannelId = channelId.IsValid ? channelId.Value : string.Empty,
+                        poseSlotId = poseSlotId.IsValid ? poseSlotId.Value : string.Empty,
+                        outputPolicy = slot.OutputPolicy.ToString()
+                    });
+                    if (channelId.IsValid && poseSlotId.IsValid)
+                        poseSlotsByChannel.TryAdd(channelId, poseSlotId);
+                }
             }
 
             var exportedProducers = new HashSet<AnimationProducerId>();
@@ -275,9 +300,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         continue;
 
                     AnimationProducerPresentationBinding binding = presentation.FindProducerBinding(producerId);
-                    string transitionPath = binding?.Transition
-                        ? AssetDatabase.GetAssetPath(binding.Transition)
+                    string sourceAssetPath = binding?.Source
+                        ? AssetDatabase.GetAssetPath(binding.Source)
                         : string.Empty;
+                    PoseSlotId poseSlotId = track.AnimationChannelId.IsValid &&
+                                            poseSlotsByChannel.TryGetValue(track.AnimationChannelId, out PoseSlotId resolved)
+                        ? resolved
+                        : default;
                     snapshot.presentation.producers.Add(new AgentSnapshotAnimationProducer
                     {
                         route = ExportRoute(source.Route),
@@ -285,16 +314,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         trackAuthoringId = producerId.TrackAuthoringId,
                         timelineName = source.Timeline.Name,
                         trackName = track.Name,
-                        layerId = track.LayerId,
+                        animationChannelId = track.AnimationChannelId.IsValid ? track.AnimationChannelId.Value : string.Empty,
+                        poseSlotId = poseSlotId.IsValid ? poseSlotId.Value : string.Empty,
                         syncMode = track.SyncMode.ToString(),
                         syncGroupId = track.SyncGroupId,
                         sequenceTopology = track.SequenceTopology.ToString(),
                         syncRole = track.SyncRole.ToString(),
-                        transitionAssetPath = transitionPath,
-                        transitionAssetGuid = string.IsNullOrEmpty(transitionPath)
+                        sourceAssetPath = sourceAssetPath,
+                        sourceAssetGuid = string.IsNullOrEmpty(sourceAssetPath)
                             ? string.Empty
-                            : AssetDatabase.AssetPathToGUID(transitionPath),
-                        easing = binding?.Easing.ToString() ?? string.Empty
+                            : AssetDatabase.AssetPathToGUID(sourceAssetPath),
+                        sourceAssetType = binding?.Source ? binding.Source.GetType().FullName : string.Empty
                     });
                 }
             }
@@ -760,7 +790,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     typeName = track.GetType().FullName,
                     name = track.Name,
                     index = trackIndex,
-                    layerId = animationTrack?.LayerId ?? string.Empty,
+                    animationChannelId = animationTrack != null && animationTrack.AnimationChannelId.IsValid
+                        ? animationTrack.AnimationChannelId.Value
+                        : string.Empty,
                     motionWarpTrack = track is MotionWarpTrack,
                     syncMode = animationTrack?.SyncMode.ToString() ?? string.Empty,
                     syncGroupId = animationTrack?.SyncGroupId ?? string.Empty,
@@ -881,12 +913,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     AgentSnapshotTimelineTrack track = timeline.tracks[trackIndex];
                     if (!string.Equals(track.syncMode, AnimationSyncMode.MarkerGroup.ToString(), StringComparison.Ordinal))
                         continue;
-                    string key = track.layerId + "\0" + track.syncGroupId;
+                    string key = track.animationChannelId + "\0" + track.syncGroupId;
                     if (!groups.TryGetValue(key, out AgentSnapshotAnimationMarkerGroup group))
                     {
                         group = new AgentSnapshotAnimationMarkerGroup
                         {
-                            layerId = track.layerId,
+                            animationChannelId = track.animationChannelId,
                             syncGroupId = track.syncGroupId,
                             compatible = true,
                             directedMarkerPairs = track.directedMarkerPairs.Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal).ToList()
@@ -901,7 +933,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
             }
             snapshot.animationMarkerGroups = groups.Values
-                .OrderBy(value => value.layerId, StringComparer.Ordinal)
+                .OrderBy(value => value.animationChannelId, StringComparer.Ordinal)
                 .ThenBy(value => value.syncGroupId, StringComparer.Ordinal)
                 .ToList();
         }

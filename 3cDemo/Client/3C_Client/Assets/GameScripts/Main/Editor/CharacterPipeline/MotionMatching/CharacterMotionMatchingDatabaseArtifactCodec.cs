@@ -204,6 +204,8 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 writer.Write(segment.SourceClipId.Value);
                 writer.Write(segment.FirstSampleIndex);
                 writer.Write(segment.SampleCount);
+                writer.Write(segment.StartTime);
+                writer.Write(segment.EndTime);
                 writer.Write((byte)segment.LoopMode);
                 writer.Write(segment.Terminal);
                 writer.Write(segment.ContinuationEntrySampleIndex);
@@ -220,6 +222,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                     new CharacterMotionMatchingSegmentId(reader.ReadString()),
                     new CharacterMotionMatchingSourceClipId(reader.ReadString()),
                     reader.ReadInt32(), reader.ReadInt32(),
+                    reader.ReadSingle(), reader.ReadSingle(),
                     (MotionMatchingSegmentLoopMode)reader.ReadByte(),
                     reader.ReadBoolean(), reader.ReadInt32());
             }

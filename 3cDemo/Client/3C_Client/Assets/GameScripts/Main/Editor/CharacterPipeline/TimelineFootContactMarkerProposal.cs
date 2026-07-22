@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
+using UnityEditor;
 using UnityEngine;
 using TimelineAnimationClip = BTSMTL.Timeline.AnimationClip;
 
@@ -71,6 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException("Foot contact marker candidates require a looping AnimationClip.");
             if (!float.IsFinite(clip.length) || clip.length <= 0f)
                 throw new InvalidOperationException("Foot contact marker candidates require a finite positive AnimationClip duration.");
+            RequireArtifactMatchesClip(clip, artifact);
 
             int intervals = Mathf.Max(2, Mathf.CeilToInt(clip.length * artifact.Identity.SampleRate));
             var candidates = new List<AnimationFootContactCandidate>();
@@ -108,6 +111,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 contentHash,
                 StableHash.Compute(revisionParts.ToArray()).Value,
                 candidates.ToArray());
+        }
+
+        static void RequireArtifactMatchesClip(
+            UnityEngine.AnimationClip clip,
+            AnimationFootAnalysisArtifact artifact)
+        {
+            string clipPath = AssetDatabase.GetAssetPath(clip);
+            string clipGuid = string.IsNullOrEmpty(clipPath)
+                ? string.Empty
+                : AssetDatabase.AssetPathToGUID(clipPath);
+            string dependencyHash = string.IsNullOrEmpty(clipPath)
+                ? string.Empty
+                : AssetDatabase.GetAssetDependencyHash(clipPath).ToString();
+            if (!string.Equals(artifact.Identity.ClipAssetGuid, clipGuid, StringComparison.Ordinal) ||
+                !string.Equals(artifact.Identity.ClipDependencyHash, dependencyHash, StringComparison.Ordinal) ||
+                !string.Equals(
+                    artifact.Identity.AlgorithmVersion,
+                    CharacterFootPlacementAnalysisSource.AlgorithmVersion,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Foot contact marker candidates require the exact current AnimationClip dependency and Foot Analysis algorithm.");
+            }
         }
 
         static void Collect(
@@ -194,6 +220,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new ArgumentNullException(nameof(clip));
             if (!ReferenceEquals(clip.Track, track))
                 throw new InvalidOperationException("Foot contact marker proposal Clip does not belong to the target AnimationTrack.");
+            if (!AuthoringIdentity.IsValid(timeline.AuthoringId) ||
+                !AuthoringIdentity.IsValid(track.AuthoringId) ||
+                !AuthoringIdentity.IsValid(clip.AuthoringId))
+            {
+                throw new InvalidOperationException(
+                    "Foot contact marker proposal requires stable Timeline, Track and Clip authoring identities.");
+            }
             if (track.SyncMode != AnimationSyncMode.MarkerGroup ||
                 track.SequenceTopology != AnimationMarkerSequenceTopology.Cyclic)
                 throw new InvalidOperationException("Foot contact marker proposal requires a MarkerGroup/Cyclic AnimationTrack.");
@@ -297,10 +330,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (track == null || !string.Equals(track.AuthoringId, TrackAuthoringId, StringComparison.Ordinal))
                 throw new InvalidOperationException("Foot contact marker proposal target track changed.");
-            var reusable = new Dictionary<string, Queue<AnimationSyncMarker>>(StringComparer.Ordinal)
+            var reusable = new Dictionary<string, List<AnimationSyncMarker>>(StringComparer.Ordinal)
             {
-                [LeftMarkerId] = new Queue<AnimationSyncMarker>(),
-                [RightMarkerId] = new Queue<AnimationSyncMarker>()
+                [LeftMarkerId] = new List<AnimationSyncMarker>(),
+                [RightMarkerId] = new List<AnimationSyncMarker>()
             };
             var existingFootMarkers = new List<AnimationSyncMarker>();
             for (int i = 0; i < track.SyncMarkers.Count; i++)
@@ -308,7 +341,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 AnimationSyncMarker marker = track.SyncMarkers[i];
                 if (marker == null || !IsFootMarker(marker.MarkerId))
                     continue;
-                reusable[marker.MarkerId].Enqueue(marker);
+                reusable[marker.MarkerId].Add(marker);
                 existingFootMarkers.Add(marker);
             }
 
@@ -316,13 +349,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < Candidates.Count; i++)
             {
                 TimelineFootContactMarkerCandidate candidate = Candidates[i];
-                Queue<AnimationSyncMarker> queue = reusable[candidate.MarkerId];
-                if (queue.Count == 0)
+                AnimationSyncMarker marker = FindReusableMarker(
+                    reusable[candidate.MarkerId],
+                    candidate.TimelineFrame,
+                    reusedIds);
+                if (marker == null)
                 {
                     track.AddMarker(candidate.MarkerId, candidate.TimelineFrame);
                     continue;
                 }
-                AnimationSyncMarker marker = queue.Dequeue();
                 reusedIds.Add(marker.AuthoringId);
                 track.EnsureMarker(marker.AuthoringId, candidate.MarkerId, candidate.TimelineFrame);
             }
@@ -332,6 +367,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (!reusedIds.Contains(marker.AuthoringId))
                     track.DeleteMarker(marker.AuthoringId);
             }
+        }
+
+        static AnimationSyncMarker FindReusableMarker(
+            IReadOnlyList<AnimationSyncMarker> markers,
+            int targetFrame,
+            ISet<string> reusedIds)
+        {
+            for (int i = 0; i < markers.Count; i++)
+            {
+                AnimationSyncMarker marker = markers[i];
+                if (marker.Frame == targetFrame && !reusedIds.Contains(marker.AuthoringId))
+                    return marker;
+            }
+            for (int i = 0; i < markers.Count; i++)
+            {
+                AnimationSyncMarker marker = markers[i];
+                if (!reusedIds.Contains(marker.AuthoringId))
+                    return marker;
+            }
+            return null;
         }
 
         static int PositiveModulo(int value, int modulus)

@@ -68,7 +68,7 @@
 - [ ] 4.18 让Runtime只按stable producer index exact lookup。
 - [ ] 4.19 删除Runtime default rule与固定duration fallback。
 - [ ] 4.20 删除Animancer TransitionLibrary authoring引用。
-- [ ] 4.21 强制RequireOutput slot的Empty到producer exact transition为零时长。
+- [x] 4.21 强制RequireOutput slot的Empty到producer exact transition为零时长。
 
 ## 5. Canonical Curve
 
@@ -87,7 +87,7 @@
 
 - [x] 6.1 定义AnimationBlendEntryId。
 - [x] 6.2 将PoseSlotId纳入EntryId。
-- [ ] 6.3 将完整AnimationPoseSourceId纳入EntryId。
+- [x] 6.3 将完整AnimationPoseSourceId纳入EntryId。
 - [x] 6.4 将PresentationRequestSequence纳入EntryId。
 - [x] 6.5 定义Live Source Entry状态。
 - [x] 6.6 定义Stored Pose Entry状态。
@@ -106,8 +106,8 @@
 
 - [ ] 7.1 让每个Projection PoseSlot创建唯一AnimationBlendStackRuntime。
 - [x] 7.2 按stable push order保存active entries。
-- [ ] 7.3 让同AnimationPoseSourceId连续sample只更新source。
-- [ ] 7.4 让同Playback不同SelectionGeneration创建新EntryId。
+- [x] 7.3 让同AnimationPoseSourceId连续sample只更新source。
+- [x] 7.4 让同Playback不同SelectionGeneration创建新EntryId。
 - [ ] 7.5 让不同generation拥有独立source visual。
 - [x] 7.6 为每entry保存独立elapsed clock。
 - [x] 7.7 为每entry保存base duration。
@@ -117,7 +117,7 @@
 - [x] 7.11 实现每骨骼duration计算。
 - [x] 7.12 实现从新到旧nested residual。
 - [x] 7.13 实现每骨骼weight规范化。
-- [ ] 7.14 合并重复source capture的entry贡献。
+- [x] 7.14 让重复引用同SourceId的entry复用唯一固定source capture slice并保留各自贡献身份。
 - [x] 7.15 实现AllowEmpty透明NoPose transition。
 - [x] 7.16 实现RequireOutput拒绝Empty。
 - [x] 7.17 实现entry归零与retirement条件。
@@ -136,7 +136,7 @@
 - [x] 8.9 实现最新entry快速替换capture条件。
 - [x] 8.10 在新entry push前完成capture。
 - [x] 8.11 原子移除被Stored取代的entries。
-- [ ] 8.12 在capture引用结束后释放source。
+- [x] 8.12 在capture引用结束且同completion成功后发布完整SourceId release。
 - [x] 8.13 阻止Stored Pose推进Timeline或Marker。
 - [x] 8.14 阻止Stored Pose伪造PlaybackId或AnimationClip。
 - [x] 8.15 删除达到容量后直接丢entry路径。
@@ -163,14 +163,14 @@
 ## 10. Animancer Source Sampling Backend
 
 - [ ] 10.1 将AnimancerPlaybackAdapter替换为AnimancerPoseSamplingBackend。
-- [ ] 10.2 按完整AnimationPoseSourceId保存source visual。
-- [ ] 10.3 为单Clip producer创建source state。
-- [ ] 10.4 为多Clip producer创建ManualMixerState。
-- [ ] 10.5 应用resolved visual sample time。
+- [x] 10.2 按完整AnimationPoseSourceId保存source visual。
+- [x] 10.3 让单Clip source使用唯一ManualMixerState单child，避免同SourceId运行时更换拓扑。
+- [x] 10.4 为多Clip producer创建ManualMixerState。
+- [x] 10.5 应用resolved visual sample time。
 - [ ] 10.6 应用loop/cycle状态。
-- [ ] 10.7 应用producer内部child weight。
-- [ ] 10.8 保持Timeline source Speed为0。
-- [ ] 10.9 保持child DontSynchronize。
+- [x] 10.7 应用producer内部child weight。
+- [x] 10.8 保持Timeline source Speed为0。
+- [x] 10.9 保持child DontSynchronize。
 - [ ] 10.10 删除AnimancerLayer.Play调用。
 - [ ] 10.11 删除StartFade和FadeGroup调用。
 - [ ] 10.12 删除Animancer layer weight写入。
@@ -193,13 +193,13 @@
 - [x] 11.11 按slot容量预分配weight buffer。
 - [x] 11.12 预分配pose history与velocity buffer。
 - [x] 11.13 预分配parameter与feature buffer。
-- [x] 11.14 建立AnimationSlotBlendPoseEvaluator。
-- [ ] 11.15 生成不可变per-slot frame plan。
-- [ ] 11.16 让source capture job写入独立Native buffer slice。
-- [x] 11.17 让Slot Evaluator发布完整PoseSlotFrame。
-- [x] 11.18 禁止Slot Evaluator读取跨slotMask和Additive。
-- [x] 11.19 禁止Slot Evaluator写最终Animator Pose。
-- [ ] 11.20 禁止表现帧动态扩容或Transform逐骨写入。
+- [x] 11.14 建立唯一AnimationSlotBlendJob并删除managed pose evaluator路径。
+- [x] 11.15 生成双页不可变per-slot frame plan并原子提交active page。
+- [x] 11.16 让source capture job写入独立Native buffer slice。
+- [x] 11.17 让Slot Job发布完整Native Pose Slot输出并最后写completion identity。
+- [x] 11.18 禁止Slot Job读取跨slotMask和Additive。
+- [x] 11.19 禁止Slot Job写最终Animator Pose。
+- [x] 11.20 禁止表现帧动态扩容或Transform逐骨写入。
 
 ## 12. Marker Sync与Retention迁移
 

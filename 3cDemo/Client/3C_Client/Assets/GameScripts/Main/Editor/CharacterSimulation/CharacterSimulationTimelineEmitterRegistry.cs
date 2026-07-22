@@ -379,7 +379,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 context.DeclareTrackCatalog(context.Builder.ConstantField(context.TrackSource, "AnimationChannelId", track.AnimationChannelId));
                 context.Builder.DeclareProducer(
                     context.AnimationProducerIdentity,
-                    new AnimationChannelId(track.AnimationChannelId),
+                    track.AnimationChannelId,
                     context.TrackIdentity,
                     ProgramOutputChannelKind.Presentation,
                     context.TrackSource);
@@ -401,7 +401,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string producer = context.AnimationProducerIdentity;
                 int producerIndex = context.Builder.DeclareProducer(
                     producer,
-                    new AnimationChannelId(((AnimationTrack)context.Track).AnimationChannelId),
+                    ((AnimationTrack)context.Track).AnimationChannelId,
                     context.TrackIdentity,
                     ProgramOutputChannelKind.Presentation,
                     source);

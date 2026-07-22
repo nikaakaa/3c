@@ -31,7 +31,7 @@ Timeline、Semantic IR、Program producer contract、selection command与Playbac
 
 ### Requirement: 动画通道输入必须是已解析播放选择与正式采样
 
-Animation module MUST只接收Program Finalize已解析的每channel selection command，以及Presentation sampler生成的ProducerSample、Complete和Release。Selection MUST表达AnimationChannelId、PlaybackId、generation、SimulationTick、sequence与EventId，MUST不携带PoseSlotId、Bone Mask、Priority、Driver、Tree route或候选列表。Projection MUST在Presentation边界把channel精确映射到slot；Pose Graph MUST不重新选择producer。
+Animation module MUST只接收Program Finalize已解析的每channel selection command，以及Presentation sampler生成的`ResolvedAnimationPoseRequest`、Complete和Release。Selection MUST表达AnimationChannelId、PlaybackId、generation、SimulationTick、sequence与EventId，MUST不携带PoseSlotId、Bone Mask、Priority、Driver、Tree route或候选列表。Presentation sampler MUST在Marker Sync与source selection完成后生成包含AnimationChannelId、PoseSlotId、完整AnimationPoseSourceId、ClipSamplePlan、dense PoseParameter与Foot Feature的唯一request；Projection MUST在该边界把channel精确映射到slot。Pose Graph MUST不重新选择producer。
 
 #### Scenario: 同一channel收到两个target
 

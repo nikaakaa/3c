@@ -55,6 +55,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         {
             if (!query.DatabaseIdentity.EqualsExact(m_Database.ArtifactIdentity) || !query.SearchDomainId.Equals(m_Database.SearchDomainId))
                 throw new InvalidOperationException("Motion Matching Query does not match the Runtime Database.");
+            if (query.NormalizedFeatures.Count != m_Database.Capacities.DenseFeatureCount ||
+                !query.Initialization && (uint)query.CurrentSampleIndex >= (uint)m_Database.SampleCount)
+                throw new InvalidOperationException("Motion Matching Query layout or current sample does not match the Runtime Database.");
             m_Database.ClearFrameWorkspace();
             int[] stack = m_Database.TraversalStack;
             int stackCount = 0;

@@ -88,6 +88,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             SerializedProperty curveCatalog = projection.FindPropertyRelative("m_BlendCurveCatalog")?.FindPropertyRelative("m_Entries");
             SerializedProperty profileCatalog = projection.FindPropertyRelative("m_BlendProfileCatalog")?.FindPropertyRelative("m_Entries");
             SerializedProperty producers = projection.FindPropertyRelative("m_Producers");
+            SerializedProperty poseProgram = projection.FindPropertyRelative("m_PoseProgram");
+            SerializedProperty rig = projection.FindPropertyRelative("m_Rig");
             int animationCount = 0;
             int cameraCount = 0;
             int cueCount = 0;
@@ -110,6 +112,45 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.LabelField("Animation Producers", animationCount.ToString());
             EditorGUILayout.LabelField("Camera Producers", cameraCount.ToString());
             EditorGUILayout.LabelField("Cue Producers", cueCount.ToString());
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Pose Program", EditorStyles.boldLabel);
+            if (poseProgram == null)
+            {
+                EditorGUILayout.HelpBox("Compiled Pose Program is missing.", MessageType.Error);
+            }
+            else
+            {
+                EditorGUILayout.LabelField("Schema / Runtime ABI", $"{poseProgram.FindPropertyRelative("m_SchemaVersion").stringValue} / {poseProgram.FindPropertyRelative("m_RuntimeAbi").stringValue}");
+                EditorGUILayout.LabelField("Graph Identity", $"{poseProgram.FindPropertyRelative("m_PoseGraphId").stringValue} @ {poseProgram.FindPropertyRelative("m_ContentRevision").stringValue}");
+                EditorGUILayout.LabelField("Program Hash", poseProgram.FindPropertyRelative("m_ProgramHash").stringValue);
+                EditorGUILayout.LabelField("Operations / Output", $"{poseProgram.FindPropertyRelative("m_Operations").arraySize} / {poseProgram.FindPropertyRelative("m_OutputOperationIndex").intValue}");
+                EditorGUILayout.LabelField("Parameters / Masks", $"{poseProgram.FindPropertyRelative("m_Parameters").arraySize} / {poseProgram.FindPropertyRelative("m_BoneMasks").arraySize}");
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Rig", EditorStyles.boldLabel);
+            if (rig == null)
+            {
+                EditorGUILayout.HelpBox("Compiled Rig payload is missing.", MessageType.Error);
+            }
+            else
+            {
+                EditorGUILayout.LabelField("Identity", $"{rig.FindPropertyRelative("m_RigId").stringValue} @ {rig.FindPropertyRelative("m_RigRevision").stringValue}");
+                EditorGUILayout.LabelField("Bones", rig.FindPropertyRelative("m_Bones").arraySize.ToString());
+                EditorGUILayout.LabelField("Root / Left Foot / Right Foot", $"{rig.FindPropertyRelative("m_RootBoneIndex").intValue} / {rig.FindPropertyRelative("m_LeftFootBoneIndex").intValue} / {rig.FindPropertyRelative("m_RightFootBoneIndex").intValue}");
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Animation Channel to Pose Slot", EditorStyles.boldLabel);
+            for (int i = 0; i < (blendSlots?.arraySize ?? 0); i++)
+            {
+                SerializedProperty slot = blendSlots.GetArrayElementAtIndex(i);
+                SerializedProperty policy = slot.FindPropertyRelative("m_OutputPolicy");
+                EditorGUILayout.LabelField(
+                    slot.FindPropertyRelative("m_AnimationChannelId").stringValue,
+                    $"{slot.FindPropertyRelative("m_PoseSlotId").stringValue} / {policy.enumDisplayNames[policy.enumValueIndex]}");
+            }
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Animation Marker Sync", EditorStyles.boldLabel);

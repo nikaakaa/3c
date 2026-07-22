@@ -6,19 +6,19 @@
 ## Requirements
 ### Requirement: CharacterPipelineDefinition 必须是配置装配根
 
-`CharacterPipelineDefinition` MUST只保存 RootTree、SimulationTickRate、InputProfile、GameplayEffectProfile、ActionProfile、GameplayBehaviorProfile、CharacterAnimationPresentationProfile 与 generated Program/Projection 的正式引用。Definition MUST不内联保存 Animation Layer、TransitionLibrary、producer binding、Graph、Timeline、runtime lifecycle 或 compiler report 数据。
+`CharacterPipelineDefinition` MUST只保存RootTree、SimulationTickRate、InputProfile、GameplayEffectProfile、ActionProfile、GameplayBehaviorProfile、CharacterAnimationPresentationProfile与generated Program/Projection的正式引用。Definition MUST不内联保存Pose Graph、Blend Library、Rig、producer binding、Graph、Timeline、runtime lifecycle或compiler report数据。
 
 #### Scenario: 打开角色 Definition
 
 - **WHEN** 作者选择 Corin CharacterPipelineDefinition
 - **THEN** Inspector MUST优先显示角色引用的正式 Config
-- **AND** MUST不平铺 Animation Layer、producer binding、Program Hash 或 capability 明细
+- **AND** MUST不平铺Pose Slot、Blend transition、producer binding、Program Hash或capability明细
 
 #### Scenario: 缺失动画表现 Profile
 
 - **WHEN** Definition 没有 CharacterAnimationPresentationProfile 引用
 - **THEN** configuration validation 与 Compiler MUST报告明确错误
-- **AND** 系统 MUST不创建内联默认 Profile 或从 TransitionLibrary 猜测配置
+- **AND** 系统 MUST不创建内联默认Profile、默认Pose Graph或从producer名称猜测配置
 
 ### Requirement: Definition Inspector 必须分离作者配置与生成产物
 
@@ -65,12 +65,12 @@ Definition Inspector MUST以紧凑 Config References 作为默认作者界面。
 
 ### Requirement: Animation Presentation Profile 必须是唯一表现配置资产
 
-`CharacterAnimationPresentationProfile` MUST作为ScriptableObject唯一保存有序Layer catalog、Animancer TransitionLibraryAsset引用、稳定producer presentation bindings，以及显式Foot Placement Analysis Mode与Analysis Source Asset GUID。Definition、Graph、Timeline、Presenter、Program、Runtime Prefab或独立EditorWindow MUST不保存这些作者配置的可写副本。Editor-only Analysis Source中的Sampling Rig Asset GUID与Rig Calibration属于分析输入；单Clip generated feature MAY先保存为非作者、非Runtime的Library artifact，Runtime payload只属于Projection且不得反写Profile或Timeline。Profile与Definition MUST不持有Analysis Source或Sampling Rig对象强引用，避免Editor分析资产进入Gameplay SourceRevision与Player依赖闭包。
+`CharacterAnimationPresentationProfile` MUST作为ScriptableObject唯一引用Pose Graph、Blend Library与Rig Definition，保存稳定producer source bindings，以及显式Foot Placement Analysis Mode与Analysis Source Asset GUID。Pose Graph MUST唯一保存Pose Slot、AnimationChannel binding、Mask、Additive、Pose Parameter与Output topology；Blend Library MUST唯一保存每slot transition。Definition、Graph、Timeline、Presenter、Program、Runtime Prefab或独立EditorWindow MUST不保存这些作者配置的可写副本。Editor-only Analysis Source中的Sampling Rig Asset GUID与Rig Calibration属于分析输入；单Clip generated feature MAY先保存为非作者、非Runtime的Library artifact，Runtime payload只属于Projection且不得反写Profile或Timeline。Profile与Definition MUST不持有Analysis Source或Sampling Rig对象强引用，避免Editor分析资产进入Gameplay SourceRevision与Player依赖闭包。
 
 #### Scenario: 一个Profile被一个Definition引用
 
 - **WHEN** 作者选择CharacterAnimationPresentationProfile
-- **THEN** Profile Inspector MUST提供Layer、TransitionLibrary、producer binding和Foot Analysis Source Asset GUID唯一写入口
+- **THEN** Profile Inspector MUST提供Pose Graph、Blend Library、Rig、producer source binding和Foot Analysis Source Asset GUID唯一入口
 - **AND** Undo与dirty owner MUST是Profile或被显式编辑的Analysis Source资产
 
 #### Scenario: 一个Profile被多个Definition引用
@@ -143,4 +143,3 @@ Definition直接拥有的core ActionProfile与Equipment Feature导出的ActionPr
 - **WHEN** Sawblade与Gun导出相同ActionId但并非同一共享ActionProfile identity
 - **THEN** Compiler MUST拒绝重复定义
 - **AND** MUST不按active Feature覆盖catalog条目
-

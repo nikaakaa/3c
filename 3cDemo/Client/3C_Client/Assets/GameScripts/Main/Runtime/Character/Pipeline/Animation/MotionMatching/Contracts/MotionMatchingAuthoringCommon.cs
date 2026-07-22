@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching

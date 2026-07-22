@@ -24,46 +24,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                                AnimationBlendPoseMath.IsFinite(Scale);
     }
 
-    internal readonly struct AnimationBlendSourcePoseFrame
-    {
-        public AnimationBlendSourcePoseFrame(
-            AnimationPlaybackId playbackId,
-            int programProducerIndex,
-            AnimationReadOnlyBuffer<AnimationLocalBonePose> denseLocalPose,
-            AnimationReadOnlyBuffer<AnimationBlendBoneVelocity> denseVelocity,
-            AnimationReadOnlyBuffer<float> poseParameters,
-            AnimationFootFeatureSample leftFootFeatures,
-            AnimationFootFeatureSample rightFootFeatures,
-            bool hasFootFeatures,
-            float visualTimeScale)
-        {
-            if (!playbackId.IsValid || programProducerIndex < 0 ||
-                denseLocalPose.Count == 0 || denseVelocity.Count != denseLocalPose.Count ||
-                !float.IsFinite(visualTimeScale) || visualTimeScale < 0f ||
-                hasFootFeatures && (!leftFootFeatures.IsValid || !rightFootFeatures.IsValid))
-                throw new ArgumentException("Animation source pose frame is invalid.");
-            PlaybackId = playbackId;
-            ProgramProducerIndex = programProducerIndex;
-            DenseLocalPose = denseLocalPose;
-            DenseVelocity = denseVelocity;
-            PoseParameters = poseParameters;
-            LeftFootFeatures = leftFootFeatures;
-            RightFootFeatures = rightFootFeatures;
-            HasFootFeatures = hasFootFeatures;
-            VisualTimeScale = visualTimeScale;
-        }
-
-        public AnimationPlaybackId PlaybackId { get; }
-        public int ProgramProducerIndex { get; }
-        public AnimationReadOnlyBuffer<AnimationLocalBonePose> DenseLocalPose { get; }
-        public AnimationReadOnlyBuffer<AnimationBlendBoneVelocity> DenseVelocity { get; }
-        public AnimationReadOnlyBuffer<float> PoseParameters { get; }
-        public AnimationFootFeatureSample LeftFootFeatures { get; }
-        public AnimationFootFeatureSample RightFootFeatures { get; }
-        public bool HasFootFeatures { get; }
-        public float VisualTimeScale { get; }
-    }
-
     internal static class AnimationBlendPoseMath
     {
         const float QuaternionTolerance = 0.0000001f;

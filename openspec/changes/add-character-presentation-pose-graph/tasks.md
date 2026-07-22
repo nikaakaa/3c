@@ -2,59 +2,59 @@
 
 ## 1. 实施基线与共同合同收口
 
-- [ ] 1.1 枚举当前`LayerId`在Timeline、Semantic IR、Program、command、Projection、Runtime、Preview、Trace和Agent Snapshot中的全部字段与构造入口。
-- [ ] 1.2 枚举`CharacterAnimationLayerDefinition`的全部authoring、serialized、Projection和Runtime调用方。
-- [ ] 1.3 枚举当前Animancer Layer、FadeGroup、TransitionLibrary和最终Pose写入调用方。
-- [ ] 1.4 枚举未实施Blend Stack提案中的per-layer Stack、global compositor和final Animator output职责。
-- [ ] 1.5 枚举Foot Placement读取Animancer、Layer scalar和visible contribution的全部入口。
-- [ ] 1.6 枚举BTSMTL Graph Editor中窗口、GraphView、搜索、clipboard、Undo、Inspector和diagnostics实现。
-- [ ] 1.7 枚举BTSMTL Graph Editor中BaseNode、BaseEdge、ConditionRule、BTAbortPolicy、InputAction与runtime context特判。
-- [ ] 1.8 核对`refactor-animation-playback-to-blend-stack`最终per-slot输出合同与本change一致。
-- [ ] 1.9 核对`refactor-presentation-projection-target-boundary`最终producer contract和Projection payload与本change一致。
-- [ ] 1.10 核对当前Corin全部AnimationTrack、producer、LayerId、Action/Locomotion ownership和Marker Group。
-- [ ] 1.11 建立待删除旧Layer数据、旧Animancer fade路径、旧snapshot字段和generated asset清单。
-- [ ] 1.12 标记并行active change已经修改且本change不得回退的Projection、Foot Analysis、Marker Sync和Presentation Runtime字段。
+- [x] 1.1 枚举当前`LayerId`在Timeline、Semantic IR、Program、command、Projection、Runtime、Preview、Trace和Agent Snapshot中的全部字段与构造入口。
+- [x] 1.2 枚举`CharacterAnimationLayerDefinition`的全部authoring、serialized、Projection和Runtime调用方。
+- [x] 1.3 枚举当前Animancer Layer、FadeGroup、TransitionLibrary和最终Pose写入调用方。
+- [x] 1.4 枚举未实施Blend Stack提案中的per-layer Stack、global compositor和final Animator output职责。
+- [x] 1.5 枚举Foot Placement读取Animancer、Layer scalar和visible contribution的全部入口。
+- [x] 1.6 枚举BTSMTL Graph Editor中窗口、GraphView、搜索、clipboard、Undo、Inspector和diagnostics实现。
+- [x] 1.7 枚举BTSMTL Graph Editor中BaseNode、BaseEdge、ConditionRule、BTAbortPolicy、InputAction与runtime context特判。
+- [x] 1.8 核对`refactor-animation-playback-to-blend-stack`最终per-slot输出合同与本change一致。
+- [x] 1.9 核对`refactor-presentation-projection-target-boundary`最终producer contract和Projection payload与本change一致。
+- [x] 1.10 核对当前Corin全部AnimationTrack、producer、LayerId、Action/Locomotion ownership和Marker Group。
+- [x] 1.11 建立待删除旧Layer数据、旧Animancer fade路径、旧snapshot字段和generated asset清单。
+- [x] 1.12 标记并行active change已经修改且本change不得回退的Projection、Foot Analysis、Marker Sync和Presentation Runtime字段。
 
 ## 2. Animation Channel身份迁移
 
-- [ ] 2.1 定义稳定`AnimationChannelId`值类型及空值规范。
-- [ ] 2.2 定义AnimationChannel canonical序列化格式。
-- [ ] 2.3 将Timeline `AnimationTrack.LayerId`替换为`AnimationChannelId`。
-- [ ] 2.4 将AnimationTrack authoring validator切换到AnimationChannelId。
-- [ ] 2.5 将Timeline复制与粘贴保持channel identity引用而不生成新channel。
-- [ ] 2.6 将Semantic producer contract的LayerId替换为AnimationChannelId。
-- [ ] 2.7 将Semantic emitter输出切换到AnimationChannelId。
-- [ ] 2.8 将Float32 Program producer descriptor切换到AnimationChannelId。
-- [ ] 2.9 将Fixed Program producer descriptor切换到AnimationChannelId。
-- [ ] 2.10 将Program canonical codec与hash输入切换到AnimationChannelId。
-- [ ] 2.11 提升受影响Program ABI与operation-set identity。
-- [ ] 2.12 将Program Finalize按AnimationChannelId建立唯一selection。
-- [ ] 2.13 将Presentation command schema切换到AnimationChannelId。
-- [ ] 2.14 将command queue排序与冲突诊断切换到AnimationChannelId。
-- [ ] 2.15 将Playback Lifecycle key切换到AnimationChannelId。
-- [ ] 2.16 将Marker Sync同组约束切换为同AnimationChannelId。
-- [ ] 2.17 将Trace、Snapshot与diagnostic字段切换到AnimationChannelId。
-- [ ] 2.18 删除全部运行时代码中的LayerId类型、字段、转换和字符串标签。
+- [x] 2.1 定义稳定`AnimationChannelId`值类型及空值规范。
+- [x] 2.2 定义AnimationChannel canonical序列化格式。
+- [x] 2.3 将Timeline `AnimationTrack.LayerId`替换为`AnimationChannelId`。
+- [x] 2.4 将AnimationTrack authoring validator切换到AnimationChannelId。
+- [x] 2.5 将Timeline复制与粘贴保持channel identity引用而不生成新channel。
+- [x] 2.6 将Semantic producer contract的LayerId替换为AnimationChannelId。
+- [x] 2.7 将Semantic emitter输出切换到AnimationChannelId。
+- [x] 2.8 将Float32 Program producer descriptor切换到AnimationChannelId。
+- [x] 2.9 将Fixed Program producer descriptor切换到AnimationChannelId。
+- [x] 2.10 将Program canonical codec与hash输入切换到AnimationChannelId。
+- [x] 2.11 提升受影响Program ABI与operation-set identity。
+- [x] 2.12 将Program Finalize按AnimationChannelId建立唯一selection。
+- [x] 2.13 将Presentation command schema切换到AnimationChannelId。
+- [x] 2.14 将command queue排序与冲突诊断切换到AnimationChannelId。
+- [x] 2.15 将Playback Lifecycle key切换到AnimationChannelId。
+- [x] 2.16 将Marker Sync同组约束切换为同AnimationChannelId。
+- [x] 2.17 将Trace、Snapshot与diagnostic字段切换到AnimationChannelId。
+- [x] 2.18 删除全部运行时代码中的LayerId类型、字段、转换和字符串标签。
 
 ## 3. Pose Slot与Profile合同
 
-- [ ] 3.1 定义稳定`PoseSlotId`值类型及空值规范。
-- [ ] 3.2 定义`PoseSlotOutputPolicy`的RequireOutput与AllowEmpty值。
-- [ ] 3.3 定义Pose Slot authoring declaration schema。
-- [ ] 3.4 让Pose Slot declaration显式保存AnimationChannelId binding。
-- [ ] 3.5 实现channel-to-slot一对一校验。
-- [ ] 3.6 实现可达Animation Channel完整slot coverage校验。
-- [ ] 3.7 实现一个Pose Slot最多一个channel校验。
-- [ ] 3.8 实现一个Pose Slot恰好一个根PoseSlotInput校验。
-- [ ] 3.9 将`CharacterAnimationPresentationProfile`增加唯一Pose Graph引用。
-- [ ] 3.10 保留Profile的Blend Library与Rig Definition正式引用。
-- [ ] 3.11 从Profile删除Layer catalog字段。
-- [ ] 3.12 从Profile删除Layer order、AvatarMask、BlendMode和Animancer layer index数据。
-- [ ] 3.13 从Profile Inspector删除旧Layer列表UI。
-- [ ] 3.14 在Profile Inspector增加Pose Graph、Blend Library与Rig identity摘要。
-- [ ] 3.15 在Profile Inspector增加显式Open Pose Graph入口。
-- [ ] 3.16 在Profile Inspector按producer identity显示AnimationChannelId和PoseSlotId。
-- [ ] 3.17 让Profile validation拒绝缺失Pose Graph、Blend Library或Rig。
+- [x] 3.1 定义稳定`PoseSlotId`值类型及空值规范。
+- [x] 3.2 定义`PoseSlotOutputPolicy`的RequireOutput与AllowEmpty值。
+- [x] 3.3 定义Pose Slot authoring declaration schema。
+- [x] 3.4 让Pose Slot declaration显式保存AnimationChannelId binding。
+- [x] 3.5 实现channel-to-slot一对一校验。
+- [x] 3.6 实现可达Animation Channel完整slot coverage校验。
+- [x] 3.7 实现一个Pose Slot最多一个channel校验。
+- [x] 3.8 实现一个Pose Slot恰好一个根PoseSlotInput校验。
+- [x] 3.9 将`CharacterAnimationPresentationProfile`增加唯一Pose Graph引用。
+- [x] 3.10 保留Profile的Blend Library与Rig Definition正式引用。
+- [x] 3.11 从Profile删除Layer catalog字段。
+- [x] 3.12 从Profile删除Layer order、AvatarMask、BlendMode和Animancer layer index数据。
+- [x] 3.13 从Profile Inspector删除旧Layer列表UI。
+- [x] 3.14 在Profile Inspector增加Pose Graph、Blend Library与Rig identity摘要。
+- [x] 3.15 在Profile Inspector增加显式Open Pose Graph入口。
+- [x] 3.16 在Profile Inspector按producer identity显示AnimationChannelId和PoseSlotId。
+- [x] 3.17 让Profile validation拒绝缺失Pose Graph、Blend Library或Rig。
 - [ ] 3.18 删除`CharacterAnimationLayerDefinition`类型与全部serialized使用点。
 
 ## 4. Graph Authoring Editor Shell抽取
@@ -86,25 +86,25 @@
 
 ## 5. Pose Graph authoring数据
 
-- [ ] 5.1 定义`CharacterPresentationPoseGraphAsset`。
-- [ ] 5.2 定义普通CSharp `CharacterPoseGraphData`。
-- [ ] 5.3 定义稳定PoseNodeId。
-- [ ] 5.4 定义稳定PosePortId。
-- [ ] 5.5 定义PoseEdge schema。
-- [ ] 5.6 定义Pose graph content revision。
-- [ ] 5.7 定义Pose node base authoring合同且不包含runtime evaluation字段。
-- [ ] 5.8 定义PoseSlotInput authoring node。
-- [ ] 5.9 定义LayeredBoneBlend authoring node。
-- [ ] 5.10 定义AdditivePose authoring node。
-- [ ] 5.11 定义PoseCurveResolve authoring node。
+- [x] 5.1 定义`CharacterPresentationPoseGraphAsset`。
+- [x] 5.2 定义普通CSharp `CharacterPoseGraphData`。
+- [x] 5.3 定义稳定PoseNodeId。
+- [x] 5.4 定义稳定PosePortId。
+- [x] 5.5 定义PoseEdge schema。
+- [x] 5.6 定义Pose graph content revision。
+- [x] 5.7 定义Pose node base authoring合同且不包含runtime evaluation字段。
+- [x] 5.8 定义PoseSlotInput authoring node。
+- [x] 5.9 定义LayeredBoneBlend authoring node。
+- [x] 5.10 定义AdditivePose authoring node。
+- [x] 5.11 定义PoseCurveResolve authoring node。
 - [x] 5.12 定义PoseSubgraph authoring node与typed接口。
 - [x] 5.12.1 定义独立稳定`PoseInterfacePortId`且与node-local `PosePortId`分离。
 - [x] 5.12.2 定义compiler-only `GraphInput`与`GraphOutput` authoring node kind。
 - [x] 5.12.3 让PoseSubgraph调用点本地端口显式保存`InterfacePortId` binding。
-- [ ] 5.13 定义OutputPose authoring node。
-- [ ] 5.14 定义owner-private inline PoseSubgraph reference。
-- [ ] 5.15 定义显式shared PoseGraph asset reference。
-- [ ] 5.16 实现inline/shared互斥所有权。
+- [x] 5.13 定义OutputPose authoring node。
+- [x] 5.14 定义owner-private inline PoseSubgraph reference。
+- [x] 5.15 定义显式shared PoseGraph asset reference。
+- [x] 5.16 实现inline/shared互斥所有权。
 - [ ] 5.17 实现Create Inline、Extract Shared与Clear Shared正式mutation。
 - [ ] 5.18 实现Pose Graph stable identity生成与复制remap。
 - [ ] 5.19 实现Pose Graph asset直接打开入口。
@@ -112,106 +112,115 @@
 
 ## 6. Pose Parameter与Mask authoring
 
-- [ ] 6.1 定义稳定`PoseParameterId`。
-- [ ] 6.2 定义有限标量Pose Parameter declaration。
-- [ ] 6.3 让每个Pose Parameter declaration保存显式default。
-- [ ] 6.4 定义`Base` resolve policy。
-- [ ] 6.5 定义`Overlay` resolve policy。
-- [ ] 6.6 定义`Weighted` resolve policy。
-- [ ] 6.7 定义`Max` resolve policy。
-- [ ] 6.8 定义`Min` resolve policy。
-- [ ] 6.9 让LayeredBoneBlend保存每参数完整policy。
-- [ ] 6.10 让AdditivePose保存每参数完整policy。
-- [ ] 6.11 让PoseCurveResolve保存显式source与policy。
-- [ ] 6.12 定义Pose Graph Bone Mask authoring引用。
-- [ ] 6.13 让Bone Mask只使用稳定BoneId。
-- [ ] 6.14 定义Additive reference pose identity。
-- [ ] 6.15 定义Additive reference space与scale policy。
+- [x] 6.1 定义稳定`PoseParameterId`。
+- [x] 6.2 定义有限标量Pose Parameter declaration。
+- [x] 6.3 让每个Pose Parameter declaration保存显式default。
+- [x] 6.4 定义`Base` resolve policy。
+- [x] 6.5 定义`Overlay` resolve policy。
+- [x] 6.6 定义`Weighted` resolve policy。
+- [x] 6.7 定义`Max` resolve policy。
+- [x] 6.8 定义`Min` resolve policy。
+- [x] 6.9 让LayeredBoneBlend保存每参数完整policy。
+- [x] 6.10 让AdditivePose保存每参数完整policy。
+- [x] 6.11 让PoseCurveResolve保存显式source与policy。
+- [x] 6.12 定义Pose Graph Bone Mask authoring引用。
+- [x] 6.13 让Bone Mask只使用稳定BoneId。
+- [x] 6.14 定义Additive reference pose identity。
+- [x] 6.14.1 安装唯一公开`AnimationAdditiveReferencePoseIds.RigReference` identity且不建立Reference catalog或fallback。
+- [x] 6.14.2 让AdditivePose Node字段默认与构造默认都使用Rig Reference identity。
+- [x] 6.15 定义Additive reference space与scale policy。
 - [ ] 6.16 在Inspector显示Mask对应Rig identity与revision。
 - [ ] 6.17 在Inspector显示每个Pose Parameter缺失policy状态。
-- [ ] 6.18 删除Runtime字符串曲线查找与同名覆盖路径。
+- [x] 6.18 删除Runtime字符串曲线查找与同名覆盖路径。
 
 ## 7. Pose Graph Validator
 
-- [ ] 7.1 建立唯一`CharacterPresentationPoseGraphValidator`。
-- [ ] 7.2 校验node identity非空且唯一。
-- [ ] 7.3 校验port identity非空且在node内唯一。
-- [ ] 7.4 校验edge端点存在且domain正确。
-- [ ] 7.5 校验typed port兼容。
-- [ ] 7.6 校验非法fan-in。
-- [ ] 7.7 校验dangling required input。
-- [ ] 7.8 校验graph cycle并保留完整source chain。
-- [ ] 7.9 校验根图恰好一个OutputPose。
-- [ ] 7.10 校验每个Pose Slot恰好一个PoseSlotInput。
-- [ ] 7.11 校验所有Pose Slot被最终Output可达路径消费。
-- [ ] 7.12 校验RequireOutput slot完整性。
-- [ ] 7.13 校验AllowEmpty传播到Output的合法性。
-- [ ] 7.14 校验Mask Rig identity和BoneId coverage。
-- [ ] 7.15 校验Additive source/reference兼容。
-- [ ] 7.16 校验全部可达PoseParameter policy coverage。
+- [x] 7.1 建立唯一`CharacterPresentationPoseGraphValidator`。
+- [x] 7.2 校验node identity非空且唯一。
+- [x] 7.3 校验port identity非空且在node内唯一。
+- [x] 7.4 校验edge端点存在且domain正确。
+- [x] 7.5 校验typed port兼容。
+- [x] 7.6 校验非法fan-in。
+- [x] 7.7 校验dangling required input。
+- [x] 7.8 校验graph cycle并保留完整source chain。
+- [x] 7.9 校验根图恰好一个OutputPose。
+- [x] 7.10 校验每个Pose Slot恰好一个PoseSlotInput。
+- [x] 7.11 校验所有Pose Slot被最终Output可达路径消费。
+- [x] 7.12 校验RequireOutput slot完整性。
+- [x] 7.13 校验AllowEmpty传播到Output的合法性。
+- [x] 7.14 校验Mask Rig identity和BoneId coverage。
+- [x] 7.15 校验Additive source/reference兼容。
+- [x] 7.15.1 让Validator精确拒绝Rig Reference之外的任意Additive reference字符串。
+- [x] 7.16 校验全部可达PoseParameter policy coverage。
+- [x] 7.16.1 让PoseCurveResolve authoring合同要求两个有序Pose输入和一个Pose输出。
 - [x] 7.17 校验PoseSubgraph typed接口。
 - [x] 7.17.1 校验根图禁止边界节点且恰好一个OutputPose，子图恰好一个GraphInput/GraphOutput且禁止OutputPose。
 - [x] 7.17.2 校验接口identity唯一、调用点完整一对一coverage、kind/direction/required一致及required边界悬空。
 - [x] 7.18 校验inline/shared互斥与inline/shared递归cycle。
-- [ ] 7.19 拒绝BTSMTL节点、Blackboard端口和Unity Object runtime字段。
+- [x] 7.19 拒绝BTSMTL节点、Blackboard端口和Unity Object runtime字段。
 - [ ] 7.20 让Profile、Projection Compiler与Editor Diagnostics复用同一Validator。
 
 ## 8. Pose Graph Compiler与Program
 
-- [ ] 8.1 定义`CharacterPresentationPoseProgram` schema version。
-- [ ] 8.2 定义Pose operation code enum。
-- [ ] 8.3 定义版本化Pose operation payload。
-- [ ] 8.4 定义stable slot index table。
-- [ ] 8.5 定义channel-to-slot compiled binding table。
-- [ ] 8.6 定义dense Bone Mask table。
-- [ ] 8.7 定义Additive reference descriptor table。
-- [ ] 8.8 定义Pose Parameter index与default table。
-- [ ] 8.9 定义每operation Parameter policy table。
-- [ ] 8.10 定义pose value workspace layout。
-- [ ] 8.11 定义parameter workspace layout。
-- [ ] 8.12 定义source contribution workspace layout。
-- [ ] 8.13 定义operation source map。
-- [ ] 8.14 建立Editor-only`CharacterPresentationPoseGraphCompiler`。
-- [ ] 8.15 生成稳定topological operation顺序。
+- [x] 8.1 定义`CharacterPresentationPoseProgram` schema version。
+- [x] 8.1.1 将Pose Program schema与runtime ABI激进提升为v2并拒绝v1。
+- [x] 8.2 定义Pose operation code enum。
+- [x] 8.3 定义版本化Pose operation payload。
+- [x] 8.3.1 将Pose operation payload提升为v2并让PoseCurveResolve layout精确要求Input A与Input B。
+- [x] 8.4 定义stable slot index table。
+- [x] 8.5 定义channel-to-slot compiled binding table。
+- [x] 8.6 定义dense Bone Mask table。
+- [x] 8.7 定义Additive reference descriptor table。
+- [x] 8.7.1 从Rig父节点优先ReferenceLocal TRS编译唯一Rig Reference的Local或Mesh dense descriptor。
+- [x] 8.8 定义Pose Parameter index与default table。
+- [x] 8.9 定义每operation Parameter policy table。
+- [x] 8.10 定义pose value workspace layout。
+- [x] 8.11 定义parameter workspace layout。
+- [x] 8.12 定义source contribution workspace layout。
+- [x] 8.13 定义operation source map。
+- [x] 8.14 建立Editor-only`CharacterPresentationPoseGraphCompiler`。
+- [x] 8.15 生成稳定topological operation顺序。
 - [x] 8.16 静态展开inline PoseSubgraph。
 - [x] 8.16.1 将外部输入edge重接GraphInput内部消费者并将GraphOutput内部source重接外部消费者。
 - [x] 8.17 静态展开shared PoseSubgraph call site。
 - [x] 8.17.1 为递归展开的内部node/port生成call-site-scoped稳定identity与完整source-map call chain。
 - [x] 8.17.2 保证PoseSubgraph、GraphInput、GraphOutput不进入Runtime Program或动态dispatch。
-- [ ] 8.18 生成公共子图frame cache与liveness layout。
-- [ ] 8.19 将BoneId与Mask展开为Rig dense index。
-- [ ] 8.20 将PoseParameterId展开为dense index。
-- [ ] 8.21 生成唯一Output operation index。
-- [ ] 8.22 计算Pose Program canonical hash与content revision。
-- [ ] 8.23 拒绝未知operation、port和payload version。
-- [ ] 8.24 删除Runtime authoring graph解释入口。
+- [x] 8.18 生成公共子图frame cache与liveness layout。
+- [x] 8.18.1 要求FrameCacheCount精确等于Operations数量并让operation index成为唯一frame-cache index。
+- [x] 8.19 将BoneId与Mask展开为Rig dense index。
+- [x] 8.20 将PoseParameterId展开为dense index。
+- [x] 8.20.1 将PoseCurveResolve的Base Pose与Parameter Source Pose依序降低为operation Input A与Input B并纳入canonical hash。
+- [x] 8.21 生成唯一Output operation index。
+- [x] 8.22 计算Pose Program canonical hash与content revision。
+- [x] 8.23 拒绝未知operation、port和payload version。
+- [x] 8.24 删除Runtime authoring graph解释入口。
 
 ## 9. Projection与Build链迁移
 
-- [ ] 9.1 将Presentation Semantic Contract producer字段改为AnimationChannelId。
-- [ ] 9.2 更新Frontend Contract builder canonical hash输入。
-- [ ] 9.3 更新Float32 Presentation Contract Adapter。
-- [ ] 9.4 更新Fixed Presentation Contract Adapter。
-- [ ] 9.5 更新Remote Presentation semantic manifest adapter。
-- [ ] 9.6 让Projection compile request接收Pose Graph、Blend Library与Rig Definition。
-- [ ] 9.7 编译channel-to-PoseSlot binding payload。
-- [ ] 9.8 编译Pose Slot output policy payload。
-- [ ] 9.9 嵌入per-slot Stack policy与transition matrix。
-- [ ] 9.10 嵌入dense Rig与Mask payload。
-- [ ] 9.11 嵌入CharacterPresentationPoseProgram。
-- [ ] 9.12 将Pose Graph dependency纳入ProjectionRevision。
-- [ ] 9.13 将Blend Library dependency纳入ProjectionRevision。
-- [ ] 9.14 将Rig/Mask/Parameter dependency纳入ProjectionRevision。
-- [ ] 9.15 保持纯Presentation变化不改变Numeric ProgramHash。
-- [ ] 9.16 让Projection payload validation校验slot/stack/pose program cross-reference。
+- [x] 9.1 将Presentation Semantic Contract producer字段改为AnimationChannelId。
+- [x] 9.2 更新Frontend Contract builder canonical hash输入。
+- [x] 9.3 更新Float32 Presentation Contract Adapter。
+- [x] 9.4 更新Fixed Presentation Contract Adapter。
+- [x] 9.5 更新Remote Presentation semantic manifest adapter。
+- [x] 9.6 让Projection compile request接收Pose Graph、Blend Library与Rig Definition。
+- [x] 9.7 编译channel-to-PoseSlot binding payload。
+- [x] 9.8 编译Pose Slot output policy payload。
+- [x] 9.9 嵌入per-slot Stack policy与transition matrix。
+- [x] 9.10 嵌入dense Rig与Mask payload。
+- [x] 9.11 嵌入CharacterPresentationPoseProgram。
+- [x] 9.12 将Pose Graph dependency纳入ProjectionRevision。
+- [x] 9.13 将Blend Library dependency纳入ProjectionRevision。
+- [x] 9.14 将Rig/Mask/Parameter dependency纳入ProjectionRevision。
+- [x] 9.15 保持纯Presentation变化不改变Numeric ProgramHash。
+- [x] 9.16 让Projection payload validation校验slot/stack/pose program cross-reference。
 - [ ] 9.17 更新Projection Asset Inspector identity摘要。
-- [ ] 9.18 提升Projection schema并拒绝旧Layer payload。
+- [x] 9.18 提升Projection schema并拒绝旧Layer payload。
 
 ## 10. Blend Stack职责收窄
 
-- [ ] 10.1 将`AnimationBlendStackRuntime` owner从LayerId切换为PoseSlotId。
-- [ ] 10.2 将每Layer Stack policy切换为每Pose Slot policy。
-- [ ] 10.3 将transition matrix key约束为同AnimationChannelId/PoseSlotId producer。
+- [x] 10.1 将`AnimationBlendStackRuntime` owner从LayerId切换为PoseSlotId。
+- [x] 10.2 将每Layer Stack policy切换为每Pose Slot policy。
+- [x] 10.3 将transition matrix key约束为同AnimationChannelId/PoseSlotId producer。
 - [ ] 10.4 定义不可变`PoseSlotFrame`合同。
 - [ ] 10.5 让PoseSlotFrame保存availability和slot output weight。
 - [ ] 10.6 让PoseSlotFrame保存dense local pose。
@@ -244,8 +253,10 @@
 - [ ] 11.12 实现Additive position规则。
 - [ ] 11.13 实现Additive shortest-arc rotation规则。
 - [ ] 11.14 实现Additive scale policy。
+- [ ] 11.14.1 实现Mesh reference delta到local pose的Rig parent-index转换。
 - [ ] 11.15 实现Additive source contribution传播。
 - [ ] 11.16 实现PoseCurveResolve operation。
+- [ ] 11.16.1 实现PoseCurveResolve保持Base骨骼/贡献/foot、只解析Parameter Source且区分NoPose与Invalid的完整runtime语义。
 - [ ] 11.17 实现OutputPose operation。
 - [ ] 11.18 实现AllowEmpty NoPose传播。
 - [ ] 11.19 实现RequireOutput invalid状态。
@@ -257,14 +268,14 @@
 
 ## 12. Animancer source后端与Presentation编排
 
-- [ ] 12.1 保持Animancer source visual按完整PlaybackId隔离。
-- [ ] 12.2 保持Timeline source state Speed为零。
-- [ ] 12.3 保持producer内部ManualMixer child使用DontSynchronize。
+- [x] 12.1 保持Animancer source visual按完整AnimationPoseSourceId隔离。
+- [x] 12.2 保持Timeline source state Speed为零。
+- [x] 12.3 保持producer内部ManualMixer child使用DontSynchronize。
 - [ ] 12.4 删除AnimancerLayer.Play调用。
 - [ ] 12.5 删除Animancer StartFade与FadeGroup调用。
 - [ ] 12.6 删除Animancer layer weight写入。
 - [ ] 12.7 删除Animancer transition lookup。
-- [ ] 12.8 让Animancer backend只输出source pose sample和playable寿命。
+- [x] 12.8 让Animancer backend只输出source pose sample和playable寿命。
 - [ ] 12.9 更新CharacterAnimationPlaybackRuntime创建顺序。
 - [ ] 12.10 更新PresentationFrame command消费顺序。
 - [ ] 12.11 同帧推进全部AnimationChannel Lifecycle。
@@ -358,3 +369,5 @@
 - [ ] 16.16 清理current specs中旧LayerId、Animancer fade权威和单Base Corin口径。
 - [ ] 16.17 记录最终`AnimationChannel -> PoseSlot -> BlendStack -> PoseGraph -> PostProcess`业务链路。
 - [ ] 16.18 记录Pose Graph与未来Motion Matching、Equipment动态层的正式扩展边界。
+- [x] 16.19 在design记录唯一Rig Reference、Local/Mesh编译、PoseCurveResolve双输入与v2 frame-cache合同。
+- [x] 16.20 在Pose Graph spec记录唯一Rig Reference、Local/Mesh编译、PoseCurveResolve双输入与v2 frame-cache合同。

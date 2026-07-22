@@ -42,6 +42,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 }
                 segments[segmentIndex] = new MotionMatchingSegmentPayload(
                     segment.SegmentId, segment.SourceClipId, first, count,
+                    segment.StartTime, segment.EndTime,
                     segment.LoopMode, segment.Terminal, continuation);
             }
             for (int i = 0; i < samples.Length; i++)
@@ -171,7 +172,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             m_LeafCapacity = leafCapacity;
             m_MaximumDepth = maximumDepth;
             m_Ordered = Enumerable.Range(0, samples.Length).ToArray();
-            m_Nodes.Add(new Node { Offset = 0, Count = samples.Length, Depth = 1 });
+            m_Nodes.Add(new Node { Offset = 0, Count = samples.Length, Depth = 0 });
         }
 
         public int CompletedNodes => m_Cursor;
@@ -395,7 +396,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             int traversalCapacity = Math.Max(1, index.MaximumDepth + 1);
             var capacities = new MotionMatchingRuntimeCapacityPayload(
                 request.FeatureSchema.DenseFeatureCount, samples.Length, nodes.Length,
-                traversalCapacity, Math.Min(request.SearchPolicy.TopK, samples.Length),
+                traversalCapacity, request.SearchPolicy.TopK,
                 request.SearchPolicy.PlanSampleCount, request.SearchPolicy.HistoryCapacity,
                 request.SearchPolicy.DiagnosticDetailCapacity);
             CharacterMotionMatchingDatabaseArtifact preliminary = CreateWithHash(

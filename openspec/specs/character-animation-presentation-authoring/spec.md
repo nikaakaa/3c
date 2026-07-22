@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定义角色动画表现配置的唯一作者边界：CharacterPipelineDefinition 只引用 CharacterAnimationPresentationProfile，Profile 保存 Layer catalog 与稳定 producer binding，Animancer TransitionLibrary 保存正式动画转场数据，Profile Inspector 提供唯一写入口，并由编译链生成 CharacterPresentationProjection。
+定义角色动画表现配置的唯一作者边界：CharacterPipelineDefinition只引用CharacterAnimationPresentationProfile，Profile唯一引用Pose Graph、Blend Library、Rig并保存稳定producer source binding，Profile Inspector提供唯一入口，并由编译链生成CharacterPresentationProjection。
 ## Requirements
 ### Requirement: Foot Analysis Source必须是显式可验证的表现作者输入
 
@@ -32,7 +32,7 @@ Editor-only `CharacterFootPlacementAnalysisSource` MUST拥有稳定identity、�
 
 ### Requirement: Pipeline Definition 必须引用唯一 Animation Presentation Profile
 
-`CharacterPipelineDefinition` MUST引用唯一`CharacterAnimationPresentationProfile`，不得内联保存Animation Presentation数据。该Profile MUST唯一保存Animation Layer catalog、正式Animancer TransitionLibraryAsset引用、稳定producer presentation keys、producer-to-transition bindings，以及显式Foot Placement Analysis Mode与Analysis Source Asset GUID。Analysis Source MUST是Editor-only Projection生成输入，只负责生成表现特征，不得保存Graph flow、State、Action、Gameplay contact或运行时IK状态。Profile MUST不持有Analysis Source或Sampling Rig对象强引用。Graph、StateMachine、Timeline、Presenter、Prefab重复数值、旧SO或独立Pipeline表 MUST不保存同一配置的第二份真相。
+`CharacterPipelineDefinition` MUST引用唯一`CharacterAnimationPresentationProfile`，不得内联保存Animation Presentation数据。该Profile MUST唯一引用`CharacterPresentationPoseGraphAsset`、`CharacterAnimationBlendLibrary`、`CharacterAnimationRigDefinition`，保存稳定producer source bindings，以及显式Foot Placement Analysis Mode与Analysis Source Asset GUID。Pose Graph MUST唯一保存Pose Slot、AnimationChannel binding、Bone Mask composition、Pose Parameter policy与Output topology；Blend Library MUST唯一保存每slot transition matrix。Analysis Source MUST是Editor-only Projection生成输入，只负责生成表现特征，不得保存Graph flow、State、Action、Gameplay contact或运行时IK状态。Profile MUST不持有Analysis Source或Sampling Rig对象强引用。Graph、StateMachine、Timeline、Presenter、Prefab重复数值、旧SO或独立Pipeline表 MUST不保存同一配置的第二份真相。
 
 #### Scenario: Corin启用生成Foot Analysis
 
@@ -291,4 +291,3 @@ Compiler MUST将每个animation producer的同步模式、canonical SyncGroupId�
 - **WHEN** Feature authoring尝试创建Layer或保存Animancer transition副本
 - **THEN** authoring validator MUST拒绝
 - **AND** 作者 MUST继续使用唯一Presentation Profile Inspector
-

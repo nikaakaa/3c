@@ -27,6 +27,7 @@ namespace ThirdPersonCharacter.Pipeline
 		[SerializeField] CharacterControlSource m_ControlSource;
 		[SerializeField] CharacterPresentationRole m_PresentationRole = CharacterPresentationRole.LocalOwner;
 		[SerializeField] AnimancerComponent m_Animancer;
+		[SerializeField] CharacterAnimationRigBinding m_AnimationRigBinding;
 		[SerializeField] Float32WorldBodyBinding m_WorldBodyBinding;
 		[SerializeField] Transform m_VisualRoot;
 		[SerializeField] CharacterEquipmentRigBindingCatalog m_EquipmentRigBindings;
@@ -51,6 +52,7 @@ namespace ThirdPersonCharacter.Pipeline
 			? m_SessionHost.Composition.WorldRevision
 			: string.Empty;
 		public AnimancerComponent Animancer => m_Animancer;
+		public CharacterAnimationRigBinding AnimationRigBinding => m_AnimationRigBinding;
 		public Float32WorldBodyBinding WorldBodyBinding => m_WorldBodyBinding;
 		public Transform VisualRoot => m_VisualRoot;
 		public CharacterEquipmentRigBindingCatalog EquipmentRigBindings => m_EquipmentRigBindings;
@@ -75,6 +77,7 @@ namespace ThirdPersonCharacter.Pipeline
 			m_Definition.SimulationProgram &&
 			m_Definition.PresentationProjection &&
 			m_Animancer &&
+			m_AnimationRigBinding &&
 			m_VisualRoot;
 		public override string PreviewStatus =>
 			"Animation and authored MotionCurve preview. MotionWarp, collision, and Foot Placement require a formal runtime session.";
@@ -135,6 +138,11 @@ namespace ThirdPersonCharacter.Pipeline
 			if (!m_Animancer)
 			{
 				Debug.LogError("CharacterPipelineHost requires an AnimancerComponent.", this);
+				return false;
+			}
+			if (!m_AnimationRigBinding)
+			{
+				Debug.LogError("CharacterPipelineHost requires an explicit Animation Rig Binding.", this);
 				return false;
 			}
 			if (!m_WorldBodyBinding)
@@ -225,6 +233,7 @@ namespace ThirdPersonCharacter.Pipeline
 					Float32CharacterPresentationContractAdapter.Create(program);
 				CharacterPresentationProjection projection = m_Definition.PresentationProjection.Load(
 					presentationContract);
+				m_AnimationRigBinding.RequireValid(projection.Rig);
 				CharacterRuntimeDebugProgram debugProgram = CharacterRuntimeDebugProgramBuilder.Build(program);
 				var diagnosticsContext = new RuntimeDiagnosticsContext(
 					Guid.NewGuid(),
@@ -257,6 +266,7 @@ namespace ThirdPersonCharacter.Pipeline
 						projection,
 						actorId,
 						m_Animancer,
+						m_AnimationRigBinding,
 						m_VisualRoot,
 						CharacterPresentationBodyState.FromFloat32(initialBody),
 						m_BodyPresentationProfile,
@@ -281,6 +291,7 @@ namespace ThirdPersonCharacter.Pipeline
 						projection,
 						actorId,
 						m_Animancer,
+						m_AnimationRigBinding,
 						m_VisualRoot,
 						CharacterPresentationBodyState.FromFloat32(initialBody),
 						m_BodyPresentationProfile,

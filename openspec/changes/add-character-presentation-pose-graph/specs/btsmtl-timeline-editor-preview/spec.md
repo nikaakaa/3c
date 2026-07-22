@@ -2,7 +2,7 @@
 
 ### Requirement: 预览采样必须复用正式动画播放链路
 
-纯动画Timeline Preview MUST通过`CharacterPresentationProjection`将稳定producer identity解析为AnimationChannelId、PoseSlotId和source资源，并复用正式CommandQueue、AnimationPlaybackLifecycle、PoseSlot Blend Stack、Animancer source backend与CharacterPoseGraphEvaluator。Preview session MUST为每个AnimationChannelId生成零或一个独立preview EventId/playback generation的command和sample；它 MUST不比较Priority、直接播放Clip、跳过Stack或实现第二套Pose composition。
+纯动画Timeline Preview MUST通过`CharacterPresentationProjection`将稳定producer identity解析为AnimationChannelId、PoseSlotId和source资源，并复用正式CommandQueue、AnimationPlaybackLifecycle、PoseSlot Blend Stack、Animancer source backend、Pose Graph native job与final frame publisher。Preview session MUST为每个AnimationChannelId生成零或一个独立preview EventId/playback generation的command和pose request；它 MUST不比较Priority、直接播放Clip、跳过Stack或实现第二套Pose composition。
 
 #### Scenario: 当前时间采样
 

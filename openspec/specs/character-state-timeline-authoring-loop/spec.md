@@ -255,45 +255,45 @@ Attack1..5 leaf MUST 各自唯一拥有 ActionProfile 引用、Action Context sl
 
 - **WHEN** 作者查看外层 Attack category
 - **THEN** MUST NOT 存在平铺 Attack leaf、重复 combo edge 或 orphan rule graph
-### Requirement: Corin 必须由逻辑层提交唯一 Base playback selection
+### Requirement: Corin 必须由逻辑层按Animation Channel提交唯一playback selection
 
-Corin MUST保持单一 Base layer，并在 `CharacterAnimationPresentationProfile` 配置 OutputPolicy=RequireOutput。Locomotion、ActionOverride、Dodge、外层 Action 与 nested combo MUST在逻辑层完成状态、打断和所有权决策，然后为 Base 提交唯一 AnimationPlaybackId。AnimationTrack.Priority、Presentation Driver、Tree route 与 Runtime arbitration MUST不参与该选择。
+Corin MUST使用BaseLocomotion与FullBodyAction两个稳定AnimationChannelId，并分别绑定RequireOutput BaseLocomotionSlot与AllowEmpty FullBodyActionSlot。Locomotion、Action、Dodge与nested combo MUST在逻辑层完成状态、打断和各channel所有权决策，然后为每个channel至多提交一个AnimationPlaybackId。AnimationTrack.Priority、Presentation Driver、Tree route与Runtime arbitration MUST不参与该选择；两个slot的空间组合 MUST只由Pose Graph决定。
 
 #### Scenario: Locomotion 正常运行
 
 - **WHEN** ActionOverride 没有活动动作
-- **THEN** Base selection MUST来自当前 Locomotion State 的正式 Timeline playback
+- **THEN** BaseLocomotion selection MUST来自当前Locomotion State的正式Timeline playback
 - **AND** Idle、WalkStart、WalkLoop、RunStart、RunLoop、RunEnd 与 MovingTurn MUST按状态逻辑切换 selection
 
 #### Scenario: Locomotion 进入 Dodge
 
 - **WHEN** Dodge 获得动作所有权
-- **THEN** Action 逻辑 MUST为 Base 选择 Dodge playback
-- **AND** Animation 模块 MUST不比较 Dodge 与 Locomotion Priority
+- **THEN** Action逻辑 MUST为FullBodyAction选择Dodge playback
+- **AND** Animation模块 MUST不比较Dodge与Locomotion Priority
 
 #### Scenario: Dodge 返回 Locomotion
 
 - **WHEN** Dodge 完成且当前仍有移动输入
-- **THEN** 逻辑层 MUST选择当前正式 Run playback
-- **AND** 没有移动输入时 MUST选择 Idle playback，MUST NOT经过 RunEnd
+- **THEN** 逻辑层 MUST清空FullBodyAction并保持BaseLocomotion当前正式Run playback
+- **AND** 没有移动输入时BaseLocomotion MUST选择Idle playback，MUST NOT经过RunEnd
 - **AND** Animation 模块 MUST不从历史 sample 或表现状态猜测返回目标
 
 #### Scenario: Attack1 进入 Attack2
 
 - **WHEN** nested Attack StateMachine 满足连段条件并切换到 Attack2
-- **THEN** Action 逻辑 MUST将 Base selection 更新为 Attack2 playback
+- **THEN** Action逻辑 MUST将FullBodyAction selection更新为Attack2 playback
 - **AND** State transition edge MUST只保存逻辑 condition 与 priority
 
 #### Scenario: 无动画 WalkEnd
 
 - **WHEN** WalkEnd 本身没有 animation producer
-- **THEN** 本次逻辑提交 MUST省略 Base 更新以保持当前正式 selection，或直接选择目标状态的正式 producer
+- **THEN** 本次逻辑提交 MUST省略BaseLocomotion更新以保持当前正式selection，或直接选择目标状态的正式producer
 - **AND** Animation 模块 MUST不为 WalkEnd 创建 fallback Timeline
 
 #### Scenario: 同 tick 多次状态变化
 
 - **WHEN** 一个 logic tick 内 RunLoop、MovingTurn 与 Action ownership 连续变化
-- **THEN** Pipeline MUST只提交最终 Base selection
+- **THEN** Pipeline MUST为每个受影响AnimationChannel只提交最终selection
 - **AND** playback generation 的 Complete/Release MUST继续保序
 
 ### Requirement: Corin 全部 AnimationTrack 必须显式选择 Marker Sync 策略
@@ -319,7 +319,7 @@ Corin WalkLoop与RunLoop AnimationTrack MUST配置为`MarkerGroup/Cyclic`并共�
 #### Scenario: WalkLoop切换RunLoop
 
 - **WHEN** Corin从WalkLoop进入RunLoop
-- **THEN** Base层RunLoop MUST在整个共同可见fade期间持续跟随WalkLoop当前marker segment
+- **THEN** BaseLocomotionSlot的RunLoop MUST在整个共同可见transition期间持续跟随WalkLoop当前marker segment
 - **AND** Gameplay状态与运动 MUST在原logic tick立即切换
 
 #### Scenario: RunLoop切回WalkLoop
@@ -330,7 +330,7 @@ Corin WalkLoop与RunLoop AnimationTrack MUST配置为`MarkerGroup/Cyclic`并共�
 
 ### Requirement: Corin 有限动作只能在资源满足时加入 Marker Group
 
-RunStart、RunEnd、MovingTurn、Attack1至Attack5、Dodge及其它one-shot producer MAY配置为`MarkerGroup/Finite`，但仅当真实clip能够从frame 0到DurationFrame提供完整marker coverage，且同Layer同组directed pair契约成立。资源不满足时 MUST显式配置None并保留普通Timeline sample + Animancer fade；不得伪造支撑marker。Attack combo、recovery、cancel、IFrame与damage MUST继续由Action Context、TreeClip window、ConditionRule和State transition决定，不能由Marker Sync代替。
+RunStart、RunEnd、MovingTurn、Attack1至Attack5、Dodge及其它one-shot producer MAY配置为`MarkerGroup/Finite`，但仅当真实clip能够从frame 0到DurationFrame提供完整marker coverage，且同AnimationChannel、同PoseSlot、同组directed pair契约成立。资源不满足时 MUST显式配置None并保留普通Timeline sample与PoseSlot transition；不得伪造支撑marker。Attack combo、recovery、cancel、IFrame与damage MUST继续由Action Context、TreeClip window、ConditionRule和State transition决定，不能由Marker Sync代替。
 
 #### Scenario: RunEnd具有完整步态marker
 
@@ -353,29 +353,29 @@ RunStart、RunEnd、MovingTurn、Attack1至Attack5、Dodge及其它one-shot prod
 #### Scenario: 动作退出到Locomotion
 
 - **WHEN** Action producer为None并结束到Locomotion
-- **THEN** Animation Runtime MUST使用普通Animancer transition与target raw Timeline time
+- **THEN** Animation Runtime MUST使用对应PoseSlot的普通Blend Stack transition与target raw Timeline time
 - **AND** MUST不从Action名称或上一状态伪造Locomotion.Gait phase
 
-### Requirement: Corin animation producer 必须绑定 Animancer 原生 transition
+### Requirement: Corin animation producer 必须绑定正式source与Pose Slot transition
 
-Corin 每个正式 Timeline animation producer MUST拥有稳定 presentation key，并通过 `CharacterAnimationPresentationProfile` 绑定到 Animancer transition key/source。Profile Inspector MUST在显式 Corin Definition context 下，按稳定 identity 列出 Locomotion、Action、Attack1..5 与 Dodge producer 的 Layer 与 binding，但 MUST不复制 producer 之间的逻辑关系；Graph/State edge MUST不保存 transition strategy、duration、curve 或 Driver。
+Corin每个正式Timeline animation producer MUST拥有稳定presentation identity，并通过`CharacterAnimationPresentationProfile`绑定到Animancer source resource。AnimationChannel到PoseSlot binding MUST来自Pose Graph，每slot transition MUST来自Blend Library。Profile Inspector MUST在显式Corin Definition context下，按稳定identity列出Locomotion、Action、Attack1..5与Dodge producer的AnimationChannelId、PoseSlotId与source binding，但 MUST不复制producer之间的逻辑关系；Graph/State edge MUST不保存transition strategy、duration、curve或Driver。
 
 #### Scenario: 配置 Attack1..5
 
 - **WHEN** 作者在 Corin Definition context 下的 Profile Inspector 查看 Attack1..5
-- **THEN** Inspector MUST显示五个 producer 的 stable key 与 Animancer binding
-- **AND** source-target fade duration MAY由 Animancer TransitionLibrary modifier 配置
-- **AND** Pipeline MUST不创建第二张 pair transition 表
+- **THEN** Inspector MUST显示五个producer的stable identity、FullBodyAction/FullBodyActionSlot与source binding
+- **AND** source-target transition MUST由FullBodyActionSlot的Blend Library matrix配置
+- **AND** Pipeline MUST不创建第二张pair transition表
 
 #### Scenario: 配置 Locomotion 与 Dodge
 
 - **WHEN** 作者调整 Dodge 的进入或退出表现
-- **THEN** 调整 MUST落在 Animancer 原生 transition/library 数据
+- **THEN** 调整 MUST落在正式Blend Library transition数据
 - **AND** RootTree、Parallel edge 与 StateMachine edge MUST保持纯逻辑
 
-#### Scenario: 缺失 producer binding
+#### Scenario: 缺失producer source binding
 
-- **WHEN** selected Corin producer 没有合法 Animancer transition binding
+- **WHEN** selected Corin producer没有合法Animancer source binding或channel-to-slot binding
 - **THEN** runtime MUST报告明确配置错误
 - **AND** MUST不使用默认 Idle、当前 clip 或 Immediate fallback
 

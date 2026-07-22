@@ -56,11 +56,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             get
             {
-                var values = new List<CharacterPresentationProducerEntry>();
+                int count = 0;
                 for (int i = 0; i < Producers.Count; i++)
                 {
                     if (Producers[i].Kind == CharacterPresentationProducerKind.Animation)
-                        values.Add(Producers[i]);
+                        count++;
+                }
+                if (count == 0)
+                    return Array.Empty<CharacterPresentationProducerEntry>();
+                var values = new CharacterPresentationProducerEntry[count];
+                int index = 0;
+                for (int i = 0; i < Producers.Count; i++)
+                {
+                    if (Producers[i].Kind == CharacterPresentationProducerKind.Animation)
+                        values[index++] = Producers[i];
                 }
                 return values;
             }
@@ -367,59 +376,63 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<CharacterPresentationAnimationClipBinding> Clips => m_Clips ?? Array.Empty<CharacterPresentationAnimationClipBinding>();
         public AnimationMarkerSyncBinding MarkerSync => m_MarkerSync;
 
-        public AnimationProducerSample Sample(
-            CharacterPresentationProducerEntry producer,
-            AnimationPlaybackId playbackId,
+        public int Sample(
             float sampleTime,
             int cycle,
-            float visualTimeScale)
-        {
-            var samples = new List<AnimationClipSample>();
-            for (int i = 0; i < Clips.Count; i++)
-            {
-                if (Clips[i].TrySample(sampleTime, cycle, out AnimationClipSample sample))
-                    samples.Add(sample);
-            }
-            return new AnimationProducerSample(
-                playbackId,
-                producer.AnimationChannelId,
-                producer.ProgramProducerIdentity,
-                producer.SourceGraphId,
-                m_TrackName,
-                sampleTime,
-                cycle,
-                visualTimeScale,
-                samples);
-        }
-
-        public bool TrySampleFootPlacement(
-            float sampleTime,
-            int cycle,
+            bool isTrackLooping,
+            float visualTimeScale,
+            ClipSamplePlan[] destination,
+            int destinationOffset,
             out AnimationFootPlacementSample footPlacement)
         {
+            if (!float.IsFinite(sampleTime) || cycle < 0 ||
+                !float.IsFinite(visualTimeScale) || visualTimeScale < 0f)
+            {
+                throw new ArgumentException("Animation binding sample time, cycle or visual time scale is invalid.");
+            }
+            if (destination == null)
+                throw new ArgumentNullException(nameof(destination));
+            if (Clips.Count == 0 || destinationOffset < 0 || destinationOffset > destination.Length - Clips.Count)
+                throw new ArgumentOutOfRangeException(nameof(destinationOffset));
+
+            for (int i = 0; i < Clips.Count; i++)
+            {
+                CharacterPresentationAnimationClipBinding clip = Clips[i];
+                if (clip == null)
+                    throw new InvalidOperationException($"Presentation animation binding clip #{i} is missing.");
+                clip.RequireSampleable(i);
+            }
+
             float totalWeight = 0f;
             float footPlacementWeight = 0f;
             var left = new AnimationFootFeatureBlendAccumulator();
             var right = new AnimationFootFeatureBlendAccumulator();
+            int activeCount = 0;
             for (int i = 0; i < Clips.Count; i++)
             {
-                if (!Clips[i].TrySample(sampleTime, cycle, out AnimationClipSample clip, out AnimationFootPlacementSample sample))
-                    continue;
-                totalWeight += clip.Weight;
-                footPlacementWeight += sample.Weight * clip.Weight;
-                left.Add(sample.Left, clip.Weight);
-                right.Add(sample.Right, clip.Weight);
+                activeCount += Clips[i].WriteSample(
+                    i,
+                    sampleTime,
+                    cycle,
+                    isTrackLooping,
+                    visualTimeScale,
+                    destination,
+                    destinationOffset + activeCount,
+                    ref totalWeight,
+                    ref footPlacementWeight,
+                    ref left,
+                    ref right);
             }
-            if (totalWeight <= 0f)
-            {
-                footPlacement = default;
-                return false;
-            }
+
+            if (activeCount == 0 || !float.IsFinite(totalWeight) || totalWeight <= 0f ||
+                !float.IsFinite(footPlacementWeight))
+                throw new InvalidOperationException("Presentation animation binding has no valid active clip sample.");
+
             footPlacement = new AnimationFootPlacementSample(
                 footPlacementWeight / totalWeight,
                 left.Resolve(),
                 right.Resolve());
-            return true;
+            return activeCount;
         }
     }
 
@@ -625,7 +638,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         void RebuildOccurrenceIndex()
         {
-            var grouped = new Dictionary<string, List<AnimationMarkerSyncSegmentOccurrence>>(StringComparer.Ordinal);
+            var counts = new Dictionary<string, int>(StringComparer.Ordinal);
             AnimationMarkerSyncSegmentOccurrence[] segments = m_Segments ?? Array.Empty<AnimationMarkerSyncSegmentOccurrence>();
             for (int i = 0; i < segments.Length; i++)
             {
@@ -633,16 +646,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (segment == null)
                     continue;
                 string key = AnimationMarkerSyncAuthoring.PairKey(segment.PreviousMarkerId, segment.NextMarkerId);
-                if (!grouped.TryGetValue(key, out List<AnimationMarkerSyncSegmentOccurrence> values))
-                {
-                    values = new List<AnimationMarkerSyncSegmentOccurrence>();
-                    grouped.Add(key, values);
-                }
-                values.Add(segment);
+                counts.TryGetValue(key, out int count);
+                counts[key] = count + 1;
             }
-            m_Occurrences = new Dictionary<string, AnimationMarkerSyncSegmentOccurrence[]>(grouped.Count, StringComparer.Ordinal);
-            foreach (KeyValuePair<string, List<AnimationMarkerSyncSegmentOccurrence>> pair in grouped)
-                m_Occurrences.Add(pair.Key, pair.Value.ToArray());
+            m_Occurrences = new Dictionary<string, AnimationMarkerSyncSegmentOccurrence[]>(counts.Count, StringComparer.Ordinal);
+            foreach (KeyValuePair<string, int> pair in counts)
+                m_Occurrences.Add(pair.Key, new AnimationMarkerSyncSegmentOccurrence[pair.Value]);
+
+            var offsets = new Dictionary<string, int>(counts.Count, StringComparer.Ordinal);
+            for (int i = 0; i < segments.Length; i++)
+            {
+                AnimationMarkerSyncSegmentOccurrence segment = segments[i];
+                if (segment == null)
+                    continue;
+                string key = AnimationMarkerSyncAuthoring.PairKey(segment.PreviousMarkerId, segment.NextMarkerId);
+                offsets.TryGetValue(key, out int offset);
+                m_Occurrences[key][offset] = segment;
+                offsets[key] = offset + 1;
+            }
         }
     }
 
@@ -707,94 +728,106 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        public bool TrySample(float timelineTime, int cycle, out AnimationClipSample sample)
+        internal void RequireSampleable(int clipBindingIndex)
         {
-            return TrySampleCore(timelineTime, cycle, out sample, out _, out _);
+            if (clipBindingIndex < 0 || string.IsNullOrWhiteSpace(m_ClipAuthoringId) || !m_Clip ||
+                !float.IsFinite(m_Clip.length) || m_Clip.length <= 0f ||
+                !float.IsFinite(m_StartTime) || !float.IsFinite(m_EndTime) || m_EndTime < m_StartTime ||
+                !float.IsFinite(m_ClipInTime) || m_ClipInTime < 0f ||
+                !float.IsFinite(m_DurationTime) || m_DurationTime <= 0f ||
+                !float.IsFinite(m_EaseInTime) || m_EaseInTime < 0f ||
+                !float.IsFinite(m_EaseOutTime) || m_EaseOutTime < 0f ||
+                !Enum.IsDefined(typeof(ExtraPolationMode), m_Extrapolation) ||
+                !HasKeys(m_WeightCurve) || !HasKeys(m_EaseInCurve) || !HasKeys(m_EaseOutCurve) ||
+                !HasKeys(m_FootPlacementWeightCurve) || !HasFootAnalysis)
+            {
+                throw new InvalidOperationException($"Presentation Projection animation clip binding #{clipBindingIndex} is not sampleable.");
+            }
         }
 
-        public bool TrySample(
+        internal int WriteSample(
+            int clipBindingIndex,
             float timelineTime,
             int cycle,
-            out AnimationClipSample sample,
-            out AnimationFootPlacementSample footPlacement)
+            bool isTrackLooping,
+            float visualTimeScale,
+            ClipSamplePlan[] destination,
+            int destinationIndex,
+            ref float totalWeight,
+            ref float footPlacementWeight,
+            ref AnimationFootFeatureBlendAccumulator left,
+            ref AnimationFootFeatureBlendAccumulator right)
         {
-            sample = default;
-            footPlacement = default;
-            if (!TrySampleCore(
-                    timelineTime,
-                    cycle,
-                    out sample,
-                    out float authoringNormalized,
-                    out float animationNormalized))
-                return false;
-            if (m_LeftFootFeatures == null || m_RightFootFeatures == null)
-                throw new InvalidOperationException($"Presentation Projection animation clip '{m_ClipAuthoringId}' has no generated Foot Analysis features.");
-            footPlacement = new AnimationFootPlacementSample(
+            RequireSampleable(clipBindingIndex);
+            if (!float.IsFinite(timelineTime) || cycle < 0 ||
+                !float.IsFinite(visualTimeScale) || visualTimeScale < 0f ||
+                destination == null || destinationIndex < 0 || destinationIndex >= destination.Length)
+            {
+                throw new ArgumentException("Animation clip sample request is invalid.");
+            }
+            if (!m_Clip || timelineTime < m_StartTime)
+                return 0;
+            bool hold = timelineTime > m_EndTime && m_Extrapolation == ExtraPolationMode.Hold;
+            if (timelineTime > m_EndTime && !hold)
+                return 0;
+
+            float selfTime = hold ? m_DurationTime : Mathf.Clamp(timelineTime - m_StartTime, 0f, m_DurationTime);
+            float remainTime = Mathf.Max(0f, m_EndTime - timelineTime);
+            float authoringNormalized = Mathf.Clamp01(selfTime / m_DurationTime);
+            float fadeIn = !hold && m_EaseInTime > 0f && selfTime < m_EaseInTime
+                ? EvaluateRequired(m_EaseInCurve, Mathf.Clamp01(selfTime / m_EaseInTime), nameof(m_EaseInCurve))
+                : 1f;
+            float fadeOut = !hold && m_EaseOutTime > 0f && remainTime < m_EaseOutTime
+                ? 1f - EvaluateRequired(m_EaseOutCurve, Mathf.Clamp01(1f - remainTime / m_EaseOutTime), nameof(m_EaseOutCurve))
+                : 1f;
+            float weighted = EvaluateRequired(m_WeightCurve, authoringNormalized, nameof(m_WeightCurve)) * fadeIn * fadeOut;
+            if (!float.IsFinite(weighted))
+                throw new InvalidOperationException($"Presentation Projection animation clip '{m_ClipAuthoringId}' produced a non-finite weight.");
+            float weight = Mathf.Clamp01(weighted);
+            if (weight <= 0f)
+                return 0;
+
+            double continuousClipTime = (double)m_ClipInTime + selfTime + (double)cycle * m_DurationTime;
+            if (double.IsNaN(continuousClipTime) || double.IsInfinity(continuousClipTime) || continuousClipTime < 0d)
+                throw new InvalidOperationException($"Presentation Projection animation clip '{m_ClipAuthoringId}' produced an invalid continuous time.");
+            bool isLooping = m_Clip.isLooping || isTrackLooping;
+            double effectiveClipTime = isLooping
+                ? continuousClipTime % m_Clip.length
+                : Math.Min(continuousClipTime, m_Clip.length);
+            float clipTime = (float)effectiveClipTime;
+            float animationNormalized = clipTime / m_Clip.length;
+            var plan = new ClipSamplePlan(
+                clipBindingIndex,
+                m_Clip,
+                clipTime,
+                continuousClipTime,
+                animationNormalized,
+                weight,
+                isLooping);
+            var footSample = new AnimationFootPlacementSample(
                 EvaluateRequired(m_FootPlacementWeightCurve, authoringNormalized, nameof(m_FootPlacementWeightCurve)),
                 m_LeftFootFeatures.Sample(animationNormalized),
                 m_RightFootFeatures.Sample(animationNormalized));
-            return true;
-        }
 
-        bool TrySampleCore(
-            float timelineTime,
-            int cycle,
-            out AnimationClipSample sample,
-            out float authoringNormalized,
-            out float animationNormalized)
-        {
-            sample = default;
-            authoringNormalized = 0f;
-            animationNormalized = 0f;
-            if (!m_Clip || timelineTime < m_StartTime)
-                return false;
-            bool hold = timelineTime > m_EndTime && m_Extrapolation == ExtraPolationMode.Hold;
-            if (timelineTime > m_EndTime && !hold)
-                return false;
-            float duration = Mathf.Max(0.0001f, m_DurationTime);
-            float selfTime = hold ? m_DurationTime : Mathf.Clamp(timelineTime - m_StartTime, 0f, m_DurationTime);
-            float remainTime = Mathf.Max(0f, m_EndTime - timelineTime);
-            authoringNormalized = Mathf.Clamp01(selfTime / duration);
-            float fadeIn = !hold && m_EaseInTime > 0f && selfTime < m_EaseInTime
-                ? Evaluate(m_EaseInCurve, Mathf.Clamp01(selfTime / m_EaseInTime), 1f)
-                : 1f;
-            float fadeOut = !hold && m_EaseOutTime > 0f && remainTime < m_EaseOutTime
-                ? 1f - Evaluate(m_EaseOutCurve, Mathf.Clamp01(1f - remainTime / m_EaseOutTime), 0f)
-                : 1f;
-            float weight = Mathf.Clamp01(Evaluate(m_WeightCurve, authoringNormalized, 1f) * fadeIn * fadeOut);
-            if (weight <= 0f)
-                return false;
-            float clipTime = selfTime + m_ClipInTime;
-            bool looping = m_Clip.isLooping || cycle > 0;
-            float absoluteClipTime = clipTime + Mathf.Max(0, cycle) * m_DurationTime;
-            animationNormalized = looping
-                ? Mathf.Repeat(absoluteClipTime, m_Clip.length) / m_Clip.length
-                : Mathf.Clamp01(clipTime / m_Clip.length);
-            sample = new AnimationClipSample(
-                m_ClipAuthoringId,
-                RuntimeSourceElementHandle.Invalid,
-                m_Clip,
-                clipTime,
-                authoringNormalized,
-                weight,
-                looping,
-                m_ClipInTime,
-                m_DurationTime,
-                absoluteClipTime);
-            return true;
+            destination[destinationIndex] = plan;
+            totalWeight += plan.Weight;
+            footPlacementWeight += footSample.Weight * plan.Weight;
+            left.Add(footSample.Left, plan.Weight, visualTimeScale);
+            right.Add(footSample.Right, plan.Weight, visualTimeScale);
+            return 1;
         }
 
         static float EvaluateRequired(AnimationCurve curve, float time, string field)
         {
             if (curve == null || curve.length == 0)
                 throw new InvalidOperationException($"Presentation Projection animation clip requires '{field}'.");
-            return curve.Evaluate(time);
+            float value = curve.Evaluate(time);
+            if (!float.IsFinite(value))
+                throw new InvalidOperationException($"Presentation Projection animation clip curve '{field}' produced a non-finite value.");
+            return value;
         }
 
-        static float Evaluate(AnimationCurve curve, float time, float fallback)
-        {
-            return curve != null && curve.length > 0 ? curve.Evaluate(time) : fallback;
-        }
+        static bool HasKeys(AnimationCurve curve) => curve != null && curve.length > 0;
 
         static AnimationCurve CopyCurve(AnimationCurve source)
         {

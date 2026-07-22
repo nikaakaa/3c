@@ -6,9 +6,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             return
                 $"body={snapshot.PreviousBodyTick}->{snapshot.CurrentBodyTick};reset={snapshot.ResetSequence};" +
+                $"pose={snapshot.PoseProgramHash}/{snapshot.CompletionIdentity}/{snapshot.PoseContinuityIdentity};" +
+                $"placement={snapshot.FootPlacementWeightParameterId}[{snapshot.FootPlacementWeightParameterIndex}]={snapshot.FootPlacementWeight:0.###};" +
                 $"calibration={snapshot.CalibrationId}/{snapshot.CalibrationRevision};" +
                 $"analysis={snapshot.AnalysisSourceId}/v{snapshot.AnalysisVersion}/{snapshot.AnalysisAlgorithmVersion};" +
-                $"visualScale={ResolveVisualTimeScale(snapshot):0.###};" +
+                $"contributions={snapshot.ContributionCount}/{ResolveContributionWeight(snapshot):0.###};" +
                 $"leftHeelToe={snapshot.Left.HeelSupportIdentity}/{snapshot.Left.ToeSupportIdentity};" +
                 $"rightHeelToe={snapshot.Right.HeelSupportIdentity}/{snapshot.Right.ToeSupportIdentity};" +
                 $"leftSurface={snapshot.Left.CurrentSupportIdentity}->{snapshot.Left.FutureSupportIdentity};" +
@@ -26,21 +28,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 $"bodyDelta={snapshot.BodySourceTranslationDelta}/{snapshot.BodyVisibleTranslationDelta};" +
                 $"actorComp={snapshot.ActorMovementCompensationMode}/{snapshot.ActorMovementCompensationTargetOffset:0.####}/{snapshot.ActorMovementCompensationCurrentOffset:0.####}/{snapshot.ActorMovementCompensationVelocity:0.####};" +
                 $"pelvisReach={snapshot.PelvisReachTargetOffset:0.####}/{snapshot.PelvisReachCurrentOffset:0.####};" +
+                $"pelvisHeight={snapshot.PelvisHeightMode}/{snapshot.PelvisHeightDecision}/{snapshot.PelvisHeightReason};" +
+                $"pelvisEvidence={snapshot.PelvisDirectionalSpeed:0.####}/{snapshot.PelvisFootLeadDistance:0.####}/{snapshot.PelvisSlopeHeightDifference:0.####};" +
                 $"pelvis={snapshot.PelvisTargetOffset:0.####}/{snapshot.PelvisCurrentOffset:0.####};support={snapshot.SupportFoot};" +
                 $"queries={snapshot.Left.QueryCount + snapshot.Right.QueryCount}";
         }
 
-        static float ResolveVisualTimeScale(CharacterFootPlacementFrameSnapshot snapshot)
+        static float ResolveContributionWeight(CharacterFootPlacementFrameSnapshot snapshot)
         {
-            float weightedScale = 0f;
-            float totalWeight = 0f;
+            float weight = 0f;
             for (int i = 0; i < snapshot.ContributionCount; i++)
-            {
-                ThirdPersonCharacter.Pipeline.Animation.AnimationPoseContribution contribution = snapshot.GetContribution(i);
-                weightedScale += contribution.VisualTimeScale * contribution.Weight;
-                totalWeight += contribution.Weight;
-            }
-            return totalWeight > 0.0001f ? weightedScale / totalWeight : 0f;
+                weight += snapshot.GetContribution(i).Weight;
+            return weight;
         }
     }
 }

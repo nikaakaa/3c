@@ -1,7 +1,7 @@
 # character-animation-pipeline Specification
 
 ## Purpose
-定义角色管线中的 Timeline 和动画输出链路：Compiler 将 `TimelineNode` 降低为 Program operation，SimulationTick 推进 Gameplay Timeline，PresentationFrame 按 visual time 采样动画，最终由 CharacterSimulationPresentationRuntime 和 Animancer 播放链应用。
+定义角色管线中的Timeline和动画输出链路：Compiler将`TimelineNode`降低为Program operation，SimulationTick推进Gameplay Timeline，PresentationFrame按visual time生成Pose Request，最终由CharacterSimulationPresentationRuntime在同一PlayableGraph完成source capture、PoseSlot Blend、Pose Graph与最终姿势发布。
 ## Requirements
 ### Requirement: Timeline 轨道采样输出管线数据
 
@@ -24,9 +24,9 @@ Gameplay Timeline sampling MUST只按 SimulationTick/canonical fraction 发生�
 
 ### Requirement: CharacterSimulationPresentationRuntime 是 Unity 动画应用边界
 
-SimulationCommitter与唯一 `CharacterSimulationPresentationRuntime`协调器 MUST共同构成Unity animation application boundary。Presentation Egress MUST把纠偏结果表达为当前最终producer selection、sample、complete或release command，并以Publish disposition提交；MUST不要求Presentation撤回已经显示的历史command。协调器 MUST通过Projection校验producer，并将playback command唯一转发给`CharacterAnimationPlaybackRuntime -> AnimationPlaybackLifecycle -> Animancer`。每个外部PresentationFrame target MUST只调用一次协调器`Present`，MUST不读取animation readiness、不在`Present`与body-only入口之间分支，也 MUST不直接决定Body、Animation和Camera的推进顺序。Program Runtime、Execution Backend、Pipeline Pass、WorldSolver、Session Source和Network adapter MUST不引用Animancer或直接播放动画。
+SimulationCommitter与唯一`CharacterSimulationPresentationRuntime`协调器 MUST共同构成Unity animation application boundary。Presentation Egress MUST把纠偏结果表达为当前最终producer selection、pose request、complete或release command，并以Publish disposition提交；MUST不要求Presentation撤回已经显示的历史command。协调器 MUST通过Projection校验producer，并将playback command唯一转发给`CharacterAnimationPlaybackRuntime -> AnimationPlaybackLifecycle -> PoseSlot Blend Stack -> source capture -> Pose Graph -> FinalAnimationPoseFrame`。每个外部PresentationFrame target MUST只调用一次协调器`Present`，MUST不读取animation readiness、不在`Present`与body-only入口之间分支，也 MUST不直接决定Body、Animation和Camera的推进顺序。Program Runtime、Execution Backend、Pipeline Pass、WorldSolver、Session Source和Network adapter MUST不引用Animancer、Blend Stack或Pose Graph实现，也 MUST不直接播放或合成动画。
 
-Runtime创建时 MUST显式锁定animation启动策略。Local owner与完整simulated actor MUST使用`RequireCommittedSelection`，required layer缺少逻辑selection时保持明确错误；只消费外部可靠表现流的observed actor MUST使用`AwaitCommittedSelection`，允许Body在第一份可靠selection到达前推进，但 MUST不伪造Idle、默认producer或隐藏selection。第一份合法selection到达后，observed actor MUST复用同一PendingFirstSample、Current、Outgoing、Retired和Animancer fade生命周期。
+Runtime创建时 MUST显式锁定animation启动策略。Local owner与完整simulated actor MUST使用`RequireCommittedSelection`，RequireOutput PoseSlot缺少逻辑selection时保持明确错误；只消费外部可靠表现流的observed actor MUST使用`AwaitCommittedSelection`，允许Body在第一份可靠selection到达前推进，但 MUST不伪造Idle、默认producer或隐藏selection。第一份合法selection到达后，observed actor MUST复用同一PendingFirstSample、Selected、Retained、Retired和PoseSlot transition生命周期。
 
 上述 Egress Publish 约束适用于 Standard Float32 与 ServerAuthoritative。Deterministic Rollback adapter MAY在 rollback 原子提交完成后，依据有界 EventId state journal 对已经应用的表现状态调用唯一 Runtime 的 Replace 或 Retire；该对账 MUST不建立第二套 Timeline、crossfade 或 Gameplay state。
 
@@ -35,7 +35,7 @@ Runtime创建时 MUST显式锁定animation启动策略。Local owner与完整sim
 - **WHEN** LocalImmediateOutputPass将Attack presentation command标记为Publish
 - **THEN** Committer MUST将其送入唯一Presentation协调器
 - **AND** 协调器 MUST将其转发到现有animation playback lifecycle
-- **AND** Pipeline Runtime MUST不直接调用Animancer
+- **AND** Pipeline Runtime MUST不直接调用Animancer或自行合成Pose
 
 #### Scenario: Observed Actor等待可靠Selection
 
@@ -46,12 +46,12 @@ Runtime创建时 MUST显式锁定animation启动策略。Local owner与完整sim
 #### Scenario: Observed Actor收到首个Selection
 
 - **WHEN** 第一份可靠selection及合法sample进入协调器
-- **THEN** AnimationPlaybackLifecycle MUST从PendingFirstSample进入正式Current生命周期
-- **AND** 后续fade与sample MUST继续按Body frame提供的同一presentation clock推进
+- **THEN** AnimationPlaybackLifecycle MUST从PendingFirstSample进入正式Selected生命周期
+- **AND** 后续Stack transition与request MUST继续按Body frame提供的同一presentation clock推进
 
 #### Scenario: Simulated Actor缺少Required Output
 
-- **WHEN** Local owner或Deterministic Rollback simulated actor的required layer没有逻辑selection
+- **WHEN** Local owner或Deterministic Rollback simulated actor的RequireOutput PoseSlot没有逻辑selection
 - **THEN** RequireCommittedSelection策略 MUST报告明确错误
 - **AND** MUST不因该Actor无相机或被称为remote而静默等待
 
@@ -59,7 +59,7 @@ Runtime创建时 MUST显式锁定animation启动策略。Local owner与完整sim
 
 - **WHEN** ServerAuthoritative Egress确认预测producer不再是当前最终selection
 - **THEN** Egress MUST生成新的release与最终selection command并以Publish提交
-- **AND** 协调器 MUST从Animancer当前视觉状态接管而不建立第二套fade
+- **AND** 协调器 MUST由正式PoseSlot Stack接管而不建立第二套transition
 
 #### Scenario: Fixed Rollback对账已应用的表现事件
 
@@ -67,14 +67,14 @@ Runtime创建时 MUST显式锁定animation启动策略。Local owner与完整sim
 - **THEN** rollback presentation adapter MAY调用唯一Runtime的Replace或Retire
 - **AND** Runtime MUST只修正表现生命周期，不修改Character/World state或重新执行Gameplay operation
 
-### Requirement: 动画层预览只读取调试 Snapshot
+### Requirement: 动画预览只读取正式调试Snapshot
 
-系统 MUST从正式 AnimationPlaybackLifecycle 与 Animancer adapter 导出只读 AnimationPlaybackFrameSnapshot 或等价数据。Snapshot MAY包含每层 selection、sample time、PendingFirstSample、Current、Outgoing、Retired、Animancer state key 与 fade progress，MUST不参与 gameplay 决策或最终播放。Timeline 编辑器预览 MUST使用与正式链路相同的 sampling、lifecycle 和 Animancer adapter。
+系统 MUST从正式AnimationPlaybackLifecycle、PoseSlot Blend Stack、source backend与Pose Graph导出只读AnimationPlaybackFrameSnapshot或等价数据。Snapshot MAY包含AnimationChannelId、PoseSlotId、selection、sample time、PendingFirstSample、Selected、Retained、Retired、Stack entry、source identity与final pose completion，MUST不参与gameplay决策或最终播放。Timeline编辑器预览 MUST使用与正式链路相同的sampling、Lifecycle、Stack、source backend与Pose Graph。
 
 #### Scenario: 生成每帧预览数据
 
 - **WHEN** 正式或 preview session 更新动画
-- **THEN** 系统 MAY导出当前 layer/playback lifecycle snapshot
+- **THEN** 系统 MAY导出当前channel/slot/playback lifecycle snapshot
 - **AND** 编辑器 MUST只读取该 snapshot
 
 #### Scenario: 运行时禁用调试历史
@@ -109,7 +109,8 @@ TreeClip Decision/Commit lifecycle MUST只存在于 Program operation 与 Charac
 
 - **WHEN** Editor preview 打开同一 Timeline 且游戏运行 Corin Program
 - **THEN** preview state MUST不影响 CharacterSimulationState
-- **AND** preview 与 live runtime MUST执行相同 Program operation
+- **AND** Authoring Preview MUST只复用表现sampling与playback lifecycle，不执行任何Program operation
+- **AND** live runtime MUST独占执行该Timeline编译出的Program operation
 
 ### Requirement: 动画生命周期通道必须分离事实写入与批次消费权限
 
@@ -129,9 +130,9 @@ Portable Core MUST只定义 model-neutral presentation command，不引用 Anima
 - **WHEN** server project 编译 Program/Kernel
 - **THEN** MUST不需要 Animancer 或 Unity Presentation assembly
 
-### Requirement: 逻辑层必须为每个动画层提交唯一播放选择
+### Requirement: 逻辑层必须为每个动画通道提交唯一播放选择
 
-Program Finalize MUST根据 State/Action ownership 为每个 LayerId 最多输出一个 selected producer/playback command。Committer 与 Presentation MUST不重新仲裁两个逻辑候选；冲突 MUST作为 Tick failure/diagnostic暴露。
+Program Finalize MUST根据State/Action ownership为每个AnimationChannelId最多输出一个selected producer/playback command。Committer与Presentation MUST不重新仲裁两个逻辑候选；冲突 MUST作为Tick failure/diagnostic暴露。
 
 #### Scenario: Action 与 Locomotion 同时声称 Base
 
@@ -146,7 +147,7 @@ Presentation-owned AnimationPlaybackLifecycle MUST继续只以所选 producer的
 #### Scenario: 新 producer 尚无 Sample
 
 - **WHEN** selection 已提交但 visual sample 未到
-- **THEN** lifecycle MUST保持 PendingFirstSample 与现有 Current
+- **THEN** Lifecycle MUST保持PendingFirstSample与现有Retained Stack输出
 
 ### Requirement: Compiled Timeline Operation 必须是 Gameplay Timeline 唯一权威
 
@@ -157,4 +158,3 @@ CharacterSimulationProgram Timeline operations MUST唯一拥有 Timeline request
 - **WHEN** Attack Timeline 在一个 SimulationTick 内推进
 - **THEN** Program operation MUST产生全部 Gameplay 结果
 - **AND** PresentationFrame MUST只重采样动画表现
-

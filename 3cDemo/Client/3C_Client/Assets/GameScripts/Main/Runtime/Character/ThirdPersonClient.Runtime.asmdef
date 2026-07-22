@@ -14,7 +14,8 @@
         "BTSMTL.TreeDesigner",
         "Kybernetik.Animancer",
         "Cinemachine",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.Collections"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

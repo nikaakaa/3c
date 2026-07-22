@@ -284,19 +284,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        public int DeclareProducer(string identity, string layerId, string sourceIdentity, ProgramOutputChannelKind channelKind, CharacterSimulationSourceLocation source)
+        public int DeclareProducer(
+            string identity,
+            AnimationChannelId animationChannelId,
+            string sourceIdentity,
+            ProgramOutputChannelKind channelKind,
+            CharacterSimulationSourceLocation source)
         {
             if (m_ProducerByIdentity.TryGetValue(identity, out int existing))
             {
                 ProgramProducer declared = m_Producers[existing];
-                if (!string.Equals(declared.LayerId, layerId, StringComparison.Ordinal) ||
+                if (declared.AnimationChannelId != animationChannelId ||
                     !string.Equals(declared.SourceIdentity, sourceIdentity, StringComparison.Ordinal) ||
                     declared.ChannelKind != channelKind)
                 {
                     m_Report.Error(
                         "producer_identity_conflict",
                         source.Identity,
-                        $"Producer identity '{identity}' was already declared with different layer, source, or channel metadata.");
+                        $"Producer identity '{identity}' was already declared with different animation channel, source, or output metadata.");
                     return -1;
                 }
                 return existing;
@@ -304,7 +309,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             int index = m_Producers.Count;
             try
             {
-                m_Producers.Add(new ProgramProducer(index, identity, layerId, sourceIdentity, channelKind));
+                m_Producers.Add(new ProgramProducer(index, identity, animationChannelId, sourceIdentity, channelKind));
                 m_ProducerByIdentity.Add(identity, index);
                 AddSourceMap(ProgramSourceTargetKind.Producer, index, source);
                 return index;

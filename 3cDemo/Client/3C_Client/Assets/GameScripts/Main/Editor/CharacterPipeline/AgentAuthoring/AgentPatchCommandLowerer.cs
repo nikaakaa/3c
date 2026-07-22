@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     "patch.schemaVersion",
                     "unsupported_schema_version",
                     $"Patch schema 必须是 {AgentAuthoringSchema.Version}，当前为 {patch.schemaVersion}。",
-                    "重新导出 v15 Snapshot 并生成新的 v15 Patch。");
+                    "重新导出 v16 Snapshot 并生成新的 v16 Patch。");
                 report.metrics.schemaInvalidCount++;
                 return false;
             }
@@ -45,7 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             if (string.IsNullOrWhiteSpace(patch.rootIdentity) || string.IsNullOrWhiteSpace(patch.sourceRevision))
             {
-                report.Error("patch", "patch_source_identity_missing", "v15 Patch 必须显式提供 rootIdentity 和 sourceRevision。");
+                report.Error("patch", "patch_source_identity_missing", "v16 Patch 必须显式提供 rootIdentity 和 sourceRevision。");
                 report.metrics.schemaInvalidCount++;
                 return false;
             }
@@ -71,7 +71,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 if (string.IsNullOrWhiteSpace(operation.id))
                 {
-                    report.Error(path, "operation_id_missing", "schema v15 要求每个 operation 使用唯一 id。");
+                    report.Error(path, "operation_id_missing", "schema v16 要求每个 operation 使用唯一 id。");
                     report.metrics.schemaInvalidCount++;
                     continue;
                 }
@@ -1489,7 +1489,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             AgentAuthoringReference reference = OptionalReference(authoringId, operationId, label, allowSelf, expectedKinds);
             if (!reference.IsValid && !(allowSelf && IsSelfReference(operationId)))
-                Error(label, $"{label}_identity_missing", $"schema v15 operation 缺少 {label} authoring identity/operation reference。");
+                Error(label, $"{label}_identity_missing", $"schema v16 operation 缺少 {label} authoring identity/operation reference。");
             return reference;
         }
 

@@ -321,12 +321,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "Playback Lifecycle",
                 events,
                 RuntimeTraceEventKind.AnimationPlaybackPending,
-                RuntimeTraceEventKind.AnimationPlaybackCurrent,
-                RuntimeTraceEventKind.AnimationPlaybackOutgoing,
+                RuntimeTraceEventKind.AnimationPlaybackSelected,
+                RuntimeTraceEventKind.AnimationPlaybackRetained,
                 RuntimeTraceEventKind.AnimationPlaybackRetired,
                 RuntimeTraceEventKind.AnimationPlaybackCompleted,
                 RuntimeTraceEventKind.AnimationPlaybackReleased);
-            DrawAnimationGroup("Animancer Fade", events, RuntimeTraceEventKind.AnimationFade);
             DrawAnimationGroup("Presentation", events, RuntimeTraceEventKind.PresentationInterpolated);
         }
 
@@ -341,7 +340,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 eventView =>
                 {
                     RuntimeTracePayload payload = eventView.Event.Payload;
-                    return $"{payload.Name} | {payload.Status} | layer {payload.LayerId} | left {payload.Weight:0.###} | right {payload.FinalWeight:0.###} | pelvis {payload.SecondaryTime:0.###} | {payload.Detail}";
+                    return $"{payload.Name} | {payload.Status} | final pose {payload.OwnerId} | left {payload.Weight:0.###} | right {payload.FinalWeight:0.###} | pelvis {payload.SecondaryTime:0.###} | {payload.Detail}";
                 });
         }
 
@@ -410,7 +409,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static string FormatAnimationEvent(RuntimeTraceEventKind kind, RuntimeTracePayload payload)
         {
-            return $"{payload.Status} layer {payload.LayerId} playback {payload.OwnerId} time {payload.Time:0.###} weight {payload.Weight:0.###} fade {payload.NormalizedTime:0.###} {payload.Detail}";
+            return $"{payload.Status} channel {payload.AnimationChannelId} slot {payload.Name} playback {payload.OwnerId} source {payload.RelatedElementId} time {payload.Time:0.###} weight {payload.Weight:0.###} {payload.Detail}";
         }
 
         static void DrawEventSection(string title, IReadOnlyList<RuntimeDebugEventView> events, Func<RuntimeDebugEventView, string> formatter)

@@ -37,6 +37,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 !IsFiniteNonNegative(poseVelocity) || !IsFiniteNonNegative(contactSoft) ||
                 !IsFiniteNonNegative(continuation) || !IsFiniteNonNegative(jump))
                 throw new ArgumentException("Motion Matching exact cost contains an invalid component.");
+            float total = trajectoryPosition + trajectoryFacing + trajectoryVelocity + posePosition +
+                          poseVelocity + contactSoft + continuation + jump;
+            if (!float.IsFinite(total))
+                throw new ArgumentException("Motion Matching exact cost total is non-finite.");
             TrajectoryPosition = trajectoryPosition;
             TrajectoryFacing = trajectoryFacing;
             TrajectoryVelocity = trajectoryVelocity;
@@ -45,6 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             ContactSoft = contactSoft;
             Continuation = continuation;
             Jump = jump;
+            Total = total;
         }
 
         public float TrajectoryPosition { get; }
@@ -55,7 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public float ContactSoft { get; }
         public float Continuation { get; }
         public float Jump { get; }
-        public float Total => TrajectoryPosition + TrajectoryFacing + TrajectoryVelocity + PosePosition + PoseVelocity + ContactSoft + Continuation + Jump;
+        public float Total { get; }
 
         static bool IsFiniteNonNegative(float value) => float.IsFinite(value) && value >= 0f;
     }

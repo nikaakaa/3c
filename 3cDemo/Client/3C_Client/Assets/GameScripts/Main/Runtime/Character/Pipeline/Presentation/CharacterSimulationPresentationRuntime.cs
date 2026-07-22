@@ -29,12 +29,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterEquipmentVisualRuntime m_Equipment;
         readonly CharacterFootPlacementRuntime m_FootPlacement;
         readonly CharacterCameraPresentationRuntime m_Camera;
-        readonly string m_PoseSourceLayerId;
         readonly CharacterAnimationStartupPolicy m_AnimationStartupPolicy;
         readonly RuntimeDiagnosticsContext m_Diagnostics;
         readonly List<CharacterPresentationCommand> m_CurrentFrameSignals =
             new List<CharacterPresentationCommand>();
-        readonly List<AnimationPoseContribution> m_AnimationPoseContributions;
 
         bool m_AnimationStarted;
         bool m_PoseHasOutput;
@@ -67,8 +65,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
             m_FootPlacement = footPlacement ?? throw new ArgumentNullException(nameof(footPlacement));
             m_Camera = camera;
-            m_PoseSourceLayerId = footPlacement.PoseSourceLayerId;
-            m_AnimationPoseContributions = new List<AnimationPoseContribution>(projection.Producers.Count);
             m_AnimationStartupPolicy = animationStartupPolicy;
             m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         }
@@ -220,8 +216,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_LastPoseResetSequence = bodyFrame.ResetSequence;
                     m_PoseHasOutput = false;
                 }
-                bool animationPresented = PresentAnimation(bodyFrame, context.ScaledDeltaSeconds);
-                PresentPosePostProcess(bodyFrame, context, animationPresented);
+                FinalAnimationPoseFrame animationPose = PresentAnimation(
+                    bodyFrame,
+                    context.ScaledDeltaSeconds);
+                PresentPosePostProcess(bodyFrame, context, in animationPose);
                 m_Camera?.Present(bodyFrame, context.ScaledDeltaSeconds);
             }
             finally
@@ -271,40 +269,52 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationModuleLifetime.Dispose(m_Camera, m_FootPlacement, m_Equipment, m_Animation, m_Body);
         }
 
-        bool PresentAnimation(CharacterBodyPresentationFrame bodyFrame, float presentationDeltaSeconds)
+        FinalAnimationPoseFrame PresentAnimation(
+            CharacterBodyPresentationFrame bodyFrame,
+            float presentationDeltaSeconds)
         {
             if (m_AnimationStartupPolicy == CharacterAnimationStartupPolicy.AwaitCommittedSelection &&
                 !m_AnimationStarted)
             {
                 if (!m_Animation.HasRequiredOutput)
-                    return false;
+                    return default;
                 m_AnimationStarted = true;
             }
             using (AnimationMarker.Auto())
             {
-                m_Animation.Present(
+                return m_Animation.Present(
                     bodyFrame.AnimationSampleTick,
                     bodyFrame.AnimationSampleAlpha,
                     presentationDeltaSeconds,
                     m_Diagnostics);
             }
-            return true;
         }
 
         void PresentPosePostProcess(
             CharacterBodyPresentationFrame bodyFrame,
             GameplayPresentationFrameContext context,
-            bool animationPresented)
+            in FinalAnimationPoseFrame animationPose)
         {
-            m_AnimationPoseContributions.Clear();
-            if (animationPresented)
-                m_Animation.CollectPoseContributions(m_PoseSourceLayerId, m_AnimationPoseContributions);
-            if (m_AnimationPoseContributions.Count == 0)
+            PoseSlotFrameAvailability availability;
+            try
+            {
+                availability = animationPose.Availability;
+            }
+            catch (InvalidOperationException)
             {
                 ResetPoseIfNeeded(
                     context.RenderFrame,
                     bodyFrame.ResetSequence,
                     CharacterPosePostProcessResetReason.MissingAnimationOutput,
+                    bodyFrame.ResetReason);
+                return;
+            }
+            if (availability != PoseSlotFrameAvailability.Pose)
+            {
+                ResetPoseIfNeeded(
+                    context.RenderFrame,
+                    bodyFrame.ResetSequence,
+                    CharacterPosePostProcessResetReason.InvalidPose,
                     bodyFrame.ResetReason);
                 return;
             }
@@ -315,7 +325,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.RenderFrame,
                     context.ScaledDeltaSeconds,
                     bodyFrame,
-                    m_AnimationPoseContributions));
+                    animationPose));
             }
             m_PoseHasOutput = true;
         }

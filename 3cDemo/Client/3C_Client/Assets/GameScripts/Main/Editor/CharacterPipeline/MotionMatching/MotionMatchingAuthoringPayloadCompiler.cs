@@ -129,6 +129,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 source.MinimumJumpInterval,
                 source.MaximumAdmittedSampleCount,
                 source.MaximumTreeDepth,
+                source.CoverageNearDuplicateCostThreshold,
                 source.HistoryCapacity,
                 source.DiagnosticDetailCapacity,
                 source.ProtectedFootPositionJumpLimit,

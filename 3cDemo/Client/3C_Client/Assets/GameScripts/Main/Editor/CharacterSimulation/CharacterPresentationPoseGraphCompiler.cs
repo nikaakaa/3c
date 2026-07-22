@@ -98,6 +98,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 parameters[i] = new CharacterPresentationPoseParameterProgramEntry(i, authoredParameters[i].ParameterId, authoredParameters[i].DefaultValue);
                 parameterIndex.Add(authoredParameters[i].ParameterId, i);
             }
+            if (!parameterIndex.ContainsKey(AnimationPoseParameterIds.FootPlacementWeight))
+            {
+                throw new InvalidOperationException(
+                    $"Pose Graph '{graph.GraphId}' requires canonical Pose Parameter '{AnimationPoseParameterIds.FootPlacementWeight}'.");
+            }
 
             var state = new CompilationState(rig, slots, slotIndex, parameters, parameterIndex);
             CompileGraph(
@@ -109,6 +114,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 true);
             CharacterPresentationPoseOperation[] operations = state.Operations.ToArray();
             CharacterPresentationPoseSourceMapEntry[] sourceMap = state.SourceMap.ToArray();
+            int poseWorkspace = operations.Length;
+            int parameterWorkspace = Math.Max(parameters.Length, poseWorkspace * parameters.Length);
+            int contributionWorkspace = checked(poseWorkspace * contributionCapacityPerValue);
+            int frameCache = poseWorkspace;
 
             string hash = ComputeHash(
                 graph,
@@ -119,10 +128,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 state.AdditiveReferences,
                 operations,
                 sourceMap,
-                state.GraphDependencies);
-            int poseWorkspace = operations.Length;
-            int parameterWorkspace = Math.Max(parameters.Length, poseWorkspace * parameters.Length);
-            int contributionWorkspace = checked(poseWorkspace * contributionCapacityPerValue);
+                state.GraphDependencies,
+                poseWorkspace,
+                parameterWorkspace,
+                contributionWorkspace,
+                frameCache,
+                state.OutputOperationIndex);
             return new CharacterPresentationPoseProgram(
                 graph.GraphId,
                 graph.ContentRevision,
@@ -137,7 +148,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 poseWorkspace,
                 parameterWorkspace,
                 contributionWorkspace,
-                poseWorkspace,
+                frameCache,
                 state.OutputOperationIndex);
         }
 
@@ -429,6 +440,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAnimationRigDefinition rig,
             List<CharacterPresentationAdditiveReferenceDescriptor> references)
         {
+            if (!string.Equals(
+                    node.AdditiveReferencePoseId,
+                    AnimationAdditiveReferencePoseIds.RigReference,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Additive Pose '{node.NodeId}' must use reference pose '{AnimationAdditiveReferencePoseIds.RigReference}'.");
+            }
+            if (!Enum.IsDefined(typeof(AdditiveReferenceSpace), node.AdditiveReferenceSpace))
+                throw new InvalidOperationException($"Additive Pose '{node.NodeId}' reference space is invalid.");
+
             int count = rig.Bones.Count;
             var positions = new UnityEngine.Vector3[count];
             var rotations = new UnityEngine.Quaternion[count];
@@ -436,9 +458,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             for (int i = 0; i < count; i++)
             {
                 CharacterAnimationBoneDefinition bone = rig.Bones[i];
-                positions[i] = bone.ReferenceLocalPosition;
-                rotations[i] = bone.ReferenceLocalRotation;
-                scales[i] = bone.ReferenceLocalScale;
+                if (node.AdditiveReferenceSpace == AdditiveReferenceSpace.Local || bone.ParentIndex < 0)
+                {
+                    positions[i] = bone.ReferenceLocalPosition;
+                    rotations[i] = bone.ReferenceLocalRotation;
+                    scales[i] = bone.ReferenceLocalScale;
+                    continue;
+                }
+
+                int parentIndex = bone.ParentIndex;
+                positions[i] = positions[parentIndex] +
+                               rotations[parentIndex] * UnityEngine.Vector3.Scale(scales[parentIndex], bone.ReferenceLocalPosition);
+                rotations[i] = (rotations[parentIndex] * bone.ReferenceLocalRotation).normalized;
+                scales[i] = UnityEngine.Vector3.Scale(scales[parentIndex], bone.ReferenceLocalScale);
             }
             int index = references.Count;
             references.Add(new CharacterPresentationAdditiveReferenceDescriptor(
@@ -498,7 +530,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             IReadOnlyList<CharacterPresentationAdditiveReferenceDescriptor> additiveReferences,
             IReadOnlyList<CharacterPresentationPoseOperation> operations,
             IReadOnlyList<CharacterPresentationPoseSourceMapEntry> sourceMap,
-            IReadOnlyList<string> graphDependencies)
+            IReadOnlyList<string> graphDependencies,
+            int poseWorkspace,
+            int parameterWorkspace,
+            int contributionWorkspace,
+            int frameCache,
+            int outputOperationIndex)
         {
             var values = new List<string>
             {
@@ -515,39 +552,44 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             for (int i = 0; i < slots.Count; i++)
             {
                 CharacterPresentationPoseSlotProgramEntry slot = slots[i];
-                values.Add($"slot:{slot.Index}:{slot.PoseSlotId.Value}:{slot.AnimationChannelId.Value}:{(int)slot.OutputPolicy}");
+                values.Add(FormattableString.Invariant($"slot:{slot.Index}:{slot.PoseSlotId.Value}:{slot.AnimationChannelId.Value}:{(int)slot.OutputPolicy}"));
             }
             for (int i = 0; i < parameters.Count; i++)
-                values.Add($"parameter:{parameters[i].Index}:{parameters[i].ParameterId.Value}:{parameters[i].DefaultValue:R}");
+                values.Add(FormattableString.Invariant($"parameter:{parameters[i].Index}:{parameters[i].ParameterId.Value}:{parameters[i].DefaultValue:R}"));
             for (int i = 0; i < masks.Count; i++)
             {
-                values.Add($"mask:{masks[i].Index}:{masks[i].MaskId}");
+                values.Add(FormattableString.Invariant($"mask:{masks[i].Index}:{masks[i].MaskId}"));
                 for (int bone = 0; bone < masks[i].Weights.Count; bone++)
                     values.Add(masks[i].Weights[bone].ToString("R", CultureInfo.InvariantCulture));
             }
             for (int i = 0; i < additiveReferences.Count; i++)
             {
                 CharacterPresentationAdditiveReferenceDescriptor reference = additiveReferences[i];
-                values.Add($"additive:{reference.Index}:{reference.ReferencePoseId}:{(int)reference.Space}:{(int)reference.ScalePolicy}");
+                values.Add(FormattableString.Invariant($"additive:{reference.Index}:{reference.ReferencePoseId}:{(int)reference.Space}:{(int)reference.ScalePolicy}"));
                 for (int bone = 0; bone < reference.Positions.Count; bone++)
                 {
                     UnityEngine.Vector3 position = reference.Positions[bone];
                     UnityEngine.Quaternion rotation = reference.Rotations[bone];
                     UnityEngine.Vector3 scale = reference.Scales[bone];
-                    values.Add($"{position.x:R}:{position.y:R}:{position.z:R}");
-                    values.Add($"{rotation.x:R}:{rotation.y:R}:{rotation.z:R}:{rotation.w:R}");
-                    values.Add($"{scale.x:R}:{scale.y:R}:{scale.z:R}");
+                    values.Add(FormattableString.Invariant($"{position.x:R}:{position.y:R}:{position.z:R}"));
+                    values.Add(FormattableString.Invariant($"{rotation.x:R}:{rotation.y:R}:{rotation.z:R}:{rotation.w:R}"));
+                    values.Add(FormattableString.Invariant($"{scale.x:R}:{scale.y:R}:{scale.z:R}"));
                 }
             }
             for (int i = 0; i < operations.Count; i++)
             {
                 CharacterPresentationPoseOperation operation = operations[i];
-                values.Add($"operation:{operation.Index}:{(int)operation.Code}:{operation.Version}:{operation.NodeId.Value}:{operation.OutputPoseValueIndex}:{operation.InputPoseValueIndexA}:{operation.InputPoseValueIndexB}:{operation.PoseSlotIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.Weight:R}");
+                values.Add(FormattableString.Invariant($"operation:{operation.Index}:{(int)operation.Code}:{operation.Version}:{operation.NodeId.Value}:{operation.OutputPoseValueIndex}:{operation.InputPoseValueIndexA}:{operation.InputPoseValueIndexB}:{operation.PoseSlotIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.Weight:R}"));
                 for (int parameter = 0; parameter < operation.ParameterPolicies.Count; parameter++)
                     values.Add(((int)operation.ParameterPolicies[parameter]).ToString(CultureInfo.InvariantCulture));
             }
             for (int i = 0; i < sourceMap.Count; i++)
-                values.Add($"source:{sourceMap[i].OperationIndex}:{sourceMap[i].GraphId}:{sourceMap[i].NodeId.Value}:{sourceMap[i].CallSite}");
+                values.Add(FormattableString.Invariant($"source:{sourceMap[i].OperationIndex}:{sourceMap[i].GraphId}:{sourceMap[i].NodeId.Value}:{sourceMap[i].CallSite}"));
+            values.Add(FormattableString.Invariant($"workspace:pose:{poseWorkspace}"));
+            values.Add(FormattableString.Invariant($"workspace:parameter:{parameterWorkspace}"));
+            values.Add(FormattableString.Invariant($"workspace:contribution:{contributionWorkspace}"));
+            values.Add(FormattableString.Invariant($"workspace:frame-cache:{frameCache}"));
+            values.Add(FormattableString.Invariant($"output-operation:{outputOperationIndex}"));
             return StableHash.Compute(values.ToArray()).ToString();
         }
     }

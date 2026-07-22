@@ -56,6 +56,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 throw new ArgumentException("Motion Matching Query is incomplete.");
             if (!initialization && currentSampleIndex < 0)
                 throw new ArgumentException("Non-initialization Motion Matching Query has no current sample.");
+            for (int i = 0; i < normalizedFeatures.Count; i++)
+            {
+                if (!float.IsFinite(normalizedFeatures[i]))
+                    throw new ArgumentException($"Motion Matching Query normalized feature #{i} is non-finite.", nameof(normalizedFeatures));
+            }
             QueryId = queryId;
             ProfileId = profileId;
             DatabaseIdentity = databaseIdentity;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BTSMTL.Timeline;
+using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 {
@@ -10,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         SamePlayback,
         MissingCurrent,
         SyncDisabled,
-        DifferentLayer,
+        DifferentChannel,
         DifferentGroup
     }
 
@@ -24,7 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         FiniteCoverageExceeded,
         MultipleSources,
         RelationCycle,
-        CrossLayerRelation,
+        CrossChannelRelation,
         SourceTimeRegressed,
         NonFiniteResult,
         RoleConflict
@@ -50,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         NoCurrentSource,
         SourceExplicitNone,
         TargetExplicitNone,
-        DifferentLayer,
+        DifferentChannel,
         DifferentGroup,
         RelationCreated,
         RelationContinued,
@@ -65,14 +66,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     {
         public AnimationMarkerSyncRawSample(
             AnimationPlaybackId playbackId,
-            string layerId,
+            AnimationChannelId animationChannelId,
             AnimationMarkerSyncBinding binding,
             float localTime,
             double continuousTime,
             int cycle)
         {
             PlaybackId = playbackId;
-            LayerId = layerId ?? string.Empty;
+            AnimationChannelId = animationChannelId;
             Binding = binding;
             LocalTime = localTime;
             ContinuousTime = continuousTime;
@@ -80,7 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         public AnimationPlaybackId PlaybackId { get; }
-        public string LayerId { get; }
+        public AnimationChannelId AnimationChannelId { get; }
         public AnimationMarkerSyncBinding Binding { get; }
         public float LocalTime { get; }
         public double ContinuousTime { get; }
@@ -126,7 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     {
         public AnimationMarkerSyncPlaybackSnapshot(
             AnimationPlaybackId playbackId,
-            string layerId,
+            AnimationChannelId animationChannelId,
             string syncGroupId,
             double rawTime,
             double effectiveTime,
@@ -138,7 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             bool rebased)
         {
             PlaybackId = playbackId;
-            LayerId = layerId ?? string.Empty;
+            AnimationChannelId = animationChannelId;
             SyncGroupId = syncGroupId ?? string.Empty;
             RawTime = rawTime;
             EffectiveTime = effectiveTime;
@@ -151,7 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         public AnimationPlaybackId PlaybackId { get; }
-        public string LayerId { get; }
+        public AnimationChannelId AnimationChannelId { get; }
         public string SyncGroupId { get; }
         public double RawTime { get; }
         public double EffectiveTime { get; }
@@ -166,7 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     public readonly struct AnimationMarkerSyncRelationSnapshot
     {
         public AnimationMarkerSyncRelationSnapshot(
-            string layerId,
+            AnimationChannelId animationChannelId,
             string syncGroupId,
             AnimationPlaybackId source,
             AnimationPlaybackId target,
@@ -183,7 +184,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             AnimationMarkerSyncSnapshotReason reason,
             AnimationPlaybackLifecyclePhase targetLifecyclePhase = AnimationPlaybackLifecyclePhase.Retired)
         {
-            LayerId = layerId ?? string.Empty;
+            AnimationChannelId = animationChannelId;
             SyncGroupId = syncGroupId ?? string.Empty;
             Source = source;
             Target = target;
@@ -201,7 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             TargetLifecyclePhase = targetLifecyclePhase;
         }
 
-        public string LayerId { get; }
+        public AnimationChannelId AnimationChannelId { get; }
         public string SyncGroupId { get; }
         public AnimationPlaybackId Source { get; }
         public AnimationPlaybackId Target { get; }
@@ -221,7 +222,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public AnimationMarkerSyncRelationSnapshot WithLifecyclePhase(AnimationPlaybackLifecyclePhase phase)
         {
             return new AnimationMarkerSyncRelationSnapshot(
-                LayerId,
+                AnimationChannelId,
                 SyncGroupId,
                 Source,
                 Target,
@@ -332,13 +333,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     AnimationMarkerSyncSnapshotReason.TargetExplicitNone);
                 return AnimationMarkerSyncNotApplicableReason.SyncDisabled;
             }
-            if (!string.Equals(outgoing.LayerId, incoming.LayerId, StringComparison.Ordinal))
+            if (!outgoing.AnimationChannelId.Equals(incoming.AnimationChannelId))
             {
                 m_Applicability[incoming.PlaybackId] = new ApplicabilityRecord(
                     outgoing.PlaybackId,
                     incoming.PlaybackId,
-                    AnimationMarkerSyncSnapshotReason.DifferentLayer);
-                return AnimationMarkerSyncNotApplicableReason.DifferentLayer;
+                    AnimationMarkerSyncSnapshotReason.DifferentChannel);
+                return AnimationMarkerSyncNotApplicableReason.DifferentChannel;
             }
             if (!string.Equals(outgoing.Binding.CanonicalGroupId, incoming.Binding.CanonicalGroupId, StringComparison.Ordinal))
             {
@@ -365,7 +366,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_Relations.Add(target.PlaybackId, new SyncRelation(
                 source.PlaybackId,
                 target.PlaybackId,
-                source.LayerId,
+                source.AnimationChannelId,
                 source.Binding,
                 target.Binding)
             {
@@ -447,7 +448,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_RawSampleCache.TryGetValue(relation.Target, out AnimationMarkerSyncRawSample targetRaw);
                 m_Effective.TryGetValue(relation.Target, out AnimationMarkerSyncEffectiveSample targetEffective);
                 destination.Add(new AnimationMarkerSyncRelationSnapshot(
-                    relation.LayerId,
+                    relation.AnimationChannelId,
                     relation.TargetBinding.CanonicalGroupId,
                     relation.Source,
                     relation.Target,
@@ -472,7 +473,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     !m_Effective.TryGetValue(item.Key, out AnimationMarkerSyncEffectiveSample targetEffective))
                     continue;
                 destination.Add(new AnimationMarkerSyncRelationSnapshot(
-                    targetRaw.LayerId,
+                    targetRaw.AnimationChannelId,
                     targetRaw.Binding?.CanonicalGroupId,
                     default,
                     item.Key,
@@ -494,7 +495,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     !m_Effective.TryGetValue(applicability.Target, out AnimationMarkerSyncEffectiveSample targetEffective))
                     continue;
                 destination.Add(new AnimationMarkerSyncRelationSnapshot(
-                    targetRaw.LayerId,
+                    targetRaw.AnimationChannelId,
                     targetRaw.Binding?.CanonicalGroupId,
                     applicability.Source,
                     applicability.Target,
@@ -530,7 +531,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     continue;
                 destination.Add(new AnimationMarkerSyncPlaybackSnapshot(
                     playbackId,
-                    raw.LayerId,
+                    raw.AnimationChannelId,
                     raw.Binding?.CanonicalGroupId,
                     raw.ContinuousTime,
                     effective.ContinuousTime,
@@ -586,8 +587,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             AnimationMarkerSyncEffectiveSample effective;
             if (m_Relations.TryGetValue(playbackId, out SyncRelation relation))
             {
-                if (!string.Equals(raw.LayerId, relation.LayerId, StringComparison.Ordinal))
-                    throw Invalid(AnimationMarkerSyncInvalidReason.CrossLayerRelation, playbackId);
+                if (!raw.AnimationChannelId.Equals(relation.AnimationChannelId))
+                    throw Invalid(AnimationMarkerSyncInvalidReason.CrossChannelRelation, playbackId);
                 EvaluatePlayback(relation.Source);
                 if (!m_Effective.TryGetValue(relation.Source, out AnimationMarkerSyncEffectiveSample source))
                     throw Invalid(AnimationMarkerSyncInvalidReason.SourceSampleMissing, relation.Source);
@@ -1031,20 +1032,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             public SyncRelation(
                 AnimationPlaybackId source,
                 AnimationPlaybackId target,
-                string layerId,
+                AnimationChannelId animationChannelId,
                 AnimationMarkerSyncBinding sourceBinding,
                 AnimationMarkerSyncBinding targetBinding)
             {
                 Source = source;
                 Target = target;
-                LayerId = layerId;
+                AnimationChannelId = animationChannelId;
                 SourceBinding = sourceBinding;
                 TargetBinding = targetBinding;
             }
 
             public AnimationPlaybackId Source { get; }
             public AnimationPlaybackId Target { get; }
-            public string LayerId { get; }
+            public AnimationChannelId AnimationChannelId { get; }
             public AnimationMarkerSyncBinding SourceBinding { get; }
             public AnimationMarkerSyncBinding TargetBinding { get; }
             public bool Initialized { get; set; }

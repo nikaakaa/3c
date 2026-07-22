@@ -128,12 +128,12 @@ PresentationFrame MUST保持为 committed/predicted presentation command 的消�
 
 ### Requirement: Timeline pose time 与 Animancer fade time 必须独立连续推进
 
-CharacterSimulationState MUST保存Timeline logic time，Presentation Source Cursor MUST提供表现帧重采样所需visual Timeline time，Animancer MUST以presentation delta推进fade。Body Visual Trajectory Follower MUST只修改visible body pose，不得修改AnimationSampleTick、AnimationSampleAlpha、Animancer delta或playback generation。四者 MUST不共享一个mutable clock，也 MUST不把表现时间或correction进度写回CharacterSimulationState。
+CharacterSimulationState MUST保存Timeline logic time，Presentation Source Cursor MUST提供表现帧重采样所需visual Timeline time，每PoseSlot Blend Stack MUST以presentation delta推进transition clock。Body Visual Trajectory Follower MUST只修改visible body pose，不得修改AnimationSampleTick、AnimationSampleAlpha、Stack delta或playback generation。四者 MUST不共享一个mutable clock，也 MUST不把表现时间或correction进度写回CharacterSimulationState。
 
 #### Scenario: 两个 Logic Tick 之间渲染
 
 - **WHEN** PresentationFrame在下一个SimulationTick前推进
-- **THEN** Body target sample、Animancer fade和visual animation sample MUST连续推进
+- **THEN** Body target sample、PoseSlot transition和visual animation sample MUST连续推进
 - **AND** Timeline gameplay state MUST保持不变
 
 #### Scenario: Body correction正在收敛
@@ -142,20 +142,20 @@ CharacterSimulationState MUST保存Timeline logic time，Presentation Source Cur
 - **THEN** 动画 MUST继续按Source Cursor的predicted presentation time采样
 - **AND** MUST不按position error减速、重启playback或生成第二个动画clock
 
-### Requirement: 动画重入必须从 Animancer 当前视觉图接管
+### Requirement: 动画重入必须从PoseSlot Stack当前视觉状态接管
 
-同一 LayerId 在旧 state 尚未淡出时收到新 selected target，或 replay后 producer command被替换或重入时，AnimationPlaybackLifecycle MUST将 EventId变化提交给 Animancer，AnimancerPlaybackAdapter MUST调用 Animancer正式 Play/Fade从当前视觉 graph/state/weight接管。项目 MUST不冻结 FinalOutput、回放中间逻辑状态、清空 layer、建立 handoff stack，Rollback Pipeline MUST不维护第二套 CrossFade或动画时间轴。
+同一AnimationChannelId在旧source仍为Retained时收到新selected target，或replay后producer command被替换或重入时，AnimationPlaybackLifecycle MUST将EventId变化提交给对应PoseSlot Blend Stack。Stack MUST从其唯一entry、Stored Pose、Inertial与history状态接管；Animancer只更新source playable采样。项目 MUST不冻结FinalOutput、回放中间逻辑状态、清空slot或建立第二套handoff stack，Rollback Pipeline MUST不维护第二套CrossFade或动画时间轴。
 
 #### Scenario: Dodge 淡出时进入 Run
 
-- **WHEN** Dodge 仍为 Outgoing 且 Run target 首样本 ready
-- **THEN** adapter MUST从当前 Animancer layer 状态播放 Run
+- **WHEN** Dodge仍为Retained且Run target首样本ready
+- **THEN** 对应PoseSlot Stack MUST从当前视觉状态接管Run
 - **AND** 画面 MUST不先跳回 Dodge 或 Idle 基准姿势
 
 #### Scenario: Replay 改变 Attack Producer
 
 - **WHEN** 原 predicted Attack2 producer 在 replay 后不再有效
-- **THEN** lifecycle MUST按 EventId cancel/replace command 从 Animancer 当前视觉状态接管
+- **THEN** lifecycle MUST按EventId cancel/replace command从PoseSlot Stack当前视觉状态接管
 
 #### Scenario: Replay 修正同一 Playback 的采样时间
 
@@ -314,4 +314,3 @@ Rollback网络协议 MUST不发送AnimationClip、Animator state、Animancer sta
 - **WHEN** Relayed MoveAxis持续到达且Locomotion状态保持Run
 - **THEN** 远端Run producer MUST由本地模拟持续拥有
 - **AND** 网络协议 MUST不逐帧同步Run动画时间
-

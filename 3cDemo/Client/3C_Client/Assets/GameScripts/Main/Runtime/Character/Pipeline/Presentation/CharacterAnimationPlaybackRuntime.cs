@@ -3,22 +3,19 @@ using System.Collections.Generic;
 using Animancer;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
-using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
+using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    public enum AnimationTransitionEvaluationMode
-    {
-        Timed = 0,
-        Immediate = 1
-    }
-
     public sealed class CharacterAnimationPlaybackRuntime : IDisposable
     {
-        readonly AnimancerPlaybackAdapter m_Adapter;
+        readonly CharacterAnimationPresentationBindingIndex m_Bindings;
+        readonly AnimationPoseRequestWorkspace m_RequestWorkspace;
+        readonly AnimationPosePlayableGraphRuntime m_PoseRuntime;
         readonly AnimationPlaybackLifecycle m_Lifecycle;
         readonly AnimationMarkerSyncRuntime m_MarkerSync = new AnimationMarkerSyncRuntime();
         readonly CharacterAnimationTracePublisher m_TracePublisher = new CharacterAnimationTracePublisher();
@@ -29,27 +26,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly List<AnimationMarkerSyncPlaybackSnapshot> m_MarkerSyncPlaybackSnapshots = new List<AnimationMarkerSyncPlaybackSnapshot>();
         readonly HashSet<AnimationPlaybackId> m_DemandedPlaybacks = new HashSet<AnimationPlaybackId>();
         readonly List<AnimationPlaybackId> m_RetiredPlaybacks = new List<AnimationPlaybackId>();
-        readonly Dictionary<string, AnimationSelectionState> m_Selections =
-            new Dictionary<string, AnimationSelectionState>(StringComparer.Ordinal);
+        readonly Dictionary<AnimationChannelId, AnimationSelectionState> m_Selections =
+            new Dictionary<AnimationChannelId, AnimationSelectionState>();
         readonly Dictionary<AnimationPlaybackId, AnimationSamplingState> m_Sampling =
             new Dictionary<AnimationPlaybackId, AnimationSamplingState>();
         readonly Dictionary<AnimationPlaybackId, AnimationMarkerSyncRawSample> m_RawSamples =
             new Dictionary<AnimationPlaybackId, AnimationMarkerSyncRawSample>();
         readonly Dictionary<AnimationPlaybackId, AnimationMarkerSyncEffectiveSample> m_EffectiveSamples =
             new Dictionary<AnimationPlaybackId, AnimationMarkerSyncEffectiveSample>();
+        readonly Dictionary<AnimationPoseSourceId, ResolvedAnimationPoseRequest> m_ResolvedRequests =
+            new Dictionary<AnimationPoseSourceId, ResolvedAnimationPoseRequest>();
         readonly List<AnimationPlaybackId> m_RemoveSampling = new List<AnimationPlaybackId>();
         readonly List<AnimationTerminalState> m_Terminals = new List<AnimationTerminalState>();
-        readonly List<string> m_RequiredLayers = new List<string>();
 
         ulong m_SelectionSequence;
+        ulong m_PresentationRequestSequence;
+        ulong m_SourceContinuityIdentity;
+        ulong m_RequestWorkspaceCompletionIdentity;
         bool m_Disposed;
 
         public CharacterAnimationPlaybackRuntime(
             CharacterPresentationSemanticContract contract,
             CharacterPresentationProjection projection,
             AnimancerComponent animancer,
-            bool ownsGraphClock,
-            AnimationTransitionEvaluationMode transitionEvaluationMode)
+            CharacterAnimationRigBinding rigBinding,
+            bool ownsGraphClock)
         {
             if (contract == null)
                 throw new ArgumentNullException(nameof(contract));
@@ -57,47 +58,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(projection));
             projection.RequireContract(contract);
             var errors = new List<string>();
-            CharacterAnimationPresentationBindingIndex bindings =
-                CharacterAnimationPresentationBindingIndex.Build(projection, contract, errors);
-            if (!bindings.IsValid)
+            m_Bindings = CharacterAnimationPresentationBindingIndex.Build(projection, contract, errors);
+            if (!m_Bindings.IsValid)
                 throw new InvalidOperationException(string.Join("\n", errors));
-            foreach (KeyValuePair<string, ResolvedAnimationLayer> pair in bindings.Layers)
+            try
             {
-                if (pair.Value.OutputPolicy == AnimationLayerOutputPolicy.RequireOutput)
-                    m_RequiredLayers.Add(pair.Key);
+                m_RequestWorkspace = new AnimationPoseRequestWorkspace(m_Bindings.WorkspaceLayout);
+                m_PoseRuntime = new AnimationPosePlayableGraphRuntime(
+                    animancer,
+                    rigBinding,
+                    m_Bindings,
+                    ownsGraphClock);
+                m_Lifecycle = new AnimationPlaybackLifecycle(m_Bindings);
             }
-            m_RequiredLayers.Sort(StringComparer.Ordinal);
-            m_Adapter = new AnimancerPlaybackAdapter(
-                animancer,
-                bindings,
-                ownsGraphClock,
-                transitionEvaluationMode);
-            m_Lifecycle = new AnimationPlaybackLifecycle(bindings, m_Adapter);
+            catch
+            {
+                m_PoseRuntime?.Dispose();
+                m_RequestWorkspace?.Dispose();
+                throw;
+            }
         }
 
         public IReadOnlyList<AnimationPlaybackId> RetiredPlaybacks => m_RetiredPlaybacks;
         public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> Snapshots => m_Snapshots;
         public IReadOnlyList<AnimationMarkerSyncRelationSnapshot> MarkerSyncSnapshots => m_MarkerSyncSnapshots;
         public IReadOnlyList<AnimationMarkerSyncPlaybackSnapshot> MarkerSyncPlaybackSnapshots => m_MarkerSyncPlaybackSnapshots;
-
-        internal void CollectPoseContributions(
-            string layerId,
-            List<AnimationPoseContribution> destination)
-        {
-            RequireAlive();
-            if (string.IsNullOrEmpty(layerId))
-                throw new ArgumentException("Pose source layer identity is required.", nameof(layerId));
-            m_Adapter.CollectPoseContributions(layerId, destination);
-        }
         public bool HasRequiredOutput
         {
             get
             {
-                RequireAlive();
-                for (int i = 0; i < m_RequiredLayers.Count; i++)
+                foreach (KeyValuePair<PoseSlotId, ResolvedAnimationPoseSlot> pair in m_Bindings.Slots)
                 {
-                    if (!m_Selections.TryGetValue(m_RequiredLayers[i], out AnimationSelectionState selection) ||
-                        !m_Sampling.ContainsKey(selection.PlaybackId))
+                    ResolvedAnimationPoseSlot slot = pair.Value;
+                    if (slot.OutputPolicy != PoseSlotOutputPolicy.RequireOutput)
+                        continue;
+                    if (!m_Selections.TryGetValue(slot.AnimationChannelId, out AnimationSelectionState selection) ||
+                        !selection.HasPlayback || !m_Sampling.ContainsKey(selection.PlaybackId))
                     {
                         return false;
                     }
@@ -126,7 +122,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     PublishTerminal(command, producer);
                     break;
                 default:
-                    throw new ArgumentException($"Presentation command '{command.Kind}' is not an animation playback command.", nameof(command));
+                    throw new ArgumentException(
+                        $"Presentation command '{command.Kind}' is not an animation playback command.",
+                        nameof(command));
             }
         }
 
@@ -141,10 +139,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             switch (command.Kind)
             {
                 case CharacterPresentationCommandKind.SelectProducer:
-                    if (m_Selections.TryGetValue(producer.LayerId, out AnimationSelectionState selection) &&
+                    if (m_Selections.TryGetValue(producer.AnimationChannelId, out AnimationSelectionState selection) &&
                         selection.EventId.Equals(command.Header.EventId))
                     {
-                        m_Selections.Remove(producer.LayerId);
+                        m_Selections[producer.AnimationChannelId] = AnimationSelectionState.Empty(
+                            producer.AnimationChannelId,
+                            command.Header.Tick.Value,
+                            command.Header.Sequence);
                     }
                     break;
                 case CharacterPresentationCommandKind.SampleProducer:
@@ -164,7 +165,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     }
                     break;
                 default:
-                    throw new ArgumentException($"Presentation command '{command.Kind}' is not an animation playback command.", nameof(command));
+                    throw new ArgumentException(
+                        $"Presentation command '{command.Kind}' is not an animation playback command.",
+                        nameof(command));
             }
         }
 
@@ -180,25 +183,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             switch (replacement.Kind)
             {
                 case CharacterPresentationCommandKind.SelectProducer:
-                {
                     if (current.Kind != CharacterPresentationCommandKind.SelectProducer ||
-                        !string.Equals(currentProducer.LayerId, replacementProducer.LayerId, StringComparison.Ordinal))
+                        currentProducer.AnimationChannelId != replacementProducer.AnimationChannelId)
                     {
-                        throw new InvalidOperationException("Animation selection replacement changed its layer or command kind.");
+                        throw new InvalidOperationException(
+                            "Animation selection replacement changed its Animation Channel or command kind.");
                     }
-                    var playbackId = new AnimationPlaybackId(
-                        replacementProducer.ProducerId,
-                        replacement.ProducerGeneration);
-                    m_Selections[replacementProducer.LayerId] = new AnimationSelectionState(
-                        replacementProducer.LayerId,
-                        playbackId,
-                        replacement.Header.EventId,
-                        replacement.Header.Tick.Value,
-                        replacement.Header.Sequence);
+                    PublishSelection(replacement, replacementProducer);
                     break;
-                }
                 case CharacterPresentationCommandKind.SampleProducer:
-                {
                     if (current.Kind != CharacterPresentationCommandKind.SampleProducer)
                         throw new InvalidOperationException("Animation sample replacement changed its command kind.");
                     var currentPlayback = new AnimationPlaybackId(
@@ -212,9 +205,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     if (m_Sampling.TryGetValue(currentPlayback, out AnimationSamplingState sampling))
                         sampling.Replace(replacement);
                     else
-                        m_Sampling.Add(replacementPlayback, new AnimationSamplingState(replacementProducer, replacement));
+                        m_Sampling.Add(replacementPlayback, CreateSamplingState(replacementProducer, replacement));
                     break;
-                }
                 case CharacterPresentationCommandKind.CompleteProducer:
                 case CharacterPresentationCommandKind.ReleaseProducer:
                     if (current.Kind != CharacterPresentationCommandKind.CompleteProducer &&
@@ -232,20 +224,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        public void Present(
+        public FinalAnimationPoseFrame Present(
             ulong latestSimulationTick,
             float interpolationAlpha,
             float presentationDeltaSeconds,
             RuntimeDiagnosticsContext diagnostics = null)
         {
             RequireAlive();
+            if (!float.IsFinite(interpolationAlpha) || !float.IsFinite(presentationDeltaSeconds) ||
+                presentationDeltaSeconds < 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
+            }
+
             foreach (AnimationSelectionState selection in m_Selections.Values)
             {
-                m_Commands.EnqueueSelection(AnimationLayerSelection.Select(
-                    selection.LayerId,
-                    selection.PlaybackId,
-                    latestSimulationTick,
-                    NextSelectionSequence()));
+                m_Commands.EnqueueSelection(selection.HasPlayback
+                    ? AnimationChannelSelection.Select(
+                        selection.AnimationChannelId,
+                        selection.PlaybackId,
+                        latestSimulationTick,
+                        NextSelectionSequence())
+                    : AnimationChannelSelection.Empty(
+                        selection.AnimationChannelId,
+                        latestSimulationTick,
+                        NextSelectionSequence()));
             }
             for (int i = 0; i < m_Terminals.Count; i++)
             {
@@ -258,7 +261,112 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Terminals.Clear();
 
             m_Commands.CopyPendingTo(m_CommandBuffer);
-            m_Lifecycle.CollectSampleDemand(m_CommandBuffer, m_DemandedPlaybacks);
+            m_Lifecycle.CollectSampleDemand(m_CommandBuffer, m_PoseRuntime.Stacks, m_DemandedPlaybacks);
+            ResolveRawAndEffectiveSamples(
+                latestSimulationTick,
+                interpolationAlpha,
+                presentationDeltaSeconds,
+                diagnostics);
+
+            m_PoseRuntime.Advance(presentationDeltaSeconds);
+            m_RequestWorkspace.BeginFrame(NextRequestWorkspaceCompletionIdentity());
+            m_ResolvedRequests.Clear();
+            foreach (AnimationPlaybackId playbackId in m_DemandedPlaybacks)
+            {
+                if (!m_Sampling.TryGetValue(playbackId, out AnimationSamplingState sampling) ||
+                    !m_EffectiveSamples.TryGetValue(playbackId, out AnimationMarkerSyncEffectiveSample effective))
+                {
+                    continue;
+                }
+                AnimationBlendStackRuntime stack = m_PoseRuntime.RequireStack(sampling.Producer.AnimationChannelId);
+                AnimationBlendTransitionIdentity transition = stack.ResolveExpectedTransitionIdentity(
+                    sampling.Producer.ProgramProducerIndex,
+                    false);
+                ResolvedAnimationPoseRequest request = TimelineAnimationPoseRequestResolver.Resolve(
+                    m_Bindings,
+                    m_RequestWorkspace,
+                    sampling.Producer.AnimationChannelId,
+                    sampling.SourceId,
+                    sampling.SourcePoseContinuityIdentity,
+                    NextPresentationRequestSequence(),
+                    sampling.Producer.ProgramProducerIndex,
+                    effective.LocalTime,
+                    effective.ContinuousTime,
+                    effective.Cycle,
+                    sampling.ResolveVisualTimeScale(effective, presentationDeltaSeconds),
+                    sampling.IsTrackLooping,
+                    transition);
+                m_ResolvedRequests.Add(request.SourceId, request);
+                m_Commands.EnqueuePoseRequest(latestSimulationTick, request);
+            }
+
+            m_Commands.CopyPendingTo(m_CommandBuffer);
+            m_Lifecycle.Apply(
+                m_CommandBuffer,
+                m_PoseRuntime,
+                NextPresentationRequestSequence);
+            FinalAnimationPoseFrame finalPose = m_PoseRuntime.Evaluate(
+                presentationDeltaSeconds,
+                m_ResolvedRequests);
+            m_Lifecycle.BuildSnapshot(m_PoseRuntime.Stacks, m_Snapshots);
+            m_MarkerSync.BuildPlaybackSnapshot(m_MarkerSyncPlaybackSnapshots);
+            m_MarkerSync.BuildRelationSnapshot(m_MarkerSyncSnapshots);
+            AttachMarkerLifecyclePhases();
+            PruneUnreferencedSampling();
+            m_MarkerSync.Retire(m_RetiredPlaybacks);
+            if (diagnostics != null)
+            {
+                m_TracePublisher.PublishPlaybackLifecycle(
+                    diagnostics,
+                    m_CommandBuffer,
+                    m_Snapshots,
+                    m_MarkerSyncSnapshots,
+                    m_RetiredPlaybacks);
+            }
+            m_Commands.Acknowledge(m_CommandBuffer);
+            m_CommandBuffer.Clear();
+            return finalPose;
+        }
+
+        public void Reset()
+        {
+            if (m_Disposed)
+                return;
+            m_PoseRuntime.Reset();
+            m_RequestWorkspace.Reset();
+            m_Commands.Clear();
+            m_Lifecycle.Reset();
+            m_CommandBuffer.Clear();
+            m_Snapshots.Clear();
+            m_MarkerSyncSnapshots.Clear();
+            m_MarkerSyncPlaybackSnapshots.Clear();
+            m_DemandedPlaybacks.Clear();
+            m_RetiredPlaybacks.Clear();
+            m_Selections.Clear();
+            m_Sampling.Clear();
+            m_RawSamples.Clear();
+            m_EffectiveSamples.Clear();
+            m_ResolvedRequests.Clear();
+            m_RemoveSampling.Clear();
+            m_MarkerSync.Reset();
+            m_Terminals.Clear();
+        }
+
+        public void Dispose()
+        {
+            if (m_Disposed)
+                return;
+            m_Disposed = true;
+            m_PoseRuntime.Dispose();
+            m_RequestWorkspace.Dispose();
+        }
+
+        void ResolveRawAndEffectiveSamples(
+            ulong latestSimulationTick,
+            float interpolationAlpha,
+            float presentationDeltaSeconds,
+            RuntimeDiagnosticsContext diagnostics)
+        {
             m_RawSamples.Clear();
             foreach (AnimationPlaybackId playbackId in m_DemandedPlaybacks)
             {
@@ -275,10 +383,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_MarkerSync.BeginFrame();
                 foreach (AnimationSelectionState selection in m_Selections.Values)
                 {
-                    if (!m_RawSamples.TryGetValue(selection.PlaybackId, out AnimationMarkerSyncRawSample target))
+                    if (!selection.HasPlayback ||
+                        !m_RawSamples.TryGetValue(selection.PlaybackId, out AnimationMarkerSyncRawSample target))
+                    {
                         continue;
-                    if (!m_Lifecycle.TryGetCurrentPlayback(selection.LayerId, out AnimationPlaybackId sourcePlayback) ||
-                        sourcePlayback.Equals(selection.PlaybackId))
+                    }
+                    AnimationBlendStackRuntime stack = m_PoseRuntime.RequireStack(selection.AnimationChannelId);
+                    AnimationPlaybackId sourcePlayback = default;
+                    for (int entryIndex = stack.EntryCount - 1; entryIndex >= 0; entryIndex--)
+                    {
+                        AnimationBlendEntryId entry = stack.GetEntryId(entryIndex);
+                        if (entry.EmptyTarget || entry.SourceId.PlaybackId.Equals(selection.PlaybackId))
+                            continue;
+                        sourcePlayback = entry.SourceId.PlaybackId;
+                        break;
+                    }
+                    if (!sourcePlayback.IsValid)
                     {
                         m_MarkerSync.RecordNoCurrentSource(target);
                         continue;
@@ -297,67 +417,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_TracePublisher.PublishMarkerSyncFailure(diagnostics, failure, failedSample);
                 throw;
             }
-            foreach (AnimationPlaybackId playbackId in m_DemandedPlaybacks)
-            {
-                if (!m_Sampling.TryGetValue(playbackId, out AnimationSamplingState sampling) ||
-                    !m_EffectiveSamples.TryGetValue(playbackId, out AnimationMarkerSyncEffectiveSample effective))
-                    continue;
-                AnimationProducerSample sample = sampling.Producer.Animation.Sample(
-                    sampling.Producer,
-                    playbackId,
-                    effective.LocalTime,
-                    effective.Cycle,
-                    sampling.ResolveVisualTimeScale(effective, presentationDeltaSeconds));
-                if (sample.HasOutput)
-                    m_Commands.EnqueueSample(latestSimulationTick, sample);
-            }
-
-            m_Commands.CopyPendingTo(m_CommandBuffer);
-            m_Lifecycle.Apply(m_CommandBuffer, presentationDeltaSeconds, m_RetiredPlaybacks);
-            m_Lifecycle.BuildSnapshot(m_Snapshots);
-            m_MarkerSync.BuildPlaybackSnapshot(m_MarkerSyncPlaybackSnapshots);
-            m_MarkerSync.BuildRelationSnapshot(m_MarkerSyncSnapshots);
-            AttachMarkerLifecyclePhases();
-            if (diagnostics != null)
-            {
-                m_TracePublisher.PublishPlaybackLifecycle(
-                    diagnostics,
-                    m_CommandBuffer,
-                    m_Snapshots,
-                    m_MarkerSyncSnapshots,
-                    m_RetiredPlaybacks);
-            }
-            m_Commands.Acknowledge(m_CommandBuffer);
-            m_CommandBuffer.Clear();
-            m_MarkerSync.Retire(m_RetiredPlaybacks);
-            for (int i = 0; i < m_RetiredPlaybacks.Count; i++)
-                m_Sampling.Remove(m_RetiredPlaybacks[i]);
-            PruneUnreferencedSampling();
-        }
-
-        public void Reset()
-        {
-            if (m_Disposed)
-                return;
-            ResetState();
-        }
-
-        public void Dispose()
-        {
-            if (m_Disposed)
-                return;
-            m_Adapter.Dispose();
-            m_Disposed = true;
         }
 
         void PublishSelection(CharacterPresentationCommand command, CharacterPresentationProducerEntry producer)
         {
             var playbackId = new AnimationPlaybackId(producer.ProducerId, command.ProducerGeneration);
-            if (!m_Selections.TryGetValue(producer.LayerId, out AnimationSelectionState current) ||
+            if (!m_Selections.TryGetValue(producer.AnimationChannelId, out AnimationSelectionState current) ||
                 IsNewer(command.Header, current.Tick, current.Sequence))
             {
-                m_Selections[producer.LayerId] = new AnimationSelectionState(
-                    producer.LayerId,
+                m_Selections[producer.AnimationChannelId] = AnimationSelectionState.Select(
+                    producer.AnimationChannelId,
                     playbackId,
                     command.Header.EventId,
                     command.Header.Tick.Value,
@@ -370,35 +439,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var playbackId = new AnimationPlaybackId(producer.ProducerId, command.ProducerGeneration);
             if (!m_Sampling.TryGetValue(playbackId, out AnimationSamplingState sampling))
             {
-                m_Sampling.Add(playbackId, new AnimationSamplingState(producer, command));
+                m_Sampling.Add(playbackId, CreateSamplingState(producer, command));
                 return;
             }
             sampling.Capture(command);
+        }
+
+        AnimationSamplingState CreateSamplingState(
+            CharacterPresentationProducerEntry producer,
+            CharacterPresentationCommand command)
+        {
+            return new AnimationSamplingState(
+                producer,
+                command,
+                NextSourceContinuityIdentity());
         }
 
         void PublishTerminal(CharacterPresentationCommand command, CharacterPresentationProducerEntry producer)
         {
             var playbackId = new AnimationPlaybackId(producer.ProducerId, command.ProducerGeneration);
             m_Terminals.Add(new AnimationTerminalState(command.Kind, playbackId, command.Header.EventId));
-        }
-
-        void ResetState()
-        {
-            m_Commands.Clear();
-            m_Lifecycle.Reset();
-            m_CommandBuffer.Clear();
-            m_Snapshots.Clear();
-            m_MarkerSyncSnapshots.Clear();
-            m_MarkerSyncPlaybackSnapshots.Clear();
-            m_DemandedPlaybacks.Clear();
-            m_RetiredPlaybacks.Clear();
-            m_Selections.Clear();
-            m_Sampling.Clear();
-            m_RawSamples.Clear();
-            m_EffectiveSamples.Clear();
-            m_RemoveSampling.Clear();
-            m_MarkerSync.Reset();
-            m_Terminals.Clear();
         }
 
         void AttachMarkerLifecyclePhases()
@@ -421,23 +481,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationProducerEntry producer,
             CharacterPresentationCommandKind commandKind)
         {
-            if (producer == null || producer.Kind != CharacterPresentationProducerKind.Animation || producer.Animation == null)
+            if (producer == null || producer.Kind != CharacterPresentationProducerKind.Animation ||
+                producer.Animation == null || !producer.AnimationChannelId.IsValid)
+            {
                 throw new InvalidOperationException(
                     $"Presentation command '{commandKind}' targets a non-animation producer.");
+            }
         }
 
-        bool IsSamplingRetained(AnimationPlaybackId playbackId)
-        {
-            foreach (AnimationSelectionState selection in m_Selections.Values)
-            {
-                if (selection.PlaybackId.Equals(playbackId))
-                    return true;
-            }
-            return m_Lifecycle.Retains(playbackId);
-        }
+        bool IsSamplingRetained(AnimationPlaybackId playbackId) =>
+            m_Lifecycle.Retains(playbackId, m_PoseRuntime.Stacks);
 
         void PruneUnreferencedSampling()
         {
+            m_RetiredPlaybacks.Clear();
             m_RemoveSampling.Clear();
             foreach (AnimationPlaybackId playbackId in m_Sampling.Keys)
             {
@@ -445,15 +502,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_RemoveSampling.Add(playbackId);
             }
             for (int i = 0; i < m_RemoveSampling.Count; i++)
-                m_Sampling.Remove(m_RemoveSampling[i]);
+            {
+                AnimationPlaybackId playbackId = m_RemoveSampling[i];
+                m_Sampling.Remove(playbackId);
+                m_RetiredPlaybacks.Add(playbackId);
+            }
         }
 
-        ulong NextSelectionSequence()
+        ulong NextSelectionSequence() => Next(ref m_SelectionSequence, "selection");
+        ulong NextPresentationRequestSequence() => Next(ref m_PresentationRequestSequence, "pose request");
+        ulong NextSourceContinuityIdentity() => Next(ref m_SourceContinuityIdentity, "source continuity");
+        ulong NextRequestWorkspaceCompletionIdentity() => Next(ref m_RequestWorkspaceCompletionIdentity, "request workspace completion");
+
+        static ulong Next(ref ulong value, string name)
         {
-            m_SelectionSequence++;
-            if (m_SelectionSequence == 0)
-                throw new OverflowException("Presentation selection sequence overflowed.");
-            return m_SelectionSequence;
+            if (value == ulong.MaxValue)
+                throw new InvalidOperationException($"Animation {name} identity was exhausted.");
+            value++;
+            return value;
         }
 
         void RequireAlive()
@@ -462,32 +528,47 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ObjectDisposedException(nameof(CharacterAnimationPlaybackRuntime));
         }
 
-        static bool IsNewer(CharacterPresentationEventHeader header, ulong tick, ulong sequence)
-        {
-            return header.Tick.Value > tick || header.Tick.Value == tick && header.Sequence > sequence;
-        }
+        static bool IsNewer(CharacterPresentationEventHeader header, ulong tick, ulong sequence) =>
+            header.Tick.Value > tick || header.Tick.Value == tick && header.Sequence > sequence;
 
         readonly struct AnimationSelectionState
         {
-            public AnimationSelectionState(
-                string layerId,
+            AnimationSelectionState(
+                AnimationChannelId animationChannelId,
                 AnimationPlaybackId playbackId,
+                bool hasPlayback,
                 EventId eventId,
                 ulong tick,
                 ulong sequence)
             {
-                LayerId = layerId;
+                AnimationChannelId = animationChannelId;
                 PlaybackId = playbackId;
+                HasPlayback = hasPlayback;
                 EventId = eventId;
                 Tick = tick;
                 Sequence = sequence;
             }
 
-            public string LayerId { get; }
+            public AnimationChannelId AnimationChannelId { get; }
             public AnimationPlaybackId PlaybackId { get; }
+            public bool HasPlayback { get; }
             public EventId EventId { get; }
             public ulong Tick { get; }
             public ulong Sequence { get; }
+
+            public static AnimationSelectionState Select(
+                AnimationChannelId animationChannelId,
+                AnimationPlaybackId playbackId,
+                EventId eventId,
+                ulong tick,
+                ulong sequence) =>
+                new AnimationSelectionState(animationChannelId, playbackId, true, eventId, tick, sequence);
+
+            public static AnimationSelectionState Empty(
+                AnimationChannelId animationChannelId,
+                ulong tick,
+                ulong sequence) =>
+                new AnimationSelectionState(animationChannelId, default, false, default, tick, sequence);
         }
 
         sealed class AnimationSamplingState
@@ -506,9 +587,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool m_HasPresentedEffectiveTime;
             bool m_WasRebased;
 
-            public AnimationSamplingState(CharacterPresentationProducerEntry producer, CharacterPresentationCommand command)
+            public AnimationSamplingState(
+                CharacterPresentationProducerEntry producer,
+                CharacterPresentationCommand command,
+                ulong sourcePoseContinuityIdentity)
             {
-                Producer = producer;
+                Producer = producer ?? throw new ArgumentNullException(nameof(producer));
+                if (sourcePoseContinuityIdentity == 0)
+                    throw new ArgumentOutOfRangeException(nameof(sourcePoseContinuityIdentity));
+                var playbackId = new AnimationPlaybackId(producer.ProducerId, command.ProducerGeneration);
+                SourceId = new AnimationPoseSourceId(
+                    playbackId,
+                    AnimationPoseSourceKind.Timeline,
+                    new AnimationPoseSelectionGeneration(command.ProducerGeneration));
+                SourcePoseContinuityIdentity = sourcePoseContinuityIdentity;
                 m_CurrentTime = command.SampleTime;
                 m_PreviousTime = m_CurrentTime;
                 m_VisualTime = m_CurrentTime;
@@ -525,8 +617,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
 
             public CharacterPresentationProducerEntry Producer { get; }
+            public AnimationPoseSourceId SourceId { get; }
+            public ulong SourcePoseContinuityIdentity { get; }
             public int Cycle { get; private set; }
             public EventId EventId { get; private set; }
+            public bool IsTrackLooping =>
+                Producer.Animation.MarkerSync != null &&
+                Producer.Animation.MarkerSync.IsMarkerGroup &&
+                Producer.Animation.MarkerSync.SequenceTopology == BTSMTL.Timeline.AnimationMarkerSequenceTopology.Cyclic;
 
             public void Capture(CharacterPresentationCommand command)
             {
@@ -599,7 +697,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_VisualContinuousTime = Math.Max(0d, m_VisualContinuousTime + Math.Max(0f, deltaSeconds));
                 }
                 else if (m_PreviousTick < m_CurrentTick &&
-                         (IsCyclicMarkerGroup || m_PreviousCycle == Cycle))
+                         (IsTrackLooping || m_PreviousCycle == Cycle))
                 {
                     m_VisualTime = m_PreviousTime + (m_CurrentTime - m_PreviousTime) * Math.Clamp(alpha, 0f, 1f);
                     m_VisualContinuousTime = m_PreviousContinuousTime +
@@ -621,7 +719,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         m_VisualTime = (float)m_VisualContinuousTime;
                         return new AnimationMarkerSyncRawSample(
                             playbackId,
-                            Producer.LayerId,
+                            Producer.AnimationChannelId,
                             binding,
                             m_VisualTime,
                             m_VisualContinuousTime,
@@ -631,7 +729,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     float localTime = (float)(m_VisualContinuousTime - cycle * binding.DurationSeconds);
                     return new AnimationMarkerSyncRawSample(
                         playbackId,
-                        Producer.LayerId,
+                        Producer.AnimationChannelId,
                         binding,
                         localTime,
                         m_VisualContinuousTime,
@@ -639,22 +737,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 return new AnimationMarkerSyncRawSample(
                     playbackId,
-                    Producer.LayerId,
+                    Producer.AnimationChannelId,
                     binding,
                     m_VisualTime,
                     m_VisualContinuousTime,
                     Cycle);
             }
 
-            bool IsCyclicMarkerGroup =>
-                Producer.Animation.MarkerSync != null &&
-                Producer.Animation.MarkerSync.IsMarkerGroup &&
-                Producer.Animation.MarkerSync.SequenceTopology == BTSMTL.Timeline.AnimationMarkerSequenceTopology.Cyclic;
-
-            double ToContinuousTime(float sampleTime, int cycle)
-            {
-                return Math.Max(0d, cycle * (double)Producer.Animation.DurationSeconds + sampleTime);
-            }
+            double ToContinuousTime(float sampleTime, int cycle) =>
+                Math.Max(0d, cycle * (double)Producer.Animation.DurationSeconds + sampleTime);
         }
 
         readonly struct AnimationTerminalState

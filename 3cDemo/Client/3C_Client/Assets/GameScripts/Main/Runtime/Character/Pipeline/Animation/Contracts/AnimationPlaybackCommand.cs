@@ -3,7 +3,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public enum AnimationPlaybackCommandKind
     {
         Selection,
-        Sample,
+        PoseRequest,
         Complete,
         Release
     }

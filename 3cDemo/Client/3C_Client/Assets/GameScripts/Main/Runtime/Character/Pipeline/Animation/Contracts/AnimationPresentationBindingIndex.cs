@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Animancer;
-using Animancer.TransitionLibraries;
 using BTSMTL.Timeline;
 using ThirdPersonSimulation;
 
@@ -21,6 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         BindingSourceInvalid,
         BindingDurationInvalid,
         BindingMarkerSyncInvalid,
+        WorkspaceLayoutInvalid,
         ProjectionInvalid
     }
 
@@ -73,6 +73,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationChannelId AnimationChannelId { get; }
         public PoseSlotOutputPolicy OutputPolicy { get; }
         public AnimationBlendSlotPayload BlendPayload { get; }
+        public bool IsValid => Index >= 0 && PoseSlotId.IsValid && AnimationChannelId.IsValid &&
+                               Enum.IsDefined(typeof(PoseSlotOutputPolicy), OutputPolicy) && BlendPayload != null &&
+                               BlendPayload.PoseSlotId == PoseSlotId &&
+                               BlendPayload.AnimationChannelId == AnimationChannelId &&
+                               BlendPayload.OutputPolicy == OutputPolicy;
     }
 
     public readonly struct ResolvedAnimationProducerBinding
@@ -80,28 +85,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public ResolvedAnimationProducerBinding(
             int programProducerIndex,
             AnimationProducerId producerId,
-            AnimationChannelId animationChannelId,
-            PoseSlotId poseSlotId,
-            TransitionAssetBase source,
-            int authoredClipCount)
+            CharacterPresentationAnimationBinding animation,
+            ResolvedAnimationPoseSlot slot)
         {
             ProgramProducerIndex = programProducerIndex;
             ProducerId = producerId;
-            AnimationChannelId = animationChannelId;
-            PoseSlotId = poseSlotId;
-            Source = source;
-            AuthoredClipCount = authoredClipCount;
+            Animation = animation ?? throw new ArgumentNullException(nameof(animation));
+            Slot = slot;
+            if (!IsValid)
+                throw new ArgumentException("Resolved Animation Producer Binding is invalid.");
         }
 
         public int ProgramProducerIndex { get; }
         public AnimationProducerId ProducerId { get; }
-        public AnimationChannelId AnimationChannelId { get; }
-        public PoseSlotId PoseSlotId { get; }
-        public TransitionAssetBase Source { get; }
-        public int AuthoredClipCount { get; }
+        public CharacterPresentationAnimationBinding Animation { get; }
+        public ResolvedAnimationPoseSlot Slot { get; }
+        public AnimationChannelId AnimationChannelId => Slot.AnimationChannelId;
+        public PoseSlotId PoseSlotId => Slot.PoseSlotId;
+        public TransitionAssetBase Source => Animation?.Source;
+        public int AuthoredClipCount => Animation?.Clips.Count ?? 0;
         public bool UsesMixer => AuthoredClipCount > 1;
         public bool IsValid => ProgramProducerIndex >= 0 && ProducerId.IsValid && AnimationChannelId.IsValid &&
-                               PoseSlotId.IsValid && Source && Source.IsValid && AuthoredClipCount > 0;
+                               PoseSlotId.IsValid && Slot.IsValid && Animation != null && Source && Source.IsValid &&
+                               AuthoredClipCount > 0 && float.IsFinite(Animation.DurationSeconds) &&
+                               Animation.DurationSeconds > 0f;
     }
 
     public sealed class CharacterAnimationPresentationBindingIndex
@@ -117,6 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public bool IsValid { get; private set; }
         public CharacterPresentationProjection Projection { get; private set; }
+        public AnimationPoseRequestWorkspaceLayout WorkspaceLayout { get; private set; }
         public IReadOnlyDictionary<PoseSlotId, ResolvedAnimationPoseSlot> Slots => m_Slots;
         public IReadOnlyDictionary<AnimationChannelId, ResolvedAnimationPoseSlot> Channels => m_Channels;
         public IReadOnlyDictionary<AnimationProducerId, ResolvedAnimationProducerBinding> Bindings => m_Bindings;
@@ -137,7 +145,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             List<string> errors)
         {
             var index = new CharacterAnimationPresentationBindingIndex();
-            index.IsValid = index.BuildInternal(projection, contract, errors);
+            bool valid = index.BuildInternal(projection, contract, errors);
+            if (valid)
+            {
+                index.IsValid = true;
+                try
+                {
+                    index.WorkspaceLayout = AnimationPoseRequestWorkspaceLayoutFactory.Create(index);
+                    valid = index.WorkspaceLayout.IsValid;
+                }
+                catch (Exception exception)
+                {
+                    index.Report(AnimationPresentationValidationCode.WorkspaceLayoutInvalid,
+                        exception.Message, errors);
+                    valid = false;
+                }
+            }
+            index.IsValid = valid;
             return index;
         }
 
@@ -248,10 +272,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 var binding = new ResolvedAnimationProducerBinding(
                     producer.ProgramProducerIndex,
                     producerId,
-                    producer.AnimationChannelId,
-                    slot.PoseSlotId,
-                    animation.Source,
-                    animation.Clips.Count);
+                    animation,
+                    slot);
                 if (!binding.IsValid || !m_Bindings.TryAdd(producerId, binding))
                 {
                     Report(AnimationPresentationValidationCode.ProducerDuplicate,

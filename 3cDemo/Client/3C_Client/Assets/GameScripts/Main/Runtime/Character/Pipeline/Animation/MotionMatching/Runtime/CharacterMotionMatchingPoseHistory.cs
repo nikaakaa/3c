@@ -115,8 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
         public void MarkGap(ulong resetSequence)
         {
-            if (resetSequence != m_ResetSequence)
-                Reset(resetSequence);
+            Reset(resetSequence);
             m_HasGap = true;
         }
 

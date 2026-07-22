@@ -15,6 +15,7 @@ namespace ThirdPersonCharacter.Pipeline
         readonly CharacterPipelineHost m_Host;
         readonly CharacterPipelineDefinition m_Definition;
         readonly AnimancerComponent m_Animancer;
+        readonly CharacterAnimationRigBinding m_AnimationRigBinding;
         readonly CharacterSimulationProgram m_Program;
         readonly CharacterPresentationProjection m_Projection;
         readonly TimelineMotionAuthoringPreviewEvaluator m_MotionPreview =
@@ -36,11 +37,15 @@ namespace ThirdPersonCharacter.Pipeline
             m_Host = host ? host : throw new ArgumentNullException(nameof(host));
             m_Definition = host.Definition ? host.Definition : throw new InvalidOperationException("Timeline preview requires a Character Pipeline Definition.");
             m_Animancer = host.Animancer ? host.Animancer : throw new InvalidOperationException("Timeline preview requires Animancer.");
+            m_AnimationRigBinding = host.AnimationRigBinding
+                ? host.AnimationRigBinding
+                : throw new InvalidOperationException("Timeline preview requires an Animation Rig Binding.");
             if (!m_Definition.SimulationProgram || !m_Definition.PresentationProjection)
                 throw new InvalidOperationException("Timeline preview requires compiled Program and Presentation Projection assets.");
             m_Program = m_Definition.SimulationProgram.Load();
             m_Projection = m_Definition.PresentationProjection.Load(
                 Float32CharacterPresentationContractAdapter.Create(m_Program));
+            m_AnimationRigBinding.RequireValid(m_Projection.Rig);
         }
 
         public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> AnimationSnapshots =>
@@ -78,7 +83,14 @@ namespace ThirdPersonCharacter.Pipeline
                 CaptureVisualPose();
                 m_Session = new PreviewSession(
                     NextGeneration(),
-                    new PreviewPlaybackEngine(m_Definition, m_Program, m_Projection, m_Animancer, timeline, sessionId));
+                    new PreviewPlaybackEngine(
+                        m_Definition,
+                        m_Program,
+                        m_Projection,
+                        m_Animancer,
+                        m_AnimationRigBinding,
+                        timeline,
+                        sessionId));
                 m_SessionId = sessionId;
                 AcquireGraphClock();
                 m_Session.Engine.ConfigureMarkerSyncSource(
@@ -129,7 +141,7 @@ namespace ThirdPersonCharacter.Pipeline
                 CharacterPresentationProducerEntry source = producers[i];
                 if (source.ProducerId.Equals(target.ProducerId) || source.Animation?.MarkerSync == null ||
                     !source.Animation.MarkerSync.IsMarkerGroup ||
-                    !string.Equals(source.LayerId, target.LayerId, StringComparison.Ordinal) ||
+                    source.AnimationChannelId != target.AnimationChannelId ||
                     !string.Equals(
                         source.Animation.MarkerSync.CanonicalGroupId,
                         target.Animation.MarkerSync.CanonicalGroupId,
@@ -141,7 +153,7 @@ namespace ThirdPersonCharacter.Pipeline
                     string.IsNullOrEmpty(source.SourceDisplayPath)
                         ? source.Animation.TrackName
                         : source.SourceDisplayPath,
-                    source.LayerId,
+                    source.AnimationChannelId,
                     source.Animation.MarkerSync.CanonicalGroupId));
             }
             destination.Sort((left, right) =>

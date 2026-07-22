@@ -2,7 +2,7 @@
 
 ### Requirement: 每个Pose Slot必须拥有唯一有序Blend Stack
 
-每个编入Projection的PoseSlotId MUST拥有唯一`AnimationBlendStackRuntime`。Stack MUST按稳定push order保存active `AnimationBlendEntryId`，并将AnimationPlaybackId与表现entry identity分离。同一Playback连续sample MUST只更新source；同一Playback在另一个target之后重新成为target MUST创建新EntryId与独立Fade Clock；同producer不同generation MUST拥有独立source visual。Stack MUST只处理绑定到该slot的AnimationChannel producer，不读取State、Action、Pose Graph topology、Bone Mask、业务priority或Timeline authoring object。
+每个编入Projection的PoseSlotId MUST拥有唯一`AnimationBlendStackRuntime`。Stack MUST按稳定push order保存active `AnimationBlendEntryId`，并将`AnimationPoseSourceId`与表现entry identity分离。同一SourceId连续sample MUST只更新source；同一SourceId在另一个target之后重新成为target MUST创建新EntryId与独立Fade Clock；同Playback不同SelectionGeneration MUST拥有独立source visual。Stack MUST只处理绑定到该slot的AnimationChannel producer，不读取State、Action、Pose Graph topology、Bone Mask、业务priority或Timeline authoring object。
 
 #### Scenario: A淡出期间切换到B和C
 
@@ -13,7 +13,7 @@
 #### Scenario: 同producer不同generation重入
 
 - **WHEN** producer P generation 10仍被entry引用且generation 11首样本到达
-- **THEN** 两个PlaybackId MUST拥有独立source visual与sample lifetime
+- **THEN** 两个AnimationPoseSourceId MUST拥有独立source visual与sample lifetime
 - **AND** generation 11 MUST不覆盖generation 10
 
 #### Scenario: 不同slot同时切换
@@ -53,7 +53,7 @@
 
 ### Requirement: Blend Stack容量必须通过Stored Pose连续压缩
 
-每个Pose Slot MUST显式配置至少为2的`MaxActiveSourceEntries`。push超过容量或最新entry命中`MaxBlendInTimeToReplaceNewest`时，Evaluator MUST在切换前捕获当前完整slot local pose、pose velocity、Pose Parameter与Left/Right Foot Analysis aggregate为唯一Stored Pose，再原子移除被取代entry。Stored Pose MUST使用预分配slot，不引用AnimationClip、PlaybackId、Marker或Gameplay事件。系统 MUST不提供直接丢弃entry或关闭Stored Pose的正式配置。
+每个Pose Slot MUST显式配置至少为2的`MaxActiveSourceEntries`。push超过容量或最新entry命中`MaxBlendInTimeToReplaceNewest`时，Evaluator MUST在切换前捕获当前完整slot local pose、pose velocity、Pose Parameter与Left/Right Foot Analysis aggregate为唯一Stored Pose，再原子移除被取代entry。Stored Pose MUST使用预分配slot，不引用AnimationClip、AnimationPoseSourceId、Marker或Gameplay事件。系统 MUST不提供直接丢弃entry或关闭Stored Pose的正式配置。
 
 #### Scenario: 高频切换达到容量
 
@@ -64,7 +64,7 @@
 #### Scenario: 捕获后释放旧source
 
 - **WHEN** Stored Pose完成pose、velocity、parameter与Foot aggregate捕获
-- **THEN** 不再被entry或relation引用的旧Playback source MUST退役
+- **THEN** 不再被entry或relation引用的旧AnimationPoseSourceId MUST由Stack发布带completion identity的release事实
 - **AND** Stored Pose MUST不继续推进Timeline、Marker、Notify或root motion
 
 #### Scenario: 快速替换最新entry
@@ -119,7 +119,7 @@ Profile MUST引用唯一`CharacterAnimationRigDefinition`；Definition MUST以�
 
 ### Requirement: Animancer必须只作为Source Pose采样后端
 
-`AnimancerPoseSamplingBackend` MUST只为完整PlaybackId创建AnimationClip state或producer内部ManualMixerState、应用resolved sample time/loop/child weight并管理source playable寿命。Timeline控制state MUST保持Speed为0且child MUST保持DontSynchronize。Backend MUST不调用AnimancerLayer.Play、StartFade、FadeGroup、自动Layer weight或transition lookup，MUST不决定entry weight、slot composition、retirement或最终Animator Pose。
+`AnimancerPoseSamplingBackend` MUST只为完整`AnimationPoseSourceId`创建AnimationClip state或producer内部ManualMixerState、应用resolved sample time/loop/child weight并管理source playable寿命。Timeline控制state MUST保持Speed为0且child MUST保持DontSynchronize；request的VisualTimeScale MUST继续表达有效视觉时间推进率而不是state Speed。Backend MUST不调用AnimancerLayer.Play、StartFade、FadeGroup、自动Layer weight或transition lookup，MUST不决定entry weight、slot composition、retirement或最终Animator Pose。
 
 #### Scenario: producer包含两个重叠clip
 
@@ -130,12 +130,12 @@ Profile MUST引用唯一`CharacterAnimationRigDefinition`；Definition MUST以�
 #### Scenario: source不再被引用
 
 - **WHEN** Stack、relation、selection与capture均不再引用某Playback source
-- **THEN** Backend MUST精确释放该PlaybackId state/mixer
+- **THEN** Backend MUST精确释放该AnimationPoseSourceId state/mixer
 - **AND** MUST不读取Animancer FadeGroup决定时机
 
 ### Requirement: 每个Pose Slot必须由固定Animation Job输出PoseSlotFrame
 
-Runtime MUST按Projection Rig bone count、slot count和每slot容量预分配source、Stored、pose history、Inertial、parameter、feature与weight Native workspace。Source capture MUST把Animancer source AnimationStream写入独立buffer；`AnimationSlotBlendPoseEvaluator` MUST按不可变frame plan求值该slot的CrossFade、Stored与Inertial并发布PoseSlotFrame。Slot evaluator MUST不读取跨slotBone Mask、执行Override/Additive、写VisualRoot/Gameplay Body或写最终Animator Pose。
+Runtime MUST按Projection Rig bone count、slot count和每slot容量预分配source、Stored、pose history、Inertial、parameter、feature与weight Native workspace。每个Pose Slot MUST由唯一`AnimationBlendStackRuntime`拥有source workspace、双页不可变`AnimationSlotBlendFramePlan`与slot workspace；Runtime MUST把完整SourceId降低为frame-local capture index和带generation的physical source identity后原子提交inactive page。Source capture MUST把Animancer source AnimationStream写入独立buffer；唯一`AnimationSlotBlendJob` MUST按相同非零exact completion求值该slot的CrossFade、Stored与Inertial，写完整Native Pose Slot buffer并最后写`CompletedAt`。Source playable、capture job、slot blend job、Pose Graph job与最终writer MUST位于同一PlayableGraph并在一次Evaluate中顺序完成；Runtime MUST不在两次Evaluate之间回到托管代码逐骨复制，也 MUST不保留managed pose evaluator作为第二路径。Slot job MUST不读取跨slotBone Mask、执行Override/Additive、写VisualRoot/Gameplay Body或写最终Animator Pose。
 
 #### Scenario: 同帧求值两个slot
 
@@ -195,7 +195,7 @@ Projection MUST为每个PoseSlotId保存显式Stack Policy、canonical curves、
 
 ### Requirement: Blend Stack调试必须完整解释Slot Pose来源
 
-正式snapshot MUST按AnimationChannelId/PoseSlotId显示selection、Pending、EntryId、PlaybackId、push order、source reference、technique、duration、elapsed、raw/eased alpha、选定BoneId weight、Stored capture、Inertial residual、PoseSlotFrame、retirement与workspace状态。Preview和Live Debug MUST只读取该snapshot，不得重新求值curve、weight、pose、capacity或最终Pose Graph贡献。
+正式snapshot MUST按AnimationChannelId/PoseSlotId显示selection、Pending、EntryId、AnimationPoseSourceId及其Playback/SourceKind/SelectionGeneration、push order、source reference、technique、duration、elapsed、raw/eased alpha、选定BoneId weight、Stored capture、Inertial residual、PoseSlotFrame、retirement与workspace状态。Preview和Live Debug MUST只读取该snapshot，不得重新求值curve、weight、pose、capacity或最终Pose Graph贡献。
 
 #### Scenario: 排查三次连续切换
 

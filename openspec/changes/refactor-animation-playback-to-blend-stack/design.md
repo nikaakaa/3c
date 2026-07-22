@@ -57,20 +57,24 @@ AnimationPlaybackLifecycle
               |
               v
 ResolvedAnimationPoseRequest
-  AnimationChannelId + PoseSlotId + PlaybackId + sample
+  AnimationChannelId + PoseSlotId + AnimationPoseSourceId + resolved samples
               |
        +------+------+
        |             |
        v             v
 AnimationBlendStackRuntime    AnimancerPoseSamplingBackend
-  entries / clocks            Clip / ManualMixer source pose
-  capacity / stored           no fade / no layer composition
-  inertial / retirement                |
+  entries / clocks / capacity Clip / ManualMixer source pose
+  stored / inertial / retirement     no fade / no layer composition
+  owns SourceWorkspace + double-page SlotWorkspace / FramePlan
+  no managed evaluator / no second Evaluate
        |                               v
-       +--------------------> Source Pose Capture
+       +--------------------> Source Pose Capture (same completion)
                                        |
                                        v
-                         AnimationSlotBlendPoseEvaluator
+                         PrepareSlotJob(...)
+                                       |
+                                       v
+                         AnimationSlotBlendJob
                            CrossFade / Stored / Inertial
                                        |
                                        v
@@ -80,16 +84,20 @@ AnimationBlendStackRuntime    AnimancerPoseSamplingBackend
                          Character Presentation Pose Graph
                                        |
                                        v
-                           Final Pose -> Foot Placement
+             Final Pose Writer -> CompleteFrame(...) -> Foot Placement
 ```
 
-Stack Runtime拥有状态与frame plan；Slot Evaluator拥有该slot骨骼求值；Pose Graph只读取完成的PoseSlotFrame。不存在Animancer state weight或Lifecycle集合重建第二份计划。
+Stack Runtime唯一拥有Source Workspace、双页Slot Workspace/FramePlan和entry状态；`PrepareSlotJob(...)`只从inactive page提交不可变plan并返回`AnimationSlotBlendJob`。Source capture、Slot Job和Pose Graph在同一非零completion、同一个PlayableGraph Evaluate内按依赖顺序执行，Evaluate成功后Runtime才调用`CompleteFrame(...)`提交release与retirement。不存在managed evaluator、第二次Evaluate、Animancer state weight或Lifecycle集合重建第二份计划。
 
 ## Identity
 
 ### AnimationPlaybackId
 
 producer一次activation的完整逻辑/表现identity，拥有Timeline sample、Marker relation和PresentationRetention。
+
+### AnimationPoseSourceId
+
+一次可独立采样的姿势来源identity，由`AnimationPlaybackId + AnimationPoseSourceKind + AnimationPoseSelectionGeneration`构成。Timeline一次activation使用稳定generation；Motion Matching Continue保持generation，Jump提升generation。同一Playback的不同generation必须能同时作为旧、新source存活。
 
 ### AnimationBlendEntryId
 
@@ -98,11 +106,11 @@ producer一次activation的完整逻辑/表现identity，拥有Timeline sample�
 ```text
 AnimationBlendEntryId
   PoseSlotId
-  PlaybackId
+  AnimationPoseSourceId
   PresentationRequestSequence
 ```
 
-同Playback连续sample只更新source；在另一个target之后重新成为target时创建新EntryId与独立clock。
+同SourceId连续sample只更新source；同SourceId在另一个target之后重新成为target时创建新EntryId与独立clock；同Playback不同generation一定是不同source。
 
 ### Live Source Entry
 
@@ -110,7 +118,7 @@ AnimationBlendEntryId
 
 ### Stored Pose Entry
 
-不引用PlaybackId。保存capture边界的slot local pose、pose velocity、Pose Parameter aggregate与per-foot feature aggregate，只作为连续性来源。
+不引用AnimationPoseSourceId。保存capture边界的slot local pose、pose velocity、Pose Parameter aggregate与per-foot feature aggregate，只作为连续性来源。
 
 ### Inertial Accumulator
 
@@ -158,11 +166,11 @@ Lifecycle在Marker Sync与Timeline membership解析后生成：
 ```text
 AnimationChannelId
 PoseSlotId
-AnimationBlendEntryId
-AnimationPlaybackId
+AnimationPoseSourceId
+PresentationRequestSequence
 ProgramProducerIndex
 resolved visual time / cycle / scale
-clip pose samples
+ClipSamplePlan列表
 exact transition source/target identity
 Pose Parameter samples
 Foot Analysis samples
@@ -176,7 +184,7 @@ Foot Analysis samples
 
 1. Lifecycle完成Marker Sync并创建request。
 2. Stack exact lookup同slot transition matrix。
-3. Animancer backend准备完整PlaybackId source visual。
+3. Animancer backend准备完整AnimationPoseSourceId source visual与capture binding。
 4. Stack按replace/capacity policy决定普通push或capture。
 5. Stack原子创建EntryId、clock和frame plan。
 
@@ -186,11 +194,11 @@ Foot Analysis samples
 
 ### Continuous Update
 
-同PlaybackId后续sample更新仍引用该source的entry，不增加entry、不重启clock。Timeline producer内部多clip membership继续由一个ManualMixer表达。
+同AnimationPoseSourceId后续sample更新仍引用该source的entry，不增加entry、不重启clock。Timeline producer内部多clip membership继续由一个ManualMixer表达。
 
 ### Re-selection
 
-同Playback在另一个target之后重新成为target时创建新EntryId。多个entry可以引用同一source capture结果；Evaluator按BoneId合并权重，不重复采样。
+同SourceId在另一个target之后重新成为target时创建新EntryId。多个entry可以引用同一source capture结果；Evaluator按BoneId合并权重，不重复采样。同Playback不同SelectionGeneration不得复用capture结果。
 
 ### Retirement
 
@@ -230,7 +238,7 @@ Pose Parameter和per-foot feature按相同正式progress从capture aggregate过�
 
 ## PoseSlotFrame
 
-Slot evaluator每帧发布不可变：
+Slot Job每帧发布不可变：
 
 ```text
 PoseSlotFrame
@@ -249,15 +257,19 @@ PoseSlotFrame
 
 ## Animancer Source Backend
 
-`AnimancerPoseSamplingBackend`只按完整PlaybackId创建AnimationClip state或producer内部ManualMixerState，应用resolved sample time、loop和child weight，管理playable寿命。Timeline控制state保持Speed 0，child保持DontSynchronize。
+`AnimancerPoseSamplingBackend`只按完整AnimationPoseSourceId创建AnimationClip state或producer内部ManualMixerState，应用resolved sample time、loop和child weight，管理playable寿命。Timeline控制state保持Speed 0，child保持DontSynchronize；`ResolvedAnimationPoseRequest.VisualTimeScale`仍表达有效视觉时间推进率，不等同于Animancer state Speed。
 
 Backend不得调用AnimancerLayer.Play、StartFade、FadeGroup、automatic layer weight或transition lookup，也不得决定entry weight、retirement、PoseSlot composition或Animator最终pose。
 
 ## Slot Pose Evaluation
 
-Runtime按Rig bone count、slot count和每slot容量预分配source、Stored、history、Inertial、parameter与weight Native workspace。Source capture把Animancer source AnimationStream写入独立buffer slice；`AnimationSlotBlendPoseEvaluator`按不可变frame plan生成PoseSlotFrame buffer。
+Runtime按Rig bone count、slot count和每slot容量预分配source、Stored、history、Inertial、parameter与weight Native workspace。Source capture把Animancer source AnimationStream写入独立buffer slice；`AnimationSlotBlendJob`按不可变frame plan生成PoseSlotFrame buffer。
 
-Slot evaluator不写VisualRoot、Gameplay Body或最终Animator output，不读取Pose Graph authoring，也不在表现帧扩容。最终`CharacterPoseGraphEvaluator`在同一正式PlayableGraph拓扑中消费这些buffer。
+每个`AnimationBlendStackRuntime`唯一拥有`AnimationBlendSourcePoseWorkspace`以及双页`AnimationSlotBlendPoseWorkspace`/`AnimationSlotBlendFramePlan`，把完整SourceId降低为frame-local capture index和带generation的physical source identity，再把当前Live、Stored与Inertial状态写入inactive page。`PrepareSlotJob(...)`按同一非零exact completion提交active page并返回唯一`AnimationSlotBlendJob`。
+
+Source playable、capture job、slot blend job、Pose Graph job与最终writer必须位于同一Animancer PlayableGraph并在一次Evaluate中按同一completion顺序完成；成功后Runtime才调用`CompleteFrame(...)`确认该completion并发布release。Runtime不得先Evaluate source、回到托管代码逐骨复制，再第二次Evaluate最终pose，也不得保留managed pose evaluator。`AnimationPoseSourceCaptureBinding`只借用Workspace拥有的Native slice，不拥有Allocator或Dispose职责。
+
+Slot Job不写VisualRoot、Gameplay Body或最终Animator output，不读取Pose Graph authoring，也不在表现帧扩容。最终`CharacterPoseGraphEvaluator`在同一正式PlayableGraph拓扑中消费这些buffer。
 
 ## Marker Sync
 
@@ -280,7 +292,7 @@ Projection / Rig / Blend Library / Pose Program validation
   -> fixed slot workspaces
   -> Animancer source backend
   -> source capture
-  -> slot evaluators
+  -> slot blend jobs
   -> final Pose Graph evaluator
   -> Lifecycle / Marker Sync / Stack
 ```
@@ -292,7 +304,7 @@ consume channel commands
   -> retained visual sampling / Marker Sync
   -> slot Stack frame plans
   -> Animancer source sampling
-  -> all PoseSlotFrame evaluation
+  -> all AnimationSlotBlendJob evaluation
   -> final Pose Graph
   -> Foot Placement
 ```
@@ -316,7 +328,7 @@ consume channel commands
 
 ## Motion Matching Extension Boundary
 
-Motion Matching位于ResolvedAnimationPoseRequest之前。continuation更新同Playback/sample；pose jump提交新EntryId并使用matrix中的CrossFade或Inertial。它必须复用当前slot容量、Stored Pose和退役合同，不得在Stack旁建立私有fade。
+Motion Matching位于ResolvedAnimationPoseRequest之前。Continue保持同AnimationPoseSourceId并更新sample；Jump在同Playback下提升SelectionGeneration、创建新SourceId与新EntryId，并使用matrix中的CrossFade或Inertial。它必须复用当前slot容量、Stored Pose和退役合同，不得在Stack旁建立私有fade。
 
 ## Migration
 
@@ -361,7 +373,7 @@ capture边界严格连续，source释放清楚。代价是被压缩entry的独�
 - `character-animation-layer-runtime`中的LayerId改为AnimationChannelId/PoseSlotId；Stack owner为PoseSlotId。
 - Animancer独占fade/final pose改为Stack独占slot内时间混合，Pose Graph独占跨slot与最终pose。
 - `character-animation-presentation-authoring`的Layer catalog与Animancer TransitionLibrary改为Pose Graph、Blend Library与Rig。
-- `character-animation-pipeline`链路改为`Lifecycle -> PoseSlot Stack -> Source Backend/Slot Evaluator -> Pose Graph -> Pose Post Process`。
+- `character-animation-pipeline`链路改为`Lifecycle -> PoseSlot Stack -> Source Backend/Slot Job -> Pose Graph -> Pose Post Process`。
 - `character-foot-placement-presentation`只消费Pose Graph最终每脚贡献。
 - `add-character-presentation-pose-graph`与本change的Runtime activation必须原子完成。
 

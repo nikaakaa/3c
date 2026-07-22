@@ -92,7 +92,7 @@ GameplayTickSystem MUST以 SimulationSessionHost/runtime handle作为每个 Sess
 
 ### Requirement: GameplayTickSystem 必须每表现帧推进 PresentationFrame
 
-PresentationFrame MUST继续以 render/presentation delta推进 visual interpolation、Timeline visual sampling、Animancer fade、Camera和 committed command lifecycle。Rollback replay MUST只产生 EventId output replacement，MUST不直接把 PresentationFrame回卷或用 logic tick代替 render delta。PresentationFrame MUST不调用 Kernel Evaluate/Finalize、WorldSolver.ResolveBatch或修改 Character/World state。
+PresentationFrame MUST继续以render/presentation delta推进visual interpolation、Timeline visual sampling、PoseSlot Blend Stack clock、Camera和committed command lifecycle。Rollback replay MUST只产生EventId output replacement，MUST不直接把PresentationFrame回卷或用logic tick代替render delta。PresentationFrame MUST不调用Kernel Evaluate/Finalize、WorldSolver.ResolveBatch或修改Character/World state。
 
 #### Scenario: 高渲染帧率下的表现帧
 
@@ -126,4 +126,3 @@ ServerTick MUST只存在于具体 Network Model Source/packet/history或被转�
 - **AND** 网络 peer以 20Hz flush
 - **THEN** 每个 command MUST保留自己的 InputSequence与 LocalLogicTick
 - **AND** peer MAY在一包中发送多个 command，MUST不把 flush序号当作 SimulationTick
-

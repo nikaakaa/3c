@@ -43,7 +43,7 @@ Program Finalize MUST在State、Action、interruption与Timeline request处理�
 
 ### Requirement: PresentationFrame 必须原子提交动画播放生命周期
 
-PresentationFrame MUST按固定顺序读取Committer queue、按channel采样selected/retained producer、更新AnimationPlaybackLifecycle、推进每slot Blend Stack、执行Animancer source采样、完成全部PoseSlotFrame、执行一次CharacterPoseGraphEvaluator、执行唯一Pose Post Process、推进Camera、退休source并acknowledge batch。该阶段 MUST不执行Program、TreeClip、Motion、Action、Effect或WorldSolver，也 MUST不产生Gameplay事实、网络输出或第二次VisualRoot写入。
+PresentationFrame MUST按固定顺序读取Committer queue、先推进既有每slot Blend Stack clock、按channel解析并push selection、更新AnimationPlaybackLifecycle、为全部source安装capture job、安装固定slot job、安装Pose Graph/final writer job、在同一PlayableGraph只Evaluate一次、按exact completion完成Stack、发布lease-protected `FinalAnimationPoseFrame`、执行唯一Pose Post Process、推进Camera、退休source并acknowledge batch。该阶段 MUST不执行Program、TreeClip、Motion、Action、Effect或WorldSolver，也 MUST不产生Gameplay事实、网络输出、第二套Stack算法、第二次Evaluate或第二次VisualRoot写入。
 
 #### Scenario: 两个selection与首样本同批
 
@@ -53,6 +53,6 @@ PresentationFrame MUST按固定顺序读取Committer queue、按channel采样sel
 
 #### Scenario: RequireOutput slot尚未就绪
 
-- **WHEN** BaseLocomotionSlot没有Current且仍等待首个合法sample
+- **WHEN** BaseLocomotionSlot没有Selected/Retained输出且仍等待首个合法pose request
 - **THEN** Pose Graph completion MUST明确Invalid
 - **AND** Pose Post Process MUST不对残留骨骼求解

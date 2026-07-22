@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
@@ -7,22 +8,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
     {
         public MotionMatchingClipSamplePlan(
             CharacterMotionMatchingSourceClipId sourceClipId,
+            int clipBindingIndex,
             AnimationClip clip,
-            float sampleTime,
+            MotionMatchingPoseTimePlan time,
             bool rootLocked)
         {
-            if (!sourceClipId.IsValid || !clip || !float.IsFinite(sampleTime) || sampleTime < 0f || !rootLocked)
+            float clipLength = clip ? clip.length : 0f;
+            bool loopTimeValid = time.Looping
+                ? time.Cycle == 0
+                    ? time.ContinuousVisualTime == time.SampleTime
+                    : time.ContinuousVisualTime > time.SampleTime
+                : time.Cycle == 0 && time.ContinuousVisualTime == time.SampleTime;
+            if (!sourceClipId.IsValid || clipBindingIndex < 0 || !clip ||
+                !float.IsFinite(clipLength) || clipLength <= 0f ||
+                !time.IsValid || time.SampleTime > clipLength || !loopTimeValid || time.AnimatorStateSpeed != 0f || !rootLocked)
                 throw new ArgumentException("Motion Matching Clip Sample Plan is invalid.");
             SourceClipId = sourceClipId;
+            ClipBindingIndex = clipBindingIndex;
             Clip = clip;
-            SampleTime = sampleTime;
+            Time = time;
             RootLocked = rootLocked;
         }
 
         public CharacterMotionMatchingSourceClipId SourceClipId { get; }
+        public int ClipBindingIndex { get; }
         public AnimationClip Clip { get; }
-        public float SampleTime { get; }
-        public float Speed => 0f;
+        public MotionMatchingPoseTimePlan Time { get; }
+        public float ClipTime => Time.SampleTime;
+        public float NormalizedTime => ClipTime / Clip.length;
+        public double ContinuousVisualTime => Time.ContinuousVisualTime;
+        public int Cycle => Time.Cycle;
+        public float VisualTimeScale => Time.VisualTimeScale;
+        public float AnimatorStateSpeed => Time.AnimatorStateSpeed;
+        public bool IsLooping => Time.Looping;
         public bool RootLocked { get; }
     }
 
@@ -66,6 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             PoseSlotId = poseSlotId;
             PlaybackId = playbackId;
             SelectionGeneration = selectionGeneration;
+            SourcePoseContinuityIdentity = selectionGeneration.Value;
             PresentationRequestSequence = presentationRequestSequence;
             ProgramProducerIndex = programProducerIndex;
             ProgramProducerId = programProducerId;
@@ -80,6 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public AnimationPlaybackId PlaybackId { get; }
         public MotionMatchingPoseSourceKind PoseSourceKind => MotionMatchingPoseSourceKind.MotionMatching;
         public MotionMatchingSelectionGeneration SelectionGeneration { get; }
+        public ulong SourcePoseContinuityIdentity { get; }
         public ulong PresentationRequestSequence { get; }
         public int ProgramProducerIndex { get; }
         public string ProgramProducerId { get; }
@@ -120,10 +140,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             if (clip.FootPlacementWeightCurve == null ||
                 !clip.FootPlacementWeightCurve.ParameterId.Equals(FootPlacementWeightParameterId))
                 throw new InvalidOperationException($"Motion Matching Pose Source requires Projection parameter '{FootPlacementWeightParameterName}' for the selected Clip sample.");
-            float normalizedTime = clip.Clip.length <= 0f ? 0f : sample.SampleTime / clip.Clip.length;
+            var clipSamplePlan = new MotionMatchingClipSamplePlan(
+                clip.SourceClipId,
+                sample.ClipBindingIndex,
+                clip.Clip,
+                selection.PoseTime,
+                true);
             var footPlacementWeight = new MotionMatchingPoseParameterSample(
                 FootPlacementWeightParameterId,
-                clip.FootPlacementWeightCurve.Sample(normalizedTime));
+                clip.FootPlacementWeightCurve.Sample(clipSamplePlan.NormalizedTime));
             var footPlacement = new AnimationFootPlacementSample(
                 footPlacementWeight.Value,
                 sample.LeftFoot,
@@ -136,7 +161,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 presentationRequestSequence,
                 programProducerIndex,
                 MotionMatchingIdentity.Require(programProducerId, nameof(programProducerId)),
-                new MotionMatchingClipSamplePlan(clip.SourceClipId, clip.Clip, sample.SampleTime, true),
+                clipSamplePlan,
                 footPlacementWeight,
                 footPlacement,
                 selection.Plan.PlanId);

@@ -89,6 +89,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new PoseParameterId("animation.foot-placement-weight");
     }
 
+    public static class AnimationAdditiveReferencePoseIds
+    {
+        public const string RigReference = "animation.rig-reference";
+    }
+
     public readonly struct AnimationBoneId : IEquatable<AnimationBoneId>, IComparable<AnimationBoneId>
     {
         public AnimationBoneId(string value) { Value = PoseSlotId.Require(value, nameof(value)); }
@@ -341,7 +346,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterAnimationBoneMaskAsset m_BoneMask;
         [SerializeField, Range(0f, 1f)] float m_Weight = 1f;
         [SerializeField] CharacterPoseParameterPolicy[] m_ParameterPolicies = Array.Empty<CharacterPoseParameterPolicy>();
-        [SerializeField] string m_AdditiveReferencePoseId = string.Empty;
+        [SerializeField] string m_AdditiveReferencePoseId = AnimationAdditiveReferencePoseIds.RigReference;
         [SerializeField] AdditiveReferenceSpace m_AdditiveReferenceSpace = AdditiveReferenceSpace.Local;
         [SerializeField] AdditiveScalePolicy m_AdditiveScalePolicy = AdditiveScalePolicy.Multiply;
         [SerializeField] CharacterPoseSubgraphReference m_Subgraph;
@@ -372,7 +377,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationBoneMaskAsset boneMask = null,
             float weight = 1f,
             CharacterPoseParameterPolicy[] parameterPolicies = null,
-            string additiveReferencePoseId = "",
+            string additiveReferencePoseId = AnimationAdditiveReferencePoseIds.RigReference,
             AdditiveReferenceSpace additiveReferenceSpace = AdditiveReferenceSpace.Local,
             AdditiveScalePolicy additiveScalePolicy = AdditiveScalePolicy.Multiply,
             CharacterPoseSubgraphReference subgraph = null)

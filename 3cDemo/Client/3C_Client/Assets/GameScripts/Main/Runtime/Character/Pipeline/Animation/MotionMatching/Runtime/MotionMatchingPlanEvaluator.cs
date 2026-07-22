@@ -43,10 +43,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             MotionMatchingExactCostComponents exactEntryCost,
             MotionMatchingPlanCostComponents horizonCost,
             bool continueCurrent,
+            float entryVisualAdvanceRate,
             float nextMandatorySearchTime)
         {
             if (!planId.IsValid || entrySampleIndex < 0 || !entrySampleId.IsValid || !segmentId.IsValid ||
                 !float.IsFinite(entryTime) || entryTime < 0f || horizonEndSampleIndex < 0 || !horizonEndSampleId.IsValid ||
+                !float.IsFinite(entryVisualAdvanceRate) || entryVisualAdvanceRate < 0f ||
                 !float.IsFinite(nextMandatorySearchTime) || nextMandatorySearchTime <= 0f)
                 throw new ArgumentException("Motion Matching Selection Plan is invalid.");
             PlanId = planId;
@@ -59,6 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             ExactEntryCost = exactEntryCost;
             HorizonCost = horizonCost;
             ContinueCurrent = continueCurrent;
+            EntryVisualAdvanceRate = entryVisualAdvanceRate;
             NextMandatorySearchTime = nextMandatorySearchTime;
         }
 
@@ -73,6 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingPlanCostComponents HorizonCost { get; }
         public float TotalCost => ExactEntryCost.Total + HorizonCost.Total;
         public bool ContinueCurrent { get; }
+        public float EntryVisualAdvanceRate { get; }
         public float NextMandatorySearchTime { get; }
         public bool IsValid => PlanId.IsValid && EntrySampleId.IsValid && HorizonEndSampleId.IsValid;
     }
@@ -222,8 +226,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 candidate.Cost,
                 new MotionMatchingPlanCostComponents(trajectoryPosition, trajectoryFacing, contact, segmentEnd, velocityChange),
                 continueCurrent,
+                ResolveVisualAdvanceRate(candidate.SampleIndex),
                 m_Database.SearchPolicy.SearchInterval);
             return true;
+        }
+
+        float ResolveVisualAdvanceRate(int sampleIndex)
+        {
+            MotionMatchingSamplePayload sample = m_Database.GetSample(sampleIndex);
+            if (sample.NextSampleIndex >= 0)
+            {
+                MotionMatchingSamplePayload next = m_Database.GetSample(sample.NextSampleIndex);
+                if (next.SegmentId.Equals(sample.SegmentId) && next.SampleTime > sample.SampleTime)
+                    return (next.SampleTime - sample.SampleTime) * m_Database.SampleRate;
+            }
+            MotionMatchingSegmentPayload segment = FindSegment(sample.SegmentId);
+            return Mathf.Max(0f, (segment.EndTime - sample.SampleTime) * m_Database.SampleRate);
+        }
+
+        MotionMatchingSegmentPayload FindSegment(CharacterMotionMatchingSegmentId segmentId)
+        {
+            for (int i = 0; ; i++)
+            {
+                MotionMatchingSegmentPayload segment;
+                try
+                {
+                    segment = m_Database.GetSegment(i);
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    break;
+                }
+                if (segment.SegmentId.Equals(segmentId))
+                    return segment;
+            }
+            throw new InvalidOperationException($"Motion Matching sample references missing Segment '{segmentId}'.");
         }
 
         static MotionMatchingTrajectoryEnvelopePoint FindEnvelopePoint(MotionMatchingTrajectoryEnvelope envelope, float time)

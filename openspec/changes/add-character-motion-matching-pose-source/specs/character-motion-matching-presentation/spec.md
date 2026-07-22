@@ -162,6 +162,22 @@ Feature Schema MUST绑定稳定Rig identity，保存严格递增且包含零时�
 - **THEN** Build MUST报告对应速度区域Missing并停止发布
 - **AND** MUST不从脚速度、输入速度或Clip名称合成root displacement
 
+### Requirement: Coverage诊断必须使用正式Search Policy代价语义
+
+Search Policy MUST显式保存有限且大于0的`CoverageNearDuplicateCostThreshold`。该阈值 MUST与Runtime最终使用的weighted normalized squared feature cost单位一致；Builder MUST不硬编码第二阈值或在字段无效时使用默认值。Coverage diagnostics MUST在Artifact唯一coverage section中保存从全部`CanInitialize` sample沿正式continuation边计算的sample/segment reachability、canonical active normalized feature exact duplicate、排除exact pair后的near duplicate、按`CoverageRequirementId + ProtectedContactMask`实际评估的protected-contact空区、完整hard admission候选上界与root edge-depth为0的search index最大深度。全部count、ratio、pair denominator、capacity与depth MUST自洽，且这些离线诊断 MUST不改变Runtime admission、search、plan或selection。
+
+#### Scenario: 统计near duplicate
+
+- **WHEN** Builder比较两个不属于exact duplicate的sample
+- **THEN** 它 MUST使用最终dense weight和active normalized feature计算与Runtime相同的squared cost
+- **AND** 只有cost小于或等于正式`CoverageNearDuplicateCostThreshold`时才 MUST计入near-duplicate pair
+
+#### Scenario: Search Policy阈值无效
+
+- **WHEN** `CoverageNearDuplicateCostThreshold`非有限或不大于0
+- **THEN** Authoring validation与Runtime payload construction MUST拒绝该Search Policy
+- **AND** Builder MUST不使用硬编码或fallback阈值继续构建
+
 ### Requirement: Trajectory Source必须来自正式Accepted Intent或Selected Body
 
 每个Actor MUST由Presentation Factory显式装配唯一`ICharacterMotionMatchingTrajectorySource`。Local与Prediction source MUST消费已被Program/World request链接受并随atomic Body发布的`CharacterPresentationTrajectoryIntent`；Observed/Remote source MUST消费正式Selected Body interval。Runtime MUST不直接读取InputAction、Scene Transform、CharacterController、packet或Network Model类型。
@@ -258,31 +274,53 @@ Exact Search的Top-K candidate MUST沿显式continuation graph推进编译后的
 - **THEN** Selection MUST保存entry与horizon end identity
 - **AND** Pose Source MUST按plan continuation连续采样
 
-### Requirement: Playback与Pose Selection必须拥有不同Generation
+### Requirement: Motion Matching时间计划必须表达连续视觉时间与手动采样
 
-Program producer一次activation MUST继续唯一拥有`AnimationPlaybackId`。MM每次pose jump MUST提升`MotionMatchingSelectionGeneration`并创建新的`AnimationBlendEntryId`；同plan continuation MUST保持selection generation并更新同一entry。Blend Stack MUST比较Playback与Selection identity，不能只因Playback相同就把jump解释为continuation。
+`MotionMatchingSelectionPlan` MUST输出`EntryVisualAdvanceRate`。该值 MUST由当前sample的正式`NextSampleIndex`、next sample clip time与Database Sample Rate计算；segment尾没有next时 MUST使用作者声明的Segment EndTime与当前sample time的剩余量计算，MUST不使用默认倍率、sample index差或表现帧率猜测。Selection Runtime MUST只使用包含SampleTime、ContinuousVisualTime、Cycle、VisualTimeScale、Looping与固定`AnimatorStateSpeed = 0`的`MotionMatchingPoseTimePlan`。SampleAccumulator MUST按表现delta累计，有效SampleTime MUST按`SampleAccumulator * EntryVisualAdvanceRate`推进。非loop MUST满足`ContinuousVisualTime = SampleTime`且`Cycle = 0`；loop MUST满足`ContinuousVisualTime = SampleTime + Cycle * Segment.Duration`，同segment sample time回绕时 MUST令Cycle递增。`VisualTimeScale` MUST精确等于`EntryVisualAdvanceRate`并只表示有效视觉时间推进；`AnimatorStateSpeed = 0` MUST只表示后端手动采样。Initialize、Jump、reset或source断裂 MUST不通过把`VisualTimeScale`设为0来表达。
+
+#### Scenario: Continue跨越Loop边界
+
+- **WHEN** 当前Selection沿同一loop segment的正式next link从较大sample time回绕到较小sample time
+- **THEN** Selection Runtime MUST保持同一generation并令Cycle精确增加1
+- **AND** ContinuousVisualTime MUST按Segment Duration保持连续推进而不得退回首圈时间
+
+#### Scenario: Animancer手动采样MM Clip
+
+- **WHEN** MM Pose Source把有效PoseTime降低为ClipSamplePlan
+- **THEN** Animancer backend MUST按ClipTime精确设置source state采样时间
+- **AND** source state Speed MUST固定为0，同时request VisualTimeScale MUST继续等于EntryVisualAdvanceRate
+
+### Requirement: AnimationPoseSourceId必须完整表达Playback与Motion Matching Selection Generation
+
+Program producer一次activation MUST继续唯一拥有`AnimationPlaybackId`。MM Initialize与每次Jump MUST提升`MotionMatchingSelectionGeneration`，并在公共降低边界将其精确降低为`AnimationPoseSelectionGeneration`；同plan Continue MUST保持generation。`AnimationPlaybackId`、Motion Matching source kind与降低后的selection generation MUST共同形成唯一`AnimationPoseSourceId`，Blend Stack MUST比较完整source identity，不能只因Playback相同就把Jump解释为Continue。`SourcePoseContinuityIdentity` MUST精确等于当前有效`MotionMatchingSelectionGeneration.Value`，Continue MUST保持该值，Initialize与Jump MUST随新generation改变；它 MUST不从sample index、sample time、`PresentationRequestSequence`或独立allocator派生。
 
 #### Scenario: 同一MM producer从Run切到Pivot sample
 
 - **WHEN** Program的BaseLocomotion MM playback没有变化但Search选择新的Pivot entry
-- **THEN** MM MUST提升Selection Generation并提交新Blend Entry
-- **AND** BaseLocomotionSlot MUST使用唯一self-pair Inertial/CrossFade规则
+- **THEN** MM MUST提升MotionMatchingSelectionGeneration，并使AnimationPoseSourceId与SourcePoseContinuityIdentity同时变化
+- **AND** AnimationPlaybackId MAY保持不变，BaseLocomotionSlot MUST使用唯一self-pair Inertial/CrossFade规则
 
 #### Scenario: 当前plan继续推进
 
 - **WHEN** 下一次sample仍属于同一Selection Plan continuation
-- **THEN** MM MUST保持Selection Generation
-- **AND** Blend Stack MUST不重启entry clock
+- **THEN** MM MUST保持MotionMatchingSelectionGeneration、AnimationPoseSourceId与SourcePoseContinuityIdentity
+- **AND** ContinuousVisualTime MUST连续推进，Blend Stack MUST不重启entry clock
 
 ### Requirement: Motion Matching必须降低为source-neutral Pose Request
 
-MM Pose Source MUST把Selection降低为与Timeline共用的`ResolvedAnimationPoseRequest`，共同表达AnimationChannelId、PoseSlotId、PlaybackId、PoseSourceKind、PoseSelectionGeneration、PresentationRequestSequence、ProgramProducerIndex、ClipSamplePlan、Pose Parameter、Foot Feature与transition identity。Animancer source backend MUST只采样Clip plan；MM MUST不建立私有fade、Stored Pose、Pose Graph或IK。
+MM Pose Source MUST把Selection降低为与Timeline共用的`ResolvedAnimationPoseRequest`，并且该request MUST只通过以下正式字段表达source与采样结果：`AnimationChannelId`、`PoseSlotId`、`AnimationPoseSourceId`、`SourcePoseContinuityIdentity`、`PresentationRequestSequence`、`ProgramProducerIndex`、`VisualSampleTime`、`ContinuousVisualTime`、`Cycle`、`VisualTimeScale`、`ClipSamplePlan[]`、dense `PoseParameters[]`、`LeftFootFeatures`、`RightFootFeatures`与`ExactTransitionIdentity`。request MUST不再把`AnimationPlaybackId`、`PoseSourceKind`与`PoseSelectionGeneration`作为三项拆分的顶层source identity。MM内部Clip plan MUST从唯一PoseTime精确写入ClipTime、ContinuousClipTime、NormalizedTime与IsLooping；Animancer source backend MUST只按ClipTime采样该plan并保持state Speed为0。MM MUST不建立私有fade、Stored Pose、Pose Graph或IK。
 
 #### Scenario: MM选择新Clip sample
 
 - **WHEN** Selection Generation创建新的entry
-- **THEN** Pose Source MUST解析Projection clip binding与sample time并提交resolved request
+- **THEN** Pose Source MUST解析Projection clip binding，把PoseTime降低为VisualSampleTime、ContinuousVisualTime、Cycle、VisualTimeScale及对应ClipSamplePlan并提交resolved request
 - **AND** request MUST进入BaseLocomotionSlot唯一Blend Stack
+
+#### Scenario: MM输出Pose Parameter与左右脚Feature
+
+- **WHEN** Pose Source降低selected Clip在VisualSampleTime的正式Projection结果
+- **THEN** request MUST写入固定容量dense PoseParameters，并以canonical PoseParameterId `animation.foot-placement-weight`表达Foot Placement Weight
+- **AND** request MUST分别携带LeftFootFeatures与RightFootFeatures，Foot MUST不二次查询MM Database
 
 #### Scenario: MM试图私自混合旧pose
 

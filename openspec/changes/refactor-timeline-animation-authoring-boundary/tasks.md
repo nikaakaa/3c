@@ -176,25 +176,25 @@
 
 ## 13. 骨骼接触候选与正式Marker闭环
 
-- [ ] 13.1 修复Preview Rig采样时误禁用Animator的问题。
-- [ ] 13.2 定义只读Left/Right contact candidate值对象。
-- [ ] 13.3 将artifact identity与content hash纳入candidate proposal revision。
-- [ ] 13.4 将Timeline、Track与Clip stable identity纳入candidate proposal revision。
-- [ ] 13.5 将AnimationClip dependency、ClipIn、source cycle与目标frame映射纳入proposal revision。
-- [ ] 13.6 按artifact sample rate重采样PlantConfidence。
-- [ ] 13.7 检测cyclic非接触到稳定接触上升沿。
-- [ ] 13.8 生成LeftFootContact与RightFootContact候选并拒绝重复目标frame。
-- [ ] 13.9 拒绝缺少任一脚接触、非法frame或非有限置信值的proposal。
-- [ ] 13.10 仅允许单AnimationClip完整覆盖MarkerGroup/Cyclic Track时创建可应用proposal。
-- [ ] 13.11 在Analysis面板显示candidate revision、脚侧与目标frame。
-- [ ] 13.12 在只读分析曲线中叠加左右脚candidate位置。
-- [ ] 13.13 Apply前重新Inspect artifact并重建proposal。
-- [ ] 13.14 artifact、clip或Timeline映射变化时拒绝Stale proposal。
-- [ ] 13.15 Apply前明确确认目标Timeline与Track identity。
-- [ ] 13.16 通过TimelineEditorSessionContext正式mutation提交Marker。
-- [ ] 13.17 只替换LeftFootContact与RightFootContact并保留其它Marker。
-- [ ] 13.18 尽量复用匹配的stable marker identity并删除多余脚步Marker。
-- [ ] 13.19 保持Agent generated analysis只读，不新增candidate Patch operation。
+- [x] 13.1 修复Preview Rig采样时误禁用Animator的问题。
+- [x] 13.2 定义只读Left/Right contact candidate值对象。
+- [x] 13.3 将artifact identity与content hash纳入candidate proposal revision。
+- [x] 13.4 将Timeline、Track与Clip stable identity纳入candidate proposal revision。
+- [x] 13.5 将AnimationClip dependency、ClipIn、source cycle与目标frame映射纳入proposal revision。
+- [x] 13.6 按artifact sample rate重采样PlantConfidence。
+- [x] 13.7 检测cyclic非接触到稳定接触上升沿。
+- [x] 13.8 生成LeftFootContact与RightFootContact候选并拒绝重复目标frame。
+- [x] 13.9 拒绝缺少任一脚接触、非法frame或非有限置信值的proposal。
+- [x] 13.10 仅允许单AnimationClip完整覆盖MarkerGroup/Cyclic Track时创建可应用proposal。
+- [x] 13.11 在Analysis面板显示candidate revision、脚侧与目标frame。
+- [x] 13.12 在只读分析曲线中叠加左右脚candidate位置。
+- [x] 13.13 Apply前重新Inspect artifact并重建proposal。
+- [x] 13.14 artifact、clip或Timeline映射变化时拒绝Stale proposal。
+- [x] 13.15 Apply前明确确认目标Timeline与Track identity。
+- [x] 13.16 通过TimelineEditorSessionContext正式mutation提交Marker。
+- [x] 13.17 只替换LeftFootContact与RightFootContact并保留其它Marker。
+- [x] 13.18 尽量复用匹配的stable marker identity并删除多余脚步Marker。
+- [x] 13.19 保持Agent generated analysis只读，不新增candidate Patch operation。
 - [ ] 13.20 使用Agent v15正式流程迁移Corin WalkLoop与RunLoop Marker。
 - [ ] 13.21 重新生成Corin artifact与Presentation Projection。
 - [ ] 13.22 编译受影响Runtime与Editor程序集并关闭build server。

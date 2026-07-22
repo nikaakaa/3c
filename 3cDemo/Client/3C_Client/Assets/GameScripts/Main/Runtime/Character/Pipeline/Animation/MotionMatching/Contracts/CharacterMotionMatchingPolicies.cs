@@ -177,6 +177,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         [SerializeField] float m_MinimumJumpInterval;
         [SerializeField] int m_MaximumAdmittedSampleCount;
         [SerializeField] int m_MaximumTreeDepth;
+        [SerializeField] float m_CoverageNearDuplicateCostThreshold;
         [SerializeField] int m_HistoryCapacity;
         [SerializeField] int m_DiagnosticDetailCapacity;
         [SerializeField] float m_ProtectedFootPositionJumpLimit;
@@ -193,6 +194,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public float MinimumJumpInterval => m_MinimumJumpInterval;
         public int MaximumAdmittedSampleCount => m_MaximumAdmittedSampleCount;
         public int MaximumTreeDepth => m_MaximumTreeDepth;
+        public float CoverageNearDuplicateCostThreshold => m_CoverageNearDuplicateCostThreshold;
         public int HistoryCapacity => m_HistoryCapacity;
         public int DiagnosticDetailCapacity => m_DiagnosticDetailCapacity;
         public float ProtectedFootPositionJumpLimit => m_ProtectedFootPositionJumpLimit;
@@ -210,6 +212,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             MotionMatchingAuthoringValidation.RequireFinitePositive(PlanSampleInterval, nameof(PlanSampleInterval));
             MotionMatchingAuthoringValidation.RequireFinitePositive(SearchInterval, nameof(SearchInterval));
             MotionMatchingAuthoringValidation.RequireFiniteNonNegative(MinimumJumpInterval, nameof(MinimumJumpInterval));
+            MotionMatchingAuthoringValidation.RequireFinitePositive(CoverageNearDuplicateCostThreshold, nameof(CoverageNearDuplicateCostThreshold));
             MotionMatchingAuthoringValidation.RequireFiniteNonNegative(ProtectedFootPositionJumpLimit, nameof(ProtectedFootPositionJumpLimit));
             MotionMatchingAuthoringValidation.RequireFiniteNonNegative(ProtectedFootVelocityJumpLimit, nameof(ProtectedFootVelocityJumpLimit));
         }

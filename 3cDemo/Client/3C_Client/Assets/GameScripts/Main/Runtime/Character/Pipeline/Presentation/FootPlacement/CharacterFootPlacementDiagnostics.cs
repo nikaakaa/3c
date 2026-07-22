@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -127,7 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootPlacementFrameSnapshot
     {
-        readonly AnimationPoseContribution[] m_Contributions;
+        readonly AnimationPoseSourceContribution[] m_Contributions;
 
         internal CharacterFootPlacementFrameSnapshot(
             ActorId actorId,
@@ -135,13 +134,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong previousBodyTick,
             ulong currentBodyTick,
             ulong resetSequence,
-            string poseSourceLayerId,
+            string poseProgramHash,
+            ulong completionIdentity,
+            ulong poseContinuityIdentity,
+            string footPlacementWeightParameterId,
+            int footPlacementWeightParameterIndex,
+            float footPlacementWeight,
             string calibrationId,
             string calibrationRevision,
             string analysisSourceId,
             int analysisVersion,
             string analysisAlgorithmVersion,
-            AnimationPoseContribution[] contributions,
+            AnimationPoseSourceContribution[] contributions,
             int contributionCount,
             FootPlacementFootFrameSnapshot left,
             FootPlacementFootFrameSnapshot right,
@@ -157,6 +161,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float actorMovementCompensationVelocity,
             float pelvisTargetOffset,
             float pelvisCurrentOffset,
+            FootPlacementPelvisHeightMode pelvisHeightMode,
+            FootPlacementPelvisHeightDecision pelvisHeightDecision,
+            FootPlacementPelvisHeightReason pelvisHeightReason,
+            float pelvisDirectionalSpeed,
+            float pelvisFootLeadDistance,
+            float pelvisSlopeHeightDifference,
             FootPlacementSupportFoot supportFoot,
             CharacterFootPlacementSolverResult solverResult)
         {
@@ -165,7 +175,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PreviousBodyTick = previousBodyTick;
             CurrentBodyTick = currentBodyTick;
             ResetSequence = resetSequence;
-            PoseSourceLayerId = poseSourceLayerId ?? string.Empty;
+            PoseProgramHash = poseProgramHash ?? string.Empty;
+            CompletionIdentity = completionIdentity;
+            PoseContinuityIdentity = poseContinuityIdentity;
+            FootPlacementWeightParameterId = footPlacementWeightParameterId ?? string.Empty;
+            FootPlacementWeightParameterIndex = footPlacementWeightParameterIndex;
+            FootPlacementWeight = footPlacementWeight;
             CalibrationId = calibrationId ?? string.Empty;
             CalibrationRevision = calibrationRevision ?? string.Empty;
             AnalysisSourceId = analysisSourceId ?? string.Empty;
@@ -187,6 +202,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActorMovementCompensationVelocity = actorMovementCompensationVelocity;
             PelvisTargetOffset = pelvisTargetOffset;
             PelvisCurrentOffset = pelvisCurrentOffset;
+            PelvisHeightMode = pelvisHeightMode;
+            PelvisHeightDecision = pelvisHeightDecision;
+            PelvisHeightReason = pelvisHeightReason;
+            PelvisDirectionalSpeed = pelvisDirectionalSpeed;
+            PelvisFootLeadDistance = pelvisFootLeadDistance;
+            PelvisSlopeHeightDifference = pelvisSlopeHeightDifference;
             SupportFoot = supportFoot;
             SolverResult = solverResult;
         }
@@ -196,7 +217,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong PreviousBodyTick { get; }
         public ulong CurrentBodyTick { get; }
         public ulong ResetSequence { get; }
-        public string PoseSourceLayerId { get; }
+        public string PoseProgramHash { get; }
+        public ulong CompletionIdentity { get; }
+        public ulong PoseContinuityIdentity { get; }
+        public string FootPlacementWeightParameterId { get; }
+        public int FootPlacementWeightParameterIndex { get; }
+        public float FootPlacementWeight { get; }
         public string CalibrationId { get; }
         public string CalibrationRevision { get; }
         public string AnalysisSourceId { get; }
@@ -217,11 +243,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float ActorMovementCompensationVelocity { get; }
         public float PelvisTargetOffset { get; }
         public float PelvisCurrentOffset { get; }
+        public FootPlacementPelvisHeightMode PelvisHeightMode { get; }
+        public FootPlacementPelvisHeightDecision PelvisHeightDecision { get; }
+        public FootPlacementPelvisHeightReason PelvisHeightReason { get; }
+        public float PelvisDirectionalSpeed { get; }
+        public float PelvisFootLeadDistance { get; }
+        public float PelvisSlopeHeightDifference { get; }
         public FootPlacementSupportFoot SupportFoot { get; }
         public CharacterFootPlacementSolverResult SolverResult { get; }
         public bool IsValid => RenderFrame != 0 && ActorId.IsValid;
 
-        public AnimationPoseContribution GetContribution(int index)
+        public AnimationPoseSourceContribution GetContribution(int index)
         {
             if (index < 0 || index >= ContributionCount || m_Contributions == null)
                 throw new ArgumentOutOfRangeException(nameof(index));
@@ -229,8 +261,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static void CopyContributions(
-            IReadOnlyList<AnimationPoseContribution> source,
-            AnimationPoseContribution[] destination)
+            AnimationReadOnlyBuffer<AnimationPoseSourceContribution> source,
+            AnimationPoseSourceContribution[] destination)
         {
             int count = Math.Min(source.Count, destination.Length);
             for (int i = 0; i < count; i++)

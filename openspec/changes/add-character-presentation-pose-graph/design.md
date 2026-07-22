@@ -78,14 +78,14 @@ AnimationPlaybackLifecycle per channel
               v
 AnimationBlendStackRuntime per PoseSlot
   + AnimancerPoseSamplingBackend
-  + AnimationSlotBlendPoseEvaluator
+  + AnimationSlotBlendJob
               |
               v
 PoseSlotFrame[]
   pose + parameters + availability + contribution
               |
               v
-CharacterPoseGraphEvaluator
+CharacterPresentationPoseGraphJob
   PoseSlotInput
   LayeredBoneBlend
   AdditivePose
@@ -117,6 +117,10 @@ Foot Placement -> Camera
 它回答：“这个已经解析好的pose从哪里进入空间合成？”
 
 它不参与State/Action优先级，也不能在多个channel之间选winner。
+
+### AnimationPoseSourceId
+
+`AnimationPoseSourceId`属于Presentation source sampling，由`AnimationPlaybackId + AnimationPoseSourceKind + AnimationPoseSelectionGeneration`构成。Timeline activation保持一个稳定generation；Motion Matching Continue保持generation，Jump提升generation。Blend Stack、Animancer source playable、capture workspace和release事实都使用完整SourceId，不能只按PlaybackId合并同一MM playback中的新旧pose。
 
 ### PoseNodeId / PosePortId
 
@@ -181,15 +185,18 @@ Authoring graph不保存Runtime buffer。Compiler为每个edge/value slot分配�
 #### AdditivePose
 
 - 一个Base Pose和一个Additive Pose输入。
-- 显式Bone Mask、weight source和reference pose identity。
-- Compiler校验additive source与reference space兼容。
+- 显式Bone Mask、weight source、reference space和scale policy。
+- 当前唯一reference identity是公开常量`AnimationAdditiveReferencePoseIds.RigReference`，值为`animation.rig-reference`；不存在第二份reference catalog或fallback。
+- `Local`由Compiler按dense Rig顺序原样写入ReferenceLocal TRS；`Mesh`按Rig父节点优先顺序组合parent TRS，Runtime计算mesh-space delta后再按同一parent index转换回local pose。
+- Compiler校验additive source、唯一reference identity与reference space兼容。
 - 不把任意普通clip静默解释为additive。
 
 #### PoseCurveResolve
 
-- 只解析已声明PoseParameterId。
-- 每个参数有完整source和policy。
-- 不修改骨骼pose，不读取Gameplay curve或Timeline Window。
+- 固定两个有序Pose输入：Input A是Base Pose，Input B是Parameter Source Pose。
+- 只解析已声明PoseParameterId，每个参数都有完整policy；Input B只参与parameter、output weight与continuity求值。
+- 骨骼pose、source contribution与左右脚feature保持Base；Parameter Source为NoPose时保持Base，为Invalid时发布typed invalid。
+- 不读取Gameplay curve或Timeline Window。
 
 #### PoseSubgraph
 
@@ -248,12 +255,12 @@ BTSMTL继续使用`BaseGraph`、`BaseNode`、`PropertyPort`与自身compiler。P
 
 输出不可变`CharacterPresentationPoseProgram`：
 
-- schema与PoseGraph identity。
+- v2 schema、v2 runtime ABI、v2 operation payload与PoseGraph identity；Runtime直接拒绝v1。
 - stable slot index和channel binding。
 - topological node operation array。
 - fixed pose/parameter/contribution workspace layout。
 - dense Bone Mask和additive reference descriptor。
-- static subgraph call-site source map。
+- static subgraph call-site source map；`FrameCacheCount`精确等于operation数量，operation index就是唯一frame-cache index。
 - output operation index。
 - required runtime capability与diagnostic source map。
 
@@ -302,7 +309,7 @@ Body frame
   -> Camera
 ```
 
-`CharacterPoseGraphEvaluator`按编译operation顺序执行。每个operation只读输入workspace并写唯一输出slot。fan-out只读同一缓存；不得重复采样source或重复推进Stack clock。
+`CharacterPresentationPoseGraphJob`按编译operation顺序执行。每个operation只读输入workspace并写唯一输出slot。fan-out只读同一缓存；不得重复采样source或重复推进Stack clock。
 
 ### Empty Slot
 
@@ -402,6 +409,7 @@ Pose Graph、Blend Library、Rig、Mask、Parameter catalog或source binding变�
 ```text
 AnimationChannelId
   -> committed PlaybackId
+  -> AnimationPoseSourceId
   -> PoseSlotId
   -> Stack Entry / Stored / Inertial
   -> PoseSlotFrame
@@ -487,6 +495,7 @@ UE这样做是因为Animation Blueprint自己承担一部分状态选择。本�
 
 - 当前Graph Editor领域特判比类名显示得更深。抽取时若adapter仍通过类型判断回调BTSMTL节点，会形成伪通用Shell；任务要求逐一收口搜索、端口兼容、Inspector与diagnostics seam。
 - Animation Jobs中source capture、slot stack和final graph output必须在同一PlayableGraph内拥有固定顺序。不能用两个独立PlayableGraph或Transform回写连接它们。
+- Animancer state Speed只表示后端手动采样方式；`ResolvedAnimationPoseRequest.VisualTimeScale`必须继续表达有效视觉时间推进率，Motion Matching不得因state Speed为零而把该值固定为零。
 - Corin从单Base仲裁改成两个channel后，Locomotion必须在Action期间继续拥有合法selection。Program compiler和authoring inventory必须验证这一点，不能由Presentation补Idle。
 - Pose Parameter curve策略若遗漏会产生难以察觉的ALS行为差异，因此Compiler对每个合成site要求完整policy，不允许运行时按名称默认。
 - 多active change都修改Projection和Animation specs。实施前必须以这三个提案的最终共同合同为基线，不能按旧任务顺序分别落地出临时双路径。

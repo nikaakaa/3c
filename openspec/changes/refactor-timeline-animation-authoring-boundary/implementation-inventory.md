@@ -105,9 +105,10 @@ DryRun只检查artifact状态，不触发采样。正式Build可生成Missing或
 - Ready artifact按sample rate重采样左右脚PlantConfidence，生成非接触到稳定接触上升沿的瞬时contact candidate。
 - Candidate携带artifact identity/content hash、Timeline/Track/Clip stable identity、脚侧、归一化时间、目标frame与置信值。
 - 只读曲线叠加Left/Right candidate位置；候选本身不进入Timeline selection、Undo或序列化数据。
+- Candidate生成前精确核对当前AnimationClip GUID、dependency hash与v3 algorithm identity；Track尚未配置MarkerGroup/Cyclic或存在多Clip时仍显示只读骨骼候选，只禁用Apply并报告映射约束。
 - 单AnimationClip完整覆盖MarkerGroup/Cyclic Track时，作者可显式确认并Apply候选。
 
-工具不注册Curve Channel，不反向搜索Definition，也不改变主时间轴行高、滚动范围或marker命中区域。从Character Pipeline Graph打开时，Tool Catalog只注入该Definition Profile显式引用的Source GUID。生成分析与候选展示保持只读；唯一写入口是作者显式确认后的`TimelineEditorSessionContext.Apply`，它重新读取artifact并重建proposal，拒绝任何identity、dependency、采样参数或Timeline映射变化，只替换`LeftFootContact`与`RightFootContact`集合并保留其它Marker。不存在直接track数组写入、自动保存或候选序列化类型。
+工具不注册Curve Channel，不反向搜索Definition，也不改变主时间轴行高、滚动范围或marker命中区域。从Character Pipeline Graph打开时，Tool Catalog只注入该Definition Profile显式引用的Source GUID。生成分析与候选展示保持只读；唯一写入口是作者显式确认后的`TimelineEditorSessionContext.Apply`，它重新读取artifact并重建proposal，拒绝任何identity、dependency、采样参数或Timeline映射变化，只替换`LeftFootContact`与`RightFootContact`集合并保留其它Marker。Apply优先复用脚侧与目标frame都匹配的stable marker identity，其次复用同脚侧identity，并删除不再需要的脚步Marker。不存在直接track数组写入、自动保存或候选序列化类型。
 
 ## 7. Runtime链
 
@@ -149,6 +150,7 @@ Standalone、Deterministic Rollback、Unity Authority与DotRecast Runtime Profil
 
 - 前一版Foot Analysis基础链曾完成Runtime/Timeline Editor/Client Editor静态编译与19/19 v2 artifact发布，但这些结果不代表本节新增Marker候选闭环已经验收。
 - Analyzer保持Animator启用、v3 algorithm identity、candidate proposal与Analysis面板显式Apply代码已经落盘；任务状态继续保持未完成，直到共享程序集恢复编译、Unity刷新和正式资产迁移完成。
+- 已删除`TimelineTrackHandle.uss`中最后残留的旧`footAnalysis*` lane样式，不存在隐藏CSS兼容入口。
 - 当前共享Unity编译仍由并行AnimationChannelId/AnimGraph迁移收口；本change不恢复旧AnimationLayerSelection、Transition或Equipment类型，也不复制Simulation Core合同。
 - 等整体编译绿后，必须重新生成v3 artifact并确认Walk/Run左右脚PlantConfidence不再同形，再通过Agent v15正式流程迁移Corin WalkLoop/RunLoop Marker并重建Projection。
 - 迁移前的Corin `frame 0/半周期` Marker与旧v2 artifact只算历史配置，不作为候选算法或完成验收真相。

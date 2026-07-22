@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonSimulation;
+using Unity.Collections;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -472,27 +474,61 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         readonly T[] m_Buffer;
         readonly int m_Offset;
+        readonly int m_Count;
+        readonly IAnimationReadOnlyBufferLease m_Lease;
+        readonly ulong m_LeaseIdentity;
 
         internal AnimationReadOnlyBuffer(T[] buffer, int offset, int count)
+            : this(buffer, offset, count, null, 0)
+        {
+        }
+
+        internal AnimationReadOnlyBuffer(
+            T[] buffer,
+            int offset,
+            int count,
+            IAnimationReadOnlyBufferLease lease,
+            ulong leaseIdentity)
         {
             if (buffer == null)
                 throw new ArgumentNullException(nameof(buffer));
-            if (offset < 0 || count < 0 || offset + count > buffer.Length)
+            if ((uint)offset > (uint)buffer.Length)
                 throw new ArgumentOutOfRangeException(nameof(offset));
+            if ((uint)count > (uint)(buffer.Length - offset))
+                throw new ArgumentOutOfRangeException(nameof(count));
+            if ((lease == null) != (leaseIdentity == 0))
+                throw new ArgumentException("Animation read-only buffer lease identity is invalid.");
+            lease?.RequireValid(leaseIdentity);
             m_Buffer = buffer;
             m_Offset = offset;
-            Count = count;
+            m_Count = count;
+            m_Lease = lease;
+            m_LeaseIdentity = leaseIdentity;
         }
 
-        public int Count { get; }
+        public int Count
+        {
+            get
+            {
+                RequireLease();
+                return m_Count;
+            }
+        }
+
         public T this[int index]
         {
             get
             {
-                if ((uint)index >= (uint)Count)
+                RequireLease();
+                if ((uint)index >= (uint)m_Count)
                     throw new ArgumentOutOfRangeException(nameof(index));
                 return m_Buffer[m_Offset + index];
             }
+        }
+
+        void RequireLease()
+        {
+            m_Lease?.RequireValid(m_LeaseIdentity);
         }
     }
 
@@ -514,6 +550,52 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static bool IsFinite(Vector3 value) => float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
         static bool IsFinite(Quaternion value) => float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z) && float.IsFinite(value.w);
+    }
+
+    internal readonly struct AnimationPoseSourceCaptureBinding
+    {
+        internal AnimationPoseSourceCaptureBinding(
+            AnimationPoseSourceId sourceId,
+            int sourceIndex,
+            ulong completionIdentity,
+            NativeSlice<AnimationLocalBonePose> currentPose,
+            NativeSlice<AnimationLocalBonePose> previousPose,
+            NativeSlice<AnimationBlendBoneVelocity> velocity,
+            NativeArray<byte> hasPrevious,
+            NativeArray<ulong> completedAt,
+            float presentationDeltaSeconds)
+        {
+            if (!sourceId.IsValid || sourceIndex < 0 || completionIdentity == 0 ||
+                currentPose.Length == 0 ||
+                previousPose.Length != currentPose.Length ||
+                velocity.Length != currentPose.Length ||
+                !hasPrevious.IsCreated || !completedAt.IsCreated || hasPrevious.Length == 0 ||
+                hasPrevious.Length != completedAt.Length || sourceIndex >= hasPrevious.Length ||
+                hasPrevious[sourceIndex] > 1 ||
+                !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f)
+            {
+                throw new ArgumentException("Animation pose source capture binding is invalid.");
+            }
+            SourceId = sourceId;
+            SourceIndex = sourceIndex;
+            CompletionIdentity = completionIdentity;
+            CurrentPose = currentPose;
+            PreviousPose = previousPose;
+            Velocity = velocity;
+            HasPrevious = hasPrevious;
+            CompletedAt = completedAt;
+            PresentationDeltaSeconds = presentationDeltaSeconds;
+        }
+
+        internal AnimationPoseSourceId SourceId { get; }
+        internal int SourceIndex { get; }
+        internal ulong CompletionIdentity { get; }
+        internal NativeSlice<AnimationLocalBonePose> CurrentPose { get; }
+        internal NativeSlice<AnimationLocalBonePose> PreviousPose { get; }
+        internal NativeSlice<AnimationBlendBoneVelocity> Velocity { get; }
+        internal NativeArray<byte> HasPrevious { get; }
+        internal NativeArray<ulong> CompletedAt { get; }
+        internal float PresentationDeltaSeconds { get; }
     }
 
     public enum PoseSlotFrameAvailability : byte

@@ -2,7 +2,7 @@
 
 ### Requirement: Foot Placement 必须是唯一 Presentation Pose Post Process Pass
 
-`CharacterSimulationPresentationRuntime` MUST在每个合法PresentationFrame中按`Body -> Pose Slot Blend Stack/Source Sampling -> Character Presentation Pose Graph -> Foot Placement -> Camera`固定顺序推进角色表现。Foot Placement MUST只在CharacterPoseGraphEvaluator发布有效`FinalAnimationPoseFrame`后执行一次，并由该Runtime显式创建、更新、reset和dispose。Foot Placement MUST不成为Pose Graph节点，也 MUST不依赖Final IK、Animator、MonoBehaviour或其它manager自主更新形成第二个姿势写入路径。
+`CharacterSimulationPresentationRuntime` MUST在每个合法PresentationFrame中按`Body -> Pose Slot Blend Stack/Source Sampling -> Character Presentation Pose Graph -> Foot Placement -> Camera`固定顺序推进角色表现。Foot Placement MUST只在`AnimationPosePlayableGraphRuntime`发布有效lease-protected `FinalAnimationPoseFrame`后执行一次，并由该Runtime显式创建、更新、reset和dispose。Foot Placement MUST不成为Pose Graph节点，也 MUST不依赖Final IK、Animator、MonoBehaviour或其它manager自主更新形成第二个姿势写入路径。
 
 #### Scenario: 一个表现帧更新Corin
 
@@ -36,7 +36,7 @@ Foot Placement MUST只读取同帧`CharacterBodyPresentationFrame`、Pose Graph�
 
 - **WHEN** 某slot Stored Pose在最终LeftFoot合成后仍有非零贡献
 - **THEN** Foot Placement MUST消费capture时的合法LeftFoot feature aggregate
-- **AND** MUST不要求Stored Pose伪造PlaybackId或AnimationClip
+- **AND** MUST不要求Stored Pose伪造AnimationPoseSourceId或AnimationClip
 
 ### Requirement: Animation Clip Foot Placement曲线必须沿正式表现投影采样
 

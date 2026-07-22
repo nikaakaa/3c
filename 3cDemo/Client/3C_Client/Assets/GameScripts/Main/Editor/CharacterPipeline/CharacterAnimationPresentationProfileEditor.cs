@@ -25,8 +25,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             new Dictionary<AnimationProducerId, CharacterAuthoringTimelineEntry>();
         readonly Dictionary<AnimationProducerId, string> m_ProducerDisplayNames =
             new Dictionary<AnimationProducerId, string>();
-        SerializedProperty m_Layers;
-        SerializedProperty m_TransitionLibrary;
+        SerializedProperty m_PoseGraph;
+        SerializedProperty m_BlendLibrary;
+        SerializedProperty m_RigDefinition;
         SerializedProperty m_FootAnalysisMode;
         SerializedProperty m_FootAnalysisSourceAssetGuid;
         CharacterPipelineDefinition m_InspectedContext;
@@ -43,8 +44,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void OnEnable()
         {
-            m_Layers = serializedObject.FindProperty("m_Layers");
-            m_TransitionLibrary = serializedObject.FindProperty("m_TransitionLibrary");
+            m_PoseGraph = serializedObject.FindProperty("m_PoseGraph");
+            m_BlendLibrary = serializedObject.FindProperty("m_BlendLibrary");
+            m_RigDefinition = serializedObject.FindProperty("m_RigDefinition");
             m_FootAnalysisMode = serializedObject.FindProperty("m_FootPlacementAnalysisMode");
             m_FootAnalysisSourceAssetGuid = serializedObject.FindProperty("m_FootPlacementAnalysisSourceAssetGuid");
             RefreshContexts();
@@ -54,14 +56,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             serializedObject.Update();
             EditorGUILayout.LabelField("Animation Presentation", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(m_Layers, new GUIContent("Layers"), true);
-            EditorGUILayout.PropertyField(m_TransitionLibrary, new GUIContent("Transition Library"));
+            EditorGUILayout.PropertyField(m_PoseGraph, new GUIContent("Pose Graph"));
+            EditorGUILayout.PropertyField(m_BlendLibrary, new GUIContent("Blend Library"));
+            EditorGUILayout.PropertyField(m_RigDefinition, new GUIContent("Rig Definition"));
             DrawFootAnalysis();
             bool changed = serializedObject.ApplyModifiedProperties();
             if (changed)
                 m_BindingError = string.Empty;
 
-            DrawTransitionLibraryNavigation();
+            DrawPresentationAssetSummary();
             DrawConfigurationErrors();
             DrawContext();
             DrawProducerBindings();
@@ -112,14 +115,39 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        void DrawTransitionLibraryNavigation()
+        void DrawPresentationAssetSummary()
         {
             CharacterAnimationPresentationProfile profile = Profile;
-            using (new EditorGUI.DisabledScope(!profile || !profile.TransitionLibrary))
+            if (!profile)
+                return;
+
+            CharacterPresentationPoseGraphAsset poseGraph = profile.PoseGraph;
+            CharacterAnimationBlendLibrary blendLibrary = profile.BlendLibrary;
+            CharacterAnimationRigDefinition rig = profile.RigDefinition;
+            if (poseGraph && poseGraph.Graph != null)
+                EditorGUILayout.LabelField("Pose Graph Identity", $"{poseGraph.Graph.GraphId} @ {poseGraph.Graph.ContentRevision}");
+            if (blendLibrary)
+                EditorGUILayout.LabelField("Blend Library Identity", $"{blendLibrary.LibraryId} @ {blendLibrary.Revision}");
+            if (rig)
+                EditorGUILayout.LabelField("Rig Identity", $"{rig.RigId} @ {rig.Revision}");
+
+            EditorGUILayout.BeginHorizontal();
+            using (new EditorGUI.DisabledScope(!poseGraph))
             {
-                if (GUILayout.Button("Open Transition Library"))
-                    OpenAsset(profile.TransitionLibrary);
+                if (GUILayout.Button("Open Pose Graph"))
+                    OpenAsset(poseGraph);
             }
+            using (new EditorGUI.DisabledScope(!blendLibrary))
+            {
+                if (GUILayout.Button("Open Blend Library"))
+                    OpenAsset(blendLibrary);
+            }
+            using (new EditorGUI.DisabledScope(!rig))
+            {
+                if (GUILayout.Button("Open Rig"))
+                    OpenAsset(rig);
+            }
+            EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(6f);
         }
 
@@ -184,8 +212,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
 
-            DrawEquipmentRequirements();
-
             m_ShowProducerBindings = EditorGUILayout.Foldout(
                 m_ShowProducerBindings,
                 $"Producer Bindings ({m_AnimationProducers.Count})",
@@ -247,7 +273,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterPresentationProducerEntry producer = producers[i];
                     if (!TryResolveTimeline(topology, producer, out CharacterAuthoringTimelineEntry source, out string trackName))
                         throw new InvalidOperationException(
-                            $"Animation producer on layer '{producer.LayerId}' no longer resolves to Timeline Track '{producer.Animation?.TrackName}'.");
+                            $"Animation producer on channel '{producer.AnimationChannelId}' no longer resolves to its Timeline Track.");
                     m_AnimationProducers.Add(producers[i]);
                     m_ProducerSources[producer.ProducerId] = source;
                     m_ProducerDisplayNames[producer.ProducerId] = $"{source.Graph.name} / {source.Timeline.Name} / {trackName}";
@@ -275,29 +301,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterAuthoringTimelineEntry source = m_ProducerSources[producer.ProducerId];
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.LabelField(m_ProducerDisplayNames[producer.ProducerId], EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("Layer", producer.LayerId);
+            EditorGUILayout.LabelField("Animation Channel", producer.AnimationChannelId.Value);
+            PoseSlotId poseSlotId = m_InspectedProjection.PoseProgram
+                .RequireSlot(producer.AnimationChannelId)
+                .PoseSlotId;
+            EditorGUILayout.LabelField("Pose Slot", poseSlotId.Value);
 
             AnimationProducerPresentationBinding binding = profile.FindProducerBinding(producer.ProducerId);
-            TransitionAssetBase currentTransition = binding?.Transition;
-            TransitionAssetBase transition = (TransitionAssetBase)EditorGUILayout.ObjectField(
-                "Animancer Transition",
-                currentTransition,
+            TransitionAssetBase currentSource = binding?.Source;
+            TransitionAssetBase sourceAsset = (TransitionAssetBase)EditorGUILayout.ObjectField(
+                "Source",
+                currentSource,
                 typeof(TransitionAssetBase),
                 false);
-            Easing.Function easing = binding?.Easing ?? Easing.Function.CubicInOut;
-            Easing.Function nextEasing = (Easing.Function)EditorGUILayout.EnumPopup("Fade Easing", easing);
-            if (transition != currentTransition || binding != null && nextEasing != easing)
+            if (sourceAsset != currentSource)
             {
                 try
                 {
-                    if (transition)
+                    if (sourceAsset)
                     {
                         CharacterAnimationPresentationAuthoringService.ConfigureProducerBinding(
                             profile,
                             context,
                             producer.ProducerId,
-                            transition,
-                            nextEasing);
+                            sourceAsset);
                     }
                     else
                     {
@@ -319,31 +346,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 OpenGraph(context, source);
             if (GUILayout.Button("Open Timeline"))
                 OpenTimeline(context, producer, source);
-            using (new EditorGUI.DisabledScope(!transition))
+            using (new EditorGUI.DisabledScope(!sourceAsset))
             {
-                if (GUILayout.Button("Open Transition"))
-                    OpenAsset(transition);
+                if (GUILayout.Button("Open Source"))
+                    OpenAsset(sourceAsset);
             }
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndVertical();
-        }
-
-        void DrawEquipmentRequirements()
-        {
-            if (m_InspectedProjection.EquipmentFeatureRequirements.Count == 0)
-                return;
-            EditorGUILayout.LabelField("Equipment Feature Requirements", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("Projection Revision", m_InspectedProjection.ProjectionRevision);
-            for (int i = 0; i < m_InspectedProjection.EquipmentFeatureRequirements.Count; i++)
-            {
-                EquipmentFeaturePresentationResolution value = m_InspectedProjection.EquipmentFeatureRequirements[i];
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                EditorGUILayout.LabelField(value.FeatureId.Value, EditorStyles.boldLabel);
-                EditorGUILayout.LabelField("Layer", $"{value.LayerId} / Animancer {value.AnimancerLayerIndex}");
-                EditorGUILayout.LabelField("Contract", $"{value.BlendMode} / {value.OutputPolicy}");
-                EditorGUILayout.LabelField("Resolved Producers", value.ProducerIds.Count == 0 ? "None" : string.Join("\n", value.ProducerIds), EditorStyles.wordWrappedLabel);
-                EditorGUILayout.EndVertical();
-            }
         }
 
         static IReadOnlyList<BaseTree> CollectCompositionRoots(CharacterPipelineDefinition definition)

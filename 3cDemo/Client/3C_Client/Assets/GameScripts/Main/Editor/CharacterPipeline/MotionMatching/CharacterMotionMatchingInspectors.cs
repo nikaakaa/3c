@@ -159,13 +159,14 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             serializedObject.Update();
             DrawPropertiesExcluding(serializedObject, "m_Script");
             serializedObject.ApplyModifiedProperties();
+            CharacterMotionMatchingDatabaseDefinition database = (CharacterMotionMatchingDatabaseDefinition)target;
+            DrawSourceSetOwners(database);
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Artifact Build Context", EditorStyles.boldLabel);
             m_Profile = (CharacterMotionMatchingProfile)EditorGUILayout.ObjectField(
                 "Motion Matching Profile", m_Profile, typeof(CharacterMotionMatchingProfile), false);
             m_AnalysisSource = (CharacterFootPlacementAnalysisSource)EditorGUILayout.ObjectField(
                 "Foot Analysis Source", m_AnalysisSource, typeof(CharacterFootPlacementAnalysisSource), false);
-            CharacterMotionMatchingDatabaseDefinition database = (CharacterMotionMatchingDatabaseDefinition)target;
             bool sourceClipsReady = MotionMatchingSourceClipInspectionGui.AreAllReady(database.SourceSets, out string sourceFailure);
             if (!sourceClipsReady)
                 EditorGUILayout.HelpBox($"Formal Build disabled: {sourceFailure}", MessageType.Error);
@@ -175,6 +176,28 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                     StartDatabaseBuild();
             }
             DrawArtifactStatus();
+        }
+
+        static void DrawSourceSetOwners(CharacterMotionMatchingDatabaseDefinition database)
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Source Set Owners", EditorStyles.boldLabel);
+            for (int i = 0; i < database.SourceSets.Count; i++)
+            {
+                CharacterMotionMatchingSourceSet sourceSet = database.SourceSets[i];
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.ObjectField($"Source Set {i + 1}", sourceSet, typeof(CharacterMotionMatchingSourceSet), false);
+                    using (new EditorGUI.DisabledScope(!sourceSet))
+                    {
+                        if (GUILayout.Button("Open Owner", GUILayout.Width(90f)))
+                        {
+                            Selection.activeObject = sourceSet;
+                            EditorGUIUtility.PingObject(sourceSet);
+                        }
+                    }
+                }
+            }
         }
 
         void DrawArtifactStatus()
@@ -210,6 +233,25 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             EditorGUILayout.LabelField("Traversal Capacity", artifact.Capacities.TraversalCapacity.ToString(CultureInfo.InvariantCulture));
             EditorGUILayout.LabelField("Top-K Capacity", artifact.Capacities.TopK.ToString(CultureInfo.InvariantCulture));
             EditorGUILayout.LabelField("Plan Capacity", artifact.Capacities.PlanSampleCount.ToString(CultureInfo.InvariantCulture));
+            MotionMatchingDatabaseCoverageDiagnosticsPayload diagnostics = artifact.CoverageDiagnostics;
+            EditorGUILayout.LabelField(
+                "Reachability",
+                $"Samples {diagnostics.ReachableSampleCount}/{diagnostics.TotalSampleCount}, Segments {diagnostics.ReachableSegmentCount}/{diagnostics.TotalSegmentCount}");
+            EditorGUILayout.LabelField(
+                "Exact Duplicates",
+                $"{diagnostics.ExactDuplicateSampleCount} samples ({diagnostics.ExactDuplicateSampleRatio:P2})");
+            EditorGUILayout.LabelField(
+                "Near Duplicates",
+                $"{diagnostics.NearDuplicatePairCount}/{diagnostics.TotalUnorderedNonExactPairCount} pairs ({diagnostics.NearDuplicatePairRatio:P2})");
+            EditorGUILayout.LabelField(
+                "Protected Contact Empty Regions",
+                $"{diagnostics.ProtectedContactEmptyRegionCount}/{diagnostics.EvaluatedNonEmptyRawProtectedContactRegionCount} ({diagnostics.ProtectedContactEmptyRegionRatio:P2})");
+            EditorGUILayout.LabelField(
+                "Candidate Upper Bound",
+                diagnostics.MaximumAdmittedCandidateSetUpperBound.ToString(CultureInfo.InvariantCulture));
+            EditorGUILayout.LabelField(
+                "Search Index Maximum Depth",
+                diagnostics.SearchIndexMaximumDepth.ToString(CultureInfo.InvariantCulture));
             for (int i = 0; i < artifact.CoverageCount; i++)
             {
                 MotionMatchingCoverageSummaryPayload coverage = artifact.GetCoverage(i);

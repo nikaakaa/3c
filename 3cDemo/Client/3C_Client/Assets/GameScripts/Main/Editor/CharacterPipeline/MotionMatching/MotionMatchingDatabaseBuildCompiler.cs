@@ -274,31 +274,109 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
 
     public sealed class MotionMatchingCoverageBuildState
     {
+        readonly struct ProtectedRegion
+        {
+            public ProtectedRegion(MotionMatchingCoverageBuildInput requirement, MotionMatchingFootContactMask mask)
+            {
+                Requirement = requirement;
+                Mask = mask;
+            }
+
+            public MotionMatchingCoverageBuildInput Requirement { get; }
+            public MotionMatchingFootContactMask Mask { get; }
+        }
+
         readonly MotionMatchingDatabaseBuildRequest m_Request;
         readonly MotionMatchingSampleBuildRecord[] m_Samples;
+        readonly MotionMatchingNormalizationBuildState m_Normalization;
+        readonly MotionMatchingSearchIndexBuildState m_Index;
         readonly MotionMatchingCoverageSummaryPayload[] m_Summaries;
-        int m_Index;
+        readonly MotionMatchingCostGroup[] m_FeatureGroups;
+        readonly bool[] m_ExactDuplicateSamples;
+        readonly ProtectedRegion[] m_ProtectedRegions;
+        readonly int[][] m_ProtectedRegionSamples;
+        readonly int m_TotalWorkUnits;
+        int m_RequirementIndex;
+        int m_LeftPairIndex;
+        int m_RightPairIndex = 1;
+        long m_ExactPairCount;
+        long m_NearPairCount;
+        int m_ProtectedRegionIndex;
+        int[] m_RegionSamples;
+        int m_RegionQueryIndex;
+        int m_RegionCandidateIndex;
+        int m_RegionCurrentAdmittedCount;
+        int m_RegionMaximumAdmittedCount;
+        int m_ProtectedEmptyRegionCount;
+        int m_EvaluatedProtectedRegionCount;
+        int m_MaximumAdmittedCandidateSetUpperBound;
+        MotionMatchingDatabaseCoverageDiagnosticsPayload m_Diagnostics;
 
-        public MotionMatchingCoverageBuildState(MotionMatchingDatabaseBuildRequest request, MotionMatchingSampleBuildRecord[] samples)
+        public MotionMatchingCoverageBuildState(
+            MotionMatchingDatabaseBuildRequest request,
+            MotionMatchingSampleBuildRecord[] samples,
+            MotionMatchingNormalizationBuildState normalization,
+            MotionMatchingSearchIndexBuildState index)
         {
             m_Request = request ?? throw new ArgumentNullException(nameof(request));
             m_Samples = samples ?? throw new ArgumentNullException(nameof(samples));
+            m_Normalization = normalization ?? throw new ArgumentNullException(nameof(normalization));
+            m_Index = index ?? throw new ArgumentNullException(nameof(index));
+            if (!normalization.IsComplete || !index.IsComplete || samples.Length == 0)
+                throw new ArgumentException("Motion Matching coverage inputs are incomplete.");
             m_Summaries = new MotionMatchingCoverageSummaryPayload[request.CoverageCount];
+            m_FeatureGroups = BuildFeatureGroups(request.FeatureSchema);
+            m_ExactDuplicateSamples = new bool[samples.Length];
+            m_ProtectedRegions = BuildProtectedRegions(request);
+            m_ProtectedRegionSamples = new int[m_ProtectedRegions.Length][];
+            long total = m_Summaries.Length + PairCountLong(samples.Length) + 1L;
+            for (int i = 0; i < m_ProtectedRegions.Length; i++)
+            {
+                int[] regionSamples = CollectRegionSamples(m_ProtectedRegions[i]);
+                m_ProtectedRegionSamples[i] = regionSamples;
+                total += regionSamples.Length == 0 ? 1L : (long)regionSamples.Length * regionSamples.Length;
+            }
+            if (total > int.MaxValue)
+                throw new InvalidOperationException("Motion Matching coverage work exceeds the supported progress capacity.");
+            m_TotalWorkUnits = (int)total;
         }
 
-        public int CompletedRequirements => m_Index;
-        public int TotalRequirements => m_Summaries.Length;
-        public bool IsComplete => m_Index == m_Summaries.Length;
+        public int CompletedWorkUnits { get; private set; }
+        public int TotalWorkUnits => m_TotalWorkUnits;
+        public bool IsComplete { get; private set; }
 
-        public void Step(int maximumRequirements)
+        public void Step(int maximumWorkUnits)
         {
-            if (maximumRequirements <= 0)
-                throw new ArgumentOutOfRangeException(nameof(maximumRequirements));
-            int end = Math.Min(m_Summaries.Length, m_Index + maximumRequirements);
-            while (m_Index < end)
+            if (maximumWorkUnits <= 0)
+                throw new ArgumentOutOfRangeException(nameof(maximumWorkUnits));
+            int remaining = maximumWorkUnits;
+            while (remaining > 0 && !IsComplete)
             {
-                m_Summaries[m_Index] = Evaluate(m_Request.GetCoverage(m_Index));
-                m_Index++;
+                if (m_RequirementIndex < m_Summaries.Length)
+                {
+                    m_Summaries[m_RequirementIndex] = Evaluate(m_Request.GetCoverage(m_RequirementIndex));
+                    m_RequirementIndex++;
+                    CompletedWorkUnits++;
+                    remaining--;
+                    continue;
+                }
+                if (m_LeftPairIndex < m_Samples.Length - 1)
+                {
+                    ProcessDuplicatePair();
+                    CompletedWorkUnits++;
+                    remaining--;
+                    continue;
+                }
+                if (m_ProtectedRegionIndex < m_ProtectedRegions.Length)
+                {
+                    ProcessProtectedRegionPair();
+                    CompletedWorkUnits++;
+                    remaining--;
+                    continue;
+                }
+                CompleteDiagnostics();
+                CompletedWorkUnits++;
+                IsComplete = true;
             }
         }
 
@@ -312,6 +390,13 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                     throw new InvalidOperationException($"Motion Matching Coverage Requirement '{m_Summaries[i].RequirementId}' is missing.");
             }
             return (MotionMatchingCoverageSummaryPayload[])m_Summaries.Clone();
+        }
+
+        public MotionMatchingDatabaseCoverageDiagnosticsPayload GetDiagnostics()
+        {
+            if (!IsComplete)
+                throw new InvalidOperationException("Motion Matching Coverage diagnostics are incomplete.");
+            return m_Diagnostics;
         }
 
         MotionMatchingCoverageSummaryPayload Evaluate(MotionMatchingCoverageBuildInput requirement)
@@ -375,6 +460,247 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             }
             return elapsed;
         }
+
+        void ProcessDuplicatePair()
+        {
+            int left = m_LeftPairIndex;
+            int right = m_RightPairIndex;
+            if (AreExactDuplicates(left, right))
+            {
+                m_ExactDuplicateSamples[left] = true;
+                m_ExactDuplicateSamples[right] = true;
+                m_ExactPairCount++;
+            }
+            else if (WeightedDistance(left, right) <= m_Request.SearchPolicy.CoverageNearDuplicateCostThreshold)
+            {
+                m_NearPairCount++;
+            }
+            m_RightPairIndex++;
+            if (m_RightPairIndex >= m_Samples.Length)
+            {
+                m_LeftPairIndex++;
+                m_RightPairIndex = m_LeftPairIndex + 1;
+            }
+        }
+
+        bool AreExactDuplicates(int left, int right)
+        {
+            int featureCount = m_Request.FeatureSchema.DenseFeatureCount;
+            for (int feature = 0; feature < featureCount; feature++)
+            {
+                if (!m_Normalization.Active[feature])
+                    continue;
+                float leftValue = m_Normalization.NormalizedFeatures[left * featureCount + feature];
+                float rightValue = m_Normalization.NormalizedFeatures[right * featureCount + feature];
+                if (BitConverter.SingleToInt32Bits(leftValue) != BitConverter.SingleToInt32Bits(rightValue))
+                    return false;
+            }
+            return true;
+        }
+
+        float WeightedDistance(int left, int right)
+        {
+            int featureCount = m_Request.FeatureSchema.DenseFeatureCount;
+            float cost = 0f;
+            for (int feature = 0; feature < featureCount; feature++)
+            {
+                if (!m_Normalization.Active[feature])
+                    continue;
+                float difference = m_Normalization.NormalizedFeatures[left * featureCount + feature] -
+                                   m_Normalization.NormalizedFeatures[right * featureCount + feature];
+                MotionMatchingCostGroup group = m_FeatureGroups[feature];
+                cost += difference * difference *
+                        m_Request.CostProfile.GetDenseFeatureWeight(feature) *
+                        m_Request.CostProfile.GetGroupWeight(group);
+            }
+            if (!float.IsFinite(cost) || cost < 0f)
+                throw new InvalidOperationException("Motion Matching near-duplicate cost is invalid.");
+            return cost;
+        }
+
+        void ProcessProtectedRegionPair()
+        {
+            ProtectedRegion region = m_ProtectedRegions[m_ProtectedRegionIndex];
+            if (m_RegionSamples == null)
+            {
+                m_RegionSamples = m_ProtectedRegionSamples[m_ProtectedRegionIndex];
+                if (m_RegionSamples.Length == 0)
+                {
+                    FinishProtectedRegion(false);
+                    return;
+                }
+                m_EvaluatedProtectedRegionCount++;
+            }
+
+            MotionMatchingSampleBuildRecord query = m_Samples[m_RegionSamples[m_RegionQueryIndex]];
+            MotionMatchingSampleBuildRecord candidate = m_Samples[m_RegionSamples[m_RegionCandidateIndex]];
+            if (PassesProtectedAdmission(region, query, candidate))
+                m_RegionCurrentAdmittedCount++;
+            m_RegionCandidateIndex++;
+            if (m_RegionCandidateIndex < m_RegionSamples.Length)
+                return;
+
+            m_RegionMaximumAdmittedCount = Math.Max(m_RegionMaximumAdmittedCount, m_RegionCurrentAdmittedCount);
+            m_RegionCurrentAdmittedCount = 0;
+            m_RegionCandidateIndex = 0;
+            m_RegionQueryIndex++;
+            if (m_RegionQueryIndex >= m_RegionSamples.Length)
+                FinishProtectedRegion(true);
+        }
+
+        int[] CollectRegionSamples(ProtectedRegion region)
+        {
+            var values = new List<int>();
+            for (int i = 0; i < m_Samples.Length; i++)
+            {
+                MotionMatchingSampleBuildRecord sample = m_Samples[i];
+                if ((sample.ContactMask & region.Mask) != region.Mask || !MatchesRequirement(sample, region.Requirement))
+                    continue;
+                values.Add(i);
+            }
+            return values.ToArray();
+        }
+
+        bool MatchesRequirement(MotionMatchingSampleBuildRecord sample, MotionMatchingCoverageBuildInput requirement)
+        {
+            if (requirement.RequireInitialization ? !sample.CanInitialize : !sample.CanJumpInto)
+                return false;
+            if (sample.EntryExcluded || sample.ExitExcluded || MeasurePlanHorizon(sample.Address.SampleIndex, requirement.MinimumPlanHorizon) + 0.00001f < requirement.MinimumPlanHorizon)
+                return false;
+            float speed = sample.RootPlanarVelocity.magnitude;
+            float facing = Mathf.Abs(sample.RootYawVelocityDegrees) * requirement.MinimumPlanHorizon;
+            return speed >= requirement.MinimumSpeed && speed <= requirement.MaximumSpeed &&
+                   facing >= requirement.MinimumFacingChangeDegrees && facing <= requirement.MaximumFacingChangeDegrees;
+        }
+
+        bool PassesProtectedAdmission(
+            ProtectedRegion region,
+            MotionMatchingSampleBuildRecord query,
+            MotionMatchingSampleBuildRecord candidate)
+        {
+            if ((candidate.ContactMask & region.Mask) != region.Mask)
+                return false;
+            float positionLimit = m_Request.SearchPolicy.ProtectedFootPositionJumpLimit;
+            float velocityLimit = m_Request.SearchPolicy.ProtectedFootVelocityJumpLimit;
+            if ((region.Mask & MotionMatchingFootContactMask.Left) != 0 &&
+                (Vector3.Distance(query.LeftFootRootPosition, candidate.LeftFootRootPosition) > positionLimit ||
+                 Vector3.Distance(query.LeftFoot.SoleLocalVelocity, candidate.LeftFoot.SoleLocalVelocity) > velocityLimit))
+                return false;
+            if ((region.Mask & MotionMatchingFootContactMask.Right) != 0 &&
+                (Vector3.Distance(query.RightFootRootPosition, candidate.RightFootRootPosition) > positionLimit ||
+                 Vector3.Distance(query.RightFoot.SoleLocalVelocity, candidate.RightFoot.SoleLocalVelocity) > velocityLimit))
+                return false;
+            return true;
+        }
+
+        void FinishProtectedRegion(bool evaluated)
+        {
+            if (evaluated)
+            {
+                if (m_RegionMaximumAdmittedCount == 0)
+                    m_ProtectedEmptyRegionCount++;
+                m_MaximumAdmittedCandidateSetUpperBound = Math.Max(
+                    m_MaximumAdmittedCandidateSetUpperBound,
+                    m_RegionMaximumAdmittedCount);
+            }
+            m_ProtectedRegionIndex++;
+            m_RegionSamples = null;
+            m_RegionQueryIndex = 0;
+            m_RegionCandidateIndex = 0;
+            m_RegionCurrentAdmittedCount = 0;
+            m_RegionMaximumAdmittedCount = 0;
+        }
+
+        void CompleteDiagnostics()
+        {
+            ComputeReachability(out int reachableSamples, out int reachableSegments);
+            int exactDuplicateSamples = 0;
+            for (int i = 0; i < m_ExactDuplicateSamples.Length; i++)
+                if (m_ExactDuplicateSamples[i])
+                    exactDuplicateSamples++;
+            long totalPairs = PairCountLong(m_Samples.Length);
+            long nonExactPairs = totalPairs - m_ExactPairCount;
+            m_Diagnostics = new MotionMatchingDatabaseCoverageDiagnosticsPayload(
+                m_Samples.Length,
+                reachableSamples,
+                m_Samples.Length - reachableSamples,
+                m_Request.SegmentCount,
+                reachableSegments,
+                m_Request.SegmentCount - reachableSegments,
+                exactDuplicateSamples,
+                Divide(exactDuplicateSamples, m_Samples.Length),
+                m_NearPairCount,
+                nonExactPairs,
+                Divide(m_NearPairCount, nonExactPairs),
+                m_ProtectedEmptyRegionCount,
+                m_EvaluatedProtectedRegionCount,
+                Divide(m_ProtectedEmptyRegionCount, m_EvaluatedProtectedRegionCount),
+                m_MaximumAdmittedCandidateSetUpperBound,
+                m_Index.MaximumDepth);
+            if (m_MaximumAdmittedCandidateSetUpperBound > m_Request.SearchPolicy.MaximumAdmittedSampleCount ||
+                m_Index.MaximumDepth > m_Request.SearchPolicy.MaximumTreeDepth)
+                throw new InvalidOperationException("Motion Matching coverage diagnostics exceed Search Policy capacities.");
+        }
+
+        void ComputeReachability(out int reachableSampleCount, out int reachableSegmentCount)
+        {
+            var reachable = new bool[m_Samples.Length];
+            var stack = new Stack<int>();
+            for (int i = 0; i < m_Samples.Length; i++)
+                if (m_Samples[i].CanInitialize)
+                    stack.Push(i);
+            while (stack.Count > 0)
+            {
+                int sampleIndex = stack.Pop();
+                if ((uint)sampleIndex >= (uint)m_Samples.Length || reachable[sampleIndex])
+                    continue;
+                reachable[sampleIndex] = true;
+                int next = m_Samples[sampleIndex].NextSampleIndex;
+                if (next >= 0)
+                    stack.Push(next);
+            }
+            var segments = new HashSet<CharacterMotionMatchingSegmentId>();
+            reachableSampleCount = 0;
+            for (int i = 0; i < reachable.Length; i++)
+            {
+                if (!reachable[i])
+                    continue;
+                reachableSampleCount++;
+                segments.Add(m_Samples[i].SegmentId);
+            }
+            reachableSegmentCount = segments.Count;
+        }
+
+        static MotionMatchingCostGroup[] BuildFeatureGroups(MotionMatchingFeatureSchemaPayload schema)
+        {
+            var groups = new MotionMatchingCostGroup[schema.DenseFeatureCount];
+            for (int rangeIndex = 0; rangeIndex < schema.FeatureRangeCount; rangeIndex++)
+            {
+                MotionMatchingFeatureRange range = schema.GetFeatureRange(rangeIndex);
+                for (int i = 0; i < range.Count; i++)
+                    groups[range.Offset + i] = range.Group;
+            }
+            return groups;
+        }
+
+        static ProtectedRegion[] BuildProtectedRegions(MotionMatchingDatabaseBuildRequest request)
+        {
+            var regions = new List<ProtectedRegion>();
+            for (int requirementIndex = 0; requirementIndex < request.CoverageCount; requirementIndex++)
+            {
+                MotionMatchingCoverageBuildInput requirement = request.GetCoverage(requirementIndex);
+                for (int contactIndex = 0; contactIndex < requirement.ContactCount; contactIndex++)
+                {
+                    MotionMatchingFootContactMask mask = requirement.GetContact(contactIndex);
+                    if (mask == MotionMatchingFootContactMask.Left || mask == MotionMatchingFootContactMask.Right || mask == MotionMatchingFootContactMask.Both)
+                        regions.Add(new ProtectedRegion(requirement, mask));
+                }
+            }
+            return regions.ToArray();
+        }
+
+        static long PairCountLong(int count) => (long)count * (count - 1) / 2;
+        static float Divide(long numerator, long denominator) => denominator == 0 ? 0f : numerator / (float)denominator;
     }
 
     public static class MotionMatchingDatabaseArtifactFactory
@@ -385,6 +711,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             MotionMatchingSegmentPayload[] segments,
             MotionMatchingNormalizationBuildState normalization,
             MotionMatchingSearchIndexBuildState index,
+            MotionMatchingDatabaseCoverageDiagnosticsPayload coverageDiagnostics,
             MotionMatchingCoverageSummaryPayload[] coverage)
         {
             if (request == null || sampleRecords == null || segments == null || normalization == null || index == null || coverage == null)
@@ -401,11 +728,11 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 request.SearchPolicy.DiagnosticDetailCapacity);
             CharacterMotionMatchingDatabaseArtifact preliminary = CreateWithHash(
                 request, StableHash.Compute("motion-matching-content-pending"), capacities,
-                segments, samples, normalization, nodes, index.GetOrderedSampleIndices(), coverage);
+                segments, samples, normalization, nodes, index.GetOrderedSampleIndices(), coverageDiagnostics, coverage);
             StableHash contentHash = CharacterMotionMatchingDatabaseArtifactCodec.ComputeContentHash(preliminary);
             return CreateWithHash(
                 request, contentHash, capacities, segments, samples, normalization,
-                nodes, index.GetOrderedSampleIndices(), coverage);
+                nodes, index.GetOrderedSampleIndices(), coverageDiagnostics, coverage);
         }
 
         static CharacterMotionMatchingDatabaseArtifact CreateWithHash(
@@ -417,6 +744,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             MotionMatchingNormalizationBuildState normalization,
             MotionMatchingSearchIndexNodePayload[] nodes,
             int[] ordered,
+            MotionMatchingDatabaseCoverageDiagnosticsPayload coverageDiagnostics,
             MotionMatchingCoverageSummaryPayload[] coverage)
         {
             CharacterMotionMatchingExpectedArtifactIdentity expected = request.ExpectedIdentity;
@@ -426,11 +754,12 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             var identity = new CharacterMotionMatchingDatabaseArtifactIdentity(
                 expected.ArtifactSchemaVersion, expected.AlgorithmVersion, expected.DatabaseId,
                 expected.DatabaseRevision, expected.FeatureSchemaId, expected.FeatureSchemaRevision,
-                expected.RigId, expected.RigRevision, dependencies, expected.OrderedDependencyHash, contentHash);
+                expected.RigId, expected.RigRevision, dependencies, expected.AnalysisInputHash,
+                expected.OrderedDependencyHash, contentHash);
             return new CharacterMotionMatchingDatabaseArtifact(
                 identity, request.Database.SearchDomainId, request.Database.SampleRate, capacities,
                 segments, samples, normalization.NormalizedFeatures, normalization.Medians,
-                normalization.Scales, normalization.Active, nodes, ordered, coverage);
+                normalization.Scales, normalization.Active, nodes, ordered, coverageDiagnostics, coverage);
         }
     }
 }

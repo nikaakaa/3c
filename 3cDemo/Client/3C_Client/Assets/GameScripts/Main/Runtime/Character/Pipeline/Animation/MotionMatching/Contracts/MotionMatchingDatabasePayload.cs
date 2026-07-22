@@ -58,13 +58,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             string rigId,
             string rigRevision,
             MotionMatchingClipDependencyIdentity[] clipDependencies,
+            StableHash analysisInputHash,
             StableHash orderedClipDependencyHash,
             StableHash contentHash)
         {
             if (artifactSchemaVersion <= 0 || string.IsNullOrWhiteSpace(analysisAlgorithmVersion) ||
                 !databaseId.IsValid || databaseRevision <= 0 || !featureSchemaId.IsValid || featureSchemaRevision <= 0 ||
                 string.IsNullOrWhiteSpace(rigId) || string.IsNullOrWhiteSpace(rigRevision) ||
-                clipDependencies == null || clipDependencies.Length == 0 || !orderedClipDependencyHash.IsValid || !contentHash.IsValid)
+                clipDependencies == null || clipDependencies.Length == 0 || !analysisInputHash.IsValid ||
+                !orderedClipDependencyHash.IsValid || !contentHash.IsValid)
                 throw new ArgumentException("Motion Matching Database Artifact identity is incomplete.");
             m_ClipDependencies = (MotionMatchingClipDependencyIdentity[])clipDependencies.Clone();
             for (int i = 1; i < m_ClipDependencies.Length; i++)
@@ -80,6 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             FeatureSchemaRevision = featureSchemaRevision;
             RigId = rigId;
             RigRevision = rigRevision;
+            AnalysisInputHash = analysisInputHash;
             OrderedClipDependencyHash = orderedClipDependencyHash;
             ContentHash = contentHash;
         }
@@ -93,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public string RigId { get; }
         public string RigRevision { get; }
         public int ClipDependencyCount => m_ClipDependencies.Length;
+        public StableHash AnalysisInputHash { get; }
         public StableHash OrderedClipDependencyHash { get; }
         public StableHash ContentHash { get; }
         public MotionMatchingClipDependencyIdentity GetClipDependency(int index) => m_ClipDependencies[index];
@@ -105,6 +109,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 !string.Equals(AnalysisAlgorithmVersion, other.AnalysisAlgorithmVersion, StringComparison.Ordinal) ||
                 !string.Equals(RigId, other.RigId, StringComparison.Ordinal) ||
                 !string.Equals(RigRevision, other.RigRevision, StringComparison.Ordinal) ||
+                !AnalysisInputHash.Equals(other.AnalysisInputHash) ||
                 !OrderedClipDependencyHash.Equals(other.OrderedClipDependencyHash) || !ContentHash.Equals(other.ContentHash))
                 return false;
             for (int i = 0; i < ClipDependencyCount; i++)

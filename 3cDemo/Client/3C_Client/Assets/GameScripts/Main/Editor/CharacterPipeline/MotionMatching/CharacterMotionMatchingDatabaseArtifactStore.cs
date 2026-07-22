@@ -20,11 +20,12 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             string rigId,
             string rigRevision,
             MotionMatchingClipDependencyIdentity[] dependencies,
+            StableHash analysisInputHash,
             StableHash orderedDependencyHash)
         {
             if (artifactSchemaVersion <= 0 || string.IsNullOrWhiteSpace(algorithmVersion) || !databaseId.IsValid || databaseRevision <= 0 ||
                 !featureSchemaId.IsValid || featureSchemaRevision <= 0 || string.IsNullOrWhiteSpace(rigId) || string.IsNullOrWhiteSpace(rigRevision) ||
-                dependencies == null || dependencies.Length == 0 || !orderedDependencyHash.IsValid)
+                dependencies == null || dependencies.Length == 0 || !analysisInputHash.IsValid || !orderedDependencyHash.IsValid)
                 throw new ArgumentException("Expected Motion Matching Artifact identity is incomplete.");
             m_Dependencies = (MotionMatchingClipDependencyIdentity[])dependencies.Clone();
             for (int i = 1; i < m_Dependencies.Length; i++)
@@ -40,6 +41,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             FeatureSchemaRevision = featureSchemaRevision;
             RigId = rigId;
             RigRevision = rigRevision;
+            AnalysisInputHash = analysisInputHash;
             OrderedDependencyHash = orderedDependencyHash;
         }
 
@@ -52,6 +54,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
         public string RigId { get; }
         public string RigRevision { get; }
         public int DependencyCount => m_Dependencies.Length;
+        public StableHash AnalysisInputHash { get; }
         public StableHash OrderedDependencyHash { get; }
         public MotionMatchingClipDependencyIdentity GetDependency(int index) => m_Dependencies[index];
 
@@ -62,6 +65,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 !DatabaseId.Equals(actual.DatabaseId) || !FeatureSchemaId.Equals(actual.FeatureSchemaId) ||
                 !string.Equals(AlgorithmVersion, actual.AnalysisAlgorithmVersion, StringComparison.Ordinal) ||
                 !string.Equals(RigId, actual.RigId, StringComparison.Ordinal) || !string.Equals(RigRevision, actual.RigRevision, StringComparison.Ordinal) ||
+                !AnalysisInputHash.Equals(actual.AnalysisInputHash) ||
                 !OrderedDependencyHash.Equals(actual.OrderedClipDependencyHash))
                 return false;
             for (int i = 0; i < DependencyCount; i++)

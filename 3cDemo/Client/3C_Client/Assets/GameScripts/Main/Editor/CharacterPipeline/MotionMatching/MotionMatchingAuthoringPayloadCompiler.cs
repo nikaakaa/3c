@@ -105,11 +105,21 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 throw new ArgumentNullException(nameof(featureSchema));
             source.RequireValid();
             var dense = new float[featureSchema.DenseFeatureCount];
-            for (int i = 0; i < dense.Length; i++)
-                dense[i] = 1f;
+            var authored = new float[Enum.GetValues(typeof(MotionMatchingCostGroup)).Length + 1];
             var groups = new float[Enum.GetValues(typeof(MotionMatchingCostGroup)).Length + 1];
             for (int i = 0; i < source.Weights.Count; i++)
-                groups[(int)source.Weights[i].Group] = source.Weights[i].Weight;
+            {
+                MotionMatchingCostGroup group = source.Weights[i].Group;
+                authored[(int)group] = source.Weights[i].Weight;
+                groups[(int)group] = IsDenseFeatureGroup(group) ? 1f : source.Weights[i].Weight;
+            }
+            for (int rangeIndex = 0; rangeIndex < featureSchema.FeatureRangeCount; rangeIndex++)
+            {
+                MotionMatchingFeatureRange range = featureSchema.GetFeatureRange(rangeIndex);
+                float weight = authored[(int)range.Group];
+                for (int featureIndex = 0; featureIndex < range.Count; featureIndex++)
+                    dense[range.Offset + featureIndex] = weight;
+            }
             return new MotionMatchingCostProfilePayload(source.CostProfileId, source.Revision, dense, groups);
         }
 
@@ -165,5 +175,13 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 default: return MotionMatchingFeatureChannel.None;
             }
         }
+
+        static bool IsDenseFeatureGroup(MotionMatchingCostGroup group) =>
+            group == MotionMatchingCostGroup.TrajectoryPosition ||
+            group == MotionMatchingCostGroup.TrajectoryFacing ||
+            group == MotionMatchingCostGroup.TrajectoryVelocity ||
+            group == MotionMatchingCostGroup.PosePosition ||
+            group == MotionMatchingCostGroup.PoseVelocity ||
+            group == MotionMatchingCostGroup.ContactSoft;
     }
 }

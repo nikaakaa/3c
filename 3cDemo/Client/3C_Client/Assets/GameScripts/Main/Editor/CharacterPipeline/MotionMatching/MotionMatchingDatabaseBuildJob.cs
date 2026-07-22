@@ -74,7 +74,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
         const int SamplesPerUpdate = 4;
         const int FeaturesPerUpdate = 4;
         const int NodesPerUpdate = 16;
-        const int RequirementsPerUpdate = 1;
+        const int CoverageWorkUnitsPerUpdate = 512;
 
         static MotionMatchingDatabaseBuildJob s_Active;
         readonly MotionMatchingDatabaseBuildRequest m_Request;
@@ -209,13 +209,13 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             m_Index.Step(NodesPerUpdate);
             if (!m_Index.IsComplete)
                 return;
-            m_Coverage = new MotionMatchingCoverageBuildState(m_Request, m_Samples);
+            m_Coverage = new MotionMatchingCoverageBuildState(m_Request, m_Samples, m_Normalization, m_Index);
             Stage = MotionMatchingDatabaseBuildStage.Coverage;
         }
 
         void RunCoverage()
         {
-            m_Coverage.Step(RequirementsPerUpdate);
+            m_Coverage.Step(CoverageWorkUnitsPerUpdate);
             if (m_Coverage.IsComplete)
                 Stage = MotionMatchingDatabaseBuildStage.Publish;
         }
@@ -227,7 +227,8 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             if (!current.InputSnapshotHash.Equals(m_Request.InputSnapshotHash))
                 throw new InvalidOperationException("Motion Matching Database dependencies changed while the Build job was running.");
             CharacterMotionMatchingDatabaseArtifact artifact = MotionMatchingDatabaseArtifactFactory.Create(
-                m_Request, m_Samples, m_Segments, m_Normalization, m_Index, m_Coverage.GetSummaries());
+                m_Request, m_Samples, m_Segments, m_Normalization, m_Index,
+                m_Coverage.GetDiagnostics(), m_Coverage.GetSummaries());
             CharacterMotionMatchingDatabaseArtifact published = CharacterMotionMatchingDatabaseArtifactStore.Publish(
                 m_Request.Database, artifact, m_Request.CandidatePath);
             Stage = MotionMatchingDatabaseBuildStage.Complete;
@@ -247,7 +248,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 case MotionMatchingDatabaseBuildStage.Index:
                     return NewProgress(m_Index?.CompletedNodes ?? 0, m_Index?.DiscoveredNodes ?? 0);
                 case MotionMatchingDatabaseBuildStage.Coverage:
-                    return NewProgress(m_Coverage?.CompletedRequirements ?? 0, m_Coverage?.TotalRequirements ?? 0);
+                    return NewProgress(m_Coverage?.CompletedWorkUnits ?? 0, m_Coverage?.TotalWorkUnits ?? 0);
                 case MotionMatchingDatabaseBuildStage.Publish:
                     return NewProgress(0, 1);
                 default:

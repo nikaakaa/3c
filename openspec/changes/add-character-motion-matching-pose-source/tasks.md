@@ -39,269 +39,269 @@
 
 ## 3. Motion Matching Profile与Authoring资产
 
-- [ ] 3.1 创建`CharacterMotionMatchingProfile`ScriptableObject。
-- [ ] 3.2 为Profile保存稳定ProfileId与Revision。
-- [ ] 3.3 为Profile添加唯一Feature Schema引用。
-- [ ] 3.4 为Profile添加唯一Trajectory Policy引用。
-- [ ] 3.5 为Profile添加唯一Cost Profile引用。
-- [ ] 3.6 为Profile添加唯一Search Policy引用。
-- [ ] 3.7 为Profile添加有序Database Definition引用。
-- [ ] 3.8 为Profile添加producer-to-SearchDomain binding。
-- [ ] 3.9 创建`CharacterMotionMatchingFeatureSchema`资产。
-- [ ] 3.10 创建`CharacterMotionMatchingTrajectoryPolicy`资产。
-- [ ] 3.11 创建`CharacterMotionMatchingCostProfile`资产。
-- [ ] 3.12 创建`CharacterMotionMatchingSearchPolicy`资产。
-- [ ] 3.13 创建`CharacterMotionMatchingDatabaseDefinition`资产。
-- [ ] 3.14 创建`CharacterMotionMatchingSegmentDefinition`序列化合同。
-- [ ] 3.15 为Segment保存稳定SourceClipId而不是路径、名称、列表index或运行时Clip对象。
-- [ ] 3.16 为Segment保存Start/End、Loop、CanInitialize与CanJumpInto。
-- [ ] 3.17 为Segment保存Entry/Exit exclusion。
-- [ ] 3.18 为Segment保存显式Continuation target或Terminal。
-- [ ] 3.19 禁止Profile、Schema和Database保存Graph State名、Action名或InputAction引用。
+- [x] 3.1 创建`CharacterMotionMatchingProfile`ScriptableObject。
+- [x] 3.2 为Profile保存稳定ProfileId与Revision。
+- [x] 3.3 为Profile添加唯一Feature Schema引用。
+- [x] 3.4 为Profile添加唯一Trajectory Policy引用。
+- [x] 3.5 为Profile添加唯一Cost Profile引用。
+- [x] 3.6 为Profile添加唯一Search Policy引用。
+- [x] 3.7 为Profile添加有序Database Definition引用。
+- [x] 3.8 为Profile添加producer-to-SearchDomain binding。
+- [x] 3.9 创建`CharacterMotionMatchingFeatureSchema`资产。
+- [x] 3.10 创建`CharacterMotionMatchingTrajectoryPolicy`资产。
+- [x] 3.11 创建`CharacterMotionMatchingCostProfile`资产。
+- [x] 3.12 创建`CharacterMotionMatchingSearchPolicy`资产。
+- [x] 3.13 创建`CharacterMotionMatchingDatabaseDefinition`资产。
+- [x] 3.14 创建`CharacterMotionMatchingSegmentDefinition`序列化合同。
+- [x] 3.15 为Segment保存稳定SourceClipId而不是路径、名称、列表index或运行时Clip对象。
+- [x] 3.16 为Segment保存Start/End、Loop、CanInitialize与CanJumpInto。
+- [x] 3.17 为Segment保存Entry/Exit exclusion。
+- [x] 3.18 为Segment保存显式Continuation target或Terminal。
+- [x] 3.19 禁止Profile、Schema和Database保存Graph State名、Action名或InputAction引用。
 - [ ] 3.20 将条件式唯一MM Profile引用加入`CharacterAnimationPresentationProfile`schema。
-- [ ] 3.21 创建`CharacterMotionMatchingSourceSet`ScriptableObject。
-- [ ] 3.22 为Source Set保存稳定SourceSetId与Revision。
-- [ ] 3.23 为Source Set保存Target Rig identity。
-- [ ] 3.24 定义`HumanoidRetargeted`与`ExactGenericRig`采样兼容模式。
-- [ ] 3.25 为Source Set保存唯一Sampling Compatibility Mode。
-- [ ] 3.26 为Source Set保存稳定Motion Root BoneId。
-- [ ] 3.27 定义`CharacterMotionMatchingSourceClipEntry`。
-- [ ] 3.28 为Source Clip保存稳定SourceClipId。
-- [ ] 3.29 为Source Clip保存AnimationClip Asset GUID与local file id。
-- [ ] 3.30 禁止Source Set保存按文件名推导的Idle、Start、Loop、Pivot或Stop角色。
-- [ ] 3.31 让Database Definition显式引用有序Source Set identity。
-- [ ] 3.32 定义Database Coverage Requirement序列化合同。
-- [ ] 3.33 为Coverage Requirement保存速度与面对变化区间。
-- [ ] 3.34 为Coverage Requirement保存Initialization与左右脚接触要求。
-- [ ] 3.35 为Coverage Requirement保存最短plan horizon。
+- [x] 3.21 创建`CharacterMotionMatchingSourceSet`ScriptableObject。
+- [x] 3.22 为Source Set保存稳定SourceSetId与Revision。
+- [x] 3.23 为Source Set保存Target Rig identity。
+- [x] 3.24 定义`HumanoidRetargeted`与`ExactGenericRig`采样兼容模式。
+- [x] 3.25 为Source Set保存唯一Sampling Compatibility Mode。
+- [x] 3.26 为Source Set保存稳定Motion Root BoneId。
+- [x] 3.27 定义`CharacterMotionMatchingSourceClipEntry`。
+- [x] 3.28 为Source Clip保存稳定SourceClipId。
+- [x] 3.29 为Source Clip保存AnimationClip Asset GUID与local file id。
+- [x] 3.30 禁止Source Set保存按文件名推导的Idle、Start、Loop、Pivot或Stop角色。
+- [x] 3.31 让Database Definition显式引用有序Source Set identity。
+- [x] 3.32 定义Database Coverage Requirement序列化合同。
+- [x] 3.33 为Coverage Requirement保存速度与面对变化区间。
+- [x] 3.34 为Coverage Requirement保存Initialization与左右脚接触要求。
+- [x] 3.35 为Coverage Requirement保存最短plan horizon。
 
 ## 4. Authoring校验与Inspector入口
 
-- [ ] 4.1 创建Profile完整identity与引用闭包校验器。
-- [ ] 4.2 校验Feature horizons有限、严格递增且包含零时刻。
-- [ ] 4.3 校验Feature BoneId唯一且存在于Rig Definition。
-- [ ] 4.4 校验Cost Profile覆盖全部启用Feature group。
-- [ ] 4.5 校验Trajectory Policy的tolerance、confidence、acceleration与turn参数有限。
+- [x] 4.1 创建Profile完整identity与引用闭包校验器。
+- [x] 4.2 校验Feature horizons有限、严格递增且包含零时刻。
+- [x] 4.3 校验Feature BoneId唯一且存在于Rig Definition。
+- [x] 4.4 校验Cost Profile覆盖全部启用Feature group。
+- [x] 4.5 校验Trajectory Policy的tolerance、confidence、acceleration与turn参数有限。
 - [x] 4.6 校验Search Policy的TopK、leaf capacity、plan horizon与固定容量合法。
-- [ ] 4.7 校验Database与Schema/Rig identity一致。
-- [ ] 4.8 校验Segment identity唯一且Clip range合法。
-- [ ] 4.9 校验Loop Segment只回到自身合法入口。
-- [ ] 4.10 校验Finite Segment拥有Continuation target或Terminal。
-- [ ] 4.11 校验Continuation target存在且Search Domain一致。
-- [ ] 4.12 校验每个Search Domain至少存在一个CanInitialize sample来源。
+- [x] 4.7 校验Database与Schema/Rig identity一致。
+- [x] 4.8 校验Segment identity唯一且Clip range合法。
+- [x] 4.9 校验Loop Segment只回到自身合法入口。
+- [x] 4.10 校验Finite Segment拥有Continuation target或Terminal。
+- [x] 4.11 校验Continuation target存在且Search Domain一致。
+- [x] 4.12 校验每个Search Domain至少存在一个CanInitialize sample来源。
 - [ ] 4.13 在Animation Presentation Profile Inspector添加MM Profile入口。
-- [ ] 4.14 在MM Profile Inspector按模块显示Schema、Policy、Database与binding。
-- [ ] 4.15 在Database Inspector显示Segment identity、范围、结束语义与Artifact状态。
-- [ ] 4.16 增加显式`Build Motion Matching Database`重操作按钮。
-- [ ] 4.17 在执行重操作前显示目标Database、Source Set、Clip数量、sample数量、Foot Artifact状态与内存上界。
-- [ ] 4.18 禁止Inspector OnGUI、OnValidate、selection与domain reload触发分析。
-- [ ] 4.19 禁止普通Character Compile隐式触发MM分析。
+- [x] 4.14 在MM Profile Inspector按模块显示Schema、Policy、Database与binding。
+- [x] 4.15 在Database Inspector显示Segment identity、范围、结束语义与Artifact状态。
+- [x] 4.16 增加显式`Build Motion Matching Database`重操作按钮。
+- [x] 4.17 在执行重操作前显示目标Database、Source Set、Clip数量、sample数量、Foot Artifact状态与内存上界。
+- [x] 4.18 禁止Inspector OnGUI、OnValidate、selection与domain reload触发分析。
+- [x] 4.19 禁止普通Character Compile隐式触发MM分析。
 - [ ] 4.20 让Product Build只显示Artifact missing/stale错误而不提供自动修复。
-- [ ] 4.21 在Database Inspector提供Source Set真实owner入口。
-- [ ] 4.22 在Source Set Inspector显示SourceClipId、GUID、local file id与解析状态。
-- [ ] 4.23 提供显式Object Picker和拖放命令登记Clip。
-- [ ] 4.24 提供显式“加入当前选择Clip”authoring命令。
-- [ ] 4.25 保证登记Clip命令只修改Source Set且不执行任何分析或Build。
-- [ ] 4.26 禁止AssetPostprocessor在FBX导入或重导入后触发Foot Analysis或MM Build。
-- [ ] 4.27 禁止Project selection change触发Sampling Rig实例化或Clip采样。
-- [ ] 4.28 轻量校验只解析GUID、local file id、Importer声明与Avatar有效性。
-- [ ] 4.29 校验SourceClipId在Source Set与Database闭包内唯一。
-- [ ] 4.30 校验Database引用的SourceClipId存在且没有orphan。
-- [ ] 4.31 校验一个Source Set只声明一种Sampling Compatibility Mode。
-- [ ] 4.32 校验全部Source Set降低到Database Target Rig identity。
-- [ ] 4.33 校验Motion Root BoneId存在于Target Rig。
-- [ ] 4.34 校验Coverage Requirement区间有限、有序且不重叠冲突。
-- [ ] 4.35 在Source Set Inspector增加显式`Build Source Set Foot Analysis`按钮。
-- [ ] 4.36 在确认框显示Analysis Source、Sampling Rig、Clip状态统计与预计sample数量。
+- [x] 4.21 在Database Inspector提供Source Set真实owner入口。
+- [x] 4.22 在Source Set Inspector显示SourceClipId、GUID、local file id与解析状态。
+- [x] 4.23 提供显式Object Picker和拖放命令登记Clip。
+- [x] 4.24 提供显式“加入当前选择Clip”authoring命令。
+- [x] 4.25 保证登记Clip命令只修改Source Set且不执行任何分析或Build。
+- [x] 4.26 禁止AssetPostprocessor在FBX导入或重导入后触发Foot Analysis或MM Build。
+- [x] 4.27 禁止Project selection change触发Sampling Rig实例化或Clip采样。
+- [x] 4.28 轻量校验只解析GUID、local file id、Importer声明与Avatar有效性。
+- [x] 4.29 校验SourceClipId在Source Set与Database闭包内唯一。
+- [x] 4.30 校验Database引用的SourceClipId存在且没有orphan。
+- [x] 4.31 校验一个Source Set只声明一种Sampling Compatibility Mode。
+- [x] 4.32 校验全部Source Set降低到Database Target Rig identity。
+- [x] 4.33 校验Motion Root BoneId存在于Target Rig。
+- [x] 4.34 校验Coverage Requirement区间有限、有序且不重叠冲突。
+- [x] 4.35 在Source Set Inspector增加显式`Build Source Set Foot Analysis`按钮。
+- [x] 4.36 在确认框显示Analysis Source、Sampling Rig、Clip状态统计与预计sample数量。
 
 ## 5. Database Artifact Identity、Codec与Store
 
-- [ ] 5.1 定义`CharacterMotionMatchingDatabaseArtifactIdentity`。
-- [ ] 5.2 在Identity中保存Artifact Schema Version。
-- [ ] 5.3 在Identity中保存Analysis Algorithm Version。
-- [ ] 5.4 在Identity中保存Database、Schema与Rig identity/revision。
-- [ ] 5.5 在Identity中保存Foot Analysis Artifact content hash。
-- [ ] 5.6 在Identity中保存有序Clip dependency hashes。
-- [ ] 5.7 在Identity中保存canonical ContentHash。
-- [ ] 5.8 定义Artifact header与section table。
-- [ ] 5.9 定义Segment与Sample canonical codec。
-- [ ] 5.10 定义dense feature与normalization canonical codec。
-- [ ] 5.11 定义continuation graph canonical codec。
-- [ ] 5.12 定义lower-bound search index canonical codec。
-- [ ] 5.13 定义runtime capacity canonical codec。
-- [ ] 5.14 定义coverage summary canonical codec。
-- [ ] 5.15 为codec拒绝未知schema version、尾随字节和非canonical排序。
-- [ ] 5.16 实现Artifact exact-byte round-trip读取路径。
-- [ ] 5.17 实现`Library/CharacterSimulation/Analysis/MotionMatching/<guid>.mmdb`路径解析。
-- [ ] 5.18 实现候选文件写入与原子替换。
-- [ ] 5.19 让写入失败保留旧文件但不伪造新identity成功。
-- [ ] 5.20 实现Artifact status的Missing、Ready、Stale与Invalid诊断。
-- [ ] 5.21 将Source Set identity与Revision加入Artifact identity。
-- [ ] 5.22 将SourceClipId、Asset GUID与local file id加入Artifact identity。
-- [ ] 5.23 将当前Clip import dependency加入Artifact identity。
-- [ ] 5.24 将Humanoid Avatar identity或Generic hierarchy signature加入Artifact identity。
-- [ ] 5.25 将Motion Root BoneId加入Artifact identity。
-- [ ] 5.26 让FBX重导入只把Artifact判为Stale而不启动重建。
+- [x] 5.1 定义`CharacterMotionMatchingDatabaseArtifactIdentity`。
+- [x] 5.2 在Identity中保存Artifact Schema Version。
+- [x] 5.3 在Identity中保存Analysis Algorithm Version。
+- [x] 5.4 在Identity中保存Database、Schema与Rig identity/revision。
+- [x] 5.5 在Identity中保存Foot Analysis Artifact content hash。
+- [x] 5.6 在Identity中保存有序Clip dependency hashes。
+- [x] 5.7 在Identity中保存canonical ContentHash。
+- [x] 5.8 定义Artifact header与section table。
+- [x] 5.9 定义Segment与Sample canonical codec。
+- [x] 5.10 定义dense feature与normalization canonical codec。
+- [x] 5.11 定义continuation graph canonical codec。
+- [x] 5.12 定义lower-bound search index canonical codec。
+- [x] 5.13 定义runtime capacity canonical codec。
+- [x] 5.14 定义coverage summary canonical codec。
+- [x] 5.15 为codec拒绝未知schema version、尾随字节和非canonical排序。
+- [x] 5.16 实现Artifact exact-byte round-trip读取路径。
+- [x] 5.17 实现`Library/CharacterSimulation/Analysis/MotionMatching/<guid>.mmdb`路径解析。
+- [x] 5.18 实现候选文件写入与原子替换。
+- [x] 5.19 让写入失败保留旧文件但不伪造新identity成功。
+- [x] 5.20 实现Artifact status的Missing、Ready、Stale与Invalid诊断。
+- [x] 5.21 将Source Set identity与Revision加入Artifact identity。
+- [x] 5.22 将SourceClipId、Asset GUID与local file id加入Artifact identity。
+- [x] 5.23 将当前Clip import dependency加入Artifact identity。
+- [x] 5.24 将Humanoid Avatar identity或Generic hierarchy signature加入Artifact identity。
+- [x] 5.25 将Motion Root BoneId加入Artifact identity。
+- [x] 5.26 让FBX重导入只把Artifact判为Stale而不启动重建。
 
 ## 6. Clip采样与Feature提取
 
-- [ ] 6.1 创建Editor-only MM Database Build Request。
-- [ ] 6.2 创建Editor-only MM Database Build Result与diagnostic。
-- [ ] 6.3 精确解析Database引用的AnimationClip资源。
-- [ ] 6.4 读取每个Clip dependency hash并纳入ordered identity。
-- [ ] 6.5 按Database固定sample rate展开每个Segment sample time。
-- [ ] 6.6 在Segment范围外拒绝sample。
-- [ ] 6.7 提取每个sample的root local translation。
-- [ ] 6.8 提取每个sample的root facing。
-- [ ] 6.9 从相邻sample计算root linear velocity。
-- [ ] 6.10 从相邻sample计算root yaw velocity。
-- [ ] 6.11 按Schema horizons提取candidate future root trajectory。
-- [ ] 6.12 按稳定BoneId提取root-relative bone position。
-- [ ] 6.13 按稳定BoneId计算bone velocity。
-- [ ] 6.14 对rotation使用最短弧和规范化Quaternion。
-- [ ] 6.15 精确解析每个Clip的Animation Foot Analysis Artifact。
-- [ ] 6.16 按sample time重采样Left Foot feature。
-- [ ] 6.17 按sample time重采样Right Foot feature。
-- [ ] 6.18 将Foot Artifact hash加入Database Artifact identity。
-- [ ] 6.19 检测非有限root、bone与foot sample。
-- [ ] 6.20 检测超过硬阈值的root discontinuity。
-- [ ] 6.21 检测Segment范围内缺失的Rig pose sample。
-- [ ] 6.22 生成每个sample的CanInitialize、CanJumpInto与exclusion metadata。
-- [ ] 6.23 生成每个sample的left/right contact mask与contact velocity metadata。
-- [ ] 6.24 保持Feature Analyzer不读取Graph、Timeline runtime、Program或Projection。
-- [ ] 6.25 创建Source Set到精确AnimationClip的Editor resolver。
-- [ ] 6.26 使用Asset GUID与local file id解析FBX内嵌Clip。
-- [ ] 6.27 为HumanoidRetargeted创建目标Sampling Rig采样adapter。
-- [ ] 6.28 校验源Clip与目标Sampling Rig均拥有有效Humanoid Avatar。
-- [ ] 6.29 从目标Sampling Rig结果提取稳定BoneId pose而非源骨架曲线。
-- [ ] 6.30 为ExactGenericRig计算所需bone hierarchy signature。
-- [ ] 6.31 校验Generic root node、bone path与hierarchy signature精确匹配。
-- [ ] 6.32 禁止Generic按骨骼名或近似层级执行retarget。
-- [ ] 6.33 从显式Motion Root BoneId采样root trajectory。
-- [ ] 6.34 将runtime pose root降低为root-locked Clip binding。
-- [ ] 6.35 禁止从脚速度、Gameplay速度或Clip名称合成root trajectory。
-- [ ] 6.36 拒绝同一Database混入不同Target Rig的采样结果。
-- [ ] 6.37 定义不可变`MotionMatchingDatabaseBuildRequest`依赖快照。
-- [ ] 6.38 创建显式`MotionMatchingDatabaseBuildJob`状态机。
-- [ ] 6.39 为Build Job定义Preflight、Sampling、Normalization、Index、Coverage、Publish阶段。
-- [ ] 6.40 Preflight发现Foot Artifact Missing或Stale时停止并指向`Build Source Set Foot Analysis`入口。
-- [ ] 6.41 禁止MM Build Job隐式调用Foot Artifact Builder。
-- [ ] 6.42 让Sampling阶段每次Editor update只处理固定sample数量。
-- [ ] 6.43 让Normalization阶段每次Editor update只处理固定feature block数量。
-- [ ] 6.44 让Index阶段每次Editor update只处理固定node工作单元。
-- [ ] 6.45 让Coverage阶段每次Editor update只处理固定requirement工作单元。
-- [ ] 6.46 保持不同切片次数下sample与计算顺序完全一致。
-- [ ] 6.47 发布Build stage、完成数、总数与当前输入identity进度。
-- [ ] 6.48 提供显式Cancel并停止后续Editor update callback。
-- [ ] 6.49 Cancel时销毁隐藏Sampling Rig与Playable资源。
-- [ ] 6.50 Cancel时删除候选文件并保留旧完整Artifact。
-- [ ] 6.51 domain reload前终止活动Build Job且不自动恢复。
-- [ ] 6.52 发布前重新解析全部依赖identity并拒绝中途变化。
-- [ ] 6.53 Build异常时统一释放Sampling Rig、Playable与候选文件。
-- [ ] 6.54 定义不可变Source Set Foot Analysis Build Request。
-- [ ] 6.55 创建Source Set Foot Analysis Build Job。
-- [ ] 6.56 按稳定SourceClipId顺序收集Missing与Stale Clip。
-- [ ] 6.57 逐Clip调用现有`AnimationFootAnalysisArtifactBuilder`。
-- [ ] 6.58 禁止Source Set Build Job实现第二个Foot Analyzer。
-- [ ] 6.59 在相邻Clip之间通过Editor update让出控制权。
-- [ ] 6.60 发布当前Clip、完成Clip数与总Clip数进度。
-- [ ] 6.61 在相邻Clip之间响应Cancel并停止后续构建。
-- [ ] 6.62 保持已完整发布的单Clip Artifact并清理未完成候选。
-- [ ] 6.63 Source Set dependency变化时停止批量Job且不继续旧请求。
-- [ ] 6.64 保持Source Set Foot Analysis不依赖Timeline producer。
+- [x] 6.1 创建Editor-only MM Database Build Request。
+- [x] 6.2 创建Editor-only MM Database Build Result与diagnostic。
+- [x] 6.3 精确解析Database引用的AnimationClip资源。
+- [x] 6.4 读取每个Clip dependency hash并纳入ordered identity。
+- [x] 6.5 按Database固定sample rate展开每个Segment sample time。
+- [x] 6.6 在Segment范围外拒绝sample。
+- [x] 6.7 提取每个sample的root local translation。
+- [x] 6.8 提取每个sample的root facing。
+- [x] 6.9 从相邻sample计算root linear velocity。
+- [x] 6.10 从相邻sample计算root yaw velocity。
+- [x] 6.11 按Schema horizons提取candidate future root trajectory。
+- [x] 6.12 按稳定BoneId提取root-relative bone position。
+- [x] 6.13 按稳定BoneId计算bone velocity。
+- [x] 6.14 对rotation使用最短弧和规范化Quaternion。
+- [x] 6.15 精确解析每个Clip的Animation Foot Analysis Artifact。
+- [x] 6.16 按sample time重采样Left Foot feature。
+- [x] 6.17 按sample time重采样Right Foot feature。
+- [x] 6.18 将Foot Artifact hash加入Database Artifact identity。
+- [x] 6.19 检测非有限root、bone与foot sample。
+- [x] 6.20 检测超过硬阈值的root discontinuity。
+- [x] 6.21 检测Segment范围内缺失的Rig pose sample。
+- [x] 6.22 生成每个sample的CanInitialize、CanJumpInto与exclusion metadata。
+- [x] 6.23 生成每个sample的left/right contact mask与contact velocity metadata。
+- [x] 6.24 保持Feature Analyzer不读取Graph、Timeline runtime、Program或Projection。
+- [x] 6.25 创建Source Set到精确AnimationClip的Editor resolver。
+- [x] 6.26 使用Asset GUID与local file id解析FBX内嵌Clip。
+- [x] 6.27 为HumanoidRetargeted创建目标Sampling Rig采样adapter。
+- [x] 6.28 校验源Clip与目标Sampling Rig均拥有有效Humanoid Avatar。
+- [x] 6.29 从目标Sampling Rig结果提取稳定BoneId pose而非源骨架曲线。
+- [x] 6.30 为ExactGenericRig计算所需bone hierarchy signature。
+- [x] 6.31 校验Generic root node、bone path与hierarchy signature精确匹配。
+- [x] 6.32 禁止Generic按骨骼名或近似层级执行retarget。
+- [x] 6.33 从显式Motion Root BoneId采样root trajectory。
+- [x] 6.34 将runtime pose root降低为root-locked Clip binding。
+- [x] 6.35 禁止从脚速度、Gameplay速度或Clip名称合成root trajectory。
+- [x] 6.36 拒绝同一Database混入不同Target Rig的采样结果。
+- [x] 6.37 定义不可变`MotionMatchingDatabaseBuildRequest`依赖快照。
+- [x] 6.38 创建显式`MotionMatchingDatabaseBuildJob`状态机。
+- [x] 6.39 为Build Job定义Preflight、Sampling、Normalization、Index、Coverage、Publish阶段。
+- [x] 6.40 Preflight发现Foot Artifact Missing或Stale时停止并指向`Build Source Set Foot Analysis`入口。
+- [x] 6.41 禁止MM Build Job隐式调用Foot Artifact Builder。
+- [x] 6.42 让Sampling阶段每次Editor update只处理固定sample数量。
+- [x] 6.43 让Normalization阶段每次Editor update只处理固定feature block数量。
+- [x] 6.44 让Index阶段每次Editor update只处理固定node工作单元。
+- [x] 6.45 让Coverage阶段每次Editor update只处理固定requirement工作单元。
+- [x] 6.46 保持不同切片次数下sample与计算顺序完全一致。
+- [x] 6.47 发布Build stage、完成数、总数与当前输入identity进度。
+- [x] 6.48 提供显式Cancel并停止后续Editor update callback。
+- [x] 6.49 Cancel时销毁隐藏Sampling Rig与Playable资源。
+- [x] 6.50 Cancel时删除候选文件并保留旧完整Artifact。
+- [x] 6.51 domain reload前终止活动Build Job且不自动恢复。
+- [x] 6.52 发布前重新解析全部依赖identity并拒绝中途变化。
+- [x] 6.53 Build异常时统一释放Sampling Rig、Playable与候选文件。
+- [x] 6.54 定义不可变Source Set Foot Analysis Build Request。
+- [x] 6.55 创建Source Set Foot Analysis Build Job。
+- [x] 6.56 按稳定SourceClipId顺序收集Missing与Stale Clip。
+- [x] 6.57 逐Clip调用现有`AnimationFootAnalysisArtifactBuilder`。
+- [x] 6.58 禁止Source Set Build Job实现第二个Foot Analyzer。
+- [x] 6.59 在相邻Clip之间通过Editor update让出控制权。
+- [x] 6.60 发布当前Clip、完成Clip数与总Clip数进度。
+- [x] 6.61 在相邻Clip之间响应Cancel并停止后续构建。
+- [x] 6.62 保持已完整发布的单Clip Artifact并清理未完成候选。
+- [x] 6.63 Source Set dependency变化时停止批量Job且不继续旧请求。
+- [x] 6.64 保持Source Set Foot Analysis不依赖Timeline producer。
 
 ## 7. Normalization、Continuation与Coverage编译
 
-- [ ] 7.1 为每个dense feature channel计算中位数。
-- [ ] 7.2 为每个dense feature channel计算稳健尺度。
-- [ ] 7.3 将零尺度constant channel显式标记为不参与distance。
-- [ ] 7.4 拒绝非有限normalization值。
-- [ ] 7.5 将Cost Profile编译为dense feature weight buffer。
-- [ ] 7.6 校验dense weight长度与Feature layout精确一致。
-- [ ] 7.7 为普通Segment sample建立next sample link。
-- [ ] 7.8 为Loop Segment末端建立显式回绕link。
-- [ ] 7.9 为Finite Segment末端解析显式Continuation target入口。
-- [ ] 7.10 为Terminal Segment标记无后继语义。
-- [ ] 7.11 检测continuation graph悬空SampleId。
-- [ ] 7.12 检测unreachable Segment。
-- [ ] 7.13 统计每Search Domain的sample数量。
-- [ ] 7.14 统计velocity、facing与contact coverage区间。
-- [ ] 7.15 检测没有Initialization入口的coverage区间。
-- [ ] 7.16 检测无法覆盖Plan horizon的candidate区域。
-- [ ] 7.17 检测protected contact可能导致的空候选区域。
-- [ ] 7.18 统计duplicate与near-duplicate sample密度。
+- [x] 7.1 为每个dense feature channel计算中位数。
+- [x] 7.2 为每个dense feature channel计算稳健尺度。
+- [x] 7.3 将零尺度constant channel显式标记为不参与distance。
+- [x] 7.4 拒绝非有限normalization值。
+- [x] 7.5 将Cost Profile编译为dense feature weight buffer。
+- [x] 7.6 校验dense weight长度与Feature layout精确一致。
+- [x] 7.7 为普通Segment sample建立next sample link。
+- [x] 7.8 为Loop Segment末端建立显式回绕link。
+- [x] 7.9 为Finite Segment末端解析显式Continuation target入口。
+- [x] 7.10 为Terminal Segment标记无后继语义。
+- [x] 7.11 检测continuation graph悬空SampleId。
+- [x] 7.12 检测unreachable Segment。
+- [x] 7.13 统计每Search Domain的sample数量。
+- [x] 7.14 统计velocity、facing与contact coverage区间。
+- [x] 7.15 检测没有Initialization入口的coverage区间。
+- [x] 7.16 检测无法覆盖Plan horizon的candidate区域。
+- [x] 7.17 检测protected contact可能导致的空候选区域。
+- [x] 7.18 统计duplicate与near-duplicate sample密度。
 - [x] 7.18a 将有限且大于0的`CoverageNearDuplicateCostThreshold`编译进唯一Search Policy Runtime payload。
-- [ ] 7.19 统计每Domain最大admitted candidate上界。
-- [ ] 7.20 将coverage summary写入Artifact只读section。
-- [ ] 7.21 将每项Coverage Requirement降低为固定coverage region。
-- [ ] 7.22 从真实root sample统计速度coverage。
-- [ ] 7.23 从真实root sample统计面对变化coverage。
-- [ ] 7.24 从Segment资格统计Initialization coverage。
-- [ ] 7.25 从Foot Artifact统计左右脚接触组合coverage。
-- [ ] 7.26 从Continuation Graph统计最短plan horizon coverage。
-- [ ] 7.27 为每项Requirement生成Satisfied或Missing证明。
-- [ ] 7.28 任一正式Requirement为Missing时拒绝发布新Artifact。
-- [ ] 7.29 在Build失败时保持旧完整Artifact但不把它标为当前Ready。
-- [ ] 7.30 禁止自动镜像、复制Segment或借用其它Database补Coverage。
+- [x] 7.19 统计每Domain最大admitted candidate上界。
+- [x] 7.20 将coverage summary写入Artifact只读section。
+- [x] 7.21 将每项Coverage Requirement降低为固定coverage region。
+- [x] 7.22 从真实root sample统计速度coverage。
+- [x] 7.23 从真实root sample统计面对变化coverage。
+- [x] 7.24 从Segment资格统计Initialization coverage。
+- [x] 7.25 从Foot Artifact统计左右脚接触组合coverage。
+- [x] 7.26 从Continuation Graph统计最短plan horizon coverage。
+- [x] 7.27 为每项Requirement生成Satisfied或Missing证明。
+- [x] 7.28 任一正式Requirement为Missing时拒绝发布新Artifact。
+- [x] 7.29 在Build失败时保持旧完整Artifact但不把它标为当前Ready。
+- [x] 7.30 禁止自动镜像、复制Segment或借用其它Database补Coverage。
 
 ## 8. 精确Lower-Bound Search Index编译
 
-- [ ] 8.1 定义stable Search Index Node identity。
-- [ ] 8.2 定义叶节点SampleId有序范围。
-- [ ] 8.3 定义节点Search Domain metadata summary。
-- [ ] 8.4 定义节点left/right contact metadata summary。
-- [ ] 8.5 定义节点可剪枝feature min/max bounds。
-- [ ] 8.6 以stable SampleId顺序构建初始样本集。
-- [ ] 8.7 使用固定规则递归构建平衡层级树。
-- [ ] 8.8 以Search Policy leaf capacity结束分裂。
-- [ ] 8.9 为每个内部节点计算保守feature bounds。
-- [ ] 8.10 验证任一child bounds不超出parent bounds。
-- [ ] 8.11 验证所有admitted SampleId在树中精确出现一次。
-- [ ] 8.12 计算并保存最大tree depth与workspace capacity。
-- [ ] 8.13 拒绝超过Search Policy maximum admitted sample count的Domain。
-- [ ] 8.14 将index section纳入Artifact ContentHash。
+- [x] 8.1 定义stable Search Index Node identity。
+- [x] 8.2 定义叶节点SampleId有序范围。
+- [x] 8.3 定义节点Search Domain metadata summary。
+- [x] 8.4 定义节点left/right contact metadata summary。
+- [x] 8.5 定义节点可剪枝feature min/max bounds。
+- [x] 8.6 以stable SampleId顺序构建初始样本集。
+- [x] 8.7 使用固定规则递归构建平衡层级树。
+- [x] 8.8 以Search Policy leaf capacity结束分裂。
+- [x] 8.9 为每个内部节点计算保守feature bounds。
+- [x] 8.10 验证任一child bounds不超出parent bounds。
+- [x] 8.11 验证所有admitted SampleId在树中精确出现一次。
+- [x] 8.12 计算并保存最大tree depth与workspace capacity。
+- [x] 8.13 拒绝超过Search Policy maximum admitted sample count的Domain。
+- [x] 8.14 将index section纳入Artifact ContentHash。
 
 ## 9. Projection Compiler与Payload
 
-- [ ] 9.1 定义`MotionMatchingProjectionPayload`Runtime schema。
-- [ ] 9.2 在Payload保存Profile identity与revision。
-- [ ] 9.3 在Payload保存编译Feature Schema。
-- [ ] 9.4 在Payload保存编译Trajectory Policy。
-- [ ] 9.5 在Payload保存编译Cost Profile。
-- [ ] 9.6 在Payload保存编译Search Policy。
-- [ ] 9.7 在Payload保存producer-to-SearchDomain binding。
-- [ ] 9.8 在Payload保存全部Database Artifact identity。
-- [ ] 9.9 在Payload保存Segment、Sample与continuation数据。
-- [ ] 9.10 在Payload保存normalization与lower-bound index。
-- [ ] 9.11 在Payload保存Clip resource binding。
-- [ ] 9.12 在Payload保存history、candidate、Top-K与plan容量。
+- [x] 9.1 定义`MotionMatchingProjectionPayload`Runtime schema。
+- [x] 9.2 在Payload保存Profile identity与revision。
+- [x] 9.3 在Payload保存编译Feature Schema。
+- [x] 9.4 在Payload保存编译Trajectory Policy。
+- [x] 9.5 在Payload保存编译Cost Profile。
+- [x] 9.6 在Payload保存编译Search Policy。
+- [x] 9.7 在Payload保存producer-to-SearchDomain binding。
+- [x] 9.8 在Payload保存全部Database Artifact identity。
+- [x] 9.9 在Payload保存Segment、Sample与continuation数据。
+- [x] 9.10 在Payload保存normalization与lower-bound index。
+- [x] 9.11 在Payload保存Clip resource binding。
+- [x] 9.12 在Payload保存history、candidate、Top-K与plan容量。
 - [ ] 9.13 扩展Projection Compiler仅在producer声明MM Pose Source时解析唯一MM Profile。
-- [ ] 9.14 扩展Projection Compiler精确解析每个`.mmdb`。
-- [ ] 9.15 让Projection Compiler拒绝Missing、Stale与Invalid Artifact。
+- [x] 9.14 扩展Projection Compiler精确解析每个`.mmdb`。
+- [x] 9.15 让Projection Compiler拒绝Missing、Stale与Invalid Artifact。
 - [ ] 9.16 将MM Artifact identity/content加入ProjectionRevision。
-- [ ] 9.17 保持Projection payload不包含Numeric ProgramHash、ABI或State地址。
-- [ ] 9.18 扩展Projection Runtime校验全部MM identity与dense长度。
+- [x] 9.17 保持Projection payload不包含Numeric ProgramHash、ABI或State地址。
+- [x] 9.18 扩展Projection Runtime校验全部MM identity与dense长度。
 - [ ] 9.19 扩展Projection Asset序列化新的MM payload。
 - [ ] 9.20 让无MM producer的Projection保持无MM payload的正式语义，不引入新旧schema双读或兼容分支。
 
 ## 10. Runtime Database与Workspace
 
-- [ ] 10.1 创建只读`CharacterMotionMatchingRuntimeDatabase`。
-- [ ] 10.2 在构造时校验Profile、Schema、Database与Rig identity。
-- [ ] 10.3 在构造时解析dense feature layout。
-- [ ] 10.4 在构造时解析Search Domain到sample range。
-- [ ] 10.5 在构造时解析Segment与continuation graph。
+- [x] 10.1 创建只读`CharacterMotionMatchingRuntimeDatabase`。
+- [x] 10.2 在构造时校验Profile、Schema、Database与Rig identity。
+- [x] 10.3 在构造时解析dense feature layout。
+- [x] 10.4 在构造时解析Search Domain到sample range。
+- [x] 10.5 在构造时解析Segment与continuation graph。
 - [x] 10.5a 让Database payload只沿Sample的`ClipBindingIndex`解析唯一SourceClipId，并校验它与所属Segment完全一致。
-- [ ] 10.6 在构造时解析lower-bound tree。
-- [ ] 10.7 在构造时解析Clip binding index。
-- [ ] 10.8 预分配tree traversal workspace。
-- [ ] 10.9 预分配admission bitset与reject workspace。
-- [ ] 10.10 预分配exact Top-K workspace。
-- [ ] 10.11 预分配short-horizon plan workspace。
-- [ ] 10.12 预分配query feature与cost component buffer。
-- [ ] 10.13 预分配可选diagnostic detail buffer。
-- [ ] 10.14 禁止Runtime Database访问AssetDatabase、Library文件或authoring对象。
-- [ ] 10.15 实现明确Dispose顺序并释放全部Native资源。
+- [x] 10.6 在构造时解析lower-bound tree。
+- [x] 10.7 在构造时解析Clip binding index。
+- [x] 10.8 预分配tree traversal workspace。
+- [x] 10.9 预分配admission bitset与reject workspace。
+- [x] 10.10 预分配exact Top-K workspace。
+- [x] 10.11 预分配short-horizon plan workspace。
+- [x] 10.12 预分配query feature与cost component buffer。
+- [x] 10.13 预分配可选diagnostic detail buffer。
+- [x] 10.14 禁止Runtime Database访问AssetDatabase、Library文件或authoring对象。
+- [x] 10.15 实现明确Dispose顺序并释放全部Native资源。
 
 ## 11. Accepted Intent与Trajectory Source端口
 
@@ -411,33 +411,33 @@
 
 ## 15. 精确Top-K Search与Short-Horizon Plan
 
-- [ ] 15.1 创建固定容量lower-bound tree traversal实现。
-- [ ] 15.2 为query计算root node lower bound。
-- [ ] 15.3 按stable child order推进tree traversal。
-- [ ] 15.4 用Domain/contact summary提前排除不可能节点。
-- [ ] 15.5 计算节点可剪枝feature lower bound。
-- [ ] 15.6 当lower bound高于Top-K阈值时安全剪枝节点。
-- [ ] 15.7 在叶节点逐sample执行完整admission。
-- [ ] 15.8 对admitted leaf sample执行完整exact cost。
-- [ ] 15.9 实现固定容量Top-K有序结构。
+- [x] 15.1 创建固定容量lower-bound tree traversal实现。
+- [x] 15.2 为query计算root node lower bound。
+- [x] 15.3 按stable child order推进tree traversal。
+- [x] 15.4 用Domain/contact summary提前排除不可能节点。
+- [x] 15.5 计算节点可剪枝feature lower bound。
+- [x] 15.6 当lower bound高于Top-K阈值时安全剪枝节点。
+- [x] 15.7 在叶节点逐sample执行完整admission。
+- [x] 15.8 对admitted leaf sample执行完整exact cost。
+- [x] 15.9 实现固定容量Top-K有序结构。
 - [x] 15.9a 在Build Request preflight拒绝estimated sample count小于Search Policy TopK。
 - [x] 15.9b 让Database Compiler把runtime Top-K capacity精确编译为Search Policy TopK并禁止使用`Math.Min`降容量。
-- [ ] 15.10 保持Top-K按cost与SampleId稳定排序。
-- [ ] 15.11 记录node visited、node pruned与exact sample count。
-- [ ] 15.12 禁止按wall-clock deadline提前退出。
-- [ ] 15.13 创建`MotionMatchingPlanEvaluator`。
-- [ ] 15.14 从Top-K每个candidate读取continuation graph cursor。
-- [ ] 15.15 按固定plan sample count推进horizon。
-- [ ] 15.16 累计trajectory position horizon cost。
-- [ ] 15.17 累计trajectory facing horizon cost。
-- [ ] 15.18 累计contact hold/release horizon cost。
-- [ ] 15.19 累计segment end与continuation cost。
-- [ ] 15.20 累计速度与yaw变化cost。
-- [ ] 15.21 计算下一次mandatory search time。
-- [ ] 15.22 拒绝无法合法完成horizon的plan。
-- [ ] 15.23 生成`MotionMatchingSelectionPlan`不可变结果。
-- [ ] 15.24 按TotalCost与stable SampleId选择winner。
-- [ ] 15.25 在无合法plan时发布typed Invalid。
+- [x] 15.10 保持Top-K按cost与SampleId稳定排序。
+- [x] 15.11 记录node visited、node pruned与exact sample count。
+- [x] 15.12 禁止按wall-clock deadline提前退出。
+- [x] 15.13 创建`MotionMatchingPlanEvaluator`。
+- [x] 15.14 从Top-K每个candidate读取continuation graph cursor。
+- [x] 15.15 按固定plan sample count推进horizon。
+- [x] 15.16 累计trajectory position horizon cost。
+- [x] 15.17 累计trajectory facing horizon cost。
+- [x] 15.18 累计contact hold/release horizon cost。
+- [x] 15.19 累计segment end与continuation cost。
+- [x] 15.20 累计速度与yaw变化cost。
+- [x] 15.21 计算下一次mandatory search time。
+- [x] 15.22 拒绝无法合法完成horizon的plan。
+- [x] 15.23 生成`MotionMatchingSelectionPlan`不可变结果。
+- [x] 15.24 按TotalCost与stable SampleId选择winner。
+- [x] 15.25 在无合法plan时发布typed Invalid。
 
 ## 16. Selection Lifecycle与Search Cadence
 

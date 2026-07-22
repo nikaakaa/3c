@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -23,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline
 		bool m_DiagnosticsRegistered;
 		bool m_AnimationDiagnosticsRegistered;
 		bool m_PresentationRegistered;
+		ulong m_TrajectoryIntentSequence;
 		bool m_Disposed;
 
 		public CharacterSimulationActorRegistration(
@@ -186,6 +188,14 @@ namespace ThirdPersonCharacter.Pipeline
 				throw new ArgumentException("Published Presentation result targets another Actor.", nameof(result));
 			PresentationRuntime.CaptureBodyInterval(
 				CharacterPresentationBodyInterval.FromFloat32(result.BodySample));
+			if (PresentationRuntime.AcceptsTrajectoryIntent)
+			{
+				PresentationRuntime.CaptureTrajectoryIntent(
+					CharacterPresentationTrajectoryIntent.FromFloat32(
+						result,
+						checked(++m_TrajectoryIntentSequence),
+						PresentationRuntime.BodyResetSequence));
+			}
 			if (!result.State.TryGetEquipmentState(out EquipmentStateAggregate equipment))
 				return;
 			m_EquipmentVisualSelections.Clear();

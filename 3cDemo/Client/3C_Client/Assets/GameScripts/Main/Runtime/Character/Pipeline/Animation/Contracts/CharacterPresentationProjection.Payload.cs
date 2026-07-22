@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -11,12 +12,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationBlendCurveCatalogPayload m_BlendCurveCatalog;
         [SerializeField] AnimationBlendProfileCatalogPayload m_BlendProfileCatalog;
         [SerializeField] CharacterAnimationRigPayload m_Rig;
+        [NonSerialized] MotionMatchingProjectionPayload m_MotionMatching;
+        [SerializeField] byte[] m_MotionMatchingPayload = Array.Empty<byte>();
+        [SerializeField] UnityEngine.AnimationClip[] m_MotionMatchingClips = Array.Empty<UnityEngine.AnimationClip>();
 
         public CharacterPresentationPoseProgram PoseProgram => m_PoseProgram;
         public IReadOnlyList<AnimationBlendSlotPayload> BlendSlots => m_BlendSlots ?? Array.Empty<AnimationBlendSlotPayload>();
         public AnimationBlendCurveCatalogPayload BlendCurveCatalog => m_BlendCurveCatalog;
         public AnimationBlendProfileCatalogPayload BlendProfileCatalog => m_BlendProfileCatalog;
         public CharacterAnimationRigPayload Rig => m_Rig;
+        public MotionMatchingProjectionPayload MotionMatching => m_MotionMatching;
+
+        public void OnBeforeSerialize()
+        {
+            m_MotionMatchingPayload = MotionMatchingProjectionPayloadCodec.Encode(
+                m_MotionMatching,
+                out m_MotionMatchingClips);
+        }
+
+        public void OnAfterDeserialize()
+        {
+            m_MotionMatching = MotionMatchingProjectionPayloadCodec.Decode(
+                m_MotionMatchingPayload,
+                m_MotionMatchingClips);
+        }
 
         public AnimationBlendSlotPayload RequireBlendSlot(PoseSlotId poseSlotId)
         {
@@ -40,6 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationBlendCurveCatalogPayload blendCurveCatalog,
             AnimationBlendProfileCatalogPayload blendProfileCatalog,
             CharacterAnimationRigPayload rig,
+            MotionMatchingProjectionPayload motionMatching,
             CharacterPresentationProducerEntry[] producers,
             AnimationFootAnalysisProjectionIdentity footAnalysis,
             string projectionRevision,
@@ -58,6 +78,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_BlendCurveCatalog = blendCurveCatalog ?? throw new ArgumentNullException(nameof(blendCurveCatalog)),
                 m_BlendProfileCatalog = blendProfileCatalog ?? throw new ArgumentNullException(nameof(blendProfileCatalog)),
                 m_Rig = rig ?? throw new ArgumentNullException(nameof(rig)),
+                m_MotionMatching = motionMatching,
                 m_Producers = producers ?? Array.Empty<CharacterPresentationProducerEntry>(),
                 m_FootAnalysis = footAnalysis
             };
@@ -103,6 +124,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         throw new InvalidOperationException($"Character Presentation Projection Pose Slot '{slot.PoseSlotId}' transition #{transitionIndex} is missing.");
                     transition.RequireValid(BlendCurveCatalog.Entries.Count, BlendProfileCatalog.Entries.Count);
                 }
+            }
+            RequireMotionMatchingPayload();
+        }
+
+        void RequireMotionMatchingPayload()
+        {
+            var motionMatchingProducers = new Dictionary<string, CharacterPresentationProducerEntry>(StringComparer.Ordinal);
+            for (int i = 0; i < Producers.Count; i++)
+            {
+                CharacterPresentationProducerEntry producer = Producers[i];
+                if (producer.Kind != CharacterPresentationProducerKind.Animation ||
+                    producer.AnimationSourceKind != AnimationPoseSourceKind.MotionMatching)
+                    continue;
+                if (!motionMatchingProducers.TryAdd(producer.ProgramProducerIdentity, producer))
+                    throw new InvalidOperationException($"Motion Matching producer '{producer.ProgramProducerIdentity}' is duplicated.");
+            }
+            if (motionMatchingProducers.Count == 0)
+            {
+                if (m_MotionMatching != null)
+                    throw new InvalidOperationException("Projection has a Motion Matching payload without Motion Matching producers.");
+                return;
+            }
+            if (m_MotionMatching == null)
+                throw new InvalidOperationException("Projection Motion Matching producers require a Motion Matching payload.");
+            if (m_MotionMatching.ProducerBindingCount != motionMatchingProducers.Count)
+                throw new InvalidOperationException("Projection Motion Matching payload producer count does not match producer declarations.");
+            var resolved = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < m_MotionMatching.ProducerBindingCount; i++)
+            {
+                MotionMatchingProducerBindingPayload binding = m_MotionMatching.GetProducerBinding(i);
+                if (!motionMatchingProducers.TryGetValue(binding.ProgramProducerId, out CharacterPresentationProducerEntry producer) ||
+                    !resolved.Add(binding.ProgramProducerId) ||
+                    producer.AnimationChannelId != binding.AnimationChannelId ||
+                    PoseProgram.RequireSlot(binding.AnimationChannelId).PoseSlotId != binding.PoseSlotId)
+                    throw new InvalidOperationException($"Motion Matching payload producer binding #{i} does not resolve uniquely to its declared producer, channel and Pose Slot.");
             }
         }
     }

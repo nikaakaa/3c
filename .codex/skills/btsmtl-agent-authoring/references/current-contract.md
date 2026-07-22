@@ -76,6 +76,7 @@ CharacterController Snapshot的`presentation`只读投影固定包含Profile、P
 | `move_timeline_clip` | 按 Timeline、Track、Clip stable identity 平移现有 Clip；MotionCurve 同步平移绝对 CurveEndFrame，并重算 Track overlap mix |
 | `configure_timeline_clip_ease` | 按 Timeline、Track、Clip stable identity 原子配置 `SelfEaseInFrame` 与 `SelfEaseOutFrame`；拒绝负数、超出 Duration 或与 overlap 冲突的值 |
 | `configure_timeline_curve_channel` | 按 Timeline、Track、Clip stable identity与registered ChannelId原子替换完整curve；保留pre/post wrap及全部Keyframe字段，拒绝未知channel、owner不匹配、字段名目标、缺key、无序或领域校验失败 |
+| `configure_animation_track_channel` | 按Timeline与AnimationTrack stable identity原子替换非空`AnimationChannelId`；handler只调用`AnimationTrack.SetAnimationChannelId`，不联动PoseSlot、Pose Graph或Profile |
 | `configure_animation_track_marker_sync` | 按Timeline与AnimationTrack stable identity原子配置None或MarkerGroup；MarkerGroup显式携带CanBeLeader、AlwaysLeader或AlwaysFollower，None清空group、topology、role与markers |
 | `ensure_animation_sync_marker` | 按Timeline、Track与Marker stable identity创建或幂等确认MarkerId和整数frame |
 | `move_animation_sync_marker` | 按Marker stable identity移动到整数frame，不按列表index定位 |

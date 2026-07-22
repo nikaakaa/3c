@@ -58,6 +58,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public string MovementModeId { get; }
         public ulong ResetSequence { get; }
 
+        public static CharacterPresentationTrajectoryIntent FromFloat32(
+            SimulationActorTickResult result,
+            ulong sourceSequence,
+            ulong resetSequence)
+        {
+            if (result == null)
+                throw new ArgumentNullException(nameof(result));
+            Float32Vector3 velocity = result.Motion.RequestedVelocity;
+            Quaternion rotation = Quaternion.Euler(0f, result.BodySample.FinalBody.Yaw.Degrees.ToSingle(), 0f);
+            Vector3 forward = rotation * Vector3.forward;
+            return new CharacterPresentationTrajectoryIntent(
+                result.ActorId,
+                result.Tick.Value > 1 ? new SimulationTick(result.Tick.Value - 1) : default,
+                result.Tick,
+                sourceSequence,
+                new Vector2(velocity.X.ToSingle(), velocity.Z.ToSingle()),
+                new Vector2(forward.x, forward.z),
+                float.MaxValue,
+                float.MaxValue,
+                result.BodySample.FinalBody.Grounded,
+                result.Motion.SourceIdentity,
+                resetSequence);
+        }
+
         static bool IsFinite(Vector2 value) => float.IsFinite(value.x) && float.IsFinite(value.y);
     }
 
@@ -89,7 +113,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 !IsFinite(desiredFacing) || desiredFacing.sqrMagnitude <= 0f ||
                 !float.IsFinite(acceptedAcceleration) || acceptedAcceleration < 0f ||
                 !float.IsFinite(acceptedTurnRateDegrees) || acceptedTurnRateDegrees < 0f ||
-                !float.IsFinite(sampleAge) || sampleAge < 0f || string.IsNullOrWhiteSpace(movementModeId))
+                !float.IsFinite(sampleAge) || sampleAge < 0f ||
+                kind == MotionMatchingTrajectorySourceKind.AcceptedIntent && string.IsNullOrWhiteSpace(movementModeId))
                 throw new ArgumentException("Motion Matching Trajectory Source Frame is incomplete.");
             Identity = identity;
             Kind = kind;
@@ -233,7 +258,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             Vector2 planarVelocity,
             float yawVelocityDegrees,
             bool grounded,
-            string movementModeId,
             float sampleAge,
             ulong resetSequence)
         {
@@ -255,7 +279,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 0f,
                 0f,
                 grounded,
-                movementModeId,
+                string.Empty,
                 sampleAge,
                 resetSequence);
             m_HasFrame = true;

@@ -12,6 +12,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public string TimelineAuthoringId { get; }
         public string TrackAuthoringId { get; }
+        public string ProgramProducerIdentity => IsValid
+            ? $"producer:{TimelineAuthoringId}:{TrackAuthoringId}"
+            : string.Empty;
         public bool IsValid => !string.IsNullOrEmpty(TimelineAuthoringId) &&
                                !string.IsNullOrEmpty(TrackAuthoringId);
 

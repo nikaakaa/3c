@@ -6,20 +6,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 {
     public readonly struct MotionMatchingBasePoseContinuityIdentity : IEquatable<MotionMatchingBasePoseContinuityIdentity>
     {
-        public MotionMatchingBasePoseContinuityIdentity(AnimationPlaybackId playbackId, MotionMatchingSelectionGeneration selectionGeneration)
+        public MotionMatchingBasePoseContinuityIdentity(
+            AnimationPlaybackId playbackId,
+            MotionMatchingSelectionGeneration selectionGeneration,
+            CharacterMotionMatchingDatabaseArtifactIdentity databaseIdentity)
         {
-            if (!playbackId.IsValid || !selectionGeneration.IsValid)
+            if (!playbackId.IsValid || !selectionGeneration.IsValid || databaseIdentity == null)
                 throw new ArgumentException("Motion Matching Base Pose continuity identity is invalid.");
             PlaybackId = playbackId;
             SelectionGeneration = selectionGeneration;
+            DatabaseIdentity = databaseIdentity;
         }
 
         public AnimationPlaybackId PlaybackId { get; }
         public MotionMatchingSelectionGeneration SelectionGeneration { get; }
-        public bool IsValid => PlaybackId.IsValid && SelectionGeneration.IsValid;
-        public bool Equals(MotionMatchingBasePoseContinuityIdentity other) => PlaybackId.Equals(other.PlaybackId) && SelectionGeneration.Equals(other.SelectionGeneration);
+        public CharacterMotionMatchingDatabaseArtifactIdentity DatabaseIdentity { get; }
+        public bool IsValid => PlaybackId.IsValid && SelectionGeneration.IsValid && DatabaseIdentity != null;
+        public bool Equals(MotionMatchingBasePoseContinuityIdentity other) => PlaybackId.Equals(other.PlaybackId) &&
+            SelectionGeneration.Equals(other.SelectionGeneration) && DatabaseIdentity != null &&
+            other.DatabaseIdentity != null && DatabaseIdentity.EqualsExact(other.DatabaseIdentity);
         public override bool Equals(object obj) => obj is MotionMatchingBasePoseContinuityIdentity other && Equals(other);
-        public override int GetHashCode() => unchecked((PlaybackId.GetHashCode() * 397) ^ SelectionGeneration.GetHashCode());
+        public override int GetHashCode() => unchecked(((PlaybackId.GetHashCode() * 397) ^ SelectionGeneration.GetHashCode()) * 397 ^ (DatabaseIdentity?.ContentHash.GetHashCode() ?? 0));
     }
 
     public readonly struct MotionMatchingBasePoseFrameInput

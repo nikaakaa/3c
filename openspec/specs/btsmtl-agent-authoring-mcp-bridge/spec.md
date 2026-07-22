@@ -1,4 +1,4 @@
-# btsmtl-agent-authoring-mcp-bridge Specification
+﻿# btsmtl-agent-authoring-mcp-bridge Specification
 
 ## Purpose
 定义现有 Unity MCP 到 Agent authoring service 的薄桥接，以及 snapshot、dry-run、事务应用、验证、回滚和保存的统一边界。
@@ -173,22 +173,28 @@ Bridge response MUST 保留 action、definition 路径、success、applied、sav
 - **THEN** MCP response MUST 包含最终 applied diff 和 validation 结果
 - **AND** response MUST 明确 `applied=true` 与 `saved=true`
 
-### Requirement: MCP bridge 必须透传同一 v15 Character 与 AI 事务
+### Requirement: MCP bridge 必须透传同一 v16 Character 与 AI 事务
 
-BTSMTL Agent MCP bridge MUST接受并返回`agent-character-controller-synthesis.v15` Snapshot、Patch与Validation结果，并通过显式domain discriminator透传CharacterController或AIController generic事务。CharacterController事务继续携带Timeline、MotionWarp、Marker与registered Curve typed operation；AIController事务只携带AI Definition、Graph、Blackboard、Configured Candidate、Observation、Memory与Intent typed operation。Bridge MUST只调用正式Agent Snapshot、lowerer、dry-run、apply和validator入口，不得新增AI专用action、SerializedProperty、YAML、反射、任意字段写入或旧v14转换工具。
+BTSMTL Agent MCP bridge MUST接受并返回`agent-character-controller-synthesis.v16` Snapshot、Patch与Validation结果，并通过显式domain discriminator透传CharacterController或AIController generic事务。CharacterController事务继续携带Timeline Animation Channel、MotionWarp、Marker与registered Curve typed operation；AIController事务只携带AI Definition、Graph、Blackboard、Configured Candidate、Observation、Memory与Intent typed operation。Bridge MUST只调用正式Agent Snapshot、lowerer、dry-run、apply和validator入口，不得新增AI专用action、SerializedProperty、YAML、反射、任意字段写入或旧v15转换工具。
 
 #### Scenario: 通过bridge配置循环组
 
-- **WHEN** 调用方通过MCP bridge提交合法v14 Patch配置WalkLoop与RunLoop的Cyclic Marker Group与CanBeLeader角色
+- **WHEN** 调用方通过MCP bridge提交合法v16 Patch配置WalkLoop与RunLoop的Cyclic Marker Group与CanBeLeader角色
 - **THEN** bridge MUST先返回正式dry-run command plan与validation结果
 - **AND** apply MUST由同一typed plan执行
 - **AND** bridge MUST返回更新后的stable identities与group摘要
 
 #### Scenario: 通过bridge配置有限序列
 
-- **WHEN** v15 Patch为Finite AnimationTrack提交frame 0到DurationFrame的marker序列与同步角色
+- **WHEN** v16 Patch为Finite AnimationTrack提交frame 0到DurationFrame的marker序列与同步角色
 - **THEN** bridge MUST保留重复MarkerId occurrence的独立AuthoringId
 - **AND** MUST返回call site Once与directed pair coverage结果
+
+#### Scenario: 通过bridge配置AnimationTrack channel
+
+- **WHEN** 调用方提交`configure_animation_track_channel`及Snapshot中的Timeline、Track stable identity
+- **THEN** bridge MUST原样透传AnimationChannelId到同一lowerer、typed command、transaction与validator链
+- **AND** MUST不增加PoseSlot、Pose Graph、producer source或Profile mutation action
 
 #### Scenario: bridge收到非法marker事务
 
@@ -205,12 +211,12 @@ BTSMTL Agent MCP bridge MUST接受并返回`agent-character-controller-synthesis
 
 #### Scenario: MCP提交AI Controller Patch
 
-- **WHEN** 调用方通过MCP bridge提交合法v15 AI Controller Patch
+- **WHEN** 调用方通过MCP bridge提交合法v16 AI Controller Patch
 - **THEN** Bridge MUST把同一请求交给AgentPatchAuthoringService
 - **AND** MUST返回typed plan、事务与Validator产生的机器可读报告
 
 #### Scenario: bridge收到旧schema请求
 
-- **WHEN** 调用方提交v14或更早的Snapshot或Patch
+- **WHEN** 调用方提交v15或更早的Snapshot或Patch
 - **THEN** bridge MUST返回unsupported schema错误
-- **AND** MUST不转换为v15或调用旧reader
+- **AND** MUST不转换为v16或调用旧reader

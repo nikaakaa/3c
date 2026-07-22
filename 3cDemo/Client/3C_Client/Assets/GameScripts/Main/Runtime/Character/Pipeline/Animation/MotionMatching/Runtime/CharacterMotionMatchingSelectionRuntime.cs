@@ -58,6 +58,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             PoseTime = poseTime;
             TriggerReason = triggerReason;
             InvalidReason = MotionMatchingInvalidReason.None;
+            SelectionIdentity = new MotionMatchingSelectionIdentity(
+                plan.DatabaseIdentity,
+                generation,
+                plan.PlanId,
+                plan.EntrySampleId,
+                sampleIndex);
         }
 
         public MotionMatchingSelectionDecision(MotionMatchingInvalidReason invalidReason, MotionMatchingSearchTriggerReason triggerReason)
@@ -71,6 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             PoseTime = default;
             TriggerReason = triggerReason;
             InvalidReason = invalidReason;
+            SelectionIdentity = default;
         }
 
         public MotionMatchingSelectionDecisionKind Kind { get; }
@@ -80,6 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingPoseTimePlan PoseTime { get; }
         public MotionMatchingSearchTriggerReason TriggerReason { get; }
         public MotionMatchingInvalidReason InvalidReason { get; }
+        public MotionMatchingSelectionIdentity SelectionIdentity { get; }
         public bool IsValid => Kind != MotionMatchingSelectionDecisionKind.Invalid && Generation.IsValid && Plan.IsValid && SampleIndex >= 0 && PoseTime.IsValid;
     }
 
@@ -173,8 +181,47 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 throw new InvalidOperationException("Motion Matching Search cannot run while its Domain is inactive.");
             if (query.ResetSequence != m_ResetSequence)
                 throw new InvalidOperationException("Motion Matching Query reset identity does not match Selection Runtime.");
+            MotionMatchingPlanEvaluationResult evaluated = SearchAndEvaluate(query);
+            MotionMatchingSelectionGeneration generation = m_Generation;
+            MotionMatchingSelectionDecisionKind kind;
+            if (!generation.IsValid || query.Initialization)
+            {
+                generation = NextGeneration(generation);
+                kind = MotionMatchingSelectionDecisionKind.Initialize;
+            }
+            else if (evaluated.IsValid && evaluated.Plan.ContinueCurrent)
+            {
+                kind = MotionMatchingSelectionDecisionKind.Continue;
+            }
+            else
+            {
+                generation = NextGeneration(generation);
+                kind = MotionMatchingSelectionDecisionKind.Jump;
+            }
+            return CommitSelection(query, triggerReason, evaluated, generation, kind);
+        }
+
+        public MotionMatchingPlanEvaluationResult SearchAndEvaluate(MotionMatchingQuery query)
+        {
             LastSearchResult = m_Search.Search(query);
             LastPlanResult = m_PlanEvaluator.Evaluate(query, LastSearchResult);
+            return LastPlanResult;
+        }
+
+        public MotionMatchingSelectionDecision CommitSelection(
+            MotionMatchingQuery query,
+            MotionMatchingSearchTriggerReason triggerReason,
+            MotionMatchingPlanEvaluationResult evaluated,
+            MotionMatchingSelectionGeneration generation,
+            MotionMatchingSelectionDecisionKind kind)
+        {
+            if (!m_DomainActive)
+                PrepareDomain(query.ResetSequence);
+            if (query.ResetSequence != m_ResetSequence)
+                throw new InvalidOperationException("Motion Matching Query reset identity does not match Selection Runtime.");
+            if (kind == MotionMatchingSelectionDecisionKind.Invalid || !generation.IsValid)
+                throw new ArgumentException("Motion Matching committed Selection identity is invalid.");
+            LastPlanResult = evaluated;
             m_SearchAccumulator = 0f;
             if (!LastPlanResult.IsValid)
             {
@@ -187,35 +234,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 return LastDecision;
             }
             MotionMatchingSelectionPlan plan = LastPlanResult.Plan;
-            MotionMatchingSelectionDecisionKind kind;
-            if (!m_Generation.IsValid)
-            {
-                m_Generation = NextGeneration(m_Generation);
-                kind = MotionMatchingSelectionDecisionKind.Initialize;
+            m_Generation = generation;
+            if (kind != MotionMatchingSelectionDecisionKind.Continue)
                 m_SecondsSinceLastJump = 0f;
-            }
-            else if (triggerReason == MotionMatchingSearchTriggerReason.DomainActivated)
-            {
-                m_Generation = NextGeneration(m_Generation);
-                kind = MotionMatchingSelectionDecisionKind.Jump;
-                m_SecondsSinceLastJump = 0f;
-            }
-            else if (query.Initialization)
-            {
-                m_Generation = NextGeneration(m_Generation);
-                kind = MotionMatchingSelectionDecisionKind.Initialize;
-                m_SecondsSinceLastJump = 0f;
-            }
-            else if (plan.ContinueCurrent)
-            {
-                kind = MotionMatchingSelectionDecisionKind.Continue;
-            }
-            else
-            {
-                m_Generation = NextGeneration(m_Generation);
-                kind = MotionMatchingSelectionDecisionKind.Jump;
-                m_SecondsSinceLastJump = 0f;
-            }
             UpdateCycleForSelection(kind, plan.EntrySampleIndex);
             m_CurrentPlan = plan;
             m_CurrentSampleIndex = plan.EntrySampleIndex;
@@ -226,6 +247,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 throw new InvalidOperationException("Motion Matching Selection Plan visual advance rate does not match its selected sample link.");
             LastDecision = new MotionMatchingSelectionDecision(kind, m_Generation, plan, m_CurrentSampleIndex, poseTime, triggerReason);
             return LastDecision;
+        }
+
+        public void PrepareDomain(ulong resetSequence)
+        {
+            if (m_DomainActive && m_ResetSequence == resetSequence)
+                return;
+            Reset(resetSequence);
+            m_DomainActive = true;
         }
 
         public MotionMatchingSelectionDecision GetContinuationDecision()

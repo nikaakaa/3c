@@ -150,6 +150,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 ["move_timeline_clip"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.MoveTimelineClip, AgentPatchOutputKind.None, LowerMoveTimelineClip),
                 ["configure_timeline_clip_ease"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.ConfigureTimelineClipEase, AgentPatchOutputKind.None, LowerConfigureTimelineClipEase),
                 ["configure_timeline_curve_channel"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.ConfigureTimelineCurveChannel, AgentPatchOutputKind.None, LowerConfigureTimelineCurveChannel),
+                ["configure_animation_track_channel"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.ConfigureAnimationTrackChannel, AgentPatchOutputKind.None, LowerConfigureAnimationTrackChannel),
                 ["configure_animation_track_marker_sync"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.ConfigureAnimationTrackMarkerSync, AgentPatchOutputKind.None, LowerConfigureAnimationTrackMarkerSync),
                 ["ensure_animation_sync_marker"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.EnsureAnimationSyncMarker, AgentPatchOutputKind.TimelineMarker, LowerEnsureAnimationSyncMarker),
                 ["move_animation_sync_marker"] = new AgentPatchOperationDescriptor(AgentPatchCommandKind.MoveAnimationSyncMarker, AgentPatchOutputKind.None, LowerMoveAnimationSyncMarker),
@@ -715,6 +716,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             return context.IsValid
                 ? new AgentConfigureAnimationTrackMarkerSyncCommand(operation.id, context.Path, target, mode, groupId, topology, syncRole)
+                : null;
+        }
+
+        static AgentPatchCommand LowerConfigureAnimationTrackChannel(
+            AgentPatchLoweringContext context,
+            AgentPatchOperation operation)
+        {
+            AgentTimelineTargetReference target = LowerAnimationTrackTarget(context, operation);
+            string value = context.RequiredText(
+                operation.animationChannelId,
+                string.Empty,
+                "animationChannelId",
+                "configure_animation_track_channel 缺少 AnimationChannelId。");
+            if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+                context.Error("animationChannelId", "animation_channel_id_invalid", "AnimationChannelId 不能包含首尾空白。");
+            var animationChannelId = new AnimationChannelId(value);
+            if (!animationChannelId.IsValid)
+                context.Error("animationChannelId", "animation_channel_id_invalid", "AnimationChannelId 必须是非空稳定 identity。");
+            return context.IsValid
+                ? new AgentConfigureAnimationTrackChannelCommand(operation.id, context.Path, target, animationChannelId)
                 : null;
         }
 

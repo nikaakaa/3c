@@ -53,20 +53,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
     public readonly struct MotionMatchingPoseHistoryTrace
     {
-        public MotionMatchingPoseHistoryTrace(int count, int capacity, bool hasGap, float latestPresentationTime)
+        public MotionMatchingPoseHistoryTrace(
+            int count,
+            int capacity,
+            bool hasGap,
+            float latestPresentationTime,
+            CharacterMotionMatchingDatabaseArtifactIdentity latestDatabaseIdentity)
         {
             if (count < 0 || capacity <= 0 || count > capacity || !float.IsFinite(latestPresentationTime) || latestPresentationTime < 0f)
                 throw new ArgumentException("Motion Matching Pose History trace is invalid.");
+            if (count > 0 && latestDatabaseIdentity == null)
+                throw new ArgumentException("Motion Matching Pose History trace has no latest Database identity.");
             Count = count;
             Capacity = capacity;
             HasGap = hasGap;
             LatestPresentationTime = latestPresentationTime;
+            LatestDatabaseIdentity = latestDatabaseIdentity;
         }
 
         public int Count { get; }
         public int Capacity { get; }
         public bool HasGap { get; }
         public float LatestPresentationTime { get; }
+        public CharacterMotionMatchingDatabaseArtifactIdentity LatestDatabaseIdentity { get; }
     }
 
     public readonly struct MotionMatchingAdmissionTrace
@@ -129,15 +138,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
     public readonly struct MotionMatchingPlanCostTrace
     {
-        public MotionMatchingPlanCostTrace(CharacterMotionMatchingPlanId planId, CharacterMotionMatchingSampleId entrySampleId, MotionMatchingPlanCostComponents cost)
+        public MotionMatchingPlanCostTrace(
+            CharacterMotionMatchingDatabaseArtifactIdentity databaseIdentity,
+            CharacterMotionMatchingPlanId planId,
+            CharacterMotionMatchingSampleId entrySampleId,
+            MotionMatchingPlanCostComponents cost)
         {
-            if (!planId.IsValid || !entrySampleId.IsValid)
+            if (databaseIdentity == null || !planId.IsValid || !entrySampleId.IsValid)
                 throw new ArgumentException("Motion Matching Plan cost trace is invalid.");
+            DatabaseIdentity = databaseIdentity;
             PlanId = planId;
             EntrySampleId = entrySampleId;
             Cost = cost;
         }
 
+        public CharacterMotionMatchingDatabaseArtifactIdentity DatabaseIdentity { get; }
         public CharacterMotionMatchingPlanId PlanId { get; }
         public CharacterMotionMatchingSampleId EntrySampleId { get; }
         public MotionMatchingPlanCostComponents Cost { get; }
@@ -148,6 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingSelectionTrace(MotionMatchingSelectionDecision decision)
         {
             Kind = decision.Kind;
+            DatabaseIdentity = decision.SelectionIdentity.DatabaseIdentity;
             Generation = decision.Generation;
             PlanId = decision.Plan.PlanId;
             SampleIndex = decision.SampleIndex;
@@ -156,6 +172,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         }
 
         public MotionMatchingSelectionDecisionKind Kind { get; }
+        public CharacterMotionMatchingDatabaseArtifactIdentity DatabaseIdentity { get; }
         public MotionMatchingSelectionGeneration Generation { get; }
         public CharacterMotionMatchingPlanId PlanId { get; }
         public int SampleIndex { get; }
@@ -168,6 +185,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingPoseSourceTrace(MotionMatchingPoseSourceOutput output)
         {
             PlaybackId = output.PlaybackId;
+            DatabaseIdentity = output.DatabaseIdentity;
             SelectionGeneration = output.SelectionGeneration;
             RequestSequence = output.PresentationRequestSequence;
             SourceClipId = output.ClipSamplePlan.SourceClipId;
@@ -179,6 +197,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         }
 
         public AnimationPlaybackId PlaybackId { get; }
+        public CharacterMotionMatchingDatabaseArtifactIdentity DatabaseIdentity { get; }
         public MotionMatchingSelectionGeneration SelectionGeneration { get; }
         public ulong RequestSequence { get; }
         public CharacterMotionMatchingSourceClipId SourceClipId { get; }
@@ -250,7 +269,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 ? new MotionMatchingQuerySummaryTrace(query.QueryId, query.ProfileId, query.DatabaseIdentity.DatabaseId, query.SearchDomainId, query.TrajectorySourceIdentity, query.Initialization, query.ResetSequence)
                 : default;
             PoseHistory = (interest & MotionMatchingDiagnosticsInterest.PoseHistory) != 0
-                ? new MotionMatchingPoseHistoryTrace(history.Count, history.Capacity, history.HasGap, history.LatestPresentationTime)
+                ? new MotionMatchingPoseHistoryTrace(
+                    history.Count,
+                    history.Capacity,
+                    history.HasGap,
+                    history.LatestPresentationTime,
+                    history.Count > 0 ? history.LatestContinuity.DatabaseIdentity : null)
                 : default;
             Admission = (interest & MotionMatchingDiagnosticsInterest.AdmissionAggregate) != 0
                 ? new MotionMatchingAdmissionTrace(search.AdmittedCount, search.RejectedCount)
@@ -259,7 +283,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 ? new MotionMatchingSearchTraversalTrace(search.NodesVisited, search.NodesPruned, search.ExactSampleCount)
                 : default;
             Plan = (interest & MotionMatchingDiagnosticsInterest.PlanCosts) != 0 && plan.IsValid
-                ? new MotionMatchingPlanCostTrace(plan.Plan.PlanId, plan.Plan.EntrySampleId, plan.Plan.HorizonCost)
+                ? new MotionMatchingPlanCostTrace(
+                    plan.Plan.DatabaseIdentity,
+                    plan.Plan.PlanId,
+                    plan.Plan.EntrySampleId,
+                    plan.Plan.HorizonCost)
                 : default;
             Selection = (interest & MotionMatchingDiagnosticsInterest.Selection) != 0
                 ? new MotionMatchingSelectionTrace(selection)

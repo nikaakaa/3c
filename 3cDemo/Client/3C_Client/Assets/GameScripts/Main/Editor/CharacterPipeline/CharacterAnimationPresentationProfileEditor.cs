@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using Animancer;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Editor;
-using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
@@ -19,23 +19,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public sealed class CharacterAnimationPresentationProfileEditor : UnityEditor.Editor
     {
         readonly List<CharacterPipelineDefinition> m_Contexts = new List<CharacterPipelineDefinition>();
-        readonly List<CharacterPresentationProducerEntry> m_AnimationProducers = new List<CharacterPresentationProducerEntry>();
+        readonly List<AnimationProducerAuthoringEntry> m_AnimationProducers = new List<AnimationProducerAuthoringEntry>();
         readonly List<string> m_ConfigurationErrors = new List<string>();
-        readonly Dictionary<AnimationProducerId, CharacterAuthoringTimelineEntry> m_ProducerSources =
-            new Dictionary<AnimationProducerId, CharacterAuthoringTimelineEntry>();
-        readonly Dictionary<AnimationProducerId, string> m_ProducerDisplayNames =
-            new Dictionary<AnimationProducerId, string>();
         SerializedProperty m_PoseGraph;
         SerializedProperty m_BlendLibrary;
         SerializedProperty m_RigDefinition;
+        SerializedProperty m_MotionMatchingProfile;
         SerializedProperty m_FootAnalysisMode;
         SerializedProperty m_FootAnalysisSourceAssetGuid;
         CharacterPipelineDefinition m_InspectedContext;
-        CharacterSimulationProgramAsset m_InspectedProgramAsset;
-        CharacterPresentationProjectionAsset m_InspectedProjectionAsset;
-        CharacterPresentationProjection m_InspectedProjection;
-        string m_InspectedProgramHash = string.Empty;
-        string m_InspectedProjectionRevision = string.Empty;
         string m_BindingError = string.Empty;
         int m_SelectedContextIndex = -1;
         bool m_ShowProducerBindings = true;
@@ -47,6 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_PoseGraph = serializedObject.FindProperty("m_PoseGraph");
             m_BlendLibrary = serializedObject.FindProperty("m_BlendLibrary");
             m_RigDefinition = serializedObject.FindProperty("m_RigDefinition");
+            m_MotionMatchingProfile = serializedObject.FindProperty("m_MotionMatchingProfile");
             m_FootAnalysisMode = serializedObject.FindProperty("m_FootPlacementAnalysisMode");
             m_FootAnalysisSourceAssetGuid = serializedObject.FindProperty("m_FootPlacementAnalysisSourceAssetGuid");
             RefreshContexts();
@@ -59,6 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.PropertyField(m_PoseGraph, new GUIContent("Pose Graph"));
             EditorGUILayout.PropertyField(m_BlendLibrary, new GUIContent("Blend Library"));
             EditorGUILayout.PropertyField(m_RigDefinition, new GUIContent("Rig Definition"));
+            EditorGUILayout.PropertyField(m_MotionMatchingProfile, new GUIContent("Motion Matching Profile"));
             DrawFootAnalysis();
             bool changed = serializedObject.ApplyModifiedProperties();
             if (changed)
@@ -124,12 +118,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPresentationPoseGraphAsset poseGraph = profile.PoseGraph;
             CharacterAnimationBlendLibrary blendLibrary = profile.BlendLibrary;
             CharacterAnimationRigDefinition rig = profile.RigDefinition;
+            CharacterMotionMatchingProfile motionMatching = profile.MotionMatchingProfile;
             if (poseGraph && poseGraph.Graph != null)
                 EditorGUILayout.LabelField("Pose Graph Identity", $"{poseGraph.Graph.GraphId} @ {poseGraph.Graph.ContentRevision}");
             if (blendLibrary)
                 EditorGUILayout.LabelField("Blend Library Identity", $"{blendLibrary.LibraryId} @ {blendLibrary.Revision}");
             if (rig)
                 EditorGUILayout.LabelField("Rig Identity", $"{rig.RigId} @ {rig.Revision}");
+            if (motionMatching)
+                EditorGUILayout.LabelField("Motion Matching Identity", $"{motionMatching.ProfileId} @ {motionMatching.Revision}");
 
             EditorGUILayout.BeginHorizontal();
             using (new EditorGUI.DisabledScope(!poseGraph))
@@ -151,6 +148,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     OpenAsset(rig);
             }
             EditorGUILayout.EndHorizontal();
+            using (new EditorGUI.DisabledScope(!motionMatching))
+            {
+                if (GUILayout.Button("Open Motion Matching Profile"))
+                    OpenAsset(motionMatching);
+            }
             EditorGUILayout.Space(6f);
         }
 
@@ -209,7 +211,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!context)
                 return;
 
-            if (!TryInspectProjection(context, out string projectionError))
+            if (!TryInspectAuthoring(context, out string projectionError))
             {
                 EditorGUILayout.HelpBox(projectionError, MessageType.Error);
                 return;
@@ -240,20 +242,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        bool TryInspectProjection(CharacterPipelineDefinition context, out string error)
+        bool TryInspectAuthoring(CharacterPipelineDefinition context, out string error)
         {
-            CharacterSimulationProgramAsset programAsset = context.SimulationProgram;
-            CharacterPresentationProjectionAsset projectionAsset = context.PresentationProjection;
-            if (!programAsset || !projectionAsset)
-            {
-                error = $"CharacterPipelineDefinition '{context.name}' requires compiled Program and Presentation Projection assets.";
-                return false;
-            }
-
-            if (m_InspectedProjection != null && m_InspectedContext == context &&
-                m_InspectedProgramAsset == programAsset && m_InspectedProjectionAsset == projectionAsset &&
-                string.Equals(m_InspectedProgramHash, programAsset.ProgramHash, StringComparison.Ordinal) &&
-                string.Equals(m_InspectedProjectionRevision, projectionAsset.ProjectionRevision, StringComparison.Ordinal))
+            if (m_InspectedContext == context && m_AnimationProducers.Count > 0)
             {
                 error = string.Empty;
                 return true;
@@ -262,30 +253,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             InvalidateProjection();
             try
             {
-                m_InspectedProjection = projectionAsset.Load(
-                    Float32CharacterPresentationContractAdapter.Create(programAsset.Load()));
-                var topologyErrors = new List<string>();
-                CharacterAuthoringTopologyProjection topology = CharacterAuthoringTopologyProjection.Build(
-                    CollectCompositionRoots(context),
-                    topologyErrors);
-                if (!topology.IsValid)
-                    throw new InvalidOperationException(string.Join("\n", topologyErrors));
-                IReadOnlyList<CharacterPresentationProducerEntry> producers = m_InspectedProjection.AnimationProducers;
+                IReadOnlyList<AnimationProducerAuthoringEntry> producers =
+                    CharacterAnimationPresentationAuthoringService.DiscoverProducers(Profile, context);
                 for (int i = 0; i < producers.Count; i++)
-                {
-                    CharacterPresentationProducerEntry producer = producers[i];
-                    if (!TryResolveTimeline(topology, producer, out CharacterAuthoringTimelineEntry source, out string trackName))
-                        throw new InvalidOperationException(
-                            $"Animation producer on channel '{producer.AnimationChannelId}' no longer resolves to its Timeline Track.");
                     m_AnimationProducers.Add(producers[i]);
-                    m_ProducerSources[producer.ProducerId] = source;
-                    m_ProducerDisplayNames[producer.ProducerId] = $"{source.Graph.name} / {source.Timeline.Name} / {trackName}";
-                }
                 m_InspectedContext = context;
-                m_InspectedProgramAsset = programAsset;
-                m_InspectedProjectionAsset = projectionAsset;
-                m_InspectedProgramHash = programAsset.ProgramHash;
-                m_InspectedProjectionRevision = projectionAsset.ProjectionRevision;
                 error = string.Empty;
                 return true;
             }
@@ -298,45 +270,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void DrawProducerBinding(
             CharacterPipelineDefinition context,
-            CharacterPresentationProducerEntry producer)
+            AnimationProducerAuthoringEntry producer)
         {
             CharacterAnimationPresentationProfile profile = Profile;
-            CharacterAuthoringTimelineEntry source = m_ProducerSources[producer.ProducerId];
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField(m_ProducerDisplayNames[producer.ProducerId], EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(producer.DisplayName, EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Producer", producer.ProgramProducerIdentity);
             EditorGUILayout.LabelField("Animation Channel", producer.AnimationChannelId.Value);
-            PoseSlotId poseSlotId = m_InspectedProjection.PoseProgram
-                .RequireSlot(producer.AnimationChannelId)
-                .PoseSlotId;
-            EditorGUILayout.LabelField("Pose Slot", poseSlotId.Value);
+            EditorGUILayout.LabelField("Pose Slot", producer.PoseSlotId.Value);
+            EditorGUILayout.LabelField("Source Clips", producer.SourceClips.Count.ToString());
 
             AnimationProducerPresentationBinding binding = profile.FindProducerBinding(producer.ProducerId);
-            TransitionAssetBase currentSource = binding?.Source;
-            TransitionAssetBase sourceAsset = (TransitionAssetBase)EditorGUILayout.ObjectField(
-                "Source",
-                currentSource,
-                typeof(TransitionAssetBase),
-                false);
-            if (sourceAsset != currentSource)
+            int sourceKind = binding == null ? 0 : (int)binding.SourceKind;
+            int nextSourceKind = EditorGUILayout.Popup("Pose Source", sourceKind, new[] { "Unbound", "Timeline", "Motion Matching" });
+            if (nextSourceKind != sourceKind)
             {
                 try
                 {
-                    if (sourceAsset)
-                    {
-                        CharacterAnimationPresentationAuthoringService.ConfigureProducerBinding(
-                            profile,
-                            context,
-                            producer.ProducerId,
-                            sourceAsset);
-                    }
-                    else
-                    {
-                        CharacterAnimationPresentationAuthoringService.RemoveProducerBinding(
-                            profile,
-                            context,
-                            producer.ProducerId);
-                    }
+                    if (nextSourceKind == 0)
+                        CharacterAnimationPresentationAuthoringService.RemoveProducerBinding(profile, context, producer.ProducerId);
+                    else if (nextSourceKind == (int)AnimationPoseSourceKind.MotionMatching)
+                        CharacterAnimationPresentationAuthoringService.ConfigureMotionMatchingProducerBinding(profile, context, producer.ProducerId);
                     m_BindingError = string.Empty;
+                    binding = profile.FindProducerBinding(producer.ProducerId);
                 }
                 catch (Exception exception)
                 {
@@ -344,11 +300,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             }
 
+            TransitionAssetBase currentSource = binding?.Source;
+            TransitionAssetBase sourceAsset = currentSource;
+            if (binding == null || binding.SourceKind != AnimationPoseSourceKind.MotionMatching)
+            {
+                sourceAsset = (TransitionAssetBase)EditorGUILayout.ObjectField(
+                    "Timeline Source",
+                    currentSource,
+                    typeof(TransitionAssetBase),
+                    false);
+                if (sourceAsset != currentSource)
+                {
+                    try
+                    {
+                        if (sourceAsset)
+                            CharacterAnimationPresentationAuthoringService.ConfigureTimelineProducerBinding(profile, context, producer.ProducerId, sourceAsset);
+                        else
+                            CharacterAnimationPresentationAuthoringService.RemoveProducerBinding(profile, context, producer.ProducerId);
+                        m_BindingError = string.Empty;
+                    }
+                    catch (Exception exception)
+                    {
+                        m_BindingError = exception.Message;
+                    }
+                }
+            }
+
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Open Graph"))
-                OpenGraph(context, source);
+                OpenGraph(context, producer.Timeline);
             if (GUILayout.Button("Open Timeline"))
-                OpenTimeline(context, producer, source);
+                OpenTimeline(context, producer);
             using (new EditorGUI.DisabledScope(!sourceAsset))
             {
                 if (GUILayout.Button("Open Source"))
@@ -356,30 +338,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndVertical();
-        }
-
-        static IReadOnlyList<BaseTree> CollectCompositionRoots(CharacterPipelineDefinition definition)
-        {
-            var roots = new List<BaseTree>();
-            if (definition.RootTreeAsset && definition.RootTreeAsset.Tree)
-                roots.Add(definition.RootTreeAsset.Tree);
-            if (!definition.EquipmentCapabilityEnabled || !definition.EquipmentProfile)
-                return roots;
-            for (int featureIndex = 0; featureIndex < definition.EquipmentProfile.Features.Count; featureIndex++)
-            {
-                CharacterEquipmentFeatureDefinition feature = definition.EquipmentProfile.Features[featureIndex];
-                if (!feature)
-                    continue;
-                if (feature.PersistentGraph)
-                    roots.Add(feature.PersistentGraph);
-                for (int routeIndex = 0; routeIndex < feature.RouteImplementations.Count; routeIndex++)
-                {
-                    EquipmentFeatureRouteImplementation route = feature.RouteImplementations[routeIndex];
-                    if (route?.InlineGraph)
-                        roots.Add(route.InlineGraph);
-                }
-            }
-            return roots;
         }
 
         void RefreshContexts()
@@ -403,14 +361,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         void InvalidateProjection()
         {
             m_InspectedContext = null;
-            m_InspectedProgramAsset = null;
-            m_InspectedProjectionAsset = null;
-            m_InspectedProjection = null;
-            m_InspectedProgramHash = string.Empty;
-            m_InspectedProjectionRevision = string.Empty;
             m_AnimationProducers.Clear();
-            m_ProducerSources.Clear();
-            m_ProducerDisplayNames.Clear();
         }
 
         static BaseTreeWindow OpenGraph(
@@ -428,40 +379,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void OpenTimeline(
             CharacterPipelineDefinition definition,
-            CharacterPresentationProducerEntry producer,
-            CharacterAuthoringTimelineEntry source)
+            AnimationProducerAuthoringEntry producer)
         {
-            BaseTreeWindow graphWindow = OpenGraph(definition, source);
-            TimelineEditorWindow.Open(graphWindow, source.Node)?.FocusSource(
+            BaseTreeWindow graphWindow = OpenGraph(definition, producer.Timeline);
+            TimelineEditorWindow.Open(graphWindow, producer.Timeline.Node)?.FocusSource(
                 producer.ProducerId.TrackAuthoringId,
                 string.Empty);
-        }
-
-        static bool TryResolveTimeline(
-            CharacterAuthoringTopologyProjection topology,
-            CharacterPresentationProducerEntry producer,
-            out CharacterAuthoringTimelineEntry source,
-            out string trackName)
-        {
-            source = default;
-            trackName = string.Empty;
-            AnimationProducerId producerId = producer.ProducerId;
-            for (int i = 0; i < topology.Timelines.Count; i++)
-            {
-                CharacterAuthoringTimelineEntry candidate = topology.Timelines[i];
-                if (!string.Equals(candidate.Timeline.AuthoringId, producerId.TimelineAuthoringId, StringComparison.Ordinal))
-                    continue;
-                for (int trackIndex = 0; trackIndex < candidate.Timeline.Tracks.Count; trackIndex++)
-                {
-                    Track track = candidate.Timeline.Tracks[trackIndex];
-                    if (track == null || !string.Equals(track.AuthoringId, producerId.TrackAuthoringId, StringComparison.Ordinal))
-                        continue;
-                    source = candidate;
-                    trackName = string.IsNullOrEmpty(track.Name) ? track.GetType().Name : track.Name;
-                    return true;
-                }
-            }
-            return false;
         }
 
         static void OpenAsset(UnityEngine.Object asset)

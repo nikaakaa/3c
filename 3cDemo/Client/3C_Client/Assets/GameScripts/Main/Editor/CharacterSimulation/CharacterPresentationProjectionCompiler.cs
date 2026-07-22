@@ -4,8 +4,10 @@ using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
+using ThirdPersonCharacter.Editor.MotionMatching;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonSimulation;
 using UnityEditor;
 
@@ -98,11 +100,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var errors = new List<string>();
             CharacterAuthoringCompilationModel model = request.Model;
             var reader = new CharacterPresentationSemanticReader(request.Artifact);
+            MotionMatchingProjectionPayload motionMatching = CompileMotionMatchingPayload(
+                model.AnimationPresentationProfile,
+                errors);
             string projectionRevision = ComputeProjectionRevision(
                 model.AnimationPresentationProfile,
                 model.Definition.EquipmentPresentationProfile,
                 reader.Contract.ContractHash,
-                request.FootAnalysis.RevisionTokens);
+                request.FootAnalysis.RevisionTokens,
+                motionMatching);
             CharacterPresentationProjection projection = CompileCore(
                 reader,
                 model.AnimationPresentationProfile,
@@ -110,6 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 model.Definition.EquipmentPresentationProfile,
                 projectionRevision,
                 request.FootAnalysis.BuildData,
+                motionMatching,
                 model.Timelines,
                 CollectAnimationMarkerSyncCallSites(model.Root),
                 errors);
@@ -149,7 +156,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 definition.AnimationPresentationProfile,
                 definition.EquipmentPresentationProfile,
                 contract.ContractHash,
-                footAnalysisTokens);
+                footAnalysisTokens,
+                projection.MotionMatching);
             return true;
         }
 
@@ -160,6 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterEquipmentPresentationProfile equipmentPresentationProfile,
             string projectionRevision,
             AnimationFootAnalysisProjectionBuildData footAnalysis,
+            MotionMatchingProjectionPayload motionMatching,
             IReadOnlyDictionary<string, TimelineData> timelines,
             IReadOnlyDictionary<string, IReadOnlyList<AnimationMarkerSyncCallSite>> markerSyncCallSites,
             List<string> errors)
@@ -187,7 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 errors?.Add("Disabled Foot Analysis cannot receive generated build data.");
                 return null;
             }
-            if (!ValidateMarkerSyncAuthoring(reader.Producers, timelines, markerSyncCallSites, errors))
+            if (!ValidateMarkerSyncAuthoring(reader.Producers, profile, timelines, markerSyncCallSites, errors))
                 return null;
 
             var entries = new List<CharacterPresentationProducerEntry>();
@@ -252,6 +261,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 blendCatalogs.CurveCatalog,
                 blendCatalogs.ProfileCatalog,
                 rig,
+                motionMatching,
                 entries.ToArray(),
                 footIdentity,
                 projectionRevision,
@@ -288,6 +298,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     producer.SourceIdentity,
                     producer.ChannelKind,
                     kind.Value,
+                    default,
                     string.Empty,
                     string.Empty,
                     producer.AnimationChannelId,
@@ -328,9 +339,36 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return null;
             }
             AnimationProducerPresentationBinding authoringBinding = profile.FindProducerBinding(producerId);
-            if (authoringBinding == null || !authoringBinding.Source || !authoringBinding.Source.IsValid)
+            if (authoringBinding == null)
             {
-                errors?.Add($"Animation producer '{producerId}' has no valid Animancer source binding.");
+                errors?.Add($"Animation producer '{producerId}' has no Presentation source binding.");
+                return null;
+            }
+            if (authoringBinding.SourceKind == AnimationPoseSourceKind.MotionMatching)
+            {
+                return new CharacterPresentationProducerEntry(
+                    producer.Index,
+                    producer.Identity,
+                    producer.SourceIdentity,
+                    producer.ChannelKind,
+                    kind.Value,
+                    AnimationPoseSourceKind.MotionMatching,
+                    producerId.TimelineAuthoringId,
+                    producerId.TrackAuthoringId,
+                    producer.AnimationChannelId,
+                    source.GraphId,
+                    source.NodeId,
+                    source.TimelineId,
+                    producerId.TrackAuthoringId,
+                    source.DisplayPath,
+                    null,
+                    null,
+                    null);
+            }
+            if (authoringBinding.SourceKind != AnimationPoseSourceKind.Timeline ||
+                !authoringBinding.Source || !authoringBinding.Source.IsValid)
+            {
+                errors?.Add($"Animation producer '{producerId}' has no valid Timeline Animancer source binding.");
                 return null;
             }
 
@@ -389,6 +427,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 producer.SourceIdentity,
                 producer.ChannelKind,
                 kind.Value,
+                AnimationPoseSourceKind.Timeline,
                 producerId.TimelineAuthoringId,
                 producerId.TrackAuthoringId,
                 producer.AnimationChannelId,
@@ -847,6 +886,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static bool ValidateMarkerSyncAuthoring(
             IReadOnlyList<ProgramProducer> producers,
+            CharacterAnimationPresentationProfile profile,
             IReadOnlyDictionary<string, TimelineData> timelines,
             IReadOnlyDictionary<string, IReadOnlyList<AnimationMarkerSyncCallSite>> callSites,
             List<string> errors)
@@ -857,6 +897,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 ProgramProducer producer = producers[producerIndex];
                 if (!TryParseAnimationSource(producer.SourceIdentity, out AnimationProducerId producerId) ||
                     !timelines.TryGetValue(producerId.TimelineAuthoringId, out TimelineData timeline))
+                    continue;
+                AnimationProducerPresentationBinding presentationBinding = profile.FindProducerBinding(producerId);
+                if (presentationBinding == null || presentationBinding.SourceKind != AnimationPoseSourceKind.Timeline)
                     continue;
                 AnimationTrack track = null;
                 for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
@@ -983,7 +1026,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterAnimationPresentationProfile animationProfile,
             UnityEngine.Object equipmentPresentationProfile,
             StableHash contractHash,
-            IReadOnlyList<string> footAnalysisTokens)
+            IReadOnlyList<string> footAnalysisTokens,
+            MotionMatchingProjectionPayload motionMatching)
         {
             var values = new List<string>
             {
@@ -992,12 +1036,62 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             };
             AddProjectionAssetRevision(animationProfile, values);
             AddProjectionAssetRevision(equipmentPresentationProfile, values);
+            AddMotionMatchingRevision(motionMatching, values);
             if (footAnalysisTokens != null)
             {
                 for (int i = 0; i < footAnalysisTokens.Count; i++)
                     values.Add(footAnalysisTokens[i]);
             }
             return StableHash.Compute(values.ToArray()).ToString();
+        }
+
+        static MotionMatchingProjectionPayload CompileMotionMatchingPayload(
+            CharacterAnimationPresentationProfile profile,
+            List<string> errors)
+        {
+            if (!profile || !profile.MotionMatchingProfile)
+                return null;
+            if (profile.FootPlacementAnalysisMode != CharacterFootPlacementAnalysisMode.GeneratedPerFootFeatures ||
+                !CharacterFootPlacementAnalysisSource.IsAssetGuid(profile.FootPlacementAnalysisSourceAssetGuid))
+            {
+                errors?.Add("Motion Matching Projection requires the Presentation Profile generated Foot Analysis Source.");
+                return null;
+            }
+            string path = AssetDatabase.GUIDToAssetPath(profile.FootPlacementAnalysisSourceAssetGuid);
+            CharacterFootPlacementAnalysisSource analysisSource =
+                AssetDatabase.LoadAssetAtPath<CharacterFootPlacementAnalysisSource>(path);
+            if (!analysisSource)
+            {
+                errors?.Add("Motion Matching Projection Foot Analysis Source is missing.");
+                return null;
+            }
+            try
+            {
+                return MotionMatchingProjectionPayloadCompiler.Compile(
+                    profile.MotionMatchingProfile,
+                    analysisSource,
+                    AnimationClipMotionMatchingParameterCurveResolver.Instance);
+            }
+            catch (Exception exception)
+            {
+                errors?.Add(exception.Message);
+                return null;
+            }
+        }
+
+        static void AddMotionMatchingRevision(MotionMatchingProjectionPayload payload, List<string> values)
+        {
+            if (payload == null)
+            {
+                values.Add("motion-matching:none");
+                return;
+            }
+            values.Add($"motion-matching:{payload.ProfileId.Value}:{payload.ProfileRevision}");
+            for (int i = 0; i < payload.DatabaseCount; i++)
+            {
+                CharacterMotionMatchingDatabaseArtifactIdentity identity = payload.GetDatabase(i).ArtifactIdentity;
+                values.Add($"{identity.DatabaseId.Value}:{identity.DatabaseRevision}:{identity.AnalysisInputHash}:{identity.OrderedClipDependencyHash}:{identity.ContentHash}");
+            }
         }
 
         static void AddProjectionAssetRevision(UnityEngine.Object root, List<string> values)

@@ -33,6 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
     public readonly struct MotionMatchingSelectionPlan
     {
         public MotionMatchingSelectionPlan(
+            CharacterMotionMatchingDatabaseArtifactIdentity databaseIdentity,
             CharacterMotionMatchingPlanId planId,
             int entrySampleIndex,
             CharacterMotionMatchingSampleId entrySampleId,
@@ -46,11 +47,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             float entryVisualAdvanceRate,
             float nextMandatorySearchTime)
         {
-            if (!planId.IsValid || entrySampleIndex < 0 || !entrySampleId.IsValid || !segmentId.IsValid ||
+            if (databaseIdentity == null || !planId.IsValid || entrySampleIndex < 0 || !entrySampleId.IsValid || !segmentId.IsValid ||
                 !float.IsFinite(entryTime) || entryTime < 0f || horizonEndSampleIndex < 0 || !horizonEndSampleId.IsValid ||
                 !float.IsFinite(entryVisualAdvanceRate) || entryVisualAdvanceRate < 0f ||
                 !float.IsFinite(nextMandatorySearchTime) || nextMandatorySearchTime <= 0f)
                 throw new ArgumentException("Motion Matching Selection Plan is invalid.");
+            DatabaseIdentity = databaseIdentity;
             PlanId = planId;
             EntrySampleIndex = entrySampleIndex;
             EntrySampleId = entrySampleId;
@@ -65,6 +67,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             NextMandatorySearchTime = nextMandatorySearchTime;
         }
 
+        public CharacterMotionMatchingDatabaseArtifactIdentity DatabaseIdentity { get; }
         public CharacterMotionMatchingPlanId PlanId { get; }
         public int EntrySampleIndex { get; }
         public CharacterMotionMatchingSampleId EntrySampleId { get; }
@@ -78,7 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public bool ContinueCurrent { get; }
         public float EntryVisualAdvanceRate { get; }
         public float NextMandatorySearchTime { get; }
-        public bool IsValid => PlanId.IsValid && EntrySampleId.IsValid && HorizonEndSampleId.IsValid;
+        public bool IsValid => DatabaseIdentity != null && PlanId.IsValid && EntrySampleId.IsValid && HorizonEndSampleId.IsValid;
     }
 
     public readonly struct MotionMatchingPlanEvaluationResult
@@ -215,9 +218,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             }
             MotionMatchingSamplePayload entry = m_Database.GetSample(candidate.SampleIndex);
             MotionMatchingSamplePayload end = m_Database.GetSample(horizonEndSampleIndex);
-            bool continueCurrent = !query.Initialization && query.CurrentSampleIndex >= 0 &&
+            bool continueCurrent = !query.Initialization && query.CurrentSelectionInDatabase && query.CurrentSampleIndex >= 0 &&
                 m_Database.GetSample(query.CurrentSampleIndex).NextSampleIndex == candidate.SampleIndex;
             plan = new MotionMatchingSelectionPlan(
+                m_Database.ArtifactIdentity,
                 new CharacterMotionMatchingPlanId(query.QueryId.Value),
                 candidate.SampleIndex,
                 entry.SampleId,
@@ -302,10 +306,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             return new Vector2(value.x * cos - value.y * sin, value.x * sin + value.y * cos).normalized;
         }
 
-        static int Compare(MotionMatchingSelectionPlan left, MotionMatchingSelectionPlan right)
+        internal static int Compare(MotionMatchingSelectionPlan left, MotionMatchingSelectionPlan right)
         {
             int total = left.TotalCost.CompareTo(right.TotalCost);
-            return total != 0 ? total : left.EntrySampleId.CompareTo(right.EntrySampleId);
+            if (total != 0)
+                return total;
+            int database = left.DatabaseIdentity.DatabaseId.CompareTo(right.DatabaseIdentity.DatabaseId);
+            return database != 0 ? database : left.EntrySampleId.CompareTo(right.EntrySampleId);
         }
     }
 }

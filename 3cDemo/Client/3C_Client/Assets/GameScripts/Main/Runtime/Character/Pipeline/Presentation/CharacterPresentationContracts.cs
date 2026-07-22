@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonSimulation;
@@ -93,6 +94,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         void CaptureBodyInterval(CharacterPresentationBodyInterval interval);
         void CaptureBodyTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals);
         void CaptureEquipmentSelections(IReadOnlyList<EquipmentVisualSelection> selections);
+        void CaptureTrajectoryIntent(CharacterPresentationTrajectoryIntent intent);
+        bool AcceptsTrajectoryIntent { get; }
+        ulong BodyResetSequence { get; }
         void Publish(CharacterPresentationCommand command);
         void Replace(CharacterPresentationCommand current, CharacterPresentationCommand replacement);
         void Retire(CharacterPresentationCommand command);

@@ -55,7 +55,7 @@
 - [x] 3.15 在Profile Inspector增加显式Open Pose Graph入口。
 - [x] 3.16 在Profile Inspector按producer identity显示AnimationChannelId和PoseSlotId。
 - [x] 3.17 让Profile validation拒绝缺失Pose Graph、Blend Library或Rig。
-- [ ] 3.18 删除`CharacterAnimationLayerDefinition`类型与全部serialized使用点。
+- [x] 3.18 删除`CharacterAnimationLayerDefinition`类型与全部serialized使用点。
 
 ## 4. Graph Authoring Editor Shell抽取
 
@@ -213,7 +213,7 @@
 - [x] 9.14 将Rig/Mask/Parameter dependency纳入ProjectionRevision。
 - [x] 9.15 保持纯Presentation变化不改变Numeric ProgramHash。
 - [x] 9.16 让Projection payload validation校验slot/stack/pose program cross-reference。
-- [ ] 9.17 更新Projection Asset Inspector identity摘要。
+- [x] 9.17 更新Projection Asset Inspector identity摘要。
 - [x] 9.18 提升Projection schema并拒绝旧Layer payload。
 
 ## 10. Blend Stack职责收窄
@@ -351,23 +351,23 @@
 
 ## 16. 旧路径删除与规格统一
 
-- [ ] 16.1 删除旧LayerId serialized字段与reader。
-- [ ] 16.2 删除旧Layer catalog serialized字段与Inspector。
-- [ ] 16.3 删除旧CharacterAnimationLayerDefinition资产和引用。
-- [ ] 16.4 删除旧Animancer TransitionLibrary正式引用。
-- [ ] 16.5 删除旧Animancer layer index与AvatarMask runtime路径。
-- [ ] 16.6 删除旧global Blend Stack Layer compositor。
-- [ ] 16.7 删除旧Lifecycle Current/Outgoing并行weight事实。
-- [ ] 16.8 删除旧Projection Layer payload与revision token。
-- [ ] 16.9 删除旧Preview简化播放链。
-- [ ] 16.10 删除旧Trace LayerId与Animancer fade字段。
-- [ ] 16.11 删除FormerlySerializedAs、兼容converter和fallback配置。
-- [ ] 16.12 更新`openspec/project.md`的动画模块职责。
-- [ ] 16.13 更新`openspec/project.md`的Profile、Projection与Editor代码组织。
-- [ ] 16.14 更新`refactor-animation-playback-to-blend-stack`的proposal、design、tasks和spec deltas。
+- [x] 16.1 删除旧LayerId serialized字段与reader。
+- [x] 16.2 删除旧Layer catalog serialized字段与Inspector。
+- [x] 16.3 删除旧CharacterAnimationLayerDefinition资产和引用。
+- [x] 16.4 删除旧Animancer TransitionLibrary正式引用。
+- [x] 16.5 删除旧Animancer layer index与AvatarMask runtime路径。
+- [x] 16.6 删除旧global Blend Stack Layer compositor。
+- [x] 16.7 删除旧Lifecycle Current/Outgoing并行weight事实。
+- [x] 16.8 删除旧Projection Layer payload与revision token。
+- [x] 16.9 删除旧Preview简化播放链。
+- [x] 16.10 删除旧Trace LayerId与Animancer fade字段。
+- [x] 16.11 删除FormerlySerializedAs、兼容converter和fallback配置。
+- [x] 16.12 更新`openspec/project.md`的动画模块职责。
+- [x] 16.13 更新`openspec/project.md`的Profile、Projection与Editor代码组织。
+- [x] 16.14 更新`refactor-animation-playback-to-blend-stack`的proposal、design、tasks和spec deltas。
 - [ ] 16.15 更新`refactor-presentation-projection-target-boundary`的proposal、design、tasks和spec deltas。
 - [ ] 16.16 清理current specs中旧LayerId、Animancer fade权威和单Base Corin口径。
-- [ ] 16.17 记录最终`AnimationChannel -> PoseSlot -> BlendStack -> PoseGraph -> PostProcess`业务链路。
-- [ ] 16.18 记录Pose Graph与未来Motion Matching、Equipment动态层的正式扩展边界。
+- [x] 16.17 记录最终`AnimationChannel -> PoseSlot -> BlendStack -> PoseGraph -> PostProcess`业务链路。
+- [x] 16.18 记录Pose Graph与未来Motion Matching、Equipment动态层的正式扩展边界。
 - [x] 16.19 在design记录唯一Rig Reference、Local/Mesh编译、PoseCurveResolve双输入与v2 frame-cache合同。
 - [x] 16.20 在Pose Graph spec记录唯一Rig Reference、Local/Mesh编译、PoseCurveResolve双输入与v2 frame-cache合同。

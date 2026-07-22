@@ -86,6 +86,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     }
                     session.AddPlanned(value, null, curveOwner.AuthoringId, $"configure Timeline curve {value.ChannelId}");
                     return true;
+                case AgentConfigureAnimationTrackChannelCommand value:
+                    if (!TryResolveAnimationTrack(session, value.Target, value.Path, out _, out AnimationTrack channelTrack)) return false;
+                    session.AddPlanned(value, null, channelTrack.AuthoringId,
+                        $"configure animation channel {channelTrack.AnimationChannelId} -> {value.AnimationChannelId}");
+                    return true;
                 case AgentConfigureAnimationTrackMarkerSyncCommand value:
                     if (!TryResolveAnimationTrack(session, value.Target, value.Path, out _, out AnimationTrack configureTrack)) return false;
                     session.AddPlanned(value, null, configureTrack?.AuthoringId ?? value.Target.TrackAuthoringId,
@@ -160,6 +165,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 case AgentMoveTimelineClipCommand value: ApplyMoveTimelineClip(session, value); break;
                 case AgentConfigureTimelineClipEaseCommand value: ApplyConfigureTimelineClipEase(session, value); break;
                 case AgentConfigureTimelineCurveChannelCommand value: ApplyConfigureTimelineCurveChannel(session, value); break;
+                case AgentConfigureAnimationTrackChannelCommand value: ApplyConfigureAnimationTrackChannel(session, value); break;
                 case AgentConfigureAnimationTrackMarkerSyncCommand value: ApplyConfigureAnimationTrackMarkerSync(session, value); break;
                 case AgentEnsureAnimationSyncMarkerCommand value: ApplyEnsureAnimationSyncMarker(session, value); break;
                 case AgentMoveAnimationSyncMarkerCommand value: ApplyMoveAnimationSyncMarker(session, value); break;
@@ -522,6 +528,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 track.ConfigureMarkerGroup(command.SyncGroupId, command.Topology, command.SyncRole);
             timeline.Init();
             session.AddAppliedAuthoring(command, timeline.SerializedOwner, track, track.AuthoringId, "configure animation marker sync");
+        }
+
+        static void ApplyConfigureAnimationTrackChannel(
+            AgentPatchCompileSession session,
+            AgentConfigureAnimationTrackChannelCommand command)
+        {
+            if (!TryResolveAnimationTrack(session, command.Target, command.Path, out TimelineData timeline, out AnimationTrack track))
+                return;
+            track.SetAnimationChannelId(command.AnimationChannelId);
+            timeline.Init();
+            session.AddAppliedAuthoring(command, timeline.SerializedOwner, track, track.AuthoringId, $"configure animation channel {command.AnimationChannelId}");
         }
 
         static void ApplyEnsureAnimationSyncMarker(

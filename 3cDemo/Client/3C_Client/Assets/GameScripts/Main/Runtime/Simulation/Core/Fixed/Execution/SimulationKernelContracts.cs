@@ -267,6 +267,7 @@ namespace ThirdPersonSimulation.Fixed
             SimulationTick tick,
             CharacterSimulationState state,
             CharacterBodySample bodySample,
+            CharacterMotionRequest motion,
             IEnumerable<GameplayFact> gameplayFacts,
             IEnumerable<PresentationCommand> presentationCommands,
             IEnumerable<SimulationTraceRecord> traceRecords)
@@ -279,6 +280,7 @@ namespace ThirdPersonSimulation.Fixed
             ActorId = actorId;
             Tick = tick;
             BodySample = bodySample;
+            Motion = motion;
             m_GameplayFacts = Copy(gameplayFacts).AsReadOnly();
             m_PresentationCommands = Copy(presentationCommands).AsReadOnly();
             m_TraceRecords = Copy(traceRecords).AsReadOnly();
@@ -300,6 +302,7 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
         public CharacterBodySample BodySample { get; }
+        public CharacterMotionRequest Motion { get; }
         public IReadOnlyList<GameplayFact> GameplayFacts => m_GameplayFacts;
         public IReadOnlyList<PresentationCommand> PresentationCommands => m_PresentationCommands;
         public IReadOnlyList<SimulationTraceRecord> TraceRecords => m_TraceRecords;

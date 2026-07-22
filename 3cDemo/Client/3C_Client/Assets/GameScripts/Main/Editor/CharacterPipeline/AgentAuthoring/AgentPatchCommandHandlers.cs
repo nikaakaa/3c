@@ -52,6 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentPatchCommandKind.MoveTimelineClip,
                 AgentPatchCommandKind.ConfigureTimelineClipEase,
                 AgentPatchCommandKind.ConfigureTimelineCurveChannel,
+                AgentPatchCommandKind.ConfigureAnimationTrackChannel,
                 AgentPatchCommandKind.ConfigureAnimationTrackMarkerSync,
                 AgentPatchCommandKind.EnsureAnimationSyncMarker,
                 AgentPatchCommandKind.MoveAnimationSyncMarker,

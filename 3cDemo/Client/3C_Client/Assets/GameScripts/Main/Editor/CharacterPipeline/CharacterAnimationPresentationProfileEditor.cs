@@ -135,7 +135,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             using (new EditorGUI.DisabledScope(!poseGraph))
             {
                 if (GUILayout.Button("Open Pose Graph"))
-                    OpenAsset(poseGraph);
+                    CharacterPresentationPoseGraphEditorWindow.Open(
+                        poseGraph,
+                        profile,
+                        SelectedContext ? SelectedContext.PresentationProjection : null);
             }
             using (new EditorGUI.DisabledScope(!blendLibrary))
             {

@@ -59,30 +59,30 @@
 
 ## 4. Graph Authoring Editor Shell抽取
 
-- [ ] 4.1 定义`IGraphAuthoringDocument`接口。
-- [ ] 4.2 定义`IGraphAuthoringNodeCatalog`接口。
-- [ ] 4.3 定义`IGraphAuthoringPortPolicy`接口。
-- [ ] 4.4 定义`IGraphAuthoringMutationAdapter`接口。
-- [ ] 4.5 定义`IGraphAuthoringInspectorAdapter`接口。
-- [ ] 4.6 定义`IGraphAuthoringDiagnosticsAdapter`接口。
-- [ ] 4.7 把窗口生命周期抽到`GraphAuthoringEditorShell`。
-- [ ] 4.8 把GraphView画布与selection协调抽到Shell。
-- [ ] 4.9 把节点搜索与创建菜单抽到Shell。
-- [ ] 4.10 把clipboard domain envelope抽到Shell。
-- [ ] 4.11 把复制、粘贴和identity remap协调抽到Shell。
-- [ ] 4.12 把Undo、dirty owner和serialized owner协调抽到Shell。
-- [ ] 4.13 把Inspector宿主抽到Shell。
-- [ ] 4.14 把breadcrumb与document navigation抽到Shell。
-- [ ] 4.15 把只读diagnostics overlay宿主抽到Shell。
-- [ ] 4.16 建立BTSMTL document adapter。
-- [ ] 4.17 建立BTSMTL node catalog adapter。
-- [ ] 4.18 建立BTSMTL port policy adapter。
-- [ ] 4.19 建立BTSMTL mutation与Inspector adapter。
-- [ ] 4.20 建立BTSMTL diagnostics adapter。
-- [ ] 4.21 将现有BaseTree资产打开入口迁移到Shell。
-- [ ] 4.22 删除Shell已接管的旧window/view/clipboard/Undo重复实现。
-- [ ] 4.23 拒绝跨Graph domain clipboard粘贴。
-- [ ] 4.24 删除Shell中的BaseNode subtype、ConditionRule和InputAction特判。
+- [x] 4.1 定义`IGraphAuthoringDocument`接口。
+- [x] 4.2 定义`IGraphAuthoringNodeCatalog`接口。
+- [x] 4.3 定义`IGraphAuthoringPortPolicy`接口。
+- [x] 4.4 定义`IGraphAuthoringMutationAdapter`接口。
+- [x] 4.5 定义`IGraphAuthoringInspectorAdapter`接口。
+- [x] 4.6 定义`IGraphAuthoringDiagnosticsAdapter`接口。
+- [x] 4.7 把窗口生命周期抽到`GraphAuthoringEditorShell`。
+- [x] 4.8 把GraphView画布与selection协调抽到Shell。
+- [x] 4.9 把节点搜索与创建菜单抽到Shell。
+- [x] 4.10 把clipboard domain envelope抽到Shell。
+- [x] 4.11 把复制、粘贴和identity remap协调抽到Shell。
+- [x] 4.12 把Undo、dirty owner和serialized owner协调抽到Shell。
+- [x] 4.13 把Inspector宿主抽到Shell。
+- [x] 4.14 把breadcrumb与document navigation抽到Shell。
+- [x] 4.15 把只读diagnostics overlay宿主抽到Shell。
+- [x] 4.16 建立BTSMTL document adapter。
+- [x] 4.17 建立BTSMTL node catalog adapter。
+- [x] 4.18 建立BTSMTL port policy adapter。
+- [x] 4.19 建立BTSMTL mutation与Inspector adapter。
+- [x] 4.20 建立BTSMTL diagnostics adapter。
+- [x] 4.21 将现有BaseTree资产打开入口迁移到Shell。
+- [x] 4.22 删除Shell已接管的旧window/view/clipboard/Undo重复实现。
+- [x] 4.23 拒绝跨Graph domain clipboard粘贴。
+- [x] 4.24 删除Shell中的BaseNode subtype、ConditionRule和InputAction特判。
 
 ## 5. Pose Graph authoring数据
 
@@ -105,10 +105,10 @@
 - [x] 5.14 定义owner-private inline PoseSubgraph reference。
 - [x] 5.15 定义显式shared PoseGraph asset reference。
 - [x] 5.16 实现inline/shared互斥所有权。
-- [ ] 5.17 实现Create Inline、Extract Shared与Clear Shared正式mutation。
-- [ ] 5.18 实现Pose Graph stable identity生成与复制remap。
-- [ ] 5.19 实现Pose Graph asset直接打开入口。
-- [ ] 5.20 建立Pose Graph document、node catalog、port policy、mutation、Inspector与diagnostics adapters。
+- [x] 5.17 实现Create Inline、Extract Shared与Clear Shared正式mutation。
+- [x] 5.18 实现Pose Graph stable identity生成与复制remap。
+- [x] 5.19 实现Pose Graph asset直接打开入口。
+- [x] 5.20 建立Pose Graph document、node catalog、port policy、mutation、Inspector与diagnostics adapters。
 
 ## 6. Pose Parameter与Mask authoring
 
@@ -129,8 +129,8 @@
 - [x] 6.14.1 安装唯一公开`AnimationAdditiveReferencePoseIds.RigReference` identity且不建立Reference catalog或fallback。
 - [x] 6.14.2 让AdditivePose Node字段默认与构造默认都使用Rig Reference identity。
 - [x] 6.15 定义Additive reference space与scale policy。
-- [ ] 6.16 在Inspector显示Mask对应Rig identity与revision。
-- [ ] 6.17 在Inspector显示每个Pose Parameter缺失policy状态。
+- [x] 6.16 在Inspector显示Mask对应Rig identity与revision。
+- [x] 6.17 在Inspector显示每个Pose Parameter缺失policy状态。
 - [x] 6.18 删除Runtime字符串曲线查找与同名覆盖路径。
 
 ## 7. Pose Graph Validator
@@ -158,7 +158,7 @@
 - [x] 7.17.2 校验接口identity唯一、调用点完整一对一coverage、kind/direction/required一致及required边界悬空。
 - [x] 7.18 校验inline/shared互斥与inline/shared递归cycle。
 - [x] 7.19 拒绝BTSMTL节点、Blackboard端口和Unity Object runtime字段。
-- [ ] 7.20 让Profile、Projection Compiler与Editor Diagnostics复用同一Validator。
+- [x] 7.20 让Profile、Projection Compiler与Editor Diagnostics复用同一Validator。
 
 ## 8. Pose Graph Compiler与Program
 

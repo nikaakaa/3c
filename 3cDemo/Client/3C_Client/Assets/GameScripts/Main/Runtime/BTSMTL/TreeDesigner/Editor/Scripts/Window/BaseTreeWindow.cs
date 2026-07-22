@@ -39,10 +39,6 @@ namespace TreeDesigner.Editor
         [NonSerialized]
         BaseTreeWindow m_Window;
         [NonSerialized]
-        Button m_BackButton;
-        [NonSerialized]
-        VisualElement m_BreadcrumbContainer;
-        [NonSerialized]
         List<BaseTree> m_OpenedTrees;
         [NonSerialized]
         List<AuthoringPageEntry> m_Stack;
@@ -77,14 +73,12 @@ namespace TreeDesigner.Editor
             }
         }
 
-        public void Initialize(BaseTreeWindow window, Button backButton, VisualElement breadcrumbContainer)
+        public void Initialize(BaseTreeWindow window)
         {
             m_Window = window;
-            m_BackButton = backButton;
-            m_BreadcrumbContainer = breadcrumbContainer;
             m_OpenedTrees = new List<BaseTree>();
             m_Stack = new List<AuthoringPageEntry>();
-            m_BackButton.clicked += Pop;
+            m_Window.BindDocumentNavigation(Pop);
         }
 
         public void Dispose()
@@ -100,8 +94,6 @@ namespace TreeDesigner.Editor
             }
             m_Stack?.Clear();
             m_Window = null;
-            m_BackButton = null;
-            m_BreadcrumbContainer = null;
         }
 
         public void ReplaceRoot(BaseTree tree, object authoringContext)
@@ -275,30 +267,22 @@ namespace TreeDesigner.Editor
 
         public void RefreshToolbar()
         {
-            if (m_BackButton == null || m_BreadcrumbContainer == null)
-                return;
-
-            m_BackButton.SetEnabled(m_Stack.Count > 1);
-            m_BreadcrumbContainer.Clear();
+            var entries = new List<GraphAuthoringBreadcrumbEntry>();
             if (m_Stack.Count == 0)
             {
                 if (m_Window.Tree != null)
-                    AddCurrentBreadcrumb(m_Window.Tree.name, AuthoringPageKind.Graph);
+                    entries.Add(new GraphAuthoringBreadcrumbEntry(m_Window.Tree.name, AuthoringPageKind.Graph.ToString()));
+                m_Window.RenderDocumentNavigation(entries, PopTo);
                 return;
             }
 
             for (int i = 0; i < m_Stack.Count; i++)
             {
-                if (i > 0)
-                    AddBreadcrumbSeparator();
-
                 AuthoringPageEntry entry = m_Stack[i];
                 string displayName = string.IsNullOrEmpty(entry.DisplayName) && entry.Tree != null ? entry.Tree.name : entry.DisplayName;
-                if (i == m_Stack.Count - 1)
-                    AddCurrentBreadcrumb(displayName, entry.PageKind);
-                else
-                    AddBreadcrumbButton(displayName, i, entry.PageKind);
+                entries.Add(new GraphAuthoringBreadcrumbEntry(displayName, entry.PageKind.ToString()));
             }
+            m_Window.RenderDocumentNavigation(entries, PopTo);
         }
 
         void SelectPage(AuthoringPageEntry entry, bool notifyOpened)
@@ -329,31 +313,6 @@ namespace TreeDesigner.Editor
             m_CurrentTreeSerializedOwner = null;
             m_CurrentTreeSerializedPropertyPath = string.Empty;
             m_CurrentTreeAuthoringId = string.Empty;
-        }
-
-        void AddBreadcrumbButton(string text, int index, AuthoringPageKind pageKind)
-        {
-            Button button = new Button(() => PopTo(index))
-            {
-                text = text,
-                tooltip = pageKind.ToString()
-            };
-            button.AddToClassList("tree-navigation-segment");
-            m_BreadcrumbContainer.Add(button);
-        }
-
-        void AddCurrentBreadcrumb(string text, AuthoringPageKind pageKind)
-        {
-            Label label = new Label(text) { tooltip = pageKind.ToString() };
-            label.AddToClassList("tree-navigation-current-segment");
-            m_BreadcrumbContainer.Add(label);
-        }
-
-        void AddBreadcrumbSeparator()
-        {
-            Label separator = new Label("/");
-            separator.AddToClassList("tree-navigation-separator");
-            m_BreadcrumbContainer.Add(separator);
         }
 
         static string GetReferenceDisplayName(BaseNode sourceNode, NodeGraphReference reference)
@@ -519,8 +478,9 @@ namespace TreeDesigner.Editor
             if (m_Status != null)
                 m_Status.style.display = liveDebug ? DisplayStyle.Flex : DisplayStyle.None;
 
-            m_TreeView?.SetRuntimeReadOnly(liveDebug);
-            m_InspectorView?.SetEnabled(!liveDebug);
+            bool writable = !liveDebug && m_Window != null && m_Window.CurrentPageSerializedOwner;
+            m_TreeView?.SetRuntimeReadOnly(!writable);
+            m_InspectorView?.SetEnabled(writable);
             if (liveDebug)
                 Refresh();
             else
@@ -867,7 +827,7 @@ namespace TreeDesigner.Editor
         }
     }
 
-    public class BaseTreeWindow : EditorWindow
+    public class BaseTreeWindow : GraphAuthoringEditorShell
     {
         [SerializeField]
         TreeWindowNavigationController m_Navigation = new TreeWindowNavigationController();
@@ -883,13 +843,11 @@ namespace TreeDesigner.Editor
         protected BaseTreeView m_TreeView;
         public BaseTreeView TreeView => m_TreeView;
 
-        protected VisualElement m_LeftPanel;
-        protected VisualElement m_RightPanel;
-        protected VisualElement m_NavigationToolbar;
-        protected Label m_TreeTitle;
         [SerializeField]
         TreeWindowRuntimeOverlayController m_RuntimeOverlay = new TreeWindowRuntimeOverlayController();
+        bool m_RuntimeDiagnosticsBound;
         public bool IsLiveDebug => m_RuntimeOverlay.IsLiveDebug;
+        public bool CanMutateCurrentDocument => !IsLiveDebug && CurrentPageSerializedOwner;
         protected BaseTreeInspectorView m_TreeInspectorView;
         public UnityEngine.Object CurrentPageSerializedOwner => m_Navigation.CurrentPageSerializedOwner;
         public string CurrentPageSerializedPropertyPath => m_Navigation.CurrentPageSerializedPropertyPath;
@@ -929,40 +887,38 @@ namespace TreeDesigner.Editor
         protected bool m_Docking;
         public bool Docking => m_Docking;
 
-        public virtual void CreateGUI()
+        protected override GraphView CreateGraphAuthoringView()
         {
             m_Tree = null;
             if (m_Navigation == null)
                 m_Navigation = new TreeWindowNavigationController();
             if (m_RuntimeOverlay == null)
                 m_RuntimeOverlay = new TreeWindowRuntimeOverlayController();
-
-            VisualElement root = rootVisualElement;
-            var visualTree = Resources.Load<VisualTreeAsset>("VisualTree/BaseTreeWindow");
-            visualTree.CloneTree(root);
-
-            m_LeftPanel = root.Q("left-panel");
-            m_RightPanel = root.Q("right-panel");
-            m_NavigationToolbar = root.Q("tree-navigation-toolbar");
-            Button backButton = root.Q<Button>("tree-navigation-back-button");
-            VisualElement breadcrumbContainer = root.Q("tree-navigation-breadcrumb");
-
             m_TreeView = Activator.CreateInstance(m_TreeViewType) as BaseTreeView;
             m_TreeView.Init(this);
-            m_TreeView.name = "tree-view";
-            m_RightPanel.Add(m_TreeView);
+            return m_TreeView;
+        }
 
-            m_TreeTitle = new Label();
-            m_TreeTitle.name = "tree-title";
-            m_RightPanel.Add(m_TreeTitle);
-
+        protected override VisualElement CreateGraphAuthoringInspectorView()
+        {
             m_TreeInspectorView = Activator.CreateInstance(m_TreeInspectorViewType) as BaseTreeInspectorView;
-            m_TreeInspectorView.name = "tree-inspector";
-            m_LeftPanel.Add(m_TreeInspectorView);
-            m_Navigation.Initialize(this, backButton, breadcrumbContainer);
-            m_RuntimeOverlay.Initialize(this, m_NavigationToolbar, m_TreeView, m_TreeInspectorView);
+            return m_TreeInspectorView;
+        }
 
-            Undo.undoRedoPerformed += OnUndoRedo;
+        protected override GraphAuthoringDomainAdapters CreateGraphAuthoringAdapters()
+        {
+            return new GraphAuthoringDomainAdapters(
+                new BtsmtlGraphAuthoringDocumentAdapter(this),
+                new BtsmtlGraphAuthoringNodeCatalogAdapter(this),
+                new BtsmtlGraphAuthoringPortPolicyAdapter(this),
+                new BtsmtlGraphAuthoringMutationAdapter(this),
+                new BtsmtlGraphAuthoringInspectorAdapter(this, m_TreeInspectorView),
+                new BtsmtlGraphAuthoringDiagnosticsAdapter(this));
+        }
+
+        protected override void OnGraphAuthoringShellCreated()
+        {
+            m_Navigation.Initialize(this);
             m_Navigation.TryRestore();
             OnClosedCallback?.Invoke();
             m_Navigation.RefreshToolbar();
@@ -993,19 +949,14 @@ namespace TreeDesigner.Editor
             //    }
             //}
         }
-        public virtual void OnDisable()
+        protected override void OnDisable()
         {
             m_TreeView?.ClearView();
-            m_TreeInspectorView?.ClearView();
-
             m_Navigation.Dispose();
-            m_RuntimeOverlay.Dispose();
-
-            Undo.undoRedoPerformed -= OnUndoRedo;
             TreeWindowUtility.OnWindowClosed(this);
-            
             OnClosedCallback?.Invoke();
             OnClosedCallback = null;
+            base.OnDisable();
         }
         public virtual void Update()
         {
@@ -1108,12 +1059,8 @@ namespace TreeDesigner.Editor
                         SetCurrentTreeDirty();
                 }
                 m_TreeView.PopulateView(tree);
-                m_TreeInspectorView.SetAuthoringContext(AuthoringContext);
-                m_TreeInspectorView.SetVisibleBlackboardSources(ResolveVisibleTrees());
-                m_TreeInspectorView.PopulateView(tree);
-                m_TreeView.SetRuntimeReadOnly(IsLiveDebug);
-                m_TreeInspectorView.SetEnabled(!IsLiveDebug);
-                m_RuntimeOverlay.OnTreeChanged();
+                m_TreeView.SetRuntimeReadOnly(!CanMutateCurrentDocument);
+                RebindGraphAuthoringDocument();
                 TreeWindowUtility.SelectTree(tree);
             }
 
@@ -1129,9 +1076,9 @@ namespace TreeDesigner.Editor
         public void PopulateSelectionInspector(IEnumerable<GraphSelectable> selection)
         {
             m_TreeInspectorView?.PopulateSelection(selection);
-            m_TreeInspectorView?.SetEnabled(!IsLiveDebug);
+            m_TreeInspectorView?.SetEnabled(CanMutateCurrentDocument);
         }
-        void OnUndoRedo()
+        internal void ReloadCurrentTreeFromSerializedState()
         {
             if (IsLiveDebug)
                 return;
@@ -1149,6 +1096,45 @@ namespace TreeDesigner.Editor
                 m_TreeInspectorView.PopulateView(m_Tree);
                 m_RuntimeOverlay.InvalidateRequests();
             }
+        }
+
+        internal void BindDocumentNavigation(Action navigateBack)
+        {
+            BindGraphAuthoringNavigation(navigateBack);
+        }
+
+        internal void RenderDocumentNavigation(
+            IReadOnlyList<GraphAuthoringBreadcrumbEntry> entries,
+            Action<int> navigateTo)
+        {
+            RenderGraphAuthoringNavigation(entries, navigateTo);
+        }
+
+        internal void BindRuntimeDiagnostics(GraphView graphView, VisualElement toolbar)
+        {
+            if (!m_RuntimeDiagnosticsBound)
+            {
+                m_RuntimeOverlay.Initialize(this, toolbar, graphView as BaseTreeView, m_TreeInspectorView);
+                m_RuntimeDiagnosticsBound = true;
+            }
+            else
+            {
+                m_RuntimeOverlay.OnTreeChanged();
+            }
+        }
+
+        internal void RefreshRuntimeDiagnostics()
+        {
+            if (m_RuntimeDiagnosticsBound && IsLiveDebug)
+                m_RuntimeOverlay.Refresh();
+        }
+
+        internal void ClearRuntimeDiagnostics()
+        {
+            if (!m_RuntimeDiagnosticsBound)
+                return;
+            m_RuntimeOverlay.Dispose();
+            m_RuntimeDiagnosticsBound = false;
         }
 
         void OnBeforeRemovedAsTab()

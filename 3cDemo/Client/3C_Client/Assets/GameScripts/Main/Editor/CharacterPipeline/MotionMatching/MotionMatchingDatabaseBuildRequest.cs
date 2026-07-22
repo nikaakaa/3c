@@ -197,8 +197,8 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
 
     public static class MotionMatchingDatabaseBuildRequestFactory
     {
-        public const int ArtifactSchemaVersion = 1;
-        public const string AlgorithmVersion = "character-motion-matching-analysis/v1";
+        public const int ArtifactSchemaVersion = 2;
+        public const string AlgorithmVersion = "character-motion-matching-analysis/v2";
 
         public static MotionMatchingDatabaseBuildRequest Create(
             CharacterMotionMatchingProfile profile,
@@ -249,11 +249,11 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 coverage[i] = new MotionMatchingCoverageBuildInput(database.CoverageRequirements[i]);
             MotionMatchingClipDependencyIdentity[] dependencies = clips.Select(value => value.DependencyIdentity).ToArray();
             StableHash dependencyHash = StableHash.Compute(dependencies.Select(DependencyKey).ToArray());
+            StableHash snapshot = ComputeInputSnapshot(profile, database, analysisSource, clips, dependencyHash);
             var expected = new CharacterMotionMatchingExpectedArtifactIdentity(
                 ArtifactSchemaVersion, AlgorithmVersion, database.DatabaseId, database.Revision,
                 profile.FeatureSchema.FeatureSchemaId, profile.FeatureSchema.Revision,
-                database.TargetRig.RigId, database.TargetRig.Revision, dependencies, dependencyHash);
-            StableHash snapshot = ComputeInputSnapshot(profile, database, analysisSource, clips, dependencyHash);
+                database.TargetRig.RigId, database.TargetRig.Revision, dependencies, snapshot, dependencyHash);
             long memoryUpperBound = (long)sampleCount * featureSchema.DenseFeatureCount * sizeof(float) * 4L +
                                     (long)sampleCount * 1024L + (long)sampleCount * search.PlanSampleCount * sizeof(int);
             string finalPath = CharacterMotionMatchingDatabaseArtifactStore.GetPath(database);
@@ -454,9 +454,12 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
         {
             var parts = new List<string>
             {
-                DependencyHash(profile), DependencyHash(profile.FeatureSchema), DependencyHash(profile.TrajectoryPolicy),
-                DependencyHash(profile.CostProfile), DependencyHash(profile.SearchPolicy), DependencyHash(database),
-                DependencyHash(database.TargetRig), DependencyHash(analysisSource), dependencyHash.Value
+                DependencyHash(database), DependencyHash(database.TargetRig), DependencyHash(analysisSource),
+                DependencyHash(database.FeatureSchema),
+                DependencyHash(profile.TrajectoryPolicy),
+                DependencyHash(profile.CostProfile),
+                DependencyHash(profile.SearchPolicy),
+                dependencyHash.Value
             };
             for (int i = 0; i < clips.Length; i++)
                 parts.Add(clips[i].DependencyHash);

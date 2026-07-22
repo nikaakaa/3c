@@ -36,6 +36,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             bool[] activeFeatureChannels,
             MotionMatchingSearchIndexNodePayload[] searchNodes,
             int[] orderedSampleIndices,
+            MotionMatchingDatabaseCoverageDiagnosticsPayload coverageDiagnostics,
             MotionMatchingCoverageSummaryPayload[] coverage)
         {
             Identity = identity ?? throw new ArgumentNullException(nameof(identity));
@@ -48,7 +49,10 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             if (samples.Length != capacities.SampleCount || searchNodes.Length != capacities.TreeNodeCount ||
                 normalizedFeatures.Length != samples.Length * capacities.DenseFeatureCount ||
                 normalizationMedian.Length != capacities.DenseFeatureCount || normalizationScale.Length != capacities.DenseFeatureCount ||
-                activeFeatureChannels.Length != capacities.DenseFeatureCount || orderedSampleIndices.Length != samples.Length)
+                activeFeatureChannels.Length != capacities.DenseFeatureCount || orderedSampleIndices.Length != samples.Length ||
+                coverageDiagnostics.TotalSampleCount != samples.Length ||
+                coverageDiagnostics.TotalSegmentCount != segments.Length ||
+                coverageDiagnostics.SearchIndexMaximumDepth + 1 != capacities.TraversalCapacity)
                 throw new ArgumentException("Motion Matching Database Artifact sections do not match compiled capacities.");
             m_Segments = (MotionMatchingSegmentPayload[])segments.Clone();
             m_Samples = (MotionMatchingSamplePayload[])samples.Clone();
@@ -62,12 +66,14 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             SearchDomainId = searchDomainId;
             SampleRate = sampleRate;
             Capacities = capacities;
+            CoverageDiagnostics = coverageDiagnostics;
         }
 
         public CharacterMotionMatchingDatabaseArtifactIdentity Identity { get; }
         public CharacterMotionMatchingSearchDomainId SearchDomainId { get; }
         public float SampleRate { get; }
         public MotionMatchingRuntimeCapacityPayload Capacities { get; }
+        public MotionMatchingDatabaseCoverageDiagnosticsPayload CoverageDiagnostics { get; }
         public int SegmentCount => m_Segments.Length;
         public int SampleCount => m_Samples.Length;
         public int NormalizedFeatureCount => m_NormalizedFeatures.Length;

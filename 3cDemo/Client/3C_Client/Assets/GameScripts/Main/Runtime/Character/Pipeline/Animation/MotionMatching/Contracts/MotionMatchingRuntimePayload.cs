@@ -488,4 +488,79 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public float MaximumObservedFacingChange { get; }
         public float MinimumObservedPlanHorizon { get; }
     }
+
+    public readonly struct MotionMatchingDatabaseCoverageDiagnosticsPayload
+    {
+        public MotionMatchingDatabaseCoverageDiagnosticsPayload(
+            int totalSampleCount,
+            int reachableSampleCount,
+            int unreachableSampleCount,
+            int totalSegmentCount,
+            int reachableSegmentCount,
+            int unreachableSegmentCount,
+            int exactDuplicateSampleCount,
+            float exactDuplicateSampleRatio,
+            long nearDuplicatePairCount,
+            long totalUnorderedNonExactPairCount,
+            float nearDuplicatePairRatio,
+            int protectedContactEmptyRegionCount,
+            int evaluatedNonEmptyRawProtectedContactRegionCount,
+            float protectedContactEmptyRegionRatio,
+            int maximumAdmittedCandidateSetUpperBound,
+            int searchIndexMaximumDepth)
+        {
+            if (totalSampleCount <= 0 || reachableSampleCount < 0 || unreachableSampleCount < 0 ||
+                reachableSampleCount + unreachableSampleCount != totalSampleCount ||
+                totalSegmentCount <= 0 || reachableSegmentCount < 0 || unreachableSegmentCount < 0 ||
+                reachableSegmentCount + unreachableSegmentCount != totalSegmentCount ||
+                exactDuplicateSampleCount < 0 || exactDuplicateSampleCount > totalSampleCount ||
+                nearDuplicatePairCount < 0 || totalUnorderedNonExactPairCount < 0 ||
+                nearDuplicatePairCount > totalUnorderedNonExactPairCount ||
+                protectedContactEmptyRegionCount < 0 || evaluatedNonEmptyRawProtectedContactRegionCount < 0 ||
+                protectedContactEmptyRegionCount > evaluatedNonEmptyRawProtectedContactRegionCount ||
+                maximumAdmittedCandidateSetUpperBound < 0 || maximumAdmittedCandidateSetUpperBound > totalSampleCount ||
+                searchIndexMaximumDepth < 0 ||
+                !Ratio(exactDuplicateSampleRatio) || !Ratio(nearDuplicatePairRatio) || !Ratio(protectedContactEmptyRegionRatio) ||
+                exactDuplicateSampleRatio != Divide(exactDuplicateSampleCount, totalSampleCount) ||
+                nearDuplicatePairRatio != Divide(nearDuplicatePairCount, totalUnorderedNonExactPairCount) ||
+                protectedContactEmptyRegionRatio != Divide(protectedContactEmptyRegionCount, evaluatedNonEmptyRawProtectedContactRegionCount))
+                throw new ArgumentException("Motion Matching Database coverage diagnostics are inconsistent.");
+            TotalSampleCount = totalSampleCount;
+            ReachableSampleCount = reachableSampleCount;
+            UnreachableSampleCount = unreachableSampleCount;
+            TotalSegmentCount = totalSegmentCount;
+            ReachableSegmentCount = reachableSegmentCount;
+            UnreachableSegmentCount = unreachableSegmentCount;
+            ExactDuplicateSampleCount = exactDuplicateSampleCount;
+            ExactDuplicateSampleRatio = exactDuplicateSampleRatio;
+            NearDuplicatePairCount = nearDuplicatePairCount;
+            TotalUnorderedNonExactPairCount = totalUnorderedNonExactPairCount;
+            NearDuplicatePairRatio = nearDuplicatePairRatio;
+            ProtectedContactEmptyRegionCount = protectedContactEmptyRegionCount;
+            EvaluatedNonEmptyRawProtectedContactRegionCount = evaluatedNonEmptyRawProtectedContactRegionCount;
+            ProtectedContactEmptyRegionRatio = protectedContactEmptyRegionRatio;
+            MaximumAdmittedCandidateSetUpperBound = maximumAdmittedCandidateSetUpperBound;
+            SearchIndexMaximumDepth = searchIndexMaximumDepth;
+        }
+
+        public int TotalSampleCount { get; }
+        public int ReachableSampleCount { get; }
+        public int UnreachableSampleCount { get; }
+        public int TotalSegmentCount { get; }
+        public int ReachableSegmentCount { get; }
+        public int UnreachableSegmentCount { get; }
+        public int ExactDuplicateSampleCount { get; }
+        public float ExactDuplicateSampleRatio { get; }
+        public long NearDuplicatePairCount { get; }
+        public long TotalUnorderedNonExactPairCount { get; }
+        public float NearDuplicatePairRatio { get; }
+        public int ProtectedContactEmptyRegionCount { get; }
+        public int EvaluatedNonEmptyRawProtectedContactRegionCount { get; }
+        public float ProtectedContactEmptyRegionRatio { get; }
+        public int MaximumAdmittedCandidateSetUpperBound { get; }
+        public int SearchIndexMaximumDepth { get; }
+
+        static bool Ratio(float value) => float.IsFinite(value) && value >= 0f && value <= 1f;
+        static float Divide(long numerator, long denominator) => denominator == 0 ? 0f : numerator / (float)denominator;
+    }
 }

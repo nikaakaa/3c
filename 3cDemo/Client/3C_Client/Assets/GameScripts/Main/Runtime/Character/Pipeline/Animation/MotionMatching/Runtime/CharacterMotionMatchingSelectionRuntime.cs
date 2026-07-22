@@ -282,6 +282,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             while (m_SampleAccumulator >= sampleDuration && m_PlanCursor < m_Database.SearchPolicy.PlanSampleCount)
             {
                 MotionMatchingSamplePayload current = m_Database.GetSample(m_CurrentSampleIndex);
+                if (current.SampleId.Equals(m_CurrentPlan.HorizonEndSampleId))
+                {
+                    m_PlanCursor = m_Database.SearchPolicy.PlanSampleCount;
+                    break;
+                }
                 if (current.NextSampleIndex < 0)
                 {
                     m_PlanCursor = m_Database.SearchPolicy.PlanSampleCount;

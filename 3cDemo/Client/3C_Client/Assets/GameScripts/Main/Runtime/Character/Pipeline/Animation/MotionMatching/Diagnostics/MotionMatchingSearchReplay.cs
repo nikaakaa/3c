@@ -228,7 +228,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 throw new ArgumentNullException(nameof(database));
             var parts = new List<string>
             {
-                "motion-matching-search-digest/v1",
+                "motion-matching-search-digest/v2",
                 database.ArtifactIdentity.ContentHash.Value,
                 search.TopKCount.ToString(CultureInfo.InvariantCulture),
                 search.AdmittedCount.ToString(CultureInfo.InvariantCulture),
@@ -252,6 +252,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 parts.Add(Bits(plan.Plan.TotalCost));
                 parts.Add(plan.Plan.HorizonEndSampleId.Value.ToString(CultureInfo.InvariantCulture));
                 parts.Add(Bits(plan.Plan.EntryVisualAdvanceRate));
+                parts.Add(Bits(plan.Plan.NextMandatorySearchTime));
             }
             return StableHash.Compute(parts.ToArray());
         }

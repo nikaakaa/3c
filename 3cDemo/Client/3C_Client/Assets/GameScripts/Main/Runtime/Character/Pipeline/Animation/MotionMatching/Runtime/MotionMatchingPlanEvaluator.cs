@@ -155,6 +155,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             float contact = 0f;
             float segmentEnd = 0f;
             float velocityChange = 0f;
+            int evaluatedSampleCount = 0;
             MotionMatchingSamplePayload previous = default;
             bool hasPrevious = false;
 
@@ -167,6 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 }
                 workspace[workspaceOffset + step] = sampleIndex;
                 MotionMatchingSamplePayload sample = m_Database.GetSample(sampleIndex);
+                evaluatedSampleCount++;
                 horizonEndSampleIndex = sampleIndex;
                 float time = step * m_Database.SearchPolicy.PlanSampleInterval;
                 if (step > 0)
@@ -227,8 +229,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 new MotionMatchingPlanCostComponents(trajectoryPosition, trajectoryFacing, contact, segmentEnd, velocityChange),
                 continueCurrent,
                 ResolveVisualAdvanceRate(candidate.SampleIndex),
-                m_Database.SearchPolicy.SearchInterval);
+                ResolveNextMandatorySearchTime(evaluatedSampleCount, end));
             return true;
+        }
+
+        float ResolveNextMandatorySearchTime(int evaluatedSampleCount, MotionMatchingSamplePayload horizonEnd)
+        {
+            if (evaluatedSampleCount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(evaluatedSampleCount));
+            bool terminalBoundary = horizonEnd.Terminal && horizonEnd.NextSampleIndex < 0;
+            int safeSampleIntervals = terminalBoundary
+                ? evaluatedSampleCount
+                : Math.Max(1, evaluatedSampleCount - 1);
+            float value = safeSampleIntervals / m_Database.SampleRate;
+            if (!float.IsFinite(value) || value <= 0f)
+                throw new InvalidOperationException("Motion Matching plan produced an invalid mandatory search time.");
+            return value;
         }
 
         float ResolveVisualAdvanceRate(int sampleIndex)

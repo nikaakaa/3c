@@ -13,7 +13,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
     public static class CharacterMotionMatchingDatabaseArtifactCodec
     {
         const int Magic = 0x42444d4d;
-        const int FormatVersion = 1;
+        const int FormatVersion = 2;
 
         enum SectionId
         {
@@ -115,7 +115,10 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             ReadNormalization(sections[SectionId.Normalization], out float[] median, out float[] scale, out bool[] active);
             ReadIndex(sections[SectionId.SearchIndex], out MotionMatchingSearchIndexNodePayload[] nodes, out int[] orderedSamples);
             RuntimeRead runtime = ReadRuntime(sections[SectionId.Runtime]);
-            MotionMatchingCoverageSummaryPayload[] coverage = ReadCoverage(sections[SectionId.Coverage]);
+            ReadCoverage(
+                sections[SectionId.Coverage],
+                out MotionMatchingDatabaseCoverageDiagnosticsPayload coverageDiagnostics,
+                out MotionMatchingCoverageSummaryPayload[] coverage);
             var identity = new CharacterMotionMatchingDatabaseArtifactIdentity(
                 identityRead.ArtifactSchemaVersion,
                 identityRead.AlgorithmVersion,
@@ -126,6 +129,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 identityRead.RigId,
                 identityRead.RigRevision,
                 identityRead.Dependencies,
+                identityRead.AnalysisInputHash,
                 identityRead.OrderedDependencyHash,
                 identityRead.ContentHash);
             var artifact = new CharacterMotionMatchingDatabaseArtifact(
@@ -141,6 +145,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 active,
                 nodes,
                 orderedSamples,
+                coverageDiagnostics,
                 coverage);
             if (!ComputeContentHash(artifact).Equals(identity.ContentHash))
                 throw new InvalidDataException("Motion Matching Artifact canonical ContentHash is invalid.");
@@ -176,6 +181,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                     writer.Write(dependency.MotionRootBoneId.Value);
                     writer.Write(dependency.FootArtifactHash.Value);
                 }
+                writer.Write(identity.AnalysisInputHash.Value);
                 writer.Write(identity.OrderedClipDependencyHash.Value);
             });
         }
@@ -388,6 +394,23 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
 
         static byte[] WriteCoverage(CharacterMotionMatchingDatabaseArtifact artifact) => WriteBuffer(writer =>
         {
+            MotionMatchingDatabaseCoverageDiagnosticsPayload diagnostics = artifact.CoverageDiagnostics;
+            writer.Write(diagnostics.TotalSampleCount);
+            writer.Write(diagnostics.ReachableSampleCount);
+            writer.Write(diagnostics.UnreachableSampleCount);
+            writer.Write(diagnostics.TotalSegmentCount);
+            writer.Write(diagnostics.ReachableSegmentCount);
+            writer.Write(diagnostics.UnreachableSegmentCount);
+            writer.Write(diagnostics.ExactDuplicateSampleCount);
+            writer.Write(diagnostics.ExactDuplicateSampleRatio);
+            writer.Write(diagnostics.NearDuplicatePairCount);
+            writer.Write(diagnostics.TotalUnorderedNonExactPairCount);
+            writer.Write(diagnostics.NearDuplicatePairRatio);
+            writer.Write(diagnostics.ProtectedContactEmptyRegionCount);
+            writer.Write(diagnostics.EvaluatedNonEmptyRawProtectedContactRegionCount);
+            writer.Write(diagnostics.ProtectedContactEmptyRegionRatio);
+            writer.Write(diagnostics.MaximumAdmittedCandidateSetUpperBound);
+            writer.Write(diagnostics.SearchIndexMaximumDepth);
             writer.Write(artifact.CoverageCount);
             for (int i = 0; i < artifact.CoverageCount; i++)
             {
@@ -402,14 +425,27 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             }
         });
 
-        static MotionMatchingCoverageSummaryPayload[] ReadCoverage(ArraySegment<byte> section) => ReadSection(section, reader =>
+        static void ReadCoverage(
+            ArraySegment<byte> section,
+            out MotionMatchingDatabaseCoverageDiagnosticsPayload diagnostics,
+            out MotionMatchingCoverageSummaryPayload[] coverage)
         {
-            int count = ReadPositiveCount(reader, "Coverage");
-            var values = new MotionMatchingCoverageSummaryPayload[count];
-            for (int i = 0; i < count; i++)
-                values[i] = new MotionMatchingCoverageSummaryPayload(reader.ReadString(), reader.ReadBoolean(), reader.ReadInt32(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
-            return values;
-        });
+            CoverageRead value = ReadSection(section, reader =>
+            {
+                var databaseDiagnostics = new MotionMatchingDatabaseCoverageDiagnosticsPayload(
+                    reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(),
+                    reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(),
+                    reader.ReadInt32(), reader.ReadSingle(), reader.ReadInt64(), reader.ReadInt64(), reader.ReadSingle(),
+                    reader.ReadInt32(), reader.ReadInt32(), reader.ReadSingle(), reader.ReadInt32(), reader.ReadInt32());
+                int count = ReadPositiveCount(reader, "Coverage");
+                var summaries = new MotionMatchingCoverageSummaryPayload[count];
+                for (int i = 0; i < count; i++)
+                    summaries[i] = new MotionMatchingCoverageSummaryPayload(reader.ReadString(), reader.ReadBoolean(), reader.ReadInt32(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+                return new CoverageRead(databaseDiagnostics, summaries);
+            });
+            diagnostics = value.Diagnostics;
+            coverage = value.Summaries;
+        }
 
         static IdentityRead ReadIdentity(ArraySegment<byte> section) => ReadSection(section, reader =>
         {
@@ -439,10 +475,11 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                     new CharacterMotionMatchingSourceClipId(coreReader.ReadString()), coreReader.ReadString(), coreReader.ReadInt64(),
                     coreReader.ReadString(), coreReader.ReadString(), new AnimationBoneId(coreReader.ReadString()), new StableHash(coreReader.ReadString()));
             }
+            var analysisInputHash = new StableHash(coreReader.ReadString());
             var orderedHash = new StableHash(coreReader.ReadString());
             if (coreStream.Position != coreStream.Length)
                 throw new InvalidDataException("Motion Matching Artifact identity core contains trailing bytes.");
-            return new IdentityRead(schema, algorithm, databaseId, databaseRevision, featureSchemaId, featureRevision, rigId, rigRevision, dependencies, orderedHash, new StableHash(contentHash));
+            return new IdentityRead(schema, algorithm, databaseId, databaseRevision, featureSchemaId, featureRevision, rigId, rigRevision, dependencies, analysisInputHash, orderedHash, new StableHash(contentHash));
         });
 
         static float[] ReadFloatArray(ArraySegment<byte> section, string label) => ReadSection(section, reader =>
@@ -537,11 +574,26 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             public MotionMatchingRuntimeCapacityPayload Capacities { get; }
         }
 
+        readonly struct CoverageRead
+        {
+            public CoverageRead(
+                MotionMatchingDatabaseCoverageDiagnosticsPayload diagnostics,
+                MotionMatchingCoverageSummaryPayload[] summaries)
+            {
+                Diagnostics = diagnostics;
+                Summaries = summaries;
+            }
+
+            public MotionMatchingDatabaseCoverageDiagnosticsPayload Diagnostics { get; }
+            public MotionMatchingCoverageSummaryPayload[] Summaries { get; }
+        }
+
         readonly struct IdentityRead
         {
             public IdentityRead(int schema, string algorithm, CharacterMotionMatchingDatabaseId databaseId, int databaseRevision,
                 CharacterMotionMatchingFeatureSchemaId featureSchemaId, int featureSchemaRevision, string rigId, string rigRevision,
-                MotionMatchingClipDependencyIdentity[] dependencies, StableHash orderedDependencyHash, StableHash contentHash)
+                MotionMatchingClipDependencyIdentity[] dependencies, StableHash analysisInputHash,
+                StableHash orderedDependencyHash, StableHash contentHash)
             {
                 ArtifactSchemaVersion = schema;
                 AlgorithmVersion = algorithm;
@@ -552,6 +604,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 RigId = rigId;
                 RigRevision = rigRevision;
                 Dependencies = dependencies;
+                AnalysisInputHash = analysisInputHash;
                 OrderedDependencyHash = orderedDependencyHash;
                 ContentHash = contentHash;
             }
@@ -564,6 +617,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             public string RigId { get; }
             public string RigRevision { get; }
             public MotionMatchingClipDependencyIdentity[] Dependencies { get; }
+            public StableHash AnalysisInputHash { get; }
             public StableHash OrderedDependencyHash { get; }
             public StableHash ContentHash { get; }
         }

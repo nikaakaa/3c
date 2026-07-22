@@ -1,5 +1,6 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -15,6 +16,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         readonly AnimationBlendEntryState[] m_CompactedEntries;
         readonly int[] m_EntrySourceCaptureIndices;
         readonly int[] m_CompactedSourceCaptureIndices;
+        readonly float[] m_EntryRawAlphas;
+        readonly float[] m_EntryEasedAlphas;
         readonly float[] m_EntryScalarWeights;
         readonly float[] m_EntryBoneWeights;
         readonly float[] m_PlannedEntryMaximumWeights;
@@ -101,6 +104,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_CompactedEntries = new AnimationBlendEntryState[capacity];
             m_EntrySourceCaptureIndices = new int[capacity];
             m_CompactedSourceCaptureIndices = new int[capacity];
+            m_EntryRawAlphas = new float[capacity];
+            m_EntryEasedAlphas = new float[capacity];
             m_EntryScalarWeights = new float[capacity];
             m_EntryBoneWeights = new float[checked(capacity * boneCount)];
             m_PlannedEntryMaximumWeights = new float[capacity];
@@ -140,12 +145,131 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal AnimationPoseNativeInvalidReason LastInvalidReason => m_LastInvalidReason;
         internal ulong ContinuityIdentity => m_ContinuityIdentity;
 
+        internal void CopyDiagnostics(
+            int stackIndex,
+            AnimationBlendStackSnapshot[] stackDestination,
+            AnimationBlendStackEntrySnapshot[] entryDestination,
+            int entryOffset,
+            float[] entryBoneWeights,
+            float[] storedBoneWeights,
+            float[] inertialBoneWeights)
+        {
+            RequireAlive();
+            if ((uint)stackIndex >= (uint)stackDestination.Length || entryOffset < 0 ||
+                entryOffset > entryDestination.Length - m_EntryCount ||
+                entryBoneWeights.Length < checked((entryOffset + m_EntryCount) * m_Rig.Bones.Count) ||
+                storedBoneWeights.Length < checked((stackIndex + 1) * m_Rig.Bones.Count) ||
+                inertialBoneWeights.Length < checked((stackIndex + 1) * m_Rig.Bones.Count))
+            {
+                throw new ArgumentException("Animation Blend Stack diagnostics capacity is invalid.");
+            }
+
+            for (int entryIndex = 0; entryIndex < m_EntryCount; entryIndex++)
+            {
+                AnimationBlendEntryState entry = m_Entries[entryIndex];
+                AnimationBlendProfilePayload profile = m_ProfileCatalog.Require(entry.BlendProfileIndex);
+                int diagnosticIndex = entryOffset + entryIndex;
+                entryDestination[diagnosticIndex] = new AnimationBlendStackEntrySnapshot(
+                    AnimationChannelId,
+                    PoseSlotId,
+                    entry.EntryId,
+                    entryIndex,
+                    entry.ProgramProducerIndex,
+                    entry.Technique,
+                    entry.CanonicalCurveIndex,
+                    m_CurveCatalog.Entries[entry.CanonicalCurveIndex].CanonicalHash,
+                    entry.BlendProfileIndex,
+                    profile.ProfileId,
+                    entry.PushDepth,
+                    entry.GetOutputDuration(profile),
+                    entry.ElapsedSeconds,
+                    m_EntryRawAlphas[entryIndex],
+                    m_EntryEasedAlphas[entryIndex],
+                    m_EntryScalarWeights[entryIndex],
+                    entry.ContributionContinuityIdentity);
+                Array.Copy(
+                    m_EntryBoneWeights,
+                    entryIndex * m_Rig.Bones.Count,
+                    entryBoneWeights,
+                    diagnosticIndex * m_Rig.Bones.Count,
+                    m_Rig.Bones.Count);
+            }
+
+            Array.Copy(
+                m_HasPendingStoredCapture ? m_PendingCaptureBoneOutputWeights : m_StoredBoneOutputWeights,
+                0,
+                storedBoneWeights,
+                stackIndex * m_Rig.Bones.Count,
+                m_Rig.Bones.Count);
+            Array.Copy(
+                m_HasPendingInertialCapture ? m_PendingCaptureBoneOutputWeights : m_InertialBoneOutputWeights,
+                0,
+                inertialBoneWeights,
+                stackIndex * m_Rig.Bones.Count,
+                m_Rig.Bones.Count);
+            bool hasStored = m_HasStoredPose || m_HasPendingStoredCapture;
+            bool hasInertial = m_HasInertialBlend || m_HasPendingInertialCapture;
+            AnimationSlotBlendStoredPoseNativeState storedState = m_HasStoredPose
+                ? RequireStoredState()
+                : default;
+            AnimationSlotBlendInertialNativeState inertialState = m_HasInertialBlend
+                ? RequireInertialState()
+                : default;
+            ulong storedIdentity = m_HasStoredPose
+                ? storedState.ContributionContinuityIdentity
+                : m_HasPendingStoredCapture ? m_PendingStoredContributionIdentity : 0;
+            ulong inertialIdentity = m_HasInertialBlend
+                ? inertialState.ContributionContinuityIdentity
+                : m_HasPendingInertialCapture ? m_PendingInertialContributionIdentity : 0;
+            stackDestination[stackIndex] = new AnimationBlendStackSnapshot(
+                AnimationChannelId,
+                PoseSlotId,
+                OutputPolicy,
+                entryOffset,
+                m_EntryCount,
+                m_HasCompletedFrame ? m_LastAvailability : PoseSlotFrameAvailability.Invalid,
+                m_HasCompletedFrame ? m_LastInvalidReason : AnimationPoseNativeInvalidReason.None,
+                m_HasCompletedFrame ? m_LastOutputWeight : 0f,
+                m_ContinuityIdentity,
+                m_LastCompletionIdentity,
+                hasStored,
+                m_HasPendingStoredCapture,
+                m_HasPendingStoredCapture ? m_PendingCaptureOutputWeight : m_StoredOutputWeight,
+                storedIdentity,
+                storedState.CapturedAtCompletionIdentity,
+                storedState.SourceHistoryCompletionIdentity,
+                storedState.HasFootFeatures == 1,
+                storedState.LeftFootFeatures,
+                storedState.RightFootFeatures,
+                hasInertial,
+                m_HasPendingInertialCapture,
+                m_HasPendingInertialCapture ? m_PendingCaptureOutputWeight : m_InertialOutputWeight,
+                inertialIdentity,
+                inertialState.CapturedAtCompletionIdentity,
+                inertialState.SourceHistoryCompletionIdentity,
+                inertialState.SourceHasFootFeatures == 1,
+                inertialState.LeftFootFeatures,
+                inertialState.RightFootFeatures);
+        }
+
         internal AnimationBlendEntryId GetEntryId(int index)
         {
             RequireAlive();
             if ((uint)index >= (uint)m_EntryCount)
                 throw new ArgumentOutOfRangeException(nameof(index));
             return m_Entries[index].EntryId;
+        }
+
+        internal bool TryGetPendingInertialSourceId(out AnimationPoseSourceId sourceId)
+        {
+            RequireAlive();
+            if (m_HasPendingInertialCapture)
+            {
+                sourceId = m_PendingInertialEntry.SourceId;
+                return true;
+            }
+            sourceId = default;
+            return false;
         }
 
         internal AnimationBlendTransitionIdentity ResolveExpectedTransitionIdentity(
@@ -554,10 +678,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             for (int i = m_EntryCount - 1; i >= 0; i--)
             {
                 AnimationBlendEntryState entry = m_Entries[i];
-                float alpha = entry.EvaluateOutputAlpha(
+                AnimationBlendProfilePayload profile = m_ProfileCatalog.Require(entry.BlendProfileIndex);
+                float rawAlpha = entry.GetOutputNormalizedTime(profile);
+                float alpha = AnimationBlendCurveEvaluator.Evaluate(
                     m_CurveCatalog.Require(entry.CanonicalCurveIndex),
-                    m_ProfileCatalog.Require(entry.BlendProfileIndex));
+                    rawAlpha);
                 RequireNormalized(alpha);
+                m_EntryRawAlphas[i] = rawAlpha;
+                m_EntryEasedAlphas[i] = alpha;
                 m_EntryScalarWeights[i] = scalarResidual * alpha;
                 m_PlannedEntryMaximumWeights[i] = m_EntryScalarWeights[i];
                 scalarResidual *= 1f - alpha;
@@ -735,7 +863,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 ? m_PendingCaptureBoneOutputWeights
                 : m_InertialBoneOutputWeights;
 
-            EvaluateInertialEnvelope(entry.GetOutputNormalizedTime(profile), entry.GetOutputDuration(profile), curve,
+            float rawOutputAlpha = entry.GetOutputNormalizedTime(profile);
+            EvaluateInertialEnvelope(rawOutputAlpha, entry.GetOutputDuration(profile), curve,
                 out float outputEnvelope, out float outputResidualWeight, out _);
             float diagnosticEnvelope = Mathf.Clamp01(outputEnvelope);
             float inertialScalarWeight = (1f - diagnosticEnvelope) * baseOutputWeight;
@@ -743,6 +872,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             float outputWeight = inertialScalarWeight + liveScalarWeight;
             RequireNormalized(outputWeight);
             m_PlannedEntryMaximumWeights[0] = liveScalarWeight;
+            m_EntryRawAlphas[0] = rawOutputAlpha;
+            m_EntryEasedAlphas[0] = diagnosticEnvelope;
+            m_EntryScalarWeights[0] = liveScalarWeight;
             m_PlannedStoredMaximumWeight = 0f;
 
             ulong historyCompletion = kind == AnimationSlotBlendFramePlanKind.InertialContinue
@@ -810,6 +942,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                         boneIndex,
                         (1f - envelope) * baseBoneWeights[boneIndex]);
                     m_SlotWorkspace.SetPreparedDenseBoneWeight(preparation, 1, boneIndex, envelope);
+                    m_EntryBoneWeights[boneIndex] = envelope;
                     m_PlannedEntryMaximumWeights[0] = Mathf.Max(m_PlannedEntryMaximumWeights[0], envelope);
                 }
                 for (int parameterIndex = 0; parameterIndex < m_SlotWorkspace.ParameterCount; parameterIndex++)
@@ -1190,20 +1323,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         ulong RequireStoredContributionIdentity()
         {
+            return RequireStoredState().ContributionContinuityIdentity;
+        }
+
+        ulong RequireInertialContributionIdentity()
+        {
+            return RequireInertialState().ContributionContinuityIdentity;
+        }
+
+        AnimationSlotBlendStoredPoseNativeState RequireStoredState()
+        {
             AnimationSlotBlendPoseWorkspaceBinding binding = m_SlotWorkspace.RequireActiveBinding();
             AnimationSlotBlendStoredPoseNativeState state = binding.StoredPose.State[0];
             if (state.Active != 1 || state.ContributionContinuityIdentity == 0)
                 throw new InvalidOperationException("Animation Stored Pose Native state is unavailable.");
-            return state.ContributionContinuityIdentity;
+            return state;
         }
 
-        ulong RequireInertialContributionIdentity()
+        AnimationSlotBlendInertialNativeState RequireInertialState()
         {
             AnimationSlotBlendPoseWorkspaceBinding binding = m_SlotWorkspace.RequireActiveBinding();
             AnimationSlotBlendInertialNativeState state = binding.Inertial.State[0];
             if (state.Active != 1 || state.ContributionContinuityIdentity == 0)
                 throw new InvalidOperationException("Animation Inertial Native state is unavailable.");
-            return state.ContributionContinuityIdentity;
+            return state;
         }
 
         int CopyEntrySourceIds(AnimationPoseSourceId[] destination)
@@ -1403,6 +1546,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         void ClearPlannedWeights()
         {
             Array.Clear(m_EntryScalarWeights, 0, m_EntryScalarWeights.Length);
+            Array.Clear(m_EntryRawAlphas, 0, m_EntryRawAlphas.Length);
+            Array.Clear(m_EntryEasedAlphas, 0, m_EntryEasedAlphas.Length);
             Array.Clear(m_EntryBoneWeights, 0, m_EntryBoneWeights.Length);
             Array.Clear(m_PlannedEntryMaximumWeights, 0, m_PlannedEntryMaximumWeights.Length);
             m_PlannedStoredMaximumWeight = 0f;

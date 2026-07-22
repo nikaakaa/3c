@@ -4,7 +4,7 @@ using Unity.Collections;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
-    internal enum AnimationPoseNativeInvalidReason : byte
+    public enum AnimationPoseNativeInvalidReason : byte
     {
         None = 0,
         SourceIncomplete = 1,

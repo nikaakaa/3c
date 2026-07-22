@@ -221,106 +221,106 @@
 - [x] 10.1 将`AnimationBlendStackRuntime` owner从LayerId切换为PoseSlotId。
 - [x] 10.2 将每Layer Stack policy切换为每Pose Slot policy。
 - [x] 10.3 将transition matrix key约束为同AnimationChannelId/PoseSlotId producer。
-- [ ] 10.4 定义不可变`PoseSlotFrame`合同。
-- [ ] 10.5 让PoseSlotFrame保存availability和slot output weight。
-- [ ] 10.6 让PoseSlotFrame保存dense local pose。
-- [ ] 10.7 让PoseSlotFrame保存Pose Parameter buffer。
-- [ ] 10.8 让PoseSlotFrame保存live/Stored/Inertial source contribution。
-- [ ] 10.9 让PoseSlotFrame保存continuity identity。
-- [ ] 10.10 将`AnimationBlendPoseEvaluator`改为`AnimationSlotBlendPoseEvaluator`。
-- [ ] 10.11 保留per-slot独立clock、curve和Per-Bone transition。
-- [ ] 10.12 保留per-slot容量、Stored Pose和Inertial accumulator。
-- [ ] 10.13 保留per-slotMarker relation detach和source retirement。
-- [ ] 10.14 从Stack evaluator删除跨slotMask composition。
-- [ ] 10.15 从Stack evaluator删除global Layer order。
-- [ ] 10.16 从Stack evaluator删除跨slotOverride/Additive。
-- [ ] 10.17 从Stack evaluator删除最终Animator AnimationStream写回。
-- [ ] 10.18 让Stack只向PoseSlotInput发布完成frame。
+- [x] 10.4 定义不可变`PoseSlotFrame`合同。
+- [x] 10.5 让PoseSlotFrame保存availability和slot output weight。
+- [x] 10.6 让PoseSlotFrame保存dense local pose。
+- [x] 10.7 让PoseSlotFrame保存Pose Parameter buffer。
+- [x] 10.8 让PoseSlotFrame保存live/Stored/Inertial source contribution。
+- [x] 10.9 让PoseSlotFrame保存continuity identity。
+- [x] 10.10 将`AnimationBlendPoseEvaluator`改为`AnimationSlotBlendPoseEvaluator`。
+- [x] 10.11 保留per-slot独立clock、curve和Per-Bone transition。
+- [x] 10.12 保留per-slot容量、Stored Pose和Inertial accumulator。
+- [x] 10.13 保留per-slotMarker relation detach和source retirement。
+- [x] 10.14 从Stack evaluator删除跨slotMask composition。
+- [x] 10.15 从Stack evaluator删除global Layer order。
+- [x] 10.16 从Stack evaluator删除跨slotOverride/Additive。
+- [x] 10.17 从Stack evaluator删除最终Animator AnimationStream写回。
+- [x] 10.18 让Stack只向PoseSlotInput发布完成frame。
 
 ## 11. Character Pose Graph Runtime
 
-- [ ] 11.1 定义`CharacterPoseGraphEvaluator`创建合同。
-- [ ] 11.2 定义Pose Program ABI校验。
-- [ ] 11.3 定义fixed pose workspace。
-- [ ] 11.4 定义fixed parameter workspace。
-- [ ] 11.5 定义fixed contribution workspace。
-- [ ] 11.6 定义frame cache与completion identity。
-- [ ] 11.7 绑定全部PoseSlotFrame输入index。
-- [ ] 11.8 实现PoseSlotInput operation。
-- [ ] 11.9 实现LayeredBoneBlend TRS operation。
-- [ ] 11.10 实现LayeredBoneBlend source contribution传播。
-- [ ] 11.11 实现LayeredBoneBlend Pose Parameter解析。
-- [ ] 11.12 实现Additive position规则。
-- [ ] 11.13 实现Additive shortest-arc rotation规则。
-- [ ] 11.14 实现Additive scale policy。
-- [ ] 11.14.1 实现Mesh reference delta到local pose的Rig parent-index转换。
-- [ ] 11.15 实现Additive source contribution传播。
-- [ ] 11.16 实现PoseCurveResolve operation。
-- [ ] 11.16.1 实现PoseCurveResolve保持Base骨骼/贡献/foot、只解析Parameter Source且区分NoPose与Invalid的完整runtime语义。
-- [ ] 11.17 实现OutputPose operation。
-- [ ] 11.18 实现AllowEmpty NoPose传播。
-- [ ] 11.19 实现RequireOutput invalid状态。
-- [ ] 11.20 实现非有限pose/parameter拒绝。
-- [ ] 11.21 将最终Evaluator接入唯一PlayableGraph/Animation Job拓扑。
-- [ ] 11.22 让最终Job唯一写回Animator AnimationStream。
-- [ ] 11.23 禁止表现帧动态扩容和逐骨骼Transform写入。
-- [ ] 11.24 定义`FinalAnimationPoseFrame`发布合同。
+- [x] 11.1 定义`CharacterPoseGraphEvaluator`创建合同。
+- [x] 11.2 定义Pose Program ABI校验。
+- [x] 11.3 定义fixed pose workspace。
+- [x] 11.4 定义fixed parameter workspace。
+- [x] 11.5 定义fixed contribution workspace。
+- [x] 11.6 定义frame cache与completion identity。
+- [x] 11.7 绑定全部PoseSlotFrame输入index。
+- [x] 11.8 实现PoseSlotInput operation。
+- [x] 11.9 实现LayeredBoneBlend TRS operation。
+- [x] 11.10 实现LayeredBoneBlend source contribution传播。
+- [x] 11.11 实现LayeredBoneBlend Pose Parameter解析。
+- [x] 11.12 实现Additive position规则。
+- [x] 11.13 实现Additive shortest-arc rotation规则。
+- [x] 11.14 实现Additive scale policy。
+- [x] 11.14.1 实现Mesh reference delta到local pose的Rig parent-index转换。
+- [x] 11.15 实现Additive source contribution传播。
+- [x] 11.16 实现PoseCurveResolve operation。
+- [x] 11.16.1 实现PoseCurveResolve保持Base骨骼/贡献/foot、只解析Parameter Source且区分NoPose与Invalid的完整runtime语义。
+- [x] 11.17 实现OutputPose operation。
+- [x] 11.18 实现AllowEmpty NoPose传播。
+- [x] 11.19 实现RequireOutput invalid状态。
+- [x] 11.20 实现非有限pose/parameter拒绝。
+- [x] 11.21 将最终Evaluator接入唯一PlayableGraph/Animation Job拓扑。
+- [x] 11.22 让最终Job唯一写回Animator AnimationStream。
+- [x] 11.23 禁止表现帧动态扩容和逐骨骼Transform写入。
+- [x] 11.24 定义`FinalAnimationPoseFrame`发布合同。
 
 ## 12. Animancer source后端与Presentation编排
 
 - [x] 12.1 保持Animancer source visual按完整AnimationPoseSourceId隔离。
 - [x] 12.2 保持Timeline source state Speed为零。
 - [x] 12.3 保持producer内部ManualMixer child使用DontSynchronize。
-- [ ] 12.4 删除AnimancerLayer.Play调用。
-- [ ] 12.5 删除Animancer StartFade与FadeGroup调用。
-- [ ] 12.6 删除Animancer layer weight写入。
-- [ ] 12.7 删除Animancer transition lookup。
+- [x] 12.4 删除AnimancerLayer.Play调用。
+- [x] 12.5 删除Animancer StartFade与FadeGroup调用。
+- [x] 12.6 删除Animancer layer weight写入。
+- [x] 12.7 删除Animancer transition lookup。
 - [x] 12.8 让Animancer backend只输出source pose sample和playable寿命。
-- [ ] 12.9 更新CharacterAnimationPlaybackRuntime创建顺序。
-- [ ] 12.10 更新PresentationFrame command消费顺序。
-- [ ] 12.11 同帧推进全部AnimationChannel Lifecycle。
-- [ ] 12.12 同帧生成全部PoseSlot Stack frame plan。
-- [ ] 12.13 在全部slot完成后只执行一次Pose Graph。
-- [ ] 12.14 在Pose Graph完成后只执行一次Pose Post Process。
-- [ ] 12.15 在Pose Post Process完成后推进Camera。
-- [ ] 12.16 更新Reset、Dispose与job completion顺序。
+- [x] 12.9 更新CharacterAnimationPlaybackRuntime创建顺序。
+- [x] 12.10 更新PresentationFrame command消费顺序。
+- [x] 12.11 同帧推进全部AnimationChannel Lifecycle。
+- [x] 12.12 同帧生成全部PoseSlot Stack frame plan。
+- [x] 12.13 在全部slot完成后只执行一次Pose Graph。
+- [x] 12.14 在Pose Graph完成后只执行一次Pose Post Process。
+- [x] 12.15 在Pose Post Process完成后推进Camera。
+- [x] 12.16 更新Reset、Dispose与job completion顺序。
 
 ## 13. Foot Placement输入迁移
 
-- [ ] 13.1 将Foot Placement pose输入切换为FinalAnimationPoseFrame。
-- [ ] 13.2 将LeftFoot actual contribution切换为Pose Graph最终输出。
-- [ ] 13.3 将RightFoot actual contribution切换为Pose Graph最终输出。
-- [ ] 13.4 传播Base slot live source Foot Analysis。
-- [ ] 13.5 传播Action slot live source Foot Analysis。
-- [ ] 13.6 传播Stored Pose每脚feature aggregate。
-- [ ] 13.7 传播Inertial每脚feature transition。
-- [ ] 13.8 按最终dense Bone Mask组合每脚feature贡献。
-- [ ] 13.9 让零脚mask overlay不稀释Base feature。
-- [ ] 13.10 让全身overlay按实际脚贡献替换Base feature。
-- [ ] 13.11 将final PoseParameter映射到Foot Placement正式输入。
-- [ ] 13.12 删除Animancer state weight读取。
-- [ ] 13.13 删除单一Layer/slot scalar替代每脚贡献路径。
-- [ ] 13.14 让Pose Graph Invalid触发Foot Placement正式reset。
-- [ ] 13.15 保持Foot Placement固定在Pose Graph之后且不成为Graph节点。
+- [x] 13.1 将Foot Placement pose输入切换为FinalAnimationPoseFrame。
+- [x] 13.2 将LeftFoot actual contribution切换为Pose Graph最终输出。
+- [x] 13.3 将RightFoot actual contribution切换为Pose Graph最终输出。
+- [x] 13.4 传播Base slot live source Foot Analysis。
+- [x] 13.5 传播Action slot live source Foot Analysis。
+- [x] 13.6 传播Stored Pose每脚feature aggregate。
+- [x] 13.7 传播Inertial每脚feature transition。
+- [x] 13.8 按最终dense Bone Mask组合每脚feature贡献。
+- [x] 13.9 让零脚mask overlay不稀释Base feature。
+- [x] 13.10 让全身overlay按实际脚贡献替换Base feature。
+- [x] 13.11 将final PoseParameter映射到Foot Placement正式输入。
+- [x] 13.12 删除Animancer state weight读取。
+- [x] 13.13 删除单一Layer/slot scalar替代每脚贡献路径。
+- [x] 13.14 让Pose Graph Invalid触发Foot Placement正式reset。
+- [x] 13.15 保持Foot Placement固定在Pose Graph之后且不成为Graph节点。
 
 ## 14. Preview、Trace与Editor诊断
 
-- [ ] 14.1 将Timeline Preview command key切换到AnimationChannelId。
-- [ ] 14.2 让Preview通过Projection解析PoseSlotId。
-- [ ] 14.3 让Preview复用正式per-slot Blend Stack。
-- [ ] 14.4 让Preview复用正式Pose Program和Evaluator。
-- [ ] 14.5 拒绝Preview同channel多个producer。
-- [ ] 14.6 更新Preview非连续seek的channel/slot reset。
-- [ ] 14.7 扩展Animation snapshot保存AnimationChannelId和PoseSlotId。
-- [ ] 14.8 扩展snapshot保存Stack entry、Stored与Inertial。
-- [ ] 14.9 扩展snapshot保存PoseNodeId与operation availability。
-- [ ] 14.10 扩展snapshot保存Pose Parameter最终值。
-- [ ] 14.11 扩展snapshot保存per-bone/per-foot final contribution。
-- [ ] 14.12 扩展snapshot保存OutputPose completion identity。
-- [ ] 14.13 将Timeline Live Debug Marker relation限制为同channel/slot。
+- [x] 14.1 将Timeline Preview command key切换到AnimationChannelId。
+- [x] 14.2 让Preview通过Projection解析PoseSlotId。
+- [x] 14.3 让Preview复用正式per-slot Blend Stack。
+- [x] 14.4 让Preview复用正式Pose Program和Evaluator。
+- [x] 14.5 拒绝Preview同channel多个producer。
+- [x] 14.6 更新Preview非连续seek的channel/slot reset。
+- [x] 14.7 扩展Animation snapshot保存AnimationChannelId和PoseSlotId。
+- [x] 14.8 扩展snapshot保存Stack entry、Stored与Inertial。
+- [x] 14.9 扩展snapshot保存PoseNodeId与operation availability。
+- [x] 14.10 扩展snapshot保存Pose Parameter最终值。
+- [x] 14.11 扩展snapshot保存per-bone/per-foot final contribution。
+- [x] 14.12 扩展snapshot保存OutputPose completion identity。
+- [x] 14.13 将Timeline Live Debug Marker relation限制为同channel/slot。
 - [ ] 14.14 让Graph Shell Pose diagnostics只读正式snapshot source map。
-- [ ] 14.15 删除按Animancer state重建fade或最终贡献的debug路径。
-- [ ] 14.16 删除旧LayerId、Current/Outgoing和Animancer fade snapshot字段。
+- [x] 14.15 删除按Animancer state重建fade或最终贡献的debug路径。
+- [x] 14.16 删除旧LayerId、Current/Outgoing和Animancer fade snapshot字段。
 
 ## 15. Corin正式资产迁移
 

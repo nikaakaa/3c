@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
@@ -14,11 +15,13 @@ namespace ThirdPersonCharacter.Pipeline
 	public sealed class CharacterSimulationActorRegistration : ILocalSimulationActorRegistration
 	{
 		readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
+		readonly AnimationPresentationRuntimeTarget m_AnimationDiagnosticsTarget;
 		readonly CharacterPresentationFrameTarget m_PresentationTarget;
 		readonly List<EquipmentVisualSelection> m_EquipmentVisualSelections = new List<EquipmentVisualSelection>();
 		bool m_Activated;
 		bool m_InputActivated;
 		bool m_DiagnosticsRegistered;
+		bool m_AnimationDiagnosticsRegistered;
 		bool m_PresentationRegistered;
 		bool m_Disposed;
 
@@ -62,6 +65,14 @@ namespace ThirdPersonCharacter.Pipeline
 				throw new ArgumentException("Local Presentation Runtime does not expose the Float32 output port.", nameof(presentationRuntime));
 			Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
 			m_DiagnosticsTarget = diagnosticsTarget ?? throw new ArgumentNullException(nameof(diagnosticsTarget));
+			var animationSnapshotProvider = presentationRuntime as IAnimationPresentationRuntimeSnapshotProvider ??
+				throw new ArgumentException("Local Presentation Runtime does not expose the Animation Presentation snapshot provider.", nameof(presentationRuntime));
+			m_AnimationDiagnosticsTarget = new AnimationPresentationRuntimeTarget(
+				diagnosticsTarget.CharacterRuntimeId,
+				ownerInstanceId,
+				ownerName,
+				projection.ProjectionRevision,
+				animationSnapshotProvider);
 			VisualRoot = visualRoot ? visualRoot : throw new ArgumentNullException(nameof(visualRoot));
 			ProgramIdentity = new SimulationActorBinding(actorId, program, worldBodyBinding.BindingId);
 			VisualRootIdentity = BuildTransformIdentity(visualRoot);
@@ -128,6 +139,8 @@ namespace ThirdPersonCharacter.Pipeline
 				}
 				RuntimeDiagnosticsTargetRegistry.Register(m_DiagnosticsTarget);
 				m_DiagnosticsRegistered = true;
+				AnimationPresentationRuntimeTargetRegistry.Register(m_AnimationDiagnosticsTarget);
+				m_AnimationDiagnosticsRegistered = true;
 				RegisterPresentationTarget();
 				m_Activated = true;
 			}
@@ -143,7 +156,8 @@ namespace ThirdPersonCharacter.Pipeline
 
 		public void Deactivate()
 		{
-			if (!m_Activated && !m_InputActivated && !m_DiagnosticsRegistered && !m_PresentationRegistered)
+			if (!m_Activated && !m_InputActivated && !m_DiagnosticsRegistered &&
+				!m_AnimationDiagnosticsRegistered && !m_PresentationRegistered)
 				return;
 			var failures = new List<Exception>();
 			ReleaseActivation(failures);
@@ -226,6 +240,21 @@ namespace ThirdPersonCharacter.Pipeline
 				finally
 				{
 					m_PresentationRegistered = false;
+				}
+			}
+			if (m_AnimationDiagnosticsRegistered)
+			{
+				try
+				{
+					AnimationPresentationRuntimeTargetRegistry.Unregister(m_AnimationDiagnosticsTarget);
+				}
+				catch (Exception exception)
+				{
+					failures.Add(exception);
+				}
+				finally
+				{
+					m_AnimationDiagnosticsRegistered = false;
 				}
 			}
 			if (m_DiagnosticsRegistered)

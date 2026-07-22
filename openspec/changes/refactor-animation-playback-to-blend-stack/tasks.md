@@ -100,15 +100,15 @@
 - [x] 6.13 保存Pose Parameter samples。
 - [x] 6.14 保存Foot Analysis samples。
 - [x] 6.15 禁止request携带State、Action、Priority、Pose Graph或Bone Mask。
-- [ ] 6.16 让PendingFirstSample首个合法request以完整权重原子初始化RequireOutput slot。
+- [x] 6.16 让PendingFirstSample首个合法request以完整权重原子初始化RequireOutput slot。
 
 ## 7. Per-Slot Stack Runtime
 
-- [ ] 7.1 让每个Projection PoseSlot创建唯一AnimationBlendStackRuntime。
+- [x] 7.1 让每个Projection PoseSlot创建唯一AnimationBlendStackRuntime。
 - [x] 7.2 按stable push order保存active entries。
 - [x] 7.3 让同AnimationPoseSourceId连续sample只更新source。
 - [x] 7.4 让同Playback不同SelectionGeneration创建新EntryId。
-- [ ] 7.5 让不同generation拥有独立source visual。
+- [x] 7.5 让不同generation拥有独立source visual。
 - [x] 7.6 为每entry保存独立elapsed clock。
 - [x] 7.7 为每entry保存base duration。
 - [x] 7.8 为每entry保存canonical curve index。
@@ -162,33 +162,33 @@
 
 ## 10. Animancer Source Sampling Backend
 
-- [ ] 10.1 将AnimancerPlaybackAdapter替换为AnimancerPoseSamplingBackend。
+- [x] 10.1 将AnimancerPlaybackAdapter替换为AnimancerPoseSamplingBackend。
 - [x] 10.2 按完整AnimationPoseSourceId保存source visual。
 - [x] 10.3 让单Clip source使用唯一ManualMixerState单child，避免同SourceId运行时更换拓扑。
 - [x] 10.4 为多Clip producer创建ManualMixerState。
 - [x] 10.5 应用resolved visual sample time。
-- [ ] 10.6 应用loop/cycle状态。
+- [x] 10.6 应用loop/cycle状态。
 - [x] 10.7 应用producer内部child weight。
 - [x] 10.8 保持Timeline source Speed为0。
 - [x] 10.9 保持child DontSynchronize。
-- [ ] 10.10 删除AnimancerLayer.Play调用。
-- [ ] 10.11 删除StartFade和FadeGroup调用。
-- [ ] 10.12 删除Animancer layer weight写入。
-- [ ] 10.13 删除transition lookup。
-- [ ] 10.14 删除按ProducerId覆盖旧generation路径。
-- [ ] 10.15 只在无entry/relation/retention引用后释放source。
+- [x] 10.10 删除AnimancerLayer.Play调用。
+- [x] 10.11 删除StartFade和FadeGroup调用。
+- [x] 10.12 删除Animancer layer weight写入。
+- [x] 10.13 删除transition lookup。
+- [x] 10.14 删除按ProducerId覆盖旧generation路径。
+- [x] 10.15 只在无entry/relation/retention引用后释放source。
 
 ## 11. Slot Pose Workspace与PoseSlotFrame
 
-- [ ] 11.1 定义PoseSlotFrame schema。
-- [ ] 11.2 定义Pose/NoPose/Invalid availability。
-- [ ] 11.3 定义slot output weight。
-- [ ] 11.4 定义dense local pose buffer。
-- [ ] 11.5 定义Pose Parameter buffer。
-- [ ] 11.6 定义live/Stored/Inertial contribution buffer。
-- [ ] 11.7 定义左右脚feature aggregate。
-- [ ] 11.8 定义continuity identity。
-- [ ] 11.9 定义completion identity。
+- [x] 11.1 定义PoseSlotFrame schema。
+- [x] 11.2 定义Pose/NoPose/Invalid availability。
+- [x] 11.3 定义slot output weight。
+- [x] 11.4 定义dense local pose buffer。
+- [x] 11.5 定义Pose Parameter buffer。
+- [x] 11.6 定义live/Stored/Inertial contribution buffer。
+- [x] 11.7 定义左右脚feature aggregate。
+- [x] 11.8 定义continuity identity。
+- [x] 11.9 定义completion identity。
 - [x] 11.10 按Rig bone count预分配source capture buffer。
 - [x] 11.11 按slot容量预分配weight buffer。
 - [x] 11.12 预分配pose history与velocity buffer。
@@ -203,56 +203,56 @@
 
 ## 12. Marker Sync与Retention迁移
 
-- [ ] 12.1 将Marker relation约束为同AnimationChannelId/PoseSlotId。
-- [ ] 12.2 在Stack push前完成target effective time解析。
-- [ ] 12.3 只使用push前live Current和Pending target建立relation。
-- [ ] 12.4 禁止Stored Pose成为Marker source。
-- [ ] 12.5 禁止Inertial accumulator成为Marker source。
-- [ ] 12.6 禁止Pose Graph共同可见关系建立Marker relation。
-- [ ] 12.7 在CrossFade source退出时建立continuation anchor。
-- [ ] 12.8 在Stored capture后建立continuation anchor。
-- [ ] 12.9 在Inertial capture后建立continuation anchor。
-- [ ] 12.10 让relation拓扑按PlaybackId稳定求值。
-- [ ] 12.11 保持logic release后的animation-only retention。
-- [ ] 12.12 在Stack/relation/pending均释放后Retire source。
-- [ ] 12.13 在Reset与Dispose原子清理relation、anchor与retention。
+- [x] 12.1 将Marker relation约束为同AnimationChannelId/PoseSlotId。
+- [x] 12.2 在Stack push前完成target effective time解析。
+- [x] 12.3 只使用push前live Current和Pending target建立relation。
+- [x] 12.4 禁止Stored Pose成为Marker source。
+- [x] 12.5 禁止Inertial accumulator成为Marker source。
+- [x] 12.6 禁止Pose Graph共同可见关系建立Marker relation。
+- [x] 12.7 在CrossFade source退出时建立continuation anchor。
+- [x] 12.8 在Stored capture后建立continuation anchor。
+- [x] 12.9 在Inertial capture后建立continuation anchor。
+- [x] 12.10 让relation拓扑按PlaybackId稳定求值。
+- [x] 12.11 保持logic release后的animation-only retention。
+- [x] 12.12 在Stack/relation/pending均释放后Retire source。
+- [x] 12.13 在Reset与Dispose原子清理relation、anchor与retention。
 
 ## 13. Projection、Foot Feature与Pose Graph接缝
 
-- [ ] 13.1 将Blend Library per-slot policy编入Projection。
-- [ ] 13.2 将完整transition matrix编入Projection。
-- [ ] 13.3 将Rig dense payload编入Projection。
-- [ ] 13.4 将Blend Profile dense payload编入Projection。
-- [ ] 13.5 将Stack workspace需求编入Projection。
-- [ ] 13.6 将PoseSlotFrame schema identity编入Projection。
-- [ ] 13.7 按effective time采样live source Foot Analysis。
+- [x] 13.1 将Blend Library per-slot policy编入Projection。
+- [x] 13.2 将完整transition matrix编入Projection。
+- [x] 13.3 将Rig dense payload编入Projection。
+- [x] 13.4 将Blend Profile dense payload编入Projection。
+- [x] 13.5 将Stack workspace需求编入Projection。
+- [x] 13.6 将PoseSlotFrame schema identity编入Projection。
+- [x] 13.7 按effective time采样live source Foot Analysis。
 - [x] 13.8 按LeftFoot transition weight生成slot aggregate。
 - [x] 13.9 按RightFoot transition weight生成slot aggregate。
 - [x] 13.10 让Stored Pose保留每脚aggregate。
 - [x] 13.11 让Inertial连续过渡每脚aggregate。
-- [ ] 13.12 把PoseSlotFrame交给唯一PoseSlotInput。
-- [ ] 13.13 禁止Foot Placement直接读取PoseSlot scalar。
-- [ ] 13.14 让Foot Placement只读取Pose Graph最终每脚贡献。
-- [ ] 13.15 让Pose Graph Invalid阻止Pose Post Process。
+- [x] 13.12 把PoseSlotFrame交给唯一PoseSlotInput。
+- [x] 13.13 禁止Foot Placement直接读取PoseSlot scalar。
+- [x] 13.14 让Foot Placement只读取Pose Graph最终每脚贡献。
+- [x] 13.15 让Pose Graph Invalid阻止Pose Post Process。
 
 ## 14. Runtime编排、Preview与Debug
 
-- [ ] 14.1 更新Presentation Runtime创建顺序。
-- [ ] 14.2 更新每帧command消费与slot plan顺序。
-- [ ] 14.3 在全部slot plan后采样Animancer sources。
-- [ ] 14.4 在全部source capture后求值PoseSlotFrame。
-- [ ] 14.5 在全部PoseSlotFrame完成后调用Pose Graph。
-- [ ] 14.6 在FinalAnimationPoseFrame后调用Foot Placement。
-- [ ] 14.7 更新Reset清理Stack/Stored/Inertial顺序。
-- [ ] 14.8 更新Dispose等待job并释放workspace顺序。
-- [ ] 14.9 让Timeline Preview复用正式per-slot Stack。
-- [ ] 14.10 让Timeline Preview复用正式Slot Evaluator。
-- [ ] 14.11 扩展snapshot保存channel、slot与entry顺序。
-- [ ] 14.12 扩展snapshot保存clock、curve与per-bone weight。
-- [ ] 14.13 扩展snapshot保存Stored与Inertial详情。
-- [ ] 14.14 扩展snapshot保存PoseSlotFrame与continuity。
-- [ ] 14.15 明确snapshot中的weight尚未经过Pose Graph最终Mask。
-- [ ] 14.16 删除按Animancer state重建weight的Debug路径。
+- [x] 14.1 更新Presentation Runtime创建顺序。
+- [x] 14.2 更新每帧command消费与slot plan顺序。
+- [x] 14.3 在全部slot plan后采样Animancer sources。
+- [x] 14.4 在全部source capture后求值PoseSlotFrame。
+- [x] 14.5 在全部PoseSlotFrame完成后调用Pose Graph。
+- [x] 14.6 在FinalAnimationPoseFrame后调用Foot Placement。
+- [x] 14.7 更新Reset清理Stack/Stored/Inertial顺序。
+- [x] 14.8 更新Dispose等待job并释放workspace顺序。
+- [x] 14.9 让Timeline Preview复用正式per-slot Stack。
+- [x] 14.10 让Timeline Preview复用正式Slot Evaluator。
+- [x] 14.11 扩展snapshot保存channel、slot与entry顺序。
+- [x] 14.12 扩展snapshot保存clock、curve与per-bone weight。
+- [x] 14.13 扩展snapshot保存Stored与Inertial详情。
+- [x] 14.14 扩展snapshot保存PoseSlotFrame与continuity。
+- [x] 14.15 明确snapshot中的weight尚未经过Pose Graph最终Mask。
+- [x] 14.16 删除按Animancer state重建weight的Debug路径。
 
 ## 15. Corin资产迁移与旧路径删除
 

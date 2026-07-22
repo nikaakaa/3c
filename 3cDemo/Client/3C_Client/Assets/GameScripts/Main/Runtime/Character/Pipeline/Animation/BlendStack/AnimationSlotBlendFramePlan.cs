@@ -214,8 +214,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 CompletionIdentity == 0 || ContinuityIdentity == 0 ||
                 kindValue < (int)AnimationSlotBlendFramePlanKind.CrossFade ||
                 kindValue > (int)AnimationSlotBlendFramePlanKind.InertialRebase ||
-                !Enum.IsDefined(typeof(PoseSlotOutputPolicy), OutputPolicy) ||
-                !Enum.IsDefined(typeof(CharacterAnimationScalePolicy), ScalePolicy) ||
+                !IsOutputPolicy(OutputPolicy) ||
+                !IsScalePolicy(ScalePolicy) ||
                 (!pose && !noPose) ||
                 !float.IsFinite(OutputWeight) || OutputWeight < 0f || OutputWeight > 1f ||
                 MaxActiveSourceEntries < 2 || ContributionCapacity != checked(MaxActiveSourceEntries + 2) ||
@@ -232,6 +232,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 throw new InvalidOperationException("Animation Slot Blend frame plan header is invalid.");
             }
         }
+
+        static bool IsOutputPolicy(PoseSlotOutputPolicy value) =>
+            (int)value >= (int)PoseSlotOutputPolicy.RequireOutput &&
+            (int)value <= (int)PoseSlotOutputPolicy.AllowEmpty;
+
+        static bool IsScalePolicy(CharacterAnimationScalePolicy value) =>
+            (int)value >= (int)CharacterAnimationScalePolicy.PreserveReferenceScale &&
+            (int)value <= (int)CharacterAnimationScalePolicy.BlendLocalScale;
     }
 
     internal readonly struct AnimationSlotBlendFramePlan

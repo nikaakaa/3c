@@ -4,6 +4,7 @@ using Animancer;
 using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Graph;
@@ -70,6 +71,12 @@ namespace ThirdPersonCharacter.Pipeline
 			m_PreviewController != null
 				? m_PreviewController.AnimationSnapshots
 				: Array.Empty<AnimationPlaybackLifecycleSnapshot>();
+		public bool HasPreviewAnimationRuntimeSnapshot =>
+			m_PreviewController != null && m_PreviewController.HasAnimationRuntimeSnapshot;
+		public AnimationPresentationRuntimeSnapshot PreviewAnimationRuntimeSnapshot =>
+			m_PreviewController != null
+				? m_PreviewController.AnimationRuntimeSnapshot
+				: default;
 		public override bool CanPreviewTimeline =>
 			!Application.isPlaying &&
 			m_Definition &&

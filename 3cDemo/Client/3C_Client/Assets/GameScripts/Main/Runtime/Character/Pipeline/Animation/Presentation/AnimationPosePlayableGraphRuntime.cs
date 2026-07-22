@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
 using ThirdPersonSimulation;
@@ -19,7 +20,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimationPoseSourcePhysicalRegistry m_PhysicalSources;
         readonly AnimancerPoseSamplingBackend m_SourceBackend;
         readonly FinalAnimationPoseFramePublisher m_FramePublisher;
+        readonly AnimationPresentationRuntimeSnapshotPublisher m_DiagnosticsPublisher;
         readonly AnimationBlendStackRuntime[] m_Stacks;
+        readonly AnimationSlotBlendJob[] m_SlotJobs;
+        readonly AnimationReleasedPoseSourceSnapshot[] m_ReleasedSources;
         readonly Dictionary<AnimationChannelId, AnimationBlendStackRuntime> m_StacksByChannel =
             new Dictionary<AnimationChannelId, AnimationBlendStackRuntime>();
         readonly Dictionary<PoseSlotId, AnimationBlendStackRuntime> m_StacksBySlot =
@@ -32,6 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         AnimationScriptPlayable m_PoseGraphPlayable;
         AnimationScriptPlayable m_FinalWriterPlayable;
         ulong m_CompletionIdentity = 1;
+        int m_ReleasedSourceCount;
         bool m_JobsInstalled;
         bool m_Disposed;
 
@@ -53,6 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationPoseSourcePhysicalRegistry physicalSources = null;
             AnimancerPoseSamplingBackend sourceBackend = null;
             AnimationBlendStackRuntime[] stacks = null;
+            AnimationPresentationRuntimeSnapshotPublisher diagnosticsPublisher = null;
             AnimationMixerPlayable sourceFanIn = default;
             Playable previousOutputSource = default;
             try
@@ -78,6 +84,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_StacksByChannel.Add(slot.AnimationChannelId, stack);
                     m_StacksBySlot.Add(slot.PoseSlotId, stack);
                 }
+                diagnosticsPublisher = new AnimationPresentationRuntimeSnapshotPublisher(
+                    projection,
+                    in initialFrame,
+                    physicalSources.Capacity);
 
                 PlayableGraph graph = animancer.Graph.PlayableGraph;
                 if (!graph.IsValid())
@@ -102,6 +112,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         stacks[i]?.Dispose();
                 }
                 sourceBackend?.Dispose();
+                diagnosticsPublisher?.Dispose();
                 physicalSources?.Dispose();
                 poseProgram?.Dispose();
                 workspace?.Dispose();
@@ -113,13 +124,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PhysicalSources = physicalSources;
             m_SourceBackend = sourceBackend;
             m_Stacks = stacks;
+            m_SlotJobs = new AnimationSlotBlendJob[stacks.Length];
             m_FramePublisher = new FinalAnimationPoseFramePublisher(projection.PoseProgram);
+            m_DiagnosticsPublisher = diagnosticsPublisher;
+            m_ReleasedSources = new AnimationReleasedPoseSourceSnapshot[physicalSources.Capacity];
             m_SourceFanIn = sourceFanIn;
             m_PreviousOutputSource = previousOutputSource;
             m_ManagesGraphClock = managesGraphClock;
         }
 
         internal IReadOnlyList<AnimationBlendStackRuntime> Stacks => m_Stacks;
+        internal bool HasDiagnosticsSnapshot => m_DiagnosticsPublisher.HasCurrent;
+        internal AnimationPresentationRuntimeSnapshot DiagnosticsSnapshot => m_DiagnosticsPublisher.Current;
+
+        internal AnimationPresentationRuntimeSnapshot PublishDiagnostics(
+            IReadOnlyList<AnimationPlaybackLifecycleSnapshot> lifecycle) =>
+            m_DiagnosticsPublisher.Publish(lifecycle, m_ReleasedSources, m_ReleasedSourceCount);
 
         internal AnimationBlendStackRuntime RequireStack(AnimationChannelId channelId)
         {
@@ -160,38 +180,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_Stacks[i].BeginSourceFrame(completionIdentity);
 
             for (int stackIndex = 0; stackIndex < m_Stacks.Length; stackIndex++)
-            {
-                AnimationBlendStackRuntime stack = m_Stacks[stackIndex];
-                for (int entryIndex = 0; entryIndex < stack.EntryCount; entryIndex++)
-                {
-                    AnimationBlendEntryId entry = stack.GetEntryId(entryIndex);
-                    if (entry.EmptyTarget)
-                        continue;
-                    if (!requests.TryGetValue(entry.SourceId, out ResolvedAnimationPoseRequest request))
-                    {
-                        throw new InvalidOperationException(
-                            $"Animation Pose Source '{entry.SourceId}' has no current resolved request.");
-                    }
-                    AnimationPhysicalSourceIdentity physical = m_PhysicalSources.Register(
-                        request.SourceId,
-                        request.PoseSlotId,
-                        request.ProgramProducerIndex);
-                    AnimationPoseSourceCaptureBinding capture = stack.PrepareCapture(
-                        in request,
-                        presentationDeltaSeconds);
-                    AnimationPoseSourcePrepareResult prepared = m_SourceBackend.PrepareOrUpdate(
-                        in request,
-                        in capture);
-                    ConnectSource(physical, prepared);
-                }
-            }
+                PrepareStackSources(m_Stacks[stackIndex], presentationDeltaSeconds, requests);
 
-            var slotJobs = new AnimationSlotBlendJob[m_Stacks.Length];
             for (int slotIndex = 0; slotIndex < m_Stacks.Length; slotIndex++)
             {
                 AnimationPoseSlotNativeWriteBinding write =
                     m_Workspace.RequireSlotWriteBinding(slotIndex, completionIdentity);
-                slotJobs[slotIndex] = m_Stacks[slotIndex].PrepareSlotJob(
+                m_SlotJobs[slotIndex] = m_Stacks[slotIndex].PrepareSlotJob(
                     completionIdentity,
                     in write,
                     m_PhysicalSources);
@@ -202,23 +197,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationFinalPoseNativeReadBinding finalRead =
                 m_Workspace.RequireFinalReadBinding(completionIdentity);
             var finalWriter = new AnimationFinalPoseStreamWriterJob(finalRead, m_SourceBackend.Handles);
-            InstallOrUpdateJobs(slotJobs, poseJob, finalWriter);
+            InstallOrUpdateJobs(poseJob, finalWriter);
 
             m_Animancer.Evaluate(presentationDeltaSeconds);
             for (int i = 0; i < m_Stacks.Length; i++)
                 m_Stacks[i].CompleteFrame(completionIdentity);
             FinalAnimationPoseFrame result = m_FramePublisher.Publish(in finalRead, m_PhysicalSources);
-            ReleaseCompletedSources(completionIdentity);
+            m_DiagnosticsPublisher.BeginFrame(in frame, in finalRead, m_Stacks, m_PhysicalSources);
+            m_ReleasedSourceCount = 0;
+            ReleaseCompletedSources(completionIdentity, true);
             return result;
         }
 
         internal void Reset()
         {
             RequireAlive();
+            m_FramePublisher.Invalidate();
+            m_DiagnosticsPublisher.Invalidate();
+            m_ReleasedSourceCount = 0;
             ulong completionIdentity = NextCompletionIdentity();
             for (int i = 0; i < m_Stacks.Length; i++)
                 m_Stacks[i].Reset(completionIdentity);
-            ReleaseCompletedSources(completionIdentity);
+            ReleaseCompletedSources(completionIdentity, false);
             m_SourceBackend.Clear();
             m_PhysicalSources.Reset();
             for (int port = 1; port < m_SourceFanIn.GetInputCount(); port++)
@@ -234,22 +234,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_Disposed)
                 return;
             m_Disposed = true;
-            try
+            m_FramePublisher.Invalidate();
+            Exception failure = null;
+            DisposeStep(m_DiagnosticsPublisher.Dispose, ref failure);
+            DisposeStep(RemoveJobs, ref failure);
+            DisposeStep(m_SourceBackend.Dispose, ref failure);
+            DisposeStep(RestoreOutputAndDestroyFanIn, ref failure);
+            for (int i = m_Stacks.Length - 1; i >= 0; i--)
             {
-                RemoveJobs();
-                m_SourceBackend.Dispose();
-                RestoreOutputAndDestroyFanIn();
+                AnimationBlendStackRuntime stack = m_Stacks[i];
+                if (stack != null)
+                    DisposeStep(stack.Dispose, ref failure);
             }
-            finally
-            {
-                for (int i = m_Stacks.Length - 1; i >= 0; i--)
-                    m_Stacks[i]?.Dispose();
-                m_PhysicalSources.Dispose();
-                m_PoseProgram.Dispose();
-                m_Workspace.Dispose();
-                if (m_ManagesGraphClock && m_Animancer && m_Animancer.IsGraphInitialized)
-                    m_Animancer.Graph.UnpauseGraph();
-            }
+            DisposeStep(m_PhysicalSources.Dispose, ref failure);
+            DisposeStep(m_PoseProgram.Dispose, ref failure);
+            DisposeStep(m_Workspace.Dispose, ref failure);
+            DisposeStep(RestoreGraphClock, ref failure);
+            if (failure != null)
+                throw failure;
         }
 
         void ConnectSource(
@@ -269,17 +271,83 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_SourceFanIn.SetInputWeight(port, 1f);
         }
 
+        void PrepareStackSources(
+            AnimationBlendStackRuntime stack,
+            float presentationDeltaSeconds,
+            IReadOnlyDictionary<AnimationPoseSourceId, ResolvedAnimationPoseRequest> requests)
+        {
+            for (int entryIndex = 0; entryIndex < stack.EntryCount; entryIndex++)
+            {
+                AnimationBlendEntryId entry = stack.GetEntryId(entryIndex);
+                if (entry.EmptyTarget || HasEarlierSource(stack, entryIndex, entry.SourceId))
+                    continue;
+                PrepareSource(stack, entry.SourceId, presentationDeltaSeconds, requests);
+            }
+            if (stack.TryGetPendingInertialSourceId(out AnimationPoseSourceId pendingSource) &&
+                !ContainsEntrySource(stack, pendingSource))
+            {
+                PrepareSource(stack, pendingSource, presentationDeltaSeconds, requests);
+            }
+        }
+
+        void PrepareSource(
+            AnimationBlendStackRuntime stack,
+            AnimationPoseSourceId sourceId,
+            float presentationDeltaSeconds,
+            IReadOnlyDictionary<AnimationPoseSourceId, ResolvedAnimationPoseRequest> requests)
+        {
+            if (!requests.TryGetValue(sourceId, out ResolvedAnimationPoseRequest request))
+                throw new InvalidOperationException($"Animation Pose Source '{sourceId}' has no current resolved request.");
+            AnimationPhysicalSourceIdentity physical = m_PhysicalSources.Register(
+                request.SourceId,
+                request.PoseSlotId,
+                request.ProgramProducerIndex);
+            AnimationPoseSourceCaptureBinding capture = stack.PrepareCapture(
+                in request,
+                presentationDeltaSeconds);
+            AnimationPoseSourcePrepareResult prepared = m_SourceBackend.PrepareOrUpdate(
+                in request,
+                in capture);
+            ConnectSource(physical, prepared);
+        }
+
+        static bool HasEarlierSource(
+            AnimationBlendStackRuntime stack,
+            int entryIndex,
+            AnimationPoseSourceId sourceId)
+        {
+            for (int i = 0; i < entryIndex; i++)
+            {
+                AnimationBlendEntryId candidate = stack.GetEntryId(i);
+                if (!candidate.EmptyTarget && candidate.SourceId.Equals(sourceId))
+                    return true;
+            }
+            return false;
+        }
+
+        static bool ContainsEntrySource(
+            AnimationBlendStackRuntime stack,
+            AnimationPoseSourceId sourceId)
+        {
+            for (int i = 0; i < stack.EntryCount; i++)
+            {
+                AnimationBlendEntryId candidate = stack.GetEntryId(i);
+                if (!candidate.EmptyTarget && candidate.SourceId.Equals(sourceId))
+                    return true;
+            }
+            return false;
+        }
+
         void InstallOrUpdateJobs(
-            AnimationSlotBlendJob[] slotJobs,
             CharacterPoseGraphNativeJob poseJob,
             AnimationFinalPoseStreamWriterJob finalWriter)
         {
             if (!m_JobsInstalled)
             {
-                m_SlotPlayables = new AnimationScriptPlayable[slotJobs.Length];
-                for (int i = 0; i < slotJobs.Length; i++)
+                m_SlotPlayables = new AnimationScriptPlayable[m_SlotJobs.Length];
+                for (int i = 0; i < m_SlotJobs.Length; i++)
                 {
-                    m_SlotPlayables[i] = m_Animancer.Graph.InsertOutputJob(slotJobs[i]);
+                    m_SlotPlayables[i] = m_Animancer.Graph.InsertOutputJob(m_SlotJobs[i]);
                     m_SlotPlayables[i].SetProcessInputs(true);
                 }
                 m_PoseGraphPlayable = m_Animancer.Graph.InsertOutputJob(poseJob);
@@ -289,13 +357,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_JobsInstalled = true;
                 return;
             }
-            for (int i = 0; i < slotJobs.Length; i++)
-                m_SlotPlayables[i].SetJobData(slotJobs[i]);
+            for (int i = 0; i < m_SlotJobs.Length; i++)
+                m_SlotPlayables[i].SetJobData(m_SlotJobs[i]);
             m_PoseGraphPlayable.SetJobData(poseJob);
             m_FinalWriterPlayable.SetJobData(finalWriter);
         }
 
-        void ReleaseCompletedSources(ulong completionIdentity)
+        void ReleaseCompletedSources(ulong completionIdentity, bool recordDiagnostics)
         {
             for (int stackIndex = 0; stackIndex < m_Stacks.Length; stackIndex++)
             {
@@ -304,6 +372,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     if (release.CompletionIdentity != completionIdentity)
                         throw new InvalidOperationException("Animation Blend Stack source release does not match the exact completed frame.");
+                    if (recordDiagnostics)
+                    {
+                        if (m_ReleasedSourceCount >= m_ReleasedSources.Length)
+                            throw new InvalidOperationException("Animation diagnostics release capacity was exceeded.");
+                        m_ReleasedSources[m_ReleasedSourceCount++] = new AnimationReleasedPoseSourceSnapshot(
+                            release.PoseSlotId,
+                            release.SourceId,
+                            release.CompletionIdentity);
+                    }
                     AnimationPhysicalSourceIdentity physical = m_PhysicalSources.RequireIdentity(release.SourceId);
                     int port = checked(physical.Index.Value + 1);
                     if (m_SourceFanIn.GetInput(port).IsValid())
@@ -343,6 +420,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException("Animation Pose completion identity was exhausted.");
             m_CompletionIdentity++;
             return m_CompletionIdentity;
+        }
+
+        void RestoreGraphClock()
+        {
+            if (m_ManagesGraphClock && m_Animancer && m_Animancer.IsGraphInitialized)
+                m_Animancer.Graph.UnpauseGraph();
+        }
+
+        static void DisposeStep(Action action, ref Exception failure)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                if (failure == null)
+                    failure = exception;
+            }
         }
 
         static ResolvedAnimationPoseSlot RequireSlot(

@@ -84,7 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Animation Pose Graph did not complete the requested frame.");
 
             PoseSlotFrameAvailability availability = binding.Availability[0];
-            if (!Enum.IsDefined(typeof(PoseSlotFrameAvailability), availability) ||
+            if (!IsAvailability(availability) ||
                 availability == PoseSlotFrameAvailability.NoPose || binding.ContinuityIdentity[0] == 0)
             {
                 throw new InvalidOperationException("Final Animation Pose Graph output header is invalid.");
@@ -99,6 +99,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PublishedPage = page;
             m_LastPublishedCompletionIdentity = completionIdentity;
             return frame;
+        }
+
+        internal void Invalidate()
+        {
+            for (int i = 0; i < m_PageLeases.Length; i++)
+                m_PageLeases[i].Invalidate();
+            m_PublishedPage = -1;
         }
 
         FinalAnimationPoseFrame PublishPose(
@@ -196,12 +203,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             AnimationPoseNativeInvalidReason outputReason = binding.OutputInvalidReason[0];
             AnimationPoseNativeInvalidReason graphReason = binding.PoseGraphInvalidReason[0];
-            if (!Enum.IsDefined(typeof(AnimationPoseNativeInvalidReason), outputReason) ||
-                !Enum.IsDefined(typeof(AnimationPoseNativeInvalidReason), graphReason) ||
+            int invalidOperationIndex = binding.PoseGraphInvalidOperationIndex[0];
+            bool finalStreamInvalid = outputReason == AnimationPoseNativeInvalidReason.FinalStreamWriteInvalid &&
+                                      graphReason == AnimationPoseNativeInvalidReason.None &&
+                                      invalidOperationIndex == -1 && binding.AppliedAt[0] == 0;
+            bool graphInvalid = outputReason != AnimationPoseNativeInvalidReason.None &&
+                                graphReason != AnimationPoseNativeInvalidReason.None &&
+                                invalidOperationIndex >= 0 && invalidOperationIndex < m_OperationCount &&
+                                binding.AppliedAt[0] == 0 && binding.ContributionCount[0] == 0;
+            if (!IsInvalidReason(outputReason) ||
+                !IsInvalidReason(graphReason) ||
                 (outputReason == AnimationPoseNativeInvalidReason.None && graphReason == AnimationPoseNativeInvalidReason.None) ||
-                binding.PoseGraphInvalidOperationIndex[0] < 0 ||
-                binding.PoseGraphInvalidOperationIndex[0] >= m_OperationCount ||
-                binding.AppliedAt[0] != 0 || binding.ContributionCount[0] != 0)
+                !finalStreamInvalid && !graphInvalid)
             {
                 throw new InvalidOperationException("Final Animation Pose Graph Invalid completion metadata is inconsistent.");
             }
@@ -236,7 +249,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPoseSourcePhysicalRegistry sourceRegistry)
         {
             if (primitive.PhysicalSlotIndex < 0 || primitive.PhysicalSlotIndex >= m_PoseSlotIds.Length ||
-                !Enum.IsDefined(typeof(AnimationPoseContributionKind), primitive.Kind) ||
+                !IsContributionKind(primitive.Kind) ||
                 primitive.ContributionContinuityIdentity == 0 ||
                 !IsWeight(primitive.Weight) || !IsWeight(primitive.LeftFootWeight) ||
                 !IsWeight(primitive.RightFootWeight))
@@ -297,6 +310,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static bool IsWeight(float value) => float.IsFinite(value) && value >= 0f && value <= 1f;
+        static bool IsAvailability(PoseSlotFrameAvailability value) =>
+            (int)value >= (int)PoseSlotFrameAvailability.Pose &&
+            (int)value <= (int)PoseSlotFrameAvailability.Invalid;
+        static bool IsInvalidReason(AnimationPoseNativeInvalidReason value) =>
+            (int)value >= (int)AnimationPoseNativeInvalidReason.None &&
+            (int)value <= (int)AnimationPoseNativeInvalidReason.FinalStreamWriteInvalid;
+        static bool IsContributionKind(AnimationPoseContributionKind value) =>
+            (int)value >= (int)AnimationPoseContributionKind.Live &&
+            (int)value <= (int)AnimationPoseContributionKind.Inertial;
         static bool IsUnit<T>(Unity.Collections.NativeSlice<T> values) where T : struct =>
             values.Length == 1;
     }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonSimulation;
@@ -17,7 +18,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public sealed class CharacterSimulationPresentationRuntime :
         ICharacterPresentationRuntime,
-        ISimulationPresentationOutputPort
+        ISimulationPresentationOutputPort,
+        IAnimationPresentationRuntimeSnapshotProvider
     {
         static readonly ProfilerMarker AnimationMarker = new ProfilerMarker("ThirdPerson.Presentation.Animation");
         static readonly ProfilerMarker PosePostProcessMarker = new ProfilerMarker("ThirdPerson.Presentation.PosePostProcess");
@@ -78,6 +80,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> AnimationSnapshots => m_Animation.Snapshots;
+        public bool HasAnimationRuntimeSnapshot => m_Animation.HasRuntimeDiagnosticsSnapshot;
+        public AnimationPresentationRuntimeSnapshot AnimationRuntimeSnapshot => m_Animation.RuntimeDiagnosticsSnapshot;
+
+        public bool TryGetAnimationPresentationSnapshot(out AnimationPresentationRuntimeSnapshot snapshot)
+        {
+            if (m_Disposed || !m_Animation.HasRuntimeDiagnosticsSnapshot)
+            {
+                snapshot = default;
+                return false;
+            }
+            snapshot = m_Animation.RuntimeDiagnosticsSnapshot;
+            return true;
+        }
 
         public void CaptureEquipmentSelections(IReadOnlyList<EquipmentVisualSelection> selections)
         {

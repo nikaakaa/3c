@@ -8,108 +8,9 @@ using UnityEditor.UIElements;
 using UnityEditor.Experimental.GraphView;
 using BTSMTL;
 using BTSMTL.Editor;
-using GraphSelectable = UnityEditor.Experimental.GraphView.ISelectable;
 
 namespace TreeDesigner.Editor
 {
-    internal readonly struct TreeSelectionIdentity : IEquatable<TreeSelectionIdentity>
-    {
-        public TreeSelectionIdentity(GraphSelectable selectable)
-        {
-            if (selectable is BaseEdgeView edgeView && edgeView.Edge != null)
-            {
-                Kind = 1;
-                Identity = edgeView.Edge.GUID ?? string.Empty;
-                RevisionA = edgeView.Edge.TransitionPriority;
-                RevisionB = (int)edgeView.Edge.AbortPolicy;
-                ReferenceId = edgeView.Edge.ConditionRuleGraph
-                    ? edgeView.Edge.ConditionRuleGraph.GetHashCode()
-                    : 0;
-                return;
-            }
-            if (selectable is BaseNodeView nodeView && nodeView.Node != null)
-            {
-                Kind = 2;
-                Identity = nodeView.Node.GUID ?? string.Empty;
-                RevisionA = 0;
-                RevisionB = 0;
-                ReferenceId = 0;
-                return;
-            }
-            if (selectable is StackNodeView stackNodeView && stackNodeView.StackNode != null)
-            {
-                Kind = 3;
-                Identity = stackNodeView.StackNode.GUID ?? string.Empty;
-                RevisionA = 0;
-                RevisionB = 0;
-                ReferenceId = 0;
-                return;
-            }
-            if (selectable is NodeGroupView nodeGroupView && nodeGroupView.NodeGroup != null)
-            {
-                Kind = 4;
-                Identity = string.Empty;
-                RevisionA = 0;
-                RevisionB = 0;
-                ReferenceId = nodeGroupView.NodeGroup.GetHashCode();
-                return;
-            }
-            Kind = 0;
-            Identity = string.Empty;
-            RevisionA = 0;
-            RevisionB = 0;
-            ReferenceId = selectable?.GetHashCode() ?? 0;
-        }
-
-        int Kind { get; }
-        string Identity { get; }
-        int RevisionA { get; }
-        int RevisionB { get; }
-        int ReferenceId { get; }
-
-        public bool Equals(TreeSelectionIdentity other)
-        {
-            return Kind == other.Kind &&
-                   Identity == other.Identity &&
-                   RevisionA == other.RevisionA &&
-                   RevisionB == other.RevisionB &&
-                   ReferenceId == other.ReferenceId;
-        }
-    }
-
-    internal sealed class TreeSelectionForwarder
-    {
-        readonly BaseTreeView m_View;
-        TreeSelectionIdentity[] m_LastSelection = Array.Empty<TreeSelectionIdentity>();
-
-        public TreeSelectionForwarder(BaseTreeView view)
-        {
-            m_View = view;
-        }
-
-        public void Invalidate()
-        {
-            m_LastSelection = Array.Empty<TreeSelectionIdentity>();
-            Publish(true);
-        }
-
-        public void Tick()
-        {
-            Publish(false);
-        }
-
-        void Publish(bool force)
-        {
-            if (m_View.TreeWindow == null)
-                return;
-            TreeSelectionIdentity[] current = m_View.selection.Select(item => new TreeSelectionIdentity(item)).ToArray();
-            if (!force && current.SequenceEqual(m_LastSelection))
-                return;
-            m_LastSelection = current;
-            m_View.TreeWindow.PopulateSelectionInspector(m_View.selection);
-        }
-    }
-
     internal sealed class TreeGraphMutationService
     {
         readonly BaseTreeView m_View;
@@ -568,7 +469,7 @@ namespace TreeDesigner.Editor
         }
     }
 
-    public class BaseTreeView : GraphView
+    public class BaseTreeView : GraphView, IGraphAuthoringDomainView
     {
         public new class UxmlFactory : UxmlFactory<BaseTreeView, UxmlTraits> { }
 
@@ -577,10 +478,6 @@ namespace TreeDesigner.Editor
 
         protected BaseTreeWindow m_TreeWindow;
         public BaseTreeWindow TreeWindow => m_TreeWindow;
-
-        protected NodeSearchWindow m_NodeSearchWindow;
-        public NodeSearchWindow NodeSearchWindow => m_NodeSearchWindow;
-
 
         protected List<BaseNodeView> m_NodeViews = new List<BaseNodeView>();
         public List<BaseNodeView> NodeViews => m_NodeViews;
@@ -596,9 +493,10 @@ namespace TreeDesigner.Editor
 
         protected Label m_NodeDescription;
         protected DropArea m_DropArea;
-        protected IVisualElementScheduledItem m_SelectionWatcher;
-        TreeSelectionForwarder m_SelectionForwarder;
         TreeGraphMutationService m_MutationService;
+        IGraphAuthoringDocument m_AuthoringDocument;
+        IGraphAuthoringPortPolicy m_PortPolicy;
+        IGraphAuthoringMutationAdapter m_AuthoringMutation;
         readonly Dictionary<GraphElement, Capabilities> m_ReadOnlyCapabilities = new Dictionary<GraphElement, Capabilities>();
         bool m_RuntimeReadOnly;
         public bool RuntimeReadOnly => m_RuntimeReadOnly;
@@ -808,87 +706,9 @@ namespace TreeDesigner.Editor
         {
             if (m_RuntimeReadOnly)
                 return new List<Port>();
-            List<Port> compatiblePorts = ports.ToList().Where(endPort =>
-            {
-                BasePortView startPortView = startPort as BasePortView;
-                BasePortView endPortView = endPort as BasePortView;
-
-                if (startPortView.NodeView == endPortView.NodeView)
-                    return false;
-
-                if (endPortView.direction == startPortView.direction)
-                    return false;
-
-                if (startPortView.portType == null || endPortView.portType == null)
-                    return false;
-
-                if (startPortView.portType == typeof(object))
-                    return false;
-
-                if (!IsCompatibleStateMachineFlowPort(startPortView, endPortView))
-                    return false;
-
-                if (endPortView is VariablePropertyPortView endVariablePropertyPortView && endVariablePropertyPortView.PropertyPort.ValueType == null)
-                {
-                    bool compatible = false;
-                    foreach (var type in endVariablePropertyPortView.AcceptableTypes)
-                    {
-                        if (startPortView.portType.IsSubClassOfRawGeneric(type))
-                        {
-                            compatible = true;
-                            break;
-                        }
-                    }
-                    return compatible;
-                }
-
-                if (startPortView.portType == endPortView.portType)
-                    return true;
-
-                if (startPortView.portType.IsSubclassOf(endPortView.portType))
-                    return true;
-
-                if (endPortView is PropertyPortView propertyPortView
-                   && propertyPortView.PropertyPort.GetAttribute<CompatiblePortsAttribute>() is CompatiblePortsAttribute compatiblePortsAttribute
-                   && compatiblePortsAttribute.CompatibleTypes.Contains(startPortView.portType))
-                    return true;
-
-                return false;
-
-            }).ToList();
-
-            return compatiblePorts;
-        }
-
-        bool IsCompatibleStateMachineFlowPort(BasePortView startPortView, BasePortView endPortView)
-        {
-            if (!(m_Tree is StateMachineGraph))
-                return true;
-
-            if (IsPropertyPort(startPortView) || IsPropertyPort(endPortView))
-                return true;
-
-            BasePortView outputPortView = startPortView.direction == Direction.Output ? startPortView : endPortView;
-            BasePortView inputPortView = startPortView.direction == Direction.Input ? startPortView : endPortView;
-            BaseNode startNode = outputPortView.NodeView?.Node;
-            BaseNode endNode = inputPortView.NodeView?.Node;
-
-            return IsCompatibleStateTransition(outputPortView, inputPortView, startNode, endNode);
-        }
-
-        static bool IsCompatibleStateTransition(BasePortView outputPortView, BasePortView inputPortView, BaseNode startNode, BaseNode endNode)
-        {
-            if (outputPortView.Name != StateMachinePorts.StateOut || inputPortView.Name != StateMachinePorts.StateIn)
-                return false;
-
-            return startNode is StateMachineEnterNode && endNode is StateNode ||
-                   startNode is StateMachineAnyStateNode && (endNode is StateNode || endNode is StateMachineExitNode) ||
-                   startNode is StateNode && (endNode is StateNode || endNode is StateMachineExitNode);
-        }
-
-        static bool IsPropertyPort(BasePortView portView)
-        {
-            return portView is PropertyPortView || portView is VariablePropertyPortView;
+            return m_PortPolicy == null
+                ? new List<Port>()
+                : ports.ToList().Where(endPort => m_PortPolicy.CanConnect(m_AuthoringDocument, startPort, endPort)).ToList();
         }
 
 
@@ -897,20 +717,16 @@ namespace TreeDesigner.Editor
         {
             m_TreeWindow = treeWindow;
             m_MutationService = new TreeGraphMutationService(this);
-            m_SelectionForwarder = new TreeSelectionForwarder(this);
-            m_NodeSearchWindow = ScriptableObject.CreateInstance<NodeSearchWindow>();
-            m_NodeSearchWindow.Init(treeWindow, this);
+        }
 
-            nodeCreationRequest = context =>
-            {
-                if (m_Tree != null && !m_RuntimeReadOnly)
-                    SearchWindow.Open(new SearchWindowContext(context.screenMousePosition), m_NodeSearchWindow);
-            };
-
-            serializeGraphElements = m_MutationService.Serialize;
-            canPasteSerializedData = m_MutationService.CanPaste;
-            unserializeAndPaste = m_MutationService.Paste;
-            m_SelectionWatcher = schedule.Execute(m_SelectionForwarder.Tick).Every(100);
+        public void BindAdapters(
+            IGraphAuthoringDocument document,
+            IGraphAuthoringPortPolicy portPolicy,
+            IGraphAuthoringMutationAdapter mutation)
+        {
+            m_AuthoringDocument = document ?? throw new ArgumentNullException(nameof(document));
+            m_PortPolicy = portPolicy ?? throw new ArgumentNullException(nameof(portPolicy));
+            m_AuthoringMutation = mutation ?? throw new ArgumentNullException(nameof(mutation));
         }
         public virtual void PopulateView(BaseTree tree)
         {
@@ -929,8 +745,6 @@ namespace TreeDesigner.Editor
             m_Tree.StackNodes.ForEach(i => CreateStackNodeView(i));
             m_Tree.NodeGroups.ForEach(i => CreateNodeGroupView(i));
             m_NodeViews.ForEach(i => i.RefreshNodeExpandedState());
-            m_SelectionForwarder.Invalidate();
-
             graphViewChanged += OnGraphViewChanged;
             if (restoreReadOnly)
                 SetRuntimeReadOnly(true);
@@ -946,8 +760,12 @@ namespace TreeDesigner.Editor
             m_NodeViews.Clear();
             m_StackNodeViews.Clear();
             m_NodeGroupViews.Clear();
-            m_SelectionForwarder?.Invalidate();
         }
+
+        internal string SerializeGraphElements(IEnumerable<GraphElement> elements) => m_MutationService.Serialize(elements);
+        internal bool CanPasteGraphElements(string payload) => m_MutationService.CanPaste(payload);
+        internal void PasteGraphElements(string operationName, string payload) => m_MutationService.Paste(operationName, payload);
+        internal GraphViewChange ApplyDomainGraphViewChange(GraphViewChange change) => m_MutationService.ApplyGraphViewChange(change);
 
         public virtual BaseNode CreateNode(Type type, Vector2 position)
         {
@@ -1095,7 +913,9 @@ namespace TreeDesigner.Editor
 
         protected virtual GraphViewChange OnGraphViewChanged(GraphViewChange graphViewChange)
         {
-            return m_MutationService.ApplyGraphViewChange(graphViewChange);
+            return m_AuthoringMutation == null
+                ? graphViewChange
+                : m_AuthoringMutation.ApplyGraphViewChange(m_AuthoringDocument, graphViewChange);
         }
 
         void KeyDownCallback(KeyDownEvent e)

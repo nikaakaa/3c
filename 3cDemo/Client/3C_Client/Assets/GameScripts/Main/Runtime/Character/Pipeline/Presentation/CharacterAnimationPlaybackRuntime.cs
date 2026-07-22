@@ -61,6 +61,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Bindings = CharacterAnimationPresentationBindingIndex.Build(projection, contract, errors);
             if (!m_Bindings.IsValid)
                 throw new InvalidOperationException(string.Join("\n", errors));
+            int sourceCapacity = m_Bindings.WorkspaceLayout.SourceCapacity;
+            m_Snapshots.Capacity = checked(sourceCapacity + m_Bindings.Slots.Count);
+            m_MarkerSyncSnapshots.Capacity = sourceCapacity;
+            m_MarkerSyncPlaybackSnapshots.Capacity = sourceCapacity;
+            m_RetiredPlaybacks.Capacity = sourceCapacity;
+            m_RemoveSampling.Capacity = sourceCapacity;
             try
             {
                 m_RequestWorkspace = new AnimationPoseRequestWorkspace(m_Bindings.WorkspaceLayout);
@@ -81,6 +87,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public IReadOnlyList<AnimationPlaybackId> RetiredPlaybacks => m_RetiredPlaybacks;
         public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> Snapshots => m_Snapshots;
+        public bool HasRuntimeDiagnosticsSnapshot => m_PoseRuntime.HasDiagnosticsSnapshot;
+        public AnimationPresentationRuntimeSnapshot RuntimeDiagnosticsSnapshot => m_PoseRuntime.DiagnosticsSnapshot;
         public IReadOnlyList<AnimationMarkerSyncRelationSnapshot> MarkerSyncSnapshots => m_MarkerSyncSnapshots;
         public IReadOnlyList<AnimationMarkerSyncPlaybackSnapshot> MarkerSyncPlaybackSnapshots => m_MarkerSyncPlaybackSnapshots;
         public bool HasRequiredOutput
@@ -309,6 +317,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 presentationDeltaSeconds,
                 m_ResolvedRequests);
             m_Lifecycle.BuildSnapshot(m_PoseRuntime.Stacks, m_Snapshots);
+            m_PoseRuntime.PublishDiagnostics(m_Snapshots);
             m_MarkerSync.BuildPlaybackSnapshot(m_MarkerSyncPlaybackSnapshots);
             m_MarkerSync.BuildRelationSnapshot(m_MarkerSyncSnapshots);
             AttachMarkerLifecyclePhases();
@@ -357,8 +366,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_Disposed)
                 return;
             m_Disposed = true;
-            m_PoseRuntime.Dispose();
-            m_RequestWorkspace.Dispose();
+            Exception failure = null;
+            try
+            {
+                m_PoseRuntime.Dispose();
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+            }
+            try
+            {
+                m_RequestWorkspace.Dispose();
+            }
+            catch (Exception exception)
+            {
+                if (failure == null)
+                    failure = exception;
+            }
+            if (failure != null)
+                throw failure;
         }
 
         void ResolveRawAndEffectiveSamples(

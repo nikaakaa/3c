@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Animancer;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
@@ -62,6 +63,8 @@ namespace ThirdPersonCharacter.Pipeline
         }
 
         public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> Snapshots => m_Playback.Snapshots;
+        public bool HasRuntimeDiagnosticsSnapshot => m_Playback.HasRuntimeDiagnosticsSnapshot;
+        public AnimationPresentationRuntimeSnapshot RuntimeDiagnosticsSnapshot => m_Playback.RuntimeDiagnosticsSnapshot;
 
         public void ConfigureMarkerSyncSource(
             string targetTimelineAuthoringId,

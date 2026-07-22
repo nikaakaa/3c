@@ -10,11 +10,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
     {
         [ReadOnly]
         readonly NativeSlice<AnimationLocalBonePose> m_DenseLocalPoses;
-        [ReadOnly]
+        [NativeDisableParallelForRestriction]
         readonly NativeSlice<PoseSlotFrameAvailability> m_Availability;
         [ReadOnly]
         readonly NativeSlice<ulong> m_ContinuityIdentity;
-        [ReadOnly]
+        [NativeDisableParallelForRestriction]
         readonly NativeSlice<AnimationPoseNativeInvalidReason> m_OutputInvalidReason;
         [ReadOnly]
         readonly NativeSlice<AnimationPoseNativeInvalidReason> m_PoseGraphInvalidReason;
@@ -56,7 +56,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             for (int boneIndex = 0; boneIndex < m_Handles.Length; boneIndex++)
             {
                 if (!m_Handles[boneIndex].IsValid(stream) || !m_DenseLocalPoses[boneIndex].IsValid)
+                {
+                    PublishInvalid();
                     return;
+                }
             }
 
             for (int boneIndex = 0; boneIndex < m_Handles.Length; boneIndex++)
@@ -74,6 +77,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
         public void ProcessRootMotion(AnimationStream stream)
         {
+        }
+
+        void PublishInvalid()
+        {
+            NativeSlice<PoseSlotFrameAvailability> availability = m_Availability;
+            NativeSlice<AnimationPoseNativeInvalidReason> invalidReason = m_OutputInvalidReason;
+            NativeSlice<ulong> appliedAt = m_AppliedAt;
+            availability[0] = PoseSlotFrameAvailability.Invalid;
+            invalidReason[0] = AnimationPoseNativeInvalidReason.FinalStreamWriteInvalid;
+            appliedAt[0] = 0;
         }
 
         static void RequireValidBinding(

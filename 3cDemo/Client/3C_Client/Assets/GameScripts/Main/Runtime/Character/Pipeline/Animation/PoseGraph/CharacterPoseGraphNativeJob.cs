@@ -300,7 +300,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return;
             }
 
-            if (contributionCount <= 0 || outputWeight <= 0f)
+            if (contributionCount <= 0)
             {
                 SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotPlanInvalid, operation.Index);
                 return;
@@ -1466,7 +1466,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     CharacterPoseOperationCode.PoseSlotInput =>
                         operation.InputPoseValueIndexA == -1 && operation.InputPoseValueIndexB == -1 &&
                         operation.PhysicalSlotIndex >= 0 && operation.PhysicalSlotIndex < layout.SlotCount &&
-                        Enum.IsDefined(typeof(PoseSlotOutputPolicy), operation.PoseSlotOutputPolicy) &&
+                        IsOutputPolicy(operation.PoseSlotOutputPolicy) &&
                         operation.BoneMaskOffset == -1 && operation.AdditiveReferenceOffset == -1 &&
                         operation.ParameterPolicyOffset == -1,
                     CharacterPoseOperationCode.LayeredBoneBlend =>
@@ -1476,8 +1476,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     CharacterPoseOperationCode.AdditivePose =>
                         inputA && inputB && HasSpan(program.DenseBoneMasks, operation.BoneMaskOffset, program.BoneCount) &&
                         HasSpan(program.AdditiveReferences, operation.AdditiveReferenceOffset, program.BoneCount) &&
-                        Enum.IsDefined(typeof(AdditiveReferenceSpace), operation.AdditiveReferenceSpace) &&
-                        Enum.IsDefined(typeof(AdditiveScalePolicy), operation.AdditiveScalePolicy) &&
+                        IsAdditiveReferenceSpace(operation.AdditiveReferenceSpace) &&
+                        IsAdditiveScalePolicy(operation.AdditiveScalePolicy) &&
                         HasSpan(program.ParameterPolicies, operation.ParameterPolicyOffset, program.ParameterCount),
                     CharacterPoseOperationCode.PoseCurveResolve =>
                         inputA && inputB && operation.BoneMaskOffset == -1 && operation.AdditiveReferenceOffset == -1 &&
@@ -1505,5 +1505,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static bool HasSpan<T>(NativeArray<T> values, int offset, int count) where T : struct =>
             offset >= 0 && count > 0 && offset <= values.Length - count;
+
+        static bool IsOutputPolicy(PoseSlotOutputPolicy value) =>
+            (int)value >= (int)PoseSlotOutputPolicy.RequireOutput &&
+            (int)value <= (int)PoseSlotOutputPolicy.AllowEmpty;
+
+        static bool IsAdditiveReferenceSpace(AdditiveReferenceSpace value) =>
+            (int)value >= (int)AdditiveReferenceSpace.Local &&
+            (int)value <= (int)AdditiveReferenceSpace.Mesh;
+
+        static bool IsAdditiveScalePolicy(AdditiveScalePolicy value) =>
+            (int)value >= (int)AdditiveScalePolicy.Multiply &&
+            (int)value <= (int)AdditiveScalePolicy.Ignore;
     }
 }

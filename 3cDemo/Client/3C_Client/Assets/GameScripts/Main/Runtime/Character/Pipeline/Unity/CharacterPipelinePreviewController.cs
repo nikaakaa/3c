@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Animancer;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonSimulation;
@@ -52,6 +53,12 @@ namespace ThirdPersonCharacter.Pipeline
             m_Session != null
                 ? m_Session.Engine.Snapshots
                 : Array.Empty<AnimationPlaybackLifecycleSnapshot>();
+        public bool HasAnimationRuntimeSnapshot =>
+            m_Session != null && m_Session.Engine.HasRuntimeDiagnosticsSnapshot;
+        public AnimationPresentationRuntimeSnapshot AnimationRuntimeSnapshot =>
+            m_Session != null
+                ? m_Session.Engine.RuntimeDiagnosticsSnapshot
+                : default;
 
         public bool Matches(CharacterPipelineDefinition definition, AnimancerComponent animancer)
         {

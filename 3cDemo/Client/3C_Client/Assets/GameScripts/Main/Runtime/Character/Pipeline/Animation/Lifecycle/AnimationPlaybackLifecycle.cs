@@ -28,8 +28,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             bool hasVisualSample)
         {
             if (!animationChannelId.IsValid || !poseSlotId.IsValid || !playbackId.IsValid ||
-                !Enum.IsDefined(typeof(AnimationPlaybackLifecyclePhase), phase) ||
-                !Enum.IsDefined(typeof(PoseSlotFrameAvailability), slotAvailability) ||
+                (int)phase < (int)AnimationPlaybackLifecyclePhase.PendingFirstSample ||
+                (int)phase > (int)AnimationPlaybackLifecyclePhase.Retired ||
+                (int)slotAvailability < (int)PoseSlotFrameAvailability.Pose ||
+                (int)slotAvailability > (int)PoseSlotFrameAvailability.Invalid ||
                 !float.IsFinite(sampleTime) || sampleTime < 0f ||
                 !float.IsFinite(slotOutputWeight) || slotOutputWeight < 0f || slotOutputWeight > 1f ||
                 hasVisualSample != sourceId.IsValid)

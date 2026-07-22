@@ -624,7 +624,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float leftFootWeight,
             float rightFootWeight)
         {
-            if (!poseSlotId.IsValid || !Enum.IsDefined(typeof(AnimationPoseContributionKind), kind) ||
+            if (!poseSlotId.IsValid ||
+                (int)kind < (int)AnimationPoseContributionKind.Live ||
+                (int)kind > (int)AnimationPoseContributionKind.Inertial ||
                 kind == AnimationPoseContributionKind.Live && (!sourceId.IsValid || programProducerIndex < 0) ||
                 kind != AnimationPoseContributionKind.Live && (sourceId.IsValid || programProducerIndex != -1) ||
                 contributionContinuityIdentity == 0 ||
@@ -673,7 +675,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong continuityIdentity)
         {
             if (!poseSlotId.IsValid || completionIdentity == 0 || continuityIdentity == 0 ||
-                !Enum.IsDefined(typeof(PoseSlotFrameAvailability), availability) ||
+                (int)availability < (int)PoseSlotFrameAvailability.Pose ||
+                (int)availability > (int)PoseSlotFrameAvailability.Invalid ||
                 !float.IsFinite(outputWeight) || outputWeight < 0f || outputWeight > 1f ||
                 denseContributionWeights.Count != contributions.Count * denseLocalPose.Count ||
                 availability == PoseSlotFrameAvailability.Pose && denseLocalPose.Count == 0 ||

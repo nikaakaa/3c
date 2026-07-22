@@ -258,7 +258,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 }
                 child.IsPlaying = true;
                 child.Speed = 0f;
-                child.Time = plan.ClipTime;
+                child.Time = plan.IsLooping ? plan.ContinuousClipTime : plan.ClipTime;
                 child.Weight = plan.Weight;
             }
 

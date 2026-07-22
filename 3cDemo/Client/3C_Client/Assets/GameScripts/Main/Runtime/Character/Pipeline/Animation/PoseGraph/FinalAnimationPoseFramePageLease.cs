@@ -19,6 +19,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CurrentLeaseIdentity = leaseIdentity;
         }
 
+        internal void Invalidate() => m_CurrentLeaseIdentity = 0;
+
         public void RequireValid(ulong leaseIdentity)
         {
             if (leaseIdentity == 0 || leaseIdentity != m_CurrentLeaseIdentity)

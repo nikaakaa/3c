@@ -56,7 +56,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawFootAnalysis();
             bool changed = serializedObject.ApplyModifiedProperties();
             if (changed)
+            {
                 m_BindingError = string.Empty;
+                InvalidateProjection();
+            }
 
             DrawPresentationAssetSummary();
             DrawConfigurationErrors();
@@ -279,6 +282,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.LabelField("Animation Channel", producer.AnimationChannelId.Value);
             EditorGUILayout.LabelField("Pose Slot", producer.PoseSlotId.Value);
             EditorGUILayout.LabelField("Source Clips", producer.SourceClips.Count.ToString());
+            for (int clipIndex = 0; clipIndex < producer.SourceClips.Count; clipIndex++)
+            {
+                AnimationProducerSourceClipAuthoringEntry sourceClip = producer.SourceClips[clipIndex];
+                EditorGUILayout.LabelField("Source Clip Identity", sourceClip.StableIdentity);
+                using (new EditorGUI.DisabledScope(true))
+                    EditorGUILayout.ObjectField("Animation Clip", sourceClip.Clip, typeof(UnityEngine.AnimationClip), false);
+            }
 
             AnimationProducerPresentationBinding binding = profile.FindProducerBinding(producer.ProducerId);
             int sourceKind = binding == null ? 0 : (int)binding.SourceKind;

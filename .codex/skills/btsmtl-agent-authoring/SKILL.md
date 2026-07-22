@@ -44,7 +44,7 @@ export_snapshot
 
 ### 不属于此写入口
 
-`CharacterAnimationPresentationProfile`、Pose Graph、Blend Library、Rig和Presentation producer source binding只允许由各自正式authoring入口修改。Agent Snapshot只读输出它们的资产identity/revision、AnimationChannel到PoseSlot映射和producer source identity；不得输出旧Layer、TransitionLibrary、easing或transition asset alias。Agent Patch不得获得第二个Presentation写入口。
+`CharacterAnimationPresentationProfile`、Pose Graph、Blend Library、Rig和Presentation producer source binding只允许由各自正式authoring入口修改。Profile Inspector必须调用`CharacterAnimationPresentationAuthoringService`，从显式`CharacterPipelineDefinition`的composition roots递归发现Timeline与AnimationTrack stable identity；不得读取已生成Program/Projection、旧Layer、显示名或目录来枚举producer。Agent Snapshot只读输出这些正式入口形成的资产identity/revision、AnimationChannel到PoseSlot映射和producer source identity；不得输出旧Layer、TransitionLibrary、easing或transition asset alias。Agent Patch不得获得第二个Presentation写入口。
 
 Animation Foot Analysis的Source identity、版本和算法摘要只允许Snapshot只读输出。Sole Speed、Height、Plant、Landing及其Library artifact是generated data，不得进入Timeline Curve Channel catalog、Patch payload或Rebuild operation；Agent仍只能修改正式注册的`Foot Placement Weight`等editable channel。
 

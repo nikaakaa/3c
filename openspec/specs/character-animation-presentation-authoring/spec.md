@@ -88,7 +88,7 @@ Editor-only `CharacterFootPlacementAnalysisSource` MUST拥有稳定identity、�
 
 ### Requirement: CharacterAnimationPresentationProfile Inspector 必须是唯一 Presentation 配置入口
 
-系统 MUST在CharacterAnimationPresentationProfile Inspector中唯一编辑Layer catalog、TransitionLibrary、producer binding、Foot Analysis Mode和Analysis Source GUID。Timeline Editor继续唯一编辑producer-local Clip、Marker与registered Curve；Timeline MAY通过领域tool provider临时接收Profile的精确Analysis Source作为面板初值，但 MUST不保存角色级Source或Projection配置。Graph、StateMachine和Timeline MUST不复制Profile作者数据。
+系统 MUST在`CharacterAnimationPresentationProfile` Inspector中唯一编辑Pose Graph、Blend Library、Rig Definition、producer resource binding、Foot Analysis Mode和Analysis Source GUID。Pose Slot、AnimationChannel binding、Bone Mask、Additive、Pose Parameter与Output topology MUST通过该Inspector进入正式Pose Graph Editor编辑；transition matrix MUST通过该Inspector进入Blend Library owner编辑。Timeline Editor继续唯一编辑producer-local Clip、Marker与registered Curve。Profile Inspector MUST不恢复Layer catalog、TransitionLibrary字段或第二张producer flow graph，Graph、StateMachine和Timeline MUST不复制Profile作者数据。
 
 #### Scenario: 从Profile打开Timeline Analysis
 
@@ -104,12 +104,12 @@ Editor-only `CharacterFootPlacementAnalysisSource` MUST拥有稳定identity、�
 
 ### Requirement: Profile Inspector 必须按正式 identity 显示 producer binding
 
-`CharacterAnimationPresentationProfile` Inspector MUST在显式 Definition context 下，从该 Definition 的正式 Projection 读取 inline/shared Graph 与 Timeline 中的 animation producer 投影，并按 stable producer identity 显示 LayerId、来源 Timeline 与 binding。Inspector MUST不重新编译 Graph，不推导或显示 StateMachine producer flow，MUST不保存 Tree node/edge 副本、Driver site、ExecutionLineage、runtime activation 或第二张 Animation Graph。正式运行时 MUST不依赖该列表做 selection 或 transition。
+`CharacterAnimationPresentationProfile` Inspector MUST在显式Definition context下调用唯一`CharacterAnimationPresentationAuthoringService`，从该Definition的RootTree与正式composition roots递归发现可达Graph、Timeline与AnimationTrack，并按`TimelineAuthoringId + TrackAuthoringId`稳定producer identity显示AnimationChannelId、PoseSlotId、source clip identity与resource binding。服务 MUST先从Pose Graph的唯一Channel到PoseSlot声明解析binding，再允许后续Projection compile；MUST不读取已生成Program或Projection来完成bootstrap，也 MUST不按Layer、显示名、目录、列表index或旧binding猜测producer。Inspector MUST不推导StateMachine producer flow、不保存Tree node/edge副本，也 MUST不复制Pose Graph topology到第二张列表。正式运行时 MUST不依赖该只读authoring列表做selection、transition或composition。
 
 #### Scenario: 查看 Attack1 到 Attack2
 
 - **WHEN** 作者在包含 Attack1 与 Attack2 的 Definition context 下检查 Profile
-- **THEN** Inspector MUST分别显示 Attack1 与 Attack2 的 producer identity、LayerId 与 binding
+- **THEN** Inspector MUST分别显示 Attack1 与 Attack2 的 producer identity、AnimationChannelId、PoseSlotId 与 binding
 - **AND** 状态 edge MUST只保存 condition、priority 与 interruption
 - **AND** Inspector MUST不复制 Attack1 到 Attack2 的逻辑 edge
 

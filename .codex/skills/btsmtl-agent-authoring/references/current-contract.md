@@ -48,6 +48,8 @@ domain必须是`CharacterController`或`AIController`；root路径必须是使�
 
 CharacterController Snapshot的`presentation`只读投影固定包含Profile、PoseGraph、BlendLibrary、Rig的asset identity与revision、`channelBindings[].animationChannelId/poseSlotId/outputPolicy`以及producer的`animationChannelId/poseSlotId/sourceAssetPath/sourceAssetGuid/sourceAssetType`。Timeline Track与Marker Group统一使用`animationChannelId`。旧`layers`、`layerId`、`transitionLibraryAsset*`、`transitionAsset*`与`easing`字段已删除，不提供alias。Patch catalog仍不提供PoseGraph、BlendLibrary、Rig、PoseSlot或producer source mutation。
 
+Presentation authoring bootstrap不属于Agent mutation。`CharacterAnimationPresentationProfileEditor`只调用`CharacterAnimationPresentationAuthoringService`，从显式Definition的RootTree与正式composition roots递归枚举Timeline、AnimationTrack和source clip stable identity，再按Pose Graph声明解析`AnimationChannelId -> PoseSlotId`。该流程不读取已生成Program/Projection，不按Layer、显示名、目录或旧binding发现producer；Agent只消费最终只读Snapshot投影。
+
 | operation | typed command 业务 |
 |---|---|
 | `ensure_state_machine` | 创建或确认 StateMachineNode/inline StateMachineGraph |

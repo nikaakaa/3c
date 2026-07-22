@@ -180,6 +180,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             float minimumJumpInterval,
             int maximumAdmittedSampleCount,
             int maximumTreeDepth,
+            float coverageNearDuplicateCostThreshold,
             int historyCapacity,
             int diagnosticDetailCapacity,
             float protectedFootPositionJumpLimit,
@@ -191,6 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 !float.IsFinite(searchInterval) || searchInterval <= 0f ||
                 !float.IsFinite(minimumJumpInterval) || minimumJumpInterval < 0f ||
                 maximumAdmittedSampleCount < topK || maximumTreeDepth <= 0 || historyCapacity <= 0 ||
+                !float.IsFinite(coverageNearDuplicateCostThreshold) || coverageNearDuplicateCostThreshold <= 0f ||
                 diagnosticDetailCapacity < 0 ||
                 !float.IsFinite(protectedFootPositionJumpLimit) || protectedFootPositionJumpLimit < 0f ||
                 !float.IsFinite(protectedFootVelocityJumpLimit) || protectedFootVelocityJumpLimit < 0f)
@@ -204,6 +206,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             MinimumJumpInterval = minimumJumpInterval;
             MaximumAdmittedSampleCount = maximumAdmittedSampleCount;
             MaximumTreeDepth = maximumTreeDepth;
+            CoverageNearDuplicateCostThreshold = coverageNearDuplicateCostThreshold;
             HistoryCapacity = historyCapacity;
             DiagnosticDetailCapacity = diagnosticDetailCapacity;
             ProtectedFootPositionJumpLimit = protectedFootPositionJumpLimit;
@@ -220,6 +223,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public float MinimumJumpInterval { get; }
         public int MaximumAdmittedSampleCount { get; }
         public int MaximumTreeDepth { get; }
+        public float CoverageNearDuplicateCostThreshold { get; }
         public int HistoryCapacity { get; }
         public int DiagnosticDetailCapacity { get; }
         public float ProtectedFootPositionJumpLimit { get; }
@@ -297,11 +301,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             CharacterMotionMatchingSourceClipId sourceClipId,
             int firstSampleIndex,
             int sampleCount,
+            float startTime,
+            float endTime,
             MotionMatchingSegmentLoopMode loopMode,
             bool terminal,
             int continuationEntrySampleIndex)
         {
             if (!segmentId.IsValid || !sourceClipId.IsValid || firstSampleIndex < 0 || sampleCount <= 0 ||
+                !float.IsFinite(startTime) || !float.IsFinite(endTime) || startTime < 0f || endTime <= startTime ||
                 !Enum.IsDefined(typeof(MotionMatchingSegmentLoopMode), loopMode) || continuationEntrySampleIndex < -1)
                 throw new ArgumentException("Motion Matching Segment payload is invalid.");
             if (loopMode == MotionMatchingSegmentLoopMode.Finite && !terminal && continuationEntrySampleIndex < 0)
@@ -310,6 +317,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             SourceClipId = sourceClipId;
             FirstSampleIndex = firstSampleIndex;
             SampleCount = sampleCount;
+            StartTime = startTime;
+            EndTime = endTime;
             LoopMode = loopMode;
             Terminal = terminal;
             ContinuationEntrySampleIndex = continuationEntrySampleIndex;
@@ -319,6 +328,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public CharacterMotionMatchingSourceClipId SourceClipId { get; }
         public int FirstSampleIndex { get; }
         public int SampleCount { get; }
+        public float StartTime { get; }
+        public float EndTime { get; }
+        public float Duration => EndTime - StartTime;
         public MotionMatchingSegmentLoopMode LoopMode { get; }
         public bool Terminal { get; }
         public int ContinuationEntrySampleIndex { get; }

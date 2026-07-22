@@ -43,7 +43,7 @@ Environment
 
 项目已经安装通用BTSMTL AI authoring、portable AI Program、独立AI State、committed Actor Observation与Local Float32 Control Source事务链。AI只产生与玩家相同类型的`CharacterSimulationInput`，不会直接执行Action、Timeline、Motion、伤害或动画。
 
-当前Corin训练敌人仍使用Neutral Control Source，Agent仍是只编辑Character Controller的v14；本文中的Ally Bot、中立怪AI、Team/Faction感知、Authority AI和具体AI资产尚未作为演示内容完成。后续场景资产必须从正式AI Definition编译并进入同一Session，不能用MonoBehaviour Bot、Scene查询或客户端本地推断代替。
+Agent v16已经通过统一`CharacterController`/`AIController`事务覆盖AI Definition、Graph、Blackboard、Perception和Intent authoring。Corin训练敌人prefab目前只是半迁移为AI Control Source：旧Definition无法按正式MonoScript加载，旧Tree、Perception与generated Program也不构成可运行闭环。本文中的Ally Bot、中立怪AI、Team/Faction感知和Authority AI仍未完成；后续场景资产必须从正式AI Definition编译并进入同一Session，不能用MonoBehaviour Bot、Scene查询或客户端本地推断代替。
 
 ## 核心战斗范围
 

@@ -513,3 +513,20 @@
 - [x] 26.6 更新proposal、design、implementation inventory、maturity research、delta spec与current spec的坐标空间合同。
 - [x] 26.7 使用规定参数编译Runtime与Final IK程序集并立即shutdown build server。
 - [x] 26.8 运行`openspec validate add-predictive-foot-placement-presentation-pass --strict --no-interactive`。
+
+## 27. 最终姿态帧输入与方向化Pelvis收口
+
+- [x] 27.1 将Pose Post Process输入替换为带有效lease的同帧`FinalAnimationPoseFrame`。
+- [x] 27.2 从Projection Pose Program一次绑定`animation.foot-placement-weight`的identity、dense index与ProgramHash。
+- [x] 27.3 删除Foot Profile的`PoseSourceLayerId`、producer binding和Projection二次采样入口。
+- [x] 27.4 让Foot Runtime直接读取最终Foot Features与最终归一化Foot Placement Weight。
+- [x] 27.5 将Diagnostics、Formatter、Feature Frame和Inspector迁到最终姿态帧合同。
+- [x] 27.6 为Pelvis Profile增加`AllPlantedFeet`与`DirectionalSlopeSupport`模式及显式方向证据阈值。
+- [x] 27.7 将Corin Profile迁到`DirectionalSlopeSupport`并删除旧Base Layer配置。
+- [ ] 27.8 将Runtime snapshot和trace迁到最终Pose Program、Completion、Continuity、参数与source contribution身份。
+- [ ] 27.9 实现上坡选择前方plant脚、下坡选择较低plant脚的方向化Pelvis决策。
+- [ ] 27.10 对缺少方向、脚前后顺序或坡面高度差的情况输出typed Neutral或Unavailable原因。
+- [ ] 27.11 将Pelvis mode、decision、reason与support foot接入统一diagnostics。
+- [ ] 27.12 更新proposal、design、delta spec与current spec，删除visible Layer重采样和隐式双脚平均描述。
+- [ ] 27.13 使用规定参数编译受影响Runtime与Editor程序集并立即shutdown build server。
+- [ ] 27.14 运行受影响OpenSpec strict validate并确认没有旧Layer、二次采样或兼容路径。

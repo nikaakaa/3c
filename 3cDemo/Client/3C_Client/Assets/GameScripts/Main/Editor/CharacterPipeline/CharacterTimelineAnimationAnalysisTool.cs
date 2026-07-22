@@ -280,14 +280,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_ContactProposal = null;
             m_ContactMarkers.text = string.Empty;
             m_ApplyContactMarkers.SetEnabled(false);
-            if (m_Artifact == null || m_SelectedClip?.Track is not AnimationTrack track ||
-                track.SyncMode != AnimationSyncMode.MarkerGroup ||
-                track.SequenceTopology != AnimationMarkerSequenceTopology.Cyclic)
+            if (m_Artifact == null)
                 return;
             try
             {
                 m_ContactCandidates = AnimationFootContactCandidateSet.Build(m_SelectedClip.Clip, m_Artifact);
-                string sourceSummary = BuildSourceCandidateSummary(m_ContactCandidates);
+                string sourceSummary =
+                    $"Candidate revision: {Short(m_ContactCandidates.Revision)}\n" +
+                    BuildSourceCandidateSummary(m_ContactCandidates);
+                if (m_SelectedClip?.Track is not AnimationTrack track)
+                {
+                    m_ContactMarkers.text =
+                        $"Contact candidates\n{sourceSummary}\nApply status: Unavailable - target track is not an AnimationTrack.";
+                    return;
+                }
                 try
                 {
                     m_ContactProposal = TimelineFootContactMarkerProposal.Build(
@@ -296,13 +302,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         m_SelectedClip,
                         m_Artifact);
                     m_ContactMarkers.text =
-                        $"Contact candidates {Short(m_ContactProposal.Revision)}\n" +
-                        BuildTimelineCandidateSummary(m_ContactProposal);
+                        $"Contact candidates\n{sourceSummary}\nProposal revision: {Short(m_ContactProposal.Revision)}\n" +
+                        $"Apply status: Ready\n{BuildTimelineCandidateSummary(m_ContactProposal)}";
                     m_ApplyContactMarkers.SetEnabled(!m_Session.IsReadOnly);
                 }
                 catch (Exception exception)
                 {
-                    m_ContactMarkers.text = $"Contact candidates\n{sourceSummary}\nApply unavailable: {exception.Message}";
+                    m_ContactMarkers.text = $"Contact candidates\n{sourceSummary}\nApply status: Unavailable - {exception.Message}";
                 }
             }
             catch (Exception exception)

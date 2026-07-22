@@ -118,6 +118,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationChannelId animationChannelId,
             PoseSlotId poseSlotId,
             AnimationPoseSourceId sourceId,
+            ulong sourcePoseContinuityIdentity,
             ulong presentationRequestSequence,
             int programProducerIndex,
             float visualSampleTime,
@@ -134,6 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationChannelId = animationChannelId;
             PoseSlotId = poseSlotId;
             SourceId = sourceId;
+            SourcePoseContinuityIdentity = sourcePoseContinuityIdentity;
             PresentationRequestSequence = presentationRequestSequence;
             ProgramProducerIndex = programProducerIndex;
             VisualSampleTime = visualSampleTime;
@@ -153,6 +155,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public AnimationChannelId AnimationChannelId { get; }
         public PoseSlotId PoseSlotId { get; }
         public AnimationPoseSourceId SourceId { get; }
+        public ulong SourcePoseContinuityIdentity { get; }
         public ulong PresentationRequestSequence { get; }
         public int ProgramProducerIndex { get; }
         public float VisualSampleTime { get; }
@@ -174,7 +177,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ? LeftFootFeatures.IsValid && RightFootFeatures.IsValid
                     : !LeftFootFeatures.IsValid && !RightFootFeatures.IsValid;
                 if (!AnimationChannelId.IsValid || !PoseSlotId.IsValid || !SourceId.IsValid ||
-                    PresentationRequestSequence == 0 || ProgramProducerIndex < 0 ||
+                    SourcePoseContinuityIdentity == 0 || PresentationRequestSequence == 0 || ProgramProducerIndex < 0 ||
                     !float.IsFinite(VisualSampleTime) || VisualSampleTime < 0f ||
                     double.IsNaN(ContinuousVisualTime) || double.IsInfinity(ContinuousVisualTime) || ContinuousVisualTime < 0d ||
                     Cycle < 0 || !float.IsFinite(VisualTimeScale) || VisualTimeScale < 0f ||

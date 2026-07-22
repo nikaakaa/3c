@@ -1,514 +1,349 @@
 using System;
 using System.Collections.Generic;
-using Animancer;
+using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
+using ThirdPersonCharacter.Pipeline.Animation.Presentation;
+using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 {
     public enum AnimationPlaybackLifecyclePhase
     {
         PendingFirstSample,
-        Current,
-        Outgoing,
+        Selected,
+        Retained,
         Retired
     }
 
     public readonly struct AnimationPlaybackLifecycleSnapshot
     {
         public AnimationPlaybackLifecycleSnapshot(
-            string layerId,
+            AnimationChannelId animationChannelId,
+            PoseSlotId poseSlotId,
             AnimationPlaybackId playbackId,
+            AnimationPoseSourceId sourceId,
             AnimationPlaybackLifecyclePhase phase,
-            float weight,
-            float fadeProgress,
-            string stateKey,
             float sampleTime,
+            PoseSlotFrameAvailability slotAvailability,
+            float slotOutputWeight,
             bool hasVisualSample)
         {
-            LayerId = layerId ?? string.Empty;
+            if (!animationChannelId.IsValid || !poseSlotId.IsValid || !playbackId.IsValid ||
+                !Enum.IsDefined(typeof(AnimationPlaybackLifecyclePhase), phase) ||
+                !Enum.IsDefined(typeof(PoseSlotFrameAvailability), slotAvailability) ||
+                !float.IsFinite(sampleTime) || sampleTime < 0f ||
+                !float.IsFinite(slotOutputWeight) || slotOutputWeight < 0f || slotOutputWeight > 1f ||
+                hasVisualSample != sourceId.IsValid)
+            {
+                throw new ArgumentException("Animation Playback Lifecycle snapshot is invalid.");
+            }
+            AnimationChannelId = animationChannelId;
+            PoseSlotId = poseSlotId;
             PlaybackId = playbackId;
+            SourceId = sourceId;
             Phase = phase;
-            Weight = weight;
-            FadeProgress = fadeProgress;
-            StateKey = stateKey ?? string.Empty;
             SampleTime = sampleTime;
+            SlotAvailability = slotAvailability;
+            SlotOutputWeight = slotOutputWeight;
             HasVisualSample = hasVisualSample;
         }
 
-        public string LayerId { get; }
+        public AnimationChannelId AnimationChannelId { get; }
+        public PoseSlotId PoseSlotId { get; }
         public AnimationPlaybackId PlaybackId { get; }
+        public AnimationPoseSourceId SourceId { get; }
         public AnimationPlaybackLifecyclePhase Phase { get; }
-        public float Weight { get; }
-        public float FadeProgress { get; }
-        public string StateKey { get; }
         public float SampleTime { get; }
+        public PoseSlotFrameAvailability SlotAvailability { get; }
+        public float SlotOutputWeight { get; }
         public bool HasVisualSample { get; }
-    }
-
-    public readonly struct AnimationLayerPlaybackVisibility
-    {
-        public AnimationLayerPlaybackVisibility(
-            string layerId,
-            AnimationPlaybackId current,
-            AnimationPlaybackId pending,
-            IReadOnlyCollection<AnimationPlaybackId> outgoing)
-        {
-            LayerId = layerId ?? string.Empty;
-            Current = current;
-            Pending = pending;
-            Outgoing = outgoing;
-        }
-
-        public string LayerId { get; }
-        public AnimationPlaybackId Current { get; }
-        public AnimationPlaybackId Pending { get; }
-        public IReadOnlyCollection<AnimationPlaybackId> Outgoing { get; }
     }
 
     public sealed class AnimationPlaybackLifecycle
     {
         readonly CharacterAnimationPresentationBindingIndex m_Bindings;
-        readonly IAnimationPlaybackAdapter m_Adapter;
-        readonly List<LayerState> m_Layers = new List<LayerState>();
-        readonly Dictionary<string, LayerState> m_LayersById =
-            new Dictionary<string, LayerState>(StringComparer.Ordinal);
-        readonly Dictionary<string, AnimationChannelSelection> m_LatestSelections =
-            new Dictionary<string, AnimationChannelSelection>(StringComparer.Ordinal);
-        readonly Dictionary<AnimationPlaybackId, AnimationProducerSample> m_LatestSamples =
-            new Dictionary<AnimationPlaybackId, AnimationProducerSample>();
-        readonly HashSet<AnimationPlaybackId> m_TerminalPlaybacks =
-            new HashSet<AnimationPlaybackId>();
-        readonly HashSet<AnimationPlaybackId> m_ReferencedPlaybacks =
-            new HashSet<AnimationPlaybackId>();
-        readonly List<AnimationPlaybackId> m_RemoveOutgoing = new List<AnimationPlaybackId>();
-        readonly List<AnimationPlaybackId> m_RemoveTerminal = new List<AnimationPlaybackId>();
+        readonly ChannelState[] m_Channels;
+        readonly Dictionary<AnimationChannelId, ChannelState> m_ChannelsById =
+            new Dictionary<AnimationChannelId, ChannelState>();
+        readonly Dictionary<AnimationPlaybackId, ResolvedAnimationPoseRequest> m_LatestRequests =
+            new Dictionary<AnimationPlaybackId, ResolvedAnimationPoseRequest>();
 
-        public AnimationPlaybackLifecycle(
-            CharacterAnimationPresentationBindingIndex bindings,
-            IAnimationPlaybackAdapter adapter)
+        public AnimationPlaybackLifecycle(CharacterAnimationPresentationBindingIndex bindings)
         {
             m_Bindings = bindings ?? throw new ArgumentNullException(nameof(bindings));
-            m_Adapter = adapter ?? throw new ArgumentNullException(nameof(adapter));
-            foreach (ResolvedAnimationLayer layer in bindings.Layers.Values)
+            if (!bindings.IsValid || bindings.Projection == null)
+                throw new ArgumentException("Animation Presentation bindings are invalid.", nameof(bindings));
+            m_Channels = new ChannelState[bindings.Slots.Count];
+            foreach (KeyValuePair<PoseSlotId, ResolvedAnimationPoseSlot> pair in bindings.Slots)
             {
-                var state = new LayerState(layer);
-                m_Layers.Add(state);
-                m_LayersById.Add(layer.Id, state);
+                ResolvedAnimationPoseSlot slot = pair.Value;
+                if (!slot.IsValid || slot.Index < 0 || slot.Index >= m_Channels.Length || m_Channels[slot.Index] != null)
+                    throw new InvalidOperationException("Animation Playback Lifecycle Pose Slot layout is invalid.");
+                var state = new ChannelState(slot);
+                m_Channels[slot.Index] = state;
+                m_ChannelsById.Add(slot.AnimationChannelId, state);
             }
-            m_Layers.Sort((left, right) => left.Layer.Order.CompareTo(right.Layer.Order));
+            for (int i = 0; i < m_Channels.Length; i++)
+            {
+                if (m_Channels[i] == null)
+                    throw new InvalidOperationException($"Animation Playback Lifecycle Pose Slot #{i} is missing.");
+            }
         }
 
-        public bool TryGetCurrentPlayback(string layerId, out AnimationPlaybackId playbackId)
+        public bool HasRequiredOutputSelection
         {
-            if (m_LayersById.TryGetValue(layerId ?? string.Empty, out LayerState layer) && layer.Current.IsValid)
+            get
             {
-                playbackId = layer.Current;
-                return true;
-            }
-            playbackId = default;
-            return false;
-        }
-
-        public bool TryGetPendingPlayback(string layerId, out AnimationPlaybackId playbackId)
-        {
-            if (m_LayersById.TryGetValue(layerId ?? string.Empty, out LayerState layer) && layer.Pending.IsValid)
-            {
-                playbackId = layer.Pending;
-                return true;
-            }
-            playbackId = default;
-            return false;
-        }
-
-        public bool Retains(AnimationPlaybackId playbackId)
-        {
-            if (!playbackId.IsValid)
-                return false;
-            for (int i = 0; i < m_Layers.Count; i++)
-            {
-                LayerState layer = m_Layers[i];
-                if (layer.Current.Equals(playbackId) ||
-                    layer.Pending.Equals(playbackId) ||
-                    layer.Selection.HasPlayback && layer.Selection.PlaybackId.Equals(playbackId) ||
-                    layer.Outgoing.Contains(playbackId))
+                for (int i = 0; i < m_Channels.Length; i++)
                 {
-                    return true;
+                    ChannelState state = m_Channels[i];
+                    if (state.Slot.OutputPolicy == PoseSlotOutputPolicy.RequireOutput &&
+                        (!state.Selection.IsValid || !state.Selection.HasPlayback || !state.SourceId.IsValid))
+                    {
+                        return false;
+                    }
                 }
+                return true;
             }
+        }
+
+        public bool TryGetSelectedPlayback(AnimationChannelId channelId, out AnimationPlaybackId playbackId)
+        {
+            if (m_ChannelsById.TryGetValue(channelId, out ChannelState state) &&
+                state.Selection.IsValid && state.Selection.HasPlayback)
+            {
+                playbackId = state.Selection.PlaybackId;
+                return true;
+            }
+            playbackId = default;
             return false;
         }
 
-        public void BuildVisibilitySnapshot(List<AnimationLayerPlaybackVisibility> destination)
-        {
-            if (destination == null)
-                throw new ArgumentNullException(nameof(destination));
-            destination.Clear();
-            for (int i = 0; i < m_Layers.Count; i++)
-            {
-                LayerState layer = m_Layers[i];
-                var outgoing = new AnimationPlaybackId[layer.Outgoing.Count];
-                layer.Outgoing.CopyTo(outgoing);
-                destination.Add(new AnimationLayerPlaybackVisibility(
-                    layer.Layer.Id,
-                    layer.Current,
-                    layer.Pending,
-                    outgoing));
-            }
-        }
-
-        public void CollectSampleDemand(
+        internal void CollectSampleDemand(
             IReadOnlyList<AnimationPlaybackCommand> commands,
+            IReadOnlyList<AnimationBlendStackRuntime> stacks,
             HashSet<AnimationPlaybackId> destination)
         {
+            if (stacks == null)
+                throw new ArgumentNullException(nameof(stacks));
             if (destination == null)
                 throw new ArgumentNullException(nameof(destination));
-
             destination.Clear();
-            m_LatestSelections.Clear();
+            for (int i = 0; i < m_Channels.Length; i++)
+            {
+                AnimationChannelSelection selection = m_Channels[i].Selection;
+                if (selection.IsValid && selection.HasPlayback)
+                    destination.Add(selection.PlaybackId);
+            }
             if (commands != null)
             {
                 for (int i = 0; i < commands.Count; i++)
                 {
                     AnimationPlaybackCommand command = commands[i];
-                    if (command.Kind == AnimationPlaybackCommandKind.Selection)
-                        m_LatestSelections[command.Selection.LayerId] = command.Selection;
+                    if (command.Kind == AnimationPlaybackCommandKind.Selection && command.Selection.HasPlayback)
+                        destination.Add(command.Selection.PlaybackId);
                 }
             }
-
-            for (int i = 0; i < m_Layers.Count; i++)
+            for (int stackIndex = 0; stackIndex < stacks.Count; stackIndex++)
             {
-                LayerState layer = m_Layers[i];
-                if (layer.Current.IsValid)
-                    destination.Add(layer.Current);
-                if (layer.Pending.IsValid)
-                    destination.Add(layer.Pending);
-                foreach (AnimationPlaybackId outgoing in layer.Outgoing)
-                    destination.Add(outgoing);
-
-                AnimationChannelSelection selection = m_LatestSelections.TryGetValue(layer.Layer.Id, out AnimationChannelSelection latest)
-                    ? latest
-                    : layer.Selection;
-                if (selection.HasPlayback && selection.PlaybackId.IsValid)
-                    destination.Add(selection.PlaybackId);
+                AnimationBlendStackRuntime stack = stacks[stackIndex];
+                for (int entryIndex = 0; entryIndex < stack.EntryCount; entryIndex++)
+                {
+                    AnimationBlendEntryId entry = stack.GetEntryId(entryIndex);
+                    if (!entry.EmptyTarget)
+                        destination.Add(entry.SourceId.PlaybackId);
+                }
             }
         }
 
-        public void Apply(
+        internal void Apply(
             IReadOnlyList<AnimationPlaybackCommand> commands,
-            float presentationDeltaSeconds,
-            List<AnimationPlaybackId> retiredPlaybacks)
+            AnimationPosePlayableGraphRuntime poseRuntime,
+            Func<ulong> nextPresentationRequestSequence)
         {
-            if (retiredPlaybacks == null)
-                throw new ArgumentNullException(nameof(retiredPlaybacks));
+            if (poseRuntime == null)
+                throw new ArgumentNullException(nameof(poseRuntime));
+            if (nextPresentationRequestSequence == null)
+                throw new ArgumentNullException(nameof(nextPresentationRequestSequence));
+            m_LatestRequests.Clear();
+            if (commands != null)
+            {
+                for (int i = 0; i < commands.Count; i++)
+                    ApplyCommand(commands[i]);
+            }
 
-            retiredPlaybacks.Clear();
-            PrepareBatch(commands);
-            ValidateBatch();
-            CommitSelections();
-            UpdateVisibleSamples();
-            m_Adapter.Evaluate(presentationDeltaSeconds);
-            RetireOutgoing(retiredPlaybacks);
-            RetireUnreferencedTerminalPlaybacks(retiredPlaybacks);
+            for (int i = 0; i < m_Channels.Length; i++)
+            {
+                ChannelState state = m_Channels[i];
+                if (!state.Selection.IsValid)
+                    continue;
+                if (!state.Selection.HasPlayback)
+                {
+                    if (state.Slot.OutputPolicy == PoseSlotOutputPolicy.RequireOutput)
+                        throw new InvalidOperationException($"Required Pose Slot '{state.Slot.PoseSlotId}' selected Empty.");
+                    if (!state.EmptyTarget)
+                    {
+                        poseRuntime.PushEmpty(
+                            state.Slot.AnimationChannelId,
+                            nextPresentationRequestSequence());
+                        state.EmptyTarget = true;
+                        state.SourceId = default;
+                    }
+                    continue;
+                }
+
+                if (!m_LatestRequests.TryGetValue(state.Selection.PlaybackId, out ResolvedAnimationPoseRequest request))
+                {
+                    state.SourceId = default;
+                    state.EmptyTarget = false;
+                    continue;
+                }
+                poseRuntime.PushPoseRequest(in request);
+                state.SourceId = request.SourceId;
+                state.EmptyTarget = false;
+            }
         }
 
-        public void BuildSnapshot(List<AnimationPlaybackLifecycleSnapshot> destination)
+        internal void BuildSnapshot(
+            IReadOnlyList<AnimationBlendStackRuntime> stacks,
+            List<AnimationPlaybackLifecycleSnapshot> destination)
         {
+            if (stacks == null)
+                throw new ArgumentNullException(nameof(stacks));
+            if (destination == null)
+                throw new ArgumentNullException(nameof(destination));
             destination.Clear();
-            for (int i = 0; i < m_Layers.Count; i++)
+            for (int i = 0; i < m_Channels.Length; i++)
             {
-                LayerState layer = m_Layers[i];
-                if (layer.Pending.IsValid)
-                    AddSnapshot(destination, layer.Layer.Id, layer.Pending, AnimationPlaybackLifecyclePhase.PendingFirstSample);
-                if (layer.Current.IsValid)
-                    AddSnapshot(destination, layer.Layer.Id, layer.Current, AnimationPlaybackLifecyclePhase.Current);
-                foreach (AnimationPlaybackId outgoing in layer.Outgoing)
-                    AddSnapshot(destination, layer.Layer.Id, outgoing, AnimationPlaybackLifecyclePhase.Outgoing);
+                ChannelState state = m_Channels[i];
+                if (!state.Selection.IsValid || !state.Selection.HasPlayback)
+                    continue;
+                AnimationBlendStackRuntime stack = stacks[state.Slot.Index];
+                ResolvedAnimationPoseRequest request = default;
+                bool sampled = state.SourceId.IsValid &&
+                               m_LatestRequests.TryGetValue(state.Selection.PlaybackId, out request);
+                destination.Add(new AnimationPlaybackLifecycleSnapshot(
+                    state.Slot.AnimationChannelId,
+                    state.Slot.PoseSlotId,
+                    state.Selection.PlaybackId,
+                    sampled ? state.SourceId : default,
+                    sampled ? AnimationPlaybackLifecyclePhase.Selected : AnimationPlaybackLifecyclePhase.PendingFirstSample,
+                    sampled ? request.VisualSampleTime : 0f,
+                    stack.HasCompletedFrame ? stack.LastAvailability : PoseSlotFrameAvailability.Invalid,
+                    stack.HasCompletedFrame ? stack.LastOutputWeight : 0f,
+                    sampled));
+
+                for (int entryIndex = 0; entryIndex < stack.EntryCount; entryIndex++)
+                {
+                    AnimationBlendEntryId entry = stack.GetEntryId(entryIndex);
+                    if (entry.EmptyTarget || entry.SourceId.Equals(state.SourceId))
+                        continue;
+                    bool hasRequest = m_LatestRequests.TryGetValue(entry.SourceId.PlaybackId, out ResolvedAnimationPoseRequest retained);
+                    if (!hasRequest)
+                        continue;
+                    destination.Add(new AnimationPlaybackLifecycleSnapshot(
+                        state.Slot.AnimationChannelId,
+                        state.Slot.PoseSlotId,
+                        entry.SourceId.PlaybackId,
+                        entry.SourceId,
+                        AnimationPlaybackLifecyclePhase.Retained,
+                        retained.VisualSampleTime,
+                        stack.LastAvailability,
+                        stack.LastOutputWeight,
+                        true));
+                }
             }
+        }
+
+        internal bool Retains(AnimationPlaybackId playbackId, IReadOnlyList<AnimationBlendStackRuntime> stacks)
+        {
+            if (!playbackId.IsValid)
+                return false;
+            for (int i = 0; i < m_Channels.Length; i++)
+            {
+                AnimationChannelSelection selection = m_Channels[i].Selection;
+                if (selection.IsValid && selection.HasPlayback && selection.PlaybackId.Equals(playbackId))
+                    return true;
+            }
+            for (int stackIndex = 0; stackIndex < stacks.Count; stackIndex++)
+            {
+                AnimationBlendStackRuntime stack = stacks[stackIndex];
+                for (int entryIndex = 0; entryIndex < stack.EntryCount; entryIndex++)
+                {
+                    AnimationBlendEntryId entry = stack.GetEntryId(entryIndex);
+                    if (!entry.EmptyTarget && entry.SourceId.PlaybackId.Equals(playbackId))
+                        return true;
+                }
+            }
+            return false;
         }
 
         public void Reset()
         {
-            for (int i = 0; i < m_Layers.Count; i++)
-                m_Layers[i].Reset();
-            m_LatestSelections.Clear();
-            m_LatestSamples.Clear();
-            m_TerminalPlaybacks.Clear();
-            m_ReferencedPlaybacks.Clear();
-            m_RemoveOutgoing.Clear();
-            m_RemoveTerminal.Clear();
-            m_Adapter.Clear();
+            for (int i = 0; i < m_Channels.Length; i++)
+                m_Channels[i].Reset();
+            m_LatestRequests.Clear();
         }
 
-        void PrepareBatch(IReadOnlyList<AnimationPlaybackCommand> commands)
+        void ApplyCommand(AnimationPlaybackCommand command)
         {
-            m_LatestSelections.Clear();
-            m_LatestSamples.Clear();
-            if (commands == null)
-                return;
-
-            for (int i = 0; i < commands.Count; i++)
+            switch (command.Kind)
             {
-                AnimationPlaybackCommand command = commands[i];
-                switch (command.Kind)
-                {
-                    case AnimationPlaybackCommandKind.Selection:
-                        m_LatestSelections[command.Selection.LayerId] = command.Selection;
-                        break;
-                    case AnimationPlaybackCommandKind.Sample:
-                        if (command.Sample == null || !command.Sample.IsValid)
-                            throw new InvalidOperationException("Animation playback batch contains an invalid producer sample.");
-                        m_LatestSamples[command.Sample.PlaybackId] = command.Sample;
-                        break;
-                    case AnimationPlaybackCommandKind.Complete:
-                    case AnimationPlaybackCommandKind.Release:
-                        if (!command.PlaybackId.IsValid)
-                            throw new InvalidOperationException("Animation playback batch contains an invalid terminal playback id.");
-                        m_TerminalPlaybacks.Add(command.PlaybackId);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(command.Kind), command.Kind, null);
-                }
-            }
-        }
-
-        void ValidateBatch()
-        {
-            foreach (KeyValuePair<string, AnimationChannelSelection> pair in m_LatestSelections)
-            {
-                if (!m_LayersById.ContainsKey(pair.Key) || !pair.Value.IsValid)
-                    throw new InvalidOperationException($"Animation selection targets unknown layer '{pair.Key}'.");
-            }
-
-            foreach (AnimationProducerSample sample in m_LatestSamples.Values)
-            {
-                if (!m_Bindings.TryGetBinding(sample.PlaybackId.ProducerId, out ResolvedAnimationProducerBinding binding))
-                    throw new InvalidOperationException($"Animation sample targets unknown producer '{sample.PlaybackId.ProducerId}'.");
-                if (!string.Equals(binding.LayerId, sample.LayerId, StringComparison.Ordinal))
-                    throw new InvalidOperationException(
-                        $"Animation sample '{sample.PlaybackId}' targets layer '{sample.LayerId}' instead of '{binding.LayerId}'.");
-            }
-
-            for (int i = 0; i < m_Layers.Count; i++)
-            {
-                LayerState layer = m_Layers[i];
-                AnimationChannelSelection selection = m_LatestSelections.TryGetValue(layer.Layer.Id, out AnimationChannelSelection latest)
-                    ? latest
-                    : layer.Selection;
-                if (!selection.IsValid)
-                {
-                    if (!layer.Current.IsValid &&
-                        layer.Layer.OutputPolicy == AnimationLayerOutputPolicy.RequireOutput)
+                case AnimationPlaybackCommandKind.Selection:
+                    if (!command.Selection.IsValid ||
+                        !m_ChannelsById.TryGetValue(command.Selection.AnimationChannelId, out ChannelState state))
                     {
                         throw new InvalidOperationException(
-                            $"Animation layer '{layer.Layer.Id}' requires output but has no current playback or logic selection.");
+                            $"Animation selection targets unknown Channel '{command.Selection.AnimationChannelId}'.");
                     }
-                    continue;
-                }
-                if (!selection.HasPlayback)
-                {
-                    if (layer.Layer.OutputPolicy == AnimationLayerOutputPolicy.RequireOutput)
-                        throw new InvalidOperationException(
-                            $"Animation layer '{layer.Layer.Id}' requires output but logic selected None.");
-                    continue;
-                }
-
-                if (!m_Bindings.TryGetBinding(selection.PlaybackId.ProducerId, out ResolvedAnimationProducerBinding binding) ||
-                    !string.Equals(binding.LayerId, layer.Layer.Id, StringComparison.Ordinal))
-                    throw new InvalidOperationException(
-                        $"Animation layer '{layer.Layer.Id}' selected unknown producer '{selection.PlaybackId.ProducerId}'.");
-
-                bool current = layer.Current.Equals(selection.PlaybackId);
-                bool hasSample = m_LatestSamples.TryGetValue(selection.PlaybackId, out AnimationProducerSample sample) &&
-                                 sample.HasOutput;
-                if (!current && !hasSample && !layer.Current.IsValid &&
-                    layer.Layer.OutputPolicy == AnimationLayerOutputPolicy.RequireOutput)
-                    throw new InvalidOperationException(
-                        $"Animation layer '{layer.Layer.Id}' selected '{selection.PlaybackId}' without a first output sample.");
-                if (!current && !hasSample && m_TerminalPlaybacks.Contains(selection.PlaybackId))
-                    throw new InvalidOperationException(
-                        $"Animation layer '{layer.Layer.Id}' selected '{selection.PlaybackId}', but it completed before producing a first sample.");
-                if (current && m_LatestSamples.TryGetValue(selection.PlaybackId, out sample) && !sample.HasOutput &&
-                    layer.Layer.OutputPolicy == AnimationLayerOutputPolicy.RequireOutput)
-                    throw new InvalidOperationException(
-                        $"Animation layer '{layer.Layer.Id}' current producer '{selection.PlaybackId}' produced no output.");
-            }
-        }
-
-        void CommitSelections()
-        {
-            for (int i = 0; i < m_Layers.Count; i++)
-            {
-                LayerState layer = m_Layers[i];
-                if (m_LatestSelections.TryGetValue(layer.Layer.Id, out AnimationChannelSelection latest))
-                    layer.Selection = latest;
-                if (!layer.Selection.IsValid)
-                    continue;
-
-                if (!layer.Selection.HasPlayback)
-                {
-                    layer.Pending = default;
-                    if (layer.Current.IsValid)
+                    if (!command.Selection.HasPlayback ||
+                        m_Bindings.TryGetBinding(command.Selection.PlaybackId.ProducerId, out ResolvedAnimationProducerBinding binding) &&
+                        binding.AnimationChannelId == state.Slot.AnimationChannelId)
                     {
-                        AnimationPlaybackId outgoing = layer.Current;
-                        layer.Outgoing.Add(outgoing);
-                        layer.Current = default;
-                        Easing.Function easing = ResolveEasing(outgoing);
-                        m_Adapter.FadeToEmpty(layer.Layer, easing);
+                        state.Selection = command.Selection;
+                        break;
                     }
-                    continue;
-                }
-
-                AnimationPlaybackId target = layer.Selection.PlaybackId;
-                if (layer.Current.Equals(target))
-                {
-                    layer.Pending = default;
-                    continue;
-                }
-
-                if (!m_LatestSamples.TryGetValue(target, out AnimationProducerSample sample) || !sample.HasOutput)
-                {
-                    layer.Pending = target;
-                    continue;
-                }
-
-                if (layer.Current.IsValid)
-                    layer.Outgoing.Add(layer.Current);
-                layer.Outgoing.Remove(target);
-                layer.Pending = default;
-                layer.Current = target;
-                ResolvedAnimationProducerBinding binding = RequireBinding(target.ProducerId);
-                m_Adapter.Play(layer.Layer, binding, sample);
+                    throw new InvalidOperationException(
+                        $"Animation Channel '{state.Slot.AnimationChannelId}' selected an unknown producer '{command.Selection.PlaybackId.ProducerId}'.");
+                case AnimationPlaybackCommandKind.PoseRequest:
+                    ResolvedAnimationPoseRequest request = command.PoseRequest;
+                    if (!request.IsValid || !m_ChannelsById.TryGetValue(request.AnimationChannelId, out state) ||
+                        state.Slot.PoseSlotId != request.PoseSlotId ||
+                        !m_Bindings.TryGetBinding(request.SourceId.PlaybackId.ProducerId, out binding) ||
+                        binding.ProgramProducerIndex != request.ProgramProducerIndex ||
+                        binding.AnimationChannelId != request.AnimationChannelId ||
+                        binding.PoseSlotId != request.PoseSlotId)
+                    {
+                        throw new InvalidOperationException("Animation pose request does not match its compiled Channel and Pose Slot binding.");
+                    }
+                    m_LatestRequests[request.SourceId.PlaybackId] = request;
+                    break;
+                case AnimationPlaybackCommandKind.Complete:
+                case AnimationPlaybackCommandKind.Release:
+                    if (!command.PlaybackId.IsValid)
+                        throw new InvalidOperationException("Animation terminal command has no PlaybackId.");
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(command.Kind), command.Kind, null);
             }
         }
 
-        void UpdateVisibleSamples()
+        sealed class ChannelState
         {
-            for (int i = 0; i < m_Layers.Count; i++)
+            internal ChannelState(ResolvedAnimationPoseSlot slot)
             {
-                LayerState layer = m_Layers[i];
-                if (layer.Current.IsValid &&
-                    m_LatestSamples.TryGetValue(layer.Current, out AnimationProducerSample currentSample) &&
-                    currentSample.HasOutput)
-                    m_Adapter.UpdateSample(currentSample);
-                foreach (AnimationPlaybackId outgoing in layer.Outgoing)
-                {
-                    if (m_LatestSamples.TryGetValue(outgoing, out AnimationProducerSample outgoingSample) &&
-                        outgoingSample.HasOutput)
-                        m_Adapter.UpdateSample(outgoingSample);
-                }
-            }
-        }
-
-        void RetireOutgoing(List<AnimationPlaybackId> retiredPlaybacks)
-        {
-            for (int i = 0; i < m_Layers.Count; i++)
-            {
-                LayerState layer = m_Layers[i];
-                m_RemoveOutgoing.Clear();
-                foreach (AnimationPlaybackId outgoing in layer.Outgoing)
-                {
-                    if (!m_Adapter.IsRetired(outgoing))
-                        continue;
-                    m_RemoveOutgoing.Add(outgoing);
-                    AddRetired(retiredPlaybacks, outgoing);
-                }
-                for (int removeIndex = 0; removeIndex < m_RemoveOutgoing.Count; removeIndex++)
-                {
-                    AnimationPlaybackId playbackId = m_RemoveOutgoing[removeIndex];
-                    layer.Outgoing.Remove(playbackId);
-                    m_Adapter.Release(playbackId);
-                }
-            }
-        }
-
-        void RetireUnreferencedTerminalPlaybacks(List<AnimationPlaybackId> retiredPlaybacks)
-        {
-            m_ReferencedPlaybacks.Clear();
-            for (int i = 0; i < m_Layers.Count; i++)
-            {
-                LayerState layer = m_Layers[i];
-                if (layer.Selection.HasPlayback)
-                    m_ReferencedPlaybacks.Add(layer.Selection.PlaybackId);
-                if (layer.Pending.IsValid)
-                    m_ReferencedPlaybacks.Add(layer.Pending);
-                if (layer.Current.IsValid)
-                    m_ReferencedPlaybacks.Add(layer.Current);
-                foreach (AnimationPlaybackId outgoing in layer.Outgoing)
-                    m_ReferencedPlaybacks.Add(outgoing);
+                Slot = slot;
             }
 
-            m_RemoveTerminal.Clear();
-            foreach (AnimationPlaybackId terminal in m_TerminalPlaybacks)
-            {
-                if (m_ReferencedPlaybacks.Contains(terminal))
-                    continue;
-                m_RemoveTerminal.Add(terminal);
-                AddRetired(retiredPlaybacks, terminal);
-            }
-            for (int i = 0; i < m_RemoveTerminal.Count; i++)
-            {
-                AnimationPlaybackId playbackId = m_RemoveTerminal[i];
-                m_TerminalPlaybacks.Remove(playbackId);
-                m_Adapter.Release(playbackId);
-            }
-        }
+            internal ResolvedAnimationPoseSlot Slot { get; }
+            internal AnimationChannelSelection Selection { get; set; }
+            internal AnimationPoseSourceId SourceId { get; set; }
+            internal bool EmptyTarget { get; set; }
 
-        ResolvedAnimationProducerBinding RequireBinding(AnimationProducerId producerId)
-        {
-            if (!m_Bindings.TryGetBinding(producerId, out ResolvedAnimationProducerBinding binding))
-                throw new InvalidOperationException($"Animation producer '{producerId}' has no presentation binding.");
-            return binding;
-        }
-
-        Easing.Function ResolveEasing(AnimationPlaybackId playbackId)
-        {
-            return RequireBinding(playbackId.ProducerId).Easing;
-        }
-
-        void AddSnapshot(
-            List<AnimationPlaybackLifecycleSnapshot> destination,
-            string layerId,
-            AnimationPlaybackId playbackId,
-            AnimationPlaybackLifecyclePhase phase)
-        {
-            bool hasVisualSample = m_Adapter.TryGetVisualSnapshot(
-                playbackId,
-                out AnimationPlaybackVisualSnapshot visualSnapshot);
-            destination.Add(new AnimationPlaybackLifecycleSnapshot(
-                layerId,
-                playbackId,
-                phase,
-                m_Adapter.GetWeight(playbackId),
-                m_Adapter.GetFadeProgress(playbackId),
-                hasVisualSample ? visualSnapshot.StateKey : string.Empty,
-                hasVisualSample ? visualSnapshot.SampleTime : 0f,
-                hasVisualSample));
-        }
-
-        static void AddRetired(List<AnimationPlaybackId> retiredPlaybacks, AnimationPlaybackId playbackId)
-        {
-            if (!retiredPlaybacks.Contains(playbackId))
-                retiredPlaybacks.Add(playbackId);
-        }
-
-        sealed class LayerState
-        {
-            public LayerState(ResolvedAnimationLayer layer)
-            {
-                Layer = layer;
-            }
-
-            public ResolvedAnimationLayer Layer { get; }
-            public AnimationChannelSelection Selection { get; set; }
-            public AnimationPlaybackId Pending { get; set; }
-            public AnimationPlaybackId Current { get; set; }
-            public HashSet<AnimationPlaybackId> Outgoing { get; } = new HashSet<AnimationPlaybackId>();
-
-            public void Reset()
+            internal void Reset()
             {
                 Selection = default;
-                Pending = default;
-                Current = default;
-                Outgoing.Clear();
+                SourceId = default;
+                EmptyTarget = false;
             }
         }
     }

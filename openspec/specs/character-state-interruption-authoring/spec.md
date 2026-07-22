@@ -5,7 +5,7 @@
 ## Requirements
 ### Requirement: 状态抢占必须复用分层停止协议
 
-状态抢占 authoring MUST 继续表达通用 Runnable stop、StateMachine transition、State.OnExit 与 Timeline producer release。Compiler MUST 将其生成为统一 control-flow、stop barrier、ownership 与 release operation；Program MUST 在关闭 source State、Action 与 Timeline Gameplay output 后，为受影响 LayerId 输出唯一 producer command。系统 MUST 不让 source 逻辑为 fade 继续 active，也 MUST 不使用 StateMachine external animation、Tree Driver、Animation priority 或 CharacterGraphContext selection。
+状态抢占authoring MUST继续表达通用Runnable stop、StateMachine transition、State.OnExit与Timeline producer release。Compiler MUST将其生成为统一control-flow、stop barrier、ownership与release operation；Program MUST在关闭source State、Action与Timeline Gameplay output后，为每个受影响AnimationChannelId输出至多一个producer command。系统 MUST不让source逻辑为视觉transition继续active，也 MUST不使用StateMachine external animation、Tree Driver、Animation priority或CharacterGraphContext selection。
 
 #### Scenario: RunEnd 被输入抢占
 
@@ -25,8 +25,8 @@
 
 - **WHEN** Session、Actor 或 Host ForceStop/deactivate/dispose
 - **THEN** Pipeline Runtime MUST立即关闭 logic activation并输出 retire lifecycle
-- **AND** Committer/Presentation MUST 清理 playback lifecycle、Animancer states 与 retention
-- **AND** MUST 不读取 transition duration 或等待 fade
+- **AND** Committer/Presentation MUST清理playback lifecycle、Blend Stack source、Animancer source playable与retention
+- **AND** MUST不读取transition duration或等待视觉收尾
 
 ### Requirement: StateExitContext 必须保持层间翻译边界
 
@@ -64,41 +64,41 @@ Transition MUST 用 Action Context、Blackboard ValueNode、`ActionWindowActiveI
 - **AND** MUST NOT 读取旧 cancel key
 ### Requirement: 状态退出逻辑屏障与表现收尾必须分离
 
-source State root、Action lifecycle、Timeline gameplay output 与逻辑所有权 MUST在 stop barrier 内关闭。AnimationPlaybackLifecycle MAY让已释放 source 以 Outgoing 视觉状态存在，并通过 PresentationRetention 接收 animation-only sample；Animancer MUST负责 fade。逻辑 release MUST不等于 outgoing visual retirement，但表现收尾 MUST不重新 tick source gameplay。
+source State root、Action lifecycle、Timeline gameplay output与逻辑所有权 MUST在stop barrier内关闭。AnimationPlaybackLifecycle MAY让已释放source以Retained视觉状态存在，并通过PresentationRetention接收animation-only sample；对应PoseSlot Blend Stack MUST负责transition、Stored/Inertial状态与最终release。逻辑release MUST不等于retained visual retirement，但表现收尾 MUST不重新tick source gameplay。
 
-#### Scenario: CrossFade 收尾
+#### Scenario: Blend Stack收尾
 
-- **WHEN** source 已逻辑退出且 Animancer 正在淡出其 state
-- **THEN** source MAY保持 Outgoing 与只读 animation retention
+- **WHEN** source已逻辑退出且PoseSlot Stack仍保留其视觉贡献
+- **THEN** source MAY保持Retained与只读animation retention
 - **AND** source MUST不再产生 gameplay、Tree、Timeline logic、Motion、root motion 或 GameplayFacts
 
 #### Scenario: target 首样本延迟
 
 - **WHEN** source 已退出但 selected target 尚无第一份 sample
-- **THEN** lifecycle MUST保持上一 Current 并记录 PendingFirstSample
+- **THEN** lifecycle MUST保持上一Retained输出并记录PendingFirstSample
 - **AND** MUST不恢复 source 逻辑所有权或选择 fallback
 
 #### Scenario: 结构 target
 
 - **WHEN** logical target 本身不产 animation producer
-- **THEN** RequireOutput layer 的逻辑提交 MUST省略该层更新并保持已提交的正式 producer，或直接选择目标状态的正式 producer
-- **AND** AllowEmpty layer MAY显式选择 None
+- **THEN** RequireOutput channel的逻辑提交 MUST省略该channel更新并保持已提交的正式producer，或直接选择目标状态的正式producer
+- **AND** AllowEmpty channel MAY显式选择None
 - **AND** Animation 模块 MUST不从 Runnable executed 或 Tree route 推断 target
 
 ### Requirement: 动画 Transition 的完成不得反向阻塞 Tree terminal
 
-Tree/StateMachine terminal MUST只由逻辑停止协议决定，MUST不等待 Animancer fade。PendingFirstSample、Current、Outgoing 与 Retired MUST由 AnimationPlaybackLifecycle 在表现帧推进；fade progress MUST由 Animancer 使用 presentation delta 推进。teardown MUST确定性清理播放生命周期。
+Tree/StateMachine terminal MUST只由逻辑停止协议决定，MUST不等待视觉transition。PendingFirstSample、Selected、Retained与Retired MUST由AnimationPlaybackLifecycle在表现帧推进；transition progress MUST由每PoseSlot Blend Stack使用presentation delta推进。teardown MUST确定性清理播放生命周期。
 
 #### Scenario: 长淡出与新 child
 
-- **WHEN** source SMNode 已 terminal 但 source Animancer state 仍为 Outgoing
+- **WHEN** source SMNode已terminal但source仍为Retained Stack entry
 - **THEN** parent Tree MUST能推进 replacement child
 - **AND** replacement logic MUST能提交新 selection
 
 #### Scenario: Host 销毁
 
 - **WHEN** host 在 fade 运行时 dispose
-- **THEN** lifecycle、retention 与 Animancer states MUST立即释放
+- **THEN** lifecycle、retention、Stack source与Animancer source playable MUST立即释放
 
 ### Requirement: 嵌套 StateMachine 停止必须逐层复用同一 source-exit 协议
 
@@ -126,4 +126,3 @@ Tree/StateMachine terminal MUST只由逻辑停止协议决定，MUST不等待 An
 - **THEN** runtime MUST 立即释放所有 descendant State、Timeline、Blackboard、Action Context 和 animation membership
 - **AND** runtime MUST NOT 伪造 gameplay Cancel、Interrupt 或 Abort
 - **AND** 不得残留 descendant execution path frame
-                                                 

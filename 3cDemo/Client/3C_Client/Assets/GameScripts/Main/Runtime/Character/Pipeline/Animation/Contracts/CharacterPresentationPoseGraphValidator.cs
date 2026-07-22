@@ -405,15 +405,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ValidateMask(graph, node, rig, report);
                     ValidateParameterPolicies(graph, node, parameters, report);
                     if (node.Kind == CharacterPoseNodeKind.AdditivePose &&
-                        (string.IsNullOrWhiteSpace(node.AdditiveReferencePoseId) ||
+                        (!string.Equals(
+                             node.AdditiveReferencePoseId,
+                             AnimationAdditiveReferencePoseIds.RigReference,
+                             StringComparison.Ordinal) ||
                          !Enum.IsDefined(typeof(AdditiveReferenceSpace), node.AdditiveReferenceSpace) ||
                          !Enum.IsDefined(typeof(AdditiveScalePolicy), node.AdditiveScalePolicy)))
                     {
-                        Report(report, CharacterPoseGraphValidationCode.AdditiveInvalid, $"AdditivePose '{node.NodeId}' has an invalid reference pose contract.", graph.GraphId, node.NodeId);
+                        Report(report, CharacterPoseGraphValidationCode.AdditiveInvalid, $"AdditivePose '{node.NodeId}' must use reference pose '{AnimationAdditiveReferencePoseIds.RigReference}' with a valid space and scale policy.", graph.GraphId, node.NodeId);
                     }
                     break;
                 case CharacterPoseNodeKind.PoseCurveResolve:
-                    expectedInputs = 1;
+                    expectedInputs = 2;
                     expectedOutputs = 1;
                     ValidateParameterPolicies(graph, node, parameters, report);
                     break;

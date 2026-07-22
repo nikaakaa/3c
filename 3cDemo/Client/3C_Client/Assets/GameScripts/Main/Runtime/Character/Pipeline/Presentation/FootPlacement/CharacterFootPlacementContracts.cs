@@ -54,6 +54,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Both = 3
     }
 
+    public enum FootPlacementPelvisHeightMode : byte
+    {
+        AllPlantedFeet = 1,
+        DirectionalSlopeSupport = 2
+    }
+
+    public enum FootPlacementPelvisHeightDecision : byte
+    {
+        Neutral = 1,
+        Resolved = 2,
+        Unavailable = 3
+    }
+
+    public enum FootPlacementPelvisHeightReason : byte
+    {
+        NoPlantedFeet = 1,
+        SinglePlantedFoot = 2,
+        AllPlantedFeet = 3,
+        LevelSupport = 4,
+        UphillForwardFoot = 5,
+        DownhillLowerFoot = 6,
+        MovementDirectionUnavailable = 7,
+        FootOrderAmbiguous = 8
+    }
+
     public readonly struct CharacterFootPlacementAnimatedFootPose
     {
         public CharacterFootPlacementAnimatedFootPose(

@@ -135,17 +135,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NextLandingConfidence = RequireNormalized(nextLandingConfidence, nameof(nextLandingConfidence));
             NextLandingDelaySeconds = RequireNonNegative(nextLandingDelaySeconds, nameof(nextLandingDelaySeconds));
             NextLandingLocalOffset = RequireFinite(nextLandingLocalOffset, nameof(nextLandingLocalOffset));
-            m_IsSpecified = true;
+            m_IsSpecified = 1;
         }
 
-        readonly bool m_IsSpecified;
+        readonly byte m_IsSpecified;
         public Vector3 SoleLocalVelocity { get; }
         public float SoleHeight { get; }
         public float PlantConfidence { get; }
         public float NextLandingConfidence { get; }
         public float NextLandingDelaySeconds { get; }
         public Vector2 NextLandingLocalOffset { get; }
-        public bool IsValid => m_IsSpecified;
+        public bool IsValid => m_IsSpecified != 0;
 
         static float RequireNormalized(float value, string field)
         {

@@ -112,7 +112,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Quaternion[] rotations,
             Vector3[] scales)
         {
-            if (index < 0 || string.IsNullOrWhiteSpace(referencePoseId) ||
+            if (index < 0 ||
+                !string.Equals(referencePoseId, AnimationAdditiveReferencePoseIds.RigReference, StringComparison.Ordinal) ||
                 !Enum.IsDefined(typeof(AdditiveReferenceSpace), space) ||
                 !Enum.IsDefined(typeof(AdditiveScalePolicy), scalePolicy) ||
                 positions == null || rotations == null || scales == null ||
@@ -141,7 +142,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterPresentationPoseOperation
     {
-        public const int PayloadVersion = 1;
+        public const int PayloadVersion = 2;
 
         [SerializeField] int m_Index;
         [SerializeField] CharacterPoseOperationCode m_Code;
@@ -226,8 +227,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterPresentationPoseProgram
     {
-        public const string SchemaVersion = "character-presentation-pose-program/v1";
-        public const string RuntimeAbi = "character-presentation-pose-runtime/v1";
+        public const string SchemaVersion = "character-presentation-pose-program/v2";
+        public const string RuntimeAbi = "character-presentation-pose-runtime/v2";
 
         [SerializeField] string m_SchemaVersion = SchemaVersion;
         [SerializeField] string m_RuntimeAbi = RuntimeAbi;
@@ -328,6 +329,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return match ?? throw new InvalidOperationException($"Pose Program has no Pose Slot for Animation Channel '{channelId}'.");
         }
 
+        public int RequireParameterIndex(PoseParameterId parameterId)
+        {
+            if (!parameterId.IsValid)
+                throw new ArgumentException("Pose Parameter id is invalid.", nameof(parameterId));
+            for (int i = 0; i < Parameters.Count; i++)
+            {
+                CharacterPresentationPoseParameterProgramEntry parameter = Parameters[i];
+                if (parameter.ParameterId.Equals(parameterId))
+                    return parameter.Index;
+            }
+            throw new InvalidOperationException($"Pose Program has no Pose Parameter '{parameterId}'.");
+        }
+
         public void RequireValid()
         {
             if (!string.Equals(m_SchemaVersion, SchemaVersion, StringComparison.Ordinal) ||
@@ -336,7 +350,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 string.IsNullOrEmpty(RigId) || string.IsNullOrEmpty(RigRevision) || BoneCount <= 0 ||
                 LeftFootBoneIndex < 0 || LeftFootBoneIndex >= BoneCount || RightFootBoneIndex < 0 || RightFootBoneIndex >= BoneCount ||
                 Slots.Count == 0 || Operations.Count == 0 || OutputOperationIndex < 0 || OutputOperationIndex >= Operations.Count ||
-                PoseValueWorkspaceCount <= 0 || ParameterWorkspaceCount < Parameters.Count || ContributionWorkspaceCount <= 0 || FrameCacheCount <= 0)
+                PoseValueWorkspaceCount <= 0 || ParameterWorkspaceCount < Parameters.Count || ContributionWorkspaceCount <= 0 ||
+                FrameCacheCount != Operations.Count)
             {
                 throw new InvalidOperationException("Character Presentation Pose Program header or workspace layout is invalid.");
             }
@@ -367,7 +382,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int i = 0; i < AdditiveReferences.Count; i++)
             {
                 CharacterPresentationAdditiveReferenceDescriptor reference = AdditiveReferences[i];
-                if (reference == null || reference.Index != i || string.IsNullOrEmpty(reference.ReferencePoseId) ||
+                if (reference == null || reference.Index != i ||
+                    !string.Equals(reference.ReferencePoseId, AnimationAdditiveReferencePoseIds.RigReference, StringComparison.Ordinal) ||
                     !Enum.IsDefined(typeof(AdditiveReferenceSpace), reference.Space) ||
                     !Enum.IsDefined(typeof(AdditiveScalePolicy), reference.ScalePolicy) ||
                     reference.Positions.Count != BoneCount || reference.Rotations.Count != BoneCount ||
@@ -445,7 +461,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseOperationCode.PoseSlotInput => noInputA && noInputB && slot && noMask && noAdditive && noPolicies,
                 CharacterPoseOperationCode.LayeredBoneBlend => inputA && inputB && noSlot && mask && noAdditive && completePolicies,
                 CharacterPoseOperationCode.AdditivePose => inputA && inputB && noSlot && mask && additive && completePolicies,
-                CharacterPoseOperationCode.PoseCurveResolve => inputA && noInputB && noSlot && noMask && noAdditive && completePolicies,
+                CharacterPoseOperationCode.PoseCurveResolve => inputA && inputB && noSlot && noMask && noAdditive && completePolicies,
                 CharacterPoseOperationCode.OutputPose => inputA && noInputB && noSlot && noMask && noAdditive && noPolicies,
                 _ => false
             };

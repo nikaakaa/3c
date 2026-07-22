@@ -83,9 +83,9 @@ Persistent与Route body MUST是Feature serialized owner内的inline普通BTSMTL 
 - **THEN** Validator MUST拒绝该迁移形状
 - **AND** Route body MUST改为Feature inline graph
 
-### Requirement: Feature必须显式声明能力与表现需求
+### Requirement: Feature必须显式声明Gameplay能力与路由需求
 
-Feature MUST声明其需要的Operation capability、World capability、LayerId、blend/output policy与ProducerId集合；Compiler MUST从实际graph再次推导并核对。缺失声明、声明与实际使用不一致、Target不支持或Presentation Profile不满足 MUST阻止Program/Projection发布。Feature MUST不把未安装能力标记为optional后继续生成部分Program。
+Feature MUST声明其需要的Operation capability、World capability与Gameplay route所需ProducerId集合；Compiler MUST从实际graph再次推导并核对。Equipment Feature MUST不声明LayerId、PoseSlotId、blend/output policy或动画空间拓扑，也 MUST不把RequiredProducerIds解释为Presentation binding。缺失声明、声明与实际使用不一致或Target不支持 MUST阻止Program发布。Feature MUST不把未安装能力标记为optional后继续生成部分Program。
 
 #### Scenario: Gun引用Hitscan但项目未安装Combat能力
 
@@ -93,11 +93,11 @@ Feature MUST声明其需要的Operation capability、World capability、LayerId�
 - **THEN** Compiler MUST报告Feature、Route、Node和缺失capability
 - **AND** MUST拒绝整个目标Program
 
-#### Scenario: Feature要求UpperBody层
+#### Scenario: Feature尝试要求UpperBody表现层
 
-- **WHEN** Feature声明UpperBody Override层及producer集合
-- **THEN** Projection build MUST验证唯一Animation Profile中的层与binding
-- **AND** Feature MUST不创建自己的Animation Profile
+- **WHEN** Feature声明UpperBody、PoseSlot或blend/output policy
+- **THEN** authoring validator MUST拒绝该动画拓扑需求
+- **AND** Feature MUST不创建自己的Animation Profile或临时PoseSlot接口
 
 ### Requirement: Initial Loadout必须完整且可编译
 
@@ -130,4 +130,3 @@ Profile、Slot、Route、Equipment、Feature、Parameter、State declaration及i
 - **WHEN** Feature `.meta` identity改变
 - **THEN** SourceRevision MUST改变
 - **AND** 旧Program MUST被判定过期
-

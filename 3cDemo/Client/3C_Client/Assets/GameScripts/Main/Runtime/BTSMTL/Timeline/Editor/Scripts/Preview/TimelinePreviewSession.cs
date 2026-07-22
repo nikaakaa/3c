@@ -172,7 +172,7 @@ namespace BTSMTL.Timeline.Editor
 
         public void SetTime(float time)
         {
-            SetTimeInternal(time, 0f, false);
+            SetTimeInternal(time, 0f, true);
         }
 
         void SetTimeInternal(float time, float presentationDeltaSeconds, bool resetLifecycle)

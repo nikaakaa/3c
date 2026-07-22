@@ -82,7 +82,7 @@
 - [ ] 4.3 校验Feature BoneId唯一且存在于Rig Definition。
 - [ ] 4.4 校验Cost Profile覆盖全部启用Feature group。
 - [ ] 4.5 校验Trajectory Policy的tolerance、confidence、acceleration与turn参数有限。
-- [ ] 4.6 校验Search Policy的TopK、leaf capacity、plan horizon与固定容量合法。
+- [x] 4.6 校验Search Policy的TopK、leaf capacity、plan horizon与固定容量合法。
 - [ ] 4.7 校验Database与Schema/Rig identity一致。
 - [ ] 4.8 校验Segment identity唯一且Clip range合法。
 - [ ] 4.9 校验Loop Segment只回到自身合法入口。
@@ -230,6 +230,7 @@
 - [ ] 7.16 检测无法覆盖Plan horizon的candidate区域。
 - [ ] 7.17 检测protected contact可能导致的空候选区域。
 - [ ] 7.18 统计duplicate与near-duplicate sample密度。
+- [x] 7.18a 将有限且大于0的`CoverageNearDuplicateCostThreshold`编译进唯一Search Policy Runtime payload。
 - [ ] 7.19 统计每Domain最大admitted candidate上界。
 - [ ] 7.20 将coverage summary写入Artifact只读section。
 - [ ] 7.21 将每项Coverage Requirement降低为固定coverage region。
@@ -290,6 +291,7 @@
 - [ ] 10.3 在构造时解析dense feature layout。
 - [ ] 10.4 在构造时解析Search Domain到sample range。
 - [ ] 10.5 在构造时解析Segment与continuation graph。
+- [x] 10.5a 让Database payload只沿Sample的`ClipBindingIndex`解析唯一SourceClipId，并校验它与所属Segment完全一致。
 - [ ] 10.6 在构造时解析lower-bound tree。
 - [ ] 10.7 在构造时解析Clip binding index。
 - [ ] 10.8 预分配tree traversal workspace。
@@ -310,7 +312,7 @@
 - [ ] 11.5 在Intent保存Grounded、MovementMode与ResetSequence。
 - [ ] 11.6 定义Intent interval的连续性与branch replacement规则。
 - [ ] 11.7 定义`ICharacterMotionMatchingTrajectorySource`接口。
-- [ ] 11.8 定义统一Trajectory Source Frame。
+- [x] 11.8 定义统一Trajectory Source Frame。
 - [ ] 11.9 实现Accepted Intent trajectory source。
 - [ ] 11.10 从World Solve后已接受motion result构造Intent候选。
 - [ ] 11.11 在atomic Body commit成功后发布匹配Intent interval。
@@ -343,7 +345,7 @@
 - [ ] 12.13 按Trajectory Policy计算各horizon facing tolerance。
 - [ ] 12.14 按source age与horizon计算confidence。
 - [ ] 12.15 将world trajectory转换到当前Body局部空间。
-- [ ] 12.16 拒绝非有限source、horizon与envelope结果。
+- [x] 12.16 拒绝非有限source、horizon与envelope结果。
 - [ ] 12.17 保持Runtime不按Network Model type分支。
 - [ ] 12.18 为ResetSequence变化清空trajectory历史。
 - [ ] 12.19 输出source identity、tick、age与envelope continuity。
@@ -418,6 +420,8 @@
 - [ ] 15.7 在叶节点逐sample执行完整admission。
 - [ ] 15.8 对admitted leaf sample执行完整exact cost。
 - [ ] 15.9 实现固定容量Top-K有序结构。
+- [x] 15.9a 在Build Request preflight拒绝estimated sample count小于Search Policy TopK。
+- [x] 15.9b 让Database Compiler把runtime Top-K capacity精确编译为Search Policy TopK并禁止使用`Math.Min`降容量。
 - [ ] 15.10 保持Top-K按cost与SampleId稳定排序。
 - [ ] 15.11 记录node visited、node pruned与exact sample count。
 - [ ] 15.12 禁止按wall-clock deadline提前退出。
@@ -456,11 +460,20 @@
 - [ ] 16.17 在Jump时创建新Pose Selection identity。
 - [ ] 16.18 Invalid时保留结构化failure而不保留旧合法plan。
 - [ ] 16.19 将Continue/Jump/Initialize/Invalid原因发布给diagnostics。
+- [x] 16.20 在Segment runtime payload保存作者声明的StartTime、EndTime与由二者确定的Duration。
+- [x] 16.21 在`MotionMatchingSelectionPlan`保存`EntryVisualAdvanceRate`，从当前sample正式next link与Database Sample Rate计算，并在segment尾使用authored EndTime剩余推进。
+- [x] 16.22 定义唯一`MotionMatchingPoseTimePlan`的SampleTime、ContinuousVisualTime、Cycle、VisualTimeScale、Looping与`AnimatorStateSpeed = 0`字段，并以specified guard保证default值无效。
+- [x] 16.23 让Selection Runtime按表现delta累计SampleAccumulator，并以`SampleAccumulator * EntryVisualAdvanceRate`推进有效SampleTime。
+- [x] 16.24 在同segment sample time回绕时递增Cycle，并实现非loop continuous等于sample time、loop continuous等于sample time加`Cycle * Segment.Duration`。
+- [x] 16.25 让VisualTimeScale精确取EntryVisualAdvanceRate，并保持AnimatorStateSpeed固定0只表达后端手动采样。
+- [x] 16.26 在Invalid plan、无Selection continuation、Reset与Release Domain路径同步清理SampleAccumulator、Loop Cycle与旧PoseTime decision状态。
+- [x] 16.27 在MM Pose Source diagnostics记录Clip sample time、ContinuousVisualTime、Cycle与VisualTimeScale。
+- [x] 16.28 在exact replay digest记录EntryVisualAdvanceRate，使有效视觉时间推进参与确定性比较。
 
 ## 17. Source-Neutral Request与Blend Stack接入
 
-- [ ] 17.1 扩展`ResolvedAnimationPoseRequest`保存PoseSourceKind。
-- [ ] 17.2 扩展request保存PoseSelectionGeneration。
+- [x] 17.1 定义公共`AnimationPoseSourceId`完整身份，由AnimationPlaybackId、AnimationPoseSourceKind与AnimationPoseSelectionGeneration共同组成。
+- [x] 17.2 让公共request严格要求非零`SourcePoseContinuityIdentity`，并让MM Pose Source output将其精确映射为有效`MotionMatchingSelectionGeneration.Value`。
 - [ ] 17.3 定义source-neutral `ClipSamplePlan`。
 - [ ] 17.4 让Timeline adapter降低为同一ClipSamplePlan。
 - [ ] 17.5 创建`MotionMatchingPoseSourceRuntime`。
@@ -483,6 +496,10 @@
 - [ ] 17.22 保持source capture进入现有AnimationSlotBlendPoseEvaluator。
 - [ ] 17.23 保持Stored Pose、Inertial与retirement由Slot Stack拥有。
 - [ ] 17.24 确保MM source不创建独立PlayableGraph或crossfade。
+- [x] 17.25 让MM Pose Source只从Selection PoseTime生成ClipTime、NormalizedTime、ContinuousVisualTime、Cycle、IsLooping与VisualTimeScale。
+- [x] 17.26 让MM Pose Source output的`SourcePoseContinuityIdentity`唯一等于当前Selection Generation Value，不使用sample、时间、request sequence或独立allocator。
+- [x] 17.27 将`MotionMatchingDiagnosticsContracts`从`ClipSamplePlan.SampleTime`迁移到正式`ClipTime`。
+- [x] 17.28 删除`MotionMatchingClipSamplePlan.SampleTime`旧alias且不保留兼容入口。
 
 ## 18. Animation Root与Runtime帧序接线
 
@@ -642,3 +659,6 @@
 - [ ] 23.19 保持`character-state-timeline-authoring-loop`及Corin视觉Timeline与Marker合同不被本change修改。
 - [ ] 23.20 记录最终`Accepted/Selected Trajectory -> Query -> Exact Top-K -> Plan -> Pose Source -> Blend Stack -> Pose Graph -> Foot Placement`链路。
 - [ ] 23.21 记录UE 5.8比较边界并避免宣称未实现的Warping、Traversal或Interaction能力。
+- [x] 23.22 将已落盘的EntryVisualAdvanceRate、PoseTime、continuous cycle与SourcePoseContinuityIdentity合同同步到`design.md`。
+- [x] 23.23 将完整AnimationPoseSourceId、source-neutral request字段与时间采样Scenario同步到Presentation spec delta。
+- [x] 23.24 对上述design/spec/tasks同步运行change strict validate并保持通过。

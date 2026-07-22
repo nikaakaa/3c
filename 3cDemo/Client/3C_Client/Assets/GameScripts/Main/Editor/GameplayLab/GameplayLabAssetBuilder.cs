@@ -6,6 +6,7 @@ using Cinemachine;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
@@ -301,6 +302,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             CharacterFootPlacementComposition footPlacement = floatHost.FootPlacement;
             CharacterEquipmentRigBindingCatalog equipment = floatHost.EquipmentRigBindings;
             AnimancerComponent animancer = floatHost.Animancer;
+            CharacterAnimationRigBinding animationRigBinding = floatHost.AnimationRigBinding;
             Transform cameraFollowAnchor = floatHost.CameraFollowAnchor;
             Transform cameraAimAnchor = floatHost.CameraAimAnchor;
             IReadOnlyList<CameraTargetBinding> cameraBindings = floatHost.CameraTargetBindings;
@@ -340,6 +342,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 footPlacement,
                 equipment,
                 animancer,
+                animationRigBinding,
                 cameraRig,
                 cameraFollowAnchor,
                 cameraAimAnchor,

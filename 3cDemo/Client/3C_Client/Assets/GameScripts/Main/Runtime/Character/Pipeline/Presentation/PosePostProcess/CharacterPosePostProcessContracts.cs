@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonSimulation;
 
@@ -45,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong renderFrame,
             float presentationDeltaSeconds,
             CharacterBodyPresentationFrame body,
-            IReadOnlyList<AnimationPoseContribution> animationContributions)
+            FinalAnimationPoseFrame animationPose)
         {
             if (!actorId.IsValid)
                 throw new ArgumentException("Pose Post Process Actor identity is invalid.", nameof(actorId));
@@ -58,15 +57,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RenderFrame = renderFrame;
             PresentationDeltaSeconds = presentationDeltaSeconds;
             Body = body;
-            AnimationContributions = animationContributions ??
-                                     throw new ArgumentNullException(nameof(animationContributions));
+            _ = animationPose.CompletionIdentity;
+            AnimationPose = animationPose;
         }
 
         public ActorId ActorId { get; }
         public ulong RenderFrame { get; }
         public float PresentationDeltaSeconds { get; }
         public CharacterBodyPresentationFrame Body { get; }
-        public IReadOnlyList<AnimationPoseContribution> AnimationContributions { get; }
+        public FinalAnimationPoseFrame AnimationPose { get; }
     }
 
     internal interface ICharacterPosePostProcessPass : IDisposable

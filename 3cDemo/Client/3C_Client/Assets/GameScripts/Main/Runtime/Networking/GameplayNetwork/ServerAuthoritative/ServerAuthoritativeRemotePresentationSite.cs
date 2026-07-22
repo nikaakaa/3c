@@ -61,11 +61,14 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             GameObject visualObject = Instantiate(m_VisualTemplate, m_SpawnPosition, Quaternion.Euler(m_SpawnEulerAngles));
             visualObject.name = $"{m_VisualTemplate.name} [Remote {actorId.Value}]";
             AnimancerComponent animancer = visualObject.GetComponent<AnimancerComponent>();
-            if (!animancer || !animancer.Animator)
+            CharacterAnimationRigBinding animationRigBinding =
+                visualObject.GetComponent<CharacterAnimationRigBinding>();
+            if (!animancer || !animancer.Animator || !animationRigBinding)
             {
                 Destroy(visualObject);
-                throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' template root requires Animancer and Animator.");
+                throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' template root requires Animancer, Animator, and Animation Rig Binding.");
             }
+            animationRigBinding.RequireValid(projection.Rig);
             Transform visualRoot = animancer.Animator.transform;
             if (visualRoot.gameObject != visualObject)
             {
@@ -101,6 +104,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     projection,
                     actorId,
                     animancer,
+                    animationRigBinding,
                     visualRoot,
                     CharacterPresentationBodyState.FromFloat32(initialBody),
                     m_BodyPresentationProfile,

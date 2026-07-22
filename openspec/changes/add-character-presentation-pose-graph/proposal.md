@@ -35,7 +35,7 @@ BTSMTL / Program AnimationChannel selection
 - 新增固定节点集合：Runtime节点为`PoseSlotInput`、`LayeredBoneBlend`、`AdditivePose`、`PoseCurveResolve`与`OutputPose`；authoring另提供静态`PoseSubgraph`及compiler-only `GraphInput`/`GraphOutput`边界。边界端口使用独立稳定`InterfacePortId`，Compiler递归展开后这三类节点不得进入Runtime Program。节点只处理 Pose/Curve/Contribution，不读取 State、Action、Blackboard、Timeline Window、GameplayTag 或业务 Priority。
 - 每个 `PoseSlotInput` 读取该 slot 唯一固定 `AnimationBlendStackRuntime` 的输出。Blend Stack不是作者可选节点，不能被绕过，也不再拥有跨 slot 合成和最终 Animator Pose。
 - Pose值同时携带 dense local bone pose、命名 `PoseParameterId` 标量流、slot availability/weight 和可追踪 source contribution。每个合成节点必须显式声明骨骼Mask、Override/Additive语义与Curve解析策略。
-- `CharacterPoseGraphEvaluator` 使用编译后的固定拓扑和预分配workspace完成跨slot骨骼合成、curve解析、公共子图缓存、最终source contribution和Animator AnimationStream写回。
+- `AnimationPosePlayableGraphRuntime`使用编译后的固定拓扑和预分配workspace安排PoseSlot Blend native job、Pose Graph native job与final stream writer，在同一PlayableGraph一次Evaluate内完成跨slot骨骼合成、curve解析、公共子图缓存、最终source contribution和Animator AnimationStream写回。
 - `CharacterAnimationPresentationProfile` 不再保存 Layer catalog。它改为唯一引用 Pose Graph、Blend Library、Animation Rig Definition、producer resource binding与Foot Analysis输入。
 - 删除 `CharacterAnimationLayerDefinition`、Animancer layer index、Profile layer order、layer AvatarMask和layer blend mode旧数据；不提供旧Layer到Slot的运行时兼容或fallback。
 - 抽取 `GraphAuthoringEditorShell`，复用现有BTSMTL节点编辑器的窗口、画布、搜索、复制粘贴、Undo、Inspector与只读diagnostics外壳。BTSMTL Graph与Pose Graph保留各自的数据、节点、端口、validator和compiler，不共享Gameplay `BaseNode`/`BaseEdge`语义。

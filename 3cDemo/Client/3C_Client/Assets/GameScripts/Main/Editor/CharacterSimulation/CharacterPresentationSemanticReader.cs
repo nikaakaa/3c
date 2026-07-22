@@ -55,7 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
             }
             int count = (animation ? 1 : 0) + (camera ? 1 : 0) + (cue ? 1 : 0);
-            if (count == 0 && string.Equals(producer.LayerId, "Cue", StringComparison.Ordinal))
+            if (count == 0 && producer.AnimationChannelId == new AnimationChannelId("Cue"))
                 return CharacterPresentationProducerKind.Cue;
             if (count != 1)
             {

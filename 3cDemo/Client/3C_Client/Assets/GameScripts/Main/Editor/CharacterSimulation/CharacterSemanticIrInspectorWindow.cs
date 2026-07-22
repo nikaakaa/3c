@@ -517,8 +517,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             for (int i = 0; i < m_SemanticIr.Producers.Count; i++)
             {
                 ProgramProducer value = m_SemanticIr.Producers[i];
-                string details = $"Index: {value.Index}\nIdentity: {value.Identity}\nLayer: {value.LayerId}\nSource Identity: {value.SourceIdentity}\nChannel: {value.ChannelKind}";
-                AddTargetRow($"{value.Index:D4}  {value.LayerId}  {value.Identity}", details, ProgramSourceTargetKind.Producer, value.Index);
+                string details = $"Index: {value.Index}\nIdentity: {value.Identity}\nAnimation Channel: {value.AnimationChannelId}\nSource Identity: {value.SourceIdentity}\nOutput Channel: {value.ChannelKind}";
+                AddTargetRow($"{value.Index:D4}  {value.AnimationChannelId}  {value.Identity}", details, ProgramSourceTargetKind.Producer, value.Index);
             }
         }
 

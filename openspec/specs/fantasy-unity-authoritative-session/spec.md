@@ -131,7 +131,7 @@ Authority Worker MUST按自己的60Hz authority clock持续生成双Actor World 
 
 ### Requirement: Routine Snapshot必须使用有界Delta Checkpoint
 
-Routine snapshot MUST使用ProgramHash/LayoutHash锁定且覆盖全部committed Character state slot的Network Checkpoint Layout，以已确认base snapshot为基准发送changed-slot bitset、changed values、owner body/world correction、remote body/producer、state/body hash、input ack和event horizon。它 MUST不携带逐slot codec字符串或完整`character-state/float32/v5`bytes，也 MUST不按复制policy省略Action、Timeline、Blackboard、GameplayEffect或Motion Modifier state。Client MUST重建并校验完整checkpoint后才向Correction Pipeline提交baseline。
+Routine snapshot MUST使用ProgramHash/LayoutHash锁定且覆盖全部committed Character state slot的Network Checkpoint Layout，以已确认base snapshot为基准发送changed-slot bitset、changed values、owner body/world correction、remote body/producer、state/body hash、input ack和event horizon。它 MUST不携带逐slot codec字符串或当前`CharacterSimulationStateCodec`的完整canonical bytes，也 MUST不按复制policy省略Action、Timeline、Blackboard、GameplayEffect或Motion Modifier state。Client MUST重建并校验完整checkpoint后才向Correction Pipeline提交baseline。
 
 Full Checkpoint与Delta Snapshot MUST共享单调SnapshotSequence。Worker在未收到新base ack时 MUST继续相对最后已确认base发送新delta；Client发现SnapshotSequence缺口但仍拥有该BaseSnapshotSequence时 MUST继续重建，MUST不因单帧丢失阻塞后续snapshot或无条件请求Full Checkpoint。
 
@@ -257,4 +257,3 @@ Fantasy handler与network callback MUST继续只校验消息外壳并写入正�
 - **WHEN** Datagram Channel收到合法routine snapshot
 - **THEN** 它 MUST将typed packet/result写入Prediction Source边界队列
 - **AND** Prediction Schedule与Remote Presentation MUST在后续正式Tick处理
-

@@ -5,7 +5,7 @@
 ## Requirements
 ### Requirement: Unity Simulation公共基座必须由独立程序集拥有
 
-系统 MUST以独立`ThirdPersonSimulation.Unity`程序集唯一拥有model-neutral Session Composition Definition、Float32 Unity request lowering、标准Local/Preview Pipeline authoring、Actor registration合同与通用roster output/diagnostics aggregate。该程序集 MUST不引用具体Network Model、Fantasy、Character Presentation、Animancer、Camera或可选DotRecast Unity实现，也 MUST不通过`Assembly-CSharp`、friend assembly、反射或字符串registry取得这些实现。
+系统 MUST以独立`ThirdPersonSimulation.Unity`程序集唯一拥有model-neutral Session Composition Definition、Float32 Unity request lowering、标准Local Pipeline authoring、Actor registration合同与通用roster output/diagnostics aggregate。该程序集 MUST不引用具体Network Model、Fantasy、Character Presentation、Animancer、Camera或可选DotRecast Unity实现，也 MUST不通过`Assembly-CSharp`、friend assembly、反射或字符串registry取得这些实现。Timeline Authoring Preview MUST由Character Presentation程序集拥有，并且 MUST不创建或依赖Preview Simulation Composition。
 
 #### Scenario: 编译公共Unity Simulation程序集
 

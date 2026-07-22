@@ -139,13 +139,14 @@ Unity Float32 composition层 MUST提供唯一抽象WorldBodyBinding合同，包�
 
 ### Requirement: 公共Unity Composition必须由程序集依赖强制模型无关
 
-公共Unity Session Composition、Float32 request lowering与标准Local/Preview authoring MUST位于不引用具体Network Model程序集的独立Unity程序集。Character Host和模型Unity adapter只能单向引用该公共程序集；它们 MUST不通过预定义程序集、friend assembly、反射、字符串类型查找或fallback registry绕过依赖方向。
+公共Unity Session Composition、Float32 request lowering与标准Local authoring MUST位于不引用具体Network Model程序集的独立Unity程序集。Character Host和模型Unity adapter只能单向引用该公共程序集；它们 MUST不通过预定义程序集、friend assembly、反射、字符串类型查找或fallback registry绕过依赖方向。Timeline Authoring Preview MUST属于Character Presentation边界，只复用表现sampling与playback lifecycle，并且 MUST不创建Simulation Session、Source、Pipeline、Backend、Solver或Actor registration。
 
 #### Scenario: ServerAuthoritative Unity adapter被移除
 
 - **WHEN** 构建中不包含ServerAuthoritative Unity程序集
-- **THEN** Local与Preview Composition程序集 MUST仍可编译并创建正式Session
+- **THEN** Local Composition程序集 MUST仍可编译并创建正式Session
 - **AND** 公共Composer源码 MUST不包含ServerAuthoritative类型或分支
+- **AND** Timeline Authoring Preview MUST不依赖该Composer创建Session
 
 ### Requirement: Composition必须校验Body Motion与Solver垂直能力
 
@@ -172,4 +173,3 @@ Local Session Preparation MUST为完整Actor roster显式生成不可变Control 
 - **WHEN** Actor绑定AI Control Source但当前Source、Pipeline或Execution Backend没有声明匹配Committed Observation schema
 - **THEN** Preparation MUST在Session Active前失败并报告ActorId、ControllerId与缺失capability
 - **AND** MUST不替换为Neutral Source或创建Session查询旁路
-

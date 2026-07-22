@@ -53,9 +53,9 @@ Session Pipeline Runtime MUST在启动前接收完整 SimulationProgramCatalog�
 
 CharacterSimulationState MUST只保存单Actor且会影响当前Commit后或未来SimulationTick的类型化Gameplay逻辑状态；同Step的MotionContribution、MotionAccumulator、PendingWorldRequest、输出staging与State Transaction MUST不进入committed Character State。WorldSimulationState MUST保存ordered body state、solver-owned mutable state、world revision与static world identity。影响未来Pipeline执行的Pass状态 MUST进入独立SimulationPipelineStateSnapshot或正式reconstruct合同；Session Source external state与Presentation state MUST不进入Character/World状态容器。
 
-#### Scenario: 动画淡出继续推进
+#### Scenario: PoseSlot transition继续推进
 
-- **WHEN** Animancer fade在两个SimulationTick之间推进
+- **WHEN** PoseSlot Blend Stack transition在两个SimulationTick之间推进
 - **THEN** CharacterSimulationState、WorldSimulationState与Pipeline Gameplay state MUST不改变
 
 #### Scenario: Evaluate生成当前Step位移请求
@@ -436,4 +436,3 @@ Float32与Fixed `WorldBodyState` MUST独立保存`VerticalVelocity`，且 MUST�
 - **WHEN** 一个Actor已Evaluate而后续pass或另一Actor失败
 - **THEN** outer Abort MUST释放全部尚未完成的lease并Abort对应transaction
 - **AND** 下一次transaction MUST不观察到上一事务的Fact、Presentation或Trace
-

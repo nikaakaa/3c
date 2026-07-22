@@ -428,15 +428,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 fields.Add(m_Builder.IdentityField($"GameplayCapability:{i:D4}", capability));
                 m_Builder.RequireGameplayCapability(capability);
             }
-            EquipmentFeaturePresentationRequirement presentation = feature.PresentationRequirement;
-            if (presentation != null && presentation.Enabled)
-            {
-                fields.Add(m_Builder.IdentityField("PresentationLayer", presentation.LayerId));
-                fields.Add(m_Builder.ConstantField(source, "PresentationBlendMode", presentation.BlendMode));
-                fields.Add(m_Builder.ConstantField(source, "PresentationOutputPolicy", presentation.OutputPolicy));
-                for (int i = 0; i < presentation.RequiredProducerIds.Count; i++)
-                    fields.Add(m_Builder.IdentityField($"RequiredProducer:{i:D4}", EquipmentSlotDefinition.Normalize(presentation.RequiredProducerIds[i])));
-            }
             m_Builder.DeclareCatalogEntry(
                 ProgramCatalogEntryKind.EquipmentFeature,
                 $"equipment:feature:{feature.FeatureIdValue}",

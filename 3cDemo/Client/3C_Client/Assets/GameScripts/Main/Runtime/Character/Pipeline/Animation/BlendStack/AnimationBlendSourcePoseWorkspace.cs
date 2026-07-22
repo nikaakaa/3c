@@ -1,28 +1,32 @@
 using System;
-using System.Collections.Generic;
-using UnityEngine;
+using Unity.Collections;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 {
-    internal sealed class AnimationBlendSourcePoseWorkspace
+    internal sealed class AnimationBlendSourcePoseWorkspace : IDisposable
     {
-        readonly CharacterAnimationRigPayload m_Rig;
         readonly int m_BoneCount;
         readonly int m_ParameterCount;
-        readonly int m_RootBoneIndex;
-        readonly AnimationPlaybackId[] m_PlaybackIds;
-        readonly int[] m_ProgramProducerIndices;
-        readonly AnimationLocalBonePose[] m_Poses;
-        readonly AnimationBlendBoneVelocity[] m_Velocities;
-        readonly float[] m_Parameters;
-        readonly AnimationFootFeatureSample[] m_LeftFootFeatures;
-        readonly AnimationFootFeatureSample[] m_RightFootFeatures;
-        readonly bool[] m_HasFootFeatures;
-        readonly float[] m_VisualTimeScales;
-        readonly AnimationLocalBonePose[] m_ReferencePose;
+        readonly AnimationPoseSourceId[] m_SourceIds;
+
+        NativeArray<AnimationLocalBonePose> m_CurrentPose;
+        NativeArray<AnimationLocalBonePose> m_PreviousPose;
+        NativeArray<AnimationBlendBoneVelocity> m_Velocity;
+        NativeArray<float> m_PoseParameters;
+        NativeArray<AnimationFootFeatureSample> m_LeftFootFeatures;
+        NativeArray<AnimationFootFeatureSample> m_RightFootFeatures;
+        NativeArray<float> m_VisualTimeScales;
+        NativeArray<byte> m_HasFootFeatures;
+        NativeArray<byte> m_HasPrevious;
+        NativeArray<ulong> m_PreparedAt;
+        NativeArray<ulong> m_CompletedAt;
+        NativeArray<ulong> m_SourcePoseContinuityIdentities;
+        NativeArray<int> m_ProgramProducerIndices;
 
         int m_Count;
         ulong m_CompletionIdentity;
+        ulong m_LastCompletionIdentity;
+        bool m_Disposed;
 
         public AnimationBlendSourcePoseWorkspace(
             CharacterAnimationRigPayload rig,
@@ -32,29 +36,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             if (rig == null)
                 throw new ArgumentNullException(nameof(rig));
             rig.RequireValid();
-            if (parameterCount < 0 || sourceCapacity < 2)
+            if (parameterCount <= 0 || sourceCapacity < 2)
                 throw new ArgumentOutOfRangeException();
-            m_Rig = rig;
             m_BoneCount = rig.Bones.Count;
             m_ParameterCount = parameterCount;
-            m_RootBoneIndex = rig.RootBoneIndex;
-            m_PlaybackIds = new AnimationPlaybackId[sourceCapacity];
-            m_ProgramProducerIndices = new int[sourceCapacity];
-            m_Poses = new AnimationLocalBonePose[sourceCapacity * m_BoneCount];
-            m_Velocities = new AnimationBlendBoneVelocity[sourceCapacity * m_BoneCount];
-            m_Parameters = new float[sourceCapacity * m_ParameterCount];
-            m_LeftFootFeatures = new AnimationFootFeatureSample[sourceCapacity];
-            m_RightFootFeatures = new AnimationFootFeatureSample[sourceCapacity];
-            m_HasFootFeatures = new bool[sourceCapacity];
-            m_VisualTimeScales = new float[sourceCapacity];
-            m_ReferencePose = new AnimationLocalBonePose[m_BoneCount];
-            for (int i = 0; i < m_BoneCount; i++)
+            m_SourceIds = new AnimationPoseSourceId[sourceCapacity];
+            int poseCapacity = checked(sourceCapacity * m_BoneCount);
+            int parameterCapacity = checked(sourceCapacity * m_ParameterCount);
+            try
             {
-                CharacterAnimationRigBonePayload bone = rig.Bones[i];
-                m_ReferencePose[i] = new AnimationLocalBonePose(
-                    bone.ReferenceLocalPosition,
-                    bone.ReferenceLocalRotation,
-                    bone.ReferenceLocalScale);
+                m_CurrentPose = Allocate<AnimationLocalBonePose>(poseCapacity);
+                m_PreviousPose = Allocate<AnimationLocalBonePose>(poseCapacity);
+                m_Velocity = Allocate<AnimationBlendBoneVelocity>(poseCapacity);
+                m_PoseParameters = Allocate<float>(parameterCapacity);
+                m_LeftFootFeatures = Allocate<AnimationFootFeatureSample>(sourceCapacity);
+                m_RightFootFeatures = Allocate<AnimationFootFeatureSample>(sourceCapacity);
+                m_VisualTimeScales = Allocate<float>(sourceCapacity);
+                m_HasFootFeatures = Allocate<byte>(sourceCapacity);
+                m_HasPrevious = Allocate<byte>(sourceCapacity);
+                m_PreparedAt = Allocate<ulong>(sourceCapacity);
+                m_CompletedAt = Allocate<ulong>(sourceCapacity);
+                m_SourcePoseContinuityIdentities = Allocate<ulong>(sourceCapacity);
+                m_ProgramProducerIndices = Allocate<int>(sourceCapacity);
+            }
+            catch
+            {
+                DisposeNativeArrays();
+                throw;
             }
         }
 
@@ -65,117 +73,220 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         public void BeginFrame(ulong completionIdentity)
         {
-            if (completionIdentity == 0 || completionIdentity == m_CompletionIdentity)
+            RequireNotDisposed();
+            if (completionIdentity == 0 || completionIdentity <= m_LastCompletionIdentity)
                 throw new ArgumentException("Animation source pose frame identity is invalid.", nameof(completionIdentity));
             m_CompletionIdentity = completionIdentity;
-            m_Count = 0;
+            m_LastCompletionIdentity = completionIdentity;
         }
 
-        public void WriteSource(
-            AnimationPlaybackId playbackId,
-            int programProducerIndex,
-            IReadOnlyList<AnimationLocalBonePose> denseLocalPose,
-            IReadOnlyList<AnimationBlendBoneVelocity> denseVelocity,
-            IReadOnlyList<float> poseParameters,
-            AnimationFootFeatureSample leftFootFeatures,
-            AnimationFootFeatureSample rightFootFeatures,
-            bool hasFootFeatures,
-            float visualTimeScale)
+        public AnimationPoseSourceCaptureBinding PrepareCapture(
+            in ResolvedAnimationPoseRequest request,
+            float presentationDeltaSeconds)
         {
+            RequireNotDisposed();
             if (m_CompletionIdentity == 0)
                 throw new InvalidOperationException("Animation source pose workspace has not begun a frame.");
-            if (!playbackId.IsValid || programProducerIndex < 0 ||
-                denseLocalPose == null || denseLocalPose.Count != m_BoneCount ||
-                denseVelocity == null || denseVelocity.Count != m_BoneCount ||
-                poseParameters == null || poseParameters.Count != m_ParameterCount ||
-                !float.IsFinite(visualTimeScale) || visualTimeScale < 0f ||
-                hasFootFeatures && (!leftFootFeatures.IsValid || !rightFootFeatures.IsValid))
-                throw new ArgumentException("Animation source pose write is invalid.");
-            if (m_Count == m_PlaybackIds.Length)
-                throw new InvalidOperationException("Animation source pose workspace capacity was exceeded.");
-            if (TryFind(playbackId, out _))
-                throw new InvalidOperationException($"Animation source pose '{playbackId}' was written twice in one frame.");
-
-            for (int boneIndex = 0; boneIndex < m_BoneCount; boneIndex++)
+            bool footStateValid = request.HasFootFeatures
+                ? request.LeftFootFeatures.IsValid && request.RightFootFeatures.IsValid
+                : !request.LeftFootFeatures.IsValid && !request.RightFootFeatures.IsValid;
+            if (!request.IsValid || request.PoseParameters.Count != m_ParameterCount || !footStateValid ||
+                !float.IsFinite(request.VisualTimeScale) || request.VisualTimeScale < 0f ||
+                !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f)
             {
-                if (!denseLocalPose[boneIndex].IsValid || !denseVelocity[boneIndex].IsValid)
-                    throw new ArgumentException($"Animation source pose Bone #{boneIndex} is invalid.");
+                throw new ArgumentException("Animation source pose capture request is invalid.");
+            }
+            bool existing = TryFind(request.SourceId, out int sourceIndex);
+            if (!existing)
+            {
+                sourceIndex = FindFreeSourceIndex();
+                ClearSourceData(sourceIndex);
+                m_SourceIds[sourceIndex] = request.SourceId;
+                m_Count++;
+            }
+            if (m_PreparedAt[sourceIndex] == m_CompletionIdentity)
+                throw new InvalidOperationException($"Animation source pose '{request.SourceId}' was prepared twice in one frame.");
+            if (existing && m_ProgramProducerIndices[sourceIndex] != request.ProgramProducerIndex)
+                throw new InvalidOperationException($"Animation source pose '{request.SourceId}' changed producer identity.");
+            if (m_SourcePoseContinuityIdentities[sourceIndex] != request.SourcePoseContinuityIdentity)
+            {
+                ClearHistory(sourceIndex);
+                m_SourcePoseContinuityIdentities[sourceIndex] = request.SourcePoseContinuityIdentity;
             }
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
             {
-                if (!float.IsFinite(poseParameters[parameterIndex]))
+                float value = request.PoseParameters[parameterIndex];
+                if (!float.IsFinite(value))
                     throw new ArgumentException($"Animation source pose parameter #{parameterIndex} is invalid.");
+                m_PoseParameters[sourceIndex * m_ParameterCount + parameterIndex] = value;
             }
-
-            int sourceIndex = m_Count++;
-            m_PlaybackIds[sourceIndex] = playbackId;
-            m_ProgramProducerIndices[sourceIndex] = programProducerIndex;
-            m_LeftFootFeatures[sourceIndex] = leftFootFeatures;
-            m_RightFootFeatures[sourceIndex] = rightFootFeatures;
-            m_HasFootFeatures[sourceIndex] = hasFootFeatures;
-            m_VisualTimeScales[sourceIndex] = visualTimeScale;
+            m_ProgramProducerIndices[sourceIndex] = request.ProgramProducerIndex;
+            m_LeftFootFeatures[sourceIndex] = request.LeftFootFeatures;
+            m_RightFootFeatures[sourceIndex] = request.RightFootFeatures;
+            m_HasFootFeatures[sourceIndex] = request.HasFootFeatures ? (byte)1 : (byte)0;
+            m_VisualTimeScales[sourceIndex] = request.VisualTimeScale;
+            m_PreparedAt[sourceIndex] = m_CompletionIdentity;
+            m_CompletedAt[sourceIndex] = 0;
             int poseOffset = sourceIndex * m_BoneCount;
-            for (int boneIndex = 0; boneIndex < m_BoneCount; boneIndex++)
+            return new AnimationPoseSourceCaptureBinding(
+                request.SourceId,
+                sourceIndex,
+                m_CompletionIdentity,
+                new NativeSlice<AnimationLocalBonePose>(m_CurrentPose, poseOffset, m_BoneCount),
+                new NativeSlice<AnimationLocalBonePose>(m_PreviousPose, poseOffset, m_BoneCount),
+                new NativeSlice<AnimationBlendBoneVelocity>(m_Velocity, poseOffset, m_BoneCount),
+                m_HasPrevious,
+                m_CompletedAt,
+                presentationDeltaSeconds);
+        }
+
+        internal AnimationBlendSourcePoseNativeReadBinding RequireNativeReadBinding(ulong completionIdentity)
+        {
+            RequireNotDisposed();
+            if (completionIdentity == 0)
+                throw new ArgumentOutOfRangeException(nameof(completionIdentity));
+            if (completionIdentity != m_CompletionIdentity)
+                throw new InvalidOperationException("Animation source pose Native read completion identity is not current.");
+            return new AnimationBlendSourcePoseNativeReadBinding(
+                m_BoneCount,
+                m_ParameterCount,
+                m_SourceIds.Length,
+                completionIdentity,
+                m_CurrentPose,
+                m_Velocity,
+                m_PoseParameters,
+                m_LeftFootFeatures,
+                m_RightFootFeatures,
+                m_VisualTimeScales,
+                m_HasFootFeatures,
+                m_CompletedAt,
+                m_ProgramProducerIndices);
+        }
+
+        public void ReleaseSource(AnimationPoseSourceId sourceId)
+        {
+            RequireNotDisposed();
+            if (!sourceId.IsValid)
+                throw new ArgumentException("Animation source identity is invalid.", nameof(sourceId));
+            if (!TryFind(sourceId, out int sourceIndex))
+                throw new InvalidOperationException($"Animation source pose '{sourceId}' is not retained.");
+            m_SourceIds[sourceIndex] = default;
+            ClearSourceData(sourceIndex);
+            m_Count--;
+        }
+
+        public void ResetContinuity()
+        {
+            RequireNotDisposed();
+            for (int i = 0; i < m_SourceIds.Length; i++)
             {
-                AnimationLocalBonePose pose = denseLocalPose[boneIndex];
-                AnimationBlendBoneVelocity velocity = denseVelocity[boneIndex];
-                if (m_Rig.RootBonePolicy == CharacterAnimationRootBonePolicy.ExcludeSourceRoot &&
-                    boneIndex == m_RootBoneIndex)
-                {
-                    pose = m_ReferencePose[boneIndex];
-                    velocity = default;
-                }
-                else if (m_Rig.ScalePolicy == CharacterAnimationScalePolicy.PreserveReferenceScale)
-                {
-                    pose = new AnimationLocalBonePose(pose.Position, pose.Rotation, m_ReferencePose[boneIndex].Scale);
-                    velocity = new AnimationBlendBoneVelocity(velocity.Linear, velocity.Angular, Vector3.zero);
-                }
-                m_Poses[poseOffset + boneIndex] = pose;
-                m_Velocities[poseOffset + boneIndex] = velocity;
+                if (!m_SourceIds[i].IsValid)
+                    continue;
+                ClearHistory(i);
+                ClearFrameMetadata(i);
             }
-            int parameterOffset = sourceIndex * m_ParameterCount;
-            for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
-                m_Parameters[parameterOffset + parameterIndex] = poseParameters[parameterIndex];
+            m_CompletionIdentity = 0;
         }
 
-        public bool TryGet(AnimationPlaybackId playbackId, out AnimationBlendSourcePoseFrame source)
+        bool TryFind(AnimationPoseSourceId sourceId, out int index)
         {
-            if (!TryFind(playbackId, out int index))
+            for (int i = 0; i < m_SourceIds.Length; i++)
             {
-                source = default;
-                return false;
-            }
-            source = new AnimationBlendSourcePoseFrame(
-                m_PlaybackIds[index],
-                m_ProgramProducerIndices[index],
-                new AnimationReadOnlyBuffer<AnimationLocalBonePose>(m_Poses, index * m_BoneCount, m_BoneCount),
-                new AnimationReadOnlyBuffer<AnimationBlendBoneVelocity>(m_Velocities, index * m_BoneCount, m_BoneCount),
-                new AnimationReadOnlyBuffer<float>(m_Parameters, index * m_ParameterCount, m_ParameterCount),
-                m_LeftFootFeatures[index],
-                m_RightFootFeatures[index],
-                m_HasFootFeatures[index],
-                m_VisualTimeScales[index]);
-            return true;
-        }
-
-        public AnimationLocalBonePose GetReferencePose(int boneIndex)
-        {
-            if ((uint)boneIndex >= (uint)m_BoneCount)
-                throw new ArgumentOutOfRangeException(nameof(boneIndex));
-            return m_ReferencePose[boneIndex];
-        }
-
-        bool TryFind(AnimationPlaybackId playbackId, out int index)
-        {
-            for (int i = 0; i < m_Count; i++)
-            {
-                if (!m_PlaybackIds[i].Equals(playbackId))
+                if (!m_SourceIds[i].Equals(sourceId))
                     continue;
                 index = i;
                 return true;
             }
             index = -1;
             return false;
+        }
+
+        int FindFreeSourceIndex()
+        {
+            for (int i = 0; i < m_SourceIds.Length; i++)
+            {
+                if (!m_SourceIds[i].IsValid)
+                    return i;
+            }
+            throw new InvalidOperationException("Animation source pose workspace capacity was exceeded.");
+        }
+
+        void ClearSourceData(int sourceIndex)
+        {
+            ClearHistory(sourceIndex);
+            ClearFrameMetadata(sourceIndex);
+            m_ProgramProducerIndices[sourceIndex] = 0;
+        }
+
+        void ClearHistory(int sourceIndex)
+        {
+            m_SourcePoseContinuityIdentities[sourceIndex] = 0;
+            m_HasPrevious[sourceIndex] = 0;
+            m_PreparedAt[sourceIndex] = 0;
+            m_CompletedAt[sourceIndex] = 0;
+            int poseOffset = sourceIndex * m_BoneCount;
+            for (int i = 0; i < m_BoneCount; i++)
+            {
+                m_CurrentPose[poseOffset + i] = default;
+                m_PreviousPose[poseOffset + i] = default;
+                m_Velocity[poseOffset + i] = default;
+            }
+        }
+
+        void ClearFrameMetadata(int sourceIndex)
+        {
+            m_LeftFootFeatures[sourceIndex] = default;
+            m_RightFootFeatures[sourceIndex] = default;
+            m_HasFootFeatures[sourceIndex] = 0;
+            m_VisualTimeScales[sourceIndex] = 0f;
+            int parameterOffset = sourceIndex * m_ParameterCount;
+            for (int i = 0; i < m_ParameterCount; i++)
+                m_PoseParameters[parameterOffset + i] = 0f;
+        }
+
+        static NativeArray<T> Allocate<T>(int length) where T : struct =>
+            new NativeArray<T>(length, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+
+        void RequireNotDisposed()
+        {
+            if (m_Disposed)
+                throw new ObjectDisposedException(nameof(AnimationBlendSourcePoseWorkspace));
+        }
+
+        public void Dispose()
+        {
+            if (m_Disposed)
+                return;
+            DisposeNativeArrays();
+            Array.Clear(m_SourceIds, 0, m_SourceIds.Length);
+            m_Count = 0;
+            m_CompletionIdentity = 0;
+            m_LastCompletionIdentity = 0;
+            m_Disposed = true;
+        }
+
+        void DisposeNativeArrays()
+        {
+            Dispose(ref m_CurrentPose);
+            Dispose(ref m_PreviousPose);
+            Dispose(ref m_Velocity);
+            Dispose(ref m_PoseParameters);
+            Dispose(ref m_LeftFootFeatures);
+            Dispose(ref m_RightFootFeatures);
+            Dispose(ref m_VisualTimeScales);
+            Dispose(ref m_HasFootFeatures);
+            Dispose(ref m_HasPrevious);
+            Dispose(ref m_PreparedAt);
+            Dispose(ref m_CompletedAt);
+            Dispose(ref m_SourcePoseContinuityIdentities);
+            Dispose(ref m_ProgramProducerIndices);
+        }
+
+        static void Dispose<T>(ref NativeArray<T> array) where T : struct
+        {
+            if (array.IsCreated)
+                array.Dispose();
+            array = default;
         }
     }
 }

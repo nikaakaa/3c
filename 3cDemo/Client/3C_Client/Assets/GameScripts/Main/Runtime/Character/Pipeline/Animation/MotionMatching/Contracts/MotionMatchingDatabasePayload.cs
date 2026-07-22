@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
@@ -226,14 +227,116 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                     throw new ArgumentException("Motion Matching Search Index sample order is not a permutation.");
                 seen[ordered] = true;
             }
+            ValidateSegments();
+            ValidateSearchTree(domain, capacities);
+            var coverageIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < m_Coverage.Length; i++)
+            {
+                if (!coverageIds.Add(m_Coverage[i].RequirementId))
+                    throw new ArgumentException($"Motion Matching Coverage Requirement '{m_Coverage[i].RequirementId}' is duplicated.");
+            }
+        }
+
+        void ValidateSegments()
+        {
+            int expectedFirstSampleIndex = 0;
+            CharacterMotionMatchingSegmentId previous = default;
+            for (int segmentIndex = 0; segmentIndex < m_Segments.Length; segmentIndex++)
+            {
+                MotionMatchingSegmentPayload segment = m_Segments[segmentIndex];
+                if (segmentIndex > 0 && segment.SegmentId.CompareTo(previous) <= 0 ||
+                    segment.FirstSampleIndex != expectedFirstSampleIndex ||
+                    segment.SampleCount > m_Samples.Length - segment.FirstSampleIndex)
+                    throw new ArgumentException($"Motion Matching Segment #{segmentIndex} is not canonical.");
+                previous = segment.SegmentId;
+                for (int offset = 0; offset < segment.SampleCount; offset++)
+                {
+                    int sampleIndex = segment.FirstSampleIndex + offset;
+                    MotionMatchingSamplePayload sample = m_Samples[sampleIndex];
+                    if (!sample.SegmentId.Equals(segment.SegmentId) ||
+                        sample.SampleTime < segment.StartTime || sample.SampleTime > segment.EndTime ||
+                        !m_ClipBindings[sample.ClipBindingIndex].SourceClipId.Equals(segment.SourceClipId))
+                        throw new ArgumentException($"Motion Matching Segment '{segment.SegmentId}' sample #{sampleIndex} is inconsistent.");
+                }
+                if (segment.LoopMode == MotionMatchingSegmentLoopMode.Loop && segment.ContinuationEntrySampleIndex != segment.FirstSampleIndex ||
+                    segment.LoopMode == MotionMatchingSegmentLoopMode.Finite && segment.Terminal && segment.ContinuationEntrySampleIndex >= 0 ||
+                    segment.LoopMode == MotionMatchingSegmentLoopMode.Finite && !segment.Terminal &&
+                    ((uint)segment.ContinuationEntrySampleIndex >= (uint)m_Samples.Length ||
+                     m_Samples[segment.ContinuationEntrySampleIndex].EntryExcluded))
+                    throw new ArgumentException($"Motion Matching Segment '{segment.SegmentId}' continuation is inconsistent.");
+                expectedFirstSampleIndex += segment.SampleCount;
+            }
+            if (expectedFirstSampleIndex != m_Samples.Length)
+                throw new ArgumentException("Motion Matching Segment ranges do not cover every sample exactly once.");
+        }
+
+        void ValidateSearchTree(CharacterMotionMatchingSearchDomainId domain, MotionMatchingRuntimeCapacityPayload capacities)
+        {
+            var parentCounts = new int[m_SearchNodes.Length];
+            var depths = new int[m_SearchNodes.Length];
+            var coveredOrderedOffsets = new bool[m_OrderedSampleIndices.Length];
+            int maximumDepth = 0;
             for (int i = 0; i < m_SearchNodes.Length; i++)
             {
                 MotionMatchingSearchIndexNodePayload node = m_SearchNodes[i];
                 if (node == null || node.NodeId.Value != i + 1 || node.FeatureCount != capacities.DenseFeatureCount ||
                     !node.SearchDomainId.Equals(domain) || node.LeftChildIndex >= m_SearchNodes.Length || node.RightChildIndex >= m_SearchNodes.Length ||
-                    node.OrderedSampleOffset + node.OrderedSampleCount > m_OrderedSampleIndices.Length)
+                    node.OrderedSampleOffset > m_OrderedSampleIndices.Length ||
+                    node.OrderedSampleCount > m_OrderedSampleIndices.Length - node.OrderedSampleOffset)
                     throw new ArgumentException($"Motion Matching Search Index node #{i} is not canonical.");
+                maximumDepth = Math.Max(maximumDepth, depths[i]);
+                if (node.IsLeaf)
+                {
+                    for (int offset = 0; offset < node.OrderedSampleCount; offset++)
+                    {
+                        int orderedOffset = node.OrderedSampleOffset + offset;
+                        if (coveredOrderedOffsets[orderedOffset])
+                            throw new ArgumentException("Motion Matching Search Index leaf ranges overlap.");
+                        coveredOrderedOffsets[orderedOffset] = true;
+                        int sampleIndex = m_OrderedSampleIndices[orderedOffset];
+                        for (int featureIndex = 0; featureIndex < capacities.DenseFeatureCount; featureIndex++)
+                        {
+                            float feature = m_NormalizedFeatures[sampleIndex * capacities.DenseFeatureCount + featureIndex];
+                            if (feature < node.GetMinimum(featureIndex) || feature > node.GetMaximum(featureIndex))
+                                throw new ArgumentException($"Motion Matching Search Index leaf #{i} does not bound sample #{sampleIndex}.");
+                        }
+                    }
+                    continue;
+                }
+
+                if (node.LeftChildIndex <= i || node.RightChildIndex <= i || node.LeftChildIndex == node.RightChildIndex)
+                    throw new ArgumentException($"Motion Matching Search Index node #{i} has a backward, self, or duplicate child.");
+                MotionMatchingSearchIndexNodePayload left = m_SearchNodes[node.LeftChildIndex];
+                MotionMatchingSearchIndexNodePayload right = m_SearchNodes[node.RightChildIndex];
+                if (left == null || right == null || left.OrderedSampleOffset != node.OrderedSampleOffset ||
+                    right.OrderedSampleOffset != left.OrderedSampleOffset + left.OrderedSampleCount ||
+                    right.OrderedSampleCount != node.OrderedSampleCount - left.OrderedSampleCount)
+                    throw new ArgumentException($"Motion Matching Search Index node #{i} children do not partition the parent range.");
+                parentCounts[node.LeftChildIndex]++;
+                parentCounts[node.RightChildIndex]++;
+                depths[node.LeftChildIndex] = depths[i] + 1;
+                depths[node.RightChildIndex] = depths[i] + 1;
+                for (int featureIndex = 0; featureIndex < capacities.DenseFeatureCount; featureIndex++)
+                {
+                    if (left.GetMinimum(featureIndex) < node.GetMinimum(featureIndex) || left.GetMaximum(featureIndex) > node.GetMaximum(featureIndex) ||
+                        right.GetMinimum(featureIndex) < node.GetMinimum(featureIndex) || right.GetMaximum(featureIndex) > node.GetMaximum(featureIndex))
+                        throw new ArgumentException($"Motion Matching Search Index node #{i} does not contain its child bounds.");
+                }
             }
+            if (parentCounts[0] != 0)
+                throw new ArgumentException("Motion Matching Search Index root has a parent.");
+            for (int i = 1; i < parentCounts.Length; i++)
+            {
+                if (parentCounts[i] != 1)
+                    throw new ArgumentException($"Motion Matching Search Index node #{i} is disconnected or has multiple parents.");
+            }
+            for (int i = 0; i < coveredOrderedOffsets.Length; i++)
+            {
+                if (!coveredOrderedOffsets[i])
+                    throw new ArgumentException($"Motion Matching Search Index does not cover ordered sample offset #{i}.");
+            }
+            if (capacities.TraversalCapacity != maximumDepth + 1)
+                throw new ArgumentException("Motion Matching Search Index traversal capacity does not match root edge-depth.");
         }
     }
 

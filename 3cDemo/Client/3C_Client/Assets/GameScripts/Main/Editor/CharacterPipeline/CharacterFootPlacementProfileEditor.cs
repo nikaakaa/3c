@@ -21,8 +21,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("m_PoseSourceLayerId"));
-            EditorGUILayout.Space(4f);
             for (int i = 0; i < SectionFields.Length; i++)
             {
                 SerializedProperty property = serializedObject.FindProperty(SectionFields[i]);

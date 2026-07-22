@@ -7,7 +7,7 @@
 #### Scenario: Base与FullBody Action同时有输出
 
 - **WHEN** BaseLocomotionSlot与FullBodyActionSlot在同一PresentationFrame产生合法PoseSlotFrame
-- **THEN** CharacterPoseGraphEvaluator MUST按编译后的LayeredBoneBlend节点和dense全身Mask生成唯一最终pose
+- **THEN** Character Presentation Pose Graph native job MUST按编译后的LayeredBoneBlend节点和dense全身Mask生成唯一最终pose
 - **AND** Blend Stack MUST不再次按Layer order合成两个slot
 
 #### Scenario: Runtime缺少Pose Program
@@ -48,6 +48,13 @@ Pose Graph MUST声明稳定`PoseSlotId`、对应`AnimationChannelId`和`RequireO
 - **THEN** Pose Graph Validator MUST拒绝该节点类型
 - **AND** MUST不允许source直接连接OutputPose
 
+#### Scenario: slot标量权重为零但仍有骨骼输出
+
+- **WHEN** PoseSlotFrame的OutputWeight为零但dense per-bone output仍至少有一个非零权重
+- **THEN** 该frame的Availability MUST保持Pose
+- **AND** Pose Graph空间合成 MUST读取dense per-bone weight而不得用OutputWeight作为空间门槛
+- **AND** OutputWeight MUST只用于非空间Pose Parameter、AllowEmpty判断与诊断概览
+
 ### Requirement: Pose Graph节点必须使用有限typed Pose合同
 
 Pose Graph Runtime MUST只安装`PoseSlotInput`、`LayeredBoneBlend`、`AdditivePose`、`PoseCurveResolve`和`OutputPose`及其版本化typed ports。Authoring MAY额外安装静态`PoseSubgraph`与compiler-only `GraphInput`/`GraphOutput`边界；Compiler MUST在发布Program前消除三者。Pose edge MUST传递Availability、dense local TRS pose、PoseParameter buffer、source contribution和continuity identity。节点 MUST不读取State、Action、Blackboard、Input、GameplayTag、Timeline Window、MotionWarp target、业务priority或runtime Unity Transform。未知node code、port kind或payload version MUST在Build或Runtime创建时失败。
@@ -76,13 +83,13 @@ Pose Graph Runtime MUST只安装`PoseSlotInput`、`LayeredBoneBlend`、`Additive
 
 #### Scenario: BaseLocomotion没有正式输出
 
-- **WHEN** RequireOutput BaseLocomotionSlot既没有Current pose也没有合法Pending output
+- **WHEN** RequireOutput BaseLocomotionSlot既没有Selected/Retained pose也没有合法Pending output
 - **THEN** Pose Graph evaluation MUST失败并发布明确slot invalid reason
 - **AND** Foot Placement MUST不对上一帧残留pose继续求解
 
 ### Requirement: Bone Mask与Additive必须依赖稳定Rig Identity
 
-所有LayeredBoneBlend和AdditivePose节点 MUST引用匹配`CharacterAnimationRigDefinition`的稳定Mask/Reference identity。Projection Compiler MUST按父节点优先BoneId顺序展开dense mask与additive reference descriptor。Runtime MUST不读取AvatarMask path、Humanoid mapping、骨骼名称、Transform path或层级搜索补全。Additive source、reference space、scale policy或Rig revision不匹配 MUST阻止发布。
+所有LayeredBoneBlend和AdditivePose节点 MUST引用匹配`CharacterAnimationRigDefinition`的稳定Mask/Reference identity。当前安装的唯一Additive reference identity MUST是公开常量`AnimationAdditiveReferencePoseIds.RigReference`，其值固定为`animation.rig-reference`；Node默认与构造默认 MUST使用该identity，Validator MUST拒绝其它任意字符串，系统 MUST不安装第二份Reference catalog或fallback。Projection Compiler MUST按父节点优先BoneId顺序展开dense mask与additive reference descriptor：`Local` MUST原样保存Rig的dense ReferenceLocal TRS，`Mesh` MUST按Rig parent index逐骨组合parent TRS为dense mesh-space reference。Runtime计算Mesh reference delta后 MUST按同一Rig parent index转换回local pose，不得把mesh-space delta直接写入local bone。Runtime MUST不读取AvatarMask path、Humanoid mapping、骨骼名称、Transform path或层级搜索补全。Additive source、reference identity、reference space、scale policy或Rig revision不匹配 MUST阻止发布。
 
 #### Scenario: UpperBody Mask不包含脚
 
@@ -96,9 +103,21 @@ Pose Graph Runtime MUST只安装`PoseSlotInput`、`LayeredBoneBlend`、`Additive
 - **THEN** Projection Build MUST失败并报告Mask与Rig identity
 - **AND** Runtime MUST不截断或重排dense数组
 
+#### Scenario: Additive节点使用任意Reference名称
+
+- **WHEN** AdditivePose保存的ReferencePoseId不是`animation.rig-reference`
+- **THEN** Validator与Projection Build MUST拒绝该节点
+- **AND** MUST不按名称查找资产、创建catalog entry或改用Rig bind pose fallback
+
+#### Scenario: 编译Mesh reference
+
+- **WHEN** AdditivePose选择Mesh reference space
+- **THEN** Compiler MUST按Rig父节点优先顺序把dense ReferenceLocal TRS组合成mesh-space reference
+- **AND** Runtime MUST使用Rig parent index把mesh-space additive结果转换回local pose
+
 ### Requirement: Pose Parameter曲线必须随Pose显式解析
 
-Pose Graph MUST以稳定`PoseParameterId`和有限标量值携带动画表现参数。每个参数声明 MUST包含显式default；每个跨pose合成节点 MUST为全部可达参数声明`Base`、`Overlay`、`Weighted`、`Max`或`Min`等已安装resolve policy。Slot Stack和Pose Graph MUST按各自职责生成唯一参数流，OutputPose MUST发布唯一final parameter stream。Runtime MUST不按字符串同名覆盖、缺失policy默认选择或从Gameplay Curve补值。
+Pose Graph MUST以稳定`PoseParameterId`和有限标量值携带动画表现参数。每个参数声明 MUST包含显式default；每个跨pose合成节点 MUST为全部可达参数声明`Base`、`Overlay`、`Weighted`、`Max`或`Min`等已安装resolve policy。`PoseCurveResolve` MUST拥有两个有序Pose输入：Input A为Base Pose，Input B为Parameter Source Pose；骨骼pose、source contribution和左右脚feature MUST保持Base，Input B MUST只参与dense parameter policy、output weight与continuity求值。Parameter Source为NoPose时 MUST保持Base，Invalid时 MUST产生typed invalid。Slot Stack和Pose Graph MUST按各自职责生成唯一参数流，OutputPose MUST发布唯一final parameter stream。Runtime MUST不按字符串同名覆盖、缺失policy默认选择或从Gameplay Curve补值。
 
 #### Scenario: Base与Action都有Foot IK权重参数
 
@@ -112,9 +131,15 @@ Pose Graph MUST以稳定`PoseParameterId`和有限标量值携带动画表现参
 - **THEN** Pose Graph Compiler MUST拒绝发布并定位node和parameter
 - **AND** Runtime MUST不选择Base、Overlay或零作为fallback
 
+#### Scenario: Parameter Source为空或无效
+
+- **WHEN** PoseCurveResolve的Parameter Source输入为NoPose
+- **THEN** 输出 MUST保持Base的骨骼、贡献、foot feature与参数
+- **AND** Parameter Source为Invalid时 MUST产生typed invalid而不是读取旧参数
+
 ### Requirement: Pose Graph必须编译为固定DAG与有界Workspace
 
-Pose Graph Compiler MUST拒绝cycle、dangling edge、非法fan-in、重复Output、缺失Output和不兼容port。Compiler MUST生成稳定topological operation顺序、固定pose/parameter/contribution workspace、公共子图frame cache、output index与source map。Runtime MUST按Projection声明容量一次预分配，并在每个PresentationFrame只求值一次；不得动态创建节点、扩容buffer、遍历ScriptableObject或逐骨骼操作场景Transform。
+Pose Graph Compiler MUST拒绝cycle、dangling edge、非法fan-in、重复Output、缺失Output和不兼容port。Compiler MUST生成v2 Pose Program schema、v2 runtime ABI与v2 operation payload、稳定topological operation顺序、固定pose/parameter/contribution workspace、公共子图frame cache、output index与source map。`FrameCacheCount` MUST精确等于Operations数量，operation index MUST是唯一frame-cache index；operation hash MUST继续包含payload version、Input A、Input B以及Additive reference identity、space和完整TRS。Runtime MUST拒绝v1 Program或operation payload，按Projection声明容量一次预分配，并在每个PresentationFrame只求值一次；不得动态创建节点、扩容buffer、遍历ScriptableObject或逐骨骼操作场景Transform。
 
 #### Scenario: 两条边形成cycle
 
@@ -128,9 +153,15 @@ Pose Graph Compiler MUST拒绝cycle、dangling edge、非法fan-in、重复Outpu
 - **THEN** Presentation Runtime创建 MUST失败
 - **AND** 表现帧 MUST不临时分配或禁用source contribution
 
+#### Scenario: 加载v1 Pose Program
+
+- **WHEN** Projection包含v1 schema、runtime ABI或operation payload
+- **THEN** Runtime创建 MUST失败
+- **AND** MUST不兼容读取、跳过Input B或复用旧frame cache布局
+
 ### Requirement: Pose Graph必须发布最终Pose贡献与连续性
 
-`CharacterPoseGraphEvaluator` MUST在最终AnimationStream写回后发布唯一`FinalAnimationPoseFrame`，包含pose completion identity、final PoseParameter、按最终Bone Mask传播的source contribution、Left/Right foot actual contribution与连续性状态。Foot Placement、Preview与Debug MUST只消费该frame；不得从Animancer state weight、单个slot scalar或authoring graph重建最终贡献。
+`AnimationPosePlayableGraphRuntime` MUST在Pose Graph native job完成最终AnimationStream写回后发布唯一lease-protected `FinalAnimationPoseFrame`，包含pose completion identity、final PoseParameter、按最终Bone Mask传播的source contribution、Left/Right foot actual contribution与连续性状态。Foot Placement、Preview与Debug MUST只消费该frame；不得从source playable weight、单个slot scalar或authoring graph重建最终贡献。
 
 #### Scenario: FullBody Action全身覆盖Locomotion
 

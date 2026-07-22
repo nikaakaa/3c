@@ -4,7 +4,7 @@
 
 - 正式调用链
 - MCP action
-- schema v15 Patch operation
+- schema v16 Patch operation
 - Condition term 与节点白名单
 - 代码所有权地图
 - Patch 示例
@@ -35,16 +35,18 @@ manage_btsmtl_agent_authoring
 
 | action | 输入 | 副作用 | 输出重点 |
 |---|---|---|---|
-| `export_snapshot` | domain + root asset path | 无 | v15 Full Snapshot；Character输出既有Graph/Timeline/MotionWarp/Marker/Curve合同，AI输出Definition/Tree/Capability/Blackboard/Perception/Character catalog/generated Program合同 |
+| `export_snapshot` | domain + root asset path | 无 | v16 Full Snapshot；Character输出Graph/Timeline/MotionWarp/Marker/Curve与只读PoseGraph/BlendLibrary/Rig/AnimationChannel→PoseSlot/source合同，AI输出Definition/Tree/Capability/Blackboard/Perception/Character catalog/generated Program合同 |
 | `dry_run_patch` | domain + root asset path + Patch JSON | 无 | planned diff、message、metrics |
 | `apply_patch` | domain + root asset path + 同一 Patch JSON | 单一 Undo 事务，成功后保存 | applied diff、`applied`、`saved` |
 | `validate` | domain + root asset path | 无 | domain正式Validator + compiler report |
 
 domain必须是`CharacterController`或`AIController`；root路径必须是使用`/`的精确`Assets/...`路径并解析成匹配Definition类型。四个action在Unity编译、AssetDatabase更新、Play Mode或切换Play Mode时都会被拒绝。
 
-## schema v15 Patch operation
+## schema v16 Patch operation
 
-当前`AgentAuthoringSchema.Version`：`agent-character-controller-synthesis.v15`。v14及更早reader、writer、converter和operation alias已删除。Patch根必须显式携带`domain`、`rootIdentity`与`sourceRevision`。
+当前`AgentAuthoringSchema.Version`：`agent-character-controller-synthesis.v16`。v15及更早reader、writer、converter和operation alias已删除。Patch根必须显式携带`domain`、`rootIdentity`与`sourceRevision`。
+
+CharacterController Snapshot的`presentation`只读投影固定包含Profile、PoseGraph、BlendLibrary、Rig的asset identity与revision、`channelBindings[].animationChannelId/poseSlotId/outputPolicy`以及producer的`animationChannelId/poseSlotId/sourceAssetPath/sourceAssetGuid/sourceAssetType`。Timeline Track与Marker Group统一使用`animationChannelId`。旧`layers`、`layerId`、`transitionLibraryAsset*`、`transitionAsset*`与`easing`字段已删除，不提供alias。Patch catalog仍不提供PoseGraph、BlendLibrary、Rig、PoseSlot或producer source mutation。
 
 | operation | typed command 业务 |
 |---|---|
@@ -177,7 +179,7 @@ AIController节点catalog由正式`NodeAuthoringCapabilityPolicy`约束，包括
 | `AgentGraphAuthoringIndex.cs` | 当前正式 topology 的 stable identity 索引 |
 | `AgentGraphTransactionOwnerCollector.cs` | Definition、RootTree、全部可达 Graph/Timeline serialized owner |
 | `AgentGraphValidator.cs` | Character/AI authoring语义与正式只读compiler validation |
-| `AgentMacroLibrary.cs` | v15明确拒绝带业务默认值的controller macro；业务迁移使用显式typed Patch |
+| `AgentMacroLibrary.cs` | v16明确拒绝带业务默认值的controller macro；业务迁移使用显式typed Patch |
 | `AgentMacroCoverageEvaluator.cs` | 无业务样例；不进入通用 validate |
 
 Current specs：
@@ -192,7 +194,7 @@ Current specs：
 
 ```json
 {
-  "schemaVersion": "agent-character-controller-synthesis.v15",
+  "schemaVersion": "agent-character-controller-synthesis.v16",
   "domain": "CharacterController",
   "rootIdentity": "<definition-asset-guid>",
   "sourceRevision": "<snapshot-source-revision>",
@@ -211,7 +213,7 @@ Current specs：
 
 ```json
 {
-  "schemaVersion": "agent-character-controller-synthesis.v15",
+  "schemaVersion": "agent-character-controller-synthesis.v16",
   "domain": "CharacterController",
   "rootIdentity": "<definition-asset-guid>",
   "sourceRevision": "<snapshot-source-revision>",
@@ -234,7 +236,7 @@ Current specs：
 
 ```json
 {
-  "schemaVersion": "agent-character-controller-synthesis.v15",
+  "schemaVersion": "agent-character-controller-synthesis.v16",
   "domain": "CharacterController",
   "rootIdentity": "<definition-asset-guid>",
   "sourceRevision": "<snapshot-source-revision>",

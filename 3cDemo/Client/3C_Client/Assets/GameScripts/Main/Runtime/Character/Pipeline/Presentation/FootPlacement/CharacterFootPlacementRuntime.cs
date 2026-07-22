@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonSimulation;
@@ -45,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly RuntimeDiagnosticsContext m_Diagnostics;
         readonly FootRuntimeState m_Left = new FootRuntimeState(CharacterFootSide.Left);
         readonly FootRuntimeState m_Right = new FootRuntimeState(CharacterFootSide.Right);
-        readonly AnimationPoseContribution[] m_DiagnosticContributions;
+        readonly AnimationPoseSourceContribution[] m_DiagnosticContributions;
 
         CharacterFootPlacementFrameSnapshot m_Snapshot;
         ulong m_LastRenderFrame;
@@ -78,12 +77,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!m_Solver.IsInitialized)
                 throw new InvalidOperationException($"Foot Placement solver failed to initialize for Actor '{actorId}'.");
             m_Query = new CharacterFootPlacementSupportQuery(physicsScene, rig, settings.Trace);
-            m_DiagnosticContributions = new AnimationPoseContribution[settings.ProducerCapacity];
+            m_DiagnosticContributions = new AnimationPoseSourceContribution[settings.ContributionCapacity];
             ResetInternal(0, 0, FootConstraintTransitionReason.PresentationReset, false);
         }
 
         public CharacterFootPlacementFrameSnapshot Snapshot => m_Snapshot;
-        public string PoseSourceLayerId => m_Settings.PoseSourceLayerId;
 
         public void Present(CharacterPosePostProcessFrame frame)
         {
@@ -92,12 +90,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException("Foot Placement frame targets another Actor.");
             if (frame.RenderFrame == m_LastRenderFrame)
                 throw new InvalidOperationException($"Foot Placement Actor '{m_ActorId}' received render frame '{frame.RenderFrame}' twice.");
-            if (!frame.Body.IsValid || frame.AnimationContributions.Count == 0)
+            if (!frame.Body.IsValid)
             {
                 ResetInternal(
                     frame.RenderFrame,
                     frame.Body.ResetSequence,
                     FootConstraintTransitionReason.MissingAnimationOutput,
+                    true);
+                return;
+            }
+
+            FinalAnimationPoseFrame animationPose = frame.AnimationPose;
+            if (animationPose.Availability != PoseSlotFrameAvailability.Pose)
+            {
+                ResetInternal(
+                    frame.RenderFrame,
+                    frame.Body.ResetSequence,
+                    animationPose.Availability == PoseSlotFrameAvailability.Invalid
+                        ? FootConstraintTransitionReason.InvalidPose
+                        : FootConstraintTransitionReason.MissingAnimationOutput,
                     true);
                 return;
             }
@@ -114,7 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             FootConstraintTransitionReason.BodyReset,
                             true);
                     }
-                    CharacterFootPlacementFeatureFrame features = ResolveAnimationFeatures(frame.AnimationContributions);
+                    CharacterFootPlacementFeatureFrame features = ResolveAnimationFeatures(animationPose);
                     CharacterFootPlacementAnimatedPose pose = m_Solver.CaptureAnimatedPose(frame.RenderFrame);
                     float deltaSeconds = frame.PresentationDeltaSeconds;
                     FootKinematics leftKinematics = CaptureKinematics(m_Left, pose.Left, deltaSeconds);
@@ -235,38 +246,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Disposed = true;
         }
 
-        CharacterFootPlacementFeatureFrame ResolveAnimationFeatures(
-            IReadOnlyList<AnimationPoseContribution> contributions)
+        CharacterFootPlacementFeatureFrame ResolveAnimationFeatures(FinalAnimationPoseFrame animationPose)
         {
-            float visible = 0f;
-            float weight = 0f;
-            var left = new AnimationFootFeatureBlendAccumulator();
-            var right = new AnimationFootFeatureBlendAccumulator();
-            for (int i = 0; i < contributions.Count; i++)
-            {
-                AnimationPoseContribution contribution = contributions[i];
-                if (!contribution.IsValid ||
-                    !string.Equals(contribution.LayerId, m_Settings.PoseSourceLayerId, StringComparison.Ordinal))
-                    throw new InvalidOperationException("Foot Placement received an invalid pose contribution.");
-                if (!m_Settings.TrySample(
-                        contribution.ProgramProducerIndex,
-                        contribution.VisualSampleTime,
-                        contribution.Cycle,
-                        out AnimationFootPlacementSample sample))
-                    throw new InvalidOperationException($"Foot Placement cannot sample animation curves for producer '{contribution.ProducerId}'.");
-                float visualWeight = contribution.Weight;
-                visible += visualWeight;
-                weight += visualWeight * sample.Weight;
-                left.Add(sample.Left, visualWeight, contribution.VisualTimeScale);
-                right.Add(sample.Right, visualWeight, contribution.VisualTimeScale);
-            }
-            if (visible <= 0.0001f)
-                throw new InvalidOperationException("Foot Placement pose layer has no visible animation contribution.");
+            if (!string.Equals(animationPose.PoseProgramHash, m_Settings.PoseProgramHash, StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    $"Foot Placement Pose Program mismatch: expected '{m_Settings.PoseProgramHash}', received '{animationPose.PoseProgramHash}'.");
+            if (!animationPose.HasFootFeatures ||
+                !animationPose.LeftFootFeatures.IsValid ||
+                !animationPose.RightFootFeatures.IsValid)
+                throw new InvalidOperationException("Foot Placement final pose has no generated foot features.");
+            int parameterIndex = m_Settings.FootPlacementWeightParameterIndex;
+            if ((uint)parameterIndex >= (uint)animationPose.PoseParameters.Count)
+                throw new InvalidOperationException(
+                    $"Foot Placement Pose Parameter '{m_Settings.FootPlacementWeightParameterId}' is outside the final pose parameter buffer.");
+            float weight = animationPose.PoseParameters[parameterIndex];
+            if (!float.IsFinite(weight) || weight < 0f || weight > 1f)
+                throw new InvalidOperationException(
+                    $"Foot Placement Pose Parameter '{m_Settings.FootPlacementWeightParameterId}' must be normalized.");
             return new CharacterFootPlacementFeatureFrame(
-                weight / visible,
-                visible,
-                left.Resolve(),
-                right.Resolve());
+                weight,
+                animationPose.LeftFootFeatures,
+                animationPose.RightFootFeatures);
         }
 
         FootKinematics CaptureKinematics(
@@ -616,10 +616,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : right.Plan.PositionWeight;
             float leftDelta = left.Plan.Position.y - pose.Left.AnklePosition.y;
             float rightDelta = right.Plan.Position.y - pose.Right.AnklePosition.y;
-            float total = leftWeight + rightWeight;
-            float desired = total > 0.0001f
-                ? (leftDelta * leftWeight + rightDelta * rightWeight) / total
-                : 0f;
+            PelvisHeightResolution height = ResolvePelvisHeight(
+                leftWeight,
+                rightWeight,
+                leftDelta,
+                rightDelta,
+                left.Plan.Position,
+                right.Plan.Position,
+                body);
+            float desired = height.DesiredOffset * left.Weight.Value;
             VerticalInterval leftInterval = BuildPelvisInterval(
                 pose.Left.HipPosition,
                 left.Plan.Position,
@@ -634,11 +639,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     0.0001f,
                     m_Rig.RightLegLength * m_Settings.Constraint.MaximumReachRatio -
                     m_Settings.Pelvis.ReachSlack));
-            FootPlacementSupportFoot supportFoot = ResolveSupportFoot(
-                leftWeight,
-                rightWeight,
-                left.Plan.Position.y,
-                right.Plan.Position.y);
+            FootPlacementSupportFoot supportFoot = height.SupportFoot;
             CharacterFootSide unreachableFoot = default;
             bool hasLeft = leftWeight > 0.0001f;
             bool hasRight = rightWeight > 0.0001f;
@@ -706,8 +707,142 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 compensationTarget,
                 m_ActorMovementCompensationOffset,
                 m_ActorMovementCompensationVelocity,
+                height.Mode,
+                height.Decision,
+                height.Reason,
+                height.DirectionalSpeed,
+                height.FootLeadDistance,
+                height.SlopeHeightDifference,
                 supportFoot,
                 unreachableFoot);
+        }
+
+        PelvisHeightResolution ResolvePelvisHeight(
+            float leftWeight,
+            float rightWeight,
+            float leftDelta,
+            float rightDelta,
+            Vector3 leftPosition,
+            Vector3 rightPosition,
+            CharacterBodyPresentationFrame body)
+        {
+            bool hasLeft = leftWeight > 0.0001f;
+            bool hasRight = rightWeight > 0.0001f;
+            FootPlacementPelvisHeightMode mode = m_Settings.Pelvis.HeightMode;
+            Vector3 movement = body.VisibleVelocity;
+            movement.y = 0f;
+            float directionalSpeed = movement.magnitude;
+            Vector3 footDelta = rightPosition - leftPosition;
+            float footLeadDistance = directionalSpeed > 0.0001f
+                ? Vector3.Dot(footDelta, movement / directionalSpeed)
+                : 0f;
+            float slopeHeightDifference = rightPosition.y - leftPosition.y;
+
+            if (!hasLeft && !hasRight)
+            {
+                return new PelvisHeightResolution(
+                    0f,
+                    FootPlacementSupportFoot.None,
+                    mode,
+                    FootPlacementPelvisHeightDecision.Unavailable,
+                    FootPlacementPelvisHeightReason.NoPlantedFeet,
+                    directionalSpeed,
+                    footLeadDistance,
+                    slopeHeightDifference);
+            }
+            if (hasLeft && !hasRight)
+            {
+                return new PelvisHeightResolution(
+                    leftDelta,
+                    FootPlacementSupportFoot.Left,
+                    mode,
+                    FootPlacementPelvisHeightDecision.Resolved,
+                    FootPlacementPelvisHeightReason.SinglePlantedFoot,
+                    directionalSpeed,
+                    footLeadDistance,
+                    slopeHeightDifference);
+            }
+            if (!hasLeft)
+            {
+                return new PelvisHeightResolution(
+                    rightDelta,
+                    FootPlacementSupportFoot.Right,
+                    mode,
+                    FootPlacementPelvisHeightDecision.Resolved,
+                    FootPlacementPelvisHeightReason.SinglePlantedFoot,
+                    directionalSpeed,
+                    footLeadDistance,
+                    slopeHeightDifference);
+            }
+            if (mode == FootPlacementPelvisHeightMode.AllPlantedFeet)
+            {
+                float totalWeight = leftWeight + rightWeight;
+                return new PelvisHeightResolution(
+                    (leftDelta * leftWeight + rightDelta * rightWeight) / totalWeight,
+                    FootPlacementSupportFoot.Both,
+                    mode,
+                    FootPlacementPelvisHeightDecision.Resolved,
+                    FootPlacementPelvisHeightReason.AllPlantedFeet,
+                    directionalSpeed,
+                    footLeadDistance,
+                    slopeHeightDifference);
+            }
+            if (directionalSpeed < m_Settings.Pelvis.MinimumDirectionalSpeed)
+            {
+                return new PelvisHeightResolution(
+                    0f,
+                    FootPlacementSupportFoot.Both,
+                    mode,
+                    FootPlacementPelvisHeightDecision.Unavailable,
+                    FootPlacementPelvisHeightReason.MovementDirectionUnavailable,
+                    directionalSpeed,
+                    footLeadDistance,
+                    slopeHeightDifference);
+            }
+            if (Mathf.Abs(footLeadDistance) < m_Settings.Pelvis.MinimumFootLeadDistance)
+            {
+                return new PelvisHeightResolution(
+                    0f,
+                    FootPlacementSupportFoot.Both,
+                    mode,
+                    FootPlacementPelvisHeightDecision.Neutral,
+                    FootPlacementPelvisHeightReason.FootOrderAmbiguous,
+                    directionalSpeed,
+                    footLeadDistance,
+                    slopeHeightDifference);
+            }
+            if (Mathf.Abs(slopeHeightDifference) < m_Settings.Pelvis.MinimumSlopeHeightDifference)
+            {
+                return new PelvisHeightResolution(
+                    0f,
+                    FootPlacementSupportFoot.Both,
+                    mode,
+                    FootPlacementPelvisHeightDecision.Neutral,
+                    FootPlacementPelvisHeightReason.LevelSupport,
+                    directionalSpeed,
+                    footLeadDistance,
+                    slopeHeightDifference);
+            }
+
+            bool rightIsForward = footLeadDistance > 0f;
+            bool forwardIsHigher = rightIsForward
+                ? slopeHeightDifference > 0f
+                : slopeHeightDifference < 0f;
+            FootPlacementSupportFoot selectedFoot = rightIsForward
+                ? FootPlacementSupportFoot.Right
+                : FootPlacementSupportFoot.Left;
+            float selectedDelta = rightIsForward ? rightDelta : leftDelta;
+            return new PelvisHeightResolution(
+                selectedDelta,
+                selectedFoot,
+                mode,
+                FootPlacementPelvisHeightDecision.Resolved,
+                forwardIsHigher
+                    ? FootPlacementPelvisHeightReason.UphillForwardFoot
+                    : FootPlacementPelvisHeightReason.DownhillLowerFoot,
+                directionalSpeed,
+                footLeadDistance,
+                slopeHeightDifference);
         }
 
         float UpdateActorMovementCompensation(CharacterBodyPresentationFrame body, float deltaSeconds)
@@ -863,16 +998,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PelvisResolution pelvis,
             CharacterFootPlacementSolverResult solverResult)
         {
+            FinalAnimationPoseFrame animationPose = frame.AnimationPose;
             CharacterFootPlacementFrameSnapshot.CopyContributions(
-                frame.AnimationContributions,
+                animationPose.Contributions,
                 m_DiagnosticContributions);
             m_Snapshot = new CharacterFootPlacementFrameSnapshot(
                 m_ActorId, frame.RenderFrame,
                 frame.Body.PreviousTick, frame.Body.CurrentTick, frame.Body.ResetSequence,
-                m_Settings.PoseSourceLayerId, m_Settings.FootAnalysis.CalibrationId.Value,
+                animationPose.PoseProgramHash,
+                animationPose.CompletionIdentity,
+                animationPose.ContinuityIdentity,
+                m_Settings.FootPlacementWeightParameterId.Value,
+                m_Settings.FootPlacementWeightParameterIndex,
+                animationPose.PoseParameters[m_Settings.FootPlacementWeightParameterIndex],
+                m_Settings.FootAnalysis.CalibrationId.Value,
                 m_Settings.FootAnalysis.CalibrationRevision, m_Settings.FootAnalysis.AnalysisSourceId, m_Settings.FootAnalysis.AnalysisVersion,
                 m_Settings.FootAnalysis.AlgorithmVersion,
-                m_DiagnosticContributions, Mathf.Min(frame.AnimationContributions.Count, m_DiagnosticContributions.Length),
+                m_DiagnosticContributions, Mathf.Min(animationPose.Contributions.Count, m_DiagnosticContributions.Length),
                 BuildFootSnapshot(left),
                 BuildFootSnapshot(right),
                 m_Settings.Pelvis.ActorMovementCompensationMode,
@@ -887,6 +1029,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pelvis.ActorMovementCompensationVelocity,
                 pelvis.TargetOffset,
                 pelvis.CurrentOffset,
+                pelvis.HeightMode,
+                pelvis.HeightDecision,
+                pelvis.HeightReason,
+                pelvis.DirectionalSpeed,
+                pelvis.FootLeadDistance,
+                pelvis.SlopeHeightDifference,
                 pelvis.SupportFoot,
                 solverResult);
         }
@@ -935,8 +1083,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new RuntimeTracePayload
                 {
                     Name = m_ActorId.Value,
-                    LayerId = m_Settings.PoseSourceLayerId,
-                    Status = $"L:{m_Snapshot.Left.ConstraintState}/R:{m_Snapshot.Right.ConstraintState}",
+                    OwnerId = m_Snapshot.PoseProgramHash,
+                    RelatedElementId = m_Snapshot.FootPlacementWeightParameterId,
+                    Status = $"L:{m_Snapshot.Left.ConstraintState}/R:{m_Snapshot.Right.ConstraintState}/P:{m_Snapshot.PelvisHeightDecision}",
+                    Cause = m_Snapshot.PelvisHeightReason.ToString(),
                     Detail = CharacterFootPlacementDiagnosticFormatter.Format(m_Snapshot),
                     Weight = m_Snapshot.Left.SolverWeight,
                     FinalWeight = m_Snapshot.Right.SolverWeight,
@@ -1034,19 +1184,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (value < interval.Minimum)
                 return interval.Minimum - value;
             return value > interval.Maximum ? value - interval.Maximum : 0f;
-        }
-
-        static FootPlacementSupportFoot ResolveSupportFoot(float leftWeight, float rightWeight, float leftHeight, float rightHeight)
-        {
-            if (leftWeight <= 0.0001f && rightWeight <= 0.0001f)
-                return FootPlacementSupportFoot.None;
-            if (Mathf.Abs(leftWeight - rightWeight) <= 0.05f)
-            {
-                if (Mathf.Abs(leftHeight - rightHeight) <= 0.02f)
-                    return FootPlacementSupportFoot.Both;
-                return leftHeight > rightHeight ? FootPlacementSupportFoot.Left : FootPlacementSupportFoot.Right;
-            }
-            return leftWeight > rightWeight ? FootPlacementSupportFoot.Left : FootPlacementSupportFoot.Right;
         }
 
         static float Decay(float current, float target, float halfLife, float deltaSeconds)
@@ -1152,6 +1289,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float actorMovementCompensationTargetOffset,
                 float actorMovementCompensationCurrentOffset,
                 float actorMovementCompensationVelocity,
+                FootPlacementPelvisHeightMode heightMode,
+                FootPlacementPelvisHeightDecision heightDecision,
+                FootPlacementPelvisHeightReason heightReason,
+                float directionalSpeed,
+                float footLeadDistance,
+                float slopeHeightDifference,
                 FootPlacementSupportFoot supportFoot,
                 CharacterFootSide unreachableFoot)
             {
@@ -1162,6 +1305,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ActorMovementCompensationTargetOffset = actorMovementCompensationTargetOffset;
                 ActorMovementCompensationCurrentOffset = actorMovementCompensationCurrentOffset;
                 ActorMovementCompensationVelocity = actorMovementCompensationVelocity;
+                HeightMode = heightMode;
+                HeightDecision = heightDecision;
+                HeightReason = heightReason;
+                DirectionalSpeed = directionalSpeed;
+                FootLeadDistance = footLeadDistance;
+                SlopeHeightDifference = slopeHeightDifference;
                 SupportFoot = supportFoot;
                 UnreachableFoot = unreachableFoot;
             }
@@ -1172,8 +1321,46 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             public float ActorMovementCompensationTargetOffset { get; }
             public float ActorMovementCompensationCurrentOffset { get; }
             public float ActorMovementCompensationVelocity { get; }
+            public FootPlacementPelvisHeightMode HeightMode { get; }
+            public FootPlacementPelvisHeightDecision HeightDecision { get; }
+            public FootPlacementPelvisHeightReason HeightReason { get; }
+            public float DirectionalSpeed { get; }
+            public float FootLeadDistance { get; }
+            public float SlopeHeightDifference { get; }
             public FootPlacementSupportFoot SupportFoot { get; }
             public CharacterFootSide UnreachableFoot { get; }
+        }
+
+        readonly struct PelvisHeightResolution
+        {
+            public PelvisHeightResolution(
+                float desiredOffset,
+                FootPlacementSupportFoot supportFoot,
+                FootPlacementPelvisHeightMode mode,
+                FootPlacementPelvisHeightDecision decision,
+                FootPlacementPelvisHeightReason reason,
+                float directionalSpeed,
+                float footLeadDistance,
+                float slopeHeightDifference)
+            {
+                DesiredOffset = desiredOffset;
+                SupportFoot = supportFoot;
+                Mode = mode;
+                Decision = decision;
+                Reason = reason;
+                DirectionalSpeed = directionalSpeed;
+                FootLeadDistance = footLeadDistance;
+                SlopeHeightDifference = slopeHeightDifference;
+            }
+
+            public float DesiredOffset { get; }
+            public FootPlacementSupportFoot SupportFoot { get; }
+            public FootPlacementPelvisHeightMode Mode { get; }
+            public FootPlacementPelvisHeightDecision Decision { get; }
+            public FootPlacementPelvisHeightReason Reason { get; }
+            public float DirectionalSpeed { get; }
+            public float FootLeadDistance { get; }
+            public float SlopeHeightDifference { get; }
         }
 
         sealed class FootRuntimeState

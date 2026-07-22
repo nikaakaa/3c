@@ -20,22 +20,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 selection.LocalLogicTick,
                 NextSequence(),
                 selection,
-                null,
+                default,
                 selection.PlaybackId));
         }
 
-        public void EnqueueSample(ulong localLogicTick, AnimationProducerSample sample)
+        public void EnqueuePoseRequest(ulong localLogicTick, ResolvedAnimationPoseRequest poseRequest)
         {
-            if (sample == null || !sample.IsValid)
-                throw new ArgumentException("Animation producer sample is invalid.", nameof(sample));
+            if (!poseRequest.IsValid)
+                throw new ArgumentException("Resolved animation pose request is invalid.", nameof(poseRequest));
 
             Enqueue(new AnimationPlaybackCommand(
-                AnimationPlaybackCommandKind.Sample,
+                AnimationPlaybackCommandKind.PoseRequest,
                 localLogicTick,
                 NextSequence(),
                 default,
-                sample,
-                sample.PlaybackId));
+                poseRequest,
+                poseRequest.SourceId.PlaybackId));
         }
 
         public void EnqueuePlaybackComplete(ulong localLogicTick, AnimationPlaybackId playbackId)
@@ -92,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 localLogicTick,
                 NextSequence(),
                 default,
-                null,
+                default,
                 playbackId));
         }
 

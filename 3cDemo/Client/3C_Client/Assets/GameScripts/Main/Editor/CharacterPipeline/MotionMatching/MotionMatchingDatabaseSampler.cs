@@ -157,12 +157,10 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             for (int segmentIndex = 0; segmentIndex < request.SegmentCount; segmentIndex++)
             {
                 MotionMatchingSegmentBuildInput segment = request.GetSegment(segmentIndex);
-                int count = Mathf.CeilToInt((segment.EndTime - segment.StartTime) * request.Database.SampleRate) + 1;
+                int count = Mathf.Max(1, Mathf.CeilToInt((segment.EndTime - segment.StartTime) * request.Database.SampleRate));
                 for (int ordinal = 0; ordinal < count; ordinal++)
                 {
-                    float time = ordinal == count - 1
-                        ? segment.EndTime
-                        : segment.StartTime + ordinal / request.Database.SampleRate;
+                    float time = segment.StartTime + ordinal / request.Database.SampleRate;
                     values.Add(new MotionMatchingSampleAddress(values.Count, segmentIndex, ordinal, count, time));
                 }
             }
@@ -423,6 +421,8 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
 
         static bool IsFinite(Vector2 value) => float.IsFinite(value.x) && float.IsFinite(value.y);
         static bool IsFinite(Vector3 value) => float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
-        static bool IsFinite(Quaternion value) => float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z) && float.IsFinite(value.w) && value.sqrMagnitude > 0f;
+        static bool IsFinite(Quaternion value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z) && float.IsFinite(value.w) &&
+            value.x * value.x + value.y * value.y + value.z * value.z + value.w * value.w > 0f;
     }
 }

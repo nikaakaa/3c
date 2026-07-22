@@ -32,9 +32,9 @@ Corin Training AI Tree MUST读取AIPerceptionProfile显式绑定的玩家ActorId
 - **THEN** AI MUST只提交一次离散Attack request
 - **AND** 下一次Attack MUST来自显式新activation或重入条件
 
-### Requirement: Corin训练AI资产必须通过Agent v15正式事务生成
+### Requirement: Corin训练AI资产必须通过Agent v16正式事务生成
 
-Corin Training AI Definition、Tree、Blackboard、Perception和Intent配置 MUST通过Agent v15 Snapshot、dry-run、同Patch apply、re-export与validate流程写入。系统 MUST不直接编辑managed-reference YAML，也 MUST不保留一次性migrator、临时菜单、Patch watcher或旧Neutral fallback配置。
+Corin Training AI Definition、Tree、Blackboard、Perception和Intent配置 MUST通过Agent v16 Snapshot、dry-run、同Patch apply、re-export与validate流程写入。系统 MUST不直接编辑managed-reference YAML，也 MUST不保留一次性migrator、临时菜单、Patch watcher或旧Neutral fallback配置。
 
 `AIControllerDefinition` MUST拥有可在Unity domain reload后恢复的正式MonoScript identity。Definition MUST位于与类型同名的独立脚本资产中，MUST NOT依赖同一脚本文件中另一个ScriptableObject的MonoScript引用。
 
@@ -66,11 +66,12 @@ Standalone训练敌人 MUST将怪兽FBX作为唯一激活的VisualRoot，并由C
 - **THEN** Host的Animancer、VisualRoot和Foot Placement MUST全部指向怪兽VisualRoot
 - **AND** 怪兽姿态 MUST只由正式Presentation链输出
 
-#### Scenario: 怪兽未配置专用脚底IK
+#### Scenario: 怪兽使用正式脚底IK执行边界
 
 - **WHEN** 怪兽首版Presentation执行Pose Post Process
-- **THEN** 系统 MUST通过显式Passthrough solver保留动画姿态并履行统一生命周期
-- **AND** MUST NOT复用Corin FinalIK骨骼引用或跳过Host的正式Foot Placement合同
+- **THEN** 怪兽VisualRoot MUST配置与其Generic Rig一致的左右LimbIK和正式FinalIK Foot Placement solver
+- **AND** MUST NOT使用Passthrough、NoOp或Disabled solver伪造执行完成
+- **AND** MUST NOT复用Corin VisualRoot骨骼引用或跳过Host的正式Foot Placement合同
 
 ### Requirement: 训练AI不得伪装寻路或Combat闭环
 

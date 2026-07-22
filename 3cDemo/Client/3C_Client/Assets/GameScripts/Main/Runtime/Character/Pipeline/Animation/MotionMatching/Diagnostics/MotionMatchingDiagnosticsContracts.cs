@@ -171,7 +171,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             SelectionGeneration = output.SelectionGeneration;
             RequestSequence = output.PresentationRequestSequence;
             SourceClipId = output.ClipSamplePlan.SourceClipId;
-            SampleTime = output.ClipSamplePlan.SampleTime;
+            SampleTime = output.ClipSamplePlan.ClipTime;
+            ContinuousVisualTime = output.ClipSamplePlan.ContinuousVisualTime;
+            Cycle = output.ClipSamplePlan.Cycle;
+            VisualTimeScale = output.ClipSamplePlan.VisualTimeScale;
             FootPlacementWeightParameterId = output.FootPlacementWeight.ParameterId;
         }
 
@@ -180,6 +183,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public ulong RequestSequence { get; }
         public CharacterMotionMatchingSourceClipId SourceClipId { get; }
         public float SampleTime { get; }
+        public double ContinuousVisualTime { get; }
+        public int Cycle { get; }
+        public float VisualTimeScale { get; }
         public PoseParameterId FootPlacementWeightParameterId { get; }
     }
 

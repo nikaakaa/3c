@@ -6,7 +6,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public static class AgentAuthoringSchema
     {
-        public const string Version = "agent-character-controller-synthesis.v15";
+        public const string Version = "agent-character-controller-synthesis.v16";
         public const string CharacterControllerDomain = "CharacterController";
         public const string AIControllerDomain = "AIController";
 
@@ -359,7 +359,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string typeName;
         public string name;
         public int index;
-        public string layerId;
+        public string animationChannelId;
         public bool motionWarpTrack;
         public string syncMode;
         public string syncGroupId;
@@ -381,7 +381,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     [Serializable]
     public sealed class AgentSnapshotAnimationMarkerGroup
     {
-        public string layerId;
+        public string animationChannelId;
         public string syncGroupId;
         public bool compatible;
         public List<string> producerIds = new List<string>();
@@ -613,14 +613,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentSnapshotAnimationLayer
+    public sealed class AgentSnapshotAnimationChannelBinding
     {
-        public string layerId;
-        public int order;
-        public int animancerLayerIndex;
-        public string avatarMaskAssetPath;
-        public string avatarMaskAssetGuid;
-        public string blendMode;
+        public string animationChannelId;
+        public string poseSlotId;
         public string outputPolicy;
     }
 
@@ -629,14 +625,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public string profileAssetPath;
         public string profileAssetGuid;
-        public string transitionLibraryAssetPath;
-        public string transitionLibraryAssetGuid;
+        public string poseGraphAssetPath;
+        public string poseGraphAssetGuid;
+        public string poseGraphId;
+        public string poseGraphRevision;
+        public string blendLibraryAssetPath;
+        public string blendLibraryAssetGuid;
+        public string blendLibraryId;
+        public string blendLibraryRevision;
+        public string rigAssetPath;
+        public string rigAssetGuid;
+        public string rigId;
+        public string rigRevision;
         public string footAnalysisMode;
         public string footAnalysisSourceAssetGuid;
         public string footAnalysisSourceId;
         public int footAnalysisSourceVersion;
         public string footAnalysisAlgorithmVersion;
-        public List<AgentSnapshotAnimationLayer> layers = new List<AgentSnapshotAnimationLayer>();
+        public List<AgentSnapshotAnimationChannelBinding> channelBindings = new List<AgentSnapshotAnimationChannelBinding>();
         public List<AgentSnapshotAnimationProducer> producers = new List<AgentSnapshotAnimationProducer>();
     }
 
@@ -648,14 +654,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string trackAuthoringId;
         public string timelineName;
         public string trackName;
-        public string layerId;
+        public string animationChannelId;
+        public string poseSlotId;
         public string syncMode;
         public string syncGroupId;
         public string sequenceTopology;
         public string syncRole;
-        public string transitionAssetPath;
-        public string transitionAssetGuid;
-        public string easing;
+        public string sourceAssetPath;
+        public string sourceAssetGuid;
+        public string sourceAssetType;
     }
 
     [Serializable]

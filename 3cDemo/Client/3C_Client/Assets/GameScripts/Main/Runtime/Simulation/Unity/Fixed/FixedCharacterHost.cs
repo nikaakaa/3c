@@ -35,6 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         [SerializeField] CharacterFootPlacementComposition m_FootPlacement;
         [SerializeField] CharacterEquipmentRigBindingCatalog m_EquipmentRigBindings;
         [SerializeField] AnimancerComponent m_Animancer;
+        [SerializeField] CharacterAnimationRigBinding m_AnimationRigBinding;
         [SerializeField] ThirdPersonCameraController m_CameraRig;
         [SerializeField] Transform m_CameraFollowAnchor;
         [SerializeField] Transform m_CameraAimAnchor;
@@ -67,6 +68,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             CharacterFootPlacementComposition footPlacement,
             CharacterEquipmentRigBindingCatalog equipmentRigBindings,
             AnimancerComponent animancer,
+            CharacterAnimationRigBinding animationRigBinding,
             ThirdPersonCameraController cameraRig,
             Transform cameraFollowAnchor,
             Transform cameraAimAnchor,
@@ -89,6 +91,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_FootPlacement = footPlacement ? footPlacement : throw new ArgumentNullException(nameof(footPlacement));
             m_EquipmentRigBindings = equipmentRigBindings;
             m_Animancer = animancer ? animancer : throw new ArgumentNullException(nameof(animancer));
+            m_AnimationRigBinding = animationRigBinding
+                ? animationRigBinding
+                : throw new ArgumentNullException(nameof(animationRigBinding));
             m_CameraRig = cameraRig;
             m_CameraFollowAnchor = cameraFollowAnchor;
             m_CameraAimAnchor = cameraAimAnchor;
@@ -155,6 +160,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new InvalidOperationException($"Fixed Character Host '{name}' requires a Foot Placement Composition.");
             AnimancerComponent animancer = m_Animancer ? m_Animancer :
                 throw new InvalidOperationException($"Fixed Character Host '{name}' requires an AnimancerComponent.");
+            CharacterAnimationRigBinding animationRigBinding = m_AnimationRigBinding
+                ? m_AnimationRigBinding
+                : throw new InvalidOperationException($"Fixed Character Host '{name}' requires an Animation Rig Binding.");
             ActorId actorId = ActorId;
             ICharacterFootPlacementSolver footPlacementSolver = footPlacement.RequireSolver(visualRoot);
             PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
@@ -184,6 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 CharacterPresentationProjection projection = CharacterPresentationRuntimeFactory.LoadProjection(
                     projectionAsset,
                     presentationContract);
+                animationRigBinding.RequireValid(projection.Rig);
                 if (projection.EquipmentVisualBindings.Count != 0 && !m_EquipmentRigBindings)
                     throw new InvalidOperationException($"Fixed Character Host '{name}' requires an Equipment Rig Binding Catalog.");
                 if (projection.EquipmentVisualBindings.Count != 0)
@@ -207,6 +216,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                             projection,
                             actorId,
                             animancer,
+                            animationRigBinding,
                             visualRoot,
                             presentationBody,
                             bodyPresentationProfile,
@@ -231,6 +241,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                             projection,
                             actorId,
                             animancer,
+                            animationRigBinding,
                             visualRoot,
                             presentationBody,
                             bodyPresentationProfile,

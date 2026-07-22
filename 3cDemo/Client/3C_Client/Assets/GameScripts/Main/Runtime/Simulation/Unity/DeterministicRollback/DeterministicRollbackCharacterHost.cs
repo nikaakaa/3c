@@ -36,6 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         [SerializeField] CharacterBodyPresentationProfile m_BodyPresentationProfile;
         [SerializeField] CharacterFootPlacementComposition m_FootPlacement;
         [SerializeField] AnimancerComponent m_Animancer;
+        [SerializeField] CharacterAnimationRigBinding m_AnimationRigBinding;
         [SerializeField] ThirdPersonCameraController m_CameraRig;
         [SerializeField] Transform m_CameraFollowAnchor;
         [SerializeField] Transform m_CameraAimAnchor;
@@ -109,6 +110,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 throw new InvalidOperationException($"Rollback Character Host '{name}' requires a Foot Placement Composition.");
             AnimancerComponent animancer = m_Animancer ? m_Animancer :
                 throw new InvalidOperationException($"Rollback Character Host '{name}' requires an AnimancerComponent.");
+            CharacterAnimationRigBinding animationRigBinding = m_AnimationRigBinding
+                ? m_AnimationRigBinding
+                : throw new InvalidOperationException($"Rollback Character Host '{name}' requires an Animation Rig Binding.");
             ActorId actorId = ActorId;
             ICharacterFootPlacementSolver footPlacementSolver = footPlacement.RequireSolver(visualRoot);
             PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
@@ -152,6 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                         program.Manifest.TickRate,
                         actorId,
                         animancer,
+                        animationRigBinding,
                         visualRoot,
                         presentationBody,
                         bodyPresentationProfile,
@@ -175,6 +180,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                         program.Manifest.TickRate,
                         actorId,
                         animancer,
+                        animationRigBinding,
                         visualRoot,
                         presentationBody,
                         bodyPresentationProfile,

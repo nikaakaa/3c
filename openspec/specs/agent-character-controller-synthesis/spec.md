@@ -244,31 +244,31 @@ Agent Validator MUST透传正式Artifact Builder、Artifact Store、Projection b
 
 ### Requirement: 正式资产必须仍由人类可微调
 
-系统 MUST保持 Agent 生成后的正式结果为普通 BTSMTL Graph、Timeline、ActionProfile，以及由 CharacterPipelineDefinition 引用的 CharacterAnimationPresentationProfile。作者 MUST能在 Graph Editor 调整逻辑，在 Timeline Editor 调整 clip/time，在 CharacterAnimationPresentationProfile Inspector 调整 Layer 与 producer binding，并在 Animancer TransitionLibrary 正式入口调整 transition 与 easing。Agent Snapshot MAY只读理解 Profile 与 Presentation identity，但 Agent Patch MUST不形成第二个 Presentation 写入口。
+系统 MUST保持 Agent 生成后的正式结果为普通 BTSMTL Graph、Timeline、ActionProfile，以及由 CharacterPipelineDefinition 引用的 CharacterAnimationPresentationProfile。作者 MUST能在 Graph Editor 调整逻辑，在 Timeline Editor 调整 clip/time，在 CharacterAnimationPresentationProfile Inspector 调整Pose Graph、Blend Library、Rig与producer source binding。Agent Snapshot MAY只读理解Profile与Presentation identity，但Agent Patch MUST不形成第二个Presentation写入口。
 
 #### Scenario: 作者微调生成结果
 
 - **WHEN** Agent 生成普通 Tree branch、Attack State 与 Timeline
 - **THEN** 作者 MUST在 Graph Editor 调整 logic rule
 - **AND** 在 Timeline Editor 调整 clip/time
-- **AND** 在 CharacterAnimationPresentationProfile Inspector 调整 Layer 与 producer binding，并从该 Inspector 进入 Animancer TransitionLibrary
+- **AND** 在 CharacterAnimationPresentationProfile Inspector 调整Pose Graph、Blend Library、Rig与producer source binding
 - **AND** 三个入口 MUST不双写同一字段
 
 #### Scenario: Agent 继续修改
 
 - **WHEN** 作者微调后再次请求 Agent 增加 dodge cancel
 - **THEN** Agent MUST基于新的 Graph、Timeline 与只读 producer identity 生成增量 Patch
-- **AND** MUST不覆盖作者在 CharacterAnimationPresentationProfile Inspector 或 Animancer TransitionLibrary 中的修改
+- **AND** MUST不覆盖作者在CharacterAnimationPresentationProfile、Pose Graph或Blend Library中的修改
 
 ### Requirement: Agent Snapshot 与 Validator 必须递归理解嵌套 StateMachine
 
-Agent Snapshot MUST递归输出完整 RootTree authoring routes、普通 RunnableNode、flow edges、inline/shared Graph、nested StateMachine、logical transitions、Action activation、Timeline 与稳定 animation producer identity。Presentation section MUST只读输出 Layer catalog、TransitionLibrary identity 与 producer binding。Validator MUST检查 Graph topology、route identity、Timeline identity 与 Timeline LayerId，但 MUST不校验或写入 Presentation binding、Animancer transition 或 runtime playback lifecycle。
+Agent Snapshot MUST递归输出完整RootTree authoring routes、普通RunnableNode、flow edges、inline/shared Graph、nested StateMachine、logical transitions、Action activation、Timeline与稳定animation producer identity。Presentation section MUST只读输出Pose Graph、Blend Library、Rig identity/revision、AnimationChannel到PoseSlot binding与producer source identity。Validator MUST检查Graph topology、route identity、Timeline identity与Timeline AnimationChannelId，但 MUST不校验或写入Presentation binding、Blend transition或runtime playback lifecycle。
 
 #### Scenario: Corin Snapshot
 
 - **WHEN** 导出 Corin compact Snapshot
 - **THEN** Graph section MUST显示 Root Parallel、普通 Runnable、外层 None/Attack/Dodge、内层 Attack1/Attack2 与完整 route
-- **AND** Presentation section MUST只读显示 Base layer、TransitionLibrary 与 Timeline producer identity/binding
+- **AND** Presentation section MUST只读显示Pose Graph、Blend Library、Rig、AnimationChannel到PoseSlot与Timeline producer source identity
 - **AND** Graph Node/Edge MUST不输出动画角色或策略字段
 
 #### Scenario: Timeline identity 断裂
@@ -408,7 +408,7 @@ Agent Snapshot MUST使用schema v15和显式domain discriminator。CharacterCont
 
 ### Requirement: Agent 不得形成第二个动画表现 authoring 入口
 
-Agent Patch compiler MUST只编辑正式Graph、StateMachine、Timeline与Blackboard authoring。它 MUST不创建或修改CharacterAnimationPresentationProfile、Presentation Driver、Pipeline transition表、Animancer TransitionLibrary或动画Priority。若需Agent编辑Animancer原生transition或Profile，必须由独立capability定义唯一authoring service。
+Agent Patch compiler MUST只编辑正式Graph、StateMachine、Timeline与Blackboard authoring。它 MUST不创建或修改CharacterAnimationPresentationProfile、Pose Graph、Blend Library、Rig、Presentation Driver、动画transition或Priority。若需Agent编辑Animation Presentation，必须由独立capability定义唯一authoring service。
 
 #### Scenario: Patch 请求创建动画 Driver
 
@@ -416,11 +416,11 @@ Agent Patch compiler MUST只编辑正式Graph、StateMachine、Timeline与Blackb
 - **THEN** compiler MUST返回 unsupported operation
 - **AND** MUST不转换成默认 transition 或写入 Graph/Timeline
 
-#### Scenario: Patch 请求配置动画层
+#### Scenario: Patch 请求配置动画表现
 
-- **WHEN** Agent Patch 包含 `configure_animation_layer` 或 animation layer payload
+- **WHEN** Agent Patch包含配置Pose Graph、Blend Library、Rig或producer source binding的payload
 - **THEN** schema/compiler MUST将其作为未知操作拒绝
-- **AND** Presentation Layer catalog MUST只能由 CharacterAnimationPresentationProfile Inspector 修改
+- **AND** Animation Presentation MUST只能由正式Profile、Pose Graph与Blend Library编辑入口修改
 
 ### Requirement: Agent Snapshot 必须完整投影 MotionWarp authoring
 

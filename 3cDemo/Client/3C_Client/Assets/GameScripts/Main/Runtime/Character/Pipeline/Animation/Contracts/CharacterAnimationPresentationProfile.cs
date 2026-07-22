@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Animancer;
-using Animancer.TransitionLibraries;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation

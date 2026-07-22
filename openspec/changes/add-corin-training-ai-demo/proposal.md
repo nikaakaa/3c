@@ -2,9 +2,9 @@
 
 ## Why
 
-AI核心和Agent v15分别解决“系统能运行AI”和“工具能安全写AI资产”，但都不应夹带具体业务样例。当前Standalone Gameplay已经有玩家Corin与Neutral训练敌人，正好可以作为第一条可观察纵切：只替换训练敌人的Control Source，继续复用同一Corin Character Program、WorldSolver和Presentation。
+AI核心和Agent v16分别解决“系统能运行AI”和“工具能安全写AI资产”，但都不应夹带具体业务样例。Standalone Gameplay已经有玩家Corin与训练敌人，原始业务基线由Neutral Control Source驱动；当前apply工作区已出现AI Control Source、怪兽VisualRoot和AI资产的半迁移结果，但Definition MonoScript失效、generated Program过期且Foot Placement仍有Missing组件，因此不能视为正式闭环。本change必须用正式Agent v16事务整套重建AI资产，并继续复用同一Corin Character Program、WorldSolver和Presentation。
 
-本change使用正式Agent v15事务创建Corin Training AI Definition、Tree与Perception配置，编译AIIntentProgram，并把现有训练敌人从Neutral迁移为AI。行为只包括显式目标、直线接近、停止和普通Attack请求，不冒充阵营、寻路、命中、伤害或完整怪物AI。
+本change使用正式Agent v16事务创建Corin Training AI Definition、Tree与Perception配置，编译AIIntentProgram，并把现有训练敌人从Neutral迁移为AI。行为只包括显式目标、直线接近、停止和普通Attack请求，不冒充阵营、寻路、命中、伤害或完整怪物AI。
 
 ## What Changes
 
@@ -15,7 +15,8 @@ AI核心和Agent v15分别解决“系统能运行AI”和“工具能安全写A
 - 增加通用WaitTicks语义，使攻击冷却由AI Tree显式编排，而不是由节点runtime硬编码。
 - 补齐AI Agent Snapshot中的Loop、Compare、ConditionRuleGraph和AbortPolicy投影，使工具可完整复核行为条件。
 - 将`AIControllerDefinition`拆为同名独立Unity脚本资产，保证Definition经过domain reload后仍能解析为正式类型。
-- 通过Agent v15执行export、dry-run、apply、re-export和validate，不直接编辑Graph YAML。
+- 通过Agent v16执行export、dry-run、apply、re-export和validate，不直接编辑Graph YAML。
+- 将Character Controller Snapshot中的Presentation只读投影收敛为PoseGraph、BlendLibrary、Rig、AnimationChannel到PoseSlot映射和producer source identity，删除旧Layer与TransitionLibrary输出；Agent Patch不增加Presentation写入口。
 - 编译并绑定Corin AIIntentProgram。
 - 将现有`corin-training-enemy`Control Source从Neutral迁移为AI，删除其Neutral序列化绑定。
 - 将训练敌人的VisualRoot迁移为`Assets/AssetArt/Animation/ZZZ/敌人/怪兽/怪兽.fbx`，由同一Animancer正式表现链驱动。
@@ -29,7 +30,7 @@ AI核心和Agent v15分别解决“系统能运行AI”和“工具能安全写A
 - Standalone训练敌人Control Source迁移。
 - 直线接近、停止、普通攻击请求和显式目标快照。
 - 训练AI与玩家目标provider共用Committed Observation。
-- 训练敌人怪兽VisualRoot、Generic Rig绑定与显式无IK Foot Placement solver。
+- 训练敌人怪兽VisualRoot、Generic Rig绑定与正式FinalIK Foot Placement adapter配置。
 
 ### Out of Scope
 
@@ -49,9 +50,9 @@ AI核心和Agent v15分别解决“系统能运行AI”和“工具能安全写A
   - Corin Training AI Definition、Tree、Perception Profile与generated Program。
   - Corin Standalone训练敌人prefab/runtime profile。
 - Affected code:
-  - 通用AI WaitTicks operation及Agent v15 AI Snapshot完整性。
+  - 通用AI WaitTicks operation及Agent v16 AI Snapshot完整性。
+  - Character Controller Snapshot的只读Presentation身份投影。
   - AIControllerDefinition Unity脚本资产所有权。
-  - 通用Passthrough Foot Placement solver。
 - Breaking changes:
   - Standalone训练敌人不再使用Neutral Control Source。
   - AI配置失败时直接拒绝Session，不回退Neutral。
@@ -60,18 +61,18 @@ AI核心和Agent v15分别解决“系统能运行AI”和“工具能安全写A
 
 - `character-targeted-motion-warp-demo`当前明确规定训练敌人使用Neutral Input并且样例不包含AI。本change将该业务事实更新为最小AI演示，但继续保留“非完整Combat、非完整敌人AI”的边界。
 - `add-btsmtl-ai-controller-authoring`只提供通用AI核心，不拥有Corin资产。
-- `extend-agent-authoring-for-ai-controller`只提供v15工具，不拥有业务Patch或训练敌人配置。
+- `extend-agent-authoring-for-ai-controller`只提供v16工具，不拥有业务Patch或训练敌人配置。
 
 ## Dependencies And Sequencing
 
 - 硬依赖`add-btsmtl-ai-controller-authoring`完成AI运行与Local Session能力。
-- 硬依赖`extend-agent-authoring-for-ai-controller`完成v15唯一资产写入口。
+- 硬依赖`extend-agent-authoring-for-ai-controller`完成v16唯一资产写入口。
 - 依赖已经完成的`add-corin-targeted-motion-warp-demo`提供同Session训练敌人、ActionTargetSnapshot和SimulatedActor表现。
 - 不得在前置未完成时使用YAML、迁移器、临时菜单或MonoBehaviour AI抢跑。
 
 ## Success Criteria
 
-- Corin Training AI资产全部由Agent v15正式事务创建并可重新导出。
+- Corin Training AI资产全部由Agent v16正式事务创建并可重新导出。
 - AI Definition经过Unity domain reload后仍保持有效MonoScript引用和类型身份。
 - 训练敌人使用AI Control Source且不存在Neutral fallback绑定。
 - 训练AI读取同一Committed Observation中的显式玩家Actor。

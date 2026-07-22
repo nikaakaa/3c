@@ -9,7 +9,7 @@
 
 ### Requirement: CharacterSimulationPresentationRuntime 是 Unity 动画应用边界
 
-SimulationCommitter与唯一`CharacterSimulationPresentationRuntime`协调器 MUST共同构成Unity animation application boundary。协调器 MUST通过Projection校验producer与AnimationChannelId，并将command唯一转发给`CharacterAnimationPlaybackRuntime -> AnimationPlaybackLifecycle -> PoseSlot Blend Stack -> AnimancerPoseSamplingBackend + AnimationSlotBlendPoseEvaluator -> CharacterPoseGraphEvaluator`。每个PresentationFrame MUST只求值一次最终Animation Pose，再把`FinalAnimationPoseFrame`交给唯一Pose Post Process Pass。Program Runtime、Execution Backend、Pipeline Pass、WorldSolver、Session Source与Network adapter MUST不引用Animancer、Blend Stack、Pose Graph evaluator、Animation Jobs或Pose Post Process实现，也 MUST不直接播放、合成或修改动画姿势。
+SimulationCommitter与唯一`CharacterSimulationPresentationRuntime`协调器 MUST共同构成Unity animation application boundary。协调器 MUST通过Projection校验producer与AnimationChannelId，并将command唯一转发给`CharacterAnimationPlaybackRuntime -> AnimationPlaybackLifecycle -> PoseSlot Blend Stack native job -> source capture -> Pose Graph native job -> final stream writer`。`AnimationPosePlayableGraphRuntime` MUST把这些job安装在同一PlayableGraph并只Evaluate一次。每个PresentationFrame MUST只求值一次最终Animation Pose，再把lease-protected `FinalAnimationPoseFrame`交给唯一Pose Post Process Pass。Program Runtime、Execution Backend、Pipeline Pass、WorldSolver、Session Source与Network adapter MUST不引用Animancer、Blend Stack、Pose Graph job、Animation Jobs或Pose Post Process实现，也 MUST不直接播放、合成或修改动画姿势。
 
 #### Scenario: 同帧提交Locomotion与Attack
 
@@ -19,7 +19,7 @@ SimulationCommitter与唯一`CharacterSimulationPresentationRuntime`协调器 MU
 
 #### Scenario: 最终动画pose完成
 
-- **WHEN** 全部PoseSlotFrame和CharacterPoseGraphEvaluator完成本帧求值
+- **WHEN** 全部PoseSlot native job与Pose Graph native job完成本帧求值
 - **THEN** 唯一Pose Post Process Pass MAY消费FinalAnimationPoseFrame
 - **AND** MUST不建立另一份selection、Stack、Bone Mask或curve resolver
 
@@ -31,7 +31,7 @@ SimulationCommitter与唯一`CharacterSimulationPresentationRuntime`协调器 MU
 
 ### Requirement: 动画管线预览只读取调试 Snapshot
 
-系统 MUST从正式AnimationPlaybackLifecycle、每slot Blend Stack、Animancer source backend、PoseSlot evaluator与CharacterPoseGraphEvaluator导出只读`AnimationPlaybackFrameSnapshot`。Snapshot MUST显示AnimationChannelId、PoseSlotId、selection、Pending、entry/Stored/Inertial、source time、PoseNodeId、parameter、final contribution与pose completion，且 MUST不参与Gameplay决策或最终播放。Timeline Preview MUST复用正式Projection、Stack、Rig、Pose Program和Evaluator，不得只播单clip或建立简化compositor。
+系统 MUST从正式AnimationPlaybackLifecycle、每slot Blend Stack、Animancer source backend、PoseSlot native job与Pose Graph native job导出只读`AnimationPlaybackFrameSnapshot`。Snapshot MUST显示AnimationChannelId、PoseSlotId、selection、Pending、entry/Stored/Inertial、source time、PoseNodeId、parameter、final contribution与pose completion，且 MUST不参与Gameplay决策或最终播放。Timeline Preview MUST复用正式Projection、Stack、Rig、Pose Program和同一PlayableGraph运行时，不得只播单clip或建立简化compositor。
 
 #### Scenario: Preview两个channel
 

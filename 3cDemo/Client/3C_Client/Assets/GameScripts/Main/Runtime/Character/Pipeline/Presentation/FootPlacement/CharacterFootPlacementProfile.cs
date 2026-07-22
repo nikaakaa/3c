@@ -144,6 +144,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     [Serializable]
     public sealed class FootPlacementPelvisSettings
     {
+        [SerializeField] FootPlacementPelvisHeightMode m_HeightMode = FootPlacementPelvisHeightMode.AllPlantedFeet;
+        [SerializeField] float m_MinimumDirectionalSpeed = 0.15f;
+        [SerializeField] float m_MinimumFootLeadDistance = 0.04f;
+        [SerializeField] float m_MinimumSlopeHeightDifference = 0.025f;
         [SerializeField] float m_MaximumUpOffset = 0.18f;
         [SerializeField] float m_MaximumDownOffset = 0.32f;
         [SerializeField] float m_ReachSlack = 0.025f;
@@ -158,6 +162,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal FootPlacementPelvisRuntimeSettings Build()
         {
             var value = new FootPlacementPelvisRuntimeSettings(
+                m_HeightMode,
+                m_MinimumDirectionalSpeed,
+                m_MinimumFootLeadDistance,
+                m_MinimumSlopeHeightDifference,
                 m_MaximumUpOffset,
                 m_MaximumDownOffset,
                 m_ReachSlack,
@@ -222,7 +230,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     [CreateAssetMenu(fileName = "CharacterFootPlacementProfile", menuName = "3C/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        [SerializeField] string m_PoseSourceLayerId = "Base";
         [SerializeField] FootPlacementTraceSettings m_Trace = new FootPlacementTraceSettings();
         [SerializeField] FootPlacementContactSettings m_Contact = new FootPlacementContactSettings();
         [SerializeField] FootPlacementPredictionSettings m_Prediction = new FootPlacementPredictionSettings();
@@ -231,14 +238,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] FootPlacementRotationSettings m_Rotation = new FootPlacementRotationSettings();
         [SerializeField] FootPlacementSmoothingSettings m_Smoothing = new FootPlacementSmoothingSettings();
 
-        public string PoseSourceLayerId => m_PoseSourceLayerId;
-
         public void RequireConfiguration(CharacterFootPlacementRigBinding rig)
         {
             if (rig == null)
                 throw new ArgumentNullException(nameof(rig));
             rig.RequireValid();
-            CharacterFootPlacementValidation.RequireIdentity(m_PoseSourceLayerId, nameof(m_PoseSourceLayerId));
             RequireSections();
             m_Trace.Build(rig.CharacterLayer);
             m_Contact.Build();
@@ -256,21 +260,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (projection == null || !projection.IsValid)
                 throw new ArgumentException("Foot Placement requires a valid Presentation Projection.", nameof(projection));
             RequireConfiguration(rig);
-            string layerId = CharacterFootPlacementValidation.RequireIdentity(
-                m_PoseSourceLayerId,
-                nameof(m_PoseSourceLayerId));
-            bool layerFound = false;
-            for (int i = 0; i < projection.Layers.Count; i++)
-            {
-                CharacterAnimationLayerDefinition layer = projection.Layers[i];
-                if (layer != null && string.Equals(layer.Id, layerId, StringComparison.Ordinal))
-                {
-                    layerFound = true;
-                    break;
-                }
-            }
-            if (!layerFound)
-                throw new InvalidOperationException($"Foot Placement pose source layer '{layerId}' is absent from the Projection.");
+            projection.RequirePosePayload();
             AnimationFootAnalysisProjectionIdentity footAnalysis = projection.FootAnalysis;
             if (footAnalysis == null || !footAnalysis.IsEnabled)
                 throw new InvalidOperationException("Foot Placement requires generated Foot Analysis in the Presentation Projection.");
@@ -278,27 +268,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (footAnalysis.CalibrationId != rig.CalibrationId ||
                 !string.Equals(footAnalysis.CalibrationRevision, rig.CalibrationRevision, StringComparison.Ordinal))
                 throw new InvalidOperationException("Foot Placement Runtime Rig Calibration does not match the Presentation Projection.");
-
-            int producerCapacity = projection.Producers.Count;
-            int poseSourceProducerCount = 0;
-            var animationBindings = new CharacterPresentationAnimationBinding[producerCapacity];
-            for (int i = 0; i < projection.Producers.Count; i++)
-            {
-                CharacterPresentationProducerEntry producer = projection.Producers[i];
-                if (producer.Kind != CharacterPresentationProducerKind.Animation ||
-                    !string.Equals(producer.LayerId, layerId, StringComparison.Ordinal))
-                    continue;
-                if (producer.ProgramProducerIndex < 0 || producer.ProgramProducerIndex >= producerCapacity ||
-                    producer.Animation == null)
-                    throw new InvalidOperationException($"Foot Placement producer '{producer.ProducerId}' has no exact compiled animation binding.");
-                animationBindings[producer.ProgramProducerIndex] = producer.Animation;
-                poseSourceProducerCount++;
-            }
-            if (poseSourceProducerCount == 0)
-                throw new InvalidOperationException($"Foot Placement pose source layer '{layerId}' has no animation producers.");
+            CharacterPresentationPoseProgram poseProgram = projection.PoseProgram;
+            int footPlacementWeightParameterIndex = poseProgram.RequireParameterIndex(
+                AnimationPoseParameterIds.FootPlacementWeight);
+            if (poseProgram.ContributionWorkspaceCount <= 0)
+                throw new InvalidOperationException("Foot Placement requires a positive final pose contribution capacity.");
 
             return new CharacterFootPlacementRuntimeSettings(
-                layerId,
+                poseProgram.ProgramHash,
+                AnimationPoseParameterIds.FootPlacementWeight,
+                footPlacementWeightParameterIndex,
+                poseProgram.ContributionWorkspaceCount,
                 footAnalysis,
                 m_Trace.Build(rig.CharacterLayer),
                 m_Contact.Build(),
@@ -306,8 +286,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Constraint.Build(),
                 m_Pelvis.Build(),
                 m_Rotation.Build(),
-                m_Smoothing.Build(),
-                animationBindings);
+                m_Smoothing.Build());
         }
 
         void RequireSections()
@@ -320,10 +299,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public sealed class CharacterFootPlacementRuntimeSettings
     {
-        readonly CharacterPresentationAnimationBinding[] m_AnimationBindings;
-
         internal CharacterFootPlacementRuntimeSettings(
-            string poseSourceLayerId,
+            string poseProgramHash,
+            PoseParameterId footPlacementWeightParameterId,
+            int footPlacementWeightParameterIndex,
+            int contributionCapacity,
             AnimationFootAnalysisProjectionIdentity footAnalysis,
             FootPlacementTraceRuntimeSettings trace,
             FootPlacementContactRuntimeSettings contact,
@@ -331,10 +311,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementConstraintRuntimeSettings constraint,
             FootPlacementPelvisRuntimeSettings pelvis,
             FootPlacementRotationRuntimeSettings rotation,
-            FootPlacementSmoothingRuntimeSettings smoothing,
-            CharacterPresentationAnimationBinding[] animationBindings)
+            FootPlacementSmoothingRuntimeSettings smoothing)
         {
-            PoseSourceLayerId = poseSourceLayerId;
+            PoseProgramHash = CharacterFootPlacementValidation.RequireIdentity(
+                poseProgramHash,
+                nameof(poseProgramHash));
+            if (!footPlacementWeightParameterId.IsValid)
+                throw new ArgumentException("Foot Placement Pose Parameter identity is invalid.", nameof(footPlacementWeightParameterId));
+            if (footPlacementWeightParameterIndex < 0)
+                throw new ArgumentOutOfRangeException(nameof(footPlacementWeightParameterIndex));
+            if (contributionCapacity <= 0)
+                throw new ArgumentOutOfRangeException(nameof(contributionCapacity));
+            FootPlacementWeightParameterId = footPlacementWeightParameterId;
+            FootPlacementWeightParameterIndex = footPlacementWeightParameterIndex;
+            ContributionCapacity = contributionCapacity;
             FootAnalysis = footAnalysis ?? throw new ArgumentNullException(nameof(footAnalysis));
             FootAnalysis.RequireValid();
             Trace = trace;
@@ -344,12 +334,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Pelvis = pelvis;
             Rotation = rotation;
             Smoothing = smoothing;
-            m_AnimationBindings = animationBindings ?? throw new ArgumentNullException(nameof(animationBindings));
-            if (m_AnimationBindings.Length == 0)
-                throw new ArgumentException("Foot Placement requires compiled animation bindings.", nameof(animationBindings));
         }
 
-        public string PoseSourceLayerId { get; }
+        public string PoseProgramHash { get; }
+        public PoseParameterId FootPlacementWeightParameterId { get; }
+        public int FootPlacementWeightParameterIndex { get; }
+        public int ContributionCapacity { get; }
         public AnimationFootAnalysisProjectionIdentity FootAnalysis { get; }
         public FootPlacementTraceRuntimeSettings Trace { get; }
         public FootPlacementContactRuntimeSettings Contact { get; }
@@ -358,25 +348,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public FootPlacementPelvisRuntimeSettings Pelvis { get; }
         public FootPlacementRotationRuntimeSettings Rotation { get; }
         public FootPlacementSmoothingRuntimeSettings Smoothing { get; }
-        public int ProducerCapacity => m_AnimationBindings.Length;
-
-        public bool TrySample(
-            int programProducerIndex,
-            float visualSampleTime,
-            int cycle,
-            out AnimationFootPlacementSample sample)
-        {
-            if (programProducerIndex < 0 || programProducerIndex >= m_AnimationBindings.Length ||
-                m_AnimationBindings[programProducerIndex] == null)
-            {
-                sample = default;
-                return false;
-            }
-            return m_AnimationBindings[programProducerIndex].TrySampleFootPlacement(
-                visualSampleTime,
-                cycle,
-                out sample);
-        }
     }
 
     public readonly struct FootPlacementTraceRuntimeSettings
@@ -531,6 +502,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public readonly struct FootPlacementPelvisRuntimeSettings
     {
         public FootPlacementPelvisRuntimeSettings(
+            FootPlacementPelvisHeightMode heightMode,
+            float minimumDirectionalSpeed,
+            float minimumFootLeadDistance,
+            float minimumSlopeHeightDifference,
             float maximumUpOffset,
             float maximumDownOffset,
             float reachSlack,
@@ -542,6 +517,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float actorMovementCompensationHalfLifeSeconds,
             float actorMovementCompensationMaximumSpeed)
         {
+            HeightMode = heightMode;
+            MinimumDirectionalSpeed = minimumDirectionalSpeed;
+            MinimumFootLeadDistance = minimumFootLeadDistance;
+            MinimumSlopeHeightDifference = minimumSlopeHeightDifference;
             MaximumUpOffset = maximumUpOffset;
             MaximumDownOffset = maximumDownOffset;
             ReachSlack = reachSlack;
@@ -553,6 +532,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActorMovementCompensationHalfLifeSeconds = actorMovementCompensationHalfLifeSeconds;
             ActorMovementCompensationMaximumSpeed = actorMovementCompensationMaximumSpeed;
         }
+        public FootPlacementPelvisHeightMode HeightMode { get; }
+        public float MinimumDirectionalSpeed { get; }
+        public float MinimumFootLeadDistance { get; }
+        public float MinimumSlopeHeightDifference { get; }
         public float MaximumUpOffset { get; }
         public float MaximumDownOffset { get; }
         public float ReachSlack { get; }
@@ -565,6 +548,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float ActorMovementCompensationMaximumSpeed { get; }
         public void RequireValid()
         {
+            if (!Enum.IsDefined(typeof(FootPlacementPelvisHeightMode), HeightMode))
+                throw new InvalidOperationException("Foot Placement Pelvis Height mode is invalid.");
+            CharacterFootPlacementValidation.RequirePositive(MinimumDirectionalSpeed, nameof(MinimumDirectionalSpeed));
+            CharacterFootPlacementValidation.RequirePositive(MinimumFootLeadDistance, nameof(MinimumFootLeadDistance));
+            CharacterFootPlacementValidation.RequirePositive(MinimumSlopeHeightDifference, nameof(MinimumSlopeHeightDifference));
             CharacterFootPlacementValidation.RequireNonNegative(MaximumUpOffset, nameof(MaximumUpOffset));
             CharacterFootPlacementValidation.RequireNonNegative(MaximumDownOffset, nameof(MaximumDownOffset));
             CharacterFootPlacementValidation.RequireNonNegative(ReachSlack, nameof(ReachSlack));

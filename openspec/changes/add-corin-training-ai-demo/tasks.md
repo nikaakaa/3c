@@ -1,17 +1,17 @@
 ## 1. 基线与依赖
 
-- [ ] 1.1 读取本change的proposal、design、tasks和全部spec delta。
-- [ ] 1.2 确认add-btsmtl-ai-controller-authoring全部任务完成。
-- [ ] 1.3 确认extend-agent-authoring-for-ai-controller全部任务完成且唯一schema为v15。
-- [ ] 1.4 记录Standalone玩家和训练敌人的ActorId、Control Source与Presentation Role。
-- [ ] 1.5 记录训练敌人当前Neutral source序列化owner和全部引用。
-- [ ] 1.6 记录Corin Character Definition、Program、Projection、World binding与Presentation引用。
-- [ ] 1.7 记录玩家ActionTarget provider使用的Committed Observation binding。
-- [ ] 1.8 确认没有现有Corin AI资产、MonoBehaviour Bot或Character RootTree AI SubTree。
+- [x] 1.1 读取本change的proposal、design、tasks和全部spec delta。
+- [x] 1.2 确认add-btsmtl-ai-controller-authoring全部任务完成。
+- [x] 1.3 确认extend-agent-authoring-for-ai-controller全部任务完成且唯一schema为v16。
+- [x] 1.4 记录Standalone玩家和训练敌人的ActorId、Control Source与Presentation Role。
+- [x] 1.5 记录训练敌人当前Neutral source序列化owner和全部引用。
+- [x] 1.6 记录Corin Character Definition、Program、Projection、World binding与Presentation引用。
+- [x] 1.7 记录玩家ActionTarget provider使用的Committed Observation binding。
+- [x] 1.8 盘点现有半迁移Corin AI资产、失效MonoScript、过期Program、Missing组件、MonoBehaviour Bot和Character RootTree AI SubTree，并确定正式删除重建范围。
 
 ## 2. Corin AI Definition与Perception
 
-- [ ] 2.1 通过Agent v15 Snapshot确认可用AI authoring context。
+- [ ] 2.1 通过Agent v16 Snapshot确认可用AI authoring context。
 - [ ] 2.2 创建Corin Training AI Controller Definition stable identity。
 - [ ] 2.3 创建Corin Training AI RootTree stable identity。
 - [ ] 2.4 将RootTree绑定为AIControllerTree。
@@ -20,7 +20,7 @@
 - [ ] 2.7 在Profile显式绑定玩家ActorId候选。
 - [ ] 2.8 拒绝Team、Tag、名称、最近距离和Scene搜索配置。
 - [ ] 2.9 校验Definition、RootTree、Character与Perception引用完整。
-- [ ] 2.10 将AIControllerDefinition拆为同名独立Unity脚本资产。
+- [x] 2.10 将AIControllerDefinition拆为同名独立Unity脚本资产。
 - [ ] 2.11 在domain reload后确认Definition仍可由AssetDatabase按正式类型加载。
 
 ## 3. AI Blackboard与Tree
@@ -39,18 +39,23 @@
 - [ ] 3.12 配置显式重入条件产生新activation。
 - [ ] 3.13 保持全部节点属于Shared或AI capability。
 - [ ] 3.14 确认Tree没有Character Action、Timeline、Motion或Transform节点。
-- [ ] 3.15 补齐AI Snapshot对LoopStopType、CompareType、ConditionRuleGraph和AbortPolicy的完整投影。
-- [ ] 3.16 更新Agent技能合同，列出AI Shared节点与BT ConditionRule正式operation。
+- [x] 3.15 补齐AI Snapshot对LoopStopType、CompareType、ConditionRuleGraph和AbortPolicy的完整投影。
+- [x] 3.16 更新Agent技能合同，列出AI Shared节点与BT ConditionRule正式operation。
+- [x] 3.17 将Character Snapshot Presentation投影迁移为PoseGraph、BlendLibrary和Rig identity与revision。
+- [x] 3.18 输出AnimationChannel到PoseSlot的唯一只读映射。
+- [x] 3.19 将producer投影收敛为AnimationChannel、PoseSlot和source asset identity。
+- [x] 3.20 删除Snapshot中的旧Layer、TransitionLibrary、transition asset与easing字段。
+- [x] 3.21 将Snapshot、Patch、Validator、MCP bridge和Agent技能合同统一升级为v16且不提供旧alias。
 
 ## 4. Agent事务与Program
 
-- [ ] 4.1 导出Corin Training AI完整v15 Snapshot。
+- [ ] 4.1 导出Corin Training AI完整v16 Snapshot。
 - [ ] 4.2 根据stable identity生成唯一typed Patch。
 - [ ] 4.3 对Patch执行正式dry-run。
 - [ ] 4.4 消除Definition、Graph、Blackboard、Perception和Intent诊断。
 - [ ] 4.5 使用完全相同Patch执行正式apply。
 - [ ] 4.6 重新导出Snapshot并核对planned diff已经落地。
-- [ ] 4.7 运行Agent v15 Validator。
+- [ ] 4.7 运行Agent v16 Validator。
 - [ ] 4.8 编译Corin AI Semantic IR。
 - [ ] 4.9 生成exact-byte Float32 AIIntentProgram资产。
 - [ ] 4.10 绑定generated Program identity与source revision。
@@ -72,8 +77,9 @@
 - [ ] 5.12 确认不支持AI的Network composition继续在Active前拒绝该配置。
 - [ ] 5.13 将训练敌人VisualRoot替换为怪兽FBX实例并停用旧Corin VisualRoot。
 - [ ] 5.14 将Host的Animancer、VisualRoot和Foot Placement引用统一迁移到怪兽VisualRoot。
-- [ ] 5.15 配置怪兽Generic Bip001骨骼rig与Passthrough Foot Placement solver。
+- [ ] 5.15 配置怪兽Generic Bip001骨骼rig、左右LimbIK与正式FinalIK Foot Placement solver。
 - [ ] 5.16 确认怪兽Animator无Controller fallback且不申请Root Motion所有权。
+- [ ] 5.17 删除已废弃或Missing的Passthrough solver组件引用，确认Composition只引用怪兽同根正式组件。
 
 ## 6. 诊断与清理
 
@@ -90,11 +96,11 @@
 
 ## 7. 编译与严格校验
 
-- [ ] 7.1 使用规定参数构建AI Core与Float32程序集。
+- [x] 7.1 使用规定参数构建AI Core与Float32程序集。
 - [ ] 7.2 使用规定参数构建Character Runtime与Editor程序集。
-- [ ] 7.3 使用规定参数构建BTSMTL Runtime与Editor程序集。
+- [x] 7.3 使用规定参数构建BTSMTL Runtime与Editor程序集。
 - [ ] 7.4 每次编译后立即执行dotnet build-server shutdown。
 - [ ] 7.5 运行Corin AI Program artifact验证。
-- [ ] 7.6 运行Agent v15正式validate。
+- [ ] 7.6 运行Agent v16正式validate。
 - [ ] 7.7 运行openspec validate add-corin-training-ai-demo --strict --no-interactive。
 - [ ] 7.8 核对tasks勾选与Corin唯一资产和运行链一致。

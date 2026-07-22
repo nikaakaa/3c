@@ -321,7 +321,7 @@ Artifact以规范化feature构建稳定平衡层级树。每个节点保存候�
 
 Runtime对query计算节点理论最小cost：若lower bound已经高于当前Top-K最差精确cost，则整个节点可以安全剪枝。叶节点逐sample计算完整exact cost。该算法的剪枝不改变Top-K结果；树构建与遍历同分顺序由stable node/sample identity决定。
 
-Search Policy保存固定TopK、leaf capacity、plan horizon和maximum admitted sample count。Builder必须验证每个Domain分区满足容量约束；Runtime不按毫秒预算少算候选。
+Search Policy保存固定TopK、leaf capacity、plan horizon、maximum admitted sample count和`CoverageNearDuplicateCostThreshold`。`CoverageNearDuplicateCostThreshold`必须有限且大于0，单位精确等于Runtime最终使用的weighted normalized squared feature cost；Builder与Runtime不得硬编码另一阈值或在字段无效时回退默认值。Builder必须验证每个Domain分区满足容量约束；Runtime不按毫秒预算少算候选。
 
 ### Coverage Report
 
@@ -335,6 +335,17 @@ Artifact附带只读coverage summary：
 - contact protection可能造成的空候选区域。
 - 最大admitted set与索引深度。
 - 每项Coverage Requirement的Satisfied或Missing证明及对应sample区间。
+
+数据库级coverage diagnostics与每项Requirement summary共同属于Artifact唯一只读coverage section，不建立第二份summary路径。其规范统计口径如下：
+
+- Continuation reachability以全部`CanInitialize` sample为唯一根集合，以每个sample的正式`NextSampleIndex`和segment显式`ContinuationEntrySampleIndex`为有向边。遍历得到的sample记为reachable；segment只要包含任一reachable sample就记为reachable。Payload同时保存`TotalSampleCount`、reachable/unreachable sample count与`TotalSegmentCount`、reachable/unreachable segment count，并强制两组reachable加unreachable分别精确闭合到对应total。
+- Exact duplicate只比较最终compiled、normalized且active的feature vector；只有按dense active feature顺序取得的canonical float bits逐项完全相同才属于同一exact组。`ExactDuplicateSampleCount`统计所有成员数至少为2的exact组所覆盖的sample并集，每个sample只计一次；`ExactDuplicateSampleRatio = ExactDuplicateSampleCount / TotalSampleCount`。
+- Near duplicate只统计不属于exact duplicate pair的无序sample pair。每个pair使用Runtime同一份最终weighted normalized squared feature distance，distance小于或等于正式`CoverageNearDuplicateCostThreshold`时计为near duplicate；不得改用raw feature、未加权距离或近似索引距离。`TotalUnorderedNonExactPairCount`精确等于全部sample无序pair数减去exact pair数，`NearDuplicatePairRatio = NearDuplicatePairCount / TotalUnorderedNonExactPairCount`；分母为0时ratio规范为0。
+- Protected-contact region identity固定为`CoverageRequirementId + ProtectedContactMask`，其中mask只允许`Left`、`Right`或`Both`。Builder先得到满足该Requirement、但尚未应用protected-foot admission的raw sample set；raw set非空时该region才进入实际评估。随后只应用正式protected-foot admission，过滤结果为0才把该region计入`ProtectedContactEmptyRegionCount`。`ProtectedContactEmptyRegionRatio = ProtectedContactEmptyRegionCount / EvaluatedNonEmptyRawProtectedContactRegionCount`；没有实际评估region时ratio规范为0。
+- `MaximumAdmittedCandidateSetUpperBound`的单位是sample count，取上述全部实际评估region经过完整hard admission后的candidate count最大值；没有实际评估region时为0。它必须不大于`TotalSampleCount`和Search Policy的maximum admitted sample count。
+- `SearchIndexMaximumDepth`使用root edge-depth等于0的定义；单节点树最大深度为0，每沿一条parent-child边增加1，并且不得超过Search Policy的maximum tree depth。
+
+全部count必须为非负整数，全部ratio必须有限且位于`[0, 1]`，阈值必须有限且大于0；exact/near-duplicate、reachability、protected-contact、capacity与depth字段必须通过上述total和分母关系自洽。它们只是在显式Database Build期间离线计算并写入Artifact的作者诊断，不改变Runtime admission、exact search、plan rerank或最终选择。
 
 Coverage report用于作者决策，不在Runtime补洞或自动生成片段。任一正式Coverage Requirement缺失时本次Build失败，旧Artifact保持原样但不得被标记为当前Ready。
 
@@ -512,6 +523,7 @@ MotionMatchingSelectionPlan
   EntrySampleId
   SegmentId
   EntryTime
+  EntryVisualAdvanceRate
   HorizonEndSampleId
   ExactEntryCost
   HorizonCost
@@ -522,6 +534,26 @@ MotionMatchingSelectionPlan
 ```
 
 计划不是Gameplay Timeline，也不产生Window/Notify/Cue。它只让Pose Source在下一次搜索前连续采样同一segment/continuation。
+
+`EntryVisualAdvanceRate`不是播放器state speed。Plan Evaluator先读取当前sample的正式`NextSampleIndex`，以相邻sample的clip time差乘`Database SampleRate`得到有效视觉时间推进倍率；segment尾没有next时，使用该segment作者声明的`EndTime`与当前sample time的剩余量乘`Database SampleRate`。它不从表现帧时长、sample index差、文件名或默认常量猜测。
+
+### Pose Time Plan
+
+Selection Runtime只产生一种正式`MotionMatchingPoseTimePlan`：
+
+```text
+MotionMatchingPoseTimePlan
+  SampleTime
+  ContinuousVisualTime
+  Cycle
+  VisualTimeScale
+  Looping
+  AnimatorStateSpeed = 0
+```
+
+`SampleAccumulator`按表现delta累计，并以当前plan的`EntryVisualAdvanceRate`推进有效`SampleTime`。沿同一segment前进时，如果下一sample time小于当前sample time，表示loop回绕，`Cycle`递增；切换segment或Initialize/Jump时重新从cycle 0开始。非loop时`ContinuousVisualTime = SampleTime`且`Cycle = 0`；loop时`ContinuousVisualTime = SampleTime + Cycle * Segment.Duration`，其中`Segment.Duration`精确来自作者声明的`StartTime/EndTime`。
+
+`VisualTimeScale`精确等于`EntryVisualAdvanceRate`，只表达“有效视觉时间相对表现时间的推进倍率”。`AnimatorStateSpeed`固定为0，只表达Animancer后端手动设置采样时间，不会把`VisualTimeScale`改成0。Initialize、Jump、reset或其它source断裂由新的source continuity identity让下游清理首样本速度，禁止用`VisualTimeScale = 0`伪装断裂或暂停。
 
 ## Selection Lifecycle
 
@@ -535,6 +567,7 @@ Startup、Body reset、branch replacement、Projection replacement或history不�
 
 - 保持`AnimationPlaybackId`。
 - 保持`MotionMatchingSelectionGeneration`。
+- 保持`SourcePoseContinuityIdentity`，其值精确等于当前有效`MotionMatchingSelectionGeneration.Value`。
 - 更新SampleTime与plan cursor。
 - 更新同一Blend Entry，不重启clock。
 
@@ -544,6 +577,7 @@ Startup、Body reset、branch replacement、Projection replacement或history不�
 
 - 保持Program拥有的MM`AnimationPlaybackId`，只要producer activation未变。
 - 提升`MotionMatchingSelectionGeneration`。
+- 把`SourcePoseContinuityIdentity`同步为新的有效`MotionMatchingSelectionGeneration.Value`。
 - 生成新`AnimationBlendEntryId`。
 - 查找Blend Library中MM producer self-pair transition。
 - 复用该Slot唯一CrossFade/Inertial、Stored Pose和retirement。
@@ -562,18 +596,37 @@ Timeline和MM都降低为：
 ResolvedAnimationPoseRequest
   AnimationChannelId
   PoseSlotId
-  AnimationPlaybackId
-  PoseSourceKind
-  PoseSelectionGeneration
+  AnimationPoseSourceId
+  SourcePoseContinuityIdentity
   PresentationRequestSequence
   ProgramProducerIndex
+  VisualSampleTime
+  ContinuousVisualTime
+  Cycle
+  VisualTimeScale
   ClipSamplePlan[]
-  PoseParameterSamples
-  FootFeatureSamples
+  PoseParameters[]
+  LeftFootFeatures
+  RightFootFeatures
   ExactTransitionIdentity
 ```
 
-Timeline adapter可以输出多Clip ManualMixer plan；MM第一版输出单个selected Clip sample。`AnimancerPoseSamplingBackend`只按plan创建/更新时间冻结的source state并捕获pose，不读取Query、Cost、Domain或Plan。
+统一request不再把`AnimationPlaybackId`、`PoseSourceKind`和`PoseSelectionGeneration`作为三份顶层source identity；它们由正式`AnimationPoseSourceId`整体表达。MM侧已有的playback identity、source kind与selection generation只能在最终公共降低边界组装一次该identity，不能再建立MM私有source key。`SourcePoseContinuityIdentity`精确取当前有效`MotionMatchingSelectionGeneration.Value`，不得取sample index、sample time、`PresentationRequestSequence`或独立allocator；因此Continue保持，Initialize/Jump随generation变化。
+
+MM内部`MotionMatchingClipSamplePlan`只持有selection的`MotionMatchingPoseTimePlan`，并按以下唯一映射降低到公共`ClipSamplePlan`：
+
+```text
+ClipTime           <- MotionMatchingPoseTimePlan.SampleTime
+ContinuousClipTime <- MotionMatchingPoseTimePlan.ContinuousVisualTime
+NormalizedTime     <- ClipTime / Clip.length
+IsLooping          <- MotionMatchingPoseTimePlan.Looping
+```
+
+Clip必须存在、长度有限且大于0，clip time必须在合法范围，loop cycle与continuous time必须一致。Playable state的`Speed`仍固定为0，只用于后端手动采样；公共request的`VisualTimeScale`继续取`EntryVisualAdvanceRate`。
+
+Timeline adapter可以输出多Clip ManualMixer plan；MM第一版输出单个selected Clip sample。MM选中Clip的正式Projection曲线在`VisualSampleTime`处写入dense `PoseParameters[]`，其中Foot Placement Weight唯一使用canonical `PoseParameterId` `animation.foot-placement-weight`；左右脚正式feature分别写入`LeftFootFeatures`与`RightFootFeatures`，Foot不得二次查询MM Database。`ExactTransitionIdentity`沿用正式producer self-pair identity。`AnimancerPoseSamplingBackend`只按plan创建/更新时间冻结的source state并捕获pose，不读取Query、Cost、Domain或Plan。
+
+上述是统一降低的唯一目标合同；当前MM独立模块已给出时间与continuity输入，但在公共Presentation接线完成前，不得把本节表述成已经安装最终runtime调用链，也不得为未接线状态增加wrapper、fallback或并行播放器。
 
 MM不参与Timeline Marker Sync。Foot contact continuity来自MM Artifact feature与admission；跨Timeline/MM producer handoff只使用Blend Stack transition，不伪造Marker relation。
 

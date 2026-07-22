@@ -27,6 +27,11 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 dependencies == null || dependencies.Length == 0 || !orderedDependencyHash.IsValid)
                 throw new ArgumentException("Expected Motion Matching Artifact identity is incomplete.");
             m_Dependencies = (MotionMatchingClipDependencyIdentity[])dependencies.Clone();
+            for (int i = 1; i < m_Dependencies.Length; i++)
+            {
+                if (m_Dependencies[i - 1].SourceClipId.CompareTo(m_Dependencies[i].SourceClipId) >= 0)
+                    throw new ArgumentException("Expected Motion Matching Clip dependencies are not in strict SourceClipId order.", nameof(dependencies));
+            }
             ArtifactSchemaVersion = artifactSchemaVersion;
             AlgorithmVersion = algorithmVersion;
             DatabaseId = databaseId;
@@ -122,6 +127,14 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 throw new ArgumentNullException(nameof(artifact));
             if (string.IsNullOrWhiteSpace(candidatePath))
                 throw new ArgumentException("Motion Matching Artifact candidate path is missing.", nameof(candidatePath));
+            database.RequireValid();
+            if (!artifact.Identity.DatabaseId.Equals(database.DatabaseId) || artifact.Identity.DatabaseRevision != database.Revision ||
+                !artifact.SearchDomainId.Equals(database.SearchDomainId) || artifact.SampleRate != database.SampleRate ||
+                !artifact.Identity.FeatureSchemaId.Equals(database.FeatureSchema.FeatureSchemaId) ||
+                artifact.Identity.FeatureSchemaRevision != database.FeatureSchema.Revision ||
+                !string.Equals(artifact.Identity.RigId, database.TargetRig.RigId, StringComparison.Ordinal) ||
+                !string.Equals(artifact.Identity.RigRevision, database.TargetRig.Revision, StringComparison.Ordinal))
+                throw new InvalidOperationException("Motion Matching Artifact identity does not match the target Database Definition.");
             string path = GetPath(database);
             string directory = Path.GetDirectoryName(path) ?? throw new InvalidOperationException("Motion Matching Artifact path has no directory.");
             Directory.CreateDirectory(directory);

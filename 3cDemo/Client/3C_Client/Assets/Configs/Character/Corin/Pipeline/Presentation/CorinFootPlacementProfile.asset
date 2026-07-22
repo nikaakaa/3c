@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3b014348f0c4733bd0a1b0c9d90a21e, type: 3}
   m_Name: CorinFootPlacementProfile
   m_EditorClassIdentifier:
-  m_PoseSourceLayerId: Base
   m_Trace:
     m_GroundLayerMask:
       serializedVersion: 2
@@ -61,6 +60,10 @@ MonoBehaviour:
     m_MaximumHeelLiftDistance: 0.06
     m_MaximumAnkleTwistDegrees: 35
   m_Pelvis:
+    m_HeightMode: 2
+    m_MinimumDirectionalSpeed: 0.15
+    m_MinimumFootLeadDistance: 0.04
+    m_MinimumSlopeHeightDifference: 0.025
     m_MaximumUpOffset: 0.18
     m_MaximumDownOffset: 0.32
     m_ReachSlack: 0.025

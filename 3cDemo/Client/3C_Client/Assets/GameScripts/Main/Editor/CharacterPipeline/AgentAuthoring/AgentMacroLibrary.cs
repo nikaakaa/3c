@@ -22,13 +22,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 !string.Equals(intent.domain, snapshot.domain, StringComparison.Ordinal) ||
                 !string.Equals(intent.rootIdentity, snapshot.rootIdentity, StringComparison.Ordinal))
             {
-                report?.Error("intent.domain", "intent_root_mismatch", "Intent 的 domain/rootIdentity 必须与 v15 Snapshot 完全一致。");
+                report?.Error("intent.domain", "intent_root_mismatch", "Intent 的 domain/rootIdentity 必须与 v16 Snapshot 完全一致。");
                 return false;
             }
             report?.Error(
                 "intent.macro",
                 "macro_removed_use_typed_patch",
-                "Agent v15 不展开带业务默认值的 controller macro。请提交显式 domain-aware AgentPatchIR。");
+                "Agent v16 不展开带业务默认值的 controller macro。请提交显式 domain-aware AgentPatchIR。");
             return false;
         }
     }

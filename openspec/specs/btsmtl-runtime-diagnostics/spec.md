@@ -77,7 +77,7 @@ SimulationKernel、Pipeline Runtime/Pass、Session Source、WorldSolver adapter�
 
 - **WHEN** 当前 Debug Session 未启用 Animation channel
 - **THEN** runtime MUST NOT 构建 Animation trace payload
-- **AND** CharacterAnimationPlaybackCommandQueue、AnimationPlaybackLifecycle 和 AnimancerPlaybackAdapter MUST 继续产生相同正式结果
+- **AND** CharacterAnimationPlaybackCommandQueue、AnimationPlaybackLifecycle、PoseSlot Blend Stack与Pose Graph native job MUST继续产生相同正式结果
 
 #### Scenario: 记录 Blackboard 值
 
@@ -199,4 +199,3 @@ Runtime diagnostics、Debug Session 和 editor overlay MUST NOT 写入 Program s
 - **WHEN** Unity 退出 Play Mode
 - **THEN** 所有 Session MUST 解绑 runtime target
 - **AND** authoring asset MUST 不包含 runtime overlay、selection、interest、Capture 或 trace state
-

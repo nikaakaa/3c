@@ -97,7 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 ResolveInstance(diagnostics, failure.PlaybackId),
                 new RuntimeTracePayload
                 {
-                    LayerId = sample.LayerId,
+                    AnimationChannelId = sample.AnimationChannelId.Value,
                     Name = sample.Binding?.CanonicalGroupId ?? string.Empty,
                     Status = failure.Reason.ToString(),
                     OwnerId = failure.PlaybackId.ToString(),
@@ -124,7 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         ResolveInstance(diagnostics, selection.PlaybackId),
                         new RuntimeTracePayload
                         {
-                            LayerId = selection.AnimationChannelId.Value,
+                            AnimationChannelId = selection.AnimationChannelId.Value,
                             Status = selection.HasPlayback ? "Selected" : "None",
                             OwnerId = selection.PlaybackId.ToString(),
                             Time = selection.LocalLogicTick,
@@ -133,29 +133,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         });
                     break;
                 }
-                case AnimationPlaybackCommandKind.Sample:
+                case AnimationPlaybackCommandKind.PoseRequest:
                 {
                     if (!diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, RuntimeTraceEventKind.AnimationProducerSampled))
                         break;
-                    AnimationProducerSample sample = command.Sample;
-                    RuntimeSourceElementHandle source = sample.Clips.Count > 0
-                        ? sample.Clips[0].SourceHandle
-                        : RuntimeSourceElementHandle.Invalid;
+                    ResolvedAnimationPoseRequest poseRequest = command.PoseRequest;
                     diagnostics.Publish(
                         RuntimeTraceChannel.Animation,
                         RuntimeTraceDomain.Presentation,
                         RuntimeTraceEventKind.AnimationProducerSampled,
-                        source,
-                        ResolveInstance(diagnostics, sample.PlaybackId),
+                        RuntimeSourceElementHandle.Invalid,
+                        ResolveInstance(diagnostics, poseRequest.SourceId.PlaybackId),
                         new RuntimeTracePayload
                         {
-                            LayerId = sample.AnimationChannelId.Value,
-                            Name = sample.TrackName,
-                            Status = sample.HasOutput ? "Output" : "Empty",
-                            OwnerId = sample.PlaybackId.ToString(),
-                            Time = sample.SampleTime,
-                            Cycle = sample.Cycle,
-                            Detail = $"Clips:{sample.Clips.Count}"
+                            AnimationChannelId = poseRequest.AnimationChannelId.Value,
+                            Name = poseRequest.SourceId.SourceKind.ToString(),
+                            Status = "Output",
+                            OwnerId = poseRequest.SourceId.ToString(),
+                            Time = poseRequest.VisualSampleTime,
+                            SecondaryTime = (float)poseRequest.ContinuousVisualTime,
+                            Cycle = poseRequest.Cycle,
+                            Detail = $"Slot={poseRequest.PoseSlotId} | Clips={poseRequest.Clips.Count} | Parameters={poseRequest.PoseParameters.Count}"
                         });
                     break;
                 }
@@ -192,11 +190,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 case AnimationPlaybackLifecyclePhase.PendingFirstSample:
                     kind = RuntimeTraceEventKind.AnimationPlaybackPending;
                     break;
-                case AnimationPlaybackLifecyclePhase.Current:
-                    kind = RuntimeTraceEventKind.AnimationPlaybackCurrent;
+                case AnimationPlaybackLifecyclePhase.Selected:
+                    kind = RuntimeTraceEventKind.AnimationPlaybackSelected;
                     break;
-                case AnimationPlaybackLifecyclePhase.Outgoing:
-                    kind = RuntimeTraceEventKind.AnimationPlaybackOutgoing;
+                case AnimationPlaybackLifecyclePhase.Retained:
+                    kind = RuntimeTraceEventKind.AnimationPlaybackRetained;
                     break;
                 default:
                     kind = RuntimeTraceEventKind.AnimationPlaybackRetired;
@@ -213,33 +211,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     ResolveInstance(diagnostics, snapshot.PlaybackId),
                     new RuntimeTracePayload
                     {
-                        LayerId = snapshot.LayerId,
-                        Name = snapshot.StateKey,
-                        Status = snapshot.Phase.ToString(),
+                        AnimationChannelId = snapshot.AnimationChannelId.Value,
+                        Name = snapshot.PoseSlotId.Value,
+                        Status = $"{snapshot.Phase}/{snapshot.SlotAvailability}",
                         OwnerId = snapshot.PlaybackId.ToString(),
+                        RelatedElementId = snapshot.SourceId.ToString(),
                         Time = snapshot.SampleTime,
-                        Weight = snapshot.Weight,
-                        NormalizedTime = snapshot.FadeProgress,
-                        Flag = snapshot.HasVisualSample
-                    });
-            }
-            if (diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, RuntimeTraceEventKind.AnimationFade))
-            {
-                diagnostics.Publish(
-                    RuntimeTraceChannel.Animation,
-                    RuntimeTraceDomain.Presentation,
-                    RuntimeTraceEventKind.AnimationFade,
-                    RuntimeSourceElementHandle.Invalid,
-                    ResolveInstance(diagnostics, snapshot.PlaybackId),
-                    new RuntimeTracePayload
-                    {
-                        LayerId = snapshot.LayerId,
-                        Name = snapshot.StateKey,
-                        Status = snapshot.Phase.ToString(),
-                        OwnerId = snapshot.PlaybackId.ToString(),
-                        Time = snapshot.SampleTime,
-                        Weight = snapshot.Weight,
-                        NormalizedTime = snapshot.FadeProgress,
+                        Weight = snapshot.SlotOutputWeight,
                         Flag = snapshot.HasVisualSample
                     });
             }
@@ -276,7 +254,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 ResolveInstance(diagnostics, snapshot.Target),
                 new RuntimeTracePayload
                 {
-                    LayerId = snapshot.LayerId,
+                    AnimationChannelId = snapshot.AnimationChannelId.Value,
                     Name = snapshot.SyncGroupId,
                     Status = snapshot.Reason.ToString(),
                     OwnerId = snapshot.Target.ToString(),

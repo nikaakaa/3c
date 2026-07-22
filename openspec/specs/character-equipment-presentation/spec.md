@@ -13,11 +13,11 @@ Feature MUST只声明Required Layer、blend/output policy、ProducerId与VisualB
 - **THEN** 唯一Animation Profile MUST提供匹配Layer和producer binding
 - **AND** Gun Feature MUST不内嵌第二个Animation或Equipment Presentation Profile
 
-#### Scenario: Layer配置缺失
+#### Scenario: Gameplay producer route缺失
 
-- **WHEN** Feature要求的LayerId不存在
-- **THEN** Projection build MUST失败并定位Feature与Layer
-- **AND** Runtime MUST不改用Base层
+- **WHEN** Feature声明的RequiredProducerId无法由其Gameplay route提供
+- **THEN** Program build MUST失败并定位Feature与producer
+- **AND** Presentation MUST不为Equipment创建AnimationChannel、PoseSlot或fallback producer
 
 ### Requirement: Equipment动画必须继续通过Timeline producer提交
 
@@ -98,4 +98,3 @@ Equipment Visual Runtime MUST只管理物体/Renderer/socket生命周期；Anima
 - **WHEN** Equip Timeline动画播放完成
 - **THEN** Animation lifecycle MUST退休producer
 - **AND** Equipment visual MUST继续保持当前装备显示
-

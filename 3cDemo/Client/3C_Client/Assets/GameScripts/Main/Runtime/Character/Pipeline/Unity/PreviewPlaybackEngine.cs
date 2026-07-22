@@ -17,11 +17,11 @@ namespace ThirdPersonCharacter.Pipeline
         readonly CharacterAnimationPlaybackRuntime m_Playback;
         readonly ActorId m_PreviewActorId;
         readonly OperationHandle m_TimelineOperation;
-        readonly HashSet<string> m_SelectedLayers = new HashSet<string>(StringComparer.Ordinal);
-        readonly Dictionary<string, ActivePreviewProducer> m_Active =
-            new Dictionary<string, ActivePreviewProducer>(StringComparer.Ordinal);
-        readonly Dictionary<string, ActivePreviewProducer> m_NextActive =
-            new Dictionary<string, ActivePreviewProducer>(StringComparer.Ordinal);
+        readonly HashSet<AnimationChannelId> m_SelectedChannels = new HashSet<AnimationChannelId>();
+        readonly Dictionary<AnimationChannelId, ActivePreviewProducer> m_Active =
+            new Dictionary<AnimationChannelId, ActivePreviewProducer>();
+        readonly Dictionary<AnimationChannelId, ActivePreviewProducer> m_NextActive =
+            new Dictionary<AnimationChannelId, ActivePreviewProducer>();
         readonly Dictionary<string, AnimationPlaybackId> m_TargetPlaybacks =
             new Dictionary<string, AnimationPlaybackId>(StringComparer.Ordinal);
         CharacterPresentationProducerEntry m_ComparisonTarget;
@@ -34,6 +34,7 @@ namespace ThirdPersonCharacter.Pipeline
             CharacterSimulationProgram program,
             CharacterPresentationProjection projection,
             AnimancerComponent animancer,
+            CharacterAnimationRigBinding animationRigBinding,
             TimelineData timeline,
             Guid previewSessionId)
         {
@@ -56,8 +57,8 @@ namespace ThirdPersonCharacter.Pipeline
                 contract,
                 m_Projection,
                 animancer,
-                false,
-                AnimationTransitionEvaluationMode.Immediate);
+                animationRigBinding,
+                false);
         }
 
         public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> Snapshots => m_Playback.Snapshots;
@@ -82,7 +83,7 @@ namespace ThirdPersonCharacter.Pipeline
                 source.Kind != CharacterPresentationProducerKind.Animation ||
                 target.Animation?.MarkerSync == null || source.Animation?.MarkerSync == null ||
                 !target.Animation.MarkerSync.IsMarkerGroup || !source.Animation.MarkerSync.IsMarkerGroup ||
-                !string.Equals(target.LayerId, source.LayerId, StringComparison.Ordinal) ||
+                target.AnimationChannelId != source.AnimationChannelId ||
                 !string.Equals(
                     target.Animation.MarkerSync.CanonicalGroupId,
                     source.Animation.MarkerSync.CanonicalGroupId,
@@ -98,7 +99,7 @@ namespace ThirdPersonCharacter.Pipeline
             if (session == null || !session.HasEvaluation)
                 throw new ArgumentException("Timeline preview session has no evaluation.", nameof(session));
 
-            m_SelectedLayers.Clear();
+            m_SelectedChannels.Clear();
             m_NextActive.Clear();
             m_TargetPlaybacks.Clear();
             var tick = new SimulationTick(session.EvaluationTick);
@@ -118,21 +119,14 @@ namespace ThirdPersonCharacter.Pipeline
                     producer.Animation == null)
                     throw new InvalidOperationException(
                         $"Timeline preview producer '{producerIdentity}' has no compiled animation projection.");
-                if (!m_SelectedLayers.Add(producer.LayerId))
+                if (!m_SelectedChannels.Add(producer.AnimationChannelId))
                     throw new InvalidOperationException(
-                        $"Timeline preview contains multiple selected producers for layer '{producer.LayerId}'.");
+                        $"Timeline preview contains multiple selected producers for Animation Channel '{producer.AnimationChannelId}'.");
 
                 var playbackId = new AnimationPlaybackId(producer.ProducerId, session.Generation);
                 m_TargetPlaybacks[track.AuthoringId] = playbackId;
-                AnimationProducerSample probe =
-                    producer.Animation.Sample(producer, playbackId, session.CurrentTime, 0, 1f);
-                if (!probe.IsValid)
-                    throw new InvalidOperationException(
-                        $"Timeline preview producer '{producer.ProducerId}' produced an invalid sample.");
-                if (!probe.HasOutput)
-                    continue;
                 var active = new ActivePreviewProducer(producer, session.Generation);
-                m_NextActive.Add(producer.LayerId, active);
+                m_NextActive.Add(producer.AnimationChannelId, active);
                 m_Playback.Publish(
                     CreateCommand(
                         PresentationCommandKind.SelectProducer,
@@ -155,7 +149,7 @@ namespace ThirdPersonCharacter.Pipeline
                     producer);
             }
 
-            foreach (KeyValuePair<string, ActivePreviewProducer> item in m_Active)
+            foreach (KeyValuePair<AnimationChannelId, ActivePreviewProducer> item in m_Active)
             {
                 if (m_NextActive.ContainsKey(item.Key))
                     continue;
@@ -176,7 +170,7 @@ namespace ThirdPersonCharacter.Pipeline
             }
 
             m_Active.Clear();
-            foreach (KeyValuePair<string, ActivePreviewProducer> item in m_NextActive)
+            foreach (KeyValuePair<AnimationChannelId, ActivePreviewProducer> item in m_NextActive)
                 m_Active.Add(item.Key, item.Value);
             m_Playback.Present(
                 session.EvaluationTick,
@@ -211,7 +205,7 @@ namespace ThirdPersonCharacter.Pipeline
             m_Playback.Reset();
             m_Active.Clear();
             m_NextActive.Clear();
-            m_SelectedLayers.Clear();
+            m_SelectedChannels.Clear();
             m_TargetPlaybacks.Clear();
             m_ComparisonSourceSeeded = false;
         }
@@ -246,7 +240,7 @@ namespace ThirdPersonCharacter.Pipeline
                     targetTrackAuthoringId,
                     hasRelation ? relation.Source.ToString() : string.Empty,
                     playbackId.ProducerId.ToString(),
-                    playback.LayerId,
+                    playback.AnimationChannelId,
                     playback.SyncGroupId,
                     playback.PreviousMarkerId,
                     playback.NextMarkerId,

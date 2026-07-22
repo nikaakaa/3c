@@ -251,6 +251,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 parts.Add(plan.Plan.EntrySampleId.Value.ToString(CultureInfo.InvariantCulture));
                 parts.Add(Bits(plan.Plan.TotalCost));
                 parts.Add(plan.Plan.HorizonEndSampleId.Value.ToString(CultureInfo.InvariantCulture));
+                parts.Add(Bits(plan.Plan.EntryVisualAdvanceRate));
             }
             return StableHash.Compute(parts.ToArray());
         }

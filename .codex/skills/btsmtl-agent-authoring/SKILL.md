@@ -44,18 +44,18 @@ export_snapshot
 
 ### 不属于此写入口
 
-`CharacterAnimationPresentationProfile`、Animancer TransitionLibrary、动画 Layer/Priority 和 Presentation producer binding 只允许由各自正式 authoring 入口修改。Agent Snapshot 可以只读理解它们；Agent Patch 不得获得第二个写入口。
+`CharacterAnimationPresentationProfile`、Pose Graph、Blend Library、Rig和Presentation producer source binding只允许由各自正式authoring入口修改。Agent Snapshot只读输出它们的资产identity/revision、AnimationChannel到PoseSlot映射和producer source identity；不得输出旧Layer、TransitionLibrary、easing或transition asset alias。Agent Patch不得获得第二个Presentation写入口。
 
 Animation Foot Analysis的Source identity、版本和算法摘要只允许Snapshot只读输出。Sole Speed、Height、Plant、Landing及其Library artifact是generated data，不得进入Timeline Curve Channel catalog、Patch payload或Rebuild operation；Agent仍只能修改正式注册的`Foot Placement Weight`等editable channel。
 
-`CharacterBodyMotionProfile`同样不属于Agent写入口。当前schema v15 CharacterController Snapshot从精确`CharacterPipelineDefinition`引用只读投影Profile identity、content revision、GravityAcceleration、MaximumFallSpeed、semantic version与`AirborneVerticalMotion`要求；不得输出runtime VerticalVelocity或pending integration plan。Patch catalog、lowerer、handler与MCP bridge不得增加Profile mutation或任意SerializedProperty写入口。
+`CharacterBodyMotionProfile`同样不属于Agent写入口。当前schema v16 CharacterController Snapshot从精确`CharacterPipelineDefinition`引用只读投影Profile identity、content revision、GravityAcceleration、MaximumFallSpeed、semantic version与`AirborneVerticalMotion`要求；不得输出runtime VerticalVelocity或pending integration plan。Patch catalog、lowerer、handler与MCP bridge不得增加Profile mutation或任意SerializedProperty写入口。
 
 ## 资产修改流程
 
 1. 明确`CharacterController`或`AIController` domain，并确定对应`CharacterPipelineDefinition`或`AIControllerDefinition`的唯一`Assets/...`精确路径。不得从资产类型、目录、显示名或场景猜domain和目标。
 2. 确认 Unity 不在编译、更新 AssetDatabase、Play Mode 或 Play Mode 切换中。遇到 `editor_busy` 或 `play_mode_active` 时停止 authoring；退出 Play Mode 或等待编译结束即可，不要重启 Unity，不要改走 fallback。
-3. 使用同一`domain + root_asset_path`调用`export_snapshot`。只使用当前schema v15 Snapshot的`rootIdentity`、`sourceRevision`、stable authoring identity和operation output reference；不得从YAML、列表index、display name、Actor名称或Tag猜identity。
-4. 根据Snapshot生成最小`AgentPatchIR`。Patch必须使用`agent-character-controller-synthesis.v15`并原样携带`domain`、`rootIdentity`和`sourceRevision`；每个operation使用唯一`id`，后序operation只能引用已出现的前序output。
+3. 使用同一`domain + root_asset_path`调用`export_snapshot`。只使用当前schema v16 Snapshot的`rootIdentity`、`sourceRevision`、stable authoring identity和operation output reference；不得从YAML、列表index、display name、Actor名称或Tag猜identity。
+4. 根据Snapshot生成最小`AgentPatchIR`。Patch必须使用`agent-character-controller-synthesis.v16`并原样携带`domain`、`rootIdentity`和`sourceRevision`；每个operation使用唯一`id`，后序operation只能引用已出现的前序output。
 5. 调用 `dry_run_patch`。逐条处理机器可读的 `path/code/message/suggestion`，并确认 `plannedDiff` 正是业务预期。Dry-run 不得 dirty 资产。
 6. 只有 dry-run 无错误时才用完全相同的 `patch_json` 调用 `apply_patch`。必须同时看到 `success=true`、`applied=true`、`saved=true`。
 7. 使用同一domain和root再次调用`export_snapshot`与`validate`，确认root identity、source revision、拓扑、ownership、引用和正式Compiler report一致。
@@ -85,7 +85,7 @@ Patch 字段、operation 和当前代码地图见 [current-contract.md](referenc
 | 修改 Definition Body Motion Profile或Program垂直能力 | Snapshot models/exporter、Definition/Profile正式校验、Simulation Compiler report；保持Patch/MCP只读 |
 | 修改 Macro 业务结构 | MacroLibrary 与 MacroCoverageEvaluator；不要把角色名或连招名塞进通用 Validator |
 | 修改 MCP action 或事务生命周期 | MCP tool、AuthoringModels、AuthoringService、EditorWindow 调用方、bridge current spec |
-| 修改AI Definition、Perception、AI节点或Intent catalog | v15 AI Snapshot、domain-aware lowerer、AI handler、AI Validator、AI Compiler与current spec |
+| 修改AI Definition、Perception、AI节点或Intent catalog | v16 AI Snapshot、domain-aware lowerer、AI handler、AI Validator、AI Compiler与current spec |
 
 4. 外部 Patch/Snapshot 合同发生破坏性变化时提升 `AgentAuthoringSchema.Version`，直接删除旧 parser 和兼容路径。不要保留旧 schema reader、converter 或双写。
 5. Agent mutation 必须继续走 `BaseGraph.CreateNode`、`Link`、`LinkProperty` 和正式 Timeline ownership API。不得在 handler 中直接维护第二套节点、边或 Timeline 数据。
@@ -105,9 +105,9 @@ Patch 字段、operation 和当前代码地图见 [current-contract.md](referenc
 
 - `play_mode_active`：退出 Play Mode，不重启 Unity。
 - `editor_busy`：等待当前编译/导入结束，不排队、不重试脚本化 fallback。
-- `unsupported_schema_version`：重新导出当前snapshot，生成v15 Patch；不转换旧Patch。
+- `unsupported_schema_version`：重新导出当前snapshot，生成v16 Patch；不转换旧Patch。
 - Marker Sync迁移使用`configure_animation_track_marker_sync`、`ensure_animation_sync_marker`、`move_animation_sync_marker`与`delete_animation_sync_marker`；MarkerGroup配置必须显式携带`animationMarkerSyncRole`；handler只能调用AnimationTrack正式authoring API。
-- Timeline曲线修改使用唯一`configure_timeline_curve_channel`；目标必须来自v15 CharacterController Snapshot中的Timeline、Track、Clip stable identity与registered `curveChannelId`，payload必须完整携带wrap mode及全部Keyframe字段。禁止使用字段名、SerializedProperty path或key index作为外部identity。
+- Timeline曲线修改使用唯一`configure_timeline_curve_channel`；目标必须来自v16 CharacterController Snapshot中的Timeline、Track、Clip stable identity与registered `curveChannelId`，payload必须完整携带wrap mode及全部Keyframe字段。禁止使用字段名、SerializedProperty path或key index作为外部identity。
 - `unknown_operation` / `unknown_node_type`：扩展正式 catalog/emitter 或承认当前工具不支持；禁止创建 placeholder。
 - `transaction_owner_*`：修复 ownership/topology，使全部 serialized owner 可进入同一事务；禁止缩小 Undo 范围。
 - apply 后 validator 失败：接受自动回滚，修 Patch 或 Agent 实现后重新从 snapshot 开始。

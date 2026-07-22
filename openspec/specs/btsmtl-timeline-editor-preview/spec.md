@@ -1,7 +1,7 @@
 # btsmtl-timeline-editor-preview Specification
 
 ## Purpose
-定义 BTSMTL Timeline 编辑器预览的正式链路：编辑器预览由 `TimelinePreviewSession` 控制播放状态，预览目标通过 `TimelinePreviewTarget` 接入正式角色管线，复用 Timeline sampling、AnimationPlaybackLifecycle 和 AnimancerPlaybackAdapter，不恢复旧 `TimelinePlayer`、Registry/Arbitrator 或独立 PlayableGraph 预览权威。
+定义BTSMTL Timeline编辑器预览的正式链路：编辑器预览由`TimelinePreviewSession`控制播放状态，预览目标通过`TimelinePreviewTarget`接入正式角色管线，复用Timeline sampling、AnimationPlaybackLifecycle、每Pose Slot Blend Stack与Pose Graph，不恢复旧`TimelinePlayer`、Registry/Arbitrator、Animancer adapter或独立PlayableGraph预览权威。
 ## Requirements
 ### Requirement: Timeline Animation Analysis必须是按需领域工具
 
@@ -78,7 +78,7 @@ Animation Analysis面板 MUST只显示离线AnimationClip局部特征。它 MUST
 
 ### Requirement: Timeline 编辑器预览目标来自正式管线预览目标
 
-系统 MUST使用 `TimelinePreviewTarget` 作为 Timeline 编辑器可选择的预览目标抽象，并由 `CharacterPipelineHost` 或等价正式角色管线目标实现它。正式角色管线预览目标 MUST沿 `CharacterPipelineDefinition.AnimationPresentationProfile` 与匹配的正式 `CharacterPresentationProjection` 取得唯一 Animancer TransitionLibrary、producer bindings，并使用 `AnimancerComponent` 正式引用。系统 MUST不使用 TimelinePlayer、场景搜索、fallback target、Definition 内联 Presentation 或第二份 animation layer 配置作为预览目标。
+系统 MUST使用`TimelinePreviewTarget`作为Timeline编辑器可选择的预览目标抽象，并由`CharacterPipelineHost`或等价正式角色管线目标实现它。正式角色管线预览目标 MUST沿`CharacterPipelineDefinition.AnimationPresentationProfile`与匹配的正式`CharacterPresentationProjection`取得Pose Program、Blend Stack、Rig与producer source bindings，并使用`AnimancerComponent`和显式`CharacterAnimationRigBinding`。系统 MUST不使用TimelinePlayer、场景搜索、fallback target、Definition内联Presentation或第二份动画拓扑配置作为预览目标。
 
 #### Scenario: 选择预览目标
 
@@ -220,7 +220,7 @@ Timeline Editor MUST显示 TreeClip的 Decision/Commit阶段、inline/shared own
 
 ### Requirement: Timeline Live Debug 必须显示真实 runtime membership
 
-Timeline Live Debug MUST 从共享 provider 的 current playback summary 显示当前 playback instance/generation、发起 Graph / Node source、可用的 activation context、active Track/Clip、TreeClip phase/runtime、AnimationProducerSample、PendingFirstSample/Current/Outgoing/Retired 与 terminal state。停止 Capture 后，它 MUST 在共享 Capture history position 显示对应历史事实。它 MUST 不根据当前 authoring time 重新采样来猜测 membership。
+Timeline Live Debug MUST从共享provider的current playback summary显示当前playback instance/generation、发起Graph/Node source、可用的activation context、active Track/Clip、TreeClip phase/runtime、ResolvedAnimationPoseRequest、PendingFirstSample/Selected/Retained/Retired与terminal state。停止Capture后，它 MUST在共享Capture history position显示对应历史事实。它 MUST不根据当前authoring time重新采样来猜测membership。
 
 #### Scenario: Decision TreeClip active
 
@@ -250,18 +250,18 @@ Timeline Live Debug MUST 从共享 provider 的 current playback summary 显示�
 
 ### Requirement: 预览采样必须复用正式动画播放链路
 
-纯动画 Timeline Preview MUST 通过 `CharacterPresentationProjection` 将稳定 producer identity 解析为表现资源，并复用正式 CharacterAnimationPlaybackCommandQueue、AnimationPlaybackLifecycle 与 AnimancerPlaybackAdapter。Preview session MUST 为每层生成零或一个带独立 preview EventId/playback generation 的 producer command 和 sample；它 MUST 不生成 `AnimationLayerSelection`、比较 Priority、直接播放 Clip 或实现第二套 layer mixing。
+纯动画Timeline Preview MUST通过`CharacterPresentationProjection`将稳定producer identity解析为表现资源、AnimationChannelId与PoseSlotId，并复用正式CharacterAnimationPlaybackCommandQueue、AnimationPlaybackLifecycle、Blend Stack、Pose Graph与Animancer source backend。Preview session MUST为每个channel生成零或一个带独立preview EventId/playback generation的producer command和resolved request；它 MUST不生成旧Layer selection、比较Priority、直接播放Clip或实现第二套混合。
 
 #### Scenario: 当前时间采样
 
 - **WHEN** preview time 位于 AnimationTrack clip 范围
 - **THEN** session MUST 提交该 producer 的唯一 preview command 与 sample
-- **AND** AnimationPlaybackLifecycle MUST 完成 PendingFirstSample/Current 提交
-- **AND** AnimancerPlaybackAdapter MUST 应用 Projection 中的正式 producer binding
+- **AND** AnimationPlaybackLifecycle MUST完成PendingFirstSample/Selected提交
+- **AND** 正式native链 MUST应用Projection中的producer source、slot与Pose Program binding
 
-#### Scenario: 同层多个 producer
+#### Scenario: 同channel多个producer
 
-- **WHEN** 一次 preview evaluation 发现多个 producer 声明同一 LayerId
+- **WHEN** 一次preview evaluation发现多个producer声明同一AnimationChannelId
 - **THEN** session MUST 明确拒绝该 evaluation
 - **AND** MUST 不按 Priority 或 Track 顺序选择赢家
 
@@ -542,4 +542,3 @@ Timeline Editor MUST保留现有TimelineEditorWindow、TimelineField、Inspector
 - **WHEN** 同一Timeline source存在多个runtime playback
 - **THEN** runtime overlay模块 MUST呈现各playback identity并服从Follow/Pin选择
 - **AND** rendering模块 MUST不按列表顺序静默选择赢家或调用preview evaluator
-

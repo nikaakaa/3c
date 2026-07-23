@@ -272,6 +272,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             foreach (ClipState child in visual.Clips.Values)
                 child.Weight = 0f;
 
+            float totalWeight = 0f;
             for (int clipIndex = 0; clipIndex < clips.Count; clipIndex++)
             {
                 ClipSamplePlan plan = clips[clipIndex];
@@ -286,7 +287,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 child.Speed = 0f;
                 child.Time = plan.IsLooping ? (float)plan.ContinuousClipTime : plan.ClipTime;
                 child.Weight = plan.Weight;
+                totalWeight += plan.Weight;
             }
+
+            if (!float.IsFinite(totalWeight) || totalWeight <= 0f)
+                throw new InvalidOperationException($"Animation source '{visual.Key}' has no positive clip weight.");
+            float inverseTotalWeight = 1f / totalWeight;
+            for (int clipIndex = 0; clipIndex < clips.Count; clipIndex++)
+                visual.Clips[clips[clipIndex].ClipBindingIndex].Weight *= inverseTotalWeight;
 
             visual.Mixer.Speed = 0f;
             visual.Mixer.IsPlaying = true;

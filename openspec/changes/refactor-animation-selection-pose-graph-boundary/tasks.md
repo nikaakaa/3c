@@ -291,3 +291,7 @@
 - [x] 18.11 核对五条 Attack Timeline 的片段范围、重叠与 Ease 配置。
 - [x] 18.12 对照 Agent v17 与 Document v1 change，拒绝用整体平移、SelfEase 或 YAML 修改伪造攻击片段 overlap。
 - [x] 18.13 使用正式 Presentation 入口让 Projection、Float32和Fixed target追上当前Definition revision。
+- [x] 18.14 将五条 Attack 的收武器 Animation Clip 提前6帧并形成正式 overlap。
+- [x] 18.15 保持 MotionCurve 时间范围不变并让 Animation 终点对齐 Tree 生命周期。
+- [x] 18.16 重建并核对攻击 overlap 修改后的 Projection、Float32和Fixed target。
+- [x] 18.17 让Animancer Pose采样后端归一化同一source的有效Clip权重。

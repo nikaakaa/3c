@@ -202,10 +202,11 @@ Agent Snapshot 已确认 MovingTurn 状态使用`CorinMovingTurnTimeline`：
 |---|---|---|---|
 | A0 | FullBodyAction 有 Pose，但已结束的有限 BaseLocomotion 仍作为当前 Sample 越界，导致 Final Pose 整体 Invalid | 已证实，当前第一修复目标 | Frame 17652 起 Attack1 保持`Selected/Pose, Weight=1`，Base MovingTurn `04758f73...@5`变为`PendingFirstSample/Invalid`，Final 明确为`Invalid/SourceIncomplete`；同一 Invalid 跨 Attack2、Attack3 延续。 |
 | A1 | 两个 Animation Clip 在 Timeline 帧区间之间存在空洞 | 已排除 | 五条 Attack Timeline 的两个 Animation Clip 都是首尾同帧相接：49、48、81、89、125，没有帧区间空洞。 |
-| A2 | 两个 Clip 时间相接但没有重叠/混合，边界权重发生硬切 | 已确认视觉根因，修复中 | 用户在A0修复后的新Build中确认，闪烁精确发生在攻击主体Animation Clip与收武器Animation Clip接缝；五条Attack均为0 overlap、0 self ease。 |
-| A3 | 同一 Attack producer 的 Clip 接缝被错误发布为新 playback/source | 待验证 | 状态和 producer 不变，但接缝处 PlaybackId、generation 或 Player source identity 改变。 |
-| A4 | 闪烁实际发生在 FullBodyAction 退出到 BaseLocomotion，而非 Timeline 内部 | 待验证 | 闪帧 tick 紧邻 Complete/Release，FullBodyAction 从 live source 进入 Stored Pose/Empty；Timeline 内部 Clip 接缝没有异常。 |
-| A5 | 第二个 Clip 的 Avatar/Root Transform 或导入设置与第一个不一致 | 待验证 | Timeline 采样始终有效，但第二段开始时骨骼根、姿态或 Root Transform 突跳；资产元数据存在不一致。 |
+| A2 | 两个 Clip 时间相接但没有重叠/混合，边界权重发生硬切 | 已确认并修复资产边界 | 用户在A0修复后的新Build中确认闪烁精确发生在主体与收武器接缝；五条Attack已形成6帧正式overlap，但仅有overlap仍不足以消除闪帧。 |
+| A3 | 同一 Attack producer 的 Clip 接缝被错误发布为新 playback/source | 已排除 | 接缝前后保持同一producer、PlaybackId、generation和Player source；Animancer后端复用同一SourceVisual，只在首次出现第二段时增加ClipState。 |
+| A4 | 闪烁实际发生在 FullBodyAction 退出到 BaseLocomotion，而非 Timeline 内部 | 已排除为本次接缝主因 | 用户定位的是主体与收武器内部接缝；新采集覆盖该接缝，Complete/Release和Stored Pose退出发生在更晚时刻。 |
+| A5 | 第二个 Clip 的 Avatar/Root Transform 或导入设置与第一个不一致 | 存在边界姿态差，但不是独立失效 | 98条Rotation曲线在主体末帧与收武器首帧平均差约`2.397°`、最大约`16.196°`；`Root`位置差由正式`ExcludeSourceRoot`策略排除，非Root位置差很小。姿态差要求正常混合，但不会自行制造参考姿势闪回。 |
+| A6 | Timeline相对权重未在ManualMixer内归一化，重叠时混入参考姿势 | 已确认并修复运行根因 | 第一段smoothstep淡出与第二段linear淡入使6帧总权重约为`1.093→1.074→1.000→0.926→0.907→1.000`；后端原样写入ManualMixer且不归一化。修复后同一source的有效clip权重统一除以总权重。 |
 
 ### Attack Clip authoring 边界
 
@@ -237,6 +238,20 @@ Agent Snapshot 已确认 MovingTurn 状态使用`CorinMovingTurnTimeline`：
 2. 第二段新的结束帧恰好等于对应Tree生命周期结束帧，没有尾部空洞。
 3. MotionCurve继续使用原时间范围，保持已经正确的RootMotion位移采样。
 4. 修改走Agent stable identity、dry-run、apply和validator，不增加新operation或第二条资产路径。
+
+### Overlap 运行权重根因
+
+`CharacterPresentationAnimationClipBinding.WriteSample`输出的是每段Timeline Clip的相对权重。第一段使用smoothstep淡出曲线，第二段使用linear淡入曲线，因此两条曲线虽然都覆盖6帧，但并不互补。
+
+`AnimancerPoseSamplingBackend.PrepareClips`原先把每条`ClipSamplePlan.Weight`直接写入`ManualMixerState`。ManualMixer不会替调用方归一化权重，项目中的`AnimationMixerPlayable.Create(..., normalizeWeights)`编译警告也明确说明该参数已经无效。结果是接缝后半段总权重低于1时混入参考姿势，前半段总权重大于1时又出现过量混合。
+
+正式修复保持输入输出职责不变：
+
+1. Timeline与Projection继续产生各clip的相对权重、采样时间和clip identity。
+2. Pose采样后端先累计同一source当前全部有效clip权重。
+3. 后端将每个ManualMixer child权重除以总权重，使source内部总和恒为1。
+4. FullBodyAction对BaseLocomotion的外层权重仍由Pose Graph控制，不把内部归一化变成新的层级混合路径。
+5. 单clip时总权重归一化后仍为1，不改变Idle、Run、MovingTurn等单片段producer的Pose。
 
 ### 已捕获的 A0 证据
 
@@ -372,6 +387,46 @@ Frame 17725 至 17872：
 
 ## 当前发布与运行现场
 
+### Clip 权重归一化现场
+
+- Player BuildId：`20260723-102106`
+- 双端 RunId：`20260723-182829`
+- 运行日志目录：`3cDemo/Client/3C_Client/Build/Network/RunLogs/DeterministicRollback/20260723-182829`
+- `ThirdPersonClient.Runtime.csproj`以`--disable-build-servers /nr:false /p:UseSharedCompilation=false`构建成功，`0 error`；构建后已执行`dotnet build-server shutdown`。
+- Unity脚本刷新后Console为`0 error`，Deterministic Rollback Player正式构建结果为`Success`。
+- 通过Windows原生前台线程绑定与`SendInput`连续触发三次Attack1；两端各记录三组FullBodyAction Push与`CapturedStoredPose`退出。
+- 两端均没有`Final=Invalid`、`SourceIncomplete`、非`None`的`InvalidOperation`或运行时异常。
+- Relay持续为`invalid=0`、`dropped=0`。
+- 第三次攻击以约30 FPS采集180帧完整窗口。主体到收武器接缝位于约F33至F38，六个连续表现帧中角色姿态逐帧连续，没有单帧参考姿势或初始姿势闪回。
+- 动作退出后的F100至F175中相机持续以角色为中心，没有脱离到虚空；空间日志中本地Actor的`Visible`、`RootBefore`、`RootAfter`与`AnimationRoot`一致且`CameraScheduled=True`。
+- 按五条Timeline的正式`ComboAccept`帧窗连续触发Attack1→Attack2→Attack3→Attack4→Attack5；两端都按`10f4cb90...→40908a3b...→001b250e...→9fa96566...→7b4f6ad5...`顺序进入并正常退出。
+- 第二轮完整连段以约20 FPS采集204帧；逐段检查五个主体/收武器重叠区，姿态均连续，没有参考姿势或出生姿势回闪。
+- Attack5退出后的连续画面中角色仍位于镜头跟随中心；两端日志继续没有`Final=Invalid`、`SourceIncomplete`、非`None`的`InvalidOperation`或运行时异常。
+- 当前自动采集已经覆盖五段攻击接缝、完整连段退出和动作后相机连续性；仍保留用户在实际操作手感下的最终视觉反证门槛。
+
+### 最新攻击 overlap 现场
+
+- Player BuildId：`20260723-092601`
+- 双端 RunId：`20260723-173415`
+- 运行日志目录：`3cDemo/Client/3C_Client/Build/Network/RunLogs/DeterministicRollback/20260723-173415`
+- 当前两个客户端和一个Relay进程存活。
+- Relay持续为`invalid=0`、`dropped=0`。
+- 该RunId最初尚未记录到Attack producer，不能把当时的网络稳定等同于攻击接缝视觉通过。
+- 2026-07-23 17:41再次读取现场：Relay canonical tick已推进到`25847`，两端仍没有`Final=Invalid`、非`None`的`InvalidOperation`、`SourceIncomplete`、stale lease或运行时异常。
+- 当前仍有两个`3C_Client.exe`和一个`ThirdPerson.DeterministicRollback.Server.exe`存活。
+- 为满足Agent自行运行双端验证，在不使用Computer Use、不改代码和资产的前提下，以Windows原生前台窗口与`SendInput`驱动Peer A，并以约30 FPS采集完整窗口。
+- 首次采集识别到150% DPI坐标虚拟化，输入落在Player窗口外，该轮明确作废。
+- 修正DPI后又确认Codex窗口会抢回前台；随后通过线程输入队列绑定保证攻击发送前后前台句柄始终为Peer A，鼠标按下和抬起均由系统接受。
+- 日志延迟刷新后确认其中一次合成点击真实触发Attack1：Peer A在Sequence `131655`、Peer B在Sequence `131071`推入同一`10f4cb90.../0811fba7...@1/Timeline/1` FullBodyAction source。
+- 两端Attack1进入时从`NoPose/Weight=0`连续过渡到`Pose/Weight≈1`，Final始终为`Pose/None`且`InvalidOperation=None`。
+- Attack1退出时两端都先以`CapturedStoredPose`推入Empty，再释放FullBodyAction；退出后的`Selected/Invalid`只是已清空Selection的零权重诊断，Final Pose仍有效，下一条Base producer也正常进入Inertialization。
+- 攻击期间Peer A的`Visible`、`RootBefore`、`RootAfter`与`AnimationRoot`持续一致，`CameraScheduled=True`；Peer B同步同一空间轨迹且`CameraScheduled=False`，没有模型与逻辑根分离证据。
+- 约30 FPS采集捕获到Attack1尾部Pose和回到Base的连续画面，但调试覆盖层遮挡角色上半身，且没有精确标出两段Animation Clip的接缝帧，不能据此单独宣告视觉闪帧通过。
+- 后续合成mouse-up/down与焦点重置未能稳定形成第二次InputAction边沿，合成W也没有产生移动；因此系统输入注入只能作为一次有效Attack1运行证据，不能替代用户对接缝闪帧和动作后相机观感的最终确认。
+- 2026-07-23 18:00 Relay canonical tick推进到`92824`，仍为`invalid=0`、`dropped=0`；两端各有一次Attack push和一次Empty push，`FinalInvalid`、`SourceIncomplete`、非None InvalidOperation与运行时异常计数都为0。
+
+### overlap 修改前现场
+
 - Player BuildId：`20260723-090701`
 - 双端 RunId：`20260723-171423`
 - 运行日志目录：`3cDemo/Client/3C_Client/Build/Network/RunLogs/DeterministicRollback/20260723-171423`
@@ -381,7 +436,7 @@ Frame 17725 至 17872：
 - 已记录到Idle、WalkStart、WalkLoop、RunLoop、RunEnd、MovingTurn、Attack1和Dodge的合法 Pose
 - 当前空间日志中Visible、RootBefore、RootAfter和AnimationRoot保持一致
 
-当前日志证明新构建不再复现旧的统一Pose失效，但还不能把A2判定为已修复：现有diagnostics是事件/间隔采样，没有精确覆盖Attack两段Animation Clip的接缝帧。动作后的相机观感也仍需要本次运行现场的用户侧观察，不能仅凭Camera target连续就宣告完成。
+BuildId `20260723-102106`的连续画面和双端日志已覆盖Attack1至Attack5的内部接缝、完整连段退出与动作后相机连续性。运行证据不再出现旧的统一Pose失效，也没有接缝处参考姿势闪回；用户实际操作仍作为最终观感确认，不用自动采集替代手感判断。
 
 ## 维护记录
 
@@ -424,3 +479,21 @@ Frame 17725 至 17872：
 - 用户在BuildId `20260723-090701`现场确认闪烁精确发生在攻击主体Animation与收武器Animation接缝，将A2升级为已确认视觉根因。
 - 核对五条Attack的Tree结束帧都比第二段Animation结束帧早6帧，确认现有`move_timeline_clip(-6)`可以同时形成6帧overlap并让Animation终点对齐Tree终点。
 - 确定只移动第二段Animation Clip，不移动MotionCurve，避免改变已经正常的RootMotion业务行为。
+- Agent dry-run通过5个`move_timeline_clip`操作，planned diff分别为`49..168→43..162`、`48..173→42..167`、`81..206→75..200`、`89..282→83..276`、`125..212→119..206`。
+- Apply回包因MCP断线丢失，但重新导出的正式Snapshot确认五条范围全部落盘、`OtherEaseInFrame=6`，没有发生重复平移；新source revision为`f043afba...`。
+- 使用正式Presentation target build重建成功，新的Projection revision为`6bc1f3f4390c9a08519403e9a6379501a90f542346444e2197e52c89f87d474e`。
+- Unity脚本刷新后Console为0 error；本change与全部OpenSpec严格校验均通过。
+- Agent Validator完成执行但MCP响应超过30秒并丢失report；不得把transport timeout记录成validator通过，后续以新Build运行日志和Snapshot结构继续交叉验证。
+- 攻击overlap版本构建成功，BuildId为`20260723-092601`，双端RunId为`20260723-173415`。
+- 检查现有`ThirdPersonSimulation.Tests`：仅覆盖确定性identity、ProgramCurve编解码与CanonicalData，不经过Presentation、Timeline Animation Clip衔接或Cinemachine；当前仓库没有可直接覆盖A2/P2的现有自动化测试，不运行无关测试冒充回归证据。
+- 完成双端Player原生输入自动化可行性排查：一次合成点击真实触发并在两端完成Attack1完整生命周期，后续合成边沿不能稳定复现；保留用户视觉确认作为攻击接缝与动作后相机的最终反证门槛。
+- 在上述双端证据后再次执行正式Agent Validator，命令仍在30秒MCP上限处丢失回包；继续只记录transport timeout，不将其表述为Validator通过。
+- 纠正“6帧overlap即可消除闪帧”的不完整判断：Timeline两侧Ease曲线不互补，原始ManualMixer权重总和会在约`0.907..1.093`之间波动。
+- 核对Animancer后端确认同一producer和SourceVisual未在接缝重建，排除Playback/source重建假设。
+- 对Attack1两段动画资产做端点曲线比对：98条Rotation曲线平均差约`2.397°`、最大约`16.196°`；`Root`位移差受`ExcludeSourceRoot`正式策略排除。
+- 让Animancer Pose采样后端对同一source当前有效ClipSamplePlan做总权重归一化，保持外层Pose Graph权重职责不变。
+- Unity脚本刷新与Runtime工程构建均为0 error；Player构建成功并提交BuildId `20260723-102106`。
+- 启动双端RunId `20260723-182829`，以原生前台线程绑定稳定触发三次Attack1；两端均完成三组Push与Stored Pose退出，Pose错误与网络丢弃计数为0。
+- 以约30 FPS采集180帧，精确检查约F33至F38的主体/收武器接缝以及F100至F175的动作后相机，未再观察到参考姿势闪回或相机脱离。
+- 依据正式`ComboAccept`帧窗完成Attack1→Attack5完整连段，两端按相同五条Timeline顺序进入并正常退出。
+- 以约20 FPS采集完整连段204帧，逐段检查五个主体/收武器重叠区与Attack5退出后的相机连续性，未观察到参考姿势回闪、出生姿势回闪或相机脱离。

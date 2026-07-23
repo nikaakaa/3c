@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Gameplay与搜索层必须只提交Animation Selection
 

@@ -3,12 +3,12 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.Animations;
+using static ThirdPersonCharacter.Pipeline.Animation.BlendStack.AnimationSlotBlendJobMath;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 {
     internal struct AnimationSlotBlendJob : IAnimationJob
     {
-        const float QuaternionTolerance = 0.0000001f;
         const float WeightTolerance = 0.0001f;
 
         [ReadOnly]
@@ -20,6 +20,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         readonly NativeArray<AnimationBlendBoneVelocity> m_SourceVelocity;
         [ReadOnly]
         readonly NativeArray<float> m_SourcePoseParameters;
+        [ReadOnly]
+        readonly NativeArray<byte> m_SourcePoseParameterAvailability;
         [ReadOnly]
         readonly NativeArray<AnimationFootFeatureSample> m_SourceLeftFootFeatures;
         [ReadOnly]
@@ -38,16 +40,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         NativeArray<AnimationBlendBoneVelocity> m_StoredVelocity;
         NativeArray<float> m_StoredParameters;
         NativeArray<float> m_StoredBoneOutputWeights;
-
-        NativeArray<AnimationSlotBlendInertialNativeState> m_InertialState;
-        NativeArray<Vector3> m_InertialPositionResiduals;
-        NativeArray<Vector3> m_InertialRotationResiduals;
-        NativeArray<Vector3> m_InertialScaleResiduals;
-        NativeArray<Vector3> m_InertialLinearVelocityResiduals;
-        NativeArray<Vector3> m_InertialAngularVelocityResiduals;
-        NativeArray<Vector3> m_InertialScaleVelocityResiduals;
-        NativeArray<float> m_InertialParameterResiduals;
-        NativeArray<float> m_InertialBoneOutputWeights;
 
         NativeArray<AnimationSlotBlendHistoryNativeState> m_HistoryStates;
         NativeArray<AnimationLocalBonePose> m_HistoryPoses;
@@ -77,6 +69,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         [NativeDisableContainerSafetyRestriction]
         NativeSlice<float> m_FinalPoseParameters;
         [NativeDisableContainerSafetyRestriction]
+        NativeSlice<byte> m_FinalPoseParameterAvailability;
+        [NativeDisableContainerSafetyRestriction]
         NativeSlice<AnimationPrimitivePoseContribution> m_FinalContributions;
         [NativeDisableContainerSafetyRestriction]
         NativeSlice<float> m_FinalDenseContributionWeights;
@@ -91,7 +85,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         [NativeDisableContainerSafetyRestriction]
         NativeSlice<byte> m_FinalHasFootFeatures;
         [NativeDisableContainerSafetyRestriction]
-        NativeSlice<PoseSlotFrameAvailability> m_FinalAvailability;
+        NativeSlice<AnimationPoseAvailability> m_FinalAvailability;
         [NativeDisableContainerSafetyRestriction]
         NativeSlice<ulong> m_FinalContinuityIdentity;
         [NativeDisableContainerSafetyRestriction]
@@ -103,7 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         readonly int m_ParameterCount;
         readonly int m_SourceCapacity;
         readonly int m_ContributionCapacity;
-        readonly int m_PhysicalSlotIndex;
+        readonly int m_PhysicalPlayerIndex;
         readonly ulong m_CompletionIdentity;
 
         internal AnimationSlotBlendJob(
@@ -113,7 +107,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             AnimationSlotBlendFramePlan plan = workspace.FramePlan;
             plan.RequireValidLayout();
             AnimationSlotBlendFramePlanHeader header = plan.Header;
-            AnimationPoseSlotNativeWriteBinding final = workspace.FinalWriteBinding;
+            AnimationPlayerPoseNativeWriteBinding final = workspace.FinalWriteBinding;
 
             RequirePlan(plan, sources.SourceCapacity);
             RequireSourceBinding(sources, header);
@@ -125,6 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_SourceCurrentPose = sources.CurrentPose;
             m_SourceVelocity = sources.Velocity;
             m_SourcePoseParameters = sources.PoseParameters;
+            m_SourcePoseParameterAvailability = sources.PoseParameterAvailability;
             m_SourceLeftFootFeatures = sources.LeftFootFeatures;
             m_SourceRightFootFeatures = sources.RightFootFeatures;
             m_SourceVisualTimeScales = sources.VisualTimeScales;
@@ -137,16 +132,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_StoredVelocity = workspace.StoredPose.DenseVelocity;
             m_StoredParameters = workspace.StoredPose.PoseParameters;
             m_StoredBoneOutputWeights = workspace.StoredPose.DenseBoneOutputWeights;
-
-            m_InertialState = workspace.Inertial.State;
-            m_InertialPositionResiduals = workspace.Inertial.PositionResiduals;
-            m_InertialRotationResiduals = workspace.Inertial.RotationResiduals;
-            m_InertialScaleResiduals = workspace.Inertial.ScaleResiduals;
-            m_InertialLinearVelocityResiduals = workspace.Inertial.LinearVelocityResiduals;
-            m_InertialAngularVelocityResiduals = workspace.Inertial.AngularVelocityResiduals;
-            m_InertialScaleVelocityResiduals = workspace.Inertial.ScaleVelocityResiduals;
-            m_InertialParameterResiduals = workspace.Inertial.ParameterResiduals;
-            m_InertialBoneOutputWeights = workspace.Inertial.DenseBoneOutputWeights;
 
             m_HistoryStates = workspace.History.States;
             m_HistoryPoses = workspace.History.DenseLocalPoses;
@@ -172,6 +157,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_FinalDenseLocalPoses = final.DenseLocalPoses;
             m_FinalDenseVelocities = final.DenseVelocities;
             m_FinalPoseParameters = final.PoseParameters;
+            m_FinalPoseParameterAvailability = final.PoseParameterAvailability;
             m_FinalContributions = final.Contributions;
             m_FinalDenseContributionWeights = final.DenseContributionWeights;
             m_FinalContributionCount = final.ContributionCount;
@@ -188,7 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_ParameterCount = header.ParameterCount;
             m_SourceCapacity = sources.SourceCapacity;
             m_ContributionCapacity = header.ContributionCapacity;
-            m_PhysicalSlotIndex = header.PhysicalSlotIndex;
+            m_PhysicalPlayerIndex = header.PhysicalPlayerIndex;
             m_CompletionIdentity = header.CompletionIdentity;
         }
 
@@ -209,6 +195,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             }
 
             AnimationPoseNativeInvalidReason reason = ValidateRuntimeInputs();
+            if (m_FramePlan.Header.Availability == AnimationPoseAvailability.Invalid)
+            {
+                PublishInvalid(m_FramePlan.Header.InvalidReason);
+                return;
+            }
             if (reason != AnimationPoseNativeInvalidReason.None)
             {
                 PublishInvalid(reason);
@@ -216,10 +207,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             }
 
             AnimationSlotBlendFramePlanHeader header = m_FramePlan.Header;
-            if (header.Availability == PoseSlotFrameAvailability.NoPose)
+            if (header.Availability == AnimationPoseAvailability.NoPose)
             {
                 ClearStored();
-                ClearInertial();
                 CommitNoPoseHistory();
                 PublishNoPose();
                 return;
@@ -228,9 +218,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             reason = PrepareScratchContributions();
             if (reason == AnimationPoseNativeInvalidReason.None)
             {
-                reason = header.UsesInertial
-                    ? BlendInertial()
-                    : BlendCrossFade(deltaSeconds);
+                reason = BlendCrossFade(deltaSeconds);
             }
             if (reason == AnimationPoseNativeInvalidReason.None)
                 reason = BlendFootFeatures();
@@ -255,68 +243,46 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             AnimationSlotBlendFramePlanHeader header = m_FramePlan.Header;
             if (header.CompletionIdentity != m_CompletionIdentity ||
-                header.PhysicalSlotIndex != m_PhysicalSlotIndex ||
+                header.PhysicalPlayerIndex != m_PhysicalPlayerIndex ||
                 m_SourceCompletedAt.Length != m_SourceCapacity)
-            {
-                return AnimationPoseNativeInvalidReason.SlotPlanInvalid;
-            }
-
-            if (header.HistoryReadPageIndex >= 0 && !IsValidHistory(header.HistoryReadPageIndex, header.HistoryCompletionIdentity))
                 return AnimationPoseNativeInvalidReason.SlotPlanInvalid;
 
-            int liveIndex = -1;
+            if (header.HistoryReadPageIndex >= 0 &&
+                !IsValidHistory(header.HistoryReadPageIndex, header.HistoryCompletionIdentity))
+                return AnimationPoseNativeInvalidReason.SlotPlanInvalid;
+
             int storedIndex = -1;
-            int inertialIndex = -1;
             for (int contributionIndex = 0; contributionIndex < header.ContributionCount; contributionIndex++)
             {
                 AnimationSlotBlendFramePlanEntry entry = m_FramePlan.GetEntry(contributionIndex);
-                switch (entry.Kind)
+                if (entry.Kind == AnimationPoseContributionKind.Live)
                 {
-                    case AnimationPoseContributionKind.Live:
-                        if (!IsValidSource(entry))
-                            return AnimationPoseNativeInvalidReason.SourceIncomplete;
-                        liveIndex = contributionIndex;
-                        break;
-                    case AnimationPoseContributionKind.Stored:
-                        storedIndex = contributionIndex;
-                        break;
-                    case AnimationPoseContributionKind.Inertial:
-                        inertialIndex = contributionIndex;
-                        break;
-                    default:
-                        return AnimationPoseNativeInvalidReason.SlotContributionInvalid;
+                    if (!IsValidSource(entry))
+                        return AnimationPoseNativeInvalidReason.SourceIncomplete;
+                }
+                else if (entry.Kind == AnimationPoseContributionKind.Stored)
+                {
+                    storedIndex = contributionIndex;
+                }
+                else
+                {
+                    return AnimationPoseNativeInvalidReason.SlotContributionInvalid;
                 }
             }
 
-            if (header.Availability == PoseSlotFrameAvailability.NoPose)
+            if (header.Availability == AnimationPoseAvailability.NoPose)
                 return header.ContributionCount == 0 && header.OutputWeight == 0f
                     ? AnimationPoseNativeInvalidReason.None
                     : AnimationPoseNativeInvalidReason.SlotPlanInvalid;
 
             if (header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture)
-            {
-                if (storedIndex < 0 || header.HistoryReadPageIndex < 0)
-                    return AnimationPoseNativeInvalidReason.SlotPlanInvalid;
-            }
-            else if (storedIndex >= 0 && !IsValidStored(m_FramePlan.GetEntry(storedIndex)))
-            {
-                return AnimationPoseNativeInvalidReason.SlotPoseInvalid;
-            }
-
-            if (!header.UsesInertial)
-                return inertialIndex < 0 ? AnimationPoseNativeInvalidReason.None : AnimationPoseNativeInvalidReason.SlotPlanInvalid;
-
-            if (liveIndex < 0 || inertialIndex < 0)
-                return AnimationPoseNativeInvalidReason.SlotPlanInvalid;
-            AnimationSlotBlendFramePlanEntry live = m_FramePlan.GetEntry(liveIndex);
-            AnimationSlotBlendFramePlanEntry inertial = m_FramePlan.GetEntry(inertialIndex);
-            if (header.Kind == AnimationSlotBlendFramePlanKind.InertialContinue)
-                return IsValidInertial(live, inertial)
+                return storedIndex >= 0 && header.HistoryReadPageIndex >= 0
                     ? AnimationPoseNativeInvalidReason.None
-                    : AnimationPoseNativeInvalidReason.SlotPoseInvalid;
-            return header.HistoryReadPageIndex >= 0
+                    : AnimationPoseNativeInvalidReason.SlotPlanInvalid;
+
+            return storedIndex < 0 || IsValidStored(m_FramePlan.GetEntry(storedIndex))
                 ? AnimationPoseNativeInvalidReason.None
-                : AnimationPoseNativeInvalidReason.SlotPlanInvalid;
+                : AnimationPoseNativeInvalidReason.SlotPoseInvalid;
         }
 
         bool IsValidSource(AnimationSlotBlendFramePlanEntry entry)
@@ -350,7 +316,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             int parameterOffset = checked(sourceIndex * m_ParameterCount);
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
             {
-                if (!float.IsFinite(m_SourcePoseParameters[parameterOffset + parameterIndex]))
+                if (!float.IsFinite(m_SourcePoseParameters[parameterOffset + parameterIndex]) ||
+                    m_SourcePoseParameterAvailability[parameterOffset + parameterIndex] != 1)
                     return false;
             }
             return true;
@@ -361,7 +328,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             if ((uint)pageIndex > 1u)
                 return false;
             AnimationSlotBlendHistoryNativeState state = m_HistoryStates[pageIndex];
-            if (state.Availability != PoseSlotFrameAvailability.Pose ||
+            if (state.Availability != AnimationPoseAvailability.Pose ||
                 state.CompletionIdentity != completionIdentity || state.ContinuityIdentity == 0 ||
                 !IsNormalized(state.OutputWeight) || state.HasFootFeatures > 1 ||
                 state.HasFootFeatures != 0 && (!IsValidFoot(state.LeftFootFeatures) || !IsValidFoot(state.RightFootFeatures)) ||
@@ -416,47 +383,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return true;
         }
 
-        bool IsValidInertial(
-            AnimationSlotBlendFramePlanEntry live,
-            AnimationSlotBlendFramePlanEntry inertial)
-        {
-            AnimationSlotBlendInertialNativeState state = m_InertialState[0];
-            if (state.Active != 1 || state.TargetSourceCaptureIndex != live.SourceCaptureIndex ||
-                state.TargetPhysicalSourceIndex != live.PhysicalSourceIndex ||
-                state.TargetPhysicalSourceGeneration != live.PhysicalSourceGeneration ||
-                state.TargetProgramProducerIndex != live.ProgramProducerIndex ||
-                state.CapturedAtCompletionIdentity == 0 || state.SourceHistoryCompletionIdentity == 0 ||
-                state.ContributionContinuityIdentity != inertial.ContributionContinuityIdentity ||
-                !IsNormalized(state.OutputWeight) || state.SourceHasFootFeatures > 1 ||
-                state.SourceHasFootFeatures != 0 && (!IsValidFoot(state.LeftFootFeatures) || !IsValidFoot(state.RightFootFeatures)) ||
-                state.SourceHasFootFeatures == 0 && (state.LeftFootFeatures.IsValid || state.RightFootFeatures.IsValid))
-            {
-                return false;
-            }
-            bool preserveScale = m_FramePlan.Header.ScalePolicy == CharacterAnimationScalePolicy.PreserveReferenceScale;
-            for (int boneIndex = 0; boneIndex < m_BoneCount; boneIndex++)
-            {
-                if (!AnimationBlendPoseMath.IsFinite(m_InertialPositionResiduals[boneIndex]) ||
-                    !AnimationBlendPoseMath.IsFinite(m_InertialRotationResiduals[boneIndex]) ||
-                    !AnimationBlendPoseMath.IsFinite(m_InertialScaleResiduals[boneIndex]) ||
-                    !AnimationBlendPoseMath.IsFinite(m_InertialLinearVelocityResiduals[boneIndex]) ||
-                    !AnimationBlendPoseMath.IsFinite(m_InertialAngularVelocityResiduals[boneIndex]) ||
-                    !AnimationBlendPoseMath.IsFinite(m_InertialScaleVelocityResiduals[boneIndex]) ||
-                    !IsNormalized(m_InertialBoneOutputWeights[boneIndex]) ||
-                    preserveScale && (m_InertialScaleResiduals[boneIndex] != Vector3.zero ||
-                                      m_InertialScaleVelocityResiduals[boneIndex] != Vector3.zero))
-                {
-                    return false;
-                }
-            }
-            for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
-            {
-                if (!float.IsFinite(m_InertialParameterResiduals[parameterIndex]))
-                    return false;
-            }
-            return true;
-        }
-
         AnimationPoseNativeInvalidReason PrepareScratchContributions()
         {
             AnimationSlotBlendFramePlanHeader header = m_FramePlan.Header;
@@ -464,7 +390,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             {
                 AnimationSlotBlendFramePlanEntry entry = m_FramePlan.GetEntry(contributionIndex);
                 m_ScratchContributions[contributionIndex] = new AnimationPrimitivePoseContribution(
-                    header.PhysicalSlotIndex,
+                    header.PhysicalPlayerIndex,
                     entry.PhysicalSourceIndex,
                     entry.PhysicalSourceGeneration,
                     entry.Kind,
@@ -517,7 +443,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     linearVelocitySum += velocity.Linear * weight;
                     angularVelocitySum += velocity.Angular * weight;
                     scaleVelocitySum += velocity.Scale * weight;
-                    rotationSum += AnimationBlendPoseMath.AlignAndScale(pose.Rotation, rotationReference, weight);
+                    rotationSum += AnimationPoseMath.AlignAndScale(pose.Rotation, rotationReference, weight);
                     poseWeight += weight;
                 }
 
@@ -598,110 +524,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 if (!float.IsFinite(result))
                     return AnimationPoseNativeInvalidReason.SlotParameterInvalid;
                 m_ScratchParameters[parameterIndex] = result;
-            }
-            return AnimationPoseNativeInvalidReason.None;
-        }
-
-        AnimationPoseNativeInvalidReason BlendInertial()
-        {
-            FindInertialEntries(out AnimationSlotBlendFramePlanEntry live, out _);
-            bool capture = m_FramePlan.Header.Kind == AnimationSlotBlendFramePlanKind.InertialCapture ||
-                           m_FramePlan.Header.Kind == AnimationSlotBlendFramePlanKind.InertialRebase;
-            int sourcePoseOffset = checked(live.SourceCaptureIndex * m_BoneCount);
-            int historyPoseOffset = checked(m_FramePlan.Header.HistoryReadPageIndex * m_BoneCount);
-            for (int boneIndex = 0; boneIndex < m_BoneCount; boneIndex++)
-            {
-                AnimationLocalBonePose targetPose = m_SourceCurrentPose[sourcePoseOffset + boneIndex];
-                AnimationBlendBoneVelocity targetVelocity = m_SourceVelocity[sourcePoseOffset + boneIndex];
-                Vector3 positionResidual;
-                Vector3 rotationResidual;
-                Vector3 scaleResidual;
-                Vector3 linearVelocityResidual;
-                Vector3 angularVelocityResidual;
-                Vector3 scaleVelocityResidual;
-                if (capture)
-                {
-                    AnimationLocalBonePose sourcePose = m_HistoryPoses[historyPoseOffset + boneIndex];
-                    AnimationBlendBoneVelocity sourceVelocity = m_HistoryVelocities[historyPoseOffset + boneIndex];
-                    positionResidual = sourcePose.Position - targetPose.Position;
-                    rotationResidual = AnimationBlendPoseMath.QuaternionLog(sourcePose.Rotation * Quaternion.Inverse(targetPose.Rotation));
-                    linearVelocityResidual = sourceVelocity.Linear - targetVelocity.Linear;
-                    angularVelocityResidual = sourceVelocity.Angular - targetVelocity.Angular;
-                    if (m_FramePlan.Header.ScalePolicy == CharacterAnimationScalePolicy.BlendLocalScale)
-                    {
-                        scaleResidual = sourcePose.Scale - targetPose.Scale;
-                        scaleVelocityResidual = sourceVelocity.Scale - targetVelocity.Scale;
-                    }
-                    else
-                    {
-                        scaleResidual = Vector3.zero;
-                        scaleVelocityResidual = Vector3.zero;
-                    }
-                }
-                else
-                {
-                    positionResidual = m_InertialPositionResiduals[boneIndex];
-                    rotationResidual = m_InertialRotationResiduals[boneIndex];
-                    scaleResidual = m_InertialScaleResiduals[boneIndex];
-                    linearVelocityResidual = m_InertialLinearVelocityResiduals[boneIndex];
-                    angularVelocityResidual = m_InertialAngularVelocityResiduals[boneIndex];
-                    scaleVelocityResidual = m_InertialScaleVelocityResiduals[boneIndex];
-                }
-
-                AnimationSlotBlendInertialBonePlan plan = m_FramePlan.GetInertialBone(boneIndex);
-                Vector3 positionBase = positionResidual + plan.ResidualTimeSeconds * linearVelocityResidual;
-                Vector3 rotationBase = rotationResidual + plan.ResidualTimeSeconds * angularVelocityResidual;
-                Vector3 scaleBase = scaleResidual + plan.ResidualTimeSeconds * scaleVelocityResidual;
-                Vector3 outputPosition = targetPose.Position + plan.ResidualWeight * positionBase;
-                Vector3 outputScale = targetPose.Scale + plan.ResidualWeight * scaleBase;
-                Vector3 outputLinearVelocity = targetVelocity.Linear +
-                                               plan.ResidualWeightDerivativePerSecond * positionBase +
-                                               plan.ResidualWeight * linearVelocityResidual;
-                Vector3 outputAngularVelocity = targetVelocity.Angular +
-                                                plan.ResidualWeightDerivativePerSecond * rotationBase +
-                                                plan.ResidualWeight * angularVelocityResidual;
-                Vector3 outputScaleVelocity = targetVelocity.Scale +
-                                              plan.ResidualWeightDerivativePerSecond * scaleBase +
-                                              plan.ResidualWeight * scaleVelocityResidual;
-                Vector3 outputRotationResidual = plan.ResidualWeight * rotationBase;
-                if (!AnimationBlendPoseMath.IsFinite(outputPosition) ||
-                    !AnimationBlendPoseMath.IsFinite(outputScale) ||
-                    !TryQuaternionExp(outputRotationResidual, out Quaternion residualRotation))
-                {
-                    return AnimationPoseNativeInvalidReason.SlotPoseInvalid;
-                }
-                Quaternion outputRotation = residualRotation * targetPose.Rotation;
-                if (!IsFinite(outputRotation) || Quaternion.Dot(outputRotation, outputRotation) <= QuaternionTolerance)
-                    return AnimationPoseNativeInvalidReason.SlotPoseInvalid;
-                m_ScratchPose[boneIndex] = new AnimationLocalBonePose(outputPosition, outputRotation, outputScale);
-                if (!TryCreateVelocity(
-                        outputLinearVelocity,
-                        outputAngularVelocity,
-                        outputScaleVelocity,
-                        out AnimationBlendBoneVelocity outputVelocity))
-                {
-                    return AnimationPoseNativeInvalidReason.SlotVelocityInvalid;
-                }
-                m_ScratchVelocity[boneIndex] = outputVelocity;
-
-                float weightSum = 0f;
-                for (int contributionIndex = 0; contributionIndex < m_FramePlan.ContributionCount; contributionIndex++)
-                    weightSum += m_FramePlan.GetDenseBoneWeight(contributionIndex, boneIndex);
-                m_ScratchPoseWeightSums[boneIndex] = weightSum;
-            }
-
-            int sourceParameterOffset = checked(live.SourceCaptureIndex * m_ParameterCount);
-            int historyParameterOffset = checked(m_FramePlan.Header.HistoryReadPageIndex * m_ParameterCount);
-            for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
-            {
-                float target = m_SourcePoseParameters[sourceParameterOffset + parameterIndex];
-                float residual = capture
-                    ? m_HistoryParameters[historyParameterOffset + parameterIndex] - target
-                    : m_InertialParameterResiduals[parameterIndex];
-                float output = target + residual * m_FramePlan.GetInertialParameterResidualWeight(parameterIndex);
-                if (!float.IsFinite(output))
-                    return AnimationPoseNativeInvalidReason.SlotParameterInvalid;
-                m_ScratchParameters[parameterIndex] = output;
             }
             return AnimationPoseNativeInvalidReason.None;
         }
@@ -811,7 +633,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
             m_ScratchState[0] = new AnimationSlotBlendScratchNativeState
             {
-                Availability = PoseSlotFrameAvailability.Pose,
+                Availability = AnimationPoseAvailability.Pose,
                 InvalidReason = AnimationPoseNativeInvalidReason.None,
                 HasFootFeatures = hasFootFeatures ? (byte)1 : (byte)0,
                 ContributionCount = header.ContributionCount,
@@ -826,7 +648,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         AnimationPoseNativeInvalidReason ValidateScratchOutput()
         {
             AnimationSlotBlendScratchNativeState state = m_ScratchState[0];
-            if (state.Availability != PoseSlotFrameAvailability.Pose ||
+            if (state.Availability != AnimationPoseAvailability.Pose ||
                 state.InvalidReason != AnimationPoseNativeInvalidReason.None ||
                 state.ContributionCount != m_FramePlan.ContributionCount ||
                 state.ContinuityIdentity != m_FramePlan.Header.ContinuityIdentity ||
@@ -961,26 +783,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 visualTimeScale = 1f;
                 return true;
             }
-            if (entry.Kind == AnimationPoseContributionKind.Inertial)
-            {
-                if (m_FramePlan.Header.Kind == AnimationSlotBlendFramePlanKind.InertialCapture ||
-                    m_FramePlan.Header.Kind == AnimationSlotBlendFramePlanKind.InertialRebase)
-                {
-                    AnimationSlotBlendHistoryNativeState history = m_HistoryStates[m_FramePlan.Header.HistoryReadPageIndex];
-                    left = history.LeftFootFeatures;
-                    right = history.RightFootFeatures;
-                    hasFeatures = history.HasFootFeatures != 0;
-                }
-                else
-                {
-                    AnimationSlotBlendInertialNativeState inertial = m_InertialState[0];
-                    left = inertial.LeftFootFeatures;
-                    right = inertial.RightFootFeatures;
-                    hasFeatures = inertial.SourceHasFootFeatures != 0;
-                }
-                visualTimeScale = 1f;
-                return true;
-            }
             left = default;
             right = default;
             hasFeatures = false;
@@ -990,21 +792,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         void CommitPersistentState()
         {
-            AnimationSlotBlendFramePlanHeader header = m_FramePlan.Header;
-            if (header.UsesInertial)
-            {
-                if (header.Kind == AnimationSlotBlendFramePlanKind.InertialCapture ||
-                    header.Kind == AnimationSlotBlendFramePlanKind.InertialRebase)
-                {
-                    CommitInertialCapture();
-                }
-                ClearStored();
-                return;
-            }
-
-            ClearInertial();
             int storedIndex = FindContribution(AnimationPoseContributionKind.Stored);
-            if (header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture)
+            if (m_FramePlan.Header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture)
                 CommitStoredCapture(m_FramePlan.GetEntry(storedIndex));
             else if (storedIndex < 0)
                 ClearStored();
@@ -1037,60 +826,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             };
         }
 
-        void CommitInertialCapture()
-        {
-            FindInertialEntries(out AnimationSlotBlendFramePlanEntry live, out AnimationSlotBlendFramePlanEntry inertial);
-            int historyPage = m_FramePlan.Header.HistoryReadPageIndex;
-            int historyPoseOffset = checked(historyPage * m_BoneCount);
-            int sourcePoseOffset = checked(live.SourceCaptureIndex * m_BoneCount);
-            for (int boneIndex = 0; boneIndex < m_BoneCount; boneIndex++)
-            {
-                AnimationLocalBonePose from = m_HistoryPoses[historyPoseOffset + boneIndex];
-                AnimationLocalBonePose to = m_SourceCurrentPose[sourcePoseOffset + boneIndex];
-                AnimationBlendBoneVelocity fromVelocity = m_HistoryVelocities[historyPoseOffset + boneIndex];
-                AnimationBlendBoneVelocity toVelocity = m_SourceVelocity[sourcePoseOffset + boneIndex];
-                m_InertialPositionResiduals[boneIndex] = from.Position - to.Position;
-                m_InertialRotationResiduals[boneIndex] = AnimationBlendPoseMath.QuaternionLog(from.Rotation * Quaternion.Inverse(to.Rotation));
-                m_InertialLinearVelocityResiduals[boneIndex] = fromVelocity.Linear - toVelocity.Linear;
-                m_InertialAngularVelocityResiduals[boneIndex] = fromVelocity.Angular - toVelocity.Angular;
-                m_InertialBoneOutputWeights[boneIndex] = m_HistoryBoneOutputWeights[historyPoseOffset + boneIndex];
-                if (m_FramePlan.Header.ScalePolicy == CharacterAnimationScalePolicy.BlendLocalScale)
-                {
-                    m_InertialScaleResiduals[boneIndex] = from.Scale - to.Scale;
-                    m_InertialScaleVelocityResiduals[boneIndex] = fromVelocity.Scale - toVelocity.Scale;
-                }
-                else
-                {
-                    m_InertialScaleResiduals[boneIndex] = Vector3.zero;
-                    m_InertialScaleVelocityResiduals[boneIndex] = Vector3.zero;
-                }
-            }
-            int historyParameterOffset = checked(historyPage * m_ParameterCount);
-            int sourceParameterOffset = checked(live.SourceCaptureIndex * m_ParameterCount);
-            for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
-            {
-                m_InertialParameterResiduals[parameterIndex] =
-                    m_HistoryParameters[historyParameterOffset + parameterIndex] -
-                    m_SourcePoseParameters[sourceParameterOffset + parameterIndex];
-            }
-            AnimationSlotBlendHistoryNativeState history = m_HistoryStates[historyPage];
-            m_InertialState[0] = new AnimationSlotBlendInertialNativeState
-            {
-                Active = 1,
-                SourceHasFootFeatures = history.HasFootFeatures,
-                TargetSourceCaptureIndex = live.SourceCaptureIndex,
-                TargetPhysicalSourceIndex = live.PhysicalSourceIndex,
-                TargetPhysicalSourceGeneration = live.PhysicalSourceGeneration,
-                TargetProgramProducerIndex = live.ProgramProducerIndex,
-                CapturedAtCompletionIdentity = m_CompletionIdentity,
-                SourceHistoryCompletionIdentity = history.CompletionIdentity,
-                ContributionContinuityIdentity = inertial.ContributionContinuityIdentity,
-                OutputWeight = history.OutputWeight,
-                LeftFootFeatures = history.LeftFootFeatures,
-                RightFootFeatures = history.RightFootFeatures
-            };
-        }
-
         void CommitPoseHistory()
         {
             AnimationSlotBlendFramePlanHeader header = m_FramePlan.Header;
@@ -1108,7 +843,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             AnimationSlotBlendScratchNativeState scratch = m_ScratchState[0];
             m_HistoryStates[page] = new AnimationSlotBlendHistoryNativeState
             {
-                Availability = PoseSlotFrameAvailability.Pose,
+                Availability = AnimationPoseAvailability.Pose,
                 HasFootFeatures = scratch.HasFootFeatures,
                 CompletionIdentity = m_CompletionIdentity,
                 ContinuityIdentity = header.ContinuityIdentity,
@@ -1134,7 +869,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_HistoryParameters[parameterOffset + parameterIndex] = 0f;
             m_HistoryStates[page] = new AnimationSlotBlendHistoryNativeState
             {
-                Availability = PoseSlotFrameAvailability.NoPose,
+                Availability = AnimationPoseAvailability.NoPose,
                 CompletionIdentity = m_CompletionIdentity,
                 ContinuityIdentity = header.ContinuityIdentity
             };
@@ -1150,7 +885,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_FinalDenseVelocities[boneIndex] = m_ScratchVelocity[boneIndex];
             }
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
+            {
                 m_FinalPoseParameters[parameterIndex] = m_ScratchParameters[parameterIndex];
+                m_FinalPoseParameterAvailability[parameterIndex] = 1;
+            }
             for (int contributionIndex = 0; contributionIndex < m_ContributionCapacity; contributionIndex++)
             {
                 bool active = contributionIndex < header.ContributionCount;
@@ -1166,7 +904,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_FinalLeftFootFeatures[0] = scratch.LeftFootFeatures;
             m_FinalRightFootFeatures[0] = scratch.RightFootFeatures;
             m_FinalHasFootFeatures[0] = scratch.HasFootFeatures;
-            m_FinalAvailability[0] = PoseSlotFrameAvailability.Pose;
+            m_FinalAvailability[0] = AnimationPoseAvailability.Pose;
             m_FinalContinuityIdentity[0] = header.ContinuityIdentity;
             m_FinalInvalidReason[0] = AnimationPoseNativeInvalidReason.None;
             m_FinalCompletedAt[0] = m_CompletionIdentity;
@@ -1178,11 +916,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             AnimationSlotBlendFramePlanHeader header = m_FramePlan.Header;
             m_ScratchState[0] = new AnimationSlotBlendScratchNativeState
             {
-                Availability = PoseSlotFrameAvailability.NoPose,
+                Availability = AnimationPoseAvailability.NoPose,
                 InvalidReason = AnimationPoseNativeInvalidReason.None,
                 ContinuityIdentity = header.ContinuityIdentity
             };
-            m_FinalAvailability[0] = PoseSlotFrameAvailability.NoPose;
+            m_FinalAvailability[0] = AnimationPoseAvailability.NoPose;
             m_FinalContinuityIdentity[0] = header.ContinuityIdentity;
             m_FinalInvalidReason[0] = AnimationPoseNativeInvalidReason.None;
             m_FinalCompletedAt[0] = m_CompletionIdentity;
@@ -1194,11 +932,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             ulong continuityIdentity = m_FramePlan.Header.ContinuityIdentity;
             m_ScratchState[0] = new AnimationSlotBlendScratchNativeState
             {
-                Availability = PoseSlotFrameAvailability.Invalid,
+                Availability = AnimationPoseAvailability.Invalid,
                 InvalidReason = reason,
                 ContinuityIdentity = continuityIdentity
             };
-            m_FinalAvailability[0] = PoseSlotFrameAvailability.Invalid;
+            m_FinalAvailability[0] = AnimationPoseAvailability.Invalid;
             m_FinalContinuityIdentity[0] = continuityIdentity;
             m_FinalInvalidReason[0] = reason;
             m_FinalCompletedAt[0] = m_CompletionIdentity;
@@ -1212,7 +950,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_FinalDenseVelocities[boneIndex] = default;
             }
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
+            {
                 m_FinalPoseParameters[parameterIndex] = 0f;
+                m_FinalPoseParameterAvailability[parameterIndex] = 0;
+            }
             for (int contributionIndex = 0; contributionIndex < m_ContributionCapacity; contributionIndex++)
             {
                 m_FinalContributions[contributionIndex] = default;
@@ -1266,23 +1007,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_StoredParameters[parameterIndex] = 0f;
         }
 
-        void ClearInertial()
-        {
-            m_InertialState[0] = default;
-            for (int boneIndex = 0; boneIndex < m_BoneCount; boneIndex++)
-            {
-                m_InertialPositionResiduals[boneIndex] = Vector3.zero;
-                m_InertialRotationResiduals[boneIndex] = Vector3.zero;
-                m_InertialScaleResiduals[boneIndex] = Vector3.zero;
-                m_InertialLinearVelocityResiduals[boneIndex] = Vector3.zero;
-                m_InertialAngularVelocityResiduals[boneIndex] = Vector3.zero;
-                m_InertialScaleVelocityResiduals[boneIndex] = Vector3.zero;
-                m_InertialBoneOutputWeights[boneIndex] = 0f;
-            }
-            for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
-                m_InertialParameterResiduals[parameterIndex] = 0f;
-        }
-
         int FindContribution(AnimationPoseContributionKind kind)
         {
             for (int i = 0; i < m_FramePlan.ContributionCount; i++)
@@ -1293,217 +1017,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return -1;
         }
 
-        void FindInertialEntries(
-            out AnimationSlotBlendFramePlanEntry live,
-            out AnimationSlotBlendFramePlanEntry inertial)
-        {
-            live = default;
-            inertial = default;
-            for (int i = 0; i < m_FramePlan.ContributionCount; i++)
-            {
-                AnimationSlotBlendFramePlanEntry entry = m_FramePlan.GetEntry(i);
-                if (entry.Kind == AnimationPoseContributionKind.Live)
-                    live = entry;
-                else if (entry.Kind == AnimationPoseContributionKind.Inertial)
-                    inertial = entry;
-            }
-        }
-
-        static bool TryResolveWeightedPose(
-            Vector3 positionSum,
-            Vector4 rotationSum,
-            Vector3 scaleSum,
-            float weight,
-            out AnimationLocalBonePose pose)
-        {
-            if (!float.IsFinite(weight) || weight <= 0f ||
-                !AnimationBlendPoseMath.IsFinite(positionSum) ||
-                !AnimationBlendPoseMath.IsFinite(scaleSum) ||
-                !IsFinite(rotationSum))
-            {
-                pose = default;
-                return false;
-            }
-            Vector3 position = positionSum / weight;
-            Vector3 scale = scaleSum / weight;
-            Quaternion rotation = new Quaternion(rotationSum.x, rotationSum.y, rotationSum.z, rotationSum.w);
-            float magnitude = Quaternion.Dot(rotation, rotation);
-            if (!AnimationBlendPoseMath.IsFinite(position) || !AnimationBlendPoseMath.IsFinite(scale) ||
-                !float.IsFinite(magnitude) || magnitude <= QuaternionTolerance)
-            {
-                pose = default;
-                return false;
-            }
-            rotation = rotation.normalized;
-            if (!IsFinite(rotation))
-            {
-                pose = default;
-                return false;
-            }
-            pose = new AnimationLocalBonePose(position, rotation, scale);
-            return true;
-        }
-
-        static bool TryCreateVelocity(
-            Vector3 linear,
-            Vector3 angular,
-            Vector3 scale,
-            out AnimationBlendBoneVelocity velocity)
-        {
-            if (!AnimationBlendPoseMath.IsFinite(linear) ||
-                !AnimationBlendPoseMath.IsFinite(angular) ||
-                !AnimationBlendPoseMath.IsFinite(scale))
-            {
-                velocity = default;
-                return false;
-            }
-            velocity = new AnimationBlendBoneVelocity(linear, angular, scale);
-            return true;
-        }
-
-        static bool TryDifferentiate(
-            AnimationLocalBonePose previous,
-            AnimationLocalBonePose current,
-            float deltaSeconds,
-            out AnimationBlendBoneVelocity velocity)
-        {
-            Vector3 linear = (current.Position - previous.Position) / deltaSeconds;
-            Vector3 angular = AnimationBlendPoseMath.QuaternionLog(current.Rotation * Quaternion.Inverse(previous.Rotation)) / deltaSeconds;
-            Vector3 scale = (current.Scale - previous.Scale) / deltaSeconds;
-            return TryCreateVelocity(linear, angular, scale, out velocity);
-        }
-
-        static bool TryQuaternionExp(Vector3 value, out Quaternion result)
-        {
-            if (!AnimationBlendPoseMath.IsFinite(value))
-            {
-                result = default;
-                return false;
-            }
-            double x = value.x;
-            double y = value.y;
-            double z = value.z;
-            double angle = Math.Sqrt(x * x + y * y + z * z);
-            if (double.IsNaN(angle) || double.IsInfinity(angle))
-            {
-                result = default;
-                return false;
-            }
-            if (angle <= QuaternionTolerance)
-            {
-                result = Quaternion.identity;
-                return true;
-            }
-            double half = angle * 0.5d;
-            double scale = Math.Sin(half) / angle;
-            result = new Quaternion(
-                (float)(x * scale),
-                (float)(y * scale),
-                (float)(z * scale),
-                (float)Math.Cos(half));
-            if (!IsFinite(result) || Quaternion.Dot(result, result) <= QuaternionTolerance)
-            {
-                result = default;
-                return false;
-            }
-            result = result.normalized;
-            return IsFinite(result);
-        }
-
-        static bool AccumulateFoot(
-            AnimationFootFeatureSample sample,
-            float weight,
-            float visualTimeScale,
-            ref float totalWeight,
-            ref Vector3 velocity,
-            ref float height,
-            ref float plantConfidence,
-            ref float landingConfidence,
-            ref float landingWeight,
-            ref float landingDelay,
-            ref Vector2 landingOffset)
-        {
-            if (!IsValidFoot(sample) || !float.IsFinite(weight) || weight <= 0f ||
-                !float.IsFinite(visualTimeScale) || visualTimeScale < 0f)
-            {
-                return false;
-            }
-            float effectiveLandingConfidence = visualTimeScale > 0.000001f
-                ? sample.NextLandingConfidence
-                : 0f;
-            float nextLandingWeight = weight * effectiveLandingConfidence;
-            totalWeight += weight;
-            velocity += sample.SoleLocalVelocity * visualTimeScale * weight;
-            height += sample.SoleHeight * weight;
-            plantConfidence += sample.PlantConfidence * weight;
-            landingConfidence += effectiveLandingConfidence * weight;
-            landingWeight += nextLandingWeight;
-            if (nextLandingWeight > 0f)
-                landingDelay += sample.NextLandingDelaySeconds / visualTimeScale * nextLandingWeight;
-            landingOffset += sample.NextLandingLocalOffset * nextLandingWeight;
-            return float.IsFinite(totalWeight) && AnimationBlendPoseMath.IsFinite(velocity) &&
-                   float.IsFinite(height) && float.IsFinite(plantConfidence) &&
-                   float.IsFinite(landingConfidence) && float.IsFinite(landingWeight) &&
-                   float.IsFinite(landingDelay) && IsFinite(landingOffset);
-        }
-
-        static bool TryResolveFoot(
-            float weight,
-            Vector3 velocity,
-            float height,
-            float plantConfidence,
-            float landingConfidence,
-            float landingWeight,
-            float landingDelay,
-            Vector2 landingOffset,
-            out AnimationFootFeatureSample sample)
-        {
-            float inverseWeight = 1f / weight;
-            float resolvedPlant = plantConfidence * inverseWeight;
-            float resolvedLandingConfidence = landingConfidence * inverseWeight;
-            float resolvedLandingDelay = landingWeight > 0f ? landingDelay / landingWeight : 0f;
-            Vector2 resolvedLandingOffset = landingWeight > 0f ? landingOffset / landingWeight : Vector2.zero;
-            Vector3 resolvedVelocity = velocity * inverseWeight;
-            float resolvedHeight = height * inverseWeight;
-            if (!AnimationBlendPoseMath.IsFinite(resolvedVelocity) || !float.IsFinite(resolvedHeight) ||
-                !IsNormalized(resolvedPlant) || !IsNormalized(resolvedLandingConfidence) ||
-                !float.IsFinite(resolvedLandingDelay) || resolvedLandingDelay < 0f ||
-                !IsFinite(resolvedLandingOffset))
-            {
-                sample = default;
-                return false;
-            }
-            sample = new AnimationFootFeatureSample(
-                resolvedVelocity,
-                resolvedHeight,
-                resolvedPlant,
-                resolvedLandingConfidence,
-                resolvedLandingDelay,
-                resolvedLandingOffset);
-            return true;
-        }
-
-        static bool IsValidFoot(AnimationFootFeatureSample sample) =>
-            sample.IsValid && AnimationBlendPoseMath.IsFinite(sample.SoleLocalVelocity) &&
-            float.IsFinite(sample.SoleHeight) && IsNormalized(sample.PlantConfidence) &&
-            IsNormalized(sample.NextLandingConfidence) &&
-            float.IsFinite(sample.NextLandingDelaySeconds) && sample.NextLandingDelaySeconds >= 0f &&
-            IsFinite(sample.NextLandingLocalOffset);
-
-        static bool IsNormalized(float value) =>
-            float.IsFinite(value) && value >= 0f && value <= 1f;
-
-        static bool IsFinite(Vector2 value) =>
-            float.IsFinite(value.x) && float.IsFinite(value.y);
-
-        static bool IsFinite(Vector4 value) =>
-            float.IsFinite(value.x) && float.IsFinite(value.y) &&
-            float.IsFinite(value.z) && float.IsFinite(value.w);
-
-        static bool IsFinite(Quaternion value) =>
-            float.IsFinite(value.x) && float.IsFinite(value.y) &&
-            float.IsFinite(value.z) && float.IsFinite(value.w);
-
         static void RequirePlan(AnimationSlotBlendFramePlan plan, int sourceCapacity)
         {
             plan.RequireValidLayout();
@@ -1513,7 +1026,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
             int liveCount = 0;
             int storedCount = 0;
-            int inertialCount = 0;
             float scalarWeight = 0f;
             float leftFootWeight = 0f;
             float rightFootWeight = 0f;
@@ -1523,71 +1035,46 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 if (!entry.IsValid ||
                     entry.Kind == AnimationPoseContributionKind.Live &&
                     (uint)entry.SourceCaptureIndex >= (uint)sourceCapacity)
-                {
                     throw new ArgumentException();
-                }
                 for (int previousIndex = 0; previousIndex < contributionIndex; previousIndex++)
                 {
-                    if (entry.ContributionContinuityIdentity == plan.GetEntry(previousIndex).ContributionContinuityIdentity)
+                    if (entry.ContributionContinuityIdentity ==
+                        plan.GetEntry(previousIndex).ContributionContinuityIdentity)
                         throw new ArgumentException();
                 }
                 if (entry.Kind == AnimationPoseContributionKind.Live)
                     liveCount++;
                 else if (entry.Kind == AnimationPoseContributionKind.Stored)
                     storedCount++;
-                else if (entry.Kind == AnimationPoseContributionKind.Inertial)
-                    inertialCount++;
+                else
+                    throw new ArgumentException();
                 scalarWeight += entry.ScalarWeight;
                 leftFootWeight += entry.LeftFootWeight;
                 rightFootWeight += entry.RightFootWeight;
             }
-            if (!float.IsFinite(scalarWeight) || !float.IsFinite(leftFootWeight) || !float.IsFinite(rightFootWeight) ||
+            if (!float.IsFinite(scalarWeight) || !float.IsFinite(leftFootWeight) ||
+                !float.IsFinite(rightFootWeight) ||
                 scalarWeight > 1f + WeightTolerance || leftFootWeight > 1f + WeightTolerance ||
                 rightFootWeight > 1f + WeightTolerance ||
                 Mathf.Abs(scalarWeight - header.OutputWeight) > WeightTolerance ||
-                liveCount > header.MaxActiveSourceEntries || storedCount > 1 || inertialCount > 1)
-            {
+                liveCount > header.MaxActiveSourceEntries || storedCount > 1 ||
+                header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture && storedCount != 1 ||
+                header.Kind == AnimationSlotBlendFramePlanKind.Unavailable &&
+                (liveCount != 0 || storedCount != 0 || scalarWeight != 0f))
                 throw new ArgumentException();
-            }
-            if (header.UsesInertial)
-            {
-                if (header.ContributionCount != 2 || liveCount != 1 || storedCount != 0 || inertialCount != 1)
-                    throw new ArgumentException();
-            }
-            else if (inertialCount != 0 ||
-                     header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture && storedCount != 1)
-            {
-                throw new ArgumentException();
-            }
+
             bool hasOutputWeight = header.OutputWeight > 0f;
             for (int boneIndex = 0; boneIndex < header.BoneCount; boneIndex++)
             {
                 float boneWeight = 0f;
                 for (int contributionIndex = 0; contributionIndex < header.ContributionCount; contributionIndex++)
-                {
-                    float weight = plan.GetDenseBoneWeight(contributionIndex, boneIndex);
-                    if (!IsNormalized(weight))
-                        throw new ArgumentException();
-                    boneWeight += weight;
-                }
+                    boneWeight += plan.GetDenseBoneWeight(contributionIndex, boneIndex);
                 if (!float.IsFinite(boneWeight) || boneWeight > 1f + WeightTolerance)
-                {
                     throw new ArgumentException();
-                }
                 hasOutputWeight |= boneWeight > 0f;
-                if (header.UsesInertial && !plan.GetInertialBone(boneIndex).IsValid)
-                    throw new ArgumentException();
             }
-            if (header.Availability == PoseSlotFrameAvailability.Pose && !hasOutputWeight)
+            if (header.Availability == AnimationPoseAvailability.Pose && !hasOutputWeight)
                 throw new ArgumentException();
-            if (header.UsesInertial)
-            {
-                for (int parameterIndex = 0; parameterIndex < header.ParameterCount; parameterIndex++)
-                {
-                    if (!float.IsFinite(plan.GetInertialParameterResidualWeight(parameterIndex)))
-                        throw new ArgumentException();
-                }
-            }
         }
 
         static void RequireSourceBinding(
@@ -1603,6 +1090,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             RequireLength(binding.CurrentPose, checked(binding.SourceCapacity * binding.BoneCount));
             RequireLength(binding.Velocity, checked(binding.SourceCapacity * binding.BoneCount));
             RequireLength(binding.PoseParameters, checked(binding.SourceCapacity * binding.ParameterCount));
+            RequireLength(binding.PoseParameterAvailability, checked(binding.SourceCapacity * binding.ParameterCount));
             RequireLength(binding.LeftFootFeatures, binding.SourceCapacity);
             RequireLength(binding.RightFootFeatures, binding.SourceCapacity);
             RequireLength(binding.VisualTimeScales, binding.SourceCapacity);
@@ -1612,11 +1100,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         }
 
         static void RequireFinalBinding(
-            AnimationPoseSlotNativeWriteBinding binding,
+            AnimationPlayerPoseNativeWriteBinding binding,
             AnimationSlotBlendFramePlanHeader header)
         {
             if (binding.CompletionIdentity != header.CompletionIdentity ||
-                binding.Range.PhysicalSlotIndex != header.PhysicalSlotIndex ||
+                binding.Range.PhysicalPlayerIndex != header.PhysicalPlayerIndex ||
                 binding.Range.ContributionCapacity != header.ContributionCapacity)
             {
                 throw new ArgumentException();
@@ -1624,6 +1112,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             RequireLength(binding.DenseLocalPoses, header.BoneCount);
             RequireLength(binding.DenseVelocities, header.BoneCount);
             RequireLength(binding.PoseParameters, header.ParameterCount);
+            RequireLength(binding.PoseParameterAvailability, header.ParameterCount);
             RequireLength(binding.Contributions, header.ContributionCapacity);
             RequireLength(binding.DenseContributionWeights, checked(header.ContributionCapacity * header.BoneCount));
             RequireLength(binding.ContributionCount, 1);
@@ -1646,16 +1135,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             RequireLength(binding.StoredPose.DenseVelocity, header.BoneCount);
             RequireLength(binding.StoredPose.PoseParameters, header.ParameterCount);
             RequireLength(binding.StoredPose.DenseBoneOutputWeights, header.BoneCount);
-
-            RequireLength(binding.Inertial.State, 1);
-            RequireLength(binding.Inertial.PositionResiduals, header.BoneCount);
-            RequireLength(binding.Inertial.RotationResiduals, header.BoneCount);
-            RequireLength(binding.Inertial.ScaleResiduals, header.BoneCount);
-            RequireLength(binding.Inertial.LinearVelocityResiduals, header.BoneCount);
-            RequireLength(binding.Inertial.AngularVelocityResiduals, header.BoneCount);
-            RequireLength(binding.Inertial.ScaleVelocityResiduals, header.BoneCount);
-            RequireLength(binding.Inertial.ParameterResiduals, header.ParameterCount);
-            RequireLength(binding.Inertial.DenseBoneOutputWeights, header.BoneCount);
 
             RequireLength(binding.History.States, 2);
             RequireLength(binding.History.DenseLocalPoses, checked(header.BoneCount * 2));

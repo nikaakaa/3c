@@ -1,0 +1,446 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using ThirdPersonCharacter.Pipeline;
+using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonSimulation;
+using UnityEditor;
+using UnityEngine;
+
+namespace ThirdPersonCharacter.Editor.MotionMatching
+{
+    [Serializable]
+    public sealed class MotionMatchingQueryFixtureTrajectoryPoint
+    {
+        [Min(0f)] public float TimeOffset;
+        public Vector2 LocalPositionCenter;
+        public Vector2 LocalFacingCenter = Vector2.up;
+        [Min(0f)] public float PositionToleranceRadius;
+        [Min(0f)] public float FacingToleranceDegrees;
+        [Range(0f, 1f)] public float Confidence = 1f;
+
+        public MotionMatchingTrajectoryEnvelopePoint Build() =>
+            new MotionMatchingTrajectoryEnvelopePoint(
+                TimeOffset,
+                LocalPositionCenter,
+                LocalFacingCenter,
+                PositionToleranceRadius,
+                FacingToleranceDegrees,
+                Confidence);
+    }
+
+    [CreateAssetMenu(
+        fileName = "MotionMatchingQueryFixture",
+        menuName = "3C/Character/Motion Matching/Query Fixture")]
+    public sealed class MotionMatchingQueryFixture : ScriptableObject
+    {
+        [SerializeField] CharacterPipelineDefinition m_Definition;
+        [SerializeField] string m_ProgramProducerId = string.Empty;
+        [SerializeField] string m_DatabaseId = string.Empty;
+        [SerializeField] string m_TrajectorySourceId = "editor-query-fixture";
+        [SerializeField, Min(1)] long m_SourceTick = 1;
+        [SerializeField, Min(1)] long m_SourceSequence = 1;
+        [SerializeField, Min(0f)] float m_SourceAge;
+        [SerializeField] List<MotionMatchingQueryFixtureTrajectoryPoint> m_Trajectory = new List<MotionMatchingQueryFixtureTrajectoryPoint>();
+        [SerializeField] float[] m_NormalizedFeatures = Array.Empty<float>();
+        [SerializeField] MotionMatchingFootContactMask m_ProtectedContact;
+        [SerializeField] Vector3 m_LeftRootPosition;
+        [SerializeField] Vector3 m_RightRootPosition;
+        [SerializeField] Vector3 m_LeftRootVelocity;
+        [SerializeField] Vector3 m_RightRootVelocity;
+        [SerializeField] bool m_Initialization = true;
+        [SerializeField, Min(0f)] float m_SecondsSinceLastJump;
+        [SerializeField, Min(0)] int m_CurrentSampleIndex;
+        [SerializeField, Min(1)] long m_CurrentGeneration = 1;
+        [SerializeField, Min(1)] long m_CurrentPlanId = 1;
+        [SerializeField] long m_ResetSequence;
+
+        internal CharacterPipelineDefinition Definition => m_Definition;
+        internal string ProgramProducerId => string.IsNullOrWhiteSpace(m_ProgramProducerId)
+            ? string.Empty
+            : m_ProgramProducerId.Trim();
+
+        public MotionMatchingSearchReplayArtifact Execute()
+        {
+            CharacterPresentationProjection projection = LoadProjection();
+            MotionMatchingProjectionPayload motionMatching = projection.MotionMatching ??
+                throw new InvalidOperationException("Query Fixture Definition has no Motion Matching payload.");
+            int databaseIndex = FindDatabase(motionMatching);
+            RequireProducerBinding(projection, motionMatching, databaseIndex);
+            using var database = new CharacterMotionMatchingRuntimeDatabase(motionMatching, databaseIndex);
+            if (m_Trajectory == null || m_Trajectory.Count != motionMatching.TrajectoryPolicy.PointCount)
+                throw new InvalidOperationException($"Query Fixture requires exactly {motionMatching.TrajectoryPolicy.PointCount} trajectory points.");
+            if (m_NormalizedFeatures == null || m_NormalizedFeatures.Length != database.Capacities.DenseFeatureCount)
+                throw new InvalidOperationException($"Query Fixture requires exactly {database.Capacities.DenseFeatureCount} normalized features.");
+            if (m_SourceTick <= 0 || m_SourceSequence <= 0 || m_CurrentGeneration <= 0 || m_CurrentPlanId <= 0 || m_ResetSequence < 0)
+                throw new InvalidOperationException("Query Fixture identities must be positive and Reset Sequence must be non-negative.");
+            var envelope = new MotionMatchingTrajectoryEnvelope(m_Trajectory.Count);
+            envelope.RestoreIdentity(
+                new MotionMatchingTrajectorySourceIdentity(m_TrajectorySourceId),
+                new SimulationTick((ulong)m_SourceTick),
+                (ulong)m_SourceSequence,
+                m_SourceAge,
+                (ulong)m_ResetSequence);
+            for (int i = 0; i < m_Trajectory.Count; i++)
+                envelope.Add(m_Trajectory[i].Build());
+            MotionMatchingSelectionIdentity currentSelection = default;
+            if (!m_Initialization)
+            {
+                if ((uint)m_CurrentSampleIndex >= (uint)database.SampleCount)
+                    throw new InvalidOperationException("Query Fixture current sample index is outside the selected Database.");
+                currentSelection = new MotionMatchingSelectionIdentity(
+                    database.ArtifactIdentity,
+                    new MotionMatchingSelectionGeneration((ulong)m_CurrentGeneration),
+                    new CharacterMotionMatchingPlanId((ulong)m_CurrentPlanId),
+                    database.GetSample(m_CurrentSampleIndex).SampleId,
+                    m_CurrentSampleIndex);
+            }
+            var query = new MotionMatchingQuery(
+                new CharacterMotionMatchingQueryId(1),
+                motionMatching.ProfileId,
+                database.ArtifactIdentity,
+                database.SearchDomainId,
+                new MotionMatchingTrajectorySourceIdentity(m_TrajectorySourceId),
+                envelope,
+                new MotionMatchingFloatBuffer(m_NormalizedFeatures, 0, m_NormalizedFeatures.Length),
+                new MotionMatchingContactProtection(
+                    m_ProtectedContact,
+                    m_LeftRootPosition,
+                    m_RightRootPosition,
+                    m_LeftRootVelocity,
+                    m_RightRootVelocity),
+                currentSelection,
+                m_Initialization,
+                m_SecondsSinceLastJump,
+                (ulong)m_ResetSequence);
+            var search = new MotionMatchingExactSearch(database);
+            MotionMatchingSearchResult searchResult = search.Search(query);
+            var plan = new MotionMatchingPlanEvaluator(database);
+            MotionMatchingPlanEvaluationResult planResult = plan.Evaluate(query, searchResult);
+            if (!planResult.IsValid)
+                throw new InvalidOperationException($"Query Fixture produced no valid plan: {planResult.InvalidReason}.");
+            return MotionMatchingSearchReplayArtifact.Capture(
+                ProjectionIdentity(projection),
+                database,
+                query,
+                searchResult,
+                planResult);
+        }
+
+        CharacterPresentationProjection LoadProjection()
+        {
+            if (!m_Definition || !m_Definition.SimulationProgram || !m_Definition.PresentationProjection)
+                throw new InvalidOperationException("Query Fixture requires one Character Definition with compiled Program and Presentation Projection.");
+            CharacterSimulationProgram program = m_Definition.SimulationProgram.Load();
+            return m_Definition.PresentationProjection.Load(
+                Float32CharacterPresentationContractAdapter.Create(program));
+        }
+
+        int FindDatabase(MotionMatchingProjectionPayload projection)
+        {
+            if (string.IsNullOrWhiteSpace(m_DatabaseId))
+                throw new InvalidOperationException("Query Fixture Database Id is missing.");
+            for (int i = 0; i < projection.DatabaseCount; i++)
+            {
+                if (string.Equals(projection.GetDatabase(i).ArtifactIdentity.DatabaseId.Value, m_DatabaseId.Trim(), StringComparison.Ordinal))
+                    return i;
+            }
+            throw new InvalidOperationException($"Query Fixture Database '{m_DatabaseId}' is absent from the selected Definition Projection.");
+        }
+
+        void RequireProducerBinding(
+            CharacterPresentationProjection projection,
+            MotionMatchingProjectionPayload motionMatching,
+            int databaseIndex)
+        {
+            if (string.IsNullOrEmpty(ProgramProducerId))
+                throw new InvalidOperationException("Query Fixture Program Producer Id is missing.");
+            for (int i = 0; i < motionMatching.ProducerBindingCount; i++)
+            {
+                MotionMatchingProducerBindingPayload binding = motionMatching.GetProducerBinding(i);
+                if (!string.Equals(binding.ProgramProducerId, ProgramProducerId, StringComparison.Ordinal) ||
+                    databaseIndex < binding.FirstDatabaseIndex ||
+                    databaseIndex >= binding.FirstDatabaseIndex + binding.DatabaseCount)
+                    continue;
+                if (!projection.TryGetProducer(ProgramProducerId, out CharacterPresentationProducerEntry producer) ||
+                    producer.Kind != CharacterPresentationProducerKind.Animation ||
+                    producer.AnimationSourceKind != AnimationPoseSourceKind.MotionMatching ||
+                    !producer.AnimationChannelId.Equals(binding.AnimationChannelId))
+                    throw new InvalidOperationException("Query Fixture producer does not match the compiled Motion Matching binding.");
+                return;
+            }
+            throw new InvalidOperationException("Query Fixture Database is not owned by the selected Motion Matching producer.");
+        }
+
+        static string ProjectionIdentity(CharacterPresentationProjection projection) =>
+            $"{projection.ProgramId}@{projection.SourceRevision}:{projection.ContractHash}";
+    }
+
+    [CustomEditor(typeof(MotionMatchingQueryFixture))]
+    public sealed class MotionMatchingQueryFixtureInspector : UnityEditor.Editor
+    {
+        MotionMatchingSearchReplayArtifact m_LastArtifact;
+        MotionMatchingQueryFixturePreviewSession m_PreviewSession;
+        CharacterPipelineHost m_PreviewTarget;
+        string m_LastPreviewStatus = string.Empty;
+
+        void OnDisable()
+        {
+            m_PreviewSession?.Dispose();
+            m_PreviewSession = null;
+        }
+
+        public override void OnInspectorGUI()
+        {
+            DrawDefaultInspector();
+            EditorGUILayout.HelpBox(
+                "This Editor-only fixture is an explicit query input. It is not referenced by Runtime Profiles or Character assets and does not execute Program, World Solver, Foot Physics, or Camera.",
+                MessageType.Info);
+            m_PreviewTarget = (CharacterPipelineHost)EditorGUILayout.ObjectField(
+                "Pose Preview Target",
+                m_PreviewTarget,
+                typeof(CharacterPipelineHost),
+                true);
+            if (GUILayout.Button("Run Formal Database Search And Plan"))
+                RunFixture();
+            if (GUILayout.Button("Run Formal Module Pose Preview"))
+                RunPosePreview();
+            using (new EditorGUI.DisabledScope(m_LastArtifact == null))
+            {
+                if (GUILayout.Button("Save Search Replay Artifact"))
+                    SaveArtifact();
+            }
+            if (m_LastArtifact != null)
+            {
+                EditorGUILayout.LabelField("Expected Digest", m_LastArtifact.ExpectedDigest.ToString());
+                EditorGUILayout.LabelField("Database", m_LastArtifact.DatabaseIdentity.DatabaseId.Value);
+                EditorGUILayout.LabelField("Projection", m_LastArtifact.ProjectionIdentity);
+            }
+            if (!string.IsNullOrEmpty(m_LastPreviewStatus))
+                EditorGUILayout.HelpBox(m_LastPreviewStatus, MessageType.Info);
+        }
+
+        void RunFixture()
+        {
+            try
+            {
+                m_LastArtifact = ((MotionMatchingQueryFixture)target).Execute();
+            }
+            catch (Exception exception)
+            {
+                m_LastArtifact = null;
+                EditorUtility.DisplayDialog("Motion Matching Query Fixture Failed", exception.Message, "OK");
+            }
+        }
+
+        void SaveArtifact()
+        {
+            string path = EditorUtility.SaveFilePanelInProject(
+                "Save Motion Matching Search Replay",
+                $"{target.name}-search-replay",
+                "bytes",
+                "Choose the Search Replay Artifact path.");
+            if (string.IsNullOrEmpty(path))
+                return;
+            File.WriteAllBytes(Path.GetFullPath(path), MotionMatchingSearchReplayArtifactCodec.Encode(m_LastArtifact));
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
+        }
+
+        void RunPosePreview()
+        {
+            try
+            {
+                if (!m_PreviewTarget)
+                    throw new InvalidOperationException("Query Fixture Pose Preview requires an explicit scene CharacterPipelineHost target.");
+                MotionMatchingQueryFixture fixture = (MotionMatchingQueryFixture)target;
+                MotionMatchingSearchReplayArtifact artifact = fixture.Execute();
+                m_PreviewSession?.Dispose();
+                m_PreviewSession = new MotionMatchingQueryFixturePreviewSession(fixture, m_PreviewTarget);
+                ComposedAnimationPoseFrame finalPose = m_PreviewSession.Evaluate(artifact);
+                m_LastArtifact = artifact;
+                m_LastPreviewStatus = $"Pose preview completed through Module and compiled Pose Plan. Completion={finalPose.CompletionIdentity}";
+            }
+            catch (Exception exception)
+            {
+                m_PreviewSession?.Dispose();
+                m_PreviewSession = null;
+                m_LastPreviewStatus = string.Empty;
+                EditorUtility.DisplayDialog("Motion Matching Query Fixture Preview Failed", exception.Message, "OK");
+            }
+        }
+    }
+
+    internal sealed class MotionMatchingQueryFixturePreviewSession : IDisposable
+    {
+        readonly CharacterAnimationPlaybackRuntime m_Playback;
+        readonly CharacterSimulationProgram m_Program;
+        readonly CharacterPresentationProducerEntry m_Producer;
+        readonly ActorId m_ActorId;
+        readonly Transform[] m_Bones;
+        readonly Vector3[] m_LocalPositions;
+        readonly Quaternion[] m_LocalRotations;
+        readonly Vector3[] m_LocalScales;
+        ulong m_EventSequence;
+        ulong m_PresentationFrame;
+        bool m_Disposed;
+
+        internal MotionMatchingQueryFixturePreviewSession(
+            MotionMatchingQueryFixture fixture,
+            CharacterPipelineHost target)
+        {
+            if (Application.isPlaying)
+                throw new InvalidOperationException("Motion Matching Query Fixture Pose Preview is Editor-only and cannot run during Play Mode.");
+            if (fixture == null || !fixture.Definition || !target || target.Definition != fixture.Definition)
+                throw new InvalidOperationException("Query Fixture and Pose Preview target must use the same explicit Character Definition.");
+            if (!target.Animancer || !target.AnimationRigBinding)
+                throw new InvalidOperationException("Query Fixture Pose Preview target requires Animancer and Animation Rig Binding.");
+            if (!fixture.Definition.SimulationProgram || !fixture.Definition.PresentationProjection)
+                throw new InvalidOperationException("Query Fixture Pose Preview requires compiled Program and Presentation Projection.");
+
+            m_Program = fixture.Definition.SimulationProgram.Load();
+            CharacterPresentationSemanticContract contract =
+                Float32CharacterPresentationContractAdapter.Create(m_Program);
+            CharacterPresentationProjection projection = fixture.Definition.PresentationProjection.Load(contract);
+            if (!projection.TryGetProducer(fixture.ProgramProducerId, out m_Producer) ||
+                m_Producer.Kind != CharacterPresentationProducerKind.Animation ||
+                m_Producer.AnimationSourceKind != AnimationPoseSourceKind.MotionMatching)
+                throw new InvalidOperationException("Query Fixture Pose Preview producer is not a compiled Motion Matching producer.");
+            target.AnimationRigBinding.RequireValid(projection.Rig);
+            m_ActorId = new ActorId($"MotionMatchingQueryFixture/{Guid.NewGuid():N}");
+            IReadOnlyList<Transform> sourceBones = target.AnimationRigBinding.Bones;
+            m_Bones = new Transform[sourceBones.Count];
+            m_LocalPositions = new Vector3[sourceBones.Count];
+            m_LocalRotations = new Quaternion[sourceBones.Count];
+            m_LocalScales = new Vector3[sourceBones.Count];
+            for (int i = 0; i < sourceBones.Count; i++)
+            {
+                Transform bone = sourceBones[i];
+                m_Bones[i] = bone;
+                m_LocalPositions[i] = bone.localPosition;
+                m_LocalRotations[i] = bone.localRotation;
+                m_LocalScales[i] = bone.localScale;
+            }
+            CharacterAnimationPresentationBindingIndex animationBindings =
+                CharacterAnimationPlaybackRuntime.BuildBindings(contract, projection);
+            var motionMatching = new CharacterMotionMatchingPresentationModule(
+                m_ActorId,
+                CharacterBodyPresentationSourceMode.CommittedStream,
+                projection,
+                animationBindings.WorkspaceLayout.SourceCapacity);
+            try
+            {
+                m_Playback = new CharacterAnimationPlaybackRuntime(
+                    animationBindings,
+                    motionMatching,
+                    target.Animancer,
+                    target.AnimationRigBinding,
+                    true);
+            }
+            catch
+            {
+                motionMatching.Dispose();
+                throw;
+            }
+        }
+
+        internal ComposedAnimationPoseFrame Evaluate(MotionMatchingSearchReplayArtifact fixture)
+        {
+            if (m_Disposed)
+                throw new ObjectDisposedException(nameof(MotionMatchingQueryFixturePreviewSession));
+            var tick = new SimulationTick(++m_PresentationFrame);
+            const ulong generation = 1;
+            var activation = new ActivationId(
+                new OperationHandle(0),
+                generation,
+                "motion-matching-query-fixture");
+            m_Playback.Publish(
+                CreateCommand(
+                    CharacterPresentationCommandKind.SelectProducer,
+                    tick,
+                    activation,
+                    generation,
+                    "preview.motion-matching.select"),
+                m_Producer);
+            m_Playback.Publish(
+                CreateCommand(
+                    CharacterPresentationCommandKind.SampleProducer,
+                    tick,
+                    activation,
+                    generation,
+                    "preview.motion-matching.sample"),
+                m_Producer);
+            m_Playback.CaptureMotionMatchingFixtureQuery(m_Producer.ProgramProducerIdentity, fixture);
+            CharacterBodyPresentationFrame bodyFrame = default;
+            ComposedAnimationPoseFrame finalPose = m_Playback.Present(
+                m_PresentationFrame,
+                tick.Value,
+                1f,
+                0f,
+                in bodyFrame,
+                null);
+            if (finalPose.Availability != AnimationPoseAvailability.Pose)
+                throw new InvalidOperationException("Query Fixture Pose Preview did not produce a valid ComposedAnimationPoseFrame.");
+            return finalPose;
+        }
+
+        public void Dispose()
+        {
+            if (m_Disposed)
+                return;
+            m_Disposed = true;
+            try
+            {
+                m_Playback.Dispose();
+            }
+            finally
+            {
+                for (int i = 0; i < m_Bones.Length; i++)
+                {
+                    Transform bone = m_Bones[i];
+                    if (!bone)
+                        continue;
+                    bone.localPosition = m_LocalPositions[i];
+                    bone.localRotation = m_LocalRotations[i];
+                    bone.localScale = m_LocalScales[i];
+                }
+            }
+        }
+
+        CharacterPresentationCommand CreateCommand(
+            CharacterPresentationCommandKind kind,
+            SimulationTick tick,
+            ActivationId activation,
+            ulong generation,
+            string channel)
+        {
+            if (m_EventSequence == ulong.MaxValue)
+                throw new InvalidOperationException("Query Fixture preview Event sequence was exhausted.");
+            ulong sequence = ++m_EventSequence;
+            EventId eventId = EventId.Create(
+                m_Program.ProgramHash,
+                m_ActorId,
+                activation,
+                tick,
+                sequence,
+                channel);
+            return new CharacterPresentationCommand(
+                new CharacterPresentationEventHeader(
+                    eventId,
+                    m_ActorId,
+                    tick,
+                    activation,
+                    sequence,
+                    channel),
+                kind,
+                m_Producer.ProgramProducerIdentity,
+                0f,
+                1f,
+                generation,
+                0);
+        }
+    }
+}

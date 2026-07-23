@@ -88,7 +88,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingTrajectoryPolicyRuntimePoint GetPoint(int index) => m_Points[index];
     }
 
-    public sealed class CharacterMotionMatchingTrajectoryRuntime
+    internal sealed class CharacterMotionMatchingTrajectoryRuntime
     {
         readonly MotionMatchingTrajectoryPolicyPayload m_Policy;
         ulong m_ResetSequence;

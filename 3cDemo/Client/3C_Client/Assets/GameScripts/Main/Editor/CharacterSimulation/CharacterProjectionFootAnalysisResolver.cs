@@ -43,6 +43,66 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public static class CharacterProjectionFootAnalysisResolver
     {
+        public static IReadOnlyList<CharacterFootAnalysisArtifactDiagnostic> InspectBlendSpace(
+            CharacterAnimationPresentationProfile profile,
+            CharacterAnimationBlendSpaceAsset asset)
+        {
+            var diagnostics = new List<CharacterFootAnalysisArtifactDiagnostic>();
+            var errors = new List<string>();
+            if (!profile || !asset)
+            {
+                diagnostics.Add(new CharacterFootAnalysisArtifactDiagnostic(
+                    AnimationFootAnalysisArtifactStatus.Missing,
+                    string.Empty,
+                    "Blend Space Foot Analysis requires a Profile and asset."));
+                return diagnostics;
+            }
+            if (profile.FootPlacementAnalysisMode == CharacterFootPlacementAnalysisMode.Disabled)
+                return diagnostics;
+            if (!TryResolveSource(profile, errors, out CharacterFootPlacementAnalysisSource source))
+            {
+                diagnostics.Add(new CharacterFootAnalysisArtifactDiagnostic(
+                    AnimationFootAnalysisArtifactStatus.Missing,
+                    string.Empty,
+                    string.Join("\n", errors)));
+                return diagnostics;
+            }
+            for (int i = 0; i < asset.Samples.Count; i++)
+            {
+                CharacterAnimationBlendSpaceSample sample = asset.Samples[i];
+                string bindingKey = sample != null && sample.SampleId.IsValid
+                    ? AnimationFootAnalysisProjectionBuildData.BlendSpaceBindingKey(asset.BlendSpaceId, sample.SampleId)
+                    : string.Empty;
+                if (sample == null || !sample.SampleId.IsValid || !sample.Clip)
+                {
+                    diagnostics.Add(new CharacterFootAnalysisArtifactDiagnostic(
+                        AnimationFootAnalysisArtifactStatus.Missing,
+                        bindingKey,
+                        $"Blend Space Sample #{i} has no valid identity or AnimationClip."));
+                    continue;
+                }
+                try
+                {
+                    AnimationFootAnalysisArtifactIdentity expected =
+                        AnimationFootAnalysisArtifactBuilder.GetExpectedIdentity(sample.Clip, source);
+                    AnimationFootAnalysisArtifactInspection inspection =
+                        AnimationFootAnalysisArtifactStore.Inspect(expected);
+                    diagnostics.Add(new CharacterFootAnalysisArtifactDiagnostic(
+                        inspection.Status,
+                        bindingKey,
+                        $"{sample.SampleId} / {sample.Clip.name} / {expected.IdentityHash.Value} / {inspection.Error}"));
+                }
+                catch (Exception exception)
+                {
+                    diagnostics.Add(new CharacterFootAnalysisArtifactDiagnostic(
+                        AnimationFootAnalysisArtifactStatus.Corrupt,
+                        bindingKey,
+                        $"{sample.SampleId} / {sample.Clip.name} / {exception.Message}"));
+                }
+            }
+            return diagnostics;
+        }
+
         readonly struct ClipBinding
         {
             public ClipBinding(
@@ -55,16 +115,41 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 TrackAuthoringId = trackAuthoringId;
                 ClipAuthoringId = clipAuthoringId;
                 Clip = clip;
+                BlendSpaceId = default;
+                SampleId = default;
+            }
+
+            public ClipBinding(
+                CharacterAnimationBlendSpaceId blendSpaceId,
+                CharacterAnimationBlendSpaceSampleId sampleId,
+                UnityEngine.AnimationClip clip)
+            {
+                if (!blendSpaceId.IsValid || !sampleId.IsValid)
+                    throw new ArgumentException("Blend Space Foot Analysis binding identity is invalid.");
+                TimelineAuthoringId = string.Empty;
+                TrackAuthoringId = string.Empty;
+                ClipAuthoringId = string.Empty;
+                Clip = clip;
+                BlendSpaceId = blendSpaceId;
+                SampleId = sampleId;
             }
 
             public string TimelineAuthoringId { get; }
             public string TrackAuthoringId { get; }
             public string ClipAuthoringId { get; }
             public UnityEngine.AnimationClip Clip { get; }
-            public string BindingKey => AnimationFootAnalysisProjectionBuildData.BindingKey(
-                TimelineAuthoringId,
-                TrackAuthoringId,
-                ClipAuthoringId);
+            public CharacterAnimationBlendSpaceId BlendSpaceId { get; }
+            public CharacterAnimationBlendSpaceSampleId SampleId { get; }
+            public bool IsBlendSpace => BlendSpaceId.IsValid;
+            public string BindingKey => IsBlendSpace
+                ? AnimationFootAnalysisProjectionBuildData.BlendSpaceBindingKey(BlendSpaceId, SampleId)
+                : AnimationFootAnalysisProjectionBuildData.BindingKey(
+                    TimelineAuthoringId,
+                    TrackAuthoringId,
+                    ClipAuthoringId);
+            public string DisplayIdentity => IsBlendSpace
+                ? $"Blend Space '{BlendSpaceId}' Sample '{SampleId}'"
+                : $"Timeline '{TimelineAuthoringId}' Track '{TrackAuthoringId}' Clip '{ClipAuthoringId}'";
         }
 
         public static CharacterFootPlacementAnalysisCompilation Resolve(
@@ -90,7 +175,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!TryResolveSource(profile, errors, out CharacterFootPlacementAnalysisSource source))
                 return null;
 
-            List<ClipBinding> bindings = CollectAuthoringBindings(timelines, errors);
+            List<ClipBinding> bindings = CollectAuthoringBindings(profile, timelines, errors);
             if (bindings.Count == 0)
             {
                 errors?.Add("Foot Analysis found no reachable Animation Clip binding.");
@@ -146,7 +231,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 catch (Exception exception)
                 {
                     errors?.Add(
-                        $"Foot Analysis binding Timeline '{binding.TimelineAuthoringId}' Track '{binding.TrackAuthoringId}' Clip '{binding.ClipAuthoringId}' AnimationClip '{binding.Clip?.name}' Source '{source.AnalysisSourceId}' Rig '{source.SamplingRigAssetGuid}' Calibration '{source.RigCalibration.CalibrationId}@{source.RigCalibration.ContentRevision}' failed: {exception.Message}");
+                        $"Foot Analysis binding {binding.DisplayIdentity} AnimationClip '{binding.Clip?.name}' Source '{source.AnalysisSourceId}' Rig '{source.SamplingRigAssetGuid}' Calibration '{source.RigCalibration.CalibrationId}@{source.RigCalibration.ContentRevision}' failed: {exception.Message}");
                 }
             }
             if (artifactFailure || errors.Count > 0 || features.Count != bindings.Count)
@@ -271,6 +356,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static List<ClipBinding> CollectAuthoringBindings(
+            CharacterAnimationPresentationProfile profile,
             IReadOnlyDictionary<string, TimelineData> timelines,
             List<string> errors)
         {
@@ -299,6 +385,27 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         }
                         result.Add(new ClipBinding(timeline.AuthoringId, track.AuthoringId, clip.AuthoringId, clip.Clip));
                     }
+                }
+            }
+            var blendSpaceBindings = new HashSet<string>(StringComparer.Ordinal);
+            for (int bindingIndex = 0; bindingIndex < profile.ProducerBindings.Count; bindingIndex++)
+            {
+                AnimationProducerPresentationBinding producerBinding = profile.ProducerBindings[bindingIndex];
+                if (producerBinding == null || producerBinding.SourceKind != AnimationPoseSourceKind.BlendSpace ||
+                    !producerBinding.BlendSpaceSource)
+                    continue;
+                CharacterAnimationBlendSpaceAsset blendSpace = producerBinding.BlendSpaceSource;
+                for (int sampleIndex = 0; sampleIndex < blendSpace.Samples.Count; sampleIndex++)
+                {
+                    CharacterAnimationBlendSpaceSample sample = blendSpace.Samples[sampleIndex];
+                    if (sample == null || !sample.SampleId.IsValid || !sample.Clip)
+                    {
+                        errors?.Add($"Foot Analysis Blend Space '{blendSpace.name}' Sample #{sampleIndex} is incomplete.");
+                        continue;
+                    }
+                    var binding = new ClipBinding(blendSpace.BlendSpaceId, sample.SampleId, sample.Clip);
+                    if (blendSpaceBindings.Add(binding.BindingKey))
+                        result.Add(binding);
                 }
             }
             SortBindings(result);
@@ -330,6 +437,25 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         clip.Clip));
                 }
             }
+            for (int planIndex = 0; planIndex < projection.BlendSpaces.Count; planIndex++)
+            {
+                CharacterAnimationBlendSpacePlan plan = projection.BlendSpaces[planIndex];
+                if (plan == null)
+                {
+                    errors?.Add($"Projection Blend Space plan #{planIndex} is missing.");
+                    continue;
+                }
+                for (int sampleIndex = 0; sampleIndex < plan.Samples.Count; sampleIndex++)
+                {
+                    CharacterAnimationBlendSpaceSamplePlan sample = plan.Samples[sampleIndex];
+                    if (sample == null || !sample.SampleId.IsValid || !sample.Clip)
+                    {
+                        errors?.Add($"Projection Blend Space '{plan.BlendSpaceId}' Sample #{sampleIndex} is incomplete.");
+                        continue;
+                    }
+                    result.Add(new ClipBinding(plan.BlendSpaceId, sample.SampleId, sample.Clip));
+                }
+            }
             SortBindings(result);
             return result;
         }
@@ -353,7 +479,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationFootAnalysisArtifactStatus status,
             string detail)
         {
-            return $"Foot Analysis artifact {status} at Timeline '{binding.TimelineAuthoringId}' Track '{binding.TrackAuthoringId}' Clip '{binding.ClipAuthoringId}' AnimationClip '{identity.ClipAssetGuid}' Source '{identity.AnalysisSourceId}' Rig '{identity.SamplingRigAssetGuid}' Calibration '{identity.CalibrationId}@{identity.CalibrationRevision}': {detail}";
+            return $"Foot Analysis artifact {status} at {binding.DisplayIdentity} AnimationClip '{identity.ClipAssetGuid}' Source '{identity.AnalysisSourceId}' Rig '{identity.SamplingRigAssetGuid}' Calibration '{identity.CalibrationId}@{identity.CalibrationRevision}': {detail}";
         }
     }
 }

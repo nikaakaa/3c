@@ -268,14 +268,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (footAnalysis.CalibrationId != rig.CalibrationId ||
                 !string.Equals(footAnalysis.CalibrationRevision, rig.CalibrationRevision, StringComparison.Ordinal))
                 throw new InvalidOperationException("Foot Placement Runtime Rig Calibration does not match the Presentation Projection.");
-            CharacterPresentationPoseProgram poseProgram = projection.PoseProgram;
+            CharacterPresentationPosePlan poseProgram = projection.PosePlan;
             int footPlacementWeightParameterIndex = poseProgram.RequireParameterIndex(
                 AnimationPoseParameterIds.FootPlacementWeight);
             if (poseProgram.ContributionWorkspaceCount <= 0)
                 throw new InvalidOperationException("Foot Placement requires a positive final pose contribution capacity.");
 
             return new CharacterFootPlacementRuntimeSettings(
-                poseProgram.ProgramHash,
+                poseProgram.PlanHash,
                 AnimationPoseParameterIds.FootPlacementWeight,
                 footPlacementWeightParameterIndex,
                 poseProgram.ContributionWorkspaceCount,
@@ -300,7 +300,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public sealed class CharacterFootPlacementRuntimeSettings
     {
         internal CharacterFootPlacementRuntimeSettings(
-            string poseProgramHash,
+            string posePlanHash,
             PoseParameterId footPlacementWeightParameterId,
             int footPlacementWeightParameterIndex,
             int contributionCapacity,
@@ -313,9 +313,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementRotationRuntimeSettings rotation,
             FootPlacementSmoothingRuntimeSettings smoothing)
         {
-            PoseProgramHash = CharacterFootPlacementValidation.RequireIdentity(
-                poseProgramHash,
-                nameof(poseProgramHash));
+            PosePlanHash = CharacterFootPlacementValidation.RequireIdentity(
+                posePlanHash,
+                nameof(posePlanHash));
             if (!footPlacementWeightParameterId.IsValid)
                 throw new ArgumentException("Foot Placement Pose Parameter identity is invalid.", nameof(footPlacementWeightParameterId));
             if (footPlacementWeightParameterIndex < 0)
@@ -336,7 +336,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Smoothing = smoothing;
         }
 
-        public string PoseProgramHash { get; }
+        public string PosePlanHash { get; }
         public PoseParameterId FootPlacementWeightParameterId { get; }
         public int FootPlacementWeightParameterIndex { get; }
         public int ContributionCapacity { get; }

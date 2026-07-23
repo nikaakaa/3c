@@ -7,21 +7,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
     {
         CrossFade = 1,
         StoredCapture = 2,
-        InertialContinue = 3,
-        InertialCapture = 4,
-        InertialRebase = 5
+        Unavailable = 3
     }
 
     internal readonly struct AnimationSlotBlendFramePlanPreparation
     {
-        internal AnimationSlotBlendFramePlanPreparation(
-            int pageIndex,
-            ulong preparationIdentity,
-            ulong completionIdentity)
+        internal AnimationSlotBlendFramePlanPreparation(int pageIndex, ulong preparationIdentity, ulong completionIdentity)
         {
             if ((uint)pageIndex > 1u || preparationIdentity == 0 || completionIdentity == 0)
                 throw new ArgumentException("Animation Slot Blend frame plan preparation is invalid.");
-
             PageIndex = pageIndex;
             PreparationIdentity = preparationIdentity;
             CompletionIdentity = completionIdentity;
@@ -46,19 +40,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             float leftFootWeight,
             float rightFootWeight)
         {
-            int kindValue = (int)kind;
             bool live = kind == AnimationPoseContributionKind.Live;
-            if (kindValue < (int)AnimationPoseContributionKind.Live ||
-                kindValue > (int)AnimationPoseContributionKind.Inertial ||
+            bool stored = kind == AnimationPoseContributionKind.Stored;
+            if ((!live && !stored) ||
                 live && (sourceCaptureIndex < 0 || physicalSourceIndex < 0 ||
                          physicalSourceGeneration == 0 || programProducerIndex < 0) ||
-                !live && (sourceCaptureIndex != -1 || physicalSourceIndex != -1 ||
-                          physicalSourceGeneration != 0 || programProducerIndex != -1) ||
+                stored && (sourceCaptureIndex != -1 || physicalSourceIndex != -1 ||
+                           physicalSourceGeneration != 0 || programProducerIndex != -1) ||
                 contributionContinuityIdentity == 0 ||
                 !IsNormalized(scalarWeight) || !IsNormalized(leftFootWeight) || !IsNormalized(rightFootWeight))
-            {
                 throw new ArgumentException("Animation Slot Blend frame plan entry is invalid.");
-            }
 
             SourceCaptureIndex = sourceCaptureIndex;
             PhysicalSourceIndex = physicalSourceIndex;
@@ -85,10 +76,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             get
             {
-                int kindValue = (int)Kind;
                 bool live = Kind == AnimationPoseContributionKind.Live;
-                return kindValue >= (int)AnimationPoseContributionKind.Live &&
-                       kindValue <= (int)AnimationPoseContributionKind.Inertial &&
+                bool stored = Kind == AnimationPoseContributionKind.Stored;
+                return (live || stored) &&
                        (live
                            ? SourceCaptureIndex >= 0 && PhysicalSourceIndex >= 0 &&
                              PhysicalSourceGeneration != 0 && ProgramProducerIndex >= 0
@@ -102,46 +92,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         static bool IsNormalized(float value) => float.IsFinite(value) && value >= 0f && value <= 1f;
     }
 
-    internal readonly struct AnimationSlotBlendInertialBonePlan
-    {
-        internal AnimationSlotBlendInertialBonePlan(
-            float residualWeight,
-            float residualTimeSeconds,
-            float residualWeightDerivativePerSecond)
-        {
-            if (!float.IsFinite(residualWeight) ||
-                !float.IsFinite(residualTimeSeconds) || residualTimeSeconds < 0f ||
-                !float.IsFinite(residualWeightDerivativePerSecond))
-            {
-                throw new ArgumentException("Animation Slot Blend Inertial Bone plan is invalid.");
-            }
-
-            ResidualWeight = residualWeight;
-            ResidualTimeSeconds = residualTimeSeconds;
-            ResidualWeightDerivativePerSecond = residualWeightDerivativePerSecond;
-        }
-
-        internal float ResidualWeight { get; }
-        internal float ResidualTimeSeconds { get; }
-        internal float ResidualWeightDerivativePerSecond { get; }
-        internal bool IsValid =>
-            float.IsFinite(ResidualWeight) &&
-            float.IsFinite(ResidualTimeSeconds) && ResidualTimeSeconds >= 0f &&
-            float.IsFinite(ResidualWeightDerivativePerSecond);
-    }
-
     internal readonly struct AnimationSlotBlendFramePlanHeader
     {
         internal AnimationSlotBlendFramePlanHeader(
             int pageIndex,
             ulong planGeneration,
-            int physicalSlotIndex,
+            int physicalPlayerIndex,
             ulong completionIdentity,
             ulong continuityIdentity,
             AnimationSlotBlendFramePlanKind kind,
-            PoseSlotOutputPolicy outputPolicy,
+            AnimationSelectionAvailabilityPolicy outputPolicy,
             CharacterAnimationScalePolicy scalePolicy,
-            PoseSlotFrameAvailability availability,
+            AnimationPoseAvailability availability,
+            AnimationPoseNativeInvalidReason invalidReason,
             float outputWeight,
             int contributionCount,
             int maxActiveSourceEntries,
@@ -154,13 +117,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             PageIndex = pageIndex;
             PlanGeneration = planGeneration;
-            PhysicalSlotIndex = physicalSlotIndex;
+            PhysicalPlayerIndex = physicalPlayerIndex;
             CompletionIdentity = completionIdentity;
             ContinuityIdentity = continuityIdentity;
             Kind = kind;
             OutputPolicy = outputPolicy;
             ScalePolicy = scalePolicy;
             Availability = availability;
+            InvalidReason = invalidReason;
             OutputWeight = outputWeight;
             ContributionCount = contributionCount;
             MaxActiveSourceEntries = maxActiveSourceEntries;
@@ -175,13 +139,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         internal int PageIndex { get; }
         internal ulong PlanGeneration { get; }
-        internal int PhysicalSlotIndex { get; }
+        internal int PhysicalPlayerIndex { get; }
         internal ulong CompletionIdentity { get; }
         internal ulong ContinuityIdentity { get; }
         internal AnimationSlotBlendFramePlanKind Kind { get; }
-        internal PoseSlotOutputPolicy OutputPolicy { get; }
+        internal AnimationSelectionAvailabilityPolicy OutputPolicy { get; }
         internal CharacterAnimationScalePolicy ScalePolicy { get; }
-        internal PoseSlotFrameAvailability Availability { get; }
+        internal AnimationPoseAvailability Availability { get; }
+        internal AnimationPoseNativeInvalidReason InvalidReason { get; }
         internal float OutputWeight { get; }
         internal int ContributionCount { get; }
         internal int MaxActiveSourceEntries { get; }
@@ -191,34 +156,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal int HistoryReadPageIndex { get; }
         internal int HistoryWritePageIndex { get; }
         internal ulong HistoryCompletionIdentity { get; }
-
-        internal bool UsesInertial =>
-            Kind == AnimationSlotBlendFramePlanKind.InertialContinue ||
-            Kind == AnimationSlotBlendFramePlanKind.InertialCapture ||
-            Kind == AnimationSlotBlendFramePlanKind.InertialRebase;
-
-        internal bool CapturesHistory =>
-            Kind == AnimationSlotBlendFramePlanKind.StoredCapture ||
-            Kind == AnimationSlotBlendFramePlanKind.InertialCapture ||
-            Kind == AnimationSlotBlendFramePlanKind.InertialRebase;
+        internal bool CapturesHistory => Kind == AnimationSlotBlendFramePlanKind.StoredCapture;
 
         internal void RequireValid()
         {
-            int kindValue = (int)Kind;
-            bool pose = Availability == PoseSlotFrameAvailability.Pose;
-            bool noPose = Availability == PoseSlotFrameAvailability.NoPose;
+            bool pose = Availability == AnimationPoseAvailability.Pose;
+            bool noPose = Availability == AnimationPoseAvailability.NoPose;
+            bool invalid = Availability == AnimationPoseAvailability.Invalid;
             bool validHistoryRead = HistoryReadPageIndex == -1
                 ? HistoryCompletionIdentity == 0
                 : (uint)HistoryReadPageIndex <= 1u && HistoryCompletionIdentity != 0;
-            if ((uint)PageIndex > 1u || PlanGeneration == 0 || PhysicalSlotIndex < 0 ||
+            if ((uint)PageIndex > 1u || PlanGeneration == 0 || PhysicalPlayerIndex < 0 ||
                 CompletionIdentity == 0 || ContinuityIdentity == 0 ||
-                kindValue < (int)AnimationSlotBlendFramePlanKind.CrossFade ||
-                kindValue > (int)AnimationSlotBlendFramePlanKind.InertialRebase ||
-                !IsOutputPolicy(OutputPolicy) ||
-                !IsScalePolicy(ScalePolicy) ||
-                (!pose && !noPose) ||
+                Kind != AnimationSlotBlendFramePlanKind.CrossFade &&
+                Kind != AnimationSlotBlendFramePlanKind.StoredCapture &&
+                Kind != AnimationSlotBlendFramePlanKind.Unavailable ||
+                !Enum.IsDefined(typeof(AnimationSelectionAvailabilityPolicy), OutputPolicy) ||
+                !Enum.IsDefined(typeof(CharacterAnimationScalePolicy), ScalePolicy) ||
+                (!pose && !noPose && !invalid) ||
+                !Enum.IsDefined(typeof(AnimationPoseNativeInvalidReason), InvalidReason) ||
                 !float.IsFinite(OutputWeight) || OutputWeight < 0f || OutputWeight > 1f ||
-                MaxActiveSourceEntries < 2 || ContributionCapacity != checked(MaxActiveSourceEntries + 2) ||
+                MaxActiveSourceEntries < 2 || ContributionCapacity != checked(MaxActiveSourceEntries + 1) ||
                 ContributionCount < 0 || ContributionCount > ContributionCapacity ||
                 BoneCount <= 0 || ParameterCount <= 0 ||
                 !validHistoryRead || (uint)HistoryWritePageIndex > 1u ||
@@ -226,20 +184,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 CapturesHistory && HistoryReadPageIndex < 0 ||
                 pose && ContributionCount == 0 ||
                 noPose && (OutputWeight != 0f || ContributionCount != 0 || Kind != AnimationSlotBlendFramePlanKind.CrossFade) ||
-                noPose && OutputPolicy == PoseSlotOutputPolicy.RequireOutput ||
-                UsesInertial && !pose)
-            {
+                noPose && OutputPolicy == AnimationSelectionAvailabilityPolicy.RequireSelection ||
+                invalid && (Kind != AnimationSlotBlendFramePlanKind.Unavailable ||
+                            InvalidReason == AnimationPoseNativeInvalidReason.None ||
+                            OutputWeight != 0f || ContributionCount != 0 || HistoryReadPageIndex >= 0) ||
+                !invalid && InvalidReason != AnimationPoseNativeInvalidReason.None)
                 throw new InvalidOperationException("Animation Slot Blend frame plan header is invalid.");
-            }
         }
-
-        static bool IsOutputPolicy(PoseSlotOutputPolicy value) =>
-            (int)value >= (int)PoseSlotOutputPolicy.RequireOutput &&
-            (int)value <= (int)PoseSlotOutputPolicy.AllowEmpty;
-
-        static bool IsScalePolicy(CharacterAnimationScalePolicy value) =>
-            (int)value >= (int)CharacterAnimationScalePolicy.PreserveReferenceScale &&
-            (int)value <= (int)CharacterAnimationScalePolicy.BlendLocalScale;
     }
 
     internal readonly struct AnimationSlotBlendFramePlan
@@ -247,48 +198,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         readonly AnimationSlotBlendFramePlanHeader m_Header;
         readonly NativeSlice<AnimationSlotBlendFramePlanEntry> m_Entries;
         readonly NativeSlice<float> m_DenseBoneWeights;
-        readonly NativeSlice<AnimationSlotBlendInertialBonePlan> m_InertialBones;
-        readonly NativeSlice<float> m_InertialParameterResidualWeights;
 
         internal AnimationSlotBlendFramePlan(
             AnimationSlotBlendFramePlanHeader header,
             NativeArray<AnimationSlotBlendFramePlanEntry> entries,
-            NativeArray<float> denseBoneWeights,
-            NativeArray<AnimationSlotBlendInertialBonePlan> inertialBones,
-            NativeArray<float> inertialParameterResidualWeights)
+            NativeArray<float> denseBoneWeights)
         {
             header.RequireValid();
             int entryOffset = checked(header.PageIndex * header.ContributionCapacity);
             int denseOffset = checked(entryOffset * header.BoneCount);
-            int inertialBoneOffset = checked(header.PageIndex * header.BoneCount);
-            int inertialParameterOffset = checked(header.PageIndex * header.ParameterCount);
             if (!entries.IsCreated || entries.Length != checked(header.ContributionCapacity * 2) ||
                 !denseBoneWeights.IsCreated ||
-                denseBoneWeights.Length != checked(header.ContributionCapacity * header.BoneCount * 2) ||
-                !inertialBones.IsCreated || inertialBones.Length != checked(header.BoneCount * 2) ||
-                !inertialParameterResidualWeights.IsCreated ||
-                inertialParameterResidualWeights.Length != checked(header.ParameterCount * 2))
-            {
+                denseBoneWeights.Length != checked(header.ContributionCapacity * header.BoneCount * 2))
                 throw new ArgumentException("Animation Slot Blend frame plan Native layout is invalid.");
-            }
 
             m_Header = header;
             m_Entries = new NativeSlice<AnimationSlotBlendFramePlanEntry>(
-                entries,
-                entryOffset,
-                header.ContributionCapacity);
+                entries, entryOffset, header.ContributionCapacity);
             m_DenseBoneWeights = new NativeSlice<float>(
-                denseBoneWeights,
-                denseOffset,
-                checked(header.ContributionCapacity * header.BoneCount));
-            m_InertialBones = new NativeSlice<AnimationSlotBlendInertialBonePlan>(
-                inertialBones,
-                inertialBoneOffset,
-                header.BoneCount);
-            m_InertialParameterResidualWeights = new NativeSlice<float>(
-                inertialParameterResidualWeights,
-                inertialParameterOffset,
-                header.ParameterCount);
+                denseBoneWeights, denseOffset, checked(header.ContributionCapacity * header.BoneCount));
         }
 
         internal AnimationSlotBlendFramePlanHeader Header => m_Header;
@@ -299,9 +227,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal bool IsCreated =>
             m_Header.PlanGeneration != 0 &&
             m_Entries.Length == m_Header.ContributionCapacity &&
-            m_DenseBoneWeights.Length == checked(m_Header.ContributionCapacity * m_Header.BoneCount) &&
-            m_InertialBones.Length == m_Header.BoneCount &&
-            m_InertialParameterResidualWeights.Length == m_Header.ParameterCount;
+            m_DenseBoneWeights.Length == checked(m_Header.ContributionCapacity * m_Header.BoneCount);
 
         internal AnimationSlotBlendFramePlanEntry GetEntry(int contributionIndex)
         {
@@ -317,30 +243,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return m_DenseBoneWeights[contributionIndex * BoneCount + boneIndex];
         }
 
-        internal AnimationSlotBlendInertialBonePlan GetInertialBone(int boneIndex)
-        {
-            if ((uint)boneIndex >= (uint)BoneCount)
-                throw new ArgumentOutOfRangeException(nameof(boneIndex));
-            return m_InertialBones[boneIndex];
-        }
-
-        internal float GetInertialParameterResidualWeight(int parameterIndex)
-        {
-            if ((uint)parameterIndex >= (uint)ParameterCount)
-                throw new ArgumentOutOfRangeException(nameof(parameterIndex));
-            return m_InertialParameterResidualWeights[parameterIndex];
-        }
-
         internal void RequireValidLayout()
         {
             m_Header.RequireValid();
-            if (!IsCreated || m_Entries.Length != ContributionCapacity ||
-                m_DenseBoneWeights.Length != checked(ContributionCapacity * BoneCount) ||
-                m_InertialBones.Length != BoneCount ||
-                m_InertialParameterResidualWeights.Length != ParameterCount)
-            {
+            if (!IsCreated)
                 throw new InvalidOperationException("Animation Slot Blend frame plan is not created.");
-            }
         }
     }
 }

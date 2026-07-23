@@ -37,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int kindValue = (int)kind;
             if (physicalSlotIndex < 0 ||
                 kindValue < (int)AnimationPoseContributionKind.Live ||
-                kindValue > (int)AnimationPoseContributionKind.Inertial ||
+                kindValue > (int)AnimationPoseContributionKind.Stored ||
                 kind == AnimationPoseContributionKind.Live &&
                 (physicalSourceIndex < 0 || physicalSourceGeneration == 0 || programProducerIndex < 0) ||
                 kind != AnimationPoseContributionKind.Live &&
@@ -50,7 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Primitive animation pose contribution is invalid.");
             }
 
-            PhysicalSlotIndex = physicalSlotIndex;
+            PhysicalPlayerIndex = physicalSlotIndex;
             PhysicalSourceIndex = physicalSourceIndex;
             PhysicalSourceGeneration = physicalSourceGeneration;
             Kind = kind;
@@ -61,7 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RightFootWeight = rightFootWeight;
         }
 
-        internal int PhysicalSlotIndex { get; }
+        internal int PhysicalPlayerIndex { get; }
         internal int PhysicalSourceIndex { get; }
         internal ulong PhysicalSourceGeneration { get; }
         internal AnimationPoseContributionKind Kind { get; }
@@ -72,9 +72,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal float RightFootWeight { get; }
     }
 
-    internal readonly struct AnimationPoseSlotNativeRange
+    internal readonly struct AnimationPlayerPoseNativeRange
     {
-        internal AnimationPoseSlotNativeRange(
+        internal AnimationPlayerPoseNativeRange(
             int physicalSlotIndex,
             int poseOffset,
             int velocityOffset,
@@ -89,7 +89,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentOutOfRangeException(nameof(physicalSlotIndex));
             }
 
-            PhysicalSlotIndex = physicalSlotIndex;
+            PhysicalPlayerIndex = physicalSlotIndex;
             PoseOffset = poseOffset;
             VelocityOffset = velocityOffset;
             ParameterOffset = parameterOffset;
@@ -98,7 +98,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             DenseContributionWeightOffset = denseContributionWeightOffset;
         }
 
-        internal int PhysicalSlotIndex { get; }
+        internal int PhysicalPlayerIndex { get; }
         internal int PoseOffset { get; }
         internal int VelocityOffset { get; }
         internal int ParameterOffset { get; }
@@ -119,7 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int operationCount,
             int frameCacheCount,
             int outputPoseValueIndex,
-            NativeArray<AnimationPoseSlotNativeRange> slotRanges)
+            NativeArray<AnimationPlayerPoseNativeRange> slotRanges)
         {
             if (slotCount <= 0 || boneCount <= 0 || parameterCount <= 0 || totalSlotContributionCapacity <= 0 ||
                 poseValueCount <= 0 || poseValueContributionStride <= 0 || operationCount <= 0 || frameCacheCount <= 0 ||
@@ -128,19 +128,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentOutOfRangeException(nameof(slotCount));
             }
 
-            SlotCount = slotCount;
+            PlayerCount = slotCount;
             BoneCount = boneCount;
             ParameterCount = parameterCount;
-            TotalSlotContributionCapacity = totalSlotContributionCapacity;
+            TotalPlayerContributionCapacity = totalSlotContributionCapacity;
             PoseValueCount = poseValueCount;
             PoseValueContributionStride = poseValueContributionStride;
             OperationCount = operationCount;
             FrameCacheCount = frameCacheCount;
-            OutputPoseValueIndex = outputPoseValueIndex;
-            SlotPoseCapacity = checked(slotCount * boneCount);
-            SlotVelocityCapacity = checked(slotCount * boneCount);
-            SlotParameterCapacity = checked(slotCount * parameterCount);
-            SlotDenseContributionWeightCapacity = checked(totalSlotContributionCapacity * boneCount);
+            OutputValueIndex = outputPoseValueIndex;
+            PlayerPoseCapacity = checked(slotCount * boneCount);
+            PlayerVelocityCapacity = checked(slotCount * boneCount);
+            PlayerParameterCapacity = checked(slotCount * parameterCount);
+            PlayerDenseContributionWeightCapacity = checked(totalSlotContributionCapacity * boneCount);
             PoseValuePoseCapacity = checked(poseValueCount * boneCount);
             PoseValueParameterCapacity = checked(poseValueCount * parameterCount);
             PoseValueContributionCapacity = checked(poseValueCount * poseValueContributionStride);
@@ -148,19 +148,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireSlotRanges(slotRanges);
         }
 
-        internal int SlotCount { get; }
+        internal int PlayerCount { get; }
         internal int BoneCount { get; }
         internal int ParameterCount { get; }
-        internal int TotalSlotContributionCapacity { get; }
+        internal int TotalPlayerContributionCapacity { get; }
         internal int PoseValueCount { get; }
         internal int PoseValueContributionStride { get; }
         internal int OperationCount { get; }
         internal int FrameCacheCount { get; }
-        internal int OutputPoseValueIndex { get; }
-        internal int SlotPoseCapacity { get; }
-        internal int SlotVelocityCapacity { get; }
-        internal int SlotParameterCapacity { get; }
-        internal int SlotDenseContributionWeightCapacity { get; }
+        internal int OutputValueIndex { get; }
+        internal int PlayerPoseCapacity { get; }
+        internal int PlayerVelocityCapacity { get; }
+        internal int PlayerParameterCapacity { get; }
+        internal int PlayerDenseContributionWeightCapacity { get; }
         internal int PoseValuePoseCapacity { get; }
         internal int PoseValueParameterCapacity { get; }
         internal int PoseValueContributionCapacity { get; }
@@ -168,13 +168,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void RequireValid()
         {
-            if (SlotCount <= 0 || BoneCount <= 0 || ParameterCount <= 0 || TotalSlotContributionCapacity <= 0 ||
+            if (PlayerCount <= 0 || BoneCount <= 0 || ParameterCount <= 0 || TotalPlayerContributionCapacity <= 0 ||
                 PoseValueCount <= 0 || PoseValueContributionStride <= 0 || OperationCount <= 0 || FrameCacheCount <= 0 ||
-                OutputPoseValueIndex < 0 || OutputPoseValueIndex >= PoseValueCount ||
-                checked(SlotCount * BoneCount) != SlotPoseCapacity ||
-                checked(SlotCount * BoneCount) != SlotVelocityCapacity ||
-                checked(SlotCount * ParameterCount) != SlotParameterCapacity ||
-                checked(TotalSlotContributionCapacity * BoneCount) != SlotDenseContributionWeightCapacity ||
+                OutputValueIndex < 0 || OutputValueIndex >= PoseValueCount ||
+                checked(PlayerCount * BoneCount) != PlayerPoseCapacity ||
+                checked(PlayerCount * BoneCount) != PlayerVelocityCapacity ||
+                checked(PlayerCount * ParameterCount) != PlayerParameterCapacity ||
+                checked(TotalPlayerContributionCapacity * BoneCount) != PlayerDenseContributionWeightCapacity ||
                 checked(PoseValueCount * BoneCount) != PoseValuePoseCapacity ||
                 checked(PoseValueCount * ParameterCount) != PoseValueParameterCapacity ||
                 checked(PoseValueCount * PoseValueContributionStride) != PoseValueContributionCapacity ||
@@ -184,20 +184,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        internal void RequireSlotRanges(NativeArray<AnimationPoseSlotNativeRange> slotRanges)
+        internal void RequireSlotRanges(NativeArray<AnimationPlayerPoseNativeRange> slotRanges)
         {
             RequireValid();
-            if (!slotRanges.IsCreated || slotRanges.Length != SlotCount)
+            if (!slotRanges.IsCreated || slotRanges.Length != PlayerCount)
                 throw new ArgumentException("Animation pose Slot ranges are invalid.", nameof(slotRanges));
 
             int contributionOffset = 0;
             for (int i = 0; i < slotRanges.Length; i++)
             {
-                AnimationPoseSlotNativeRange range = slotRanges[i];
+                AnimationPlayerPoseNativeRange range = slotRanges[i];
                 int poseOffset = checked(i * BoneCount);
                 int parameterOffset = checked(i * ParameterCount);
                 int denseContributionWeightOffset = checked(contributionOffset * BoneCount);
-                if (range.PhysicalSlotIndex != i || range.PoseOffset != poseOffset || range.VelocityOffset != poseOffset ||
+                if (range.PhysicalPlayerIndex != i || range.PoseOffset != poseOffset || range.VelocityOffset != poseOffset ||
                     range.ParameterOffset != parameterOffset || range.ContributionOffset != contributionOffset ||
                     range.ContributionCapacity <= 0 ||
                     range.DenseContributionWeightOffset != denseContributionWeightOffset)
@@ -208,8 +208,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 contributionOffset = checked(contributionOffset + range.ContributionCapacity);
             }
 
-            if (contributionOffset != TotalSlotContributionCapacity ||
-                checked(contributionOffset * BoneCount) != SlotDenseContributionWeightCapacity)
+            if (contributionOffset != TotalPlayerContributionCapacity ||
+                checked(contributionOffset * BoneCount) != PlayerDenseContributionWeightCapacity)
             {
                 throw new ArgumentException("Animation pose Slot ranges do not close the aggregate capacity.", nameof(slotRanges));
             }
@@ -221,10 +221,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseGraphNativeBinding(
             AnimationPoseNativeAggregateLayout layout,
             ulong completionIdentity,
-            NativeArray<AnimationPoseSlotNativeRange> slotRanges,
+            NativeArray<AnimationPlayerPoseNativeRange> slotRanges,
             NativeArray<AnimationLocalBonePose> slotDenseLocalPoses,
             NativeArray<AnimationBlendBoneVelocity> slotDenseVelocities,
             NativeArray<float> slotPoseParameters,
+            NativeArray<byte> slotPoseParameterAvailability,
             NativeArray<AnimationPrimitivePoseContribution> slotContributions,
             NativeArray<float> slotDenseContributionWeights,
             NativeArray<int> slotContributionCounts,
@@ -232,12 +233,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeArray<AnimationFootFeatureSample> slotLeftFootFeatures,
             NativeArray<AnimationFootFeatureSample> slotRightFootFeatures,
             NativeArray<byte> slotHasFootFeatures,
-            NativeArray<PoseSlotFrameAvailability> slotAvailability,
+            NativeArray<AnimationPoseAvailability> slotAvailability,
             NativeArray<ulong> slotContinuityIdentities,
+            NativeArray<PoseDiscontinuity> slotDiscontinuities,
             NativeArray<AnimationPoseNativeInvalidReason> slotInvalidReasons,
             NativeArray<ulong> slotCompletedAt,
             NativeArray<AnimationLocalBonePose> valueDenseLocalPoses,
+            NativeArray<AnimationBlendBoneVelocity> valueDenseVelocities,
             NativeArray<float> valuePoseParameters,
+            NativeArray<byte> valuePoseParameterAvailability,
             NativeArray<AnimationPrimitivePoseContribution> valueContributions,
             NativeArray<float> valueDenseContributionWeights,
             NativeArray<int> valueContributionCounts,
@@ -245,8 +249,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeArray<AnimationFootFeatureSample> valueLeftFootFeatures,
             NativeArray<AnimationFootFeatureSample> valueRightFootFeatures,
             NativeArray<byte> valueHasFootFeatures,
-            NativeArray<PoseSlotFrameAvailability> valueAvailability,
+            NativeArray<AnimationPoseAvailability> valueAvailability,
             NativeArray<ulong> valueContinuityIdentities,
+            NativeArray<PoseDiscontinuity> valueDiscontinuities,
             NativeArray<AnimationPoseNativeInvalidReason> valueInvalidReasons,
             NativeArray<ulong> frameCacheCompletedAt,
             NativeArray<AnimationPoseNativeInvalidReason> poseGraphInvalidReason,
@@ -263,6 +268,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SlotDenseLocalPoses = slotDenseLocalPoses;
             SlotDenseVelocities = slotDenseVelocities;
             SlotPoseParameters = slotPoseParameters;
+            SlotPoseParameterAvailability = slotPoseParameterAvailability;
             SlotContributions = slotContributions;
             SlotDenseContributionWeights = slotDenseContributionWeights;
             SlotContributionCounts = slotContributionCounts;
@@ -272,10 +278,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SlotHasFootFeatures = slotHasFootFeatures;
             SlotAvailability = slotAvailability;
             SlotContinuityIdentities = slotContinuityIdentities;
+            SlotDiscontinuities = slotDiscontinuities;
             SlotInvalidReasons = slotInvalidReasons;
             SlotCompletedAt = slotCompletedAt;
             ValueDenseLocalPoses = valueDenseLocalPoses;
+            ValueDenseVelocities = valueDenseVelocities;
             ValuePoseParameters = valuePoseParameters;
+            ValuePoseParameterAvailability = valuePoseParameterAvailability;
             ValueContributions = valueContributions;
             ValueDenseContributionWeights = valueDenseContributionWeights;
             ValueContributionCounts = valueContributionCounts;
@@ -285,6 +294,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ValueHasFootFeatures = valueHasFootFeatures;
             ValueAvailability = valueAvailability;
             ValueContinuityIdentities = valueContinuityIdentities;
+            ValueDiscontinuities = valueDiscontinuities;
             ValueInvalidReasons = valueInvalidReasons;
             FrameCacheCompletedAt = frameCacheCompletedAt;
             PoseGraphInvalidReason = poseGraphInvalidReason;
@@ -296,10 +306,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal AnimationPoseNativeAggregateLayout Layout { get; }
         internal ulong CompletionIdentity { get; }
-        internal NativeArray<AnimationPoseSlotNativeRange> SlotRanges { get; }
+        internal NativeArray<AnimationPlayerPoseNativeRange> SlotRanges { get; }
         internal NativeArray<AnimationLocalBonePose> SlotDenseLocalPoses { get; }
         internal NativeArray<AnimationBlendBoneVelocity> SlotDenseVelocities { get; }
         internal NativeArray<float> SlotPoseParameters { get; }
+        internal NativeArray<byte> SlotPoseParameterAvailability { get; }
         internal NativeArray<AnimationPrimitivePoseContribution> SlotContributions { get; }
         internal NativeArray<float> SlotDenseContributionWeights { get; }
         internal NativeArray<int> SlotContributionCounts { get; }
@@ -307,12 +318,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<AnimationFootFeatureSample> SlotLeftFootFeatures { get; }
         internal NativeArray<AnimationFootFeatureSample> SlotRightFootFeatures { get; }
         internal NativeArray<byte> SlotHasFootFeatures { get; }
-        internal NativeArray<PoseSlotFrameAvailability> SlotAvailability { get; }
+        internal NativeArray<AnimationPoseAvailability> SlotAvailability { get; }
         internal NativeArray<ulong> SlotContinuityIdentities { get; }
+        internal NativeArray<PoseDiscontinuity> SlotDiscontinuities { get; }
         internal NativeArray<AnimationPoseNativeInvalidReason> SlotInvalidReasons { get; }
         internal NativeArray<ulong> SlotCompletedAt { get; }
         internal NativeArray<AnimationLocalBonePose> ValueDenseLocalPoses { get; }
+        internal NativeArray<AnimationBlendBoneVelocity> ValueDenseVelocities { get; }
         internal NativeArray<float> ValuePoseParameters { get; }
+        internal NativeArray<byte> ValuePoseParameterAvailability { get; }
         internal NativeArray<AnimationPrimitivePoseContribution> ValueContributions { get; }
         internal NativeArray<float> ValueDenseContributionWeights { get; }
         internal NativeArray<int> ValueContributionCounts { get; }
@@ -320,8 +334,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<AnimationFootFeatureSample> ValueLeftFootFeatures { get; }
         internal NativeArray<AnimationFootFeatureSample> ValueRightFootFeatures { get; }
         internal NativeArray<byte> ValueHasFootFeatures { get; }
-        internal NativeArray<PoseSlotFrameAvailability> ValueAvailability { get; }
+        internal NativeArray<AnimationPoseAvailability> ValueAvailability { get; }
         internal NativeArray<ulong> ValueContinuityIdentities { get; }
+        internal NativeArray<PoseDiscontinuity> ValueDiscontinuities { get; }
         internal NativeArray<AnimationPoseNativeInvalidReason> ValueInvalidReasons { get; }
         internal NativeArray<ulong> FrameCacheCompletedAt { get; }
         internal NativeArray<AnimationPoseNativeInvalidReason> PoseGraphInvalidReason { get; }
@@ -335,22 +350,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (CompletionIdentity == 0)
                 throw new InvalidOperationException("Animation Pose Graph Native completion identity is invalid.");
 
-            RequireLength(SlotDenseLocalPoses, Layout.SlotPoseCapacity);
-            RequireLength(SlotDenseVelocities, Layout.SlotVelocityCapacity);
-            RequireLength(SlotPoseParameters, Layout.SlotParameterCapacity);
-            RequireLength(SlotContributions, Layout.TotalSlotContributionCapacity);
-            RequireLength(SlotDenseContributionWeights, Layout.SlotDenseContributionWeightCapacity);
-            RequireLength(SlotContributionCounts, Layout.SlotCount);
-            RequireLength(SlotOutputWeights, Layout.SlotCount);
-            RequireLength(SlotLeftFootFeatures, Layout.SlotCount);
-            RequireLength(SlotRightFootFeatures, Layout.SlotCount);
-            RequireLength(SlotHasFootFeatures, Layout.SlotCount);
-            RequireLength(SlotAvailability, Layout.SlotCount);
-            RequireLength(SlotContinuityIdentities, Layout.SlotCount);
-            RequireLength(SlotInvalidReasons, Layout.SlotCount);
-            RequireLength(SlotCompletedAt, Layout.SlotCount);
+            RequireLength(SlotDenseLocalPoses, Layout.PlayerPoseCapacity);
+            RequireLength(SlotDenseVelocities, Layout.PlayerVelocityCapacity);
+            RequireLength(SlotPoseParameters, Layout.PlayerParameterCapacity);
+            RequireLength(SlotPoseParameterAvailability, Layout.PlayerParameterCapacity);
+            RequireLength(SlotContributions, Layout.TotalPlayerContributionCapacity);
+            RequireLength(SlotDenseContributionWeights, Layout.PlayerDenseContributionWeightCapacity);
+            RequireLength(SlotContributionCounts, Layout.PlayerCount);
+            RequireLength(SlotOutputWeights, Layout.PlayerCount);
+            RequireLength(SlotLeftFootFeatures, Layout.PlayerCount);
+            RequireLength(SlotRightFootFeatures, Layout.PlayerCount);
+            RequireLength(SlotHasFootFeatures, Layout.PlayerCount);
+            RequireLength(SlotAvailability, Layout.PlayerCount);
+            RequireLength(SlotContinuityIdentities, Layout.PlayerCount);
+            RequireLength(SlotDiscontinuities, Layout.PlayerCount);
+            RequireLength(SlotInvalidReasons, Layout.PlayerCount);
+            RequireLength(SlotCompletedAt, Layout.PlayerCount);
             RequireLength(ValueDenseLocalPoses, Layout.PoseValuePoseCapacity);
+            RequireLength(ValueDenseVelocities, Layout.PoseValuePoseCapacity);
             RequireLength(ValuePoseParameters, Layout.PoseValueParameterCapacity);
+            RequireLength(ValuePoseParameterAvailability, Layout.PoseValueParameterCapacity);
             RequireLength(ValueContributions, Layout.PoseValueContributionCapacity);
             RequireLength(ValueDenseContributionWeights, Layout.PoseValueDenseContributionWeightCapacity);
             RequireLength(ValueContributionCounts, Layout.PoseValueCount);
@@ -360,6 +379,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireLength(ValueHasFootFeatures, Layout.PoseValueCount);
             RequireLength(ValueAvailability, Layout.PoseValueCount);
             RequireLength(ValueContinuityIdentities, Layout.PoseValueCount);
+            RequireLength(ValueDiscontinuities, Layout.PoseValueCount);
             RequireLength(ValueInvalidReasons, Layout.PoseValueCount);
             RequireLength(FrameCacheCompletedAt, Layout.FrameCacheCount);
             RequireLength(PoseGraphInvalidReason, 1);
@@ -375,18 +395,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    internal readonly struct AnimationPoseSlotNativeWriteBinding
+    internal readonly struct AnimationPlayerPoseNativeWriteBinding
     {
-        internal AnimationPoseSlotNativeWriteBinding(
+        internal AnimationPlayerPoseNativeWriteBinding(
             in CharacterPoseGraphNativeBinding aggregate,
             int physicalSlotIndex)
         {
             aggregate.RequireValid();
-            if (physicalSlotIndex < 0 || physicalSlotIndex >= aggregate.Layout.SlotCount)
+            if (physicalSlotIndex < 0 || physicalSlotIndex >= aggregate.Layout.PlayerCount)
                 throw new ArgumentOutOfRangeException(nameof(physicalSlotIndex));
 
-            AnimationPoseSlotNativeRange range = aggregate.SlotRanges[physicalSlotIndex];
-            if (range.PhysicalSlotIndex != physicalSlotIndex)
+            AnimationPlayerPoseNativeRange range = aggregate.SlotRanges[physicalSlotIndex];
+            if (range.PhysicalPlayerIndex != physicalSlotIndex)
                 throw new ArgumentException("Animation pose Slot Native range identity is invalid.", nameof(physicalSlotIndex));
 
             Range = range;
@@ -394,6 +414,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             DenseLocalPoses = new NativeSlice<AnimationLocalBonePose>(aggregate.SlotDenseLocalPoses, range.PoseOffset, aggregate.Layout.BoneCount);
             DenseVelocities = new NativeSlice<AnimationBlendBoneVelocity>(aggregate.SlotDenseVelocities, range.VelocityOffset, aggregate.Layout.BoneCount);
             PoseParameters = new NativeSlice<float>(aggregate.SlotPoseParameters, range.ParameterOffset, aggregate.Layout.ParameterCount);
+            PoseParameterAvailability = new NativeSlice<byte>(aggregate.SlotPoseParameterAvailability, range.ParameterOffset, aggregate.Layout.ParameterCount);
             Contributions = new NativeSlice<AnimationPrimitivePoseContribution>(aggregate.SlotContributions, range.ContributionOffset, range.ContributionCapacity);
             DenseContributionWeights = new NativeSlice<float>(
                 aggregate.SlotDenseContributionWeights,
@@ -404,17 +425,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             LeftFootFeatures = new NativeSlice<AnimationFootFeatureSample>(aggregate.SlotLeftFootFeatures, physicalSlotIndex, 1);
             RightFootFeatures = new NativeSlice<AnimationFootFeatureSample>(aggregate.SlotRightFootFeatures, physicalSlotIndex, 1);
             HasFootFeatures = new NativeSlice<byte>(aggregate.SlotHasFootFeatures, physicalSlotIndex, 1);
-            Availability = new NativeSlice<PoseSlotFrameAvailability>(aggregate.SlotAvailability, physicalSlotIndex, 1);
+            Availability = new NativeSlice<AnimationPoseAvailability>(aggregate.SlotAvailability, physicalSlotIndex, 1);
             ContinuityIdentity = new NativeSlice<ulong>(aggregate.SlotContinuityIdentities, physicalSlotIndex, 1);
+            Discontinuity = new NativeSlice<PoseDiscontinuity>(aggregate.SlotDiscontinuities, physicalSlotIndex, 1);
             InvalidReason = new NativeSlice<AnimationPoseNativeInvalidReason>(aggregate.SlotInvalidReasons, physicalSlotIndex, 1);
             CompletedAt = new NativeSlice<ulong>(aggregate.SlotCompletedAt, physicalSlotIndex, 1);
         }
 
-        internal AnimationPoseSlotNativeRange Range { get; }
+        internal AnimationPlayerPoseNativeRange Range { get; }
         internal ulong CompletionIdentity { get; }
         internal NativeSlice<AnimationLocalBonePose> DenseLocalPoses { get; }
         internal NativeSlice<AnimationBlendBoneVelocity> DenseVelocities { get; }
         internal NativeSlice<float> PoseParameters { get; }
+        internal NativeSlice<byte> PoseParameterAvailability { get; }
         internal NativeSlice<AnimationPrimitivePoseContribution> Contributions { get; }
         internal NativeSlice<float> DenseContributionWeights { get; }
         internal NativeSlice<int> ContributionCount { get; }
@@ -422,8 +445,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeSlice<AnimationFootFeatureSample> LeftFootFeatures { get; }
         internal NativeSlice<AnimationFootFeatureSample> RightFootFeatures { get; }
         internal NativeSlice<byte> HasFootFeatures { get; }
-        internal NativeSlice<PoseSlotFrameAvailability> Availability { get; }
+        internal NativeSlice<AnimationPoseAvailability> Availability { get; }
         internal NativeSlice<ulong> ContinuityIdentity { get; }
+        internal NativeSlice<PoseDiscontinuity> Discontinuity { get; }
         internal NativeSlice<AnimationPoseNativeInvalidReason> InvalidReason { get; }
         internal NativeSlice<ulong> CompletedAt { get; }
     }
@@ -433,16 +457,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal AnimationFinalPoseNativeReadBinding(in CharacterPoseGraphNativeBinding aggregate)
         {
             aggregate.RequireValid();
-            int valueIndex = aggregate.Layout.OutputPoseValueIndex;
+            int valueIndex = aggregate.Layout.OutputValueIndex;
             int poseOffset = checked(valueIndex * aggregate.Layout.BoneCount);
             int parameterOffset = checked(valueIndex * aggregate.Layout.ParameterCount);
             int contributionOffset = checked(valueIndex * aggregate.Layout.PoseValueContributionStride);
             int denseContributionWeightOffset = checked(contributionOffset * aggregate.Layout.BoneCount);
 
             CompletionIdentity = aggregate.CompletionIdentity;
-            OutputPoseValueIndex = valueIndex;
+            OutputValueIndex = valueIndex;
             DenseLocalPoses = new NativeSlice<AnimationLocalBonePose>(aggregate.ValueDenseLocalPoses, poseOffset, aggregate.Layout.BoneCount);
             PoseParameters = new NativeSlice<float>(aggregate.ValuePoseParameters, parameterOffset, aggregate.Layout.ParameterCount);
+            PoseParameterAvailability = new NativeSlice<byte>(aggregate.ValuePoseParameterAvailability, parameterOffset, aggregate.Layout.ParameterCount);
             Contributions = new NativeSlice<AnimationPrimitivePoseContribution>(
                 aggregate.ValueContributions,
                 contributionOffset,
@@ -456,7 +481,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             LeftFootFeatures = new NativeSlice<AnimationFootFeatureSample>(aggregate.ValueLeftFootFeatures, valueIndex, 1);
             RightFootFeatures = new NativeSlice<AnimationFootFeatureSample>(aggregate.ValueRightFootFeatures, valueIndex, 1);
             HasFootFeatures = new NativeSlice<byte>(aggregate.ValueHasFootFeatures, valueIndex, 1);
-            Availability = new NativeSlice<PoseSlotFrameAvailability>(aggregate.ValueAvailability, valueIndex, 1);
+            Availability = new NativeSlice<AnimationPoseAvailability>(aggregate.ValueAvailability, valueIndex, 1);
             ContinuityIdentity = new NativeSlice<ulong>(aggregate.ValueContinuityIdentities, valueIndex, 1);
             OutputInvalidReason = new NativeSlice<AnimationPoseNativeInvalidReason>(aggregate.ValueInvalidReasons, valueIndex, 1);
             PoseGraphInvalidReason = new NativeSlice<AnimationPoseNativeInvalidReason>(aggregate.PoseGraphInvalidReason, 0, 1);
@@ -466,9 +491,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal ulong CompletionIdentity { get; }
-        internal int OutputPoseValueIndex { get; }
+        internal int OutputValueIndex { get; }
         internal NativeSlice<AnimationLocalBonePose> DenseLocalPoses { get; }
         internal NativeSlice<float> PoseParameters { get; }
+        internal NativeSlice<byte> PoseParameterAvailability { get; }
         internal NativeSlice<AnimationPrimitivePoseContribution> Contributions { get; }
         internal NativeSlice<float> DenseContributionWeights { get; }
         internal NativeSlice<int> ContributionCount { get; }
@@ -476,7 +502,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeSlice<AnimationFootFeatureSample> LeftFootFeatures { get; }
         internal NativeSlice<AnimationFootFeatureSample> RightFootFeatures { get; }
         internal NativeSlice<byte> HasFootFeatures { get; }
-        internal NativeSlice<PoseSlotFrameAvailability> Availability { get; }
+        internal NativeSlice<AnimationPoseAvailability> Availability { get; }
         internal NativeSlice<ulong> ContinuityIdentity { get; }
         internal NativeSlice<AnimationPoseNativeInvalidReason> OutputInvalidReason { get; }
         internal NativeSlice<AnimationPoseNativeInvalidReason> PoseGraphInvalidReason { get; }

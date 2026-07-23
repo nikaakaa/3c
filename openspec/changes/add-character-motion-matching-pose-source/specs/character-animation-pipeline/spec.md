@@ -1,40 +1,40 @@
 ## ADDED Requirements
 
-### Requirement: Motion Matching必须位于source-neutral Pose Request之前
+### Requirement: Motion Matching必须是source-neutral Animation Selection provider
 
-当已提交AnimationChannel producer绑定Motion Matching Pose Source时，`CharacterSimulationPresentationRuntime` MUST在该Channel的PoseSlot Stack frame plan之前执行trajectory/query/search与selection lifecycle，并把结果降低为正式`ResolvedAnimationPoseRequest`。Timeline与MM request MUST进入同一个Animancer source sampling backend、per-slot Blend Stack、Pose Graph与Foot Placement链。MM MUST不建立私有crossfade、PlayableGraph、Pose Graph或Post Process。
+当已提交AnimationChannel producer绑定Motion Matching Source时，`CharacterSimulationPresentationRuntime` MUST在Pose Plan的Selection阶段执行trajectory/query/search与selection lifecycle，并把结果降低为正式`AnimationSelectionFrame`。Timeline与MM Selection MUST进入同一个编译Pose Graph；图上的显式节点决定直接Player硬切、局部Inertialization或BlendStack CrossFade。MM MUST不建立私有播放器、crossfade、惯性器、PlayableGraph、Pose Graph或Post Process。
 
 #### Scenario: BaseLocomotion使用MM而Action使用Timeline
 
 - **WHEN** 同帧BaseLocomotion MM和FullBodyAction Timeline均有合法输出
-- **THEN** 两者 MUST分别生成source-neutral request并进入各自PoseSlot Stack
-- **AND** 唯一Pose Graph MUST合成最终pose
+- **THEN** 两者 MUST分别生成source-neutral Selection并进入各自Selection Input
+- **AND** 唯一Pose Plan MUST按显式Player与composition节点合成最终pose
 
 #### Scenario: MM query无合法candidate
 
 - **WHEN** BaseLocomotion MM发布typed Invalid
-- **THEN** RequireOutput Slot MUST沿统一动画管线报告Invalid
+- **THEN** RequireSelection Input MUST沿统一动画管线报告Invalid
 - **AND** Presentation MUST不调用旧Timeline或隐藏Idle维持输出
 
-### Requirement: PresentationFrame必须在Base Slot求值后更新MM Pose History
+### Requirement: PresentationFrame必须在绑定Pose节点求值后更新MM Pose History
 
-PresentationFrame MUST先以旧history完成MM query与source selection，再求值全部PoseSlotFrame和最终Pose Graph，随后只把本帧BaseLocomotionSlot结果追加到MM Pose History，最后执行Foot Placement与Camera。MM MUST不以本帧尚未完成的pose构造循环query。
+PresentationFrame MUST先以旧history完成MM query与source selection，再执行编译Pose Plan，随后只把本帧绑定history source PoseNode的结果追加到MM Pose History，最后完成FootPlacement阶段与Camera。MM MUST不以本帧尚未完成的pose构造循环query。
 
 #### Scenario: 正常表现帧
 
-- **WHEN** BaseLocomotionSlot完成本帧PoseSlotFrame
-- **THEN** Runtime MUST在Foot Placement前追加MM Pose History
+- **WHEN** 绑定的history source PoseNode完成本帧Pose Value
+- **THEN** Runtime MUST在该节点完成后追加MM Pose History
 - **AND** 下一帧query MAY消费该sample
 
-#### Scenario: Base Slot Invalid
+#### Scenario: History source节点Invalid
 
-- **WHEN** 本帧BaseLocomotionSlot没有合法Pose
+- **WHEN** 本帧绑定history source节点没有合法Pose
 - **THEN** Runtime MUST不追加伪造history
 - **AND** MM diagnostics MUST记录history gap
 
 ### Requirement: Animation Root Motion不得通过MM进入Gameplay应用边界
 
-MM Artifact MAY保存Clip root trajectory用于search，但Unity animation application boundary MUST保持Body/VisualRoot权威分离。Animancer source backend、Blend Stack、Pose Graph与MM Runtime MUST不把selected Clip的deltaPosition或deltaRotation提交给Simulation、WorldSolver、CharacterController或VisualRoot。
+MM Artifact MAY保存Clip root trajectory用于search，但Unity animation application boundary MUST保持Body/VisualRoot权威分离。Animancer source backend、任何Player节点、Pose Graph与MM Runtime MUST不把selected Clip的deltaPosition或deltaRotation提交给Simulation、WorldSolver、CharacterController或VisualRoot。
 
 #### Scenario: MM采样Root Motion Clip
 

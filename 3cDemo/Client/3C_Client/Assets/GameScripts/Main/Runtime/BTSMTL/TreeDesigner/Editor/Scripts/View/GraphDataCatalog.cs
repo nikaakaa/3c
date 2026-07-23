@@ -8,6 +8,18 @@ using UnityEditor.UIElements;
 
 namespace TreeDesigner.Editor
 {
+    [Serializable]
+    internal sealed class GraphDataCatalogViewState
+    {
+        public string Search = string.Empty;
+        public GraphDataCatalogSourceFilter SourceFilter = GraphDataCatalogSourceFilter.All;
+        public PipelineBlackboardScopeFilter ScopeFilter = PipelineBlackboardScopeFilter.All;
+        public PipelineBlackboardContextFilter ContextFilter = PipelineBlackboardContextFilter.AllVisible;
+        public bool BlackboardFiltersExpanded;
+        public List<string> CollapsedGroups = new List<string>();
+        public List<string> ExpandedEntries = new List<string>();
+    }
+
     public enum GraphDataCatalogSourceFilter { All, Input, Blackboard }
     public enum PipelineBlackboardScopeFilter { All, Character, Graph, State, ActionInstance, Frame }
     public enum PipelineBlackboardContextFilter { AllVisible, CurrentContext, Local, Inherited }
@@ -217,13 +229,12 @@ namespace TreeDesigner.Editor
         }
     }
 
-    internal sealed class GraphDataCatalogController
+    internal sealed partial class GraphDataCatalogController
     {
-        readonly BaseTreeInspectorView m_Root;
-        readonly Action m_ShowDataTab;
+        readonly VisualElement m_Root;
         readonly List<BaseTree> m_VisibleBlackboardTrees = new List<BaseTree>();
-        readonly Dictionary<string, bool> m_FoldoutStates = new Dictionary<string, bool>(StringComparer.Ordinal);
-        readonly HashSet<string> m_ExpandedEntries = new HashSet<string>(StringComparer.Ordinal);
+        readonly GraphDataCatalogExpandedEntrySet m_ExpandedEntries = new GraphDataCatalogExpandedEntrySet();
+        readonly GraphDataCatalogViewState m_ViewState;
         readonly List<IGraphDataCatalogSource> m_Sources = new List<IGraphDataCatalogSource>();
         readonly VisualElement m_CatalogContainer;
         readonly VisualElement m_CreationBar;
@@ -245,16 +256,19 @@ namespace TreeDesigner.Editor
         IReadOnlyList<GraphDataCatalogCreationOption> m_ScopeOptions = Array.Empty<GraphDataCatalogCreationOption>();
         IReadOnlyList<GraphDataCatalogCreationOption> m_TypeOptions = Array.Empty<GraphDataCatalogCreationOption>();
         GraphDataCatalogContext m_Context;
-        GraphDataCatalogSourceFilter m_SourceFilter = GraphDataCatalogSourceFilter.All;
+        GraphDataCatalogSourceFilter m_SourceFilter;
         object m_AuthoringContext;
         int m_Generation;
         bool m_RefreshScheduled;
         bool m_BlackboardFiltersExpanded;
 
-        public GraphDataCatalogController(BaseTreeInspectorView root, Action showDataTab)
+        public GraphDataCatalogController(VisualElement root, GraphDataCatalogViewState viewState)
         {
             m_Root = root;
-            m_ShowDataTab = showDataTab;
+            m_ViewState = viewState ?? throw new ArgumentNullException(nameof(viewState));
+            m_SourceFilter = m_ViewState.SourceFilter;
+            m_BlackboardFiltersExpanded = m_ViewState.BlackboardFiltersExpanded;
+            m_ExpandedEntries.Bind(m_ViewState);
             m_CatalogContainer = root.Q("graph-data-catalog-container");
             m_CreationBar = root.Q("graph-data-creation-bar");
             m_BlackboardFilterPanel = root.Q("graph-data-blackboard-filter-panel");
@@ -272,11 +286,16 @@ namespace TreeDesigner.Editor
             m_CreateButton = root.Q<Button>("graph-data-create-button");
             m_CancelButton = root.Q<Button>("graph-data-cancel-button");
 
-            m_ScopeFilterField?.Init(PipelineBlackboardScopeFilter.All);
-            m_ContextFilterField?.Init(PipelineBlackboardContextFilter.AllVisible);
-            m_ScopeFilterField?.RegisterValueChangedCallback(_ => OnBlackboardFiltersChanged());
-            m_ContextFilterField?.RegisterValueChangedCallback(_ => OnBlackboardFiltersChanged());
-            m_SearchField?.RegisterValueChangedCallback(_ => RequestRefresh());
+            m_ScopeFilterField?.Init(m_ViewState.ScopeFilter);
+            m_ContextFilterField?.Init(m_ViewState.ContextFilter);
+            m_ScopeFilterField?.RegisterValueChangedCallback(_ => OnBlackboardFiltersChangedAndCapture());
+            m_ContextFilterField?.RegisterValueChangedCallback(_ => OnBlackboardFiltersChangedAndCapture());
+            m_SearchField?.SetValueWithoutNotify(m_ViewState.Search ?? string.Empty);
+            m_SearchField?.RegisterValueChangedCallback(evt =>
+            {
+                m_ViewState.Search = evt.newValue ?? string.Empty;
+                RequestRefresh();
+            });
             m_AllSourceButton.clicked += () => SetSourceFilter(GraphDataCatalogSourceFilter.All);
             m_InputSourceButton.clicked += () => SetSourceFilter(GraphDataCatalogSourceFilter.Input);
             m_BlackboardSourceButton.clicked += () => SetSourceFilter(GraphDataCatalogSourceFilter.Blackboard);
@@ -347,10 +366,14 @@ namespace TreeDesigner.Editor
                 return false;
 
             string stableId = $"blackboard:{graphAuthoringId}:{declarationId}";
-            m_ShowDataTab();
             m_SearchField?.SetValueWithoutNotify(string.Empty);
             m_ScopeFilterField?.SetValueWithoutNotify(PipelineBlackboardScopeFilter.All);
             m_ContextFilterField?.SetValueWithoutNotify(PipelineBlackboardContextFilter.AllVisible);
+            m_ViewState.Search = string.Empty;
+            m_ViewState.ScopeFilter = PipelineBlackboardScopeFilter.All;
+            m_ViewState.ContextFilter = PipelineBlackboardContextFilter.AllVisible;
+            m_ViewState.SourceFilter = GraphDataCatalogSourceFilter.Blackboard;
+            m_ViewState.BlackboardFiltersExpanded = true;
             m_ExpandedEntries.Add(stableId);
             SetSourceFilter(GraphDataCatalogSourceFilter.Blackboard);
             Rebuild();
@@ -510,12 +533,12 @@ namespace TreeDesigner.Editor
                 if (!groups.TryGetValue(currentPath, out Foldout foldout))
                 {
                     string stateKey = currentPath;
-                    bool expanded = !m_FoldoutStates.TryGetValue(stateKey, out bool saved) || saved;
+                    bool expanded = m_ViewState.CollapsedGroups == null || !m_ViewState.CollapsedGroups.Contains(stateKey);
                     foldout = new Foldout { text = segment, value = expanded };
                     foldout.AddToClassList(currentPath.Contains("/")
                         ? "graph-data-category-foldout"
                         : "graph-data-source-foldout");
-                    foldout.RegisterValueChangedCallback(evt => m_FoldoutStates[stateKey] = evt.newValue);
+                    foldout.RegisterValueChangedCallback(evt => SetGroupExpanded(stateKey, evt.newValue));
                     groups.Add(currentPath, foldout);
                     parent.Add(foldout);
                 }

@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using Unity.Collections;
 
@@ -7,10 +8,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal sealed class AnimationPoseNativeWorkspace : IDisposable
     {
         AnimationPoseNativeAggregateLayout m_Layout;
-        NativeArray<AnimationPoseSlotNativeRange> m_SlotRanges;
+        NativeArray<AnimationPlayerPoseNativeRange> m_SlotRanges;
         NativeArray<AnimationLocalBonePose> m_SlotDenseLocalPoses;
         NativeArray<AnimationBlendBoneVelocity> m_SlotDenseVelocities;
         NativeArray<float> m_SlotPoseParameters;
+        NativeArray<byte> m_SlotPoseParameterAvailability;
         NativeArray<AnimationPrimitivePoseContribution> m_SlotContributions;
         NativeArray<float> m_SlotDenseContributionWeights;
         NativeArray<int> m_SlotContributionCounts;
@@ -18,12 +20,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         NativeArray<AnimationFootFeatureSample> m_SlotLeftFootFeatures;
         NativeArray<AnimationFootFeatureSample> m_SlotRightFootFeatures;
         NativeArray<byte> m_SlotHasFootFeatures;
-        NativeArray<PoseSlotFrameAvailability> m_SlotAvailability;
+        NativeArray<AnimationPoseAvailability> m_SlotAvailability;
         NativeArray<ulong> m_SlotContinuityIdentities;
+        NativeArray<PoseDiscontinuity> m_SlotDiscontinuities;
         NativeArray<AnimationPoseNativeInvalidReason> m_SlotInvalidReasons;
         NativeArray<ulong> m_SlotCompletedAt;
         NativeArray<AnimationLocalBonePose> m_ValueDenseLocalPoses;
+        NativeArray<AnimationBlendBoneVelocity> m_ValueDenseVelocities;
         NativeArray<float> m_ValuePoseParameters;
+        NativeArray<byte> m_ValuePoseParameterAvailability;
         NativeArray<AnimationPrimitivePoseContribution> m_ValueContributions;
         NativeArray<float> m_ValueDenseContributionWeights;
         NativeArray<int> m_ValueContributionCounts;
@@ -31,15 +36,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         NativeArray<AnimationFootFeatureSample> m_ValueLeftFootFeatures;
         NativeArray<AnimationFootFeatureSample> m_ValueRightFootFeatures;
         NativeArray<byte> m_ValueHasFootFeatures;
-        NativeArray<PoseSlotFrameAvailability> m_ValueAvailability;
+        NativeArray<AnimationPoseAvailability> m_ValueAvailability;
         NativeArray<ulong> m_ValueContinuityIdentities;
+        NativeArray<PoseDiscontinuity> m_ValueDiscontinuities;
         NativeArray<AnimationPoseNativeInvalidReason> m_ValueInvalidReasons;
         NativeArray<ulong> m_FrameCacheCompletedAt;
         NativeArray<AnimationPoseNativeInvalidReason> m_PoseGraphInvalidReason;
         NativeArray<int> m_PoseGraphInvalidOperationIndex;
         NativeArray<ulong> m_PoseGraphCompletedAt;
         NativeArray<ulong> m_FinalAppliedAt;
-        PoseSlotId[] m_PoseSlotIds;
+        PoseNodeId[] m_PoseNodeIds;
         CharacterPoseGraphNativeBinding m_FrameBinding;
         ulong m_LastCompletionIdentity;
         ulong m_CurrentCompletionIdentity;
@@ -56,15 +62,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
                 CharacterPresentationProjection projection = bindings.Projection;
                 projection.RequirePosePayload();
-                CharacterPresentationPoseProgram program = projection.PoseProgram;
+                CharacterPresentationPosePlan program = projection.PosePlan;
                 program.RequireValid();
-                int slotCount = program.Slots.Count;
+                int playerCount = program.PlayerCount;
                 int boneCount = program.BoneCount;
                 int parameterCount = program.Parameters.Count;
                 int poseValueCount = program.PoseValueWorkspaceCount;
-                if (slotCount <= 0 || boneCount <= 0 || parameterCount <= 0 || poseValueCount <= 0 ||
-                    bindings.Slots.Count != slotCount || bindings.Channels.Count != slotCount ||
-                    projection.BlendSlots.Count != slotCount ||
+                if (playerCount <= 0 || boneCount <= 0 || parameterCount <= 0 || poseValueCount <= 0 ||
                     program.ContributionWorkspaceCount % poseValueCount != 0)
                 {
                     throw new InvalidOperationException("Animation Pose Native workspace source layout is invalid.");
@@ -76,54 +80,46 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPresentationPoseOperation outputOperation = program.Operations[program.OutputOperationIndex];
                 if (outputOperation == null || outputOperation.Index != program.OutputOperationIndex ||
                     outputOperation.Code != CharacterPoseOperationCode.OutputPose ||
-                    outputOperation.OutputPoseValueIndex < 0 || outputOperation.OutputPoseValueIndex >= poseValueCount)
+                    outputOperation.OutputValueIndex < 0 || outputOperation.OutputValueIndex >= poseValueCount)
                 {
                     throw new InvalidOperationException("Animation Pose Native output operation is invalid.");
                 }
 
-                m_PoseSlotIds = new PoseSlotId[slotCount];
-                int totalSlotContributionCapacity = 0;
-                for (int i = 0; i < slotCount; i++)
+                m_PoseNodeIds = new PoseNodeId[playerCount];
+                int totalPlayerContributionCapacity = 0;
+                CharacterPresentationPoseOperation[] playerOperations = program.Operations
+                    .Where(operation => operation.Code == CharacterPoseOperationCode.SelectedPosePlayer ||
+                                        operation.Code == CharacterPoseOperationCode.BlendStack ||
+                                        operation.Code == CharacterPoseOperationCode.BlendSpacePlayer)
+                    .OrderBy(operation => operation.PlayerIndex)
+                    .ToArray();
+                for (int i = 0; i < playerCount; i++)
                 {
-                    CharacterPresentationPoseSlotProgramEntry programSlot = program.Slots[i];
-                    if (programSlot == null || programSlot.Index != i || !programSlot.PoseSlotId.IsValid ||
-                        !programSlot.AnimationChannelId.IsValid ||
-                        !bindings.TryGetSlot(programSlot.PoseSlotId, out ResolvedAnimationPoseSlot slot) ||
-                        !bindings.TryGetSlot(programSlot.AnimationChannelId, out ResolvedAnimationPoseSlot channelSlot) ||
-                        slot.Index != i || channelSlot.Index != i ||
-                        slot.PoseSlotId != programSlot.PoseSlotId || channelSlot.PoseSlotId != programSlot.PoseSlotId ||
-                        slot.AnimationChannelId != programSlot.AnimationChannelId ||
-                        channelSlot.AnimationChannelId != programSlot.AnimationChannelId ||
-                        slot.OutputPolicy != programSlot.OutputPolicy || channelSlot.OutputPolicy != programSlot.OutputPolicy ||
-                        slot.BlendPayload == null || channelSlot.BlendPayload == null ||
-                        !ReferenceEquals(slot.BlendPayload, channelSlot.BlendPayload) ||
-                        slot.BlendPayload.PoseSlotId != programSlot.PoseSlotId ||
-                        slot.BlendPayload.AnimationChannelId != programSlot.AnimationChannelId ||
-                        slot.BlendPayload.OutputPolicy != programSlot.OutputPolicy ||
-                        slot.BlendPayload.StackPolicy == null)
-                    {
-                        throw new InvalidOperationException($"Animation Pose Native Slot #{i} is not bound one-to-one.");
-                    }
-
-                    slot.BlendPayload.StackPolicy.RequireValid();
-                    int contributionCapacity = checked(slot.BlendPayload.StackPolicy.MaxActiveSourceEntries + 2);
-                    totalSlotContributionCapacity = checked(totalSlotContributionCapacity + contributionCapacity);
-                    m_PoseSlotIds[i] = programSlot.PoseSlotId;
+                    CharacterPresentationPoseOperation player = playerOperations[i];
+                    if (player == null || player.PlayerIndex != i || !player.NodeId.IsValid)
+                        throw new InvalidOperationException($"Animation Pose Native Player #{i} is invalid.");
+                    int contributionCapacity = player.Code == CharacterPoseOperationCode.BlendStack
+                        ? checked(program.BlendNodes[player.BlendNodeIndex].StackPolicy.MaxActiveSourceEntries + 1)
+                        : 1;
+                    totalPlayerContributionCapacity = checked(totalPlayerContributionCapacity + contributionCapacity);
+                    m_PoseNodeIds[i] = player.NodeId;
                 }
 
-                if (poseValueContributionStride < totalSlotContributionCapacity)
+                if (poseValueContributionStride < totalPlayerContributionCapacity)
                 {
                     throw new InvalidOperationException(
-                        "Animation Pose Native value contribution stride cannot contain all physical Slot contributions.");
+                        "Animation Pose Native value contribution stride cannot contain all Player contributions.");
                 }
 
-                m_SlotRanges = Allocate<AnimationPoseSlotNativeRange>(slotCount);
+                m_SlotRanges = Allocate<AnimationPlayerPoseNativeRange>(playerCount);
                 int contributionOffset = 0;
-                for (int i = 0; i < slotCount; i++)
+                for (int i = 0; i < playerCount; i++)
                 {
-                    ResolvedAnimationPoseSlot slot = bindings.Slots[m_PoseSlotIds[i]];
-                    int contributionCapacity = checked(slot.BlendPayload.StackPolicy.MaxActiveSourceEntries + 2);
-                    m_SlotRanges[i] = new AnimationPoseSlotNativeRange(
+                    CharacterPresentationPoseOperation player = playerOperations[i];
+                    int contributionCapacity = player.Code == CharacterPoseOperationCode.BlendStack
+                        ? checked(program.BlendNodes[player.BlendNodeIndex].StackPolicy.MaxActiveSourceEntries + 1)
+                        : 1;
+                    m_SlotRanges[i] = new AnimationPlayerPoseNativeRange(
                         i,
                         checked(i * boneCount),
                         checked(i * boneCount),
@@ -133,37 +129,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         checked(contributionOffset * boneCount));
                     contributionOffset = checked(contributionOffset + contributionCapacity);
                 }
-                if (contributionOffset != totalSlotContributionCapacity)
-                    throw new InvalidOperationException("Animation Pose Native Slot contribution capacity is inconsistent.");
+                if (contributionOffset != totalPlayerContributionCapacity)
+                    throw new InvalidOperationException("Animation Pose Native Player contribution capacity is inconsistent.");
 
                 m_Layout = new AnimationPoseNativeAggregateLayout(
-                    slotCount,
+                    playerCount,
                     boneCount,
                     parameterCount,
-                    totalSlotContributionCapacity,
+                    totalPlayerContributionCapacity,
                     poseValueCount,
                     poseValueContributionStride,
                     program.Operations.Count,
                     program.FrameCacheCount,
-                    outputOperation.OutputPoseValueIndex,
+                    outputOperation.OutputValueIndex,
                     m_SlotRanges);
 
-                m_SlotDenseLocalPoses = Allocate<AnimationLocalBonePose>(m_Layout.SlotPoseCapacity);
-                m_SlotDenseVelocities = Allocate<AnimationBlendBoneVelocity>(m_Layout.SlotVelocityCapacity);
-                m_SlotPoseParameters = Allocate<float>(m_Layout.SlotParameterCapacity);
-                m_SlotContributions = Allocate<AnimationPrimitivePoseContribution>(m_Layout.TotalSlotContributionCapacity);
-                m_SlotDenseContributionWeights = Allocate<float>(m_Layout.SlotDenseContributionWeightCapacity);
-                m_SlotContributionCounts = Allocate<int>(m_Layout.SlotCount);
-                m_SlotOutputWeights = Allocate<float>(m_Layout.SlotCount);
-                m_SlotLeftFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.SlotCount);
-                m_SlotRightFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.SlotCount);
-                m_SlotHasFootFeatures = Allocate<byte>(m_Layout.SlotCount);
-                m_SlotAvailability = Allocate<PoseSlotFrameAvailability>(m_Layout.SlotCount);
-                m_SlotContinuityIdentities = Allocate<ulong>(m_Layout.SlotCount);
-                m_SlotInvalidReasons = Allocate<AnimationPoseNativeInvalidReason>(m_Layout.SlotCount);
-                m_SlotCompletedAt = Allocate<ulong>(m_Layout.SlotCount);
+                m_SlotDenseLocalPoses = Allocate<AnimationLocalBonePose>(m_Layout.PlayerPoseCapacity);
+                m_SlotDenseVelocities = Allocate<AnimationBlendBoneVelocity>(m_Layout.PlayerVelocityCapacity);
+                m_SlotPoseParameters = Allocate<float>(m_Layout.PlayerParameterCapacity);
+                m_SlotPoseParameterAvailability = Allocate<byte>(m_Layout.PlayerParameterCapacity);
+                m_SlotContributions = Allocate<AnimationPrimitivePoseContribution>(m_Layout.TotalPlayerContributionCapacity);
+                m_SlotDenseContributionWeights = Allocate<float>(m_Layout.PlayerDenseContributionWeightCapacity);
+                m_SlotContributionCounts = Allocate<int>(m_Layout.PlayerCount);
+                m_SlotOutputWeights = Allocate<float>(m_Layout.PlayerCount);
+                m_SlotLeftFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.PlayerCount);
+                m_SlotRightFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.PlayerCount);
+                m_SlotHasFootFeatures = Allocate<byte>(m_Layout.PlayerCount);
+                m_SlotAvailability = Allocate<AnimationPoseAvailability>(m_Layout.PlayerCount);
+                m_SlotContinuityIdentities = Allocate<ulong>(m_Layout.PlayerCount);
+                m_SlotDiscontinuities = Allocate<PoseDiscontinuity>(m_Layout.PlayerCount);
+                m_SlotInvalidReasons = Allocate<AnimationPoseNativeInvalidReason>(m_Layout.PlayerCount);
+                m_SlotCompletedAt = Allocate<ulong>(m_Layout.PlayerCount);
                 m_ValueDenseLocalPoses = Allocate<AnimationLocalBonePose>(m_Layout.PoseValuePoseCapacity);
+                m_ValueDenseVelocities = Allocate<AnimationBlendBoneVelocity>(m_Layout.PoseValuePoseCapacity);
                 m_ValuePoseParameters = Allocate<float>(m_Layout.PoseValueParameterCapacity);
+                m_ValuePoseParameterAvailability = Allocate<byte>(m_Layout.PoseValueParameterCapacity);
                 m_ValueContributions = Allocate<AnimationPrimitivePoseContribution>(m_Layout.PoseValueContributionCapacity);
                 m_ValueDenseContributionWeights = Allocate<float>(m_Layout.PoseValueDenseContributionWeightCapacity);
                 m_ValueContributionCounts = Allocate<int>(m_Layout.PoseValueCount);
@@ -171,8 +171,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ValueLeftFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.PoseValueCount);
                 m_ValueRightFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.PoseValueCount);
                 m_ValueHasFootFeatures = Allocate<byte>(m_Layout.PoseValueCount);
-                m_ValueAvailability = Allocate<PoseSlotFrameAvailability>(m_Layout.PoseValueCount);
+                m_ValueAvailability = Allocate<AnimationPoseAvailability>(m_Layout.PoseValueCount);
                 m_ValueContinuityIdentities = Allocate<ulong>(m_Layout.PoseValueCount);
+                m_ValueDiscontinuities = Allocate<PoseDiscontinuity>(m_Layout.PoseValueCount);
                 m_ValueInvalidReasons = Allocate<AnimationPoseNativeInvalidReason>(m_Layout.PoseValueCount);
                 m_FrameCacheCompletedAt = Allocate<ulong>(m_Layout.FrameCacheCount);
                 m_PoseGraphInvalidReason = Allocate<AnimationPoseNativeInvalidReason>(1);
@@ -195,13 +196,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             m_LastCompletionIdentity = completionIdentity;
             m_CurrentCompletionIdentity = completionIdentity;
-            for (int i = 0; i < m_Layout.SlotCount; i++)
+            for (int i = 0; i < m_Layout.PlayerCount; i++)
             {
                 m_SlotContributionCounts[i] = 0;
                 m_SlotOutputWeights[i] = 0f;
                 m_SlotHasFootFeatures[i] = 0;
-                m_SlotAvailability[i] = PoseSlotFrameAvailability.Invalid;
+                m_SlotAvailability[i] = AnimationPoseAvailability.Invalid;
                 m_SlotContinuityIdentities[i] = 0;
+                m_SlotDiscontinuities[i] = default;
                 m_SlotInvalidReasons[i] = AnimationPoseNativeInvalidReason.SourceIncomplete;
                 m_SlotCompletedAt[i] = 0;
             }
@@ -210,8 +212,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ValueContributionCounts[i] = 0;
                 m_ValueOutputWeights[i] = 0f;
                 m_ValueHasFootFeatures[i] = 0;
-                m_ValueAvailability[i] = PoseSlotFrameAvailability.Invalid;
+                m_ValueAvailability[i] = AnimationPoseAvailability.Invalid;
                 m_ValueContinuityIdentities[i] = 0;
+                m_ValueDiscontinuities[i] = default;
                 m_ValueInvalidReasons[i] = AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete;
             }
             for (int i = 0; i < m_FrameCacheCompletedAt.Length; i++)
@@ -225,14 +228,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return m_FrameBinding;
         }
 
-        internal AnimationPoseSlotNativeWriteBinding RequireSlotWriteBinding(
+        internal AnimationPlayerPoseNativeWriteBinding RequirePlayerWriteBinding(
             int physicalSlotIndex,
             ulong completionIdentity)
         {
             RequireFrame(completionIdentity);
-            if (physicalSlotIndex < 0 || physicalSlotIndex >= m_Layout.SlotCount)
+            if (physicalSlotIndex < 0 || physicalSlotIndex >= m_Layout.PlayerCount)
                 throw new ArgumentOutOfRangeException(nameof(physicalSlotIndex));
-            return new AnimationPoseSlotNativeWriteBinding(in m_FrameBinding, physicalSlotIndex);
+            return new AnimationPlayerPoseNativeWriteBinding(in m_FrameBinding, physicalSlotIndex);
         }
 
         internal CharacterPoseGraphNativeBinding RequirePoseGraphBinding(ulong completionIdentity)
@@ -247,15 +250,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return new AnimationFinalPoseNativeReadBinding(in m_FrameBinding);
         }
 
-        internal PoseSlotId RequirePoseSlotId(int physicalSlotIndex)
+        internal PoseNodeId RequirePoseNodeId(int physicalSlotIndex)
         {
             RequireAlive();
-            if (physicalSlotIndex < 0 || physicalSlotIndex >= m_PoseSlotIds.Length ||
-                !m_PoseSlotIds[physicalSlotIndex].IsValid)
+            if (physicalSlotIndex < 0 || physicalSlotIndex >= m_PoseNodeIds.Length ||
+                !m_PoseNodeIds[physicalSlotIndex].IsValid)
             {
                 throw new ArgumentOutOfRangeException(nameof(physicalSlotIndex));
             }
-            return m_PoseSlotIds[physicalSlotIndex];
+            return m_PoseNodeIds[physicalSlotIndex];
         }
 
         public void Dispose()
@@ -271,6 +274,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             DisposeArray(ref m_PoseGraphInvalidReason);
             DisposeArray(ref m_FrameCacheCompletedAt);
             DisposeArray(ref m_ValueInvalidReasons);
+            DisposeArray(ref m_ValueDiscontinuities);
             DisposeArray(ref m_ValueContinuityIdentities);
             DisposeArray(ref m_ValueAvailability);
             DisposeArray(ref m_ValueHasFootFeatures);
@@ -281,9 +285,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             DisposeArray(ref m_ValueDenseContributionWeights);
             DisposeArray(ref m_ValueContributions);
             DisposeArray(ref m_ValuePoseParameters);
+            DisposeArray(ref m_ValuePoseParameterAvailability);
             DisposeArray(ref m_ValueDenseLocalPoses);
+            DisposeArray(ref m_ValueDenseVelocities);
             DisposeArray(ref m_SlotCompletedAt);
             DisposeArray(ref m_SlotInvalidReasons);
+            DisposeArray(ref m_SlotDiscontinuities);
             DisposeArray(ref m_SlotContinuityIdentities);
             DisposeArray(ref m_SlotAvailability);
             DisposeArray(ref m_SlotHasFootFeatures);
@@ -294,10 +301,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             DisposeArray(ref m_SlotDenseContributionWeights);
             DisposeArray(ref m_SlotContributions);
             DisposeArray(ref m_SlotPoseParameters);
+            DisposeArray(ref m_SlotPoseParameterAvailability);
             DisposeArray(ref m_SlotDenseVelocities);
             DisposeArray(ref m_SlotDenseLocalPoses);
             DisposeArray(ref m_SlotRanges);
-            m_PoseSlotIds = null;
+            m_PoseNodeIds = null;
         }
 
         CharacterPoseGraphNativeBinding CreateBinding(ulong completionIdentity)
@@ -309,6 +317,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_SlotDenseLocalPoses,
                 m_SlotDenseVelocities,
                 m_SlotPoseParameters,
+                m_SlotPoseParameterAvailability,
                 m_SlotContributions,
                 m_SlotDenseContributionWeights,
                 m_SlotContributionCounts,
@@ -318,10 +327,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_SlotHasFootFeatures,
                 m_SlotAvailability,
                 m_SlotContinuityIdentities,
+                m_SlotDiscontinuities,
                 m_SlotInvalidReasons,
                 m_SlotCompletedAt,
                 m_ValueDenseLocalPoses,
+                m_ValueDenseVelocities,
                 m_ValuePoseParameters,
+                m_ValuePoseParameterAvailability,
                 m_ValueContributions,
                 m_ValueDenseContributionWeights,
                 m_ValueContributionCounts,
@@ -331,6 +343,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ValueHasFootFeatures,
                 m_ValueAvailability,
                 m_ValueContinuityIdentities,
+                m_ValueDiscontinuities,
                 m_ValueInvalidReasons,
                 m_FrameCacheCompletedAt,
                 m_PoseGraphInvalidReason,

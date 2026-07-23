@@ -6,7 +6,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public interface IAnimationPlaybackCommandSink
     {
         void EnqueueSelection(AnimationChannelSelection selection);
-        void EnqueuePoseRequest(ulong localLogicTick, ResolvedAnimationPoseRequest poseRequest);
+        void EnqueuePoseRequest(ulong localLogicTick, AnimationSelectionFrame poseRequest);
+        void EnqueuePoseUnavailable(ulong localLogicTick, AnimationChannelId channelId, AnimationPlaybackId playbackId);
         void EnqueuePlaybackComplete(ulong localLogicTick, AnimationPlaybackId playbackId);
         void EnqueuePlaybackRelease(ulong localLogicTick, AnimationPlaybackId playbackId);
     }

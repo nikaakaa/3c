@@ -2,7 +2,7 @@
 
 ### Requirement: GameplayTickSystem 必须每表现帧推进 PresentationFrame
 
-PresentationFrame MUST继续以render/presentation delta推进visual interpolation、Timeline visual sampling、每PoseSlot Blend Stack clock、Animancer source sampling、Character Pose Graph、Foot Placement、Camera与committed command lifecycle。Rollback replay MUST只产生EventId output replacement，MUST不直接回卷PresentationFrame或用logic tick代替presentation delta。PresentationFrame MUST不调用Kernel Evaluate/Finalize、WorldSolver.ResolveBatch或修改Character/World state。
+PresentationFrame MUST继续以render/presentation delta推进visual interpolation、Timeline visual sampling、显式Player节点clock、Animancer source sampling、Character Pose Graph Plan、FootPlacement world-aware阶段、Camera与committed command lifecycle。Rollback replay MUST只产生EventId output replacement，MUST不直接回卷PresentationFrame或用logic tick代替presentation delta。PresentationFrame MUST不调用Kernel Evaluate/Finalize、Gameplay WorldSolver.ResolveBatch或修改Character/World state。
 
 #### Scenario: 高渲染帧率下的表现帧
 
@@ -14,4 +14,4 @@ PresentationFrame MUST继续以render/presentation delta推进visual interpolati
 
 - **WHEN** Output Disposition Pass产生FullBodyAction EventId replacement
 - **THEN** PresentationFrame MUST从该slot当前视觉结果处理新command
-- **AND** MUST继续以presentation delta推进唯一Stack与Pose Graph
+- **AND** MUST继续以presentation delta推进唯一Pose Plan及其中显式Player节点

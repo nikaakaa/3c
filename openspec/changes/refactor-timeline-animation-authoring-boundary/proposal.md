@@ -1,14 +1,21 @@
 # Change: 重构 Timeline Animation 作者界面与领域工具边界
 
+## 动画播放边界重新基线
+
+`refactor-animation-selection-pose-graph-boundary`不改变本change的Timeline Core、typed context、Foot Analysis Artifact和按需领域工具边界，只更新Preview的正式输出链：Timeline采样产生`AnimationSelectionFrame`与表现参数，编译Pose Graph决定使用直接Player、可选局部Inertialization或显式Blend Stack，并在同一Pose Plan中执行可用的FootPlacement阶段。
+
+Timeline不得携带transition、PoseSlot、Blend Stack entry、Inertialization residual或IK状态；Preview也不得后台创建图中不存在的Stack或Inertialization。本文后续出现的Animancer最终姿势、固定Stack或图外Foot Placement描述只代表迁移前基线。
+
 ## Why
 
 当前 Foot Placement 运行时已经形成唯一表现链：
 
 ```text
 Body Presentation
-  -> Animancer 最终姿势
-  -> Foot Placement Planner
-  -> Final IK Solver
+  -> Timeline Animation Selection
+  -> compiled Pose Graph Plan
+  -> explicit Player / composition
+  -> Foot Placement Planner / IK Solver
   -> Camera
 ```
 
@@ -88,7 +95,7 @@ Character Projection Publication
 ## Dependencies And Sequencing
 
 - 必须先建立typed Timeline open/session/tool合同，再迁移Marker topology与Foot Analysis；不得直接在旧`object AuthoringContext`上再增加一个provider cast。
-- 保留`add-timeline-animation-marker-sync`已经安装的Point Marker、Projection marker map和PresentationFrame持续同步；Foot Analysis只按Marker Sync后的VisualSampleTime采样，不读取MarkerId。
+- 保留`add-timeline-animation-marker-sync`已经安装的Point Marker、Projection marker map和segment映射算法；`refactor-animation-selection-pose-graph-boundary`负责把运行时解析迁入显式MarkerSync节点。Foot Analysis只按Player最终采用的raw/effective sample time采样，不读取MarkerId。
 - 保留`add-predictive-foot-placement-presentation-pass`已经安装的唯一Foot Placement Pass、Final IK程序集边界与单一Foot Placement Weight曲线。
 - 必须先建立artifact合同、store和单clip analyzer，再迁移Projection Build，最后删除Timeline旧Context/lane。不得先删除Projection生成能力导致Runtime缺数据。
 - 如果其它active change同时修改Foot Placement Runtime或Timeline布局，必须按文件所有权串行合并，不建立兼容Context或双UI入口。

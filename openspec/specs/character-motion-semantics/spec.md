@@ -67,7 +67,7 @@ Target Motion accumulator MUST按 `Locomotion -> Action -> GameplayResult` 的�
 
 ### Requirement: Timeline MotionCurve 必须是动画位移的唯一事实来源
 
-Compiled Timeline MotionCurve operation MUST按SimulationTick与canonical fraction求值并产生motion contribution。AnimationTrack、AnimationClip、PoseSlot transition、PresentationFrame与Animator root motion MUST不产生或修改Gameplay位移。
+Compiled Timeline MotionCurve operation MUST按SimulationTick与canonical fraction求值并产生motion contribution。AnimationTrack、AnimationClip、Player transition、PresentationFrame与Animator root motion MUST不产生或修改Gameplay位移。
 
 #### Scenario: Dodge Timeline 同时包含动画和MotionCurve
 

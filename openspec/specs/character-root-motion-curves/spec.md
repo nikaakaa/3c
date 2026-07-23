@@ -131,7 +131,7 @@ Root Motion curve delta MUST作为原始动画派生位移进入 Kernel Evaluate
 
 ### Requirement: 动画表现淡入淡出不得成为 Root Motion 路径
 
-PoseSlot Blend Stack transition、source weight、Presentation retention和visual Timeline sample MUST不改变compiled MotionCurve contribution、WorldRequest或Character/World state。Gameplay位移权重只能来自Program authoring规则。
+显式Player transition、source weight、Presentation retention和visual Timeline sample MUST不改变compiled MotionCurve contribution、WorldRequest或Character/World state。Gameplay位移权重只能来自Program authoring规则。
 
 #### Scenario: 攻击动画淡出
 

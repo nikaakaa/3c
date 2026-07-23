@@ -100,13 +100,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             }
 
-            FinalAnimationPoseFrame animationPose = frame.AnimationPose;
-            if (animationPose.Availability != PoseSlotFrameAvailability.Pose)
+            ComposedAnimationPoseFrame animationPose = frame.AnimationPose;
+            if (animationPose.Availability != AnimationPoseAvailability.Pose)
             {
                 ResetInternal(
                     frame.RenderFrame,
                     frame.Body.ResetSequence,
-                    animationPose.Availability == PoseSlotFrameAvailability.Invalid
+                    animationPose.Availability == AnimationPoseAvailability.Invalid
                         ? FootConstraintTransitionReason.InvalidPose
                         : FootConstraintTransitionReason.MissingAnimationOutput,
                     true);
@@ -246,11 +246,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Disposed = true;
         }
 
-        CharacterFootPlacementFeatureFrame ResolveAnimationFeatures(FinalAnimationPoseFrame animationPose)
+        CharacterFootPlacementFeatureFrame ResolveAnimationFeatures(ComposedAnimationPoseFrame animationPose)
         {
-            if (!string.Equals(animationPose.PoseProgramHash, m_Settings.PoseProgramHash, StringComparison.Ordinal))
+            if (!string.Equals(animationPose.PosePlanHash, m_Settings.PosePlanHash, StringComparison.Ordinal))
                 throw new InvalidOperationException(
-                    $"Foot Placement Pose Program mismatch: expected '{m_Settings.PoseProgramHash}', received '{animationPose.PoseProgramHash}'.");
+                    $"Foot Placement Pose Plan mismatch: expected '{m_Settings.PosePlanHash}', received '{animationPose.PosePlanHash}'.");
             if (!animationPose.HasFootFeatures ||
                 !animationPose.LeftFootFeatures.IsValid ||
                 !animationPose.RightFootFeatures.IsValid)
@@ -998,14 +998,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PelvisResolution pelvis,
             CharacterFootPlacementSolverResult solverResult)
         {
-            FinalAnimationPoseFrame animationPose = frame.AnimationPose;
+            ComposedAnimationPoseFrame animationPose = frame.AnimationPose;
             CharacterFootPlacementFrameSnapshot.CopyContributions(
                 animationPose.Contributions,
                 m_DiagnosticContributions);
             m_Snapshot = new CharacterFootPlacementFrameSnapshot(
                 m_ActorId, frame.RenderFrame,
                 frame.Body.PreviousTick, frame.Body.CurrentTick, frame.Body.ResetSequence,
-                animationPose.PoseProgramHash,
+                animationPose.PosePlanHash,
                 animationPose.CompletionIdentity,
                 animationPose.ContinuityIdentity,
                 m_Settings.FootPlacementWeightParameterId.Value,
@@ -1083,7 +1083,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new RuntimeTracePayload
                 {
                     Name = m_ActorId.Value,
-                    OwnerId = m_Snapshot.PoseProgramHash,
+                    OwnerId = m_Snapshot.PosePlanHash,
                     RelatedElementId = m_Snapshot.FootPlacementWeightParameterId,
                     Status = $"L:{m_Snapshot.Left.ConstraintState}/R:{m_Snapshot.Right.ConstraintState}/P:{m_Snapshot.PelvisHeightDecision}",
                     Cause = m_Snapshot.PelvisHeightReason.ToString(),

@@ -90,6 +90,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
     public readonly struct AnimationMarkerSyncEffectiveSample
     {
+        public const string SchemaVersion = "animation-marker-sync-effective-sample/v1";
+
         public AnimationMarkerSyncEffectiveSample(
             AnimationPlaybackId playbackId,
             float localTime,
@@ -123,6 +125,112 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public bool Rebased { get; }
     }
 
+    internal sealed class AnimationMarkerSyncEffectiveSamplePage
+    {
+        public const string SchemaVersion = "animation-marker-sync-effective-sample-page/v1";
+
+        readonly Dictionary<EntryKey, Entry> m_Entries = new Dictionary<EntryKey, Entry>();
+
+        internal ulong CompletionIdentity { get; private set; }
+
+        internal void BeginFrame(ulong completionIdentity)
+        {
+            if (completionIdentity == 0 || completionIdentity <= CompletionIdentity)
+                throw new ArgumentOutOfRangeException(nameof(completionIdentity));
+            m_Entries.Clear();
+            CompletionIdentity = completionIdentity;
+        }
+
+        internal void Set(
+            PoseNodeId markerNodeId,
+            PoseNodeId playerNodeId,
+            AnimationPoseSourceId sourceId,
+            in AnimationMarkerSyncEffectiveSample sample)
+        {
+            if (CompletionIdentity == 0 || !markerNodeId.IsValid || !playerNodeId.IsValid || !sourceId.IsValid ||
+                !sourceId.PlaybackId.Equals(sample.PlaybackId) ||
+                !float.IsFinite(sample.LocalTime) || sample.LocalTime < 0f ||
+                double.IsNaN(sample.ContinuousTime) || double.IsInfinity(sample.ContinuousTime) || sample.ContinuousTime < 0d ||
+                sample.Cycle < 0 || !float.IsFinite(sample.SegmentFraction) ||
+                sample.SegmentFraction < 0f || sample.SegmentFraction > 1f)
+            {
+                throw new ArgumentException("Marker Sync effective sample page entry is invalid.");
+            }
+            m_Entries[new EntryKey(playerNodeId, sourceId)] = new Entry(
+                markerNodeId,
+                playerNodeId,
+                sourceId,
+                sample,
+                CompletionIdentity);
+        }
+
+        internal bool TryGet(
+            ulong completionIdentity,
+            PoseNodeId playerNodeId,
+            AnimationPoseSourceId sourceId,
+            out AnimationMarkerSyncEffectiveSample sample)
+        {
+            if (completionIdentity == 0 || completionIdentity != CompletionIdentity ||
+                !playerNodeId.IsValid || !sourceId.IsValid)
+            {
+                sample = default;
+                return false;
+            }
+            if (m_Entries.TryGetValue(new EntryKey(playerNodeId, sourceId), out Entry entry) &&
+                entry.CompletionIdentity == completionIdentity)
+            {
+                sample = entry.Sample;
+                return true;
+            }
+            sample = default;
+            return false;
+        }
+
+        internal void Reset()
+        {
+            m_Entries.Clear();
+            CompletionIdentity = 0;
+        }
+
+        readonly struct EntryKey : IEquatable<EntryKey>
+        {
+            internal EntryKey(PoseNodeId playerNodeId, AnimationPoseSourceId sourceId)
+            {
+                PlayerNodeId = playerNodeId;
+                SourceId = sourceId;
+            }
+
+            internal PoseNodeId PlayerNodeId { get; }
+            internal AnimationPoseSourceId SourceId { get; }
+            public bool Equals(EntryKey other) => PlayerNodeId.Equals(other.PlayerNodeId) && SourceId.Equals(other.SourceId);
+            public override bool Equals(object obj) => obj is EntryKey other && Equals(other);
+            public override int GetHashCode() => HashCode.Combine(PlayerNodeId, SourceId);
+        }
+
+        readonly struct Entry
+        {
+            internal Entry(
+                PoseNodeId markerNodeId,
+                PoseNodeId playerNodeId,
+                AnimationPoseSourceId sourceId,
+                AnimationMarkerSyncEffectiveSample sample,
+                ulong completionIdentity)
+            {
+                MarkerNodeId = markerNodeId;
+                PlayerNodeId = playerNodeId;
+                SourceId = sourceId;
+                Sample = sample;
+                CompletionIdentity = completionIdentity;
+            }
+
+            internal PoseNodeId MarkerNodeId { get; }
+            internal PoseNodeId PlayerNodeId { get; }
+            internal AnimationPoseSourceId SourceId { get; }
+            internal AnimationMarkerSyncEffectiveSample Sample { get; }
+            internal ulong CompletionIdentity { get; }
+        }
+    }
+
     public readonly struct AnimationMarkerSyncPlaybackSnapshot
     {
         public AnimationMarkerSyncPlaybackSnapshot(
@@ -136,8 +244,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             string nextMarkerId,
             float fraction,
             bool mapped,
-            bool rebased)
+            bool rebased,
+            PoseNodeId markerNodeId = default,
+            PoseNodeId playerNodeId = default)
         {
+            MarkerNodeId = markerNodeId;
+            PlayerNodeId = playerNodeId;
             PlaybackId = playbackId;
             AnimationChannelId = animationChannelId;
             SyncGroupId = syncGroupId ?? string.Empty;
@@ -152,6 +264,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         public AnimationPlaybackId PlaybackId { get; }
+        public PoseNodeId MarkerNodeId { get; }
+        public PoseNodeId PlayerNodeId { get; }
         public AnimationChannelId AnimationChannelId { get; }
         public string SyncGroupId { get; }
         public double RawTime { get; }
@@ -162,6 +276,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public float Fraction { get; }
         public bool Mapped { get; }
         public bool Rebased { get; }
+
+        public AnimationMarkerSyncPlaybackSnapshot WithNodeContext(PoseNodeId markerNodeId, PoseNodeId playerNodeId) =>
+            new AnimationMarkerSyncPlaybackSnapshot(
+                PlaybackId,
+                AnimationChannelId,
+                SyncGroupId,
+                RawTime,
+                EffectiveTime,
+                EffectiveCycle,
+                PreviousMarkerId,
+                NextMarkerId,
+                Fraction,
+                Mapped,
+                Rebased,
+                markerNodeId,
+                playerNodeId);
     }
 
     public readonly struct AnimationMarkerSyncRelationSnapshot
@@ -182,8 +312,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             int targetEffectiveCycle,
             int relationDepth,
             AnimationMarkerSyncSnapshotReason reason,
-            AnimationPlaybackLifecyclePhase targetLifecyclePhase = AnimationPlaybackLifecyclePhase.Retired)
+            AnimationPlaybackLifecyclePhase targetLifecyclePhase = AnimationPlaybackLifecyclePhase.Retired,
+            PoseNodeId markerNodeId = default,
+            PoseNodeId playerNodeId = default)
         {
+            MarkerNodeId = markerNodeId;
+            PlayerNodeId = playerNodeId;
             AnimationChannelId = animationChannelId;
             SyncGroupId = syncGroupId ?? string.Empty;
             Source = source;
@@ -203,6 +337,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         public AnimationChannelId AnimationChannelId { get; }
+        public PoseNodeId MarkerNodeId { get; }
+        public PoseNodeId PlayerNodeId { get; }
         public string SyncGroupId { get; }
         public AnimationPlaybackId Source { get; }
         public AnimationPlaybackId Target { get; }
@@ -237,8 +373,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 TargetEffectiveCycle,
                 RelationDepth,
                 Reason,
-                phase);
+                phase,
+                MarkerNodeId,
+                PlayerNodeId);
         }
+
+        public AnimationMarkerSyncRelationSnapshot WithNodeContext(PoseNodeId markerNodeId, PoseNodeId playerNodeId) =>
+            new AnimationMarkerSyncRelationSnapshot(
+                AnimationChannelId,
+                SyncGroupId,
+                Source,
+                Target,
+                PreviousMarkerId,
+                NextMarkerId,
+                Fraction,
+                TargetOccurrenceIndex,
+                SourceRawTime,
+                SourceEffectiveTime,
+                TargetRawTime,
+                TargetEffectiveTime,
+                TargetEffectiveCycle,
+                RelationDepth,
+                Reason,
+                TargetLifecyclePhase,
+                markerNodeId,
+                playerNodeId);
     }
 
     public sealed class AnimationMarkerSyncRuntime

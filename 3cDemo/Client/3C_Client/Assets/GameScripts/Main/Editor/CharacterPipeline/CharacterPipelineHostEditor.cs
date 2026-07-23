@@ -1,9 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
 using ThirdPersonCharacter.Equipment;
+using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonCharacter.Pipeline.Simulation;
 using UnityEditor;
 using UnityEngine;
 
@@ -70,7 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawBlackboard(view);
             DrawMotion(view);
             DrawCamera(view);
-            DrawPresentation(view);
+            DrawPresentation(host, view);
             DrawFootPlacement(view);
         }
 
@@ -301,7 +306,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             });
         }
 
-        static void DrawPresentation(RuntimeDebugViewModel view)
+        static void DrawPresentation(CharacterPipelineHost host, RuntimeDebugViewModel view)
         {
             IReadOnlyList<RuntimeDebugEventView> source = view.GetCurrentEvents(RuntimeTraceChannel.Animation);
             var events = new List<RuntimeDebugEventView>();
@@ -318,6 +323,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawAnimationGroup("Selection", events, RuntimeTraceEventKind.AnimationSelectionSubmitted);
             DrawAnimationGroup("Timeline Samples", events, RuntimeTraceEventKind.AnimationProducerSampled, RuntimeTraceEventKind.TimelineVisualTime);
             DrawAnimationGroup(
+                "Motion Matching",
+                events,
+                RuntimeTraceEventKind.MotionMatchingQuery,
+                RuntimeTraceEventKind.MotionMatchingTrajectory,
+                RuntimeTraceEventKind.MotionMatchingPoseHistory,
+                RuntimeTraceEventKind.MotionMatchingAdmission,
+                RuntimeTraceEventKind.MotionMatchingCandidateRejected,
+                RuntimeTraceEventKind.MotionMatchingSearchTraversal,
+                RuntimeTraceEventKind.MotionMatchingTopK,
+                RuntimeTraceEventKind.MotionMatchingPlan,
+                RuntimeTraceEventKind.MotionMatchingSelection,
+                RuntimeTraceEventKind.MotionMatchingPoseSource,
+                RuntimeTraceEventKind.MotionMatchingReset,
+                RuntimeTraceEventKind.MotionMatchingFrame);
+            DrawMotionMatchingReplayCapture(host, view, events);
+            DrawAnimationGroup(
                 "Playback Lifecycle",
                 events,
                 RuntimeTraceEventKind.AnimationPlaybackPending,
@@ -327,6 +348,93 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RuntimeTraceEventKind.AnimationPlaybackCompleted,
                 RuntimeTraceEventKind.AnimationPlaybackReleased);
             DrawAnimationGroup("Presentation", events, RuntimeTraceEventKind.PresentationInterpolated);
+        }
+
+        static void DrawMotionMatchingReplayCapture(
+            CharacterPipelineHost host,
+            RuntimeDebugViewModel view,
+            IReadOnlyList<RuntimeDebugEventView> events)
+        {
+            EditorGUILayout.LabelField("Motion Matching Capability", "Available in project");
+            CharacterPipelineDefinition definition = host ? host.Definition : null;
+            CharacterAnimationPresentationProfile profile = definition ? definition.AnimationPresentationProfile : null;
+            CharacterPresentationProjectionAsset projection = definition ? definition.PresentationProjection : null;
+            EditorGUILayout.LabelField("Definition Identity", AssetIdentity(definition));
+            EditorGUILayout.LabelField("Profile Identity", AssetIdentity(profile));
+            EditorGUILayout.LabelField("Projection Asset Identity", AssetIdentity(projection));
+            if (!AnimationPresentationRuntimeTargetRegistry.TryGet(
+                    view.Target.CharacterRuntimeId,
+                    out AnimationPresentationRuntimeTarget target))
+            {
+                EditorGUILayout.LabelField("Current Definition", "Runtime target unavailable");
+                return;
+            }
+            EditorGUILayout.LabelField(
+                "Current Definition",
+                target.MotionMatchingRuntimeEnabled ? "Enabled" : "Disabled");
+            if (!target.MotionMatchingRuntimeEnabled)
+                return;
+            string producerId = string.Empty;
+            for (int i = events.Count - 1; i >= 0; i--)
+            {
+                RuntimeTraceEventKind kind = events[i].Event.Kind;
+                if (kind is not RuntimeTraceEventKind.MotionMatchingQuery and
+                    not RuntimeTraceEventKind.MotionMatchingSelection)
+                {
+                    continue;
+                }
+                producerId = events[i].Event.Payload.OwnerId;
+                if (!string.IsNullOrWhiteSpace(producerId))
+                    break;
+            }
+            EditorGUILayout.LabelField("Active Producer", string.IsNullOrEmpty(producerId) ? "No searchable frame" : producerId);
+            if (!string.IsNullOrEmpty(producerId) &&
+                target.TryCaptureMotionMatchingSearchReplay(producerId, out MotionMatchingSearchReplayArtifact artifact))
+            {
+                EditorGUILayout.LabelField("MM Profile", artifact.ProfileId.Value);
+                EditorGUILayout.LabelField("Database", artifact.DatabaseIdentity.DatabaseId.Value);
+                EditorGUILayout.LabelField("Database Artifact", artifact.DatabaseIdentity.ContentHash.Value);
+                EditorGUILayout.LabelField("Runtime Projection", artifact.ProjectionIdentity);
+            }
+            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(producerId)))
+            {
+                if (GUILayout.Button("Capture Motion Matching Search Replay"))
+                    CaptureMotionMatchingSearchReplay(target, producerId);
+            }
+        }
+
+        static string AssetIdentity(UnityEngine.Object asset)
+        {
+            if (!asset)
+                return "Missing";
+            string path = AssetDatabase.GetAssetPath(asset);
+            string guid = string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path);
+            return string.IsNullOrEmpty(guid) ? asset.name : $"{asset.name} [{guid}]";
+        }
+
+        static void CaptureMotionMatchingSearchReplay(
+            AnimationPresentationRuntimeTarget target,
+            string producerId)
+        {
+            try
+            {
+                if (!target.TryCaptureMotionMatchingSearchReplay(producerId, out MotionMatchingSearchReplayArtifact artifact))
+                    throw new InvalidOperationException("The active Motion Matching producer has no completed Search to capture.");
+                string path = EditorUtility.SaveFilePanelInProject(
+                    "Capture Motion Matching Search Replay",
+                    $"{producerId}-search-replay",
+                    "bytes",
+                    "Choose the Search Replay Artifact path.");
+                if (string.IsNullOrEmpty(path))
+                    return;
+                File.WriteAllBytes(Path.GetFullPath(path), MotionMatchingSearchReplayArtifactCodec.Encode(artifact));
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+                Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
+            }
+            catch (Exception exception)
+            {
+                EditorUtility.DisplayDialog("Motion Matching Search Replay Capture Failed", exception.Message, "OK");
+            }
         }
 
         static void DrawFootPlacement(RuntimeDebugViewModel view)

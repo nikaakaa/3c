@@ -6,7 +6,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             return
                 $"body={snapshot.PreviousBodyTick}->{snapshot.CurrentBodyTick};reset={snapshot.ResetSequence};" +
-                $"pose={snapshot.PoseProgramHash}/{snapshot.CompletionIdentity}/{snapshot.PoseContinuityIdentity};" +
+                $"pose={snapshot.PosePlanHash}/{snapshot.CompletionIdentity}/{snapshot.PoseContinuityIdentity};" +
                 $"placement={snapshot.FootPlacementWeightParameterId}[{snapshot.FootPlacementWeightParameterIndex}]={snapshot.FootPlacementWeight:0.###};" +
                 $"calibration={snapshot.CalibrationId}/{snapshot.CalibrationRevision};" +
                 $"analysis={snapshot.AnalysisSourceId}/v{snapshot.AnalysisVersion}/{snapshot.AnalysisAlgorithmVersion};" +

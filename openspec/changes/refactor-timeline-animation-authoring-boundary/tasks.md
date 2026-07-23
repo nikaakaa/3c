@@ -130,7 +130,7 @@
 ## 9. Runtime与表现边界确认
 
 - [x] 9.1 保持Runtime只从Projection clip binding读取左右脚feature。
-- [x] 9.2 保持Marker Sync后的VisualSampleTime作为feature采样时间。
+- [x] 9.2 保持Player最终采用的raw/effective VisualSampleTime作为feature采样时间；显式MarkerSync迁移由Selection边界change负责。
 - [x] 9.3 保持Foot Placement Weight为唯一逐Clip可写IK介入曲线。
 - [x] 9.4 保持Foot contact不读取MarkerId、Distance Curve、State或Action。
 - [x] 9.5 保持Foot Placement Planner、Ground Envelope、constraint、pelvis和Final IK链不变。
@@ -195,8 +195,21 @@
 - [x] 13.17 只替换LeftFootContact与RightFootContact并保留其它Marker。
 - [x] 13.18 尽量复用匹配的stable marker identity并删除多余脚步Marker。
 - [x] 13.19 保持Agent generated analysis只读，不新增candidate Patch operation。
-- [ ] 13.20 使用Agent v15正式流程迁移Corin WalkLoop与RunLoop Marker。
-- [ ] 13.21 重新生成Corin artifact与Presentation Projection。
-- [ ] 13.22 编译受影响Runtime与Editor程序集并关闭build server。
-- [ ] 13.23 更新implementation inventory与current specs。
-- [ ] 13.24 运行OpenSpec strict validation并核对任务勾选真实性。
+- [x] 13.20 使用Agent v15正式流程迁移Corin WalkLoop与RunLoop Marker。
+- [x] 13.21 重新生成Corin artifact与Presentation Projection。
+- [x] 13.22 编译受影响Runtime与Editor程序集并关闭build server。
+- [x] 13.23 更新implementation inventory与current specs。
+- [x] 13.24 运行OpenSpec strict validation并核对任务勾选真实性。
+
+## 14. Preview Selection与Pose Plan重新基线
+
+- [x] 14.1 将Timeline Preview采样输出改为AnimationSelectionFrame与表现参数。
+- [x] 14.2 删除Preview输出中的PoseSlotId与transition identity。
+- [x] 14.3 让Preview创建与Projection revision匹配的编译Pose Plan实例。
+- [x] 14.4 让Preview严格按图执行SelectedPosePlayer、可选局部Inertialization或BlendStack。
+- [x] 14.5 禁止Preview后台补建Blend Stack、Inertialization或默认fade。
+- [x] 14.6 让Preview按Pose Plan执行source、composition与world-aware阶段。
+- [x] 14.7 缺少正式world context时标记FootPlacement阶段Unavailable。
+- [x] 14.8 禁止不完整world-aware结果冒充FinalAnimationPoseFrame。
+- [x] 14.9 更新Live Debug binding为Selection、PoseNode与plan completion口径。
+- [x] 14.10 更新本change相关spec delta并保持Timeline Core不引用播放器实现。

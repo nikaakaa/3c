@@ -81,12 +81,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingExactCostComponents Cost { get; }
     }
 
+    public readonly struct MotionMatchingCandidateRejectDetail
+    {
+        public MotionMatchingCandidateRejectDetail(
+            MotionMatchingCandidateRejectReason reason,
+            float value,
+            float limit,
+            float secondaryValue = 0f,
+            float secondaryLimit = 0f)
+        {
+            if (reason == MotionMatchingCandidateRejectReason.None ||
+                !float.IsFinite(value) || !float.IsFinite(limit) ||
+                !float.IsFinite(secondaryValue) || !float.IsFinite(secondaryLimit))
+            {
+                throw new ArgumentException("Motion Matching candidate rejection detail is invalid.");
+            }
+            Reason = reason;
+            Value = value;
+            Limit = limit;
+            SecondaryValue = secondaryValue;
+            SecondaryLimit = secondaryLimit;
+        }
+
+        public MotionMatchingCandidateRejectReason Reason { get; }
+        public float Value { get; }
+        public float Limit { get; }
+        public float SecondaryValue { get; }
+        public float SecondaryLimit { get; }
+    }
+
     public sealed class CharacterMotionMatchingRuntimeDatabase : IDisposable
     {
         readonly MotionMatchingProjectionPayload m_Projection;
         readonly MotionMatchingDatabasePayload m_Database;
         readonly int[] m_TraversalStack;
-        readonly MotionMatchingCandidateRejectReason[] m_RejectReasons;
+        readonly MotionMatchingCandidateRejectDetail[] m_RejectDetails;
         readonly MotionMatchingExactCandidate[] m_TopK;
         readonly int[] m_PlanSamples;
         readonly float[] m_QueryFeatures;
@@ -110,7 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 m_Database.Capacities.HistoryCapacity != projection.SearchPolicy.HistoryCapacity)
                 throw new InvalidOperationException("Motion Matching Runtime Database identity or fixed capacities do not match the Projection.");
             m_TraversalStack = new int[m_Database.Capacities.TraversalCapacity];
-            m_RejectReasons = new MotionMatchingCandidateRejectReason[m_Database.Capacities.SampleCount];
+            m_RejectDetails = new MotionMatchingCandidateRejectDetail[m_Database.Capacities.SampleCount];
             m_TopK = new MotionMatchingExactCandidate[m_Database.Capacities.TopK];
             m_PlanSamples = new int[m_Database.Capacities.PlanSampleCount * m_Database.Capacities.TopK];
             m_QueryFeatures = new float[m_Database.Capacities.DenseFeatureCount];
@@ -127,7 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public int SampleCount => RequireAlive().m_Database.SampleCount;
         public int SearchNodeCount => RequireAlive().m_Database.SearchNodeCount;
         internal int[] TraversalStack => RequireAlive().m_TraversalStack;
-        internal MotionMatchingCandidateRejectReason[] RejectReasons => RequireAlive().m_RejectReasons;
+        internal MotionMatchingCandidateRejectDetail[] RejectDetails => RequireAlive().m_RejectDetails;
         internal MotionMatchingExactCandidate[] TopK => RequireAlive().m_TopK;
         internal int[] PlanSamples => RequireAlive().m_PlanSamples;
         internal float[] QueryFeatures => RequireAlive().m_QueryFeatures;
@@ -181,7 +210,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         {
             RequireAlive();
             Array.Clear(m_TraversalStack, 0, m_TraversalStack.Length);
-            Array.Clear(m_RejectReasons, 0, m_RejectReasons.Length);
+            Array.Clear(m_RejectDetails, 0, m_RejectDetails.Length);
             Array.Clear(m_TopK, 0, m_TopK.Length);
             Array.Clear(m_PlanSamples, 0, m_PlanSamples.Length);
             Array.Clear(m_DiagnosticSamples, 0, m_DiagnosticSamples.Length);
@@ -192,7 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             if (m_Disposed)
                 return;
             Array.Clear(m_TraversalStack, 0, m_TraversalStack.Length);
-            Array.Clear(m_RejectReasons, 0, m_RejectReasons.Length);
+            Array.Clear(m_RejectDetails, 0, m_RejectDetails.Length);
             Array.Clear(m_TopK, 0, m_TopK.Length);
             Array.Clear(m_PlanSamples, 0, m_PlanSamples.Length);
             Array.Clear(m_QueryFeatures, 0, m_QueryFeatures.Length);

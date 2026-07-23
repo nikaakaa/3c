@@ -26,6 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong previousTick,
             ulong currentTick,
             float sampleAlpha,
+            float sampleAgeSeconds,
             CharacterBodyPresentationSourceMode sourceMode,
             CharacterVisualTrajectoryMode trajectoryMode,
             CharacterVisualTrajectorySample target,
@@ -41,6 +42,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PreviousTick = previousTick;
             CurrentTick = currentTick;
             SampleAlpha = Mathf.Clamp01(sampleAlpha);
+            if (!float.IsFinite(sampleAgeSeconds) || sampleAgeSeconds < 0f)
+                throw new ArgumentOutOfRangeException(nameof(sampleAgeSeconds));
+            SampleAgeSeconds = sampleAgeSeconds;
             SourceMode = sourceMode;
             TrajectoryMode = trajectoryMode;
             VisiblePosition = visible.Position;
@@ -72,6 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong PreviousTick { get; }
         public ulong CurrentTick { get; }
         public float SampleAlpha { get; }
+        public float SampleAgeSeconds { get; }
         public ulong AnimationSampleTick => CurrentTick;
         public float AnimationSampleAlpha => SampleAlpha;
         public CharacterBodyPresentationSourceMode SourceMode { get; }
@@ -170,6 +175,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public CharacterBodyPresentationSourceMode SourceMode => m_SourceMode;
+        internal Transform VisualRoot => m_VisualRoot;
         public ulong LatestTick => m_LatestTick;
         public ulong ResetSequence => m_ResetSequence;
         public ulong BranchReplacementCount => m_BranchReplacementCount;
@@ -516,10 +522,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                               m_LastPresentedFrame.ResetSequence == m_ResetSequence
                 ? visible.Position - m_LastPresentedFrame.VisiblePosition
                 : Vector3.zero;
+            double sampleTick = target.PreviousTick +
+                                (target.CurrentTick - target.PreviousTick) * (double)target.SampleAlpha;
+            float sampleAgeSeconds = m_SourceMode == CharacterBodyPresentationSourceMode.SelectedStream
+                ? (float)(Math.Max(0d, m_LatestTick - sampleTick) * m_TickDurationSeconds)
+                : 0f;
             return new CharacterBodyPresentationFrame(
                 target.PreviousTick,
                 target.CurrentTick,
                 target.SampleAlpha,
+                sampleAgeSeconds,
                 m_SourceMode,
                 m_Follower.Mode,
                 target.Sample,
@@ -559,7 +571,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Status = frame.CorrectionActive ? "Correcting" : "Settled",
                     Time = frame.SampleAlpha,
                     SecondaryTime = presentationDeltaSeconds,
-                    Detail = $"{frame.PreviousTick}->{frame.CurrentTick};source={frame.SourceMode};trajectory={frame.TrajectoryMode};target={frame.TargetPosition};targetYaw={frame.TargetRotation.eulerAngles.y:0.###};targetVelocity={frame.TargetVelocity};targetYawVelocity={frame.TargetYawVelocityDegreesPerSecond:0.###};grounded={frame.TargetGrounded};groundedInterval={frame.GroundedBefore}->{frame.GroundedAfter};sourceDelta={frame.SourceTranslationDelta};visibleDelta={frame.VisibleTranslationDelta};visual={frame.VisiblePosition};visualYaw={frame.VisibleRotation.eulerAngles.y:0.###};visualVelocity={frame.VisibleVelocity};visualYawVelocity={frame.VisibleYawVelocityDegreesPerSecond:0.###};positionError={frame.PositionError:0.####};yawError={frame.RotationError:0.###};correctionVelocity={frame.CorrectionPositionVelocity};yawCorrectionVelocity={frame.CorrectionYawVelocityDegreesPerSecond:0.###};active={frame.CorrectionActive};clamped={frame.CorrectionClamped};settled={frame.CorrectionSettled};branchRevision={frame.ResetSequence};resetReason={frame.ResetReason}",
+                    Detail = $"{frame.PreviousTick}->{frame.CurrentTick};source={frame.SourceMode};trajectory={frame.TrajectoryMode};sampleAge={frame.SampleAgeSeconds:0.####};target={frame.TargetPosition};targetYaw={frame.TargetRotation.eulerAngles.y:0.###};targetVelocity={frame.TargetVelocity};targetYawVelocity={frame.TargetYawVelocityDegreesPerSecond:0.###};grounded={frame.TargetGrounded};groundedInterval={frame.GroundedBefore}->{frame.GroundedAfter};sourceDelta={frame.SourceTranslationDelta};visibleDelta={frame.VisibleTranslationDelta};visual={frame.VisiblePosition};visualYaw={frame.VisibleRotation.eulerAngles.y:0.###};visualVelocity={frame.VisibleVelocity};visualYawVelocity={frame.VisibleYawVelocityDegreesPerSecond:0.###};positionError={frame.PositionError:0.####};yawError={frame.RotationError:0.###};correctionVelocity={frame.CorrectionPositionVelocity};yawCorrectionVelocity={frame.CorrectionYawVelocityDegreesPerSecond:0.###};active={frame.CorrectionActive};clamped={frame.CorrectionClamped};settled={frame.CorrectionSettled};branchRevision={frame.ResetSequence};resetReason={frame.ResetReason}",
                     Value = DebugValueSnapshot.Capture(frame.VisiblePosition)
                 });
         }

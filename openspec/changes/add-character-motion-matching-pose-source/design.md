@@ -1,22 +1,28 @@
 # Design: 短时序接触约束 Motion Matching 姿势源
 
+## 重新基线
+
+`refactor-animation-selection-pose-graph-boundary`覆盖本文原先的`ResolvedAnimationPoseRequest -> fixed PoseSlot Blend Stack`接线。Trajectory、Database、Pose History、Query、Admission、Exact Search、Plan、Selection Lifecycle与Replay设计继续有效；公开输出改为`AnimationSelectionFrame`和表现参数。Selection进入`MotionMatchingSelectionInput`后，由Pose Graph显式节点决定直接Player硬切、局部Inertialization连续化或Blend Stack多source CrossFade。
+
+本文后续出现的PoseSlotFrame、BaseLocomotionSlot、per-slot Blend Library与ResolvedAnimationPoseRequest只描述迁移前基线，不再是当前接口。Pose History已经读取与MM节点绑定的已完成Pose Value，不读取固定Slot身份。
+
 ## Context
 
-当前正式职责已经被并行change拆开：
+迁移前的职责链是：
 
 ```text
 Gameplay Program
   -> AnimationChannel producer ownership
   -> Presentation Playback Lifecycle
-  -> ResolvedAnimationPoseRequest
-  -> per-PoseSlot Blend Stack
-  -> PoseSlotFrame
-  -> Character Presentation Pose Graph
+  -> AnimationSelectionFrame
+  -> MotionMatchingSelectionInput
+  -> explicit Player / local Inertialization or BlendStack
+  -> Character Presentation Pose Graph Plan
   -> FinalAnimationPoseFrame
   -> Foot Placement
 ```
 
-Motion Matching必须位于`ResolvedAnimationPoseRequest`之前。它回答“BaseLocomotion下一段从数据库采样哪个姿势”，不回答“角色能否移动”“实际移动到哪里”“Action是否覆盖Locomotion”“多个Slot怎样合成”或“脚如何贴合当前世界表面”。
+Motion Matching必须位于Animation Selection阶段。它回答“BaseLocomotion下一段从数据库采样哪个姿势”，不回答“角色能否移动”“实际移动到哪里”“Action是否覆盖Locomotion”“Pose Graph怎样合成”或“脚如何贴合当前世界表面”。
 
 UE 5.8公开基线已经不只是线性最近邻：Pose Search提供Pose/Trajectory channel、Pose History、Continuing Pose、Brute Force、PCAKDTree、实验VPTree、Normalization Set、Chooser过滤和debug；Game Animation Sample使用capsule-driven movement、GenerateTrajectory、IsStarting/IsPivoting等状态与Chooser；实验Interaction API还支持多角色候选。参考：
 
@@ -26,18 +32,18 @@ UE 5.8公开基线已经不只是线性最近邻：Pose Search提供Pose/Traject
 
 因此本设计不以“也有KDTree”作为领先点，而以当前3C业务真正需要的完整闭环为目标：编译身份、轨迹不确定性、硬接触约束、短时序计划、网络分支重置和可复现解释。
 
-这不是从零发明Motion Matching，也不把UE类名逐个翻译。Schema、Database、Pose History、Trajectory Query、Continuing Pose、feature normalization、不可跳入区间和调试视图属于成熟Motion Matching共同基础，本设计明确参考UE公开工作流。项目不照搬的是UE的Animation Blueprint Motion Matching Node、Chooser、内置Blend Tree、Derived Data自动索引与root-motion gameplay组织；这些职责必须进入本项目已有Program producer、target-neutral Projection、Animancer Blend Stack、Pose Graph、Body Presentation和显式Artifact链。
+这不是从零发明Motion Matching，也不把UE类名逐个翻译。Schema、Database、Pose History、Trajectory Query、Continuing Pose、feature normalization、不可跳入区间和调试视图属于成熟Motion Matching共同基础，本设计明确参考UE公开工作流。项目不照搬的是UE的Animation Blueprint Motion Matching Node、Chooser、内置Blend Tree、Derived Data自动索引与root-motion gameplay组织；这些职责必须进入本项目已有Program producer、target-neutral Projection、Animancer source backend、显式Player/局部Inertialization/Blend Stack、Pose Graph、Body Presentation和显式Artifact链。
 
 ## Goals
 
 - 提供可由独立正式角色配置显式启用的Grounded Locomotion Pose Source，不改动未启用MM的角色。
 - 保持Gameplay Body、WorldSolver和Program为真实移动权威。
 - 让Local accepted intent与Remote selected body使用同一query模型，并显式表达置信度差异。
-- 使用上一帧BaseLocomotionSlot输出建立pose query，不被FullBody Action或Foot IK污染。
+- 使用上一帧与MM Selection Input绑定的Player完成Pose建立pose query，不被FullBody Action或Foot IK污染。
 - 先执行可解释硬准入，再执行结果可证明精确的Top-K搜索。
 - 在Top-K上评估固定短时序continuation plan，而不是只比较单个当前sample。
 - 把左右脚受保护接触作为候选资格，不允许普通代价权重掩盖脚步断裂。
-- 将MM selection降低为现有source-neutral pose request并复用唯一Blend Stack。
+- 将MM selection降低为统一Animation Selection并复用唯一编译Pose Plan与显式Player节点集。
 - 让查询、候选、拒绝、代价、计划、选择、混合和重置完整可诊断、可捕获、可重放。
 - 全部Runtime内存按Projection容量预分配，不在表现帧扩容。
 
@@ -112,12 +118,60 @@ PresentationFrame
   -> Camera
 ```
 
+## Current Implementation Baseline
+
+截至2026-07-22，设计已经从“待实现目标”进入“主链已接通、跨模块闭环待收口”阶段。工作区里的正式调用链是：
+
+```text
+CharacterAnimationPresentationProfile
+  -> MotionMatchingProjectionPayloadCompiler
+  -> CharacterPresentationProjection.MotionMatching
+  -> CharacterPresentationRuntimeFactory
+       -> CharacterAnimationPlaybackRuntime
+            -> CharacterMotionMatchingPresentationModule
+                 -> internal Accepted Intent or Selected Body Adapter
+  -> CharacterSimulationPresentationRuntime.Present
+       -> Body Presentation Frame / ResetSequence
+       -> CharacterAnimationPlaybackRuntime.Present
+            -> CharacterMotionMatchingPresentationModule.ResolveFrame
+              -> CharacterMotionMatchingProducerRuntime.Resolve
+                 -> CharacterMotionMatchingTrajectoryRuntime
+                 -> MotionMatchingQueryBuilder
+                 -> MotionMatchingCandidateAdmission
+                 -> MotionMatchingExactSearch
+                 -> MotionMatchingPlanEvaluator
+                 -> CharacterMotionMatchingSelectionRuntime
+                 -> MotionMatchingPoseSourceRuntime
+              -> MotionMatchingResolvedPoseRequestFactory
+            -> AnimationBlendStackRuntime
+            -> native Pose Slot evaluation
+            -> native Pose Graph evaluation
+            -> CharacterMotionMatchingPresentationModule.CompleteFrame
+                 -> append Base Pose History
+       -> Foot Placement
+       -> Camera
+```
+
+当前已落盘的职责：
+
+| 边界 | 当前实现 | 仍缺的闭环 |
+|---|---|---|
+| Authoring与离线分析 | Profile、Source Set、Database、显式Foot批处理、显式MM Build、Artifact、Coverage与Projection payload均已存在 | 用户尚未提供独立正式验证配置及其完整内容identity |
+| Trajectory | Accepted Intent与Selected Body已收敛为MM Module内部Adapter；Factory、Simulation Presentation与Playback不再识别具体类型；Envelope、真实selected sample age和Reset已存在 | Rollback remote只消费最终selected Body transaction，仍等待独立验证配置 |
+| Query与选择 | Pose History、Query、硬准入、Exact Top-K、Plan Rerank、Selection Generation与Pose Time均已存在；受关注reject保存实际值与阈值 | 无代码闭环缺口 |
+| 公共动画链 | MM已降低为正式Animation Selection，复用编译Pose Plan、显式SelectedPosePlayer、可选局部Inertialization或BlendStack与FootPlacement | 仍需完成独立正式验证配置，current specs才能安装可选MM能力 |
+| Diagnostics与Replay | Snapshot payload、显式Capture、exact codec、Database Inspector Replay均已进入正式链；Query Fixture可选择显式producer与场景Preview Target，并执行同一MM Module、Pose Source与编译Pose Plan | 仍需完成独立正式验证配置 |
+| 条件式能力 | 无MM payload时不构造MM Runtime，也不分配查询workspace；orphan/missing/duplicate-owner使用typed diagnostic；Inspector区分项目能力与当前Definition启用状态 | 独立正式验证Definition的内容装配与显式环境选择仍等待用户输入 |
+
+这份基线只说明工作区实现事实，不把active change提前升级为current architecture。Corin没有MM producer、MM Profile、Database或验证资产，仍沿现有Timeline producer运行。
+
 ## Responsibility Boundary
 
 | 模块 | 输入 | 输出 | 明确不拥有 |
 |---|---|---|---|
 | Program | input、state、world result | channel producer lifecycle、accepted motion | clip、sample、query、pose history |
-| Trajectory Source | committed/selected body、accepted intent | source frame | candidate选择、动画pose |
+| MM表现Module内部Trajectory Adapter | committed/selected body、accepted intent | source frame | channel winner、Stack transition、最终pose |
+| MM表现Module | 正式Body/Intent、MM playback demand、Stack retention | resolved pose request、frame completion、pose history | channel winner、Stack entry/clock、Pose Graph |
 | Trajectory Runtime | source frame、policy | trajectory envelope | Program input、World request修改 |
 | Pose History | BaseLocomotionSlot frame | bounded pose samples | FullBody/IK/VisualRoot真相 |
 | Admission | query、domain、candidate metadata | admitted candidate set与reject | soft cost |
@@ -437,7 +491,7 @@ Accepted Intent使用加速度和转向限制积分得到中心；Selected Body�
 
 ## Pose History
 
-Pose History只追加已经完成的`BaseLocomotionSlot` PoseSlotFrame：
+Pose History只追加与MM Selection Input绑定的Player节点已经完成的Pose Value：
 
 - stable BoneId local pose。
 - 基于表现delta的bone velocity。
@@ -445,7 +499,7 @@ Pose History只追加已经完成的`BaseLocomotionSlot` PoseSlotFrame：
 - continuity identity。
 - sample presentation time。
 
-它不读取FinalAnimationPoseFrame中的FullBody覆盖，不读取Foot Placement骨骼结果，不读取VisualRoot world correction。查询发生在本帧slot求值前，因此只消费上一帧及更早历史；本帧slot完成后再append，避免循环依赖。
+它不读取FinalAnimationPoseFrame中的FullBody覆盖，不读取FootPlacement骨骼结果，不读取VisualRoot world correction。查询发生在本帧Player求值前，因此只消费上一帧及更早历史；绑定PoseNode完成后再append，避免循环依赖。
 
 History容量和sample horizons由Schema编译。时间不足时进入Initialization Query，不使用bind pose或隐藏Idle补历史。
 
@@ -578,9 +632,9 @@ Startup、Body reset、branch replacement、Projection replacement或history不�
 - 保持Program拥有的MM`AnimationPlaybackId`，只要producer activation未变。
 - 提升`MotionMatchingSelectionGeneration`。
 - 把`SourcePoseContinuityIdentity`同步为新的有效`MotionMatchingSelectionGeneration.Value`。
-- 生成新`AnimationBlendEntryId`。
-- 查找Blend Library中MM producer self-pair transition。
-- 复用该Slot唯一CrossFade/Inertial、Stored Pose和retirement。
+- 由`SelectedPosePlayer`发布新的typed PoseDiscontinuity。
+- 按显式图连接解析局部Inertialization Policy或BlendStack CrossFade Policy。
+- 若显式图选择BlendStack，复用该节点唯一CrossFade、Stored Pose和retirement；若选择局部Inertialization，只复用其history、residual和rebase。
 
 这修复了“同Playback一律视为continuation”无法表达MM jump的合同缺口。
 
@@ -588,17 +642,15 @@ Startup、Body reset、branch replacement、Projection replacement或history不�
 
 无合法candidate、Clip丢失、plan graph断裂、query非有限或identity错配时发布typed Invalid。RequireOutput slot由统一动画管线报告失败；不得播放旧state、bind pose或全库fallback。
 
-## Source-Neutral Pose Request
+## Animation Selection输出
 
 Timeline和MM都降低为：
 
 ```text
-ResolvedAnimationPoseRequest
+AnimationSelectionFrame
   AnimationChannelId
-  PoseSlotId
   AnimationPoseSourceId
-  SourcePoseContinuityIdentity
-  PresentationRequestSequence
+  SelectionGeneration
   ProgramProducerIndex
   VisualSampleTime
   ContinuousVisualTime
@@ -608,12 +660,11 @@ ResolvedAnimationPoseRequest
   PoseParameters[]
   LeftFootFeatures
   RightFootFeatures
-  ExactTransitionIdentity
 ```
 
-统一request不再把`AnimationPlaybackId`、`PoseSourceKind`和`PoseSelectionGeneration`作为三份顶层source identity；它们由正式`AnimationPoseSourceId`整体表达。MM侧已有的playback identity、source kind与selection generation只能在最终公共降低边界组装一次该identity，不能再建立MM私有source key。`SourcePoseContinuityIdentity`精确取当前有效`MotionMatchingSelectionGeneration.Value`，不得取sample index、sample time、`PresentationRequestSequence`或独立allocator；因此Continue保持，Initialize/Jump随generation变化。
+统一Selection不携带PoseSlot、transition technique、duration、curve、Bone Mask或最终weight。MM侧已有的playback identity、source kind与selection generation只能在最终公共降低边界组装一次稳定source identity，不能再建立MM私有source key。`SelectionGeneration`精确取当前有效`MotionMatchingSelectionGeneration.Value`，不得取sample index、sample time或独立allocator；因此Continue保持，Initialize/Jump随generation变化。
 
-MM内部`MotionMatchingClipSamplePlan`只持有selection的`MotionMatchingPoseTimePlan`，并按以下唯一映射降低到公共`ClipSamplePlan`：
+MM内部`MotionMatchingClipSamplePlan`只持有selection的`MotionMatchingPoseTimePlan`，并按以下唯一映射降低到Selection的source-local clip descriptor：
 
 ```text
 ClipTime           <- MotionMatchingPoseTimePlan.SampleTime
@@ -622,13 +673,13 @@ NormalizedTime     <- ClipTime / Clip.length
 IsLooping          <- MotionMatchingPoseTimePlan.Looping
 ```
 
-Clip必须存在、长度有限且大于0，clip time必须在合法范围，loop cycle与continuous time必须一致。Playable state的`Speed`仍固定为0，只用于后端手动采样；公共request的`VisualTimeScale`继续取`EntryVisualAdvanceRate`。
+Clip必须存在、长度有限且大于0，clip time必须在合法范围，loop cycle与continuous time必须一致。Playable state的`Speed`仍固定为0，只用于后端手动采样；Selection的`VisualTimeScale`继续取`EntryVisualAdvanceRate`。
 
-Timeline adapter可以输出多Clip ManualMixer plan；MM第一版输出单个selected Clip sample。MM选中Clip的正式Projection曲线在`VisualSampleTime`处写入dense `PoseParameters[]`，其中Foot Placement Weight唯一使用canonical `PoseParameterId` `animation.foot-placement-weight`；左右脚正式feature分别写入`LeftFootFeatures`与`RightFootFeatures`，Foot不得二次查询MM Database。`ExactTransitionIdentity`沿用正式producer self-pair identity。`AnimancerPoseSamplingBackend`只按plan创建/更新时间冻结的source state并捕获pose，不读取Query、Cost、Domain或Plan。
+Timeline adapter可以输出多Clip ManualMixer descriptor；MM第一版输出单个selected Clip sample。MM选中Clip的正式Projection曲线在`VisualSampleTime`处写入dense `PoseParameters[]`，其中Foot Placement Weight唯一使用canonical `PoseParameterId` `animation.foot-placement-weight`；左右脚正式feature分别写入`LeftFootFeatures`与`RightFootFeatures`，Foot不得二次查询MM Database。`AnimancerPoseSamplingBackend`只按Selection descriptor创建/更新时间冻结的source state并捕获pose，不读取Query、Cost、Domain、Plan或transition Policy。
 
-上述是统一降低的唯一目标合同；当前MM独立模块已给出时间与continuity输入，但在公共Presentation接线完成前，不得把本节表述成已经安装最终runtime调用链，也不得为未接线状态增加wrapper、fallback或并行播放器。
+当前工作区已经由`CharacterAnimationPlaybackRuntime`内部唯一`CharacterMotionMatchingPresentationModule`与`MotionMatchingResolvedPoseRequestFactory`接入旧公共request链，这只是迁移基线。最终Module统一拥有producer、query、selection、frozen output与history completion；Playback只提交正式demand并接收Animation Selection。必须在Selection、显式Player、局部Inertialization/BlendStack与Pose Plan依赖完成后才能归档为current truth；后续缺口不得通过wrapper、fallback或并行播放器解决。
 
-MM不参与Timeline Marker Sync。Foot contact continuity来自MM Artifact feature与admission；跨Timeline/MM producer handoff只使用Blend Stack transition，不伪造Marker relation。
+MM不参与Timeline Marker Sync。Foot contact continuity来自MM Artifact feature与admission；跨Timeline/MM producer handoff按显式Pose Graph节点处理连续性，不伪造Marker relation，也不由MM选择Blend Stack或Inertialization。
 
 ## Runtime Frame Order
 
@@ -638,16 +689,16 @@ MM不参与Timeline Marker Sync。Foot contact continuity来自MM Artifact featu
 3. build trajectory source frame and envelope
 4. build query from previous Base pose history
 5. execute admission, exact Top-K and plan rerank when cadence requires
-6. advance/replace MM selection and lower pose request
-7. resolve Timeline source requests for other channels
-8. build all PoseSlot Stack frame plans
+6. advance/replace MM selection and publish AnimationSelectionFrame
+7. resolve Timeline selections for other channels
+8. bind all selections to compiled Pose Plan inputs
 9. sample Animancer sources
-10. evaluate all PoseSlotFrames
-11. evaluate final Pose Graph once
-12. append current BaseLocomotionSlot pose history
-13. execute Foot Placement once
-14. advance Camera
-15. publish diagnostics and acknowledge batch
+10. evaluate explicit Player, local Inertialization or BlendStack nodes
+11. evaluate pose composition once
+12. append bound MM PoseNode history
+13. execute FootPlacement world-aware phase once
+14. publish FinalAnimationPoseFrame
+15. advance Camera, publish diagnostics and acknowledge batch
 ```
 
 Search Cadence使用Presentation delta累计，但Reset、Domain activation、plan invalidation和mandatory search boundary会强制本帧search。Cadence不改变Gameplay tick，也不通过跳过搜索维持非法plan。
@@ -655,8 +706,9 @@ Search Cadence使用Presentation delta累计，但Reset、Domain activation、pl
 ## Network And Branch Semantics
 
 - MM selection、plan、pose history、query和contact protection不进入CharacterState、WorldState、Snapshot、Hash或packet。
-- Local Float32、Local Fixed、Prediction、Rollback peer和Observed Actor共用同一个MM Runtime与Database payload。
-- 各模型只在Factory提供不同正式Trajectory Source，不拥有搜索器、cost或database副本。
+- Local Float32、Local Fixed、ServerAuthoritative Prediction owner与Rollback owner已经使用Accepted Intent source；ServerAuthoritative Observed Actor已经使用Selected Body source。它们共用同一个MM Runtime与Database payload。
+- Deterministic Rollback remote的Selected/relayed Body Presentation尚未接入，完成前不得把Rollback remote描述为已具备MM。
+- 各模型只决定正式Body SourceMode并提交Body/Intent；MM Module按锁定SourceMode选择内部Adapter，不允许Factory或模型拥有搜索器、cost或database副本。
 - Committed branch replacement、Selected stream reset、Rollback EventId Replace/Retire与Presentation reset在Body reset边界原子清理history、plan和selection。
 - 两个客户端可能因表现帧时序选择不同pose，但不能影响Gameplay结果。相同captured query与database identity必须在Search Replay中产生相同结果。
 - Remote没有accepted intent时使用显式Selected Body source和较低confidence，不读取本地Input或猜测authority意图。
@@ -682,23 +734,25 @@ FullBodyAction覆盖期间BaseLocomotion MM继续：
 
 - 消费Body与trajectory source。
 - 按正常cadence更新plan。
-- 求值BaseLocomotionSlot。
+- 求值与MM Selection Input绑定的Player分支。
 - 更新自己的pose history。
 
-Pose Graph可以把Base脚部贡献完全遮蔽，但MM history仍记录Base slot而非Action final pose。业务收益是Action结束立即显露与当前移动匹配的pose；代价是Action期间仍支付Base MM搜索和采样成本。本项目选择连续运行，不引入“Action覆盖时冻结MM”的第二策略。
+Pose Graph可以把Base脚部贡献完全遮蔽，但MM history仍记录绑定Player的完成Pose而非Action final pose。业务收益是Action结束立即显露与当前移动匹配的pose；代价是Action期间仍支付Base MM搜索和采样成本。本项目选择连续运行，不引入“Action覆盖时冻结MM”的第二策略。
 
 ## Preview And Tooling
 
-Timeline Preview没有Body/intent，不得伪造MM query。新增Motion Matching Database Inspector：
+Timeline Preview没有Body/intent，不得伪造MM query。Motion Matching Database Inspector已经提供Source Set owner、显式Build、Artifact状态、Coverage与Search Replay载入。Query Fixture隔离Preview已经完成：
 
-- 从显式Search Replay Artifact或作者创建的Query Fixture打开隔离Preview Session。
-- 复用正式Runtime database、admission、search、plan、pose source、Blend Stack和Pose Graph。
-- 允许拖动query horizon、查看candidate和sample pose，但不执行Program、WorldSolver、Foot Placement Physics或Camera。
-- Query Fixture只是Editor预览输入，不进入Runtime Profile或Character资产。
+- 只从显式Search Replay Artifact或作者创建的Query Fixture启动。
+- 复用正式Runtime database、admission、search、plan、pose source、编译Pose Plan和显式Player节点。
+- 显式选择Definition、Program producer和场景`CharacterPipelineHost` Preview Target，显示正式FinalAnimationPoseFrame，但不执行Program、WorldSolver、Foot Placement Physics或Camera。
+- 保持Query Fixture只作为Editor预览输入，不进入Runtime Profile或Character资产。
 
 普通Timeline producer preview保持原路径，不尝试把MM producer显示为Timeline clip。
 
 ## Diagnostics And Search Replay
+
+`MotionMatchingRuntimeSnapshot`、`MotionMatchingSearchReplayArtifact`与`MotionMatchingSearchReplayRunner`已经进入`RuntimeDebugSession`统一provider、显式Capture和Editor Replay入口。帧事务额外发布Resolve/Complete identity、request count、history append/gap、retained frozen output与reset reason；Inspector不得重新计算另一份结果。
 
 ### Runtime Snapshot
 
@@ -713,7 +767,7 @@ Timeline Preview没有Body/intent，不得伪造MM query。新增Motion Matching
 - Top-K exact cost分项。
 - plan horizon cost分项。
 - selected plan、continue/jump、generation和mandatory search time。
-- Base Blend Entry、Stored/Inertial结果。
+- 匹配Player source usage、BlendStack Entry/Stored与局部Inertialization结果。
 
 Interest关闭时只保留正式搜索所需状态，不构造candidate debug集合。
 
@@ -762,6 +816,8 @@ Editor Replay必须加载exact matching Artifact/Projection，运行同一search
 已启用MM时不得改用旧Locomotion、隐藏Idle、bind pose、全库scan fallback、默认Schema、默认Rig、Transform推断或自动重建。未启用MM不是失败恢复：它是一份没有MM producer、没有MM Profile、没有MM payload和没有MM Runtime的完整合法配置。
 
 ## Independent Validation Configuration Boundary
+
+当前仓库尚未提供这份独立正式验证配置。以下十项是内容接线和change完成的门槛，不是已经存在的资产清单：
 
 1. 用户另行提供一份完整正式验证配置及其动画内容。
 2. 该配置复用现有`CharacterPipelineDefinition`、`CharacterAnimationPresentationProfile`、Pose Graph、Blend Library、Rig Definition、Foot Analysis Source、MM Profile和Database Definition类型，不创建验证专用Runtime或第二套配置模型。

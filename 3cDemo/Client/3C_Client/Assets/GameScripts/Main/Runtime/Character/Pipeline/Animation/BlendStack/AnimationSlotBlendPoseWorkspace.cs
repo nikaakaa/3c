@@ -17,25 +17,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal AnimationFootFeatureSample RightFootFeatures;
     }
 
-    internal struct AnimationSlotBlendInertialNativeState
-    {
-        internal byte Active;
-        internal byte SourceHasFootFeatures;
-        internal int TargetSourceCaptureIndex;
-        internal int TargetPhysicalSourceIndex;
-        internal ulong TargetPhysicalSourceGeneration;
-        internal int TargetProgramProducerIndex;
-        internal ulong CapturedAtCompletionIdentity;
-        internal ulong SourceHistoryCompletionIdentity;
-        internal ulong ContributionContinuityIdentity;
-        internal float OutputWeight;
-        internal AnimationFootFeatureSample LeftFootFeatures;
-        internal AnimationFootFeatureSample RightFootFeatures;
-    }
-
     internal struct AnimationSlotBlendHistoryNativeState
     {
-        internal PoseSlotFrameAvailability Availability;
+        internal AnimationPoseAvailability Availability;
         internal byte HasFootFeatures;
         internal ulong CompletionIdentity;
         internal ulong ContinuityIdentity;
@@ -46,7 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
     internal struct AnimationSlotBlendScratchNativeState
     {
-        internal PoseSlotFrameAvailability Availability;
+        internal AnimationPoseAvailability Availability;
         internal AnimationPoseNativeInvalidReason InvalidReason;
         internal byte HasFootFeatures;
         internal int ContributionCount;
@@ -76,41 +60,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal NativeArray<AnimationLocalBonePose> DenseLocalPose { get; }
         internal NativeArray<AnimationBlendBoneVelocity> DenseVelocity { get; }
         internal NativeArray<float> PoseParameters { get; }
-        internal NativeArray<float> DenseBoneOutputWeights { get; }
-    }
-
-    internal readonly struct AnimationSlotBlendInertialWorkspaceBinding
-    {
-        internal AnimationSlotBlendInertialWorkspaceBinding(
-            NativeArray<AnimationSlotBlendInertialNativeState> state,
-            NativeArray<Vector3> positionResiduals,
-            NativeArray<Vector3> rotationResiduals,
-            NativeArray<Vector3> scaleResiduals,
-            NativeArray<Vector3> linearVelocityResiduals,
-            NativeArray<Vector3> angularVelocityResiduals,
-            NativeArray<Vector3> scaleVelocityResiduals,
-            NativeArray<float> parameterResiduals,
-            NativeArray<float> denseBoneOutputWeights)
-        {
-            State = state;
-            PositionResiduals = positionResiduals;
-            RotationResiduals = rotationResiduals;
-            ScaleResiduals = scaleResiduals;
-            LinearVelocityResiduals = linearVelocityResiduals;
-            AngularVelocityResiduals = angularVelocityResiduals;
-            ScaleVelocityResiduals = scaleVelocityResiduals;
-            ParameterResiduals = parameterResiduals;
-            DenseBoneOutputWeights = denseBoneOutputWeights;
-        }
-
-        internal NativeArray<AnimationSlotBlendInertialNativeState> State { get; }
-        internal NativeArray<Vector3> PositionResiduals { get; }
-        internal NativeArray<Vector3> RotationResiduals { get; }
-        internal NativeArray<Vector3> ScaleResiduals { get; }
-        internal NativeArray<Vector3> LinearVelocityResiduals { get; }
-        internal NativeArray<Vector3> AngularVelocityResiduals { get; }
-        internal NativeArray<Vector3> ScaleVelocityResiduals { get; }
-        internal NativeArray<float> ParameterResiduals { get; }
         internal NativeArray<float> DenseBoneOutputWeights { get; }
     }
 
@@ -191,15 +140,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
     {
         internal AnimationSlotBlendPoseWorkspaceBinding(
             AnimationSlotBlendFramePlan framePlan,
-            AnimationPoseSlotNativeWriteBinding finalWriteBinding,
+            AnimationPlayerPoseNativeWriteBinding finalWriteBinding,
             AnimationSlotBlendStoredPoseWorkspaceBinding storedPose,
-            AnimationSlotBlendInertialWorkspaceBinding inertial,
             AnimationSlotBlendHistoryWorkspaceBinding history,
             AnimationSlotBlendScratchWorkspaceBinding scratch)
         {
             framePlan.RequireValidLayout();
             if (framePlan.Header.CompletionIdentity != finalWriteBinding.CompletionIdentity ||
-                framePlan.Header.PhysicalSlotIndex != finalWriteBinding.Range.PhysicalSlotIndex)
+                framePlan.Header.PhysicalPlayerIndex != finalWriteBinding.Range.PhysicalPlayerIndex)
             {
                 throw new ArgumentException("Animation Slot Blend workspace binding is not aligned to its final Slot output.");
             }
@@ -207,15 +155,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             FramePlan = framePlan;
             FinalWriteBinding = finalWriteBinding;
             StoredPose = storedPose;
-            Inertial = inertial;
             History = history;
             Scratch = scratch;
         }
 
         internal AnimationSlotBlendFramePlan FramePlan { get; }
-        internal AnimationPoseSlotNativeWriteBinding FinalWriteBinding { get; }
+        internal AnimationPlayerPoseNativeWriteBinding FinalWriteBinding { get; }
         internal AnimationSlotBlendStoredPoseWorkspaceBinding StoredPose { get; }
-        internal AnimationSlotBlendInertialWorkspaceBinding Inertial { get; }
         internal AnimationSlotBlendHistoryWorkspaceBinding History { get; }
         internal AnimationSlotBlendScratchWorkspaceBinding Scratch { get; }
     }
@@ -224,7 +170,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
     {
         const float WeightTolerance = 0.0001f;
 
-        readonly int m_PhysicalSlotIndex;
+        readonly int m_PhysicalPlayerIndex;
         readonly int m_MaxActiveSourceEntries;
         readonly int m_ContributionCapacity;
         readonly int m_BoneCount;
@@ -233,28 +179,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         NativeArray<AnimationSlotBlendFramePlanHeader> m_PlanHeaders;
         NativeArray<AnimationSlotBlendFramePlanEntry> m_PlanEntries;
         NativeArray<float> m_PlanDenseBoneWeights;
-        NativeArray<AnimationSlotBlendInertialBonePlan> m_PlanInertialBones;
-        NativeArray<float> m_PlanInertialParameterResidualWeights;
         NativeArray<byte> m_PlanEntryWritten;
         NativeArray<byte> m_PlanDenseBoneWeightWritten;
-        NativeArray<byte> m_PlanInertialBoneWritten;
-        NativeArray<byte> m_PlanInertialParameterWritten;
 
         NativeArray<AnimationSlotBlendStoredPoseNativeState> m_StoredState;
         NativeArray<AnimationLocalBonePose> m_StoredPose;
         NativeArray<AnimationBlendBoneVelocity> m_StoredVelocity;
         NativeArray<float> m_StoredParameters;
         NativeArray<float> m_StoredBoneOutputWeights;
-
-        NativeArray<AnimationSlotBlendInertialNativeState> m_InertialState;
-        NativeArray<Vector3> m_InertialPositionResiduals;
-        NativeArray<Vector3> m_InertialRotationResiduals;
-        NativeArray<Vector3> m_InertialScaleResiduals;
-        NativeArray<Vector3> m_InertialLinearVelocityResiduals;
-        NativeArray<Vector3> m_InertialAngularVelocityResiduals;
-        NativeArray<Vector3> m_InertialScaleVelocityResiduals;
-        NativeArray<float> m_InertialParameterResiduals;
-        NativeArray<float> m_InertialBoneOutputWeights;
 
         NativeArray<AnimationSlotBlendHistoryNativeState> m_HistoryStates;
         NativeArray<AnimationLocalBonePose> m_HistoryPoses;
@@ -277,8 +209,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         NativeArray<float> m_ScratchPoseWeightSums;
         NativeArray<AnimationFootFeatureBlendAccumulator> m_ScratchFootFeatureAccumulators;
 
-        AnimationPoseSlotNativeWriteBinding m_PageZeroFinalWriteBinding;
-        AnimationPoseSlotNativeWriteBinding m_PageOneFinalWriteBinding;
+        AnimationPlayerPoseNativeWriteBinding m_PageZeroFinalWriteBinding;
+        AnimationPlayerPoseNativeWriteBinding m_PageOneFinalWriteBinding;
         int m_ActivePageIndex = -1;
         int m_PreparationPageIndex = -1;
         ulong m_PreparationIdentity;
@@ -289,7 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         internal AnimationSlotBlendPoseWorkspace(
             int maxActiveSourceEntries,
-            in AnimationPoseSlotNativeWriteBinding initialFinalWriteBinding)
+            in AnimationPlayerPoseNativeWriteBinding initialFinalWriteBinding)
         {
             if (maxActiveSourceEntries < 2)
                 throw new ArgumentOutOfRangeException(nameof(maxActiveSourceEntries));
@@ -299,9 +231,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 throw new ArgumentException("Animation Slot Blend final write layout is invalid.", nameof(initialFinalWriteBinding));
             }
 
-            m_PhysicalSlotIndex = initialFinalWriteBinding.Range.PhysicalSlotIndex;
+            m_PhysicalPlayerIndex = initialFinalWriteBinding.Range.PhysicalPlayerIndex;
             m_MaxActiveSourceEntries = maxActiveSourceEntries;
-            m_ContributionCapacity = checked(maxActiveSourceEntries + 2);
+            m_ContributionCapacity = checked(maxActiveSourceEntries + 1);
             m_BoneCount = initialFinalWriteBinding.DenseLocalPoses.Length;
             m_ParameterCount = initialFinalWriteBinding.PoseParameters.Length;
             RequireFinalWriteBinding(in initialFinalWriteBinding);
@@ -311,28 +243,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_PlanHeaders = Allocate<AnimationSlotBlendFramePlanHeader>(2);
                 m_PlanEntries = Allocate<AnimationSlotBlendFramePlanEntry>(checked(m_ContributionCapacity * 2));
                 m_PlanDenseBoneWeights = Allocate<float>(checked(m_ContributionCapacity * m_BoneCount * 2));
-                m_PlanInertialBones = Allocate<AnimationSlotBlendInertialBonePlan>(checked(m_BoneCount * 2));
-                m_PlanInertialParameterResidualWeights = Allocate<float>(checked(m_ParameterCount * 2));
                 m_PlanEntryWritten = Allocate<byte>(checked(m_ContributionCapacity * 2));
                 m_PlanDenseBoneWeightWritten = Allocate<byte>(checked(m_ContributionCapacity * m_BoneCount * 2));
-                m_PlanInertialBoneWritten = Allocate<byte>(checked(m_BoneCount * 2));
-                m_PlanInertialParameterWritten = Allocate<byte>(checked(m_ParameterCount * 2));
 
                 m_StoredState = Allocate<AnimationSlotBlendStoredPoseNativeState>(1);
                 m_StoredPose = Allocate<AnimationLocalBonePose>(m_BoneCount);
                 m_StoredVelocity = Allocate<AnimationBlendBoneVelocity>(m_BoneCount);
                 m_StoredParameters = Allocate<float>(m_ParameterCount);
                 m_StoredBoneOutputWeights = Allocate<float>(m_BoneCount);
-
-                m_InertialState = Allocate<AnimationSlotBlendInertialNativeState>(1);
-                m_InertialPositionResiduals = Allocate<Vector3>(m_BoneCount);
-                m_InertialRotationResiduals = Allocate<Vector3>(m_BoneCount);
-                m_InertialScaleResiduals = Allocate<Vector3>(m_BoneCount);
-                m_InertialLinearVelocityResiduals = Allocate<Vector3>(m_BoneCount);
-                m_InertialAngularVelocityResiduals = Allocate<Vector3>(m_BoneCount);
-                m_InertialScaleVelocityResiduals = Allocate<Vector3>(m_BoneCount);
-                m_InertialParameterResiduals = Allocate<float>(m_ParameterCount);
-                m_InertialBoneOutputWeights = Allocate<float>(m_BoneCount);
 
                 m_HistoryStates = Allocate<AnimationSlotBlendHistoryNativeState>(2);
                 m_HistoryPoses = Allocate<AnimationLocalBonePose>(checked(m_BoneCount * 2));
@@ -362,7 +280,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             }
         }
 
-        internal int PhysicalSlotIndex => m_PhysicalSlotIndex;
+        internal int PhysicalPlayerIndex => m_PhysicalPlayerIndex;
         internal int MaxActiveSourceEntries => m_MaxActiveSourceEntries;
         internal int ContributionCapacity => m_ContributionCapacity;
         internal int BoneCount => m_BoneCount;
@@ -370,11 +288,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal bool HasActivePlan => Volatile.Read(ref m_ActivePageIndex) >= 0;
 
         internal AnimationSlotBlendFramePlanPreparation PrepareInactivePage(
-            in AnimationPoseSlotNativeWriteBinding finalWriteBinding,
+            in AnimationPlayerPoseNativeWriteBinding finalWriteBinding,
             AnimationSlotBlendFramePlanKind kind,
-            PoseSlotOutputPolicy outputPolicy,
+            AnimationSelectionAvailabilityPolicy outputPolicy,
             CharacterAnimationScalePolicy scalePolicy,
-            PoseSlotFrameAvailability availability,
+            AnimationPoseAvailability availability,
+            AnimationPoseNativeInvalidReason invalidReason,
             float outputWeight,
             int contributionCount,
             ulong continuityIdentity,
@@ -404,13 +323,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_PlanHeaders[pageIndex] = new AnimationSlotBlendFramePlanHeader(
                 pageIndex,
                 preparationIdentity,
-                m_PhysicalSlotIndex,
+                m_PhysicalPlayerIndex,
                 finalWriteBinding.CompletionIdentity,
                 continuityIdentity,
                 kind,
                 outputPolicy,
                 scalePolicy,
                 availability,
+                invalidReason,
                 outputWeight,
                 contributionCount,
                 m_MaxActiveSourceEntries,
@@ -466,44 +386,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_PlanDenseBoneWeightWritten[index] = 1;
         }
 
-        internal void SetPreparedInertialBone(
-            in AnimationSlotBlendFramePlanPreparation preparation,
-            int boneIndex,
-            in AnimationSlotBlendInertialBonePlan inertialBone)
-        {
-            AnimationSlotBlendFramePlanHeader header = RequirePreparing(preparation);
-            if (!header.UsesInertial)
-                throw new InvalidOperationException("Animation Slot Blend frame plan does not evaluate Inertial residuals.");
-            if ((uint)boneIndex >= (uint)m_BoneCount)
-                throw new ArgumentOutOfRangeException(nameof(boneIndex));
-            if (!inertialBone.IsValid)
-                throw new ArgumentException("Animation Slot Blend Inertial Bone plan is invalid.", nameof(inertialBone));
-            int index = checked(header.PageIndex * m_BoneCount + boneIndex);
-            if (m_PlanInertialBoneWritten[index] != 0)
-                throw new InvalidOperationException($"Animation Slot Blend Inertial Bone #{boneIndex} was written twice.");
-            m_PlanInertialBones[index] = inertialBone;
-            m_PlanInertialBoneWritten[index] = 1;
-        }
-
-        internal void SetPreparedInertialParameterResidualWeight(
-            in AnimationSlotBlendFramePlanPreparation preparation,
-            int parameterIndex,
-            float residualWeight)
-        {
-            AnimationSlotBlendFramePlanHeader header = RequirePreparing(preparation);
-            if (!header.UsesInertial)
-                throw new InvalidOperationException("Animation Slot Blend frame plan does not evaluate Inertial residuals.");
-            if ((uint)parameterIndex >= (uint)m_ParameterCount)
-                throw new ArgumentOutOfRangeException(nameof(parameterIndex));
-            if (!float.IsFinite(residualWeight))
-                throw new ArgumentOutOfRangeException(nameof(residualWeight));
-            int index = checked(header.PageIndex * m_ParameterCount + parameterIndex);
-            if (m_PlanInertialParameterWritten[index] != 0)
-                throw new InvalidOperationException($"Animation Slot Blend Inertial parameter #{parameterIndex} was written twice.");
-            m_PlanInertialParameterResidualWeights[index] = residualWeight;
-            m_PlanInertialParameterWritten[index] = 1;
-        }
-
         internal void ValidateInactivePage(in AnimationSlotBlendFramePlanPreparation preparation)
         {
             RequireAlive();
@@ -556,7 +438,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal AnimationSlotBlendPoseWorkspaceBinding RequireActiveBinding()
         {
             AnimationSlotBlendFramePlan plan = RequireActivePlan();
-            AnimationPoseSlotNativeWriteBinding finalWriteBinding = GetFinalWriteBinding(plan.Header.PageIndex);
+            AnimationPlayerPoseNativeWriteBinding finalWriteBinding = GetFinalWriteBinding(plan.Header.PageIndex);
             RequireFinalWriteBinding(in finalWriteBinding);
             return new AnimationSlotBlendPoseWorkspaceBinding(
                 plan,
@@ -567,16 +449,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     m_StoredVelocity,
                     m_StoredParameters,
                     m_StoredBoneOutputWeights),
-                new AnimationSlotBlendInertialWorkspaceBinding(
-                    m_InertialState,
-                    m_InertialPositionResiduals,
-                    m_InertialRotationResiduals,
-                    m_InertialScaleResiduals,
-                    m_InertialLinearVelocityResiduals,
-                    m_InertialAngularVelocityResiduals,
-                    m_InertialScaleVelocityResiduals,
-                    m_InertialParameterResiduals,
-                    m_InertialBoneOutputWeights),
                 new AnimationSlotBlendHistoryWorkspaceBinding(
                     m_HistoryStates,
                     m_HistoryPoses,
@@ -606,26 +478,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             Clear(m_PlanHeaders);
             Clear(m_PlanEntries);
             Clear(m_PlanDenseBoneWeights);
-            Clear(m_PlanInertialBones);
-            Clear(m_PlanInertialParameterResidualWeights);
             Clear(m_PlanEntryWritten);
             Clear(m_PlanDenseBoneWeightWritten);
-            Clear(m_PlanInertialBoneWritten);
-            Clear(m_PlanInertialParameterWritten);
             Clear(m_StoredState);
             Clear(m_StoredPose);
             Clear(m_StoredVelocity);
             Clear(m_StoredParameters);
             Clear(m_StoredBoneOutputWeights);
-            Clear(m_InertialState);
-            Clear(m_InertialPositionResiduals);
-            Clear(m_InertialRotationResiduals);
-            Clear(m_InertialScaleResiduals);
-            Clear(m_InertialLinearVelocityResiduals);
-            Clear(m_InertialAngularVelocityResiduals);
-            Clear(m_InertialScaleVelocityResiduals);
-            Clear(m_InertialParameterResiduals);
-            Clear(m_InertialBoneOutputWeights);
             Clear(m_HistoryStates);
             Clear(m_HistoryPoses);
             Clear(m_HistoryVelocities);
@@ -655,7 +514,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         void RequirePreparedPageContent(AnimationSlotBlendFramePlanHeader header)
         {
             header.RequireValid();
-            AnimationPoseSlotNativeWriteBinding finalWriteBinding = GetFinalWriteBinding(header.PageIndex);
+            AnimationPlayerPoseNativeWriteBinding finalWriteBinding = GetFinalWriteBinding(header.PageIndex);
             RequireFinalWriteBinding(in finalWriteBinding);
             if (finalWriteBinding.CompletionIdentity != header.CompletionIdentity)
                 throw new InvalidOperationException("Animation Slot Blend plan and final write completion identities differ.");
@@ -663,7 +522,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             {
                 AnimationSlotBlendHistoryNativeState history = m_HistoryStates[header.HistoryReadPageIndex];
                 if (history.CompletionIdentity != header.HistoryCompletionIdentity ||
-                    history.Availability != PoseSlotFrameAvailability.Pose ||
+                    history.Availability != AnimationPoseAvailability.Pose ||
                     history.ContinuityIdentity == 0 ||
                     !IsNormalized(history.OutputWeight))
                 {
@@ -673,7 +532,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
             int liveCount = 0;
             int storedCount = 0;
-            int inertialCount = 0;
             float scalarWeight = 0f;
             float leftFootWeight = 0f;
             float rightFootWeight = 0f;
@@ -701,16 +559,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     case AnimationPoseContributionKind.Stored:
                         storedCount++;
                         break;
-                    case AnimationPoseContributionKind.Inertial:
-                        inertialCount++;
-                        break;
                 }
                 scalarWeight += entry.ScalarWeight;
                 leftFootWeight += entry.LeftFootWeight;
                 rightFootWeight += entry.RightFootWeight;
             }
 
-            if (liveCount > m_MaxActiveSourceEntries || storedCount > 1 || inertialCount > 1 ||
+            if (liveCount > m_MaxActiveSourceEntries || storedCount > 1 ||
                 scalarWeight > 1f + WeightTolerance || leftFootWeight > 1f + WeightTolerance ||
                 rightFootWeight > 1f + WeightTolerance ||
                 Mathf.Abs(scalarWeight - header.OutputWeight) > WeightTolerance)
@@ -718,17 +573,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 throw new InvalidOperationException("Animation Slot Blend frame plan contribution budget is invalid.");
             }
 
-            bool inertialPlan = header.UsesInertial;
-            if (inertialPlan)
-            {
-                if (header.ContributionCount != 2 || liveCount != 1 || storedCount != 0 || inertialCount != 1)
-                    throw new InvalidOperationException("Animation Slot Blend Inertial plan must contain one live and one Inertial contribution.");
-            }
-            else if (inertialCount != 0 ||
-                     header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture && storedCount != 1)
-            {
-                throw new InvalidOperationException("Animation Slot Blend CrossFade plan contribution kinds are invalid.");
-            }
+            if (header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture && storedCount != 1)
+                throw new InvalidOperationException("Animation Slot Blend Stored capture plan has no Stored contribution.");
 
             bool hasOutputWeight = header.OutputWeight > 0f;
             int densePageOffset = checked(header.PageIndex * m_ContributionCapacity * m_BoneCount);
@@ -751,28 +597,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 }
                 hasOutputWeight |= boneWeight > 0f;
             }
-            if (header.Availability == PoseSlotFrameAvailability.Pose && !hasOutputWeight)
+            if (header.Availability == AnimationPoseAvailability.Pose && !hasOutputWeight)
                 throw new InvalidOperationException("Animation Slot Blend Pose plan has no scalar or dense output weight.");
 
-            if (!inertialPlan)
-                return;
-            int inertialBoneOffset = checked(header.PageIndex * m_BoneCount);
-            for (int boneIndex = 0; boneIndex < m_BoneCount; boneIndex++)
-            {
-                int index = inertialBoneOffset + boneIndex;
-                if (m_PlanInertialBoneWritten[index] != 1 || !m_PlanInertialBones[index].IsValid)
-                    throw new InvalidOperationException($"Animation Slot Blend Inertial Bone plan #{boneIndex} is incomplete.");
-            }
-            int parameterOffset = checked(header.PageIndex * m_ParameterCount);
-            for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
-            {
-                int index = parameterOffset + parameterIndex;
-                if (m_PlanInertialParameterWritten[index] != 1 ||
-                    !float.IsFinite(m_PlanInertialParameterResidualWeights[index]))
-                {
-                    throw new InvalidOperationException($"Animation Slot Blend Inertial parameter plan #{parameterIndex} is incomplete.");
-                }
-            }
         }
 
         AnimationSlotBlendFramePlanHeader RequirePreparing(
@@ -833,9 +660,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return new AnimationSlotBlendFramePlan(
                 m_PlanHeaders[pageIndex],
                 m_PlanEntries,
-                m_PlanDenseBoneWeights,
-                m_PlanInertialBones,
-                m_PlanInertialParameterResidualWeights);
+                m_PlanDenseBoneWeights);
         }
 
         void ClearPlanPage(int pageIndex)
@@ -845,18 +670,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             ClearRange(m_PlanDenseBoneWeights,
                 checked(pageIndex * m_ContributionCapacity * m_BoneCount),
                 checked(m_ContributionCapacity * m_BoneCount));
-            ClearRange(m_PlanInertialBones, checked(pageIndex * m_BoneCount), m_BoneCount);
-            ClearRange(m_PlanInertialParameterResidualWeights,
-                checked(pageIndex * m_ParameterCount),
-                m_ParameterCount);
             ClearRange(m_PlanEntryWritten, checked(pageIndex * m_ContributionCapacity), m_ContributionCapacity);
             ClearRange(m_PlanDenseBoneWeightWritten,
                 checked(pageIndex * m_ContributionCapacity * m_BoneCount),
                 checked(m_ContributionCapacity * m_BoneCount));
-            ClearRange(m_PlanInertialBoneWritten, checked(pageIndex * m_BoneCount), m_BoneCount);
-            ClearRange(m_PlanInertialParameterWritten,
-                checked(pageIndex * m_ParameterCount),
-                m_ParameterCount);
         }
 
         void ClearPreparation()
@@ -866,10 +683,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_PreparationValidated = false;
         }
 
-        AnimationPoseSlotNativeWriteBinding GetFinalWriteBinding(int pageIndex) =>
+        AnimationPlayerPoseNativeWriteBinding GetFinalWriteBinding(int pageIndex) =>
             pageIndex == 0 ? m_PageZeroFinalWriteBinding : m_PageOneFinalWriteBinding;
 
-        void SetFinalWriteBinding(int pageIndex, AnimationPoseSlotNativeWriteBinding binding)
+        void SetFinalWriteBinding(int pageIndex, AnimationPlayerPoseNativeWriteBinding binding)
         {
             if (pageIndex == 0)
                 m_PageZeroFinalWriteBinding = binding;
@@ -877,10 +694,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_PageOneFinalWriteBinding = binding;
         }
 
-        void RequireFinalWriteBinding(in AnimationPoseSlotNativeWriteBinding binding)
+        void RequireFinalWriteBinding(in AnimationPlayerPoseNativeWriteBinding binding)
         {
             if (binding.CompletionIdentity == 0 ||
-                binding.Range.PhysicalSlotIndex != m_PhysicalSlotIndex ||
+                binding.Range.PhysicalPlayerIndex != m_PhysicalPlayerIndex ||
                 binding.Range.ContributionCapacity != m_ContributionCapacity ||
                 binding.DenseLocalPoses.Length != m_BoneCount ||
                 binding.DenseVelocities.Length != m_BoneCount ||
@@ -955,26 +772,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             DisposeArray(ref m_HistoryVelocities);
             DisposeArray(ref m_HistoryPoses);
             DisposeArray(ref m_HistoryStates);
-            DisposeArray(ref m_InertialBoneOutputWeights);
-            DisposeArray(ref m_InertialParameterResiduals);
-            DisposeArray(ref m_InertialScaleVelocityResiduals);
-            DisposeArray(ref m_InertialAngularVelocityResiduals);
-            DisposeArray(ref m_InertialLinearVelocityResiduals);
-            DisposeArray(ref m_InertialScaleResiduals);
-            DisposeArray(ref m_InertialRotationResiduals);
-            DisposeArray(ref m_InertialPositionResiduals);
-            DisposeArray(ref m_InertialState);
             DisposeArray(ref m_StoredBoneOutputWeights);
             DisposeArray(ref m_StoredParameters);
             DisposeArray(ref m_StoredVelocity);
             DisposeArray(ref m_StoredPose);
             DisposeArray(ref m_StoredState);
-            DisposeArray(ref m_PlanInertialParameterWritten);
-            DisposeArray(ref m_PlanInertialBoneWritten);
             DisposeArray(ref m_PlanDenseBoneWeightWritten);
             DisposeArray(ref m_PlanEntryWritten);
-            DisposeArray(ref m_PlanInertialParameterResidualWeights);
-            DisposeArray(ref m_PlanInertialBones);
             DisposeArray(ref m_PlanDenseBoneWeights);
             DisposeArray(ref m_PlanEntries);
             DisposeArray(ref m_PlanHeaders);

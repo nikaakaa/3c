@@ -77,6 +77,18 @@ namespace ThirdPersonCharacter.Pipeline
 			m_PreviewController != null
 				? m_PreviewController.AnimationRuntimeSnapshot
 				: default;
+		public CharacterPosePlanStageSnapshot PreviewPosePlanStages =>
+			m_PreviewController != null
+				? m_PreviewController.PosePlanStages
+				: default;
+		public bool TrySetPreviewPoseWatchInterests(
+			Guid sessionId,
+			Guid ownerId,
+			IReadOnlyList<AnimationPoseWatchIdentity> interests) =>
+			m_PreviewController != null &&
+			m_PreviewController.TrySetPoseWatchInterests(sessionId, ownerId, interests);
+		public void RemovePreviewPoseWatchInterests(Guid ownerId) =>
+			m_PreviewController?.RemovePoseWatchInterests(ownerId);
 		public override bool CanPreviewTimeline =>
 			!Application.isPlaying &&
 			m_Definition &&
@@ -203,9 +215,10 @@ namespace ThirdPersonCharacter.Pipeline
 				Debug.LogError("CharacterPipelineHost requires Animancer to reference a valid Animator.", this);
 				return false;
 			}
-			if (m_Animancer.Animator.transform != m_VisualRoot)
+			if (m_Animancer.Animator.transform == m_VisualRoot ||
+				!m_Animancer.Animator.transform.IsChildOf(m_VisualRoot))
 			{
-				Debug.LogError("CharacterPipelineHost requires VisualRoot to be the Animancer Animator transform.", this);
+				Debug.LogError("CharacterPipelineHost requires the Animancer Animator Root to be a strict child of VisualRoot.", this);
 				return false;
 			}
 			if (m_WorldBodyBinding is UnityCharacterControllerWorldBodyBinding ccBinding &&
@@ -379,6 +392,38 @@ namespace ThirdPersonCharacter.Pipeline
 		public override void ClearTimelinePreview(Guid sessionId)
 		{
 			m_PreviewController?.Clear(sessionId);
+		}
+
+		public void EvaluateBlendSpacePreview(
+			Guid sessionId,
+			TimelineData timeline,
+			string targetTrackAuthoringId,
+			float previousTime,
+			float currentTime,
+			string sourceId,
+			string sourceName,
+			ulong evaluationTick,
+			float presentationDeltaSeconds,
+			bool resetLifecycle,
+			Vector2 parameter)
+		{
+			if (sessionId == Guid.Empty || timeline == null || !CanPreviewTimeline)
+			{
+				ClearTimelinePreview(sessionId);
+				return;
+			}
+			EnsurePreviewController().EvaluateBlendSpace(
+				sessionId,
+				timeline,
+				targetTrackAuthoringId,
+				previousTime,
+				currentTime,
+				sourceId,
+				sourceName,
+				evaluationTick,
+				presentationDeltaSeconds,
+				resetLifecycle,
+				parameter);
 		}
 
 		public override void CollectAnimationMarkerSyncPreviewSources(

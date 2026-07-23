@@ -193,7 +193,7 @@ namespace ThirdPersonSimulation
 
     public enum EquipmentExpectedAnimationOutputPolicy : byte
     {
-        RequireOutput = 1,
+        RequireSelection = 1,
         AllowEmpty = 2
     }
 

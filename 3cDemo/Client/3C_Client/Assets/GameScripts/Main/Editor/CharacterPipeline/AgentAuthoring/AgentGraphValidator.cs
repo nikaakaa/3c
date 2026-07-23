@@ -150,36 +150,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     "Animation Presentation Profile缺少正式Pose Graph。");
                 return;
             }
-            if (!presentation.BlendLibrary)
-                m_Report.Error(
-                    "definition.animationPresentationProfile.blendLibrary",
-                    "presentation_blend_library_missing",
-                    "Animation Presentation Profile缺少正式Blend Library。");
             if (!presentation.RigDefinition)
                 m_Report.Error(
                     "definition.animationPresentationProfile.rigDefinition",
                     "presentation_rig_definition_missing",
                     "Animation Presentation Profile缺少正式Rig Definition。");
-
-            var channels = new HashSet<AnimationChannelId>();
-            IReadOnlyList<CharacterPoseSlotDeclaration> slots = presentation.PoseGraph.Graph.PoseSlots;
-            for (int i = 0; i < slots.Count; i++)
-            {
-                CharacterPoseSlotDeclaration slot = slots[i];
-                if (slot == null || !slot.AnimationChannelId.IsValid || !slot.PoseSlotId.IsValid)
-                {
-                    m_Report.Error(
-                        $"definition.animationPresentationProfile.poseGraph.poseSlots[{i}]",
-                        "presentation_pose_slot_binding_invalid",
-                        "Pose Slot必须拥有有效AnimationChannelId与PoseSlotId。");
-                    continue;
-                }
-                if (!channels.Add(slot.AnimationChannelId))
-                    m_Report.Error(
-                        $"definition.animationPresentationProfile.poseGraph.poseSlots[{i}]",
-                        "presentation_animation_channel_duplicate",
-                        $"Animation Channel '{slot.AnimationChannelId}'重复绑定Pose Slot。");
-            }
 
             for (int timelineIndex = 0; timelineIndex < topology.Timelines.Count; timelineIndex++)
             {
@@ -195,13 +170,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             path,
                             "animation_channel_missing",
                             "AnimationTrack缺少有效AnimationChannelId。");
-                    }
-                    else if (!channels.Contains(track.AnimationChannelId))
-                    {
-                        m_Report.Error(
-                            path,
-                            "animation_channel_unknown",
-                            $"AnimationTrack引用的Animation Channel '{track.AnimationChannelId}'没有Pose Slot绑定。");
                     }
                 }
             }

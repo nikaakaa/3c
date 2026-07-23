@@ -37,14 +37,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public AnimationProducerAuthoringEntry(
             AnimationProducerId producerId,
             ThirdPersonSimulation.AnimationChannelId animationChannelId,
-            PoseSlotId poseSlotId,
             CharacterAuthoringTimelineEntry timeline,
             AnimationTrack track,
             AnimationProducerSourceClipAuthoringEntry[] sourceClips)
         {
             ProducerId = producerId;
             AnimationChannelId = animationChannelId;
-            PoseSlotId = poseSlotId;
             Timeline = timeline;
             Track = track;
             SourceClips = sourceClips ?? Array.Empty<AnimationProducerSourceClipAuthoringEntry>();
@@ -53,7 +51,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public AnimationProducerId ProducerId { get; }
         public string ProgramProducerIdentity => ProducerId.ProgramProducerIdentity;
         public ThirdPersonSimulation.AnimationChannelId AnimationChannelId { get; }
-        public PoseSlotId PoseSlotId { get; }
         public CharacterAuthoringTimelineEntry Timeline { get; }
         public AnimationTrack Track { get; }
         public IReadOnlyList<AnimationProducerSourceClipAuthoringEntry> SourceClips { get; }
@@ -67,23 +64,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPipelineDefinition definitionContext)
         {
             RequireContext(profile, definitionContext);
+            if (!profile.PoseGraph || profile.PoseGraph.Graph == null)
+                throw new InvalidOperationException($"Animation Presentation Profile '{profile.name}' requires a Pose Graph before producer bootstrap.");
+            return DiscoverProducerTracks(definitionContext, true);
+        }
+
+        public static IReadOnlyList<AnimationProducerAuthoringEntry> DiscoverProducerTracks(
+            CharacterPipelineDefinition definitionContext)
+        {
+            if (!definitionContext)
+                throw new ArgumentNullException(nameof(definitionContext));
+            return DiscoverProducerTracks(definitionContext, false);
+        }
+
+        static IReadOnlyList<AnimationProducerAuthoringEntry> DiscoverProducerTracks(
+            CharacterPipelineDefinition definitionContext,
+            bool requireAnimationChannel)
+        {
             var topologyErrors = new List<string>();
             CharacterAuthoringTopologyProjection topology = CharacterAuthoringTopologyProjection.Build(
                 CollectCompositionRoots(definitionContext),
                 topologyErrors);
             if (!topology.IsValid)
                 throw new InvalidOperationException(string.Join("\n", topologyErrors));
-            if (!profile.PoseGraph || profile.PoseGraph.Graph == null)
-                throw new InvalidOperationException($"Animation Presentation Profile '{profile.name}' requires a Pose Graph before producer bootstrap.");
-
-            var poseSlots = new Dictionary<ThirdPersonSimulation.AnimationChannelId, PoseSlotId>();
-            for (int i = 0; i < profile.PoseGraph.Graph.PoseSlots.Count; i++)
-            {
-                CharacterPoseSlotDeclaration slot = profile.PoseGraph.Graph.PoseSlots[i];
-                if (slot == null || !slot.AnimationChannelId.IsValid || !slot.PoseSlotId.IsValid ||
-                    !poseSlots.TryAdd(slot.AnimationChannelId, slot.PoseSlotId))
-                    throw new InvalidOperationException($"Animation Presentation Pose Graph has an invalid or duplicated Pose Slot declaration at index {i}.");
-            }
 
             var entries = new Dictionary<AnimationProducerId, AnimationProducerAuthoringEntry>();
             for (int timelineIndex = 0; timelineIndex < topology.Timelines.Count; timelineIndex++)
@@ -94,15 +97,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     if (timeline.Timeline.Tracks[trackIndex] is not AnimationTrack track)
                         continue;
                     var producerId = new AnimationProducerId(timeline.Timeline.AuthoringId, track.AuthoringId);
-                    if (!producerId.IsValid || !track.AnimationChannelId.IsValid)
+                    if (!producerId.IsValid || requireAnimationChannel && !track.AnimationChannelId.IsValid)
                         throw new InvalidOperationException($"Animation Track at '{timeline.Route}' has no stable producer or Animation Channel identity.");
-                    if (!poseSlots.TryGetValue(track.AnimationChannelId, out PoseSlotId poseSlotId))
-                        throw new InvalidOperationException($"Animation producer '{producerId}' channel '{track.AnimationChannelId}' has no Pose Slot declaration.");
                     AnimationProducerSourceClipAuthoringEntry[] clips = CollectSourceClips(producerId, track);
                     var entry = new AnimationProducerAuthoringEntry(
                         producerId,
                         track.AnimationChannelId,
-                        poseSlotId,
                         timeline,
                         track,
                         clips);
@@ -145,6 +145,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Undo.RecordObject(profile, "Configure Motion Matching Animation Producer Binding");
             AnimationProducerPresentationBinding binding = RequireBinding(profile, producerId);
             binding.ConfigureMotionMatching(producerId);
+            EditorUtility.SetDirty(profile);
+        }
+
+        public static void ConfigureBlendSpaceProducerBinding(
+            CharacterAnimationPresentationProfile profile,
+            CharacterPipelineDefinition definitionContext,
+            AnimationProducerId producerId,
+            CharacterAnimationBlendSpaceAsset source)
+        {
+            RequireProducer(profile, definitionContext, producerId);
+            CharacterAnimationBlendSpaceValidationReport report = CharacterAnimationBlendSpaceValidator.Validate(source);
+            if (!report.IsValid)
+                throw new ArgumentException(report.Issues[0].ToString(), nameof(source));
+            Undo.RecordObject(profile, "Configure Blend Space Animation Producer Binding");
+            AnimationProducerPresentationBinding binding = RequireBinding(profile, producerId);
+            binding.ConfigureBlendSpace(producerId, source);
             EditorUtility.SetDirty(profile);
         }
 

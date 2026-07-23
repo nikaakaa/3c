@@ -36,7 +36,7 @@ MonoBehaviour:
         m_Clips:
         - rid: 665191780990845506
         - rid: 665191780990845507
-        LayerId: Base
+        m_AnimationChannelId: FullBodyAction
         m_SyncMode: 1
         m_SyncGroupId: 
         m_SequenceTopology: 0
@@ -78,7 +78,7 @@ MonoBehaviour:
         StartFrame: 0
         EndFrame: 49
         OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
+        OtherEaseOutFrame: 6
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
@@ -184,9 +184,9 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 74f288a4-3126-453a-9858-109479d652e6
-        StartFrame: 49
-        EndFrame: 168
-        OtherEaseInFrame: 0
+        StartFrame: 43
+        EndFrame: 162
+        OtherEaseInFrame: 6
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0

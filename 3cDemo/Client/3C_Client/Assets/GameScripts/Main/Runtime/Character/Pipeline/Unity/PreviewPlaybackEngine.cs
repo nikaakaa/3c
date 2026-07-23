@@ -5,9 +5,11 @@ using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonSimulation;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline
 {
@@ -30,6 +32,7 @@ namespace ThirdPersonCharacter.Pipeline
         bool m_ComparisonSourceSeeded;
         ulong m_EventSequence;
         ulong m_PresentationFrame;
+        CharacterPosePlanStageSnapshot m_PosePlanStages;
 
         public PreviewPlaybackEngine(
             CharacterPipelineDefinition definition,
@@ -55,17 +58,35 @@ namespace ThirdPersonCharacter.Pipeline
             m_TimelineOperation = CharacterPipelinePreviewProgram.FindTimelineOperation(
                 m_Program,
                 timeline.AuthoringId);
-            m_Playback = new CharacterAnimationPlaybackRuntime(
-                contract,
-                m_Projection,
-                animancer,
-                animationRigBinding,
-                false);
+            CharacterAnimationPresentationBindingIndex animationBindings =
+                CharacterAnimationPlaybackRuntime.BuildBindings(contract, m_Projection);
+            CharacterMotionMatchingPresentationModule motionMatching = m_Projection.MotionMatching == null
+                ? null
+                : new CharacterMotionMatchingPresentationModule(
+                    m_PreviewActorId,
+                    CharacterBodyPresentationSourceMode.CommittedStream,
+                    m_Projection,
+                    animationBindings.WorkspaceLayout.SourceCapacity);
+            try
+            {
+                m_Playback = new CharacterAnimationPlaybackRuntime(
+                    animationBindings,
+                    motionMatching,
+                    animancer,
+                    animationRigBinding,
+                    false);
+            }
+            catch
+            {
+                motionMatching?.Dispose();
+                throw;
+            }
         }
 
         public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> Snapshots => m_Playback.Snapshots;
         public bool HasRuntimeDiagnosticsSnapshot => m_Playback.HasRuntimeDiagnosticsSnapshot;
         public AnimationPresentationRuntimeSnapshot RuntimeDiagnosticsSnapshot => m_Playback.RuntimeDiagnosticsSnapshot;
+        public CharacterPosePlanStageSnapshot PosePlanStages => m_PosePlanStages;
 
         public void ConfigureMarkerSyncSource(
             string targetTimelineAuthoringId,
@@ -112,9 +133,13 @@ namespace ThirdPersonCharacter.Pipeline
                 session.Generation,
                 $"timeline-preview:{session.Timeline.AuthoringId}");
             PrepareComparisonSource(session, tick, activation);
+            CharacterPresentationProducerEntry blendSpaceProducer = null;
             for (int trackIndex = 0; trackIndex < session.Timeline.Tracks.Count; trackIndex++)
             {
                 if (session.Timeline.Tracks[trackIndex] is not AnimationTrack track)
+                    continue;
+                if (!string.IsNullOrEmpty(session.TargetTrackAuthoringId) &&
+                    !string.Equals(track.AuthoringId, session.TargetTrackAuthoringId, StringComparison.Ordinal))
                     continue;
 
                 string producerIdentity = $"producer:{session.Timeline.AuthoringId}:{track.AuthoringId}";
@@ -126,6 +151,15 @@ namespace ThirdPersonCharacter.Pipeline
                 if (!m_SelectedChannels.Add(producer.AnimationChannelId))
                     throw new InvalidOperationException(
                         $"Timeline preview contains multiple selected producers for Animation Channel '{producer.AnimationChannelId}'.");
+                if (producer.AnimationSourceKind == AnimationPoseSourceKind.BlendSpace)
+                {
+                    if (!session.HasBlendSpaceParameter)
+                        throw new InvalidOperationException(
+                            $"Blend Space producer '{producerIdentity}' requires explicit typed Preview parameters.");
+                    if (blendSpaceProducer != null)
+                        throw new InvalidOperationException("Blend Space preview supports one explicit producer target per session.");
+                    blendSpaceProducer = producer;
+                }
 
                 var playbackId = new AnimationPlaybackId(producer.ProducerId, session.Generation);
                 m_TargetPlaybacks[track.AuthoringId] = playbackId;
@@ -176,14 +210,17 @@ namespace ThirdPersonCharacter.Pipeline
             m_Active.Clear();
             foreach (KeyValuePair<AnimationChannelId, ActivePreviewProducer> item in m_NextActive)
                 m_Active.Add(item.Key, item.Value);
-            m_Playback.Present(
+            CharacterBodyPresentationFrame bodyFrame = CreatePreviewBodyFrame(session, blendSpaceProducer);
+            ComposedAnimationPoseFrame composed = m_Playback.Present(
                 ++m_PresentationFrame,
                 session.EvaluationTick,
                 1f,
                 session.PresentationDeltaSeconds,
-                0,
-                null,
+                in bodyFrame,
                 null);
+            m_PosePlanStages = CharacterPosePlanStageSnapshotFactory.Preview(
+                m_Projection.PosePlan,
+                in composed);
         }
 
         public void RetireAndReset(ulong evaluationTick)
@@ -208,13 +245,26 @@ namespace ThirdPersonCharacter.Pipeline
                     active.Producer);
             }
             if (m_Active.Count > 0)
-                m_Playback.Present(++m_PresentationFrame, tickValue, 1f, 0f, 0, null, null);
-            m_Playback.Reset();
+            {
+                CharacterBodyPresentationFrame bodyFrame = default;
+                ComposedAnimationPoseFrame composed = m_Playback.Present(
+                    ++m_PresentationFrame,
+                    tickValue,
+                    1f,
+                    0f,
+                    in bodyFrame,
+                    null);
+                m_PosePlanStages = CharacterPosePlanStageSnapshotFactory.Preview(
+                    m_Projection.PosePlan,
+                    in composed);
+            }
+            m_Playback.Reset(PoseDiscontinuityResetReason.PreviewSeek);
             m_Active.Clear();
             m_NextActive.Clear();
             m_SelectedChannels.Clear();
             m_TargetPlaybacks.Clear();
             m_ComparisonSourceSeeded = false;
+            m_PosePlanStages = default;
         }
 
         public bool TryGetMarkerSyncPreviewState(
@@ -265,9 +315,116 @@ namespace ThirdPersonCharacter.Pipeline
             return false;
         }
 
+        public void SetPoseWatchInterests(Guid ownerId, IReadOnlyList<AnimationPoseWatchIdentity> interests) =>
+            m_Playback.SetPoseWatchInterests(ownerId, interests);
+
+        public void RemovePoseWatchInterests(Guid ownerId) => m_Playback.RemovePoseWatchInterests(ownerId);
+
         public void Dispose()
         {
             m_Playback.Dispose();
+        }
+
+        CharacterBodyPresentationFrame CreatePreviewBodyFrame(
+            PreviewSession session,
+            CharacterPresentationProducerEntry blendSpaceProducer)
+        {
+            Vector3 velocity = Vector3.zero;
+            if (blendSpaceProducer != null)
+            {
+                int planIndex = blendSpaceProducer.BlendSpacePlanIndex;
+                if (planIndex < 0 || planIndex >= m_Projection.BlendSpaces.Count)
+                    throw new InvalidOperationException("Blend Space preview producer has no compiled plan.");
+                velocity = ResolvePreviewVelocity(
+                    m_Projection.BlendSpaces[planIndex],
+                    session.BlendSpaceParameter);
+            }
+            var target = new CharacterVisualTrajectorySample(
+                Vector3.zero,
+                Quaternion.identity,
+                velocity,
+                0f,
+                true);
+            var visible = new CharacterVisualTrajectoryResult(
+                Vector3.zero,
+                Quaternion.identity,
+                velocity,
+                0f,
+                Vector3.zero,
+                0f,
+                Vector3.zero,
+                0f,
+                false,
+                false,
+                true);
+            return new CharacterBodyPresentationFrame(
+                session.EvaluationTick > 1 ? session.EvaluationTick - 1 : session.EvaluationTick,
+                session.EvaluationTick,
+                1f,
+                0f,
+                CharacterBodyPresentationSourceMode.CommittedStream,
+                CharacterVisualTrajectoryMode.Direct,
+                target,
+                visible,
+                Vector3.zero,
+                Vector3.zero,
+                true,
+                true,
+                1,
+                CharacterBodyPresentationResetReason.Initialization);
+        }
+
+        static Vector3 ResolvePreviewVelocity(
+            CharacterAnimationBlendSpacePlan plan,
+            Vector2 parameter)
+        {
+            float? speed = null;
+            float? localX = null;
+            float? localY = null;
+            Assign(plan.XAxis.ParameterId, parameter.x);
+            if (plan.AxisCount == 2)
+                Assign(plan.YAxis.ParameterId, parameter.y);
+            if (speed.HasValue)
+            {
+                if (speed.Value < 0f)
+                    throw new InvalidOperationException("Motor Planar Speed Preview input cannot be negative.");
+                if (localX.HasValue && localY.HasValue)
+                {
+                    float magnitude = new Vector2(localX.Value, localY.Value).magnitude;
+                    if (!Mathf.Approximately(magnitude, speed.Value))
+                        throw new InvalidOperationException("Blend Space Preview speed and local velocity inputs describe different vectors.");
+                }
+                else if (localX.HasValue)
+                {
+                    float remainder = speed.Value * speed.Value - localX.Value * localX.Value;
+                    if (remainder < 0f)
+                        throw new InvalidOperationException("Blend Space Preview LocalVelocityX exceeds PlanarSpeed.");
+                    localY = Mathf.Sqrt(remainder);
+                }
+                else if (localY.HasValue)
+                {
+                    float remainder = speed.Value * speed.Value - localY.Value * localY.Value;
+                    if (remainder < 0f)
+                        throw new InvalidOperationException("Blend Space Preview LocalVelocityY exceeds PlanarSpeed.");
+                    localX = Mathf.Sqrt(remainder);
+                }
+                else
+                    localY = speed.Value;
+            }
+            return new Vector3(localX ?? 0f, 0f, localY ?? 0f);
+
+            void Assign(PoseParameterId parameterId, float value)
+            {
+                if (parameterId.Equals(AnimationPoseParameterIds.MotorPlanarSpeed))
+                    speed = value;
+                else if (parameterId.Equals(AnimationPoseParameterIds.MotorLocalVelocityX))
+                    localX = value;
+                else if (parameterId.Equals(AnimationPoseParameterIds.MotorLocalVelocityY))
+                    localY = value;
+                else
+                    throw new InvalidOperationException(
+                        $"Blend Space Preview Parameter '{parameterId}' has no formal Character Motor source.");
+            }
         }
 
         void PrepareComparisonSource(
@@ -309,7 +466,17 @@ namespace ThirdPersonCharacter.Pipeline
                 m_ComparisonSource);
             if (!m_ComparisonSourceSeeded)
             {
-                m_Playback.Present(++m_PresentationFrame, session.EvaluationTick, 1f, 0f, 0, null, null);
+                CharacterBodyPresentationFrame bodyFrame = default;
+                ComposedAnimationPoseFrame composed = m_Playback.Present(
+                    ++m_PresentationFrame,
+                    session.EvaluationTick,
+                    1f,
+                    0f,
+                    in bodyFrame,
+                    null);
+                m_PosePlanStages = CharacterPosePlanStageSnapshotFactory.Preview(
+                    m_Projection.PosePlan,
+                    in composed);
                 m_ComparisonSourceSeeded = true;
             }
         }

@@ -493,14 +493,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         {
             writer.Write(value.ProgramProducerId);
             writer.Write(value.AnimationChannelId.Value);
-            writer.Write(value.PoseSlotId.Value);
+            writer.Write(value.PoseNodeId.Value);
             writer.Write(value.SearchDomainId.Value);
             writer.Write(value.FirstDatabaseIndex);
             writer.Write(value.DatabaseCount);
         }
 
         static MotionMatchingProducerBindingPayload ReadProducerBinding(BinaryReader reader) => new MotionMatchingProducerBindingPayload(
-            reader.ReadString(), new AnimationChannelId(reader.ReadString()), new PoseSlotId(reader.ReadString()),
+            reader.ReadString(), new AnimationChannelId(reader.ReadString()), new PoseNodeId(reader.ReadString()),
             new CharacterMotionMatchingSearchDomainId(reader.ReadString()), reader.ReadInt32(), reader.ReadInt32());
 
         static void WriteFootSample(BinaryWriter writer, AnimationFootFeatureSample value)

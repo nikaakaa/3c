@@ -94,16 +94,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
     public readonly struct MotionMatchingCandidateRejectTrace
     {
-        public MotionMatchingCandidateRejectTrace(CharacterMotionMatchingSampleId sampleId, MotionMatchingCandidateRejectReason reason)
+        public MotionMatchingCandidateRejectTrace(CharacterMotionMatchingSampleId sampleId, MotionMatchingCandidateRejectDetail detail)
         {
-            if (!sampleId.IsValid || reason == MotionMatchingCandidateRejectReason.None)
+            if (!sampleId.IsValid || detail.Reason == MotionMatchingCandidateRejectReason.None)
                 throw new ArgumentException("Motion Matching candidate rejection trace is invalid.");
             SampleId = sampleId;
-            Reason = reason;
+            Detail = detail;
         }
 
         public CharacterMotionMatchingSampleId SampleId { get; }
-        public MotionMatchingCandidateRejectReason Reason { get; }
+        public MotionMatchingCandidateRejectDetail Detail { get; }
     }
 
     public readonly struct MotionMatchingSearchTraversalTrace
@@ -306,9 +306,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             {
                 for (int i = 0; i < database.SampleCount && RejectDetailCount < m_RejectDetails.Length; i++)
                 {
-                    MotionMatchingCandidateRejectReason reason = search.GetRejectReason(i);
-                    if (reason != MotionMatchingCandidateRejectReason.None)
-                        m_RejectDetails[RejectDetailCount++] = new MotionMatchingCandidateRejectTrace(database.GetSample(i).SampleId, reason);
+                    MotionMatchingCandidateRejectDetail detail = search.GetRejectDetail(i);
+                    if (detail.Reason != MotionMatchingCandidateRejectReason.None)
+                        m_RejectDetails[RejectDetailCount++] = new MotionMatchingCandidateRejectTrace(database.GetSample(i).SampleId, detail);
                 }
             }
             if ((interest & MotionMatchingDiagnosticsInterest.TopKCosts) != 0)

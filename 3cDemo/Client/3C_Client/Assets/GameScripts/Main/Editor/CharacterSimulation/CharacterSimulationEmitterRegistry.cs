@@ -147,7 +147,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (port.Direction == PortDirection.Output)
                 {
                     if (IsPropertyOutputLinked(node.GUID, portId, accessor.FieldKey))
-                        contract.RequireOutput(portId);
+                        contract.RequireSelection(portId);
                     continue;
                 }
                 OperationValuePortDefinition definition = contract.RequireInput(portId);

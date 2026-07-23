@@ -1,16 +1,17 @@
 # character-animation-pipeline Specification
 
 ## Purpose
-定义角色管线中的Timeline和动画输出链路：Compiler将`TimelineNode`降低为Program operation，SimulationTick推进Gameplay Timeline，PresentationFrame按visual time生成Pose Request，最终由CharacterSimulationPresentationRuntime在同一PlayableGraph完成source capture、PoseSlot Blend、Pose Graph与最终姿势发布。
+定义角色管线中的Timeline和动画输出链路：Compiler将`TimelineNode`降低为Program operation，SimulationTick推进Gameplay Timeline并提交AnimationChannel winner，PresentationFrame按raw visual time生成Animation Selection，最终由CharacterSimulationPresentationRuntime在同一PlayableGraph执行唯一编译Pose Plan并发布最终姿势。
 ## Requirements
-### Requirement: Timeline 轨道采样输出管线数据
+### Requirement: Timeline轨道采样必须输出Animation Selection数据
 
-Compiled Timeline gameplay tracks MUST在 Evaluate/Finalize 输出 typed facts、WorldRequest contribution 和 EventId presentation commands。Animation track resource binding MUST留在 CharacterPresentationProjection；Runtime MUST不把 Unity Track/Clip object 写入 `SimulationActorTickResult`。
+Compiler MUST将Timeline Animation Track降低为source-neutral selection binding和marker binding。SimulationTick MUST只推进Gameplay Timeline与提交AnimationChannel winner；PresentationFrame sampler MUST按raw visual time、cycle和source-local clip权重生成Animation Selection与typed Parameter page。Timeline MUST不解析Marker Sync effective time，也 MUST不创建Pose、Blend entry、transition identity、Bone Mask或IK plan。Animation track resource binding MUST留在CharacterPresentationProjection；Runtime MUST不把Unity Track/Clip object写入`SimulationActorTickResult`。
 
 #### Scenario: 同一 Attack Timeline 产生 Window 与动画
 
 - **WHEN** 当前 Tick 命中 Attack Window 并选择动画 producer
-- **THEN** Tick result MUST分别包含 Gameplay Window fact 与 presentation command
+- **THEN** Gameplay Window MUST进入Program事实链
+- **AND** Presentation MUST独立生成Attack Animation Selection供Pose Graph消费
 
 ### Requirement: Timeline 动画采样必须和逻辑事实采样分离
 
@@ -22,11 +23,11 @@ Gameplay Timeline sampling MUST只按 SimulationTick/canonical fraction 发生�
 - **THEN** 动画 pose MAY连续变化
 - **AND** Gameplay state/facts MUST保持不变
 
-### Requirement: CharacterSimulationPresentationRuntime 是 Unity 动画应用边界
+### Requirement: CharacterSimulationPresentationRuntime必须执行唯一编译Pose Plan
 
-SimulationCommitter与唯一`CharacterSimulationPresentationRuntime`协调器 MUST共同构成Unity animation application boundary。Presentation Egress MUST把纠偏结果表达为当前最终producer selection、pose request、complete或release command，并以Publish disposition提交；MUST不要求Presentation撤回已经显示的历史command。协调器 MUST通过Projection校验producer，并将playback command唯一转发给`CharacterAnimationPlaybackRuntime -> AnimationPlaybackLifecycle -> PoseSlot Blend Stack -> source capture -> Pose Graph -> FinalAnimationPoseFrame`。每个外部PresentationFrame target MUST只调用一次协调器`Present`，MUST不读取animation readiness、不在`Present`与body-only入口之间分支，也 MUST不直接决定Body、Animation和Camera的推进顺序。Program Runtime、Execution Backend、Pipeline Pass、WorldSolver、Session Source和Network adapter MUST不引用Animancer、Blend Stack或Pose Graph实现，也 MUST不直接播放或合成动画。
+SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application boundary。Presentation Egress MUST把纠偏结果表达为当前最终producer selection、sample、complete或release command，并以Publish disposition提交。Presentation Runtime MUST消费committed Animation Selection与参数，执行Projection编译的Selection、Player、native pose composition、world-aware postprocess和final publication阶段，并在IK/Solver exact completion后发布唯一`FinalAnimationPoseFrame`。Runtime MUST不自动创建图外Stack、图外Foot Placement、第二Pose Graph或第二final writer。每个外部PresentationFrame target MUST只调用一次协调器`Present`；Program Runtime、Execution Backend、Pipeline Pass、WorldSolver、Session Source和Network adapter MUST不引用Animancer、Blend Stack或Pose Graph实现，也 MUST不直接播放或合成动画。
 
-Runtime创建时 MUST显式锁定animation启动策略。Local owner与完整simulated actor MUST使用`RequireCommittedSelection`，RequireOutput PoseSlot缺少逻辑selection时保持明确错误；只消费外部可靠表现流的observed actor MUST使用`AwaitCommittedSelection`，允许Body在第一份可靠selection到达前推进，但 MUST不伪造Idle、默认producer或隐藏selection。第一份合法selection到达后，observed actor MUST复用同一PendingFirstSample、Selected、Retained、Retired和PoseSlot transition生命周期。
+Runtime创建时 MUST显式锁定animation启动策略。Local owner与完整simulated actor MUST使用`RequireCommittedSelection`，Required Selection Input缺少逻辑selection时保持明确错误；只消费外部可靠表现流的observed actor MUST使用`AwaitCommittedSelection`，允许Body在第一份可靠selection到达前推进，但 MUST不伪造Idle、默认producer或隐藏selection。第一份合法selection到达后，observed actor MUST复用同一PendingFirstSample、Selected、Retained、Retired与Player source usage生命周期。
 
 上述 Egress Publish 约束适用于 Standard Float32 与 ServerAuthoritative。Deterministic Rollback adapter MAY在 rollback 原子提交完成后，依据有界 EventId state journal 对已经应用的表现状态调用唯一 Runtime 的 Replace 或 Retire；该对账 MUST不建立第二套 Timeline、crossfade 或 Gameplay state。
 
@@ -47,11 +48,11 @@ Runtime创建时 MUST显式锁定animation启动策略。Local owner与完整sim
 
 - **WHEN** 第一份可靠selection及合法sample进入协调器
 - **THEN** AnimationPlaybackLifecycle MUST从PendingFirstSample进入正式Selected生命周期
-- **AND** 后续Stack transition与request MUST继续按Body frame提供的同一presentation clock推进
+- **AND** 后续Player、MarkerSync、BlendStack与Pose operation MUST继续按Body frame提供的同一presentation clock推进
 
 #### Scenario: Simulated Actor缺少Required Output
 
-- **WHEN** Local owner或Deterministic Rollback simulated actor的RequireOutput PoseSlot没有逻辑selection
+- **WHEN** Local owner或Deterministic Rollback simulated actor的Required Selection Input没有逻辑selection
 - **THEN** RequireCommittedSelection策略 MUST报告明确错误
 - **AND** MUST不因该Actor无相机或被称为remote而静默等待
 
@@ -59,7 +60,7 @@ Runtime创建时 MUST显式锁定animation启动策略。Local owner与完整sim
 
 - **WHEN** ServerAuthoritative Egress确认预测producer不再是当前最终selection
 - **THEN** Egress MUST生成新的release与最终selection command并以Publish提交
-- **AND** 协调器 MUST由正式PoseSlot Stack接管而不建立第二套transition
+- **AND** 协调器 MUST由图中显式Player节点接管而不建立第二套transition
 
 #### Scenario: Fixed Rollback对账已应用的表现事件
 
@@ -69,12 +70,12 @@ Runtime创建时 MUST显式锁定animation启动策略。Local owner与完整sim
 
 ### Requirement: 动画预览只读取正式调试Snapshot
 
-系统 MUST从正式AnimationPlaybackLifecycle、PoseSlot Blend Stack、source backend与Pose Graph导出只读AnimationPlaybackFrameSnapshot或等价数据。Snapshot MAY包含AnimationChannelId、PoseSlotId、selection、sample time、PendingFirstSample、Selected、Retained、Retired、Stack entry、source identity与final pose completion，MUST不参与gameplay决策或最终播放。Timeline编辑器预览 MUST使用与正式链路相同的sampling、Lifecycle、Stack、source backend与Pose Graph。
+系统 MUST从正式AnimationPlaybackLifecycle、Player、source backend与Pose Graph导出只读AnimationPlaybackFrameSnapshot或等价数据。Snapshot MAY包含AnimationChannelId、PoseNodeId、selection/source map、raw/effective sample time、Player source usage、PendingFirstSample、Selected、Retained、Retired、Stack entry/clock/Stored、Inertialization residual、Pose operation contribution以及Composed/PostProcess/Final completion，MUST不参与gameplay决策或最终播放。Timeline编辑器预览 MUST执行与正式链路相同的Selection、Lifecycle、Player、source backend与Pose Plan。
 
 #### Scenario: 生成每帧预览数据
 
 - **WHEN** 正式或 preview session 更新动画
-- **THEN** 系统 MAY导出当前channel/slot/playback lifecycle snapshot
+- **THEN** 系统 MAY导出当前channel/player/playback lifecycle snapshot
 - **AND** 编辑器 MUST只读取该 snapshot
 
 #### Scenario: 运行时禁用调试历史

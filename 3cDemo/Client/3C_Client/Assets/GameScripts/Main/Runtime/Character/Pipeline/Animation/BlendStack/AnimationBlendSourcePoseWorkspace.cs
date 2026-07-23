@@ -13,6 +13,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         NativeArray<AnimationLocalBonePose> m_PreviousPose;
         NativeArray<AnimationBlendBoneVelocity> m_Velocity;
         NativeArray<float> m_PoseParameters;
+        NativeArray<byte> m_PoseParameterAvailability;
         NativeArray<AnimationFootFeatureSample> m_LeftFootFeatures;
         NativeArray<AnimationFootFeatureSample> m_RightFootFeatures;
         NativeArray<float> m_VisualTimeScales;
@@ -36,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             if (rig == null)
                 throw new ArgumentNullException(nameof(rig));
             rig.RequireValid();
-            if (parameterCount <= 0 || sourceCapacity < 2)
+            if (parameterCount <= 0 || sourceCapacity <= 0)
                 throw new ArgumentOutOfRangeException();
             m_BoneCount = rig.Bones.Count;
             m_ParameterCount = parameterCount;
@@ -49,6 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_PreviousPose = Allocate<AnimationLocalBonePose>(poseCapacity);
                 m_Velocity = Allocate<AnimationBlendBoneVelocity>(poseCapacity);
                 m_PoseParameters = Allocate<float>(parameterCapacity);
+                m_PoseParameterAvailability = Allocate<byte>(parameterCapacity);
                 m_LeftFootFeatures = Allocate<AnimationFootFeatureSample>(sourceCapacity);
                 m_RightFootFeatures = Allocate<AnimationFootFeatureSample>(sourceCapacity);
                 m_VisualTimeScales = Allocate<float>(sourceCapacity);
@@ -81,16 +83,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         }
 
         public AnimationPoseSourceCaptureBinding PrepareCapture(
-            in ResolvedAnimationPoseRequest request,
+            in AnimationSourcePoseSample sourceSample,
             float presentationDeltaSeconds)
         {
             RequireNotDisposed();
             if (m_CompletionIdentity == 0)
                 throw new InvalidOperationException("Animation source pose workspace has not begun a frame.");
-            bool footStateValid = request.HasFootFeatures
-                ? request.LeftFootFeatures.IsValid && request.RightFootFeatures.IsValid
-                : !request.LeftFootFeatures.IsValid && !request.RightFootFeatures.IsValid;
-            if (!request.IsValid || request.PoseParameters.Count != m_ParameterCount || !footStateValid ||
+            AnimationSelectionFrame request = sourceSample.Selection;
+            if (!sourceSample.IsValid || request.PoseParameters.Count != m_ParameterCount ||
+                request.PoseParameterAvailability.Count != m_ParameterCount ||
                 !float.IsFinite(request.VisualTimeScale) || request.VisualTimeScale < 0f ||
                 !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f)
             {
@@ -116,14 +117,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             for (int parameterIndex = 0; parameterIndex < m_ParameterCount; parameterIndex++)
             {
                 float value = request.PoseParameters[parameterIndex];
-                if (!float.IsFinite(value))
+                byte available = request.PoseParameterAvailability[parameterIndex];
+                if (!float.IsFinite(value) || available > 1)
                     throw new ArgumentException($"Animation source pose parameter #{parameterIndex} is invalid.");
                 m_PoseParameters[sourceIndex * m_ParameterCount + parameterIndex] = value;
+                m_PoseParameterAvailability[sourceIndex * m_ParameterCount + parameterIndex] = available;
             }
             m_ProgramProducerIndices[sourceIndex] = request.ProgramProducerIndex;
-            m_LeftFootFeatures[sourceIndex] = request.LeftFootFeatures;
-            m_RightFootFeatures[sourceIndex] = request.RightFootFeatures;
-            m_HasFootFeatures[sourceIndex] = request.HasFootFeatures ? (byte)1 : (byte)0;
+            m_LeftFootFeatures[sourceIndex] = sourceSample.LeftFootFeatures;
+            m_RightFootFeatures[sourceIndex] = sourceSample.RightFootFeatures;
+            m_HasFootFeatures[sourceIndex] = sourceSample.HasFootFeatures ? (byte)1 : (byte)0;
             m_VisualTimeScales[sourceIndex] = request.VisualTimeScale;
             m_PreparedAt[sourceIndex] = m_CompletionIdentity;
             m_CompletedAt[sourceIndex] = 0;
@@ -155,6 +158,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_CurrentPose,
                 m_Velocity,
                 m_PoseParameters,
+                m_PoseParameterAvailability,
                 m_LeftFootFeatures,
                 m_RightFootFeatures,
                 m_VisualTimeScales,
@@ -241,7 +245,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_VisualTimeScales[sourceIndex] = 0f;
             int parameterOffset = sourceIndex * m_ParameterCount;
             for (int i = 0; i < m_ParameterCount; i++)
+            {
                 m_PoseParameters[parameterOffset + i] = 0f;
+                m_PoseParameterAvailability[parameterOffset + i] = 0;
+            }
         }
 
         static NativeArray<T> Allocate<T>(int length) where T : struct =>
@@ -271,6 +278,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             Dispose(ref m_PreviousPose);
             Dispose(ref m_Velocity);
             Dispose(ref m_PoseParameters);
+            Dispose(ref m_PoseParameterAvailability);
             Dispose(ref m_LeftFootFeatures);
             Dispose(ref m_RightFootFeatures);
             Dispose(ref m_VisualTimeScales);

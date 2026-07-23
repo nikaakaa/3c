@@ -40,12 +40,12 @@ Compiled Node 与 Timeline operation MUST只产生 state mutation、typed fact�
 
 ### Requirement: Timeline 和动画 tick 权威归属 pipeline
 
-Gameplay Timeline logic time MUST归 Program/CharacterSimulationState并按 SimulationTick推进；animation visual sampling与 Animancer fade MUST归 PresentationFrame。Pipeline Runtime与 Presentation MUST通过 committed producer/playback identity连接，MUST不共享 mutable clock。
+Gameplay Timeline logic time MUST归Program/CharacterSimulationState并按SimulationTick推进；animation visual sampling、显式Player clock、Animancer source sampling与Pose Plan evaluation MUST归PresentationFrame。Pipeline Runtime与Presentation MUST只通过committed AnimationChannel producer/playback identity连接，MUST不共享mutable clock，Program MUST不读取PoseNode、Player或Pose Graph时间。
 
 #### Scenario: 无新 Logic Tick 的 RenderFrame
 
 - **WHEN** PresentationFrame 到达但没有新 SimulationTick
-- **THEN** animation MAY继续采样和淡出
+- **THEN** animation source、Player transition与Pose Graph MAY继续推进
 - **AND** Timeline Gameplay state MUST不改变
 
 ### Requirement: 不恢复 BBB 和旧 SO 数据源
@@ -149,14 +149,15 @@ SimulationCommitter MUST使用 presentation-owned 持久队列保存未消费的
 - **WHEN** Committer 连续提交多个 generation
 - **THEN** queue MUST保留 Complete/Release 顺序直到 Presentation acknowledge
 
-### Requirement: PresentationFrame 必须输出最终Pose结果
+### Requirement: PresentationFrame必须输出完整最终Pose Plan结果
 
-Presentation diagnostics snapshot MUST按AnimationChannelId与PoseSlotId保存AnimationPlaybackLifecycle状态，包括PendingFirstSample、Selected、Retained、Retired、visual sample time、slot availability与slot output weight，并保存OutputPose completion identity。Snapshot MUST只用于diagnostics，MUST不进入SimulationWorldSnapshot或Kernel决策，也 MUST不从Animancer state重建fade或最终贡献。
+PresentationFrame MUST消费完整committed Animation Selection batch和typed Parameter page，按Projection编译的Selection、Player source membership、Marker time resolve、source sampling、native composition、world-aware postprocess与Output阶段原子推进。只有唯一OutputPose及其所有必需阶段完成后，Runtime才可发布`FinalAnimationPoseFrame`并推进Camera；任一Selection、MarkerSync、Player、Pose operation、FootPlacement或Solver失败 MUST阻止部分最终结果发布，不得沿用上一帧或绕过节点。Presentation diagnostics snapshot MUST按AnimationChannelId与PoseNodeId保存selection/source map、Player/Stack、Marker relation、参数、贡献及Composed/PostProcess/Final completion，且只用于diagnostics。
 
-#### Scenario: Base 等待第一 Sample
+#### Scenario: Action等待第一Sample
 
-- **WHEN** target selection 已提交但首个 sample 未到
-- **THEN** snapshot MUST显示PendingFirstSample与该slot当前正式availability
+- **WHEN** FullBodyAction target已提交但首个sample未到
+- **THEN** snapshot MUST显示FullBodyAction channel PendingFirstSample与匹配Player当前availability
+- **AND** MUST同时显示BaseLocomotion Player和最终OutputPose仍来自哪里
 
 ### Requirement: Simulation Session 必须作为显式 diagnostics target
 
@@ -185,7 +186,7 @@ Input、ingress、Program operation、StateMachine、Timeline、Blackboard、Wor
 
 ### Requirement: Program Finalize 必须提交逻辑侧唯一动画选择
 
-Program Finalize MUST在State、Action、interruption与Timeline request处理后为每个AnimationChannelId最多产生一个selected producer/playback command。Committer与Presentation MUST不重新仲裁逻辑候选。
+Program Finalize MUST在State、Action、interruption与Timeline request处理后为每个`AnimationChannelId`最多产生一个selected producer/playback command。不同Animation Channel可以同时产生command。Committer、Projection、Player与Pose Graph MUST不重新仲裁同一channel候选，Program MUST不读取PoseNodeId、Bone Mask或Pose Graph topology决定winner。
 
 #### Scenario: 同通道所有权冲突
 
@@ -193,21 +194,27 @@ Program Finalize MUST在State、Action、interruption与Timeline request处理�
 - **THEN** 当前 Tick MUST报告明确冲突
 - **AND** Presentation MUST不选择默认赢家
 
-### Requirement: PresentationFrame 必须原子提交动画播放生命周期
+#### Scenario: 两个channel合法并行
 
-PresentationFrame MUST按固定顺序读取Committer queue、推进既有Stack clock、解析并push selection/request、开始source frame、安装source capture与固定slot jobs、安装Pose Graph与final writer、在同一PlayableGraph执行一次Evaluate、exact CompleteFrame、发布lease-protected FinalAnimationPoseFrame、drain source release、执行唯一Pose Post Process Pass、推进Camera并acknowledge batch。Pose Post Process MUST只消费该同帧FinalAnimationPoseFrame、Body frame和Presentation-owned配置；该阶段整体 MUST不执行Program、TreeClip、Motion、Action、Effect或WorldSolver，也 MUST不产生Gameplay事实、网络输出、二次采样或第二次VisualRoot写入。
+- **WHEN** BaseLocomotion选择Run且FullBodyAction选择Dodge
+- **THEN** Program MUST提交两个独立command
+- **AND** Pose Graph MUST只在PresentationFrame合成它们
+
+### Requirement: PresentationFrame必须原子提交动画播放与Pose节点生命周期
+
+PresentationFrame MUST在同一外层事务中提交Selection cache、Player source usage、Marker relation/effective sample page、Player/Blend Stack状态、source capture、Pose operation completion、world-aware postprocess plan、Solver结果和final publication。Reset、branch replacement、Projection replacement或失败 MUST按编译Plan逆序清理全部stateful节点；不得只提交Marker relation或Blend entry而保留旧Output，也不得只发布Output而遗漏source retirement。该阶段整体 MUST不执行Program、TreeClip、Motion、Action、Effect或WorldSolver，也 MUST不产生Gameplay事实、网络输出、二次采样或第二次VisualRoot写入。
 
 #### Scenario: Selection 与首个 Sample 同批
 
 - **WHEN** target selection 与合法 sample 同批到达
-- **THEN** lifecycle MUST原子提交Selected与Retained source到对应Pose Slot Stack
-- **AND** Pose Post Process MUST只观察同一次Evaluate发布的FinalAnimationPoseFrame
+- **THEN** 目标Player节点 MUST原子初始化并参与本帧Pose Plan
+- **AND** FinalAnimationPoseFrame MUST只反映该次完整事务结果
 
 #### Scenario: 动画输出尚未就绪
 
-- **WHEN** RequireOutput slot仍等待target首个合法sample且当前没有正式动画输出
-- **THEN** Pose Post Process MUST不对残留骨骼姿势求解
-- **AND** 已有Pose Post Process历史 MUST按正式reset语义清除
+- **WHEN** Required Selection Input仍等待target首个合法sample且当前没有正式动画输出
+- **THEN** world-aware postprocess MUST不对残留骨骼姿势求解
+- **AND** 已有world-aware节点历史 MUST按正式reset语义清除
 
 ### Requirement: Compiled Program 必须编排唯一 Gameplay Effect 阶段
 

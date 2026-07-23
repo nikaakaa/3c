@@ -23,6 +23,9 @@ namespace ThirdPersonCharacter.Pipeline
         public string SourceName { get; private set; }
         public ulong EvaluationTick { get; private set; }
         public float PresentationDeltaSeconds { get; private set; }
+        public string TargetTrackAuthoringId { get; private set; }
+        public bool HasBlendSpaceParameter { get; private set; }
+        public Vector2 BlendSpaceParameter { get; private set; }
         public bool HasEvaluation => Timeline != null && EvaluationTick != 0;
 
         public void Capture(
@@ -41,6 +44,36 @@ namespace ThirdPersonCharacter.Pipeline
             SourceName = sourceName ?? string.Empty;
             EvaluationTick = evaluationTick;
             PresentationDeltaSeconds = Mathf.Max(0f, presentationDeltaSeconds);
+            TargetTrackAuthoringId = string.Empty;
+            HasBlendSpaceParameter = false;
+            BlendSpaceParameter = default;
+        }
+
+        public void CaptureBlendSpace(
+            TimelineData timeline,
+            string targetTrackAuthoringId,
+            float previousTime,
+            float currentTime,
+            string sourceId,
+            string sourceName,
+            ulong evaluationTick,
+            float presentationDeltaSeconds,
+            Vector2 parameter)
+        {
+            if (string.IsNullOrWhiteSpace(targetTrackAuthoringId) ||
+                !float.IsFinite(parameter.x) || !float.IsFinite(parameter.y))
+                throw new ArgumentException("Blend Space preview input is invalid.");
+            Capture(
+                timeline,
+                previousTime,
+                currentTime,
+                sourceId,
+                sourceName,
+                evaluationTick,
+                presentationDeltaSeconds);
+            TargetTrackAuthoringId = targetTrackAuthoringId.Trim();
+            HasBlendSpaceParameter = true;
+            BlendSpaceParameter = parameter;
         }
 
         public void Dispose()

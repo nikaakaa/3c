@@ -55,7 +55,11 @@ namespace ThirdPersonCamera
             brain = GetComponent<CinemachineBrain>();
         }
 
-        public void Apply(CameraPosePlan plan)
+        public void Apply(CameraPosePlan plan) => Apply(plan, false);
+
+        public void ApplyAfterTrackingReset(CameraPosePlan plan) => Apply(plan, true);
+
+        void Apply(CameraPosePlan plan, bool resetTracking)
         {
             if (!plan.Valid)
             {
@@ -69,6 +73,8 @@ namespace ThirdPersonCamera
             ApplyLookDelta(plan.LookDelta);
             ApplyTargets(plan.FollowPoint, plan.AimPoint);
             ApplyLens(plan.FieldOfView);
+            if (resetTracking)
+                freeLook.PreviousStateIsValid = false;
             UpdateBrain();
             RefreshBasisSnapshot(plan.AimPoint);
         }

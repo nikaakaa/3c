@@ -1,8 +1,14 @@
 # Design: Character Presentation Pose Graph
 
+## 重新基线
+
+`refactor-animation-selection-pose-graph-boundary`已经把本文原先的固定`PoseSlotInput -> hidden Blend Stack`入口升级为显式Selection、MarkerSync、SelectedPosePlayer、BlendStack、局部Inertialization、Pose composition、ModifyBone、FootPlacement与Output。本文后续出现的PoseSlotFrame、图外Marker Sync、Stack Inertial和图外Pose Post Process只描述迁移前基线，不再是当前合同。
+
+FootPlacement在作者图中可见，但Compiler将其降低到唯一world-aware阶段，继续复用现有Planner、Physics query和Solver，不在Animation Job内复制算法。
+
 ## Context
 
-当前正式链路把`LayerId`贯穿Gameplay与Presentation：
+本change批准时的正式链路把`LayerId`贯穿Gameplay与Presentation：
 
 ```text
 State / Action / Timeline ownership
@@ -13,7 +19,7 @@ State / Action / Timeline ownership
   -> Foot Placement
 ```
 
-未实施的完整Blend Stack提案进一步计划：
+当时并行的完整Blend Stack提案进一步计划：
 
 ```text
 per Layer stack
@@ -26,15 +32,18 @@ per Layer stack
 
 本设计把本项目缺失的UE AnimGraph职责定义为`Character Presentation Pose Graph`。它只负责Presentation pose composition，不复制UE Animation Blueprint中的Gameplay event graph、StateMachine选择、Montage业务触发或Motion Matching搜索。
 
+当前代码已经安装AnimationChannel、Selection Input、MarkerSync、显式Player、node-local BlendStack与Inertialization、Pose Graph compiler/runtime plan、FinalAnimationPoseFrame、GraphAuthoringEditorShell与唯一world-aware FootPlacement阶段。Live diagnostics已经绑定匹配ProjectionRevision的正式runtime operation trace与source map；Corin Profile、Pose Graph、Rig Binding和generated artifacts已经通过正式authoring与Build链重建。旧Corin serialized payload不得作为runtime兼容输入。
+
 ## Goals
 
 - 让BTSMTL逻辑仲裁、每路时间混合、跨路骨骼合成和最终IK各有唯一权威。
 - 保留当前Program Finalize“Presentation不重新选择逻辑赢家”的边界。
-- 让每个Pose Slot自动经过固定Blend Stack，支持高频重选、Stored Pose、Inertial与Per-Bone transition。
-- 让Pose Graph唯一拥有跨slot拓扑、Bone Mask、Override/Additive、Pose Parameter curve解析和最终动画pose。
+- 让作者显式选择SelectedPosePlayer、BlendStack或局部Inertialization，不再自动为每个Pose Slot装配固定Stack。
+- 让作者显式决定一条Selection是否经过MarkerSync；Timeline只输出raw visual time，BlendStack只报告source usage和计算权重。
+- 让Pose Graph Plan唯一拥有跨分支拓扑、Bone Mask、Override/Additive、Pose Parameter解析、world-aware FootPlacement和最终动画pose。
 - 复用现有节点编辑体验，不把BTSMTL Gameplay节点模型复制到Presentation。
 - 让当前ALS式Corin马上获得有业务意义的BaseLocomotion与FullBodyAction分层。
-- 保持未来Motion Matching只替换上游pose producer，不替换Blend Stack、Pose Graph或Foot Placement。
+- 保持未来Motion Matching只替换上游Selection provider，不替换SelectedPosePlayer、局部Inertialization、BlendStack、Pose Graph或FootPlacement。
 - 所有Runtime拓扑、buffer与node dispatch均由Projection编译固定，表现热路径不解释authoring graph且不动态分配。
 
 ## Non-Goals
@@ -44,7 +53,7 @@ per Layer stack
 - 不把BTSMTL StateMachine搬进Pose Graph，也不让Pose Graph读取Input、Blackboard、Action或GameplayTag。
 - 不实现运行时动态Linked Anim Layer class替换。当前只提供静态inline/shared PoseSubgraph；Equipment需要动态替换时必须用独立change定义正式业务输入和生命周期。
 - 不实现动画重定向。所有source必须已经适配正式Rig。
-- 不把Foot Placement改成可选Pose Graph节点；它继续是固定、唯一的Pose Post Process。
+- 不复制FootPlacement Planner、Physics query或IK Solver；作者图中的显式FootPlacement节点只把这些唯一实现编译进world-aware阶段。
 - 不提供旧Layer配置兼容、隐式Base Pose、缺失mask默认全身或缺失curve policy默认规则。
 
 ## Responsibility Model
@@ -53,14 +62,16 @@ per Layer stack
 |---|---|---|---|
 | BTSMTL / Program | State、Action、Timeline、ownership | 每个Animation Channel选择至多一个producer | committed producer command |
 | Presentation Projection | producer contract、Profile、Pose Graph、Blend/Rig authoring | 绑定channel、slot、资源并编译target-neutral payload | Projection |
-| Pose Slot Blend Stack | 一个slot的resolved source request历史 | 时间混合、clock、curve、Stored Pose、Inertial、source retirement | PoseSlotFrame |
+| 显式MarkerSync节点 | raw Selection、Track marker binding、Player source usage | leader/follower与raw-to-effective time | effective sample page |
+| 显式Blend Stack节点 | 一份Selection的多source历史 | CrossFade、clock、curve、Stored Pose、source retirement | Pose Value |
+| 局部Inertialization节点 | 直接Player的Pose与Discontinuity | 单Pose history、residual、rebase | Pose Value |
 | Presentation Pose Graph | 全部PoseSlotFrame、bone masks、curve policy | 空间合成、additive、curve解析、贡献传播 | FinalAnimationPoseFrame |
 | Foot Placement | final pose、final per-foot contribution、Body与world query | 最终脚部约束与pelvis修正 | post-processed pose |
 | Animancer | resolved clip/mixer sample | source Playable采样和寿命 | source pose sample |
 
 任何一层不得重新承担上一层的决策。
 
-## Target Architecture
+## Installed Architecture
 
 ```text
 CharacterSimulationProgram
@@ -85,7 +96,7 @@ PoseSlotFrame[]
   pose + parameters + availability + contribution
               |
               v
-CharacterPresentationPoseGraphJob
+CharacterPoseGraphNativeJob
   PoseSlotInput
   LayeredBoneBlend
   AdditivePose
@@ -165,7 +176,9 @@ PoseValue
 
 Authoring graph不保存Runtime buffer。Compiler为每个edge/value slot分配固定workspace index。
 
-### Fixed Node Set
+### 已安装旧Fixed Node Set
+
+本节记录迁移前已安装实现，不是最终节点合同。目标节点集以重新基线和spec delta为准，其中Selection层必须包含可选`MarkerSync`。
 
 #### PoseSlotInput
 
@@ -299,17 +312,18 @@ Projection/Contract validation
 ```text
 Body frame
   -> consume channel commands
-  -> sample retained producers / Marker Sync
-  -> update every slot Blend Stack frame plan
+  -> build raw Selection cache
+  -> stateful Player声明source usage
+  -> 显式MarkerSync解析effective sample page
   -> sample source poses
-  -> evaluate each PoseSlotFrame
-  -> evaluate compiled Pose Program once
+  -> evaluate SelectedPosePlayer / BlendStack / Inertialization
+  -> evaluate native composition once
+  -> FootPlacement world-aware phase once
   -> publish FinalAnimationPoseFrame
-  -> Foot Placement once
   -> Camera
 ```
 
-`CharacterPresentationPoseGraphJob`按编译operation顺序执行。每个operation只读输入workspace并写唯一输出slot。fan-out只读同一缓存；不得重复采样source或重复推进Stack clock。
+`CharacterPoseGraphNativeJob`按编译operation顺序执行。每个operation只读输入workspace并写唯一输出slot。fan-out只读同一缓存；不得重复采样source或重复推进Stack clock。
 
 ### Empty Slot
 
@@ -332,13 +346,13 @@ ALS式动画经常用动画曲线控制骨骼混合、Foot IK权重或局部姿�
 
 ## Blend Stack Boundary
 
-每个Pose Slot自动拥有一个固定`AnimationBlendStackRuntime`。它负责：
+每个显式BlendStack节点拥有一个`AnimationBlendStackRuntime`实例。它负责：
 
 - ordered entry与独立Fade Clock。
 - canonical curve和Per-Bone transition profile。
-- capacity、Stored Pose与Inertial accumulator。
-- 同slot source retirement和Marker relation detach。
-- `PoseSlotFrame`及slot内部source contribution。
+- capacity与Stored Pose。
+- 该节点source retention、exact release和source usage发布。
+- 普通Pose Value与节点内部source contribution。
 
 它不负责：
 
@@ -347,8 +361,10 @@ ALS式动画经常用动画曲线控制骨骼混合、Foot IK权重或局部姿�
 - Base/Overlay/Additive拓扑。
 - final Pose Parameter解析。
 - Animator最终Pose写回。
+- Marker leader/follower、segment fraction与effective time。
+- Inertial residual、history与rebase。
 
-Blend Stack不是Pose Graph节点。Pose Graph只通过`PoseSlotInput`读取它的完成结果，因此作者无法绕过Stack，也不会为不同graph topology创建多个stack实例。
+Blend Stack是Pose Graph中的显式Player节点。MarkerSync若存在，必须位于Selection Input与该BlendStack之间，并通过编译的一对一source-usage合同解析时间；它不得扫描Stack entry或读取weight。作者不放BlendStack时Runtime不得自动补建。
 
 ## Foot Placement and IK Boundary
 
@@ -359,9 +375,9 @@ Pose Graph输出`FinalAnimationPoseFrame`：
 - 按最终空间Mask传播后的source contribution。
 - Left/Right语义foot的实际贡献与连续性identity。
 
-Foot Placement只在该frame completion之后运行。BaseLocomotion的脚在FullBodyAction全身覆盖时可以被action贡献替换；未来UpperBody mask若脚权重为0，则不得降低Base脚贡献。Stored Pose与Inertial feature先在slot内部形成，再由Pose Graph按最终脚Bone Mask传播。
+Foot Placement只在native Pose阶段完成之后运行。BaseLocomotion的脚在FullBodyAction全身覆盖时可以被action贡献替换；未来UpperBody mask若脚权重为0，则不得降低Base脚贡献。Stored Pose feature在BlendStack形成，Inertial feature在局部Inertialization按实际脚Bone envelope形成，再由Pose Graph按最终脚Bone Mask传播。
 
-Foot Placement仍不成为Graph节点，原因是它依赖Body、PhysicsScene、surface生命周期和pelvis约束，不是纯Animation Pose composition。
+Foot Placement是编译Pose Plan中的唯一world-aware节点；它依赖Body、PhysicsScene、surface生命周期和pelvis约束，因此不进入纯native Pose job，但仍由同一计划安排并在OutputPose之前完成。
 
 ## Corin Formal Topology
 
@@ -371,13 +387,20 @@ Animation Channels
   FullBodyAction    -> FullBodyActionSlot    AllowEmpty
 
 Pose Graph
-  BaseLocomotionSlot
-      |
-      +---- LayeredBoneBlend(full body mask) <---- FullBodyActionSlot
-                         |
-                     OutputPose
-                         |
-                    Foot Placement
+  AnimationSelectionInput(BaseLocomotion)
+      -> MarkerSync
+      -> SelectedPosePlayer
+      -> Inertialization
+      -> BasePose
+
+  AnimationSelectionInput(FullBodyAction)
+      -> BlendStack
+      -> ActionPose
+
+  BasePose + ActionPose
+      -> LayeredBoneBlend(full body mask)
+      -> FootPlacement
+      -> OutputPose
 ```
 
 producer迁移：
@@ -419,20 +442,28 @@ AnimationChannelId
 
 Timeline Authoring Preview继续只采样Presentation动画，不运行Gameplay StateMachine。它为每个channel最多生成一个preview command，复用正式Projection、Stack、Pose Program、Rig和Evaluator。Live Debug只读正式snapshot，不重新执行Graph或curve。
 
-## Migration and Deletion
+## Implementation Status and Remaining Migration
 
-迁移必须形成一次最终切换，不发布临时双拓扑：
+已经安装：
 
-1. 抽取Editor Shell并把BTSMTL现有入口切换到domain adapter。
-2. 建立Pose Graph authoring、validator、compiler和Projection schema，但不接入第二条Runtime输出。
-3. 将Blend Stack change收窄到per-slot输出合同，建立Pose Graph final evaluator。
-4. 将`LayerId`全链替换为`AnimationChannelId`，将Profile Layer catalog替换为Pose Graph Slot声明。
-5. 在同一Runtime迁移中切换Presentation、Preview、Debug和Foot Placement到`Stack -> PoseGraph -> PostProcess`。
-6. 迁移Corin两个channel、两个slot、正式Pose Graph与Blend Library。
-7. 重建Projection和目标Program wrapper。
-8. 删除旧Layer definition、Animancer layer/fade、旧Blend Stack global compositor、旧snapshot和旧serialized字段。
+1. Editor Shell、Pose Graph authoring、validator、compiler与Projection schema。
+2. `LayerId`到`AnimationChannelId`、Profile Layer catalog到Pose Slot/Pose Graph合同的代码迁移。
+3. Blend Stack收窄为per-slot输出，`CharacterPoseGraphNativeJob`拥有跨slot合成和最终Pose。
+4. Presentation、Preview、Debug与Foot Placement使用`Stack -> Pose Graph -> Post Process`正式链。
+5. 旧Layer definition、Animancer layer/fade、global compositor、旧snapshot字段和兼容代码删除。
 
-不存在“旧Layer compositor先运行，再由Pose Graph二次合成”的中间正式路径。
+剩余迁移全部集中在本change第15章，并且必须一次完成：
+
+1. 迁移Corin全部producer到BaseLocomotion或FullBodyAction channel。
+2. 创建两个Pose Slot、Pose Graph topology和完整Pose Parameter policy。
+3. 创建Corin Rig Definition、dense BoneId、左右脚语义、root exclusion与Blend Profiles。
+4. 创建两个slot的Stack policy和完整transition matrix。
+5. 重写Corin Profile并直接删除旧`m_Layers`、`m_TransitionLibrary`、`m_Transition`与`m_Easing`序列化数据。
+6. 配置Runtime Rig Binding和final writer所需Prefab装配。
+7. 重建target-neutral Projection、Float32 wrapper与Fixed wrapper。
+8. 由现有delta清理current specs中的旧LayerId、Animancer fade权威和单Base Corin口径。
+
+`refactor-animation-playback-to-blend-stack`不再复制上述资产任务。不存在旧Layer compositor、缺失配置下的临时直通或两个change分别生成Projection的中间正式路径。
 
 ## Tradeoffs
 
@@ -484,12 +515,14 @@ UE这样做是因为Animation Blueprint自己承担一部分状态选择。本�
 
 - `character-animation-layer-runtime`和`character-animation-pipeline`中的`LayerId`改为`AnimationChannelId`；空间Layer语义迁移到Pose Graph。
 - `character-state-timeline-authoring-loop`中的Corin单一Base layer改为BaseLocomotion与FullBodyAction两个channel/slot；逻辑仍为每channel唯一selection。
+- `btsmtl-node-interruption-lifecycle`中的“每层唯一producer command”改为“每个AnimationChannelId唯一producer command”，通用Tree scheduler仍不得产生表现输出。
 - `character-animation-presentation-authoring`与`character-pipeline-definition-authoring`中的Layer catalog/Animancer TransitionLibrary改为Pose Graph、Blend Library与Rig引用。
 - `btsmtl-graph-core`的一套Graph规则限定为BTSMTL领域；跨领域只共享Editor Shell，Pose Graph不得成为第二套BTSMTL runtime graph。
 - `character-presentation-interpolation`和`gameplay-tick-system`中的Animancer fade时钟改为slot Blend Stack clock；Animancer只推进source sampling graph。
 - `character-foot-placement-presentation`的最终输入改为Pose Graph输出后的per-foot contribution，而不是Animancer或单个slot scalar。
+- `character-equipment-presentation`删除Feature Required Layer、AvatarMask和Animancer binding需求；Equipment RequiredProducerIds只表达Gameplay route完整性，动态装备Pose拓扑留给独立change。
 - `agent-character-controller-synthesis`继续不写Presentation配置，但Snapshot只读术语改为Animation Channel、Pose Slot、Pose Graph、Blend Library与producer binding。
-- `refactor-animation-playback-to-blend-stack`删除global Layer compositor职责；已完成的`refactor-presentation-projection-target-boundary`继续提供target-neutral边界，本change负责其后续AnimationChannelId与Pose payload schema升级。
+- `refactor-animation-playback-to-blend-stack`已经删除global Layer compositor职责，其时间连续性算法迁入显式Blend Stack节点；已完成的`refactor-presentation-projection-target-boundary`继续提供target-neutral边界，本change负责完整Pose Graph与Corin表现资产闭环。
 
 ## Risks
 
@@ -498,4 +531,4 @@ UE这样做是因为Animation Blueprint自己承担一部分状态选择。本�
 - Animancer state Speed只表示后端手动采样方式；`ResolvedAnimationPoseRequest.VisualTimeScale`必须继续表达有效视觉时间推进率，Motion Matching不得因state Speed为零而把该值固定为零。
 - Corin从单Base仲裁改成两个channel后，Locomotion必须在Action期间继续拥有合法selection。Program compiler和authoring inventory必须验证这一点，不能由Presentation补Idle。
 - Pose Parameter curve策略若遗漏会产生难以察觉的ALS行为差异，因此Compiler对每个合成site要求完整policy，不允许运行时按名称默认。
-- 多active change都修改Projection和Animation specs。实施前必须以这三个提案的最终共同合同为基线，不能按旧任务顺序分别落地出临时双路径。
+- 多active change都修改Projection和Animation specs。剩余Corin资产必须只按本change第15章落地，不能再从Blend Stack change复制第二份Rig、Blend Library、Profile或Projection任务。

@@ -55,7 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(rig));
             rig.RequireValid();
             m_Schema = SchemaVersion;
-            m_ProfileId = PoseSlotId.Require(profileId, nameof(profileId));
+            m_ProfileId = PoseNodeId.Require(profileId, nameof(profileId));
             m_RigId = rig.RigId;
             m_RigRevision = rig.Revision;
             m_GlobalDurationMultiplier = globalDurationMultiplier;

@@ -372,7 +372,7 @@ namespace ThirdPersonSimulation
             SemanticOperation source = m_Operations[edge.Source.Value];
             OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts
                 .Require(source.Code)
-                .RequireOutput(edge.SourcePort);
+                .RequireSelection(edge.SourcePort);
             return ResolveOutputKind(source, sourcePort);
         }
 
@@ -434,7 +434,7 @@ namespace ThirdPersonSimulation
                 if (edge.Kind != ProgramControlFlowKind.Value)
                     continue;
                 SemanticOperation target = m_Operations[edge.Target.Value];
-                OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts.Require(source.Code).RequireOutput(edge.SourcePort);
+                OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts.Require(source.Code).RequireSelection(edge.SourcePort);
                 OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts.Require(target.Code).RequireInput(edge.TargetPort);
                 SemanticValueKind sourceKind = ResolveOutputKind(source, sourcePort);
                 SemanticValueKind targetKind = ResolveInputKind(target, targetPort, sourceKind);

@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonSimulation;
@@ -8,7 +9,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 {
     internal sealed class AnimationBlendStackRuntime : IDisposable
     {
-        readonly AnimationBlendSlotPayload m_Slot;
+        readonly AnimationBlendNodePayload m_Slot;
+        readonly AnimationChannelId m_AnimationChannelId;
+        readonly AnimationSelectionAvailabilityPolicy m_AvailabilityPolicy;
         readonly AnimationBlendCurveCatalogPayload m_CurveCatalog;
         readonly AnimationBlendProfileCatalogPayload m_ProfileCatalog;
         readonly CharacterAnimationRigPayload m_Rig;
@@ -22,7 +25,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         readonly float[] m_EntryBoneWeights;
         readonly float[] m_PlannedEntryMaximumWeights;
         readonly float[] m_StoredBoneOutputWeights;
-        readonly float[] m_InertialBoneOutputWeights;
         readonly float[] m_PendingCaptureBoneOutputWeights;
         readonly float[] m_LastBoneOutputWeights;
         readonly AnimationPoseSourceId[] m_RemovedSourceIds;
@@ -35,7 +37,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         int m_PendingStackReleaseCount;
         int m_StackReleaseHead;
         int m_StackReleaseCount;
-        int m_PendingInertialSourceCaptureIndex = -1;
         ulong m_LastRequestSequence;
         ulong m_LastCompletionIdentity;
         ulong m_LastContributionContinuityIdentity;
@@ -44,35 +45,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         ulong m_SourceFrameCompletionIdentity;
         float m_LastOutputWeight;
         float m_StoredOutputWeight;
-        float m_InertialOutputWeight;
         float m_PendingCaptureOutputWeight;
         float m_PlannedStoredMaximumWeight;
         bool m_HasCompletedFrame;
         bool m_HasStoredPose;
-        bool m_HasInertialBlend;
         bool m_HasPendingStoredCapture;
-        bool m_HasPendingInertialCapture;
+        bool m_SelectionUnavailable;
         bool m_Disposed;
-        PoseSlotFrameAvailability m_LastAvailability;
+        AnimationPoseAvailability m_LastAvailability;
         AnimationPoseNativeInvalidReason m_LastInvalidReason;
         AnimationSlotBlendFramePlanKind m_PendingPlanKind;
-        AnimationBlendEntryState m_PendingInertialEntry;
         ulong m_PendingStoredContributionIdentity;
-        ulong m_PendingInertialContributionIdentity;
 
         internal AnimationBlendStackRuntime(
-            AnimationBlendSlotPayload slot,
+            AnimationBlendNodePayload slot,
+            AnimationChannelId animationChannelId,
+            AnimationSelectionAvailabilityPolicy availabilityPolicy,
             AnimationBlendCurveCatalogPayload curveCatalog,
             AnimationBlendProfileCatalogPayload profileCatalog,
             CharacterAnimationRigPayload rig,
-            in AnimationPoseSlotNativeWriteBinding initialFinalWriteBinding)
+            in AnimationPlayerPoseNativeWriteBinding initialFinalWriteBinding)
         {
             m_Slot = slot ?? throw new ArgumentNullException(nameof(slot));
+            m_AnimationChannelId = animationChannelId;
+            m_AvailabilityPolicy = availabilityPolicy;
             m_CurveCatalog = curveCatalog ?? throw new ArgumentNullException(nameof(curveCatalog));
             m_ProfileCatalog = profileCatalog ?? throw new ArgumentNullException(nameof(profileCatalog));
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
-            if (!slot.PoseSlotId.IsValid || !slot.AnimationChannelId.IsValid ||
-                !Enum.IsDefined(typeof(PoseSlotOutputPolicy), slot.OutputPolicy) ||
+            if (!slot.NodeId.IsValid || !animationChannelId.IsValid ||
+                !Enum.IsDefined(typeof(AnimationSelectionAvailabilityPolicy), availabilityPolicy) ||
                 slot.StackPolicy == null || curveCatalog.Entries.Count == 0 ||
                 profileCatalog.Entries.Count == 0)
             {
@@ -110,7 +111,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_EntryBoneWeights = new float[checked(capacity * boneCount)];
             m_PlannedEntryMaximumWeights = new float[capacity];
             m_StoredBoneOutputWeights = new float[boneCount];
-            m_InertialBoneOutputWeights = new float[boneCount];
             m_PendingCaptureBoneOutputWeights = new float[boneCount];
             m_LastBoneOutputWeights = new float[boneCount];
             m_RemovedSourceIds = new AnimationPoseSourceId[capacity + 1];
@@ -132,15 +132,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             }
         }
 
-        internal PoseSlotId PoseSlotId => m_Slot.PoseSlotId;
-        internal AnimationChannelId AnimationChannelId => m_Slot.AnimationChannelId;
-        internal PoseSlotOutputPolicy OutputPolicy => m_Slot.OutputPolicy;
+        internal PoseNodeId PoseNodeId => m_Slot.NodeId;
+        internal int PlayerIndex => m_SlotWorkspace.PhysicalPlayerIndex;
+        internal AnimationChannelId AnimationChannelId => m_AnimationChannelId;
+        internal AnimationSelectionAvailabilityPolicy OutputPolicy => m_AvailabilityPolicy;
         internal int EntryCount => m_EntryCount;
         internal bool HasStoredPose => m_HasStoredPose || m_HasPendingStoredCapture;
-        internal bool HasInertialBlend => m_HasInertialBlend;
-        internal bool HasPendingInertialCapture => m_HasPendingInertialCapture;
         internal bool HasCompletedFrame => m_HasCompletedFrame;
-        internal PoseSlotFrameAvailability LastAvailability => m_LastAvailability;
+        internal bool HasCurrentSelectionSample => !m_SelectionUnavailable;
+        internal AnimationPoseAvailability LastAvailability => m_LastAvailability;
         internal float LastOutputWeight => m_LastOutputWeight;
         internal AnimationPoseNativeInvalidReason LastInvalidReason => m_LastInvalidReason;
         internal ulong ContinuityIdentity => m_ContinuityIdentity;
@@ -151,15 +151,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             AnimationBlendStackEntrySnapshot[] entryDestination,
             int entryOffset,
             float[] entryBoneWeights,
-            float[] storedBoneWeights,
-            float[] inertialBoneWeights)
+            float[] storedBoneWeights)
         {
             RequireAlive();
             if ((uint)stackIndex >= (uint)stackDestination.Length || entryOffset < 0 ||
                 entryOffset > entryDestination.Length - m_EntryCount ||
                 entryBoneWeights.Length < checked((entryOffset + m_EntryCount) * m_Rig.Bones.Count) ||
-                storedBoneWeights.Length < checked((stackIndex + 1) * m_Rig.Bones.Count) ||
-                inertialBoneWeights.Length < checked((stackIndex + 1) * m_Rig.Bones.Count))
+                storedBoneWeights.Length < checked((stackIndex + 1) * m_Rig.Bones.Count))
             {
                 throw new ArgumentException("Animation Blend Stack diagnostics capacity is invalid.");
             }
@@ -171,11 +169,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 int diagnosticIndex = entryOffset + entryIndex;
                 entryDestination[diagnosticIndex] = new AnimationBlendStackEntrySnapshot(
                     AnimationChannelId,
-                    PoseSlotId,
+                    PoseNodeId,
                     entry.EntryId,
                     entryIndex,
                     entry.ProgramProducerIndex,
-                    entry.Technique,
                     entry.CanonicalCurveIndex,
                     m_CurveCatalog.Entries[entry.CanonicalCurveIndex].CanonicalHash,
                     entry.BlendProfileIndex,
@@ -201,33 +198,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 storedBoneWeights,
                 stackIndex * m_Rig.Bones.Count,
                 m_Rig.Bones.Count);
-            Array.Copy(
-                m_HasPendingInertialCapture ? m_PendingCaptureBoneOutputWeights : m_InertialBoneOutputWeights,
-                0,
-                inertialBoneWeights,
-                stackIndex * m_Rig.Bones.Count,
-                m_Rig.Bones.Count);
             bool hasStored = m_HasStoredPose || m_HasPendingStoredCapture;
-            bool hasInertial = m_HasInertialBlend || m_HasPendingInertialCapture;
             AnimationSlotBlendStoredPoseNativeState storedState = m_HasStoredPose
                 ? RequireStoredState()
-                : default;
-            AnimationSlotBlendInertialNativeState inertialState = m_HasInertialBlend
-                ? RequireInertialState()
                 : default;
             ulong storedIdentity = m_HasStoredPose
                 ? storedState.ContributionContinuityIdentity
                 : m_HasPendingStoredCapture ? m_PendingStoredContributionIdentity : 0;
-            ulong inertialIdentity = m_HasInertialBlend
-                ? inertialState.ContributionContinuityIdentity
-                : m_HasPendingInertialCapture ? m_PendingInertialContributionIdentity : 0;
             stackDestination[stackIndex] = new AnimationBlendStackSnapshot(
                 AnimationChannelId,
-                PoseSlotId,
+                PoseNodeId,
                 OutputPolicy,
                 entryOffset,
                 m_EntryCount,
-                m_HasCompletedFrame ? m_LastAvailability : PoseSlotFrameAvailability.Invalid,
+                m_HasCompletedFrame ? m_LastAvailability : AnimationPoseAvailability.Invalid,
                 m_HasCompletedFrame ? m_LastInvalidReason : AnimationPoseNativeInvalidReason.None,
                 m_HasCompletedFrame ? m_LastOutputWeight : 0f,
                 m_ContinuityIdentity,
@@ -240,16 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 storedState.SourceHistoryCompletionIdentity,
                 storedState.HasFootFeatures == 1,
                 storedState.LeftFootFeatures,
-                storedState.RightFootFeatures,
-                hasInertial,
-                m_HasPendingInertialCapture,
-                m_HasPendingInertialCapture ? m_PendingCaptureOutputWeight : m_InertialOutputWeight,
-                inertialIdentity,
-                inertialState.CapturedAtCompletionIdentity,
-                inertialState.SourceHistoryCompletionIdentity,
-                inertialState.SourceHasFootFeatures == 1,
-                inertialState.LeftFootFeatures,
-                inertialState.RightFootFeatures);
+                storedState.RightFootFeatures);
         }
 
         internal AnimationBlendEntryId GetEntryId(int index)
@@ -258,18 +233,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             if ((uint)index >= (uint)m_EntryCount)
                 throw new ArgumentOutOfRangeException(nameof(index));
             return m_Entries[index].EntryId;
-        }
-
-        internal bool TryGetPendingInertialSourceId(out AnimationPoseSourceId sourceId)
-        {
-            RequireAlive();
-            if (m_HasPendingInertialCapture)
-            {
-                sourceId = m_PendingInertialEntry.SourceId;
-                return true;
-            }
-            sourceId = default;
-            return false;
         }
 
         internal AnimationBlendTransitionIdentity ResolveExpectedTransitionIdentity(
@@ -285,7 +248,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 sourceProducerIndex,
                 sourceEmpty,
                 targetProducerIndex,
-                targetEmpty).GetIdentity(m_Slot.PoseSlotId);
+                targetEmpty).GetIdentity(m_Slot.NodeId);
         }
 
         internal void BeginSourceFrame(ulong completionIdentity)
@@ -299,13 +262,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         }
 
         internal AnimationPoseSourceCaptureBinding PrepareCapture(
-            in ResolvedAnimationPoseRequest request,
+            in AnimationSourcePoseSample sourceSample,
             float presentationDeltaSeconds)
         {
             RequireAlive();
             RequireNoPreparedPlan();
-            if (!request.IsValid || request.AnimationChannelId != m_Slot.AnimationChannelId ||
-                request.PoseSlotId != m_Slot.PoseSlotId ||
+            AnimationSelectionFrame request = sourceSample.Selection;
+            if (!request.IsValid || request.AnimationChannelId != m_AnimationChannelId ||
                 m_SourceFrameCompletionIdentity == 0 ||
                 m_SourceFrameCompletionIdentity != m_Sources.CompletionIdentity)
             {
@@ -321,32 +284,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     throw new InvalidOperationException("Animation source capture producer differs from its Blend entry.");
                 referenced = true;
             }
-            if (m_HasPendingInertialCapture && m_PendingInertialEntry.SourceId.Equals(request.SourceId))
-            {
-                if (m_PendingInertialEntry.ProgramProducerIndex != request.ProgramProducerIndex)
-                    throw new InvalidOperationException("Pending Inertial target producer differs from its source capture.");
-                referenced = true;
-            }
             if (!referenced)
                 throw new InvalidOperationException("Animation source capture is not referenced by this Blend Stack.");
 
-            AnimationPoseSourceCaptureBinding binding = m_Sources.PrepareCapture(in request, presentationDeltaSeconds);
+            AnimationPoseSourceCaptureBinding binding = m_Sources.PrepareCapture(in sourceSample, presentationDeltaSeconds);
             for (int i = 0; i < m_EntryCount; i++)
             {
                 if (!m_Entries[i].IsEmpty && m_Entries[i].SourceId.Equals(request.SourceId))
                     m_EntrySourceCaptureIndices[i] = binding.SourceIndex;
             }
-            if (m_HasPendingInertialCapture && m_PendingInertialEntry.SourceId.Equals(request.SourceId))
-                m_PendingInertialSourceCaptureIndex = binding.SourceIndex;
             return binding;
         }
 
-        internal AnimationBlendPushResult PushPoseRequest(in ResolvedAnimationPoseRequest request)
+        internal AnimationBlendPushResult PushPoseRequest(in AnimationSelectionFrame request)
         {
             RequireAlive();
             RequireNoPreparedPlan();
-            if (!request.IsValid || request.AnimationChannelId != m_Slot.AnimationChannelId ||
-                request.PoseSlotId != m_Slot.PoseSlotId || !request.SourceId.IsValid ||
+            if (!request.IsValid || request.AnimationChannelId != m_AnimationChannelId || !request.SourceId.IsValid ||
                 request.ProgramProducerIndex < 0)
             {
                 throw new ArgumentException("Resolved animation pose request is routed to the wrong Blend Stack.");
@@ -358,16 +312,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 sourceEmpty,
                 request.ProgramProducerIndex,
                 false);
-            if (request.ExactTransitionIdentity != transition.GetIdentity(m_Slot.PoseSlotId))
-                throw new InvalidOperationException("Resolved animation pose request does not carry the exact compiled transition.");
-            return Push(new AnimationBlendPushRequest(
-                m_Slot.AnimationChannelId,
-                m_Slot.PoseSlotId,
+            AnimationBlendPushResult result = Push(new AnimationBlendPushRequest(
+                m_AnimationChannelId,
+                m_Slot.NodeId,
                 request.SourceId,
                 false,
                 request.ProgramProducerIndex,
                 request.PresentationRequestSequence,
-                transition));
+                transition), false);
+            m_SelectionUnavailable = false;
+            return result;
+        }
+
+        internal void PushUnavailable(AnimationPlaybackId playbackId)
+        {
+            RequireAlive();
+            RequireNoPreparedPlan();
+            if (!playbackId.IsValid)
+                throw new ArgumentException("Unavailable Blend Stack playback is invalid.", nameof(playbackId));
+            m_SelectionUnavailable = true;
         }
 
         internal AnimationBlendPushResult PushEmpty(ulong presentationRequestSequence)
@@ -375,20 +338,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             RequireAlive();
             RequireNoPreparedPlan();
             RequireTarget(default, true, -1, presentationRequestSequence);
+            if (IsCurrentTarget(default, true, -1))
+            {
+                ContinueCurrentTarget(presentationRequestSequence);
+                m_SelectionUnavailable = false;
+                return AnimationBlendPushResult.ContinuedSource;
+            }
             GetCurrentEndpoint(out int sourceProducerIndex, out bool sourceEmpty);
             AnimationBlendTransitionPayload transition = m_Slot.RequireTransition(
                 sourceProducerIndex,
                 sourceEmpty,
                 -1,
                 true);
-            return Push(new AnimationBlendPushRequest(
-                m_Slot.AnimationChannelId,
-                m_Slot.PoseSlotId,
+            AnimationBlendPushResult result = Push(new AnimationBlendPushRequest(
+                m_AnimationChannelId,
+                m_Slot.NodeId,
                 default,
                 true,
                 -1,
                 presentationRequestSequence,
-                transition));
+                transition), true);
+            m_SelectionUnavailable = false;
+            return result;
         }
 
         internal void Advance(float deltaSeconds)
@@ -402,18 +373,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_CompactedEntries[i] = m_Entries[i];
                 m_CompactedEntries[i].Advance(deltaSeconds);
             }
-            AnimationBlendEntryState pending = m_PendingInertialEntry;
-            if (m_HasPendingInertialCapture)
-                pending.Advance(deltaSeconds);
             Array.Copy(m_CompactedEntries, 0, m_Entries, 0, m_EntryCount);
             Array.Clear(m_CompactedEntries, 0, m_EntryCount);
-            if (m_HasPendingInertialCapture)
-                m_PendingInertialEntry = pending;
         }
 
         internal AnimationSlotBlendJob PrepareSlotJob(
             ulong completionIdentity,
-            in AnimationPoseSlotNativeWriteBinding finalWriteBinding,
+            in AnimationPlayerPoseNativeWriteBinding finalWriteBinding,
             AnimationPoseSourcePhysicalRegistry physicalSources)
         {
             RequireAlive();
@@ -427,14 +393,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 throw new InvalidOperationException("Animation Blend Stack completion or final Slot layout is not current.");
             }
 
-            AnimationBlendSourcePoseNativeReadBinding sourceBinding =
-                m_Sources.RequireNativeReadBinding(completionIdentity);
-            AnimationSlotBlendFramePlanKind kind = ResolvePlanKind();
-            ClearPlannedWeights();
-            if (IsInertial(kind))
-                PrepareInertialPlan(in finalWriteBinding, physicalSources, kind);
+            AnimationBlendSourcePoseNativeReadBinding sourceBinding = m_Sources.RequireNativeReadBinding(completionIdentity);
+            AnimationSlotBlendFramePlanKind kind;
+            if (m_SelectionUnavailable)
+            {
+                kind = AnimationSlotBlendFramePlanKind.Unavailable;
+                PrepareUnavailablePlan(in finalWriteBinding);
+            }
             else
+            {
+                kind = ResolvePlanKind();
+                ClearPlannedWeights();
                 PrepareCrossFadePlan(in finalWriteBinding, physicalSources, kind);
+            }
 
             AnimationSlotBlendPoseWorkspaceBinding workspaceBinding = m_SlotWorkspace.RequireActiveBinding();
             var job = new AnimationSlotBlendJob(workspaceBinding, sourceBinding);
@@ -449,16 +420,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             if (completionIdentity == 0 || completionIdentity != m_PendingPlanCompletionIdentity)
                 throw new InvalidOperationException("Animation Blend Stack completion does not match its committed frame plan.");
             AnimationSlotBlendPoseWorkspaceBinding binding = m_SlotWorkspace.RequireActiveBinding();
-            AnimationPoseSlotNativeWriteBinding output = binding.FinalWriteBinding;
+            AnimationPlayerPoseNativeWriteBinding output = binding.FinalWriteBinding;
             if (output.CompletedAt[0] != completionIdentity)
                 throw new InvalidOperationException("Animation Blend Stack job has not completed the requested frame.");
 
-            PoseSlotFrameAvailability availability = output.Availability[0];
+            AnimationPoseAvailability availability = output.Availability[0];
             AnimationPoseNativeInvalidReason invalidReason = output.InvalidReason[0];
-            if (availability == PoseSlotFrameAvailability.Invalid || invalidReason != AnimationPoseNativeInvalidReason.None)
+            if (availability == AnimationPoseAvailability.Invalid || invalidReason != AnimationPoseNativeInvalidReason.None)
             {
+                Debug.LogError(BuildInvalidFrameDiagnostic(completionIdentity, invalidReason));
                 m_LastCompletionIdentity = completionIdentity;
-                m_LastAvailability = PoseSlotFrameAvailability.Invalid;
+                m_LastAvailability = AnimationPoseAvailability.Invalid;
                 m_LastInvalidReason = invalidReason == AnimationPoseNativeInvalidReason.None
                     ? AnimationPoseNativeInvalidReason.SlotPoseInvalid
                     : invalidReason;
@@ -467,19 +439,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_SourceFrameCompletionIdentity = 0;
                 return;
             }
-            if (availability != PoseSlotFrameAvailability.Pose && availability != PoseSlotFrameAvailability.NoPose)
+            if (availability != AnimationPoseAvailability.Pose && availability != AnimationPoseAvailability.NoPose)
                 throw new InvalidOperationException("Animation Blend Stack job published an unknown availability.");
 
             CacheCompletedOutput(in output);
-            if (m_HasPendingInertialCapture)
-                CommitPendingInertialCapture();
             if (m_HasPendingStoredCapture)
                 CommitPendingStoredCapture();
-            if (IsInertial(m_PendingPlanKind) && m_EntryCount == 1 &&
-                m_Entries[0].IsComplete(m_Rig.Bones.Count, m_ProfileCatalog.Require(m_Entries[0].BlendProfileIndex)))
-            {
-                m_HasInertialBlend = false;
-            }
 
             RetireCompletedHistory();
             PublishPendingStackReleases(completionIdentity);
@@ -534,16 +499,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_EntryCount = 0;
             ClearPendingCaptures();
             m_HasStoredPose = false;
-            m_HasInertialBlend = false;
+            m_SelectionUnavailable = false;
             m_HasCompletedFrame = false;
             m_LastAvailability = default;
             m_LastInvalidReason = AnimationPoseNativeInvalidReason.None;
             m_LastOutputWeight = 0f;
             m_StoredOutputWeight = 0f;
-            m_InertialOutputWeight = 0f;
             Array.Clear(m_LastBoneOutputWeights, 0, m_LastBoneOutputWeights.Length);
             Array.Clear(m_StoredBoneOutputWeights, 0, m_StoredBoneOutputWeights.Length);
-            Array.Clear(m_InertialBoneOutputWeights, 0, m_InertialBoneOutputWeights.Length);
             m_Sources.ResetContinuity();
             m_SlotWorkspace.Reset();
             m_SourceFrameCompletionIdentity = 0;
@@ -553,10 +516,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             PublishPendingStackReleases(completionIdentity);
         }
 
-        AnimationBlendPushResult Push(AnimationBlendPushRequest request)
+        AnimationBlendPushResult Push(AnimationBlendPushRequest request, bool forceStoredCapture)
         {
             RequireRequest(request);
-            if (m_HasPendingStoredCapture || m_HasPendingInertialCapture)
+            if (forceStoredCapture && !request.TargetEmpty)
+                throw new InvalidOperationException("Forced Stored Pose capture requires an Empty target.");
+            if (m_HasPendingStoredCapture)
             {
                 if (IsCurrentTarget(request.SourceId, request.TargetEmpty, request.ProgramProducerIndex))
                 {
@@ -572,21 +537,59 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             }
             if (request.PresentationRequestSequence <= m_LastRequestSequence)
                 throw new InvalidOperationException("Animation Blend push request order is not strictly increasing.");
-            if (m_Slot.OutputPolicy == PoseSlotOutputPolicy.RequireOutput && request.TargetEmpty)
-                throw new InvalidOperationException($"Required Pose Slot '{m_Slot.PoseSlotId}' cannot target Empty.");
+            if (m_AvailabilityPolicy == AnimationSelectionAvailabilityPolicy.RequireSelection && request.TargetEmpty)
+                throw new InvalidOperationException($"Required Blend Stack '{m_Slot.NodeId}' cannot target Empty.");
 
-            AnimationBlendPushResult result = request.Transition.Technique == AnimationBlendTechnique.Inertial
-                ? PushInertial(request)
-                : PushCrossFade(request);
+            AnimationBlendPushResult result = PushCrossFade(request, forceStoredCapture);
             m_LastRequestSequence = request.PresentationRequestSequence;
+            Debug.Log(
+                $"Animation Blend target changed Channel={m_AnimationChannelId}, Node={m_Slot.NodeId}, " +
+                $"Source={request.SourceId}, Producer={request.ProgramProducerIndex}, Empty={request.TargetEmpty}, " +
+                $"Sequence={request.PresentationRequestSequence}, Duration={request.Transition.DurationSeconds:R}, " +
+                $"Curve={request.Transition.CurveIndex}, Profile={request.Transition.BlendProfileIndex}, " +
+                $"Result={result}, Entries={m_EntryCount}.");
             return result;
         }
 
-        AnimationBlendPushResult PushCrossFade(AnimationBlendPushRequest request)
+        string BuildInvalidFrameDiagnostic(
+            ulong completionIdentity,
+            AnimationPoseNativeInvalidReason invalidReason)
+        {
+            var builder = new StringBuilder(512);
+            builder.Append("Animation Blend Stack invalid")
+                .Append(" Channel=").Append(m_AnimationChannelId)
+                .Append(", Node=").Append(m_Slot.NodeId)
+                .Append(", Completion=").Append(completionIdentity)
+                .Append(", Reason=").Append(invalidReason)
+                .Append(", PlanKind=").Append(m_PendingPlanKind)
+                .Append(", SelectionUnavailable=").Append(m_SelectionUnavailable)
+                .Append(", HasStored=").Append(m_HasStoredPose)
+                .Append(", HasPendingStored=").Append(m_HasPendingStoredCapture)
+                .Append(", StoredWeight=").Append(m_StoredOutputWeight)
+                .Append(", PendingStoredWeight=").Append(m_PendingCaptureOutputWeight)
+                .Append(", Entries=").Append(m_EntryCount);
+            for (int i = 0; i < m_EntryCount; i++)
+            {
+                AnimationBlendEntryState entry = m_Entries[i];
+                builder.Append(" | #").Append(i)
+                    .Append(" Id=").Append(entry.EntryId)
+                    .Append(", Source=").Append(entry.SourceId)
+                    .Append(", Producer=").Append(entry.ProgramProducerIndex)
+                    .Append(", Empty=").Append(entry.IsEmpty)
+                    .Append(", Elapsed=").Append(entry.ElapsedSeconds)
+                    .Append(", RawAlpha=").Append(m_EntryRawAlphas[i])
+                    .Append(", EasedAlpha=").Append(m_EntryEasedAlphas[i])
+                    .Append(", Weight=").Append(m_EntryScalarWeights[i])
+                    .Append(", Capture=").Append(m_EntrySourceCaptureIndices[i]);
+            }
+            return builder.Append('.').ToString();
+        }
+
+        AnimationBlendPushResult PushCrossFade(AnimationBlendPushRequest request, bool forceStoredCapture)
         {
             bool startsNewContinuity = !request.TargetEmpty &&
-                                       (!m_HasCompletedFrame || m_LastAvailability != PoseSlotFrameAvailability.Pose);
-            bool replaceHistory = m_HasInertialBlend || m_EntryCount == m_Entries.Length ||
+                                       (!m_HasCompletedFrame || m_LastAvailability != AnimationPoseAvailability.Pose);
+            bool replaceHistory = forceStoredCapture || m_EntryCount == m_Entries.Length ||
                                   m_EntryCount > 0 && m_Entries[m_EntryCount - 1].ElapsedSeconds <=
                                   m_Slot.StackPolicy.MaxBlendInTimeToReplaceNewest;
             int identityCount = replaceHistory ? 2 : 1;
@@ -634,38 +637,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 : AnimationBlendPushResult.Pushed;
         }
 
-        AnimationBlendPushResult PushInertial(AnimationBlendPushRequest request)
-        {
-            if (request.TargetEmpty || request.Transition.SourceEmpty)
-                throw new InvalidOperationException("Inertial Blend requires live source and target endpoints.");
-            RequireCapturableFrame();
-            RequireContributionIdentityCapacity(2);
-            int removedCount = CopyEntrySourceIds(m_RemovedSourceIds);
-            RequireReleaseCapacity(m_RemovedSourceIds, removedCount, request.SourceId);
-
-            int captureIndex = FindSourceCaptureIndex(request.SourceId);
-            AnimationBlendEntryState pendingEntry = CreateEntry(
-                request,
-                AllocateContributionContinuityIdentity());
-            ulong inertialIdentity = AllocateContributionContinuityIdentity();
-
-            CancelStackRelease(request.SourceId);
-            for (int i = 0; i < removedCount; i++)
-            {
-                if (!m_RemovedSourceIds[i].Equals(request.SourceId))
-                    StageStackRelease(m_RemovedSourceIds[i]);
-            }
-            m_PendingInertialEntry = pendingEntry;
-            m_PendingInertialSourceCaptureIndex = captureIndex;
-            m_PendingInertialContributionIdentity = inertialIdentity;
-            m_HasPendingInertialCapture = true;
-            m_PendingCaptureOutputWeight = m_LastOutputWeight;
-            Array.Copy(m_LastBoneOutputWeights, m_PendingCaptureBoneOutputWeights, m_LastBoneOutputWeights.Length);
-            return AnimationBlendPushResult.RebasedInertial;
-        }
-
         void PrepareCrossFadePlan(
-            in AnimationPoseSlotNativeWriteBinding finalWriteBinding,
+            in AnimationPlayerPoseNativeWriteBinding finalWriteBinding,
             AnimationPoseSourcePhysicalRegistry physicalSources,
             AnimationSlotBlendFramePlanKind kind)
         {
@@ -728,16 +701,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 m_PlannedStoredMaximumWeight = Mathf.Max(m_PlannedStoredMaximumWeight, storedWeight);
             }
 
-            PoseSlotFrameAvailability availability = outputWeight > 0f || hasDenseOutput
-                ? PoseSlotFrameAvailability.Pose
-                : PoseSlotFrameAvailability.NoPose;
-            if (availability == PoseSlotFrameAvailability.NoPose && m_Slot.OutputPolicy == PoseSlotOutputPolicy.RequireOutput)
-                throw new InvalidOperationException("Required Pose Slot has no CrossFade output.");
+            AnimationPoseAvailability availability = outputWeight > 0f || hasDenseOutput
+                ? AnimationPoseAvailability.Pose
+                : AnimationPoseAvailability.NoPose;
+            if (availability == AnimationPoseAvailability.NoPose && m_AvailabilityPolicy == AnimationSelectionAvailabilityPolicy.RequireSelection)
+                throw new InvalidOperationException("Required Blend Stack has no CrossFade output.");
 
-            int contributionCount = availability == PoseSlotFrameAvailability.Pose
+            int contributionCount = availability == AnimationPoseAvailability.Pose
                 ? CountCrossFadeContributions(usesStored)
                 : 0;
-            ulong historyCompletion = m_HasCompletedFrame && m_LastAvailability == PoseSlotFrameAvailability.Pose
+            ulong historyCompletion = m_HasCompletedFrame && m_LastAvailability == AnimationPoseAvailability.Pose
                 ? m_LastCompletionIdentity
                 : 0;
             if (capturesStored && historyCompletion == 0)
@@ -745,20 +718,46 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
             AnimationSlotBlendFramePlanPreparation preparation = m_SlotWorkspace.PrepareInactivePage(
                 in finalWriteBinding,
-                availability == PoseSlotFrameAvailability.NoPose
+                availability == AnimationPoseAvailability.NoPose
                     ? AnimationSlotBlendFramePlanKind.CrossFade
                     : kind,
-                m_Slot.OutputPolicy,
+                m_AvailabilityPolicy,
                 m_Rig.ScalePolicy,
                 availability,
+                AnimationPoseNativeInvalidReason.None,
                 outputWeight,
                 contributionCount,
                 m_ContinuityIdentity,
                 historyCompletion);
             try
             {
-                if (availability == PoseSlotFrameAvailability.Pose)
+                if (availability == AnimationPoseAvailability.Pose)
                     WriteCrossFadePlan(preparation, physicalSources, usesStored, capturesStored, storedScalarWeight, storedBoneWeights);
+                m_SlotWorkspace.ValidateInactivePage(preparation);
+                m_SlotWorkspace.CommitInactivePage(preparation);
+            }
+            catch
+            {
+                m_SlotWorkspace.AbortInactivePage(preparation);
+                throw;
+            }
+        }
+
+        void PrepareUnavailablePlan(in AnimationPlayerPoseNativeWriteBinding finalWriteBinding)
+        {
+            AnimationSlotBlendFramePlanPreparation preparation = m_SlotWorkspace.PrepareInactivePage(
+                in finalWriteBinding,
+                AnimationSlotBlendFramePlanKind.Unavailable,
+                m_AvailabilityPolicy,
+                m_Rig.ScalePolicy,
+                AnimationPoseAvailability.Invalid,
+                AnimationPoseNativeInvalidReason.RequiredPoseMissing,
+                0f,
+                0,
+                m_ContinuityIdentity,
+                0);
+            try
+            {
                 m_SlotWorkspace.ValidateInactivePage(preparation);
                 m_SlotWorkspace.CommitInactivePage(preparation);
             }
@@ -840,152 +839,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             }
         }
 
-        void PrepareInertialPlan(
-            in AnimationPoseSlotNativeWriteBinding finalWriteBinding,
-            AnimationPoseSourcePhysicalRegistry physicalSources,
-            AnimationSlotBlendFramePlanKind kind)
-        {
-            AnimationBlendEntryState entry = m_HasPendingInertialCapture
-                ? m_PendingInertialEntry
-                : RequireSingleInertialEntry();
-            int captureIndex = m_HasPendingInertialCapture
-                ? m_PendingInertialSourceCaptureIndex
-                : RequireSourceCaptureIndex(0);
-            if (captureIndex < 0)
-                throw new InvalidOperationException("Inertial target source has not been prepared in the source workspace.");
-            AnimationPhysicalSourceIdentity physical = RequirePhysicalSource(physicalSources, entry);
-            AnimationBlendCurvePayload curve = m_CurveCatalog.Require(entry.CanonicalCurveIndex);
-            AnimationBlendProfilePayload profile = m_ProfileCatalog.Require(entry.BlendProfileIndex);
-            float baseOutputWeight = m_HasPendingInertialCapture
-                ? m_PendingCaptureOutputWeight
-                : m_InertialOutputWeight;
-            float[] baseBoneWeights = m_HasPendingInertialCapture
-                ? m_PendingCaptureBoneOutputWeights
-                : m_InertialBoneOutputWeights;
-
-            float rawOutputAlpha = entry.GetOutputNormalizedTime(profile);
-            EvaluateInertialEnvelope(rawOutputAlpha, entry.GetOutputDuration(profile), curve,
-                out float outputEnvelope, out float outputResidualWeight, out _);
-            float diagnosticEnvelope = Mathf.Clamp01(outputEnvelope);
-            float inertialScalarWeight = (1f - diagnosticEnvelope) * baseOutputWeight;
-            float liveScalarWeight = diagnosticEnvelope;
-            float outputWeight = inertialScalarWeight + liveScalarWeight;
-            RequireNormalized(outputWeight);
-            m_PlannedEntryMaximumWeights[0] = liveScalarWeight;
-            m_EntryRawAlphas[0] = rawOutputAlpha;
-            m_EntryEasedAlphas[0] = diagnosticEnvelope;
-            m_EntryScalarWeights[0] = liveScalarWeight;
-            m_PlannedStoredMaximumWeight = 0f;
-
-            ulong historyCompletion = kind == AnimationSlotBlendFramePlanKind.InertialContinue
-                ? 0
-                : m_LastCompletionIdentity;
-            if (kind != AnimationSlotBlendFramePlanKind.InertialContinue &&
-                (!m_HasCompletedFrame || m_LastAvailability != PoseSlotFrameAvailability.Pose || historyCompletion == 0))
-            {
-                throw new InvalidOperationException("Inertial capture requires a completed Pose history frame.");
-            }
-
-            AnimationSlotBlendFramePlanPreparation preparation = m_SlotWorkspace.PrepareInactivePage(
-                in finalWriteBinding,
-                kind,
-                m_Slot.OutputPolicy,
-                m_Rig.ScalePolicy,
-                PoseSlotFrameAvailability.Pose,
-                outputWeight,
-                2,
-                m_ContinuityIdentity,
-                historyCompletion);
-            try
-            {
-                float leftEnvelope = WriteInertialBonePlans(preparation, entry, curve, profile, baseBoneWeights);
-                float rightEnvelope = GetDiagnosticInertialEnvelope(entry, curve, profile, m_Rig.RightFootBoneIndex);
-                float inertialLeftWeight = (1f - leftEnvelope) * baseBoneWeights[m_Rig.LeftFootBoneIndex];
-                float liveLeftWeight = leftEnvelope;
-                float inertialRightWeight = (1f - rightEnvelope) * baseBoneWeights[m_Rig.RightFootBoneIndex];
-                float liveRightWeight = rightEnvelope;
-
-                m_SlotWorkspace.SetPreparedEntry(
-                    preparation,
-                    0,
-                    new AnimationSlotBlendFramePlanEntry(
-                        -1,
-                        -1,
-                        0,
-                        AnimationPoseContributionKind.Inertial,
-                        -1,
-                        m_HasPendingInertialCapture
-                            ? m_PendingInertialContributionIdentity
-                            : RequireInertialContributionIdentity(),
-                        inertialScalarWeight,
-                        inertialLeftWeight,
-                        inertialRightWeight));
-                m_SlotWorkspace.SetPreparedEntry(
-                    preparation,
-                    1,
-                    new AnimationSlotBlendFramePlanEntry(
-                        captureIndex,
-                        physical.Index.Value,
-                        physical.Generation,
-                        AnimationPoseContributionKind.Live,
-                        entry.ProgramProducerIndex,
-                        entry.ContributionContinuityIdentity,
-                        liveScalarWeight,
-                        liveLeftWeight,
-                        liveRightWeight));
-                for (int boneIndex = 0; boneIndex < m_Rig.Bones.Count; boneIndex++)
-                {
-                    float envelope = GetDiagnosticInertialEnvelope(entry, curve, profile, boneIndex);
-                    m_SlotWorkspace.SetPreparedDenseBoneWeight(
-                        preparation,
-                        0,
-                        boneIndex,
-                        (1f - envelope) * baseBoneWeights[boneIndex]);
-                    m_SlotWorkspace.SetPreparedDenseBoneWeight(preparation, 1, boneIndex, envelope);
-                    m_EntryBoneWeights[boneIndex] = envelope;
-                    m_PlannedEntryMaximumWeights[0] = Mathf.Max(m_PlannedEntryMaximumWeights[0], envelope);
-                }
-                for (int parameterIndex = 0; parameterIndex < m_SlotWorkspace.ParameterCount; parameterIndex++)
-                    m_SlotWorkspace.SetPreparedInertialParameterResidualWeight(preparation, parameterIndex, outputResidualWeight);
-                m_SlotWorkspace.ValidateInactivePage(preparation);
-                m_SlotWorkspace.CommitInactivePage(preparation);
-            }
-            catch
-            {
-                m_SlotWorkspace.AbortInactivePage(preparation);
-                throw;
-            }
-        }
-
-        float WriteInertialBonePlans(
-            AnimationSlotBlendFramePlanPreparation preparation,
-            AnimationBlendEntryState entry,
-            AnimationBlendCurvePayload curve,
-            AnimationBlendProfilePayload profile,
-            float[] baseBoneWeights)
-        {
-            float leftEnvelope = 0f;
-            for (int boneIndex = 0; boneIndex < m_Rig.Bones.Count; boneIndex++)
-            {
-                float duration = entry.GetBoneDuration(boneIndex, profile);
-                EvaluateInertialEnvelope(entry.GetBoneNormalizedTime(boneIndex, profile), duration, curve,
-                    out float envelope, out float residualWeight, out float residualDerivative);
-                float residualTime = duration <= 0f
-                    ? 0f
-                    : entry.GetBoneNormalizedTime(boneIndex, profile) * duration;
-                m_SlotWorkspace.SetPreparedInertialBone(
-                    preparation,
-                    boneIndex,
-                    new AnimationSlotBlendInertialBonePlan(residualWeight, residualTime, residualDerivative));
-                if (boneIndex == m_Rig.LeftFootBoneIndex)
-                    leftEnvelope = Mathf.Clamp01(envelope);
-                if (!float.IsFinite(baseBoneWeights[boneIndex]) || baseBoneWeights[boneIndex] < 0f || baseBoneWeights[boneIndex] > 1f)
-                    throw new InvalidOperationException("Inertial captured Bone output weight is invalid.");
-            }
-            return leftEnvelope;
-        }
-
-        void CacheCompletedOutput(in AnimationPoseSlotNativeWriteBinding output)
+        void CacheCompletedOutput(in AnimationPlayerPoseNativeWriteBinding output)
         {
             float outputWeight = output.OutputWeight[0];
             if (!float.IsFinite(outputWeight) || outputWeight < 0f || outputWeight > 1f)
@@ -1011,38 +865,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_StoredOutputWeight = m_PendingCaptureOutputWeight;
             Array.Copy(m_PendingCaptureBoneOutputWeights, m_StoredBoneOutputWeights, m_StoredBoneOutputWeights.Length);
             m_HasStoredPose = m_PlannedStoredMaximumWeight > 0f;
-            m_HasInertialBlend = false;
             m_HasPendingStoredCapture = false;
             m_PendingStoredContributionIdentity = 0;
             ClearPendingCaptureOutput();
         }
 
-        void CommitPendingInertialCapture()
-        {
-            if (m_PendingPlanKind != AnimationSlotBlendFramePlanKind.InertialCapture &&
-                m_PendingPlanKind != AnimationSlotBlendFramePlanKind.InertialRebase)
-            {
-                throw new InvalidOperationException("Inertial capture completed with the wrong frame plan kind.");
-            }
-            AnimationBlendEntryState entry = m_PendingInertialEntry;
-            int captureIndex = m_PendingInertialSourceCaptureIndex;
-            m_InertialOutputWeight = m_PendingCaptureOutputWeight;
-            Array.Copy(m_PendingCaptureBoneOutputWeights, m_InertialBoneOutputWeights, m_InertialBoneOutputWeights.Length);
-            ClearEntries();
-            AddEntry(entry, captureIndex);
-            m_HasInertialBlend = true;
-            m_HasStoredPose = false;
-            m_HasPendingInertialCapture = false;
-            m_PendingInertialEntry = default;
-            m_PendingInertialSourceCaptureIndex = -1;
-            m_PendingInertialContributionIdentity = 0;
-            ClearPendingCaptureOutput();
-        }
-
         void RetireCompletedHistory()
         {
-            if (IsInertial(m_PendingPlanKind))
-                return;
             if (m_HasStoredPose && m_PlannedStoredMaximumWeight <= 0f)
                 m_HasStoredPose = false;
             if (m_EntryCount <= 1)
@@ -1084,12 +913,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             return new AnimationBlendEntryState(
                 new AnimationBlendEntryId(
-                    m_Slot.PoseSlotId,
+                    m_Slot.NodeId,
                     request.SourceId,
                     request.TargetEmpty,
                     request.PresentationRequestSequence),
                 request.ProgramProducerIndex,
-                request.Transition.Technique,
                 request.Transition.DurationSeconds,
                 request.Transition.CurveIndex,
                 request.Transition.BlendProfileIndex,
@@ -1107,8 +935,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         void RequireRequest(AnimationBlendPushRequest request)
         {
-            if (request.AnimationChannelId != m_Slot.AnimationChannelId || request.PoseSlotId != m_Slot.PoseSlotId)
-                throw new InvalidOperationException("Animation Blend push was routed to the wrong slot.");
+            if (request.AnimationChannelId != m_AnimationChannelId || request.PoseNodeId != m_Slot.NodeId)
+                throw new InvalidOperationException("Animation Blend push was routed to the wrong node.");
             RequireTarget(request.SourceId, request.TargetEmpty, request.ProgramProducerIndex, request.PresentationRequestSequence);
             GetCurrentEndpoint(out int sourceProducerIndex, out bool sourceEmpty);
             AnimationBlendTransitionPayload exact = m_Slot.RequireTransition(
@@ -1117,7 +945,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 request.ProgramProducerIndex,
                 request.TargetEmpty);
             if (!ReferenceEquals(exact, request.Transition) ||
-                exact.GetIdentity(m_Slot.PoseSlotId) != request.Transition.GetIdentity(m_Slot.PoseSlotId))
+                exact.GetIdentity(m_Slot.NodeId) != request.Transition.GetIdentity(m_Slot.NodeId))
             {
                 throw new InvalidOperationException("Animation Blend push did not use the compiled exact transition.");
             }
@@ -1141,12 +969,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             bool targetEmpty,
             int programProducerIndex)
         {
-            if (m_HasPendingInertialCapture)
-            {
-                return m_PendingInertialEntry.IsEmpty == targetEmpty &&
-                       m_PendingInertialEntry.ProgramProducerIndex == programProducerIndex &&
-                       (targetEmpty || m_PendingInertialEntry.SourceId.Equals(sourceId));
-            }
             if (m_EntryCount == 0)
                 return targetEmpty;
             AnimationBlendEntryState current = m_Entries[m_EntryCount - 1];
@@ -1157,12 +979,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         void GetCurrentEndpoint(out int producerIndex, out bool empty)
         {
-            if (m_HasPendingInertialCapture)
-            {
-                producerIndex = m_PendingInertialEntry.ProgramProducerIndex;
-                empty = false;
-                return;
-            }
             if (m_EntryCount == 0)
             {
                 producerIndex = -1;
@@ -1174,18 +990,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             empty = current.IsEmpty;
         }
 
-        AnimationSlotBlendFramePlanKind ResolvePlanKind()
-        {
-            if (m_HasPendingInertialCapture)
-                return m_HasInertialBlend
-                    ? AnimationSlotBlendFramePlanKind.InertialRebase
-                    : AnimationSlotBlendFramePlanKind.InertialCapture;
-            if (m_HasPendingStoredCapture)
-                return AnimationSlotBlendFramePlanKind.StoredCapture;
-            return m_HasInertialBlend
-                ? AnimationSlotBlendFramePlanKind.InertialContinue
+        AnimationSlotBlendFramePlanKind ResolvePlanKind() =>
+            m_HasPendingStoredCapture
+                ? AnimationSlotBlendFramePlanKind.StoredCapture
                 : AnimationSlotBlendFramePlanKind.CrossFade;
-        }
 
         void CapturePendingOutput(ulong storedContributionIdentity)
         {
@@ -1197,7 +1005,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         void RequireCapturableFrame()
         {
-            if (!m_HasCompletedFrame || m_LastAvailability != PoseSlotFrameAvailability.Pose ||
+            if (!m_HasCompletedFrame || m_LastAvailability != AnimationPoseAvailability.Pose ||
                 m_LastCompletionIdentity == 0)
             {
                 throw new InvalidOperationException("Animation Blend Stack has no completed Pose frame to capture.");
@@ -1208,20 +1016,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             AnimationPoseSourcePhysicalRegistry physicalSources,
             AnimationBlendEntryState entry)
         {
-            AnimationPhysicalSourceIdentity identity = physicalSources.RequireIdentity(entry.SourceId);
-            if (physicalSources.RequirePoseSlotId(identity) != m_Slot.PoseSlotId ||
+            AnimationPhysicalSourceIdentity identity = physicalSources.RequireIdentity(entry.SourceId, m_Slot.NodeId);
+            if (physicalSources.RequirePoseNodeId(identity) != m_Slot.NodeId ||
                 physicalSources.RequireProgramProducerIndex(identity) != entry.ProgramProducerIndex)
             {
                 throw new InvalidOperationException("Animation physical source is routed to the wrong Blend Stack entry.");
             }
             return identity;
-        }
-
-        AnimationBlendEntryState RequireSingleInertialEntry()
-        {
-            if (!m_HasInertialBlend || m_EntryCount != 1 || m_Entries[0].IsEmpty)
-                throw new InvalidOperationException("Animation Blend Stack Inertial state has no single live target.");
-            return m_Entries[0];
         }
 
         int RequireSourceCaptureIndex(int entryIndex)
@@ -1241,8 +1042,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 if (!m_Entries[i].IsEmpty && m_Entries[i].SourceId.Equals(sourceId))
                     return m_EntrySourceCaptureIndices[i];
             }
-            if (m_HasPendingInertialCapture && m_PendingInertialEntry.SourceId.Equals(sourceId))
-                return m_PendingInertialSourceCaptureIndex;
             return -1;
         }
 
@@ -1268,67 +1067,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return residual;
         }
 
-        float GetDiagnosticInertialEnvelope(
-            AnimationBlendEntryState entry,
-            AnimationBlendCurvePayload curve,
-            AnimationBlendProfilePayload profile,
-            int boneIndex)
-        {
-            EvaluateInertialEnvelope(
-                entry.GetBoneNormalizedTime(boneIndex, profile),
-                entry.GetBoneDuration(boneIndex, profile),
-                curve,
-                out float envelope,
-                out _,
-                out _);
-            return Mathf.Clamp01(envelope);
-        }
-
-        static void EvaluateInertialEnvelope(
-            float normalizedTime,
-            float durationSeconds,
-            AnimationBlendCurvePayload curve,
-            out float envelope,
-            out float residualWeight,
-            out float residualDerivativePerSecond)
-        {
-            float s = Mathf.Clamp01(normalizedTime);
-            if (durationSeconds <= 0f)
-            {
-                envelope = 1f;
-                residualWeight = 0f;
-                residualDerivativePerSecond = 0f;
-                return;
-            }
-            float c = AnimationBlendCurveEvaluator.Evaluate(curve, s);
-            float derivative = AnimationBlendCurveEvaluator.EvaluateDerivative(curve, s);
-            float c0 = AnimationBlendCurveEvaluator.EvaluateDerivative(curve, 0f);
-            float c1 = AnimationBlendCurveEvaluator.EvaluateDerivative(curve, 1f);
-            float s2 = s * s;
-            float s3 = s2 * s;
-            float h10 = s3 - 2f * s2 + s;
-            float h11 = s3 - s2;
-            float h10Derivative = 3f * s2 - 4f * s + 1f;
-            float h11Derivative = 3f * s2 - 2f * s;
-            envelope = c - c0 * h10 - c1 * h11;
-            float envelopeDerivative = derivative - c0 * h10Derivative - c1 * h11Derivative;
-            residualWeight = 1f - envelope;
-            residualDerivativePerSecond = -envelopeDerivative / durationSeconds;
-            if (!float.IsFinite(envelope) || !float.IsFinite(residualWeight) ||
-                !float.IsFinite(residualDerivativePerSecond))
-            {
-                throw new InvalidOperationException("Animation Inertial envelope is non-finite.");
-            }
-        }
-
         ulong RequireStoredContributionIdentity()
         {
             return RequireStoredState().ContributionContinuityIdentity;
-        }
-
-        ulong RequireInertialContributionIdentity()
-        {
-            return RequireInertialState().ContributionContinuityIdentity;
         }
 
         AnimationSlotBlendStoredPoseNativeState RequireStoredState()
@@ -1337,15 +1078,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             AnimationSlotBlendStoredPoseNativeState state = binding.StoredPose.State[0];
             if (state.Active != 1 || state.ContributionContinuityIdentity == 0)
                 throw new InvalidOperationException("Animation Stored Pose Native state is unavailable.");
-            return state;
-        }
-
-        AnimationSlotBlendInertialNativeState RequireInertialState()
-        {
-            AnimationSlotBlendPoseWorkspaceBinding binding = m_SlotWorkspace.RequireActiveBinding();
-            AnimationSlotBlendInertialNativeState state = binding.Inertial.State[0];
-            if (state.Active != 1 || state.ContributionContinuityIdentity == 0)
-                throw new InvalidOperationException("Animation Inertial Native state is unavailable.");
             return state;
         }
 
@@ -1360,13 +1092,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return count;
         }
 
-        int CopyReferencedSourceIds(AnimationPoseSourceId[] destination)
-        {
-            int count = CopyEntrySourceIds(destination);
-            if (m_HasPendingInertialCapture)
-                count = AppendUniqueSourceId(destination, count, m_PendingInertialEntry.SourceId);
-            return count;
-        }
+        int CopyReferencedSourceIds(AnimationPoseSourceId[] destination) =>
+            CopyEntrySourceIds(destination);
 
         static int AppendUniqueSourceId(
             AnimationPoseSourceId[] destination,
@@ -1393,7 +1120,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 if (!m_Entries[i].IsEmpty && m_Entries[i].SourceId.Equals(sourceId))
                     return true;
             }
-            return m_HasPendingInertialCapture && m_PendingInertialEntry.SourceId.Equals(sourceId);
+            return false;
         }
 
         void StageStackRelease(AnimationPoseSourceId sourceId)
@@ -1418,7 +1145,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     throw new InvalidOperationException("Animation Blend source retirement queue was not drained.");
                 int tail = (m_StackReleaseHead + m_StackReleaseCount) % m_StackReleases.Length;
                 m_StackReleases[tail] = new AnimationBlendStackRelease(
-                    m_Slot.PoseSlotId,
+                    m_Slot.NodeId,
                     sourceId,
                     completionIdentity);
                 m_StackReleaseCount++;
@@ -1529,11 +1256,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         void ClearPendingCaptures()
         {
             m_HasPendingStoredCapture = false;
-            m_HasPendingInertialCapture = false;
-            m_PendingInertialEntry = default;
-            m_PendingInertialSourceCaptureIndex = -1;
             m_PendingStoredContributionIdentity = 0;
-            m_PendingInertialContributionIdentity = 0;
             ClearPendingCaptureOutput();
         }
 
@@ -1557,7 +1280,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             if (m_PendingPlanCompletionIdentity != 0)
                 throw new InvalidOperationException("Animation Blend Stack frame plan must complete before state changes.");
-            if (m_HasCompletedFrame && m_LastAvailability == PoseSlotFrameAvailability.Invalid)
+            if (m_HasCompletedFrame && m_LastAvailability == AnimationPoseAvailability.Invalid &&
+                m_LastInvalidReason != AnimationPoseNativeInvalidReason.RequiredPoseMissing &&
+                m_LastInvalidReason != AnimationPoseNativeInvalidReason.SourceIncomplete)
                 throw new InvalidOperationException("Animation Blend Stack is Invalid and must be reset.");
         }
 
@@ -1592,11 +1317,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 throw new InvalidOperationException("Animation contribution continuity identity overflowed.");
             return ++m_LastContributionContinuityIdentity;
         }
-
-        static bool IsInertial(AnimationSlotBlendFramePlanKind kind) =>
-            kind == AnimationSlotBlendFramePlanKind.InertialContinue ||
-            kind == AnimationSlotBlendFramePlanKind.InertialCapture ||
-            kind == AnimationSlotBlendFramePlanKind.InertialRebase;
 
         static void RequireNormalized(float value)
         {

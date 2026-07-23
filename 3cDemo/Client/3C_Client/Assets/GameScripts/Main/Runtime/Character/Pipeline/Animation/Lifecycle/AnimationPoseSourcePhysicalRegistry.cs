@@ -53,7 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     internal sealed class AnimationPoseSourcePhysicalRegistry : IDisposable
     {
         AnimationPoseSourceId[] m_SourceIds;
-        PoseSlotId[] m_PoseSlotIds;
+        PoseNodeId[] m_PoseNodeIds;
         int[] m_ProgramProducerIndices;
         ulong[] m_Generations;
         int m_Count;
@@ -65,7 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (capacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(capacity));
             m_SourceIds = new AnimationPoseSourceId[capacity];
-            m_PoseSlotIds = new PoseSlotId[capacity];
+            m_PoseNodeIds = new PoseNodeId[capacity];
             m_ProgramProducerIndices = new int[capacity];
             m_Generations = new ulong[capacity];
             for (int i = 0; i < m_ProgramProducerIndices.Length; i++)
@@ -92,16 +92,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         internal AnimationPhysicalSourceIdentity Register(
             AnimationPoseSourceId sourceId,
-            PoseSlotId poseSlotId,
+            PoseNodeId poseNodeId,
             int programProducerIndex)
         {
             RequireAlive();
-            if (!sourceId.IsValid || !poseSlotId.IsValid || programProducerIndex < 0)
+            if (!sourceId.IsValid || !poseNodeId.IsValid || programProducerIndex < 0)
                 throw new ArgumentException("Animation physical source identity is invalid.");
-            if (TryFind(sourceId, out int existing))
+            if (TryFind(sourceId, poseNodeId, out int existing))
             {
-                if (!m_PoseSlotIds[existing].Equals(poseSlotId) ||
-                    m_ProgramProducerIndices[existing] != programProducerIndex)
+                if (m_ProgramProducerIndices[existing] != programProducerIndex)
                 {
                     throw new InvalidOperationException(
                         $"Animation pose source '{sourceId}' is already registered with different physical metadata.");
@@ -112,20 +111,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             int index = FindFreeIndex();
             ulong generation = AllocateGeneration();
             m_SourceIds[index] = sourceId;
-            m_PoseSlotIds[index] = poseSlotId;
+            m_PoseNodeIds[index] = poseNodeId;
             m_ProgramProducerIndices[index] = programProducerIndex;
             m_Generations[index] = generation;
             m_Count++;
             return new AnimationPhysicalSourceIdentity(new AnimationPhysicalSourceIndex(index), generation);
         }
 
-        internal AnimationPhysicalSourceIdentity RequireIdentity(AnimationPoseSourceId sourceId)
+        internal AnimationPhysicalSourceIdentity RequireIdentity(AnimationPoseSourceId sourceId, PoseNodeId nodeId)
         {
             RequireAlive();
-            if (!sourceId.IsValid)
-                throw new ArgumentException("Animation pose source identity is invalid.", nameof(sourceId));
-            if (!TryFind(sourceId, out int index))
-                throw new InvalidOperationException($"Animation pose source '{sourceId}' has no physical identity.");
+            if (!sourceId.IsValid || !nodeId.IsValid)
+                throw new ArgumentException("Animation pose source identity is invalid.");
+            if (!TryFind(sourceId, nodeId, out int index))
+                throw new InvalidOperationException($"Animation pose source '{sourceId}' has no physical identity for Player '{nodeId}'.");
             return CreateIdentity(index);
         }
 
@@ -135,10 +134,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return m_SourceIds[value];
         }
 
-        internal PoseSlotId RequirePoseSlotId(AnimationPhysicalSourceIdentity identity)
+        internal PoseNodeId RequirePoseNodeId(AnimationPhysicalSourceIdentity identity)
         {
             int value = RequireOccupied(identity);
-            return m_PoseSlotIds[value];
+            return m_PoseNodeIds[value];
         }
 
         internal int RequireProgramProducerIndex(AnimationPhysicalSourceIdentity identity)
@@ -166,7 +165,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             RequireAlive();
             Array.Clear(m_SourceIds, 0, m_SourceIds.Length);
-            Array.Clear(m_PoseSlotIds, 0, m_PoseSlotIds.Length);
+            Array.Clear(m_PoseNodeIds, 0, m_PoseNodeIds.Length);
             Array.Clear(m_Generations, 0, m_Generations.Length);
             for (int i = 0; i < m_ProgramProducerIndices.Length; i++)
                 m_ProgramProducerIndices[i] = -1;
@@ -188,7 +187,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (!identity.IsValid || identity.Index.Value < 0 || identity.Index.Value >= m_SourceIds.Length)
                 throw new ArgumentOutOfRangeException(nameof(identity));
             int index = identity.Index.Value;
-            if (!m_SourceIds[index].IsValid || !m_PoseSlotIds[index].IsValid ||
+            if (!m_SourceIds[index].IsValid || !m_PoseNodeIds[index].IsValid ||
                 m_ProgramProducerIndices[index] < 0 || m_Generations[index] == 0)
             {
                 throw new InvalidOperationException(
@@ -202,11 +201,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return index;
         }
 
-        bool TryFind(AnimationPoseSourceId sourceId, out int index)
+        bool TryFind(AnimationPoseSourceId sourceId, PoseNodeId nodeId, out int index)
         {
             for (int i = 0; i < m_SourceIds.Length; i++)
             {
-                if (!m_SourceIds[i].Equals(sourceId))
+                if (!m_SourceIds[i].Equals(sourceId) || !m_PoseNodeIds[i].Equals(nodeId))
                     continue;
                 index = i;
                 return true;
@@ -236,7 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         void Clear(int index)
         {
             m_SourceIds[index] = default;
-            m_PoseSlotIds[index] = default;
+            m_PoseNodeIds[index] = default;
             m_ProgramProducerIndices[index] = -1;
             m_Generations[index] = 0;
         }
@@ -253,7 +252,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 return;
             Reset();
             m_SourceIds = null;
-            m_PoseSlotIds = null;
+            m_PoseNodeIds = null;
             m_ProgramProducerIndices = null;
             m_Generations = null;
             m_Disposed = true;

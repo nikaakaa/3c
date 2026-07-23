@@ -1,57 +1,57 @@
 # character-animation-layer-runtime Specification
 
 ## Purpose
-定义角色动画通道到最终Pose的正式运行时：逻辑侧为每个AnimationChannelId提交唯一selection，Timeline在表现帧生成匹配generation的ResolvedAnimationPoseRequest，AnimationPlaybackLifecycle管理Selected/Retained producer寿命，每PoseSlot Blend Stack负责transition，Pose Graph负责跨slot空间组合与最终Animator输出。
+定义角色动画通道到最终Pose的正式运行时：逻辑侧为每个AnimationChannelId提交唯一selection，Timeline在表现帧生成匹配generation的Animation Selection与参数页，AnimationPlaybackLifecycle管理producer寿命，编译Pose Plan中的显式Player节点负责各自连续性并生成最终Animator输出。
 ## Requirements
-### Requirement: 动画通道与Pose Slot定义必须分离
+### Requirement: 动画通道与Pose节点定义必须分离
 
-Timeline、Semantic IR、Program producer contract、selection command与Playback Lifecycle MUST只使用稳定AnimationChannelId表达逻辑仲裁通道。`CharacterAnimationPresentationProfile`引用的Pose Graph MUST唯一声明PoseSlotId、channel-to-slot一对一binding与OutputPolicy；Blend Library MUST按PoseSlotId声明Stack policy与transition matrix。Projection Compiler MUST把producer resource、AnimationChannelId、PoseSlotId、compiled Stack、Rig与Pose Program编入target-neutral `CharacterPresentationProjection`。Runtime MUST不读取Layer catalog、Animancer layer index、Profile layer order或旧LayerId，并 MUST不按ProgramHash选择Projection。
+Timeline、Semantic IR、Program producer contract、selection command与Playback Lifecycle MUST只使用稳定AnimationChannelId表达逻辑仲裁通道。`CharacterAnimationPresentationProfile`引用的Pose Graph MUST唯一声明Selection Input、MarkerSync、Player、组合、world-aware节点与Output topology；Blend/Inertialization Policy MUST由对应PoseNodeId拥有。Projection Compiler MUST把producer resource、AnimationChannelId、PoseNodeId、compiled Pose Plan、Policy与Rig编入target-neutral `CharacterPresentationProjection`。Runtime MUST不读取旧PoseSlot、Layer catalog、Animancer layer index、Profile layer order或旧LayerId，并 MUST不按ProgramHash选择Projection。
 
 #### Scenario: BaseLocomotion要求持续输出
 
-- **WHEN** Corin BaseLocomotion channel绑定到RequireOutput BaseLocomotionSlot
-- **THEN** 正常激活期间该slot MUST拥有Selected Stack Entry、PendingFirstSample或明确Invalid状态
-- **AND** 系统 MUST不静默把该slot解释为Empty
+- **WHEN** Corin BaseLocomotion channel绑定到Required Selection Input
+- **THEN** 正常激活期间匹配Player MUST拥有Selected source、PendingFirstSample或明确Invalid状态
+- **AND** 系统 MUST不静默把该输入解释为Empty
 
 #### Scenario: FullBodyAction允许为空
 
-- **WHEN** FullBodyAction channel提交None且对应slot为AllowEmpty
-- **THEN** 该slot Stack MUST按exact source-to-Empty transition输出typed NoPose
+- **WHEN** FullBodyAction channel提交None且对应Selection Input为AllowEmpty
+- **THEN** 图中显式Player MUST按自身语义输出typed NoPose
 - **AND** Pose Graph MUST让BaseLocomotion继续通过且不创建fallback clip
 
 #### Scenario: producer command引用未知channel
 
-- **WHEN** committed producer command的AnimationChannelId不存在或没有精确PoseSlot binding
+- **WHEN** committed producer command的AnimationChannelId不存在或没有精确Selection Input binding
 - **THEN** Program/Projection组合校验 MUST报告配置错误
 - **AND** 对应command MUST不进入Lifecycle、Stack或Pose Graph
 
 #### Scenario: Float32与Fixed复用动画Projection
 
 - **WHEN** Float32与Fixed Program由相同SemanticHash和producer contract生成
-- **THEN** 两个Presentation contract Adapter MUST加载同一套channel/slot/pose program与producer binding
+- **THEN** 两个Presentation contract Adapter MUST加载同一套channel/Pose Plan与producer binding
 - **AND** Runtime MUST不按ProgramHash复制、选择或降级Projection
 
 ### Requirement: 基础姿态必须由正式来源输出
 
-Base pose、Idle、Move 与其它基础动画 MUST来自正式 Graph/State/Action 所选择的 Timeline animation producer。RequireOutput PoseSlot在target首份合法`ResolvedAnimationPoseRequest`到达前 MAY保持既有Retained Stack Entry，但Lifecycle MUST保留PendingFirstSample target identity。Pipeline、Lifecycle、Blend Stack与source sampling backend MUST不内置隐藏基础姿态producer。
+Base pose、Idle、Move 与其它基础动画 MUST来自正式 Graph/State/Action 所选择的 Timeline animation producer。Required Selection Input在target首份合法Animation Selection到达前 MAY由其显式stateful Player保持既有Retained source，但Lifecycle MUST保留PendingFirstSample target identity。Pipeline、Lifecycle、Player与source sampling backend MUST不内置隐藏基础姿态producer。
 
 #### Scenario: 首次激活缺少基础动画
 
-- **WHEN** RequireOutput BaseLocomotionSlot没有Selected或Retained pose
+- **WHEN** Required BaseLocomotion Selection Input没有Selected或Retained pose
 - **AND** 逻辑层没有合法 selection 或 selected target 没有 sample
 - **THEN** lifecycle MUST报告明确 Invalid
 - **AND** 系统 MUST不选择 bind pose clip、旧 locomotion 或隐藏 Idle
 
 #### Scenario: 已有输出后 incoming 延迟
 
-- **WHEN** BaseLocomotionSlot已有Retained A且selection已变为B
+- **WHEN** BaseLocomotion Player已有Retained A且selection已变为B
 - **AND** B 的第一份 sample 尚未到达
 - **THEN** Lifecycle MUST保持A的Stack Entry并记录PendingFirstSample B
 - **AND** MUST不把 A 重新声明为逻辑 winner
 
 ### Requirement: 角色管线不依赖旧动画播放路径
 
-角色管线和BTSMTL Timeline编辑器预览 MUST共用一条语义：逻辑按AnimationChannel提交selection，Timeline生成`ResolvedAnimationPoseRequest`，AnimationPlaybackLifecycle管理Selected/Retained producer寿命，每PoseSlot Blend Stack管理transition，Pose Graph写回最终pose。系统 MUST不读取旧AnimationPresentationPolicySO、旧locomotion/action SO、旧bodyclaim policy，也 MUST不依赖TimelinePlayer autonomous playback、Animator.Play、Animator.CrossFade或独立PlayableGraph作为另一权威。
+角色管线和BTSMTL Timeline编辑器预览 MUST共用一条语义：逻辑按AnimationChannel提交selection，Timeline生成raw `AnimationSelectionFrame`，AnimationPlaybackLifecycle管理producer寿命，编译Pose Plan中的显式Player管理连续性并写回最终pose。系统 MUST不读取旧AnimationPresentationPolicySO、旧locomotion/action SO、旧bodyclaim policy，也 MUST不依赖TimelinePlayer autonomous playback、Animator.Play、Animator.CrossFade或独立PlayableGraph作为另一权威。
 
 #### Scenario: 搜索旧直接播放入口
 
@@ -82,7 +82,7 @@ Base pose、Idle、Move 与其它基础动画 MUST来自正式 Graph/State/Actio
 
 ### Requirement: 动画片段 membership 必须显式提交和释放
 
-Timeline producer MUST显式提交PoseRequest、Complete与Release。进入或继续处于有效动画片段时 MUST提交`ResolvedAnimationPoseRequest`；离开ExtraPolationMode=None片段、playback失败或producer正式销毁时 MUST提交Release。AnimationPlaybackLifecycle MUST不因当帧缺少PoseRequest自动释放Selected或Retained source，也 MUST不因历史request存在而把无效target当作ready。
+Timeline producer MUST显式提交Animation Selection、Complete与Release。进入或继续处于有效动画片段时 MUST提交`AnimationSelectionFrame`；离开ExtraPolationMode=None片段、playback失败或producer正式销毁时 MUST提交Release。AnimationPlaybackLifecycle MUST不因当帧缺少Selection sample自动释放Selected或Retained source，也 MUST不因历史Selection存在而把无效target当作ready。
 
 #### Scenario: None 片段结束但 Timeline 继续
 
@@ -98,9 +98,9 @@ Timeline producer MUST显式提交PoseRequest、Complete与Release。进入或�
 - **THEN** AnimationTrack MUST继续提交正式 Hold sample
 - **AND** Hold MUST不来自 lifecycle 或 Presenter 的隐式 fallback
 
-### Requirement: 动画通道输入必须是已解析播放选择与正式Pose Request
+### Requirement: 动画通道输入必须是已解析Animation Selection与正式参数页
 
-Animation module MUST只接收Program Finalize已解析的channel selection command，以及Presentation sampler生成的PoseRequest、Complete和Release。Selection MUST表达AnimationChannelId、PlaybackId、generation、SimulationTick、sequence与EventId，MUST不携带Priority、Driver、Tree route或候选列表。
+Program Finalize MUST为每个AnimationChannelId最多提交一个已解析Gameplay winner；Presentation sampler MUST按committed Timeline time与visual interpolation生成含raw visual time和marker binding identity的版本化Animation Selection与typed Parameter page。Selection MUST由Pose Graph显式路径消费；只有连接在Selection Input与Player之间的MarkerSync节点 MAY解析effective time。Lifecycle、Projection、Player与Pose Graph MUST不重新仲裁同channel候选，也 MUST不把transition、Bone Mask或IK状态写回Program。
 
 #### Scenario: Base 收到唯一 Target
 
@@ -114,7 +114,7 @@ Animation module MUST只接收Program Finalize已解析的channel selection comm
 
 ### Requirement: 动画播放生命周期必须只管理可见 producer 寿命
 
-每个AnimationChannelId MUST拥有一个AnimationPlaybackLifecycleState，并只使用PendingFirstSample、Selected、Retained与Retired表达播放寿命。PendingFirstSample MUST等待选中target的第一份合法request；Selected MUST对应当前逻辑选择并交给PoseSlot Stack的target；Retained MUST对应Stack仍为视觉连续性保留的旧source；Retired MUST在Stack exact completion发布release后释放该producer的表现retention与source playable。该生命周期 MUST不解释State、Action、Tree interruption或业务Priority。
+每个AnimationChannelId MUST拥有一个AnimationPlaybackLifecycleState，并只使用PendingFirstSample、Selected、Retained与Retired表达播放寿命。PendingFirstSample MUST等待选中target的第一份合法Selection；Selected MUST对应当前逻辑选择并交给图中匹配Player；Retained MUST对应任一stateful Player正式source usage仍保留的旧source；Retired MUST在Player exact completion发布release后释放该producer的表现retention与source playable。该生命周期 MUST不解释State、Action、Tree interruption或业务Priority。
 
 #### Scenario: target 首样本延迟
 
@@ -126,7 +126,7 @@ Animation module MUST只接收Program Finalize已解析的channel selection comm
 #### Scenario: target 首样本到达
 
 - **WHEN** PendingFirstSample B 收到匹配 playback generation 的合法 sample
-- **THEN** Lifecycle MUST原子地向对应PoseSlot Stack push B
+- **THEN** Lifecycle MUST原子地向对应显式Player发布B
 - **AND** A MUST按Stack状态进入Retained
 - **AND** B MUST进入Selected
 
@@ -136,26 +136,26 @@ Animation module MUST只接收Program Finalize已解析的channel selection comm
 - **THEN** Lifecycle MUST将A标记Retired
 - **AND** MUST释放 A 的 PresentationRetention
 
-### Requirement: PoseSlot Blend Stack必须是transition权威
+### Requirement: 显式动画Player节点必须拥有各自时间连续性
 
-每PoseSlot的`AnimationBlendStackRuntime` MUST唯一负责entry、transition clock、Per-Bone weight、Stored Pose、Inertial状态与source release。Animancer source backend MUST只创建或复用source playable、写入Timeline采样时间与producer内部clip weights，并把source capture job安装到同一PlayableGraph。Pose Graph MUST唯一负责跨slot空间组合与最终AnimationStream写回。其它项目代码 MUST不复制Stack entry/weight算法、建立managed evaluator或执行第二次Evaluate。
+`SelectedPosePlayer` MUST只保持当前Selection并输出typed discontinuity；没有下游Inertialization时允许明确硬切。`BlendStack` MUST只对连接到该节点的Selection拥有entry、CrossFade clock、Stored Pose、Per-Bone Blend Profile和source retirement。`Inertialization` MUST独占单Pose residual与rebase。项目 MUST不为每AnimationChannel、旧PoseSlot或Graph branch自动创建隐藏Stack或Inertialization；LayeredBoneBlend、Additive、FootPlacement与OutputPose MUST不重建Player transition。Animancer source backend MUST只创建或复用source playable并把source capture job安装到同一PlayableGraph。
 
 #### Scenario: producer 包含多个 clip
 
 - **WHEN** 同一Timeline producer采样到多个重叠clip
 - **THEN** source backend MUST在同一source playable内表达producer内部clip weights
-- **AND** PoseSlot Stack MUST负责该source与其它source之间的transition
+- **AND** 显式BlendStack MUST负责该source与其它source之间的transition
 
 #### Scenario: transition期间再次切换
 
-- **WHEN** 当前PoseSlot Stack仍保留A时逻辑选择C
-- **THEN** Stack MUST从唯一正式entry/Stored/Inertial状态push C
+- **WHEN** 当前BlendStack仍保留A时逻辑选择C
+- **THEN** Stack MUST从唯一正式entry/Stored状态push C
 - **AND** PlaybackRuntime MUST不建立第二个handoff stack或恢复中间逻辑状态
 
 #### Scenario: slot概览权重为零但骨骼仍有贡献
 
 - **WHEN** Stack完成帧的OutputWeight为零但dense per-bone output仍至少有一个非零权重
-- **THEN** PoseSlot availability MUST保持Pose
+- **THEN** Player availability MUST保持Pose
 - **AND** Pose Graph MUST按dense per-bone weight执行空间合成
 - **AND** MUST不使用OutputWeight裁掉仍然有效的骨骼姿势
 
@@ -199,7 +199,7 @@ Marker Sync MUST在source与target共同可见的每个PresentationFrame重新�
 
 #### Scenario: 不同时长循环动画fade
 
-- **WHEN** 1.0秒WalkLoop与0.6秒RunLoop在PoseSlot transition期间共同可见
+- **WHEN** 1.0秒WalkLoop与0.6秒RunLoop在显式Player transition期间共同可见
 - **THEN** RunLoop MUST在每个PresentationFrame持续对齐WalkLoop marker fraction
 - **AND** MUST不因两个producer各自速度不同而在fade后半段重新漂移
 
@@ -282,13 +282,13 @@ Sync relation MUST以完整AnimationPlaybackId为key，并且只依赖AnimationP
 
 ### Requirement: source backend必须只负责采样
 
-MarkerSyncRuntime MUST只提供producer effective sample time。Animancer source backend MUST只拥有source playable与producer内部clip采样；PoseSlot Blend Stack MUST唯一拥有transition clock、curve、Per-Bone weight、Stored/Inertial与release；Pose Graph MUST唯一拥有跨slot空间组合与最终pose。项目 MUST不新增第二套crossfade weight、Animancer automatic synchronization、managed evaluator或第二动画时钟。
+显式MarkerSync节点 MUST只提供producer effective sample page与relation snapshot。Animancer source backend MUST只拥有source playable与producer内部clip采样；显式BlendStack MUST唯一拥有transition clock、curve、Per-Bone weight、Stored与release；局部Inertialization MUST唯一拥有residual与rebase；Pose Graph MUST唯一拥有组合与最终pose。项目 MUST不新增第二套crossfade weight、Animancer automatic synchronization、managed evaluator或第二动画时钟。
 
 #### Scenario: 同步target开始播放
 
 - **WHEN** matched target首份合法sample进入lifecycle
-- **THEN** Lifecycle MUST把target的ResolvedAnimationPoseRequest push到正式PoseSlot Stack
-- **AND** MarkerSyncRuntime MUST不写入transition progress或source weight
+- **THEN** Lifecycle MUST把target的Animation Selection发布到正式Player路径
+- **AND** MarkerSync节点 MUST不写入transition progress或source weight
 
 #### Scenario: source retirement由Stack exact completion确认
 

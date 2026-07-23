@@ -36,12 +36,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             int clipOffset,
             int clipCapacity,
             float[] poseParameters,
+            byte[] poseParameterAvailability,
             int parameterOffset,
             int parameterCount)
         {
             if (!sourceId.IsValid || !rowIndex.IsValid || leaseGeneration == 0 || preparedAtCompletion == 0 ||
                 clips == null || clipOffset < 0 || clipCapacity <= 0 ||
-                clipOffset > clips.Length - clipCapacity || poseParameters == null || parameterOffset < 0 ||
+                clipOffset > clips.Length - clipCapacity || poseParameters == null || poseParameterAvailability == null ||
+                poseParameterAvailability.Length != poseParameters.Length || parameterOffset < 0 ||
                 parameterCount <= 0 || parameterOffset > poseParameters.Length - parameterCount)
             {
                 throw new ArgumentException("Animation pose request workspace row is invalid.");
@@ -55,6 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             ClipOffset = clipOffset;
             ClipCapacity = clipCapacity;
             PoseParameters = poseParameters;
+            PoseParameterAvailability = poseParameterAvailability;
             ParameterOffset = parameterOffset;
             ParameterCount = parameterCount;
         }
@@ -67,13 +70,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal int ClipOffset { get; }
         internal int ClipCapacity { get; }
         internal float[] PoseParameters { get; }
+        internal byte[] PoseParameterAvailability { get; }
         internal int ParameterOffset { get; }
         internal int ParameterCount { get; }
 
         internal bool IsValid =>
             SourceId.IsValid && RowIndex.IsValid && LeaseGeneration != 0 && PreparedAtCompletion != 0 &&
             Clips != null && ClipOffset >= 0 && ClipCapacity > 0 && ClipOffset <= Clips.Length - ClipCapacity &&
-            PoseParameters != null && ParameterOffset >= 0 && ParameterCount > 0 &&
+            PoseParameters != null && PoseParameterAvailability != null &&
+            PoseParameterAvailability.Length == PoseParameters.Length && ParameterOffset >= 0 && ParameterCount > 0 &&
             ParameterOffset <= PoseParameters.Length - ParameterCount;
     }
 
@@ -85,6 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly ulong[] m_PreparedAt;
         readonly ClipSamplePlan[] m_Clips;
         readonly float[] m_PoseParameters;
+        readonly byte[] m_PoseParameterAvailability;
 
         int m_Count;
         ulong m_CompletionIdentity;
@@ -102,6 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_PreparedAt = new ulong[layout.SourceCapacity];
             m_Clips = new ClipSamplePlan[layout.ClipPlanCapacity];
             m_PoseParameters = new float[layout.PoseParameterCapacity];
+            m_PoseParameterAvailability = new byte[layout.PoseParameterCapacity];
         }
 
         internal int Count
@@ -127,6 +134,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             RequireAlive();
             if (completionIdentity == 0 || completionIdentity <= m_LastCompletionIdentity)
                 throw new ArgumentOutOfRangeException(nameof(completionIdentity));
+            Array.Clear(m_SourceIds, 0, m_SourceIds.Length);
+            Array.Clear(m_LeaseGenerations, 0, m_LeaseGenerations.Length);
+            Array.Clear(m_PreparedAt, 0, m_PreparedAt.Length);
+            m_Count = 0;
             m_CompletionIdentity = completionIdentity;
             m_LastCompletionIdentity = completionIdentity;
         }
@@ -156,6 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             int parameterOffset = checked(rowIndex * m_Layout.ParameterStride);
             Array.Clear(m_Clips, clipOffset, m_Layout.ClipStride);
             Array.Clear(m_PoseParameters, parameterOffset, m_Layout.ParameterStride);
+            Array.Clear(m_PoseParameterAvailability, parameterOffset, m_Layout.ParameterStride);
             m_PreparedAt[rowIndex] = m_CompletionIdentity;
             return new AnimationPoseRequestWorkspaceRow(
                 sourceId,
@@ -166,6 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 clipOffset,
                 m_Layout.ClipStride,
                 m_PoseParameters,
+                m_PoseParameterAvailability,
                 parameterOffset,
                 m_Layout.ParameterStride);
         }
@@ -185,6 +198,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (rowIndex < 0 || rowIndex >= m_SourceIds.Length)
                 throw new ArgumentOutOfRangeException(nameof(row));
             if (!ReferenceEquals(row.Clips, m_Clips) || !ReferenceEquals(row.PoseParameters, m_PoseParameters) ||
+                !ReferenceEquals(row.PoseParameterAvailability, m_PoseParameterAvailability) ||
                 row.ClipOffset != checked(rowIndex * m_Layout.ClipStride) ||
                 row.ClipCapacity != m_Layout.ClipStride ||
                 row.ParameterOffset != checked(rowIndex * m_Layout.ParameterStride) ||
@@ -221,6 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             Array.Clear(m_PreparedAt, 0, m_PreparedAt.Length);
             Array.Clear(m_Clips, 0, m_Clips.Length);
             Array.Clear(m_PoseParameters, 0, m_PoseParameters.Length);
+            Array.Clear(m_PoseParameterAvailability, 0, m_PoseParameterAvailability.Length);
             m_Count = 0;
             m_CompletionIdentity = 0;
         }
@@ -262,6 +277,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             int parameterOffset = checked(rowIndex * m_Layout.ParameterStride);
             Array.Clear(m_Clips, clipOffset, m_Layout.ClipStride);
             Array.Clear(m_PoseParameters, parameterOffset, m_Layout.ParameterStride);
+            Array.Clear(m_PoseParameterAvailability, parameterOffset, m_Layout.ParameterStride);
             m_SourceIds[rowIndex] = default;
             m_LeaseGenerations[rowIndex] = 0;
             m_PreparedAt[rowIndex] = 0;

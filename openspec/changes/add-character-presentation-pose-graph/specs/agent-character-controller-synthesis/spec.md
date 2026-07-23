@@ -20,7 +20,7 @@
 
 ### Requirement: Agent Snapshot 与 Validator 必须递归理解嵌套 StateMachine
 
-Agent Snapshot MUST递归输出完整RootTree authoring routes、RunnableNode、flow edges、inline/shared Graph、nested StateMachine、logical transitions、Action activation、Timeline与稳定animation producer identity。Presentation section MUST只读输出Animation Channel catalog、PoseSlot binding、PoseGraph identity/revision、Blend Library identity、Rig identity与producer resource binding。Validator MUST检查Graph topology、route identity、Timeline identity与Timeline AnimationChannelId，但 MUST不校验或写入Pose Graph topology、Blend transition、Rig、runtime Stack或PoseGraph lifecycle。
+Agent Snapshot MUST递归输出完整RootTree authoring routes、RunnableNode、flow edges、inline/shared Graph、nested StateMachine、logical transitions、Action activation、Timeline与稳定animation producer identity。Presentation section MUST只读输出Animation Channel catalog、Selection Input binding、PoseGraph identity/revision、节点Policy identity、Rig identity与producer resource binding。Validator MUST检查Graph topology、route identity、Timeline identity与Timeline AnimationChannelId，但 MUST不校验或写入Pose Graph topology、Blend/Inertialization Policy、Rig、runtime Player或PoseGraph lifecycle。
 
 #### Scenario: Corin Snapshot
 
@@ -49,4 +49,4 @@ Agent Patch compiler MUST只编辑正式BTSMTL Graph、StateMachine、Timeline�
 
 - **WHEN** 已安装的Timeline Patch命令显式修改AnimationChannelId
 - **THEN** Agent MAY通过Timeline正式authoring API修改该字段
-- **AND** MUST不同时修改PoseSlot binding来掩盖Projection错误
+- **AND** MUST不同时修改Selection Input binding来掩盖Projection错误

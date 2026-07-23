@@ -31,6 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CameraModifierResolver m_CameraModifierResolver = new CameraModifierResolver();
         readonly HashSet<ulong> m_NoTerminalActions = new HashSet<ulong>();
 
+        ulong m_LastBodyResetSequence;
         bool m_Disposed;
 
         public CharacterCameraPresentationRuntime(
@@ -179,11 +180,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector2 look = m_InputAdapter.TryGetLatchedVector2(m_LookInputId, out Vector2 value)
                 ? value
                 : Vector2.zero;
+            bool resetTracking = bodyFrame.ResetSequence != m_LastBodyResetSequence;
+            m_LastBodyResetSequence = bodyFrame.ResetSequence;
             Apply(
                 bodyFrame.VisiblePosition,
                 bodyFrame.VisibleRotation,
                 look,
-                presentationDeltaSeconds);
+                presentationDeltaSeconds,
+                resetTracking);
         }
 
         public void Reset()
@@ -198,6 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_CameraResponseBuffer.Clear();
             m_CameraStateResolver.Reset();
             m_CameraModifierResolver.Reset();
+            m_LastBodyResetSequence = 0;
         }
 
         public void Dispose()
@@ -208,7 +213,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Disposed = true;
         }
 
-        void Apply(Vector3 position, Quaternion rotation, Vector2 look, float deltaSeconds)
+        void Apply(
+            Vector3 position,
+            Quaternion rotation,
+            Vector2 look,
+            float deltaSeconds,
+            bool resetTracking = false)
         {
             Vector3 follow = position + rotation * m_FollowBindPosition;
             Vector3 aim = position + rotation * m_AimBindPosition;
@@ -249,7 +259,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_NoTerminalActions,
                 deltaSeconds);
             m_PendingCameraCues.Clear();
-            m_CameraRig.Apply(plan);
+            if (resetTracking)
+                m_CameraRig.ApplyAfterTrackingReset(plan);
+            else
+                m_CameraRig.Apply(plan);
         }
 
         static CharacterPresentationCameraBinding RequireCameraBinding(

@@ -268,15 +268,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(projection));
             if (!animationRigBinding)
                 throw new ArgumentNullException(nameof(animationRigBinding));
+            if (!visualRoot)
+                throw new ArgumentNullException(nameof(visualRoot));
+            if (!animancer || !animancer.Animator)
+                throw new ArgumentNullException(nameof(animancer));
             projection.RequireContract(contract);
             animationRigBinding.RequireValid(projection.Rig);
+            Transform animatorRoot = animancer.Animator.transform;
+            if (animatorRoot == visualRoot || !animatorRoot.IsChildOf(visualRoot))
+                throw new InvalidOperationException("Animator Root must be a strict child of the Presentation VisualRoot.");
+            if (animationRigBinding.Animator != animancer.Animator ||
+                animationRigBinding.Bones[projection.Rig.RootBoneIndex] != animatorRoot)
+            {
+                throw new InvalidOperationException("Animation Rig root must match the Animancer Animator Root exactly.");
+            }
 
             CharacterBodyPresentationRuntime body = null;
             CharacterAnimationPlaybackRuntime animation = null;
             CharacterFootPlacementRuntime footPlacement = null;
             CharacterCameraPresentationRuntime camera = null;
             CharacterEquipmentVisualRuntime equipment = null;
-            ICharacterMotionMatchingTrajectorySource motionMatchingTrajectorySource = null;
+            CharacterMotionMatchingPresentationModule motionMatching = null;
             try
             {
                 body = new CharacterBodyPresentationRuntime(
@@ -287,41 +299,51 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     visualRoot,
                     initialBody,
                     diagnostics);
+                CharacterAnimationPresentationBindingIndex animationBindings =
+                    CharacterAnimationPlaybackRuntime.BuildBindings(contract, projection);
+                if (projection.MotionMatching != null)
+                {
+                    motionMatching = new CharacterMotionMatchingPresentationModule(
+                        actorId,
+                        bodySourceMode,
+                        projection,
+                        animationBindings.WorkspaceLayout.SourceCapacity);
+                }
                 animation = new CharacterAnimationPlaybackRuntime(
-                    contract,
-                    projection,
+                    animationBindings,
+                    motionMatching,
                     animancer,
                     animationRigBinding,
                     true);
-                motionMatchingTrajectorySource = CreateMotionMatchingTrajectorySource(
-                    projection,
-                    bodySourceMode,
-                    actorId);
+                motionMatching = null;
                 equipment = new CharacterEquipmentVisualRuntime(
                     actorId,
                     projection,
                     equipmentRigCatalog,
                     diagnostics);
-                if (!footPlacementProfile)
-                    throw new ArgumentNullException(nameof(footPlacementProfile));
-                if (!footPlacementRig)
-                    throw new ArgumentNullException(nameof(footPlacementRig));
-                if (footPlacementSolver == null)
-                    throw new ArgumentNullException(nameof(footPlacementSolver));
-                if (!physicsScene.IsValid())
-                    throw new ArgumentException("Foot Placement requires a valid PhysicsScene.", nameof(physicsScene));
-                CharacterFootPlacementRigBinding rig = footPlacementRig.BuildBinding();
-                if (rig.VisualRoot != visualRoot)
-                    throw new InvalidOperationException("Foot Placement Rig VisualRoot must match Presentation VisualRoot exactly.");
-                CharacterFootPlacementRuntimeSettings footPlacementSettings =
-                    footPlacementProfile.BuildSettings(projection, rig);
-                footPlacement = new CharacterFootPlacementRuntime(
-                    actorId,
-                    footPlacementSettings,
-                    rig,
-                    footPlacementSolver,
-                    physicsScene,
-                    diagnostics);
+                if (projection.PosePlan.FootPlacementNodes.Count == 1)
+                {
+                    if (!footPlacementProfile)
+                        throw new ArgumentNullException(nameof(footPlacementProfile));
+                    if (!footPlacementRig)
+                        throw new ArgumentNullException(nameof(footPlacementRig));
+                    if (footPlacementSolver == null)
+                        throw new ArgumentNullException(nameof(footPlacementSolver));
+                    if (!physicsScene.IsValid())
+                        throw new ArgumentException("Foot Placement requires a valid PhysicsScene.", nameof(physicsScene));
+                    CharacterFootPlacementRigBinding rig = footPlacementRig.BuildBinding();
+                    if (rig.VisualRoot != visualRoot)
+                        throw new InvalidOperationException("Foot Placement Rig VisualRoot must match Presentation VisualRoot exactly.");
+                    CharacterFootPlacementRuntimeSettings footPlacementSettings =
+                        footPlacementProfile.BuildSettings(projection, rig);
+                    footPlacement = new CharacterFootPlacementRuntime(
+                        actorId,
+                        footPlacementSettings,
+                        rig,
+                        footPlacementSolver,
+                        physicsScene,
+                        diagnostics);
+                }
                 if (cameraRig)
                 {
                     camera = new CharacterCameraPresentationRuntime(
@@ -345,15 +367,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     projection,
                     body,
                     animation,
-                    motionMatchingTrajectorySource,
                     equipment,
                     footPlacement,
                     camera,
+                    animatorRoot,
                     animationStartupPolicy,
                     diagnostics);
                 body = null;
                 animation = null;
-                motionMatchingTrajectorySource = null;
                 equipment = null;
                 footPlacement = null;
                 camera = null;
@@ -361,31 +382,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             catch
             {
-                try
-                {
-                    motionMatchingTrajectorySource?.Dispose();
-                }
-                finally
-                {
-                    CharacterPresentationModuleLifetime.Dispose(camera, footPlacement, equipment, animation, body);
-                }
+                motionMatching?.Dispose();
+                CharacterPresentationModuleLifetime.Dispose(camera, footPlacement, equipment, animation, body);
                 throw;
             }
-        }
-
-        static ICharacterMotionMatchingTrajectorySource CreateMotionMatchingTrajectorySource(
-            CharacterPresentationProjection projection,
-            CharacterBodyPresentationSourceMode bodySourceMode,
-            ActorId actorId)
-        {
-            if (projection.MotionMatching == null)
-                return null;
-            string suffix = actorId.ToString();
-            return bodySourceMode == CharacterBodyPresentationSourceMode.SelectedStream
-                ? (ICharacterMotionMatchingTrajectorySource)new SelectedBodyMotionMatchingTrajectorySource(
-                    new MotionMatchingTrajectorySourceIdentity("selected-body/" + suffix))
-                : new AcceptedIntentMotionMatchingTrajectorySource(
-                    new MotionMatchingTrajectorySourceIdentity("accepted-intent/" + suffix));
         }
 
         static CharacterBodyPresentationSettings RequireBodySettings(CharacterBodyPresentationProfile profile)

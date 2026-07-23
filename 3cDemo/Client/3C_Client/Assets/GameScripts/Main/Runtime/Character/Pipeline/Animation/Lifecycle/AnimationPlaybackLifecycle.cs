@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonSimulation;
 
@@ -18,45 +17,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     {
         public AnimationPlaybackLifecycleSnapshot(
             AnimationChannelId animationChannelId,
-            PoseSlotId poseSlotId,
+            PoseNodeId playerNodeId,
             AnimationPlaybackId playbackId,
             AnimationPoseSourceId sourceId,
             AnimationPlaybackLifecyclePhase phase,
             float sampleTime,
-            PoseSlotFrameAvailability slotAvailability,
-            float slotOutputWeight,
+            float visualTimeScale,
+            AnimationPoseAvailability availability,
+            float outputWeight,
             bool hasVisualSample)
         {
-            if (!animationChannelId.IsValid || !poseSlotId.IsValid || !playbackId.IsValid ||
-                (int)phase < (int)AnimationPlaybackLifecyclePhase.PendingFirstSample ||
-                (int)phase > (int)AnimationPlaybackLifecyclePhase.Retired ||
-                (int)slotAvailability < (int)PoseSlotFrameAvailability.Pose ||
-                (int)slotAvailability > (int)PoseSlotFrameAvailability.Invalid ||
+            if (!animationChannelId.IsValid || !playerNodeId.IsValid || !playbackId.IsValid ||
+                !Enum.IsDefined(typeof(AnimationPlaybackLifecyclePhase), phase) ||
+                !Enum.IsDefined(typeof(AnimationPoseAvailability), availability) ||
                 !float.IsFinite(sampleTime) || sampleTime < 0f ||
-                !float.IsFinite(slotOutputWeight) || slotOutputWeight < 0f || slotOutputWeight > 1f ||
+                !float.IsFinite(visualTimeScale) || visualTimeScale < 0f ||
+                !float.IsFinite(outputWeight) || outputWeight < 0f || outputWeight > 1f ||
                 hasVisualSample != sourceId.IsValid)
-            {
                 throw new ArgumentException("Animation Playback Lifecycle snapshot is invalid.");
-            }
             AnimationChannelId = animationChannelId;
-            PoseSlotId = poseSlotId;
+            PoseNodeId = playerNodeId;
             PlaybackId = playbackId;
             SourceId = sourceId;
             Phase = phase;
             SampleTime = sampleTime;
-            SlotAvailability = slotAvailability;
-            SlotOutputWeight = slotOutputWeight;
+            VisualTimeScale = visualTimeScale;
+            Availability = availability;
+            OutputWeight = outputWeight;
             HasVisualSample = hasVisualSample;
         }
 
         public AnimationChannelId AnimationChannelId { get; }
-        public PoseSlotId PoseSlotId { get; }
+        public PoseNodeId PoseNodeId { get; }
         public AnimationPlaybackId PlaybackId { get; }
         public AnimationPoseSourceId SourceId { get; }
         public AnimationPlaybackLifecyclePhase Phase { get; }
         public float SampleTime { get; }
-        public PoseSlotFrameAvailability SlotAvailability { get; }
-        public float SlotOutputWeight { get; }
+        public float VisualTimeScale { get; }
+        public AnimationPoseAvailability Availability { get; }
+        public float OutputWeight { get; }
         public bool HasVisualSample { get; }
     }
 
@@ -66,29 +65,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly ChannelState[] m_Channels;
         readonly Dictionary<AnimationChannelId, ChannelState> m_ChannelsById =
             new Dictionary<AnimationChannelId, ChannelState>();
-        readonly Dictionary<AnimationPlaybackId, ResolvedAnimationPoseRequest> m_LatestRequests =
-            new Dictionary<AnimationPlaybackId, ResolvedAnimationPoseRequest>();
+        readonly Dictionary<AnimationPlaybackId, AnimationSelectionFrame> m_LatestSelections =
+            new Dictionary<AnimationPlaybackId, AnimationSelectionFrame>();
+        readonly HashSet<AnimationPlaybackId> m_LatestUnavailable = new HashSet<AnimationPlaybackId>();
 
         public AnimationPlaybackLifecycle(CharacterAnimationPresentationBindingIndex bindings)
         {
             m_Bindings = bindings ?? throw new ArgumentNullException(nameof(bindings));
             if (!bindings.IsValid || bindings.Projection == null)
                 throw new ArgumentException("Animation Presentation bindings are invalid.", nameof(bindings));
-            m_Channels = new ChannelState[bindings.Slots.Count];
-            foreach (KeyValuePair<PoseSlotId, ResolvedAnimationPoseSlot> pair in bindings.Slots)
+
+            var channels = new List<ChannelState>();
+            IReadOnlyList<CharacterPresentationSelectionInputEntry> inputs = bindings.Projection.PosePlan.SelectionInputs;
+            for (int i = 0; i < inputs.Count; i++)
             {
-                ResolvedAnimationPoseSlot slot = pair.Value;
-                if (!slot.IsValid || slot.Index < 0 || slot.Index >= m_Channels.Length || m_Channels[slot.Index] != null)
-                    throw new InvalidOperationException("Animation Playback Lifecycle Pose Slot layout is invalid.");
-                var state = new ChannelState(slot);
-                m_Channels[slot.Index] = state;
-                m_ChannelsById.Add(slot.AnimationChannelId, state);
+                CharacterPresentationSelectionInputEntry input = inputs[i];
+                if (!m_ChannelsById.TryGetValue(input.AnimationChannelId, out ChannelState state))
+                {
+                    state = new ChannelState(input.AnimationChannelId, input.NodeId);
+                    m_ChannelsById.Add(input.AnimationChannelId, state);
+                    channels.Add(state);
+                }
+                state.AddInput(input);
             }
-            for (int i = 0; i < m_Channels.Length; i++)
-            {
-                if (m_Channels[i] == null)
-                    throw new InvalidOperationException($"Animation Playback Lifecycle Pose Slot #{i} is missing.");
-            }
+            if (channels.Count == 0)
+                throw new InvalidOperationException("Animation Playback Lifecycle requires at least one Selection Input channel.");
+            m_Channels = channels.ToArray();
         }
 
         public bool HasRequiredOutputSelection
@@ -98,11 +100,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 for (int i = 0; i < m_Channels.Length; i++)
                 {
                     ChannelState state = m_Channels[i];
-                    if (state.Slot.OutputPolicy == PoseSlotOutputPolicy.RequireOutput &&
+                    if (state.RequiresSelection &&
                         (!state.Selection.IsValid || !state.Selection.HasPlayback || !state.SourceId.IsValid))
-                    {
                         return false;
-                    }
                 }
                 return true;
             }
@@ -122,11 +122,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         internal void CollectSampleDemand(
             IReadOnlyList<AnimationPlaybackCommand> commands,
-            IReadOnlyList<AnimationBlendStackRuntime> stacks,
+            AnimationPosePlayableGraphRuntime poseRuntime,
             HashSet<AnimationPlaybackId> destination)
         {
-            if (stacks == null)
-                throw new ArgumentNullException(nameof(stacks));
+            if (poseRuntime == null)
+                throw new ArgumentNullException(nameof(poseRuntime));
             if (destination == null)
                 throw new ArgumentNullException(nameof(destination));
             destination.Clear();
@@ -145,16 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         destination.Add(command.Selection.PlaybackId);
                 }
             }
-            for (int stackIndex = 0; stackIndex < stacks.Count; stackIndex++)
-            {
-                AnimationBlendStackRuntime stack = stacks[stackIndex];
-                for (int entryIndex = 0; entryIndex < stack.EntryCount; entryIndex++)
-                {
-                    AnimationBlendEntryId entry = stack.GetEntryId(entryIndex);
-                    if (!entry.EmptyTarget)
-                        destination.Add(entry.SourceId.PlaybackId);
-                }
-            }
+            poseRuntime.CollectRetainedPlaybackDemand(destination);
         }
 
         internal void Apply(
@@ -166,7 +157,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new ArgumentNullException(nameof(poseRuntime));
             if (nextPresentationRequestSequence == null)
                 throw new ArgumentNullException(nameof(nextPresentationRequestSequence));
-            m_LatestRequests.Clear();
+            m_LatestSelections.Clear();
+            m_LatestUnavailable.Clear();
             if (commands != null)
             {
                 for (int i = 0; i < commands.Count; i++)
@@ -180,37 +172,50 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     continue;
                 if (!state.Selection.HasPlayback)
                 {
-                    if (state.Slot.OutputPolicy == PoseSlotOutputPolicy.RequireOutput)
-                        throw new InvalidOperationException($"Required Pose Slot '{state.Slot.PoseSlotId}' selected Empty.");
+                    if (state.RequiresSelection)
+                        throw new InvalidOperationException($"Required Selection Input channel '{state.AnimationChannelId}' selected Empty.");
                     if (!state.EmptyTarget)
                     {
-                        poseRuntime.PushEmpty(
-                            state.Slot.AnimationChannelId,
-                            nextPresentationRequestSequence());
+                        poseRuntime.PublishEmptySelection(state.AnimationChannelId, nextPresentationRequestSequence());
                         state.EmptyTarget = true;
                         state.SourceId = default;
                     }
                     continue;
                 }
-
-                if (!m_LatestRequests.TryGetValue(state.Selection.PlaybackId, out ResolvedAnimationPoseRequest request))
+                if (!m_LatestSelections.TryGetValue(state.Selection.PlaybackId, out AnimationSelectionFrame selection))
                 {
                     state.SourceId = default;
-                    state.EmptyTarget = false;
+                    if (m_LatestUnavailable.Contains(state.Selection.PlaybackId))
+                    {
+                        if (state.RequiresSelection)
+                        {
+                            poseRuntime.PublishUnavailableSelection(state.AnimationChannelId, state.Selection.PlaybackId);
+                            state.EmptyTarget = false;
+                        }
+                        else
+                        {
+                            poseRuntime.PublishEmptySelection(state.AnimationChannelId, nextPresentationRequestSequence());
+                            state.EmptyTarget = true;
+                        }
+                    }
+                    else
+                    {
+                        state.EmptyTarget = false;
+                    }
                     continue;
                 }
-                poseRuntime.PushPoseRequest(in request);
-                state.SourceId = request.SourceId;
+                poseRuntime.PublishSelection(in selection);
+                state.SourceId = selection.SourceId;
                 state.EmptyTarget = false;
             }
         }
 
         internal void BuildSnapshot(
-            IReadOnlyList<AnimationBlendStackRuntime> stacks,
+            AnimationPosePlayableGraphRuntime poseRuntime,
             List<AnimationPlaybackLifecycleSnapshot> destination)
         {
-            if (stacks == null)
-                throw new ArgumentNullException(nameof(stacks));
+            if (poseRuntime == null)
+                throw new ArgumentNullException(nameof(poseRuntime));
             if (destination == null)
                 throw new ArgumentNullException(nameof(destination));
             destination.Clear();
@@ -219,46 +224,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 ChannelState state = m_Channels[i];
                 if (!state.Selection.IsValid || !state.Selection.HasPlayback)
                     continue;
-                AnimationBlendStackRuntime stack = stacks[state.Slot.Index];
-                ResolvedAnimationPoseRequest request = default;
+                AnimationSelectionFrame selection = default;
                 bool sampled = state.SourceId.IsValid &&
-                               m_LatestRequests.TryGetValue(state.Selection.PlaybackId, out request);
+                               m_LatestSelections.TryGetValue(state.Selection.PlaybackId, out selection);
+                if (!poseRuntime.TryGetPlaybackStatus(
+                        state.Selection.PlaybackId,
+                        out PoseNodeId playerNodeId,
+                        out AnimationPoseAvailability availability,
+                        out float outputWeight))
+                {
+                    playerNodeId = state.PrimaryInputNodeId;
+                }
                 destination.Add(new AnimationPlaybackLifecycleSnapshot(
-                    state.Slot.AnimationChannelId,
-                    state.Slot.PoseSlotId,
+                    state.AnimationChannelId,
+                    playerNodeId,
                     state.Selection.PlaybackId,
                     sampled ? state.SourceId : default,
-                    sampled ? AnimationPlaybackLifecyclePhase.Selected : AnimationPlaybackLifecyclePhase.PendingFirstSample,
-                    sampled ? request.VisualSampleTime : 0f,
-                    stack.HasCompletedFrame ? stack.LastAvailability : PoseSlotFrameAvailability.Invalid,
-                    stack.HasCompletedFrame ? stack.LastOutputWeight : 0f,
+                    sampled || state.EmptyTarget
+                        ? AnimationPlaybackLifecyclePhase.Selected
+                        : AnimationPlaybackLifecyclePhase.PendingFirstSample,
+                    sampled ? selection.VisualSampleTime : 0f,
+                    sampled ? selection.VisualTimeScale : 0f,
+                    availability,
+                    outputWeight,
                     sampled));
-
-                for (int entryIndex = 0; entryIndex < stack.EntryCount; entryIndex++)
-                {
-                    AnimationBlendEntryId entry = stack.GetEntryId(entryIndex);
-                    if (entry.EmptyTarget || entry.SourceId.Equals(state.SourceId))
-                        continue;
-                    bool hasRequest = m_LatestRequests.TryGetValue(entry.SourceId.PlaybackId, out ResolvedAnimationPoseRequest retained);
-                    if (!hasRequest)
-                        continue;
-                    destination.Add(new AnimationPlaybackLifecycleSnapshot(
-                        state.Slot.AnimationChannelId,
-                        state.Slot.PoseSlotId,
-                        entry.SourceId.PlaybackId,
-                        entry.SourceId,
-                        AnimationPlaybackLifecyclePhase.Retained,
-                        retained.VisualSampleTime,
-                        stack.LastAvailability,
-                        stack.LastOutputWeight,
-                        true));
-                }
             }
         }
 
-        internal bool Retains(AnimationPlaybackId playbackId, IReadOnlyList<AnimationBlendStackRuntime> stacks)
+        internal bool Retains(AnimationPlaybackId playbackId, AnimationPosePlayableGraphRuntime poseRuntime)
         {
-            if (!playbackId.IsValid)
+            if (!playbackId.IsValid || poseRuntime == null)
                 return false;
             for (int i = 0; i < m_Channels.Length; i++)
             {
@@ -266,24 +261,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 if (selection.IsValid && selection.HasPlayback && selection.PlaybackId.Equals(playbackId))
                     return true;
             }
-            for (int stackIndex = 0; stackIndex < stacks.Count; stackIndex++)
-            {
-                AnimationBlendStackRuntime stack = stacks[stackIndex];
-                for (int entryIndex = 0; entryIndex < stack.EntryCount; entryIndex++)
-                {
-                    AnimationBlendEntryId entry = stack.GetEntryId(entryIndex);
-                    if (!entry.EmptyTarget && entry.SourceId.PlaybackId.Equals(playbackId))
-                        return true;
-                }
-            }
-            return false;
+            return poseRuntime.RetainsPlayback(playbackId);
         }
 
         public void Reset()
         {
             for (int i = 0; i < m_Channels.Length; i++)
                 m_Channels[i].Reset();
-            m_LatestRequests.Clear();
+            m_LatestSelections.Clear();
+            m_LatestUnavailable.Clear();
         }
 
         void ApplyCommand(AnimationPlaybackCommand command)
@@ -293,31 +279,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 case AnimationPlaybackCommandKind.Selection:
                     if (!command.Selection.IsValid ||
                         !m_ChannelsById.TryGetValue(command.Selection.AnimationChannelId, out ChannelState state))
-                    {
-                        throw new InvalidOperationException(
-                            $"Animation selection targets unknown Channel '{command.Selection.AnimationChannelId}'.");
-                    }
-                    if (!command.Selection.HasPlayback ||
-                        m_Bindings.TryGetBinding(command.Selection.PlaybackId.ProducerId, out ResolvedAnimationProducerBinding binding) &&
-                        binding.AnimationChannelId == state.Slot.AnimationChannelId)
-                    {
-                        state.Selection = command.Selection;
-                        break;
-                    }
-                    throw new InvalidOperationException(
-                        $"Animation Channel '{state.Slot.AnimationChannelId}' selected an unknown producer '{command.Selection.PlaybackId.ProducerId}'.");
+                        throw new InvalidOperationException($"Animation selection targets unknown Channel '{command.Selection.AnimationChannelId}'.");
+                    if (command.Selection.HasPlayback)
+                        RequireProducer(command.Selection.PlaybackId.ProducerId, state.AnimationChannelId);
+                    state.Selection = command.Selection;
+                    break;
                 case AnimationPlaybackCommandKind.PoseRequest:
-                    ResolvedAnimationPoseRequest request = command.PoseRequest;
-                    if (!request.IsValid || !m_ChannelsById.TryGetValue(request.AnimationChannelId, out state) ||
-                        state.Slot.PoseSlotId != request.PoseSlotId ||
-                        !m_Bindings.TryGetBinding(request.SourceId.PlaybackId.ProducerId, out binding) ||
-                        binding.ProgramProducerIndex != request.ProgramProducerIndex ||
-                        binding.AnimationChannelId != request.AnimationChannelId ||
-                        binding.PoseSlotId != request.PoseSlotId)
+                    AnimationSelectionFrame selection = command.PoseRequest;
+                    if (!selection.IsValid || !m_ChannelsById.ContainsKey(selection.AnimationChannelId))
+                        throw new InvalidOperationException("Animation Selection Frame targets an unknown channel.");
+                    CharacterPresentationProducerEntry producer = RequireProducer(
+                        selection.SourceId.PlaybackId.ProducerId,
+                        selection.AnimationChannelId);
+                    if (producer.ProgramProducerIndex != selection.ProgramProducerIndex)
+                        throw new InvalidOperationException("Animation Selection Frame producer index does not match the compiled Projection.");
+                    m_LatestSelections[selection.SourceId.PlaybackId] = selection;
+                    m_LatestUnavailable.Remove(selection.SourceId.PlaybackId);
+                    break;
+                case AnimationPlaybackCommandKind.PoseUnavailable:
+                    AnimationChannelSelection unavailable = command.Selection;
+                    if (!unavailable.IsValid || !unavailable.HasPlayback ||
+                        !m_ChannelsById.ContainsKey(unavailable.AnimationChannelId) ||
+                        !unavailable.PlaybackId.Equals(command.PlaybackId))
                     {
-                        throw new InvalidOperationException("Animation pose request does not match its compiled Channel and Pose Slot binding.");
+                        throw new InvalidOperationException("Unavailable animation pose targets an unknown channel or playback.");
                     }
-                    m_LatestRequests[request.SourceId.PlaybackId] = request;
+                    RequireProducer(unavailable.PlaybackId.ProducerId, unavailable.AnimationChannelId);
+                    m_LatestSelections.Remove(unavailable.PlaybackId);
+                    m_LatestUnavailable.Add(unavailable.PlaybackId);
                     break;
                 case AnimationPlaybackCommandKind.Complete:
                 case AnimationPlaybackCommandKind.Release:
@@ -329,17 +318,40 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
+        CharacterPresentationProducerEntry RequireProducer(AnimationProducerId producerId, AnimationChannelId channelId)
+        {
+            IReadOnlyList<CharacterPresentationProducerEntry> producers = m_Bindings.Projection.Producers;
+            for (int i = 0; i < producers.Count; i++)
+            {
+                CharacterPresentationProducerEntry producer = producers[i];
+                if (producer != null && producer.Kind == CharacterPresentationProducerKind.Animation &&
+                    producer.ProducerId.Equals(producerId) && producer.AnimationChannelId.Equals(channelId))
+                    return producer;
+            }
+            throw new InvalidOperationException($"Animation Channel '{channelId}' selected unknown producer '{producerId}'.");
+        }
+
         sealed class ChannelState
         {
-            internal ChannelState(ResolvedAnimationPoseSlot slot)
+            internal ChannelState(AnimationChannelId animationChannelId, PoseNodeId primaryInputNodeId)
             {
-                Slot = slot;
+                AnimationChannelId = animationChannelId;
+                PrimaryInputNodeId = primaryInputNodeId;
             }
 
-            internal ResolvedAnimationPoseSlot Slot { get; }
+            internal AnimationChannelId AnimationChannelId { get; }
+            internal PoseNodeId PrimaryInputNodeId { get; }
+            internal bool RequiresSelection { get; private set; }
             internal AnimationChannelSelection Selection { get; set; }
             internal AnimationPoseSourceId SourceId { get; set; }
             internal bool EmptyTarget { get; set; }
+
+            internal void AddInput(CharacterPresentationSelectionInputEntry input)
+            {
+                if (input == null || input.AnimationChannelId != AnimationChannelId)
+                    throw new ArgumentException("Selection Input does not belong to the channel.", nameof(input));
+                RequiresSelection |= input.Availability == AnimationSelectionAvailabilityPolicy.RequireSelection;
+            }
 
             internal void Reset()
             {

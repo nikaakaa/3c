@@ -286,48 +286,48 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public readonly struct AnimationBlendTransitionIdentity : IEquatable<AnimationBlendTransitionIdentity>
     {
         public AnimationBlendTransitionIdentity(
-            PoseSlotId poseSlotId,
+            PoseNodeId nodeId,
             int sourceProducerIndex,
             bool sourceEmpty,
             int targetProducerIndex,
             bool targetEmpty)
         {
-            if (!poseSlotId.IsValid ||
+            if (!nodeId.IsValid ||
                 (sourceEmpty ? sourceProducerIndex != -1 : sourceProducerIndex < 0) ||
                 (targetEmpty ? targetProducerIndex != -1 : targetProducerIndex < 0))
             {
                 throw new ArgumentException("Animation Blend transition identity is invalid.");
             }
-            PoseSlotId = poseSlotId;
+            NodeId = nodeId;
             SourceProducerIndex = sourceProducerIndex;
             SourceEmpty = sourceEmpty;
             TargetProducerIndex = targetProducerIndex;
             TargetEmpty = targetEmpty;
         }
 
-        public AnimationBlendTransitionIdentity(PoseSlotId poseSlotId, AnimationBlendTransitionPayload payload)
+        public AnimationBlendTransitionIdentity(PoseNodeId nodeId, AnimationBlendTransitionPayload payload)
         {
             if (payload == null)
                 throw new ArgumentNullException(nameof(payload));
             this = new AnimationBlendTransitionIdentity(
-                poseSlotId,
+                nodeId,
                 payload.SourceProducerIndex,
                 payload.SourceEmpty,
                 payload.TargetProducerIndex,
                 payload.TargetEmpty);
         }
 
-        public PoseSlotId PoseSlotId { get; }
+        public PoseNodeId NodeId { get; }
         public int SourceProducerIndex { get; }
         public bool SourceEmpty { get; }
         public int TargetProducerIndex { get; }
         public bool TargetEmpty { get; }
-        public bool IsValid => PoseSlotId.IsValid &&
+        public bool IsValid => NodeId.IsValid &&
                                (SourceEmpty ? SourceProducerIndex == -1 : SourceProducerIndex >= 0) &&
                                (TargetEmpty ? TargetProducerIndex == -1 : TargetProducerIndex >= 0);
 
         public bool Equals(AnimationBlendTransitionIdentity other) =>
-            PoseSlotId == other.PoseSlotId &&
+            NodeId.Equals(other.NodeId) &&
             SourceProducerIndex == other.SourceProducerIndex &&
             SourceEmpty == other.SourceEmpty &&
             TargetProducerIndex == other.TargetProducerIndex &&
@@ -340,7 +340,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             unchecked
             {
-                int hash = PoseSlotId.GetHashCode();
+                int hash = NodeId.GetHashCode();
                 hash = hash * 397 ^ SourceProducerIndex;
                 hash = hash * 397 ^ SourceEmpty.GetHashCode();
                 hash = hash * 397 ^ TargetProducerIndex;
@@ -349,7 +349,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         public override string ToString() =>
-            $"{PoseSlotId}:{(SourceEmpty ? "Empty" : SourceProducerIndex.ToString())}->{(TargetEmpty ? "Empty" : TargetProducerIndex.ToString())}";
+            $"{NodeId}:{(SourceEmpty ? "Empty" : SourceProducerIndex.ToString())}->{(TargetEmpty ? "Empty" : TargetProducerIndex.ToString())}";
 
         public static bool operator ==(AnimationBlendTransitionIdentity left, AnimationBlendTransitionIdentity right) =>
             left.Equals(right);
@@ -365,7 +365,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] bool m_SourceEmpty;
         [SerializeField] int m_TargetProducerIndex = -1;
         [SerializeField] bool m_TargetEmpty;
-        [SerializeField] AnimationBlendTechnique m_Technique;
         [SerializeField] float m_DurationSeconds;
         [SerializeField] int m_CurveIndex = -1;
         [SerializeField] int m_BlendProfileIndex = -1;
@@ -374,19 +373,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public bool SourceEmpty => m_SourceEmpty;
         public int TargetProducerIndex => m_TargetProducerIndex;
         public bool TargetEmpty => m_TargetEmpty;
-        public AnimationBlendTechnique Technique => m_Technique;
         public float DurationSeconds => m_DurationSeconds;
         public int CurveIndex => m_CurveIndex;
         public int BlendProfileIndex => m_BlendProfileIndex;
-        public AnimationBlendTransitionIdentity GetIdentity(PoseSlotId poseSlotId) =>
-            new AnimationBlendTransitionIdentity(poseSlotId, this);
+        public AnimationBlendTransitionIdentity GetIdentity(PoseNodeId nodeId) =>
+            new AnimationBlendTransitionIdentity(nodeId, this);
 
         public AnimationBlendTransitionPayload(
             int sourceProducerIndex,
             bool sourceEmpty,
             int targetProducerIndex,
             bool targetEmpty,
-            AnimationBlendTechnique technique,
             float durationSeconds,
             int curveIndex,
             int blendProfileIndex)
@@ -395,7 +392,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourceEmpty = sourceEmpty;
             m_TargetProducerIndex = targetProducerIndex;
             m_TargetEmpty = targetEmpty;
-            m_Technique = technique;
             m_DurationSeconds = durationSeconds;
             m_CurveIndex = curveIndex;
             m_BlendProfileIndex = blendProfileIndex;
@@ -404,7 +400,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void RequireValid(int curveCount, int blendProfileCount)
         {
             if (SourceEmpty == (SourceProducerIndex >= 0) || TargetEmpty == (TargetProducerIndex >= 0) ||
-                !Enum.IsDefined(typeof(AnimationBlendTechnique), Technique) ||
                 !float.IsFinite(DurationSeconds) || DurationSeconds < 0f ||
                 (uint)CurveIndex >= (uint)curveCount || (uint)BlendProfileIndex >= (uint)blendProfileCount)
             {
@@ -414,30 +409,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class AnimationBlendSlotPayload
+    public sealed class AnimationBlendNodePayload
     {
-        [SerializeField] string m_PoseSlotId = string.Empty;
-        [SerializeField] string m_AnimationChannelId = string.Empty;
-        [SerializeField] PoseSlotOutputPolicy m_OutputPolicy;
+        [SerializeField] string m_NodeId = string.Empty;
+        [SerializeField] string m_PolicyId = string.Empty;
+        [SerializeField] string m_PolicyRevision = string.Empty;
         [SerializeField] AnimationBlendStackPolicyPayload m_StackPolicy;
         [SerializeField] AnimationBlendTransitionPayload[] m_Transitions = Array.Empty<AnimationBlendTransitionPayload>();
 
-        public PoseSlotId PoseSlotId => string.IsNullOrWhiteSpace(m_PoseSlotId) ? default : new PoseSlotId(m_PoseSlotId);
-        public AnimationChannelId AnimationChannelId => string.IsNullOrWhiteSpace(m_AnimationChannelId) ? default : new AnimationChannelId(m_AnimationChannelId);
-        public PoseSlotOutputPolicy OutputPolicy => m_OutputPolicy;
+        public PoseNodeId NodeId => string.IsNullOrWhiteSpace(m_NodeId) ? default : new PoseNodeId(m_NodeId);
+        public string PolicyId => m_PolicyId ?? string.Empty;
+        public string PolicyRevision => m_PolicyRevision ?? string.Empty;
         public AnimationBlendStackPolicyPayload StackPolicy => m_StackPolicy;
         public IReadOnlyList<AnimationBlendTransitionPayload> Transitions => m_Transitions ?? Array.Empty<AnimationBlendTransitionPayload>();
 
-        public AnimationBlendSlotPayload(
-            PoseSlotId poseSlotId,
-            AnimationChannelId animationChannelId,
-            PoseSlotOutputPolicy outputPolicy,
+        public AnimationBlendNodePayload(
+            PoseNodeId nodeId,
+            string policyId,
+            string policyRevision,
             AnimationBlendStackPolicyPayload stackPolicy,
             AnimationBlendTransitionPayload[] transitions)
         {
-            m_PoseSlotId = poseSlotId.IsValid ? poseSlotId.Value : throw new ArgumentException("Pose Slot identity is invalid.", nameof(poseSlotId));
-            m_AnimationChannelId = animationChannelId.IsValid ? animationChannelId.Value : throw new ArgumentException("Animation Channel identity is invalid.", nameof(animationChannelId));
-            m_OutputPolicy = outputPolicy;
+            m_NodeId = nodeId.IsValid ? nodeId.Value : throw new ArgumentException("Blend Stack Node identity is invalid.", nameof(nodeId));
+            m_PolicyId = PoseIdentity.Require(policyId, nameof(policyId));
+            m_PolicyRevision = PoseIdentity.Require(policyRevision, nameof(policyRevision));
             m_StackPolicy = stackPolicy ?? throw new ArgumentNullException(nameof(stackPolicy));
             m_Transitions = transitions ?? throw new ArgumentNullException(nameof(transitions));
         }
@@ -449,7 +444,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             bool targetEmpty)
         {
             var identity = new AnimationBlendTransitionIdentity(
-                PoseSlotId,
+                NodeId,
                 sourceProducerIndex,
                 sourceEmpty,
                 targetProducerIndex,
@@ -458,15 +453,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int i = 0; i < Transitions.Count; i++)
             {
                 AnimationBlendTransitionPayload candidate = Transitions[i];
-                if (candidate == null || candidate.GetIdentity(PoseSlotId) != identity)
+                if (candidate == null || candidate.GetIdentity(NodeId) != identity)
                 {
                     continue;
                 }
                 if (result != null)
-                    throw new InvalidOperationException($"Compiled Animation Blend Slot '{PoseSlotId}' duplicates an exact transition.");
+                    throw new InvalidOperationException($"Compiled Animation Blend Stack '{NodeId}' duplicates an exact transition.");
                 result = candidate;
             }
-            return result ?? throw new InvalidOperationException($"Compiled Animation Blend Slot '{PoseSlotId}' has no exact transition.");
+            return result ?? throw new InvalidOperationException($"Compiled Animation Blend Stack '{NodeId}' has no exact transition.");
         }
     }
 
@@ -598,7 +593,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal float PresentationDeltaSeconds { get; }
     }
 
-    public enum PoseSlotFrameAvailability : byte
+    public enum AnimationPoseAvailability : byte
     {
         Pose = 1,
         NoPose = 2,
@@ -608,14 +603,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public enum AnimationPoseContributionKind : byte
     {
         Live = 1,
-        Stored = 2,
-        Inertial = 3
+        Stored = 2
     }
 
     public readonly struct AnimationPoseSourceContribution
     {
         public AnimationPoseSourceContribution(
-            PoseSlotId poseSlotId,
+            PoseNodeId nodeId,
             AnimationPoseContributionKind kind,
             AnimationPoseSourceId sourceId,
             int programProducerIndex,
@@ -624,9 +618,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float leftFootWeight,
             float rightFootWeight)
         {
-            if (!poseSlotId.IsValid ||
+            if (!nodeId.IsValid ||
                 (int)kind < (int)AnimationPoseContributionKind.Live ||
-                (int)kind > (int)AnimationPoseContributionKind.Inertial ||
+                (int)kind > (int)AnimationPoseContributionKind.Stored ||
                 kind == AnimationPoseContributionKind.Live && (!sourceId.IsValid || programProducerIndex < 0) ||
                 kind != AnimationPoseContributionKind.Live && (sourceId.IsValid || programProducerIndex != -1) ||
                 contributionContinuityIdentity == 0 ||
@@ -634,7 +628,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new ArgumentException("Animation pose source contribution is invalid.");
             }
-            PoseSlotId = poseSlotId;
+            NodeId = nodeId;
             Kind = kind;
             SourceId = sourceId;
             ProgramProducerIndex = programProducerIndex;
@@ -644,7 +638,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RightFootWeight = rightFootWeight;
         }
 
-        public PoseSlotId PoseSlotId { get; }
+        public PoseNodeId NodeId { get; }
         public AnimationPoseContributionKind Kind { get; }
         public AnimationPoseSourceId SourceId { get; }
         public int ProgramProducerIndex { get; }
@@ -656,14 +650,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         static bool IsNormalized(float value) => float.IsFinite(value) && value >= 0f && value <= 1f;
     }
 
-    public readonly struct PoseSlotFrame
+    public readonly struct AnimationPoseValue
     {
         readonly AnimationReadOnlyBuffer<float> m_DenseContributionWeights;
 
-        internal PoseSlotFrame(
-            PoseSlotId poseSlotId,
+        internal AnimationPoseValue(
+            PoseNodeId nodeId,
             ulong completionIdentity,
-            PoseSlotFrameAvailability availability,
+            AnimationPoseAvailability availability,
             float outputWeight,
             AnimationReadOnlyBuffer<AnimationLocalBonePose> denseLocalPose,
             AnimationReadOnlyBuffer<float> poseParameters,
@@ -674,33 +668,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             bool hasFootFeatures,
             ulong continuityIdentity)
         {
-            if (!poseSlotId.IsValid || completionIdentity == 0 || continuityIdentity == 0 ||
-                (int)availability < (int)PoseSlotFrameAvailability.Pose ||
-                (int)availability > (int)PoseSlotFrameAvailability.Invalid ||
+            if (!nodeId.IsValid || completionIdentity == 0 || continuityIdentity == 0 ||
+                (int)availability < (int)AnimationPoseAvailability.Pose ||
+                (int)availability > (int)AnimationPoseAvailability.Invalid ||
                 !float.IsFinite(outputWeight) || outputWeight < 0f || outputWeight > 1f ||
                 denseContributionWeights.Count != contributions.Count * denseLocalPose.Count ||
-                availability == PoseSlotFrameAvailability.Pose && denseLocalPose.Count == 0 ||
-                availability == PoseSlotFrameAvailability.NoPose && (denseLocalPose.Count != 0 || outputWeight != 0f) ||
+                availability == AnimationPoseAvailability.Pose && denseLocalPose.Count == 0 ||
+                availability == AnimationPoseAvailability.NoPose && (denseLocalPose.Count != 0 || outputWeight != 0f) ||
                 hasFootFeatures && (!leftFootFeatures.IsValid || !rightFootFeatures.IsValid))
             {
-                throw new ArgumentException("Pose Slot Frame is invalid.");
+                throw new ArgumentException("Animation Pose Value is invalid.");
             }
             for (int i = 0; i < denseLocalPose.Count; i++)
             {
                 if (!denseLocalPose[i].IsValid)
-                    throw new ArgumentException($"Pose Slot Frame Bone pose #{i} is invalid.");
+                    throw new ArgumentException($"Animation Pose Value Bone pose #{i} is invalid.");
             }
             for (int i = 0; i < poseParameters.Count; i++)
             {
                 if (!float.IsFinite(poseParameters[i]))
-                    throw new ArgumentException($"Pose Slot Frame parameter #{i} is invalid.");
+                    throw new ArgumentException($"Animation Pose Value parameter #{i} is invalid.");
             }
             for (int i = 0; i < denseContributionWeights.Count; i++)
             {
                 if (!float.IsFinite(denseContributionWeights[i]) || denseContributionWeights[i] < 0f || denseContributionWeights[i] > 1f)
-                    throw new ArgumentException($"Pose Slot Frame contribution weight #{i} is invalid.");
+                    throw new ArgumentException($"Animation Pose Value contribution weight #{i} is invalid.");
             }
-            PoseSlotId = poseSlotId;
+            NodeId = nodeId;
             CompletionIdentity = completionIdentity;
             Availability = availability;
             OutputWeight = outputWeight;
@@ -714,9 +708,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ContinuityIdentity = continuityIdentity;
         }
 
-        public PoseSlotId PoseSlotId { get; }
+        public PoseNodeId NodeId { get; }
         public ulong CompletionIdentity { get; }
-        public PoseSlotFrameAvailability Availability { get; }
+        public AnimationPoseAvailability Availability { get; }
         public float OutputWeight { get; }
         public AnimationReadOnlyBuffer<AnimationLocalBonePose> DenseLocalPose { get; }
         public AnimationReadOnlyBuffer<float> PoseParameters { get; }

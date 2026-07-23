@@ -13,6 +13,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             NativeArray<AnimationLocalBonePose> currentPose,
             NativeArray<AnimationBlendBoneVelocity> velocity,
             NativeArray<float> poseParameters,
+            NativeArray<byte> poseParameterAvailability,
             NativeArray<AnimationFootFeatureSample> leftFootFeatures,
             NativeArray<AnimationFootFeatureSample> rightFootFeatures,
             NativeArray<float> visualTimeScales,
@@ -34,6 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             RequireLength(currentPose, poseCapacity);
             RequireLength(velocity, poseCapacity);
             RequireLength(poseParameters, parameterCapacity);
+            RequireLength(poseParameterAvailability, parameterCapacity);
             RequireLength(leftFootFeatures, sourceCapacity);
             RequireLength(rightFootFeatures, sourceCapacity);
             RequireLength(visualTimeScales, sourceCapacity);
@@ -48,6 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             CurrentPose = currentPose;
             Velocity = velocity;
             PoseParameters = poseParameters;
+            PoseParameterAvailability = poseParameterAvailability;
             LeftFootFeatures = leftFootFeatures;
             RightFootFeatures = rightFootFeatures;
             VisualTimeScales = visualTimeScales;
@@ -63,6 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal NativeArray<AnimationLocalBonePose> CurrentPose { get; }
         internal NativeArray<AnimationBlendBoneVelocity> Velocity { get; }
         internal NativeArray<float> PoseParameters { get; }
+        internal NativeArray<byte> PoseParameterAvailability { get; }
         internal NativeArray<AnimationFootFeatureSample> LeftFootFeatures { get; }
         internal NativeArray<AnimationFootFeatureSample> RightFootFeatures { get; }
         internal NativeArray<float> VisualTimeScales { get; }

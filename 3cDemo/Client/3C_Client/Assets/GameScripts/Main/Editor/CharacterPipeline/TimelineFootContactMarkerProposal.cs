@@ -76,9 +76,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireArtifactMatchesClip(clip, artifact);
 
             int intervals = Mathf.Max(2, Mathf.CeilToInt(clip.length * artifact.Identity.SampleRate));
+            int minimumSamples = Mathf.Max(
+                1,
+                Mathf.CeilToInt(artifact.Identity.MinimumLandingSegmentSeconds / (clip.length / intervals)));
             var candidates = new List<AnimationFootContactCandidate>();
-            Collect(TimelineFootContactSide.Left, artifact.Features.Left.PlantConfidence, intervals, candidates);
-            Collect(TimelineFootContactSide.Right, artifact.Features.Right.PlantConfidence, intervals, candidates);
+            Collect(TimelineFootContactSide.Left, artifact.Features.Left.PlantConfidence, intervals, minimumSamples, candidates);
+            Collect(TimelineFootContactSide.Right, artifact.Features.Right.PlantConfidence, intervals, minimumSamples, candidates);
             candidates.Sort(Compare);
             bool hasLeft = false;
             bool hasRight = false;
@@ -140,6 +143,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             TimelineFootContactSide side,
             AnimationCurve plantConfidence,
             int intervals,
+            int minimumSamples,
             List<AnimationFootContactCandidate> destination)
         {
             if (plantConfidence == null)
@@ -151,7 +155,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 float current = plantConfidence.Evaluate(i / (float)intervals);
                 if (!float.IsFinite(previous) || !float.IsFinite(current))
                     throw new InvalidOperationException($"{side} foot PlantConfidence contains a non-finite sample.");
-                if (previous < 0.5f && current >= 0.5f)
+                if (previous >= 0.5f || current < 0.5f)
+                    continue;
+                int plantedSamples = 0;
+                while (plantedSamples < intervals)
+                {
+                    float confidence = plantConfidence.Evaluate(((i + plantedSamples) % intervals) / (float)intervals);
+                    if (!float.IsFinite(confidence))
+                        throw new InvalidOperationException($"{side} foot PlantConfidence contains a non-finite sample.");
+                    if (confidence < 0.5f)
+                        break;
+                    plantedSamples++;
+                }
+                if (plantedSamples >= minimumSamples)
                     destination.Add(new AnimationFootContactCandidate(side, i / (float)intervals, current));
             }
         }

@@ -134,7 +134,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong previousBodyTick,
             ulong currentBodyTick,
             ulong resetSequence,
-            string poseProgramHash,
+            string posePlanHash,
             ulong completionIdentity,
             ulong poseContinuityIdentity,
             string footPlacementWeightParameterId,
@@ -175,7 +175,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PreviousBodyTick = previousBodyTick;
             CurrentBodyTick = currentBodyTick;
             ResetSequence = resetSequence;
-            PoseProgramHash = poseProgramHash ?? string.Empty;
+            PosePlanHash = posePlanHash ?? string.Empty;
             CompletionIdentity = completionIdentity;
             PoseContinuityIdentity = poseContinuityIdentity;
             FootPlacementWeightParameterId = footPlacementWeightParameterId ?? string.Empty;
@@ -217,7 +217,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong PreviousBodyTick { get; }
         public ulong CurrentBodyTick { get; }
         public ulong ResetSequence { get; }
-        public string PoseProgramHash { get; }
+        public string PosePlanHash { get; }
         public ulong CompletionIdentity { get; }
         public ulong PoseContinuityIdentity { get; }
         public string FootPlacementWeightParameterId { get; }

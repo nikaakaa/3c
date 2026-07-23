@@ -43,7 +43,7 @@
 - [x] 3.8 校验override multiplier有限且为正。
 - [x] 3.9 将Profile展开为dense multiplier数组。
 - [x] 3.10 将dense Profile纳入ProjectionRevision。
-- [ ] 3.11 在Inspector显示Rig identity和最终multiplier。
+- [x] 3.11 在Inspector显示Rig identity和最终multiplier。
 - [x] 3.12 删除按骨骼名称或数组长度勉强应用路径。
 
 ## 4. Blend Library与Transition Matrix
@@ -55,7 +55,7 @@
 - [x] 4.5 校验Stack容量至少为2。
 - [x] 4.6 校验阈值与倍率有限合法。
 - [x] 4.7 定义CrossFade technique。
-- [x] 4.8 定义Inertial technique。
+- [x] 4.8 删除Inertial technique并让BlendStack类型本身唯一表达CrossFade。
 - [x] 4.9 定义transition duration。
 - [x] 4.10 定义canonical transition curve引用。
 - [x] 4.11 定义Blend Profile引用。
@@ -91,7 +91,7 @@
 - [x] 6.4 将PresentationRequestSequence纳入EntryId。
 - [x] 6.5 定义Live Source Entry状态。
 - [x] 6.6 定义Stored Pose Entry状态。
-- [x] 6.7 定义每slot唯一Inertial Accumulator状态。
+- [x] 6.7 删除每slot Inertial Accumulator并由局部Inertialization节点独占Accumulator。
 - [x] 6.8 定义ResolvedAnimationPoseRequest中的AnimationChannelId。
 - [x] 6.9 定义ResolvedAnimationPoseRequest中的PoseSlotId。
 - [x] 6.10 保存resolved visual time、cycle和scale。
@@ -141,9 +141,9 @@
 - [x] 8.14 阻止Stored Pose伪造PlaybackId或AnimationClip。
 - [x] 8.15 删除达到容量后直接丢entry路径。
 
-## 9. Inertial Blend
+## 9. Inertial数学迁移到局部节点
 
-- [x] 9.1 预分配每slot唯一Inertial workspace。
+- [x] 9.1 预分配每Inertialization节点唯一workspace。
 - [x] 9.2 捕获切换前current/previous slot pose。
 - [x] 9.3 捕获新target pose与velocity。
 - [x] 9.4 计算position residual。
@@ -153,8 +153,8 @@
 - [x] 9.8 捕获Pose Parameter residual。
 - [x] 9.9 捕获每脚feature transition端点。
 - [x] 9.10 按duration、curve与Blend Profile衰减。
-- [x] 9.11 在capture后退出旧source entries。
-- [x] 9.12 让新target成为唯一live source。
+- [x] 9.11 让SelectedPosePlayer在handoff完成后立即退出旧source。
+- [x] 9.12 让新target成为Player唯一live source。
 - [x] 9.13 实现连续中断从当前修正结果rebase。
 - [x] 9.14 禁止叠加第二个Accumulator。
 - [x] 9.15 在residual完成后清除Accumulator。
@@ -185,7 +185,7 @@
 - [x] 11.3 定义slot output weight。
 - [x] 11.4 定义dense local pose buffer。
 - [x] 11.5 定义Pose Parameter buffer。
-- [x] 11.6 定义live/Stored/Inertial contribution buffer。
+- [x] 11.6 定义BlendStack的live/Stored contribution，并让Inertialization独立发布普通Pose contribution。
 - [x] 11.7 定义左右脚feature aggregate。
 - [x] 11.8 定义continuity identity。
 - [x] 11.9 定义completion identity。
@@ -207,11 +207,11 @@
 - [x] 12.2 在Stack push前完成target effective time解析。
 - [x] 12.3 只使用push前live Current和Pending target建立relation。
 - [x] 12.4 禁止Stored Pose成为Marker source。
-- [x] 12.5 禁止Inertial accumulator成为Marker source。
+- [x] 12.5 禁止局部Inertialization的Accumulator成为Marker source。
 - [x] 12.6 禁止Pose Graph共同可见关系建立Marker relation。
 - [x] 12.7 在CrossFade source退出时建立continuation anchor。
 - [x] 12.8 在Stored capture后建立continuation anchor。
-- [x] 12.9 在Inertial capture后建立continuation anchor。
+- [x] 12.9 让SelectedPosePlayer handoff完成后释放旧source，局部Inertialization只保留Pose history。
 - [x] 12.10 让relation拓扑按PlaybackId稳定求值。
 - [x] 12.11 保持logic release后的animation-only retention。
 - [x] 12.12 在Stack/relation/pending均释放后Retire source。
@@ -229,7 +229,7 @@
 - [x] 13.8 按LeftFoot transition weight生成slot aggregate。
 - [x] 13.9 按RightFoot transition weight生成slot aggregate。
 - [x] 13.10 让Stored Pose保留每脚aggregate。
-- [x] 13.11 让Inertial连续过渡每脚aggregate。
+- [x] 13.11 让局部Inertialization按实际脚Bone envelope传播每脚feature。
 - [x] 13.12 把PoseSlotFrame交给唯一PoseSlotInput。
 - [x] 13.13 禁止Foot Placement直接读取PoseSlot scalar。
 - [x] 13.14 让Foot Placement只读取Pose Graph最终每脚贡献。
@@ -243,34 +243,49 @@
 - [x] 14.4 在全部source capture后求值PoseSlotFrame。
 - [x] 14.5 在全部PoseSlotFrame完成后调用Pose Graph。
 - [x] 14.6 在FinalAnimationPoseFrame后调用Foot Placement。
-- [x] 14.7 更新Reset清理Stack/Stored/Inertial顺序。
+- [x] 14.7 更新Reset分别清理BlendStack/Stored与局部Inertialization顺序。
 - [x] 14.8 更新Dispose等待job并释放workspace顺序。
 - [x] 14.9 让Timeline Preview复用正式per-slot Stack。
 - [x] 14.10 让Timeline Preview复用正式Slot Evaluator。
 - [x] 14.11 扩展snapshot保存channel、slot与entry顺序。
 - [x] 14.12 扩展snapshot保存clock、curve与per-bone weight。
-- [x] 14.13 扩展snapshot保存Stored与Inertial详情。
+- [x] 14.13 扩展snapshot分别保存Stack Stored与局部Inertialization详情。
 - [x] 14.14 扩展snapshot保存PoseSlotFrame与continuity。
 - [x] 14.15 明确snapshot中的weight尚未经过Pose Graph最终Mask。
 - [x] 14.16 删除按Animancer state重建weight的Debug路径。
 
-## 15. Corin资产迁移与旧路径删除
+## 15. 旧路径删除与Corin资产单一归属
 
-- [ ] 15.1 创建Corin CharacterAnimationRigDefinition。
-- [ ] 15.2 配置Corin稳定BoneId与父索引。
-- [ ] 15.3 配置左右脚语义BoneId与root exclusion。
-- [ ] 15.4 创建Corin Runtime Rig Binding。
-- [ ] 15.5 创建Corin Blend Profiles。
-- [ ] 15.6 将Corin Blend Library改为BaseLocomotionSlot policy。
-- [ ] 15.7 将Corin Blend Library改为FullBodyActionSlot policy。
-- [ ] 15.8 物化两个slot完整transition matrix。
-- [ ] 15.9 更新Corin Profile引用Blend Library与Rig。
-- [ ] 15.10 重建Corin Presentation Projection。
-- [ ] 15.11 删除Corin Animancer TransitionLibrary引用。
-- [x] 15.12 删除旧Animancer fade与Layer weight代码。
-- [x] 15.13 删除旧LayerId Stack key与Layer compositor。
-- [x] 15.14 删除旧AnimationBlendPoseEvaluator global output职责。
-- [x] 15.15 删除旧single-scalar visible contribution schema。
-- [x] 15.16 删除旧Projection Layer/transition字段与reader。
-- [x] 15.17 删除FormerlySerializedAs、fallback与兼容转换。
-- [x] 15.18 更新`openspec/project.md`中Animancer、Blend Stack与Pose Graph职责。
+- [x] 15.1 删除旧Animancer fade与Layer weight代码。
+- [x] 15.2 删除旧LayerId Stack key与Layer compositor。
+- [x] 15.3 删除旧AnimationBlendPoseEvaluator global output职责。
+- [x] 15.4 删除旧single-scalar visible contribution schema。
+- [x] 15.5 删除旧Projection Layer/transition字段与reader。
+- [x] 15.6 删除FormerlySerializedAs、fallback与兼容转换。
+- [x] 15.7 更新`openspec/project.md`中Animancer、Blend Stack与Pose Graph职责。
+- [x] 15.8 将Corin通道、Pose Graph、Rig、Blend Profile、Blend Library、Runtime Binding、Projection与Program wrapper资产迁移统一归属到`add-character-presentation-pose-graph`第15章。
+- [x] 15.9 从本change删除重复的Corin资产创建与重建任务，不建立第二份迁移清单。
+- [x] 15.10 在proposal与design记录两个change不得分开形成Corin临时配置或独立归档闭包。
+
+## 16. 显式Blend Stack节点重新基线
+
+- [x] 16.1 将Stack owner从PoseSlotId迁移为稳定PoseNodeId。
+- [x] 16.2 让Stack节点消费AnimationSelectionFrame。
+- [x] 16.3 让Stack节点输出统一Pose Value。
+- [x] 16.4 将per-slot policy迁移为node-local CharacterAnimationBlendPolicy。
+- [x] 16.5 让Compiler只物化该节点可达selection的exact transition table。
+- [x] 16.6 把entry、clock、CrossFade、Stored Pose与Per-Bone算法迁入BlendStack节点实例。
+- [x] 16.6.1 把既有Inertial数学、history、rebase与workspace整体迁移给局部Inertialization节点。
+- [x] 16.6.2 删除BlendStack中的Inertial technique、rule、state、contribution与diagnostics字段。
+- [x] 16.7 把source retention与release迁入节点生命周期。
+- [x] 16.7.1 让Stack membership预阶段发布current与Retained PlayerSourceUsage。
+- [x] 16.7.2 让Stack exact release发布匹配source usage release。
+- [x] 16.7.3 让Stack在连接MarkerSync时消费effective sample page。
+- [x] 16.7.4 让Stack未连接MarkerSync时消费Selection raw visual time。
+- [x] 16.7.5 删除Stack对MarkerId、SyncRole、relation与effective time的所有权。
+- [x] 16.7.6 删除Lifecycle对隐藏Stack entry的Marker扫描。
+- [x] 16.8 删除固定per-slot Stack创建与workspace分配。
+- [x] 16.9 删除PoseSlotFrame专用输出和隐藏PoseSlotInput接线。
+- [x] 16.10 更新Preview、Live Debug与snapshot为PoseNodeId、source usage和Pose Value口径。
+- [x] 16.11 更新本change全部spec delta为显式节点口径。
+- [x] 16.12 确认本change只作为新边界change的算法迁移输入，不独立形成旧链归档闭包。

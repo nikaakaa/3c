@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
+using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
@@ -78,6 +79,47 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 });
         }
 
+        public void PublishBlendSpaceSample(
+            RuntimeDiagnosticsContext diagnostics,
+            AnimationChannelId animationChannelId,
+            AnimationPoseSourceId sourceId,
+            PoseNodeId playerNodeId,
+            string dominantSampleId,
+            float dominantWeight,
+            float visualSampleTime,
+            double continuousVisualTime,
+            int cycle,
+            float rawAxis,
+            float resolvedAxis,
+            float normalizedPhase,
+            string weights)
+        {
+            diagnostics ??= m_DiagnosticsSource?.Invoke();
+            if (diagnostics == null ||
+                !diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, RuntimeTraceEventKind.AnimationProducerSampled))
+                return;
+            diagnostics.Publish(
+                RuntimeTraceChannel.Animation,
+                RuntimeTraceDomain.Presentation,
+                RuntimeTraceEventKind.AnimationProducerSampled,
+                RuntimeSourceElementHandle.Invalid,
+                ResolveInstance(diagnostics, sourceId.PlaybackId),
+                new RuntimeTracePayload
+                {
+                    AnimationChannelId = animationChannelId.Value,
+                    Name = dominantSampleId,
+                    Status = "BlendSpace",
+                    OwnerId = sourceId.ToString(),
+                    RelatedElementId = playerNodeId.Value,
+                    Time = visualSampleTime,
+                    SecondaryTime = (float)continuousVisualTime,
+                    NormalizedTime = normalizedPhase,
+                    Cycle = cycle,
+                    Weight = dominantWeight,
+                    Detail = $"Axis={rawAxis:F3}->{resolvedAxis:F3} | Weights={weights}"
+                });
+        }
+
         public void PublishMarkerSyncFailure(
             RuntimeDiagnosticsContext diagnostics,
             AnimationMarkerSyncException failure,
@@ -137,7 +179,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 {
                     if (!diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, RuntimeTraceEventKind.AnimationProducerSampled))
                         break;
-                    ResolvedAnimationPoseRequest poseRequest = command.PoseRequest;
+                    AnimationSelectionFrame poseRequest = command.PoseRequest;
                     diagnostics.Publish(
                         RuntimeTraceChannel.Animation,
                         RuntimeTraceDomain.Presentation,
@@ -153,7 +195,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                             Time = poseRequest.VisualSampleTime,
                             SecondaryTime = (float)poseRequest.ContinuousVisualTime,
                             Cycle = poseRequest.Cycle,
-                            Detail = $"Slot={poseRequest.PoseSlotId} | Clips={poseRequest.Clips.Count} | Parameters={poseRequest.PoseParameters.Count}"
+                            Detail = $"Selection={AnimationSelectionFrame.SchemaVersion} | Clips={poseRequest.Clips.Count} | Parameters={poseRequest.PoseParameters.Count}"
+                        });
+                    break;
+                }
+                case AnimationPlaybackCommandKind.PoseUnavailable:
+                {
+                    if (!diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, RuntimeTraceEventKind.AnimationProducerSampled))
+                        break;
+                    AnimationChannelSelection unavailable = command.Selection;
+                    diagnostics.Publish(
+                        RuntimeTraceChannel.Animation,
+                        RuntimeTraceDomain.Presentation,
+                        RuntimeTraceEventKind.AnimationProducerSampled,
+                        RuntimeSourceElementHandle.Invalid,
+                        ResolveInstance(diagnostics, unavailable.PlaybackId),
+                        new RuntimeTracePayload
+                        {
+                            AnimationChannelId = unavailable.AnimationChannelId.Value,
+                            Status = "NoPose",
+                            OwnerId = unavailable.PlaybackId.ToString(),
+                            Time = command.LocalLogicTick
                         });
                     break;
                 }
@@ -212,12 +274,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     new RuntimeTracePayload
                     {
                         AnimationChannelId = snapshot.AnimationChannelId.Value,
-                        Name = snapshot.PoseSlotId.Value,
-                        Status = $"{snapshot.Phase}/{snapshot.SlotAvailability}",
+                        Name = snapshot.PoseNodeId.Value,
+                        Status = $"{snapshot.Phase}/{snapshot.Availability}",
                         OwnerId = snapshot.PlaybackId.ToString(),
                         RelatedElementId = snapshot.SourceId.ToString(),
                         Time = snapshot.SampleTime,
-                        Weight = snapshot.SlotOutputWeight,
+                        Weight = snapshot.OutputWeight,
                         Flag = snapshot.HasVisualSample
                     });
             }

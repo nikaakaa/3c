@@ -26,15 +26,15 @@ Planner MUST从动画ankle rotation与Calibration计算Animated Semantic Foot Fr
 - **THEN** 目标鞋底 MUST按support normal对齐
 - **AND** ankle骨 MUST保留rig-specific固定旋转关系
 
-### Requirement: Foot Placement 必须是唯一 Presentation Pose Post Process Pass
+### Requirement: Foot Placement必须是Pose Graph中唯一world-aware postprocess节点
 
-`CharacterSimulationPresentationRuntime` MUST在每个合法PresentationFrame中按 `Body -> Animation/Animancer Evaluate -> Foot Placement -> Camera` 固定顺序推进角色表现。Foot Placement MUST由该runtime显式创建、更新、reset和dispose，MUST不依赖Final IK、Animator、MonoBehaviour或其它manager的自主`Update`、`LateUpdate`或`FixedUpdate`形成第二个姿势写入路径。
+启用Foot Placement的Character Presentation Pose Graph MUST显式包含一个`FootPlacement`节点。Pose Graph Compiler MUST把该节点降低为唯一world-aware postprocess阶段，复用正式Planner、PhysicsScene query、Rig Calibration和`ICharacterFootPlacementSolver`，并让`OutputPose`等待该阶段exact completion。Runtime MUST不在图外自动追加第二Foot Placement Pass，不得由Final IK、Animator、MonoBehaviour或其它manager自主更新形成第二骨骼写入路径。
 
 #### Scenario: 一个表现帧更新Corin
 
-- **WHEN** Body frame有效且Animancer完成本帧Evaluate
-- **THEN** Foot Placement MUST读取本帧最终动画姿势并只执行一次
-- **AND** Camera MUST在Foot Placement完成后执行
+- **WHEN** Corin Pose Plan包含FootPlacement节点且ComposedAnimationPoseFrame完成
+- **THEN** Runtime MUST执行一次Planner、query与Solver
+- **AND** FinalAnimationPoseFrame MUST只在Solver完成后发布
 
 #### Scenario: Final IK组件仍启用自主更新
 
@@ -242,9 +242,9 @@ Body Presentation Frame MUST同时提供当前正式区间`SourceTranslationDelt
 - **AND** Foot Placement MUST读取Pose Graph最终结果且不重新采样该source
 - **AND** MUST不读取MarkerId作为plant/contact真相
 
-### Requirement: Foot Placement Planner 与骨骼 Solver 必须分离
+### Requirement: Foot Placement Planner与骨骼Solver必须分离
 
-项目Presentation core MUST唯一拥有contact、prediction、support envelope、constraint、pelvis与`CharacterFootPlacementPlan`。骨骼实现 MUST只通过`ICharacterFootPlacementSolver`消费plan、捕获显式rig姿势、应用双脚target和pelvis offset。Final IK adapter MUST位于独立命名程序集，使用两个显式Limb solver并由Pass单次驱动；`ThirdPersonClient.Runtime` MUST不引用RootMotion类型，Final IK vendor源码 MUST不被修改。
+`FootPlacement`节点的world-aware阶段 MUST让Presentation core唯一拥有contact、prediction、support envelope、constraint、pelvis与`CharacterFootPlacementPlan`；骨骼Solver MUST只消费plan、匹配Rig姿势并应用双脚target和pelvis offset。Pose Graph authoring决定该节点在最终拓扑中的位置，但不得把Planner状态、Physics query或Solver vendor对象写入Gameplay State、Selection或普通native pose节点。Final IK adapter MUST位于独立命名程序集；`ThirdPersonClient.Runtime` MUST不引用RootMotion类型，Final IK vendor源码 MUST不被修改。
 
 #### Scenario: Final IK应用一帧计划
 
@@ -270,9 +270,9 @@ Foot Placement Runtime MUST跟踪`CharacterBodyPresentationFrame.ResetSequence`�
 
 #### Scenario: Dodge淡出到Run
 
-- **WHEN** Body没有reset且Animancer正常crossfade producer
+- **WHEN** Body没有reset且显式Player正常transition producer
 - **THEN** Foot Placement MUST保留合法surface lifecycle
-- **AND** policy权重 MUST按当前视觉graph连续变化
+- **AND** policy权重 MUST按FinalAnimationPoseFrame连续变化
 
 ### Requirement: Foot Placement 必须与Simulation和Network单向隔离
 
@@ -312,10 +312,10 @@ Runtime diagnostics MUST只读暴露Body tick/reset、Calibration/Analysis ident
 
 ### Requirement: Preview 必须遵守正式世界上下文边界
 
-Play Mode中的完整Gameplay角色在具有显式Body、rig、Profile和PhysicsScene时 MUST复用正式Foot Placement Pass。项目 MUST不为Foot Placement恢复独立Preview Simulation。纯动画Timeline Preview没有正式Body和scene query上下文时 MUST明确不创建Foot Placement Runtime，且 MUST不生成默认平面、假Grounded或临时PhysicsScene来伪造效果。
+Play Mode中的完整Gameplay角色在具有显式Body、rig、Profile和PhysicsScene时 MUST执行Pose Plan中的正式FootPlacement节点。项目 MUST不为Foot Placement恢复独立Preview Simulation。纯动画Timeline Preview没有正式Body和scene query上下文时 MUST把world-aware阶段与Final publication标记为typed Unavailable，且 MUST不生成默认平面、假Grounded或临时PhysicsScene来伪造效果。
 
 #### Scenario: 纯动画预览攻击clip
 
 - **WHEN** Timeline窗口只创建AnimationPlaybackRuntime进行纯动画采样
-- **THEN** Preview MUST只显示Animancer最终动画姿势
+- **THEN** Preview MUST只显示Composed Animation Pose
 - **AND** MUST明确Foot Placement不可用而不创建另一套preview solver

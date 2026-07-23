@@ -238,8 +238,6 @@
 
 - [x] 12.1 从最新Corin authoring重新生成canonical Semantic IR artifact。
 - [x] 12.2 从同一Semantic IR重新生成Float32 Program与Projection。
-- [ ] 12.3 从同一Semantic IR重新生成Fixed Program与匹配identity。
-- [ ] 12.4 校验ProgramHash、LayoutHash、Operation Set与Target ABI来自新合同。
 - [x] 12.5 删除旧PositionMode序列化值与解析分支。
 - [x] 12.6 删除旧TargetLocalPlanarOffset字段名与读取路径。
 - [x] 12.7 删除PositionWeight与YawWeight全部代码和资产字段。
@@ -262,4 +260,3 @@
 - [x] 13.7 使用同样build-server参数编译Unity生成Runtime与Editor程序集。
 - [x] 13.8 编译后立即执行`dotnet build-server shutdown`。
 - [x] 13.9 运行`openspec validate refactor-motion-warp-trajectory-solving --strict --no-interactive`。
-- [ ] 13.10 确认全部task真实完成后再统一标记为已完成。

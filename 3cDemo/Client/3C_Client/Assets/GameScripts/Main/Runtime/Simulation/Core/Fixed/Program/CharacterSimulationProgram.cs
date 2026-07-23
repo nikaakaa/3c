@@ -1,4 +1,4 @@
-﻿using ThirdPersonSimulation;
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -334,7 +334,7 @@ namespace ThirdPersonSimulation.Fixed
                 string key = edge.Target.Value.ToString() + ":" + edge.TargetPort;
                 if (!valueSources.Add(key))
                     throw new ArgumentException($"Operation '{edge.Target}' input port '{edge.TargetPort}' has multiple linked Value sources.");
-                CharacterGameplayValuePortContracts.Require(m_Operations[edge.Source.Value].Code).RequireOutput(edge.SourcePort);
+                CharacterGameplayValuePortContracts.Require(m_Operations[edge.Source.Value].Code).RequireSelection(edge.SourcePort);
                 CharacterGameplayValuePortContracts.Require(m_Operations[edge.Target.Value].Code).RequireInput(edge.TargetPort);
             }
             for (int i = 0; i < m_ConstantInputBindings.Count; i++)

@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 {
-    public enum MotionMatchingTrajectorySourceKind : byte
+    internal enum MotionMatchingTrajectorySourceKind : byte
     {
         AcceptedIntent = 1,
         SelectedBody = 2
@@ -85,7 +85,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         static bool IsFinite(Vector2 value) => float.IsFinite(value.x) && float.IsFinite(value.y);
     }
 
-    public readonly struct MotionMatchingTrajectorySourceFrame
+    internal readonly struct MotionMatchingTrajectorySourceFrame
     {
         public MotionMatchingTrajectorySourceFrame(
             MotionMatchingTrajectorySourceIdentity identity,
@@ -158,161 +158,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         static bool IsFinite(Quaternion value) => float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z) && float.IsFinite(value.w) && Quaternion.Dot(value, value) > 0f;
     }
 
-    public interface ICharacterMotionMatchingTrajectorySource : IDisposable
-    {
-        MotionMatchingTrajectorySourceIdentity Identity { get; }
-        bool TryGetFrame(out MotionMatchingTrajectorySourceFrame frame);
-        void Reset(ulong resetSequence);
-    }
-
-    public sealed class AcceptedIntentMotionMatchingTrajectorySource : ICharacterMotionMatchingTrajectorySource
-    {
-        readonly MotionMatchingTrajectorySourceIdentity m_Identity;
-        MotionMatchingTrajectorySourceFrame m_Frame;
-        bool m_HasFrame;
-        bool m_Disposed;
-
-        public AcceptedIntentMotionMatchingTrajectorySource(MotionMatchingTrajectorySourceIdentity identity)
-        {
-            m_Identity = identity.IsValid ? identity : throw new ArgumentException("Trajectory Source identity is invalid.", nameof(identity));
-        }
-
-        public MotionMatchingTrajectorySourceIdentity Identity => m_Identity;
-
-        public void Publish(
-            CharacterPresentationTrajectoryIntent intent,
-            Vector3 worldPosition,
-            Quaternion worldRotation,
-            Vector2 currentPlanarVelocity)
-        {
-            RequireAlive();
-            m_Frame = new MotionMatchingTrajectorySourceFrame(
-                m_Identity,
-                MotionMatchingTrajectorySourceKind.AcceptedIntent,
-                intent.ActorId,
-                intent.CurrentTick,
-                intent.SourceSequence,
-                worldPosition,
-                worldRotation,
-                currentPlanarVelocity,
-                0f,
-                intent.DesiredPlanarVelocity,
-                intent.DesiredFacing,
-                intent.AcceptedAcceleration,
-                intent.AcceptedTurnRateDegrees,
-                intent.Grounded,
-                intent.MovementModeId,
-                0f,
-                intent.ResetSequence);
-            m_HasFrame = true;
-        }
-
-        public bool TryGetFrame(out MotionMatchingTrajectorySourceFrame frame)
-        {
-            RequireAlive();
-            frame = m_Frame;
-            return m_HasFrame;
-        }
-
-        public void Reset(ulong resetSequence)
-        {
-            RequireAlive();
-            m_Frame = default;
-            m_HasFrame = false;
-        }
-
-        public void Dispose()
-        {
-            m_Frame = default;
-            m_HasFrame = false;
-            m_Disposed = true;
-        }
-
-        void RequireAlive()
-        {
-            if (m_Disposed)
-                throw new ObjectDisposedException(nameof(AcceptedIntentMotionMatchingTrajectorySource));
-        }
-    }
-
-    public sealed class SelectedBodyMotionMatchingTrajectorySource : ICharacterMotionMatchingTrajectorySource
-    {
-        readonly MotionMatchingTrajectorySourceIdentity m_Identity;
-        MotionMatchingTrajectorySourceFrame m_Frame;
-        bool m_HasFrame;
-        bool m_Disposed;
-
-        public SelectedBodyMotionMatchingTrajectorySource(MotionMatchingTrajectorySourceIdentity identity)
-        {
-            m_Identity = identity.IsValid ? identity : throw new ArgumentException("Trajectory Source identity is invalid.", nameof(identity));
-        }
-
-        public MotionMatchingTrajectorySourceIdentity Identity => m_Identity;
-
-        public void PublishSelectedBody(
-            ActorId actorId,
-            SimulationTick selectedTick,
-            ulong sourceSequence,
-            Vector3 worldPosition,
-            Quaternion worldRotation,
-            Vector2 planarVelocity,
-            float yawVelocityDegrees,
-            bool grounded,
-            float sampleAge,
-            ulong resetSequence)
-        {
-            RequireAlive();
-            Vector3 forward = worldRotation * Vector3.forward;
-            Vector2 facing = new Vector2(forward.x, forward.z);
-            m_Frame = new MotionMatchingTrajectorySourceFrame(
-                m_Identity,
-                MotionMatchingTrajectorySourceKind.SelectedBody,
-                actorId,
-                selectedTick,
-                sourceSequence,
-                worldPosition,
-                worldRotation,
-                planarVelocity,
-                yawVelocityDegrees,
-                planarVelocity,
-                facing,
-                0f,
-                0f,
-                grounded,
-                string.Empty,
-                sampleAge,
-                resetSequence);
-            m_HasFrame = true;
-        }
-
-        public bool TryGetFrame(out MotionMatchingTrajectorySourceFrame frame)
-        {
-            RequireAlive();
-            frame = m_Frame;
-            return m_HasFrame;
-        }
-
-        public void Reset(ulong resetSequence)
-        {
-            RequireAlive();
-            m_Frame = default;
-            m_HasFrame = false;
-        }
-
-        public void Dispose()
-        {
-            m_Frame = default;
-            m_HasFrame = false;
-            m_Disposed = true;
-        }
-
-        void RequireAlive()
-        {
-            if (m_Disposed)
-                throw new ObjectDisposedException(nameof(SelectedBodyMotionMatchingTrajectorySource));
-        }
-    }
-
     public readonly struct MotionMatchingTrajectoryEnvelopePoint
     {
         public MotionMatchingTrajectoryEnvelopePoint(
@@ -367,7 +212,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public ulong ResetSequence { get; private set; }
         public MotionMatchingTrajectoryEnvelopePoint this[int index] => (uint)index < (uint)Count ? m_Points[index] : throw new ArgumentOutOfRangeException(nameof(index));
 
-        public void Begin(MotionMatchingTrajectorySourceFrame frame)
+        internal void Begin(MotionMatchingTrajectorySourceFrame frame)
         {
             SourceIdentity = frame.Identity;
             SourceTick = frame.SourceTick;

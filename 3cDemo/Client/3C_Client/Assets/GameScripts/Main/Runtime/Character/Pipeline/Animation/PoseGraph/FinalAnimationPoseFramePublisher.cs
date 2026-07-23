@@ -1,16 +1,17 @@
-using System;
+﻿using System;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
-    internal sealed class FinalAnimationPoseFramePublisher
+    internal sealed class ComposedAnimationPoseFramePublisher
     {
         readonly string m_PoseGraphId;
-        readonly string m_PoseProgramHash;
-        readonly PoseSlotId[] m_PoseSlotIds;
+        readonly string m_PosePlanHash;
+        readonly PoseNodeId[] m_PoseNodeIds;
         readonly float[] m_ParameterDefaults;
         readonly AnimationLocalBonePose[] m_DenseLocalPoses;
         readonly float[] m_PoseParameters;
+        readonly byte[] m_PoseParameterAvailability;
         readonly AnimationPoseSourceContribution[] m_Contributions;
         readonly float[] m_DenseContributionWeights;
         readonly FinalAnimationPoseFramePageLease[] m_PageLeases;
@@ -21,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         int m_PublishedPage = -1;
         ulong m_LastPublishedCompletionIdentity;
 
-        internal FinalAnimationPoseFramePublisher(CharacterPresentationPoseProgram program)
+        internal ComposedAnimationPoseFramePublisher(CharacterPresentationPosePlan program)
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
@@ -36,21 +37,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (contributionCapacity <= 0)
                 throw new InvalidOperationException("Final Animation Pose Frame contribution capacity is invalid.");
             m_PoseGraphId = program.PoseGraphId;
-            m_PoseProgramHash = program.ProgramHash;
+            m_PosePlanHash = program.PlanHash;
             m_OperationCount = program.Operations.Count;
-            m_PoseSlotIds = new PoseSlotId[program.Slots.Count];
-            for (int i = 0; i < m_PoseSlotIds.Length; i++)
+            m_PoseNodeIds = new PoseNodeId[program.PlayerCount];
+            for (int i = 0; i < program.Operations.Count; i++)
             {
-                CharacterPresentationPoseSlotProgramEntry slot = program.Slots[i];
-                if (slot == null || slot.Index != i || !slot.PoseSlotId.IsValid)
-                    throw new InvalidOperationException($"Final Animation Pose Frame Slot #{i} is invalid.");
-                m_PoseSlotIds[i] = slot.PoseSlotId;
+                CharacterPresentationPoseOperation operation = program.Operations[i];
+                if (operation.Code != CharacterPoseOperationCode.SelectedPosePlayer &&
+                    operation.Code != CharacterPoseOperationCode.BlendStack &&
+                    operation.Code != CharacterPoseOperationCode.BlendSpacePlayer)
+                    continue;
+                if (operation.PlayerIndex < 0 || operation.PlayerIndex >= m_PoseNodeIds.Length ||
+                    m_PoseNodeIds[operation.PlayerIndex].IsValid)
+                    throw new InvalidOperationException($"Composed Animation Pose Player #{operation.PlayerIndex} is invalid.");
+                m_PoseNodeIds[operation.PlayerIndex] = operation.NodeId;
             }
 
             m_ParameterDefaults = new float[program.Parameters.Count];
             for (int i = 0; i < m_ParameterDefaults.Length; i++)
             {
-                CharacterPresentationPoseParameterProgramEntry parameter = program.Parameters[i];
+                CharacterPresentationPoseParameterEntry parameter = program.Parameters[i];
                 if (parameter == null || parameter.Index != i || !float.IsFinite(parameter.DefaultValue))
                     throw new InvalidOperationException($"Final Animation Pose Frame Parameter #{i} is invalid.");
                 m_ParameterDefaults[i] = parameter.DefaultValue;
@@ -61,6 +67,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ContributionCapacity = contributionCapacity;
             m_DenseLocalPoses = new AnimationLocalBonePose[checked(2 * m_BoneCount)];
             m_PoseParameters = new float[checked(2 * m_ParameterCount)];
+            m_PoseParameterAvailability = new byte[checked(2 * m_ParameterCount)];
             m_Contributions = new AnimationPoseSourceContribution[checked(2 * m_ContributionCapacity)];
             m_DenseContributionWeights = new float[checked(2 * m_ContributionCapacity * m_BoneCount)];
             m_PageLeases = new[]
@@ -70,7 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             };
         }
 
-        internal FinalAnimationPoseFrame Publish(
+        internal ComposedAnimationPoseFrame Publish(
             in AnimationFinalPoseNativeReadBinding binding,
             AnimationPoseSourcePhysicalRegistry sourceRegistry)
         {
@@ -83,9 +90,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (binding.PoseGraphCompletedAt[0] != completionIdentity)
                 throw new InvalidOperationException("Animation Pose Graph did not complete the requested frame.");
 
-            PoseSlotFrameAvailability availability = binding.Availability[0];
+            AnimationPoseAvailability availability = binding.Availability[0];
             if (!IsAvailability(availability) ||
-                availability == PoseSlotFrameAvailability.NoPose || binding.ContinuityIdentity[0] == 0)
+                availability == AnimationPoseAvailability.NoPose || binding.ContinuityIdentity[0] == 0)
             {
                 throw new InvalidOperationException("Final Animation Pose Graph output header is invalid.");
             }
@@ -93,7 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int page = (m_PublishedPage + 1) & 1;
             FinalAnimationPoseFramePageLease pageLease = m_PageLeases[page];
             pageLease.BeginWrite(completionIdentity);
-            FinalAnimationPoseFrame frame = availability == PoseSlotFrameAvailability.Invalid
+            ComposedAnimationPoseFrame frame = availability == AnimationPoseAvailability.Invalid
                 ? PublishInvalid(in binding, page, pageLease)
                 : PublishPose(in binding, sourceRegistry, page, pageLease);
             m_PublishedPage = page;
@@ -108,7 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PublishedPage = -1;
         }
 
-        FinalAnimationPoseFrame PublishPose(
+        ComposedAnimationPoseFrame PublishPose(
             in AnimationFinalPoseNativeReadBinding binding,
             AnimationPoseSourcePhysicalRegistry sourceRegistry,
             int page,
@@ -138,9 +145,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int parameter = 0; parameter < m_ParameterCount; parameter++)
             {
                 float value = binding.PoseParameters[parameter];
-                if (!float.IsFinite(value))
+                byte parameterAvailable = binding.PoseParameterAvailability[parameter];
+                if (!float.IsFinite(value) || parameterAvailable > 1)
                     throw new InvalidOperationException($"Final Animation Pose Graph Parameter #{parameter} is invalid.");
                 m_PoseParameters[parameterOffset + parameter] = value;
+                m_PoseParameterAvailability[parameterOffset + parameter] = parameterAvailable;
             }
 
             int contributionCount = binding.ContributionCount[0];
@@ -171,15 +180,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (hasFootFeatures == 1 && (!left.IsValid || !right.IsValid))
                 throw new InvalidOperationException("Final Animation Pose Graph Foot Features are invalid.");
 
-            return new FinalAnimationPoseFrame(
+            return new ComposedAnimationPoseFrame(
                 m_PoseGraphId,
-                m_PoseProgramHash,
+                m_PosePlanHash,
                 binding.CompletionIdentity,
-                PoseSlotFrameAvailability.Pose,
+                AnimationPoseAvailability.Pose,
                 new AnimationReadOnlyBuffer<AnimationLocalBonePose>(
                     m_DenseLocalPoses, poseOffset, m_BoneCount, pageLease, binding.CompletionIdentity),
                 new AnimationReadOnlyBuffer<float>(
                     m_PoseParameters, parameterOffset, m_ParameterCount, pageLease, binding.CompletionIdentity),
+                new AnimationReadOnlyBuffer<byte>(
+                    m_PoseParameterAvailability, parameterOffset, m_ParameterCount, pageLease, binding.CompletionIdentity),
                 new AnimationReadOnlyBuffer<AnimationPoseSourceContribution>(
                     m_Contributions, contributionOffset, contributionCount, pageLease, binding.CompletionIdentity),
                 new AnimationReadOnlyBuffer<float>(
@@ -196,7 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 binding.CompletionIdentity);
         }
 
-        FinalAnimationPoseFrame PublishInvalid(
+        ComposedAnimationPoseFrame PublishInvalid(
             in AnimationFinalPoseNativeReadBinding binding,
             int page,
             FinalAnimationPoseFramePageLease pageLease)
@@ -223,15 +234,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int contributionOffset = checked(page * m_ContributionCapacity);
             int denseWeightOffset = checked(contributionOffset * m_BoneCount);
             Array.Copy(m_ParameterDefaults, 0, m_PoseParameters, parameterOffset, m_ParameterCount);
-            return new FinalAnimationPoseFrame(
+            Array.Clear(m_PoseParameterAvailability, parameterOffset, m_ParameterCount);
+            return new ComposedAnimationPoseFrame(
                 m_PoseGraphId,
-                m_PoseProgramHash,
+                m_PosePlanHash,
                 binding.CompletionIdentity,
-                PoseSlotFrameAvailability.Invalid,
+                AnimationPoseAvailability.Invalid,
                 new AnimationReadOnlyBuffer<AnimationLocalBonePose>(
                     m_DenseLocalPoses, poseOffset, 0, pageLease, binding.CompletionIdentity),
                 new AnimationReadOnlyBuffer<float>(
                     m_PoseParameters, parameterOffset, m_ParameterCount, pageLease, binding.CompletionIdentity),
+                new AnimationReadOnlyBuffer<byte>(
+                    m_PoseParameterAvailability, parameterOffset, m_ParameterCount, pageLease, binding.CompletionIdentity),
                 new AnimationReadOnlyBuffer<AnimationPoseSourceContribution>(
                     m_Contributions, contributionOffset, 0, pageLease, binding.CompletionIdentity),
                 new AnimationReadOnlyBuffer<float>(
@@ -248,7 +262,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPrimitivePoseContribution primitive,
             AnimationPoseSourcePhysicalRegistry sourceRegistry)
         {
-            if (primitive.PhysicalSlotIndex < 0 || primitive.PhysicalSlotIndex >= m_PoseSlotIds.Length ||
+            if (primitive.PhysicalPlayerIndex < 0 || primitive.PhysicalPlayerIndex >= m_PoseNodeIds.Length ||
                 !IsContributionKind(primitive.Kind) ||
                 primitive.ContributionContinuityIdentity == 0 ||
                 !IsWeight(primitive.Weight) || !IsWeight(primitive.LeftFootWeight) ||
@@ -257,7 +271,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Final Animation Pose Graph primitive contribution is invalid.");
             }
 
-            PoseSlotId poseSlotId = m_PoseSlotIds[primitive.PhysicalSlotIndex];
+            PoseNodeId playerNodeId = m_PoseNodeIds[primitive.PhysicalPlayerIndex];
             AnimationPoseSourceId sourceId = default;
             if (primitive.Kind == AnimationPoseContributionKind.Live)
             {
@@ -268,7 +282,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     new AnimationPhysicalSourceIndex(primitive.PhysicalSourceIndex),
                     primitive.PhysicalSourceGeneration);
                 sourceId = sourceRegistry.RequireSourceId(physicalIdentity);
-                if (!sourceRegistry.RequirePoseSlotId(physicalIdentity).Equals(poseSlotId) ||
+                if (!sourceRegistry.RequirePoseNodeId(physicalIdentity).Equals(playerNodeId) ||
                     sourceRegistry.RequireProgramProducerIndex(physicalIdentity) != primitive.ProgramProducerIndex)
                 {
                     throw new InvalidOperationException("Final Animation Pose Graph Live contribution metadata does not match its physical identity.");
@@ -281,7 +295,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             return new AnimationPoseSourceContribution(
-                poseSlotId,
+                playerNodeId,
                 primitive.Kind,
                 sourceId,
                 primitive.ProgramProducerIndex,
@@ -310,15 +324,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static bool IsWeight(float value) => float.IsFinite(value) && value >= 0f && value <= 1f;
-        static bool IsAvailability(PoseSlotFrameAvailability value) =>
-            (int)value >= (int)PoseSlotFrameAvailability.Pose &&
-            (int)value <= (int)PoseSlotFrameAvailability.Invalid;
+        static bool IsAvailability(AnimationPoseAvailability value) =>
+            (int)value >= (int)AnimationPoseAvailability.Pose &&
+            (int)value <= (int)AnimationPoseAvailability.Invalid;
         static bool IsInvalidReason(AnimationPoseNativeInvalidReason value) =>
             (int)value >= (int)AnimationPoseNativeInvalidReason.None &&
             (int)value <= (int)AnimationPoseNativeInvalidReason.FinalStreamWriteInvalid;
         static bool IsContributionKind(AnimationPoseContributionKind value) =>
             (int)value >= (int)AnimationPoseContributionKind.Live &&
-            (int)value <= (int)AnimationPoseContributionKind.Inertial;
+            (int)value <= (int)AnimationPoseContributionKind.Stored;
         static bool IsUnit<T>(Unity.Collections.NativeSlice<T> values) where T : struct =>
             values.Length == 1;
     }

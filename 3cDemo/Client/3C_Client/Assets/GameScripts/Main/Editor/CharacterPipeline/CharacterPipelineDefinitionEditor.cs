@@ -194,7 +194,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RefreshArtifactHeaderStatus(definition);
             if (m_ArtifactStatus != ArtifactStatus.Unchecked)
                 return;
-            m_ArtifactStatus = CharacterSimulationProgramBuildService.IsStale(definition)
+            m_ArtifactStatus = CharacterSimulationProgramBuildService.EvaluateExactArtifactStaleness(definition)
                 ? ArtifactStatus.Stale
                 : ArtifactStatus.Ready;
         }

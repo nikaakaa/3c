@@ -125,7 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             {
                 AnimationLocalBonePose current = currentPose[boneIndex];
                 velocity[boneIndex] = hasPrevious && m_PresentationDeltaSeconds > 0f
-                    ? AnimationBlendPoseMath.Differentiate(
+                    ? AnimationPoseMath.Differentiate(
                         previousPose[boneIndex],
                         current,
                         m_PresentationDeltaSeconds)

@@ -268,6 +268,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 positions[i] = (heelPositions[i] + toePositions[i]) * 0.5f;
                 result.Heights[i] = Mathf.Min(heelPositions[i].y, toePositions[i].y);
+            }
+            for (int i = 0; i <= last; i++)
+            {
                 if (loop && (i == 0 || i == last))
                     result.Velocities[i] = (positions[1] - positions[last - 1]) / (2f * step);
                 else if (i == 0)

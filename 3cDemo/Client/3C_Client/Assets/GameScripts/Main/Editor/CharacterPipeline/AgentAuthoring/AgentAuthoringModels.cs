@@ -6,7 +6,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public static class AgentAuthoringSchema
     {
-        public const string Version = "agent-character-controller-synthesis.v16";
+        public const string Version = "agent-character-controller-synthesis.v17";
         public const string CharacterControllerDomain = "CharacterController";
         public const string AIControllerDomain = "AIController";
 
@@ -613,11 +613,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentSnapshotAnimationChannelBinding
+    public sealed class AgentSnapshotAnimationSelectionInput
     {
+        public string nodeId;
+        public string kind;
         public string animationChannelId;
-        public string poseSlotId;
-        public string outputPolicy;
+        public string programProducerId;
+        public string availability;
     }
 
     [Serializable]
@@ -629,10 +631,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string poseGraphAssetGuid;
         public string poseGraphId;
         public string poseGraphRevision;
-        public string blendLibraryAssetPath;
-        public string blendLibraryAssetGuid;
-        public string blendLibraryId;
-        public string blendLibraryRevision;
         public string rigAssetPath;
         public string rigAssetGuid;
         public string rigId;
@@ -642,8 +640,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string footAnalysisSourceId;
         public int footAnalysisSourceVersion;
         public string footAnalysisAlgorithmVersion;
-        public List<AgentSnapshotAnimationChannelBinding> channelBindings = new List<AgentSnapshotAnimationChannelBinding>();
+        public List<AgentSnapshotAnimationSelectionInput> selectionInputs = new List<AgentSnapshotAnimationSelectionInput>();
         public List<AgentSnapshotAnimationProducer> producers = new List<AgentSnapshotAnimationProducer>();
+        public List<AgentSnapshotAnimationBlendSpace> blendSpaces = new List<AgentSnapshotAnimationBlendSpace>();
+        public List<AgentSnapshotAnimationBlendSpacePlayer> blendSpacePlayers = new List<AgentSnapshotAnimationBlendSpacePlayer>();
+    }
+
+    [Serializable]
+    public sealed class AgentSnapshotAnimationBlendSpace
+    {
+        public string assetPath;
+        public string assetGuid;
+        public string blendSpaceId;
+        public string contentRevision;
+        public string mode;
+        public string xParameterId;
+        public string xUnit;
+        public float xMinimum;
+        public float xMaximum;
+        public string yParameterId;
+        public string yUnit;
+        public float yMinimum;
+        public float yMaximum;
+        public int sampleCount;
+        public string compileStatus;
+        public string projectionRevision;
+        public List<string> diagnostics = new List<string>();
+    }
+
+    [Serializable]
+    public sealed class AgentSnapshotAnimationBlendSpacePlayer
+    {
+        public string graphId;
+        public string nodeId;
+        public string selectionPortId;
+        public string xParameterPortId;
+        public string yParameterPortId;
+        public string inputRangePolicy;
     }
 
     [Serializable]
@@ -655,7 +688,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string timelineName;
         public string trackName;
         public string animationChannelId;
-        public string poseSlotId;
         public string syncMode;
         public string syncGroupId;
         public string sequenceTopology;
@@ -663,6 +695,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string sourceAssetPath;
         public string sourceAssetGuid;
         public string sourceAssetType;
+        public string sourceKind;
+        public string blendSpaceId;
+        public string blendSpaceContentRevision;
     }
 
     [Serializable]

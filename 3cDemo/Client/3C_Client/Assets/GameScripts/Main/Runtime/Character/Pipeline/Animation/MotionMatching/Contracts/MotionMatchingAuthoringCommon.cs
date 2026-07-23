@@ -114,20 +114,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
     {
         [SerializeField] string m_ProgramProducerId = string.Empty;
         [SerializeField] string m_AnimationChannelId = string.Empty;
-        [SerializeField] string m_PoseSlotId = string.Empty;
         [SerializeField] string m_SearchDomainId = string.Empty;
         [SerializeField] CharacterMotionMatchingDatabaseDefinition[] m_Databases = Array.Empty<CharacterMotionMatchingDatabaseDefinition>();
 
         public string ProgramProducerId => m_ProgramProducerId ?? string.Empty;
         public AnimationChannelId AnimationChannelId => string.IsNullOrWhiteSpace(m_AnimationChannelId) ? default : new AnimationChannelId(m_AnimationChannelId);
-        public PoseSlotId PoseSlotId => string.IsNullOrWhiteSpace(m_PoseSlotId) ? default : new PoseSlotId(m_PoseSlotId);
         public CharacterMotionMatchingSearchDomainId SearchDomainId => string.IsNullOrWhiteSpace(m_SearchDomainId) ? default : new CharacterMotionMatchingSearchDomainId(m_SearchDomainId);
         public IReadOnlyList<CharacterMotionMatchingDatabaseDefinition> Databases => m_Databases ?? Array.Empty<CharacterMotionMatchingDatabaseDefinition>();
 
         public void RequireValid()
         {
             MotionMatchingAuthoringValidation.RequireIdentity(ProgramProducerId, nameof(ProgramProducerId));
-            if (!AnimationChannelId.IsValid || !PoseSlotId.IsValid || !SearchDomainId.IsValid || Databases.Count == 0)
+            if (!AnimationChannelId.IsValid || !SearchDomainId.IsValid || Databases.Count == 0)
                 throw new InvalidOperationException("Motion Matching producer binding is incomplete.");
             var databaseIds = new HashSet<CharacterMotionMatchingDatabaseId>();
             for (int i = 0; i < Databases.Count; i++)

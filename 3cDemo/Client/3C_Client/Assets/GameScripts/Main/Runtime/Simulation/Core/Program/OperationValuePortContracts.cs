@@ -164,7 +164,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<OperationValuePortDefinition> Outputs => m_Outputs;
 
         public OperationValuePortDefinition RequireInput(string identity) => Require(m_InputByIdentity, identity, "input");
-        public OperationValuePortDefinition RequireOutput(string identity) => Require(m_OutputByIdentity, identity, "output");
+        public OperationValuePortDefinition RequireSelection(string identity) => Require(m_OutputByIdentity, identity, "output");
 
         static ReadOnlyCollection<OperationValuePortDefinition> Build(
             IEnumerable<OperationValuePortDefinition> source,

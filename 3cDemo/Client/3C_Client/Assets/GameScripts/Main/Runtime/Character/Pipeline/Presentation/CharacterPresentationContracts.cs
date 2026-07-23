@@ -10,6 +10,188 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
+    public enum CharacterPosePlanPhaseStatus : byte
+    {
+        Completed = 1,
+        NotRequired = 2,
+        Unavailable = 3
+    }
+
+    public enum CharacterPosePlanPhaseUnavailableReason : byte
+    {
+        None = 0,
+        ComposedPoseUnavailable = 1,
+        WorldContextUnavailable = 2,
+        WorldAwarePhaseUnavailable = 3
+    }
+
+    public readonly struct CharacterPosePlanPhaseSnapshot
+    {
+        public CharacterPosePlanPhaseSnapshot(
+            CharacterPosePlanPhase phase,
+            CharacterPosePlanPhaseStatus status,
+            CharacterPosePlanPhaseUnavailableReason unavailableReason,
+            ulong completionIdentity)
+        {
+            bool completed = status == CharacterPosePlanPhaseStatus.Completed;
+            bool notRequired = status == CharacterPosePlanPhaseStatus.NotRequired;
+            bool unavailable = status == CharacterPosePlanPhaseStatus.Unavailable;
+            if (!Enum.IsDefined(typeof(CharacterPosePlanPhase), phase) ||
+                !Enum.IsDefined(typeof(CharacterPosePlanPhaseStatus), status) ||
+                !Enum.IsDefined(typeof(CharacterPosePlanPhaseUnavailableReason), unavailableReason) ||
+                completed && (completionIdentity == 0 || unavailableReason != CharacterPosePlanPhaseUnavailableReason.None) ||
+                notRequired && (completionIdentity != 0 || unavailableReason != CharacterPosePlanPhaseUnavailableReason.None) ||
+                unavailable && (completionIdentity != 0 || unavailableReason == CharacterPosePlanPhaseUnavailableReason.None))
+            {
+                throw new ArgumentException("Pose Plan phase snapshot is invalid.");
+            }
+            Phase = phase;
+            Status = status;
+            UnavailableReason = unavailableReason;
+            CompletionIdentity = completionIdentity;
+        }
+
+        public CharacterPosePlanPhase Phase { get; }
+        public CharacterPosePlanPhaseStatus Status { get; }
+        public CharacterPosePlanPhaseUnavailableReason UnavailableReason { get; }
+        public ulong CompletionIdentity { get; }
+        public bool IsCompleted => Status == CharacterPosePlanPhaseStatus.Completed;
+    }
+
+    public readonly struct CharacterPosePlanStageSnapshot
+    {
+        public CharacterPosePlanStageSnapshot(
+            string poseGraphId,
+            string posePlanHash,
+            AnimationPoseAvailability composedAvailability,
+            CharacterPosePlanPhaseSnapshot composed,
+            CharacterPosePlanPhaseSnapshot worldAware,
+            CharacterPosePlanPhaseSnapshot final)
+        {
+            if (string.IsNullOrWhiteSpace(poseGraphId) || string.IsNullOrWhiteSpace(posePlanHash) ||
+                !Enum.IsDefined(typeof(AnimationPoseAvailability), composedAvailability) ||
+                composed.Phase != CharacterPosePlanPhase.SourceAndNativePose ||
+                worldAware.Phase != CharacterPosePlanPhase.WorldAwarePostProcess ||
+                final.Phase != CharacterPosePlanPhase.FinalPublication ||
+                final.IsCompleted && !composed.IsCompleted ||
+                final.IsCompleted && worldAware.Status == CharacterPosePlanPhaseStatus.Unavailable)
+            {
+                throw new ArgumentException("Pose Plan stage snapshot is invalid.");
+            }
+            PoseGraphId = poseGraphId;
+            PosePlanHash = posePlanHash;
+            ComposedAvailability = composedAvailability;
+            Composed = composed;
+            WorldAware = worldAware;
+            Final = final;
+        }
+
+        public string PoseGraphId { get; }
+        public string PosePlanHash { get; }
+        public AnimationPoseAvailability ComposedAvailability { get; }
+        public CharacterPosePlanPhaseSnapshot Composed { get; }
+        public CharacterPosePlanPhaseSnapshot WorldAware { get; }
+        public CharacterPosePlanPhaseSnapshot Final { get; }
+        public bool IsValid => !string.IsNullOrWhiteSpace(PoseGraphId) && !string.IsNullOrWhiteSpace(PosePlanHash);
+    }
+
+    internal static class CharacterPosePlanStageSnapshotFactory
+    {
+        internal static CharacterPosePlanStageSnapshot Completed(
+            CharacterPresentationPosePlan plan,
+            in ComposedAnimationPoseFrame composed,
+            bool worldAwareExecuted)
+        {
+            RequirePlan(plan);
+            return new CharacterPosePlanStageSnapshot(
+                composed.PoseGraphId,
+                composed.PosePlanHash,
+                composed.Availability,
+                Complete(CharacterPosePlanPhase.SourceAndNativePose, composed.CompletionIdentity),
+                worldAwareExecuted
+                    ? Complete(CharacterPosePlanPhase.WorldAwarePostProcess, composed.CompletionIdentity)
+                    : NotRequired(CharacterPosePlanPhase.WorldAwarePostProcess),
+                Complete(CharacterPosePlanPhase.FinalPublication, composed.CompletionIdentity));
+        }
+
+        internal static CharacterPosePlanStageSnapshot Unavailable(
+            CharacterPresentationPosePlan plan,
+            AnimationPoseAvailability composedAvailability,
+            ulong composedCompletionIdentity,
+            CharacterPosePlanPhaseUnavailableReason reason)
+        {
+            RequirePlan(plan);
+            CharacterPosePlanPhaseSnapshot composed = composedCompletionIdentity == 0
+                ? Missing(CharacterPosePlanPhase.SourceAndNativePose, reason)
+                : Complete(CharacterPosePlanPhase.SourceAndNativePose, composedCompletionIdentity);
+            return new CharacterPosePlanStageSnapshot(
+                plan.PoseGraphId,
+                plan.PlanHash,
+                composedAvailability,
+                composed,
+                Missing(CharacterPosePlanPhase.WorldAwarePostProcess, reason),
+                Missing(CharacterPosePlanPhase.FinalPublication, CharacterPosePlanPhaseUnavailableReason.WorldAwarePhaseUnavailable));
+        }
+
+        internal static CharacterPosePlanStageSnapshot Preview(
+            CharacterPresentationPosePlan plan,
+            in ComposedAnimationPoseFrame composed)
+        {
+            RequirePlan(plan);
+            if (composed.Availability != AnimationPoseAvailability.Pose)
+            {
+                return Unavailable(
+                    plan,
+                    composed.Availability,
+                    composed.CompletionIdentity,
+                    CharacterPosePlanPhaseUnavailableReason.ComposedPoseUnavailable);
+            }
+            return plan.FootPlacementNodes.Count == 0
+                ? Completed(plan, in composed, false)
+                : new CharacterPosePlanStageSnapshot(
+                    composed.PoseGraphId,
+                    composed.PosePlanHash,
+                    composed.Availability,
+                    Complete(CharacterPosePlanPhase.SourceAndNativePose, composed.CompletionIdentity),
+                    Missing(
+                        CharacterPosePlanPhase.WorldAwarePostProcess,
+                        CharacterPosePlanPhaseUnavailableReason.WorldContextUnavailable),
+                    Missing(
+                        CharacterPosePlanPhase.FinalPublication,
+                        CharacterPosePlanPhaseUnavailableReason.WorldAwarePhaseUnavailable));
+        }
+
+        static CharacterPosePlanPhaseSnapshot Complete(CharacterPosePlanPhase phase, ulong completionIdentity) =>
+            new CharacterPosePlanPhaseSnapshot(
+                phase,
+                CharacterPosePlanPhaseStatus.Completed,
+                CharacterPosePlanPhaseUnavailableReason.None,
+                completionIdentity);
+
+        static CharacterPosePlanPhaseSnapshot NotRequired(CharacterPosePlanPhase phase) =>
+            new CharacterPosePlanPhaseSnapshot(
+                phase,
+                CharacterPosePlanPhaseStatus.NotRequired,
+                CharacterPosePlanPhaseUnavailableReason.None,
+                0);
+
+        static CharacterPosePlanPhaseSnapshot Missing(
+            CharacterPosePlanPhase phase,
+            CharacterPosePlanPhaseUnavailableReason reason) =>
+            new CharacterPosePlanPhaseSnapshot(
+                phase,
+                CharacterPosePlanPhaseStatus.Unavailable,
+                reason,
+                0);
+
+        static void RequirePlan(CharacterPresentationPosePlan plan)
+        {
+            if (plan == null)
+                throw new ArgumentNullException(nameof(plan));
+            plan.RequireValid();
+        }
+    }
+
     public interface ICharacterPresentationLookInput
     {
         bool TryGetLatchedVector2(string inputId, out Vector2 value);
@@ -73,13 +255,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong animationBranchReplacementCount,
             float followerPositionCorrectionMeters,
             float followerYawCorrectionDegrees,
-            CharacterFootPlacementFrameSnapshot footPlacement)
+            CharacterFootPlacementFrameSnapshot footPlacement,
+            CharacterPosePlanStageSnapshot posePlanStages)
         {
             BodyBranchReplacementCount = bodyBranchReplacementCount;
             AnimationBranchReplacementCount = animationBranchReplacementCount;
             FollowerPositionCorrectionMeters = followerPositionCorrectionMeters;
             FollowerYawCorrectionDegrees = followerYawCorrectionDegrees;
             FootPlacement = footPlacement;
+            PosePlanStages = posePlanStages;
         }
 
         public ulong BodyBranchReplacementCount { get; }
@@ -87,6 +271,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float FollowerPositionCorrectionMeters { get; }
         public float FollowerYawCorrectionDegrees { get; }
         public CharacterFootPlacementFrameSnapshot FootPlacement { get; }
+        public CharacterPosePlanStageSnapshot PosePlanStages { get; }
     }
 
     public interface ICharacterPresentationRuntime : IDisposable

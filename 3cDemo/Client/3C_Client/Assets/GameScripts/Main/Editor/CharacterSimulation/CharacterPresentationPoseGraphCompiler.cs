@@ -4,53 +4,70 @@ using System.Globalization;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonSimulation;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
     public static class CharacterPresentationPoseGraphCompiler
     {
+        readonly struct CompiledValue
+        {
+            public CompiledValue(CharacterPosePortKind kind, int index, int producerOperationIndex = -1)
+            {
+                Kind = kind;
+                Index = index;
+                ProducerOperationIndex = producerOperationIndex;
+            }
+
+            public CharacterPosePortKind Kind { get; }
+            public int Index { get; }
+            public int ProducerOperationIndex { get; }
+        }
+
         sealed class CompilationState
         {
             public CompilationState(
                 CharacterAnimationRigDefinition rig,
-                CharacterPresentationPoseSlotProgramEntry[] slots,
-                Dictionary<PoseSlotId, int> slotIndices,
-                CharacterPresentationPoseParameterProgramEntry[] parameters,
-                Dictionary<PoseParameterId, int> parameterIndices)
+                CharacterPresentationPoseParameterEntry[] parameters,
+                Dictionary<PoseParameterId, int> parameterIndices,
+                AnimationBlendNodePayload[] blendNodes)
             {
                 Rig = rig;
-                Slots = slots;
-                SlotIndices = slotIndices;
                 Parameters = parameters;
                 ParameterIndices = parameterIndices;
+                BlendNodes = blendNodes;
+                BlendNodeIndices = blendNodes
+                    .Select((value, index) => new KeyValuePair<PoseNodeId, int>(value.NodeId, index))
+                    .ToDictionary(value => value.Key, value => value.Value);
             }
 
             public CharacterAnimationRigDefinition Rig { get; }
-            public CharacterPresentationPoseSlotProgramEntry[] Slots { get; }
-            public Dictionary<PoseSlotId, int> SlotIndices { get; }
-            public CharacterPresentationPoseParameterProgramEntry[] Parameters { get; }
+            public CharacterPresentationPoseParameterEntry[] Parameters { get; }
             public Dictionary<PoseParameterId, int> ParameterIndices { get; }
+            public AnimationBlendNodePayload[] BlendNodes { get; }
+            public Dictionary<PoseNodeId, int> BlendNodeIndices { get; }
+            public List<CharacterPresentationSelectionInputEntry> SelectionInputs { get; } = new List<CharacterPresentationSelectionInputEntry>();
             public List<CharacterPresentationDenseBoneMask> Masks { get; } = new List<CharacterPresentationDenseBoneMask>();
             public Dictionary<string, int> MaskIndices { get; } = new Dictionary<string, int>(StringComparer.Ordinal);
             public List<CharacterPresentationAdditiveReferenceDescriptor> AdditiveReferences { get; } = new List<CharacterPresentationAdditiveReferenceDescriptor>();
+            public int InertializationCount { get; set; }
+            public List<CharacterPresentationModifyBoneDescriptor> ModifyBones { get; } = new List<CharacterPresentationModifyBoneDescriptor>();
+            public List<CharacterPresentationFootPlacementNodeDescriptor> FootPlacementNodes { get; } = new List<CharacterPresentationFootPlacementNodeDescriptor>();
             public List<CharacterPresentationPoseOperation> Operations { get; } = new List<CharacterPresentationPoseOperation>();
             public List<CharacterPresentationPoseSourceMapEntry> SourceMap { get; } = new List<CharacterPresentationPoseSourceMapEntry>();
             public List<string> GraphDependencies { get; } = new List<string>();
+            public int PoseValueCount { get; set; }
+            public int PlayerCount { get; set; }
             public int OutputOperationIndex { get; set; } = -1;
         }
 
-        public static CharacterPresentationPoseProgram Compile(
+        public static CharacterPresentationPosePlan Compile(
             CharacterPresentationPoseGraphAsset asset,
             CharacterAnimationRigDefinition rig,
             IReadOnlyCollection<AnimationChannelId> reachableAnimationChannels,
-            int contributionCapacityPerValue,
+            AnimationBlendNodePayload[] blendNodes,
             List<string> errors)
         {
-            if (contributionCapacityPerValue <= 0)
-            {
-                errors?.Add("Pose Graph contribution capacity must be positive.");
-                return null;
-            }
             CharacterPoseGraphValidationReport report = CharacterPresentationPoseGraphValidator.Validate(
                 asset,
                 rig,
@@ -62,7 +79,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             try
             {
-                return CompileValidated(asset.Graph, rig, contributionCapacityPerValue);
+                return CompileValidated(asset.Graph, rig, blendNodes ?? Array.Empty<AnimationBlendNodePayload>());
             }
             catch (Exception exception)
             {
@@ -71,80 +88,64 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
-        static CharacterPresentationPoseProgram CompileValidated(
+        static CharacterPresentationPosePlan CompileValidated(
             CharacterPoseGraphData graph,
             CharacterAnimationRigDefinition rig,
-            int contributionCapacityPerValue)
+            AnimationBlendNodePayload[] blendNodes)
         {
-            CharacterPoseSlotDeclaration[] authoredSlots = graph.PoseSlots.OrderBy(value => value.PoseSlotId).ToArray();
-            var slots = new CharacterPresentationPoseSlotProgramEntry[authoredSlots.Length];
-            var slotIndex = new Dictionary<PoseSlotId, int>();
-            for (int i = 0; i < authoredSlots.Length; i++)
-            {
-                CharacterPoseSlotDeclaration slot = authoredSlots[i];
-                slots[i] = new CharacterPresentationPoseSlotProgramEntry(
-                    i,
-                    slot.PoseSlotId,
-                    slot.AnimationChannelId,
-                    slot.OutputPolicy);
-                slotIndex.Add(slot.PoseSlotId, i);
-            }
-
             CharacterPoseParameterDeclaration[] authoredParameters = graph.Parameters.OrderBy(value => value.ParameterId).ToArray();
-            var parameters = new CharacterPresentationPoseParameterProgramEntry[authoredParameters.Length];
-            var parameterIndex = new Dictionary<PoseParameterId, int>();
+            var parameters = new CharacterPresentationPoseParameterEntry[authoredParameters.Length];
+            var parameterIndices = new Dictionary<PoseParameterId, int>();
             for (int i = 0; i < authoredParameters.Length; i++)
             {
-                parameters[i] = new CharacterPresentationPoseParameterProgramEntry(i, authoredParameters[i].ParameterId, authoredParameters[i].DefaultValue);
-                parameterIndex.Add(authoredParameters[i].ParameterId, i);
+                CharacterPoseParameterDeclaration parameter = authoredParameters[i];
+                parameters[i] = new CharacterPresentationPoseParameterEntry(
+                    i,
+                    parameter.ParameterId,
+                    parameter.ValueType,
+                    parameter.DefaultValue,
+                    parameter.Unit);
+                parameterIndices.Add(parameter.ParameterId, i);
             }
-            if (!parameterIndex.ContainsKey(AnimationPoseParameterIds.FootPlacementWeight))
-            {
-                throw new InvalidOperationException(
-                    $"Pose Graph '{graph.GraphId}' requires canonical Pose Parameter '{AnimationPoseParameterIds.FootPlacementWeight}'.");
-            }
+            if (!parameterIndices.ContainsKey(AnimationPoseParameterIds.FootPlacementWeight))
+                throw new InvalidOperationException($"Pose Graph '{graph.GraphId}' requires Parameter '{AnimationPoseParameterIds.FootPlacementWeight}'.");
 
-            var state = new CompilationState(rig, slots, slotIndex, parameters, parameterIndex);
+            var state = new CompilationState(rig, parameters, parameterIndices, blendNodes);
             CompileGraph(
                 state,
                 graph,
-                new Dictionary<PoseInterfacePortId, int>(),
+                new Dictionary<PoseInterfacePortId, CompiledValue>(),
                 string.Empty,
                 string.Empty,
                 true);
-            CharacterPresentationPoseOperation[] operations = state.Operations.ToArray();
-            CharacterPresentationPoseSourceMapEntry[] sourceMap = state.SourceMap.ToArray();
-            int poseWorkspace = operations.Length;
-            int parameterWorkspace = Math.Max(parameters.Length, poseWorkspace * parameters.Length);
-            int contributionWorkspace = checked(poseWorkspace * contributionCapacityPerValue);
-            int frameCache = poseWorkspace;
+            if (state.OutputOperationIndex < 0 || state.PoseValueCount <= 0 || state.SelectionInputs.Count == 0)
+                throw new InvalidOperationException("Pose Plan has no complete Selection, Pose and Output boundary.");
+            if (state.BlendNodeIndices.Count != state.BlendNodes.Length)
+                throw new InvalidOperationException("Pose Plan Blend Stack payload identities are not unique.");
 
-            string hash = ComputeHash(
-                graph,
-                rig,
-                slots,
-                parameters,
-                state.Masks,
-                state.AdditiveReferences,
-                operations,
-                sourceMap,
-                state.GraphDependencies,
-                poseWorkspace,
-                parameterWorkspace,
-                contributionWorkspace,
-                frameCache,
-                state.OutputOperationIndex);
-            return new CharacterPresentationPoseProgram(
+            int selectionWorkspace = state.SelectionInputs.Count;
+            int poseWorkspace = state.PoseValueCount;
+            int parameterWorkspace = parameters.Length;
+            int contributionCapacityPerValue = ComputeContributionCapacityPerValue(state);
+            int contributionWorkspace = checked(poseWorkspace * contributionCapacityPerValue);
+            int frameCache = state.Operations.Count;
+            string hash = ComputeHash(graph, rig, state, selectionWorkspace, poseWorkspace, parameterWorkspace, contributionWorkspace, frameCache);
+            return new CharacterPresentationPosePlan(
                 graph.GraphId,
                 graph.ContentRevision,
                 hash,
                 rig,
-                slots,
+                state.SelectionInputs.ToArray(),
                 parameters,
+                blendNodes,
+                Array.Empty<CharacterPresentationInertializationDescriptor>(),
                 state.Masks.ToArray(),
                 state.AdditiveReferences.ToArray(),
-                operations,
-                sourceMap,
+                state.ModifyBones.ToArray(),
+                state.FootPlacementNodes.ToArray(),
+                state.Operations.ToArray(),
+                state.SourceMap.ToArray(),
+                selectionWorkspace,
                 poseWorkspace,
                 parameterWorkspace,
                 contributionWorkspace,
@@ -152,10 +153,35 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 state.OutputOperationIndex);
         }
 
-        static Dictionary<PoseInterfacePortId, int> CompileGraph(
+        static int ComputeContributionCapacityPerValue(CompilationState state)
+        {
+            int capacity = 0;
+            for (int i = 0; i < state.Operations.Count; i++)
+            {
+                CharacterPresentationPoseOperation operation = state.Operations[i];
+                if (operation.Code == CharacterPoseOperationCode.SelectedPosePlayer ||
+                    operation.Code == CharacterPoseOperationCode.BlendSpacePlayer)
+                {
+                    capacity = checked(capacity + 1);
+                    continue;
+                }
+                if (operation.Code != CharacterPoseOperationCode.BlendStack ||
+                    operation.BlendNodeIndex < 0 || operation.BlendNodeIndex >= state.BlendNodes.Length)
+                    continue;
+                AnimationBlendNodePayload blendNode = state.BlendNodes[operation.BlendNodeIndex];
+                if (blendNode?.StackPolicy == null || blendNode.StackPolicy.MaxActiveSourceEntries <= 0)
+                    throw new InvalidOperationException($"Pose Plan Blend Stack '{operation.NodeId}' has an invalid contribution capacity.");
+                capacity = checked(capacity + blendNode.StackPolicy.MaxActiveSourceEntries + 1);
+            }
+            if (capacity <= 0)
+                throw new InvalidOperationException("Pose Plan requires at least one Player contribution capacity.");
+            return capacity;
+        }
+
+        static Dictionary<PoseInterfacePortId, CompiledValue> CompileGraph(
             CompilationState state,
             CharacterPoseGraphData graph,
-            IReadOnlyDictionary<PoseInterfacePortId, int> imports,
+            IReadOnlyDictionary<PoseInterfacePortId, CompiledValue> imports,
             string scope,
             string callChain,
             bool root)
@@ -163,8 +189,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             state.GraphDependencies.Add($"{callChain}\0{graph.GraphId}\0{graph.ContentRevision}");
             List<CharacterPoseNodeDefinition> orderedNodes = TopologicalOrder(graph);
             Dictionary<string, CharacterPoseEdge> incoming = BuildIncoming(graph);
-            var values = new Dictionary<string, int>(StringComparer.Ordinal);
-            var exports = new Dictionary<PoseInterfacePortId, int>();
+            var values = new Dictionary<string, CompiledValue>(StringComparer.Ordinal);
+            var exports = new Dictionary<PoseInterfacePortId, CompiledValue>();
             for (int nodeIndex = 0; nodeIndex < orderedNodes.Count; nodeIndex++)
             {
                 CharacterPoseNodeDefinition node = orderedNodes[nodeIndex];
@@ -184,72 +210,157 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     continue;
                 }
 
-                CharacterPoseOperationCode code = OperationCode(node.Kind);
-                List<CharacterPosePortDefinition> inputPorts = node.Ports
-                    .Where(value => value != null && value.Kind == CharacterPosePortKind.Pose &&
-                                    value.Direction == CharacterPosePortDirection.Input)
-                    .ToList();
-                int inputA = inputPorts.Count > 0
-                    ? RequireInputValue(node, inputPorts[0], incoming, scope, values)
-                    : -1;
-                int inputB = inputPorts.Count > 1
-                    ? RequireInputValue(node, inputPorts[1], incoming, scope, values)
-                    : -1;
-                int operationIndex = state.Operations.Count;
                 PoseNodeId scopedNodeId = ScopeNodeId(node.NodeId, scope);
-                int compiledSlot = node.Kind == CharacterPoseNodeKind.PoseSlotInput
-                    ? state.SlotIndices[node.PoseSlotId]
+                CharacterPoseOperationCode code = OperationCode(node.Kind);
+                int operationIndex = state.Operations.Count;
+                int outputValueIndex = HasPoseOutput(node) || node.Kind == CharacterPoseNodeKind.OutputPose
+                    ? state.PoseValueCount++
                     : -1;
-                int mask = node.BoneMask
-                    ? CompileMask(node.BoneMask, state.Rig, state.Masks, state.MaskIndices)
+                int inputA = RequireOptionalInput(node, CharacterPosePortKind.Pose, 0, incoming, scope, values);
+                int inputB = RequireOptionalInput(node, CharacterPosePortKind.Pose, 1, incoming, scope, values);
+                int selectionInputIndex = -1;
+                int markerSyncOperationIndex = -1;
+                int parameterIndex = -1;
+                int parameterIndexB = -1;
+                int playerIndex = -1;
+                if (node.Kind == CharacterPoseNodeKind.AnimationSelectionInput || node.Kind == CharacterPoseNodeKind.MotionMatchingSelectionInput)
+                {
+                    selectionInputIndex = state.SelectionInputs.Count;
+                    state.SelectionInputs.Add(new CharacterPresentationSelectionInputEntry(
+                        selectionInputIndex,
+                        scopedNodeId,
+                        node.AnimationChannelId,
+                        node.ProgramProducerId,
+                        node.Kind == CharacterPoseNodeKind.MotionMatchingSelectionInput,
+                        node.SelectionAvailability));
+                }
+                else if (node.Kind == CharacterPoseNodeKind.MarkerSync ||
+                         node.Kind == CharacterPoseNodeKind.SelectedPosePlayer ||
+                         node.Kind == CharacterPoseNodeKind.BlendStack ||
+                         node.Kind == CharacterPoseNodeKind.BlendSpacePlayer)
+                {
+                    CompiledValue selection = RequireInput(node, CharacterPosePortKind.AnimationSelection, 0, incoming, scope, values);
+                    selectionInputIndex = selection.Index;
+                    if ((node.Kind == CharacterPoseNodeKind.SelectedPosePlayer || node.Kind == CharacterPoseNodeKind.BlendStack ||
+                         node.Kind == CharacterPoseNodeKind.BlendSpacePlayer) &&
+                        selection.ProducerOperationIndex >= 0 &&
+                        state.Operations[selection.ProducerOperationIndex].Code == CharacterPoseOperationCode.MarkerSync)
+                        markerSyncOperationIndex = selection.ProducerOperationIndex;
+                }
+                if (node.Kind == CharacterPoseNodeKind.SelectedPosePlayer || node.Kind == CharacterPoseNodeKind.BlendStack ||
+                    node.Kind == CharacterPoseNodeKind.BlendSpacePlayer)
+                    playerIndex = state.PlayerCount++;
+                if (node.Kind == CharacterPoseNodeKind.ProgramParameterInput)
+                    parameterIndex = state.ParameterIndices[node.ParameterId];
+                else if (node.Ports.Any(port => port != null &&
+                    port.Kind == CharacterPosePortKind.Parameter &&
+                    port.Direction == CharacterPosePortDirection.Input))
+                {
+                    CompiledValue parameterInput = RequireInput(node, CharacterPosePortKind.Parameter, 0, incoming, scope, values, false);
+                    parameterIndex = parameterInput.Index;
+                }
+                if (node.Kind == CharacterPoseNodeKind.BlendSpacePlayer)
+                    parameterIndexB = TryGetInputIndex(node, CharacterPosePortKind.Parameter, 1, incoming, scope, values);
+
+                int blendNodeIndex = node.Kind == CharacterPoseNodeKind.BlendStack
+                    ? state.BlendNodeIndices.TryGetValue(scopedNodeId, out int index)
+                        ? index
+                        : throw new InvalidOperationException($"Blend Stack '{scopedNodeId}' has no compiled policy payload.")
                     : -1;
-                int additiveReference = node.Kind == CharacterPoseNodeKind.AdditivePose
+                int inertializationIndex = node.Kind == CharacterPoseNodeKind.Inertialization
+                    ? CompileInertialization(node, scopedNodeId, state)
+                    : -1;
+                int maskIndex = node.BoneMask ? CompileMask(node.BoneMask, state.Rig, state.Masks, state.MaskIndices) : -1;
+                int additiveIndex = node.Kind == CharacterPoseNodeKind.AdditivePose
                     ? CompileAdditiveReference(node, state.Rig, state.AdditiveReferences)
                     : -1;
-                PoseParameterResolvePolicy[] policies = CompilePolicies(
-                    node,
-                    state.Parameters,
-                    state.ParameterIndices);
+                int modifyIndex = node.Kind == CharacterPoseNodeKind.ModifyBone
+                    ? CompileModifyBone(node, state)
+                    : -1;
+                int footIndex = node.Kind == CharacterPoseNodeKind.FootPlacement
+                    ? CompileFootPlacement(node, scopedNodeId, state)
+                    : -1;
+                PoseParameterResolvePolicy[] policies = CompilePolicies(node, state.Parameters, state.ParameterIndices);
                 state.Operations.Add(new CharacterPresentationPoseOperation(
                     operationIndex,
+                    Phase(node.Kind),
                     code,
                     scopedNodeId,
-                    operationIndex,
+                    outputValueIndex,
                     inputA,
                     inputB,
-                    compiledSlot,
-                    mask,
-                    additiveReference,
+                    selectionInputIndex,
+                    markerSyncOperationIndex,
+                    parameterIndex,
+                    parameterIndexB,
+                    node.BlendSpaceInputRangePolicy,
+                    playerIndex,
+                    blendNodeIndex,
+                    inertializationIndex,
+                    maskIndex,
+                    additiveIndex,
+                    modifyIndex,
+                    footIndex,
                     node.Weight,
                     policies));
-                state.SourceMap.Add(new CharacterPresentationPoseSourceMapEntry(
-                    operationIndex,
-                    graph.GraphId,
-                    scopedNodeId,
-                    callChain));
-                BindOperationOutputs(node, scope, operationIndex, values);
-                if (code == CharacterPoseOperationCode.OutputPose)
+                state.SourceMap.Add(new CharacterPresentationPoseSourceMapEntry(operationIndex, graph.GraphId, scopedNodeId, callChain));
+
+                BindOperationOutputs(node, scope, outputValueIndex, selectionInputIndex, parameterIndex, operationIndex, values);
+                if (node.Kind == CharacterPoseNodeKind.OutputPose)
                 {
                     if (!root || state.OutputOperationIndex >= 0)
-                        throw new InvalidOperationException("Pose Program contains an invalid OutputPose boundary.");
+                        throw new InvalidOperationException("Pose Plan contains an invalid OutputPose boundary.");
                     state.OutputOperationIndex = operationIndex;
                 }
             }
             return exports;
         }
 
+        static int CompileModifyBone(CharacterPoseNodeDefinition node, CompilationState state)
+        {
+            int boneIndex = state.Rig.RequireBoneIndex(node.BoneId);
+            int index = state.ModifyBones.Count;
+            state.ModifyBones.Add(new CharacterPresentationModifyBoneDescriptor(
+                index,
+                boneIndex,
+                state.Rig.Bones[boneIndex].ParentIndex,
+                node));
+            return index;
+        }
+
+        static int CompileInertialization(
+            CharacterPoseNodeDefinition node,
+            PoseNodeId scopedNodeId,
+            CompilationState state)
+        {
+            return state.InertializationCount++;
+        }
+
+        static int CompileFootPlacement(CharacterPoseNodeDefinition node, PoseNodeId scopedNodeId, CompilationState state)
+        {
+            if (state.FootPlacementNodes.Count != 0)
+                throw new InvalidOperationException("Pose Plan contains more than one FootPlacement node.");
+            int index = state.FootPlacementNodes.Count;
+            state.FootPlacementNodes.Add(new CharacterPresentationFootPlacementNodeDescriptor(
+                index,
+                scopedNodeId,
+                node.FootPlacementCalibration.CalibrationId.Value,
+                node.FootPlacementCalibration.ContentRevision));
+            return index;
+        }
+
         static void BindGraphInputs(
             CharacterPoseNodeDefinition node,
-            IReadOnlyDictionary<PoseInterfacePortId, int> imports,
+            IReadOnlyDictionary<PoseInterfacePortId, CompiledValue> imports,
             string scope,
-            Dictionary<string, int> values)
+            Dictionary<string, CompiledValue> values)
         {
             for (int i = 0; i < node.Ports.Count; i++)
             {
                 CharacterPosePortDefinition port = node.Ports[i];
                 if (port == null || port.Direction != CharacterPosePortDirection.Output)
                     continue;
-                if (imports.TryGetValue(port.InterfacePortId, out int value))
+                if (imports.TryGetValue(port.InterfacePortId, out CompiledValue value))
                     values.Add(EndpointKey(node.NodeId, port.PortId, scope), value);
                 else if (port.Required)
                     throw new InvalidOperationException($"GraphInput Interface Port '{port.InterfacePortId}' has no call-site source.");
@@ -260,15 +371,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeDefinition node,
             Dictionary<string, CharacterPoseEdge> incoming,
             string scope,
-            Dictionary<string, int> values,
-            Dictionary<PoseInterfacePortId, int> exports)
+            Dictionary<string, CompiledValue> values,
+            Dictionary<PoseInterfacePortId, CompiledValue> exports)
         {
             for (int i = 0; i < node.Ports.Count; i++)
             {
                 CharacterPosePortDefinition port = node.Ports[i];
                 if (port == null || port.Direction != CharacterPosePortDirection.Input)
                     continue;
-                if (TryGetInputValue(node, port, incoming, scope, values, out int value))
+                if (TryGetInputValue(node, port, incoming, scope, values, out CompiledValue value))
                     exports.Add(port.InterfacePortId, value);
                 else if (port.Required)
                     throw new InvalidOperationException($"GraphOutput Interface Port '{port.InterfacePortId}' has no internal source.");
@@ -282,58 +393,133 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Dictionary<string, CharacterPoseEdge> incoming,
             string scope,
             string callChain,
-            Dictionary<string, int> values)
+            Dictionary<string, CompiledValue> values)
         {
-            CharacterPoseSubgraphReference reference = callSite.Subgraph;
-            CharacterPoseGraphData child = reference.HasInline ? reference.Inline : reference.Shared.Graph;
-            var childImports = new Dictionary<PoseInterfacePortId, int>();
+            CharacterPoseGraphData child = callSite.Subgraph.HasInline ? callSite.Subgraph.Inline : callSite.Subgraph.Shared.Graph;
+            var imports = new Dictionary<PoseInterfacePortId, CompiledValue>();
             for (int i = 0; i < callSite.Ports.Count; i++)
             {
                 CharacterPosePortDefinition port = callSite.Ports[i];
                 if (port == null || port.Direction != CharacterPosePortDirection.Input)
                     continue;
-                if (TryGetInputValue(callSite, port, incoming, scope, values, out int value))
-                    childImports.Add(port.InterfacePortId, value);
+                if (TryGetInputValue(callSite, port, incoming, scope, values, out CompiledValue value))
+                    imports.Add(port.InterfacePortId, value);
                 else if (port.Required)
                     throw new InvalidOperationException($"PoseSubgraph '{callSite.NodeId}' Interface Port '{port.InterfacePortId}' has no source.");
             }
-
             PoseNodeId scopedCallSite = ScopeNodeId(callSite.NodeId, scope);
             string childScope = scopedCallSite.Value + "/" + child.GraphId;
             string childCallChain = string.IsNullOrEmpty(callChain)
                 ? $"{owner.GraphId}/{scopedCallSite.Value}->{child.GraphId}"
                 : $"{callChain}|{owner.GraphId}/{scopedCallSite.Value}->{child.GraphId}";
-            Dictionary<PoseInterfacePortId, int> childExports = CompileGraph(
-                state,
-                child,
-                childImports,
-                childScope,
-                childCallChain,
-                false);
+            Dictionary<PoseInterfacePortId, CompiledValue> exports = CompileGraph(state, child, imports, childScope, childCallChain, false);
             for (int i = 0; i < callSite.Ports.Count; i++)
             {
                 CharacterPosePortDefinition port = callSite.Ports[i];
                 if (port == null || port.Direction != CharacterPosePortDirection.Output)
                     continue;
-                if (childExports.TryGetValue(port.InterfacePortId, out int value))
+                if (exports.TryGetValue(port.InterfacePortId, out CompiledValue value))
                     values.Add(EndpointKey(callSite.NodeId, port.PortId, scope), value);
                 else if (port.Required)
-                    throw new InvalidOperationException($"PoseSubgraph '{callSite.NodeId}' Interface Port '{port.InterfacePortId}' has no compiled output.");
+                    throw new InvalidOperationException($"PoseSubgraph '{callSite.NodeId}' Interface Port '{port.InterfacePortId}' has no output.");
             }
         }
 
         static void BindOperationOutputs(
             CharacterPoseNodeDefinition node,
             string scope,
-            int value,
-            Dictionary<string, int> values)
+            int poseValue,
+            int selectionValue,
+            int parameterValue,
+            int operationIndex,
+            Dictionary<string, CompiledValue> values)
         {
             for (int i = 0; i < node.Ports.Count; i++)
             {
                 CharacterPosePortDefinition port = node.Ports[i];
-                if (port != null && port.Direction == CharacterPosePortDirection.Output)
-                    values.Add(EndpointKey(node.NodeId, port.PortId, scope), value);
+                if (port == null || port.Direction != CharacterPosePortDirection.Output)
+                    continue;
+                int index = port.Kind switch
+                {
+                    CharacterPosePortKind.AnimationSelection => selectionValue,
+                    CharacterPosePortKind.Parameter => parameterValue,
+                    CharacterPosePortKind.Pose => poseValue,
+                    CharacterPosePortKind.PoseDiscontinuity => poseValue,
+                    _ => -1
+                };
+                if (index < 0)
+                    throw new InvalidOperationException($"Pose Node '{node.NodeId}' output '{port.PortId}' has no compiled workspace value.");
+                values.Add(EndpointKey(node.NodeId, port.PortId, scope), new CompiledValue(port.Kind, index, operationIndex));
             }
+        }
+
+        static CompiledValue RequireInput(
+            CharacterPoseNodeDefinition node,
+            CharacterPosePortKind kind,
+            int ordinal,
+            Dictionary<string, CharacterPoseEdge> incoming,
+            string scope,
+            Dictionary<string, CompiledValue> values,
+            bool required = true)
+        {
+            CharacterPosePortDefinition[] ports = node.Ports
+                .Where(value => value != null && value.Kind == kind && value.Direction == CharacterPosePortDirection.Input)
+                .ToArray();
+            if ((uint)ordinal >= (uint)ports.Length)
+                return default;
+            if (TryGetInputValue(node, ports[ordinal], incoming, scope, values, out CompiledValue value))
+                return value;
+            if (required || ports[ordinal].Required)
+                throw new InvalidOperationException($"Pose Node '{node.NodeId}' input '{ports[ordinal].PortId}' has no compiled source.");
+            return default;
+        }
+
+        static int RequireOptionalInput(
+            CharacterPoseNodeDefinition node,
+            CharacterPosePortKind kind,
+            int ordinal,
+            Dictionary<string, CharacterPoseEdge> incoming,
+            string scope,
+            Dictionary<string, CompiledValue> values)
+        {
+            CharacterPosePortDefinition[] ports = node.Ports
+                .Where(value => value != null && value.Kind == kind && value.Direction == CharacterPosePortDirection.Input)
+                .ToArray();
+            if ((uint)ordinal >= (uint)ports.Length)
+                return -1;
+            return RequireInput(node, kind, ordinal, incoming, scope, values).Index;
+        }
+
+        static int TryGetInputIndex(
+            CharacterPoseNodeDefinition node,
+            CharacterPosePortKind kind,
+            int ordinal,
+            Dictionary<string, CharacterPoseEdge> incoming,
+            string scope,
+            Dictionary<string, CompiledValue> values)
+        {
+            CharacterPosePortDefinition[] ports = node.Ports
+                .Where(value => value != null && value.Kind == kind && value.Direction == CharacterPosePortDirection.Input)
+                .ToArray();
+            if ((uint)ordinal >= (uint)ports.Length)
+                return -1;
+            return TryGetInputValue(node, ports[ordinal], incoming, scope, values, out CompiledValue value)
+                ? value.Index
+                : -1;
+        }
+
+        static bool TryGetInputValue(
+            CharacterPoseNodeDefinition node,
+            CharacterPosePortDefinition port,
+            Dictionary<string, CharacterPoseEdge> incoming,
+            string scope,
+            Dictionary<string, CompiledValue> values,
+            out CompiledValue value)
+        {
+            value = default;
+            return incoming.TryGetValue(node.NodeId.Value + "\0" + port.PortId.Value, out CharacterPoseEdge edge) &&
+                   values.TryGetValue(EndpointKey(edge.SourceNodeId, edge.SourcePortId, scope), out value) &&
+                   value.Kind == port.Kind;
         }
 
         static List<CharacterPoseNodeDefinition> TopologicalOrder(CharacterPoseGraphData graph)
@@ -345,12 +531,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 CharacterPoseEdge edge = graph.Edges[i];
                 indegree[edge.TargetNodeId]++;
-                if (!outgoing.TryGetValue(edge.SourceNodeId, out List<PoseNodeId> values))
+                if (!outgoing.TryGetValue(edge.SourceNodeId, out List<PoseNodeId> targets))
                 {
-                    values = new List<PoseNodeId>();
-                    outgoing.Add(edge.SourceNodeId, values);
+                    targets = new List<PoseNodeId>();
+                    outgoing.Add(edge.SourceNodeId, targets);
                 }
-                values.Add(edge.TargetNodeId);
+                targets.Add(edge.TargetNodeId);
             }
             var ready = new SortedSet<PoseNodeId>(indegree.Where(value => value.Value == 0).Select(value => value.Key));
             var result = new List<CharacterPoseNodeDefinition>(nodes.Count);
@@ -364,10 +550,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 targets.Sort();
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    PoseNodeId target = targets[i];
-                    indegree[target]--;
-                    if (indegree[target] == 0)
-                        ready.Add(target);
+                    if (--indegree[targets[i]] == 0)
+                        ready.Add(targets[i]);
                 }
             }
             if (result.Count != nodes.Count)
@@ -386,51 +570,18 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return result;
         }
 
-        static int RequireInputValue(
-            CharacterPoseNodeDefinition node,
-            CharacterPosePortDefinition port,
-            Dictionary<string, CharacterPoseEdge> incoming,
-            string scope,
-            Dictionary<string, int> values)
-        {
-            if (!TryGetInputValue(node, port, incoming, scope, values, out int value))
-                throw new InvalidOperationException($"Pose Node '{node.NodeId}' input Port '{port.PortId}' has no compiled source.");
-            return value;
-        }
-
-        static bool TryGetInputValue(
-            CharacterPoseNodeDefinition node,
-            CharacterPosePortDefinition port,
-            Dictionary<string, CharacterPoseEdge> incoming,
-            string scope,
-            Dictionary<string, int> values,
-            out int value)
-        {
-            value = -1;
-            return incoming.TryGetValue(node.NodeId.Value + "\0" + port.PortId.Value, out CharacterPoseEdge edge) &&
-                   values.TryGetValue(EndpointKey(edge.SourceNodeId, edge.SourcePortId, scope), out value);
-        }
-
-        static string EndpointKey(PoseNodeId nodeId, PosePortId portId, string scope) =>
-            ScopeNodeId(nodeId, scope).Value + "\0" + ScopePortId(portId, scope).Value;
-
-        static PoseNodeId ScopeNodeId(PoseNodeId nodeId, string scope) =>
-            string.IsNullOrEmpty(scope) ? nodeId : new PoseNodeId(scope + "/" + nodeId.Value);
-
-        static PosePortId ScopePortId(PosePortId portId, string scope) =>
-            string.IsNullOrEmpty(scope) ? portId : new PosePortId(scope + "/" + portId.Value);
-
         static int CompileMask(
             CharacterAnimationBoneMaskAsset mask,
             CharacterAnimationRigDefinition rig,
             List<CharacterPresentationDenseBoneMask> masks,
             Dictionary<string, int> indices)
         {
-            string key = mask.MaskId + "\0" + mask.RigId + "\0" + mask.RigRevision;
+            float[] dense = mask.BuildDense(rig);
+            string key = mask.MaskId + "\0" + string.Join("|", dense.Select(value => value.ToString("R", CultureInfo.InvariantCulture)));
             if (indices.TryGetValue(key, out int existing))
                 return existing;
             int index = masks.Count;
-            masks.Add(new CharacterPresentationDenseBoneMask(index, mask.MaskId, mask.BuildDense(rig)));
+            masks.Add(new CharacterPresentationDenseBoneMask(index, mask.MaskId, dense));
             indices.Add(key, index);
             return index;
         }
@@ -440,37 +591,24 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAnimationRigDefinition rig,
             List<CharacterPresentationAdditiveReferenceDescriptor> references)
         {
-            if (!string.Equals(
-                    node.AdditiveReferencePoseId,
-                    AnimationAdditiveReferencePoseIds.RigReference,
-                    StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    $"Additive Pose '{node.NodeId}' must use reference pose '{AnimationAdditiveReferencePoseIds.RigReference}'.");
-            }
-            if (!Enum.IsDefined(typeof(AdditiveReferenceSpace), node.AdditiveReferenceSpace))
-                throw new InvalidOperationException($"Additive Pose '{node.NodeId}' reference space is invalid.");
-
             int count = rig.Bones.Count;
-            var positions = new UnityEngine.Vector3[count];
-            var rotations = new UnityEngine.Quaternion[count];
-            var scales = new UnityEngine.Vector3[count];
+            var positions = new Vector3[count];
+            var rotations = new Quaternion[count];
+            var scales = new Vector3[count];
             for (int i = 0; i < count; i++)
             {
                 CharacterAnimationBoneDefinition bone = rig.Bones[i];
-                if (node.AdditiveReferenceSpace == AdditiveReferenceSpace.Local || bone.ParentIndex < 0)
+                if (bone.ParentIndex < 0)
                 {
                     positions[i] = bone.ReferenceLocalPosition;
                     rotations[i] = bone.ReferenceLocalRotation;
                     scales[i] = bone.ReferenceLocalScale;
                     continue;
                 }
-
-                int parentIndex = bone.ParentIndex;
-                positions[i] = positions[parentIndex] +
-                               rotations[parentIndex] * UnityEngine.Vector3.Scale(scales[parentIndex], bone.ReferenceLocalPosition);
-                rotations[i] = (rotations[parentIndex] * bone.ReferenceLocalRotation).normalized;
-                scales[i] = UnityEngine.Vector3.Scale(scales[parentIndex], bone.ReferenceLocalScale);
+                int parent = bone.ParentIndex;
+                positions[i] = positions[parent] + rotations[parent] * Vector3.Scale(scales[parent], bone.ReferenceLocalPosition);
+                rotations[i] = (rotations[parent] * bone.ReferenceLocalRotation).normalized;
+                scales[i] = Vector3.Scale(scales[parent], bone.ReferenceLocalScale);
             }
             int index = references.Count;
             references.Add(new CharacterPresentationAdditiveReferenceDescriptor(
@@ -486,12 +624,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         static PoseParameterResolvePolicy[] CompilePolicies(
             CharacterPoseNodeDefinition node,
-            CharacterPresentationPoseParameterProgramEntry[] parameters,
+            CharacterPresentationPoseParameterEntry[] parameters,
             Dictionary<PoseParameterId, int> indices)
         {
-            if (node.Kind != CharacterPoseNodeKind.LayeredBoneBlend &&
-                node.Kind != CharacterPoseNodeKind.AdditivePose &&
-                node.Kind != CharacterPoseNodeKind.PoseCurveResolve)
+            if (node.ParameterPolicies.Count == 0)
                 return Array.Empty<PoseParameterResolvePolicy>();
             var result = new PoseParameterResolvePolicy[parameters.Length];
             for (int i = 0; i < node.ParameterPolicies.Count; i++)
@@ -502,94 +638,92 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return result;
         }
 
-        static CharacterPoseOperationCode OperationCode(CharacterPoseNodeKind kind)
+        static bool HasPoseOutput(CharacterPoseNodeDefinition node) =>
+            node.Ports.Any(value => value != null && value.Kind == CharacterPosePortKind.Pose && value.Direction == CharacterPosePortDirection.Output);
+
+        static CharacterPosePlanPhase Phase(CharacterPoseNodeKind kind) => kind switch
         {
-            return kind switch
-            {
-                CharacterPoseNodeKind.PoseSlotInput => CharacterPoseOperationCode.PoseSlotInput,
-                CharacterPoseNodeKind.LayeredBoneBlend => CharacterPoseOperationCode.LayeredBoneBlend,
-                CharacterPoseNodeKind.AdditivePose => CharacterPoseOperationCode.AdditivePose,
-                CharacterPoseNodeKind.PoseCurveResolve => CharacterPoseOperationCode.PoseCurveResolve,
-                CharacterPoseNodeKind.PoseSubgraph => throw new InvalidOperationException(
-                    "PoseSubgraph must disappear during static expansion."),
-                CharacterPoseNodeKind.OutputPose => CharacterPoseOperationCode.OutputPose,
-                CharacterPoseNodeKind.GraphInput => throw new InvalidOperationException(
-                    "GraphInput must disappear during static expansion."),
-                CharacterPoseNodeKind.GraphOutput => throw new InvalidOperationException(
-                    "GraphOutput must disappear during static expansion."),
-                _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
-            };
-        }
+            CharacterPoseNodeKind.AnimationSelectionInput => CharacterPosePlanPhase.Selection,
+            CharacterPoseNodeKind.MotionMatchingSelectionInput => CharacterPosePlanPhase.Selection,
+            CharacterPoseNodeKind.ProgramParameterInput => CharacterPosePlanPhase.Selection,
+            CharacterPoseNodeKind.MarkerSync => CharacterPosePlanPhase.Selection,
+            CharacterPoseNodeKind.FootPlacement => CharacterPosePlanPhase.WorldAwarePostProcess,
+            CharacterPoseNodeKind.OutputPose => CharacterPosePlanPhase.FinalPublication,
+            _ => CharacterPosePlanPhase.SourceAndNativePose
+        };
+
+        static CharacterPoseOperationCode OperationCode(CharacterPoseNodeKind kind) => kind switch
+        {
+            CharacterPoseNodeKind.AnimationSelectionInput => CharacterPoseOperationCode.AnimationSelectionInput,
+            CharacterPoseNodeKind.MotionMatchingSelectionInput => CharacterPoseOperationCode.MotionMatchingSelectionInput,
+            CharacterPoseNodeKind.ProgramParameterInput => CharacterPoseOperationCode.ProgramParameterInput,
+            CharacterPoseNodeKind.MarkerSync => CharacterPoseOperationCode.MarkerSync,
+            CharacterPoseNodeKind.SelectedPosePlayer => CharacterPoseOperationCode.SelectedPosePlayer,
+            CharacterPoseNodeKind.BlendSpacePlayer => CharacterPoseOperationCode.BlendSpacePlayer,
+            CharacterPoseNodeKind.BlendStack => CharacterPoseOperationCode.BlendStack,
+            CharacterPoseNodeKind.Inertialization => CharacterPoseOperationCode.Inertialization,
+            CharacterPoseNodeKind.BlendPose => CharacterPoseOperationCode.BlendPose,
+            CharacterPoseNodeKind.LayeredBoneBlend => CharacterPoseOperationCode.LayeredBoneBlend,
+            CharacterPoseNodeKind.AdditivePose => CharacterPoseOperationCode.AdditivePose,
+            CharacterPoseNodeKind.PoseParameterResolve => CharacterPoseOperationCode.PoseParameterResolve,
+            CharacterPoseNodeKind.ModifyBone => CharacterPoseOperationCode.ModifyBone,
+            CharacterPoseNodeKind.FootPlacement => CharacterPoseOperationCode.FootPlacement,
+            CharacterPoseNodeKind.OutputPose => CharacterPoseOperationCode.OutputPose,
+            _ => throw new InvalidOperationException($"Node '{kind}' must disappear during static subgraph expansion.")
+        };
+
+        static string EndpointKey(PoseNodeId nodeId, PosePortId portId, string scope) =>
+            ScopeNodeId(nodeId, scope).Value + "\0" + ScopePortId(portId, scope).Value;
+
+        static PoseNodeId ScopeNodeId(PoseNodeId nodeId, string scope) =>
+            string.IsNullOrEmpty(scope) ? nodeId : new PoseNodeId(scope + "/" + nodeId.Value);
+
+        static PosePortId ScopePortId(PosePortId portId, string scope) =>
+            string.IsNullOrEmpty(scope) ? portId : new PosePortId(scope + "/" + portId.Value);
 
         static string ComputeHash(
             CharacterPoseGraphData graph,
             CharacterAnimationRigDefinition rig,
-            IReadOnlyList<CharacterPresentationPoseSlotProgramEntry> slots,
-            IReadOnlyList<CharacterPresentationPoseParameterProgramEntry> parameters,
-            IReadOnlyList<CharacterPresentationDenseBoneMask> masks,
-            IReadOnlyList<CharacterPresentationAdditiveReferenceDescriptor> additiveReferences,
-            IReadOnlyList<CharacterPresentationPoseOperation> operations,
-            IReadOnlyList<CharacterPresentationPoseSourceMapEntry> sourceMap,
-            IReadOnlyList<string> graphDependencies,
+            CompilationState state,
+            int selectionWorkspace,
             int poseWorkspace,
             int parameterWorkspace,
             int contributionWorkspace,
-            int frameCache,
-            int outputOperationIndex)
+            int frameCache)
         {
             var values = new List<string>
             {
-                CharacterPresentationPoseProgram.SchemaVersion,
-                CharacterPresentationPoseProgram.RuntimeAbi,
+                CharacterPresentationPosePlan.SchemaVersion,
+                CharacterPresentationPosePlan.RuntimeAbi,
                 graph.GraphId,
                 graph.ContentRevision,
                 rig.RigId,
-                rig.Revision,
-                rig.Bones.Count.ToString(CultureInfo.InvariantCulture)
+                rig.Revision
             };
-            for (int i = 0; i < graphDependencies.Count; i++)
-                values.Add("graph:" + graphDependencies[i]);
-            for (int i = 0; i < slots.Count; i++)
+            values.AddRange(state.GraphDependencies.Select(value => "graph:" + value));
+            for (int i = 0; i < state.SelectionInputs.Count; i++)
             {
-                CharacterPresentationPoseSlotProgramEntry slot = slots[i];
-                values.Add(FormattableString.Invariant($"slot:{slot.Index}:{slot.PoseSlotId.Value}:{slot.AnimationChannelId.Value}:{(int)slot.OutputPolicy}"));
+                CharacterPresentationSelectionInputEntry input = state.SelectionInputs[i];
+                values.Add(FormattableString.Invariant($"selection:{input.Index}:{input.NodeId}:{input.AnimationChannelId}:{input.ProgramProducerId}:{input.MotionMatching}:{(int)input.Availability}"));
             }
-            for (int i = 0; i < parameters.Count; i++)
-                values.Add(FormattableString.Invariant($"parameter:{parameters[i].Index}:{parameters[i].ParameterId.Value}:{parameters[i].DefaultValue:R}"));
-            for (int i = 0; i < masks.Count; i++)
+            for (int i = 0; i < state.Parameters.Length; i++)
             {
-                values.Add(FormattableString.Invariant($"mask:{masks[i].Index}:{masks[i].MaskId}"));
-                for (int bone = 0; bone < masks[i].Weights.Count; bone++)
-                    values.Add(masks[i].Weights[bone].ToString("R", CultureInfo.InvariantCulture));
+                CharacterPresentationPoseParameterEntry parameter = state.Parameters[i];
+                values.Add(FormattableString.Invariant($"parameter:{parameter.Index}:{parameter.ParameterId}:{(int)parameter.ValueType}:{parameter.Unit}:{parameter.DefaultValue:R}"));
             }
-            for (int i = 0; i < additiveReferences.Count; i++)
+            for (int i = 0; i < state.BlendNodes.Length; i++)
             {
-                CharacterPresentationAdditiveReferenceDescriptor reference = additiveReferences[i];
-                values.Add(FormattableString.Invariant($"additive:{reference.Index}:{reference.ReferencePoseId}:{(int)reference.Space}:{(int)reference.ScalePolicy}"));
-                for (int bone = 0; bone < reference.Positions.Count; bone++)
-                {
-                    UnityEngine.Vector3 position = reference.Positions[bone];
-                    UnityEngine.Quaternion rotation = reference.Rotations[bone];
-                    UnityEngine.Vector3 scale = reference.Scales[bone];
-                    values.Add(FormattableString.Invariant($"{position.x:R}:{position.y:R}:{position.z:R}"));
-                    values.Add(FormattableString.Invariant($"{rotation.x:R}:{rotation.y:R}:{rotation.z:R}:{rotation.w:R}"));
-                    values.Add(FormattableString.Invariant($"{scale.x:R}:{scale.y:R}:{scale.z:R}"));
-                }
+                AnimationBlendNodePayload blend = state.BlendNodes[i];
+                values.Add($"blend:{blend.NodeId}:{blend.PolicyId}:{blend.PolicyRevision}:{blend.Transitions.Count}");
             }
-            for (int i = 0; i < operations.Count; i++)
+            values.Add($"inertial-count:{state.InertializationCount}");
+            for (int i = 0; i < state.Operations.Count; i++)
             {
-                CharacterPresentationPoseOperation operation = operations[i];
-                values.Add(FormattableString.Invariant($"operation:{operation.Index}:{(int)operation.Code}:{operation.Version}:{operation.NodeId.Value}:{operation.OutputPoseValueIndex}:{operation.InputPoseValueIndexA}:{operation.InputPoseValueIndexB}:{operation.PoseSlotIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.Weight:R}"));
-                for (int parameter = 0; parameter < operation.ParameterPolicies.Count; parameter++)
-                    values.Add(((int)operation.ParameterPolicies[parameter]).ToString(CultureInfo.InvariantCulture));
+                CharacterPresentationPoseOperation operation = state.Operations[i];
+                values.Add(FormattableString.Invariant(
+                    $"operation:{operation.Index}:{(int)operation.Phase}:{(int)operation.Code}:{operation.NodeId}:{operation.OutputValueIndex}:{operation.InputValueIndexA}:{operation.InputValueIndexB}:{operation.SelectionInputIndex}:{operation.MarkerSyncOperationIndex}:{operation.ParameterIndex}:{operation.PlayerIndex}:{operation.BlendNodeIndex}:{operation.InertializationIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.ModifyBoneIndex}:{operation.FootPlacementNodeIndex}:{operation.Weight:R}"));
             }
-            for (int i = 0; i < sourceMap.Count; i++)
-                values.Add(FormattableString.Invariant($"source:{sourceMap[i].OperationIndex}:{sourceMap[i].GraphId}:{sourceMap[i].NodeId.Value}:{sourceMap[i].CallSite}"));
-            values.Add(FormattableString.Invariant($"workspace:pose:{poseWorkspace}"));
-            values.Add(FormattableString.Invariant($"workspace:parameter:{parameterWorkspace}"));
-            values.Add(FormattableString.Invariant($"workspace:contribution:{contributionWorkspace}"));
-            values.Add(FormattableString.Invariant($"workspace:frame-cache:{frameCache}"));
-            values.Add(FormattableString.Invariant($"output-operation:{outputOperationIndex}"));
+            values.Add(FormattableString.Invariant($"workspace:{selectionWorkspace}:{poseWorkspace}:{parameterWorkspace}:{contributionWorkspace}:{frameCache}:{state.OutputOperationIndex}"));
             return StableHash.Compute(values.ToArray()).ToString();
         }
     }

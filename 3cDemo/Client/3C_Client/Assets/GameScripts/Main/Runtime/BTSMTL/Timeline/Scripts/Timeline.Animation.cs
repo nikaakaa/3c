@@ -76,6 +76,7 @@ namespace BTSMTL.Timeline
             ? default
             : new AnimationChannelId(m_AnimationChannelId);
 
+#if UNITY_EDITOR
         public void SetAnimationChannelId(AnimationChannelId animationChannelId)
         {
             m_AnimationChannelId = animationChannelId.IsValid
@@ -83,6 +84,7 @@ namespace BTSMTL.Timeline
                 : throw new ArgumentException("Animation Channel identity is invalid.", nameof(animationChannelId));
             RebindTimeline();
         }
+#endif
 
         public void Sample(float timelineTime, int trackIndex, string sourceId, string sourceName, ICollection<TimelineAnimationContribution> contributions)
         {

@@ -2,7 +2,7 @@
 
 ### Requirement: Motion Matching必须是Animation Presentation Profile装配的正式Pose Source
 
-当且仅当`CharacterAnimationPresentationProfile`声明至少一个Motion Matching Pose Source producer时，它 MUST唯一引用一个`CharacterMotionMatchingProfile`，后者 MUST装配Feature Schema、Trajectory Policy、Cost Profile、Search Policy、Database Definition与producer-to-SearchDomain binding。未声明MM producer的Profile MUST不引用MM Profile，Projection MUST不生成MM payload，Runtime MUST不构造MM模块。Graph、Timeline、Prefab、Presenter与Runtime MUST不保存另一份MM配置。MM MUST只作为已编译AnimationChannel的上游Pose Source，并进入该Channel绑定PoseSlot的唯一Blend Stack。
+当且仅当`CharacterAnimationPresentationProfile`声明至少一个Motion Matching Pose Source producer时，它 MUST唯一引用一个`CharacterMotionMatchingProfile`，后者 MUST装配Feature Schema、Trajectory Policy、Cost Profile、Search Policy、Database Definition与producer-to-SearchDomain binding。未声明MM producer的Profile MUST不引用MM Profile，Projection MUST不生成MM payload，Runtime MUST不构造MM模块。Graph、Timeline、Prefab、Presenter与Runtime MUST不保存另一份MM配置。MM MUST只作为已编译AnimationChannel的上游Selection provider，并通过`MotionMatchingSelectionInput`进入唯一编译Pose Plan；连续性节点由图显式声明。
 
 #### Scenario: 独立验证配置装配Grounded数据库
 
@@ -210,14 +210,14 @@ Search Policy MUST显式保存有限且大于0的`CoverageNearDuplicateCostThres
 - **THEN** trajectory cost MUST对不匹配转向的candidate产生明确分项
 - **AND** MUST不等待当前Body完全转向后才响应
 
-### Requirement: Pose History必须只记录BaseLocomotionSlot正式结果
+### Requirement: Pose History必须只记录匹配MM节点的正式Pose结果
 
-MM Pose History MUST在全部PoseSlot完成后追加当前`BaseLocomotionSlot`的dense pose、bone velocity、per-foot feature、continuity与presentation time。Query MUST只消费上一帧及更早history。FinalAnimationPoseFrame中的FullBody覆盖、Foot Placement解算结果与VisualRoot world correction MUST不进入MM Pose History。
+MM Pose History MUST在编译Pose Plan中与MM Selection Input绑定的history source PoseNode完成后，追加该节点的dense pose、bone velocity、per-foot feature、continuity与presentation time。Query MUST只消费上一帧及更早history。下游FullBody覆盖、Foot Placement解算结果与VisualRoot world correction MUST不进入MM Pose History。
 
 #### Scenario: Attack全身覆盖Locomotion
 
-- **WHEN** FullBodyActionSlot完全遮蔽BaseLocomotionSlot
-- **THEN** MM History MUST继续记录BaseLocomotionSlot结果
+- **WHEN** 下游FullBody分支完全遮蔽MM Locomotion节点
+- **THEN** MM History MUST继续记录绑定history source节点的结果
 - **AND** MUST不记录Attack最终骨骼姿势
 
 #### Scenario: Body分支重置
@@ -290,42 +290,42 @@ Exact Search的Top-K candidate MUST沿显式continuation graph推进编译后的
 - **THEN** Animancer backend MUST按ClipTime精确设置source state采样时间
 - **AND** source state Speed MUST固定为0，同时request VisualTimeScale MUST继续等于EntryVisualAdvanceRate
 
-### Requirement: AnimationPoseSourceId必须完整表达Playback与Motion Matching Selection Generation
+### Requirement: Animation Selection identity必须完整表达Playback与Motion Matching Generation
 
-Program producer一次activation MUST继续唯一拥有`AnimationPlaybackId`。MM Initialize与每次Jump MUST提升`MotionMatchingSelectionGeneration`，并在公共降低边界将其精确降低为`AnimationPoseSelectionGeneration`；同plan Continue MUST保持generation。`AnimationPlaybackId`、Motion Matching source kind与降低后的selection generation MUST共同形成唯一`AnimationPoseSourceId`，Blend Stack MUST比较完整source identity，不能只因Playback相同就把Jump解释为Continue。`SourcePoseContinuityIdentity` MUST精确等于当前有效`MotionMatchingSelectionGeneration.Value`，Continue MUST保持该值，Initialize与Jump MUST随新generation改变；它 MUST不从sample index、sample time、`PresentationRequestSequence`或独立allocator派生。
+Program producer一次activation MUST继续唯一拥有`AnimationPlaybackId`。MM Initialize与每次Jump MUST提升`MotionMatchingSelectionGeneration`；同plan Continue MUST保持generation。Playback、MM source identity与generation MUST共同形成`AnimationSelectionFrame`的完整source identity，显式Player MUST比较完整identity，不能只因Playback相同就把Jump解释为Continue。`SourcePoseContinuityIdentity` MUST精确等于当前有效generation，Continue MUST保持该值，Initialize与Jump MUST随新generation改变；它 MUST不从sample index、sample time、frame sequence或独立allocator派生。
 
 #### Scenario: 同一MM producer从Run切到Pivot sample
 
 - **WHEN** Program的BaseLocomotion MM playback没有变化但Search选择新的Pivot entry
-- **THEN** MM MUST提升MotionMatchingSelectionGeneration，并使AnimationPoseSourceId与SourcePoseContinuityIdentity同时变化
-- **AND** AnimationPlaybackId MAY保持不变，BaseLocomotionSlot MUST使用唯一self-pair Inertial/CrossFade规则
+- **THEN** MM MUST提升MotionMatchingSelectionGeneration，并使Selection source identity与SourcePoseContinuityIdentity同时变化
+- **AND** AnimationPlaybackId MAY保持不变，图上的显式Player MUST按自身语义处理新identity
 
 #### Scenario: 当前plan继续推进
 
 - **WHEN** 下一次sample仍属于同一Selection Plan continuation
-- **THEN** MM MUST保持MotionMatchingSelectionGeneration、AnimationPoseSourceId与SourcePoseContinuityIdentity
-- **AND** ContinuousVisualTime MUST连续推进，Blend Stack MUST不重启entry clock
+- **THEN** MM MUST保持MotionMatchingSelectionGeneration、Selection source identity与SourcePoseContinuityIdentity
+- **AND** ContinuousVisualTime MUST连续推进，显式Blend Stack节点 MUST不重启entry clock
 
-### Requirement: Motion Matching必须降低为source-neutral Pose Request
+### Requirement: Motion Matching必须降低为source-neutral Animation Selection
 
-MM Pose Source MUST把Selection降低为与Timeline共用的`ResolvedAnimationPoseRequest`，并且该request MUST只通过以下正式字段表达source与采样结果：`AnimationChannelId`、`PoseSlotId`、`AnimationPoseSourceId`、`SourcePoseContinuityIdentity`、`PresentationRequestSequence`、`ProgramProducerIndex`、`VisualSampleTime`、`ContinuousVisualTime`、`Cycle`、`VisualTimeScale`、`ClipSamplePlan[]`、dense `PoseParameters[]`、`LeftFootFeatures`、`RightFootFeatures`与`ExactTransitionIdentity`。request MUST不再把`AnimationPlaybackId`、`PoseSourceKind`与`PoseSelectionGeneration`作为三项拆分的顶层source identity。MM内部Clip plan MUST从唯一PoseTime精确写入ClipTime、ContinuousClipTime、NormalizedTime与IsLooping；Animancer source backend MUST只按ClipTime采样该plan并保持state Speed为0。MM MUST不建立私有fade、Stored Pose、Pose Graph或IK。
+MM Module MUST把选择降低为与Timeline共用的`AnimationSelectionFrame`，并通过以下正式字段表达source与采样结果：`AnimationChannelId`、`ProgramProducerIndex`、完整source identity、`SourcePoseContinuityIdentity`、frame sequence、`VisualSampleTime`、`ContinuousVisualTime`、`Cycle`、`VisualTimeScale`、source-local clip sample descriptor、dense `PoseParameters[]`、`LeftFootFeatures`与`RightFootFeatures`。Selection MUST不携带PoseSlotId、transition identity、entry、Bone Mask或IK。MM内部Clip plan MUST从唯一PoseTime精确写入ClipTime、ContinuousClipTime、NormalizedTime与IsLooping；Animancer source backend MUST只按Player解析后的descriptor采样并保持state Speed为0。MM MUST不建立私有fade、Stored Pose、Pose Graph或IK。
 
 #### Scenario: MM选择新Clip sample
 
 - **WHEN** Selection Generation创建新的entry
-- **THEN** Pose Source MUST解析Projection clip binding，把PoseTime降低为VisualSampleTime、ContinuousVisualTime、Cycle、VisualTimeScale及对应ClipSamplePlan并提交resolved request
-- **AND** request MUST进入BaseLocomotionSlot唯一Blend Stack
+- **THEN** MM Module MUST解析Projection clip binding，把PoseTime降低为VisualSampleTime、ContinuousVisualTime、Cycle、VisualTimeScale及source-local descriptor并提交Selection
+- **AND** Selection MUST进入绑定的MotionMatchingSelectionInput
 
 #### Scenario: MM输出Pose Parameter与左右脚Feature
 
 - **WHEN** Pose Source降低selected Clip在VisualSampleTime的正式Projection结果
-- **THEN** request MUST写入固定容量dense PoseParameters，并以canonical PoseParameterId `animation.foot-placement-weight`表达Foot Placement Weight
-- **AND** request MUST分别携带LeftFootFeatures与RightFootFeatures，Foot MUST不二次查询MM Database
+- **THEN** Selection MUST写入固定容量dense PoseParameters，并以canonical PoseParameterId `animation.foot-placement-weight`表达Foot Placement Weight
+- **AND** Selection MUST分别携带LeftFootFeatures与RightFootFeatures，FootPlacement节点 MUST不二次查询MM Database
 
 #### Scenario: MM试图私自混合旧pose
 
 - **WHEN** 新candidate需要与当前pose过渡
-- **THEN** 过渡 MUST由Blend Library和Slot Blend Stack完成
+- **THEN** 过渡 MUST由图上的显式Player语义完成
 - **AND** MM Runtime MUST不持有第二个crossfade weight
 
 ### Requirement: Motion Matching不得应用Animation Root Motion到Gameplay Body

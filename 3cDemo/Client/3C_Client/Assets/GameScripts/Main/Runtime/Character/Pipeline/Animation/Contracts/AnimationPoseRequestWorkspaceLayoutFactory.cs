@@ -4,8 +4,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal static class AnimationPoseRequestWorkspaceLayoutFactory
     {
-        internal static AnimationPoseRequestWorkspaceLayout Create(
-            CharacterAnimationPresentationBindingIndex bindings)
+        internal static AnimationPoseRequestWorkspaceLayout Create(CharacterAnimationPresentationBindingIndex bindings)
         {
             if (bindings == null)
                 throw new ArgumentNullException(nameof(bindings));
@@ -15,61 +14,48 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Animation Presentation Projection is missing.");
             projection.RequirePosePayload();
 
-            if (bindings.Slots.Count == 0 ||
-                bindings.Slots.Count != projection.PoseProgram.Slots.Count ||
-                bindings.Channels.Count != bindings.Slots.Count)
-            {
-                throw new InvalidOperationException("Animation Pose Request workspace requires every compiled Pose Slot exactly once.");
-            }
-            if (bindings.Bindings.Count == 0)
-                throw new InvalidOperationException("Animation Pose Request workspace requires at least one animation binding.");
-
             try
             {
                 int sourceCapacity = 0;
-                foreach (var pair in bindings.Slots)
+                int playerCount = 0;
+                for (int i = 0; i < projection.PosePlan.Operations.Count; i++)
                 {
-                    ResolvedAnimationPoseSlot slot = pair.Value;
-                    if (!pair.Key.IsValid || pair.Key != slot.PoseSlotId || slot.Index < 0 ||
-                        slot.Index >= projection.PoseProgram.Slots.Count ||
-                        !slot.PoseSlotId.IsValid || !slot.AnimationChannelId.IsValid ||
-                        !Enum.IsDefined(typeof(PoseSlotOutputPolicy), slot.OutputPolicy) ||
-                        slot.BlendPayload == null || slot.BlendPayload.StackPolicy == null ||
-                        slot.BlendPayload.PoseSlotId != slot.PoseSlotId ||
-                        slot.BlendPayload.AnimationChannelId != slot.AnimationChannelId ||
-                        slot.BlendPayload.OutputPolicy != slot.OutputPolicy ||
-                        slot.BlendPayload.StackPolicy.MaxActiveSourceEntries <= 0)
+                    CharacterPresentationPoseOperation operation = projection.PosePlan.Operations[i];
+                    switch (operation.Code)
                     {
-                        throw new InvalidOperationException(
-                            $"Animation Pose Request workspace Pose Slot '{pair.Key}' is invalid.");
+                        case CharacterPoseOperationCode.SelectedPosePlayer:
+                        case CharacterPoseOperationCode.BlendSpacePlayer:
+                            sourceCapacity = checked(sourceCapacity + 1);
+                            playerCount++;
+                            break;
+                        case CharacterPoseOperationCode.BlendStack:
+                            AnimationBlendNodePayload blendNode = projection.PosePlan.RequireBlendNode(operation.NodeId);
+                            if (blendNode.StackPolicy == null || blendNode.StackPolicy.MaxActiveSourceEntries <= 0)
+                                throw new InvalidOperationException($"Blend Stack '{operation.NodeId}' has an invalid source capacity.");
+                            sourceCapacity = checked(sourceCapacity + blendNode.StackPolicy.MaxActiveSourceEntries + 1);
+                            playerCount++;
+                            break;
                     }
-                    sourceCapacity = checked(
-                        sourceCapacity + checked(slot.BlendPayload.StackPolicy.MaxActiveSourceEntries + 1));
                 }
-                if (sourceCapacity <= 0)
-                    throw new InvalidOperationException("Animation Pose Request workspace source capacity must be positive.");
+                if (sourceCapacity <= 0 || playerCount <= 0)
+                    throw new InvalidOperationException("Pose Plan requires at least one explicit Player node.");
 
                 int clipStride = 0;
                 foreach (var pair in bindings.Bindings)
                 {
                     ResolvedAnimationProducerBinding binding = pair.Value;
-                    if (!pair.Key.IsValid || !pair.Key.Equals(binding.ProducerId) ||
-                        !binding.IsValid || binding.AuthoredClipCount <= 0)
-                    {
-                        throw new InvalidOperationException(
-                            $"Animation Pose Request workspace binding '{pair.Key}' is invalid.");
-                    }
+                    if (!pair.Key.IsValid || !pair.Key.Equals(binding.ProducerId) || !binding.IsValid)
+                        throw new InvalidOperationException($"Animation binding '{pair.Key}' is invalid.");
                     clipStride = Math.Max(clipStride, binding.AuthoredClipCount);
                 }
                 if (clipStride <= 0)
-                    throw new InvalidOperationException("Animation Pose Request workspace clip stride must be positive.");
+                    throw new InvalidOperationException("Animation Selection workspace has no clip binding capacity.");
 
-                int parameterStride = projection.PoseProgram.Parameters.Count;
+                int parameterStride = projection.PosePlan.Parameters.Count;
                 if (parameterStride <= 0)
-                    throw new InvalidOperationException("Animation Pose Request workspace parameter stride must be positive.");
-                int footPlacementWeightParameterIndex = projection.PoseProgram.RequireParameterIndex(
+                    throw new InvalidOperationException("Animation Selection workspace parameter stride must be positive.");
+                int footPlacementWeightParameterIndex = projection.PosePlan.RequireParameterIndex(
                     AnimationPoseParameterIds.FootPlacementWeight);
-
                 return new AnimationPoseRequestWorkspaceLayout(
                     sourceCapacity,
                     clipStride,
@@ -78,9 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             catch (OverflowException exception)
             {
-                throw new InvalidOperationException(
-                    "Animation Pose Request workspace capacity overflowed Int32.",
-                    exception);
+                throw new InvalidOperationException("Animation Selection workspace capacity overflowed Int32.", exception);
             }
         }
     }

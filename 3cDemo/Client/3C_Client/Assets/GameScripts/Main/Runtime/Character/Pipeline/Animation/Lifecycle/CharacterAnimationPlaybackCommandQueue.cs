@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 {
@@ -24,7 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 selection.PlaybackId));
         }
 
-        public void EnqueuePoseRequest(ulong localLogicTick, ResolvedAnimationPoseRequest poseRequest)
+        public void EnqueuePoseRequest(ulong localLogicTick, AnimationSelectionFrame poseRequest)
         {
             if (!poseRequest.IsValid)
                 throw new ArgumentException("Resolved animation pose request is invalid.", nameof(poseRequest));
@@ -36,6 +37,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 default,
                 poseRequest,
                 poseRequest.SourceId.PlaybackId));
+        }
+
+        public void EnqueuePoseUnavailable(
+            ulong localLogicTick,
+            AnimationChannelId channelId,
+            AnimationPlaybackId playbackId)
+        {
+            if (!channelId.IsValid || !playbackId.IsValid)
+                throw new ArgumentException("Unavailable animation pose identity is invalid.");
+
+            ulong sequence = NextSequence();
+            Enqueue(new AnimationPlaybackCommand(
+                AnimationPlaybackCommandKind.PoseUnavailable,
+                localLogicTick,
+                sequence,
+                AnimationChannelSelection.Select(channelId, playbackId, localLogicTick, sequence),
+                default,
+                playbackId));
         }
 
         public void EnqueuePlaybackComplete(ulong localLogicTick, AnimationPlaybackId playbackId)
@@ -77,6 +96,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public void Clear()
         {
             m_Commands.Clear();
+        }
+
+        public void DiscardFrameLocalPoseCommands()
+        {
+            for (int i = m_Commands.Count - 1; i >= 0; i--)
+            {
+                AnimationPlaybackCommandKind kind = m_Commands[i].Kind;
+                if (kind == AnimationPlaybackCommandKind.PoseRequest ||
+                    kind == AnimationPlaybackCommandKind.PoseUnavailable)
+                {
+                    m_Commands.RemoveAt(i);
+                }
+            }
         }
 
         void EnqueuePlaybackCommand(

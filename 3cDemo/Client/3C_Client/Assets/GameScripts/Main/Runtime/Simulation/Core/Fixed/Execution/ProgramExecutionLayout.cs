@@ -1,4 +1,4 @@
-﻿using ThirdPersonSimulation;
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -729,7 +729,7 @@ namespace ThirdPersonSimulation.Fixed
                     continue;
                 SimulationOperation source = program.Operations[edge.Source.Value];
                 SimulationOperation target = program.Operations[edge.Target.Value];
-                OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts.Require(source.Code).RequireOutput(edge.SourcePort);
+                OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts.Require(source.Code).RequireSelection(edge.SourcePort);
                 OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts.Require(target.Code).RequireInput(edge.TargetPort);
                 SemanticValueKind kind = CharacterSimulationProgramValueResolver.ResolveOutputKind(program, source, sourcePort);
                 CharacterSimulationProgramValueResolver.RequireInputKind(program, target, targetPort, kind);

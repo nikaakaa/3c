@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
@@ -7,6 +7,7 @@ using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
 using TreeDesigner;
@@ -232,15 +233,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             snapshot.presentation.poseGraphId = poseGraph?.Graph?.GraphId ?? string.Empty;
             snapshot.presentation.poseGraphRevision = poseGraph?.Graph?.ContentRevision ?? string.Empty;
 
-            CharacterAnimationBlendLibrary blendLibrary = presentation.BlendLibrary;
-            string blendLibraryPath = blendLibrary ? AssetDatabase.GetAssetPath(blendLibrary) : string.Empty;
-            snapshot.presentation.blendLibraryAssetPath = blendLibraryPath;
-            snapshot.presentation.blendLibraryAssetGuid = string.IsNullOrEmpty(blendLibraryPath)
-                ? string.Empty
-                : AssetDatabase.AssetPathToGUID(blendLibraryPath);
-            snapshot.presentation.blendLibraryId = blendLibrary?.LibraryId ?? string.Empty;
-            snapshot.presentation.blendLibraryRevision = blendLibrary?.Revision ?? string.Empty;
-
             CharacterAnimationRigDefinition rig = presentation.RigDefinition;
             string rigPath = rig ? AssetDatabase.GetAssetPath(rig) : string.Empty;
             snapshot.presentation.rigAssetPath = rigPath;
@@ -265,27 +257,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
             }
 
-            var poseSlotsByChannel = new Dictionary<AnimationChannelId, PoseSlotId>();
-            IReadOnlyList<CharacterPoseSlotDeclaration> slots = poseGraph?.Graph?.PoseSlots;
-            if (slots != null)
-            {
-                for (int i = 0; i < slots.Count; i++)
-                {
-                    CharacterPoseSlotDeclaration slot = slots[i];
-                    if (slot == null)
-                        continue;
-                    AnimationChannelId channelId = slot.AnimationChannelId;
-                    PoseSlotId poseSlotId = slot.PoseSlotId;
-                    snapshot.presentation.channelBindings.Add(new AgentSnapshotAnimationChannelBinding
-                    {
-                        animationChannelId = channelId.IsValid ? channelId.Value : string.Empty,
-                        poseSlotId = poseSlotId.IsValid ? poseSlotId.Value : string.Empty,
-                        outputPolicy = slot.OutputPolicy.ToString()
-                    });
-                    if (channelId.IsValid && poseSlotId.IsValid)
-                        poseSlotsByChannel.TryAdd(channelId, poseSlotId);
-                }
-            }
+            ExportSelectionInputs(
+                poseGraph?.Graph,
+                string.Empty,
+                new HashSet<CharacterPoseGraphData>(),
+                snapshot.presentation.selectionInputs);
+            ExportBlendSpacePlayers(
+                poseGraph?.Graph,
+                string.Empty,
+                new HashSet<CharacterPoseGraphData>(),
+                snapshot.presentation.blendSpacePlayers);
+
+            ExportBlendSpaces(definition, presentation, snapshot.presentation);
 
             var exportedProducers = new HashSet<AnimationProducerId>();
             for (int timelineIndex = 0; timelineIndex < topology.Timelines.Count; timelineIndex++)
@@ -300,13 +283,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         continue;
 
                     AnimationProducerPresentationBinding binding = presentation.FindProducerBinding(producerId);
-                    string sourceAssetPath = binding?.Source
-                        ? AssetDatabase.GetAssetPath(binding.Source)
-                        : string.Empty;
-                    PoseSlotId poseSlotId = track.AnimationChannelId.IsValid &&
-                                            poseSlotsByChannel.TryGetValue(track.AnimationChannelId, out PoseSlotId resolved)
-                        ? resolved
-                        : default;
+                    UnityEngine.Object sourceAsset = binding?.SourceKind == AnimationPoseSourceKind.BlendSpace
+                        ? binding.BlendSpaceSource
+                        : binding?.Source;
+                    string sourceAssetPath = sourceAsset ? AssetDatabase.GetAssetPath(sourceAsset) : string.Empty;
                     snapshot.presentation.producers.Add(new AgentSnapshotAnimationProducer
                     {
                         route = ExportRoute(source.Route),
@@ -315,7 +295,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         timelineName = source.Timeline.Name,
                         trackName = track.Name,
                         animationChannelId = track.AnimationChannelId.IsValid ? track.AnimationChannelId.Value : string.Empty,
-                        poseSlotId = poseSlotId.IsValid ? poseSlotId.Value : string.Empty,
                         syncMode = track.SyncMode.ToString(),
                         syncGroupId = track.SyncGroupId,
                         sequenceTopology = track.SequenceTopology.ToString(),
@@ -324,10 +303,157 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         sourceAssetGuid = string.IsNullOrEmpty(sourceAssetPath)
                             ? string.Empty
                             : AssetDatabase.AssetPathToGUID(sourceAssetPath),
-                        sourceAssetType = binding?.Source ? binding.Source.GetType().FullName : string.Empty
+                        sourceAssetType = sourceAsset ? sourceAsset.GetType().FullName : string.Empty,
+                        sourceKind = binding?.SourceKind.ToString() ?? string.Empty,
+                        blendSpaceId = binding?.BlendSpaceSource ? binding.BlendSpaceSource.BlendSpaceId.Value : string.Empty,
+                        blendSpaceContentRevision = binding?.BlendSpaceSource ? binding.BlendSpaceSource.ContentRevision : string.Empty
                     });
                 }
             }
+        }
+
+        static void ExportBlendSpaces(
+            CharacterPipelineDefinition definition,
+            CharacterAnimationPresentationProfile profile,
+            AgentSnapshotAnimationPresentation destination)
+        {
+            var assets = new HashSet<CharacterAnimationBlendSpaceAsset>();
+            for (int i = 0; i < profile.ProducerBindings.Count; i++)
+            {
+                AnimationProducerPresentationBinding binding = profile.ProducerBindings[i];
+                if (binding?.SourceKind == AnimationPoseSourceKind.BlendSpace && binding.BlendSpaceSource)
+                    assets.Add(binding.BlendSpaceSource);
+            }
+            string compileStatus = ResolvePresentationCompileStatus(definition, out string projectionRevision);
+            foreach (CharacterAnimationBlendSpaceAsset asset in assets.OrderBy(value => value.BlendSpaceId.Value, StringComparer.Ordinal))
+            {
+                string path = AssetDatabase.GetAssetPath(asset);
+                var entry = new AgentSnapshotAnimationBlendSpace
+                {
+                    assetPath = path,
+                    assetGuid = string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path),
+                    blendSpaceId = asset.BlendSpaceId.Value,
+                    contentRevision = asset.ContentRevision,
+                    mode = asset.Mode.ToString(),
+                    xParameterId = asset.XAxis?.ParameterId.Value ?? string.Empty,
+                    xUnit = asset.XAxis?.Unit ?? string.Empty,
+                    xMinimum = asset.XAxis?.Minimum ?? 0f,
+                    xMaximum = asset.XAxis?.Maximum ?? 0f,
+                    yParameterId = asset.YAxis?.ParameterId.Value ?? string.Empty,
+                    yUnit = asset.YAxis?.Unit ?? string.Empty,
+                    yMinimum = asset.YAxis?.Minimum ?? 0f,
+                    yMaximum = asset.YAxis?.Maximum ?? 0f,
+                    sampleCount = asset.Samples.Count,
+                    compileStatus = compileStatus,
+                    projectionRevision = projectionRevision
+                };
+                CharacterAnimationBlendSpaceValidationReport report = CharacterAnimationBlendSpaceValidator.Validate(asset);
+                for (int issue = 0; issue < report.Issues.Count; issue++)
+                    entry.diagnostics.Add(report.Issues[issue].ToString());
+                destination.blendSpaces.Add(entry);
+            }
+        }
+
+        static string ResolvePresentationCompileStatus(
+            CharacterPipelineDefinition definition,
+            out string projectionRevision)
+        {
+            projectionRevision = definition && definition.PresentationProjection
+                ? definition.PresentationProjection.ProjectionRevision
+                : string.Empty;
+            if (!definition || !definition.SimulationProgram || !definition.PresentationProjection)
+                return "Missing";
+            try
+            {
+                if (CharacterSimulationProgramBuildService.EvaluateExactArtifactStaleness(definition))
+                    return "Stale";
+                CharacterSimulationProgram program = definition.SimulationProgram.Load();
+                CharacterPresentationSemanticContract contract = Float32CharacterPresentationContractAdapter.Create(program);
+                _ = definition.PresentationProjection.Load(contract);
+                return "Ready";
+            }
+            catch (Exception exception)
+            {
+                return "Corrupt: " + exception.Message;
+            }
+        }
+
+        static void ExportBlendSpacePlayers(
+            CharacterPoseGraphData graph,
+            string scope,
+            HashSet<CharacterPoseGraphData> path,
+            List<AgentSnapshotAnimationBlendSpacePlayer> destination)
+        {
+            if (graph == null || !path.Add(graph))
+                return;
+            for (int i = 0; i < graph.Nodes.Count; i++)
+            {
+                CharacterPoseNodeDefinition node = graph.Nodes[i];
+                if (node == null)
+                    continue;
+                PoseNodeId scopedNodeId = string.IsNullOrEmpty(scope)
+                    ? node.NodeId
+                    : new PoseNodeId(scope + "/" + node.NodeId.Value);
+                if (node.Kind == CharacterPoseNodeKind.BlendSpacePlayer)
+                {
+                    CharacterPosePortDefinition[] selection = node.Ports
+                        .Where(port => port != null && port.Direction == CharacterPosePortDirection.Input && port.Kind == CharacterPosePortKind.AnimationSelection)
+                        .ToArray();
+                    CharacterPosePortDefinition[] parameters = node.Ports
+                        .Where(port => port != null && port.Direction == CharacterPosePortDirection.Input && port.Kind == CharacterPosePortKind.Parameter)
+                        .ToArray();
+                    destination.Add(new AgentSnapshotAnimationBlendSpacePlayer
+                    {
+                        graphId = graph.GraphId,
+                        nodeId = scopedNodeId.Value,
+                        selectionPortId = selection.Length > 0 ? selection[0].PortId.Value : string.Empty,
+                        xParameterPortId = parameters.Length > 0 ? parameters[0].PortId.Value : string.Empty,
+                        yParameterPortId = parameters.Length > 1 ? parameters[1].PortId.Value : string.Empty,
+                        inputRangePolicy = node.BlendSpaceInputRangePolicy.ToString()
+                    });
+                }
+                if (node.Kind != CharacterPoseNodeKind.PoseSubgraph || node.Subgraph == null || !node.Subgraph.IsExclusive)
+                    continue;
+                CharacterPoseGraphData child = node.Subgraph.HasInline ? node.Subgraph.Inline : node.Subgraph.Shared.Graph;
+                ExportBlendSpacePlayers(child, scopedNodeId.Value + "/" + child.GraphId, path, destination);
+            }
+            path.Remove(graph);
+        }
+
+        static void ExportSelectionInputs(
+            CharacterPoseGraphData graph,
+            string scope,
+            HashSet<CharacterPoseGraphData> path,
+            List<AgentSnapshotAnimationSelectionInput> destination)
+        {
+            if (graph == null || !path.Add(graph))
+                return;
+            for (int i = 0; i < graph.Nodes.Count; i++)
+            {
+                CharacterPoseNodeDefinition node = graph.Nodes[i];
+                if (node == null)
+                    continue;
+                PoseNodeId scopedNodeId = string.IsNullOrEmpty(scope)
+                    ? node.NodeId
+                    : new PoseNodeId(scope + "/" + node.NodeId.Value);
+                if (node.Kind == CharacterPoseNodeKind.AnimationSelectionInput ||
+                    node.Kind == CharacterPoseNodeKind.MotionMatchingSelectionInput)
+                {
+                    destination.Add(new AgentSnapshotAnimationSelectionInput
+                    {
+                        nodeId = scopedNodeId.Value,
+                        kind = node.Kind.ToString(),
+                        animationChannelId = node.AnimationChannelId.IsValid ? node.AnimationChannelId.Value : string.Empty,
+                        programProducerId = node.ProgramProducerId,
+                        availability = node.SelectionAvailability.ToString()
+                    });
+                }
+                if (node.Kind != CharacterPoseNodeKind.PoseSubgraph || node.Subgraph == null || !node.Subgraph.IsExclusive)
+                    continue;
+                CharacterPoseGraphData child = node.Subgraph.HasInline ? node.Subgraph.Inline : node.Subgraph.Shared.Graph;
+                ExportSelectionInputs(child, scopedNodeId.Value + "/" + child.GraphId, path, destination);
+            }
+            path.Remove(graph);
         }
 
         void ExportProjectedGraphs(

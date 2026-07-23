@@ -5,6 +5,7 @@ using BTSMTL.Timeline;
 using BTSMTL.Timeline.Editor;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Editor.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
@@ -21,8 +22,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly List<CharacterPipelineDefinition> m_Contexts = new List<CharacterPipelineDefinition>();
         readonly List<AnimationProducerAuthoringEntry> m_AnimationProducers = new List<AnimationProducerAuthoringEntry>();
         readonly List<string> m_ConfigurationErrors = new List<string>();
+        readonly List<CharacterMotionMatchingAuthoringDiagnostic> m_MotionMatchingDiagnostics =
+            new List<CharacterMotionMatchingAuthoringDiagnostic>();
         SerializedProperty m_PoseGraph;
-        SerializedProperty m_BlendLibrary;
         SerializedProperty m_RigDefinition;
         SerializedProperty m_MotionMatchingProfile;
         SerializedProperty m_FootAnalysisMode;
@@ -37,7 +39,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         void OnEnable()
         {
             m_PoseGraph = serializedObject.FindProperty("m_PoseGraph");
-            m_BlendLibrary = serializedObject.FindProperty("m_BlendLibrary");
             m_RigDefinition = serializedObject.FindProperty("m_RigDefinition");
             m_MotionMatchingProfile = serializedObject.FindProperty("m_MotionMatchingProfile");
             m_FootAnalysisMode = serializedObject.FindProperty("m_FootPlacementAnalysisMode");
@@ -50,9 +51,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             serializedObject.Update();
             EditorGUILayout.LabelField("Animation Presentation", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(m_PoseGraph, new GUIContent("Pose Graph"));
-            EditorGUILayout.PropertyField(m_BlendLibrary, new GUIContent("Blend Library"));
             EditorGUILayout.PropertyField(m_RigDefinition, new GUIContent("Rig Definition"));
             EditorGUILayout.PropertyField(m_MotionMatchingProfile, new GUIContent("Motion Matching Profile"));
+            EditorGUILayout.HelpBox(
+                "Motion Matching is optional per Character Definition. Configure one Motion Matching Profile only when at least one producer uses Motion Matching; Timeline-only Definitions leave it empty.",
+                MessageType.Info);
             DrawFootAnalysis();
             bool changed = serializedObject.ApplyModifiedProperties();
             if (changed)
@@ -119,13 +122,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
 
             CharacterPresentationPoseGraphAsset poseGraph = profile.PoseGraph;
-            CharacterAnimationBlendLibrary blendLibrary = profile.BlendLibrary;
             CharacterAnimationRigDefinition rig = profile.RigDefinition;
             CharacterMotionMatchingProfile motionMatching = profile.MotionMatchingProfile;
             if (poseGraph && poseGraph.Graph != null)
                 EditorGUILayout.LabelField("Pose Graph Identity", $"{poseGraph.Graph.GraphId} @ {poseGraph.Graph.ContentRevision}");
-            if (blendLibrary)
-                EditorGUILayout.LabelField("Blend Library Identity", $"{blendLibrary.LibraryId} @ {blendLibrary.Revision}");
             if (rig)
                 EditorGUILayout.LabelField("Rig Identity", $"{rig.RigId} @ {rig.Revision}");
             if (motionMatching)
@@ -138,12 +138,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterPresentationPoseGraphEditorWindow.Open(
                         poseGraph,
                         profile,
-                        SelectedContext ? SelectedContext.PresentationProjection : null);
-            }
-            using (new EditorGUI.DisabledScope(!blendLibrary))
-            {
-                if (GUILayout.Button("Open Blend Library"))
-                    OpenAsset(blendLibrary);
+                        SelectedContext ? SelectedContext.PresentationProjection : null,
+                        SelectedContext);
             }
             using (new EditorGUI.DisabledScope(!rig))
             {
@@ -163,10 +159,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             m_ConfigurationErrors.Clear();
             CharacterAnimationPresentationProfile profile = Profile;
-            if (profile && profile.CollectConfigurationErrors(m_ConfigurationErrors))
-                return;
+            profile?.CollectConfigurationErrors(m_ConfigurationErrors);
             for (int i = 0; i < m_ConfigurationErrors.Count; i++)
                 EditorGUILayout.HelpBox(m_ConfigurationErrors[i], MessageType.Error);
+            DrawMotionMatchingOwnershipDiagnostics();
+        }
+
+        void DrawMotionMatchingOwnershipDiagnostics()
+        {
+            m_MotionMatchingDiagnostics.Clear();
+            string[] guids = AssetDatabase.FindAssets("t:CharacterAnimationPresentationProfile");
+            var profiles = new List<CharacterAnimationPresentationProfile>(guids.Length);
+            for (int i = 0; i < guids.Length; i++)
+            {
+                CharacterAnimationPresentationProfile profile =
+                    AssetDatabase.LoadAssetAtPath<CharacterAnimationPresentationProfile>(AssetDatabase.GUIDToAssetPath(guids[i]));
+                if (profile)
+                    profiles.Add(profile);
+            }
+            CharacterMotionMatchingAuthoringValidator.CollectPresentationOwnershipDiagnostics(
+                Profile,
+                profiles,
+                m_MotionMatchingDiagnostics);
+            for (int i = 0; i < m_MotionMatchingDiagnostics.Count; i++)
+            {
+                CharacterMotionMatchingAuthoringDiagnostic diagnostic = m_MotionMatchingDiagnostics[i];
+                EditorGUILayout.HelpBox($"{diagnostic.Code}: {diagnostic.Message}", MessageType.Error);
+            }
         }
 
         void DrawContext()
@@ -280,7 +299,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.LabelField(producer.DisplayName, EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Producer", producer.ProgramProducerIdentity);
             EditorGUILayout.LabelField("Animation Channel", producer.AnimationChannelId.Value);
-            EditorGUILayout.LabelField("Pose Slot", producer.PoseSlotId.Value);
             EditorGUILayout.LabelField("Source Clips", producer.SourceClips.Count.ToString());
             for (int clipIndex = 0; clipIndex < producer.SourceClips.Count; clipIndex++)
             {
@@ -292,7 +310,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
             AnimationProducerPresentationBinding binding = profile.FindProducerBinding(producer.ProducerId);
             int sourceKind = binding == null ? 0 : (int)binding.SourceKind;
-            int nextSourceKind = EditorGUILayout.Popup("Pose Source", sourceKind, new[] { "Unbound", "Timeline", "Motion Matching" });
+            int nextSourceKind = EditorGUILayout.Popup("Pose Source", sourceKind, new[] { "Unbound", "Timeline", "Motion Matching", "Blend Space" });
             if (nextSourceKind != sourceKind)
             {
                 try
@@ -311,28 +329,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
 
             TransitionAssetBase currentSource = binding?.Source;
-            TransitionAssetBase sourceAsset = currentSource;
-            if (binding == null || binding.SourceKind != AnimationPoseSourceKind.MotionMatching)
+            TransitionAssetBase sourceAsset = (TransitionAssetBase)EditorGUILayout.ObjectField(
+                "Timeline Source",
+                currentSource,
+                typeof(TransitionAssetBase),
+                false);
+            if (sourceAsset != currentSource)
             {
-                sourceAsset = (TransitionAssetBase)EditorGUILayout.ObjectField(
-                    "Timeline Source",
-                    currentSource,
-                    typeof(TransitionAssetBase),
-                    false);
-                if (sourceAsset != currentSource)
+                try
                 {
-                    try
-                    {
-                        if (sourceAsset)
-                            CharacterAnimationPresentationAuthoringService.ConfigureTimelineProducerBinding(profile, context, producer.ProducerId, sourceAsset);
-                        else
-                            CharacterAnimationPresentationAuthoringService.RemoveProducerBinding(profile, context, producer.ProducerId);
-                        m_BindingError = string.Empty;
-                    }
-                    catch (Exception exception)
-                    {
-                        m_BindingError = exception.Message;
-                    }
+                    if (sourceAsset)
+                        CharacterAnimationPresentationAuthoringService.ConfigureTimelineProducerBinding(profile, context, producer.ProducerId, sourceAsset);
+                    else if (binding?.SourceKind == AnimationPoseSourceKind.Timeline)
+                        CharacterAnimationPresentationAuthoringService.RemoveProducerBinding(profile, context, producer.ProducerId);
+                    m_BindingError = string.Empty;
+                    binding = profile.FindProducerBinding(producer.ProducerId);
+                }
+                catch (Exception exception)
+                {
+                    m_BindingError = exception.Message;
+                }
+            }
+
+            CharacterAnimationBlendSpaceAsset currentBlendSpace = binding?.BlendSpaceSource;
+            CharacterAnimationBlendSpaceAsset blendSpaceAsset = (CharacterAnimationBlendSpaceAsset)EditorGUILayout.ObjectField(
+                "Blend Space Source",
+                currentBlendSpace,
+                typeof(CharacterAnimationBlendSpaceAsset),
+                false);
+            if (blendSpaceAsset != currentBlendSpace)
+            {
+                try
+                {
+                    if (blendSpaceAsset)
+                        CharacterAnimationPresentationAuthoringService.ConfigureBlendSpaceProducerBinding(profile, context, producer.ProducerId, blendSpaceAsset);
+                    else if (binding?.SourceKind == AnimationPoseSourceKind.BlendSpace)
+                        CharacterAnimationPresentationAuthoringService.RemoveProducerBinding(profile, context, producer.ProducerId);
+                    m_BindingError = string.Empty;
+                    binding = profile.FindProducerBinding(producer.ProducerId);
+                }
+                catch (Exception exception)
+                {
+                    m_BindingError = exception.Message;
                 }
             }
 
@@ -341,10 +379,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 OpenGraph(context, producer.Timeline);
             if (GUILayout.Button("Open Timeline"))
                 OpenTimeline(context, producer);
-            using (new EditorGUI.DisabledScope(!sourceAsset))
+            UnityEngine.Object sourceObject = binding?.SourceKind == AnimationPoseSourceKind.BlendSpace
+                ? binding.BlendSpaceSource
+                : binding?.Source;
+            using (new EditorGUI.DisabledScope(!sourceObject))
             {
                 if (GUILayout.Button("Open Source"))
-                    OpenAsset(sourceAsset);
+                {
+                    if (sourceObject is CharacterAnimationBlendSpaceAsset blendSpace)
+                        CharacterAnimationBlendSpaceEditorWindow.Open(blendSpace, context);
+                    else
+                        OpenAsset(sourceObject);
+                }
             }
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndVertical();

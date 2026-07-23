@@ -475,6 +475,18 @@ namespace TreeDesigner.Editor
         }
     }
 
+    public sealed class BaseTreeNavigatorView : VisualElement
+    {
+        public BaseTreeNavigatorView()
+        {
+            VisualTreeAsset template = Resources.Load<VisualTreeAsset>("VisualTree/BaseTreeNavigator");
+            if (!template)
+                throw new InvalidOperationException("Base Tree Navigator visual tree is missing.");
+            template.CloneTree(this);
+            style.flexGrow = 1f;
+        }
+    }
+
     public class BaseTreeInspectorView : VisualElement
     {
         public new class UxmlFactory : UxmlFactory<BaseTreeInspectorView, UxmlTraits> { }
@@ -483,14 +495,10 @@ namespace TreeDesigner.Editor
         protected BaseTree m_Tree;
         public BaseTree Tree => m_Tree;
         readonly TreeSelectionInspectorController m_SelectionController;
-        readonly GraphDataCatalogController m_DataCatalogController;
+        GraphDataCatalogController m_DataCatalogController;
 
-        protected VisualElement m_DataPage;
         protected VisualElement m_SelectionPage;
         protected VisualElement m_SelectionInspectorContainer;
-
-        protected Button m_DataTabButton;
-        protected Button m_SelectionTabButton;
 
         public BaseTreeInspectorView()
         {
@@ -500,35 +508,60 @@ namespace TreeDesigner.Editor
             AddToClassList("treeInspector");
             style.display = DisplayStyle.None;
 
-            m_DataPage = this.Q("data-page");
             m_SelectionPage = this.Q("selection-inspector-page");
             m_SelectionInspectorContainer = this.Q("selection-inspector-container");
-            m_DataTabButton = this.Q<Button>("data-tab-button");
-            m_SelectionTabButton = this.Q<Button>("selection-tab-button");
+            m_SelectionPage.style.display = DisplayStyle.Flex;
+        }
 
-            m_DataTabButton.clicked += ShowDataTab;
-            m_SelectionTabButton.clicked += ShowSelectionTab;
-            m_DataCatalogController = new GraphDataCatalogController(this, ShowDataTab);
-
-            ShowDataTab();
+        internal void BindNavigator(BaseTreeNavigatorView navigator, GraphDataCatalogViewState viewState)
+        {
+            if (navigator == null)
+                throw new ArgumentNullException(nameof(navigator));
+            if (m_DataCatalogController != null)
+                throw new InvalidOperationException("Base Tree Navigator is already bound.");
+            m_DataCatalogController = new GraphDataCatalogController(navigator, viewState);
+            navigator.Q<EnumField>("graph-data-scope-filter")?.RegisterValueChangedCallback(evt =>
+                viewState.ScopeFilter = evt.newValue is PipelineBlackboardScopeFilter value
+                    ? value
+                    : PipelineBlackboardScopeFilter.All);
+            navigator.Q<EnumField>("graph-data-context-filter")?.RegisterValueChangedCallback(evt =>
+                viewState.ContextFilter = evt.newValue is PipelineBlackboardContextFilter value
+                    ? value
+                    : PipelineBlackboardContextFilter.AllVisible);
+            navigator.Q<Button>("graph-data-source-all-button").clicked += () => viewState.SourceFilter = GraphDataCatalogSourceFilter.All;
+            navigator.Q<Button>("graph-data-source-input-button").clicked += () =>
+            {
+                viewState.SourceFilter = GraphDataCatalogSourceFilter.Input;
+                viewState.ScopeFilter = PipelineBlackboardScopeFilter.All;
+                viewState.ContextFilter = PipelineBlackboardContextFilter.AllVisible;
+                viewState.BlackboardFiltersExpanded = false;
+            };
+            navigator.Q<Button>("graph-data-source-blackboard-button").clicked += () =>
+            {
+                viewState.SourceFilter = GraphDataCatalogSourceFilter.Blackboard;
+                viewState.BlackboardFiltersExpanded = true;
+            };
+            navigator.Q<Button>("graph-data-blackboard-filter-button").clicked += () => navigator.schedule.Execute(() =>
+                viewState.BlackboardFiltersExpanded = navigator.Q("graph-data-blackboard-filter-panel").resolvedStyle.display == DisplayStyle.Flex);
         }
 
         public virtual void SetAuthoringContext(object authoringContext)
         {
-            m_DataCatalogController.SetAuthoringContext(authoringContext);
+            m_DataCatalogController?.SetAuthoringContext(authoringContext);
         }
 
         public virtual void SetVisibleBlackboardSources(IEnumerable<BaseTree> trees)
         {
-            m_DataCatalogController.SetVisibleBlackboardSources(trees);
+            m_DataCatalogController?.SetVisibleBlackboardSources(trees);
         }
 
         public IEnumerable<BaseExposedProperty> VisibleBlackboardDeclarations =>
-            m_DataCatalogController.VisibleBlackboardDeclarations;
+            m_DataCatalogController?.VisibleBlackboardDeclarations ?? Array.Empty<BaseExposedProperty>();
 
         public bool FocusBlackboardDeclaration(string graphAuthoringId, string declarationId)
         {
-            return m_DataCatalogController.FocusBlackboardDeclaration(graphAuthoringId, declarationId);
+            return m_DataCatalogController != null &&
+                   m_DataCatalogController.FocusBlackboardDeclaration(graphAuthoringId, declarationId);
         }
 
         public virtual void PopulateView(BaseTree tree)
@@ -536,14 +569,13 @@ namespace TreeDesigner.Editor
             ClearView();
             m_Tree = tree;
             m_SelectionController.PopulateGraphAuthoringSettings();
-            m_DataCatalogController.Bind(tree);
+            m_DataCatalogController?.Bind(tree);
 
-            ShowDataTab();
             style.display = DisplayStyle.Flex;
         }
         public virtual void ClearView()
         {
-            m_DataCatalogController.Clear();
+            m_DataCatalogController?.Clear();
             m_SelectionController.Clear();
             m_Tree = null;
         }
@@ -559,27 +591,16 @@ namespace TreeDesigner.Editor
             m_SelectionController.RefreshNodeSelection(nodeView);
         }
 
-        protected virtual void ShowDataTab()
-        {
-            SetTab(false);
-        }
         protected virtual void ShowSelectionTab()
         {
             if (!m_SelectionController.HasSelection)
                 m_SelectionController.PopulateGraphAuthoringSettings();
-            SetTab(true);
+            m_SelectionPage.style.display = DisplayStyle.Flex;
         }
 
         internal void ShowSelectionTabInternal()
         {
             ShowSelectionTab();
         }
-        protected virtual void SetTab(bool selection)
-        {
-            m_DataPage.style.display = selection ? DisplayStyle.None : DisplayStyle.Flex;
-            m_SelectionPage.style.display = selection ? DisplayStyle.Flex : DisplayStyle.None;
-            m_DataTabButton.EnableInClassList("selected", !selection);
-            m_SelectionTabButton.EnableInClassList("selected", selection);
-       }
    }
 }

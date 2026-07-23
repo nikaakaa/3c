@@ -1,15 +1,15 @@
 using System;
 using UnityEngine;
 
-namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
+namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal readonly struct AnimationBlendBoneVelocity
     {
         public AnimationBlendBoneVelocity(Vector3 linear, Vector3 angular, Vector3 scale)
         {
-            if (!AnimationBlendPoseMath.IsFinite(linear) ||
-                !AnimationBlendPoseMath.IsFinite(angular) ||
-                !AnimationBlendPoseMath.IsFinite(scale))
+            if (!AnimationPoseMath.IsFinite(linear) ||
+                !AnimationPoseMath.IsFinite(angular) ||
+                !AnimationPoseMath.IsFinite(scale))
                 throw new ArgumentException("Animation Bone velocity is non-finite.");
             Linear = linear;
             Angular = angular;
@@ -19,12 +19,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         public Vector3 Linear { get; }
         public Vector3 Angular { get; }
         public Vector3 Scale { get; }
-        public bool IsValid => AnimationBlendPoseMath.IsFinite(Linear) &&
-                               AnimationBlendPoseMath.IsFinite(Angular) &&
-                               AnimationBlendPoseMath.IsFinite(Scale);
+        public bool IsValid => AnimationPoseMath.IsFinite(Linear) &&
+                               AnimationPoseMath.IsFinite(Angular) &&
+                               AnimationPoseMath.IsFinite(Scale);
     }
 
-    internal static class AnimationBlendPoseMath
+    internal static class AnimationPoseMath
     {
         const float QuaternionTolerance = 0.0000001f;
 

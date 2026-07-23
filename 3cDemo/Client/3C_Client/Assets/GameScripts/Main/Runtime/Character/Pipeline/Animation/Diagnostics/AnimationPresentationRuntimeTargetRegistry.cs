@@ -1,11 +1,23 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
     public interface IAnimationPresentationRuntimeSnapshotProvider
     {
+        bool MotionMatchingRuntimeEnabled { get; }
+        IReadOnlyList<AnimationMarkerSyncRelationSnapshot> MarkerSyncSnapshots { get; }
+        IReadOnlyList<AnimationMarkerSyncPlaybackSnapshot> MarkerSyncPlaybackSnapshots { get; }
         bool TryGetAnimationPresentationSnapshot(out AnimationPresentationRuntimeSnapshot snapshot);
+        bool TryGetPosePlanStages(out CharacterPosePlanStageSnapshot snapshot);
+        bool TryCaptureMotionMatchingSearchReplay(
+            string programProducerId,
+            out MotionMatchingSearchReplayArtifact artifact);
+        void SetPoseWatchInterests(Guid ownerId, IReadOnlyList<AnimationPoseWatchIdentity> interests);
+        void RemovePoseWatchInterests(Guid ownerId);
     }
 
     public sealed class AnimationPresentationRuntimeTarget
@@ -35,6 +47,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public int HostInstanceId { get; }
         public string DisplayName { get; }
         public string ProjectionRevision { get; }
+        public bool MotionMatchingRuntimeEnabled => m_Provider.MotionMatchingRuntimeEnabled;
+        public IReadOnlyList<AnimationMarkerSyncRelationSnapshot> MarkerSyncSnapshots => m_Provider.MarkerSyncSnapshots;
+        public IReadOnlyList<AnimationMarkerSyncPlaybackSnapshot> MarkerSyncPlaybackSnapshots => m_Provider.MarkerSyncPlaybackSnapshots;
 
         public bool TryGetSnapshot(out AnimationPresentationRuntimeSnapshot snapshot)
         {
@@ -44,6 +59,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 throw new InvalidOperationException("Animation Presentation runtime snapshot Projection revision changed after target binding.");
             return true;
         }
+
+        public bool TryGetPosePlanStages(out CharacterPosePlanStageSnapshot snapshot) =>
+            m_Provider.TryGetPosePlanStages(out snapshot);
+
+        public bool TryCaptureMotionMatchingSearchReplay(
+            string programProducerId,
+            out MotionMatchingSearchReplayArtifact artifact) =>
+            m_Provider.TryCaptureMotionMatchingSearchReplay(programProducerId, out artifact);
+
+        public void SetPoseWatchInterests(Guid ownerId, IReadOnlyList<AnimationPoseWatchIdentity> interests) =>
+            m_Provider.SetPoseWatchInterests(ownerId, interests);
+
+        public void RemovePoseWatchInterests(Guid ownerId) => m_Provider.RemovePoseWatchInterests(ownerId);
     }
 
     public static class AnimationPresentationRuntimeTargetRegistry

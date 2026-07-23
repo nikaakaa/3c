@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1db7d9c134c44714a63ec97ecb76d8b9, type: 3}
+  m_Name: CorinLocomotionInertializationPolicy
+  m_EditorClassIdentifier: 
+  m_Schema: character-pose-inertialization-policy/v2
+  m_PolicyId: corin.animation-rig.base-locomotion
+  m_Revision: bd4189d964024691b538a6fc4c40c1aa
+  m_DefaultRule:
+    m_Mode: 2
+    m_DurationSeconds: 0.18
+    m_Curve:
+      m_Keys:
+      - m_Time: 0
+        m_Value: 0
+        m_InTangent: 0
+        m_OutTangent: 0
+      - m_Time: 1
+        m_Value: 1
+        m_InTangent: 0
+        m_OutTangent: 0
+    m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0, type: 2}
+    m_ParameterFilters:
+    - m_ParameterId: animation.action-weight
+      m_Mode: 1
+    - m_ParameterId: animation.foot-placement-weight
+      m_Mode: 2
+  m_Overrides: []

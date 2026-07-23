@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
@@ -123,6 +124,253 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         }
     }
 
+    public static class MotionMatchingSearchReplayArtifactCodec
+    {
+        const int Magic = 0x4d4d5352;
+        const int Version = 1;
+
+        public static byte[] Encode(MotionMatchingSearchReplayArtifact artifact)
+        {
+            if (artifact == null)
+                throw new ArgumentNullException(nameof(artifact));
+            using var stream = new MemoryStream();
+            using var writer = new BinaryWriter(stream);
+            writer.Write(Magic);
+            writer.Write(Version);
+            writer.Write(artifact.ProjectionIdentity);
+            WriteDatabaseIdentity(writer, artifact.DatabaseIdentity);
+            writer.Write(artifact.SearchPolicyId);
+            writer.Write(artifact.SearchPolicyRevision);
+            writer.Write(artifact.QueryId.Value);
+            writer.Write(artifact.ProfileId.Value);
+            writer.Write(artifact.SearchDomainId.Value);
+            writer.Write(artifact.TrajectorySourceIdentity.Value);
+            writer.Write(artifact.TrajectorySourceTick.Value);
+            writer.Write(artifact.TrajectorySourceSequence);
+            writer.Write(artifact.TrajectorySourceAge);
+            writer.Write(artifact.TrajectoryPointCount);
+            for (int i = 0; i < artifact.TrajectoryPointCount; i++)
+            {
+                MotionMatchingTrajectoryEnvelopePoint point = artifact.GetTrajectoryPoint(i);
+                writer.Write(point.TimeOffset);
+                WriteVector2(writer, point.LocalPositionCenter);
+                WriteVector2(writer, point.LocalFacingCenter);
+                writer.Write(point.PositionToleranceRadius);
+                writer.Write(point.FacingToleranceDegrees);
+                writer.Write(point.Confidence);
+            }
+            writer.Write(artifact.NormalizedFeatureCount);
+            for (int i = 0; i < artifact.NormalizedFeatureCount; i++)
+                writer.Write(artifact.GetNormalizedFeature(i));
+            WriteContactProtection(writer, artifact.ContactProtection);
+            writer.Write(artifact.CurrentSelection.IsValid);
+            if (artifact.CurrentSelection.IsValid)
+                WriteSelectionIdentity(writer, artifact.CurrentSelection);
+            writer.Write(artifact.Initialization);
+            writer.Write(artifact.SecondsSinceLastJump);
+            writer.Write(artifact.ResetSequence);
+            writer.Write(artifact.ExpectedDigest.Value);
+            writer.Flush();
+            return stream.ToArray();
+        }
+
+        public static MotionMatchingSearchReplayArtifact Decode(byte[] bytes)
+        {
+            if (bytes == null || bytes.Length == 0)
+                throw new ArgumentException("Motion Matching Search Replay bytes are empty.", nameof(bytes));
+            using var stream = new MemoryStream(bytes, false);
+            using var reader = new BinaryReader(stream);
+            if (reader.ReadInt32() != Magic || reader.ReadInt32() != Version)
+                throw new InvalidDataException("Motion Matching Search Replay schema is unsupported.");
+            string projectionIdentity = reader.ReadString();
+            CharacterMotionMatchingDatabaseArtifactIdentity databaseIdentity = ReadDatabaseIdentity(reader);
+            string searchPolicyId = reader.ReadString();
+            int searchPolicyRevision = reader.ReadInt32();
+            var queryId = new CharacterMotionMatchingQueryId(reader.ReadUInt64());
+            var profileId = new CharacterMotionMatchingProfileId(reader.ReadString());
+            var searchDomainId = new CharacterMotionMatchingSearchDomainId(reader.ReadString());
+            var trajectorySourceIdentity = new MotionMatchingTrajectorySourceIdentity(reader.ReadString());
+            var trajectorySourceTick = new SimulationTick(reader.ReadUInt64());
+            ulong trajectorySourceSequence = reader.ReadUInt64();
+            float trajectorySourceAge = reader.ReadSingle();
+            int trajectoryCount = RequireCount(reader.ReadInt32(), "trajectory");
+            var trajectory = new MotionMatchingTrajectoryEnvelopePoint[trajectoryCount];
+            for (int i = 0; i < trajectory.Length; i++)
+            {
+                trajectory[i] = new MotionMatchingTrajectoryEnvelopePoint(
+                    reader.ReadSingle(),
+                    ReadVector2(reader),
+                    ReadVector2(reader),
+                    reader.ReadSingle(),
+                    reader.ReadSingle(),
+                    reader.ReadSingle());
+            }
+            int featureCount = RequireCount(reader.ReadInt32(), "feature");
+            var features = new float[featureCount];
+            for (int i = 0; i < features.Length; i++)
+                features[i] = reader.ReadSingle();
+            MotionMatchingContactProtection contact = ReadContactProtection(reader);
+            MotionMatchingSelectionIdentity currentSelection = reader.ReadBoolean()
+                ? ReadSelectionIdentity(reader)
+                : default;
+            bool initialization = reader.ReadBoolean();
+            float secondsSinceLastJump = reader.ReadSingle();
+            ulong resetSequence = reader.ReadUInt64();
+            var expectedDigest = new StableHash(reader.ReadString());
+            if (stream.Position != stream.Length)
+                throw new InvalidDataException("Motion Matching Search Replay contains trailing data.");
+            return new MotionMatchingSearchReplayArtifact(
+                projectionIdentity,
+                databaseIdentity,
+                searchPolicyId,
+                searchPolicyRevision,
+                queryId,
+                profileId,
+                searchDomainId,
+                trajectorySourceIdentity,
+                trajectorySourceTick,
+                trajectorySourceSequence,
+                trajectorySourceAge,
+                trajectory,
+                features,
+                contact,
+                currentSelection,
+                initialization,
+                secondsSinceLastJump,
+                resetSequence,
+                expectedDigest);
+        }
+
+        static void WriteDatabaseIdentity(BinaryWriter writer, CharacterMotionMatchingDatabaseArtifactIdentity identity)
+        {
+            writer.Write(identity.ArtifactSchemaVersion);
+            writer.Write(identity.AnalysisAlgorithmVersion);
+            writer.Write(identity.DatabaseId.Value);
+            writer.Write(identity.DatabaseRevision);
+            writer.Write(identity.FeatureSchemaId.Value);
+            writer.Write(identity.FeatureSchemaRevision);
+            writer.Write(identity.RigId);
+            writer.Write(identity.RigRevision);
+            writer.Write(identity.ClipDependencyCount);
+            for (int i = 0; i < identity.ClipDependencyCount; i++)
+            {
+                MotionMatchingClipDependencyIdentity clip = identity.GetClipDependency(i);
+                writer.Write(clip.SourceSetId.Value);
+                writer.Write(clip.SourceSetRevision);
+                writer.Write(clip.SourceClipId.Value);
+                writer.Write(clip.AssetGuid);
+                writer.Write(clip.LocalFileId);
+                writer.Write(clip.ImportDependencyHash);
+                writer.Write(clip.SamplingRigSignature);
+                writer.Write(clip.MotionRootBoneId.Value);
+                writer.Write(clip.FootArtifactHash.Value);
+            }
+            writer.Write(identity.AnalysisInputHash.Value);
+            writer.Write(identity.OrderedClipDependencyHash.Value);
+            writer.Write(identity.ContentHash.Value);
+        }
+
+        static CharacterMotionMatchingDatabaseArtifactIdentity ReadDatabaseIdentity(BinaryReader reader)
+        {
+            int artifactSchemaVersion = reader.ReadInt32();
+            string algorithmVersion = reader.ReadString();
+            var databaseId = new CharacterMotionMatchingDatabaseId(reader.ReadString());
+            int databaseRevision = reader.ReadInt32();
+            var schemaId = new CharacterMotionMatchingFeatureSchemaId(reader.ReadString());
+            int schemaRevision = reader.ReadInt32();
+            string rigId = reader.ReadString();
+            string rigRevision = reader.ReadString();
+            int clipCount = RequireCount(reader.ReadInt32(), "clip dependency");
+            var clips = new MotionMatchingClipDependencyIdentity[clipCount];
+            for (int i = 0; i < clips.Length; i++)
+            {
+                clips[i] = new MotionMatchingClipDependencyIdentity(
+                    new CharacterMotionMatchingSourceSetId(reader.ReadString()),
+                    reader.ReadInt32(),
+                    new CharacterMotionMatchingSourceClipId(reader.ReadString()),
+                    reader.ReadString(),
+                    reader.ReadInt64(),
+                    reader.ReadString(),
+                    reader.ReadString(),
+                    new AnimationBoneId(reader.ReadString()),
+                    new StableHash(reader.ReadString()));
+            }
+            return new CharacterMotionMatchingDatabaseArtifactIdentity(
+                artifactSchemaVersion,
+                algorithmVersion,
+                databaseId,
+                databaseRevision,
+                schemaId,
+                schemaRevision,
+                rigId,
+                rigRevision,
+                clips,
+                new StableHash(reader.ReadString()),
+                new StableHash(reader.ReadString()),
+                new StableHash(reader.ReadString()));
+        }
+
+        static void WriteSelectionIdentity(BinaryWriter writer, MotionMatchingSelectionIdentity selection)
+        {
+            WriteDatabaseIdentity(writer, selection.DatabaseIdentity);
+            writer.Write(selection.Generation.Value);
+            writer.Write(selection.PlanId.Value);
+            writer.Write(selection.SampleId.Value);
+            writer.Write(selection.SampleIndex);
+        }
+
+        static MotionMatchingSelectionIdentity ReadSelectionIdentity(BinaryReader reader) =>
+            new MotionMatchingSelectionIdentity(
+                ReadDatabaseIdentity(reader),
+                new MotionMatchingSelectionGeneration(reader.ReadUInt64()),
+                new CharacterMotionMatchingPlanId(reader.ReadUInt64()),
+                new CharacterMotionMatchingSampleId(reader.ReadUInt32()),
+                reader.ReadInt32());
+
+        static void WriteContactProtection(BinaryWriter writer, MotionMatchingContactProtection contact)
+        {
+            writer.Write((byte)contact.ProtectedMask);
+            WriteVector3(writer, contact.LeftRootPosition);
+            WriteVector3(writer, contact.RightRootPosition);
+            WriteVector3(writer, contact.LeftRootVelocity);
+            WriteVector3(writer, contact.RightRootVelocity);
+        }
+
+        static MotionMatchingContactProtection ReadContactProtection(BinaryReader reader) =>
+            new MotionMatchingContactProtection(
+                (MotionMatchingFootContactMask)reader.ReadByte(),
+                ReadVector3(reader),
+                ReadVector3(reader),
+                ReadVector3(reader),
+                ReadVector3(reader));
+
+        static void WriteVector2(BinaryWriter writer, UnityEngine.Vector2 value)
+        {
+            writer.Write(value.x);
+            writer.Write(value.y);
+        }
+
+        static UnityEngine.Vector2 ReadVector2(BinaryReader reader) =>
+            new UnityEngine.Vector2(reader.ReadSingle(), reader.ReadSingle());
+
+        static void WriteVector3(BinaryWriter writer, UnityEngine.Vector3 value)
+        {
+            writer.Write(value.x);
+            writer.Write(value.y);
+            writer.Write(value.z);
+        }
+
+        static UnityEngine.Vector3 ReadVector3(BinaryReader reader) =>
+            new UnityEngine.Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+
+        static int RequireCount(int count, string name)
+        {
+            if (count <= 0 || count > 1_000_000)
+                throw new InvalidDataException($"Motion Matching Search Replay {name} count is invalid.");
+            return count;
+        }
+    }
+
     public enum MotionMatchingSearchReplayFailure : byte
     {
         None = 0,
@@ -223,7 +471,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 throw new ArgumentNullException(nameof(database));
             var parts = new List<string>
             {
-                "motion-matching-search-digest/v2",
+                "motion-matching-search-digest/v3",
                 database.ArtifactIdentity.ContentHash.Value,
                 search.TopKCount.ToString(CultureInfo.InvariantCulture),
                 search.AdmittedCount.ToString(CultureInfo.InvariantCulture),
@@ -233,7 +481,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 search.ExactSampleCount.ToString(CultureInfo.InvariantCulture)
             };
             for (int i = 0; i < database.SampleCount; i++)
-                parts.Add(((byte)search.GetRejectReason(i)).ToString(CultureInfo.InvariantCulture));
+            {
+                MotionMatchingCandidateRejectDetail detail = search.GetRejectDetail(i);
+                parts.Add(((byte)detail.Reason).ToString(CultureInfo.InvariantCulture));
+                parts.Add(Bits(detail.Value));
+                parts.Add(Bits(detail.Limit));
+                parts.Add(Bits(detail.SecondaryValue));
+                parts.Add(Bits(detail.SecondaryLimit));
+            }
             for (int i = 0; i < search.TopKCount; i++)
             {
                 MotionMatchingExactCandidate candidate = search.GetCandidate(i);

@@ -1,4 +1,4 @@
-using ThirdPersonCharacter.Pipeline.Animation;
+﻿using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonSimulation;
 using UnityEditor;
@@ -84,11 +84,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
 
-            SerializedProperty blendSlots = projection.FindPropertyRelative("m_BlendSlots");
             SerializedProperty curveCatalog = projection.FindPropertyRelative("m_BlendCurveCatalog")?.FindPropertyRelative("m_Entries");
             SerializedProperty profileCatalog = projection.FindPropertyRelative("m_BlendProfileCatalog")?.FindPropertyRelative("m_Entries");
             SerializedProperty producers = projection.FindPropertyRelative("m_Producers");
-            SerializedProperty poseProgram = projection.FindPropertyRelative("m_PoseProgram");
+            SerializedProperty poseProgram = projection.FindPropertyRelative("m_PosePlan");
             SerializedProperty rig = projection.FindPropertyRelative("m_Rig");
             int animationCount = 0;
             int cameraCount = 0;
@@ -106,7 +105,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
             EditorGUILayout.LabelField("Semantic Contract", projection.FindPropertyRelative("m_ContractHash").stringValue);
             EditorGUILayout.LabelField("Projection Revision", projection.FindPropertyRelative("m_ProjectionRevision").stringValue);
-            EditorGUILayout.LabelField("Pose Slots", (blendSlots?.arraySize ?? 0).ToString());
+            SerializedProperty selectionInputs = poseProgram?.FindPropertyRelative("m_SelectionInputs");
+            SerializedProperty poseOperations = poseProgram?.FindPropertyRelative("m_Operations");
+            int playerCount = 0;
+            for (int i = 0; i < (poseOperations?.arraySize ?? 0); i++)
+            {
+                int code = poseOperations.GetArrayElementAtIndex(i).FindPropertyRelative("m_Code").enumValueIndex;
+                if (code == (int)CharacterPoseOperationCode.SelectedPosePlayer ||
+                    code == (int)CharacterPoseOperationCode.BlendStack ||
+                    code == (int)CharacterPoseOperationCode.BlendSpacePlayer)
+                    playerCount++;
+            }
+            EditorGUILayout.LabelField("Selection Inputs / Players", $"{selectionInputs?.arraySize ?? 0} / {playerCount}");
             EditorGUILayout.LabelField("Blend Curves", (curveCatalog?.arraySize ?? 0).ToString());
             EditorGUILayout.LabelField("Blend Profiles", (profileCatalog?.arraySize ?? 0).ToString());
             EditorGUILayout.LabelField("Animation Producers", animationCount.ToString());
@@ -142,14 +152,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Animation Channel to Pose Slot", EditorStyles.boldLabel);
-            for (int i = 0; i < (blendSlots?.arraySize ?? 0); i++)
+            EditorGUILayout.LabelField("Animation Selection Inputs", EditorStyles.boldLabel);
+            for (int i = 0; i < (selectionInputs?.arraySize ?? 0); i++)
             {
-                SerializedProperty slot = blendSlots.GetArrayElementAtIndex(i);
-                SerializedProperty policy = slot.FindPropertyRelative("m_OutputPolicy");
+                SerializedProperty input = selectionInputs.GetArrayElementAtIndex(i);
+                SerializedProperty availability = input.FindPropertyRelative("m_Availability");
                 EditorGUILayout.LabelField(
-                    slot.FindPropertyRelative("m_AnimationChannelId").stringValue,
-                    $"{slot.FindPropertyRelative("m_PoseSlotId").stringValue} / {policy.enumDisplayNames[policy.enumValueIndex]}");
+                    input.FindPropertyRelative("m_AnimationChannelId").stringValue,
+                    $"{input.FindPropertyRelative("m_NodeId").stringValue} / {availability.enumDisplayNames[availability.enumValueIndex]}");
             }
 
             EditorGUILayout.Space();

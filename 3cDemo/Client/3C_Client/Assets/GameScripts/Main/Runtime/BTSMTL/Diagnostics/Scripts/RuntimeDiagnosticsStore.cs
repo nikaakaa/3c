@@ -655,6 +655,17 @@ namespace BTSMTL.Diagnostics
                 RuntimeTraceEventKind.AnimationPlaybackRetained or
                 RuntimeTraceEventKind.AnimationPlaybackRetired or
                 RuntimeTraceEventKind.AnimationMarkerSync or
+                RuntimeTraceEventKind.MotionMatchingQuery or
+                RuntimeTraceEventKind.MotionMatchingTrajectory or
+                RuntimeTraceEventKind.MotionMatchingPoseHistory or
+                RuntimeTraceEventKind.MotionMatchingAdmission or
+                RuntimeTraceEventKind.MotionMatchingCandidateRejected or
+                RuntimeTraceEventKind.MotionMatchingSearchTraversal or
+                RuntimeTraceEventKind.MotionMatchingTopK or
+                RuntimeTraceEventKind.MotionMatchingPlan or
+                RuntimeTraceEventKind.MotionMatchingSelection or
+                RuntimeTraceEventKind.MotionMatchingPoseSource or
+                RuntimeTraceEventKind.MotionMatchingFrame or
                 RuntimeTraceEventKind.PresentationInterpolated or
                 RuntimeTraceEventKind.CameraSnapshot or
                 RuntimeTraceEventKind.CameraRequest => RuntimeDiagnosticsCaptureDetail.Continuous,

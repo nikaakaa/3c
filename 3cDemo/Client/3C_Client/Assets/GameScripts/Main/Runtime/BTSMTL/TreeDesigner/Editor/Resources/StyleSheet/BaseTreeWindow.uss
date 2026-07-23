@@ -1,5 +1,84 @@
-#right-panel {
+#graph-workspace {
+    flex-grow: 1;
     flex-direction: column;
+}
+
+#workspace-horizontal,
+#workspace-content-vertical,
+#workspace-main-horizontal,
+#workspace-graph {
+    flex-grow: 1;
+}
+
+.workspace-toolbar {
+    height: 28px;
+    min-height: 28px;
+    flex-direction: row;
+    align-items: center;
+    background-color: rgb(42, 42, 42);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(22, 22, 22);
+}
+
+#workspace-toolbar-content {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: center;
+}
+
+.workspace-region-toggle {
+    min-width: 58px;
+    height: 22px;
+    margin-left: 2px;
+    margin-right: 0;
+    margin-top: 3px;
+    margin-bottom: 3px;
+    padding-left: 6px;
+    padding-right: 6px;
+    color: rgb(150, 150, 150);
+}
+
+.workspace-region-toggle-expanded {
+    color: rgb(235, 235, 235);
+    background-color: rgb(61, 61, 61);
+}
+
+.workspace-region {
+    flex-direction: column;
+    background-color: rgb(35, 35, 35);
+}
+
+.workspace-side-region {
+    min-width: 220px;
+}
+
+.workspace-bottom-region {
+    min-height: 120px;
+}
+
+.workspace-region-title {
+    height: 24px;
+    min-height: 24px;
+    padding-left: 8px;
+    padding-top: 4px;
+    color: rgb(205, 205, 205);
+    background-color: rgb(45, 45, 45);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(24, 24, 24);
+    -unity-font-style: bold;
+}
+
+.workspace-region-content {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.workspace-empty-state {
+    margin-left: 8px;
+    margin-right: 8px;
+    margin-top: 8px;
+    white-space: normal;
+    color: rgb(145, 145, 145);
 }
 
 #tree-navigation-toolbar {
@@ -91,6 +170,7 @@
 }
 
 #tree-inspector {
+    flex-grow: 1;
 }
 
 #unity-dragline-anchor {

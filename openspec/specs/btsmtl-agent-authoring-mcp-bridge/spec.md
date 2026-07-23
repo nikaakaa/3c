@@ -194,7 +194,7 @@ BTSMTL Agent MCP bridge MUST接受并返回`agent-character-controller-synthesis
 
 - **WHEN** 调用方提交`configure_animation_track_channel`及Snapshot中的Timeline、Track stable identity
 - **THEN** bridge MUST原样透传AnimationChannelId到同一lowerer、typed command、transaction与validator链
-- **AND** MUST不增加PoseSlot、Pose Graph、producer source或Profile mutation action
+- **AND** MUST不增加Pose Graph拓扑、PoseNode、producer source或Profile mutation action
 
 #### Scenario: bridge收到非法marker事务
 

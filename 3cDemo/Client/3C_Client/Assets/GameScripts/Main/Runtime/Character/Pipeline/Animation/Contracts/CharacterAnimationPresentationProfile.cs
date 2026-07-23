@@ -13,10 +13,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_TrackAuthoringId;
         [SerializeField] AnimationPoseSourceKind m_SourceKind;
         [SerializeField] TransitionAssetBase m_Source;
+        [SerializeField] CharacterAnimationBlendSpaceAsset m_BlendSpaceSource;
 
         public AnimationProducerId ProducerId => new AnimationProducerId(m_TimelineAuthoringId, m_TrackAuthoringId);
         public AnimationPoseSourceKind SourceKind => m_SourceKind;
         public TransitionAssetBase Source => m_Source;
+        public CharacterAnimationBlendSpaceAsset BlendSpaceSource => m_BlendSpaceSource;
 
         public void ConfigureTimeline(
             AnimationProducerId producerId,
@@ -31,6 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_TrackAuthoringId = producerId.TrackAuthoringId;
             m_SourceKind = AnimationPoseSourceKind.Timeline;
             m_Source = source;
+            m_BlendSpaceSource = null;
         }
 
         public void ConfigureMotionMatching(AnimationProducerId producerId)
@@ -41,6 +44,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_TrackAuthoringId = producerId.TrackAuthoringId;
             m_SourceKind = AnimationPoseSourceKind.MotionMatching;
             m_Source = null;
+            m_BlendSpaceSource = null;
+        }
+
+        public void ConfigureBlendSpace(
+            AnimationProducerId producerId,
+            CharacterAnimationBlendSpaceAsset source)
+        {
+            if (!producerId.IsValid)
+                throw new ArgumentException("Animation producer id is invalid.", nameof(producerId));
+            CharacterAnimationBlendSpaceValidationReport report = CharacterAnimationBlendSpaceValidator.Validate(source);
+            if (!report.IsValid)
+                throw new ArgumentException(report.Issues[0].ToString(), nameof(source));
+            m_TimelineAuthoringId = producerId.TimelineAuthoringId;
+            m_TrackAuthoringId = producerId.TrackAuthoringId;
+            m_SourceKind = AnimationPoseSourceKind.BlendSpace;
+            m_Source = null;
+            m_BlendSpaceSource = source;
         }
     }
 
@@ -50,7 +70,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterAnimationPresentationProfile : ScriptableObject
     {
         [SerializeField] CharacterPresentationPoseGraphAsset m_PoseGraph;
-        [SerializeField] CharacterAnimationBlendLibrary m_BlendLibrary;
         [SerializeField] CharacterAnimationRigDefinition m_RigDefinition;
         [SerializeField] CharacterMotionMatchingProfile m_MotionMatchingProfile;
         [SerializeField] AnimationProducerPresentationBinding[] m_ProducerBindings =
@@ -59,7 +78,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_FootPlacementAnalysisSourceAssetGuid = string.Empty;
 
         public CharacterPresentationPoseGraphAsset PoseGraph => m_PoseGraph;
-        public CharacterAnimationBlendLibrary BlendLibrary => m_BlendLibrary;
         public CharacterAnimationRigDefinition RigDefinition => m_RigDefinition;
         public CharacterMotionMatchingProfile MotionMatchingProfile => m_MotionMatchingProfile;
         public IReadOnlyList<AnimationProducerPresentationBinding> ProducerBindings =>
@@ -85,11 +103,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public void SetPresentationGraph(
             CharacterPresentationPoseGraphAsset poseGraph,
-            CharacterAnimationBlendLibrary blendLibrary,
             CharacterAnimationRigDefinition rigDefinition)
         {
             m_PoseGraph = poseGraph ? poseGraph : throw new ArgumentNullException(nameof(poseGraph));
-            m_BlendLibrary = blendLibrary ? blendLibrary : throw new ArgumentNullException(nameof(blendLibrary));
             m_RigDefinition = rigDefinition ? rigDefinition : throw new ArgumentNullException(nameof(rigDefinition));
         }
 
@@ -129,11 +145,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 errors?.Add($"{name}: Presentation Pose Graph is missing.");
                 valid = false;
             }
-            if (!m_BlendLibrary)
-            {
-                errors?.Add($"{name}: Animation Blend Library is missing.");
-                valid = false;
-            }
             if (!m_RigDefinition)
             {
                 errors?.Add($"{name}: Animation Rig Definition is missing.");
@@ -145,19 +156,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 poseReport.CopyMessagesTo(errors);
                 valid &= poseReport.IsValid;
             }
-            if (m_BlendLibrary && m_PoseGraph && m_RigDefinition)
-            {
-                try
-                {
-                    m_BlendLibrary.RequireValid(m_PoseGraph, m_RigDefinition);
-                }
-                catch (Exception exception)
-                {
-                    errors?.Add(exception.Message);
-                    valid = false;
-                }
-            }
-
             var producerIds = new HashSet<AnimationProducerId>();
             var motionMatchingProducerIds = new HashSet<string>(StringComparer.Ordinal);
             IReadOnlyList<AnimationProducerPresentationBinding> bindings = ProducerBindings;
@@ -167,8 +165,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (binding == null || !binding.ProducerId.IsValid ||
                     !producerIds.Add(binding.ProducerId) ||
                     !Enum.IsDefined(typeof(AnimationPoseSourceKind), binding.SourceKind) ||
-                    binding.SourceKind == AnimationPoseSourceKind.Timeline && (!binding.Source || !binding.Source.IsValid) ||
-                    binding.SourceKind == AnimationPoseSourceKind.MotionMatching && binding.Source)
+                    binding.SourceKind == AnimationPoseSourceKind.Timeline &&
+                    (!binding.Source || !binding.Source.IsValid || binding.BlendSpaceSource) ||
+                    binding.SourceKind == AnimationPoseSourceKind.MotionMatching &&
+                    (binding.Source || binding.BlendSpaceSource) ||
+                    binding.SourceKind == AnimationPoseSourceKind.BlendSpace &&
+                    (binding.Source || !binding.BlendSpaceSource))
                 {
                     errors?.Add($"{name}: Animation producer binding #{i} is invalid or duplicated.");
                     valid = false;
@@ -176,6 +178,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 else if (binding.SourceKind == AnimationPoseSourceKind.MotionMatching)
                 {
                     motionMatchingProducerIds.Add(binding.ProducerId.ProgramProducerIdentity);
+                }
+                else if (binding.SourceKind == AnimationPoseSourceKind.BlendSpace)
+                {
+                    CharacterAnimationBlendSpaceValidationReport blendSpaceReport =
+                        CharacterAnimationBlendSpaceValidator.Validate(binding.BlendSpaceSource);
+                    blendSpaceReport.CopyMessagesTo(errors);
+                    valid &= blendSpaceReport.IsValid;
+                    if (m_RigDefinition && binding.BlendSpaceSource &&
+                        binding.BlendSpaceSource.Rig != m_RigDefinition)
+                    {
+                        errors?.Add($"{name}: Blend Space '{binding.BlendSpaceSource.name}' Rig does not match the Presentation Profile Rig.");
+                        valid = false;
+                    }
                 }
             }
 
@@ -205,9 +220,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         AnimationProducerPresentationBinding presentationBinding = FindBindingByProgramProducerId(binding.ProgramProducerId);
                         if (presentationBinding == null || presentationBinding.SourceKind != AnimationPoseSourceKind.MotionMatching)
                             throw new InvalidOperationException($"Motion Matching producer '{binding.ProgramProducerId}' is not declared by the Presentation Profile.");
-                        CharacterPoseSlotDeclaration slot = RequirePoseSlot(binding.AnimationChannelId);
-                        if (slot.PoseSlotId != binding.PoseSlotId)
-                            throw new InvalidOperationException($"Motion Matching producer '{binding.ProgramProducerId}' Pose Slot does not match the Presentation Pose Graph.");
+                        RequireMotionMatchingSelectionInput(binding.AnimationChannelId, binding.ProgramProducerId);
                     }
                     if (!profileProducerIds.SetEquals(motionMatchingProducerIds))
                         throw new InvalidOperationException("Motion Matching Profile producer declarations do not exactly match Presentation Profile Motion Matching producers.");
@@ -248,21 +261,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return null;
         }
 
-        CharacterPoseSlotDeclaration RequirePoseSlot(ThirdPersonSimulation.AnimationChannelId channelId)
+        void RequireMotionMatchingSelectionInput(
+            ThirdPersonSimulation.AnimationChannelId channelId,
+            string programProducerId)
         {
             if (!m_PoseGraph || m_PoseGraph.Graph == null)
                 throw new InvalidOperationException("Presentation Pose Graph is required before Motion Matching producer validation.");
-            CharacterPoseSlotDeclaration result = null;
-            for (int i = 0; i < m_PoseGraph.Graph.PoseSlots.Count; i++)
+            CharacterPoseNodeDefinition result = null;
+            for (int i = 0; i < m_PoseGraph.Graph.Nodes.Count; i++)
             {
-                CharacterPoseSlotDeclaration candidate = m_PoseGraph.Graph.PoseSlots[i];
-                if (candidate == null || candidate.AnimationChannelId != channelId)
+                CharacterPoseNodeDefinition candidate = m_PoseGraph.Graph.Nodes[i];
+                if (candidate == null || candidate.Kind != CharacterPoseNodeKind.MotionMatchingSelectionInput ||
+                    candidate.AnimationChannelId != channelId ||
+                    !string.Equals(candidate.ProgramProducerId, programProducerId, StringComparison.Ordinal))
                     continue;
                 if (result != null)
-                    throw new InvalidOperationException($"Presentation Pose Graph duplicates Animation Channel '{channelId}'.");
+                    throw new InvalidOperationException($"Presentation Pose Graph duplicates Motion Matching Selection Input '{programProducerId}'.");
                 result = candidate;
             }
-            return result ?? throw new InvalidOperationException($"Presentation Pose Graph has no Pose Slot for Animation Channel '{channelId}'.");
+            if (result == null)
+                throw new InvalidOperationException($"Presentation Pose Graph has no Motion Matching Selection Input for '{programProducerId}'.");
         }
 
         static bool IsAssetGuid(string value)

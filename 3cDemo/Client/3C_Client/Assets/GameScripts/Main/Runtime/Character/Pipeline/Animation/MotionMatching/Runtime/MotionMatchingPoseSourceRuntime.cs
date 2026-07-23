@@ -64,7 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingPoseSourceOutput(
             CharacterMotionMatchingDatabaseArtifactIdentity databaseIdentity,
             AnimationChannelId animationChannelId,
-            PoseSlotId poseSlotId,
+            PoseNodeId poseNodeId,
             AnimationPlaybackId playbackId,
             MotionMatchingSelectionGeneration selectionGeneration,
             ulong presentationRequestSequence,
@@ -75,7 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             AnimationFootPlacementSample footFeatures,
             CharacterMotionMatchingPlanId planId)
         {
-            if (databaseIdentity == null || !animationChannelId.IsValid || !poseSlotId.IsValid || !playbackId.IsValid || !selectionGeneration.IsValid ||
+            if (databaseIdentity == null || !animationChannelId.IsValid || !poseNodeId.IsValid || !playbackId.IsValid || !selectionGeneration.IsValid ||
                 presentationRequestSequence == 0 || programProducerIndex < 0 || string.IsNullOrWhiteSpace(programProducerId) ||
                 !footPlacementWeight.IsValid ||
                 !footPlacementWeight.ParameterId.Equals(MotionMatchingPoseSourceRuntime.FootPlacementWeightParameterId) ||
@@ -83,7 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 throw new ArgumentException("Motion Matching Pose Source output is incomplete.");
             DatabaseIdentity = databaseIdentity;
             AnimationChannelId = animationChannelId;
-            PoseSlotId = poseSlotId;
+            PoseNodeId = poseNodeId;
             PlaybackId = playbackId;
             SelectionGeneration = selectionGeneration;
             SourcePoseContinuityIdentity = selectionGeneration.Value;
@@ -98,7 +98,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
         public CharacterMotionMatchingDatabaseArtifactIdentity DatabaseIdentity { get; }
         public AnimationChannelId AnimationChannelId { get; }
-        public PoseSlotId PoseSlotId { get; }
+        public PoseNodeId PoseNodeId { get; }
         public AnimationPlaybackId PlaybackId { get; }
         public MotionMatchingPoseSourceKind PoseSourceKind => MotionMatchingPoseSourceKind.MotionMatching;
         public MotionMatchingSelectionGeneration SelectionGeneration { get; }
@@ -110,7 +110,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingPoseParameterSample FootPlacementWeight { get; }
         public AnimationFootPlacementSample FootFeatures { get; }
         public CharacterMotionMatchingPlanId PlanId { get; }
-        public string ExactSelfTransitionIdentity => ProgramProducerId + "->" + ProgramProducerId;
     }
 
     public sealed class MotionMatchingPoseSourceRuntime
@@ -128,7 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingPoseSourceOutput Resolve(
             MotionMatchingSelectionDecision selection,
             AnimationChannelId animationChannelId,
-            PoseSlotId poseSlotId,
+            PoseNodeId poseNodeId,
             AnimationPlaybackId playbackId,
             ulong presentationRequestSequence,
             int programProducerIndex,
@@ -159,7 +158,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             return new MotionMatchingPoseSourceOutput(
                 m_Database.ArtifactIdentity,
                 animationChannelId,
-                poseSlotId,
+                poseNodeId,
                 playbackId,
                 selection.Generation,
                 presentationRequestSequence,

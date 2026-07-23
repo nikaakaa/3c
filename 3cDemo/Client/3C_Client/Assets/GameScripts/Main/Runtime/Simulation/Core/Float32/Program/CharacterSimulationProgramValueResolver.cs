@@ -18,7 +18,7 @@ namespace ThirdPersonSimulation
             SimulationOperation source = program.Operations[edge.Source.Value];
             OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts
                 .Require(source.Code)
-                .RequireOutput(edge.SourcePort);
+                .RequireSelection(edge.SourcePort);
             return ResolveOutputKind(program, source, sourcePort);
         }
 

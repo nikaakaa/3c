@@ -4,6 +4,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         Selection,
         PoseRequest,
+        PoseUnavailable,
         Complete,
         Release
     }
@@ -15,7 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong localLogicTick,
             ulong sequence,
             AnimationChannelSelection selection,
-            ResolvedAnimationPoseRequest poseRequest,
+            AnimationSelectionFrame poseRequest,
             AnimationPlaybackId playbackId)
         {
             Kind = kind;
@@ -30,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public ulong LocalLogicTick { get; }
         public ulong Sequence { get; }
         public AnimationChannelSelection Selection { get; }
-        public ResolvedAnimationPoseRequest PoseRequest { get; }
+        public AnimationSelectionFrame PoseRequest { get; }
         public AnimationPlaybackId PlaybackId { get; }
     }
 }

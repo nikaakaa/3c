@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定义角色动画表现配置的唯一作者边界：CharacterPipelineDefinition只引用CharacterAnimationPresentationProfile，Profile唯一引用Pose Graph、Blend Library、Rig并保存稳定producer source binding，Profile Inspector提供唯一入口，并由编译链生成CharacterPresentationProjection。
+定义角色动画表现配置的唯一作者边界：CharacterPipelineDefinition只引用CharacterAnimationPresentationProfile，Profile唯一引用Pose Graph、node-local Blend/Inertialization Policy、Rig并保存稳定producer source binding，Profile Inspector提供唯一入口，并由编译链生成CharacterPresentationProjection。
 ## Requirements
 ### Requirement: Foot Analysis Source必须是显式可验证的表现作者输入
 
@@ -32,7 +32,7 @@ Editor-only `CharacterFootPlacementAnalysisSource` MUST拥有稳定identity、�
 
 ### Requirement: Pipeline Definition 必须引用唯一 Animation Presentation Profile
 
-`CharacterPipelineDefinition` MUST引用唯一`CharacterAnimationPresentationProfile`，不得内联保存Animation Presentation数据。该Profile MUST唯一引用`CharacterPresentationPoseGraphAsset`、`CharacterAnimationBlendLibrary`、`CharacterAnimationRigDefinition`，保存稳定producer source bindings，以及显式Foot Placement Analysis Mode与Analysis Source Asset GUID。Pose Graph MUST唯一保存Pose Slot、AnimationChannel binding、Bone Mask composition、Pose Parameter policy与Output topology；Blend Library MUST唯一保存每slot transition matrix。Analysis Source MUST是Editor-only Projection生成输入，只负责生成表现特征，不得保存Graph flow、State、Action、Gameplay contact或运行时IK状态。Profile MUST不持有Analysis Source或Sampling Rig对象强引用。Graph、StateMachine、Timeline、Presenter、Prefab重复数值、旧SO或独立Pipeline表 MUST不保存同一配置的第二份真相。
+`CharacterPipelineDefinition` MUST引用唯一`CharacterAnimationPresentationProfile`，不得内联保存Animation Presentation数据。该Profile MUST唯一引用`CharacterPresentationPoseGraphAsset`、node-local `CharacterAnimationBlendPolicy`、`CharacterPoseInertializationPolicy`、`CharacterAnimationRigDefinition`，保存稳定producer source bindings，以及显式Foot Placement Analysis Mode与Analysis Source Asset GUID。Pose Graph MUST唯一保存Selection Input、MarkerSync、Player、Bone Mask composition、Pose Parameter policy、FootPlacement与Output topology；Policy只由对应节点引用。Analysis Source MUST是Editor-only Projection生成输入，只负责生成表现特征，不得保存Graph flow、State、Action、Gameplay contact或运行时IK状态。Profile MUST不持有Analysis Source或Sampling Rig对象强引用。Graph、StateMachine、Timeline、Presenter、Prefab重复数值、旧SO或独立Pipeline表 MUST不保存同一配置的第二份真相。
 
 #### Scenario: Corin启用生成Foot Analysis
 
@@ -70,25 +70,25 @@ Editor-only `CharacterFootPlacementAnalysisSource` MUST拥有稳定identity、�
 - **THEN** Compiler/Validator MUST 报告 orphan binding
 - **AND** Runtime MUST 拒绝 Program/Projection 组合，不能按名称或 Clip 猜测目标
 
-### Requirement: Animancer 原生 transition 数据必须是转场权威
+### Requirement: Blend Policy必须属于显式Blend Stack节点
 
-系统 MUST使用项目已安装的 Animancer TransitionLibraryAsset、ITransition、FadeMode、source-to-target fade duration modifier 与 FadeGroup easing 作为转场播放权威。`CharacterAnimationPresentationProfile` MAY保存 producer 到 Animancer transition key/source 的绑定，但 MUST不再保存 Pipeline 自有 Layer + SourceProducer + TargetProducer -> Duration + Curve 表，也 MUST不实现自定义 crossfade weight 求值。
+`CharacterAnimationPresentationProfile` MUST通过Pose Graph中的显式Blend Stack节点引用`CharacterAnimationBlendPolicy`。Policy MUST保存Stack容量、Stored Pose policy、canonical curve、Blend Profile、authoring default和exact override；Compiler MUST只为引用该Policy的节点物化可达endpoint完整table。Timeline、BTSMTL Graph、Program、SelectedPosePlayer、Equipment Feature与Prefab MUST不保存第二份transition表。Animancer source backend MUST只复用和采样source playable，不得调用TransitionLibrary、AnimancerLayer.Play、StartFade或FadeGroup决定转场。
 
-#### Scenario: 播放目标 producer
+#### Scenario: 播放目标producer
 
-- **WHEN** selected producer 收到第一份合法 sample
-- **THEN** AnimancerPlaybackAdapter MUST通过正式 transition key/source 调用 TransitionLibrary.Play 或 AnimancerLayer.Play
-- **AND** fade MUST由 Animancer state graph 推进
+- **WHEN** selected producer收到第一份合法sample
+- **THEN** 对应显式BlendStack MUST按Projection中的exact source-target transition开始时间混合
+- **AND** Animancer source backend MUST只提供该source pose sample
 
-#### Scenario: source-target duration modifier
+#### Scenario: FullBodyAction淡出到Empty
 
-- **WHEN** TransitionLibrary 为当前 source key 到 target key 配置 modifier
-- **THEN** adapter MUST使用 Animancer 原生解析结果
-- **AND** Pipeline MUST不复制同一 pair 到另一张表
+- **WHEN** FullBodyAction channel提交None且当前action source仍有贡献
+- **THEN** FullBodyAction BlendStack MUST使用节点Policy中的source-to-Empty transition连续淡出
+- **AND** 系统 MUST不从TransitionLibrary、Animancer state或默认duration补值
 
-### Requirement: CharacterAnimationPresentationProfile Inspector 必须是唯一 Presentation 配置入口
+### Requirement: CharacterAnimationPresentationProfile Inspector必须是唯一Presentation配置入口
 
-系统 MUST在`CharacterAnimationPresentationProfile` Inspector中唯一编辑Pose Graph、Blend Library、Rig Definition、producer resource binding、Foot Analysis Mode和Analysis Source GUID。Pose Slot、AnimationChannel binding、Bone Mask、Additive、Pose Parameter与Output topology MUST通过该Inspector进入正式Pose Graph Editor编辑；transition matrix MUST通过该Inspector进入Blend Library owner编辑。Timeline Editor继续唯一编辑producer-local Clip、Marker与registered Curve。Profile Inspector MUST不恢复Layer catalog、TransitionLibrary字段或第二张producer flow graph，Graph、StateMachine和Timeline MUST不复制Profile作者数据。
+Profile Inspector MUST唯一编辑Pose Graph、Blend Policy、Inertialization Policy、Rig Definition、producer source binding、Foot Analysis Mode与Analysis Source GUID。Pose Graph Editor MUST编辑Selection Input、MarkerSync、SelectedPosePlayer、Blend Stack、Inertialization、Blend/Layered/Additive、Parameter、ModifyBone、FootPlacement和Output拓扑；Timeline Editor继续唯一编辑producer-local Clip、SyncGroup、Topology、SyncRole、Point Marker、Window与registered Curve。MarkerSync节点 MUST不复制Track marker数据；Profile、Timeline、Definition或Prefab MUST不保存Pose Graph节点配置副本。
 
 #### Scenario: 从Profile打开Timeline Analysis
 
@@ -104,12 +104,12 @@ Editor-only `CharacterFootPlacementAnalysisSource` MUST拥有稳定identity、�
 
 ### Requirement: Profile Inspector 必须按正式 identity 显示 producer binding
 
-`CharacterAnimationPresentationProfile` Inspector MUST在显式Definition context下调用唯一`CharacterAnimationPresentationAuthoringService`，从该Definition的RootTree与正式composition roots递归发现可达Graph、Timeline与AnimationTrack，并按`TimelineAuthoringId + TrackAuthoringId`稳定producer identity显示AnimationChannelId、PoseSlotId、source clip identity与resource binding。服务 MUST先从Pose Graph的唯一Channel到PoseSlot声明解析binding，再允许后续Projection compile；MUST不读取已生成Program或Projection来完成bootstrap，也 MUST不按Layer、显示名、目录、列表index或旧binding猜测producer。Inspector MUST不推导StateMachine producer flow、不保存Tree node/edge副本，也 MUST不复制Pose Graph topology到第二张列表。正式运行时 MUST不依赖该只读authoring列表做selection、transition或composition。
+`CharacterAnimationPresentationProfile` Inspector MUST在显式Definition context下调用唯一`CharacterAnimationPresentationAuthoringService`，从该Definition的RootTree与正式composition roots递归发现可达Graph、Timeline与AnimationTrack，并按`TimelineAuthoringId + TrackAuthoringId`稳定producer identity显示AnimationChannelId、Selection Input PoseNodeId、source clip identity与resource binding。服务 MUST从Pose Graph的正式Selection Input声明解析binding，再允许后续Projection compile；MUST不读取已生成Program或Projection来完成bootstrap，也 MUST不按Layer、显示名、目录、列表index或旧binding猜测producer。Inspector MUST不推导StateMachine producer flow、不保存Tree node/edge副本，也 MUST不复制Pose Graph topology到第二张列表。正式运行时 MUST不依赖该只读authoring列表做selection、transition或composition。
 
 #### Scenario: 查看 Attack1 到 Attack2
 
 - **WHEN** 作者在包含 Attack1 与 Attack2 的 Definition context 下检查 Profile
-- **THEN** Inspector MUST分别显示 Attack1 与 Attack2 的 producer identity、AnimationChannelId、PoseSlotId 与 binding
+- **THEN** Inspector MUST分别显示 Attack1 与 Attack2 的 producer identity、AnimationChannelId、Selection Input PoseNodeId 与 binding
 - **AND** 状态 edge MUST只保存 condition、priority 与 interruption
 - **AND** Inspector MUST不复制 Attack1 到 Attack2 的逻辑 edge
 
@@ -132,7 +132,7 @@ Editor-only `CharacterFootPlacementAnalysisSource` MUST拥有稳定identity、�
 
 #### Scenario: Timeline提供同组Marker名称候选
 
-- **WHEN** Editor从同Layer同SyncGroup的正式AnimationTrack投影已使用MarkerId候选
+- **WHEN** Editor从同AnimationChannelId、同显式MarkerSync可达集合、同SyncGroup的正式AnimationTrack投影已使用MarkerId候选
 - **THEN** 该候选 MUST只用于作者选择
 - **AND** 唯一持久化真相 MUST仍是各AnimationTrack上的实际Point Marker
 - **AND** MUST不创建全局Marker catalog、同步Profile或Projection反向写入入口
@@ -158,12 +158,12 @@ Editor-only `CharacterFootPlacementAnalysisSource` MUST拥有稳定identity、�
 
 ### Requirement: 播放生命周期调试必须只保留统一视图
 
-RuntimeDebugSession 与 CharacterPipelineHost 调试视图 MUST作为 committed producer command、Timeline visual sample、PendingFirstSample、Current、Outgoing、Retired、Animancer state key 与 fade progress 的唯一生命周期调试入口。CharacterPipelineDefinition Inspector 与 CharacterAnimationPresentationProfile Inspector MUST不复制该 Trace UI。Editor MUST不重新运行 Graph、重建 Program command、重采样 Gameplay Timeline 或自行混合。
+RuntimeDebugSession与CharacterPipelineHost调试视图 MUST作为committed producer command、Timeline visual sample、PendingFirstSample、AnimationChannelId、PoseNodeId、Player source usage、Stack entry/clock/Stored、Inertialization residual、source identity、Marker relation、Pose Graph contribution与OutputPose completion的唯一生命周期调试入口。CharacterPipelineDefinition Inspector与CharacterAnimationPresentationProfile Inspector MUST不复制该Trace UI。Editor MUST不重新运行Graph、重建Program command、重采样Gameplay Timeline、求值Pose Graph、自行混合或从Animancer weight重建事实。
 
 #### Scenario: 排查攻击切换
 
-- **WHEN** Base committed producer 从 Locomotion 变为 Attack1
-- **THEN** Host Live Debug MUST显示 Program command EventId、Attack1 首样本、Animancer state 与 outgoing Locomotion fade
+- **WHEN** FullBodyAction committed producer从None变为Attack1且BaseLocomotion继续输出
+- **THEN** Host Live Debug MUST显示两个channel command EventId、Attack1首样本、Action BlendStack PoseNodeId与最终OutputPose贡献
 - **AND** 数据 MUST来自正式 Trace
 
 ### Requirement: Animation Clip控制曲线必须作为typed Curve Channel编辑
@@ -217,7 +217,7 @@ MarkerGroup producer MUST显式声明`CanBeLeader`、`AlwaysLeader`或`AlwaysFol
 
 ### Requirement: Marker Group 必须在 Projection 构建前完整校验
 
-MarkerGroup的Timeline duration MUST为有限正值；MarkerAuthoringId和frame MUST在track内唯一，MarkerId MUST非空且 MAY重复。每个相邻marker MUST形成非零有向segment，AnimationTrack在marker覆盖区内 MUST持续产生正式animation output。同一Layer与canonical SyncGroupId内的所有producer MUST拥有相同的有向`PreviousMarkerId -> NextMarkerId`集合，允许相同pair出现次数和frame不同。Inspector、Compiler、Projection Builder和Agent Validator MUST复用唯一校验服务。
+MarkerGroup的Timeline duration MUST为有限正值；MarkerAuthoringId和frame MUST在track内唯一，MarkerId MUST非空且 MAY重复。每个相邻marker MUST形成非零有向segment，AnimationTrack在marker覆盖区内 MUST持续产生正式animation output。同一AnimationChannelId、同一显式MarkerSync可达集合与canonical SyncGroupId内的所有producer MUST拥有相同的有向`PreviousMarkerId -> NextMarkerId`集合，允许相同pair出现次数和frame不同。Inspector、Compiler、Projection Builder和Agent Validator MUST复用唯一校验服务。
 
 #### Scenario: Walk与Run使用不同时序
 
@@ -260,21 +260,21 @@ Compiler MUST将每个animation producer的同步模式、canonical SyncGroupId�
 - **THEN** ProjectionRevision MUST更新且旧Projection MUST被拒绝
 - **AND** Float32与Fixed Gameplay operation语义 MUST保持不变
 
-### Requirement: Animation Profile必须验证Equipment Feature表现需求
+### Requirement: Equipment Presentation 不得拥有动画空间拓扑
 
-唯一`CharacterAnimationPresentationProfile` authoring/compile service MUST对每个已编译Feature验证Required LayerId、blend mode、AvatarMask/output policy和Producer binding覆盖，并把结果纳入Projection source revision。Feature只保存需求identity，不得保存Layer定义、Transition或Animancer对象副本。
+Equipment Feature authoring MUST不保存LayerId、BlendMode、OutputPolicy或Presentation producer requirement。`EquipmentFeatureRouteImplementation.RequiredProducerIds` MUST仅表达Gameplay route完整性，MUST不进入Presentation Projection的channel、Player、transition或Animancer resolution。Equipment Presentation Profile与Projection MUST只保存VisualBinding、Prefab/socket、Renderer登记与local pose资源绑定，MUST不复制Selection Input或PoseNode字段，也 MUST不提前创建Equipment到Pose Graph的动态替换接口。
 
-#### Scenario: Sawblade只使用Base层
+#### Scenario: Equipment Feature声明Gameplay route producer
 
-- **WHEN** Sawblade Feature声明Base层producer集合
-- **THEN** Profile validator MUST确认每个producer拥有唯一正式binding
-- **AND** Feature MUST不复制Transition资源
+- **WHEN** Equipment route使用RequiredProducerIds校验Gameplay Graph实现完整性
+- **THEN** Semantic/Gameplay compiler MAY保留该纯route依赖
+- **AND** Projection Compiler MUST不把它解释为AnimationChannel、PoseNode或表现层producer binding
 
-#### Scenario: Gun要求不存在的UpperBody层
+#### Scenario: 武器需要动态替换Pose Graph
 
-- **WHEN** Gun Feature声明UpperBody但Profile未配置
-- **THEN** Projection build MUST失败
-- **AND** MUST不把producer重写到Base层
+- **WHEN** 未来武器业务需要替换整段Pose实现
+- **THEN** 系统 MUST由独立change定义正式输入、Projection schema与Runtime生命周期
+- **AND** 当前Equipment Visual链 MUST不提供passthrough、兼容Layer或临时Player接口
 
 ### Requirement: Equipment Visual binding必须属于唯一Equipment Presentation Profile
 
@@ -291,3 +291,40 @@ Compiler MUST将每个animation producer的同步模式、canonical SyncGroupId�
 - **WHEN** Feature authoring尝试创建Layer或保存Animancer transition副本
 - **THEN** authoring validator MUST拒绝
 - **AND** 作者 MUST继续使用唯一Presentation Profile Inspector
+### Requirement: Pose Graph Producer Navigator必须从显式Definition上下文投影
+
+Pose Graph Producer Navigator MUST要求精确`CharacterPipelineDefinition`上下文，并调用唯一`CharacterAnimationPresentationAuthoringService`从该Definition的composition roots递归发现可达Graph、Timeline、AnimationTrack和stable producer identity。Navigator MUST按AnimationChannel和source owner分组显示producer、Clip identity、Sync模式与可用导航，不得扫描目录、读取generated Program/Projection完成bootstrap、按显示名或列表index猜测，也不得保存第二份producer binding或flow。
+
+#### Scenario: 查看BaseLocomotion producers
+
+- **WHEN** 作者从Corin Definition上下文打开Pose Graph并展开BaseLocomotion
+- **THEN** Navigator MUST列出该Definition正式可达的Idle、Start、Loop、Turn与End producer identity
+- **AND** 每个条目 MUST精确定位其Timeline、Track和Clip owner
+- **AND** Pose Graph资产 MUST不因展开、搜索或定位而变脏
+
+#### Scenario: 缺少Definition上下文
+
+- **WHEN** 作者直接打开shared Pose Graph且没有精确Definition call-site context
+- **THEN** Producer Navigator MUST显示Unavailable及缺失上下文原因
+- **AND** MUST不搜索使用该图的任意角色或使用上一次窗口context
+
+### Requirement: 跨资产表现配置必须保持唯一写入口
+
+Pose Graph Navigator、Details与Bottom Dock MAY只读显示AnimationTrack的Clip、SyncGroup、Topology、SyncRole、Marker，Profile/Rig/Policy owner以及generated Foot Analysis状态。修改Clip、Marker和registered Curve MUST精确导航到Timeline Editor；修改Profile、Rig、Blend Policy、Inertialization Policy和Analysis Source MUST精确导航到各自正式Inspector。Pose Graph Workspace MUST不复制这些字段、直接写SerializedProperty或提供第二mutation命令。
+
+#### Scenario: 从Sync面板调整脚接触Marker
+
+- **WHEN** 作者在Pose Graph Sync面板查看WalkLoop与RunLoop Marker
+- **THEN** 面板 MUST保持只读并提供Open Source Timeline
+- **AND** Timeline Editor MUST成为移动Marker的唯一正式入口
+- **AND** Pose Graph与Profile MUST不保存Marker副本
+
+### Requirement: Animation authoring工作区不得自动发布generated产物
+
+打开Profile、Pose Graph或Timeline，选择producer、切换Details页签、修改authoring、切换Preview Target、保存资产、窗口focus、domain reload和AssetDatabase refresh MUST不自动执行Program Build、Projection Build、Foot Analysis batch或Motion Matching Database Build。工作区 MUST显示Dirty、Invalid、Stale、Ready或显式Building状态，只有明确Compile/Build命令 MAY调用现有正式发布事务。
+
+#### Scenario: 选择Stale producer
+
+- **WHEN** 作者在Navigator选择一个Projection已Stale的producer
+- **THEN** Details MUST显示Stale来源与受影响revision
+- **AND** 系统 MUST不因selection自动重建Projection或Foot Analysis

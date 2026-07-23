@@ -101,7 +101,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !string.Equals(m_ContractHash, contract.ContractHash.ToString(), StringComparison.Ordinal) ||
                 Producers.Count != contract.Producers.Count)
             {
-                throw new InvalidOperationException("Character Presentation Projection does not match the loaded semantic contract.");
+                string invalidProducer = string.Empty;
+                for (int i = 0; i < Producers.Count; i++)
+                {
+                    CharacterPresentationProducerEntry producer = Producers[i];
+                    if (producer == null)
+                    {
+                        invalidProducer = $"Producer[{i}]=null";
+                        break;
+                    }
+                    if (producer.ProgramProducerIndex != i || !producer.IsValid)
+                    {
+                        invalidProducer = producer.DescribeValidity(i);
+                        break;
+                    }
+                }
+                throw new InvalidOperationException(
+                    $"Character Presentation Projection does not match the loaded semantic contract. " +
+                    $"Actual Valid={IsValid} ProjectionRevision={m_ProjectionRevision} Program={m_ProgramId} Source={m_SourceRevision} Semantic={m_SemanticHash} Contract={m_ContractHash} Producers={Producers.Count} InvalidProducer={invalidProducer}; " +
+                    $"Expected Program={contract.ProgramId.Value} Source={contract.SourceRevision.Value} Semantic={contract.SemanticHash} Contract={contract.ContractHash} Producers={contract.Producers.Count}.");
             }
             for (int i = 0; i < Producers.Count; i++)
             {
@@ -129,6 +147,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] ProgramOutputChannelKind m_ChannelKind;
         [SerializeField] CharacterPresentationProducerKind m_Kind;
         [SerializeField] AnimationPoseSourceKind m_AnimationSourceKind;
+        [SerializeField] TimelinePlaybackMode m_PlaybackMode;
         [SerializeField] string m_TimelineAuthoringId = string.Empty;
         [SerializeField] string m_TrackAuthoringId = string.Empty;
         [SerializeField] string m_AnimationChannelId = string.Empty;
@@ -137,9 +156,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_SourceTimelineId = string.Empty;
         [SerializeField] string m_SourceTrackId = string.Empty;
         [SerializeField] string m_SourceDisplayPath = string.Empty;
-        [SerializeField] CharacterPresentationAnimationBinding m_Animation;
-        [SerializeField] CharacterPresentationCameraBinding m_Camera;
-        [SerializeField] CharacterPresentationCueBinding m_Cue;
+        [SerializeReference] CharacterPresentationAnimationBinding m_Animation;
+        [SerializeReference] CharacterPresentationCameraBinding m_Camera;
+        [SerializeReference] CharacterPresentationCueBinding m_Cue;
+        [SerializeField] int m_BlendSpacePlanIndex = -1;
+        [SerializeField] int m_SourceClipCount;
+        [SerializeField] float m_SourceDurationSeconds;
+        [SerializeReference] AnimationMarkerSyncBinding m_SourceMarkerSync;
 
         public CharacterPresentationProducerEntry(
             int programProducerIndex,
@@ -148,6 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ProgramOutputChannelKind channelKind,
             CharacterPresentationProducerKind kind,
             AnimationPoseSourceKind animationSourceKind,
+            TimelinePlaybackMode playbackMode,
             string timelineAuthoringId,
             string trackAuthoringId,
             AnimationChannelId animationChannelId,
@@ -158,7 +182,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string sourceDisplayPath,
             CharacterPresentationAnimationBinding animation,
             CharacterPresentationCameraBinding camera,
-            CharacterPresentationCueBinding cue)
+            CharacterPresentationCueBinding cue,
+            int blendSpacePlanIndex = -1,
+            int sourceClipCount = 0,
+            float sourceDurationSeconds = 0f,
+            AnimationMarkerSyncBinding sourceMarkerSync = null)
         {
             if (!animationChannelId.IsValid)
                 throw new ArgumentException("Animation Channel identity is invalid.", nameof(animationChannelId));
@@ -168,6 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ChannelKind = channelKind;
             m_Kind = kind;
             m_AnimationSourceKind = animationSourceKind;
+            m_PlaybackMode = playbackMode;
             m_TimelineAuthoringId = timelineAuthoringId ?? string.Empty;
             m_TrackAuthoringId = trackAuthoringId ?? string.Empty;
             m_AnimationChannelId = animationChannelId.Value;
@@ -179,6 +208,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Animation = animation;
             m_Camera = camera;
             m_Cue = cue;
+            m_BlendSpacePlanIndex = blendSpacePlanIndex;
+            m_SourceClipCount = sourceClipCount;
+            m_SourceDurationSeconds = sourceDurationSeconds;
+            m_SourceMarkerSync = sourceMarkerSync;
         }
 
         public int ProgramProducerIndex => m_ProgramProducerIndex;
@@ -187,6 +220,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public ProgramOutputChannelKind ChannelKind => m_ChannelKind;
         public CharacterPresentationProducerKind Kind => m_Kind;
         public AnimationPoseSourceKind AnimationSourceKind => m_AnimationSourceKind;
+        public TimelinePlaybackMode PlaybackMode => m_PlaybackMode;
         public AnimationProducerId ProducerId => new AnimationProducerId(m_TimelineAuthoringId, m_TrackAuthoringId);
         public AnimationChannelId AnimationChannelId => string.IsNullOrWhiteSpace(m_AnimationChannelId)
             ? default
@@ -199,19 +233,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterPresentationAnimationBinding Animation => m_Animation;
         public CharacterPresentationCameraBinding Camera => m_Camera;
         public CharacterPresentationCueBinding Cue => m_Cue;
-        public int AuthoredClipCount => m_Animation?.Clips.Count ?? 0;
+        public int BlendSpacePlanIndex => m_BlendSpacePlanIndex;
+        public int AuthoredClipCount => m_Animation?.Clips.Count ?? m_SourceClipCount;
+        public float SourceDurationSeconds => m_Animation?.DurationSeconds ?? m_SourceDurationSeconds;
+        public AnimationMarkerSyncBinding MarkerSync => m_Animation?.MarkerSync ?? m_SourceMarkerSync;
+        bool HasCleanAnimationPayload => m_AnimationSourceKind == AnimationPoseSourceKind.Timeline
+            ? m_Animation != null && m_BlendSpacePlanIndex == -1 && m_SourceClipCount == 0 &&
+              m_SourceDurationSeconds == 0f && m_SourceMarkerSync == null
+            : m_AnimationSourceKind == AnimationPoseSourceKind.MotionMatching
+                ? m_Animation == null && m_BlendSpacePlanIndex == -1 && m_SourceClipCount == 0 &&
+                  m_SourceDurationSeconds == 0f && m_SourceMarkerSync == null
+                : m_AnimationSourceKind == AnimationPoseSourceKind.BlendSpace && m_Animation == null &&
+                  m_BlendSpacePlanIndex >= 0 && m_SourceClipCount > 0 &&
+                  float.IsFinite(m_SourceDurationSeconds) && m_SourceDurationSeconds > 0f && m_SourceMarkerSync != null;
+
         public bool IsValid => m_ProgramProducerIndex >= 0 &&
                                !string.IsNullOrWhiteSpace(m_ProgramProducerIdentity) &&
                                !string.IsNullOrWhiteSpace(m_SourceIdentity) &&
                                AnimationChannelId.IsValid &&
                                Enum.IsDefined(typeof(ProgramOutputChannelKind), m_ChannelKind) &&
                                Enum.IsDefined(typeof(CharacterPresentationProducerKind), m_Kind) &&
+                               Enum.IsDefined(typeof(TimelinePlaybackMode), m_PlaybackMode) &&
                                (m_Kind == CharacterPresentationProducerKind.Animation &&
                                 Enum.IsDefined(typeof(AnimationPoseSourceKind), m_AnimationSourceKind) &&
-                                (m_AnimationSourceKind == AnimationPoseSourceKind.Timeline && m_Animation != null ||
-                                 m_AnimationSourceKind == AnimationPoseSourceKind.MotionMatching && m_Animation == null) ||
-                                m_Kind == CharacterPresentationProducerKind.Camera && m_Camera != null ||
-                                m_Kind == CharacterPresentationProducerKind.Cue && m_Cue != null);
+                                HasCleanAnimationPayload && m_Camera == null && m_Cue == null ||
+                                m_Kind == CharacterPresentationProducerKind.Camera && m_Camera != null && m_Animation == null &&
+                                m_Cue == null && m_BlendSpacePlanIndex == -1 && m_SourceClipCount == 0 &&
+                                m_SourceDurationSeconds == 0f && m_SourceMarkerSync == null ||
+                                m_Kind == CharacterPresentationProducerKind.Cue && m_Cue != null && m_Animation == null &&
+                                m_Camera == null && m_BlendSpacePlanIndex == -1 && m_SourceClipCount == 0 &&
+                                m_SourceDurationSeconds == 0f && m_SourceMarkerSync == null);
+
+        internal string DescribeValidity(int expectedIndex)
+        {
+            return $"Producer[{expectedIndex}] Index={m_ProgramProducerIndex} Identity={m_ProgramProducerIdentity} Source={m_SourceIdentity} " +
+                   $"Channel={m_AnimationChannelId} ChannelKind={m_ChannelKind} Kind={m_Kind} SourceKind={m_AnimationSourceKind} " +
+                   $"PlaybackMode={m_PlaybackMode} " +
+                   $"Animation={m_Animation != null} Camera={m_Camera != null} Cue={m_Cue != null} BlendSpacePlanIndex={m_BlendSpacePlanIndex} " +
+                   $"SourceClipCount={m_SourceClipCount} SourceDuration={m_SourceDurationSeconds} SourceMarkerSync={m_SourceMarkerSync != null} CleanAnimationPayload={HasCleanAnimationPayload} IsValid={IsValid}";
+        }
     }
 
     public enum CharacterPresentationCameraBindingKind
@@ -362,19 +422,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] float m_DurationSeconds;
         [SerializeField] CharacterPresentationAnimationClipBinding[] m_Clips = Array.Empty<CharacterPresentationAnimationClipBinding>();
         [SerializeField] AnimationMarkerSyncBinding m_MarkerSync = new AnimationMarkerSyncBinding();
+        [SerializeField] string m_MarkerBindingId = string.Empty;
 
         public CharacterPresentationAnimationBinding(
             TransitionAssetBase source,
             string trackName,
             float durationSeconds,
             CharacterPresentationAnimationClipBinding[] clips,
-            AnimationMarkerSyncBinding markerSync)
+            AnimationMarkerSyncBinding markerSync,
+            AnimationMarkerBindingId markerBindingId)
         {
             m_Source = source;
             m_TrackName = trackName ?? string.Empty;
             m_DurationSeconds = durationSeconds;
             m_Clips = clips ?? Array.Empty<CharacterPresentationAnimationClipBinding>();
             m_MarkerSync = markerSync ?? throw new ArgumentNullException(nameof(markerSync));
+            m_MarkerBindingId = markerBindingId.IsValid
+                ? markerBindingId.Value
+                : throw new ArgumentException("Animation binding Marker identity is invalid.", nameof(markerBindingId));
         }
 
         public TransitionAssetBase Source => m_Source;
@@ -382,6 +447,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public float DurationSeconds => m_DurationSeconds;
         public IReadOnlyList<CharacterPresentationAnimationClipBinding> Clips => m_Clips ?? Array.Empty<CharacterPresentationAnimationClipBinding>();
         public AnimationMarkerSyncBinding MarkerSync => m_MarkerSync;
+        public AnimationMarkerBindingId MarkerBindingId => new AnimationMarkerBindingId(m_MarkerBindingId);
 
         public int Sample(
             float sampleTime,
@@ -431,8 +497,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ref right);
             }
 
-            if (activeCount == 0 || !float.IsFinite(totalWeight) || totalWeight <= 0f ||
-                !float.IsFinite(footPlacementWeight))
+            if (activeCount == 0)
+            {
+                footPlacement = default;
+                return 0;
+            }
+            if (!float.IsFinite(totalWeight) || totalWeight <= 0f || !float.IsFinite(footPlacementWeight))
                 throw new InvalidOperationException("Presentation animation binding has no valid active clip sample.");
 
             footPlacement = new AnimationFootPlacementSample(

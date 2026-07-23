@@ -1,0 +1,164 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4c77fcceb244d1da8ab1a64b24b6c47, type: 3}
+  m_Name: TransitionRoutingModuleFixture
+  m_EditorClassIdentifier:
+  m_SchemaVersion: 1
+  m_DefinitionRevision: transition-routing-module-fixture-v1
+  m_OwnerNodeId: fixture-action-branch
+  m_EventCapacity: 128
+  m_Endpoints:
+  - m_EndpointId: $empty
+  - m_EndpointId: idle
+  - m_EndpointId: hit
+  m_Rules:
+  - m_RuleId: empty-empty
+    m_SourceEndpointId: $empty
+    m_TargetEndpointId: $empty
+    m_BlendLogic: 1
+    m_DurationSeconds: 0
+    m_BlendCurveId: linear
+    m_BlendProfileId:
+  - m_RuleId: empty-idle
+    m_SourceEndpointId: $empty
+    m_TargetEndpointId: idle
+    m_BlendLogic: 1
+    m_DurationSeconds: 0
+    m_BlendCurveId: linear
+    m_BlendProfileId:
+  - m_RuleId: empty-hit
+    m_SourceEndpointId: $empty
+    m_TargetEndpointId: hit
+    m_BlendLogic: 1
+    m_DurationSeconds: 0
+    m_BlendCurveId: linear
+    m_BlendProfileId:
+  - m_RuleId: idle-empty
+    m_SourceEndpointId: idle
+    m_TargetEndpointId: $empty
+    m_BlendLogic: 1
+    m_DurationSeconds: 0
+    m_BlendCurveId: linear
+    m_BlendProfileId:
+  - m_RuleId: idle-idle
+    m_SourceEndpointId: idle
+    m_TargetEndpointId: idle
+    m_BlendLogic: 1
+    m_DurationSeconds: 0
+    m_BlendCurveId: linear
+    m_BlendProfileId:
+  - m_RuleId: idle-hit
+    m_SourceEndpointId: idle
+    m_TargetEndpointId: hit
+    m_BlendLogic: 2
+    m_DurationSeconds: 0.12
+    m_BlendCurveId:
+    m_BlendProfileId: full-body-fast
+  - m_RuleId: hit-empty
+    m_SourceEndpointId: hit
+    m_TargetEndpointId: $empty
+    m_BlendLogic: 1
+    m_DurationSeconds: 0
+    m_BlendCurveId: linear
+    m_BlendProfileId:
+  - m_RuleId: hit-idle
+    m_SourceEndpointId: hit
+    m_TargetEndpointId: idle
+    m_BlendLogic: 1
+    m_DurationSeconds: 0.15
+    m_BlendCurveId: ease-out
+    m_BlendProfileId: full-body
+  - m_RuleId: hit-hit
+    m_SourceEndpointId: hit
+    m_TargetEndpointId: hit
+    m_BlendLogic: 1
+    m_DurationSeconds: 0
+    m_BlendCurveId: linear
+    m_BlendProfileId:
+  m_Frames:
+  - m_FrameId: 1
+    m_CurrentEndpointId: $empty
+    m_RequestedEndpointId: idle
+    m_SelectionGeneration: 1
+    m_TargetReady: 1
+    m_CapturePlanReady: 1
+    m_CompleteCurrentCapture: 0
+    m_CaptureSucceeded: 1
+    m_CompleteCurrentRelease: 0
+    m_ReleaseSucceeded: 1
+    m_ResetReason: 0
+  - m_FrameId: 2
+    m_CurrentEndpointId: idle
+    m_RequestedEndpointId: hit
+    m_SelectionGeneration: 2
+    m_TargetReady: 0
+    m_CapturePlanReady: 0
+    m_CompleteCurrentCapture: 0
+    m_CaptureSucceeded: 1
+    m_CompleteCurrentRelease: 0
+    m_ReleaseSucceeded: 1
+    m_ResetReason: 0
+  - m_FrameId: 3
+    m_CurrentEndpointId: idle
+    m_RequestedEndpointId: hit
+    m_SelectionGeneration: 2
+    m_TargetReady: 1
+    m_CapturePlanReady: 1
+    m_CompleteCurrentCapture: 0
+    m_CaptureSucceeded: 1
+    m_CompleteCurrentRelease: 0
+    m_ReleaseSucceeded: 1
+    m_ResetReason: 0
+  - m_FrameId: 4
+    m_CurrentEndpointId: idle
+    m_RequestedEndpointId: hit
+    m_SelectionGeneration: 2
+    m_TargetReady: 1
+    m_CapturePlanReady: 1
+    m_CompleteCurrentCapture: 1
+    m_CaptureSucceeded: 1
+    m_CompleteCurrentRelease: 0
+    m_ReleaseSucceeded: 1
+    m_ResetReason: 0
+  - m_FrameId: 5
+    m_CurrentEndpointId: hit
+    m_RequestedEndpointId: hit
+    m_SelectionGeneration: 2
+    m_TargetReady: 1
+    m_CapturePlanReady: 1
+    m_CompleteCurrentCapture: 0
+    m_CaptureSucceeded: 1
+    m_CompleteCurrentRelease: 1
+    m_ReleaseSucceeded: 1
+    m_ResetReason: 0
+  - m_FrameId: 6
+    m_CurrentEndpointId: hit
+    m_RequestedEndpointId: idle
+    m_SelectionGeneration: 3
+    m_TargetReady: 1
+    m_CapturePlanReady: 1
+    m_CompleteCurrentCapture: 0
+    m_CaptureSucceeded: 1
+    m_CompleteCurrentRelease: 0
+    m_ReleaseSucceeded: 1
+    m_ResetReason: 0
+  - m_FrameId: 7
+    m_CurrentEndpointId: idle
+    m_RequestedEndpointId: idle
+    m_SelectionGeneration: 3
+    m_TargetReady: 1
+    m_CapturePlanReady: 1
+    m_CompleteCurrentCapture: 0
+    m_CaptureSucceeded: 1
+    m_CompleteCurrentRelease: 0
+    m_ReleaseSucceeded: 1
+    m_ResetReason: 0

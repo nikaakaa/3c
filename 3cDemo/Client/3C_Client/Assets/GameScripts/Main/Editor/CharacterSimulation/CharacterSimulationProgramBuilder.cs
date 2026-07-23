@@ -618,6 +618,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 case float single: return SemanticLiteral.FromNumber(index, identity, single);
                 case double number: return SemanticLiteral.FromNumber(index, identity, number);
                 case string text: return SemanticLiteral.FromString(index, identity, text);
+                case AnimationChannelId animationChannelId:
+                    return SemanticLiteral.FromString(index, identity, animationChannelId.Value);
                 case Vector2 vector2:
                     return SemanticLiteral.FromVector2(index, identity, vector2.x, vector2.y);
                 case Vector3 vector3:

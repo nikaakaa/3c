@@ -350,16 +350,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingProducerBindingPayload(
             string programProducerId,
             AnimationChannelId animationChannelId,
-            PoseSlotId poseSlotId,
+            PoseNodeId poseNodeId,
             CharacterMotionMatchingSearchDomainId searchDomainId,
             int firstDatabaseIndex,
             int databaseCount)
         {
             ProgramProducerId = MotionMatchingIdentity.Require(programProducerId, nameof(programProducerId));
-            if (!animationChannelId.IsValid || !poseSlotId.IsValid || !searchDomainId.IsValid || firstDatabaseIndex < 0 || databaseCount <= 0)
+            if (!animationChannelId.IsValid || !poseNodeId.IsValid || !searchDomainId.IsValid || firstDatabaseIndex < 0 || databaseCount <= 0)
                 throw new ArgumentException("Motion Matching producer binding payload is invalid.");
             AnimationChannelId = animationChannelId;
-            PoseSlotId = poseSlotId;
+            PoseNodeId = poseNodeId;
             SearchDomainId = searchDomainId;
             FirstDatabaseIndex = firstDatabaseIndex;
             DatabaseCount = databaseCount;
@@ -367,7 +367,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
         public string ProgramProducerId { get; }
         public AnimationChannelId AnimationChannelId { get; }
-        public PoseSlotId PoseSlotId { get; }
+        public PoseNodeId PoseNodeId { get; }
         public CharacterMotionMatchingSearchDomainId SearchDomainId { get; }
         public int FirstDatabaseIndex { get; }
         public int DatabaseCount { get; }

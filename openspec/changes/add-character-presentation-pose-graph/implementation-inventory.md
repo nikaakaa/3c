@@ -28,14 +28,20 @@
 - 左右脚feature来自Pose Graph最终输出；Pose Graph为Invalid或NoPose时Foot Placement走正式reset/不可用路径。
 - 旧Animancer state weight、Layer scalar或单slot scalar不再作为最终脚贡献事实。
 
+## 规格状态
+
+- current specs已经统一为AnimationChannel、PoseSlot、Blend Library、Pose Graph与FinalAnimationPoseFrame口径。
+- 旧LayerId、TransitionLibrary、Animancer fade、Current/Outgoing和Equipment Required Layer只允许出现在明确禁止恢复旧路径的语境中。
+- `character-equipment-presentation`已明确RequiredProducerIds只校验Gameplay route完整性，不声明AnimationChannel、PoseSlot或动画空间拓扑。
+- `btsmtl-node-interruption-lifecycle`已明确Program只按AnimationChannelId输出唯一producer command，通用Tree scheduler不产生表现生命周期。
+
 ## BTSMTL Graph Editor
 
-- 现有窗口生命周期、breadcrumb和runtime diagnostics集中在`BaseTreeWindow`。
-- GraphView画布、selection、搜索、创建、clipboard与连接协调集中在`BaseTreeView`及其Node/Port/Edge View。
-- Undo、dirty owner与窗口选择协调分布在`TreeWindowUtility`和`TreeDesignerUtility`。
-- Inspector宿主为`BaseTreeInspectorView`，搜索入口为`NodeSearchWindow`，Data Catalog为`GraphDataCatalog`。
-- BTSMTL领域特判仍存在于`BaseTreeView`、`BaseNodeView`、`BaseEdgeView`和Input Action drag factory，包括BaseNode subtype、ConditionRule、BTAbortPolicy、PropertyPort与InputAction规则。
-- 当前尚不存在`GraphAuthoringEditorShell`及其六个domain adapter接口，因此Graph Shell章节仍未完成。
+- `GraphAuthoringEditorShell`及`IGraphAuthoringDocument`、`IGraphAuthoringNodeCatalog`、`IGraphAuthoringPortPolicy`、`IGraphAuthoringMutationAdapter`、`IGraphAuthoringInspectorAdapter`、`IGraphAuthoringDiagnosticsAdapter`已经安装。
+- `BaseTreeWindow`已经继承`GraphAuthoringEditorShell`并通过BTSMTL adapters复用窗口、GraphView、selection、搜索、clipboard、Undo、Inspector与diagnostics宿主。
+- `CharacterPresentationPoseGraphEditorWindow`已经继承同一Shell，并使用独立Pose document、node catalog、port policy、mutation、Inspector和diagnostics adapters；Pose数据不继承BTSMTL runtime node/edge语义。
+- 跨domain clipboard由domain identity拒绝，Shell不保存第二份node/edge集合。
+- Pose diagnostics当前只运行authoring validator并显示Projection摘要，明确显示`Live Snapshot Unavailable`；正式runtime snapshot source-map绑定仍未完成。
 
 ## Corin正式迁移清单
 
@@ -46,10 +52,11 @@
 - WalkEnd保持无producer，不创建Timeline或默认Idle。
 - 必须通过正式Agent authoring工具迁移RootTree和Timeline；不得直接编辑Unity YAML。
 - Pose Graph、Blend Library、Rig、Profile与producer source binding不属于Agent Patch写入口，必须通过各自正式authoring入口和显式Build请求发布。
+- 当前`CorinPlayableRootTree.asset`与`CorinAttack1Timeline.asset`仍保存`LayerId: Base`；`CorinAnimationPresentationProfile.asset`仍保存Layer catalog、Animancer layer index和TransitionLibrary；旧generated Projection仍保存Layer与transition payload。
 
 ## 并行change边界
 
-- `refactor-animation-playback-to-blend-stack`拥有per-slot Stack、Stored Pose、Inertial、native slot job与source retirement；本change拥有跨slot Pose Graph、final pose与Post Process接缝。
+- 当前工作区已经把CrossFade/Stored/source release收口到显式BlendStack，把history/residual/rebase收口到SelectedPosePlayer后的局部Inertialization，并由完整Pose Plan拥有composition、world-aware FootPlacement与final publication；不存在per-slot隐藏Stack或Stack Inertial双写。
 - `add-character-motion-matching-pose-source`只在Resolved Pose Request之前提供producer source，不得建立私有fade、第二Stack或第二Pose输出。
 - Timeline Animation Analysis、Marker Sync、Foot Analysis与target-neutral Projection现有字段均视为已安装合同，本change不得回退。
 - 待删除清单固定为旧Layer serialized数据、TransitionLibrary、Animancer fade/layer权威、global compositor、旧snapshot字段、旧generated Projection payload及兼容字段。

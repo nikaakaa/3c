@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         [ReadOnly]
         readonly NativeSlice<AnimationLocalBonePose> m_DenseLocalPoses;
         [NativeDisableParallelForRestriction]
-        readonly NativeSlice<PoseSlotFrameAvailability> m_Availability;
+        readonly NativeSlice<AnimationPoseAvailability> m_Availability;
         [ReadOnly]
         readonly NativeSlice<ulong> m_ContinuityIdentity;
         [NativeDisableParallelForRestriction]
@@ -25,12 +25,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         [ReadOnly]
         readonly NativeArray<TransformStreamHandle> m_Handles;
         readonly ulong m_CompletionIdentity;
+        readonly int m_RootBoneIndex;
+        readonly CharacterAnimationRootBonePolicy m_RootBonePolicy;
 
         internal AnimationFinalPoseStreamWriterJob(
             AnimationFinalPoseNativeReadBinding binding,
-            NativeArray<TransformStreamHandle> handles)
+            NativeArray<TransformStreamHandle> handles,
+            int rootBoneIndex,
+            CharacterAnimationRootBonePolicy rootBonePolicy)
         {
-            RequireValidBinding(binding, handles);
+            RequireValidBinding(binding, handles, rootBoneIndex, rootBonePolicy);
             m_DenseLocalPoses = binding.DenseLocalPoses;
             m_Availability = binding.Availability;
             m_ContinuityIdentity = binding.ContinuityIdentity;
@@ -40,12 +44,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_AppliedAt = binding.AppliedAt;
             m_Handles = handles;
             m_CompletionIdentity = binding.CompletionIdentity;
+            m_RootBoneIndex = rootBoneIndex;
+            m_RootBonePolicy = rootBonePolicy;
         }
 
         public void ProcessAnimation(AnimationStream stream)
         {
             if (m_PoseGraphCompletedAt[0] != m_CompletionIdentity ||
-                m_Availability[0] != PoseSlotFrameAvailability.Pose ||
+                m_Availability[0] != AnimationPoseAvailability.Pose ||
                 m_OutputInvalidReason[0] != AnimationPoseNativeInvalidReason.None ||
                 m_PoseGraphInvalidReason[0] != AnimationPoseNativeInvalidReason.None ||
                 m_ContinuityIdentity[0] == 0)
@@ -55,6 +61,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
             for (int boneIndex = 0; boneIndex < m_Handles.Length; boneIndex++)
             {
+                if (ExcludesRoot(boneIndex))
+                    continue;
                 if (!m_Handles[boneIndex].IsValid(stream) || !m_DenseLocalPoses[boneIndex].IsValid)
                 {
                     PublishInvalid();
@@ -64,6 +72,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
             for (int boneIndex = 0; boneIndex < m_Handles.Length; boneIndex++)
             {
+                if (ExcludesRoot(boneIndex))
+                    continue;
                 TransformStreamHandle handle = m_Handles[boneIndex];
                 AnimationLocalBonePose pose = m_DenseLocalPoses[boneIndex];
                 handle.SetLocalPosition(stream, pose.Position);
@@ -81,21 +91,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
         void PublishInvalid()
         {
-            NativeSlice<PoseSlotFrameAvailability> availability = m_Availability;
+            NativeSlice<AnimationPoseAvailability> availability = m_Availability;
             NativeSlice<AnimationPoseNativeInvalidReason> invalidReason = m_OutputInvalidReason;
             NativeSlice<ulong> appliedAt = m_AppliedAt;
-            availability[0] = PoseSlotFrameAvailability.Invalid;
+            availability[0] = AnimationPoseAvailability.Invalid;
             invalidReason[0] = AnimationPoseNativeInvalidReason.FinalStreamWriteInvalid;
             appliedAt[0] = 0;
         }
 
         static void RequireValidBinding(
             AnimationFinalPoseNativeReadBinding binding,
-            NativeArray<TransformStreamHandle> handles)
+            NativeArray<TransformStreamHandle> handles,
+            int rootBoneIndex,
+            CharacterAnimationRootBonePolicy rootBonePolicy)
         {
-            if (binding.CompletionIdentity == 0 || binding.OutputPoseValueIndex < 0 ||
+            if (binding.CompletionIdentity == 0 || binding.OutputValueIndex < 0 ||
                 binding.DenseLocalPoses.Length == 0 ||
                 !handles.IsCreated || handles.Length != binding.DenseLocalPoses.Length ||
+                rootBoneIndex < 0 || rootBoneIndex >= handles.Length ||
+                !Enum.IsDefined(typeof(CharacterAnimationRootBonePolicy), rootBonePolicy) ||
                 binding.PoseParameters.Length == 0 ||
                 binding.Contributions.Length == 0 ||
                 binding.DenseContributionWeights.Length != checked(binding.Contributions.Length * binding.DenseLocalPoses.Length) ||
@@ -109,6 +123,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 throw new ArgumentException("Final animation pose stream writer binding is invalid.");
             }
         }
+
+        bool ExcludesRoot(int boneIndex) =>
+            m_RootBonePolicy == CharacterAnimationRootBonePolicy.ExcludeSourceRoot && boneIndex == m_RootBoneIndex;
 
         static bool IsUnit<T>(NativeSlice<T> values) where T : struct =>
             values.Length == 1;

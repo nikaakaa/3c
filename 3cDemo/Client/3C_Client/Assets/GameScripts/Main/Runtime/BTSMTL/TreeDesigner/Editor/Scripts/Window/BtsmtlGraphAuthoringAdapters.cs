@@ -199,6 +199,27 @@ namespace TreeDesigner.Editor
         }
     }
 
+    sealed class BtsmtlGraphAuthoringNavigatorAdapter : IGraphAuthoringWorkspaceRegionAdapter
+    {
+        readonly BaseTreeWindow m_Window;
+        readonly BaseTreeNavigatorView m_View;
+
+        public BtsmtlGraphAuthoringNavigatorAdapter(BaseTreeWindow window, BaseTreeInspectorView view)
+        {
+            m_Window = window ?? throw new ArgumentNullException(nameof(window));
+            if (view == null)
+                throw new ArgumentNullException(nameof(view));
+            m_View = new BaseTreeNavigatorView();
+            view.BindNavigator(m_View, m_Window.DataCatalogViewState);
+        }
+
+        public VisualElement View => m_View;
+
+        public void Bind(IGraphAuthoringDocument document) => m_View.SetEnabled(m_Window.CanMutateCurrentDocument);
+        public void Refresh() { }
+        public void Clear() { }
+    }
+
     sealed class BtsmtlGraphAuthoringDiagnosticsAdapter : IGraphAuthoringDiagnosticsAdapter
     {
         readonly BaseTreeWindow m_Window;

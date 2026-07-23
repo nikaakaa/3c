@@ -39,7 +39,7 @@ Artifact Store MUST使用canonical codec、payload hash、临时文件与原子�
 
 ### Requirement: 单Clip Analyzer不得依赖Tree或Projection
 
-正式Analyzer MUST只接受精确AnimationClip与Analysis Source，并由Source精确解析Sampling Rig与Calibration。它 MUST不接受或读取RootTree、StateMachine、Timeline call site、CharacterPipelineDefinition、SimulationProgram或PresentationProjection。Analyzer MUST使用精确Rig/Animator/Playable采样并生成左右脚有限feature curve set。
+正式Analyzer MUST只接受精确AnimationClip与Analysis Source，并由Source精确解析Sampling Rig与Calibration。它 MUST不接受或读取RootTree、StateMachine、Timeline call site、CharacterPipelineDefinition、SimulationProgram或PresentationProjection。Analyzer MUST使用精确Rig/Animator/Playable采样并生成左右脚有限feature curve set。Analyzer MUST先写完全部采样帧的heel、toe、sole位置与高度，再从完整循环位置序列计算中心差分速度，不得在未来采样帧尚未写入时读取它。
 
 #### Scenario: 从独立Timeline分析Clip
 
@@ -97,7 +97,7 @@ Player Runtime MUST只从与Program和producer binding匹配的CharacterPresenta
 
 ### Requirement: Foot Analysis必须生成可校验的接触Marker候选
 
-Ready artifact MAY按artifact sample rate从左右脚PlantConfidence推导离散contact onset候选。候选 MUST携带artifact identity与content hash、AnimationClip dependency、Timeline/Track/Clip stable identity、脚侧、源动画归一化时间、目标Timeline frame与置信值。候选 MUST是Editor session中的瞬时只读数据，不得写入artifact payload、Projection或Runtime。
+Ready artifact MAY按artifact sample rate从左右脚PlantConfidence推导离散contact onset候选。一个上升沿只有在其后的Plant状态连续维持至少Analysis Source `MinimumLandingSegmentSeconds`对应的循环样本数时才是稳定接触；单帧阈值穿越 MUST不产生候选。候选 MUST携带artifact identity与content hash、AnimationClip dependency、Timeline/Track/Clip stable identity、脚侧、源动画归一化时间、目标Timeline frame与置信值。候选 MUST是Editor session中的瞬时只读数据，不得写入artifact payload、Projection或Runtime。
 
 #### Scenario: 循环步态生成左右脚候选
 

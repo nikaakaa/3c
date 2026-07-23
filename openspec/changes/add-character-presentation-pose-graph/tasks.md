@@ -5,7 +5,7 @@
 - [x] 1.1 枚举当前`LayerId`在Timeline、Semantic IR、Program、command、Projection、Runtime、Preview、Trace和Agent Snapshot中的全部字段与构造入口。
 - [x] 1.2 枚举`CharacterAnimationLayerDefinition`的全部authoring、serialized、Projection和Runtime调用方。
 - [x] 1.3 枚举当前Animancer Layer、FadeGroup、TransitionLibrary和最终Pose写入调用方。
-- [x] 1.4 枚举未实施Blend Stack提案中的per-layer Stack、global compositor和final Animator output职责。
+- [x] 1.4 枚举批准基线中尚未实施的Blend Stack提案所含per-layer Stack、global compositor和final Animator output职责。
 - [x] 1.5 枚举Foot Placement读取Animancer、Layer scalar和visible contribution的全部入口。
 - [x] 1.6 枚举BTSMTL Graph Editor中窗口、GraphView、搜索、clipboard、Undo、Inspector和diagnostics实现。
 - [x] 1.7 枚举BTSMTL Graph Editor中BaseNode、BaseEdge、ConditionRule、BTAbortPolicy、InputAction与runtime context特判。
@@ -225,11 +225,11 @@
 - [x] 10.5 让PoseSlotFrame保存availability和slot output weight。
 - [x] 10.6 让PoseSlotFrame保存dense local pose。
 - [x] 10.7 让PoseSlotFrame保存Pose Parameter buffer。
-- [x] 10.8 让PoseSlotFrame保存live/Stored/Inertial source contribution。
+- [x] 10.8 让Player输出保存live/Stored contribution，并让局部Inertialization输出普通Pose contribution。
 - [x] 10.9 让PoseSlotFrame保存continuity identity。
-- [x] 10.10 将`AnimationBlendPoseEvaluator`改为`AnimationSlotBlendPoseEvaluator`。
+- [x] 10.10 将旧`AnimationBlendPoseEvaluator`拆为`AnimationSlotBlendJob`与独立Pose Graph Job。
 - [x] 10.11 保留per-slot独立clock、curve和Per-Bone transition。
-- [x] 10.12 保留per-slot容量、Stored Pose和Inertial accumulator。
+- [x] 10.12 保留显式BlendStack容量与Stored Pose，并把Accumulator唯一迁入局部Inertialization节点。
 - [x] 10.13 保留per-slotMarker relation detach和source retirement。
 - [x] 10.14 从Stack evaluator删除跨slotMask composition。
 - [x] 10.15 从Stack evaluator删除global Layer order。
@@ -239,7 +239,7 @@
 
 ## 11. Character Pose Graph Runtime
 
-- [x] 11.1 定义`CharacterPoseGraphEvaluator`创建合同。
+- [x] 11.1 定义`CharacterPoseGraphNativeJob`创建合同。
 - [x] 11.2 定义Pose Program ABI校验。
 - [x] 11.3 定义fixed pose workspace。
 - [x] 11.4 定义fixed parameter workspace。
@@ -293,7 +293,7 @@
 - [x] 13.4 传播Base slot live source Foot Analysis。
 - [x] 13.5 传播Action slot live source Foot Analysis。
 - [x] 13.6 传播Stored Pose每脚feature aggregate。
-- [x] 13.7 传播Inertial每脚feature transition。
+- [x] 13.7 由局部Inertialization按脚Bone envelope传播每脚feature transition。
 - [x] 13.8 按最终dense Bone Mask组合每脚feature贡献。
 - [x] 13.9 让零脚mask overlay不稀释Base feature。
 - [x] 13.10 让全身overlay按实际脚贡献替换Base feature。
@@ -312,62 +312,136 @@
 - [x] 14.5 拒绝Preview同channel多个producer。
 - [x] 14.6 更新Preview非连续seek的channel/slot reset。
 - [x] 14.7 扩展Animation snapshot保存AnimationChannelId和PoseSlotId。
-- [x] 14.8 扩展snapshot保存Stack entry、Stored与Inertial。
+- [x] 14.8 扩展snapshot分别保存Stack entry/Stored与局部Inertialization。
 - [x] 14.9 扩展snapshot保存PoseNodeId与operation availability。
 - [x] 14.10 扩展snapshot保存Pose Parameter最终值。
 - [x] 14.11 扩展snapshot保存per-bone/per-foot final contribution。
 - [x] 14.12 扩展snapshot保存OutputPose completion identity。
 - [x] 14.13 将Timeline Live Debug Marker relation限制为同channel/slot。
-- [ ] 14.14 让Graph Shell Pose diagnostics只读正式snapshot source map。
+- [x] 14.14 把Pose diagnostics的Live入口从authoring validation-only状态切换到正式runtime snapshot读取。
+- [x] 14.14.1 让Pose diagnostics取得当前显式runtime diagnostics target与最新AnimationPlaybackFrameSnapshot。
+- [x] 14.14.2 校验snapshot的PoseGraph identity、ProjectionRevision与当前打开文档精确匹配。
+- [x] 14.14.3 通过compiled Pose Program source map把operation snapshot映射到稳定PoseNodeId。
+- [x] 14.14.4 只读显示node availability、final contribution与OutputPose completion identity。
+- [x] 14.14.5 在缺少target、缺少snapshot或ProjectionRevision不匹配时分别显示Unavailable或Stale。
+- [x] 14.14.6 禁止Pose diagnostics临时编译Program、运行Pose Evaluator或读取authoring默认值冒充Live结果。
 - [x] 14.15 删除按Animancer state重建fade或最终贡献的debug路径。
 - [x] 14.16 删除旧LayerId、Current/Outgoing和Animancer fade snapshot字段。
 
-## 15. Corin正式资产迁移
+## 15. Corin正式资产迁移（唯一实施归属）
 
-- [ ] 15.1 在Corin authoring catalog创建`BaseLocomotion` AnimationChannelId。
-- [ ] 15.2 在Corin authoring catalog创建`FullBodyAction` AnimationChannelId。
-- [ ] 15.3 将Idle producer迁移到BaseLocomotion。
-- [ ] 15.4 将WalkStart与WalkLoop producer迁移到BaseLocomotion。
-- [ ] 15.5 将RunStart、RunLoop与RunEnd producer迁移到BaseLocomotion。
-- [ ] 15.6 将MovingTurn producer迁移到BaseLocomotion。
-- [ ] 15.7 将Attack1至Attack5 producer迁移到FullBodyAction。
-- [ ] 15.8 将Dodge producer迁移到FullBodyAction。
-- [ ] 15.9 迁移其它明确全身Action producer到FullBodyAction。
-- [ ] 15.10 保持WalkEnd无producer且不创建fallback Timeline。
-- [ ] 15.11 更新Corin Program ownership让两个channel可同时输出。
-- [ ] 15.12 创建Corin Pose Graph asset。
-- [ ] 15.13 声明BaseLocomotionSlot并设为RequireOutput。
-- [ ] 15.14 声明FullBodyActionSlot并设为AllowEmpty。
-- [ ] 15.15 创建两个PoseSlotInput节点。
-- [ ] 15.16 创建全身Mask LayeredBoneBlend节点。
-- [ ] 15.17 创建唯一OutputPose节点。
-- [ ] 15.18 配置完整Pose Parameter policy。
-- [ ] 15.19 更新Corin Blend Library为两个slot的完整matrix。
-- [ ] 15.20 更新Corin Profile引用Pose Graph、Blend Library与Rig。
-- [ ] 15.21 更新Corin Prefab Rig Binding与final output job装配。
-- [ ] 15.22 重建Corin target-neutral Projection。
-- [ ] 15.23 重建Corin Float32 Program artifact/wrapper。
-- [ ] 15.24 重建Corin Fixed Program artifact/wrapper。
+- [x] 15.1 在Corin authoring catalog创建`BaseLocomotion` AnimationChannelId。
+- [x] 15.2 在Corin authoring catalog创建`FullBodyAction` AnimationChannelId。
+- [x] 15.3 将Idle producer迁移到BaseLocomotion。
+- [x] 15.4 将WalkStart producer迁移到BaseLocomotion。
+- [x] 15.5 将WalkLoop producer迁移到BaseLocomotion。
+- [x] 15.6 将RunStart producer迁移到BaseLocomotion。
+- [x] 15.7 将RunLoop producer迁移到BaseLocomotion。
+- [x] 15.8 将RunEnd producer迁移到BaseLocomotion。
+- [x] 15.9 将MovingTurn producer迁移到BaseLocomotion。
+- [x] 15.10 将Attack1 producer迁移到FullBodyAction。
+- [x] 15.11 将Attack2 producer迁移到FullBodyAction。
+- [x] 15.12 将Attack3 producer迁移到FullBodyAction。
+- [x] 15.13 将Attack4 producer迁移到FullBodyAction。
+- [x] 15.14 将Attack5 producer迁移到FullBodyAction。
+- [x] 15.15 将DodgeBack producer迁移到FullBodyAction。
+- [x] 15.16 将DodgeForward producer迁移到FullBodyAction。
+- [x] 15.17 枚举并迁移其它明确全身Action producer到FullBodyAction。
+- [x] 15.18 保持WalkEnd无producer且不创建Timeline、默认Idle或其它fallback。
+- [x] 15.19 让Locomotion与Action所有权分别只写各自AnimationChannel。
+- [x] 15.20 让Program Finalize能在同一Tick同时提交BaseLocomotion与FullBodyAction最终selection。
+- [x] 15.21 重新导出Corin Snapshot并确认全部可达AnimationTrack只使用两个正式AnimationChannelId。
+- [x] 15.22 创建Corin Pose Graph asset并建立稳定PoseGraph identity。
+- [x] 15.23 创建绑定BaseLocomotion/RequireSelection的唯一AnimationSelectionInput节点。
+- [x] 15.24 创建绑定FullBodyAction/AllowEmpty的唯一AnimationSelectionInput节点。
+- [x] 15.25 为BaseLocomotion创建唯一MarkerSync节点。
+- [x] 15.25.1 将BaseLocomotion MarkerSync一对一连接唯一SelectedPosePlayer节点。
+- [x] 15.26 为BaseLocomotion创建SelectedPosePlayer后的唯一局部Inertialization节点。
+- [x] 15.26.1 为FullBodyAction创建唯一显式BlendStack节点。
+- [x] 15.27 创建覆盖全身的稳定Rig Bone Mask。
+- [x] 15.28 创建以Base Inertialization输出为Base、FullBodyAction BlendStack输出为Overlay的LayeredBoneBlend节点。
+- [x] 15.29 创建根图唯一OutputPose节点并连接最终Pose路径。
+- [x] 15.30 为全部已声明PoseParameter配置LayeredBoneBlend完整resolve policy。
+- [x] 15.31 校验RequireOutput、AllowEmpty与全部合法availability组合。
+- [x] 15.31.1 创建Corin CharacterAnimationRigDefinition并建立稳定Rig identity。
+- [x] 15.31.2 配置Corin父节点优先dense BoneId与ParentIndex。
+- [x] 15.31.3 配置Corin root exclusion、scale policy与左右脚语义BoneId。
+- [x] 15.31.4 创建Corin CharacterAnimationBlendProfile资产。
+- [x] 15.31.5 配置每个Blend Profile的Rig identity、global duration multiplier与BoneId override。
+- [x] 15.32 创建Corin BaseLocomotion节点唯一CharacterPoseInertializationPolicy。
+- [x] 15.33 创建Corin FullBodyAction BlendStack节点唯一CharacterAnimationBlendPolicy与容量。
+- [x] 15.34 为BaseLocomotion全部可达discontinuity endpoint配置完整Inertialization exact table。
+- [x] 15.35 为FullBodyAction全部可达source pair及source-to-Empty配置完整CrossFade exact table。
+- [x] 15.36 更新Corin Profile引用唯一Pose Graph。
+- [x] 15.37 更新Corin Profile引用Pose Graph节点所需唯一Blend与Inertialization Policy。
+- [x] 15.38 更新Corin Profile引用唯一Rig Definition。
+- [x] 15.39 为全部BaseLocomotion producer配置稳定source resource binding。
+- [x] 15.40 为全部FullBodyAction producer配置稳定source resource binding。
+- [x] 15.41 保持Corin Foot Analysis Mode与Analysis Source GUID指向正式输入。
+- [x] 15.42 更新Corin Prefab CharacterAnimationRigBinding的dense Transform绑定。
+- [x] 15.42.1 接入Corin唯一final output job装配。
+- [x] 15.43 删除Corin RootTree与shared Timeline中的旧`LayerId` serialized payload。
+- [x] 15.44 删除Corin Profile中的旧Layer catalog、Animancer layer index与TransitionLibrary serialized payload。
+- [x] 15.44.1 将Corin producer binding重写为正式SourceKind与Source字段并删除旧m_Transition、m_Easing序列化数据。
+- [x] 15.45 通过显式Build请求发布Corin target-neutral Projection。
+- [x] 15.46 通过显式Build请求发布Corin Float32 Program artifact与wrapper。
+- [x] 15.47 通过显式Build请求发布Corin Fixed Program artifact与wrapper。
+- [x] 15.48 让新generated Projection只保存AnimationChannel、SelectionInput、PoseNode、node-local Policy、Rig与Pose Plan payload。
+- [x] 15.49 删除旧generated Projection中的Layer、TransitionLibrary与Animancer layer payload。
 
 ## 16. 旧路径删除与规格统一
 
-- [x] 16.1 删除旧LayerId serialized字段与reader。
-- [x] 16.2 删除旧Layer catalog serialized字段与Inspector。
+- [x] 16.1 删除主代码中的旧LayerId字段、类型与reader；Corin资产serialized残留由15.43清理。
+- [x] 16.2 删除Profile代码合同与Inspector中的旧Layer catalog；Corin Profile serialized残留由15.44清理。
 - [x] 16.3 删除旧CharacterAnimationLayerDefinition资产和引用。
 - [x] 16.4 删除旧Animancer TransitionLibrary正式引用。
 - [x] 16.5 删除旧Animancer layer index与AvatarMask runtime路径。
 - [x] 16.6 删除旧global Blend Stack Layer compositor。
 - [x] 16.7 删除旧Lifecycle Current/Outgoing并行weight事实。
-- [x] 16.8 删除旧Projection Layer payload与revision token。
+- [x] 16.8 删除Projection代码schema中的旧Layer payload与revision token；Corin旧generated artifact由15.49清理。
 - [x] 16.9 删除旧Preview简化播放链。
 - [x] 16.10 删除旧Trace LayerId与Animancer fade字段。
 - [x] 16.11 删除FormerlySerializedAs、兼容converter和fallback配置。
 - [x] 16.12 更新`openspec/project.md`的动画模块职责。
 - [x] 16.13 更新`openspec/project.md`的Profile、Projection与Editor代码组织。
 - [x] 16.14 更新`refactor-animation-playback-to-blend-stack`的proposal、design、tasks和spec deltas。
-- [ ] 16.15 更新`refactor-presentation-projection-target-boundary`的proposal、design、tasks和spec deltas。
-- [ ] 16.16 清理current specs中旧LayerId、Animancer fade权威和单Base Corin口径。
-- [x] 16.17 记录最终`AnimationChannel -> PoseSlot -> BlendStack -> PoseGraph -> PostProcess`业务链路。
+- [x] 16.15 明确`refactor-presentation-projection-target-boundary`已经归档且只作历史追溯，不回改其proposal、design、tasks或spec delta。
+- [x] 16.16 清理current specs中旧LayerId、Animancer fade/TransitionLibrary权威、旧preview lifecycle和Equipment Required Layer口径。
+- [x] 16.16.1 更新`character-animation-presentation-authoring`的Blend Library、Profile bootstrap与Equipment边界。
+- [x] 16.16.2 更新`btsmtl-timeline-editor-preview`的session、Marker Sync preview与Live Debug术语。
+- [x] 16.16.3 更新`character-pipeline-runtime`的PresentationFrame时钟与完整动画合成结果。
+- [x] 16.16.4 更新`character-presentation-interpolation`的source sampling、Stack/Pose Graph时钟与diagnostics术语。
+- [x] 16.16.5 更新`character-equipment-presentation`，删除Feature Required Layer与旧Animation Profile Layer所有权。
+- [x] 16.16.6 更新`btsmtl-node-interruption-lifecycle`，把每层producer术语改为每AnimationChannelId唯一输出。
+- [x] 16.16.7 复查其它current specs只允许在禁止旧路径的语境中保留`LayerId`、TransitionLibrary或Animancer fade字样。
+- [x] 16.17 记录最终`AnimationSelection -> SelectedPosePlayer或BlendStack -> 可选局部Inertialization -> Pose Plan -> FootPlacement`业务链路。
 - [x] 16.18 记录Pose Graph与未来Motion Matching、Equipment动态层的正式扩展边界。
 - [x] 16.19 在design记录唯一Rig Reference、Local/Mesh编译、PoseCurveResolve双输入与v2 frame-cache合同。
 - [x] 16.20 在Pose Graph spec记录唯一Rig Reference、Local/Mesh编译、PoseCurveResolve双输入与v2 frame-cache合同。
+
+## 17. 完整显式Pose Graph重新基线
+
+- [x] 17.1 将图输入从PoseSlotFrame迁移为AnimationSelection与typed Program Parameter。
+- [x] 17.2 新增AnimationSelectionInput与MotionMatchingSelectionInput节点合同。
+- [x] 17.3 新增MarkerSync Selection节点合同。
+- [x] 17.3.1 编译MarkerSync与stateful Player一对一source-usage合同。
+- [x] 17.3.2 将Timeline Marker effective time解析迁入MarkerSync节点。
+- [x] 17.3.3 删除图外Marker Sync自动装配与隐藏Stack entry扫描。
+- [x] 17.3.4 新增SelectedPosePlayer节点合同。
+- [x] 17.4 将Blend Stack算法装配为显式Player节点。
+- [x] 17.4.1 将Inertialization装配为SelectedPosePlayer后的显式局部Pose节点。
+- [x] 17.4.2 禁止Blend Stack与Inertialization同时拥有残差算法。
+- [x] 17.5 新增普通BlendPose节点。
+- [x] 17.6 保留并迁移LayeredBoneBlend与AdditivePose节点。
+- [x] 17.7 将PoseCurveResolve迁移为PoseParameterResolve合同。
+- [x] 17.8 新增受Rig BoneId约束的ModifyBone节点。
+- [x] 17.9 新增显式FootPlacement作者节点。
+- [x] 17.10 将FootPlacement降低为唯一world-aware执行阶段。
+- [x] 17.11 让OutputPose只发布完成FootPlacement/IK后的FinalAnimationPoseFrame。
+- [x] 17.12 删除固定PoseSlotInput与隐藏Stack依赖。
+- [x] 17.13 删除图外自动追加Foot Placement的路径。
+- [x] 17.14 升级validator、compiler、runtime plan和typed source map。
+- [x] 17.15 升级Preview与Live Debug以显示Selection raw time、MarkerSync relation/effective time、Player source usage、Stack和阶段completion。
+- [x] 17.16 按显式节点集重建Corin Pose Graph和Presentation Profile。
+- [x] 17.17 更新本change全部spec delta为完整显式图口径。
+- [x] 17.18 与`refactor-animation-selection-pose-graph-boundary`共同完成后再收口归档。

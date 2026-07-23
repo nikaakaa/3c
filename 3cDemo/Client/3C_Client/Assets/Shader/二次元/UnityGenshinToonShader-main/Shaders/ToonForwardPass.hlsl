@@ -62,7 +62,7 @@ half3 GetShadowColor(half shadow, half material, half day)
     half rangeMin = 0.5 + _ShadowOffset - _ShadowSmoothness;
     half rangeMax = 0.5 + _ShadowOffset;
     half2 rampUV = half2(smoothstep(rangeMin, rangeMax, shadow), index / 10.0 + 0.5 * day + 0.05);
-    half3 shadowRamp = SAMPLE_TEXTURE2D(_ShadowRamp, sampler_ShadowRamp, rampUV);
+    half3 shadowRamp = SAMPLE_TEXTURE2D(_ShadowRamp, sampler_ShadowRamp, rampUV).rgb;
 
     half3 shadowColor = shadowRamp * lerp(_ShadowColor.rgb, 1.0, rampUV.x);
     shadowColor = lerp(shadowColor, 1.0, step(rangeMax, shadow));
@@ -79,7 +79,7 @@ half3 GetSpecular(Varyings input, half3 lightDirection, half3 baseMap, half3 lig
 
     half3 normalVS = TransformWorldToViewNormal(input.normalWS, true);
     half2 matcapUV = 0.5 * normalVS.xy + 0.5;
-    half3 metalMap = SAMPLE_TEXTURE2D(_MetalMap, sampler_MetalMap, matcapUV);
+    half3 metalMap = SAMPLE_TEXTURE2D(_MetalMap, sampler_MetalMap, matcapUV).rgb;
 
     half3 nonMetallic = step(1.1 - blinnPhong, lightMap.b) * lightMap.r * _NonmetallicIntensity;
     half3 metallic = blinnPhong * lightMap.b * baseMap * metalMap * _MetallicIntensity;

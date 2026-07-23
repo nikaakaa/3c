@@ -1,0 +1,610 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c098d552eb42231449a0d29a2f0026cb, type: 3}
+  m_Name: CorinPresentationPoseGraph
+  m_EditorClassIdentifier: 
+  m_Graph:
+    m_GraphId: ed8ff472330e4057a900af3eae5dfb8f
+    m_ContentRevision: b05747e10ef344b98e24dd5819a58d3b
+    m_Parameters:
+    - m_ParameterId: animation.action-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    - m_ParameterId: animation.foot-placement-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    m_Nodes:
+    - m_NodeId: 5e5c0a6b782a4d70a2e333f86d727d75
+      m_Kind: 1
+      m_DisplayName: Base Locomotion Selection
+      m_Position: {x: -900, y: -160}
+      m_Ports:
+      - m_PortId: 52195e360ea94087a53e05a6bc040053
+        m_InterfacePortId: 
+        m_Name: Selection
+        m_Kind: 1
+        m_Direction: 2
+        m_Required: 1
+      m_AnimationChannelId: BaseLocomotion
+      m_ProgramProducerId: 
+      m_ParameterId: 
+      m_SelectionAvailability: 1
+      m_BlendSpaceInputRangePolicy: 1
+      m_BlendPolicy: {fileID: 0}
+      m_InertializationPolicy: {fileID: 0}
+      m_BoneMask: {fileID: 0}
+      m_Weight: 1
+      m_ParameterPolicies: []
+      m_AdditiveReferencePoseId: animation.rig-reference
+      m_AdditiveReferenceSpace: 1
+      m_AdditiveScalePolicy: 1
+      m_BoneId: 
+      m_ModifyBoneReferenceSpace: 1
+      m_ModifyBoneOperations: 0
+      m_ModifyPosition: {x: 0, y: 0, z: 0}
+      m_ModifyRotationEuler: {x: 0, y: 0, z: 0}
+      m_ModifyScale: {x: 1, y: 1, z: 1}
+      m_FootPlacementProfile: {fileID: 0}
+      m_FootPlacementCalibration: {fileID: 0}
+      m_Subgraph:
+        m_Inline:
+          rid: -2
+        m_Shared: {fileID: 0}
+    - m_NodeId: 91103bac2d8e41e29e419079ff87f6b8
+      m_Kind: 17
+      m_DisplayName: Locomotion Marker Sync
+      m_Position: {x: -680, y: -160}
+      m_Ports:
+      - m_PortId: a78e0424ca094608a3cf3ab895e1e9ed
+        m_InterfacePortId: 
+        m_Name: Selection
+        m_Kind: 1
+        m_Direction: 1
+        m_Required: 1
+      - m_PortId: c2abd46d0bd84df2acc735cfa51c9563
+        m_InterfacePortId: 
+        m_Name: Selection
+        m_Kind: 1
+        m_Direction: 2
+        m_Required: 1
+      m_AnimationChannelId: 
+      m_ProgramProducerId: 
+      m_ParameterId: animation.action-weight
+      m_SelectionAvailability: 1
+      m_BlendSpaceInputRangePolicy: 1
+      m_BlendPolicy: {fileID: 0}
+      m_InertializationPolicy: {fileID: 0}
+      m_BoneMask: {fileID: 0}
+      m_Weight: 1
+      m_ParameterPolicies:
+      - m_ParameterId: animation.action-weight
+        m_Policy: 3
+      - m_ParameterId: animation.foot-placement-weight
+        m_Policy: 3
+      m_AdditiveReferencePoseId: animation.rig-reference
+      m_AdditiveReferenceSpace: 1
+      m_AdditiveScalePolicy: 1
+      m_BoneId: 
+      m_ModifyBoneReferenceSpace: 1
+      m_ModifyBoneOperations: 0
+      m_ModifyPosition: {x: 0, y: 0, z: 0}
+      m_ModifyRotationEuler: {x: -0, y: 0, z: 0}
+      m_ModifyScale: {x: 1, y: 1, z: 1}
+      m_FootPlacementProfile: {fileID: 0}
+      m_FootPlacementCalibration: {fileID: 0}
+      m_Subgraph:
+        m_Inline:
+          rid: -2
+        m_Shared: {fileID: 0}
+    - m_NodeId: 09e41ce9fa3f4440b10013916e72b185
+      m_Kind: 6
+      m_DisplayName: Locomotion Inertialization
+      m_Position: {x: -240, y: -160}
+      m_Ports:
+      - m_PortId: 84815cd8737a4ff3888c3385da82bcaa
+        m_InterfacePortId: 
+        m_Name: Pose
+        m_Kind: 2
+        m_Direction: 1
+        m_Required: 1
+      - m_PortId: 334f80ff32b54678b062e35f4e5b4b25
+        m_InterfacePortId: 
+        m_Name: Pose
+        m_Kind: 2
+        m_Direction: 2
+        m_Required: 1
+      m_AnimationChannelId: 
+      m_ProgramProducerId: 
+      m_ParameterId: 
+      m_SelectionAvailability: 1
+      m_BlendSpaceInputRangePolicy: 1
+      m_BlendPolicy: {fileID: 0}
+      m_InertializationPolicy: {fileID: 11400000, guid: 554032a3480e2ae489c2331dace715b3,
+        type: 2}
+      m_BoneMask: {fileID: 0}
+      m_Weight: 1
+      m_ParameterPolicies: []
+      m_AdditiveReferencePoseId: animation.rig-reference
+      m_AdditiveReferenceSpace: 1
+      m_AdditiveScalePolicy: 1
+      m_BoneId: 
+      m_ModifyBoneReferenceSpace: 1
+      m_ModifyBoneOperations: 0
+      m_ModifyPosition: {x: 0, y: 0, z: 0}
+      m_ModifyRotationEuler: {x: 0, y: 0, z: 0}
+      m_ModifyScale: {x: 1, y: 1, z: 1}
+      m_FootPlacementProfile: {fileID: 0}
+      m_FootPlacementCalibration: {fileID: 0}
+      m_Subgraph:
+        m_Inline:
+          rid: -2
+        m_Shared: {fileID: 0}
+    - m_NodeId: 79bae106afad4890b3fb26839168bd96
+      m_Kind: 1
+      m_DisplayName: Full Body Action Selection
+      m_Position: {x: -680, y: 180}
+      m_Ports:
+      - m_PortId: 2dcbd221283743668657ac9d8d46dd81
+        m_InterfacePortId: 
+        m_Name: Selection
+        m_Kind: 1
+        m_Direction: 2
+        m_Required: 1
+      m_AnimationChannelId: FullBodyAction
+      m_ProgramProducerId: 
+      m_ParameterId: 
+      m_SelectionAvailability: 2
+      m_BlendSpaceInputRangePolicy: 1
+      m_BlendPolicy: {fileID: 0}
+      m_InertializationPolicy: {fileID: 0}
+      m_BoneMask: {fileID: 0}
+      m_Weight: 1
+      m_ParameterPolicies: []
+      m_AdditiveReferencePoseId: animation.rig-reference
+      m_AdditiveReferenceSpace: 1
+      m_AdditiveScalePolicy: 1
+      m_BoneId: 
+      m_ModifyBoneReferenceSpace: 1
+      m_ModifyBoneOperations: 0
+      m_ModifyPosition: {x: 0, y: 0, z: 0}
+      m_ModifyRotationEuler: {x: 0, y: 0, z: 0}
+      m_ModifyScale: {x: 1, y: 1, z: 1}
+      m_FootPlacementProfile: {fileID: 0}
+      m_FootPlacementCalibration: {fileID: 0}
+      m_Subgraph:
+        m_Inline:
+          rid: -2
+        m_Shared: {fileID: 0}
+    - m_NodeId: 31359528bfe141d2a51e1d5843935ca6
+      m_Kind: 5
+      m_DisplayName: Full Body Action Blend Stack
+      m_Position: {x: -391.3333, y: 180}
+      m_Ports:
+      - m_PortId: 0295d5c236eb4aa197abc86757948cd4
+        m_InterfacePortId: 
+        m_Name: Selection
+        m_Kind: 1
+        m_Direction: 1
+        m_Required: 1
+      - m_PortId: 9776f99831c7495189bee36f49050054
+        m_InterfacePortId: 
+        m_Name: Pose
+        m_Kind: 2
+        m_Direction: 2
+        m_Required: 1
+      m_AnimationChannelId: 
+      m_ProgramProducerId: 
+      m_ParameterId: 
+      m_SelectionAvailability: 1
+      m_BlendSpaceInputRangePolicy: 1
+      m_BlendPolicy: {fileID: 11400000, guid: 0c091f82b87df624b9df65e821e52c38, type: 2}
+      m_InertializationPolicy: {fileID: 0}
+      m_BoneMask: {fileID: 0}
+      m_Weight: 1
+      m_ParameterPolicies: []
+      m_AdditiveReferencePoseId: animation.rig-reference
+      m_AdditiveReferenceSpace: 1
+      m_AdditiveScalePolicy: 1
+      m_BoneId: 
+      m_ModifyBoneReferenceSpace: 1
+      m_ModifyBoneOperations: 0
+      m_ModifyPosition: {x: 0, y: 0, z: 0}
+      m_ModifyRotationEuler: {x: -0, y: 0, z: 0}
+      m_ModifyScale: {x: 1, y: 1, z: 1}
+      m_FootPlacementProfile: {fileID: 0}
+      m_FootPlacementCalibration: {fileID: 0}
+      m_Subgraph:
+        m_Inline:
+          rid: -2
+        m_Shared: {fileID: 0}
+    - m_NodeId: b206723c340c49e7a7d43338b82c215f
+      m_Kind: 3
+      m_DisplayName: Action Weight
+      m_Position: {x: -254.66666, y: 318.66666}
+      m_Ports:
+      - m_PortId: 470e647ffc814b48a580ab1798682708
+        m_InterfacePortId: 
+        m_Name: Parameter
+        m_Kind: 3
+        m_Direction: 2
+        m_Required: 1
+      m_AnimationChannelId: 
+      m_ProgramProducerId: 
+      m_ParameterId: animation.action-weight
+      m_SelectionAvailability: 1
+      m_BlendSpaceInputRangePolicy: 1
+      m_BlendPolicy: {fileID: 0}
+      m_InertializationPolicy: {fileID: 0}
+      m_BoneMask: {fileID: 0}
+      m_Weight: 1
+      m_ParameterPolicies: []
+      m_AdditiveReferencePoseId: animation.rig-reference
+      m_AdditiveReferenceSpace: 1
+      m_AdditiveScalePolicy: 1
+      m_BoneId: 
+      m_ModifyBoneReferenceSpace: 1
+      m_ModifyBoneOperations: 0
+      m_ModifyPosition: {x: 0, y: 0, z: 0}
+      m_ModifyRotationEuler: {x: -0, y: 0, z: 0}
+      m_ModifyScale: {x: 1, y: 1, z: 1}
+      m_FootPlacementProfile: {fileID: 0}
+      m_FootPlacementCalibration: {fileID: 0}
+      m_Subgraph:
+        m_Inline:
+          rid: -2
+        m_Shared: {fileID: 0}
+    - m_NodeId: 957d366e76ea45e09d4e2d8e048c0a72
+      m_Kind: 8
+      m_DisplayName: Base And Full Body Action
+      m_Position: {x: 0, y: 0}
+      m_Ports:
+      - m_PortId: 522dc00c06f14d01a86e900235f7761e
+        m_InterfacePortId: 
+        m_Name: Base
+        m_Kind: 2
+        m_Direction: 1
+        m_Required: 1
+      - m_PortId: 7ed602499e054d0b931c0970e795a59d
+        m_InterfacePortId: 
+        m_Name: Overlay
+        m_Kind: 2
+        m_Direction: 1
+        m_Required: 1
+      - m_PortId: a349bd2890e04703a632a396f2919201
+        m_InterfacePortId: 
+        m_Name: Pose
+        m_Kind: 2
+        m_Direction: 2
+        m_Required: 1
+      - m_PortId: 969a555fccbe4b0b8884e9362513bc8b
+        m_InterfacePortId: 
+        m_Name: Weight
+        m_Kind: 3
+        m_Direction: 1
+        m_Required: 1
+      m_AnimationChannelId: 
+      m_ProgramProducerId: 
+      m_ParameterId: 
+      m_SelectionAvailability: 1
+      m_BlendSpaceInputRangePolicy: 1
+      m_BlendPolicy: {fileID: 0}
+      m_InertializationPolicy: {fileID: 0}
+      m_BoneMask: {fileID: 11400000, guid: bd992affd152b374e81f30a13cc92876, type: 2}
+      m_Weight: 1
+      m_ParameterPolicies: []
+      m_AdditiveReferencePoseId: animation.rig-reference
+      m_AdditiveReferenceSpace: 1
+      m_AdditiveScalePolicy: 1
+      m_BoneId: 
+      m_ModifyBoneReferenceSpace: 1
+      m_ModifyBoneOperations: 0
+      m_ModifyPosition: {x: 0, y: 0, z: 0}
+      m_ModifyRotationEuler: {x: 0, y: 0, z: 0}
+      m_ModifyScale: {x: 1, y: 1, z: 1}
+      m_FootPlacementProfile: {fileID: 0}
+      m_FootPlacementCalibration: {fileID: 0}
+      m_Subgraph:
+        m_Inline:
+          rid: -2
+        m_Shared: {fileID: 0}
+    - m_NodeId: ee12476fcb6441ebbbe37a2c91c6b5fe
+      m_Kind: 10
+      m_DisplayName: Resolve Pose Parameters
+      m_Position: {x: 226.00002, y: 94}
+      m_Ports:
+      - m_PortId: e4fadcef5f5a4248b29c7c7837193cb2
+        m_InterfacePortId: 
+        m_Name: Base Pose
+        m_Kind: 2
+        m_Direction: 1
+        m_Required: 1
+      - m_PortId: 04022ce53d7749289dc863517ab5369b
+        m_InterfacePortId: 
+        m_Name: Parameter Source Pose
+        m_Kind: 2
+        m_Direction: 1
+        m_Required: 1
+      - m_PortId: ef5d65e74b58474fa5f61135e200652f
+        m_InterfacePortId: 
+        m_Name: Pose
+        m_Kind: 2
+        m_Direction: 2
+        m_Required: 1
+      m_AnimationChannelId: 
+      m_ProgramProducerId: 
+      m_ParameterId: 
+      m_SelectionAvailability: 1
+      m_BlendSpaceInputRangePolicy: 1
+      m_BlendPolicy: {fileID: 0}
+      m_InertializationPolicy: {fileID: 0}
+      m_BoneMask: {fileID: 0}
+      m_Weight: 1
+      m_ParameterPolicies:
+      - m_ParameterId: animation.action-weight
+        m_Policy: 3
+      - m_ParameterId: animation.foot-placement-weight
+        m_Policy: 3
+      m_AdditiveReferencePoseId: animation.rig-reference
+      m_AdditiveReferenceSpace: 1
+      m_AdditiveScalePolicy: 1
+      m_BoneId: 
+      m_ModifyBoneReferenceSpace: 1
+      m_ModifyBoneOperations: 0
+      m_ModifyPosition: {x: 0, y: 0, z: 0}
+      m_ModifyRotationEuler: {x: -0, y: 0, z: 0}
+      m_ModifyScale: {x: 1, y: 1, z: 1}
+      m_FootPlacementProfile: {fileID: 0}
+      m_FootPlacementCalibration: {fileID: 0}
+      m_Subgraph:
+        m_Inline:
+          rid: -2
+        m_Shared: {fileID: 0}
+    - m_NodeId: fd84c35ae6ed49a1b72703b92795c43c
+      m_Kind: 3
+      m_DisplayName: Foot Placement Weight
+      m_Position: {x: 128.00002, y: 334.66666}
+      m_Ports:
+      - m_PortId: 4b77329bf16f43dcbb820f5afb9530bc
+        m_InterfacePortId: 
+        m_Name: Parameter
+        m_Kind: 3
+        m_Direction: 2
+        m_Required: 1
+      m_AnimationChannelId: 
+      m_ProgramProducerId: 
+      m_ParameterId: animation.foot-placement-weight
+      m_SelectionAvailability: 1
+      m_BlendSpaceInputRangePolicy: 1
+      m_BlendPolicy: {fileID: 0}
+      m_InertializationPolicy: {fileID: 0}
+      m_BoneMask: {fileID: 0}
+      m_Weight: 1
+      m_ParameterPolicies: []
+      m_AdditiveReferencePoseId: animation.rig-reference
+      m_AdditiveReferenceSpace: 1
+      m_AdditiveScalePolicy: 1
+      m_BoneId: 
+      m_ModifyBoneReferenceSpace: 1
+      m_ModifyBoneOperations: 0
+      m_ModifyPosition: {x: 0, y: 0, z: 0}
+      m_ModifyRotationEuler: {x: -0, y: 0, z: 0}
+      m_ModifyScale: {x: 1, y: 1, z: 1}
+      m_FootPlacementProfile: {fileID: 0}
+      m_FootPlacementCalibration: {fileID: 0}
+      m_Subgraph:
+        m_Inline:
+          rid: -2
+        m_Shared: {fileID: 0}
+    - m_NodeId: cc0cb7f36cb9426d88f6ae03f255a013
+      m_Kind: 12
+      m_DisplayName: Foot Placement
+      m_Position: {x: 489.3333, y: 146}
+      m_Ports:
+      - m_PortId: 5e722b67d08541c5a9440a38aedc0013
+        m_InterfacePortId: 
+        m_Name: Pose
+        m_Kind: 2
+        m_Direction: 1
+        m_Required: 1
+      - m_PortId: 0eff2ae98084475aa17720ccc86f6fec
+        m_InterfacePortId: 
+        m_Name: Pose
+        m_Kind: 2
+        m_Direction: 2
+        m_Required: 1
+      - m_PortId: dc4f005f24a64d6ead03f8e35149d172
+        m_InterfacePortId: 
+        m_Name: Weight
+        m_Kind: 3
+        m_Direction: 1
+        m_Required: 1
+      m_AnimationChannelId: 
+      m_ProgramProducerId: 
+      m_ParameterId: 
+      m_SelectionAvailability: 1
+      m_BlendSpaceInputRangePolicy: 1
+      m_BlendPolicy: {fileID: 0}
+      m_InertializationPolicy: {fileID: 0}
+      m_BoneMask: {fileID: 0}
+      m_Weight: 1
+      m_ParameterPolicies: []
+      m_AdditiveReferencePoseId: animation.rig-reference
+      m_AdditiveReferenceSpace: 1
+      m_AdditiveScalePolicy: 1
+      m_BoneId: 
+      m_ModifyBoneReferenceSpace: 1
+      m_ModifyBoneOperations: 0
+      m_ModifyPosition: {x: 0, y: 0, z: 0}
+      m_ModifyRotationEuler: {x: -0, y: 0, z: 0}
+      m_ModifyScale: {x: 1, y: 1, z: 1}
+      m_FootPlacementProfile: {fileID: 11400000, guid: 6b94b222eff64c24a2ecf708238ef9a1,
+        type: 2}
+      m_FootPlacementCalibration: {fileID: 11400000, guid: 471a3432ddd640c187b4ebfdf8c94e69,
+        type: 2}
+      m_Subgraph:
+        m_Inline:
+          rid: -2
+        m_Shared: {fileID: 0}
+    - m_NodeId: 1f9ab07f79e94a789095b9080b71880d
+      m_Kind: 14
+      m_DisplayName: Output Pose
+      m_Position: {x: 699.3334, y: 146}
+      m_Ports:
+      - m_PortId: 603f161c789c4652886b25abb4a16506
+        m_InterfacePortId: 
+        m_Name: Pose
+        m_Kind: 2
+        m_Direction: 1
+        m_Required: 1
+      m_AnimationChannelId: 
+      m_ProgramProducerId: 
+      m_ParameterId: animation.action-weight
+      m_SelectionAvailability: 1
+      m_BlendSpaceInputRangePolicy: 1
+      m_BlendPolicy: {fileID: 0}
+      m_InertializationPolicy: {fileID: 0}
+      m_BoneMask: {fileID: 0}
+      m_Weight: 1
+      m_ParameterPolicies:
+      - m_ParameterId: animation.action-weight
+        m_Policy: 3
+      - m_ParameterId: animation.foot-placement-weight
+        m_Policy: 3
+      m_AdditiveReferencePoseId: animation.rig-reference
+      m_AdditiveReferenceSpace: 1
+      m_AdditiveScalePolicy: 1
+      m_BoneId: 
+      m_ModifyBoneReferenceSpace: 1
+      m_ModifyBoneOperations: 0
+      m_ModifyPosition: {x: 0, y: 0, z: 0}
+      m_ModifyRotationEuler: {x: -0, y: 0, z: 0}
+      m_ModifyScale: {x: 1, y: 1, z: 1}
+      m_FootPlacementProfile: {fileID: 0}
+      m_FootPlacementCalibration: {fileID: 0}
+      m_Subgraph:
+        m_Inline:
+          rid: -2
+        m_Shared: {fileID: 0}
+    - m_NodeId: 08a8a23ea6254d58aa80abbcc1dba8ab
+      m_Kind: 4
+      m_DisplayName: Locomotion Player
+      m_Position: {x: -460, y: -160}
+      m_Ports:
+      - m_PortId: 61b68ad6d1b7476b9344ede8bdb9f6f0
+        m_InterfacePortId: 
+        m_Name: Selection
+        m_Kind: 1
+        m_Direction: 1
+        m_Required: 1
+      - m_PortId: 26e88f5286064077bced229a3a459a30
+        m_InterfacePortId: 
+        m_Name: Pose
+        m_Kind: 2
+        m_Direction: 2
+        m_Required: 1
+      m_AnimationChannelId: 
+      m_ProgramProducerId: 
+      m_ParameterId: animation.action-weight
+      m_SelectionAvailability: 1
+      m_BlendSpaceInputRangePolicy: 1
+      m_BlendPolicy: {fileID: 0}
+      m_InertializationPolicy: {fileID: 0}
+      m_BoneMask: {fileID: 0}
+      m_Weight: 1
+      m_ParameterPolicies:
+      - m_ParameterId: animation.action-weight
+        m_Policy: 3
+      - m_ParameterId: animation.foot-placement-weight
+        m_Policy: 3
+      m_AdditiveReferencePoseId: animation.rig-reference
+      m_AdditiveReferenceSpace: 1
+      m_AdditiveScalePolicy: 1
+      m_BoneId: 
+      m_ModifyBoneReferenceSpace: 1
+      m_ModifyBoneOperations: 0
+      m_ModifyPosition: {x: 0, y: 0, z: 0}
+      m_ModifyRotationEuler: {x: -0, y: 0, z: 0}
+      m_ModifyScale: {x: 1, y: 1, z: 1}
+      m_FootPlacementProfile: {fileID: 0}
+      m_FootPlacementCalibration: {fileID: 0}
+      m_Subgraph:
+        m_Inline:
+          rid: -2
+        m_Shared: {fileID: 0}
+    m_Edges:
+    - m_EdgeId: 34bbc34e88354de7908e18ac9ca42c05
+      m_SourceNodeId: 5e5c0a6b782a4d70a2e333f86d727d75
+      m_SourcePortId: 52195e360ea94087a53e05a6bc040053
+      m_TargetNodeId: 91103bac2d8e41e29e419079ff87f6b8
+      m_TargetPortId: a78e0424ca094608a3cf3ab895e1e9ed
+    - m_EdgeId: a40086647fd443f78af61456c878b51b
+      m_SourceNodeId: 09e41ce9fa3f4440b10013916e72b185
+      m_SourcePortId: 334f80ff32b54678b062e35f4e5b4b25
+      m_TargetNodeId: 957d366e76ea45e09d4e2d8e048c0a72
+      m_TargetPortId: 522dc00c06f14d01a86e900235f7761e
+    - m_EdgeId: cfb5a08c71bf49d1ba7ef4b64f027455
+      m_SourceNodeId: 79bae106afad4890b3fb26839168bd96
+      m_SourcePortId: 2dcbd221283743668657ac9d8d46dd81
+      m_TargetNodeId: 31359528bfe141d2a51e1d5843935ca6
+      m_TargetPortId: 0295d5c236eb4aa197abc86757948cd4
+    - m_EdgeId: d2a1493553304ae2bcc80a763d0d884a
+      m_SourceNodeId: 31359528bfe141d2a51e1d5843935ca6
+      m_SourcePortId: 9776f99831c7495189bee36f49050054
+      m_TargetNodeId: 957d366e76ea45e09d4e2d8e048c0a72
+      m_TargetPortId: 7ed602499e054d0b931c0970e795a59d
+    - m_EdgeId: 0e0e28d9a248408f8dd025469204204a
+      m_SourceNodeId: b206723c340c49e7a7d43338b82c215f
+      m_SourcePortId: 470e647ffc814b48a580ab1798682708
+      m_TargetNodeId: 957d366e76ea45e09d4e2d8e048c0a72
+      m_TargetPortId: 969a555fccbe4b0b8884e9362513bc8b
+    - m_EdgeId: 55fddfd9d03e420e835cdcff5457a535
+      m_SourceNodeId: 957d366e76ea45e09d4e2d8e048c0a72
+      m_SourcePortId: a349bd2890e04703a632a396f2919201
+      m_TargetNodeId: ee12476fcb6441ebbbe37a2c91c6b5fe
+      m_TargetPortId: e4fadcef5f5a4248b29c7c7837193cb2
+    - m_EdgeId: 31980947b94945d3a9e4583773551495
+      m_SourceNodeId: 31359528bfe141d2a51e1d5843935ca6
+      m_SourcePortId: 9776f99831c7495189bee36f49050054
+      m_TargetNodeId: ee12476fcb6441ebbbe37a2c91c6b5fe
+      m_TargetPortId: 04022ce53d7749289dc863517ab5369b
+    - m_EdgeId: 8110ec77523e4d42b92152a7f323be0e
+      m_SourceNodeId: ee12476fcb6441ebbbe37a2c91c6b5fe
+      m_SourcePortId: ef5d65e74b58474fa5f61135e200652f
+      m_TargetNodeId: cc0cb7f36cb9426d88f6ae03f255a013
+      m_TargetPortId: 5e722b67d08541c5a9440a38aedc0013
+    - m_EdgeId: 633a0f4d803844fa8480212581dd09bd
+      m_SourceNodeId: fd84c35ae6ed49a1b72703b92795c43c
+      m_SourcePortId: 4b77329bf16f43dcbb820f5afb9530bc
+      m_TargetNodeId: cc0cb7f36cb9426d88f6ae03f255a013
+      m_TargetPortId: dc4f005f24a64d6ead03f8e35149d172
+    - m_EdgeId: 6eedc24b11d64bbc83a5d99e5dbdc597
+      m_SourceNodeId: cc0cb7f36cb9426d88f6ae03f255a013
+      m_SourcePortId: 0eff2ae98084475aa17720ccc86f6fec
+      m_TargetNodeId: 1f9ab07f79e94a789095b9080b71880d
+      m_TargetPortId: 603f161c789c4652886b25abb4a16506
+    - m_EdgeId: 82dce6fc761c48919fa01e3230e604a8
+      m_SourceNodeId: 91103bac2d8e41e29e419079ff87f6b8
+      m_SourcePortId: c2abd46d0bd84df2acc735cfa51c9563
+      m_TargetNodeId: 08a8a23ea6254d58aa80abbcc1dba8ab
+      m_TargetPortId: 61b68ad6d1b7476b9344ede8bdb9f6f0
+    - m_EdgeId: fc837f05b80c42a1b599fe987158c9cc
+      m_SourceNodeId: 08a8a23ea6254d58aa80abbcc1dba8ab
+      m_SourcePortId: 26e88f5286064077bced229a3a459a30
+      m_TargetNodeId: 09e41ce9fa3f4440b10013916e72b185
+      m_TargetPortId: 84815cd8737a4ff3888c3385da82bcaa
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

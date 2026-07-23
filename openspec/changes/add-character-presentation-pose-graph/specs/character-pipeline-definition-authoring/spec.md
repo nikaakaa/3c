@@ -18,7 +18,7 @@
 
 ### Requirement: Animation Presentation Profile 必须是唯一表现配置资产
 
-`CharacterAnimationPresentationProfile` MUST作为ScriptableObject唯一引用Pose Graph、Blend Library与Rig Definition，并保存稳定producer resource bindings、Foot Placement Analysis Mode与Analysis Source Asset GUID。Pose Slot及其AnimationChannelId binding、Bone Mask、Additive和Pose Parameter topology MUST只保存在Pose Graph；Stack policy与transition matrix作者数据 MUST只保存在Blend Library。Definition、BTSMTL Graph、Timeline、Presenter、Program、Runtime Prefab或独立EditorWindow MUST不保存这些配置的可写副本。
+`CharacterAnimationPresentationProfile` MUST作为ScriptableObject唯一引用Pose Graph、node-local Blend/Inertialization Policy与Rig Definition，并保存稳定producer resource bindings、Foot Placement Analysis Mode与Analysis Source Asset GUID。AnimationChannel Selection Input、Player、Bone Mask、Additive、Pose Parameter、FootPlacement和Output topology MUST只保存在Pose Graph；Stack Policy与Inertialization Policy作者数据 MUST只由对应显式节点引用。Definition、BTSMTL Graph、Timeline、Presenter、Program、Runtime Prefab或独立EditorWindow MUST不保存这些配置的可写副本。
 
 #### Scenario: 一个Profile被一个Definition引用
 

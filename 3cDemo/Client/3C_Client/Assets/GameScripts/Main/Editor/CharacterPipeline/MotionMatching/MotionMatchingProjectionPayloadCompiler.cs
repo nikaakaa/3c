@@ -17,6 +17,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
     {
         public static MotionMatchingProjectionPayload Compile(
             CharacterMotionMatchingProfile profile,
+            CharacterPoseGraphData poseGraph,
             CharacterFootPlacementAnalysisSource analysisSource,
             IMotionMatchingProjectionParameterCurveResolver parameterCurveResolver)
         {
@@ -24,6 +25,8 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 throw new ArgumentNullException(nameof(profile));
             if (!analysisSource)
                 throw new ArgumentNullException(nameof(analysisSource));
+            if (poseGraph == null)
+                throw new ArgumentNullException(nameof(poseGraph));
             if (parameterCurveResolver == null)
                 throw new ArgumentNullException(nameof(parameterCurveResolver));
             CharacterMotionMatchingAuthoringValidator.RequireProfile(profile);
@@ -44,7 +47,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 bindings[bindingIndex] = new MotionMatchingProducerBindingPayload(
                     binding.ProgramProducerId,
                     binding.AnimationChannelId,
-                    binding.PoseSlotId,
+                    ResolveSelectionInputNodeId(poseGraph, binding),
                     binding.SearchDomainId,
                     firstDatabase,
                     binding.Databases.Count);
@@ -60,6 +63,48 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 MotionMatchingAuthoringPayloadCompiler.CompileSearchPolicy(profile.SearchPolicy),
                 databases.ToArray(),
                 bindings);
+        }
+
+        static PoseNodeId ResolveSelectionInputNodeId(
+            CharacterPoseGraphData graph,
+            CharacterMotionMatchingProducerBinding binding)
+        {
+            PoseNodeId result = default;
+            ResolveSelectionInputNodeId(graph, binding, string.Empty, ref result);
+            return result.IsValid
+                ? result
+                : throw new InvalidOperationException(
+                    $"Motion Matching producer '{binding.ProgramProducerId}' has no matching Selection Input in Pose Graph '{graph.GraphId}'.");
+        }
+
+        static void ResolveSelectionInputNodeId(
+            CharacterPoseGraphData graph,
+            CharacterMotionMatchingProducerBinding binding,
+            string scope,
+            ref PoseNodeId result)
+        {
+            for (int i = 0; i < graph.Nodes.Count; i++)
+            {
+                CharacterPoseNodeDefinition node = graph.Nodes[i];
+                if (node == null)
+                    continue;
+                PoseNodeId scopedNodeId = string.IsNullOrEmpty(scope)
+                    ? node.NodeId
+                    : new PoseNodeId(scope + "/" + node.NodeId.Value);
+                if (node.Kind == CharacterPoseNodeKind.MotionMatchingSelectionInput &&
+                    node.AnimationChannelId == binding.AnimationChannelId &&
+                    string.Equals(node.ProgramProducerId, binding.ProgramProducerId, StringComparison.Ordinal))
+                {
+                    if (result.IsValid)
+                        throw new InvalidOperationException(
+                            $"Motion Matching producer '{binding.ProgramProducerId}' matches more than one Pose Graph Selection Input.");
+                    result = scopedNodeId;
+                }
+                if (node.Kind != CharacterPoseNodeKind.PoseSubgraph || node.Subgraph == null || !node.Subgraph.IsExclusive)
+                    continue;
+                CharacterPoseGraphData child = node.Subgraph.HasInline ? node.Subgraph.Inline : node.Subgraph.Shared.Graph;
+                ResolveSelectionInputNodeId(child, binding, scopedNodeId.Value + "/" + child.GraphId, ref result);
+            }
         }
 
         static MotionMatchingDatabasePayload CompileDatabase(

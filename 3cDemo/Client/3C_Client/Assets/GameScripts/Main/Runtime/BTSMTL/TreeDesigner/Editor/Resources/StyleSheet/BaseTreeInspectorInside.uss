@@ -9,42 +9,6 @@
     border-bottom-color: rgb(34, 34, 34);
 }
 
-#inspector-tab-bar {
-    height: 26px;
-    min-height: 26px;
-    flex-direction: row;
-    background-color: rgb(35, 35, 35);
-    border-bottom-width: 1px;
-    border-bottom-color: rgb(22, 22, 22);
-}
-
-.inspector-tab-button {
-    flex-grow: 1;
-    height: 24px;
-    margin-left: 0;
-    margin-right: 0;
-    margin-top: 1px;
-    margin-bottom: 1px;
-    padding-left: 0;
-    padding-right: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    border-left-width: 0;
-    border-right-width: 1px;
-    border-top-width: 0;
-    border-bottom-width: 0;
-    border-right-color: rgb(24, 24, 24);
-    background-color: rgb(42, 42, 42);
-    color: rgb(185, 185, 185);
-    -unity-text-align: middle-center;
-}
-
-.inspector-tab-button.selected {
-    background-color: rgb(62, 62, 62);
-    color: rgb(235, 235, 235);
-    -unity-font-style: bold;
-}
-
 #data-page,
 #selection-inspector-page {
     flex-grow: 1;

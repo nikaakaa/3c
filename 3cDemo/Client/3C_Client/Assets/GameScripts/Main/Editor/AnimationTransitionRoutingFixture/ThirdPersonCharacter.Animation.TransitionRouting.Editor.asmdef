@@ -1,0 +1,19 @@
+{
+    "name": "ThirdPersonCharacter.Animation.TransitionRouting.Editor",
+    "rootNamespace": "ThirdPersonCharacter.Editor.Animation.TransitionRouting",
+    "references": [
+        "ThirdPersonCharacter.Animation.TransitionRouting",
+        "ThirdPersonSimulation.Core"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

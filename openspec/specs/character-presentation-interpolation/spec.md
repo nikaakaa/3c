@@ -1,7 +1,7 @@
 # character-presentation-interpolation Specification
 
 ## Purpose
-定义逻辑运动学轨迹到表现根姿态的采样与有界纠偏边界，以及 visual Timeline 重采样、动画播放生命周期与 Animancer fade 独立连续推进的职责分离。
+定义逻辑运动学轨迹到表现根姿态的采样与有界纠偏边界，以及visual Timeline重采样、动画播放生命周期、显式Player时间连续性与Pose Plan独立连续推进的职责分离。
 ## Requirements
 ### Requirement: 角色表现插值必须基于 logic sample 历史
 
@@ -74,21 +74,22 @@ Character Host MUST显式持有 visual root/model root 与 Unity WorldSolver act
 
 ### Requirement: 动画 visual playback 必须来自表现帧重采样和生命周期注册表
 
-`SimulationActorTickResult` MUST只提供 producer/EventId/playback intent，CharacterPresentationProjection MUST定位 Unity 资源，现有 AnimationPlaybackLifecycle/Animancer MUST继续在 PresentationFrame 执行 visual sampling、state reuse 和 fade。Kernel MUST不记录 Animancer state。
+`SimulationActorTickResult` MUST只提供AnimationChannel producer、EventId与playback intent。Presentation MUST把正式Timeline/MM采样降低为含raw visual time的`AnimationSelectionFrame`；显式MarkerSync、Player、Animancer source backend与编译Pose Plan MUST在PresentationFrame依次执行effective time解析、source sampling、时间连续性、空间合成和world-aware处理。Kernel MUST不记录Marker relation、Animancer state、Player entry、Pose Value或Pose Plan workspace。
 
 #### Scenario: Attack Timeline 选中动画 Producer
 
 - **WHEN** Committer 收到 compiled producer command
-- **THEN** MUST通过 Projection 定位 binding 并提交给现有 playback lifecycle
+- **THEN** Presentation MUST通过Projection生成对应Animation Selection
+- **AND** Pose Graph MUST只按typed edge消费其Player结果
 
 ### Requirement: 表现插值不得产生同步事实
 
-PresentationFrame MUST保持为 committed/predicted presentation command 的消费阶段。表现插值、EventId keep/replace/cancel、Animancer fade 和 visual recovery MAY产生 visual pose、playback state 与 diagnostics snapshot，但 MUST不生成 canonical input、state hash、rollback decision或 gameplay fact，也 MUST不写入 CharacterSimulationState、WorldSimulationState、SimulationIngress、`SimulationActorTickResult` typed facts 或 Model Output Adapter queue。网络与 SimulationState MUST不读取 visual root作为真值。
+PresentationFrame MUST保持为committed/predicted presentation command消费阶段。Visual interpolation、EventId keep/replace/cancel、Animation Selection、显式Player、Animancer source sampling、Pose Plan与visual recovery MAY产生visual pose、player state和diagnostics snapshot，但 MUST不生成canonical input、state hash、rollback decision或Gameplay fact，也 MUST不写CharacterSimulationState、WorldSimulationState、SimulationIngress、TickResult facts或Model Output queue。网络与SimulationState MUST不读取visual root、Player或Pose Graph作为真值。
 
 #### Scenario: 高帧率表现帧
 
 - **WHEN** 多个 PresentationFrame 发生在两个 SimulationTick 之间
-- **THEN** visual root 与 Animancer MAY连续更新
+- **THEN** visual root、Player、source sampling与Pose Plan MAY连续更新
 - **AND** MUST不创建额外 gameplay fact、input command 或 world snapshot
 
 #### Scenario: Visual Correction 进行中
@@ -98,7 +99,7 @@ PresentationFrame MUST保持为 committed/predicted presentation command 的消�
 
 ### Requirement: 表现插值必须提供调试可追踪性
 
-系统 SHOULD暴露Body SourceMode、TrajectoryMode、previous/current logic tick、interpolation alpha、target/visible pose、target/visible velocity、Grounded、correction error/velocity、active、clamped、settled、branch/reset identity、visual Timeline time、每层selection、playback generation、PendingFirstSample、Current、Outgoing、Retired、Animancer state key、fade progress、retention与错误。Graph、StateMachine、Timeline、Body trajectory和Animation channel MUST区分逻辑执行、target sample、visible correction与播放生命周期；Debug MUST不成为Gameplay、selection、Blackboard、Follower或网络输入。
+Diagnostics SHOULD暴露Body SourceMode、logic tick、interpolation alpha、raw visual Timeline time、AnimationChannel selection、playback generation、PoseNodeId、MarkerSync raw/effective time与relation、Player source usage、Blend Stack entry/Stored、Inertialization residual、Pose availability、参数来源、world-aware completion、final per-foot contribution与错误。Graph、StateMachine、Timeline、Body trajectory、Animation Channel、Player和Pose Graph MUST区分逻辑执行、target sample、visible correction、时间连续性与空间合成；Debug MUST不成为Gameplay、Selection、Player或Graph输入。
 
 #### Scenario: 排查远端移动漂移
 
@@ -112,7 +113,7 @@ PresentationFrame MUST保持为 committed/predicted presentation command 的消�
 - **WHEN** Action结束、Locomotion selection恢复且MovingTurn同tick生效
 - **THEN** Logic Trace MUST显示最终Base selection
 - **AND** Timeline Trace MUST显示target sample time
-- **AND** Animation Trace MUST显示Current/Outgoing与Animancer fade
+- **AND** Animation Trace MUST显示action slot淡出、base slot transition和OutputPose来源
 
 #### Scenario: duplicate selection
 
@@ -123,46 +124,47 @@ PresentationFrame MUST保持为 committed/predicted presentation command 的消�
 #### Scenario: missing first sample
 
 - **WHEN** selected target在release前始终没有合法sample
-- **THEN** debug MUST显示playback generation、LayerId与lifecycle error
+- **THEN** debug MUST显示playback generation、AnimationChannelId、PoseNodeId与lifecycle error
 - **AND** MUST不伪造fallback output
 
-### Requirement: Timeline pose time 与 Animancer fade time 必须独立连续推进
+### Requirement: Timeline pose time与显式Player time必须独立连续推进
 
-CharacterSimulationState MUST保存Timeline logic time，Presentation Source Cursor MUST提供表现帧重采样所需visual Timeline time，每PoseSlot Blend Stack MUST以presentation delta推进transition clock。Body Visual Trajectory Follower MUST只修改visible body pose，不得修改AnimationSampleTick、AnimationSampleAlpha、Stack delta或playback generation。四者 MUST不共享一个mutable clock，也 MUST不把表现时间或correction进度写回CharacterSimulationState。
+CharacterSimulationState MUST保存Timeline logic time，Presentation Source Cursor MUST提供visual Timeline time，每个显式Player MUST以presentation delta推进自身sample或transition clock，Animancer MUST只按resolved sample descriptor采样。Body Visual Trajectory Follower MUST不修改Animation sample、Player delta、Pose Plan completion或playback generation。这些时钟 MUST不共享mutable state，也 MUST不把表现时间或correction写回CharacterSimulationState。
 
 #### Scenario: 两个 Logic Tick 之间渲染
 
 - **WHEN** PresentationFrame在下一个SimulationTick前推进
-- **THEN** Body target sample、PoseSlot transition和visual animation sample MUST连续推进
-- **AND** Timeline gameplay state MUST保持不变
+- **THEN** Body target sample、Player clock与visual animation sample MUST连续推进
+- **AND** Timeline Gameplay state与Pose Graph topology MUST保持不变
 
 #### Scenario: Body correction正在收敛
 
 - **WHEN** BoundedCorrection正把visible body收敛到新canonical target
-- **THEN** 动画 MUST继续按Source Cursor的predicted presentation time采样
+- **THEN** 动画 MUST继续按Source Cursor采样并按presentation delta推进Player/PoseGraph
 - **AND** MUST不按position error减速、重启playback或生成第二个动画clock
 
-### Requirement: 动画重入必须从PoseSlot Stack当前视觉状态接管
+### Requirement: 动画重入必须遵守显式Player连续性语义
 
-同一AnimationChannelId在旧source仍为Retained时收到新selected target，或replay后producer command被替换或重入时，AnimationPlaybackLifecycle MUST将EventId变化提交给对应PoseSlot Blend Stack。Stack MUST从其唯一entry、Stored Pose、Inertial与history状态接管；Animancer只更新source playable采样。项目 MUST不冻结FinalOutput、回放中间逻辑状态、清空slot或建立第二套handoff stack，Rollback Pipeline MUST不维护第二套CrossFade或动画时间轴。
+同一AnimationChannel收到新selection identity或rollback替换时，`SelectedPosePlayer` MUST发布typed discontinuity；没有Inertialization时明确硬切。`BlendStack` MUST按其Blend Policy执行CrossFade或Stored Pose接管；局部`Inertialization` MUST按自身Policy决定HardCut或残差rebase。Animancer MUST只维护source sample；项目 MUST不冻结最终OutputPose、回放中间逻辑状态或建立第二套handoff stack，Rollback Pipeline MUST不维护第二套CrossFade、Inertial或动画时间轴。
 
-#### Scenario: Dodge 淡出时进入 Run
+#### Scenario: Dodge淡出到Empty
 
-- **WHEN** Dodge仍为Retained且Run target首样本ready
-- **THEN** 对应PoseSlot Stack MUST从当前视觉状态接管Run
-- **AND** 画面 MUST不先跳回 Dodge 或 Idle 基准姿势
+- **WHEN** FullBodyAction BlendStack的Dodge仍有贡献且action channel提交None
+- **THEN** 该BlendStack MUST从当前视觉结果淡出到NoPose
+- **AND** Pose Graph MUST连续显露BaseLocomotion，不先跳Idle或bind pose
 
 #### Scenario: Replay 改变 Attack Producer
 
 - **WHEN** 原 predicted Attack2 producer 在 replay 后不再有效
-- **THEN** lifecycle MUST按EventId cancel/replace command从PoseSlot Stack当前视觉状态接管
+- **THEN** FullBodyAction Player MUST按图定义接管新source
+- **AND** BaseLocomotion Player与Pose Graph topology MUST保持不变
 
 #### Scenario: Replay 修正同一 Playback 的采样时间
 
 - **WHEN** replay替换当前playback generation的SampleProducer command
 - **THEN** Presentation Runtime MUST保留替换前的当前视觉采样时间
 - **AND** MUST在后续PresentationFrame向纠正后的sample推进
-- **AND** MUST不先清空Layer或重新显示replay中间sample
+- **AND** MUST不先清空Player、Pose Graph或重新显示replay中间sample
 
 ### Requirement: Prediction变步调度与Owner表现时钟必须解耦
 
@@ -301,16 +303,16 @@ DeterministicRollback Peer MUST在Simulation执行阶段优先使用目标Tick�
 
 ### Requirement: Rollback 动画同步必须来自同一 Gameplay 输入模拟
 
-Rollback网络协议 MUST不发送AnimationClip、Animator state、Animancer state、normalized time或visual pose。每个Peer MUST从同一Fixed Program输入与Action/Timeline状态生成稳定producer lifecycle；PresentationFrame再独立推进Animancer sample/fade时间。进攻request的选择性延迟 MUST作用于Gameplay request eligible tick，因此本地与远端从同一SimulationTick开始对应动作，而不是由表现层等待或瞬切补齐。
+Rollback MUST从同一Gameplay input、Program执行与EventId replacement重新产生Animation Selection。网络协议 MUST不发送AnimationClip、Animator state、Animancer state、Player entry、Pose Value、normalized time或最终visual pose；PresentationFrame MUST按本地编译Pose Plan重新求值。进攻request的选择性延迟 MUST作用于Gameplay request eligible tick，使双方从同一SimulationTick开始对应动作，而不是由表现层等待或瞬切补齐。
 
 #### Scenario: 双 Peer 进入 Attack Producer
 
 - **WHEN** Offensive Attack request在Tick T变为eligible并进入双方同一Gameplay input history
-- **THEN** 两端Fixed Program MUST从Tick T生成相同producer lifecycle identity
-- **AND** 各自Animancer MUST在本地表现帧连续采样该producer
+- **THEN** 两端Fixed Program MUST从Tick T生成相同FullBodyAction producer lifecycle identity
+- **AND** 各自PresentationFrame MUST在本地连续采样source并推进相同Player/Pose Plan合同
 
 #### Scenario: 连续移动驱动循环动画
 
 - **WHEN** Relayed MoveAxis持续到达且Locomotion状态保持Run
-- **THEN** 远端Run producer MUST由本地模拟持续拥有
+- **THEN** 远端BaseLocomotion producer MUST由本地模拟持续拥有
 - **AND** 网络协议 MUST不逐帧同步Run动画时间

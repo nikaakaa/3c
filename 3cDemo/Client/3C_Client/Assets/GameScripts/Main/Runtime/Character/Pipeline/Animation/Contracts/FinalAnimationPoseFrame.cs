@@ -2,14 +2,15 @@ using System;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
-    public readonly struct FinalAnimationPoseFrame
+    public readonly struct ComposedAnimationPoseFrame
     {
         readonly string m_PoseGraphId;
-        readonly string m_PoseProgramHash;
+        readonly string m_PosePlanHash;
         readonly ulong m_CompletionIdentity;
-        readonly PoseSlotFrameAvailability m_Availability;
+        readonly AnimationPoseAvailability m_Availability;
         readonly AnimationReadOnlyBuffer<AnimationLocalBonePose> m_DenseLocalPose;
         readonly AnimationReadOnlyBuffer<float> m_PoseParameters;
+        readonly AnimationReadOnlyBuffer<byte> m_PoseParameterAvailability;
         readonly AnimationReadOnlyBuffer<AnimationPoseSourceContribution> m_Contributions;
         readonly AnimationReadOnlyBuffer<float> m_DenseContributionWeights;
         readonly AnimationFootFeatureSample m_LeftFootFeatures;
@@ -19,13 +20,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly IAnimationReadOnlyBufferLease m_Lease;
         readonly ulong m_LeaseIdentity;
 
-        internal FinalAnimationPoseFrame(
+        internal ComposedAnimationPoseFrame(
             string poseGraphId,
-            string poseProgramHash,
+            string posePlanHash,
             ulong completionIdentity,
-            PoseSlotFrameAvailability availability,
+            AnimationPoseAvailability availability,
             AnimationReadOnlyBuffer<AnimationLocalBonePose> denseLocalPose,
             AnimationReadOnlyBuffer<float> poseParameters,
+            AnimationReadOnlyBuffer<byte> poseParameterAvailability,
             AnimationReadOnlyBuffer<AnimationPoseSourceContribution> contributions,
             AnimationReadOnlyBuffer<float> denseContributionWeights,
             AnimationFootFeatureSample leftFootFeatures,
@@ -41,8 +43,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentOutOfRangeException(nameof(leaseIdentity));
             lease.RequireValid(leaseIdentity);
 
-            bool isPose = availability == PoseSlotFrameAvailability.Pose;
-            bool isInvalid = availability == PoseSlotFrameAvailability.Invalid;
+            bool isPose = availability == AnimationPoseAvailability.Pose;
+            bool isInvalid = availability == AnimationPoseAvailability.Invalid;
             bool footFeaturesValid = hasFootFeatures
                 ? leftFootFeatures.IsValid && rightFootFeatures.IsValid
                 : !leftFootFeatures.IsValid && !rightFootFeatures.IsValid;
@@ -50,22 +52,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ? checked(contributions.Count * denseLocalPose.Count)
                 : 0;
             bool payloadValid = isPose
-                ? denseLocalPose.Count > 0 && poseParameters.Count > 0 && contributions.Count > 0 &&
+                ? denseLocalPose.Count > 0 && poseParameters.Count > 0 && poseParameterAvailability.Count == poseParameters.Count && contributions.Count > 0 &&
                   denseContributionWeights.Count == expectedDenseWeightCount
-                : poseParameters.Count > 0 && denseLocalPose.Count == 0 && contributions.Count == 0 &&
+                : poseParameters.Count > 0 && poseParameterAvailability.Count == poseParameters.Count && denseLocalPose.Count == 0 && contributions.Count == 0 &&
                   denseContributionWeights.Count == 0 && !hasFootFeatures;
-            if (string.IsNullOrWhiteSpace(poseGraphId) || string.IsNullOrWhiteSpace(poseProgramHash) ||
+            if (string.IsNullOrWhiteSpace(poseGraphId) || string.IsNullOrWhiteSpace(posePlanHash) ||
                 completionIdentity == 0 || continuityIdentity == 0 || !isPose && !isInvalid ||
                 !footFeaturesValid || !payloadValid)
             {
-                throw new ArgumentException("Final Animation Pose Frame is invalid.");
+                throw new ArgumentException("Composed Animation Pose Frame is invalid.");
             }
             m_PoseGraphId = poseGraphId;
-            m_PoseProgramHash = poseProgramHash;
+            m_PosePlanHash = posePlanHash;
             m_CompletionIdentity = completionIdentity;
             m_Availability = availability;
             m_DenseLocalPose = denseLocalPose;
             m_PoseParameters = poseParameters;
+            m_PoseParameterAvailability = poseParameterAvailability;
             m_Contributions = contributions;
             m_DenseContributionWeights = denseContributionWeights;
             m_LeftFootFeatures = leftFootFeatures;
@@ -85,12 +88,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        public string PoseProgramHash
+        public string PosePlanHash
         {
             get
             {
                 RequireLease();
-                return m_PoseProgramHash;
+                return m_PosePlanHash;
             }
         }
 
@@ -103,7 +106,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        public PoseSlotFrameAvailability Availability
+        public AnimationPoseAvailability Availability
         {
             get
             {
@@ -198,8 +201,50 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void RequireLease()
         {
             if (m_Lease == null || m_LeaseIdentity == 0)
-                throw new InvalidOperationException("Final Animation Pose Frame lease is unavailable.");
+                throw new InvalidOperationException("Composed Animation Pose Frame lease is unavailable.");
             m_Lease.RequireValid(m_LeaseIdentity);
         }
+
+        public AnimationReadOnlyBuffer<byte> PoseParameterAvailability
+        {
+            get
+            {
+                RequireLease();
+                return m_PoseParameterAvailability;
+            }
+        }
+    }
+
+    public readonly struct FinalAnimationPoseFrame
+    {
+        readonly ComposedAnimationPoseFrame m_Composed;
+        readonly ulong m_WorldAwareCompletionIdentity;
+
+        internal FinalAnimationPoseFrame(
+            in ComposedAnimationPoseFrame composed,
+            ulong worldAwareCompletionIdentity)
+        {
+            if (composed.CompletionIdentity == 0 || worldAwareCompletionIdentity == 0)
+                throw new ArgumentException("Final Animation Pose Frame completion is invalid.");
+            m_Composed = composed;
+            m_WorldAwareCompletionIdentity = worldAwareCompletionIdentity;
+        }
+
+        public ComposedAnimationPoseFrame ComposedPose => m_Composed;
+        public ulong WorldAwareCompletionIdentity => m_WorldAwareCompletionIdentity;
+        public string PoseGraphId => m_Composed.PoseGraphId;
+        public string PosePlanHash => m_Composed.PosePlanHash;
+        public ulong CompletionIdentity => m_Composed.CompletionIdentity;
+        public AnimationPoseAvailability Availability => m_Composed.Availability;
+        public AnimationReadOnlyBuffer<AnimationLocalBonePose> DenseLocalPose => m_Composed.DenseLocalPose;
+        public AnimationReadOnlyBuffer<float> PoseParameters => m_Composed.PoseParameters;
+        public AnimationReadOnlyBuffer<AnimationPoseSourceContribution> Contributions => m_Composed.Contributions;
+        public AnimationFootFeatureSample LeftFootFeatures => m_Composed.LeftFootFeatures;
+        public AnimationFootFeatureSample RightFootFeatures => m_Composed.RightFootFeatures;
+        public bool HasFootFeatures => m_Composed.HasFootFeatures;
+        public ulong ContinuityIdentity => m_Composed.ContinuityIdentity;
+        public float GetContributionBoneWeight(int contributionIndex, int boneIndex) =>
+            m_Composed.GetContributionBoneWeight(contributionIndex, boneIndex);
+        public float GetBoneOutputWeight(int boneIndex) => m_Composed.GetBoneOutputWeight(boneIndex);
     }
 }

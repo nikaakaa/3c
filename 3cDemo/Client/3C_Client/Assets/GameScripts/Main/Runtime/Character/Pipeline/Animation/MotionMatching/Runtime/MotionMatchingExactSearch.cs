@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public int ExactSampleCount { get; }
         public bool IsValid => TopKCount > 0;
         public MotionMatchingExactCandidate GetCandidate(int index) => (uint)index < (uint)TopKCount ? m_Database.TopK[index] : throw new ArgumentOutOfRangeException(nameof(index));
-        public MotionMatchingCandidateRejectReason GetRejectReason(int sampleIndex) => m_Database.RejectReasons[sampleIndex];
+        public MotionMatchingCandidateRejectDetail GetRejectDetail(int sampleIndex) => m_Database.RejectDetails[sampleIndex];
     }
 
     public sealed class MotionMatchingExactSearch
@@ -100,9 +100,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 for (int offset = 0; offset < node.OrderedSampleCount; offset++)
                 {
                     int sampleIndex = m_Database.GetOrderedSampleIndex(node.OrderedSampleOffset + offset);
-                    if (!m_Admission.Admit(query, sampleIndex, out MotionMatchingCandidateRejectReason rejectReason))
+                    if (!m_Admission.Admit(query, sampleIndex, out MotionMatchingCandidateRejectDetail rejectDetail))
                     {
-                        m_Database.RejectReasons[sampleIndex] = rejectReason;
+                        m_Database.RejectDetails[sampleIndex] = rejectDetail;
                         rejectedCount++;
                         continue;
                     }

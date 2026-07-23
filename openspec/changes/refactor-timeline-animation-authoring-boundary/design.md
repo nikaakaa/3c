@@ -1,5 +1,11 @@
 # Design: Timeline Animation Authoring Surface 与领域分析工具
 
+## 动画播放边界重新基线
+
+`refactor-animation-selection-pose-graph-boundary`只改变Timeline Preview接入正式表现链的合同：预览时间降低为`AnimationSelectionFrame`，再进入同一编译Pose Plan。图上只使用直接Player就明确硬切，连接局部Inertialization就复用正式history/residual/rebase，连接BlendStack就保留多source历史；Timeline Editor Core、Foot Analysis Artifact和Marker候选工具不得拥有或模拟播放器状态。
+
+Preview若缺少FootPlacement所需Body、PhysicsScene、Rig Calibration或Solver，必须把world-aware阶段标记为Unavailable，并明确停在`ComposedAnimationPoseFrame`；不得伪造平面、静默跳过后仍发布FinalAnimationPoseFrame。
+
 ## Context
 
 当前代码把脚分析实现为Projection Build的内部阶段：
@@ -48,7 +54,7 @@ Character Definition + reachable clip bindings
 - 生成特征以规范、可重建、可复用的Editor artifact存在。
 - Projection继续是Player Runtime唯一分析数据。
 - 分析状态与Projection发布状态分开表达。
-- 保留现有Foot Placement Runtime和Marker Sync，不重新设计已成立链路。
+- 保留现有Foot Placement算法与Marker作者数据；运行时Marker Sync节点化由`refactor-animation-selection-pose-graph-boundary`统一设计，本change不建立第二套解析路径。
 
 ## Non-Goals
 
@@ -338,7 +344,9 @@ Player中链路保持：
 ```text
 PresentationCommand
   -> Producer Binding
-  -> VisualSampleTime（可能经过Marker Sync）
+  -> raw VisualSampleTime
+  -> 显式MarkerSync节点（若图中存在）
+  -> Player采用的raw/effective sample time
   -> Projection Clip Feature Sampler
   -> Foot Placement Planner
   -> Final IK
@@ -355,7 +363,7 @@ Runtime程序集不得引用Artifact Store、AssetDatabase、Analysis Source或E
 | Foot Placement Weight | Clip归一化控制曲线 | 作者控制IK总体介入权重 | 是 |
 | Foot Analysis Feature | 生成artifact与Projection数据 | plant/landing预测和诊断 | 否 |
 
-Marker Sync可以改变VisualSampleTime，Foot Analysis按改变后的时间采样；它们不共享MarkerId、phase或contact状态。Distance Matching未来可消费独立Distance Curve，但不能读取plant confidence代替距离。Foot Placement Weight只控制介入量，不表达左右脚接触。
+显式MarkerSync节点可以在source采样前把raw VisualSampleTime映射为effective time；Foot Analysis按Player最终采用的时间采样。二者不共享MarkerId、phase或contact状态。Distance Matching未来可消费独立Distance Curve，但不能读取plant confidence代替距离。Foot Placement Weight只控制介入量，不表达左右脚接触。
 
 ## Decision 10: Agent只处理作者数据
 
@@ -393,7 +401,7 @@ Apply规则：
 4. mutation必须通过`TimelineEditorSessionContext.Apply`进入Timeline正式Undo、dirty和刷新链。
 5. 只替换`LeftFootContact`与`RightFootContact`集合；其它业务Marker原样保留。
 6. 复用仍匹配的stable marker identity，新增候选才创建新identity，移除多余脚步Marker。
-7. 提交后继续由现有Marker validator、Projection compiler与Runtime Marker Sync消费，不新增analysis runtime reader。
+7. 提交后继续由现有Marker validator、Projection compiler与显式MarkerSync节点消费，不新增analysis runtime reader。
 
 ### Tradeoff
 

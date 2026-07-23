@@ -111,7 +111,7 @@ function Assert-NetworkTestProductBuild {
     if ($player.kind -ne "UnityPlayer" -or $player.root -ne "Player" -or
         $player.entryPoint -ne "Player/3C_Client.exe" -or
         (Get-NetworkTestProductField $player.fields "target") -ne "StandaloneWindows64" -or
-        (Get-NetworkTestProductField $player.fields "buildOptions") -ne "Development, StrictMode" -or
+        (Get-NetworkTestProductField $player.fields "buildOptions") -ne "Development, StrictMode, CleanBuildCache" -or
         (Get-NetworkTestProductField $player.fields "scriptingBackend") -ne $ExpectedScriptingBackend -or
         (Get-NetworkTestProductField $player.fields "scenes") -ne [string]::Join("|", $ExpectedScenes)) {
         throw "Network Test Product Unity Player compile options or scenes are incompatible."

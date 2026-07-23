@@ -6,7 +6,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
 {
     [McpForUnityTool(
         "manage_btsmtl_agent_authoring",
-        Description = "Bootstrap an AIController or export, dry-run, apply, and validate the v16 BTSMTL Agent contract for an explicit CharacterController or AIController root domain.")]
+        Description = "Bootstrap an AIController or export, dry-run, apply, and validate the v17 BTSMTL Agent contract for an explicit CharacterController or AIController root domain.")]
     public static class ManageBtsmtlAgentAuthoringMcpTool
     {
         public sealed class Parameters

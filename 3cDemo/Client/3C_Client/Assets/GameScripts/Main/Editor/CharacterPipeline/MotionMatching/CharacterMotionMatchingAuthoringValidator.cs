@@ -22,7 +22,10 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
         InvalidFootArtifact = 13,
         SamplingRigMismatch = 14,
         UnsupportedClipRig = 15,
-        InputChanged = 16
+        InputChanged = 16,
+        OrphanMotionMatchingProfile = 17,
+        MissingMotionMatchingProfile = 18,
+        DuplicateMotionMatchingProfileOwner = 19
     }
 
     public readonly struct CharacterMotionMatchingAuthoringDiagnostic
@@ -41,6 +44,52 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
 
     public static class CharacterMotionMatchingAuthoringValidator
     {
+        public static void CollectPresentationOwnershipDiagnostics(
+            CharacterAnimationPresentationProfile profile,
+            IReadOnlyList<CharacterAnimationPresentationProfile> projectProfiles,
+            List<CharacterMotionMatchingAuthoringDiagnostic> diagnostics)
+        {
+            if (!profile || diagnostics == null)
+                return;
+            int producerCount = 0;
+            for (int i = 0; i < profile.ProducerBindings.Count; i++)
+            {
+                AnimationProducerPresentationBinding binding = profile.ProducerBindings[i];
+                if (binding != null && binding.SourceKind == AnimationPoseSourceKind.MotionMatching)
+                    producerCount++;
+            }
+            if (producerCount == 0 && profile.MotionMatchingProfile)
+            {
+                diagnostics.Add(new CharacterMotionMatchingAuthoringDiagnostic(
+                    CharacterMotionMatchingAuthoringDiagnosticCode.OrphanMotionMatchingProfile,
+                    profile.name,
+                    "Motion Matching Profile is configured but no Presentation producer uses Motion Matching."));
+            }
+            if (producerCount > 0 && !profile.MotionMatchingProfile)
+            {
+                diagnostics.Add(new CharacterMotionMatchingAuthoringDiagnostic(
+                    CharacterMotionMatchingAuthoringDiagnosticCode.MissingMotionMatchingProfile,
+                    profile.name,
+                    "Motion Matching producer exists but the Presentation Profile has no Motion Matching Profile owner."));
+            }
+            if (!profile.MotionMatchingProfile || projectProfiles == null)
+                return;
+            int ownerCount = 0;
+            for (int i = 0; i < projectProfiles.Count; i++)
+            {
+                CharacterAnimationPresentationProfile candidate = projectProfiles[i];
+                if (candidate && candidate.MotionMatchingProfile == profile.MotionMatchingProfile)
+                    ownerCount++;
+            }
+            if (ownerCount > 1)
+            {
+                diagnostics.Add(new CharacterMotionMatchingAuthoringDiagnostic(
+                    CharacterMotionMatchingAuthoringDiagnosticCode.DuplicateMotionMatchingProfileOwner,
+                    profile.MotionMatchingProfile.name,
+                    $"Motion Matching Profile resolves to {ownerCount} Animation Presentation Profile owners."));
+            }
+        }
+
         public static void RequireProfile(CharacterMotionMatchingProfile profile)
         {
             if (!profile)

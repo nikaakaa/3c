@@ -5,6 +5,7 @@ using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -58,6 +59,10 @@ namespace ThirdPersonCharacter.Pipeline
         public AnimationPresentationRuntimeSnapshot AnimationRuntimeSnapshot =>
             m_Session != null
                 ? m_Session.Engine.RuntimeDiagnosticsSnapshot
+                : default;
+        public CharacterPosePlanStageSnapshot PosePlanStages =>
+            m_Session != null
+                ? m_Session.Engine.PosePlanStages
                 : default;
 
         public bool Matches(CharacterPipelineDefinition definition, AnimancerComponent animancer)
@@ -123,6 +128,64 @@ namespace ThirdPersonCharacter.Pipeline
                 presentationDeltaSeconds);
             m_Session.Engine.Evaluate(m_Session);
             ApplyMotionPreview(timeline, currentTime);
+        }
+
+        public void EvaluateBlendSpace(
+            Guid sessionId,
+            TimelineData timeline,
+            string targetTrackAuthoringId,
+            float previousTime,
+            float currentTime,
+            string sourceId,
+            string sourceName,
+            ulong evaluationTick,
+            float presentationDeltaSeconds,
+            bool resetLifecycle,
+            Vector2 parameter)
+        {
+            if (sessionId == Guid.Empty || timeline == null || string.IsNullOrWhiteSpace(targetTrackAuthoringId))
+                throw new ArgumentException("Blend Space preview identity is incomplete.");
+            if (evaluationTick == 0)
+                throw new InvalidOperationException("Blend Space preview evaluation tick must be non-zero.");
+            if (m_Session != null && m_SessionId != sessionId)
+                throw new InvalidOperationException(
+                    $"Animation preview target '{m_Host.name}' is already owned by session '{m_SessionId}'.");
+
+            bool created = m_Session == null;
+            if (created)
+            {
+                CaptureVisualPose();
+                m_Session = new PreviewSession(
+                    NextGeneration(),
+                    new PreviewPlaybackEngine(
+                        m_Definition,
+                        m_Program,
+                        m_Projection,
+                        m_Animancer,
+                        m_AnimationRigBinding,
+                        timeline,
+                        sessionId));
+                m_SessionId = sessionId;
+                AcquireGraphClock();
+            }
+
+            if (resetLifecycle && !created)
+            {
+                m_Session.Engine.RetireAndReset(evaluationTick);
+                m_Session.Generation = NextGeneration();
+            }
+
+            m_Session.CaptureBlendSpace(
+                timeline,
+                targetTrackAuthoringId,
+                previousTime,
+                currentTime,
+                sourceId,
+                sourceName,
+                evaluationTick,
+                presentationDeltaSeconds,
+                parameter);
+            m_Session.Engine.Evaluate(m_Session);
         }
 
         public void CollectMarkerSyncSources(
@@ -209,6 +272,22 @@ namespace ThirdPersonCharacter.Pipeline
                 return m_Session.Engine.TryGetMarkerSyncPreviewState(targetTrackAuthoringId, out state);
             state = default;
             return false;
+        }
+
+        public bool TrySetPoseWatchInterests(
+            Guid sessionId,
+            Guid ownerId,
+            IReadOnlyList<AnimationPoseWatchIdentity> interests)
+        {
+            if (m_Session == null || m_SessionId != sessionId)
+                return false;
+            m_Session.Engine.SetPoseWatchInterests(ownerId, interests);
+            return true;
+        }
+
+        public void RemovePoseWatchInterests(Guid ownerId)
+        {
+            m_Session?.Engine.RemovePoseWatchInterests(ownerId);
         }
 
         public void Clear(Guid sessionId)

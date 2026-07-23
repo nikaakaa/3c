@@ -305,83 +305,84 @@
 
 ## 11. Accepted Intent与Trajectory Source端口
 
-- [ ] 11.1 定义`CharacterPresentationTrajectoryIntent`不可变合同。
-- [ ] 11.2 在Intent保存ActorId、Previous/Current Tick与SourceSequence。
-- [ ] 11.3 在Intent保存DesiredPlanarVelocity与DesiredFacing。
-- [ ] 11.4 在Intent保存AcceptedAcceleration与AcceptedTurnRate。
-- [ ] 11.5 在Intent保存Grounded、MovementMode与ResetSequence。
-- [ ] 11.6 定义Intent interval的连续性与branch replacement规则。
-- [ ] 11.7 定义`ICharacterMotionMatchingTrajectorySource`接口。
+- [x] 11.1 定义`CharacterPresentationTrajectoryIntent`不可变合同。
+- [x] 11.2 在Intent保存ActorId、Previous/Current Tick与SourceSequence。
+- [x] 11.3 在Intent保存DesiredPlanarVelocity与DesiredFacing。
+- [x] 11.4 在Intent保存AcceptedAcceleration与AcceptedTurnRate。
+- [x] 11.5 在Intent保存Grounded、MovementMode与ResetSequence。
+- [x] 11.6 定义Intent interval的连续性与branch replacement规则。
+- [x] 11.7 定义`ICharacterMotionMatchingTrajectorySource`接口。
 - [x] 11.8 定义统一Trajectory Source Frame。
-- [ ] 11.9 实现Accepted Intent trajectory source。
+- [x] 11.9 实现Accepted Intent trajectory source。
 - [x] 11.10 从World Solve后已接受motion result构造Intent候选。
 - [x] 11.11 在atomic Body commit成功后发布匹配Intent interval。
 - [x] 11.12 保证失败事务不发布部分Intent。
-- [ ] 11.13 实现Selected Body trajectory source。
-- [ ] 11.14 从selected interval读取position、rotation、velocity、yaw velocity与Grounded。
-- [ ] 11.15 在Selected Body source保存sample age与source tick。
-- [ ] 11.16 为Local Presentation Factory显式装配Accepted Intent source。
+- [x] 11.13 实现Selected Body trajectory source。
+- [x] 11.14 从selected interval读取position、rotation、velocity、yaw velocity与Grounded。
+- [x] 11.15 在Selected Body source合同保存sample age与source tick。
+- [x] 11.15a 从Selected Body presentation cursor计算真实sample age，删除调用端固定`0f`输入。
+- [x] 11.16 为Local Presentation Factory显式装配Accepted Intent source。
 - [x] 11.17 为Prediction Presentation Factory显式装配Accepted Intent source。
-- [ ] 11.18 为Observed/Remote Presentation Factory显式装配Selected Body source。
+- [x] 11.18 为Observed/Remote Presentation Factory显式装配Selected Body source。
 - [x] 11.19 为Rollback owner显式装配当前分支Accepted Intent source。
-- [ ] 11.20 禁止任一source缺失时改读InputAction、Scene Transform或packet。
-- [ ] 11.21 扩展Host/Factory校验trajectory source与Body source identity一致。
-- [ ] 11.22 将trajectory source生命周期纳入Presentation Reset与Dispose。
+- [x] 11.20 禁止任一source缺失时改读InputAction、Scene Transform或packet。
+- [x] 11.21 扩展Host/Factory校验trajectory source与Body source identity一致。
+- [x] 11.22 将trajectory source生命周期纳入Presentation Reset与Dispose。
 
 ## 12. Trajectory Envelope运行时
 
-- [ ] 12.1 定义`MotionMatchingTrajectoryEnvelopePoint`。
-- [ ] 12.2 在Envelope Point保存TimeOffset与LocalPositionCenter。
-- [ ] 12.3 在Envelope Point保存LocalFacingCenter。
-- [ ] 12.4 在Envelope Point保存PositionToleranceRadius。
-- [ ] 12.5 在Envelope Point保存FacingToleranceDegrees。
-- [ ] 12.6 在Envelope Point保存Confidence。
-- [ ] 12.7 定义固定容量`MotionMatchingTrajectoryEnvelope`。
-- [ ] 12.8 创建`CharacterMotionMatchingTrajectoryRuntime`。
-- [ ] 12.9 将Accepted Intent按加速度限制积分到各horizon。
-- [ ] 12.10 将Accepted Intent按turn rate限制积分facing。
-- [ ] 12.11 将Selected Body velocity/yaw velocity外推到各horizon。
-- [ ] 12.12 按Trajectory Policy计算各horizon position tolerance。
-- [ ] 12.13 按Trajectory Policy计算各horizon facing tolerance。
-- [ ] 12.14 按source age与horizon计算confidence。
-- [ ] 12.15 将world trajectory转换到当前Body局部空间。
+- [x] 12.1 定义`MotionMatchingTrajectoryEnvelopePoint`。
+- [x] 12.2 在Envelope Point保存TimeOffset与LocalPositionCenter。
+- [x] 12.3 在Envelope Point保存LocalFacingCenter。
+- [x] 12.4 在Envelope Point保存PositionToleranceRadius。
+- [x] 12.5 在Envelope Point保存FacingToleranceDegrees。
+- [x] 12.6 在Envelope Point保存Confidence。
+- [x] 12.7 定义固定容量`MotionMatchingTrajectoryEnvelope`。
+- [x] 12.8 创建`CharacterMotionMatchingTrajectoryRuntime`。
+- [x] 12.9 将Accepted Intent按加速度限制积分到各horizon。
+- [x] 12.10 将Accepted Intent按turn rate限制积分facing。
+- [x] 12.11 将Selected Body velocity/yaw velocity外推到各horizon。
+- [x] 12.12 按Trajectory Policy计算各horizon position tolerance。
+- [x] 12.13 按Trajectory Policy计算各horizon facing tolerance。
+- [x] 12.14 按source age与horizon计算confidence。
+- [x] 12.15 将world trajectory转换到当前Body局部空间。
 - [x] 12.16 拒绝非有限source、horizon与envelope结果。
-- [ ] 12.17 保持Runtime不按Network Model type分支。
-- [ ] 12.18 为ResetSequence变化清空trajectory历史。
-- [ ] 12.19 输出source identity、tick、age与envelope continuity。
+- [x] 12.17 保持Runtime不按Network Model type分支。
+- [x] 12.18 为ResetSequence变化清空trajectory历史。
+- [x] 12.19 输出source identity、tick、age与envelope continuity。
 
 ## 13. Base Pose History与Query构建
 
-- [ ] 13.1 定义固定容量`CharacterMotionMatchingPoseHistory`。
-- [ ] 13.2 按Schema BoneId分配dense pose history buffer。
-- [ ] 13.3 保存每个history sample的presentation time。
-- [ ] 13.4 保存每个history sample的Base slot continuity identity。
-- [ ] 13.5 保存每个history sample的left/right Foot Feature。
-- [ ] 13.6 从相邻Base slot sample计算bone velocity。
-- [ ] 13.7 在全部PoseSlot求值后定位BaseLocomotionSlot frame。
-- [ ] 13.8 在Foot Placement前追加Base slot sample。
-- [ ] 13.9 禁止追加FullBody overlay后的Final Pose。
-- [ ] 13.10 禁止追加Foot Placement solver修改后的pose。
-- [ ] 13.11 禁止追加VisualRoot world correction。
-- [ ] 13.12 Body ResetSequence变化时清空history。
-- [ ] 13.13 Base slot Invalid时记录gap但不伪造sample。
-- [ ] 13.14 定义`MotionMatchingQuery`不可变合同。
-- [ ] 13.15 在Query保存QueryId、Domain、Profile与Database identity。
-- [ ] 13.16 在Query保存Trajectory Source与Envelope。
-- [ ] 13.17 按Schema history horizons重采样pose position。
-- [ ] 13.18 按Schema history horizons重采样pose velocity。
-- [ ] 13.19 在Query保存当前left/right contact protection。
-- [ ] 13.20 在Query保存current selection与plan identity。
-- [ ] 13.21 history不足时设置Initialization Mode与Feature Mask。
-- [ ] 13.22 将Query feature按Artifact normalization降低为dense buffer。
-- [ ] 13.23 拒绝任何非有限query feature。
+- [x] 13.1 定义固定容量`CharacterMotionMatchingPoseHistory`。
+- [x] 13.2 按Schema BoneId分配dense pose history buffer。
+- [x] 13.3 保存每个history sample的presentation time。
+- [x] 13.4 保存每个history sample的Base slot continuity identity。
+- [x] 13.5 保存每个history sample的left/right Foot Feature。
+- [x] 13.6 从相邻Base slot sample计算bone velocity。
+- [x] 13.7 在全部PoseSlot求值后定位BaseLocomotionSlot frame。
+- [x] 13.8 在Foot Placement前追加Base slot sample。
+- [x] 13.9 禁止追加FullBody overlay后的Final Pose。
+- [x] 13.10 禁止追加Foot Placement solver修改后的pose。
+- [x] 13.11 禁止追加VisualRoot world correction。
+- [x] 13.12 Body ResetSequence变化时清空history。
+- [x] 13.13 Base slot Invalid时记录gap但不伪造sample。
+- [x] 13.14 定义`MotionMatchingQuery`不可变合同。
+- [x] 13.15 在Query保存QueryId、Domain、Profile与Database identity。
+- [x] 13.16 在Query保存Trajectory Source与Envelope。
+- [x] 13.17 按Schema history horizons重采样pose position。
+- [x] 13.18 按Schema history horizons重采样pose velocity。
+- [x] 13.19 在Query保存当前left/right contact protection。
+- [x] 13.20 在Query保存current selection与plan identity。
+- [x] 13.21 history不足时设置Initialization Mode与Feature Mask。
+- [x] 13.22 将Query feature按Artifact normalization降低为dense buffer。
+- [x] 13.23 拒绝任何非有限query feature。
 
 ## 14. Candidate Admission与Exact Cost
 
-- [ ] 14.1 创建固定顺序`MotionMatchingCandidateAdmission`。
-- [ ] 14.2 校验candidate Database、Rig、Schema与Clip binding identity。
-- [ ] 14.3 校验candidate Search Domain。
-- [ ] 14.4 在Initialization Mode校验CanInitialize。
+- [x] 14.1 创建固定顺序`MotionMatchingCandidateAdmission`。
+- [x] 14.2 校验candidate Database、Rig、Schema与Clip binding identity。
+- [x] 14.3 校验candidate Search Domain。
+- [x] 14.4 在Initialization Mode校验CanInitialize。
 - [x] 14.5 在普通Jump校验CanJumpInto。
 - [x] 14.6 校验candidate不位于Entry exclusion。
 - [x] 14.7 校验candidate不位于Exit exclusion。
@@ -394,7 +395,7 @@
 - [x] 14.14 校验protected foot root-relative position jump阈值。
 - [x] 14.15 校验protected foot velocity jump阈值。
 - [x] 14.16 为每个reject写入稳定RejectReason。
-- [ ] 14.17 按interest保存受关注candidate reject数值。
+- [x] 14.17 按interest保存受关注candidate reject数值。
 - [x] 14.18 无admitted candidate时发布typed Invalid。
 - [x] 14.19 创建`MotionMatchingExactCostEvaluator`。
 - [x] 14.20 实现Trajectory Position dead-zone cost。
@@ -488,13 +489,13 @@
 - [x] 17.14 保持Timeline同Playback同Selection连续sample不创建新entry。
 - [x] 17.15 让MM同Playback新Selection创建新entry。
 - [x] 17.16 在Blend Library Compiler生成MM producer self-pair transition。
-- [x] 17.17 让MM self-pair exact lookup使用现有CrossFade/Inertial规则。
+- [x] 17.17 让连接BlendStack的MM self-pair使用CrossFade exact rule，连接局部Inertialization时使用独立exact policy。
 - [x] 17.18 禁止MM request携带私有blend duration、curve或weight。
 - [x] 17.19 扩展Animancer source backend按ClipSamplePlan创建source。
 - [x] 17.20 让MM source state使用精确sample time且Speed保持零。
 - [x] 17.21 禁止MM source加入Timeline Marker Sync relation。
 - [x] 17.22 保持source capture进入现有AnimationSlotBlendPoseEvaluator。
-- [x] 17.23 保持Stored Pose、Inertial与retirement由Slot Stack拥有。
+- [x] 17.23 保持Stored Pose与retirement由显式BlendStack拥有，Inertial history/residual由局部节点拥有。
 - [x] 17.24 确保MM source不创建独立PlayableGraph或crossfade。
 - [x] 17.25 让MM Pose Source只从Selection PoseTime生成ClipTime、NormalizedTime、ContinuousVisualTime、Cycle、IsLooping与VisualTimeScale。
 - [x] 17.26 让MM Pose Source output的`SourcePoseContinuityIdentity`唯一等于当前Selection Generation Value，不使用sample、时间、request sequence或独立allocator。
@@ -537,7 +538,7 @@
 - [x] 19.8 让ServerAuthoritative Prediction owner使用Accepted Intent source。
 - [x] 19.9 让ServerAuthoritative Observed Actor使用Selected Body source。
 - [x] 19.10 让Deterministic Rollback owner使用当前分支Intent source。
-- [ ] 19.11 让Rollback remote使用当前selected/relayed Body source。
+- [x] 19.11 让Rollback remote使用当前selected/relayed Body source。
 - [x] 19.12 Committed branch replacement时清理MM history与plan。
 - [x] 19.13 Selected stream reset时清理MM history与plan。
 - [x] 19.14 EventId Replace/Retire影响MM producer时清理selection lifecycle。
@@ -552,7 +553,7 @@
 - [x] 20.2 让BaseLocomotionSlot live contribution传播MM Left Foot feature。
 - [x] 20.3 让BaseLocomotionSlot live contribution传播MM Right Foot feature。
 - [x] 20.4 复用Stored Pose Foot Feature aggregate。
-- [x] 20.5 复用Inertial Foot Feature transition。
+- [x] 20.5 复用局部Inertialization的Foot Feature transition。
 - [x] 20.6 让Pose Graph按最终per-foot contribution输出MM feature。
 - [x] 20.7 让Foot Placement只消费FinalAnimationPoseFrame输入。
 - [x] 20.8 禁止Foot Placement读取MM Database、Query、Cost与Selection。
@@ -562,10 +563,10 @@
 - [x] 20.12 FullBodyAction覆盖期间持续更新Base Pose History。
 - [x] 20.13 Action退出时直接显露当前Base slot结果。
 - [x] 20.14 创建Motion Matching Database Inspector。
-- [ ] 20.15 创建显式Query Fixture Editor输入。
-- [ ] 20.16 让Database Inspector加载Search Replay Artifact。
-- [ ] 20.17 Preview复用正式Runtime Database、Search与Plan实现。
-- [ ] 20.18 Preview复用正式Pose Source、Blend Stack与Pose Graph。
+- [x] 20.15 创建显式Query Fixture Editor输入。
+- [x] 20.16 让Database Inspector加载Search Replay Artifact。
+- [x] 20.17 Preview复用正式Runtime Database、Search与Plan实现。
+- [x] 20.18 Preview复用正式Pose Source、Blend Stack与Pose Graph。
 - [x] 20.19 禁止Timeline Preview为MM伪造Body、Intent或query。
 - [x] 20.20 禁止MM Preview执行Program、WorldSolver、Foot Physics或Camera。
 
@@ -584,7 +585,7 @@
 - [x] 21.11 定义Selection continue/jump/generation payload。
 - [x] 21.12 定义MM source到Blend Entry关联payload。
 - [x] 21.13 定义Reset与Initialization原因payload。
-- [ ] 21.14 将全部payload接入RuntimeDebugSession。
+- [x] 21.14 将全部payload接入RuntimeDebugSession。
 - [x] 21.15 interest关闭时禁止构造candidate detail集合。
 - [x] 21.16 在Database Inspector显示Coverage Summary。
 - [x] 21.17 显示每Domain、velocity、facing与contact coverage。
@@ -594,18 +595,18 @@
 - [x] 21.21 在Replay保存Database Artifact与Projection exact identity。
 - [x] 21.22 在Replay保存Query、current plan与Search Policy payload。
 - [x] 21.23 在Replay保存candidate/reject/cost/selection digest。
-- [ ] 21.24 增加RuntimeDebugSession显式Capture Replay入口。
-- [ ] 21.25 增加Editor Replay执行入口。
+- [x] 21.24 增加RuntimeDebugSession显式Capture Replay入口。
+- [x] 21.25 增加Editor Replay执行入口。
 - [x] 21.26 Replay调用正式Admission、Search与Plan实现。
 - [x] 21.27 Replay比较expected与actual digest并输出结构化差异。
 - [x] 21.28 identity不匹配时拒绝Replay且不迁移旧capture。
 
 ## 22. 条件式能力与独立验证配置边界
 
-- [ ] 22.1 定义Profile没有MM producer时不得引用MM Profile的validation code。
-- [ ] 22.2 定义Profile引用MM Profile但没有MM producer时的typed orphan-profile diagnostic。
-- [ ] 22.3 定义producer声明MM Pose Source但缺少MM Profile时的typed missing-profile diagnostic。
-- [ ] 22.4 定义多个MM Profile owner被解析时的typed duplicate-owner diagnostic。
+- [x] 22.1 定义Profile没有MM producer时不得引用MM Profile的validation code。
+- [x] 22.2 定义Profile引用MM Profile但没有MM producer时的typed orphan-profile diagnostic。
+- [x] 22.3 定义producer声明MM Pose Source但缺少MM Profile时的typed missing-profile diagnostic。
+- [x] 22.4 定义多个MM Profile owner被解析时的typed duplicate-owner diagnostic。
 - [x] 22.5 让Projection Compiler在没有MM producer时完全省略MM payload。
 - [x] 22.6 让Presentation Runtime Factory在Projection没有MM payload时不构造MM模块。
 - [x] 22.7 让无MM配置不分配query、candidate、Top-K、plan、history与replay buffer。
@@ -629,7 +630,7 @@
 - [x] 22.22 禁止为验证配置注入默认Rig、默认Schema、默认Database、placeholder Clip或bind pose。
 - [x] 22.23 禁止创建验证专用Runtime、第二套Profile类型、旧/MM开关或兼容converter。
 - [x] 22.24 让不同Definition切换时按Projection replacement规则释放旧MM状态并重新构造正式模块。
-- [ ] 22.25 让Diagnostics明确显示当前Definition、Profile、Database、Artifact与Projection identity。
+- [x] 22.25 让Diagnostics明确显示当前Definition、Profile、Database、Artifact与Projection identity。
 - [ ] 22.26 记录用户另行提供正式验证配置时所需的最小输入清单与显式选择入口。
 - [x] 22.27 保持Corin Graph、StateMachine、Timeline、Profile、Definition、Projection、Prefab、动画、Marker与transition资产不进入本change写入范围。
 - [x] 22.28 禁止独立验证配置引用Corin Rig、Foot Analysis、Clip、Database或其它动画资产作为占位。
@@ -644,21 +645,41 @@
 - [x] 23.6 删除自动MM Analysis build回调与隐式stale修复。
 - [x] 23.7 删除Animator root delta到Gameplay Body或VisualRoot的潜在接线。
 - [x] 23.8 删除MM查询InputAction、Scene Transform与Network packet的潜在接线。
-- [ ] 23.9 让诊断宿主只在显式选择的Projection包含MM payload时读取正式MM runtime snapshot。
-- [ ] 23.10 让诊断宿主区分“项目具备MM能力”与“当前Definition未启用MM”。
+- [x] 23.9 让诊断宿主只在显式选择的Projection包含MM payload时读取正式MM runtime snapshot。
+- [x] 23.10 让诊断宿主区分“项目具备MM能力”与“当前Definition未启用MM”。
 - [x] 23.11 保持Motion Warp、Marker Sync、Foot Placement与MM诊断名称互不混淆。
-- [ ] 23.12 更新Animation Presentation Profile Inspector帮助文本。
+- [x] 23.12 更新Animation Presentation Profile Inspector帮助文本。
 - [x] 23.13 更新Database Inspector的显式重操作提示。
 - [x] 23.13a 更新Source Set Inspector的“登记不构建”提示。
 - [x] 23.13b 记录FBX重导入只产生Stale状态且必须由作者主动Build。
-- [ ] 23.14 更新`openspec/project.md`的动画表现正式链路。
-- [ ] 23.15 更新`openspec/project.md`的MM Artifact、Projection与Runtime职责。
-- [ ] 23.16 更新`openspec/project.md`的Local/Prediction/Observed trajectory source边界。
-- [ ] 23.17 更新`openspec/project.md`，明确Corin未配置MM且资产链保持现状。
-- [ ] 23.18 将current specs中“项目没有Motion Matching”收敛为“能力可选、按producer显式启用”。
+- [x] 23.14 更新`openspec/project.md`的动画表现正式链路。
+- [x] 23.15 更新`openspec/project.md`的MM Artifact、Projection与Runtime职责。
+- [x] 23.16 更新`openspec/project.md`的Local/Prediction/Observed trajectory source边界。
+- [x] 23.17 更新`openspec/project.md`，明确Corin未配置MM且资产链保持现状。
+- [x] 23.18 将current specs中“项目没有Motion Matching”收敛为“能力可选、按producer显式启用”。
 - [x] 23.19 保持`character-state-timeline-authoring-loop`及Corin视觉Timeline与Marker合同不被本change修改。
 - [x] 23.20 记录最终`Accepted/Selected Trajectory -> Query -> Exact Top-K -> Plan -> Pose Source -> Blend Stack -> Pose Graph -> Foot Placement`链路。
 - [x] 23.21 记录UE 5.8比较边界并避免宣称未实现的Warping、Traversal或Interaction能力。
 - [x] 23.22 将已落盘的EntryVisualAdvanceRate、PoseTime、continuous cycle与SourcePoseContinuityIdentity合同同步到`design.md`。
 - [x] 23.23 将完整AnimationPoseSourceId、source-neutral request字段与时间采样Scenario同步到Presentation spec delta。
 - [x] 23.24 对上述design/spec/tasks同步运行change strict validate并保持通过。
+
+## 24. Animation Selection与显式Pose Graph重新基线
+
+- [x] 24.1 将MM公开输出从ResolvedAnimationPoseRequest迁移为AnimationSelectionFrame。
+- [x] 24.2 删除MM输出中的PoseSlotId与transition identity。
+- [x] 24.3 保留source、generation、sample time、clip descriptor与表现参数。
+- [x] 24.4 新增MotionMatchingSelectionInput的Projection binding。
+- [x] 24.5 让MM Selection进入图上显式SelectedPosePlayer或BlendStack。
+- [x] 24.5.1 让MM高频jump推荐使用SelectedPosePlayer到局部Inertialization。
+- [x] 24.5.2 禁止MM Module或BlendStack私有执行Inertial residual。
+- [x] 24.6 删除MM对固定BaseLocomotionSlot Stack的依赖。
+- [x] 24.7 将Pose History绑定到匹配MM节点的已完成Pose Value。
+- [x] 24.8 让Complete阶段校验对应PoseNodeId与plan completion identity。
+- [x] 24.9 删除MM producer self-pair必须存在于全局per-slot matrix的要求。
+- [x] 24.10 若MM Selection显式连接BlendStack，为该节点每个可达source pair生成完整CrossFade Policy并禁止Runtime fallback。
+- [x] 24.10.1 若MM Selection连接局部Inertialization，为每个可达discontinuity端点生成完整Inertialization Policy并禁止Runtime fallback。
+- [x] 24.11 更新Query Fixture以执行同一编译Pose Plan。
+- [x] 24.12 更新diagnostics与Replay的Selection、PoseNode和player identity。
+- [x] 24.13 更新本change全部spec delta为Selection provider口径。
+- [x] 24.14 与动画选择边界change共同完成后再收口current spec。

@@ -350,6 +350,17 @@ namespace BTSMTL.Diagnostics
         AnimationPlaybackRetained,
         AnimationPlaybackRetired,
         AnimationMarkerSync,
+        MotionMatchingQuery,
+        MotionMatchingTrajectory,
+        MotionMatchingPoseHistory,
+        MotionMatchingAdmission,
+        MotionMatchingCandidateRejected,
+        MotionMatchingSearchTraversal,
+        MotionMatchingTopK,
+        MotionMatchingPlan,
+        MotionMatchingSelection,
+        MotionMatchingPoseSource,
+        MotionMatchingReset,
         PresentationInterpolated,
         CameraSnapshot,
         CameraRequest,
@@ -367,7 +378,8 @@ namespace BTSMTL.Diagnostics
         EquipmentSnapshot,
         EquipmentChange,
         EquipmentHost,
-        EquipmentVisual
+        EquipmentVisual,
+        MotionMatchingFrame
     }
 
     public enum DebugValueKind

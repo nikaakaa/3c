@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Diagnostics;
@@ -200,6 +200,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return null;
 
             var entries = new List<CharacterPresentationProducerEntry>();
+            var blendSpaces = new List<CharacterAnimationBlendSpacePlan>();
+            var blendSpaceIndices = new Dictionary<CharacterAnimationBlendSpaceAsset, int>();
             var animationIds = new HashSet<AnimationProducerId>();
             for (int i = 0; i < reader.Producers.Count; i++)
             {
@@ -208,7 +210,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     reader.Producers[i],
                     profile,
                     footAnalysis,
+                    blendSpaces,
+                    blendSpaceIndices,
                     timelines,
+                    markerSyncCallSites,
                     errors);
                 if (entry == null)
                     continue;
@@ -229,20 +234,38 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 .Distinct()
                 .OrderBy(value => value)
                 .ToArray();
-            int contributionCapacityPerValue = ComputeContributionCapacity(profile.BlendLibrary);
-            CharacterPresentationPoseProgram poseProgram = CharacterPresentationPoseGraphCompiler.Compile(
+            AnimationBlendCatalogCompilation blendCatalogs = CompileBlendCatalogs(
+                profile.PoseGraph.Graph,
+                profile.RigDefinition,
+                errors);
+            AnimationBlendNodePayload[] blendNodes = blendCatalogs == null
+                ? Array.Empty<AnimationBlendNodePayload>()
+                : CompileBlendNodes(
+                    profile.PoseGraph.Graph,
+                    profile.RigDefinition,
+                    entries,
+                    blendCatalogs,
+                    errors);
+            CharacterPresentationPosePlan poseProgram = CharacterPresentationPoseGraphCompiler.Compile(
                 profile.PoseGraph,
                 profile.RigDefinition,
                 animationChannels,
-                contributionCapacityPerValue,
+                blendNodes,
                 errors);
-            AnimationBlendCatalogCompilation blendCatalogs = CompileBlendCatalogs(
-                profile.BlendLibrary,
-                profile.RigDefinition,
-                errors);
-            AnimationBlendSlotPayload[] blendSlots = poseProgram == null
-                ? Array.Empty<AnimationBlendSlotPayload>()
-                : CompileBlendSlots(profile.BlendLibrary, profile.RigDefinition, poseProgram, entries, blendCatalogs, errors);
+            if (poseProgram != null && blendCatalogs != null)
+            {
+                poseProgram = CharacterPresentationInertializationPlanCompiler.Compile(
+                    poseProgram,
+                    profile.PoseGraph.Graph,
+                    profile.RigDefinition,
+                    entries,
+                    blendCatalogs.CurveIndices,
+                    blendCatalogs.ProfileIndicesByIdentity,
+                    errors);
+            }
+            CharacterAnimationBlendSpacePlayerPlan[] blendSpacePlayers = poseProgram == null
+                ? Array.Empty<CharacterAnimationBlendSpacePlayerPlan>()
+                : CompileBlendSpacePlayers(poseProgram, entries, blendSpaces, errors);
             CharacterAnimationRigPayload rig = poseProgram == null
                 ? null
                 : new CharacterAnimationRigPayload(profile.RigDefinition);
@@ -257,23 +280,140 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return CharacterPresentationProjection.Create(
                 reader.Contract,
                 poseProgram,
-                blendSlots,
                 blendCatalogs.CurveCatalog,
                 blendCatalogs.ProfileCatalog,
                 rig,
                 motionMatching,
+                blendSpaces.ToArray(),
+                blendSpacePlayers,
                 entries.ToArray(),
                 footIdentity,
                 projectionRevision,
                 visualBindings);
         }
 
+        static CharacterAnimationBlendSpacePlayerPlan[] CompileBlendSpacePlayers(
+            CharacterPresentationPosePlan posePlan,
+            IReadOnlyList<CharacterPresentationProducerEntry> producers,
+            IReadOnlyList<CharacterAnimationBlendSpacePlan> blendSpaces,
+            List<string> errors)
+        {
+            var result = new List<CharacterAnimationBlendSpacePlayerPlan>();
+            for (int operationIndex = 0; operationIndex < posePlan.Operations.Count; operationIndex++)
+            {
+                CharacterPresentationPoseOperation operation = posePlan.Operations[operationIndex];
+                if (operation.Code != CharacterPoseOperationCode.BlendSpacePlayer)
+                    continue;
+                if (operation.SelectionInputIndex < 0 || operation.SelectionInputIndex >= posePlan.SelectionInputs.Count ||
+                    operation.ParameterIndex < 0 || operation.ParameterIndex >= posePlan.Parameters.Count)
+                {
+                    errors?.Add($"Blend Space Player '{operation.NodeId}' has incomplete compiled inputs.");
+                    continue;
+                }
+                AnimationChannelId channelId = posePlan.SelectionInputs[operation.SelectionInputIndex].AnimationChannelId;
+                CharacterPresentationProducerEntry[] reachable = producers
+                    .Where(value => value != null && value.Kind == CharacterPresentationProducerKind.Animation &&
+                                    value.AnimationChannelId == channelId)
+                    .OrderBy(value => value.ProgramProducerIndex)
+                    .ToArray();
+                if (reachable.Length == 0 || reachable.Any(value => value.AnimationSourceKind != AnimationPoseSourceKind.BlendSpace))
+                {
+                    errors?.Add($"Blend Space Player '{operation.NodeId}' channel '{channelId}' has a missing or non-Blend Space producer endpoint.");
+                    continue;
+                }
+                int[] planIndices = reachable
+                    .Select(value => value.BlendSpacePlanIndex)
+                    .Distinct()
+                    .OrderBy(value => value)
+                    .ToArray();
+                if (planIndices.Any(value => value < 0 || value >= blendSpaces.Count))
+                {
+                    errors?.Add($"Blend Space Player '{operation.NodeId}' has an invalid Projection plan source.");
+                    continue;
+                }
+                CharacterAnimationBlendSpacePlan reference = blendSpaces[planIndices[0]];
+                bool consistent = true;
+                if (reference.Mode == CharacterAnimationBlendSpaceMode.Linear1D &&
+                    operation.BlendSpaceInputRangePolicy != CharacterAnimationBlendSpaceInputRangePolicy.Clamp)
+                    consistent = false;
+                for (int i = 1; i < planIndices.Length; i++)
+                    consistent &= SameAxisContract(reference, blendSpaces[planIndices[i]]);
+                CharacterPresentationPoseParameterEntry xParameter = posePlan.Parameters[operation.ParameterIndex];
+                consistent &= SameParameterContract(xParameter, reference.XAxis);
+                if (reference.AxisCount == 1)
+                    consistent &= operation.ParameterIndexB == -1;
+                else if (operation.ParameterIndexB < 0 || operation.ParameterIndexB >= posePlan.Parameters.Count)
+                    consistent = false;
+                else
+                    consistent &= SameParameterContract(posePlan.Parameters[operation.ParameterIndexB], reference.YAxis);
+                for (int parameterIndex = 0; parameterIndex < posePlan.Parameters.Count; parameterIndex++)
+                {
+                    if (parameterIndex == operation.ParameterIndex || parameterIndex == operation.ParameterIndexB)
+                        continue;
+                    PoseParameterId parameterId = posePlan.Parameters[parameterIndex].ParameterId;
+                    if (!reference.TryGetParameterPolicy(parameterId, out CharacterAnimationBlendSpaceParameterPolicy policy))
+                    {
+                        consistent = false;
+                        break;
+                    }
+                    for (int planIndex = 1; planIndex < planIndices.Length; planIndex++)
+                    {
+                        if (!blendSpaces[planIndices[planIndex]].TryGetParameterPolicy(parameterId, out CharacterAnimationBlendSpaceParameterPolicy candidate) ||
+                            candidate != policy)
+                        {
+                            consistent = false;
+                            break;
+                        }
+                    }
+                }
+                if (!consistent)
+                {
+                    errors?.Add($"Blend Space Player '{operation.NodeId}' producer assets and typed axis inputs do not share one ParameterId/type/unit contract.");
+                    continue;
+                }
+                result.Add(new CharacterAnimationBlendSpacePlayerPlan(
+                    operation.NodeId,
+                    operation.Index,
+                    operation.PlayerIndex,
+                    operation.SelectionInputIndex,
+                    operation.ParameterIndex,
+                    operation.ParameterIndexB,
+                    operation.BlendSpaceInputRangePolicy,
+                    planIndices));
+            }
+            return result.ToArray();
+        }
+
+        static bool SameAxisContract(
+            CharacterAnimationBlendSpacePlan left,
+            CharacterAnimationBlendSpacePlan right)
+        {
+            if (left == null || right == null || left.AxisCount != right.AxisCount || left.Mode != right.Mode ||
+                !SameAxis(left.XAxis, right.XAxis))
+                return false;
+            return left.AxisCount == 1 || SameAxis(left.YAxis, right.YAxis);
+        }
+
+        static bool SameAxis(CharacterAnimationBlendSpaceAxisPlan left, CharacterAnimationBlendSpaceAxisPlan right) =>
+            left != null && right != null && left.ParameterId.Equals(right.ParameterId) &&
+            left.ValueType == right.ValueType && string.Equals(left.Unit, right.Unit, StringComparison.Ordinal) &&
+            left.Minimum.Equals(right.Minimum) && left.Maximum.Equals(right.Maximum);
+
+        static bool SameParameterContract(
+            CharacterPresentationPoseParameterEntry parameter,
+            CharacterAnimationBlendSpaceAxisPlan axis) =>
+            parameter != null && axis != null && parameter.ParameterId.Equals(axis.ParameterId) &&
+            parameter.ValueType == axis.ValueType && string.Equals(parameter.Unit, axis.Unit, StringComparison.Ordinal);
+
         static CharacterPresentationProducerEntry BuildProducer(
             CharacterPresentationSemanticReader reader,
             ProgramProducer producer,
             CharacterAnimationPresentationProfile profile,
             AnimationFootAnalysisProjectionBuildData footAnalysis,
+            List<CharacterAnimationBlendSpacePlan> blendSpaces,
+            Dictionary<CharacterAnimationBlendSpaceAsset, int> blendSpaceIndices,
             IReadOnlyDictionary<string, TimelineData> timelines,
+            IReadOnlyDictionary<string, IReadOnlyList<AnimationMarkerSyncCallSite>> timelineCallSites,
             List<string> errors)
         {
             CharacterPresentationProducerKind? kind = reader.ResolveKind(producer, errors);
@@ -299,6 +439,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     producer.ChannelKind,
                     kind.Value,
                     default,
+                    TimelinePlaybackMode.Once,
                     string.Empty,
                     string.Empty,
                     producer.AnimationChannelId,
@@ -323,6 +464,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 errors?.Add($"Animation producer '{producer.Identity}' Timeline source is absent from the compiler inventory.");
                 return null;
             }
+            if (!TryResolvePlaybackMode(
+                    producerId.TimelineAuthoringId,
+                    timelineCallSites,
+                    errors,
+                    out TimelinePlaybackMode playbackMode))
+                return null;
             AnimationTrack track = null;
             for (int i = 0; i < timeline.Tracks.Count; i++)
             {
@@ -353,6 +500,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     producer.ChannelKind,
                     kind.Value,
                     AnimationPoseSourceKind.MotionMatching,
+                    playbackMode,
                     producerId.TimelineAuthoringId,
                     producerId.TrackAuthoringId,
                     producer.AnimationChannelId,
@@ -364,6 +512,73 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     null,
                     null,
                     null);
+            }
+            if (authoringBinding.SourceKind == AnimationPoseSourceKind.BlendSpace)
+            {
+                CharacterAnimationBlendSpaceAsset blendSpace = authoringBinding.BlendSpaceSource;
+                CharacterAnimationBlendSpaceValidationReport report = CharacterAnimationBlendSpaceValidator.Validate(blendSpace);
+                if (!report.IsValid)
+                {
+                    report.CopyMessagesTo(errors);
+                    return null;
+                }
+                if (!blendSpaceIndices.TryGetValue(blendSpace, out int planIndex))
+                {
+                    var samples = new CharacterAnimationBlendSpaceSamplePlan[blendSpace.Samples.Count];
+                    for (int i = 0; i < samples.Length; i++)
+                    {
+                        CharacterAnimationBlendSpaceSample sample = blendSpace.Samples[i];
+                        AnimationFootFeaturePair features = default;
+                        if (profile.FootPlacementAnalysisMode == CharacterFootPlacementAnalysisMode.GeneratedPerFootFeatures &&
+                            (footAnalysis == null || !footAnalysis.TryGetBlendSpace(
+                                blendSpace.BlendSpaceId,
+                                sample.SampleId,
+                                out features)))
+                        {
+                            errors?.Add($"Blend Space '{blendSpace.BlendSpaceId}' Sample '{sample.SampleId}' has no generated Foot Analysis features.");
+                            continue;
+                        }
+                        samples[i] = new CharacterAnimationBlendSpaceSamplePlan(sample, features);
+                    }
+                    if (errors.Count > 0)
+                        return null;
+                    try
+                    {
+                        var plan = new CharacterAnimationBlendSpacePlan(blendSpace, samples);
+                        plan.RequireValid(profile.FootPlacementAnalysisMode == CharacterFootPlacementAnalysisMode.GeneratedPerFootFeatures);
+                        planIndex = blendSpaces.Count;
+                        blendSpaces.Add(plan);
+                        blendSpaceIndices.Add(blendSpace, planIndex);
+                    }
+                    catch (Exception exception)
+                    {
+                        errors?.Add($"Blend Space '{blendSpace.name}' Projection compile failed: {exception.Message}");
+                        return null;
+                    }
+                }
+                return new CharacterPresentationProducerEntry(
+                    producer.Index,
+                    producer.Identity,
+                    producer.SourceIdentity,
+                    producer.ChannelKind,
+                    kind.Value,
+                    AnimationPoseSourceKind.BlendSpace,
+                    playbackMode,
+                    producerId.TimelineAuthoringId,
+                    producerId.TrackAuthoringId,
+                    producer.AnimationChannelId,
+                    source.GraphId,
+                    source.NodeId,
+                    source.TimelineId,
+                    producerId.TrackAuthoringId,
+                    source.DisplayPath,
+                    null,
+                    null,
+                    null,
+                    planIndex,
+                    blendSpace.Samples.Count,
+                    blendSpaces[planIndex].ClockDurationSeconds,
+                    blendSpaces[planIndex].MarkerSync);
             }
             if (authoringBinding.SourceKind != AnimationPoseSourceKind.Timeline ||
                 !authoringBinding.Source || !authoringBinding.Source.IsValid)
@@ -420,7 +635,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 track.Name,
                 timeline.Duration,
                 clips.ToArray(),
-                CompileMarkerSync(track, timeline));
+                CompileMarkerSync(track, timeline),
+                new AnimationMarkerBindingId($"marker-binding:{producer.Identity}"));
             return new CharacterPresentationProducerEntry(
                 producer.Index,
                 producer.Identity,
@@ -428,6 +644,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 producer.ChannelKind,
                 kind.Value,
                 AnimationPoseSourceKind.Timeline,
+                playbackMode,
                 producerId.TimelineAuthoringId,
                 producerId.TrackAuthoringId,
                 producer.AnimationChannelId,
@@ -439,6 +656,35 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 animation,
                 null,
                 null);
+        }
+
+        static bool TryResolvePlaybackMode(
+            string timelineAuthoringId,
+            IReadOnlyDictionary<string, IReadOnlyList<AnimationMarkerSyncCallSite>> timelineCallSites,
+            List<string> errors,
+            out TimelinePlaybackMode playbackMode)
+        {
+            playbackMode = default;
+            if (timelineCallSites == null ||
+                !timelineCallSites.TryGetValue(timelineAuthoringId, out IReadOnlyList<AnimationMarkerSyncCallSite> callSites) ||
+                callSites == null ||
+                callSites.Count == 0)
+            {
+                errors?.Add($"Animation Timeline '{timelineAuthoringId}' has no playback call site.");
+                return false;
+            }
+
+            playbackMode = callSites[0].PlaybackMode;
+            for (int i = 1; i < callSites.Count; i++)
+            {
+                if (callSites[i].PlaybackMode == playbackMode)
+                    continue;
+                errors?.Add(
+                    $"Animation Timeline '{timelineAuthoringId}' is called with both {playbackMode} and {callSites[i].PlaybackMode}; " +
+                    "one Presentation producer cannot own conflicting playback modes.");
+                return false;
+            }
+            return true;
         }
 
         static CharacterPresentationCameraBinding BuildCameraBinding(
@@ -551,39 +797,66 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return null;
         }
 
-        static int ComputeContributionCapacity(CharacterAnimationBlendLibrary library)
+        readonly struct SelectionEndpoint
         {
-            if (!library)
-                return 0;
-            int capacity = 0;
-            for (int i = 0; i < library.Slots.Count; i++)
+            public SelectionEndpoint(
+                AnimationChannelId channelId,
+                string programProducerId,
+                AnimationSelectionAvailabilityPolicy availability)
             {
-                CharacterAnimationBlendSlotDefinition slot = library.Slots[i];
-                if (slot?.StackPolicy == null)
-                    continue;
-                capacity = checked(capacity + slot.StackPolicy.MaxActiveSourceEntries);
+                ChannelId = channelId;
+                ProgramProducerId = programProducerId ?? string.Empty;
+                Availability = availability;
             }
-            return capacity;
+
+            public AnimationChannelId ChannelId { get; }
+            public string ProgramProducerId { get; }
+            public AnimationSelectionAvailabilityPolicy Availability { get; }
+        }
+
+        sealed class CompiledBlendAuthoringNode
+        {
+            public CompiledBlendAuthoringNode(PoseNodeId nodeId, CharacterPoseNodeDefinition node, SelectionEndpoint selection)
+            {
+                NodeId = nodeId;
+                Node = node;
+                Selection = selection;
+            }
+
+            public PoseNodeId NodeId { get; }
+            public CharacterPoseNodeDefinition Node { get; }
+            public SelectionEndpoint Selection { get; }
         }
 
         static AnimationBlendCatalogCompilation CompileBlendCatalogs(
-            CharacterAnimationBlendLibrary library,
+            CharacterPoseGraphData graph,
             CharacterAnimationRigDefinition rig,
             List<string> errors)
         {
-            if (!library || !rig)
+            if (graph == null || !rig)
                 return null;
             var curves = new SortedDictionary<string, AnimationBlendCurvePayload>(StringComparer.Ordinal);
             var profiles = new SortedDictionary<string, AnimationBlendProfilePayload>(StringComparer.Ordinal);
             var profileIdentityKeys = new Dictionary<string, string>(StringComparer.Ordinal);
-            for (int slotIndex = 0; slotIndex < library.Slots.Count; slotIndex++)
+            List<CompiledBlendAuthoringNode> blendNodes = CollectBlendAuthoringNodes(graph);
+            for (int i = 0; i < blendNodes.Count; i++)
             {
-                CharacterAnimationBlendSlotDefinition slot = library.Slots[slotIndex];
-                if (slot == null)
+                CharacterAnimationBlendPolicy policy = blendNodes[i].Node.BlendPolicy;
+                if (!policy)
                     continue;
-                CollectBlendRule(slot.DefaultTransition, rig, curves, profiles, profileIdentityKeys, errors);
-                for (int transitionIndex = 0; transitionIndex < slot.Overrides.Count; transitionIndex++)
-                    CollectBlendRule(slot.Overrides[transitionIndex]?.Rule, rig, curves, profiles, profileIdentityKeys, errors);
+                CollectBlendRule(policy.DefaultTransition, rig, curves, profiles, profileIdentityKeys, errors);
+                for (int overrideIndex = 0; overrideIndex < policy.Overrides.Count; overrideIndex++)
+                    CollectBlendRule(policy.Overrides[overrideIndex]?.Rule, rig, curves, profiles, profileIdentityKeys, errors);
+            }
+            List<CharacterPoseInertializationPolicy> inertialPolicies = CollectInertializationPolicies(graph);
+            for (int i = 0; i < inertialPolicies.Count; i++)
+            {
+                CharacterPoseInertializationPolicy policy = inertialPolicies[i];
+                if (!policy)
+                    continue;
+                CollectInertialRule(policy.DefaultRule, rig, curves, profiles, profileIdentityKeys, errors);
+                for (int overrideIndex = 0; overrideIndex < policy.Overrides.Count; overrideIndex++)
+                    CollectInertialRule(policy.Overrides[overrideIndex]?.Rule, rig, curves, profiles, profileIdentityKeys, errors);
             }
             if (curves.Count == 0 || profiles.Count == 0)
             {
@@ -665,25 +938,26 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        static AnimationBlendSlotPayload[] CompileBlendSlots(
-            CharacterAnimationBlendLibrary library,
+        static AnimationBlendNodePayload[] CompileBlendNodes(
+            CharacterPoseGraphData graph,
             CharacterAnimationRigDefinition rig,
-            CharacterPresentationPoseProgram poseProgram,
             IReadOnlyList<CharacterPresentationProducerEntry> producers,
             AnimationBlendCatalogCompilation catalogs,
             List<string> errors)
         {
-            if (!library || !rig || poseProgram == null || catalogs == null)
-                return Array.Empty<AnimationBlendSlotPayload>();
-            var result = new AnimationBlendSlotPayload[poseProgram.Slots.Count];
-            for (int slotIndex = 0; slotIndex < poseProgram.Slots.Count; slotIndex++)
+            if (graph == null || !rig || catalogs == null)
+                return Array.Empty<AnimationBlendNodePayload>();
+            List<CompiledBlendAuthoringNode> authoredNodes = CollectBlendAuthoringNodes(graph)
+                .OrderBy(value => value.NodeId)
+                .ToList();
+            var result = new AnimationBlendNodePayload[authoredNodes.Count];
+            for (int nodeIndex = 0; nodeIndex < authoredNodes.Count; nodeIndex++)
             {
-                CharacterPresentationPoseSlotProgramEntry programSlot = poseProgram.Slots[slotIndex];
-                CharacterAnimationBlendSlotDefinition authoredSlot;
+                CompiledBlendAuthoringNode authored = authoredNodes[nodeIndex];
+                CharacterAnimationBlendPolicy policy = authored.Node.BlendPolicy;
                 try
                 {
-                    authoredSlot = library.RequireSlot(programSlot.PoseSlotId);
-                    authoredSlot.RequireValid(rig);
+                    policy.RequireValid(rig);
                 }
                 catch (Exception exception)
                 {
@@ -691,127 +965,176 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     continue;
                 }
 
-                CharacterPresentationProducerEntry[] slotProducers = producers
+                CharacterPresentationProducerEntry[] nodeProducers = producers
                     .Where(value => value != null && value.Kind == CharacterPresentationProducerKind.Animation &&
-                                    value.AnimationChannelId == programSlot.AnimationChannelId)
+                                    value.AnimationChannelId == authored.Selection.ChannelId &&
+                                    (string.IsNullOrEmpty(authored.Selection.ProgramProducerId) ||
+                                     string.Equals(value.ProgramProducerIdentity, authored.Selection.ProgramProducerId, StringComparison.Ordinal)))
                     .OrderBy(value => value.ProgramProducerIndex)
                     .ToArray();
                 var identities = new Dictionary<string, int>(StringComparer.Ordinal);
-                for (int i = 0; i < slotProducers.Length; i++)
+                for (int i = 0; i < nodeProducers.Length; i++)
                 {
-                    CharacterPresentationProducerEntry producer = slotProducers[i];
+                    CharacterPresentationProducerEntry producer = nodeProducers[i];
                     if (!identities.TryAdd(producer.ProgramProducerIdentity, producer.ProgramProducerIndex))
-                    {
-                        errors?.Add($"Pose Slot '{programSlot.PoseSlotId}' duplicates producer identity '{producer.ProgramProducerIdentity}'.");
-                    }
+                        errors?.Add($"Blend Stack '{authored.NodeId}' duplicates producer identity '{producer.ProgramProducerIdentity}'.");
                 }
-                if (slotProducers.Length == 0)
-                    errors?.Add($"Pose Slot '{programSlot.PoseSlotId}' has no reachable producer on Animation Channel '{programSlot.AnimationChannelId}'.");
-                ValidateTransitionOverrides(authoredSlot, programSlot, identities, errors);
+                if (nodeProducers.Length == 0)
+                    errors?.Add($"Blend Stack '{authored.NodeId}' has no reachable producer on Animation Channel '{authored.Selection.ChannelId}'.");
+                ValidateTransitionOverrides(policy, authored, identities, errors);
 
                 var transitions = new List<AnimationBlendTransitionPayload>();
-                for (int target = 0; target < slotProducers.Length; target++)
+                for (int target = 0; target < nodeProducers.Length; target++)
                 {
-                    CharacterPresentationProducerEntry targetProducer = slotProducers[target];
+                    CharacterPresentationProducerEntry targetProducer = nodeProducers[target];
                     transitions.Add(CompileTransition(
-                        authoredSlot,
+                        policy,
                         -1,
                         true,
                         string.Empty,
                         targetProducer.ProgramProducerIndex,
                         false,
                         targetProducer.ProgramProducerIdentity,
-                        programSlot.OutputPolicy,
+                        authored.Selection.Availability,
                         catalogs));
                 }
-                for (int source = 0; source < slotProducers.Length; source++)
+                for (int source = 0; source < nodeProducers.Length; source++)
                 {
-                    CharacterPresentationProducerEntry sourceProducer = slotProducers[source];
-                    for (int target = 0; target < slotProducers.Length; target++)
+                    CharacterPresentationProducerEntry sourceProducer = nodeProducers[source];
+                    for (int target = 0; target < nodeProducers.Length; target++)
                     {
-                        CharacterPresentationProducerEntry targetProducer = slotProducers[target];
+                        CharacterPresentationProducerEntry targetProducer = nodeProducers[target];
                         transitions.Add(CompileTransition(
-                            authoredSlot,
+                            policy,
                             sourceProducer.ProgramProducerIndex,
                             false,
                             sourceProducer.ProgramProducerIdentity,
                             targetProducer.ProgramProducerIndex,
                             false,
                             targetProducer.ProgramProducerIdentity,
-                            programSlot.OutputPolicy,
+                            authored.Selection.Availability,
                             catalogs));
                     }
-                    if (programSlot.OutputPolicy == PoseSlotOutputPolicy.AllowEmpty)
+                    if (authored.Selection.Availability == AnimationSelectionAvailabilityPolicy.AllowEmpty)
                     {
                         transitions.Add(CompileTransition(
-                            authoredSlot,
+                            policy,
                             sourceProducer.ProgramProducerIndex,
                             false,
                             sourceProducer.ProgramProducerIdentity,
                             -1,
                             true,
                             string.Empty,
-                            programSlot.OutputPolicy,
+                            authored.Selection.Availability,
                             catalogs));
                     }
                 }
 
-                result[slotIndex] = new AnimationBlendSlotPayload(
-                    programSlot.PoseSlotId,
-                    programSlot.AnimationChannelId,
-                    programSlot.OutputPolicy,
-                    new AnimationBlendStackPolicyPayload(authoredSlot.StackPolicy),
+                result[nodeIndex] = new AnimationBlendNodePayload(
+                    authored.NodeId,
+                    policy.PolicyId,
+                    policy.Revision,
+                    new AnimationBlendStackPolicyPayload(policy.StackPolicy),
                     transitions.ToArray());
             }
             return result;
         }
 
+        static void CollectInertialRule(
+            CharacterPoseInertializationRule rule,
+            CharacterAnimationRigDefinition rig,
+            SortedDictionary<string, AnimationBlendCurvePayload> curves,
+            SortedDictionary<string, AnimationBlendProfilePayload> profiles,
+            Dictionary<string, string> profileIdentityKeys,
+            List<string> errors)
+        {
+            if (rule == null || rule.Mode == PoseInertializationMode.HardCut)
+                return;
+            try
+            {
+                rule.RequireValid(rig);
+                AnimationBlendCurvePayload curve = rule.Curve.Compile();
+                string curveKey = AnimationBlendCanonicalPayload.CurveKey(curve);
+                if (!curves.ContainsKey(curveKey))
+                    curves.Add(curveKey, curve);
+                var profile = new AnimationBlendProfilePayload(rule.BlendProfile, rig);
+                string profileKey = AnimationBlendCanonicalPayload.ProfileKey(profile);
+                if (profileIdentityKeys.TryGetValue(profile.ProfileId, out string existingKey) &&
+                    !string.Equals(existingKey, profileKey, StringComparison.Ordinal))
+                    throw new InvalidOperationException($"Animation Blend Profile identity '{profile.ProfileId}' resolves to multiple canonical payloads.");
+                profileIdentityKeys[profile.ProfileId] = profileKey;
+                if (!profiles.ContainsKey(profileKey))
+                    profiles.Add(profileKey, profile);
+            }
+            catch (Exception exception)
+            {
+                errors?.Add(exception.Message);
+            }
+        }
+
+        static List<CharacterPoseInertializationPolicy> CollectInertializationPolicies(CharacterPoseGraphData graph)
+        {
+            var result = new List<CharacterPoseInertializationPolicy>();
+            CollectInertializationPolicies(graph, result);
+            return result;
+        }
+
+        static void CollectInertializationPolicies(
+            CharacterPoseGraphData graph,
+            List<CharacterPoseInertializationPolicy> result)
+        {
+            for (int i = 0; i < graph.Nodes.Count; i++)
+            {
+                CharacterPoseNodeDefinition node = graph.Nodes[i];
+                if (node.Kind == CharacterPoseNodeKind.Inertialization && node.InertializationPolicy)
+                    result.Add(node.InertializationPolicy);
+                if (node.Kind != CharacterPoseNodeKind.PoseSubgraph || node.Subgraph == null || !node.Subgraph.IsExclusive)
+                    continue;
+                CharacterPoseGraphData child = node.Subgraph.HasInline ? node.Subgraph.Inline : node.Subgraph.Shared.Graph;
+                CollectInertializationPolicies(child, result);
+            }
+        }
+
         static void ValidateTransitionOverrides(
-            CharacterAnimationBlendSlotDefinition authoredSlot,
-            CharacterPresentationPoseSlotProgramEntry programSlot,
+            CharacterAnimationBlendPolicy policy,
+            CompiledBlendAuthoringNode authored,
             IReadOnlyDictionary<string, int> producerIdentities,
             List<string> errors)
         {
-            for (int i = 0; i < authoredSlot.Overrides.Count; i++)
+            for (int i = 0; i < policy.Overrides.Count; i++)
             {
-                CharacterAnimationBlendTransitionOverride transition = authoredSlot.Overrides[i];
+                CharacterAnimationBlendTransitionOverride transition = policy.Overrides[i];
                 if (transition == null)
                     continue;
                 if (transition.SourceEmpty && transition.TargetEmpty)
                 {
-                    errors?.Add($"Pose Slot '{programSlot.PoseSlotId}' transition override #{i} cannot target Empty from Empty.");
+                    errors?.Add($"Blend Stack '{authored.NodeId}' transition override #{i} cannot target Empty from Empty.");
                     continue;
                 }
                 if (!transition.SourceEmpty && !producerIdentities.ContainsKey(transition.SourceProducerIdentity))
-                {
-                    errors?.Add($"Pose Slot '{programSlot.PoseSlotId}' transition override #{i} references source producer '{transition.SourceProducerIdentity}' outside Animation Channel '{programSlot.AnimationChannelId}'.");
-                }
+                    errors?.Add($"Blend Stack '{authored.NodeId}' transition override #{i} references source producer '{transition.SourceProducerIdentity}' outside its Selection endpoint.");
                 if (!transition.TargetEmpty && !producerIdentities.ContainsKey(transition.TargetProducerIdentity))
-                {
-                    errors?.Add($"Pose Slot '{programSlot.PoseSlotId}' transition override #{i} references target producer '{transition.TargetProducerIdentity}' outside Animation Channel '{programSlot.AnimationChannelId}'.");
-                }
-                if (transition.TargetEmpty && programSlot.OutputPolicy != PoseSlotOutputPolicy.AllowEmpty)
-                {
-                    errors?.Add($"Pose Slot '{programSlot.PoseSlotId}' transition override #{i} targets Empty while output policy is RequireOutput.");
-                }
+                    errors?.Add($"Blend Stack '{authored.NodeId}' transition override #{i} references target producer '{transition.TargetProducerIdentity}' outside its Selection endpoint.");
+                if (transition.TargetEmpty && authored.Selection.Availability != AnimationSelectionAvailabilityPolicy.AllowEmpty)
+                    errors?.Add($"Blend Stack '{authored.NodeId}' transition override #{i} targets Empty while Selection is required.");
             }
         }
 
         static AnimationBlendTransitionPayload CompileTransition(
-            CharacterAnimationBlendSlotDefinition slot,
+            CharacterAnimationBlendPolicy policy,
             int sourceProducerIndex,
             bool sourceEmpty,
             string sourceProducerIdentity,
             int targetProducerIndex,
             bool targetEmpty,
             string targetProducerIdentity,
-            PoseSlotOutputPolicy outputPolicy,
+            AnimationSelectionAvailabilityPolicy outputPolicy,
             AnimationBlendCatalogCompilation catalogs)
         {
-            CharacterAnimationBlendTransitionRule rule = slot.DefaultTransition;
-            for (int i = 0; i < slot.Overrides.Count; i++)
+            CharacterAnimationBlendTransitionRule rule = policy.DefaultTransition;
+            for (int i = 0; i < policy.Overrides.Count; i++)
             {
-                CharacterAnimationBlendTransitionOverride candidate = slot.Overrides[i];
+                CharacterAnimationBlendTransitionOverride candidate = policy.Overrides[i];
                 if (candidate != null && candidate.SourceEmpty == sourceEmpty && candidate.TargetEmpty == targetEmpty &&
                     string.Equals(candidate.SourceProducerIdentity, sourceProducerIdentity, StringComparison.Ordinal) &&
                     string.Equals(candidate.TargetProducerIdentity, targetProducerIdentity, StringComparison.Ordinal))
@@ -821,7 +1144,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
             }
             string curveKey = AnimationBlendCanonicalPayload.CurveKey(rule.Curve.Compile());
-            float durationSeconds = outputPolicy == PoseSlotOutputPolicy.RequireOutput && sourceEmpty && !targetEmpty
+            float durationSeconds = outputPolicy == AnimationSelectionAvailabilityPolicy.RequireSelection && sourceEmpty && !targetEmpty
                 ? 0f
                 : rule.DurationSeconds;
             return new AnimationBlendTransitionPayload(
@@ -829,11 +1152,183 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 sourceEmpty,
                 targetProducerIndex,
                 targetEmpty,
-                rule.Technique,
                 durationSeconds,
                 catalogs.CurveIndices[curveKey],
                 catalogs.ProfileIndicesByIdentity[rule.BlendProfile.ProfileId]);
         }
+
+        static List<CompiledBlendAuthoringNode> CollectBlendAuthoringNodes(CharacterPoseGraphData root)
+        {
+            var result = new List<CompiledBlendAuthoringNode>();
+            CollectBlendAuthoringNodes(
+                root,
+                string.Empty,
+                new Dictionary<PoseInterfacePortId, SelectionEndpoint>(),
+                result);
+            var identities = new HashSet<PoseNodeId>();
+            for (int i = 0; i < result.Count; i++)
+            {
+                if (!identities.Add(result[i].NodeId))
+                    throw new InvalidOperationException($"Pose Graph duplicates compiled Blend Stack '{result[i].NodeId}'.");
+            }
+            return result;
+        }
+
+        static Dictionary<PoseInterfacePortId, SelectionEndpoint> CollectBlendAuthoringNodes(
+            CharacterPoseGraphData graph,
+            string scope,
+            IReadOnlyDictionary<PoseInterfacePortId, SelectionEndpoint> imports,
+            List<CompiledBlendAuthoringNode> result)
+        {
+            Dictionary<string, CharacterPoseEdge> incoming = graph.Edges.ToDictionary(
+                edge => edge.TargetNodeId.Value + "\0" + edge.TargetPortId.Value,
+                edge => edge,
+                StringComparer.Ordinal);
+            var values = new Dictionary<string, SelectionEndpoint>(StringComparer.Ordinal);
+            var exports = new Dictionary<PoseInterfacePortId, SelectionEndpoint>();
+            List<CharacterPoseNodeDefinition> ordered = TopologicalPoseNodes(graph);
+            for (int nodeIndex = 0; nodeIndex < ordered.Count; nodeIndex++)
+            {
+                CharacterPoseNodeDefinition node = ordered[nodeIndex];
+                if (node.Kind == CharacterPoseNodeKind.AnimationSelectionInput ||
+                    node.Kind == CharacterPoseNodeKind.MotionMatchingSelectionInput)
+                {
+                    var endpoint = new SelectionEndpoint(
+                        node.AnimationChannelId,
+                        node.Kind == CharacterPoseNodeKind.MotionMatchingSelectionInput ? node.ProgramProducerId : string.Empty,
+                        node.SelectionAvailability);
+                    BindSelectionOutputs(node, scope, endpoint, values);
+                    continue;
+                }
+                if (node.Kind == CharacterPoseNodeKind.GraphInput)
+                {
+                    for (int i = 0; i < node.Ports.Count; i++)
+                    {
+                        CharacterPosePortDefinition port = node.Ports[i];
+                        if (port != null && port.Kind == CharacterPosePortKind.AnimationSelection &&
+                            port.Direction == CharacterPosePortDirection.Output && imports.TryGetValue(port.InterfacePortId, out SelectionEndpoint endpoint))
+                            values.Add(ScopedEndpoint(node.NodeId, port.PortId, scope), endpoint);
+                    }
+                    continue;
+                }
+                if (node.Kind == CharacterPoseNodeKind.GraphOutput)
+                {
+                    for (int i = 0; i < node.Ports.Count; i++)
+                    {
+                        CharacterPosePortDefinition port = node.Ports[i];
+                        if (port != null && port.Kind == CharacterPosePortKind.AnimationSelection &&
+                            port.Direction == CharacterPosePortDirection.Input &&
+                            TryResolveSelection(node, port, incoming, scope, values, out SelectionEndpoint endpoint))
+                            exports.Add(port.InterfacePortId, endpoint);
+                    }
+                    continue;
+                }
+                if (node.Kind == CharacterPoseNodeKind.PoseSubgraph)
+                {
+                    var childImports = new Dictionary<PoseInterfacePortId, SelectionEndpoint>();
+                    for (int i = 0; i < node.Ports.Count; i++)
+                    {
+                        CharacterPosePortDefinition port = node.Ports[i];
+                        if (port != null && port.Kind == CharacterPosePortKind.AnimationSelection &&
+                            port.Direction == CharacterPosePortDirection.Input &&
+                            TryResolveSelection(node, port, incoming, scope, values, out SelectionEndpoint endpoint))
+                            childImports.Add(port.InterfacePortId, endpoint);
+                    }
+                    CharacterPoseGraphData child = node.Subgraph.HasInline ? node.Subgraph.Inline : node.Subgraph.Shared.Graph;
+                    PoseNodeId callSite = ScopePoseNodeId(node.NodeId, scope);
+                    string childScope = callSite.Value + "/" + child.GraphId;
+                    Dictionary<PoseInterfacePortId, SelectionEndpoint> childExports =
+                        CollectBlendAuthoringNodes(child, childScope, childImports, result);
+                    for (int i = 0; i < node.Ports.Count; i++)
+                    {
+                        CharacterPosePortDefinition port = node.Ports[i];
+                        if (port != null && port.Kind == CharacterPosePortKind.AnimationSelection &&
+                            port.Direction == CharacterPosePortDirection.Output && childExports.TryGetValue(port.InterfacePortId, out SelectionEndpoint endpoint))
+                            values.Add(ScopedEndpoint(node.NodeId, port.PortId, scope), endpoint);
+                    }
+                    continue;
+                }
+                if (node.Kind != CharacterPoseNodeKind.BlendStack)
+                    continue;
+                CharacterPosePortDefinition selectionPort = node.Ports.Single(port =>
+                    port.Kind == CharacterPosePortKind.AnimationSelection && port.Direction == CharacterPosePortDirection.Input);
+                if (!TryResolveSelection(node, selectionPort, incoming, scope, values, out SelectionEndpoint selection))
+                    throw new InvalidOperationException($"Blend Stack '{node.NodeId}' has no resolvable Selection endpoint.");
+                result.Add(new CompiledBlendAuthoringNode(ScopePoseNodeId(node.NodeId, scope), node, selection));
+            }
+            return exports;
+        }
+
+        static void BindSelectionOutputs(
+            CharacterPoseNodeDefinition node,
+            string scope,
+            SelectionEndpoint endpoint,
+            Dictionary<string, SelectionEndpoint> values)
+        {
+            for (int i = 0; i < node.Ports.Count; i++)
+            {
+                CharacterPosePortDefinition port = node.Ports[i];
+                if (port != null && port.Kind == CharacterPosePortKind.AnimationSelection && port.Direction == CharacterPosePortDirection.Output)
+                    values.Add(ScopedEndpoint(node.NodeId, port.PortId, scope), endpoint);
+            }
+        }
+
+        static bool TryResolveSelection(
+            CharacterPoseNodeDefinition node,
+            CharacterPosePortDefinition port,
+            IReadOnlyDictionary<string, CharacterPoseEdge> incoming,
+            string scope,
+            IReadOnlyDictionary<string, SelectionEndpoint> values,
+            out SelectionEndpoint endpoint)
+        {
+            endpoint = default;
+            return incoming.TryGetValue(node.NodeId.Value + "\0" + port.PortId.Value, out CharacterPoseEdge edge) &&
+                   values.TryGetValue(ScopedEndpoint(edge.SourceNodeId, edge.SourcePortId, scope), out endpoint);
+        }
+
+        static List<CharacterPoseNodeDefinition> TopologicalPoseNodes(CharacterPoseGraphData graph)
+        {
+            var nodes = graph.Nodes.ToDictionary(node => node.NodeId);
+            var indegree = nodes.Keys.ToDictionary(node => node, _ => 0);
+            var outgoing = new Dictionary<PoseNodeId, List<PoseNodeId>>();
+            for (int i = 0; i < graph.Edges.Count; i++)
+            {
+                CharacterPoseEdge edge = graph.Edges[i];
+                indegree[edge.TargetNodeId]++;
+                if (!outgoing.TryGetValue(edge.SourceNodeId, out List<PoseNodeId> targets))
+                {
+                    targets = new List<PoseNodeId>();
+                    outgoing.Add(edge.SourceNodeId, targets);
+                }
+                targets.Add(edge.TargetNodeId);
+            }
+            var ready = new SortedSet<PoseNodeId>(indegree.Where(pair => pair.Value == 0).Select(pair => pair.Key));
+            var result = new List<CharacterPoseNodeDefinition>(nodes.Count);
+            while (ready.Count > 0)
+            {
+                PoseNodeId current = ready.Min;
+                ready.Remove(current);
+                result.Add(nodes[current]);
+                if (!outgoing.TryGetValue(current, out List<PoseNodeId> targets))
+                    continue;
+                targets.Sort();
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    if (--indegree[targets[i]] == 0)
+                        ready.Add(targets[i]);
+                }
+            }
+            if (result.Count != nodes.Count)
+                throw new InvalidOperationException($"Pose Graph '{graph.GraphId}' contains a cycle.");
+            return result;
+        }
+
+        static string ScopedEndpoint(PoseNodeId nodeId, PosePortId portId, string scope) =>
+            ScopePoseNodeId(nodeId, scope).Value + "\0" +
+            (string.IsNullOrEmpty(scope) ? portId.Value : scope + "/" + portId.Value);
+
+        static PoseNodeId ScopePoseNodeId(PoseNodeId nodeId, string scope) =>
+            string.IsNullOrEmpty(scope) ? nodeId : new PoseNodeId(scope + "/" + nodeId.Value);
 
         static bool TryFindSourceClip(
             ProgramSourceMapEntry source,
@@ -1031,7 +1526,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             var values = new List<string>
             {
-                "character-presentation-projection/v3",
+                "character-presentation-projection/v5",
                 contractHash.ToString()
             };
             AddProjectionAssetRevision(animationProfile, values);
@@ -1069,6 +1564,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 return MotionMatchingProjectionPayloadCompiler.Compile(
                     profile.MotionMatchingProfile,
+                    profile.PoseGraph.Graph,
                     analysisSource,
                     AnimationClipMotionMatchingParameterCurveResolver.Instance);
             }

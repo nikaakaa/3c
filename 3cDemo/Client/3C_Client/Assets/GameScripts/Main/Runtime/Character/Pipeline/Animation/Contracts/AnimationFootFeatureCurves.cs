@@ -156,9 +156,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static float RequireNonNegative(float value, string field)
         {
-            if (!float.IsFinite(value) || value < 0f)
+            if (!float.IsFinite(value) || value < -0.00001f)
                 throw new ArgumentOutOfRangeException(field);
-            return value;
+            return Mathf.Max(0f, value);
         }
 
         static float RequireFinite(float value, string field)
@@ -338,6 +338,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                        out pair) && pair.IsValid;
         }
 
+        public bool TryGetBlendSpace(
+            CharacterAnimationBlendSpaceId blendSpaceId,
+            CharacterAnimationBlendSpaceSampleId sampleId,
+            out AnimationFootFeaturePair pair)
+        {
+            return m_Features.TryGetValue(
+                       BlendSpaceBindingKey(blendSpaceId, sampleId),
+                       out pair) && pair.IsValid;
+        }
+
         public static string BindingKey(
             string timelineAuthoringId,
             string trackAuthoringId,
@@ -348,6 +358,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 string.IsNullOrWhiteSpace(clipAuthoringId))
                 throw new ArgumentException("Foot Analysis stable clip binding identity is invalid.");
             return string.Concat(timelineAuthoringId, "\n", trackAuthoringId, "\n", clipAuthoringId);
+        }
+
+        public static string BlendSpaceBindingKey(
+            CharacterAnimationBlendSpaceId blendSpaceId,
+            CharacterAnimationBlendSpaceSampleId sampleId)
+        {
+            if (!blendSpaceId.IsValid || !sampleId.IsValid)
+                throw new ArgumentException("Foot Analysis Blend Space Sample binding identity is invalid.");
+            return string.Concat("blend-space\n", blendSpaceId.Value, "\n", sampleId.Value);
         }
     }
 }

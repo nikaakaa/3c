@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEditor;
 using UnityEngine;
 
@@ -10,6 +11,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     public static class CharacterPresentationPoseGraphAuthoringService
     {
+        public static void ConfigureParameters(
+            CharacterPresentationPoseGraphAsset owner,
+            CharacterPoseParameterDeclaration[] parameters)
+        {
+            if (!owner)
+                throw new ArgumentNullException(nameof(owner));
+            Undo.RecordObject(owner, "Configure Pose Graph Parameters");
+            CharacterPoseGraphData graph = owner.Graph;
+            graph.Configure(
+                parameters ?? Array.Empty<CharacterPoseParameterDeclaration>(),
+                graph.Nodes.ToArray(),
+                graph.Edges.ToArray());
+            EditorUtility.SetDirty(owner);
+        }
+
         public static CharacterPoseNodeDefinition CreateNode(
             CharacterPresentationPoseGraphAsset owner,
             CharacterPoseGraphData graph,
@@ -20,7 +36,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Undo.RecordObject(owner, "Create Pose Graph Node");
             CharacterPoseNodeDefinition node = CreateNodeDefinition(graph, kind, position);
             graph.Configure(
-                graph.PoseSlots.ToArray(),
                 graph.Parameters.ToArray(),
                 graph.Nodes.Concat(new[] { node }).ToArray(),
                 graph.Edges.ToArray());
@@ -41,7 +56,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             Undo.RecordObject(owner, "Delete Pose Graph Selection");
             graph.Configure(
-                graph.PoseSlots.ToArray(),
                 graph.Parameters.ToArray(),
                 graph.Nodes.Where(node => node != null && !removedNodes.Contains(node.NodeId)).ToArray(),
                 graph.Edges.Where(edge => edge != null &&
@@ -76,7 +90,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Undo.RecordObject(owner, "Connect Pose Graph Ports");
             var edge = new CharacterPoseEdge(Guid.NewGuid().ToString("N"), sourceNodeId, sourcePortId, targetNodeId, targetPortId);
             graph.Configure(
-                graph.PoseSlots.ToArray(),
                 graph.Parameters.ToArray(),
                 graph.Nodes.ToArray(),
                 graph.Edges.Concat(new[] { edge }).ToArray());
@@ -99,7 +112,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return node;
                 return CloneNode(node, node.NodeId, node.Ports.ToArray(), position, node.Subgraph);
             }).ToArray();
-            graph.Configure(graph.PoseSlots.ToArray(), graph.Parameters.ToArray(), nodes, graph.Edges.ToArray());
+            graph.Configure(graph.Parameters.ToArray(), nodes, graph.Edges.ToArray());
             EditorUtility.SetDirty(owner);
         }
 
@@ -120,31 +133,59 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPresentationPoseGraphAsset owner,
             CharacterPoseGraphData graph,
             PoseNodeId nodeId,
-            PoseSlotId poseSlotId,
+            ThirdPersonSimulation.AnimationChannelId animationChannelId,
+            string programProducerId,
+            PoseParameterId parameterId,
+            AnimationSelectionAvailabilityPolicy selectionAvailability,
+            CharacterAnimationBlendSpaceInputRangePolicy blendSpaceInputRangePolicy,
+            CharacterAnimationBlendPolicy blendPolicy,
+            CharacterPoseInertializationPolicy inertializationPolicy,
             CharacterAnimationBoneMaskAsset boneMask,
             float weight,
             CharacterPoseParameterPolicy[] parameterPolicies,
             string additiveReferencePoseId,
             AdditiveReferenceSpace additiveReferenceSpace,
-            AdditiveScalePolicy additiveScalePolicy)
+            AdditiveScalePolicy additiveScalePolicy,
+            AnimationBoneId boneId,
+            ModifyBoneReferenceSpace modifyBoneReferenceSpace,
+            ModifyBoneOperationMask modifyBoneOperations,
+            Vector3 modifyPosition,
+            Vector3 modifyRotationEuler,
+            Vector3 modifyScale,
+            CharacterFootPlacementProfile footPlacementProfile,
+            CharacterFootPlacementRigCalibration footPlacementCalibration)
         {
             RequireOwner(owner, graph);
             CharacterPoseNodeDefinition current = RequireNode(graph, nodeId);
             Undo.RecordObject(owner, "Configure Pose Graph Node");
             CharacterPoseNodeDefinition replacement = new CharacterPoseNodeDefinition(
-                current.NodeId,
-                current.Kind,
-                current.DisplayName,
-                current.Position,
-                current.Ports.ToArray(),
-                poseSlotId,
-                boneMask,
-                weight,
-                parameterPolicies ?? Array.Empty<CharacterPoseParameterPolicy>(),
-                additiveReferencePoseId,
-                additiveReferenceSpace,
-                additiveScalePolicy,
-                current.Subgraph);
+                nodeId: current.NodeId,
+                kind: current.Kind,
+                displayName: current.DisplayName,
+                position: current.Position,
+                ports: current.Ports.ToArray(),
+                animationChannelId: animationChannelId,
+                programProducerId: programProducerId,
+                parameterId: parameterId,
+                selectionAvailability: selectionAvailability,
+                blendSpaceInputRangePolicy: blendSpaceInputRangePolicy,
+                blendPolicy: blendPolicy,
+                inertializationPolicy: inertializationPolicy,
+                boneMask: boneMask,
+                weight: weight,
+                parameterPolicies: parameterPolicies ?? Array.Empty<CharacterPoseParameterPolicy>(),
+                additiveReferencePoseId: additiveReferencePoseId,
+                additiveReferenceSpace: additiveReferenceSpace,
+                additiveScalePolicy: additiveScalePolicy,
+                boneId: boneId,
+                modifyBoneReferenceSpace: modifyBoneReferenceSpace,
+                modifyBoneOperations: modifyBoneOperations,
+                modifyPosition: modifyPosition,
+                modifyRotationEuler: modifyRotationEuler,
+                modifyScale: modifyScale,
+                footPlacementProfile: footPlacementProfile,
+                footPlacementCalibration: footPlacementCalibration,
+                subgraph: current.Subgraph);
             ReplaceNode(graph, current, replacement);
             EditorUtility.SetDirty(owner);
         }
@@ -327,7 +368,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireOwner(owner, graph);
             Undo.RecordObject(owner, "Paste Pose Graph Elements");
             graph.Configure(
-                graph.PoseSlots.ToArray(),
                 graph.Parameters.ToArray(),
                 graph.Nodes.Concat(nodes ?? Array.Empty<CharacterPoseNodeDefinition>()).ToArray(),
                 graph.Edges.Concat(edges ?? Array.Empty<CharacterPoseEdge>()).ToArray());
@@ -341,22 +381,55 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             PoseNodeId nodeId = new PoseNodeId(Guid.NewGuid().ToString("N"));
             CharacterPosePortDefinition[] ports;
-            PoseSlotId slotId = default;
             CharacterPoseSubgraphReference subgraph = null;
             switch (kind)
             {
-                case CharacterPoseNodeKind.PoseSlotInput:
-                    ports = new[] { Port("Pose", CharacterPosePortDirection.Output) };
-                    slotId = graph.PoseSlots.FirstOrDefault()?.PoseSlotId ?? default;
+                case CharacterPoseNodeKind.AnimationSelectionInput:
+                case CharacterPoseNodeKind.MotionMatchingSelectionInput:
+                    ports = new[] { Port("Selection", CharacterPosePortKind.AnimationSelection, CharacterPosePortDirection.Output) };
                     break;
+                case CharacterPoseNodeKind.ProgramParameterInput:
+                    ports = new[] { Port("Parameter", CharacterPosePortKind.Parameter, CharacterPosePortDirection.Output) };
+                    break;
+                case CharacterPoseNodeKind.MarkerSync:
+                    ports = new[]
+                    {
+                        Port("Selection", CharacterPosePortKind.AnimationSelection, CharacterPosePortDirection.Input),
+                        Port("Selection", CharacterPosePortKind.AnimationSelection, CharacterPosePortDirection.Output)
+                    };
+                    break;
+                case CharacterPoseNodeKind.SelectedPosePlayer:
+                case CharacterPoseNodeKind.BlendStack:
+                    ports = new[]
+                    {
+                        Port("Selection", CharacterPosePortKind.AnimationSelection, CharacterPosePortDirection.Input),
+                        Port("Pose", CharacterPosePortKind.Pose, CharacterPosePortDirection.Output)
+                    };
+                    break;
+                case CharacterPoseNodeKind.BlendSpacePlayer:
+                    ports = new[]
+                    {
+                        Port("Selection", CharacterPosePortKind.AnimationSelection, CharacterPosePortDirection.Input),
+                        Port("X", CharacterPosePortKind.Parameter, CharacterPosePortDirection.Input),
+                        OptionalPort("Y", CharacterPosePortKind.Parameter, CharacterPosePortDirection.Input),
+                        Port("Pose", CharacterPosePortKind.Pose, CharacterPosePortDirection.Output),
+                        Port("Discontinuity", CharacterPosePortKind.PoseDiscontinuity, CharacterPosePortDirection.Output)
+                    };
+                    break;
+                case CharacterPoseNodeKind.Inertialization:
+                    ports = PoseUnaryPorts();
+                    break;
+                case CharacterPoseNodeKind.BlendPose:
                 case CharacterPoseNodeKind.LayeredBoneBlend:
-                    ports = PoseBinaryPorts("Base", "Overlay");
-                    break;
                 case CharacterPoseNodeKind.AdditivePose:
-                    ports = PoseBinaryPorts("Base", "Additive");
+                    ports = PoseBinaryWithParameterPorts("Base", kind == CharacterPoseNodeKind.AdditivePose ? "Additive" : "Overlay");
                     break;
-                case CharacterPoseNodeKind.PoseCurveResolve:
+                case CharacterPoseNodeKind.PoseParameterResolve:
                     ports = PoseBinaryPorts("Base Pose", "Parameter Source Pose");
+                    break;
+                case CharacterPoseNodeKind.ModifyBone:
+                case CharacterPoseNodeKind.FootPlacement:
+                    ports = PoseUnaryWithParameterPorts();
                     break;
                 case CharacterPoseNodeKind.PoseSubgraph:
                     subgraph = CreateDefaultSubgraphReference(graph.Parameters);
@@ -366,22 +439,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ports = new[] { Port("Pose", CharacterPosePortDirection.Input) };
                     break;
                 default:
-                    throw new InvalidOperationException($"Pose node kind '{kind}' is compiler-only and cannot be created in the current document.");
+                    throw new InvalidOperationException($"Pose node kind '{kind}' is a graph boundary and cannot be created directly.");
             }
             return new CharacterPoseNodeDefinition(
-                nodeId,
-                kind,
-                kind.ToString(),
-                position,
-                ports,
-                slotId,
-                null,
-                1f,
-                CreatePolicies(graph.Parameters),
-                AnimationAdditiveReferencePoseIds.RigReference,
-                AdditiveReferenceSpace.Local,
-                AdditiveScalePolicy.Multiply,
-                subgraph);
+                nodeId: nodeId,
+                kind: kind,
+                displayName: kind.ToString(),
+                position: position,
+                ports: ports,
+                parameterId: graph.Parameters.FirstOrDefault()?.ParameterId ?? default,
+                parameterPolicies: CreatePolicies(graph.Parameters),
+                subgraph: subgraph);
         }
 
         static CharacterPoseSubgraphReference CreateDefaultSubgraphReference(
@@ -405,7 +473,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new[] { outputBoundaryPort });
             var graph = new CharacterPoseGraphData();
             graph.Configure(
-                Array.Empty<CharacterPoseSlotDeclaration>(),
                 parameters?.ToArray() ?? Array.Empty<CharacterPoseParameterDeclaration>(),
                 new[] { input, output },
                 new[]
@@ -479,7 +546,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 out Dictionary<string, PosePortId> portMap);
             CharacterPoseEdge[] edges = CloneInternalEdges(graph.Edges.ToArray(), nodeMap, portMap);
             var inline = new CharacterPoseGraphData();
-            inline.Configure(graph.PoseSlots.ToArray(), graph.Parameters.ToArray(), nodes, edges);
+            inline.Configure(graph.Parameters.ToArray(), nodes, edges);
             clone.CreateInline(inline);
             return clone;
         }
@@ -493,19 +560,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string displayName = null)
         {
             return new CharacterPoseNodeDefinition(
-                nodeId,
-                source.Kind,
-                displayName ?? source.DisplayName,
-                position,
-                ports,
-                source.PoseSlotId,
-                source.BoneMask,
-                source.Weight,
-                source.ParameterPolicies.ToArray(),
-                source.AdditiveReferencePoseId,
-                source.AdditiveReferenceSpace,
-                source.AdditiveScalePolicy,
-                subgraph);
+                nodeId: nodeId,
+                kind: source.Kind,
+                displayName: displayName ?? source.DisplayName,
+                position: position,
+                ports: ports,
+                animationChannelId: source.AnimationChannelId,
+                programProducerId: source.ProgramProducerId,
+                parameterId: source.ParameterId,
+                selectionAvailability: source.SelectionAvailability,
+                blendSpaceInputRangePolicy: source.BlendSpaceInputRangePolicy,
+                blendPolicy: source.BlendPolicy,
+                inertializationPolicy: source.InertializationPolicy,
+                boneMask: source.BoneMask,
+                weight: source.Weight,
+                parameterPolicies: source.ParameterPolicies.ToArray(),
+                additiveReferencePoseId: source.AdditiveReferencePoseId,
+                additiveReferenceSpace: source.AdditiveReferenceSpace,
+                additiveScalePolicy: source.AdditiveScalePolicy,
+                boneId: source.BoneId,
+                modifyBoneReferenceSpace: source.ModifyBoneReferenceSpace,
+                modifyBoneOperations: source.ModifyBoneOperations,
+                modifyPosition: source.ModifyPosition,
+                modifyRotationEuler: source.ModifyRotation.eulerAngles,
+                modifyScale: source.ModifyScale,
+                footPlacementProfile: source.FootPlacementProfile,
+                footPlacementCalibration: source.FootPlacementCalibration,
+                subgraph: subgraph);
         }
 
         static CharacterPosePortDefinition[] PoseBinaryPorts(string first, string second)
@@ -518,18 +599,63 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             };
         }
 
+        static CharacterPosePortDefinition[] PoseBinaryWithParameterPorts(string first, string second)
+        {
+            return PoseBinaryPorts(first, second)
+                .Concat(new[] { Port("Weight", CharacterPosePortKind.Parameter, CharacterPosePortDirection.Input) })
+                .ToArray();
+        }
+
+        static CharacterPosePortDefinition[] PoseUnaryPorts()
+        {
+            return new[]
+            {
+                Port("Pose", CharacterPosePortKind.Pose, CharacterPosePortDirection.Input),
+                Port("Pose", CharacterPosePortKind.Pose, CharacterPosePortDirection.Output)
+            };
+        }
+
+        static CharacterPosePortDefinition[] PoseUnaryWithParameterPorts()
+        {
+            return PoseUnaryPorts()
+                .Concat(new[] { Port("Weight", CharacterPosePortKind.Parameter, CharacterPosePortDirection.Input) })
+                .ToArray();
+        }
+
         static CharacterPosePortDefinition Port(
             string name,
+            CharacterPosePortDirection direction,
+            PoseInterfacePortId interfacePortId = default)
+        {
+            return Port(name, CharacterPosePortKind.Pose, direction, interfacePortId);
+        }
+
+        static CharacterPosePortDefinition Port(
+            string name,
+            CharacterPosePortKind kind,
             CharacterPosePortDirection direction,
             PoseInterfacePortId interfacePortId = default)
         {
             return new CharacterPosePortDefinition(
                 new PosePortId(Guid.NewGuid().ToString("N")),
                 name,
-                CharacterPosePortKind.Pose,
+                kind,
                 direction,
                 true,
                 interfacePortId);
+        }
+
+        static CharacterPosePortDefinition OptionalPort(
+            string name,
+            CharacterPosePortKind kind,
+            CharacterPosePortDirection direction)
+        {
+            return new CharacterPosePortDefinition(
+                new PosePortId(Guid.NewGuid().ToString("N")),
+                name,
+                kind,
+                direction,
+                false);
         }
 
         static CharacterPoseParameterPolicy[] CreatePolicies(IReadOnlyList<CharacterPoseParameterDeclaration> parameters)
@@ -550,7 +676,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (index < 0)
                 throw new InvalidOperationException($"Pose node '{current.NodeId}' is not owned by graph '{graph.GraphId}'.");
             nodes[index] = replacement;
-            graph.Configure(graph.PoseSlots.ToArray(), graph.Parameters.ToArray(), nodes, graph.Edges.ToArray());
+            graph.Configure(graph.Parameters.ToArray(), nodes, graph.Edges.ToArray());
         }
 
         static CharacterPoseNodeDefinition RequireNode(CharacterPoseGraphData graph, PoseNodeId nodeId)

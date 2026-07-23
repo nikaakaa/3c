@@ -1,0 +1,420 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12a2aa2105adfad4da7b60bd90e64cb3, type: 3}
+  m_Name: CorinFullBodyActionMask
+  m_EditorClassIdentifier: 
+  m_MaskId: corin.animation-rig.full-body-action
+  m_RigId: corin.animation-rig
+  m_RigRevision: 56009a4556da483182cd735e9ed537e7
+  m_Weights:
+  - m_BoneId: animation-bone/root
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_L_Thigh
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_L_Thigh/Bip001_L_Calf
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_L_Thigh/Bip001_L_Calf/Bip001_L_Calf_Adv
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_L_Thigh/Bip001_L_Calf/Bip001_L_Foot
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_L_Thigh/Bip001_L_Calf/Bip001_L_Foot/Bip001_L_Toe0
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_L_Thigh/Bip001_L_Calf/JH_L
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_L_Thigh/Bip001_L_Calf/knee_L
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_L_Thigh/Bip001_L_Thigh_Fix01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_L_Thigh/Bip001_LThighTwist
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_R_Thigh
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_R_Thigh/Bip001_R_Calf
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_R_Thigh/Bip001_R_Calf/Bip001_R_Calf_Adv
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_R_Thigh/Bip001_R_Calf/Bip001_R_Foot
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_R_Thigh/Bip001_R_Calf/Bip001_R_Foot/Bip001_R_Toe0
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_R_Thigh/Bip001_R_Calf/JH_R
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_R_Thigh/Bip001_R_Calf/knee_R
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_R_Thigh/Bip001_R_Thigh_Fix01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_R_Thigh/Bip001_R_Thigh_Fix02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_R_Thigh/Bip001_RThighTwist
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Forearm_Adv
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Forearm_Adv/Bip001_L_ForeTwist
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger0
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger0/Bip001_L_Finger01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger0/Bip001_L_Finger01/Bip001_L_Finger02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger1
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger1/Bip001_L_Finger11
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger1/Bip001_L_Finger11/Bip001_L_Finger12
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger2
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger2/Bip001_L_Finger21
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger2/Bip001_L_Finger21/Bip001_L_Finger22
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger3
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger3/Bip001_L_Finger31
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger3/Bip001_L_Finger31/Bip001_L_Finger32
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger4
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger4/Bip001_L_Finger41
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand/Bip001_L_Finger4/Bip001_L_Finger41/Bip001_L_Finger42
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Elbow_L
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_UpArmTwist01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_UpArmTwist02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/EYE_L
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/EYE_R
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_F_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_F_01/Hair_F_03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_F_01/Hair_F_03/Hair_F_04
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_F_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_F_02/Hair_F_06
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_F_02/Hair_F_06/Hair_F_07
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_01/Hair_S_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_01/Hair_S_02/Hair_S_03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_01/Hair_S_02/Hair_S_03/Hair_S_04
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_06
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_06/Hair_S_07
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_06/Hair_S_07/Hair_S_08
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_10
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_10/Hair_S_15
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_10/Hair_S_15/Hair_S_16
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_10/Hair_S_15/Hair_S_16/Hair_S_17
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_11
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_11/Hair_S_12
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Hair_S_11/Hair_S_12/Hair_S_13
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_A_15
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_A_15/L_Backhair_A_16
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_A_15/L_Backhair_A_16/L_Backhair_A_17
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_A_15/L_Backhair_A_16/L_Backhair_A_17/L_Backhair_A_18
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_A_15/L_Backhair_A_16/L_Backhair_A_17/L_Backhair_A_18/L_Backhair_A_19
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_B_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_B_01/L_Backhair_B_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_B_01/L_Backhair_B_02/L_Backhair_B_03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_B_01/L_Backhair_B_02/L_Backhair_B_03/L_Backhair_B_04
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_C_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_C_01/L_Backhair_C_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_C_01/L_Backhair_C_02/L_Backhair_C_03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_C_01/L_Backhair_C_02/L_Backhair_C_03/L_Backhair_C_04
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_C_01/L_Backhair_C_02/L_Backhair_C_03/L_Backhair_C_04/L_Backhair_C_05
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/L_Backhair_A_01/L_Backhair_A_02/L_Backhair_C_01/L_Backhair_C_02/L_Backhair_C_03/L_Backhair_C_04/L_Backhair_C_05/L_Backhair_C_06
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Mouth_A
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Mouth_B
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/Mouth_C
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_A_03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_A_03/R_Backhair_A_04
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_A_03/R_Backhair_A_04/R_Backhair_A_05
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_A_03/R_Backhair_A_04/R_Backhair_A_05/R_Backhair_A_06
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_A_03/R_Backhair_A_04/R_Backhair_A_05/R_Backhair_A_06/R_Backhair_A_07
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_B_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_B_01/R_Backhair_B_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_B_01/R_Backhair_B_02/R_Backhair_B_03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_B_01/R_Backhair_B_02/R_Backhair_B_03/R_Backhair_B_04
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_C_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_C_01/R_Backhair_C_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_C_01/R_Backhair_C_02/R_Backhair_C_03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_C_01/R_Backhair_C_02/R_Backhair_C_03/R_Backhair_C_04
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_C_01/R_Backhair_C_02/R_Backhair_C_03/R_Backhair_C_04/R_Backhair_C_05
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head/R_Backhair_A_01/R_Backhair_A_02/R_Backhair_C_01/R_Backhair_C_02/R_Backhair_C_03/R_Backhair_C_04/R_Backhair_C_05/R_Backhair_C_06
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Forearm_Adv
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Forearm_Adv/Bip001_R_ForeTwist
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger0
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger0/Bip001_R_Finger01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger0/Bip001_R_Finger01/Bip001_R_Finger02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger1
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger1/Bip001_R_Finger11
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger1/Bip001_R_Finger11/Bip001_R_Finger12
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger2
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger2/Bip001_R_Finger21
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger2/Bip001_R_Finger21/Bip001_R_Finger22
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger3
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger3/Bip001_R_Finger31
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger3/Bip001_R_Finger31/Bip001_R_Finger32
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger4
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger4/Bip001_R_Finger41
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand/Bip001_R_Finger4/Bip001_R_Finger41/Bip001_R_Finger42
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Elbow_R
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_UpArmTwist01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_UpArmTwist02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Chest_L
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Chest_R
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Etc_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Etc_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Etc_03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Kuma_Main
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Kuma_Main/Kuma_Arm_L
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Kuma_Main/Kuma_Arm_R
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Kuma_Main/Kuma_Body
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Kuma_Main/Kuma_Body/Kuma_Heart
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Kuma_Main/Kuma_Body/Kuma_Leg_L
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Kuma_Main/Kuma_Body/Kuma_Leg_R
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Kuma_Main/Kuma_Head
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/S_ChainB_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/S_ChainB_01/S_ChainB_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/S_ChainB_01/S_ChainB_02/S_ChainB_03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/S_ChainF_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/S_ChainF_01/S_ChainF_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/S_ChainF_01/S_ChainF_02/S_ChainF_03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_01/Skirt_12
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_01/Skirt_12/Skirt_13
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_02/Skirt_30
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_02/Skirt_30/Skirt_31
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_03/Skirt_18
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_03/Skirt_18/Skirt_19
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_04
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_04/Skirt_24
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_04/Skirt_24/Skirt_25
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_05
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_05/Skirt_09
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_05/Skirt_09/Skirt_10
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_06
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_06/Skirt_21
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_06/Skirt_21/Skirt_22
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_07
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_07/Skirt_15
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_07/Skirt_15/Skirt_16
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_08
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_08/Skirt_27
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Skirt_08/Skirt_27/Skirt_28
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Bn_LALIAN
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Pelvis_L
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Pelvis_L2
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Pelvis_R
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Pelvis_R2
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Spring_L01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Spring_L01/Spring_L02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Spring_L01/Spring_L02/Spring_L03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Spring_R01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Spring_R01/Spring_R02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Pelvis/Spring_R01/Spring_R02/Spring_R03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Prop1
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Prop1/Weapon_Lever_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Prop1/Weapon_Lever_01/Weapon_Lever_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Prop1/Weapon_Lever_01/Weapon_Lever_02/Weapon_Etc_01
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Prop1/Weapon_Lever_01/Weapon_Lever_02/Weapon_Etc_01/Weapon_Etc_02
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Prop1/Weapon_Lever_01/Weapon_Lever_02/Weapon_Etc_01/Weapon_Etc_02/Weapon_Etc_03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Prop1/Weapon_Lever_01/Weapon_Lever_02/Weapon_Etc_05
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Prop1/Weapon_Lever_01/Weapon_Lever_02/Weapon_Etc_05/Weapon_Etc_06
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Prop1/Weapon_Lever_01/Weapon_Lever_02/Weapon_Etc_05/Weapon_Etc_06/Weapon_Etc_07
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Prop1/Weapon_Lever_01/Weapon_Lever_02/Weapon_Etc_05/Weapon_Etc_06/Weapon_Etc_07/Weapon_Etc_08
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Prop1/Weapon_Lever_01/Weapon_Lever_02/Weapon_Lever_03
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Prop1/Weapon_Lever_01/Weapon_Lever_02/Weapon_Lever_03/Weapon_saw
+    m_Weight: 1
+  - m_BoneId: animation-bone/Bip001/Bip001_Prop1/Weapon_Lever_01/Weapon_Lever_02/Weapon_Lever_03/Weapon_saw_b
+    m_Weight: 1

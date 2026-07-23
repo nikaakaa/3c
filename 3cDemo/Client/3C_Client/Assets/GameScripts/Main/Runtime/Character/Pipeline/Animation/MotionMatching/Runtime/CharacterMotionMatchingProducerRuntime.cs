@@ -1,13 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
+using BTSMTL.Diagnostics;
 using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 {
-    public sealed class CharacterMotionMatchingProducerRuntime : IDisposable
+    internal sealed class CharacterMotionMatchingProducerRuntime : IDisposable
     {
         readonly MotionMatchingProjectionPayload m_Projection;
+        readonly string m_ProjectionIdentity;
         readonly MotionMatchingProducerBindingPayload m_Binding;
         readonly DatabaseRuntime[] m_Databases;
         readonly CharacterMotionMatchingTrajectoryRuntime m_Trajectory;
@@ -15,6 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         readonly CharacterMotionMatchingPoseHistory m_History;
         readonly int[] m_FeatureBoneIndices;
         readonly Vector3[] m_FeatureBonePositions;
+        MotionMatchingRuntimeSnapshot m_RuntimeSnapshot;
 
         MotionMatchingSelectionDecision m_CurrentDecision;
         AnimationPlaybackId m_CurrentPlaybackId;
@@ -26,16 +31,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         ulong m_LastResolvedFrame;
         ulong m_LastHistoryFrame;
         float m_PresentationTime;
+        ulong m_PendingResetPreviousSequence;
+        bool m_HasPendingReset;
         bool m_Disposed;
 
         public CharacterMotionMatchingProducerRuntime(
+            string projectionIdentity,
             MotionMatchingProjectionPayload projection,
             MotionMatchingProducerBindingPayload binding,
             CharacterAnimationRigPayload rig)
         {
+            m_ProjectionIdentity = MotionMatchingIdentity.Require(projectionIdentity, nameof(projectionIdentity));
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             m_Binding = binding;
-            if (!binding.AnimationChannelId.IsValid || !binding.PoseSlotId.IsValid ||
+            if (!binding.AnimationChannelId.IsValid || !binding.PoseNodeId.IsValid ||
                 !binding.SearchDomainId.IsValid || binding.DatabaseCount <= 0 || rig == null)
                 throw new ArgumentException("Motion Matching producer runtime binding is invalid.");
             rig.RequireValid();
@@ -73,7 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
         public string ProgramProducerId => m_Binding.ProgramProducerId;
         public AnimationChannelId AnimationChannelId => m_Binding.AnimationChannelId;
-        public PoseSlotId PoseSlotId => m_Binding.PoseSlotId;
+        public PoseNodeId PoseNodeId => m_Binding.PoseNodeId;
         public int FeatureBoneCount => m_FeatureBoneIndices.Length;
         public MotionMatchingSelectionDecision CurrentDecision => m_CurrentDecision;
         public MotionMatchingQuery LastWinnerQuery => m_LastWinnerQuery;
@@ -90,7 +99,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             MotionMatchingTrajectorySourceFrame trajectorySource,
             AnimationPlaybackId playbackId,
             ulong presentationRequestSequence,
-            int programProducerIndex)
+            int programProducerIndex,
+            RuntimeDiagnosticsContext diagnostics)
         {
             RequireAlive();
             if (presentationFrame == 0 || presentationFrame == m_LastResolvedFrame)
@@ -101,6 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 throw new ArgumentException("Motion Matching producer frame input is invalid.");
 
             m_LastResolvedFrame = presentationFrame;
+            PublishPendingReset(diagnostics);
             if (m_CurrentPlaybackId.IsValid && !m_CurrentPlaybackId.Equals(playbackId))
                 ReleaseDomain();
             m_CurrentPlaybackId = playbackId;
@@ -123,20 +134,140 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             }
 
             if (requiresSearch)
-                SearchAndSelect(triggerReason);
+                SearchAndSelect(triggerReason, diagnostics);
             else
                 m_CurrentDecision = m_Databases[m_CurrentDatabaseIndex].Selection.GetContinuationDecision();
             if (!m_CurrentDecision.IsValid || m_CurrentDatabaseIndex < 0)
                 throw new InvalidOperationException($"Motion Matching producer '{ProgramProducerId}' has no valid cross-Database Selection: {m_CurrentDecision.InvalidReason}.");
 
-            return m_Databases[m_CurrentDatabaseIndex].PoseSource.Resolve(
+            MotionMatchingPoseSourceOutput output = m_Databases[m_CurrentDatabaseIndex].PoseSource.Resolve(
                 m_CurrentDecision,
                 AnimationChannelId,
-                PoseSlotId,
+                PoseNodeId,
                 playbackId,
                 presentationRequestSequence,
                 programProducerIndex,
                 ProgramProducerId);
+            PublishPoseSourceDiagnostics(diagnostics, output);
+            return output;
+        }
+
+        internal MotionMatchingPoseSourceOutput ResolveFixture(
+            ulong presentationFrame,
+            float presentationDeltaSeconds,
+            MotionMatchingSearchReplayArtifact fixture,
+            AnimationPlaybackId playbackId,
+            ulong presentationRequestSequence,
+            int programProducerIndex,
+            RuntimeDiagnosticsContext diagnostics)
+        {
+            RequireAlive();
+            if (fixture == null || presentationFrame == 0 || presentationFrame == m_LastResolvedFrame ||
+                !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f ||
+                !playbackId.IsValid || presentationRequestSequence == 0 || programProducerIndex < 0 ||
+                !string.Equals(fixture.ProjectionIdentity, m_ProjectionIdentity, StringComparison.Ordinal) ||
+                !fixture.ProfileId.Equals(m_Projection.ProfileId) ||
+                !fixture.SearchDomainId.Equals(m_Binding.SearchDomainId))
+                throw new ArgumentException("Motion Matching fixture frame input is invalid.", nameof(fixture));
+
+            int databaseIndex = -1;
+            for (int i = 0; i < m_Databases.Length; i++)
+            {
+                DatabaseRuntime candidate = m_Databases[i];
+                if (!candidate.Database.ArtifactIdentity.EqualsExact(fixture.DatabaseIdentity))
+                    continue;
+                if (!string.Equals(candidate.Database.SearchPolicy.PolicyId, fixture.SearchPolicyId, StringComparison.Ordinal) ||
+                    candidate.Database.SearchPolicy.Revision != fixture.SearchPolicyRevision)
+                    throw new InvalidOperationException("Motion Matching fixture Search Policy identity is stale.");
+                databaseIndex = i;
+                break;
+            }
+            if (databaseIndex < 0)
+                throw new InvalidOperationException("Motion Matching fixture Database identity is not owned by the selected producer.");
+            if (fixture.ResetSequence != m_ResetSequence)
+                Reset(fixture.ResetSequence);
+
+            m_Envelope.RestoreIdentity(
+                fixture.TrajectorySourceIdentity,
+                fixture.TrajectorySourceTick,
+                fixture.TrajectorySourceSequence,
+                fixture.TrajectorySourceAge,
+                fixture.ResetSequence);
+            for (int i = 0; i < fixture.TrajectoryPointCount; i++)
+                m_Envelope.Add(fixture.GetTrajectoryPoint(i));
+            var features = new float[fixture.NormalizedFeatureCount];
+            for (int i = 0; i < features.Length; i++)
+                features[i] = fixture.GetNormalizedFeature(i);
+            var query = new MotionMatchingQuery(
+                fixture.QueryId,
+                fixture.ProfileId,
+                fixture.DatabaseIdentity,
+                fixture.SearchDomainId,
+                fixture.TrajectorySourceIdentity,
+                m_Envelope,
+                new MotionMatchingFloatBuffer(features, 0, features.Length),
+                fixture.ContactProtection,
+                fixture.CurrentSelection,
+                fixture.Initialization,
+                fixture.SecondsSinceLastJump,
+                fixture.ResetSequence);
+            DatabaseRuntime database = m_Databases[databaseIndex];
+            database.Selection.PrepareDomain(m_ResetSequence);
+            MotionMatchingPlanEvaluationResult plan = database.Selection.SearchAndEvaluate(query);
+            database.LastQuery = query;
+            if (!plan.IsValid)
+                throw new InvalidOperationException($"Motion Matching fixture produced no valid plan: {plan.InvalidReason}.");
+            StableHash digest = MotionMatchingSearchDigest.Compute(
+                database.Database,
+                database.Selection.LastSearchResult,
+                plan);
+            if (!digest.Equals(fixture.ExpectedDigest))
+                throw new InvalidOperationException("Motion Matching fixture Search result does not match its exact replay digest.");
+
+            MotionMatchingSelectionDecisionKind kind;
+            MotionMatchingSelectionGeneration generation;
+            if (!fixture.CurrentSelection.IsValid || fixture.Initialization)
+            {
+                generation = NextSelectionGeneration();
+                kind = MotionMatchingSelectionDecisionKind.Initialize;
+            }
+            else if (plan.Plan.ContinueCurrent)
+            {
+                generation = fixture.CurrentSelection.Generation;
+                kind = MotionMatchingSelectionDecisionKind.Continue;
+            }
+            else
+            {
+                generation = NextSelectionGeneration();
+                kind = MotionMatchingSelectionDecisionKind.Jump;
+            }
+            for (int i = 0; i < m_Databases.Length; i++)
+            {
+                if (i != databaseIndex)
+                    m_Databases[i].Selection.ReleaseDomain();
+            }
+            m_CurrentDecision = database.Selection.CommitSelection(
+                query,
+                MotionMatchingSearchTriggerReason.QueryFixture,
+                plan,
+                generation,
+                kind);
+            m_CurrentDatabaseIndex = databaseIndex;
+            m_LastWinnerQuery = query;
+            m_CurrentPlaybackId = playbackId;
+            m_LastResolvedFrame = presentationFrame;
+            m_PresentationTime += presentationDeltaSeconds;
+            PublishSearchDiagnostics(diagnostics, database);
+            MotionMatchingPoseSourceOutput output = database.PoseSource.Resolve(
+                m_CurrentDecision,
+                AnimationChannelId,
+                PoseNodeId,
+                playbackId,
+                presentationRequestSequence,
+                programProducerIndex,
+                ProgramProducerId);
+            PublishPoseSourceDiagnostics(diagnostics, output);
+            return output;
         }
 
         public void AppendBasePose(
@@ -180,6 +311,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public void Reset(ulong resetSequence)
         {
             RequireAlive();
+            m_PendingResetPreviousSequence = m_ResetSequence;
+            m_HasPendingReset = resetSequence != m_ResetSequence;
             for (int i = 0; i < m_Databases.Length; i++)
                 m_Databases[i].Selection.Reset(resetSequence);
             m_Trajectory.Reset(resetSequence);
@@ -196,6 +329,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_PresentationTime = 0f;
         }
 
+        public bool TryCaptureSearchReplay(out MotionMatchingSearchReplayArtifact artifact)
+        {
+            RequireAlive();
+            artifact = null;
+            if (m_CurrentDatabaseIndex < 0 || !m_LastWinnerQuery.QueryId.IsValid)
+                return false;
+            DatabaseRuntime runtime = m_Databases[m_CurrentDatabaseIndex];
+            if (!runtime.Selection.LastPlanResult.IsValid)
+                return false;
+            artifact = MotionMatchingSearchReplayArtifact.Capture(
+                m_ProjectionIdentity,
+                runtime.Database,
+                m_LastWinnerQuery,
+                runtime.Selection.LastSearchResult,
+                runtime.Selection.LastPlanResult);
+            return true;
+        }
+
         public void Dispose()
         {
             if (m_Disposed)
@@ -207,7 +358,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             DisposeDatabases();
         }
 
-        void SearchAndSelect(MotionMatchingSearchTriggerReason triggerReason)
+        void SearchAndSelect(MotionMatchingSearchTriggerReason triggerReason, RuntimeDiagnosticsContext diagnostics)
         {
             MotionMatchingSelectionIdentity currentSelection = m_CurrentDecision.SelectionIdentity;
             MotionMatchingContactProtection contactProtection = BuildContactProtection();
@@ -245,6 +396,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                     m_Databases[i].Selection.ReleaseDomain();
                 m_CurrentDatabaseIndex = -1;
                 m_CurrentDecision = new MotionMatchingSelectionDecision(MotionMatchingInvalidReason.NoValidPlan, triggerReason);
+                PublishInvalidSelectionDiagnostics(diagnostics);
                 return;
             }
 
@@ -281,7 +433,306 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 kind);
             m_CurrentDatabaseIndex = winnerIndex;
             m_LastWinnerQuery = winnerQuery;
+            PublishSearchDiagnostics(diagnostics, winner);
         }
+
+        void PublishSearchDiagnostics(RuntimeDiagnosticsContext diagnostics, DatabaseRuntime winner)
+        {
+            MotionMatchingDiagnosticsInterest interest = ResolveDiagnosticsInterest(diagnostics);
+            if (interest == MotionMatchingDiagnosticsInterest.None)
+                return;
+            m_RuntimeSnapshot ??= CreateRuntimeSnapshot();
+            m_RuntimeSnapshot.Capture(
+                interest,
+                m_LastWinnerQuery,
+                m_History,
+                winner.Database,
+                winner.Selection.LastSearchResult,
+                winner.Selection.LastPlanResult,
+                m_CurrentDecision);
+            RuntimeInstanceKey instance = RuntimeInstanceKey.Character(diagnostics.CharacterRuntimeId);
+            CharacterMotionMatchingDatabaseArtifactIdentity artifact = winner.Database.ArtifactIdentity;
+            if ((interest & MotionMatchingDiagnosticsInterest.QuerySummary) != 0)
+            {
+                MotionMatchingContactProtection contact = m_LastWinnerQuery.ContactProtection;
+                PublishDiagnostics(diagnostics, instance, RuntimeTraceEventKind.MotionMatchingQuery, new RuntimeTracePayload
+                {
+                    Status = m_LastWinnerQuery.Initialization ? "Initialization" : "Update",
+                    Name = m_LastWinnerQuery.QueryId.ToString(),
+                    AnimationChannelId = AnimationChannelId.ToString(),
+                    OwnerId = ProgramProducerId,
+                    RelatedElementId = artifact.DatabaseId.ToString(),
+                    Detail = $"projection={m_ProjectionIdentity};profile={m_Projection.ProfileId};artifact={artifact.ContentHash};domain={m_LastWinnerQuery.SearchDomainId};trajectory={m_LastWinnerQuery.TrajectorySourceIdentity};sourceTick={m_LastWinnerQuery.TrajectoryEnvelope.SourceTick};sourceAge={F(m_LastWinnerQuery.TrajectoryEnvelope.SourceAge)};protected={contact.ProtectedMask};leftPosition={contact.LeftRootPosition};rightPosition={contact.RightRootPosition};leftVelocity={contact.LeftRootVelocity};rightVelocity={contact.RightRootVelocity};reset={m_LastWinnerQuery.ResetSequence}"
+                });
+            }
+            if ((interest & MotionMatchingDiagnosticsInterest.TrajectoryEnvelope) != 0)
+            {
+                var detail = new StringBuilder();
+                for (int i = 0; i < m_RuntimeSnapshot.TrajectoryPointCount; i++)
+                {
+                    MotionMatchingTrajectoryEnvelopePoint point = m_RuntimeSnapshot.GetTrajectoryPoint(i);
+                    AppendSeparator(detail);
+                    detail.Append(i).Append(":t=").Append(F(point.TimeOffset))
+                        .Append(",position=").Append(point.LocalPositionCenter)
+                        .Append(",facing=").Append(point.LocalFacingCenter)
+                        .Append(",positionTolerance=").Append(F(point.PositionToleranceRadius))
+                        .Append(",facingTolerance=").Append(F(point.FacingToleranceDegrees))
+                        .Append(",confidence=").Append(F(point.Confidence));
+                }
+                PublishDiagnostics(diagnostics, instance, RuntimeTraceEventKind.MotionMatchingTrajectory, new RuntimeTracePayload
+                {
+                    Status = "Envelope",
+                    Name = m_LastWinnerQuery.QueryId.ToString(),
+                    AnimationChannelId = AnimationChannelId.ToString(),
+                    OwnerId = ProgramProducerId,
+                    Priority = m_RuntimeSnapshot.TrajectoryPointCount,
+                    Detail = detail.ToString()
+                });
+            }
+            if ((interest & MotionMatchingDiagnosticsInterest.PoseHistory) != 0)
+            {
+                MotionMatchingPoseHistoryTrace history = m_RuntimeSnapshot.PoseHistory;
+                PublishDiagnostics(diagnostics, instance, RuntimeTraceEventKind.MotionMatchingPoseHistory, new RuntimeTracePayload
+                {
+                    Status = history.HasGap ? "Gap" : "Continuous",
+                    Name = m_LastWinnerQuery.QueryId.ToString(),
+                    AnimationChannelId = AnimationChannelId.ToString(),
+                    OwnerId = ProgramProducerId,
+                    Priority = history.Count,
+                    Cycle = history.Capacity,
+                    Time = history.LatestPresentationTime,
+                    Detail = $"database={history.LatestDatabaseIdentity?.DatabaseId};artifact={history.LatestDatabaseIdentity?.ContentHash}"
+                });
+            }
+            if ((interest & MotionMatchingDiagnosticsInterest.AdmissionAggregate) != 0)
+            {
+                PublishDiagnostics(diagnostics, instance, RuntimeTraceEventKind.MotionMatchingAdmission, new RuntimeTracePayload
+                {
+                    Status = "Completed",
+                    Name = m_LastWinnerQuery.QueryId.ToString(),
+                    AnimationChannelId = AnimationChannelId.ToString(),
+                    OwnerId = ProgramProducerId,
+                    Priority = m_RuntimeSnapshot.Admission.Admitted,
+                    Cycle = m_RuntimeSnapshot.Admission.Rejected,
+                    Detail = $"admitted={m_RuntimeSnapshot.Admission.Admitted};rejected={m_RuntimeSnapshot.Admission.Rejected}"
+                });
+            }
+            if ((interest & MotionMatchingDiagnosticsInterest.CandidateRejectDetail) != 0)
+            {
+                var detail = new StringBuilder();
+                for (int i = 0; i < m_RuntimeSnapshot.RejectDetailCount; i++)
+                {
+                    MotionMatchingCandidateRejectTrace trace = m_RuntimeSnapshot.GetRejectDetail(i);
+                    AppendSeparator(detail);
+                    detail.Append(trace.SampleId).Append(':').Append(trace.Detail.Reason)
+                        .Append(" value=").Append(F(trace.Detail.Value))
+                        .Append(" limit=").Append(F(trace.Detail.Limit))
+                        .Append(" secondaryValue=").Append(F(trace.Detail.SecondaryValue))
+                        .Append(" secondaryLimit=").Append(F(trace.Detail.SecondaryLimit));
+                }
+                PublishDiagnostics(diagnostics, instance, RuntimeTraceEventKind.MotionMatchingCandidateRejected, new RuntimeTracePayload
+                {
+                    Status = "Rejected",
+                    Name = m_LastWinnerQuery.QueryId.ToString(),
+                    AnimationChannelId = AnimationChannelId.ToString(),
+                    OwnerId = ProgramProducerId,
+                    Priority = m_RuntimeSnapshot.RejectDetailCount,
+                    Detail = detail.ToString()
+                });
+            }
+            if ((interest & MotionMatchingDiagnosticsInterest.SearchTraversal) != 0)
+            {
+                MotionMatchingSearchTraversalTrace traversal = m_RuntimeSnapshot.Traversal;
+                PublishDiagnostics(diagnostics, instance, RuntimeTraceEventKind.MotionMatchingSearchTraversal, new RuntimeTracePayload
+                {
+                    Status = "Exact",
+                    Name = m_LastWinnerQuery.QueryId.ToString(),
+                    AnimationChannelId = AnimationChannelId.ToString(),
+                    OwnerId = ProgramProducerId,
+                    Priority = traversal.NodesVisited,
+                    Cycle = traversal.NodesPruned,
+                    Detail = $"visited={traversal.NodesVisited};pruned={traversal.NodesPruned};exactSamples={traversal.ExactSampleCount}"
+                });
+            }
+            if ((interest & MotionMatchingDiagnosticsInterest.TopKCosts) != 0)
+            {
+                var detail = new StringBuilder();
+                for (int i = 0; i < m_RuntimeSnapshot.TopKCount; i++)
+                {
+                    MotionMatchingTopKCostTrace trace = m_RuntimeSnapshot.GetTopK(i);
+                    MotionMatchingExactCostComponents cost = trace.Cost;
+                    AppendSeparator(detail);
+                    detail.Append(trace.SampleId).Append(":total=").Append(F(cost.Total))
+                        .Append(",trajectoryPosition=").Append(F(cost.TrajectoryPosition))
+                        .Append(",trajectoryFacing=").Append(F(cost.TrajectoryFacing))
+                        .Append(",trajectoryVelocity=").Append(F(cost.TrajectoryVelocity))
+                        .Append(",posePosition=").Append(F(cost.PosePosition))
+                        .Append(",poseVelocity=").Append(F(cost.PoseVelocity))
+                        .Append(",contact=").Append(F(cost.ContactSoft))
+                        .Append(",continuation=").Append(F(cost.Continuation))
+                        .Append(",jump=").Append(F(cost.Jump));
+                }
+                PublishDiagnostics(diagnostics, instance, RuntimeTraceEventKind.MotionMatchingTopK, new RuntimeTracePayload
+                {
+                    Status = "Exact",
+                    Name = m_LastWinnerQuery.QueryId.ToString(),
+                    AnimationChannelId = AnimationChannelId.ToString(),
+                    OwnerId = ProgramProducerId,
+                    Priority = m_RuntimeSnapshot.TopKCount,
+                    Detail = detail.ToString()
+                });
+            }
+            if ((interest & MotionMatchingDiagnosticsInterest.PlanCosts) != 0)
+            {
+                MotionMatchingPlanCostTrace plan = m_RuntimeSnapshot.Plan;
+                MotionMatchingPlanCostComponents cost = plan.Cost;
+                PublishDiagnostics(diagnostics, instance, RuntimeTraceEventKind.MotionMatchingPlan, new RuntimeTracePayload
+                {
+                    Status = "Selected",
+                    Name = plan.PlanId.ToString(),
+                    AnimationChannelId = AnimationChannelId.ToString(),
+                    OwnerId = ProgramProducerId,
+                    RelatedElementId = plan.EntrySampleId.ToString(),
+                    Weight = cost.Total,
+                    Detail = $"trajectoryPosition={F(cost.TrajectoryPosition)};trajectoryFacing={F(cost.TrajectoryFacing)};contact={F(cost.Contact)};segmentEnd={F(cost.SegmentEnd)};velocityChange={F(cost.VelocityChange)}"
+                });
+            }
+            if ((interest & MotionMatchingDiagnosticsInterest.Selection) != 0)
+                PublishSelectionDiagnostics(diagnostics, instance, m_RuntimeSnapshot.Selection);
+        }
+
+        void PublishSelectionDiagnostics(
+            RuntimeDiagnosticsContext diagnostics,
+            RuntimeInstanceKey instance,
+            MotionMatchingSelectionTrace selection)
+        {
+            PublishDiagnostics(diagnostics, instance, RuntimeTraceEventKind.MotionMatchingSelection, new RuntimeTracePayload
+            {
+                Status = selection.Kind.ToString(),
+                Name = selection.PlanId.ToString(),
+                AnimationChannelId = AnimationChannelId.ToString(),
+                OwnerId = ProgramProducerId,
+                RelatedElementId = selection.DatabaseIdentity?.DatabaseId.ToString() ?? string.Empty,
+                Priority = selection.SampleIndex,
+                Cycle = (int)selection.Generation.Value,
+                Cause = selection.TriggerReason.ToString(),
+                Detail = $"generation={selection.Generation};sampleIndex={selection.SampleIndex};invalid={selection.InvalidReason}"
+            });
+        }
+
+        void PublishInvalidSelectionDiagnostics(RuntimeDiagnosticsContext diagnostics)
+        {
+            if (diagnostics == null || !diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, RuntimeTraceEventKind.MotionMatchingSelection))
+                return;
+            PublishDiagnostics(diagnostics, RuntimeInstanceKey.Character(diagnostics.CharacterRuntimeId), RuntimeTraceEventKind.MotionMatchingSelection, new RuntimeTracePayload
+            {
+                Status = "Invalid",
+                AnimationChannelId = AnimationChannelId.ToString(),
+                OwnerId = ProgramProducerId,
+                Cause = m_CurrentDecision.TriggerReason.ToString(),
+                Detail = m_CurrentDecision.InvalidReason.ToString()
+            });
+        }
+
+        void PublishPoseSourceDiagnostics(RuntimeDiagnosticsContext diagnostics, MotionMatchingPoseSourceOutput output)
+        {
+            if (diagnostics == null || !diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, RuntimeTraceEventKind.MotionMatchingPoseSource))
+                return;
+            var trace = new MotionMatchingPoseSourceTrace(output);
+            PublishDiagnostics(diagnostics, RuntimeInstanceKey.Character(diagnostics.CharacterRuntimeId), RuntimeTraceEventKind.MotionMatchingPoseSource, new RuntimeTracePayload
+            {
+                Status = m_CurrentDecision.Kind.ToString(),
+                Name = PoseNodeId.ToString(),
+                AnimationChannelId = AnimationChannelId.ToString(),
+                OwnerId = trace.PlaybackId.ToString(),
+                RelatedElementId = trace.SourceClipId.ToString(),
+                Time = trace.SampleTime,
+                SecondaryTime = trace.VisualTimeScale,
+                Cycle = trace.Cycle,
+                Priority = (int)trace.SelectionGeneration.Value,
+                Detail = $"database={trace.DatabaseIdentity.DatabaseId};artifact={trace.DatabaseIdentity.ContentHash};request={trace.RequestSequence};continuousTime={trace.ContinuousVisualTime.ToString("R", CultureInfo.InvariantCulture)};footWeight={trace.FootPlacementWeightParameterId}"
+            });
+        }
+
+        void PublishPendingReset(RuntimeDiagnosticsContext diagnostics)
+        {
+            if (!m_HasPendingReset)
+                return;
+            if (diagnostics != null && diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, RuntimeTraceEventKind.MotionMatchingReset))
+            {
+                PublishDiagnostics(diagnostics, RuntimeInstanceKey.Character(diagnostics.CharacterRuntimeId), RuntimeTraceEventKind.MotionMatchingReset, new RuntimeTracePayload
+                {
+                    Status = "Initialization",
+                    AnimationChannelId = AnimationChannelId.ToString(),
+                    OwnerId = ProgramProducerId,
+                    Cause = MotionMatchingSearchTriggerReason.PresentationReset.ToString(),
+                    Detail = $"previous={m_PendingResetPreviousSequence};current={m_ResetSequence}"
+                });
+            }
+            m_HasPendingReset = false;
+        }
+
+        MotionMatchingDiagnosticsInterest ResolveDiagnosticsInterest(RuntimeDiagnosticsContext diagnostics)
+        {
+            if (diagnostics == null)
+                return MotionMatchingDiagnosticsInterest.None;
+            MotionMatchingDiagnosticsInterest interest = MotionMatchingDiagnosticsInterest.None;
+            AddInterest(diagnostics, RuntimeTraceEventKind.MotionMatchingQuery, MotionMatchingDiagnosticsInterest.QuerySummary, ref interest);
+            AddInterest(diagnostics, RuntimeTraceEventKind.MotionMatchingTrajectory, MotionMatchingDiagnosticsInterest.TrajectoryEnvelope, ref interest);
+            AddInterest(diagnostics, RuntimeTraceEventKind.MotionMatchingPoseHistory, MotionMatchingDiagnosticsInterest.PoseHistory, ref interest);
+            AddInterest(diagnostics, RuntimeTraceEventKind.MotionMatchingAdmission, MotionMatchingDiagnosticsInterest.AdmissionAggregate, ref interest);
+            AddInterest(diagnostics, RuntimeTraceEventKind.MotionMatchingCandidateRejected, MotionMatchingDiagnosticsInterest.CandidateRejectDetail, ref interest);
+            AddInterest(diagnostics, RuntimeTraceEventKind.MotionMatchingSearchTraversal, MotionMatchingDiagnosticsInterest.SearchTraversal, ref interest);
+            AddInterest(diagnostics, RuntimeTraceEventKind.MotionMatchingTopK, MotionMatchingDiagnosticsInterest.TopKCosts, ref interest);
+            AddInterest(diagnostics, RuntimeTraceEventKind.MotionMatchingPlan, MotionMatchingDiagnosticsInterest.PlanCosts, ref interest);
+            AddInterest(diagnostics, RuntimeTraceEventKind.MotionMatchingSelection, MotionMatchingDiagnosticsInterest.Selection, ref interest);
+            return interest;
+        }
+
+        MotionMatchingRuntimeSnapshot CreateRuntimeSnapshot()
+        {
+            int rejectCapacity = 0;
+            int topKCapacity = 0;
+            for (int i = 0; i < m_Databases.Length; i++)
+            {
+                rejectCapacity = Math.Max(rejectCapacity, m_Databases[i].Database.Capacities.DiagnosticDetailCapacity);
+                topKCapacity = Math.Max(topKCapacity, m_Databases[i].Database.Capacities.TopK);
+            }
+            return new MotionMatchingRuntimeSnapshot(m_Envelope.Capacity, rejectCapacity, topKCapacity);
+        }
+
+        static void AddInterest(
+            RuntimeDiagnosticsContext diagnostics,
+            RuntimeTraceEventKind kind,
+            MotionMatchingDiagnosticsInterest value,
+            ref MotionMatchingDiagnosticsInterest interest)
+        {
+            if (diagnostics.ShouldPublish(RuntimeTraceChannel.Animation, kind))
+                interest |= value;
+        }
+
+        static void PublishDiagnostics(
+            RuntimeDiagnosticsContext diagnostics,
+            RuntimeInstanceKey instance,
+            RuntimeTraceEventKind kind,
+            RuntimeTracePayload payload)
+        {
+            diagnostics.Publish(
+                RuntimeTraceChannel.Animation,
+                RuntimeTraceDomain.Presentation,
+                kind,
+                RuntimeSourceElementHandle.Invalid,
+                instance,
+                payload);
+        }
+
+        static void AppendSeparator(StringBuilder builder)
+        {
+            if (builder.Length > 0)
+                builder.Append(" | ");
+        }
+
+        static string F(float value) => value.ToString("R", CultureInfo.InvariantCulture);
 
         MotionMatchingContactProtection BuildContactProtection()
         {

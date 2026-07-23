@@ -262,13 +262,13 @@ Agent Validator MUST透传正式Artifact Builder、Artifact Store、Projection b
 
 ### Requirement: Agent Snapshot 与 Validator 必须递归理解嵌套 StateMachine
 
-Agent Snapshot MUST递归输出完整RootTree authoring routes、普通RunnableNode、flow edges、inline/shared Graph、nested StateMachine、logical transitions、Action activation、Timeline与稳定animation producer identity。Presentation section MUST只读输出Pose Graph、Blend Library、Rig identity/revision、AnimationChannel到PoseSlot binding与producer source identity。Validator MUST检查Graph topology、route identity、Timeline identity与Timeline AnimationChannelId，但 MUST不校验或写入Presentation binding、Blend transition或runtime playback lifecycle。
+Agent Snapshot MUST递归输出完整RootTree authoring routes、普通RunnableNode、flow edges、inline/shared Graph、nested StateMachine、logical transitions、Action activation、Timeline与稳定animation producer identity。Presentation section MUST只读输出Pose Graph、node-local Blend/Inertialization Policy、Rig identity/revision、AnimationChannel到Selection Input binding与producer source identity。Validator MUST检查Graph topology、route identity、Timeline identity与Timeline AnimationChannelId，但 MUST不校验或写入Presentation binding、Player transition或runtime playback lifecycle。
 
 #### Scenario: Corin Snapshot
 
 - **WHEN** 导出 Corin compact Snapshot
 - **THEN** Graph section MUST显示 Root Parallel、普通 Runnable、外层 None/Attack/Dodge、内层 Attack1/Attack2 与完整 route
-- **AND** Presentation section MUST只读显示Pose Graph、Blend Library、Rig、AnimationChannel到PoseSlot与Timeline producer source identity
+- **AND** Presentation section MUST只读显示Pose Graph、node-local Policy、Rig、AnimationChannel到Selection Input与Timeline producer source identity
 - **AND** Graph Node/Edge MUST不输出动画角色或策略字段
 
 #### Scenario: Timeline identity 断裂
@@ -488,7 +488,7 @@ Agent compact/full CharacterController Snapshot MUST从显式`CharacterPipelineD
 
 ### Requirement: Agent v16 CharacterController 必须通过正式类型化操作配置 Animation Channel
 
-CharacterController Snapshot MUST按Timeline与AnimationTrack stable identity只读输出当前`AnimationChannelId`。Patch MUST只通过`configure_animation_track_channel`按`TimelineAuthoringId + TrackAuthoringId`原子替换非空、无首尾空白的稳定channel identity。Lowerer MUST生成immutable typed command，handler MUST只调用`AnimationTrack.SetAnimationChannelId`，并把Timeline真实serialized owner纳入既有事务、dirty、validator与report链。该操作 MUST不修改PoseSlot、Pose Graph、Blend Library、producer source binding或MM Profile。
+CharacterController Snapshot MUST按Timeline与AnimationTrack stable identity只读输出当前`AnimationChannelId`。Patch MUST只通过`configure_animation_track_channel`按`TimelineAuthoringId + TrackAuthoringId`原子替换非空、无首尾空白的稳定channel identity。Lowerer MUST生成immutable typed command，handler MUST只调用`AnimationTrack.SetAnimationChannelId`，并把Timeline真实serialized owner纳入既有事务、dirty、validator与report链。该操作 MUST不修改Selection Input、Pose Graph、node-local Policy、producer source binding或MM Profile。
 
 #### Scenario: 迁移现有AnimationTrack channel
 
@@ -501,7 +501,7 @@ CharacterController Snapshot MUST按Timeline与AnimationTrack stable identity只
 
 - **WHEN** Patch缺少TimelineAuthoringId或TrackAuthoringId，或者AnimationChannelId为空
 - **THEN** lowerer MUST在mutation前拒绝
-- **AND** MUST不按Track显示名、列表index、旧LayerId或PoseSlot猜测目标
+- **AND** MUST不按Track显示名、列表index、旧LayerId或PoseNode猜测目标
 
 ### Requirement: Agent v16 CharacterController 必须完整读写 Timeline Marker 与 Curve Channel
 

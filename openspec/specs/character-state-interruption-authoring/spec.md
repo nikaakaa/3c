@@ -64,11 +64,11 @@ Transition MUST 用 Action Context、Blackboard ValueNode、`ActionWindowActiveI
 - **AND** MUST NOT 读取旧 cancel key
 ### Requirement: 状态退出逻辑屏障与表现收尾必须分离
 
-source State root、Action lifecycle、Timeline gameplay output与逻辑所有权 MUST在stop barrier内关闭。AnimationPlaybackLifecycle MAY让已释放source以Retained视觉状态存在，并通过PresentationRetention接收animation-only sample；对应PoseSlot Blend Stack MUST负责transition、Stored/Inertial状态与最终release。逻辑release MUST不等于retained visual retirement，但表现收尾 MUST不重新tick source gameplay。
+source State root、Action lifecycle、Timeline gameplay output与逻辑所有权 MUST在stop barrier内关闭。AnimationPlaybackLifecycle MAY让已释放source以Retained视觉状态存在，并通过PresentationRetention接收animation-only sample；连接该Selection的显式Player MUST负责source usage，BlendStack MUST独占transition与Stored Pose，局部Inertialization MUST独占residual，Lifecycle MUST在全部usage释放后最终退休source。逻辑release MUST不等于retained visual retirement，但表现收尾 MUST不重新tick source gameplay。
 
 #### Scenario: Blend Stack收尾
 
-- **WHEN** source已逻辑退出且PoseSlot Stack仍保留其视觉贡献
+- **WHEN** source已逻辑退出且显式Player链仍保留其视觉贡献
 - **THEN** source MAY保持Retained与只读animation retention
 - **AND** source MUST不再产生 gameplay、Tree、Timeline logic、Motion、root motion 或 GameplayFacts
 
@@ -87,7 +87,7 @@ source State root、Action lifecycle、Timeline gameplay output与逻辑所有�
 
 ### Requirement: 动画 Transition 的完成不得反向阻塞 Tree terminal
 
-Tree/StateMachine terminal MUST只由逻辑停止协议决定，MUST不等待视觉transition。PendingFirstSample、Selected、Retained与Retired MUST由AnimationPlaybackLifecycle在表现帧推进；transition progress MUST由每PoseSlot Blend Stack使用presentation delta推进。teardown MUST确定性清理播放生命周期。
+Tree/StateMachine terminal MUST只由逻辑停止协议决定，MUST不等待视觉transition。PendingFirstSample、Selected、Retained与Retired MUST由AnimationPlaybackLifecycle在表现帧推进；transition progress MUST由图中显式BlendStack使用presentation delta推进。teardown MUST确定性清理播放生命周期。
 
 #### Scenario: 长淡出与新 child
 

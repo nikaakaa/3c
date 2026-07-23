@@ -3,25 +3,25 @@
 ## Purpose
 定义装备 VisualBinding、Projection payload 与 Unity 外观实例的单向表现链路。
 ## Requirements
-### Requirement: Equipment动画与外观必须由两个唯一Presentation Profile分工
+### Requirement: Equipment Gameplay route与表现配置必须分工
 
-Feature MUST只声明Required Layer、blend/output policy、ProducerId与VisualBindingId；唯一`CharacterAnimationPresentationProfile` MUST继续拥有Layer、AvatarMask、Transition、Animancer binding与output policy，唯一`CharacterEquipmentPresentationProfile` MUST拥有VisualBinding到Rig/Renderer/Prefab/Socket的映射。Feature、Gameplay Equipment Profile、RootTree和Prefab MUST不保存重复Layer、transition或visual binding表。
+Equipment Feature MUST只声明Operation capability、World capability、Gameplay route所需ProducerId与VisualBindingId。RequiredProducerIds MUST只校验Gameplay route完整性，不得表达AnimationChannel、PoseNode、blend/output policy或动画空间拓扑。唯一`CharacterAnimationPresentationProfile` MUST拥有Pose Graph、node-local Policy、Rig与producer source binding；唯一`CharacterEquipmentPresentationProfile` MUST拥有VisualBinding到Rig/Renderer/Prefab/Socket的映射。Feature、Gameplay Equipment Profile、RootTree和Prefab MUST不保存重复Pose Graph、transition或visual binding表。
 
-#### Scenario: Gun要求UpperBody层
+#### Scenario: Gun未来需要UpperBody表现
 
-- **WHEN** Gun Feature声明UpperBody Additive或Override需求
-- **THEN** 唯一Animation Profile MUST提供匹配Layer和producer binding
-- **AND** Gun Feature MUST不内嵌第二个Animation或Equipment Presentation Profile
+- **WHEN** 未来Gun业务需要动态UpperBody Pose实现
+- **THEN** 系统 MUST由独立change定义Gameplay输入、Pose Graph/Projection schema与Runtime生命周期
+- **AND** 当前Gun Feature MUST不声明AnimationChannel、PoseNode或内嵌Presentation Profile
 
 #### Scenario: Gameplay producer route缺失
 
 - **WHEN** Feature声明的RequiredProducerId无法由其Gameplay route提供
 - **THEN** Program build MUST失败并定位Feature与producer
-- **AND** Presentation MUST不为Equipment创建AnimationChannel、PoseSlot或fallback producer
+- **AND** Presentation MUST不为Equipment创建AnimationChannel、PoseNode或fallback producer
 
 ### Requirement: Equipment动画必须继续通过Timeline producer提交
 
-Feature graph中的动画 MUST由正式Timeline AnimationTrack产生typed producer command，并经过Presentation Queue、Animation Playback Lifecycle与Presenter。Equipment Host、Action runtime和Visual runtime MUST不直接调用Animancer、Animator.Play、CrossFade或修改Layer weight。
+Feature graph中的动画 MUST由正式Timeline AnimationTrack产生typed producer command，并经过Presentation Queue、Animation Playback Lifecycle、显式Player与Pose Graph。Equipment Host、Action runtime和Visual runtime MUST不直接调用Animancer、Animator.Play、CrossFade或修改Player/Graph weight。
 
 #### Scenario: Sawblade攻击播放
 
@@ -32,7 +32,7 @@ Feature graph中的动画 MUST由正式Timeline AnimationTrack产生typed produc
 #### Scenario: Persistent持枪姿态
 
 - **WHEN** Feature Persistent Graph需要上半身持枪循环
-- **THEN** MUST通过对应Layer的Timeline producer表达
+- **THEN** MUST通过正式AnimationChannel中的Timeline producer表达
 - **AND** MUST不由Equipment visual component驱动Animator
 
 ### Requirement: 装备外观必须使用稳定显式binding
@@ -83,9 +83,9 @@ Prefab实例、Renderer enabled、socket Transform、visual load状态和present
 - **THEN** Equipment gameplay query MUST仍读取CharacterState
 - **AND** MUST不把Renderer状态当作Unequipped
 
-### Requirement: Equipment Presentation必须与动画层生命周期分工
+### Requirement: Equipment Presentation必须与动画播放生命周期分工
 
-Equipment Visual Runtime MUST只管理物体/Renderer/socket生命周期；Animation Playback Lifecycle MUST只管理producer播放与层输出。二者 MUST通过同一EquipmentRevision和Presentation frame ordering协调，但 MUST不互相拥有mutable state或直接调用对方内部实现。
+Equipment Visual Runtime MUST只管理物体、Renderer与socket生命周期；Animation Playback Lifecycle、显式Player与Pose Graph MUST分别管理producer寿命、时间连续性与空间合成。两条表现链 MAY通过同一EquipmentRevision和Presentation frame ordering协调，但 MUST不互相拥有mutable state或直接调用对方内部实现。
 
 #### Scenario: 换装commit同帧切换动画与外观
 

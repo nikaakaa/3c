@@ -2,8 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using ThirdPersonCharacter.Pipeline;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
+using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
 
@@ -153,6 +157,8 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
     {
         CharacterMotionMatchingProfile m_Profile;
         CharacterFootPlacementAnalysisSource m_AnalysisSource;
+        CharacterPipelineDefinition m_ReplayDefinition;
+        TextAsset m_SearchReplayArtifact;
 
         public override void OnInspectorGUI()
         {
@@ -176,6 +182,68 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                     StartDatabaseBuild();
             }
             DrawArtifactStatus();
+            DrawSearchReplay();
+        }
+
+        void DrawSearchReplay()
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Search Replay", EditorStyles.boldLabel);
+            m_ReplayDefinition = (CharacterPipelineDefinition)EditorGUILayout.ObjectField(
+                "Character Definition", m_ReplayDefinition, typeof(CharacterPipelineDefinition), false);
+            m_SearchReplayArtifact = (TextAsset)EditorGUILayout.ObjectField(
+                "Search Replay Artifact", m_SearchReplayArtifact, typeof(TextAsset), false);
+            EditorGUILayout.HelpBox(
+                "Replay uses the selected Definition's compiled Projection and the formal Runtime Database/Search/Plan path. Exact Projection and Database identity are required.",
+                MessageType.Info);
+            using (new EditorGUI.DisabledScope(!m_ReplayDefinition || !m_SearchReplayArtifact))
+            {
+                if (GUILayout.Button("Replay Motion Matching Search"))
+                    ReplaySearch();
+            }
+        }
+
+        void ReplaySearch()
+        {
+            try
+            {
+                MotionMatchingSearchReplayArtifact artifact =
+                    MotionMatchingSearchReplayArtifactCodec.Decode(m_SearchReplayArtifact.bytes);
+                if (!m_ReplayDefinition.SimulationProgram || !m_ReplayDefinition.PresentationProjection)
+                    throw new InvalidOperationException("Selected Character Definition has no compiled Program or Presentation Projection.");
+                CharacterSimulationProgram program = m_ReplayDefinition.SimulationProgram.Load();
+                CharacterPresentationProjection projection = m_ReplayDefinition.PresentationProjection.Load(
+                    Float32CharacterPresentationContractAdapter.Create(program));
+                string projectionIdentity = $"{projection.ProgramId}@{projection.SourceRevision}:{projection.ContractHash}";
+                if (!string.Equals(projectionIdentity, artifact.ProjectionIdentity, StringComparison.Ordinal))
+                    throw new InvalidOperationException("Search Replay Projection identity does not match the selected Character Definition.");
+                MotionMatchingProjectionPayload motionMatching = projection.MotionMatching ??
+                    throw new InvalidOperationException("Selected Character Definition has no Motion Matching payload.");
+                int databaseIndex = -1;
+                for (int i = 0; i < motionMatching.DatabaseCount; i++)
+                {
+                    if (!motionMatching.GetDatabase(i).ArtifactIdentity.EqualsExact(artifact.DatabaseIdentity))
+                        continue;
+                    databaseIndex = i;
+                    break;
+                }
+                if (databaseIndex < 0)
+                    throw new InvalidOperationException("Search Replay Database Artifact identity is absent from the selected Projection.");
+                using var database = new CharacterMotionMatchingRuntimeDatabase(motionMatching, databaseIndex);
+                var runner = new MotionMatchingSearchReplayRunner(
+                    projectionIdentity,
+                    database,
+                    motionMatching.TrajectoryPolicy.PointCount);
+                MotionMatchingSearchReplayResult result = runner.Replay(artifact);
+                EditorUtility.DisplayDialog(
+                    result.Matches ? "Motion Matching Search Replay Matched" : "Motion Matching Search Replay Mismatch",
+                    $"Result: {result.Failure}\nExpected: {result.ExpectedDigest}\nActual: {result.ActualDigest}",
+                    "OK");
+            }
+            catch (Exception exception)
+            {
+                EditorUtility.DisplayDialog("Motion Matching Search Replay Failed", exception.Message, "OK");
+            }
         }
 
         static void DrawSourceSetOwners(CharacterMotionMatchingDatabaseDefinition database)

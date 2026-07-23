@@ -390,6 +390,7 @@ namespace TreeDesigner.Editor
         BaseTreeView m_TreeView;
         [NonSerialized]
         BaseTreeInspectorView m_InspectorView;
+        VisualElement m_NavigatorView;
         [NonSerialized]
         Dictionary<string, RuntimeDebugViewBinding> m_Bindings;
         [NonSerialized]
@@ -433,11 +434,13 @@ namespace TreeDesigner.Editor
             BaseTreeWindow window,
             VisualElement navigationToolbar,
             BaseTreeView treeView,
-            BaseTreeInspectorView inspectorView)
+            BaseTreeInspectorView inspectorView,
+            VisualElement navigatorView)
         {
             m_Window = window;
             m_TreeView = treeView;
             m_InspectorView = inspectorView;
+            m_NavigatorView = navigatorView;
             m_Bindings = new Dictionary<string, RuntimeDebugViewBinding>(StringComparer.Ordinal);
             m_Requests = new Dictionary<string, RuntimeDebugTargetRequest>(StringComparer.Ordinal);
             CreateToolbar(navigationToolbar);
@@ -455,6 +458,7 @@ namespace TreeDesigner.Editor
             m_Window = null;
             m_TreeView = null;
             m_InspectorView = null;
+            m_NavigatorView = null;
         }
 
         public void SetMode(TreeWindowMode mode)
@@ -481,6 +485,7 @@ namespace TreeDesigner.Editor
             bool writable = !liveDebug && m_Window != null && m_Window.CurrentPageSerializedOwner;
             m_TreeView?.SetRuntimeReadOnly(!writable);
             m_InspectorView?.SetEnabled(writable);
+            m_NavigatorView?.SetEnabled(writable);
             if (liveDebug)
                 Refresh();
             else
@@ -515,6 +520,7 @@ namespace TreeDesigner.Editor
             m_FollowToggle.SetValueWithoutNotify(binding.Following);
             m_TreeView.SetRuntimeReadOnly(true);
             m_InspectorView.SetEnabled(false);
+            m_NavigatorView?.SetEnabled(false);
 
             if (!resolution.CanReadSnapshot)
             {
@@ -845,13 +851,17 @@ namespace TreeDesigner.Editor
 
         [SerializeField]
         TreeWindowRuntimeOverlayController m_RuntimeOverlay = new TreeWindowRuntimeOverlayController();
+        [SerializeField]
+        GraphDataCatalogViewState m_DataCatalogViewState = new GraphDataCatalogViewState();
         bool m_RuntimeDiagnosticsBound;
         public bool IsLiveDebug => m_RuntimeOverlay.IsLiveDebug;
         public bool CanMutateCurrentDocument => !IsLiveDebug && CurrentPageSerializedOwner;
         protected BaseTreeInspectorView m_TreeInspectorView;
+        VisualElement m_TreeNavigatorView;
         public UnityEngine.Object CurrentPageSerializedOwner => m_Navigation.CurrentPageSerializedOwner;
         public string CurrentPageSerializedPropertyPath => m_Navigation.CurrentPageSerializedPropertyPath;
         public IReadOnlyList<BaseTree> VisibleTrees => m_Navigation.VisibleTrees;
+        internal GraphDataCatalogViewState DataCatalogViewState => m_DataCatalogViewState ??= new GraphDataCatalogViewState();
 
         public IEnumerable<BaseExposedProperty> GetVisibleExposedProperties()
         {
@@ -907,13 +917,20 @@ namespace TreeDesigner.Editor
 
         protected override GraphAuthoringDomainAdapters CreateGraphAuthoringAdapters()
         {
+            var navigator = new BtsmtlGraphAuthoringNavigatorAdapter(this, m_TreeInspectorView);
+            m_TreeNavigatorView = navigator.View;
             return new GraphAuthoringDomainAdapters(
                 new BtsmtlGraphAuthoringDocumentAdapter(this),
                 new BtsmtlGraphAuthoringNodeCatalogAdapter(this),
                 new BtsmtlGraphAuthoringPortPolicyAdapter(this),
                 new BtsmtlGraphAuthoringMutationAdapter(this),
                 new BtsmtlGraphAuthoringInspectorAdapter(this, m_TreeInspectorView),
-                new BtsmtlGraphAuthoringDiagnosticsAdapter(this));
+                new BtsmtlGraphAuthoringDiagnosticsAdapter(this),
+                new GraphAuthoringWorkspaceDescriptor(
+                    new GraphAuthoringWorkspaceRegionDescriptor("Data", true, 220f, 260f),
+                    new GraphAuthoringWorkspaceRegionDescriptor("Details", true, 220f, 340f),
+                    new GraphAuthoringWorkspaceRegionDescriptor("Diagnostics", false, 120f, 220f, true)),
+                navigator);
         }
 
         protected override void OnGraphAuthoringShellCreated()
@@ -1114,7 +1131,7 @@ namespace TreeDesigner.Editor
         {
             if (!m_RuntimeDiagnosticsBound)
             {
-                m_RuntimeOverlay.Initialize(this, toolbar, graphView as BaseTreeView, m_TreeInspectorView);
+                m_RuntimeOverlay.Initialize(this, toolbar, graphView as BaseTreeView, m_TreeInspectorView, m_TreeNavigatorView);
                 m_RuntimeDiagnosticsBound = true;
             }
             else

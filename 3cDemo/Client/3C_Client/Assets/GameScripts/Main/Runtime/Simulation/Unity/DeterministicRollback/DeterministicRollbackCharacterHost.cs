@@ -50,6 +50,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public bool IsLocalActor => m_Endpoint && m_Endpoint.ResolvePeerProfile().ActorId == ActorId;
         public SimulationSessionHost SessionHost => m_SessionHost;
         public Vector3 VisualPosition => m_VisualRoot ? m_VisualRoot.position : transform.position;
+        public Transform VisualRoot => m_VisualRoot;
+        public CharacterFootPlacementComposition FootPlacement => m_FootPlacement;
+        public AnimancerComponent Animancer => m_Animancer;
+        public CharacterAnimationRigBinding AnimationRigBinding => m_AnimationRigBinding;
+
+        public void ConfigureAnimationRigBinding(CharacterAnimationRigBinding binding)
+        {
+            m_AnimationRigBinding = binding ? binding : throw new ArgumentNullException(nameof(binding));
+        }
 
         public bool TryGetRuntimeDiagnostics(out RollbackRuntimeDiagnosticsSnapshot snapshot)
         {

@@ -2,6 +2,7 @@ using System;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonSimulation;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
@@ -9,11 +10,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
     {
         internal AnimationBlendStackEntrySnapshot(
             AnimationChannelId animationChannelId,
-            PoseSlotId poseSlotId,
+            PoseNodeId poseNodeId,
             AnimationBlendEntryId entryId,
             int order,
             int programProducerIndex,
-            AnimationBlendTechnique technique,
             int canonicalCurveIndex,
             string canonicalCurveHash,
             int blendProfileIndex,
@@ -27,11 +27,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             ulong contributionContinuityIdentity)
         {
             AnimationChannelId = animationChannelId;
-            PoseSlotId = poseSlotId;
+            PoseNodeId = poseNodeId;
             EntryId = entryId;
             Order = order;
             ProgramProducerIndex = programProducerIndex;
-            Technique = technique;
             CanonicalCurveIndex = canonicalCurveIndex;
             CanonicalCurveHash = canonicalCurveHash ?? string.Empty;
             BlendProfileIndex = blendProfileIndex;
@@ -46,11 +45,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         }
 
         public AnimationChannelId AnimationChannelId { get; }
-        public PoseSlotId PoseSlotId { get; }
+        public PoseNodeId PoseNodeId { get; }
         public AnimationBlendEntryId EntryId { get; }
         public int Order { get; }
         public int ProgramProducerIndex { get; }
-        public AnimationBlendTechnique Technique { get; }
         public int CanonicalCurveIndex { get; }
         public string CanonicalCurveHash { get; }
         public int BlendProfileIndex { get; }
@@ -68,11 +66,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
     {
         internal AnimationBlendStackSnapshot(
             AnimationChannelId animationChannelId,
-            PoseSlotId poseSlotId,
-            PoseSlotOutputPolicy outputPolicy,
+            PoseNodeId poseNodeId,
+            AnimationSelectionAvailabilityPolicy outputPolicy,
             int entryOffset,
             int entryCount,
-            PoseSlotFrameAvailability availability,
+            AnimationPoseAvailability availability,
             AnimationPoseNativeInvalidReason invalidReason,
             float outputWeight,
             ulong continuityIdentity,
@@ -85,19 +83,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             ulong storedSourceHistoryCompletedAt,
             bool storedHasFootFeatures,
             AnimationFootFeatureSample storedLeftFootFeatures,
-            AnimationFootFeatureSample storedRightFootFeatures,
-            bool hasInertialBlend,
-            bool hasPendingInertialCapture,
-            float inertialOutputWeight,
-            ulong inertialContributionIdentity,
-            ulong inertialCapturedAt,
-            ulong inertialSourceHistoryCompletedAt,
-            bool inertialHasFootFeatures,
-            AnimationFootFeatureSample inertialLeftFootFeatures,
-            AnimationFootFeatureSample inertialRightFootFeatures)
+            AnimationFootFeatureSample storedRightFootFeatures)
         {
             AnimationChannelId = animationChannelId;
-            PoseSlotId = poseSlotId;
+            PoseNodeId = poseNodeId;
             OutputPolicy = outputPolicy;
             EntryOffset = entryOffset;
             EntryCount = entryCount;
@@ -115,23 +104,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             StoredHasFootFeatures = storedHasFootFeatures;
             StoredLeftFootFeatures = storedLeftFootFeatures;
             StoredRightFootFeatures = storedRightFootFeatures;
-            HasInertialBlend = hasInertialBlend;
-            HasPendingInertialCapture = hasPendingInertialCapture;
-            InertialOutputWeight = inertialOutputWeight;
-            InertialContributionIdentity = inertialContributionIdentity;
-            InertialCapturedAt = inertialCapturedAt;
-            InertialSourceHistoryCompletedAt = inertialSourceHistoryCompletedAt;
-            InertialHasFootFeatures = inertialHasFootFeatures;
-            InertialLeftFootFeatures = inertialLeftFootFeatures;
-            InertialRightFootFeatures = inertialRightFootFeatures;
         }
 
         public AnimationChannelId AnimationChannelId { get; }
-        public PoseSlotId PoseSlotId { get; }
-        public PoseSlotOutputPolicy OutputPolicy { get; }
+        public PoseNodeId PoseNodeId { get; }
+        public AnimationSelectionAvailabilityPolicy OutputPolicy { get; }
         public int EntryOffset { get; }
         public int EntryCount { get; }
-        public PoseSlotFrameAvailability Availability { get; }
+        public AnimationPoseAvailability Availability { get; }
         public AnimationPoseNativeInvalidReason InvalidReason { get; }
         public float OutputWeight { get; }
         public ulong ContinuityIdentity { get; }
@@ -145,15 +125,77 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public bool StoredHasFootFeatures { get; }
         public AnimationFootFeatureSample StoredLeftFootFeatures { get; }
         public AnimationFootFeatureSample StoredRightFootFeatures { get; }
-        public bool HasInertialBlend { get; }
-        public bool HasPendingInertialCapture { get; }
-        public float InertialOutputWeight { get; }
-        public ulong InertialContributionIdentity { get; }
-        public ulong InertialCapturedAt { get; }
-        public ulong InertialSourceHistoryCompletedAt { get; }
-        public bool InertialHasFootFeatures { get; }
-        public AnimationFootFeatureSample InertialLeftFootFeatures { get; }
-        public AnimationFootFeatureSample InertialRightFootFeatures { get; }
+    }
+
+    public readonly struct PoseInertializationSnapshot
+    {
+        internal PoseInertializationSnapshot(
+            PoseNodeId nodeId,
+            PoseNodeId inputPlayerNodeId,
+            int inputPlayerIndex,
+            PoseInertializationRuntimeState state,
+            ulong eventIdentity,
+            PoseDiscontinuityReason reason,
+            PoseDiscontinuityResetReason resetReason,
+            ulong resetSequence,
+            string policyId,
+            string policyRevision,
+            string ruleIdentity,
+            PoseDiscontinuityEndpoint previousEndpoint,
+            PoseDiscontinuityEndpoint currentEndpoint,
+            ulong previousContinuityIdentity,
+            ulong currentContinuityIdentity,
+            PoseInertializationMode ruleMode,
+            float elapsedSeconds,
+            float durationSeconds,
+            ulong accumulatorGeneration,
+            ulong historyCompletionIdentity,
+            ulong outputCompletionIdentity)
+        {
+            NodeId = nodeId;
+            InputPlayerNodeId = inputPlayerNodeId;
+            InputPlayerIndex = inputPlayerIndex;
+            State = state;
+            EventIdentity = eventIdentity;
+            Reason = reason;
+            ResetReason = resetReason;
+            ResetSequence = resetSequence;
+            PolicyId = policyId ?? string.Empty;
+            PolicyRevision = policyRevision ?? string.Empty;
+            RuleIdentity = ruleIdentity ?? string.Empty;
+            PreviousEndpoint = previousEndpoint;
+            CurrentEndpoint = currentEndpoint;
+            PreviousContinuityIdentity = previousContinuityIdentity;
+            CurrentContinuityIdentity = currentContinuityIdentity;
+            RuleMode = ruleMode;
+            ElapsedSeconds = elapsedSeconds;
+            DurationSeconds = durationSeconds;
+            AccumulatorGeneration = accumulatorGeneration;
+            HistoryCompletionIdentity = historyCompletionIdentity;
+            OutputCompletionIdentity = outputCompletionIdentity;
+        }
+
+        public PoseNodeId NodeId { get; }
+        public PoseNodeId InputPlayerNodeId { get; }
+        public int InputPlayerIndex { get; }
+        public PoseInertializationRuntimeState State { get; }
+        public ulong EventIdentity { get; }
+        public PoseDiscontinuityReason Reason { get; }
+        public PoseDiscontinuityResetReason ResetReason { get; }
+        public ulong ResetSequence { get; }
+        public string PolicyId { get; }
+        public string PolicyRevision { get; }
+        public string RuleIdentity { get; }
+        public PoseDiscontinuityEndpoint PreviousEndpoint { get; }
+        public PoseDiscontinuityEndpoint CurrentEndpoint { get; }
+        public ulong PreviousContinuityIdentity { get; }
+        public ulong CurrentContinuityIdentity { get; }
+        public PoseInertializationMode RuleMode { get; }
+        public float ElapsedSeconds { get; }
+        public float DurationSeconds { get; }
+        public ulong AccumulatorGeneration { get; }
+        public ulong HistoryCompletionIdentity { get; }
+        public ulong OutputCompletionIdentity { get; }
     }
 
     public readonly struct AnimationPoseOperationSnapshot
@@ -164,7 +206,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             PoseNodeId nodeId,
             string callSite,
             CharacterPoseOperationCode code,
-            PoseSlotFrameAvailability availability,
+            AnimationPoseAvailability availability,
             AnimationPoseNativeInvalidReason invalidReason,
             float outputWeight,
             ulong continuityIdentity,
@@ -191,7 +233,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public PoseNodeId NodeId { get; }
         public string CallSite { get; }
         public CharacterPoseOperationCode Code { get; }
-        public PoseSlotFrameAvailability Availability { get; }
+        public AnimationPoseAvailability Availability { get; }
         public AnimationPoseNativeInvalidReason InvalidReason { get; }
         public float OutputWeight { get; }
         public ulong ContinuityIdentity { get; }
@@ -215,9 +257,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public string ProjectionRevision => m_Snapshot.ProjectionRevision;
         public string PoseGraphId => m_Snapshot.PoseGraphId;
         public string PoseGraphRevision => m_Snapshot.PoseGraphRevision;
-        public string PoseProgramHash => m_Snapshot.PoseProgramHash;
+        public string PosePlanHash => m_Snapshot.PosePlanHash;
         public ulong CompletionIdentity => m_Snapshot.CompletionIdentity;
-        public PoseSlotFrameAvailability FinalAvailability => m_Snapshot.FinalAvailability;
+        public AnimationPoseAvailability FinalAvailability => m_Snapshot.FinalAvailability;
         public AnimationPoseNativeInvalidReason FinalInvalidReason => m_Snapshot.FinalInvalidReason;
         public ulong FinalAppliedAt => m_Snapshot.FinalAppliedAt;
         public ulong FinalContinuityIdentity => m_Snapshot.ContinuityIdentity;
@@ -231,26 +273,143 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
     public readonly struct AnimationPoseParameterSnapshot
     {
-        internal AnimationPoseParameterSnapshot(PoseParameterId parameterId, float value)
+        internal AnimationPoseParameterSnapshot(PoseParameterId parameterId, float value, bool available)
         {
             ParameterId = parameterId;
             Value = value;
+            Available = available;
         }
 
         public PoseParameterId ParameterId { get; }
         public float Value { get; }
+        public bool Available { get; }
+    }
+
+    public readonly struct AnimationBlendSpaceSampleRuntimeSnapshot
+    {
+        internal AnimationBlendSpaceSampleRuntimeSnapshot(
+            CharacterAnimationBlendSpaceSampleId sampleId,
+            float weight,
+            float clipTime,
+            float normalizedTime,
+            bool hasFootFeatures,
+            string footAnalysisSourceId,
+            int footAnalysisVersion,
+            string footArtifactContentHash,
+            AnimationFootFeatureSample leftFootFeatures,
+            AnimationFootFeatureSample rightFootFeatures)
+        {
+            SampleId = sampleId;
+            Weight = weight;
+            ClipTime = clipTime;
+            NormalizedTime = normalizedTime;
+            HasFootFeatures = hasFootFeatures;
+            FootAnalysisSourceId = footAnalysisSourceId ?? string.Empty;
+            FootAnalysisVersion = footAnalysisVersion;
+            FootArtifactContentHash = footArtifactContentHash ?? string.Empty;
+            LeftFootFeatures = leftFootFeatures;
+            RightFootFeatures = rightFootFeatures;
+        }
+
+        public CharacterAnimationBlendSpaceSampleId SampleId { get; }
+        public float Weight { get; }
+        public float ClipTime { get; }
+        public float NormalizedTime { get; }
+        public bool HasFootFeatures { get; }
+        public string FootAnalysisSourceId { get; }
+        public int FootAnalysisVersion { get; }
+        public string FootArtifactContentHash { get; }
+        public AnimationFootFeatureSample LeftFootFeatures { get; }
+        public AnimationFootFeatureSample RightFootFeatures { get; }
+    }
+
+    public readonly struct AnimationBlendSpacePlayerRuntimeSnapshot
+    {
+        internal AnimationBlendSpacePlayerRuntimeSnapshot(
+            PoseNodeId nodeId,
+            AnimationChannelId animationChannelId,
+            AnimationPoseSourceId sourceId,
+            CharacterAnimationBlendSpaceId blendSpaceId,
+            string contentRevision,
+            CharacterAnimationBlendSpaceMode mode,
+            float rawX,
+            float rawY,
+            float x,
+            float y,
+            CharacterAnimationBlendSpaceCanonicalPhase canonicalPhase,
+            bool hasFootFeatures,
+            int sampleOffset,
+            int sampleCount,
+            AnimationPoseAvailability poseAvailability = default,
+            AnimationPoseNativeInvalidReason invalidReason = default)
+        {
+            NodeId = nodeId;
+            AnimationChannelId = animationChannelId;
+            SourceId = sourceId;
+            BlendSpaceId = blendSpaceId;
+            ContentRevision = contentRevision ?? string.Empty;
+            Mode = mode;
+            RawX = rawX;
+            RawY = rawY;
+            X = x;
+            Y = y;
+            CanonicalPhase = canonicalPhase;
+            HasFootFeatures = hasFootFeatures;
+            SampleOffset = sampleOffset;
+            SampleCount = sampleCount;
+            PoseAvailability = poseAvailability;
+            InvalidReason = invalidReason;
+        }
+
+        internal AnimationBlendSpacePlayerRuntimeSnapshot WithPoseResult(
+            AnimationPoseAvailability poseAvailability,
+            AnimationPoseNativeInvalidReason invalidReason) =>
+            new AnimationBlendSpacePlayerRuntimeSnapshot(
+                NodeId,
+                AnimationChannelId,
+                SourceId,
+                BlendSpaceId,
+                ContentRevision,
+                Mode,
+                RawX,
+                RawY,
+                X,
+                Y,
+                CanonicalPhase,
+                HasFootFeatures,
+                SampleOffset,
+                SampleCount,
+                poseAvailability,
+                invalidReason);
+
+        public PoseNodeId NodeId { get; }
+        public AnimationChannelId AnimationChannelId { get; }
+        public AnimationPoseSourceId SourceId { get; }
+        public CharacterAnimationBlendSpaceId BlendSpaceId { get; }
+        public string ContentRevision { get; }
+        public CharacterAnimationBlendSpaceMode Mode { get; }
+        public float RawX { get; }
+        public float RawY { get; }
+        public float X { get; }
+        public float Y { get; }
+        public CharacterAnimationBlendSpaceCanonicalPhase CanonicalPhase { get; }
+        public bool HasFootFeatures { get; }
+        public AnimationPoseAvailability PoseAvailability { get; }
+        public AnimationPoseNativeInvalidReason InvalidReason { get; }
+        internal int SampleOffset { get; }
+        public int SampleCount { get; }
     }
 
     public readonly struct AnimationReleasedPoseSourceSnapshot
     {
-        internal AnimationReleasedPoseSourceSnapshot(PoseSlotId poseSlotId, AnimationPoseSourceId sourceId, ulong completionIdentity)
+        internal AnimationReleasedPoseSourceSnapshot(PoseNodeId poseNodeId, AnimationPoseSourceId sourceId, ulong completionIdentity)
         {
-            PoseSlotId = poseSlotId;
+            PoseNodeId = poseNodeId;
             SourceId = sourceId;
             CompletionIdentity = completionIdentity;
         }
 
-        public PoseSlotId PoseSlotId { get; }
+        public PoseNodeId PoseNodeId { get; }
         public AnimationPoseSourceId SourceId { get; }
         public ulong CompletionIdentity { get; }
     }
@@ -260,30 +419,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly FinalAnimationPoseFramePageLease m_Lease;
         readonly ulong m_LeaseIdentity;
         readonly AnimationBlendStackSnapshot[] m_Stacks;
+        readonly PoseInertializationSnapshot[] m_Inertializations;
         readonly AnimationBlendStackEntrySnapshot[] m_Entries;
         readonly AnimationPlaybackLifecycleSnapshot[] m_Lifecycle;
         readonly AnimationPoseOperationSnapshot[] m_Operations;
         readonly AnimationPoseParameterSnapshot[] m_Parameters;
+        readonly AnimationBlendSpacePlayerRuntimeSnapshot[] m_BlendSpacePlayers;
+        readonly AnimationBlendSpaceSampleRuntimeSnapshot[] m_BlendSpaceSamples;
         readonly AnimationPoseSourceContribution[] m_SlotContributions;
         readonly AnimationPoseSourceContribution[] m_OperationContributions;
         readonly AnimationPoseSourceContribution[] m_FinalContributions;
         readonly AnimationReleasedPoseSourceSnapshot[] m_Releases;
+        readonly AnimationPoseWatchSnapshot[] m_PoseWatches;
+        readonly AnimationLocalBonePose[] m_PoseWatchLocalPoses;
+        readonly AnimationPoseSourceContribution[] m_PoseWatchContributions;
         readonly AnimationBoneId[] m_BoneIds;
         readonly float[] m_EntryBoneWeights;
         readonly float[] m_StoredBoneWeights;
-        readonly float[] m_InertialBoneWeights;
+        readonly Vector3[] m_InertialPositionResiduals;
+        readonly Vector3[] m_InertialRotationResiduals;
+        readonly Vector3[] m_InertialScaleResiduals;
+        readonly float[] m_InertialBoneEnvelopes;
         readonly float[] m_SlotContributionBoneWeights;
         readonly float[] m_OperationContributionBoneWeights;
         readonly float[] m_FinalContributionBoneWeights;
         readonly int m_StackCount;
+        readonly int m_InertializationCount;
         readonly int m_EntryCount;
         readonly int m_LifecycleCount;
         readonly int m_OperationCount;
         readonly int m_ParameterCount;
+        readonly int m_BlendSpacePlayerCount;
+        readonly int m_BlendSpaceSampleCount;
         readonly int m_SlotContributionCount;
         readonly int m_OperationContributionCount;
         readonly int m_FinalContributionCount;
         readonly int m_ReleaseCount;
+        readonly int m_PoseWatchCount;
 
         internal AnimationPresentationRuntimeSnapshot(
             string projectionRevision,
@@ -291,9 +463,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             string rigRevision,
             string poseGraphId,
             string poseGraphRevision,
-            string poseProgramHash,
+            string posePlanHash,
             ulong completionIdentity,
-            PoseSlotFrameAvailability finalAvailability,
+            AnimationPoseAvailability finalAvailability,
             AnimationPoseNativeInvalidReason finalInvalidReason,
             int invalidOperationIndex,
             ulong poseGraphCompletedAt,
@@ -306,6 +478,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             ulong leaseIdentity,
             AnimationBlendStackSnapshot[] stacks,
             int stackCount,
+            PoseInertializationSnapshot[] inertializations,
+            int inertializationCount,
             AnimationBlendStackEntrySnapshot[] entries,
             int entryCount,
             AnimationPlaybackLifecycleSnapshot[] lifecycle,
@@ -314,6 +488,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             int operationCount,
             AnimationPoseParameterSnapshot[] parameters,
             int parameterCount,
+            AnimationBlendSpacePlayerRuntimeSnapshot[] blendSpacePlayers,
+            int blendSpacePlayerCount,
+            AnimationBlendSpaceSampleRuntimeSnapshot[] blendSpaceSamples,
+            int blendSpaceSampleCount,
             AnimationPoseSourceContribution[] slotContributions,
             int slotContributionCount,
             AnimationPoseSourceContribution[] operationContributions,
@@ -322,10 +500,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             int finalContributionCount,
             AnimationReleasedPoseSourceSnapshot[] releases,
             int releaseCount,
+            AnimationPoseWatchSnapshot[] poseWatches,
+            int poseWatchCount,
+            AnimationLocalBonePose[] poseWatchLocalPoses,
+            AnimationPoseSourceContribution[] poseWatchContributions,
             AnimationBoneId[] boneIds,
             float[] entryBoneWeights,
             float[] storedBoneWeights,
-            float[] inertialBoneWeights,
+            Vector3[] inertialPositionResiduals,
+            Vector3[] inertialRotationResiduals,
+            Vector3[] inertialScaleResiduals,
+            float[] inertialBoneEnvelopes,
             float[] slotContributionBoneWeights,
             float[] operationContributionBoneWeights,
             float[] finalContributionBoneWeights)
@@ -335,7 +520,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             RigRevision = rigRevision ?? string.Empty;
             PoseGraphId = poseGraphId ?? string.Empty;
             PoseGraphRevision = poseGraphRevision ?? string.Empty;
-            PoseProgramHash = poseProgramHash ?? string.Empty;
+            PosePlanHash = posePlanHash ?? string.Empty;
             CompletionIdentity = completionIdentity;
             FinalAvailability = finalAvailability;
             FinalInvalidReason = finalInvalidReason;
@@ -350,6 +535,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_LeaseIdentity = leaseIdentity;
             m_Stacks = stacks;
             m_StackCount = stackCount;
+            m_Inertializations = inertializations;
+            m_InertializationCount = inertializationCount;
             m_Entries = entries;
             m_EntryCount = entryCount;
             m_Lifecycle = lifecycle;
@@ -358,6 +545,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_OperationCount = operationCount;
             m_Parameters = parameters;
             m_ParameterCount = parameterCount;
+            m_BlendSpacePlayers = blendSpacePlayers;
+            m_BlendSpacePlayerCount = blendSpacePlayerCount;
+            m_BlendSpaceSamples = blendSpaceSamples;
+            m_BlendSpaceSampleCount = blendSpaceSampleCount;
             m_SlotContributions = slotContributions;
             m_SlotContributionCount = slotContributionCount;
             m_OperationContributions = operationContributions;
@@ -366,10 +557,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_FinalContributionCount = finalContributionCount;
             m_Releases = releases;
             m_ReleaseCount = releaseCount;
+            m_PoseWatches = poseWatches;
+            m_PoseWatchCount = poseWatchCount;
+            m_PoseWatchLocalPoses = poseWatchLocalPoses;
+            m_PoseWatchContributions = poseWatchContributions;
             m_BoneIds = boneIds;
             m_EntryBoneWeights = entryBoneWeights;
             m_StoredBoneWeights = storedBoneWeights;
-            m_InertialBoneWeights = inertialBoneWeights;
+            m_InertialPositionResiduals = inertialPositionResiduals;
+            m_InertialRotationResiduals = inertialRotationResiduals;
+            m_InertialScaleResiduals = inertialScaleResiduals;
+            m_InertialBoneEnvelopes = inertialBoneEnvelopes;
             m_SlotContributionBoneWeights = slotContributionBoneWeights;
             m_OperationContributionBoneWeights = operationContributionBoneWeights;
             m_FinalContributionBoneWeights = finalContributionBoneWeights;
@@ -381,9 +579,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public string RigRevision { get; }
         public string PoseGraphId { get; }
         public string PoseGraphRevision { get; }
-        public string PoseProgramHash { get; }
+        public string PosePlanHash { get; }
         public ulong CompletionIdentity { get; }
-        public PoseSlotFrameAvailability FinalAvailability { get; }
+        public AnimationPoseAvailability FinalAvailability { get; }
         public AnimationPoseNativeInvalidReason FinalInvalidReason { get; }
         public int InvalidOperationIndex { get; }
         public ulong PoseGraphCompletedAt { get; }
@@ -394,23 +592,70 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public bool HasFootFeatures { get; }
         public bool StackWeightsArePrePoseGraphMask => true;
         public AnimationReadOnlyBuffer<AnimationBlendStackSnapshot> Stacks => Buffer(m_Stacks, m_StackCount);
+        public AnimationReadOnlyBuffer<PoseInertializationSnapshot> Inertializations =>
+            Buffer(m_Inertializations, m_InertializationCount);
         public AnimationReadOnlyBuffer<AnimationBlendStackEntrySnapshot> Entries => Buffer(m_Entries, m_EntryCount);
         public AnimationReadOnlyBuffer<AnimationPlaybackLifecycleSnapshot> Lifecycle => Buffer(m_Lifecycle, m_LifecycleCount);
         public AnimationReadOnlyBuffer<AnimationPoseOperationSnapshot> Operations => Buffer(m_Operations, m_OperationCount);
         public AnimationReadOnlyBuffer<AnimationPoseParameterSnapshot> Parameters => Buffer(m_Parameters, m_ParameterCount);
+        public AnimationReadOnlyBuffer<AnimationBlendSpacePlayerRuntimeSnapshot> BlendSpacePlayers =>
+            Buffer(m_BlendSpacePlayers, m_BlendSpacePlayerCount);
         public AnimationReadOnlyBuffer<AnimationPoseSourceContribution> SlotContributions => Buffer(m_SlotContributions, m_SlotContributionCount);
         public AnimationReadOnlyBuffer<AnimationPoseSourceContribution> OperationContributions =>
             Buffer(m_OperationContributions, m_OperationContributionCount);
         public AnimationReadOnlyBuffer<AnimationPoseSourceContribution> FinalContributions => Buffer(m_FinalContributions, m_FinalContributionCount);
         public AnimationReadOnlyBuffer<AnimationReleasedPoseSourceSnapshot> Releases => Buffer(m_Releases, m_ReleaseCount);
+        public AnimationReadOnlyBuffer<AnimationPoseWatchSnapshot> PoseWatches => Buffer(m_PoseWatches, m_PoseWatchCount);
         public AnimationReadOnlyBuffer<AnimationBoneId> BoneIds => Buffer(m_BoneIds, m_BoneIds.Length);
+
+        public AnimationReadOnlyBuffer<AnimationBlendSpaceSampleRuntimeSnapshot> GetBlendSpaceSamples(int playerIndex)
+        {
+            RequireIndex(playerIndex, m_BlendSpacePlayerCount, nameof(playerIndex));
+            AnimationBlendSpacePlayerRuntimeSnapshot player = m_BlendSpacePlayers[playerIndex];
+            return new AnimationReadOnlyBuffer<AnimationBlendSpaceSampleRuntimeSnapshot>(
+                m_BlendSpaceSamples,
+                player.SampleOffset,
+                player.SampleCount,
+                m_Lease,
+                m_LeaseIdentity);
+        }
+
+        public AnimationReadOnlyBuffer<AnimationLocalBonePose> GetPoseWatchLocalPoses(int watchIndex)
+        {
+            RequireIndex(watchIndex, m_PoseWatchCount, nameof(watchIndex));
+            AnimationPoseWatchSnapshot watch = m_PoseWatches[watchIndex];
+            return new AnimationReadOnlyBuffer<AnimationLocalBonePose>(
+                m_PoseWatchLocalPoses,
+                watch.PoseOffset,
+                watch.Availability == AnimationPoseWatchAvailability.Pose ? watch.BoneCount : 0,
+                m_Lease,
+                m_LeaseIdentity);
+        }
+
+        public AnimationReadOnlyBuffer<AnimationPoseSourceContribution> GetPoseWatchContributions(int watchIndex)
+        {
+            RequireIndex(watchIndex, m_PoseWatchCount, nameof(watchIndex));
+            AnimationPoseWatchSnapshot watch = m_PoseWatches[watchIndex];
+            return new AnimationReadOnlyBuffer<AnimationPoseSourceContribution>(
+                m_PoseWatchContributions,
+                watch.ContributionOffset,
+                watch.ContributionCount,
+                m_Lease,
+                m_LeaseIdentity);
+        }
 
         public float GetEntryBoneWeight(int entryIndex, int boneIndex) =>
             GetWeight(m_EntryBoneWeights, m_EntryCount, entryIndex, boneIndex);
         public float GetStoredBoneWeight(int stackIndex, int boneIndex) =>
             GetWeight(m_StoredBoneWeights, m_StackCount, stackIndex, boneIndex);
-        public float GetInertialBoneWeight(int stackIndex, int boneIndex) =>
-            GetWeight(m_InertialBoneWeights, m_StackCount, stackIndex, boneIndex);
+        public Vector3 GetInertialPositionResidual(int nodeIndex, int boneIndex) =>
+            GetBoneValue(m_InertialPositionResiduals, m_InertializationCount, nodeIndex, boneIndex);
+        public Vector3 GetInertialRotationResidual(int nodeIndex, int boneIndex) =>
+            GetBoneValue(m_InertialRotationResiduals, m_InertializationCount, nodeIndex, boneIndex);
+        public Vector3 GetInertialScaleResidual(int nodeIndex, int boneIndex) =>
+            GetBoneValue(m_InertialScaleResiduals, m_InertializationCount, nodeIndex, boneIndex);
+        public float GetInertialBoneEnvelope(int nodeIndex, int boneIndex) =>
+            GetWeight(m_InertialBoneEnvelopes, m_InertializationCount, nodeIndex, boneIndex);
         public float GetSlotContributionBoneWeight(int contributionIndex, int boneIndex) =>
             GetWeight(m_SlotContributionBoneWeights, m_SlotContributionCount, contributionIndex, boneIndex);
         public float GetOperationContributionBoneWeight(int contributionIndex, int boneIndex) =>
@@ -501,6 +746,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         static bool Matches(AnimationPoseOperationSnapshot operation, string graphId, PoseNodeId nodeId) =>
             string.Equals(operation.GraphId, graphId, StringComparison.Ordinal) && operation.NodeId.Equals(nodeId);
 
+        void RequireIndex(int index, int count, string parameterName)
+        {
+            m_Lease.RequireValid(m_LeaseIdentity);
+            if ((uint)index >= (uint)count)
+                throw new ArgumentOutOfRangeException(parameterName);
+        }
+
         float GetWeight(float[] weights, int rowCount, int row, int boneIndex)
         {
             m_Lease.RequireValid(m_LeaseIdentity);
@@ -510,6 +762,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             if ((uint)index >= (uint)weights.Length)
                 throw new ArgumentOutOfRangeException();
             return weights[index];
+        }
+
+        Vector3 GetBoneValue(Vector3[] values, int rowCount, int row, int boneIndex)
+        {
+            m_Lease.RequireValid(m_LeaseIdentity);
+            if ((uint)boneIndex >= (uint)m_BoneIds.Length || (uint)row >= (uint)rowCount)
+                throw new ArgumentOutOfRangeException();
+            int index = checked(row * m_BoneIds.Length + boneIndex);
+            if ((uint)index >= (uint)values.Length)
+                throw new ArgumentOutOfRangeException();
+            return values[index];
         }
     }
 }

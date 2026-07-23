@@ -67,12 +67,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             for (int i = 0; i < guids.Length; i++)
             {
                 CharacterPipelineDefinition definition = AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(AssetDatabase.GUIDToAssetPath(guids[i]));
-                if (definition && IsStale(definition))
+                if (definition && EvaluateExactArtifactStaleness(definition))
                     Build(definition, true);
             }
         }
 
-        public static bool IsStale(CharacterPipelineDefinition definition)
+        public static bool EvaluateExactArtifactStaleness(CharacterPipelineDefinition definition)
         {
             CharacterSimulationProgramAsset asset = definition.SimulationProgram;
             CharacterPresentationProjectionAsset projection = definition.PresentationProjection;

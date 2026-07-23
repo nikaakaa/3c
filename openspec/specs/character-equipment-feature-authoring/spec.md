@@ -85,7 +85,7 @@ Persistent与Route body MUST是Feature serialized owner内的inline普通BTSMTL 
 
 ### Requirement: Feature必须显式声明Gameplay能力与路由需求
 
-Feature MUST声明其需要的Operation capability、World capability与Gameplay route所需ProducerId集合；Compiler MUST从实际graph再次推导并核对。Equipment Feature MUST不声明LayerId、PoseSlotId、blend/output policy或动画空间拓扑，也 MUST不把RequiredProducerIds解释为Presentation binding。缺失声明、声明与实际使用不一致或Target不支持 MUST阻止Program发布。Feature MUST不把未安装能力标记为optional后继续生成部分Program。
+Feature MUST声明其需要的Operation capability、World capability与Gameplay route所需ProducerId集合；Compiler MUST从实际graph再次推导并核对。Equipment Feature MUST不声明AnimationChannel、PoseNode、Player policy或动画空间拓扑，也 MUST不把RequiredProducerIds解释为Presentation binding。缺失声明、声明与实际使用不一致或Target不支持 MUST阻止Program发布。Feature MUST不把未安装能力标记为optional后继续生成部分Program。
 
 #### Scenario: Gun引用Hitscan但项目未安装Combat能力
 
@@ -95,9 +95,9 @@ Feature MUST声明其需要的Operation capability、World capability与Gameplay
 
 #### Scenario: Feature尝试要求UpperBody表现层
 
-- **WHEN** Feature声明UpperBody、PoseSlot或blend/output policy
+- **WHEN** Feature声明UpperBody、PoseNode或Player policy
 - **THEN** authoring validator MUST拒绝该动画拓扑需求
-- **AND** Feature MUST不创建自己的Animation Profile或临时PoseSlot接口
+- **AND** Feature MUST不创建自己的Animation Profile或表现图入口
 
 ### Requirement: Initial Loadout必须完整且可编译
 

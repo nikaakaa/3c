@@ -44,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong renderFrame,
             float presentationDeltaSeconds,
             CharacterBodyPresentationFrame body,
-            FinalAnimationPoseFrame animationPose)
+            ComposedAnimationPoseFrame animationPose)
         {
             if (!actorId.IsValid)
                 throw new ArgumentException("Pose Post Process Actor identity is invalid.", nameof(actorId));
@@ -65,7 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong RenderFrame { get; }
         public float PresentationDeltaSeconds { get; }
         public CharacterBodyPresentationFrame Body { get; }
-        public FinalAnimationPoseFrame AnimationPose { get; }
+        public ComposedAnimationPoseFrame AnimationPose { get; }
     }
 
     internal interface ICharacterPosePostProcessPass : IDisposable

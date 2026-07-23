@@ -55,7 +55,7 @@ Artifact identity包含：
 - Calibration GUID、Id与Revision。
 - sample rate、plant阈值、landing参数、curve reduction参数与algorithm version。
 
-当前artifact format version为`2`，算法身份为`animation-foot-analysis/v3`。v3保证Preview Rig的Animator在Playable手动采样期间保持启用；旧v2产物必须按algorithm identity判为Stale并重新生成。Codec固定编码左右脚九组feature curve、wrap mode、key、tangent、weight和weighted mode。Reader拒绝未知版本、非法长度、非法枚举、非有限值、无序key、identity hash错误、payload hash错误与尾随字节。Store只写`Library/CharacterFootAnalysis`，使用临时文件、回读校验和原子替换发布；状态严格区分Missing、Stale、Ready与Corrupt。
+当前artifact format version为`2`，算法身份为`animation-foot-analysis/v4`。v4先完成全部heel/toe/sole位置与高度采样，再在第二阶段用完整位置序列计算循环中心差分速度；旧v3在采样当前帧时读取尚未写入的未来帧，生成了错误的高速度并漏判Plant，因此必须按algorithm identity判为Stale并重新生成。Codec固定编码左右脚九组feature curve、wrap mode、key、tangent、weight和weighted mode。Reader拒绝未知版本、非法长度、非法枚举、非有限值、无序key、identity hash错误、payload hash错误与尾随字节。Store只写`Library/CharacterFootAnalysis`，使用临时文件、回读校验和原子替换发布；状态严格区分Missing、Stale、Ready与Corrupt。
 
 ## 4. 单Clip分析链
 
@@ -68,7 +68,7 @@ AnimationClip + CharacterFootPlacementAnalysisSource
   -> canonical artifact
 ```
 
-`CharacterFootPlacementAnimationAnalyzer`只接受`AnimationClip + Analysis Source`，不遍历Timeline，也不知道Definition、RootTree、Program、Projection或Artifact Store。Plant判断使用Calibration地面与sole垂直速度，局部水平速度继续作为生成轨迹供Runtime合成。Timeline面板和Definition Build都只调用唯一`AnimationFootAnalysisArtifactBuilder`。
+`CharacterFootPlacementAnimationAnalyzer`只接受`AnimationClip + Analysis Source`，不遍历Timeline，也不知道Definition、RootTree、Program、Projection或Artifact Store。Analyzer先采齐全部位置和高度，之后才计算循环中心差分速度。Plant判断使用Calibration地面与sole垂直速度，局部水平速度继续作为生成轨迹供Runtime合成。Timeline面板和Definition Build都只调用唯一`AnimationFootAnalysisArtifactBuilder`。
 
 ## 5. Definition发布链
 
@@ -102,10 +102,10 @@ DryRun只检查artifact状态，不触发采样。正式Build可生成Missing或
 - Left或Right单脚选择。
 - Speed、Height、Plant或Landing单metric只读曲线。
 - `Rebuild Selected Clip`只重建当前artifact。
-- Ready artifact按sample rate重采样左右脚PlantConfidence，生成非接触到稳定接触上升沿的瞬时contact candidate。
+- Ready artifact按sample rate重采样左右脚PlantConfidence。上升沿之后必须连续保持Plant，持续样本数由Analysis Source的`MinimumLandingSegmentSeconds`与artifact采样步长精确换算；单帧阈值穿越不再成为contact candidate。
 - Candidate携带artifact identity/content hash、Timeline/Track/Clip stable identity、脚侧、归一化时间、目标frame与置信值。
 - 只读曲线叠加Left/Right candidate位置；候选本身不进入Timeline selection、Undo或序列化数据。
-- Candidate生成前精确核对当前AnimationClip GUID、dependency hash与v3 algorithm identity；Track尚未配置MarkerGroup/Cyclic或存在多Clip时仍显示只读骨骼候选，只禁用Apply并报告映射约束。
+- Candidate生成前精确核对当前AnimationClip GUID、dependency hash与v4 algorithm identity；Track尚未配置MarkerGroup/Cyclic或存在多Clip时仍显示只读骨骼候选，只禁用Apply并报告映射约束。
 - 单AnimationClip完整覆盖MarkerGroup/Cyclic Track时，作者可显式确认并Apply候选。
 
 工具不注册Curve Channel，不反向搜索Definition，也不改变主时间轴行高、滚动范围或marker命中区域。从Character Pipeline Graph打开时，Tool Catalog只注入该Definition Profile显式引用的Source GUID。生成分析与候选展示保持只读；唯一写入口是作者显式确认后的`TimelineEditorSessionContext.Apply`，它重新读取artifact并重建proposal，拒绝任何identity、dependency、采样参数或Timeline映射变化，只替换`LeftFootContact`与`RightFootContact`集合并保留其它Marker。Apply优先复用脚侧与目标frame都匹配的stable marker identity，其次复用同脚侧identity，并删除不再需要的脚步Marker。不存在直接track数组写入、自动保存或候选序列化类型。
@@ -128,31 +128,33 @@ Runtime程序集不引用Artifact Store、Analysis Source或Editor Analyzer。Li
 
 Agent Snapshot只输出Analysis Mode、Source GUID、SourceId、SourceVersion与AlgorithmVersion摘要。Agent Patch继续不能读取或修改candidate，也不能触发artifact Rebuild；Sole Speed、Height、Plant和Landing没有Patch operation。候选经作者确认成为正式AnimationSyncMarker后，Agent只通过v15既有Marker操作与Validator观察和修改最终作者数据。Validator通过正式Build DryRun复用artifact和Projection binding诊断；Compile Report区分artifact Missing、Stale、Corrupt与Projection binding错误。
 
-## 9. Corin迁移基线与待发布产物
+## 9. Corin正式迁移结果
 
 - Analysis Source：`CorinFootPlacementAnalysisSource.asset`
 - Sampling Rig：`CorinFootPlacementAnalysisRig.prefab`
 - Calibration：`CorinFootPlacementRigCalibration.asset`
 - 可达Animation Clip binding：19个。
-- v3算法切换前最后一次发布的v2 artifact为19个。它们与旧Projection只作为迁移基线；v3 identity会把它们判为Stale，不能作为当前候选或验收输入。
-- 迁移前Projection artifact aggregate hash：`49180844a582243e65fde7db744eeb83941c54cf554a042d4256760de0fb6503`。
-- 迁移前Projection semantic contract hash：`7be2b230cb37eb76d7d40005ed7ae8590641adb157958499659e715d9a36d432`。
-- 迁移前Projection revision：`bf0904a2355e1fd189bee0e880079c106b960b999e24e65d346134016a355e14`。
-- 迁移前Float32与Fixed SourceRevision：`7e3b3866f0f2416366a7685cbad14db9faa0206991f0dcfc5520c64ceee1222f`。
-- 迁移前Float32与Fixed SemanticHash：`d3fa1c4a20be895790d34796f8bf1b23f46ed0e7426ea733c3f2dd64ef128572`。
-- 迁移前Float32 ProgramHash：`ebedd28030011ad59aa5d2aa57616686e9137058e191e3bfee1b88f06d468170`。
-- 迁移前Fixed ProgramHash：`0e130e749b0de6dc30bf205699522cd12469c22639ab8b666ba91d48d1b2e39a`。
-- v3正式artifact aggregate、Projection revision、Program hash和WalkLoop/RunLoop Marker frame必须在整体编译绿后由正式Builder与Agent v15流程生成，再回填本节；不得沿用上述迁移前值。
+- 19/19可达Animation Clip已通过唯一Builder生成`animation-foot-analysis/v4` artifact；v3及更早算法产物只能判为Stale，不再作为当前候选或发布输入。
+- Projection artifact aggregate content hash：`6aa73e203604bbe96a58e9fd73a7e15887531d666e1245eff980cf1d90bb8930`。
+- Projection revision：`31788f722760d3e02a63862df6cbd3018814eeaf6be86adea772a30d6e956eb2`。
+- Float32与Fixed SourceRevision：`0a3900b32f99b968a4e82ea9974198aee7e807f71b17569cb1a5ae215533c9a4`。
+- Float32与Fixed SemanticHash：`bfe0ebc2cbae4a4b18a013d88920fc14a4bf4997ca5f7264058b2230b451d5a1`。
+- Projection semantic contract hash：`4e06592984d8bba455337003779ba1213687c0888a0066f0a2d0cfabc353a62d`。
+- Float32 ProgramHash：`c9569e15302ab2bb1e3c25e8c42e162b4342d0e99c42e35d026d8edd29e829c0`。
+- Fixed ProgramHash：`aa8068d033b1ec6be4bf80e283277a79429268daa441c4f151b6b6cca0fad0ec`。
+- Corin WalkLoop正式Marker：RightFootContact frame `2`，LeftFootContact frame `18`。
+- Corin RunLoop正式Marker：RightFootContact frame `1`，LeftFootContact frame `16`。
+- 四个Marker通过Agent `agent-character-controller-synthesis.v17`的正式snapshot、dry-run与apply事务写入并保留stable marker identity，没有直接修改Graph YAML。
 
 Standalone、Deterministic Rollback、Unity Authority与DotRecast Runtime Profile都引用Calibration GUID `471a3432ddd640c187b4ebfdf8c94e69`。
 
 ## 10. 验证状态
 
-- 前一版Foot Analysis基础链曾完成Runtime/Timeline Editor/Client Editor静态编译与19/19 v2 artifact发布，但这些结果不代表本节新增Marker候选闭环已经验收。
-- Analyzer保持Animator启用、v3 algorithm identity、candidate proposal与Analysis面板显式Apply代码已经落盘；任务状态继续保持未完成，直到共享程序集恢复编译、Unity刷新和正式资产迁移完成。
+- Analyzer保持Animator启用，并使用v4两阶段采样与速度求导；Walk/Run的左右脚PlantConfidence已产生独立稳定接触段。
+- Candidate proposal按`MinimumLandingSegmentSeconds`过滤单帧阈值穿越；RunLoop不再产生额外LeftFootContact候选。
 - 已删除`TimelineTrackHandle.uss`中最后残留的旧`footAnalysis*` lane样式，不存在隐藏CSS兼容入口。
-- 当前共享Unity编译仍由并行AnimationChannelId/AnimGraph迁移收口；本change不恢复旧AnimationLayerSelection、Transition或Equipment类型，也不复制Simulation Core合同。
-- 等整体编译绿后，必须重新生成v3 artifact并确认Walk/Run左右脚PlantConfidence不再同形，再通过Agent v15正式流程迁移Corin WalkLoop/RunLoop Marker并重建Projection。
-- 迁移前的Corin `frame 0/半周期` Marker与旧v2 artifact只算历史配置，不作为候选算法或完成验收真相。
+- Runtime与Editor程序集均以`--disable-build-servers /nr:false /p:UseSharedCompilation=false`编译通过，完成后已关闭MSBuild与编译器服务器。
+- 正式Agent marker事务、19/19 v4 artifact、Presentation Projection、Float32 Program与Fixed wrapper已经统一发布到同一SourceRevision。
+- 旧Corin `frame 0/半周期` Marker、v3及更早artifact只算历史配置，不作为候选算法或完成验收真相。
 - 未运行Unity batchmode。
 - 未新增测试。

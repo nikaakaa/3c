@@ -24,32 +24,34 @@ Graph Data Catalog MUST 在 owner-local Blackboard declaration 上编辑唯一 f
 - **WHEN** declaration 不满足 Bool、Frame/Frame、SyncFact 或 Action Context provenance 约束
 - **THEN** Catalog 与 Validator MUST 报错
 - **AND** 系统 MUST NOT 静默改写类型、scope、lifetime、projection 或 owner
-### Requirement: Tree Inspector 必须提供唯一 Graph Data Catalog
+### Requirement: Tree Workspace必须提供唯一Graph Data Catalog
 
-系统 MUST 在 Tree Inspector 的 `Data` 页中提供唯一 `Graph Data Catalog`，统一列出当前 authoring context 可用于图编辑的正式数据来源。Input 与 Pipeline Blackboard MUST 使用同一目录外壳、搜索入口、分组规则和条目视觉语法。`Inspector` 页 MUST NOT 同时显示、复制或嵌入 Catalog。系统 MUST NOT 同时保留独立 Input 素材区、独立 ExposedProperty 列表或其它并行的正式 Graph 数据目录。
+系统 MUST在Tree Workspace左侧Data区域提供唯一`Graph Data Catalog`，统一列出当前authoring context可用于图编辑的正式数据来源。Input与Pipeline Blackboard MUST使用同一目录外壳、搜索入口、分组规则和条目视觉语法。右侧Details MUST只显示当前selection或Graph Authoring Settings，不得复制、嵌入或持有Catalog。系统 MUST不保留独立Input素材区、独立ExposedProperty列表、旧Data/Inspector互斥页签或其它并行正式Graph数据目录。
 
-#### Scenario: 在角色 RootTree 查看数据
+#### Scenario: 在角色RootTree查看数据
 
-- **WHEN** 作者打开带有 Character Pipeline authoring context 的 RootTree
-- **THEN** Data 页的目录 MUST 同时展示当前 InputProfile 的 Input 条目和当前图可见的 Blackboard declaration
-- **AND** Inspector 页 MUST 不重复显示该目录
+- **WHEN** 作者打开带Character Pipeline authoring context的RootTree
+- **THEN** 左侧Data区域 MUST同时展示当前InputProfile的Input条目和当前图可见Blackboard declaration
+- **AND** 右侧Details MUST不重复显示该目录
 
-#### Scenario: 在 inline state body 下钻
+#### Scenario: 在inline state body下钻
 
-- **WHEN** 作者从 RootTree 下钻到 StateNode 的 inline graph
-- **THEN** 同一 Data 页目录 MUST 按 inline graph 的当前上下文重新投影数据，而不是打开第二套面板
+- **WHEN** 作者从RootTree下钻到StateNode的inline graph
+- **THEN** 同一Data区域 MUST按inline graph当前上下文重新投影数据
+- **AND** MUST不打开第二套面板或替换右侧Details owner
 
-#### Scenario: 打开 Transition rule
+#### Scenario: 打开Transition rule
 
-- **WHEN** 作者选择可编辑的 Transition rule graph
-- **THEN** 同一 Data 页目录 MUST 显示该 rule graph 可引用的数据与当前可用操作
-- **AND** Inspector 页 MUST 继续只显示选中对象或图级 authoring settings
+- **WHEN** 作者选择可编辑Transition rule graph
+- **THEN** 同一Data区域 MUST显示该rule graph可引用的数据与当前可用操作
+- **AND** 右侧Details MUST继续只显示选中对象或图级authoring settings
 
-#### Scenario: 切换到 Inspector
+#### Scenario: 选择Graph节点
 
-- **WHEN** 作者从 Data 页切换到 Inspector 页
-- **THEN** Catalog MUST 不可见且不响应拖拽、展开、创建、删除或详情编辑
-- **AND** Catalog 的 editor-only 搜索、筛选和折叠状态 MAY 在当前 TreeWindow 内保留
+- **WHEN** 作者在Graph Canvas选择Node或Edge
+- **THEN** Catalog MUST保持可见并保留editor-only搜索、筛选和折叠状态
+- **AND** Catalog MUST不响应Details字段修改为第二条catalog mutation
+- **AND** Details MUST不复制Catalog条目
 
 ### Requirement: Graph Data Catalog 必须是编辑器专用投影
 

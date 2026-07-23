@@ -77,7 +77,7 @@ SimulationKernel、Pipeline Runtime/Pass、Session Source、WorldSolver adapter�
 
 - **WHEN** 当前 Debug Session 未启用 Animation channel
 - **THEN** runtime MUST NOT 构建 Animation trace payload
-- **AND** CharacterAnimationPlaybackCommandQueue、AnimationPlaybackLifecycle、PoseSlot Blend Stack与Pose Graph native job MUST继续产生相同正式结果
+- **AND** CharacterAnimationPlaybackCommandQueue、AnimationPlaybackLifecycle、显式Player与Pose Graph native job MUST继续产生相同正式结果
 
 #### Scenario: 记录 Blackboard 值
 

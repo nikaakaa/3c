@@ -1,38 +1,61 @@
-# Design: 每Pose Slot完整Animation Blend Stack
+# Design: 显式Animation Blend Stack节点算法内核
+
+## 重新基线
+
+`refactor-animation-selection-pose-graph-boundary`已经替换本文原先的隐藏owner和管线边界。显式Pose Graph `BlendStack`节点只保留entry、clock、CrossFade、Stored Pose、Per-Bone Blend Profile、source capture与release；Inertial数学、history与rebase属于`refactor-inertial-blending-to-local-pose-node`定义的局部`Inertialization`节点。本文中的per-slot runtime、`ResolvedAnimationPoseRequest`、`PoseSlotFrame`、Stack Inertial和全局Blend Library均为迁移前清单，不再是当前合同。
+
+最终链路是：
+
+```text
+AnimationSelectionFrame
+  -> SelectedPosePlayer
+       -> 可选局部Inertialization
+     或显式BlendStack
+  -> 普通Pose Value
+  -> Pose Graph composition / ModifyBone / FootPlacement
+  -> FinalAnimationPoseFrame
+```
+
+没有显式Blend Stack节点的分支不创建历史播放器；每个显式节点拥有独立算法状态和node-local Blend Policy。
 
 ## Context
 
-当前正式动画路径为：
+迁移前代码安装的是以下动画路径：
 
 ```text
-Program Finalize
-  -> Layer selection
-  -> Timeline visual sample
-  -> AnimationPlaybackLifecycle
-  -> AnimancerLayer.Play / FadeGroup
-  -> Animancer Layer composition
-  -> Final Animator Pose
+CharacterAnimationPlaybackRuntime.Present
+  -> committed AnimationChannel selection
+  -> AnimationPlaybackLifecycle采样需求与Marker Sync
+  -> ResolvedAnimationPoseRequest
+  -> AnimationBlendStackRuntime.Advance / Push
+  -> AnimationPosePlayableGraphRuntime.Evaluate
+  -> source capture
+  -> AnimationSlotBlendJob
+  -> CharacterPoseGraphNativeJob
+  -> AnimationFinalPoseStreamWriterJob
+  -> Animancer PlayableGraph单次Evaluate
+  -> FinalAnimationPoseFrame
   -> Foot Placement
 ```
 
-这条路径同时存在Lifecycle的Playback寿命和Animancer state graph的实际权重，且不同generation可能复用同一producer visual。Stored Pose、Per-Bone transition和Inertial都需要项目直接拥有时间weight与pose history，不能继续把FadeGroup作为隐藏权威。
+`AnimationPosePlayableGraphRuntime`已经唯一拥有per-slot Stack、source backend、Native workspace、Slot Job、Pose Graph Job和final writer的装配顺序。Animancer只提供同一PlayableGraph与source playable采样，不再拥有transition clock、source间weight、跨slot合成或最终Pose决策。
 
-此前设计又把所有Layer的空间合成塞进同一个Blend Stack evaluator。`add-character-presentation-pose-graph`现已明确：
+历史问题是Lifecycle寿命与Animancer fade权重并存，且早期Blend Stack设计又试图同时承担时间历史和跨slot空间合成。最终职责已经固定为：
 
 - Blend Stack回答“同一个Pose Slot的旧source如何连续过渡到新source”。
 - Pose Graph回答“多个Pose Slot如何按骨骼与参数组合成最终pose”。
 
-本设计只保留第一类职责。
+本design现在记录已安装实现和剩余配置闭环，不再把旧Animancer FadeGroup链描述为当前Runtime。
 
 ## Goals
 
-- 每个Pose Slot拥有稳定、有序、可诊断的时间Blend Stack。
+- 每个显式Blend Stack节点拥有稳定、有序、可诊断的时间历史。
 - 每个entry拥有独立Fade Clock、Curve、depth-adjusted duration和每骨骼transition weight。
 - 在固定active source预算下通过Stored Pose保持pose、velocity、parameter和feature连续。
-- 提供CrossFade与Inertial两种显式transition technique。
+- Blend Stack只提供CrossFade；现有Inertial实现完整迁移到局部Inertialization节点。
 - 让Animancer继续采样Clip/ManualMixer，不再拥有fade和source间权重。
-- 输出完整PoseSlotFrame供Pose Graph唯一消费。
-- Marker Sync、Preview、Rollback replacement和source retirement只读取同一Stack事实。
+- 输出统一Pose Value供下游Pose节点消费。
+- Marker Sync、Preview、Rollback replacement和source retirement只读取同一显式节点事实。
 - 以source-neutral resolved request承接未来Motion Matching。
 - 所有Runtime内存按Rig、Slot和容量预分配。
 
@@ -46,7 +69,7 @@ Program Finalize
 - 不把Notify、Window、Cue或Gameplay事件交给动画播放器。
 - 不保留Animancer FadeGroup、旧Layer compositor或TransitionLibrary fallback。
 
-## Target Architecture
+## Installed Architecture
 
 ```text
 Committed AnimationChannel selection
@@ -81,10 +104,10 @@ AnimationBlendStackRuntime    AnimancerPoseSamplingBackend
                                   PoseSlotFrame
                                        |
                                        v
-                         Character Presentation Pose Graph
+                           CharacterPoseGraphNativeJob
                                        |
                                        v
-             Final Pose Writer -> CompleteFrame(...) -> Foot Placement
+ AnimationFinalPoseStreamWriterJob -> CompleteFrame(...) -> Foot Placement
 ```
 
 Stack Runtime唯一拥有Source Workspace、双页Slot Workspace/FramePlan和entry状态；`PrepareSlotJob(...)`只从inactive page提交不可变plan并返回`AnimationSlotBlendJob`。Source capture、Slot Job和Pose Graph在同一非零completion、同一个PlayableGraph Evaluate内按依赖顺序执行，Evaluate成功后Runtime才调用`CompleteFrame(...)`提交release与retirement。不存在managed evaluator、第二次Evaluate、Animancer state weight或Lifecycle集合重建第二份计划。
@@ -228,9 +251,9 @@ Evaluator从最新到最旧按nested residual计算weight，并保证每骨骼li
 
 capture完成后原子移除被压缩entry并释放不再引用的source。Stored Pose不推进Timeline、Marker、Notify或root motion。
 
-## Inertial Blend
+## 旧Inertial Blend迁移清单
 
-Inertial rule捕获切换前current/previous slot pose与新target pose，计算每骨骼TRS和velocity residual。旧entry在capture后退出，新target成为唯一live source。rotation使用最短弧并保持单位四元数。
+当前Inertial rule捕获切换前current/previous slot pose与新target pose，计算每骨骼TRS和velocity residual。该数学、history与rebase必须移动到唯一Inertialization节点；旧entry在capture后退出的source lifetime语义不再由Blend Stack的Inertial分支保留。
 
 尚未完成时再次切换，Evaluator先求当前修正pose/velocity，再相对新target重建同一accumulator。不得叠加第二个accumulator或返回旧target原始pose。
 
@@ -248,7 +271,7 @@ PoseSlotFrame
   OutputWeight
   DenseLocalPose
   PoseParameterBuffer
-  Live/Stored/InertialContribution
+  Live/StoredContribution
   Left/RightFeatureAggregate
   ContinuityIdentity
 ```
@@ -265,17 +288,19 @@ Backend不得调用AnimancerLayer.Play、StartFade、FadeGroup、automatic layer
 
 Runtime按Rig bone count、slot count和每slot容量预分配source、Stored、history、Inertial、parameter与weight Native workspace。Source capture把Animancer source AnimationStream写入独立buffer slice；`AnimationSlotBlendJob`按不可变frame plan生成PoseSlotFrame buffer。
 
-每个`AnimationBlendStackRuntime`唯一拥有`AnimationBlendSourcePoseWorkspace`以及双页`AnimationSlotBlendPoseWorkspace`/`AnimationSlotBlendFramePlan`，把完整SourceId降低为frame-local capture index和带generation的physical source identity，再把当前Live、Stored与Inertial状态写入inactive page。`PrepareSlotJob(...)`按同一非零exact completion提交active page并返回唯一`AnimationSlotBlendJob`。
+迁移前每个`AnimationBlendStackRuntime`同时保存Live、Stored与Inertial状态。当前显式BlendStack只把Live与Stored写入预分配workspace；局部Inertialization使用独立双页history与residual workspace，两者由同一Pose Plan completion提交。
 
 Source playable、capture job、slot blend job、Pose Graph job与最终writer必须位于同一Animancer PlayableGraph并在一次Evaluate中按同一completion顺序完成；成功后Runtime才调用`CompleteFrame(...)`确认该completion并发布release。Runtime不得先Evaluate source、回到托管代码逐骨复制，再第二次Evaluate最终pose，也不得保留managed pose evaluator。`AnimationPoseSourceCaptureBinding`只借用Workspace拥有的Native slice，不拥有Allocator或Dispose职责。
 
-Slot Job不写VisualRoot、Gameplay Body或最终Animator output，不读取Pose Graph authoring，也不在表现帧扩容。最终`CharacterPoseGraphEvaluator`在同一正式PlayableGraph拓扑中消费这些buffer。
+Slot Job不写VisualRoot、Gameplay Body或最终Animator output，不读取Pose Graph authoring，也不在表现帧扩容。最终`CharacterPoseGraphNativeJob`在同一正式PlayableGraph拓扑中消费这些buffer。
 
 ## Marker Sync
 
-Marker Sync只在同AnimationChannelId/PoseSlotId的live Current与incoming target之间工作，并在Stack push前解析effective time。Stored Pose和Inertial不成为relation节点。
+本节原先描述的图外handoff runtime不再是目标架构。Marker Sync必须迁入Selection路径上的显式`MarkerSync`节点，并与一个stateful Player一对一配对。
 
-source被capture或Inertial接管后，relation按最后effective/raw time建立continuation anchor再detach，防止target时间跳回。
+Blend Stack只在membership预阶段发布该节点当前与尚未exact release的live source usage；MarkerSync随后根据AnimationTrack编入Projection的binding解析leader、segment fraction与effective sample page；Blend Stack最后按该page采样source并独立计算CrossFade weight。Stored Pose不是live source usage，不加入Marker relation；Inertialization也不加入relation。
+
+source被Stored capture或exact release移除时，Blend Stack只发布release usage。MarkerSync根据该正式usage建立continuation anchor并detach relation。Blend Stack不得读取MarkerId、SyncRole或relation，也不得扫描自己的entry来复制同步算法。
 
 ## Foot Feature Boundary
 
@@ -293,7 +318,8 @@ Projection / Rig / Blend Library / Pose Program validation
   -> Animancer source backend
   -> source capture
   -> slot blend jobs
-  -> final Pose Graph evaluator
+  -> CharacterPoseGraphNativeProgram / CharacterPoseGraphNativeJob
+  -> AnimationFinalPoseStreamWriterJob
   -> Lifecycle / Marker Sync / Stack
 ```
 
@@ -301,11 +327,15 @@ Projection / Rig / Blend Library / Pose Program validation
 
 ```text
 consume channel commands
-  -> retained visual sampling / Marker Sync
-  -> slot Stack frame plans
-  -> Animancer source sampling
-  -> all AnimationSlotBlendJob evaluation
-  -> final Pose Graph
+  -> raw Selection cache
+  -> BlendStack membership预阶段与source usage
+  -> 显式MarkerSync解析effective sample page
+  -> BlendStack Apply selection与Empty
+  -> BeginFrame并准备全部source capture
+  -> PrepareSlotJob生成全部不可变slot plan
+  -> CharacterPoseGraphNativeJob与final writer入图
+  -> Animancer PlayableGraph单次Evaluate
+  -> CompleteFrame并发布FinalAnimationPoseFrame
   -> Foot Placement
 ```
 
@@ -320,45 +350,58 @@ consume channel commands
 - transition matrix缺少任一可达同slot pair。
 - curve非规范、非有限或非单调。
 - RequireOutput slot被要求到Empty。
-- source/Stored/Inertial workspace无效或pose非有限。
+- source/Stored workspace无效、局部Inertialization workspace无效或pose非有限。
 - 同一PresentationFrame重复推进slot Stack。
 - PoseSlotFrame未完成却进入Pose Graph。
 
 不得改用Animancer fade、default profile、Humanoid mapping、bind pose、旧TransitionLibrary或global Layer compositor。
 
-## Motion Matching Extension Boundary
+## Motion Matching目标边界
 
-Motion Matching位于ResolvedAnimationPoseRequest之前。Continue保持同AnimationPoseSourceId并更新sample；Jump在同Playback下提升SelectionGeneration、创建新SourceId与新EntryId，并使用matrix中的CrossFade或Inertial。它必须复用当前slot容量、Stored Pose和退役合同，不得在Stack旁建立私有fade。
+Motion Matching只输出Animation Selection。Continue保持同Selection identity并更新sample；Jump提升SelectionGeneration，由`SelectedPosePlayer`发布typed discontinuity。推荐图通过局部`Inertialization`处理高频jump；作者明确需要多source共同可见期时才连接Blend Stack并使用其CrossFade/Stored Pose合同。MM不得选择transition technique，也不得建立私有fade、Stack或惯性器。
 
-## Migration
+## Implementation Status and Remaining Closure
 
-1. 安装Rig、Blend Profile与per-slot Library schema。
-2. 安装AnimationChannelId/PoseSlotId binding与PoseSlotFrame合同。
-3. 将Animancer降为source backend。
-4. 将Stack evaluator收窄为per-slot输出。
-5. 与Pose Graph change在同一Runtime切换中接入final evaluator。
-6. 迁移Foot feature、Preview、Trace与Corin资产。
-7. 删除Animancer fade、旧Layer Stack、global compositor与旧schema。
+已经安装：
 
-不得先保留旧global compositor再套Pose Graph。
+1. Rig、Blend Profile、per-slot Blend Library、canonical curve与完整matrix的代码合同。
+2. AnimationChannelId/PoseSlotId binding、PoseSlotFrame与FinalAnimationPoseFrame合同。
+3. `AnimancerPoseSamplingBackend`、source physical registry和完整SourceId隔离。
+4. `AnimationBlendStackRuntime`、Stored Pose、容量压缩与source retirement；局部Inertialization独立拥有history/residual/rebase。
+5. `AnimationSlotBlendJob`、`CharacterPoseGraphNativeJob`与final writer在同一PlayableGraph单次Evaluate中的正式编排。
+6. Foot feature、Preview、Trace与Runtime diagnostics的新链路。
+7. 旧Animancer fade、Layer weight、global compositor、managed evaluator与兼容代码删除。
+
+尚未收口：
+
+1. Blend Profile Inspector显示Rig identity、BoneId与最终duration multiplier。
+2. Corin正式Rig Definition、dense BoneId、左右脚语义与root exclusion。
+3. Corin Blend Profiles和BaseLocomotionSlot/FullBodyActionSlot完整matrix。
+4. Corin Profile、Pose Graph、Runtime Rig Binding、Projection与Float32/Fixed wrapper原子重建。
+5. Corin旧`m_Layers`、`m_TransitionLibrary`和旧producer binding序列化数据随正式资产重写直接删除。
+6. current specs中的Animancer transition权威、旧LayerId和单Base Corin口径通过两个change的delta统一替换。
+
+Corin资产实施唯一归属`add-character-presentation-pose-graph`第15章。本change不得单独创建另一份Rig、Blend Library、Profile、Binding或Projection，也不得在该资产迁移完成前单独归档成已闭合角色链路。
 
 ## Tradeoffs
 
-### 选择：Stack只拥有时间混合
+### 选择：Stack只拥有多source时间混合
 
-业务收益：Base、FullBody、UpperBody或未来Equipment每一路都能独立高频切换，跨路组合可以单独改图。Motion Matching无需替换空间compositor。
+业务收益：需要共同可见期的Base、FullBody、UpperBody或未来Equipment分支可以独立CrossFade，跨路组合可以单独改图；高频MM jump则不必承担多source Stack。
 
-技术代价：必须定义稳定PoseSlotFrame并协调slot evaluator与final Pose Graph job顺序。
+技术代价：必须定义稳定Pose Value、PoseNodeId与source usage，并协调Player、Stack和final Pose Plan顺序。
 
 ### 选择：项目拥有source间weight，Animancer只采样
 
-业务收益：Stored Pose、Per-Bone transition与Inertial共享同一个事实。
+业务收益：CrossFade与Stored Pose的source权重只有一份事实；局部Inertialization只处理完成Pose残差，不再复制source混合权重。
 
-技术代价：项目承担pose buffer、clock、curve、quaternion residual与内存管理。
+技术代价：项目同时承担Stack的source pose/clock/curve内存，以及独立Inertialization的history/residual内存，但二者所有权不重叠。
 
-### 选择：CrossFade与Inertial显式二选一
+### 选择：CrossFade与Inertialization是两个显式节点
 
-CrossFade保留多个source细节和Marker共同可见期；Inertial适合高频取消与MM pose jump。Compiler物化完整matrix，Runtime不猜测。
+Blend Stack CrossFade保留多个source细节和Marker共同可见期；局部Inertialization不保留旧source，适合高频取消与MM pose jump。作者通过图连接选择，Compiler分别物化node-local Blend Policy和Inertialization Policy，Runtime不猜测。
+
+Marker共同可见期只描述Blend Stack发布的source usage寿命，不表示Blend Stack拥有同步算法。作者需要同步时必须在Selection路径显式连接MarkerSync；没有该节点时同一共同可见期内各source仍按raw time采样。
 
 ### 选择：容量触发时捕获完整slot输出
 
@@ -366,20 +409,21 @@ capture边界严格连续，source释放清楚。代价是被压缩entry的独�
 
 ### 未选择：Stack继续做global Layer composition
 
-它能少一个runtime module，但会再次把时间历史、Bone Mask、Additive、curve和最终Pose压在一起，并与已规划Pose Graph重复，因此删除。
+它能少一个runtime module，但会再次把时间历史、Bone Mask、Additive、curve和最终Pose压在一起，并与已安装Pose Graph重复，因此已经删除。
 
 ## Spec Conflicts and Resolution
 
-- `character-animation-layer-runtime`中的LayerId改为AnimationChannelId/PoseSlotId；Stack owner为PoseSlotId。
-- Animancer独占fade/final pose改为Stack独占slot内时间混合，Pose Graph独占跨slot与最终pose。
+- `character-animation-layer-runtime`中的隐藏Layer/PoseSlot Stack owner删除；Stack owner为显式PoseNodeId。
+- Animancer独占fade/final pose改为显式Blend Stack独占多source CrossFade、局部Inertialization独占单Pose残差，Pose Graph Plan独占组合与最终pose。
 - `character-animation-presentation-authoring`的Layer catalog与Animancer TransitionLibrary改为Pose Graph、Blend Library与Rig。
-- `character-animation-pipeline`链路改为`Lifecycle -> PoseSlot Stack -> Source Backend/Slot Job -> Pose Graph -> Pose Post Process`。
+- `character-animation-pipeline`链路改为`Selection -> explicit Player -> Pose Graph Plan -> world-aware FootPlacement -> Final Publication`。
 - `character-foot-placement-presentation`只消费Pose Graph最终每脚贡献。
-- `add-character-presentation-pose-graph`与本change的Runtime activation必须原子完成。
+- `add-character-presentation-pose-graph`与本change的Runtime已经按同一PlayableGraph原子安装；剩余Corin资产和spec收口仍必须由同一最终配置链完成。
+- current `character-animation-presentation-authoring`仍保留Animancer原生transition权威，本change归档时必须由现有MODIFIED delta替换，不得与新的Blend Library Requirement并存。
 
 ## Risks
 
-- Slot source capture和final Pose Graph必须在同一PlayableGraph顺序中工作，不能用独立graph或Transform回写拼接。
+- Player source capture、显式Blend Stack和final Pose Graph必须在同一PlayableGraph顺序中工作，不能用独立graph或Transform回写拼接。
 - Stored Pose失去旧source时间语义，Marker detach与feature capture必须同边界提交。
 - Per-Bone transition导致单一scalar无法代表slot source贡献，所有diagnostics与feature调用方必须同步迁移。
-- 多change共同修改Projection，实施前必须按最终共同合同重读current specs与代码，不能按旧Layer字段落地。
+- 多change共同修改Projection，剩余Corin资产必须只按`add-character-presentation-pose-graph`第15章落地，不能再从本change复制第二份旧Layer迁移清单。

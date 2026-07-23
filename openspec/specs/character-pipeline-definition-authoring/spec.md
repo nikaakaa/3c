@@ -65,7 +65,7 @@ Definition Inspector MUST以紧凑 Config References 作为默认作者界面。
 
 ### Requirement: Animation Presentation Profile 必须是唯一表现配置资产
 
-`CharacterAnimationPresentationProfile` MUST作为ScriptableObject唯一引用Pose Graph、Blend Library与Rig Definition，保存稳定producer source bindings，以及显式Foot Placement Analysis Mode与Analysis Source Asset GUID。Pose Graph MUST唯一保存Pose Slot、AnimationChannel binding、Mask、Additive、Pose Parameter与Output topology；Blend Library MUST唯一保存每slot transition。Definition、Graph、Timeline、Presenter、Program、Runtime Prefab或独立EditorWindow MUST不保存这些作者配置的可写副本。Editor-only Analysis Source中的Sampling Rig Asset GUID与Rig Calibration属于分析输入；单Clip generated feature MAY先保存为非作者、非Runtime的Library artifact，Runtime payload只属于Projection且不得反写Profile或Timeline。Profile与Definition MUST不持有Analysis Source或Sampling Rig对象强引用，避免Editor分析资产进入Gameplay SourceRevision与Player依赖闭包。
+`CharacterAnimationPresentationProfile` MUST作为ScriptableObject唯一引用Pose Graph、node-local Blend/Inertialization Policy与Rig Definition，保存稳定producer source bindings，以及显式Foot Placement Analysis Mode与Analysis Source Asset GUID。Pose Graph MUST唯一保存Selection Input、MarkerSync、Player、Mask、Additive、Pose Parameter、FootPlacement与Output topology；Policy MUST只由对应节点引用。Definition、Graph、Timeline、Presenter、Program、Runtime Prefab或独立EditorWindow MUST不保存这些作者配置的可写副本。Editor-only Analysis Source中的Sampling Rig Asset GUID与Rig Calibration属于分析输入；单Clip generated feature MAY先保存为非作者、非Runtime的Library artifact，Runtime payload只属于Projection且不得反写Profile或Timeline。Profile与Definition MUST不持有Analysis Source或Sampling Rig对象强引用，避免Editor分析资产进入Gameplay SourceRevision与Player依赖闭包。
 
 #### Scenario: 一个Profile被一个Definition引用
 

@@ -325,7 +325,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         MandatoryBoundary = 3,
         PlanInvalidated = 4,
         DomainActivated = 5,
-        PresentationReset = 6
+        PresentationReset = 6,
+        QueryFixture = 7
     }
 
     public enum MotionMatchingSelectionDecisionKind : byte

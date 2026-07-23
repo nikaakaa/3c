@@ -35,10 +35,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         readonly AnimancerComponent m_Animancer;
         readonly AnimancerGraph m_Graph;
         readonly CharacterAnimationRigPayload m_Rig;
+        readonly Transform m_RootTransform;
         readonly NativeArray<TransformStreamHandle> m_Handles;
         readonly NativeArray<AnimationLocalBonePose> m_ReferencePose;
-        readonly Dictionary<AnimationPoseSourceId, SourceVisual> m_Sources =
-            new Dictionary<AnimationPoseSourceId, SourceVisual>();
+        readonly Dictionary<AnimationPlayerSourceKey, SourceVisual> m_Sources =
+            new Dictionary<AnimationPlayerSourceKey, SourceVisual>();
 
         bool m_Disposed;
 
@@ -95,8 +96,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_Animancer = animancer;
             m_Graph = graph;
             m_Rig = rig;
+            m_RootTransform = rigBinding.Bones[rig.RootBoneIndex];
             m_Handles = handles;
             m_ReferencePose = referencePose;
+        }
+
+        internal Transform RootTransform
+        {
+            get
+            {
+                RequireAvailable();
+                return m_RootTransform;
+            }
+        }
+
+        internal void ApplyRootPolicy()
+        {
+            RequireAvailable();
+            if (m_Rig.RootBonePolicy != CharacterAnimationRootBonePolicy.ExcludeSourceRoot)
+                return;
+            CharacterAnimationRigBonePayload root = m_Rig.Bones[m_Rig.RootBoneIndex];
+            m_RootTransform.SetLocalPositionAndRotation(
+                root.ReferenceLocalPosition,
+                root.ReferenceLocalRotation);
+            m_RootTransform.localScale = root.ReferenceLocalScale;
         }
 
         internal NativeArray<TransformStreamHandle> Handles
@@ -109,11 +132,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         }
 
         internal AnimationPoseSourcePrepareResult PrepareOrUpdate(
-            in ResolvedAnimationPoseRequest request,
-            in AnimationPoseSourceCaptureBinding capture)
+            in AnimationSelectionFrame request,
+            in AnimationPoseSourceCaptureBinding capture,
+            PoseNodeId playerNodeId)
         {
             RequireAvailable();
-            if (!request.IsValid)
+            if (!request.IsValid || !playerNodeId.IsValid)
                 throw new ArgumentException("Resolved animation pose request is invalid.", nameof(request));
             if (!capture.SourceId.Equals(request.SourceId))
                 throw new ArgumentException("Animation pose capture SourceId does not match the request.", nameof(capture));
@@ -127,10 +151,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 m_Rig.ScalePolicy);
 
             bool created = false;
-            if (!m_Sources.TryGetValue(request.SourceId, out SourceVisual visual))
+            var key = new AnimationPlayerSourceKey(request.SourceId, playerNodeId);
+            if (!m_Sources.TryGetValue(key, out SourceVisual visual))
             {
-                visual = CreateSource(request.SourceId, job);
-                m_Sources.Add(request.SourceId, visual);
+                visual = CreateSource(key, job);
+                m_Sources.Add(key, visual);
                 created = true;
             }
 
@@ -148,20 +173,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             {
                 if (created)
                 {
-                    m_Sources.Remove(request.SourceId);
+                    m_Sources.Remove(key);
                     visual.Destroy(m_Graph.PlayableGraph);
                 }
                 throw;
             }
         }
 
-        internal void Release(AnimationPoseSourceId sourceId)
+        internal void Release(AnimationPoseSourceId sourceId, PoseNodeId playerNodeId)
         {
             RequireAvailable();
-            if (!sourceId.IsValid)
+            if (!sourceId.IsValid || !playerNodeId.IsValid)
                 throw new ArgumentException("Animation pose SourceId is invalid.", nameof(sourceId));
-            if (!m_Sources.Remove(sourceId, out SourceVisual visual))
-                throw new KeyNotFoundException($"Animation pose source '{sourceId}' is not prepared.");
+            var key = new AnimationPlayerSourceKey(sourceId, playerNodeId);
+            if (!m_Sources.Remove(key, out SourceVisual visual))
+                throw new KeyNotFoundException($"Animation pose source '{sourceId}' for Player '{playerNodeId}' is not prepared.");
             visual.Destroy(m_Graph.PlayableGraph);
         }
 
@@ -195,11 +221,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_Sources.Clear();
         }
 
-        SourceVisual CreateSource(AnimationPoseSourceId sourceId, AnimationSourcePoseCaptureJob job)
+        SourceVisual CreateSource(AnimationPlayerSourceKey key, AnimationSourcePoseCaptureJob job)
         {
             var mixer = new ManualMixerState
             {
-                Key = new AnimationPoseSourceMixerKey(sourceId),
+                Key = new AnimationPoseSourceMixerKey(key),
                 Speed = 0f,
                 IsPlaying = true,
                 Weight = 1f
@@ -212,7 +238,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 capturePlayable.SetProcessInputs(true);
                 m_Graph.PlayableGraph.Connect(mixer.Playable, 0, capturePlayable, 0);
                 capturePlayable.SetInputWeight(0, 1f);
-                return new SourceVisual(sourceId, mixer, capturePlayable);
+                return new SourceVisual(key, mixer, capturePlayable);
             }
             catch
             {
@@ -234,7 +260,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     !ReferenceEquals(child.Clip, plan.Clip))
                 {
                     throw new InvalidOperationException(
-                        $"Animation source '{visual.SourceId}' ClipBindingIndex #{plan.ClipBindingIndex} changed its clip reference.");
+                        $"Animation source '{visual.Key}' ClipBindingIndex #{plan.ClipBindingIndex} changed its clip reference.");
                 }
             }
         }
@@ -252,7 +278,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 if (!visual.Clips.TryGetValue(plan.ClipBindingIndex, out ClipState child))
                 {
                     child = visual.Mixer.Add(plan.Clip);
-                    child.Key = new AnimationPoseSourceClipKey(visual.SourceId, plan.ClipBindingIndex);
+                    child.Key = new AnimationPoseSourceClipKey(visual.Key, plan.ClipBindingIndex);
                     visual.Mixer.DontSynchronize(child);
                     visual.Clips.Add(plan.ClipBindingIndex, child);
                 }
@@ -283,18 +309,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         sealed class SourceVisual
         {
             public SourceVisual(
-                AnimationPoseSourceId sourceId,
+                AnimationPlayerSourceKey key,
                 ManualMixerState mixer,
                 AnimationScriptPlayable capturePlayable)
             {
-                SourceId = sourceId;
+                Key = key;
                 Mixer = mixer ?? throw new ArgumentNullException(nameof(mixer));
                 CapturePlayable = capturePlayable;
-                if (!sourceId.IsValid || !capturePlayable.IsValid())
+                if (!key.IsValid || !capturePlayable.IsValid())
                     throw new ArgumentException("Animation pose source visual is invalid.");
             }
 
-            public AnimationPoseSourceId SourceId { get; }
+            public AnimationPlayerSourceKey Key { get; }
             public ManualMixerState Mixer { get; }
             public AnimationScriptPlayable CapturePlayable { get; }
             public Dictionary<int, ClipState> Clips { get; } = new Dictionary<int, ClipState>();
@@ -310,35 +336,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
         readonly struct AnimationPoseSourceMixerKey : IEquatable<AnimationPoseSourceMixerKey>
         {
-            public AnimationPoseSourceMixerKey(AnimationPoseSourceId sourceId)
+            public AnimationPoseSourceMixerKey(AnimationPlayerSourceKey source)
             {
-                if (!sourceId.IsValid)
-                    throw new ArgumentException("Animation pose source mixer key is invalid.", nameof(sourceId));
-                SourceId = sourceId;
+                if (!source.IsValid)
+                    throw new ArgumentException("Animation pose source mixer key is invalid.", nameof(source));
+                Source = source;
             }
 
-            public AnimationPoseSourceId SourceId { get; }
-            public bool Equals(AnimationPoseSourceMixerKey other) => SourceId.Equals(other.SourceId);
+            public AnimationPlayerSourceKey Source { get; }
+            public bool Equals(AnimationPoseSourceMixerKey other) => Source.Equals(other.Source);
             public override bool Equals(object obj) => obj is AnimationPoseSourceMixerKey other && Equals(other);
-            public override int GetHashCode() => SourceId.GetHashCode();
-            public override string ToString() => $"PoseSource/{SourceId}";
+            public override int GetHashCode() => Source.GetHashCode();
+            public override string ToString() => $"PoseSource/{Source}";
         }
 
         readonly struct AnimationPoseSourceClipKey : IEquatable<AnimationPoseSourceClipKey>
         {
-            public AnimationPoseSourceClipKey(AnimationPoseSourceId sourceId, int clipBindingIndex)
+            public AnimationPoseSourceClipKey(AnimationPlayerSourceKey source, int clipBindingIndex)
             {
-                if (!sourceId.IsValid || clipBindingIndex < 0)
+                if (!source.IsValid || clipBindingIndex < 0)
                     throw new ArgumentException("Animation pose source clip key is invalid.");
-                SourceId = sourceId;
+                Source = source;
                 ClipBindingIndex = clipBindingIndex;
             }
 
-            public AnimationPoseSourceId SourceId { get; }
+            public AnimationPlayerSourceKey Source { get; }
             public int ClipBindingIndex { get; }
 
             public bool Equals(AnimationPoseSourceClipKey other) =>
-                SourceId.Equals(other.SourceId) && ClipBindingIndex == other.ClipBindingIndex;
+                Source.Equals(other.Source) && ClipBindingIndex == other.ClipBindingIndex;
 
             public override bool Equals(object obj) => obj is AnimationPoseSourceClipKey other && Equals(other);
 
@@ -346,11 +372,41 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             {
                 unchecked
                 {
-                    return SourceId.GetHashCode() * 397 ^ ClipBindingIndex;
+                    return Source.GetHashCode() * 397 ^ ClipBindingIndex;
                 }
             }
 
-            public override string ToString() => $"PoseSource/{SourceId}/Clip/{ClipBindingIndex}";
+            public override string ToString() => $"PoseSource/{Source}/Clip/{ClipBindingIndex}";
+        }
+
+        readonly struct AnimationPlayerSourceKey : IEquatable<AnimationPlayerSourceKey>
+        {
+            public AnimationPlayerSourceKey(AnimationPoseSourceId sourceId, PoseNodeId playerNodeId)
+            {
+                if (!sourceId.IsValid || !playerNodeId.IsValid)
+                    throw new ArgumentException("Animation Player source key is invalid.");
+                SourceId = sourceId;
+                PlayerNodeId = playerNodeId;
+            }
+
+            public AnimationPoseSourceId SourceId { get; }
+            public PoseNodeId PlayerNodeId { get; }
+            public bool IsValid => SourceId.IsValid && PlayerNodeId.IsValid;
+
+            public bool Equals(AnimationPlayerSourceKey other) =>
+                SourceId.Equals(other.SourceId) && PlayerNodeId.Equals(other.PlayerNodeId);
+
+            public override bool Equals(object obj) => obj is AnimationPlayerSourceKey other && Equals(other);
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return SourceId.GetHashCode() * 397 ^ PlayerNodeId.GetHashCode();
+                }
+            }
+
+            public override string ToString() => $"{SourceId}/Player/{PlayerNodeId}";
         }
     }
 }

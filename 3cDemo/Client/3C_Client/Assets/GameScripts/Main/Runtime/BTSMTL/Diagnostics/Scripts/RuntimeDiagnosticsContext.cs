@@ -52,6 +52,8 @@ namespace BTSMTL.Diagnostics
 
         public bool ShouldPublish(RuntimeTraceChannel channel, RuntimeTraceEventKind kind) => Store.ShouldPublish(channel, kind);
 
+        public bool ShouldCapture(RuntimeTraceChannel channel, RuntimeTraceEventKind kind) => Store.ShouldCapture(channel, kind);
+
         public RuntimeSourceElementHandle ResolveSourceHandle(RuntimeSourceElementKey source)
         {
             if (!SourceMap.TryGetHandle(source, out RuntimeSourceElementHandle handle))

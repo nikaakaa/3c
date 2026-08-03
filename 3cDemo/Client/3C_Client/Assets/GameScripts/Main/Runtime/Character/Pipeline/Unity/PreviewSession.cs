@@ -1,6 +1,5 @@
 using System;
 using BTSMTL.Timeline;
-using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline
 {
@@ -8,13 +7,13 @@ namespace ThirdPersonCharacter.Pipeline
     {
         public PreviewSession(
             ulong generation,
-            PreviewPlaybackEngine engine)
+            AnimationPreviewRuntime engine)
         {
             Generation = generation;
             Engine = engine ?? throw new ArgumentNullException(nameof(engine));
         }
 
-        public PreviewPlaybackEngine Engine { get; }
+        public AnimationPreviewRuntime Engine { get; }
         public ulong Generation { get; set; }
         public TimelineData Timeline { get; private set; }
         public float PreviousTime { get; private set; }
@@ -23,9 +22,6 @@ namespace ThirdPersonCharacter.Pipeline
         public string SourceName { get; private set; }
         public ulong EvaluationTick { get; private set; }
         public float PresentationDeltaSeconds { get; private set; }
-        public string TargetTrackAuthoringId { get; private set; }
-        public bool HasBlendSpaceParameter { get; private set; }
-        public Vector2 BlendSpaceParameter { get; private set; }
         public bool HasEvaluation => Timeline != null && EvaluationTick != 0;
 
         public void Capture(
@@ -43,37 +39,7 @@ namespace ThirdPersonCharacter.Pipeline
             SourceId = sourceId ?? string.Empty;
             SourceName = sourceName ?? string.Empty;
             EvaluationTick = evaluationTick;
-            PresentationDeltaSeconds = Mathf.Max(0f, presentationDeltaSeconds);
-            TargetTrackAuthoringId = string.Empty;
-            HasBlendSpaceParameter = false;
-            BlendSpaceParameter = default;
-        }
-
-        public void CaptureBlendSpace(
-            TimelineData timeline,
-            string targetTrackAuthoringId,
-            float previousTime,
-            float currentTime,
-            string sourceId,
-            string sourceName,
-            ulong evaluationTick,
-            float presentationDeltaSeconds,
-            Vector2 parameter)
-        {
-            if (string.IsNullOrWhiteSpace(targetTrackAuthoringId) ||
-                !float.IsFinite(parameter.x) || !float.IsFinite(parameter.y))
-                throw new ArgumentException("Blend Space preview input is invalid.");
-            Capture(
-                timeline,
-                previousTime,
-                currentTime,
-                sourceId,
-                sourceName,
-                evaluationTick,
-                presentationDeltaSeconds);
-            TargetTrackAuthoringId = targetTrackAuthoringId.Trim();
-            HasBlendSpaceParameter = true;
-            BlendSpaceParameter = parameter;
+            PresentationDeltaSeconds = Math.Max(0f, presentationDeltaSeconds);
         }
 
         public void Dispose()

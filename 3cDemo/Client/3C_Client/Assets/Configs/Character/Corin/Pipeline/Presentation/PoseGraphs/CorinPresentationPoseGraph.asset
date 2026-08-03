@@ -1,0 +1,1947 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8411527234393366902
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
+  m_Name: Moving Turn
+  m_EditorClassIdentifier: 
+--- !u!114 &-6787058357175954472
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
+  m_Name: Walk Loop
+  m_EditorClassIdentifier: 
+--- !u!114 &-1663756737420138858
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
+  m_Name: Run Loop
+  m_EditorClassIdentifier: 
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c098d552eb42231449a0d29a2f0026cb, type: 3}
+  m_Name: CorinPresentationPoseGraph
+  m_EditorClassIdentifier: 
+  m_TypedGraph:
+    m_GraphId: ed8ff472330e4057a900af3eae5dfb8f
+    m_ContentRevision: 8eba75ca6261423a9157816b693553ca
+    m_Parameters:
+    - m_ParameterId: animation.action-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    - m_ParameterId: animation.foot-placement-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    m_Nodes:
+    - m_NodeId: corin.locomotion.pose-state-machine
+      m_DisplayName: Locomotion Pose State Machine
+      m_Payload:
+        rid: 665191900899704832
+      m_DynamicPorts: []
+    - m_NodeId: 09e41ce9fa3f4440b10013916e72b185
+      m_DisplayName: Locomotion Inertialization
+      m_Payload:
+        rid: 665191900899704833
+      m_DynamicPorts: []
+    - m_NodeId: corin.full-body-action.playback-input
+      m_DisplayName: Full Body Action Playback
+      m_Payload:
+        rid: 665191900899704834
+      m_DynamicPorts: []
+    - m_NodeId: corin.full-body-action.slot
+      m_DisplayName: Full Body Action Slot
+      m_Payload:
+        rid: 665191900899704835
+      m_DynamicPorts: []
+    - m_NodeId: ee12476fcb6441ebbbe37a2c91c6b5fe
+      m_DisplayName: Resolve Pose Parameters
+      m_Payload:
+        rid: 665191900899704836
+      m_DynamicPorts: []
+    - m_NodeId: fd84c35ae6ed49a1b72703b92795c43c
+      m_DisplayName: Foot Placement Weight
+      m_Payload:
+        rid: 665191900899704837
+      m_DynamicPorts: []
+    - m_NodeId: corin.pose.local-to-component
+      m_DisplayName: Local To Component
+      m_Payload:
+        rid: 665192033737244900
+      m_DynamicPorts: []
+    - m_NodeId: 7a1493d03e6d42e8b3fc87818673843c
+      m_DisplayName: Left Arm Two Bone IK
+      m_Payload:
+        rid: 665191900899704838
+      m_DynamicPorts: []
+    - m_NodeId: 8b25a4e14f7e43f9a40d98929784954d
+      m_DisplayName: Right Arm Two Bone IK
+      m_Payload:
+        rid: 665191900899704839
+      m_DynamicPorts: []
+    - m_NodeId: cc0cb7f36cb9426d88f6ae03f255a013
+      m_DisplayName: Foot Placement
+      m_Payload:
+        rid: 665191900899704840
+      m_DynamicPorts: []
+    - m_NodeId: corin.pose.component-to-local
+      m_DisplayName: Component To Local
+      m_Payload:
+        rid: 665192033737244901
+      m_DynamicPorts: []
+    - m_NodeId: 1f9ab07f79e94a789095b9080b71880d
+      m_DisplayName: Output Pose
+      m_Payload:
+        rid: 665191900899704841
+      m_DynamicPorts: []
+    m_Edges:
+    - m_EdgeId: corin.locomotion.pose-state-machine-inertialization
+      m_SourceNodeId: corin.locomotion.pose-state-machine
+      m_SourcePortId: pose
+      m_TargetNodeId: 09e41ce9fa3f4440b10013916e72b185
+      m_TargetPortId: pose
+    - m_EdgeId: corin.locomotion.inertialization-full-body-action-slot
+      m_SourceNodeId: 09e41ce9fa3f4440b10013916e72b185
+      m_SourcePortId: result
+      m_TargetNodeId: corin.full-body-action.slot
+      m_TargetPortId: source-pose
+    - m_EdgeId: corin.full-body-action.playback-input-slot
+      m_SourceNodeId: corin.full-body-action.playback-input
+      m_SourcePortId: action-playback
+      m_TargetNodeId: corin.full-body-action.slot
+      m_TargetPortId: action-playback
+    - m_EdgeId: corin.full-body-action.slot-pose-parameter-resolve
+      m_SourceNodeId: corin.full-body-action.slot
+      m_SourcePortId: pose
+      m_TargetNodeId: ee12476fcb6441ebbbe37a2c91c6b5fe
+      m_TargetPortId: base-pose
+    - m_EdgeId: corin.full-body-action.slot-parameter-source
+      m_SourceNodeId: corin.full-body-action.slot
+      m_SourcePortId: pose
+      m_TargetNodeId: ee12476fcb6441ebbbe37a2c91c6b5fe
+      m_TargetPortId: parameter-source-pose
+    - m_EdgeId: corin.pose.resolve-local-to-component
+      m_SourceNodeId: ee12476fcb6441ebbbe37a2c91c6b5fe
+      m_SourcePortId: pose
+      m_TargetNodeId: corin.pose.local-to-component
+      m_TargetPortId: local-pose
+    - m_EdgeId: corin.pose.local-to-component-left-arm-ik
+      m_SourceNodeId: corin.pose.local-to-component
+      m_SourcePortId: component-pose
+      m_TargetNodeId: 7a1493d03e6d42e8b3fc87818673843c
+      m_TargetPortId: pose
+    - m_EdgeId: 922be486f45b48a4afccae872c78a1f1
+      m_SourceNodeId: 7a1493d03e6d42e8b3fc87818673843c
+      m_SourcePortId: result
+      m_TargetNodeId: 8b25a4e14f7e43f9a40d98929784954d
+      m_TargetPortId: pose
+    - m_EdgeId: a33cf597056c49b5bfddef983d89b202
+      m_SourceNodeId: 8b25a4e14f7e43f9a40d98929784954d
+      m_SourcePortId: result
+      m_TargetNodeId: cc0cb7f36cb9426d88f6ae03f255a013
+      m_TargetPortId: pose
+    - m_EdgeId: 633a0f4d803844fa8480212581dd09bd
+      m_SourceNodeId: fd84c35ae6ed49a1b72703b92795c43c
+      m_SourcePortId: parameter
+      m_TargetNodeId: cc0cb7f36cb9426d88f6ae03f255a013
+      m_TargetPortId: weight
+    - m_EdgeId: corin.pose.foot-placement-component-to-local
+      m_SourceNodeId: cc0cb7f36cb9426d88f6ae03f255a013
+      m_SourcePortId: result
+      m_TargetNodeId: corin.pose.component-to-local
+      m_TargetPortId: component-pose
+    - m_EdgeId: corin.pose.component-to-local-output
+      m_SourceNodeId: corin.pose.component-to-local
+      m_SourcePortId: local-pose
+      m_TargetNodeId: 1f9ab07f79e94a789095b9080b71880d
+      m_TargetPortId: pose
+    m_Layout:
+    - m_NodeId: 09e41ce9fa3f4440b10013916e72b185
+      m_Position: {x: -240, y: -160}
+    - m_NodeId: corin.full-body-action.playback-input
+      m_Position: {x: -483.3333, y: 115.99999}
+    - m_NodeId: corin.full-body-action.slot
+      m_Position: {x: -124, y: 11.333328}
+    - m_NodeId: ee12476fcb6441ebbbe37a2c91c6b5fe
+      m_Position: {x: 159.33334, y: 58.666664}
+    - m_NodeId: corin.locomotion.pose-state-machine
+      m_Position: {x: -580, y: -160}
+    - m_NodeId: fd84c35ae6ed49a1b72703b92795c43c
+      m_Position: {x: 104, y: 606.6667}
+    - m_NodeId: 1f9ab07f79e94a789095b9080b71880d
+      m_Position: {x: 1622, y: 384}
+    - m_NodeId: corin.pose.component-to-local
+      m_Position: {x: 1382, y: 384}
+    - m_NodeId: cc0cb7f36cb9426d88f6ae03f255a013
+      m_Position: {x: 890.6666, y: 384}
+    - m_NodeId: 8b25a4e14f7e43f9a40d98929784954d
+      m_Position: {x: 810, y: 110.666664}
+    - m_NodeId: 7a1493d03e6d42e8b3fc87818673843c
+      m_Position: {x: 574, y: 202.66666}
+    - m_NodeId: corin.pose.local-to-component
+      m_Position: {x: 444, y: -82.66667}
+  m_TypedGraphCatalog:
+  - m_GraphId: corin.locomotion.idle.graph
+    m_ContentRevision: dae5e9365ba74cd78bb57ce7533b1cbe
+    m_Parameters:
+    - m_ParameterId: animation.action-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    - m_ParameterId: animation.foot-placement-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    m_Nodes:
+    - m_NodeId: corin.locomotion.idle.sequence
+      m_DisplayName: Idle Sequence
+      m_Payload:
+        rid: 665192033737244840
+      m_DynamicPorts: []
+    - m_NodeId: corin.locomotion.idle.output
+      m_DisplayName: Output Pose
+      m_Payload:
+        rid: 665191900899704843
+      m_DynamicPorts: []
+    m_Edges:
+    - m_EdgeId: corin.locomotion.idle.sequence-output
+      m_SourceNodeId: corin.locomotion.idle.sequence
+      m_SourcePortId: pose
+      m_TargetNodeId: corin.locomotion.idle.output
+      m_TargetPortId: pose
+    m_Layout:
+    - m_NodeId: corin.locomotion.idle.output
+      m_Position: {x: 220, y: 0}
+    - m_NodeId: corin.locomotion.idle.sequence
+      m_Position: {x: -220.66667, y: 0}
+  - m_GraphId: corin.locomotion.start.graph
+    m_ContentRevision: 8d5fbe7ff38341c88fa5f7462a3a019d
+    m_Parameters:
+    - m_ParameterId: animation.action-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    - m_ParameterId: animation.foot-placement-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    m_Nodes:
+    - m_NodeId: corin.locomotion.start.sequence
+      m_DisplayName: Run Start Sequence
+      m_Payload:
+        rid: 665192033737244841
+      m_DynamicPorts: []
+    - m_NodeId: corin.locomotion.start.output
+      m_DisplayName: Output Pose
+      m_Payload:
+        rid: 665191900899704845
+      m_DynamicPorts: []
+    m_Edges:
+    - m_EdgeId: corin.locomotion.start.sequence-output
+      m_SourceNodeId: corin.locomotion.start.sequence
+      m_SourcePortId: pose
+      m_TargetNodeId: corin.locomotion.start.output
+      m_TargetPortId: pose
+    m_Layout:
+    - m_NodeId: corin.locomotion.start.sequence
+      m_Position: {x: -220, y: 0}
+    - m_NodeId: corin.locomotion.start.output
+      m_Position: {x: 220, y: 0}
+  - m_GraphId: corin.locomotion.locomotion.graph
+    m_ContentRevision: 411654d0b95d4235ac01ea1a50aa0914
+    m_Parameters:
+    - m_ParameterId: animation.action-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    - m_ParameterId: animation.foot-placement-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    m_Nodes:
+    - m_NodeId: corin.locomotion.locomotion.sequence
+      m_DisplayName: Run Loop Sequence
+      m_Payload:
+        rid: 665192033737244842
+      m_DynamicPorts: []
+    - m_NodeId: corin.locomotion.locomotion.output
+      m_DisplayName: Output Pose
+      m_Payload:
+        rid: 665191900899704847
+      m_DynamicPorts: []
+    m_Edges:
+    - m_EdgeId: corin.locomotion.locomotion.sequence-output
+      m_SourceNodeId: corin.locomotion.locomotion.sequence
+      m_SourcePortId: pose
+      m_TargetNodeId: corin.locomotion.locomotion.output
+      m_TargetPortId: pose
+    m_Layout:
+    - m_NodeId: corin.locomotion.locomotion.sequence
+      m_Position: {x: -220, y: 0}
+    - m_NodeId: corin.locomotion.locomotion.output
+      m_Position: {x: 220, y: 0}
+  - m_GraphId: corin.locomotion.stop.graph
+    m_ContentRevision: 9d190b3397004ad0b74709b3743cc86e
+    m_Parameters:
+    - m_ParameterId: animation.action-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    - m_ParameterId: animation.foot-placement-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    m_Nodes:
+    - m_NodeId: corin.locomotion.stop.sequence
+      m_DisplayName: Run End Sequence
+      m_Payload:
+        rid: 665192033737244843
+      m_DynamicPorts: []
+    - m_NodeId: corin.locomotion.stop.output
+      m_DisplayName: Output Pose
+      m_Payload:
+        rid: 665191900899704849
+      m_DynamicPorts: []
+    m_Edges:
+    - m_EdgeId: corin.locomotion.stop.sequence-output
+      m_SourceNodeId: corin.locomotion.stop.sequence
+      m_SourcePortId: pose
+      m_TargetNodeId: corin.locomotion.stop.output
+      m_TargetPortId: pose
+    m_Layout:
+    - m_NodeId: corin.locomotion.stop.sequence
+      m_Position: {x: -220, y: 0}
+    - m_NodeId: corin.locomotion.stop.output
+      m_Position: {x: 220, y: 0}
+  - m_GraphId: corin.locomotion.turn.graph
+    m_ContentRevision: 03f247529c1f49488e56fe0cf45d342b
+    m_Parameters:
+    - m_ParameterId: animation.action-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    - m_ParameterId: animation.foot-placement-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    m_Nodes:
+    - m_NodeId: corin.locomotion.turn.sequence
+      m_DisplayName: Moving Turn Sequence
+      m_Payload:
+        rid: 665192033737244844
+      m_DynamicPorts: []
+    - m_NodeId: corin.locomotion.turn.output
+      m_DisplayName: Output Pose
+      m_Payload:
+        rid: 665191900899704851
+      m_DynamicPorts: []
+    m_Edges:
+    - m_EdgeId: 2b4ef9d52769067557e6652f38041b35
+      m_SourceNodeId: corin.locomotion.turn.sequence
+      m_SourcePortId: pose
+      m_TargetNodeId: corin.locomotion.turn.output
+      m_TargetPortId: pose
+    m_Layout:
+    - m_NodeId: corin.locomotion.turn.output
+      m_Position: {x: 300, y: 0}
+    - m_NodeId: corin.locomotion.turn.sequence
+      m_Position: {x: -300, y: 0}
+  - m_GraphId: 239fb85af79509b36208db12ad91354f
+    m_ContentRevision: c1a8ad6f36bb482aab1b46579be126c1
+    m_Parameters:
+    - m_ParameterId: animation.action-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    - m_ParameterId: animation.foot-placement-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    m_Nodes:
+    - m_NodeId: 392890fbd759c4cba656c9607b0ba5b8
+      m_DisplayName: Output Pose
+      m_Payload:
+        rid: 665192033737244679
+      m_DynamicPorts: []
+    - m_NodeId: a60a24c736273ce8e07e2aaf8b3403f8
+      m_DisplayName: Walk Start Sequence
+      m_Payload:
+        rid: 665192033737244845
+      m_DynamicPorts: []
+    m_Edges:
+    - m_EdgeId: 6363a088affe9653b8ee0d8a5576f4a0
+      m_SourceNodeId: a60a24c736273ce8e07e2aaf8b3403f8
+      m_SourcePortId: pose
+      m_TargetNodeId: 392890fbd759c4cba656c9607b0ba5b8
+      m_TargetPortId: pose
+    m_Layout:
+    - m_NodeId: 392890fbd759c4cba656c9607b0ba5b8
+      m_Position: {x: 220, y: 0}
+    - m_NodeId: a60a24c736273ce8e07e2aaf8b3403f8
+      m_Position: {x: -220, y: 0}
+  - m_GraphId: 658ab38fd39b80592ae222925f31e25c
+    m_ContentRevision: 931d7adb1ed847f8933a61d0be0dd8bc
+    m_Parameters:
+    - m_ParameterId: animation.action-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    - m_ParameterId: animation.foot-placement-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    m_Nodes:
+    - m_NodeId: 8d4b1b80835e97d02b73d6e166a01be7
+      m_DisplayName: Output Pose
+      m_Payload:
+        rid: 665192033737244681
+      m_DynamicPorts: []
+    - m_NodeId: cff873cb4c0040670d27858670fcfb31
+      m_DisplayName: Walk Loop Sequence
+      m_Payload:
+        rid: 665192033737244846
+      m_DynamicPorts: []
+    m_Edges:
+    - m_EdgeId: 4b9956bcabbd5e950a33d7b48cac1bca
+      m_SourceNodeId: cff873cb4c0040670d27858670fcfb31
+      m_SourcePortId: pose
+      m_TargetNodeId: 8d4b1b80835e97d02b73d6e166a01be7
+      m_TargetPortId: pose
+    m_Layout:
+    - m_NodeId: 8d4b1b80835e97d02b73d6e166a01be7
+      m_Position: {x: 220, y: 0}
+    - m_NodeId: cff873cb4c0040670d27858670fcfb31
+      m_Position: {x: -220, y: 0}
+  m_StateMachineLayouts:
+  - m_StateMachineId: corin.locomotion
+    m_Elements:
+    - m_ElementId: 12a31544976ddf152639d62c6d19142c
+      m_Position: {x: 592, y: 61.333336}
+    - m_ElementId: 89eeedab7b97adb04b02ef9abd06f8bc
+      m_Position: {x: 260, y: 320}
+    - m_ElementId: corin.locomotion.locomotion
+      m_Position: {x: 716.6667, y: 592.6667}
+    - m_ElementId: corin.locomotion.stop
+      m_Position: {x: 505.3333, y: 850}
+    - m_ElementId: corin.locomotion.turn
+      m_Position: {x: 381.3333, y: 509.99997}
+  m_SourceSlots:
+  - {fileID: 3450945198615820384}
+  - {fileID: -8411527234393366902}
+  - {fileID: 6877363416557948613}
+  - {fileID: -1663756737420138858}
+  - {fileID: 1041388167119753750}
+  - {fileID: -6787058357175954472}
+  - {fileID: 5181372091040810034}
+  references:
+    version: 2
+    RefIds:
+    - rid: 665191900899704832
+      type: {class: CharacterPoseStateMachineNodePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_StateMachine:
+          m_StateMachineId: corin.locomotion
+          m_ContentRevision: fbea4e3334b54ff09835727a775b3794
+          m_Entry:
+            m_EntryId: corin.locomotion.entry
+            m_TargetStateId: corin.locomotion.idle
+          m_States:
+          - m_StateId: 12a31544976ddf152639d62c6d19142c
+            m_DisplayName: Walk Loop
+            m_PoseGraphId: 658ab38fd39b80592ae222925f31e25c
+            m_OutputPoseNodeId: 8d4b1b80835e97d02b73d6e166a01be7
+            m_AlwaysResetOnEntry: 0
+          - m_StateId: 89eeedab7b97adb04b02ef9abd06f8bc
+            m_DisplayName: Walk Start
+            m_PoseGraphId: 239fb85af79509b36208db12ad91354f
+            m_OutputPoseNodeId: 392890fbd759c4cba656c9607b0ba5b8
+            m_AlwaysResetOnEntry: 1
+          - m_StateId: corin.locomotion.idle
+            m_DisplayName: Idle
+            m_PoseGraphId: corin.locomotion.idle.graph
+            m_OutputPoseNodeId: corin.locomotion.idle.output
+            m_AlwaysResetOnEntry: 0
+          - m_StateId: corin.locomotion.locomotion
+            m_DisplayName: Run Loop
+            m_PoseGraphId: corin.locomotion.locomotion.graph
+            m_OutputPoseNodeId: corin.locomotion.locomotion.output
+            m_AlwaysResetOnEntry: 0
+          - m_StateId: corin.locomotion.start
+            m_DisplayName: Run Start
+            m_PoseGraphId: corin.locomotion.start.graph
+            m_OutputPoseNodeId: corin.locomotion.start.output
+            m_AlwaysResetOnEntry: 1
+          - m_StateId: corin.locomotion.stop
+            m_DisplayName: Run End
+            m_PoseGraphId: corin.locomotion.stop.graph
+            m_OutputPoseNodeId: corin.locomotion.stop.output
+            m_AlwaysResetOnEntry: 1
+          - m_StateId: corin.locomotion.turn
+            m_DisplayName: Turn
+            m_PoseGraphId: corin.locomotion.turn.graph
+            m_OutputPoseNodeId: corin.locomotion.turn.output
+            m_AlwaysResetOnEntry: 1
+          m_Transitions:
+          - m_TransitionId: 302210b10c4a90c560762163d676a267
+            m_Source:
+              m_Kind: 1
+              m_StateId: 89eeedab7b97adb04b02ef9abd06f8bc
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.locomotion
+            m_Priority: 0
+            m_Rule:
+              m_GraphId: 9b4c4a81eb819ee42e4e9cdc630d23e4
+              m_ContentRevision: 1ec15b66450bac27858696a767818588
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.15
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: 40bdae207c51c1fc2df59c6572acfa18
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.idle
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.start
+            m_Priority: 0
+            m_Rule:
+              m_GraphId: 6992eda1701390294e2fef138c8de34e
+              m_ContentRevision: a79fc9ad395fbdd8800d0d965c9ee4ce
+              m_Operations:
+              - m_OperationId: matches-run-loop-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: run-loop-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: matches-run-start-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: run-start-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: matches-run-start-or-loop-mode
+                m_Kind: 7
+                m_InputA: matches-run-start-mode
+                m_InputB: matches-run-loop-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: run-loop-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+              - m_OperationId: run-start-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/54223f0b-f2e9-5178-ab79-bc4269701214
+              m_OutputOperationId: matches-run-start-or-loop-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.15
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: 7d417c81b453fadaf9856d792c8faf13
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.start
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.locomotion
+            m_Priority: 0
+            m_Rule:
+              m_GraphId: 0d7eff3ee315c8479906e6e01aab8104
+              m_ContentRevision: 4ee4a73cb77a4fee83528637d8c461d2
+              m_Operations:
+              - m_OperationId: blend-duration
+                m_Kind: 3
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0.15
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: ready-to-transition
+                m_Kind: 6
+                m_InputA: matches-target-mode
+                m_InputB: state-pose-ready
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: state-pose-ready
+                m_Kind: 13
+                m_InputA: state-pose-remaining-time
+                m_InputB: blend-duration
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: state-pose-remaining-time
+                m_Kind: 15
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+              m_OutputOperationId: ready-to-transition
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.15
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: 7f48553f9eb60254b61640cf9a1b513a
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.locomotion
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.turn
+            m_Priority: 0
+            m_Rule:
+              m_GraphId: 089793dbf13a1cbed02f5c75ee4fe58c
+              m_ContentRevision: a7cd3fd232f80dd3dffcbea69ecc9b90
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/27d93ca2-0aa4-5da9-9e2b-9ab1a096bb15
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.12
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: f1d65b9eddd4f346f2419609ce0a416f
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.turn
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.idle
+            m_Priority: 0
+            m_Rule:
+              m_GraphId: 5a3fef35afb1a99e4dfc110b71e2e63b
+              m_ContentRevision: 6286a40cae89e209aa50898c9274261f
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.stationary
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 1
+            m_DurationSeconds: 0.3
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: 0008c49325737b578cec12feb827dea5
+            m_Source:
+              m_Kind: 1
+              m_StateId: 89eeedab7b97adb04b02ef9abd06f8bc
+              m_AliasId: 
+            m_TargetStateId: 12a31544976ddf152639d62c6d19142c
+            m_Priority: 1
+            m_Rule:
+              m_GraphId: 99a39b3d4b0d878453cc4049fff8bff4
+              m_ContentRevision: 3a24f047159c10a92bc000c45b8e1290
+              m_Operations:
+              - m_OperationId: blend-duration
+                m_Kind: 3
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0.15
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: ready-to-transition
+                m_Kind: 6
+                m_InputA: matches-target-mode
+                m_InputB: state-pose-ready
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: state-pose-ready
+                m_Kind: 13
+                m_InputA: state-pose-remaining-time
+                m_InputB: blend-duration
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: state-pose-remaining-time
+                m_Kind: 15
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+              m_OutputOperationId: ready-to-transition
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.15
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: 05e5b9add547fee826645e126b6b4624
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.turn
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.locomotion
+            m_Priority: 1
+            m_Rule:
+              m_GraphId: 21f4812b3d7cbe3effa54397ca44f281
+              m_ContentRevision: 6be79fde35a4291ec26395205be11e62
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 1
+            m_DurationSeconds: 0.3
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: 0d49c1629146887a3419fa6bd508279e
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.locomotion
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.stop
+            m_Priority: 1
+            m_Rule:
+              m_GraphId: 6ed26e909dc0e1caabf8085b36214350
+              m_ContentRevision: 454e8b24da4e32ceed80c72d032bf15e
+              m_Operations:
+              - m_OperationId: matches-stationary-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: stationary-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: matches-stop-mode
+                m_Kind: 7
+                m_InputA: matches-target-mode
+                m_InputB: matches-stationary-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: stationary-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.stationary
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/84c12f85-34ab-5f09-8b1f-c73166c3deb9
+              m_OutputOperationId: matches-stop-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.15
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: 3377399d4663fc03b2849e4785dc3b87
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.stop
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.locomotion
+            m_Priority: 1
+            m_Rule:
+              m_GraphId: d72bfe0a17dd7d917beb25dcd0078e4a
+              m_ContentRevision: 70f626e635d06b4344576c792d781ad6
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.1
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: 53821ab3ce20a0a5478a554ca981b4b4
+            m_Source:
+              m_Kind: 1
+              m_StateId: 12a31544976ddf152639d62c6d19142c
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.idle
+            m_Priority: 1
+            m_Rule:
+              m_GraphId: a291e438c6d69cc77912a55eb05dd3c7
+              m_ContentRevision: fe72cb1928464ee3c32d7235f7828e7f
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.stationary
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.15
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: aa74311944c6a422e954c4a533743867
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.idle
+              m_AliasId: 
+            m_TargetStateId: 89eeedab7b97adb04b02ef9abd06f8bc
+            m_Priority: 1
+            m_Rule:
+              m_GraphId: ae3d9c6b33afdbedaaa61b8fa3fefbbd
+              m_ContentRevision: a06bff59b0691b8b054995c31fdec403
+              m_Operations:
+              - m_OperationId: matches-walk-loop-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: walk-loop-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: matches-walk-start-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: walk-start-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: matches-walk-start-or-loop-mode
+                m_Kind: 7
+                m_InputA: matches-walk-start-mode
+                m_InputB: matches-walk-loop-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: walk-loop-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+              - m_OperationId: walk-start-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/01fa46e2-ef80-5ac4-9acb-d874fd5b5f6b
+              m_OutputOperationId: matches-walk-start-or-loop-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.15
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: b13f471ab426923ef2853aa54396dd36
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.start
+              m_AliasId: 
+            m_TargetStateId: 12a31544976ddf152639d62c6d19142c
+            m_Priority: 1
+            m_Rule:
+              m_GraphId: 4a879dddf8a10bb78fe80c6e357ee716
+              m_ContentRevision: dc1e648dee498b4cf37595c7cfcf3580
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.15
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: 180facadacee8ff4398001cb31b253db
+            m_Source:
+              m_Kind: 1
+              m_StateId: 12a31544976ddf152639d62c6d19142c
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.locomotion
+            m_Priority: 2
+            m_Rule:
+              m_GraphId: 17af0ab1c1636e43b70fa25417cee212
+              m_ContentRevision: 9434446258dd315e17a8f45c59906e91
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.15
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: 60d8b8f78ddf3f3b107041883abe1da6
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.stop
+              m_AliasId: 
+            m_TargetStateId: 12a31544976ddf152639d62c6d19142c
+            m_Priority: 2
+            m_Rule:
+              m_GraphId: 140eddf387db8112f13c270c4c846b5a
+              m_ContentRevision: 80c8259ddff0bbbcb0786098ceb9f5c6
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.1
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: a43513405b8ee76c57e356fe14fdf1d6
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.locomotion
+              m_AliasId: 
+            m_TargetStateId: 12a31544976ddf152639d62c6d19142c
+            m_Priority: 2
+            m_Rule:
+              m_GraphId: da80520f7dd2bc36d598a5f800fcdc4a
+              m_ContentRevision: dba7076a94175304db46187d7cf1f610
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.15
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: corin.run-start-to-run-end-by-movement-mode
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.start
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.stop
+            m_Priority: 2
+            m_Rule:
+              m_GraphId: corin.rule.run-start-to-run-end-by-movement-mode
+              m_ContentRevision: 64e14b3c3d732da0f9e10196ab392bff
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.stationary
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.15
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: ee15c5d84a17111632903384c7eb6858
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.turn
+              m_AliasId: 
+            m_TargetStateId: 12a31544976ddf152639d62c6d19142c
+            m_Priority: 2
+            m_Rule:
+              m_GraphId: 06967554bff21b3767dc63ca4eba0a52
+              m_ContentRevision: 51376459c020397fb622a18a44b1b282
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 1
+            m_DurationSeconds: 0.3
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: 66f76f17aecc26193781f127579e79d4
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.stop
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.idle
+            m_Priority: 3
+            m_Rule:
+              m_GraphId: 23e0647396275941c4bf4d185ecfd783
+              m_ContentRevision: 5bcf482df5fe39099c49103737cfea92
+              m_Operations:
+              - m_OperationId: blend-duration
+                m_Kind: 3
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0.15
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: ready-to-transition
+                m_Kind: 6
+                m_InputA: matches-target-mode
+                m_InputB: state-pose-ready
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: state-pose-ready
+                m_Kind: 13
+                m_InputA: state-pose-remaining-time
+                m_InputB: blend-duration
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: state-pose-remaining-time
+                m_Kind: 15
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.stationary
+              m_OutputOperationId: ready-to-transition
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.15
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: corin.walk-start-to-idle-by-movement-mode
+            m_Source:
+              m_Kind: 1
+              m_StateId: 89eeedab7b97adb04b02ef9abd06f8bc
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.idle
+            m_Priority: 3
+            m_Rule:
+              m_GraphId: corin.rule.walk-start-to-idle-by-movement-mode
+              m_ContentRevision: 365ee19c4a6630797ef637ebfb2026ff
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.stationary
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.15
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: 1eec43ee148238b400c193d220769895
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.start
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.turn
+            m_Priority: 4
+            m_Rule:
+              m_GraphId: 7e0a96fa2e91a6bc085c7b9cde36eb7c
+              m_ContentRevision: 76287a714bd04ca6a8bd58957dc79afe
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/27d93ca2-0aa4-5da9-9e2b-9ab1a096bb15
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.12
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          - m_TransitionId: b7817cf8df38719c6bf611cd20c7484b
+            m_Source:
+              m_Kind: 1
+              m_StateId: corin.locomotion.stop
+              m_AliasId: 
+            m_TargetStateId: corin.locomotion.turn
+            m_Priority: 4
+            m_Rule:
+              m_GraphId: 3f26370671e31d9949f96bc3eea724c9
+              m_ContentRevision: d6578954aa2f46b6a92293cefc9cc63d
+              m_Operations:
+              - m_OperationId: matches-target-mode
+                m_Kind: 8
+                m_InputA: movement-mode
+                m_InputB: target-mode
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: movement-mode
+                m_Kind: 1
+                m_InputA: 
+                m_InputB: 
+                m_FactId: presentation.movement-mode
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: 
+              - m_OperationId: target-mode
+                m_Kind: 16
+                m_InputA: 
+                m_InputB: 
+                m_FactId: 
+                m_BoolLiteral: 0
+                m_FloatLiteral: 0
+                m_EnumTypeId: 
+                m_EnumLiteral: 0
+                m_IdentityLiteral: presentation.movement-mode.state/27d93ca2-0aa4-5da9-9e2b-9ab1a096bb15
+              m_OutputOperationId: matches-target-mode
+            m_BlendLogic: 2
+            m_DurationSeconds: 0.12
+            m_BlendMode: 1
+            m_CustomBlendCurve: {fileID: 0}
+            m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+              type: 2}
+          m_Aliases: []
+          m_MaxTransitionsPerFrame: 1
+    - rid: 665191900899704833
+      type: {class: CharacterInertializationPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_Policy: {fileID: 11400000, guid: 554032a3480e2ae489c2331dace715b3, type: 2}
+    - rid: 665191900899704834
+      type: {class: CharacterActionPlaybackInputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_AnimationChannelId: FullBodyAction
+    - rid: 665191900899704835
+      type: {class: CharacterAnimationSlotPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SlotId: corin.full-body-action
+        m_AnimationChannelId: FullBodyAction
+        m_SelectionAvailability: 2
+        m_BlendPolicy: {fileID: 11400000, guid: 0c091f82b87df624b9df65e821e52c38,
+          type: 2}
+    - rid: 665191900899704836
+      type: {class: CharacterPoseParameterResolvePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_Policies:
+        - m_ParameterId: animation.action-weight
+          m_Policy: 3
+        - m_ParameterId: animation.foot-placement-weight
+          m_Policy: 3
+    - rid: 665191900899704837
+      type: {class: CharacterProgramParameterInputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_ParameterId: animation.foot-placement-weight
+    - rid: 665191900899704838
+      type: {class: CharacterTwoBoneIkPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_EndPhysicalBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand
+        m_EffectorPoseBoneId: animation-bone/virtual/VB_Weapon_LeftHand
+        m_EffectorLocalPositionOffset: {x: 0, y: 0, z: 0}
+        m_EffectorLocalRotationEuler: {x: -0, y: 0, z: 0}
+        m_JointTargetPoseBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm
+        m_JointTargetLocalOffset: {x: 0, y: 0, z: 0.3}
+        m_EndRotationMode: 2
+        m_Weight: 1
+    - rid: 665191900899704839
+      type: {class: CharacterTwoBoneIkPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_EndPhysicalBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand
+        m_EffectorPoseBoneId: animation-bone/virtual/VB_Weapon_RightHand
+        m_EffectorLocalPositionOffset: {x: 0, y: 0, z: 0}
+        m_EffectorLocalRotationEuler: {x: -0, y: 0, z: 0}
+        m_JointTargetPoseBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm
+        m_JointTargetLocalOffset: {x: 0, y: 0, z: 0.3}
+        m_EndRotationMode: 2
+        m_Weight: 1
+    - rid: 665191900899704840
+      type: {class: CharacterFootPlacementPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_Profile: {fileID: 11400000, guid: 6b94b222eff64c24a2ecf708238ef9a1, type: 2}
+        m_Calibration: {fileID: 11400000, guid: 471a3432ddd640c187b4ebfdf8c94e69,
+          type: 2}
+    - rid: 665191900899704841
+      type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 665191900899704843
+      type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 665191900899704845
+      type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 665191900899704847
+      type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 665191900899704849
+      type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 665191900899704851
+      type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 665192033737244679
+      type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 665192033737244681
+      type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 665192033737244840
+      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: 3450945198615820384}
+        m_Loop: 1
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 0
+    - rid: 665192033737244841
+      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: 1041388167119753750}
+        m_Loop: 0
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 0
+    - rid: 665192033737244842
+      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: -1663756737420138858}
+        m_Loop: 1
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 0
+    - rid: 665192033737244843
+      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: 6877363416557948613}
+        m_Loop: 0
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 0
+    - rid: 665192033737244844
+      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: -8411527234393366902}
+        m_Loop: 0
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 0
+    - rid: 665192033737244845
+      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: 5181372091040810034}
+        m_Loop: 0
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 0
+    - rid: 665192033737244846
+      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: -6787058357175954472}
+        m_Loop: 1
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 0
+    - rid: 665192033737244900
+      type: {class: CharacterLocalToComponentPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 665192033737244901
+      type: {class: CharacterComponentToLocalPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data: 
+--- !u!114 &1041388167119753750
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
+  m_Name: Run Start
+  m_EditorClassIdentifier: 
+--- !u!114 &3450945198615820384
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
+  m_Name: Idle
+  m_EditorClassIdentifier: 
+--- !u!114 &5181372091040810034
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
+  m_Name: Walk Start
+  m_EditorClassIdentifier: 
+--- !u!114 &6877363416557948613
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49c10fd6d1bb3a643aa5b3af630f36bb, type: 3}
+  m_Name: Run End
+  m_EditorClassIdentifier: 

@@ -113,9 +113,9 @@ Fault Lab 通过 YooAsset 的 Development-only 公开边界枚举已登记缓存
 
 Unity Editor 的唯一入口是 `Tools/3C/Launcher`。其中`单机 / Gameplay Lab`可选择 Local Float32 或 Local Fixed Variant，直接运行 `Assets/Scenes/GameplayLab/GameplayLab.unity`，不启动 CDN、Auth、Relay 或远端客户端。
 
-工具会先校验两个显式 Variant、完整 Session 组合、正式可琳玩家 Prefab、Foot Placement composition 与 FinalIK solver；随后保存当前场景、运行所选 Variant，并在退出 Play 后恢复原场景。它不修改 Build Settings、ProductStartupProfile 或 endpoint，也不会成为正式启动失败后的离线 fallback。
+工具会先校验两个显式 Variant、完整 Session 组合、正式可琳玩家 Prefab、Animation Rig Binding、World-Aware Binding、Presentation Projection 与 Native Pose Program identity；随后保存当前场景、运行所选 Variant，并在退出 Play 后恢复原场景。它不修改 Build Settings、ProductStartupProfile 或 endpoint，也不会成为正式启动失败后的离线 fallback。
 
-当前仓库没有 Motion Matching、Pose Search 或 Pose Database。现有能力是 Motion Warp、Root Motion、动画状态管线和 Foot Placement/FinalIK，展示与文档不得把这些能力改名为 Motion Matching。
+当前仓库已经存在Motion Matching的Profile、Source Set、显式Database Build、`.mmdb` Artifact、Query、Exact Search、短时序Plan、Selection与Projection工作区实现，但该能力仍由active change收口，尚未作为current capability安装，Corin也没有正式MM producer、Profile、Database或演示资产。Motion Warp、Root Motion、动画状态管线和Pose Graph内的Foot Placement解析式骨骼控制仍是当前Corin正式配置；展示时不得把它们改名为Motion Matching，也不得把未安装的MM工作区实现描述为Corin现成功能。
 
 ## 展示口径
 

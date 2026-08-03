@@ -177,6 +177,11 @@ namespace ThirdPersonCharacter.Editor.ProductBuild
             string destination = ClientBuildArtifactLayout.GetPlayerVersionRoot(request.Target, identity.ClientBuildVersion);
             RejectExistingVersion(destination);
             PrepareBuiltInContent(contentPath, request.ResourcePackageVersion);
+            BuildTargetGroup targetGroup = BuildPipeline.GetBuildTargetGroup(request.Target);
+            if (targetGroup == BuildTargetGroup.Unknown)
+                throw new BuildFailedException($"正式 Player 不支持 BuildTarget：{request.Target}");
+            if (PlayerSettings.GetScriptingBackend(targetGroup) != ScriptingImplementation.IL2CPP)
+                PlayerSettings.SetScriptingBackend(targetGroup, ScriptingImplementation.IL2CPP);
             string candidate = ClientBuildArtifactLayout.CreatePlayerCandidate();
             try
             {

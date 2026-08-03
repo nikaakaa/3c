@@ -111,7 +111,8 @@ $manifest = Assert-NetworkTestProductBuild `
     -ExpectedScenes @(
         "Assets/Scenes/ServerAuthoritative/ServerAuthoritativeNetworkTestBootstrap.unity",
         "Assets/Scenes/ServerAuthoritative/DotRecastAuthorityClient.unity") `
-    -ExpectedScriptingBackend "IL2CPP"
+    -ExpectedBuildOptions "Development, StrictMode" `
+    -ExpectedScriptingBackend "Mono2x"
 Assert-Exists $client "DotRecast Authority Player"
 Assert-Exists $clientRuntime "DotRecast Authority Player runtime"
 Assert-Exists $clientContent "DotRecast Authority Player content"

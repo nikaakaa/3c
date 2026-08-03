@@ -24,7 +24,8 @@ Corin Training AI Tree MUST读取AIPerceptionProfile显式绑定的玩家ActorId
 
 - **WHEN** committed玩家Body进入AttackRange且Attack分支获得新activation
 - **THEN** AI MUST输出zero MoveAxis并提交一次Attack request
-- **AND** 后续Action admission、Timeline、MotionWarp与动画 MUST由Corin Character Program决定
+- **AND** 后续Action admission、Timeline与MotionWarp MUST由Corin Character Program决定
+- **AND** 动画 MUST由实施时正式Corin Presentation按Action playback或PoseState fact生成
 
 #### Scenario: Attack节点持续Running
 
@@ -32,22 +33,22 @@ Corin Training AI Tree MUST读取AIPerceptionProfile显式绑定的玩家ActorId
 - **THEN** AI MUST只提交一次离散Attack request
 - **AND** 下一次Attack MUST来自显式新activation或重入条件
 
-### Requirement: Corin训练AI资产必须通过Agent v16正式事务生成
+### Requirement: Corin训练AI资产必须通过Agent Document v3正式事务生成
 
-Corin Training AI Definition、Tree、Blackboard、Perception和Intent配置 MUST通过Agent v16 Snapshot、dry-run、同Patch apply、re-export与validate流程写入。系统 MUST不直接编辑managed-reference YAML，也 MUST不保留一次性migrator、临时菜单、Patch watcher或旧Neutral fallback配置。
+Corin Training AI Definition、Tree、Blackboard、Perception和Intent配置 MUST通过Agent Document v3 package checkout、通用文件工具编辑`editable/**/*.json`、dry-run、同hash apply、re-export与validate流程写入，MUST不并存Patch、v1/v2或局部图工具。系统 MUST不直接编辑managed-reference YAML，也 MUST不保留一次性migrator、临时菜单、Patch watcher或旧Neutral fallback配置。
 
 `AIControllerDefinition` MUST拥有可在Unity domain reload后恢复的正式MonoScript identity。Definition MUST位于与类型同名的独立脚本资产中，MUST NOT依赖同一脚本文件中另一个ScriptableObject的MonoScript引用。
 
-#### Scenario: 创建训练AI资产
+#### Scenario: 应用训练AI Document
 
-- **WHEN** Agent应用Corin Training AI Patch
+- **WHEN** Agent dry-run并以相同document hash应用Corin Training AI Document v3
 - **THEN** dry-run与apply MUST消费同一immutable typed plan
 - **AND** re-export MUST以stable identity显示全部正式配置
 
 #### Scenario: 审查AI条件控制流
 
-- **WHEN** Agent导出Corin Training AI完整Snapshot
-- **THEN** Snapshot MUST显示Loop stop类型、Compare类型、ConditionRuleGraph identity和Edge AbortPolicy
+- **WHEN** Agent checkout Corin Training AI完整Document v3
+- **THEN** package MUST显示Loop stop类型、Compare类型、ConditionRuleGraph identity和Edge AbortPolicy
 - **AND** Agent不得把已经序列化的条件边投影为空
 
 #### Scenario: Unity重新加载脚本域
@@ -56,22 +57,22 @@ Corin Training AI Definition、Tree、Blackboard、Perception和Intent配置 MUS
 - **THEN** AssetDatabase MUST继续把Definition解析为`AIControllerDefinition`
 - **AND** Agent export MUST继续从同一路径加载该正式根
 
-### Requirement: Corin训练敌人必须使用唯一怪兽表现根
+### Requirement: Corin训练敌人必须使用唯一Corin表现链
 
-Standalone训练敌人 MUST将怪兽FBX作为唯一激活的VisualRoot，并由CharacterPipelineHost绑定的同一Animancer与Presentation Projection驱动。旧Corin VisualRoot MUST显式停用。怪兽Animator MUST不绑定Animator Controller fallback，也 MUST不申请Root Motion移动所有权。
+Standalone训练敌人 MUST复用与玩家相同的Corin VisualRoot、Rig v3、Animancer与Presentation Projection，并由自己的CharacterPipelineHost和Actor状态驱动。Animator MUST不绑定Animator Controller fallback，也 MUST不申请Root Motion移动所有权或创建训练敌人专用动画链。
 
 #### Scenario: 创建训练敌人表现
 
 - **WHEN** Standalone加载`corin-training-enemy`
-- **THEN** Host的Animancer、VisualRoot和Foot Placement MUST全部指向怪兽VisualRoot
+- **THEN** Host的Animancer、VisualRoot、Rig v3和Foot Placement MUST全部指向该Actor的Corin表现根
 - **AND** 怪兽姿态 MUST只由正式Presentation链输出
 
-#### Scenario: 怪兽使用正式脚底IK执行边界
+#### Scenario: 训练敌人使用正式Foot Placement节点
 
-- **WHEN** 怪兽首版Presentation执行Pose Post Process
-- **THEN** 怪兽VisualRoot MUST配置与其Generic Rig一致的左右LimbIK和正式FinalIK Foot Placement solver
-- **AND** MUST NOT使用Passthrough、NoOp或Disabled solver伪造执行完成
-- **AND** MUST NOT复用Corin VisualRoot骨骼引用或跳过Host的正式Foot Placement合同
+- **WHEN** 训练敌人Presentation执行包含FootPlacement的staged Pose Plan
+- **THEN** FootPlacement MUST消费该Actor同帧上游Component Pose、Rig v3腿链与正式world context
+- **AND** MUST NOT使用Passthrough、NoOp、Final IK或图外solver伪造执行完成
+- **AND** MUST NOT复用另一Actor的Transform引用或跳过Host的正式Foot Placement合同
 
 ### Requirement: 训练AI不得伪装寻路或Combat闭环
 

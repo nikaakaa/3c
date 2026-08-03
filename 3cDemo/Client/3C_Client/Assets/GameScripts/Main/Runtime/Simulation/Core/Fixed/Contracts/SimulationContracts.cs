@@ -590,7 +590,9 @@ namespace ThirdPersonSimulation.Fixed
             FixedScalar sampleTime,
             FixedScalar weight,
             ulong producerGeneration = 0,
-            int cycle = 0)
+            int cycle = 0,
+            ulong sourceActionInstanceId = 0,
+            FixedScalar visualTimeScale = default)
         {
             Header = header;
             Kind = kind;
@@ -599,10 +601,14 @@ namespace ThirdPersonSimulation.Fixed
             Weight = weight;
             ProducerGeneration = producerGeneration;
             Cycle = cycle;
+            SourceActionInstanceId = sourceActionInstanceId;
+            VisualTimeScale = visualTimeScale;
             if (IsPlaybackCommand(kind) && producerGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(producerGeneration));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
+            if (IsPlaybackSample(kind) && visualTimeScale < FixedScalar.Zero)
+                throw new ArgumentOutOfRangeException(nameof(visualTimeScale));
         }
         public SimulationEventHeader Header { get; }
         public PresentationCommandKind Kind { get; }
@@ -611,6 +617,8 @@ namespace ThirdPersonSimulation.Fixed
         public FixedScalar Weight { get; }
         public ulong ProducerGeneration { get; }
         public int Cycle { get; }
+        public ulong SourceActionInstanceId { get; }
+        public FixedScalar VisualTimeScale { get; }
 
         static bool IsPlaybackCommand(PresentationCommandKind kind)
         {
@@ -619,6 +627,9 @@ namespace ThirdPersonSimulation.Fixed
                    kind == PresentationCommandKind.CompleteProducer ||
                    kind == PresentationCommandKind.ReleaseProducer;
         }
+
+        static bool IsPlaybackSample(PresentationCommandKind kind) =>
+            kind == PresentationCommandKind.SampleProducer;
     }
 
     public enum SimulationTraceSeverity : byte

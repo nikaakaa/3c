@@ -216,17 +216,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
-        internal void ReleaseSource(AnimationPoseSourceId sourceId)
-        {
-            RequireAlive();
-            if (!sourceId.IsValid)
-                throw new ArgumentException("Animation pose source identity is invalid.", nameof(sourceId));
-            if (!TryFind(sourceId, out int rowIndex))
-                throw new InvalidOperationException($"Animation pose source '{sourceId}' is not retained.");
-            ClearRow(rowIndex);
-            m_Count--;
-        }
-
         internal void Reset()
         {
             RequireAlive();

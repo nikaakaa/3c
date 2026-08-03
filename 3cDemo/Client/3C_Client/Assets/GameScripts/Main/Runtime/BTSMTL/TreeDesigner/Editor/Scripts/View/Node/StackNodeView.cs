@@ -18,6 +18,8 @@ namespace TreeDesigner.Editor
         public BaseTreeView TreeView => m_TreeView;
 
         List<BaseNodeView> m_NodeViews = new List<BaseNodeView>();
+        internal IReadOnlyList<BaseNodeView> NodeViews =>
+            m_NodeViews;
 
         NodeGroupView m_NodeGroupView;
         public NodeGroupView NodeGroupView { get => m_NodeGroupView; set => m_NodeGroupView = value; }
@@ -107,15 +109,10 @@ namespace TreeDesigner.Editor
 
         public void OnMoved(Vector2 position)
         {
-            if (m_StackNode.Position != position)
-            {
-                m_TreeView.Tree.ApplyModify("Move Stack", () =>
-                {
-                    m_StackNode.Position = position;
-                    UpdateChildPosition();
-                    m_NodeGroupView?.OnMoved();
-                });
-            }
+            SetPosition(new Rect(position, GetPosition().size));
+            UpdateChildPosition();
+            m_TreeView.CommitMovedElements(
+                new GraphElement[] { this });
         }
         void OnChildDetachedFromPanel(DetachFromPanelEvent evt)
         {
@@ -166,6 +163,8 @@ namespace TreeDesigner.Editor
                         });
                     }
                     UpdateChildPosition();
+                    m_TreeView.CommitMovedElements(
+                        new GraphElement[] { this });
                 }
             };
         }
@@ -173,7 +172,13 @@ namespace TreeDesigner.Editor
         {
             foreach (var nodeView in m_NodeViews)
             {
-                nodeView.OnMoved(m_StackNode.Position + new Vector2(12, nodeView.layout.position.y));
+                nodeView.SetPosition(
+                    new Rect(
+                        GetPosition().position +
+                        new Vector2(
+                            12,
+                            nodeView.layout.position.y),
+                        nodeView.GetPosition().size));
             }
         }
     }

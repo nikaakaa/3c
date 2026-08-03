@@ -6,6 +6,19 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+namespace BTSMTL.Timeline
+{
+    public static class TimelineAuthoringCommands
+    {
+        public static readonly GraphAuthoringCommandId UseInline =
+            new GraphAuthoringCommandId(
+                "btsmtl.timeline.use-inline");
+        public static readonly GraphAuthoringCommandId UseShared =
+            new GraphAuthoringCommandId(
+                "btsmtl.timeline.use-shared");
+    }
+}
+
 namespace BTSMTL.Timeline.Editor
 {
     public sealed class TreeClipInspectorView : TimelineClipInspectorView
@@ -289,7 +302,9 @@ namespace BTSMTL.Timeline.Editor
             {
                 actions.Add(new Button(() =>
                 {
-                    ExtractShared(node);
+                    TimelineAsset asset = CreateSharedTimelineAsset(node);
+                    nodeView.ExecuteAuthoringCommand(TimelineAuthoringCommands.UseShared, asset);
+                    TimelineEditorWindow.RebindIfOpen(node);
                     RefreshNodeInspector(inspector, nodeView);
                 }) { text = "Extract Shared" });
 
@@ -303,7 +318,7 @@ namespace BTSMTL.Timeline.Editor
 
             actions.Add(new Button(() =>
             {
-                node.ApplyModify("Use Inline Timeline", () => node.ConfigureAuthoring(node.Timeline.CloneForAuthoring(), node.ActionContext, node.PlaybackMode));
+                nodeView.ExecuteAuthoringCommand(TimelineAuthoringCommands.UseInline);
                 TimelineEditorWindow.RebindIfOpen(node);
                 RefreshNodeInspector(inspector, nodeView);
             }) { text = "Use Inline" });
@@ -322,7 +337,9 @@ namespace BTSMTL.Timeline.Editor
                     sharedAsset.SetValueWithoutNotify(node.SharedTimelineAsset);
                     return;
                 }
-                node.ApplyModify("Set Shared Timeline", () => node.ConfigureSharedAuthoring(asset, node.ActionContext, node.PlaybackMode));
+                nodeView.ExecuteAuthoringCommand(
+                    TimelineAuthoringCommands.UseShared,
+                    asset);
                 TimelineEditorWindow.RebindIfOpen(node);
                 RefreshNodeInspector(inspector, nodeView);
             });
@@ -341,14 +358,17 @@ namespace BTSMTL.Timeline.Editor
                 TimelineAsset asset = evt.newValue as TimelineAsset;
                 if (!asset)
                     return;
-                node.ApplyModify("Use Shared Timeline", () => node.ConfigureSharedAuthoring(asset, node.ActionContext, node.PlaybackMode));
+                nodeView.ExecuteAuthoringCommand(
+                    TimelineAuthoringCommands.UseShared,
+                    asset);
                 TimelineEditorWindow.RebindIfOpen(node);
                 RefreshNodeInspector(inspector, nodeView);
             });
             return picker;
         }
 
-        static void ExtractShared(TimelineNode node)
+        static TimelineAsset CreateSharedTimelineAsset(
+            TimelineNode node)
         {
             TimelineData timeline = node?.InlineTimeline;
             UnityEngine.Object owner = timeline?.SerializedOwner;
@@ -365,10 +385,9 @@ namespace BTSMTL.Timeline.Editor
             asset.SetData(timeline.Clone());
             string path = AssetDatabase.GenerateUniqueAssetPath($"{folder}/{Sanitize(timeline.Name)}.asset");
             AssetDatabase.CreateAsset(asset, path);
-            node.ApplyModify("Extract Shared Timeline", () => node.ConfigureSharedAuthoring(asset, node.ActionContext, node.PlaybackMode));
             EditorUtility.SetDirty(asset);
             AssetDatabase.SaveAssets();
-            TimelineEditorWindow.RebindIfOpen(node);
+            return asset;
         }
 
         static void RefreshNodeInspector(BaseTreeInspectorView inspector, BaseNodeView nodeView)

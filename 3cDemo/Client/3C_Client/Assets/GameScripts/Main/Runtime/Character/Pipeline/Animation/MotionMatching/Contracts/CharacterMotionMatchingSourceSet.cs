@@ -73,7 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 throw new InvalidOperationException($"Motion Matching Source Set '{name}' has no explicit sampling compatibility mode.");
             if (!MotionRootBoneId.IsValid)
                 throw new InvalidOperationException($"Motion Matching Source Set '{name}' has no Motion Root Bone identity.");
-            TargetRig.RequireBoneIndex(MotionRootBoneId);
+            TargetRig.RequirePhysicalBoneIndex(MotionRootBoneId);
             if (SourceClips.Count == 0)
                 throw new InvalidOperationException($"Motion Matching Source Set '{name}' contains no registered clips.");
 

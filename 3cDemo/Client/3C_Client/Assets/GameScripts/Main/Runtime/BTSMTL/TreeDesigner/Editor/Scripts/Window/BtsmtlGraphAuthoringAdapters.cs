@@ -17,11 +17,16 @@ namespace TreeDesigner.Editor
             m_Window = window;
         }
 
-        public string DomainId => "btsmtl";
-        public string DocumentId => m_Window.Tree?.GraphAuthoringId ?? string.Empty;
-        public string DisplayName => m_Window.Tree != null ? m_Window.Tree.name : "BTSMTL Graph";
-        public string ContentRevision => m_Window.Tree != null ? GraphAuthoringFingerprint.Compute(m_Window.Tree) : string.Empty;
-        public UnityEngine.Object SerializedOwner => m_Window.CurrentPageSerializedOwner;
+        public string DomainId =>
+            m_Window.SharedAuthoring.Document.DomainId.Value;
+        public string DocumentId =>
+            m_Window.SharedAuthoring.Document.DocumentId;
+        public string DisplayName =>
+            m_Window.SharedAuthoring.Document.DisplayName;
+        public string ContentRevision =>
+            m_Window.SharedAuthoring.Document.ContentRevision;
+        public UnityEngine.Object SerializedOwner =>
+            m_Window.SharedAuthoring.Document.SerializedOwner;
     }
 
     sealed class BtsmtlGraphAuthoringNodeCatalogAdapter : IGraphAuthoringNodeCatalog
@@ -47,7 +52,19 @@ namespace TreeDesigner.Editor
                 {
                     foreach ((Type type, string path) in TreeDesignerUtility.GetNodePathPairs(rootPath))
                     {
-                        if (type == null || !tree.CanCreateNodeType(type) || !paths.Add(path))
+                        if (type == null ||
+                            !tree.CanCreateNodeType(type) ||
+                            !m_Window.SharedAuthoring.Capabilities
+                                .TryGetByAuthoringType(
+                                    m_Window.SharedAuthoring
+                                        .Document.DomainId,
+                                    type,
+                                    out GraphAuthoringCapabilityDescriptor
+                                        capability) ||
+                            !capability.Allows(
+                                m_Window.SharedAuthoring
+                                    .Document.DocumentRoleId) ||
+                            !paths.Add(path))
                             continue;
                         entries.Add(new GraphAuthoringNodeCatalogEntry(path, type.AssemblyQualifiedName));
                     }
@@ -182,10 +199,37 @@ namespace TreeDesigner.Editor
         {
             m_View.SetAuthoringContext(m_Window.AuthoringContext);
             m_View.SetEnabled(m_Window.CanMutateCurrentDocument);
-            if (m_Window.Tree == null)
+            if (!m_Window.HasSharedAuthoring)
                 return;
+            m_View.BindSharedAuthoring(m_Window.SharedAuthoring, ExecuteDetailsCommand);
             m_View.SetVisibleBlackboardSources(m_Window.ResolveVisibleTrees());
             m_View.PopulateView(m_Window.Tree);
+        }
+
+        void ExecuteDetailsCommand(
+            GraphAuthoringDetailsCommandRequest request)
+        {
+            BaseNode node = m_Window.Tree.Nodes.SingleOrDefault(
+                value => value != null &&
+                         value.GUID == request.ElementId.Value) ??
+                throw new InvalidOperationException(
+                    $"BTSMTL Details node '{request.ElementId}' is missing.");
+            bool handled = request.Kind ==
+                           GraphAuthoringMutationKind.ExecuteCommand
+                ? AuthoringDetailsCommandRegistry.TryExecute(
+                    m_Window,
+                    node,
+                    request.CommandId)
+                : request.Kind ==
+                  GraphAuthoringMutationKind.OpenChildSurface
+                    ? AuthoringPageOpenRegistry.TryOpen(
+                        m_Window,
+                        node)
+                    : throw new InvalidOperationException(
+                        $"BTSMTL Details command '{request.Kind}' is invalid.");
+            if (!handled)
+                throw new InvalidOperationException(
+                    $"BTSMTL Details command '{request.CommandId}' has no handler for '{node.GetType().FullName}'.");
         }
 
         public void Inspect(IReadOnlyList<ISelectable> selection)

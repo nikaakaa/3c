@@ -2,30 +2,28 @@
 
 ## Purpose
 
-定义Agent通过统一v15 Snapshot、Patch、Validator与MCP事务读取、修改和验证BTSMTL AI Controller资产的正式合同。
-
+定义Agent通过统一Document v3目录包、Mutation、Validator与固定生命周期工具读取、修改和验证BTSMTL AI Controller资产的正式合同。
 ## Requirements
-
 ### Requirement: Agent必须通过正式AI Authoring合同修改AI Controller
 
-系统 MUST将唯一Agent Snapshot、Patch、Intent与Validation根schema原子提升为`agent-character-controller-synthesis.v15`，使用显式domain discriminator区分Character Controller与AI Controller根。AI Snapshot MUST输出AIControllerDefinition、AI Graph role、Graph/Node/Edge identity、AI Blackboard declaration、显式候选Actor Perception binding、Character input/request binding与generated AI Program identity。Patch MUST通过唯一schema、typed command lowerer与handler catalog创建或修改AI Tree、AI declaration、Observation、Memory与Intent节点。Handler MUST调用正式BTSMTL与AI Definition authoring API，MUST NOT直接编辑YAML或建立AI专用宽DTO解释器。系统 MUST删除v14及更早reader、converter与双写输出。
+系统 MUST使用`btsmtl-agent-authoring-document.v3`目录包作为CharacterController与AIController唯一AI-facing编辑合同，并通过显式domain选择AI root。AI package MUST从已有合法`AIControllerDefinition`、AIControllerTree、Graph、AI Blackboard、Perception和受控Character input/request catalog checkout；editable分片 MUST表达AI Definition binding、Shared Flow/Value、Observation、Memory与Character input/request intent binding目标结构。Graph MUST使用稀疏Node kind、逻辑port、系统anchor和Edge完整目标集合。Document Reconciler MUST降低为统一immutable`AgentMutationPlan`，handler MUST调用正式BTSMTL与AI authoring API。系统 MUST不直接编辑YAML，不建立AI专用package解释器，不保留v1/v2、v15-v17 Patch、bootstrap或双写输出。
 
-#### Scenario: Agent创建AI接近与攻击结构
+#### Scenario: Agent编辑AI接近与攻击结构
 
-- **WHEN** v15 AI Controller Patch创建Configured Candidate、距离条件、MoveAxis与Attack request节点
-- **THEN** lowerer MUST生成immutable typed command plan
-- **AND** handler MUST通过正式AI authoring API和统一Graph policy写入
+- **WHEN** AI package增加Configured Candidate、距离条件、MoveAxis与Attack request结构
+- **THEN** Reconciler MUST从统一capability catalog生成immutable Mutation Plan
+- **AND** handler MUST通过正式AI authoring API和Graph policy写入
 
 #### Scenario: Agent尝试创建Timeline节点
 
-- **WHEN** AI Graph Patch包含TimelineNode或ActivateActionInstanceNode
-- **THEN** preflight MUST拒绝整次事务
+- **WHEN** AI Graph文件包含Timeline或ActivateActionInstance kind
+- **THEN** Reconciler MUST在mutation前拒绝整份package
 - **AND** AI Tree MUST不发生部分修改
 
-#### Scenario: Agent提交旧v14 Patch
+#### Scenario: Agent提交旧合同
 
-- **WHEN** v15安装后Agent收到v14 Patch
-- **THEN** 系统 MUST明确报告版本不匹配
+- **WHEN** Document链收到v1单文件或v15-v17 Snapshot/Patch payload
+- **THEN** 系统 MUST明确报告schema不匹配
 - **AND** MUST不转换、双写或兼容解释
 
 ### Requirement: Agent Validator必须检查AI与Character分层
@@ -40,10 +38,12 @@ Agent Validator MUST复用AI Graph Role、Node Capability、AI Blackboard scope�
 
 ### Requirement: Agent技能合同必须覆盖AI Tree工作流
 
-BTSMTL Agent authoring技能与MCP bridge文档 MUST记录AI Definition发现、Snapshot导出、Patch dry-run、同Patch apply、重新导出与validate流程，并列出AI Graph、Blackboard、Perception和Intent正式operation。MCP bridge MUST只透传同一v15 generic transaction，MUST NOT增加AI专用action、YAML写入或按名称猜identity。
+BTSMTL Agent authoring技能与MCP bridge文档 MUST记录已有合法AI Definition的package checkout、AI通过宿主文件能力直接编辑JSON、dry-run、同document hash apply、整个package反向同步与validate流程。技能 MUST列出AI Graph、Blackboard、Perception、Observation、Memory和Character input/request intent binding正式schema，并指导AI读取本package内Node/Graph catalog。MCP MUST只暴露五个固定生命周期工具，MUST不增加AI专用action、Node级tool、Patch、bootstrap、YAML写入或按名称猜identity。
 
 #### Scenario: Agent修改AI Controller
 
 - **WHEN** Agent需要修改AI Blackboard或Intent分支
-- **THEN** MUST先导出当前AI Snapshot并锁定source revision
-- **AND** dry-run与apply MUST使用完全相同Patch
+- **THEN** MUST先显式checkout或复用未冲突package
+- **AND** MUST直接修改相关editable文件
+- **AND** dry-run与apply MUST使用完全相同document hash
+- **AND** apply成功后 MUST从最终AI Tree反向规范化整个package

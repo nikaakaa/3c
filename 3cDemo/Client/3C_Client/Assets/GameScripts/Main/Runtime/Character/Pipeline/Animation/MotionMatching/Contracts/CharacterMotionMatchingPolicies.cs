@@ -62,7 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 MotionMatchingBoneFeature bone = BoneFeatures[i];
                 if (bone == null || !bone.BoneId.IsValid || !boneIds.Add(bone.BoneId) || !bone.Position && !bone.Velocity)
                     throw new InvalidOperationException($"Motion Matching Feature Schema '{name}' Bone feature #{i} is invalid or duplicated.");
-                Rig.RequireBoneIndex(bone.BoneId);
+                Rig.RequirePhysicalBoneIndex(bone.BoneId);
             }
             if (FootFeatureSource != MotionMatchingFootFeatureSource.AnimationFootAnalysisArtifact)
                 throw new InvalidOperationException($"Motion Matching Feature Schema '{name}' must use the formal Animation Foot Analysis Artifact.");

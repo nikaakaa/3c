@@ -12,7 +12,126 @@ using BTSMTL;
 
 namespace TreeDesigner.Editor
 {
-    public class BaseNodeView : Node, IGroupable
+    public abstract class GraphAuthoringNodeViewBase :
+        Node,
+        IGraphAuthoringReadOnlyView
+    {
+        Capabilities m_AuthoringCapabilities;
+        bool m_RuntimeReadOnly;
+        Image m_AuthoringIcon;
+        Label m_AuthoringStatus;
+
+        protected GraphAuthoringNodeViewBase()
+        {
+        }
+
+        protected GraphAuthoringNodeViewBase(string visualTreePath)
+            : base(visualTreePath)
+        {
+        }
+
+        protected bool RuntimeReadOnly => m_RuntimeReadOnly;
+
+        protected void BindAuthoringPresentation(
+            string elementId,
+            string displayName,
+            Vector2 position,
+            Color? titleColor = null)
+        {
+            if (string.IsNullOrWhiteSpace(elementId))
+            {
+                throw new ArgumentException(
+                    "Graph authoring element identity is missing.",
+                    nameof(elementId));
+            }
+            viewDataKey = elementId;
+            title = displayName ?? string.Empty;
+            style.left = position.x;
+            style.top = position.y;
+            if (titleColor.HasValue)
+                titleContainer.style.backgroundColor =
+                    titleColor.Value;
+        }
+
+        protected void BindAuthoringDescriptor(
+            GraphAuthoringCapabilityDescriptor capability,
+            string displayName,
+            string status,
+            bool applyDescriptorColor = true)
+        {
+            if (capability == null)
+                throw new ArgumentNullException(nameof(capability));
+            title = string.IsNullOrWhiteSpace(displayName)
+                ? capability.DisplayName
+                : displayName;
+            tooltip = capability.CapabilityId.Value;
+            if (applyDescriptorColor)
+            {
+                titleContainer.style.backgroundColor =
+                    capability.Color;
+            }
+
+            m_AuthoringIcon?.RemoveFromHierarchy();
+            m_AuthoringIcon = null;
+            if (!string.IsNullOrWhiteSpace(capability.IconName))
+            {
+                GUIContent content =
+                    EditorGUIUtility.IconContent(
+                        capability.IconName);
+                if (content?.image != null)
+                {
+                    m_AuthoringIcon = new Image
+                    {
+                        image = content.image,
+                        tooltip = capability.DisplayName
+                    };
+                    m_AuthoringIcon.AddToClassList(
+                        "graph-authoring-node-icon");
+                    titleContainer.Insert(
+                        0,
+                        m_AuthoringIcon);
+                }
+            }
+
+            m_AuthoringStatus?.RemoveFromHierarchy();
+            m_AuthoringStatus = null;
+            if (string.IsNullOrWhiteSpace(status))
+                return;
+            m_AuthoringStatus = new Label(status);
+            m_AuthoringStatus.AddToClassList(
+                "graph-authoring-node-status");
+            extensionContainer.Add(m_AuthoringStatus);
+        }
+
+        public virtual void SetRuntimeReadOnly(bool readOnly)
+        {
+            if (m_RuntimeReadOnly == readOnly)
+                return;
+            m_RuntimeReadOnly = readOnly;
+            if (readOnly)
+            {
+                m_AuthoringCapabilities = capabilities;
+                capabilities &=
+                    Capabilities.Selectable |
+                    Capabilities.Ascendable;
+            }
+            else
+            {
+                capabilities = m_AuthoringCapabilities;
+            }
+            OnRuntimeReadOnlyChanged(readOnly);
+        }
+
+        protected virtual void OnRuntimeReadOnlyChanged(
+            bool readOnly)
+        {
+        }
+    }
+
+    public class BaseNodeView :
+        GraphAuthoringNodeViewBase,
+        IGroupable,
+        IGraphAuthoringReadOnlyView
     {
         public const string DefaultVisualTreeGUID = "5eec7eeaaa8d8374181513f90c706047";
         public const string StyleSheetGUID = "f24502238ee8ac5478af96e8894528ee";
@@ -20,6 +139,17 @@ namespace TreeDesigner.Editor
 
         protected BaseNode m_Node;
         public BaseNode Node => m_Node;
+        public GraphAuthoringNodeProjection AuthoringProjection
+        {
+            get;
+            private set;
+        }
+        public GraphAuthoringCapabilityDescriptor
+            AuthoringCapability
+        {
+            get;
+            private set;
+        }
 
         protected BaseTreeWindow m_TreeWindow;
         public BaseTreeWindow TreeWindow => m_TreeWindow;
@@ -48,9 +178,6 @@ namespace TreeDesigner.Editor
                     AddToClassList("stacked");
             }
         }
-
-        Capabilities m_AuthoringCapabilities;
-        bool m_RuntimeReadOnly;
 
         public Dictionary<string, BasePortView> InputPorts => m_InputPortContainer.PortViewMap;
         public Dictionary<string, BasePortView> OutputPorts => m_OutputPortContainer.PortViewMap;
@@ -82,18 +209,18 @@ namespace TreeDesigner.Editor
             m_NodeInputFieldContainer = this.Q<NodeInputFieldContainerView>();
             m_NodeInputFieldContainer.Init(m_Node, this);
 
-            title = NodeName();
-
             NodeColorAttribute nodeColor = m_Node.GetAttribute<NodeColorAttribute>();
-            if (nodeColor != null)
-                titleContainer.style.backgroundColor = nodeColor.Color / 255f;
+            BindAuthoringPresentation(
+                m_Node.GUID,
+                NodeName(),
+                m_Node.Position,
+                nodeColor != null
+                    ? nodeColor.Color / 255f
+                    : (Color?)null);
 
             RefreshCapabilities();
 
-            viewDataKey = m_Node.GUID;
             expanded = m_Node.Expanded;
-            style.left = m_Node.Position.x;
-            style.top = m_Node.Position.y;
 
             GeneratePorts();
             GeneratePropertyPorts();
@@ -190,6 +317,58 @@ namespace TreeDesigner.Editor
             }
         }
 
+        public void BindSharedProjection(
+            GraphAuthoringNodeProjection projection,
+            GraphAuthoringCapabilityDescriptor capability)
+        {
+            if (projection == null ||
+                projection.NodeId.Value != m_Node.GUID)
+            {
+                throw new InvalidOperationException(
+                    $"BTSMTL Node '{m_Node.GUID}' received a mismatched authoring projection.");
+            }
+            if (capability == null ||
+                !capability.CapabilityId.Equals(
+                    projection.CapabilityId) ||
+                capability.AuthoringType != m_Node.GetType())
+            {
+                throw new InvalidOperationException(
+                    $"BTSMTL Node '{m_Node.GUID}' received a mismatched authoring capability.");
+            }
+            AuthoringProjection = projection;
+            AuthoringCapability = capability;
+            BindAuthoringDescriptor(
+                capability,
+                projection.DisplayName,
+                projection.Status,
+                m_Node.GetAttribute<NodeColorAttribute>() != null);
+        }
+
+        public void SetDisplayName(string displayName)
+        {
+            TreeView.SharedAuthoring.Mutation.Apply(
+                TreeView.SharedAuthoring.Document,
+                new GraphAuthoringMutationRequest(
+                    GraphAuthoringMutationKind.SetDisplayName,
+                    new GraphAuthoringElementId(
+                        m_Node.GUID),
+                    value: displayName ?? string.Empty));
+            Refresh();
+        }
+
+        public void ExecuteAuthoringCommand(
+            GraphAuthoringCommandId commandId,
+            object value = null)
+        {
+            TreeView.SharedAuthoring.Mutation.Apply(
+                TreeView.SharedAuthoring.Document,
+                new GraphAuthoringMutationRequest(
+                    GraphAuthoringMutationKind.ExecuteCommand,
+                    new GraphAuthoringElementId(m_Node.GUID),
+                    commandId: commandId,
+                    value: value));
+        }
+
         protected virtual void AppendReferenceActions(DropdownMenu menu)
         {
             if (AuthoringPageOpenRegistry.CanOpen(m_Node))
@@ -251,20 +430,9 @@ namespace TreeDesigner.Editor
             SetStateClass("nodeState-None");
         }
 
-        public void SetRuntimeReadOnly(bool readOnly)
+        protected override void OnRuntimeReadOnlyChanged(
+            bool readOnly)
         {
-            if (m_RuntimeReadOnly == readOnly)
-                return;
-            m_RuntimeReadOnly = readOnly;
-            if (readOnly)
-            {
-                m_AuthoringCapabilities = capabilities;
-                capabilities &= Capabilities.Selectable | Capabilities.Ascendable;
-            }
-            else
-            {
-                capabilities = m_AuthoringCapabilities;
-            }
             m_NodePanel?.SetEnabled(!readOnly);
             m_NodeInputFieldContainer?.SetEnabled(!readOnly);
         }
@@ -357,15 +525,9 @@ namespace TreeDesigner.Editor
 
         public virtual void OnMoved(Vector2 position)
         {
-            if (m_Node.Position != position)
-            {
-                m_Node.ApplyModify("Move Node", () =>
-                {
-                    m_Node.Position = position;
-                    m_Node.OnMoved();
-                    m_NodeGroupView?.OnMoved();
-                });
-            }
+            SetPosition(new Rect(position, GetPosition().size));
+            m_TreeWindow.TreeView.CommitMovedElements(
+                new GraphElement[] { this });
         }
         public virtual void OnInputPortConnected(BasePortView portView)
         {
@@ -431,7 +593,7 @@ namespace TreeDesigner.Editor
         }
         protected override void ToggleCollapse()
         {
-            if (m_RuntimeReadOnly)
+            if (RuntimeReadOnly)
                 return;
             if (CanCollapsed())
             {

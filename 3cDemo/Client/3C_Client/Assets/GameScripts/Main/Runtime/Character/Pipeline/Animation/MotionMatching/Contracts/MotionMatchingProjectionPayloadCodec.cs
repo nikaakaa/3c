@@ -8,7 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 {
     public static class MotionMatchingProjectionPayloadCodec
     {
-        const int SchemaVersion = 1;
+        const int SchemaVersion = 3;
 
         public static byte[] Encode(MotionMatchingProjectionPayload payload, out AnimationClip[] clips)
         {
@@ -30,9 +30,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             writer.Write(payload.DatabaseCount);
             for (int i = 0; i < payload.DatabaseCount; i++)
                 WriteDatabase(writer, payload.GetDatabase(i), clipTable);
-            writer.Write(payload.ProducerBindingCount);
-            for (int i = 0; i < payload.ProducerBindingCount; i++)
-                WriteProducerBinding(writer, payload.GetProducerBinding(i));
+            writer.Write(payload.ProviderBindingCount);
+            for (int i = 0; i < payload.ProviderBindingCount; i++)
+                WriteProviderBinding(writer, payload.GetProviderBinding(i));
             clips = clipTable.ToArray();
             return stream.ToArray();
         }
@@ -56,10 +56,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             var databases = new MotionMatchingDatabasePayload[databaseCount];
             for (int i = 0; i < databaseCount; i++)
                 databases[i] = ReadDatabase(reader, clips ?? Array.Empty<AnimationClip>());
-            int producerCount = RequireCount(reader.ReadInt32(), "producer binding", false);
-            var producers = new MotionMatchingProducerBindingPayload[producerCount];
-            for (int i = 0; i < producerCount; i++)
-                producers[i] = ReadProducerBinding(reader);
+            int providerCount = RequireCount(
+                reader.ReadInt32(),
+                "provider binding",
+                false);
+            var providers =
+                new MotionMatchingProviderBindingPayload[providerCount];
+            for (int i = 0; i < providerCount; i++)
+                providers[i] = ReadProviderBinding(reader);
             if (stream.Position != stream.Length)
                 throw new InvalidOperationException("Motion Matching Projection payload contains trailing data.");
             return new MotionMatchingProjectionPayload(
@@ -70,7 +74,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 costProfile,
                 searchPolicy,
                 databases,
-                producers);
+                providers);
         }
 
         static void WriteFeatureSchema(BinaryWriter writer, MotionMatchingFeatureSchemaPayload value)
@@ -489,19 +493,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         static MotionMatchingCoverageSummaryPayload ReadCoverage(BinaryReader reader) => new MotionMatchingCoverageSummaryPayload(
             reader.ReadString(), reader.ReadBoolean(), reader.ReadInt32(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
 
-        static void WriteProducerBinding(BinaryWriter writer, MotionMatchingProducerBindingPayload value)
+        static void WriteProviderBinding(
+            BinaryWriter writer,
+            MotionMatchingProviderBindingPayload value)
         {
-            writer.Write(value.ProgramProducerId);
-            writer.Write(value.AnimationChannelId.Value);
+            writer.Write(value.ProviderId);
+            writer.Write(value.PresentationPoseSourceIndex.Value);
             writer.Write(value.PoseNodeId.Value);
             writer.Write(value.SearchDomainId.Value);
             writer.Write(value.FirstDatabaseIndex);
             writer.Write(value.DatabaseCount);
         }
 
-        static MotionMatchingProducerBindingPayload ReadProducerBinding(BinaryReader reader) => new MotionMatchingProducerBindingPayload(
-            reader.ReadString(), new AnimationChannelId(reader.ReadString()), new PoseNodeId(reader.ReadString()),
-            new CharacterMotionMatchingSearchDomainId(reader.ReadString()), reader.ReadInt32(), reader.ReadInt32());
+        static MotionMatchingProviderBindingPayload ReadProviderBinding(
+            BinaryReader reader) =>
+            new MotionMatchingProviderBindingPayload(
+                reader.ReadString(),
+                new PresentationPoseSourceIndex(reader.ReadInt32()),
+                new PoseNodeId(reader.ReadString()),
+                new CharacterMotionMatchingSearchDomainId(
+                    reader.ReadString()),
+                reader.ReadInt32(),
+                reader.ReadInt32());
 
         static void WriteFootSample(BinaryWriter writer, AnimationFootFeatureSample value)
         {

@@ -5,46 +5,74 @@ using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonSimulation.DeterministicKcc
 {
-    public enum DeterministicKccStepPhase : byte
+    public enum DeterministicKccLedgeState : byte
     {
         None = 0,
-        SteppedUp = 1,
-        SteppedDown = 2
+        StableSide = 1,
+        EmptySide = 2
     }
 
     public readonly struct DeterministicKccBodyState
     {
         public DeterministicKccBodyState(
             ActorId actorId,
-            bool grounded,
+            bool foundAnyGround,
+            bool isStableOnGround,
+            int groundSurfaceId,
             int groundPrimitiveId,
             DeterministicCollisionFeatureId groundFeatureId,
-            FixedVector3 groundNormal)
+            FixedVector3 groundNormal,
+            FixedVector3 innerGroundNormal,
+            FixedVector3 outerGroundNormal,
+            bool snappingPrevented,
+            DeterministicKccLedgeState ledgeState,
+            bool lastMovementIterationFoundAnyGround)
         {
-            if (!actorId.IsValid || groundPrimitiveId < -1 ||
-                grounded && (groundPrimitiveId < 0 || !groundFeatureId.IsValid || groundNormal.SqrMagnitude == FixedScalar.Zero) ||
-                !grounded && (groundPrimitiveId >= 0 || groundFeatureId.IsValid || groundNormal.SqrMagnitude != FixedScalar.Zero))
+            bool identityValid = groundSurfaceId >= 0 && groundPrimitiveId >= 0 && groundFeatureId.IsValid;
+            bool identityEmpty = groundSurfaceId == -1 && groundPrimitiveId == -1 && !groundFeatureId.IsValid;
+            if (!actorId.IsValid || groundSurfaceId < -1 || groundPrimitiveId < -1 ||
+                isStableOnGround && (!foundAnyGround || snappingPrevented) ||
+                foundAnyGround && (!identityValid || groundNormal.SqrMagnitude == FixedScalar.Zero) ||
+                !foundAnyGround && (!identityEmpty || groundNormal.SqrMagnitude != FixedScalar.Zero ||
+                                    innerGroundNormal.SqrMagnitude != FixedScalar.Zero ||
+                                    outerGroundNormal.SqrMagnitude != FixedScalar.Zero ||
+                                    snappingPrevented || ledgeState != DeterministicKccLedgeState.None) ||
+                !Enum.IsDefined(typeof(DeterministicKccLedgeState), ledgeState))
             {
                 throw new ArgumentException("Deterministic KCC body state is invalid.");
             }
             ActorId = actorId;
-            Grounded = grounded;
+            FoundAnyGround = foundAnyGround;
+            IsStableOnGround = isStableOnGround;
+            GroundSurfaceId = groundSurfaceId;
             GroundPrimitiveId = groundPrimitiveId;
             GroundFeatureId = groundFeatureId;
             GroundNormal = groundNormal;
+            InnerGroundNormal = innerGroundNormal;
+            OuterGroundNormal = outerGroundNormal;
+            SnappingPrevented = snappingPrevented;
+            LedgeState = ledgeState;
+            LastMovementIterationFoundAnyGround = lastMovementIterationFoundAnyGround;
         }
 
         public ActorId ActorId { get; }
-        public bool Grounded { get; }
+        public bool FoundAnyGround { get; }
+        public bool IsStableOnGround { get; }
+        public int GroundSurfaceId { get; }
         public int GroundPrimitiveId { get; }
         public DeterministicCollisionFeatureId GroundFeatureId { get; }
         public FixedVector3 GroundNormal { get; }
+        public FixedVector3 InnerGroundNormal { get; }
+        public FixedVector3 OuterGroundNormal { get; }
+        public bool SnappingPrevented { get; }
+        public DeterministicKccLedgeState LedgeState { get; }
+        public bool LastMovementIterationFoundAnyGround { get; }
     }
 
     public static class DeterministicKccStateCodec
     {
         const uint Magic = 0x5343434B;
-        const int Version = 2;
+        const int Version = 3;
 
         public static byte[] Write(
             StableHash collisionWorldHash,
@@ -65,11 +93,18 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 if (i > 0 && states[i - 1].ActorId.CompareTo(state.ActorId) >= 0)
                     throw new InvalidOperationException("Deterministic KCC state Actor order is not canonical.");
                 writer.WriteString(state.ActorId.Value);
-                writer.WriteBoolean(state.Grounded);
+                writer.WriteBoolean(state.FoundAnyGround);
+                writer.WriteBoolean(state.IsStableOnGround);
+                writer.WriteInt32(state.GroundSurfaceId);
                 writer.WriteInt32(state.GroundPrimitiveId);
                 writer.WriteByte((byte)state.GroundFeatureId.Kind);
                 writer.WriteInt32(state.GroundFeatureId.Index);
                 writer.WriteVector3(state.GroundNormal);
+                writer.WriteVector3(state.InnerGroundNormal);
+                writer.WriteVector3(state.OuterGroundNormal);
+                writer.WriteBoolean(state.SnappingPrevented);
+                writer.WriteByte((byte)state.LedgeState);
+                writer.WriteBoolean(state.LastMovementIterationFoundAnyGround);
             }
             return writer.ToArray();
         }
@@ -95,9 +130,16 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 states[i] = new DeterministicKccBodyState(
                     new ActorId(reader.ReadString()),
                     reader.ReadBoolean(),
+                    reader.ReadBoolean(),
+                    reader.ReadInt32(),
                     reader.ReadInt32(),
                     ReadFeature(reader.ReadByte(), reader.ReadInt32()),
-                    reader.ReadVector3());
+                    reader.ReadVector3(),
+                    reader.ReadVector3(),
+                    reader.ReadVector3(),
+                    reader.ReadBoolean(),
+                    ReadLedgeState(reader.ReadByte()),
+                    reader.ReadBoolean());
                 if (i > 0 && states[i - 1].ActorId.CompareTo(states[i].ActorId) >= 0)
                     throw new InvalidDataException("Deterministic KCC state Actor order is not canonical.");
             }
@@ -114,5 +156,11 @@ namespace ThirdPersonSimulation.DeterministicKcc
             return new DeterministicCollisionFeatureId((DeterministicCollisionFeatureKind)kind, index);
         }
 
+        static DeterministicKccLedgeState ReadLedgeState(byte value)
+        {
+            if (!Enum.IsDefined(typeof(DeterministicKccLedgeState), value))
+                throw new InvalidDataException($"Deterministic KCC ledge state '{value}' is invalid.");
+            return (DeterministicKccLedgeState)value;
+        }
     }
 }

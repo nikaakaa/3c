@@ -9,6 +9,34 @@ namespace TreeDesigner.Editor
 {
     public static class InputActionNodeDragFactory
     {
+        sealed class InputActionNodeCreationPayload :
+            IBtsmtlNodeCreationPayload
+        {
+            readonly InputAction m_Action;
+
+            public InputActionNodeCreationPayload(
+                Type nodeType,
+                InputAction action)
+            {
+                NodeType = nodeType ??
+                    throw new ArgumentNullException(
+                        nameof(nodeType));
+                m_Action = action ??
+                    throw new ArgumentNullException(
+                        nameof(action));
+            }
+
+            public Type NodeType { get; }
+
+            public void Configure(BaseNode node)
+            {
+                if (!(node is InputActionValueNode input))
+                    throw new InvalidOperationException(
+                        $"InputAction payload cannot configure '{node?.GetType().FullName}'.");
+                input.BindAction(m_Action);
+            }
+        }
+
         static readonly Vector2 NodeSpacing = new Vector2(260f, 120f);
 
         public static bool CanCreateFromDrag(BaseTreeView treeView)
@@ -49,13 +77,14 @@ namespace TreeDesigner.Editor
                 }
 
                 Vector2 position = origin + new Vector2(createdCount % 4 * NodeSpacing.x, createdCount / 4 * NodeSpacing.y);
-                BaseNode node = treeView.CreateNode(nodeType, position);
-                if (node is InputActionValueNode inputActionNode)
+                BaseNode node = treeView.CreateNode(
+                    nodeType,
+                    position,
+                    new InputActionNodeCreationPayload(
+                        nodeType,
+                        action));
+                if (node is InputActionValueNode)
                 {
-                    inputActionNode.ApplyModify("Bind InputAction", () =>
-                    {
-                        inputActionNode.BindAction(action);
-                    });
                     createdCount++;
                     handledCount++;
                 }

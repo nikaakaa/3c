@@ -46,19 +46,6 @@ namespace TreeDesigner.Editor
             m_CollapseButton.SetEnabled(!m_CollapseButton.enabledSelf);
             m_CollapseButton.SetEnabled(true);
         }
-        protected override void GeneratePorts()
-        {
-            base.GeneratePorts();
-            switch (ExposedPropertyNode.NodeType)
-            {
-                case ExposedPropertyNodeType.Get:
-                    
-                    break;
-                case ExposedPropertyNodeType.Set:
-                    m_InputPortContainer.AddPort("Input", Direction.Input, Port.Capacity.Single);
-                    break;
-            }
-        }
         protected override void GeneratePropertyPorts()
         {
             base.GeneratePropertyPorts();

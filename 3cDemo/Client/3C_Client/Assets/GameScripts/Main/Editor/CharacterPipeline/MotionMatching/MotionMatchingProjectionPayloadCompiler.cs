@@ -17,7 +17,9 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
     {
         public static MotionMatchingProjectionPayload Compile(
             CharacterMotionMatchingProfile profile,
-            CharacterPoseGraphData poseGraph,
+            CharacterPresentationPoseGraphAsset poseGraphAsset,
+            IReadOnlyList<CharacterMotionMatchingPoseSourceBinding> sourceBindings,
+            IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
             CharacterFootPlacementAnalysisSource analysisSource,
             IMotionMatchingProjectionParameterCurveResolver parameterCurveResolver)
         {
@@ -25,16 +27,24 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 throw new ArgumentNullException(nameof(profile));
             if (!analysisSource)
                 throw new ArgumentNullException(nameof(analysisSource));
-            if (poseGraph == null)
-                throw new ArgumentNullException(nameof(poseGraph));
+            if (!poseGraphAsset || poseGraphAsset.Graph == null || sourceBindings == null || sourceIndices == null)
+                throw new ArgumentNullException(nameof(poseGraphAsset));
+            CharacterTypedPoseGraph poseGraph = poseGraphAsset.Graph;
             if (parameterCurveResolver == null)
                 throw new ArgumentNullException(nameof(parameterCurveResolver));
             CharacterMotionMatchingAuthoringValidator.RequireProfile(profile);
             var databases = new List<MotionMatchingDatabasePayload>();
-            var bindings = new MotionMatchingProducerBindingPayload[profile.ProducerBindings.Count];
-            for (int bindingIndex = 0; bindingIndex < profile.ProducerBindings.Count; bindingIndex++)
+            var bindings =
+                new MotionMatchingProviderBindingPayload[
+                    sourceBindings.Count];
+            for (int bindingIndex = 0;
+                 bindingIndex < sourceBindings.Count;
+                 bindingIndex++)
             {
-                CharacterMotionMatchingProducerBinding binding = profile.ProducerBindings[bindingIndex];
+                CharacterMotionMatchingPoseSourceBinding binding = sourceBindings[bindingIndex];
+                binding.RequireValid(binding.Rig);
+                if (binding.Profile != profile || !sourceIndices.TryGetValue(binding.Slot, out PresentationPoseSourceIndex sourceIndex))
+                    throw new InvalidOperationException($"Motion Matching Pose source binding '{binding.name}' is outside the compiled source catalog.");
                 int firstDatabase = databases.Count;
                 for (int databaseIndex = 0; databaseIndex < binding.Databases.Count; databaseIndex++)
                 {
@@ -44,10 +54,13 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                         analysisSource,
                         parameterCurveResolver));
                 }
-                bindings[bindingIndex] = new MotionMatchingProducerBindingPayload(
-                    binding.ProgramProducerId,
-                    binding.AnimationChannelId,
-                    ResolveSelectionInputNodeId(poseGraph, binding),
+                if (!(binding.Slot is CharacterMotionMatchingPoseSourceSlot slot))
+                    throw new InvalidOperationException($"Motion Matching Pose source binding '{binding.name}' has the wrong Source Slot kind.");
+                PoseNodeId playerNodeId = ResolveProviderNodeId(poseGraphAsset, poseGraph, slot);
+                bindings[bindingIndex] = new MotionMatchingProviderBindingPayload(
+                    $"pose-provider/{playerNodeId}",
+                    sourceIndex,
+                    playerNodeId,
                     binding.SearchDomainId,
                     firstDatabase,
                     binding.Databases.Count);
@@ -65,45 +78,90 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 bindings);
         }
 
-        static PoseNodeId ResolveSelectionInputNodeId(
-            CharacterPoseGraphData graph,
-            CharacterMotionMatchingProducerBinding binding)
+        static PoseNodeId ResolveProviderNodeId(
+            CharacterPresentationPoseGraphAsset owner,
+            CharacterTypedPoseGraph graph,
+            CharacterMotionMatchingPoseSourceSlot slot)
         {
             PoseNodeId result = default;
-            ResolveSelectionInputNodeId(graph, binding, string.Empty, ref result);
+            ResolveProviderNodeId(
+                owner,
+                graph,
+                slot,
+                string.Empty,
+                ref result);
             return result.IsValid
                 ? result
                 : throw new InvalidOperationException(
-                    $"Motion Matching producer '{binding.ProgramProducerId}' has no matching Selection Input in Pose Graph '{graph.GraphId}'.");
+                    $"Motion Matching Source Slot '{slot.name}' has no matching player node in Pose Graph '{graph.GraphId}'.");
         }
 
-        static void ResolveSelectionInputNodeId(
-            CharacterPoseGraphData graph,
-            CharacterMotionMatchingProducerBinding binding,
+        static void ResolveProviderNodeId(
+            CharacterPresentationPoseGraphAsset owner,
+            CharacterTypedPoseGraph graph,
+            CharacterMotionMatchingPoseSourceSlot slot,
             string scope,
             ref PoseNodeId result)
         {
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
-                CharacterPoseNodeDefinition node = graph.Nodes[i];
+                CharacterTypedPoseNode node = graph.Nodes[i];
                 if (node == null)
                     continue;
                 PoseNodeId scopedNodeId = string.IsNullOrEmpty(scope)
                     ? node.NodeId
                     : new PoseNodeId(scope + "/" + node.NodeId.Value);
-                if (node.Kind == CharacterPoseNodeKind.MotionMatchingSelectionInput &&
-                    node.AnimationChannelId == binding.AnimationChannelId &&
-                    string.Equals(node.ProgramProducerId, binding.ProgramProducerId, StringComparison.Ordinal))
+                if ((node.Kind ==
+                         CharacterPoseNodeKind.SelectedPosePlayer ||
+                     node.Kind ==
+                         CharacterPoseNodeKind.BlendStack) &&
+                    node.PresentationPoseSourceSlot == slot)
                 {
                     if (result.IsValid)
                         throw new InvalidOperationException(
-                            $"Motion Matching producer '{binding.ProgramProducerId}' matches more than one Pose Graph Selection Input.");
+                            $"Motion Matching Source Slot '{slot.name}' matches more than one Pose Graph player node.");
                     result = scopedNodeId;
                 }
-                if (node.Kind != CharacterPoseNodeKind.PoseSubgraph || node.Subgraph == null || !node.Subgraph.IsExclusive)
+                if (node.Kind ==
+                        CharacterPoseNodeKind.PoseStateMachine &&
+                    node.PoseStateMachine != null)
+                {
+                    for (int stateIndex = 0;
+                         stateIndex <
+                         node.PoseStateMachine.States.Count;
+                         stateIndex++)
+                    {
+                        CharacterPoseStateDefinition state =
+                            node.PoseStateMachine.States[
+                                stateIndex];
+                        if (state == null ||
+                            !state.PoseGraphId.IsValid)
+                            continue;
+                        CharacterTypedPoseGraph stateGraph =
+                            owner.RequireGraph(
+                                state.PoseGraphId);
+                        ResolveProviderNodeId(
+                            owner,
+                            stateGraph,
+                            slot,
+                            scopedNodeId.Value +
+                            "/state/" +
+                            state.StateId.Value,
+                            ref result);
+                    }
+                }
+                if (node.Kind != CharacterPoseNodeKind.PoseSubgraph ||
+                    node.Subgraph == null ||
+                    !node.Subgraph.PoseGraphId.IsValid)
                     continue;
-                CharacterPoseGraphData child = node.Subgraph.HasInline ? node.Subgraph.Inline : node.Subgraph.Shared.Graph;
-                ResolveSelectionInputNodeId(child, binding, scopedNodeId.Value + "/" + child.GraphId, ref result);
+                CharacterTypedPoseGraph child =
+                    owner.RequireGraph(node.Subgraph.PoseGraphId);
+                ResolveProviderNodeId(
+                    owner,
+                    child,
+                    slot,
+                    scopedNodeId.Value + "/" + child.GraphId,
+                    ref result);
             }
         }
 

@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         [SerializeField] Transform m_LogicalSpawn;
         [SerializeField] Transform m_VisualRoot;
         [SerializeField] CharacterBodyPresentationProfile m_BodyPresentationProfile;
-        [SerializeField] CharacterFootPlacementComposition m_FootPlacement;
+        [SerializeField] CharacterWorldAwarePresentationBinding m_WorldAwarePresentation;
         [SerializeField] CharacterEquipmentRigBindingCatalog m_EquipmentRigBindings;
         [SerializeField] AnimancerComponent m_Animancer;
         [SerializeField] CharacterAnimationRigBinding m_AnimationRigBinding;
@@ -48,6 +48,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public ActorId ActorId => new ActorId(Require(m_ActorId, nameof(m_ActorId)));
         public ActorId SimulationActorId => ActorId;
         public SimulationSessionHost SessionHost => m_SessionHost;
+        public FixedCharacterSimulationProgramAsset ProgramAsset => m_Program;
+        public CharacterPresentationProjectionAsset ProjectionAsset => m_PresentationProjection;
         public FixedCharacterControlSource ControlSource => m_ControlSource;
         public ThirdPersonCameraController CameraRig => m_CameraRig;
         public CharacterPresentationRole PresentationRole => m_PresentationRole;
@@ -65,7 +67,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             Transform logicalSpawn,
             Transform visualRoot,
             CharacterBodyPresentationProfile bodyPresentationProfile,
-            CharacterFootPlacementComposition footPlacement,
+            CharacterWorldAwarePresentationBinding worldAwarePresentation,
             CharacterEquipmentRigBindingCatalog equipmentRigBindings,
             AnimancerComponent animancer,
             CharacterAnimationRigBinding animationRigBinding,
@@ -88,7 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_VisualRoot = visualRoot ? visualRoot : throw new ArgumentNullException(nameof(visualRoot));
             m_BodyPresentationProfile = bodyPresentationProfile ? bodyPresentationProfile :
                 throw new ArgumentNullException(nameof(bodyPresentationProfile));
-            m_FootPlacement = footPlacement ? footPlacement : throw new ArgumentNullException(nameof(footPlacement));
+            m_WorldAwarePresentation = worldAwarePresentation ? worldAwarePresentation : throw new ArgumentNullException(nameof(worldAwarePresentation));
             m_EquipmentRigBindings = equipmentRigBindings;
             m_Animancer = animancer ? animancer : throw new ArgumentNullException(nameof(animancer));
             m_AnimationRigBinding = animationRigBinding
@@ -156,15 +158,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new InvalidOperationException($"Fixed Character Host '{name}' requires a visual root Transform.");
             CharacterBodyPresentationProfile bodyPresentationProfile = m_BodyPresentationProfile ? m_BodyPresentationProfile :
                 throw new InvalidOperationException($"Fixed Character Host '{name}' requires a Body Presentation Profile.");
-            CharacterFootPlacementComposition footPlacement = m_FootPlacement ? m_FootPlacement :
-                throw new InvalidOperationException($"Fixed Character Host '{name}' requires a Foot Placement Composition.");
+            CharacterWorldAwarePresentationBinding worldAwarePresentation = m_WorldAwarePresentation ? m_WorldAwarePresentation :
+                throw new InvalidOperationException($"Fixed Character Host '{name}' requires a World-Aware Presentation Binding.");
             AnimancerComponent animancer = m_Animancer ? m_Animancer :
                 throw new InvalidOperationException($"Fixed Character Host '{name}' requires an AnimancerComponent.");
             CharacterAnimationRigBinding animationRigBinding = m_AnimationRigBinding
                 ? m_AnimationRigBinding
                 : throw new InvalidOperationException($"Fixed Character Host '{name}' requires an Animation Rig Binding.");
             ActorId actorId = ActorId;
-            ICharacterFootPlacementSolver footPlacementSolver = footPlacement.RequireSolver(visualRoot);
             PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
             FixedCharacterSimulationProgram program = programAsset.Load();
             IUnityFixedCharacterControlSourceRuntime controlSource = null;
@@ -180,12 +181,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     program.Manifest.SourceRevision.Value,
                     program.ProgramHash.ToString(),
                     program.SourceMap);
+                var diagnosticsStore = new RuntimeDiagnosticsStore();
+                CharacterPipelineTraceCommandLine.Enable(diagnosticsStore);
                 var diagnosticsContext = new RuntimeDiagnosticsContext(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     debugProgram.Revision,
                     debugProgram.SourceMap,
-                    new RuntimeDiagnosticsStore());
+                    diagnosticsStore);
                 diagnosticsTarget = new RuntimeDiagnosticsTarget(name, GetInstanceID(), diagnosticsContext);
                 CharacterPresentationSemanticContract presentationContract =
                     FixedCharacterPresentationContractAdapter.Create(program);
@@ -220,9 +223,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                             visualRoot,
                             presentationBody,
                             bodyPresentationProfile,
-                            footPlacement.Profile,
-                            footPlacement.Rig,
-                            footPlacementSolver,
+                            worldAwarePresentation,
                             physicsScene,
                             cameraRig,
                             m_CameraFollowAnchor,
@@ -245,9 +246,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                             visualRoot,
                             presentationBody,
                             bodyPresentationProfile,
-                            footPlacement.Profile,
-                            footPlacement.Rig,
-                            footPlacementSolver,
+                            worldAwarePresentation,
                             physicsScene,
                             m_EquipmentRigBindings,
                             diagnosticsContext);
@@ -267,6 +266,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     actorId,
                     program,
                     presentationContract,
+                    projection.ProjectionRevision,
                     Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
                     initialBody,
                     controlSource,

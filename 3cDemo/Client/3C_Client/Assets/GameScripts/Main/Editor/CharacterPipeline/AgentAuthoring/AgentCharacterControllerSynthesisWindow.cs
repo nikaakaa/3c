@@ -1,5 +1,6 @@
+using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using System.Linq;
 using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline;
 using UnityEditor;
@@ -9,12 +10,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public sealed class AgentCharacterControllerSynthesisWindow : EditorWindow
     {
-        enum InputKind
-        {
-            Intent,
-            Patch
-        }
-
         enum ControllerDomain
         {
             CharacterController,
@@ -23,14 +18,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         ControllerDomain m_Domain;
         UnityEngine.Object m_Root;
-        InputKind m_InputKind;
-        string m_Json = string.Empty;
         Vector2 m_Scroll;
-        AgentCompileReport m_LastReport;
+        AgentAuthoringResponse m_LastResponse;
+        string m_ExpectedDocumentHash = string.Empty;
+        bool m_ShowPlannedDiff;
+        bool m_ShowAppliedDiff;
 
         public static void Open(CharacterPipelineDefinition definition)
         {
-            AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Controller");
+            AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Document v3");
             window.m_Domain = ControllerDomain.CharacterController;
             window.m_Root = definition;
             window.Show();
@@ -38,7 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public static void Open(AIControllerDefinition definition)
         {
-            AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Controller");
+            AgentCharacterControllerSynthesisWindow window = GetWindow<AgentCharacterControllerSynthesisWindow>("Agent Document v3");
             window.m_Domain = ControllerDomain.AIController;
             window.m_Root = definition;
             window.Show();
@@ -48,173 +44,156 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             m_Scroll = EditorGUILayout.BeginScrollView(m_Scroll);
             m_Domain = (ControllerDomain)EditorGUILayout.EnumPopup("Domain", m_Domain);
-            System.Type rootType = m_Domain == ControllerDomain.CharacterController ? typeof(CharacterPipelineDefinition) : typeof(AIControllerDefinition);
+            System.Type rootType = m_Domain == ControllerDomain.CharacterController
+                ? typeof(CharacterPipelineDefinition)
+                : typeof(AIControllerDefinition);
             if (m_Root && !rootType.IsInstanceOfType(m_Root))
                 m_Root = null;
             m_Root = EditorGUILayout.ObjectField("Root Definition", m_Root, rootType, false);
             EditorGUILayout.LabelField("Schema", AgentAuthoringSchema.Version);
-            m_InputKind = (InputKind)EditorGUILayout.EnumPopup("Input", m_InputKind);
+            EditorGUILayout.LabelField("Root Path", m_Root ? AssetDatabase.GetAssetPath(m_Root) : string.Empty);
+            EditorGUILayout.LabelField("Root Identity", m_LastResponse?.rootIdentity ?? string.Empty);
+            EditorGUILayout.LabelField("Package Path", m_LastResponse?.packagePath ?? string.Empty);
+            EditorGUILayout.LabelField("Sync State", m_LastResponse?.syncState ?? string.Empty);
+            EditorGUILayout.LabelField("Editable Hash", m_LastResponse?.editableHash ?? string.Empty);
+            EditorGUILayout.LabelField("Context Hash", m_LastResponse?.contextHash ?? string.Empty);
+            EditorGUILayout.LabelField("Document Hash", m_LastResponse?.documentHash ?? string.Empty);
+            EditorGUILayout.LabelField("Plan Hash", m_LastResponse?.planHash ?? string.Empty);
 
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Export Snapshot"))
-                ExportSnapshot();
-            if (GUILayout.Button("Export Full Debug"))
-                ExportFullDebugSnapshot();
-            if (GUILayout.Button("Load JSON"))
-                LoadJson();
-            if (GUILayout.Button("Save Report"))
-                SaveReport();
+            if (GUILayout.Button("Checkout"))
+                Execute(AgentAuthoringAction.CheckoutDocument);
+            if (GUILayout.Button("Open Package") &&
+                !string.IsNullOrEmpty(m_LastResponse?.packagePath) &&
+                Directory.Exists(m_LastResponse.packagePath))
+                EditorUtility.RevealInFinder(m_LastResponse.packagePath);
+            if (GUILayout.Button("Rebase"))
+                Rebase();
             EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.LabelField("Agent JSON", EditorStyles.boldLabel);
-            m_Json = EditorGUILayout.TextArea(m_Json, GUILayout.MinHeight(180f));
 
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Dry Run"))
-                Run(false);
-            if (GUILayout.Button("Apply"))
-                Run(true);
-            if (GUILayout.Button("Validate"))
-                Validate();
-            using (new EditorGUI.DisabledScope(m_Domain != ControllerDomain.CharacterController))
+                DryRun();
+            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(m_ExpectedDocumentHash)))
             {
-                if (GUILayout.Button("Evaluate"))
-                    Evaluate();
+                if (GUILayout.Button("Apply"))
+                    Execute(AgentAuthoringAction.ApplyDocument, m_ExpectedDocumentHash);
             }
+            if (GUILayout.Button("Validate"))
+                Execute(AgentAuthoringAction.Validate);
             EditorGUILayout.EndHorizontal();
 
             DrawReport();
             EditorGUILayout.EndScrollView();
         }
 
-        void ExportSnapshot()
+        void DryRun()
         {
-            if (!m_Root)
+            AgentAuthoringResponse response = Execute(AgentAuthoringAction.DryRunDocument);
+            m_ExpectedDocumentHash = response.success ? response.documentHash : string.Empty;
+        }
+
+        void Rebase()
+        {
+            if (!EditorUtility.DisplayDialog(
+                    "Rebase Agent Document",
+                    "接受当前Unity树与只读context作为新基线，并保留Document目标正文？",
+                    "确认Rebase",
+                    "取消"))
                 return;
-            AgentAuthoringResponse response = Execute(AgentAuthoringAction.ExportSnapshot);
-            if (response.success)
-                AgentAuthoringJsonUtility.SaveJsonPanel("Export Agent Snapshot", $"{m_Root.name}_AgentSnapshot", response.snapshot);
-            m_LastReport = response.report;
+            Execute(AgentAuthoringAction.RebaseDocument, confirmRebase: true);
         }
 
-        void ExportFullDebugSnapshot()
+        AgentAuthoringResponse Execute(
+            AgentAuthoringAction action,
+            string expectedDocumentHash = null,
+            bool confirmRebase = false)
         {
-            if (!m_Root)
-                return;
-            AgentAuthoringResponse response = Execute(AgentAuthoringAction.ExportSnapshot);
-            if (response.success)
-                AgentAuthoringJsonUtility.SaveJsonPanel("Export Full Agent Snapshot", $"{m_Root.name}_AgentSnapshot_FullDebug", response.snapshot);
-            m_LastReport = response.report;
-        }
-
-        void LoadJson()
-        {
-            string path = EditorUtility.OpenFilePanel("Load Agent JSON", Application.dataPath, "json");
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
-                return;
-
-            m_Json = File.ReadAllText(path, Encoding.UTF8);
-        }
-
-        void SaveReport()
-        {
-            if (m_LastReport == null)
-                return;
-
-            AgentAuthoringJsonUtility.SaveJsonPanel("Save Agent Compile Report", "AgentCompileReport", m_LastReport);
-        }
-
-        void Run(bool apply)
-        {
-            m_LastReport = new AgentCompileReport { success = true };
-            if (!m_Root)
-            {
-                m_LastReport.Error("definition", "missing_definition", "Controller root definition 缺失。");
-                return;
-            }
-
-            if (!TryBuildPatchJson(out string patchJson, m_LastReport))
-                return;
-
-            AgentAuthoringResponse response = Execute(apply ? AgentAuthoringAction.ApplyPatch : AgentAuthoringAction.DryRunPatch, patchJson);
-            m_LastReport = response.report;
-        }
-
-        bool TryBuildPatchJson(out string patchJson, AgentCompileReport report)
-        {
-            patchJson = m_Json;
-            if (m_InputKind == InputKind.Patch)
-                return true;
-
-            if (!AgentAuthoringJsonUtility.TryFromJson(m_Json, out AgentControllerIntent intent, report, "intent-json"))
-                return false;
-
-            AgentAuthoringResponse response = Execute(AgentAuthoringAction.ExportSnapshot);
-            if (!response.success)
-            {
-                m_LastReport = response.report;
-                return false;
-            }
-            AgentGraphSnapshot snapshot = response.snapshot;
-            if (!new AgentMacroLibrary().TryExpand(intent, snapshot, out AgentPatchIR patch, report))
-                return false;
-
-            patchJson = AgentAuthoringJsonUtility.ToJson(patch);
-            return true;
-        }
-
-        void Validate()
-        {
-            if (!m_Root)
-            {
-                m_LastReport = new AgentCompileReport { success = false };
-                m_LastReport.Error("definition", "missing_definition", "Controller root definition 缺失。");
-                return;
-            }
-
-            AgentAuthoringResponse response = Execute(AgentAuthoringAction.Validate);
-            m_LastReport = response.report;
-        }
-
-        void Evaluate()
-        {
-            m_LastReport = m_Root is not CharacterPipelineDefinition definition
-                ? new AgentCompileReport { success = false }
-                : new AgentSynthesisEvaluator().EvaluateDefaultSamples(definition);
-            if (m_Root is not CharacterPipelineDefinition)
-                m_LastReport.Error("definition", "evaluation_domain_unsupported", "Evaluate samples 只适用于 CharacterController domain。");
-        }
-
-        AgentAuthoringResponse Execute(AgentAuthoringAction action, string patchJson = null)
-        {
-            return new AgentPatchAuthoringService().Execute(new AgentAuthoringRequest
+            m_ExpectedDocumentHash = action == AgentAuthoringAction.ApplyDocument ? m_ExpectedDocumentHash : string.Empty;
+            m_LastResponse = new AgentAuthoringDocumentApplicationService().Execute(new AgentAuthoringRequest
             {
                 action = action,
                 domain = m_Domain.ToString(),
                 rootAssetPath = m_Root ? AssetDatabase.GetAssetPath(m_Root) : string.Empty,
-                patchJson = patchJson
+                expectedDocumentHash = expectedDocumentHash,
+                confirmRebase = confirmRebase
             });
+            return m_LastResponse;
         }
 
         void DrawReport()
         {
-            if (m_LastReport == null)
+            AgentCompileReport report = m_LastResponse?.report;
+            if (report == null)
                 return;
 
             EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField(m_LastReport.success ? "Report: Success" : "Report: Issues", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("Applied", m_LastReport.applied.ToString());
-            EditorGUILayout.LabelField("Diff Size", m_LastReport.metrics.diffSize.ToString());
-
-            for (int i = 0; i < m_LastReport.messages.Count; i++)
+            EditorGUILayout.LabelField(report.success ? "Report: Success" : "Report: Issues", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Applied", report.applied.ToString());
+            EditorGUILayout.LabelField("Diff Size", report.metrics.diffSize.ToString());
+            DrawPresentationSummary(report);
+            m_ShowPlannedDiff = EditorGUILayout.Foldout(m_ShowPlannedDiff, $"Planned Diff ({report.plannedDiff.Count})");
+            if (m_ShowPlannedDiff)
+                DrawDiff(report.plannedDiff);
+            m_ShowAppliedDiff = EditorGUILayout.Foldout(m_ShowAppliedDiff, $"Applied Diff ({report.appliedDiff.Count})");
+            if (m_ShowAppliedDiff)
+                DrawDiff(report.appliedDiff);
+            for (int i = 0; i < report.messages.Count; i++)
             {
-                AgentCompileMessage message = m_LastReport.messages[i];
+                AgentCompileMessage message = report.messages[i];
                 MessageType type = message.severity == AgentReportSeverity.Error.ToString()
                     ? MessageType.Error
                     : message.severity == AgentReportSeverity.Warning.ToString()
                         ? MessageType.Warning
                         : MessageType.Info;
                 EditorGUILayout.HelpBox($"{message.path}\n{message.code}: {message.message}\n{message.suggestion}", type);
+            }
+        }
+
+        static void DrawPresentationSummary(AgentCompileReport report)
+        {
+            AgentCompileDiffEntry[] planned = report.plannedDiff
+                .Where(IsPresentationDiff)
+                .ToArray();
+            AgentCompileDiffEntry[] applied = report.appliedDiff
+                .Where(IsPresentationDiff)
+                .ToArray();
+            int profile = planned.Count(value =>
+                value.target?.StartsWith(
+                    "editable/presentation/profile.json",
+                    System.StringComparison.Ordinal) == true);
+            int stateMachines = planned.Count(value =>
+                value.target?.StartsWith(
+                    "editable/presentation/pose-state-machines/",
+                    System.StringComparison.Ordinal) == true);
+            int graphs = planned.Length - profile - stateMachines;
+            EditorGUILayout.LabelField(
+                "Presentation Dirty",
+                planned.Length == 0
+                    ? "Clean"
+                    : $"Profile {profile}, Graph {graphs}, StateMachine {stateMachines}");
+            EditorGUILayout.LabelField(
+                "Presentation Applied",
+                applied.Length.ToString());
+            EditorGUILayout.LabelField(
+                "Touched Owners",
+                report.touchedOwners.Count.ToString());
+        }
+
+        static bool IsPresentationDiff(AgentCompileDiffEntry value) =>
+            value?.mutationId?.StartsWith(
+                "presentation-",
+                System.StringComparison.Ordinal) == true;
+
+        static void DrawDiff(IReadOnlyList<AgentCompileDiffEntry> entries)
+        {
+            for (int i = 0; i < entries.Count; i++)
+            {
+                AgentCompileDiffEntry entry = entries[i];
+                EditorGUILayout.LabelField(
+                    $"{entry.mutationId} | {entry.action}",
+                    $"{entry.graph} | {entry.target} | {entry.detail}",
+                    EditorStyles.wordWrappedMiniLabel);
             }
         }
     }

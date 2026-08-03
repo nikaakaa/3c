@@ -18,7 +18,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
         Movement = 6,
         Step = 7,
         Ground = 8,
-        StaticReconstraint = 9
+        StaticReconstraint = 9,
+        Raycast = 10
     }
 
     public sealed class DeterministicKccQueryException : InvalidOperationException
@@ -45,32 +46,32 @@ namespace ThirdPersonSimulation.DeterministicKcc
 
     public readonly struct DeterministicActorContactShape : IEquatable<DeterministicActorContactShape>
     {
-        public DeterministicActorContactShape(FixedScalar radius, FixedScalar height, FixedScalar skinWidth)
+        public DeterministicActorContactShape(FixedScalar radius, FixedScalar height, FixedScalar collisionOffset)
         {
             if (radius <= FixedScalar.Zero)
                 throw new ArgumentOutOfRangeException(nameof(radius));
             if (height <= radius + radius)
                 throw new ArgumentOutOfRangeException(nameof(height));
-            if (skinWidth < FixedScalar.Zero || skinWidth >= radius)
-                throw new ArgumentOutOfRangeException(nameof(skinWidth));
+            if (collisionOffset <= FixedScalar.Zero || collisionOffset >= radius)
+                throw new ArgumentOutOfRangeException(nameof(collisionOffset));
             Radius = radius;
             Height = height;
-            SkinWidth = skinWidth;
+            CollisionOffset = collisionOffset;
             ConfigurationHash = default;
             ConfigurationHash = DeterministicActorContactShapeCodec.ComputeHash(this);
         }
 
         public FixedScalar Radius { get; }
         public FixedScalar Height { get; }
-        public FixedScalar SkinWidth { get; }
-        public FixedScalar SeparationRadius => Radius + SkinWidth;
+        public FixedScalar CollisionOffset { get; }
+        public FixedScalar SeparationRadius => Radius + CollisionOffset;
         public StableHash ConfigurationHash { get; }
 
         public bool Equals(DeterministicActorContactShape other) =>
-            Radius == other.Radius && Height == other.Height && SkinWidth == other.SkinWidth;
+            Radius == other.Radius && Height == other.Height && CollisionOffset == other.CollisionOffset;
 
         public override bool Equals(object obj) => obj is DeterministicActorContactShape other && Equals(other);
-        public override int GetHashCode() => HashCode.Combine(Radius, Height, SkinWidth);
+        public override int GetHashCode() => HashCode.Combine(Radius, Height, CollisionOffset);
         public static bool operator ==(DeterministicActorContactShape left, DeterministicActorContactShape right) => left.Equals(right);
         public static bool operator !=(DeterministicActorContactShape left, DeterministicActorContactShape right) => !left.Equals(right);
     }
@@ -78,7 +79,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
     public static class DeterministicActorContactShapeCodec
     {
         const uint Magic = 0x48534341;
-        const int Version = 1;
+        const int Version = 2;
 
         public static byte[] Write(DeterministicActorContactShape shape)
         {
@@ -87,7 +88,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             writer.WriteInt32(Version);
             writer.WriteInt64(shape.Radius.Raw);
             writer.WriteInt64(shape.Height.Raw);
-            writer.WriteInt64(shape.SkinWidth.Raw);
+            writer.WriteInt64(shape.CollisionOffset.Raw);
             return writer.ToArray();
         }
 
@@ -107,40 +108,37 @@ namespace ThirdPersonSimulation.DeterministicKcc
         public static StableHash ComputeHash(DeterministicActorContactShape shape)
         {
             using var writer = new CanonicalWriter();
-            writer.WriteString("deterministic-actor-contact-shape/1");
-            writer.WriteBytes(WriteWithoutHash(shape));
+            writer.WriteString("deterministic-actor-contact-shape/2");
+            writer.WriteBytes(Write(shape));
             return writer.ComputeHash();
-        }
-
-        static byte[] WriteWithoutHash(DeterministicActorContactShape shape)
-        {
-            using var writer = new CanonicalWriter();
-            writer.WriteUInt32(Magic);
-            writer.WriteInt32(Version);
-            writer.WriteInt64(shape.Radius.Raw);
-            writer.WriteInt64(shape.Height.Raw);
-            writer.WriteInt64(shape.SkinWidth.Raw);
-            return writer.ToArray();
         }
     }
 
     public sealed class DeterministicKccConfiguration
     {
-        public const string ActorContactPolicyVersion = "solid-body-block/1";
-        public const string QuerySemanticVersion = "fixed-capsule-conservative-cast/3";
-        public const string MotorSemanticVersion = "fixed-kcc-motor/3";
+        public const string ActorContactPolicyVersion = "solid-body-block/2";
+        public const string QuerySemanticVersion = "fixed-capsule-ray-conservative-cast/4";
+        public const string MotorSemanticVersion = "fixed-philippe-kcc-motor/8";
 
         public DeterministicKccConfiguration(
             FixedScalar radius,
             FixedScalar height,
-            FixedScalar skinWidth,
+            FixedScalar collisionOffset,
             FixedScalar minimumGroundNormalY,
             FixedScalar maximumStepHeight,
-            FixedScalar groundSnapDistance,
+            FixedScalar groundDetectionExtraDistance,
+            FixedScalar groundProbeReboundDistance,
+            FixedScalar minimumGroundProbingDistance,
+            FixedScalar secondaryProbeVerticalDistance,
+            FixedScalar secondaryProbeHorizontalDistance,
+            FixedScalar steppingForwardDistance,
+            FixedScalar minimumRequiredStepDepth,
+            FixedScalar maximumStableDistanceFromLedge,
+            FixedScalar maximumStableDenivelationAngle,
+            FixedScalar verticalObstructionCorrelation,
             FixedScalar maximumMovementDistance,
             FixedScalar queryTolerance,
             FixedScalar minimumMovementDistance,
-            FixedScalar minimumStepForwardDistance,
             FixedScalar normalMergeDot,
             int maximumSweepIterations,
             int maximumContactIterations,
@@ -150,27 +148,46 @@ namespace ThirdPersonSimulation.DeterministicKcc
             int maximumActorContactIterations,
             DeterministicActorContactResponseKind actorContactResponse = DeterministicActorContactResponseKind.SolidBodyBlock)
         {
-            if (radius <= FixedScalar.Zero || height <= radius + radius || skinWidth < FixedScalar.Zero ||
+            if (radius <= FixedScalar.Zero || height <= radius + radius ||
+                collisionOffset <= FixedScalar.Zero || collisionOffset >= radius ||
                 minimumGroundNormalY <= FixedScalar.Zero || minimumGroundNormalY > FixedScalar.One ||
-                maximumStepHeight < FixedScalar.Zero || groundSnapDistance < FixedScalar.Zero ||
+                maximumStepHeight < FixedScalar.Zero || groundDetectionExtraDistance < FixedScalar.Zero ||
+                groundProbeReboundDistance <= FixedScalar.Zero || minimumGroundProbingDistance <= FixedScalar.Zero ||
+                secondaryProbeVerticalDistance <= FixedScalar.Zero || secondaryProbeHorizontalDistance <= FixedScalar.Zero ||
+                steppingForwardDistance <= FixedScalar.Zero || minimumRequiredStepDepth <= FixedScalar.Zero ||
+                minimumRequiredStepDepth > radius || maximumStableDistanceFromLedge < FixedScalar.Zero ||
+                maximumStableDistanceFromLedge > radius || maximumStableDenivelationAngle < FixedScalar.Zero ||
+                maximumStableDenivelationAngle > FixedScalar.FromInt64(180) ||
+                verticalObstructionCorrelation < FixedScalar.Zero || verticalObstructionCorrelation >= FixedScalar.One ||
                 maximumMovementDistance <= FixedScalar.Zero || queryTolerance <= FixedScalar.Zero ||
-                queryTolerance >= skinWidth || minimumMovementDistance <= FixedScalar.Zero ||
-                minimumStepForwardDistance <= FixedScalar.Zero || normalMergeDot <= FixedScalar.Zero ||
-                normalMergeDot >= FixedScalar.One || maximumSweepIterations <= 0 || maximumContactIterations <= 0 ||
+                queryTolerance >= collisionOffset || minimumMovementDistance <= FixedScalar.Zero ||
+                normalMergeDot <= FixedScalar.Zero || normalMergeDot >= FixedScalar.One ||
+                maximumSweepIterations <= 0 || maximumContactIterations <= 0 ||
                 maximumCandidates <= 0 || maximumContacts <= 0 || maximumActorPairs <= 0 ||
                 maximumActorPairs > 4096 || maximumActorContactIterations <= 0 || maximumActorContactIterations > 32 ||
                 actorContactResponse != DeterministicActorContactResponseKind.SolidBodyBlock)
             {
                 throw new ArgumentException("Deterministic KCC configuration is invalid.");
             }
-            ActorContactShape = new DeterministicActorContactShape(radius, height, skinWidth);
+
+            ActorContactShape = new DeterministicActorContactShape(radius, height, collisionOffset);
             MinimumGroundNormalY = minimumGroundNormalY;
             MaximumStepHeight = maximumStepHeight;
-            GroundSnapDistance = groundSnapDistance;
+            GroundDetectionExtraDistance = groundDetectionExtraDistance;
+            GroundProbeReboundDistance = groundProbeReboundDistance;
+            MinimumGroundProbingDistance = minimumGroundProbingDistance;
+            SecondaryProbeVerticalDistance = secondaryProbeVerticalDistance;
+            SecondaryProbeHorizontalDistance = secondaryProbeHorizontalDistance;
+            SteppingForwardDistance = steppingForwardDistance;
+            MinimumRequiredStepDepth = minimumRequiredStepDepth;
+            MaximumStableDistanceFromLedge = maximumStableDistanceFromLedge;
+            MaximumStableDenivelationAngle = maximumStableDenivelationAngle;
+            FixedAngle.SinCos(new FixedYaw(maximumStableDenivelationAngle), out _, out FixedScalar denivelationCosine);
+            MinimumStableDenivelationNormalDot = denivelationCosine;
+            VerticalObstructionCorrelation = verticalObstructionCorrelation;
             MaximumMovementDistance = maximumMovementDistance;
             QueryTolerance = queryTolerance;
             MinimumMovementDistance = minimumMovementDistance;
-            MinimumStepForwardDistance = minimumStepForwardDistance;
             NormalMergeDot = normalMergeDot;
             MaximumSweepIterations = maximumSweepIterations;
             MaximumContactIterations = maximumContactIterations;
@@ -180,15 +197,23 @@ namespace ThirdPersonSimulation.DeterministicKcc
             MaximumActorContactIterations = maximumActorContactIterations;
             ActorContactResponse = actorContactResponse;
             ConfigurationHash = StableHash.Compute(
-                "deterministic-kcc-configuration/5",
+                "deterministic-kcc-configuration/7",
                 ActorContactShape.ConfigurationHash.Value,
                 minimumGroundNormalY.Raw.ToString(),
                 maximumStepHeight.Raw.ToString(),
-                groundSnapDistance.Raw.ToString(),
+                groundDetectionExtraDistance.Raw.ToString(),
+                groundProbeReboundDistance.Raw.ToString(),
+                minimumGroundProbingDistance.Raw.ToString(),
+                secondaryProbeVerticalDistance.Raw.ToString(),
+                secondaryProbeHorizontalDistance.Raw.ToString(),
+                steppingForwardDistance.Raw.ToString(),
+                minimumRequiredStepDepth.Raw.ToString(),
+                maximumStableDistanceFromLedge.Raw.ToString(),
+                maximumStableDenivelationAngle.Raw.ToString(),
+                verticalObstructionCorrelation.Raw.ToString(),
                 maximumMovementDistance.Raw.ToString(),
                 queryTolerance.Raw.ToString(),
                 minimumMovementDistance.Raw.ToString(),
-                minimumStepForwardDistance.Raw.ToString(),
                 normalMergeDot.Raw.ToString(),
                 maximumSweepIterations.ToString(),
                 maximumContactIterations.ToString(),
@@ -205,14 +230,23 @@ namespace ThirdPersonSimulation.DeterministicKcc
         public DeterministicActorContactShape ActorContactShape { get; }
         public FixedScalar Radius => ActorContactShape.Radius;
         public FixedScalar Height => ActorContactShape.Height;
-        public FixedScalar SkinWidth => ActorContactShape.SkinWidth;
+        public FixedScalar CollisionOffset => ActorContactShape.CollisionOffset;
         public FixedScalar MinimumGroundNormalY { get; }
         public FixedScalar MaximumStepHeight { get; }
-        public FixedScalar GroundSnapDistance { get; }
+        public FixedScalar GroundDetectionExtraDistance { get; }
+        public FixedScalar GroundProbeReboundDistance { get; }
+        public FixedScalar MinimumGroundProbingDistance { get; }
+        public FixedScalar SecondaryProbeVerticalDistance { get; }
+        public FixedScalar SecondaryProbeHorizontalDistance { get; }
+        public FixedScalar SteppingForwardDistance { get; }
+        public FixedScalar MinimumRequiredStepDepth { get; }
+        public FixedScalar MaximumStableDistanceFromLedge { get; }
+        public FixedScalar MaximumStableDenivelationAngle { get; }
+        public FixedScalar MinimumStableDenivelationNormalDot { get; }
+        public FixedScalar VerticalObstructionCorrelation { get; }
         public FixedScalar MaximumMovementDistance { get; }
         public FixedScalar QueryTolerance { get; }
         public FixedScalar MinimumMovementDistance { get; }
-        public FixedScalar MinimumStepForwardDistance { get; }
         public FixedScalar NormalMergeDot { get; }
         public int MaximumSweepIterations { get; }
         public int MaximumContactIterations { get; }
@@ -226,14 +260,22 @@ namespace ThirdPersonSimulation.DeterministicKcc
         public static DeterministicKccConfiguration Default { get; } = new DeterministicKccConfiguration(
             FixedScalar.FromRatio(35, 100),
             FixedScalar.FromRatio(18, 10),
-            FixedScalar.FromRatio(5, 1000),
+            FixedScalar.FromRatio(1, 100),
             FixedScalar.FromRatio(707106, 1000000),
             FixedScalar.FromRatio(3, 10),
-            FixedScalar.FromRatio(12, 100),
+            FixedScalar.Zero,
+            FixedScalar.FromRatio(2, 100),
+            FixedScalar.FromRatio(5, 1000),
+            FixedScalar.FromRatio(2, 100),
+            FixedScalar.FromRatio(1, 1000),
+            FixedScalar.FromRatio(3, 100),
+            FixedScalar.FromRatio(1, 10),
+            FixedScalar.FromRatio(35, 100),
+            FixedScalar.FromInt64(180),
+            FixedScalar.FromRatio(1, 100),
             FixedScalar.FromInt64(3),
             FixedScalar.FromRatio(1, 100000),
             FixedScalar.FromRatio(1, 100000),
-            FixedScalar.FromRatio(1, 100),
             FixedScalar.FromRatio(9999, 10000),
             16,
             8,
@@ -289,6 +331,34 @@ namespace ThirdPersonSimulation.DeterministicKcc
             WorldPoint,
             Separation,
             timeOfImpact);
+    }
+
+    public readonly struct DeterministicKccRayHit
+    {
+        public DeterministicKccRayHit(
+            int surfaceId,
+            int primitiveId,
+            DeterministicCollisionFeatureId featureId,
+            FixedScalar distance,
+            FixedVector3 point,
+            FixedVector3 normal)
+        {
+            if (surfaceId < 0 || primitiveId < 0 || !featureId.IsValid || distance < FixedScalar.Zero || normal.SqrMagnitude == FixedScalar.Zero)
+                throw new ArgumentException("Deterministic KCC ray hit is invalid.");
+            SurfaceId = surfaceId;
+            PrimitiveId = primitiveId;
+            FeatureId = featureId;
+            Distance = distance;
+            Point = point;
+            Normal = normal;
+        }
+
+        public int SurfaceId { get; }
+        public int PrimitiveId { get; }
+        public DeterministicCollisionFeatureId FeatureId { get; }
+        public FixedScalar Distance { get; }
+        public FixedVector3 Point { get; }
+        public FixedVector3 Normal { get; }
     }
 
     public readonly struct DeterministicKccQuerySummary

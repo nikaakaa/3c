@@ -8,7 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 $"body={snapshot.PreviousBodyTick}->{snapshot.CurrentBodyTick};reset={snapshot.ResetSequence};" +
                 $"pose={snapshot.PosePlanHash}/{snapshot.CompletionIdentity}/{snapshot.PoseContinuityIdentity};" +
                 $"placement={snapshot.FootPlacementWeightParameterId}[{snapshot.FootPlacementWeightParameterIndex}]={snapshot.FootPlacementWeight:0.###};" +
-                $"calibration={snapshot.CalibrationId}/{snapshot.CalibrationRevision};" +
+                $"calibration={snapshot.CalibrationId}/v{snapshot.CalibrationSchemaVersion}/{snapshot.CalibrationRevision};" +
                 $"analysis={snapshot.AnalysisSourceId}/v{snapshot.AnalysisVersion}/{snapshot.AnalysisAlgorithmVersion};" +
                 $"contributions={snapshot.ContributionCount}/{ResolveContributionWeight(snapshot):0.###};" +
                 $"leftHeelToe={snapshot.Left.HeelSupportIdentity}/{snapshot.Left.ToeSupportIdentity};" +
@@ -22,6 +22,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 $"rightEnvelope={snapshot.Right.GroundEnvelopeSegmentCount}/{snapshot.Right.GroundEnvelopeRejectReason};" +
                 $"leftConstraint={snapshot.Left.AnkleTwistDegrees:0.###}/{snapshot.Left.HeelLiftDistance:0.###}/{snapshot.Left.SeparationCorrection:0.###};" +
                 $"rightConstraint={snapshot.Right.AnkleTwistDegrees:0.###}/{snapshot.Right.HeelLiftDistance:0.###}/{snapshot.Right.SeparationCorrection:0.###};" +
+                $"leftBend={snapshot.Left.BendDecisionReason}/{snapshot.Left.LegExtensionRatio:0.###}/{snapshot.Left.PositionWeight:0.###}/{snapshot.Left.RotationWeight:0.###}/{snapshot.Left.BendStabilizationWeight:0.###}/{snapshot.Left.AnimatedBendNormal}/{snapshot.Left.PreferredBendNormal}/{snapshot.Left.FinalBendNormal};" +
+                $"rightBend={snapshot.Right.BendDecisionReason}/{snapshot.Right.LegExtensionRatio:0.###}/{snapshot.Right.PositionWeight:0.###}/{snapshot.Right.RotationWeight:0.###}/{snapshot.Right.BendStabilizationWeight:0.###}/{snapshot.Right.AnimatedBendNormal}/{snapshot.Right.PreferredBendNormal}/{snapshot.Right.FinalBendNormal};" +
+                $"leftSole={snapshot.Left.SemanticSoleForward}/{snapshot.Left.SemanticSoleUp};rightSole={snapshot.Right.SemanticSoleForward}/{snapshot.Right.SemanticSoleUp};" +
                 $"leftPrediction={snapshot.Left.PredictionHorizon:0.####}/clamped:{snapshot.Left.PredictionHorizonClamped}/reject:{snapshot.Left.PredictionRejectReason};" +
                 $"rightPrediction={snapshot.Right.PredictionHorizon:0.####}/clamped:{snapshot.Right.PredictionHorizonClamped}/reject:{snapshot.Right.PredictionRejectReason};" +
                 $"bodyGrounded={snapshot.BodyGroundedBefore}->{snapshot.BodyGroundedAfter};" +

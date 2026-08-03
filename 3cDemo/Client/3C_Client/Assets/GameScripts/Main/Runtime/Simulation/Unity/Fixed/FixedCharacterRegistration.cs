@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonGameplay.Tick;
@@ -22,6 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly ICharacterPresentationRuntime m_PresentationRuntime;
         readonly FixedCharacterSimulationDiagnosticsAdapter m_DiagnosticsAdapter;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
+        readonly AnimationPresentationRuntimeTarget m_AnimationDiagnosticsTarget;
         readonly FixedPresentationFrameTarget m_PresentationTarget;
         readonly SortedDictionary<ulong, FixedCharacterBodySample> m_PendingBodySamples =
             new SortedDictionary<ulong, FixedCharacterBodySample>();
@@ -33,6 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         bool m_Activated;
         bool m_InputActivated;
         bool m_DiagnosticsRegistered;
+        bool m_AnimationDiagnosticsRegistered;
         bool m_PresentationRegistered;
         bool m_ResultCommitActive;
         int m_MaximumBodySamples;
@@ -45,6 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             ActorId actorId,
             FixedCharacterSimulationProgram program,
             CharacterPresentationSemanticContract presentationContract,
+            string projectionRevision,
             string worldBodyBindingId,
             FixedWorldBodyState initialBody,
             IUnityFixedCharacterControlSourceRuntime controlSource,
@@ -83,6 +87,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             DiagnosticsContext = diagnosticsContext ?? throw new ArgumentNullException(nameof(diagnosticsContext));
             m_DiagnosticsAdapter = new FixedCharacterSimulationDiagnosticsAdapter(DiagnosticsContext, Program);
             m_DiagnosticsTarget = diagnosticsTarget ?? throw new ArgumentNullException(nameof(diagnosticsTarget));
+            var animationSnapshotProvider = presentationRuntime as IAnimationPresentationRuntimeSnapshotProvider ??
+                throw new ArgumentException("Fixed Presentation Runtime does not expose the Animation Presentation snapshot provider.", nameof(presentationRuntime));
+            m_AnimationDiagnosticsTarget = new AnimationPresentationRuntimeTarget(
+                diagnosticsTarget.CharacterRuntimeId,
+                ownerInstanceId,
+                ownerName,
+                projectionRevision,
+                animationSnapshotProvider);
             m_PresentationTarget = new FixedPresentationFrameTarget(presentationRuntime);
             ProgramIdentity = new FixedSimulationActorBinding(actorId, program, WorldBodyBindingId);
             OutputRoute = new SimulationOutputRouteDescriptor(
@@ -132,6 +144,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 m_InputActivated = true;
                 RuntimeDiagnosticsTargetRegistry.Register(m_DiagnosticsTarget);
                 m_DiagnosticsRegistered = true;
+                AnimationPresentationRuntimeTargetRegistry.Register(m_AnimationDiagnosticsTarget);
+                m_AnimationDiagnosticsRegistered = true;
                 if (!GameplayTickSystem.RegisterPresentationTarget(m_PresentationTarget))
                     throw new InvalidOperationException("GameplayTickSystem rejected the Fixed Actor Presentation target.");
                 m_PresentationRegistered = true;
@@ -149,7 +163,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public void Deactivate()
         {
-            if (!m_Activated && !m_InputActivated && !m_DiagnosticsRegistered && !m_PresentationRegistered)
+            if (!m_Activated && !m_InputActivated && !m_DiagnosticsRegistered &&
+                !m_AnimationDiagnosticsRegistered && !m_PresentationRegistered)
                 return;
             var failures = new List<Exception>();
             ReleaseActivation(failures);
@@ -263,22 +278,26 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             ulong resetSequence)
         {
             FixedVector3 velocity = result.Motion.RequestedVelocity;
-            UnityEngine.Quaternion rotation = UnityEngine.Quaternion.Euler(
-                0f,
-                result.BodySample.FinalBody.Yaw.Degrees.ToSingle(),
-                0f);
-            UnityEngine.Vector3 forward = rotation * UnityEngine.Vector3.forward;
+            var desiredVelocity = new UnityEngine.Vector2(
+                velocity.X.ToSingle(),
+                velocity.Z.ToSingle());
             return new CharacterPresentationTrajectoryIntent(
                 result.ActorId,
                 result.Tick.Value > 1 ? new SimulationTick(result.Tick.Value - 1) : default,
                 result.Tick,
                 sourceSequence,
-                new UnityEngine.Vector2(velocity.X.ToSingle(), velocity.Z.ToSingle()),
-                new UnityEngine.Vector2(forward.x, forward.z),
+                desiredVelocity,
+                CharacterPresentationTrajectoryIntent.ResolveDesiredFacing(
+                    desiredVelocity,
+                    result.BodySample.FinalBody.Yaw.Degrees.ToSingle()),
                 float.MaxValue,
                 float.MaxValue,
+                CharacterPresentationTrajectoryIntent.HasPlanarMotion(desiredVelocity),
                 result.BodySample.FinalBody.Grounded,
-                result.Motion.SourceIdentity,
+                CharacterPresentationTrajectoryIntent.ResolveMovementModeId(
+                    result.Motion.LocomotionOwnerIdentity,
+                    result.Motion.ActionOwnerIdentity,
+                    result.Motion.GameplayResultOwnerIdentity),
                 resetSequence);
         }
 
@@ -304,6 +323,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 TryRelease(() => GameplayTickSystem.UnregisterPresentationTarget(m_PresentationTarget), failures);
                 m_PresentationRegistered = false;
+            }
+            if (m_AnimationDiagnosticsRegistered)
+            {
+                TryRelease(() => AnimationPresentationRuntimeTargetRegistry.Unregister(m_AnimationDiagnosticsTarget), failures);
+                m_AnimationDiagnosticsRegistered = false;
             }
             if (m_DiagnosticsRegistered)
             {

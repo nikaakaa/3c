@@ -26,7 +26,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             if (!TryAddOwner(definition, out errorCode, out errorMessage) ||
                 !TryAddOwner(definition.RootTreeAsset, out errorCode, out errorMessage) ||
-                !TryAddOwner(definition.InputProfile, out errorCode, out errorMessage))
+                !TryAddOwner(definition.InputProfile, out errorCode, out errorMessage) ||
+                !TryAddOwner(definition.SimulationProgram, out errorCode, out errorMessage) ||
+                !TryAddOwner(definition.PresentationProjection, out errorCode, out errorMessage))
                 return false;
 
             var projectionErrors = new List<string>();

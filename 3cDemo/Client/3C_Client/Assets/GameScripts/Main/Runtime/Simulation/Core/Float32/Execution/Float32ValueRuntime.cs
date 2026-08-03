@@ -124,70 +124,128 @@ namespace ThirdPersonSimulation
 			{
 				SimulationOperation operation = Access.Operation(handle);
 				using Float32ValueInputLease inputs = ReadInputs(cursor, operation);
+				CharacterStateValue result;
 				switch (operation.Code)
 				{
 					case SimulationOperationCode.ConditionResult:
-						return CharacterStateValue.FromBoolean(inputs.Count > 0 && ToBoolean(inputs[0]));
+						result = CharacterStateValue.FromBoolean(inputs.Count > 0 && ToBoolean(inputs[0]));
+						break;
 					case SimulationOperationCode.InputBoolean:
-						return CharacterStateValue.FromBoolean(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Boolean).Boolean);
+						result = CharacterStateValue.FromBoolean(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Boolean).Boolean);
+						break;
 					case SimulationOperationCode.InputScalar:
-						return CharacterStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Scalar).Scalar);
+						result = CharacterStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Scalar).Scalar);
+						break;
 					case SimulationOperationCode.InputVector2:
-						return CharacterStateValue.FromVector2(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Vector2).Vector2);
+						result = CharacterStateValue.FromVector2(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Vector2).Vector2);
+						break;
 					case SimulationOperationCode.InputVector2Magnitude:
-						return CharacterStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Vector2).Vector2.Magnitude);
+						result = CharacterStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Vector2).Vector2.Magnitude);
+						break;
 					case SimulationOperationCode.InputRequest:
-						return CharacterStateValue.FromBoolean(m_Input.HasRequest(operation.Text0, out _));
+						result = CharacterStateValue.FromBoolean(m_Input.HasRequest(operation.Text0, out _));
+						break;
 					case SimulationOperationCode.BlackboardGet:
-						return ReadBlackboard(cursor, operation);
+						result = ReadBlackboard(cursor, operation);
+						break;
 					case SimulationOperationCode.ActionContextActive:
-						return CharacterStateValue.FromBoolean(m_Actions.IsContextActive(operation.Text0));
+						result = CharacterStateValue.FromBoolean(m_Actions.IsContextActive(operation.Text0));
+						break;
 					case SimulationOperationCode.ActionWindowActive:
-						return CharacterStateValue.FromBoolean(m_Blackboard.IsActionWindowActive(operation));
+						result = CharacterStateValue.FromBoolean(m_Blackboard.IsActionWindowActive(operation));
+						break;
 					case SimulationOperationCode.CanActivateAction:
-						return CharacterStateValue.FromBoolean(m_ActionAdmission.PreviewActivation(cursor, operation).Allowed);
+						result = CharacterStateValue.FromBoolean(m_ActionAdmission.PreviewActivation(cursor, operation).Allowed);
+						break;
 					case SimulationOperationCode.GameplayEffectHasTag:
-						return CharacterStateValue.FromBoolean(m_GameplayTags.HasTag(operation.Text0));
+						result = CharacterStateValue.FromBoolean(m_GameplayTags.HasTag(operation.Text0));
+						break;
 					case SimulationOperationCode.GameplayEffectMatchTags:
-						return CharacterStateValue.FromBoolean(
+						result = CharacterStateValue.FromBoolean(
 							m_GameplayTags.Matches(Access.Services.RequireTagQuery(operation.Handle)));
+						break;
 					case SimulationOperationCode.GameplayAttributeRead:
-						return m_GameplayTags.ReadAttribute(operation, outputPort);
+						result = m_GameplayTags.ReadAttribute(operation, outputPort);
+						break;
 					case SimulationOperationCode.CameraBasisRead:
-						return ReadCameraBasis(outputPort);
+						result = ReadCameraBasis(outputPort);
+						break;
 					case SimulationOperationCode.ReadEquipmentIdentity:
 					case SimulationOperationCode.ReadEquipmentParameter:
 					case SimulationOperationCode.RequestEquipmentChange:
 					case SimulationOperationCode.BeginEquipmentChange:
 					case SimulationOperationCode.CommitEquipmentChange:
 					case SimulationOperationCode.CancelEquipmentChange:
-						return m_Equipment.Evaluate(operation, outputPort, inputs);
+						result = m_Equipment.Evaluate(operation, outputPort, inputs);
+						break;
 					case SimulationOperationCode.StateRootCompleted:
-						return CharacterStateValue.FromBoolean(cursor.CurrentStateRootCompleted());
+						result = CharacterStateValue.FromBoolean(cursor.CurrentStateRootCompleted());
+						break;
 					case SimulationOperationCode.StateExitCause:
-						return CharacterStateValue.FromBoolean(operation.Integer0 == cursor.CurrentStateExitCause());
+						result = CharacterStateValue.FromBoolean(operation.Integer0 == cursor.CurrentStateExitCause());
+						break;
 					case SimulationOperationCode.MoveFacingAngle:
-						return CharacterStateValue.FromScalar(ReadMoveFacingAngle(inputs));
+						result = CharacterStateValue.FromScalar(ReadMoveFacingAngle(inputs));
+						break;
 					case SimulationOperationCode.Compare:
-						return CharacterStateValue.FromBoolean(Compare(operation.Integer0, inputs));
+						result = CharacterStateValue.FromBoolean(Compare(operation.Integer0, inputs));
+						break;
 					case SimulationOperationCode.And:
-						return CharacterStateValue.FromBoolean(inputs.Count >= 2 && ToBoolean(inputs[0]) && ToBoolean(inputs[1]));
+						result = CharacterStateValue.FromBoolean(inputs.Count >= 2 && ToBoolean(inputs[0]) && ToBoolean(inputs[1]));
+						break;
 					case SimulationOperationCode.Or:
-						return CharacterStateValue.FromBoolean(inputs.Count >= 2 && (ToBoolean(inputs[0]) || ToBoolean(inputs[1])));
+						result = CharacterStateValue.FromBoolean(inputs.Count >= 2 && (ToBoolean(inputs[0]) || ToBoolean(inputs[1])));
+						break;
 					case SimulationOperationCode.Not:
-						return CharacterStateValue.FromBoolean(inputs.Count == 0 || !ToBoolean(inputs[0]));
+						result = CharacterStateValue.FromBoolean(inputs.Count == 0 || !ToBoolean(inputs[0]));
+						break;
 					case SimulationOperationCode.Constant:
-						return operation.ConstantReferences.Count > 0
+						result = operation.ConstantReferences.Count > 0
 							? ValueFromConstant(m_Program.Constants[operation.ConstantReferences[0]])
 							: CharacterStateValue.FromBoolean(false);
+						break;
 					default:
 						throw new InvalidOperationException($"Operation '{handle}' code '{operation.Code}' is not a value operation.");
 				}
+				TraceValue(operation, result);
+				return result;
 			}
 			finally
 			{
 				m_ValueStack.Remove(valueKey);
 			}
+		}
+
+		void TraceValue(SimulationOperation operation, CharacterStateValue value)
+		{
+			if (!m_Frame.Trace.Enabled ||
+			    operation.Code != SimulationOperationCode.InputVector2 &&
+			    operation.Code != SimulationOperationCode.InputVector2Magnitude &&
+			    operation.Code != SimulationOperationCode.MoveFacingAngle &&
+			    operation.Code != SimulationOperationCode.Compare &&
+			    operation.Code != SimulationOperationCode.And &&
+			    operation.Code != SimulationOperationCode.Or &&
+			    operation.Code != SimulationOperationCode.Not &&
+			    operation.Code != SimulationOperationCode.ConditionResult)
+				return;
+			m_Frame.Trace.Add(
+				operation,
+				"condition_value_evaluated",
+				SimulationTraceSeverity.Detail,
+				$"code={operation.Code};kind={value.Kind};value={FormatValue(value)}");
+		}
+
+		static string FormatValue(CharacterStateValue value)
+		{
+			return value.Kind switch
+			{
+				ProgramStateValueKind.Boolean => value.Boolean.ToString(),
+				ProgramStateValueKind.Scalar => value.Scalar.ToString(),
+				ProgramStateValueKind.Vector2 => $"({value.Vector2.X},{value.Vector2.Y})",
+				ProgramStateValueKind.Vector3 => $"({value.Vector3.X},{value.Vector3.Y},{value.Vector3.Z})",
+				ProgramStateValueKind.Yaw => value.Yaw.Degrees.ToString(),
+				_ => value.Kind.ToString()
+			};
 		}
 
         public bool EvaluateCondition<TTarget>(

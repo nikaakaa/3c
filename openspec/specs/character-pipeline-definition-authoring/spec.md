@@ -6,19 +6,19 @@
 ## Requirements
 ### Requirement: CharacterPipelineDefinition 必须是配置装配根
 
-`CharacterPipelineDefinition` MUST只保存RootTree、SimulationTickRate、InputProfile、GameplayEffectProfile、ActionProfile、GameplayBehaviorProfile、CharacterAnimationPresentationProfile与generated Program/Projection的正式引用。Definition MUST不内联保存Pose Graph、Blend Library、Rig、producer binding、Graph、Timeline、runtime lifecycle或compiler report数据。
+`CharacterPipelineDefinition` MUST只保存RootTree、SimulationTickRate、InputProfile、GameplayEffectProfile、ActionProfile、GameplayBehaviorProfile、CharacterAnimationPresentationProfile与generated Program/Projection的正式引用。Definition MUST不内联保存Animation Channel、PoseStateMachine、AnimationSlot、Pose Graph、Policy、Rig、producer binding、Graph、Timeline、runtime lifecycle或compiler report数据。
 
-#### Scenario: 打开角色 Definition
+#### Scenario: 打开角色Definition
 
-- **WHEN** 作者选择 Corin CharacterPipelineDefinition
-- **THEN** Inspector MUST优先显示角色引用的正式 Config
-- **AND** MUST不平铺Pose Slot、Blend transition、producer binding、Program Hash或capability明细
+- **WHEN** 作者选择Corin CharacterPipelineDefinition
+- **THEN** Inspector MUST优先显示角色引用的正式Config
+- **AND** MUST不平铺PoseState、AnimationSlot、Pose节点、transition matrix、producer binding或Program Hash
 
-#### Scenario: 缺失动画表现 Profile
+#### Scenario: 缺失动画表现Profile
 
-- **WHEN** Definition 没有 CharacterAnimationPresentationProfile 引用
-- **THEN** configuration validation 与 Compiler MUST报告明确错误
-- **AND** 系统 MUST不创建内联默认Profile、默认Pose Graph或从producer名称猜测配置
+- **WHEN** Definition没有CharacterAnimationPresentationProfile引用
+- **THEN** configuration validation与Compiler MUST报告明确错误
+- **AND** 系统 MUST不创建内联Profile、默认Pose Graph或从Blend Library猜测配置
 
 ### Requirement: Definition Inspector 必须分离作者配置与生成产物
 
@@ -65,26 +65,19 @@ Definition Inspector MUST以紧凑 Config References 作为默认作者界面。
 
 ### Requirement: Animation Presentation Profile 必须是唯一表现配置资产
 
-`CharacterAnimationPresentationProfile` MUST作为ScriptableObject唯一引用Pose Graph、node-local Blend/Inertialization Policy与Rig Definition，保存稳定producer source bindings，以及显式Foot Placement Analysis Mode与Analysis Source Asset GUID。Pose Graph MUST唯一保存Selection Input、MarkerSync、Player、Mask、Additive、Pose Parameter、FootPlacement与Output topology；Policy MUST只由对应节点引用。Definition、Graph、Timeline、Presenter、Program、Runtime Prefab或独立EditorWindow MUST不保存这些作者配置的可写副本。Editor-only Analysis Source中的Sampling Rig Asset GUID与Rig Calibration属于分析输入；单Clip generated feature MAY先保存为非作者、非Runtime的Library artifact，Runtime payload只属于Projection且不得反写Profile或Timeline。Profile与Definition MUST不持有Analysis Source或Sampling Rig对象强引用，避免Editor分析资产进入Gameplay SourceRevision与Player依赖闭包。
+`CharacterAnimationPresentationProfile` MUST作为ScriptableObject唯一引用Pose Graph、PoseStateMachine topology、node-local Blend/Inertialization Policy与Rig Definition，保存Profile-owned typed Source Binding子资产、有限Action producer source binding，以及显式Foot Placement Analysis Mode与Analysis Source对象引用。Pose Graph MUST唯一拥有typed Source Slot子资产，并保存Presentation Fact Input、PoseStateMachine、SequencePlayer、BlendSpacePlayer、SelectedPosePlayer、ActionPlaybackInput、AnimationSlot、Player、Mask、Additive、Pose Parameter、TwoBoneIK、FootPlacement与Output topology；Player只引用精确Source Slot对象，Binding保存resource、marker、source-local Foot Placement Weight与analysis配置。Policy MUST只由对应transition owner或节点引用。Definition、Gameplay Graph、BTSMTL StateMachine、Timeline、Presenter、Program、Runtime Prefab或独立EditorWindow MUST不保存这些作者配置的可写副本。
 
 #### Scenario: 一个Profile被一个Definition引用
 
 - **WHEN** 作者选择CharacterAnimationPresentationProfile
-- **THEN** Profile Inspector MUST提供Pose Graph、Blend Library、Rig、producer source binding和Foot Analysis Source Asset GUID唯一入口
-- **AND** Undo与dirty owner MUST是Profile或被显式编辑的Analysis Source资产
+- **THEN** Profile Inspector MUST提供Pose Graph、Pose source、Action producer binding、Policy、Rig和Foot Analysis唯一入口
+- **AND** Definition Inspector MUST不内联这些字段
 
-#### Scenario: 一个Profile被多个Definition引用
-
-- **WHEN** 多个Definition引用同一Profile
-- **THEN** 每个Definition/Profile/Projection组合 MUST独立通过producer与Projection identity校验
-- **AND** Profile Inspector MUST要求显式Definition context才显示Projection及Foot Analysis状态
-- **AND** Profile MUST不保存反向Definition owner引用
-
-#### Scenario: Definition Inspector显示Foot Analysis
+#### Scenario: Definition Inspector显示Projection状态
 
 - **WHEN** 作者只选择CharacterPipelineDefinition
 - **THEN** Inspector MUST只显示Animation Presentation Profile引用与Projection Ready/Stale/Missing摘要
-- **AND** MUST不内联Analysis Source参数或执行动画采样
+- **AND** MUST不运行Pose Graph Compiler或内联显示node/mask参数
 
 ### Requirement: Body Motion Profile 必须是唯一垂直动力作者配置
 

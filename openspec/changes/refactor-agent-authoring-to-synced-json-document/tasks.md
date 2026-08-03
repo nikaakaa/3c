@@ -1,342 +1,443 @@
-## 1. 基线与迁移清单
+> 串行位置：本change是`openspec/character-pipeline-serial-execution.md`阶段1。当前只收口剩余10项Document v2可复用基础；不得在这里扩展Presentation editable、Document v3 schema、Pose UI、Corin资产或产品Build。v3升级只由`refactor-pose-graph-to-btsmtl-authoring-domain`继续完成。
 
-- [ ] 1.1 记录当前`AgentAuthoringSchema.Version`、current spec版本和工作区版本差异。
-- [ ] 1.2 列出`AgentControllerIntent`全部生产与消费点。
-- [ ] 1.3 列出`AgentMacroLibrary`全部生产与消费点。
-- [ ] 1.4 列出`AgentMacroCoverageEvaluator`全部生产与消费点。
-- [ ] 1.5 列出`AgentPatchIR`全部JSON入口。
-- [ ] 1.6 列出`AgentPatchOperation`全部字段与operation catalog。
-- [ ] 1.7 列出Patch lowerer、typed command、compile session与handler之间的所有权边界。
-- [ ] 1.8 列出Character与AI Snapshot exporter当前source revision来源。
-- [ ] 1.9 列出`AgentPatchAuthoringService`全部action与事务顺序。
-- [ ] 1.10 列出MCP bridge、Editor Window和技能中的旧action名称。
-- [ ] 1.11 列出`bootstrap_ai_controller`全部调用点与当前业务依赖。
-- [ ] 1.12 列出`add-corin-training-ai-demo`所有v16 Patch与bootstrap依赖。
-- [ ] 1.13 确认Presentation、Body Motion、Foot Analysis和generated product继续只读。
-- [ ] 1.14 建立旧Intent、Macro、Patch、bootstrap和兼容入口删除清单。
+## 1. v2边界与删除清单
 
-## 2. Document schema与领域模型
+- [x] 1.1 固定`btsmtl-agent-authoring-document.v2`唯一schema常量。
+- [x] 1.2 固定`.btsmtl/`文档包目录后缀。
+- [x] 1.3 固定CharacterController与AIController domain discriminator。
+- [x] 1.4 列出v1单文件Document模型的全部生产点。
+- [x] 1.5 列出v1单文件Document模型的全部消费点。
+- [x] 1.6 列出`.btsmtl.json.sync`基线文件的全部读写点。
+- [x] 1.7 列出`manage_btsmtl_agent_authoring`全部注册与调用点。
+- [x] 1.8 列出当前Snapshot exporter可输出的全部Node类型。
+- [x] 1.9 列出`AgentNodeEmitterRegistry`可创建的全部Node类型。
+- [x] 1.10 列出GraphLink handler现有Flow与Property Edge能力。
+- [x] 1.11 列出Document Reconciler现有unsupported分支。
+- [x] 1.12 建立v1、Patch、Macro、bootstrap、旧tool和兼容入口删除清单。
 
-- [ ] 2.1 定义`btsmtl-agent-authoring-document.v1`唯一schema常量。
-- [ ] 2.2 定义Document domain discriminator。
-- [ ] 2.3 定义Document root identity字段。
-- [ ] 2.4 定义service-owned sync header。
-- [ ] 2.5 定义`baseSourceRevision`。
-- [ ] 2.6 定义`baseContentHash`。
-- [ ] 2.7 定义Character editable root。
-- [ ] 2.8 定义AI editable root。
-- [ ] 2.9 定义Graph、Node与Edge document entity。
-- [ ] 2.10 定义StateMachine、State、Transition与Condition document entity。
-- [ ] 2.11 定义Blackboard declaration document entity。
-- [ ] 2.12 定义Timeline、Track、Clip、Marker与Curve document entity。
-- [ ] 2.13 定义Action、Input、MotionWarp与lifecycle document entity。
-- [ ] 2.14 定义AI Definition、Perception、Observation、Memory与Intent document entity。
-- [ ] 2.15 定义已有entity stable authoring identity规则。
-- [ ] 2.16 定义新entity document-local identity规则。
-- [ ] 2.17 定义read-only context root。
-- [ ] 2.18 定义capability和catalog版本身份。
-- [ ] 2.19 定义unsupported/read-only entity保留规则。
-- [ ] 2.20 删除外部`AgentControllerIntent`模型。
-- [ ] 2.21 删除外部`AgentPatchIR`模型。
-- [ ] 2.22 删除外部宽`AgentPatchOperation`模型。
-- [ ] 2.23 删除v16/v17外部schema reader、writer与alias。
+## 2. 文档包manifest与同步模型
 
-## 3. 严格JSON与规范化codec
+- [x] 2.1 定义`AgentAuthoringPackageManifest`。
+- [x] 2.2 在manifest中定义schemaVersion。
+- [x] 2.3 在manifest中定义domain。
+- [x] 2.4 在manifest中定义rootIdentity。
+- [x] 2.5 在manifest中定义规范文件清单。
+- [x] 2.6 定义`AgentAuthoringPackageSync`。
+- [x] 2.7 在sync中定义baseSourceRevision。
+- [x] 2.8 在sync中定义baseEditableHash。
+- [x] 2.9 在sync中定义baseContextHash。
+- [x] 2.10 删除业务正文中的sync header。
+- [x] 2.11 定义package projection结果。
+- [x] 2.12 定义package load state。
+- [x] 2.13 定义package publish结果。
+- [x] 2.14 定义package path到业务entity path的映射规则。
 
-- [ ] 3.1 建立Document唯一strict parser。
-- [ ] 3.2 拒绝未知JSON字段。
-- [ ] 3.3 拒绝重复JSON属性。
-- [ ] 3.4 拒绝非法domain和entity discriminator。
-- [ ] 3.5 拒绝缺失必需字段。
-- [ ] 3.6 拒绝AI修改sync header。
-- [ ] 3.7 拒绝AI修改read-only context。
-- [ ] 3.8 建立Document唯一canonical writer。
-- [ ] 3.9 固定UTF-8无BOM输出。
-- [ ] 3.10 固定属性顺序。
-- [ ] 3.11 固定entity排序。
-- [ ] 3.12 固定浮点与curve数值格式。
-- [ ] 3.13 规范化空集合与可空字段表示。
-- [ ] 3.14 计算editable正文canonical hash。
-- [ ] 3.15 计算完整Document semantic hash。
-- [ ] 3.16 保证仅缩进或换行变化不改变semantic hash。
-- [ ] 3.17 删除Document路径上的`JsonUtility`宽松解析。
+## 3. 可编辑领域分片模型
 
-## 4. Document Store
+- [x] 3.1 定义`editable/controller.json`模型。
+- [x] 3.2 定义`editable/blackboard.json`模型。
+- [x] 3.3 定义Character `editable/actions.json`模型。
+- [x] 3.4 定义AI `editable/ai/perception.json`模型。
+- [x] 3.5 定义Graph目录identity编码规则。
+- [x] 3.6 定义Timeline目录identity编码规则。
+- [x] 3.7 定义`graph.json`根模型。
+- [x] 3.8 定义Graph owner entityId。
+- [x] 3.9 定义Graph owner slot。
+- [x] 3.10 定义稳定Graph kind。
+- [x] 3.11 定义稀疏Node模型。
+- [x] 3.12 定义Node stable/local identity。
+- [x] 3.13 定义Node kind。
+- [x] 3.14 定义Node typed properties。
+- [x] 3.15 定义Flow Edge目标模型。
+- [x] 3.16 定义Property Edge目标模型。
+- [x] 3.17 定义Edge endpoint逻辑port key。
+- [x] 3.18 定义Graph reference模型。
+- [x] 3.19 定义`layout.json`模型。
+- [x] 3.20 定义`timeline.json`模型。
+- [x] 3.21 定义`curves.json`模型。
+- [x] 3.22 定义Curve完整payload模型。
+- [x] 3.23 定义`local:<meaningful-id>`语法。
+- [x] 3.24 禁止Node kind与Graph kind原地变更。
 
-- [ ] 4.1 定义Unity项目级`AgentAuthoring/Documents`唯一根目录。
-- [ ] 4.2 确保Document根位于`Assets/`之外。
-- [ ] 4.3 定义domain子目录。
-- [ ] 4.4 定义root-key规范算法。
-- [ ] 4.5 从显式domain、root path与root identity计算唯一Document路径。
-- [ ] 4.6 禁止调用方传入任意Document路径。
-- [ ] 4.7 禁止按文件名或目录扫描寻找Document。
-- [ ] 4.8 实现Document只读加载。
-- [ ] 4.9 实现Document临时文件写入。
-- [ ] 4.10 实现Document原子替换。
-- [ ] 4.11 保证写入失败不破坏上一份Document。
-- [ ] 4.12 将Document工作目录排除版本控制与Player内容。
-- [ ] 4.13 删除任何Patch inbox、clipboard或watcher路径。
+## 4. 系统anchor模型
 
-## 5. Live authoring revision
+- [x] 4.1 定义`@root` anchor。
+- [x] 4.2 定义`@enter` anchor。
+- [x] 4.3 定义`@exit` anchor。
+- [x] 4.4 定义`@any` anchor。
+- [x] 4.5 定义`@onEnter` anchor。
+- [x] 4.6 定义`@onExit` anchor。
+- [x] 4.7 定义`@timelineEnter` anchor。
+- [x] 4.8 定义`@result` anchor。
+- [x] 4.9 为每个Graph kind声明允许anchor。
+- [x] 4.10 为每个anchor声明逻辑port。
+- [x] 4.11 禁止anchor出现在editable nodes集合。
+- [x] 4.12 禁止anchor拥有layout与properties。
+- [x] 4.13 建立Unity系统Node到anchor的导出映射。
+- [x] 4.14 建立anchor到当前Unity系统Node的解析映射。
 
-- [ ] 5.1 定义domain-aware authoring revision接口。
-- [ ] 5.2 收集Character Definition正式可写字段。
-- [ ] 5.3 收集Character全部可达Graph与StateMachine作者内容。
-- [ ] 5.4 收集Character ConditionRuleGraph作者内容。
-- [ ] 5.5 收集Character inline/shared Timeline作者内容。
-- [ ] 5.6 收集Track、Clip、Marker和registered Curve作者内容。
-- [ ] 5.7 收集Agent可写Input、ActionProfile和Blackboard依赖。
-- [ ] 5.8 收集AI Definition与RootTree作者内容。
-- [ ] 5.9 收集AI Blackboard、Perception与Intent作者内容。
-- [ ] 5.10 收集受控Character input/request只读合同身份。
-- [ ] 5.11 使用stable identity与canonical字段顺序计算revision。
-- [ ] 5.12 从revision输入中排除generated Character Program。
-- [ ] 5.13 从revision输入中排除Presentation Projection。
-- [ ] 5.14 从revision输入中排除generated AIIntentProgram。
-- [ ] 5.15 保证revision计算不调用build、publish或AssetDatabase保存。
-- [ ] 5.16 让Character Snapshot使用live authoring revision。
-- [ ] 5.17 让AI Snapshot使用live authoring revision。
+## 5. Authoring Capability Catalog
 
-## 6. Canonical Document Exporter
+- [x] 5.1 建立`AgentAuthoringCapabilityCatalog`唯一owner。
+- [x] 5.2 定义Node capability descriptor。
+- [x] 5.3 为descriptor定义稳定kind。
+- [x] 5.4 为descriptor定义允许Graph kind。
+- [x] 5.5 为descriptor定义typed property schema。
+- [x] 5.6 为descriptor定义正式默认值。
+- [x] 5.7 为descriptor定义逻辑Flow ports。
+- [x] 5.8 为descriptor定义逻辑Property ports。
+- [x] 5.9 为descriptor定义资产引用类型。
+- [x] 5.10 为descriptor定义create lowering。
+- [x] 5.11 为descriptor定义configure lowering。
+- [x] 5.12 为descriptor定义delete lowering。
+- [x] 5.13 定义Graph kind descriptor。
+- [x] 5.14 为Graph kind定义owner slot。
+- [x] 5.15 为Graph kind定义anchor集合。
+- [x] 5.16 为Graph kind定义Node capability集合。
+- [x] 5.17 为Graph kind定义inline/shared ownership规则。
+- [x] 5.18 将`AgentNodeEmitterRegistry`登记迁入统一catalog。
+- [x] 5.19 将Snapshot exporter节点识别迁入统一catalog。
+- [x] 5.20 将Graph policy校验迁入统一catalog。
+- [x] 5.21 将Node handler解析迁入统一catalog。
+- [x] 5.22 将Validator capability读取迁入统一catalog。
+- [x] 5.23 删除C# type name外部解析。
+- [x] 5.24 删除显示名与类型别名外部解析。
+- [x] 5.25 对不可完整往返capability返回`authoring_capability_incomplete`。
 
-- [ ] 6.1 建立Character Document exporter。
-- [ ] 6.2 建立AI Document exporter。
-- [ ] 6.3 复用Graph topology与stable identity投影。
-- [ ] 6.4 投影完整可写StateMachine结构。
-- [ ] 6.5 投影完整可写Timeline结构。
-- [ ] 6.6 投影完整可写Blackboard结构。
-- [ ] 6.7 投影完整可写AI Perception与Intent结构。
-- [ ] 6.8 投影只读Input、Action和Capability catalog。
-- [ ] 6.9 投影只读Presentation identity。
-- [ ] 6.10 投影只读Body Motion identity与参数。
-- [ ] 6.11 投影只读Foot Analysis状态但不复制generated payload。
-- [ ] 6.12 投影generated product identity与stale诊断。
-- [ ] 6.13 把Document初始正文hash写入sync header。
-- [ ] 6.14 把live source revision写入sync header。
-- [ ] 6.15 保证重复导出未变化树产生相同canonical正文与hash。
+## 6. 只读context catalog
 
-## 7. 同步状态与checkout
+- [x] 6.1 定义`context/node-catalog.json`。
+- [x] 6.2 从唯一capability catalog投影Node kind。
+- [x] 6.3 投影typed property、默认值与逻辑port。
+- [x] 6.4 定义`context/graph-kinds.json`。
+- [x] 6.5 投影Graph kind、owner slot与anchor。
+- [x] 6.6 定义`context/asset-catalog.json`。
+- [x] 6.7 投影当前Definition可引用Input identity。
+- [x] 6.8 投影当前Definition可引用Action identity。
+- [x] 6.9 投影当前Definition可引用Timeline identity。
+- [x] 6.10 投影当前Definition可引用Blackboard identity。
+- [x] 6.11 投影AI Perception与受控Character合同。
+- [x] 6.12 定义`context/dependencies.json`。
+- [x] 6.13 投影Graph、Timeline、owner与shared asset依赖。
+- [x] 6.14 投影影响编辑决策的Presentation摘要。
+- [x] 6.14.1 删除MotionMatchingSelectionInput、AnimationSelection port与Pose Graph MarkerSync旧摘要。
+- [x] 6.14.2 把SelectedPosePlayer与BlendStack投影为state-local provider/source owner。
+- [x] 6.14.3 把Motion Matching限制为PoseState provider摘要并排除Gameplay playback字段。
+- [x] 6.14.4 分离ActionPlaybackInput与AnimationSlot的Action AnimationChannel owner摘要。
+- [x] 6.14.5 校验AnimationSlot是有限Action channel唯一consumer。
+- [x] 6.14.6 从Action producer摘要删除Blend Space旧字段。
+- [x] 6.14.7 从Action producer摘要删除固定Timeline的sourceKind字段。
+- [x] 6.15 投影影响编辑决策的Body Motion摘要。
+- [x] 6.16 投影generated product identity与stale摘要。
+- [x] 6.17 排除Foot Analysis generated payload。
+- [x] 6.18 排除Program与Projection payload。
+- [x] 6.19 排除runtime state、instance id与时间戳。
+- [x] 6.20 拒绝AI修改context文件。
+- [x] 6.20.1 保持Presentation context不进入Reconciler与Mutation lowering。
 
-- [ ] 7.1 定义`Clean`状态。
-- [ ] 7.2 定义`TreeDirty`状态。
-- [ ] 7.3 定义`DocumentDirty`状态。
-- [ ] 7.4 定义`Conflict`状态。
-- [ ] 7.5 从当前source revision计算treeChanged。
-- [ ] 7.6 从当前Document正文hash计算documentChanged。
-- [ ] 7.7 禁止序列化可编辑dirty布尔值。
-- [ ] 7.8 实现无Document时显式checkout创建。
-- [ ] 7.9 实现Clean状态显式checkout规范刷新。
-- [ ] 7.10 实现TreeDirty且Document未改时显式checkout刷新。
-- [ ] 7.11 实现DocumentDirty时checkout保留现有文件。
-- [ ] 7.12 实现Conflict时checkout拒绝覆盖。
-- [ ] 7.13 checkout response返回Document绝对路径。
-- [ ] 7.14 checkout response返回同步状态和基线身份。
-- [ ] 7.15 保证checkout不dirty或保存Unity资产。
-- [ ] 7.16 保证checkout不触发Character或AI Program build。
+## 7. Strict multi-file codec
 
-## 8. Document Reconciler
+- [x] 7.1 建立manifest strict parser。
+- [x] 7.2 建立sync strict parser。
+- [x] 7.3 建立controller strict parser。
+- [x] 7.4 建立blackboard strict parser。
+- [x] 7.5 建立actions strict parser。
+- [x] 7.6 建立AI perception strict parser。
+- [x] 7.7 建立Graph strict parser。
+- [x] 7.8 建立layout strict parser。
+- [x] 7.9 建立Timeline strict parser。
+- [x] 7.10 建立Curve strict parser。
+- [x] 7.11 建立context catalog strict parser。
+- [x] 7.12 拒绝重复JSON属性。
+- [x] 7.13 拒绝未知字段。
+- [x] 7.14 拒绝未知kind、property、port和anchor。
+- [x] 7.15 拒绝非法stable/local identity。
+- [x] 7.16 拒绝非有限数值与非法Curve。
+- [x] 7.17 建立逐文件canonical writer。
+- [x] 7.18 固定UTF-8无BOM。
+- [x] 7.19 固定字段与entity顺序。
+- [x] 7.20 固定数值格式。
+- [x] 7.21 省略正式默认值。
+- [x] 7.22 省略空集合与无关字段。
+- [x] 7.23 计算逐文件semantic hash。
+- [x] 7.24 计算editableHash。
+- [x] 7.25 计算contextHash。
+- [x] 7.26 计算整包documentHash。
+- [x] 7.27 拒绝manifest之外的未登记JSON文件。
+- [x] 7.28 删除v1单文件codec。
+- [x] 7.29 删除v15-v17 Patch reader与converter。
 
-- [ ] 8.1 定义`AgentDocumentReconciler`唯一入口。
-- [ ] 8.2 建立当前Snapshot stable identity索引。
-- [ ] 8.3 建立Document local identity symbol表。
-- [ ] 8.4 校验Document root与当前root一致。
-- [ ] 8.5 校验Document context版本与当前capability一致。
-- [ ] 8.6 识别未变化现有entity并跳过命令。
-- [ ] 8.7 识别现有entity可写字段变化。
-- [ ] 8.8 识别Document新entity。
-- [ ] 8.9 识别完整目标集合中被删除的可写entity。
-- [ ] 8.10 拒绝删除read-only或unsupported entity。
-- [ ] 8.11 确定StateMachine与State创建顺序。
-- [ ] 8.12 确定Node与flow/property edge创建顺序。
-- [ ] 8.13 确定Transition与ConditionRule创建顺序。
-- [ ] 8.14 确定Timeline、Track、Clip、Marker与Curve创建顺序。
-- [ ] 8.15 确定Blackboard declaration与引用绑定顺序。
-- [ ] 8.16 确定AI Definition引用、Perception、Memory与Intent更新顺序。
-- [ ] 8.17 确定edge重接与entity删除顺序。
-- [ ] 8.18 保持现有entity stable authoring identity。
-- [ ] 8.19 为新entity生成planning symbol。
-- [ ] 8.20 输出唯一immutable `AgentMutationPlan`。
-- [ ] 8.21 输出entity路径到typed command的source map。
-- [ ] 8.22 输出最小planned diff。
-- [ ] 8.23 禁止Reconciler修改Unity对象。
+## 8. 目录Document Store
 
-## 9. 内部Mutation链迁移
+- [x] 8.1 保留Unity项目级`AgentAuthoring/Documents`唯一根目录。
+- [x] 8.2 从domain、root path与root identity计算root-key。
+- [x] 8.3 计算确定性`.btsmtl/`目录路径。
+- [x] 8.4 禁止调用方传入任意package path。
+- [x] 8.5 禁止目录扫描寻找替代package。
+- [x] 8.6 实现package存在性查询。
+- [x] 8.7 实现manifest文件清单加载。
+- [x] 8.8 实现完整package只读加载。
+- [x] 8.9 实现staging目录创建。
+- [x] 8.10 将全部规范文件写入staging。
+- [x] 8.11 严格重读staging package。
+- [x] 8.12 校验staging documentHash。
+- [x] 8.13 实现当前package rollback目录切换。
+- [x] 8.14 实现staging到正式package原子切换。
+- [x] 8.15 实现发布失败恢复上一package。
+- [x] 8.16 清理成功后的rollback目录。
+- [x] 8.17 清理失败后的staging目录。
+- [x] 8.18 保持package位于Assets之外。
+- [x] 8.19 删除v1单文件与sidecar写入路径。
+- [x] 8.20 删除Patch inbox、clipboard和watcher路径。
 
-- [ ] 9.1 将`AgentPatchCommandKind`改名为`AgentMutationKind`。
-- [ ] 9.2 将`AgentPatchCommand`类型族改名为`AgentMutation`类型族。
-- [ ] 9.3 将`AgentPatchCommandPlan`改名为`AgentMutationPlan`。
-- [ ] 9.4 将`AgentPatchCompileSession`改名为`AgentMutationSession`。
-- [ ] 9.5 将`AgentPatchPreparation`改名为Document preparation结果。
-- [ ] 9.6 将`AgentPatchCompiler`改名为Document mutation compiler facade。
-- [ ] 9.7 将handler catalog迁移到Mutation命名。
-- [ ] 9.8 保持StateMachine handler调用正式authoring API。
-- [ ] 9.9 保持StateBehavior handler调用正式authoring API。
-- [ ] 9.10 保持GraphLink handler调用正式authoring API。
-- [ ] 9.11 保持Timeline handler调用正式authoring API。
-- [ ] 9.12 保持AI handler调用正式AI authoring API。
-- [ ] 9.13 保持TransactionOwnerCollector覆盖全部owner。
-- [ ] 9.14 保持Compiler不拥有Undo、dirty、rollback或SaveAssets。
-- [ ] 9.15 删除operation字符串catalog外部解析。
-- [ ] 9.16 删除前序operation output外部合同。
-- [ ] 9.17 删除旧Patch类型alias和兼容wrapper。
+## 9. Graph与Timeline exporter
 
-## 10. Dry-run与hash锁定
+- [x] 9.1 建立Character v2 package exporter。
+- [x] 9.2 建立AI v2 package exporter。
+- [x] 9.3 导出controller分片。
+- [x] 9.4 导出blackboard分片。
+- [x] 9.5 导出Character actions分片。
+- [x] 9.6 导出AI perception分片。
+- [x] 9.7 按stable Graph identity创建Graph目录。
+- [x] 9.8 从capability catalog导出Node kind。
+- [x] 9.9 只导出当前kind有效properties。
+- [x] 9.10 将系统Node转换为anchor endpoint。
+- [x] 9.11 导出Flow Edge完整目标集合。
+- [x] 9.12 导出Property Edge完整目标集合。
+- [x] 9.13 导出Graph owner与slot。
+- [x] 9.14 导出Graph reference。
+- [x] 9.15 将Node位置写入layout分片。
+- [x] 9.16 按stable Timeline identity创建Timeline目录。
+- [x] 9.17 将Track、Clip、Marker写入timeline分片。
+- [x] 9.18 将Curve payload写入curves分片。
+- [x] 9.19 从Node输出删除C# typeName。
+- [x] 9.20 从Node输出删除nodeTypeDisplayName。
+- [x] 9.21 从Node输出删除重复propertyPorts。
+- [x] 9.22 从Node输出删除无意义空配置字段。
+- [x] 9.23 生成全部context catalog。
+- [x] 9.24 生成manifest规范文件清单。
+- [x] 9.25 生成sync基线。
 
-- [ ] 10.1 实现`dry_run_document` service入口。
-- [ ] 10.2 dry-run重新加载确定性Document路径。
-- [ ] 10.3 dry-run重新计算live source revision。
-- [ ] 10.4 dry-run重新计算同步状态。
-- [ ] 10.5 dry-run拒绝TreeDirty。
-- [ ] 10.6 dry-run拒绝Conflict。
-- [ ] 10.7 dry-run严格解析Document。
-- [ ] 10.8 dry-run执行Reconciler。
-- [ ] 10.9 dry-run执行Mutation preflight。
-- [ ] 10.10 dry-run返回canonical document hash。
-- [ ] 10.11 dry-run返回plan hash。
-- [ ] 10.12 dry-run返回planned diff与metrics。
-- [ ] 10.13 dry-run使用Document entity路径报告诊断。
-- [ ] 10.14 保证dry-run不dirty、save或build。
+## 10. 确定性layout
 
-## 11. Apply事务与反向同步
+- [x] 10.1 定义Graph kind到布局方向的正式规则。
+- [x] 10.2 定义拓扑层级计算规则。
+- [x] 10.3 定义同层identity排序规则。
+- [x] 10.4 定义Node间距常量。
+- [x] 10.5 保留现有Node显式位置。
+- [x] 10.6 为新Node缺失位置生成确定性位置。
+- [x] 10.7 禁止自动布局改写未受影响现有Node。
+- [x] 10.8 将layout变化纳入editableHash。
+- [x] 10.9 从Program/Projection发布判定中排除纯layout变化。
 
-- [ ] 11.1 实现`apply_document` service入口。
-- [ ] 11.2 apply要求非空expected document hash。
-- [ ] 11.3 apply重新计算当前document hash。
-- [ ] 11.4 apply拒绝hash变化。
-- [ ] 11.5 apply重新计算live source revision。
-- [ ] 11.6 apply拒绝tree revision变化。
-- [ ] 11.7 apply拒绝TreeDirty与Conflict。
-- [ ] 11.8 apply重新建立等价Mutation Plan。
-- [ ] 11.9 apply校验plan hash与dry-run结果一致。
-- [ ] 11.10 apply收集完整Character transaction owner。
-- [ ] 11.11 apply收集完整AI transaction owner。
-- [ ] 11.12 apply注册唯一Undo group。
-- [ ] 11.13 apply执行typed handler mutation。
-- [ ] 11.14 apply执行domain正式Validator。
-- [ ] 11.15 任一mutation或validation错误时完整回滚。
-- [ ] 11.16 成功时dirty实际touched owner。
-- [ ] 11.17 成功时保存正式Unity资产。
-- [ ] 11.18 Character apply显式发布正式Program与Projection。
-- [ ] 11.19 AI apply显式发布正式AIIntentProgram。
-- [ ] 11.20 generated product发布失败时回滚Unity事务。
-- [ ] 11.21 从最终Character树重新导出canonical Document。
-- [ ] 11.22 从最终AI树重新导出canonical Document。
-- [ ] 11.23 写回真实stable identity与规范顺序。
-- [ ] 11.24 更新base source revision与base content hash。
-- [ ] 11.25 原子替换Document文件。
-- [ ] 11.26 Document写回失败时不得报告Clean或完整成功。
-- [ ] 11.27 apply成功response返回新revision、hash与Clean状态。
+## 11. Live revision与同步状态
 
-## 12. Conflict与显式rebase
+- [x] 11.1 保留domain-aware live source revision入口。
+- [x] 11.2 从revision排除generated Character Program。
+- [x] 11.3 从revision排除Presentation Projection。
+- [x] 11.4 从revision排除generated AIIntentProgram。
+- [x] 11.5 保留独立current context hash入口。
+- [x] 11.6 从当前package计算editableHash。
+- [x] 11.7 从当前package校验contextHash。
+- [x] 11.8 定义Clean。
+- [x] 11.9 定义TreeDirty。
+- [x] 11.10 定义DocumentDirty。
+- [x] 11.11 定义Conflict。
+- [x] 11.12 将context文件变化判为`readonly_context_modified`。
+- [x] 11.13 禁止保存可编辑dirty布尔值。
+- [x] 11.14 保持revision与状态查询不build、不publish。
 
-- [ ] 12.1 实现`rebase_document` service入口。
-- [ ] 12.2 rebase只允许现有合法Document。
-- [ ] 12.3 rebase重新导出当前树规范投影。
-- [ ] 12.4 rebase返回树与Document差异诊断。
-- [ ] 12.5 rebase不自动修改Document editable body。
-- [ ] 12.6 rebase要求显式确认当前树为新基线。
-- [ ] 12.7 rebase只更新base source revision。
-- [ ] 12.8 rebase把当前树canonical正文hash写为base content hash。
-- [ ] 12.9 rebase保留AI目标正文。
-- [ ] 12.10 rebase后重新推导DocumentDirty。
-- [ ] 12.11 rebase不修改Unity资产。
-- [ ] 12.12 rebase不触发build或publish。
+## 12. Checkout与rebase
 
-## 13. MCP与Editor Window
+- [x] 12.1 将checkout切换为v2 package exporter。
+- [x] 12.2 无package时显式checkout创建。
+- [x] 12.3 Clean时显式checkout规范刷新。
+- [x] 12.4 TreeDirty且editable未改时显式checkout刷新。
+- [x] 12.5 DocumentDirty时checkout保留现有package。
+- [x] 12.6 Conflict时checkout拒绝覆盖。
+- [x] 12.7 checkout返回package绝对路径。
+- [x] 12.8 checkout返回整包状态与hash摘要。
+- [x] 12.9 checkout不修改Unity资产。
+- [x] 12.10 checkout不触发Program或Projection build。
+- [x] 12.11 将rebase切换为整包基线。
+- [x] 12.12 rebase刷新当前Unity context分片。
+- [x] 12.13 rebase保留AI editable分片。
+- [x] 12.14 rebase更新三项base identity。
+- [x] 12.15 rebase后重新推导DocumentDirty。
+- [x] 12.16 rebase不修改Unity资产或generated product。
 
-- [ ] 13.1 保留唯一`manage_btsmtl_agent_authoring`工具。
-- [ ] 13.2 增加`checkout_document` action。
-- [ ] 13.3 增加`rebase_document` action。
-- [ ] 13.4 增加`dry_run_document` action。
-- [ ] 13.5 增加`apply_document` action。
-- [ ] 13.6 保留只读`validate` action。
-- [ ] 13.7 为apply增加`expected_document_hash`参数。
-- [ ] 13.8 从MCP参数删除`patch_json`。
-- [ ] 13.9 删除`export_snapshot` action。
-- [ ] 13.10 删除`dry_run_patch` action。
-- [ ] 13.11 删除`apply_patch` action。
-- [ ] 13.12 删除`bootstrap_ai_controller` action。
-- [ ] 13.13 拒绝全部旧action alias。
-- [ ] 13.14 response返回Document绝对路径。
-- [ ] 13.15 response返回同步状态、revision与hash。
-- [ ] 13.16 response保留机器可读report与diff。
-- [ ] 13.17 Window显示明确domain与root path。
-- [ ] 13.18 Window显示Document路径与同步状态。
-- [ ] 13.19 Window提供显式checkout按钮。
-- [ ] 13.20 Window提供显式rebase按钮。
-- [ ] 13.21 Window提供显式dry-run按钮。
-- [ ] 13.22 Window提供显式apply按钮。
-- [ ] 13.23 Window提供显式validate按钮。
-- [ ] 13.24 删除Window Intent输入模式。
-- [ ] 13.25 删除Window Patch JSON输入模式。
-- [ ] 13.26 禁止selection或focus自动切换root并执行操作。
-- [ ] 13.27 禁止Window或MCP复制application service生命周期。
+## 13. Reconciler目标状态闭包
 
-## 14. Domain能力与Validator迁移
+- [x] 13.1 将Reconciler输入切换为v2 package projection。
+- [x] 13.2 建立跨文件stable identity索引。
+- [x] 13.3 建立跨文件local identity symbol表。
+- [x] 13.4 校验Graph owner存在且slot合法。
+- [x] 13.5 计划新Graph创建。
+- [x] 13.6 计划Graph删除。
+- [x] 13.7 计划Node创建。
+- [x] 13.8 计划Node typed property更新。
+- [x] 13.9 计划Node删除。
+- [x] 13.10 拒绝Node kind原地改变。
+- [x] 13.11 计划Flow Edge创建。
+- [x] 13.12 计划Flow Edge删除。
+- [x] 13.13 计划Flow Edge endpoint变化。
+- [x] 13.14 计划Property Edge创建。
+- [x] 13.15 计划Property Edge删除。
+- [x] 13.16 计划Property Edge endpoint变化。
+- [x] 13.17 解析anchor endpoint。
+- [x] 13.18 计划Graph reference更新。
+- [x] 13.19 计划ConditionRule目标状态。
+- [x] 13.20 计划StateMachine与State目标状态。
+- [x] 13.21 计划Timeline与Track目标状态。
+- [x] 13.22 计划Clip与Marker目标状态。
+- [x] 13.23 计划完整Curve替换。
+- [x] 13.24 计划Blackboard目标状态。
+- [x] 13.25 计划Action与Input binding目标状态。
+- [x] 13.25.1 将Character Input节点的`inputId`与Action Request节点的`requestId`定义为必填typed property。
+- [x] 13.25.2 从正式Node binding导出并重建Input与Request节点目标状态。
+- [x] 13.25.3 将Input与Request节点新增、改名、移动和binding变化对账为同一typed Mutation。
+- [x] 13.25.4 在Mutation preflight中校验Definition identity与Input值类型，并通过正式binding API应用。
+- [x] 13.26 计划AI Definition与Perception目标状态。
+- [x] 13.27 计算创建与引用绑定顺序。
+- [x] 13.28 计算Edge断开与entity删除顺序。
+- [x] 13.29 收集全部serialized transaction owner。
+- [x] 13.30 输出跨文件entity source map。
+- [x] 13.31 输出最小planned diff。
+- [x] 13.32 保持Reconciler不修改Unity对象。
 
-- [ ] 14.1 让Character Document覆盖当前全部正式可写State操作。
-- [ ] 14.2 让Character Document覆盖当前全部正式可写Transition与Condition操作。
-- [ ] 14.3 让Character Document覆盖当前全部正式可写Action lifecycle操作。
-- [ ] 14.4 让Character Document覆盖当前全部正式可写Timeline操作。
-- [ ] 14.5 让Character Document覆盖MotionWarp操作语义。
-- [ ] 14.6 让Character Document覆盖Animation Channel操作语义。
-- [ ] 14.7 让Character Document覆盖Marker Sync操作语义。
-- [ ] 14.8 让Character Document覆盖registered Curve Channel操作语义。
-- [ ] 14.9 让Character Document覆盖Action target与Input binding语义。
-- [ ] 14.10 让AI Document覆盖Definition binding语义。
-- [ ] 14.11 让AI Document覆盖Blackboard与Perception语义。
-- [ ] 14.12 让AI Document覆盖Shared Flow/Value节点语义。
-- [ ] 14.13 让AI Document覆盖Observation、Memory与Intent语义。
-- [ ] 14.14 保持AI Graph禁止Character execution、Timeline和Transform副作用。
-- [ ] 14.15 把Compile Report路径从operation id迁移为Document entity path。
-- [ ] 14.16 把Synthesis评估从Macro coverage迁移为Document业务结构coverage。
-- [ ] 14.17 保持通用Validator不硬编码Corin或业务状态名。
-- [ ] 14.18 保持Presentation、Body Motion和Foot Analysis写入拒绝。
+## 14. Mutation handler闭包
 
-## 15. 清理旧路径
+- [x] 14.1 将Node create/configure接入统一capability catalog。
+- [x] 14.2 将Graph kind校验接入统一capability catalog。
+- [x] 14.3 为Flow Edge保留正式`BaseGraph.Link`。
+- [x] 14.4 为Flow Edge删除保留正式`BaseGraph.UnLink`。
+- [x] 14.5 为Property Edge保留正式`BaseGraph.LinkProperty`。
+- [x] 14.6 增加Property Edge正式断开Mutation。
+- [x] 14.7 增加Property Edge preflight解析。
+- [x] 14.8 增加Property Edge endpoint重接lowering。
+- [x] 14.9 增加新Graph正式owner创建Mutation。
+- [x] 14.10 增加Graph reference正式配置Mutation。
+- [x] 14.11 保持StateMachine handler正式API。
+- [x] 14.12 保持StateBehavior handler正式API。
+- [x] 14.13 保持Timeline handler正式API。
+- [x] 14.14 保持AI handler正式API。
+- [x] 14.15 保持Compiler不拥有Undo、dirty、rollback与SaveAssets。
+- [x] 14.16 删除operation字符串catalog解析。
+- [x] 14.17 删除前序operation output合同。
 
-- [ ] 15.1 删除`AgentMacroLibrary`。
-- [ ] 15.2 删除`AgentMacroCoverageEvaluator`。
-- [ ] 15.3 删除`AgentPatchIdentityBinder`旧外部Patch绑定路径。
-- [ ] 15.4 删除旧Patch JSON utility入口。
-- [ ] 15.5 删除旧operation catalog外部schema描述。
-- [ ] 15.6 删除旧Patch Editor Window状态与按钮。
-- [ ] 15.7 删除MCP `patch_json`工具说明。
-- [ ] 15.8 删除clipboard、快捷键、Patch inbox与文件watcher残留。
-- [ ] 15.9 删除v16/v17 converter、reader、writer和alias。
-- [ ] 15.10 确认没有第二个Graph、Timeline或AI mutation service。
-- [ ] 15.11 确认runtime程序集不引用Document模型或Store。
-- [ ] 15.12 确认Document目录不进入Player、Bundle或generated Program。
+## 15. Dry-run与apply
 
-## 16. Active change与文档同步
+- [x] 15.1 将dry-run切换为整包加载。
+- [x] 15.2 dry-run严格校验manifest与文件清单。
+- [x] 15.3 dry-run计算live source revision与current context hash。
+- [x] 15.4 dry-run拒绝TreeDirty。
+- [x] 15.5 dry-run拒绝Conflict。
+- [x] 15.6 dry-run执行v2 Reconciler。
+- [x] 15.7 dry-run执行Mutation preflight。
+- [x] 15.8 dry-run返回documentHash。
+- [x] 15.9 dry-run返回plan hash。
+- [x] 15.10 dry-run返回跨文件planned diff与诊断。
+- [x] 15.11 dry-run不dirty、save、build或publish。
+- [x] 15.12 将apply切换为整包expected document hash。
+- [x] 15.13 apply重新加载并计算documentHash。
+- [x] 15.14 apply拒绝hash变化。
+- [x] 15.15 apply拒绝source revision或context变化。
+- [x] 15.16 apply重新建立等价Mutation Plan。
+- [x] 15.17 apply校验plan hash。
+- [x] 15.18 apply建立唯一Undo事务。
+- [x] 15.19 apply执行typed handlers。
+- [x] 15.20 apply执行domain Validator。
+- [x] 15.21 apply失败时回滚全部owner。
+- [x] 15.22 apply成功时dirty实际owner。
+- [x] 15.23 apply成功时保存正式Unity资产。
+- [x] 15.24 Character apply只保存正式authoring，Program与Projection保持stale直到独立显式Build。
+- [x] 15.25 AI apply显式发布正式AIIntentProgram。
+- [x] 15.26 AI generated product发布失败时回滚。
+- [x] 15.27 从最终Unity树导出完整v2 package。
+- [x] 15.28 将local identity替换为stable identity。
+- [x] 15.29 原子发布最终package。
+- [x] 15.30 package发布失败时不报告Clean。
+- [x] 15.31 apply成功时返回新hash与Clean。
 
-- [ ] 16.1 重写`add-corin-training-ai-demo`的v16 Agent工作流描述。
-- [ ] 16.2 把其Snapshot任务改为显式checkout Document。
-- [ ] 16.3 把其Patch生成任务改为编辑正式Document。
-- [ ] 16.4 把其same Patch apply任务改为same document hash apply。
-- [ ] 16.5 把其re-export任务改为apply后canonical Document反向同步。
-- [ ] 16.6 删除其`bootstrap_ai_controller`依赖。
-- [ ] 16.7 更新`openspec/project.md`的Agent authoring当前链路。
-- [ ] 16.8 更新`btsmtl-agent-authoring`技能主流程。
-- [ ] 16.9 更新技能`current-contract.md`的schema、action和代码地图。
-- [ ] 16.10 更新Editor工具说明与机器诊断文案。
-- [ ] 16.11 删除文档中所有把v16/v17 Patch描述为外部正式入口的现行口径。
+## 16. 五个生命周期MCP工具
 
-## 17. 编译与正式工具校验
+- [x] 16.1 删除`ManageBtsmtlAgentAuthoringMcpTool`。
+- [x] 16.2 删除MCP `action`参数。
+- [x] 16.3 注册`btsmtl.checkout_document`。
+- [x] 16.4 为checkout定义严格input schema。
+- [x] 16.5 为checkout定义结构化output schema。
+- [x] 16.6 为checkout声明行为annotations。
+- [x] 16.7 注册`btsmtl.rebase_document`。
+- [x] 16.8 为rebase定义严格input schema。
+- [x] 16.9 为rebase定义结构化output schema。
+- [x] 16.10 为rebase声明行为annotations。
+- [x] 16.11 注册`btsmtl.dry_run_document`。
+- [x] 16.12 为dry-run定义严格input schema。
+- [x] 16.13 为dry-run定义结构化output schema。
+- [x] 16.14 为dry-run声明行为annotations。
+- [x] 16.15 注册`btsmtl.apply_document`。
+- [x] 16.16 为apply定义严格input schema。
+- [x] 16.17 为apply定义结构化output schema。
+- [x] 16.18 为apply声明行为annotations。
+- [x] 16.19 注册`btsmtl.validate`。
+- [x] 16.20 为validate定义严格input schema。
+- [x] 16.21 为validate定义结构化output schema。
+- [x] 16.22 为validate声明行为annotations。
+- [x] 16.23 将五个薄handler接入同一application service。
+- [x] 16.24 让业务/schema失败返回tool execution error。
+- [x] 16.25 在错误中返回code、path、message与suggestion。
+- [x] 16.26 在成功结果中返回绝对package path与hash摘要。
+- [x] 16.27 禁止MCP结果嵌入完整package JSON。
+- [x] 16.28 拒绝旧tool名与旧action alias。
+- [x] 16.29 拒绝`patch_json`与任意document path参数。
+- [x] 16.30 不注册任何Node、Edge、Timeline或JSON patch工具。
+- [x] 16.31 在生命周期工具说明中声明Presentation provider/source与Action channel只读边界。
 
-- [ ] 17.1 使用规定参数编译受影响的BTSMTL Editor程序集。
-- [ ] 17.2 使用规定参数编译受影响的Character Editor程序集。
-- [ ] 17.3 每次dotnet build后立即执行`dotnet build-server shutdown`。
-- [ ] 17.4 通过正式工具对Character root执行`checkout_document`。
-- [ ] 17.5 通过正式工具对AI root执行`checkout_document`。
-- [ ] 17.6 对未修改Document确认同步状态为Clean。
-- [ ] 17.7 对修改后的Character Document执行`dry_run_document`。
-- [ ] 17.8 对修改后的AI Document执行`dry_run_document`。
-- [ ] 17.9 对需要迁移的真实Document执行同hash `apply_document`。
-- [ ] 17.10 apply后确认Document已从最终树规范化并回到Clean。
-- [ ] 17.11 对Character root执行正式`validate`。
-- [ ] 17.12 对AI root执行正式`validate`。
-- [ ] 17.13 运行`openspec validate refactor-agent-authoring-to-synced-json-document --strict --no-interactive`。
-- [ ] 17.14 核对全部旧Patch、Macro、bootstrap和自动触发路径已删除。
-- [ ] 17.15 核对tasks状态与唯一Document闭环一致。
+## 17. Editor Window
 
+- [x] 17.1 将Window路径显示改为package目录。
+- [x] 17.2 显示manifest schema与root identity。
+- [x] 17.3 显示Clean、TreeDirty、DocumentDirty与Conflict。
+- [x] 17.4 显示editable、context与document hash。
+- [x] 17.5 保留显式checkout按钮。
+- [x] 17.6 保留显式rebase按钮。
+- [x] 17.7 保留显式dry-run按钮。
+- [x] 17.8 保留显式apply按钮。
+- [x] 17.9 保留显式validate按钮。
+- [x] 17.10 显示跨文件entity诊断。
+- [x] 17.11 显示planned与applied diff摘要。
+- [x] 17.12 删除Window内JSON正文编辑器。
+- [x] 17.13 删除Patch与Intent输入模式。
+- [x] 17.14 禁止selection、focus或domain reload自动执行生命周期。
+- [x] 17.15 禁止Window复制application service。
+
+## 18. 旧路径清理与文档同步
+
+- [x] 18.1 删除v1`AgentAuthoringDocument`单文件根模型。
+- [x] 18.2 删除v1单文件Store。
+- [x] 18.3 删除v1 sidecar baseline模型。
+- [x] 18.4 删除v1 external reader与writer。
+- [x] 18.5 删除`AgentControllerIntent`外部入口。
+- [x] 18.6 删除`AgentMacroLibrary`。
+- [x] 18.7 删除`AgentMacroCoverageEvaluator`。
+- [x] 18.8 删除外部Patch IR与宽operation模型。
+- [x] 18.9 删除bootstrap AI root入口。
+- [x] 18.10 删除clipboard、快捷键、inbox与watcher残留。
+- [x] 18.11 删除Node级或局部Graph工具说明。
+- [x] 18.12 更新`add-corin-training-ai-demo`为v2 package工作流。
+- [x] 18.13 删除其v17 Snapshot/Patch任务。
+- [x] 18.14 删除其bootstrap依赖。
+- [x] 18.15 更新`openspec/project.md`的Agent authoring口径。
+- [x] 18.16 更新`btsmtl-agent-authoring`技能主流程。
+- [x] 18.17 更新技能current-contract schema与代码地图。
+- [x] 18.18 更新Editor工具说明与错误文案。
+- [x] 18.19 删除现行文档中的Document v1和单tool action口径。
+
+## 19. 旧Presentation结构迁移生命周期
+
+- [x] 19.1 为checkout返回旧inline Pose Graph类型化诊断。
+- [x] 19.2 实现唯一GraphCatalog迁移服务与Inspector入口。
+- [x] 19.3 注册精确Definition的`character.migrate_legacy_pose_state_graphs`。
+- [x] 19.4 返回迁移数量、保存状态、资产revision和typed failure。
+- [x] 19.5 拒绝selection、扫描、未知参数与自动Build。
+- [x] 19.6 同步技能、current contract与Corin最终迁移步骤。

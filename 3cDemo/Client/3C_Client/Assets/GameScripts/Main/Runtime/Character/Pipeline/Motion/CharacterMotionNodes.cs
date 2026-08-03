@@ -30,6 +30,24 @@ namespace ThirdPersonCharacter.Pipeline.Motion
         public bool CameraRelative => m_CameraRelative;
         public bool Continuous => m_Continuous;
 
+#if UNITY_EDITOR
+        public void ConfigureAuthoring(
+            float moveSpeed,
+            float turnSpeedDegrees,
+            bool cameraRelative,
+            bool continuous)
+        {
+            if (float.IsNaN(moveSpeed) || float.IsInfinity(moveSpeed) || moveSpeed < 0f)
+                throw new ArgumentOutOfRangeException(nameof(moveSpeed));
+            if (float.IsNaN(turnSpeedDegrees) || float.IsInfinity(turnSpeedDegrees) || turnSpeedDegrees <= 0f)
+                throw new ArgumentOutOfRangeException(nameof(turnSpeedDegrees));
+            m_MoveSpeed = moveSpeed;
+            m_TurnSpeedDegrees = turnSpeedDegrees;
+            m_CameraRelative = cameraRelative;
+            m_Continuous = continuous;
+        }
+#endif
+
         public override State ReturnState => m_Continuous ? State.Running : State.Success;
 
         protected override void OnStart()

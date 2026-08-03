@@ -1,22 +1,22 @@
 ## ADDED Requirements
 
-### Requirement: Profile必须唯一绑定Blend Space表现来源
+### Requirement: Profile必须唯一绑定Blend Space Pose source
 
-`CharacterAnimationPresentationProfile` MUST允许稳定producer identity绑定`AnimationPoseSourceKind.BlendSpace`与精确`CharacterAnimationBlendSpaceAsset`。同一producer MUST只有一条正式source binding；Timeline、MotionMatching与BlendSpace字段 MUST互斥。Pose Graph节点、Timeline、State、Agent Patch和generated Projection MUST不保存第二份可写Blend Space资源选择。
+Pose Graph MUST拥有typed Blend Space Source Slot子资产，`CharacterAnimationPresentationProfile` MUST为该Slot拥有唯一typed Blend Space Binding子资产并精确引用`CharacterAnimationBlendSpaceAsset`。同一Slot MUST只有一条类型匹配binding；Sequence、Motion Matching与Blend Space必须使用各自独立的Slot和Binding类型。Pose Graph节点、Timeline、Gameplay State、Agent Patch和generated Projection MUST不保存第二份可写Blend Space资源选择。
 
-#### Scenario: 作者把Locomotion producer绑定到Blend Space
+#### Scenario: 作者把Locomotion Pose source绑定到Blend Space
 
-- **WHEN** 作者在Profile正式入口为稳定producer选择BlendSpace source kind与资产
-- **THEN** Presentation Authoring Service MUST原子保存唯一binding
-- **AND** 旧Timeline transition字段 MUST被删除而不是保留备用
+- **WHEN** 作者在Profile正式入口为Graph-owned Blend Space Source Slot创建Binding并选择Blend Space资产
+- **THEN** Presentation Authoring Service MUST在Profile文件内原子保存唯一typed Binding子资产
+- **AND** 旧Gameplay producer、Timeline locomotion与Selection binding MUST被删除而不是保留备用
 
-### Requirement: Blend Space binding必须从正式composition roots发现producer
+### Requirement: Blend Space binding必须从正式PoseState roots发现消费者
 
-Presentation Authoring Service MUST从显式`CharacterPipelineDefinition`的composition roots递归发现Timeline、AnimationTrack或其它正式producer stable identity。它 MUST不从generated Program/Projection、旧Layer、显示名、目录或场景对象猜producer。Binding Validator MUST校验资产Rig、轴接口和可达BlendSpacePlayer合同。
+Presentation Authoring Service MUST从显式`CharacterPipelineDefinition`的Presentation Profile与PoseState inline subgraph递归发现精确Source Slot对象引用和BlendSpacePlayer消费者。它 MUST按对象引用解析唯一Profile Binding，不得从generated Program/Projection、Timeline、旧Layer、显示名、目录、数组index或场景对象猜source。Binding Validator MUST校验Slot/Binding类型、资产Rig、轴接口、Fact参数投影和可达BlendSpacePlayer合同。
 
-#### Scenario: producer只能通过名称找到
+#### Scenario: Pose source只能通过名称找到
 
-- **WHEN** Profile中只有显示名相同但没有正式stable identity的候选
+- **WHEN** Profile中只有显示名相同但没有引用精确Source Slot对象的候选Binding
 - **THEN** Authoring Service MUST拒绝绑定
 - **AND** MUST不选择目录中的第一个同名资产
 
@@ -28,5 +28,4 @@ Presentation Authoring Service MUST从显式`CharacterPipelineDefinition`的comp
 
 - **WHEN** 作者在Profile References中打开一个BlendSpace binding
 - **THEN** Workspace MUST定位精确BlendSpaceId和content revision
-- **AND** Details MUST显示引用它的producer与Pose Graph节点
-
+- **AND** Details MUST显示引用它的PoseState、Pose source与Pose Graph节点

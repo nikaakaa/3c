@@ -92,19 +92,19 @@ GameplayTickSystem MUST以 SimulationSessionHost/runtime handle作为每个 Sess
 
 ### Requirement: GameplayTickSystem 必须每表现帧推进 PresentationFrame
 
-PresentationFrame MUST继续以render/presentation delta推进visual interpolation、Timeline visual sampling、显式Player clock、Camera和committed command lifecycle。Rollback replay MUST只产生EventId output replacement，MUST不直接把PresentationFrame回卷或用logic tick代替render delta。PresentationFrame MUST不调用Kernel Evaluate/Finalize、WorldSolver.ResolveBatch或修改Character/World state。
+PresentationFrame MUST继续以render/presentation delta推进visual interpolation、Timeline visual sampling、显式Player节点clock、Animancer source sampling、Character Pose Graph Plan、FootPlacement world-aware阶段、Camera与committed command lifecycle。Rollback replay MUST只产生EventId output replacement，MUST不直接回卷PresentationFrame或用logic tick代替presentation delta。PresentationFrame MUST不调用Kernel Evaluate/Finalize、Gameplay WorldSolver.ResolveBatch或修改Character/World state。
 
 #### Scenario: 高渲染帧率下的表现帧
 
-- **WHEN** 两个 SimulationTick之间发生多个 PresentationFrame
-- **THEN** 表现 MUST继续插值和淡入淡出
+- **WHEN** 两个SimulationTick之间发生多个PresentationFrame
+- **THEN** Body插值、slot淡入淡出、source sampling与Pose Graph输出 MUST连续推进
 - **AND** Session runtime handle MUST不被额外推进
 
-#### Scenario: Replay 后替换动画选择
+#### Scenario: Replay后替换动画选择
 
-- **WHEN** Output Disposition Pass产生 EventId replacement
-- **THEN** PresentationFrame MUST从当前视觉状态处理新 command
-- **AND** MUST继续以 presentation delta 推进 Animancer
+- **WHEN** Output Disposition Pass产生FullBodyAction EventId replacement
+- **THEN** PresentationFrame MUST从该slot当前视觉结果处理新command
+- **AND** MUST继续以presentation delta推进唯一Pose Plan及其中显式Player节点
 
 ### Requirement: 服务端 tick 必须只通过网络输入进入角色管线
 

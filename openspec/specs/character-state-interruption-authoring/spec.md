@@ -5,28 +5,28 @@
 ## Requirements
 ### Requirement: 状态抢占必须复用分层停止协议
 
-状态抢占authoring MUST继续表达通用Runnable stop、StateMachine transition、State.OnExit与Timeline producer release。Compiler MUST将其生成为统一control-flow、stop barrier、ownership与release operation；Program MUST在关闭source State、Action与Timeline Gameplay output后，为每个受影响AnimationChannelId输出至多一个producer command。系统 MUST不让source逻辑为视觉transition继续active，也 MUST不使用StateMachine external animation、Tree Driver、Animation priority或CharacterGraphContext selection。
+Gameplay状态抢占authoring MUST继续表达通用Runnable stop、BTSMTL StateMachine transition、State.OnExit、Action lifecycle与有限Action Timeline producer release。Compiler MUST把它们生成为统一control-flow、stop barrier、Motion ownership与release operation；Program MUST在关闭source Action与Timeline Gameplay output后，为每个受影响的有限Action AnimationChannel输出至多一个producer command。持续Locomotion Pose transition MUST由PoseStateMachine处理，Program MUST不为视觉transition保持source Gameplay State active。
 
-#### Scenario: RunEnd 被输入抢占
+#### Scenario: Attack被Dodge抢占
 
-- **WHEN** RunEnd compiled edge 命中更高优先级条件
-- **THEN** StateMachine operation MUST 完成 source exit 与 target activation
-- **AND** Locomotion operation MUST 输出 target producer command
-- **AND** AnimationPlaybackLifecycle MUST 只消费已提交 command 与 sample
+- **WHEN** 更高优先级Dodge replacement停止Attack State
+- **THEN** Gameplay MUST完成Attack source exit并激活Dodge
+- **AND** FullBodyAction MUST提交Dodge playback
+- **AND** Slot MUST独立处理Attack到Dodge的Pose transition
 
-#### Scenario: 上层 Selector 抢占 StateMachineNode
+#### Scenario: 上层Selector抢占StateMachineNode
 
-- **WHEN** LowerPriority replacement 停止整个 StateMachine operation
-- **THEN** stop cause MUST 沿 active descendant operation 传播
-- **AND** Action/Locomotion operation MUST 在 barrier 完成后输出最终 producer command
-- **AND** MUST 不读取 StateMachineNode external animation definition
+- **WHEN** LowerPriority replacement停止整个Gameplay StateMachine operation
+- **THEN** stop cause MUST沿active descendant传播
+- **AND** Program MUST释放受影响Action playback与Motion ownership
+- **AND** MUST不读取PoseStateMachine active state
 
 #### Scenario: ForceStop
 
-- **WHEN** Session、Actor 或 Host ForceStop/deactivate/dispose
-- **THEN** Pipeline Runtime MUST立即关闭 logic activation并输出 retire lifecycle
-- **AND** Committer/Presentation MUST清理playback lifecycle、Blend Stack source、Animancer source playable与retention
-- **AND** MUST不读取transition duration或等待视觉收尾
+- **WHEN** Session、Actor或Host ForceStop/deactivate/dispose
+- **THEN** Pipeline Runtime MUST立即关闭logic activation并输出各channel retire lifecycle
+- **AND** Presentation MUST清理Lifecycle、全部Player节点、Pose Graph workspace、Animancer sources与retention
+- **AND** MUST不等待fade完成或读取Pose Graph transition
 
 ### Requirement: StateExitContext 必须保持层间翻译边界
 
@@ -62,43 +62,45 @@ Transition MUST 用 Action Context、Blackboard ValueNode、`ActionWindowActiveI
 - **WHEN** `RecoveryOpen` 与 Attack、Dodge 或 Move 条件成立
 - **THEN** StateMachine MUST 按 edge priority 选择唯一 target
 - **AND** MUST NOT 读取旧 cancel key
+
 ### Requirement: 状态退出逻辑屏障与表现收尾必须分离
 
-source State root、Action lifecycle、Timeline gameplay output与逻辑所有权 MUST在stop barrier内关闭。AnimationPlaybackLifecycle MAY让已释放source以Retained视觉状态存在，并通过PresentationRetention接收animation-only sample；连接该Selection的显式Player MUST负责source usage，BlendStack MUST独占transition与Stored Pose，局部Inertialization MUST独占residual，Lifecycle MUST在全部usage释放后最终退休source。逻辑release MUST不等于retained visual retirement，但表现收尾 MUST不重新tick source gameplay。
+source Gameplay State root、Action lifecycle、Timeline Gameplay output与Motion ownership MUST在stop barrier内关闭。`CharacterActionPlaybackRuntime` MAY让已释放的有限Action source以Retained视觉状态存在；AnimationSlot、BlendStack与Inertialization MUST按compiled route完成表现收尾。PoseStateMachine source relevance MUST只属于Presentation workspace。逻辑release MUST不等待Slot或PoseState transition，表现收尾 MUST不重新tick source Gameplay。
 
-#### Scenario: Blend Stack收尾
+#### Scenario: Action Slot收尾
 
-- **WHEN** source已逻辑退出且显式Player链仍保留其视觉贡献
-- **THEN** source MAY保持Retained与只读animation retention
-- **AND** source MUST不再产生 gameplay、Tree、Timeline logic、Motion、root motion 或 GameplayFacts
+- **WHEN** Attack已经逻辑退出但FullBodyAction Slot仍在淡出
+- **THEN** Attack source MAY保持Retained animation-only sample
+- **AND** MUST不再产生Gameplay、Timeline logic、Motion或Window
 
-#### Scenario: target 首样本延迟
+#### Scenario: target首样本延迟
 
-- **WHEN** source 已退出但 selected target 尚无第一份 sample
-- **THEN** lifecycle MUST保持上一Retained输出并记录PendingFirstSample
-- **AND** MUST不恢复 source 逻辑所有权或选择 fallback
+- **WHEN** source已退出但selected target尚无首样本
+- **THEN** Lifecycle MUST保持上一份正式Player输出并记录PendingFirstSample
+- **AND** MUST不恢复source逻辑ownership或选择fallback
 
-#### Scenario: 结构 target
+#### Scenario: 结构target
 
-- **WHEN** logical target 本身不产 animation producer
-- **THEN** RequireOutput channel的逻辑提交 MUST省略该channel更新并保持已提交的正式producer，或直接选择目标状态的正式producer
+- **WHEN** logical target本身不产animation producer
+- **THEN** RequireOutput channel MUST保持已提交正式producer或由逻辑直接选择目标producer
 - **AND** AllowEmpty channel MAY显式选择None
-- **AND** Animation 模块 MUST不从 Runnable executed 或 Tree route 推断 target
+- **AND** Animation module MUST不从Runnable、Tree route或Pose Graph推断target
 
 ### Requirement: 动画 Transition 的完成不得反向阻塞 Tree terminal
 
-Tree/StateMachine terminal MUST只由逻辑停止协议决定，MUST不等待视觉transition。PendingFirstSample、Selected、Retained与Retired MUST由AnimationPlaybackLifecycle在表现帧推进；transition progress MUST由图中显式BlendStack使用presentation delta推进。teardown MUST确定性清理播放生命周期。
+Tree与Gameplay StateMachine terminal MUST只由逻辑停止协议决定，MUST不等待Animation Slot、PoseStateMachine transition、PendingFirstSample、BlendStack或Inertialization。Action playback lifecycle与PoseState workspace MUST由PresentationFrame推进；teardown MUST按编译Plan确定性清理。
 
-#### Scenario: 长淡出与新 child
+#### Scenario: 长Action淡出与新child
 
-- **WHEN** source SMNode已terminal但source仍为Retained Stack entry
-- **THEN** parent Tree MUST能推进 replacement child
-- **AND** replacement logic MUST能提交新 selection
+- **WHEN** source Action State已经terminal但Action Pose仍为Retained
+- **THEN** parent Tree MUST能推进replacement child
+- **AND** 新Action MUST能提交新的playback generation
 
-#### Scenario: Host 销毁
+#### Scenario: Host销毁
 
-- **WHEN** host 在 fade 运行时 dispose
-- **THEN** lifecycle、retention、Stack source与Animancer source playable MUST立即释放
+- **WHEN** Host在Player连续化运行时dispose
+- **THEN** Runtime MUST清理Lifecycle、全部Player节点、source、Pose Graph workspace与retention
+- **AND** Tree terminal MUST不等待transition duration
 
 ### Requirement: 嵌套 StateMachine 停止必须逐层复用同一 source-exit 协议
 

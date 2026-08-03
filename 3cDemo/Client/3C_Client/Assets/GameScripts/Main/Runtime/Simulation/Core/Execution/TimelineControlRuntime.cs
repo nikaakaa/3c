@@ -368,7 +368,16 @@ namespace ThirdPersonSimulation
             bool select)
         {
             IReadOnlyList<OperationHandle> representatives = m_Target.AnimationProducerRepresentatives(timeline);
+            if (representatives.Count == 0)
+                return;
             ulong generation = m_Target.ReadActivationGeneration(timeline);
+            TimelineActionContextIdentity actionContext = m_State.ReadRetainedActionContext(timeline);
+            if (!actionContext.IsValid)
+                throw new InvalidOperationException(
+                    $"Animation Timeline '{m_Target.SourcePath(timeline)}' has no retained Action context.");
+            TTime visualTimeScale = m_Target.Divide(
+                m_Target.Subtract(segment.Current, segment.Previous),
+                m_Target.TickDelta);
             for (int i = 0; i < representatives.Count; i++)
             {
                 OperationHandle representative = representatives[i];
@@ -380,7 +389,9 @@ namespace ThirdPersonSimulation
                         segment.Current,
                         m_Target.One,
                         generation,
-                        segment.Cycle);
+                        segment.Cycle,
+                        actionContext.InstanceId,
+                        visualTimeScale);
                 }
                 EmitPresentation(
                     representative,
@@ -388,7 +399,9 @@ namespace ThirdPersonSimulation
                     segment.Current,
                     m_Target.One,
                     generation,
-                    segment.Cycle);
+                    segment.Cycle,
+                    actionContext.InstanceId,
+                    visualTimeScale);
             }
         }
 
@@ -620,10 +633,24 @@ namespace ThirdPersonSimulation
             TTime time)
         {
             IReadOnlyList<OperationHandle> representatives = m_Target.AnimationProducerRepresentatives(timeline);
+            if (representatives.Count == 0)
+                return;
             int cycle = m_State.TryReadCycle(timeline, out int value) ? value : 0;
             ulong generation = m_Target.ReadActivationGeneration(timeline);
+            TimelineActionContextIdentity actionContext = m_State.ReadRetainedActionContext(timeline);
+            if (!actionContext.IsValid)
+                throw new InvalidOperationException(
+                    $"Animation Timeline '{m_Target.SourcePath(timeline)}' has no retained Action context.");
             for (int i = 0; i < representatives.Count; i++)
-                EmitPresentation(representatives[i], kind, time, m_Target.Zero, generation, cycle);
+                EmitPresentation(
+                    representatives[i],
+                    kind,
+                    time,
+                    m_Target.Zero,
+                    generation,
+                    cycle,
+                    actionContext.InstanceId,
+                    m_Target.Zero);
         }
 
         void EmitTimelineCameraTerminal(OperationHandle timeline, TTime time)
@@ -642,7 +669,9 @@ namespace ThirdPersonSimulation
                         time,
                         m_Target.Zero,
                         0,
-                        0);
+                        0,
+                        0,
+                        m_Target.Zero);
                 }
             }
         }
@@ -653,7 +682,9 @@ namespace ThirdPersonSimulation
             TTime time,
             TTime weight,
             ulong generation,
-            int cycle)
+            int cycle,
+            ulong sourceActionInstanceId = 0,
+            TTime visualTimeScale = default)
         {
             m_Target.EmitPresentation(new TimelinePresentationOutput<TTime>(
                 operation,
@@ -661,7 +692,9 @@ namespace ThirdPersonSimulation
                 time,
                 weight,
                 generation,
-                cycle));
+                cycle,
+                sourceActionInstanceId,
+                visualTimeScale));
         }
 
         bool CaptureTimelineActionContext(OperationHandle timeline)

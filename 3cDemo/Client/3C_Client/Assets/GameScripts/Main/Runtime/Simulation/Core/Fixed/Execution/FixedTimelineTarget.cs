@@ -341,8 +341,10 @@ namespace ThirdPersonSimulation.Fixed
                 return;
             FixedScalar curveEnd = ClipTime(operation, TimelineClipTimePoint.CurveEnd);
             FixedScalar curveDuration = FixedScalar.Max(Epsilon, curveEnd - start);
-            FixedScalar previousCurve = FixedScalar.Clamp(segment.Previous - start, FixedScalar.Zero, curveDuration) / curveDuration;
-            FixedScalar currentCurve = FixedScalar.Clamp(segment.Current - start, FixedScalar.Zero, curveDuration) / curveDuration;
+            FixedScalar previousCurveTime = FixedScalar.Clamp(segment.Previous - start, FixedScalar.Zero, curveDuration);
+            FixedScalar currentCurveTime = FixedScalar.Clamp(segment.Current - start, FixedScalar.Zero, curveDuration);
+            FixedScalar previousCurve = previousCurveTime / curveDuration;
+            FixedScalar currentCurve = currentCurveTime / curveDuration;
             FixedScalar normalized = FixedScalar.Clamp(self / duration, FixedScalar.Zero, FixedScalar.One);
             FixedScalar weight = SampleClipWeight(
                 operation,
@@ -428,7 +430,9 @@ namespace ThirdPersonSimulation.Fixed
                 output.SampleTime,
                 output.Weight,
                 output.ProducerGeneration,
-                output.Cycle));
+                output.Cycle,
+                output.SourceActionInstanceId,
+                output.VisualTimeScale));
         }
 
         public void EmitCue(TimelineCueOutput<FixedScalar> output)
@@ -445,7 +449,9 @@ namespace ThirdPersonSimulation.Fixed
                 output.SampleTime,
                 FixedScalar.One,
                 0,
-                output.Cycle));
+                output.Cycle,
+                0,
+                FixedScalar.Zero));
         }
 
         public void EmitTrace(TimelineTraceOutput output)

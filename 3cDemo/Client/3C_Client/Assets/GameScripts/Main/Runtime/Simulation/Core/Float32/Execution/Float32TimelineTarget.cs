@@ -340,8 +340,10 @@ namespace ThirdPersonSimulation
                 return;
             Float32Scalar curveEnd = ClipTime(operation, TimelineClipTimePoint.CurveEnd);
             Float32Scalar curveDuration = Float32Scalar.Max(Epsilon, curveEnd - start);
-            Float32Scalar previousCurve = Float32Scalar.Clamp(segment.Previous - start, Float32Scalar.Zero, curveDuration) / curveDuration;
-            Float32Scalar currentCurve = Float32Scalar.Clamp(segment.Current - start, Float32Scalar.Zero, curveDuration) / curveDuration;
+            Float32Scalar previousCurveTime = Float32Scalar.Clamp(segment.Previous - start, Float32Scalar.Zero, curveDuration);
+            Float32Scalar currentCurveTime = Float32Scalar.Clamp(segment.Current - start, Float32Scalar.Zero, curveDuration);
+            Float32Scalar previousCurve = previousCurveTime / curveDuration;
+            Float32Scalar currentCurve = currentCurveTime / curveDuration;
             Float32Scalar normalized = Float32Scalar.Clamp(self / duration, Float32Scalar.Zero, Float32Scalar.One);
             Float32Scalar weight = SampleClipWeight(
                 operation,
@@ -427,7 +429,9 @@ namespace ThirdPersonSimulation
                 output.SampleTime,
                 output.Weight,
                 output.ProducerGeneration,
-                output.Cycle));
+                output.Cycle,
+                output.SourceActionInstanceId,
+                output.VisualTimeScale));
         }
 
         public void EmitCue(TimelineCueOutput<Float32Scalar> output)
@@ -444,7 +448,9 @@ namespace ThirdPersonSimulation
                 output.SampleTime,
                 Float32Scalar.One,
                 0,
-                output.Cycle));
+                output.Cycle,
+                0,
+                Float32Scalar.Zero));
         }
 
         public void EmitTrace(TimelineTraceOutput output)

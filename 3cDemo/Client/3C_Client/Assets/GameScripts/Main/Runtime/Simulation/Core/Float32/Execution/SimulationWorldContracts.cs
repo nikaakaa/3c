@@ -19,7 +19,10 @@ namespace ThirdPersonSimulation
             Float32Vector3 requestedVelocity,
             Float32Scalar yawDegrees,
             WorldMotionSpace space,
-            bool hasMotion)
+            bool hasMotion,
+            string locomotionOwnerIdentity,
+            string actionOwnerIdentity,
+            string gameplayResultOwnerIdentity)
         {
             SourceIdentity = SimulationIdentity.Require(sourceIdentity, nameof(sourceIdentity));
             Displacement = displacement;
@@ -27,6 +30,9 @@ namespace ThirdPersonSimulation
             YawDegrees = yawDegrees;
             Space = space;
             HasMotion = hasMotion;
+            LocomotionOwnerIdentity = locomotionOwnerIdentity ?? string.Empty;
+            ActionOwnerIdentity = actionOwnerIdentity ?? string.Empty;
+            GameplayResultOwnerIdentity = gameplayResultOwnerIdentity ?? string.Empty;
         }
 
         public string SourceIdentity { get; }
@@ -35,6 +41,9 @@ namespace ThirdPersonSimulation
         public Float32Scalar YawDegrees { get; }
         public WorldMotionSpace Space { get; }
         public bool HasMotion { get; }
+        public string LocomotionOwnerIdentity { get; }
+        public string ActionOwnerIdentity { get; }
+        public string GameplayResultOwnerIdentity { get; }
     }
 
     public sealed class CharacterWorldSolveRequest

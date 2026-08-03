@@ -181,28 +181,25 @@
 
 ### Requirement: 不新增 Graph 分裂路径
 
-系统 MUST保持一套图数据、一套BTSMTL原生端口系统和一套编辑器资产入口。系统 MUST NOT因`BaseGraph`、`StateMachineGraph`、`ConditionRuleGraph`、`AIControllerTree`或BT edge decorator新增Workbench图、并行端口协议、旧数据fallback或重复序列化集合。
+系统 MUST在BTSMTL领域保持一套`BaseGraph`数据、一套`PropertyPort`/`PropertyEdge`端口系统和一套`BaseTreeAsset`入口。StateMachineGraph、ConditionRuleGraph和BT edge decorator MUST继续使用该正式BTSMTL链路，不得新增Workbench、并行BTSMTL端口协议、旧数据fallback或重复序列化集合。跨领域的Character Presentation Pose Graph MUST使用独立Pose数据、typed Pose端口、validator和compiler，同时与BTSMTL共享唯一Graph Authoring Domain Framework中的Canvas、Node/Port View、selection、clipboard、Details、Navigator与StateMachine作者交互。共享层 MUST只消费domain document、Capability、typed payload、port policy和mutation adapter；Pose MUST不继承BTSMTL runtime node/edge语义，也 MUST不成为第二个BTSMTL Graph执行路径。
 
-领域专用Tree Window MAY通过继承`BaseTreeWindow`提供独立Unity dockable窗口身份、标题和Inspector context，但 MUST复用同一个BaseTreeView、Graph Data Catalog、page stack、breadcrumb、selection、Undo、dirty、Node Search和authoring mutation服务。领域窗口 MUST NOT拥有第二套GraphView或Graph序列化模型。
-
-#### Scenario: 结构链路唯一
-
-- **WHEN** 新Graph能力接入BTSMTL
-- **THEN** 它 MUST使用现有BaseGraph集合、PropertyPort/PropertyEdge和BaseTreeAsset入口
-- **AND** 它 MUST NOT新增并行Workbench或fallback数据链路
-
-#### Scenario: AI与Character窗口并排
-
-- **WHEN** 作者同时打开Character RootTree和AIControllerTree
-- **THEN** 两者 MAY显示为两个独立dockable EditorWindow
-- **AND** 两个窗口 MUST复用同一BaseTreeWindow编辑器核心
-- **AND** AI窗口 MUST NOT复制GraphView、Undo、Node Search或Data Catalog实现
-
-#### Scenario: 规则图链路唯一
+#### Scenario: BTSMTL新增规则图能力
 
 - **WHEN** StateMachine Transition或BT edge decorator需要条件求值图
-- **THEN** 系统 MUST使用ConditionRuleGraph
-- **AND** 系统 MUST NOT同时保留TransitionRuleGraph、旧BoolPort条件字段或IfNode作为第二套运行条件
+- **THEN** 它 MUST继续使用ConditionRuleGraph、PropertyPort和BaseTree authoring入口
+- **AND** MUST不使用Pose Graph或通用Shell payload代替BTSMTL数据
+
+#### Scenario: 打开Presentation Pose Graph
+
+- **WHEN** 作者通过共享Editor Shell打开Pose Graph asset
+- **THEN** Shell MUST装配Pose domain document与port policy
+- **AND** MUST不创建BaseGraph、BaseNode、BaseEdge、Blackboard或runtime evaluation context
+
+#### Scenario: 复用节点编辑交互
+
+- **WHEN** BTSMTL Graph和Pose Graph都需要搜索、clipboard、Undo和Inspector宿主
+- **THEN** 两者 MUST复用同一Graph Authoring Editor Shell实现
+- **AND** 每个领域 MUST只修改自己的正式serialized owner
 
 ### Requirement: Shared Graph Asset 只是复用外壳
 系统 MUST 允许 graph data 被显式保存到独立 ScriptableObject asset 以支持复用。Shared graph asset MUST 只作为项目文件、复用和直接打开入口，不得成为默认私有 graph 的保存方式。
@@ -401,4 +398,3 @@ Timeline TreeClip 作为拥有下钻 Graph 的 authoring owner 时，编辑器 M
 - **WHEN** 未声明authoring capability的新节点尝试进入AIControllerTree
 - **THEN** 创建与发布 MUST失败并报告节点类型和Graph Role
 - **AND** 系统 MUST不按默认Base节点处理
-

@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [switch]$StopExisting,
+    [switch]$CharacterPipelineTrace,
     [int]$RunSeconds = 0,
     [string]$ProductRoot
 )
@@ -34,9 +35,8 @@ $manifest = Assert-NetworkTestProductBuild `
     -ExpectedRuntimeTopologyIdentity "thirdperson.runtime-topology.deterministic-rollback.relay-two-peers.v1" `
     -ExpectedPlayerRoleId "unity-client-player" `
     -ExpectedAdditionalArtifactRoleIds @("deterministic-relay-server") `
-    -ExpectedScenes @(
-        "Assets/Scenes/DeterministicRollback/DeterministicRollbackBootstrap.unity",
-        "Assets/Scenes/DeterministicRollback/DeterministicRollbackPeer.unity") `
+    -ExpectedScenes @("Assets/Scenes/GameplayLab/GameplayLab.unity") `
+    -ExpectedBuildOptions "Development, StrictMode" `
     -ExpectedScriptingBackend "IL2CPP"
 
 $relayArtifact = Get-NetworkTestProductArtifact $manifest "deterministic-relay-server"
@@ -95,6 +95,9 @@ if (!$ready) {
 }
 
 $common = @("-screen-fullscreen", "0", "-screen-width", "900", "-screen-height", "600")
+if ($CharacterPipelineTrace) {
+    $common += "--character-pipeline-trace"
+}
 $peerAArguments = @(
     "--deterministic-rollback-profile=peer-a",
     "-screen-position-x", "0",

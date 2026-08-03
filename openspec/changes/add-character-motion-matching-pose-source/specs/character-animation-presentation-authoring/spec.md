@@ -2,17 +2,17 @@
 
 ### Requirement: Pipeline Definition 必须引用唯一 Animation Presentation Profile
 
-`CharacterPipelineDefinition` MUST引用唯一`CharacterAnimationPresentationProfile`。Profile MUST唯一引用Character Presentation Pose Graph、Character Animation Blend Library、Character Animation Rig Definition，保存稳定producer resource binding，以及显式Foot Analysis Mode与Analysis Source identity。当且仅当producer binding声明Motion Matching Pose Source时，Profile MUST唯一引用一个Character Motion Matching Profile；该Profile MUST唯一装配Feature Schema、Trajectory/Cost/Search Policy、Database Definition与producer-to-SearchDomain binding。未声明MM producer的Profile MUST不引用MM Profile。Definition、Graph、Timeline、Prefab、Presenter、独立Workbench或Runtime SO MUST不保存这些配置的第二份真相。
+`CharacterPipelineDefinition` MUST引用唯一`CharacterAnimationPresentationProfile`。Profile MUST唯一引用Character Presentation Pose Graph、node-local Blend/Inertialization Policy、Character Animation Rig Definition，保存稳定Timeline producer source binding，以及显式Foot Analysis Mode与Analysis Source identity。当且仅当Pose Graph声明至少一个可达Motion Matching provider时，Profile MUST唯一引用一个Character Motion Matching Profile；该Profile MUST唯一装配Feature Schema、Trajectory/Cost/Search Policy、Database Definition与provider-to-SearchDomain binding。未声明MM provider的Profile MUST不引用MM Profile。Definition、Graph、Timeline、Prefab、Presenter、独立Workbench或Runtime SO MUST不保存这些配置的第二份真相。
 
 #### Scenario: 独立验证配置装配Pose Graph与Motion Matching
 
-- **WHEN** 独立验证Definition引用声明MM producer的正式Animation Presentation Profile
-- **THEN** Profile validation MUST精确解析Pose Graph、Blend Library、Rig、Foot Analysis与MM Profile identity
+- **WHEN** 独立验证Definition引用声明MM provider的正式Animation Presentation Profile
+- **THEN** Profile validation MUST精确解析Pose Graph、node-local Policy、Rig、Foot Analysis与MM Profile identity
 - **AND** Definition MUST不内联复制slot、database、schema、cost或clip字段
 
 #### Scenario: Corin保持未配置Motion Matching
 
-- **WHEN** Corin Profile没有声明MM producer且没有引用MM Profile
+- **WHEN** Corin Profile没有声明MM provider且没有引用MM Profile
 - **THEN** Profile validation MUST按非MM正式配置处理
 - **AND** Corin Graph、Timeline、Definition、Projection、Prefab与动画引用 MUST不因本能力改变
 
@@ -24,7 +24,7 @@
 
 ### Requirement: CharacterAnimationPresentationProfile Inspector 必须是唯一 Presentation 配置入口
 
-系统 MUST在`CharacterAnimationPresentationProfile` Inspector中唯一编辑Pose Graph、Blend Library、Rig Definition、producer resource binding、Foot Analysis与Motion Matching Profile引用。Inspector MUST从MM Profile进入Schema、Policy、Database、Motion Source Set与Coverage工具，但 MUST不内联复制其数据。重建MM Artifact MUST是带目标Database、Source Set、Clip/sample数量、Foot Artifact状态与内存上界提示的显式可取消重操作；Inspector repaint、selection、普通Compile或Play Mode切换 MUST不触发Build。
+系统 MUST在`CharacterAnimationPresentationProfile` Inspector中唯一编辑Pose Graph、node-local Blend/Inertialization Policy、Rig Definition、Timeline producer source binding、Foot Analysis与Motion Matching Profile引用。Inspector MUST从MM Profile进入Schema、Policy、Database、Motion Source Set与Coverage工具，但 MUST不内联复制其数据。重建MM Artifact MUST是带目标Database、Source Set、Clip/sample数量、Foot Artifact状态与内存上界提示的显式可取消重操作；Inspector repaint、selection、普通Compile或Play Mode切换 MUST不触发Build。
 
 #### Scenario: 作者打开独立验证配置的Motion Matching
 
@@ -32,7 +32,7 @@
 - **THEN** Editor MUST打开Profile引用的真实MM owner
 - **AND** Undo/dirty MUST作用于真实Profile、Schema或Database asset
 
-#### Scenario: 作者只修改普通producer binding
+#### Scenario: 作者只修改普通Timeline producer binding
 
 - **WHEN** 作者修改与MM Analysis无关的Presentation binding
 - **THEN** Inspector MUST只标记Projection stale

@@ -11,7 +11,6 @@
 - [x] 1.7 记录AnimancerPoseSamplingBackend现有ClipSamplePlan与ManualMixerState链路。
 - [x] 1.8 记录Foot Analysis artifact的source identity、store和Projection绑定入口。
 - [x] 1.9 记录Character Animation Authoring Workspace最终Navigator、Details、Preview和Live接口。
-- [x] 1.10 记录Agent v17 Presentation只读Snapshot模型和Exporter入口。
 - [x] 1.11 删除实施分支中任何面向旧PoseSlot Stack或旧Workbench的Blend Space草稿。
 - [x] 1.12 确认全部依赖change已经提供目标合同；未安装时停止实现，不创建临时适配器。
 
@@ -59,7 +58,7 @@
 - [x] 4.4 实现轴ParameterId与range更新。
 - [x] 4.5 实现Sample创建并生成新SampleId。
 - [x] 4.6 实现Sample复制并生成不同SampleId。
-- [x] 4.7 实现Sample删除并同步清理reference sample引用。
+- [x] 4.7 实现Sample删除，并在删除Marker Phase Reference前要求作者先显式更换reference或phase policy。
 - [x] 4.8 实现Sample位置更新。
 - [x] 4.9 实现Sample clip更新并刷新clip content identity。
 - [x] 4.10 实现Sample role与stationary time更新。
@@ -337,23 +336,22 @@
 - [x] 20.13 输出NodeId、SampleId、weight、phase、time和feature来源。
 - [x] 20.14 保持Timeline Preview、Pose Graph Preview和Runtime使用同一plan。
 
-## 21. 扩展Agent只读Snapshot
+## 21A. 重基线state-local Blend Space运行ABI
 
-- [x] 21.1 扩展v17 Presentation Snapshot模型保存BlendSpace摘要。
-- [x] 21.2 输出BlendSpace asset identity和content revision。
-- [x] 21.3 输出mode、轴ParameterId、单位和sample count。
-- [x] 21.4 输出producer到BlendSpace source identity绑定。
-- [x] 21.5 输出BlendSpacePlayer NodeId和参数输入摘要。
-- [x] 21.6 输出Projection compile status和revision。
-- [x] 21.7 透传Missing、Stale、Corrupt、Rig、marker和parameter诊断。
-- [x] 21.8 禁止Snapshot输出generated foot feature payload。
-- [x] 21.9 禁止Snapshot输出Runtime sample weight和time。
-- [x] 21.10 禁止把BlendSpace Sample伪装为Timeline Track或Clip。
-- [x] 21.11 确认Patch DTO不增加BlendSpace operation。
-- [x] 21.12 确认operation catalog和lowerer拒绝BlendSpace mutation。
-- [x] 21.13 确认handler和validator不直接修改Presentation资产。
-- [x] 21.14 确认MCP bridge仍只有四个generic action。
-- [x] 21.15 保持Agent authoring schema v17写合同不变。
+- [x] 21A.1 删除Blend Space resolver的AnimationPlaybackId输入。
+- [x] 21A.2 删除Blend Space resolver的AnimationChannelId输入。
+- [x] 21A.3 删除Blend Space resolver的ProgramProducerIndex输入。
+- [x] 21A.4 让BlendSpacePlayer消费`PoseStateSourceProviderPlan`。
+- [x] 21A.5 让BlendSpacePlayer发布`PresentationPoseSourceSample`。
+- [x] 21A.6 让BlendSpacePlayer使用Projection-local dense source index与player generation。
+- [x] 21A.7 让BlendSpacePlayer发布Pending、Ready与Invalid readiness。
+- [x] 21A.8 让PoseState target readiness barrier消费BlendSpace readiness。
+- [x] 21A.9 删除Blend Space Gameplay producer binding。
+- [x] 21A.10 删除Blend Space通用SelectionInput binding。
+- [x] 21A.11 把Blend Space采样workspace归入state-local provider Module。
+- [x] 21A.12 删除旧`BlendSpaceAnimationPoseRequestResolver`生命周期归属。
+- [x] 21A.13 更新Preview通过PoseGraph Fact adapter驱动BlendSpacePlayer。
+- [x] 21A.14 更新diagnostics使用PoseState、provider、player与Presentation source identity。
 
 ## 22. 收口Corin主配置并延后独立演示
 
@@ -368,14 +366,14 @@
 - [x] 22.9 让正式producer binding工具原子执行纯Timeline拓扑归一化与遗留参数清理。
 - [x] 22.10 通过正式Definition Build发布纯Timeline Projection、Float32与Fixed产物。
 - [ ] 22.11 在八向素材齐备后盘点独立演示所需AnimationClip、Rig和Foot Analysis状态。
-- [ ] 22.12 创建独立Blend Space演示CharacterPipelineDefinition、Profile与Pose Graph。
+- [ ] 22.12 在动画职责重构完成后创建独立Blend Space演示Definition、Profile与Pose Graph。
 - [ ] 22.13 选择与完整样本集合匹配的正式BlendSpace mode。
-- [ ] 22.14 配置独立演示的轴ParameterId、单位、范围与正式Motor参数绑定。
+- [ ] 22.14 配置独立演示的轴ParameterId、单位、范围与Presentation Fact参数投影。
 - [ ] 22.15 为独立演示每个样本生成稳定SampleId并配置phase角色。
 - [ ] 22.16 通过正式Foot Analysis链生成并绑定独立演示所需artifact。
 - [ ] 22.17 配置独立演示完整Pose Parameter policy。
-- [ ] 22.18 把独立演示全部可达producer一次绑定到合法BlendSpace source。
-- [ ] 22.19 在独立演示Pose Graph连接`Selection -> MarkerSync -> BlendSpacePlayer -> Inertialization`。
+- [ ] 22.18 把独立演示全部可达Pose source一次绑定到合法BlendSpace source。
+- [ ] 22.19 在独立演示PoseState inline subgraph连接`Fact Parameter -> BlendSpacePlayer -> 可选Inertialization`。
 - [ ] 22.20 通过独立Definition Build发布演示Projection，不修改Corin主图。
 
 ## 23. 清理分裂路径
@@ -401,9 +399,8 @@
 - [x] 24.4 更新Character Animation Authoring Workspace入口说明。
 - [x] 24.5 更新Profile producer binding说明。
 - [x] 24.6 更新Foot Analysis source identity说明。
-- [x] 24.7 更新Agent Snapshot只读Presentation说明。
 - [x] 24.8 更新Corin纯Timeline主配置与独立Blend Space演示边界。
 - [x] 24.9 更新`openspec/project.md`中的最终动画链和明确非目标。
-- [ ] 24.10 对照实际实现逐项更新本任务状态。
+- [x] 24.10 对照实际实现逐项更新本任务状态。
 - [x] 24.11 对照current specs检查重复、冲突和过时口径。
 - [x] 24.12 严格校验本change的OpenSpec格式与scenario完整性。

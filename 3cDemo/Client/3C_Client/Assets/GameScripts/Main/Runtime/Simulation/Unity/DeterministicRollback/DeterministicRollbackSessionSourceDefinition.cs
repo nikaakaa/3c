@@ -18,6 +18,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         [SerializeField] DeterministicKccWorldSolverDefinition m_WorldSolver;
         [SerializeField] RollbackEndpointAuthoringDefinition m_Endpoint;
 
+        public FixedCharacterSimulationProgramAsset FixedProgram => RequireProgramAsset();
+        public DeterministicRollbackPipelineDefinition Pipeline => m_Pipeline ? m_Pipeline :
+            throw new InvalidOperationException($"Rollback Source '{name}' requires a Pipeline Definition.");
+        public DeterministicKccWorldSolverDefinition WorldSolver => m_WorldSolver ? m_WorldSolver :
+            throw new InvalidOperationException($"Rollback Source '{name}' requires a KCC World Solver Definition.");
+        public RollbackEndpointAuthoringDefinition Endpoint => RequireEndpoint();
+
         public override SimulationSessionSourceAuthoringDescriptor BuildAuthoringDescriptor()
         {
             DeterministicRollbackModelDefinition model = BuildModelDefinition();
@@ -48,10 +55,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 RequireProgramAsset().Load();
             if (program.Manifest.TickRate != RequireTickRate())
                 throw new InvalidOperationException($"Rollback Source '{name}' TickRate does not match its Fixed Program.");
-            DeterministicRollbackPipelineDefinition pipeline = m_Pipeline ? m_Pipeline :
-                throw new InvalidOperationException($"Rollback Source '{name}' requires a Pipeline Definition.");
-            DeterministicKccWorldSolverDefinition solver = m_WorldSolver ? m_WorldSolver :
-                throw new InvalidOperationException($"Rollback Source '{name}' requires a KCC World Solver Definition.");
+            DeterministicRollbackPipelineDefinition pipeline = Pipeline;
+            DeterministicKccWorldSolverDefinition solver = WorldSolver;
             RollbackEndpointDefinition endpoint = RequireEndpoint().Build();
             return new DeterministicRollbackModelDefinition(
                 pipeline.BuildPolicy(),

@@ -26,6 +26,13 @@ namespace TreeDesigner.Editor
         LiveDebug
     }
 
+    enum PendingNavigationRootKind
+    {
+        None,
+        Tree,
+        TreeAsset
+    }
+
     [Serializable]
     internal sealed class TreeWindowNavigationController
     {
@@ -45,6 +52,7 @@ namespace TreeDesigner.Editor
         [NonSerialized]
         object m_AuthoringContext;
 
+        public bool Initialized => m_Window != null && m_Stack != null;
         public object AuthoringContext => m_AuthoringContext;
         public UnityEngine.Object CurrentPageSerializedOwner => m_Stack != null && m_Stack.Count > 0
             ? m_Stack[m_Stack.Count - 1].SerializedOwner
@@ -837,6 +845,18 @@ namespace TreeDesigner.Editor
     {
         [SerializeField]
         TreeWindowNavigationController m_Navigation = new TreeWindowNavigationController();
+        [NonSerialized]
+        PendingNavigationRootKind m_PendingNavigationRootKind;
+        [NonSerialized]
+        BaseTree m_PendingNavigationTree;
+        [NonSerialized]
+        BaseTreeAsset m_PendingNavigationTreeAsset;
+        [NonSerialized]
+        object m_PendingNavigationRootAuthoringContext;
+        [NonSerialized]
+        bool m_HasPendingAuthoringContext;
+        [NonSerialized]
+        object m_PendingAuthoringContext;
 
         protected BaseTree m_Tree;
         public BaseTree Tree => m_Tree;
@@ -857,6 +877,15 @@ namespace TreeDesigner.Editor
         public bool IsLiveDebug => m_RuntimeOverlay.IsLiveDebug;
         public bool CanMutateCurrentDocument => !IsLiveDebug && CurrentPageSerializedOwner;
         protected BaseTreeInspectorView m_TreeInspectorView;
+        BtsmtlSharedAuthoringWorkspaceBinding
+            m_SharedAuthoring;
+        internal bool HasSharedAuthoring =>
+            m_SharedAuthoring != null;
+        internal BtsmtlSharedAuthoringWorkspaceBinding
+            SharedAuthoring =>
+            m_SharedAuthoring ??
+            throw new InvalidOperationException(
+                "BTSMTL shared authoring workspace is not bound.");
         VisualElement m_TreeNavigatorView;
         public UnityEngine.Object CurrentPageSerializedOwner => m_Navigation.CurrentPageSerializedOwner;
         public string CurrentPageSerializedPropertyPath => m_Navigation.CurrentPageSerializedPropertyPath;
@@ -887,6 +916,22 @@ namespace TreeDesigner.Editor
                    m_TreeInspectorView.FocusBlackboardDeclaration(graphAuthoringId, declarationId);
         }
 
+        public void FocusSharedElement(GraphAuthoringElementId elementId)
+        {
+            if (m_TreeView == null || !elementId.IsValid)
+                return;
+            GraphElement element = m_TreeView.graphElements.FirstOrDefault(value =>
+                string.Equals(
+                    value.viewDataKey,
+                    elementId.Value,
+                    StringComparison.Ordinal));
+            if (element == null)
+                return;
+            m_TreeView.ClearSelection();
+            m_TreeView.AddToSelection(element);
+            m_TreeView.FrameSelection();
+        }
+
         protected virtual Type m_TreeViewType => typeof(BaseTreeView);
         protected virtual Type m_TreeInspectorViewType => typeof(BaseTreeInspectorView);
 
@@ -900,6 +945,7 @@ namespace TreeDesigner.Editor
         protected override GraphView CreateGraphAuthoringView()
         {
             m_Tree = null;
+            m_SharedAuthoring = null;
             if (m_Navigation == null)
                 m_Navigation = new TreeWindowNavigationController();
             if (m_RuntimeOverlay == null)
@@ -936,7 +982,16 @@ namespace TreeDesigner.Editor
         protected override void OnGraphAuthoringShellCreated()
         {
             m_Navigation.Initialize(this);
-            m_Navigation.TryRestore();
+            if (m_PendingNavigationRootKind == PendingNavigationRootKind.None)
+                m_Navigation.TryRestore();
+            else
+                ApplyPendingNavigationRoot();
+            if (m_HasPendingAuthoringContext)
+            {
+                m_Navigation.SetAuthoringContext(m_PendingAuthoringContext);
+                m_HasPendingAuthoringContext = false;
+                m_PendingAuthoringContext = null;
+            }
             OnClosedCallback?.Invoke();
             m_Navigation.RefreshToolbar();
         }
@@ -997,17 +1052,73 @@ namespace TreeDesigner.Editor
        }
         public void ReplaceNavigationRoot(BaseTree tree, object authoringContext = null)
         {
+            if (tree == null)
+                return;
+            if (!m_Navigation.Initialized)
+            {
+                QueueNavigationRoot(tree, authoringContext);
+                return;
+            }
             m_Navigation.ReplaceRoot(tree, authoringContext);
         }
 
         public void ReplaceNavigationRoot(BaseTreeAsset treeAsset, object authoringContext = null)
         {
+            if (!treeAsset)
+                return;
+            if (!m_Navigation.Initialized)
+            {
+                QueueNavigationRoot(treeAsset, authoringContext);
+                return;
+            }
             m_Navigation.ReplaceRoot(treeAsset, authoringContext);
         }
 
         public void SetAuthoringContext(object authoringContext)
         {
+            if (!m_Navigation.Initialized)
+            {
+                m_HasPendingAuthoringContext = true;
+                m_PendingAuthoringContext = authoringContext;
+                return;
+            }
             m_Navigation.SetAuthoringContext(authoringContext);
+        }
+
+        void QueueNavigationRoot(BaseTree tree, object authoringContext)
+        {
+            m_PendingNavigationRootKind = PendingNavigationRootKind.Tree;
+            m_PendingNavigationTree = tree;
+            m_PendingNavigationTreeAsset = null;
+            m_PendingNavigationRootAuthoringContext = authoringContext;
+            m_HasPendingAuthoringContext = false;
+            m_PendingAuthoringContext = null;
+        }
+
+        void QueueNavigationRoot(BaseTreeAsset treeAsset, object authoringContext)
+        {
+            m_PendingNavigationRootKind = PendingNavigationRootKind.TreeAsset;
+            m_PendingNavigationTree = null;
+            m_PendingNavigationTreeAsset = treeAsset;
+            m_PendingNavigationRootAuthoringContext = authoringContext;
+            m_HasPendingAuthoringContext = false;
+            m_PendingAuthoringContext = null;
+        }
+
+        void ApplyPendingNavigationRoot()
+        {
+            PendingNavigationRootKind kind = m_PendingNavigationRootKind;
+            BaseTree tree = m_PendingNavigationTree;
+            BaseTreeAsset treeAsset = m_PendingNavigationTreeAsset;
+            object authoringContext = m_PendingNavigationRootAuthoringContext;
+            m_PendingNavigationRootKind = PendingNavigationRootKind.None;
+            m_PendingNavigationTree = null;
+            m_PendingNavigationTreeAsset = null;
+            m_PendingNavigationRootAuthoringContext = null;
+            if (kind == PendingNavigationRootKind.Tree)
+                m_Navigation.ReplaceRoot(tree, authoringContext);
+            else
+                m_Navigation.ReplaceRoot(treeAsset, authoringContext);
         }
 
         public void PushReferencedTree(BaseNode sourceNode, NodeGraphReference reference)
@@ -1075,6 +1186,13 @@ namespace TreeDesigner.Editor
                     if (tree.CheckInit())
                         SetCurrentTreeDirty();
                 }
+                m_SharedAuthoring =
+                    BtsmtlSharedAuthoringWorkspaceRegistry.Create(
+                        this,
+                        tree,
+                        !CanMutateCurrentDocument);
+                m_TreeView.BindSharedAuthoring(
+                    m_SharedAuthoring);
                 m_TreeView.PopulateView(tree);
                 m_TreeView.SetRuntimeReadOnly(!CanMutateCurrentDocument);
                 RebindGraphAuthoringDocument();
@@ -1171,6 +1289,82 @@ namespace TreeDesigner.Editor
         }
 
    }
+
+    public static class AuthoringDetailsCommandRegistry
+    {
+        readonly struct Key : IEquatable<Key>
+        {
+            public Key(Type nodeType, GraphAuthoringCommandId commandId)
+            {
+                NodeType = nodeType ??
+                    throw new ArgumentNullException(nameof(nodeType));
+                CommandId = commandId.IsValid
+                    ? commandId
+                    : throw new ArgumentException(
+                        "Authoring command identity is invalid.",
+                        nameof(commandId));
+            }
+
+            public Type NodeType { get; }
+            public GraphAuthoringCommandId CommandId { get; }
+
+            public bool Equals(Key other) =>
+                NodeType == other.NodeType &&
+                CommandId.Equals(other.CommandId);
+
+            public override bool Equals(object obj) =>
+                obj is Key other && Equals(other);
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return
+                        (NodeType.GetHashCode() * 397) ^
+                        CommandId.GetHashCode();
+                }
+            }
+        }
+
+        static readonly Dictionary<Key, Action<BaseTreeWindow, BaseNode>>
+            s_Handlers =
+                new Dictionary<
+                    Key,
+                    Action<BaseTreeWindow, BaseNode>>();
+
+        public static void Register<TNode>(
+            GraphAuthoringCommandId commandId,
+            Action<BaseTreeWindow, TNode> handler)
+            where TNode : BaseNode
+        {
+            var key = new Key(typeof(TNode), commandId);
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler));
+            if (s_Handlers.ContainsKey(key))
+            {
+                throw new InvalidOperationException(
+                    $"Authoring command '{commandId}' is already registered for '{typeof(TNode).FullName}'.");
+            }
+            s_Handlers.Add(
+                key,
+                (window, node) => handler(window, (TNode)node));
+        }
+
+        public static bool TryExecute(
+            BaseTreeWindow window,
+            BaseNode node,
+            GraphAuthoringCommandId commandId)
+        {
+            if (!window || node == null || !commandId.IsValid)
+                return false;
+            if (!s_Handlers.TryGetValue(
+                    new Key(node.GetType(), commandId),
+                    out Action<BaseTreeWindow, BaseNode> handler))
+                return false;
+            handler(window, node);
+            return true;
+        }
+    }
 
     public static class AuthoringPageOpenRegistry
     {

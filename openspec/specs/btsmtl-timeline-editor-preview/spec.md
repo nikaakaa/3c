@@ -1,17 +1,39 @@
 # btsmtl-timeline-editor-preview Specification
 
 ## Purpose
-定义BTSMTL Timeline编辑器预览的正式链路：编辑器预览由`TimelinePreviewSession`控制播放状态，预览目标通过`TimelinePreviewTarget`接入正式角色管线，复用Timeline sampling、AnimationPlaybackLifecycle、每Pose Slot Blend Stack与Pose Graph，不恢复旧`TimelinePlayer`、Registry/Arbitrator、Animancer adapter或独立PlayableGraph预览权威。
+定义BTSMTL有限Action Timeline编辑器预览的正式链路：`TimelinePreviewSession`通过typed Action adapter接入唯一`AnimationPreviewRuntime`，复用Action lifecycle、AnimationSlot、Transition Routing、source backend与Pose Plan；持续Locomotion由Pose Graph Fact Preview负责，不恢复旧`TimelinePlayer`、BaseLocomotion Timeline、共享Playback总管或独立PlayableGraph。
 ## Requirements
+### Requirement: Source Time Authoring模块必须跨正式owner复用
+
+Timeline Field的time ruler、marker、curve与analysis interaction、geometry和rendering MUST被抽象为不依赖Timeline数据类型的Source Time Authoring模块。Timeline AnimationTrack/Clip与Presentation Pose Source binding MUST分别通过typed owner adapter使用同一模块，并把Mutation提交给各自正式owner。模块 MUST不复制数据、不创建Locomotion Timeline、不提供任意自定义curve或SerializedProperty入口。
+
+#### Scenario: Timeline与Pose Source编辑相同曲线类型
+
+- **WHEN** 作者分别编辑Attack Clip和Run Pose Source的Foot Placement Weight
+- **THEN** 两个页面 MUST共享key/tangent/selection/Undo交互实现
+- **AND** 数据 MUST分别只写入Timeline Clip与Profile binding
+
+#### Scenario: 提取模块后编辑Timeline marker
+
+- **WHEN** 作者在原Timeline页面拖动Attack marker
+- **THEN** Timeline AnimationTrack identity与Mutation语义 MUST保持不变
+- **AND** Presentation Profile MUST不获得副本
+
 ### Requirement: Timeline Animation Analysis必须是按需领域工具
 
-Timeline窗口 MAY通过显式Character Editor provider提供Animation Analysis面板。面板 MUST默认关闭，不占Track行；打开后 MUST显式显示当前AnimationClip、Analysis Source、artifact状态、Left/Right选择与单一metric选择。生成曲线 MUST只读且不得进入Timeline selection、Undo或Curve Channel Catalog。
+Timeline窗口 MAY为有限Action AnimationClip通过显式Character Editor provider提供Animation Analysis面板。面板 MUST默认关闭，不占Track行；打开后 MUST显式显示当前Action Clip、Analysis Source、artifact状态、Left/Right选择与单一metric选择。持续Locomotion Pose source的Analysis MUST属于Profile source editor，Timeline窗口不得创建或反向搜索对应Timeline。生成曲线 MUST只读且不得进入Timeline selection、Undo或Curve Channel Catalog。
 
-#### Scenario: 查看WalkLoop脚分析
+#### Scenario: 查看Attack脚分析
 
-- **WHEN** 作者选中WalkLoop AnimationClip、选择匹配Analysis Source并打开Analysis
+- **WHEN** 作者选中Attack AnimationClip、选择匹配Analysis Source并打开Analysis
 - **THEN** 面板 MUST允许选择一只脚和一个metric查看
 - **AND** Timeline主时间轴 MUST不增加Sole Speed、Height、Plant或Landing行
+
+#### Scenario: 查看Run Pose source脚分析
+
+- **WHEN** 作者从Run Sequence source打开Analysis
+- **THEN** 必须导航到Profile source editor
+- **AND** MUST不创建RunLoop Timeline或反向搜索Definition
 
 #### Scenario: 未选择Analysis Source
 
@@ -21,11 +43,11 @@ Timeline窗口 MAY通过显式Character Editor provider提供Animation Analysis�
 
 ### Requirement: Timeline Analysis必须显示并显式应用脚接触候选
 
-Animation Analysis面板 MUST在artifact Ready时显示由左右脚PlantConfidence实际采样推导的contact候选及目标frame。候选 MUST保持瞬时只读，不得自动保存或成为第二份运行真相。作者确认目标AnimationTrack后，Apply MUST重新校验artifact、AnimationClip dependency、Analysis Source、Sampling Rig、Calibration、采样参数、Timeline映射和candidate revision，并通过Timeline正式mutation生成已有的AnimationSyncMarker作者数据。
+Animation Analysis面板 MUST在有限Action artifact Ready时显示由左右脚PlantConfidence实际采样推导的contact候选及目标frame。候选 MUST保持瞬时只读，不得自动保存或成为第二份运行真相。作者确认目标Action AnimationTrack后，Apply MUST重新校验artifact、AnimationClip dependency、Analysis Source、Sampling Rig、Calibration、采样参数、Timeline映射和candidate revision，并通过Timeline正式mutation生成已有的AnimationSyncMarker作者数据。持续Locomotion Pose source候选只能由Profile source editor写入其binding。
 
-#### Scenario: 应用WalkLoop候选
+#### Scenario: 应用Action候选
 
-- **WHEN** 作者选择完整覆盖MarkerGroup/Cyclic AnimationTrack的WalkLoop Clip并确认Apply
+- **WHEN** 作者选择完整覆盖MarkerGroup/Finite AnimationTrack的Action Clip并确认Apply
 - **THEN** 面板 MUST把当前未过期候选写为正式LeftFootContact与RightFootContact Marker
 - **AND** MUST只替换这两类脚接触Marker、尽量保留匹配的stable marker identity并保留其它业务Marker
 - **AND** 写入 MUST进入既有Undo、dirty、validator、compiler与Agent v15链
@@ -78,7 +100,7 @@ Animation Analysis面板 MUST只显示离线AnimationClip局部特征。它 MUST
 
 ### Requirement: Timeline 编辑器预览目标来自正式管线预览目标
 
-系统 MUST使用`TimelinePreviewTarget`作为Timeline编辑器可选择的预览目标抽象，并由`CharacterPipelineHost`或等价正式角色管线目标实现它。正式角色管线预览目标 MUST沿`CharacterPipelineDefinition.AnimationPresentationProfile`与匹配的正式`CharacterPresentationProjection`取得Pose Program、Blend Stack、Rig与producer source bindings，并使用`AnimancerComponent`和显式`CharacterAnimationRigBinding`。系统 MUST不使用TimelinePlayer、场景搜索、fallback target、Definition内联Presentation或第二份动画拓扑配置作为预览目标。
+系统 MUST使用`TimelinePreviewTarget`作为Timeline编辑器可选择的预览目标抽象，并由`CharacterPipelineHost`或等价正式角色管线目标实现它。正式角色管线预览目标 MUST沿`CharacterPipelineDefinition.AnimationPresentationProfile`与匹配的`CharacterPresentationProjection`取得Action Playback Input、AnimationSlot、Transition Routing、完整Pose Plan、Rig与有限Action producer source binding，并使用`AnimancerComponent`和显式`CharacterAnimationRigBinding`。Timeline Preview MUST不直接预览持续Locomotion Pose source；该工作由同一Projection上的Pose Graph Fact Preview承担。系统 MUST不使用TimelinePlayer、场景搜索、fallback target、Definition内联Presentation或第二份动画拓扑配置作为预览目标。
 
 #### Scenario: 选择预览目标
 
@@ -121,7 +143,7 @@ Animation Analysis面板 MUST只显示离线AnimationClip局部特征。它 MUST
 
 ### Requirement: Timeline preview session 必须隔离动画生命周期状态
 
-每个`TimelinePreviewSession` MUST拥有独立session identity、playback generation、CharacterAnimationPlaybackCommandQueue、AnimationPlaybackLifecycle、匹配Projection的Player/Pose Plan workspace、Animancer source backend与snapshot。它 MUST不读取角色runtime playback lifecycle、不与其它窗口共享command batch/state，也 MUST不把lifecycle、Player或Pose Graph状态写入Timeline asset。
+每个`TimelinePreviewSession` MUST拥有独立session identity、非零ActionInstance、playback generation、Action command inbox、session-local `CharacterActionPlaybackRuntime`、匹配Projection的AnimationSlot/Pose Plan workspace、Animancer source backend与snapshot。它 MUST不读取角色runtime Action lifecycle、不与其它窗口共享command batch/state，也 MUST不把lifecycle、Slot、Player或Pose Graph状态写入Timeline asset。
 
 #### Scenario: 两个 Preview 窗口
 
@@ -220,7 +242,7 @@ Timeline Editor MUST显示 TreeClip的 Decision/Commit阶段、inline/shared own
 
 ### Requirement: Timeline Live Debug 必须显示真实 runtime membership
 
-Timeline Live Debug MUST从共享provider的current playback summary显示当前playback instance/generation、发起Graph/Node source、可用的activation context、active Track/Clip、TreeClip phase/runtime、Animation Selection、PendingFirstSample/Selected/Retained/Retired、PoseNodeId与terminal state。停止Capture后，它 MUST在共享Capture history position显示对应历史事实。它 MUST不根据当前authoring time重新采样来猜测membership。
+Timeline Live Debug MUST从共享provider的current Action playback summary显示当前playback instance/generation、发起Graph/Node source、ActionInstance、active Track/Clip、TreeClip phase/runtime、Action Selection、PendingFirstSample/Selected/Retained/Retired、AnimationSlot/PoseNode identity与terminal state。PoseState source usage属于Pose Graph Live Debug；Timeline MAY提供只读导航但不得伪装成Timeline playback。停止Capture后，它 MUST在共享Capture history position显示对应历史事实，不得根据当前authoring time重新采样来猜测membership。
 
 #### Scenario: Decision TreeClip active
 
@@ -250,32 +272,32 @@ Timeline Live Debug MUST从共享provider的current playback summary显示当前
 
 ### Requirement: 预览采样必须复用正式动画Selection与Pose Plan
 
-Authoring Preview MUST把当前Timeline/Track/Clip时间降低为含raw visual time的正式Animation Selection与Parameter page，并执行匹配Projection的`CharacterPresentationPosePlan`。Preview MUST只在图中存在MarkerSync时显示和应用effective time，并按图中显式节点决定直接Player硬切、局部Inertialization残差或Blend Stack多source历史，按同一Layered/Additive/ModifyBone拓扑生成Composed Pose；具备正式Body与PhysicsScene上下文时 MAY执行FootPlacement节点，否则 MUST把world-aware阶段标记为Unavailable。Preview MUST不创建隐藏Marker Sync、固定per-slot Stack、隐藏Inertialization、简化PoseGraph、Animancer direct Play或假Foot Physics。
+有限Action Timeline Authoring Preview MUST把当前Track/Clip时间降低为正式Action Selection与Parameter page，并通过session-local Action command inbox执行匹配Projection的Action Playback Input、AnimationSlot、Transition Routing、Player和`CharacterPresentationPosePlan`。持续Locomotion Pose source、PoseStateMachine与Transition Rule预览 MUST属于Pose Graph Workspace，Timeline Preview不得伪造BaseLocomotion Timeline或Presentation Fact。具备正式Body与PhysicsScene上下文时 MAY执行FootPlacement，否则 MUST标记world-aware阶段Unavailable。Preview MUST不创建隐藏MarkerSync、固定per-slot Stack、隐藏Inertialization、简化PoseGraph、Animancer direct Play、假Foot Physics或自动全局平滑。
 
 #### Scenario: 当前时间采样
 
-- **WHEN** preview time 位于 AnimationTrack clip 范围
-- **THEN** session MUST提交该producer的唯一preview command与Animation Selection
-- **AND** AnimationPlaybackLifecycle MUST完成PendingFirstSample/Selected提交
-- **AND** 正式native链 MUST应用Projection中的producer source、Player与Pose Plan binding
+- **WHEN** 作者把Preview游标移动到Attack clip中间
+- **THEN** Preview MUST生成对应Attack Selection并送入FullBodyAction Action Playback Input与AnimationSlot
+- **AND** 最终路径 MUST与正式Pose Plan一致
 
-#### Scenario: 同channel多个producer
+#### Scenario: 尝试预览Walk到Run
 
-- **WHEN** 一次preview evaluation发现多个producer声明同一AnimationChannelId
-- **THEN** session MUST 明确拒绝该 evaluation
-- **AND** MUST 不按 Priority 或 Track 顺序选择赢家
+- **WHEN** 作者需要预览Locomotion PoseState从Walk到Run
+- **THEN** Timeline Editor MUST导航到Pose Graph Workspace
+- **AND** MUST不创建临时Walk/Run Timeline preview command
 
-#### Scenario: 非连续 seek
+#### Scenario: 非连续seek
 
-- **WHEN** preview time 非连续跳转
-- **THEN** session MUST retire旧preview EventId并清理对应channel Lifecycle、Player、source与Pose Plan workspace
-- **AND** 目标时间 MUST 使用新的 preview playback generation 建立 command/sample
+- **WHEN** 作者从一个producer非连续seek到另一个producer
+- **THEN** AnimationSlot MUST按正式Action seek/reset policy重建source usage
+- **AND** 连接Inertialization时 MUST按正式seek/reset policy处理history与residual
+- **AND** 连接BlendStack时 MUST按正式node reset/seek policy处理而不创建额外fade
 
-#### Scenario: 连续播放
+#### Scenario: Preview非连续拖动时间
 
-- **WHEN** session 连续播放
-- **THEN** 同一 preview playback generation MUST 持续更新 producer sample time
-- **AND** session MUST 不在每个表现帧重新创建隐藏 producer
+- **WHEN** 作者把预览时间从一个不连续位置跳到另一个位置
+- **THEN** Preview MUST重置Inertialization history
+- **AND** MUST不把seek解释为可惯性化的连续切换
 
 ### Requirement: Timeline Editor 必须编辑 AnimationTrack Marker Sync
 
@@ -293,8 +315,8 @@ Timeline Editor MUST在AnimationTrack Inspector与同一track时间轴中编辑S
 
 #### Scenario: 在空白帧新增同组marker
 
-- **WHEN** 作者在RunLoop的SYNC MARKERS子轨空白帧打开右键菜单
-- **THEN** 菜单 MUST显示`Locomotion.Gait`同AnimationChannelId、同显式MarkerSync可达集合其它正式Track已经使用的MarkerId候选
+- **WHEN** 作者在Attack AnimationTrack的SYNC MARKERS子轨空白帧打开右键菜单
+- **THEN** 菜单 MUST显示同Action AnimationChannelId、同Slot可达集合其它有限Action Track已经使用的MarkerId候选
 - **AND** 选择候选 MUST通过正式authoring API在当前frame创建具有新AuthoringId的Marker
 
 #### Scenario: 为组创建首个marker名称
@@ -355,7 +377,7 @@ Timeline Editor MUST在AnimationTrack Inspector与同一track时间轴中编辑S
 
 ### Requirement: Authoring Preview 必须复用正式 Marker Sync 表现链
 
-纯表现Authoring Preview MUST通过CharacterPresentationProjection解析producer marker binding、AnimationChannelId与PoseNodeId，并复用CharacterAnimationPlaybackRuntime、显式MarkerSync节点、AnimationPlaybackLifecycle、Player、Animancer source backend与Pose Plan。单producer预览 MUST从正式relation snapshot显示raw/effective time和当前marker segment。作者 MAY显式选择同一Projection、同AnimationChannelId、同MarkerSync可达集合、同SyncGroup的source producer进行handoff比较；该比较 MUST只生成正式preview command/Selection，不得创建Preview Simulation Session、执行Gameplay operation、直接设置Animancer normalized time或调用TransitionLibrary执行fade。
+有限Action Timeline Authoring Preview MUST通过CharacterPresentationProjection解析producer marker binding、Action AnimationChannelId与Slot/Player PoseNodeId，并复用session-local `CharacterActionPlaybackRuntime`、AnimationSlot、source backend与Pose Plan。单producer预览 MUST从正式relation snapshot显示raw/effective time和当前marker segment。持续Locomotion Sequence/BlendSpace source marker预览 MUST由Pose Graph Workspace从Profile binding执行，Timeline Editor不得复制或编辑这些marker。
 
 #### Scenario: 单producer预览marker
 
@@ -363,11 +385,11 @@ Timeline Editor MUST在AnimationTrack Inspector与同一track时间轴中编辑S
 - **THEN** Preview MUST显示该时间所在的marker pair与segment fraction
 - **AND** 在没有source handoff时effective time MUST等于raw time
 
-#### Scenario: 比较Walk与Run handoff
+#### Scenario: 比较Locomotion Walk与Run handoff
 
-- **WHEN** 作者显式选择WalkLoop作为source并预览RunLoop target
-- **THEN** Preview MUST通过正式MarkerSync节点持续映射target effective time
-- **AND** 图中BaseLocomotion Player MUST执行正式连续性语义并由Pose Graph发布preview阶段结果
+- **WHEN** 作者选择Walk与Run Presentation Pose source
+- **THEN** Pose Graph Workspace MUST通过正式source-local marker映射与PoseState transition执行比较
+- **AND** Timeline Preview MUST不生成BaseLocomotion Selection
 
 #### Scenario: Preview包含TreeClip或MotionWarp
 
@@ -377,11 +399,11 @@ Timeline Editor MUST在AnimationTrack Inspector与同一track时间轴中编辑S
 
 ### Requirement: Timeline Live Debug 必须显示正式 Sync Relation
 
-Timeline Live Debug MUST从共享RuntimeDebugSession的正式Animation trace显示source/target PlaybackId、AnimationChannelId、MarkerSync PoseNodeId、canonical SyncGroupId、有向marker pair、source fraction、target occurrence、raw/effective time、effective cycle、relation depth、lifecycle phase与detach/failure reason。Live Debug MAY关联同帧Player/Pose operation与OutputPose completion，但 MUST不按authoring游标重新采样、不读取脚骨Transform、不推导StateMachine transition、不求值Pose Graph、不从Animancer weight重建贡献或维护第二份relation状态。
+Timeline Live Debug MUST从共享RuntimeDebugSession的正式Animation trace显示有限Action source/target PlaybackId、AnimationChannelId、Slot/Player PoseNodeId、canonical SyncGroupId、有向marker pair、source fraction、target occurrence、raw/effective time、effective cycle、relation depth、lifecycle phase与detach/failure reason。PoseState Source Sync relation MUST在Pose Graph Live Debug显示PoseState、transition generation与Presentation source usage；Timeline Live Debug MAY提供只读跨工作区导航，但 MUST不把Pose relation伪装为Timeline playback。两者 MUST不按authoring游标重新采样、不推导State transition、不求值Pose Graph、不从Animancer weight重建贡献或维护第二份relation状态。
 
 #### Scenario: 观察连续切换
 
-- **WHEN** runtime发生`Walk -> Run -> Turn`且存在relation chain
+- **WHEN** runtime发生`Attack1 -> Attack2 -> Dodge`且存在Action relation chain
 - **THEN** Live Debug MUST按playback generation显示每条source-target relation与depth
 - **AND** 显示值 MUST来自当帧正式runtime snapshot
 
@@ -390,6 +412,12 @@ Timeline Live Debug MUST从共享RuntimeDebugSession的正式Animation trace显�
 - **WHEN** source fade完成并触发target continuation rebase
 - **THEN** Live Debug MUST显示`SourceRetiredRebased`及最后raw/effective anchor
 - **AND** MUST不把该事件显示为Gameplay State transition
+
+#### Scenario: 观察Walk到Run
+
+- **WHEN** runtime发生PoseState Source Sync
+- **THEN** Timeline Live Debug MUST提供Open Pose Graph Live导航
+- **AND** MUST不生成虚假AnimationPlaybackId
 
 #### Scenario: target显式None
 

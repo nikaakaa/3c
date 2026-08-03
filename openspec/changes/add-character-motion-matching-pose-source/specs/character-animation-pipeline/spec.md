@@ -2,18 +2,18 @@
 
 ### Requirement: Motion Matching必须是source-neutral Animation Selection provider
 
-当已提交AnimationChannel producer绑定Motion Matching Source时，`CharacterSimulationPresentationRuntime` MUST在Pose Plan的Selection阶段执行trajectory/query/search与selection lifecycle，并把结果降低为正式`AnimationSelectionFrame`。Timeline与MM Selection MUST进入同一个编译Pose Graph；图上的显式节点决定直接Player硬切、局部Inertialization或BlendStack CrossFade。MM MUST不建立私有播放器、crossfade、惯性器、PlayableGraph、Pose Graph或Post Process。
+当active PoseState声明Motion Matching source时，`CharacterSimulationPresentationRuntime` MUST按state relevance执行trajectory/query/search与selection lifecycle，并把结果降低为State内部正式Selection。有限Action Timeline与MM source MUST进入同一个编译Pose Graph；图上的显式节点决定Player硬切、局部Inertialization或BlendStack CrossFade。MM MUST不建立私有播放器、crossfade、惯性器、PlayableGraph、Pose Graph或Post Process。
 
-#### Scenario: BaseLocomotion使用MM而Action使用Timeline
+#### Scenario: Locomotion PoseState使用MM而Action使用Timeline
 
-- **WHEN** 同帧BaseLocomotion MM和FullBodyAction Timeline均有合法输出
-- **THEN** 两者 MUST分别生成source-neutral Selection并进入各自Selection Input
-- **AND** 唯一Pose Plan MUST按显式Player与composition节点合成最终pose
+- **WHEN** 同帧Locomotion PoseState MM和FullBodyAction Timeline均有合法输出
+- **THEN** MM MUST进入State内部Player，Action MUST进入AnimationSlot
+- **AND** 唯一Pose Plan MUST按显式Player、Slot与composition节点合成最终pose
 
 #### Scenario: MM query无合法candidate
 
-- **WHEN** BaseLocomotion MM发布typed Invalid
-- **THEN** RequireSelection Input MUST沿统一动画管线报告Invalid
+- **WHEN** active PoseState MM发布typed Invalid
+- **THEN** Required State source MUST沿统一动画管线报告Invalid
 - **AND** Presentation MUST不调用旧Timeline或隐藏Idle维持输出
 
 ### Requirement: PresentationFrame必须在绑定Pose节点求值后更新MM Pose History

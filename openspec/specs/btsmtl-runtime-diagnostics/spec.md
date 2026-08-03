@@ -77,7 +77,7 @@ SimulationKernel、Pipeline Runtime/Pass、Session Source、WorldSolver adapter�
 
 - **WHEN** 当前 Debug Session 未启用 Animation channel
 - **THEN** runtime MUST NOT 构建 Animation trace payload
-- **AND** CharacterAnimationPlaybackCommandQueue、AnimationPlaybackLifecycle、显式Player与Pose Graph native job MUST继续产生相同正式结果
+- **AND** ActionAnimationPlaybackCommandQueue、CharacterActionPlaybackRuntime、PoseStateMachine、AnimationSlot、显式Player与Pose Graph native job MUST继续产生相同正式结果
 
 #### Scenario: 记录 Blackboard 值
 
@@ -185,7 +185,7 @@ Graph 或 Timeline 进入 Live Debug 时 MUST 用当前 source identity 与 cont
 
 ### Requirement: Diagnostics 必须保持只读且不影响结果
 
-Runtime diagnostics、Debug Session 和 editor overlay MUST NOT 写入 Program state、Timeline operation time、Blackboard slots、Action instance state、Motion state、AnimationPlaybackLifecycle、Animancer state、GameplayFacts 或作者资产。关闭或打开 diagnostics 后，相同输入和 tick 序列 MUST 产生相同 gameplay 与 presentation 结果。
+Runtime diagnostics、Debug Session 和 editor overlay MUST NOT 写入 Program state、Timeline operation time、Blackboard slots、Action instance state、Motion state、CharacterActionPlaybackRuntime、PoseState workspace、AnimationSlot、Animancer state、GameplayFacts 或作者资产。关闭或打开 diagnostics 后，相同输入和 tick 序列 MUST 产生相同 gameplay 与 presentation 结果。
 
 #### Scenario: 在历史位置 scrub
 

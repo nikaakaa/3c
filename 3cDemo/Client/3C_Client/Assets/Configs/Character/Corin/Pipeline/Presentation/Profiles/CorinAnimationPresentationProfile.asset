@@ -1,0 +1,392 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-5710335383678467973
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 585cfe4503dda5e498c4bab5e5781901, type: 3}
+  m_Name: Idle Binding
+  m_EditorClassIdentifier: 
+  m_Slot: {fileID: 3450945198615820384, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_Rig: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
+  m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  m_ContentRevision: aa1a12ef58564a029f7bf284ab2ac788
+  m_Clip: {fileID: 7400000, guid: 7dbd59f643bcfbe4495990d45ad359ef, type: 2}
+  m_Loop: 1
+  m_DefaultPlayRate: 1
+  m_MarkerGroupId: 
+  m_MarkerTopology: 0
+  m_Markers: []
+  m_FootPlacementWeightCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &-4716995449906911236
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 585cfe4503dda5e498c4bab5e5781901, type: 3}
+  m_Name: Run Start Binding
+  m_EditorClassIdentifier: 
+  m_Slot: {fileID: 1041388167119753750, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_Rig: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
+  m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  m_ContentRevision: 7601b54be9bc4e94b9fbac9563e19c56
+  m_Clip: {fileID: 7400000, guid: c3f6deae23e56064fb4b8938601e35e5, type: 2}
+  m_Loop: 0
+  m_DefaultPlayRate: 1
+  m_MarkerGroupId: 
+  m_MarkerTopology: 0
+  m_Markers: []
+  m_FootPlacementWeightCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &-519036404311876286
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 585cfe4503dda5e498c4bab5e5781901, type: 3}
+  m_Name: Walk Start Binding
+  m_EditorClassIdentifier: 
+  m_Slot: {fileID: 5181372091040810034, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_Rig: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
+  m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  m_ContentRevision: 34ca2616f16343b08908274114cb13a4
+  m_Clip: {fileID: 7400000, guid: 90d528fc935ce2e43b4b301c8c2b98db, type: 2}
+  m_Loop: 0
+  m_DefaultPlayRate: 1
+  m_MarkerGroupId: 
+  m_MarkerTopology: 0
+  m_Markers: []
+  m_FootPlacementWeightCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 248c097b8659488296c54f95ad0de83b, type: 3}
+  m_Name: CorinAnimationPresentationProfile
+  m_EditorClassIdentifier: 
+  m_PoseGraph: {fileID: 11400000, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_RigDefinition: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
+  m_MotionMatchingProfile: {fileID: 0}
+  m_ProducerBindings:
+  - m_TimelineAuthoringId: 001b250e-9f1c-44ab-a170-c43896e756ac
+    m_TrackAuthoringId: 5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_Source: {fileID: 11400000, guid: fbfa6e616d704fb4bb80da7ec8132117, type: 2}
+    m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  - m_TimelineAuthoringId: 10f4cb90-8b9a-4944-b77c-14efc9a3124d
+    m_TrackAuthoringId: 0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_Source: {fileID: 11400000, guid: 1698ca04a0025e642a3b5032168625ba, type: 2}
+    m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  - m_TimelineAuthoringId: 1ec9175b-a959-4960-af6b-4177f601425f
+    m_TrackAuthoringId: ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_Source: {fileID: 11400000, guid: 98146d9d2caf5ef438ad1d61f5e1b358, type: 2}
+    m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  - m_TimelineAuthoringId: 40908a3b-5568-459b-b4f0-b871155dc226
+    m_TrackAuthoringId: 321b312e-7450-4482-b10e-11066d42129c
+    m_Source: {fileID: 11400000, guid: b4c3f14a18640144292f0da00fa0be76, type: 2}
+    m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  - m_TimelineAuthoringId: 7b4f6ad5-7513-4a00-92f3-d34c3761d2f9
+    m_TrackAuthoringId: ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_Source: {fileID: 11400000, guid: 39e8ed745474d0945b65533264287364, type: 2}
+    m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  - m_TimelineAuthoringId: 86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27
+    m_TrackAuthoringId: ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_Source: {fileID: 11400000, guid: 02085fc4a1303004894fb081ff1e9e7d, type: 2}
+    m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  - m_TimelineAuthoringId: 9fa96566-14a4-47e4-b6ea-c6c710ffbbcf
+    m_TrackAuthoringId: 1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_Source: {fileID: 11400000, guid: c2a2fede911e06b40b63d8f9b633e490, type: 2}
+    m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  m_PoseSourceBindings:
+  - {fileID: -5710335383678467973}
+  - {fileID: 8164006987482995073}
+  - {fileID: 3362752906275948932}
+  - {fileID: 3413234720574271279}
+  - {fileID: -4716995449906911236}
+  - {fileID: 1130228593803803321}
+  - {fileID: -519036404311876286}
+  m_FootPlacementAnalysisMode: 1
+  m_FootPlacementAnalysisSourceAssetGuid: 2487156154864bb5b49cb283c2583808
+--- !u!114 &1130228593803803321
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 585cfe4503dda5e498c4bab5e5781901, type: 3}
+  m_Name: Walk Loop Binding
+  m_EditorClassIdentifier: 
+  m_Slot: {fileID: -6787058357175954472, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_Rig: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
+  m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  m_ContentRevision: 8b359e975f404b5cb3d2f1ebfbd5b9d3
+  m_Clip: {fileID: 7400000, guid: a42a3b1b15a10b44f9892c728d72b74f, type: 2}
+  m_Loop: 1
+  m_DefaultPlayRate: 1
+  m_MarkerGroupId: Locomotion.Gait
+  m_MarkerTopology: 2
+  m_SyncRole: 1
+  m_Markers:
+  - m_AuthoringId: 0d878358-7b77-44de-ab40-881a842236b6
+    m_MarkerId: RightFootContact
+    m_Frame: 0
+  - m_AuthoringId: ec180c0d-dd78-45fd-89e7-8a8e5dacd546
+    m_MarkerId: LeftFootContact
+    m_Frame: 18
+  m_FootPlacementWeightCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &3362752906275948932
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 585cfe4503dda5e498c4bab5e5781901, type: 3}
+  m_Name: Run End Binding
+  m_EditorClassIdentifier: 
+  m_Slot: {fileID: 6877363416557948613, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_Rig: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
+  m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  m_ContentRevision: bdcc2e87f7d94b4eaa623b457324d782
+  m_Clip: {fileID: 7400000, guid: 9654782e7ebbcd14bab93c76dc248019, type: 2}
+  m_Loop: 0
+  m_DefaultPlayRate: 1
+  m_MarkerGroupId: 
+  m_MarkerTopology: 0
+  m_Markers: []
+  m_FootPlacementWeightCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &3413234720574271279
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 585cfe4503dda5e498c4bab5e5781901, type: 3}
+  m_Name: Run Loop Binding
+  m_EditorClassIdentifier: 
+  m_Slot: {fileID: -1663756737420138858, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_Rig: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
+  m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  m_ContentRevision: 1c10f4fe43e54f5db3a2168318c37b80
+  m_Clip: {fileID: 7400000, guid: 3747a185f0711e842b4df7c03fa2cfac, type: 2}
+  m_Loop: 1
+  m_DefaultPlayRate: 1
+  m_MarkerGroupId: Locomotion.Gait
+  m_MarkerTopology: 2
+  m_SyncRole: 1
+  m_Markers:
+  - m_AuthoringId: 409be7a1-0618-49e2-8094-b52c4ae28634
+    m_MarkerId: RightFootContact
+    m_Frame: 0
+  - m_AuthoringId: 633f740f-168c-4b64-abe1-4222817f0cee
+    m_MarkerId: LeftFootContact
+    m_Frame: 15
+  m_FootPlacementWeightCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &8164006987482995073
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 585cfe4503dda5e498c4bab5e5781901, type: 3}
+  m_Name: Moving Turn Binding
+  m_EditorClassIdentifier: 
+  m_Slot: {fileID: -8411527234393366902, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_Rig: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
+  m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  m_ContentRevision: d827b136c65c4416930987e26f71f7dc
+  m_Clip: {fileID: 7400000, guid: e569e81bd2858154b9bf4f2e660cf981, type: 2}
+  m_Loop: 0
+  m_DefaultPlayRate: 1
+  m_MarkerGroupId: 
+  m_MarkerTopology: 0
+  m_Markers: []
+  m_FootPlacementWeightCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4

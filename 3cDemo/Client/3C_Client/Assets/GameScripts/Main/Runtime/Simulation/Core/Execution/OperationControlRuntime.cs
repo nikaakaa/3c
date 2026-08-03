@@ -841,7 +841,18 @@ namespace ThirdPersonSimulation
 
         bool EvaluateCondition(ProgramControlFlowEdge edge)
         {
-            return !edge.HasCondition || m_Target.EvaluateCondition(m_Cursor, edge);
+            bool result = !edge.HasCondition || m_Target.EvaluateCondition(m_Cursor, edge);
+            if (edge.HasCondition && m_Target.DiagnosticsEnabled)
+            {
+                m_Target.EmitTrace(
+                    m_Topology.Operation(edge.Source),
+                    edge.Kind == ProgramControlFlowKind.Transition
+                        ? "state_transition_evaluated"
+                        : "condition_graph_evaluated",
+                    OperationControlTraceSeverity.Detail,
+                    $"{edge.Identity}:{FormatHandle(edge.Source)}->{FormatHandle(edge.Target)}:condition={FormatHandle(edge.Condition)}:result={result}");
+            }
+            return result;
         }
 
         OperationHandle FindOwnedEntry(OperationExecutionDescriptor operation, string sourcePort, bool requireSourcePort)

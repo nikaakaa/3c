@@ -1,0 +1,659 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 313afb60e66f63b46a8ee2e8fc154fe2, type: 3}
+  m_Name: CorinActionBlendPolicy
+  m_EditorClassIdentifier: 
+  m_Schema: character-animation-blend-policy/v3
+  m_PolicyId: corin.animation-rig.full-body-action
+  m_Revision: 3b9ad258d5ca446eb9c2988b2853c400
+  m_StackPolicy:
+    m_MaxActiveSourceEntries: 4
+    m_StoredPosePolicy: 2
+    m_MaxBlendInTimeToReplaceNewest: 0.05
+    m_DepthBlendTimeMultiplier: 1
+  m_DefaultTransition:
+    m_BlendLogic: 2
+    m_DurationSeconds: 0.16
+    m_BlendMode: 4
+    m_CustomBlendCurve: {fileID: 0}
+    m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  m_Overrides:
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: 
+    m_SourceEndpointKind: 2
+    m_TargetOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: 
+    m_TargetEndpointKind: 2
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: 
+    m_TargetEndpointKind: 2
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: 
+    m_TargetEndpointKind: 2
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: 
+    m_TargetEndpointKind: 2
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: 
+    m_TargetEndpointKind: 2
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: 
+    m_TargetEndpointKind: 2
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: 
+    m_TargetEndpointKind: 2
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}
+  - m_SourceOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_SourceEndpointKind: 1
+    m_TargetOwnerIdentity: producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+    m_TargetEndpointKind: 1
+    m_Rule:
+      m_BlendLogic: 2
+      m_DurationSeconds: 0.16
+      m_BlendMode: 4
+      m_CustomBlendCurve: {fileID: 0}
+      m_BlendProfile: {fileID: 11400000, guid: e0f8b91a48553814487a03f97940ba2f, type: 2}

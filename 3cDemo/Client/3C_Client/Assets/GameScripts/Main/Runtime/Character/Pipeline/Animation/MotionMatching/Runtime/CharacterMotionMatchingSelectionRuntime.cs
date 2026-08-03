@@ -93,6 +93,53 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
     public sealed class CharacterMotionMatchingSelectionRuntime
     {
+        readonly struct FramePage
+        {
+            internal FramePage(
+                MotionMatchingSelectionGeneration generation,
+                MotionMatchingSelectionPlan currentPlan,
+                int currentSampleIndex,
+                int planCursor,
+                float sampleAccumulator,
+                float searchAccumulator,
+                float secondsSinceLastJump,
+                int loopCycle,
+                ulong resetSequence,
+                bool domainActive,
+                MotionMatchingSearchResult lastSearchResult,
+                MotionMatchingPlanEvaluationResult lastPlanResult,
+                MotionMatchingSelectionDecision lastDecision)
+            {
+                Generation = generation;
+                CurrentPlan = currentPlan;
+                CurrentSampleIndex = currentSampleIndex;
+                PlanCursor = planCursor;
+                SampleAccumulator = sampleAccumulator;
+                SearchAccumulator = searchAccumulator;
+                SecondsSinceLastJump = secondsSinceLastJump;
+                LoopCycle = loopCycle;
+                ResetSequence = resetSequence;
+                DomainActive = domainActive;
+                LastSearchResult = lastSearchResult;
+                LastPlanResult = lastPlanResult;
+                LastDecision = lastDecision;
+            }
+
+            internal MotionMatchingSelectionGeneration Generation { get; }
+            internal MotionMatchingSelectionPlan CurrentPlan { get; }
+            internal int CurrentSampleIndex { get; }
+            internal int PlanCursor { get; }
+            internal float SampleAccumulator { get; }
+            internal float SearchAccumulator { get; }
+            internal float SecondsSinceLastJump { get; }
+            internal int LoopCycle { get; }
+            internal ulong ResetSequence { get; }
+            internal bool DomainActive { get; }
+            internal MotionMatchingSearchResult LastSearchResult { get; }
+            internal MotionMatchingPlanEvaluationResult LastPlanResult { get; }
+            internal MotionMatchingSelectionDecision LastDecision { get; }
+        }
+
         readonly CharacterMotionMatchingRuntimeDatabase m_Database;
         readonly MotionMatchingExactSearch m_Search;
         readonly MotionMatchingPlanEvaluator m_PlanEvaluator;
@@ -106,12 +153,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         int m_LoopCycle;
         ulong m_ResetSequence;
         bool m_DomainActive;
+        FramePage m_CommittedPage;
+        bool m_FrameOpen;
 
         public CharacterMotionMatchingSelectionRuntime(CharacterMotionMatchingRuntimeDatabase database)
         {
             m_Database = database ?? throw new ArgumentNullException(nameof(database));
             m_Search = new MotionMatchingExactSearch(database);
             m_PlanEvaluator = new MotionMatchingPlanEvaluator(database);
+            m_CommittedPage = ReadPage();
         }
 
         public bool HasSelection => m_CurrentPlan.IsValid && m_CurrentSampleIndex >= 0 && m_Generation.IsValid;
@@ -123,6 +173,61 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingSearchResult LastSearchResult { get; private set; }
         public MotionMatchingPlanEvaluationResult LastPlanResult { get; private set; }
         public MotionMatchingSelectionDecision LastDecision { get; private set; }
+
+        FramePage ReadPage() =>
+            new FramePage(
+                m_Generation,
+                m_CurrentPlan,
+                m_CurrentSampleIndex,
+                m_PlanCursor,
+                m_SampleAccumulator,
+                m_SearchAccumulator,
+                m_SecondsSinceLastJump,
+                m_LoopCycle,
+                m_ResetSequence,
+                m_DomainActive,
+                LastSearchResult,
+                LastPlanResult,
+                LastDecision);
+
+        void LoadPage(in FramePage state)
+        {
+            m_Generation = state.Generation;
+            m_CurrentPlan = state.CurrentPlan;
+            m_CurrentSampleIndex = state.CurrentSampleIndex;
+            m_PlanCursor = state.PlanCursor;
+            m_SampleAccumulator = state.SampleAccumulator;
+            m_SearchAccumulator = state.SearchAccumulator;
+            m_SecondsSinceLastJump = state.SecondsSinceLastJump;
+            m_LoopCycle = state.LoopCycle;
+            m_ResetSequence = state.ResetSequence;
+            m_DomainActive = state.DomainActive;
+            LastSearchResult = state.LastSearchResult;
+            LastPlanResult = state.LastPlanResult;
+            LastDecision = state.LastDecision;
+        }
+
+        internal void BeginFrame()
+        {
+            if (m_FrameOpen)
+                throw new InvalidOperationException("Motion Matching Selection frame is already open.");
+            LoadPage(in m_CommittedPage);
+            m_FrameOpen = true;
+        }
+
+        internal void CommitFrame()
+        {
+            RequireOpenFrame();
+            m_CommittedPage = ReadPage();
+            m_FrameOpen = false;
+        }
+
+        internal void DiscardFrame()
+        {
+            RequireOpenFrame();
+            LoadPage(in m_CommittedPage);
+            m_FrameOpen = false;
+        }
 
         public bool RequiresSearch(
             float presentationDelta,
@@ -288,6 +393,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             LastSearchResult = default;
             LastPlanResult = default;
             LastDecision = default;
+            PersistClosedState();
         }
 
         public void ReleaseDomain()
@@ -300,6 +406,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_LoopCycle = 0;
             m_DomainActive = false;
             LastDecision = default;
+            PersistClosedState();
+        }
+
+        void PersistClosedState()
+        {
+            if (!m_FrameOpen)
+                m_CommittedPage = ReadPage();
+        }
+
+        void RequireOpenFrame()
+        {
+            if (!m_FrameOpen)
+                throw new InvalidOperationException("Motion Matching Selection has no open frame.");
         }
 
         void AdvancePlan(float presentationDelta)

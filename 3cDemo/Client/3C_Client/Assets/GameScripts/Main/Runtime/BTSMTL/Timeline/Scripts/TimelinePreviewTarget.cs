@@ -46,8 +46,9 @@ namespace BTSMTL.Timeline
             double rawTime,
             double effectiveTime,
             int effectiveCycle,
-            int targetOccurrenceIndex,
-            int relationDepth,
+            string relationId,
+            bool mapped,
+            bool rebased,
             string lifecyclePhase,
             string reason)
         {
@@ -64,8 +65,9 @@ namespace BTSMTL.Timeline
             RawTime = rawTime;
             EffectiveTime = effectiveTime;
             EffectiveCycle = effectiveCycle;
-            TargetOccurrenceIndex = targetOccurrenceIndex;
-            RelationDepth = relationDepth;
+            RelationId = relationId ?? string.Empty;
+            Mapped = mapped;
+            Rebased = rebased;
             LifecyclePhase = lifecyclePhase ?? string.Empty;
             Reason = reason ?? string.Empty;
         }
@@ -81,8 +83,9 @@ namespace BTSMTL.Timeline
         public double RawTime { get; }
         public double EffectiveTime { get; }
         public int EffectiveCycle { get; }
-        public int TargetOccurrenceIndex { get; }
-        public int RelationDepth { get; }
+        public string RelationId { get; }
+        public bool Mapped { get; }
+        public bool Rebased { get; }
         public string LifecyclePhase { get; }
         public string Reason { get; }
     }

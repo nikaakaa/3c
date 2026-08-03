@@ -1,3 +1,5 @@
+> 当前状态：已完成任务表示Motion Matching能力代码和合同已经存在，不表示已接入角色。剩余未完成项只属于Rollback闭环后的独立Definition、Profile、Database、Clip与Projection内容队列；不得修改Corin资产，也不得阻塞`openspec/character-pipeline-serial-execution.md`阶段1至8。共享Capability、Document v3、UI与Pose IR接入由Pose Graph重构的14A门禁拥有，本change不得建立第二套GraphView、catalog、mutation或compiler入口。
+
 ## 1. 现状清点与共享合同冻结
 
 - [x] 1.1 枚举当前全部Animation Pose Source producer类型及其Projection lowering入口。
@@ -601,37 +603,56 @@
 - [x] 21.27 Replay比较expected与actual digest并输出结构化差异。
 - [x] 21.28 identity不匹配时拒绝Replay且不迁移旧capture。
 
-## 22. 条件式能力与独立验证配置边界
+## 21A. 重基线state-local Motion Matching运行ABI
 
-- [x] 22.1 定义Profile没有MM producer时不得引用MM Profile的validation code。
-- [x] 22.2 定义Profile引用MM Profile但没有MM producer时的typed orphan-profile diagnostic。
-- [x] 22.3 定义producer声明MM Pose Source但缺少MM Profile时的typed missing-profile diagnostic。
+- [x] 21A.1 删除MM Projection payload中的Gameplay ProgramProducerId。
+- [x] 21A.2 删除MM Projection payload中的Gameplay AnimationChannelId。
+- [x] 21A.3 删除MM source identity中的AnimationPlaybackId。
+- [x] 21A.4 增加Graph-owned typed MM Source Slot与Profile-owned typed Binding。
+- [x] 21A.5 增加绑定PoseState与Player NodeId。
+- [x] 21A.6 让MM payload codec保存Projection-local dense source index、Player NodeId、generation与lease。
+- [x] 21A.7 让Projection compiler从PoseState provider plan解析MM binding。
+- [x] 21A.8 删除MM producer binding回指Program producer的校验。
+- [x] 21A.9 让MM lowerer输出`PresentationPoseSourceSample`。
+- [x] 21A.10 让MM sample显式输出Pending、Ready与Invalid。
+- [x] 21A.11 让PoseState target readiness barrier消费MM readiness。
+- [x] 21A.12 让MM Player只比较provider、player、Presentation source与selection generation。
+- [x] 21A.13 删除MotionMatchingSelectionInput进入通用Selection表的编译路径。
+- [x] 21A.14 更新Query Fixture通过MM Preview adapter提交state relevance。
+- [x] 21A.15 禁止Query Fixture创建Gameplay producer、channel或PlaybackId。
+- [x] 21A.16 更新diagnostics与Replay使用state-local sample identity。
+
+## 22. 正式接入门禁与独立验证配置
+
+- [x] 22.1 定义Profile没有MM provider时不得引用MM Profile的validation code。
+- [x] 22.2 定义Profile引用MM Profile但没有MM provider时的typed orphan-profile diagnostic。
+- [x] 22.3 定义Pose Graph声明MM provider但缺少MM Profile时的typed missing-profile diagnostic。
 - [x] 22.4 定义多个MM Profile owner被解析时的typed duplicate-owner diagnostic。
-- [x] 22.5 让Projection Compiler在没有MM producer时完全省略MM payload。
+- [x] 22.5 让Projection Compiler在没有MM provider时完全省略MM payload。
 - [x] 22.6 让Presentation Runtime Factory在Projection没有MM payload时不构造MM模块。
 - [x] 22.7 让无MM配置不分配query、candidate、Top-K、plan、history与replay buffer。
 - [x] 22.8 让无MM配置不发布伪MM runtime snapshot或capability状态。
-- [ ] 22.9 定义独立验证配置必须提供的Definition、Presentation Profile与Graph producer identity。
-- [ ] 22.10 定义独立验证配置必须提供的Pose Graph、Blend Library、Channel与Slot binding。
-- [ ] 22.11 定义独立验证配置必须提供的Rig Definition与稳定BoneId闭包。
-- [ ] 22.12 定义独立验证配置必须提供的Foot Analysis Source与Artifact identity。
-- [ ] 22.13 定义独立验证配置必须提供的动画Clip、Segment与continuation闭包。
-- [ ] 22.13a 定义独立验证配置必须提供的Motion Source Set与SourceClip identity闭包。
-- [ ] 22.13b 定义独立验证配置必须提供的Sampling Compatibility Mode与Motion Root。
-- [ ] 22.13c 定义独立验证配置必须提供的Coverage Requirement。
-- [ ] 22.14 定义独立验证配置必须提供的MM Profile、Schema、Trajectory/Cost/Search Policy与Database。
-- [ ] 22.15 定义独立验证配置必须提供的MM producer self jump transition。
-- [ ] 22.16 让验证环境通过现有正式入口显式选择目标`CharacterPipelineDefinition`。
-- [ ] 22.17 禁止按场景名、角色名、asset目录或资源缺失自动选择验证Definition。
-- [ ] 22.18 让MM Analysis Build只枚举显式请求Definition引用的Database。
+- [ ] 22.9 在动画职责与MM Module重构完成后创建独立正式MM Definition、Presentation Profile与唯一Pose source identity。
+- [ ] 22.10 为独立Definition装配Pose Graph、PoseStateMachine、State内部MM provider与显式Player route，不创建Gameplay AnimationChannel或第二条动画链。
+- [ ] 22.11 为独立Definition装配正式Rig Definition并闭合全部稳定BoneId。
+- [ ] 22.12 为独立Definition装配Foot Analysis Source并生成exact Artifact identity。
+- [ ] 22.13 导入正式动画Clip，配置可搜索Segment、contact与continuation闭包。
+- [ ] 22.13a 创建正式Motion Source Set并闭合全部SourceClip identity。
+- [ ] 22.13b 为每个SourceClip显式配置Sampling Compatibility Mode与Motion Root。
+- [ ] 22.13c 配置Coverage Requirement并生成对应Coverage结果。
+- [ ] 22.14 创建正式MM Profile，装配Schema、Trajectory Policy、Cost Policy、Search Policy与Database Definition。
+- [ ] 22.15 为State内部MM provider配置pose jump所需的正式Selection continuity策略，不接入第二套transition runtime。
+- [ ] 22.16 让Launcher、Build与Query Fixture通过现有正式入口显式选择该`CharacterPipelineDefinition`。
+- [ ] 22.17 删除或拒绝任何按场景名、角色名、asset目录或资源缺失自动选择验证Definition的入口。
+- [ ] 22.18 让MM Analysis Build只枚举显式请求Definition引用的Database并生成该Definition的正式Artifact。
 - [x] 22.19 让Character Build只消费显式请求Definition引用的合法`.mmdb`。
-- [ ] 22.20 让Projection payload保存验证Definition、Profile、Rig、Foot Artifact、Database与Clip exact identity。
-- [ ] 22.21 让验证配置缺少任一正式输入时Build直接返回typed diagnostic。
+- [ ] 22.20 编译独立Definition的Projection payload，并保存Definition、Profile、PoseState、Rig、Foot Artifact、Database与Clip exact identity。
+- [ ] 22.21 让独立配置缺少任一正式输入时Build直接返回typed diagnostic且不生成部分Projection。
 - [x] 22.22 禁止为验证配置注入默认Rig、默认Schema、默认Database、placeholder Clip或bind pose。
 - [x] 22.23 禁止创建验证专用Runtime、第二套Profile类型、旧/MM开关或兼容converter。
 - [x] 22.24 让不同Definition切换时按Projection replacement规则释放旧MM状态并重新构造正式模块。
 - [x] 22.25 让Diagnostics明确显示当前Definition、Profile、Database、Artifact与Projection identity。
-- [ ] 22.26 记录用户另行提供正式验证配置时所需的最小输入清单与显式选择入口。
+- [ ] 22.26 在独立Definition旁记录正式资产入口、最小输入清单与Launcher、Build、Query Fixture显式选择路径。
 - [x] 22.27 保持Corin Graph、StateMachine、Timeline、Profile、Definition、Projection、Prefab、动画、Marker与transition资产不进入本change写入范围。
 - [x] 22.28 禁止独立验证配置引用Corin Rig、Foot Analysis、Clip、Database或其它动画资产作为占位。
 

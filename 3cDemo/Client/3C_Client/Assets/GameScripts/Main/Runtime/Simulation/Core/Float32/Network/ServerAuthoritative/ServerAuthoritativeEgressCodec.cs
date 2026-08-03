@@ -11,11 +11,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public const string AuthorityReplication = "server-authoritative.authority-replication";
         public const string RemotePresentation = "server-authoritative.remote-presentation";
         public const string ClientInputSchema = "server-authoritative-client-input/1";
-        public const string AuthorityReplicationSchema = "server-authoritative-authority-replication/3";
-        public const string RemotePresentationSchema = "server-authoritative-remote-presentation/3";
+        public const string AuthorityReplicationSchema = "server-authoritative-authority-replication/5";
+        public const string RemotePresentationSchema = "server-authoritative-remote-presentation/5";
         public const int SchemaVersion = 1;
-        public const int AuthorityReplicationSchemaVersion = 3;
-        public const int RemotePresentationSchemaVersion = 3;
+        public const int AuthorityReplicationSchemaVersion = 5;
+        public const int RemotePresentationSchemaVersion = 5;
     }
 
     public static class ServerAuthoritativeEgressCodec
@@ -24,8 +24,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         const uint ReplicationMagic = 0x52454153;
         const uint RemoteMagic = 0x50454153;
         const int InputVersion = 1;
-        const int ReplicationVersion = 3;
-        const int RemoteVersion = 3;
+        const int ReplicationVersion = 5;
+        const int RemoteVersion = 5;
         const int MaximumCount = 4096;
 
         public static byte[] WriteOwnerInput(OwnerCanonicalInputBatch input)
@@ -237,6 +237,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteScalar(command.Weight);
             writer.WriteUInt64(command.ProducerGeneration);
             writer.WriteInt32(command.Cycle);
+            writer.WriteUInt64(command.SourceActionInstanceId);
+            writer.WriteScalar(command.VisualTimeScale);
         }
 
         static PresentationCommand ReadPresentationCommand(CanonicalReader reader) => new PresentationCommand(
@@ -246,7 +248,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             reader.ReadScalar(),
             reader.ReadScalar(),
             reader.ReadUInt64(),
-            reader.ReadInt32());
+            reader.ReadInt32(),
+            reader.ReadUInt64(),
+            reader.ReadScalar());
 
         static void WriteHeader(CanonicalWriter writer, SimulationEventHeader header)
         {

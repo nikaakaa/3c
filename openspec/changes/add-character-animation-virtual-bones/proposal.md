@@ -23,6 +23,10 @@
 - Preview、Pose Watch、Live Debug与Runtime执行相同Virtual Bone派生、混合和TwoBoneIK计划；打开窗口、选择资产或修改Rig不得自动Build。
 - Corin Rig新增武器分支到左右手的Virtual Bone，Pose Graph新增双臂`TwoBoneIK`节点，并迁移所有Bone Mask与Blend Profile显式覆盖新增Pose Bone。旧Rig schema、旧payload、旧mask/profile serialized数据和旧generated Projection直接删除或重建，不保留兼容reader与runtime fallback。
 
+## 后续动画职责重构关系
+
+后续`refactor-animation-control-boundaries`会重写Corin Locomotion前半段为PoseStateMachine加AnimationSlot，但必须保留本change已经安装的Rig v3、Virtual Bone、Mask/Profile覆盖和双臂TwoBoneIK在Action composition之后、FootPlacement之前的唯一执行顺序。新架构不得恢复图外FinalIK或建立另一份武器手部修正。
+
 ## Capabilities
 
 ### Added
@@ -31,20 +35,24 @@
 
 ### Modified
 
-- `character-presentation-pose-graph`：把`TwoBoneIK`加入有限正式节点目录，并规定它只读取Pose Bone reference、只写Physical Bone肢体链且位于native composition阶段。
+- `character-animation-presentation-authoring`：把Rig authoring明确为Physical/Virtual Bone唯一入口，并规定Rig变化只使Projection失效，不触发自动Build。
+- `character-animation-pipeline`：把Virtual Bone source派生、完整Pose运输、TwoBoneIK与Physical-only final writer纳入唯一Pose Plan。
+- `character-foot-placement-presentation`：明确TwoBoneIK属于FootPlacement之前的native composition，Virtual Bone不进入脚部world-aware真相。
+- `character-pipeline-runtime`：让统一Trace从已完成Pose workspace发布Physical/Virtual Bone与TwoBoneIK诊断。
+- `character-presentation-pose-graph`：把`TwoBoneIK`加入重基线后的有限正式节点目录，并规定它只读取Pose Bone reference、只写Physical Bone肢体链且位于native composition阶段。
 
 ## Dependencies And Sequencing
 
-1. `refactor-animation-selection-pose-graph-boundary`先固定Selection、Player、source capture与最终Pose Plan边界。
-2. `add-character-presentation-pose-graph`先安装唯一PoseGraph compiler、native plan、world-aware FootPlacement与final writer。
-3. `refactor-animation-playback-to-blend-stack`与`refactor-inertial-blending-to-local-pose-node`先收口Stored Pose、per-bone transition和单Pose history所有权。
-4. `upgrade-character-animation-authoring-workspace`先提供正式Rig导航、PoseGraph Details、Preview、Pose Watch与显式Build边界。
-5. `add-character-presentation-blend-space`与本change共享source capture。两者的运行时代码可以保持正交，但Corin资产迁移必须先完成Blend Space的locomotion重写，再一次加入Virtual Bone和TwoBoneIK，不能并行覆盖同一Rig、Mask、Profile或PoseGraph资产。
-6. 本change不得先向旧PoseSlot固定Stack、图外Pose Post Process或FinalIK MonoBehaviour安装临时Virtual Bone缓存。
+1. 已归档的Selection、Pose Graph、Blend Stack、Inertialization与Animation Workspace已经安装本change所需运行和作者基座，不重新建立平行入口。
+2. 本change已经完成Rig v3、Virtual Bone派生、TwoBoneIK、Native Plan、Mask/Profile和Corin接入；后续change只能消费和重新编码这些最终合同，不得重做。
+3. `refactor-pose-graph-to-btsmtl-authoring-domain`负责把现有能力纳入唯一Capability Catalog、typed mutation、Document v3、共享UI与Pose IR，并保留`TwoBoneIK -> FootPlacement -> OutputPose`顺序。
+4. `refactor-animation-control-boundaries`负责PoseState、AnimationSlot和业务拓扑；它与本change的资产任务必须合并为一次Corin Document v3事务，不能分别覆盖Rig、Mask、Profile或Pose Graph。
+5. Blend Space和Motion Matching只输出完整`PoseBoneCount`页面并复用现有source capture；它们的独立演示内容不是Virtual Bone/IK闭环前置。
+6. 唯一串行关系以`openspec/character-pipeline-serial-execution.md`为准；不得向旧PoseSlot固定Stack、图外Pose Post Process或FinalIK MonoBehaviour恢复临时缓存。
 
 ## Implementation Staging
 
-本change分为两个阶段。当前只允许实施第一阶段；第二阶段必须等待用户明确确认当前动画闭环结束并解除接入门禁。
+本change的两个阶段均已完成。后续重构只允许消费最终合同并迁入统一Document与编译链，不得恢复第一阶段并行模块状态或再次执行Rig迁移。
 
 ### 第一阶段：并行模块，不接入
 
@@ -63,7 +71,7 @@
 
 ### 第二阶段：统一接入与破坏性迁移
 
-门禁解除后，才把第一阶段模块一次接入唯一正式链路，并在同一个阶段完成Rig v2破坏性改名、Projection ABI、source capture、全部Pose运输、Mask/Profile、TwoBoneIK节点、final writer、作者工作区、Preview、diagnostics、通用资产与Corin迁移。第二阶段不得让Rig v1/v2、旧/新Pose count、旧/新Mask或图内/图外IK同时可运行。
+门禁解除后，才把第一阶段模块一次接入唯一正式链路，并在同一个阶段完成Rig v3破坏性改名、Projection ABI、source capture、全部Pose运输、Mask/Profile、TwoBoneIK节点、final writer、作者工作区、Preview、diagnostics、通用资产与Corin迁移。第二阶段不得让Rig v1/v2、旧/新Pose count、旧/新Mask或图内/图外IK同时可运行。
 
 ## Deliberate Scope
 
@@ -80,10 +88,10 @@
 
 - current `character-animation-presentation-authoring`与`character-pipeline-definition-authoring`只规定Profile引用Rig Definition，没有区分Transform绑定骨骼与Pose数据骨骼。本change把该区分收口在唯一Rig资产内，不新增第二份Virtual Bone配置资产。
 - current `character-animation-pipeline`和工作区代码把Rig `Bones.Count`同时用于Transform handle、source workspace、Mask、Blend与final writer；本change将其拆成Physical/Pose数量，避免Virtual Bone被错误绑定或写回。
-- active `character-presentation-pose-graph`把正式节点目录限定在现有节点集合，尚不包含`TwoBoneIK`；本change明确修改该有限目录，不通过隐藏job或图外solver绕过节点合同。
-- active `upgrade-character-animation-authoring-workspace`把“新增runtime节点”列为该change的Non-Goal。本change在其完成后正式安装TwoBoneIK authoring与Live显示，不反向扩大workspace change的范围。
+- 已归档的`character-presentation-pose-graph`原始节点目录不包含`TwoBoneIK`；本change已经把它安装进正式有限目录，没有使用隐藏job或图外solver绕过节点合同。
+- 已归档的`upgrade-character-animation-authoring-workspace`只提供共享Shell；本change已经在其上安装TwoBoneIK authoring与Live显示，后续Pose authoring重构负责迁入Capability驱动的共享UI。
 - active `add-character-presentation-blend-space`新增`BlendSpacePlayer`并复用source采样。本change在合并后的节点目录中同时保留`MarkerSync`、`BlendSpacePlayer`与`TwoBoneIK`，并要求BlendSpace采出的Pose同样生成Virtual Bone。
-- current `character-foot-placement-presentation`规定FootPlacement只消费最终动画脚特征、显式rig/calibration、世界查询与`ICharacterFootPlacementSolver`。本change不修改该真相；Virtual Bone不得代替ankle/toe/sole、预测落点或Foot Lock。
+- current `character-foot-placement-presentation`规定FootPlacement只消费同帧上游Component Pose、最终脚特征、Rig v3、Calibration与PhysicsScene support，并由解析式Limb Pose Solver写入节点output workspace。Virtual Bone不得代替ankle/toe/sole、预测落点或Foot Lock。
 - current与active Agent specs都禁止Agent修改Rig与PoseGraph。本change保持该只读边界，因此不增加Agent authoring schema；若未来允许Agent配置Virtual Bone，必须独立升级完整Agent链和`btsmtl-agent-authoring`技能。
 
 ## Breaking Changes

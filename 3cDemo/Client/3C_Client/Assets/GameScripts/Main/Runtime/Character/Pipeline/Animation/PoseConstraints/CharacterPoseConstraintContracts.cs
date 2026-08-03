@@ -221,7 +221,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new ArgumentException("Two Bone IK Joint Target offset is invalid.", nameof(jointTargetLocalOffset));
             }
-            if (!Enum.IsDefined(typeof(CharacterTwoBoneIkEndRotationMode), endRotationMode))
+            if (endRotationMode != CharacterTwoBoneIkEndRotationMode.PreserveInput &&
+                endRotationMode != CharacterTwoBoneIkEndRotationMode.MatchEffector)
                 throw new ArgumentOutOfRangeException(nameof(endRotationMode));
             if (!float.IsFinite(weight) || weight < 0f || weight > 1f)
                 throw new ArgumentOutOfRangeException(nameof(weight));
@@ -386,7 +387,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 component = new CharacterComponentBonePose(local.Position, local.Rotation, local.Scale);
                 return true;
             }
-            CharacterComponentBonePose parent = componentPoses[parentIndex];
+            return TryCreateComponent(local, componentPoses[parentIndex], out component);
+        }
+
+        internal static bool TryCreateComponent(
+            AnimationLocalBonePose local,
+            int parentIndex,
+            CharacterComponentBonePose[] componentPoses,
+            int componentOffset,
+            out CharacterComponentBonePose component)
+        {
+            component = default;
+            if (!local.IsValid)
+                return false;
+            if (parentIndex < 0)
+            {
+                component = new CharacterComponentBonePose(local.Position, local.Rotation, local.Scale);
+                return true;
+            }
+            return TryCreateComponent(
+                local,
+                componentPoses[componentOffset + parentIndex],
+                out component);
+        }
+
+        internal static bool TryCreateComponent(
+            AnimationLocalBonePose local,
+            CharacterComponentBonePose parent,
+            out CharacterComponentBonePose component)
+        {
+            component = default;
             if (!parent.IsValid)
                 return false;
             Vector3 position = parent.Position +
@@ -404,5 +434,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal static Vector3 TransformPoint(CharacterComponentBonePose pose, Vector3 localPoint) =>
             pose.Position + pose.Rotation * Vector3.Scale(pose.Scale, localPoint);
+
+        internal static bool TryCreateLocal(
+            CharacterComponentBonePose component,
+            CharacterComponentBonePose parent,
+            out AnimationLocalBonePose local)
+        {
+            local = default;
+            if (!component.IsValid || !parent.IsValid || !IsUsableScale(parent.Scale))
+                return false;
+            Quaternion inverseParent = Quaternion.Inverse(parent.Rotation);
+            Vector3 position = inverseParent * (component.Position - parent.Position);
+            position = new Vector3(
+                position.x / parent.Scale.x,
+                position.y / parent.Scale.y,
+                position.z / parent.Scale.z);
+            Quaternion rotation = (inverseParent * component.Rotation).normalized;
+            Vector3 scale = new Vector3(
+                component.Scale.x / parent.Scale.x,
+                component.Scale.y / parent.Scale.y,
+                component.Scale.z / parent.Scale.z);
+            local = new AnimationLocalBonePose(position, rotation, scale);
+            return local.IsValid;
+        }
     }
 }

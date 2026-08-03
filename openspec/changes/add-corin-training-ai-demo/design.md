@@ -22,7 +22,7 @@ Root
                       -> Wait AttackCooldownTicks
 ```
 
-AI只决定输入。Attack是否准入、进入哪段状态、窗口、后摇、MotionWarp与动画仍由Corin Character Program决定。
+AI只决定输入。Attack是否准入、进入哪段Gameplay状态、窗口、后摇与MotionWarp仍由Corin Character Program决定；有限Action动画由Program确认的Timeline playback进入AnimationSlot，持续Locomotion动画在动画职责重构安装后由PoseStateMachine根据committed Body/Intent选择。AI不得直接选择两类动画。
 
 ## Target Ownership
 
@@ -40,28 +40,29 @@ AI输出目标平面方向的MoveAxis。Character Program负责Locomotion，Worl
 
 训练敌人继续使用Corin Character Definition和Presentation Projection，但Host的VisualRoot改为怪兽FBX实例。怪兽与Corin均使用Generic `Bip001`骨架路径，因此同一Animancer输出可以驱动该VisualRoot；旧Corin VisualRoot在训练敌人prefab中显式停用，不能形成第二个动画驱动。
 
-首版不声明怪兽专用Timeline动画映射。Foot Placement仍走正式Pose Post Process合同：怪兽VisualRoot配置自己的`CharacterFootPlacementRig`、两条禁用自动Update的`LimbIK`与现有`FinalIKLimbFootPlacementSolver`，Composition只引用这些同根正式组件。它可以复用现有Profile与Calibration，但左右腿solver骨链必须与怪兽Rig逐Transform一致。
+首版不声明怪兽专用Timeline动画映射。Foot Placement走正式ordered Pose Plan合同：怪兽VisualRoot配置Rig v3、`CharacterAnimationRigBinding`与`CharacterWorldAwarePresentationBinding`，FootPlacement operation在同帧上游Component Pose上执行Planner与解析式Limb Pose Solver。它可以复用现有Profile与Calibration，但左右腿Physical chain与Calibration identity必须和怪兽Rig严格一致。
 
-本change不得新增Passthrough、NoOp或Disabled solver来伪造生命周期完成，也不得复用Corin VisualRoot上的LimbIK组件。若怪兽骨架无法通过正式Rig与FinalIK adapter校验，必须停止并报告Presentation资产缺口；禁止回退Animator Controller、跳过Composition或双写动画。
+本change不得新增Passthrough、NoOp、Disabled、Final IK或图外solver来伪造生命周期完成。若怪兽骨架无法通过Rig v3、Calibration与world-aware stage校验，必须停止并报告Presentation资产缺口；禁止回退Animator Controller、跳过Pose Plan或双写动画。
 
 ## Asset Authoring
 
 资产修改固定为：
 
 ```text
-Agent v16 export_snapshot
-  -> dry_run_patch
-  -> apply same patch
-  -> export_snapshot
+Agent Document v3 package checkout
+  -> 编辑唯一AI editable正文
+  -> dry_run_document
+  -> apply_document(same document hash)
+  -> canonical Document反向同步
   -> validate
-  -> compile AIIntentProgram
+  -> publish AIIntentProgram
 ```
 
-不保留Patch文件监听、一次性migrator、YAML写入或Neutral fallback。训练敌人prefab只在AI资产与Program全部可用后原子迁移Control Source引用。
+不保留Document文件监听、Patch、一次性migrator、YAML写入或Neutral fallback。训练敌人prefab只在AI资产与Program全部可用后原子迁移Control Source引用。
 
-Character Controller Snapshot只读投影Presentation的正式身份边界：Profile、PoseGraph、BlendLibrary、Rig的资产identity与revision，AnimationChannel到PoseSlot映射，以及producer source identity。它不再输出旧Layer、TransitionLibrary、transition asset或easing。Agent Patch仍只修改Character或AI authoring，不获得PoseGraph、BlendLibrary、Rig、PoseSlot或producer source的第二个写入口。AI Snapshot只引用受控Character Definition和Program identity，不复制Character Presentation配置。
+AIController Document context只读投影受控Character的Definition、Input/Request capability、Program identity与必要Presentation capability，不复制或修改Character Presentation配置。CharacterController Document v3中的Profile与PoseGraph editable由共享Presentation Mutation唯一处理；本change既不扩展也不旁路该写链。
 
-当前半迁移资产不能原地修补。Unity公共程序集恢复零编译错误、`AIControllerDefinition`同名脚本类型可加载后，必须通过AssetDatabase正式删除失效Definition、旧RootTree、旧Perception和过期generated Program，再从`bootstrap_ai_controller`开始重建。不得保留旧GUID兼容、手工补`m_Script`、直接改Graph YAML或让prefab继续指向失效Definition。
+当前半迁移资产不能原地修补。Unity公共程序集恢复零编译错误、`AIControllerDefinition`同名脚本类型可加载后，必须通过正式资产创建入口一次性重建Definition、RootTree、Perception和generated Program，再对已有合法Definition执行Document checkout。Document工具不创建不存在的root，不得恢复`bootstrap_ai_controller`旁路。不得保留旧GUID兼容、手工补`m_Script`、直接改Graph YAML或让prefab继续指向失效Definition。
 
 `AIControllerDefinition`必须位于同名独立C#文件。UnityEngine.Object authoring类型不得与另一个可创建ScriptableObject共享脚本文件后仍假定其MonoScript identity稳定；Definition在domain reload后必须继续由AssetDatabase解析为`AIControllerDefinition`，否则正式Agent根不存在。
 
@@ -79,6 +80,7 @@ Character Controller Snapshot只读投影Presentation的正式身份边界：Pro
 
 优点是先验证Local核心，不提前决定Authority Bot或Rollback Bot所有权。代价是三个网络产品暂时不能带该AI Actor，配置时必须明确拒绝。
 
-### 复用Corin Projection并为怪兽配置正式FinalIK
+### 复用Corin Projection并为怪兽配置正式FootPlacement Pose节点
 
-优点是只替换表现骨架，AI输入、Character Program、Timeline事实、动画生命周期与Foot Placement执行边界仍是唯一链路。代价是需要为怪兽骨架显式配置两条LimbIK，并且首版动作仍来自Corin Projection，不是怪兽FBX中的专用攻击组；怪兽专用动作和IK参数调校需要独立Presentation variant change，不能塞回AI Tree。
+优点是只替换表现骨架，AI输入、Character Program、Timeline事实、动画生命周期与Foot Placement执行边界仍是唯一链路。代价是需要为怪兽骨架显式配置Rig v3双腿Physical chain，并且首版动作仍来自Corin Projection，不是怪兽FBX中的专用攻击组；怪兽专用动作和Foot Placement参数调校需要独立Presentation variant change，不能塞回AI Tree。
+

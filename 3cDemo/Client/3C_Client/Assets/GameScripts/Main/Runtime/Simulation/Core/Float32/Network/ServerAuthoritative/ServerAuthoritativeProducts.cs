@@ -387,6 +387,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     string.Equals(latestSamples[lastIndex].ProducerId, sample.ProducerId, StringComparison.Ordinal) &&
                     latestSamples[lastIndex].ProducerGeneration == sample.ProducerGeneration)
                 {
+                    if (latestSamples[lastIndex].SourceActionInstanceId != sample.SourceActionInstanceId)
+                        throw new ArgumentException(
+                            "Remote presentation playback changed its source Action instance.",
+                            nameof(sampleCommands));
                     latestSamples[lastIndex] = sample;
                 }
                 else

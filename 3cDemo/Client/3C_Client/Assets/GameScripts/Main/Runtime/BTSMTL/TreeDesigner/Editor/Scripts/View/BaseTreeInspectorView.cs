@@ -207,6 +207,9 @@ namespace TreeDesigner.Editor
                 return;
             }
 
+            if (m_View.TryPopulateSharedNode(nodeView, node))
+                return;
+
             AddNodeIdentity(nodeView, node);
             AuthoringPageOpenRegistry.PopulateInspector(m_View, nodeView, node);
         }
@@ -337,11 +340,7 @@ namespace TreeDesigner.Editor
                 if (value == node.DisplayName)
                     return;
 
-                node.ApplyModify("Set Node Display Name", () =>
-                {
-                    node.DisplayName = value;
-                });
-                nodeView.Refresh();
+                nodeView.SetDisplayName(value);
                 titleLabel.text = NodeLabel(node);
             });
             displayNameField.AddToClassList("selection-inspector-field");
@@ -475,42 +474,105 @@ namespace TreeDesigner.Editor
         }
     }
 
-    public sealed class BaseTreeNavigatorView : VisualElement
+    public abstract class GraphAuthoringDetailsHostView : VisualElement
     {
-        public BaseTreeNavigatorView()
+        protected GraphAuthoringDetailsHostView(bool startsHidden)
         {
-            VisualTreeAsset template = Resources.Load<VisualTreeAsset>("VisualTree/BaseTreeNavigator");
+            VisualTreeAsset template = Resources.Load<VisualTreeAsset>(
+                "VisualTree/BaseTreeInspectorInside");
             if (!template)
-                throw new InvalidOperationException("Base Tree Navigator visual tree is missing.");
+                throw new InvalidOperationException(
+                    "Graph authoring details visual tree is missing.");
+            template.CloneTree(this);
+            AddToClassList("treeInspector");
+            style.display = startsHidden
+                ? DisplayStyle.None
+                : DisplayStyle.Flex;
+            DetailsPage = this.Q("selection-inspector-page") ??
+                throw new InvalidOperationException(
+                    "Graph authoring details page is missing.");
+            DetailsContent =
+                this.Q("selection-inspector-container") ??
+                throw new InvalidOperationException(
+                    "Graph authoring details content is missing.");
+            DetailsPage.style.display = DisplayStyle.Flex;
+        }
+
+        protected VisualElement DetailsPage { get; }
+        protected VisualElement DetailsContent { get; }
+    }
+
+    public abstract class GraphAuthoringNavigatorHostView : VisualElement
+    {
+        protected GraphAuthoringNavigatorHostView(
+            string visualTreeName)
+        {
+            VisualTreeAsset template =
+                Resources.Load<VisualTreeAsset>(
+                    $"VisualTree/{visualTreeName}");
+            if (!template)
+                throw new InvalidOperationException(
+                    "Graph authoring navigator visual tree is missing.");
             template.CloneTree(this);
             style.flexGrow = 1f;
         }
     }
 
-    public class BaseTreeInspectorView : VisualElement
+    public sealed class BaseTreeNavigatorView :
+        GraphAuthoringNavigatorHostView
+    {
+        public BaseTreeNavigatorView() :
+            base("BaseTreeNavigator")
+        {
+        }
+    }
+
+    public class BaseTreeInspectorView :
+        GraphAuthoringDetailsHostView
     {
         public new class UxmlFactory : UxmlFactory<BaseTreeInspectorView, UxmlTraits> { }
-        protected virtual string m_VisualTreeName => "BaseTreeInspectorInside";
 
         protected BaseTree m_Tree;
         public BaseTree Tree => m_Tree;
         readonly TreeSelectionInspectorController m_SelectionController;
+        readonly GraphAuthoringDetailsPresenter m_SharedDetailsPresenter;
         GraphDataCatalogController m_DataCatalogController;
 
         protected VisualElement m_SelectionPage;
         protected VisualElement m_SelectionInspectorContainer;
 
-        public BaseTreeInspectorView()
+        public BaseTreeInspectorView() :
+            base(true)
         {
             m_SelectionController = new TreeSelectionInspectorController(this);
-            VisualTreeAsset template = Resources.Load<VisualTreeAsset>($"VisualTree/{m_VisualTreeName}");
-            template.CloneTree(this);
-            AddToClassList("treeInspector");
-            style.display = DisplayStyle.None;
+            m_SelectionPage = DetailsPage;
+            m_SelectionInspectorContainer = DetailsContent;
+            m_SharedDetailsPresenter = new GraphAuthoringDetailsPresenter(m_SelectionInspectorContainer);
+        }
 
-            m_SelectionPage = this.Q("selection-inspector-page");
-            m_SelectionInspectorContainer = this.Q("selection-inspector-container");
-            m_SelectionPage.style.display = DisplayStyle.Flex;
+        public void BindSharedAuthoring(
+            BtsmtlSharedAuthoringWorkspaceBinding binding,
+            Action<GraphAuthoringDetailsCommandRequest> commandHandler)
+        {
+            if (binding == null)
+                throw new ArgumentNullException(nameof(binding));
+            m_SharedDetailsPresenter.Bind(
+                new GraphAuthoringDetailsBinding(
+                    binding.Document,
+                    binding.Capabilities,
+                    binding.Mutation,
+                    binding.Details,
+                    commandHandler,
+                    true));
+        }
+
+        internal bool TryPopulateSharedNode(BaseNodeView nodeView, BaseNode node)
+        {
+            if (node == null)
+                return false;
+            m_SharedDetailsPresenter.Inspect(new GraphAuthoringSelection(GraphAuthoringSelectionKind.Node, new GraphAuthoringElementId(node.GUID)));
+            AuthoringPageOpenRegistry.PopulateInspector(this, nodeView, node);
+            return true;
         }
 
         internal void BindNavigator(BaseTreeNavigatorView navigator, GraphDataCatalogViewState viewState)

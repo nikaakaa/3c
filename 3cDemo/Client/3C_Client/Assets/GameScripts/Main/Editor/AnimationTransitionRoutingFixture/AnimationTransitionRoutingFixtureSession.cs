@@ -90,6 +90,7 @@ namespace ThirdPersonCharacter.Editor.Animation.TransitionRouting
             var definition = new TransitionRoutingDefinition(
                 m_Asset.SchemaVersion,
                 new TransitionDefinitionRevision(m_Asset.DefinitionRevision),
+                TransitionRoutingCoveragePolicy.CompleteMatrix,
                 endpoints,
                 rules);
             m_CompileResult = TransitionRoutingCompiler.Compile(definition);

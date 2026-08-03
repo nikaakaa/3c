@@ -3,6 +3,27 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    internal readonly struct CharacterTwoBoneIkRuntimeDiagnostic
+    {
+        internal CharacterTwoBoneIkRuntimeDiagnostic(
+            CharacterTwoBoneIkDescriptor descriptor,
+            CharacterTwoBoneIkResult result,
+            CharacterComponentBonePose inputEndPose,
+            CharacterComponentBonePose outputEndPose)
+        {
+            Descriptor = descriptor;
+            Result = result;
+            InputEndPose = inputEndPose;
+            OutputEndPose = outputEndPose;
+        }
+
+        internal CharacterTwoBoneIkDescriptor Descriptor { get; }
+        internal CharacterTwoBoneIkResult Result { get; }
+        internal CharacterComponentBonePose InputEndPose { get; }
+        internal CharacterComponentBonePose OutputEndPose { get; }
+        internal bool Completed => Descriptor.IsValid && Result.Completed;
+    }
+
     public readonly struct CharacterVirtualBoneDiagnostic
     {
         public CharacterVirtualBoneDiagnostic(

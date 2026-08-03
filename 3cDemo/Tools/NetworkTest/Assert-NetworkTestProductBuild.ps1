@@ -47,6 +47,7 @@ function Assert-NetworkTestProductBuild {
         [Parameter(Mandatory = $true)][string]$ExpectedPlayerRoleId,
         [Parameter(Mandatory = $true)][string[]]$ExpectedAdditionalArtifactRoleIds,
         [Parameter(Mandatory = $true)][string[]]$ExpectedScenes,
+        [Parameter(Mandatory = $true)][string]$ExpectedBuildOptions,
         [Parameter(Mandatory = $true)][string]$ExpectedScriptingBackend
     )
 
@@ -111,7 +112,7 @@ function Assert-NetworkTestProductBuild {
     if ($player.kind -ne "UnityPlayer" -or $player.root -ne "Player" -or
         $player.entryPoint -ne "Player/3C_Client.exe" -or
         (Get-NetworkTestProductField $player.fields "target") -ne "StandaloneWindows64" -or
-        (Get-NetworkTestProductField $player.fields "buildOptions") -ne "Development, StrictMode, CleanBuildCache" -or
+        (Get-NetworkTestProductField $player.fields "buildOptions") -ne $ExpectedBuildOptions -or
         (Get-NetworkTestProductField $player.fields "scriptingBackend") -ne $ExpectedScriptingBackend -or
         (Get-NetworkTestProductField $player.fields "scenes") -ne [string]::Join("|", $ExpectedScenes)) {
         throw "Network Test Product Unity Player compile options or scenes are incompatible."

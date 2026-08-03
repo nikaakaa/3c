@@ -246,8 +246,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
 
     public sealed class DeterministicCollisionWorldArtifact
     {
-        public const int ArtifactVersion = 2;
-        public const string ArtifactSchema = "deterministic-collision-world/2";
+        public const int ArtifactVersion = 3;
+        public const string ArtifactSchema = "deterministic-collision-world/3";
         readonly ReadOnlyCollection<DeterministicCollisionSurface> m_Surfaces;
         readonly ReadOnlyCollection<FixedVector3> m_Vertices;
         readonly ReadOnlyCollection<DeterministicCollisionPrimitive> m_Primitives;

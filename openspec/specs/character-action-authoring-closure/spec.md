@@ -187,27 +187,29 @@ Timeline 攻击的时间事实 MUST 由 inline Timeline Decision TreeClip 写 ow
 - **THEN** Graph MAY 写具有显式 Action Context projection 的 scope variable
 - **AND** 输出仍 MUST 使用正式 Action Context
 
-### Requirement: Full-body Action 必须通过唯一 pipeline blackboard 事实公布 locomotion ownership
+### Requirement: Full-body Action 必须通过唯一Motion arbitration事实公布Motor ownership
 
-Attack、Dodge 与未来 full-body Action MUST 只通过 pipeline Blackboard `HasActionLocomotionOwnership` 让渡 locomotion。ActionInstance 成功激活后写 true，所有 source exit 对称写 false。Locomotion MUST 只读 ownership，不得复制 request、ActionProfile、Timeline、motion、window 或 lifecycle。系统 MUST 删除按动作种类选择恢复状态的路由事实。
+Attack、Dodge与未来full-body Action MUST只通过正式Action/Motion arbitration事实声明是否取得Character Motor控制权。该事实 MAY由pipeline Blackboard承载，但 MUST只控制Locomotion Motion contribution，不得控制基础Pose是否输出。Locomotion Gameplay MUST只读Motor ownership，不得复制request、ActionProfile、Timeline、motion、window或lifecycle。Locomotion PoseStateMachine MUST继续根据committed Body与Intent生成基础Pose；系统 MUST删除`HasActionLocomotionOwnership -> ActionOverride -> RunLoop/Idle`表现路由和按动作种类选择恢复Pose State的事实。
 
 #### Scenario: Full-body Action 激活
 
-- **WHEN** Attack 或 Dodge 激活成功
-- **THEN** OnEnter MUST 写 `HasActionLocomotionOwnership=true`
-- **AND** Locomotion MUST 进入无表现输出的 ActionOverride
+- **WHEN** Attack或Dodge激活并提交动作Motion
+- **THEN** Motion arbitration MUST阻止冲突Locomotion Motion contribution
+- **AND** FullBodyAction Slot MUST独立播放Action Pose
+- **AND** Locomotion PoseStateMachine MUST继续更新Source Pose
 
 #### Scenario: Full-body Action 结束
 
-- **WHEN** Action 完成、被替换或被上层 stop
-- **THEN** OnExit MUST 写 `HasActionLocomotionOwnership=false`
-- **AND** Locomotion MUST 按 Move input 进入 RunLoop 或 Idle
+- **WHEN** Action完成、被替换或被上层stop
+- **THEN** terminal lifecycle MUST释放Motor ownership与Action playback
+- **AND** Locomotion Gameplay MUST恢复正常Motor contribution
+- **AND** Slot MUST回到当前PoseStateMachine Source Pose
 
 #### Scenario: 单一 Action 真相
 
 - **WHEN** Locomotion 处理 ownership
-- **THEN** MUST NOT 创建第二个 Action state 或引用 Action Timeline
-- **AND** request MUST 只由 target activation 消费
+- **THEN** MUST NOT创建第二个Action state、引用Action Timeline或指定恢复动画
+- **AND** request MUST只由target activation消费
 
 ### Requirement: TreeClip 与 Scope Variable 必须是 Timeline Window 唯一作者入口
 
@@ -277,4 +279,3 @@ BTSMTL MUST提供通用Persistent Feature Host与Equipment Action Route Host aut
 - **WHEN** 节点RouteId不属于Character Equipment Profile
 - **THEN** Inspector与Compiler MUST失败
 - **AND** MUST不创建自由字符串Route
-

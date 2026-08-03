@@ -26,7 +26,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float lockError,
             float replantError,
             float policyWeight,
-            float solverWeight,
+            float positionWeight,
+            float rotationWeight,
+            float bendStabilizationWeight,
+            float legExtensionRatio,
+            FootPlacementBendDecisionReason bendDecisionReason,
+            Vector3 semanticSoleForward,
+            Vector3 semanticSoleUp,
+            Vector3 animatedBendNormal,
+            Vector3 preferredBendNormal,
+            Vector3 finalBendNormal,
+            Vector3 hipPosition,
+            Vector3 animatedKneePosition,
+            Vector3 animatedAnklePosition,
+            float minimumLegReach,
+            float maximumLegReach,
             Vector3 generatedSoleLocalVelocity,
             Vector3 generatedSoleWorldVelocity,
             float generatedSoleHeight,
@@ -64,7 +78,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LockError = lockError;
             ReplantError = replantError;
             PolicyWeight = policyWeight;
-            SolverWeight = solverWeight;
+            PositionWeight = positionWeight;
+            RotationWeight = rotationWeight;
+            BendStabilizationWeight = bendStabilizationWeight;
+            LegExtensionRatio = legExtensionRatio;
+            BendDecisionReason = bendDecisionReason;
+            SemanticSoleForward = semanticSoleForward;
+            SemanticSoleUp = semanticSoleUp;
+            AnimatedBendNormal = animatedBendNormal;
+            PreferredBendNormal = preferredBendNormal;
+            FinalBendNormal = finalBendNormal;
+            HipPosition = hipPosition;
+            AnimatedKneePosition = animatedKneePosition;
+            AnimatedAnklePosition = animatedAnklePosition;
+            MinimumLegReach = minimumLegReach;
+            MaximumLegReach = maximumLegReach;
             GeneratedSoleLocalVelocity = generatedSoleLocalVelocity;
             GeneratedSoleWorldVelocity = generatedSoleWorldVelocity;
             GeneratedSoleHeight = generatedSoleHeight;
@@ -103,7 +131,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float LockError { get; }
         public float ReplantError { get; }
         public float PolicyWeight { get; }
-        public float SolverWeight { get; }
+        public float PositionWeight { get; }
+        public float RotationWeight { get; }
+        public float BendStabilizationWeight { get; }
+        public float LegExtensionRatio { get; }
+        public FootPlacementBendDecisionReason BendDecisionReason { get; }
+        public Vector3 SemanticSoleForward { get; }
+        public Vector3 SemanticSoleUp { get; }
+        public Vector3 AnimatedBendNormal { get; }
+        public Vector3 PreferredBendNormal { get; }
+        public Vector3 FinalBendNormal { get; }
+        public Vector3 HipPosition { get; }
+        public Vector3 AnimatedKneePosition { get; }
+        public Vector3 AnimatedAnklePosition { get; }
+        public float MinimumLegReach { get; }
+        public float MaximumLegReach { get; }
         public Vector3 GeneratedSoleLocalVelocity { get; }
         public Vector3 GeneratedSoleWorldVelocity { get; }
         public float GeneratedSoleHeight { get; }
@@ -141,6 +183,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int footPlacementWeightParameterIndex,
             float footPlacementWeight,
             string calibrationId,
+            int calibrationSchemaVersion,
             string calibrationRevision,
             string analysisSourceId,
             int analysisVersion,
@@ -182,6 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementWeightParameterIndex = footPlacementWeightParameterIndex;
             FootPlacementWeight = footPlacementWeight;
             CalibrationId = calibrationId ?? string.Empty;
+            CalibrationSchemaVersion = calibrationSchemaVersion;
             CalibrationRevision = calibrationRevision ?? string.Empty;
             AnalysisSourceId = analysisSourceId ?? string.Empty;
             AnalysisVersion = analysisVersion;
@@ -224,6 +268,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public int FootPlacementWeightParameterIndex { get; }
         public float FootPlacementWeight { get; }
         public string CalibrationId { get; }
+        public int CalibrationSchemaVersion { get; }
         public string CalibrationRevision { get; }
         public string AnalysisSourceId { get; }
         public int AnalysisVersion { get; }
@@ -269,6 +314,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 destination[i] = source[i];
             for (int i = count; i < destination.Length; i++)
                 destination[i] = default;
+        }
+
+        internal static void CopyContributions(
+            AnimationPoseSourceContribution[] source,
+            int sourceCount,
+            AnimationPoseSourceContribution[] destination)
+        {
+            if (source == null || destination == null ||
+                sourceCount < 0 || sourceCount > source.Length)
+                throw new ArgumentOutOfRangeException(nameof(sourceCount));
+            int count = Math.Min(sourceCount, destination.Length);
+            Array.Copy(source, destination, count);
+            Array.Clear(destination, count, destination.Length - count);
         }
     }
 }

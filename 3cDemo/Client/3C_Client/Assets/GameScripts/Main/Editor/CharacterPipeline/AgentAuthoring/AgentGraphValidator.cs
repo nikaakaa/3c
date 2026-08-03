@@ -156,9 +156,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     "presentation_rig_definition_missing",
                     "Animation Presentation Profile缺少正式Rig Definition。");
 
+            var actionTrackChannels = new HashSet<string>(StringComparer.Ordinal);
             for (int timelineIndex = 0; timelineIndex < topology.Timelines.Count; timelineIndex++)
             {
-                TimelineData timeline = topology.Timelines[timelineIndex].Timeline;
+                CharacterAuthoringTimelineEntry entry = topology.Timelines[timelineIndex];
+                TimelineData timeline = entry.Timeline;
                 for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
                 {
                     if (timeline.Tracks[trackIndex] is not AnimationTrack track)
@@ -171,8 +173,249 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             "animation_channel_missing",
                             "AnimationTrack缺少有效AnimationChannelId。");
                     }
+                    else
+                    {
+                        actionTrackChannels.Add(track.AnimationChannelId.Value);
+                    }
+                    if (entry.Node == null || !entry.Node.ActionContext)
+                    {
+                        m_Report.Error(
+                            path,
+                            "animation_track_requires_finite_action",
+                            "AnimationTrack只允许属于带Action Context的有限Timeline Action。持续Pose source必须放在Presentation Profile与PoseState provider中。");
+                    }
                 }
             }
+            ValidatePresentationControlBoundary(
+                presentation,
+                actionTrackChannels);
+        }
+
+        void ValidatePresentationControlBoundary(
+            CharacterAnimationPresentationProfile presentation,
+            HashSet<string> actionTrackChannels)
+        {
+            var actionInputs = new Dictionary<string, int>(StringComparer.Ordinal);
+            var animationSlots = new Dictionary<string, int>(StringComparer.Ordinal);
+            ValidatePresentationGraph(
+                presentation,
+                presentation.PoseGraph,
+                presentation.PoseGraph.Graph,
+                string.Empty,
+                new HashSet<PoseGraphId>(),
+                actionInputs,
+                animationSlots);
+
+            var channels = new HashSet<string>(
+                actionTrackChannels,
+                StringComparer.Ordinal);
+            channels.UnionWith(actionInputs.Keys);
+            channels.UnionWith(animationSlots.Keys);
+            foreach (string channel in channels.OrderBy(value => value, StringComparer.Ordinal))
+            {
+                actionInputs.TryGetValue(channel, out int inputCount);
+                animationSlots.TryGetValue(channel, out int slotCount);
+                bool hasActionTrack = actionTrackChannels.Contains(channel);
+                string path = $"definition.animationPresentationProfile.actionChannel:{channel}";
+                if (!hasActionTrack)
+                {
+                    m_Report.Error(
+                        path,
+                        "action_channel_without_finite_timeline",
+                        "Action Playback Input或AnimationSlot引用的AnimationChannel没有任何有限Timeline Action producer。");
+                }
+                if (inputCount != 1)
+                {
+                    m_Report.Error(
+                        path,
+                        "action_playback_input_count_invalid",
+                        $"Action AnimationChannel必须有且只有一个ActionPlaybackInput，当前为{inputCount}个。");
+                }
+                if (slotCount != 1)
+                {
+                    m_Report.Error(
+                        path,
+                        "action_channel_consumer_count_invalid",
+                        $"AnimationSlot必须是Action AnimationChannel的唯一consumer，当前为{slotCount}个。");
+                }
+            }
+        }
+
+        void ValidatePresentationGraph(
+            CharacterAnimationPresentationProfile presentation,
+            CharacterPresentationPoseGraphAsset owner,
+            CharacterTypedPoseGraph graph,
+            string scope,
+            HashSet<PoseGraphId> path,
+            Dictionary<string, int> actionInputs,
+            Dictionary<string, int> animationSlots)
+        {
+            if (!owner || graph == null || !path.Add(graph.GraphId))
+                return;
+            for (int i = 0; i < graph.Nodes.Count; i++)
+            {
+                CharacterTypedPoseNode node = graph.Nodes[i];
+                if (node == null)
+                    continue;
+                string nodeId = string.IsNullOrEmpty(scope)
+                    ? node.NodeId.Value
+                    : scope + "/" + node.NodeId.Value;
+                string nodePath =
+                    $"definition.animationPresentationProfile.poseGraph:{graph.GraphId}/node:{nodeId}";
+                bool stateLocal =
+                    node.Kind == CharacterPoseNodeKind.SelectedPosePlayer ||
+                    node.Kind == CharacterPoseNodeKind.BlendStack ||
+                    node.Kind == CharacterPoseNodeKind.BlendSpacePlayer ||
+                    node.Kind == CharacterPoseNodeKind.SequencePlayer;
+                if (stateLocal)
+                    ValidateStateLocalPoseSource(presentation, node, nodePath);
+                if (!stateLocal &&
+                    node.Kind != CharacterPoseNodeKind.ActionPlaybackInput &&
+                    node.Kind != CharacterPoseNodeKind.AnimationSlot &&
+                    node.AnimationChannelId.IsValid)
+                {
+                    m_Report.Error(
+                        nodePath,
+                        "action_channel_owner_invalid",
+                        "只有ActionPlaybackInput与AnimationSlot可以引用Action AnimationChannel。");
+                }
+                if (node.Kind == CharacterPoseNodeKind.ActionPlaybackInput)
+                    CountActionChannel(node, nodePath, actionInputs, "action_playback_input_channel_missing");
+                if (node.Kind == CharacterPoseNodeKind.AnimationSlot)
+                    CountActionChannel(node, nodePath, animationSlots, "animation_slot_channel_missing");
+
+                if (node.Kind == CharacterPoseNodeKind.PoseSubgraph &&
+                    node.Subgraph?.PoseGraphId.IsValid == true)
+                {
+                    CharacterTypedPoseGraph child =
+                        owner.RequireGraph(node.Subgraph.PoseGraphId);
+                    ValidatePresentationGraph(
+                        presentation,
+                        owner,
+                        child,
+                        nodeId + "/" + child.GraphId,
+                        path,
+                        actionInputs,
+                        animationSlots);
+                }
+
+                CharacterPoseStateMachineDefinition machine =
+                    node.PoseStateMachine;
+                if (node.Kind != CharacterPoseNodeKind.PoseStateMachine ||
+                    machine == null)
+                {
+                    continue;
+                }
+                for (int stateIndex = 0;
+                     stateIndex < machine.States.Count;
+                     stateIndex++)
+                {
+                    CharacterPoseStateDefinition state = machine.States[stateIndex];
+                    if (state == null)
+                        continue;
+                    CharacterTypedPoseGraph child =
+                        owner.RequireGraph(state.PoseGraphId);
+                    ValidatePresentationGraph(
+                        presentation,
+                        owner,
+                        child,
+                        nodeId + "/state/" + state.StateId.Value,
+                        path,
+                        actionInputs,
+                        animationSlots);
+                }
+            }
+            path.Remove(graph.GraphId);
+        }
+
+        void ValidateStateLocalPoseSource(
+            CharacterAnimationPresentationProfile presentation,
+            CharacterTypedPoseNode node,
+            string path)
+        {
+            if (node.AnimationChannelId.IsValid)
+            {
+                m_Report.Error(
+                    path,
+                    "state_local_pose_source_has_action_channel",
+                    "State-local Pose source不能保存Gameplay AnimationChannel。");
+            }
+            CharacterPresentationPoseSourceSlot sourceSlot =
+                node.PresentationPoseSourceSlot;
+            if (!sourceSlot)
+            {
+                m_Report.Error(
+                    path,
+                    "presentation_pose_source_missing",
+                    "State-local Pose source缺少typed Source Slot对象引用。");
+                return;
+            }
+            Type expectedSlotType = node.Kind switch
+            {
+                CharacterPoseNodeKind.SelectedPosePlayer =>
+                    typeof(CharacterMotionMatchingPoseSourceSlot),
+                CharacterPoseNodeKind.BlendStack =>
+                    typeof(CharacterMotionMatchingPoseSourceSlot),
+                CharacterPoseNodeKind.BlendSpacePlayer =>
+                    typeof(CharacterBlendSpacePoseSourceSlot),
+                CharacterPoseNodeKind.SequencePlayer =>
+                    typeof(CharacterSequencePoseSourceSlot),
+                _ => typeof(CharacterPresentationPoseSourceSlot)
+            };
+            if (!expectedSlotType.IsInstanceOfType(sourceSlot))
+            {
+                m_Report.Error(
+                    path,
+                    "presentation_pose_source_slot_type_invalid",
+                    $"{node.Kind}必须引用{expectedSlotType.Name}。");
+                return;
+            }
+
+            CharacterPresentationPoseSourceBinding source =
+                presentation.FindPoseSourceBinding(sourceSlot);
+            if (!source)
+            {
+                m_Report.Error(
+                    path,
+                    "presentation_pose_source_unresolved",
+                    "Source Slot不能从Presentation Profile解析到唯一typed binding子资产。");
+                return;
+            }
+            if (node.Kind == CharacterPoseNodeKind.SequencePlayer &&
+                source?.SourceKind != PresentationPoseSourceKind.Sequence)
+            {
+                m_Report.Error(
+                    path,
+                    "sequence_pose_source_kind_invalid",
+                    "SequencePlayer必须引用Sequence Presentation Pose source。");
+            }
+            if (node.Kind == CharacterPoseNodeKind.BlendSpacePlayer &&
+                source?.SourceKind != PresentationPoseSourceKind.BlendSpace)
+            {
+                m_Report.Error(
+                    path,
+                    "blend_space_pose_source_kind_invalid",
+                    "BlendSpacePlayer必须引用BlendSpace Presentation Pose source。");
+            }
+        }
+
+        void CountActionChannel(
+            CharacterTypedPoseNode node,
+            string path,
+            Dictionary<string, int> counts,
+            string missingCode)
+        {
+            if (!node.AnimationChannelId.IsValid)
+            {
+                m_Report.Error(
+                    path,
+                    missingCode,
+                    $"{node.Kind}缺少有效Action AnimationChannel。");
+                return;
+            }
+            string channel = node.AnimationChannelId.Value;
+            counts.TryGetValue(channel, out int count);
+            counts[channel] = count + 1;
         }
 
         void AppendFormalCompileReport(CharacterSimulationBuildResult result)
@@ -214,7 +457,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             ValidateGraphTypeRules(graph, path);
             ValidateGraphOwnership(graph, path);
             ValidateActionContextChain(graph, path);
-            ValidateActionLocomotionOwnership(graph, path);
 
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
@@ -814,103 +1056,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return count;
         }
 
-        void ValidateActionLocomotionOwnership(BaseTree graph, string path)
-        {
-            if (!(graph is StateBehaviorSubTree stateBehavior))
-                return;
-
-            var setters = new List<ExposedPropertyNode>();
-            for (int i = 0; i < graph.Nodes.Count; i++)
-            {
-                if (!(graph.Nodes[i] is ExposedPropertyNode setter) ||
-                    setter.NodeType != ExposedPropertyNodeType.Set ||
-                    !m_Declarations.TryGetValue(setter.BlackboardVariable.DeclarationId, out BaseExposedProperty declaration) ||
-                    !string.Equals(declaration.BlackboardKey, "HasActionLocomotionOwnership", StringComparison.Ordinal))
-                    continue;
-
-                setters.Add(setter);
-            }
-
-            if (setters.Count == 0)
-                return;
-
-            int onEnterTrue = 0;
-            int onExitFalse = 0;
-            for (int i = 0; i < setters.Count; i++)
-            {
-                ExposedPropertyNode setter = setters[i];
-                string setterPath = $"{path}/node:{setter.GUID}";
-                if (!(setter.Value.GetValue() is bool value))
-                {
-                    m_Report.Error(setterPath, "action_locomotion_ownership_value_invalid", "HasActionLocomotionOwnership write 必须是 Bool 常量。");
-                    continue;
-                }
-
-                bool reachableFromEnter = IsReachable(graph, stateBehavior.OnEnter, setter);
-                bool reachableFromExit = IsReachable(graph, stateBehavior.OnExit, setter);
-                if (reachableFromEnter && reachableFromExit)
-                {
-                    m_Report.Error(setterPath, "action_locomotion_ownership_phase_ambiguous", "ownership write 同时属于 OnEnter 与 OnExit 执行分支。");
-                    continue;
-                }
-                if (!reachableFromEnter && !reachableFromExit)
-                {
-                    m_Report.Error(setterPath, "action_locomotion_ownership_phase_missing", "ownership write 不属于 OnEnter 或 OnExit 执行分支。");
-                    continue;
-                }
-
-                if (reachableFromEnter)
-                {
-                    if (value)
-                        onEnterTrue++;
-                    else
-                        m_Report.Error(setterPath, "action_locomotion_ownership_enter_value_invalid", "OnEnter ownership write 必须设置 true。");
-                }
-                else
-                {
-                    if (!value)
-                        onExitFalse++;
-                    else
-                        m_Report.Error(setterPath, "action_locomotion_ownership_exit_value_invalid", "OnExit ownership write 必须设置 false。");
-                }
-            }
-
-            if (onEnterTrue != 1 || onExitFalse != 1)
-            {
-                m_Report.Error(
-                    path,
-                    "action_locomotion_ownership_asymmetric",
-                    $"full-body Action ownership 必须有唯一 OnEnter=true 与 OnExit=false，当前 OnEnter=true {onEnterTrue} 个，OnExit=false {onExitFalse} 个。");
-            }
-        }
-
-        static bool IsReachable(BaseTree graph, BaseNode source, BaseNode target)
-        {
-            if (graph == null || source == null || target == null)
-                return false;
-
-            var pending = new Queue<string>();
-            var visited = new HashSet<string>(StringComparer.Ordinal);
-            pending.Enqueue(source.GUID);
-            while (pending.Count > 0)
-            {
-                string current = pending.Dequeue();
-                if (!visited.Add(current))
-                    continue;
-                if (string.Equals(current, target.GUID, StringComparison.Ordinal))
-                    return true;
-
-                for (int i = 0; i < graph.Edges.Count; i++)
-                {
-                    BaseEdge edge = graph.Edges[i];
-                    if (edge != null && string.Equals(edge.StartNodeGUID, current, StringComparison.Ordinal))
-                        pending.Enqueue(edge.EndNodeGUID);
-                }
-            }
-
-            return false;
-        }
-
         bool HasMatchingActivationContext(List<ActivateActionInstanceNode> activations, ActionContextSlot context)
         {
             for (int i = 0; i < activations.Count; i++)
@@ -1000,6 +1145,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
     public sealed class AgentAIControllerValidator
     {
+        readonly BtsmtlGraphAuthoringCapabilities m_Catalog =
+            new BtsmtlGraphAuthoringCapabilities();
+
         public AgentCompileReport Validate(AIControllerDefinition definition)
         {
             var report = new AgentCompileReport
@@ -1067,8 +1215,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     report.Error(path, "ai_node_identity_invalid", "AI node 缺失或 identity 重复。");
                     continue;
                 }
-                if (!NodeAuthoringCapabilityPolicy.TryGetCapability(node.GetType(), out NodeAuthoringCapability capability) ||
-                    !NodeAuthoringCapabilityPolicy.Allows(GraphAuthoringRole.AIController, capability))
+                if (!m_Catalog.IsNodeTypeAllowed(node.GetType(), AgentAuthoringSchema.AIControllerDomain))
                 {
                     report.Error(path, "ai_node_capability_forbidden", $"AI Graph 禁止节点：{node.GetType().FullName}");
                 }

@@ -18,9 +18,11 @@
 - 把 BTSMTL authoring object、Unity Graph、Timeline asset 或 Animancer state 放进网络协议。
 - 为网络模型复制一套 Character Program、Action、GameplayEffect 或 motion evaluator。
 
-## 当前真实状态
+## 历史基线
 
-当前可运行组合只有 Float32 Program Runtime + Float32 Pass Backend + Standard Local Pipeline + Local Source + Unity CharacterController Solver。正式链路是：
+本节记录最初评估该参考项目时的3C基线，已经不是当前项目状态。当前网络模型、产品闭包和运行组合以`openspec/project.md`与`openspec/specs/`为准。
+
+当时可运行组合只有 Float32 Program Runtime + Float32 Pass Backend + Standard Local Pipeline + Local Source + Unity CharacterController Solver。当时链路是：
 
 ```text
 UnityCharacterSimulationInputAdapter
@@ -40,7 +42,7 @@ UnityCharacterSimulationInputAdapter
 
 `CharacterSimulationProgram` 负责 gameplay operation，`CharacterSimulationState` 与 `WorldSimulationState` 保存可变状态。网络模型只能通过自己的 Session Source、typed Pipeline product、SnapshotParticipant、ExecutionPlan 和 output disposition 接入，不能进入 Program operation 或 WorldSolver 内部。
 
-旧 `ServerAuthoritativeHybrid` packet、policy、history、LocalLoopback endpoint 和 session facade 已删除。正式 Prediction/Authority Source、Pipeline、Fantasy 协议和 Unity Authority Worker 尚未实现，因此该模型仍不可选择，也不能称为已闭环网络模型。当前没有可运行的 Fantasy 双客户端 Demo。
+旧 `ServerAuthoritativeHybrid` packet、policy、history、LocalLoopback endpoint 和 session facade 当时已经删除，而正式 Prediction/Authority Source、Pipeline、Fantasy 协议和 Unity Authority Worker尚未实现。此后项目已经安装ServerAuthoritative Prediction/Authority、Unity Authority、DotRecast Authority与Deterministic Rollback产品；不得继续把本段当成当前能力清单。
 
 `refactor-gameplay-session-composition-boundary` 已建立三个网络方向共用的唯一 `SimulationSessionHost`、Actor registration、正式 `.csim` artifact、Float32 Composer、Source preparation 和 Pipeline compiler。后续模型只能增加自己的 Source、Pass、Pipeline、协议与 Solver，不得创建模型专用 SessionHost 或复制 composition。
 
@@ -112,12 +114,12 @@ ServerAuthoritative 使用 EventId 防止 reconciliation 重复提交；Determin
 - 不上传客户端 resolved displacement 作为服务端 canonical pose。
 - 不为 rollback 新增专用 BTSMTL 节点、Timeline evaluator 或第二份业务图。
 
-## 实施顺序
+## 历史实施顺序
 
-1. `refactor-gameplay-session-composition-boundary` 已完成公共 Host、Source preparation、Pipeline compiler、Actor registration 与 Float32 Composer。
-2. `refactor-server-authoritative-hybrid-runtime` 实现 Prediction/Authority Source 与 Pipeline、Fantasy endpoint、Room、Unity authoritative worker、owner reconciliation 与 remote presentation。
-3. `add-dotrecast-authoritative-server-backend` 只替换 ServerAuthoritative 的服务端 Host/WorldSolver，不创建第二个网络模型。
-4. `add-deterministic-rollback-kcc-model` 独立实现 Fixed Target、Fixed Composer、Deterministic KCC、Rollback Source/Pass/Pipeline 与协议。
+1. 公共Session composition已经完成并归档。
+2. ServerAuthoritative Prediction/Authority、Fantasy endpoint、Room与Unity Authority Worker已经完成并归档。
+3. DotRecast Authority已经通过同一ServerAuthoritative模型接入并归档。
+4. Deterministic Rollback、Fixed Target、Deterministic KCC与Relay产品已经完成并安装为current capabilities。
 
 ## 当前依据
 
@@ -125,9 +127,9 @@ ServerAuthoritative 使用 EventId 防止 reconciliation 重复提交；Determin
 - `openspec/specs/character-simulation-kernel/spec.md`
 - `openspec/specs/gameplay-network-model-boundary/spec.md`
 - `openspec/specs/server-authoritative-hybrid-sync-model/spec.md`
-- `openspec/specs/character-network-sync-domain-contract/spec.md`
-- `openspec/changes/refactor-gameplay-session-composition-boundary/`
-- `openspec/changes/refactor-server-authoritative-hybrid-runtime/`
-- `openspec/changes/add-deterministic-rollback-kcc-model/`
+- `openspec/specs/server-authoritative-prediction-correction-pipeline/spec.md`
+- `openspec/specs/dotrecast-authoritative-server-backend/spec.md`
+- `openspec/specs/deterministic-rollback-network-model/spec.md`
+- `openspec/specs/gameplay-network-test-build-workflow/spec.md`
 
 参考项目只能帮助解释机制。任何机制进入 3C 前，都必须落在现有 Program Runtime、Session Source、Pipeline Pass、WorldSolver、Snapshot、OutputDisposition 与 Presentation 边界内，不能成为第二条运行链路。

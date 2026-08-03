@@ -84,7 +84,26 @@ namespace ThirdPersonGameplay.Lab
         GameplayLabSessionVariantDefinition RequireVariant()
         {
             ValidateConfiguration();
-            return m_Variants[m_StartupVariantIndex];
+            return m_Variants[ResolveVariantIndex()];
+        }
+
+        int ResolveVariantIndex()
+        {
+            string[] arguments = Environment.GetCommandLineArgs();
+            int matchedIndex = -1;
+            for (int i = 0; i < m_Variants.Length; i++)
+            {
+                if (!m_Variants[i].MatchesExternalLaunch(arguments))
+                    continue;
+                if (matchedIndex >= 0)
+                    throw new InvalidOperationException("Gameplay Lab command line matches more than one external Session Variant.");
+                matchedIndex = i;
+            }
+            if (matchedIndex >= 0)
+                return matchedIndex;
+            if (!Application.isEditor && Array.Exists(m_Variants, variant => variant.IsExternalLaunchVariant))
+                throw new InvalidOperationException("Gameplay Lab Player requires an explicit external Session Variant argument.");
+            return m_StartupVariantIndex;
         }
 
         void ValidateConfiguration()
@@ -94,6 +113,7 @@ namespace ThirdPersonGameplay.Lab
             if (m_StartupVariantIndex < 0 || m_StartupVariantIndex >= m_Variants.Length)
                 throw new InvalidOperationException("Gameplay Lab startup Variant index is outside the configured Variant list.");
             var ids = new HashSet<string>(StringComparer.Ordinal);
+            var externalArguments = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < m_Variants.Length; i++)
             {
                 GameplayLabSessionVariantDefinition variant = m_Variants[i];
@@ -101,6 +121,12 @@ namespace ThirdPersonGameplay.Lab
                     throw new InvalidOperationException($"Gameplay Lab Variant at index {i} is missing.");
                 if (!ids.Add(variant.VariantId))
                     throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' is configured more than once.");
+                if (variant.IsExternalLaunchVariant &&
+                    !externalArguments.Add(variant.ExternalLaunchArgumentPrefix))
+                {
+                    throw new InvalidOperationException(
+                        $"Gameplay Lab external launch argument '{variant.ExternalLaunchArgumentPrefix}' is configured more than once.");
+                }
             }
         }
     }

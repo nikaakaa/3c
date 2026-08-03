@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
     [Serializable]
     public sealed class DeterministicRollbackServerManifest
     {
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
 
         public int schemaVersion;
         public string buildId = string.Empty;
@@ -25,6 +25,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public string protocolVersion = string.Empty;
         public string protocolSchemaHash = string.Empty;
         public int tickRate;
+        public string programId = string.Empty;
+        public string sourceRevision = string.Empty;
+        public string projectionRevision = string.Empty;
         public string semanticHash = string.Empty;
         public string fixedProgramHash = string.Empty;
         public string fixedLayoutHash = string.Empty;
@@ -51,6 +54,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (schemaVersion != CurrentSchemaVersion || string.IsNullOrWhiteSpace(buildId) ||
                 string.IsNullOrWhiteSpace(productId) || string.IsNullOrWhiteSpace(sessionId) ||
                 string.IsNullOrWhiteSpace(relayServerPeerId) || tickRate <= 0 ||
+                string.IsNullOrWhiteSpace(programId) ||
+                string.IsNullOrWhiteSpace(sourceRevision) ||
+                string.IsNullOrWhiteSpace(projectionRevision) ||
                 !string.Equals(modelId, DeterministicRollbackModelIdentity.ModelId, StringComparison.Ordinal) ||
                 !string.Equals(modelVersion, DeterministicRollbackModelIdentity.SemanticVersion, StringComparison.Ordinal) ||
                 !string.Equals(protocolId, DeterministicRollbackModelIdentity.ProtocolId, StringComparison.Ordinal) ||
@@ -80,10 +86,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
             var values = new List<string>
             {
-                "deterministic-rollback-server-manifest/1",
+                "deterministic-rollback-server-manifest/2",
                 schemaVersion.ToString(), buildId, productId, sessionId, listenAddress, listenPort.ToString(),
                 relayServerPeerId, modelId, modelVersion, modelConfigurationHash, protocolId, protocolVersion,
-                protocolSchemaHash, tickRate.ToString(), semanticHash, fixedProgramHash, fixedLayoutHash,
+                protocolSchemaHash, tickRate.ToString(), programId, sourceRevision, projectionRevision,
+                semanticHash, fixedProgramHash, fixedLayoutHash,
                 collisionWorldHash, kccIdentityHash, offensiveRequestDelayTicks.ToString(),
                 confirmationDelayTicks.ToString(), historyLengthTicks.ToString(), hashCadenceTicks.ToString(),
                 maximumRollbackDepthTicks.ToString(), maximumQueuedBundles.ToString(),

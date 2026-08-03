@@ -338,7 +338,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 command.SampleTime.ToSingle(),
                 command.Weight.ToSingle(),
                 command.ProducerGeneration,
-                command.Cycle);
+                command.Cycle,
+                command.SourceActionInstanceId,
+                command.VisualTimeScale.ToSingle());
         }
 
         readonly struct ActivePresentationRecord
@@ -373,13 +375,29 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             public override int GetHashCode() => HashCode.Combine(Channel, Producer, Generation);
             public int CompareTo(PresentationStateKey other)
             {
-                int channel = string.CompareOrdinal(Channel, other.Channel);
+                int channel = ChannelOrder(Channel).CompareTo(ChannelOrder(other.Channel));
+                if (channel != 0)
+                    return channel;
+                channel = string.CompareOrdinal(Channel, other.Channel);
                 if (channel != 0)
                     return channel;
                 int producer = string.CompareOrdinal(Producer, other.Producer);
                 return producer != 0 ? producer : Generation.CompareTo(other.Generation);
             }
             public override string ToString() => $"{Channel}/{Producer}/{Generation}";
+
+            static int ChannelOrder(string channel)
+            {
+                return channel switch
+                {
+                    "animation-selection" => 0,
+                    "animation-sample" => 1,
+                    "animation-terminal" => 2,
+                    "camera" => 3,
+                    _ => throw new InvalidOperationException(
+                        $"Fixed Presentation state channel '{channel}' has no reconciliation order.")
+                };
+            }
         }
     }
 

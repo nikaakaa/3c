@@ -12,6 +12,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
     public readonly struct CharacterPresentationTrajectoryIntent
     {
+        public const string StationaryMovementModeId = "presentation.movement-mode.stationary";
+
         public CharacterPresentationTrajectoryIntent(
             ActorId actorId,
             SimulationTick previousTick,
@@ -21,6 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             Vector2 desiredFacing,
             float acceptedAcceleration,
             float acceptedTurnRateDegrees,
+            bool hasMotion,
             bool grounded,
             string movementModeId,
             ulong resetSequence)
@@ -41,6 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             DesiredFacing = desiredFacing.normalized;
             AcceptedAcceleration = acceptedAcceleration;
             AcceptedTurnRateDegrees = acceptedTurnRateDegrees;
+            HasMotion = hasMotion;
             Grounded = grounded;
             MovementModeId = movementModeId;
             ResetSequence = resetSequence;
@@ -54,6 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public Vector2 DesiredFacing { get; }
         public float AcceptedAcceleration { get; }
         public float AcceptedTurnRateDegrees { get; }
+        public bool HasMotion { get; }
         public bool Grounded { get; }
         public string MovementModeId { get; }
         public ulong ResetSequence { get; }
@@ -66,20 +71,86 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             if (result == null)
                 throw new ArgumentNullException(nameof(result));
             Float32Vector3 velocity = result.Motion.RequestedVelocity;
-            Quaternion rotation = Quaternion.Euler(0f, result.BodySample.FinalBody.Yaw.Degrees.ToSingle(), 0f);
-            Vector3 forward = rotation * Vector3.forward;
+            var desiredVelocity = new Vector2(velocity.X.ToSingle(), velocity.Z.ToSingle());
             return new CharacterPresentationTrajectoryIntent(
                 result.ActorId,
                 result.Tick.Value > 1 ? new SimulationTick(result.Tick.Value - 1) : default,
                 result.Tick,
                 sourceSequence,
-                new Vector2(velocity.X.ToSingle(), velocity.Z.ToSingle()),
-                new Vector2(forward.x, forward.z),
+                desiredVelocity,
+                ResolveDesiredFacing(
+                    desiredVelocity,
+                    result.BodySample.FinalBody.Yaw.Degrees.ToSingle()),
                 float.MaxValue,
                 float.MaxValue,
+                HasPlanarMotion(desiredVelocity),
                 result.BodySample.FinalBody.Grounded,
-                result.Motion.SourceIdentity,
+                ResolveMovementModeId(
+                    result.Motion.LocomotionOwnerIdentity,
+                    result.Motion.ActionOwnerIdentity,
+                    result.Motion.GameplayResultOwnerIdentity),
                 resetSequence);
+        }
+
+        public static string ResolveMovementModeId(
+            string locomotionOwnerIdentity,
+            string actionOwnerIdentity,
+            string gameplayResultOwnerIdentity)
+        {
+            string ownerIdentity =
+                string.IsNullOrWhiteSpace(actionOwnerIdentity) &&
+                !string.IsNullOrWhiteSpace(gameplayResultOwnerIdentity)
+                    ? gameplayResultOwnerIdentity
+                    : locomotionOwnerIdentity;
+            if (string.IsNullOrWhiteSpace(ownerIdentity))
+                return StationaryMovementModeId;
+
+            const string stateGraphReference = "/reference:stateBehaviorGraph.";
+            int referenceIndex = ownerIdentity.IndexOf(
+                stateGraphReference,
+                StringComparison.Ordinal);
+            if (referenceIndex < 0)
+            {
+                throw new InvalidOperationException(
+                    $"Committed movement owner '{ownerIdentity}' has no enclosing Gameplay State identity.");
+            }
+            int nodeIndex = ownerIdentity.LastIndexOf(
+                "/node:",
+                referenceIndex,
+                StringComparison.Ordinal);
+            int valueIndex = nodeIndex + "/node:".Length;
+            if (nodeIndex < 0 || valueIndex >= referenceIndex)
+            {
+                throw new InvalidOperationException(
+                    $"Committed movement owner '{ownerIdentity}' has an invalid Gameplay State identity.");
+            }
+            string stateId = ownerIdentity.Substring(
+                valueIndex,
+                referenceIndex - valueIndex);
+            if (string.IsNullOrWhiteSpace(stateId))
+            {
+                throw new InvalidOperationException(
+                    $"Committed movement owner '{ownerIdentity}' has an empty Gameplay State identity.");
+            }
+            return $"presentation.movement-mode.state/{stateId}";
+        }
+
+        public static bool HasPlanarMotion(Vector2 desiredPlanarVelocity)
+        {
+            if (!IsFinite(desiredPlanarVelocity))
+                throw new ArgumentException("Character Presentation planar motion input is invalid.", nameof(desiredPlanarVelocity));
+            return desiredPlanarVelocity.sqrMagnitude > 0.00000001f;
+        }
+
+        public static Vector2 ResolveDesiredFacing(Vector2 desiredPlanarVelocity, float committedYawDegrees)
+        {
+            if (!IsFinite(desiredPlanarVelocity) || !float.IsFinite(committedYawDegrees))
+                throw new ArgumentException("Character Presentation desired facing input is invalid.");
+            if (desiredPlanarVelocity.sqrMagnitude > 0.00000001f)
+                return desiredPlanarVelocity.normalized;
+            Quaternion rotation = Quaternion.Euler(0f, committedYawDegrees, 0f);
+            Vector3 forward = rotation * Vector3.forward;
+            return new Vector2(forward.x, forward.z).normalized;
         }
 
         static bool IsFinite(Vector2 value) => float.IsFinite(value.x) && float.IsFinite(value.y);
@@ -194,32 +265,92 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
     public sealed class MotionMatchingTrajectoryEnvelope
     {
-        readonly MotionMatchingTrajectoryEnvelopePoint[] m_Points;
+        sealed class Page
+        {
+            internal Page(int capacity)
+            {
+                Points = new MotionMatchingTrajectoryEnvelopePoint[capacity];
+            }
+
+            internal readonly MotionMatchingTrajectoryEnvelopePoint[] Points;
+            internal int Count;
+            internal MotionMatchingTrajectorySourceIdentity SourceIdentity;
+            internal SimulationTick SourceTick;
+            internal ulong SourceSequence;
+            internal float SourceAge;
+            internal ulong ResetSequence;
+
+            internal void Clear()
+            {
+                Count = 0;
+                SourceIdentity = default;
+                SourceTick = default;
+                SourceSequence = 0;
+                SourceAge = 0f;
+                ResetSequence = 0;
+            }
+        }
+
+        Page m_CommittedPage;
+        Page m_PendingPage;
+        Page m_CurrentPage;
+        bool m_FrameOpen;
 
         public MotionMatchingTrajectoryEnvelope(int capacity)
         {
             if (capacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(capacity));
-            m_Points = new MotionMatchingTrajectoryEnvelopePoint[capacity];
+            m_CommittedPage = new Page(capacity);
+            m_PendingPage = new Page(capacity);
+            m_CurrentPage = m_CommittedPage;
         }
 
-        public int Capacity => m_Points.Length;
-        public int Count { get; private set; }
-        public MotionMatchingTrajectorySourceIdentity SourceIdentity { get; private set; }
-        public SimulationTick SourceTick { get; private set; }
-        public ulong SourceSequence { get; private set; }
-        public float SourceAge { get; private set; }
-        public ulong ResetSequence { get; private set; }
-        public MotionMatchingTrajectoryEnvelopePoint this[int index] => (uint)index < (uint)Count ? m_Points[index] : throw new ArgumentOutOfRangeException(nameof(index));
+        public int Capacity => m_CurrentPage.Points.Length;
+        public int Count => m_CurrentPage.Count;
+        public MotionMatchingTrajectorySourceIdentity SourceIdentity => m_CurrentPage.SourceIdentity;
+        public SimulationTick SourceTick => m_CurrentPage.SourceTick;
+        public ulong SourceSequence => m_CurrentPage.SourceSequence;
+        public float SourceAge => m_CurrentPage.SourceAge;
+        public ulong ResetSequence => m_CurrentPage.ResetSequence;
+        public MotionMatchingTrajectoryEnvelopePoint this[int index] =>
+            (uint)index < (uint)m_CurrentPage.Count
+                ? m_CurrentPage.Points[index]
+                : throw new ArgumentOutOfRangeException(nameof(index));
+
+        internal void BeginFrame()
+        {
+            if (m_FrameOpen)
+                throw new InvalidOperationException("Motion Matching Trajectory Envelope frame is already open.");
+            m_PendingPage.Clear();
+            m_CurrentPage = m_PendingPage;
+            m_FrameOpen = true;
+        }
+
+        internal void CommitFrame()
+        {
+            RequireOpenFrame();
+            Page previous = m_CommittedPage;
+            m_CommittedPage = m_PendingPage;
+            m_PendingPage = previous;
+            m_CurrentPage = m_CommittedPage;
+            m_FrameOpen = false;
+        }
+
+        internal void DiscardFrame()
+        {
+            RequireOpenFrame();
+            m_CurrentPage = m_CommittedPage;
+            m_FrameOpen = false;
+        }
 
         internal void Begin(MotionMatchingTrajectorySourceFrame frame)
         {
-            SourceIdentity = frame.Identity;
-            SourceTick = frame.SourceTick;
-            SourceSequence = frame.SourceSequence;
-            SourceAge = frame.SampleAge;
-            ResetSequence = frame.ResetSequence;
-            Count = 0;
+            m_CurrentPage.SourceIdentity = frame.Identity;
+            m_CurrentPage.SourceTick = frame.SourceTick;
+            m_CurrentPage.SourceSequence = frame.SourceSequence;
+            m_CurrentPage.SourceAge = frame.SampleAge;
+            m_CurrentPage.ResetSequence = frame.ResetSequence;
+            m_CurrentPage.Count = 0;
         }
 
         public void RestoreIdentity(
@@ -231,31 +362,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         {
             if (!sourceIdentity.IsValid || !sourceTick.IsValid || sourceSequence == 0 || !float.IsFinite(sourceAge) || sourceAge < 0f)
                 throw new ArgumentException("Motion Matching Trajectory Envelope replay identity is invalid.");
-            SourceIdentity = sourceIdentity;
-            SourceTick = sourceTick;
-            SourceSequence = sourceSequence;
-            SourceAge = sourceAge;
-            ResetSequence = resetSequence;
-            Count = 0;
+            m_CurrentPage.SourceIdentity = sourceIdentity;
+            m_CurrentPage.SourceTick = sourceTick;
+            m_CurrentPage.SourceSequence = sourceSequence;
+            m_CurrentPage.SourceAge = sourceAge;
+            m_CurrentPage.ResetSequence = resetSequence;
+            m_CurrentPage.Count = 0;
         }
 
         public void Add(MotionMatchingTrajectoryEnvelopePoint point)
         {
-            if (Count >= Capacity)
+            if (m_CurrentPage.Count >= Capacity)
                 throw new InvalidOperationException("Motion Matching Trajectory Envelope capacity is exceeded.");
-            if (Count > 0 && point.TimeOffset <= m_Points[Count - 1].TimeOffset)
+            if (m_CurrentPage.Count > 0 && point.TimeOffset <= m_CurrentPage.Points[m_CurrentPage.Count - 1].TimeOffset)
                 throw new InvalidOperationException("Motion Matching Trajectory Envelope points are not strictly ordered.");
-            m_Points[Count++] = point;
+            m_CurrentPage.Points[m_CurrentPage.Count++] = point;
         }
 
         public void Clear()
         {
-            Count = 0;
-            SourceIdentity = default;
-            SourceTick = default;
-            SourceSequence = 0;
-            SourceAge = 0f;
-            ResetSequence = 0;
+            m_CurrentPage.Clear();
+        }
+
+        void RequireOpenFrame()
+        {
+            if (!m_FrameOpen)
+                throw new InvalidOperationException("Motion Matching Trajectory Envelope has no open frame.");
         }
     }
 }

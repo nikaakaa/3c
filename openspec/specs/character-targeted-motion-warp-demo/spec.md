@@ -2,13 +2,13 @@
 
 ## Purpose
 
-定义Standalone Gameplay中Corin玩家、同Session训练敌人、显式目标输入与五段攻击MotionWarp的正式演示闭环，同时明确该样例不冒充AI、命中或伤害系统。
+定义Standalone Gameplay中Corin玩家、同Session训练敌人、显式目标输入与五段攻击MotionWarp的正式演示闭环，同时明确训练AI不冒充完整敌人AI、命中或伤害系统。
 
 ## Requirements
 
 ### Requirement: Standalone Gameplay 必须提供同 Session 的 Corin 训练敌人
 
-Standalone Gameplay MUST在同一个 `SimulationSessionHost` 中注册玩家 Corin 与训练敌人两个正式 Actor。训练敌人 MUST复用 Corin CharacterPipelineDefinition、compiled Program、Projection、WorldSolver 与 Presentation 链，使用 Neutral Input 和SimulatedActor Presentation Role。训练敌人 MUST有独立稳定ActorId、InitialBody和World body binding，MUST NOT拥有玩家Camera或设备输入。
+Standalone Gameplay MUST在同一个 `SimulationSessionHost` 中注册玩家 Corin 与训练敌人两个正式 Actor。训练敌人 MUST复用 Corin CharacterPipelineDefinition、compiled Program、Projection、WorldSolver 与 Presentation 链，使用Corin Training AI Control Source和SimulatedActor Presentation Role。训练敌人 MUST有独立稳定ActorId、InitialBody和World body binding，MUST NOT拥有玩家Camera或设备输入，也 MUST NOT保留Neutral Control Source fallback。
 
 #### Scenario: Standalone 创建两个 Actor
 
@@ -16,10 +16,10 @@ Standalone Gameplay MUST在同一个 `SimulationSessionHost` 中注册玩家 Cor
 - **THEN**roster MUST包含玩家Actor与`corin-training-enemy`
 - **AND**两者 MUST由同一Session在同一Logic Tick顺序中执行
 
-#### Scenario: 训练敌人保持静止
+#### Scenario: 训练敌人由AI输入驱动
 
-- **WHEN**训练敌人没有AI或玩家输入
-- **THEN**Neutral Input MUST保持连续输入为neutral且request为空
+- **WHEN**Local Control Input Ingress准备训练敌人当前Tick输入
+- **THEN**输入 MUST由Corin Training AI Control Source产生
 - **AND**敌人 MUST继续拥有正式逻辑Body、碰撞与动画表现
 
 ### Requirement: 玩家目标 provider 必须显式绑定训练敌人
@@ -61,9 +61,9 @@ Corin Attack Profile MUST声明`OptionalSnapshot`，Dodge MUST保持`None`。Att
 - **THEN**动作与Timeline MUST正常启动
 - **AND**主MotionCurve MUST保持原始轨迹，后摇与其它动作语义 MUST不改变
 
-### Requirement: 训练敌人闭环不得冒充完整 Combat 或 AI
+### Requirement: 训练敌人闭环不得冒充完整 Combat 或完整敌人 AI
 
-本capability MUST只交付目标输入、动作目标捕获、MotionWarp与第二个正式Actor。它 MUST NOT添加敌人决策树、寻路、攻击、格挡、Hitbox、命中检测、伤害、Health、死亡或目标评分旁路。后续AI MUST通过替换Control Source提交同一portable input/request；后续Combat MUST通过正式GameplayResult/Effect边界接入。
+本capability MUST只交付显式目标、直线接近、普通Attack请求、动作目标捕获、MotionWarp与第二个正式Actor。它 MUST NOT添加Team/Faction、动态目标评分、寻路、格挡、Hitbox、命中检测、伤害、Health、死亡或完整怪物行为。后续Combat MUST通过正式GameplayResult/Effect边界接入。
 
 #### Scenario: 训练敌人被玩家攻击
 

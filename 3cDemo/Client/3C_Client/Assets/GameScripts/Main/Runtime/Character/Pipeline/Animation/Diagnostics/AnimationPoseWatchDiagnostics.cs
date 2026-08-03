@@ -55,6 +55,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         internal AnimationPoseWatchSnapshot(
             AnimationPoseWatchIdentity identity,
             int operationIndex,
+            CharacterPoseOperationCode operationCode,
+            int stageIndex,
+            CharacterPoseExecutionDomain executionDomain,
+            CharacterPoseSpace outputPoseSpace,
+            AnimationFootPlacementSolvedPoseSnapshot footPlacementSolvedPose,
             int poseOffset,
             int boneCount,
             int contributionOffset,
@@ -67,6 +72,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         {
             Identity = identity;
             OperationIndex = operationIndex;
+            OperationCode = operationCode;
+            StageIndex = stageIndex;
+            ExecutionDomain = executionDomain;
+            OutputPoseSpace = outputPoseSpace;
+            FootPlacementSolvedPose = footPlacementSolvedPose;
             PoseOffset = poseOffset;
             BoneCount = boneCount;
             ContributionOffset = contributionOffset;
@@ -80,6 +90,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         public AnimationPoseWatchIdentity Identity { get; }
         public int OperationIndex { get; }
+        public CharacterPoseOperationCode OperationCode { get; }
+        public int StageIndex { get; }
+        public CharacterPoseExecutionDomain ExecutionDomain { get; }
+        public CharacterPoseSpace OutputPoseSpace { get; }
+        public AnimationFootPlacementSolvedPoseSnapshot FootPlacementSolvedPose { get; }
         internal int PoseOffset { get; }
         public int BoneCount { get; }
         internal int ContributionOffset { get; }
@@ -89,5 +104,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public float OutputWeight { get; }
         public ulong ContinuityIdentity { get; }
         public ulong CompletionIdentity { get; }
+    }
+
+    public readonly struct AnimationFootPlacementSolvedPoseSnapshot
+    {
+        internal AnimationFootPlacementSolvedPoseSnapshot(
+            CharacterComponentBonePose pelvis,
+            CharacterComponentBonePose leftHip,
+            CharacterComponentBonePose leftKnee,
+            CharacterComponentBonePose leftAnkle,
+            CharacterComponentBonePose rightHip,
+            CharacterComponentBonePose rightKnee,
+            CharacterComponentBonePose rightAnkle)
+        {
+            if (!pelvis.IsValid || !leftHip.IsValid || !leftKnee.IsValid ||
+                !leftAnkle.IsValid || !rightHip.IsValid || !rightKnee.IsValid ||
+                !rightAnkle.IsValid)
+            {
+                throw new ArgumentException("Foot Placement solved Pose Watch result is invalid.");
+            }
+            Pelvis = pelvis;
+            LeftHip = leftHip;
+            LeftKnee = leftKnee;
+            LeftAnkle = leftAnkle;
+            RightHip = rightHip;
+            RightKnee = rightKnee;
+            RightAnkle = rightAnkle;
+        }
+
+        public CharacterComponentBonePose Pelvis { get; }
+        public CharacterComponentBonePose LeftHip { get; }
+        public CharacterComponentBonePose LeftKnee { get; }
+        public CharacterComponentBonePose LeftAnkle { get; }
+        public CharacterComponentBonePose RightHip { get; }
+        public CharacterComponentBonePose RightKnee { get; }
+        public CharacterComponentBonePose RightAnkle { get; }
+        public bool IsValid =>
+            Pelvis.IsValid && LeftHip.IsValid && LeftKnee.IsValid &&
+            LeftAnkle.IsValid && RightHip.IsValid && RightKnee.IsValid &&
+            RightAnkle.IsValid;
     }
 }

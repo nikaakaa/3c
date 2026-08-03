@@ -1,222 +1,200 @@
 ﻿# btsmtl-agent-authoring-mcp-bridge Specification
 
 ## Purpose
-定义现有 Unity MCP 到 Agent authoring service 的薄桥接，以及 snapshot、dry-run、事务应用、验证、回滚和保存的统一边界。
+定义现有Unity MCP到Agent authoring service的薄桥接，以及Document checkout、rebase、dry-run、事务apply、validate与精确Build的统一边界。
 ## Requirements
-### Requirement: Agent authoring 必须通过现有 Unity MCP 暴露单一桥接工具
+### Requirement: Character generated product必须使用精确独立Build生命周期
 
-系统 MUST 在现有 `unityMCP` 连接中自动注册 `manage_btsmtl_agent_authoring` editor-only 自定义工具。工具 MUST 使用当前 MCP package 的正式自定义工具发现和命令分发机制，MUST NOT 启动第二个 MCP server、终端常驻进程或 Unity batchmode。
+系统 MUST在同一Unity MCP连接中提供`character.build_float32_products`与`character.build_fixed_products`。Float32工具 MUST只接收精确`definition_asset_path`并原子发布该Definition的Float32 wrapper与Presentation Projection。Fixed工具 MUST只接收精确`definition_asset_path`和精确`wrapper_asset_path`并原子发布指定Fixed wrapper与同一Projection。两个工具 MUST拒绝未知参数，MUST不读取selection、扫描目录、猜测Definition或自动触发。
 
-#### Scenario: Unity Editor 完成 domain reload
+#### Scenario: Apply后显式重建Corin产物
 
-- **WHEN** 当前项目的 Editor assembly 和 Unity MCP package 成功加载
-- **THEN** `mcpforunity://custom-tools` MUST 能发现 `manage_btsmtl_agent_authoring`
-- **AND** Codex MUST 能通过当前 Unity MCP 实例调用该工具
-
-#### Scenario: Agent 调用 bridge
-
-- **WHEN** Codex 调用 `manage_btsmtl_agent_authoring`
-- **THEN** 请求 MUST 由当前 Unity Editor 会话处理
-- **AND** bridge MUST NOT 创建额外进程或 transport
-
-### Requirement: MCP bridge 必须提供完整且受限的 authoring action 集合
-
-`manage_btsmtl_agent_authoring` MUST只提供`export_snapshot`、`dry_run_patch`、`apply_patch`和`validate`四个action。所有action MUST要求明确的`domain`与`root_asset_path`；`dry_run_patch`和`apply_patch`还 MUST要求`patch_json`。未知domain、未知action、domain/root类型不匹配或缺失参数 MUST在修改资产前返回结构化错误。
-
-#### Scenario: 导出当前 Agent Snapshot
-
-- **WHEN** Codex 以合法 definition 路径调用 `export_snapshot`
-- **THEN** bridge MUST 返回 `AgentGraphSnapshotExporter` 生成的紧凑只读 snapshot
-- **AND** bridge MUST NOT 修改或保存任何资产
-
-#### Scenario: 预检 Patch
-
-- **WHEN** Codex 以合法 definition 路径和 Patch JSON 调用 `dry_run_patch`
-- **THEN** bridge MUST 返回 `AgentPatchCompiler` 生成的 planned diff、messages 和 metrics
-- **AND** bridge MUST NOT dirty 或保存资产
-
-#### Scenario: 验证当前 Graph
-
-- **WHEN** Codex 以合法 definition 路径调用 `validate`
-- **THEN** bridge MUST 返回 `AgentGraphValidator` 的机器可读 report
-- **AND** bridge MUST NOT修改 graph
-
-#### Scenario: 调用未知 action
-
-- **WHEN** MCP 请求携带四个正式 action 之外的值
-- **THEN** bridge MUST 返回 unsupported action 错误
-- **AND** bridge MUST NOT改用菜单、反射命令或默认 action
-
-### Requirement: MCP 和 EditorWindow 必须共用唯一 Patch application service
-
-系统 MUST 使用 `AgentPatchAuthoringService` 或等价 editor-only service 统一编排 Patch 解析、snapshot、dry-run、apply、validator、Undo 和保存。MCP handler 与 `AgentCharacterControllerSynthesisWindow` MUST 调用同一 service。MCP handler、窗口和菜单 MUST NOT 各自复制一套 Patch 应用生命周期。
-
-#### Scenario: 窗口执行 Patch dry-run
-
-- **WHEN** 作者在 Agent Controller 窗口请求 dry-run
-- **THEN** 窗口 MUST 调用统一 application service
-- **AND** 返回语义 MUST 与 MCP `dry_run_patch` 一致
-
-#### Scenario: MCP 执行 Patch apply
-
-- **WHEN** Codex 调用 `apply_patch`
-- **THEN** MCP handler MUST 把请求交给统一 application service
-- **AND** handler MUST NOT 直接调用 BTSMTL 结构编辑 API
-
-### Requirement: Apply 必须执行预检和资产级事务
-
-`apply_patch` MUST 先基于调用时的当前资产执行无副作用 dry-run。预检成功后，系统 MUST 对 definition、RootTree 和全部可达 inline/shared graph serialized owner 建立单一 Undo 事务，再调用 `AgentPatchCompiler` apply 和 `AgentGraphValidator`。只有 compiler 与 validator 全部成功时才可保存；任一错误或异常 MUST 回滚本次全部修改。
-
-#### Scenario: Dry-run 发现引用错误
-
-- **WHEN** Patch 引用了当前 definition 中不存在的 ActionProfile、Timeline、input request 或 graph target
-- **THEN** `apply_patch` MUST 返回 dry-run report
-- **AND** 系统 MUST NOT 建立部分 graph 修改或保存资产
-
-#### Scenario: Apply 后验证失败
-
-- **WHEN** compiler 完成修改但 validator 报告 graph 语义错误
-- **THEN** application service MUST 回滚当前 Undo group 覆盖的全部 owner
-- **AND** bridge MUST 返回失败 report
-- **AND** 系统 MUST NOT 保存半成品资产
-
-#### Scenario: Apply 完整成功
-
-- **WHEN** dry-run、compiler apply 和 validator 全部成功
-- **THEN** application service MUST 折叠本次 Undo group
-- **AND** 系统 MUST 调用正式资产保存入口
-- **AND** response MUST 明确报告 applied 与 saved 状态
-
-#### Scenario: 无法覆盖事务 owner
-
-- **WHEN** 系统无法可靠枚举或注册某个可达 graph 的 serialized owner
-- **THEN** `apply_patch` MUST 在修改前失败
-- **AND** 系统 MUST NOT 退化为只保护 RootTree 或无回滚 apply
+- **WHEN** Character Document apply成功且调用方传入精确Corin Definition路径
+- **THEN** Float32工具 MUST发布该Definition的Float32 wrapper与Projection
+- **AND** Fixed工具 MUST只把Fixed wrapper发布到调用方指定destination
+- **AND** response MUST返回Program、Projection、Numeric ABI、hash与编译诊断
 
 ### Requirement: Bridge 必须复用正式 Agent compiler 与 BTSMTL authoring API
 
-MCP bridge MUST 复用 `AgentGraphSnapshotExporter`、`AgentPatchCompiler`、`AgentGraphValidator` 和 `AgentCompileReport`。所有 graph 修改 MUST 继续由 compiler 通过 `BaseGraph.CreateNode`、`BaseGraph.Link`、`BaseGraph.LinkProperty` 和正式节点配置入口执行。Bridge MUST NOT 直接写 Unity YAML、节点集合、边集合、GUID 映射或建立第二套 graph 数据。
+MCP bridge MUST复用v3 package exporter、Document Reconciler、Mutation Compiler、domain Validator和Compile Report。全部Graph修改 MUST继续由typed handler通过`BaseGraph.CreateNode`、`BaseGraph.Link`、`BaseGraph.UnLink`、`BaseGraph.LinkProperty`、正式Property Edge断开、Timeline、Presentation与AI authoring API执行。Bridge MUST不直接写Unity YAML、Node集合、Edge集合、GUID映射或建立第二套Graph数据。
 
-#### Scenario: Patch 请求创建状态和 Transition
+#### Scenario: Document新增状态和Transition
 
-- **WHEN** MCP bridge 接收包含状态和 Transition operation 的 Patch
-- **THEN** bridge MUST 将 Patch 交给 `AgentPatchCompiler`
-- **AND** compiler MUST 继续受 emitter 白名单和 graph 类型规则约束
+- **WHEN** dry-run读取包含新State、body Graph、Node与Transition的package
+- **THEN** Reconciler MUST生成受capability与Graph kind约束的typed Mutation
+- **AND** bridge MUST不解释创建顺序
 
-#### Scenario: Patch 请求未知节点或操作
+#### Scenario: Document包含未知Node或port
 
-- **WHEN** Patch 包含 compiler 不支持的 operation、节点或端口
-- **THEN** bridge MUST 返回 compiler report 中的明确错误
-- **AND** bridge MUST NOT 创建 placeholder、执行动态代码或直接写序列化字段
+- **WHEN** package包含catalog不支持的kind或逻辑port
+- **THEN** bridge MUST返回Reconciler或Compiler明确错误
+- **AND** MUST不创建placeholder、执行动态代码或写SerializedProperty
 
 ### Requirement: Definition 目标必须由调用上下文显式提供
 
-MCP/Editor请求 MUST通过`domain`与`root_asset_path`显式选择`CharacterPipelineDefinition`或`AIControllerDefinition`。路径 MUST是`Assets/`下能精确解析为对应domain根类型的项目资产。`AgentPatchIR` MUST保存Snapshot提供的root identity与source revision，但 MUST NOT保存或解释项目资产路径。系统 MUST NOT通过目录扫描、同名匹配、场景对象、剪贴板或旧配置寻找目标资产。
+MCP与Window请求 MUST通过`domain`和`root_asset_path`显式选择已有合法`CharacterPipelineDefinition`或`AIControllerDefinition`。路径 MUST是`Assets/`下能精确解析为对应domain根类型的资产。文档包路径 MUST由service从调用上下文确定。系统 MUST不通过selection、目录扫描、同名匹配、场景对象、剪贴板或旧配置寻找root或文档包。
 
-#### Scenario: Definition 路径合法
+#### Scenario: Definition路径合法
 
-- **WHEN** 请求给出能精确加载为 `CharacterPipelineDefinition` 的 `Assets/...` 路径
-- **THEN** service MUST 以该 definition 及其正式引用链作为 snapshot、resolver 和 compiler 上下文
-- **AND** Patch MUST 只作用于该上下文
+- **WHEN** 请求给出匹配domain的精确Definition路径
+- **THEN** service MUST以该Definition及正式引用链作为checkout、reconcile和validate上下文
+- **AND** 文档包 MUST只作用于该root
 
-#### Scenario: Definition 路径缺失或类型错误
+#### Scenario: Definition不存在
 
-- **WHEN** 请求缺少路径、路径不在 `Assets/` 下、资产不存在或类型不是 `CharacterPipelineDefinition`
-- **THEN** bridge MUST 在解析或应用 Patch 前返回错误
-- **AND** bridge MUST NOT 搜索替代 definition
+- **WHEN** root路径缺失、类型错误或资产不存在
+- **THEN** bridge MUST在checkout前返回错误
+- **AND** MUST不创建临时root或调用已删除bootstrap
 
 ### Requirement: 临时剪贴板和快捷键入口必须删除
 
-系统 MUST 删除 `Apply Agent Patch From Clipboard` 菜单、快捷键和剪贴板读取逻辑。系统 MUST NOT 保留隐藏菜单、兼容快捷键、Patch inbox 或文件监视器作为 MCP 不可用时的 fallback。人工 authoring 继续使用现有 Agent Controller 窗口，自动 authoring 使用正式 MCP bridge。
+系统 MUST不保留Patch clipboard、快捷键、Patch inbox、任意Document path、文件watcher或隐藏菜单作为MCP不可用时的fallback。AI MUST通过宿主已有通用文件能力直接编辑正式文档包；BTSMTL MCP MUST只负责生命周期。人工authoring继续使用正式Graph、Timeline和Profile入口。
 
-#### Scenario: 用户查看 Unity Shortcuts
+#### Scenario: JSON文件被保存
 
-- **WHEN** Editor assembly 与 Unity MCP package 完成 domain reload
-- **THEN** Unity Shortcut Manager MUST NOT 再显示 Agent Patch clipboard 命令
-- **AND** 该命令 MUST NOT 与 Unity 内置快捷键产生冲突
+- **WHEN** AI直接保存文档包文件
+- **THEN** 文件watcher MUST不自动apply、validate或build
+- **AND** 下一次显式生命周期工具 MUST重新读取整包并推导状态
 
-#### Scenario: MCP 当前不可用
+#### Scenario: MCP不可用
 
-- **WHEN** Unity MCP 未连接或自定义工具加载失败
-- **THEN** 系统 MUST 明确暴露连接或编译问题
-- **AND** 系统 MUST NOT 自动改用剪贴板、菜单或临时 Patch 文件
+- **WHEN** Unity MCP未连接或custom tool加载失败
+- **THEN** 系统 MUST明确报告连接或编译问题
+- **AND** MUST不自动改用剪贴板、菜单、临时Patch或文件监视器
 
 ### Requirement: Bridge 必须拒绝不安全的 Editor 状态
 
-Bridge MUST 在 Unity 正在编译、更新 AssetDatabase、处于 Play Mode 或正在切换 Play Mode 时拒绝执行。系统 MUST 返回明确状态错误，MUST NOT 排队重试、延迟执行或启动额外进程等待。
+Bridge MUST在Unity编译、AssetDatabase更新、Play Mode或Play Mode切换期间拒绝全部生命周期工具。系统 MUST返回明确状态错误，MUST不排队、延迟执行或启动额外进程等待。普通selection、Inspector focus和JSON保存不得触发任何工具。
 
-#### Scenario: Unity 正在编译
+#### Scenario: Unity正在编译
 
-- **WHEN** Codex 在 Editor domain reload 或脚本编译期间调用任一 action
-- **THEN** bridge MUST 返回 editor busy 错误
-- **AND** bridge MUST NOT 读取或修改半加载的 graph 数据
+- **WHEN** Codex在domain reload或脚本编译期间调用checkout或apply
+- **THEN** bridge MUST返回editor busy
+- **AND** MUST不读取半加载Graph或写文档包
 
-#### Scenario: Unity 正在 Play Mode
+#### Scenario: 用户只选中Definition
 
-- **WHEN** Codex 在 Play Mode 中调用 `apply_patch`
-- **THEN** bridge MUST 拒绝 authoring 写入
-- **AND** runtime working copy 与 authoring asset MUST NOT 因该请求发生交叠修改
+- **WHEN** Project selection变为Character或AI root
+- **THEN** 系统 MUST不自动checkout、validate、compile或build
+- **AND** MUST等待明确工具调用
 
 ### Requirement: MCP 返回必须保留机器可读诊断
 
-Bridge response MUST 保留 action、definition 路径、success、applied、saved，以及 snapshot 或 `AgentCompileReport`。Compile report MUST 保留 message path、code、severity、message、suggestion、planned/applied diff 和 metrics。Bridge MUST NOT 只返回 Console 日志字符串。
+每个工具 MUST声明结构化output schema。成功结果 MUST保留tool、domain、root path、package path、sync state、source revision、editable/context/document/plan hash、success、applied与saved等适用字段。Report MUST保留跨文件entity path、code、severity、message、suggestion、planned/applied diff与metrics，MUST不只返回Console字符串，也 MUST不嵌入完整文档包JSON。
 
-#### Scenario: Patch 编译失败
+#### Scenario: Document reconcile失败
 
-- **WHEN** compiler 拒绝一条 Patch operation
-- **THEN** MCP response MUST 包含对应 operation path、错误 code、原因和建议修复
-- **AND** Codex MUST 能直接使用该 response 生成下一轮 Patch
+- **WHEN** Reconciler拒绝一个Graph entity
+- **THEN** tool execution error MUST包含文件路径、entity path、错误code、原因和建议
+- **AND** Codex MUST能直接修改同一文件后重新dry-run
 
-#### Scenario: Patch 应用成功
+#### Scenario: Document apply成功
 
-- **WHEN** `apply_patch` 完成并保存
-- **THEN** MCP response MUST 包含最终 applied diff 和 validation 结果
-- **AND** response MUST 明确 `applied=true` 与 `saved=true`
+- **WHEN** apply完成并反向同步
+- **THEN** response MUST包含最终applied diff、validation、新revision和新document hash
+- **AND** MUST明确报告Clean
 
-### Requirement: MCP bridge 必须透传同一 v16 Character 与 AI 事务
+### Requirement: Agent authoring 必须通过现有 Unity MCP 暴露固定生命周期工具集
 
-BTSMTL Agent MCP bridge MUST接受并返回`agent-character-controller-synthesis.v16` Snapshot、Patch与Validation结果，并通过显式domain discriminator透传CharacterController或AIController generic事务。CharacterController事务继续携带Timeline Animation Channel、MotionWarp、Marker与registered Curve typed operation；AIController事务只携带AI Definition、Graph、Blackboard、Configured Candidate、Observation、Memory与Intent typed operation。Bridge MUST只调用正式Agent Snapshot、lowerer、dry-run、apply和validator入口，不得新增AI专用action、SerializedProperty、YAML、反射、任意字段写入或旧v15转换工具。
+系统 MUST在现有`unityMCP`连接中注册`btsmtl.checkout_document`、`btsmtl.rebase_document`、`btsmtl.dry_run_document`、`btsmtl.apply_document`与`btsmtl.validate`五个editor-only工具。工具 MUST使用当前MCP package正式发现与分发机制，MUST不启动第二个server、终端常驻进程、文件watcher或Unity batchmode。系统 MUST删除`manage_btsmtl_agent_authoring`及其`action`multiplexer，MUST不注册Node、Edge、Timeline、字段或JSON patch领域工具。
 
-#### Scenario: 通过bridge配置循环组
+#### Scenario: Unity Editor完成domain reload
 
-- **WHEN** 调用方通过MCP bridge提交合法v16 Patch配置WalkLoop与RunLoop的Cyclic Marker Group与CanBeLeader角色
-- **THEN** bridge MUST先返回正式dry-run command plan与validation结果
-- **AND** apply MUST由同一typed plan执行
-- **AND** bridge MUST返回更新后的stable identities与group摘要
+- **WHEN** 当前Editor assembly与Unity MCP package成功加载
+- **THEN** custom tool discovery MUST发现五个固定生命周期工具
+- **AND** MUST不再发现`manage_btsmtl_agent_authoring`
 
-#### Scenario: 通过bridge配置有限序列
+#### Scenario: Agent需要创建Graph节点
 
-- **WHEN** v16 Patch为Finite AnimationTrack提交frame 0到DurationFrame的marker序列与同步角色
-- **THEN** bridge MUST保留重复MarkerId occurrence的独立AuthoringId
-- **AND** MUST返回call site Once与directed pair coverage结果
+- **WHEN** AI需要在文档包中创建Node与Edge
+- **THEN** AI MUST直接修改对应JSON目标状态
+- **AND** MCP MUST不暴露`create_node`、`link_edge`或等价局部工具
 
-#### Scenario: 通过bridge配置AnimationTrack channel
+### Requirement: MCP bridge 必须提供完整且受限的生命周期工具集合
 
-- **WHEN** 调用方提交`configure_animation_track_channel`及Snapshot中的Timeline、Track stable identity
-- **THEN** bridge MUST原样透传AnimationChannelId到同一lowerer、typed command、transaction与validator链
-- **AND** MUST不增加Pose Graph拓扑、PoseNode、producer source或Profile mutation action
+五个工具 MUST各自使用独立input schema、output schema与行为annotations。全部schema MUST拒绝额外参数。工具 MUST只接收明确`domain`与`root_asset_path`；rebase额外要求显式`confirm_rebase`，apply额外要求`expected_document_hash`。Document package路径 MUST由service计算并返回，调用方 MUST不提交任意package path、JSON正文、Patch或action字段。
 
-#### Scenario: bridge收到非法marker事务
+#### Scenario: Checkout当前树
 
-- **WHEN** Patch包含重复AuthoringId、非法frame、Once/Loop冲突或group pair缺口
-- **THEN** bridge MUST返回正式Agent validation code、path与相关identity
-- **AND** MUST不绕过validator直接写Unity资产
+- **WHEN** Codex对合法root调用`btsmtl.checkout_document`
+- **THEN** bridge MUST返回确定性package绝对路径、同步状态、source revision与hash摘要
+- **AND** MUST不修改Unity资产或触发build
 
-#### Scenario: 通过bridge修改Curve Channel
+#### Scenario: 预检Document
 
-- **WHEN** 调用方通过generic Patch提交registered ChannelId与完整AnimationCurve payload
-- **THEN** bridge MUST原样透传owner identity、domain、wrap mode和完整Keyframe字段
-- **AND** lowerer与handler MUST调用同一Catalog descriptor和owner MutationAdapter
-- **AND** bridge MUST不按字段名寻找AnimationCurve
+- **WHEN** Codex调用`btsmtl.dry_run_document`
+- **THEN** bridge MUST返回document hash、plan hash、planned diff、messages与metrics
+- **AND** MUST不dirty、save、build或publish
 
-#### Scenario: MCP提交AI Controller Patch
+#### Scenario: 调用旧工具或提交旧参数
 
-- **WHEN** 调用方通过MCP bridge提交合法v16 AI Controller Patch
-- **THEN** Bridge MUST把同一请求交给AgentPatchAuthoringService
-- **AND** MUST返回typed plan、事务与Validator产生的机器可读报告
+- **WHEN** 调用方使用`manage_btsmtl_agent_authoring`、`patch_json`、`action`或任意document path
+- **THEN** MCP MUST返回unknown tool或严格schema错误
+- **AND** MUST不转换为v2生命周期请求
 
-#### Scenario: bridge收到旧schema请求
+### Requirement: MCP 和 EditorWindow 必须共用唯一 Document application service
 
-- **WHEN** 调用方提交v15或更早的Snapshot或Patch
-- **THEN** bridge MUST返回unsupported schema错误
-- **AND** MUST不转换为v16或调用旧reader
+系统 MUST使用唯一Document application service统一编排checkout、sync state、rebase、strict package parse、reconcile、dry-run、apply、Validator、Undo、保存与反向package发布。五个MCP handler与Agent Controller Window MUST调用同一service，MUST不复制Document Store、Reconciler或Mutation生命周期。
+
+#### Scenario: Window执行Document dry-run
+
+- **WHEN** 作者在Agent Window显式请求dry-run
+- **THEN** Window MUST调用统一service
+- **AND** 返回语义 MUST与`btsmtl.dry_run_document`一致
+
+#### Scenario: MCP执行Document apply
+
+- **WHEN** Codex调用`btsmtl.apply_document`
+- **THEN** bridge MUST把请求交给统一service
+- **AND** handler MUST不直接调用BTSMTL结构编辑API
+
+### Requirement: Document Apply必须执行hash门禁、预检和资产级事务
+
+`btsmtl.apply_document` MUST重新读取确定性文档包，校验expected document hash、live source revision、current context hash、root identity和同步状态，再执行无副作用reconcile与preflight。全部门禁成功后，系统 MUST对Definition和全部可达serialized owner建立单一Undo事务，调用Mutation Compiler、domain Validator、save与最终文档包反向发布。AI domain MAY在事务内发布AIIntentProgram；Character domain MUST不在Document apply内Build。任一错误或异常 MUST回滚，MUST不保存半成品或报告Clean。
+
+#### Scenario: Document hash变化
+
+- **WHEN** dry-run后任一editable文件semantic hash变化
+- **THEN** apply MUST在mutation前失败
+- **AND** MUST要求重新dry-run
+
+#### Scenario: Apply后验证失败
+
+- **WHEN** Mutation完成但domain Validator报告错误
+- **THEN** service MUST回滚当前Undo group覆盖的全部owner
+- **AND** 文档包 MUST保持待修改状态
+
+#### Scenario: Apply完整成功
+
+- **WHEN** hash、revision、preflight、Mutation、Validator、save、该domain事务内产物与package发布全部成功
+- **THEN** response MUST明确`applied=true`、`saved=true`与`syncState=Clean`
+- **AND** 最终package MUST来自最终正式Unity树
+
+### Requirement: MCP bridge必须透传同一Document Character与AI事务
+
+五个BTSMTL lifecycle tool MUST接受并返回`btsmtl-agent-authoring-document.v3`同步与validation结果，并通过显式domain透传CharacterController或AIController generic事务。Character package MUST覆盖State、Action、Timeline、MotionWarp、Marker、Curve、Node、Edge与Presentation owner可写语义；AI package MUST覆盖Definition、Graph、Blackboard、Perception、Observation、Memory与Character input/request intent binding。Bridge MUST只调用统一Store、Reconciler、Mutation、transaction和Validator，不得新增domain专用action、Node级tool、Pose专用tool、Patch JSON、YAML、反射、任意字段写入或旧schema转换。
+
+#### Scenario: dry-run发现新增Pose Graph分片
+
+- **WHEN** Character Document包含Store按完整canonical `local:*` graph/layout创建合同接纳的新分片
+- **THEN** dry-run MUST返回锁定有效manifest文件闭包的exact document hash与Create Pose Graph计划
+- **AND** apply MUST只接受该exact hash，并在成功reverse export后由service发布stable identity与canonical manifest
+- **AND** Bridge MUST不增加manifest编辑参数或Pose专用工具
+
+#### Scenario: Character Document修改Property Edge
+
+- **WHEN** Character package增加、删除或重接Property Edge目标状态
+- **THEN** bridge MUST把整包交给同一Reconciler与typed Mutation链
+- **AND** handler MUST调用正式Property Edge authoring API
+
+#### Scenario: AI Document修改Intent binding
+
+- **WHEN** AI package增加合法Character input/request binding
+- **THEN** bridge MUST把同一整包交给统一service
+- **AND** response MUST返回Mutation Plan、事务与Validator机器报告
+
+#### Scenario: bridge收到旧schema
+
+- **WHEN** 调用方提交v1单文件、v15-v17 Snapshot/Patch、operation或`patch_json`
+- **THEN** bridge MUST返回unsupported schema或unsupported parameter
+- **AND** MUST不转换为v3文档包

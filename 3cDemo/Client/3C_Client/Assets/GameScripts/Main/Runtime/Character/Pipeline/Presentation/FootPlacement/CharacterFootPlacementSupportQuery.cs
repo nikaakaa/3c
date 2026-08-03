@@ -80,7 +80,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal sealed class CharacterFootPlacementSupportQuery
     {
         readonly PhysicsScene m_PhysicsScene;
-        readonly CharacterFootPlacementRigBinding m_Rig;
+        readonly CharacterFootPlacementPoseRig m_Rig;
         readonly FootPlacementTraceRuntimeSettings m_Settings;
         readonly RaycastHit[] m_Hits;
         readonly SupportCandidate[] m_Candidates;
@@ -93,7 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public CharacterFootPlacementSupportQuery(
             PhysicsScene physicsScene,
-            CharacterFootPlacementRigBinding rig,
+            CharacterFootPlacementPoseRig rig,
             FootPlacementTraceRuntimeSettings settings)
         {
             if (!physicsScene.IsValid())

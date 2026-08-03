@@ -10,6 +10,12 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
         Inertialization = 2
     }
 
+    public enum TransitionRoutingCoveragePolicy : byte
+    {
+        CompleteMatrix = 1,
+        DeclaredRules = 2
+    }
+
     public enum TransitionRoutingLifecycle : byte
     {
         Idle = 0,
@@ -20,16 +26,21 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
         Invalid = 5
     }
 
-    public enum TransitionRoutingDecisionKind : byte
+    public enum TransitionRouteDecisionKind : byte
     {
         None = 0,
         StandardBlend = 1,
         AwaitingReadiness = 2,
         InertializationRequest = 3,
-        CaptureCommitted = 4,
-        ReleaseCompleted = 5,
-        Reset = 6,
-        Invalid = 7
+        Reset = 4,
+        Invalid = 5
+    }
+
+    public enum TransitionRoutingCompletionOutcome : byte
+    {
+        None = 0,
+        CaptureCommitted = 1,
+        ReleaseCompleted = 2
     }
 
     public enum TransitionRoutingResetReason : byte
@@ -49,7 +60,7 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
         MissingEndpointCatalog = 3,
         InvalidEndpoint = 4,
         DuplicateEndpoint = 5,
-        MissingEmptyEndpoint = 6,
+        MissingSourcePoseEndpoint = 6,
         InvalidRule = 7,
         DuplicateRule = 8,
         DuplicatePair = 9,
@@ -59,7 +70,7 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
         InvalidBlendLogic = 13,
         InvalidStandardBlendDuration = 14,
         InvalidInertializationDuration = 15,
-        InertializationTargetsEmpty = 16,
+        InertializationTargetsSourcePose = 16,
         PlanIdentityMismatch = 17,
         InvalidFrameIdentity = 18,
         NonMonotonicFrame = 19,
@@ -75,7 +86,9 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
         UnexpectedReleaseCompletion = 29,
         ReleaseCompletionIdentityMismatch = 30,
         ReleaseFailed = 31,
-        ResetApplied = 32
+        ResetApplied = 32,
+        ConflictingCompletionFacts = 33,
+        InvalidCoveragePolicy = 34
     }
 
     public enum TransitionRoutingEventKind : byte
@@ -130,17 +143,23 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
         public TransitionRoutingDefinition(
             int schemaVersion,
             TransitionDefinitionRevision definitionRevision,
+            TransitionRoutingCoveragePolicy coveragePolicy,
             IReadOnlyList<TransitionEndpointId> endpoints,
-            IReadOnlyList<AnimationTransitionRule> rules)
+            IReadOnlyList<AnimationTransitionRule> rules,
+            bool supportsSourcePoseInertialization = false)
         {
             SchemaVersion = schemaVersion;
             DefinitionRevision = definitionRevision;
+            CoveragePolicy = coveragePolicy;
             m_Endpoints = Copy(endpoints);
             m_Rules = Copy(rules);
+            SupportsSourcePoseInertialization = supportsSourcePoseInertialization;
         }
 
         public int SchemaVersion { get; }
         public TransitionDefinitionRevision DefinitionRevision { get; }
+        public TransitionRoutingCoveragePolicy CoveragePolicy { get; }
+        public bool SupportsSourcePoseInertialization { get; }
         public IReadOnlyList<TransitionEndpointId> Endpoints => m_Endpoints;
         public IReadOnlyList<AnimationTransitionRule> Rules => m_Rules;
 
@@ -177,10 +196,11 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
         readonly AnimationTransitionRule[] m_Rules;
         readonly Dictionary<TransitionRuleKey, AnimationTransitionRule> m_RuleByPair;
 
-        internal CompiledTransitionRoutingPlan(
+        public CompiledTransitionRoutingPlan(
             TransitionRoutingPlanId planId,
             int schemaVersion,
             TransitionDefinitionRevision definitionRevision,
+            TransitionRoutingCoveragePolicy coveragePolicy,
             StableHash canonicalHash,
             TransitionEndpointId[] endpoints,
             AnimationTransitionRule[] rules)
@@ -188,6 +208,7 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             PlanId = planId;
             SchemaVersion = schemaVersion;
             DefinitionRevision = definitionRevision;
+            CoveragePolicy = coveragePolicy;
             CanonicalHash = canonicalHash;
             m_Endpoints = (TransitionEndpointId[])endpoints.Clone();
             m_Rules = (AnimationTransitionRule[])rules.Clone();
@@ -202,6 +223,7 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
         public TransitionRoutingPlanId PlanId { get; }
         public int SchemaVersion { get; }
         public TransitionDefinitionRevision DefinitionRevision { get; }
+        public TransitionRoutingCoveragePolicy CoveragePolicy { get; }
         public StableHash CanonicalHash { get; }
         public IReadOnlyList<TransitionEndpointId> Endpoints => m_Endpoints;
         public IReadOnlyList<AnimationTransitionRule> Rules => m_Rules;
@@ -385,7 +407,8 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
     public readonly struct TransitionRoutingFrameOutput
     {
         public TransitionRoutingFrameOutput(
-            TransitionRoutingDecisionKind decisionKind,
+            TransitionRouteDecisionKind routeDecision,
+            TransitionRoutingCompletionOutcome completionOutcome,
             TransitionRoutingLifecycle lifecycle,
             TransitionRuleId activeRuleId,
             StandardBlendCommand standardBlendCommand,
@@ -398,7 +421,8 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             TransitionRoutingReasonCode reasonCode,
             string reason)
         {
-            DecisionKind = decisionKind;
+            RouteDecision = routeDecision;
+            CompletionOutcome = completionOutcome;
             Lifecycle = lifecycle;
             ActiveRuleId = activeRuleId;
             StandardBlendCommand = standardBlendCommand;
@@ -412,7 +436,8 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             Reason = reason ?? string.Empty;
         }
 
-        public TransitionRoutingDecisionKind DecisionKind { get; }
+        public TransitionRouteDecisionKind RouteDecision { get; }
+        public TransitionRoutingCompletionOutcome CompletionOutcome { get; }
         public TransitionRoutingLifecycle Lifecycle { get; }
         public TransitionRuleId ActiveRuleId { get; }
         public StandardBlendCommand StandardBlendCommand { get; }
@@ -424,7 +449,7 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
         public bool RebaseRequired { get; }
         public TransitionRoutingReasonCode ReasonCode { get; }
         public string Reason { get; }
-        public bool IsInvalid => DecisionKind == TransitionRoutingDecisionKind.Invalid;
+        public bool IsInvalid => RouteDecision == TransitionRouteDecisionKind.Invalid;
     }
 
     public readonly struct TransitionRoutingEvent

@@ -150,8 +150,8 @@ namespace ThirdPersonCharacter.Editor.ProductStartup
             RequireCollector(setting, "CoreHomeData", "Assets/AssetRaw/Product/Core", "Core");
             RequireCollector(setting, "GameplayScene", GameplayScene, "Gameplay");
             RequireCollector(setting, "GameplayShared", "Assets/AssetRaw/Product/Gameplay", "Gameplay");
-            RequireCollector(setting, "GameplayCorin", "Assets/Prefabs/Characters/RuntimeProfiles/CorinStandalonePlayer.prefab", "Gameplay");
-            RequireCollector(setting, "GameplayCorin", "Assets/Prefabs/Characters/RuntimeProfiles/CorinStandaloneTrainingEnemy.prefab", "Gameplay");
+            RequireCollector(setting, "GameplayCorin", "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab", "Gameplay");
+            RequireCollector(setting, "GameplayCorin", "Assets/Prefabs/Characters/RuntimeProfiles/AI/CorinStandaloneTrainingEnemy.prefab", "Gameplay");
             RequireCollector(setting, "OptionalHD", "Assets/AssetRaw/Product/OptionalHD", "OptionalHD");
         }
 
@@ -161,8 +161,8 @@ namespace ThirdPersonCharacter.Editor.ProductStartup
             string[] required =
             {
                 GameplayScene,
-                "Assets/Prefabs/Characters/RuntimeProfiles/CorinStandalonePlayer.prefab",
-                "Assets/Prefabs/Characters/RuntimeProfiles/CorinStandaloneTrainingEnemy.prefab"
+                "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab",
+                "Assets/Prefabs/Characters/RuntimeProfiles/AI/CorinStandaloneTrainingEnemy.prefab"
             };
             foreach (string path in required)
             {

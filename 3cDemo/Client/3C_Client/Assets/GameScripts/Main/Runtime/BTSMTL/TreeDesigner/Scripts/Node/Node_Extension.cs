@@ -59,6 +59,11 @@ namespace TreeDesigner
                 yield return new FlowPortDeclaration(outputAttribute.Name, PortDirection.Output, outputAttribute.Capacity);
         }
 
+        public virtual IEnumerable<FlowPortDeclaration> GetSupportedFlowPortDeclarations(BaseGraph owner)
+        {
+            return GetFlowPortDeclarations(owner);
+        }
+
         public virtual bool Refresh()
         {
             bool isDirty = false;

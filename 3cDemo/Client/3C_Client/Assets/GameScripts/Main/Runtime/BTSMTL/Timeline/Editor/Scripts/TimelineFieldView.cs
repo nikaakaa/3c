@@ -48,8 +48,6 @@ namespace BTSMTL.Timeline.Editor
         bool m_RuntimeReadOnly;
         float m_RuntimeVisualTime;
         int m_LocatorDragStartFrame;
-        TimelineCurveSelection m_CurveSelection;
-        TimelineCurveSelection m_PendingCurveSelection;
 
         public TimelineEditorView EditorWindow;
         public TimelineData TimelineData => EditorWindow.Timeline;
@@ -67,6 +65,7 @@ namespace BTSMTL.Timeline.Editor
         internal TimelineFrameGeometry Geometry => m_Geometry;
         internal TimelineInteractionState Interaction => m_Interaction;
         internal TimelineRendering Rendering => m_Rendering;
+        internal bool RuntimeReadOnly => m_RuntimeReadOnly;
         public int CurrentMinFrame => m_Geometry.PositionToCeilFrame(ScrollViewContentOffset);
         public int CurrentMaxFrame => m_Geometry.PositionToFloorFrame(ScrollViewContentWidth + ScrollViewContentOffset);
         public float OneFrameWidth => m_Geometry.OneFrameWidth;
@@ -202,10 +201,6 @@ namespace BTSMTL.Timeline.Editor
                                 {
                                     TimelineData.RemoveClip(clipView.Clip);
                                 }
-                                if (selectable is TimelineAnimationMarkerView markerView)
-                                {
-                                    markerView.Track.DeleteMarker(markerView.Marker.AuthoringId);
-                                }
                                 }
                             }, "Remove");
                         }
@@ -289,16 +284,11 @@ namespace BTSMTL.Timeline.Editor
                              TrackViewMap.TryGetValue(selectedClip.Track, out TimelineTrackView ownerTrackView) &&
                              ownerTrackView.ClipViewMap.TryGetValue(selectedClip, out TimelineClipView selectedClipView))
                         AddToSelection(selectedClipView);
-                    else if (target is TimelineAnimationMarkerSelection markerSelection &&
-                             TrackViewMap.TryGetValue(markerSelection.Track, out TimelineTrackView markerTrackView) &&
-                             markerTrackView.TryGetMarkerView(markerSelection.MarkerAuthoringId, out TimelineAnimationMarkerView markerView))
-                        AddToSelection(markerView);
                 }
             }
 
             OnPopulatedCallback?.Invoke();
             OnVerticalScrollChanged(TrackScrollView.scrollOffset.y);
-            RestorePendingCurveSelection();
         }
         public void PopulateInspector(object target)
         {
@@ -314,18 +304,11 @@ namespace BTSMTL.Timeline.Editor
 
                             DrawProperties(serializedProperty, target);
                             if (track is AnimationTrack animationTrack)
+                            {
                                 ClipInspector.Add(new AnimationMarkerSyncTrackInspectorView(EditorWindow, animationTrack));
+                                ClipInspector.Add(new TimelineAnimationTimeAuthoringInspector(this, animationTrack));
+                            }
                         }
-                        break;
-                    case TimelineAnimationMarkerSelection markerSelection:
-                        ClipInspector.Add(new AnimationMarkerSyncTrackInspectorView(
-                            EditorWindow,
-                            markerSelection.Track,
-                            markerSelection.MarkerAuthoringId));
-                        break;
-                    case TimelineCurveSelection curveSelection:
-                        m_CurveSelection = curveSelection;
-                        ClipInspector.Add(new TimelineCurveInspectorView(this, curveSelection));
                         break;
                     case Clip clip:
                         {
@@ -337,6 +320,9 @@ namespace BTSMTL.Timeline.Editor
                             serializedProperty = serializedProperty.GetArrayElementAtIndex(clip.Track.Clips.IndexOf(clip));
 
                             DrawProperties(serializedProperty, target);
+
+                            if (clip is AnimationClip animationClip && clip.Track is AnimationTrack animationTrack)
+                                ClipInspector.Add(new TimelineAnimationTimeAuthoringInspector(this, animationTrack, animationClip));
 
                             ClipInspectorView clipViewName = clip.GetAttribute<ClipInspectorView>();
                             if (clipViewName != null)
@@ -579,43 +565,12 @@ namespace BTSMTL.Timeline.Editor
             }, 0.01f);
         }
 
-        internal void PresentCurveSelection(TimelineCurveSelection selection)
-        {
-            m_Interaction.ClearSelection();
-            m_CurveSelection = selection;
-            PopulateInspector(selection);
-        }
-
         internal void CommitAuthoringMutation(Action mutation, string undoName, object selectionAfter = null)
         {
             if (m_RuntimeReadOnly)
                 throw new InvalidOperationException("Live Debug Timeline is read-only.");
             TimelineData.ApplyModify(mutation, undoName);
-            if (selectionAfter is TimelineCurveSelection curveSelection)
-            {
-                m_PendingCurveSelection = new TimelineCurveSelection(
-                    curveSelection.Owner,
-                    curveSelection.Descriptor,
-                    curveSelection.KeyIndices);
-            }
-            else
-            {
-                m_PendingCurveSelection = null;
-            }
             EditorWindow.RefreshPreview(true);
-        }
-
-        void RestorePendingCurveSelection()
-        {
-            if (m_PendingCurveSelection == null)
-                return;
-            TimelineCurveSelection selection = m_PendingCurveSelection;
-            m_PendingCurveSelection = null;
-            if (selection.Owner == null ||
-                !string.Equals(selection.Owner.AuthoringId, selection.OwnerAuthoringId, StringComparison.Ordinal) ||
-                !selection.Descriptor.Supports(selection.Owner))
-                return;
-            PresentCurveSelection(selection);
         }
         #endregion
 

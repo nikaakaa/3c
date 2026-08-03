@@ -1,8 +1,8 @@
 using System;
-using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonSimulation;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.Animations;
@@ -11,52 +11,104 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
     internal sealed class AnimationSelectedPosePlayerRuntime : IDisposable
     {
+        struct State
+        {
+            internal AnimationPoseSourceId SourceId;
+            internal PoseDiscontinuityEndpoint Endpoint;
+            internal ulong SourcePoseContinuityIdentity;
+            internal PoseDiscontinuityEndpoint
+                PendingPreviousEndpoint;
+            internal ulong
+                PendingPreviousContinuityIdentity;
+            internal PoseDiscontinuityReason PendingReason;
+            internal PoseDiscontinuityResetReason
+                PendingResetReason;
+            internal ulong NextEventIdentity;
+            internal ulong ResetSequence;
+            internal ulong NextResetSequence;
+            internal bool HasPendingDiscontinuity;
+            internal bool HasSelection;
+            internal bool SourceRetained;
+            internal bool HasCurrentSample;
+            internal bool Empty;
+            internal bool HasCompletedFrame;
+        }
+
         readonly AnimationBlendSourcePoseWorkspace m_Sources;
-        readonly Queue<AnimationPoseSourceId> m_PendingReleases = new Queue<AnimationPoseSourceId>();
-        AnimationPoseSourceId m_SourceId;
-        PoseDiscontinuityEndpoint m_Endpoint;
-        ulong m_SourcePoseContinuityIdentity;
-        PoseDiscontinuityEndpoint m_PendingPreviousEndpoint;
-        ulong m_PendingPreviousContinuityIdentity;
-        PoseDiscontinuityReason m_PendingReason;
-        PoseDiscontinuityResetReason m_PendingResetReason = PoseDiscontinuityResetReason.Initialization;
-        ulong m_NextEventIdentity = 1;
-        ulong m_ResetSequence = 1;
-        bool m_HasPendingDiscontinuity;
-        bool m_HasSelection;
-        bool m_SourceRetained;
-        bool m_HasCurrentSample;
-        bool m_Empty;
-        bool m_HasCompletedFrame;
+        readonly AnimationPlayerReleaseJournal m_Releases;
+        State m_CommittedState;
+        State m_PendingState;
+        bool m_FrameOpen;
         bool m_Disposed;
+
+        ref State ActiveState
+        {
+            get
+            {
+                if (m_FrameOpen)
+                    return ref m_PendingState;
+                return ref m_CommittedState;
+            }
+        }
+
+        AnimationPoseSourceId m_SourceId { get => ActiveState.SourceId; set => ActiveState.SourceId = value; }
+        PoseDiscontinuityEndpoint m_Endpoint { get => ActiveState.Endpoint; set => ActiveState.Endpoint = value; }
+        ulong m_SourcePoseContinuityIdentity { get => ActiveState.SourcePoseContinuityIdentity; set => ActiveState.SourcePoseContinuityIdentity = value; }
+        PoseDiscontinuityEndpoint m_PendingPreviousEndpoint { get => ActiveState.PendingPreviousEndpoint; set => ActiveState.PendingPreviousEndpoint = value; }
+        ulong m_PendingPreviousContinuityIdentity { get => ActiveState.PendingPreviousContinuityIdentity; set => ActiveState.PendingPreviousContinuityIdentity = value; }
+        PoseDiscontinuityReason m_PendingReason { get => ActiveState.PendingReason; set => ActiveState.PendingReason = value; }
+        PoseDiscontinuityResetReason m_PendingResetReason { get => ActiveState.PendingResetReason; set => ActiveState.PendingResetReason = value; }
+        ulong m_NextEventIdentity { get => ActiveState.NextEventIdentity; set => ActiveState.NextEventIdentity = value; }
+        ulong m_ResetSequence { get => ActiveState.ResetSequence; set => ActiveState.ResetSequence = value; }
+        ulong m_NextResetSequence { get => ActiveState.NextResetSequence; set => ActiveState.NextResetSequence = value; }
+        bool m_HasPendingDiscontinuity { get => ActiveState.HasPendingDiscontinuity; set => ActiveState.HasPendingDiscontinuity = value; }
+        bool m_HasSelection { get => ActiveState.HasSelection; set => ActiveState.HasSelection = value; }
+        bool m_SourceRetained { get => ActiveState.SourceRetained; set => ActiveState.SourceRetained = value; }
+        bool m_HasCurrentSample { get => ActiveState.HasCurrentSample; set => ActiveState.HasCurrentSample = value; }
+        bool m_Empty { get => ActiveState.Empty; set => ActiveState.Empty = value; }
+        bool m_HasCompletedFrame { get => ActiveState.HasCompletedFrame; set => ActiveState.HasCompletedFrame = value; }
 
         internal AnimationSelectedPosePlayerRuntime(
             PoseNodeId nodeId,
             int playerIndex,
-            AnimationChannelId channelId,
+            int sourceOwnerIndex,
+            PresentationPoseSourceProviderId providerId,
             AnimationSelectionAvailabilityPolicy availability,
-            bool blendSpace,
             CharacterAnimationRigPayload rig,
             int parameterCount)
         {
-            if (!nodeId.IsValid || playerIndex < 0 || !channelId.IsValid ||
-                !Enum.IsDefined(typeof(AnimationSelectionAvailabilityPolicy), availability))
+            if (!nodeId.IsValid || playerIndex < 0 ||
+                sourceOwnerIndex < 0 ||
+                !providerId.IsValid ||
+                (byte)availability < (byte)AnimationSelectionAvailabilityPolicy.RequireSelection ||
+                (byte)availability > (byte)AnimationSelectionAvailabilityPolicy.AllowEmpty)
                 throw new ArgumentException("Selected Pose Player configuration is invalid.");
             NodeId = nodeId;
             PlayerIndex = playerIndex;
-            ChannelId = channelId;
+            SourceOwnerIndex = sourceOwnerIndex;
+            ProviderId = providerId;
             Availability = availability;
-            BlendSpace = blendSpace;
-            m_Sources = new AnimationBlendSourcePoseWorkspace(rig, parameterCount, 1);
+            m_Sources = new AnimationBlendSourcePoseWorkspace(
+                rig,
+                parameterCount,
+                AnimationBlendSourcePoseWorkspace.SinglePlayerHandoffCapacity);
+            m_Releases = new AnimationPlayerReleaseJournal(
+                AnimationBlendSourcePoseWorkspace.SinglePlayerHandoffCapacity);
+            m_CommittedState = new State
+            {
+                PendingResetReason = PoseDiscontinuityResetReason.Initialization,
+                NextEventIdentity = 1,
+                ResetSequence = 1,
+                NextResetSequence = 2
+            };
+            m_PendingState = m_CommittedState;
         }
 
         internal PoseNodeId NodeId { get; }
         internal int PlayerIndex { get; }
-        internal AnimationChannelId ChannelId { get; }
+        internal int SourceOwnerIndex { get; }
+        internal PresentationPoseSourceProviderId ProviderId { get; }
         internal AnimationSelectionAvailabilityPolicy Availability { get; }
-        internal bool BlendSpace { get; }
-        internal bool Accepts(AnimationPoseSourceKind sourceKind) =>
-            BlendSpace ? sourceKind == AnimationPoseSourceKind.BlendSpace : sourceKind != AnimationPoseSourceKind.BlendSpace;
         internal bool HasSelection => m_HasSelection;
         internal bool HasCurrentSample => m_HasSelection && m_HasCurrentSample;
         internal AnimationPoseSourceId SourceId => m_HasSelection ? m_SourceId : default;
@@ -68,14 +120,69 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 : m_Empty ? AnimationPoseAvailability.NoPose : AnimationPoseAvailability.Invalid;
         internal float LastOutputWeight => m_HasCompletedFrame && HasCurrentSample ? 1f : 0f;
 
-        internal void PushSelection(in AnimationSelectionFrame selection)
+        internal void BeginFrame()
         {
             RequireAlive();
-            if (!selection.IsValid || selection.AnimationChannelId != ChannelId || !Accepts(selection.SourceId.SourceKind))
-                throw new ArgumentException("Selection does not belong to this Selected Pose Player.", nameof(selection));
-            PoseDiscontinuityEndpoint endpoint = PoseDiscontinuityEndpoint.From(in selection);
-            bool sourceChanged = m_HasSelection && !m_SourceId.Equals(selection.SourceId);
-            bool continuityChanged = m_HasSelection && m_SourcePoseContinuityIdentity != selection.SourcePoseContinuityIdentity;
+            if (m_FrameOpen)
+                throw new InvalidOperationException($"Selected Pose Player '{NodeId}' frame is already open.");
+            m_PendingState = m_CommittedState;
+            m_Releases.BeginFrame();
+            m_FrameOpen = true;
+        }
+
+        internal void DiscardFrame()
+        {
+            RequireAlive();
+            if (!m_FrameOpen)
+                return;
+            if (m_Sources.HasOpenFrame)
+                m_Sources.DiscardFrame(m_Sources.CompletionIdentity);
+            m_Sources.DiscardPreparedReleases();
+            m_Releases.DiscardFrame();
+            m_PendingState = m_CommittedState;
+            m_FrameOpen = false;
+        }
+
+        internal void CommitFrame()
+        {
+            RequireAlive();
+            if (!m_FrameOpen)
+                throw new InvalidOperationException($"Selected Pose Player '{NodeId}' frame is not open.");
+            m_CommittedState = m_PendingState;
+            m_Releases.CommitFrame();
+            m_FrameOpen = false;
+        }
+
+        internal void PushSelection(
+            in PresentationPoseSourceSample sample)
+        {
+            RequireAlive();
+            if (!sample.IsValid ||
+                sample.Availability !=
+                    PresentationPoseSourceAvailability.Ready ||
+                sample.ProviderId != ProviderId ||
+                sample.PlayerNodeId != NodeId ||
+                sample.SourceKind !=
+                    AnimationPoseSourceKind.MotionMatching)
+            {
+                throw new ArgumentException(
+                    "Selection does not belong to this Selected Pose Player.",
+                    nameof(sample));
+            }
+            var sourceId = new AnimationPoseSourceId(
+                sample.SourceIndex,
+                sample.SourceKind,
+                new AnimationPoseSelectionGeneration(
+                    sample.SourceGeneration.Value));
+            PoseDiscontinuityEndpoint endpoint =
+                PoseDiscontinuityEndpoint.From(in sample);
+            bool sourceChanged =
+                m_HasSelection &&
+                !m_SourceId.Equals(sourceId);
+            bool continuityChanged =
+                m_HasSelection &&
+                m_SourcePoseContinuityIdentity !=
+                    sample.SourcePoseContinuityIdentity;
             if ((sourceChanged || continuityChanged) && m_HasPendingDiscontinuity)
                 throw new InvalidOperationException($"Selected Pose Player '{NodeId}' received more than one discontinuity before frame completion.");
             if (sourceChanged)
@@ -89,56 +196,67 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PendingReason = ResolveReason(m_Endpoint, endpoint, sourceChanged);
                 m_HasPendingDiscontinuity = true;
             }
-            m_SourceId = selection.SourceId;
+            m_SourceId = sourceId;
             m_Endpoint = endpoint;
-            m_SourcePoseContinuityIdentity = selection.SourcePoseContinuityIdentity;
+            m_SourcePoseContinuityIdentity =
+                sample.SourcePoseContinuityIdentity;
             m_HasSelection = true;
             m_HasCurrentSample = true;
             m_Empty = false;
         }
 
-        internal void PushUnavailable(AnimationPlaybackId playbackId)
-        {
-            RequireAlive();
-            if (!playbackId.IsValid)
-                throw new ArgumentException("Unavailable Selected Pose Player playback is invalid.", nameof(playbackId));
-            if (m_HasSelection && !m_SourceId.PlaybackId.Equals(playbackId))
-            {
-                ReleaseRetainedSource();
-                m_SourceId = default;
-                m_Endpoint = default;
-                m_SourcePoseContinuityIdentity = 0;
-                m_HasSelection = false;
-            }
-            m_HasCurrentSample = false;
-            m_Empty = false;
-        }
-
-        internal void PushEmpty()
-        {
-            RequireAlive();
-            if (Availability == AnimationSelectionAvailabilityPolicy.RequireSelection)
-                throw new InvalidOperationException($"Selected Pose Player '{NodeId}' requires a selection.");
-            if (m_HasSelection)
-                ReleaseRetainedSource();
-            m_SourceId = default;
-            m_Endpoint = default;
-            m_SourcePoseContinuityIdentity = 0;
-            m_HasSelection = false;
-            m_HasCurrentSample = false;
-            m_Empty = true;
-        }
-
-        internal void BeginFrame(ulong completionIdentity) => m_Sources.BeginFrame(completionIdentity);
+        internal void BeginFrame(ulong completionIdentity) =>
+            m_Sources.BeginFrame(completionIdentity);
 
         internal AnimationPoseSourceCaptureBinding PrepareCapture(
-            in AnimationSourcePoseSample sample,
+            in PresentationPoseSourceSample sample,
             float presentationDeltaSeconds)
         {
             RequireAlive();
-            if (!m_HasSelection || !sample.IsValid || !sample.Selection.SourceId.Equals(m_SourceId))
+            if (!m_HasSelection || !sample.IsValid ||
+                sample.ProviderId != ProviderId ||
+                sample.PlayerNodeId != NodeId ||
+                sample.Availability !=
+                    PresentationPoseSourceAvailability.Ready)
+            {
                 throw new InvalidOperationException($"Selected Pose Player '{NodeId}' has no matching source sample.");
-            AnimationPoseSourceCaptureBinding binding = m_Sources.PrepareCapture(in sample, presentationDeltaSeconds);
+            }
+            var sourceId = new AnimationPoseSourceId(
+                sample.SourceIndex,
+                sample.SourceKind,
+                new AnimationPoseSelectionGeneration(
+                    sample.SourceGeneration.Value));
+            if (sourceId != m_SourceId)
+            {
+                throw new InvalidOperationException(
+                    $"Selected Pose Player '{NodeId}' source identity does not match its current selection.");
+            }
+            PresentationPoseSampleTime time =
+                sample.EffectiveSample;
+            var request = new AnimationPoseSampleRequest(
+                sourceId,
+                sample.SourcePoseContinuityIdentity,
+                sample.FrameSequence,
+                SourceOwnerIndex,
+                default,
+                time.SampleTime,
+                time.ContinuousTime,
+                time.Cycle,
+                time.Loop,
+                time.TimeScale,
+                sample.Clips,
+                sample.ParameterPageId,
+                sample.PoseParameters,
+                sample.PoseParameterAvailability);
+            var resolved = new AnimationResolvedPoseSourceSample(
+                request,
+                sample.LeftFootFeatures,
+                sample.RightFootFeatures,
+                sample.HasFootFeatures);
+            AnimationPoseSourceCaptureBinding binding =
+                m_Sources.PrepareCapture(
+                    in resolved,
+                    presentationDeltaSeconds);
             m_SourceRetained = true;
             return binding;
         }
@@ -165,21 +283,51 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void CompleteFrame()
         {
             RequireAlive();
+            if (m_Sources.HasOpenFrame)
+                m_Sources.CommitFrame(m_Sources.CompletionIdentity);
             m_HasCompletedFrame = true;
             m_HasPendingDiscontinuity = false;
             m_PendingResetReason = PoseDiscontinuityResetReason.None;
         }
 
-        internal bool TryDequeueRelease(out AnimationPoseSourceId sourceId)
+        internal int PendingReleaseCount
+        {
+            get
+            {
+                RequireAlive();
+                return m_Releases.Count;
+            }
+        }
+
+        internal AnimationPlayerReleaseToken PrepareRelease(
+            int releaseOrdinal)
         {
             RequireAlive();
-            if (m_PendingReleases.Count > 0)
+            AnimationPoseSourceId sourceId =
+                m_Releases.PrepareRelease(releaseOrdinal);
+            try
             {
-                sourceId = m_PendingReleases.Dequeue();
-                return true;
+                AnimationBlendSourcePoseReleaseToken sourcePoseRelease =
+                    m_Sources.PrepareRelease(sourceId);
+                return new AnimationPlayerReleaseToken(
+                    releaseOrdinal,
+                    sourceId,
+                    in sourcePoseRelease);
             }
-            sourceId = default;
-            return false;
+            catch
+            {
+                m_Releases.CancelPreparedRelease(releaseOrdinal);
+                throw;
+            }
+        }
+
+        internal void ApplyPreparedRelease(
+            in AnimationPlayerReleaseToken token)
+        {
+            AnimationBlendSourcePoseReleaseToken sourcePoseRelease =
+                token.SourcePoseRelease;
+            m_Sources.ApplyPreparedRelease(in sourcePoseRelease);
+            m_Releases.ApplyPreparedRelease(token.ReleaseOrdinal);
         }
 
         internal void Reset(PoseDiscontinuityResetReason reason)
@@ -187,8 +335,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireAlive();
             if (reason == PoseDiscontinuityResetReason.None)
                 throw new ArgumentOutOfRangeException(nameof(reason));
-            if (m_SourceRetained)
-                m_Sources.ReleaseSource(m_SourceId);
+            ReleaseRetainedSource();
             m_SourceId = default;
             m_Endpoint = default;
             m_SourcePoseContinuityIdentity = 0;
@@ -197,10 +344,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_HasCurrentSample = false;
             m_Empty = false;
             m_HasCompletedFrame = false;
-            m_PendingReleases.Clear();
             m_HasPendingDiscontinuity = false;
             m_PendingResetReason = reason;
-            m_ResetSequence = checked(m_ResetSequence + 1UL);
+            m_ResetSequence = AllocateResetSequence();
             m_Sources.ResetContinuity();
         }
 
@@ -208,24 +354,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             if (!m_SourceRetained)
                 return;
-            m_PendingReleases.Enqueue(m_SourceId);
-            m_Sources.ReleaseSource(m_SourceId);
+            m_Releases.Append(m_SourceId);
             m_SourceRetained = false;
+        }
+
+        ulong AllocateResetSequence()
+        {
+            if (m_NextResetSequence == ulong.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"Selected Pose Player '{NodeId}' reset sequence was exhausted.");
+            }
+            return m_NextResetSequence++;
         }
 
         PoseDiscontinuity BuildDiscontinuity(ulong completionIdentity)
         {
             if (m_PendingResetReason != PoseDiscontinuityResetReason.None)
                 return PoseDiscontinuity.Reset(
-                    m_NextEventIdentity++, completionIdentity, m_Endpoint, m_SourcePoseContinuityIdentity,
+                    AllocateEventIdentity(), completionIdentity, m_Endpoint, m_SourcePoseContinuityIdentity,
                     m_PendingResetReason, m_ResetSequence, m_HasSelection);
             if (!m_HasPendingDiscontinuity)
                 return default;
             return PoseDiscontinuity.SourceJump(
-                m_NextEventIdentity++, completionIdentity,
+                AllocateEventIdentity(), completionIdentity,
                 m_PendingPreviousEndpoint, m_Endpoint,
                 m_PendingPreviousContinuityIdentity, m_SourcePoseContinuityIdentity,
                 m_PendingReason);
+        }
+
+        ulong AllocateEventIdentity()
+        {
+            if (m_NextEventIdentity == ulong.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"Selected Pose Player '{NodeId}' discontinuity identity was exhausted.");
+            }
+            return m_NextEventIdentity++;
         }
 
         static PoseDiscontinuityReason ResolveReason(
@@ -233,11 +398,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             PoseDiscontinuityEndpoint current,
             bool sourceChanged)
         {
-            if (previous.ProgramProducerIndex != current.ProgramProducerIndex ||
-                previous.SourceKind != current.SourceKind || previous.PlaybackGeneration != current.PlaybackGeneration)
+            if (previous.SourceId.SourceKind !=
+                    current.SourceId.SourceKind ||
+                !previous.SourceId.PlaybackId.Equals(
+                    current.SourceId.PlaybackId) ||
+                previous.SourceId.PresentationPoseSourceIndex !=
+                    current.SourceId.PresentationPoseSourceIndex ||
+                previous.SourceId.SourceActionInstanceId !=
+                    current.SourceId.SourceActionInstanceId)
+            {
                 return PoseDiscontinuityReason.SourceIdentityChanged;
-            if (previous.SelectionGeneration != current.SelectionGeneration)
+            }
+            if (previous.SourceId.SelectionGeneration !=
+                current.SourceId.SelectionGeneration)
+            {
                 return PoseDiscontinuityReason.SelectionGenerationChanged;
+            }
             return sourceChanged
                 ? PoseDiscontinuityReason.SourceIdentityChanged
                 : PoseDiscontinuityReason.SourcePoseContinuityChanged;
@@ -248,7 +424,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_Disposed)
                 return;
             m_Disposed = true;
-            m_PendingReleases.Clear();
+            m_Releases.Clear();
             m_Sources.Dispose();
         }
 
@@ -259,6 +435,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
     }
 
+    [BurstCompile]
     internal struct AnimationSelectedPosePlayerJob : IAnimationJob
     {
         [ReadOnly] readonly AnimationBlendSourcePoseNativeReadBinding m_Source;
@@ -275,14 +452,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         [NativeDisableContainerSafetyRestriction] NativeSlice<byte> m_HasFootFeatures;
         [NativeDisableContainerSafetyRestriction] NativeSlice<AnimationPoseAvailability> m_Availability;
         [NativeDisableContainerSafetyRestriction] NativeSlice<ulong> m_Continuity;
-        [NativeDisableContainerSafetyRestriction] NativeSlice<PoseDiscontinuity> m_Discontinuity;
+        [NativeDisableContainerSafetyRestriction] NativeSlice<PoseDiscontinuityNative> m_Discontinuity;
         [NativeDisableContainerSafetyRestriction] NativeSlice<AnimationPoseNativeInvalidReason> m_InvalidReason;
         [NativeDisableContainerSafetyRestriction] NativeSlice<ulong> m_CompletedAt;
         readonly AnimationPhysicalSourceIdentity m_PhysicalSource;
         readonly int m_SourceIndex;
         readonly int m_PlayerIndex;
         readonly ulong m_ContinuityIdentity;
-        readonly PoseDiscontinuity m_PoseDiscontinuity;
+        readonly PoseDiscontinuityNative m_PoseDiscontinuity;
         readonly ulong m_CompletionIdentity;
         readonly AnimationSelectionAvailabilityPolicy m_AvailabilityPolicy;
         readonly bool m_HasSelection;
@@ -320,7 +497,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_SourceIndex = sourceIndex;
             m_PlayerIndex = output.Range.PhysicalPlayerIndex;
             m_ContinuityIdentity = continuityIdentity;
-            m_PoseDiscontinuity = discontinuity;
+            m_PoseDiscontinuity =
+                PoseDiscontinuityNative.From(in discontinuity);
             m_CompletionIdentity = output.CompletionIdentity;
             m_AvailabilityPolicy = availabilityPolicy;
             m_HasSelection = hasSelection;
@@ -329,7 +507,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         public void ProcessAnimation(AnimationStream stream)
         {
-            ClearOutput();
+            InvalidateOutput();
             if (!m_HasSelection)
             {
                 if (m_AvailabilityPolicy == AnimationSelectionAvailabilityPolicy.AllowEmpty && m_Empty)
@@ -380,7 +558,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PhysicalSource.Index.Value,
                 m_PhysicalSource.Generation,
                 AnimationPoseContributionKind.Live,
-                m_Source.ProgramProducerIndices[m_SourceIndex],
+                m_Source.SourceOwnerIndices[m_SourceIndex],
                 m_ContinuityIdentity,
                 1f,
                 hasFeet ? 1f : 0f,
@@ -416,22 +594,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_CompletedAt[0] = m_CompletionIdentity;
         }
 
-        void ClearOutput()
+        void InvalidateOutput()
         {
-            for (int i = 0; i < m_Pose.Length; i++)
-            {
-                m_Pose[i] = default;
-                m_Velocity[i] = default;
-            }
             for (int i = 0; i < m_Parameters.Length; i++)
             {
                 m_Parameters[i] = 0f;
                 m_ParameterAvailability[i] = 0;
             }
-            for (int i = 0; i < m_Contributions.Length; i++)
-                m_Contributions[i] = default;
-            for (int i = 0; i < m_DenseContributionWeights.Length; i++)
-                m_DenseContributionWeights[i] = 0f;
             m_ContributionCount[0] = 0;
             m_OutputWeight[0] = 0f;
             m_LeftFootFeatures[0] = default;

@@ -54,19 +54,19 @@
 
 ### Requirement: BlendSpacePlayer必须是显式Pose Graph Player
 
-Pose Graph MUST提供`BlendSpacePlayer`正式节点。节点 MUST消费一份BlendSpace类型AnimationSelection、一维模式的X typed Parameter或二维模式的X/Y typed Parameter，并输出普通Pose Value与typed Pose Discontinuity。节点 MUST不保存BlendSpace资产引用；Compiler MUST从可达producer source binding解析唯一资源真相。节点 MUST不保存跨source entry、CrossFade clock、Stored Pose或inertial residual。
+Pose Graph MUST提供`BlendSpacePlayer`正式节点。节点 MUST只位于PoseState inline subgraph，精确引用一个Graph-owned typed Blend Space Source Slot，一维模式消费X typed Fact Parameter，二维模式消费X/Y typed Fact Parameter，并输出普通Pose Value与typed Pose Discontinuity。节点 MUST不保存BlendSpace资产引用；Compiler MUST按Slot对象引用从Profile-owned typed Binding子资产解析唯一资源真相并生成Projection-local dense source index。节点 MUST不保存跨State source entry、transition clock、Stored Pose或inertial residual。
 
 #### Scenario: 一维资产进入BlendSpacePlayer
 
-- **WHEN** 可达Selection endpoint全部绑定具有同一Speed轴合同的Linear1D资产
+- **WHEN** PoseState中的Player绑定具有Speed轴合同的Linear1D Pose source
 - **THEN** Compiler MUST把X Parameter端口和资产轴绑定到同一typed ParameterId
-- **AND** 节点 MUST按Selection clock和Speed参数输出Pose
+- **AND** 节点 MUST按State source clock和Speed Fact参数输出Pose
 
-#### Scenario: 普通Timeline source进入BlendSpacePlayer
+#### Scenario: 非BlendSpace Pose source进入BlendSpacePlayer
 
-- **WHEN** 可达Selection endpoint包含Timeline或MotionMatching source kind
-- **THEN** Compiler MUST拒绝该节点并定位producer identity
-- **AND** MUST不改用SelectedPosePlayer
+- **WHEN** Player绑定的source kind为Sequence或MotionMatching
+- **THEN** Compiler MUST拒绝该节点并定位Source Slot业务名与对象owner
+- **AND** MUST不改用SequencePlayer或MM Player
 
 ### Requirement: BlendSpacePlayer与连续性节点必须分责
 
@@ -74,13 +74,13 @@ BlendSpacePlayer MUST只拥有同一BlendSpace source内部的参数权重、chi
 
 #### Scenario: BlendSpace source identity变化
 
-- **WHEN** BlendSpacePlayer收到不同source identity或generation
+- **WHEN** BlendSpacePlayer收到不同Projection-local source index或generation
 - **THEN** 节点 MUST发布typed Pose Discontinuity
 - **AND** 只有图中显式连接的Inertialization MAY平滑该跳变
 
 ### Requirement: Blend Space必须编译为固定Projection计划
 
-Projection Compiler MUST把资产编译为不可变BlendSpace plan，其中包含identity/revision/Rig、dense axis、stable sample table、weight solver data、phase table、clip resource binding、Foot Analysis binding、Pose Parameter policy、workspace offset与diagnostic source map。Runtime MUST只读取匹配Projection revision的plan，不得读取ScriptableObject、AssetDatabase、Timeline authoring、Profile或AnimationTrack marker。
+Projection Compiler MUST把资产编译为不可变BlendSpace plan，其中包含Projection-local dense source index、identity/revision/Rig、dense axis、stable sample table、weight solver data、phase table、clip resource binding、Foot Analysis binding、Pose Parameter policy、workspace offset与可读diagnostic source map。Runtime MUST只读取匹配Projection revision的plan，不得读取Source Slot或Binding ScriptableObject、AssetDatabase、Timeline authoring、Profile或AnimationTrack marker。
 
 #### Scenario: Runtime创建BlendSpacePlayer
 
@@ -130,11 +130,10 @@ Character Animation Authoring Workspace MUST提供Blend Space资产模式，并�
 
 ### Requirement: Preview与Runtime必须共享同一Blend Space计划
 
-Blend Space资产Preview、Pose Graph Preview、Timeline Preview和正式Runtime MUST使用同一Projection revision、weight evaluator、phase mapper、Animancer sampling backend、Pose Parameter policy和Foot feature聚合。Live Debug MUST只读取Runtime Snapshot。Diagnostics MUST按NodeId与SampleId显示参数、权重、canonical phase、effective time、feature来源与revision，不得重新求值。
+Blend Space资产Preview、PoseState Preview、Pose Graph Preview和正式Runtime MUST使用同一Projection revision、weight evaluator、phase mapper、Animancer sampling backend、Pose Parameter policy和Foot feature聚合。Live Debug MUST只读取Runtime Snapshot。Diagnostics MUST按NodeId与SampleId显示参数、权重、canonical phase、effective time、feature来源与revision，不得重新求值。
 
 #### Scenario: Preview拖动参数落点
 
 - **WHEN** 作者在Ready Projection上拖动X/Y preview参数
 - **THEN** Preview MUST执行正式BlendSpace plan并显示active SampleId与weight
 - **AND** Live视图 MUST不从Animancer child state反推权重
-

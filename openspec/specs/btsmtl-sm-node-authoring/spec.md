@@ -392,3 +392,13 @@ StateMachineNode、StateMachineGraph、StateNode、TransitionEdge 和 ConditionR
 - **WHEN** compiled State body 进入内层 StateMachineNode
 - **THEN** Kernel MUST以稳定 execution path 访问内层 state slot
 - **AND** MUST不创建 runtime Graph clone
+
+### Requirement: StateMachine作者交互必须复用共享领域表面
+
+BTSMTL StateMachine与Character PoseStateMachine MUST复用Graph Authoring Domain Framework的State、Transition、Entry、selection、Node/Port View、Details与Navigator交互实现。BTSMTL domain policy MUST继续把ConditionRuleGraph、interruption和compiled operation映射到自身typed document；Pose domain policy MUST把Presentation Fact、Pose source、transition routing和Pose IR映射到独立typed document。共享表面 MUST不合并两种数据schema、runtime state或compiler handler，也不得保留BTSMTL旧StateMachine View和Pose专用StateMachine View两套实现。
+
+#### Scenario: 在两个领域创建Transition
+
+- **WHEN** 作者分别在BTSMTL StateMachine与PoseStateMachine中拖出Transition
+- **THEN** 两者 MUST使用同一StateMachine交互与Edge View实现
+- **AND** mutation MUST分别落到BTSMTL Graph owner与Presentation owner

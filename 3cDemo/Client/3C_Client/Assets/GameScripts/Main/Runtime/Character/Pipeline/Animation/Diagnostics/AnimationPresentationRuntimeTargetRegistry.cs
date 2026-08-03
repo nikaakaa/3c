@@ -1,21 +1,35 @@
 using System;
 using System.Collections.Generic;
-using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
+    [Flags]
+    public enum AnimationPresentationDiagnosticsInterest : byte
+    {
+        None = 0,
+        LiveState = 1 << 0,
+        Capture = 1 << 1,
+        OperationDetail = 1 << 2,
+        FinalPoseDetail = 1 << 3,
+        PoseWatch = 1 << 4
+    }
+
     public interface IAnimationPresentationRuntimeSnapshotProvider
     {
         bool MotionMatchingRuntimeEnabled { get; }
-        IReadOnlyList<AnimationMarkerSyncRelationSnapshot> MarkerSyncSnapshots { get; }
-        IReadOnlyList<AnimationMarkerSyncPlaybackSnapshot> MarkerSyncPlaybackSnapshots { get; }
-        bool TryGetAnimationPresentationSnapshot(out AnimationPresentationRuntimeSnapshot snapshot);
+        AnimationPresentationDiagnosticsInterest DiagnosticsInterest { get; }
+        bool TryGetAnimationPresentationDebugView(
+            out AnimationPresentationDebugView debugView);
         bool TryGetPosePlanStages(out CharacterPosePlanStageSnapshot snapshot);
         bool TryCaptureMotionMatchingSearchReplay(
-            string programProducerId,
+            string providerId,
             out MotionMatchingSearchReplayArtifact artifact);
+        void SetDiagnosticsInterest(
+            Guid ownerId,
+            AnimationPresentationDiagnosticsInterest interest);
+        void RemoveDiagnosticsInterest(Guid ownerId);
         void SetPoseWatchInterests(Guid ownerId, IReadOnlyList<AnimationPoseWatchIdentity> interests);
         void RemovePoseWatchInterests(Guid ownerId);
     }
@@ -48,15 +62,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public string DisplayName { get; }
         public string ProjectionRevision { get; }
         public bool MotionMatchingRuntimeEnabled => m_Provider.MotionMatchingRuntimeEnabled;
-        public IReadOnlyList<AnimationMarkerSyncRelationSnapshot> MarkerSyncSnapshots => m_Provider.MarkerSyncSnapshots;
-        public IReadOnlyList<AnimationMarkerSyncPlaybackSnapshot> MarkerSyncPlaybackSnapshots => m_Provider.MarkerSyncPlaybackSnapshots;
+        public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
+            m_Provider.DiagnosticsInterest;
 
-        public bool TryGetSnapshot(out AnimationPresentationRuntimeSnapshot snapshot)
+        public bool TryGetDebugView(
+            out AnimationPresentationDebugView debugView)
         {
-            if (!m_Provider.TryGetAnimationPresentationSnapshot(out snapshot))
+            if (!m_Provider
+                .TryGetAnimationPresentationDebugView(
+                    out debugView))
+            {
                 return false;
-            if (!string.Equals(snapshot.ProjectionRevision, ProjectionRevision, StringComparison.Ordinal))
-                throw new InvalidOperationException("Animation Presentation runtime snapshot Projection revision changed after target binding.");
+            }
+            if (!string.Equals(
+                    debugView.PosePlan.ProjectionRevision,
+                    ProjectionRevision,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Animation Presentation Debug View Projection revision changed after target binding.");
+            }
             return true;
         }
 
@@ -64,9 +89,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_Provider.TryGetPosePlanStages(out snapshot);
 
         public bool TryCaptureMotionMatchingSearchReplay(
-            string programProducerId,
+            string providerId,
             out MotionMatchingSearchReplayArtifact artifact) =>
-            m_Provider.TryCaptureMotionMatchingSearchReplay(programProducerId, out artifact);
+            m_Provider.TryCaptureMotionMatchingSearchReplay(providerId, out artifact);
+
+        public void SetDiagnosticsInterest(
+            Guid ownerId,
+            AnimationPresentationDiagnosticsInterest interest) =>
+            m_Provider.SetDiagnosticsInterest(ownerId, interest);
+
+        public void RemoveDiagnosticsInterest(Guid ownerId) =>
+            m_Provider.RemoveDiagnosticsInterest(ownerId);
 
         public void SetPoseWatchInterests(Guid ownerId, IReadOnlyList<AnimationPoseWatchIdentity> interests) =>
             m_Provider.SetPoseWatchInterests(ownerId, interests);

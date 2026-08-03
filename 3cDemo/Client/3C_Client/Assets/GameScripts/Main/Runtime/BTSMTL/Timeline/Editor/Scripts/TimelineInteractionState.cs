@@ -90,9 +90,7 @@ namespace BTSMTL.Timeline.Editor
                     ? (object)clipView.Clip
                     : selection is TimelineTrackView trackView
                         ? trackView.Track
-                        : selection is TimelineAnimationMarkerView markerView
-                            ? markerView.Selection
-                            : null)
+                        : null)
                 .Where(target => target != null)
                 .ToArray();
         }
@@ -114,8 +112,6 @@ namespace BTSMTL.Timeline.Editor
                 m_Host.PresentSelection(trackView.Track);
             else if (selectable is TimelineClipView clipView)
                 m_Host.PresentSelection(clipView.Clip);
-            else if (selectable is TimelineAnimationMarkerView markerView)
-                m_Host.PresentSelection(markerView.Selection);
         }
 
         public void RemoveFromSelection(ISelectable selectable)

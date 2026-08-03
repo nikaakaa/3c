@@ -23,9 +23,6 @@ namespace BTSMTL.Timeline.Editor
         public Track Track { get; private set; }
         public BiDictionary<Clip, TimelineClipView> ClipViewMap { get; private set; }
         public List<TimelineClipView> ClipViews { get; set; }
-        internal List<TimelineAnimationMarkerView> MarkerViews { get; private set; }
-        internal List<TimelineCurveChannelLaneView> CurveLaneViews { get; private set; }
-
         public Action OnSelected;
         public Action OnUnselected;
         internal event Action<string> MarkerSyncSummaryChanged;
@@ -38,7 +35,6 @@ namespace BTSMTL.Timeline.Editor
         Label m_MarkerLaneSummary;
         VisualElement m_CurveHeader;
         readonly List<TimelineCurveChannelDescriptor> m_CurveChannels = new List<TimelineCurveChannelDescriptor>();
-        int m_MarkerContextFrame;
         internal bool RuntimeReadOnly => m_RuntimeReadOnly;
 
         public TimelineTrackView()
@@ -61,8 +57,6 @@ namespace BTSMTL.Timeline.Editor
             Track.OnMutedStateChanged = OnMutedStateChanged;
             ClipViewMap = new BiDictionary<Clip, TimelineClipView>();
             ClipViews = new List<TimelineClipView>();
-            MarkerViews = new List<TimelineAnimationMarkerView>();
-            CurveLaneViews = new List<TimelineCurveChannelLaneView>();
             PopulateMarkerLane();
             PopulateCurveLanes();
             foreach (var clip in track.Clips)
@@ -76,8 +70,6 @@ namespace BTSMTL.Timeline.Editor
                 ClipViewMap.Add(clip, clipView);
                 ClipViews.Add(clipView);
             }
-            PopulateMarkerViews();
-
             DragAndDropManipulator dragAndDropManipulator = new DragAndDropManipulator(this);
             dragAndDropManipulator.DragValid = () => !m_RuntimeReadOnly && Track.DragValid();
             dragAndDropManipulator.DragPerform += (e1, e2) =>
@@ -111,10 +103,6 @@ namespace BTSMTL.Timeline.Editor
             {
                 clipViewPair.Value.Refresh();
             }
-            for (int i = 0; i < MarkerViews.Count; i++)
-                MarkerViews[i].Refresh();
-            for (int i = 0; i < CurveLaneViews.Count; i++)
-                CurveLaneViews[i].Refresh();
             RefreshMarkerLane();
         }
 
@@ -225,26 +213,6 @@ namespace BTSMTL.Timeline.Editor
             m_RuntimeReadOnly = readOnly;
             for (int i = 0; i < ClipViews.Count; i++)
                 ClipViews[i].SetRuntimeReadOnly(readOnly);
-            for (int i = 0; i < MarkerViews.Count; i++)
-                MarkerViews[i].SetRuntimeReadOnly(readOnly);
-        }
-
-        void PopulateMarkerViews()
-        {
-            if (Track is not AnimationTrack animationTrack ||
-                animationTrack.SyncMode != AnimationSyncMode.MarkerGroup ||
-                !TimelineTrackLayout.MarkersExpanded(Track))
-                return;
-            for (int i = 0; i < animationTrack.SyncMarkers.Count; i++)
-            {
-                AnimationSyncMarker marker = animationTrack.SyncMarkers[i];
-                if (marker == null)
-                    continue;
-                var markerView = new TimelineAnimationMarkerView(this, animationTrack, marker);
-                Add(markerView);
-                FieldView.RegisterSelectable(markerView);
-                MarkerViews.Add(markerView);
-            }
         }
 
         void PopulateMarkerLane()
@@ -265,7 +233,6 @@ namespace BTSMTL.Timeline.Editor
                 if (evt.button != 0)
                     return;
                 SelectTrackForMarkerAuthoring();
-                ToggleMarkerLane();
                 evt.StopImmediatePropagation();
             });
             Add(m_MarkerHeader);
@@ -279,20 +246,11 @@ namespace BTSMTL.Timeline.Editor
                 m_MarkerLane.generateVisualContent += DrawMarkerCoverage;
                 m_MarkerLane.RegisterCallback<PointerDownEvent>(evt =>
                 {
-                    if (m_RuntimeReadOnly)
-                        return;
                     if (evt.button == 0)
                     {
                         SelectTrackForMarkerAuthoring();
                         evt.StopImmediatePropagation();
-                        return;
                     }
-                    if (evt.button != 1)
-                        return;
-                    SelectTrackForMarkerAuthoring();
-                    m_MarkerContextFrame = FieldView.Geometry.PositionToClosestFrame(evt.localPosition.x);
-                    ShowMarkerAddMenu(animationTrack);
-                    evt.StopImmediatePropagation();
                 });
                 Add(m_MarkerLane);
             }
@@ -321,10 +279,10 @@ namespace BTSMTL.Timeline.Editor
             m_CurveHeader.AddToClassList("animationCurvesHeader");
             m_CurveHeader.style.top = TimelineTrackLayout.CurveHeaderTop(Track);
             m_CurveHeader.pickingMode = PickingMode.Position;
-            var fold = new Label(TimelineTrackLayout.CurvesExpanded(Track) ? "v" : ">");
+            var fold = new Label("·");
             fold.AddToClassList("animationCurvesHeaderFold");
             fold.pickingMode = PickingMode.Ignore;
-            var headerLabel = new Label("CURVES");
+            var headerLabel = new Label("TYPED CURVES · EDIT IN SOURCE TIME INSPECTOR");
             headerLabel.AddToClassList("animationCurvesHeaderLabel");
             headerLabel.pickingMode = PickingMode.Ignore;
             var rangeLabel = new Label($"{TimelineTrackLayout.VisibleCurveChannelCount(Track)}/{m_CurveChannels.Count}");
@@ -337,22 +295,10 @@ namespace BTSMTL.Timeline.Editor
             {
                 if (evt.button != 0)
                     return;
-                ToggleCurveLanes();
+                SelectTrackForMarkerAuthoring();
                 evt.StopImmediatePropagation();
             });
             Add(m_CurveHeader);
-            if (!TimelineTrackLayout.CurvesExpanded(Track))
-                return;
-            int visibleIndex = 0;
-            for (int i = 0; i < m_CurveChannels.Count; i++)
-            {
-                TimelineCurveChannelDescriptor descriptor = m_CurveChannels[i];
-                if (!TimelineCurveEditorSession.IsChannelVisible(Track, descriptor.ChannelId))
-                    continue;
-                var lane = new TimelineCurveChannelLaneView(this, descriptor, visibleIndex++);
-                Add(lane);
-                CurveLaneViews.Add(lane);
-            }
         }
 
         internal void ToggleCurveLanes()
@@ -380,106 +326,6 @@ namespace BTSMTL.Timeline.Editor
             if (track.SyncMode == AnimationSyncMode.None)
                 return "None · 0 markers";
             return $"{track.SyncGroupId} · {track.SequenceTopology} · {track.SyncRole} · {track.SyncMarkers.Count} markers";
-        }
-
-        void ShowMarkerAddMenu(AnimationTrack track)
-        {
-            if (track.SyncMode != AnimationSyncMode.MarkerGroup)
-            {
-                var unavailable = new GenericMenu();
-                unavailable.AddDisabledItem(new GUIContent("Configure MarkerGroup in Inspector first"));
-                unavailable.ShowAsContext();
-                return;
-            }
-            var candidates = new List<string>();
-            ITimelineAnimationMarkerSyncAuthoringContext context = EditorWindow.SessionContext?.MarkerTopologyContext;
-            if (context != null)
-            {
-                var members = new List<TimelineAnimationMarkerSyncGroupMember>();
-                context.CollectAnimationMarkerSyncGroupMembers(track.Timeline, track.AuthoringId, members);
-                for (int memberIndex = 0; memberIndex < members.Count; memberIndex++)
-                    candidates.AddRange(members[memberIndex].MarkerIds);
-            }
-            for (int i = 0; i < track.SyncMarkers.Count; i++)
-            {
-                string markerId = track.SyncMarkers[i]?.MarkerId;
-                if (!string.IsNullOrEmpty(markerId))
-                    candidates.Add(markerId);
-            }
-            candidates = candidates.Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal).ToList();
-            var menu = new GenericMenu();
-            for (int i = 0; i < candidates.Count; i++)
-            {
-                string markerId = candidates[i];
-                menu.AddItem(new GUIContent($"Add Sync Marker/{markerId}"), false, () => AddMarker(track, markerId));
-            }
-            if (candidates.Count > 0)
-                menu.AddSeparator(string.Empty);
-            menu.AddItem(new GUIContent("New Marker Id..."), false, () => ShowMarkerTextEntry(track, null));
-            menu.ShowAsContext();
-        }
-
-        internal void ShowMarkerTextEntry(AnimationTrack track, AnimationSyncMarker marker)
-        {
-            var field = new TextField
-            {
-                value = marker?.MarkerId ?? string.Empty,
-                isDelayed = false
-            };
-            field.AddToClassList("animationMarkerTextEntry");
-            field.style.left = FieldView.Geometry.FrameToPosition(marker?.Frame ?? m_MarkerContextFrame);
-            field.style.top = TimelineTrackLayout.MarkerLaneTop;
-            field.style.width = 150f;
-            Add(field);
-            field.BringToFront();
-            field.schedule.Execute(field.Focus);
-            bool closing = false;
-            void Submit()
-            {
-                if (closing)
-                    return;
-                closing = true;
-                string value = AnimationMarkerSyncAuthoring.NormalizeId(field.value);
-                field.RemoveFromHierarchy();
-                if (string.IsNullOrEmpty(value))
-                    return;
-                if (marker == null)
-                    AddMarker(track, value);
-                else
-                    FieldView.CommitAuthoringMutation(
-                        () => track.RenameMarker(marker.AuthoringId, value),
-                        "Rename Animation Sync Marker");
-            }
-            field.RegisterCallback<KeyDownEvent>(evt =>
-            {
-                if (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter)
-                {
-                    Submit();
-                    evt.StopImmediatePropagation();
-                }
-                else if (evt.keyCode == KeyCode.Escape)
-                {
-                    closing = true;
-                    field.RemoveFromHierarchy();
-                    evt.StopImmediatePropagation();
-                }
-            });
-            field.RegisterCallback<FocusOutEvent>(_ =>
-            {
-                if (!closing && field.parent != null)
-                    Submit();
-            });
-        }
-
-        void AddMarker(AnimationTrack track, string markerId)
-        {
-            int maximum = track.SequenceTopology == AnimationMarkerSequenceTopology.Cyclic
-                ? Mathf.Max(0, track.Timeline.MaxFrame - 1)
-                : track.Timeline.MaxFrame;
-            int frame = Mathf.Clamp(m_MarkerContextFrame, 0, maximum);
-            FieldView.CommitAuthoringMutation(
-                () => track.AddMarker(markerId, frame),
-                "Add Animation Sync Marker");
         }
 
         void SelectTrackForMarkerAuthoring()
@@ -554,20 +400,6 @@ namespace BTSMTL.Timeline.Editor
             painter.MoveTo(new Vector2(FieldView.Geometry.FrameToPosition(from.Frame), y));
             painter.LineTo(new Vector2(FieldView.Geometry.FrameToPosition(to.Frame), y));
             painter.Stroke();
-        }
-
-        internal bool TryGetMarkerView(string markerAuthoringId, out TimelineAnimationMarkerView markerView)
-        {
-            for (int i = 0; i < MarkerViews.Count; i++)
-            {
-                if (string.Equals(MarkerViews[i].Marker.AuthoringId, markerAuthoringId, StringComparison.Ordinal))
-                {
-                    markerView = MarkerViews[i];
-                    return true;
-                }
-            }
-            markerView = null;
-            return false;
         }
 
         void OnPointerMove(PointerMoveEvent e)

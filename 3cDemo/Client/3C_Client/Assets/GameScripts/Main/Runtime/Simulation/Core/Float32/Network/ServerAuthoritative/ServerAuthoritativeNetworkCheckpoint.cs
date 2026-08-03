@@ -92,7 +92,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         const uint FullMagic = 0x50434E53;
         const uint DeltaMagic = 0x44434E53;
         const int FullVersion = 2;
-        const int DeltaVersion = 3;
+        const int DeltaVersion = 5;
         const string PresentationChannel = "Presentation";
 
         public static NetworkCheckpoint Capture(NetworkCheckpointLayout layout, AuthoritativeActorBaseline baseline)
@@ -380,6 +380,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteScalar(command.Weight);
             writer.WriteUInt64(command.ProducerGeneration);
             writer.WriteInt32(command.Cycle);
+            writer.WriteUInt64(command.SourceActionInstanceId);
+            writer.WriteScalar(command.VisualTimeScale);
         }
 
         static PresentationCommand ReadCompactSampleCommand(
@@ -407,7 +409,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 reader.ReadScalar(),
                 reader.ReadScalar(),
                 reader.ReadUInt64(),
-                reader.ReadInt32());
+                reader.ReadInt32(),
+                reader.ReadUInt64(),
+                reader.ReadScalar());
         }
 
         static ProgramProducer ResolveCompactProducer(NetworkCheckpointLayout layout, OperationHandle operation)

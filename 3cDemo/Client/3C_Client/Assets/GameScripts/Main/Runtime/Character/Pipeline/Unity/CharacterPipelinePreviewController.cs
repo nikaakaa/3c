@@ -18,6 +18,10 @@ namespace ThirdPersonCharacter.Pipeline
         readonly CharacterPipelineDefinition m_Definition;
         readonly AnimancerComponent m_Animancer;
         readonly CharacterAnimationRigBinding m_AnimationRigBinding;
+        readonly Float32WorldBodyBinding m_WorldBodyBinding;
+        readonly CharacterWorldAwarePresentationBinding m_WorldAwareBinding;
+        readonly CharacterPresentationBodyState m_BodyFixture;
+        readonly PhysicsScene m_PhysicsScene;
         readonly CharacterSimulationProgram m_Program;
         readonly CharacterPresentationProjection m_Projection;
         readonly TimelineMotionAuthoringPreviewEvaluator m_MotionPreview =
@@ -37,37 +41,52 @@ namespace ThirdPersonCharacter.Pipeline
         public CharacterPipelinePreviewController(CharacterPipelineHost host)
         {
             m_Host = host ? host : throw new ArgumentNullException(nameof(host));
-            m_Definition = host.Definition ? host.Definition : throw new InvalidOperationException("Timeline preview requires a Character Pipeline Definition.");
-            m_Animancer = host.Animancer ? host.Animancer : throw new InvalidOperationException("Timeline preview requires Animancer.");
+            m_Definition = host.Definition ? host.Definition : throw new InvalidOperationException("Animation preview requires a Character Pipeline Definition.");
+            m_Animancer = host.Animancer ? host.Animancer : throw new InvalidOperationException("Animation preview requires Animancer.");
             m_AnimationRigBinding = host.AnimationRigBinding
                 ? host.AnimationRigBinding
-                : throw new InvalidOperationException("Timeline preview requires an Animation Rig Binding.");
+                : throw new InvalidOperationException("Animation preview requires an Animation Rig Binding.");
+            m_WorldBodyBinding = host.WorldBodyBinding
+                ? host.WorldBodyBinding
+                : throw new InvalidOperationException("Animation preview requires the target's formal World Body Binding fixture.");
+            if (m_WorldBodyBinding.gameObject.scene != host.gameObject.scene)
+                throw new InvalidOperationException("Animation preview Body fixture must belong to the target Scene.");
             if (!m_Definition.SimulationProgram || !m_Definition.PresentationProjection)
-                throw new InvalidOperationException("Timeline preview requires compiled Program and Presentation Projection assets.");
+                throw new InvalidOperationException("Animation preview requires compiled Program and Presentation Projection assets.");
             m_Program = m_Definition.SimulationProgram.Load();
             m_Projection = m_Definition.PresentationProjection.Load(
                 Float32CharacterPresentationContractAdapter.Create(m_Program));
             m_AnimationRigBinding.RequireValid(m_Projection.Rig);
+            m_BodyFixture = CharacterPresentationBodyState.FromFloat32(
+                m_WorldBodyBinding.InitialBody);
+            m_PhysicsScene = host.gameObject.scene.GetPhysicsScene();
+            m_WorldAwareBinding = ResolveWorldAwareBinding(host);
         }
 
-        public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> AnimationSnapshots =>
+        public bool HasAnimationDebugView =>
+            m_Session != null &&
+            m_Session.Engine.HasDebugView;
+        public AnimationPresentationDebugView AnimationDebugView =>
             m_Session != null
-                ? m_Session.Engine.Snapshots
-                : Array.Empty<AnimationPlaybackLifecycleSnapshot>();
-        public bool HasAnimationRuntimeSnapshot =>
-            m_Session != null && m_Session.Engine.HasRuntimeDiagnosticsSnapshot;
-        public AnimationPresentationRuntimeSnapshot AnimationRuntimeSnapshot =>
-            m_Session != null
-                ? m_Session.Engine.RuntimeDiagnosticsSnapshot
-                : default;
+                ? m_Session.Engine.DebugView
+                : throw new InvalidOperationException(
+                    "Animation Preview Debug View is unavailable.");
         public CharacterPosePlanStageSnapshot PosePlanStages =>
             m_Session != null
                 ? m_Session.Engine.PosePlanStages
                 : default;
+        public CharacterFootPlacementFrameSnapshot FootPlacementSnapshot =>
+            m_Session != null
+                ? m_Session.Engine.FootPlacementSnapshot
+                : default;
 
         public bool Matches(CharacterPipelineDefinition definition, AnimancerComponent animancer)
         {
-            return m_Definition == definition && m_Animancer == animancer;
+            return m_Definition == definition &&
+                   m_Animancer == animancer &&
+                   m_AnimationRigBinding == m_Host.AnimationRigBinding &&
+                   m_WorldBodyBinding == m_Host.WorldBodyBinding &&
+                   m_WorldAwareBinding == ResolveWorldAwareBinding(m_Host);
         }
 
         public void Evaluate(
@@ -95,12 +114,15 @@ namespace ThirdPersonCharacter.Pipeline
                 CaptureVisualPose();
                 m_Session = new PreviewSession(
                     NextGeneration(),
-                    new PreviewPlaybackEngine(
+                    new AnimationPreviewRuntime(
                         m_Definition,
                         m_Program,
                         m_Projection,
                         m_Animancer,
                         m_AnimationRigBinding,
+                        m_BodyFixture,
+                        m_WorldAwareBinding,
+                        m_PhysicsScene,
                         timeline,
                         sessionId));
                 m_SessionId = sessionId;
@@ -130,23 +152,25 @@ namespace ThirdPersonCharacter.Pipeline
             ApplyMotionPreview(timeline, currentTime);
         }
 
-        public void EvaluateBlendSpace(
+        public void EvaluatePoseGraph(
             Guid sessionId,
-            TimelineData timeline,
-            string targetTrackAuthoringId,
-            float previousTime,
-            float currentTime,
-            string sourceId,
-            string sourceName,
+            double presentationTime,
             ulong evaluationTick,
             float presentationDeltaSeconds,
             bool resetLifecycle,
-            Vector2 parameter)
+            bool grounded,
+            float horizontalSpeed,
+            float horizontalAcceleration,
+            float verticalSpeed,
+            Vector2 movementDirection,
+            Vector2 desiredDirection,
+            float facingError,
+            CharacterPresentationMotionPhase motionPhase,
+            IReadOnlyList<PoseParameterId> directParameterIds = null,
+            IReadOnlyList<float> directParameterValues = null)
         {
-            if (sessionId == Guid.Empty || timeline == null || string.IsNullOrWhiteSpace(targetTrackAuthoringId))
-                throw new ArgumentException("Blend Space preview identity is incomplete.");
-            if (evaluationTick == 0)
-                throw new InvalidOperationException("Blend Space preview evaluation tick must be non-zero.");
+            if (sessionId == Guid.Empty || evaluationTick == 0)
+                throw new ArgumentException("Pose Graph Preview identity is incomplete.");
             if (m_Session != null && m_SessionId != sessionId)
                 throw new InvalidOperationException(
                     $"Animation preview target '{m_Host.name}' is already owned by session '{m_SessionId}'.");
@@ -157,13 +181,16 @@ namespace ThirdPersonCharacter.Pipeline
                 CaptureVisualPose();
                 m_Session = new PreviewSession(
                     NextGeneration(),
-                    new PreviewPlaybackEngine(
+                    new AnimationPreviewRuntime(
                         m_Definition,
                         m_Program,
                         m_Projection,
                         m_Animancer,
                         m_AnimationRigBinding,
-                        timeline,
+                        m_BodyFixture,
+                        m_WorldAwareBinding,
+                        m_PhysicsScene,
+                        null,
                         sessionId));
                 m_SessionId = sessionId;
                 AcquireGraphClock();
@@ -175,17 +202,20 @@ namespace ThirdPersonCharacter.Pipeline
                 m_Session.Generation = NextGeneration();
             }
 
-            m_Session.CaptureBlendSpace(
-                timeline,
-                targetTrackAuthoringId,
-                previousTime,
-                currentTime,
-                sourceId,
-                sourceName,
+            m_Session.Engine.EvaluatePoseGraph(
                 evaluationTick,
                 presentationDeltaSeconds,
-                parameter);
-            m_Session.Engine.Evaluate(m_Session);
+                presentationTime,
+                grounded,
+                horizontalSpeed,
+                horizontalAcceleration,
+                verticalSpeed,
+                movementDirection,
+                desiredDirection,
+                facingError,
+                motionPhase,
+                directParameterIds,
+                directParameterValues);
         }
 
         public void CollectMarkerSyncSources(
@@ -201,6 +231,7 @@ namespace ThirdPersonCharacter.Pipeline
             string targetIdentity = $"producer:{timeline.AuthoringId}:{targetTrackAuthoringId}";
             if (!m_Projection.TryGetProducer(targetIdentity, out CharacterPresentationProducerEntry target) ||
                 target.Kind != CharacterPresentationProducerKind.Animation ||
+                target.Animation == null ||
                 target.Animation?.MarkerSync == null ||
                 !target.Animation.MarkerSync.IsMarkerGroup)
                 return;
@@ -209,7 +240,9 @@ namespace ThirdPersonCharacter.Pipeline
             for (int i = 0; i < producers.Count; i++)
             {
                 CharacterPresentationProducerEntry source = producers[i];
-                if (source.ProducerId.Equals(target.ProducerId) || source.Animation?.MarkerSync == null ||
+                if (source.ProducerId.Equals(target.ProducerId) ||
+                    source.Animation == null ||
+                    source.Animation.MarkerSync == null ||
                     !source.Animation.MarkerSync.IsMarkerGroup ||
                     source.AnimationChannelId != target.AnimationChannelId ||
                     !string.Equals(
@@ -335,6 +368,31 @@ namespace ThirdPersonCharacter.Pipeline
             if (m_Generation == 0)
                 m_Generation++;
             return m_Generation;
+        }
+
+        CharacterWorldAwarePresentationBinding ResolveWorldAwareBinding(
+            CharacterPipelineHost host)
+        {
+            if (m_Projection.PosePlan.FootPlacementNodes.Count == 0)
+                return null;
+            CharacterWorldAwarePresentationBinding binding =
+                host.WorldAwarePresentation;
+            if (!binding ||
+                binding.gameObject.scene != host.gameObject.scene ||
+                binding.PresentationRoot != host.VisualRoot ||
+                !m_PhysicsScene.IsValid())
+            {
+                return null;
+            }
+            try
+            {
+                binding.RequireValid();
+                return binding;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         void CaptureVisualPose()

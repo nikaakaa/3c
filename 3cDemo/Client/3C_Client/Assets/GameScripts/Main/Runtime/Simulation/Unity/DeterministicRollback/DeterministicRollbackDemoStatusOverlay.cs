@@ -10,6 +10,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         [SerializeField] DeterministicRollbackCharacterHost[] m_Actors;
         float m_SmoothedFrameDeltaSeconds;
 
+#if UNITY_EDITOR
+        public void SetActors(params DeterministicRollbackCharacterHost[] actors)
+        {
+            m_Actors = actors == null
+                ? throw new System.ArgumentNullException(nameof(actors))
+                : (DeterministicRollbackCharacterHost[])actors.Clone();
+        }
+#endif
+
         void Update()
         {
             float deltaSeconds = Time.unscaledDeltaTime;

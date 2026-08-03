@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Animation.TransitionRouting
 {
     public static class TransitionRoutingCompiler
     {
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 3;
 
         public static TransitionRoutingCompileResult Compile(TransitionRoutingDefinition definition)
         {
@@ -33,9 +34,15 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
                     TransitionRoutingReasonCode.MissingDefinitionRevision,
                     "Definition revision is required."));
             }
+            if (!Enum.IsDefined(typeof(TransitionRoutingCoveragePolicy), definition.CoveragePolicy))
+            {
+                diagnostics.Add(new TransitionRoutingDiagnostic(
+                    TransitionRoutingReasonCode.InvalidCoveragePolicy,
+                    "Transition routing coverage policy is invalid."));
+            }
 
             var endpointSet = new HashSet<TransitionEndpointId>();
-            bool hasEmptyEndpoint = false;
+            bool hasSourcePoseEndpoint = false;
             for (int i = 0; i < definition.Endpoints.Count; i++)
             {
                 TransitionEndpointId endpoint = definition.Endpoints[i];
@@ -55,7 +62,7 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
                         sourceEndpoint: endpoint));
                 }
 
-                hasEmptyEndpoint |= endpoint.IsEmpty;
+                hasSourcePoseEndpoint |= endpoint.IsSourcePose;
             }
 
             if (definition.Endpoints.Count == 0)
@@ -64,11 +71,12 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
                     TransitionRoutingReasonCode.MissingEndpointCatalog,
                     "At least one endpoint is required."));
             }
-            else if (!hasEmptyEndpoint)
+            else if (definition.CoveragePolicy == TransitionRoutingCoveragePolicy.CompleteMatrix &&
+                      !hasSourcePoseEndpoint)
             {
                 diagnostics.Add(new TransitionRoutingDiagnostic(
-                    TransitionRoutingReasonCode.MissingEmptyEndpoint,
-                    $"Endpoint catalog must include '{TransitionEndpointId.Empty}'."));
+                    TransitionRoutingReasonCode.MissingSourcePoseEndpoint,
+                    $"Endpoint catalog must include '{TransitionEndpointId.SourcePose}'."));
             }
 
             var ruleIds = new HashSet<TransitionRuleId>();
@@ -76,26 +84,36 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             for (int i = 0; i < definition.Rules.Count; i++)
             {
                 AnimationTransitionRule rule = definition.Rules[i];
-                ValidateRule(rule, i, endpointSet, ruleIds, rulesByPair, diagnostics);
+                ValidateRule(
+                    rule,
+                    i,
+                    endpointSet,
+                    ruleIds,
+                    rulesByPair,
+                    definition.SupportsSourcePoseInertialization,
+                    diagnostics);
             }
 
-            for (int sourceIndex = 0; sourceIndex < definition.Endpoints.Count; sourceIndex++)
+            if (definition.CoveragePolicy == TransitionRoutingCoveragePolicy.CompleteMatrix)
             {
-                TransitionEndpointId source = definition.Endpoints[sourceIndex];
-                if (!source.IsValid)
-                    continue;
-                for (int targetIndex = 0; targetIndex < definition.Endpoints.Count; targetIndex++)
+                for (int sourceIndex = 0; sourceIndex < definition.Endpoints.Count; sourceIndex++)
                 {
-                    TransitionEndpointId target = definition.Endpoints[targetIndex];
-                    if (!target.IsValid)
+                    TransitionEndpointId source = definition.Endpoints[sourceIndex];
+                    if (!source.IsValid)
                         continue;
-                    if (!rulesByPair.ContainsKey(new TransitionRuleKey(source, target)))
+                    for (int targetIndex = 0; targetIndex < definition.Endpoints.Count; targetIndex++)
                     {
-                        diagnostics.Add(new TransitionRoutingDiagnostic(
-                            TransitionRoutingReasonCode.MissingPair,
-                            $"Exact transition rule is missing for '{source}' -> '{target}'.",
-                            sourceEndpoint: source,
-                            targetEndpoint: target));
+                        TransitionEndpointId target = definition.Endpoints[targetIndex];
+                        if (!target.IsValid)
+                            continue;
+                        if (!rulesByPair.ContainsKey(new TransitionRuleKey(source, target)))
+                        {
+                            diagnostics.Add(new TransitionRoutingDiagnostic(
+                                TransitionRoutingReasonCode.MissingPair,
+                                $"Exact transition rule is missing for '{source}' -> '{target}'.",
+                                sourceEndpoint: source,
+                                targetEndpoint: target));
+                        }
                     }
                 }
             }
@@ -107,15 +125,27 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             for (int i = 0; i < endpoints.Length; i++)
                 endpoints[i] = definition.Endpoints[i];
 
-            var orderedRules = new AnimationTransitionRule[endpoints.Length * endpoints.Length];
-            int ruleIndex = 0;
-            for (int sourceIndex = 0; sourceIndex < endpoints.Length; sourceIndex++)
+            AnimationTransitionRule[] orderedRules;
+            if (definition.CoveragePolicy == TransitionRoutingCoveragePolicy.CompleteMatrix)
             {
-                for (int targetIndex = 0; targetIndex < endpoints.Length; targetIndex++)
+                orderedRules = new AnimationTransitionRule[endpoints.Length * endpoints.Length];
+                int ruleIndex = 0;
+                for (int sourceIndex = 0; sourceIndex < endpoints.Length; sourceIndex++)
                 {
-                    orderedRules[ruleIndex++] =
-                        rulesByPair[new TransitionRuleKey(endpoints[sourceIndex], endpoints[targetIndex])];
+                    for (int targetIndex = 0; targetIndex < endpoints.Length; targetIndex++)
+                    {
+                        orderedRules[ruleIndex++] =
+                            rulesByPair[new TransitionRuleKey(endpoints[sourceIndex], endpoints[targetIndex])];
+                    }
                 }
+            }
+            else
+            {
+                orderedRules = rulesByPair.Values
+                    .OrderBy(value => value.SourceEndpoint)
+                    .ThenBy(value => value.TargetEndpoint)
+                    .ThenBy(value => value.RuleId)
+                    .ToArray();
             }
 
             StableHash canonicalHash = ComputeCanonicalHash(definition, endpoints, orderedRules);
@@ -123,6 +153,7 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
                 new TransitionRoutingPlanId(StableHash.Compute("transition-routing-plan", canonicalHash.ToString())),
                 definition.SchemaVersion,
                 definition.DefinitionRevision,
+                definition.CoveragePolicy,
                 canonicalHash,
                 endpoints,
                 orderedRules);
@@ -135,6 +166,7 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             HashSet<TransitionEndpointId> endpointSet,
             HashSet<TransitionRuleId> ruleIds,
             Dictionary<TransitionRuleKey, AnimationTransitionRule> rulesByPair,
+            bool supportsSourcePoseInertialization,
             List<TransitionRoutingDiagnostic> diagnostics)
         {
             if (!rule.RuleId.IsValid)
@@ -208,11 +240,11 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
                         rule.TargetEndpoint));
                 }
 
-                if (rule.TargetEndpoint.IsEmpty)
+                if (rule.TargetEndpoint.IsSourcePose && !supportsSourcePoseInertialization)
                 {
                     diagnostics.Add(new TransitionRoutingDiagnostic(
-                        TransitionRoutingReasonCode.InertializationTargetsEmpty,
-                        $"Rule '{rule.RuleId}' cannot inertialize to Empty.",
+                        TransitionRoutingReasonCode.InertializationTargetsSourcePose,
+                        $"Rule '{rule.RuleId}' cannot inertialize to Source Pose.",
                         rule.RuleId,
                         rule.SourceEndpoint,
                         rule.TargetEndpoint));
@@ -236,11 +268,15 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             TransitionEndpointId[] endpoints,
             AnimationTransitionRule[] rules)
         {
-            var values = new List<string>(4 + endpoints.Length + rules.Length * 7)
+            var values = new List<string>(6 + endpoints.Length + rules.Length * 7)
             {
                 "transition-routing-definition",
                 definition.SchemaVersion.ToString(CultureInfo.InvariantCulture),
                 definition.DefinitionRevision.ToString(),
+                ((byte)definition.CoveragePolicy).ToString(CultureInfo.InvariantCulture),
+                definition.SupportsSourcePoseInertialization
+                    ? "supports-source-pose-inertialization"
+                    : "forbids-source-pose-inertialization",
                 endpoints.Length.ToString(CultureInfo.InvariantCulture)
             };
 

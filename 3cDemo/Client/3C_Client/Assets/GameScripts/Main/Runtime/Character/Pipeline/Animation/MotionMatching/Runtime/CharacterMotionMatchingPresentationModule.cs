@@ -14,15 +14,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         PreviousFrameIncomplete = 1,
         DuplicateResolve = 2,
         DuplicateDemand = 3,
-        DemandCapacityExceeded = 4,
         MissingTrajectory = 5,
-        FixtureDemandMismatch = 6,
-        RequestCapacityExceeded = 7,
+        PreviewDemandMismatch = 6,
+        SelectionCapacityExceeded = 7,
         RetainedOutputMissing = 8,
         MissingResolve = 9,
         CompletionIdentityMismatch = 10,
         PresentationFrameMismatch = 11,
-        ResetIdentityMismatch = 12
+        ResetIdentityMismatch = 12,
+        PosePlanCompletionMismatch = 13,
+        HistoryBindingMismatch = 14
     }
 
     internal sealed class MotionMatchingFrameTransactionException : InvalidOperationException
@@ -46,84 +47,115 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         ProjectionReplacement = 4
     }
 
-    internal readonly struct MotionMatchingResolvedFrameRequest
+    internal readonly struct MotionMatchingFrameMutationLease
     {
-        internal MotionMatchingResolvedFrameRequest(
-            in AnimationSourcePoseSample sourceSample,
-            bool submitToLifecycle)
+        internal MotionMatchingFrameMutationLease(ulong frameIdentity)
         {
-            SourceSample = sourceSample;
-            SubmitToLifecycle = submitToLifecycle;
+            FrameIdentity = frameIdentity;
         }
 
-        internal AnimationSourcePoseSample SourceSample { get; }
-        internal AnimationSelectionFrame Selection => SourceSample.Selection;
-        internal bool SubmitToLifecycle { get; }
-    }
-
-    internal readonly struct MotionMatchingFrameResolution
-    {
-        readonly MotionMatchingResolvedFrameRequest[] m_Requests;
-
-        internal MotionMatchingFrameResolution(
-            ulong presentationFrame,
-            ulong resetSequence,
-            ulong completionIdentity,
-            MotionMatchingResolvedFrameRequest[] requests,
-            int requestCount,
-            int resolvedProducerCount,
-            bool requiresHistoryCompletion)
-        {
-            if (presentationFrame == 0 || completionIdentity == 0 || requests == null ||
-                requestCount < 0 || requestCount > requests.Length || resolvedProducerCount < 0)
-                throw new ArgumentException("Motion Matching frame resolution is invalid.");
-            PresentationFrame = presentationFrame;
-            ResetSequence = resetSequence;
-            CompletionIdentity = completionIdentity;
-            m_Requests = requests;
-            RequestCount = requestCount;
-            ResolvedProducerCount = resolvedProducerCount;
-            RequiresHistoryCompletion = requiresHistoryCompletion;
-        }
-
-        internal ulong PresentationFrame { get; }
-        internal ulong ResetSequence { get; }
-        internal ulong CompletionIdentity { get; }
-        internal int RequestCount { get; }
-        internal int ResolvedProducerCount { get; }
-        internal bool RequiresHistoryCompletion { get; }
-
-        internal MotionMatchingResolvedFrameRequest GetRequest(int index) =>
-            (uint)index < (uint)RequestCount
-                ? m_Requests[index]
-                : throw new ArgumentOutOfRangeException(nameof(index));
+        internal ulong FrameIdentity { get; }
+        internal bool IsValid => FrameIdentity != 0;
     }
 
     internal sealed class CharacterMotionMatchingPresentationModule : IDisposable
     {
+        readonly struct FramePage
+        {
+            internal FramePage(
+                ulong resetSequence,
+                ulong previousResetSequence,
+                ulong openCompletionIdentity,
+                ulong openPresentationFrame,
+                ulong openResetSequence,
+                ulong lastResolvedPresentationFrame,
+                ulong lastCompletedPresentationFrame,
+                int lastHistoryAppendCount,
+                int lastHistoryGapCount,
+                MotionMatchingSearchReplayArtifact previewQuery,
+                string previewProviderId,
+                MotionMatchingPresentationResetReason lastResetReason,
+                bool frameOpen)
+            {
+                ResetSequence = resetSequence;
+                PreviousResetSequence = previousResetSequence;
+                OpenCompletionIdentity = openCompletionIdentity;
+                OpenPresentationFrame = openPresentationFrame;
+                OpenResetSequence = openResetSequence;
+                LastResolvedPresentationFrame =
+                    lastResolvedPresentationFrame;
+                LastCompletedPresentationFrame =
+                    lastCompletedPresentationFrame;
+                LastHistoryAppendCount = lastHistoryAppendCount;
+                LastHistoryGapCount = lastHistoryGapCount;
+                PreviewQuery = previewQuery;
+                PreviewProviderId = previewProviderId;
+                LastResetReason = lastResetReason;
+                FrameOpen = frameOpen;
+            }
+
+            internal ulong ResetSequence { get; }
+            internal ulong PreviousResetSequence { get; }
+            internal ulong OpenCompletionIdentity { get; }
+            internal ulong OpenPresentationFrame { get; }
+            internal ulong OpenResetSequence { get; }
+            internal ulong LastResolvedPresentationFrame { get; }
+            internal ulong LastCompletedPresentationFrame { get; }
+            internal int LastHistoryAppendCount { get; }
+            internal int LastHistoryGapCount { get; }
+            internal MotionMatchingSearchReplayArtifact PreviewQuery { get; }
+            internal string PreviewProviderId { get; }
+            internal MotionMatchingPresentationResetReason LastResetReason
+            {
+                get;
+            }
+            internal bool FrameOpen { get; }
+        }
+
+        struct FrozenOutputMutation
+        {
+            internal AnimationPoseSourceId SourceId;
+            internal MotionMatchingFrozenSelection Frozen;
+            internal bool Retained;
+        }
+
+        struct FrozenOutputSlot
+        {
+            internal bool InUse;
+            internal bool Retained;
+            internal AnimationPoseSourceId SourceId;
+            internal MotionMatchingFrozenSelection Frozen;
+        }
+
+        struct PreparedHistoryMutation
+        {
+            internal CharacterMotionMatchingProviderRuntime Runtime;
+            internal string ProviderId;
+            internal PoseNodeId PlayerNodeId;
+            internal AnimationPoseSourceId SourceId;
+        }
+
         readonly ActorId m_ActorId;
         readonly CharacterBodyPresentationSourceMode m_BodySourceMode;
         readonly CharacterPresentationProjection m_Projection;
         readonly MotionMatchingTrajectoryAdapter m_TrajectoryAdapter;
-        readonly Dictionary<string, CharacterMotionMatchingProducerRuntime> m_Producers =
-            new Dictionary<string, CharacterMotionMatchingProducerRuntime>(StringComparer.Ordinal);
-        readonly Dictionary<AnimationPlaybackId, CharacterPresentationProducerEntry> m_Sampling =
-            new Dictionary<AnimationPlaybackId, CharacterPresentationProducerEntry>();
-        readonly Dictionary<AnimationPoseSourceId, MotionMatchingPoseSourceOutput> m_FrozenOutputs =
-            new Dictionary<AnimationPoseSourceId, MotionMatchingPoseSourceOutput>();
-        readonly HashSet<string> m_ResolvedProducers = new HashSet<string>(StringComparer.Ordinal);
-        readonly MotionMatchingPlaybackDemand[] m_Demands;
-        readonly MotionMatchingFrameSelection[] m_FrameSelections;
-        readonly MotionMatchingResolvedFrameRequest[] m_ResolvedRequests;
-        readonly List<AnimationPoseSourceId> m_RemoveOutputs;
-        readonly List<AnimationPlaybackId> m_RemoveSampling;
+        readonly Dictionary<string, CharacterMotionMatchingProviderRuntime> m_Providers;
+        readonly CharacterMotionMatchingProviderRuntime[] m_ProviderRuntimes;
+        readonly FrozenOutputSlot[] m_FrozenOutputs;
+        readonly HashSet<string> m_ResolvedProviders;
+        readonly MotionMatchingSelectionBatchItem[] m_Selections;
+        readonly AnimationPoseRequestWorkspace m_SelectionWorkspace;
+        readonly FrozenOutputMutation[] m_FrozenOutputMutations;
+        readonly PreparedHistoryMutation[] m_PreparedHistoryMutations;
 
-        int m_DemandCount;
-        int m_FrameSelectionCount;
-        int m_ResolvedRequestCount;
+        int m_FrozenOutputCount;
+        int m_SelectionCount;
+        int m_FrozenOutputMutationCount;
+        int m_PreparedHistoryMutationCount;
         ulong m_ResetSequence;
         ulong m_PreviousResetSequence;
         ulong m_CompletionSequence;
+        ulong m_SelectionWorkspaceCompletionIdentity;
         ulong m_OpenCompletionIdentity;
         ulong m_OpenPresentationFrame;
         ulong m_OpenResetSequence;
@@ -131,17 +163,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         ulong m_LastCompletedPresentationFrame;
         int m_LastHistoryAppendCount;
         int m_LastHistoryGapCount;
-        MotionMatchingSearchReplayArtifact m_FixtureQuery;
-        string m_FixtureProducerId;
+        MotionMatchingSearchReplayArtifact m_PreviewQuery;
+        string m_PreviewProviderId;
         MotionMatchingPresentationResetReason m_LastResetReason;
+        MotionMatchingPreparedFrameCompletion m_PreparedCompletion;
+        FramePage m_CommittedPage;
+        MotionMatchingFrameMutationLease m_ActiveMutationLease;
+        bool m_PreparedCompletionApplied;
         bool m_FrameOpen;
         bool m_Disposed;
 
         internal CharacterMotionMatchingPresentationModule(
             ActorId actorId,
             CharacterBodyPresentationSourceMode bodySourceMode,
-            CharacterPresentationProjection projection,
-            int sourceCapacity)
+            CharacterPresentationProjection projection)
         {
             if (!actorId.IsValid)
                 throw new ArgumentException("Motion Matching Presentation Module Actor identity is invalid.", nameof(actorId));
@@ -150,17 +185,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 throw new ArgumentOutOfRangeException(nameof(bodySourceMode));
             if (projection == null || projection.MotionMatching == null)
                 throw new ArgumentException("Motion Matching Presentation Module requires a compiled Projection payload.", nameof(projection));
-            if (sourceCapacity <= 0)
-                throw new ArgumentOutOfRangeException(nameof(sourceCapacity));
+            AnimationPoseRequestWorkspaceLayout workspaceLayout =
+                AnimationPoseRequestWorkspaceLayoutFactory.Create(
+                    projection);
 
             m_ActorId = actorId;
             m_BodySourceMode = bodySourceMode;
             m_Projection = projection;
-            m_Demands = new MotionMatchingPlaybackDemand[sourceCapacity];
-            m_FrameSelections = new MotionMatchingFrameSelection[sourceCapacity];
-            m_ResolvedRequests = new MotionMatchingResolvedFrameRequest[sourceCapacity];
-            m_RemoveOutputs = new List<AnimationPoseSourceId>(sourceCapacity);
-            m_RemoveSampling = new List<AnimationPlaybackId>(sourceCapacity);
+            int sourceCapacity = workspaceLayout.SourceCapacity;
+            m_Providers = new Dictionary<string, CharacterMotionMatchingProviderRuntime>(
+                projection.MotionMatching.ProviderBindingCount,
+                StringComparer.Ordinal);
+            m_ProviderRuntimes =
+                new CharacterMotionMatchingProviderRuntime[
+                    projection.MotionMatching.ProviderBindingCount];
+            m_FrozenOutputs = new FrozenOutputSlot[sourceCapacity];
+            m_ResolvedProviders = new HashSet<string>(sourceCapacity, StringComparer.Ordinal);
+            m_Selections = new MotionMatchingSelectionBatchItem[sourceCapacity];
+            m_SelectionWorkspace = new AnimationPoseRequestWorkspace(workspaceLayout);
+            m_FrozenOutputMutations = new FrozenOutputMutation[sourceCapacity];
+            m_PreparedHistoryMutations =
+                new PreparedHistoryMutation[
+                    projection.MotionMatching.ProviderBindingCount];
             string actorSuffix = actorId.ToString();
             m_TrajectoryAdapter = bodySourceMode == CharacterBodyPresentationSourceMode.SelectedStream
                 ? new SelectedBodyTrajectoryAdapter(
@@ -171,32 +217,107 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                     new MotionMatchingTrajectorySourceIdentity("accepted-intent/" + actorSuffix));
             try
             {
-                BuildProducerRuntimes(projection.MotionMatching);
+                BuildProviderRuntimes(projection.MotionMatching);
             }
             catch
             {
-                DisposeProducerRuntimes();
+                DisposeProviderRuntimes();
                 m_TrajectoryAdapter.Dispose();
+                m_SelectionWorkspace.Dispose();
                 throw;
             }
+            m_CommittedPage = ReadPage();
         }
 
         internal bool Enabled => true;
         internal bool AcceptsTrajectoryIntent => m_TrajectoryAdapter.AcceptsIntent;
-        internal int FrozenOutputCount => m_FrozenOutputs.Count;
+        internal int FrozenOutputCount => m_FrozenOutputCount;
         internal ulong LastResolvedCompletionIdentity => m_OpenCompletionIdentity;
         internal ulong LastCompletedPresentationFrame => m_LastCompletedPresentationFrame;
         internal int LastHistoryAppendCount => m_LastHistoryAppendCount;
         internal int LastHistoryGapCount => m_LastHistoryGapCount;
 
-        internal bool HasFrameWork(AnimationPosePlayableGraphRuntime poseRuntime)
+        internal MotionMatchingFrameMutationLease BeginPendingFrame(
+            ulong frameIdentity)
         {
             RequireAlive();
-            if (poseRuntime == null)
-                throw new ArgumentNullException(nameof(poseRuntime));
-            if (m_DemandCount > 0 || m_FrozenOutputs.Count > 0 || m_FixtureQuery != null)
-                return true;
-            return false;
+            if (frameIdentity == 0)
+                throw new ArgumentOutOfRangeException(nameof(frameIdentity));
+            if (m_ActiveMutationLease.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Motion Matching frame mutation is already open.");
+            }
+            LoadPage(in m_CommittedPage);
+            ClearFrameScratch();
+            m_TrajectoryAdapter.BeginFrame();
+            int begunProviders = 0;
+            try
+            {
+                for (int providerIndex = 0;
+                     providerIndex < m_ProviderRuntimes.Length;
+                     providerIndex++)
+                {
+                    m_ProviderRuntimes[providerIndex].BeginFrame();
+                    begunProviders++;
+                }
+                m_ActiveMutationLease =
+                    new MotionMatchingFrameMutationLease(
+                        frameIdentity);
+                return m_ActiveMutationLease;
+            }
+            catch
+            {
+                for (int providerIndex = begunProviders - 1;
+                     providerIndex >= 0;
+                     providerIndex--)
+                    m_ProviderRuntimes[providerIndex].DiscardFrame();
+                m_TrajectoryAdapter.DiscardFrame();
+                ClearFrameScratch();
+                throw;
+            }
+        }
+
+        internal void SealFrame(
+            MotionMatchingFrameMutationLease lease)
+        {
+            RequireMutation(lease);
+            if (m_PreparedCompletion.IsValid &&
+                !m_PreparedCompletionApplied)
+            {
+                throw new InvalidOperationException(
+                    "Motion Matching prepared completion was not applied before Seal.");
+            }
+            for (int providerIndex = 0;
+                 providerIndex < m_ProviderRuntimes.Length;
+                 providerIndex++)
+                m_ProviderRuntimes[providerIndex].CommitFrame();
+            m_TrajectoryAdapter.CommitFrame();
+            ApplyFrozenOutputMutations();
+            m_CommittedPage = ReadPage();
+            ClearFrameScratch();
+            m_ActiveMutationLease = default;
+        }
+
+        internal void DiscardFrame(
+            MotionMatchingFrameMutationLease lease)
+        {
+            RequireMutation(lease);
+            for (int providerIndex = m_ProviderRuntimes.Length - 1;
+                 providerIndex >= 0;
+                 providerIndex--)
+                m_ProviderRuntimes[providerIndex].DiscardFrame();
+            m_TrajectoryAdapter.DiscardFrame();
+            LoadPage(in m_CommittedPage);
+            m_SelectionWorkspace.Reset();
+            ClearFrameScratch();
+            m_ActiveMutationLease = default;
+        }
+
+        internal bool HasFrameWork(in MotionMatchingPoseStateDemandBatch demands)
+        {
+            RequireAlive();
+            return demands.Count > 0 || m_FrozenOutputCount > 0 || m_PreviewQuery != null;
         }
 
         internal void CaptureTrajectoryIntent(CharacterPresentationTrajectoryIntent intent)
@@ -205,165 +326,79 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_TrajectoryAdapter.CaptureIntent(intent);
         }
 
-        internal void CaptureFixtureQuery(
-            string programProducerId,
-            MotionMatchingSearchReplayArtifact fixture)
+        internal void CapturePreviewQuery(
+            string providerId,
+            MotionMatchingSearchReplayArtifact query)
         {
             RequireAlive();
-            if (fixture == null || string.IsNullOrWhiteSpace(programProducerId) ||
-                !m_Producers.ContainsKey(programProducerId) ||
+            if (m_ActiveMutationLease.IsValid)
+                throw new InvalidOperationException("Motion Matching preview query cannot change while a frame mutation is open.");
+            if (query == null || string.IsNullOrWhiteSpace(providerId) ||
+                !m_Providers.ContainsKey(providerId) ||
                 !string.Equals(
-                    fixture.ProjectionIdentity,
+                    query.ProjectionIdentity,
                     $"{m_Projection.ProgramId}@{m_Projection.SourceRevision}:{m_Projection.ContractHash}",
                     StringComparison.Ordinal))
-                throw new InvalidOperationException("Motion Matching Query Fixture identity does not match this Module.");
-            if (m_FixtureQuery != null)
-                throw new InvalidOperationException("Motion Matching Module already has a pending Query Fixture input.");
-            if (fixture.ResetSequence != m_ResetSequence)
-                Reset(fixture.ResetSequence, MotionMatchingPresentationResetReason.PresentationReset, false);
-            m_FixtureProducerId = programProducerId;
-            m_FixtureQuery = fixture;
-        }
-
-        internal void PublishSample(
-            AnimationPlaybackId playbackId,
-            CharacterPresentationProducerEntry producer)
-        {
-            RequireAlive();
-            RequireProducer(producer);
-            if (!playbackId.IsValid || !playbackId.ProducerId.Equals(producer.ProducerId))
-                throw new ArgumentException("Motion Matching sample Playback identity is invalid.", nameof(playbackId));
-            m_Sampling[playbackId] = producer;
-        }
-
-        internal void ReplaceSample(
-            AnimationPlaybackId playbackId,
-            CharacterPresentationProducerEntry producer)
-        {
-            RequireAlive();
-            RequireProducer(producer);
-            if (!playbackId.IsValid || !playbackId.ProducerId.Equals(producer.ProducerId))
-                throw new ArgumentException("Motion Matching replacement Playback identity is invalid.", nameof(playbackId));
-            RequireProducerRuntime(producer.ProgramProducerIdentity).Reset(m_ResetSequence);
-            m_LastResetReason = MotionMatchingPresentationResetReason.AnimationBranchReplacement;
-            m_Sampling[playbackId] = producer;
-        }
-
-        internal void ReplaceSelection(
-            CharacterPresentationProducerEntry current,
-            CharacterPresentationProducerEntry replacement)
-        {
-            RequireAlive();
-            if (current?.AnimationSourceKind == AnimationPoseSourceKind.MotionMatching)
-                RequireProducerRuntime(current.ProgramProducerIdentity).Reset(m_ResetSequence);
-            if (replacement?.AnimationSourceKind == AnimationPoseSourceKind.MotionMatching &&
-                (current == null || !string.Equals(
-                    current.ProgramProducerIdentity,
-                    replacement.ProgramProducerIdentity,
-                    StringComparison.Ordinal)))
-                RequireProducerRuntime(replacement.ProgramProducerIdentity).Reset(m_ResetSequence);
-            m_LastResetReason = MotionMatchingPresentationResetReason.AnimationBranchReplacement;
-        }
-
-        internal void RetireSample(AnimationPlaybackId playbackId, bool retained)
-        {
-            RequireAlive();
-            if (retained || !m_Sampling.TryGetValue(playbackId, out CharacterPresentationProducerEntry producer))
-                return;
-            RequireProducerRuntime(producer.ProgramProducerIdentity).ReleaseDomain();
-            m_Sampling.Remove(playbackId);
-            RemoveFrozenOutputs(playbackId);
-        }
-
-        internal bool ContainsSampling(AnimationPlaybackId playbackId) =>
-            m_Sampling.ContainsKey(playbackId);
-
-        internal bool TryGetSamplingChannel(
-            AnimationPlaybackId playbackId,
-            out AnimationChannelId animationChannelId)
-        {
-            RequireAlive();
-            if (m_Sampling.TryGetValue(playbackId, out CharacterPresentationProducerEntry producer))
-            {
-                animationChannelId = producer.AnimationChannelId;
-                return true;
-            }
-            animationChannelId = default;
-            return false;
-        }
-
-        internal void BeginDemandFrame()
-        {
-            RequireAlive();
-            if (m_FrameOpen)
-                throw FrameFailure(
-                    MotionMatchingFrameTransactionInvalidReason.PreviousFrameIncomplete,
-                    "Motion Matching cannot begin demand collection before the previous frame completes.");
-            Array.Clear(m_Demands, 0, m_DemandCount);
-            m_DemandCount = 0;
-        }
-
-        internal void SubmitDemand(AnimationPlaybackId playbackId)
-        {
-            RequireAlive();
-            if (!m_Sampling.TryGetValue(playbackId, out CharacterPresentationProducerEntry producer))
-                throw new InvalidOperationException($"Motion Matching Playback '{playbackId}' has no sampled producer.");
-            for (int i = 0; i < m_DemandCount; i++)
-            {
-                if (m_Demands[i].PlaybackId.Equals(playbackId))
-                    throw FrameFailure(
-                        MotionMatchingFrameTransactionInvalidReason.DuplicateDemand,
-                        $"Motion Matching Playback '{playbackId}' was demanded twice in one frame.");
-            }
-            if (m_DemandCount >= m_Demands.Length)
-                throw FrameFailure(
-                    MotionMatchingFrameTransactionInvalidReason.DemandCapacityExceeded,
-                    "Motion Matching playback demand capacity was exceeded.");
-            m_Demands[m_DemandCount++] = new MotionMatchingPlaybackDemand(playbackId, producer);
+                throw new InvalidOperationException("Motion Matching preview query identity does not match this Module.");
+            if (m_PreviewQuery != null)
+                throw new InvalidOperationException("Motion Matching Module already has a pending preview query.");
+            if (query.ResetSequence != m_ResetSequence)
+                Reset(
+                    query.ResetSequence,
+                    MotionMatchingPresentationResetReason
+                        .PresentationReset);
+            m_PreviewProviderId = providerId;
+            m_PreviewQuery = query;
+            m_CommittedPage = ReadPage();
         }
 
         internal MotionMatchingFrameResolution ResolveFrame(
             ulong presentationFrame,
             float presentationDeltaSeconds,
             in CharacterBodyPresentationFrame bodyFrame,
-            AnimationPoseRequestWorkspace requestWorkspace,
-            AnimationPosePlayableGraphRuntime poseRuntime,
-            Func<ulong> nextPresentationRequestSequence,
+            in MotionMatchingPoseStateDemandBatch demands,
             RuntimeDiagnosticsContext diagnostics)
         {
             RequireAlive();
-            MotionMatchingSearchReplayArtifact fixtureQuery = m_FixtureQuery;
-            string fixtureProducerId = m_FixtureProducerId;
-            bool fixtureFrame = fixtureQuery != null;
+            RequireOpenMutation();
+            MotionMatchingSearchReplayArtifact previewQuery = m_PreviewQuery;
+            string previewProviderId = m_PreviewProviderId;
+            bool previewFrame = previewQuery != null;
             if (presentationFrame == m_LastResolvedPresentationFrame)
                 throw FrameFailure(
                     MotionMatchingFrameTransactionInvalidReason.DuplicateResolve,
                     "Motion Matching cannot Resolve twice in one Presentation frame.");
             if (presentationFrame == 0 ||
-                !fixtureFrame && (!bodyFrame.IsValid || bodyFrame.SourceMode != m_BodySourceMode) ||
+                !previewFrame && (!bodyFrame.IsValid || bodyFrame.SourceMode != m_BodySourceMode) ||
                 !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f ||
-                requestWorkspace == null || poseRuntime == null || nextPresentationRequestSequence == null)
+                demands.PresentationFrame != presentationFrame)
                 throw new ArgumentException("Motion Matching Resolve frame input is invalid.");
             if (m_FrameOpen)
                 throw FrameFailure(
                     MotionMatchingFrameTransactionInvalidReason.PreviousFrameIncomplete,
                     "Motion Matching cannot Resolve a new frame before the previous frame completes.");
-            if (!fixtureFrame && bodyFrame.ResetSequence != m_ResetSequence)
+            if (!previewFrame && bodyFrame.ResetSequence != m_ResetSequence)
                 throw FrameFailure(
                     MotionMatchingFrameTransactionInvalidReason.ResetIdentityMismatch,
                     "Motion Matching Body Reset identity was not applied before Resolve.");
 
-            ulong frameResetSequence = fixtureFrame ? fixtureQuery.ResetSequence : bodyFrame.ResetSequence;
-            if (fixtureFrame && frameResetSequence != m_ResetSequence)
-                Reset(frameResetSequence, MotionMatchingPresentationResetReason.PresentationReset, false);
+            ulong frameResetSequence = previewFrame ? previewQuery.ResetSequence : bodyFrame.ResetSequence;
+            if (!previewFrame && demands.ResetSequence != frameResetSequence)
+                throw FrameFailure(
+                    MotionMatchingFrameTransactionInvalidReason.ResetIdentityMismatch,
+                    "Motion Matching Pose State demand Reset identity does not match the Body frame.");
+            if (previewFrame && frameResetSequence != m_ResetSequence)
+                Reset(
+                    frameResetSequence,
+                    MotionMatchingPresentationResetReason
+                        .PresentationReset);
 
-            m_ResolvedProducers.Clear();
-            Array.Clear(m_FrameSelections, 0, m_FrameSelectionCount);
-            Array.Clear(m_ResolvedRequests, 0, m_ResolvedRequestCount);
-            m_FrameSelectionCount = 0;
-            m_ResolvedRequestCount = 0;
+            m_ResolvedProviders.Clear();
+            Array.Clear(m_Selections, 0, m_SelectionCount);
+            m_SelectionCount = 0;
+            m_SelectionWorkspace.BeginFrame(NextSelectionWorkspaceCompletionIdentity());
             MotionMatchingTrajectorySourceFrame trajectoryFrame = default;
-            bool hasTrajectory = fixtureFrame || m_DemandCount == 0;
+            bool hasTrajectory = previewFrame || demands.Count == 0;
             if (!hasTrajectory)
                 hasTrajectory = m_TrajectoryAdapter.TryResolve(in bodyFrame, out trajectoryFrame);
             if (!hasTrajectory)
@@ -371,50 +406,62 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                     MotionMatchingFrameTransactionInvalidReason.MissingTrajectory,
                     "Selected Motion Matching playback requires a formal trajectory input for the current Body branch.");
 
-            for (int demandIndex = 0; demandIndex < m_DemandCount; demandIndex++)
+            for (int demandIndex = 0; demandIndex < demands.Count; demandIndex++)
             {
-                MotionMatchingPlaybackDemand demand = m_Demands[demandIndex];
-                CharacterMotionMatchingProducerRuntime runtime = RequireProducerRuntime(
-                    demand.Producer.ProgramProducerIdentity);
-                if (fixtureFrame && (m_DemandCount != 1 ||
-                                     !string.Equals(demand.Producer.ProgramProducerIdentity, fixtureProducerId, StringComparison.Ordinal)))
+                MotionMatchingPoseStateDemand demand = demands.GetDemand(demandIndex);
+                if (demand.ResetSequence != frameResetSequence)
                     throw FrameFailure(
-                        MotionMatchingFrameTransactionInvalidReason.FixtureDemandMismatch,
-                        "Motion Matching Query Fixture must target one selected producer demand.");
-                MotionMatchingPoseSourceOutput output = fixtureFrame
-                    ? runtime.ResolveFixture(
+                        MotionMatchingFrameTransactionInvalidReason.ResetIdentityMismatch,
+                        $"Motion Matching provider '{demand.ProviderId}' demand has a stale Reset identity.");
+                if (!m_ResolvedProviders.Add(demand.ProviderId))
+                    throw FrameFailure(
+                        MotionMatchingFrameTransactionInvalidReason.DuplicateDemand,
+                        $"Motion Matching provider '{demand.ProviderId}' was demanded more than once.");
+                CharacterMotionMatchingProviderRuntime runtime = RequireProviderRuntime(demand.ProviderId);
+                if (previewFrame && (demands.Count != 1 ||
+                                     !string.Equals(demand.ProviderId, previewProviderId, StringComparison.Ordinal)))
+                    throw FrameFailure(
+                        MotionMatchingFrameTransactionInvalidReason.PreviewDemandMismatch,
+                        "Motion Matching preview query must target one exact provider demand.");
+                MotionMatchingPoseSourceOutput output = previewFrame
+                    ? runtime.ResolvePreviewQuery(
                         presentationFrame,
                         presentationDeltaSeconds,
-                        fixtureQuery,
-                        demand.PlaybackId,
-                        nextPresentationRequestSequence(),
-                        demand.Producer.ProgramProducerIndex,
+                        previewQuery,
                         diagnostics)
                     : runtime.Resolve(
                         presentationFrame,
                         presentationDeltaSeconds,
                         trajectoryFrame,
-                        demand.PlaybackId,
-                        nextPresentationRequestSequence(),
-                        demand.Producer.ProgramProducerIndex,
                         diagnostics);
                 var sourceId = new AnimationPoseSourceId(
-                    output.PlaybackId,
+                    output.SourceIndex,
                     AnimationPoseSourceKind.MotionMatching,
                     new AnimationPoseSelectionGeneration(output.SelectionGeneration.Value));
-                m_FrozenOutputs[sourceId] = output;
-                AddRequest(in output, requestWorkspace, true);
-                m_ResolvedProducers.Add(runtime.ProgramProducerId);
-                if (m_FrameSelectionCount >= m_FrameSelections.Length)
-                    throw FrameFailure(
-                        MotionMatchingFrameTransactionInvalidReason.DemandCapacityExceeded,
-                        "Motion Matching frame selection capacity was exceeded.");
-                m_FrameSelections[m_FrameSelectionCount++] = new MotionMatchingFrameSelection(runtime, demand.PlaybackId);
+                var frozen = new MotionMatchingFrozenSelection(
+                    demand.ProviderId,
+                    demand.StateMachineIndex,
+                    demand.StateIndex,
+                    demand.PlayerIndex,
+                    demand.PlayerNodeId,
+                    new PoseSourceProviderDemandGeneration(
+                        demand.RelevanceGeneration),
+                    in output);
+                StageFrozenOutput(sourceId, in frozen);
+                AddSelection(
+                    in frozen,
+                    presentationFrame,
+                    true,
+                    runtime);
             }
-            AddRetainedRequests(poseRuntime, requestWorkspace);
-            foreach (CharacterMotionMatchingProducerRuntime runtime in m_Producers.Values)
+            AddRetainedSelections(presentationFrame);
+            for (int providerIndex = 0;
+                 providerIndex < m_ProviderRuntimes.Length;
+                 providerIndex++)
             {
-                if (!m_ResolvedProducers.Contains(runtime.ProgramProducerId))
+                CharacterMotionMatchingProviderRuntime runtime =
+                    m_ProviderRuntimes[providerIndex];
+                if (!m_ResolvedProviders.Contains(runtime.ProviderId))
                     runtime.ReleaseDomain();
             }
 
@@ -424,143 +471,210 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_OpenResetSequence = frameResetSequence;
             m_LastResolvedPresentationFrame = presentationFrame;
             m_FrameOpen = true;
-            m_DemandCount = 0;
-            m_FixtureQuery = null;
-            m_FixtureProducerId = null;
-            PublishFrameDiagnostics(diagnostics, "Resolved", completionIdentity, m_ResolvedRequestCount, 0, 0);
+            m_PreviewQuery = null;
+            m_PreviewProviderId = null;
+            PublishFrameDiagnostics(diagnostics, "Resolved", completionIdentity, m_SelectionCount, 0, 0);
             return new MotionMatchingFrameResolution(
                 presentationFrame,
                 frameResetSequence,
                 completionIdentity,
-                m_ResolvedRequests,
-                m_ResolvedRequestCount,
-                m_ResolvedProducers.Count,
-                m_FrameSelectionCount > 0);
+                m_Selections,
+                m_SelectionCount,
+                m_ResolvedProviders.Count,
+                m_ResolvedProviders.Count > 0);
+        }
+
+        internal MotionMatchingPreparedFrameCompletion
+            PrepareFrameCompletion(
+                in MotionMatchingFrameResolution resolution,
+                ulong posePlanCompletionIdentity)
+        {
+            RequireAlive();
+            RequireOpenMutation();
+            ValidateOpenResolution(in resolution);
+            if (posePlanCompletionIdentity == 0)
+                throw new ArgumentOutOfRangeException(
+                    nameof(posePlanCompletionIdentity));
+            if (m_PreparedCompletion.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Motion Matching frame completion is already prepared.");
+            }
+
+            ValidateFrozenCandidates(in resolution);
+            m_PreparedHistoryMutationCount = 0;
+            for (int selectionIndex = 0;
+                 selectionIndex < resolution.SelectionCount;
+                 selectionIndex++)
+            {
+                MotionMatchingSelectionBatchItem selection =
+                    resolution.GetSelection(selectionIndex);
+                if (!selection.RequiresHistory)
+                    continue;
+                if (m_PreparedHistoryMutationCount >=
+                    m_PreparedHistoryMutations.Length)
+                {
+                    throw FrameFailure(
+                        MotionMatchingFrameTransactionInvalidReason
+                            .SelectionCapacityExceeded,
+                        "Motion Matching history mutation capacity was exceeded.");
+                }
+                CharacterMotionMatchingProviderRuntime runtime =
+                    RequireProviderRuntime(selection.ProviderId);
+                if (runtime.PoseNodeId != selection.PlayerNodeId ||
+                    runtime.PresentationPoseSourceIndex !=
+                    selection.SourceSample.SourceIndex)
+                {
+                    throw FrameFailure(
+                        MotionMatchingFrameTransactionInvalidReason
+                            .HistoryBindingMismatch,
+                        $"Motion Matching provider '{selection.ProviderId}' history binding does not match its compiled Player and source index.");
+                }
+                runtime.PrepareBasePoseCompletion(
+                    resolution.PresentationFrame,
+                    selection.SourceSample.SourceIndex,
+                    new MotionMatchingSelectionGeneration(
+                        selection.SourceSample.SourceGeneration.Value));
+                m_PreparedHistoryMutations[
+                    m_PreparedHistoryMutationCount++] =
+                    new PreparedHistoryMutation
+                    {
+                        Runtime = runtime,
+                        ProviderId = selection.ProviderId,
+                        PlayerNodeId = selection.PlayerNodeId,
+                        SourceId = selection.SourceIdentity
+                    };
+            }
+
+            m_PreparedCompletion =
+                new MotionMatchingPreparedFrameCompletion(
+                    resolution.PresentationFrame,
+                    resolution.ResetSequence,
+                    resolution.CompletionIdentity,
+                    posePlanCompletionIdentity,
+                    m_PreparedHistoryMutationCount);
+            m_PreparedCompletionApplied = false;
+            return m_PreparedCompletion;
         }
 
         internal void CompleteFrame(
-            in MotionMatchingFrameResolution resolution,
-            AnimationPosePlayableGraphRuntime poseRuntime,
-            RuntimeDiagnosticsContext diagnostics)
+            in MotionMatchingPosePlanCompletion posePlanCompletion)
         {
             RequireAlive();
-            if (!m_FrameOpen || resolution.CompletionIdentity == 0)
+            RequireOpenMutation();
+            if (!m_PreparedCompletion.IsValid ||
+                m_PreparedCompletionApplied)
                 throw FrameFailure(
                     MotionMatchingFrameTransactionInvalidReason.MissingResolve,
-                    "Motion Matching Complete has no open Resolve frame transaction.");
-            if (resolution.CompletionIdentity != m_OpenCompletionIdentity)
+                    "Motion Matching Complete has no prepared frame completion.");
+            if (posePlanCompletion.SelectionCompletionIdentity !=
+                    m_PreparedCompletion.SelectionCompletionIdentity ||
+                posePlanCompletion.PresentationFrame !=
+                    m_PreparedCompletion.PresentationFrame ||
+                posePlanCompletion.ResetSequence !=
+                    m_PreparedCompletion.ResetSequence ||
+                posePlanCompletion.PosePlanCompletionIdentity !=
+                    m_PreparedCompletion.PosePlanCompletionIdentity ||
+                posePlanCompletion.HistoryCount !=
+                    m_PreparedCompletion.HistoryCount)
                 throw FrameFailure(
-                    MotionMatchingFrameTransactionInvalidReason.CompletionIdentityMismatch,
-                    "Motion Matching Complete identity does not match the open Resolve frame transaction.");
-            if (resolution.PresentationFrame != m_OpenPresentationFrame)
-                throw FrameFailure(
-                    MotionMatchingFrameTransactionInvalidReason.PresentationFrameMismatch,
-                    "Motion Matching Complete Presentation frame does not match Resolve.");
-            if (resolution.ResetSequence != m_OpenResetSequence || resolution.ResetSequence != m_ResetSequence)
-                throw FrameFailure(
-                    MotionMatchingFrameTransactionInvalidReason.ResetIdentityMismatch,
-                    "Motion Matching Complete Reset identity does not match Resolve.");
-            if (poseRuntime == null)
-                throw new ArgumentNullException();
+                    MotionMatchingFrameTransactionInvalidReason.PosePlanCompletionMismatch,
+                    "Motion Matching Pose Plan completion token does not match the prepared frame completion.");
 
             int appended = 0;
             int gaps = 0;
-            for (int selectionIndex = 0; selectionIndex < m_FrameSelectionCount; selectionIndex++)
+            for (int historyIndex = 0;
+                 historyIndex < m_PreparedHistoryMutationCount;
+                 historyIndex++)
             {
-                MotionMatchingFrameSelection selection = m_FrameSelections[selectionIndex];
-                CharacterMotionMatchingProducerRuntime runtime = selection.Runtime;
-                if (!poseRuntime.TryCopyPlayerPose(
-                        runtime.PoseNodeId,
-                        runtime.FeatureRigBoneIndices,
-                        runtime.FeatureBonePositionWorkspace,
-                        out AnimationFootPlacementSample footPlacement))
+                PreparedHistoryMutation mutation =
+                    m_PreparedHistoryMutations[historyIndex];
+                MotionMatchingPosePlanHistoryCompletion history =
+                    posePlanCompletion.GetHistory(historyIndex);
+                AnimationFootPlacementSample footPlacement =
+                    history.FootPlacement;
+                MotionMatchingHistoryCompletionOutcome outcome =
+                    mutation.Runtime.CompletePreparedBasePose(
+                        history.PoseAvailable,
+                        in footPlacement);
+                if (outcome ==
+                    MotionMatchingHistoryCompletionOutcome.Appended)
                 {
-                    runtime.History.MarkGap(m_ResetSequence);
-                    gaps++;
-                    continue;
+                    appended++;
                 }
-                runtime.AppendBasePose(resolution.PresentationFrame, selection.PlaybackId, footPlacement);
-                appended++;
+                else if (outcome ==
+                         MotionMatchingHistoryCompletionOutcome.Gap)
+                {
+                    gaps++;
+                }
             }
 
-            PruneFrozenOutputs(poseRuntime);
-            m_LastCompletedPresentationFrame = resolution.PresentationFrame;
+            MarkRetainedFrozenOutputs(in posePlanCompletion);
+            m_LastCompletedPresentationFrame =
+                m_PreparedCompletion.PresentationFrame;
             m_LastHistoryAppendCount = appended;
             m_LastHistoryGapCount = gaps;
             m_FrameOpen = false;
             m_OpenCompletionIdentity = 0;
             m_OpenPresentationFrame = 0;
             m_OpenResetSequence = 0;
-            Array.Clear(m_FrameSelections, 0, m_FrameSelectionCount);
-            m_FrameSelectionCount = 0;
-            PublishFrameDiagnostics(
-                diagnostics,
-                "Completed",
-                resolution.CompletionIdentity,
-                resolution.RequestCount,
-                appended,
-                gaps);
+            m_PreparedCompletionApplied = true;
         }
 
-        internal void PruneUnreferencedSampling(
-            AnimationPlaybackLifecycle lifecycle,
-            AnimationPosePlayableGraphRuntime poseRuntime,
-            Func<AnimationPlaybackId, bool> hasRawSelection,
-            List<AnimationPlaybackId> retiredPlaybacks)
+        internal void PublishCommittedFrameDiagnostics(
+            RuntimeDiagnosticsContext diagnostics,
+            in MotionMatchingFrameResolution resolution)
         {
             RequireAlive();
-            if (lifecycle == null || poseRuntime == null || hasRawSelection == null || retiredPlaybacks == null)
-                throw new ArgumentNullException();
-            m_RemoveSampling.Clear();
-            foreach (AnimationPlaybackId playbackId in m_Sampling.Keys)
+            if (resolution.CompletionIdentity == 0 ||
+                resolution.PresentationFrame !=
+                    m_LastCompletedPresentationFrame ||
+                m_FrameOpen ||
+                m_ActiveMutationLease.IsValid)
             {
-                if (!lifecycle.Retains(playbackId, poseRuntime) && !hasRawSelection(playbackId))
-                    m_RemoveSampling.Add(playbackId);
+                throw new InvalidOperationException(
+                    "Motion Matching committed diagnostics have no completed frame.");
             }
-            for (int i = 0; i < m_RemoveSampling.Count; i++)
-            {
-                AnimationPlaybackId playbackId = m_RemoveSampling[i];
-                m_Sampling.Remove(playbackId);
-                retiredPlaybacks.Add(playbackId);
-            }
+            PublishFrameDiagnostics(
+                diagnostics,
+                "Committed",
+                resolution.CompletionIdentity,
+                resolution.SelectionCount,
+                m_LastHistoryAppendCount,
+                m_LastHistoryGapCount);
         }
 
         internal bool TryCaptureSearchReplay(
-            string programProducerId,
+            string providerId,
             out MotionMatchingSearchReplayArtifact artifact)
         {
             RequireAlive();
             artifact = null;
-            return !string.IsNullOrWhiteSpace(programProducerId) &&
-                   m_Producers.TryGetValue(programProducerId, out CharacterMotionMatchingProducerRuntime runtime) &&
+            return !string.IsNullOrWhiteSpace(providerId) &&
+                   m_Providers.TryGetValue(providerId, out CharacterMotionMatchingProviderRuntime runtime) &&
                    runtime.TryCaptureSearchReplay(out artifact);
         }
 
         internal void Reset(
             ulong resetSequence,
-            MotionMatchingPresentationResetReason reason,
-            bool clearSampling)
+            MotionMatchingPresentationResetReason reason)
         {
             RequireAlive();
+            if (m_ActiveMutationLease.IsValid)
+                throw new InvalidOperationException("Motion Matching Module cannot reset while a frame mutation is open.");
             if (!Enum.IsDefined(typeof(MotionMatchingPresentationResetReason), reason))
                 throw new ArgumentOutOfRangeException(nameof(reason));
             m_TrajectoryAdapter.Reset(resetSequence);
-            foreach (CharacterMotionMatchingProducerRuntime runtime in m_Producers.Values)
-                runtime.Reset(resetSequence);
-            if (clearSampling)
-                m_Sampling.Clear();
-            m_FrozenOutputs.Clear();
-            m_ResolvedProducers.Clear();
-            if (clearSampling)
-                Array.Clear(m_Demands, 0, m_DemandCount);
-            Array.Clear(m_FrameSelections, 0, m_FrameSelectionCount);
-            Array.Clear(m_ResolvedRequests, 0, m_ResolvedRequestCount);
-            if (clearSampling)
-                m_DemandCount = 0;
-            m_FrameSelectionCount = 0;
-            m_ResolvedRequestCount = 0;
-            m_RemoveOutputs.Clear();
-            m_RemoveSampling.Clear();
+            for (int providerIndex = 0;
+                 providerIndex < m_ProviderRuntimes.Length;
+                 providerIndex++)
+            {
+                m_ProviderRuntimes[providerIndex].Reset(resetSequence);
+            }
+            Array.Clear(m_FrozenOutputs, 0, m_FrozenOutputs.Length);
+            m_FrozenOutputCount = 0;
+            ClearFrameScratch();
+            m_SelectionWorkspace.Reset();
             m_PreviousResetSequence = m_ResetSequence;
             m_ResetSequence = resetSequence;
             m_OpenCompletionIdentity = 0;
@@ -571,9 +685,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_LastHistoryAppendCount = 0;
             m_LastHistoryGapCount = 0;
             m_LastResetReason = reason;
-            m_FixtureQuery = null;
-            m_FixtureProducerId = null;
+            m_PreviewQuery = null;
+            m_PreviewProviderId = null;
             m_FrameOpen = false;
+            m_CommittedPage = ReadPage();
         }
 
         public void Dispose()
@@ -583,136 +698,381 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_Disposed = true;
             m_FrameOpen = false;
             m_TrajectoryAdapter.Dispose();
-            DisposeProducerRuntimes();
-            m_Sampling.Clear();
-            m_FrozenOutputs.Clear();
-            m_ResolvedProducers.Clear();
-            m_RemoveOutputs.Clear();
-            m_RemoveSampling.Clear();
-            m_FixtureQuery = null;
-            m_FixtureProducerId = null;
+            DisposeProviderRuntimes();
+            m_SelectionWorkspace.Dispose();
+            Array.Clear(m_FrozenOutputs, 0, m_FrozenOutputs.Length);
+            m_FrozenOutputCount = 0;
+            ClearFrameScratch();
+            m_PreviewQuery = null;
+            m_PreviewProviderId = null;
         }
 
-        void BuildProducerRuntimes(MotionMatchingProjectionPayload payload)
+        void BuildProviderRuntimes(MotionMatchingProjectionPayload payload)
         {
-            for (int bindingIndex = 0; bindingIndex < payload.ProducerBindingCount; bindingIndex++)
+            for (int bindingIndex = 0; bindingIndex < payload.ProviderBindingCount; bindingIndex++)
             {
-                MotionMatchingProducerBindingPayload binding = payload.GetProducerBinding(bindingIndex);
-                if (!m_Projection.TryGetProducer(binding.ProgramProducerId, out CharacterPresentationProducerEntry producer) ||
-                    producer.Kind != CharacterPresentationProducerKind.Animation ||
-                    producer.AnimationSourceKind != AnimationPoseSourceKind.MotionMatching ||
-                    !producer.AnimationChannelId.Equals(binding.AnimationChannelId) ||
-                    !HasSelectionInput(binding))
-                    throw new InvalidOperationException($"Motion Matching producer binding '{binding.ProgramProducerId}' does not match the Projection producer.");
-                m_Producers.Add(
-                    binding.ProgramProducerId,
-                    new CharacterMotionMatchingProducerRuntime(
+                MotionMatchingProviderBindingPayload binding = payload.GetProviderBinding(bindingIndex);
+                if (!HasProviderUsage(binding))
+                    throw new InvalidOperationException($"Motion Matching provider binding '{binding.ProviderId}' does not match the Projection source.");
+                var runtime =
+                    new CharacterMotionMatchingProviderRuntime(
                         $"{m_Projection.ProgramId}@{m_Projection.SourceRevision}:{m_Projection.ContractHash}",
                         payload,
                         binding,
-                        m_Projection.Rig));
+                        m_Projection.Rig);
+                try
+                {
+                    m_Providers.Add(binding.ProviderId, runtime);
+                    m_ProviderRuntimes[bindingIndex] = runtime;
+                }
+                catch
+                {
+                    runtime.Dispose();
+                    throw;
+                }
             }
-            if (m_Producers.Count == 0)
-                throw new InvalidOperationException("Motion Matching Projection payload has no producer runtime binding.");
+            if (m_Providers.Count == 0)
+                throw new InvalidOperationException("Motion Matching Projection payload has no provider runtime binding.");
         }
 
-        bool HasSelectionInput(MotionMatchingProducerBindingPayload binding)
+        bool HasProviderUsage(
+            MotionMatchingProviderBindingPayload binding)
         {
             int count = 0;
-            for (int i = 0; i < m_Projection.PosePlan.SelectionInputs.Count; i++)
+            for (int machineIndex = 0;
+                 machineIndex <
+                 m_Projection.PosePlan.StateMachines.Count;
+                 machineIndex++)
             {
-                CharacterPresentationSelectionInputEntry input = m_Projection.PosePlan.SelectionInputs[i];
-                if (input.MotionMatching && input.NodeId == binding.PoseNodeId &&
-                    input.AnimationChannelId == binding.AnimationChannelId &&
-                    string.Equals(input.ProgramProducerId, binding.ProgramProducerId, StringComparison.Ordinal))
-                    count++;
+                CharacterPoseStateMachineDescriptor machine =
+                    m_Projection.PosePlan.StateMachines[
+                        machineIndex];
+                for (int stateIndex = 0;
+                     stateIndex < machine.States.Count;
+                     stateIndex++)
+                {
+                    IReadOnlyList<PoseStateSourceProviderPlan>
+                        providers =
+                            machine.States[stateIndex]
+                                .SourceProviders;
+                    for (int providerIndex = 0;
+                         providerIndex < providers.Count;
+                         providerIndex++)
+                    {
+                        PoseStateSourceProviderPlan provider =
+                            providers[providerIndex];
+                        if (provider.SourceKind ==
+                                AnimationPoseSourceKind
+                                    .MotionMatching &&
+                            provider.ProviderId.Value ==
+                                binding.ProviderId &&
+                            provider.PresentationPoseSourceIndex ==
+                                binding
+                                    .PresentationPoseSourceIndex &&
+                            provider.PlayerNodeId ==
+                                binding.PoseNodeId)
+                        {
+                            count++;
+                        }
+                    }
+                }
             }
             return count == 1;
         }
 
-        void AddRetainedRequests(
-            AnimationPosePlayableGraphRuntime poseRuntime,
-            AnimationPoseRequestWorkspace requestWorkspace)
+        void AddRetainedSelections(ulong presentationFrame)
         {
-            foreach (KeyValuePair<AnimationPoseSourceId, MotionMatchingPoseSourceOutput> pair in m_FrozenOutputs)
+            for (int slotIndex = 0;
+                 slotIndex < m_FrozenOutputs.Length;
+                 slotIndex++)
             {
-                if (!poseRuntime.RetainsSource(pair.Key) || ContainsResolvedRequest(pair.Key))
+                FrozenOutputSlot slot = m_FrozenOutputs[slotIndex];
+                if (!slot.InUse ||
+                    ContainsSelection(
+                        slot.Frozen.PlayerNodeId,
+                        slot.SourceId))
                     continue;
-                MotionMatchingPoseSourceOutput output = pair.Value;
-                AddRequest(in output, requestWorkspace, false);
+                MotionMatchingFrozenSelection frozen = slot.Frozen;
+                AddSelection(
+                    in frozen,
+                    presentationFrame,
+                    false,
+                    null);
             }
         }
 
-        void AddRequest(
-            in MotionMatchingPoseSourceOutput output,
-            AnimationPoseRequestWorkspace requestWorkspace,
-            bool submitToLifecycle)
+        void AddSelection(
+            in MotionMatchingFrozenSelection frozen,
+            ulong presentationFrame,
+            bool requiresHistory,
+            CharacterMotionMatchingProviderRuntime runtime)
         {
+            MotionMatchingPoseSourceOutput output = frozen.Output;
             var sourceId = new AnimationPoseSourceId(
-                output.PlaybackId,
+                output.SourceIndex,
                 AnimationPoseSourceKind.MotionMatching,
                 new AnimationPoseSelectionGeneration(output.SelectionGeneration.Value));
-            if (ContainsResolvedRequest(sourceId))
+            if (ContainsSelection(frozen.PlayerNodeId, sourceId))
                 return;
-            if (m_ResolvedRequestCount >= m_ResolvedRequests.Length)
+            if (m_SelectionCount >= m_Selections.Length)
                 throw FrameFailure(
-                    MotionMatchingFrameTransactionInvalidReason.RequestCapacityExceeded,
-                    "Motion Matching resolved request capacity was exceeded.");
-            AnimationSourcePoseSample sourceSample = MotionMatchingSelectionFactory.Create(
+                    MotionMatchingFrameTransactionInvalidReason.SelectionCapacityExceeded,
+                    "Motion Matching Selection batch capacity was exceeded.");
+            PresentationPoseSourceSample sourceSample =
+                MotionMatchingSelectionFactory.Create(
                 in output,
-                m_Projection.PosePlan,
-                requestWorkspace);
-            m_ResolvedRequests[m_ResolvedRequestCount++] = new MotionMatchingResolvedFrameRequest(
+                m_Projection,
+                m_SelectionWorkspace);
+            if (sourceSample.FrameSequence != presentationFrame)
+            {
+                sourceSample =
+                    PresentationPoseSourceSample.Ready(
+                        sourceSample.ProviderId,
+                        sourceSample.PlayerNodeId,
+                        sourceSample.SourceIndex,
+                        sourceSample.SourceKind,
+                        sourceSample.ProjectionDatabaseIndex,
+                        sourceSample.SourceGeneration,
+                        sourceSample
+                            .SourcePoseContinuityIdentity,
+                        presentationFrame,
+                        sourceSample.RawSample,
+                        sourceSample.EffectiveSample,
+                        sourceSample.Clips,
+                        sourceSample.ParameterPageId,
+                        sourceSample.PoseParameters,
+                        sourceSample
+                            .PoseParameterAvailability,
+                        sourceSample.LeftFootFeatures,
+                        sourceSample.RightFootFeatures,
+                        sourceSample.HasFootFeatures);
+            }
+            m_Selections[m_SelectionCount++] = new MotionMatchingSelectionBatchItem(
+                frozen.ProviderId,
+                frozen.StateMachineIndex,
+                frozen.StateIndex,
+                frozen.PlayerIndex,
+                frozen.PlayerNodeId,
+                frozen.DemandGeneration,
                 in sourceSample,
-                submitToLifecycle);
+                requiresHistory,
+                requiresHistory,
+                requiresHistory ? runtime.FeatureRigBoneIndices : null,
+                requiresHistory ? runtime.FeatureBonePositionWorkspace : null);
         }
 
-        bool ContainsResolvedRequest(AnimationPoseSourceId sourceId)
+        bool ContainsSelection(PoseNodeId playerNodeId, AnimationPoseSourceId sourceId)
         {
-            for (int i = 0; i < m_ResolvedRequestCount; i++)
+            for (int i = 0; i < m_SelectionCount; i++)
             {
-                if (m_ResolvedRequests[i].Selection.SourceId.Equals(sourceId))
+                MotionMatchingSelectionBatchItem selection = m_Selections[i];
+                if (selection.PlayerNodeId == playerNodeId &&
+                    selection.SourceIdentity.Equals(sourceId))
                     return true;
             }
             return false;
         }
 
-        void PruneFrozenOutputs(AnimationPosePlayableGraphRuntime poseRuntime)
+        void ValidateOpenResolution(
+            in MotionMatchingFrameResolution resolution)
         {
-            m_RemoveOutputs.Clear();
-            foreach (AnimationPoseSourceId sourceId in m_FrozenOutputs.Keys)
+            if (!m_FrameOpen || resolution.CompletionIdentity == 0)
+                throw FrameFailure(
+                    MotionMatchingFrameTransactionInvalidReason.MissingResolve,
+                    "Motion Matching completion preparation has no open Resolve frame transaction.");
+            if (resolution.CompletionIdentity != m_OpenCompletionIdentity)
+                throw FrameFailure(
+                    MotionMatchingFrameTransactionInvalidReason.CompletionIdentityMismatch,
+                    "Motion Matching completion preparation identity does not match Resolve.");
+            if (resolution.PresentationFrame != m_OpenPresentationFrame)
+                throw FrameFailure(
+                    MotionMatchingFrameTransactionInvalidReason.PresentationFrameMismatch,
+                    "Motion Matching completion preparation frame does not match Resolve.");
+            if (resolution.ResetSequence != m_OpenResetSequence ||
+                resolution.ResetSequence != m_ResetSequence)
             {
-                if (!poseRuntime.RetainsSource(sourceId))
-                    m_RemoveOutputs.Add(sourceId);
+                throw FrameFailure(
+                    MotionMatchingFrameTransactionInvalidReason.ResetIdentityMismatch,
+                    "Motion Matching completion preparation Reset identity does not match Resolve.");
             }
-            for (int i = 0; i < m_RemoveOutputs.Count; i++)
-                m_FrozenOutputs.Remove(m_RemoveOutputs[i]);
         }
 
-        void RemoveFrozenOutputs(AnimationPlaybackId playbackId)
+        void ValidateFrozenCandidates(
+            in MotionMatchingFrameResolution resolution)
         {
-            m_RemoveOutputs.Clear();
-            foreach (AnimationPoseSourceId sourceId in m_FrozenOutputs.Keys)
+            for (int selectionIndex = 0;
+                 selectionIndex < resolution.SelectionCount;
+                 selectionIndex++)
             {
-                if (sourceId.PlaybackId.Equals(playbackId))
-                    m_RemoveOutputs.Add(sourceId);
+                MotionMatchingSelectionBatchItem selection =
+                    resolution.GetSelection(selectionIndex);
+                if (!TryGetFrozenOutput(
+                        selection.SourceIdentity,
+                        out MotionMatchingFrozenSelection frozen) ||
+                    frozen.PlayerNodeId != selection.PlayerNodeId ||
+                    !string.Equals(
+                        frozen.ProviderId,
+                        selection.ProviderId,
+                        StringComparison.Ordinal))
+                {
+                    throw FrameFailure(
+                        MotionMatchingFrameTransactionInvalidReason.RetainedOutputMissing,
+                        $"Motion Matching Player '{selection.PlayerNodeId}' has no exact frozen candidate '{selection.SourceIdentity}'.");
+                }
             }
-            for (int i = 0; i < m_RemoveOutputs.Count; i++)
-                m_FrozenOutputs.Remove(m_RemoveOutputs[i]);
         }
 
-        CharacterMotionMatchingProducerRuntime RequireProducerRuntime(string programProducerId) =>
-            m_Producers.TryGetValue(programProducerId, out CharacterMotionMatchingProducerRuntime runtime)
+        void MarkRetainedFrozenOutputs(
+            in MotionMatchingPosePlanCompletion completion)
+        {
+            for (int usageIndex = 0;
+                 usageIndex < completion.SourceUsageCount;
+                 usageIndex++)
+            {
+                MotionMatchingPosePlanSourceUsage usage =
+                    completion.GetSourceUsage(usageIndex);
+                int mutationIndex =
+                    FindFrozenOutputMutation(usage.SourceId);
+                if (mutationIndex >= 0)
+                {
+                    FrozenOutputMutation mutation =
+                        m_FrozenOutputMutations[mutationIndex];
+                    mutation.Retained = true;
+                    m_FrozenOutputMutations[mutationIndex] = mutation;
+                    continue;
+                }
+                int slotIndex = FindFrozenOutputSlot(usage.SourceId);
+                if (slotIndex < 0)
+                {
+                    throw FrameFailure(
+                        MotionMatchingFrameTransactionInvalidReason
+                            .RetainedOutputMissing,
+                        "Motion Matching Pose Plan completion references a missing prepared frozen output.");
+                }
+                FrozenOutputSlot slot = m_FrozenOutputs[slotIndex];
+                slot.Retained = true;
+                m_FrozenOutputs[slotIndex] = slot;
+            }
+        }
+
+        void StageFrozenOutput(
+            AnimationPoseSourceId sourceId,
+            in MotionMatchingFrozenSelection frozen)
+        {
+            int mutationIndex = FindFrozenOutputMutation(sourceId);
+            if (mutationIndex < 0)
+            {
+                if (m_FrozenOutputMutationCount >= m_FrozenOutputMutations.Length)
+                    throw FrameFailure(
+                        MotionMatchingFrameTransactionInvalidReason.SelectionCapacityExceeded,
+                        "Motion Matching frozen output journal capacity was exceeded.");
+                mutationIndex = m_FrozenOutputMutationCount++;
+            }
+            m_FrozenOutputMutations[mutationIndex] = new FrozenOutputMutation
+            {
+                SourceId = sourceId,
+                Frozen = frozen
+            };
+        }
+
+        bool TryGetFrozenOutput(
+            AnimationPoseSourceId sourceId,
+            out MotionMatchingFrozenSelection frozen)
+        {
+            int mutationIndex = FindFrozenOutputMutation(sourceId);
+            if (mutationIndex >= 0)
+            {
+                FrozenOutputMutation mutation =
+                    m_FrozenOutputMutations[mutationIndex];
+                frozen = mutation.Frozen;
+                return true;
+            }
+            int slotIndex = FindFrozenOutputSlot(sourceId);
+            if (slotIndex >= 0)
+            {
+                frozen = m_FrozenOutputs[slotIndex].Frozen;
+                return true;
+            }
+            frozen = default;
+            return false;
+        }
+
+        int FindFrozenOutputMutation(AnimationPoseSourceId sourceId)
+        {
+            for (int i = 0; i < m_FrozenOutputMutationCount; i++)
+            {
+                if (m_FrozenOutputMutations[i].SourceId.Equals(sourceId))
+                    return i;
+            }
+            return -1;
+        }
+
+        int FindFrozenOutputSlot(AnimationPoseSourceId sourceId)
+        {
+            for (int i = 0; i < m_FrozenOutputs.Length; i++)
+            {
+                if (m_FrozenOutputs[i].InUse &&
+                    m_FrozenOutputs[i].SourceId.Equals(sourceId))
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        void ApplyFrozenOutputMutations()
+        {
+            for (int slotIndex = 0;
+                 slotIndex < m_FrozenOutputs.Length;
+                 slotIndex++)
+            {
+                FrozenOutputSlot slot = m_FrozenOutputs[slotIndex];
+                if (!slot.InUse || slot.Retained)
+                    continue;
+                m_FrozenOutputs[slotIndex] = default;
+                m_FrozenOutputCount--;
+            }
+            for (int i = 0; i < m_FrozenOutputMutationCount; i++)
+            {
+                FrozenOutputMutation mutation = m_FrozenOutputMutations[i];
+                if (!mutation.Retained)
+                    continue;
+                int slotIndex =
+                    FindFrozenOutputSlot(mutation.SourceId);
+                if (slotIndex < 0)
+                {
+                    for (int candidateIndex = 0;
+                         candidateIndex < m_FrozenOutputs.Length;
+                         candidateIndex++)
+                    {
+                        if (!m_FrozenOutputs[candidateIndex].InUse)
+                        {
+                            slotIndex = candidateIndex;
+                            break;
+                        }
+                    }
+                    if (slotIndex < 0)
+                    {
+                        throw new InvalidOperationException(
+                            "Motion Matching frozen output capacity invariant was broken after validation.");
+                    }
+                    m_FrozenOutputCount++;
+                }
+                m_FrozenOutputs[slotIndex] =
+                    new FrozenOutputSlot
+                    {
+                        InUse = true,
+                        Retained = true,
+                        SourceId = mutation.SourceId,
+                        Frozen = mutation.Frozen
+                    };
+            }
+        }
+
+        CharacterMotionMatchingProviderRuntime RequireProviderRuntime(string providerId) =>
+            m_Providers.TryGetValue(providerId, out CharacterMotionMatchingProviderRuntime runtime)
                 ? runtime
-                : throw new InvalidOperationException($"Motion Matching producer '{programProducerId}' has no compiled Runtime workspace.");
-
-        void RequireProducer(CharacterPresentationProducerEntry producer)
-        {
-            if (producer == null || producer.Kind != CharacterPresentationProducerKind.Animation ||
-                producer.AnimationSourceKind != AnimationPoseSourceKind.MotionMatching ||
-                !m_Producers.ContainsKey(producer.ProgramProducerIdentity))
-                throw new InvalidOperationException("Motion Matching sample targets a producer outside this Module.");
-        }
+                : throw new InvalidOperationException($"Motion Matching provider '{providerId}' has no compiled Runtime workspace.");
 
         ulong NextCompletionIdentity()
         {
@@ -721,11 +1081,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             return ++m_CompletionSequence;
         }
 
+        ulong NextSelectionWorkspaceCompletionIdentity()
+        {
+            if (m_SelectionWorkspaceCompletionIdentity == ulong.MaxValue)
+                throw new InvalidOperationException("Motion Matching Selection workspace completion identity was exhausted.");
+            return ++m_SelectionWorkspaceCompletionIdentity;
+        }
+
         void PublishFrameDiagnostics(
             RuntimeDiagnosticsContext diagnostics,
             string status,
             ulong completionIdentity,
-            int requestCount,
+            int selectionCount,
             int historyAppended,
             int historyGaps)
         {
@@ -743,16 +1110,103 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                     Status = status,
                     OwnerId = m_ActorId.ToString(),
                     Cause = m_LastResetReason.ToString(),
-                    Priority = requestCount,
-                    Detail = $"completion={completionIdentity};frame={m_LastResolvedPresentationFrame};previousReset={m_PreviousResetSequence};reset={m_ResetSequence};requests={requestCount};historyAppended={historyAppended};historyGaps={historyGaps};retainedFrozen={m_FrozenOutputs.Count}"
+                    Priority = selectionCount,
+                    Detail = $"completion={completionIdentity};frame={m_LastResolvedPresentationFrame};previousReset={m_PreviousResetSequence};reset={m_ResetSequence};selections={selectionCount};historyAppended={historyAppended};historyGaps={historyGaps};retainedFrozen={m_FrozenOutputCount}"
                 });
         }
 
-        void DisposeProducerRuntimes()
+        FramePage ReadPage() => new FramePage(
+            m_ResetSequence,
+            m_PreviousResetSequence,
+            m_OpenCompletionIdentity,
+            m_OpenPresentationFrame,
+            m_OpenResetSequence,
+            m_LastResolvedPresentationFrame,
+            m_LastCompletedPresentationFrame,
+            m_LastHistoryAppendCount,
+            m_LastHistoryGapCount,
+            m_PreviewQuery,
+            m_PreviewProviderId,
+            m_LastResetReason,
+            m_FrameOpen);
+
+        void LoadPage(in FramePage page)
         {
-            foreach (CharacterMotionMatchingProducerRuntime runtime in m_Producers.Values)
-                runtime.Dispose();
-            m_Producers.Clear();
+            m_ResetSequence = page.ResetSequence;
+            m_PreviousResetSequence = page.PreviousResetSequence;
+            m_OpenCompletionIdentity = page.OpenCompletionIdentity;
+            m_OpenPresentationFrame = page.OpenPresentationFrame;
+            m_OpenResetSequence = page.OpenResetSequence;
+            m_LastResolvedPresentationFrame = page.LastResolvedPresentationFrame;
+            m_LastCompletedPresentationFrame = page.LastCompletedPresentationFrame;
+            m_LastHistoryAppendCount = page.LastHistoryAppendCount;
+            m_LastHistoryGapCount = page.LastHistoryGapCount;
+            m_PreviewQuery = page.PreviewQuery;
+            m_PreviewProviderId = page.PreviewProviderId;
+            m_LastResetReason = page.LastResetReason;
+            m_FrameOpen = page.FrameOpen;
+        }
+
+        void ClearFrameScratch()
+        {
+            Array.Clear(m_Selections, 0, m_SelectionCount);
+            m_SelectionCount = 0;
+            m_ResolvedProviders.Clear();
+            Array.Clear(
+                m_FrozenOutputMutations,
+                0,
+                m_FrozenOutputMutationCount);
+            m_FrozenOutputMutationCount = 0;
+            Array.Clear(
+                m_PreparedHistoryMutations,
+                0,
+                m_PreparedHistoryMutationCount);
+            m_PreparedHistoryMutationCount = 0;
+            m_PreparedCompletion = default;
+            m_PreparedCompletionApplied = false;
+            for (int slotIndex = 0;
+                 slotIndex < m_FrozenOutputs.Length;
+                 slotIndex++)
+            {
+                FrozenOutputSlot slot = m_FrozenOutputs[slotIndex];
+                if (!slot.InUse || !slot.Retained)
+                    continue;
+                slot.Retained = false;
+                m_FrozenOutputs[slotIndex] = slot;
+            }
+        }
+
+        void RequireMutation(
+            MotionMatchingFrameMutationLease lease)
+        {
+            RequireAlive();
+            if (!lease.IsValid ||
+                !m_ActiveMutationLease.IsValid ||
+                lease.FrameIdentity !=
+                    m_ActiveMutationLease.FrameIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Motion Matching frame mutation lease is stale.");
+            }
+        }
+
+        void RequireOpenMutation()
+        {
+            if (!m_ActiveMutationLease.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Motion Matching frame work requires an open animation frame mutation.");
+            }
+        }
+
+        void DisposeProviderRuntimes()
+        {
+            for (int i = m_ProviderRuntimes.Length - 1; i >= 0; i--)
+            {
+                m_ProviderRuntimes[i]?.Dispose();
+                m_ProviderRuntimes[i] = null;
+            }
+            m_Providers.Clear();
         }
 
         void RequireAlive()
@@ -765,34 +1219,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             MotionMatchingFrameTransactionInvalidReason reason,
             string message) => new MotionMatchingFrameTransactionException(reason, message);
 
-        readonly struct MotionMatchingPlaybackDemand
+        readonly struct MotionMatchingFrozenSelection
         {
-            internal MotionMatchingPlaybackDemand(
-                AnimationPlaybackId playbackId,
-                CharacterPresentationProducerEntry producer)
+            internal MotionMatchingFrozenSelection(
+                string providerId,
+                int stateMachineIndex,
+                int stateIndex,
+                int playerIndex,
+                PoseNodeId playerNodeId,
+                PoseSourceProviderDemandGeneration
+                    demandGeneration,
+                in MotionMatchingPoseSourceOutput output)
             {
-                PlaybackId = playbackId;
-                Producer = producer ?? throw new ArgumentNullException(nameof(producer));
+                if (string.IsNullOrWhiteSpace(providerId) || stateMachineIndex < 0 || stateIndex < 0 ||
+                    playerIndex < 0 || !playerNodeId.IsValid ||
+                    !demandGeneration.IsValid ||
+                    output.ProviderId !=
+                        new PresentationPoseSourceProviderId(
+                            providerId) ||
+                    output.PlayerNodeId != playerNodeId)
+                    throw new ArgumentException("Motion Matching frozen Selection binding is invalid.");
+                ProviderId = providerId;
+                StateMachineIndex = stateMachineIndex;
+                StateIndex = stateIndex;
+                PlayerIndex = playerIndex;
+                PlayerNodeId = playerNodeId;
+                DemandGeneration = demandGeneration;
+                Output = output;
             }
 
-            internal AnimationPlaybackId PlaybackId { get; }
-            internal CharacterPresentationProducerEntry Producer { get; }
-        }
-
-        readonly struct MotionMatchingFrameSelection
-        {
-            internal MotionMatchingFrameSelection(
-                CharacterMotionMatchingProducerRuntime runtime,
-                AnimationPlaybackId playbackId)
-            {
-                Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-                PlaybackId = playbackId.IsValid
-                    ? playbackId
-                    : throw new ArgumentException("Motion Matching frame Playback identity is invalid.", nameof(playbackId));
-            }
-
-            internal CharacterMotionMatchingProducerRuntime Runtime { get; }
-            internal AnimationPlaybackId PlaybackId { get; }
+            internal string ProviderId { get; }
+            internal int StateMachineIndex { get; }
+            internal int StateIndex { get; }
+            internal int PlayerIndex { get; }
+            internal PoseNodeId PlayerNodeId { get; }
+            internal PoseSourceProviderDemandGeneration
+                DemandGeneration { get; }
+            internal MotionMatchingPoseSourceOutput Output { get; }
         }
 
         abstract class MotionMatchingTrajectoryAdapter : IDisposable
@@ -816,6 +1279,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             internal abstract bool TryResolve(
                 in CharacterBodyPresentationFrame bodyFrame,
                 out MotionMatchingTrajectorySourceFrame frame);
+            internal abstract void BeginFrame();
+            internal abstract void CommitFrame();
+            internal abstract void DiscardFrame();
             internal abstract void Reset(ulong resetSequence);
             public abstract void Dispose();
         }
@@ -824,6 +1290,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         {
             CharacterPresentationTrajectoryIntent m_Intent;
             bool m_HasIntent;
+            bool m_FrameOpen;
             bool m_Disposed;
 
             internal AcceptedIntentTrajectoryAdapter(
@@ -838,6 +1305,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             internal override void CaptureIntent(CharacterPresentationTrajectoryIntent intent)
             {
                 RequireAlive();
+                if (m_FrameOpen)
+                    throw new InvalidOperationException("Accepted Intent cannot change while a Motion Matching frame is open.");
                 if (intent.ActorId != ActorId)
                     throw new InvalidOperationException("Presentation Trajectory Intent targets another Actor.");
                 if (m_HasIntent && intent.SourceSequence <= m_Intent.SourceSequence)
@@ -887,10 +1356,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 m_HasIntent = false;
             }
 
+            internal override void BeginFrame()
+            {
+                RequireAlive();
+                if (m_FrameOpen)
+                    throw new InvalidOperationException("Accepted Intent trajectory frame is already open.");
+                m_FrameOpen = true;
+            }
+
+            internal override void CommitFrame()
+            {
+                RequireOpenFrame();
+                m_FrameOpen = false;
+            }
+
+            internal override void DiscardFrame()
+            {
+                RequireOpenFrame();
+                m_FrameOpen = false;
+            }
+
             public override void Dispose()
             {
                 m_Intent = default;
                 m_HasIntent = false;
+                m_FrameOpen = false;
                 m_Disposed = true;
             }
 
@@ -899,11 +1389,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 if (m_Disposed)
                     throw new ObjectDisposedException(nameof(AcceptedIntentTrajectoryAdapter));
             }
+
+            void RequireOpenFrame()
+            {
+                RequireAlive();
+                if (!m_FrameOpen)
+                    throw new InvalidOperationException("Accepted Intent trajectory has no open frame.");
+            }
         }
 
         sealed class SelectedBodyTrajectoryAdapter : MotionMatchingTrajectoryAdapter
         {
-            ulong m_SourceSequence;
+            ulong m_CommittedSourceSequence;
+            ulong m_PendingSourceSequence;
+            bool m_FrameOpen;
             bool m_Disposed;
 
             internal SelectedBodyTrajectoryAdapter(
@@ -926,7 +1425,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 out MotionMatchingTrajectorySourceFrame frame)
             {
                 RequireAlive();
-                if (m_SourceSequence == ulong.MaxValue)
+                if (!m_FrameOpen)
+                    throw new InvalidOperationException("Selected Body trajectory requires an open frame.");
+                if (m_PendingSourceSequence == ulong.MaxValue)
                     throw new InvalidOperationException("Selected Body trajectory sequence was exhausted.");
                 Vector3 forward = bodyFrame.TargetRotation * Vector3.forward;
                 Vector2 planarVelocity = new Vector2(bodyFrame.TargetVelocity.x, bodyFrame.TargetVelocity.z);
@@ -935,7 +1436,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                     MotionMatchingTrajectorySourceKind.SelectedBody,
                     ActorId,
                     new SimulationTick(bodyFrame.CurrentTick),
-                    ++m_SourceSequence,
+                    ++m_PendingSourceSequence,
                     bodyFrame.TargetPosition,
                     bodyFrame.TargetRotation,
                     planarVelocity,
@@ -954,12 +1455,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             internal override void Reset(ulong resetSequence)
             {
                 RequireAlive();
-                m_SourceSequence = 0;
+            }
+
+            internal override void BeginFrame()
+            {
+                RequireAlive();
+                if (m_FrameOpen)
+                    throw new InvalidOperationException("Selected Body trajectory frame is already open.");
+                m_PendingSourceSequence = m_CommittedSourceSequence;
+                m_FrameOpen = true;
+            }
+
+            internal override void CommitFrame()
+            {
+                RequireOpenFrame();
+                m_CommittedSourceSequence = m_PendingSourceSequence;
+                m_FrameOpen = false;
+            }
+
+            internal override void DiscardFrame()
+            {
+                RequireOpenFrame();
+                m_PendingSourceSequence = m_CommittedSourceSequence;
+                m_FrameOpen = false;
             }
 
             public override void Dispose()
             {
-                m_SourceSequence = 0;
+                m_FrameOpen = false;
                 m_Disposed = true;
             }
 
@@ -967,6 +1490,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             {
                 if (m_Disposed)
                     throw new ObjectDisposedException(nameof(SelectedBodyTrajectoryAdapter));
+            }
+
+            void RequireOpenFrame()
+            {
+                RequireAlive();
+                if (!m_FrameOpen)
+                    throw new InvalidOperationException("Selected Body trajectory has no open frame.");
             }
         }
     }

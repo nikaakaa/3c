@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
+using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
@@ -230,7 +233,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             snapshot.presentation.poseGraphAssetGuid = string.IsNullOrEmpty(poseGraphPath)
                 ? string.Empty
                 : AssetDatabase.AssetPathToGUID(poseGraphPath);
-            snapshot.presentation.poseGraphId = poseGraph?.Graph?.GraphId ?? string.Empty;
+            snapshot.presentation.poseGraphId = poseGraph && poseGraph.Graph != null ? poseGraph.Graph.GraphId.Value : string.Empty;
             snapshot.presentation.poseGraphRevision = poseGraph?.Graph?.ContentRevision ?? string.Empty;
 
             CharacterAnimationRigDefinition rig = presentation.RigDefinition;
@@ -257,16 +260,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
             }
 
-            ExportSelectionInputs(
+            ExportPresentationPoseGraphContext(
+                presentation,
+                poseGraph,
                 poseGraph?.Graph,
                 string.Empty,
-                new HashSet<CharacterPoseGraphData>(),
-                snapshot.presentation.selectionInputs);
-            ExportBlendSpacePlayers(
-                poseGraph?.Graph,
-                string.Empty,
-                new HashSet<CharacterPoseGraphData>(),
-                snapshot.presentation.blendSpacePlayers);
+                new HashSet<PoseGraphId>(),
+                snapshot.presentation);
 
             ExportBlendSpaces(definition, presentation, snapshot.presentation);
 
@@ -274,6 +274,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             for (int timelineIndex = 0; timelineIndex < topology.Timelines.Count; timelineIndex++)
             {
                 CharacterAuthoringTimelineEntry source = topology.Timelines[timelineIndex];
+                if (source.Node == null || !source.Node.ActionContext)
+                    continue;
                 for (int trackIndex = 0; trackIndex < source.Timeline.Tracks.Count; trackIndex++)
                 {
                     if (source.Timeline.Tracks[trackIndex] is not AnimationTrack track)
@@ -283,30 +285,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         continue;
 
                     AnimationProducerPresentationBinding binding = presentation.FindProducerBinding(producerId);
-                    UnityEngine.Object sourceAsset = binding?.SourceKind == AnimationPoseSourceKind.BlendSpace
-                        ? binding.BlendSpaceSource
-                        : binding?.Source;
+                    UnityEngine.Object sourceAsset = binding?.Source;
                     string sourceAssetPath = sourceAsset ? AssetDatabase.GetAssetPath(sourceAsset) : string.Empty;
+                    bool markerGroup =
+                        track.SyncMode == AnimationSyncMode.MarkerGroup;
                     snapshot.presentation.producers.Add(new AgentSnapshotAnimationProducer
                     {
                         route = ExportRoute(source.Route),
+                        ownerKind = "ActionAnimationChannel",
                         timelineAuthoringId = producerId.TimelineAuthoringId,
                         trackAuthoringId = producerId.TrackAuthoringId,
                         timelineName = source.Timeline.Name,
                         trackName = track.Name,
+                        actionContextId = AssetIdentity(source.Node.ActionContext),
                         animationChannelId = track.AnimationChannelId.IsValid ? track.AnimationChannelId.Value : string.Empty,
                         syncMode = track.SyncMode.ToString(),
-                        syncGroupId = track.SyncGroupId,
-                        sequenceTopology = track.SequenceTopology.ToString(),
-                        syncRole = track.SyncRole.ToString(),
+                        syncGroupId = markerGroup ? track.SyncGroupId : string.Empty,
+                        sequenceTopology = markerGroup
+                            ? track.SequenceTopology.ToString()
+                            : string.Empty,
+                        syncRole = markerGroup
+                            ? track.SyncRole.ToString()
+                            : string.Empty,
                         sourceAssetPath = sourceAssetPath,
                         sourceAssetGuid = string.IsNullOrEmpty(sourceAssetPath)
                             ? string.Empty
                             : AssetDatabase.AssetPathToGUID(sourceAssetPath),
-                        sourceAssetType = sourceAsset ? sourceAsset.GetType().FullName : string.Empty,
-                        sourceKind = binding?.SourceKind.ToString() ?? string.Empty,
-                        blendSpaceId = binding?.BlendSpaceSource ? binding.BlendSpaceSource.BlendSpaceId.Value : string.Empty,
-                        blendSpaceContentRevision = binding?.BlendSpaceSource ? binding.BlendSpaceSource.ContentRevision : string.Empty
+                        sourceAssetType = sourceAsset ? sourceAsset.GetType().FullName : string.Empty
                     });
                 }
             }
@@ -318,11 +323,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentSnapshotAnimationPresentation destination)
         {
             var assets = new HashSet<CharacterAnimationBlendSpaceAsset>();
-            for (int i = 0; i < profile.ProducerBindings.Count; i++)
+            for (int i = 0; i < profile.PoseSourceBindings.Count; i++)
             {
-                AnimationProducerPresentationBinding binding = profile.ProducerBindings[i];
-                if (binding?.SourceKind == AnimationPoseSourceKind.BlendSpace && binding.BlendSpaceSource)
-                    assets.Add(binding.BlendSpaceSource);
+                CharacterPresentationPoseSourceBinding binding =
+                    profile.PoseSourceBindings[i];
+                if (binding is CharacterBlendSpacePoseSourceBinding blendSpace &&
+                    blendSpace.BlendSpace)
+                {
+                    assets.Add(blendSpace.BlendSpace);
+                }
             }
             string compileStatus = ResolvePresentationCompileStatus(definition, out string projectionRevision);
             foreach (CharacterAnimationBlendSpaceAsset asset in assets.OrderBy(value => value.BlendSpaceId.Value, StringComparer.Ordinal))
@@ -378,82 +387,189 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
-        static void ExportBlendSpacePlayers(
-            CharacterPoseGraphData graph,
+        static void ExportPresentationPoseGraphContext(
+            CharacterAnimationPresentationProfile profile,
+            CharacterPresentationPoseGraphAsset owner,
+            CharacterTypedPoseGraph graph,
             string scope,
-            HashSet<CharacterPoseGraphData> path,
-            List<AgentSnapshotAnimationBlendSpacePlayer> destination)
+            HashSet<PoseGraphId> path,
+            AgentSnapshotAnimationPresentation destination)
         {
-            if (graph == null || !path.Add(graph))
+            if (!owner || graph == null || !path.Add(graph.GraphId))
                 return;
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
-                CharacterPoseNodeDefinition node = graph.Nodes[i];
+                CharacterTypedPoseNode node = graph.Nodes[i];
                 if (node == null)
                     continue;
                 PoseNodeId scopedNodeId = string.IsNullOrEmpty(scope)
                     ? node.NodeId
                     : new PoseNodeId(scope + "/" + node.NodeId.Value);
-                if (node.Kind == CharacterPoseNodeKind.BlendSpacePlayer)
+                if (IsStateLocalPoseSourceNode(node.Kind))
                 {
-                    CharacterPosePortDefinition[] selection = node.Ports
-                        .Where(port => port != null && port.Direction == CharacterPosePortDirection.Input && port.Kind == CharacterPosePortKind.AnimationSelection)
-                        .ToArray();
-                    CharacterPosePortDefinition[] parameters = node.Ports
+                    CharacterPresentationPoseSourceSlot sourceSlot =
+                        node.PresentationPoseSourceSlot;
+                    ResolveObjectIdentity(
+                        sourceSlot,
+                        out string sourceSlotAssetPath,
+                        out string sourceSlotAssetGuid,
+                        out long sourceSlotLocalFileId);
+                    CharacterPosePortDefinition[] parameters =
+                        CharacterPoseAuthoringPortProjection.Get(node)
                         .Where(port => port != null && port.Direction == CharacterPosePortDirection.Input && port.Kind == CharacterPosePortKind.Parameter)
                         .ToArray();
-                    destination.Add(new AgentSnapshotAnimationBlendSpacePlayer
+                    destination.stateLocalPoseSources.Add(new AgentSnapshotStateLocalPoseSource
                     {
-                        graphId = graph.GraphId,
+                        graphId = graph.GraphId.Value,
                         nodeId = scopedNodeId.Value,
-                        selectionPortId = selection.Length > 0 ? selection[0].PortId.Value : string.Empty,
+                        nodeKind = node.Kind.ToString(),
+                        ownerKind = "StateLocalPoseSource",
+                        sourceSlotName = sourceSlot ? sourceSlot.name : string.Empty,
+                        sourceSlotAssetPath = sourceSlotAssetPath,
+                        sourceSlotAssetGuid = sourceSlotAssetGuid,
+                        sourceSlotLocalFileId = sourceSlotLocalFileId,
+                        sourceKind = ResolveStateLocalPoseSourceKind(profile, node),
                         xParameterPortId = parameters.Length > 0 ? parameters[0].PortId.Value : string.Empty,
                         yParameterPortId = parameters.Length > 1 ? parameters[1].PortId.Value : string.Empty,
-                        inputRangePolicy = node.BlendSpaceInputRangePolicy.ToString()
+                        inputRangePolicy = node.Kind == CharacterPoseNodeKind.BlendSpacePlayer
+                            ? node.BlendSpaceInputRangePolicy.ToString()
+                            : string.Empty
                     });
                 }
-                if (node.Kind != CharacterPoseNodeKind.PoseSubgraph || node.Subgraph == null || !node.Subgraph.IsExclusive)
+                if (node.Kind == CharacterPoseNodeKind.ActionPlaybackInput)
+                {
+                    destination.actionPlaybackInputs.Add(new AgentSnapshotActionPlaybackInput
+                    {
+                        graphId = graph.GraphId.Value,
+                        nodeId = scopedNodeId.Value,
+                        ownerKind = "ActionAnimationChannel",
+                        animationChannelId = node.AnimationChannelId.IsValid
+                            ? node.AnimationChannelId.Value
+                            : string.Empty
+                    });
+                }
+                if (node.Kind == CharacterPoseNodeKind.AnimationSlot)
+                {
+                    destination.animationSlots.Add(new AgentSnapshotAnimationSlot
+                    {
+                        graphId = graph.GraphId.Value,
+                        nodeId = scopedNodeId.Value,
+                        ownerKind = "ActionAnimationChannel",
+                        animationSlotId = node.AnimationSlotId.IsValid
+                            ? node.AnimationSlotId.Value
+                            : string.Empty,
+                        animationChannelId = node.AnimationChannelId.IsValid
+                            ? node.AnimationChannelId.Value
+                            : string.Empty
+                    });
+                }
+                if (node.Kind == CharacterPoseNodeKind.PoseSubgraph &&
+                    node.Subgraph?.PoseGraphId.IsValid == true)
+                {
+                    CharacterTypedPoseGraph child =
+                        owner.RequireGraph(node.Subgraph.PoseGraphId);
+                    ExportPresentationPoseGraphContext(
+                        profile,
+                        owner,
+                        child,
+                        scopedNodeId.Value + "/" + child.GraphId,
+                        path,
+                        destination);
+                }
+                CharacterPoseStateMachineDefinition machine =
+                    node.PoseStateMachine;
+                if (node.Kind != CharacterPoseNodeKind.PoseStateMachine ||
+                    machine == null)
+                {
                     continue;
-                CharacterPoseGraphData child = node.Subgraph.HasInline ? node.Subgraph.Inline : node.Subgraph.Shared.Graph;
-                ExportBlendSpacePlayers(child, scopedNodeId.Value + "/" + child.GraphId, path, destination);
+                }
+                for (int stateIndex = 0;
+                     stateIndex < machine.States.Count;
+                     stateIndex++)
+                {
+                    CharacterPoseStateDefinition state = machine.States[stateIndex];
+                    if (state == null)
+                        continue;
+                    CharacterTypedPoseGraph child = RequirePoseStateGraph(
+                        owner,
+                        machine,
+                        state);
+                    ExportPresentationPoseGraphContext(
+                        profile,
+                        owner,
+                        child,
+                        scopedNodeId.Value + "/state/" + state.StateId.Value,
+                        path,
+                        destination);
+                }
             }
-            path.Remove(graph);
+            path.Remove(graph.GraphId);
         }
 
-        static void ExportSelectionInputs(
-            CharacterPoseGraphData graph,
-            string scope,
-            HashSet<CharacterPoseGraphData> path,
-            List<AgentSnapshotAnimationSelectionInput> destination)
+        static CharacterTypedPoseGraph RequirePoseStateGraph(
+            CharacterPresentationPoseGraphAsset owner,
+            CharacterPoseStateMachineDefinition machine,
+            CharacterPoseStateDefinition state)
         {
-            if (graph == null || !path.Add(graph))
-                return;
-            for (int i = 0; i < graph.Nodes.Count; i++)
+            string path =
+                $"context.dependencies.presentation.poseStateMachines[{machine.StateMachineId}].states[{state.StateId}]";
+            if (!state.PoseGraphId.IsValid)
             {
-                CharacterPoseNodeDefinition node = graph.Nodes[i];
-                if (node == null)
-                    continue;
-                PoseNodeId scopedNodeId = string.IsNullOrEmpty(scope)
-                    ? node.NodeId
-                    : new PoseNodeId(scope + "/" + node.NodeId.Value);
-                if (node.Kind == CharacterPoseNodeKind.AnimationSelectionInput ||
-                    node.Kind == CharacterPoseNodeKind.MotionMatchingSelectionInput)
-                {
-                    destination.Add(new AgentSnapshotAnimationSelectionInput
-                    {
-                        nodeId = scopedNodeId.Value,
-                        kind = node.Kind.ToString(),
-                        animationChannelId = node.AnimationChannelId.IsValid ? node.AnimationChannelId.Value : string.Empty,
-                        programProducerId = node.ProgramProducerId,
-                        availability = node.SelectionAvailability.ToString()
-                    });
-                }
-                if (node.Kind != CharacterPoseNodeKind.PoseSubgraph || node.Subgraph == null || !node.Subgraph.IsExclusive)
-                    continue;
-                CharacterPoseGraphData child = node.Subgraph.HasInline ? node.Subgraph.Inline : node.Subgraph.Shared.Graph;
-                ExportSelectionInputs(child, scopedNodeId.Value + "/" + child.GraphId, path, destination);
+                throw new AgentAuthoringOperationException(
+                    "presentation_pose_state_graph_reference_missing",
+                    path,
+                    $"Pose State '{state.StateId}' has no GraphCatalog reference.",
+                    "使用正式Presentation Pose Graph authoring入口为该State配置PoseGraphId与OutputPoseNodeId。");
             }
-            path.Remove(graph);
+            if (!owner.TryGetGraph(state.PoseGraphId, out CharacterTypedPoseGraph graph))
+            {
+                throw new AgentAuthoringOperationException(
+                    "presentation_pose_state_graph_missing",
+                    path,
+                    $"Pose State '{state.StateId}' references missing Pose Graph '{state.PoseGraphId}'.",
+                    "使用正式Presentation Pose Graph authoring入口修复GraphCatalog与State引用。");
+            }
+            return graph;
+        }
+
+        static bool IsStateLocalPoseSourceNode(CharacterPoseNodeKind kind)
+        {
+            return kind == CharacterPoseNodeKind.SelectedPosePlayer ||
+                   kind == CharacterPoseNodeKind.BlendStack ||
+                   kind == CharacterPoseNodeKind.BlendSpacePlayer ||
+                   kind == CharacterPoseNodeKind.SequencePlayer;
+        }
+
+        static string ResolveStateLocalPoseSourceKind(
+            CharacterAnimationPresentationProfile profile,
+            CharacterTypedPoseNode node)
+        {
+            if (node == null || profile == null)
+                return string.Empty;
+            CharacterPresentationPoseSourceSlot sourceSlot =
+                node.PresentationPoseSourceSlot;
+            CharacterPresentationPoseSourceBinding source = sourceSlot
+                ? profile.FindPoseSourceBinding(sourceSlot)
+                : null;
+            return source?.SourceKind.ToString() ?? string.Empty;
+        }
+
+        static void ResolveObjectIdentity(
+            UnityEngine.Object asset,
+            out string assetPath,
+            out string assetGuid,
+            out long localFileId)
+        {
+            assetPath = asset ? AssetDatabase.GetAssetPath(asset) : string.Empty;
+            if (!asset ||
+                !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(
+                    asset,
+                    out assetGuid,
+                    out localFileId))
+            {
+                assetGuid = string.Empty;
+                localFileId = 0;
+            }
         }
 
         void ExportProjectedGraphs(
@@ -649,6 +765,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (tree == null)
                 return;
 
+            tree.CheckInit();
             for (int i = 0; i < tree.Nodes.Count; i++)
             {
                 BaseNode node = tree.Nodes[i];
@@ -813,6 +930,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     graphPath = graphPath,
                     key = declaration.BlackboardKey,
                     valueType = declaration.ValueType?.FullName ?? string.Empty,
+                    defaultValue = AgentAuthoringDocumentCodec.ToToken(declaration.GetValue()),
                     scope = declaration.BlackboardScope.ToString(),
                     lifetime = declaration.BlackboardLifetime.ToString(),
                     authority = declaration.BlackboardAuthority.ToString(),
@@ -910,6 +1028,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     continue;
 
                 AnimationTrack animationTrack = track as AnimationTrack;
+                bool markerGroup =
+                    animationTrack?.SyncMode ==
+                    AnimationSyncMode.MarkerGroup;
                 var trackSnapshot = new AgentSnapshotTimelineTrack
                 {
                     trackAuthoringId = track.AuthoringId,
@@ -921,9 +1042,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         : string.Empty,
                     motionWarpTrack = track is MotionWarpTrack,
                     syncMode = animationTrack?.SyncMode.ToString() ?? string.Empty,
-                    syncGroupId = animationTrack?.SyncGroupId ?? string.Empty,
-                    sequenceTopology = animationTrack?.SequenceTopology.ToString() ?? string.Empty,
-                    syncRole = animationTrack?.SyncRole.ToString() ?? string.Empty
+                    syncGroupId = markerGroup
+                        ? animationTrack.SyncGroupId
+                        : string.Empty,
+                    sequenceTopology = markerGroup
+                        ? animationTrack.SequenceTopology.ToString()
+                        : string.Empty,
+                    syncRole = markerGroup
+                        ? animationTrack.SyncRole.ToString()
+                        : string.Empty
                 };
                 timelineSnapshot.tracks.Add(trackSnapshot);
 
@@ -981,6 +1108,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             ? string.Empty
                             : AssetDatabase.AssetPathToGUID(animationClipPath)
                     };
+                    if (clip is MotionCurveClip motionCurve)
+                    {
+                        clipSnapshot.curveId = motionCurve.CurveId;
+                        clipSnapshot.curveEndFrame = motionCurve.CurveEndFrame;
+                        clipSnapshot.motionSpace = motionCurve.Space.ToString();
+                        clipSnapshot.motionChannel = motionCurve.Channel.ToString();
+                        clipSnapshot.motionBlendMode = motionCurve.BlendMode.ToString();
+                        clipSnapshot.motionPriority = motionCurve.Priority;
+                        clipSnapshot.consumeLowerChannels = motionCurve.ConsumeLowerChannels;
+                    }
                     if (clip is MotionWarpClip warp)
                     {
                         clipSnapshot.motionWarpClip = true;
@@ -1120,36 +1257,117 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (ruleGraph == null)
                 return summary;
 
+            ExportCanonicalConditionTerms(ruleGraph, summary);
+            return summary;
+        }
+
+        static void ExportCanonicalConditionTerms(
+            ConditionRuleGraph ruleGraph,
+            AgentSnapshotTransitionSummary summary)
+        {
+            var nodeIndexes = ruleGraph.Nodes
+                .Select((node, index) => new { node, index })
+                .Where(value => value.node != null)
+                .ToDictionary(value => value.node, value => value.index);
+            var candidates =
+                new List<KeyValuePair<int, AgentSnapshotConditionTerm>>();
+            var consumedComparisons = new HashSet<CompareNode>();
+            List<CompareNode> walkLower = ruleGraph.Nodes
+                .OfType<CompareNode>()
+                .Where(compare =>
+                    string.Equals(
+                        ClassifyMovementComparison(ruleGraph, compare),
+                        "walk_lower",
+                        StringComparison.Ordinal))
+                .ToList();
+            List<CompareNode> walkUpper = ruleGraph.Nodes
+                .OfType<CompareNode>()
+                .Where(compare =>
+                    string.Equals(
+                        ClassifyMovementComparison(ruleGraph, compare),
+                        "walk_upper",
+                        StringComparison.Ordinal))
+                .ToList();
+            int walkCount = Math.Min(walkLower.Count, walkUpper.Count);
+            for (int i = 0; i < walkCount; i++)
+            {
+                CompareNode lower = walkLower[i];
+                CompareNode upper = walkUpper[i];
+                consumedComparisons.Add(lower);
+                consumedComparisons.Add(upper);
+                candidates.Add(
+                    new KeyValuePair<int, AgentSnapshotConditionTerm>(
+                        Math.Min(nodeIndexes[lower], nodeIndexes[upper]),
+                        new AgentSnapshotConditionTerm
+                        {
+                            kind = "move_walk"
+                        }));
+            }
+
             for (int i = 0; i < ruleGraph.Nodes.Count; i++)
             {
                 BaseNode node = ruleGraph.Nodes[i];
-                if (node == null || node is ConditionRuleResultNode)
+                if (node == null ||
+                    node is ConditionRuleResultNode ||
+                    node is AndNode ||
+                    node is OrNode ||
+                    node is NotNode ||
+                    node is CharacterInputValueInfoNode ||
+                    node is CharacterMoveFacingAngleInfoNode ||
+                    node is PipelineBlackboardFloatInfoNode ||
+                    consumedComparisons.Contains(node as CompareNode))
                     continue;
-
+                if (node is CompareNode compare)
+                {
+                    AgentSnapshotConditionTerm compareTerm =
+                        ExportCompareTerm(ruleGraph, compare);
+                    if (compareTerm != null)
+                    {
+                        candidates.Add(
+                            new KeyValuePair<int, AgentSnapshotConditionTerm>(
+                                i,
+                                compareTerm));
+                    }
+                    continue;
+                }
                 if (node is CharacterActionRequestInfoNode requestNode)
                 {
                     AddUnique(summary.requests, requestNode.RequestId);
-                    summary.conditionTerms.Add(new AgentSnapshotConditionTerm
-                    {
-                        kind = "action_request",
-                        request = requestNode.RequestId
-                    });
+                    candidates.Add(
+                        new KeyValuePair<int, AgentSnapshotConditionTerm>(
+                            i,
+                            new AgentSnapshotConditionTerm
+                            {
+                                kind = "action_request",
+                                request = requestNode.RequestId,
+                                negate = IsNegated(ruleGraph, node)
+                            }));
                     continue;
                 }
 
                 if (node is StateRootCompletedNode)
                 {
-                    summary.conditionTerms.Add(new AgentSnapshotConditionTerm { kind = "state_root_completed" });
+                    candidates.Add(
+                        new KeyValuePair<int, AgentSnapshotConditionTerm>(
+                            i,
+                            new AgentSnapshotConditionTerm
+                            {
+                                kind = "state_root_completed"
+                            }));
                     continue;
                 }
 
                 if (node is ActionWindowActiveInfoNode windowNode)
                 {
-                    summary.conditionTerms.Add(new AgentSnapshotConditionTerm
-                    {
-                        kind = "action_window_active",
-                        windowType = windowNode.WindowType
-                    });
+                    candidates.Add(
+                        new KeyValuePair<int, AgentSnapshotConditionTerm>(
+                            i,
+                            new AgentSnapshotConditionTerm
+                            {
+                                kind = "action_window_active",
+                                windowType = windowNode.WindowType,
+                                negate = IsNegated(ruleGraph, node)
+                            }));
                     continue;
                 }
 
@@ -1157,31 +1375,208 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     ActionProfile profile = admissionNode.ActionProfile;
                     string path = profile ? AssetDatabase.GetAssetPath(profile) : string.Empty;
-                    summary.conditionTerms.Add(new AgentSnapshotConditionTerm
-                    {
-                        kind = "action_can_activate",
-                        actionProfile = profile ? profile.ActionId : string.Empty,
-                        actionProfileAssetPath = path,
-                        actionProfileAssetGuid = string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path),
-                        targetSnapshotBlackboardKey = admissionNode.TargetSnapshotVariable.DisplayKey
-                    });
+                    candidates.Add(
+                        new KeyValuePair<int, AgentSnapshotConditionTerm>(
+                            i,
+                            new AgentSnapshotConditionTerm
+                            {
+                                kind = "action_can_activate",
+                                actionProfile = profile
+                                    ? profile.ActionId
+                                    : string.Empty,
+                                actionProfileAssetPath = path,
+                                actionProfileAssetGuid =
+                                    string.IsNullOrEmpty(path)
+                                        ? string.Empty
+                                        : AssetDatabase.AssetPathToGUID(path),
+                                targetSnapshotBlackboardKey =
+                                    admissionNode
+                                        .TargetSnapshotVariable
+                                        .DisplayKey,
+                                negate = IsNegated(ruleGraph, node)
+                            }));
                     continue;
                 }
 
                 if (node is PipelineBlackboardBoolInfoNode blackboardNode)
                 {
-                    summary.conditionTerms.Add(new AgentSnapshotConditionTerm
-                    {
-                        kind = "blackboard_bool",
-                        blackboardKey = blackboardNode.BlackboardVariable.DisplayKey
-                    });
-                    continue;
+                    candidates.Add(
+                        new KeyValuePair<int, AgentSnapshotConditionTerm>(
+                            i,
+                            new AgentSnapshotConditionTerm
+                            {
+                                kind = "blackboard_bool",
+                                blackboardKey =
+                                    blackboardNode
+                                        .BlackboardVariable
+                                        .DisplayKey,
+                                negate = IsNegated(ruleGraph, node)
+                            }));
                 }
-
-                summary.conditionTerms.Add(new AgentSnapshotConditionTerm { kind = node.GetType().Name });
             }
 
-            return summary;
+            summary.conditionTerms.AddRange(
+                candidates
+                    .OrderBy(value => value.Key)
+                    .ThenBy(
+                        value => value.Value.kind,
+                        StringComparer.Ordinal)
+                    .Select(value => value.Value));
+        }
+
+        static AgentSnapshotConditionTerm ExportCompareTerm(
+            ConditionRuleGraph graph,
+            CompareNode compare)
+        {
+            string movement = ClassifyMovementComparison(graph, compare);
+            if (string.Equals(movement, "move_stop", StringComparison.Ordinal) ||
+                string.Equals(movement, "move_has", StringComparison.Ordinal) ||
+                string.Equals(movement, "move_run", StringComparison.Ordinal))
+            {
+                return new AgentSnapshotConditionTerm
+                {
+                    kind = movement,
+                    negate = IsNegated(graph, compare)
+                };
+            }
+            BaseNode left = PropertySource(
+                graph,
+                compare,
+                "m_InputValue1");
+            BaseNode right = PropertySource(
+                graph,
+                compare,
+                "m_InputValue2");
+            if (left is CharacterMoveFacingAngleInfoNode &&
+                right is PipelineBlackboardFloatInfoNode angleThreshold &&
+                compare.Comparison == CompareNode.CompareType.GreaterEqual)
+            {
+                return new AgentSnapshotConditionTerm
+                {
+                    kind = "turn_facing_angle",
+                    blackboardKey = angleThreshold.BlackboardVariable.DisplayKey,
+                    negate = IsNegated(graph, compare)
+                };
+            }
+            if (left is ReadTargetDistanceNode &&
+                right is ReadAIMemoryNode memory)
+            {
+                return new AgentSnapshotConditionTerm
+                {
+                    kind = "ai_target_distance_compare_blackboard",
+                    blackboardKey =
+                        memory.BlackboardVariable.DisplayKey,
+                    compareType = compare.Comparison.ToString(),
+                    negate = IsNegated(graph, compare)
+                };
+            }
+            return null;
+        }
+
+        static string ClassifyMovementComparison(
+            ConditionRuleGraph graph,
+            CompareNode compare)
+        {
+            BaseNode left = PropertySource(
+                graph,
+                compare,
+                "m_InputValue1");
+            BaseNode right = PropertySource(
+                graph,
+                compare,
+                "m_InputValue2");
+            if (left is not CharacterInputVector2MagnitudeInfoNode input ||
+                !string.Equals(
+                    input.InputValueId,
+                    "MoveAxis",
+                    StringComparison.Ordinal) ||
+                right is not PipelineBlackboardFloatInfoNode threshold)
+                return string.Empty;
+            string key = threshold.BlackboardVariable.DisplayKey;
+            if (string.Equals(
+                    key,
+                    "StopThreshold",
+                    StringComparison.Ordinal))
+            {
+                if (compare.Comparison ==
+                    CompareNode.CompareType.Less)
+                    return "move_stop";
+                if (compare.Comparison ==
+                    CompareNode.CompareType.Greater)
+                    return "move_has";
+            }
+            if (string.Equals(
+                    key,
+                    "RunThreshold",
+                    StringComparison.Ordinal))
+            {
+                if (compare.Comparison ==
+                    CompareNode.CompareType.GreaterEqual)
+                    return "move_run";
+                if (compare.Comparison ==
+                    CompareNode.CompareType.Less)
+                    return "walk_upper";
+            }
+            if (string.Equals(
+                    key,
+                    "WalkThreshold",
+                    StringComparison.Ordinal) &&
+                compare.Comparison ==
+                CompareNode.CompareType.GreaterEqual)
+                return "walk_lower";
+            return string.Empty;
+        }
+
+        static BaseNode PropertySource(
+            ConditionRuleGraph graph,
+            BaseNode target,
+            string targetPort)
+        {
+            PropertyEdge edge = graph.PropertyEdges.FirstOrDefault(
+                value =>
+                    value != null &&
+                    (value.EndNode == target ||
+                     string.Equals(
+                         value.EndNodeGUID,
+                         target.GUID,
+                         StringComparison.Ordinal)) &&
+                    string.Equals(
+                        value.EndPortName,
+                        targetPort,
+                        StringComparison.Ordinal));
+            if (edge == null)
+                return null;
+            if (edge.StartNode != null)
+                return edge.StartNode;
+            return graph.Nodes.FirstOrDefault(
+                node =>
+                    node != null &&
+                    string.Equals(
+                        node.GUID,
+                        edge.StartNodeGUID,
+                        StringComparison.Ordinal));
+        }
+
+        static bool IsNegated(
+            ConditionRuleGraph graph,
+            BaseNode source)
+        {
+            return graph.PropertyEdges.Any(
+                edge =>
+                    edge != null &&
+                    (edge.StartNode == source ||
+                     string.Equals(
+                         edge.StartNodeGUID,
+                         source.GUID,
+                         StringComparison.Ordinal)) &&
+                    (edge.EndNode is NotNode ||
+                     graph.Nodes.Any(
+                         node =>
+                             node is NotNode &&
+                             string.Equals(
+                                 node.GUID,
+                                 edge.EndNodeGUID,
+                                 StringComparison.Ordinal))));
         }
 
         static AgentSnapshotGameplayTagQuery ExportTagQuery(ThirdPersonGameplay.Tags.GameplayTagQuery query)
@@ -1294,20 +1689,51 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 result.loopStopType = loopNode.LoopStopType.ToString();
             else if (node is CompareNode compareNode)
                 result.compareType = compareNode.Comparison.ToString();
-
-            if (node is ExposedPropertyNode setter &&
-                setter.NodeType == ExposedPropertyNodeType.Set &&
-                setter.BlackboardVariable.IsValid &&
-                setter.Value.GetValue() is bool boolValue)
+            else if (node is LocomotionInputMotionNode motionNode)
             {
-                m_BlackboardDeclarations.TryGetValue(setter.BlackboardVariable.DeclarationId, out BaseExposedProperty declaration);
-                result.blackboardWrite = new AgentSnapshotBlackboardWrite
+                result.moveSpeed = motionNode.MoveSpeed;
+                result.turnSpeedDegrees = motionNode.TurnSpeedDegrees;
+                result.cameraRelative = motionNode.CameraRelative;
+                result.continuous = motionNode.Continuous;
+            }
+            else if (node is CharacterInputValueInfoNode inputValueNode)
+                result.inputId = inputValueNode.InputValueId;
+            else if (node is CharacterActionRequestInfoNode actionRequestNode)
+                result.requestId = actionRequestNode.RequestId;
+            else if (node is PipelineBlackboardValueInfoNode blackboardValueNode)
+                result.blackboardDeclarationId = blackboardValueNode.BlackboardVariable.DeclarationId;
+            else if (node is StateExitCauseInfoNode stateExitCauseNode)
+                result.stateExitCause = stateExitCauseNode.Cause.ToString();
+            else if (node is ActionContextActiveInfoNode actionContextNode)
+            {
+                result.actionContextId = AssetIdentity(actionContextNode.ActionContext);
+                RegisterKnownAsset(actionContextNode.ActionContext, snapshot);
+            }
+            else if (node is ActionWindowActiveInfoNode actionWindowNode)
+                result.windowType = actionWindowNode.WindowType;
+            else if (node is CanActivateActionInfoNode actionAdmissionNode)
+            {
+                result.actionProfileId = actionAdmissionNode.ActionProfile ? actionAdmissionNode.ActionProfile.ActionId : string.Empty;
+                result.targetSnapshotBlackboardDeclarationId = actionAdmissionNode.TargetSnapshotVariable.DeclarationId;
+            }
+
+            if (node is ExposedPropertyNode exposedProperty &&
+                exposedProperty.BlackboardVariable.IsValid &&
+                exposedProperty.Value?.ValueType != null)
+            {
+                m_BlackboardDeclarations.TryGetValue(
+                    exposedProperty.BlackboardVariable.DeclarationId,
+                    out BaseExposedProperty declaration);
+                result.exposedProperty = new AgentSnapshotExposedProperty
                 {
-                    declarationAuthoringId = setter.BlackboardVariable.DeclarationId,
-                    declarationOwnerId = setter.BlackboardVariable.DeclarationOwnerId,
-                    key = declaration?.BlackboardKey ?? setter.BlackboardVariable.DisplayKey,
-                    valueType = typeof(bool).FullName,
-                    boolValue = boolValue
+                    mode = exposedProperty.NodeType.ToString(),
+                    declarationAuthoringId = exposedProperty.BlackboardVariable.DeclarationId,
+                    declarationOwnerId = exposedProperty.BlackboardVariable.DeclarationOwnerId,
+                    key = declaration?.BlackboardKey ?? exposedProperty.BlackboardVariable.DisplayKey,
+                    valueType = exposedProperty.Value.ValueType.FullName,
+                    value = exposedProperty.NodeType == ExposedPropertyNodeType.Set
+                        ? AgentAuthoringDocumentCodec.ToToken(exposedProperty.Value.GetValue())
+                        : null
                 };
             }
 
@@ -1452,6 +1878,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static string AssetName(UnityEngine.Object asset)
         {
             return asset ? asset.name : string.Empty;
+        }
+
+        static string AssetIdentity(UnityEngine.Object asset)
+        {
+            if (!asset)
+                return string.Empty;
+            string path = AssetDatabase.GetAssetPath(asset);
+            return string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path);
         }
 
         static void AddUnique(List<string> values, string value)

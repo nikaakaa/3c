@@ -111,33 +111,34 @@ Program manifest MUST声明 NumericProfile、scalar/vector ABI、operation-set v
 
 ### Requirement: Presentation Projection 必须与 Gameplay Numeric Target 分离
 
-Compiler MUST从validated Gameplay Semantic IR artifact建立唯一target-neutral `CharacterPresentationSemanticContract`，并与同一authoring root的Presentation inventory及正式Animation Analysis artifacts生成`CharacterPresentationProjection`。Contract MUST规范保存ProgramId、Gameplay SourceRevision、SemanticHash、按index排序的producer contract与ContractHash。Projection MUST保存该ContractHash与独立ProjectionRevision，MUST不保存或接收Float32/Fixed ProgramHash、LayoutHash、NumericProfile、Target ABI、State codec或target-specific constant。Projection Compiler的正式输入 MUST不包含任何Numeric Target Program；Float32与Fixed Program只能在各自严格加载后通过Target Adapter生成同一Presentation contract。
+Compiler MUST从validated Gameplay Semantic IR artifact建立唯一target-neutral `CharacterPresentationSemanticContract`。Contract MUST规范保存ProgramId、Gameplay SourceRevision、SemanticHash、按index排序且只包含有限Gameplay-owned `AnimationChannelId`的producer contract与ContractHash。Projection Compiler MUST结合Presentation Profile、Pose Graph、PoseStateMachine、state-local pose source、node-local Blend/Inertialization Policy、Rig Definition、有限Action producer inventory和正式Animation Analysis artifacts生成唯一`CharacterPresentationProjection`。Projection MUST保存typed Presentation Fact布局、state-local source binding、Action channel binding、compiled Pose Plan/player/AnimationSlot payload、dense Rig、`CharacterPresentationPoseProgram`、Transition source sync、Foot Analysis与独立ProjectionRevision，MUST不保存或接收Float32/Fixed ProgramHash、LayoutHash、NumericProfile、Target ABI、State codec或target-specific constant。
 
-Projection用于映射producer identity到AnimationClip、Animancer、Camera、Cue、Equipment Visual资源，以及由显式Presentation Analysis Source生成的每脚动画特征。Projection MAY保存Calibration/Analysis identity和压缩后的表现feature curve，但 MUST不保存Graph flow、State transition、Timeline Window、MotionCurve、GameplayEffect真值、Gameplay contact、Sampling Rig实例或Editor采样状态。生成特征 MUST不进入Semantic IR、Numeric Program、Character State、Snapshot、Gameplay Hash或Network协议。
+Projection MUST把state-local PresentationPoseSource identity与有限Action producer identity分别映射到AnimationClip/Animancer source、Camera、Cue、Equipment Visual和其它表现资源。持续Locomotion MUST由committed Body/Intent构造Presentation Fact后进入PoseStateMachine，不得包装成Gameplay producer或AnimationChannel。有限Action channel MUST只进入ActionPlaybackInput并由唯一AnimationSlot消费。Projection、Pose Graph、BlendStack和Inertialization MUST不保存Gameplay Graph flow、Timeline Gameplay Window、MotionCurve、GameplayEffect真值、Gameplay contact或Editor采样状态。Pose Graph/Policy/Rig/Mask/Parameter变化只属于Presentation dependency；有限Action AnimationChannel或producer semantic变化属于Gameplay contract。
 
-#### Scenario: 客户端定位攻击动画
+#### Scenario: 客户端定位Attack动画
 
-- **WHEN** 任一Numeric Target Program输出Attack producer command
-- **THEN** Presentation MUST通过Projection定位Unity动画资源并采样匹配的Foot Analysis
-- **AND** Projection MUST不决定Attack状态、Window或Gameplay命中
+- **WHEN** 任一Numeric Target Program为FullBodyAction channel输出Attack producer command
+- **THEN** Presentation MUST通过匹配contract的Projection定位source并路由到FullBodyAction ActionPlaybackInput
+- **AND** AnimationSlot MUST把该Action source插入同帧Locomotion基础Pose
+- **AND** Pose Graph MUST不决定Attack状态、Window或Gameplay命中
+
+#### Scenario: 客户端求值持续Locomotion
+
+- **WHEN** 任一Numeric Target Program提交移动Body但没有有限Action command
+- **THEN** Presentation MUST从committed Body/Intent构造Fact并求值PoseStateMachine的state-local source
+- **AND** Program与Semantic Contract MUST不包含BaseLocomotion animation producer
 
 #### Scenario: 同一语义生成Float32与Fixed Program
 
-- **WHEN** 同一validated Semantic IR生成Float32 Program与Fixed Program
-- **THEN** 两个Target Adapter MUST生成相同Presentation ContractHash并加载同一Projection
-- **AND** 两个Program MUST继续拥有各自不同的ProgramHash、LayoutHash、NumericProfile与ABI
+- **WHEN** 同一validated Semantic IR生成Float32与Fixed Program
+- **THEN** 两个Target Adapter MUST生成相同AnimationChannel producer contract并加载同一Projection/Pose Program
+- **AND** 两个Program MUST继续拥有各自不同ProgramHash、LayoutHash、NumericProfile与ABI
 
-#### Scenario: 纯表现分析变化
+#### Scenario: 只修改Pose Graph Mask
 
-- **WHEN** AnimationClip内容、Analysis Source内容或Rig Calibration改变但Gameplay authoring语义不变
+- **WHEN** 作者修改FullBodyAction Bone Mask但Gameplay authoring不变
 - **THEN** ProjectionRevision MUST改变
-- **AND** Gameplay SourceRevision、Semantic operation、State layout、Numeric Program payload与各Target ProgramHash MUST保持不变
-
-#### Scenario: Graph Camera producer编译
-
-- **WHEN** Projection Compiler处理Graph来源的Camera producer
-- **THEN** MUST从validated Semantic IR operation、reference、source map与numeric-neutral literal生成Camera binding
-- **AND** MUST不先生成Float32或Fixed Program再反读target constant
+- **AND** Gameplay SourceRevision、Semantic operation、ContractHash与各Target ProgramHash MUST保持不变
 
 ### Requirement: Session ProgramCatalog 必须不可变且支持每 Actor 显式绑定
 
@@ -353,4 +354,3 @@ Program runtime initialization MUST按Program一次构建Slot/Route/Equipment/Fe
 - **WHEN** Route catalog引用不存在的operation entry
 - **THEN** Program execution layout build MUST失败
 - **AND** Session MUST不进入Active
-

@@ -168,7 +168,7 @@ Corin正式Rig MUST为武器Physical Bone到左右手Physical Bone声明两项�
 
 ### Requirement: Virtual Bone必须保持Presentation边界
 
-Virtual Bone、TwoBoneIK状态与diagnostics MUST只属于Presentation Projection与每帧Pose workspace，不得进入Gameplay Program、CharacterSimulationState、WorldSimulationState、Snapshot、Hash、Network packet或Gameplay决策。Agent authoring MUST继续把Rig/PoseGraph作为只读Presentation context，不得获得Virtual Bone写操作。
+Virtual Bone、TwoBoneIK状态与diagnostics MUST只属于Presentation Projection与每帧Pose workspace，不得进入Gameplay Program、CharacterSimulationState、WorldSimulationState、Snapshot、Hash、Network packet或Gameplay决策。Character Document v3 MAY通过正式Pose capability与Presentation Mutation配置TwoBoneIK typed payload；Rig与Virtual Bone catalog正文继续只读，不得通过Pose节点或第二服务修改。
 
 #### Scenario: 网络模型切换
 
@@ -176,8 +176,8 @@ Virtual Bone、TwoBoneIK状态与diagnostics MUST只属于Presentation Projectio
 - **THEN** 各客户端Presentation MAY使用同一Virtual Bone Projection修正可见姿势
 - **AND** Gameplay state、World solve、snapshot与packet identity MUST不因TwoBoneIK结果改变
 
-#### Scenario: Agent请求创建Virtual Bone
+#### Scenario: Agent请求修改Virtual Bone或TwoBoneIK
 
-- **WHEN** Agent Document、Patch或MCP payload尝试修改Rig Virtual Bone或TwoBoneIK配置
-- **THEN** 现有只读Presentation边界 MUST拒绝未知写入
-- **AND** MUST不通过SerializedProperty、默认配置或第二authoring service执行修改
+- **WHEN** Character Document v3修改TwoBoneIK节点并同时尝试改写Rig Virtual Bone正文
+- **THEN** 系统 MUST只允许capability声明的TwoBoneIK typed字段进入Presentation Mutation
+- **AND** MUST拒绝Rig正文改写且不通过SerializedProperty或第二authoring service执行修改

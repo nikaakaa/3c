@@ -37,9 +37,30 @@ namespace ThirdPersonGameplay.Tick
             ulong renderFrame,
             ulong localLogicTick,
             float interpolationAlpha)
+            : this(
+                scaledDeltaSeconds,
+                unscaledDeltaSeconds,
+                scaledDeltaSeconds,
+                GameplayPresentationDebugClockMode.LivePresentation,
+                renderFrame,
+                localLogicTick,
+                interpolationAlpha)
+        {
+        }
+
+        public GameplayPresentationFrameContext(
+            float scaledDeltaSeconds,
+            float unscaledDeltaSeconds,
+            float presentationDeltaSeconds,
+            GameplayPresentationDebugClockMode presentationClockMode,
+            ulong renderFrame,
+            ulong localLogicTick,
+            float interpolationAlpha)
         {
             ScaledDeltaSeconds = scaledDeltaSeconds;
             UnscaledDeltaSeconds = unscaledDeltaSeconds;
+            PresentationDeltaSeconds = presentationDeltaSeconds;
+            PresentationClockMode = presentationClockMode;
             RenderFrame = renderFrame;
             LocalLogicTick = localLogicTick;
             InterpolationAlpha = interpolationAlpha;
@@ -47,6 +68,8 @@ namespace ThirdPersonGameplay.Tick
 
         public float ScaledDeltaSeconds { get; }
         public float UnscaledDeltaSeconds { get; }
+        public float PresentationDeltaSeconds { get; }
+        public GameplayPresentationDebugClockMode PresentationClockMode { get; }
         public ulong RenderFrame { get; }
         public ulong LocalLogicTick { get; }
         public float InterpolationAlpha { get; }

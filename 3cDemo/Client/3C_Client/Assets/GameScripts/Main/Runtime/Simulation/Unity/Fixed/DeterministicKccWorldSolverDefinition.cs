@@ -35,14 +35,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         [SerializeField] DeterministicCollisionWorldAsset m_CollisionWorld;
         [SerializeField] FixedRatioAuthoring m_Radius = new FixedRatioAuthoring(35, 100);
         [SerializeField] FixedRatioAuthoring m_Height = new FixedRatioAuthoring(18, 10);
-        [SerializeField] FixedRatioAuthoring m_SkinWidth = new FixedRatioAuthoring(5, 1000);
+        [SerializeField] FixedRatioAuthoring m_CollisionOffset = new FixedRatioAuthoring(1, 100);
         [SerializeField] FixedRatioAuthoring m_MinimumGroundNormalY = new FixedRatioAuthoring(707106, 1000000);
         [SerializeField] FixedRatioAuthoring m_MaximumStepHeight = new FixedRatioAuthoring(3, 10);
-        [SerializeField] FixedRatioAuthoring m_GroundSnapDistance = new FixedRatioAuthoring(12, 100);
+        [SerializeField] FixedRatioAuthoring m_GroundDetectionExtraDistance = new FixedRatioAuthoring(0, 1);
+        [SerializeField] FixedRatioAuthoring m_GroundProbeReboundDistance = new FixedRatioAuthoring(2, 100);
+        [SerializeField] FixedRatioAuthoring m_MinimumGroundProbingDistance = new FixedRatioAuthoring(5, 1000);
+        [SerializeField] FixedRatioAuthoring m_SecondaryProbeVerticalDistance = new FixedRatioAuthoring(2, 100);
+        [SerializeField] FixedRatioAuthoring m_SecondaryProbeHorizontalDistance = new FixedRatioAuthoring(1, 1000);
+        [SerializeField] FixedRatioAuthoring m_SteppingForwardDistance = new FixedRatioAuthoring(3, 100);
+        [SerializeField] FixedRatioAuthoring m_MinimumRequiredStepDepth = new FixedRatioAuthoring(1, 10);
+        [SerializeField] FixedRatioAuthoring m_MaximumStableDistanceFromLedge = new FixedRatioAuthoring(35, 100);
+        [SerializeField] FixedRatioAuthoring m_MaximumStableDenivelationAngle = new FixedRatioAuthoring(180, 1);
+        [SerializeField] FixedRatioAuthoring m_VerticalObstructionCorrelation = new FixedRatioAuthoring(1, 100);
         [SerializeField] FixedRatioAuthoring m_MaximumMovementDistance = new FixedRatioAuthoring(3, 1);
         [SerializeField] FixedRatioAuthoring m_QueryTolerance = new FixedRatioAuthoring(1, 100000);
         [SerializeField] FixedRatioAuthoring m_MinimumMovementDistance = new FixedRatioAuthoring(1, 100000);
-        [SerializeField] FixedRatioAuthoring m_MinimumStepForwardDistance = new FixedRatioAuthoring(1, 100);
         [SerializeField] FixedRatioAuthoring m_NormalMergeDot = new FixedRatioAuthoring(9999, 10000);
         [SerializeField, Min(1)] int m_MaximumSweepIterations = 16;
         [SerializeField, Min(1)] int m_MaximumContactIterations = 8;
@@ -51,11 +59,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         [SerializeField, Min(1)] int m_MaximumActorPairs = 64;
         [SerializeField, Range(1, 32)] int m_MaximumActorContactIterations = 8;
 
+        public DeterministicCollisionWorldAsset CollisionWorld => m_CollisionWorld ? m_CollisionWorld :
+            throw new InvalidOperationException($"Deterministic KCC Definition '{name}' requires a Collision World Asset.");
+
         public DeterministicCollisionWorldArtifact LoadCollisionWorld()
         {
-            if (!m_CollisionWorld)
-                throw new InvalidOperationException($"Deterministic KCC Definition '{name}' requires a Collision World Asset.");
-            return m_CollisionWorld.Load();
+            return CollisionWorld.Load();
         }
 
         public DeterministicKccConfiguration BuildConfiguration()
@@ -63,14 +72,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             return new DeterministicKccConfiguration(
                 m_Radius.Build(nameof(m_Radius)),
                 m_Height.Build(nameof(m_Height)),
-                m_SkinWidth.Build(nameof(m_SkinWidth)),
+                m_CollisionOffset.Build(nameof(m_CollisionOffset)),
                 m_MinimumGroundNormalY.Build(nameof(m_MinimumGroundNormalY)),
                 m_MaximumStepHeight.Build(nameof(m_MaximumStepHeight)),
-                m_GroundSnapDistance.Build(nameof(m_GroundSnapDistance)),
+                m_GroundDetectionExtraDistance.Build(nameof(m_GroundDetectionExtraDistance)),
+                m_GroundProbeReboundDistance.Build(nameof(m_GroundProbeReboundDistance)),
+                m_MinimumGroundProbingDistance.Build(nameof(m_MinimumGroundProbingDistance)),
+                m_SecondaryProbeVerticalDistance.Build(nameof(m_SecondaryProbeVerticalDistance)),
+                m_SecondaryProbeHorizontalDistance.Build(nameof(m_SecondaryProbeHorizontalDistance)),
+                m_SteppingForwardDistance.Build(nameof(m_SteppingForwardDistance)),
+                m_MinimumRequiredStepDepth.Build(nameof(m_MinimumRequiredStepDepth)),
+                m_MaximumStableDistanceFromLedge.Build(nameof(m_MaximumStableDistanceFromLedge)),
+                m_MaximumStableDenivelationAngle.Build(nameof(m_MaximumStableDenivelationAngle)),
+                m_VerticalObstructionCorrelation.Build(nameof(m_VerticalObstructionCorrelation)),
                 m_MaximumMovementDistance.Build(nameof(m_MaximumMovementDistance)),
                 m_QueryTolerance.Build(nameof(m_QueryTolerance)),
                 m_MinimumMovementDistance.Build(nameof(m_MinimumMovementDistance)),
-                m_MinimumStepForwardDistance.Build(nameof(m_MinimumStepForwardDistance)),
                 m_NormalMergeDot.Build(nameof(m_NormalMergeDot)),
                 m_MaximumSweepIterations,
                 m_MaximumContactIterations,

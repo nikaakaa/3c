@@ -134,13 +134,13 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             m_Instance.name = $"MotionMatchingSamplingRig:{request.Database.DatabaseId}";
             m_Instance.hideFlags = HideFlags.HideAndDontSave;
             m_Binding = m_Instance.GetComponentInChildren<CharacterAnimationRigBinding>(true);
-            if (!m_Binding || !m_Binding.Animator || m_Binding.Bones.Count != request.Database.TargetRig.Bones.Count)
+            if (!m_Binding || !m_Binding.Animator || m_Binding.PhysicalBones.Count != request.Database.TargetRig.PhysicalBoneCount)
                 throw new InvalidOperationException("Instantiated Motion Matching Sampling Rig does not match the preflight binding.");
             m_FeatureBoneIndices = new int[request.FeatureSchema.BoneCount];
             for (int i = 0; i < m_FeatureBoneIndices.Length; i++)
-                m_FeatureBoneIndices[i] = request.Database.TargetRig.RequireBoneIndex(new AnimationBoneId(request.FeatureSchema.GetBoneId(i)));
-            m_LeftFootIndex = request.Database.TargetRig.RequireBoneIndex(request.Database.TargetRig.LeftFootBoneId);
-            m_RightFootIndex = request.Database.TargetRig.RequireBoneIndex(request.Database.TargetRig.RightFootBoneId);
+                m_FeatureBoneIndices[i] = request.Database.TargetRig.RequirePhysicalBoneIndex(new AnimationBoneId(request.FeatureSchema.GetBoneId(i)));
+            m_LeftFootIndex = request.Database.TargetRig.RequirePhysicalBoneIndex(request.Database.TargetRig.LeftLeg.AnkleBoneId);
+            m_RightFootIndex = request.Database.TargetRig.RequirePhysicalBoneIndex(request.Database.TargetRig.RightLeg.AnkleBoneId);
             m_SegmentIndices = new Dictionary<CharacterMotionMatchingSegmentId, int>();
             for (int i = 0; i < request.SegmentCount; i++)
                 m_SegmentIndices.Add(request.GetSegment(i).SegmentId, i);
@@ -331,8 +331,8 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             {
                 AnimationMode.EndSampling();
             }
-            int rootIndex = m_Request.Database.TargetRig.RequireBoneIndex(clip.MotionRootBoneId);
-            Transform root = m_Binding.Bones[rootIndex];
+            int rootIndex = m_Request.Database.TargetRig.RequirePhysicalBoneIndex(clip.MotionRootBoneId);
+            Transform root = m_Binding.PhysicalBones[rootIndex];
             if (!root)
                 throw new InvalidOperationException($"Motion Root Bone '{clip.MotionRootBoneId}' is missing from Sampling Rig.");
             Vector3 rootPosition = m_Instance.transform.InverseTransformPoint(root.position);
@@ -340,13 +340,13 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             var bones = new Vector3[m_FeatureBoneIndices.Length];
             for (int i = 0; i < bones.Length; i++)
             {
-                Transform bone = m_Binding.Bones[m_FeatureBoneIndices[i]];
+                Transform bone = m_Binding.PhysicalBones[m_FeatureBoneIndices[i]];
                 if (!bone)
                     throw new InvalidOperationException($"Feature Bone #{i} is missing from Sampling Rig.");
                 bones[i] = root.InverseTransformPoint(bone.position);
             }
-            Transform left = m_Binding.Bones[m_LeftFootIndex];
-            Transform right = m_Binding.Bones[m_RightFootIndex];
+            Transform left = m_Binding.PhysicalBones[m_LeftFootIndex];
+            Transform right = m_Binding.PhysicalBones[m_RightFootIndex];
             Vector3 leftPosition = root.InverseTransformPoint(left.position);
             Vector3 rightPosition = root.InverseTransformPoint(right.position);
             if (!IsFinite(rootPosition) || !IsFinite(rootRotation) || !IsFinite(leftPosition) || !IsFinite(rightPosition))

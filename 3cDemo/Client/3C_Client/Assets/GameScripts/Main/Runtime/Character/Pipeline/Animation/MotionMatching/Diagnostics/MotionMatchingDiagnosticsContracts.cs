@@ -184,10 +184,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
     {
         public MotionMatchingPoseSourceTrace(MotionMatchingPoseSourceOutput output)
         {
-            PlaybackId = output.PlaybackId;
+            ProviderId = output.ProviderId;
+            SourceIndex = output.SourceIndex;
+            PlayerNodeId = output.PlayerNodeId;
             DatabaseIdentity = output.DatabaseIdentity;
             SelectionGeneration = output.SelectionGeneration;
-            RequestSequence = output.PresentationRequestSequence;
+            FrameSequence = output.FrameSequence;
             SourceClipId = output.ClipSamplePlan.SourceClipId;
             SampleTime = output.ClipSamplePlan.ClipTime;
             ContinuousVisualTime = output.ClipSamplePlan.ContinuousVisualTime;
@@ -196,10 +198,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             FootPlacementWeightParameterId = output.FootPlacementWeight.ParameterId;
         }
 
-        public AnimationPlaybackId PlaybackId { get; }
+        public PresentationPoseSourceProviderId ProviderId { get; }
+        public PresentationPoseSourceIndex SourceIndex { get; }
+        public PoseNodeId PlayerNodeId { get; }
         public CharacterMotionMatchingDatabaseArtifactIdentity DatabaseIdentity { get; }
         public MotionMatchingSelectionGeneration SelectionGeneration { get; }
-        public ulong RequestSequence { get; }
+        public ulong FrameSequence { get; }
         public CharacterMotionMatchingSourceClipId SourceClipId { get; }
         public float SampleTime { get; }
         public double ContinuousVisualTime { get; }

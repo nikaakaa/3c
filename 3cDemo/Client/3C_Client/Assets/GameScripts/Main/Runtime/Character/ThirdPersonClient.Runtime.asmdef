@@ -6,6 +6,7 @@
         "ThirdPersonSimulation.Float32",
         "ThirdPersonSimulation.Unity",
         "ThirdPersonGameplay",
+        "ThirdPersonCharacter.Animation.TransitionRouting",
         "ThirdPersonCharacter.Pipeline.RootMotion",
         "BTSMTL",
         "BTSMTL.Diagnostics",
@@ -15,7 +16,8 @@
         "Kybernetik.Animancer",
         "Cinemachine",
         "Unity.InputSystem",
-        "Unity.Collections"
+        "Unity.Collections",
+        "Unity.Burst"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

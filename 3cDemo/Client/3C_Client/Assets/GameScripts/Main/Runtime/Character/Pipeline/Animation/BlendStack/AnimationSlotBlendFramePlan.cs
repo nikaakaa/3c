@@ -34,7 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             int physicalSourceIndex,
             ulong physicalSourceGeneration,
             AnimationPoseContributionKind kind,
-            int programProducerIndex,
+            int sourceOwnerIndex,
             ulong contributionContinuityIdentity,
             float scalarWeight,
             float leftFootWeight,
@@ -44,9 +44,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             bool stored = kind == AnimationPoseContributionKind.Stored;
             if ((!live && !stored) ||
                 live && (sourceCaptureIndex < 0 || physicalSourceIndex < 0 ||
-                         physicalSourceGeneration == 0 || programProducerIndex < 0) ||
+                         physicalSourceGeneration == 0 || sourceOwnerIndex < 0) ||
                 stored && (sourceCaptureIndex != -1 || physicalSourceIndex != -1 ||
-                           physicalSourceGeneration != 0 || programProducerIndex != -1) ||
+                           physicalSourceGeneration != 0 || sourceOwnerIndex != -1) ||
                 contributionContinuityIdentity == 0 ||
                 !IsNormalized(scalarWeight) || !IsNormalized(leftFootWeight) || !IsNormalized(rightFootWeight))
                 throw new ArgumentException("Animation Slot Blend frame plan entry is invalid.");
@@ -55,7 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             PhysicalSourceIndex = physicalSourceIndex;
             PhysicalSourceGeneration = physicalSourceGeneration;
             Kind = kind;
-            ProgramProducerIndex = programProducerIndex;
+            SourceOwnerIndex = sourceOwnerIndex;
             ContributionContinuityIdentity = contributionContinuityIdentity;
             ScalarWeight = scalarWeight;
             LeftFootWeight = leftFootWeight;
@@ -66,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal int PhysicalSourceIndex { get; }
         internal ulong PhysicalSourceGeneration { get; }
         internal AnimationPoseContributionKind Kind { get; }
-        internal int ProgramProducerIndex { get; }
+        internal int SourceOwnerIndex { get; }
         internal ulong ContributionContinuityIdentity { get; }
         internal float ScalarWeight { get; }
         internal float LeftFootWeight { get; }
@@ -81,9 +81,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 return (live || stored) &&
                        (live
                            ? SourceCaptureIndex >= 0 && PhysicalSourceIndex >= 0 &&
-                             PhysicalSourceGeneration != 0 && ProgramProducerIndex >= 0
+                             PhysicalSourceGeneration != 0 && SourceOwnerIndex >= 0
                            : SourceCaptureIndex == -1 && PhysicalSourceIndex == -1 &&
-                             PhysicalSourceGeneration == 0 && ProgramProducerIndex == -1) &&
+                             PhysicalSourceGeneration == 0 && SourceOwnerIndex == -1) &&
                        ContributionContinuityIdentity != 0 &&
                        IsNormalized(ScalarWeight) && IsNormalized(LeftFootWeight) && IsNormalized(RightFootWeight);
             }
@@ -171,10 +171,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 Kind != AnimationSlotBlendFramePlanKind.CrossFade &&
                 Kind != AnimationSlotBlendFramePlanKind.StoredCapture &&
                 Kind != AnimationSlotBlendFramePlanKind.Unavailable ||
-                !Enum.IsDefined(typeof(AnimationSelectionAvailabilityPolicy), OutputPolicy) ||
-                !Enum.IsDefined(typeof(CharacterAnimationScalePolicy), ScalePolicy) ||
+                (byte)OutputPolicy < (byte)AnimationSelectionAvailabilityPolicy.RequireSelection ||
+                (byte)OutputPolicy > (byte)AnimationSelectionAvailabilityPolicy.AllowEmpty ||
+                (byte)ScalePolicy < (byte)CharacterAnimationScalePolicy.PreserveReferenceScale ||
+                (byte)ScalePolicy > (byte)CharacterAnimationScalePolicy.BlendLocalScale ||
                 (!pose && !noPose && !invalid) ||
-                !Enum.IsDefined(typeof(AnimationPoseNativeInvalidReason), InvalidReason) ||
+                (byte)InvalidReason > (byte)AnimationPoseNativeInvalidReason.WorldContextUnavailable ||
                 !float.IsFinite(OutputWeight) || OutputWeight < 0f || OutputWeight > 1f ||
                 MaxActiveSourceEntries < 2 || ContributionCapacity != checked(MaxActiveSourceEntries + 1) ||
                 ContributionCount < 0 || ContributionCount > ContributionCapacity ||

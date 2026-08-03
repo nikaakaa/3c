@@ -345,28 +345,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         }
     }
 
-    public readonly struct MotionMatchingProducerBindingPayload
+    public readonly struct MotionMatchingProviderBindingPayload
     {
-        public MotionMatchingProducerBindingPayload(
-            string programProducerId,
-            AnimationChannelId animationChannelId,
+        public MotionMatchingProviderBindingPayload(
+            string providerId,
+            PresentationPoseSourceIndex presentationPoseSourceIndex,
             PoseNodeId poseNodeId,
             CharacterMotionMatchingSearchDomainId searchDomainId,
             int firstDatabaseIndex,
             int databaseCount)
         {
-            ProgramProducerId = MotionMatchingIdentity.Require(programProducerId, nameof(programProducerId));
-            if (!animationChannelId.IsValid || !poseNodeId.IsValid || !searchDomainId.IsValid || firstDatabaseIndex < 0 || databaseCount <= 0)
-                throw new ArgumentException("Motion Matching producer binding payload is invalid.");
-            AnimationChannelId = animationChannelId;
+            ProviderId = MotionMatchingIdentity.Require(
+                providerId,
+                nameof(providerId));
+            if (!presentationPoseSourceIndex.IsValid ||
+                !poseNodeId.IsValid ||
+                !searchDomainId.IsValid ||
+                firstDatabaseIndex < 0 ||
+                databaseCount <= 0)
+            {
+                throw new ArgumentException(
+                    "Motion Matching provider binding payload is invalid.");
+            }
+            PresentationPoseSourceIndex = presentationPoseSourceIndex;
             PoseNodeId = poseNodeId;
             SearchDomainId = searchDomainId;
             FirstDatabaseIndex = firstDatabaseIndex;
             DatabaseCount = databaseCount;
         }
 
-        public string ProgramProducerId { get; }
-        public AnimationChannelId AnimationChannelId { get; }
+        public string ProviderId { get; }
+        public PresentationPoseSourceIndex PresentationPoseSourceIndex { get; }
         public PoseNodeId PoseNodeId { get; }
         public CharacterMotionMatchingSearchDomainId SearchDomainId { get; }
         public int FirstDatabaseIndex { get; }
@@ -376,7 +385,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
     public sealed class MotionMatchingProjectionPayload
     {
         readonly MotionMatchingDatabasePayload[] m_Databases;
-        readonly MotionMatchingProducerBindingPayload[] m_ProducerBindings;
+        readonly MotionMatchingProviderBindingPayload[] m_ProviderBindings;
 
         public MotionMatchingProjectionPayload(
             CharacterMotionMatchingProfileId profileId,
@@ -386,26 +395,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             MotionMatchingCostProfilePayload costProfile,
             MotionMatchingSearchPolicyPayload searchPolicy,
             MotionMatchingDatabasePayload[] databases,
-            MotionMatchingProducerBindingPayload[] producerBindings)
+            MotionMatchingProviderBindingPayload[] providerBindings)
         {
             if (!profileId.IsValid || profileRevision <= 0 || featureSchema == null || trajectoryPolicy == null ||
                 costProfile == null || searchPolicy == null || databases == null || databases.Length == 0 ||
-                producerBindings == null || producerBindings.Length == 0 ||
+                providerBindings == null || providerBindings.Length == 0 ||
                 featureSchema.DenseFeatureCount != costProfile.DenseFeatureCount)
                 throw new ArgumentException("Motion Matching Projection payload is incomplete.");
             m_Databases = (MotionMatchingDatabasePayload[])databases.Clone();
-            m_ProducerBindings = (MotionMatchingProducerBindingPayload[])producerBindings.Clone();
-            for (int i = 0; i < m_ProducerBindings.Length; i++)
+            m_ProviderBindings =
+                (MotionMatchingProviderBindingPayload[])providerBindings.Clone();
+            for (int i = 0; i < m_ProviderBindings.Length; i++)
             {
-                MotionMatchingProducerBindingPayload binding = m_ProducerBindings[i];
+                MotionMatchingProviderBindingPayload binding =
+                    m_ProviderBindings[i];
                 if (binding.FirstDatabaseIndex + binding.DatabaseCount > m_Databases.Length)
-                    throw new ArgumentException($"Motion Matching producer binding #{i} exceeds the Database payload range.");
+                    throw new ArgumentException($"Motion Matching provider binding #{i} exceeds the Database payload range.");
                 for (int databaseIndex = 0; databaseIndex < binding.DatabaseCount; databaseIndex++)
                 {
                     MotionMatchingDatabasePayload database = m_Databases[binding.FirstDatabaseIndex + databaseIndex];
                     if (database == null || !database.SearchDomainId.Equals(binding.SearchDomainId) ||
                         !database.ArtifactIdentity.FeatureSchemaId.Equals(featureSchema.SchemaId))
-                        throw new ArgumentException($"Motion Matching producer binding #{i} references an incompatible Database payload.");
+                        throw new ArgumentException($"Motion Matching provider binding #{i} references an incompatible Database payload.");
                 }
             }
             ProfileId = profileId;
@@ -423,8 +434,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingCostProfilePayload CostProfile { get; }
         public MotionMatchingSearchPolicyPayload SearchPolicy { get; }
         public int DatabaseCount => m_Databases.Length;
-        public int ProducerBindingCount => m_ProducerBindings.Length;
+        public int ProviderBindingCount => m_ProviderBindings.Length;
         public MotionMatchingDatabasePayload GetDatabase(int index) => m_Databases[index];
-        public MotionMatchingProducerBindingPayload GetProducerBinding(int index) => m_ProducerBindings[index];
+        public MotionMatchingProviderBindingPayload GetProviderBinding(
+            int index) => m_ProviderBindings[index];
     }
 }

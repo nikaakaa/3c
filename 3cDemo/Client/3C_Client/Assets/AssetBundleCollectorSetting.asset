@@ -82,7 +82,7 @@ MonoBehaviour:
       AssetTags: Gameplay
       ActiveRuleName: EnableGroup
       Collectors:
-      - CollectPath: Assets/Prefabs/Characters/RuntimeProfiles/CorinStandalonePlayer.prefab
+      - CollectPath: Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab
         CollectorGUID: 67b20b0165b77b44f8cf0cfa9ae33f19
         CollectorType: 0
         AddressRuleName: AddressByFileName
@@ -90,7 +90,7 @@ MonoBehaviour:
         FilterRuleName: CollectAll
         AssetTags: Gameplay
         UserData: 
-      - CollectPath: Assets/Prefabs/Characters/RuntimeProfiles/CorinStandaloneTrainingEnemy.prefab
+      - CollectPath: Assets/Prefabs/Characters/RuntimeProfiles/AI/CorinStandaloneTrainingEnemy.prefab
         CollectorGUID: 92b30edb28014fe8a1c58b893df987d4
         CollectorType: 0
         AddressRuleName: AddressByFileName

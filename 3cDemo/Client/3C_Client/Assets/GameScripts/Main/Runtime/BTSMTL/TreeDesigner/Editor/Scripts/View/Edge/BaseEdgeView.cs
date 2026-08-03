@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,12 +10,77 @@ using UnityEngine.UIElements;
 
 namespace TreeDesigner.Editor
 {
-    public class BaseEdgeView : Edge
+    public class GraphAuthoringEdgeViewBase :
+        Edge,
+        IGraphAuthoringReadOnlyView
+    {
+        Capabilities m_AuthoringCapabilities;
+        bool m_RuntimeReadOnly;
+
+        protected bool RuntimeReadOnly => m_RuntimeReadOnly;
+        public GraphAuthoringEdgeProjection?
+            AuthoringProjection { get; private set; }
+
+        protected void BindAuthoringIdentity(string elementId)
+        {
+            if (string.IsNullOrWhiteSpace(elementId))
+                return;
+            viewDataKey = elementId;
+        }
+
+        public void BindAuthoringProjection(
+            GraphAuthoringEdgeProjection projection)
+        {
+            AuthoringProjection = projection;
+            BindAuthoringIdentity(projection.EdgeId.Value);
+        }
+
+        public virtual void SetRuntimeDebugState(string status, bool selected)
+        {
+            Color color = selected ? new Color(0.25f, 0.9f, 0.55f, 1f) : new Color(0.95f, 0.76f, 0.2f, 1f);
+            edgeControl.inputColor = color;
+            edgeControl.outputColor = color;
+            edgeControl.edgeWidth = selected ? 4 : 3;
+            tooltip = status ?? string.Empty;
+            MarkDirtyRepaint();
+        }
+
+        public virtual void ClearRuntimeDebugState()
+        {
+            edgeControl.inputColor = Color.gray;
+            edgeControl.outputColor = Color.gray;
+            edgeControl.edgeWidth = 2;
+            tooltip = string.Empty;
+            MarkDirtyRepaint();
+        }
+
+        public void SetRuntimeReadOnly(bool readOnly)
+        {
+            if (m_RuntimeReadOnly == readOnly)
+                return;
+            m_RuntimeReadOnly = readOnly;
+            if (readOnly)
+            {
+                m_AuthoringCapabilities = capabilities;
+                capabilities &= Capabilities.Selectable | Capabilities.Ascendable;
+            }
+            else
+            {
+                capabilities = m_AuthoringCapabilities;
+            }
+            OnRuntimeReadOnlyChanged(readOnly);
+        }
+
+        protected virtual void OnRuntimeReadOnlyChanged(bool readOnly)
+        {
+        }
+    }
+
+    public class BaseEdgeView :
+        GraphAuthoringEdgeViewBase
     {
         protected BaseEdge m_Edge;
         readonly Label m_EdgeSummary;
-        Capabilities m_AuthoringCapabilities;
-        bool m_RuntimeReadOnly;
 
         public BaseEdge Edge
         {
@@ -22,6 +88,7 @@ namespace TreeDesigner.Editor
             set
             {
                 m_Edge = value;
+                BindAuthoringIdentity(value?.GUID);
                 UpdateEdgeSummary();
             }
         }
@@ -130,41 +197,6 @@ namespace TreeDesigner.Editor
             m_EdgeSummary.style.display = DisplayStyle.Flex;
         }
 
-        public void SetRuntimeDebugState(string status, bool selected)
-        {
-            Color color = selected ? new Color(0.25f, 0.9f, 0.55f, 1f) : new Color(0.95f, 0.76f, 0.2f, 1f);
-            edgeControl.inputColor = color;
-            edgeControl.outputColor = color;
-            edgeControl.edgeWidth = selected ? 4 : 3;
-            tooltip = status ?? string.Empty;
-            MarkDirtyRepaint();
-        }
-
-        public void ClearRuntimeDebugState()
-        {
-            edgeControl.inputColor = Color.gray;
-            edgeControl.outputColor = Color.gray;
-            edgeControl.edgeWidth = 2;
-            tooltip = string.Empty;
-            MarkDirtyRepaint();
-        }
-
-        public void SetRuntimeReadOnly(bool readOnly)
-        {
-            if (m_RuntimeReadOnly == readOnly)
-                return;
-            m_RuntimeReadOnly = readOnly;
-            if (readOnly)
-            {
-                m_AuthoringCapabilities = capabilities;
-                capabilities &= Capabilities.Selectable | Capabilities.Ascendable;
-            }
-            else
-            {
-                capabilities = m_AuthoringCapabilities;
-            }
-        }
-
         string BuildSummaryText()
         {
             if (m_Edge == null)
@@ -214,10 +246,7 @@ namespace TreeDesigner.Editor
             if (!IsStateMachineTransitionEdge)
                 return;
 
-            m_Edge.Owner.ApplyModify("Set Transition Priority", () =>
-            {
-                m_Edge.TransitionPriority = priority;
-            });
+            ApplyTransitionField("priority", priority);
             UpdateEdgeSummary();
         }
 
@@ -226,10 +255,7 @@ namespace TreeDesigner.Editor
             if (!IsBTConditionEdge)
                 return;
 
-            m_Edge.Owner.ApplyModify("Set BT Abort Policy", () =>
-            {
-                m_Edge.AbortPolicy = policy;
-            });
+            ApplyTransitionField("interruption", policy);
             UpdateEdgeSummary();
         }
 
@@ -238,10 +264,9 @@ namespace TreeDesigner.Editor
             if (!HasConditionRuleEditor)
                 return;
 
-            m_Edge.Owner.ApplyModify("Set Condition Rule Graph", () =>
-            {
-                m_Edge.SetConditionRuleGraph(graph);
-            });
+            ApplyTransitionField(
+                "inline-condition-rule",
+                graph);
             UpdateEdgeSummary();
         }
 
@@ -272,10 +297,9 @@ namespace TreeDesigner.Editor
             if (!ConfirmRuleGraphRemoval(oldGraph, oldOwnership))
                 return false;
 
-            m_Edge.Owner.ApplyModify("Set Shared Condition Rule Graph", () =>
-            {
-                m_Edge.SetConditionRuleGraphAsset(asset);
-            });
+            ApplyTransitionField(
+                "shared-condition-rule-asset",
+                asset);
             UpdateEdgeSummary();
             return true;
         }
@@ -293,10 +317,9 @@ namespace TreeDesigner.Editor
             if (graph == null || m_Edge.Owner == null)
                 return false;
 
-            m_Edge.Owner.ApplyModify("Use Inline Condition Rule Graph", () =>
-            {
-                m_Edge.SetConditionRuleGraph(graph);
-            });
+            ApplyTransitionField(
+                "inline-condition-rule",
+                graph);
             UpdateEdgeSummary();
             return true;
         }
@@ -379,11 +402,41 @@ namespace TreeDesigner.Editor
             EditorUtility.SetDirty(sharedAsset);
             AssetDatabase.SaveAssets();
 
-            m_Edge.Owner.ApplyModify("Extract Shared Condition Rule Graph", () =>
-            {
-                m_Edge.SetConditionRuleGraphAsset(sharedAsset);
-            });
+            ApplyTransitionField(
+                "shared-condition-rule-asset",
+                sharedAsset);
             UpdateEdgeSummary();
+        }
+
+        void ApplyTransitionField(
+            string fieldId,
+            object value)
+        {
+            BtsmtlSharedAuthoringWorkspaceBinding binding =
+                StartNodeView?.TreeView?.TreeWindow
+                    ?.SharedAuthoring ??
+                throw new InvalidOperationException(
+                    "BTSMTL Edge has no shared authoring binding.");
+            IGraphAuthoringDocumentProjection document =
+                IsStateMachineTransitionEdge &&
+                binding.UsesStateMachineSurface
+                    ? binding.StateMachineDocument
+                    : binding.Document;
+            IGraphAuthoringDomainMutation mutation =
+                IsStateMachineTransitionEdge &&
+                binding.UsesStateMachineSurface
+                    ? binding.StateMachineMutation
+                    : binding.Mutation;
+            mutation.Apply(
+                document,
+                new GraphAuthoringMutationRequest(
+                    GraphAuthoringMutationKind
+                        .SetTransitionField,
+                    new GraphAuthoringElementId(
+                        m_Edge.GUID),
+                    fieldId:
+                    new GraphAuthoringFieldId(fieldId),
+                    value: value));
         }
 
         ConditionRuleGraphOwnership GetRuleGraphOwnership()

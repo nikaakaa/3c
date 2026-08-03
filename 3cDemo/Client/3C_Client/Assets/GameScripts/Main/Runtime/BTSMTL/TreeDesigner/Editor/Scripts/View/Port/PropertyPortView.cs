@@ -31,14 +31,10 @@ namespace TreeDesigner.Editor
 
         public static PropertyPortView Create<TEdge>(PropertyPort propertyPort, Orientation orientation, Capacity capacity) where TEdge : Edge, new()
         {
-            DefaultEdgeConnectorListener listener = new DefaultEdgeConnectorListener();
-            PropertyPortView port = new PropertyPortView(orientation, (Direction)propertyPort.Direction, capacity, propertyPort.ValueType)
-            {
-                m_EdgeConnector = new EdgeConnector<TEdge>(listener)
-            };
+            PropertyPortView port = new PropertyPortView(orientation, (Direction)propertyPort.Direction, capacity, propertyPort.ValueType);
             port.m_Name = propertyPort.PortId;
             port.m_PropertyPort = propertyPort;
-            port.AddManipulator(port.m_EdgeConnector);
+            port.InstallConnector<TEdge>();
 
             PortHandle portHandle = new PortHandle(port);
             port.m_PortHandle = portHandle;

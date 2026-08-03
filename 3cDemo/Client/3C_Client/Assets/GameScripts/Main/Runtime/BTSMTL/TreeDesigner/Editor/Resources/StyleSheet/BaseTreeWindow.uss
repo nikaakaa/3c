@@ -165,6 +165,10 @@
     flex-grow: 1;
 }
 
+#workspace-graph-content > * {
+    flex-grow: 1;
+}
+
 #tree-title {
     display: none;
 }

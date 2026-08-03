@@ -2,13 +2,13 @@
 
 ### Requirement: Pose Source Selection必须独立于Program Playback生命周期
 
-`AnimationPlaybackId` MUST只标识Program producer activation；`PoseSelectionGeneration` MUST标识该activation内部source pose selection。`AnimationSelectionFrame`的完整source identity MUST同时包含Playback与Pose Selection identity。同Playback同Selection的sample更新 MUST为continuation；同Playback新Selection MUST产生新source identity。显式Player MUST按自身语义处理新identity。
+`PoseStateRelevanceGeneration` MUST标识MM source需求，`PoseSelectionGeneration` MUST标识该需求内部source pose selection。State内部Selection的完整source identity MUST同时包含relevance与Pose Selection identity。同relevance同Selection的sample更新 MUST为continuation；同relevance新Selection MUST产生新source identity。显式Player MUST按自身语义处理新identity。
 
 #### Scenario: MM playback内部跳转
 
-- **WHEN** BaseLocomotion MM producer仍为同一Playback但选择不同Database sample
+- **WHEN** Locomotion PoseState relevance未变但MM选择不同Database sample
 - **THEN** Runtime MUST提升PoseSelectionGeneration
-- **AND** 显式Player MUST不能只按PlaybackId将其视为continuation
+- **AND** 显式Player MUST按provider、player、Presentation source与新generation识别discontinuity，不得读取Gameplay PlaybackId
 
 #### Scenario: Timeline producer连续采样
 
@@ -22,16 +22,16 @@ MM Runtime MUST只提交新的Selection source identity，不提交临时blend d
 
 #### Scenario: Run sample跳到Stop sample
 
-- **WHEN** Search选择同MM producer内的新Stop sample
+- **WHEN** Search选择同MM provider内的新Stop sample
 - **THEN** 显式Blend Stack节点 MUST查找exact transition并创建entry
 - **AND** MM MUST不传入临时blend duration或直接修改entry weight
 
-### Requirement: Motion Matching source不得加入Timeline Marker Sync relation
+### Requirement: Motion Matching source不得加入Action Timeline Marker Sync relation
 
-MM source的contact连续性 MUST来自Database Foot Feature、candidate admission与plan；Marker Sync Runtime MUST只处理正式Timeline producer关系。Timeline与MM在同Channel发生handoff时 MUST只通过图上的显式Player语义处理，不得为MM伪造Timeline marker、cycle或relation。
+MM source的contact连续性 MUST来自Database Foot Feature、candidate admission与plan；Action Marker Sync MUST只处理正式Timeline producer关系。PoseState从Sequence/BlendSpace切换到MM时 MUST只通过State transition、State Source Sync Plan和显式Player处理，不得为MM伪造Timeline marker、cycle或playback relation。
 
 #### Scenario: Airborne Timeline落地到Grounded MM
 
-- **WHEN** BaseLocomotion Channel从普通Airborne producer切换到Grounded MM producer
-- **THEN** Lifecycle MUST提交新的Animation Selection source identity
+- **WHEN** PoseState从普通Airborne source切换到Grounded MM source
+- **THEN** State relevance MUST提交新的Selection source identity
 - **AND** Marker Sync MUST不创建跨source-kind relation

@@ -39,6 +39,7 @@ namespace ThirdPersonGameplay.Tick
 
         static void FrameUpdate()
         {
+            GameplayTickDebugHotkeys.Pump();
             GameplayTickSystem.Current?.FrameUpdate(Time.deltaTime, Time.unscaledDeltaTime);
         }
 

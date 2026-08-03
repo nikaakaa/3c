@@ -1,161 +1,227 @@
 # character-animation-pipeline Specification
 
 ## Purpose
-定义角色管线中的Timeline和动画输出链路：Compiler将`TimelineNode`降低为Program operation，SimulationTick推进Gameplay Timeline并提交AnimationChannel winner，PresentationFrame按raw visual time生成Animation Selection，最终由CharacterSimulationPresentationRuntime在同一PlayableGraph执行唯一编译Pose Plan并发布最终姿势。
+
+定义Gameplay Timeline、Presentation Fact、state-local Pose source、有限Action playback、唯一编译Pose Plan与预分配表现帧事务之间的角色动画输出链。
+
 ## Requirements
-### Requirement: Timeline轨道采样必须输出Animation Selection数据
 
-Compiler MUST将Timeline Animation Track降低为source-neutral selection binding和marker binding。SimulationTick MUST只推进Gameplay Timeline与提交AnimationChannel winner；PresentationFrame sampler MUST按raw visual time、cycle和source-local clip权重生成Animation Selection与typed Parameter page。Timeline MUST不解析Marker Sync effective time，也 MUST不创建Pose、Blend entry、transition identity、Bone Mask或IK plan。Animation track resource binding MUST留在CharacterPresentationProjection；Runtime MUST不把Unity Track/Clip object写入`SimulationActorTickResult`。
+### Requirement: Gameplay Timeline只能提交有限Action播放事实
 
-#### Scenario: 同一 Attack Timeline 产生 Window 与动画
+Compiler MUST把有限Action Timeline AnimationTrack降低为稳定producer binding、AnimationChannel binding、committed sample contract与marker binding。SimulationTick MUST只推进Gameplay Timeline logic time并提交Select、Sample、Complete或Release command；PresentationFrame sampler MUST按committed raw sample、cycle、PlaybackMode和source-local clip weight生成Action playback frame与typed parameter page。Timeline MUST不解析effective marker time、不创建Pose、transition、Bone Mask或IK plan。持续Idle、Walk、Run、Start、Stop与Turn MUST不依赖Gameplay Timeline或AnimationChannel。
 
-- **WHEN** 当前 Tick 命中 Attack Window 并选择动画 producer
-- **THEN** Gameplay Window MUST进入Program事实链
-- **AND** Presentation MUST独立生成Attack Animation Selection供Pose Graph消费
+#### Scenario: Attack Timeline同时产生Window与动画
 
-### Requirement: Timeline 动画采样必须和逻辑事实采样分离
+- **WHEN** Attack Timeline在一个SimulationTick推进Window并选择Attack animation producer
+- **THEN** Window MUST进入Gameplay事实链
+- **AND** Action playback command MUST进入Presentation-owned inbox
 
-Gameplay Timeline sampling MUST只按 SimulationTick/canonical fraction 发生；动画 visual sampling MUST按 PresentationFrame visual time发生。多个 PresentationFrame MUST不重复产生 TreeClip、Motion、ActionWindow、Cue fact 或 Effect mutation。
+#### Scenario: Locomotion持续播放
 
-#### Scenario: 两个逻辑 Tick 之间多次渲染
+- **WHEN** 角色保持Run
+- **THEN** PoseStateMachine的state-local provider MUST推进Run source
+- **AND** Program MUST不创建Run Timeline producer
 
-- **WHEN** PresentationFrame 多次采样同一 producer
-- **THEN** 动画 pose MAY连续变化
-- **AND** Gameplay state/facts MUST保持不变
+### Requirement: Timeline逻辑采样与表现采样必须分离
+
+Gameplay Timeline sampling MUST只按SimulationTick/canonical fraction发生；Action visual sampling与state-local Pose sampling MUST只按PresentationFrame发生。两个Simulation Tick之间的多个PresentationFrame MUST不重复产生TreeClip、Motion、ActionWindow、Cue fact或Effect mutation。Presentation sample MUST不推进CharacterSimulationState的Timeline clock。
+
+#### Scenario: 两个逻辑Tick之间多次渲染
+
+- **WHEN** PresentationFrame多次采样同一Action或Pose source
+- **THEN** 动画Pose MAY连续变化
+- **AND** Gameplay state与facts MUST保持不变
 
 ### Requirement: CharacterSimulationPresentationRuntime必须执行唯一编译Pose Plan
 
-SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application boundary。Presentation Egress MUST把纠偏结果表达为当前最终producer selection、sample、complete或release command，并以Publish disposition提交。Presentation Runtime MUST消费committed Animation Selection与参数，执行Projection编译的Selection、Player、native pose composition、world-aware postprocess和final publication阶段，并在IK/Solver exact completion后发布唯一`FinalAnimationPoseFrame`。Runtime MUST不自动创建图外Stack、图外Foot Placement、第二Pose Graph或第二final writer。每个外部PresentationFrame target MUST只调用一次协调器`Present`；Program Runtime、Execution Backend、Pipeline Pass、WorldSolver、Session Source和Network adapter MUST不引用Animancer、Blend Stack或Pose Graph实现，也 MUST不直接播放或合成动画。
-
-Runtime创建时 MUST显式锁定animation启动策略。Local owner与完整simulated actor MUST使用`RequireCommittedSelection`，Required Selection Input缺少逻辑selection时保持明确错误；只消费外部可靠表现流的observed actor MUST使用`AwaitCommittedSelection`，允许Body在第一份可靠selection到达前推进，但 MUST不伪造Idle、默认producer或隐藏selection。第一份合法selection到达后，observed actor MUST复用同一PendingFirstSample、Selected、Retained、Retired与Player source usage生命周期。
-
-上述 Egress Publish 约束适用于 Standard Float32 与 ServerAuthoritative。Deterministic Rollback adapter MAY在 rollback 原子提交完成后，依据有界 EventId state journal 对已经应用的表现状态调用唯一 Runtime 的 Replace 或 Retire；该对账 MUST不建立第二套 Timeline、crossfade 或 Gameplay state。
+SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application boundary。Runtime MUST消费committed Body/Intent、Program parameter和有限Action command，构造Presentation Fact，并按Projection编译的ordered staged Pose Plan执行PoseStateMachine、state-local provider demand/readiness、ActionPlaybackInput、AnimationSlot、Local Pose composition、显式`LocalToComponentPose`、Component Pose骨骼控制与world-aware FootPlacement、显式`ComponentToLocalPose`、后续Pose stage及FinalPublication。所有Player、Routing、Inertialization、source capture、空间转换和output completion MUST位于同一帧固定计划和同一次PlayableGraph Evaluate。任一stage失败 MUST阻断后续stage与FinalPublication；若已跨过Animancer Evaluate Barrier，同一Actor Animation Runtime MUST进入Faulted且不得逆序恢复状态或Physical Bone快照。Runtime MUST不创建图外基础动画、Stack、FootPlacement、隐式Pose空间转换、world-aware postprocess、第二Pose Graph或第二final writer。
 
 #### Scenario: Commit Attack producer
 
-- **WHEN** LocalImmediateOutputPass将Attack presentation command标记为Publish
-- **THEN** Committer MUST将其送入唯一Presentation协调器
-- **AND** 协调器 MUST将其转发到现有animation playback lifecycle
-- **AND** Pipeline Runtime MUST不直接调用Animancer或自行合成Pose
+- **WHEN** Program提交FullBodyAction Attack command
+- **THEN** Runtime MUST把Action frame送入绑定的ActionPlaybackInput与AnimationSlot
+- **AND** 如何覆盖Source Pose与何时释放 MUST只由compiled Routing Plan决定
 
-#### Scenario: Observed Actor等待可靠Selection
+#### Scenario: Locomotion target Pending
 
-- **WHEN** selected Body horizon已推进但对应可靠animation selection尚未发布
-- **THEN** 协调器 MUST继续推进Body表现
-- **AND** MUST不调用外部body-only分支或伪造animation output
+- **WHEN** PoseStateMachine选择新target但provider尚未Ready
+- **THEN** Runtime MUST保持现有合法Source Pose
+- **AND** MUST不启动target transition或使用旧Timeline fallback
 
-#### Scenario: Observed Actor收到首个Selection
+#### Scenario: Player source槽位复用
 
-- **WHEN** 第一份可靠selection及合法sample进入协调器
-- **THEN** AnimationPlaybackLifecycle MUST从PendingFirstSample进入正式Selected生命周期
-- **AND** 后续Player、MarkerSync、BlendStack与Pose operation MUST继续按Body frame提供的同一presentation clock推进
+- **WHEN** consumer发布retirement permission且backend完成旧source物理释放
+- **THEN** Runtime MAY把workspace槽位分配给新source
+- **AND** 旧CaptureJob与新CaptureJob MUST不在同一次Evaluate写入同一槽位
 
-#### Scenario: Simulated Actor缺少Required Output
+### Requirement: Marker effective time必须由source-local计划解析
 
-- **WHEN** Local owner或Deterministic Rollback simulated actor的Required Selection Input没有逻辑selection
-- **THEN** RequireCommittedSelection策略 MUST报告明确错误
-- **AND** MUST不因该Actor无相机或被称为remote而静默等待
+Action Timeline与Pose source只提交raw sample和marker binding。PoseState Transition的Source Sync Plan或AnimationSlot的Action source usage MUST在采样前解析effective time，并在共同可见期持续求值。Pose Graph MUST不序列化MarkerSync节点；Runtime MUST不按State、Action或clip显示名建立relation。
 
-#### Scenario: 纠偏改变当前可见 producer
+#### Scenario: Walk到Run同步
 
-- **WHEN** ServerAuthoritative Egress确认预测producer不再是当前最终selection
-- **THEN** Egress MUST生成新的release与最终selection command并以Publish提交
-- **AND** 协调器 MUST由图中显式Player节点接管而不建立第二套transition
+- **WHEN** Pose Transition启用MarkerGroup且两侧source binding合法
+- **THEN** Runtime MUST按有向marker pair和segment fraction映射target sample
+- **AND** Gameplay movement MUST不等待marker边界
 
-#### Scenario: Fixed Rollback对账已应用的表现事件
+#### Scenario: Action不同步
 
-- **WHEN** Fixed rollback原子提交后EventId journal判定既有表现事件被替换或退出有效历史
-- **THEN** rollback presentation adapter MAY调用唯一Runtime的Replace或Retire
-- **AND** Runtime MUST只修正表现生命周期，不修改Character/World state或重新执行Gameplay operation
+- **WHEN** Action binding的SyncMode为None
+- **THEN** Action source MUST使用raw visual time
+- **AND** Runtime MUST不自动补relation
 
-### Requirement: 动画预览只读取正式调试Snapshot
+### Requirement: 动画调试只能读取正式Snapshot
 
-系统 MUST从正式AnimationPlaybackLifecycle、Player、source backend与Pose Graph导出只读AnimationPlaybackFrameSnapshot或等价数据。Snapshot MAY包含AnimationChannelId、PoseNodeId、selection/source map、raw/effective sample time、Player source usage、PendingFirstSample、Selected、Retained、Retired、Stack entry/clock/Stored、Inertialization residual、Pose operation contribution以及Composed/PostProcess/Final completion，MUST不参与gameplay决策或最终播放。Timeline编辑器预览 MUST执行与正式链路相同的Selection、Lifecycle、Player、source backend与Pose Plan。
+系统 MUST从`CharacterActionPlaybackRuntime`、PoseState provider、Player、Routing、source backend与Pose Plan导出只读snapshot。Snapshot MAY包含Action PlaybackId/channel/lifecycle、Projection-local dense source index、PlayerNodeId、generation、frame lease、Pending/Ready/Invalid、raw/effective sample、relation、source usage、transition、Inertialization residual、Pose contribution及ordered stage/FinalPublication completion。Snapshot MUST不参与Gameplay、source选择或最终播放，Editor MUST不从Animancer weight重建事实。Runtime MUST先读取显式Live、Capture、Pose Watch与detail interest；没有任何interest时 MUST不执行BlendStack、StateMachine、Inertialization、Operation contribution、Final Pose或逐骨骼weight复制。有interest时 MUST只从成功Seal的Committed页复制到预分配diagnostics页，不得读取或发布Pending帧。
 
-#### Scenario: 生成每帧预览数据
+#### Scenario: 导出每帧调试数据
 
-- **WHEN** 正式或 preview session 更新动画
-- **THEN** 系统 MAY导出当前channel/player/playback lifecycle snapshot
-- **AND** 编辑器 MUST只读取该 snapshot
+- **WHEN** 正式Runtime或Preview完成表现帧且存在匹配diagnostics interest
+- **THEN** MAY发布匹配Projection revision的只读snapshot
+- **AND** Snapshot MUST只表达同一completion identity的Committed结果
+- **AND** 关闭调试历史 MUST不影响正式播放
 
-#### Scenario: 运行时禁用调试历史
+#### Scenario: 没有调试关注者
 
-- **WHEN** 项目关闭动画历史采集
-- **THEN** 系统 MAY不保存历史 snapshot
-- **AND** 正式播放 MUST不依赖 snapshot
+- **WHEN** 当前Actor没有Live、Capture、Pose Watch或detail interest
+- **THEN** Runtime MUST跳过Operation、Final Pose、Pose Watch和逐骨骼diagnostics复制
+- **AND** 正式Pose求值、Final Writer与completion MUST保持不变
 
-### Requirement: 不新增 Timeline 播放分裂路径
+### Requirement: 不得恢复Timeline或Preview分裂路径
 
-系统 MUST只有一条 Gameplay Timeline operation 路径和一条纯表现 sampling 路径。它们通过 producer/playback identity 与 EventId连接；不得保留旧 TimelinePlaybackScheduler gameplay runtime、Timeline.Bind/Evaluate/Unbind、自主 TreeClip runtime 或 AnimationClip root motion 路径。
+系统 MUST只有一条Gameplay Timeline Program operation路径和一条Presentation Pose Plan路径。两者只通过committed Body/Intent、EventId和有限Action command连接；不得保留旧TimelinePlaybackScheduler、Timeline.Bind/Evaluate/Unbind、自主TreeClip runtime、AnimationClip root motion、Animancer direct Play或独立PlayableGraph。Timeline Authoring Preview MUST只通过Action adapter进入统一`AnimationPreviewRuntime`，不得执行Program TreeClip或Simulation Session；Pose Graph Preview与MM Fixture MUST使用各自typed adapter进入同一Runtime。
 
-#### Scenario: 搜索 Timeline Runtime
+#### Scenario: Runtime与Preview并存
 
-- **WHEN** Corin 完成 compiled migration
-- **THEN** Gameplay TreeClip MUST只由 Program operation 执行
+- **WHEN** Editor预览Attack Timeline且游戏运行Corin Program
+- **THEN** Preview state MUST不影响CharacterSimulationState
+- **AND** Live Runtime MUST独占执行Program operation
 
-### Requirement: Timeline 回绕采样必须覆盖边界两侧
+### Requirement: Timeline回绕必须完整采样Gameplay边界
 
-Compiled Timeline operation MUST在一个 SimulationTick 跨越 loop 边界时按尾段、中间 cycle 和头段稳定采样 Gameplay tracks。Presentation sampler MAY按 visual time回绕动画，但 MUST不补发 Gameplay facts。
+Compiled Timeline operation MUST在一个SimulationTick跨越loop边界时按尾段、中间cycle和头段稳定采样Gameplay tracks。Presentation sampler MAY按visual time回绕Action动画，但 MUST不补发Gameplay facts。持续Pose source的cycle MUST由state-local Player独立维护。
 
-#### Scenario: 一 Tick 跨越 Loop 终点
+#### Scenario: 一Tick跨越Loop终点
 
-- **WHEN** logic time 从 cycle 尾部前进到下一 cycle 头部
-- **THEN** Program MUST按正式区间顺序采样两侧 Gameplay segment
+- **WHEN** logic time从cycle尾部前进到下一cycle头部
+- **THEN** Program MUST按正式区间顺序采样两侧Gameplay segment
+- **AND** Presentation MUST不重复提交Window或Cue
 
-### Requirement: TreeClip 运行不得恢复 Timeline 双权威
+### Requirement: 动画command写入与消费权限必须单向
 
-TreeClip Decision/Commit lifecycle MUST只存在于 Program operation 与 CharacterSimulationState。Timeline Authoring Preview MUST不运行 TreeClip、Program operation或 Preview Simulation Session；正式 Character runtime 与 Preview MUST不创建 TimelineRunningTree clone、调用旧 scheduler 或维护第二份 TreeClip 解释逻辑。真实 Decision/Commit 与输出只通过正式运行 Session和 Live Debug观察。
+Kernel Finalize MUST只写有限Action的EventId producer select/sample/complete/release command；SimulationCommitter MUST只按已校验OutputDisposition写presentation-owned queue；PresentationFrame MUST在外层事务中原子消费并acknowledge。Portable Core MUST只定义model-neutral command，不引用Unity Animation/Presentation模块；Presentation adapter MUST不反向修改Program或Character state。
 
-#### Scenario: Runtime 与 Preview 并存
+#### Scenario: 一个RenderFrame前发生多个SimulationTick
 
-- **WHEN** Editor preview 打开同一 Timeline 且游戏运行 Corin Program
-- **THEN** preview state MUST不影响 CharacterSimulationState
-- **AND** Authoring Preview MUST只复用表现sampling与playback lifecycle，不执行任何Program operation
-- **AND** live runtime MUST独占执行该Timeline编译出的Program operation
+- **WHEN** queue包含多个generation的complete/release
+- **THEN** PresentationFrame MUST按Tick/Event sequence消费
+- **AND** 任一阶段 MUST不双写同一command
 
-### Requirement: 动画生命周期通道必须分离事实写入与批次消费权限
+### Requirement: 有限Action readiness必须来自第一份合法Sample
 
-Kernel Finalize MUST只写 EventId producer selection/sample/complete/release command；SimulationCommitter MUST只按已校验 OutputDisposition写 presentation-owned command queue；PresentationFrame MUST原子消费并 acknowledge。任何阶段 MUST不双写同一 command。
+Action lifecycle MUST只以所选producer的第一份匹配generation的合法visual sample作为PendingFirstSample到Selected的readiness。Runnable completion、Kernel Finalize或Pipeline Commit MUST不伪造Ready。PoseState readiness MUST独立来自`PresentationPoseSourceSample`的Availability。
 
-#### Scenario: 一个 RenderFrame 前发生多个 SimulationTick
+#### Scenario: 新Action尚无Sample
 
-- **WHEN** queue 收到多个 generation 的 complete/release
-- **THEN** PresentationFrame MUST按 Tick/Event sequence消费
+- **WHEN** Select已提交但合法Sample未到
+- **THEN** Lifecycle MUST保持PendingFirstSample
+- **AND** Slot MUST按compiled语义维持当前合法输出
 
-### Requirement: Animation 与 Presentation 模块必须保持单向依赖
+### Requirement: 动画表现帧必须使用预分配暂存事务
 
-Portable Core MUST只定义 model-neutral presentation command，不引用 Animation/Presentation module。Projection/Committer MAY引用 Core identity/output；Animation adapter MAY引用 Projection/Presentation lifecycle，MUST不反向修改 Program 或 Character state。
+`CharacterAnimationPresentationRuntime` MUST为每个Actor使用唯一`Prepare -> Validate -> Animancer Evaluate Barrier -> Seal`表现帧事务。Runtime创建时 MUST按Projection编译容量一次分配Committed/Pending Dense Pose页、Native workspace页、Inertialization页、Final Pose页、pending scalar state、mutation journal与source lifecycle command batch。PresentationFrame MUST只读取Committed状态并写Pending页或journal；MUST不通过`CaptureState`、`Clone`、`ToArray`、新建数组、Dictionary或List复制完整旧状态以建立回滚点。成功帧 MUST通过页索引交换和已验证journal提交新状态；Animancer Evaluate Barrier前失败 MUST只丢弃Pending，不恢复Committed对象图；Barrier期间或之后失败 MUST使同一Actor Animation Runtime进入Faulted，不逆序恢复状态或Physical Bone快照。
 
-#### Scenario: 普通 DotNet 编译 Core
+#### Scenario: 普通动画表现帧成功
 
-- **WHEN** server project 编译 Program/Kernel
-- **THEN** MUST不需要 Animancer 或 Unity Presentation assembly
+- **WHEN** 一个Actor使用合法Projection完成普通PresentationFrame且没有诊断interest
+- **THEN** Runtime MUST直接生成Pending Pose与Pending Module状态并在成功后交换Committed页
+- **AND** 事务、Pose发布与关闭的diagnostics MUST不产生每帧托管分配
+- **AND** Runtime MUST不复制完整BlendStack、Pose workspace、Inertialization history、Physical Source registry或骨骼Transform
 
-### Requirement: 逻辑层必须为每个动画通道提交唯一播放选择
+#### Scenario: Evaluate前验证失败
 
-Program Finalize MUST根据State/Action ownership为每个AnimationChannelId最多输出一个selected producer/playback command。Committer与Presentation MUST不重新仲裁两个逻辑候选；冲突 MUST作为Tick failure/diagnostic暴露。
+- **WHEN** Pending帧在进入Animancer Evaluate前发现identity、容量、source ownership或release依赖不合法
+- **THEN** Runtime MUST丢弃本帧Pending页、journal和prepared resource
+- **AND** 已提交Action、PoseState、Slot、Transition、source ownership、Final Pose与Physical Bones MUST保持不变
 
-#### Scenario: Action 与 Locomotion 同时声称 Base
+### Requirement: Dense状态与稀疏生命周期必须使用不同暂存策略
 
-- **WHEN** Program ownership 规则无法产生唯一选择
-- **THEN** Finalize MUST报告冲突
-- **AND** Presentation MUST不自行选择赢家
+每帧完整生成的Dense Pose、velocity、weight、parameter、Native result与Inertialization next state MUST直接写入固定Committed/Pending双页。Action registry、command inbox cursor、sample/Marker cursor、source ownership、usage、retirement与release handshake MUST使用固定容量pending scalar或mutation journal。journal MUST在Evaluate前完成identity、顺序、重复项、容量和依赖验证，Seal MUST只按固定顺序应用已验证mutation。系统 MUST不为了统一API把稀疏Registry整页复制，也 MUST不把Dense Pose降低为逐骨骼托管mutation对象。
 
-### Requirement: 目标播放准备就绪必须来自第一份合法 Sample
+#### Scenario: 本帧只有一个Action生命周期变化
 
-Presentation-owned AnimationPlaybackLifecycle MUST继续只以所选 producer的第一份合法 visual sample作为 readiness。Runnable completion、Kernel Finalize或 Pipeline Commit MUST不伪造 ready。
+- **WHEN** 当前帧只新增或推进一个Action playback而其它Registry entry不变
+- **THEN** Runtime MUST只在固定journal中记录对应mutation
+- **AND** MUST不复制完整Action registry或全部source ownership集合
 
-#### Scenario: 新 producer 尚无 Sample
+#### Scenario: Pose Graph生成下一帧结果
 
-- **WHEN** selection 已提交但 visual sample 未到
-- **THEN** Lifecycle MUST保持PendingFirstSample与现有Retained Stack输出
+- **WHEN** Native Pose Graph为当前帧求值全部PoseBone
+- **THEN** Job MUST把结果直接写入Pending Native/Pose页
+- **AND** MUST不先把Committed Pose页复制为Pending页
 
-### Requirement: Compiled Timeline Operation 必须是 Gameplay Timeline 唯一权威
+### Requirement: Animancer Evaluate必须是唯一不可逆提交门槛
 
-CharacterSimulationProgram Timeline operations MUST唯一拥有 Timeline request、logic time、loop、TreeClip Decision/Commit、motion、window 与 gameplay cue 采样。Presentation timeline sampler MUST只使用 committed producer identity 与 visual time采样动画，MUST不执行 TreeClip、Motion 或 Gameplay fact。
+唯一正式Animancer Graph Evaluate MUST作为动画表现帧不可逆Animancer Evaluate Barrier。进入Barrier前，Runtime MUST完成全部托管identity、容量、readiness、source、release、Job binding与Final Writer binding验证，并且 MUST不消费command acknowledgement、不提交lifecycle、不销毁Committed source、不发布release completion或Final Pose。Barrier之后的Seal MUST不执行动态查找、编译、扩容或业务输入验证，只可交换固定页、应用已验证mutation并发布成功结果。
 
-#### Scenario: Attack Timeline 推进
+#### Scenario: Barrier前Module准备失败
 
-- **WHEN** Attack Timeline 在一个 SimulationTick 内推进
-- **THEN** Program operation MUST产生全部 Gameplay 结果
-- **AND** PresentationFrame MUST只重采样动画表现
+- **WHEN** Player、Slot、Routing或source backend在Prepare阶段报告不可提交结果
+- **THEN** Runtime MUST不调用Animancer Evaluate
+- **AND** MUST不修改Physical Bones或任何已提交外部资源
+
+#### Scenario: Barrier成功完成
+
+- **WHEN** Pending状态、Job binding与Final Writer binding全部通过验证且Graph Evaluate成功
+- **THEN** Runtime MUST以同一completion identity Seal全部Module状态
+- **AND** command acknowledgement、lifecycle、retirement、release completion与Final Pose MUST只属于该成功帧
+
+### Requirement: Final Pose写入必须在整Rig验证后原子选择Committed或Pending结果
+
+`AnimationFinalPosePhysicalWriter` MUST同时读取当前Committed Final Pose与本帧Pending Final Pose，并在写入任何Physical Bone前验证全部Physical Bone Transform binding、PhysicalBoneCount、Pose availability、continuity identity、graph completion和frame completion。全部合法时 MUST写入Pending Pose；typed Pending、Unavailable或Invalid时 MUST保持Committed Pose并禁止提交Pending页。由于该outcome在Evaluate Barrier内产生，外层Runtime MUST进入Faulted。Writer MUST不先写部分骨骼再报告失败，Physical Bone local pose MUST不再由表现帧事务提前捕获或在失败后恢复。
+
+#### Scenario: Pending Pose全部合法
+
+- **WHEN** Pose Graph完成且全部Physical Bone handle和Pending local pose合法
+- **THEN** Final Writer MUST在同一Evaluate Barrier写入完整Pending Physical Pose
+- **AND** Seal MUST把对应Pending Final Pose页提升为Committed
+
+#### Scenario: Pending Pose无效
+
+- **WHEN** Pose Graph发布typed Invalid、completion不匹配或任一Physical Bone在写入前验证失败
+- **THEN** Final Writer MUST不把部分Pending Pose留在可见Rig
+- **AND** Runtime MUST保持上一Committed Pose并丢弃本帧Pending结果
+- **AND** 当前Actor Animation Presentation Runtime MUST进入Faulted并拒绝下一帧
+- **AND** MUST不分配或恢复Physical Transform快照
+
+### Requirement: Physical Source资源生命周期必须延迟提交
+
+新Source Visual、Mixer、Capture Playable、Clip State与物理source slot MAY在Prepare阶段创建为prepared resource，但 MUST不在Seal前取代Committed ownership。Prepare失败 MUST只释放本帧新建prepared resource。Committed source的disconnect、destroy、slot reuse与backend release MUST只由成功帧的固定deferred lifecycle command执行；容量 MUST来自Projection并在Runtime创建或Prepare时严格验证，不得动态扩容或回退其它source。
+
+#### Scenario: 新Action source准备后帧失败
+
+- **WHEN** Prepare为新Action创建了Source Visual但Pose Plan没有成功跨过Animancer Evaluate Barrier
+- **THEN** Runtime MUST释放本帧prepared resource
+- **AND** 原Committed source、usage和slot ownership MUST保持有效
+
+#### Scenario: 旧source获得释放许可
+
+- **WHEN** Slot usage消失、retirement permission和backend release依赖全部在成功帧内匹配
+- **THEN** Runtime MUST在Seal后执行唯一deferred release command
+- **AND** MUST不在Pose Plan成功前销毁旧Playable或复用其workspace槽位
+
+### Requirement: 动画表现异常必须区分Discard与Fault
+
+预期的source Pending、readiness等待与Pose Unavailable MUST在Animancer Evaluate Barrier前通过正式outcome关闭Pending帧，不得依赖异常恢复。若typed Invalid只能在Barrier内确定，Runtime MUST保持Committed Physical Pose并进入Faulted。任何异常发生在Animancer Evaluate Barrier前时，Runtime MUST Discard Pending并向上抛错；发生在Barrier期间或之后时，Runtime MUST记录一次结构化Actor、PresentationFrame、BodyTick、completion与phase上下文，使该Actor的Animation Presentation Runtime进入Faulted并继续向上抛错。Faulted Runtime MUST拒绝后续Present调用，MUST不捕获全部骨骼和状态后尝试继续旧动画，也 MUST不自动重建Runtime或切换fallback路径。
+
+#### Scenario: Prepare阶段发生不变量异常
+
+- **WHEN** Animancer Evaluate Barrier前检测到非法generation或workspace identity
+- **THEN** Runtime MUST Discard Pending并保留Committed状态
+- **AND** 原异常 MUST继续向上报告
+
+#### Scenario: Graph Evaluate发生不可预期异常
+
+- **WHEN** Animancer Graph Evaluate或Barrier后的Seal发生无法证明无外部副作用的异常
+- **THEN** 当前Actor Animation Presentation Runtime MUST进入Faulted并拒绝下一帧
+- **AND** 系统 MUST不执行Physical Transform全量恢复后继续运行

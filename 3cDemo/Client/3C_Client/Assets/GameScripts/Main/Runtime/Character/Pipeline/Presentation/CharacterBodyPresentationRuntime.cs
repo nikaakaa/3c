@@ -136,6 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         bool m_HasSelectedTail;
         float m_SelectedElapsedSeconds;
         ulong m_ResetSequence;
+        ulong m_NextResetSequence;
         CharacterBodyPresentationResetReason m_ResetReason;
         ulong m_BranchReplacementCount;
         CharacterBodyPresentationFrame m_LastPresentedFrame;
@@ -239,7 +240,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : PresentSelected(context);
                 m_LastPresentedFrame = frame;
                 ApplyVisualRoot(frame);
-                PublishDiagnostics(frame, context.ScaledDeltaSeconds);
+                PublishDiagnostics(frame, context.PresentationDeltaSeconds);
                 return frame;
             }
         }
@@ -411,7 +412,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     throw new InvalidOperationException("Committed Presentation cursor cannot move backward.");
                 m_CommittedPresentationTick = Math.Min(
                     latestTick,
-                    m_CommittedPresentationTick + Math.Max(0f, context.ScaledDeltaSeconds) * m_SimulationTickRate);
+                    m_CommittedPresentationTick + Math.Max(0f, context.PresentationDeltaSeconds) * m_SimulationTickRate);
                 if (m_CommittedPresentationTick < firstTick)
                     m_CommittedPresentationTick = firstTick;
             }
@@ -420,7 +421,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException("Committed Presentation Body target cannot be sampled.");
             CharacterVisualTrajectoryResult visible = m_Follower.Evaluate(
                 target.Sample,
-                context.ScaledDeltaSeconds);
+                context.PresentationDeltaSeconds);
             TrimCommittedBodies(target.PreviousTick);
             return BuildFrame(target, visible);
         }
@@ -429,7 +430,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (!m_HasSelectedInterval)
                 return default;
-            float deltaSeconds = Math.Max(0f, context.ScaledDeltaSeconds);
+            float deltaSeconds = Math.Max(0f, context.PresentationDeltaSeconds);
             float intervalDuration = SelectedIntervalDuration(m_SelectedInterval);
             float remainingSeconds = deltaSeconds;
             while (remainingSeconds > 0f)
@@ -625,9 +626,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         void AdvanceReset(CharacterBodyPresentationResetReason reason)
         {
-            m_ResetSequence++;
-            if (m_ResetSequence == 0)
-                m_ResetSequence++;
+            if (m_NextResetSequence == ulong.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    "Character Body presentation reset sequence was exhausted.");
+            }
+            m_NextResetSequence++;
+            m_ResetSequence = m_NextResetSequence;
             m_ResetReason = reason;
         }
 

@@ -19,7 +19,7 @@ AnimationSelection
 - 描述Animator层级中的真实骨骼。
 - 决定source pose workspace的dense长度。
 - 决定Bone Mask、Blend Profile和PoseGraph的dense长度。
-- 决定TransformStreamHandle与final writer的数量。
+- 决定source capture的`TransformStreamHandle`与final Physical Transform writer binding的数量。
 
 这四项在只有真实骨骼时数值相同，但Virtual Bone加入后不再相同。Virtual Bone需要占据Pose槽位并参与混合，却没有场景Transform，也不能被final writer写回。若只向现有`Bones`追加条目，`CharacterAnimationRigBinding`会要求一个不存在的Transform，`BindStreamTransform`也会失败；若把Virtual Bone保存在PoseGraph节点或FinalIK adapter中，它又无法跟随每个source分支、Stored Pose和Inertialization一起流动。
 
@@ -31,7 +31,7 @@ Corin Rig已经包含左右手、完整双臂链和独立于手臂分支的`Bip0
 - 让Virtual Bone从每个真实source pose派生，并完整经过Player、Blend、Stack、Stored Pose和Inertialization。
 - 让作者通过Bone Mask明确决定某一层是否改变Virtual Bone参考。
 - 用显式PoseGraph `TwoBoneIK`消费Virtual Bone，不创建图外IK或场景target。
-- 保持Animator绑定、AnimationStream写回、蒙皮与FootPlacement只操作Physical Bone。
+- 保持Animator绑定、Physical Transform写回、蒙皮与FootPlacement只操作Physical Bone。
 - 让Projection、Preview、Runtime、Pose Watch和Live Debug使用同一数据与执行计划。
 - 以Corin武器双手稳定作为完整样例，而不是只安装未使用的数据结构。
 
@@ -144,7 +144,7 @@ Corin Rig已经包含左右手、完整双臂链和独立于手臂分支的`Bip0
 第二阶段按唯一方向接入：
 
 ```text
-Rig v2 authoring
+Rig v3 authoring
   -> Projection v2
   -> source capture调用Virtual Bone Pose Derivation
   -> Pose运输与Mask/Profile
@@ -165,7 +165,7 @@ Physical Bone同时存在于：
 - Rig authoring与Projection payload。
 - Animator Transform层级。
 - source/final Pose page。
-- AnimationStream handle与final writer。
+- source capture的`TransformStreamHandle`与final Physical Transform writer/binding。
 
 它可以驱动蒙皮、附件或真实辅助骨骼。
 
@@ -199,14 +199,14 @@ Virtual Bone不是历史缓存，也不能替代世界锁点。
 
 | 层 | 输入 | 唯一职责 | 输出 |
 |---|---|---|---|
-| Rig Inspector | Physical Bone catalog | 声明Virtual Bone identity与Source/Target | Rig v2 authoring |
-| Projection Compiler | Rig v2与PoseGraph | 校验并降低dense索引、reference pose与IK描述 | immutable Projection |
+| Rig Inspector | Physical Bone catalog | 声明Virtual Bone identity与Source/Target | Rig v3 authoring |
+| Projection Compiler | Rig v3与PoseGraph | 校验并降低dense索引、reference pose与IK描述 | immutable Projection |
 | Animancer source capture | Physical Bone AnimationStream | 采样Physical Pose并派生Virtual Pose | 完整source Pose page |
 | Player/Stack/Inertialization | 完整source Pose | 时间连续性和Pose运输 | 完整Pose Value |
 | Blend/Mask/Additive | 完整Pose Value | 按显式权重组合Physical与Virtual槽位 | 完整Pose Value |
 | TwoBoneIK | 一个完整Pose Value | 读取Effector/Joint reference并修改Physical limb | 完整Pose Value |
 | FootPlacement | composition后Physical leg pose与world context | 地面查询、脚腿与pelvis修正 | world-aware最终Physical pose |
-| Final writer | 最终Pose Value | 只写Physical Bone handle | Animator AnimationStream |
+| Final writer | 最终Pose Value | 只通过Physical Transform binding写Physical Bone | Animator Physical Transform |
 
 ## Decision 1: Rig显式区分Physical Bone与Virtual Bone
 
@@ -303,10 +303,10 @@ TwoBoneIK把真实LeftHand从27修正到26
 以下模块继续使用`PhysicalBoneCount`：
 
 - `CharacterAnimationRigBinding` Transform数组。
-- Animator `TransformStreamHandle`数组。
+- source capture的Animator `TransformStreamHandle`数组。
 - Foot Analysis Sampling Rig层级校验。
 - Motion Matching实际骨骼特征catalog，除非其source schema以后显式选择Virtual Bone。
-- final AnimationStream writer。
+- final Physical Transform writer/binding。
 
 Virtual Bone可以被Blend、Additive、Mask、Stack和Inertialization间接修改，因为这些操作表达Pose来源贡献。`ModifyBone`、TwoBoneIK chain输出和FootPlacement不得直接写Virtual Bone。这样它始终是参考数据，不会变成没有Transform却可任意修改的第二种控制骨骼。
 
@@ -372,7 +372,7 @@ Root Physical Bone -> Joint Physical Bone -> End Physical Bone
 
 ### 为什么不复用FinalIK LimbIK
 
-FinalIK adapter当前属于FootPlacement world-aware阶段，需要场景Transform、显式solver lifecycle和外部target。把手部Virtual Bone送入FinalIK会要求创建隐藏GameObject或在PosePlan外再跑一次组件更新，形成第二执行链。TwoBoneIK数学直接在dense Pose上运行，才能与Preview和Runtime共用同一计划。
+旧Final IK adapter依赖场景Transform、显式solver lifecycle和外部target。把手部Virtual Bone送入Final IK会要求创建隐藏GameObject或在PosePlan外再跑一次组件更新，形成第二执行链。TwoBoneIK数学直接在dense Pose上运行，才能与Preview和Runtime共用同一计划。
 
 ### Tradeoff
 
@@ -412,10 +412,10 @@ final writer执行：
 
 ```text
 for index in [0, PhysicalBoneCount):
-    write Pose[index] to TransformStreamHandle[index]
+    write Pose[index] through PhysicalTransformBinding[index]
 ```
 
-Virtual区域永远不进入AnimationStream。任何代码尝试为Virtual Bone请求Transform、handle、Humanoid mapping或FootPlacement rig binding都必须失败。
+Virtual区域永远不进入final Physical Transform writer。任何代码尝试为Virtual Bone请求Physical Transform binding、Humanoid mapping或FootPlacement rig binding都必须失败；source capture继续只为Physical Bone持有`TransformStreamHandle`。
 
 ### Tradeoff
 
@@ -534,7 +534,7 @@ FootPlacement继续读取：
 - Foot Lock与prediction状态。
 - `CharacterFootPlacementRigCalibration`。
 
-它不读取Virtual Bone列表，不用Virtual Bone表示heel/toe offset、未来落点、surface anchor或pole。`CharacterFootPlacementRig`继续显式绑定真实pelvis、hip、knee、ankle与toe Transform。
+它不读取Virtual Bone列表，不用Virtual Bone表示heel/toe offset、未来落点、surface anchor或pole。Rig v3唯一声明pelvis与左右hip-knee-ankle-toe Physical chain，`CharacterAnimationRigBinding`只提供对应Physical Transform绑定。
 
 这样手部TwoBoneIK是纯Pose约束，脚部FootPlacement是world-aware接触约束，两者不会争夺同一数据真相。
 
@@ -566,7 +566,7 @@ Rig schema提升会改变RigRevision并使以下产物明确Stale：
 1. 再次确认Selection/PoseGraph/BlendStack/Inertialization/workspace依赖已经安装。
 2. 合并`add-character-presentation-blend-space`对最终node catalog、source capture与Corin PoseGraph的改动。
 3. 将Rig Definition与payload schema升级为Physical/Virtual模型。
-4. 原子迁移所有Rig v1资产为Rig v2；旧`Bones` serialized字段和reader删除。
+4. 原子迁移所有Rig v1资产为Rig v3；旧`Bones` serialized字段和reader删除。
 5. 迁移Rig Binding、Foot Analysis、Motion Matching与所有显式数量语义。
 6. 让source capture和全部Pose workspace复用第一阶段Virtual Bone模块。
 7. 扩展Mask/Profile并迁移全部资产显式覆盖完整Pose Bone。
@@ -594,7 +594,7 @@ Rig schema提升会改变RigRevision并使以下产物明确Stale：
 - Rig数量语义拆分会影响大量数组长度和索引。通过破坏性改名`PhysicalBoneCount`/`PoseBoneCount`并删除含糊API，避免静默选错。
 - Virtual Bone增加每个活跃source的Pose与velocity成本。通过固定少量authoring项、append-only dense layout和预分配scratch限制成本。
 - TwoBoneIK可能在极端姿势退化。通过显式Joint Target、无stretch、编译期reference检查和typed runtime failure暴露问题，不猜默认pole。
-- Corin资产同时被Blend Space change迁移。通过固定先后顺序和一次最终PoseGraph迁移，避免两个change各自保存不同图版本。
+- Virtual Bone/TwoBoneIK业务配置已经完成；后续Pose authoring重构只在一次Document v3事务中重新编码最终Corin图。Blend Space与Motion Matching的独立内容不得再覆盖Corin Rig、Mask、Profile或PoseGraph。
 - 作者可能把Virtual Bone误当世界锚点。通过Inspector帮助、Bone Kind、FootPlacement隔离和诊断空间标签明确语义。
 
 ## Rejected Alternatives

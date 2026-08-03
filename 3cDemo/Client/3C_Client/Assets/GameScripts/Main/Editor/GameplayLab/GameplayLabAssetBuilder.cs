@@ -1,18 +1,21 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using Animancer;
 using Cinemachine;
 using ThirdPersonCamera;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonGameplay.Lab;
 using ThirdPersonSimulation;
+using ThirdPersonSimulation.DeterministicRollback;
 using ThirdPersonSimulation.Fixed;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -25,28 +28,41 @@ namespace ThirdPersonGameplay.Editor.Lab
     internal static class GameplayLabAssetBuilder
     {
         const string ConfigDirectory = "Assets/Configs/Simulation/GameplayLab";
+        const string CompositionDirectory = ConfigDirectory + "/Compositions";
+        const string PipelineDirectory = ConfigDirectory + "/Pipelines";
+        const string SourceDirectory = ConfigDirectory + "/Sources";
+        const string VariantDirectory = ConfigDirectory + "/Variants";
         const string PrefabDirectory = "Assets/Prefabs/GameplayLab";
-        const string SceneDirectory = "Assets/Scenes/GameplayLab";
-        const string FloatCompositionPath = "Assets/Configs/Character/Corin/Pipeline/Definition/CorinLocalSimulationSessionComposition.asset";
-        const string FixedProgramPath = "Assets/Configs/Simulation/DeterministicRollback/CorinFixedProgram.asset";
-        const string FixedRuntimePath = "Assets/Configs/Simulation/DeterministicRollback/CorinFixedProgramRuntime.asset";
-        const string FixedBackendPath = "Assets/Configs/Simulation/DeterministicRollback/CorinFixedPassBackend.asset";
-        const string FixedSolverPath = "Assets/Configs/Simulation/DeterministicRollback/CorinDeterministicKcc.asset";
+        const string FixedProgramPath = "Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgram.asset";
+        const string FixedRuntimePath = "Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgramRuntime.asset";
+        const string FixedBackendPath = "Assets/Configs/Simulation/DeterministicRollback/Pipelines/CorinFixedPassBackend.asset";
+        const string FixedSolverPath = "Assets/Configs/Simulation/DeterministicRollback/World/CorinDeterministicKcc.asset";
+        const string RollbackPipelinePath = "Assets/Configs/Simulation/DeterministicRollback/Pipelines/CorinDeterministicRollbackPipeline.asset";
+        const string CollisionPath = "Assets/Configs/Simulation/DeterministicRollback/World/CorinDeterministicCollisionWorld.asset";
+        const string RollbackEndpointPath = "Assets/Configs/Simulation/DeterministicRollback/Networking/CorinRollbackEndpoint.asset";
+        const string RollbackSourcePath = "Assets/Configs/Simulation/DeterministicRollback/Networking/CorinRollbackSessionSource.asset";
+        const string RollbackCompositionPath = "Assets/Configs/Simulation/DeterministicRollback/Compositions/CorinRollbackComposition.asset";
         const string CharacterDefinitionPath = "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset";
-        const string PlayerPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/CorinStandalonePlayer.prefab";
-        const string TargetPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/CorinStandaloneTrainingEnemy.prefab";
+        const string PlayerPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab";
+        const string TargetPrefabPath = PlayerPrefabPath;
+        const string AnimationRigTemplatePrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Rollback/CorinDeterministicRollback.prefab";
         const string EnvironmentPrefabPath = "Assets/Scenes/Shared/CharacterMovementTestEnvironment.prefab";
-        const string FixedPipelinePath = ConfigDirectory + "/StandardFixedLocalSimulationPipeline.asset";
-        const string FixedSourcePath = ConfigDirectory + "/LocalFixedSimulationSessionSource.asset";
-        const string FixedCompositionPath = ConfigDirectory + "/CorinGameplayLabFixedComposition.asset";
-        const string FloatRootPath = PrefabDirectory + "/GameplayLabLocalFloat32.prefab";
+        const string FixedPipelinePath = PipelineDirectory + "/StandardFixedLocalSimulationPipeline.asset";
+        const string FixedSourcePath = SourceDirectory + "/LocalFixedSimulationSessionSource.asset";
+        const string FixedCompositionPath = CompositionDirectory + "/CorinGameplayLabFixedComposition.asset";
         const string FixedRootPath = PrefabDirectory + "/GameplayLabLocalFixed.prefab";
-        const string FloatVariantPath = ConfigDirectory + "/GameplayLabLocalFloat32Variant.asset";
-        const string FixedVariantPath = ConfigDirectory + "/GameplayLabLocalFixedVariant.asset";
+        const string RollbackRootPath = PrefabDirectory + "/GameplayLabDeterministicRollback.prefab";
+        const string FixedVariantPath = VariantDirectory + "/GameplayLabLocalFixedVariant.asset";
+        const string RollbackVariantPath = VariantDirectory + "/GameplayLabDeterministicRollbackVariant.asset";
         const string PlayerActorId = "gameplay-lab-player";
         const string TargetActorId = "gameplay-lab-target";
         const string ActionTargetInputId = "ActionTarget";
         const string CameraLookInputId = "LookAxis";
+        const string RollbackSessionId = "corin-deterministic-rollback-demo";
+        const string RollbackMapId = "deterministic-rollback-demo";
+        const string RollbackLaunchArgumentPrefix = "--deterministic-rollback-profile=";
+        const string SharedWorldId = "corin-gameplay-lab-world";
+        const string SharedWorldRevision = "corin-gameplay-lab-world-v1";
 
         static readonly Vector3 s_PlayerPosition = new Vector3(2.96f, 0f, -5.27f);
         static readonly Vector3 s_TargetPosition = new Vector3(2.96f, 0f, -1.7f);
@@ -57,55 +73,80 @@ namespace ThirdPersonGameplay.Editor.Lab
                 throw new InvalidOperationException("Gameplay Lab assets cannot be rebuilt in Play Mode.");
             EnsureFolders();
             CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
-            CharacterSimulationBuildResult build = CharacterSimulationBuildOrchestrator.Build(
-                new CharacterSimulationBuildRequest(
-                    definition,
-                    CharacterSimulationBuildPublicationMode.Publish,
-                    new ICharacterSimulationTargetBuildAdapter[]
-                    {
-                        CharacterSimulationTargetCatalog.Float32(definition),
-                        new FixedCharacterSimulationTargetBuildAdapter(FixedProgramPath)
-                    }));
-            if (!build.IsValid)
-                throw new InvalidOperationException(BuildFailureMessage(build));
+            FixedCharacterSimulationProgramAsset fixedProgram =
+                LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
+            CharacterPresentationProjectionAsset projection = definition.PresentationProjection
+                ? definition.PresentationProjection
+                : throw new InvalidOperationException("Gameplay Lab Character Definition has no published Projection.");
+            DeterministicKccWorldSolverDefinition solver =
+                LoadRequired<DeterministicKccWorldSolverDefinition>(FixedSolverPath);
+            DeterministicCollisionWorldAsset collision =
+                LoadRequired<DeterministicCollisionWorldAsset>(CollisionPath);
+            ValidatePublishedProducts(definition, fixedProgram, projection, solver, collision);
             SimulationSessionCompositionDefinition fixedComposition = BuildFixedComposition();
-            GameObject floatRoot = BuildFloatRuntimeRoot();
+            SimulationSessionCompositionDefinition rollbackComposition = BuildRollbackComposition();
             GameObject fixedRoot = BuildFixedRuntimeRoot(fixedComposition);
-            GameplayLabSessionVariantDefinition floatVariant = BuildVariant(
-                FloatVariantPath,
-                "gameplay-lab.local-float32",
-                floatRoot,
-                LoadRequired<SimulationSessionCompositionDefinition>(FloatCompositionPath));
+            GameObject rollbackRoot = BuildRollbackRuntimeRoot(rollbackComposition);
             GameplayLabSessionVariantDefinition fixedVariant = BuildVariant(
                 FixedVariantPath,
                 "gameplay-lab.local-fixed-q32.32",
                 fixedRoot,
-                fixedComposition);
-            BuildScene(floatVariant, fixedVariant);
+                fixedComposition,
+                definition,
+                fixedProgram,
+                projection,
+                solver,
+                collision,
+                string.Empty);
+            GameplayLabSessionVariantDefinition rollbackVariant = BuildVariant(
+                RollbackVariantPath,
+                "gameplay-lab.deterministic-rollback",
+                rollbackRoot,
+                rollbackComposition,
+                definition,
+                fixedProgram,
+                projection,
+                solver,
+                collision,
+                RollbackLaunchArgumentPrefix);
+            BuildScene(fixedVariant, rollbackVariant);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             GameplayLabEditorLauncher.Validate();
-            Debug.Log("Gameplay Lab assets rebuilt: Local Float32 and Local Fixed Q32.32.");
+            Debug.Log("Shared Gameplay Lab synchronized: Local Fixed Q32.32 and Deterministic Rollback.");
         }
 
-        static string BuildFailureMessage(CharacterSimulationBuildResult build)
+        static void ValidatePublishedProducts(
+            CharacterPipelineDefinition definition,
+            FixedCharacterSimulationProgramAsset fixedProgram,
+            CharacterPresentationProjectionAsset projection,
+            DeterministicKccWorldSolverDefinition solver,
+            DeterministicCollisionWorldAsset collision)
         {
-            if (build == null)
-                return "Gameplay Lab Character Simulation build returned no result.";
-            var message = new StringBuilder("Gameplay Lab Character Simulation targets failed to build.");
-            for (int i = 0; i < build.Report.Messages.Count; i++)
+            string definitionPath = AssetDatabase.GetAssetPath(definition);
+            string definitionGuid = AssetDatabase.AssetPathToGUID(definitionPath);
+            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program = fixedProgram.Load();
+            CharacterPresentationSemanticContract contract =
+                FixedCharacterPresentationContractAdapter.Create(program);
+            CharacterPresentationProjection published = projection.Load(contract);
+            ProgramId expectedProgramId = CharacterSemanticFrontendCompiler.ComputeProgramId(definition);
+            ProgramRevision expectedRevision = CharacterSemanticFrontendCompiler.ComputeSourceRevision(definition);
+            if (!string.Equals(fixedProgram.DefinitionGuid, definitionGuid, StringComparison.Ordinal) ||
+                !string.Equals(program.Manifest.ProgramId.Value, expectedProgramId.Value, StringComparison.Ordinal) ||
+                !string.Equals(program.Manifest.SourceRevision.Value, expectedRevision.Value, StringComparison.Ordinal) ||
+                !string.Equals(published.ProgramId, expectedProgramId.Value, StringComparison.Ordinal) ||
+                !string.Equals(published.SourceRevision, expectedRevision.Value, StringComparison.Ordinal) ||
+                !string.Equals(published.SemanticHash, program.Manifest.SemanticHash.ToString(), StringComparison.Ordinal))
             {
-                CharacterSimulationCompileMessage diagnostic = build.Report.Messages[i];
-                if (diagnostic.Severity != CharacterSimulationCompileSeverity.Error)
-                    continue;
-                message.AppendLine();
-                message.Append(diagnostic);
+                throw new InvalidOperationException(
+                    "Gameplay Lab requires one current Fixed Program and Projection from the exact Corin Definition.");
             }
-            message.AppendLine();
-            message.Append("Artifact=").Append(build.Artifact != null ? "ready" : "missing");
-            message.Append(" Targets=").Append(build.TargetProducts.Count);
-            message.Append(" Projection=").Append(build.PresentationProjection != null ? "ready" : "missing");
-            return message.ToString();
+            if (solver.CollisionWorld != collision ||
+                !string.Equals(solver.LoadCollisionWorld().ContentHash.Value, collision.ContentHash, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Gameplay Lab KCC and Collision Artifact references are split.");
+            }
+            _ = solver.BuildKccIdentityHash(program.Manifest.TickRate);
         }
 
         static SimulationSessionCompositionDefinition BuildFixedComposition()
@@ -121,9 +162,9 @@ namespace ThirdPersonGameplay.Editor.Lab
             string mapId = solver.LoadCollisionWorld().MapId;
             composition.SetAuthoring(
                 "corin-gameplay-lab-fixed-local",
-                "corin-gameplay-lab-world",
+                SharedWorldId,
                 mapId,
-                "corin-gameplay-lab-world-v1",
+                SharedWorldRevision,
                 "corin-gameplay-lab-fixed-local-logic",
                 program.Manifest.TickRate,
                 runtime,
@@ -143,55 +184,113 @@ namespace ThirdPersonGameplay.Editor.Lab
             return composition;
         }
 
-        static GameObject BuildFloatRuntimeRoot()
+        static SimulationSessionCompositionDefinition BuildRollbackComposition()
         {
+            FixedCharacterSimulationProgramAsset fixedProgram = LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
+            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program = fixedProgram.Load();
+            FixedProgramRuntimeDefinition runtime = LoadRequired<FixedProgramRuntimeDefinition>(FixedRuntimePath);
+            FixedPassExecutionBackendDefinition backend = LoadRequired<FixedPassExecutionBackendDefinition>(FixedBackendPath);
+            DeterministicRollbackPipelineDefinition pipeline = CreateOrLoad<DeterministicRollbackPipelineDefinition>(RollbackPipelinePath);
+            DeterministicKccWorldSolverDefinition solver = LoadRequired<DeterministicKccWorldSolverDefinition>(FixedSolverPath);
+            RollbackEndpointAuthoringDefinition endpoint = CreateOrLoad<RollbackEndpointAuthoringDefinition>(RollbackEndpointPath);
+            ConfigureRollbackEndpoint(endpoint);
+            DeterministicRollbackSessionSourceDefinition source =
+                CreateOrLoad<DeterministicRollbackSessionSourceDefinition>(RollbackSourcePath);
+            ConfigureRollbackSource(source, program.Manifest.TickRate, fixedProgram, pipeline, solver, endpoint);
             SimulationSessionCompositionDefinition composition =
-                LoadRequired<SimulationSessionCompositionDefinition>(FloatCompositionPath);
-            Scene previous = SceneManager.GetActiveScene();
-            Scene workspace = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
-            try
-            {
-                SceneManager.SetActiveScene(workspace);
-                var root = new GameObject("GameplayLabLocalFloat32");
-                SimulationSessionHost sessionHost = root.AddComponent<SimulationSessionHost>();
-                sessionHost.BindComposition(composition);
-                ThirdPersonCameraController cameraRig = CreateCameraRig(root.transform);
-                CharacterPipelineHost player = InstantiateFloatActor(
-                    PlayerPrefabPath,
-                    root.transform,
-                    "Gameplay Lab Player",
-                    PlayerActorId,
-                    s_PlayerPosition,
-                    Quaternion.identity,
-                    sessionHost,
-                    CharacterPresentationRole.LocalOwner,
-                    cameraRig);
-                CharacterPipelineHost target = InstantiateFloatActor(
-                    TargetPrefabPath,
-                    root.transform,
-                    "Gameplay Lab Target",
-                    TargetActorId,
-                    s_TargetPosition,
-                    Quaternion.Euler(0f, 180f, 0f),
-                    sessionHost,
-                    CharacterPresentationRole.SimulatedActor,
-                    null);
-                ReplaceWithNeutralControl(target);
-                SessionActorActionTargetInputProvider provider =
-                    player.GetComponent<SessionActorActionTargetInputProvider>();
-                if (!provider)
-                    throw new InvalidOperationException("Gameplay Lab Float player requires the formal Session Actor target provider.");
-                provider.SetAuthoring(target);
-                GameObject saved = SavePrefab(root, FloatRootPath);
-                Object.DestroyImmediate(root);
-                return saved;
-            }
-            finally
-            {
-                if (previous.IsValid() && previous.isLoaded)
-                    SceneManager.SetActiveScene(previous);
-                EditorSceneManager.CloseScene(workspace, true);
-            }
+                CreateOrLoad<SimulationSessionCompositionDefinition>(RollbackCompositionPath);
+            composition.SetAuthoring(
+                RollbackSessionId,
+                SharedWorldId,
+                RollbackMapId,
+                SharedWorldRevision,
+                "deterministic-rollback-local-logic",
+                program.Manifest.TickRate,
+                runtime,
+                backend,
+                pipeline,
+                source,
+                solver,
+                WorldFeature.Ground |
+                WorldFeature.Slope |
+                WorldFeature.Step |
+                WorldFeature.WallSlide |
+                WorldFeature.ActorCollision);
+            EditorUtility.SetDirty(pipeline);
+            EditorUtility.SetDirty(source);
+            EditorUtility.SetDirty(composition);
+            composition.RequireComplete();
+            source.BuildModelDefinition();
+            return composition;
+        }
+
+        static void ConfigureRollbackEndpoint(RollbackEndpointAuthoringDefinition endpoint)
+        {
+            var serialized = new SerializedObject(endpoint);
+            serialized.FindProperty("m_RelayServerAddress").stringValue = "127.0.0.1";
+            serialized.FindProperty("m_RelayServerPort").intValue = 24100;
+            serialized.FindProperty("m_RelayServerPeerId").stringValue = "rollback-input-relay";
+            serialized.FindProperty("m_SessionId").stringValue = RollbackSessionId;
+            serialized.FindProperty("m_MaximumDatagramBytes").intValue = 1200;
+            serialized.FindProperty("m_MaximumQueuedMessages").intValue = 512;
+            serialized.FindProperty("m_MaximumFragmentsPerMessage").intValue = 512;
+            serialized.FindProperty("m_ReliableResendMilliseconds").intValue = 50;
+            serialized.FindProperty("m_InputRedundancyCount").intValue = 4;
+            serialized.FindProperty("m_MaximumPreparationTicks").intValue = 1200;
+            SerializedProperty profiles = serialized.FindProperty("m_PeerProfiles");
+            profiles.arraySize = 2;
+            ConfigureRollbackProfile(
+                profiles.GetArrayElementAtIndex(0),
+                "peer-a",
+                "rollback-peer-a",
+                "rollback-player-a",
+                "rollback-actor-a",
+                24101);
+            ConfigureRollbackProfile(
+                profiles.GetArrayElementAtIndex(1),
+                "peer-b",
+                "rollback-peer-b",
+                "rollback-player-b",
+                "rollback-actor-b",
+                24102);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(endpoint);
+            endpoint.Build();
+            endpoint.BuildRoster();
+        }
+
+        static void ConfigureRollbackProfile(
+            SerializedProperty profile,
+            string profileId,
+            string peerId,
+            string playerId,
+            string actorId,
+            int port)
+        {
+            profile.FindPropertyRelative("m_ProfileId").stringValue = profileId;
+            profile.FindPropertyRelative("m_PeerId").stringValue = peerId;
+            profile.FindPropertyRelative("m_PlayerId").stringValue = playerId;
+            profile.FindPropertyRelative("m_ActorId").stringValue = actorId;
+            profile.FindPropertyRelative("m_LocalAddress").stringValue = "127.0.0.1";
+            profile.FindPropertyRelative("m_LocalPort").intValue = port;
+        }
+
+        static void ConfigureRollbackSource(
+            DeterministicRollbackSessionSourceDefinition source,
+            int tickRate,
+            FixedCharacterSimulationProgramAsset program,
+            DeterministicRollbackPipelineDefinition pipeline,
+            DeterministicKccWorldSolverDefinition solver,
+            RollbackEndpointAuthoringDefinition endpoint)
+        {
+            var serialized = new SerializedObject(source);
+            serialized.FindProperty("m_TickRate").intValue = tickRate;
+            serialized.FindProperty("m_FixedProgram").objectReferenceValue = program;
+            serialized.FindProperty("m_Pipeline").objectReferenceValue = pipeline;
+            serialized.FindProperty("m_WorldSolver").objectReferenceValue = solver;
+            serialized.FindProperty("m_Endpoint").objectReferenceValue = endpoint;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(source);
         }
 
         static GameObject BuildFixedRuntimeRoot(SimulationSessionCompositionDefinition composition)
@@ -250,26 +349,90 @@ namespace ThirdPersonGameplay.Editor.Lab
             }
         }
 
-        static CharacterPipelineHost InstantiateFloatActor(
-            string prefabPath,
+        static GameObject BuildRollbackRuntimeRoot(SimulationSessionCompositionDefinition composition)
+        {
+            CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
+            FixedCharacterSimulationProgramAsset fixedProgram = LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
+            RollbackEndpointAuthoringDefinition endpoint = LoadRequired<RollbackEndpointAuthoringDefinition>(RollbackEndpointPath);
+            Scene previous = SceneManager.GetActiveScene();
+            Scene workspace = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            try
+            {
+                SceneManager.SetActiveScene(workspace);
+                var root = new GameObject("GameplayLabDeterministicRollback");
+                SimulationSessionHost sessionHost = root.AddComponent<SimulationSessionHost>();
+                sessionHost.BindComposition(composition);
+                ThirdPersonCameraController cameraRig = CreateCameraRig(root.transform);
+                DeterministicRollbackCharacterHost actorA = InstantiateRollbackActor(
+                    root.transform,
+                    "Corin Rollback Actor A",
+                    "rollback-actor-a",
+                    "rollback-body-a",
+                    new Vector3(-2f, 0f, -5f),
+                    sessionHost,
+                    endpoint,
+                    fixedProgram,
+                    definition,
+                    cameraRig);
+                DeterministicRollbackCharacterHost actorB = InstantiateRollbackActor(
+                    root.transform,
+                    "Corin Rollback Actor B",
+                    "rollback-actor-b",
+                    "rollback-body-b",
+                    new Vector3(2f, 0f, -5f),
+                    sessionHost,
+                    endpoint,
+                    fixedProgram,
+                    definition,
+                    cameraRig);
+                var diagnosticsObject = new GameObject("Deterministic Rollback Diagnostics");
+                diagnosticsObject.transform.SetParent(root.transform, false);
+                DeterministicRollbackDemoStatusOverlay overlay =
+                    diagnosticsObject.AddComponent<DeterministicRollbackDemoStatusOverlay>();
+                overlay.SetActors(actorA, actorB);
+                GameObject saved = SavePrefab(root, RollbackRootPath);
+                Object.DestroyImmediate(root);
+                return saved;
+            }
+            finally
+            {
+                if (previous.IsValid() && previous.isLoaded)
+                    SceneManager.SetActiveScene(previous);
+                EditorSceneManager.CloseScene(workspace, true);
+            }
+        }
+
+        static DeterministicRollbackCharacterHost InstantiateRollbackActor(
             Transform parent,
             string objectName,
             string actorId,
+            string bodyBindingId,
             Vector3 position,
-            Quaternion rotation,
             SimulationSessionHost sessionHost,
-            CharacterPresentationRole role,
+            RollbackEndpointAuthoringDefinition endpoint,
+            FixedCharacterSimulationProgramAsset fixedProgram,
+            CharacterPipelineDefinition definition,
             ThirdPersonCameraController cameraRig)
         {
-            GameObject instance = InstantiatePrefab(prefabPath, parent.gameObject.scene);
+            GameObject instance = InstantiatePrefab(AnimationRigTemplatePrefabPath, parent.gameObject.scene);
             instance.name = objectName;
             instance.transform.SetParent(parent, false);
             instance.transform.localPosition = position;
-            instance.transform.localRotation = rotation;
-            CharacterPipelineHost host = instance.GetComponent<CharacterPipelineHost>() ??
-                throw new InvalidOperationException($"Character Prefab '{prefabPath}' has no CharacterPipelineHost.");
-            host.BindSessionActor(sessionHost, new ActorId(actorId));
-            host.SetRuntimeAuthoring(host.ControlSource, role, cameraRig);
+            instance.transform.localRotation = Quaternion.identity;
+            DeterministicRollbackCharacterHost host =
+                instance.GetComponent<DeterministicRollbackCharacterHost>() ??
+                throw new InvalidOperationException(
+                    $"Rollback Character Prefab '{AnimationRigTemplatePrefabPath}' has no DeterministicRollbackCharacterHost.");
+            host.SetAuthoring(
+                sessionHost,
+                endpoint,
+                fixedProgram,
+                definition.PresentationProjection,
+                definition.InputProfile,
+                actorId,
+                bodyBindingId,
+                cameraRig,
+                CameraLookInputId);
             return host;
         }
 
@@ -288,18 +451,24 @@ namespace ThirdPersonGameplay.Editor.Lab
             bool playerControlled)
         {
             GameObject instance = InstantiatePrefab(prefabPath, parent.gameObject.scene);
+            PrefabUtility.UnpackPrefabInstance(
+                instance,
+                PrefabUnpackMode.Completely,
+                InteractionMode.AutomatedAction);
             instance.name = objectName;
             instance.transform.SetParent(parent, false);
             instance.transform.localPosition = position;
             instance.transform.localRotation = rotation;
             CharacterPipelineHost floatHost = instance.GetComponent<CharacterPipelineHost>() ??
                 throw new InvalidOperationException($"Character Prefab '{prefabPath}' has no CharacterPipelineHost.");
+            EnsureStrictAnimatorRoot(floatHost, definition);
+            EnsureAnimationRigBinding(floatHost, definition);
             Float32WorldBodyBinding floatBody = floatHost.WorldBodyBinding;
             string bindingId = floatBody ? floatBody.BindingId :
                 throw new InvalidOperationException($"Character Prefab '{prefabPath}' has no World Body Binding.");
             Transform visualRoot = floatHost.VisualRoot;
             CharacterBodyPresentationProfile bodyPresentation = floatHost.BodyPresentationProfile;
-            CharacterFootPlacementComposition footPlacement = floatHost.FootPlacement;
+            CharacterWorldAwarePresentationBinding worldAwarePresentation = floatHost.WorldAwarePresentation;
             CharacterEquipmentRigBindingCatalog equipment = floatHost.EquipmentRigBindings;
             AnimancerComponent animancer = floatHost.Animancer;
             CharacterAnimationRigBinding animationRigBinding = floatHost.AnimationRigBinding;
@@ -339,7 +508,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 instance.transform,
                 visualRoot,
                 bodyPresentation,
-                footPlacement,
+                worldAwarePresentation,
                 equipment,
                 animancer,
                 animationRigBinding,
@@ -352,12 +521,106 @@ namespace ThirdPersonGameplay.Editor.Lab
             return fixedHost;
         }
 
-        static void ReplaceWithNeutralControl(CharacterPipelineHost host)
+        static void EnsureStrictAnimatorRoot(
+            CharacterPipelineHost host,
+            CharacterPipelineDefinition definition)
         {
-            RemoveComponents<CharacterControlSource>(host.gameObject);
-            RemoveComponents<CharacterActionTargetInputProvider>(host.gameObject);
-            NeutralCharacterControlSource neutral = host.gameObject.AddComponent<NeutralCharacterControlSource>();
-            host.SetRuntimeAuthoring(neutral, CharacterPresentationRole.SimulatedActor, null);
+            Transform visualRoot = host.VisualRoot;
+            AnimancerComponent sourceAnimancer = host.Animancer;
+            Animator sourceAnimator = sourceAnimancer ? sourceAnimancer.Animator : null;
+            if (!visualRoot || !sourceAnimator)
+                throw new InvalidOperationException(
+                    $"Gameplay Lab Character '{host.name}' has no formal Presentation hierarchy.");
+            sourceAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            if (sourceAnimator.transform != visualRoot)
+            {
+                if (!sourceAnimator.transform.IsChildOf(visualRoot))
+                    throw new InvalidOperationException(
+                        $"Gameplay Lab Character '{host.name}' Animator Root is outside its Presentation VisualRoot.");
+                return;
+            }
+
+            CharacterAnimationRigDefinition rigDefinition = definition.AnimationPresentationProfile
+                ? definition.AnimationPresentationProfile.RigDefinition
+                : throw new InvalidOperationException(
+                    "Gameplay Lab Character Definition has no Animation Presentation Rig.");
+            var payload = new CharacterAnimationRigPayload(rigDefinition);
+            CharacterAnimationRigBinding rigBinding = host.AnimationRigBinding;
+            Transform[] physicalBones = rigBinding
+                ? rigBinding.PhysicalBones.ToArray()
+                : null;
+
+            Transform[] children = Enumerable.Range(0, visualRoot.childCount)
+                .Select(visualRoot.GetChild)
+                .ToArray();
+            var animatorRootObject = new GameObject("AnimatorRoot");
+            Transform animatorRoot = animatorRootObject.transform;
+            animatorRoot.SetParent(visualRoot, false);
+            for (int i = 0; i < children.Length; i++)
+                children[i].SetParent(animatorRoot, false);
+
+            Animator animator = animatorRootObject.AddComponent<Animator>();
+            EditorUtility.CopySerialized(sourceAnimator, animator);
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            AnimancerComponent animancer = animatorRootObject.AddComponent<AnimancerComponent>();
+            EditorUtility.CopySerialized(sourceAnimancer, animancer);
+            var animancerSerialized = new SerializedObject(animancer);
+            animancerSerialized.FindProperty("_Animator").objectReferenceValue = animator;
+            animancerSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            if (rigBinding)
+            {
+                physicalBones[payload.RootPhysicalBoneIndex] = animatorRoot;
+                rigBinding.Configure(animator, payload, physicalBones);
+            }
+            var hostSerialized = new SerializedObject(host);
+            hostSerialized.FindProperty("m_Animancer").objectReferenceValue = animancer;
+            hostSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            Object.DestroyImmediate(sourceAnimancer, true);
+            Object.DestroyImmediate(sourceAnimator, true);
+        }
+
+        static void EnsureAnimationRigBinding(
+            CharacterPipelineHost host,
+            CharacterPipelineDefinition definition)
+        {
+            CharacterAnimationRigDefinition rigDefinition = definition.AnimationPresentationProfile
+                ? definition.AnimationPresentationProfile.RigDefinition
+                : throw new InvalidOperationException("Gameplay Lab Character Definition has no Animation Presentation Rig.");
+            var payload = new CharacterAnimationRigPayload(rigDefinition);
+            if (host.AnimationRigBinding)
+            {
+                host.AnimationRigBinding.RequireValid(payload);
+                return;
+            }
+
+            GameObject template = LoadRequired<GameObject>(AnimationRigTemplatePrefabPath);
+            CharacterAnimationRigBinding templateBinding =
+                template.GetComponentInChildren<CharacterAnimationRigBinding>(true);
+            if (!templateBinding)
+                throw new InvalidOperationException("Gameplay Lab Animation Rig template has no formal Rig Binding.");
+            templateBinding.RequireValid(payload);
+
+            Transform sourceRoot = templateBinding.Animator.transform;
+            Transform targetRoot = host.Animancer.Animator.transform;
+            var physicalBones = new Transform[templateBinding.PhysicalBones.Count];
+            for (int i = 0; i < physicalBones.Length; i++)
+            {
+                Transform sourceBone = templateBinding.PhysicalBones[i];
+                string path = AnimationUtility.CalculateTransformPath(sourceBone, sourceRoot);
+                Transform targetBone = string.IsNullOrEmpty(path) ? targetRoot : targetRoot.Find(path);
+                if (!targetBone)
+                    throw new InvalidOperationException(
+                        $"Gameplay Lab Character '{host.name}' is missing Animation Rig Bone path '{path}'.");
+                physicalBones[i] = targetBone;
+            }
+
+            CharacterAnimationRigBinding binding =
+                host.VisualRoot.GetComponent<CharacterAnimationRigBinding>() ??
+                host.VisualRoot.gameObject.AddComponent<CharacterAnimationRigBinding>();
+            binding.Configure(host.Animancer.Animator, payload, physicalBones);
+            host.ConfigureAnimationRigBinding(binding);
         }
 
         static ThirdPersonCameraController CreateCameraRig(Transform parent)
@@ -415,7 +678,13 @@ namespace ThirdPersonGameplay.Editor.Lab
             string path,
             string variantId,
             GameObject rootPrefab,
-            SimulationSessionCompositionDefinition composition)
+            SimulationSessionCompositionDefinition composition,
+            CharacterPipelineDefinition definition,
+            FixedCharacterSimulationProgramAsset fixedProgram,
+            CharacterPresentationProjectionAsset projection,
+            DeterministicKccWorldSolverDefinition worldSolver,
+            DeterministicCollisionWorldAsset collision,
+            string externalLaunchArgumentPrefix)
         {
             GameplayLabSessionVariantDefinition variant = CreateOrLoad<GameplayLabSessionVariantDefinition>(path);
             SimulationProgramRuntimeDescriptor program = composition.ProgramRuntime.BuildDescriptor();
@@ -429,15 +698,27 @@ namespace ThirdPersonGameplay.Editor.Lab
                 program.TargetAbiVersion.Value,
                 source.Identity.ComponentId,
                 pipeline.PipelineId.Value,
-                solver.Identity.ComponentId);
+                solver.Identity.ComponentId,
+                AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(definition)),
+                composition,
+                fixedProgram,
+                projection,
+                worldSolver,
+                collision,
+                externalLaunchArgumentPrefix);
             variant.ValidateComposition(composition);
             EditorUtility.SetDirty(variant);
             return variant;
         }
 
         static void BuildScene(
-            GameplayLabSessionVariantDefinition floatVariant,
-            GameplayLabSessionVariantDefinition fixedVariant)
+            GameplayLabSessionVariantDefinition fixedVariant,
+            GameplayLabSessionVariantDefinition rollbackVariant)
+        {
+            BuildSharedScene(new[] { fixedVariant, rollbackVariant });
+        }
+
+        static void BuildSharedScene(GameplayLabSessionVariantDefinition[] variants)
         {
             Scene previous = SceneManager.GetActiveScene();
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
@@ -446,14 +727,18 @@ namespace ThirdPersonGameplay.Editor.Lab
                 SceneManager.SetActiveScene(scene);
                 GameObject environment = InstantiatePrefab(EnvironmentPrefabPath, scene);
                 environment.name = "Character Movement Test Environment";
+                ConfigureDeterministicWorld(environment);
                 var lightObject = new GameObject("Gameplay Lab Directional Light");
                 Light light = lightObject.AddComponent<Light>();
                 light.type = LightType.Directional;
                 light.intensity = 1f;
                 lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
-                var bootstrapObject = new GameObject("Gameplay Lab Bootstrap");
-                GameplayLabBootstrap bootstrap = bootstrapObject.AddComponent<GameplayLabBootstrap>();
-                bootstrap.SetVariants(0, floatVariant, fixedVariant);
+                if (variants.Length != 0)
+                {
+                    var bootstrapObject = new GameObject("Gameplay Lab Bootstrap");
+                    GameplayLabBootstrap bootstrap = bootstrapObject.AddComponent<GameplayLabBootstrap>();
+                    bootstrap.SetVariants(0, variants);
+                }
                 Scene loadedScene = SceneManager.GetSceneByPath(GameplayLabEditorLauncher.ScenePath);
                 bool targetIsOpen = loadedScene.IsValid() && loadedScene.isLoaded;
                 if (targetIsOpen)
@@ -471,6 +756,29 @@ namespace ThirdPersonGameplay.Editor.Lab
                     SceneManager.SetActiveScene(previous);
                 EditorSceneManager.CloseScene(scene, true);
             }
+        }
+
+        static void ConfigureDeterministicWorld(GameObject environment)
+        {
+            DeterministicCollisionWorldAsset collision = CreateOrLoad<DeterministicCollisionWorldAsset>(CollisionPath);
+            DeterministicCollisionWorldAuthoring world =
+                environment.GetComponent<DeterministicCollisionWorldAuthoring>() ??
+                environment.AddComponent<DeterministicCollisionWorldAuthoring>();
+            var worldSerialized = new SerializedObject(world);
+            worldSerialized.FindProperty("m_MapId").stringValue = RollbackMapId;
+            worldSerialized.FindProperty("m_QuantizationUnitsPerMeter").intValue = 1000;
+            worldSerialized.FindProperty("m_WorldBoundsCenter").vector3Value = new Vector3(50f, 8f, 15f);
+            worldSerialized.FindProperty("m_WorldBoundsSize").vector3Value = new Vector3(400f, 60f, 240f);
+            worldSerialized.FindProperty("m_Output").objectReferenceValue = collision;
+            worldSerialized.ApplyModifiedPropertiesWithoutUndo();
+            DeterministicCollisionSurfaceAuthoring surface =
+                environment.GetComponent<DeterministicCollisionSurfaceAuthoring>() ??
+                environment.AddComponent<DeterministicCollisionSurfaceAuthoring>();
+            var surfaceSerialized = new SerializedObject(surface);
+            surfaceSerialized.FindProperty("m_SurfaceIdentity").stringValue = "movement-test-course";
+            surfaceSerialized.FindProperty("m_MaterialIdentity").stringValue = "sandbox-graybox";
+            surfaceSerialized.FindProperty("m_Walkable").boolValue = true;
+            surfaceSerialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         static void ReplaceSceneContents(Scene source, Scene destination)
@@ -526,6 +834,10 @@ namespace ThirdPersonGameplay.Editor.Lab
         static void EnsureFolders()
         {
             EnsureFolder("Assets/Configs/Simulation", "GameplayLab");
+            EnsureFolder(ConfigDirectory, "Compositions");
+            EnsureFolder(ConfigDirectory, "Pipelines");
+            EnsureFolder(ConfigDirectory, "Sources");
+            EnsureFolder(ConfigDirectory, "Variants");
             EnsureFolder("Assets/Prefabs", "GameplayLab");
             EnsureFolder("Assets/Scenes", "GameplayLab");
         }

@@ -1,5 +1,6 @@
 using System;
 using BTSMTL.Diagnostics;
+using UnityEngine;
 using FixedRuntime = ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
@@ -95,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     Flag = record.Severity != FixedRuntime.SimulationTraceSeverity.Error,
                     Value = DebugValueSnapshot.Capture(record.Header.Sequence)
                 });
+            CharacterPipelineTraceCommandLine.LogOperation(record, kind, source, m_SourceMap);
         }
 
         public void PublishPipeline(FixedRuntime.SimulationPipelineTraceRecord record)
@@ -213,6 +215,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 "operation_stop_requested" => RuntimeTraceEventKind.NodeStopRequested,
                 "operation_stopped" => RuntimeTraceEventKind.NodeStopped,
                 "operation_force_stopped" => RuntimeTraceEventKind.NodeForceStopped,
+                "condition_value_evaluated" => RuntimeTraceEventKind.ConditionGraphEvaluated,
+                "condition_graph_evaluated" => RuntimeTraceEventKind.ConditionGraphEvaluated,
+                "state_transition_evaluated" => RuntimeTraceEventKind.StateTransitionEvaluated,
                 "state_transition_selected" => RuntimeTraceEventKind.StateTransitionSelected,
                 "timeline_logic_time" => RuntimeTraceEventKind.TimelineLogicTime,
                 "timeline_completed" => RuntimeTraceEventKind.TimelineCompleted,
@@ -230,6 +235,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 "action_activation_rejected" => RuntimeTraceEventKind.ActionActivationRequested,
                 "action_activated" => RuntimeTraceEventKind.ActionActivationRequested,
                 "action_lifecycle" => RuntimeTraceEventKind.ActionLifecycleTransitioned,
+                "equipment_snapshot" => RuntimeTraceEventKind.EquipmentSnapshot,
+                "equipment_change" => RuntimeTraceEventKind.EquipmentChange,
+                "equipment_host" => RuntimeTraceEventKind.EquipmentHost,
+                "motion_contribution" => RuntimeTraceEventKind.MotionContribution,
+                "motion_channel_resolved" or
+                "resolved_gameplay_motion" or
+                "motion_warp_applied" or
+                "world_result_applied" => RuntimeTraceEventKind.MotionResolved,
+                _ when code.StartsWith("motion_warp_", StringComparison.Ordinal) => RuntimeTraceEventKind.MotionResolved,
                 _ when code.StartsWith("gameplay_effect", StringComparison.Ordinal) => RuntimeTraceEventKind.GameplayEffectLifecycle,
                 _ => RuntimeTraceEventKind.NodeStatus
             };
@@ -264,14 +278,68 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 return RuntimeTraceChannel.Timeline;
             if (kind == RuntimeTraceEventKind.BlackboardProjected)
                 return RuntimeTraceChannel.Blackboard;
-            if (kind == RuntimeTraceEventKind.StateTransitionSelected ||
+            if (kind == RuntimeTraceEventKind.MotionContribution ||
+                kind == RuntimeTraceEventKind.MotionResolved)
+                return RuntimeTraceChannel.Motion;
+            if (kind == RuntimeTraceEventKind.StateTransitionEvaluated ||
+                kind == RuntimeTraceEventKind.StateTransitionSelected ||
                 kind == RuntimeTraceEventKind.ActionWindowSampled ||
                 kind == RuntimeTraceEventKind.ActionActivationRequested ||
                 kind == RuntimeTraceEventKind.ActionLifecycleTransitioned)
                 return RuntimeTraceChannel.StateMachine;
             if (kind == RuntimeTraceEventKind.GameplayEffectLifecycle || code.StartsWith("gameplay_", StringComparison.Ordinal))
                 return RuntimeTraceChannel.GameplayEffect;
+            if (kind == RuntimeTraceEventKind.EquipmentSnapshot ||
+                kind == RuntimeTraceEventKind.EquipmentChange ||
+                kind == RuntimeTraceEventKind.EquipmentHost)
+                return RuntimeTraceChannel.Equipment;
             return RuntimeTraceChannel.Graph;
+        }
+    }
+
+    public static class CharacterPipelineTraceCommandLine
+    {
+        const string Argument = "--character-pipeline-trace";
+        static readonly bool s_Requested = Array.Exists(
+            Environment.GetCommandLineArgs(),
+            value => string.Equals(value, Argument, StringComparison.Ordinal));
+
+        public static void Enable(RuntimeDiagnosticsStore store)
+        {
+            if (!s_Requested)
+                return;
+            if (store == null)
+                throw new ArgumentNullException(nameof(store));
+            store.AcquireInterest(new RuntimeDiagnosticsInterest(
+                RuntimeDiagnosticsInterestKind.LiveState,
+                RuntimeTraceChannel.All));
+        }
+
+        internal static void LogOperation(
+            FixedRuntime.SimulationTraceRecord record,
+            RuntimeTraceEventKind kind,
+            RuntimeSourceElementHandle source,
+            IDebugSourceMap sourceMap)
+        {
+            if (!s_Requested ||
+                kind != RuntimeTraceEventKind.StateTransitionEvaluated &&
+                kind != RuntimeTraceEventKind.StateTransitionSelected &&
+                kind != RuntimeTraceEventKind.ConditionGraphEvaluated &&
+                kind != RuntimeTraceEventKind.MotionContribution &&
+                kind != RuntimeTraceEventKind.MotionResolved)
+            {
+                return;
+            }
+
+            string sourceIdentity = source.ToString();
+            if (sourceMap.TryGet(source, out DebugSourceMapEntry entry))
+            {
+                RuntimeSourceElementKey key = entry.Source;
+                sourceIdentity =
+                    $"{entry.DisplayName}|{key.Kind}|graph={key.GraphAuthoringId}|element={key.ElementAuthoringId}|timeline={key.TimelineAuthoringId}|track={key.TrackAuthoringId}|clip={key.ClipAuthoringId}";
+            }
+            Debug.Log(
+                $"[CharacterPipelineTrace] Actor={record.Header.ActorId.Value} Tick={record.Header.Tick.Value} Code={record.Code} Source={sourceIdentity} Detail={record.Detail}");
         }
     }
 }

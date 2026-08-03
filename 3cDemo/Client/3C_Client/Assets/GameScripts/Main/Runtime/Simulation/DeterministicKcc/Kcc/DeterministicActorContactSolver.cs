@@ -683,7 +683,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             FixedScalar aMaximum = FixedScalar.Max(a.BeforePosition.Y, a.CandidatePosition.Y) + a.Shape.Height;
             FixedScalar bMinimum = FixedScalar.Min(b.BeforePosition.Y, b.CandidatePosition.Y);
             FixedScalar bMaximum = FixedScalar.Max(b.BeforePosition.Y, b.CandidatePosition.Y) + b.Shape.Height;
-            FixedScalar tolerance = FixedScalar.Max(a.Shape.SkinWidth, b.Shape.SkinWidth);
+            FixedScalar tolerance = FixedScalar.Max(a.Shape.CollisionOffset, b.Shape.CollisionOffset);
             return aMinimum < bMaximum - tolerance && bMinimum < aMaximum - tolerance;
         }
 
@@ -693,7 +693,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             FixedVector3 bPosition,
             DeterministicActorContactShape bShape)
         {
-            FixedScalar tolerance = FixedScalar.Max(aShape.SkinWidth, bShape.SkinWidth);
+            FixedScalar tolerance = FixedScalar.Max(aShape.CollisionOffset, bShape.CollisionOffset);
             return aPosition.Y < bPosition.Y + bShape.Height - tolerance &&
                    bPosition.Y < aPosition.Y + aShape.Height - tolerance;
         }

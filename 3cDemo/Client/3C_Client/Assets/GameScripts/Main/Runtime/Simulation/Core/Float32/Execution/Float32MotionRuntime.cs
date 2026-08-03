@@ -5,16 +5,28 @@ namespace ThirdPersonSimulation
 {
     public readonly struct ResolvedGameplayMotion
     {
-        public ResolvedGameplayMotion(Float32Vector3 displacement, Float32Scalar yawDegrees, bool hasMotion)
+        public ResolvedGameplayMotion(
+            Float32Vector3 displacement,
+            Float32Scalar yawDegrees,
+            bool hasMotion,
+            string locomotionOwnerIdentity,
+            string actionOwnerIdentity,
+            string gameplayResultOwnerIdentity)
         {
             Displacement = displacement;
             YawDegrees = yawDegrees;
             HasMotion = hasMotion;
+            LocomotionOwnerIdentity = locomotionOwnerIdentity ?? string.Empty;
+            ActionOwnerIdentity = actionOwnerIdentity ?? string.Empty;
+            GameplayResultOwnerIdentity = gameplayResultOwnerIdentity ?? string.Empty;
         }
 
         public Float32Vector3 Displacement { get; }
         public Float32Scalar YawDegrees { get; }
         public bool HasMotion { get; }
+        public string LocomotionOwnerIdentity { get; }
+        public string ActionOwnerIdentity { get; }
+        public string GameplayResultOwnerIdentity { get; }
     }
 
     internal enum SimulationMotionChannel
@@ -195,7 +207,13 @@ namespace ThirdPersonSimulation
             Compose(gameplayResult, ref displacement, ref yaw);
 
             bool hasMotion = displacement != Float32Vector3.Zero || yaw != Float32Scalar.Zero;
-            var motion = new ResolvedGameplayMotion(displacement, yaw, hasMotion);
+            var motion = new ResolvedGameplayMotion(
+                displacement,
+                yaw,
+                hasMotion,
+                locomotion.ResolvedOwnerIdentity,
+                action.ResolvedOwnerIdentity,
+                gameplayResult.ResolvedOwnerIdentity);
             TraceResolvedGameplayMotion(motion, action);
             return motion;
         }

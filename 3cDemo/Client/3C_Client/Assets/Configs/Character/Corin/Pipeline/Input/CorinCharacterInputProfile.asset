@@ -17,9 +17,11 @@ MonoBehaviour:
   m_InputValues:
   - m_InputValueId: MoveAxis
     m_ValueType: 2
+    m_Vector2ConflictPolicy: 1
     m_SourceAction: {fileID: 11400000, guid: 73cefb543257c0a458a0ee0caadbcff1, type: 2}
   - m_InputValueId: LookAxis
     m_ValueType: 2
+    m_Vector2ConflictPolicy: 0
     m_SourceAction: {fileID: 11400000, guid: 50ae9dbcb8b780942864fce5bf43a906, type: 2}
   m_ActionRequests:
   - m_RequestId: Attack

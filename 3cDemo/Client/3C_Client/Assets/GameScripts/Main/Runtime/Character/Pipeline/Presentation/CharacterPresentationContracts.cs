@@ -10,177 +10,210 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    public enum CharacterPosePlanPhaseStatus : byte
+    public enum CharacterPoseStageStatus : byte
     {
         Completed = 1,
-        NotRequired = 2,
-        Unavailable = 3
+        Unavailable = 2
     }
 
-    public enum CharacterPosePlanPhaseUnavailableReason : byte
+    public enum CharacterPoseStageUnavailableReason : byte
     {
         None = 0,
-        ComposedPoseUnavailable = 1,
+        PoseUnavailable = 1,
         WorldContextUnavailable = 2,
-        WorldAwarePhaseUnavailable = 3
+        UpstreamStageUnavailable = 3
     }
 
-    public readonly struct CharacterPosePlanPhaseSnapshot
+    public readonly struct CharacterPoseExecutionStageSnapshot
     {
-        public CharacterPosePlanPhaseSnapshot(
-            CharacterPosePlanPhase phase,
-            CharacterPosePlanPhaseStatus status,
-            CharacterPosePlanPhaseUnavailableReason unavailableReason,
+        public CharacterPoseExecutionStageSnapshot(
+            int stageIndex,
+            CharacterPoseExecutionDomain executionDomain,
+            CharacterPoseSpace inputPoseSpace,
+            CharacterPoseSpace outputPoseSpace,
+            CharacterPoseStageStatus status,
+            CharacterPoseStageUnavailableReason unavailableReason,
             ulong completionIdentity)
         {
-            bool completed = status == CharacterPosePlanPhaseStatus.Completed;
-            bool notRequired = status == CharacterPosePlanPhaseStatus.NotRequired;
-            bool unavailable = status == CharacterPosePlanPhaseStatus.Unavailable;
-            if (!Enum.IsDefined(typeof(CharacterPosePlanPhase), phase) ||
-                !Enum.IsDefined(typeof(CharacterPosePlanPhaseStatus), status) ||
-                !Enum.IsDefined(typeof(CharacterPosePlanPhaseUnavailableReason), unavailableReason) ||
-                completed && (completionIdentity == 0 || unavailableReason != CharacterPosePlanPhaseUnavailableReason.None) ||
-                notRequired && (completionIdentity != 0 || unavailableReason != CharacterPosePlanPhaseUnavailableReason.None) ||
-                unavailable && (completionIdentity != 0 || unavailableReason == CharacterPosePlanPhaseUnavailableReason.None))
+            bool completed = status == CharacterPoseStageStatus.Completed;
+            if (stageIndex < 0 ||
+                (byte)executionDomain < (byte)CharacterPoseExecutionDomain.FactAndDemand ||
+                (byte)executionDomain > (byte)CharacterPoseExecutionDomain.FinalPublication ||
+                (byte)inputPoseSpace > (byte)CharacterPoseSpace.Component ||
+                (byte)outputPoseSpace > (byte)CharacterPoseSpace.Component ||
+                (byte)status < (byte)CharacterPoseStageStatus.Completed ||
+                (byte)status > (byte)CharacterPoseStageStatus.Unavailable ||
+                (byte)unavailableReason > (byte)CharacterPoseStageUnavailableReason.UpstreamStageUnavailable ||
+                completed && (completionIdentity == 0 || unavailableReason != CharacterPoseStageUnavailableReason.None) ||
+                !completed && (completionIdentity != 0 || unavailableReason == CharacterPoseStageUnavailableReason.None))
             {
-                throw new ArgumentException("Pose Plan phase snapshot is invalid.");
+                throw new ArgumentException("Pose execution stage snapshot is invalid.");
             }
-            Phase = phase;
+            StageIndex = stageIndex;
+            ExecutionDomain = executionDomain;
+            InputPoseSpace = inputPoseSpace;
+            OutputPoseSpace = outputPoseSpace;
             Status = status;
             UnavailableReason = unavailableReason;
             CompletionIdentity = completionIdentity;
         }
 
-        public CharacterPosePlanPhase Phase { get; }
-        public CharacterPosePlanPhaseStatus Status { get; }
-        public CharacterPosePlanPhaseUnavailableReason UnavailableReason { get; }
+        public int StageIndex { get; }
+        public CharacterPoseExecutionDomain ExecutionDomain { get; }
+        public CharacterPoseSpace InputPoseSpace { get; }
+        public CharacterPoseSpace OutputPoseSpace { get; }
+        public CharacterPoseStageStatus Status { get; }
+        public CharacterPoseStageUnavailableReason UnavailableReason { get; }
         public ulong CompletionIdentity { get; }
-        public bool IsCompleted => Status == CharacterPosePlanPhaseStatus.Completed;
+        public bool IsCompleted => Status == CharacterPoseStageStatus.Completed;
     }
 
     public readonly struct CharacterPosePlanStageSnapshot
     {
+        readonly CharacterPoseExecutionStageSnapshot[] m_Stages;
+
         public CharacterPosePlanStageSnapshot(
             string poseGraphId,
             string posePlanHash,
             AnimationPoseAvailability composedAvailability,
-            CharacterPosePlanPhaseSnapshot composed,
-            CharacterPosePlanPhaseSnapshot worldAware,
-            CharacterPosePlanPhaseSnapshot final)
+            CharacterPoseExecutionStageSnapshot[] stages)
         {
             if (string.IsNullOrWhiteSpace(poseGraphId) || string.IsNullOrWhiteSpace(posePlanHash) ||
-                !Enum.IsDefined(typeof(AnimationPoseAvailability), composedAvailability) ||
-                composed.Phase != CharacterPosePlanPhase.SourceAndNativePose ||
-                worldAware.Phase != CharacterPosePlanPhase.WorldAwarePostProcess ||
-                final.Phase != CharacterPosePlanPhase.FinalPublication ||
-                final.IsCompleted && !composed.IsCompleted ||
-                final.IsCompleted && worldAware.Status == CharacterPosePlanPhaseStatus.Unavailable)
+                (byte)composedAvailability < (byte)AnimationPoseAvailability.Pose ||
+                (byte)composedAvailability > (byte)AnimationPoseAvailability.Invalid ||
+                stages == null || stages.Length == 0)
             {
                 throw new ArgumentException("Pose Plan stage snapshot is invalid.");
+            }
+            for (int i = 0; i < stages.Length; i++)
+            {
+                if (stages[i].StageIndex != i ||
+                    i > 0 && stages[i - 1].Status == CharacterPoseStageStatus.Unavailable &&
+                    stages[i].Status == CharacterPoseStageStatus.Completed)
+                {
+                    throw new ArgumentException("Pose Plan stage snapshot order is invalid.");
+                }
             }
             PoseGraphId = poseGraphId;
             PosePlanHash = posePlanHash;
             ComposedAvailability = composedAvailability;
-            Composed = composed;
-            WorldAware = worldAware;
-            Final = final;
+            m_Stages = stages;
         }
 
         public string PoseGraphId { get; }
         public string PosePlanHash { get; }
         public AnimationPoseAvailability ComposedAvailability { get; }
-        public CharacterPosePlanPhaseSnapshot Composed { get; }
-        public CharacterPosePlanPhaseSnapshot WorldAware { get; }
-        public CharacterPosePlanPhaseSnapshot Final { get; }
-        public bool IsValid => !string.IsNullOrWhiteSpace(PoseGraphId) && !string.IsNullOrWhiteSpace(PosePlanHash);
+        public IReadOnlyList<CharacterPoseExecutionStageSnapshot> Stages =>
+            m_Stages ?? Array.Empty<CharacterPoseExecutionStageSnapshot>();
+        public bool IsValid => !string.IsNullOrWhiteSpace(PoseGraphId) &&
+                               !string.IsNullOrWhiteSpace(PosePlanHash) &&
+                               m_Stages != null && m_Stages.Length > 0;
     }
 
     internal static class CharacterPosePlanStageSnapshotFactory
     {
         internal static CharacterPosePlanStageSnapshot Completed(
             CharacterPresentationPosePlan plan,
-            in ComposedAnimationPoseFrame composed,
-            bool worldAwareExecuted)
+            in ComposedAnimationPoseFrame composed)
         {
             RequirePlan(plan);
+            var stages = new CharacterPoseExecutionStageSnapshot[plan.Stages.Count];
+            for (int i = 0; i < stages.Length; i++)
+                stages[i] = Complete(plan.Stages[i], composed.CompletionIdentity);
             return new CharacterPosePlanStageSnapshot(
                 composed.PoseGraphId,
                 composed.PosePlanHash,
                 composed.Availability,
-                Complete(CharacterPosePlanPhase.SourceAndNativePose, composed.CompletionIdentity),
-                worldAwareExecuted
-                    ? Complete(CharacterPosePlanPhase.WorldAwarePostProcess, composed.CompletionIdentity)
-                    : NotRequired(CharacterPosePlanPhase.WorldAwarePostProcess),
-                Complete(CharacterPosePlanPhase.FinalPublication, composed.CompletionIdentity));
+                stages);
         }
 
         internal static CharacterPosePlanStageSnapshot Unavailable(
             CharacterPresentationPosePlan plan,
             AnimationPoseAvailability composedAvailability,
-            ulong composedCompletionIdentity,
-            CharacterPosePlanPhaseUnavailableReason reason)
+            CharacterPoseStageUnavailableReason reason,
+            int firstUnavailableStageIndex = 0,
+            ulong completedIdentity = 0)
         {
             RequirePlan(plan);
-            CharacterPosePlanPhaseSnapshot composed = composedCompletionIdentity == 0
-                ? Missing(CharacterPosePlanPhase.SourceAndNativePose, reason)
-                : Complete(CharacterPosePlanPhase.SourceAndNativePose, composedCompletionIdentity);
+            if (firstUnavailableStageIndex < 0 || firstUnavailableStageIndex >= plan.Stages.Count ||
+                firstUnavailableStageIndex > 0 && completedIdentity == 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(firstUnavailableStageIndex));
+            }
+            var stages = new CharacterPoseExecutionStageSnapshot[plan.Stages.Count];
+            for (int i = 0; i < stages.Length; i++)
+            {
+                stages[i] = i < firstUnavailableStageIndex
+                    ? Complete(plan.Stages[i], completedIdentity)
+                    : Missing(
+                        plan.Stages[i],
+                        i == firstUnavailableStageIndex
+                            ? reason
+                            : CharacterPoseStageUnavailableReason.UpstreamStageUnavailable);
+            }
             return new CharacterPosePlanStageSnapshot(
                 plan.PoseGraphId,
                 plan.PlanHash,
                 composedAvailability,
-                composed,
-                Missing(CharacterPosePlanPhase.WorldAwarePostProcess, reason),
-                Missing(CharacterPosePlanPhase.FinalPublication, CharacterPosePlanPhaseUnavailableReason.WorldAwarePhaseUnavailable));
+                stages);
         }
 
         internal static CharacterPosePlanStageSnapshot Preview(
             CharacterPresentationPosePlan plan,
-            in ComposedAnimationPoseFrame composed)
+            in ComposedAnimationPoseFrame composed,
+            bool worldContextAvailable)
         {
             RequirePlan(plan);
+            int worldStage = -1;
+            for (int i = 0; i < plan.Stages.Count; i++)
+            {
+                if (plan.Stages[i].ExecutionDomain != CharacterPoseExecutionDomain.WorldAwarePose)
+                    continue;
+                worldStage = i;
+                break;
+            }
+            if (worldStage >= 0 && !worldContextAvailable)
+            {
+                return Unavailable(
+                    plan,
+                    AnimationPoseAvailability.Invalid,
+                    CharacterPoseStageUnavailableReason.WorldContextUnavailable,
+                    worldStage,
+                    composed.CompletionIdentity == 0
+                        ? 1UL
+                        : composed.CompletionIdentity);
+            }
             if (composed.Availability != AnimationPoseAvailability.Pose)
             {
                 return Unavailable(
                     plan,
                     composed.Availability,
-                    composed.CompletionIdentity,
-                    CharacterPosePlanPhaseUnavailableReason.ComposedPoseUnavailable);
+                    CharacterPoseStageUnavailableReason.PoseUnavailable);
             }
-            return plan.FootPlacementNodes.Count == 0
-                ? Completed(plan, in composed, false)
-                : new CharacterPosePlanStageSnapshot(
-                    composed.PoseGraphId,
-                    composed.PosePlanHash,
-                    composed.Availability,
-                    Complete(CharacterPosePlanPhase.SourceAndNativePose, composed.CompletionIdentity),
-                    Missing(
-                        CharacterPosePlanPhase.WorldAwarePostProcess,
-                        CharacterPosePlanPhaseUnavailableReason.WorldContextUnavailable),
-                    Missing(
-                        CharacterPosePlanPhase.FinalPublication,
-                        CharacterPosePlanPhaseUnavailableReason.WorldAwarePhaseUnavailable));
+            return Completed(plan, in composed);
         }
 
-        static CharacterPosePlanPhaseSnapshot Complete(CharacterPosePlanPhase phase, ulong completionIdentity) =>
-            new CharacterPosePlanPhaseSnapshot(
-                phase,
-                CharacterPosePlanPhaseStatus.Completed,
-                CharacterPosePlanPhaseUnavailableReason.None,
+        static CharacterPoseExecutionStageSnapshot Complete(
+            CharacterPresentationPoseStage stage,
+            ulong completionIdentity) =>
+            new CharacterPoseExecutionStageSnapshot(
+                stage.Index,
+                stage.ExecutionDomain,
+                stage.InputPoseSpace,
+                stage.OutputPoseSpace,
+                CharacterPoseStageStatus.Completed,
+                CharacterPoseStageUnavailableReason.None,
                 completionIdentity);
 
-        static CharacterPosePlanPhaseSnapshot NotRequired(CharacterPosePlanPhase phase) =>
-            new CharacterPosePlanPhaseSnapshot(
-                phase,
-                CharacterPosePlanPhaseStatus.NotRequired,
-                CharacterPosePlanPhaseUnavailableReason.None,
-                0);
-
-        static CharacterPosePlanPhaseSnapshot Missing(
-            CharacterPosePlanPhase phase,
-            CharacterPosePlanPhaseUnavailableReason reason) =>
-            new CharacterPosePlanPhaseSnapshot(
-                phase,
-                CharacterPosePlanPhaseStatus.Unavailable,
+        static CharacterPoseExecutionStageSnapshot Missing(
+            CharacterPresentationPoseStage stage,
+            CharacterPoseStageUnavailableReason reason) =>
+            new CharacterPoseExecutionStageSnapshot(
+                stage.Index,
+                stage.ExecutionDomain,
+                stage.InputPoseSpace,
+                stage.OutputPoseSpace,
+                CharacterPoseStageStatus.Unavailable,
                 reason,
                 0);
 
@@ -188,7 +221,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (plan == null)
                 throw new ArgumentNullException(nameof(plan));
-            plan.RequireValid();
         }
     }
 
@@ -360,7 +392,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float sampleTime,
             float weight,
             ulong producerGeneration = 0,
-            int cycle = 0)
+            int cycle = 0,
+            ulong sourceActionInstanceId = 0,
+            float visualTimeScale = 0f)
         {
             if (float.IsNaN(sampleTime) || float.IsInfinity(sampleTime) ||
                 float.IsNaN(weight) || float.IsInfinity(weight))
@@ -371,6 +405,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentOutOfRangeException(nameof(producerGeneration));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
+            if (!float.IsFinite(visualTimeScale) || visualTimeScale < 0f)
+                throw new ArgumentOutOfRangeException(nameof(visualTimeScale));
             Header = header;
             Kind = kind;
             ProducerId = RequireIdentity(producerId, nameof(producerId));
@@ -378,6 +414,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Weight = weight;
             ProducerGeneration = producerGeneration;
             Cycle = cycle;
+            SourceActionInstanceId = sourceActionInstanceId;
+            VisualTimeScale = visualTimeScale;
         }
 
         public CharacterPresentationEventHeader Header { get; }
@@ -387,6 +425,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float Weight { get; }
         public ulong ProducerGeneration { get; }
         public int Cycle { get; }
+        public ulong SourceActionInstanceId { get; }
+        public float VisualTimeScale { get; }
 
         public static CharacterPresentationCommand FromFloat32(PresentationCommand command)
         {
@@ -403,7 +443,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 command.SampleTime.ToSingle(),
                 command.Weight.ToSingle(),
                 command.ProducerGeneration,
-                command.Cycle);
+                command.Cycle,
+                command.SourceActionInstanceId,
+                command.VisualTimeScale.ToSingle());
         }
 
         static bool IsPlaybackCommand(CharacterPresentationCommandKind kind)

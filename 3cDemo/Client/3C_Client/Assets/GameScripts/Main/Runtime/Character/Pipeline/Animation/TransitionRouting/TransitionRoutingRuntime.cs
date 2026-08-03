@@ -3,80 +3,81 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Animation.TransitionRouting
 {
+
     public sealed class TransitionRoutingWorkspace
     {
-        readonly TransitionRoutingEvent[] m_Events;
-        int m_EventStart;
-        int m_EventCount;
+        readonly TransitionRoutingEventJournal m_Events;
+        readonly TransitionRoutingWorkspaceState m_State;
 
-        internal bool IsBound;
-        internal TransitionRoutingPlanId PlanId;
-        internal TransitionDefinitionRevision DefinitionRevision;
-        internal TransitionRouteOwnerId OwnerNodeId;
-        internal TransitionFrameId LastFrameId;
-        internal TransitionEndpointId CurrentEndpoint;
-        internal TransitionEndpointId RequestedEndpoint;
-        internal TransitionSelectionGeneration SelectionGeneration;
-        internal TransitionRoutingLifecycle Lifecycle;
-        internal TransitionRuleId ActiveRuleId;
-        internal PoseInertializationRequest ActiveRequest;
-        internal bool HasActiveRequest;
-        internal bool HasStandardCommand;
-        internal TransitionEndpointId StandardTarget;
-        internal TransitionRuleId StandardRuleId;
-        internal TransitionSelectionGeneration StandardSelectionGeneration;
-        internal bool HasInertialIntent;
-        internal bool PendingRebaseRequired;
-        internal bool CaptureCompleted;
-        internal bool ReleaseCompleted;
-        internal ulong RequestGenerationValue;
-        internal ulong ModuleGenerationValue;
-        internal ulong RebaseCount;
-        internal TransitionRoutingResetReason LastResetReason;
-        internal TransitionRoutingReasonCode LastReasonCode;
-        internal string LastReason = string.Empty;
+        internal bool IsBound { get => m_State.IsBound; set => m_State.IsBound = value; }
+        internal TransitionRoutingPlanId PlanId { get => m_State.PlanId; set => m_State.PlanId = value; }
+        internal TransitionDefinitionRevision DefinitionRevision { get => m_State.DefinitionRevision; set => m_State.DefinitionRevision = value; }
+        internal TransitionRouteOwnerId OwnerNodeId { get => m_State.OwnerNodeId; set => m_State.OwnerNodeId = value; }
+        internal TransitionFrameId LastFrameId { get => m_State.LastFrameId; set => m_State.LastFrameId = value; }
+        internal TransitionEndpointId CurrentEndpoint { get => m_State.CurrentEndpoint; set => m_State.CurrentEndpoint = value; }
+        internal TransitionEndpointId RequestedEndpoint { get => m_State.RequestedEndpoint; set => m_State.RequestedEndpoint = value; }
+        internal TransitionSelectionGeneration SelectionGeneration { get => m_State.SelectionGeneration; set => m_State.SelectionGeneration = value; }
+        internal TransitionRoutingLifecycle Lifecycle { get => m_State.Lifecycle; set => m_State.Lifecycle = value; }
+        internal TransitionRuleId ActiveRuleId { get => m_State.ActiveRuleId; set => m_State.ActiveRuleId = value; }
+        internal PoseInertializationRequest ActiveRequest { get => m_State.ActiveRequest; set => m_State.ActiveRequest = value; }
+        internal bool HasActiveRequest { get => m_State.HasActiveRequest; set => m_State.HasActiveRequest = value; }
+        internal bool HasStandardCommand { get => m_State.HasStandardCommand; set => m_State.HasStandardCommand = value; }
+        internal TransitionEndpointId StandardTarget { get => m_State.StandardTarget; set => m_State.StandardTarget = value; }
+        internal TransitionRuleId StandardRuleId { get => m_State.StandardRuleId; set => m_State.StandardRuleId = value; }
+        internal TransitionSelectionGeneration StandardSelectionGeneration { get => m_State.StandardSelectionGeneration; set => m_State.StandardSelectionGeneration = value; }
+        internal bool HasInertialIntent { get => m_State.HasInertialIntent; set => m_State.HasInertialIntent = value; }
+        internal bool PendingRebaseRequired { get => m_State.PendingRebaseRequired; set => m_State.PendingRebaseRequired = value; }
+        internal bool CaptureCompleted { get => m_State.CaptureCompleted; set => m_State.CaptureCompleted = value; }
+        internal bool ReleaseCompleted { get => m_State.ReleaseCompleted; set => m_State.ReleaseCompleted = value; }
+        internal ulong RequestGenerationValue { get => m_State.RequestGenerationValue; set => m_State.RequestGenerationValue = value; }
+        internal ulong ModuleGenerationValue { get => m_State.ModuleGenerationValue; set => m_State.ModuleGenerationValue = value; }
+        internal ulong RebaseCount { get => m_State.RebaseCount; set => m_State.RebaseCount = value; }
+        internal TransitionRoutingResetReason LastResetReason { get => m_State.LastResetReason; set => m_State.LastResetReason = value; }
+        internal TransitionRoutingReasonCode LastReasonCode { get => m_State.LastReasonCode; set => m_State.LastReasonCode = value; }
+        internal string LastReason { get => m_State.LastReason; set => m_State.LastReason = value; }
 
         public TransitionRoutingWorkspace(int eventCapacity = 128)
         {
             if (eventCapacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(eventCapacity));
-            m_Events = new TransitionRoutingEvent[eventCapacity];
-            Lifecycle = TransitionRoutingLifecycle.Idle;
+            m_State = new TransitionRoutingWorkspaceState();
+            m_Events = new TransitionRoutingEventJournal(eventCapacity);
         }
 
-        public TransitionRoutingRuntimeSnapshot Snapshot { get; internal set; }
-        public int EventCount => m_EventCount;
+        public TransitionRoutingRuntimeSnapshot Snapshot { get => m_State.Snapshot; internal set => m_State.Snapshot = value; }
+        public int EventCount => m_Events.Count;
 
         public TransitionRoutingEvent[] CopyEvents()
         {
-            var result = new TransitionRoutingEvent[m_EventCount];
-            for (int i = 0; i < result.Length; i++)
-                result[i] = m_Events[(m_EventStart + i) % m_Events.Length];
-            return result;
+            return m_Events.CopyEvents();
         }
 
         public void ClearEvents()
         {
-            Array.Clear(m_Events, 0, m_Events.Length);
-            m_EventStart = 0;
-            m_EventCount = 0;
+            m_Events.Clear();
+        }
+
+        public void BeginFrame()
+        {
+            m_State.BeginFrame();
+            m_Events.BeginFrame();
+        }
+
+        public void CommitFrame()
+        {
+            m_State.CommitFrame();
+            m_Events.CommitFrame();
+        }
+
+        public void DiscardFrame()
+        {
+            m_State.DiscardFrame();
+            m_Events.DiscardFrame();
         }
 
         internal void Append(TransitionRoutingEvent item)
         {
-            int writeIndex;
-            if (m_EventCount < m_Events.Length)
-            {
-                writeIndex = (m_EventStart + m_EventCount) % m_Events.Length;
-                m_EventCount++;
-            }
-            else
-            {
-                writeIndex = m_EventStart;
-                m_EventStart = (m_EventStart + 1) % m_Events.Length;
-            }
-
-            m_Events[writeIndex] = item;
+            m_Events.Append(item);
         }
     }
 
@@ -116,6 +117,9 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             if (workspace.LastFrameId.IsValid && input.FrameId.Value <= workspace.LastFrameId.Value)
                 return Invalid(workspace, input, TransitionRoutingReasonCode.NonMonotonicFrame, "Frame identity must increase monotonically.");
 
+            bool selectionGenerationChanged =
+                workspace.SelectionGeneration.IsValid &&
+                workspace.SelectionGeneration != input.SelectionGeneration;
             workspace.LastFrameId = input.FrameId;
             workspace.CurrentEndpoint = input.CurrentEndpoint;
             workspace.RequestedEndpoint = input.RequestedEndpoint;
@@ -124,14 +128,23 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             workspace.LastReasonCode = TransitionRoutingReasonCode.None;
             workspace.LastReason = string.Empty;
 
-            TransitionRoutingDecisionKind completionDecision = TransitionRoutingDecisionKind.None;
+            if (input.CaptureCompletion.IsPresent && input.ReleaseCompletion.IsPresent)
+            {
+                return Invalid(
+                    workspace,
+                    input,
+                    TransitionRoutingReasonCode.ConflictingCompletionFacts,
+                    "Capture and release completion cannot be reported in the same frame.");
+            }
+
+            TransitionRoutingCompletionOutcome completionOutcome = TransitionRoutingCompletionOutcome.None;
             bool releasePermission = false;
             if (input.CaptureCompletion.IsPresent)
             {
                 TransitionRoutingFrameOutput captureResult = ApplyCaptureCompletion(workspace, input);
                 if (captureResult.IsInvalid)
                     return captureResult;
-                completionDecision = captureResult.DecisionKind;
+                completionOutcome = captureResult.CompletionOutcome;
                 releasePermission = captureResult.ReleasePermission;
             }
 
@@ -140,10 +153,10 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
                 TransitionRoutingFrameOutput releaseResult = ApplyReleaseCompletion(workspace, input);
                 if (releaseResult.IsInvalid)
                     return releaseResult;
-                completionDecision = releaseResult.DecisionKind;
+                completionOutcome = releaseResult.CompletionOutcome;
             }
 
-            if (input.CurrentEndpoint == input.RequestedEndpoint)
+            if (input.CurrentEndpoint == input.RequestedEndpoint && !selectionGenerationChanged)
             {
                 workspace.HasStandardCommand = false;
                 if (!workspace.HasActiveRequest)
@@ -156,9 +169,10 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
                 return Complete(
                     workspace,
                     input,
-                    completionDecision,
+                    TransitionRouteDecisionKind.None,
                     workspace.Lifecycle,
-                    releasePermission: releasePermission);
+                    releasePermission: releasePermission,
+                    completionOutcome: completionOutcome);
             }
 
             if (!plan.TryGetRule(input.CurrentEndpoint, input.RequestedEndpoint, out AnimationTransitionRule rule))
@@ -182,15 +196,16 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
                 $"{rule.SourceEndpoint} -> {rule.TargetEndpoint}: {rule.BlendLogic}"));
 
             return rule.BlendLogic == AnimationTransitionBlendLogic.StandardBlend
-                ? ApplyStandardBlend(workspace, input, rule, releasePermission)
-                : ApplyInertialization(workspace, input, rule, releasePermission);
+                ? ApplyStandardBlend(workspace, input, rule, releasePermission, completionOutcome)
+                : ApplyInertialization(workspace, input, rule, releasePermission, completionOutcome);
         }
 
         static TransitionRoutingFrameOutput ApplyStandardBlend(
             TransitionRoutingWorkspace workspace,
             in TransitionRoutingFrameInput input,
             in AnimationTransitionRule rule,
-            bool releasePermission)
+            bool releasePermission,
+            TransitionRoutingCompletionOutcome completionOutcome)
         {
             if (workspace.HasActiveRequest || workspace.HasInertialIntent)
             {
@@ -216,7 +231,13 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             workspace.StandardSelectionGeneration = input.SelectionGeneration;
 
             if (duplicate)
-                return Complete(workspace, input, TransitionRoutingDecisionKind.None, workspace.Lifecycle, releasePermission: releasePermission);
+                return Complete(
+                    workspace,
+                    input,
+                    TransitionRouteDecisionKind.None,
+                    workspace.Lifecycle,
+                    releasePermission: releasePermission,
+                    completionOutcome: completionOutcome);
 
             var command = new StandardBlendCommand(rule);
             workspace.Append(new TransitionRoutingEvent(
@@ -231,18 +252,20 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             return Complete(
                 workspace,
                 input,
-                TransitionRoutingDecisionKind.StandardBlend,
+                TransitionRouteDecisionKind.StandardBlend,
                 workspace.Lifecycle,
                 command,
                 true,
-                releasePermission: releasePermission);
+                releasePermission: releasePermission,
+                completionOutcome: completionOutcome);
         }
 
         static TransitionRoutingFrameOutput ApplyInertialization(
             TransitionRoutingWorkspace workspace,
             in TransitionRoutingFrameInput input,
             in AnimationTransitionRule rule,
-            bool releasePermission)
+            bool releasePermission,
+            TransitionRoutingCompletionOutcome completionOutcome)
         {
             workspace.HasStandardCommand = false;
             bool matchingRequest =
@@ -286,11 +309,12 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
                 return Complete(
                     workspace,
                     input,
-                    TransitionRoutingDecisionKind.AwaitingReadiness,
+                    TransitionRouteDecisionKind.AwaitingReadiness,
                     workspace.Lifecycle,
                     reasonCode: code,
                     reason: reason,
-                    releasePermission: releasePermission);
+                    releasePermission: releasePermission,
+                    completionOutcome: completionOutcome);
             }
 
             if (matchingRequest)
@@ -312,9 +336,10 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
                 return Complete(
                     workspace,
                     input,
-                    TransitionRoutingDecisionKind.None,
+                    TransitionRouteDecisionKind.None,
                     workspace.Lifecycle,
-                    releasePermission: releasePermission);
+                    releasePermission: releasePermission,
+                    completionOutcome: completionOutcome);
             }
 
             bool rebaseRequired =
@@ -369,13 +394,14 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             return Complete(
                 workspace,
                 input,
-                TransitionRoutingDecisionKind.InertializationRequest,
+                TransitionRouteDecisionKind.InertializationRequest,
                 workspace.Lifecycle,
                 request: request,
                 hasRequest: true,
                 capturePermission: true,
                 releasePermission: releasePermission,
-                rebaseRequired: rebaseRequired);
+                rebaseRequired: rebaseRequired,
+                completionOutcome: completionOutcome);
         }
 
         static TransitionRoutingFrameOutput ApplyCaptureCompletion(
@@ -419,9 +445,10 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             return Complete(
                 workspace,
                 input,
-                TransitionRoutingDecisionKind.CaptureCommitted,
+                TransitionRouteDecisionKind.None,
                 workspace.Lifecycle,
-                releasePermission: true);
+                releasePermission: true,
+                completionOutcome: TransitionRoutingCompletionOutcome.CaptureCommitted);
         }
 
         static TransitionRoutingFrameOutput ApplyReleaseCompletion(
@@ -465,7 +492,12 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
                 completedRequest.RequestGeneration,
                 TransitionRoutingReasonCode.None,
                 "Release completed."));
-            return Complete(workspace, input, TransitionRoutingDecisionKind.ReleaseCompleted, workspace.Lifecycle);
+            return Complete(
+                workspace,
+                input,
+                TransitionRouteDecisionKind.None,
+                workspace.Lifecycle,
+                completionOutcome: TransitionRoutingCompletionOutcome.ReleaseCompleted);
         }
 
         static TransitionRoutingFrameOutput ApplyReset(
@@ -507,7 +539,7 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             return Complete(
                 workspace,
                 input,
-                TransitionRoutingDecisionKind.Reset,
+                TransitionRouteDecisionKind.Reset,
                 workspace.Lifecycle,
                 reasonCode: TransitionRoutingReasonCode.ResetApplied,
                 reason: workspace.LastReason);
@@ -554,7 +586,7 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             return Complete(
                 workspace,
                 input,
-                TransitionRoutingDecisionKind.Invalid,
+                TransitionRouteDecisionKind.Invalid,
                 workspace.Lifecycle,
                 reasonCode: code,
                 reason: workspace.LastReason);
@@ -563,7 +595,7 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
         static TransitionRoutingFrameOutput Complete(
             TransitionRoutingWorkspace workspace,
             in TransitionRoutingFrameInput input,
-            TransitionRoutingDecisionKind decisionKind,
+            TransitionRouteDecisionKind routeDecision,
             TransitionRoutingLifecycle lifecycle,
             StandardBlendCommand command = default,
             bool hasCommand = false,
@@ -573,7 +605,8 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             bool releasePermission = false,
             bool rebaseRequired = false,
             TransitionRoutingReasonCode reasonCode = TransitionRoutingReasonCode.None,
-            string reason = "")
+            string reason = "",
+            TransitionRoutingCompletionOutcome completionOutcome = TransitionRoutingCompletionOutcome.None)
         {
             if (reasonCode != TransitionRoutingReasonCode.None)
             {
@@ -582,7 +615,8 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
             }
 
             var output = new TransitionRoutingFrameOutput(
-                decisionKind,
+                routeDecision,
+                completionOutcome,
                 lifecycle,
                 workspace.ActiveRuleId,
                 command,

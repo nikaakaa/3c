@@ -6,8 +6,8 @@ using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Editor.ProductStartup;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Presentation;
-using ThirdPersonCharacter.Pipeline.Presentation.FinalIK;
 using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonGameplay.Lab;
 using UnityEditor;
@@ -20,7 +20,7 @@ namespace ThirdPersonGameplay.Editor.Lab
     internal static class GameplayLabEditorLauncher
     {
         public const string ScenePath = "Assets/Scenes/GameplayLab/GameplayLab.unity";
-        const string PlayerPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/CorinStandalonePlayer.prefab";
+        const string PlayerPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab";
 
         internal static void Open()
         {
@@ -93,11 +93,10 @@ namespace ThirdPersonGameplay.Editor.Lab
             GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
             if (!player)
                 throw new InvalidOperationException($"Gameplay Lab player Prefab is missing: {PlayerPrefabPath}");
-            if (!player.GetComponentInChildren<CharacterFootPlacementComposition>(true) ||
-                !player.GetComponentInChildren<FinalIKLimbFootPlacementSolver>(true))
+            if (!player.GetComponentInChildren<CharacterWorldAwarePresentationBinding>(true))
             {
                 throw new InvalidOperationException(
-                    "Gameplay Lab player Prefab requires Foot Placement composition and FinalIK solver.");
+                    "Gameplay Lab player Prefab requires a World-Aware Presentation Binding.");
             }
         }
 
@@ -114,18 +113,27 @@ namespace ThirdPersonGameplay.Editor.Lab
         static void ValidateVariants(GameplayLabBootstrap bootstrap)
         {
             if (bootstrap.Variants.Count != 2)
-                throw new InvalidOperationException($"Gameplay Lab requires exactly two local Session Variants, found {bootstrap.Variants.Count}.");
+                throw new InvalidOperationException($"Gameplay Lab requires exactly Local Fixed and Rollback Variants, found {bootstrap.Variants.Count}.");
             var ids = new HashSet<string>(StringComparer.Ordinal);
-            var profiles = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < bootstrap.Variants.Count; i++)
             {
                 GameplayLabSessionVariantDefinition variant = bootstrap.Variants[i];
-                if (!ids.Add(variant.VariantId) || !profiles.Add(variant.NumericProfileId))
-                    throw new InvalidOperationException("Gameplay Lab Session Variants require distinct IDs and numeric profiles.");
+                if (!ids.Add(variant.VariantId))
+                    throw new InvalidOperationException("Gameplay Lab Session Variants require distinct IDs.");
+                if (!string.Equals(variant.NumericProfileId, "fixed-q32.32", StringComparison.Ordinal))
+                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' must use the shared Fixed Program.");
                 ValidateRuntimeRoot(variant);
             }
-            if (!profiles.Contains("float32-ieee754") || !profiles.Contains("fixed-q32.32"))
-                throw new InvalidOperationException("Gameplay Lab requires Local Float32 and Local Fixed Q32.32 Variants.");
+            if (!ids.Contains("gameplay-lab.local-fixed-q32.32") ||
+                !ids.Contains("gameplay-lab.deterministic-rollback"))
+                throw new InvalidOperationException("Gameplay Lab requires the exact Local Fixed and Deterministic Rollback Variants.");
+            GameplayLabSessionVariantDefinition local = bootstrap.Variants.Single(
+                value => string.Equals(value.VariantId, "gameplay-lab.local-fixed-q32.32", StringComparison.Ordinal));
+            GameplayLabSessionVariantDefinition rollback = bootstrap.Variants.Single(
+                value => string.Equals(value.VariantId, "gameplay-lab.deterministic-rollback", StringComparison.Ordinal));
+            if (local.IsExternalLaunchVariant || !rollback.IsExternalLaunchVariant)
+                throw new InvalidOperationException("Only the Deterministic Rollback Variant may use external launch.");
+            RequireSharedClosure(local, rollback);
         }
 
         static void ValidateRuntimeRoot(GameplayLabSessionVariantDefinition variant)
@@ -152,27 +160,32 @@ namespace ThirdPersonGameplay.Editor.Lab
             }
             if (actors.Any(actor => !ReferenceEquals(actor.SessionHost, hosts[0])))
                 throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' contains an Actor outside its Session Host.");
-            int localOwners = root.GetComponentsInChildren<CharacterPipelineHost>(true)
-                .Count(host => host.PresentationRole == CharacterPresentationRole.LocalOwner) +
-                root.GetComponentsInChildren<FixedCharacterHost>(true)
+            bool rollbackVariant = string.Equals(
+                variant.VariantId,
+                "gameplay-lab.deterministic-rollback",
+                StringComparison.Ordinal);
+            if (!rollbackVariant)
+            {
+                int localOwners = root.GetComponentsInChildren<FixedCharacterHost>(true)
                     .Count(host => host.PresentationRole == CharacterPresentationRole.LocalOwner);
-            if (localOwners != 1)
-                throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires exactly one local owner.");
-            SessionActorActionTargetInputProvider[] providers =
-                root.GetComponentsInChildren<SessionActorActionTargetInputProvider>(true);
-            if (providers.Length != 1 || providers[0].Target == null)
-                throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires one bound committed Actor target provider.");
+                if (localOwners != 1)
+                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires exactly one local owner.");
+                SessionActorActionTargetInputProvider[] providers =
+                    root.GetComponentsInChildren<SessionActorActionTargetInputProvider>(true);
+                if (providers.Length != 1 || providers[0].Target == null)
+                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires one bound committed Actor target provider.");
+            }
             if (root.GetComponentsInChildren<ThirdPersonCameraController>(true).Length != 1)
                 throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires exactly one gameplay camera controller.");
-            bool fixedVariant = string.Equals(variant.NumericProfileId, "fixed-q32.32", StringComparison.Ordinal);
             int floatHosts = root.GetComponentsInChildren<CharacterPipelineHost>(true).Length;
             int fixedHosts = root.GetComponentsInChildren<FixedCharacterHost>(true).Length;
-            if ((fixedVariant && (fixedHosts != 2 || floatHosts != 0)) ||
-                (!fixedVariant && (floatHosts != 2 || fixedHosts != 0)))
+            int rollbackHosts = root.GetComponentsInChildren<DeterministicRollbackCharacterHost>(true).Length;
+            if ((!rollbackVariant && (fixedHosts != 2 || rollbackHosts != 0 || floatHosts != 0)) ||
+                (rollbackVariant && (rollbackHosts != 2 || fixedHosts != 0 || floatHosts != 0)))
             {
                 throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' Actor host model does not match its numeric profile.");
             }
-            if (fixedVariant)
+            if (!rollbackVariant)
             {
                 FixedCharacterHost[] characters = root.GetComponentsInChildren<FixedCharacterHost>(true);
                 if (characters.Any(character => !character.ControlSource) ||
@@ -183,6 +196,21 @@ namespace ThirdPersonGameplay.Editor.Lab
                 }
             }
             variant.ValidateComposition(hosts[0].Composition);
+        }
+
+        static void RequireSharedClosure(
+            GameplayLabSessionVariantDefinition local,
+            GameplayLabSessionVariantDefinition rollback)
+        {
+            if (!string.Equals(local.DefinitionGuid, rollback.DefinitionGuid, StringComparison.Ordinal) ||
+                local.FixedProgram != rollback.FixedProgram ||
+                local.PresentationProjection != rollback.PresentationProjection ||
+                local.WorldSolver != rollback.WorldSolver ||
+                local.CollisionWorld != rollback.CollisionWorld)
+            {
+                throw new InvalidOperationException(
+                    "Gameplay Lab Local Fixed and Rollback Variants must share Definition, Program, Projection, KCC and Collision identities.");
+            }
         }
 
         static int CountMissingScripts(GameObject root)
@@ -203,12 +231,18 @@ namespace ThirdPersonGameplay.Editor.Lab
             GameplayLabLauncherRegistry.Register(new Operations());
         }
 
+        [MenuItem("Tools/3C/Internal/Rebuild Gameplay Lab Assets")]
+        static void RebuildAssets()
+        {
+            GameplayLabAssetBuilder.Rebuild();
+        }
+
         sealed class Operations : IGameplayLabLauncherOperations
         {
             public GameplayLabLauncherState ReadState() => GameplayLabEditorLauncher.ReadLauncherState();
             public void Open() => GameplayLabEditorLauncher.Open();
             public void Play(int variantIndex) => GameplayLabEditorLauncher.Play(variantIndex);
-            public void RebuildAssets() => GameplayLabAssetBuilder.Rebuild();
+            public void SyncAssets() => GameplayLabAssetBuilder.Rebuild();
         }
     }
 }

@@ -811,6 +811,31 @@ namespace TreeDesigner.Editor
 
         sealed class GenericExposedPropertyNodeFactory : IBlackboardGraphDataNodeFactory
         {
+            sealed class ExposedPropertyNodeCreationPayload :
+                IBtsmtlNodeCreationPayload
+            {
+                readonly BaseExposedProperty m_Declaration;
+
+                public ExposedPropertyNodeCreationPayload(
+                    BaseExposedProperty declaration)
+                {
+                    m_Declaration = declaration ??
+                        throw new ArgumentNullException(
+                            nameof(declaration));
+                }
+
+                public Type NodeType =>
+                    typeof(ExposedPropertyNode);
+
+                public void Configure(BaseNode node)
+                {
+                    if (!(node is ExposedPropertyNode exposed))
+                        throw new InvalidOperationException(
+                            $"Blackboard payload cannot configure '{node?.GetType().FullName}'.");
+                    exposed.SetExposedProperty(m_Declaration);
+                }
+            }
+
             public static readonly GenericExposedPropertyNodeFactory Instance = new GenericExposedPropertyNodeFactory();
 
             public int Order => int.MaxValue;
@@ -829,14 +854,17 @@ namespace TreeDesigner.Editor
                     return false;
                 }
 
-                ExposedPropertyNode node = treeView.CreateNode(typeof(ExposedPropertyNode), position) as ExposedPropertyNode;
+                ExposedPropertyNode node = treeView.CreateNode(
+                    typeof(ExposedPropertyNode),
+                    position,
+                    new ExposedPropertyNodeCreationPayload(
+                        declaration)) as ExposedPropertyNode;
                 if (node == null)
                 {
                     error = "Could not create ExposedPropertyNode.";
                     return false;
                 }
 
-                node.ApplyModify("Bind Blackboard Declaration", () => node.SetExposedProperty(declaration));
                 node.Refresh();
                 return true;
             }

@@ -16,6 +16,13 @@ namespace ThirdPersonGameplay.Lab
         [SerializeField] string m_SourceId = string.Empty;
         [SerializeField] string m_PipelineId = string.Empty;
         [SerializeField] string m_SolverId = string.Empty;
+        [SerializeField] string m_DefinitionGuid = string.Empty;
+        [SerializeField] SimulationSessionCompositionDefinition m_Composition;
+        [SerializeField] ScriptableObject m_FixedProgram;
+        [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
+        [SerializeField] SimulationWorldSolverDefinition m_WorldSolver;
+        [SerializeField] ScriptableObject m_CollisionWorld;
+        [SerializeField] string m_ExternalLaunchArgumentPrefix = string.Empty;
 
         public string VariantId => Require(m_VariantId, nameof(m_VariantId));
         public GameObject RuntimeRootPrefab => m_RuntimeRootPrefab ? m_RuntimeRootPrefab :
@@ -27,11 +34,44 @@ namespace ThirdPersonGameplay.Lab
         public string SourceId => Require(m_SourceId, nameof(m_SourceId));
         public string PipelineId => Require(m_PipelineId, nameof(m_PipelineId));
         public string SolverId => Require(m_SolverId, nameof(m_SolverId));
+        public string DefinitionGuid => Require(m_DefinitionGuid, nameof(m_DefinitionGuid));
+        public SimulationSessionCompositionDefinition Composition => m_Composition ? m_Composition :
+            throw new InvalidOperationException($"Gameplay Lab Variant '{name}' requires an exact Composition.");
+        public ScriptableObject FixedProgram => m_FixedProgram ? m_FixedProgram :
+            throw new InvalidOperationException($"Gameplay Lab Variant '{name}' requires an exact Fixed Program.");
+        public CharacterPresentationProjectionAsset PresentationProjection => m_PresentationProjection
+            ? m_PresentationProjection
+            : throw new InvalidOperationException($"Gameplay Lab Variant '{name}' requires an exact Presentation Projection.");
+        public SimulationWorldSolverDefinition WorldSolver => m_WorldSolver ? m_WorldSolver :
+            throw new InvalidOperationException($"Gameplay Lab Variant '{name}' requires an exact KCC Definition.");
+        public ScriptableObject CollisionWorld => m_CollisionWorld ? m_CollisionWorld :
+            throw new InvalidOperationException($"Gameplay Lab Variant '{name}' requires an exact Collision Artifact.");
+        public bool IsExternalLaunchVariant => !string.IsNullOrEmpty(m_ExternalLaunchArgumentPrefix);
+        public string ExternalLaunchArgumentPrefix => m_ExternalLaunchArgumentPrefix;
+
+        public bool MatchesExternalLaunch(string[] arguments)
+        {
+            if (!IsExternalLaunchVariant || arguments == null)
+                return false;
+            for (int i = 0; i < arguments.Length; i++)
+            {
+                string argument = arguments[i];
+                if (!string.IsNullOrEmpty(argument) &&
+                    argument.StartsWith(m_ExternalLaunchArgumentPrefix, StringComparison.Ordinal) &&
+                    argument.Length > m_ExternalLaunchArgumentPrefix.Length)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         public void ValidateComposition(SimulationSessionCompositionDefinition composition)
         {
             if (!composition)
                 throw new ArgumentNullException(nameof(composition));
+            if (composition != Composition)
+                throw new InvalidOperationException($"Gameplay Lab Variant '{VariantId}' targets another Composition.");
             composition.RequireComplete();
             SimulationProgramRuntimeDescriptor program = composition.ProgramRuntime.BuildDescriptor();
             SimulationSessionSourceDescriptor source = composition.SessionSource.BuildAuthoringDescriptor().Source;
@@ -45,6 +85,11 @@ namespace ThirdPersonGameplay.Lab
             {
                 throw new InvalidOperationException($"Gameplay Lab Variant '{VariantId}' does not match runtime root Composition '{composition.name}'.");
             }
+            if (composition.WorldSolver != WorldSolver)
+                throw new InvalidOperationException($"Gameplay Lab Variant '{VariantId}' KCC closure is split.");
+            SimulationSessionHost[] hosts = RuntimeRootPrefab.GetComponentsInChildren<SimulationSessionHost>(true);
+            if (hosts.Length != 1 || hosts[0].Composition != composition)
+                throw new InvalidOperationException($"Gameplay Lab Variant '{VariantId}' runtime root targets another Composition.");
         }
 
 #if UNITY_EDITOR
@@ -55,7 +100,14 @@ namespace ThirdPersonGameplay.Lab
             int targetAbiVersion,
             string sourceId,
             string pipelineId,
-            string solverId)
+            string solverId,
+            string definitionGuid,
+            SimulationSessionCompositionDefinition composition,
+            ScriptableObject fixedProgram,
+            CharacterPresentationProjectionAsset presentationProjection,
+            SimulationWorldSolverDefinition worldSolver,
+            ScriptableObject collisionWorld,
+            string externalLaunchArgumentPrefix)
         {
             m_VariantId = variantId;
             m_RuntimeRootPrefab = runtimeRootPrefab;
@@ -64,6 +116,17 @@ namespace ThirdPersonGameplay.Lab
             m_SourceId = sourceId;
             m_PipelineId = pipelineId;
             m_SolverId = solverId;
+            m_DefinitionGuid = Require(definitionGuid, nameof(definitionGuid));
+            m_Composition = composition ? composition : throw new ArgumentNullException(nameof(composition));
+            m_FixedProgram = fixedProgram ? fixedProgram : throw new ArgumentNullException(nameof(fixedProgram));
+            m_PresentationProjection = presentationProjection
+                ? presentationProjection
+                : throw new ArgumentNullException(nameof(presentationProjection));
+            m_WorldSolver = worldSolver ? worldSolver : throw new ArgumentNullException(nameof(worldSolver));
+            m_CollisionWorld = collisionWorld ? collisionWorld : throw new ArgumentNullException(nameof(collisionWorld));
+            m_ExternalLaunchArgumentPrefix = string.IsNullOrEmpty(externalLaunchArgumentPrefix)
+                ? string.Empty
+                : RequireExternalLaunchArgumentPrefix(externalLaunchArgumentPrefix);
             _ = VariantId;
             _ = RuntimeRootPrefab;
             _ = NumericProfileId;
@@ -71,8 +134,17 @@ namespace ThirdPersonGameplay.Lab
             _ = SourceId;
             _ = PipelineId;
             _ = SolverId;
+            ValidateComposition(composition);
         }
 #endif
+
+        static string RequireExternalLaunchArgumentPrefix(string value)
+        {
+            string prefix = Require(value, nameof(m_ExternalLaunchArgumentPrefix));
+            if (!prefix.StartsWith("--", StringComparison.Ordinal) || !prefix.EndsWith("=", StringComparison.Ordinal))
+                throw new InvalidOperationException("Gameplay Lab external launch argument prefix must use '--name=' form.");
+            return prefix;
+        }
 
         static string Require(string value, string field)
         {

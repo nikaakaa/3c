@@ -7,7 +7,7 @@
 
 ### Requirement: Animation Foot Analysis必须拥有Editor-only规范产物
 
-系统 MUST将单AnimationClip脚分析输出写为不可变Editor-only artifact。Artifact identity MUST包含format version、AnimationClip GUID与import dependency、Analysis Source GUID/identity/version、Sampling Rig GUID/dependency、Rig Calibration identity/revision、sample rate、threshold、reduction与algorithm version。Artifact MUST写入固定`Library`存储根，不得进入Assets、Player、Addressables、YooAsset、Program、Snapshot或Network产物。
+Animation Foot Analysis MUST为`AnimationClip imported content + Rig Definition v3 + Sampling Rig prefab + Rig Calibration + Analysis Settings + Analyzer Version`生成不可变Editor-only规范Artifact。Artifact MUST保存上述输入的stable identity、revision、hash、采样域、每脚连续feature channel与接触Marker候选；artifact identity MUST包含format version、AnimationClip GUID与import dependency、Analysis Source GUID/identity/version、Rig Definition v3 identity/revision/hash、Sampling Rig GUID/dependency、Rig Calibration identity/revision、sample rate、threshold、reduction与algorithm version。Artifact MUST写入固定`Library`存储根，不得进入Assets、Player、Addressables、YooAsset、Program、Snapshot或Network产物，也不得写回AnimationClip、Rig、Calibration、Timeline或Profile。相同输入 MUST产生相同artifact identity与规范payload。
 
 #### Scenario: 同一输入重复分析
 
@@ -20,6 +20,12 @@
 - **WHEN** AnimationClip GUID不变但import dependency改变
 - **THEN** expected artifact identity MUST改变并把旧artifact判为Stale
 - **AND** MUST不因clip名称、duration或GUID仍相同而继续使用旧数据
+
+#### Scenario: Rig腿链改变
+
+- **WHEN** Rig v3的ankle或toe BoneId、revision或content hash改变
+- **THEN** 旧artifact MUST变为Stale
+- **AND** Analyzer MUST不使用Sampling Rig旧Transform映射继续发布
 
 ### Requirement: Artifact Store必须精确校验并原子发布
 
@@ -39,19 +45,19 @@ Artifact Store MUST使用canonical codec、payload hash、临时文件与原子�
 
 ### Requirement: 单Clip Analyzer不得依赖Tree或Projection
 
-正式Analyzer MUST只接受精确AnimationClip与Analysis Source，并由Source精确解析Sampling Rig与Calibration。它 MUST不接受或读取RootTree、StateMachine、Timeline call site、CharacterPipelineDefinition、SimulationProgram或PresentationProjection。Analyzer MUST使用精确Rig/Animator/Playable采样并生成左右脚有限feature curve set。Analyzer MUST先写完全部采样帧的heel、toe、sole位置与高度，再从完整循环位置序列计算中心差分速度，不得在未来采样帧尚未写入时读取它。
+正式Analyzer MUST只接受精确AnimationClip、Rig Definition v3、Sampling Rig、Rig Calibration、Analysis Settings与Analyzer Version。它 MUST通过Rig v3 Physical BoneId绑定Sampling Rig Transform并执行独立PlayableGraph sampling，不得读取Tree、StateMachine、Timeline call site、CharacterPipelineDefinition、Profile runtime、PresentationProjection、CharacterPipelineHost、当前Scene或Transform名称。Analyzer MUST生成左右脚有限feature curve set，先写完全部采样帧的heel、toe、sole位置与高度，再从完整循环位置序列计算中心差分速度，不得在未来采样帧尚未写入时读取它。Sampling Rig、Rig与Calibration identity/revision/hash不一致 MUST明确失败。
 
 #### Scenario: 从独立Timeline分析Clip
 
 - **WHEN** 作者选择AnimationClip与合法Analysis Source并执行Rebuild Selected Clip
-- **THEN** Analyzer MUST生成或更新对应artifact
+- **THEN** Analyzer MUST只使用Analysis Source提供的Rig v3、Sampling Rig与Calibration生成或更新对应artifact
 - **AND** MUST不执行Authoring Discovery、Semantic compile、Numeric lowering或完整Projection Build
 
 #### Scenario: Sampling Rig Calibration不匹配
 
-- **WHEN** Sampling Rig引用的Calibration与Analysis Source不一致
-- **THEN** Analyzer MUST拒绝并报告两端identity
-- **AND** MUST不搜索其它Prefab或默认Humanoid脚骨补全
+- **WHEN** Calibration声明的rig identity与Analysis Source的Rig v3或Sampling Rig不一致
+- **THEN** Analyzer MUST拒绝生成Artifact并报告Rig、Sampling Rig与Calibration三方identity/revision/hash
+- **AND** MUST不尝试按骨骼名称重绑或搜索其它Prefab补全
 
 ### Requirement: Analyzer必须使用统一校准地面与heel/toe接触语义
 

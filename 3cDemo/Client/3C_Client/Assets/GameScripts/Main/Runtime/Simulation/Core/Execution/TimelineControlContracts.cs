@@ -314,7 +314,9 @@ namespace ThirdPersonSimulation
             TTime sampleTime,
             TTime weight,
             ulong producerGeneration,
-            int cycle)
+            int cycle,
+            ulong sourceActionInstanceId,
+            TTime visualTimeScale)
         {
             if (!operation.IsValid)
                 throw new ArgumentException("Timeline presentation output requires a valid operation.", nameof(operation));
@@ -328,6 +330,8 @@ namespace ThirdPersonSimulation
             Weight = weight;
             ProducerGeneration = producerGeneration;
             Cycle = cycle;
+            SourceActionInstanceId = sourceActionInstanceId;
+            VisualTimeScale = visualTimeScale;
         }
 
         public OperationHandle Operation { get; }
@@ -336,6 +340,8 @@ namespace ThirdPersonSimulation
         public TTime Weight { get; }
         public ulong ProducerGeneration { get; }
         public int Cycle { get; }
+        public ulong SourceActionInstanceId { get; }
+        public TTime VisualTimeScale { get; }
 
         static bool RequiresGeneration(TimelinePresentationOutputKind kind) =>
             kind == TimelinePresentationOutputKind.SelectProducer ||

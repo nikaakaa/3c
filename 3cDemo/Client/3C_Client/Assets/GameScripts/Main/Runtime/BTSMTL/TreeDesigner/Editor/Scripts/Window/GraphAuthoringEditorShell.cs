@@ -224,11 +224,146 @@ namespace TreeDesigner.Editor
             IGraphAuthoringMutationAdapter mutation);
     }
 
-    [Serializable]
-    sealed class GraphAuthoringClipboardEnvelope
+    public sealed class GraphAuthoringBreadcrumbHost :
+        IDisposable
     {
-        public string domainId;
-        public string payload;
+        readonly Button m_BackButton;
+        readonly VisualElement m_Breadcrumb;
+        Action m_NavigateBack;
+
+        public GraphAuthoringBreadcrumbHost(
+            Button backButton,
+            VisualElement breadcrumb)
+        {
+            m_BackButton = backButton ??
+                throw new ArgumentNullException(nameof(backButton));
+            m_Breadcrumb = breadcrumb ??
+                throw new ArgumentNullException(nameof(breadcrumb));
+            m_BackButton.clicked += NavigateBack;
+        }
+
+        public void BindBack(Action navigateBack)
+        {
+            m_NavigateBack = navigateBack;
+        }
+
+        public void Render(
+            IReadOnlyList<GraphAuthoringBreadcrumbEntry> entries,
+            Action<int> navigateTo)
+        {
+            int count = entries?.Count ?? 0;
+            m_BackButton.SetEnabled(count > 1);
+            m_Breadcrumb.Clear();
+            for (int index = 0; index < count; index++)
+            {
+                if (index > 0)
+                {
+                    var separator = new Label("/");
+                    separator.AddToClassList(
+                        "tree-navigation-separator");
+                    m_Breadcrumb.Add(separator);
+                }
+                GraphAuthoringBreadcrumbEntry entry =
+                    entries[index];
+                if (index == count - 1)
+                {
+                    var label = new Label(entry.DisplayName)
+                    {
+                        tooltip = entry.Tooltip
+                    };
+                    label.AddToClassList(
+                        "tree-navigation-current-segment");
+                    m_Breadcrumb.Add(label);
+                    continue;
+                }
+                int targetIndex = index;
+                var button = new Button(
+                    () => navigateTo?.Invoke(targetIndex))
+                {
+                    text = entry.DisplayName,
+                    tooltip = entry.Tooltip
+                };
+                button.AddToClassList(
+                    "tree-navigation-segment");
+                m_Breadcrumb.Add(button);
+            }
+        }
+
+        public void Dispose()
+        {
+            m_BackButton.clicked -= NavigateBack;
+            m_NavigateBack = null;
+            m_Breadcrumb.Clear();
+        }
+
+        void NavigateBack()
+        {
+            m_NavigateBack?.Invoke();
+        }
+    }
+
+    public sealed class GraphAuthoringUndoBinding :
+        IDisposable
+    {
+        Action m_Reload;
+
+        public GraphAuthoringUndoBinding(Action reload)
+        {
+            m_Reload = reload ??
+                throw new ArgumentNullException(nameof(reload));
+            Undo.undoRedoPerformed += Reload;
+        }
+
+        public void Dispose()
+        {
+            if (m_Reload == null)
+                return;
+            Undo.undoRedoPerformed -= Reload;
+            m_Reload = null;
+        }
+
+        void Reload()
+        {
+            m_Reload?.Invoke();
+        }
+    }
+
+    public sealed class GraphAuthoringSelectionBinding :
+        IDisposable
+    {
+        readonly Action m_Publish;
+        IVisualElementScheduledItem m_Scheduled;
+
+        public GraphAuthoringSelectionBinding(
+            VisualElement schedulerHost,
+            Action publish,
+            long intervalMilliseconds = 100)
+        {
+            if (schedulerHost == null)
+                throw new ArgumentNullException(
+                    nameof(schedulerHost));
+            m_Publish = publish ??
+                throw new ArgumentNullException(nameof(publish));
+            m_Scheduled = schedulerHost.schedule
+                .Execute(Publish)
+                .Every(intervalMilliseconds);
+        }
+
+        public void PublishNow()
+        {
+            Publish();
+        }
+
+        public void Dispose()
+        {
+            m_Scheduled?.Pause();
+            m_Scheduled = null;
+        }
+
+        void Publish()
+        {
+            m_Publish();
+        }
     }
 
     sealed class GraphAuthoringNodeSearchProvider : ScriptableObject, ISearchWindowProvider
@@ -303,11 +438,10 @@ namespace TreeDesigner.Editor
         GraphView m_GraphView;
         GraphAuthoringDomainAdapters m_Adapters;
         GraphAuthoringNodeSearchProvider m_NodeSearchProvider;
-        IVisualElementScheduledItem m_SelectionWatcher;
+        GraphAuthoringSelectionBinding m_SelectionBinding;
         int[] m_LastSelection = Array.Empty<int>();
-        Button m_NavigationBackButton;
-        VisualElement m_BreadcrumbContainer;
-        Action m_NavigateBack;
+        GraphAuthoringBreadcrumbHost m_BreadcrumbHost;
+        GraphAuthoringUndoBinding m_UndoBinding;
         TwoPaneSplitView m_NavigatorSplit;
         TwoPaneSplitView m_DetailsSplit;
         TwoPaneSplitView m_BottomDockSplit;
@@ -351,9 +485,11 @@ namespace TreeDesigner.Editor
             m_DetailsRegion = RequireHost("workspace-details");
             m_BottomDockRegion = RequireHost("workspace-bottom-dock");
             m_NavigationToolbar = rootVisualElement.Q("tree-navigation-toolbar");
-            m_NavigationBackButton = rootVisualElement.Q<Button>("tree-navigation-back-button");
-            m_BreadcrumbContainer = rootVisualElement.Q("tree-navigation-breadcrumb");
-            m_NavigationBackButton.clicked += NavigateBack;
+            m_BreadcrumbHost = new GraphAuthoringBreadcrumbHost(
+                rootVisualElement.Q<Button>(
+                    "tree-navigation-back-button"),
+                rootVisualElement.Q(
+                    "tree-navigation-breadcrumb"));
             m_GraphView = CreateGraphAuthoringView() ?? throw new InvalidOperationException("Graph Authoring domain did not create a GraphView.");
             m_GraphView.name = "tree-view";
             m_GraphCanvasHost.Add(m_GraphView);
@@ -377,8 +513,12 @@ namespace TreeDesigner.Editor
             m_Adapters.Diagnostics.Bind(m_Adapters.Document, m_GraphView, m_WorkspaceToolbar);
             RestorePageState();
             rootVisualElement.schedule.Execute(InitializeLayout);
-            m_SelectionWatcher = m_GraphView.schedule.Execute(PublishSelection).Every(100);
-            Undo.undoRedoPerformed += HandleUndoRedo;
+            m_SelectionBinding =
+                new GraphAuthoringSelectionBinding(
+                    m_GraphView,
+                    PublishSelection);
+            m_UndoBinding =
+                new GraphAuthoringUndoBinding(HandleUndoRedo);
             OnGraphAuthoringShellCreated();
         }
 
@@ -388,17 +528,16 @@ namespace TreeDesigner.Editor
         {
             CaptureLayoutState();
             CapturePageState();
-            Undo.undoRedoPerformed -= HandleUndoRedo;
-            m_SelectionWatcher?.Pause();
+            m_UndoBinding?.Dispose();
+            m_UndoBinding = null;
+            m_SelectionBinding?.Dispose();
+            m_SelectionBinding = null;
             m_Adapters?.Diagnostics.Clear();
             m_Adapters?.BottomDock?.Clear();
             m_Adapters?.Navigator?.Clear();
             m_Adapters?.Inspector.Clear();
-            if (m_NavigationBackButton != null)
-                m_NavigationBackButton.clicked -= NavigateBack;
-            m_NavigateBack = null;
-            m_NavigationBackButton = null;
-            m_BreadcrumbContainer = null;
+            m_BreadcrumbHost?.Dispose();
+            m_BreadcrumbHost = null;
             rootVisualElement.UnregisterCallback<GeometryChangedEvent>(HandleWorkspaceGeometryChanged);
             if (m_NodeSearchProvider)
                 DestroyImmediate(m_NodeSearchProvider);
@@ -610,45 +749,14 @@ namespace TreeDesigner.Editor
 
         protected void BindGraphAuthoringNavigation(Action navigateBack)
         {
-            m_NavigateBack = navigateBack;
+            m_BreadcrumbHost?.BindBack(navigateBack);
         }
 
         protected void RenderGraphAuthoringNavigation(
             IReadOnlyList<GraphAuthoringBreadcrumbEntry> entries,
             Action<int> navigateTo)
         {
-            if (m_NavigationBackButton == null || m_BreadcrumbContainer == null)
-                return;
-            int count = entries?.Count ?? 0;
-            m_NavigationBackButton.SetEnabled(count > 1);
-            m_BreadcrumbContainer.Clear();
-            for (int index = 0; index < count; index++)
-            {
-                if (index > 0)
-                {
-                    Label separator = new Label("/");
-                    separator.AddToClassList("tree-navigation-separator");
-                    m_BreadcrumbContainer.Add(separator);
-                }
-                GraphAuthoringBreadcrumbEntry entry = entries[index];
-                if (index == count - 1)
-                {
-                    Label label = new Label(entry.DisplayName) { tooltip = entry.Tooltip };
-                    label.AddToClassList("tree-navigation-current-segment");
-                    m_BreadcrumbContainer.Add(label);
-                }
-                else
-                {
-                    int targetIndex = index;
-                    Button button = new Button(() => navigateTo?.Invoke(targetIndex))
-                    {
-                        text = entry.DisplayName,
-                        tooltip = entry.Tooltip
-                    };
-                    button.AddToClassList("tree-navigation-segment");
-                    m_BreadcrumbContainer.Add(button);
-                }
-            }
+            m_BreadcrumbHost?.Render(entries, navigateTo);
         }
 
         internal IReadOnlyList<GraphAuthoringNodeCatalogEntry> GetNodeCatalogEntries()
@@ -679,30 +787,25 @@ namespace TreeDesigner.Editor
 
         void BindClipboard()
         {
-            m_GraphView.serializeGraphElements = elements =>
-            {
-                string payload = m_Adapters.Mutation.SerializeSelection(m_Adapters.Document, elements);
-                return JsonUtility.ToJson(new GraphAuthoringClipboardEnvelope
+            GraphAuthoringClipboardController.Bind(
+                m_GraphView,
+                () => m_Adapters.Document.DomainId,
+                elements =>
+                    m_Adapters.Mutation.SerializeSelection(
+                        m_Adapters.Document,
+                        elements),
+                payload =>
+                    m_Adapters.Mutation.CanPaste(
+                        m_Adapters.Document,
+                        payload),
+                (operationName, payload) =>
                 {
-                    domainId = m_Adapters.Document.DomainId,
-                    payload = payload
+                    m_Adapters.Mutation.Paste(
+                        m_Adapters.Document,
+                        operationName,
+                        payload);
+                    RebindGraphAuthoringDocument();
                 });
-            };
-            m_GraphView.canPasteSerializedData = serialized =>
-            {
-                if (!TryReadEnvelope(serialized, out GraphAuthoringClipboardEnvelope envelope))
-                    return false;
-                return string.Equals(envelope.domainId, m_Adapters.Document.DomainId, StringComparison.Ordinal) &&
-                       m_Adapters.Mutation.CanPaste(m_Adapters.Document, envelope.payload);
-            };
-            m_GraphView.unserializeAndPaste = (operationName, serialized) =>
-            {
-                if (!TryReadEnvelope(serialized, out GraphAuthoringClipboardEnvelope envelope) ||
-                    !string.Equals(envelope.domainId, m_Adapters.Document.DomainId, StringComparison.Ordinal))
-                    throw new InvalidOperationException("Graph Authoring clipboard domain does not match the current document.");
-                m_Adapters.Mutation.Paste(m_Adapters.Document, operationName, envelope.payload);
-                RebindGraphAuthoringDocument();
-            };
         }
 
         void PublishSelection()
@@ -726,25 +829,5 @@ namespace TreeDesigner.Editor
             RebindGraphAuthoringDocument();
         }
 
-        void NavigateBack()
-        {
-            m_NavigateBack?.Invoke();
-        }
-
-        static bool TryReadEnvelope(string serialized, out GraphAuthoringClipboardEnvelope envelope)
-        {
-            envelope = null;
-            if (string.IsNullOrEmpty(serialized))
-                return false;
-            try
-            {
-                envelope = JsonUtility.FromJson<GraphAuthoringClipboardEnvelope>(serialized);
-                return envelope != null && !string.IsNullOrEmpty(envelope.domainId) && envelope.payload != null;
-            }
-            catch
-            {
-                return false;
-            }
-        }
     }
 }

@@ -1,397 +1,208 @@
 # character-state-timeline-authoring-loop Specification
 
 ## Purpose
-定义 Corin 角色资产的 StateMachine + Timeline authoring 闭环：RootTree 只表达主流程层，Locomotion 和 Action 细节下钻到状态机与状态行为内联图，Timeline 负责具体动作/移动表现与事实输出，不再把攻击节点、window、cue 或 loopback result 平铺在 RootTree。
+
+定义Corin Gameplay StateMachine、有限Action Timeline与Presentation PoseState的唯一职责边界：BTSMTL只拥有Gameplay控制、Motion、Action、Window、Cue与有限Action时间，持续Locomotion姿态只由Presentation Fact、PoseStateMachine和state-local source选择。
+
 ## Requirements
+
 ### Requirement: Corin RootTree 必须只表达角色主流程层
 
-Corin RootTree MUST 作为角色每 tick 的主流程编排层。RootTree SHOULD 包含 Runtime Loop、输入/运动入口、Locomotion StateMachine 和 Action StateMachine 等高层节点。RootTree MUST NOT 平铺某个具体攻击的 action activation、Timeline playback、lifecycle、window、cue 或 loopback result 输出节点。
+Corin RootTree MUST作为角色每tick主流程编排层，包含输入、Gameplay移动控制、Locomotion Gameplay StateMachine和Action StateMachine等高层节点。RootTree MUST不平铺具体Attack Timeline、window、cue或lifecycle，也 MUST不平铺Idle、Walk、Run、Start、Stop、Turn等纯表现Pose State。持续Locomotion PoseStateMachine MUST只存在于Presentation Pose Graph。
 
-#### Scenario: 打开 Corin RootTree
+#### Scenario: 打开Corin RootTree
 
-- **WHEN** 作者打开 Corin RootTree
-- **THEN** 作者 SHOULD 看到 Locomotion StateMachine 和 Action StateMachine
-- **AND** 具体 `Attack1` 的 Timeline、window、cue 和 lifecycle 细节 MUST 位于 Action StateMachine 的状态下钻图中
-- **AND** RootTree MUST NOT 显示 `Activate Attack`、`Play Attack Timeline`、`Submit Attack Window`、`Submit Attack Cue` 或 `Submit Loopback Result`
+- **WHEN** 作者打开Corin RootTree
+- **THEN** 作者 SHOULD看到Gameplay Locomotion与Action控制入口
+- **AND** Attack1的Timeline细节 MUST位于Action State下钻图
+- **AND** Locomotion Pose State MUST通过Open Presentation导航查看而不成为RootTree节点
 
-### Requirement: Corin Locomotion 必须使用 StateMachine + Timeline 编排
+### Requirement: Corin Locomotion StateMachine必须只控制Gameplay运动
 
-Corin locomotion MUST 使用状态机表达基础移动与分层所有权状态。有独立时序内容的状态 MUST 在状态行为内通过 TimelineNode 播放对应 Timeline；没有独立动画资源的状态 MUST 使用 Transition blend 或无表现 ownership state 衔接，不得创建伪 Timeline 或 fallback clip。状态至少包含 `Idle`、`WalkStart`、`WalkLoop`、`WalkEnd`、`RunStart`、`RunLoop`、`RunEnd`、`MovingTurn` 和 `ActionOverride`。所有 start、end、loop、turn 和 ownership 状态 MUST 通过明确 Transition 响应输入与 `HasActionLocomotionOwnership`，并复用统一 State source-exit 生命周期。RunEnd MUST 只表达 locomotion 从实际 Run 状态停止，不得作为 Action 结束后的通用恢复状态。
+Corin BTSMTL Locomotion StateMachine MUST只表达输入准入、Gameplay movement mode、Motion authority、转向与加速度约束、Action对移动的打断以及其它影响Simulation结果的控制。只有具有Gameplay时序、Motion或事实输出的移动行为 MAY使用Timeline；它 MUST不包含只为Idle、WalkStart、WalkLoop、RunStart、RunLoop、RunEnd或MovingTurn动画存在的Timeline playback，不提交BaseLocomotion AnimationSelection，并 MUST不使用ActionOverride停止基础Pose输出。持续Pose选择 MUST由Corin Pose Graph中的Locomotion PoseStateMachine完成。
 
-#### Scenario: WalkStart 输入抢占
+#### Scenario: 角色开始跑动
 
-- **WHEN** WalkStart root 尚未完成且输入进入 Run 或 Stop 区间
-- **THEN** 状态机 MUST 分别允许进入 RunStart 或 WalkEnd
-- **AND** source TimelineNode MUST 通过 State root stop 取消
+- **WHEN** Gameplay接受移动输入并由Motor产生速度
+- **THEN** BTSMTL MUST只更新移动控制和committed Body结果
+- **AND** Presentation PoseStateMachine MUST根据Fact选择Start或Locomotion Pose
 
-#### Scenario: WalkEnd 恢复移动
+#### Scenario: FullBody Action活跃
 
-- **WHEN** WalkEnd root 尚未完成且输入进入 Walk 或 Run 区间
-- **THEN** 状态机 MUST 分别允许进入 WalkStart 或 RunStart
-- **AND** 没有 WalkEnd 独立动画时 MUST 使用 Transition blend
+- **WHEN** Action取得Motion authority
+- **THEN** Gameplay Locomotion control MUST按正式Motion arbitration让渡或限制Motor
+- **AND** MUST不进入ActionOverride动画状态
 
-#### Scenario: RunStart 输入抢占
+### Requirement: Corin基础连招必须使用Action StateMachine和Timeline编排
 
-- **WHEN** RunStart root 尚未完成且输入进入 Stop 或 Walk 区间
-- **THEN** 状态机 MUST 分别允许进入 RunEnd 或 WalkLoop
-- **AND** MUST NOT 等待 RunStart Timeline 自然完成
+Corin外层Action StateMachine MUST只表达`None`、`Attack`和`Dodge`动作大类。Attack1至Attack5 MUST位于Attack State body内的nested StateMachine，DodgeBack与DodgeForward MUST位于Dodge State body内的nested StateMachine。具体leaf MUST唯一拥有ActionProfile、Action Context、inline Timeline、Window、Cue、Motion与lifecycle。连段、恢复取消与replacement MUST复用ConditionRuleGraph、State edge、Runnable stop、source OnExit、Action lifecycle和Timeline cancel，不得创建Action专用旁路。
 
-#### Scenario: RunEnd 恢复移动
+#### Scenario: Attack1进入Attack2
 
-- **WHEN** RunEnd root 尚未完成且输入进入 Walk 或 Run 区间
-- **THEN** 状态机 MUST 分别允许进入 WalkStart 或 RunStart
-- **AND** 输入恢复边 MUST 优先于 Completed AND Stop 的 Idle 边
+- **WHEN** Attack1的ComboAccept active、存在Attack request且Attack2 admission成立
+- **THEN** source MUST先按统一Action lifecycle关闭
+- **AND** target MUST消费request并创建新的ActionInstance
+- **AND** FullBodyAction channel MUST提交Attack2 exact playback
 
-#### Scenario: RunLoop 与 MovingTurn 输入抢占
+#### Scenario: Attack被Dodge打断
 
-- **WHEN** RunLoop 或 MovingTurn 的输入进入 Stop、Walk 或有效 Run/Turn 区间
-- **THEN** 状态机 MUST 按明确 edge 切换到 RunEnd、WalkLoop、MovingTurn 或 RunLoop
-- **AND** 同 source 多条边 MUST 使用稳定 priority
+- **WHEN** Gameplay规则允许Dodge替换Attack
+- **THEN** source Action Timeline MUST按统一Runnable与Action lifecycle停止
+- **AND** AnimationSlot MUST只处理Attack playback到Dodge playback的Pose transition
 
-#### Scenario: Full-body Action 活跃时交出 locomotion 所有权
+#### Scenario: Action自然结束
 
-- **WHEN** 任一普通 locomotion state 读取到 `HasActionLocomotionOwnership=true`
-- **THEN** Locomotion StateMachine MUST 以高优先级进入 ActionOverride
-- **AND** ActionOverride MUST NOT 播放动画、引用 Action Timeline 或提交 motion contribution
+- **WHEN** 当前leaf没有更高优先级replacement且Timeline完成
+- **THEN** Gameplay MUST完成Action lifecycle并释放Motion authority
+- **AND** FullBodyAction AnimationSlot MUST过渡回同帧当前Locomotion Source Pose
 
-#### Scenario: Action 完成后有输入进入 RunLoop
+### Requirement: Corin一次性状态行为必须默认使用inline Graph
 
-- **WHEN** ActionOverride 读取到 `HasActionLocomotionOwnership=false`
-- **AND** 当前 MoveAxis 大于 stop threshold
-- **THEN** Locomotion StateMachine MUST 直接进入 RunLoop
-- **AND** MUST NOT 重复进入 RunStart
+Corin Locomotion Gameplay状态行为和基础连招状态行为 MUST默认保存为StateNode内部inline graph data。只有多个状态明确复用同一行为图时，作者 MAY显式抽取shared `BaseTreeAsset`。外层Action category MUST不复制leaf数据或创建一次性SubTree asset。
 
-#### Scenario: Action 完成后无输入进入 Idle
+#### Scenario: 下钻Attack1
 
-- **WHEN** ActionOverride 读取到 `HasActionLocomotionOwnership=false`
-- **AND** 当前 MoveAxis 不大于 stop threshold
-- **THEN** Locomotion StateMachine MUST 直接进入 Idle
-- **AND** MUST NOT 播放 RunEnd
+- **WHEN** 作者下钻Attack1 StateNode
+- **THEN** 编辑器 MUST打开该StateNode的inline StateBehaviorSubTree
+- **AND** 项目 MUST不要求`Attack1SubTree.asset`
 
-#### Scenario: ActionOverride 保持单一职责
+### Requirement: Corin有限Action Timeline必须默认使用inline Timeline
 
-- **WHEN** 作者下钻 ActionOverride StateNode
-- **THEN** inline state body MUST 不包含 request consume、ActionProfile、Timeline、animation 或 motion node
-- **AND** 项目 MUST NOT 为 ActionOverride 创建一次性 SubTree asset
+Corin有限Action与真正包含Gameplay时序的移动行为 Timeline MUST默认保存为对应TimelineNode私有的inline TimelineData。纯Idle、Start、Loop、Stop与Turn动画 MUST使用Presentation Pose source，MUST不为其创建TimelineNode或inline Timeline。Compiler MUST把保留的inline/shared Timeline编译为同一不可变Program与Action Playback合同，不得创建runtime clone。
 
-#### Scenario: MovingTurn 使用角色朝向误差
+#### Scenario: 下钻Attack1 Timeline
 
-- **WHEN** RunLoop 中有效 Run 输入的 camera-relative 期望世界方向与 tick 起点 actor forward 夹角达到 turn threshold
-- **THEN** Locomotion StateMachine MUST 进入 MovingTurn
-- **AND** 条件 MUST NOT 使用相邻 logic tick 的 MoveAxis 差角替代 actor facing error
-- **AND** turn threshold MUST 继续来自可调 ExposedProperty
+- **WHEN** 作者从Attack1 State body打开TimelineNode
+- **THEN** Timeline Editor MUST显示Animation、Motion与Decision Tree tracks
+- **AND** playback MUST属于Attack1 Action Context
 
-#### Scenario: ownership edge 优先级
+#### Scenario: 编辑Run Pose
 
-- **WHEN** 同一 source state 同时满足普通 Walk/Run/Turn 条件和 `HasActionLocomotionOwnership=true`
-- **THEN** ActionOverride edge MUST 使用稳定更高 priority 获胜
-- **AND** 状态机 MUST NOT 创建重复 source-target edge
+- **WHEN** 作者需要替换持续Run动画或marker
+- **THEN** 必须导航到Presentation Profile的Run Pose source binding
+- **AND** MUST不创建RunLoop inline Timeline
 
-### Requirement: Corin 基础连招必须使用 Action StateMachine + Timeline 编排
+### Requirement: Corin Action Timeline Window必须由owner-local事实表达
 
-Corin 外层 Action StateMachine MUST 只表达动作大类，并包含 `None`、`Attack` 和 `Dodge`。`Attack1`、`Attack2`、`Attack3`、`Attack4` 与 `Attack5` MUST 位于 Attack StateNode body 内的 inline StateMachineNode；`DodgeBack` 与 `DodgeForward` MUST 位于 Dodge StateNode body 内的 inline StateMachineNode。具体动作 leaf MUST 使用 ActionProfile、独立 Action Context 和带 Action Context 的 inline TimelineNode。连段、恢复取消与外层 replacement MUST 复用普通 ConditionRuleGraph、State edge、Runnable stop、source OnExit、Action lifecycle 和 Timeline cancel，不得创建 Action 专用旁路。没有成功闪避或成功格挡的 Combat Resolution 事实时，系统 MUST NOT 保留 RushAttack、CounterAttack 或按上一状态推导特殊攻击的路由。
+Attack1至Attack5、DodgeForward和DodgeBack的inline Timeline MUST以Decision TreeClip和owner-local Bool Frame declaration表达Hit、IFrame、ComboAccept、RecoveryEarly、RecoveryLate与RecoveryOpen。ActionWindow projection MUST保留Action Context、WindowId、Digest、phase和frame range；ConditionRuleGraph与EndFrame fact MUST消费同一candidate。系统 MUST不建立Root-owned per-state window key、WindowTrack、专用submit node、cache或registry。
 
-#### Scenario: 首次进入 Attack1
+#### Scenario: Attack窗口
 
-- **WHEN** 外层 None 检测到 Attack request 且 `CanActivateAction(Attack)` 为 true
-- **THEN** 外层 Action StateMachine MUST 进入 Attack category
-- **AND** 外层条件 MUST 只查询而不消费该 request
-- **AND** 内层 Attack StateMachine MUST 进入 `Attack1`
-- **AND** `Attack1` target activation MUST 消费 request 并创建新的 Action Context
+- **WHEN** 作者打开任一Attack inline Timeline
+- **THEN** Hit、ComboAccept、RecoveryEarly与RecoveryLate MUST位于该owner
+- **AND** projection MUST指向当前ActionInstance
 
-#### Scenario: 五段普通攻击连段
+### Requirement: Corin Gameplay只能提交有限Action playback
 
-- **WHEN** Attack1..4 的 `ComboAccept` active、存在 Attack request 且下一段 admission 为 true
-- **THEN** 内层 Attack StateMachine MUST 按 Attack1→2→3→4→5 抢占
-- **AND** source OnExit MUST 提交一次 `Cancel(RecoveryCancel)`
-- **AND** target activation MUST 消费 request 并创建新的 Action Context
+Corin Gameplay MUST只为FullBodyAction及其它有限Gameplay-owned channel提交唯一playback selection。Locomotion、Action、Dodge与nested combo MUST在逻辑层完成Gameplay状态、打断和Action channel所有权；持续BaseLocomotion MUST不再是AnimationChannel，也 MUST不提交AnimationPlaybackId。Pose Graph MUST从Presentation Fact选择Locomotion Pose，并通过FullBodyAction AnimationSlot组合有限Action。
 
-#### Scenario: Attack5 是有限连段终段
+#### Scenario: Locomotion正常运行
 
-- **WHEN** Attack5 播放期间再次收到 Attack request
-- **THEN** 内层 StateMachine MUST NOT 从 Attack5 replacement 到 Attack1
-- **AND** Attack5 MUST 只允许有效 Dodge、Move replacement 或 natural complete
+- **WHEN** 当前没有FullBodyAction且Body正在移动
+- **THEN** Program MUST不提交BaseLocomotion selection
+- **AND** PoseStateMachine MUST从movement fact生成基础Pose
 
-#### Scenario: 攻击较早后摇被 Dodge 取消
+#### Scenario: 同tick切换Locomotion与Action
 
-- **WHEN** 任一 Attack leaf 的 `RecoveryEarly` active
-- **AND** Dodge request 与 Dodge admission 成立
-- **THEN** 该 source leaf 的内层 Exit edge MUST 优先于 Combo、Move 和 natural complete
-- **AND** source lifecycle MUST 在 target Dodge activation 前明确关闭
+- **WHEN** 同一logic tick内Gameplay movement mode和Attack ownership均变化
+- **THEN** Program MUST只提交最终Gameplay Body事实与FullBodyAction playback
+- **AND** Locomotion Pose source MUST由同帧Presentation Fact独立选择
 
-#### Scenario: 攻击较晚后摇被移动取消
+### Requirement: Corin必须使用PoseStateMachine加Action Slot的唯一表现拓扑
 
-- **WHEN** 任一 Attack leaf 的 `RecoveryLate` active 且当前 MoveAxis 大于 stop threshold
-- **AND** 没有更高优先级 Dodge 或 Combo edge 获胜
-- **THEN** leaf MUST 先退出 Attack 内层 StateMachine
-- **AND** Locomotion MUST 在 ownership 释放后进入 RunLoop
+Corin Presentation Pose Graph MUST以typed Presentation Fact驱动Locomotion PoseStateMachine，以FullBodyAction exact playback驱动唯一AnimationSlot，并在同一Pose Plan完成transition、composition、TwoBoneIK、FootPlacement与Output。Corin MUST不同时保留BaseLocomotion Selection Input、旧Timeline Player、共享Playback总管或第二动画链。
 
-#### Scenario: 攻击完整后摇自然结束
+#### Scenario: 编译Corin Pose Graph
 
-- **WHEN** 当前 Attack leaf 没有有效 Dodge、Combo 或 Move replacement
-- **THEN** 其 End clip MUST 完整播放到 Timeline root terminal
-- **AND** leaf MUST 提交一次 Complete 并退出到 None
-- **AND** 无移动输入时 Locomotion MUST 回 Idle
+- **WHEN** Projection Compiler解析Corin Profile
+- **THEN** MUST发现唯一Locomotion PoseStateMachine和唯一FullBodyAction AnimationSlot
+- **AND** MUST拒绝可达BaseLocomotion Gameplay Selection Input
 
-#### Scenario: Dodge 恢复期接普通 Attack1
+### Requirement: Corin Pose source必须具有稳定binding与node-local policy
 
-- **WHEN** DodgeBack 或 DodgeForward 的 `RecoveryOpen` active
-- **AND** Attack request 与 Attack admission 成立
-- **THEN** Dodge leaf MUST 先退出内层 Dodge StateMachine
-- **AND** 外层 Dodge→Attack edge MUST 只在 `state_root_completed` 后路由
-- **AND** 内层 Attack StateMachine MUST 通过普通 Enter 进入 Attack1
+Corin每个持续Locomotion Sequence、BlendSpace或Motion Matching source MUST拥有Graph-owned typed Source Slot与Profile-owned typed Binding子资产；Projection Compiler MUST把它们降低为连续dense source index，不得保存作者source/provider字符串。每个有限Action Timeline producer MUST拥有稳定presentation identity、FullBodyAction channel binding与resource binding。PoseState transition与Slot transition MUST分别来自对应node-local Policy；Graph Gameplay State edge和Timeline MUST不保存另一份表现transition策略。
 
-#### Scenario: Dodge 恢复期再次闪避或移动
+#### Scenario: 配置Run source
 
-- **WHEN** Dodge `RecoveryOpen` active
-- **THEN** Attack edge MUST 高于 Dodge re-entry，Dodge re-entry MUST 高于 Move edge，Move MUST 高于 natural complete
-- **AND** 所有 route MUST 使用显式 State transition，不得由 runtime 全局 priority 推导
+- **WHEN** Profile Inspector显示Run Presentation Pose source
+- **THEN** 必须显示provider/source id、Sequence或BlendSpace消费者与resource binding
+- **AND** 不得要求Timeline producer identity
 
-#### Scenario: Dodge 无输入自然结束
+#### Scenario: 配置Attack1至Attack5
 
-- **WHEN** Dodge Timeline 自然完成且没有有效 Attack、Dodge 或 Move replacement
-- **THEN** Dodge leaf MUST 提交一次 Complete 并退出到 None
-- **AND** Locomotion MUST 直接回 Idle
-- **AND** MUST NOT 经过 RunEnd
+- **WHEN** Profile Inspector显示五个Action producer
+- **THEN** 必须显示各自stable identity、FullBodyAction AnimationSlot与resource binding
+- **AND** 不得把它们列为Locomotion Pose State
 
-#### Scenario: 打开外层 Action StateMachine
+### Requirement: Corin Walk与Run MAY共享Locomotion.Gait
 
-- **WHEN** 作者打开 Corin Action StateMachine
-- **THEN** 作者 MUST 只看到 `None`、`Attack` 和 `Dodge` 动作大类
-- **AND** 作者下钻 Attack 或 Dodge state body 后 MUST 能继续打开对应 inline StateMachine
+Corin Walk与Run Presentation Pose source MAY在同一Locomotion PoseStateMachine可达分支中共享`Locomotion.Gait` SyncGroup。启用时，两项source binding MUST按真实AnimationClip配置完整Cyclic marker sequence；source-local marker映射 MUST只影响Pose sample time，不得改变Pose transition rule、Gameplay movement、Motion request或WorldSolver结果。Walk与Run MUST不为marker同步恢复Timeline producer。
 
-### Requirement: Corin 资产闭环不得创建一次性 SubTree asset
+#### Scenario: Walk Pose切换Run Pose
 
-Corin 的 `Locomotion` 状态行为和基础连招状态行为 MUST 默认保存为 StateNode 内部 inline graph data。只有多个状态明确复用同一行为图时，作者 MAY 显式抽取 shared `BaseTreeAsset`。
+- **WHEN** PoseStateMachine从Walk handoff到Run且两侧marker完整
+- **THEN** source-local marker映射 MUST按Locomotion.Gait有向pair解析target sample time
+- **AND** Gameplay Program MUST不产生WalkLoop或RunLoop playback
 
-#### Scenario: Attack1 状态行为
+### Requirement: Corin全部动画owner必须显式选择Marker策略
 
-- **WHEN** 作者下钻 `Attack1` StateNode
-- **THEN** 编辑器 MUST 打开该 StateNode 的 inline StateBehaviorSubTree
-- **AND** 项目 MUST NOT 为这个一次性状态 body 创建 `Attack1SubTree.asset`
+Corin每个可达有限Action AnimationTrack MUST显式配置`None`或`MarkerGroup`，不得保留Unspecified。持续Locomotion Pose source MUST在Profile binding独立配置自己的sync mode、group、topology、role与marker；它们不计入Timeline AnimationTrack inventory。选择 MUST根据真实资源语义、Action Timeline call site或Pose source loop capability及完整coverage作出，不得按显示名称硬编码。
 
-#### Scenario: 显式复用
+#### Scenario: 检查Corin作者清单
 
-- **WHEN** 作者决定 `WalkLoop` 和其它角色复用同一行为图
-- **THEN** 作者 MAY 使用 Extract Shared 或等价显式复用操作创建 shared asset
-- **AND** owner inline 真数据 MUST 被清理
+- **WHEN** Compiler遍历有限Action Timeline与Presentation Pose source
+- **THEN** 每个真实owner MUST拥有明确sync mode
+- **AND** 任一Unspecified配置 MUST阻止发布并定位真实owner
 
-### Requirement: Corin 循环 locomotion 状态必须使用 TimelineNode Loop 播放模式
+### Requirement: Corin有限动作只能在资源满足时加入Marker Group
 
-Corin locomotion 中表达持续姿态或持续移动的循环状态 MUST 通过状态 body 内的 `TimelineNode PlaybackMode=Loop` 播放对应 Timeline。状态 body MUST NOT 使用普通 `LoopNode` 包住 `TimelineNode` 来表达动画循环。RootTree 顶层 `Runtime Loop` MAY 保留，用于角色主流程持续运行。
+Attack1至Attack5、Dodge及其它有限Action producer MAY配置`MarkerGroup/Finite`，但仅当真实clip从frame 0到DurationFrame具有完整coverage，并满足同AnimationSlot可达集合、同组directed pair契约。RunStart、RunEnd、MovingTurn等Pose source MAY在Profile binding配置Finite MarkerGroup，但 MUST不再作为Action Timeline producer。资源不满足时owner MUST显式配置None并使用raw sample与自己的Transition或Slot Blend Logic；不得伪造支撑marker。
 
-#### Scenario: Idle 循环姿态
+#### Scenario: Action没有共同姿态契约
 
-- **WHEN** 作者打开 Corin `Idle` 状态 body
-- **THEN** body SHOULD 直接包含播放 idle Timeline 的 `TimelineNode`
-- **AND** 该 `TimelineNode` 播放模式 MUST 是 `Loop`
-- **AND** body MUST NOT 通过普通 `LoopNode` 重启该 `TimelineNode`
-
-#### Scenario: WalkLoop 和 RunLoop 持续移动
-
-- **WHEN** 作者打开 Corin `WalkLoop` 或 `RunLoop` 状态 body
-- **THEN** body SHOULD 直接包含对应 locomotion loop Timeline 的 `TimelineNode`
-- **AND** 该 `TimelineNode` 播放模式 MUST 是 `Loop`
-- **AND** 状态离开 MUST 由同层 Condition rule 决定
-
-#### Scenario: 一次性 locomotion 状态
-
-- **WHEN** 作者打开 `WalkStart`、`WalkEnd`、`RunStart`、`RunEnd` 或 `MovingTurn` 状态 body
-- **THEN** 对应 TimelineNode SHOULD 使用 `Once` 播放模式
-- **AND** `StateRootCompleted` 或其它正式 Transition 条件 MUST 决定状态离开
-
-### Requirement: Corin TimelineNode 必须默认拥有 inline Timeline
-
-Corin 的 Locomotion 与 Action 状态 Timeline MUST 默认保存为对应 TimelineNode 私有的 inline TimelineData。只有多个节点明确复用同一 Timeline 时，作者 MAY 显式 Extract Shared 或分配 shared TimelineAsset。Compiler MUST 将 inline/shared resolved Timeline 编译为同一不可变 Program/Projection 合同；每个 playback MUST 只在 CharacterSimulationState 中获得独立 activation state，不得创建 TimelineData 或 TimelineRunningTree runtime clone。
-
-#### Scenario: 下钻 Attack1 Timeline
-
-- **WHEN** 作者从 Attack1 State body 打开 Play Attack1 Timeline 节点
-- **THEN** 独立 TimelineEditorWindow MUST 绑定 Attack1 inline TimelineData
-- **AND** 来源 Graph 窗口 MUST 保持 Attack1 State body 可见
-- **AND** TimelineEditorWindow MUST 显示 Animation、Motion 和 Decision Tree tracks
-- **AND** 作者从 Hit 或 Cancel TreeClip 下钻时 MUST 在来源 Graph 窗口打开 inline TimelineRunningTree authoring data
-
-#### Scenario: 下钻 locomotion Timeline
-
-- **WHEN** 作者从 Idle、WalkStart、WalkLoop、RunStart、RunLoop、RunEnd 或 MovingTurn 状态 body 打开 TimelineNode
-- **THEN** 独立 TimelineEditorWindow MUST 绑定对应节点的 inline TimelineData
-- **AND** 来源 Graph 窗口 MUST 保持当前状态行为 Graph 可见
-- **AND** 项目 MUST NOT 要求对应一次性 Timeline asset 存在
-
-#### Scenario: 显式复用 Timeline
-
-- **WHEN** 作者决定多个状态或角色复用同一 Timeline
-- **THEN** 作者 MUST 通过 Extract Shared 或显式 Shared ownership 创建/选择 TimelineAsset
-- **AND** owner inline 真数据 MUST 被清理
-- **AND** 每个 playback request MUST 继续拥有独立 Program state address
-
-### Requirement: Corin inline Timeline Window 必须只有 owner-local 事实链
-
-Attack1..5、DodgeForward 和 DodgeBack 的 inline Timeline MUST 以 Decision TreeClip 和 owner-local Bool Frame declaration 表达 Hit、IFrame、ComboAccept、RecoveryEarly、RecoveryLate 与 RecoveryOpen。ActionWindow projection MUST 保留 Action Context、WindowId、Digest、phase 和 frame range；ConditionRuleGraph 与 EndFrame fact MUST 消费同一 candidate。系统 MUST NOT 建 Root-owned per-state window key、WindowTrack、专用 submit node、cache 或 registry。
-
-#### Scenario: Attack 窗口
-
-- **WHEN** 作者打开任一 Attack inline Timeline
-- **THEN** Hit、ComboAccept、RecoveryEarly 与 RecoveryLate MUST 位于该 owner
-- **AND** projection MUST 指向当前 ActionInstance
-
-#### Scenario: Dodge 窗口
-
-- **WHEN** 作者打开 DodgeForward 或 DodgeBack inline Timeline
-- **THEN** IFrame 与 RecoveryOpen MUST 位于该 owner
-- **AND** RecoveryOpen MUST 能被同帧 typed WindowType query 读取
-### Requirement: Corin Attack 资源与身份必须由 nested leaf 唯一拥有
-
-Attack1..5 leaf MUST 各自唯一拥有 ActionProfile 引用、Action Context slot、inline Timeline、AnimationTrack、MotionCurveTrack、Window declaration 与 lifecycle 节点。外层 Attack category MUST 只拥有嵌套 StateMachine 和 category transition，MUST NOT 复制 leaf 数据或创建一次性 shared asset。
-
-#### Scenario: 下钻 Attack leaf
-
-- **WHEN** 作者下钻 Attack1..5 任一 StateNode
-- **THEN** 对应 inline body 与 Timeline MUST 是该动作的唯一可写数据
-- **AND** Snapshot、Compiler、Validator 与 runtime MUST 解析同一 owner identity
-
-#### Scenario: 检查外层 Attack
-
-- **WHEN** 作者查看外层 Attack category
-- **THEN** MUST NOT 存在平铺 Attack leaf、重复 combo edge 或 orphan rule graph
-### Requirement: Corin 必须由逻辑层按Animation Channel提交唯一playback selection
-
-Corin MUST使用BaseLocomotion与FullBodyAction两个稳定AnimationChannelId，并分别绑定RequireOutput与AllowEmpty Selection Input。Locomotion、Action、Dodge与nested combo MUST在逻辑层完成状态、打断和各channel所有权决策，然后为每个channel至多提交一个AnimationPlaybackId。AnimationTrack.Priority、Presentation Driver、Tree route与Runtime arbitration MUST不参与该选择；两条Selection的播放、过渡与空间组合 MUST只由Pose Graph决定。
-
-#### Scenario: Locomotion 正常运行
-
-- **WHEN** ActionOverride 没有活动动作
-- **THEN** BaseLocomotion selection MUST来自当前Locomotion State的正式Timeline playback
-- **AND** Idle、WalkStart、WalkLoop、RunStart、RunLoop、RunEnd 与 MovingTurn MUST按状态逻辑切换 selection
-
-#### Scenario: Locomotion 进入 Dodge
-
-- **WHEN** Dodge 获得动作所有权
-- **THEN** Action逻辑 MUST为FullBodyAction选择Dodge playback
-- **AND** Animation模块 MUST不比较Dodge与Locomotion Priority
-
-#### Scenario: Dodge 返回 Locomotion
-
-- **WHEN** Dodge 完成且当前仍有移动输入
-- **THEN** 逻辑层 MUST清空FullBodyAction并保持BaseLocomotion当前正式Run playback
-- **AND** 没有移动输入时BaseLocomotion MUST选择Idle playback，MUST NOT经过RunEnd
-- **AND** Animation 模块 MUST不从历史 sample 或表现状态猜测返回目标
-
-#### Scenario: Attack1 进入 Attack2
-
-- **WHEN** nested Attack StateMachine 满足连段条件并切换到 Attack2
-- **THEN** Action逻辑 MUST将FullBodyAction selection更新为Attack2 playback
-- **AND** State transition edge MUST只保存逻辑 condition 与 priority
-
-#### Scenario: 无动画 WalkEnd
-
-- **WHEN** WalkEnd 本身没有 animation producer
-- **THEN** 本次逻辑提交 MUST省略BaseLocomotion更新以保持当前正式selection，或直接选择目标状态的正式producer
-- **AND** Animation 模块 MUST不为 WalkEnd 创建 fallback Timeline
-
-#### Scenario: 同 tick 多次状态变化
-
-- **WHEN** 一个 logic tick 内 RunLoop、MovingTurn 与 Action ownership 连续变化
-- **THEN** Pipeline MUST为每个受影响AnimationChannel只提交最终selection
-- **AND** playback generation 的 Complete/Release MUST继续保序
-
-### Requirement: Corin 全部 AnimationTrack 必须显式选择 Marker Sync 策略
-
-Corin每个可达AnimationTrack MUST显式配置为`None`或`MarkerGroup`，不得保留Unspecified。选择 MUST根据该producer真实动画语义、Timeline Once/Loop call site和完整marker coverage作出，不得按Locomotion、Attack、Dodge、Turn等状态名称硬编码。没有AnimationTrack的状态 MUST不创建伪Timeline、伪clip或伪marker。
-
-#### Scenario: 打开Corin完整作者清单
-
-- **WHEN** Compiler或Agent Validator遍历Corin全部RootTree、nested StateMachine与inline/shared Timeline
-- **THEN** 每个可达AnimationTrack MUST拥有明确sync mode
-- **AND** 任一Unspecified track MUST阻止发布
-
-#### Scenario: WalkEnd没有动画资源
-
-- **WHEN** WalkEnd继续只依赖Animancer transition blend且没有AnimationTrack
-- **THEN** 迁移 MUST不为WalkEnd创建一次性Timeline或fallback clip
-- **AND** Marker Sync inventory MUST不制造不存在的producer
-
-### Requirement: Corin WalkLoop 与 RunLoop 必须共享 Locomotion.Gait
-
-Corin WalkLoop与RunLoop AnimationTrack MUST配置为`MarkerGroup/Cyclic`并共享`Locomotion.Gait` SyncGroupId。两者 MUST按各自真实动画frame配置至少覆盖左右支撑两个方向的marker segment，不得假设normalized time或动画长度相同。Locomotion状态transition时刻、motion request和WorldSolver结果 MUST不因Marker Sync改变。
-
-#### Scenario: WalkLoop切换RunLoop
-
-- **WHEN** Corin从WalkLoop进入RunLoop
-- **THEN** BaseLocomotion Selection Input下游的RunLoop MUST在整个共同可见transition期间持续跟随WalkLoop当前marker segment
-- **AND** Gameplay状态与运动 MUST在原logic tick立即切换
-
-#### Scenario: RunLoop切回WalkLoop
-
-- **WHEN** Corin从RunLoop进入WalkLoop
-- **THEN** WalkLoop MUST读取RunLoop当帧effective phase
-- **AND** MUST不使用上一次WalkLoop activation留下的offset或cycle
-
-### Requirement: Corin 有限动作只能在资源满足时加入 Marker Group
-
-RunStart、RunEnd、MovingTurn、Attack1至Attack5、Dodge及其它one-shot producer MAY配置为`MarkerGroup/Finite`，但仅当真实clip能够从frame 0到DurationFrame提供完整marker coverage，且同AnimationChannel、同显式MarkerSync可达集合、同组directed pair契约成立。资源不满足时 MUST显式配置None并保留raw Timeline sample与Player transition；不得伪造支撑marker。Attack combo、recovery、cancel、IFrame与damage MUST继续由Action Context、TreeClip window、ConditionRule和State transition决定，不能由Marker Sync代替。
-
-#### Scenario: RunEnd具有完整步态marker
-
-- **WHEN** RunEnd真实动画能够表达Locomotion.Gait全部有向segment并覆盖完整Timeline
-- **THEN** 作者 MAY将其配置为`MarkerGroup/Finite`
-- **AND** RunLoop进入RunEnd时 MUST使用通用Cyclic到Finite映射
-
-#### Scenario: Attack动画没有共同姿态契约
-
-- **WHEN** Attack1与Attack2是顺序连段动作但没有同组完整marker语义
+- **WHEN** Attack1与Attack2没有同组完整marker语义
 - **THEN** 两者AnimationTrack MUST显式为None
-- **AND** Attack1到Attack2 MUST继续由ComboAccept窗口、State transition与目标Timeline ClipIn控制
+- **AND** 连段准入 MUST继续由ComboAccept window和Gameplay transition决定
 
-#### Scenario: 一组Action变体确实需要同步
+#### Scenario: Action退出到Locomotion
 
-- **WHEN** 多个Action producer真实共享同一姿态marker语义与完整coverage
-- **THEN** 作者 MAY为它们建立独立Action Marker Group
-- **AND** Runtime MUST复用Pose Graph中的显式MarkerSync节点，不得增加Attack专用matcher
+- **WHEN** Action producer为None并结束
+- **THEN** AnimationSlot MUST按compiled Action-to-Source Pose规则回到同帧当前Locomotion Pose
+- **AND** MUST不从Action名称、Timeline时间或旧BaseLocomotion selection伪造步态phase
 
-#### Scenario: 动作退出到Locomotion
+### Requirement: Corin旧Locomotion Timeline数据必须原子迁移
 
-- **WHEN** Action producer为None并结束到Locomotion
-- **THEN** Animation Runtime MUST让对应Selection Input下游Player使用target raw Timeline time，并由显式BlendStack完成transition
-- **AND** MUST不从Action名称或上一状态伪造Locomotion.Gait phase
+旧Idle、WalkStart、WalkLoop、RunStart、RunLoop、RunEnd与MovingTurn Timeline中的数据 MUST按用途迁移：AnimationClip、表现marker、Foot Placement Weight曲线与Foot Analysis identity迁入Presentation Pose source binding；真实影响Body的Motion数据迁入唯一Gameplay Motion owner；无正式消费方的数据删除。迁移完成后 MUST删除旧TimelineNode、BaseLocomotion AnimationChannel producer、source binding、lifecycle配置、ActionOverride与旧ownership Blackboard declaration，MUST不保留旧新双写。
 
-### Requirement: Corin animation producer 必须绑定正式source与Player policy
+#### Scenario: 迁移RunLoop
 
-Corin每个正式Timeline animation producer MUST拥有稳定presentation identity，并通过`CharacterAnimationPresentationProfile`绑定到Animancer source resource。AnimationChannel到Selection Input的binding MUST来自Pose Graph，transition MUST来自对应BlendStack节点的node-local policy。Profile Inspector MUST在显式Corin Definition context下，按稳定identity列出Locomotion、Action、Attack1..5与Dodge producer的AnimationChannelId、Selection Input PoseNodeId、marker binding与source binding，但 MUST不复制producer之间的逻辑关系；Graph/State edge MUST不保存transition strategy、duration、curve或Driver。
+- **WHEN** RunLoop Timeline的AnimationTrack只负责循环Pose和Locomotion marker
+- **THEN** Clip与marker MUST迁入Run Presentation Pose source
+- **AND** RunLoop Timeline producer MUST删除
 
-#### Scenario: 配置 Attack1..5
+#### Scenario: MovingTurn含Gameplay MotionCurve
 
-- **WHEN** 作者在 Corin Definition context 下的 Profile Inspector 查看 Attack1..5
-- **THEN** Inspector MUST显示五个producer的stable identity、FullBodyAction Selection Input与source binding
-- **AND** source-target transition MUST由该输入下游BlendStack的node-local policy配置
-- **AND** Pipeline MUST不创建第二张pair transition表
+- **WHEN** 曲线确实参与CharacterMotionRequest
+- **THEN** 曲线 MUST保留在明确Gameplay Motion owner并保持唯一消费链
+- **AND** PoseStateMachine MUST不读取该曲线驱动World movement
 
-#### Scenario: 配置 Locomotion 与 Dodge
+### Requirement: Corin资产迁移必须通过正式Agent Document事务
 
-- **WHEN** 作者调整 Dodge 的进入或退出表现
-- **THEN** 调整 MUST落在正式BlendStack node-local policy
-- **AND** RootTree、Parallel edge 与 StateMachine edge MUST保持纯逻辑
+有限Action Timeline、Gameplay Graph、Blackboard与旧Locomotion Timeline清理 MUST通过`btsmtl-agent-authoring-document.v2`的`checkout_document -> editable修改 -> dry_run_document -> apply_document(expected_document_hash) -> validate`唯一事务完成。Presentation Pose source、Pose Graph、Rig与Foot Analysis只在Document context只读投影，并通过各自正式authoring service维护。实现 MUST不直接修改Unity YAML、不恢复v17 Patch链、不创建一次性migrator或第二mutation service。
 
-#### Scenario: 缺失producer source binding
+#### Scenario: 应用Corin Document
 
-- **WHEN** selected Corin producer没有合法Animancer source binding或channel-to-slot binding
-- **THEN** runtime MUST报告明确配置错误
-- **AND** MUST不使用默认 Idle、当前 clip 或 Immediate fallback
+- **WHEN** dry-run成功并返回exact document hash
+- **THEN** apply MUST消费同一hash并在一个Undo事务保存正式authoring
+- **AND** 成功后反向导出Package MUST为Clean
+- **AND** Document MUST不再包含旧BaseLocomotion、ActionOverride或旧Selection字段
 
-### Requirement: Corin Marker Sync 配置必须通过正式 Agent v15 迁移
+### Requirement: Corin生成产物必须显式重建
 
-Corin AnimationTrack的sync mode、group、topology、SyncRole与marker，以及Timeline Clip已登记的Curve Channel MUST通过v14 `export_snapshot -> dry_run_patch -> apply_patch -> export_snapshot -> validate`流程写入。实现 MUST不直接修改CorinPlayableRootTree或shared Timeline YAML，不创建一次性migrator。迁移完成后 MUST重新生成匹配source revision的CharacterPresentationProjection及Float32/Fixed Program wrapper。
+Corin作者数据迁移后，Presentation Projection、Float32 Program wrapper与Fixed Program wrapper MUST通过精确Definition的正式显式Build入口重建。Program MUST不包含BaseLocomotion animation producer；Projection MUST包含PoseStateMachine、state-local source、AnimationSlot、完整Rig v3与唯一ordered Pose Plan。三种产物 MUST共享相同Semantic IR/source revision闭包，不得自动Build、部分发布或使用旧wrapper。
 
-#### Scenario: 迁移Corin资产
+#### Scenario: 迁移后显式Build
 
-- **WHEN** apply流程配置Corin全部AnimationTrack
-- **THEN** dry-run与apply MUST消费同一immutable typed command plan
-- **AND** 再次导出的Snapshot MUST显示全部可达track不再是Unspecified
-- **AND** generated Projection MUST包含canonical group与segment occurrence索引
-
-#### Scenario: generated artifact重建
-
-- **WHEN** marker作者数据改变source revision
-- **THEN** Float32/Fixed Program wrapper与Projection MUST通过正式编译流程重建
-- **AND** Program Gameplay operation MUST不包含marker sync payload
+- **WHEN** Corin Document apply与Presentation authoring migration均成功
+- **THEN** 作者 MUST显式触发Projection/Float32 Build与Fixed Build
+- **AND** 任一阶段失败 MUST保留明确typed diagnostic且不得发布混合revision

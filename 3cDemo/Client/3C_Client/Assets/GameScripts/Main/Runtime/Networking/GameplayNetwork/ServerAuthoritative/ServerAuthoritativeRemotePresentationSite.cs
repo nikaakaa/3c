@@ -75,14 +75,13 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 Destroy(visualObject);
                 throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' template root must be the Animancer Animator transform.");
             }
-            CharacterFootPlacementComposition footPlacement =
-                visualObject.GetComponent<CharacterFootPlacementComposition>();
-            if (!footPlacement)
+            CharacterWorldAwarePresentationBinding worldAwarePresentation =
+                visualObject.GetComponent<CharacterWorldAwarePresentationBinding>();
+            if (!worldAwarePresentation)
             {
                 Destroy(visualObject);
-                throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' template root requires a Foot Placement Composition.");
+                throw new InvalidOperationException($"Remote Presentation Site '{BindingId}' template root requires a World-Aware Presentation Binding.");
             }
-            ICharacterFootPlacementSolver footPlacementSolver = footPlacement.RequireSolver(visualRoot);
             PhysicsScene physicsScene = visualObject.scene.GetPhysicsScene();
             WorldBodyState initialBody = BuildInitialBody(actorId, visualRoot);
             CharacterRuntimeDebugProgram debugProgram = CharacterRuntimeDebugProgramBuilder.Build(program);
@@ -108,9 +107,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     visualRoot,
                     CharacterPresentationBodyState.FromFloat32(initialBody),
                     m_BodyPresentationProfile,
-                    footPlacement.Profile,
-                    footPlacement.Rig,
-                    footPlacementSolver,
+                    worldAwarePresentation,
                     physicsScene,
                     diagnosticsContext);
                 runtime = presentationBinding.Runtime;

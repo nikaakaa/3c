@@ -17,6 +17,10 @@ namespace TreeDesigner.Editor
 
         List<BaseNodeView> m_NodeViews = new List<BaseNodeView>();
         List<StackNodeView> m_StackNodeViews = new List<StackNodeView>();
+        internal IReadOnlyList<BaseNodeView> NodeViews =>
+            m_NodeViews;
+        internal IReadOnlyList<StackNodeView> StackNodeViews =>
+            m_StackNodeViews;
 
         public NodeGroupView(NodeGroup nodeGroup, BaseTreeView treeView)
         {
@@ -66,25 +70,14 @@ namespace TreeDesigner.Editor
 
         public void OnMoved(Vector2 position)
         {
-            if (m_NodeGroup.Position != position)
-            {
-                m_TreeView.Tree.ApplyModify("Move Group", () =>
-                {
-                    m_NodeGroup.Position = position;
-                    m_NodeViews.ForEach(i => i.OnMoved(i.GetPosition().position));
-                    m_StackNodeViews.ForEach(i => i.OnMoved(i.GetPosition().position));
-                });
-            }
+            SetPosition(new Rect(position, GetPosition().size));
+            m_TreeView.CommitMovedElements(
+                new GraphElement[] { this });
         }
         public void OnMoved()
         {
-            if (m_NodeGroup.Position != GetPosition().position)
-            {
-                m_TreeView.Tree.ApplyModify("Move Group", () =>
-                {
-                    m_NodeGroup.Position = GetPosition().position;
-                });
-            }
+            m_TreeView.CommitMovedElements(
+                new GraphElement[] { this });
         }
         public void RemoveFromGroup(IGroupable groupable)
         {

@@ -22,6 +22,7 @@
         "ThirdPersonGameplay",
         "ThirdPersonGameplay.NetworkModel.Unity",
         "GUID:3e6494bf8f0645729da93eb99041c86c",
+        "ThirdPersonCharacter.Animation.TransitionRouting",
         "ThirdPersonCharacter.Pipeline.RootMotion",
         "BTSMTL",
         "BTSMTL.Diagnostics",

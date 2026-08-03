@@ -8,7 +8,7 @@ namespace ThirdPersonCharacter.Editor.Animation.TransitionRouting
     [Serializable]
     public sealed class AnimationTransitionRoutingFixtureEndpoint
     {
-        [SerializeField] string m_EndpointId = "$empty";
+        [SerializeField] string m_EndpointId = "$source-pose";
 
         public string EndpointId => m_EndpointId ?? string.Empty;
     }

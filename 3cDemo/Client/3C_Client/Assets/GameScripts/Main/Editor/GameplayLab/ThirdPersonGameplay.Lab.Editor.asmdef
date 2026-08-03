@@ -10,13 +10,15 @@
         "ThirdPersonSimulation.Fixed",
         "ThirdPersonSimulation.Fixed.Compiler",
         "ThirdPersonSimulation.DeterministicKcc",
+        "ThirdPersonSimulation.DeterministicRollback",
+        "ThirdPersonSimulation.DeterministicRollback.Endpoint",
+        "ThirdPersonSimulation.DeterministicRollback.Unity",
         "ThirdPersonSimulation.Fixed.Unity",
         "ThirdPersonGameplay",
-        "ThirdPersonCharacter.Presentation.FinalIK",
         "ThirdPersonCharacter.Pipeline.RootMotion",
         "BTSMTL.Timeline",
         "Kybernetik.Animancer",
-        "Cinemachine"
+        "Cinemachine"                             
     ],
     "includePlatforms": [
         "Editor"

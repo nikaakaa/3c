@@ -58,7 +58,6 @@ namespace TreeDesigner.Editor
             });
             rootVisualElement.Add(imguiContainer);
 
-            TreeWindowUtility.OnOpened += OnOpened;
         }
         private void Update()
         {
@@ -102,14 +101,6 @@ namespace TreeDesigner.Editor
         {
             m_TargetTrees.ForEach(i => Resources.UnloadAsset(i));
             m_TargetTrees.Clear();
-
-            TreeWindowUtility.OnOpened -= OnOpened;
-        }
-
-
-        void OnOpened(BaseTreeWindow treeWindow, BaseTree tree)
-        {
-            treeWindow.TreeView.TargetTypeStr = m_TargetTypeStr;
         }
 
 

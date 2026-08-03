@@ -11,6 +11,12 @@ namespace ThirdPersonCharacter.Pipeline.Input
         Offensive = 2
     }
 
+    public enum CharacterVector2ConflictPolicy : byte
+    {
+        UnityComposite = 0,
+        LatestActuatedCardinal = 1
+    }
+
     [CreateAssetMenu(fileName = "CharacterInputProfile", menuName = "3C/Character/Input Profile")]
     public sealed class CharacterInputProfile : ScriptableObject
     {
@@ -55,7 +61,30 @@ namespace ThirdPersonCharacter.Pipeline.Input
                     valid = false;
                 }
 
-                if (!inputValue.TryResolveAction(m_SourceAsset, out _, out string error))
+                if (!Enum.IsDefined(typeof(CharacterVector2ConflictPolicy), inputValue.Vector2ConflictPolicy))
+                {
+                    errors?.Add($"{name}: input value '{inputValue.InputValueId}' Vector2 conflict policy is invalid.");
+                    valid = false;
+                    continue;
+                }
+
+                if (inputValue.ValueType != CharacterInputValueType.Vector2 &&
+                    inputValue.Vector2ConflictPolicy != CharacterVector2ConflictPolicy.UnityComposite)
+                {
+                    errors?.Add($"{name}: input value '{inputValue.InputValueId}' cannot use a Vector2 conflict policy with value type '{inputValue.ValueType}'.");
+                    valid = false;
+                    continue;
+                }
+
+                if (!inputValue.TryResolveAction(m_SourceAsset, out InputAction action, out string error))
+                {
+                    errors?.Add($"{name}: input value '{inputValue.InputValueId}' {error}");
+                    valid = false;
+                    continue;
+                }
+
+                if (inputValue.Vector2ConflictPolicy == CharacterVector2ConflictPolicy.LatestActuatedCardinal &&
+                    !CharacterDirectionalInputConflictResolver.TryValidateAction(action, out error))
                 {
                     errors?.Add($"{name}: input value '{inputValue.InputValueId}' {error}");
                     valid = false;
@@ -113,10 +142,12 @@ namespace ThirdPersonCharacter.Pipeline.Input
     {
         [SerializeField] string m_InputValueId;
         [SerializeField] CharacterInputValueType m_ValueType = CharacterInputValueType.Vector2;
+        [SerializeField] CharacterVector2ConflictPolicy m_Vector2ConflictPolicy;
         [SerializeField] InputActionReference m_SourceAction;
 
         public string InputValueId => m_InputValueId;
         public CharacterInputValueType ValueType => m_ValueType;
+        public CharacterVector2ConflictPolicy Vector2ConflictPolicy => m_Vector2ConflictPolicy;
         public InputActionReference SourceAction => m_SourceAction;
 
         public bool TryResolveAction(InputActionAsset sourceAsset, out InputAction action, out string error)

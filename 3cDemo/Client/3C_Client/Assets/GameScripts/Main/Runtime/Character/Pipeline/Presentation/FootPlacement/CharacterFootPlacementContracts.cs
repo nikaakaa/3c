@@ -32,7 +32,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         PresentationReset = 10,
         MissingAnimationOutput = 11,
         InvalidPose = 12,
-        ContactReleased = 13
+        ContactReleased = 13,
+        LegCompressed = 14
     }
 
     public enum FootPredictionRejectReason : byte
@@ -77,6 +78,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         DownhillLowerFoot = 6,
         MovementDirectionUnavailable = 7,
         FootOrderAmbiguous = 8
+    }
+
+    public enum FootPlacementBendDecisionReason : byte
+    {
+        None = 0,
+        AnimationPlanePreserved = 1,
+        ExtensionStabilized = 2,
+        AnimationPlaneDegenerate = 3,
+        CompressedBeyondLimit = 4,
+        ExtendedBeyondLimit = 5,
+        PolicyDisabled = 6
     }
 
     public readonly struct CharacterFootPlacementAnimatedFootPose
@@ -143,8 +155,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             Vector3 position,
             Quaternion rotation,
-            Vector3 bendGoalPosition,
-            float bendGoalWeight,
+            float legExtensionRatio,
+            Vector3 animatedBendNormal,
+            Vector3 preferredBendNormal,
+            float bendStabilizationWeight,
+            FootPlacementBendDecisionReason bendDecisionReason,
             float positionWeight,
             float rotationWeight,
             FootConstraintState constraintState,
@@ -153,8 +168,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Side = side;
             Position = position;
             Rotation = rotation;
-            BendGoalPosition = bendGoalPosition;
-            BendGoalWeight = Mathf.Clamp01(bendGoalWeight);
+            LegExtensionRatio = legExtensionRatio;
+            AnimatedBendNormal = animatedBendNormal;
+            PreferredBendNormal = preferredBendNormal;
+            BendStabilizationWeight = Mathf.Clamp01(bendStabilizationWeight);
+            BendDecisionReason = bendDecisionReason;
             PositionWeight = Mathf.Clamp01(positionWeight);
             RotationWeight = Mathf.Clamp01(rotationWeight);
             ConstraintState = constraintState;
@@ -164,8 +182,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootSide Side { get; }
         public Vector3 Position { get; }
         public Quaternion Rotation { get; }
-        public Vector3 BendGoalPosition { get; }
-        public float BendGoalWeight { get; }
+        public float LegExtensionRatio { get; }
+        public Vector3 AnimatedBendNormal { get; }
+        public Vector3 PreferredBendNormal { get; }
+        public float BendStabilizationWeight { get; }
+        public FootPlacementBendDecisionReason BendDecisionReason { get; }
         public float PositionWeight { get; }
         public float RotationWeight { get; }
         public FootConstraintState ConstraintState { get; }
@@ -196,46 +217,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public FootPlacementFootPlan Left { get; }
         public FootPlacementFootPlan Right { get; }
         public float PelvisComponentVerticalOffset { get; }
-        public bool IsValid => ActorId.IsValid && RenderFrame != 0 &&
+            public bool IsValid => ActorId.IsValid && RenderFrame != 0 &&
                                IsFinite(Left.Position) && IsFinite(Right.Position) &&
-                               IsFinite(Left.BendGoalPosition) && IsFinite(Right.BendGoalPosition) &&
+                               IsFinite(Left.LegExtensionRatio) && IsFinite(Right.LegExtensionRatio) &&
+                               IsFinite(Left.AnimatedBendNormal) && IsFinite(Right.AnimatedBendNormal) &&
+                               IsFinite(Left.PreferredBendNormal) && IsFinite(Right.PreferredBendNormal) &&
                                IsFinite(Left.Rotation) && IsFinite(Right.Rotation) &&
                                IsFinite(PelvisComponentVerticalOffset);
 
         static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         static bool IsFinite(Vector3 value) => IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z);
         static bool IsFinite(Quaternion value) => IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z) && IsFinite(value.w);
-    }
-
-    public readonly struct CharacterFootPlacementSolverContext
-    {
-        public CharacterFootPlacementSolverContext(
-            ActorId actorId,
-            CharacterFootPlacementRigBinding rig)
-        {
-            ActorId = actorId;
-            Rig = rig ?? throw new ArgumentNullException(nameof(rig));
-        }
-
-        public ActorId ActorId { get; }
-        public CharacterFootPlacementRigBinding Rig { get; }
-    }
-
-    public readonly struct CharacterFootPlacementSolverReset
-    {
-        public CharacterFootPlacementSolverReset(
-            ulong renderFrame,
-            ulong resetSequence,
-            FootConstraintTransitionReason reason)
-        {
-            RenderFrame = renderFrame;
-            ResetSequence = resetSequence;
-            Reason = reason;
-        }
-
-        public ulong RenderFrame { get; }
-        public ulong ResetSequence { get; }
-        public FootConstraintTransitionReason Reason { get; }
     }
 
     public readonly struct CharacterFootPlacementSolverResult
@@ -258,13 +250,4 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public string Detail { get; }
     }
 
-    public interface ICharacterFootPlacementSolver : IDisposable
-    {
-        bool IsInitialized { get; }
-        void RequireValid(CharacterFootPlacementRigBinding rig);
-        void Initialize(CharacterFootPlacementSolverContext context);
-        CharacterFootPlacementAnimatedPose CaptureAnimatedPose(ulong renderFrame);
-        CharacterFootPlacementSolverResult Apply(CharacterFootPlacementPlan plan);
-        void ResetPose(CharacterFootPlacementSolverReset reset);
-    }
 }

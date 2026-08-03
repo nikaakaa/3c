@@ -19,7 +19,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             NativeArray<float> visualTimeScales,
             NativeArray<byte> hasFootFeatures,
             NativeArray<ulong> completedAt,
-            NativeArray<int> programProducerIndices)
+            NativeArray<AnimationSourcePoseCaptureFailure> captureFailures,
+            NativeArray<int> sourceOwnerIndices)
         {
             if (boneCount <= 0)
                 throw new ArgumentOutOfRangeException(nameof(boneCount));
@@ -41,7 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             RequireLength(visualTimeScales, sourceCapacity);
             RequireLength(hasFootFeatures, sourceCapacity);
             RequireLength(completedAt, sourceCapacity);
-            RequireLength(programProducerIndices, sourceCapacity);
+            RequireLength(captureFailures, sourceCapacity);
+            RequireLength(sourceOwnerIndices, sourceCapacity);
 
             BoneCount = boneCount;
             ParameterCount = parameterCount;
@@ -56,7 +58,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             VisualTimeScales = visualTimeScales;
             HasFootFeatures = hasFootFeatures;
             CompletedAt = completedAt;
-            ProgramProducerIndices = programProducerIndices;
+            CaptureFailures = captureFailures;
+            SourceOwnerIndices = sourceOwnerIndices;
         }
 
         internal int BoneCount { get; }
@@ -72,7 +75,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal NativeArray<float> VisualTimeScales { get; }
         internal NativeArray<byte> HasFootFeatures { get; }
         internal NativeArray<ulong> CompletedAt { get; }
-        internal NativeArray<int> ProgramProducerIndices { get; }
+        internal NativeArray<AnimationSourcePoseCaptureFailure> CaptureFailures { get; }
+        internal NativeArray<int> SourceOwnerIndices { get; }
 
         static void RequireLength<T>(NativeArray<T> values, int expectedLength) where T : struct
         {

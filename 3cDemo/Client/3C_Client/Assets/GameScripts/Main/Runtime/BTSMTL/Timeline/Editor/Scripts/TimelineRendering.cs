@@ -54,7 +54,7 @@ namespace BTSMTL.Timeline.Editor
                 height += MarkerHeaderHeight + (MarkersExpanded(track) ? MarkerLaneHeight : 0f);
             int channelCount = VisibleCurveChannelCount(track);
             if (RegisteredCurveChannelCount(track) > 0)
-                height += CurveHeaderHeight + (CurvesExpanded(track) ? channelCount * CurveLaneHeight : 0f);
+                height += CurveHeaderHeight;
             return height;
         }
 
@@ -73,7 +73,7 @@ namespace BTSMTL.Timeline.Editor
             return CurveHeaderTop(track) + CurveHeaderHeight + visibleChannelIndex * CurveLaneHeight;
         }
 
-        public static bool CurvesExpanded(Track track) => TimelineCurveEditorSession.CurvesExpanded(track);
+        public static bool CurvesExpanded(Track track) => false;
         public static bool MarkersExpanded(Track track) => track is AnimationTrack && TimelineCurveEditorSession.MarkersExpanded(track);
 
         public static void ToggleCurves(Track track) => TimelineCurveEditorSession.ToggleCurves(track);

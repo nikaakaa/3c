@@ -33,9 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Transform visualRoot,
             CharacterPresentationBodyState initialBody,
             CharacterBodyPresentationProfile bodyProfile,
-            CharacterFootPlacementProfile footPlacementProfile,
-            CharacterFootPlacementRig footPlacementRig,
-            ICharacterFootPlacementSolver footPlacementSolver,
+            CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
             ThirdPersonCameraController cameraRig,
             Transform followAnchor,
@@ -55,9 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 visualRoot,
                 initialBody,
                 bodyProfile,
-                footPlacementProfile,
-                footPlacementRig,
-                footPlacementSolver,
+                worldAwareBinding,
                 physicsScene,
                 cameraRig,
                 followAnchor,
@@ -79,9 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Transform visualRoot,
             CharacterPresentationBodyState initialBody,
             CharacterBodyPresentationProfile bodyProfile,
-            CharacterFootPlacementProfile footPlacementProfile,
-            CharacterFootPlacementRig footPlacementRig,
-            ICharacterFootPlacementSolver footPlacementSolver,
+            CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
             ThirdPersonCameraController cameraRig,
             Transform followAnchor,
@@ -103,10 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 initialBody,
                 CharacterBodyPresentationSourceMode.CommittedStream,
                 RequireBodySettings(bodyProfile),
-                CharacterAnimationStartupPolicy.RequireCommittedSelection,
-                footPlacementProfile,
-                footPlacementRig,
-                footPlacementSolver,
+                worldAwareBinding,
                 physicsScene,
                 cameraRig,
                 followAnchor,
@@ -128,9 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Transform visualRoot,
             CharacterPresentationBodyState initialBody,
             CharacterBodyPresentationProfile bodyProfile,
-            CharacterFootPlacementProfile footPlacementProfile,
-            CharacterFootPlacementRig footPlacementRig,
-            ICharacterFootPlacementSolver footPlacementSolver,
+            CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
             RuntimeDiagnosticsContext diagnostics)
         {
@@ -144,9 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 visualRoot,
                 initialBody,
                 bodyProfile,
-                footPlacementProfile,
-                footPlacementRig,
-                footPlacementSolver,
+                worldAwareBinding,
                 physicsScene,
                 null,
                 diagnostics);
@@ -162,9 +149,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Transform visualRoot,
             CharacterPresentationBodyState initialBody,
             CharacterBodyPresentationProfile bodyProfile,
-            CharacterFootPlacementProfile footPlacementProfile,
-            CharacterFootPlacementRig footPlacementRig,
-            ICharacterFootPlacementSolver footPlacementSolver,
+            CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
             CharacterEquipmentRigBindingCatalog equipmentRigCatalog,
             RuntimeDiagnosticsContext diagnostics)
@@ -180,10 +165,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 initialBody,
                 CharacterBodyPresentationSourceMode.CommittedStream,
                 RequireBodySettings(bodyProfile),
-                CharacterAnimationStartupPolicy.RequireCommittedSelection,
-                footPlacementProfile,
-                footPlacementRig,
-                footPlacementSolver,
+                worldAwareBinding,
                 physicsScene,
                 null,
                 null,
@@ -205,9 +187,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Transform visualRoot,
             CharacterPresentationBodyState initialBody,
             CharacterBodyPresentationProfile bodyProfile,
-            CharacterFootPlacementProfile footPlacementProfile,
-            CharacterFootPlacementRig footPlacementRig,
-            ICharacterFootPlacementSolver footPlacementSolver,
+            CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
             RuntimeDiagnosticsContext diagnostics)
         {
@@ -222,10 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 initialBody,
                 CharacterBodyPresentationSourceMode.SelectedStream,
                 RequireBodySettings(bodyProfile),
-                CharacterAnimationStartupPolicy.AwaitCommittedSelection,
-                footPlacementProfile,
-                footPlacementRig,
-                footPlacementSolver,
+                worldAwareBinding,
                 physicsScene,
                 null,
                 null,
@@ -248,10 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationBodyState initialBody,
             CharacterBodyPresentationSourceMode bodySourceMode,
             CharacterBodyPresentationSettings bodySettings,
-            CharacterAnimationStartupPolicy animationStartupPolicy,
-            CharacterFootPlacementProfile footPlacementProfile,
-            CharacterFootPlacementRig footPlacementRig,
-            ICharacterFootPlacementSolver footPlacementSolver,
+            CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
             ThirdPersonCameraController cameraRig,
             Transform followAnchor,
@@ -273,18 +247,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!animancer || !animancer.Animator)
                 throw new ArgumentNullException(nameof(animancer));
             projection.RequireContract(contract);
+            projection.RequirePosePayload();
             animationRigBinding.RequireValid(projection.Rig);
             Transform animatorRoot = animancer.Animator.transform;
             if (animatorRoot == visualRoot || !animatorRoot.IsChildOf(visualRoot))
                 throw new InvalidOperationException("Animator Root must be a strict child of the Presentation VisualRoot.");
             if (animationRigBinding.Animator != animancer.Animator ||
-                animationRigBinding.Bones[projection.Rig.RootBoneIndex] != animatorRoot)
+                animationRigBinding.PhysicalBones[projection.Rig.RootPhysicalBoneIndex] != animatorRoot)
             {
                 throw new InvalidOperationException("Animation Rig root must match the Animancer Animator Root exactly.");
             }
 
             CharacterBodyPresentationRuntime body = null;
-            CharacterAnimationPlaybackRuntime animation = null;
+            CharacterAnimationPresentationRuntime animation = null;
             CharacterFootPlacementRuntime footPlacement = null;
             CharacterCameraPresentationRuntime camera = null;
             CharacterEquipmentVisualRuntime equipment = null;
@@ -299,17 +274,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     visualRoot,
                     initialBody,
                     diagnostics);
-                CharacterAnimationPresentationBindingIndex animationBindings =
-                    CharacterAnimationPlaybackRuntime.BuildBindings(contract, projection);
+                CharacterAnimationPresentationBindings animationBindings =
+                    CharacterAnimationPresentationBindingFactory.Build(
+                        contract,
+                        projection);
                 if (projection.MotionMatching != null)
                 {
                     motionMatching = new CharacterMotionMatchingPresentationModule(
                         actorId,
                         bodySourceMode,
-                        projection,
-                        animationBindings.WorkspaceLayout.SourceCapacity);
+                        projection);
                 }
-                animation = new CharacterAnimationPlaybackRuntime(
+                animation = new CharacterAnimationPresentationRuntime(
+                    actorId,
                     animationBindings,
                     motionMatching,
                     animancer,
@@ -323,24 +300,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     diagnostics);
                 if (projection.PosePlan.FootPlacementNodes.Count == 1)
                 {
-                    if (!footPlacementProfile)
-                        throw new ArgumentNullException(nameof(footPlacementProfile));
-                    if (!footPlacementRig)
-                        throw new ArgumentNullException(nameof(footPlacementRig));
-                    if (footPlacementSolver == null)
-                        throw new ArgumentNullException(nameof(footPlacementSolver));
+                    if (!worldAwareBinding)
+                        throw new ArgumentNullException(nameof(worldAwareBinding));
                     if (!physicsScene.IsValid())
                         throw new ArgumentException("Foot Placement requires a valid PhysicsScene.", nameof(physicsScene));
-                    CharacterFootPlacementRigBinding rig = footPlacementRig.BuildBinding();
+                    CharacterPresentationFootPlacementNodeDescriptor descriptor = projection.PosePlan.FootPlacementNodes[0];
+                    CharacterFootPlacementPoseRig rig = new CharacterFootPlacementPoseRig(
+                        descriptor.Calibration,
+                        projection.Rig,
+                        animationRigBinding,
+                        worldAwareBinding);
+                    rig.RequireValid();
                     if (rig.VisualRoot != visualRoot)
-                        throw new InvalidOperationException("Foot Placement Rig VisualRoot must match Presentation VisualRoot exactly.");
+                        throw new InvalidOperationException("World-Aware Presentation Root must match Presentation VisualRoot exactly.");
                     CharacterFootPlacementRuntimeSettings footPlacementSettings =
-                        footPlacementProfile.BuildSettings(projection, rig);
+                        descriptor.Profile.BuildSettings(projection, rig);
                     footPlacement = new CharacterFootPlacementRuntime(
                         actorId,
                         footPlacementSettings,
                         rig,
-                        footPlacementSolver,
                         physicsScene,
                         diagnostics);
                 }
@@ -371,7 +349,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     footPlacement,
                     camera,
                     animatorRoot,
-                    animationStartupPolicy,
                     diagnostics);
                 body = null;
                 animation = null;
@@ -402,7 +379,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterCameraPresentationRuntime camera,
             CharacterFootPlacementRuntime footPlacement,
             CharacterEquipmentVisualRuntime equipment,
-            CharacterAnimationPlaybackRuntime animation,
+            CharacterAnimationPresentationRuntime animation,
             CharacterBodyPresentationRuntime body)
         {
             try

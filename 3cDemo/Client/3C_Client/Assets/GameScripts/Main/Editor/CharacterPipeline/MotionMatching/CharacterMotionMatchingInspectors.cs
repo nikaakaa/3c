@@ -16,13 +16,19 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
     [CustomEditor(typeof(CharacterMotionMatchingProfile))]
     public sealed class CharacterMotionMatchingProfileInspector : UnityEditor.Editor
     {
+        bool m_ShowDiagnostics;
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            DrawSection("Identity", "m_Schema", "m_ProfileId", "m_Revision");
             DrawSection("Feature And Policies", "m_FeatureSchema", "m_TrajectoryPolicy", "m_CostProfile", "m_SearchPolicy");
             DrawSection("Databases", "m_Databases");
-            DrawSection("Producer Bindings", "m_ProducerBindings");
+            m_ShowDiagnostics = EditorGUILayout.Foldout(m_ShowDiagnostics, "Diagnostics", true);
+            if (m_ShowDiagnostics)
+            {
+                using (new EditorGUI.DisabledScope(true))
+                    DrawSection("Machine Identity", "m_Schema", "m_ProfileId", "m_Revision");
+            }
             serializedObject.ApplyModifiedProperties();
             MotionMatchingSourceClipInspectionGui.DrawProfile((CharacterMotionMatchingProfile)target);
             if (GUILayout.Button("Validate Motion Matching Profile"))
@@ -385,6 +391,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
 
     static class MotionMatchingSourceClipInspectionGui
     {
+        static bool s_ShowDiagnostics;
         const string RegistrationNotice = "登记只建立正式配置，不自动Build。";
         const string ReimportNotice = "FBX导入或reimport只会使既有artifact变为Stale，必须由作者主动Build。";
 
@@ -471,6 +478,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             }
             EditorGUILayout.LabelField($"Source Set: {sourceSet.name}", EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Compatibility Mode", sourceSet.SamplingCompatibilityMode.ToString());
+            s_ShowDiagnostics = EditorGUILayout.Foldout(s_ShowDiagnostics, "Diagnostics", true);
             if (sourceSet.SourceClips.Count == 0)
             {
                 EditorGUILayout.HelpBox("No Source Clip is registered.", MessageType.Error);
@@ -482,21 +490,18 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             {
                 MotionMatchingSourceClipInspection inspection = MotionMatchingSourceClipResolver.Inspect(
                     sourceSet.SourceClips[clipIndex], sourceSet.SamplingCompatibilityMode);
-                DrawClip(clipIndex, inspection);
+                DrawClip(clipIndex, inspection, s_ShowDiagnostics);
                 allReady &= inspection.HasFormalBuildPrerequisites;
             }
             return allReady;
         }
 
-        static void DrawClip(int clipIndex, MotionMatchingSourceClipInspection inspection)
+        static void DrawClip(int clipIndex, MotionMatchingSourceClipInspection inspection, bool showDiagnostics)
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 string sourceClipId = inspection.SourceClipId.IsValid ? inspection.SourceClipId.Value : $"Entry #{clipIndex}";
                 EditorGUILayout.LabelField(sourceClipId, EditorStyles.boldLabel);
-                EditorGUILayout.LabelField(
-                    "Asset Identity",
-                    $"{inspection.AssetIdentityStatus} | {inspection.AssetGuid}:{inspection.LocalFileId.ToString(CultureInfo.InvariantCulture)}");
                 EditorGUILayout.LabelField("AnimationClip", inspection.AnimationClipExists ? inspection.Clip.name : "Missing");
                 EditorGUILayout.LabelField("Importer", inspection.ImporterExists ? inspection.Importer.GetType().Name : "Missing");
                 string declaredCompatibility = inspection.ModelImporter != null
@@ -508,24 +513,38 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 if (inspection.CompatibilityMode == MotionMatchingSamplingCompatibilityMode.HumanoidRetargeted)
                 {
                     EditorGUILayout.LabelField("Humanoid Avatar", inspection.SourceAvatar ? inspection.SourceAvatar.name : "Missing");
-                    EditorGUILayout.LabelField(
-                        "Avatar Identity",
-                        inspection.SourceAvatarIdentityAvailable ? inspection.SourceAvatarIdentity : "Missing");
-                }
-                else if (inspection.CompatibilityMode == MotionMatchingSamplingCompatibilityMode.ExactGenericRig)
-                {
-                    EditorGUILayout.LabelField(
-                        "Generic Root",
-                        string.IsNullOrEmpty(inspection.SourceRootIdentity) ? "Missing" : inspection.SourceRootIdentity);
-                    EditorGUILayout.LabelField(
-                        "Hierarchy Identity",
-                        inspection.SourceHierarchyIdentityAvailable
-                            ? $"{inspection.SourceHierarchyIdentity} ({inspection.SourceHierarchyPathCount.ToString(CultureInfo.InvariantCulture)} paths)"
-                            : "Missing");
                 }
                 EditorGUILayout.LabelField("Ready", inspection.HasFormalBuildPrerequisites ? "Yes" : "No");
                 if (!inspection.HasFormalBuildPrerequisites)
                     EditorGUILayout.HelpBox($"{inspection.Status}: {inspection.Diagnostic}", MessageType.Error);
+                if (showDiagnostics)
+                    DrawDiagnostics(inspection);
+            }
+        }
+
+        static void DrawDiagnostics(MotionMatchingSourceClipInspection inspection)
+        {
+            EditorGUILayout.Space(2f);
+            EditorGUILayout.LabelField("Machine Identity", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField(
+                "Asset Identity",
+                $"{inspection.AssetIdentityStatus} | {inspection.AssetGuid}:{inspection.LocalFileId.ToString(CultureInfo.InvariantCulture)}");
+            if (inspection.CompatibilityMode == MotionMatchingSamplingCompatibilityMode.HumanoidRetargeted)
+            {
+                EditorGUILayout.LabelField(
+                    "Avatar Identity",
+                    inspection.SourceAvatarIdentityAvailable ? inspection.SourceAvatarIdentity : "Missing");
+            }
+            else if (inspection.CompatibilityMode == MotionMatchingSamplingCompatibilityMode.ExactGenericRig)
+            {
+                EditorGUILayout.LabelField(
+                    "Generic Root",
+                    string.IsNullOrEmpty(inspection.SourceRootIdentity) ? "Missing" : inspection.SourceRootIdentity);
+                EditorGUILayout.LabelField(
+                    "Hierarchy Identity",
+                    inspection.SourceHierarchyIdentityAvailable
+                        ? $"{inspection.SourceHierarchyIdentity} ({inspection.SourceHierarchyPathCount.ToString(CultureInfo.InvariantCulture)} paths)"
+                        : "Missing");
             }
         }
 

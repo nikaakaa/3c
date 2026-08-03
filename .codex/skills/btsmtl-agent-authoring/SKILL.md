@@ -1,115 +1,144 @@
 ---
 name: btsmtl-agent-authoring
-description: 通过项目正式的BTSMTL Agent authoring工具读取、修改和验证CharacterController与AIController的Graph、StateMachine、Timeline、Blackboard、Perception和Intent关系，并在相关authoring代码变化时同步更新Agent Snapshot、Patch schema、lowerer、handler、validator和MCP bridge。Use when changing BTSMTL assets, Character or AI controller authoring, Agent Patch IR, or code that changes Agent-visible or Agent-writable authoring semantics.
+description: 通过唯一BTSMTL Agent Authoring Document读取、修改、对账和验证CharacterController与AIController的Graph、StateMachine、Timeline、Blackboard、Perception和Intent关系，并在authoring语义变化时同步Document schema、exporter、reconciler、Mutation、validator和MCP bridge。
 ---
 
 # BTSMTL Agent Authoring
 
 ## 核心边界
 
-把 `manage_btsmtl_agent_authoring` 作为自动修改 BTSMTL 资产的唯一入口。只通过它执行：
+AI通过五个生命周期工具管理一个显式Document v3 JSON package，Graph、StateMachine、Timeline与Character Presentation的业务修改直接使用通用文件工具：
 
 ```text
-export_snapshot
-  -> dry_run_patch
-  -> apply_patch
-  -> export_snapshot
-  -> validate
+btsmtl.checkout_document
+  -> 读取manifest与context catalog
+  -> 直接修改editable/**/*.json
+  -> btsmtl.dry_run_document
+  -> btsmtl.apply_document(expected_document_hash)
+  -> Character需要产物时显式调用精确Definition Build生命周期
+  -> btsmtl.validate
 ```
 
-禁止直接编辑 Graph、StateMachine、ConditionRule 或内联 Timeline 的 Unity YAML。禁止用 `execute_code`、反射、剪贴板、临时菜单、临时 Patch 文件或第二个 MCP 服务绕过正式工具。
+Unity资产是正式真相，`.btsmtl/`目录是单一逻辑Document和AI工作副本。Document不在`Assets/`内，不进入Player、Bundle或generated product。禁止使用BTSMTL局部节点/边编辑工具、直接编辑Unity YAML、`execute_code`、反射、剪贴板、临时菜单、文件监听器、Patch inbox或第二套mutation service。
 
-修改 C#、OpenSpec 和 Skill 文件仍使用 Codex 文件工具，不通过 Unity MCP 写代码。
+Document不会自动编译或自动apply。Unity树变化和Document变化只计算同步状态；只有显式`apply_document`才修改Unity authoring资产。Character Presentation Profile、Pose Graph与PoseStateMachine属于同一Document目标、Reconciler和资产级apply事务；Character Program、Presentation Projection与Native Pose Program不属于Document事务，必须在apply成功后通过精确Definition的Character Build生命周期显式发布。
 
-## 先判断任务类型
-
-### 修改 authoring 资产
-
-只要目标是持久化修改以下内容，就执行“资产修改流程”：
-
-- RootTree、SubTree、inline graph 或 shared graph。
-- StateMachine、State、Transition、ConditionRule。
-- State lifecycle body 中的节点和 flow/property edge。
-- TimelineNode 的 inline/shared ownership、Timeline TreeClip、Action activation/lifecycle、Input node。
-- AnimationTrack Marker Sync mode、group、topology、sync role与stable marker。
-- Agent 已正式支持的 Character Blackboard declaration、TreeClip write、ActionWindow 与 ActionProfile 准入条件。
-- ActionProfile granted/cancel tag policy 与 Definition 的 GameplayTagCatalog。
-- AIControllerDefinition、AIControllerTree、AI Blackboard、Configured Candidate、Observation、Memory与Character Input/Request intent binding。
-
-### 修改相关代码
-
-只要代码变化会改变 Agent 能看到、能引用、能创建、能连接或必须验证的 authoring 语义，就执行“代码同步流程”。不能只改 runtime/compiler/editor 后留下过期 Agent 工具。
-
-纯 runtime 私有实现变化可以不改 Agent schema，但必须完成影响扫描并说明为什么 Snapshot、Patch 和 Validator 都不受影响。
-
-### 不属于此写入口
-
-`CharacterAnimationPresentationProfile`、Pose Graph、Blend Library、Rig和Presentation producer source binding只允许由各自正式authoring入口修改。Profile Inspector必须调用`CharacterAnimationPresentationAuthoringService`，从显式`CharacterPipelineDefinition`的composition roots递归发现Timeline与AnimationTrack stable identity；不得读取已生成Program/Projection、旧Layer、显示名或目录来枚举producer。Agent Snapshot只读输出这些正式入口形成的资产identity/revision、AnimationChannel到PoseSlot映射和producer source identity；不得输出旧Layer、TransitionLibrary、easing或transition asset alias。Agent Patch不得获得第二个Presentation写入口。
-
-Animation Foot Analysis的Source identity、版本和算法摘要只允许Snapshot只读输出。Sole Speed、Height、Plant、Landing及其Library artifact是generated data，不得进入Timeline Curve Channel catalog、Patch payload或Rebuild operation；Agent仍只能修改正式注册的`Foot Placement Weight`等editable channel。
-
-`CharacterBodyMotionProfile`同样不属于Agent写入口。当前schema v16 CharacterController Snapshot从精确`CharacterPipelineDefinition`引用只读投影Profile identity、content revision、GravityAcceleration、MaximumFallSpeed、semantic version与`AirborneVerticalMotion`要求；不得输出runtime VerticalVelocity或pending integration plan。Patch catalog、lowerer、handler与MCP bridge不得增加Profile mutation或任意SerializedProperty写入口。
+修改C#、OpenSpec和Skill文件继续使用Codex文件工具，不通过Unity MCP写代码。
 
 ## 资产修改流程
 
-1. 明确`CharacterController`或`AIController` domain，并确定对应`CharacterPipelineDefinition`或`AIControllerDefinition`的唯一`Assets/...`精确路径。不得从资产类型、目录、显示名或场景猜domain和目标。
-2. 确认 Unity 不在编译、更新 AssetDatabase、Play Mode 或 Play Mode 切换中。遇到 `editor_busy` 或 `play_mode_active` 时停止 authoring；退出 Play Mode 或等待编译结束即可，不要重启 Unity，不要改走 fallback。
-3. 使用同一`domain + root_asset_path`调用`export_snapshot`。只使用当前schema v16 Snapshot的`rootIdentity`、`sourceRevision`、stable authoring identity和operation output reference；不得从YAML、列表index、display name、Actor名称或Tag猜identity。
-4. 根据Snapshot生成最小`AgentPatchIR`。Patch必须使用`agent-character-controller-synthesis.v16`并原样携带`domain`、`rootIdentity`和`sourceRevision`；每个operation使用唯一`id`，后序operation只能引用已出现的前序output。
-5. 调用 `dry_run_patch`。逐条处理机器可读的 `path/code/message/suggestion`，并确认 `plannedDiff` 正是业务预期。Dry-run 不得 dirty 资产。
-6. 只有 dry-run 无错误时才用完全相同的 `patch_json` 调用 `apply_patch`。必须同时看到 `success=true`、`applied=true`、`saved=true`。
-7. 使用同一domain和root再次调用`export_snapshot`与`validate`，确认root identity、source revision、拓扑、ownership、引用和正式Compiler report一致。
-8. CharacterController检查SimulationProgram/PresentationProjection；AIController检查AIIntentProgram。只允许正式compiler发布generated asset，不直接编辑产物。
+1. 明确`CharacterController`或`AIController` domain，并确定对应Definition的精确`Assets/...`路径。不得按目录、显示名、selection或场景猜root。
+2. 确认Unity不在编译、更新AssetDatabase、Play Mode或切换Play Mode。
+3. 调用`btsmtl.checkout_document`。读取返回的绝对`packagePath`、`syncState`、`sourceRevision`、`editableHash`和`contextHash`。
+4. 先读`manifest.json`以及`context/node-catalog.json`、`context/graph-kinds.json`、`context/asset-catalog.json`、`context/dependencies.json`，再用通用文件工具修改`editable/**/*.json`。Character Presentation目标位于`editable/presentation/profile.json`、`editable/presentation/pose-graphs/*/{graph,layout}.json`与`editable/presentation/pose-state-machines/*/{state-machine,layout}.json`。不得修改`manifest.json`、`.sync.json`或`context/**/*.json`。
+   - 新增Pose State Graph或Subgraph时，graph id必须是`local:<meaningful-id>`，并一次创建同目录`graph.json`和`layout.json`。目录segment由完整local id确定：把非字母数字、`-`、`_`字符替换为`-`，去掉首尾`-`，截取前48字符，再追加`-`和完整local id的SHA-256前12位小写十六进制。
+   - 新增Graph-owned Inline Timeline时，timeline id、唯一TimelineNode调用点、Track与Clip都必须使用`local:<meaningful-id>`；一次创建同目录`timeline.json`与`curves.json`，目录使用相同canonical segment算法。controller Timeline摘要、Graph节点、callSite和文件对必须指向同一local TimelineNode与Timeline。
+   - Graph、Node、Edge等新实体使用`local:*`；`contentRevision`是版本值而不是实体identity，不得使用带冒号的`local:*`，应提交合法非空revision。
+   - dry-run只会把合法的local Pose Graph文件对与graph-owned Inline Timeline文件对加入服务端有效manifest。缺少配对、非canonical目录、非local id、非法role、非唯一调用点或其它manifest外文件仍会严格失败。AI不得直接修改manifest。
+   - dry-run返回的document hash已经锁定扩展后的完整文件闭包；apply成功后reverse export把local identity替换为stable identity，并由service发布新的canonical manifest。
+5. Graph文件只表达stable capability、typed properties、逻辑port和system anchor。Pose Graph节点必须使用共享Capability提供的typed payload字段、port与role约束。已有实体保持stable authoring identity；新实体使用`local:<meaningful-id>`，不得写C#类型名、序列化field、compiler index、generated payload、冗余port镜像或系统节点正文。
+6. 调用`btsmtl.dry_run_document`。必须处理机器可读`path/code/message/suggestion`，并确认`plannedDiff`符合业务目标。
+7. 仅当dry-run成功时，把其返回的精确`documentHash`原样作为`expected_document_hash`调用`btsmtl.apply_document`；任一editable文件变化后都必须重新dry-run。
+8. apply成功必须同时满足`success=true`、`applied=true`、`saved=true`和`syncState=Clean`。Character的Gameplay、Timeline与Presentation owner进入同一资产级事务，Document从最终Unity树反向导出，local identity被真实stable identity替换。任一Mutation、Validator、保存或反向发布失败都必须完整回滚并返回`syncState=ApplyFailed`。
+9. Character authoring语义变化且需要正式产物时，显式调用`character.build_float32_products(definition_asset_path)`；需要Fixed wrapper时再调用`character.build_fixed_products(definition_asset_path, wrapper_asset_path)`。两个工具都只接受精确路径，不读取selection、不扫描目录、不自动触发。
+10. Character Build后重新checkout刷新generated context，再调用`btsmtl.validate`确认正式authoring与compiler约束。
 
-AIController Patch只允许`ensure_ai_controller_definition`、`ensure_ai_controller_tree`、`bind_ai_controller_assets`、`configure_ai_candidates`、`ensure_ai_blackboard_declaration`、`ensure_ai_shared_node`、`ensure_ai_observation_node`、`ensure_ai_memory_node`、`ensure_ai_continuous_input`、`ensure_ai_action_target`、`ensure_ai_action_request`、`ensure_bt_condition_rule`以及复用的`link_flow`、`link_property`。`ensure_ai_shared_node`只开放Shared capability中的Sequence、Selector、Loop、Compare与WaitTicks；`ensure_bt_condition_rule`只绑定AI Tree中明确的flow edge并显式配置AbortPolicy。AI Graph禁止Character execution、Timeline、MotionWarp、Transform副作用节点；AI Definition、RootTree与Perception Profile必须进入同一Undo/rollback事务。
+同步状态：
 
-如果 Patch catalog 无法表达所需 mutation，先停止资产修改并扩展正式 Agent schema/lowerer/typed command/handler/validator；扩展完成后再从新 snapshot 开始。工具能力缺失绝不是手改 YAML 的理由。
+- `Clean`：树、context和Document正文都与基线一致。
+- `TreeDirty`：Unity侧变化，Document正文未变；重新checkout可刷新。
+- `DocumentDirty`：Document正文变化，Unity侧未变；可dry-run/apply。
+- `Conflict`：Unity侧和Document正文都变化；不得apply。
 
-Patch 字段、operation 和当前代码地图见 [current-contract.md](references/current-contract.md)。
+`btsmtl.rebase_document`只在显式`confirm_rebase=true`时接受当前Unity树和context为新基线，保留Document目标正文，不修改Unity资产，也不发布产物。
 
-## 代码同步流程
+## 可写与只读边界
 
-1. 先读 current specs：
-   - `openspec/specs/agent-character-controller-synthesis/spec.md`
-   - `openspec/specs/btsmtl-agent-authoring-mcp-bridge/spec.md`
-2. 用 `rg` 定位 authoring 模型、正式 compiler、Agent snapshot、patch、validator 和 MCP 的全部消费点。
-3. 按变化类型同步更新：
+Character Document v3正式可写：
 
-| 代码变化 | 必须检查或更新的 Agent 模块 |
+- Pose Graph-owned typed Source Slot子资产、Presentation Profile-owned typed Source Binding子资产、policy与有限Action producer binding。
+- root-owned Pose Graph catalog中的Graph、layout、parameter、节点typed payload、dynamic port与edge。
+- PoseStateMachine的entry、state、alias、transition、transition rule与blend/sync策略。
+- PoseStateMachine同目录layout只稀疏保存Entry、State与Alias的稳定identity和有限二维位置；纯layout apply不修改StateMachine `ContentRevision`，也不触发Build。
+
+以下内容只作为现有资产引用或`context`事实，不能通过Document创建或修改：
+
+- Rig Definition、Bone、Virtual Bone及其绑定和生成数据。
+- Body Motion、Foot Analysis、Motion Matching索引与其它算法生成内容。
+- generated Character Program、Presentation Projection、Native Pose Program和AIIntentProgram身份与stale状态。
+- AI受控Character的Input/Request合同与capability catalog。
+
+Pose Graph-owned Source Slot与Profile-owned Source Binding允许通过同一Document事务创建、重命名、配置和删除；Binding中的Rig、实际source asset、Motion Matching Profile与Foot Analysis字段只能引用正式目录允许的既有资产，可写的是Slot、Binding及其策略，不是被引用资产的内部内容。Pose Graph必须通过唯一共享Capability表达节点、typed payload、port与Document role，不得增加Pose专用MCP action或第二套Reconciler/Mutation入口。
+
+Presentation目标必须把State-local Pose Source与Action AnimationChannel分开：Pose Player的`pose-source-slot`必须是精确Graph-owned typed Slot对象引用，`profile.json.poseSources`必须用精确Slot与Binding子资产对象引用绑定实际资源；不得按名称、路径、数组index或字符串identity猜测。Projection编译后Runtime只按dense source index解析资源；按PlayerNodeId生成的typed provider identity只做帧内路由，不进入Document或资源查找。ActionPlaybackInput与AnimationSlot只引用Timeline目标状态中已存在的Animation Channel，AnimationSlot仍是Action channel唯一consumer；有限Action producer必须引用现有Timeline与Animation track。
+
+PoseStateMachine Transition混合字段固定为`blendLogic`、`durationSeconds`、`blendMode`、条件式`customBlendCurveAssetId`与`blendProfileAssetId`。Curve/Profile必须从只读Asset Catalog解析为强类型资产并提交同一Presentation Mutation；禁止恢复`blendCurveId`、旧`blendProfileId`或GUID文本输入。Custom必须带Curve Asset，非Custom不得保留Curve Asset；BlendStack只作为显式Pose Graph节点存在。
+
+不得恢复旧MotionMatchingSelectionInput、AnimationSelection port、Pose Graph MarkerSync、旧Layer、PoseSlot、TransitionLibrary、presentation第二MCP入口或generated payload写入。Timeline AnimationTrack自身的Marker Sync仍属于Timeline editable，不与已删除的Pose Graph MarkerSync节点混用。
+
+## 修改相关代码
+
+authoring代码变化只要改变Agent能看到、能写入、能创建、能连接或必须验证的语义，就同步检查：
+
+| 变化 | 必须同步 |
 |---|---|
-| 新增/删除节点类型、端口或 graph kind 规则 | Snapshot models/exporter、NodeEmitterRegistry、typed command/handler、GraphValidator、正式 compiler 对应约束 |
-| 新增/删除 State lifecycle 或 graph ownership | Topology projection、GraphAuthoringIndex、TransactionOwnerCollector、lowerer/handler、Snapshot、Validator |
-| 新增 Agent 可写操作 | `AgentPatchOperation` DTO、command kind/type、operation catalog/lowerer、handler catalog/handler、report、current spec |
-| 修改 Condition 语义 | Condition term catalog/emitter、ConditionRuleBuilder、Snapshot、Validator、正式 compiler |
-| 修改 Input/ActionProfile/ActionContext/Timeline/Blackboard identity | AssetResolver、SnapshotExporter、lowerer/handler、Validator |
-| 修改 Definition Body Motion Profile或Program垂直能力 | Snapshot models/exporter、Definition/Profile正式校验、Simulation Compiler report；保持Patch/MCP只读 |
-| 修改 Macro 业务结构 | MacroLibrary 与 MacroCoverageEvaluator；不要把角色名或连招名塞进通用 Validator |
-| 修改 MCP action 或事务生命周期 | MCP tool、AuthoringModels、AuthoringService、EditorWindow 调用方、bridge current spec |
-| 修改AI Definition、Perception、AI节点或Intent catalog | v16 AI Snapshot、domain-aware lowerer、AI handler、AI Validator、AI Compiler与current spec |
+| Graph、Node、Edge、Port、StateMachine、Source Slot/Binding子资产或ownership | Document模型、Exporter、Reconciler、Mutation handler、Validator |
+| Timeline、Track、Clip、Marker、Curve或MotionWarp | Document投影、Reconciler顺序、Timeline handler、Validator |
+| Input、ActionProfile、ActionContext或Blackboard identity | editable/context分区、Reconciler、AssetResolver、Validator |
+| AI Definition、Perception、Memory、Observation或Intent | AI editable/context、AI Snapshot、Reconciler、AI Compiler |
+| Presentation Profile、Pose Graph或PoseStateMachine | Document v3模型、Presentation codec/exporter、唯一Reconciler、typed Presentation Mutation、Validator与五工具说明 |
+| Rig、Bone、Virtual Bone、Body Motion、Foot Analysis或generated product | 只读context、context hash与current spec；不得增加Document Mutation |
+| MCP生命周期或事务生命周期 | application service、五个MCP薄桥、Editor Window、current spec、此技能 |
 
-4. 外部 Patch/Snapshot 合同发生破坏性变化时提升 `AgentAuthoringSchema.Version`，直接删除旧 parser 和兼容路径。不要保留旧 schema reader、converter 或双写。
-5. Agent mutation 必须继续走 `BaseGraph.CreateNode`、`Link`、`LinkProperty` 和正式 Timeline ownership API。不得在 handler 中直接维护第二套节点、边或 Timeline 数据。
-6. `AgentPatchAuthoringService` 继续唯一拥有 Undo、rollback、dirty 和 SaveAssets；Compiler/handler 不得自行保存。
-7. 相关代码改完后，必须使用正式工具完成至少 `export_snapshot` 与 `validate`。若修改了写能力，还必须用真实目标执行 `dry_run_patch`，并在需要迁移资产时执行事务 `apply_patch`。
+正式调用链必须保持：
+
+```text
+Package manifest + strict per-file parser
+  -> AgentDocumentReconciler
+  -> Presentation Reconciler
+  -> immutable AgentMutationPlan
+  -> Mutation preflight
+  -> one Undo transaction
+  -> typed Gameplay/Timeline/Presentation Mutation handlers
+  -> formal Validator
+  -> save formal authoring
+  -> canonical reverse export
+```
+
+Character需要产物时，必须在上述Document事务完成后另行调用精确Definition的Build生命周期。
+
+Reconciler只计算差异，不修改Unity对象。Mutation compiler/handler不拥有Undo、rollback、dirty、SaveAssets或Document写回。Application service唯一拥有事务生命周期。
+
+如果Document实体无法映射到正式Mutation，必须返回明确错误并扩展唯一Reconciler/handler链，不能手改YAML或添加fallback。
+
+完整字段和代码地图见[当前合同](references/current-contract.md)。
 
 ## 完成门槛
 
-- 没有直接 YAML mutation、fallback、临时桥接或第二套 graph 数据。
-- Agent 可见/可写语义变化与 Agent 代码在同一 change 中更新；不能留“以后再补 Agent”。
-- `dry_run_patch` 与 `apply_patch` 使用同一个 Patch JSON，apply 后再次 snapshot/validate。
-- Editor 编译使用 `--disable-build-servers /nr:false /p:UseSharedCompilation=false`，完成后立即 `dotnet build-server shutdown`。
-- 不运行 Unity batchmode，不新增测试，除非用户明确要求。
-- 若修改外部合同，同步 OpenSpec delta/current spec；若只改资产，至少运行对应 change 的 strict validate。
+- 外部不存在Intent、Macro、Patch IR、operation catalog、bootstrap action或旧action alias。
+- BTSMTL MCP和Window只暴露`btsmtl.checkout_document`、`btsmtl.rebase_document`、`btsmtl.dry_run_document`、`btsmtl.apply_document`、`btsmtl.validate`。
+- 旧Pose State inline Graph只通过`character.migrate_legacy_pose_state_graphs(definition_asset_path)`一次性迁入GraphCatalog；该工具不读取selection、不扫描、不build。
+- Character generated product通过独立`character.build_float32_products`与`character.build_fixed_products`生命周期发布；它们不是BTSMTL局部编辑工具。
+- 不存在BTSMTL局部节点/边/属性修改工具；AI直接修改package文件。
+- Package严格拒绝清单外文件、未知字段、重复属性、非法数值、`.sync.json`语义改动和read-only context改动；Character必须包含完整Presentation目标文件闭包，每个Pose StateMachine必须同时具有`state-machine.json`与`layout.json`。
+- manifest外只允许由服务发现完整canonical `local:*` Pose State Graph/Subgraph的`graph.json + layout.json`创建对，以及graph-owned Inline Timeline的`timeline.json + curves.json`创建对；两者都属于同一Store、hash和apply生命周期，不是未知文件fallback。
+- dry-run不dirty、不保存、不build；apply使用同一Document hash，Character apply不build。
+- apply失败完整回滚并返回`ApplyFailed`；成功后Document从最终树规范化并回到`Clean`。
+- 没有watcher、selection/focus自动执行、第二套graph/timeline/AI mutation service。
+- 不运行Unity batchmode，不新增测试，除非用户明确要求。
+- dotnet build使用`--disable-build-servers /nr:false /p:UseSharedCompilation=false`，随后立即`dotnet build-server shutdown`。
 
 ## 故障处理
 
-- `play_mode_active`：退出 Play Mode，不重启 Unity。
-- `editor_busy`：等待当前编译/导入结束，不排队、不重试脚本化 fallback。
-- `unsupported_schema_version`：重新导出当前snapshot，生成v16 Patch；不转换旧Patch。
-- Marker Sync迁移使用`configure_animation_track_marker_sync`、`ensure_animation_sync_marker`、`move_animation_sync_marker`与`delete_animation_sync_marker`；MarkerGroup配置必须显式携带`animationMarkerSyncRole`；handler只能调用AnimationTrack正式authoring API。
-- Timeline曲线修改使用唯一`configure_timeline_curve_channel`；目标必须来自v16 CharacterController Snapshot中的Timeline、Track、Clip stable identity与registered `curveChannelId`，payload必须完整携带wrap mode及全部Keyframe字段。禁止使用字段名、SerializedProperty path或key index作为外部identity。
-- AnimationTrack channel迁移使用唯一`configure_animation_track_channel`；目标必须来自v16 CharacterController Snapshot中的Timeline与Track stable identity，payload必须携带非空`animationChannelId`。handler只能调用`AnimationTrack.SetAnimationChannelId`，不得联动PoseSlot、Pose Graph或Profile。
-- `unknown_operation` / `unknown_node_type`：扩展正式 catalog/emitter 或承认当前工具不支持；禁止创建 placeholder。
-- `transaction_owner_*`：修复 ownership/topology，使全部 serialized owner 可进入同一事务；禁止缩小 Undo 范围。
-- apply 后 validator 失败：接受自动回滚，修 Patch 或 Agent 实现后重新从 snapshot 开始。
-- MCP transport 错误：修复连接或 Editor 编译状态；禁止改用 YAML、`execute_code` 或剪贴板。
+- checkout返回`presentation_pose_state_graph_migration_required`时，不得直接改YAML或读取inline数据继续导出。调用`character.migrate_legacy_pose_state_graphs`并传入报错root的精确`definition_asset_path`，完成GraphCatalog结构迁移后重试checkout。该迁移不build。
+
+- `play_mode_active`：退出Play Mode。
+- `editor_busy`：等待当前编译或导入结束。
+- `DocumentDirty`：正常执行`btsmtl.dry_run_document`。
+- `TreeDirty`：Document未编辑时重新checkout；需要保留目标正文时显式rebase。
+- `Conflict`：先决定以哪侧为基线，再显式rebase或人工整理Document；禁止自动合并。
+- `ApplyFailed`：资产级事务已经回滚；读取机器诊断，修复同一Document目标后重新dry-run，不得复用旧hash。
+- `readonly_context_modified`或`sync_header_modified`：恢复这些service-owned字段，只编辑`editable`。
+- `document_hash_changed`：重新调用`btsmtl.dry_run_document`，不复用旧hash。
+- `transaction_owner_*`：修复ownership，使所有正式与generated owner进入同一事务，禁止缩小Undo范围。
+- MCP transport错误：修复连接或Editor编译状态，禁止改走YAML、`execute_code`或旧Patch入口。

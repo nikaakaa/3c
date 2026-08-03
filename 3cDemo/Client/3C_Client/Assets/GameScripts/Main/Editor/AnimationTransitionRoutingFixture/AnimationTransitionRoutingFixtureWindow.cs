@@ -210,7 +210,7 @@ namespace ThirdPersonCharacter.Editor.Animation.TransitionRouting
                     $"{(output.RebaseRequired ? " Rebase" : string.Empty)}";
                 EditorGUILayout.LabelField(
                     $"[{record.SequenceIndex}] Frame {record.Input.FrameId}",
-                    $"{output.DecisionKind} / {output.Lifecycle}{flags}");
+                    $"Route {output.RouteDecision} / Completion {output.CompletionOutcome} / {output.Lifecycle}{flags}");
                 if (output.ReasonCode != TransitionRoutingReasonCode.None)
                     EditorGUILayout.LabelField(string.Empty, $"{output.ReasonCode}: {output.Reason}", EditorStyles.miniLabel);
             }

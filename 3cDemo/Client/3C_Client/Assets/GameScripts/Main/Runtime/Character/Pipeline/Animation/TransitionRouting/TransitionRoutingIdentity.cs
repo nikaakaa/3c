@@ -14,7 +14,8 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
 
     public readonly struct TransitionEndpointId : IEquatable<TransitionEndpointId>, IComparable<TransitionEndpointId>
     {
-        public static TransitionEndpointId Empty { get; } = new TransitionEndpointId("$empty");
+        public static TransitionEndpointId SourcePose { get; } = new TransitionEndpointId("$source-pose");
+        public static TransitionEndpointId NoPose { get; } = new TransitionEndpointId("$no-pose");
 
         public TransitionEndpointId(string value)
         {
@@ -23,7 +24,8 @@ namespace ThirdPersonCharacter.Animation.TransitionRouting
 
         public string Value { get; }
         public bool IsValid => !string.IsNullOrEmpty(Value);
-        public bool IsEmpty => Equals(Empty);
+        public bool IsSourcePose => Equals(SourcePose);
+        public bool IsNoPose => Equals(NoPose);
         public int CompareTo(TransitionEndpointId other) => string.CompareOrdinal(Value, other.Value);
         public bool Equals(TransitionEndpointId other) => string.Equals(Value, other.Value, StringComparison.Ordinal);
         public override bool Equals(object obj) => obj is TransitionEndpointId other && Equals(other);

@@ -27,6 +27,7 @@ namespace ThirdPersonCharacter.Pipeline
         SimulationSessionLifecycleState m_State = SimulationSessionLifecycleState.Uninitialized;
         SimulationSessionFailure m_Failure;
         SimulationSessionDiagnosticsSnapshot m_LastDiagnostics;
+        SimulationSessionHostDebugControlPort m_DebugControlPort;
         bool m_TickTargetsRegistered;
         bool m_Quiesced;
         bool m_Disposed;
@@ -298,6 +299,7 @@ namespace ThirdPersonCharacter.Pipeline
             ActivateActorPorts();
             CaptureActorInputs(context.RenderFrame);
             m_State = SimulationSessionLifecycleState.Active;
+            RegisterDebugControlPort();
         }
 
         SimulationSessionLogicTickContext BuildRuntimeContext(
@@ -394,6 +396,7 @@ namespace ThirdPersonCharacter.Pipeline
             m_State = SimulationSessionLifecycleState.Failed;
             m_LastDiagnostics = m_Runtime?.Diagnostics ?? m_Preparation?.Diagnostics ?? BuildFailureDiagnostics(failure);
             var cleanupFailures = new List<Exception>();
+            TryCleanup(UnregisterDebugControlPort, cleanupFailures);
             TryCleanup(UnregisterTickTargets, cleanupFailures);
             TryCleanup(DeactivateActorPorts, cleanupFailures);
             ReleaseFailedResources(cleanupFailures);
@@ -435,6 +438,7 @@ namespace ThirdPersonCharacter.Pipeline
 
         void ReleaseSessionResources(List<Exception> failures)
         {
+            TryCleanup(UnregisterDebugControlPort, failures);
             if (m_Preparation != null)
                 TryCleanup(m_Preparation.Dispose, failures);
             m_Preparation = null;
@@ -451,8 +455,25 @@ namespace ThirdPersonCharacter.Pipeline
             m_OutputLifecycle = null;
         }
 
+        void RegisterDebugControlPort()
+        {
+            if (m_DebugControlPort != null || m_Runtime == null)
+                return;
+            m_DebugControlPort = new SimulationSessionHostDebugControlPort(this, m_Runtime.Descriptor);
+            LocalSimulationDebugControlService.Register(m_DebugControlPort);
+        }
+
+        void UnregisterDebugControlPort()
+        {
+            if (m_DebugControlPort == null)
+                return;
+            LocalSimulationDebugControlService.Unregister(m_DebugControlPort);
+            m_DebugControlPort = null;
+        }
+
         void CompleteSessionDisposal()
         {
+            UnregisterDebugControlPort();
             m_Disposed = true;
             m_Quiesced = true;
             m_Registrations.Clear();

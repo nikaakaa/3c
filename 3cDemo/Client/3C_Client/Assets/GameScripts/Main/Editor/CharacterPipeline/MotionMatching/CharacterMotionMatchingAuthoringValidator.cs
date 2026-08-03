@@ -51,26 +51,22 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
         {
             if (!profile || diagnostics == null)
                 return;
-            int producerCount = 0;
-            for (int i = 0; i < profile.ProducerBindings.Count; i++)
+            bool hasMotionMatchingBinding = false;
+            for (int i = 0; i < profile.PoseSourceBindings.Count; i++)
             {
-                AnimationProducerPresentationBinding binding = profile.ProducerBindings[i];
-                if (binding != null && binding.SourceKind == AnimationPoseSourceKind.MotionMatching)
-                    producerCount++;
+                if (profile.PoseSourceBindings[i] is CharacterMotionMatchingPoseSourceBinding binding &&
+                    binding.Profile == profile.MotionMatchingProfile)
+                {
+                    hasMotionMatchingBinding = true;
+                    break;
+                }
             }
-            if (producerCount == 0 && profile.MotionMatchingProfile)
+            if (profile.MotionMatchingProfile && !hasMotionMatchingBinding)
             {
                 diagnostics.Add(new CharacterMotionMatchingAuthoringDiagnostic(
                     CharacterMotionMatchingAuthoringDiagnosticCode.OrphanMotionMatchingProfile,
                     profile.name,
-                    "Motion Matching Profile is configured but no Presentation producer uses Motion Matching."));
-            }
-            if (producerCount > 0 && !profile.MotionMatchingProfile)
-            {
-                diagnostics.Add(new CharacterMotionMatchingAuthoringDiagnostic(
-                    CharacterMotionMatchingAuthoringDiagnosticCode.MissingMotionMatchingProfile,
-                    profile.name,
-                    "Motion Matching producer exists but the Presentation Profile has no Motion Matching Profile owner."));
+                    "Motion Matching Profile is configured but has no Pose source provider binding."));
             }
             if (!profile.MotionMatchingProfile || projectProfiles == null)
                 return;

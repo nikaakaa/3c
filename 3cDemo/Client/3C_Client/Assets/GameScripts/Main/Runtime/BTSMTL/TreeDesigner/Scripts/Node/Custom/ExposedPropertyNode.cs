@@ -11,6 +11,8 @@ namespace TreeDesigner
     [NodeAuthoringCapability(NodeAuthoringCapability.SharedBlackboard)]
     public partial class ExposedPropertyNode : RunnableNode
     {
+        public const string FlowInputPortName = "Input";
+
         [SerializeField]
         ExposedPropertyNodeType m_NodeType;
         public ExposedPropertyNodeType NodeType => m_NodeType;
@@ -45,7 +47,7 @@ namespace TreeDesigner
 
             m_InputEdgeGUID = string.Empty;
             m_Parent = null;
-            foreach (var inputEdge in m_Owner.GetInputEdges(this, "Input"))
+            foreach (var inputEdge in m_Owner.GetInputEdges(this, FlowInputPortName))
             {
                 m_InputEdgeGUID = inputEdge.GUID;
                 m_Parent = inputEdge.StartNode as RunnableNode;
@@ -123,6 +125,27 @@ namespace TreeDesigner
         }
 
 #if UNITY_EDITOR
+        public override IEnumerable<FlowPortDeclaration> GetFlowPortDeclarations(BaseGraph owner)
+        {
+            foreach (FlowPortDeclaration declaration in base.GetFlowPortDeclarations(owner))
+                yield return declaration;
+            if (m_NodeType == ExposedPropertyNodeType.Set)
+                yield return new FlowPortDeclaration(
+                    FlowInputPortName,
+                    PortDirection.Input,
+                    PortCapacity.Single);
+        }
+
+        public override IEnumerable<FlowPortDeclaration> GetSupportedFlowPortDeclarations(BaseGraph owner)
+        {
+            foreach (FlowPortDeclaration declaration in base.GetFlowPortDeclarations(owner))
+                yield return declaration;
+            yield return new FlowPortDeclaration(
+                FlowInputPortName,
+                PortDirection.Input,
+                PortCapacity.Single);
+        }
+
         public static ExposedPropertyNode Create(BaseGraph targetGraph, BaseExposedProperty exposedProperty)
         {
             ExposedPropertyNode exposedPropertyNode = targetGraph.CreateNode(typeof(ExposedPropertyNode)) as ExposedPropertyNode;

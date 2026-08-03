@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public static class AgentAuthoringSchema
     {
-        public const string Version = "agent-character-controller-synthesis.v17";
+        public const string Version = "btsmtl-agent-authoring-document.v3";
         public const string CharacterControllerDomain = "CharacterController";
         public const string AIControllerDomain = "AIController";
 
@@ -251,6 +252,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string actionProfileAssetPath;
         public string actionProfileAssetGuid;
         public string targetSnapshotBlackboardKey;
+        public string compareType;
     }
 
     [Serializable]
@@ -290,6 +292,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string graphPath;
         public string key;
         public string valueType;
+        public JToken defaultValue;
         public string scope;
         public string lifetime;
         public string authority;
@@ -308,7 +311,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string timelineAuthoringId;
         public string trackAuthoringId;
         public string clipAuthoringId;
-        public string clipOperationId;
         public string timeline;
         public string timelineNodePath;
         public string timelineOwnership;
@@ -404,6 +406,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public int easeOutFrame;
         public string animationClipAssetPath;
         public string animationClipAssetGuid;
+        public string curveId;
+        public int curveEndFrame;
+        public string motionSpace;
+        public string motionChannel;
+        public string motionBlendMode;
+        public int motionPriority;
+        public bool consumeLowerChannels;
         public bool motionWarpClip;
         public string sourceMotionClipAuthoringId;
         public string sourceMotionClipPath;
@@ -445,7 +454,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public float outTangent;
         public float inWeight;
         public float outWeight;
-        public string weightedMode;
+        public string weightedMode = WeightedMode.None.ToString();
     }
 
     [Serializable]
@@ -501,19 +510,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentSnapshotGraphReference> graphReferences = new List<AgentSnapshotGraphReference>();
         public List<AgentSnapshotAssetReference> assetReferences = new List<AgentSnapshotAssetReference>();
         public List<AgentSnapshotPropertyPort> propertyPorts = new List<AgentSnapshotPropertyPort>();
-        public AgentSnapshotBlackboardWrite blackboardWrite;
+        public AgentSnapshotExposedProperty exposedProperty;
         public string loopStopType;
         public string compareType;
+        public float moveSpeed;
+        public float turnSpeedDegrees;
+        public bool cameraRelative;
+        public bool continuous;
+        public string inputId;
+        public string requestId;
+        public string blackboardDeclarationId;
+        public string stateExitCause;
+        public string actionContextId;
+        public string windowType;
+        public string actionProfileId;
+        public string targetSnapshotBlackboardDeclarationId;
     }
 
     [Serializable]
-    public sealed class AgentSnapshotBlackboardWrite
+    public sealed class AgentSnapshotExposedProperty
     {
+        public string mode;
         public string declarationAuthoringId;
         public string declarationOwnerId;
         public string key;
         public string valueType;
-        public bool boolValue;
+        public JToken value;
     }
 
     [Serializable]
@@ -613,13 +635,39 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentSnapshotAnimationSelectionInput
+    public sealed class AgentSnapshotStateLocalPoseSource
     {
+        public string graphId;
         public string nodeId;
-        public string kind;
+        public string nodeKind;
+        public string ownerKind;
+        public string sourceSlotName;
+        public string sourceSlotAssetPath;
+        public string sourceSlotAssetGuid;
+        public long sourceSlotLocalFileId;
+        public string sourceKind;
+        public string xParameterPortId;
+        public string yParameterPortId;
+        public string inputRangePolicy;
+    }
+
+    [Serializable]
+    public sealed class AgentSnapshotActionPlaybackInput
+    {
+        public string graphId;
+        public string nodeId;
+        public string ownerKind;
         public string animationChannelId;
-        public string programProducerId;
-        public string availability;
+    }
+
+    [Serializable]
+    public sealed class AgentSnapshotAnimationSlot
+    {
+        public string graphId;
+        public string nodeId;
+        public string ownerKind;
+        public string animationSlotId;
+        public string animationChannelId;
     }
 
     [Serializable]
@@ -640,10 +688,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string footAnalysisSourceId;
         public int footAnalysisSourceVersion;
         public string footAnalysisAlgorithmVersion;
-        public List<AgentSnapshotAnimationSelectionInput> selectionInputs = new List<AgentSnapshotAnimationSelectionInput>();
+        public List<AgentSnapshotStateLocalPoseSource> stateLocalPoseSources =
+            new List<AgentSnapshotStateLocalPoseSource>();
+        public List<AgentSnapshotActionPlaybackInput> actionPlaybackInputs =
+            new List<AgentSnapshotActionPlaybackInput>();
+        public List<AgentSnapshotAnimationSlot> animationSlots =
+            new List<AgentSnapshotAnimationSlot>();
         public List<AgentSnapshotAnimationProducer> producers = new List<AgentSnapshotAnimationProducer>();
         public List<AgentSnapshotAnimationBlendSpace> blendSpaces = new List<AgentSnapshotAnimationBlendSpace>();
-        public List<AgentSnapshotAnimationBlendSpacePlayer> blendSpacePlayers = new List<AgentSnapshotAnimationBlendSpacePlayer>();
     }
 
     [Serializable]
@@ -669,24 +721,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentSnapshotAnimationBlendSpacePlayer
-    {
-        public string graphId;
-        public string nodeId;
-        public string selectionPortId;
-        public string xParameterPortId;
-        public string yParameterPortId;
-        public string inputRangePolicy;
-    }
-
-    [Serializable]
     public sealed class AgentSnapshotAnimationProducer
     {
         public AgentSnapshotAuthoringRoute route = new AgentSnapshotAuthoringRoute();
+        public string ownerKind;
         public string timelineAuthoringId;
         public string trackAuthoringId;
         public string timelineName;
         public string trackName;
+        public string actionContextId;
         public string animationChannelId;
         public string syncMode;
         public string syncGroupId;
@@ -695,9 +738,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string sourceAssetPath;
         public string sourceAssetGuid;
         public string sourceAssetType;
-        public string sourceKind;
-        public string blendSpaceId;
-        public string blendSpaceContentRevision;
     }
 
     [Serializable]
@@ -734,59 +774,51 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentControllerIntent
-    {
-        public string schemaVersion = AgentAuthoringSchema.Version;
-        public string domain;
-        public string rootIdentity;
-        public string macro;
-    }
-
-    [Serializable]
-    public sealed class AgentPatchIR
+    public sealed class AgentMutationDraftSet
     {
         public string schemaVersion = AgentAuthoringSchema.Version;
         public string domain;
         public string rootIdentity;
         public string sourceRevision;
-        public string sourceMacro;
-        public string sourceMacroVersion;
-        public List<AgentPatchOperation> operations = new List<AgentPatchOperation>();
+        public List<AgentMutationDraft> mutations = new List<AgentMutationDraft>();
     }
 
     [Serializable]
-    public sealed class AgentPatchOperation
+    public sealed class AgentMutationDraft
     {
         public string id;
-        public string op;
+        [NonSerialized]
+        public string sourcePath;
+        public AgentMutationKind kind;
         public string graphAuthoringId;
-        public string graphOperationId;
+        public string graphPlannedIdentity;
         public string targetGraphAuthoringId;
-        public string targetGraphOperationId;
+        public string targetGraphPlannedIdentity;
         public string stateMachineGraphAuthoringId;
-        public string stateMachineOperationId;
+        public string stateMachinePlannedIdentity;
         public string stateAuthoringId;
-        public string stateOperationId;
+        public string statePlannedIdentity;
         public string fromElementAuthoringId;
-        public string fromOperationId;
+        public string fromPlannedIdentity;
         public string toElementAuthoringId;
-        public string toOperationId;
+        public string toPlannedIdentity;
         public string sourceElementAuthoringId;
-        public string sourceOperationId;
+        public string sourcePlannedIdentity;
         public string targetElementAuthoringId;
-        public string targetOperationId;
+        public string targetPlannedIdentity;
         public string flowEdgeAuthoringId;
-        public string flowEdgeOperationId;
+        public string flowEdgePlannedIdentity;
         public string timelineAuthoringId;
+        public string timelinePlannedIdentity;
         public string trackAuthoringId;
-        public string trackOperationId;
+        public string trackPlannedIdentity;
         public string markerAuthoringId;
-        public string markerOperationId;
+        public string markerPlannedIdentity;
         public string clipAuthoringId;
-        public string clipOperationId;
+        public string clipPlannedIdentity;
         public string sourceMotionClipAuthoringId;
         public string declarationAuthoringId;
-        public string declarationOperationId;
+        public string declarationPlannedIdentity;
         public string graph;
         public string targetGraph;
         public string stateMachine;
@@ -815,6 +847,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string requestTimingClass;
         public string blackboardKey;
         public string blackboardValueType;
+        public JToken blackboardDefaultValue;
         public string blackboardScope;
         public string blackboardLifetime;
         public string blackboardAuthority;
@@ -859,6 +892,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentAnimationCurveKey> positionProgressCurve = new List<AgentAnimationCurveKey>();
         public List<AgentAnimationCurveKey> yawProgressCurve = new List<AgentAnimationCurveKey>();
         public string curveChannelId;
+        public string curveId;
+        public int curveEndFrame;
+        public string motionSpace;
+        public string motionChannel;
+        public string motionBlendMode;
+        public int motionPriority;
+        public bool consumeLowerChannels;
         public AgentAnimationCurvePayload curve = new AgentAnimationCurvePayload();
         public string gameplayTag;
         public string parentGameplayTag;
@@ -873,13 +913,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public bool consumeSourceInputRequest = true;
         public string targetKey;
         public string targetSnapshotBlackboardKey;
+        public string targetSnapshotBlackboardDeclarationId;
+        public string targetSnapshotBlackboardDeclarationPlannedIdentity;
         public string lifecycleType;
         public string reason;
         public string completeReason;
         public string interruptReason;
         public string abortReason;
         public string inputId;
-        public string inputValueType;
+        public string conditionValueConfiguration;
+        public string stateExitCause;
         public string controllerId;
         public string rootTreeAssetPath;
         public string controlledCharacterAssetPath;
@@ -891,6 +934,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string aiNodeKind;
         public string loopStopType;
         public string compareType;
+        public float moveSpeed;
+        public float turnSpeedDegrees;
+        public bool cameraRelative;
+        public bool continuous;
         public string abortPolicy;
         public string aiMemoryValueKind;
         public string aiRequestRepeatPolicy;
@@ -935,6 +982,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentCompileMessage> messages = new List<AgentCompileMessage>();
         public List<AgentCompileDiffEntry> plannedDiff = new List<AgentCompileDiffEntry>();
         public List<AgentCompileDiffEntry> appliedDiff = new List<AgentCompileDiffEntry>();
+        public List<AgentTouchedOwner> touchedOwners =
+            new List<AgentTouchedOwner>();
 
         public void Info(string path, string code, string message, string suggestion = "")
         {
@@ -981,6 +1030,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
+    public sealed class AgentTouchedOwner
+    {
+        public string assetGuid;
+        public string assetPath;
+        public string assetType;
+    }
+
+    [Serializable]
     public sealed class AgentCompileMessage
     {
         public string severity;
@@ -993,7 +1050,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     [Serializable]
     public sealed class AgentCompileDiffEntry
     {
-        public string operationId;
+        public string mutationId;
         public string action;
         public string graph;
         public string target;

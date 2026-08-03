@@ -87,7 +87,8 @@ $manifest = Assert-NetworkTestProductBuild `
         "Assets/Scenes/ServerAuthoritative/ServerAuthoritativeNetworkTestBootstrap.unity",
         "Assets/Scenes/ServerAuthoritative/ServerAuthoritativeClient.unity",
         "Assets/Scenes/ServerAuthoritative/ServerAuthoritativeAuthorityWorker.unity") `
-    -ExpectedScriptingBackend "IL2CPP"
+    -ExpectedBuildOptions "Development, StrictMode" `
+    -ExpectedScriptingBackend "Mono2x"
 Assert-Exists $client "Unity Authority Player"
 Assert-Exists $clientRuntime "Unity Authority Player runtime"
 Assert-Exists $clientContent "Unity Authority Player content"

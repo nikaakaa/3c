@@ -211,6 +211,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 "operation_stop_requested" => RuntimeTraceEventKind.NodeStopRequested,
                 "operation_stopped" => RuntimeTraceEventKind.NodeStopped,
                 "operation_force_stopped" => RuntimeTraceEventKind.NodeForceStopped,
+                "condition_value_evaluated" => RuntimeTraceEventKind.ConditionGraphEvaluated,
+                "condition_graph_evaluated" => RuntimeTraceEventKind.ConditionGraphEvaluated,
+                "state_transition_evaluated" => RuntimeTraceEventKind.StateTransitionEvaluated,
                 "state_transition_selected" => RuntimeTraceEventKind.StateTransitionSelected,
                 "timeline_logic_time" => RuntimeTraceEventKind.TimelineLogicTime,
                 "timeline_completed" => RuntimeTraceEventKind.TimelineCompleted,
@@ -277,7 +280,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (kind == RuntimeTraceEventKind.MotionContribution ||
                 kind == RuntimeTraceEventKind.MotionResolved)
                 return RuntimeTraceChannel.Motion;
-            if (kind == RuntimeTraceEventKind.StateTransitionSelected ||
+            if (kind == RuntimeTraceEventKind.StateTransitionEvaluated ||
+                kind == RuntimeTraceEventKind.StateTransitionSelected ||
                 kind == RuntimeTraceEventKind.ActionWindowSampled ||
                 kind == RuntimeTraceEventKind.ActionActivationRequested ||
                 kind == RuntimeTraceEventKind.ActionLifecycleTransitioned)

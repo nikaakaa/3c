@@ -2,12 +2,12 @@
 
 ### Requirement: Pose Graph必须显式支持BlendSpacePlayer
 
-Character Presentation Pose Graph的正式Runtime节点目录 MUST加入`BlendSpacePlayer`。该节点 MUST位于Selection/Parameter与Pose composition之间，并由Compiler降低到SourceAndNativePose阶段。GraphInput/GraphOutput仍只用于subgraph编译边界，Runtime MUST不在图外创建隐藏Blend Space player。
+Character Presentation Pose Graph的正式Runtime节点目录 MUST加入`BlendSpacePlayer`。该节点 MUST只位于PoseState inline subgraph的Fact Parameter与Pose composition之间，并由Compiler降低到SourceAndNativePose阶段。GraphInput/GraphOutput仍只用于subgraph编译边界，Runtime MUST不在根图或图外创建隐藏Blend Space player。
 
 #### Scenario: 编译Locomotion表现分支
 
-- **WHEN** 图包含`AnimationSelectionInput -> MarkerSync -> BlendSpacePlayer -> Inertialization`
-- **THEN** Compiler MUST生成固定Selection、source sample和local continuity执行顺序
+- **WHEN** Locomotion PoseState inline subgraph包含`Fact Parameter -> BlendSpacePlayer -> 可选Inertialization`
+- **THEN** Compiler MUST生成固定Pose source、sample和branch-local continuity执行顺序
 - **AND** Runtime MUST不追加隐藏SelectedPosePlayer或BlendStack
 
 ### Requirement: BlendSpacePlayer必须使用typed参数端口
@@ -28,4 +28,3 @@ Pose Graph Preview、Pose Watch与Live Details MUST从匹配Projection revision�
 - **WHEN** 作者选择正在运行的BlendSpacePlayer节点
 - **THEN** Live Details MUST显示Runtime Snapshot中的实际样本贡献
 - **AND** revision不匹配时 MUST明确标记Unavailable
-

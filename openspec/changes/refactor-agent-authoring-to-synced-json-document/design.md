@@ -1,356 +1,466 @@
-# Design: Agent Authoring 显式同步 JSON 文档
+# Design: Agent Authoring 可直接编辑的同步 JSON 文档包
 
 ## Context
 
-当前实现把MCP工具数量压缩为一个，但AI-facing语言仍是低层mutation指令：
+当前实现已经把低层Patch链迁移为：
 
 ```text
-LLM
-  -> patch_json.operations[]
-  -> AgentPatchCommandLowerer
-  -> AgentPatchCommandPlan
-  -> AgentPatchCompileSession
+single JSON Document
+  -> strict codec
+  -> AgentDocumentReconciler
+  -> immutable AgentMutationPlan
   -> typed handler
   -> formal BTSMTL authoring API
+  -> Validator
 ```
 
-后半段已经解决preflight、identity、ownership、Undo、rollback和validator，应该继续保留。问题位于前半段：AI需要编排大量`ensure_*`、`configure_*`、`link_*`和`delete_*`操作，并直接承担内部施工顺序。
+后半段的Reconciler、Mutation、事务、Undo、Validator和正式authoring API方向正确。问题集中在AI-facing外部表示与MCP边界：
 
-用户要求的双向绑定不是实时数据绑定，而是带基线的显式同步：平时Unity树独立编辑；AI开始工作时才从当前树checkout一份JSON；AI保存JSON只标脏；显式dry-run/apply后再从最终树反向规范化JSON。
+- 当前单文件为4.35 MB、99,821行。
+- Graph和Timeline占压缩editable的绝大多数。
+- Node DTO是Unity/C#对象投影，不是面向Graph组合的authoring语言。
+- exporter与creator的Node能力集合不闭合。
+- 一个MCP工具用`action`复用五种不同安全语义。
+
+目标不是恢复`create_node`、`link_edge`之类局部工具。AI应直接修改目标JSON，系统只在显式生命周期边界把目标状态降低为内部Mutation。
 
 ## Goals
 
-- 让AI只编辑一份持久化、结构化、可读的JSON文档。
-- 保持普通BTSMTL资产为唯一正式authoring真相和人工编辑面。
-- 保持现有typed handler、正式authoring API、validator和单Undo事务。
-- 准确区分树变化、文档变化和双边冲突。
-- 确保任何重操作只由明确action触发。
-- 让CharacterController与AIController共享同一Document、Reconciler和事务生命周期。
+- 让AI按文件夹和业务实体直接编辑Graph，而不是编排工具调用。
+- 让Graph JSON只表达业务结构，不复制Unity序列化细节。
+- 支持Node、Flow Edge、Property Edge、Graph reference、Condition、Timeline和领域配置的完整目标状态闭包。
+- 保持Unity资产为唯一正式authoring真相。
+- 保持一个逻辑Document、一份基线、一个整包hash和一次事务。
+- 保持文件保存轻量，不自动compile、build或apply。
+- 让MCP工具数量与Node种类解耦。
 
 ## Non-Goals
 
-- 不做实时文件watcher或自动apply。
-- 不在selection、Inspector、domain reload或AssetDatabase事件中build。
-- 不把JSON打进Player或运行时读取。
-- 不做自动三方merge。
-- 不保留Intent、Macro、外部Patch或bootstrap兼容入口。
-- 不扩大Agent对Presentation、Body Motion或generated analysis的写权限。
+- 不提供节点级、边级、字段级或JSON patch MCP工具。
+- 不把JSON包打进Player或Runtime。
+- 不做文件级提交、文件级Conflict或自动merge。
+- 不做文件watcher、后台daemon或自动构建。
+- 不创建缺失Definition根。
+- 不把Presentation和generated analysis变为Agent可写配置。
 
-## Decision 1: JSON是工作文档，不是第二份authoring真相
+## Decision 1: 一个逻辑Document，物理上使用确定性目录包
 
-正式权威保持：
-
-```text
-普通BTSMTL / Character / AI Unity assets
-```
-
-JSON只表示某次AI编辑会话的目标结构。apply前，Unity资产不受JSON影响；apply成功后，以正式树重新导出的JSON为规范结果。
-
-如果把JSON设为第二份正式真相，就必须让Graph Editor和Timeline Editor所有人工编辑反向写JSON，否则立即形成双主线。本变更选择工作文档，可以保留现有人工工具，也能让AI直接编辑文件。
-
-## Decision 2: 文档位置固定在Unity项目外部资产目录
-
-Document Store拥有唯一确定性路径：
+正式路径：
 
 ```text
-<UnityProject>/AgentAuthoring/Documents/<domain>/<root-key>.btsmtl.json
+<UnityProject>/AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/
 ```
 
-`root-key`由显式domain、规范root asset path和已有root identity确定。调用方不传任意文档路径，不通过文件选择器或当前selection寻找文档。
-
-该目录位于`Assets/`之外：
-
-- 不触发AssetDatabase import。
-- 不进入Player或AssetBundle。
-- 不成为Unity authoring asset。
-- 可以跨Editor重启保留AI未应用修改。
-
-该目录是派生工作区，不进入版本控制；Git历史仍记录最终Unity资产。Document Store不得扫描其它目录寻找替代文件。
-
-## Decision 3: 文档分为同步头、可编辑正文与只读上下文
-
-外部schema使用新的语义版本：
+目录结构：
 
 ```text
-btsmtl-agent-authoring-document.v1
+<root-key>.btsmtl/
+  manifest.json
+  editable/
+    controller.json
+    blackboard.json
+    actions.json
+    graphs/
+      <graph-id>/
+        graph.json
+        layout.json
+    timelines/
+      <timeline-id>/
+        timeline.json
+        curves.json
+    ai/
+      perception.json
+  context/
+    node-catalog.json
+    graph-kinds.json
+    asset-catalog.json
+    dependencies.json
+  .sync.json
 ```
 
-结构分为：
+Character与AI只生成本domain有意义的文件；不生成空领域占位文件。`manifest.json`记录schema、domain、root identity和规范文件清单。`.sync.json`只保存service-owned基线，不保存业务authoring。
+
+物理拆分只解决选择性读取和局部编辑，不改变同步粒度。checkout、rebase、dry-run、apply、Conflict和反向导出始终针对整个文档包。系统不暴露“只应用一个graph.json”。
+
+文档包位于`Assets/`之外，不触发AssetDatabase import，不进入Player或Bundle，也不作为版本控制中的正式authoring来源。
+
+## Decision 2: schema v2是稀疏规范authoring语言
+
+外部schema固定为：
+
+```text
+btsmtl-agent-authoring-document.v2
+```
+
+Graph示意：
 
 ```json
 {
-  "schemaVersion": "btsmtl-agent-authoring-document.v1",
-  "domain": "CharacterController",
-  "rootIdentity": "...",
-  "sync": {
-    "baseSourceRevision": "...",
-    "baseContentHash": "..."
+  "id": "local:attack-body",
+  "kind": "state-body",
+  "owner": {
+    "entityId": "local:attack-state",
+    "slot": "body"
   },
-  "editable": {},
-  "context": {}
+  "nodes": [
+    {
+      "id": "local:attack-timeline",
+      "kind": "timeline",
+      "properties": {
+        "timeline": "local:attack-timeline-data",
+        "actionContext": "Attack"
+      }
+    }
+  ],
+  "flowEdges": [
+    {
+      "id": "local:attack-entry",
+      "from": { "node": "@root", "port": "out" },
+      "to": { "node": "local:attack-timeline", "port": "in" }
+    }
+  ],
+  "propertyEdges": []
 }
 ```
 
-- `sync`由service写入，AI不得修改。
-- `editable`完整表达Agent正式可写的Graph、StateMachine、Timeline、Blackboard、Perception和Intent实体。
-- `context`输出Input、ActionProfile、Capability、Presentation、Body Motion、Foot Analysis与generated product等只读信息；Reconciler拒绝被修改的只读字段。
+规则：
+
+- `kind`是稳定外部标识，不是C# type name、namespace或显示名。
+- `properties`只输出当前kind有意义且偏离正式默认值的字段。
+- 不输出空集合、无关nullable字段、重复port声明、route/path和ownership派生字段。
+- 端口只使用catalog定义的逻辑key。
+- Edge是完整目标集合；从集合移除即表达删除。
+- Graph必须拥有`owner.entityId + owner.slot`，不能创建裸Graph。
 - 已有实体使用stable authoring identity。
-- 新实体使用文档局部identity；apply成功后由反向导出替换为真实stable identity。
-- editable集合是完整目标集合，删除已有可写实体通过从集合中移除表达；read-only或Agent不支持的实体不因缺席而删除。
+- 新实体使用文档包内唯一`local:<meaningful-id>`。
+- Node kind与Graph kind不可原地改变。类型变化必须删除旧identity并创建新local identity。
 
-## Decision 4: 使用严格解析和规范化内容hash
+稀疏并不意味着宽松。缺省值由对应kind的唯一catalog schema定义；未知字段、未知kind和未知port仍严格失败。
 
-Document parser必须拒绝：
+## Decision 3: 系统节点投影为只读anchor
 
-- 未知字段。
-- 重复JSON属性。
-- 非法discriminator。
-- 缺失必需字段。
-- 修改service-owned同步字段。
-- 非有限数值、非法curve、非法identity与domain不匹配。
+Unity内部需要Root、Enter、Exit、Any、OnEnter、OnExit、TimelineEnter和ConditionRuleResult等系统Node。AI不应创建、删除或配置它们。
 
-`baseContentHash`和dry-run返回的`documentHash`都基于规范化语义内容，不基于缩进、换行或属性输入顺序。Canonical writer固定：
+文档包按Graph kind暴露保留anchor：
+
+```text
+@root
+@enter
+@exit
+@any
+@onEnter
+@onExit
+@timelineEnter
+@result
+```
+
+anchor只允许作为Edge endpoint。`graph-kinds.json`定义每种Graph允许的anchor与逻辑port。Exporter把内部系统Node endpoint转换为anchor；Reconciler再解析回当前Graph真实系统Node。anchor不拥有editable identity、layout或properties。
+
+这样AI仍能完整连接Graph，但无需理解系统Node构造和内部类型。
+
+## Decision 4: Graph逻辑与布局分离
+
+`graph.json`只表达Graph业务逻辑。`layout.json`只按Node identity保存位置和可视分组，不复制Edge或Node配置。
+
+已有Node位置在checkout时保留。AI可以：
+
+- 修改`layout.json`显式布局。
+- 完全不碰layout，让现有位置保持。
+- 为新Node省略位置，由唯一确定性自动布局器按Graph kind、拓扑层级和identity顺序生成位置。
+
+自动布局是正式明确规则，不是隐藏fallback配置。相同Graph目标状态必须生成相同初始位置。布局变化进入editable hash，但不触发Program/Projection build。
+
+## Decision 5: Timeline结构与Curve payload分离
+
+`timeline.json`保存Timeline、Track、Clip、Marker、ownership和引用关系。`curves.json`按stable/local curve identity保存完整Curve payload。
+
+Curve规则：
+
+- 只输出影响正式语义的wrap mode和key字段。
+- 与正式默认值相同的weight、weighted mode等字段省略。
+- 同一Curve完整替换，不提供key级MCP操作。
+- registered Channel仍由catalog identity约束，不能按字段名猜测。
+
+这样AI修改Timeline拓扑时无需加载全部Curve key，修改Curve时也不会重写Graph文件。
+
+## Decision 6: 一个能力catalog驱动export、edit、reconcile和validate
+
+当前`AgentNodeEmitterRegistry`只能创建部分exporter可输出Node。v2将其提升为唯一`AgentAuthoringCapabilityCatalog`，每个Node kind声明：
+
+- 稳定kind。
+- 允许的Graph kind。
+- typed properties及正式默认值。
+- 逻辑Flow/Property ports。
+- 资产引用类型。
+- create/configure/delete lowering。
+- read-only或system-owned性质。
+
+Graph kind catalog声明：
+
+- Graph kind。
+- owner slot。
+- 系统anchor。
+- 允许的Node capability。
+- inline/shared ownership规则。
+
+同一catalog必须被exporter、strict parser、Reconciler、handler preflight、Validator和checkout context writer复用。任何editable实体无法完整往返时，checkout以`authoring_capability_incomplete`失败；系统不输出“可看但不可改”的假可编辑Node。
+
+只读`node-catalog.json`和`graph-kinds.json`是该正式catalog对AI需要部分的紧凑投影，不是第二个手写schema。
+
+## Decision 7: context只保存AI作出编辑决策所需的信息
+
+`context`只包含：
+
+- Node与Graph kind catalog。
+- 当前Definition可引用的Input、Action、Timeline、Blackboard、Perception和资产identity。
+- owner与dependency关系。
+- AI受控Character input/request合同。
+- 对编辑有影响的只读Presentation、Body Motion和generated product状态摘要。
+
+以下内容不进入文档包：
+
+- Unity managed-reference布局。
+- C#类型全名和SerializedProperty path。
+- runtime state、对象实例ID和时间戳。
+- Validator可以直接从当前Unity资产读取、但AI编辑不需要的数据。
+- 大型generated Foot Analysis、Program、Projection或Database payload。
+
+context文件由service独占写入。AI修改context时报告`readonly_context_modified`。
+
+## Decision 8: 整包canonical hash与四态同步
+
+每个JSON文件使用strict parser和canonical writer：
 
 - UTF-8无BOM。
-- 稳定属性顺序。
-- 稳定entity排序。
-- 明确数值格式。
-- 不输出默认别名或兼容字段。
+- 拒绝重复属性和未知字段。
+- 稳定字段顺序。
+- 稳定entity顺序。
+- 明确有限数值格式。
 
-因此纯格式调整不会制造业务dirty，语义修改一定改变hash。
-
-## Decision 5: live authoring revision独立于generated Program
-
-同步revision必须在不build的情况下从当前authoring内容计算：
+整包hash：
 
 ```text
-Character root
-  + Definition正式可写配置
-  + 全部可达Graph/StateMachine/ConditionRuleGraph
-  + inline/shared Timeline及其Track/Clip/Marker/Curve
-  + Agent可写Input/ActionProfile/Blackboard依赖
-
-AI root
-  + AIControllerDefinition
-  + AIControllerTree与全部可达Graph
-  + AI Blackboard
-  + Perception Profile
-  + 受控Character的只读input/request contract identity
+editableHash = H(sorted(editable relative path + file semantic hash))
+contextHash = H(sorted(context relative path + file semantic hash))
+documentHash = H(schema + domain + root identity + editableHash + contextHash)
 ```
 
-generated Program、Projection和AIIntentProgram revision只进入`context`诊断，不参与判断作者是否改过树。Revision calculator必须只读，不调用任何build或publish入口。
-
-## Decision 6: 四态同步由revision和hash推导
-
-设：
+`.sync.json`保存：
 
 ```text
-treeChanged = currentSourceRevision != sync.baseSourceRevision
-documentChanged = canonical(editable + context contract) != sync.baseContentHash
+baseSourceRevision
+baseEditableHash
+baseContextHash
 ```
 
-状态为：
+`.sync.json`不参与editable/context hash。manifest与sync身份不一致、文件清单缺失、出现未登记JSON文件或context被修改都属于非法文档包。
 
-| treeChanged | documentChanged | 状态 | 允许动作 |
-|---|---|---|---|
-| false | false | `Clean` | checkout、validate |
-| true | false | `TreeDirty` | 显式checkout刷新文档 |
-| false | true | `DocumentDirty` | dry-run、apply |
-| true | true | `Conflict` | inspect、显式rebase；拒绝apply |
+状态：
 
-状态不保存为可编辑bool，每次action都从当前树和当前文件重新计算。
+| Unity侧变化 | editable变化 | 状态 |
+|---|---|---|
+| false | false | `Clean` |
+| true | false | `TreeDirty` |
+| false | true | `DocumentDirty` |
+| true | true | `Conflict` |
 
-## Decision 7: checkout只在明确请求时写文档
+Unity侧变化包含live可写authoring revision或current context hash变化。状态每次显式调用重新计算，不保存可编辑dirty bool。
 
-`checkout_document`固定行为：
+## Decision 9: Document Store使用目录级staging与原子发布
 
-1. 显式加载domain与root path。
-2. 计算live authoring revision。
-3. 读取确定性文档路径。
-4. 无文档时从当前树生成完整规范Document。
-5. `Clean`或`TreeDirty`且Document未改时，从当前树刷新Document。
-6. `DocumentDirty`时保留现有文件并返回路径和状态，不覆盖AI工作。
-7. `Conflict`时保留双方并返回结构化冲突，不重写文件。
+checkout和apply反向导出先生成完整staging目录：
 
-checkout不build、不validate generated product、不保存Unity资产。
+1. 写入全部规范文件。
+2. 严格重读并计算整包hash。
+3. 校验manifest文件清单和root身份。
+4. 将当前正式目录改为rollback目录。
+5. 将staging目录原子切换为正式目录。
+6. 成功后删除rollback目录；失败时恢复上一目录。
 
-## Decision 8: Reconciler只生成内部Mutation Plan
+Store只接受由domain、root path和root identity计算的确定性路径。调用方不能提交任意文档目录，Store也不扫描其它目录寻找替代包。
 
-正式降低链改为：
+apply期间文档包发布与Unity资产事务属于同一应用服务成功边界。反向发布失败时不得报告`Clean`。
+
+## Decision 10: Reconciler消费目标状态，不消费编辑操作
+
+正式链：
 
 ```text
-AgentAuthoringDocument
-  -> strict parse
-  -> sync/root/context validation
-  -> current canonical Snapshot
+document package
+  -> strict multi-file parse
+  -> package/root/context validation
+  -> current canonical Unity projection
   -> AgentDocumentReconciler
   -> immutable AgentMutationPlan
-  -> existing preflight/session/handler
+  -> preflight
+  -> typed handlers
 ```
 
-Reconciler按stable identity比较实体：
+Reconciler负责：
 
-- 现有identity且内容相同：不生成命令。
-- 现有identity且可写字段变化：生成对应typed update command。
-- 新local identity：建立planning symbol并生成typed create command。
-- 现有可写identity从完整目标集合消失：生成typed delete command。
-- read-only或unsupported identity变化：拒绝，不生成命令。
+- stable/local identity索引。
+- owner和Graph创建顺序。
+- Node创建、属性更新和删除。
+- Flow Edge与Property Edge完整增删。
+- endpoint变化降低为旧Edge删除和新Edge创建。
+- Graph reference、ConditionRule、StateMachine和Timeline引用绑定。
+- Timeline、Track、Clip、Marker和Curve完整目标状态。
+- Blackboard、Action与AI领域配置。
+- 受影响serialized owner收集和删除顺序。
 
-创建顺序、引用绑定、edge重接、owner收集和删除顺序由Reconciler和typed plan决定，不暴露给AI。
+AI不填写mutation kind、handler、前序输出或执行顺序。Patch/operation catalog不再是外部合同。
 
-现有Patch Command/Compiler类型直接迁移为`AgentMutation*`命名，不保留Patch alias。Handler继续调用相同正式BTSMTL/Timeline/AI authoring API。
+## Decision 11: 五个独立MCP工具只表达生命周期
 
-## Decision 9: dry-run和apply以documentHash锁定同一语义输入
+删除`manage_btsmtl_agent_authoring(action, ...)`，正式工具固定为：
 
-`dry_run_document`：
+| Tool | 输入 | 行为 |
+|---|---|---|
+| `btsmtl.checkout_document` | `domain`, `root_asset_path` | 创建或刷新文档包 |
+| `btsmtl.rebase_document` | `domain`, `root_asset_path`, `confirm_rebase` | 接受当前Unity基线 |
+| `btsmtl.dry_run_document` | `domain`, `root_asset_path` | 严格解析、reconcile、preflight |
+| `btsmtl.apply_document` | `domain`, `root_asset_path`, `expected_document_hash` | 事务apply并反向同步 |
+| `btsmtl.validate` | `domain`, `root_asset_path` | 只读验证正式Unity树 |
 
-1. 重新读取文档。
-2. 重新计算live source revision和sync状态。
-3. 只接受`DocumentDirty`或明确允许的无变化`Clean`。
-4. 严格解析、reconcile和preflight。
-5. 返回canonical `documentHash`、planned diff、诊断和metrics。
+每个工具：
 
-`apply_document`：
+- input schema设置`additionalProperties: false`。
+- 拥有独立output schema和`structuredContent`。
+- 业务/schema错误用tool execution error返回`code/path/message/suggestion`。
+- 不返回或嵌入完整文档包JSON，只返回绝对路径、状态、hash、diff摘要和诊断。
 
-1. 要求`expected_document_hash`。
-2. 重新计算文档hash和live source revision。
-3. 任一身份、revision、hash或状态变化时在mutation前失败。
-4. 重新建立与dry-run相同语义的immutable plan并校验其plan hash。
-5. 在唯一Undo事务内apply、validate、dirty与save。
-6. 只有显式apply成功后才调用正式generated product发布。
+建议annotations：
 
-dry-run不缓存Unity对象或跨MCP调用保存plan。hash锁定语义输入，apply在当前Editor状态重新构建等价plan，避免跨domain reload持有失效对象。
+| Tool | readOnlyHint | destructiveHint | idempotentHint | openWorldHint |
+|---|---:|---:|---:|---:|
+| checkout | false | false | true | false |
+| rebase | false | true | true | false |
+| dry-run | true | false | true | false |
+| apply | false | true | false | false |
+| validate | true | false | true | false |
 
-## Decision 10: apply成功后以正式树反向规范化Document
+五个工具的数量永远不随Node、Edge、Timeline类型增长。
 
-正式顺序：
+## Decision 12: 文件编辑属于宿主，不属于BTSMTL领域工具
+
+checkout返回文档包绝对路径。AI使用Codex系统文件工具、通用filesystem MCP或其它宿主已有文件能力直接读写JSON。
+
+BTSMTL不提供：
 
 ```text
-apply mutation plan
-  -> validate formal tree
-  -> save formal owners
-  -> explicit generated product publish
-  -> export final canonical document
-  -> atomic replace document file
-  -> update baseSourceRevision/baseContentHash
-  -> Clean
+create_node
+delete_node
+link_edge
+configure_node
+edit_curve_key
+write_document_file
+apply_json_patch
 ```
 
-stable identity、实际owner和规范顺序只能从最终树获得。若Document写回失败，Unity事务不得被报告为完整成功；service必须在可回滚边界内处理文档原子替换，不能留下“树已保存但JSON仍声称待应用”的假状态。
+官方MCP将Tools定义为模型控制的外部动作，将Resources定义为上下文数据。直接文件编辑已经由通用filesystem能力覆盖；再建立BTSMTL局部工具只会复制文件编辑和Reconciler职责。
 
-## Decision 11: Conflict只允许显式rebase
+## Decision 13: checkout、dry-run、apply和rebase闭环
 
-发生`Conflict`时，系统不自动选择任何一边。`rebase_document`：
+AI编辑流程：
 
-1. 返回当前树的规范投影与Document差异诊断。
-2. 要求AI先把当前人工变化合入editable body。
-3. 显式确认后，只把当前树revision和当前树canonical content hash写为Document新基线。
-4. 保留AI编辑后的目标body，使状态回到`DocumentDirty`。
-5. 后续必须重新dry-run。
+```text
+显式checkout
+  -> 返回文档包路径与Clean/TreeDirty状态
+  -> AI只读取相关catalog和editable文件
+  -> AI直接修改JSON文件
+  -> 文件保存不触发Unity工作
+  -> 显式dry-run
+  -> 返回整包documentHash、planned diff和诊断
+  -> AI按诊断继续修改并重新dry-run
+  -> 显式apply(expected documentHash)
+  -> 事务Mutation + Validator + Save
+  -> 从最终Unity树反向导出整个文档包
+  -> local identity转stable identity
+  -> Clean
+  -> Character需要正式产物时显式精确Build
+  -> 显式validate读取最终正式树
+```
 
-rebase不修改Unity树、不build、不apply，也不静默删除AI或人工内容。
+Conflict时：
 
-## Decision 12: 所有重操作都必须显式触发
+```text
+Unity与Document都变化
+  -> dry-run/apply拒绝
+  -> AI读取当前Unity差异摘要
+  -> AI把需要保留的人工变化合入editable
+  -> 显式rebase(confirm)
+  -> 当前Unity成为新基线，AI目标正文保留
+  -> DocumentDirty
+  -> 重新dry-run
+```
 
-以下事件只允许更新可见状态或延迟到下一次显式查询计算：
+rebase不修改Unity资产、不build、不自动merge。
 
-- Graph/Timeline/Inspector编辑。
+## Decision 14: 所有重操作只允许明确触发
+
+以下事件不得触发checkout、reconcile、dry-run、apply、validate、compile、Program build或Projection build：
+
 - JSON文件保存。
-- selection变化。
-- 窗口focus。
+- Graph/Timeline/Inspector编辑。
+- selection与focus变化。
 - AssetDatabase refresh。
 - domain reload。
 
-它们不得触发checkout、reconcile、dry-run、apply、Program build或Projection build。只有`apply_document`允许在事务成功后显式发布generated product；独立`validate`只做只读正式校验。
-
-## MCP Contract
-
-继续只有一个工具：
-
-```text
-manage_btsmtl_agent_authoring
-```
-
-正式action：
-
-```text
-checkout_document
-rebase_document
-dry_run_document
-apply_document
-validate
-```
-
-共同参数保留显式`domain + root_asset_path`。`apply_document`额外要求`expected_document_hash`。Document路径由service计算并返回，调用方不能传入任意文件路径。
-
-删除：
-
-```text
-bootstrap_ai_controller
-export_snapshot
-dry_run_patch
-apply_patch
-patch_json
-```
-
-## Editor Window
-
-窗口只负责：
-
-- 显示明确root上下文。
-- 显示Document确定性路径。
-- 显示`Clean/TreeDirty/DocumentDirty/Conflict`。
-- 提供显式checkout、rebase、dry-run、apply和validate按钮。
-- 显示planned diff、applied diff和机器诊断。
-
-窗口不内嵌第二个JSON编辑器；AI使用普通文件工具编辑Document。窗口不因selection自动切root或执行任何重操作。
+`btsmtl.apply_document`只负责正式authoring事务、保存和反向文档发布。AI domain继续在自身事务内发布AIIntentProgram；Character Program与Projection必须在apply成功后通过精确Definition的独立Build生命周期显式发布。布局修改本身不得导致Program/Projection重建。
 
 ## Failure Semantics
 
 - root缺失或类型不符：失败，不扫描替代资产。
-- Document缺失：只有checkout可创建。
-- schema不匹配：失败，不转换v16/v17 Patch。
-- sync头被修改：失败并指出service-owned字段。
-- TreeDirty或Conflict：apply前失败。
+- 文档包缺失：只有checkout可创建。
+- v1单文件或旧Patch输入：失败，不迁移、不转换。
+- manifest、sync或文件清单非法：失败。
+- context被修改：`readonly_context_modified`。
+- editable kind未形成完整能力闭包：`authoring_capability_incomplete`。
+- unknown kind、property、port、anchor、owner或reference：reconcile前失败。
+- TreeDirty或Conflict：dry-run/apply失败。
 - document hash变化：apply前失败。
-- unknown entity、field、node capability或reference：reconcile前失败。
 - transaction owner不完整：mutation前失败。
-- apply或validator失败：回滚全部Unity owner。
-- generated product发布失败：回滚并保持DocumentDirty。
-- final Document原子写回失败：不得报告Clean或完整成功。
+- handler或Validator失败：回滚全部Unity owner。
+- AI generated product发布失败：回滚并保持DocumentDirty。
+- Character Build失败：保持已保存authoring与stale generated product，返回Target与Projection诊断，不伪装为Document apply失败。
+- 最终文档包反向发布失败：不得报告Clean或完整成功。
 
 ## Migration
 
-1. 冻结旧v16/v17 Patch外部schema，不再增加operation。
-2. 建立Document模型、canonical codec、store、revision和sync evaluator。
-3. 建立Document Reconciler并复用现有typed handler验证能力覆盖。
-4. 将内部Patch类型原子改名为Mutation类型。
-5. 把Service、Window和MCP切换到Document action。
-6. 删除Intent、Macro、Patch parser、旧action和bootstrap。
-7. 重基线`add-corin-training-ai-demo`未完成任务。
-8. 更新skill、current-contract与project口径。
+1. 冻结当前单文件v1，不再补字段或兼容逻辑。
+2. 建立v2 manifest、分片schema、strict codec、package hash与目录Store。
+3. 将NodeEmitter registry收敛为唯一authoring capability catalog。
+4. 改写Graph/Timeline/AI exporter，输出稀疏模型、anchor和context catalog。
+5. 改写Reconciler，补齐Flow/Property Edge及全部目标状态CRUD。
+6. 将application service切换为整包读取、hash和反向发布。
+7. 用五个独立生命周期MCP工具替换action multiplexer。
+8. 更新Window、技能、current-contract、project与Corin active change。
+9. 删除单文件v1、旧Store、旧tool、Patch/Macro/bootstrap和全部兼容入口。
 
-迁移结束时只能存在Document到Mutation Plan这一条Agent写入链。不得保留隐藏旧菜单、兼容reader、临时Patch文件或双写response。
+迁移结束时只允许：
+
+```text
+JSON document package -> Reconciler -> Mutation Plan -> formal authoring APIs
+```
 
 ## Tradeoffs
 
-### 完整目标文档而不是操作数组
+### 多文件包与单文件
 
-AI更容易理解状态、状态机和Timeline结构，系统也能自己决定最小修改顺序。代价是必须实现严格、稳定的Reconciler，并明确unsupported/read-only实体的保留规则。
+多文件包让AI按Graph或Timeline选择性读取，显著降低局部修改上下文。代价是Store、canonical hash和原子发布复杂度增加，因此同步粒度必须继续保持整包，不能再引入文件级状态。
 
-### 显式同步而不是实时绑定
+### 稀疏规范schema与Unity对象快照
 
-避免每次文件保存或Graph编辑卡住Unity Editor，也允许AI在文档中多轮修改。代价是必须显示脏状态并处理冲突，用户不能假设文件和树始终同步。
+稀疏schema更接近AI实际要组合的Graph，并隔离C#重命名和序列化细节。代价是需要维护正式kind/property/port catalog，但这个catalog同时解决exporter与creator能力漂移。
+
+### 直接文件编辑与Node级工具
+
+直接文件编辑让AI一次描述完整目标状态，Reconciler统一决定顺序和最小Mutation。Node级工具更适合交互式单步操控，但会增加工具选择、往返、部分失败和中间状态；本业务的核心是生成整张图，因此不采用。
+
+### 五个生命周期工具与单action工具
+
+五个工具让模型、客户端和权限层清楚识别只读、破坏性、必需参数和输出schema。代价是工具数从1变为5，但它仍是固定小集合，不会随Graph能力增长。
 
 ### Unity树继续是正式真相
 
-保留Graph Editor、Timeline Editor和现有资产编译链，不需要把全部人工工具改成JSON前端。代价是JSON只能作为工作文档，不能在未apply时被其它系统消费。
-
-### 语义hash而不是原始文件hash
-
-格式化不会制造无意义冲突，AI可以自由调整缩进。代价是必须拥有唯一canonical parser/writer，不能继续依赖会忽略未知字段的宽松JSON解析。
-
-### 冲突失败而不是自动merge
-
-不会静默覆盖人工Graph改动或AI工作。代价是双边同时修改后需要一次显式rebase和新的dry-run。
-
+保留现有Graph/Timeline人工编辑与Program编译链。代价是JSON包是工作副本而不是实时镜像，必须显式处理TreeDirty和Conflict。

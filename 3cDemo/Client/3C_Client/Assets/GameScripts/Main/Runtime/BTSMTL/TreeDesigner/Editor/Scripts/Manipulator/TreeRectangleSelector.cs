@@ -9,7 +9,7 @@ namespace TreeDesigner.Editor
     public class TreeRectangleSelector : MouseManipulator
     {
         readonly List<ISelectable> m_BaseSelection = new List<ISelectable>();
-        BaseTreeView m_TreeView;
+        GraphView m_GraphView;
         VisualElement m_Rectangle;
         Vector2 m_Start;
         Vector2 m_End;
@@ -34,19 +34,19 @@ namespace TreeDesigner.Editor
 
         void OnMouseDown(MouseDownEvent evt)
         {
-            if (m_Active || evt.button != 0 || evt.altKey || target is not BaseTreeView treeView)
+            if (m_Active || evt.button != 0 || evt.altKey || target is not GraphView graphView)
                 return;
 
-            if (!CanStartFrom(evt.target as VisualElement, treeView))
+            if (!CanStartFrom(evt.target as VisualElement, graphView))
                 return;
 
-            m_TreeView = treeView;
+            m_GraphView = graphView;
             m_Start = m_End = ToGraphLocal(evt);
             m_Additive = evt.shiftKey || evt.actionKey;
             m_BaseSelection.Clear();
 
             if (m_Additive)
-                m_BaseSelection.AddRange(treeView.selection);
+                m_BaseSelection.AddRange(graphView.selection);
 
             EnsureRectangle();
             UpdateRectangle();
@@ -89,23 +89,23 @@ namespace TreeDesigner.Editor
         void ApplySelection()
         {
             Rect selectionRect = ToWorldRect(m_Start, m_End);
-            List<GraphElement> selectedElements = m_TreeView.graphElements
+            List<GraphElement> selectedElements = m_GraphView.graphElements
                 .Where(CanSelect)
                 .Where(i => selectionRect.Overlaps(i.worldBound))
                 .ToList();
 
-            m_TreeView.ClearSelection();
+            m_GraphView.ClearSelection();
 
             if (m_Additive)
             {
                 foreach (ISelectable selectable in m_BaseSelection.Where(i => i != null))
-                    m_TreeView.AddToSelection(selectable);
+                    m_GraphView.AddToSelection(selectable);
             }
 
             foreach (GraphElement element in selectedElements)
             {
-                if (!m_TreeView.selection.Contains(element))
-                    m_TreeView.AddToSelection(element);
+                if (!m_GraphView.selection.Contains(element))
+                    m_GraphView.AddToSelection(element);
             }
         }
 
@@ -189,12 +189,12 @@ namespace TreeDesigner.Editor
             return (element.capabilities & Capabilities.Selectable) == Capabilities.Selectable;
         }
 
-        static bool CanStartFrom(VisualElement element, BaseTreeView treeView)
+        static bool CanStartFrom(VisualElement element, GraphView graphView)
         {
             if (element == null)
                 return false;
 
-            if (element == treeView || element == treeView.contentViewContainer || element == treeView.contentContainer)
+            if (element == graphView || element == graphView.contentViewContainer || element == graphView.contentContainer)
                 return true;
 
             if (element is GraphElement || element.GetFirstAncestorOfType<GraphElement>() != null)

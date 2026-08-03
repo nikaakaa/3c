@@ -19,7 +19,7 @@ MonoBehaviour:
     type: BaseTree
     locked: 0
   - guid: 85b261b17e94e1c4784c45be082f5101
-    path: Assets/Configs/Character/Corin/Pipeline/Definition/CorinTrainingAIController.AIRootTree.asset
+    path: Assets/Configs/Character/Corin/Pipeline/AI/Training/Authoring/CorinTrainingAIController.AIRootTree.asset
     name: CorinTrainingAIController.AIRootTree
     type: AIControllerTree
     locked: 0

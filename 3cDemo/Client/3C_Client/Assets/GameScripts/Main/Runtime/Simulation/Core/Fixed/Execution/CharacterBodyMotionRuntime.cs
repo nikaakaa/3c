@@ -126,7 +126,10 @@ namespace ThirdPersonSimulation.Fixed
                 requestedVelocity,
                 gameplayMotion.YawDegrees,
                 WorldMotionSpace.World,
-                requestedDisplacement != FixedVector3.Zero || gameplayMotion.YawDegrees != FixedScalar.Zero);
+                requestedDisplacement != FixedVector3.Zero || gameplayMotion.YawDegrees != FixedScalar.Zero,
+                gameplayMotion.LocomotionOwnerIdentity,
+                gameplayMotion.ActionOwnerIdentity,
+                gameplayMotion.GameplayResultOwnerIdentity);
             return new BodyMotionPrepareResult(plan, motion);
         }
 

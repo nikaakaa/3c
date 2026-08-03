@@ -91,7 +91,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
     internal sealed class CharacterMotionMatchingTrajectoryRuntime
     {
         readonly MotionMatchingTrajectoryPolicyPayload m_Policy;
-        ulong m_ResetSequence;
+        ulong m_CommittedResetSequence;
+        ulong m_PendingResetSequence;
+        bool m_FrameOpen;
 
         public CharacterMotionMatchingTrajectoryRuntime(MotionMatchingTrajectoryPolicyPayload policy)
         {
@@ -100,14 +102,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
         public void Build(MotionMatchingTrajectorySourceFrame source, MotionMatchingTrajectoryEnvelope output)
         {
+            RequireOpenFrame();
             if (output == null)
                 throw new ArgumentNullException(nameof(output));
             if (output.Capacity < m_Policy.PointCount)
                 throw new InvalidOperationException("Motion Matching Trajectory Envelope capacity is smaller than the compiled policy.");
-            if (source.ResetSequence != m_ResetSequence)
+            if (source.ResetSequence != m_PendingResetSequence)
             {
                 output.Clear();
-                m_ResetSequence = source.ResetSequence;
+                m_PendingResetSequence = source.ResetSequence;
             }
             output.Begin(source);
             Quaternion worldToLocal = Quaternion.Inverse(source.WorldRotation);
@@ -155,7 +158,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
         public void Reset(ulong resetSequence)
         {
-            m_ResetSequence = resetSequence;
+            if (m_FrameOpen)
+                throw new InvalidOperationException("Motion Matching Trajectory cannot reset while a frame is open.");
+            m_CommittedResetSequence = resetSequence;
+            m_PendingResetSequence = resetSequence;
+        }
+
+        internal void BeginFrame()
+        {
+            if (m_FrameOpen)
+                throw new InvalidOperationException("Motion Matching Trajectory frame is already open.");
+            m_PendingResetSequence = m_CommittedResetSequence;
+            m_FrameOpen = true;
+        }
+
+        internal void CommitFrame()
+        {
+            RequireOpenFrame();
+            m_CommittedResetSequence = m_PendingResetSequence;
+            m_FrameOpen = false;
+        }
+
+        internal void DiscardFrame()
+        {
+            RequireOpenFrame();
+            m_PendingResetSequence = m_CommittedResetSequence;
+            m_FrameOpen = false;
         }
 
         static Vector3 ToWorld(Vector2 planar) => new Vector3(planar.x, 0f, planar.y);
@@ -175,6 +203,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             float sin = Mathf.Sin(radians);
             float cos = Mathf.Cos(radians);
             return new Vector2(value.x * cos - value.y * sin, value.x * sin + value.y * cos).normalized;
+        }
+
+        void RequireOpenFrame()
+        {
+            if (!m_FrameOpen)
+                throw new InvalidOperationException("Motion Matching Trajectory has no open frame.");
         }
     }
 }

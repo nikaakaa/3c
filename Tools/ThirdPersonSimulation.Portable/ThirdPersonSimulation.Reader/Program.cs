@@ -456,7 +456,7 @@ namespace ThirdPersonSimulation.Reader
                 for (int i = 0; i < producers.Count; i++)
                 {
                     ProgramProducer value = producers[i];
-                    Console.WriteLine($"{value.Index}\t{Escape(value.Identity)}\tlayer={Escape(value.LayerId)}\tsource={Escape(value.SourceIdentity)}\tchannel={value.ChannelKind}");
+                    Console.WriteLine($"{value.Index}\t{Escape(value.Identity)}\tanimationChannel={Escape(value.AnimationChannelId.Value)}\tsource={Escape(value.SourceIdentity)}\tchannel={value.ChannelKind}");
                 }
             }
             if (section == "source-map" || section == "all")
@@ -971,7 +971,7 @@ namespace ThirdPersonSimulation.Reader
                     writer.WriteStartObject();
                     writer.WriteNumber("index", value.Index);
                     writer.WriteString("identity", value.Identity);
-                    writer.WriteString("layerId", value.LayerId);
+                    writer.WriteString("animationChannelId", value.AnimationChannelId.Value);
                     writer.WriteString("sourceIdentity", value.SourceIdentity);
                     writer.WriteString("channelKind", value.ChannelKind.ToString());
                     writer.WriteEndObject();

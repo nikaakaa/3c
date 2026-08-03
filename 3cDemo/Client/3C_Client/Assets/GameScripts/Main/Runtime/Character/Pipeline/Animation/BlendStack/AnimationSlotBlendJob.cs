@@ -1,4 +1,5 @@
 using System;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
@@ -7,6 +8,7 @@ using static ThirdPersonCharacter.Pipeline.Animation.BlendStack.AnimationSlotBle
 
 namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 {
+    [BurstCompile]
     internal struct AnimationSlotBlendJob : IAnimationJob
     {
         const float WeightTolerance = 0.0001f;
@@ -33,7 +35,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         [ReadOnly]
         readonly NativeArray<ulong> m_SourceCompletedAt;
         [ReadOnly]
-        readonly NativeArray<int> m_SourceProgramProducerIndices;
+        readonly NativeArray<AnimationSourcePoseCaptureFailure> m_SourceCaptureFailures;
+        [ReadOnly]
+        readonly NativeArray<int> m_SourceOwnerIndices;
 
         NativeArray<AnimationSlotBlendStoredPoseNativeState> m_StoredState;
         NativeArray<AnimationLocalBonePose> m_StoredPose;
@@ -125,7 +129,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             m_SourceVisualTimeScales = sources.VisualTimeScales;
             m_SourceHasFootFeatures = sources.HasFootFeatures;
             m_SourceCompletedAt = sources.CompletedAt;
-            m_SourceProgramProducerIndices = sources.ProgramProducerIndices;
+            m_SourceCaptureFailures = sources.CaptureFailures;
+            m_SourceOwnerIndices = sources.SourceOwnerIndices;
 
             m_StoredState = workspace.StoredPose.State;
             m_StoredPose = workspace.StoredPose.DenseLocalPose;
@@ -258,7 +263,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 if (entry.Kind == AnimationPoseContributionKind.Live)
                 {
                     if (!IsValidSource(entry))
-                        return AnimationPoseNativeInvalidReason.SourceIncomplete;
+                        return CaptureFailureReason(entry.SourceCaptureIndex);
                 }
                 else if (entry.Kind == AnimationPoseContributionKind.Stored)
                 {
@@ -285,12 +290,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 : AnimationPoseNativeInvalidReason.SlotPoseInvalid;
         }
 
+        AnimationPoseNativeInvalidReason CaptureFailureReason(int sourceIndex)
+        {
+            if ((uint)sourceIndex >= (uint)m_SourceCaptureFailures.Length)
+                return AnimationPoseNativeInvalidReason.SourceIncomplete;
+            return m_SourceCaptureFailures[sourceIndex] switch
+            {
+                AnimationSourcePoseCaptureFailure.PhysicalPoseInvalid =>
+                    AnimationPoseNativeInvalidReason.SourcePhysicalPoseInvalid,
+                AnimationSourcePoseCaptureFailure.VirtualBoneDerivationInvalid =>
+                    AnimationPoseNativeInvalidReason.SourceVirtualBoneInvalid,
+                AnimationSourcePoseCaptureFailure.PreviousPoseInvalid =>
+                    AnimationPoseNativeInvalidReason.SourcePoseHistoryInvalid,
+                _ => AnimationPoseNativeInvalidReason.SourceIncomplete
+            };
+        }
+
         bool IsValidSource(AnimationSlotBlendFramePlanEntry entry)
         {
             int sourceIndex = entry.SourceCaptureIndex;
             if ((uint)sourceIndex >= (uint)m_SourceCapacity ||
                 m_SourceCompletedAt[sourceIndex] != m_CompletionIdentity ||
-                m_SourceProgramProducerIndices[sourceIndex] != entry.ProgramProducerIndex ||
+                m_SourceOwnerIndices[sourceIndex] != entry.SourceOwnerIndex ||
                 m_SourceHasFootFeatures[sourceIndex] > 1 ||
                 !float.IsFinite(m_SourceVisualTimeScales[sourceIndex]) || m_SourceVisualTimeScales[sourceIndex] < 0f)
             {
@@ -394,7 +415,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     entry.PhysicalSourceIndex,
                     entry.PhysicalSourceGeneration,
                     entry.Kind,
-                    entry.ProgramProducerIndex,
+                    entry.SourceOwnerIndex,
                     entry.ContributionContinuityIdentity,
                     entry.ScalarWeight,
                     entry.LeftFootWeight,
@@ -1021,8 +1042,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         {
             plan.RequireValidLayout();
             AnimationSlotBlendFramePlanHeader header = plan.Header;
-            if (sourceCapacity != checked(header.MaxActiveSourceEntries + 1))
-                throw new ArgumentException();
+            int expectedSourceCapacity = checked(
+                (header.MaxActiveSourceEntries + 1) *
+                AnimationBlendSourcePoseWorkspace.PhysicalPageCount);
+            if (sourceCapacity != expectedSourceCapacity)
+            {
+                throw new ArgumentException(
+                    $"Animation Slot Blend source capacity '{sourceCapacity}' does not match plan capacity '{expectedSourceCapacity}'.");
+            }
 
             int liveCount = 0;
             int storedCount = 0;
@@ -1032,36 +1059,60 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             for (int contributionIndex = 0; contributionIndex < header.ContributionCount; contributionIndex++)
             {
                 AnimationSlotBlendFramePlanEntry entry = plan.GetEntry(contributionIndex);
-                if (!entry.IsValid ||
-                    entry.Kind == AnimationPoseContributionKind.Live &&
+                if (!entry.IsValid)
+                    throw new ArgumentException($"Animation Slot Blend contribution #{contributionIndex} is invalid.");
+                if (entry.Kind == AnimationPoseContributionKind.Live &&
                     (uint)entry.SourceCaptureIndex >= (uint)sourceCapacity)
-                    throw new ArgumentException();
+                {
+                    throw new ArgumentException(
+                        $"Animation Slot Blend live contribution #{contributionIndex} capture index '{entry.SourceCaptureIndex}' exceeds source capacity '{sourceCapacity}'.");
+                }
                 for (int previousIndex = 0; previousIndex < contributionIndex; previousIndex++)
                 {
                     if (entry.ContributionContinuityIdentity ==
                         plan.GetEntry(previousIndex).ContributionContinuityIdentity)
-                        throw new ArgumentException();
+                    {
+                        throw new ArgumentException(
+                            $"Animation Slot Blend contributions #{previousIndex} and #{contributionIndex} share continuity identity '{entry.ContributionContinuityIdentity}'.");
+                    }
                 }
                 if (entry.Kind == AnimationPoseContributionKind.Live)
                     liveCount++;
                 else if (entry.Kind == AnimationPoseContributionKind.Stored)
                     storedCount++;
                 else
-                    throw new ArgumentException();
+                    throw new ArgumentException($"Animation Slot Blend contribution #{contributionIndex} kind '{entry.Kind}' is unsupported.");
                 scalarWeight += entry.ScalarWeight;
                 leftFootWeight += entry.LeftFootWeight;
                 rightFootWeight += entry.RightFootWeight;
             }
             if (!float.IsFinite(scalarWeight) || !float.IsFinite(leftFootWeight) ||
-                !float.IsFinite(rightFootWeight) ||
-                scalarWeight > 1f + WeightTolerance || leftFootWeight > 1f + WeightTolerance ||
-                rightFootWeight > 1f + WeightTolerance ||
-                Mathf.Abs(scalarWeight - header.OutputWeight) > WeightTolerance ||
-                liveCount > header.MaxActiveSourceEntries || storedCount > 1 ||
-                header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture && storedCount != 1 ||
-                header.Kind == AnimationSlotBlendFramePlanKind.Unavailable &&
+                !float.IsFinite(rightFootWeight))
+                throw new ArgumentException("Animation Slot Blend contribution weights are not finite.");
+            if (scalarWeight > 1f + WeightTolerance ||
+                leftFootWeight > 1f + WeightTolerance ||
+                rightFootWeight > 1f + WeightTolerance)
+            {
+                throw new ArgumentException(
+                    $"Animation Slot Blend contribution weights exceed one: scalar={scalarWeight:R}, left={leftFootWeight:R}, right={rightFootWeight:R}.");
+            }
+            if (Mathf.Abs(scalarWeight - header.OutputWeight) > WeightTolerance)
+            {
+                throw new ArgumentException(
+                    $"Animation Slot Blend scalar contribution '{scalarWeight:R}' does not match output weight '{header.OutputWeight:R}'.");
+            }
+            if (liveCount > header.MaxActiveSourceEntries)
+                throw new ArgumentException($"Animation Slot Blend live contribution count '{liveCount}' exceeds capacity '{header.MaxActiveSourceEntries}'.");
+            if (storedCount > 1)
+                throw new ArgumentException($"Animation Slot Blend stored contribution count '{storedCount}' exceeds one.");
+            if (header.Kind == AnimationSlotBlendFramePlanKind.StoredCapture && storedCount != 1)
+                throw new ArgumentException($"Animation Slot Blend StoredCapture plan requires one stored contribution, actual '{storedCount}'.");
+            if (header.Kind == AnimationSlotBlendFramePlanKind.Unavailable &&
                 (liveCount != 0 || storedCount != 0 || scalarWeight != 0f))
-                throw new ArgumentException();
+            {
+                throw new ArgumentException(
+                    $"Animation Slot Blend Unavailable plan contains live={liveCount}, stored={storedCount}, scalar={scalarWeight:R}.");
+            }
 
             bool hasOutputWeight = header.OutputWeight > 0f;
             for (int boneIndex = 0; boneIndex < header.BoneCount; boneIndex++)
@@ -1081,8 +1132,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             AnimationBlendSourcePoseNativeReadBinding binding,
             AnimationSlotBlendFramePlanHeader header)
         {
+            int expectedSourceCapacity = checked(
+                (header.MaxActiveSourceEntries + 1) *
+                AnimationBlendSourcePoseWorkspace.PhysicalPageCount);
             if (binding.BoneCount != header.BoneCount || binding.ParameterCount != header.ParameterCount ||
-                binding.SourceCapacity != checked(header.MaxActiveSourceEntries + 1) ||
+                binding.SourceCapacity != expectedSourceCapacity ||
                 binding.CompletionIdentity != header.CompletionIdentity)
             {
                 throw new ArgumentException();
@@ -1096,7 +1150,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             RequireLength(binding.VisualTimeScales, binding.SourceCapacity);
             RequireLength(binding.HasFootFeatures, binding.SourceCapacity);
             RequireLength(binding.CompletedAt, binding.SourceCapacity);
-            RequireLength(binding.ProgramProducerIndices, binding.SourceCapacity);
+            RequireLength(binding.CaptureFailures, binding.SourceCapacity);
+            RequireLength(binding.SourceOwnerIndices, binding.SourceCapacity);
         }
 
         static void RequireFinalBinding(

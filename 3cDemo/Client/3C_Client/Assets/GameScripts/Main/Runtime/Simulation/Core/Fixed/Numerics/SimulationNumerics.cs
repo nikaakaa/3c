@@ -390,6 +390,7 @@ namespace ThirdPersonSimulation.Fixed
         public bool Equals(FixedVector2 other) => X == other.X && Y == other.Y;
         public override bool Equals(object obj) => obj is FixedVector2 other && Equals(other);
         public override int GetHashCode() => unchecked(X.GetHashCode() * 397 ^ Y.GetHashCode());
+        public override string ToString() => $"({X},{Y})";
         public static FixedVector2 operator +(FixedVector2 left, FixedVector2 right) => new FixedVector2(left.X + right.X, left.Y + right.Y);
         public static FixedVector2 operator -(FixedVector2 left, FixedVector2 right) => new FixedVector2(left.X - right.X, left.Y - right.Y);
         public static FixedVector2 operator -(FixedVector2 value) => new FixedVector2(-value.X, -value.Y);
@@ -429,6 +430,7 @@ namespace ThirdPersonSimulation.Fixed
         public bool Equals(FixedVector3 other) => X == other.X && Y == other.Y && Z == other.Z;
         public override bool Equals(object obj) => obj is FixedVector3 other && Equals(other);
         public override int GetHashCode() => unchecked((X.GetHashCode() * 397 ^ Y.GetHashCode()) * 397 ^ Z.GetHashCode());
+        public override string ToString() => $"({X},{Y},{Z})";
         public static FixedVector3 operator +(FixedVector3 left, FixedVector3 right) => new FixedVector3(left.X + right.X, left.Y + right.Y, left.Z + right.Z);
         public static FixedVector3 operator -(FixedVector3 left, FixedVector3 right) => new FixedVector3(left.X - right.X, left.Y - right.Y, left.Z - right.Z);
         public static FixedVector3 operator -(FixedVector3 value) => new FixedVector3(-value.X, -value.Y, -value.Z);
@@ -452,6 +454,7 @@ namespace ThirdPersonSimulation.Fixed
         public bool Equals(FixedYaw other) => Degrees == other.Degrees;
         public override bool Equals(object obj) => obj is FixedYaw other && Equals(other);
         public override int GetHashCode() => Degrees.GetHashCode();
+        public override string ToString() => Degrees.ToString();
         public static bool operator ==(FixedYaw left, FixedYaw right) => left.Equals(right);
         public static bool operator !=(FixedYaw left, FixedYaw right) => !left.Equals(right);
 

@@ -114,6 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
     {
         readonly MotionMatchingProjectionPayload m_Projection;
         readonly MotionMatchingDatabasePayload m_Database;
+        readonly int m_ProjectionDatabaseIndex;
         readonly int[] m_TraversalStack;
         readonly MotionMatchingCandidateRejectDetail[] m_RejectDetails;
         readonly MotionMatchingExactCandidate[] m_TopK;
@@ -127,6 +128,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             if ((uint)databaseIndex >= (uint)projection.DatabaseCount)
                 throw new ArgumentOutOfRangeException(nameof(databaseIndex));
+            m_ProjectionDatabaseIndex = databaseIndex;
             m_Database = projection.GetDatabase(databaseIndex) ?? throw new InvalidOperationException("Motion Matching Projection contains a null Database payload.");
             if (!m_Database.ArtifactIdentity.FeatureSchemaId.Equals(projection.FeatureSchema.SchemaId) ||
                 m_Database.ArtifactIdentity.FeatureSchemaRevision != projection.FeatureSchema.Revision ||
@@ -147,6 +149,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         }
 
         public CharacterMotionMatchingDatabaseArtifactIdentity ArtifactIdentity => RequireAlive().m_Database.ArtifactIdentity;
+        public int ProjectionDatabaseIndex => RequireAlive().m_ProjectionDatabaseIndex;
         public CharacterMotionMatchingSearchDomainId SearchDomainId => RequireAlive().m_Database.SearchDomainId;
         public MotionMatchingFeatureSchemaPayload FeatureSchema => RequireAlive().m_Projection.FeatureSchema;
         public MotionMatchingCostProfilePayload CostProfile => RequireAlive().m_Projection.CostProfile;

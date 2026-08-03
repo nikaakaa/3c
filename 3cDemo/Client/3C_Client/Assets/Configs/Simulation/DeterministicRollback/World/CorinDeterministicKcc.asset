@@ -1,0 +1,78 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a382e73156c743c0b657b12112327b73, type: 3}
+  m_Name: CorinDeterministicKcc
+  m_EditorClassIdentifier: 
+  m_CollisionWorld: {fileID: 11400000, guid: d0b6f91c641a9a94aaeabe7bb97263e6, type: 2}
+  m_Radius:
+    m_Numerator: 35
+    m_Denominator: 100
+  m_Height:
+    m_Numerator: 18
+    m_Denominator: 10
+  m_CollisionOffset:
+    m_Numerator: 1
+    m_Denominator: 100
+  m_MinimumGroundNormalY:
+    m_Numerator: 707106
+    m_Denominator: 1000000
+  m_MaximumStepHeight:
+    m_Numerator: 3
+    m_Denominator: 10
+  m_GroundDetectionExtraDistance:
+    m_Numerator: 0
+    m_Denominator: 1
+  m_GroundProbeReboundDistance:
+    m_Numerator: 2
+    m_Denominator: 100
+  m_MinimumGroundProbingDistance:
+    m_Numerator: 5
+    m_Denominator: 1000
+  m_SecondaryProbeVerticalDistance:
+    m_Numerator: 2
+    m_Denominator: 100
+  m_SecondaryProbeHorizontalDistance:
+    m_Numerator: 1
+    m_Denominator: 1000
+  m_SteppingForwardDistance:
+    m_Numerator: 3
+    m_Denominator: 100
+  m_MinimumRequiredStepDepth:
+    m_Numerator: 1
+    m_Denominator: 10
+  m_MaximumStableDistanceFromLedge:
+    m_Numerator: 35
+    m_Denominator: 100
+  m_MaximumStableDenivelationAngle:
+    m_Numerator: 180
+    m_Denominator: 1
+  m_VerticalObstructionCorrelation:
+    m_Numerator: 1
+    m_Denominator: 100
+  m_MaximumMovementDistance:
+    m_Numerator: 3
+    m_Denominator: 1
+  m_QueryTolerance:
+    m_Numerator: 1
+    m_Denominator: 100000
+  m_MinimumMovementDistance:
+    m_Numerator: 1
+    m_Denominator: 100000
+  m_NormalMergeDot:
+    m_Numerator: 9999
+    m_Denominator: 10000
+  m_MaximumSweepIterations: 16
+  m_MaximumContactIterations: 8
+  m_MaximumCandidates: 256
+  m_MaximumContacts: 32
+  m_MaximumActorPairs: 64
+  m_MaximumActorContactIterations: 8

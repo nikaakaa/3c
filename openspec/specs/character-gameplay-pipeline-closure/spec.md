@@ -102,12 +102,12 @@ Authority Replication Egress MUST只消费finalized Character/World state、type
 
 ### Requirement: Remote表现必须属于正式Committer消费链
 
-Remote Body sample、producer command和reliable EventId facts MUST在Prediction Pipeline最终Commit边界进入remote presentation output，并复用既有Presentation interpolation、Animation lifecycle和Projection。Fantasy Handler、Room和Model Source MUST不直接调用Animancer、写visual Transform或决定Animation transition。
+Remote Body sample、有限Action producer command和reliable EventId facts MUST在Prediction Pipeline最终Commit边界进入remote presentation output，并复用既有Body interpolation、Presentation Fact、Action lifecycle、AnimationSlot和Projection Pose Plan。Fantasy Handler、Room和Model Source MUST不直接调用Animancer、写visual Transform或决定Animation transition。
 
 #### Scenario: Remote Actor切换到Attack2动画
 
 - **WHEN** RemotePresentationEgress提交Authority producer select command
-- **THEN** CharacterAnimationPlaybackRuntime MUST通过Projection播放Attack2 producer
+- **THEN** CharacterActionPlaybackRuntime MUST提交Attack2 lifecycle，并由AnimationSlot与Projection Pose Plan播放
 - **AND** 网络层 MUST不发送AnimationClip或直接调用Play
 
 ### Requirement: Hybrid Diagnostics必须沿统一Source Map与Session Trace关联

@@ -9,27 +9,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         public AnimationBlendEntryId(
             PoseNodeId poseNodeId,
             AnimationPoseSourceId sourceId,
-            bool emptyTarget,
+            bool sourcePoseTarget,
             ulong presentationRequestSequence)
         {
             if (!poseNodeId.IsValid || presentationRequestSequence == 0 ||
-                emptyTarget == sourceId.IsValid)
+                sourcePoseTarget == sourceId.IsValid)
                 throw new ArgumentException("Animation Blend Entry identity is invalid.");
             PoseNodeId = poseNodeId;
             SourceId = sourceId;
-            EmptyTarget = emptyTarget;
+            SourcePoseTarget = sourcePoseTarget;
             PresentationRequestSequence = presentationRequestSequence;
         }
 
         public PoseNodeId PoseNodeId { get; }
         public AnimationPoseSourceId SourceId { get; }
-        public bool EmptyTarget { get; }
+        public bool SourcePoseTarget { get; }
         public ulong PresentationRequestSequence { get; }
-        public bool IsValid => PoseNodeId.IsValid && PresentationRequestSequence != 0 && EmptyTarget != SourceId.IsValid;
+        public bool IsValid =>
+            PoseNodeId.IsValid &&
+            PresentationRequestSequence != 0 &&
+            SourcePoseTarget != SourceId.IsValid;
 
         public bool Equals(AnimationBlendEntryId other) =>
             PoseNodeId == other.PoseNodeId && SourceId.Equals(other.SourceId) &&
-            EmptyTarget == other.EmptyTarget && PresentationRequestSequence == other.PresentationRequestSequence;
+            SourcePoseTarget == other.SourcePoseTarget &&
+            PresentationRequestSequence == other.PresentationRequestSequence;
 
         public override bool Equals(object obj) => obj is AnimationBlendEntryId other && Equals(other);
 
@@ -39,13 +43,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             {
                 int hash = PoseNodeId.GetHashCode();
                 hash = hash * 397 ^ SourceId.GetHashCode();
-                hash = hash * 397 ^ EmptyTarget.GetHashCode();
+                hash = hash * 397 ^ SourcePoseTarget.GetHashCode();
                 return hash * 397 ^ PresentationRequestSequence.GetHashCode();
             }
         }
 
-        public override string ToString() => EmptyTarget
-            ? $"{PoseNodeId}/Empty#{PresentationRequestSequence}"
+        public override string ToString() => SourcePoseTarget
+            ? $"{PoseNodeId}/SourcePose#{PresentationRequestSequence}"
             : $"{PoseNodeId}/{SourceId}#{PresentationRequestSequence}";
     }
 
@@ -90,20 +94,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         public AnimationBlendEntryState(
             AnimationBlendEntryId entryId,
-            int programProducerIndex,
+            int sourceOwnerIndex,
             float baseDurationSeconds,
             int canonicalCurveIndex,
             int blendProfileIndex,
             ulong contributionContinuityIdentity)
         {
             if (!entryId.IsValid ||
-                entryId.EmptyTarget == (programProducerIndex >= 0) ||
+                entryId.SourcePoseTarget == (sourceOwnerIndex >= 0) ||
                 !float.IsFinite(baseDurationSeconds) || baseDurationSeconds < 0f ||
                 canonicalCurveIndex < 0 || blendProfileIndex < 0 ||
                 contributionContinuityIdentity == 0)
                 throw new ArgumentException("Animation Blend Entry state is invalid.");
             EntryId = entryId;
-            ProgramProducerIndex = programProducerIndex;
+            SourceOwnerIndex = sourceOwnerIndex;
             BaseDurationSeconds = baseDurationSeconds;
             CanonicalCurveIndex = canonicalCurveIndex;
             BlendProfileIndex = blendProfileIndex;
@@ -115,8 +119,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         public AnimationBlendEntryId EntryId { get; }
         public AnimationPoseSourceId SourceId => EntryId.SourceId;
-        public bool IsEmpty => EntryId.EmptyTarget;
-        public int ProgramProducerIndex { get; }
+        public bool IsSourcePose => EntryId.SourcePoseTarget;
+        public int SourceOwnerIndex { get; }
         public float BaseDurationSeconds { get; }
         public int CanonicalCurveIndex { get; }
         public int BlendProfileIndex { get; }
@@ -197,35 +201,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
     internal readonly struct AnimationBlendPushRequest
     {
         public AnimationBlendPushRequest(
-            AnimationChannelId animationChannelId,
             PoseNodeId poseNodeId,
             AnimationPoseSourceId sourceId,
-            bool targetEmpty,
-            int programProducerIndex,
+            AnimationBlendTransitionEndpointKind targetEndpointKind,
+            int sourceOwnerIndex,
             ulong presentationRequestSequence,
-            AnimationBlendTransitionPayload transition)
+            AnimationBlendTransitionPayload transition,
+            bool executeAsHardCut)
         {
-            if (!animationChannelId.IsValid || !poseNodeId.IsValid || presentationRequestSequence == 0 ||
-                targetEmpty == sourceId.IsValid || targetEmpty == (programProducerIndex >= 0) ||
-                transition == null || transition.TargetEmpty != targetEmpty ||
-                !targetEmpty && transition.TargetProducerIndex != programProducerIndex)
+            if (!poseNodeId.IsValid || presentationRequestSequence == 0 ||
+                targetEndpointKind == AnimationBlendTransitionEndpointKind.NoPose ||
+                !Enum.IsDefined(typeof(AnimationBlendTransitionEndpointKind), targetEndpointKind) ||
+                (targetEndpointKind == AnimationBlendTransitionEndpointKind.SourceOwner) != sourceId.IsValid ||
+                (targetEndpointKind == AnimationBlendTransitionEndpointKind.SourceOwner) != (sourceOwnerIndex >= 0) ||
+                transition == null || transition.TargetEndpointKind != targetEndpointKind ||
+                targetEndpointKind == AnimationBlendTransitionEndpointKind.SourceOwner &&
+                transition.TargetOwnerIndex != sourceOwnerIndex)
                 throw new ArgumentException("Animation Blend push request is invalid.");
-            AnimationChannelId = animationChannelId;
             PoseNodeId = poseNodeId;
             SourceId = sourceId;
-            TargetEmpty = targetEmpty;
-            ProgramProducerIndex = programProducerIndex;
+            TargetEndpointKind = targetEndpointKind;
+            SourceOwnerIndex = sourceOwnerIndex;
             PresentationRequestSequence = presentationRequestSequence;
             Transition = transition;
+            ExecuteAsHardCut = executeAsHardCut;
         }
 
-        public AnimationChannelId AnimationChannelId { get; }
         public PoseNodeId PoseNodeId { get; }
         public AnimationPoseSourceId SourceId { get; }
-        public bool TargetEmpty { get; }
-        public int ProgramProducerIndex { get; }
+        public AnimationBlendTransitionEndpointKind TargetEndpointKind { get; }
+        public int SourceOwnerIndex { get; }
         public ulong PresentationRequestSequence { get; }
         public AnimationBlendTransitionPayload Transition { get; }
+        public bool ExecuteAsHardCut { get; }
     }
 
     public readonly struct AnimationBlendStackRelease

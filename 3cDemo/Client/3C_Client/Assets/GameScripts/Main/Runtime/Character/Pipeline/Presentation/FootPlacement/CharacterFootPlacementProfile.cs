@@ -116,7 +116,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_SlideSpeed = 0.45f;
         [SerializeField] float m_ReplantDistance = 0.3f;
         [SerializeField] float m_ReplantAngleDegrees = 32f;
-        [SerializeField, Range(0.5f, 1.2f)] float m_MaximumReachRatio = 0.99f;
         [SerializeField] float m_MinimumFootSeparation = 0.12f;
         [SerializeField] float m_MaximumHeelLiftDegrees = 20f;
         [SerializeField] float m_MaximumHeelLiftDistance = 0.06f;
@@ -131,11 +130,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_SlideSpeed,
                 m_ReplantDistance,
                 m_ReplantAngleDegrees,
-                m_MaximumReachRatio,
                 m_MinimumFootSeparation,
                 m_MaximumHeelLiftDegrees,
                 m_MaximumHeelLiftDistance,
                 m_MaximumAnkleTwistDegrees);
+            value.RequireValid();
+            return value;
+        }
+    }
+
+    [Serializable]
+    public sealed class FootPlacementLimbSettings
+    {
+        [SerializeField, Range(0.01f, 0.9f)] float m_MinimumLegExtensionRatio = 0.18f;
+        [SerializeField, Range(0.5f, 0.999f)] float m_BendStabilizationStartRatio = 0.82f;
+        [SerializeField, Range(0.5f, 0.999f)] float m_BendStabilizationFullRatio = 0.93f;
+        [SerializeField, Range(0.5f, 0.999f)] float m_MaximumLegExtensionRatio = 0.98f;
+        [SerializeField, Range(0f, 1f)] float m_MaximumBendStabilizationWeight = 0.65f;
+
+        internal FootPlacementLimbRuntimeSettings Build()
+        {
+            var value = new FootPlacementLimbRuntimeSettings(
+                m_MinimumLegExtensionRatio,
+                m_BendStabilizationStartRatio,
+                m_BendStabilizationFullRatio,
+                m_MaximumLegExtensionRatio,
+                m_MaximumBendStabilizationWeight);
             value.RequireValid();
             return value;
         }
@@ -234,11 +254,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] FootPlacementContactSettings m_Contact = new FootPlacementContactSettings();
         [SerializeField] FootPlacementPredictionSettings m_Prediction = new FootPlacementPredictionSettings();
         [SerializeField] FootPlacementConstraintSettings m_Constraint = new FootPlacementConstraintSettings();
+        [SerializeField] FootPlacementLimbSettings m_Limb = new FootPlacementLimbSettings();
         [SerializeField] FootPlacementPelvisSettings m_Pelvis = new FootPlacementPelvisSettings();
         [SerializeField] FootPlacementRotationSettings m_Rotation = new FootPlacementRotationSettings();
         [SerializeField] FootPlacementSmoothingSettings m_Smoothing = new FootPlacementSmoothingSettings();
 
-        public void RequireConfiguration(CharacterFootPlacementRigBinding rig)
+        public void RequireConfiguration(CharacterFootPlacementPoseRig rig)
         {
             if (rig == null)
                 throw new ArgumentNullException(nameof(rig));
@@ -248,6 +269,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Contact.Build();
             m_Prediction.Build();
             m_Constraint.Build();
+            m_Limb.Build();
             m_Pelvis.Build();
             m_Rotation.Build();
             m_Smoothing.Build();
@@ -255,7 +277,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public CharacterFootPlacementRuntimeSettings BuildSettings(
             CharacterPresentationProjection projection,
-            CharacterFootPlacementRigBinding rig)
+            CharacterFootPlacementPoseRig rig)
         {
             if (projection == null || !projection.IsValid)
                 throw new ArgumentException("Foot Placement requires a valid Presentation Projection.", nameof(projection));
@@ -266,6 +288,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException("Foot Placement requires generated Foot Analysis in the Presentation Projection.");
             footAnalysis.RequireValid();
             if (footAnalysis.CalibrationId != rig.CalibrationId ||
+                footAnalysis.CalibrationSchemaVersion != rig.CalibrationSchemaVersion ||
                 !string.Equals(footAnalysis.CalibrationRevision, rig.CalibrationRevision, StringComparison.Ordinal))
                 throw new InvalidOperationException("Foot Placement Runtime Rig Calibration does not match the Presentation Projection.");
             CharacterPresentationPosePlan poseProgram = projection.PosePlan;
@@ -284,6 +307,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Contact.Build(),
                 m_Prediction.Build(),
                 m_Constraint.Build(),
+                m_Limb.Build(),
                 m_Pelvis.Build(),
                 m_Rotation.Build(),
                 m_Smoothing.Build());
@@ -291,7 +315,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         void RequireSections()
         {
-            if (m_Trace == null || m_Contact == null || m_Prediction == null || m_Constraint == null ||
+            if (m_Trace == null || m_Contact == null || m_Prediction == null || m_Constraint == null || m_Limb == null ||
                 m_Pelvis == null || m_Rotation == null || m_Smoothing == null)
                 throw new InvalidOperationException("Foot Placement Profile settings are incomplete.");
         }
@@ -309,6 +333,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementContactRuntimeSettings contact,
             FootPlacementPredictionRuntimeSettings prediction,
             FootPlacementConstraintRuntimeSettings constraint,
+            FootPlacementLimbRuntimeSettings limb,
             FootPlacementPelvisRuntimeSettings pelvis,
             FootPlacementRotationRuntimeSettings rotation,
             FootPlacementSmoothingRuntimeSettings smoothing)
@@ -331,6 +356,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Contact = contact;
             Prediction = prediction;
             Constraint = constraint;
+            Limb = limb;
             Pelvis = pelvis;
             Rotation = rotation;
             Smoothing = smoothing;
@@ -345,6 +371,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public FootPlacementContactRuntimeSettings Contact { get; }
         public FootPlacementPredictionRuntimeSettings Prediction { get; }
         public FootPlacementConstraintRuntimeSettings Constraint { get; }
+        public FootPlacementLimbRuntimeSettings Limb { get; }
         public FootPlacementPelvisRuntimeSettings Pelvis { get; }
         public FootPlacementRotationRuntimeSettings Rotation { get; }
         public FootPlacementSmoothingRuntimeSettings Smoothing { get; }
@@ -472,15 +499,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct FootPlacementConstraintRuntimeSettings
     {
-        public FootPlacementConstraintRuntimeSettings(float slideStartDistance, float slideStopDistance, float maximumSlideDistance, float slideSpeed, float replantDistance, float replantAngleDegrees, float maximumReachRatio, float minimumFootSeparation, float maximumHeelLiftDegrees, float maximumHeelLiftDistance, float maximumAnkleTwistDegrees)
-        { SlideStartDistance = slideStartDistance; SlideStopDistance = slideStopDistance; MaximumSlideDistance = maximumSlideDistance; SlideSpeed = slideSpeed; ReplantDistance = replantDistance; ReplantAngleDegrees = replantAngleDegrees; MaximumReachRatio = maximumReachRatio; MinimumFootSeparation = minimumFootSeparation; MaximumHeelLiftDegrees = maximumHeelLiftDegrees; MaximumHeelLiftDistance = maximumHeelLiftDistance; MaximumAnkleTwistDegrees = maximumAnkleTwistDegrees; }
+        public FootPlacementConstraintRuntimeSettings(float slideStartDistance, float slideStopDistance, float maximumSlideDistance, float slideSpeed, float replantDistance, float replantAngleDegrees, float minimumFootSeparation, float maximumHeelLiftDegrees, float maximumHeelLiftDistance, float maximumAnkleTwistDegrees)
+        { SlideStartDistance = slideStartDistance; SlideStopDistance = slideStopDistance; MaximumSlideDistance = maximumSlideDistance; SlideSpeed = slideSpeed; ReplantDistance = replantDistance; ReplantAngleDegrees = replantAngleDegrees; MinimumFootSeparation = minimumFootSeparation; MaximumHeelLiftDegrees = maximumHeelLiftDegrees; MaximumHeelLiftDistance = maximumHeelLiftDistance; MaximumAnkleTwistDegrees = maximumAnkleTwistDegrees; }
         public float SlideStartDistance { get; }
         public float SlideStopDistance { get; }
         public float MaximumSlideDistance { get; }
         public float SlideSpeed { get; }
         public float ReplantDistance { get; }
         public float ReplantAngleDegrees { get; }
-        public float MaximumReachRatio { get; }
         public float MinimumFootSeparation { get; }
         public float MaximumHeelLiftDegrees { get; }
         public float MaximumHeelLiftDistance { get; }
@@ -491,11 +517,44 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementValidation.RequireOrdered(SlideStartDistance, MaximumSlideDistance, ReplantDistance, nameof(ReplantDistance));
             CharacterFootPlacementValidation.RequirePositive(SlideSpeed, nameof(SlideSpeed));
             CharacterFootPlacementValidation.RequireOrdered(0f, ReplantAngleDegrees, 180f, nameof(ReplantAngleDegrees));
-            CharacterFootPlacementValidation.RequireOrdered(0f, MaximumReachRatio, 1.2f, nameof(MaximumReachRatio));
             CharacterFootPlacementValidation.RequireNonNegative(MinimumFootSeparation, nameof(MinimumFootSeparation));
             CharacterFootPlacementValidation.RequireOrdered(0f, MaximumHeelLiftDegrees, 60f, nameof(MaximumHeelLiftDegrees));
             CharacterFootPlacementValidation.RequireNonNegative(MaximumHeelLiftDistance, nameof(MaximumHeelLiftDistance));
             CharacterFootPlacementValidation.RequireOrdered(0f, MaximumAnkleTwistDegrees, 180f, nameof(MaximumAnkleTwistDegrees));
+        }
+    }
+
+    public readonly struct FootPlacementLimbRuntimeSettings
+    {
+        public FootPlacementLimbRuntimeSettings(
+            float minimumLegExtensionRatio,
+            float bendStabilizationStartRatio,
+            float bendStabilizationFullRatio,
+            float maximumLegExtensionRatio,
+            float maximumBendStabilizationWeight)
+        {
+            MinimumLegExtensionRatio = minimumLegExtensionRatio;
+            BendStabilizationStartRatio = bendStabilizationStartRatio;
+            BendStabilizationFullRatio = bendStabilizationFullRatio;
+            MaximumLegExtensionRatio = maximumLegExtensionRatio;
+            MaximumBendStabilizationWeight = maximumBendStabilizationWeight;
+        }
+
+        public float MinimumLegExtensionRatio { get; }
+        public float BendStabilizationStartRatio { get; }
+        public float BendStabilizationFullRatio { get; }
+        public float MaximumLegExtensionRatio { get; }
+        public float MaximumBendStabilizationWeight { get; }
+
+        public void RequireValid()
+        {
+            CharacterFootPlacementValidation.RequireOrdered(0f, MinimumLegExtensionRatio, 1f, nameof(MinimumLegExtensionRatio), false);
+            CharacterFootPlacementValidation.RequireOrdered(MinimumLegExtensionRatio, BendStabilizationStartRatio, 1f, nameof(BendStabilizationStartRatio), false);
+            CharacterFootPlacementValidation.RequireOrdered(BendStabilizationStartRatio, BendStabilizationFullRatio, 1f, nameof(BendStabilizationFullRatio), false);
+            CharacterFootPlacementValidation.RequireOrdered(BendStabilizationFullRatio, MaximumLegExtensionRatio, 1f, nameof(MaximumLegExtensionRatio), false);
+            if (MaximumLegExtensionRatio >= 1f)
+                throw new InvalidOperationException("Foot Placement maximum leg extension ratio must be less than one.");
+            CharacterFootPlacementValidation.RequireWeight(MaximumBendStabilizationWeight, nameof(MaximumBendStabilizationWeight));
         }
     }
 

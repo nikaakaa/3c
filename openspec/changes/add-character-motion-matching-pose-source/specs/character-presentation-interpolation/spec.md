@@ -2,7 +2,7 @@
 
 ### Requirement: Motion Matching轨迹必须使用表现帧正式Source与时间
 
-MM Trajectory Runtime MUST消费与Character Body presentation cursor一致的Accepted Intent或Selected Body source frame，并以PresentationFrame delta和编译horizon生成Trajectory Envelope。Body visual correction MAY影响可见body pose，但 MUST不改写accepted intent、candidate root feature或Gameplay state。Runtime MUST在diagnostics区分target body、visible body、intent与envelope。
+`CharacterMotionMatchingPresentationModule` MUST按已提交Body的正式SourceMode从内部Accepted Intent或Selected Body adapter消费与Character Body presentation cursor一致的source frame，并以PresentationFrame delta和编译horizon生成Trajectory Envelope。Factory、Host与网络模型 MUST不装配另一份trajectory source。Body visual correction MAY影响可见body pose，但 MUST不改写accepted intent、candidate root feature或Gameplay state。Runtime MUST在diagnostics区分target body、visible body、intent与envelope。
 
 #### Scenario: Visual correction正在收敛
 

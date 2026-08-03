@@ -33,7 +33,7 @@ namespace ThirdPersonCharacter.Pipeline
 		[SerializeField] Transform m_VisualRoot;
 		[SerializeField] CharacterEquipmentRigBindingCatalog m_EquipmentRigBindings;
 		[SerializeField] CharacterBodyPresentationProfile m_BodyPresentationProfile;
-		[SerializeField] CharacterFootPlacementComposition m_FootPlacement;
+		[SerializeField] CharacterWorldAwarePresentationBinding m_WorldAwarePresentation;
 		[SerializeField] ThirdPersonCameraController m_CameraRig;
 		[SerializeField] Transform m_CameraFollowAnchor;
 		[SerializeField] Transform m_CameraAimAnchor;
@@ -58,7 +58,7 @@ namespace ThirdPersonCharacter.Pipeline
 		public Transform VisualRoot => m_VisualRoot;
 		public CharacterEquipmentRigBindingCatalog EquipmentRigBindings => m_EquipmentRigBindings;
 		public CharacterBodyPresentationProfile BodyPresentationProfile => m_BodyPresentationProfile;
-		public CharacterFootPlacementComposition FootPlacement => m_FootPlacement;
+		public CharacterWorldAwarePresentationBinding WorldAwarePresentation => m_WorldAwarePresentation;
 		public ThirdPersonCameraController CameraRig => m_CameraRig;
 		public Transform CameraFollowAnchor => m_CameraFollowAnchor;
 		public Transform CameraAimAnchor => m_CameraAimAnchor;
@@ -67,19 +67,21 @@ namespace ThirdPersonCharacter.Pipeline
 			? string.Empty
 			: m_CameraLookInputValueId.Trim();
 		public CharacterSimulationActorRegistration Registration => m_Registration;
-		public IReadOnlyList<AnimationPlaybackLifecycleSnapshot> PreviewAnimationSnapshot =>
+		public bool HasPreviewAnimationDebugView =>
+			m_PreviewController != null &&
+			m_PreviewController.HasAnimationDebugView;
+		public AnimationPresentationDebugView PreviewAnimationDebugView =>
 			m_PreviewController != null
-				? m_PreviewController.AnimationSnapshots
-				: Array.Empty<AnimationPlaybackLifecycleSnapshot>();
-		public bool HasPreviewAnimationRuntimeSnapshot =>
-			m_PreviewController != null && m_PreviewController.HasAnimationRuntimeSnapshot;
-		public AnimationPresentationRuntimeSnapshot PreviewAnimationRuntimeSnapshot =>
-			m_PreviewController != null
-				? m_PreviewController.AnimationRuntimeSnapshot
-				: default;
+				? m_PreviewController.AnimationDebugView
+				: throw new InvalidOperationException(
+					"Animation Preview Debug View is unavailable.");
 		public CharacterPosePlanStageSnapshot PreviewPosePlanStages =>
 			m_PreviewController != null
 				? m_PreviewController.PosePlanStages
+				: default;
+		public CharacterFootPlacementFrameSnapshot PreviewFootPlacementSnapshot =>
+			m_PreviewController != null
+				? m_PreviewController.FootPlacementSnapshot
 				: default;
 		public bool TrySetPreviewPoseWatchInterests(
 			Guid sessionId,
@@ -96,10 +98,13 @@ namespace ThirdPersonCharacter.Pipeline
 			m_Definition.SimulationProgram &&
 			m_Definition.PresentationProjection &&
 			m_Animancer &&
+			m_Animancer.Animator &&
 			m_AnimationRigBinding &&
+			m_WorldBodyBinding &&
 			m_VisualRoot;
+		public bool CanPreviewPoseGraph => CanPreviewTimeline;
 		public override string PreviewStatus =>
-			"Animation and authored MotionCurve preview. MotionWarp, collision, and Foot Placement require a formal runtime session.";
+			"Pose Graph preview uses the selected Host's formal Body fixture and Scene PhysicsScene. A missing World-Aware Binding is reported at the first world-aware stage.";
 
 		public void BindSessionActor(SimulationSessionHost sessionHost, ActorId actorId)
 		{
@@ -113,6 +118,13 @@ namespace ThirdPersonCharacter.Pipeline
 		}
 
 #if UNITY_EDITOR
+		public void ConfigureAnimationRigBinding(CharacterAnimationRigBinding animationRigBinding)
+		{
+			m_AnimationRigBinding = animationRigBinding
+				? animationRigBinding
+				: throw new ArgumentNullException(nameof(animationRigBinding));
+		}
+
 		public void SetRuntimeAuthoring(
 			CharacterControlSource controlSource,
 			CharacterPresentationRole presentationRole,
@@ -205,9 +217,9 @@ namespace ThirdPersonCharacter.Pipeline
 					return false;
 				}
 			}
-			if (!m_FootPlacement)
+			if (!m_WorldAwarePresentation)
 			{
-				Debug.LogError("CharacterPipelineHost requires an explicit Foot Placement Composition.", this);
+				Debug.LogError("Foot Placement Pose Graph requires an explicit World-Aware Presentation Binding.", this);
 				return false;
 			}
 			if (!m_Animancer.Animator)
@@ -273,7 +285,6 @@ namespace ThirdPersonCharacter.Pipeline
 				if (inputAdapter == null)
 					throw new InvalidOperationException("Character control source returned no input adapter.");
 				WorldBodyState initialBody = m_WorldBodyBinding.InitialBody;
-				ICharacterFootPlacementSolver footPlacementSolver = m_FootPlacement.RequireSolver(m_VisualRoot);
 				PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
 				CharacterPresentationRuntimeBinding presentationBinding;
 				if (m_PresentationRole == CharacterPresentationRole.LocalOwner)
@@ -290,9 +301,7 @@ namespace ThirdPersonCharacter.Pipeline
 						m_VisualRoot,
 						CharacterPresentationBodyState.FromFloat32(initialBody),
 						m_BodyPresentationProfile,
-						m_FootPlacement.Profile,
-						m_FootPlacement.Rig,
-						footPlacementSolver,
+						m_WorldAwarePresentation,
 						physicsScene,
 						m_CameraRig,
 						m_CameraFollowAnchor,
@@ -315,9 +324,7 @@ namespace ThirdPersonCharacter.Pipeline
 						m_VisualRoot,
 						CharacterPresentationBodyState.FromFloat32(initialBody),
 						m_BodyPresentationProfile,
-						m_FootPlacement.Profile,
-						m_FootPlacement.Rig,
-						footPlacementSolver,
+						m_WorldAwarePresentation,
 						physicsScene,
 						m_EquipmentRigBindings,
 						diagnosticsContext);
@@ -389,41 +396,54 @@ namespace ThirdPersonCharacter.Pipeline
 				resetLifecycle);
 		}
 
-		public override void ClearTimelinePreview(Guid sessionId)
+		public void EvaluatePoseGraphPreview(
+			Guid sessionId,
+			double presentationTime,
+			ulong evaluationTick,
+			float presentationDeltaSeconds,
+			bool resetLifecycle,
+			bool grounded,
+			float horizontalSpeed,
+			float horizontalAcceleration,
+			float verticalSpeed,
+			Vector2 movementDirection,
+			Vector2 desiredDirection,
+			float facingError,
+			CharacterPresentationMotionPhase motionPhase,
+			IReadOnlyList<PoseParameterId> directParameterIds = null,
+			IReadOnlyList<float> directParameterValues = null)
+		{
+			if (sessionId == Guid.Empty || !CanPreviewPoseGraph)
+			{
+				ClearPoseGraphPreview(sessionId);
+				return;
+			}
+			EnsurePreviewController().EvaluatePoseGraph(
+				sessionId,
+				presentationTime,
+				evaluationTick,
+				presentationDeltaSeconds,
+				resetLifecycle,
+				grounded,
+				horizontalSpeed,
+				horizontalAcceleration,
+				verticalSpeed,
+				movementDirection,
+				desiredDirection,
+				facingError,
+				motionPhase,
+				directParameterIds,
+				directParameterValues);
+		}
+
+		public void ClearPoseGraphPreview(Guid sessionId)
 		{
 			m_PreviewController?.Clear(sessionId);
 		}
 
-		public void EvaluateBlendSpacePreview(
-			Guid sessionId,
-			TimelineData timeline,
-			string targetTrackAuthoringId,
-			float previousTime,
-			float currentTime,
-			string sourceId,
-			string sourceName,
-			ulong evaluationTick,
-			float presentationDeltaSeconds,
-			bool resetLifecycle,
-			Vector2 parameter)
+		public override void ClearTimelinePreview(Guid sessionId)
 		{
-			if (sessionId == Guid.Empty || timeline == null || !CanPreviewTimeline)
-			{
-				ClearTimelinePreview(sessionId);
-				return;
-			}
-			EnsurePreviewController().EvaluateBlendSpace(
-				sessionId,
-				timeline,
-				targetTrackAuthoringId,
-				previousTime,
-				currentTime,
-				sourceId,
-				sourceName,
-				evaluationTick,
-				presentationDeltaSeconds,
-				resetLifecycle,
-				parameter);
+			m_PreviewController?.Clear(sessionId);
 		}
 
 		public override void CollectAnimationMarkerSyncPreviewSources(

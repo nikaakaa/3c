@@ -1,10 +1,21 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace BTSMTL.Timeline.Editor
 {
+    public enum TimelineEditorSelectionKind : byte
+    {
+        None = 0,
+        Track = 1,
+        Clip = 2,
+        TreeClip = 3,
+        Marker = 4,
+        Curve = 5
+    }
+
     public interface ITimelineEditorRuntimeDebugBinding
     {
         string BindingId { get; }
@@ -13,15 +24,59 @@ namespace BTSMTL.Timeline.Editor
     public readonly struct TimelineEditorSelection
     {
         public TimelineEditorSelection(Track track, Clip clip)
+            : this(
+                clip is ITimelineOwnedAuthoringIdentity
+                    ? TimelineEditorSelectionKind.TreeClip
+                    : clip != null
+                        ? TimelineEditorSelectionKind.Clip
+                        : track != null
+                            ? TimelineEditorSelectionKind.Track
+                            : TimelineEditorSelectionKind.None,
+                track,
+                clip,
+                clip?.AuthoringId ?? track?.AuthoringId ??
+                string.Empty,
+                string.Empty,
+                Array.Empty<int>(),
+                0)
         {
-            Track = track;
-            Clip = clip;
         }
 
+        TimelineEditorSelection(
+            TimelineEditorSelectionKind kind,
+            Track track,
+            Clip clip,
+            string elementAuthoringId,
+            string subElementId,
+            IReadOnlyList<int> keyIndices,
+            ulong revision)
+        {
+            Kind = kind;
+            Track = track;
+            Clip = clip;
+            ElementAuthoringId =
+                elementAuthoringId ?? string.Empty;
+            SubElementId = subElementId ?? string.Empty;
+            KeyIndices = keyIndices ?? Array.Empty<int>();
+            Revision = revision;
+        }
+
+        public TimelineEditorSelectionKind Kind { get; }
         public Track Track { get; }
         public Clip Clip { get; }
+        public string ElementAuthoringId { get; }
+        public string SubElementId { get; }
+        public IReadOnlyList<int> KeyIndices { get; }
+        public ulong Revision { get; }
         public bool HasTrack => Track != null;
         public bool HasClip => Clip != null;
+        public bool IsTreeClip =>
+            Kind == TimelineEditorSelectionKind.TreeClip;
+        public bool HasMarker =>
+            Kind == TimelineEditorSelectionKind.Marker;
+        public bool HasCurve =>
+            Kind == TimelineEditorSelectionKind.Curve;
+
     }
 
     public interface ITimelineEditorSelectionPort
@@ -178,10 +233,27 @@ namespace BTSMTL.Timeline.Editor
             {
                 Clip clip => new TimelineEditorSelection(clip.Track, clip),
                 Track track => new TimelineEditorSelection(track, null),
-                TimelineAnimationMarkerSelection marker => new TimelineEditorSelection(marker.Track, null),
                 _ => default
             };
-            if (ReferenceEquals(selection.Track, m_Selection.Track) && ReferenceEquals(selection.Clip, m_Selection.Clip))
+            if (selection.Kind == m_Selection.Kind &&
+                ReferenceEquals(
+                    selection.Track,
+                    m_Selection.Track) &&
+                ReferenceEquals(
+                    selection.Clip,
+                    m_Selection.Clip) &&
+                string.Equals(
+                    selection.ElementAuthoringId,
+                    m_Selection.ElementAuthoringId,
+                    StringComparison.Ordinal) &&
+                string.Equals(
+                    selection.SubElementId,
+                    m_Selection.SubElementId,
+                    StringComparison.Ordinal) &&
+                selection.Revision == m_Selection.Revision &&
+                selection.KeyIndices.SequenceEqual(
+                    m_Selection.KeyIndices ??
+                    Array.Empty<int>()))
                 return;
             m_Selection = selection;
             SelectionChanged?.Invoke(m_Selection);

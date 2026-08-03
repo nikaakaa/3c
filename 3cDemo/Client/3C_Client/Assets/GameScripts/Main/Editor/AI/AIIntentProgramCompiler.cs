@@ -63,6 +63,7 @@ namespace ThirdPersonCharacter.AI.Editor
             var perception = new AIPerceptionDescriptor(
                 candidates,
                 definition.PerceptionProfile.Ordering == AICandidateOrdering.DistanceThenActorId);
+            PrepareSourceGraph(definition);
             string sourceRevision = ComputeSourceRevision(definition, characterProgram, perception);
             AIIntentSemanticIr firstIr = AIIntentSemanticFrontend.Compile(definition, characterProgram, perception, sourceRevision);
             AIIntentSemanticIr secondIr = AIIntentSemanticFrontend.Compile(definition, characterProgram, perception, sourceRevision);
@@ -100,6 +101,7 @@ namespace ThirdPersonCharacter.AI.Editor
             for (int i = 0; i < candidates.Length; i++)
                 candidates[i] = new ActorId(definition.PerceptionProfile.CandidateActorIds[i]);
             var perception = new AIPerceptionDescriptor(candidates, definition.PerceptionProfile.Ordering == AICandidateOrdering.DistanceThenActorId);
+            PrepareSourceGraph(definition);
             string sourceRevision = ComputeSourceRevision(definition, characterProgram, perception);
             AIIntentSemanticIr firstIr = AIIntentSemanticFrontend.Compile(definition, characterProgram, perception, sourceRevision);
             AIIntentSemanticIr secondIr = AIIntentSemanticFrontend.Compile(definition, characterProgram, perception, sourceRevision);
@@ -135,6 +137,7 @@ namespace ThirdPersonCharacter.AI.Editor
                 var perception = new AIPerceptionDescriptor(
                     candidates,
                     definition.PerceptionProfile.Ordering == AICandidateOrdering.DistanceThenActorId);
+                PrepareSourceGraph(definition);
                 string expected = ComputeSourceRevision(definition, characterProgram, perception);
                 AIIntentProgram program = definition.IntentProgram.Load();
                 bool current = string.Equals(program.SemanticIr.SourceRevision, expected, StringComparison.Ordinal);
@@ -189,6 +192,13 @@ namespace ThirdPersonCharacter.AI.Editor
                 characterProgram.Manifest.ProgramId,
                 characterProgram.ProgramHash,
                 perception.SchemaHash);
+        }
+
+        static void PrepareSourceGraph(AIControllerDefinition definition)
+        {
+            if (definition.RootTreeAsset?.Tree is not AIControllerTree root)
+                throw new InvalidOperationException("AI Controller RootTree asset does not contain AIControllerTree.");
+            root.RebindReadOnlyViewReferences();
         }
 
         static void RequireExact(byte[] left, byte[] right, string label)

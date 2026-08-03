@@ -582,6 +582,18 @@ namespace BTSMTL.Diagnostics
             }
         }
 
+        public bool ShouldCapture(RuntimeTraceChannel channel, RuntimeTraceEventKind kind)
+        {
+            lock (m_Gate)
+            {
+                return !m_Disposed &&
+                       !m_Terminated &&
+                       m_Capture != null &&
+                       (m_CaptureChannels & channel) != 0 &&
+                       m_CaptureDetail >= RequiredCaptureDetail(kind);
+            }
+        }
+
         public void Publish(RuntimeTraceEvent traceEvent)
         {
             lock (m_Gate)

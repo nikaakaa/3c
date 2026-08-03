@@ -90,7 +90,7 @@ MotionWarpClip MUST只为当前solver实际消费的进度保存canonical normal
 
 #### Scenario: Agent修改MotionWarp进度
 
-- **WHEN** Agent v15通过registered ChannelId提交Yaw Progress完整curve
+- **WHEN** Agent v17通过registered ChannelId提交Yaw Progress完整curve
 - **THEN** handler MUST调用同一MotionWarp mutation与validator
 - **AND** MUST不使用MotionWarp专用第二curve patch入口
 

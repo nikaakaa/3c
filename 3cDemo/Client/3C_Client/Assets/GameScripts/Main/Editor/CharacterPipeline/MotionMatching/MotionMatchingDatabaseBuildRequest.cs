@@ -214,7 +214,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             if (!rigPrefab)
                 throw new InvalidOperationException($"Sampling Rig GUID '{analysisSource.SamplingRigAssetGuid}' does not resolve to a Prefab.");
             CharacterAnimationRigBinding rigBinding = rigPrefab.GetComponentInChildren<CharacterAnimationRigBinding>(true);
-            if (!rigBinding || !rigBinding.Animator || rigBinding.Bones.Count != database.TargetRig.Bones.Count ||
+            if (!rigBinding || !rigBinding.Animator || rigBinding.PhysicalBones.Count != database.TargetRig.PhysicalBoneCount ||
                 !string.Equals(rigBinding.RigId, database.TargetRig.RigId, StringComparison.Ordinal) ||
                 !string.Equals(rigBinding.RigRevision, database.TargetRig.Revision, StringComparison.Ordinal))
                 throw new InvalidOperationException("Sampling Rig animation binding does not match the Database Target Rig exact identity.");
@@ -355,7 +355,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 throw new InvalidOperationException("ExactGenericRig Target Sampling Rig Animator is declared Humanoid.");
 
             string[] targetPaths = RequireTargetBonePaths(targetRig, rigBinding);
-            int motionRootIndex = targetRig.RequireBoneIndex(sourceSet.MotionRootBoneId);
+            int motionRootIndex = targetRig.RequirePhysicalBoneIndex(sourceSet.MotionRootBoneId);
             string targetRootIdentity = targetPaths[motionRootIndex];
             if (!string.Equals(sourceInspection.SourceRootIdentity, targetRootIdentity, StringComparison.Ordinal))
                 throw new InvalidOperationException(
@@ -394,21 +394,21 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             CharacterAnimationRigBinding rigBinding)
         {
             targetRig.RequireValid();
-            if (rigBinding.Bones.Count != targetRig.Bones.Count)
+            if (rigBinding.PhysicalBones.Count != targetRig.PhysicalBoneCount)
                 throw new InvalidOperationException("Target Sampling Rig Bone binding count does not match the Target Rig definition.");
-            var paths = new string[targetRig.Bones.Count];
+            var paths = new string[targetRig.PhysicalBoneCount];
             var transforms = new HashSet<Transform>();
             var uniquePaths = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < paths.Length; i++)
             {
-                CharacterAnimationBoneDefinition bone = targetRig.Bones[i];
-                Transform transform = rigBinding.Bones[i];
+                CharacterAnimationPhysicalBoneDefinition bone = targetRig.PhysicalBones[i];
+                Transform transform = rigBinding.PhysicalBones[i];
                 if (bone == null || !bone.BoneId.IsValid || bone.ParentIndex < -1 || bone.ParentIndex >= i)
                     throw new InvalidOperationException($"Target Rig Bone #{i} is invalid or not parent-first.");
                 if (!transform || !transforms.Add(transform) ||
                     transform != rigBinding.Animator.transform && !transform.IsChildOf(rigBinding.Animator.transform))
                     throw new InvalidOperationException($"Target Sampling Rig Bone '{bone.BoneId}' is missing, duplicated, or outside the Animator hierarchy.");
-                if (bone.ParentIndex >= 0 && transform.parent != rigBinding.Bones[bone.ParentIndex])
+                if (bone.ParentIndex >= 0 && transform.parent != rigBinding.PhysicalBones[bone.ParentIndex])
                     throw new InvalidOperationException($"Target Sampling Rig Bone '{bone.BoneId}' does not match parent-first Rig hierarchy.");
                 string path = AnimationUtility.CalculateTransformPath(transform, rigBinding.Animator.transform);
                 if (path == null || !uniquePaths.Add(path))
@@ -423,14 +423,14 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             string[] targetPaths,
             string targetRootIdentity)
         {
-            var parts = new string[targetRig.Bones.Count + 4];
+            var parts = new string[targetRig.PhysicalBoneCount + 4];
             parts[0] = "motion-matching-target-hierarchy/v1";
             parts[1] = targetRig.RigId;
             parts[2] = targetRig.Revision;
             parts[3] = targetRootIdentity;
-            for (int i = 0; i < targetRig.Bones.Count; i++)
+            for (int i = 0; i < targetRig.PhysicalBoneCount; i++)
             {
-                CharacterAnimationBoneDefinition bone = targetRig.Bones[i];
+                CharacterAnimationPhysicalBoneDefinition bone = targetRig.PhysicalBones[i];
                 parts[i + 4] = FormattableString.Invariant(
                     $"{i}:{bone.BoneId.Value}:{bone.ParentIndex}:{targetPaths[i]}");
             }

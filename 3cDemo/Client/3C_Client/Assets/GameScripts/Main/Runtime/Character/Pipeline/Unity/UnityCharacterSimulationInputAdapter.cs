@@ -80,6 +80,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             if (m_Active)
                 return;
             Actions.Enable();
+            foreach (InputValueBinding binding in m_ValueBindings.Values)
+                binding.ConflictResolver?.Activate();
             m_Active = true;
         }
 
@@ -87,6 +89,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         {
             if (!m_Active)
                 return;
+            foreach (InputValueBinding binding in m_ValueBindings.Values)
+                binding.ConflictResolver?.Deactivate();
             Actions.Disable();
             m_LatchedValues.Clear();
             m_PendingRequests.Clear();
@@ -202,6 +206,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 return;
             Deactivate();
             m_Disposed = true;
+            foreach (InputValueBinding binding in m_ValueBindings.Values)
+                binding.ConflictResolver?.Dispose();
             m_ValueBindings.Clear();
             m_RequestBindings.Clear();
             m_CameraRelativeVector2Ids.Clear();
@@ -228,7 +234,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     throw new InvalidOperationException($"Input value '{definition.InputValueId}' {error}");
                 m_ValueBindings.Add(
                     definition.InputValueId,
-                    new InputValueBinding(definition.InputValueId, definition.ValueType, action));
+                    new InputValueBinding(
+                        definition.InputValueId,
+                        definition.ValueType,
+                        action,
+                        CreateConflictResolver(definition, action)));
             }
             for (int i = 0; i < m_Profile.ActionRequests.Count; i++)
             {
@@ -342,7 +352,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 case CharacterInputValueType.Float:
                     return LatchedInputValue.FromScalar(binding.Action.ReadValue<float>());
                 case CharacterInputValueType.Vector2:
-                    return LatchedInputValue.FromVector2(binding.Action.ReadValue<Vector2>());
+                    Vector2 value = binding.Action.ReadValue<Vector2>();
+                    return LatchedInputValue.FromVector2(binding.ConflictResolver?.Resolve(value) ?? value);
                 default:
                     throw new InvalidOperationException($"Input value '{binding.InputId}' has unsupported type '{binding.Kind}'.");
             }
@@ -461,18 +472,33 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 throw new ObjectDisposedException(nameof(UnityCharacterSimulationInputAdapter));
         }
 
+        static CharacterDirectionalInputConflictResolver CreateConflictResolver(
+            CharacterInputValueDefinition definition,
+            InputAction action)
+        {
+            return definition.Vector2ConflictPolicy == CharacterVector2ConflictPolicy.LatestActuatedCardinal
+                ? new CharacterDirectionalInputConflictResolver(action)
+                : null;
+        }
+
         readonly struct InputValueBinding
         {
-            public InputValueBinding(string inputId, CharacterInputValueType kind, InputAction action)
+            public InputValueBinding(
+                string inputId,
+                CharacterInputValueType kind,
+                InputAction action,
+                CharacterDirectionalInputConflictResolver conflictResolver)
             {
                 InputId = inputId;
                 Kind = kind;
                 Action = action;
+                ConflictResolver = conflictResolver;
             }
 
             public string InputId { get; }
             public CharacterInputValueType Kind { get; }
             public InputAction Action { get; }
+            public CharacterDirectionalInputConflictResolver ConflictResolver { get; }
         }
 
         readonly struct RequestBinding

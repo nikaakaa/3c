@@ -1,177 +1,214 @@
 ## ADDED Requirements
 
-### Requirement: Agent Authoring Document必须是按需生成的持久化工作副本
+### Requirement: Agent Authoring Document必须是按需生成的持久化目录包
 
-系统 MUST为每个已有合法`CharacterPipelineDefinition`或`AIControllerDefinition`提供唯一确定性Agent Authoring Document路径。Document MUST位于Unity项目内、`Assets/`之外的正式Agent工作目录，并且只在显式`checkout_document`时从当前正式树创建或刷新。Document MUST不成为BTSMTL authoring真相、Unity资产、Player内容或runtime输入。
+系统 MUST为每个已有合法`CharacterPipelineDefinition`或`AIControllerDefinition`提供唯一确定性`btsmtl-agent-authoring-document.v2`文档包。文档包 MUST位于Unity项目内、`Assets/`之外的`AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/`，并只在显式checkout时从当前正式Unity authoring创建或刷新。文档包 MUST不成为BTSMTL正式真相、Unity资产、Player内容或runtime输入。
 
 #### Scenario: AI首次编辑现有Character Controller
 
-- **WHEN** Agent对一个已有合法Character root显式调用`checkout_document`
-- **THEN** 系统 MUST从当前正式Graph、StateMachine、Timeline与可写依赖生成规范JSON
-- **AND** response MUST返回唯一Document绝对路径
-- **AND** 系统 MUST不修改或保存任何Unity资产
+- **WHEN** Agent对已有合法Character root显式checkout
+- **THEN** 系统 MUST从当前正式Graph、StateMachine、Timeline与可写依赖生成规范目录包
+- **AND** response MUST返回唯一文档包绝对路径
+- **AND** 系统 MUST不修改或保存Unity资产
 
 #### Scenario: 普通人工编辑期间没有AI会话
 
-- **WHEN** 作者在Graph Editor或Timeline Editor修改正式树但没有调用checkout
-- **THEN** 系统 MUST不创建或刷新Document
-- **AND** MUST不触发任何Agent reconcile、build或publish
+- **WHEN** 作者修改Graph或Timeline但没有显式checkout
+- **THEN** 系统 MUST不创建或刷新文档包
+- **AND** MUST不触发reconcile、compile、build或publish
 
-### Requirement: Agent Authoring Document必须分离同步头、可编辑正文和只读上下文
+### Requirement: 物理分片不得改变Document整包同步语义
 
-Document MUST只接受`btsmtl-agent-authoring-document.v1`，并 MUST包含显式domain、root identity、service-owned sync header、AI可编辑authoring正文与只读context。已有可写entity MUST使用stable authoring identity，新entity MUST使用本Document内唯一local identity。Presentation、Body Motion、Foot Analysis generated data、runtime state与generated product MUST只进入只读context或完全省略，不得进入可写正文。
+文档包 MUST通过manifest声明唯一规范文件清单，并 MAY按Graph、Timeline、Curve、领域配置和只读context拆分JSON。AI MAY只读取和修改相关文件，但checkout、rebase、dry-run、apply、Conflict、hash锁定与反向导出 MUST始终以整个文档包为唯一提交单元。系统 MUST不提供文件级基线、文件级dirty、文件级apply或文件级Conflict。
 
-#### Scenario: AI读取Character Document
+#### Scenario: AI只修改一个Graph文件
+
+- **WHEN** AI只改动`editable/graphs/<graph-id>/graph.json`
+- **THEN** 下一次显式状态查询 MUST把整个文档包判定为DocumentDirty
+- **AND** dry-run MUST严格读取整包并生成一个document hash
+- **AND** apply MUST不允许只提交该Graph文件
+
+### Requirement: 文档包必须分离可编辑authoring、只读context与service基线
+
+文档包 MUST包含service-owned `manifest.json`与`.sync.json`、AI可编辑`editable/`和service-owned只读`context/`。`.sync.json` MUST只保存base source revision、base editable hash与base context hash，不得保存业务authoring。Presentation、Body Motion、Foot Analysis generated data、runtime state和generated product MUST只进入紧凑只读context或完全省略。
+
+#### Scenario: AI读取Character文档包
 
 - **WHEN** checkout导出Character Controller
-- **THEN** editable MUST表达Agent正式可写的Graph、StateMachine、Condition、Timeline与Blackboard结构
-- **AND** context MUST只读表达Input、Action、Presentation、Body Motion与generated product身份
-- **AND** Document MUST不暴露Unity YAML、managed-reference布局或私有SerializedProperty path
+- **THEN** editable MUST表达Agent正式可写的Graph、StateMachine、Condition、Timeline、Blackboard与Action结构
+- **AND** context MUST只读表达Node/Graph schema、可引用asset、dependency与必要能力摘要
+- **AND** 文档包 MUST不暴露Unity YAML、managed-reference布局或私有SerializedProperty path
 
-#### Scenario: AI尝试修改只读上下文
+#### Scenario: AI尝试修改只读context
 
-- **WHEN** Document中的Presentation、Body Motion或generated product字段与checkout基线不同
-- **THEN** strict parser或Reconciler MUST返回`readonly_context_modified`
-- **AND** MUST不把该变化降低为mutation
+- **WHEN** context文件semantic hash与checkout基线不同
+- **THEN** parser或Reconciler MUST返回`readonly_context_modified`
+- **AND** MUST不把变化降低为Mutation
 
-### Requirement: Document codec必须严格解析并规范化JSON
+### Requirement: Graph JSON必须使用稀疏规范authoring语言
 
-系统 MUST使用唯一strict parser和canonical writer处理Document。Parser MUST拒绝未知字段、重复属性、非法discriminator、缺失必需字段、非有限数值和对service-owned同步字段的修改。Writer MUST使用UTF-8无BOM、稳定字段顺序、稳定entity顺序与明确数值格式。Content hash MUST基于规范语义内容，不得因缩进、换行或输入属性顺序变化。
+每个`graph.json` MUST通过稳定Graph kind、正式owner、稀疏Node、Flow Edge目标集合、Property Edge目标集合和Graph reference表达Graph。Node MUST只输出稳定`kind`、stable/local identity与当前kind有意义的typed properties；MUST不输出C# type name、namespace、重复port metadata、无关nullable字段或Unity序列化路径。端口 MUST使用authoring capability catalog中的稳定逻辑key。
 
-#### Scenario: AI只格式化Document
+#### Scenario: AI添加Timeline节点
+
+- **WHEN** AI在合法State body Graph中增加`kind: timeline`节点并连接逻辑port
+- **THEN** Reconciler MUST从catalog解析正式Node类型、属性和port
+- **AND** AI MUST不提供C#类型名、PropertyPort对象或`create_node`操作
+
+#### Scenario: Node包含无关字段
+
+- **WHEN** timeline Node提交compareType或未知property
+- **THEN** strict parser MUST在mutation前拒绝该Graph
+- **AND** MUST不忽略字段或转换为SerializedProperty写入
+
+### Requirement: 系统Node必须通过只读anchor参与Graph连接
+
+系统 MUST按Graph kind把Root、Enter、Exit、Any、OnEnter、OnExit、TimelineEnter和ConditionRuleResult等系统Node投影为保留anchor。Anchor MUST只作为Edge endpoint，不得进入editable Node集合，不得拥有layout、properties或可删除identity。每个Graph kind允许的anchor与逻辑port MUST来自同一Graph kind catalog。
+
+#### Scenario: AI连接State body入口
+
+- **WHEN** Graph Flow Edge从`@root.out`连接到新行为Node
+- **THEN** Reconciler MUST把anchor解析为当前Graph真实系统Root Node
+- **AND** handler MUST通过正式`BaseGraph.Link`创建连接
+
+#### Scenario: AI尝试创建系统Node
+
+- **WHEN** editable nodes包含`kind: root`或把`@root`声明为普通Node
+- **THEN** parser MUST拒绝文档包
+- **AND** MUST不创建第二个系统Node
+
+### Requirement: 新Graph必须声明正式owner
+
+每个editable Graph MUST拥有`owner.entityId`与`owner.slot`。已有Graph MUST保持stable authoring identity；新Graph MUST使用local identity并引用同文档包内已有或新建owner。系统 MUST不接受无owner Graph、按路径猜owner或以独立Graph asset作为默认私有下钻。
+
+#### Scenario: AI为新State创建body Graph
+
+- **WHEN** AI增加`local:attack-state`并增加owner为该State、slot为`body`的`local:attack-body`
+- **THEN** Reconciler MUST先建立State planning symbol再创建inline body Graph
+- **AND** apply成功后两者 MUST反向导出为正式stable identity
+
+### Requirement: Graph逻辑与layout必须使用独立分片
+
+`graph.json` MUST只表达业务Graph逻辑，`layout.json` MUST只表达Node位置与正式允许的视觉布局数据。已有Node显式位置 MUST保留；新Node未提供位置时，系统 MUST使用唯一确定性自动布局规则。纯layout变化 MUST进入editable hash，但 MUST不触发Program或Projection发布。
+
+#### Scenario: AI只增加Node而不编辑layout
+
+- **WHEN** 新Node在graph.json中存在且layout.json没有对应位置
+- **THEN** apply MUST按Graph kind、拓扑层级与identity稳定排序生成位置
+- **AND** MUST不移动未受影响的已有Node
+
+### Requirement: Timeline结构与Curve payload必须分离
+
+每个Timeline目录 MUST使用`timeline.json`表达Timeline、Track、Clip、Marker、ownership和引用，使用`curves.json`表达完整Curve payload。Curve MUST只保存影响正式语义的字段；与catalog正式默认值相同的字段 MUST省略。AI修改Curve MUST提交该Curve完整目标状态，不得依赖key级MCP操作。
+
+#### Scenario: AI只修改weighted curve
+
+- **WHEN** AI替换`curves.json`中registered Channel的完整Curve
+- **THEN** Reconciler MUST保留time、value、tangent、必要weight、weighted mode与wrap mode语义
+- **AND** MUST不要求AI调用`edit_curve_key`
+
+### Requirement: 可编辑能力必须由唯一authoring capability catalog闭合
+
+系统 MUST使用同一authoring capability catalog驱动exporter、strict parser、Reconciler、handler preflight、Validator及只读Node/Graph catalog。每个editable Node kind MUST声明允许Graph kind、typed properties、默认值、逻辑ports、资产引用与create/configure/delete lowering。任何可导出实体若不能完整创建、修改、连接、删除和反向导出，checkout MUST以`authoring_capability_incomplete`失败，不得输出假可编辑结构。
+
+#### Scenario: Exporter发现未登记Node类型
+
+- **WHEN** 当前正式Graph包含一个未形成完整capability descriptor的可写Node
+- **THEN** checkout MUST报告Node identity、Graph identity与缺失能力
+- **AND** MUST不把C# type name直接写入editable作为绕过
+
+### Requirement: 文档包codec必须严格解析并计算整包规范hash
+
+系统 MUST对manifest、sync及每类JSON分片使用唯一strict parser与canonical writer。Parser MUST拒绝重复属性、未知字段、非法kind、非法identity、未登记文件、缺失manifest文件和非有限数值。Writer MUST使用UTF-8无BOM、稳定字段顺序、稳定entity顺序与明确数值格式。`editableHash`与`contextHash` MUST由规范相对路径和逐文件semantic hash计算，`documentHash` MUST锁定schema、domain、root identity及两项内容hash。
+
+#### Scenario: AI只格式化一个Graph文件
 
 - **WHEN** AI只改变缩进、换行或JSON属性输入顺序
-- **THEN** canonical content hash MUST保持不变
-- **AND** 同步状态 MUST不因此变为DocumentDirty
+- **THEN** 对应file semantic hash与document hash MUST保持不变
+- **AND** 同步状态 MUST不因此成为DocumentDirty
 
-#### Scenario: Document包含未知字段
+#### Scenario: 文档包出现未登记JSON文件
 
-- **WHEN** AI在Timeline entity中加入schema未声明字段
-- **THEN** parser MUST在reconcile前拒绝Document
-- **AND** MUST不忽略未知字段或按默认值继续apply
+- **WHEN** AI在editable目录加入manifest未声明的JSON文件
+- **THEN** parser MUST拒绝整包
+- **AND** MUST不静默忽略该文件
 
-### Requirement: 同步状态必须由live revision和canonical hash推导
+### Requirement: 同步状态必须由live revision和整包hash推导
 
-系统 MUST通过当前live authoring source revision与Document的`baseSourceRevision`比较树是否变化，并通过当前正文canonical hash与`baseContentHash`比较Document是否变化。系统 MUST只产生`Clean`、`TreeDirty`、`DocumentDirty`和`Conflict`四种状态，MUST不保存可由AI编辑的dirty布尔值。
+系统 MUST通过当前live authoring source revision与base source revision比较可写Unity authoring变化，通过current context hash与base context hash比较只读上下文变化，通过当前editable hash与base editable hash比较AI变化。系统 MUST只产生`Clean`、`TreeDirty`、`DocumentDirty`与`Conflict`，MUST不保存可由AI编辑的dirty布尔值。
 
-#### Scenario: 只有作者修改树
+#### Scenario: 只有AI修改Graph文件
 
-- **WHEN** 当前live source revision变化且Document正文hash仍等于基线
-- **THEN** 状态 MUST为`TreeDirty`
-- **AND** 下一次显式checkout MAY从当前树刷新Document
-
-#### Scenario: 只有AI修改Document
-
-- **WHEN** live source revision未变化且Document正文hash变化
-- **THEN** 状态 MUST为`DocumentDirty`
+- **WHEN** live source revision与current context未变化且editable hash变化
+- **THEN** 状态 MUST为DocumentDirty
 - **AND** Unity树与generated product MUST保持不变
 
-#### Scenario: 双方同时修改
+#### Scenario: Unity与AI都修改
 
-- **WHEN** live source revision与Document正文hash都偏离基线
-- **THEN** 状态 MUST为`Conflict`
+- **WHEN** Unity侧identity与editable hash都偏离基线
+- **THEN** 状态 MUST为Conflict
 - **AND** dry-run与apply MUST拒绝继续
 
-### Requirement: live authoring source revision不得依赖generated product
+### Requirement: Document必须确定性降低为完整Mutation Plan
 
-Character与AI domain MUST从当前Definition、可达Graph、StateMachine、Condition、Timeline和各domain正式可写依赖计算live authoring source revision。Character Program、Presentation Projection与AIIntentProgram的revision和stale状态 MUST只作为只读诊断，MUST不充当TreeDirty基线。Revision计算 MUST只读，MUST不调用build、publish或SaveAssets。
+系统 MUST使用唯一Document Reconciler比较当前规范Unity投影与整个文档包目标状态，并生成immutable typed `AgentMutationPlan`。Reconciler MUST自行决定Graph owner、Node、Flow Edge、Property Edge、Graph reference、Condition、Timeline、Blackboard和领域配置的创建、更新、连接与删除顺序。AI MUST不提交operation数组、handler名称、前序输出或局部工具调用。
 
-#### Scenario: 作者改树但没有编译Program
+#### Scenario: AI重接Property Edge
 
-- **WHEN** 作者修改一个Transition后没有执行Character Program Build
-- **THEN** live authoring source revision MUST立即在下一次显式状态查询时变化
-- **AND** Document MUST显示TreeDirty或Conflict
-- **AND** 系统 MUST不为了计算revision而编译Program
+- **WHEN** property edge保持或更换identity但endpoint目标发生变化
+- **THEN** Reconciler MUST降低为旧Property Edge断开与新Property Edge连接
+- **AND** handler MUST调用正式Property Edge API
 
-### Requirement: checkout必须保护未应用的AI修改
+#### Scenario: AI删除Flow Edge
 
-`checkout_document` MUST根据当前同步状态决定是否写Document。无Document、Clean或TreeDirty且Document未改时，checkout MUST从当前树写出规范Document；DocumentDirty时 MUST保留当前AI正文并返回现有路径；Conflict时 MUST拒绝覆盖任何一边并返回机器可读冲突。
+- **WHEN** 现有可写Flow Edge从目标集合移除
+- **THEN** Reconciler MUST计划正式断开Mutation
+- **AND** MUST不要求AI调用`delete_edge`
 
-#### Scenario: AI编辑中再次checkout
+### Requirement: dry-run与apply必须锁定同一整包语义
 
-- **WHEN** Document处于DocumentDirty且树未变化
-- **THEN** checkout MUST不覆盖AI正文
-- **AND** response MUST返回同一路径与DocumentDirty状态
+dry-run MUST重新加载完整文档包、计算live revision、推导同步状态、严格解析、reconcile并执行无副作用preflight。成功结果 MUST包含canonical document hash、plan hash、planned diff、metrics与跨文件entity诊断。Apply MUST要求同一expected document hash，并在mutation前重新确认package、root、revision、context和状态未变化。
 
-#### Scenario: checkout遇到冲突
+#### Scenario: dry-run后另一个文件被修改
 
-- **WHEN** Document和树都已变化
-- **THEN** checkout MUST返回Conflict及当前revision诊断
-- **AND** MUST不自动重导出覆盖Document
-
-### Requirement: Document必须确定性降低为内部Mutation Plan
-
-系统 MUST使用唯一Document Reconciler比较当前规范Snapshot与Document目标正文，并生成immutable typed `AgentMutationPlan`。Reconciler MUST自行决定创建、更新、连接、删除、引用绑定和owner处理顺序；AI MUST不提交operation数组、前序operation output或内部handler名称。Reconciler MUST保持现有stable identity，为新local identity建立planning symbol，并拒绝unsupported或只读entity变化。
-
-#### Scenario: AI在Document中增加Attack状态
-
-- **WHEN** AI只在StateMachine正文中增加一个带local identity的Attack状态及其行为结构
-- **THEN** Reconciler MUST生成创建State、行为节点、引用和连接所需的有序typed mutation
-- **AND** AI MUST不填写`ensure_state`、`link_flow`或operation output引用
-
-#### Scenario: AI从完整目标集合删除状态
-
-- **WHEN** 一个已有可写State stable identity从Document目标集合中移除
-- **THEN** Reconciler MUST计划删除State及正式受影响关系
-- **AND** MUST不删除Document未管理的read-only或unsupported实体
-
-### Requirement: dry-run必须锁定Document语义输入
-
-`dry_run_document` MUST重新读取Document、计算live revision、推导同步状态、严格解析、reconcile并执行无副作用preflight。成功response MUST包含canonical`documentHash`、plan hash、planned diff、metrics与Document entity路径诊断。TreeDirty或Conflict MUST在任何mutation前失败。Dry-run MUST不dirty、save、build或publish。
-
-#### Scenario: AI完成一轮Document编辑
-
-- **WHEN** Document处于DocumentDirty且root、revision、context和正文均合法
-- **THEN** dry-run MUST返回对应document hash和planned diff
-- **AND** Unity资产、Program和Projection MUST保持不变
-
-### Requirement: apply必须消费同一Document并在成功后反向规范化
-
-`apply_document` MUST要求dry-run返回的`expectedDocumentHash`，重新确认当前Document semantic hash、live source revision、root identity和同步状态未变化，再建立等价immutable Mutation Plan并进入唯一资产事务。Apply MUST调用正式handler、Validator、dirty、Save与显式generated product发布；任一失败 MUST完整回滚。成功后系统 MUST从最终正式树重新导出规范Document，写回真实stable identity与新基线，并把状态恢复为Clean。
-
-#### Scenario: dry-run后Document又被修改
-
-- **WHEN** apply收到的expected hash与当前Document semantic hash不同
+- **WHEN** dry-run后任一editable文件semantic hash变化
 - **THEN** apply MUST在mutation前返回`document_hash_changed`
-- **AND** MUST不修改Unity资产
+- **AND** MUST要求重新dry-run
+
+### Requirement: apply成功后必须从最终Unity树反向发布整个文档包
+
+Apply MUST在唯一资产事务内调用正式handler、Validator、dirty与Save。成功后系统 MUST从最终正式树重新导出完整规范文档包，将local identity替换为stable identity，更新sync基线并通过目录级staging原子发布。AI domain MAY在同一事务内发布AIIntentProgram；Character domain MUST不在Document apply内构建Program或Projection。任一Mutation、Validator、AI generated product或package发布失败 MUST不留下半成品或报告Clean。
 
 #### Scenario: Apply完整成功
 
-- **WHEN** 同一Document通过hash、revision、preflight、mutation、Validator与generated product发布
-- **THEN** 系统 MUST原子保存正式资产
-- **AND** MUST从最终树反向写回规范Document
-- **AND** Document与树 MUST回到Clean
+- **WHEN** 同一document hash通过全部门禁与事务
+- **THEN** 系统 MUST保存正式Unity资产
+- **AND** MUST从最终Unity树反向发布完整文档包
+- **AND** 文档包与Unity树 MUST回到Clean
 
-#### Scenario: 反向写回Document失败
+#### Scenario: 最终package发布失败
 
-- **WHEN** 正式树mutation成功但最终Document无法原子替换
+- **WHEN** Unity Mutation成功但最终目录包无法原子切换
 - **THEN** service MUST不报告完整成功或Clean
-- **AND** MUST在正式事务可回滚边界内避免留下假同步状态
+- **AND** MUST在正式可回滚边界内恢复上一份Unity资产与文档包
 
 ### Requirement: Conflict必须通过显式rebase处理
 
-系统 MUST在Conflict时拒绝apply，并提供显式`rebase_document`。Rebase MUST以当前树作为新基线，保留AI目标正文，不修改Unity资产、不build、不自动merge。Rebase完成后Document MUST重新成为DocumentDirty，并要求新的dry-run。
+系统 MUST在Conflict时拒绝apply，并提供显式rebase。Rebase MUST以当前Unity可写authoring与只读context为新整包基线，刷新context分片，保留AI editable分片，不修改Unity资产、不build、不自动merge。Rebase完成后 MUST重新推导DocumentDirty并要求新的dry-run。
 
-#### Scenario: AI显式接受当前人工树为新基线
+#### Scenario: AI接受当前人工树为新基线
 
-- **WHEN** AI已把需要保留的人工变化整理进Document并调用rebase
-- **THEN** service MUST更新base source revision和当前树canonical content hash
-- **AND** MUST保留AI目标正文
-- **AND** 后续apply MUST要求重新dry-run
+- **WHEN** AI已把需要保留的人工变化合入editable并显式rebase
+- **THEN** service MUST更新三项base identity
+- **AND** MUST保留AI editable目标状态
+- **AND** MUST刷新当前Unity context分片
 
-### Requirement: 文件与编辑器事件不得自动触发重操作
+### Requirement: 文件与Editor事件不得自动触发重操作
 
-Graph编辑、Timeline编辑、Inspector修改、JSON保存、selection变化、窗口focus、AssetDatabase refresh和domain reload MUST不自动执行checkout、reconcile、dry-run、apply、Program build、Projection build或AI Program build。只有显式`apply_document` MAY在成功事务内发布generated product。
+Graph编辑、Timeline编辑、Inspector修改、JSON保存、selection变化、窗口focus、AssetDatabase refresh和domain reload MUST不自动执行checkout、reconcile、dry-run、apply、validate、compile、Program build、Projection build或AI Program build。AI Program只可由显式AI apply发布；Character Program与Projection只可由apply后的精确Definition独立Build生命周期发布。
 
-#### Scenario: AI保存Document文件
+#### Scenario: AI保存多个JSON文件
 
-- **WHEN** AI把修改后的JSON写入磁盘
-- **THEN** 系统 MUST只在下一次显式查询时推导DocumentDirty
-- **AND** MUST不自动唤醒Unity编译或修改树
-
-#### Scenario: 用户在Project窗口选中Definition
-
-- **WHEN** selection切换到Character或AI Definition
-- **THEN** Window MAY显示上下文
-- **AND** MUST不自动checkout、validate或build
-
+- **WHEN** AI完成一轮直接文件编辑
+- **THEN** 系统 MUST只在下一次显式生命周期调用时重新计算状态
+- **AND** MUST不启动文件watcher、Unity compile或asset mutation

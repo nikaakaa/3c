@@ -12,7 +12,7 @@
   "dependencies": {
     "com.alex.tengine": "file:com.alex.tengine",
     "com.code-philosophy.hybridclr": "https://gitee.com/focus-creative-games/hybridclr_unity.git",
-    "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
+    "com.coplaydev.unity-mcp": "file:C:/Users/Lenovo/.unity-mcp/MCPForUnity",
     "com.cysharp.unitask": "file:UniTask",
     "com.fantasy.unity": "2026.0.1020",
     "com.inspiaaa.unityhfsm": "https://github.com/Inspiaaa/UnityHFSM.git#upm",

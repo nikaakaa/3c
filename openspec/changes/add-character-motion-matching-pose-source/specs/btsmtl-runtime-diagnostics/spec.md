@@ -2,7 +2,7 @@
 
 ### Requirement: RuntimeDebugSession必须统一承载Motion Matching诊断
 
-Motion Matching MUST通过现有RuntimeDebugSession、interest、Capture与只读view发布结构化trace，不建立独立运行时调试管理器。Trace MUST覆盖Profile/Database identity、trajectory source/envelope、history状态、admission stage、reject reason、index visit/prune、Top-K exact cost、short-horizon plan、selected sample、continue/jump、Selection Generation、Blend Entry与reset。
+Motion Matching MUST通过现有RuntimeDebugSession、interest、Capture与只读view发布结构化trace，不建立独立运行时调试管理器。Trace MUST覆盖Profile/Database identity、provider/player/Presentation source identity、trajectory source/envelope、history状态、admission stage、reject reason、index visit/prune、Top-K exact cost、short-horizon plan、selected sample、continue/jump、Selection Generation、availability、Pose Plan completion与reset。
 
 #### Scenario: 未订阅候选详情
 
@@ -13,7 +13,7 @@ Motion Matching MUST通过现有RuntimeDebugSession、interest、Capture与只�
 #### Scenario: 订阅一次查询
 
 - **WHEN** Live Debug关注当前Actor的MM query
-- **THEN** view MUST关联同一QueryId下的trajectory、admission、cost、plan和Blend Entry
+- **THEN** view MUST关联同一QueryId下的trajectory、admission、cost、plan和state-local source sample
 - **AND** MUST不根据动画状态名重新推断选择原因
 
 ### Requirement: Search Replay Capture必须严格绑定数据库身份

@@ -15,11 +15,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     public interface IAgentConditionTermEmitter
     {
         AgentConditionTermKind Kind { get; }
-        bool Preflight(AgentPatchCompileSession session, AgentConditionTermCommand term, string path);
+        bool Preflight(AgentMutationSession session, AgentConditionTermMutation term, string path);
         AgentConditionTermOutput Emit(
-            AgentPatchCompileSession session,
+            AgentMutationSession session,
             ConditionRuleGraph graph,
-            AgentConditionTermCommand term,
+            AgentConditionTermMutation term,
             int index,
             string path);
     }
@@ -58,17 +58,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         public bool Preflight(
-            AgentPatchCompileSession session,
-            IReadOnlyList<AgentConditionGroupCommand> groups,
+            AgentMutationSession session,
+            IReadOnlyList<AgentConditionGroupMutation> groups,
             string path)
         {
             bool valid = true;
             for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
             {
-                IReadOnlyList<AgentConditionTermCommand> terms = groups[groupIndex].Terms;
+                IReadOnlyList<AgentConditionTermMutation> terms = groups[groupIndex].Terms;
                 for (int termIndex = 0; termIndex < terms.Count; termIndex++)
                 {
-                    AgentConditionTermCommand term = terms[termIndex];
+                    AgentConditionTermMutation term = terms[termIndex];
                     string termPath = $"{path}.conditionGroups[{groupIndex}].terms[{termIndex}]";
                     if (!m_Emitters.TryGetValue(term.Kind, out IAgentConditionTermEmitter emitter))
                     {
@@ -83,26 +83,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         public bool BuildTransitionRule(
-            AgentPatchCompileSession session,
+            AgentMutationSession session,
             BaseEdge targetEdge,
-            AgentEnsureConditionRuleCommand command)
+            AgentEnsureConditionRuleMutation command)
         {
             return BuildRule(session, targetEdge, command.Groups, command.Path);
         }
 
         public bool BuildFlowRule(
-            AgentPatchCompileSession session,
+            AgentMutationSession session,
             BaseEdge targetEdge,
-            IReadOnlyList<AgentConditionGroupCommand> groups,
+            IReadOnlyList<AgentConditionGroupMutation> groups,
             string path)
         {
             return BuildRule(session, targetEdge, groups, path);
         }
 
         bool BuildRule(
-            AgentPatchCompileSession session,
+            AgentMutationSession session,
             BaseEdge targetEdge,
-            IReadOnlyList<AgentConditionGroupCommand> groups,
+            IReadOnlyList<AgentConditionGroupMutation> groups,
             string path)
         {
             ConditionRuleGraph target = targetEdge?.ConditionRuleGraph;
@@ -117,11 +117,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             int layoutIndex = 0;
             for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
             {
-                IReadOnlyList<AgentConditionTermCommand> terms = groups[groupIndex].Terms;
+                IReadOnlyList<AgentConditionTermMutation> terms = groups[groupIndex].Terms;
                 var termOutputs = new List<AgentConditionTermOutput>();
                 for (int termIndex = 0; termIndex < terms.Count; termIndex++)
                 {
-                    AgentConditionTermCommand term = terms[termIndex];
+                    AgentConditionTermMutation term = terms[termIndex];
                     string termPath = $"{path}.conditionGroups[{groupIndex}].terms[{termIndex}]";
                     if (!m_Emitters.TryGetValue(term.Kind, out IAgentConditionTermEmitter emitter))
                     {
@@ -157,11 +157,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         public ConditionRuleGraph BuildActionExitRule(
-            AgentPatchCompileSession session,
+            AgentMutationSession session,
             string graphName,
             ActionContextSlot actionContext,
             AgentActionExitRuleKind ruleKind,
-            IReadOnlyList<AgentConditionGroupCommand> cancelConditionGroups,
+            IReadOnlyList<AgentConditionGroupMutation> cancelConditionGroups,
             string path)
         {
             ConditionRuleGraph graph = ConditionRuleGraph.CreateDefaultGraph(graphName);
@@ -195,11 +195,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 int layoutIndex = 2;
                 for (int groupIndex = 0; groupIndex < cancelConditionGroups.Count; groupIndex++)
                 {
-                    IReadOnlyList<AgentConditionTermCommand> terms = cancelConditionGroups[groupIndex].Terms;
+                    IReadOnlyList<AgentConditionTermMutation> terms = cancelConditionGroups[groupIndex].Terms;
                     var termOutputs = new List<AgentConditionTermOutput>();
                     for (int termIndex = 0; termIndex < terms.Count; termIndex++)
                     {
-                        AgentConditionTermCommand term = terms[termIndex];
+                        AgentConditionTermMutation term = terms[termIndex];
                         string termPath = $"{path}.cancelConditionGroups[{groupIndex}].terms[{termIndex}]";
                         if (!m_Emitters.TryGetValue(term.Kind, out IAgentConditionTermEmitter emitter))
                         {
@@ -268,7 +268,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static AgentConditionTermOutput Combine(
-            AgentPatchCompileSession session,
+            AgentMutationSession session,
             ConditionRuleGraph graph,
             IReadOnlyList<AgentConditionTermOutput> outputs,
             bool useAnd,
@@ -295,7 +295,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static bool ConnectResult(
-            AgentPatchCompileSession session,
+            AgentMutationSession session,
             ConditionRuleGraph graph,
             AgentConditionTermOutput output,
             string path)
@@ -311,7 +311,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         internal static void Link(
-            AgentPatchCompileSession session,
+            AgentMutationSession session,
             ConditionRuleGraph graph,
             AgentConditionTermOutput output,
             BaseNode target,
@@ -370,7 +370,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public AgentConditionTermKind Kind { get; }
 
-        public bool Preflight(AgentPatchCompileSession session, AgentConditionTermCommand term, string path)
+        public bool Preflight(AgentMutationSession session, AgentConditionTermMutation term, string path)
         {
             bool valid = true;
             if (!session.Resolver.TryResolveInputValue("MoveAxis", out _))
@@ -382,13 +382,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return valid;
         }
 
-        public AgentConditionTermOutput Emit(AgentPatchCompileSession session, ConditionRuleGraph graph, AgentConditionTermCommand term, int index, string path)
+        public AgentConditionTermOutput Emit(AgentMutationSession session, ConditionRuleGraph graph, AgentConditionTermMutation term, int index, string path)
         {
             return EmitCompare(session, graph, index, m_ThresholdKey, m_CompareType, path);
         }
 
         internal static AgentConditionTermOutput EmitCompare(
-            AgentPatchCompileSession session,
+            AgentMutationSession session,
             ConditionRuleGraph graph,
             int index,
             string thresholdKey,
@@ -423,7 +423,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public AgentConditionTermKind Kind => AgentConditionTermKind.MoveWalk;
 
-        public bool Preflight(AgentPatchCompileSession session, AgentConditionTermCommand term, string path)
+        public bool Preflight(AgentMutationSession session, AgentConditionTermMutation term, string path)
         {
             bool valid = true;
             if (!session.Resolver.TryResolveInputValue("MoveAxis", out _))
@@ -436,7 +436,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return valid;
         }
 
-        public AgentConditionTermOutput Emit(AgentPatchCompileSession session, ConditionRuleGraph graph, AgentConditionTermCommand term, int index, string path)
+        public AgentConditionTermOutput Emit(AgentMutationSession session, ConditionRuleGraph graph, AgentConditionTermMutation term, int index, string path)
         {
             AgentConditionTermOutput lower = MovementCompareEmitter.EmitCompare(session, graph, index * 2, "WalkThreshold", CompareNode.CompareType.GreaterEqual, path);
             AgentConditionTermOutput upper = MovementCompareEmitter.EmitCompare(session, graph, index * 2 + 1, "RunThreshold", CompareNode.CompareType.Less, path);
@@ -453,7 +453,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public AgentConditionTermKind Kind => AgentConditionTermKind.TurnFacingAngle;
 
-        public bool Preflight(AgentPatchCompileSession session, AgentConditionTermCommand term, string path)
+        public bool Preflight(AgentMutationSession session, AgentConditionTermMutation term, string path)
         {
             bool valid = true;
             if (!session.Resolver.TryResolveInputValue("MoveAxis", out _))
@@ -461,11 +461,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 session.Report.Error(path, "input_not_found", "Condition term 需要当前 InputProfile 的 MoveAxis。");
                 valid = false;
             }
-            valid &= session.TryResolveBlackboardDeclaration("MovingTurnAngleThreshold", typeof(float), path, out _, out _);
+            valid &= session.TryResolveBlackboardDeclaration(term.BlackboardKey, typeof(float), path, out _, out _);
             return valid;
         }
 
-        public AgentConditionTermOutput Emit(AgentPatchCompileSession session, ConditionRuleGraph graph, AgentConditionTermCommand term, int index, string path)
+        public AgentConditionTermOutput Emit(AgentMutationSession session, ConditionRuleGraph graph, AgentConditionTermMutation term, int index, string path)
         {
             CharacterInputVector2InfoNode inputNode = graph.CreateNode(typeof(CharacterInputVector2InfoNode)) as CharacterInputVector2InfoNode;
             inputNode.DisplayName = "MoveAxis Input Value";
@@ -477,9 +477,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             angleNode.Position = new Vector2(-400f, index * 120f);
 
             PipelineBlackboardFloatInfoNode thresholdNode = graph.CreateNode(typeof(PipelineBlackboardFloatInfoNode)) as PipelineBlackboardFloatInfoNode;
-            thresholdNode.DisplayName = "MovingTurnAngleThreshold";
+            thresholdNode.DisplayName = term.BlackboardKey;
             thresholdNode.Position = new Vector2(-400f, index * 120f + 60f);
-            if (!session.TryResolveBlackboardDeclaration("MovingTurnAngleThreshold", typeof(float), path, out _, out BaseExposedProperty declaration))
+            if (!session.TryResolveBlackboardDeclaration(term.BlackboardKey, typeof(float), path, out _, out BaseExposedProperty declaration))
                 return default;
             thresholdNode.ConfigureAuthoring(declaration);
 
@@ -492,7 +492,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             graph.LinkProperty(inputNode, angleNode, inputNode.PropertyPortMap["m_Output"], angleNode.PropertyPortMap["m_MoveInput"]);
             graph.LinkProperty(angleNode, compareNode, angleNode.PropertyPortMap["m_Output"], compareNode.PropertyPortMap["m_InputValue1"]);
             graph.LinkProperty(thresholdNode, compareNode, thresholdNode.PropertyPortMap["m_Output"], compareNode.PropertyPortMap["m_InputValue2"]);
-            return AgentConditionRuleBuilder.Output(compareNode, "m_Result");
+            return ActionWindowActiveEmitter.ApplyNegate(
+                session,
+                graph,
+                AgentConditionRuleBuilder.Output(compareNode, "m_Result"),
+                term.Negate,
+                "Facing Angle Threshold",
+                index,
+                path);
         }
     }
 
@@ -500,12 +507,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public AgentConditionTermKind Kind => AgentConditionTermKind.BlackboardBool;
 
-        public bool Preflight(AgentPatchCompileSession session, AgentConditionTermCommand term, string path)
+        public bool Preflight(AgentMutationSession session, AgentConditionTermMutation term, string path)
         {
             return session.TryResolveBlackboardDeclaration(term.BlackboardKey, typeof(bool), path, out _, out _);
         }
 
-        public AgentConditionTermOutput Emit(AgentPatchCompileSession session, ConditionRuleGraph graph, AgentConditionTermCommand term, int index, string path)
+        public AgentConditionTermOutput Emit(AgentMutationSession session, ConditionRuleGraph graph, AgentConditionTermMutation term, int index, string path)
         {
             PipelineBlackboardBoolInfoNode valueNode = graph.CreateNode(typeof(PipelineBlackboardBoolInfoNode)) as PipelineBlackboardBoolInfoNode;
             valueNode.DisplayName = term.BlackboardKey;
@@ -528,9 +535,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     sealed class StateRootCompletedEmitter : IAgentConditionTermEmitter
     {
         public AgentConditionTermKind Kind => AgentConditionTermKind.StateRootCompleted;
-        public bool Preflight(AgentPatchCompileSession session, AgentConditionTermCommand term, string path) => true;
+        public bool Preflight(AgentMutationSession session, AgentConditionTermMutation term, string path) => true;
 
-        public AgentConditionTermOutput Emit(AgentPatchCompileSession session, ConditionRuleGraph graph, AgentConditionTermCommand term, int index, string path)
+        public AgentConditionTermOutput Emit(AgentMutationSession session, ConditionRuleGraph graph, AgentConditionTermMutation term, int index, string path)
         {
             StateRootCompletedNode node = graph.CreateNode(typeof(StateRootCompletedNode)) as StateRootCompletedNode;
             node.DisplayName = "State Root Completed";
@@ -543,7 +550,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public AgentConditionTermKind Kind => AgentConditionTermKind.ActionRequest;
 
-        public bool Preflight(AgentPatchCompileSession session, AgentConditionTermCommand term, string path)
+        public bool Preflight(AgentMutationSession session, AgentConditionTermMutation term, string path)
         {
             if (session.Resolver.TryResolveActionRequest(term.Request, out _))
                 return true;
@@ -551,7 +558,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return false;
         }
 
-        public AgentConditionTermOutput Emit(AgentPatchCompileSession session, ConditionRuleGraph graph, AgentConditionTermCommand term, int index, string path)
+        public AgentConditionTermOutput Emit(AgentMutationSession session, ConditionRuleGraph graph, AgentConditionTermMutation term, int index, string path)
         {
             if (!session.Resolver.TryResolveActionRequest(term.Request, out _))
             {
@@ -570,7 +577,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public AgentConditionTermKind Kind => AgentConditionTermKind.ActionWindowActive;
 
-        public bool Preflight(AgentPatchCompileSession session, AgentConditionTermCommand term, string path)
+        public bool Preflight(AgentMutationSession session, AgentConditionTermMutation term, string path)
         {
             if (!string.IsNullOrWhiteSpace(term.WindowType))
                 return true;
@@ -578,7 +585,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return false;
         }
 
-        public AgentConditionTermOutput Emit(AgentPatchCompileSession session, ConditionRuleGraph graph, AgentConditionTermCommand term, int index, string path)
+        public AgentConditionTermOutput Emit(AgentMutationSession session, ConditionRuleGraph graph, AgentConditionTermMutation term, int index, string path)
         {
             ActionWindowActiveInfoNode node = graph.CreateNode(typeof(ActionWindowActiveInfoNode)) as ActionWindowActiveInfoNode;
             node.DisplayName = $"Window {term.WindowType}";
@@ -588,7 +595,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         internal static AgentConditionTermOutput ApplyNegate(
-            AgentPatchCompileSession session,
+            AgentMutationSession session,
             ConditionRuleGraph graph,
             AgentConditionTermOutput output,
             bool negate,
@@ -610,7 +617,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public AgentConditionTermKind Kind => AgentConditionTermKind.CanActivateAction;
 
-        public bool Preflight(AgentPatchCompileSession session, AgentConditionTermCommand term, string path)
+        public bool Preflight(AgentMutationSession session, AgentConditionTermMutation term, string path)
         {
             if (!session.Resolver.TryResolveActionProfile(term.ActionProfile.LogicalId, out ActionProfile profile))
             {
@@ -632,7 +639,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 out _);
         }
 
-        public AgentConditionTermOutput Emit(AgentPatchCompileSession session, ConditionRuleGraph graph, AgentConditionTermCommand term, int index, string path)
+        public AgentConditionTermOutput Emit(AgentMutationSession session, ConditionRuleGraph graph, AgentConditionTermMutation term, int index, string path)
         {
             if (!session.Resolver.TryResolveActionProfile(term.ActionProfile.LogicalId, out ActionProfile profile))
             {
@@ -663,7 +670,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public AgentConditionTermKind Kind => AgentConditionTermKind.AITargetDistanceCompareBlackboard;
 
-        public bool Preflight(AgentPatchCompileSession session, AgentConditionTermCommand term, string path)
+        public bool Preflight(AgentMutationSession session, AgentConditionTermMutation term, string path)
         {
             if (session.Domain != AgentAuthoringSchema.AIControllerDomain)
             {
@@ -673,7 +680,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return session.TryResolveBlackboardDeclaration(term.BlackboardKey, typeof(float), path, out _, out _);
         }
 
-        public AgentConditionTermOutput Emit(AgentPatchCompileSession session, ConditionRuleGraph graph, AgentConditionTermCommand term, int index, string path)
+        public AgentConditionTermOutput Emit(AgentMutationSession session, ConditionRuleGraph graph, AgentConditionTermMutation term, int index, string path)
         {
             if (!session.TryResolveBlackboardDeclaration(term.BlackboardKey, typeof(float), path, out _, out BaseExposedProperty declaration))
                 return default;

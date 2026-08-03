@@ -216,7 +216,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         ulong m_PreparationIdentity;
         ulong m_LastPreparationIdentity;
         ulong m_LastCommittedCompletionIdentity;
+        int m_CommittedActivePageIndex = -1;
+        ulong m_CommittedCompletionIdentity;
         bool m_PreparationValidated;
+        bool m_FrameOpen;
         bool m_Disposed;
 
         internal AnimationSlotBlendPoseWorkspace(
@@ -286,6 +289,50 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal int BoneCount => m_BoneCount;
         internal int ParameterCount => m_ParameterCount;
         internal bool HasActivePlan => Volatile.Read(ref m_ActivePageIndex) >= 0;
+
+        internal void BeginFrame()
+        {
+            RequireAlive();
+            if (m_FrameOpen || m_PreparationPageIndex >= 0)
+                throw new InvalidOperationException("Animation Slot Blend workspace frame is already open.");
+            m_CommittedActivePageIndex =
+                Volatile.Read(ref m_ActivePageIndex);
+            m_CommittedCompletionIdentity =
+                m_LastCommittedCompletionIdentity;
+            m_FrameOpen = true;
+        }
+
+        internal void DiscardFrame()
+        {
+            RequireAlive();
+            if (!m_FrameOpen)
+                return;
+            int pendingPageIndex =
+                Volatile.Read(ref m_ActivePageIndex);
+            if (m_PreparationPageIndex >= 0)
+                pendingPageIndex = m_PreparationPageIndex;
+            if (pendingPageIndex >= 0 &&
+                pendingPageIndex != m_CommittedActivePageIndex)
+            {
+                ClearPlanPage(pendingPageIndex);
+                SetFinalWriteBinding(pendingPageIndex, default);
+            }
+            Volatile.Write(
+                ref m_ActivePageIndex,
+                m_CommittedActivePageIndex);
+            m_LastCommittedCompletionIdentity =
+                m_CommittedCompletionIdentity;
+            ClearPreparation();
+            m_FrameOpen = false;
+        }
+
+        internal void CommitFrame()
+        {
+            RequireAlive();
+            if (!m_FrameOpen || m_PreparationPageIndex >= 0)
+                throw new InvalidOperationException("Animation Slot Blend workspace frame is not sealed.");
+            m_FrameOpen = false;
+        }
 
         internal AnimationSlotBlendFramePlanPreparation PrepareInactivePage(
             in AnimationPlayerPoseNativeWriteBinding finalWriteBinding,

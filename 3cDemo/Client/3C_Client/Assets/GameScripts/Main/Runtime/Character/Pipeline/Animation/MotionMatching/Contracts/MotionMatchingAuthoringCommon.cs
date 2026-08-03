@@ -109,37 +109,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public float Weight => m_Weight;
     }
 
-    [Serializable]
-    public sealed class CharacterMotionMatchingProducerBinding
-    {
-        [SerializeField] string m_ProgramProducerId = string.Empty;
-        [SerializeField] string m_AnimationChannelId = string.Empty;
-        [SerializeField] string m_SearchDomainId = string.Empty;
-        [SerializeField] CharacterMotionMatchingDatabaseDefinition[] m_Databases = Array.Empty<CharacterMotionMatchingDatabaseDefinition>();
-
-        public string ProgramProducerId => m_ProgramProducerId ?? string.Empty;
-        public AnimationChannelId AnimationChannelId => string.IsNullOrWhiteSpace(m_AnimationChannelId) ? default : new AnimationChannelId(m_AnimationChannelId);
-        public CharacterMotionMatchingSearchDomainId SearchDomainId => string.IsNullOrWhiteSpace(m_SearchDomainId) ? default : new CharacterMotionMatchingSearchDomainId(m_SearchDomainId);
-        public IReadOnlyList<CharacterMotionMatchingDatabaseDefinition> Databases => m_Databases ?? Array.Empty<CharacterMotionMatchingDatabaseDefinition>();
-
-        public void RequireValid()
-        {
-            MotionMatchingAuthoringValidation.RequireIdentity(ProgramProducerId, nameof(ProgramProducerId));
-            if (!AnimationChannelId.IsValid || !SearchDomainId.IsValid || Databases.Count == 0)
-                throw new InvalidOperationException("Motion Matching producer binding is incomplete.");
-            var databaseIds = new HashSet<CharacterMotionMatchingDatabaseId>();
-            for (int i = 0; i < Databases.Count; i++)
-            {
-                CharacterMotionMatchingDatabaseDefinition database = Databases[i];
-                if (!database)
-                    throw new InvalidOperationException($"Motion Matching producer binding database #{i} is missing.");
-                database.RequireValid();
-                if (!database.SearchDomainId.Equals(SearchDomainId) || !databaseIds.Add(database.DatabaseId))
-                    throw new InvalidOperationException($"Motion Matching producer binding database #{i} has a mismatched or duplicate identity.");
-            }
-        }
-    }
-
     static class MotionMatchingAuthoringValidation
     {
         public static string RequireIdentity(string value, string field)

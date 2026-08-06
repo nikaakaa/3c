@@ -19,7 +19,7 @@
 
 ### Requirement: Predictive Foot Placement的通用Grounding必须复用FinalIK成熟数学
 
-正式`PredictiveFootPlacement` MUST是唯一world-aware Foot Goal Source，并 MUST通过中立FinalIK Grounding backend复用本地`Grounding.Leg`现有的cast组合、velocity prediction基线、命中点/平面到脚高、坡面rotation offset与foot interpolation数学。Backend MAY把`Transform`、`Time.time`和默认Physics调用替换为显式Component Transform、frame delta、逐脚Plant Contribution、精确PhysicsScene、self-collider filter与固定命中workspace；Foot Placement Weight与逐脚Plant Contribution MUST共同连续门控合法Current Grounding脚目标的Position/Rotation Weight，Contact Weight MUST只门控anchor、lock与slide。三者 MUST不重写命中、脚高、rotation或脚插值方程。Backend MUST把stock pelvis lower/lift权重固定为零且不发布stock pelvis结果，也 MUST不把上述脚部数学复制到项目新类或用第二套结果覆盖。`GrounderFBBIK`组件 MUST不进入正式Runtime。
+正式`PredictiveFootPlacement` MUST是唯一world-aware Foot Goal Source，并 MUST通过中立FinalIK Grounding backend复用本地`Grounding.Leg`现有的cast组合、velocity prediction基线、命中点/平面到脚高、坡面rotation offset与foot interpolation数学。Backend MAY把`Transform`、`Time.time`和默认Physics调用替换为显式Component Transform、frame delta、精确PhysicsScene、self-collider filter与固定命中workspace；它 MUST先生成不受动画`PlantConfidence`连续缩放的完整Current Grounding结果，`GroundingFootInput` MUST不携带`PlantWeight`或同义权重。Backend MUST把stock pelvis lower/lift权重固定为零且不发布stock pelvis结果，也 MUST不把上述脚部数学复制到项目新类或用第二套结果覆盖。`GrounderFBBIK`组件 MUST不进入正式Runtime。
 
 FinalIK Grounding没有的动画Foot Feature、source contribution、相位驱动Future Landing、Current/Future Support、Ground Envelope、surface identity、moving surface anchor、Free/Locked/Sliding与逐腿可达区间 MUST由同一节点内范围明确的Project Predictive Extension补充。Project Predictive Extension MUST不重新计算与FinalIK竞争的当前脚高、坡面rotation或foot smoothing；Pelvis Reach Planner MUST只消费最终Foot Goal与Rig腿长，不得query world。系统 MUST不把FinalIK的简单velocity prediction表述为动画相位落点预测。
 
@@ -31,10 +31,10 @@ FinalIK Grounding没有的动画Foot Feature、source contribution、相位驱�
 
 #### Scenario: 移动动画中的摆动脚跨过低一级踏面
 
-- **WHEN** 动画Foot Feature把该脚标记为Unplanted且另一脚保持有效Plant Contribution
-- **THEN** 该摆动脚Foot Goal的Position与Rotation Weight MUST为零，保持动画摆脚Pose
-- **AND** 该摆动脚 MUST不创建plant anchor、lock或slide约束
-- **AND** 该摆动腿 MUST不参与Pelvis Reach Planner
+- **WHEN** 最终表现姿势的摆动脚仍有合法Current Grounding命中且Body Grounded
+- **THEN** FinalIK Grounding Goal MUST保留动画Ankle相对Root参考平面的离地高度，并按Foot Placement Weight应用踏面相对Root的高度与rotation变化
+- **AND** 该摆动脚在未进入Plant Contact时 MUST不创建plant anchor、lock或slide约束
+- **AND** 该摆动腿在`AllPlantedFeet`模式下 MUST不参与Pelvis Reach Planner
 
 #### Scenario: FinalIK缺少Future Landing语义
 
@@ -47,6 +47,32 @@ FinalIK Grounding没有的动画Foot Feature、source contribution、相位驱�
 - **WHEN** 实施审计发现显式world query或Pose输入必须复制FinalIK脚高、rotation或foot interpolation方程
 - **THEN** 本change实施 MUST停止并报告精确源码依赖
 - **AND** MUST不保留项目重复Grounding、Grounder组件或旧Foot Placement作为fallback
+
+### Requirement: Placement、Plant Support与Contact必须使用独立信号
+
+每脚 MUST同时保留彼此独立的`PlacementWeight`、`PlantConfidence`、`AnimationFootSpeed`、`PlantSupportWeight`与`ContactWeight`。`PlacementWeight` MUST只由唯一Foot Placement作者权重、Body Grounded和合法Current Grounding命中决定，并 MUST唯一控制未约束FinalIK Grounding Foot Goal的Position/Rotation Weight。Runtime MUST不使用脚速、Plant Confidence、sole到surface距离或首帧历史状态连续缩放普通Foot Goal。
+
+`PlantConfidence` MUST只表达最终Pose contribution中混合后的源动画接触意图，并只通过显式enter/exit迟滞参与Plant Contact状态。`AnimationFootSpeed` MUST等于最终Pose contribution中已按source权重和visual time scale混合的烘焙`SoleLocalVelocity.magnitude`；Runtime MUST不把它与Body可见线速度、actor世界平移、yaw点速度或相邻最终sole世界位置差拼接。Profile MUST只提供严格有序的`PlantSpeedThreshold`与`UnalignmentSpeedThreshold`。Plant Contact进入 MUST要求`PlantConfidence`达到Enter且`AnimationFootSpeed <= PlantSpeedThreshold`；退出 MUST在`PlantConfidence`达到Exit或`AnimationFootSpeed >= UnalignmentSpeedThreshold`时发生。
+
+`PlantSupportWeight` MUST在Plant Contact成立时等于`PlacementWeight`，否则为0，并 MUST只表达Pelvis Reach Planner的普通支撑腿选择。`ContactWeight` MUST只在Plant Contact成立、Plant Policy允许约束且surface anchor有效时使用，并 MUST在两个速度阈值间连续渐退，只控制anchor、lock与slide；`Unlocked`策略下 MUST为0。系统 MUST删除旧`PlantWeight`、`GroundAlignmentWeight`、world planar/vertical速度门控、surface distance门控、`0.5 -> 1`连续重映射、旧Plant/Release与Alignment速度距离字段及兼容别名。
+
+#### Scenario: Run混合得到中间Plant Confidence
+
+- **WHEN** 左脚`PlantConfidence`为`0.65`、Body Grounded且Current Grounding命中合法踏面
+- **THEN** 左脚Placement Weight MUST等于有效Foot Placement Weight
+- **AND** MUST不因`InverseLerp(0.5, 1, 0.65)`把Goal权重压成`0.3`
+
+#### Scenario: 持续输入让actor世界速度升高
+
+- **WHEN** 角色持续跑动导致左右sole世界位置都包含actor平移
+- **THEN** 普通Foot Goal Weight MUST继续等于Placement Weight，不得因actor世界速度归零
+- **AND** Plant Contact MUST只读取混合后的动画Sole Local Velocity与Plant Confidence
+
+#### Scenario: Unlocked普通基线
+
+- **WHEN** Corin使用`Unlocked`且Body Grounded并有合法Current Grounding命中
+- **THEN** Foot Goal MUST按Placement Weight应用FinalIK Grounding目标
+- **AND** Contact Weight MUST为0且不得创建anchor、lock或slide
 
 ## MODIFIED Requirements
 
@@ -165,10 +191,10 @@ Profile MAY通过`AdjustHeelBeforePlanting`让未锁定但toe plant hit合法的
 
 #### Scenario: Corin普通基线站在同一斜坡踏面
 
-- **WHEN** Corin配置`Unlocked`、`AdjustHeelBeforePlanting=false`且当前Plant Foot命中合法踏面
-- **THEN** Goal Source MUST以Foot Placement Weight和逐脚Plant Contribution共同门控FinalIK Grounding ankle Position/Rotation目标
+- **WHEN** Corin配置`Unlocked`、`AdjustHeelBeforePlanting=false`且Body Grounded并且当前脚命中合法踏面
+- **THEN** Goal Source MUST以Placement Weight应用FinalIK Grounding ankle Position/Rotation目标
 - **AND** Goal Source MUST不创建anchor、toe plant pivot或提前Heel Lift
-- **AND** Pelvis MUST只来自有效Plant Foot参与的逐腿可达区间
+- **AND** Pelvis MUST只来自有效Plant Support或Contact支撑脚参与的逐腿可达区间
 
 #### Scenario: Toe命中丢失
 
@@ -178,7 +204,7 @@ Profile MAY通过`AdjustHeelBeforePlanting`让未锁定但toe plant hit合法的
 
 ### Requirement: Pelvis必须由逐腿可达区间统一规划
 
-Pelvis基础结果 MUST且只能由同一`PredictiveFootPlacement`中的Pelvis Reach Planner计算。Planner MUST按每腿Hip、动画Ankle、最终Foot Goal、Position Weight、Rig reference leg length、minimum extension ratio与maximum extension ratio计算允许的竖直pelvis offset区间，并按Profile的`AllLegs`、`AllPlantedFeet`或`DirectionalSlopeSupport`模式选择贡献腿。Planner MUST从贡献脚的最终Foot Goal相对动画Ankle的竖直变化和支撑权重求唯一首选高度：有效目标没有共同竖直变化时首选高度为0，目标共同抬高或降低时骨盆 MUST连续跟随，双脚高低不同时 MUST按贡献权重平衡。区间有交集时 MUST把首选高度夹入共同区间；区间无交集或单腿目标超出最大水平调整/最大升降范围时 MUST保留主要支撑脚并把不可满足Foot Goal权重清零，不得通过无限下蹲、拉长腿或上一帧目标掩盖冲突。
+Pelvis基础结果 MUST且只能由同一`PredictiveFootPlacement`中的Pelvis Reach Planner计算。Planner MUST按每腿Hip、动画Ankle、最终Foot Goal、Position Weight、Rig reference leg length、minimum extension ratio与maximum extension ratio计算允许的竖直pelvis offset区间，并按Profile的`AllLegs`、`AllPlantedFeet`或`DirectionalSlopeSupport`模式选择贡献腿。每腿支撑权重 MUST为`max(PlantSupportWeight, ContactWeight)`，MUST不直接读取或重映射`PlantConfidence`，也 MUST不把普通Placement Weight自动视为`AllPlantedFeet`支撑。Planner MUST从贡献脚的最终Foot Goal相对动画Ankle的竖直变化和支撑权重求唯一首选高度：有效目标没有共同竖直变化时首选高度为0，目标共同抬高或降低时骨盆 MUST连续跟随，双脚高低不同时 MUST按贡献权重平衡。区间有交集时 MUST把首选高度夹入共同区间；区间无交集或单腿目标超出最大水平调整/最大升降范围时 MUST保留主要支撑脚并把不可满足Foot Goal权重清零，不得通过无限下蹲、拉长腿或上一帧目标掩盖冲突。
 
 Planner MUST通过Profile的最大降低、最大抬升、插值速度与dead zone连续更新唯一状态，并 MUST显式使用`FollowBody`或`HoldWorldDuringInterpolation` Actor Movement Compensation Mode。`FollowBody`不得从pelvis offset中扣除actor/root位移；`HoldWorldDuringInterpolation` MAY按VisualRoot up扣除有限root delta。FinalIK stock `lowerPelvisWeight`、`liftPelvisWeight`、`pelvisSpeed`与`pelvisDamper` MUST退出Profile且在adapter中固定为不产生输出。Planner MUST不query world、不重新计算脚高/rotation、不执行IK。结果 MUST作为唯一`PelvisPreSolveTranslation` Goal发布；PredictiveFootPlacement MUST不写pelvis Pose，FullBodyIK MUST在同一个Pending output中先应用该Component Space translation再设置effectors并执行一次FBBIK。
 
@@ -210,8 +236,8 @@ Pelvis translation MUST沿VisualRoot Component up表达。Pose Buffer adapter MU
 
 #### Scenario: 双腿目标没有共同可达区间
 
-- **WHEN** 左右Plant Foot Goal的允许pelvis区间不相交
-- **THEN** Planner MUST按Plant/Contact权重、区间到0的距离与支撑高度稳定选择主要支撑脚
+- **WHEN** 左右Foot Goal的允许pelvis区间不相交
+- **THEN** Planner MUST按Plant Support/Contact权重、区间到0的距离与支撑高度稳定选择主要支撑脚
 - **AND** 次要Foot Goal MUST以`PelvisRangeConflictReleased`原因清零Position与Rotation Weight
 
 ### Requirement: Predictive Foot Placement与Full Body IK必须在Pose Graph中显式分段
@@ -281,7 +307,7 @@ PredictiveFootPlacement节点 MUST显式引用唯一Foot Placement Profile与Cal
 
 ### Requirement: Predictive Foot Placement与Full Body IK必须提供分层诊断且保持热路径有界
 
-PredictiveFootPlacement diagnostics MUST只读分组暴露FinalIK Grounding backend identity、current query requests/hits、stock velocity prediction、脚高/rotation，以及Project Predictive Extension的Foot Features、Current/Future Support、Ground Envelope、surface anchor、constraint、左右腿允许pelvis区间、target/resolved pelvis offset、冲突释放、最终Foot目标和彼此独立的Placement、Plant、Contact weights。FullBodyIK diagnostics MUST只读暴露匹配Goal Set Completion、backend identity、Profile revision、输入/输出Physical biped Pose、每effector目标/权重/residual、chain reach、bend constraint、iterations与typed failure。Pose Watch MUST分别观察Goal Source输入Pose与FullBodyIK solved Pose；Target Watch MUST观察Goal Set。Scene gizmo MUST区分动画输入、FinalIK Grounding当前命中、预测扩展目标和FullBodyIK结果。Diagnostics MUST复用固定容量workspace，不得重新query、求解或遍历Transform反推。
+PredictiveFootPlacement diagnostics MUST只读分组暴露FinalIK Grounding backend identity、current query requests/hits、stock velocity prediction、脚高/rotation，以及Project Predictive Extension的Foot Features、Plant Contact迟滞、Animation Foot Speed、surface distance、Current/Future Support、Ground Envelope、surface anchor、constraint、左右腿允许pelvis区间、target/resolved pelvis offset、冲突释放、最终Foot目标和彼此独立的Placement、Plant Support、Contact weights。Body Grounded诊断 MUST分别暴露Target、Before与After来源，不得只发布合并结果。FullBodyIK diagnostics MUST只读暴露匹配Goal Set Completion、backend identity、Profile revision、输入/输出Physical biped Pose、每effector目标/权重/residual、chain reach、bend constraint、iterations与typed failure。Pose Watch MUST分别观察Goal Source输入Pose与FullBodyIK solved Pose；Target Watch MUST观察Goal Set。Scene gizmo MUST区分动画输入、FinalIK Grounding当前命中、预测扩展目标和FullBodyIK结果。Diagnostics MUST复用固定容量workspace，不得重新query、求解或遍历Transform反推。
 
 #### Scenario: 排查膝盖侧翻
 

@@ -110,12 +110,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float predictionHorizon,
             bool predictionHorizonClamped,
             Vector3 stockVelocityPrediction,
-            Vector3 soleVelocity,
+            Vector3 animationSoleVelocity,
             float legExtensionRatio,
             float ankleTwistDegrees,
             float separationCorrection,
             float placementWeight,
-            float plantWeight,
+            bool plantContact,
+            float animationFootSpeed,
+            float surfaceDistance,
+            float plantSupportWeight,
             float contactWeight,
             float swingClearance,
             int queryCount,
@@ -150,12 +153,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PredictionRejectReason = predictionRejectReason;
             PredictionHorizon = predictionHorizon;
             PredictionHorizonClamped = predictionHorizonClamped;
-            SoleVelocity = soleVelocity;
+            AnimationSoleVelocity = animationSoleVelocity;
             LegExtensionRatio = legExtensionRatio;
             AnkleTwistDegrees = ankleTwistDegrees;
             SeparationCorrection = separationCorrection;
             PlacementWeight = placementWeight;
-            PlantWeight = plantWeight;
+            PlantContact = plantContact;
+            AnimationFootSpeed = animationFootSpeed;
+            SurfaceDistance = surfaceDistance;
+            PlantSupportWeight = plantSupportWeight;
             ContactWeight = contactWeight;
             SwingClearance = swingClearance;
             QueryCount = queryCount;
@@ -191,12 +197,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public FootPredictionRejectReason PredictionRejectReason { get; }
         public float PredictionHorizon { get; }
         public bool PredictionHorizonClamped { get; }
-        public Vector3 SoleVelocity { get; }
+        public Vector3 AnimationSoleVelocity { get; }
         public float LegExtensionRatio { get; }
         public float AnkleTwistDegrees { get; }
         public float SeparationCorrection { get; }
         public float PlacementWeight { get; }
-        public float PlantWeight { get; }
+        public bool PlantContact { get; }
+        public float AnimationFootSpeed { get; }
+        public float SurfaceDistance { get; }
+        public float PlantSupportWeight { get; }
         public float ContactWeight { get; }
         public float SwingClearance { get; }
         public int QueryCount { get; }
@@ -213,6 +222,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             string backendIdentity,
             CharacterFootPlacementPelvisPlan pelvisPlan,
             CharacterGroundingHitDiagnostics rootHit,
+            bool targetGrounded,
+            bool groundedBefore,
+            bool groundedAfter,
             bool grounded,
             CharacterPredictiveFootDiagnostics left,
             CharacterPredictiveFootDiagnostics right)
@@ -224,6 +236,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PelvisPlan = pelvisPlan;
             PelvisPreSolveTranslation = pelvisPlan.ComponentTranslation;
             RootHit = rootHit;
+            TargetGrounded = targetGrounded;
+            GroundedBefore = groundedBefore;
+            GroundedAfter = groundedAfter;
             Grounded = grounded;
             Left = left;
             Right = right;
@@ -236,6 +251,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootPlacementPelvisPlan PelvisPlan { get; }
         public Vector3 PelvisPreSolveTranslation { get; }
         public CharacterGroundingHitDiagnostics RootHit { get; }
+        public bool TargetGrounded { get; }
+        public bool GroundedBefore { get; }
+        public bool GroundedAfter { get; }
         public bool Grounded { get; }
         public CharacterPredictiveFootDiagnostics Left { get; }
         public CharacterPredictiveFootDiagnostics Right { get; }

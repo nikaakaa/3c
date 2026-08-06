@@ -17,6 +17,8 @@ UE的可借鉴点不是把多个IK节点并行执行，而是把职责和数据�
 
 FinalIK Grounding也不是完整的预测式Foot Placement。Stock实现只提供基于脚当前速度的短时外推，不知道动画触地相位、Future Landing、Current/Future Support、Ground Envelope、moving surface anchor、Free/Locked/Sliding、source contribution或逐腿可达区间。因此本change保留这些无法由FinalIK提供的项目业务，把当前地面采样、命中到脚目标、坡面旋转与脚平滑下沉到FinalIK Grounding，并由独立Pelvis Reach Planner只消费最终Foot Goals和Rig腿长。实施审计若证明必须重写Grounding脚部或FBBIK核心方程才能接入Pose Buffer与显式预测输入，必须停止并报告，不得悄悄恢复项目自研通用Grounding、shadow skeleton或旧IK。
 
+240帧Foot IK连续采集进一步证明当前实现存在一条独立于FinalIK求解质量的权重合同错误：左右脚全部成功进入FBBIK且满权重帧残差接近零，但运行时曾把`PlantConfidence`、拼接后的脚速或最终sole世界速度依次作为整个Foot Goal的总闸门。前者让Run混合权重长期偏低，后两者把Body或actor世界平移计入两脚速度，造成持续输入时Goal归零、松开输入后才恢复。surface distance门控还会在修正距离最大时关闭IK。因此本change最终拆开职责：合法Current Grounding Goal只由Placement Weight控制；烘焙Plant Confidence和Sole Local Velocity只维护Plant Contact；Plant Support只服务Pelvis；Contact Weight只拥有anchor、lock与slide。
+
 ## What Changes
 
 - 把正式Component Pose DAG收敛为两个目标数据分支和一次骨骼求解：
@@ -34,7 +36,8 @@ FinalIK Grounding也不是完整的预测式Foot Placement。Stock实现只提�
   - Transform backend继续服务FinalIK自带素材；项目Runtime只使用Pose Buffer/world-query adapter。
 - `PredictiveFootPlacement`是唯一world query和Foot contact owner：
   - FinalIK Grounding负责其现有能力覆盖的当前脚采样、脚掌坡面对齐与脚平滑。
-  - 项目扩展负责动画Foot Feature、source contribution、未来落点与路径采样、Current/Future Support、Ground Envelope、Free/Locked/Sliding、moving surface anchor，以及基于Rig腿长和最终Foot Goal的逐腿pelvis可达区间。
+  - 项目扩展负责动画Foot Feature、source contribution、Placement/Plant Support/Contact职责、未来落点与路径采样、Current/Future Support、Ground Envelope、Free/Locked/Sliding、moving surface anchor，以及基于Rig腿长和最终Foot Goal的逐腿pelvis可达区间。
+  - Foot Placement Weight是作者总开关；Body Grounded与合法Current Grounding命中生成Placement Weight并唯一控制普通Foot Goal；混合后的Plant Confidence与烘焙Sole Local Velocity只参与接触意图迟滞；Plant Support只参与Pelvis；Contact Weight只参与anchor、lock与slide。系统不得用脚速、surface distance或接触置信度连续衰减普通Foot Goal。
   - 当前脚Grounding与预测扩展共用同一个精确PhysicsScene查询端口和命中合同，但Future Landing与路径采样不得伪装成FinalIK Grounding能力；Pelvis Reach Planner也不得覆盖FinalIK产生的当前脚高与坡面旋转。
   - 同一节点内不得保留一套与FinalIK Grounding并行竞争的“当前脚目标/坡面旋转”实现；Pelvis Reach Planner不是第二Grounding或IK solver，只能发布一个pelvis pre-solve Goal。
 - 新增唯一`CharacterFullBodyIkProfile`，只保存FinalIK FBBIK真实支持的iterations、FABRIK pass、spine stiffness、body pull、chain pin/pull/push/push-parent/reach、limb mapping与maintain rotation配置。
@@ -60,7 +63,7 @@ FinalIK Grounding也不是完整的预测式Foot Placement。Stock实现只提�
 - 新增current capability候选：`character-full-body-ik-pose-solver`。
 - 修改`character-foot-placement-presentation`、`character-presentation-pose-graph`、`graph-authoring-domain-framework`、`character-animation-pipeline`、`character-animation-layer-runtime`、`character-pipeline-runtime`、`character-pipeline-definition-authoring`、`character-animation-presentation-authoring`与`character-animation-foot-analysis-artifact`。
 - 影响FinalIK Grounding与FBBIK的I/O边界、`ThirdPersonClient.Runtime`装配、Pose Graph authoring/compiler/runtime、Rig/Calibration schema、Foot Analysis、Projection、Preview、diagnostics与Corin内容资产。
-- 不修改Gameplay KCC、Simulation状态、Network packet、Body root motion、Motion Matching查询、Foot Analysis曲线业务、Camera、Motion Warping或Timeline事件。
+- 不修改Gameplay KCC、Simulation状态、Network packet、Body root motion、Motion Matching查询、Foot Analysis曲线payload、Camera、Motion Warping或Timeline事件；只收紧`PlantConfidence`的Runtime消费语义。
 - 不安装Unity Animation Rigging并行约束链，不从UE复制PBIK/FootPlacement源码，不在Prefab挂FinalIK组件。
 
 ## 成熟方案对照与无法承诺的边界
@@ -82,6 +85,7 @@ FinalIK Grounding也不是完整的预测式Foot Placement。Stock实现只提�
 - active `add-discrete-stair-presentation`仍明确保留旧Directional Pelvis和项目自有当前heel/toe query，与本change的FinalIK Grounding owner冲突。实施必须同步删除旧当前脚口径：当前脚采样归FinalIK Grounding，Future/Path Envelope归Predictive Extension，pelvis归唯一Pelvis Reach Planner；Actor Movement Compensation保留为显式`FollowBody`或`HoldWorldDuringInterpolation`模式，不再隐含在stock damper中。
 - active `add-character-presentation-blend-space`和`add-character-motion-matching-pose-source`只把最终Foot Feature贡献交给唯一Foot Placement节点。本change保持该输入与MM History边界，只同步节点职责名称。
 - active KCC和楼梯Gameplay change不读取IK Goals或结果，边界不变。
+- 本change早先要求Plant Confidence连续门控Foot Goal与Planner贡献，这与240帧运行证据冲突，并把“源动画接触意图”和“当前世界地面对齐强度”错误合成同一个标量。本次修订删除该口径，不保留旧`PlantWeight`字段、诊断列或兼容计算路径。
 
 ## References
 

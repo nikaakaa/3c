@@ -157,6 +157,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal Vector3 LockedLocalPlantPosition;
             internal Quaternion LockedLocalRotation = Quaternion.identity;
             internal bool HasAnchor;
+            internal bool PlantContact;
+
+            internal void UpdatePlantContact(
+                float plantConfidence,
+                float animationFootSpeed,
+                bool policyActive,
+                bool bodyGrounded,
+                bool hasSurface,
+                CharacterPredictiveFootPlacementRuntimeSettings settings)
+            {
+                if (!policyActive ||
+                    !bodyGrounded ||
+                    !hasSurface ||
+                    animationFootSpeed >= settings.UnalignmentSpeedThreshold)
+                {
+                    PlantContact = false;
+                    return;
+                }
+                if (PlantContact)
+                {
+                    if (plantConfidence <= settings.PlantConfidenceExit)
+                        PlantContact = false;
+                    return;
+                }
+                if (animationFootSpeed <= settings.PlantSpeedThreshold &&
+                    plantConfidence >= settings.PlantConfidenceEnter)
+                    PlantContact = true;
+            }
 
             internal void CaptureAnchor(
                 FootPlacementSurface surface,
@@ -236,6 +264,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 ConstraintState = FootConstraintState.Free;
                 TransitionReason = reason;
+                PlantContact = false;
                 ClearAnchor();
             }
 
@@ -324,8 +353,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             GroundingFrameInput groundingFrame = BuildGroundingFrame(
                 frame,
                 animationPose,
-                pose,
-                features);
+                pose);
             m_World.BeginGroundingFrameDiagnostics();
             CharacterFinalIkGroundingResult grounding = m_Grounding.Evaluate(
                 in groundingFrame,
@@ -411,6 +439,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFinalIkGroundingAdapter.BackendIdentity,
                 pelvisPlan,
                 new CharacterGroundingHitDiagnostics(grounding.RootHit),
+                frame.Body.TargetGrounded,
+                frame.Body.GroundedBefore,
+                frame.Body.GroundedAfter,
                 grounding.Grounded,
                 BuildFootDiagnostics(
                     m_Left,
@@ -479,8 +510,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         GroundingFrameInput BuildGroundingFrame(
             in CharacterFootPlacementPlanningFrame frame,
             in CharacterFootPlacementPoseInput animationPose,
-            in CharacterFootPlacementAnimatedPose pose,
-            in CharacterFootPlacementFeatureFrame features)
+            in CharacterFootPlacementAnimatedPose pose)
         {
             Transform poseRoot = m_Rig.PoseRoot;
             AnimationLocalBonePose rootPose = animationPose.DenseComponentPoses[m_Rig.Rig.RootPhysicalBoneIndex];
@@ -497,15 +527,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new GroundingComponentTransform(
                     poseRoot.TransformPoint(pose.PelvisLocalPosition),
                     poseRoot.rotation * pelvisPose.Rotation),
-                BuildGroundingFoot(0, pose.Left, ResolvePlantWeight(frame.Body, features.Value, features.Left)),
-                BuildGroundingFoot(1, pose.Right, ResolvePlantWeight(frame.Body, features.Value, features.Right)),
+                BuildGroundingFoot(0, pose.Left),
+                BuildGroundingFoot(1, pose.Right),
                 2);
         }
 
         static GroundingFootInput BuildGroundingFoot(
             int footIndex,
-            CharacterFootPlacementAnimatedFootPose pose,
-            float plantWeight)
+            CharacterFootPlacementAnimatedFootPose pose)
         {
             Vector3 center = (pose.HeelPosition + pose.ToePosition) * 0.5f;
             return new GroundingFootInput(
@@ -513,19 +542,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new GroundingComponentTransform(pose.AnklePosition, pose.AnkleRotation),
                 new GroundingComponentTransform(pose.HeelPosition, pose.SemanticRotation),
                 new GroundingComponentTransform(pose.ToePosition, pose.ToeRotation),
-                new GroundingComponentTransform(center, pose.SemanticRotation),
-                plantWeight);
-        }
-
-        static float ResolvePlantWeight(
-            CharacterBodyPresentationFrame body,
-            float policyWeight,
-            AnimationFootFeatureSample feature)
-        {
-            if (!ResolveBodyGrounded(body))
-                return 0f;
-            float plantedWeight = Mathf.InverseLerp(0.5f, 1f, feature.PlantConfidence);
-            return Mathf.Clamp01(policyWeight * plantedWeight);
+                new GroundingComponentTransform(center, pose.SemanticRotation));
         }
 
         static float ResolvePlacementWeight(
@@ -562,23 +579,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 (poseRoot.rotation * grounding.ComponentRotation).normalized;
             bool usesToePivot = settings.LockType == CharacterFootPlantLockType.PivotAroundToe;
             FootPlacementSurface plantSurface = usesToePivot ? toeSupport : support;
-            Vector3 currentPlantPosition = usesToePivot ? pose.ToePosition : currentSole;
             Vector3 groundingPlantPosition = usesToePivot && toeSupport.IsValid
                 ? grounding.ToeHit.Point
                 : usesToePivot
                     ? ResolveToePosition(pose, groundingWorldPosition, groundingWorldRotation)
                     : groundingWorldPosition;
-            Vector3 soleVelocity = ResolveContactVelocity(
-                feature.SoleLocalVelocity,
-                currentSole,
-                body,
-                poseRoot);
-            float planarSpeed = new Vector2(soleVelocity.x, soleVelocity.z).magnitude;
-            float verticalSpeed = soleVelocity.y >= 0f
-                ? soleVelocity.y
-                : Mathf.Max(0f, -soleVelocity.y - settings.DescendingTolerance);
+            Vector3 animationSoleVelocity = feature.SoleLocalVelocity;
+            float animationFootSpeed = animationSoleVelocity.magnitude;
             bool bodyGrounded = ResolveBodyGrounded(body);
             bool policyActive = policyWeight >= settings.MinimumSourceContribution;
+            bool hasGroundingSurface = grounding.Grounded && grounding.CurrentGroundingHit.HasHit;
+            float groundSurfaceDistance = support.IsValid
+                ? Mathf.Abs(Vector3.Dot(currentSole - support.Point, support.Normal))
+                : float.PositiveInfinity;
+            float placementWeight = policyActive
+                ? ResolvePlacementWeight(body, policyWeight, hasGroundingSurface)
+                : 0f;
 
             bool hasAnchor = state.TryResolveAnchor(
                 settings,
@@ -609,28 +625,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
 
             FootPlacementSurface contactSurface = hasAnchor ? anchorSurface : plantSurface;
-            float surfaceDistance = contactSurface.IsValid
-                ? Mathf.Abs(Vector3.Dot(
-                    currentPlantPosition - contactSurface.Point,
-                    contactSurface.Normal))
-                : float.PositiveInfinity;
-            float contactWeight = ResolveContactWeight(
+            state.UpdatePlantContact(
                 feature.PlantConfidence,
-                policyWeight,
-                planarSpeed,
-                verticalSpeed,
-                surfaceDistance,
+                animationFootSpeed,
+                policyActive,
+                bodyGrounded,
                 contactSurface.IsValid,
                 settings);
-            if (!bodyGrounded)
-                contactWeight = 0f;
-            bool hasGroundingSurface = grounding.Grounded && grounding.CurrentGroundingHit.HasHit;
-            float plantWeight = policyActive && hasGroundingSurface
-                ? ResolvePlantWeight(body, policyWeight, feature)
+            float contactMotionWeight = ResolveContactMotionWeight(
+                policyWeight,
+                animationFootSpeed,
+                contactSurface.IsValid,
+                bodyGrounded,
+                settings);
+            float contactWeight = state.PlantContact &&
+                                  state.HasAnchor &&
+                                  settings.LockType != CharacterFootPlantLockType.Unlocked
+                ? contactMotionWeight
                 : 0f;
-            float placementWeight = policyActive
-                ? ResolvePlacementWeight(body, policyWeight, hasGroundingSurface)
-                : 0f;
+            float plantSupportWeight = state.PlantContact ? placementWeight : 0f;
 
             if (state.ConstraintState == FootConstraintState.Free && state.HasAnchor)
             {
@@ -645,13 +658,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 bool canPlant = policyActive &&
                                 bodyGrounded &&
-                                grounding.Grounded &&
+                                hasGroundingSurface &&
                                 plantSurface.IsValid &&
                                 settings.LockType != CharacterFootPlantLockType.Unlocked &&
-                                feature.PlantConfidence >= settings.PlantConfidenceEnter &&
-                                planarSpeed <= settings.PlantPlanarSpeed &&
-                                verticalSpeed <= settings.PlantVerticalSpeed &&
-                                surfaceDistance <= settings.PlantDistance;
+                                state.PlantContact;
                 if (canPlant)
                 {
                     state.CaptureAnchor(
@@ -666,6 +676,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         out anchorWorldRotation,
                         out anchorWorldPlantPosition,
                         out anchorSurface);
+                    contactWeight = state.PlantContact &&
+                                    hasAnchor &&
+                                    settings.LockType != CharacterFootPlantLockType.Unlocked
+                        ? contactMotionWeight
+                        : 0f;
                 }
             }
 
@@ -705,10 +720,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float supportAngle = plantSurface.IsValid
                     ? Vector3.Angle(anchorSurface.Normal, plantSurface.Normal)
                     : 0f;
-                bool release = feature.PlantConfidence <= settings.PlantConfidenceExit ||
-                               planarSpeed >= settings.ReleasePlanarSpeed ||
-                               verticalSpeed >= settings.ReleaseVerticalSpeed ||
-                               surfaceDistance >= settings.ReleaseDistance;
+                bool release = !state.PlantContact;
                 if (release)
                 {
                     state.Release(
@@ -736,6 +748,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     state.ConstraintState = FootConstraintState.Sliding;
                     state.TransitionReason = FootConstraintTransitionReason.AnimationDrift;
                 }
+                hasAnchor &= state.HasAnchor;
             }
 
             if (state.ConstraintState == FootConstraintState.Sliding && state.HasAnchor)
@@ -816,8 +829,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 componentPlantPivot = hasPlantPivot
                 ? ToComponentPoint(poseRoot, targetPlantPosition)
                 : Vector3.zero;
-            float positionGoalWeight = hasAnchor ? contactWeight : plantWeight;
-            float rotationGoalWeight = hasAnchor ? contactWeight : plantWeight;
+            float positionGoalWeight = hasAnchor ? contactWeight : placementWeight;
+            float rotationGoalWeight = hasAnchor ? contactWeight : placementWeight;
             var goal = new CharacterFullBodyIkGoal(
                 state.Side == CharacterFootSide.Left
                     ? CharacterFullBodyIkEffectorSlot.LeftFoot
@@ -843,8 +856,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : CharacterFullBodyIkEffectorSlot.RightFoot,
                 ToComponentPoint(poseRoot, groundingWorldPosition),
                 grounding.ComponentRotation,
-                plantWeight,
-                plantWeight,
+                placementWeight,
+                placementWeight,
                 CharacterFullBodyIkGoalApplication.GroundingEffectorTarget,
                 CharacterFullBodyIkGoalSourceKind.FinalIkGrounding,
                 CharacterFullBodyIkPlantPivotMode.None,
@@ -860,10 +873,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ankleTwistDegrees,
                 0f,
                 placementWeight,
-                plantWeight,
+                plantSupportWeight,
                 contactWeight,
                 default,
-                soleVelocity,
+                animationSoleVelocity,
+                animationFootSpeed,
+                groundSurfaceDistance,
                 new PredictedFootprint(
                     currentSole,
                     0f,
@@ -1064,47 +1079,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 normal));
         }
 
-        static Vector3 ResolveContactVelocity(
-            Vector3 localSoleVelocity,
-            Vector3 currentSole,
-            CharacterBodyPresentationFrame body,
-            Transform poseRoot)
-        {
-            Vector3 angularVelocity = Vector3.up *
-                                      (body.VisibleYawVelocityDegreesPerSecond * Mathf.Deg2Rad);
-            Vector3 bodyPointVelocity = body.VisibleVelocity +
-                                        Vector3.Cross(
-                                            angularVelocity,
-                                            currentSole - poseRoot.position);
-            return poseRoot.rotation * localSoleVelocity + bodyPointVelocity;
-        }
-
-        static float ResolveContactWeight(
-            float plantConfidence,
+        static float ResolveContactMotionWeight(
             float policyWeight,
-            float planarSpeed,
-            float verticalSpeed,
-            float surfaceDistance,
+            float animationFootSpeed,
             bool hasSurface,
+            bool bodyGrounded,
             CharacterPredictiveFootPlacementRuntimeSettings settings)
         {
-            if (!hasSurface || policyWeight < settings.MinimumSourceContribution)
+            if (!hasSurface || !bodyGrounded || policyWeight < settings.MinimumSourceContribution)
                 return 0f;
-            float planarWeight = 1f - Mathf.InverseLerp(
-                settings.PlantPlanarSpeed,
-                settings.ReleasePlanarSpeed,
-                planarSpeed);
-            float verticalWeight = 1f - Mathf.InverseLerp(
-                settings.PlantVerticalSpeed,
-                settings.ReleaseVerticalSpeed,
-                verticalSpeed);
-            float distanceWeight = 1f - Mathf.InverseLerp(
-                settings.PlantDistance,
-                settings.ReleaseDistance,
-                surfaceDistance);
-            return Mathf.Clamp01(
-                policyWeight * plantConfidence *
-                Mathf.Min(planarWeight, verticalWeight, distanceWeight));
+            float motionWeight = 1f - Mathf.InverseLerp(
+                settings.PlantSpeedThreshold,
+                settings.UnalignmentSpeedThreshold,
+                animationFootSpeed);
+            return Mathf.Clamp01(policyWeight * motionWeight);
         }
 
         static Vector3 ToComponentPoint(Transform poseRoot, Vector3 worldPoint) =>
@@ -1122,7 +1110,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pose.AnklePosition,
                 m_Rig.PoseRoot.TransformPoint(goal.Goal.ComponentPosition),
                 goal.Goal.PositionWeight,
-                goal.PlantWeight,
+                goal.PlantSupportWeight,
                 goal.ContactWeight,
                 legLength,
                 goal.CurrentSupport);
@@ -1162,12 +1150,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 resolved.Prediction.Horizon,
                 resolved.Prediction.HorizonClamped,
                 grounding.Velocity * m_Settings.Grounding.VelocityPrediction,
-                resolved.SoleVelocity,
+                resolved.AnimationSoleVelocity,
                 resolved.ExtensionRatio,
                 resolved.AnkleTwistDegrees,
                 resolved.SeparationCorrection,
                 resolved.PlacementWeight,
-                resolved.PlantWeight,
+                state.PlantContact,
+                resolved.AnimationFootSpeed,
+                resolved.SurfaceDistance,
+                resolved.PlantSupportWeight,
                 resolved.ContactWeight,
                 resolved.Predictive.SwingClearance,
                 resolved.Predictive.QueryCount,
@@ -1216,10 +1207,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float ankleTwistDegrees,
                 float separationCorrection,
                 float placementWeight,
-                float plantWeight,
+                float plantSupportWeight,
                 float contactWeight,
                 CharacterPredictiveFootPlacementQueryResult predictive,
-                Vector3 soleVelocity,
+                Vector3 animationSoleVelocity,
+                float animationFootSpeed,
+                float surfaceDistance,
                 PredictedFootprint prediction,
                 FootPlacementSurface currentSupport)
             {
@@ -1231,10 +1224,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnkleTwistDegrees = ankleTwistDegrees;
                 SeparationCorrection = separationCorrection;
                 PlacementWeight = placementWeight;
-                PlantWeight = plantWeight;
+                PlantSupportWeight = plantSupportWeight;
                 ContactWeight = contactWeight;
                 Predictive = predictive;
-                SoleVelocity = soleVelocity;
+                AnimationSoleVelocity = animationSoleVelocity;
+                AnimationFootSpeed = animationFootSpeed;
+                SurfaceDistance = surfaceDistance;
                 Prediction = prediction;
                 CurrentSupport = currentSupport;
             }
@@ -1247,10 +1242,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal float AnkleTwistDegrees { get; }
             internal float SeparationCorrection { get; }
             internal float PlacementWeight { get; }
-            internal float PlantWeight { get; }
+            internal float PlantSupportWeight { get; }
             internal float ContactWeight { get; }
             internal CharacterPredictiveFootPlacementQueryResult Predictive { get; }
-            internal Vector3 SoleVelocity { get; }
+            internal Vector3 AnimationSoleVelocity { get; }
+            internal float AnimationFootSpeed { get; }
+            internal float SurfaceDistance { get; }
             internal PredictedFootprint Prediction { get; }
             internal FootPlacementSurface CurrentSupport { get; }
 
@@ -1276,10 +1273,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     AnkleTwistDegrees,
                     separationCorrection,
                     PlacementWeight,
-                    PlantWeight,
+                    PlantSupportWeight,
                     ContactWeight,
                     Predictive,
-                    SoleVelocity,
+                    AnimationSoleVelocity,
+                    AnimationFootSpeed,
+                    SurfaceDistance,
                     Prediction,
                     CurrentSupport);
 
@@ -1310,7 +1309,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     0f,
                     0f,
                     Predictive,
-                    SoleVelocity,
+                    AnimationSoleVelocity,
+                    AnimationFootSpeed,
+                    SurfaceDistance,
                     Prediction,
                     CurrentSupport);
             }
@@ -1335,10 +1336,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     AnkleTwistDegrees,
                     SeparationCorrection,
                     PlacementWeight,
-                    PlantWeight,
+                    PlantSupportWeight,
                     ContactWeight,
                     Predictive,
-                    SoleVelocity,
+                    AnimationSoleVelocity,
+                    AnimationFootSpeed,
+                    SurfaceDistance,
                     Prediction,
                     CurrentSupport);
             }

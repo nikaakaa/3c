@@ -73,6 +73,14 @@ indexed backend 在 Actor preparation 一次创建 solver、chain、mapping、ha
 
 项目 Predictive Extension只补FinalIK Grounding没有的动画Foot Feature/source contribution、相位Future Landing、Current/Future Support、Ground Envelope、surface identity/moving anchor、Free/Locked/Sliding生命周期和逐腿Pelvis Reach Planner。Planner只消费最终Foot Goals、Rig腿长与extension ratio并发布一个pelvis pre-solve Goal；当前脚grounding与未来预测在同一`PredictiveFootPlacement`内汇合，不存在两份结果择优。
 
+## 当前Foot IK信号职责修订
+
+240帧运行采集确认当前代码仍把混合后的动画`PlantConfidence`执行`InverseLerp(0.5, 1)`，并把结果同时作为Grounding输入、Foot Goal Position/Rotation Weight与Pelvis Planner支撑权重。该公式在全部采集帧精确成立；FinalIK solver completion连续、failure为None，满权重帧Foot residual接近零。因此当前低权重不是FBBIK求解失败，而是Goal Source在solver前主动衰减。
+
+正式修订保留烘焙`PlantConfidence`作为源动画接触意图与Landing/MM特征，但删除它对Goal和Planner的连续乘法。一次性运行时快照进一步定位到第二个错误：跑动帧的Body Grounded、Current Grounding Hit和solver completion全部正常，但把单Clip烘焙`SoleLocalVelocity`与Body可见速度、yaw点速度拼接后得到左脚`10.64m/s`、右脚竖直`5.938m/s`，使左右Goal Weight同时归零。随后把相邻最终sole世界位置差作为Goal总闸门仍然错误，因为actor世界平移天然进入该速度，持续输入时两脚会同时高速，松开输入后速度骤降才恢复IK。
+
+最终实现删除`GroundAlignmentWeight`、逐脚sole历史、world planar/vertical速度阈值和surface distance门控。合法Current Grounding Goal只由`PlacementWeight`控制；最终混合后的烘焙`SoleLocalVelocity.magnitude`只用`0.6m/s -> 2.0m/s`阈值维护Plant Contact与Contact约束渐退；`PlantSupportWeight`只负责Pelvis支撑选择；`ContactWeight`只负责anchor、lock与slide。FinalIK `Grounding.Leg`通过`rootYOffset`保留动画脚相对Root参考平面的离地高度，所以普通跑动Goal保持满Placement Weight不会把摆动脚绝对压到地面。Profile schema、Live Tuning与typed diagnostics均迁移到新职责，不保留旧Alignment字段或CSV列。当前生成Projection仍是旧产品，必须等待用户明确触发Character Build后再发布，禁止自动构建卡住Unity。
+
 ## Corin 完整 biped reference 门禁
 
 Corin `corin.animation-rig` 当前 physical catalog 已包含以下唯一候选，足以迁移为 Rig v4 显式 binding：

@@ -10,7 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v9";
+        public const string SchemaVersion = "character-foot-placement-profile/v11";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] string m_Revision = string.Empty;
@@ -57,7 +57,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public void RequireValid()
         {
             _ = ProfileId;
-            _ = Revision;
+            string revision = Revision;
+            string computedRevision = ComputeRevision();
+            if (!string.Equals(revision, computedRevision, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Foot Placement Profile revision is stale: {revision}/{computedRevision}.");
             _ = FinalIkGrounding.Build();
             _ = PredictiveExtension.Build();
         }

@@ -79,7 +79,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             EnsureFolders();
             CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
             FixedCharacterSimulationProgramAsset fixedProgram =
-                LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
+                FixedCharacterSimulationProgramBuildService.Build(definition, FixedProgramPath);
             CharacterPresentationProjectionAsset projection = definition.PresentationProjection
                 ? definition.PresentationProjection
                 : throw new InvalidOperationException("Gameplay Lab Character Definition has no published Projection.");

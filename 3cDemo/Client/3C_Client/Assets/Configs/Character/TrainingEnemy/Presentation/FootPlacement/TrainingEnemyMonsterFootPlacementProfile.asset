@@ -28,10 +28,6 @@ MonoBehaviour:
     m_FootRotationSpeed: 7
     m_MaximumFootRotationAngle: 45
     m_RotateSolver: 0
-    m_PelvisSpeed: 5
-    m_PelvisDamper: 0
-    m_LowerPelvisWeight: 1
-    m_LiftPelvisWeight: 0
     m_RootCastRadius: 0.2
     m_OverstepFallsDown: 0
   m_PredictiveExtension:
@@ -47,13 +43,8 @@ MonoBehaviour:
     m_MaximumHeightDiscontinuity: 0.35
     m_MaximumEdgeGap: 0.4
     m_MaximumSwingClearance: 0.16
-    m_PlantDistance: 0.08
-    m_ReleaseDistance: 0.18
-    m_PlantPlanarSpeed: 0.14
-    m_ReleasePlanarSpeed: 0.42
-    m_PlantVerticalSpeed: 0.14
-    m_ReleaseVerticalSpeed: 0.48
-    m_DescendingTolerance: 0.04
+    m_PlantSpeedThreshold: 0.6
+    m_UnalignmentSpeedThreshold: 2
     m_PlantConfidenceEnter: 0.65
     m_PlantConfidenceExit: 0.35
     m_MinimumLookAheadSeconds: 0.04
@@ -74,4 +65,11 @@ MonoBehaviour:
     m_HeelLiftRatio: 1
     m_MinimumLegExtensionRatio: 0.18
     m_MaximumLegExtensionRatio: 0.98
+    m_PelvisHeightMode: 2
+    m_ActorMovementCompensationMode: 1
+    m_MaximumPelvisLowering: 0.32
+    m_MaximumPelvisRaising: 0.18
+    m_PelvisInterpolationSpeed: 14
+    m_PelvisHeightDeadZone: 0.003
+    m_MaximumHorizontalFootAdjustment: 0.25
     m_MinimumSourceContribution: 0.05

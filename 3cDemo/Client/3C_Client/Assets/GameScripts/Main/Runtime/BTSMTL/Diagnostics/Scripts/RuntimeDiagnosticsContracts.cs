@@ -520,9 +520,12 @@ namespace BTSMTL.Diagnostics
         public string GoalSourceKind;
         public bool SolverResultAvailable;
         public float PlantConfidence;
+        public bool PlantContact;
         public float SoleHeight;
         public float PlacementWeight;
-        public float PlantWeight;
+        public float AnimationFootSpeed;
+        public float SurfaceDistance;
+        public float PlantSupportWeight;
         public float ContactWeight;
         public float GoalPositionWeight;
         public float GoalRotationWeight;
@@ -547,6 +550,9 @@ namespace BTSMTL.Diagnostics
         public string SolverBackendIdentity;
         public string SolverFailure;
         public bool BodyGrounded;
+        public bool TargetGrounded;
+        public bool GroundedBefore;
+        public bool GroundedAfter;
         public bool RootHit;
         public int RootSurfaceIdentity;
         public float PelvisTargetOffset;

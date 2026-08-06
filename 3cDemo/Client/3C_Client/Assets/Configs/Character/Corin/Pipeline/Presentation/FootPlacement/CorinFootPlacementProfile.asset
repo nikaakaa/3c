@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: CorinFootPlacementProfile
   m_EditorClassIdentifier:
   m_ProfileId: corin.foot-placement
-  m_Revision: 76ae001cd12a0ac0bdd6c0c3e83e2dde3de532913085a7ea4ed58bb58eab479f
+  m_Revision: bd421def0c82d4fb6d0ab3473a83ea2869214b2a19b7b820557d045ba6031b3f
   m_FinalIkGrounding:
     m_Quality: 2
     m_GroundLayerMask:
@@ -43,13 +43,8 @@ MonoBehaviour:
     m_MaximumHeightDiscontinuity: 0.35
     m_MaximumEdgeGap: 0.4
     m_MaximumSwingClearance: 0.16
-    m_PlantDistance: 0.08
-    m_ReleaseDistance: 0.18
-    m_PlantPlanarSpeed: 0.14
-    m_ReleasePlanarSpeed: 0.42
-    m_PlantVerticalSpeed: 0.14
-    m_ReleaseVerticalSpeed: 0.48
-    m_DescendingTolerance: 0.04
+    m_PlantSpeedThreshold: 0.6
+    m_UnalignmentSpeedThreshold: 2
     m_PlantConfidenceEnter: 0.65
     m_PlantConfidenceExit: 0.35
     m_MinimumLookAheadSeconds: 0.04

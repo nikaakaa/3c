@@ -322,7 +322,7 @@
 - [x] 9A.1 让FinalIK Grounding当前帧结果生成LeftFoot与RightFoot Goals，让Pelvis Reach Planner生成唯一Pelvis Goal。
 - [x] 9A.2 让Grounding root来自Rig物理Root的Component Pose，而不是假设Presentation VisualRoot等于骨架根。
 - [x] 9A.3 在普通基线闭合阶段暂停Future Landing与Path Sample对正式Goal输出的影响；Current Support的Foot Lock、Slide与moving surface anchor只约束FinalIK Grounding当帧目标。
-- [x] 9A.4 只在逐腿目标不可达或双腿区间冲突时清零不可满足Foot Goal，合法目标保持连续Plant Weight。
+- [x] 9A.4 只在逐腿目标不可达或双腿区间冲突时清零不可满足Foot Goal，合法Current Grounding目标保持连续Placement Weight。
 - [x] 9A.5 保持一次FinalIK FBBIK求解，不恢复TwoBoneIK、LegIK或第二求解器。
 - [x] 9A.6 用有限Replant角度与Ankle Twist阈值释放失效锁点，并在同帧返回FinalIK Grounding目标。
 - [x] 9A.7 在有限腿长范围内保持左右Foot Goal最小水平分离；双脚均受约束时释放次要支撑脚。
@@ -332,8 +332,8 @@
 - [x] 9A.11 定义`Unlocked`、`PivotAroundToe`、`PivotAroundAnkle`与`LockRotation`四种plant policy；普通基线阶段让Corin正式选择`Unlocked`，不创建anchor或toe pivot。
 - [x] 9A.12 让`AdjustHeelBeforePlanting`和`HeelLiftRatio`进入唯一Foot Placement Profile、Projection identity与Pose Watch诊断，并只让连续量`HeelLiftRatio`进入Live Tuning。
 - [x] 9A.13 让Foot Goal携带完整ankle目标、toe plant point与pivot weight，并在一次FBBIK中完成部分权重下的toe-preserving offset。
-- [x] 9A.14 让作者Foot Placement Weight与动画逐脚Plant Confidence共同连续控制合法Current Grounding脚目标Position/Rotation Weight与Planner贡献，Contact Weight只控制anchor、lock与slide。
-- [x] 9A.14A 让Unplanted脚Position/Rotation Goal归零并保持动画摆脚Pose，禁止摆动脚吸附当前踏面。
+- [x] 9A.14 让作者Foot Placement Weight唯一控制合法Current Grounding Goal；Plant Confidence与动画Foot Speed只参与接触意图迟滞，Contact Weight只控制anchor、lock与slide。
+- [x] 9A.14A 让FinalIK Grounding用root-relative height保留动画摆脚高度，禁止用actor世界脚速关闭普通跑动Foot Goal。
 - [x] 9A.14B 让最小脚距修正只在左右脚都有有效Contact Weight时运行，禁止连续Position Goal把自由摆脚横向推开。
 - [x] 9A.15 让Grounding leg与Pelvis Reach Planner插值全部使用调用方显式frame delta，禁止同帧混用`Time.deltaTime`。
 - [x] 9A.16 让Corin普通基线关闭velocity prediction、plant anchor与提前Heel Lift，选择AllPlantedFeet与FollowBody，并以显式Character Build重建正式Projection。
@@ -452,7 +452,7 @@
 - [x] 13.16 禁止Diagnostics第二次调用FinalIK或读取Transform反推。
 - [x] 13.17 让Canvas和Trace明确显示Goal Source不是IK solver。
 - [x] 13.18 让Trace区分FinalIK Grounding结果与Project Predictive Extension结果。
-- [x] 13.19 让统一Trace以typed payload连续发布左右脚Plant Confidence、分层权重、grounding、constraint、pelvis与FullBodyIK residual，并提供Capture CSV导出。
+- [x] 13.19 让统一Trace以typed payload连续发布左右脚Plant Confidence、Plant Contact迟滞、Animation Foot Speed、surface distance、Placement/Plant Support/Contact权重、Body Grounded三项来源、grounding、constraint、pelvis与FullBodyIK residual，并提供Capture CSV导出。
 - [x] 13.20 让CharacterPipelineHost与FixedCharacterHost复用同一Runtime Diagnostics入口、Attach目标、连续采集与CSV导出实现。
 - [x] 13.21 让FixedCharacterHost脚IK诊断只订阅Foot Placement通道，以10Hz刷新Inspector预览但保留逐PresentationFrame采集，并在240个segment后自动结束。
 
@@ -545,7 +545,7 @@
 
 - [x] 17.1 从Grounding settings、Live Tuning与Corin资产删除Pelvis Speed、Damper、Lower与Lift，并在adapter中固定stock pelvis不输出。
 - [x] 17.2 从左右Hip、动画Ankle、最终Foot Goal、Goal Weight、Rig腿长与extension ratio计算逐腿允许pelvis区间。
-- [x] 17.3 让Plant Confidence同时门控Foot Position/Rotation Goal与Planner贡献，摆动脚保持动画Pose。
+- [x] 17.3 让Pelvis Reach Planner只使用`max(PlantSupportWeight, ContactWeight)`作为支撑权重，不直接读取或重映射Plant Confidence，也不把普通Placement Weight自动视为支撑。
 - [x] 17.4 在单腿不可达或双腿区间冲突时稳定保留主要支撑脚，并以PelvisRangeConflictReleased释放不可满足Goal。
 - [x] 17.5 以最大升降范围、dead zone、显式frame delta和Actor Movement Compensation Mode维护唯一pelvis插值状态。
 - [x] 17.6 在正式PredictiveFootPlacement diagnostics发布左右区间、target/resolved offset与左右Goal拒绝结果。
@@ -557,3 +557,20 @@
 - [x] 17.12 同步Pelvis设计与spec，删除“区间内永远选择最接近0”导致共同高平台下蹲的旧口径。
 - [x] 17.13 通过Runtime与Editor编译并显式发布匹配修正后Profile与Pose Plan的Corin Float32、Fixed和Presentation Projection。
 - [x] 17.14 对修正后的change执行strict OpenSpec validate并按真实结果更新任务状态。
+
+## 18. 拆除脚速对普通Foot Goal的总闸门
+
+- [x] 18.1 从`GroundingFootInput`与FinalIK Grounding adapter删除`PlantWeight`输入，让Grounding先生成不受动画Plant Confidence缩放的唯一Current Grounding结果。
+- [x] 18.2 删除`InverseLerp(0.5f, 1f, PlantConfidence)`及Plant Confidence对普通Foot Goal和Pelvis的连续乘法。
+- [x] 18.3 通过运行时快照确认烘焙Sole Local Velocity与Body可见速度、yaw点速度重组会产生虚高脚速，并删除该重组。
+- [x] 18.4 通过持续输入/松开输入现象确认相邻sole世界位置差包含actor平移，删除逐脚世界速度历史和`GroundAlignmentWeight`总闸门。
+- [x] 18.5 让合法Current Grounding Goal只由`PlacementWeight`控制，并保留FinalIK `rootYOffset`表达的动画脚离地高度。
+- [x] 18.6 只使用最终Pose contribution混合后的烘焙`SoleLocalVelocity.magnitude`维护Plant Contact与Contact约束渐退，不拼接Body或actor世界运动。
+- [x] 18.7 将Profile迁移为严格有序的`PlantSpeedThreshold`与`UnalignmentSpeedThreshold`，删除Alignment planar/vertical、descending tolerance与旧Live Tuning key。
+- [x] 18.8 新增`PlantSupportWeight`作为Pelvis普通支撑选择，并让Planner使用`max(PlantSupportWeight, ContactWeight)`。
+- [x] 18.9 让`Unlocked`固定不产生Contact Weight；其它Plant Policy只让Contact Weight控制anchor、lock与slide。
+- [x] 18.10 将runtime plan、pelvis input、typed diagnostics、snapshot、Inspector与CSV统一迁移到Placement/Plant Support/Contact职责，不保留旧字段或双写列。
+- [x] 18.11 迁移Corin与TrainingEnemy Foot Placement Profile到schema v11和`0.6m/s -> 2.0m/s`正式Plant阈值。
+- [x] 18.12 新增并维护IK诊断文档，记录现象、运行证据、UE对照、踩坑和固定排查链路。
+- [x] 18.13 在用户明确触发Character Build后发布匹配新Profile revision的Corin Float32/Fixed Program、Presentation Projection与Native Pose Program，以及TrainingEnemy Float32 Program、Presentation Projection与Native Pose Program。
+- [x] 18.14 对最终修订执行静态搜索与strict OpenSpec validate并按真实结果更新任务状态。

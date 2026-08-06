@@ -26,9 +26,9 @@ MonoBehaviour:
       m_ExecutionContract: character-linked-pose-execution/v1
     m_AbiVersion: character-presentation-projection/v11
     m_ProgramId: character:e135c016ef75f604986f7458515fa6b7
-    m_SourceRevision: c9c812ebecdbc3fbbafc3fed6138774ab981271718db4663d903443e18d29b4e
-    m_SemanticHash: cc1ec9bb6cb114d94b9abe84d7216088d982e81c38436731a730c374809fc479
-    m_ContractHash: 232c20cb2b23571e0e55f8f7adb948f82062b6a0038bd650a22f79a5b7fd88e3
+    m_SourceRevision: b340c555cabd13c61dba0f87ab90a1cef9e599b0a1dfc7eb1ee0db181000fb17
+    m_SemanticHash: ae64c2f73936d868e4aa416b74a1a3d2ed59ad5a5f99d81b5952ac4afa5f6fb1
+    m_ContractHash: ba1bb2c08c658b729e34ba4269b7868ed2727d0588c4a82c453e8e93713e7957
     m_Producers:
     - m_ProgramProducerIndex: 0
       m_ProgramProducerIdentity: producer:effect:Effect.Combat.Damage:cue:1:Cue.Combat.Damage
@@ -49,7 +49,7 @@ MonoBehaviour:
       m_Camera:
         rid: -2
       m_Cue:
-        rid: 1002
+        rid: 1000
     - m_ProgramProducerIndex: 1
       m_ProgramProducerIdentity: producer:fdd39441-d8cd-4239-a71e-38db0baf29f6:5363209c-c0c6-4fc0-97d8-1188907443c0
       m_SourceIdentity: timeline:fdd39441-d8cd-4239-a71e-38db0baf29f6/track:5363209c-c0c6-4fc0-97d8-1188907443c0
@@ -65,7 +65,7 @@ MonoBehaviour:
       m_SourceTrackId: 5363209c-c0c6-4fc0-97d8-1188907443c0
       m_SourceDisplayPath: root:f7fe059d-93d5-401d-9e59-c9599a2ee24d/node:ad42d9c4-d7a3-44cf-8f61-b9fd2ecacdda/reference:scopedGraph.m_InlineGraph/scope:ad42d9c4-d7a3-44cf-8f61-b9fd2ecacdda/node:b17c6d77-4d44-4d5c-883a-2e5c253fdaa8/reference:stateBehaviorGraph.m_InlineSubTree/scope:b17c6d77-4d44-4d5c-883a-2e5c253fdaa8/node:585c32e8-451a-4a24-b7ef-8f1394b24e13/timeline:fdd39441-d8cd-4239-a71e-38db0baf29f6/track:5363209c-c0c6-4fc0-97d8-1188907443c0
       m_Animation:
-        rid: 1003
+        rid: 1001
       m_Camera:
         rid: -2
       m_Cue:
@@ -74,14 +74,14 @@ MonoBehaviour:
       m_Mode: 1
       m_AnalysisSourceId: TrainingEnemy.Monster.FootPlacementAnalysis
       m_AnalysisVersion: 1
-      m_AlgorithmVersion: animation-foot-analysis/v6
+      m_AlgorithmVersion: animation-foot-analysis/v7
       m_CalibrationId: TrainingEnemy.Monster.FootPlacementRig
       m_CalibrationSchemaVersion: 4
       m_CalibrationRevision: f6830aa1f965c30fd57bc3096f9edb6bcccebedd923efcacf15ea30a5cbdc792
       m_GeometryValidationIdentity: a484f7b8ad3cc2b7fb220238a9b577fca9937b3dc49d67279b943a768eb37a4f
       m_GeometryValidationContentHash: cff2a8a070d31e99d0b9f502021524c38e5818764bc557dd67b903f56a899157
-      m_ArtifactContentHash: 2f7ec2a0a93b20d8ef6a40b5f93ee13869ff76de5f7968feff5034c6220fcf44
-    m_ProjectionRevision: 8972f6128a6999979e094bfe3fca035892584910c7f031b0925e2127b8b6c81f
+      m_ArtifactContentHash: 771f09a7c6d3257848d2e1cb37b8a13699a73ef34761e949bb3ad887372bb3ed
+    m_ProjectionRevision: 8eb64d782d408c48d98217b64753edbeaa9836bb866b42b09a26300fec4d6c3d
     m_EquipmentVisualBindings: []
     m_PosePlan:
       m_LinkedPoseFragments: []
@@ -94,7 +94,7 @@ MonoBehaviour:
       m_RuntimeAbi: character-presentation-pose-runtime/v24
       m_PoseGraphId: training-enemy.monster.pose-graph
       m_ContentRevision: training-enemy.monster.pose-graph-v2
-      m_PlanHash: 4b68509fa6c9f197f472b8e5a00727bd153f839baadd1584143001c52f3fce05
+      m_PlanHash: f4f9cb895660ea9a78ff21e9877b2e60e71d0b270988e84ad0ef0c2fdac12e78
       m_RigId: training-enemy.monster.animation-rig
       m_RigRevision: training-enemy.monster.rig-118455d4c7c3a21e46effac0dd2c7c05
       m_PoseBoneCount: 57
@@ -184,8 +184,8 @@ MonoBehaviour:
           type: 2}
         m_CalibrationId: TrainingEnemy.Monster.FootPlacementRig
         m_CalibrationRevision: f6830aa1f965c30fd57bc3096f9edb6bcccebedd923efcacf15ea30a5cbdc792
-        m_BackendIdentity: rootmotion.finalik.grounding/explicit-pose-world-query-secondary-plant/v2
-        m_BackendSourceRevision: 81ab08f36f8199f15309bea57564d29acdc964fd084cf92773f47217414347ab
+        m_BackendIdentity: rootmotion.finalik.grounding/explicit-pose-world-query-secondary-plant/v4
+        m_BackendSourceRevision: 76a0fcb8e0472d6ba5d0f2059c154a92e5ed3fa374e30ceccb507e972771d5b1
         m_GoalWorkspaceOffset: 0
       m_FullBodyIks:
       - m_Index: 0
@@ -6982,72 +6982,54 @@ MonoBehaviour:
               inWeight: 0
               outWeight: 0
             - serializedVersion: 3
-              time: 0.054545455
-              value: 0
-              inSlope: -0
-              outSlope: 2.7452831
-              tangentMode: 0
-              weightedMode: 0
-              inWeight: 0
-              outWeight: 0
-            - serializedVersion: 3
-              time: 0.07272727
-              value: 0.049914233
-              inSlope: 2.7452831
-              outSlope: -2.7452822
-              tangentMode: 0
-              weightedMode: 0
-              inWeight: 0
-              outWeight: 0
-            - serializedVersion: 3
-              time: 0.09090909
-              value: 0
-              inSlope: -2.7452822
-              outSlope: 27.445004
-              tangentMode: 0
-              weightedMode: 0
-              inWeight: 0
-              outWeight: 0
-            - serializedVersion: 3
-              time: 0.10909091
-              value: 0.499
-              inSlope: 27.445004
-              outSlope: -27.445004
-              tangentMode: 0
-              weightedMode: 0
-              inWeight: 0
-              outWeight: 0
-            - serializedVersion: 3
               time: 0.12727273
               value: 0
-              inSlope: -27.445004
-              outSlope: 0
+              inSlope: -0
+              outSlope: 55.000008
               tangentMode: 0
               weightedMode: 0
               inWeight: 0
               outWeight: 0
             - serializedVersion: 3
               time: 0.14545454
-              value: 0
-              inSlope: -0
-              outSlope: 27.499992
-              tangentMode: 0
-              weightedMode: 0
-              inWeight: 0
-              outWeight: 0
-            - serializedVersion: 3
-              time: 0.18181819
               value: 1
-              inSlope: 27.499992
+              inSlope: 55.000008
               outSlope: -55.000008
               tangentMode: 0
               weightedMode: 0
               inWeight: 0
               outWeight: 0
             - serializedVersion: 3
-              time: 0.2
+              time: 0.16363636
               value: 0
               inSlope: -55.000008
+              outSlope: 0
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 0.18181819
+              value: 0
+              inSlope: -0
+              outSlope: 55.000008
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 0.2
+              value: 1
+              inSlope: 55.000008
+              outSlope: -27.500004
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 0.23636363
+              value: 0
+              inSlope: -27.500004
               outSlope: 0
               tangentMode: 0
               weightedMode: 0
@@ -9125,36 +9107,72 @@ MonoBehaviour:
               inWeight: 0
               outWeight: 0
             - serializedVersion: 3
-              time: 0.6545454
+              time: 0.6181818
               value: 0
               inSlope: -0
-              outSlope: 54.99987
+              outSlope: 27.445026
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 0.6363636
+              value: 0.499
+              inSlope: 27.445026
+              outSlope: -0.83006
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 0.6545454
+              value: 0.48390803
+              inSlope: -0.83006
+              outSlope: -15.045928
               tangentMode: 0
               weightedMode: 0
               inWeight: 0
               outWeight: 0
             - serializedVersion: 3
               time: 0.6727273
-              value: 1
-              inSlope: 54.99987
-              outSlope: 0
+              value: 0.21034506
+              inSlope: -15.045928
+              outSlope: -2.6787412
               tangentMode: 0
               weightedMode: 0
               inWeight: 0
               outWeight: 0
             - serializedVersion: 3
               time: 0.6909091
-              value: 1
-              inSlope: -0
-              outSlope: -55.000053
+              value: 0.16164072
+              inSlope: -2.6787412
+              outSlope: -7.213808
               tangentMode: 0
               weightedMode: 0
               inWeight: 0
               outWeight: 0
             - serializedVersion: 3
               time: 0.7090909
+              value: 0.030480698
+              inSlope: -7.213808
+              outSlope: 25.768503
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 0.72727275
+              value: 0.499
+              inSlope: 25.768503
+              outSlope: -27.445026
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 0.74545455
               value: 0
-              inSlope: -55.000053
+              inSlope: -27.445026
               outSlope: 0
               tangentMode: 0
               weightedMode: 0
@@ -9305,11 +9323,63 @@ MonoBehaviour:
       m_BlendSpacePlanIndex: 0
     m_TuningLayout:
       m_ProgramId: character:e135c016ef75f604986f7458515fa6b7
-      m_ProjectionRevision: 8972f6128a6999979e094bfe3fca035892584910c7f031b0925e2127b8b6c81f
-      m_PosePlanHash: 4b68509fa6c9f197f472b8e5a00727bd153f839baadd1584143001c52f3fce05
+      m_ProjectionRevision: 8eb64d782d408c48d98217b64753edbeaa9836bb866b42b09a26300fec4d6c3d
+      m_PosePlanHash: f4f9cb895660ea9a78ff21e9877b2e60e71d0b270988e84ad0ef0c2fdac12e78
       m_RigId: training-enemy.monster.animation-rig
       m_RigRevision: training-enemy.monster.rig-118455d4c7c3a21e46effac0dd2c7c05
       m_Entries:
+      - m_OwnerId: animation-blend-policy:training-enemy.monster.full-body
+        m_FieldId: animation-blend-policy:training-enemy.monster.full-body/depth-blend-time-multiplier
+        m_DisplayName: Depth Blend Time Multiplier
+        m_Interaction: 1
+        m_ValueKind: 0
+        m_Unit: multiplier
+        m_Minimum: 0.01
+        m_Maximum: 100
+        m_FiniteOnly: 1
+        m_ApplyTiming: 1
+        m_StatePolicy: 0
+        m_ValueIndex: 1
+        m_ConsumerId: animation-blend-policy:training-enemy.monster.full-body
+      - m_OwnerId: animation-blend-policy:training-enemy.monster.full-body
+        m_FieldId: animation-blend-policy:training-enemy.monster.full-body/max-active-source-entries
+        m_DisplayName: Max Active Sources
+        m_Interaction: 0
+        m_ValueKind: 1
+        m_Unit: count
+        m_Minimum: 2
+        m_Maximum: 64
+        m_FiniteOnly: 0
+        m_ApplyTiming: 0
+        m_StatePolicy: 0
+        m_ValueIndex: 0
+        m_ConsumerId: animation-blend-policy:training-enemy.monster.full-body
+      - m_OwnerId: animation-blend-policy:training-enemy.monster.full-body
+        m_FieldId: animation-blend-policy:training-enemy.monster.full-body/max-blend-in-time-to-replace-newest
+        m_DisplayName: Replace Newest Window
+        m_Interaction: 1
+        m_ValueKind: 0
+        m_Unit: seconds
+        m_Minimum: 0
+        m_Maximum: 10
+        m_FiniteOnly: 1
+        m_ApplyTiming: 1
+        m_StatePolicy: 0
+        m_ValueIndex: 0
+        m_ConsumerId: animation-blend-policy:training-enemy.monster.full-body
+      - m_OwnerId: animation-blend-policy:training-enemy.monster.full-body
+        m_FieldId: animation-blend-policy:training-enemy.monster.full-body/stored-pose-policy
+        m_DisplayName: Stored Pose Policy
+        m_Interaction: 0
+        m_ValueKind: 3
+        m_Unit: 
+        m_Minimum: 1
+        m_Maximum: 2
+        m_FiniteOnly: 0
+        m_ApplyTiming: 0
+        m_StatePolicy: 0
+        m_ValueIndex: 0
+        m_ConsumerId: animation-blend-policy:training-enemy.monster.full-body
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/grounding/foot-height-speed
         m_DisplayName: Foot Height Speed
@@ -9321,7 +9391,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 42
+        m_ValueIndex: 44
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/grounding/foot-radius
@@ -9334,7 +9404,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 43
+        m_ValueIndex: 45
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/grounding/foot-rotation-speed
@@ -9347,7 +9417,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 46
+        m_ValueIndex: 48
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/grounding/foot-rotation-weight
@@ -9360,7 +9430,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 45
+        m_ValueIndex: 47
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/grounding/height-offset
@@ -9373,33 +9443,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 41
-        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
-      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
-        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/grounding/lift-pelvis-weight
-        m_DisplayName: Lift Pelvis Weight
-        m_Interaction: 1
-        m_ValueKind: 0
-        m_Unit: normalized
-        m_Minimum: 0
-        m_Maximum: 1
-        m_FiniteOnly: 1
-        m_ApplyTiming: 0
-        m_StatePolicy: 0
-        m_ValueIndex: 51
-        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
-      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
-        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/grounding/lower-pelvis-weight
-        m_DisplayName: Lower Pelvis Weight
-        m_Interaction: 1
-        m_ValueKind: 0
-        m_Unit: normalized
-        m_Minimum: 0
-        m_Maximum: 1
-        m_FiniteOnly: 1
-        m_ApplyTiming: 0
-        m_StatePolicy: 0
-        m_ValueIndex: 50
+        m_ValueIndex: 43
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/grounding/maximum-foot-rotation-angle
@@ -9412,7 +9456,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 47
+        m_ValueIndex: 49
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/grounding/maximum-step
@@ -9425,33 +9469,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 40
-        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
-      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
-        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/grounding/pelvis-damper
-        m_DisplayName: Pelvis Damper
-        m_Interaction: 1
-        m_ValueKind: 0
-        m_Unit: normalized
-        m_Minimum: 0
-        m_Maximum: 1
-        m_FiniteOnly: 1
-        m_ApplyTiming: 0
-        m_StatePolicy: 0
-        m_ValueIndex: 49
-        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
-      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
-        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/grounding/pelvis-speed
-        m_DisplayName: Pelvis Speed
-        m_Interaction: 1
-        m_ValueKind: 0
-        m_Unit: meters/second
-        m_Minimum: 0
-        m_Maximum: 100
-        m_FiniteOnly: 1
-        m_ApplyTiming: 0
-        m_StatePolicy: 0
-        m_ValueIndex: 48
+        m_ValueIndex: 42
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/grounding/velocity-prediction
@@ -9464,7 +9482,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 44
+        m_ValueIndex: 46
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/cast-above
@@ -9477,7 +9495,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 54
+        m_ValueIndex: 52
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/cast-below
@@ -9490,20 +9508,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 55
-        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
-      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
-        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/descending-tolerance
-        m_DisplayName: Descending Tolerance
-        m_Interaction: 1
-        m_ValueKind: 0
-        m_Unit: meters/second
-        m_Minimum: 0
-        m_Maximum: 10
-        m_FiniteOnly: 1
-        m_ApplyTiming: 0
-        m_StatePolicy: 0
-        m_ValueIndex: 68
+        m_ValueIndex: 53
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/heel-lift-ratio
@@ -9516,7 +9521,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 84
+        m_ValueIndex: 77
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/hit-capacity
@@ -9529,7 +9534,7 @@ MonoBehaviour:
         m_FiniteOnly: 0
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 1
+        m_ValueIndex: 2
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-ankle-twist-degrees
@@ -9542,7 +9547,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 83
+        m_ValueIndex: 76
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-edge-gap
@@ -9555,7 +9560,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 60
+        m_ValueIndex: 58
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-height-discontinuity
@@ -9568,7 +9573,20 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 59
+        m_ValueIndex: 57
+        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
+      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
+        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-horizontal-foot-adjustment
+        m_DisplayName: Maximum Horizontal Foot Adjustment
+        m_Interaction: 1
+        m_ValueKind: 0
+        m_Unit: meters
+        m_Minimum: 0
+        m_Maximum: 1
+        m_FiniteOnly: 1
+        m_ApplyTiming: 0
+        m_StatePolicy: 0
+        m_ValueIndex: 84
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-leg-extension-ratio
@@ -9581,7 +9599,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 86
+        m_ValueIndex: 79
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-look-ahead-seconds
@@ -9594,7 +9612,33 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 72
+        m_ValueIndex: 65
+        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
+      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
+        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-pelvis-lowering
+        m_DisplayName: Maximum Pelvis Lowering
+        m_Interaction: 1
+        m_ValueKind: 0
+        m_Unit: meters
+        m_Minimum: 0
+        m_Maximum: 1
+        m_FiniteOnly: 1
+        m_ApplyTiming: 0
+        m_StatePolicy: 0
+        m_ValueIndex: 80
+        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
+      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
+        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-pelvis-raising
+        m_DisplayName: Maximum Pelvis Raising
+        m_Interaction: 1
+        m_ValueKind: 0
+        m_Unit: meters
+        m_Minimum: 0
+        m_Maximum: 1
+        m_FiniteOnly: 1
+        m_ApplyTiming: 0
+        m_StatePolicy: 0
+        m_ValueIndex: 81
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-prediction-distance
@@ -9607,7 +9651,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 74
+        m_ValueIndex: 67
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-prediction-reach-ratio
@@ -9620,7 +9664,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 75
+        m_ValueIndex: 68
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-slide-distance
@@ -9633,7 +9677,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 78
+        m_ValueIndex: 71
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-slope-degrees
@@ -9646,7 +9690,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 56
+        m_ValueIndex: 54
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-step-down
@@ -9659,7 +9703,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 58
+        m_ValueIndex: 56
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-step-up
@@ -9672,7 +9716,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 57
+        m_ValueIndex: 55
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-swing-clearance
@@ -9685,7 +9729,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 61
+        m_ValueIndex: 59
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/maximum-yaw-velocity
@@ -9698,7 +9742,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 73
+        m_ValueIndex: 66
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/minimum-foot-separation
@@ -9711,7 +9755,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 82
+        m_ValueIndex: 75
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/minimum-leg-extension-ratio
@@ -9724,7 +9768,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 85
+        m_ValueIndex: 78
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/minimum-look-ahead-seconds
@@ -9737,7 +9781,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 71
+        m_ValueIndex: 64
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/minimum-source-contribution
@@ -9750,7 +9794,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 87
+        m_ValueIndex: 85
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/path-sample-count
@@ -9763,7 +9807,7 @@ MonoBehaviour:
         m_FiniteOnly: 0
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 2
+        m_ValueIndex: 3
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/path-sphere-radius
@@ -9776,7 +9820,33 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 52
+        m_ValueIndex: 50
+        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
+      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
+        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/pelvis-height-dead-zone
+        m_DisplayName: Pelvis Height Dead Zone
+        m_Interaction: 1
+        m_ValueKind: 0
+        m_Unit: meters
+        m_Minimum: 0
+        m_Maximum: 0.05
+        m_FiniteOnly: 1
+        m_ApplyTiming: 0
+        m_StatePolicy: 0
+        m_ValueIndex: 83
+        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
+      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
+        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/pelvis-interpolation-speed
+        m_DisplayName: Pelvis Interpolation Speed
+        m_Interaction: 1
+        m_ValueKind: 0
+        m_Unit: response
+        m_Minimum: 0.01
+        m_Maximum: 100
+        m_FiniteOnly: 1
+        m_ApplyTiming: 0
+        m_StatePolicy: 0
+        m_ValueIndex: 82
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/plant-confidence-enter
@@ -9789,7 +9859,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 69
+        m_ValueIndex: 62
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/plant-confidence-exit
@@ -9802,63 +9872,11 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 70
-        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
-      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
-        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/plant-distance
-        m_DisplayName: Plant Distance
-        m_Interaction: 1
-        m_ValueKind: 0
-        m_Unit: meters
-        m_Minimum: 0
-        m_Maximum: 10
-        m_FiniteOnly: 1
-        m_ApplyTiming: 0
-        m_StatePolicy: 0
-        m_ValueIndex: 62
-        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
-      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
-        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/plant-planar-speed
-        m_DisplayName: Plant Planar Speed
-        m_Interaction: 1
-        m_ValueKind: 0
-        m_Unit: meters/second
-        m_Minimum: 0
-        m_Maximum: 10
-        m_FiniteOnly: 1
-        m_ApplyTiming: 0
-        m_StatePolicy: 0
-        m_ValueIndex: 64
-        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
-      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
-        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/plant-vertical-speed
-        m_DisplayName: Plant Vertical Speed
-        m_Interaction: 1
-        m_ValueKind: 0
-        m_Unit: meters/second
-        m_Minimum: 0
-        m_Maximum: 10
-        m_FiniteOnly: 1
-        m_ApplyTiming: 0
-        m_StatePolicy: 0
-        m_ValueIndex: 66
-        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
-      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
-        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/release-distance
-        m_DisplayName: Release Distance
-        m_Interaction: 1
-        m_ValueKind: 0
-        m_Unit: meters
-        m_Minimum: 0
-        m_Maximum: 10
-        m_FiniteOnly: 1
-        m_ApplyTiming: 0
-        m_StatePolicy: 0
         m_ValueIndex: 63
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
-        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/release-planar-speed
-        m_DisplayName: Release Planar Speed
+        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/plant-speed-threshold
+        m_DisplayName: Plant Speed Threshold
         m_Interaction: 1
         m_ValueKind: 0
         m_Unit: meters/second
@@ -9867,20 +9885,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 65
-        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
-      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
-        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/release-vertical-speed
-        m_DisplayName: Release Vertical Speed
-        m_Interaction: 1
-        m_ValueKind: 0
-        m_Unit: meters/second
-        m_Minimum: 0
-        m_Maximum: 10
-        m_FiniteOnly: 1
-        m_ApplyTiming: 0
-        m_StatePolicy: 0
-        m_ValueIndex: 67
+        m_ValueIndex: 60
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/replant-angle-degrees
@@ -9893,7 +9898,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 81
+        m_ValueIndex: 74
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/replant-distance
@@ -9906,7 +9911,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 80
+        m_ValueIndex: 73
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/slide-speed
@@ -9919,7 +9924,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 79
+        m_ValueIndex: 72
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/slide-start-distance
@@ -9932,7 +9937,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 76
+        m_ValueIndex: 69
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/slide-stop-distance
@@ -9945,7 +9950,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 77
+        m_ValueIndex: 70
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
         m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/swing-capsule-radius
@@ -9958,7 +9963,20 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 53
+        m_ValueIndex: 51
+        m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
+      - m_OwnerId: foot-placement-profile:training-enemy.monster.foot-placement
+        m_FieldId: foot-placement-profile:training-enemy.monster.foot-placement/predictive/unalignment-speed-threshold
+        m_DisplayName: Unalignment Speed Threshold
+        m_Interaction: 1
+        m_ValueKind: 0
+        m_Unit: meters/second
+        m_Minimum: 0
+        m_Maximum: 10
+        m_FiniteOnly: 1
+        m_ApplyTiming: 0
+        m_StatePolicy: 0
+        m_ValueIndex: 61
         m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/fabrik-pass
@@ -9984,7 +10002,7 @@ MonoBehaviour:
         m_FiniteOnly: 0
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 0
+        m_ValueIndex: 1
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-arm/bend-clamp
@@ -9997,7 +10015,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 12
+        m_ValueIndex: 14
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-arm/bend-constraint-weight
@@ -10010,7 +10028,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 11
+        m_ValueIndex: 13
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-arm/maintain-rotation-weight
@@ -10023,7 +10041,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 10
+        m_ValueIndex: 12
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-arm/mapping-weight
@@ -10036,7 +10054,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 9
+        m_ValueIndex: 11
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-arm/pin
@@ -10049,7 +10067,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 4
+        m_ValueIndex: 6
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-arm/pull
@@ -10062,7 +10080,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 5
+        m_ValueIndex: 7
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-arm/push
@@ -10075,7 +10093,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 6
+        m_ValueIndex: 8
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-arm/push-parent
@@ -10088,7 +10106,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 7
+        m_ValueIndex: 9
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-arm/push-smoothing
@@ -10101,7 +10119,7 @@ MonoBehaviour:
         m_FiniteOnly: 0
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 1
+        m_ValueIndex: 2
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-arm/reach
@@ -10114,7 +10132,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 8
+        m_ValueIndex: 10
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-arm/reach-smoothing
@@ -10127,7 +10145,7 @@ MonoBehaviour:
         m_FiniteOnly: 0
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 0
+        m_ValueIndex: 1
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-leg/bend-clamp
@@ -10140,7 +10158,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 30
+        m_ValueIndex: 32
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-leg/bend-constraint-weight
@@ -10153,7 +10171,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 29
+        m_ValueIndex: 31
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-leg/maintain-rotation-weight
@@ -10166,7 +10184,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 28
+        m_ValueIndex: 30
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-leg/mapping-weight
@@ -10179,7 +10197,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 27
+        m_ValueIndex: 29
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-leg/pin
@@ -10192,7 +10210,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 22
+        m_ValueIndex: 24
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-leg/pull
@@ -10205,7 +10223,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 23
+        m_ValueIndex: 25
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-leg/push
@@ -10218,7 +10236,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 24
+        m_ValueIndex: 26
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-leg/push-parent
@@ -10231,7 +10249,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 25
+        m_ValueIndex: 27
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-leg/push-smoothing
@@ -10244,7 +10262,7 @@ MonoBehaviour:
         m_FiniteOnly: 0
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 5
+        m_ValueIndex: 6
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-leg/reach
@@ -10257,7 +10275,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 26
+        m_ValueIndex: 28
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/left-leg/reach-smoothing
@@ -10270,7 +10288,7 @@ MonoBehaviour:
         m_FiniteOnly: 0
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 4
+        m_ValueIndex: 5
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/node-weight
@@ -10283,7 +10301,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 3
+        m_ValueIndex: 5
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/pull-body-horizontal
@@ -10296,7 +10314,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 2
+        m_ValueIndex: 4
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/pull-body-vertical
@@ -10309,7 +10327,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 1
+        m_ValueIndex: 3
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-arm/bend-clamp
@@ -10322,7 +10340,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 21
+        m_ValueIndex: 23
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-arm/bend-constraint-weight
@@ -10335,7 +10353,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 20
+        m_ValueIndex: 22
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-arm/maintain-rotation-weight
@@ -10348,7 +10366,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 19
+        m_ValueIndex: 21
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-arm/mapping-weight
@@ -10361,7 +10379,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 18
+        m_ValueIndex: 20
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-arm/pin
@@ -10374,7 +10392,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 13
+        m_ValueIndex: 15
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-arm/pull
@@ -10387,7 +10405,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 14
+        m_ValueIndex: 16
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-arm/push
@@ -10400,7 +10418,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 15
+        m_ValueIndex: 17
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-arm/push-parent
@@ -10413,7 +10431,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 16
+        m_ValueIndex: 18
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-arm/push-smoothing
@@ -10426,7 +10444,7 @@ MonoBehaviour:
         m_FiniteOnly: 0
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 3
+        m_ValueIndex: 4
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-arm/reach
@@ -10439,7 +10457,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 17
+        m_ValueIndex: 19
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-arm/reach-smoothing
@@ -10452,7 +10470,7 @@ MonoBehaviour:
         m_FiniteOnly: 0
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 2
+        m_ValueIndex: 3
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-leg/bend-clamp
@@ -10465,7 +10483,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 39
+        m_ValueIndex: 41
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-leg/bend-constraint-weight
@@ -10478,7 +10496,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 38
+        m_ValueIndex: 40
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-leg/maintain-rotation-weight
@@ -10491,7 +10509,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 37
+        m_ValueIndex: 39
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-leg/mapping-weight
@@ -10504,7 +10522,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 36
+        m_ValueIndex: 38
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-leg/pin
@@ -10517,7 +10535,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 31
+        m_ValueIndex: 33
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-leg/pull
@@ -10530,7 +10548,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 32
+        m_ValueIndex: 34
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-leg/push
@@ -10543,7 +10561,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 33
+        m_ValueIndex: 35
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-leg/push-parent
@@ -10556,7 +10574,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 34
+        m_ValueIndex: 36
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-leg/push-smoothing
@@ -10569,7 +10587,7 @@ MonoBehaviour:
         m_FiniteOnly: 0
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 7
+        m_ValueIndex: 8
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-leg/reach
@@ -10582,7 +10600,7 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 35
+        m_ValueIndex: 37
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/right-leg/reach-smoothing
@@ -10595,7 +10613,7 @@ MonoBehaviour:
         m_FiniteOnly: 0
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 6
+        m_ValueIndex: 7
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       - m_OwnerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FieldId: full-body-ik-profile:training-enemy.monster.full-body-ik/spine-stiffness
@@ -10608,19 +10626,24 @@ MonoBehaviour:
         m_FiniteOnly: 1
         m_ApplyTiming: 0
         m_StatePolicy: 0
-        m_ValueIndex: 0
+        m_ValueIndex: 2
         m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
       m_Consumers:
-      - m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
+      - m_ConsumerId: animation-blend-policy:training-enemy.monster.full-body
         m_FirstEntryIndex: 0
-        m_EntryCount: 50
+        m_EntryCount: 4
+      - m_ConsumerId: foot-placement-profile:training-enemy.monster.foot-placement
+        m_FirstEntryIndex: 4
+        m_EntryCount: 46
       - m_ConsumerId: full-body-ik-profile:training-enemy.monster.full-body-ik
         m_FirstEntryIndex: 50
         m_EntryCount: 50
-      m_LayoutHash: 4e6ab31113e597dce3ae4eac611c5f9b04a0c3f69ac1f8a46a6c2507c8c32d24
+      m_LayoutHash: 277eda23b7536f13539e222352578f23a244c3595df14669ffa3c853c1c693ed
     m_TuningDefaultBlock:
-      m_LayoutHash: 4e6ab31113e597dce3ae4eac611c5f9b04a0c3f69ac1f8a46a6c2507c8c32d24
+      m_LayoutHash: 277eda23b7536f13539e222352578f23a244c3595df14669ffa3c853c1c693ed
       m_Floats:
+      - 0.05
+      - 1
       - 0.5
       - 0.5
       - 0
@@ -10669,10 +10692,6 @@ MonoBehaviour:
       - 1
       - 7
       - 45
-      - 5
-      - 0
-      - 1
-      - 0
       - 0.08
       - 0.05
       - 0.35
@@ -10683,13 +10702,8 @@ MonoBehaviour:
       - 0.35
       - 0.4
       - 0.16
-      - 0.08
-      - 0.18
-      - 0.14
-      - 0.42
-      - 0.14
-      - 0.48
-      - 0.04
+      - 0.6
+      - 2
       - 0.65
       - 0.35
       - 0.04
@@ -10708,11 +10722,16 @@ MonoBehaviour:
       - 1
       - 0.18
       - 0.98
+      - 0.32
+      - 0.18
+      - 14
+      - 0.003
+      - 0.25
       - 0.05
-      m_Integers: 040000001000000003000000
+      m_Integers: 04000000040000001000000003000000
       m_Booleans: 01
-      m_Enums: 0100000001000000010000000100000001000000010000000100000001000000
-    m_PublishedParameterRevision: 959a3239311134a073afaf00784e3c643d97c638c881a50c41cf3296cba1dcc8
+      m_Enums: 020000000100000001000000010000000100000001000000010000000100000001000000
+    m_PublishedParameterRevision: 24bbc7c9d559b4ffc50912eda09e25ab89b3cf4f81f2904907034d72bcb51e38
     m_MotionMatchingPayload: 
     m_MotionMatchingClips: []
   references:
@@ -10720,13 +10739,13 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 1002
+    - rid: 1000
       type: {class: CharacterPresentationCueBinding, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
       data:
         m_CueId: Cue.Combat.Damage
         m_CueType: GameplayEffect
-    - rid: 1003
+    - rid: 1001
       type: {class: CharacterPresentationAnimationBinding, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
       data:
@@ -16854,7 +16873,7 @@ MonoBehaviour:
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.018867925
+                time: 0.014150944
                 value: 0
                 inSlope: -0
                 outSlope: 105.788
@@ -16863,7 +16882,7 @@ MonoBehaviour:
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.023584906
+                time: 0.018867925
                 value: 0.499
                 inSlope: 105.788
                 outSlope: -105.788
@@ -16872,7 +16891,7 @@ MonoBehaviour:
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.028301887
+                time: 0.023584906
                 value: 0
                 inSlope: -105.788
                 outSlope: 0
@@ -16884,60 +16903,33 @@ MonoBehaviour:
                 time: 0.03773585
                 value: 0
                 inSlope: -0
-                outSlope: 29.47398
+                outSlope: 212
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.04245283
-                value: 0.1390282
-                inSlope: 29.47398
-                outSlope: 59.7378
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.047169812
-                value: 0.42081028
-                inSlope: 59.7378
-                outSlope: 16.576223
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.051886793
-                value: 0.499
-                inSlope: 16.576223
-                outSlope: 106.212
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.056603774
                 value: 1
-                inSlope: 106.212
+                inSlope: 212
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.14150943
+                time: 0.13679245
                 value: 1
                 inSlope: -0
-                outSlope: -105.999916
+                outSlope: -212.00017
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.1509434
+                time: 0.14150943
                 value: 0
-                inSlope: -105.999916
+                inSlope: -212.00017
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
@@ -16947,16 +16939,34 @@ MonoBehaviour:
                 time: 0.2028302
                 value: 0
                 inSlope: -0
-                outSlope: 106.000084
+                outSlope: 38.589676
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.20754717
+                value: 0.18202662
+                inSlope: 38.589676
+                outSlope: 67.19841
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.21226415
-                value: 1
-                inSlope: 106.000084
+                value: 0.499
+                inSlope: 67.19841
                 outSlope: 0
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.21698113
+                value: 0.499
+                inSlope: -0
+                outSlope: 106.21175
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
@@ -16964,17 +16974,17 @@ MonoBehaviour:
               - serializedVersion: 3
                 time: 0.22169812
                 value: 1
-                inSlope: -0
-                outSlope: -63.1195
+                inSlope: 106.21175
+                outSlope: -9.8058
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.2264151
-                value: 0.70226675
-                inSlope: -63.1195
-                outSlope: 63.1195
+                value: 0.95374626
+                inSlope: -9.8058
+                outSlope: 9.8058
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
@@ -16982,26 +16992,8 @@ MonoBehaviour:
               - serializedVersion: 3
                 time: 0.23113208
                 value: 1
-                inSlope: 63.1195
+                inSlope: 9.8058
                 outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.25
-                value: 1
-                inSlope: -0
-                outSlope: -44.166
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.254717
-                value: 0.7916693
-                inSlope: -44.166
-                outSlope: 44.16628
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
@@ -17009,70 +17001,97 @@ MonoBehaviour:
               - serializedVersion: 3
                 time: 0.25943395
                 value: 1
-                inSlope: 44.16628
-                outSlope: -20.269857
+                inSlope: -0
+                outSlope: -53.514847
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.26415095
-                value: 0.90438724
-                inSlope: -20.269857
-                outSlope: -191.73085
+                value: 0.7475709
+                inSlope: -53.514847
+                outSlope: 21.517246
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.2688679
-                value: 0
-                inSlope: -191.73085
-                outSlope: 0
+                value: 0.8490669
+                inSlope: 21.517246
+                outSlope: 31.997738
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.2735849
+                value: 1
+                inSlope: 31.997738
+                outSlope: -95.588326
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.2783019
+                value: 0.5491106
+                inSlope: -95.588326
+                outSlope: 95.58893
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.28301886
+                value: 1
+                inSlope: 95.58893
+                outSlope: -2.2433472
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.28773585
+                value: 0.98941815
+                inSlope: -2.2433472
+                outSlope: 1.121677
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.2971698
-                value: 0
-                inSlope: -0
-                outSlope: 105.78775
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.3018868
-                value: 0.499
-                inSlope: 105.78775
+                value: 1
+                inSlope: 1.121677
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.30660376
-                value: 0.499
-                inSlope: -0
-                outSlope: -67.41949
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
                 time: 0.31132075
-                value: 0.1809828
-                inSlope: -67.41949
-                outSlope: -38.368263
+                value: 1
+                inSlope: -0
+                outSlope: -42.373222
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.31603774
-                value: 0
-                inSlope: -38.368263
+                value: 0.80012584
+                inSlope: -42.373222
+                outSlope: 42.37349
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.3207547
+                value: 1
+                inSlope: 42.37349
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
@@ -17080,27 +17099,27 @@ MonoBehaviour:
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.33490565
-                value: 0
+                value: 1
                 inSlope: -0
-                outSlope: 36.233738
+                outSlope: -211.9995
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.33962265
-                value: 0.17091426
-                inSlope: 36.233738
-                outSlope: 69.55445
+                value: 0
+                inSlope: -211.9995
+                outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.3443396
-                value: 0.499
-                inSlope: 69.55445
-                outSlope: 106.21175
+                value: 0
+                inSlope: -0
+                outSlope: 211.9995
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
@@ -17108,7 +17127,7 @@ MonoBehaviour:
               - serializedVersion: 3
                 time: 0.3490566
                 value: 1
-                inSlope: 106.21175
+                inSlope: 211.9995
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
@@ -17118,25 +17137,25 @@ MonoBehaviour:
                 time: 0.3537736
                 value: 1
                 inSlope: -0
-                outSlope: -34.68942
+                outSlope: -106.00042
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.35849056
-                value: 0.8363713
-                inSlope: -34.68942
-                outSlope: -14.811229
+                value: 0.5
+                inSlope: -106.00042
+                outSlope: 21.318684
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.36320755
-                value: 0.76650685
-                inSlope: -14.811229
-                outSlope: 49.50043
+                value: 0.60056007
+                inSlope: 21.318684
+                outSlope: 84.68106
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
@@ -17144,25 +17163,7 @@ MonoBehaviour:
               - serializedVersion: 3
                 time: 0.36792454
                 value: 1
-                inSlope: 49.50043
-                outSlope: -16.870308
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.3726415
-                value: 0.9204234
-                inSlope: -16.870308
-                outSlope: 16.870201
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.3773585
-                value: 1
-                inSlope: 16.870201
+                inSlope: 84.68106
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
@@ -17172,25 +17173,25 @@ MonoBehaviour:
                 time: 0.41509435
                 value: 1
                 inSlope: -0
-                outSlope: -39.348515
+                outSlope: -8.30907
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.4198113
-                value: 0.81439453
-                inSlope: -39.348515
-                outSlope: 8.743094
+                value: 0.9608064
+                inSlope: -8.30907
+                outSlope: 6.3285904
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.4245283
-                value: 0.85563564
-                inSlope: 8.743094
-                outSlope: 30.605171
+                value: 0.99065834
+                inSlope: 6.3285904
+                outSlope: 1.9804265
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
@@ -17198,88 +17199,160 @@ MonoBehaviour:
               - serializedVersion: 3
                 time: 0.4292453
                 value: 1
-                inSlope: 30.605171
+                inSlope: 1.9804265
                 outSlope: 0
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.49056605
+                value: 1
+                inSlope: -0
+                outSlope: -15.391717
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.495283
+                value: 0.92739785
+                inSlope: -15.391717
+                outSlope: -90.60812
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.5
-                value: 1
-                inSlope: -0
+                value: 0.5
+                inSlope: -90.60812
                 outSlope: -105.99975
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.509434
+                time: 0.504717
                 value: 0
                 inSlope: -105.99975
+                outSlope: 106.00042
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.5141509
+                value: 1
+                inSlope: 106.00042
+                outSlope: -62.589314
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.5188679
+                value: 0.7047667
+                inSlope: -62.589314
+                outSlope: -18.726074
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.5235849
+                value: 0.61643595
+                inSlope: -18.726074
+                outSlope: 27.45537
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.5283019
+                value: 0.7459427
+                inSlope: 27.45537
+                outSlope: 53.860016
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.5330189
+                value: 1
+                inSlope: 53.860016
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.6367925
+                time: 0.5424528
+                value: 1
+                inSlope: -0
+                outSlope: -41.70046
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.5471698
+                value: 0.80329925
+                inSlope: -41.70046
+                outSlope: -170.29904
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.5518868
+                value: 0
+                inSlope: -170.29904
+                outSlope: 0
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.6650943
                 value: 0
                 inSlope: -0
-                outSlope: 31.0785
+                outSlope: 211.9995
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.6415094
-                value: 0.1465952
-                inSlope: 31.0785
-                outSlope: -31.078108
+                time: 0.6698113
+                value: 1
+                inSlope: 211.9995
+                outSlope: -71.94312
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.6462264
-                value: 0
-                inSlope: -31.078108
-                outSlope: 0
+                time: 0.6745283
+                value: 0.6606448
+                inSlope: -71.94312
+                outSlope: -24.589363
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.6792453
-                value: 0
-                inSlope: -0
-                outSlope: 20.70047
+                value: 0.544657
+                inSlope: -24.589363
+                outSlope: 96.532486
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.6839623
-                value: 0.09764396
-                inSlope: 20.70047
-                outSlope: 85.088356
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6886792
-                value: 0.499
-                inSlope: 85.088356
-                outSlope: 106.21175
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6933962
                 value: 1
-                inSlope: 106.21175
+                inSlope: 96.532486
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
@@ -17310,7 +17383,7 @@ MonoBehaviour:
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.6933962
+                time: 0.6698113
                 value: 1
                 inSlope: -0
                 outSlope: -211.9995
@@ -17319,7 +17392,7 @@ MonoBehaviour:
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.6981132
+                time: 0.6745283
                 value: 0
                 inSlope: -211.9995
                 outSlope: 0
@@ -17344,7 +17417,7 @@ MonoBehaviour:
               m_Curve:
               - serializedVersion: 3
                 time: 0
-                value: 0.19905661
+                value: 0.14929245
                 inSlope: 0
                 outSlope: -3.5166667
                 tangentMode: 0
@@ -17352,36 +17425,36 @@ MonoBehaviour:
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.056603774
+                time: 0.04245283
                 value: 0
                 inSlope: -3.5166667
-                outSlope: 112.53333
+                outSlope: 130.11667
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.061320756
-                value: 0.5308176
-                inSlope: 112.53333
-                outSlope: -3.5166667
+                time: 0.047169812
+                value: 0.6137579
+                inSlope: 130.11667
+                outSlope: -3.516667
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.21226415
+                time: 0.22169812
                 value: 0
-                inSlope: -3.5166667
-                outSlope: 98.46675
+                inSlope: -3.516667
+                outSlope: 91.4334
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.21698113
-                value: 0.46446544
-                inSlope: 98.46675
+                time: 0.2264151
+                value: 0.43128932
+                inSlope: 91.4334
                 outSlope: -3.516667
                 tangentMode: 0
                 weightedMode: 0
@@ -17391,24 +17464,42 @@ MonoBehaviour:
                 time: 0.3490566
                 value: 0
                 inSlope: -3.516667
-                outSlope: 253.1994
+                outSlope: 119.56639
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.3537736
-                value: 1.1943396
-                inSlope: 253.1994
-                outSlope: -3.516667
+                value: 0.56399375
+                inSlope: 119.56639
+                outSlope: -3.5166676
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.6933962
+                time: 0.5141509
                 value: 0
-                inSlope: -3.516667
+                inSlope: -3.5166676
+                outSlope: 112.533066
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.5188679
+                value: 0.5308176
+                inSlope: 112.533066
+                outSlope: -3.5166667
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.6698113
+                value: 0
+                inSlope: -3.5166667
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
@@ -17431,7 +17522,7 @@ MonoBehaviour:
               m_Curve:
               - serializedVersion: 3
                 time: 0
-                value: -0.9338068
+                value: -0.92551917
                 inSlope: 0
                 outSlope: 0
                 tangentMode: 0
@@ -17439,36 +17530,36 @@ MonoBehaviour:
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.056603774
-                value: -0.9338068
+                time: 0.04245283
+                value: -0.92551917
                 inSlope: -0
-                outSlope: 99.13029
+                outSlope: 98.49533
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.061320756
-                value: -0.46621108
-                inSlope: 99.13029
+                time: 0.047169812
+                value: -0.46091855
+                inSlope: 98.49533
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.21226415
-                value: -0.46621108
+                time: 0.22169812
+                value: -0.46091855
                 inSlope: -0
-                outSlope: -4.2959332
+                outSlope: -5.4179516
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.21698113
+                time: 0.2264151
                 value: -0.4864749
-                inSlope: -4.2959332
+                inSlope: -5.4179516
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
@@ -17478,33 +17569,51 @@ MonoBehaviour:
                 time: 0.3490566
                 value: -0.4864749
                 inSlope: -0
-                outSlope: -20.310717
+                outSlope: 15.038445
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.3537736
-                value: -0.5822804
-                inSlope: -20.310717
+                value: -0.41553867
+                inSlope: 15.038445
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.6933962
-                value: -0.5822804
+                time: 0.5141509
+                value: -0.41553867
                 inSlope: -0
-                outSlope: 123.44315
+                outSlope: -32.259293
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.6981132
+                time: 0.5188679
+                value: -0.5677055
+                inSlope: -32.259293
+                outSlope: 0
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.6698113
+                value: -0.5677055
+                inSlope: -0
+                outSlope: 120.35328
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.6745283
                 value: 0
-                inSlope: 123.44315
+                inSlope: 120.35328
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
@@ -17527,7 +17636,7 @@ MonoBehaviour:
               m_Curve:
               - serializedVersion: 3
                 time: 0
-                value: 0.6504059
+                value: 0.65310764
                 inSlope: 0
                 outSlope: 0
                 tangentMode: 0
@@ -17535,72 +17644,72 @@ MonoBehaviour:
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.056603774
-                value: 0.6504059
+                time: 0.04245283
+                value: 0.65310764
                 inSlope: -0
-                outSlope: 156.2456
+                outSlope: 154.82396
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.061320756
-                value: 1.3874135
-                inSlope: 156.2456
+                time: 0.047169812
+                value: 1.3834094
+                inSlope: 154.82396
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.21226415
-                value: 1.3874135
+                time: 0.22169812
+                value: 1.3834094
                 inSlope: -0
-                outSlope: 83.118484
+                outSlope: 83.96736
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.21698113
+                time: 0.2264151
                 value: 1.7794815
-                inSlope: 83.118484
+                inSlope: 83.96736
+                outSlope: -0.00321622
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.5141509
+                value: 1.7785561
+                inSlope: -0.00321622
+                outSlope: 595.72064
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.5188679
+                value: 4.588566
+                inSlope: 595.72064
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.3490566
-                value: 1.7794815
+                time: 0.6698113
+                value: 4.588566
                 inSlope: -0
-                outSlope: 592.2318
+                outSlope: -972.7736
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.3537736
-                value: 4.5730343
-                inSlope: 592.2318
-                outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6933962
-                value: 4.5730343
-                inSlope: -0
-                outSlope: -969.48096
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6981132
+                time: 0.6745283
                 value: 0
-                inSlope: -969.48096
+                inSlope: -972.7736
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
@@ -23464,16 +23573,16 @@ MonoBehaviour:
                 time: 0.20754717
                 value: 1
                 inSlope: -0
-                outSlope: -87.493
+                outSlope: -6.276625
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.21226415
-                value: 0.5872975
-                inSlope: -87.493
-                outSlope: 87.493
+                value: 0.9703933
+                inSlope: -6.276625
+                outSlope: 6.276625
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
@@ -23481,61 +23590,16 @@ MonoBehaviour:
               - serializedVersion: 3
                 time: 0.21698113
                 value: 1
-                inSlope: 87.493
+                inSlope: 6.276625
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.22169812
+                time: 0.24528302
                 value: 1
                 inSlope: -0
-                outSlope: -49.127438
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.2264151
-                value: 0.768267
-                inSlope: -49.127438
-                outSlope: 30.822319
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.23113208
-                value: 0.91365516
-                inSlope: 30.822319
-                outSlope: 18.30512
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.23584905
-                value: 1
-                inSlope: 18.30512
-                outSlope: -18.70736
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.24056605
-                value: 0.9117575
-                inSlope: -18.70736
-                outSlope: -87.29266
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.24528302
-                value: 0.5
-                inSlope: -87.29266
                 outSlope: -106.000084
                 tangentMode: 0
                 weightedMode: 0
@@ -23543,42 +23607,51 @@ MonoBehaviour:
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.25
-                value: 0
+                value: 0.5
                 inSlope: -106.000084
+                outSlope: 1.8699108
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.254717
+                value: 0.50882035
+                inSlope: 1.8699108
+                outSlope: 104.13049
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.25943395
+                value: 1
+                inSlope: 104.13049
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.36792454
-                value: 0
+                time: 0.26415095
+                value: 1
                 inSlope: -0
-                outSlope: 98.27805
+                outSlope: -212.00084
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.3726415
-                value: 0.4635739
-                inSlope: 98.27805
-                outSlope: -98.277435
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.3773585
+                time: 0.2688679
                 value: 0
-                inSlope: -98.277435
+                inSlope: -212.00084
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.38679245
+                time: 0.36320755
                 value: 0
                 inSlope: -0
                 outSlope: 211.9995
@@ -23587,253 +23660,127 @@ MonoBehaviour:
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.39150944
+                time: 0.36792454
                 value: 1
                 inSlope: 211.9995
-                outSlope: -49.70872
+                outSlope: -0.42744923
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.3962264
-                value: 0.7655258
-                inSlope: -49.70872
-                outSlope: -56.29134
+                time: 0.38207546
+                value: 0.9939512
+                inSlope: -0.42744923
+                outSlope: 1.2823422
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.4009434
-                value: 0.5
-                inSlope: -56.29134
+                time: 0.38679245
+                value: 1
+                inSlope: 1.2823422
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.41037735
-                value: 0.5
-                inSlope: -0
-                outSlope: 42.534966
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.41509435
-                value: 0.7006371
-                inSlope: 42.534966
-                outSlope: 63.465183
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.4198113
+                time: 0.4245283
                 value: 1
-                inSlope: 63.465183
-                outSlope: -105.99975
+                inSlope: -0
+                outSlope: -1.3799312
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.4292453
-                value: 0
-                inSlope: -105.99975
-                outSlope: 71.09457
+                value: 0.9934909
+                inSlope: -1.3799312
+                outSlope: 1.37994
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.43396226
-                value: 0.33535042
-                inSlope: 71.09457
-                outSlope: 140.90538
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.43867925
                 value: 1
-                inSlope: 140.90538
+                inSlope: 1.37994
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.44339624
+                time: 0.5377358
                 value: 1
                 inSlope: -0
-                outSlope: -21.41474
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.4481132
-                value: 0.8989875
-                inSlope: -21.41474
-                outSlope: -16.213324
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.4528302
-                value: 0.82250935
-                inSlope: -16.213324
-                outSlope: 37.628166
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.45754716
-                value: 1
-                inSlope: 37.628166
-                outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.4716981
-                value: 1
-                inSlope: -0
-                outSlope: -18.746658
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.4764151
-                value: 0.91157216
-                inSlope: -18.746658
-                outSlope: 18.746658
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.4811321
-                value: 1
-                inSlope: 18.746658
-                outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.49056605
-                value: 1
-                inSlope: -0
-                outSlope: -31.434364
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.495283
-                value: 0.8517253
-                inSlope: -31.434364
-                outSlope: -52.572002
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.5
-                value: 0.60374355
-                inSlope: -52.572002
-                outSlope: -20.680368
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.504717
-                value: 0.5061944
-                inSlope: -20.680368
-                outSlope: -1.3132124
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.509434
-                value: 0.5
-                inSlope: -1.3132124
-                outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.5235849
-                value: 0.5
-                inSlope: -0
-                outSlope: 8.16638
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.5283019
-                value: 0.53852075
-                inSlope: 8.16638
-                outSlope: 35.34935
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.5330189
-                value: 0.7052634
-                inSlope: 35.34935
-                outSlope: 31.242205
+                outSlope: -99.309875
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.5424528
+                value: 0.53155607
+                inSlope: -99.309875
+                outSlope: 29.506407
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.5471698
+                value: 0.67073756
+                inSlope: 29.506407
+                outSlope: 69.80347
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.5518868
                 value: 1
-                inSlope: 31.242205
+                inSlope: 69.80347
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.5754717
+                time: 0.5707547
                 value: 1
                 inSlope: -0
-                outSlope: -10.995362
+                outSlope: -11.128724
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.5754717
+                value: 0.9475059
+                inSlope: -11.128724
+                outSlope: -28.52622
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.5801887
-                value: 0.94813496
-                inSlope: -10.995362
-                outSlope: 3.40859
+                value: 0.8129479
+                inSlope: -28.52622
+                outSlope: 7.036177
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.5849057
-                value: 0.96421325
-                inSlope: 3.40859
-                outSlope: 7.5868683
+                value: 0.8461375
+                inSlope: 7.036177
+                outSlope: 32.61918
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
@@ -23841,8 +23788,26 @@ MonoBehaviour:
               - serializedVersion: 3
                 time: 0.5896226
                 value: 1
-                inSlope: 7.5868683
+                inSlope: 32.61918
                 outSlope: 0
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.6226415
+                value: 1
+                inSlope: -0
+                outSlope: -3.1747074
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.6273585
+                value: 0.9850249
+                inSlope: -3.1747074
+                outSlope: 3.1747074
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
@@ -23850,152 +23815,8 @@ MonoBehaviour:
               - serializedVersion: 3
                 time: 0.6320755
                 value: 1
-                inSlope: -0
-                outSlope: -23.922464
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6367925
-                value: 0.8871579
-                inSlope: -23.922464
-                outSlope: -82.07832
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6415094
-                value: 0.5
-                inSlope: -82.07832
-                outSlope: -105.99975
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6462264
-                value: 0
-                inSlope: -105.99975
+                inSlope: 3.1747074
                 outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6509434
-                value: 0
-                inSlope: -0
-                outSlope: 9.489475
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6556604
-                value: 0.044761784
-                inSlope: 9.489475
-                outSlope: 96.29828
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6603774
-                value: 0.499
-                inSlope: 96.29828
-                outSlope: 106.21309
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6650943
-                value: 1
-                inSlope: 106.21309
-                outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6698113
-                value: 1
-                inSlope: -0
-                outSlope: -33.777477
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6745283
-                value: 0.8406719
-                inSlope: -33.777477
-                outSlope: -39.12876
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6792453
-                value: 0.6561018
-                inSlope: -39.12876
-                outSlope: -33.093506
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6839623
-                value: 0.5
-                inSlope: -33.093506
-                outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6886792
-                value: 0.5
-                inSlope: -0
-                outSlope: -105.99975
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6933962
-                value: 0
-                inSlope: -105.99975
-                outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6981132
-                value: 0
-                inSlope: -0
-                outSlope: 12.577673
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.7028302
-                value: 0.059328787
-                inSlope: 12.577673
-                outSlope: 93.210075
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.7075472
-                value: 0.499
-                inSlope: 93.210075
-                outSlope: 106.21175
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
@@ -24003,7 +23824,25 @@ MonoBehaviour:
               - serializedVersion: 3
                 time: 0.7122642
                 value: 1
-                inSlope: 106.21175
+                inSlope: -0
+                outSlope: -7.0087442
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.7169811
+                value: 0.9669402
+                inSlope: -7.0087442
+                outSlope: 7.0086555
+                tangentMode: 0
+                weightedMode: 0
+                inWeight: 0
+                outWeight: 0
+              - serializedVersion: 3
+                time: 0.7216981
+                value: 1
+                inSlope: 7.0086555
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
@@ -24034,18 +23873,18 @@ MonoBehaviour:
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.7122642
+                time: 0.36792454
                 value: 1
                 inSlope: -0
-                outSlope: -212.00217
+                outSlope: -212.00084
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.7169811
+                time: 0.3726415
                 value: 0
-                inSlope: -212.00217
+                inSlope: -212.00084
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
@@ -24070,78 +23909,24 @@ MonoBehaviour:
                 time: 0
                 value: 0
                 inSlope: 0
-                outSlope: 288.36667
+                outSlope: 270.78336
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.004716981
-                value: 1.3602202
-                inSlope: 288.36667
+                value: 1.27728
+                inSlope: 270.78336
                 outSlope: -3.516667
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.39150944
+                time: 0.36792454
                 value: 0
                 inSlope: -3.516667
-                outSlope: 31.650126
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.3962264
-                value: 0.14929245
-                inSlope: 31.650126
-                outSlope: -3.5166657
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.43867925
-                value: 0
-                inSlope: -3.5166657
-                outSlope: 165.28294
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.44339624
-                value: 0.7796384
-                inSlope: 165.28294
-                outSlope: -3.5166674
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6650943
-                value: 0
-                inSlope: -3.5166674
-                outSlope: 31.649925
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6698113
-                value: 0.14929245
-                inSlope: 31.649925
-                outSlope: -3.5166633
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.7122642
-                value: 0
-                inSlope: -3.5166633
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
@@ -24166,87 +23951,33 @@ MonoBehaviour:
                 time: 0
                 value: 0.6290072
                 inSlope: 0
-                outSlope: 12.662708
+                outSlope: 5.8077927
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.004716981
-                value: 0.688737
-                inSlope: 12.662708
+                value: 0.65640247
+                inSlope: 5.8077927
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.39150944
-                value: 0.688737
+                time: 0.36792454
+                value: 0.65640247
                 inSlope: -0
-                outSlope: 2.555969
+                outSlope: -139.15787
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.3962264
-                value: 0.7007934
-                inSlope: 2.555969
-                outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.43867925
-                value: 0.7007934
-                inSlope: -0
-                outSlope: -17.995022
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.44339624
-                value: 0.615911
-                inSlope: -17.995022
-                outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6650943
-                value: 0.615911
-                inSlope: -0
-                outSlope: 3.5635219
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6698113
-                value: 0.6327201
-                inSlope: 3.5635219
-                outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.7122642
-                value: 0.6327201
-                inSlope: -0
-                outSlope: -134.13805
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.7169811
+                time: 0.3726415
                 value: 0
-                inSlope: -134.13805
+                inSlope: -139.15787
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
@@ -24271,87 +24002,33 @@ MonoBehaviour:
                 time: 0
                 value: -0.41789842
                 inSlope: 0
-                outSlope: 799.47546
+                outSlope: 799.1307
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
                 time: 0.004716981
-                value: 3.3532124
-                inSlope: 799.47546
+                value: 3.351586
+                inSlope: 799.1307
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.39150944
-                value: 3.3532124
+                time: 0.36792454
+                value: 3.351586
                 inSlope: -0
-                outSlope: 2.5505986
+                outSlope: -710.53906
                 tangentMode: 0
                 weightedMode: 0
                 inWeight: 0
                 outWeight: 0
               - serializedVersion: 3
-                time: 0.3962264
-                value: 3.3652434
-                inSlope: 2.5505986
-                outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.43867925
-                value: 3.3652434
-                inSlope: -0
-                outSlope: 35.124165
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.44339624
-                value: 3.5309238
-                inSlope: 35.124165
-                outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6650943
-                value: 3.5309238
-                inSlope: -0
-                outSlope: 17.450884
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.6698113
-                value: 3.6132395
-                inSlope: 17.450884
-                outSlope: 0
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.7122642
-                value: 3.6132395
-                inSlope: -0
-                outSlope: -766.01465
-                tangentMode: 0
-                weightedMode: 0
-                inWeight: 0
-                outWeight: 0
-              - serializedVersion: 3
-                time: 0.7169811
+                time: 0.3726415
                 value: 0
-                inSlope: -766.01465
+                inSlope: -710.53906
                 outSlope: 0
                 tangentMode: 0
                 weightedMode: 0

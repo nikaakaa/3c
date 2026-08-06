@@ -2,6 +2,8 @@
 
 当前系统已经完成动画Foot Feature贡献传播、未来落点与world contact lifecycle的基础类型，以及Animancer Evaluate Barrier后的空间化Pose Plan。问题有两层：骨盆、双腿和双臂曾由项目自研解析式算法分三次求解；当前脚地面采样、坡面对齐与脚平滑可复用FinalIK Grounding，但它的stock pelvis只按脚offset取lower/lift，不能表达UE Foot Placement式的逐腿compression/extension可达区间，因此会在同平面或离散台阶上产生悬空、过度下蹲和根运动补偿抖动。
 
+当前普通基线还有第三个已由连续采集复现的问题：单Clip Analyzer烘焙的`PlantConfidence`在动画混合后被直接执行`InverseLerp(0.5, 1)`，同一个值同时承担源动画接触意图、Grounding输入权重、Foot Goal权重和Pelvis支撑权重。240帧采集内FinalIK全部成功，满权重残差接近零，但跑动平均Plant Confidence约为`0.48/0.51`，最终左右Goal平均权重仅约`0.43/0.45`。问题发生在FBBIK前，不是solver没有解到目标。
+
 这次设计把FinalIK能够覆盖的当前脚Grounding交给FinalIK Grounding，把“骨骼如何满足全部目标”交给FinalIK FBBIK。项目只继续拥有FinalIK没有的动画相位Future Landing、Current/Future Support、Ground Envelope、moving surface anchor、Free/Locked/Sliding、source contribution，以及逐腿可达区间驱动的Pelvis Reach Planner。它们在同一个`PredictiveFootPlacement`目标生成节点中组合，不形成第二查询权威或第二骨骼求解器。
 
 ## Goals
@@ -10,6 +12,7 @@
 - 复用FinalIK Grounding的当前脚查询、命中到脚目标、坡面旋转和脚平滑数学。
 - 以逐腿compression/extension区间生成唯一pelvis pre-solve translation，避免stock lower/lift导致的同平面下蹲与台阶悬空。
 - 把动画相位预测明确限制为FinalIK缺失的Project Predictive Extension。
+- 分离源动画接触意图、当前世界地面对齐强度与脚掌约束强度，禁止一个烘焙标量同时承担三种职责。
 - 让双脚、双手与Body目标只经过一次Full Body IK求解。
 - 让FinalIK在Component Pose Buffer上工作，不复制第二套Transform骨架。
 - 保持唯一编译Pose Plan、一次Animancer Evaluate、一次Physical Transform final write。
@@ -34,7 +37,7 @@
 
 普通约束层还负责四个有限安全边界：锁点与当前Support法线超过Replant角度时释放；锁点相对当前Grounding姿势产生过度Ankle Twist时释放；左右Foot Goal小于最小脚距时只移动Free脚，双脚均受约束则释放次要支撑脚；单腿目标超出允许pelvis区间或双腿区间无交集时释放不可满足的次要Foot Goal。它们只选择或约束Goal，不重新查询地面、不重算坡面rotation，也不执行第二次IK。
 
-Corin普通基线必须显式关闭FinalIK `Overstep Falls Down`。该stock策略在脚查询无命中时会用`Max Step`向下构造overstep位移，而项目合同禁止把无合法Surface Identity的fallback脚点发布为Foot Goal。Corin `Foot Radius`还必须小于Calibration左右鞋底中较短一侧的半长，避免Best质量的Capsule在鞋底已经越过台阶边缘后仍取得宽于真实鞋底的支撑。FinalIK stock pelvis lower/lift/damper全部退出正式配置与输出；Corin使用`AllPlantedFeet`、`FollowBody`、最大升降范围、插值速度与dead zone配置唯一Pelvis Reach Planner。有效Plant Foot目标与动画Ankle没有共同竖直变化时骨盆保持动画高度；目标共同抬高或降低时骨盆按支撑权重跟随，避免把相同平台高度差全部转成膝盖压缩；只有已plant的脚参与高度规划，摆动脚保持动画Pose。
+Corin普通基线必须显式关闭FinalIK `Overstep Falls Down`。该stock策略在脚查询无命中时会用`Max Step`向下构造overstep位移，而项目合同禁止把无合法Surface Identity的fallback脚点发布为Foot Goal。Corin `Foot Radius`还必须小于Calibration左右鞋底中较短一侧的半长，避免Best质量的Capsule在鞋底已经越过台阶边缘后仍取得宽于真实鞋底的支撑。FinalIK stock pelvis lower/lift/damper全部退出正式配置与输出；Corin使用`AllPlantedFeet`、`FollowBody`、最大升降范围、插值速度与dead zone配置唯一Pelvis Reach Planner。有效Plant Support或Contact支撑脚目标与动画Ankle没有共同竖直变化时骨盆保持动画高度；目标共同抬高或降低时骨盆按支撑权重跟随，避免把相同平台高度差全部转成膝盖压缩；未进入Plant Contact且无Contact约束的摆动脚不参与高度规划。
 
 有限Heel Lift与Toe Pivot已经沿同一成熟边界闭合。FinalIK Grounding的`Best`质量仍以stock heel Ray与foot-center Capsule唯一计算脚高与坡面rotation；同一个`Grounding.Leg`可额外发布一个typed Toe Ray命中，只作为secondary plant point，不参加或覆盖上述stock结果。Project Predictive Extension据此提供`Unlocked`、`PivotAroundToe`、`PivotAroundAnkle`与`LockRotation`四种plant policy，并把选中的toe plant point、完整ankle目标与`HeelLiftRatio`写入同一个Foot Goal。唯一FinalIK FBBIK在`ReadPose`前按Goal权重绕toe point应用ankle rotation和position offset，再执行原有一次solve。这里没有第二当前Grounding owner、第二LegIK、第二骨架或重复坡面对齐数学。
 
@@ -224,7 +227,7 @@ Grounding允许修改或扩展的内容仅限：
 
 - root、heel、toe、ankle与foot pose改为显式value/handle输入；
 - `Time.time`改为调用方提供的frame delta和history；
-- 每脚接收动画分析产出的有限plant contribution，同时门控该脚的position/rotation Goal；摆动脚保持动画Pose，不修改命中、脚高、rotation或插值方程；
+- 每脚只接收显式当前Component Pose并生成未按Plant Confidence缩放的Grounding结果；最终Foot Goal权重在Project Predictive Extension中根据当前世界运动学与合法Current Support独立计算；
 - Physics查询改为显式world-query port和fixed hit workspace；
 - `RaycastHit.collider`补充稳定surface identity与self-collider裁决结果；
 - FinalIK Grounding只接受其stock语义覆盖的当前脚采样输入；
@@ -295,9 +298,21 @@ FinalIK core不能引用`ThirdPersonClient.Runtime`。中立bone backend、groun
 
 Project Predictive Extension不得重新声明Foot Rotation Speed、坡面rotation算法或Foot Height interpolation。Pelvis Reach Planner配置描述逐腿可达性与整体验高，不复刻FinalIK stock lower/lift公式。旧stock Pelvis Speed/Damper/Lower/Lift字段直接删除，不做双写。两组配置共同形成一个Profile identity并进入Projection依赖，Profile不保存backend选择或fallback。
 
-普通基线阶段，Corin显式使用`Best`、`velocity prediction = 0`、`Unlocked`、`AdjustHeelBeforePlanting = false`、`AllPlantedFeet`与`FollowBody`。唯一Foot Placement Weight是作者控制的总开关；动画Foot Feature中的逐脚Plant Confidence连续控制该脚的Position/Rotation Goal并决定该腿是否参与Pelvis Reach Planner，Contact Weight继续只服务anchor、lock与slide。Plant Confidence为0的摆动脚不取得地面Goal，保持动画摆脚；Plant Foot目标没有相对动画Ankle竖直变化时骨盆不偏移，双脚目标共同抬高或降低时骨盆按支撑权重跟随该变化。高低踏面区间有交集时先求支撑权重首选高度再夹入共同可达区间，无交集时保留主要支撑脚并释放次要Goal，不允许通过无限下蹲满足冲突。Future Landing、Path Sample、anchor、toe pivot与提前Heel Lift在普通基线稳定前不影响Corin正式Goal。
+普通基线阶段，Corin显式使用`Best`、`velocity prediction = 0`、`Unlocked`、`AdjustHeelBeforePlanting = false`、`AllPlantedFeet`与`FollowBody`。唯一Foot Placement Weight是作者控制的总开关。每脚运行时信号拆成五层：
 
-这与UE Foot Placement的职责边界对齐：Plant语义决定脚目标、骨盆贡献与接触约束，逐腿compression/extension区间决定骨盆高度；当前后端仍是FinalIK Grounding加唯一FBBIK，但不宣称拥有UE Foot Placement完整的plant/floor springs与完整replant状态。后续预测扩展必须在同一Goal Source内补齐既定Future Landing与Envelope任务，不能新增第二solver或backend路径。
+- `PlacementWeight`：Body Grounded、Current Grounding命中合法且作者Foot Placement Weight有效时等于作者权重，否则为0。它唯一控制未约束FinalIK Grounding Foot Goal的Position/Rotation Weight，不读取脚速、Plant Confidence或surface distance。
+- `PlantConfidence`：单Clip烘焙并随最终Pose contribution混合的源动画接触意图。它只通过enter/exit迟滞决定Plant Contact，不连续缩放Foot Goal或Pelvis贡献。
+- `AnimationFootSpeed`：最终Pose contribution中已经按source权重与visual time scale混合的烘焙`SoleLocalVelocity.magnitude`。它不拼接Body世界平移、Body可见速度或yaw点速度，只用于Plant Contact进入、退出和Contact约束渐退。
+- `PlantSupportWeight`：Plant Contact成立时等于`PlacementWeight`，否则为0。它只表达Pelvis Reach Planner的普通支撑腿选择，不控制普通Foot Goal。
+- `ContactWeight`：只有Plant Contact成立、Plant Policy允许约束且surface anchor有效时才存在，按`PlantSpeedThreshold -> UnalignmentSpeedThreshold`连续渐退，只控制anchor、lock与slide。`Unlocked`下固定为0。
+
+正式Profile只保留`PlantSpeedThreshold`与`UnalignmentSpeedThreshold`两个严格有序阈值。Corin与TrainingEnemy使用`0.6m/s`和`2.0m/s`，对应UE 5.7默认`60cm/s`与`200cm/s`的职责：低速允许进入Plant，达到Unalignment阈值退出，区间内只让锁脚约束连续渐退。旧`Alignment Full/Zero` planar/vertical阈值、descending tolerance、Plant/Release速度距离字段和兼容别名全部删除。
+
+FinalIK Grounding必须先基于当前脚Pose产生完整命中、脚高、rotation与插值结果，`GroundingFootInput`不携带Plant或速度权重。`Grounding.Leg`的`rootYOffset`会从脚到命中面的高度差中扣除动画脚到Root参考平面的高度，所以`IKPosition`表达的是“动画Ankle加地形相对Root的高度差”，不是把摆动脚绝对压到地面。Project Predictive Extension因此可让合法Current Grounding Goal始终使用`PlacementWeight`；脚速只决定支撑/约束状态，不能关闭普通跑动Foot IK。
+
+Pelvis Reach Planner继续从最终Foot Goal计算逐腿区间，支撑权重为`max(PlantSupportWeight, ContactWeight)`。这样普通跑动支撑脚不因烘焙置信度连续降权，受约束脚在释放前仍能维持支撑，摆动脚即使保留地形相对动画高度的Foot Goal也不会参与`AllPlantedFeet`骨盆规划。Foot Goal没有相对动画Ankle竖直变化时骨盆不偏移，双脚目标共同抬高或降低时骨盆按支撑权重跟随该变化。高低踏面区间有交集时先求支撑权重首选高度再夹入共同可达区间，无交集时保留主要支撑脚并释放次要Goal。
+
+这与UE Foot Placement的职责边界对齐：动画/Root Motion空间脚速决定Plant意图，Alignment Alpha参与plant plane过渡与有限roll/hyperextension行为，`DisableLeg`才是整腿回到FK的独立权重。当前后端仍是FinalIK Grounding加唯一FBBIK，不复制UE实现，也不新增第二solver或backend路径。
 
 ## Decision: FullBodyIK Profile只暴露真实FinalIK能力
 
@@ -352,8 +367,10 @@ FullBodyIK只写Pending Dense Pose page。唯一Physical Transform writer在全�
 
 ### Diagnostics
 
+IK现象、运行证据、UE源码对照、已踩坑与固定排查顺序统一维护在`ik-diagnostics.md`；后续修正不得只改代码或阈值而不更新该记录。
+
 - Grounding Watch：FinalIK Grounding backend identity、current query requests/hits、stock velocity prediction与foot height/rotation。
-- Predictive Extension Watch：动画Foot Feature、current/future support、Ground Envelope、surface anchor、lock状态、左右腿pelvis允许区间、目标/平滑pelvis offset、冲突释放与Body/Feet goals。
+- Predictive Extension Watch：动画Plant Confidence、Plant Contact迟滞、Animation Foot Speed、surface distance、Placement/Plant Support/Contact weights、current/future support、Ground Envelope、surface anchor、lock状态、左右腿pelvis允许区间、目标/平滑pelvis offset、冲突释放与Body/Feet goals。
 - Goal Source Watch：Virtual target和生成的hand goals。
 - FullBodyIK Watch：输入/输出Pose、每effector权重/残差、chain reach、iterations、bend constraint和typed failure。
 - Diagnostics只复制已完成固定workspace，不第二次调用FinalIK、不读取Transform反推。
@@ -412,6 +429,12 @@ FullBodyIK只写Pending Dense Pose page。唯一Physical Transform writer在全�
 ### 不选择自研PBIK
 
 它最接近UE功能表，但会把范围扩大到迭代约束、limits、stiffness、preferred angles和稳定性工具，违背“优先成熟方案、项目只自有预测业务”的目标。
+
+### 不选择把Plant Confidence阈值从0.5改成0
+
+收益是只改一行映射，跑动Foot Goal数值会立刻升高。
+
+代价是摆动脚的任意非零烘焙置信度都会直接进入IK，动画混合仍让一个标量同时承担接触判断和地面对齐强度，容易出现拖脚、提前吸附与骨盆误参与。它没有修复职责错误，因此不作为正式方案或调试开关。
 
 ## Hard Stop Gates
 

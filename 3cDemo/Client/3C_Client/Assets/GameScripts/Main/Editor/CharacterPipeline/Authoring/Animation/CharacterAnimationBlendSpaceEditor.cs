@@ -888,7 +888,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterFootPlacementAnalysisSource source = AssetDatabase.LoadAssetAtPath<CharacterFootPlacementAnalysisSource>(path);
                     if (!source)
                         throw new InvalidOperationException("Profile Foot Analysis Source does not resolve to an exact asset.");
-                    AnimationFootAnalysisArtifactIdentity identity = AnimationFootAnalysisArtifactIdentityBuilder.Build(m_Clip, source);
+                    AnimationFootAnalysisArtifactIdentity identity = AnimationFootAnalysisArtifactBuilder.GetExpectedIdentity(m_Clip, source);
                     AnimationFootAnalysisArtifactInspection inspection = AnimationFootAnalysisArtifactStore.Inspect(identity);
                     if (inspection.Status != AnimationFootAnalysisArtifactStatus.Ready || inspection.Artifact == null)
                         throw new InvalidOperationException($"Foot Analysis artifact is {inspection.Status}: {inspection.Error}");

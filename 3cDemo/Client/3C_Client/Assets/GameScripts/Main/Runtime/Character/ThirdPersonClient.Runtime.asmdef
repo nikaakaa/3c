@@ -8,6 +8,7 @@
         "ThirdPersonGameplay",
         "ThirdPersonCharacter.Animation.TransitionRouting",
         "ThirdPersonCharacter.Pipeline.RootMotion",
+        "RootMotion",
         "BTSMTL",
         "BTSMTL.Diagnostics",
         "BTSMTL.Timeline",

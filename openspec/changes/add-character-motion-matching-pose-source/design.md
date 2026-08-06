@@ -17,8 +17,10 @@ Presentation Fact
   -> State内部Selection
   -> explicit Player / local Inertialization or BlendStack
   -> Character Presentation Pose Graph Plan
-  -> FinalAnimationPoseFrame
-  -> Foot Placement
+       -> append bound MM Player Pose History
+       -> PredictiveFootPlacement Goals
+       -> FullBodyIK
+       -> FinalAnimationPoseFrame
 ```
 
 Motion Matching必须位于PoseState内部的表现Selection阶段。它回答“当前relevant PoseState下一段从数据库采样哪个姿势”，不回答“角色能否移动”“实际移动到哪里”“Action是否覆盖Locomotion”“Pose Graph怎样合成”或“脚如何贴合当前世界表面”。
@@ -38,7 +40,7 @@ UE 5.8公开基线已经不只是线性最近邻：Pose Search提供Pose/Traject
 - 提供可由独立正式角色配置显式启用的Grounded Locomotion Pose Source，不改动未启用MM的角色。
 - 保持Gameplay Body、WorldSolver和Program为真实移动权威。
 - 让Local accepted intent与Remote selected body使用同一query模型，并显式表达置信度差异。
-- 使用上一帧与PoseState MM Player绑定的完成Pose建立pose query，不被FullBody Action或Foot IK污染。
+- 使用上一帧与PoseState MM Player绑定的完成Pose建立pose query，不被FullBody Action、FinalIK Grounding、PredictiveFootPlacement或FullBodyIK污染。
 - 先执行可解释硬准入，再执行结果可证明精确的Top-K搜索。
 - 在Top-K上评估固定短时序continuation plan，而不是只比较单个当前sample。
 - 把左右脚受保护接触作为候选资格，不允许普通代价权重掩盖脚步断裂。
@@ -51,7 +53,7 @@ UE 5.8公开基线已经不只是线性最近邻：Pose Search提供Pose/Traject
 - 不用MM控制Gameplay移动、碰撞、动作准入、窗口、伤害或网络裁决。
 - 不实现Airborne、Traversal、Attack、Dodge、Hit Reaction或多人Interaction数据库。
 - 不实现Stride/Orientation/Slope Warping或Root Offset Bone。
-- 不用Foot Placement world anchor或IK结果做搜索输入。
+- 不用FinalIK Grounding、PredictiveFootPlacement world anchor或FullBodyIK结果做搜索输入。
 - 不提供Brute Force/PCAKDTree/VPTree运行模式下拉；项目只安装一种正式搜索语义。
 - 不让Runtime读Authoring asset、AssetDatabase或Library artifact。
 - 不建立自动分析、运行时数据库构建或stale fallback。
@@ -114,10 +116,11 @@ PresentationFrame
   -> explicit Player
   -> optional local Inertialization or explicit BlendStack
   -> compile and evaluate one Pose Plan
-  -> CharacterMotionMatchingPresentationModule.CompleteFrame
-       -> append current bound Player Pose History
-  -> Foot Placement with formal world context
-  -> FinalAnimationPoseFrame
+       -> CharacterMotionMatchingPresentationModule.CompleteFrame at bound Player node
+            -> append current bound Player Pose History
+       -> PredictiveFootPlacement Goals with formal world context
+       -> FullBodyIK
+       -> FinalAnimationPoseFrame
   -> Camera
 ```
 
@@ -151,11 +154,12 @@ CharacterAnimationPresentationProfile
             -> State内部Selection / PoseState MM Player
             -> explicit Player / optional local Inertialization or BlendStack
             -> compiled Pose Plan evaluation
-            -> CharacterMotionMatchingPresentationModule.CompleteFrame
-                 -> current direct bound Player pose copy
-                 -> append bound Player Pose History
-        -> Foot Placement
-        -> FinalAnimationPoseFrame
+                 -> CharacterMotionMatchingPresentationModule.CompleteFrame at bound Player node
+                      -> current direct bound Player pose copy
+                      -> append bound Player Pose History
+                 -> PredictiveFootPlacement Goals
+                 -> FullBodyIK
+                 -> FinalAnimationPoseFrame
         -> Camera
 ```
 
@@ -180,7 +184,7 @@ CharacterAnimationPresentationProfile
 | MM表现Module内部Trajectory Adapter | committed/selected body、accepted intent | source frame | channel winner、Stack transition、最终pose |
 | MM表现Module | 正式Body/Intent、PoseState MM relevance demand | state-local sample batch、frame completion、pose history | channel winner、Gameplay playback、Player source usage、Stack entry/clock、Pose Graph |
 | Trajectory Runtime | source frame、policy | trajectory envelope | Program input、World request修改 |
-| Pose History | 绑定MM Player PoseNode的正式完成Pose | bounded pose samples | FullBody/IK/VisualRoot真相 |
+| Pose History | 绑定MM Player PoseNode的正式完成Pose | bounded pose samples | FullBody Action/Grounding/PredictiveFootPlacement/FullBodyIK/VisualRoot真相 |
 | Admission | query、domain、candidate metadata | admitted candidate set与reject | soft cost |
 | Exact Search | query、admitted set、index | exact Top-K | Blend、Gameplay状态 |
 | Plan Rerank | Top-K、continuation graph、horizon | selection plan | 私有crossfade |
@@ -188,7 +192,8 @@ CharacterAnimationPresentationProfile
 | 显式Player | state-local Presentation Pose source sample | Pose Value | 搜索、跨Player组合 |
 | Blend Stack | 显式多source输入与CrossFade Policy | Pose Value | 搜索、跨图节点组合 |
 | Pose Graph | 全部节点输入与表现参数 | composed pose与Pose Plan completion | source选择、Foot Physics |
-| Foot Placement | composed pose、body、world query | FinalAnimationPoseFrame | 动画选择、Gameplay contact |
+| PredictiveFootPlacement | composed Component Pose、body、world query | typed Goal Set | 动画选择、Gameplay contact、骨骼求解 |
+| FullBodyIK | 原始Component Pose、全部Goal Sets、Rig v4、Solver Profile | solved Component Pose | MM选择、world query、contact生命周期 |
 
 ## Authoring Model
 
@@ -507,7 +512,7 @@ Pose History只追加与PoseState MM Player绑定的已完成Pose Value：
 - continuity identity。
 - sample presentation time。
 
-它不读取FinalAnimationPoseFrame中的FullBody覆盖，不读取FootPlacement骨骼结果，不读取VisualRoot world correction。查询发生在本帧Player求值前，因此只消费上一帧及更早历史；绑定PoseNode完成后再append，避免循环依赖。
+它不读取FinalAnimationPoseFrame中的FullBody覆盖，不读取FinalIK Grounding、PredictiveFootPlacement Goals或FullBodyIK骨骼结果，不读取VisualRoot world correction。查询发生在本帧Player求值前，因此只消费上一帧及更早历史；绑定PoseNode完成后立即append，后续Goal Source与FullBodyIK不能回写该history，避免循环依赖。
 
 History容量和sample horizons由Schema编译。时间不足时进入Initialization Query，不使用bind pose或隐藏Idle补历史。
 
@@ -528,7 +533,7 @@ InitializationMode
 ResetSequence
 ```
 
-Pose feature由history按Schema horizon重采样。当前脚保护来自上一帧绑定MM Player PoseNode的feature aggregate和MM selection contact metadata，不读取Foot Placement world lock。
+Pose feature由history按Schema horizon重采样。当前脚保护来自上一帧绑定MM Player PoseNode的feature aggregate和MM selection contact metadata，不读取PredictiveFootPlacement world lock或FinalIK Grounding结果。
 
 ## Candidate Admission
 
@@ -706,8 +711,9 @@ MM不参与Timeline Marker Sync。Foot contact continuity来自MM Artifact featu
 10. evaluate explicit Player, local Inertialization or BlendStack nodes
 11. evaluate pose composition once
 12. append bound MM PoseNode history
-13. execute FootPlacement world-aware phase once
-14. publish FinalAnimationPoseFrame
+13. execute PredictiveFootPlacement Goal Source once
+14. execute FullBodyIK once
+15. publish FinalAnimationPoseFrame
 15. advance Camera, publish diagnostics and acknowledge batch
 ```
 
@@ -723,9 +729,9 @@ Search Cadence使用Presentation delta累计，但Reset、Domain activation、pl
 - 两个客户端可能因表现帧时序选择不同pose，但不能影响Gameplay结果。相同captured query与database identity必须在Search Replay中产生相同结果。
 - Remote没有accepted intent时使用显式Selected Body source和较低confidence，不读取本地Input或猜测authority意图。
 
-## Foot Contact And Foot Placement
+## Foot Contact And Predictive Foot Placement
 
-MM使用离线Foot Analysis feature解决“能否从当前接触跳到candidate”的动画连续性。Foot Placement使用最终pose与world query解决“脚在当前表面如何锁定”的世界约束。二者单向串联：
+MM使用离线Foot Analysis feature解决“能否从当前接触跳到candidate”的动画连续性。PredictiveFootPlacement使用最终pose contribution、FinalIK Grounding与world query解决“脚在当前表面如何锁定”的世界约束，再由FullBodyIK把Goals应用到Pose。三者单向串联：
 
 ```text
 Foot Analysis Artifact
@@ -733,10 +739,11 @@ Foot Analysis Artifact
   -> selected source FootFeatureSamples
   -> Blend Stack per-foot contribution
   -> Pose Graph final per-foot contribution
-  -> Foot Placement world constraint
+  -> PredictiveFootPlacement world constraint / Goals
+  -> FullBodyIK
 ```
 
-Foot Placement不得把Locked/Sliding/anchor写回MM。Body reset会分别清理MM history和Foot Placement world history，但二者不共享mutable state。
+PredictiveFootPlacement不得把Locked/Sliding/anchor、Grounding结果或Goals写回MM，FullBodyIK也不得把Solved Pose写回MM history。Body reset会分别清理MM history、PredictiveFootPlacement world history和solver frame state，但三者不共享mutable state。
 
 ## FullBody Action Coexistence
 
@@ -755,7 +762,7 @@ Timeline Preview没有Body/intent，不得伪造MM query。Motion Matching Datab
 
 - 只从显式Search Replay Artifact或作者创建的Query Fixture启动。
 - 复用正式Runtime database、admission、search、plan、pose source、编译Pose Plan和显式Player节点。
-- 显式选择Definition、Program producer和场景`CharacterPipelineHost` Preview Target，显示正式FinalAnimationPoseFrame，但不执行Program、WorldSolver、Foot Placement Physics或Camera。
+- 显式选择Definition、Program producer和场景`CharacterPipelineHost` Preview Target，显示正式FinalAnimationPoseFrame，但不执行Program、WorldSolver、PredictiveFootPlacement Physics或Camera。
 - 保持Query Fixture只作为Editor预览输入，不进入Runtime Profile或Character资产。
 
 普通Timeline producer preview保持原路径，不尝试把MM provider显示为Timeline clip。

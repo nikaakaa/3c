@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3b014348f0c4733bd0a1b0c9d90a21e, type: 3}
+  m_Name: TrainingEnemyMonsterFootPlacementProfile
+  m_EditorClassIdentifier: 
+  m_ProfileId: training-enemy.monster.foot-placement
+  m_Revision: 7489349c93e960c92a9cb480fbef67d1351a2beb603d6b7fd23dcd5019529efe
+  m_FinalIkGrounding:
+    m_Quality: 2
+    m_GroundLayerMask:
+      serializedVersion: 2
+      m_Bits: 4608
+    m_MaximumStep: 0.45
+    m_HeightOffset: 0
+    m_FootHeightSpeed: 2.5
+    m_FootRadius: 0.08
+    m_VelocityPrediction: 0.05
+    m_FootRotationWeight: 1
+    m_FootRotationSpeed: 7
+    m_MaximumFootRotationAngle: 45
+    m_RotateSolver: 0
+    m_PelvisSpeed: 5
+    m_PelvisDamper: 0
+    m_LowerPelvisWeight: 1
+    m_LiftPelvisWeight: 0
+    m_RootCastRadius: 0.2
+    m_OverstepFallsDown: 0
+  m_PredictiveExtension:
+    m_HitCapacity: 16
+    m_PathSphereRadius: 0.08
+    m_SwingCapsuleRadius: 0.05
+    m_CastAbove: 0.35
+    m_CastBelow: 0.75
+    m_PathSampleCount: 3
+    m_MaximumSlopeDegrees: 55
+    m_MaximumStepUp: 0.45
+    m_MaximumStepDown: 0.65
+    m_MaximumHeightDiscontinuity: 0.35
+    m_MaximumEdgeGap: 0.4
+    m_MaximumSwingClearance: 0.16
+    m_PlantDistance: 0.08
+    m_ReleaseDistance: 0.18
+    m_PlantPlanarSpeed: 0.14
+    m_ReleasePlanarSpeed: 0.42
+    m_PlantVerticalSpeed: 0.14
+    m_ReleaseVerticalSpeed: 0.48
+    m_DescendingTolerance: 0.04
+    m_PlantConfidenceEnter: 0.65
+    m_PlantConfidenceExit: 0.35
+    m_MinimumLookAheadSeconds: 0.04
+    m_MaximumLookAheadSeconds: 0.22
+    m_MaximumYawVelocityDegreesPerSecond: 540
+    m_MaximumPredictionDistance: 0.65
+    m_MaximumPredictionReachRatio: 0.98
+    m_SlideStartDistance: 0.07
+    m_SlideStopDistance: 0.025
+    m_MaximumSlideDistance: 0.14
+    m_SlideSpeed: 0.45
+    m_ReplantDistance: 0.3
+    m_ReplantAngleDegrees: 32
+    m_MinimumFootSeparation: 0.12
+    m_MaximumAnkleTwistDegrees: 35
+    m_LockType: 2
+    m_AdjustHeelBeforePlanting: 1
+    m_HeelLiftRatio: 1
+    m_MinimumLegExtensionRatio: 0.18
+    m_MaximumLegExtensionRatio: 0.98
+    m_MinimumSourceContribution: 0.05

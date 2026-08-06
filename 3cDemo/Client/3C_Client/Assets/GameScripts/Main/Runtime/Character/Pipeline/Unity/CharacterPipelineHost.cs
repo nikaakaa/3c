@@ -32,6 +32,7 @@ namespace ThirdPersonCharacter.Pipeline
 		[SerializeField] Float32WorldBodyBinding m_WorldBodyBinding;
 		[SerializeField] Transform m_VisualRoot;
 		[SerializeField] CharacterEquipmentRigBindingCatalog m_EquipmentRigBindings;
+		[SerializeField] CharacterEquipmentPreviewFixture m_EquipmentPreviewFixture;
 		[SerializeField] CharacterBodyPresentationProfile m_BodyPresentationProfile;
 		[SerializeField] CharacterWorldAwarePresentationBinding m_WorldAwarePresentation;
 		[SerializeField] ThirdPersonCameraController m_CameraRig;
@@ -57,6 +58,7 @@ namespace ThirdPersonCharacter.Pipeline
 		public Float32WorldBodyBinding WorldBodyBinding => m_WorldBodyBinding;
 		public Transform VisualRoot => m_VisualRoot;
 		public CharacterEquipmentRigBindingCatalog EquipmentRigBindings => m_EquipmentRigBindings;
+		public CharacterEquipmentPreviewFixture EquipmentPreviewFixture => m_EquipmentPreviewFixture;
 		public CharacterBodyPresentationProfile BodyPresentationProfile => m_BodyPresentationProfile;
 		public CharacterWorldAwarePresentationBinding WorldAwarePresentation => m_WorldAwarePresentation;
 		public ThirdPersonCameraController CameraRig => m_CameraRig;
@@ -79,10 +81,76 @@ namespace ThirdPersonCharacter.Pipeline
 			m_PreviewController != null
 				? m_PreviewController.PosePlanStages
 				: default;
-		public CharacterFootPlacementFrameSnapshot PreviewFootPlacementSnapshot =>
-			m_PreviewController != null
-				? m_PreviewController.FootPlacementSnapshot
-				: default;
+		internal CharacterPoseTuningLayout PreviewTuningLayout =>
+			m_PreviewController?.TuningLayout;
+		internal CharacterPoseTuningParameterBlock PreviewActiveTuningBlock =>
+			m_PreviewController?.ActiveTuningBlock;
+		internal CharacterPoseTuningRuntimeState PreviewTuningState =>
+			m_PreviewController?.TuningState ?? default;
+		internal CharacterPoseTuningLayout LiveTuningLayout =>
+			(m_Registration?.PresentationRuntime as CharacterSimulationPresentationRuntime)?.TuningLayout;
+		internal CharacterPoseTuningParameterBlock LiveActiveTuningBlock =>
+			(m_Registration?.PresentationRuntime as CharacterSimulationPresentationRuntime)?.ActiveTuningBlock;
+		internal CharacterPoseTuningRuntimeState LiveTuningState =>
+			(m_Registration?.PresentationRuntime as CharacterSimulationPresentationRuntime)?.TuningState ?? default;
+		internal bool SubmitPreviewPoseTuningCandidate(
+			string sourceAuthoringRevision,
+			string candidateRevision,
+			CharacterPoseTuningParameterBlock block,
+			out string error)
+		{
+			if (m_PreviewController == null)
+			{
+				error = "Pose tuning requires an active Preview controller.";
+				return false;
+			}
+			return m_PreviewController.SubmitPoseTuningCandidate(
+				sourceAuthoringRevision,
+				candidateRevision,
+				block,
+				out error);
+		}
+		internal bool SubmitLivePoseTuningCandidate(
+			string sourceAuthoringRevision,
+			string candidateRevision,
+			CharacterPoseTuningParameterBlock block,
+			out string error)
+		{
+			CharacterSimulationActorRegistration registration = m_Registration;
+			CharacterSimulationPresentationRuntime runtime =
+				registration?.PresentationRuntime as CharacterSimulationPresentationRuntime;
+			if (registration == null || runtime == null || block == null)
+			{
+				error = "Pose tuning requires an active Live Actor presentation runtime.";
+				return false;
+			}
+			CharacterPresentationProjection projection = registration.Projection;
+			if (projection.TuningLayout == null)
+			{
+				error = "Pose tuning payload is unavailable for this Live Actor.";
+				return false;
+			}
+			return runtime.SubmitTuningCandidate(
+				new CharacterPoseTuningCandidate(
+					new CharacterPoseTuningTargetIdentity(
+						registration.ActorId.Value,
+						projection.ProgramId,
+						projection.ProjectionRevision,
+						projection.PosePlan.PlanHash,
+						projection.Rig.RigId,
+						projection.Rig.RigRevision,
+						projection.TuningLayout.LayoutHash),
+					sourceAuthoringRevision,
+					candidateRevision,
+					block),
+				out error);
+		}
+		internal void ClearPoseTuningCandidate()
+		{
+			m_PreviewController?.ClearPoseTuningCandidate();
+			(m_Registration?.PresentationRuntime as CharacterSimulationPresentationRuntime)
+				?.ClearPendingTuningCandidate();
+		}
 		public bool TrySetPreviewPoseWatchInterests(
 			Guid sessionId,
 			Guid ownerId,
@@ -441,6 +509,33 @@ namespace ThirdPersonCharacter.Pipeline
 			m_PreviewController?.Clear(sessionId);
 		}
 
+		public void SetLinkedPosePreviewOverride(
+			Guid sessionId,
+			LinkedPoseGroupId groupId,
+			LinkedPoseImplementationId implementationId)
+		{
+			if (sessionId == Guid.Empty || !CanPreviewPoseGraph)
+				return;
+			EnsurePreviewController().SetLinkedPosePreviewOverride(
+				sessionId,
+				groupId,
+				implementationId);
+		}
+
+		public void ClearLinkedPosePreviewOverride(
+			Guid sessionId,
+			LinkedPoseGroupId groupId)
+		{
+			m_PreviewController?.ClearLinkedPosePreviewOverride(
+				sessionId,
+				groupId);
+		}
+
+		public void ClearLinkedPosePreviewOverrides(Guid sessionId)
+		{
+			m_PreviewController?.ClearLinkedPosePreviewOverrides(sessionId);
+		}
+
 		public override void ClearTimelinePreview(Guid sessionId)
 		{
 			m_PreviewController?.Clear(sessionId);
@@ -482,6 +577,8 @@ namespace ThirdPersonCharacter.Pipeline
 
 		void Awake()
 		{
+			if (!Application.isPlaying)
+				return;
 			ClearAllTimelinePreviews();
 			EnsureRegistration();
 		}
@@ -499,6 +596,8 @@ namespace ThirdPersonCharacter.Pipeline
 
 		void OnEnable()
 		{
+			if (!Application.isPlaying)
+				return;
 			EnsureRegistration();
 		}
 

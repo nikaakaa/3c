@@ -63,7 +63,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public AnimationFootPlacementSample FootPlacement { get; }
     }
 
-    public sealed class CharacterMotionMatchingPoseHistory
+    public sealed class CharacterMotionMatchingPoseHistory :
+        IMotionMatchingPoseHistoryReadView
     {
         enum PendingMutation : byte
         {

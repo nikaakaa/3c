@@ -68,6 +68,13 @@ namespace TreeDesigner.Editor
             GraphAuthoringSelection selection);
     }
 
+    public interface IGraphAuthoringAppliedValuesDataSource
+    {
+        IReadOnlyList<GraphAuthoringReadOnlyDetail> GetAppliedValues(
+            IGraphAuthoringDocumentProjection document,
+            GraphAuthoringSelection selection);
+    }
+
     public readonly struct GraphAuthoringDetailsCommandRequest
     {
         public GraphAuthoringDetailsCommandRequest(
@@ -153,8 +160,10 @@ namespace TreeDesigner.Editor
 
         public void BindStateMachine(
             GraphAuthoringStateMachineBinding binding,
-            IGraphAuthoringStateMachineDetailsDataSource dataSource) =>
-            m_StateMachinePresenter.Bind(binding, dataSource);
+            IGraphAuthoringStateMachineDetailsDataSource dataSource,
+            Func<GraphAuthoringSelection, IReadOnlyList<GraphAuthoringReadOnlyDetail>>
+                appliedValues = null) =>
+            m_StateMachinePresenter.Bind(binding, dataSource, appliedValues);
 
         public void InspectState(
             GraphAuthoringElementId stateId) =>
@@ -216,8 +225,9 @@ namespace TreeDesigner.Editor
             GraphAuthoringSelection selection = m_Selection.Value;
             if (selection.Kind != GraphAuthoringSelectionKind.Node)
             {
+                AddReadOnlySection("Runtime Inputs", m_Binding.DataSource.GetLive(m_Binding.Document, selection), true);
+                AddAppliedValuesSection(selection);
                 AddReadOnlySection("References", m_Binding.DataSource.GetReferences(m_Binding.Document, selection), true);
-                AddReadOnlySection("Live", m_Binding.DataSource.GetLive(m_Binding.Document, selection), true);
                 AddReadOnlySection("Diagnostics", m_Binding.DataSource.GetDiagnostics(m_Binding.Document, selection), false);
                 return;
             }
@@ -231,7 +241,8 @@ namespace TreeDesigner.Editor
             AddHeader(node, capability);
             AddAuthoringSection(node, capability);
             AddCommandSection(node, capability);
-            AddReadOnlySection("Live", m_Binding.DataSource.GetLive(m_Binding.Document, selection), true);
+            AddReadOnlySection("Runtime Inputs", m_Binding.DataSource.GetLive(m_Binding.Document, selection), true);
+            AddAppliedValuesSection(selection);
             AddReadOnlySection("References", m_Binding.DataSource.GetReferences(m_Binding.Document, selection), true);
             AddReadOnlySection("Diagnostics", m_Binding.DataSource.GetDiagnostics(m_Binding.Document, selection), false);
         }
@@ -272,7 +283,7 @@ namespace TreeDesigner.Editor
 
         void AddAuthoringSection(GraphAuthoringNodeProjection node, GraphAuthoringCapabilityDescriptor capability)
         {
-            var section = new Foldout { text = "Authoring", value = true };
+            var section = new Foldout { text = "Authoring Defaults", value = true };
             section.AddToClassList("graph-authoring-details-section");
             GraphAuthoringFieldDescriptor[] fields = capability.Fields
                 .Where(value =>
@@ -291,12 +302,54 @@ namespace TreeDesigner.Editor
                 object value = m_Binding.DataSource.ReadField(m_Binding.Document, node.NodeId, field);
                 VisualElement control = CreateField(node.NodeId, field, value);
                 control.SetEnabled(field.AuthoringWritable && !m_Binding.Mutation.ReadOnly);
-                section.Add(control);
+                var row = new VisualElement();
+                row.style.flexDirection = FlexDirection.Row;
+                row.AddToClassList("graph-authoring-details-field-row");
+                row.Add(control);
+                var policy = new Label(TuningLabel(field));
+                policy.AddToClassList("graph-authoring-details-field-policy");
+                row.Add(policy);
+                section.Add(row);
             }
             if (fields.Length == 0)
                 section.Add(new Label("This node has no editable authoring fields."));
             m_Scroll.Add(section);
         }
+
+        void AddAppliedValuesSection(GraphAuthoringSelection selection)
+        {
+            IReadOnlyList<GraphAuthoringReadOnlyDetail> values =
+                m_Binding.DataSource is IGraphAuthoringAppliedValuesDataSource source
+                    ? source.GetAppliedValues(m_Binding.Document, selection)
+                    : new[]
+                    {
+                        new GraphAuthoringReadOnlyDetail(
+                            "Target",
+                            "Select an exact Preview or Live target to inspect applied values.")
+                    };
+            AddReadOnlySection("Applied Values", values, true);
+        }
+
+        static string TuningLabel(GraphAuthoringFieldDescriptor field)
+        {
+            switch (field.Interaction)
+            {
+                case GraphAuthoringFieldInteractionPolicy.Structural:
+                    return "Build Required";
+                case GraphAuthoringFieldInteractionPolicy.TunableDefault:
+                    return field.Tuning != null &&
+                           field.Tuning.ApplyTiming == GraphAuthoringFieldApplyTiming.NextActivation
+                        ? "Next Activation"
+                        : "Live Now";
+                case GraphAuthoringFieldInteractionPolicy.RuntimeInput:
+                    return "Runtime Input";
+                case GraphAuthoringFieldInteractionPolicy.DerivedReadOnly:
+                    return "Read Only";
+                default:
+                    return "Unclassified";
+            }
+        }
+
 
         void AddCommandSection(GraphAuthoringNodeProjection node, GraphAuthoringCapabilityDescriptor capability)
         {

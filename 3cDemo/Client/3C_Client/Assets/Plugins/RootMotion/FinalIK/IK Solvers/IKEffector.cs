@@ -22,6 +22,7 @@ namespace RootMotion.FinalIK {
 		/// The node transform used by this effector.
 		/// </summary>
 		public Transform bone;
+		public IndexedBoneHandle boneHandle = IndexedBoneHandle.Invalid;
 		/// <summary>
 		/// The target Transform (optional, you can use just the position and rotation instead).
 		/// </summary>
@@ -76,9 +77,13 @@ namespace RootMotion.FinalIK {
 		#endregion Main Interface
 
 		public Transform[] childBones = new Transform[0]; // The optional list of other bones that positionOffset and position of this effector will be applied to.
+		public IndexedBoneHandle[] childBoneHandles = new IndexedBoneHandle[0];
 		public Transform planeBone1; // The first bone defining the parent plane.
 		public Transform planeBone2; // The second bone defining the parent plane.
 		public Transform planeBone3; // The third bone defining the parent plane.
+		public IndexedBoneHandle planeBone1Handle = IndexedBoneHandle.Invalid;
+		public IndexedBoneHandle planeBone2Handle = IndexedBoneHandle.Invalid;
+		public IndexedBoneHandle planeBone3Handle = IndexedBoneHandle.Invalid;
 		public Quaternion planeRotationOffset = Quaternion.identity; // Used by Bend Constraints
 
 		private float posW, rotW;
@@ -109,6 +114,25 @@ namespace RootMotion.FinalIK {
 		 * Determines whether this IKEffector is valid or not.
 		 * */
 		public bool IsValid(IKSolver solver, ref string message) {
+			if (solver.usesIndexedPoseBackend) {
+				if (!boneHandle.IsValid || solver.GetPoint(boneHandle) == null) {
+					message = "IK Effector indexed bone is invalid or missing from the Node Chain.";
+					return false;
+				}
+				for (int i = 0; i < childBoneHandles.Length; i++) {
+					if (!childBoneHandles[i].IsValid || solver.GetPoint(childBoneHandles[i]) == null) {
+						message = "IK Effector contains an invalid indexed child bone.";
+						return false;
+					}
+				}
+				if (planeBone1Handle.IsValid && solver.GetPoint(planeBone1Handle) == null ||
+					planeBone2Handle.IsValid && solver.GetPoint(planeBone2Handle) == null ||
+					planeBone3Handle.IsValid && solver.GetPoint(planeBone3Handle) == null) {
+					message = "IK Effector contains an indexed plane bone outside the Node Chain.";
+					return false;
+				}
+				return true;
+			}
 
 			if (bone == null) {
 				message = "IK Effector bone is null.";
@@ -156,34 +180,42 @@ namespace RootMotion.FinalIK {
 		 * Initiate the effector, set default values
 		 * */
 		public void Initiate(IKSolverFullBody solver) {
-			position = bone.position;
-			rotation = bone.rotation;
+			IKSolver.Point point = solver.usesIndexedPoseBackend ? solver.GetPoint(boneHandle) : solver.GetPoint(bone);
+			position = solver.ReadComponentPosition(point);
+			rotation = solver.ReadComponentRotation(point);
 			animatedPlaneRotation = Quaternion.identity;
 
-			// Getting the node
-			solver.GetChainAndNodeIndexes(bone, out chainIndex, out nodeIndex);
+			if (solver.usesIndexedPoseBackend) solver.GetChainAndNodeIndexes(boneHandle, out chainIndex, out nodeIndex);
+			else solver.GetChainAndNodeIndexes(bone, out chainIndex, out nodeIndex);
 
-			// Child nodes
-			childChainIndexes = new int[childBones.Length];
-			childNodeIndexes = new int[childBones.Length];
+			int childCount = solver.usesIndexedPoseBackend ? childBoneHandles.Length : childBones.Length;
+			childChainIndexes = new int[childCount];
+			childNodeIndexes = new int[childCount];
 
-			for (int i = 0; i < childBones.Length; i++) {
-				solver.GetChainAndNodeIndexes(childBones[i], out childChainIndexes[i], out childNodeIndexes[i]);
+			for (int i = 0; i < childCount; i++) {
+				if (solver.usesIndexedPoseBackend) solver.GetChainAndNodeIndexes(childBoneHandles[i], out childChainIndexes[i], out childNodeIndexes[i]);
+				else solver.GetChainAndNodeIndexes(childBones[i], out childChainIndexes[i], out childNodeIndexes[i]);
 			}
 
-			localPositions = new Vector3[childBones.Length];
+			localPositions = new Vector3[childCount];
 
 			// Plane nodes
 			usePlaneNodes = false;
 
-			if (planeBone1 != null) {
-				solver.GetChainAndNodeIndexes(planeBone1, out plane1ChainIndex, out plane1NodeIndex);
+			bool hasPlane1 = solver.usesIndexedPoseBackend ? planeBone1Handle.IsValid : planeBone1 != null;
+			bool hasPlane2 = solver.usesIndexedPoseBackend ? planeBone2Handle.IsValid : planeBone2 != null;
+			bool hasPlane3 = solver.usesIndexedPoseBackend ? planeBone3Handle.IsValid : planeBone3 != null;
+			if (hasPlane1) {
+				if (solver.usesIndexedPoseBackend) solver.GetChainAndNodeIndexes(planeBone1Handle, out plane1ChainIndex, out plane1NodeIndex);
+				else solver.GetChainAndNodeIndexes(planeBone1, out plane1ChainIndex, out plane1NodeIndex);
 
-				if (planeBone2 != null) {
-					solver.GetChainAndNodeIndexes(planeBone2, out plane2ChainIndex, out plane2NodeIndex);
+				if (hasPlane2) {
+					if (solver.usesIndexedPoseBackend) solver.GetChainAndNodeIndexes(planeBone2Handle, out plane2ChainIndex, out plane2NodeIndex);
+					else solver.GetChainAndNodeIndexes(planeBone2, out plane2ChainIndex, out plane2NodeIndex);
 
-					if (planeBone3 != null) {
-						solver.GetChainAndNodeIndexes(planeBone3, out plane3ChainIndex, out plane3NodeIndex);
+					if (hasPlane3) {
+						if (solver.usesIndexedPoseBackend) solver.GetChainAndNodeIndexes(planeBone3Handle, out plane3ChainIndex, out plane3NodeIndex);
+						else solver.GetChainAndNodeIndexes(planeBone3, out plane3ChainIndex, out plane3NodeIndex);
 
 						usePlaneNodes = true;
 					}
@@ -250,8 +282,8 @@ namespace RootMotion.FinalIK {
 			solver.GetNode(chainIndex, nodeIndex).offset += positionOffset * solver.IKPositionWeight;
 
 			if (effectChildNodes && solver.iterations > 0) {
-				for (int i = 0; i < childBones.Length; i++) {
-					localPositions[i] = childBones[i].transform.position - bone.transform.position;
+				for (int i = 0; i < childChainIndexes.Length; i++) {
+					localPositions[i] = solver.ReadComponentPosition(solver.GetNode(childChainIndexes[i], childNodeIndexes[i])) - solver.ReadComponentPosition(solver.GetNode(chainIndex, nodeIndex));
 
 					solver.GetNode(childChainIndexes[i], childNodeIndexes[i]).offset += positionOffset * solver.IKPositionWeight;
 				}
@@ -259,7 +291,10 @@ namespace RootMotion.FinalIK {
 
 			// Relative to Plane
 			if (usePlaneNodes && maintainRelativePositionWeight > 0f) {
-				animatedPlaneRotation = Quaternion.LookRotation(planeBone2.position - planeBone1.position, planeBone3.position - planeBone1.position);;
+				Vector3 plane1 = solver.ReadComponentPosition(solver.GetNode(plane1ChainIndex, plane1NodeIndex));
+				Vector3 plane2 = solver.ReadComponentPosition(solver.GetNode(plane2ChainIndex, plane2NodeIndex));
+				Vector3 plane3 = solver.ReadComponentPosition(solver.GetNode(plane3ChainIndex, plane3NodeIndex));
+				animatedPlaneRotation = Quaternion.LookRotation(plane2 - plane1, plane3 - plane1);
 			}
 
 			firstUpdate = true;
@@ -296,7 +331,7 @@ namespace RootMotion.FinalIK {
 		 * */
 		public void Update(IKSolverFullBody solver) {
 			if (firstUpdate) {
-				animatedPosition = bone.position + solver.GetNode(chainIndex, nodeIndex).offset;
+				animatedPosition = solver.ReadComponentPosition(solver.GetNode(chainIndex, nodeIndex)) + solver.GetNode(chainIndex, nodeIndex).offset;
 				firstUpdate = false;
 			}
 
@@ -305,7 +340,7 @@ namespace RootMotion.FinalIK {
 			// Child nodes
 			if (!effectChildNodes) return;
 
-			for (int i = 0; i < childBones.Length; i++) {
+			for (int i = 0; i < childChainIndexes.Length; i++) {
 				solver.GetNode(childChainIndexes[i], childNodeIndexes[i]).solverPosition = Vector3.Lerp(solver.GetNode(childChainIndexes[i], childNodeIndexes[i]).solverPosition, solver.GetNode(chainIndex, nodeIndex).solverPosition + localPositions[i], posW);
 			}
 		}
@@ -320,8 +355,8 @@ namespace RootMotion.FinalIK {
 			if (maintainRelativePositionWeight <= 0f) return animatedPosition;
 
 			// Maintain relative position
-			Vector3 p = bone.position;
-			Vector3 dir = p - planeBone1.position;
+			Vector3 p = solver.ReadComponentPosition(solver.GetNode(chainIndex, nodeIndex));
+			Vector3 dir = p - solver.ReadComponentPosition(solver.GetNode(plane1ChainIndex, plane1NodeIndex));
 				
 			planeRotationOffset = GetPlaneRotation(solver) * Quaternion.Inverse(animatedPlaneRotation);
 

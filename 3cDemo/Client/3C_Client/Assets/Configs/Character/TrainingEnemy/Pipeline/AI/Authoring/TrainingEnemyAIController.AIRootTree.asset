@@ -1,0 +1,1328 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: befcc6c13c3138b4e9df571f4b8b2599, type: 3}
+  m_Name: TrainingEnemyAIController.AIRootTree
+  m_EditorClassIdentifier: 
+  m_Tree:
+    rid: 3396202407018103292
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
+    - rid: 3396202407018103292
+      type: {class: AIControllerTree, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_Name: TrainingEnemyAIController.AIRootTree
+        m_GraphAuthoringId: 806ddc63-801a-4e2e-8124-a3da7c24e7eb
+        m_Nodes:
+        - rid: 3396202407018103293
+        - rid: 3396202407018103294
+        - rid: 3396202407018103295
+        - rid: 3396202407018103296
+        - rid: 3396202407018103297
+        - rid: 3396202407018103298
+        - rid: 3396202407018103299
+        - rid: 3396202407018103300
+        - rid: 3396202407018103301
+        - rid: 3396202407018103302
+        - rid: 3396202407018103303
+        - rid: 3396202407018103304
+        - rid: 3396202407018103305
+        - rid: 3396202407018103306
+        - rid: 3396202407018103307
+        - rid: 3396202407018103308
+        - rid: 3396202407018103309
+        m_Edges:
+        - m_GUID: 4748afbf-73e1-4d81-8616-96bb8fef0230
+          m_StartNodeGUID: f109f754-f9b7-4c50-8744-44793fd3efaf
+          m_EndNodeGUID: f780d582-b858-4bdf-ab23-9879486fe758
+          m_StartPortName: Output
+          m_EndPortName: Input
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: -2
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 0
+        - m_GUID: dcf7e4af-c0b6-447c-adda-6e0c792a8f6f
+          m_StartNodeGUID: f780d582-b858-4bdf-ab23-9879486fe758
+          m_EndNodeGUID: 1a9bae16-85e9-4116-9bd0-db599b6d4096
+          m_StartPortName: Output
+          m_EndPortName: Input
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: -2
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 0
+        - m_GUID: 3c0d00cd-27ea-472f-84da-44d6eb1fcd8e
+          m_StartNodeGUID: 1a9bae16-85e9-4116-9bd0-db599b6d4096
+          m_EndNodeGUID: 7253492e-f041-44f3-8310-35eba9072a28
+          m_StartPortName: Output
+          m_EndPortName: Input
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: 3396202407018103310
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 1
+        - m_GUID: cc5c0729-2b9f-4fab-a9a0-7ea876450169
+          m_StartNodeGUID: 1a9bae16-85e9-4116-9bd0-db599b6d4096
+          m_EndNodeGUID: 79569626-0154-4bb0-976a-df0be963886b
+          m_StartPortName: Output
+          m_EndPortName: Input
+          m_FlowOrder: 1
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: 3396202407018103311
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 1
+        - m_GUID: a3584d75-477f-41f1-9506-22c8e4226914
+          m_StartNodeGUID: 1a9bae16-85e9-4116-9bd0-db599b6d4096
+          m_EndNodeGUID: f8759a8f-a961-481e-b368-4f91da163936
+          m_StartPortName: Output
+          m_EndPortName: Input
+          m_FlowOrder: 2
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: 3396202407018103312
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 1
+        - m_GUID: 45c99bfb-dd7e-45ad-aa05-4958690633a3
+          m_StartNodeGUID: 1a9bae16-85e9-4116-9bd0-db599b6d4096
+          m_EndNodeGUID: 1b3721d0-56ad-4df2-86d0-c540b8ec9d8e
+          m_StartPortName: Output
+          m_EndPortName: Input
+          m_FlowOrder: 3
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: 3396202407018103313
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 1
+        - m_GUID: 2c2e0db9-a74e-4f36-9042-d7ecce73edad
+          m_StartNodeGUID: 1b3721d0-56ad-4df2-86d0-c540b8ec9d8e
+          m_EndNodeGUID: 910f0b81-5252-4ce3-ac8f-2efd795fd8d8
+          m_StartPortName: Output
+          m_EndPortName: Input
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 3
+          m_InlineConditionRuleGraph:
+            rid: 3396202407018103314
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 1
+        - m_GUID: ff523302-f8d2-4e35-aab3-732967a44fce
+          m_StartNodeGUID: 1b3721d0-56ad-4df2-86d0-c540b8ec9d8e
+          m_EndNodeGUID: dcace6db-8555-49d4-86ce-1f4138ed26b6
+          m_StartPortName: Output
+          m_EndPortName: Input
+          m_FlowOrder: 1
+          m_TransitionPriority: 0
+          m_AbortPolicy: 1
+          m_InlineConditionRuleGraph:
+            rid: 3396202407018103315
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 1
+        - m_GUID: e1513331-cc6e-42f6-bb11-e834fa2ac077
+          m_StartNodeGUID: 910f0b81-5252-4ce3-ac8f-2efd795fd8d8
+          m_EndNodeGUID: 56820b0d-278e-493f-9ba8-9ab4ee4564af
+          m_StartPortName: Output
+          m_EndPortName: Input
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: 3396202407018103316
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 1
+        - m_GUID: d08a2761-5b1d-4ff8-95de-b03be30d3f56
+          m_StartNodeGUID: dcace6db-8555-49d4-86ce-1f4138ed26b6
+          m_EndNodeGUID: 58a308da-2538-4b2d-bb9a-1e6b4aaa504c
+          m_StartPortName: Output
+          m_EndPortName: Input
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: 3396202407018103317
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 1
+        - m_GUID: df469f59-7fa7-4545-b6ba-334bf9c6c7f2
+          m_StartNodeGUID: dcace6db-8555-49d4-86ce-1f4138ed26b6
+          m_EndNodeGUID: 6d97938d-0c44-47d8-ba38-4845c30d1dfe
+          m_StartPortName: Output
+          m_EndPortName: Input
+          m_FlowOrder: 1
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: 3396202407018103318
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 1
+        - m_GUID: e33c58f5-34d9-4d4e-9dc8-459c8ae1f8a2
+          m_StartNodeGUID: dcace6db-8555-49d4-86ce-1f4138ed26b6
+          m_EndNodeGUID: 37d37ac6-6a58-4430-9a8c-789c1bf8d0f8
+          m_StartPortName: Output
+          m_EndPortName: Input
+          m_FlowOrder: 2
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: 3396202407018103319
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 1
+        m_PropertyEdges:
+        - m_GUID: dc023ab3-9646-4814-98ef-1b009db369cf
+          m_StartNodeGUID: f637e526-eed7-43ee-ba33-525e1c82d6a1
+          m_EndNodeGUID: 79569626-0154-4bb0-976a-df0be963886b
+          m_StartPortName: m_Target
+          m_EndPortName: m_Value
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: -2
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 0
+        - m_GUID: 4da008d6-00c5-4769-90e3-76e68d1150e5
+          m_StartNodeGUID: 145384f3-686e-45c2-9618-1ddd53817ee8
+          m_EndNodeGUID: 56820b0d-278e-493f-9ba8-9ab4ee4564af
+          m_StartPortName: m_Direction
+          m_EndPortName: m_Value
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: -2
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 0
+        - m_GUID: 865016cc-efc3-482e-93da-c9eb8d8d29ad
+          m_StartNodeGUID: e40b35c0-e62a-474a-ac13-80dc51da6442
+          m_EndNodeGUID: 58a308da-2538-4b2d-bb9a-1e6b4aaa504c
+          m_StartPortName: m_Value
+          m_EndPortName: m_Value
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: -2
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 0
+        - m_GUID: cd6a8c8e-1741-4e8e-84de-8b4aef868703
+          m_StartNodeGUID: 32b3ddd2-f234-4b5a-9203-f87d31a2ed8d
+          m_EndNodeGUID: 37d37ac6-6a58-4430-9a8c-789c1bf8d0f8
+          m_StartPortName: m_Value
+          m_EndPortName: m_Ticks
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: -2
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 0
+        m_ExposedProperties:
+        - rid: 3396202407018103320
+        - rid: 3396202407018103321
+        - rid: 3396202407018103322
+        - rid: 3396202407018103323
+        m_NodeGroups: []
+        m_StackNodes: []
+        m_RootGUID: f109f754-f9b7-4c50-8744-44793fd3efaf
+    - rid: 3396202407018103293
+      type: {class: RootNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: f109f754-f9b7-4c50-8744-44793fd3efaf
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 0, y: 0}
+        m_DeltaTime:
+          m_Name: m_DeltaTime
+          m_PortId: m_DeltaTime
+          m_DisplayName: DeltaTime
+          m_OwnerModuleId: 
+          m_FieldKey: m_DeltaTime
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 1
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs: []
+          m_Value: 0
+        m_OutputEdgeGUID: 4748afbf-73e1-4d81-8616-96bb8fef0230
+    - rid: 3396202407018103294
+      type: {class: LoopNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: f780d582-b858-4bdf-ab23-9879486fe758
+        m_DisplayName: Monster Decision Loop
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: -760, y: 0}
+        m_InputEdgeGUID: 4748afbf-73e1-4d81-8616-96bb8fef0230
+        m_OutputEdgeGUID: dcf7e4af-c0b6-447c-adda-6e0c792a8f6f
+        m_StopType: 0
+    - rid: 3396202407018103295
+      type: {class: SequenceNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: 1a9bae16-85e9-4116-9bd0-db599b6d4096
+        m_DisplayName: Observe Local Actor
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: -520, y: 0}
+        m_InputEdgeGUID: dcf7e4af-c0b6-447c-adda-6e0c792a8f6f
+        m_OutputEdgeGUIDs:
+        - 3c0d00cd-27ea-472f-84da-44d6eb1fcd8e
+        - cc5c0729-2b9f-4fab-a9a0-7ea876450169
+        - a3584d75-477f-41f1-9506-22c8e4226914
+        - 45c99bfb-dd7e-45ad-aa05-4958690633a3
+    - rid: 3396202407018103296
+      type: {class: SelectNearestCandidateNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: 7253492e-f041-44f3-8310-35eba9072a28
+        m_DisplayName: Select Nearest Local Actor
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: -260, y: -180}
+        m_InputEdgeGUID: 3c0d00cd-27ea-472f-84da-44d6eb1fcd8e
+    - rid: 3396202407018103297
+      type: {class: ReadSelectedTargetSnapshotNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: f637e526-eed7-43ee-ba33-525e1c82d6a1
+        m_DisplayName: Read Selected Target
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: -260, y: 40}
+        m_Target:
+          m_Name: m_Target
+          m_PortId: m_Target
+          m_DisplayName: Target
+          m_OwnerModuleId: 
+          m_FieldKey: m_Target
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 1
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs:
+          - dc023ab3-9646-4814-98ef-1b009db369cf
+          m_Value:
+            m_Target:
+              m_Value: 
+            m_Position: {x: 0, y: 0, z: 0}
+            m_Yaw: 0
+    - rid: 3396202407018103298
+      type: {class: WriteAIMemoryNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: 79569626-0154-4bb0-976a-df0be963886b
+        m_DisplayName: Remember Current Target
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 0, y: -100}
+        m_InputEdgeGUID: cc5c0729-2b9f-4fab-a9a0-7ea876450169
+        m_BlackboardVariable:
+          m_DeclarationId: 18abc355-3fbd-4175-9139-f0a92618a809
+          m_DeclarationOwnerId: 806ddc63-801a-4e2e-8124-a3da7c24e7eb
+          m_DisplayKey: CurrentTarget
+          m_ValueTypeName: ThirdPersonCharacter.AI.AIActionTargetSnapshotValue, ThirdPersonClient.Runtime,
+            Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+        m_ValueKind: 7
+        m_Value:
+          rid: 3396202407018103324
+    - rid: 3396202407018103299
+      type: {class: WriteActionTargetSnapshotNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: f8759a8f-a961-481e-b368-4f91da163936
+        m_DisplayName: Write Character Action Target
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 240, y: -100}
+        m_InputEdgeGUID: a3584d75-477f-41f1-9506-22c8e4226914
+        m_InputId: ActionTarget
+    - rid: 3396202407018103300
+      type: {class: SelectorNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: 1b3721d0-56ad-4df2-86d0-c540b8ec9d8e
+        m_DisplayName: Chase or Attack
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 500, y: 0}
+        m_InputEdgeGUID: 45c99bfb-dd7e-45ad-aa05-4958690633a3
+        m_OutputEdgeGUIDs:
+        - 2c2e0db9-a74e-4f36-9042-d7ecce73edad
+        - ff523302-f8d2-4e35-aab3-732967a44fce
+    - rid: 3396202407018103301
+      type: {class: SequenceNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: 910f0b81-5252-4ce3-ac8f-2efd795fd8d8
+        m_DisplayName: Chase Target
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 760, y: -140}
+        m_InputEdgeGUID: 2c2e0db9-a74e-4f36-9042-d7ecce73edad
+        m_OutputEdgeGUIDs:
+        - e1513331-cc6e-42f6-bb11-e834fa2ac077
+    - rid: 3396202407018103302
+      type: {class: ReadTargetDirectionNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: 145384f3-686e-45c2-9618-1ddd53817ee8
+        m_DisplayName: Read Target Direction
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 760, y: -340}
+        m_Direction:
+          m_Name: m_Direction
+          m_PortId: m_Direction
+          m_DisplayName: Direction
+          m_OwnerModuleId: 
+          m_FieldKey: m_Direction
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 1
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs:
+          - 4da008d6-00c5-4769-90e3-76e68d1150e5
+          m_Value: {x: 0, y: 0}
+    - rid: 3396202407018103303
+      type: {class: WriteContinuousInputNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: 56820b0d-278e-493f-9ba8-9ab4ee4564af
+        m_DisplayName: Write Monster Move
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 1020, y: -140}
+        m_InputEdgeGUID: e1513331-cc6e-42f6-bb11-e834fa2ac077
+        m_InputId: MoveAxis
+        m_Value:
+          rid: 3396202407018103325
+    - rid: 3396202407018103304
+      type: {class: SequenceNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: dcace6db-8555-49d4-86ce-1f4138ed26b6
+        m_DisplayName: Attack Target
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 760, y: 160}
+        m_InputEdgeGUID: ff523302-f8d2-4e35-aab3-732967a44fce
+        m_OutputEdgeGUIDs:
+        - d08a2761-5b1d-4ff8-95de-b03be30d3f56
+        - df469f59-7fa7-4545-b6ba-334bf9c6c7f2
+        - e33c58f5-34d9-4d4e-9dc8-459c8ae1f8a2
+    - rid: 3396202407018103305
+      type: {class: ReadAIMemoryNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: e40b35c0-e62a-474a-ac13-80dc51da6442
+        m_DisplayName: Read Stop Move
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 760, y: 360}
+        m_BlackboardVariable:
+          m_DeclarationId: 9c96b817-4245-43ef-8829-55bb2b53dc58
+          m_DeclarationOwnerId: 806ddc63-801a-4e2e-8124-a3da7c24e7eb
+          m_DisplayKey: StopMove
+          m_ValueTypeName: UnityEngine.Vector2, UnityEngine.CoreModule, Version=0.0.0.0,
+            Culture=neutral, PublicKeyToken=null
+        m_ValueKind: 4
+        m_Value:
+          rid: 3396202407018103326
+    - rid: 3396202407018103306
+      type: {class: WriteContinuousInputNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: 58a308da-2538-4b2d-bb9a-1e6b4aaa504c
+        m_DisplayName: Stop Before Attack
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 1020, y: 80}
+        m_InputEdgeGUID: d08a2761-5b1d-4ff8-95de-b03be30d3f56
+        m_InputId: MoveAxis
+        m_Value:
+          rid: 3396202407018103327
+    - rid: 3396202407018103307
+      type: {class: SubmitActionRequestNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: 6d97938d-0c44-47d8-ba38-4845c30d1dfe
+        m_DisplayName: Submit Monster Attack
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 1020, y: 180}
+        m_InputEdgeGUID: df469f59-7fa7-4545-b6ba-334bf9c6c7f2
+        m_RequestId: Attack
+        m_BufferSeconds: 0.2
+        m_Priority: 0
+        m_RepeatPolicy: 1
+    - rid: 3396202407018103308
+      type: {class: ReadAIMemoryNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: 32b3ddd2-f234-4b5a-9203-f87d31a2ed8d
+        m_DisplayName: Read Attack Cooldown
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 760, y: 460}
+        m_BlackboardVariable:
+          m_DeclarationId: 29b30480-78ff-4ae5-b6f8-f01fd15ffcd4
+          m_DeclarationOwnerId: 806ddc63-801a-4e2e-8124-a3da7c24e7eb
+          m_DisplayKey: AttackCooldownTicks
+          m_ValueTypeName: System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral,
+            PublicKeyToken=b77a5c561934e089
+        m_ValueKind: 2
+        m_Value:
+          rid: 3396202407018103328
+    - rid: 3396202407018103309
+      type: {class: AIWaitTicksNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: 37d37ac6-6a58-4430-9a8c-789c1bf8d0f8
+        m_DisplayName: Wait Attack Cooldown
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 1020, y: 280}
+        m_InputEdgeGUID: e33c58f5-34d9-4d4e-9dc8-459c8ae1f8a2
+        m_Ticks:
+          m_Name: m_Ticks
+          m_PortId: m_Ticks
+          m_DisplayName: Ticks
+          m_OwnerModuleId: 
+          m_FieldKey: m_Ticks
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 0
+          m_InputEdgeGUID: cd6a8c8e-1741-4e8e-84de-8b4aef868703
+          m_OutputEdgeGUIDs: []
+          m_Value: 0
+    - rid: 3396202407018103310
+      type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: Observe Local Actor_To_Select Nearest Local Actor_Rule
+        m_GraphAuthoringId: bc83861f-3085-4160-ac15-34d3e18084c0
+        m_Nodes:
+        - rid: 3396202407018103329
+        m_Edges: []
+        m_PropertyEdges: []
+        m_ExposedProperties: []
+        m_NodeGroups: []
+        m_StackNodes: []
+        m_AuthoringRole: 5
+    - rid: 3396202407018103311
+      type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: Observe Local Actor_To_Remember Current Target_Rule
+        m_GraphAuthoringId: 7574b05d-5b38-47e1-a1dd-2f1fbd773557
+        m_Nodes:
+        - rid: 3396202407018103330
+        m_Edges: []
+        m_PropertyEdges: []
+        m_ExposedProperties: []
+        m_NodeGroups: []
+        m_StackNodes: []
+        m_AuthoringRole: 5
+    - rid: 3396202407018103312
+      type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: Observe Local Actor_To_Write Character Action Target_Rule
+        m_GraphAuthoringId: df73f264-8a0e-4a23-b93a-953abbe90d5c
+        m_Nodes:
+        - rid: 3396202407018103331
+        m_Edges: []
+        m_PropertyEdges: []
+        m_ExposedProperties: []
+        m_NodeGroups: []
+        m_StackNodes: []
+        m_AuthoringRole: 5
+    - rid: 3396202407018103313
+      type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: Observe Local Actor_To_Chase or Attack_Rule
+        m_GraphAuthoringId: 9ec94514-2c93-467a-9dcd-20cdd1fb4f2e
+        m_Nodes:
+        - rid: 3396202407018103332
+        m_Edges: []
+        m_PropertyEdges: []
+        m_ExposedProperties: []
+        m_NodeGroups: []
+        m_StackNodes: []
+        m_AuthoringRole: 5
+    - rid: 3396202407018103314
+      type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: Target Outside Attack Range
+        m_GraphAuthoringId: 4fae476c-c2c1-48ea-bd8a-25e7734c5ffe
+        m_Nodes:
+        - rid: 3396202407018103333
+        - rid: 3396202407018103334
+        - rid: 3396202407018103335
+        - rid: 3396202407018103336
+        m_Edges: []
+        m_PropertyEdges:
+        - m_GUID: 058895e3-cd84-47c3-aaa3-c6f2a9d1b0a8
+          m_StartNodeGUID: 8bb1df9e-a0f6-4318-9f0f-b67e6f6ec2bc
+          m_EndNodeGUID: cfe2b03d-bd42-4418-ae57-62ee1d71ddd0
+          m_StartPortName: m_Distance
+          m_EndPortName: m_InputValue1
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: -2
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 0
+        - m_GUID: da3b8c62-b522-469f-8f2d-2b425b45e2d0
+          m_StartNodeGUID: 7b43a6ac-9d23-4eec-a1e1-9258fa518f7f
+          m_EndNodeGUID: cfe2b03d-bd42-4418-ae57-62ee1d71ddd0
+          m_StartPortName: m_Value
+          m_EndPortName: m_InputValue2
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: -2
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 0
+        - m_GUID: 71817582-ada8-4e4e-9d04-7c5ee7efacba
+          m_StartNodeGUID: cfe2b03d-bd42-4418-ae57-62ee1d71ddd0
+          m_EndNodeGUID: 68d71466-b67d-43bb-87e7-e145feec5db6
+          m_StartPortName: m_Result
+          m_EndPortName: m_Result
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: -2
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 0
+        m_ExposedProperties: []
+        m_NodeGroups: []
+        m_StackNodes: []
+        m_AuthoringRole: 5
+    - rid: 3396202407018103315
+      type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: Target Inside Attack Range
+        m_GraphAuthoringId: 2ec49180-c8ae-4ccc-8f57-c70c2ad10cf2
+        m_Nodes:
+        - rid: 3396202407018103337
+        - rid: 3396202407018103338
+        - rid: 3396202407018103339
+        - rid: 3396202407018103340
+        m_Edges: []
+        m_PropertyEdges:
+        - m_GUID: 132b4df5-1131-4293-bae6-da46d4138884
+          m_StartNodeGUID: 292f5b54-cd46-45cd-9295-f9221e27430d
+          m_EndNodeGUID: da9827f2-f3e7-4451-b3e6-d15935cd8bc5
+          m_StartPortName: m_Distance
+          m_EndPortName: m_InputValue1
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: -2
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 0
+        - m_GUID: 3abba787-91b1-4abe-b73d-69758795479e
+          m_StartNodeGUID: 485a5b4c-8341-4377-83f9-0f09fd6b91fe
+          m_EndNodeGUID: da9827f2-f3e7-4451-b3e6-d15935cd8bc5
+          m_StartPortName: m_Value
+          m_EndPortName: m_InputValue2
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: -2
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 0
+        - m_GUID: e2b6025f-60f1-4d44-8158-9c086527bc50
+          m_StartNodeGUID: da9827f2-f3e7-4451-b3e6-d15935cd8bc5
+          m_EndNodeGUID: 2b948ac5-ab1a-4e47-9bdc-8c03dbc05318
+          m_StartPortName: m_Result
+          m_EndPortName: m_Result
+          m_FlowOrder: 0
+          m_TransitionPriority: 0
+          m_AbortPolicy: 0
+          m_InlineConditionRuleGraph:
+            rid: -2
+          m_SharedConditionRuleGraphAsset: {fileID: 0}
+          m_ConditionRuleGraphOwnership: 0
+        m_ExposedProperties: []
+        m_NodeGroups: []
+        m_StackNodes: []
+        m_AuthoringRole: 5
+    - rid: 3396202407018103316
+      type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: Chase Target_To_Write Monster Move_Rule
+        m_GraphAuthoringId: 8117b2ff-c029-4a3f-8b7e-6036547c7c55
+        m_Nodes:
+        - rid: 3396202407018103341
+        m_Edges: []
+        m_PropertyEdges: []
+        m_ExposedProperties: []
+        m_NodeGroups: []
+        m_StackNodes: []
+        m_AuthoringRole: 5
+    - rid: 3396202407018103317
+      type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: Attack Target_To_Stop Before Attack_Rule
+        m_GraphAuthoringId: 0f188479-c383-4ea0-b283-0e8c8fe1ee64
+        m_Nodes:
+        - rid: 3396202407018103342
+        m_Edges: []
+        m_PropertyEdges: []
+        m_ExposedProperties: []
+        m_NodeGroups: []
+        m_StackNodes: []
+        m_AuthoringRole: 5
+    - rid: 3396202407018103318
+      type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: Attack Target_To_Submit Monster Attack_Rule
+        m_GraphAuthoringId: ed55b5fd-a580-4702-bf93-d550cd19e8b9
+        m_Nodes:
+        - rid: 3396202407018103343
+        m_Edges: []
+        m_PropertyEdges: []
+        m_ExposedProperties: []
+        m_NodeGroups: []
+        m_StackNodes: []
+        m_AuthoringRole: 5
+    - rid: 3396202407018103319
+      type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: Attack Target_To_Wait Attack Cooldown_Rule
+        m_GraphAuthoringId: eb20e98b-44b8-4976-ba36-7c1b982a46ee
+        m_Nodes:
+        - rid: 3396202407018103344
+        m_Edges: []
+        m_PropertyEdges: []
+        m_ExposedProperties: []
+        m_NodeGroups: []
+        m_StackNodes: []
+        m_AuthoringRole: 5
+    - rid: 3396202407018103320
+      type: {class: AIActionTargetSnapshotExposedProperty, ns: ThirdPersonCharacter.AI,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: 18abc355-3fbd-4175-9139-f0a92618a809
+        m_Name: CurrentTarget
+        m_BlackboardKey: CurrentTarget
+        m_BlackboardScope: 5
+        m_BlackboardLifetime: 7
+        m_BlackboardAuthority: 0
+        m_BlackboardSyncPolicy: 0
+        m_InputValueId: 
+        m_BlackboardFactProjection: 0
+        m_ActionWindowType: 
+        m_ActionWindowId: 
+        m_ActionWindowDigest: 0
+        m_BlackboardCategoryPath: MonsterAI
+        m_Index: 0
+        m_Expanded: 1
+        m_Internal: 0
+        m_ShowOutside: 0
+        m_CanEdit: 0
+        m_Value:
+          m_Target:
+            m_Value: 
+          m_Position: {x: 0, y: 0, z: 0}
+          m_Yaw: 0
+    - rid: 3396202407018103321
+      type: {class: FloatExposedProperty, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: 9557ba7d-e6e7-4052-8021-34b4d81da90d
+        m_Name: AttackRange
+        m_BlackboardKey: AttackRange
+        m_BlackboardScope: 5
+        m_BlackboardLifetime: 7
+        m_BlackboardAuthority: 0
+        m_BlackboardSyncPolicy: 0
+        m_InputValueId: 
+        m_BlackboardFactProjection: 0
+        m_ActionWindowType: 
+        m_ActionWindowId: 
+        m_ActionWindowDigest: 0
+        m_BlackboardCategoryPath: MonsterAI
+        m_Index: 1
+        m_Expanded: 1
+        m_Internal: 0
+        m_ShowOutside: 0
+        m_CanEdit: 0
+        m_Value: 2.5
+    - rid: 3396202407018103322
+      type: {class: IntExposedProperty, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: 29b30480-78ff-4ae5-b6f8-f01fd15ffcd4
+        m_Name: AttackCooldownTicks
+        m_BlackboardKey: AttackCooldownTicks
+        m_BlackboardScope: 5
+        m_BlackboardLifetime: 7
+        m_BlackboardAuthority: 0
+        m_BlackboardSyncPolicy: 0
+        m_InputValueId: 
+        m_BlackboardFactProjection: 0
+        m_ActionWindowType: 
+        m_ActionWindowId: 
+        m_ActionWindowDigest: 0
+        m_BlackboardCategoryPath: MonsterAI
+        m_Index: 2
+        m_Expanded: 1
+        m_Internal: 0
+        m_ShowOutside: 0
+        m_CanEdit: 0
+        m_Value: 36
+    - rid: 3396202407018103323
+      type: {class: Vector2ExposedProperty, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: 9c96b817-4245-43ef-8829-55bb2b53dc58
+        m_Name: StopMove
+        m_BlackboardKey: StopMove
+        m_BlackboardScope: 0
+        m_BlackboardLifetime: 0
+        m_BlackboardAuthority: 0
+        m_BlackboardSyncPolicy: 0
+        m_InputValueId: 
+        m_BlackboardFactProjection: 0
+        m_ActionWindowType: 
+        m_ActionWindowId: 
+        m_ActionWindowDigest: 0
+        m_BlackboardCategoryPath: MonsterAI
+        m_Index: 3
+        m_Expanded: 1
+        m_Internal: 0
+        m_ShowOutside: 0
+        m_CanEdit: 0
+        m_Value: {x: 0, y: 0}
+    - rid: 3396202407018103324
+      type: {class: AIActionTargetSnapshotPropertyPort, ns: ThirdPersonCharacter.AI,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_Name: m_Value
+        m_PortId: m_Value
+        m_DisplayName: Value
+        m_OwnerModuleId: 
+        m_FieldKey: m_Value
+        m_Index: 0
+        m_Expanded: 0
+        m_Direction: 0
+        m_InputEdgeGUID: dc023ab3-9646-4814-98ef-1b009db369cf
+        m_OutputEdgeGUIDs: []
+        m_Value:
+          m_Target:
+            m_Value: 
+          m_Position: {x: 0, y: 0, z: 0}
+          m_Yaw: 0
+    - rid: 3396202407018103325
+      type: {class: Vector2PropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: m_Value
+        m_PortId: m_Value
+        m_DisplayName: Value
+        m_OwnerModuleId: 
+        m_FieldKey: m_Value
+        m_Index: -1
+        m_Expanded: 0
+        m_Direction: 0
+        m_InputEdgeGUID: 4da008d6-00c5-4769-90e3-76e68d1150e5
+        m_OutputEdgeGUIDs: []
+        m_Value: {x: 0, y: 0}
+    - rid: 3396202407018103326
+      type: {class: Vector2PropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: m_Value
+        m_PortId: m_Value
+        m_DisplayName: Value
+        m_OwnerModuleId: 
+        m_FieldKey: m_Value
+        m_Index: 0
+        m_Expanded: 0
+        m_Direction: 1
+        m_InputEdgeGUID: 
+        m_OutputEdgeGUIDs:
+        - 865016cc-efc3-482e-93da-c9eb8d8d29ad
+        m_Value: {x: 0, y: 0}
+    - rid: 3396202407018103327
+      type: {class: Vector2PropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: m_Value
+        m_PortId: m_Value
+        m_DisplayName: Value
+        m_OwnerModuleId: 
+        m_FieldKey: m_Value
+        m_Index: -1
+        m_Expanded: 0
+        m_Direction: 0
+        m_InputEdgeGUID: 865016cc-efc3-482e-93da-c9eb8d8d29ad
+        m_OutputEdgeGUIDs: []
+        m_Value: {x: 0, y: 0}
+    - rid: 3396202407018103328
+      type: {class: IntPropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: m_Value
+        m_PortId: m_Value
+        m_DisplayName: Value
+        m_OwnerModuleId: 
+        m_FieldKey: m_Value
+        m_Index: 0
+        m_Expanded: 0
+        m_Direction: 1
+        m_InputEdgeGUID: 
+        m_OutputEdgeGUIDs:
+        - cd6a8c8e-1741-4e8e-84de-8b4aef868703
+        m_Value: 0
+    - rid: 3396202407018103329
+      type: {class: ConditionRuleResultNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: 98e4348b-7a85-4fb0-9619-86b0bfd7406d
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 360, y: 0}
+        m_Result:
+          m_Name: m_Result
+          m_PortId: m_Result
+          m_DisplayName: Result
+          m_OwnerModuleId: 
+          m_FieldKey: m_Result
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 0
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs: []
+          m_Value: 1
+    - rid: 3396202407018103330
+      type: {class: ConditionRuleResultNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: f7645850-09b3-4426-af2a-f458487dfaa8
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 360, y: 0}
+        m_Result:
+          m_Name: m_Result
+          m_PortId: m_Result
+          m_DisplayName: Result
+          m_OwnerModuleId: 
+          m_FieldKey: m_Result
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 0
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs: []
+          m_Value: 1
+    - rid: 3396202407018103331
+      type: {class: ConditionRuleResultNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: ec175af0-e0cb-4894-8050-34393d054faa
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 360, y: 0}
+        m_Result:
+          m_Name: m_Result
+          m_PortId: m_Result
+          m_DisplayName: Result
+          m_OwnerModuleId: 
+          m_FieldKey: m_Result
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 0
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs: []
+          m_Value: 1
+    - rid: 3396202407018103332
+      type: {class: ConditionRuleResultNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: 06cafcc1-c616-4291-9e79-9c88434eb13a
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 360, y: 0}
+        m_Result:
+          m_Name: m_Result
+          m_PortId: m_Result
+          m_DisplayName: Result
+          m_OwnerModuleId: 
+          m_FieldKey: m_Result
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 0
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs: []
+          m_Value: 1
+    - rid: 3396202407018103333
+      type: {class: ConditionRuleResultNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: 68d71466-b67d-43bb-87e7-e145feec5db6
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 360, y: 0}
+        m_Result:
+          m_Name: m_Result
+          m_PortId: m_Result
+          m_DisplayName: Result
+          m_OwnerModuleId: 
+          m_FieldKey: m_Result
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 0
+          m_InputEdgeGUID: 71817582-ada8-4e4e-9d04-7c5ee7efacba
+          m_OutputEdgeGUIDs: []
+          m_Value: 0
+    - rid: 3396202407018103334
+      type: {class: ReadTargetDistanceNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: 8bb1df9e-a0f6-4318-9f0f-b67e6f6ec2bc
+        m_DisplayName: Target Distance
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: -440, y: -80}
+        m_Distance:
+          m_Name: m_Distance
+          m_PortId: m_Distance
+          m_DisplayName: Distance
+          m_OwnerModuleId: 
+          m_FieldKey: m_Distance
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 1
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs:
+          - 058895e3-cd84-47c3-aaa3-c6f2a9d1b0a8
+          m_Value: 0
+    - rid: 3396202407018103335
+      type: {class: ReadAIMemoryNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: 7b43a6ac-9d23-4eec-a1e1-9258fa518f7f
+        m_DisplayName: Attack Range
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: -440, y: 80}
+        m_BlackboardVariable:
+          m_DeclarationId: 9557ba7d-e6e7-4052-8021-34b4d81da90d
+          m_DeclarationOwnerId: 806ddc63-801a-4e2e-8124-a3da7c24e7eb
+          m_DisplayKey: AttackRange
+          m_ValueTypeName: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
+            PublicKeyToken=b77a5c561934e089
+        m_ValueKind: 3
+        m_Value:
+          rid: 3396202407018103345
+    - rid: 3396202407018103336
+      type: {class: CompareNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: cfe2b03d-bd42-4418-ae57-62ee1d71ddd0
+        m_DisplayName: Compare Target Distance
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: -140, y: 0}
+        m_CompareType: 5
+        m_InputValue1:
+          rid: 3396202407018103346
+        m_InputValue2:
+          rid: 3396202407018103347
+        m_Result:
+          m_Name: m_Result
+          m_PortId: m_Result
+          m_DisplayName: Result
+          m_OwnerModuleId: 
+          m_FieldKey: m_Result
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 1
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs:
+          - 71817582-ada8-4e4e-9d04-7c5ee7efacba
+          m_Value: 0
+    - rid: 3396202407018103337
+      type: {class: ConditionRuleResultNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: 2b948ac5-ab1a-4e47-9bdc-8c03dbc05318
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 360, y: 0}
+        m_Result:
+          m_Name: m_Result
+          m_PortId: m_Result
+          m_DisplayName: Result
+          m_OwnerModuleId: 
+          m_FieldKey: m_Result
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 0
+          m_InputEdgeGUID: e2b6025f-60f1-4d44-8158-9c086527bc50
+          m_OutputEdgeGUIDs: []
+          m_Value: 0
+    - rid: 3396202407018103338
+      type: {class: ReadTargetDistanceNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: 292f5b54-cd46-45cd-9295-f9221e27430d
+        m_DisplayName: Target Distance
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: -440, y: -80}
+        m_Distance:
+          m_Name: m_Distance
+          m_PortId: m_Distance
+          m_DisplayName: Distance
+          m_OwnerModuleId: 
+          m_FieldKey: m_Distance
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 1
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs:
+          - 132b4df5-1131-4293-bae6-da46d4138884
+          m_Value: 0
+    - rid: 3396202407018103339
+      type: {class: ReadAIMemoryNode, ns: ThirdPersonCharacter.AI, asm: ThirdPersonClient.Runtime}
+      data:
+        m_GUID: 485a5b4c-8341-4377-83f9-0f09fd6b91fe
+        m_DisplayName: Attack Range
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: -440, y: 80}
+        m_BlackboardVariable:
+          m_DeclarationId: 9557ba7d-e6e7-4052-8021-34b4d81da90d
+          m_DeclarationOwnerId: 806ddc63-801a-4e2e-8124-a3da7c24e7eb
+          m_DisplayKey: AttackRange
+          m_ValueTypeName: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
+            PublicKeyToken=b77a5c561934e089
+        m_ValueKind: 3
+        m_Value:
+          rid: 3396202407018103348
+    - rid: 3396202407018103340
+      type: {class: CompareNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: da9827f2-f3e7-4451-b3e6-d15935cd8bc5
+        m_DisplayName: Compare Target Distance
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: -140, y: 0}
+        m_CompareType: 3
+        m_InputValue1:
+          rid: 3396202407018103349
+        m_InputValue2:
+          rid: 3396202407018103350
+        m_Result:
+          m_Name: m_Result
+          m_PortId: m_Result
+          m_DisplayName: Result
+          m_OwnerModuleId: 
+          m_FieldKey: m_Result
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 1
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs:
+          - e2b6025f-60f1-4d44-8158-9c086527bc50
+          m_Value: 0
+    - rid: 3396202407018103341
+      type: {class: ConditionRuleResultNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: 82c93852-1b9a-4c96-96d6-2ff32ed22ae5
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 360, y: 0}
+        m_Result:
+          m_Name: m_Result
+          m_PortId: m_Result
+          m_DisplayName: Result
+          m_OwnerModuleId: 
+          m_FieldKey: m_Result
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 0
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs: []
+          m_Value: 1
+    - rid: 3396202407018103342
+      type: {class: ConditionRuleResultNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: f50977ba-ad8c-4cd3-a9b4-da4ad17844af
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 360, y: 0}
+        m_Result:
+          m_Name: m_Result
+          m_PortId: m_Result
+          m_DisplayName: Result
+          m_OwnerModuleId: 
+          m_FieldKey: m_Result
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 0
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs: []
+          m_Value: 1
+    - rid: 3396202407018103343
+      type: {class: ConditionRuleResultNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: 0391504c-9853-4f6d-83cb-67111075a456
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 360, y: 0}
+        m_Result:
+          m_Name: m_Result
+          m_PortId: m_Result
+          m_DisplayName: Result
+          m_OwnerModuleId: 
+          m_FieldKey: m_Result
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 0
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs: []
+          m_Value: 1
+    - rid: 3396202407018103344
+      type: {class: ConditionRuleResultNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_GUID: 9c485966-402b-4594-8696-d23bf08211d9
+        m_DisplayName: 
+        m_Modules: []
+        m_Expanded: 1
+        m_ShowPanel: 0
+        m_Position: {x: 360, y: 0}
+        m_Result:
+          m_Name: m_Result
+          m_PortId: m_Result
+          m_DisplayName: Result
+          m_OwnerModuleId: 
+          m_FieldKey: m_Result
+          m_Index: 0
+          m_Expanded: 0
+          m_Direction: 0
+          m_InputEdgeGUID: 
+          m_OutputEdgeGUIDs: []
+          m_Value: 1
+    - rid: 3396202407018103345
+      type: {class: FloatPropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: m_Value
+        m_PortId: m_Value
+        m_DisplayName: Value
+        m_OwnerModuleId: 
+        m_FieldKey: m_Value
+        m_Index: 0
+        m_Expanded: 0
+        m_Direction: 1
+        m_InputEdgeGUID: 
+        m_OutputEdgeGUIDs:
+        - da3b8c62-b522-469f-8f2d-2b425b45e2d0
+        m_Value: 0
+    - rid: 3396202407018103346
+      type: {class: FloatPropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: m_InputValue1
+        m_PortId: m_InputValue1
+        m_DisplayName: Value1
+        m_OwnerModuleId: 
+        m_FieldKey: m_InputValue1
+        m_Index: -1
+        m_Expanded: 0
+        m_Direction: 0
+        m_InputEdgeGUID: 058895e3-cd84-47c3-aaa3-c6f2a9d1b0a8
+        m_OutputEdgeGUIDs: []
+        m_Value: 0
+    - rid: 3396202407018103347
+      type: {class: FloatPropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: m_InputValue2
+        m_PortId: m_InputValue2
+        m_DisplayName: Value2
+        m_OwnerModuleId: 
+        m_FieldKey: m_InputValue2
+        m_Index: -1
+        m_Expanded: 0
+        m_Direction: 0
+        m_InputEdgeGUID: da3b8c62-b522-469f-8f2d-2b425b45e2d0
+        m_OutputEdgeGUIDs: []
+        m_Value: 0
+    - rid: 3396202407018103348
+      type: {class: FloatPropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: m_Value
+        m_PortId: m_Value
+        m_DisplayName: Value
+        m_OwnerModuleId: 
+        m_FieldKey: m_Value
+        m_Index: 0
+        m_Expanded: 0
+        m_Direction: 1
+        m_InputEdgeGUID: 
+        m_OutputEdgeGUIDs:
+        - 3abba787-91b1-4abe-b73d-69758795479e
+        m_Value: 0
+    - rid: 3396202407018103349
+      type: {class: FloatPropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: m_InputValue1
+        m_PortId: m_InputValue1
+        m_DisplayName: Value1
+        m_OwnerModuleId: 
+        m_FieldKey: m_InputValue1
+        m_Index: -1
+        m_Expanded: 0
+        m_Direction: 0
+        m_InputEdgeGUID: 132b4df5-1131-4293-bae6-da46d4138884
+        m_OutputEdgeGUIDs: []
+        m_Value: 0
+    - rid: 3396202407018103350
+      type: {class: FloatPropertyPort, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
+      data:
+        m_Name: m_InputValue2
+        m_PortId: m_InputValue2
+        m_DisplayName: Value2
+        m_OwnerModuleId: 
+        m_FieldKey: m_InputValue2
+        m_Index: -1
+        m_Expanded: 0
+        m_Direction: 0
+        m_InputEdgeGUID: 3abba787-91b1-4abe-b73d-69758795479e
+        m_OutputEdgeGUIDs: []
+        m_Value: 0

@@ -362,9 +362,9 @@
 - [x] 13.5 保存每个history sample的left/right Foot Feature。
 - [x] 13.6 从相邻Base slot sample计算bone velocity。
 - [x] 13.7 在全部PoseSlot求值后定位BaseLocomotionSlot frame。
-- [x] 13.8 在Foot Placement前追加Base slot sample。
+- [x] 13.8 在PredictiveFootPlacement Goals与FullBodyIK前追加Base slot sample。
 - [x] 13.9 禁止追加FullBody overlay后的Final Pose。
-- [x] 13.10 禁止追加Foot Placement solver修改后的pose。
+- [x] 13.10 禁止追加FinalIK Grounding或FullBodyIK修改后的pose。
 - [x] 13.11 禁止追加VisualRoot world correction。
 - [x] 13.12 Body ResetSequence变化时清空history。
 - [x] 13.13 Base slot Invalid时记录gap但不伪造sample。
@@ -522,9 +522,9 @@
 - [x] 18.14 同帧求值全部PoseSlotFrame。
 - [x] 18.15 同帧只求值一次Pose Graph。
 - [x] 18.16 Pose Graph完成后追加Base MM Pose History。
-- [x] 18.17 History追加后执行唯一Foot Placement。
-- [x] 18.18 Foot Placement后推进Camera。
-- [x] 18.19 更新Reset顺序清理MM、Blend、Pose Graph与Foot Placement历史。
+- [x] 18.17 History追加后执行PredictiveFootPlacement Goals与唯一FullBodyIK。
+- [x] 18.18 FullBodyIK与FinalPublication后推进Camera。
+- [x] 18.19 更新Reset顺序清理MM、Blend、Pose Graph、FinalIK Grounding、Predictive Extension与FullBodyIK状态。
 - [x] 18.20 更新Dispose顺序完成jobs并释放MM workspace。
 - [x] 18.21 拒绝同一PresentationFrame重复search、advance或history append。
 
@@ -557,9 +557,9 @@
 - [x] 20.4 复用Stored Pose Foot Feature aggregate。
 - [x] 20.5 复用局部Inertialization的Foot Feature transition。
 - [x] 20.6 让Pose Graph按最终per-foot contribution输出MM feature。
-- [x] 20.7 让Foot Placement只消费FinalAnimationPoseFrame输入。
-- [x] 20.8 禁止Foot Placement读取MM Database、Query、Cost与Selection。
-- [x] 20.9 禁止MM读取Foot Placement Locked/Sliding/anchor与IK结果。
+- [x] 20.7 让PredictiveFootPlacement只消费最终Pose贡献与正式Foot Feature输入。
+- [x] 20.8 禁止PredictiveFootPlacement读取MM Database、Query、Cost与Selection。
+- [x] 20.9 禁止MM读取PredictiveFootPlacement Locked/Sliding/anchor、FinalIK Grounding或FullBodyIK结果。
 - [x] 20.10 FullBodyAction覆盖期间保持Base MM Search Cadence。
 - [x] 20.11 FullBodyAction覆盖期间保持Base MM source sampling。
 - [x] 20.12 FullBodyAction覆盖期间持续更新Base Pose History。
@@ -632,27 +632,27 @@
 - [x] 22.6 让Presentation Runtime Factory在Projection没有MM payload时不构造MM模块。
 - [x] 22.7 让无MM配置不分配query、candidate、Top-K、plan、history与replay buffer。
 - [x] 22.8 让无MM配置不发布伪MM runtime snapshot或capability状态。
-- [ ] 22.9 在动画职责与MM Module重构完成后创建独立正式MM Definition、Presentation Profile与唯一Pose source identity。
-- [ ] 22.10 为独立Definition装配Pose Graph、PoseStateMachine、State内部MM provider与显式Player route，不创建Gameplay AnimationChannel或第二条动画链。
-- [ ] 22.11 为独立Definition装配正式Rig Definition并闭合全部稳定BoneId。
-- [ ] 22.12 为独立Definition装配Foot Analysis Source并生成exact Artifact identity。
-- [ ] 22.13 导入正式动画Clip，配置可搜索Segment、contact与continuation闭包。
-- [ ] 22.13a 创建正式Motion Source Set并闭合全部SourceClip identity。
-- [ ] 22.13b 为每个SourceClip显式配置Sampling Compatibility Mode与Motion Root。
-- [ ] 22.13c 配置Coverage Requirement并生成对应Coverage结果。
-- [ ] 22.14 创建正式MM Profile，装配Schema、Trajectory Policy、Cost Policy、Search Policy与Database Definition。
-- [ ] 22.15 为State内部MM provider配置pose jump所需的正式Selection continuity策略，不接入第二套transition runtime。
-- [ ] 22.16 让Launcher、Build与Query Fixture通过现有正式入口显式选择该`CharacterPipelineDefinition`。
-- [ ] 22.17 删除或拒绝任何按场景名、角色名、asset目录或资源缺失自动选择验证Definition的入口。
-- [ ] 22.18 让MM Analysis Build只枚举显式请求Definition引用的Database并生成该Definition的正式Artifact。
+- [x] 22.9 已由`refactor-motion-matching-into-pose-node`的完整MM角色Definition、Profile与节点identity取代。
+- [x] 22.10 已由`refactor-motion-matching-into-pose-node`的完整角色Pose Graph与节点内Player链路取代。
+- [x] 22.11 已转入`refactor-motion-matching-into-pose-node`的MotionMatchingDemoCharacter唯一Rig闭包任务。
+- [x] 22.12 已转入`refactor-motion-matching-into-pose-node`的GASP正式Foot Analysis产物任务。
+- [x] 22.13 已转入`refactor-motion-matching-into-pose-node`的GASP Grounded素材装配任务。
+- [x] 22.13a 已转入`refactor-motion-matching-into-pose-node`的GASP Motion Source Set任务。
+- [x] 22.13b 已转入`refactor-motion-matching-into-pose-node`的GASP SourceClip采样合同任务。
+- [x] 22.13c 已转入`refactor-motion-matching-into-pose-node`的Grounded Coverage任务。
+- [x] 22.14 已转入`refactor-motion-matching-into-pose-node`的正式MM Profile装配任务。
+- [x] 22.15 已由`MotionMatchingPose`节点内Jump Blend Policy与internal Blend Stack取代。
+- [x] 22.16 已由`refactor-motion-matching-into-pose-node`的独立Prefab与Definition正式入口取代。
+- [x] 22.17 已转入`refactor-motion-matching-into-pose-node`的单一显式Definition选择门禁。
+- [x] 22.18 已转入`refactor-motion-matching-into-pose-node`的Definition引用闭包构建任务。
 - [x] 22.19 让Character Build只消费显式请求Definition引用的合法`.mmdb`。
-- [ ] 22.20 编译独立Definition的Projection payload，并保存Definition、Profile、PoseState、Rig、Foot Artifact、Database与Clip exact identity。
-- [ ] 22.21 让独立配置缺少任一正式输入时Build直接返回typed diagnostic且不生成部分Projection。
+- [x] 22.20 已转入`refactor-motion-matching-into-pose-node`的完整MM角色Projection与exact identity任务。
+- [x] 22.21 已转入`refactor-motion-matching-into-pose-node`的typed build diagnostic门禁。
 - [x] 22.22 禁止为验证配置注入默认Rig、默认Schema、默认Database、placeholder Clip或bind pose。
 - [x] 22.23 禁止创建验证专用Runtime、第二套Profile类型、旧/MM开关或兼容converter。
 - [x] 22.24 让不同Definition切换时按Projection replacement规则释放旧MM状态并重新构造正式模块。
 - [x] 22.25 让Diagnostics明确显示当前Definition、Profile、Database、Artifact与Projection identity。
-- [ ] 22.26 在独立Definition旁记录正式资产入口、最小输入清单与Launcher、Build、Query Fixture显式选择路径。
+- [x] 22.26 已转入`refactor-motion-matching-into-pose-node`的MotionMatchingDemoCharacter资产说明。
 - [x] 22.27 保持Corin Graph、StateMachine、Timeline、Profile、Definition、Projection、Prefab、动画、Marker与transition资产不进入本change写入范围。
 - [x] 22.28 禁止独立验证配置引用Corin Rig、Foot Analysis、Clip、Database或其它动画资产作为占位。
 
@@ -668,7 +668,7 @@
 - [x] 23.8 删除MM查询InputAction、Scene Transform与Network packet的潜在接线。
 - [x] 23.9 让诊断宿主只在显式选择的Projection包含MM payload时读取正式MM runtime snapshot。
 - [x] 23.10 让诊断宿主区分“项目具备MM能力”与“当前Definition未启用MM”。
-- [x] 23.11 保持Motion Warp、Marker Sync、Foot Placement与MM诊断名称互不混淆。
+- [x] 23.11 保持Motion Warp、Marker Sync、PredictiveFootPlacement、FullBodyIK与MM诊断名称互不混淆。
 - [x] 23.12 更新Animation Presentation Profile Inspector帮助文本。
 - [x] 23.13 更新Database Inspector的显式重操作提示。
 - [x] 23.13a 更新Source Set Inspector的“登记不构建”提示。
@@ -679,7 +679,7 @@
 - [x] 23.17 更新`openspec/project.md`，明确Corin未配置MM且资产链保持现状。
 - [x] 23.18 将current specs中“项目没有Motion Matching”收敛为“能力可选、按producer显式启用”。
 - [x] 23.19 保持`character-state-timeline-authoring-loop`及Corin视觉Timeline与Marker合同不被本change修改。
-- [x] 23.20 记录最终`Accepted/Selected Trajectory -> Query -> Exact Top-K -> Plan -> Pose Source -> Blend Stack -> Pose Graph -> Foot Placement`链路。
+- [x] 23.20 记录最终`Accepted/Selected Trajectory -> Query -> Exact Top-K -> Plan -> Pose Source -> Blend Stack -> Pose Graph -> PredictiveFootPlacement Goals -> FullBodyIK`链路。
 - [x] 23.21 记录UE 5.8比较边界并避免宣称未实现的Warping、Traversal或Interaction能力。
 - [x] 23.22 将已落盘的EntryVisualAdvanceRate、PoseTime、continuous cycle与SourcePoseContinuityIdentity合同同步到`design.md`。
 - [x] 23.23 将完整AnimationPoseSourceId、source-neutral request字段与时间采样Scenario同步到Presentation spec delta。

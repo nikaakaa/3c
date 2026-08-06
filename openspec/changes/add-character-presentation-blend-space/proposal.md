@@ -20,7 +20,7 @@ Unity 的 Animator Controller BlendTree不能直接复用：它会引入另一�
 - Projection Compiler把Blend Space authoring编译为固定样本表、权重求解数据、canonical phase映射、Foot Analysis绑定、参数策略和有界workspace；Runtime不读取authoring asset、不动态构建三角关系、不搜索资源。
 - `BlendSpacePlayer`内部只拥有同一Blend Space来源内的参数插值、canonical phase到各样本时间的映射、多clip加权采样和source-local feature聚合。跨State source同步与过渡由PoseState transition edge拥有，Action来源切换由AnimationSlot拥有，单Pose跳变平滑仍由显式`Inertialization`拥有。
 - 时间策略必须在资产上显式选择`SharedNormalizedPhase`或`MarkerSynchronizedPhase`，不得在标记缺失时自动退回normalized time。Marker模式使用稳定Phase Reference Sample和统一MarkerId拓扑，参数变化不会动态更换phase leader。
-- Foot Analysis按每个真实样本clip生成和绑定；Runtime用与骨骼姿势相同的最终样本权重聚合左右脚feature与source contribution，之后仍由唯一FootPlacement节点消费。
+- Foot Analysis按每个真实样本clip生成和绑定；Runtime用与骨骼姿势相同的最终样本权重聚合左右脚feature与source contribution，之后仍由唯一`PredictiveFootPlacement` Goal Source消费。
 - 在正式Character Animation Authoring Workspace中增加Blend Space资产模式：Navigator、参数空间视图、Details、Preview、编译诊断和引用关系使用现有workspace外壳，不创建旧Workbench或第二个编辑器体系。
 - Pose Graph Details与Live Debug显示参数值、落点、有效样本、归一化权重、canonical phase、每样本有效时间、foot contribution和Projection revision；Preview与Runtime执行同一编译计划。
 - Character Document v3通过共享Pose capability表达BlendSpacePlayer typed payload与Profile source binding；Blend Space资源正文、generated payload和运行时权重继续只读，且不增加专用MCP action。
@@ -68,7 +68,7 @@ Unity 的 Animator Controller BlendTree不能直接复用：它会引入另一�
 - 不把Animancer MixerState作为权重、时钟或同步权威；只复用其可见算法语义和现有采样后端。
 - 不提供`Direct`模式。显式权重组合已经由BlendPose、LayeredBoneBlend和AdditivePose表达，新增Direct会形成重复权威。
 - 不提供`SimpleDirectional2D`、嵌套Blend Space、任意子图或动态运行时样本增删。当前正式目录只覆盖项目移动业务需要且能与Animancer公开算法逐一对应的三种模式。
-- 不在Blend Space里执行Gameplay状态选择、Motion Matching查询、Root Motion移动决策、跨来源CrossFade、惯性、FootPlacement或最终Animator输出。
+- 不在Blend Space里执行Gameplay状态选择、Motion Matching查询、Root Motion移动决策、跨来源CrossFade、惯性、PredictiveFootPlacement、FullBodyIK或最终Animator输出。
 - 不增加Pose专用MCP action、任意SerializedProperty写入或第二个Presentation authoring服务。
 
 ## Breaking Changes
@@ -83,6 +83,6 @@ Unity 的 Animator Controller BlendTree不能直接复用：它会引入另一�
 
 - 作者能在正式workspace创建、编辑、编译和预览三种正式Blend Space资产，并在Pose Graph中通过显式BlendSpacePlayer使用它们。
 - 参数落点在Preview与Runtime得到相同的稳定SampleId集合、归一化权重、canonical phase、样本时间、Pose Parameter和Foot feature贡献。
-- BlendSpacePlayer、BlendStack、MarkerSync、Inertialization和FootPlacement各自只有一项清晰职责，代码链中没有第二个权重、过渡、同步或IK权威。
+- BlendSpacePlayer、BlendStack、MarkerSync、Inertialization、PredictiveFootPlacement Goal Source与FullBodyIK各自只有一项清晰职责，代码链中没有第二个权重、过渡、同步、Grounding或IK权威。
 - Corin正式Profile、Projection和Pose Graph只走PoseState持续Locomotion链；后续Blend Space演示拥有独立Definition、Profile和Pose Graph，不污染当前双端帧同步验证配置。
 - Character Document v3能往返BlendSpacePlayer与Profile binding；Blend Space资源正文和generated诊断保持只读。

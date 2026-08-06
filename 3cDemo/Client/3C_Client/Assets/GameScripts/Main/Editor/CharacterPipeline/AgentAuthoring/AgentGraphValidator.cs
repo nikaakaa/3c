@@ -100,6 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 IndexBlackboardDeclarations(topology);
                 ValidateAnimationChannels(topology, definition.AnimationPresentationProfile);
+                ValidateLinkedPose(definition.AnimationPresentationProfile);
                 ValidateAnimationMarkerSync(topology);
                 var actionTargetIssues = new List<ActionTargetAuthoringIssue>();
                 ActionTargetAuthoringValidation.Collect(topology, actionTargetIssues);
@@ -189,6 +190,78 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             ValidatePresentationControlBoundary(
                 presentation,
                 actionTrackChannels);
+        }
+
+        void ValidateLinkedPose(
+            CharacterAnimationPresentationProfile presentation)
+        {
+            if (!presentation)
+                return;
+            var configurationErrors = new List<string>();
+            presentation.CollectConfigurationErrors(configurationErrors);
+            for (int i = 0; i < configurationErrors.Count; i++)
+            {
+                m_Report.Error(
+                    "definition.animationPresentationProfile.linkedPose",
+                    "linked_pose_profile_invalid",
+                    configurationErrors[i]);
+            }
+            var entriesByOwner = new Dictionary<
+                CharacterPresentationPoseGraphAsset,
+                HashSet<PoseGraphId>>();
+            foreach (CharacterLinkedPoseImplementationAsset implementation in
+                     presentation.LinkedPoseImplementations)
+            {
+                if (!implementation)
+                    continue;
+                string implementationPath =
+                    "definition.animationPresentationProfile.linkedPoseImplementation:" +
+                    implementation.ImplementationId.Value;
+                try
+                {
+                    implementation.RequireValid();
+                    foreach (CharacterLinkedPoseImplementationEntryBinding entry in
+                             implementation.Entries)
+                    {
+                        CharacterTypedPoseGraph graph = entry.RequireValid();
+                        CharacterLinkedPosePortProjection.RequireEntryGraphMatch(
+                            graph,
+                            implementation.Interface,
+                            entry.EntryId);
+                        if (!entriesByOwner.TryGetValue(
+                                entry.GraphOwner,
+                                out HashSet<PoseGraphId> entryGraphs))
+                        {
+                            entryGraphs = new HashSet<PoseGraphId>();
+                            entriesByOwner.Add(entry.GraphOwner, entryGraphs);
+                        }
+                        entryGraphs.Add(entry.GraphId);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    m_Report.Error(
+                        implementationPath,
+                        "linked_pose_implementation_invalid",
+                        exception.Message);
+                }
+            }
+            foreach (KeyValuePair<CharacterPresentationPoseGraphAsset, HashSet<PoseGraphId>> pair in
+                     entriesByOwner)
+            {
+                IReadOnlyList<string> errors =
+                    CharacterPoseGraphCapabilityValidator.Validate(
+                        pair.Key,
+                        pair.Value);
+                for (int i = 0; i < errors.Count; i++)
+                {
+                    m_Report.Error(
+                        "definition.animationPresentationProfile.linkedPoseGraph:" +
+                        pair.Key.name,
+                        "linked_pose_capability_invalid",
+                        errors[i]);
+                }
+            }
         }
 
         void ValidatePresentationControlBoundary(

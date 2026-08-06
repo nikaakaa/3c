@@ -14,7 +14,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         NoPose = 2,
         Invalid = 3,
         NotCompleted = 4,
-        Stale = 5
+        Stale = 5,
+        Targets = 6,
+        WorldContextUnavailable = 7
     }
 
     public readonly struct AnimationPoseWatchIdentity : IEquatable<AnimationPoseWatchIdentity>
@@ -50,6 +52,46 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public override string ToString() => $"{GraphId}@{GraphRevision}/{NodeId}/{(string.IsNullOrEmpty(CallSite) ? "root" : CallSite)}";
     }
 
+    public readonly struct AnimationFullBodyIkGoalSetSnapshot
+    {
+        internal AnimationFullBodyIkGoalSetSnapshot(
+            in CharacterFullBodyIkGoalSetHeader header,
+            int copiedGoalOffset)
+        {
+            FrameSequence = header.FrameSequence;
+            CompletionIdentity = header.CompletionIdentity;
+            RigId = header.RigId.ToString();
+            RigRevision = header.RigRevision.ToString();
+            ProducerOperationIndex = header.ProducerOperationIndex;
+            ProducerCallSiteIndex = header.ProducerCallSiteIndex;
+            GoalOffset = copiedGoalOffset;
+            GoalCount = header.GoalCount;
+            Availability = header.Availability;
+        }
+
+        public ulong FrameSequence { get; }
+        public ulong CompletionIdentity { get; }
+        public string RigId { get; }
+        public string RigRevision { get; }
+        public int ProducerOperationIndex { get; }
+        public int ProducerCallSiteIndex { get; }
+        internal int GoalOffset { get; }
+        public int GoalCount { get; }
+        public CharacterFullBodyIkGoalSetAvailability Availability { get; }
+        public bool IsValid =>
+            FrameSequence != 0 &&
+            CompletionIdentity != 0 &&
+            !string.IsNullOrEmpty(RigId) &&
+            !string.IsNullOrEmpty(RigRevision) &&
+            ProducerOperationIndex >= 0 &&
+            ProducerCallSiteIndex >= 0 &&
+            GoalOffset >= 0 &&
+            GoalCount >= 0 &&
+            GoalCount <= CharacterFullBodyIkGoalSetHeader.MaximumGoalCount &&
+            (Availability == CharacterFullBodyIkGoalSetAvailability.Ready ||
+             Availability == CharacterFullBodyIkGoalSetAvailability.WorldContextUnavailable && GoalCount == 0);
+    }
+
     public readonly struct AnimationPoseWatchSnapshot
     {
         internal AnimationPoseWatchSnapshot(
@@ -59,7 +101,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             int stageIndex,
             CharacterPoseExecutionDomain executionDomain,
             CharacterPoseSpace outputPoseSpace,
-            AnimationFootPlacementSolvedPoseSnapshot footPlacementSolvedPose,
+            AnimationLinkedPoseEntryRuntimeSnapshot linkedPoseEntry,
+            AnimationFullBodyIkGoalSetSnapshot goalSet,
             int poseOffset,
             int boneCount,
             int contributionOffset,
@@ -76,7 +119,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             StageIndex = stageIndex;
             ExecutionDomain = executionDomain;
             OutputPoseSpace = outputPoseSpace;
-            FootPlacementSolvedPose = footPlacementSolvedPose;
+            LinkedPoseEntry = linkedPoseEntry;
+            GoalSet = goalSet;
             PoseOffset = poseOffset;
             BoneCount = boneCount;
             ContributionOffset = contributionOffset;
@@ -94,7 +138,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public int StageIndex { get; }
         public CharacterPoseExecutionDomain ExecutionDomain { get; }
         public CharacterPoseSpace OutputPoseSpace { get; }
-        public AnimationFootPlacementSolvedPoseSnapshot FootPlacementSolvedPose { get; }
+        public AnimationLinkedPoseEntryRuntimeSnapshot LinkedPoseEntry { get; }
+        public AnimationFullBodyIkGoalSetSnapshot GoalSet { get; }
         internal int PoseOffset { get; }
         public int BoneCount { get; }
         internal int ContributionOffset { get; }
@@ -104,44 +149,5 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public float OutputWeight { get; }
         public ulong ContinuityIdentity { get; }
         public ulong CompletionIdentity { get; }
-    }
-
-    public readonly struct AnimationFootPlacementSolvedPoseSnapshot
-    {
-        internal AnimationFootPlacementSolvedPoseSnapshot(
-            CharacterComponentBonePose pelvis,
-            CharacterComponentBonePose leftHip,
-            CharacterComponentBonePose leftKnee,
-            CharacterComponentBonePose leftAnkle,
-            CharacterComponentBonePose rightHip,
-            CharacterComponentBonePose rightKnee,
-            CharacterComponentBonePose rightAnkle)
-        {
-            if (!pelvis.IsValid || !leftHip.IsValid || !leftKnee.IsValid ||
-                !leftAnkle.IsValid || !rightHip.IsValid || !rightKnee.IsValid ||
-                !rightAnkle.IsValid)
-            {
-                throw new ArgumentException("Foot Placement solved Pose Watch result is invalid.");
-            }
-            Pelvis = pelvis;
-            LeftHip = leftHip;
-            LeftKnee = leftKnee;
-            LeftAnkle = leftAnkle;
-            RightHip = rightHip;
-            RightKnee = rightKnee;
-            RightAnkle = rightAnkle;
-        }
-
-        public CharacterComponentBonePose Pelvis { get; }
-        public CharacterComponentBonePose LeftHip { get; }
-        public CharacterComponentBonePose LeftKnee { get; }
-        public CharacterComponentBonePose LeftAnkle { get; }
-        public CharacterComponentBonePose RightHip { get; }
-        public CharacterComponentBonePose RightKnee { get; }
-        public CharacterComponentBonePose RightAnkle { get; }
-        public bool IsValid =>
-            Pelvis.IsValid && LeftHip.IsValid && LeftKnee.IsValid &&
-            LeftAnkle.IsValid && RightHip.IsValid && RightKnee.IsValid &&
-            RightAnkle.IsValid;
     }
 }

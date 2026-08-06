@@ -9,14 +9,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         static readonly string[] SectionFields =
         {
-            "m_Trace",
-            "m_Contact",
-            "m_Prediction",
-            "m_Constraint",
-            "m_Limb",
-            "m_Pelvis",
-            "m_Rotation",
-            "m_Smoothing"
+            "m_ProfileId",
+            "m_Revision",
+            "m_FinalIkGrounding",
+            "m_PredictiveExtension"
         };
 
         public override void OnInspectorGUI()

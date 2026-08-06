@@ -19,7 +19,10 @@ namespace ThirdPersonCharacter.Pipeline
     {
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterAnimationPresentationRuntime m_Playback;
-        readonly CharacterFootPlacementRuntime m_FootPlacement;
+        readonly CharacterEquipmentLinkedPoseRuntime m_LinkedPose;
+        readonly CharacterEquipmentPreviewFixture
+            m_EquipmentFixture;
+        readonly CharacterPredictiveFootPlacementGoalSource m_FootPlacement;
         readonly bool m_WorldContextAvailable;
         readonly ActorId m_PreviewActorId;
         readonly Guid m_DiagnosticsOwnerId;
@@ -53,6 +56,7 @@ namespace ThirdPersonCharacter.Pipeline
             CharacterPresentationBodyState bodyFixture,
             CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
+            CharacterEquipmentPreviewFixture equipmentFixture,
             TimelineData timeline,
             Guid previewSessionId)
         {
@@ -66,7 +70,14 @@ namespace ThirdPersonCharacter.Pipeline
             CharacterPresentationSemanticContract contract =
                 Float32CharacterPresentationContractAdapter.Create(program);
             m_Projection.RequireContract(contract);
+            m_Projection.RequirePosePayload();
+            m_Projection.RequireTuningPayload();
             m_PreviewActorId = new ActorId($"AnimationPreview/{previewSessionId:N}");
+            m_LinkedPose = new CharacterEquipmentLinkedPoseRuntime(
+                m_PreviewActorId,
+                m_Projection);
+            m_EquipmentFixture = equipmentFixture;
+            CaptureLinkedPoseSelections();
             m_DiagnosticsOwnerId = previewSessionId;
             m_TimelineActionPreview =
                 new TimelineActionPreviewAdapter(
@@ -92,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline
                     CharacterBodyPresentationSourceMode.CommittedStream,
                     m_Projection);
             CharacterAnimationPresentationRuntime playback = null;
-            CharacterFootPlacementRuntime footPlacement = null;
+            CharacterPredictiveFootPlacementGoalSource footPlacement = null;
             try
             {
                 playback = new CharacterAnimationPresentationRuntime(
@@ -108,38 +119,44 @@ namespace ThirdPersonCharacter.Pipeline
                     AnimationPresentationDiagnosticsInterest.OperationDetail |
                     AnimationPresentationDiagnosticsInterest.FinalPoseDetail);
                 motionMatching = null;
-                if (m_Projection.PosePlan.FootPlacementNodes.Count == 1 && worldAwareBinding)
+                if (m_Projection.PosePlan.PredictiveFootPlacements.Count == 1 && worldAwareBinding)
                 {
                     worldAwareBinding.RequireValid();
                     if (!physicsScene.IsValid())
                         throw new InvalidOperationException("Pose Graph Preview Foot Placement requires the target Scene PhysicsScene.");
-                    CharacterRuntimeDebugProgram debugProgram =
-                        CharacterRuntimeDebugProgramBuilder.Build(program);
-                    var diagnostics = new RuntimeDiagnosticsContext(
-                        Guid.NewGuid(),
-                        Guid.NewGuid(),
-                        debugProgram.Revision,
-                        debugProgram.SourceMap,
-                        new RuntimeDiagnosticsStore());
-                    CharacterPresentationFootPlacementNodeDescriptor descriptor =
-                        m_Projection.PosePlan.FootPlacementNodes[0];
+                    CharacterPresentationPredictiveFootPlacementDescriptor descriptor =
+                        m_Projection.PosePlan.PredictiveFootPlacements[0];
+                    CharacterFootPlacementPublicationValidation.Require(m_Projection, descriptor.Calibration);
                     var rig = new CharacterFootPlacementPoseRig(
                         descriptor.Calibration,
                         m_Projection.Rig,
                         animationRigBinding,
                         worldAwareBinding);
                     rig.RequireValid();
-                    footPlacement = new CharacterFootPlacementRuntime(
+                    footPlacement = new CharacterPredictiveFootPlacementGoalSource(
                         m_PreviewActorId,
                         descriptor.Profile.BuildSettings(m_Projection, rig),
                         rig,
-                        physicsScene,
-                        diagnostics);
+                        physicsScene);
                 }
+                var tuningTarget = new CharacterPoseTuningTargetIdentity(
+                    m_PreviewActorId.Value,
+                    m_Projection.ProgramId,
+                    m_Projection.ProjectionRevision,
+                    m_Projection.PosePlan.PlanHash,
+                    m_Projection.Rig.RigId,
+                    m_Projection.Rig.RigRevision,
+                    m_Projection.TuningLayout.LayoutHash);
+                playback.SetTuningBinding(
+                    new CharacterPoseTuningRuntimeBinding(
+                        tuningTarget,
+                        m_Projection.TuningLayout,
+                        m_Projection.TuningDefaultBlock,
+                        m_Projection.PublishedParameterRevision));
                 m_Playback = playback;
                 m_FootPlacement = footPlacement;
                 m_WorldContextAvailable =
-                    m_Projection.PosePlan.FootPlacementNodes.Count == 0 ||
+                    m_Projection.PosePlan.PredictiveFootPlacements.Count == 0 ||
                     m_FootPlacement != null;
             }
             catch
@@ -156,8 +173,68 @@ namespace ThirdPersonCharacter.Pipeline
         public AnimationPresentationDebugView DebugView =>
             m_Playback.DebugView;
         public CharacterPosePlanStageSnapshot PosePlanStages => m_PosePlanStages;
-        public CharacterFootPlacementFrameSnapshot FootPlacementSnapshot =>
-            m_FootPlacement?.Snapshot ?? default;
+
+        internal CharacterPoseTuningRuntimeState TuningState =>
+            m_Playback.TuningState;
+
+        internal CharacterPoseTuningLayout TuningLayout =>
+            m_Projection.TuningLayout;
+
+        internal CharacterPoseTuningParameterBlock ActiveTuningBlock =>
+            m_Playback.ActiveTuningBlock;
+
+        internal bool SubmitPoseTuningCandidate(
+            string sourceAuthoringRevision,
+            string candidateRevision,
+            CharacterPoseTuningParameterBlock block,
+            out string error)
+        {
+            if (m_Projection.TuningLayout == null || block == null)
+            {
+                error = "Pose tuning payload is unavailable for this preview target.";
+                return false;
+            }
+            var target = new CharacterPoseTuningTargetIdentity(
+                m_PreviewActorId.Value,
+                m_Projection.ProgramId,
+                m_Projection.ProjectionRevision,
+                m_Projection.PosePlan.PlanHash,
+                m_Projection.Rig.RigId,
+                m_Projection.Rig.RigRevision,
+                m_Projection.TuningLayout.LayoutHash);
+            return m_Playback.SubmitTuningCandidate(
+                new CharacterPoseTuningCandidate(
+                    target,
+                    sourceAuthoringRevision,
+                    candidateRevision,
+                    block),
+                out error);
+        }
+
+        internal bool SubmitPoseTuningCandidate(
+            CharacterPoseTuningCandidate candidate,
+            out string error) =>
+            m_Playback.SubmitTuningCandidate(candidate, out error);
+
+        internal void ClearPendingPoseTuningCandidate() =>
+            m_Playback.ClearPendingTuningCandidate();
+
+        public void SetLinkedPosePreviewOverride(
+            LinkedPoseGroupId groupId,
+            LinkedPoseImplementationId implementationId)
+        {
+            m_LinkedPose.SetPreviewOverride(groupId, implementationId);
+        }
+
+        public void ClearLinkedPosePreviewOverride(LinkedPoseGroupId groupId)
+        {
+            m_LinkedPose.ClearPreviewOverride(groupId);
+        }
+
+        public void ClearLinkedPosePreviewOverrides()
+        {
+            m_LinkedPose.ClearPreviewOverrides();
+        }
 
         public void ConfigureMarkerSyncSource(
             string targetTimelineAuthoringId,
@@ -306,6 +383,7 @@ namespace ThirdPersonCharacter.Pipeline
                 session.PresentationDeltaSeconds,
                 in bodyFrame,
                 in factFrame,
+                m_LinkedPose.Session,
                 m_FootPlacement,
                 null);
             m_PosePlanStages = CharacterPosePlanStageSnapshotFactory.Preview(
@@ -374,6 +452,7 @@ namespace ThirdPersonCharacter.Pipeline
                     in bodyFrame,
                     in factFrame,
                     in parameterFrame,
+                    m_LinkedPose.Session,
                     m_FootPlacement,
                     null);
             }
@@ -386,6 +465,7 @@ namespace ThirdPersonCharacter.Pipeline
                     presentationDeltaSeconds,
                     in bodyFrame,
                     in factFrame,
+                    m_LinkedPose.Session,
                     m_FootPlacement,
                     null);
             }
@@ -428,6 +508,7 @@ namespace ThirdPersonCharacter.Pipeline
                     0f,
                     in bodyFrame,
                     in factFrame,
+                    m_LinkedPose.Session,
                     m_FootPlacement,
                     null);
             m_PosePlanStages =
@@ -472,6 +553,7 @@ namespace ThirdPersonCharacter.Pipeline
                     0f,
                     in bodyFrame,
                     in factFrame,
+                    m_LinkedPose.Session,
                     m_FootPlacement,
                     null);
                 m_PosePlanStages = CharacterPosePlanStageSnapshotFactory.Preview(
@@ -481,6 +563,8 @@ namespace ThirdPersonCharacter.Pipeline
                 ForgetReleasedPreviewPlaybacks();
             }
             m_Playback.Reset(PoseDiscontinuityResetReason.PreviewSeek);
+            m_LinkedPose.Reset();
+            CaptureLinkedPoseSelections();
             ResetFootPlacement(tickValue);
             m_TimelineActionPreview.Reset();
             m_Active.Clear();
@@ -591,6 +675,25 @@ namespace ThirdPersonCharacter.Pipeline
                     CharacterBodyPresentationResetReason.Initialization));
         }
 
+        void CaptureLinkedPoseSelections()
+        {
+            if (m_Projection.LinkedPose.EquipmentSelectors.Count == 0)
+            {
+                m_LinkedPose.Capture(
+                    Array.Empty<EquipmentVisualSelection>());
+                return;
+            }
+            if (!m_EquipmentFixture)
+            {
+                throw new InvalidOperationException(
+                    "Linked Pose Preview requires an explicit CharacterEquipmentPreviewFixture with committed Equipment selections.");
+            }
+            m_LinkedPose.Capture(
+                m_EquipmentFixture.BuildSelections(
+                    m_PreviewActorId,
+                    m_Projection.LinkedPose));
+        }
+
         void PrepareComparisonSource(
             PreviewSession session,
             SimulationTick tick,
@@ -647,6 +750,7 @@ namespace ThirdPersonCharacter.Pipeline
                     0f,
                     in bodyFrame,
                     in factFrame,
+                    m_LinkedPose.Session,
                     m_FootPlacement,
                     null);
                 m_PosePlanStages = CharacterPosePlanStageSnapshotFactory.Preview(

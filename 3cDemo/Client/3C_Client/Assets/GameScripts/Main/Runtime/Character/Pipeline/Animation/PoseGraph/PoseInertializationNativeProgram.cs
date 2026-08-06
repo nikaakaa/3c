@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using Unity.Collections;
@@ -78,6 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal ulong AccumulatorGeneration;
         internal float ElapsedSeconds;
         internal float LastDeltaSeconds;
+        internal float ActiveDurationSeconds;
         internal int HistoryPage;
         internal int ActiveRuleIndex;
         internal byte HasHistory;
@@ -146,11 +148,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         NativeArray<UnityEngine.Vector3> m_AngularVelocityResiduals;
         NativeArray<UnityEngine.Vector3> m_ScaleVelocityResiduals;
         NativeArray<float> m_ParameterResiduals;
+        NativeArray<byte> m_ResetRequests;
         Page m_CommittedPage;
         Page m_PendingPage;
         readonly int m_BoneCount;
         readonly int m_ParameterCount;
         readonly int m_SlotNodeOffset;
+        readonly CharacterPresentationPosePlan m_Plan;
         bool m_FrameOpen;
         bool m_Disposed;
 
@@ -163,6 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(plan));
             plan.RequireValid();
             plan.RequireInertializationValid();
+            m_Plan = plan;
             m_BoneCount = plan.PoseBoneCount;
             m_ParameterCount = plan.Parameters.Count;
             m_SlotNodeOffset = plan.Inertializations.Count;
@@ -217,6 +222,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_AngularVelocityResiduals = Allocate<UnityEngine.Vector3>(residualBoneCount, true);
             m_ScaleVelocityResiduals = Allocate<UnityEngine.Vector3>(residualBoneCount, true);
             m_ParameterResiduals = Allocate<float>(checked(nodeCount * m_ParameterCount), true);
+            m_ResetRequests = Allocate<byte>(nodeCount, true);
             m_CommittedPage = CaptureActivePage();
             m_PendingPage = AllocatePage(nodeCount);
             Compile(plan, curves, profiles);
@@ -228,7 +234,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_FrameOpen)
                 throw new InvalidOperationException("Pose Inertialization frame is already open.");
             BindPage(m_PendingPage);
+            for (int i = 0; i < m_ResetRequests.Length; i++)
+                m_ResetRequests[i] = 0;
             m_FrameOpen = true;
+        }
+
+        internal void RequestReset(int stateIndex)
+        {
+            RequireAlive();
+            RequireOpenFrame();
+            if ((uint)stateIndex >= (uint)m_ResetRequests.Length)
+                throw new ArgumentOutOfRangeException(nameof(stateIndex));
+            m_ResetRequests[stateIndex] = 1;
         }
 
         internal void CommitFrame()
@@ -276,6 +293,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<UnityEngine.Vector3> AngularVelocityResiduals => m_AngularVelocityResiduals;
         internal NativeArray<UnityEngine.Vector3> ScaleVelocityResiduals => m_ScaleVelocityResiduals;
         internal NativeArray<float> ParameterResiduals => m_ParameterResiduals;
+        internal NativeArray<byte> ResetRequests => m_ResetRequests;
         internal NativeArray<PoseInertializationNativeState> CommittedStates => m_CommittedPage.States;
         internal NativeArray<AnimationLocalBonePose> CommittedHistoryPoses => m_CommittedPage.HistoryPoses;
         internal NativeArray<AnimationBlendBoneVelocity> CommittedHistoryVelocities => m_CommittedPage.HistoryVelocities;
@@ -331,7 +349,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (state.Active == 0 || (uint)state.ActiveRuleIndex >= (uint)m_Rules.Length)
                 return 1f;
             PoseInertializationNativeRule rule = m_Rules[state.ActiveRuleIndex];
-            float duration = rule.DurationSeconds * m_DenseProfiles[rule.ProfileOffset + boneIndex];
+            float duration = state.ActiveDurationSeconds *
+                             m_DenseProfiles[rule.ProfileOffset + boneIndex];
             if (duration <= 0f || state.ElapsedSeconds >= duration)
                 return 1f;
             float normalized = Mathf.Clamp01(state.ElapsedSeconds / duration);
@@ -344,6 +363,188 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float h11 = s3 - s2;
             return Mathf.Clamp01(curve - startDerivative * h10 - endDerivative * h11);
         }
+
+        internal string ApplyTuning(
+            CharacterPoseTuningLayout layout,
+            CharacterPoseTuningParameterBlock block)
+        {
+            if (layout == null || block == null)
+                return "Pose Inertialization tuning payload is missing.";
+            if (m_FrameOpen)
+                return "Pose Inertialization tuning cannot change during an open frame.";
+            var rules = new PoseInertializationNativeRule[m_Rules.Length];
+            for (int i = 0; i < rules.Length; i++)
+                rules[i] = m_Rules[i];
+            for (int entryIndex = 0;
+                 entryIndex < layout.Entries.Count;
+                 entryIndex++)
+            {
+                CharacterPoseTuningLayoutEntry entry =
+                    layout.Entries[entryIndex];
+                if (entry.Interaction !=
+                        CharacterPoseTuningInteractionPolicy.TunableDefault ||
+                    entry.ApplyTiming !=
+                        CharacterPoseTuningApplyTiming.NextActivation ||
+                    !entry.FieldId.EndsWith(
+                        "/duration-seconds",
+                        StringComparison.Ordinal))
+                {
+                    continue;
+                }
+                CharacterPoseTuningValue value = block.GetValue(entry);
+                if (value.Kind != CharacterPoseTuningValueKind.Float ||
+                    !float.IsFinite(value.FloatValue) ||
+                    value.FloatValue <= 0f)
+                {
+                    return $"Pose Inertialization duration '{entry.FieldId}' is invalid.";
+                }
+                if (entry.OwnerId.StartsWith(
+                        "pose-inertialization-policy:",
+                        StringComparison.Ordinal))
+                {
+                    ApplyDirectPolicyDuration(
+                        rules,
+                        entry.OwnerId.Substring(
+                            "pose-inertialization-policy:".Length),
+                        value.FloatValue);
+                }
+                else if (entry.OwnerId.StartsWith(
+                             "pose-state-machine:",
+                             StringComparison.Ordinal))
+                {
+                    ApplyStateMachineDuration(
+                        rules,
+                        entry,
+                        value.FloatValue);
+                }
+            }
+            for (int i = 0; i < rules.Length; i++)
+                m_Rules[i] = rules[i];
+            return string.Empty;
+        }
+
+        void ApplyDirectPolicyDuration(
+            PoseInertializationNativeRule[] rules,
+            string policyId,
+            float duration)
+        {
+            for (int descriptorIndex = 0;
+                 descriptorIndex < m_Plan.Inertializations.Count;
+                 descriptorIndex++)
+            {
+                CharacterPresentationInertializationDescriptor descriptor =
+                    m_Plan.Inertializations[descriptorIndex];
+                if (descriptor.TemporalOwnerKind !=
+                        PoseInertializationTemporalOwnerKind.DirectPlayerPolicy ||
+                    !string.Equals(
+                        descriptor.PolicyId,
+                        policyId,
+                        StringComparison.Ordinal))
+                {
+                    continue;
+                }
+                PoseInertializationNativeNode node = m_Nodes[descriptorIndex];
+                for (int ruleOffset = 0;
+                     ruleOffset < node.RuleCount;
+                     ruleOffset++)
+                {
+                    int ruleIndex = node.RuleOffset + ruleOffset;
+                    if (rules[ruleIndex].Mode ==
+                        PoseInertializationMode.Inertialize)
+                    {
+                        rules[ruleIndex] = WithDuration(
+                            rules[ruleIndex],
+                            duration);
+                    }
+                }
+            }
+        }
+
+        void ApplyStateMachineDuration(
+            PoseInertializationNativeRule[] rules,
+            CharacterPoseTuningLayoutEntry entry,
+            float duration)
+        {
+            string machineId = entry.OwnerId.Substring(
+                "pose-state-machine:".Length);
+            const string marker = "/transition:";
+            int start = entry.FieldId.IndexOf(
+                marker,
+                StringComparison.Ordinal);
+            int end = start < 0
+                ? -1
+                : entry.FieldId.IndexOf('/', start + marker.Length);
+            if (start < 0 || end <= start + marker.Length)
+                return;
+            string transitionId = entry.FieldId.Substring(
+                start + marker.Length,
+                end - start - marker.Length);
+            for (int machineIndex = 0;
+                 machineIndex < m_Plan.StateMachines.Count;
+                 machineIndex++)
+            {
+                CharacterPoseStateMachineDescriptor machine =
+                    m_Plan.StateMachines[machineIndex];
+                if (!string.Equals(
+                        machine.StateMachineId.Value,
+                        machineId,
+                        StringComparison.Ordinal))
+                {
+                    continue;
+                }
+                CharacterPoseStateTransitionDescriptor transition =
+                    machine.Transitions.SingleOrDefault(candidate =>
+                        string.Equals(
+                            candidate.TransitionId.Value,
+                            transitionId,
+                            StringComparison.Ordinal));
+                if (transition == null)
+                    return;
+                for (int descriptorIndex = 0;
+                     descriptorIndex < m_Plan.Inertializations.Count;
+                     descriptorIndex++)
+                {
+                    CharacterPresentationInertializationDescriptor descriptor =
+                        m_Plan.Inertializations[descriptorIndex];
+                    if (descriptor.TemporalOwnerKind !=
+                            PoseInertializationTemporalOwnerKind.StateMachineTransition ||
+                        descriptor.InputOwnerIndex != machineIndex)
+                    {
+                        continue;
+                    }
+                    PoseInertializationNativeNode node =
+                        m_Nodes[descriptorIndex];
+                    for (int ruleOffset = 0;
+                         ruleOffset < node.RuleCount;
+                         ruleOffset++)
+                    {
+                        int ruleIndex = node.RuleOffset + ruleOffset;
+                        PoseInertializationNativeRule rule = rules[ruleIndex];
+                        if (rule.SourceEndpointIndex ==
+                                transition.SourceStateIndex &&
+                            rule.TargetEndpointIndex ==
+                                transition.TargetStateIndex)
+                        {
+                            rules[ruleIndex] = WithDuration(rule, duration);
+                        }
+                    }
+                }
+                return;
+            }
+        }
+
+        static PoseInertializationNativeRule WithDuration(
+            PoseInertializationNativeRule rule,
+            float duration) =>
+            new PoseInertializationNativeRule(
+                rule.SourceEndpointIndex,
+                rule.TargetEndpointIndex,
+                rule.Mode,
+                duration,
+                rule.CurveOffset,
+                rule.CurveCount,
+                rule.ProfileOffset,
+                rule.ParameterModeOffset);
 
         void EvaluateCurve(
             PoseInertializationNativeRule rule,
@@ -488,6 +689,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Pose Inertialization frame must close before reset.");
             ClearPage(m_CommittedPage);
             ClearPage(m_PendingPage);
+            for (int i = 0; i < m_ResetRequests.Length; i++)
+                m_ResetRequests[i] = 0;
             BindPage(m_CommittedPage);
         }
 
@@ -504,6 +707,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CommittedPage = null;
             m_PendingPage = null;
             Dispose(ref m_ParameterModes);
+            Dispose(ref m_ResetRequests);
             Dispose(ref m_DenseProfiles);
             Dispose(ref m_CurveSegments);
             Dispose(ref m_Rules);

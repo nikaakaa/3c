@@ -50,7 +50,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static CalibrationEditMode s_EditMode;
         static CharacterFootPlacementRigGeometryReport s_Report;
         static string s_Error = string.Empty;
-        static string s_KneeBendError = string.Empty;
         static readonly Dictionary<int, string> s_LastValidation = new Dictionary<int, string>();
         static bool s_PreviousToolsHidden;
         static bool s_HasToolsHiddenState;
@@ -74,7 +73,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (!source)
                 throw new ArgumentNullException(nameof(source));
-            source.RequireValid();
+            source.RequireCalibrationAuthoringInput();
+            CharacterFootPlacementSamplingRigAuthoringService.SynchronizeBinding(source);
             string path = AssetDatabase.GUIDToAssetPath(source.SamplingRigAssetGuid);
             if (string.IsNullOrEmpty(path))
                 throw new InvalidOperationException("Sampling Rig GUID does not resolve to a Prefab asset.");
@@ -90,13 +90,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 catch (Exception exception)
                 {
                     Detach();
+                    s_LastValidation[source.RigCalibration.GetInstanceID()] = exception.Message;
                     Debug.LogException(exception);
-                    EditorUtility.DisplayDialog(
-                        "Foot Placement Calibration Could Not Open",
-                        exception.Message,
-                        "OK");
                 }
             };
+        }
+
+        public static void RebuildGeometryValidation(CharacterFootPlacementAnalysisSource source)
+        {
+            if (!source)
+                throw new ArgumentNullException(nameof(source));
+            try
+            {
+                CharacterFootPlacementRigGeometryValidationIdentity identity =
+                    CharacterFootPlacementSamplingRigAuthoringService.RebuildGeometryValidation(source);
+                s_LastValidation[source.RigCalibration.GetInstanceID()] =
+                    $"Rig Calibration geometry is valid and published as {identity.GeometryContentHash}.";
+            }
+            catch (Exception exception)
+            {
+                s_LastValidation[source.RigCalibration.GetInstanceID()] = exception.Message;
+                Debug.LogException(exception);
+            }
         }
 
         public static bool IsEditing(CharacterWorldAwarePresentationBinding binding) =>
@@ -156,9 +171,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_EditMode = (CalibrationEditMode)GUILayout.Toolbar(
                 (int)s_EditMode,
                 new[] { "Heel", "Toe" });
-            EditorGUILayout.HelpBox(
-                "Knee Bend is generated from the Calibration Preview Hip / Knee / Ankle pose. The Scene arrow is read-only; choose a preview pose with a clear knee bend instead of editing a pole position.",
-                MessageType.Info);
             if (GUILayout.Button("Frame Active Calibration Control"))
                 FrameActiveControl();
             CharacterFootPlacementFootRigGeometry geometry = s_Side == CharacterFootSide.Left
@@ -172,7 +184,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorGUILayout.TextField("Heel / Toe Height", $"{geometry.ContactGroundError:F4}");
                 EditorGUILayout.TextField("Forward Z Error", $"{geometry.SoleForwardErrorDegrees:F2} degrees / 15 max");
                 EditorGUILayout.TextField("Up Y Error", $"{geometry.SoleUpErrorDegrees:F2} degrees / 15 max");
-                EditorGUILayout.TextField("Automatic Bend Reference Dot", geometry.BendReferenceDot.ToString("F3"));
             }
             if (!string.IsNullOrEmpty(s_Error))
                 EditorGUILayout.HelpBox(s_Error, MessageType.Error);
@@ -189,7 +200,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             }
             EditorGUILayout.HelpBox(
-                "Apply writes Calibration v3 only. Foot-analysis artifacts and Presentation Projection are rebuilt by their explicit Build commands.",
+                "Apply writes Calibration v4 Heel, Toe and Sole geometry only. Foot-analysis artifacts and Presentation Projection are rebuilt by their explicit Build commands.",
                 MessageType.None);
         }
 
@@ -231,9 +242,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void RebuildRig()
         {
-            s_Rig = new CharacterFootPlacementPoseRig(
+            s_Rig = CharacterFootPlacementPoseRig.CreateCalibrationAuthoringRig(
                 s_Source.RigCalibration,
-                new CharacterAnimationRigPayload(s_Source.RigDefinition),
+                s_Source.RigDefinition,
                 s_RigBinding,
                 s_WorldBinding);
         }
@@ -425,6 +436,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ValidateMappingDraft();
             if (!string.IsNullOrEmpty(s_MappingError))
                 return;
+            DeriveSoleFrames();
+            EvaluateDraft();
+            if (s_Report == null || !s_Report.IsValid)
+                return;
             CharacterAnimationRigDefinition definition = s_Source.RigDefinition;
             CharacterFootPlacementRigCalibration calibration = s_Source.RigCalibration;
             int undoGroup = Undo.GetCurrentGroup();
@@ -438,6 +453,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     physical[i] = definition.PhysicalBones[i];
                 for (int i = 0; i < virtualBones.Length; i++)
                     virtualBones[i] = definition.VirtualBones[i];
+                var spine = new AnimationBoneId[definition.SpineBoneCount];
+                for (int i = 0; i < spine.Length; i++)
+                    spine[i] = definition.GetSpineBoneId(i);
                 definition.Configure(
                     definition.RigId,
                     Guid.NewGuid().ToString("N"),
@@ -445,7 +463,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     virtualBones,
                     definition.RootBonePolicy,
                     definition.ScalePolicy,
+                    definition.SolverRootBoneId,
                     new AnimationBoneId(s_PelvisBoneId),
+                    spine,
+                    definition.LeftArm,
+                    definition.RightArm,
                     new CharacterAnimationLegChainDefinition(
                         new AnimationBoneId(s_LeftHipBoneId),
                         new AnimationBoneId(s_LeftKneeBoneId),
@@ -455,7 +477,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         new AnimationBoneId(s_RightHipBoneId),
                         new AnimationBoneId(s_RightKneeBoneId),
                         new AnimationBoneId(s_RightAnkleBoneId),
-                        new AnimationBoneId(s_RightToeBoneId)));
+                        new AnimationBoneId(s_RightToeBoneId)),
+                    definition.HeadBoneId);
                 calibration.Configure(calibration.CalibrationId, definition, s_Left, s_Right);
                 var physicalTransforms = new Transform[s_RigBinding.PhysicalBones.Count];
                 for (int i = 0; i < physicalTransforms.Length; i++)
@@ -464,6 +487,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     s_RigBinding.Animator,
                     new CharacterAnimationRigPayload(definition),
                     physicalTransforms);
+                CharacterFootPlacementRigGeometryValidationPublisher.Publish(s_Source, s_Report);
+                RebuildRig();
+                DeriveSoleFrames();
+                EvaluateDraft();
+                if (s_Report == null || !s_Report.IsValid)
+                    throw new InvalidOperationException("Updated Rig mapping does not produce valid Foot Placement geometry.");
+                calibration.Configure(calibration.CalibrationId, definition, s_Left, s_Right);
+                CharacterFootPlacementRigGeometryValidationPublisher.Publish(s_Source, s_Report);
                 EditorUtility.SetDirty(definition);
                 EditorUtility.SetDirty(calibration);
                 EditorUtility.SetDirty(s_RigBinding);
@@ -596,7 +627,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_Left = s_Source.RigCalibration.Left;
             s_Right = s_Source.RigCalibration.Right;
             DeriveSoleFrames();
-            DeriveKneeBendDirections();
             EvaluateDraft();
             SceneView.RepaintAll();
         }
@@ -604,13 +634,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void Apply()
         {
             DeriveSoleFrames();
-            DeriveKneeBendDirections();
             EvaluateDraft();
             if (s_Report == null || !s_Report.IsValid)
                 return;
             CharacterFootPlacementRigCalibration calibration = s_Source.RigCalibration;
             Undo.RecordObject(calibration, "Apply Foot Placement Rig Calibration");
             calibration.Configure(calibration.CalibrationId, s_Source.RigDefinition, s_Left, s_Right);
+            CharacterFootPlacementRigGeometryValidationPublisher.Publish(s_Source, s_Report);
             EditorUtility.SetDirty(calibration);
             AssetDatabase.SaveAssetIfDirty(calibration);
             LoadDraft();
@@ -629,7 +659,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
             CharacterFootPlacementFootCalibration draft = s_Side == CharacterFootSide.Left ? s_Left : s_Right;
-            Transform hip = s_Side == CharacterFootSide.Left ? s_Rig.LeftHip : s_Rig.RightHip;
             Transform ankle = s_Side == CharacterFootSide.Left ? s_Rig.LeftAnkle : s_Rig.RightAnkle;
             Transform toe = s_Side == CharacterFootSide.Left ? s_Rig.LeftToe : s_Rig.RightToe;
             Color color = s_Side == CharacterFootSide.Left ? new Color(0.2f, 0.75f, 1f) : new Color(1f, 0.55f, 0.2f);
@@ -646,10 +675,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawAxis(soleCenter, soleRotation * Vector3.forward, Color.blue, "Z");
             DrawAxis(soleCenter, soleRotation * Vector3.up, Color.green, "Y");
             DrawAxis(soleCenter, soleRotation * Vector3.right, Color.red, "X");
-            Transform knee = s_Side == CharacterFootSide.Left ? s_Rig.LeftKnee : s_Rig.RightKnee;
-            Handles.color = color;
-            Handles.DrawAAPolyLine(3f, hip.position, knee.position, ankle.position);
-            DrawKneeBendDiagnostic(hip, knee, ankle);
 
             EditorGUI.BeginChangeCheck();
             Vector3 nextHeel = heelPosition;
@@ -671,8 +696,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 draft = new CharacterFootPlacementFootCalibration(
                     ankle.InverseTransformPoint(nextHeel),
                     toe.InverseTransformPoint(nextToe),
-                    draft.SoleFrameLocalRotation,
-                    draft.PreferredBendVisualRootLocalDirection);
+                    draft.SoleFrameLocalRotation);
                 draft = DeriveSoleFrame(draft, ankle, toe);
                 if (s_Side == CharacterFootSide.Left)
                     s_Left = draft;
@@ -694,73 +718,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!string.IsNullOrEmpty(label))
                 Handles.Label(origin + direction * length, label);
         }
-
-        static void DrawKneeBendDiagnostic(Transform hip, Transform knee, Transform ankle)
-        {
-            Vector3 legAxis = ankle.position - hip.position;
-            if (legAxis.sqrMagnitude <= 0.000001f)
-                return;
-            Vector3 projectedKnee = hip.position + Vector3.Project(knee.position - hip.position, legAxis);
-            Vector3 bend = knee.position - projectedKnee;
-            if (bend.sqrMagnitude <= 0.000001f)
-                return;
-            Handles.color = new Color(0f, 1f, 1f, 0.85f);
-            Handles.DrawDottedLine(hip.position, ankle.position, 4f);
-            Handles.DrawAAPolyLine(5f, projectedKnee, knee.position);
-            Handles.ArrowHandleCap(
-                0,
-                knee.position,
-                Quaternion.LookRotation(bend.normalized),
-                HandleUtility.GetHandleSize(knee.position) * 0.12f,
-                EventType.Repaint);
-            Handles.Label(knee.position, "Automatic Knee Bend (Read Only)");
-        }
-
-        static bool TryGetAnimatedKneeBendDirection(CharacterFootSide side, out Vector3 direction)
-        {
-            direction = Vector3.zero;
-            if (s_Rig == null)
-                return false;
-            Transform hip = side == CharacterFootSide.Left ? s_Rig.LeftHip : s_Rig.RightHip;
-            Transform knee = side == CharacterFootSide.Left ? s_Rig.LeftKnee : s_Rig.RightKnee;
-            Transform ankle = side == CharacterFootSide.Left ? s_Rig.LeftAnkle : s_Rig.RightAnkle;
-            Vector3 legAxis = ankle.position - hip.position;
-            if (legAxis.sqrMagnitude <= 0.000001f)
-                return false;
-            Vector3 projectedKnee = hip.position + Vector3.Project(knee.position - hip.position, legAxis);
-            Vector3 worldDirection = knee.position - projectedKnee;
-            if (worldDirection.sqrMagnitude <= 0.000001f)
-                return false;
-            direction = s_Rig.VisualRoot.InverseTransformDirection(worldDirection.normalized).normalized;
-            return direction.sqrMagnitude > 0.000001f;
-        }
-
-        static bool DeriveKneeBendDirections()
-        {
-            if (!TryGetAnimatedKneeBendDirection(CharacterFootSide.Left, out Vector3 leftDirection))
-            {
-                s_KneeBendError = "Left Calibration Preview Hip / Knee / Ankle pose does not define a stable knee bend. Choose a preview frame with a visible knee bend.";
-                return false;
-            }
-            if (!TryGetAnimatedKneeBendDirection(CharacterFootSide.Right, out Vector3 rightDirection))
-            {
-                s_KneeBendError = "Right Calibration Preview Hip / Knee / Ankle pose does not define a stable knee bend. Choose a preview frame with a visible knee bend.";
-                return false;
-            }
-            s_Left = WithKneeBendDirection(s_Left, leftDirection);
-            s_Right = WithKneeBendDirection(s_Right, rightDirection);
-            s_KneeBendError = string.Empty;
-            return true;
-        }
-
-        static CharacterFootPlacementFootCalibration WithKneeBendDirection(
-            CharacterFootPlacementFootCalibration source,
-            Vector3 direction) =>
-            new CharacterFootPlacementFootCalibration(
-                source.HeelContactLocalOffset,
-                source.ToeContactLocalOffset,
-                source.SoleFrameLocalRotation,
-                direction);
 
         static void DrawContact(Vector3 position, bool active, Color color)
         {
@@ -815,8 +772,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return new CharacterFootPlacementFootCalibration(
                 source.HeelContactLocalOffset,
                 source.ToeContactLocalOffset,
-                Quaternion.Inverse(ankle.rotation) * worldRotation,
-                source.PreferredBendVisualRootLocalDirection);
+                Quaternion.Inverse(ankle.rotation) * worldRotation);
         }
 
         static void DeriveSoleFrames()
@@ -906,12 +862,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return $"{side} · Automatic up Y error {diagnostic.Actual:F2} degrees; maximum {diagnostic.Limit:F2}.";
                 case CharacterFootPlacementRigCalibrationDiagnosticCode.FlatGroundCorrectionExceeded:
                     return $"{side} · Flat-ground correction {diagnostic.Actual:F2} degrees; maximum {diagnostic.Limit:F2}.";
-                case CharacterFootPlacementRigCalibrationDiagnosticCode.DegenerateBendPlane:
-                    return $"{side} · Animated knee bend plane is degenerate.";
-                case CharacterFootPlacementRigCalibrationDiagnosticCode.PreferredBendCollinear:
-                    return $"{side} · Knee direction is too close to the leg axis ({diagnostic.Actual:F3}; maximum {diagnostic.Limit:F3}).";
-                case CharacterFootPlacementRigCalibrationDiagnosticCode.PreferredBendOpposesReference:
-                    return $"{side} · Knee direction opposes the animated bend ({diagnostic.Actual:F3}; minimum {diagnostic.Limit:F3}).";
                 case CharacterFootPlacementRigCalibrationDiagnosticCode.FeetGroundMismatch:
                     return $"Both · Left / Right ground height difference {diagnostic.Actual:F4}; maximum {diagnostic.Limit:F4}.";
                 case CharacterFootPlacementRigCalibrationDiagnosticCode.FeetForwardOpposed:
@@ -925,14 +875,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void EvaluateDraft()
         {
-            if (!string.IsNullOrEmpty(s_KneeBendError))
-            {
-                s_Report = null;
-                s_Error = s_KneeBendError;
-                if (s_Source && s_Source.RigCalibration)
-                    s_LastValidation[s_Source.RigCalibration.GetInstanceID()] = s_Error;
-                return;
-            }
             try
             {
                 CharacterFootPlacementRigCalibration.RequireValidDraft(s_Left, s_Right);
@@ -982,7 +924,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 SamplePreviewPose();
                 DeriveSoleFrames();
-                DeriveKneeBendDirections();
                 ValidateMappingDraft();
                 EvaluateDraft();
                 SceneView.RepaintAll();
@@ -1049,7 +990,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_Stage = null;
             s_Report = null;
             s_Error = string.Empty;
-            s_KneeBendError = string.Empty;
             s_MappingError = string.Empty;
         }
     }
@@ -1067,6 +1007,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorGUILayout.TextField("Calibration Id", calibration.CalibrationId.Value);
                 EditorGUILayout.IntField("Schema Version", calibration.SchemaVersion);
                 EditorGUILayout.TextField("Content Revision", calibration.ContentRevision);
+            }
+            CharacterFootPlacementRigGeometryValidationIdentity geometry = calibration.GeometryValidation;
+            if (geometry == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "Geometry Validation is not published. Open a referencing Analysis Source, validate the preview pose, then Apply Calibration Asset.",
+                    MessageType.Error);
+            }
+            else
+            {
+                using (new EditorGUI.DisabledScope(true))
+                {
+                    EditorGUILayout.TextField("Geometry Identity", geometry.IdentityHash);
+                    EditorGUILayout.TextField("Geometry Content", geometry.GeometryContentHash);
+                    EditorGUILayout.TextField("Validated Rig", $"{geometry.RigId}@{geometry.RigRevision}");
+                    EditorGUILayout.TextField("Sampling Rig GUID", geometry.SamplingRigAssetGuid);
+                    EditorGUILayout.TextField("Preview Clip GUID", geometry.PreviewClipAssetGuid);
+                    EditorGUILayout.FloatField("Preview Normalized Time", geometry.PreviewNormalizedTime);
+                }
             }
             EditorGUILayout.HelpBox(
                 "Geometry is authored from an Analysis Source inside its exact Sampling Rig Prefab Stage.",

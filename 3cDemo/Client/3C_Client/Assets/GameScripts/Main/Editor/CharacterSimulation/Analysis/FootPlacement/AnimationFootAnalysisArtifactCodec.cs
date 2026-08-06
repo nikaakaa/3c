@@ -90,12 +90,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             WriteString(writer, value.RigAssetGuid);
             WriteString(writer, value.RigId);
             WriteString(writer, value.RigRevision);
+            WriteString(writer, value.RigContentHash);
             WriteString(writer, value.SamplingRigAssetGuid);
             WriteString(writer, value.SamplingRigDependencyHash);
             WriteString(writer, value.CalibrationAssetGuid);
             WriteString(writer, value.CalibrationId);
             writer.Write(value.CalibrationSchemaVersion);
             WriteString(writer, value.CalibrationRevision);
+            WriteString(writer, value.GeometryValidationIdentity);
+            WriteString(writer, value.GeometryValidationContentHash);
             writer.Write(value.SampleRate);
             writer.Write(value.PlantEnterVerticalSpeed);
             writer.Write(value.PlantExitVerticalSpeed);
@@ -120,8 +123,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var identity = new AnimationFootAnalysisArtifactIdentity(
                 ReadString(reader), ReadString(reader), ReadString(reader), ReadString(reader), ReadString(reader),
                 reader.ReadInt32(), ReadString(reader), ReadString(reader), ReadString(reader),
-                ReadString(reader), ReadString(reader), ReadString(reader), ReadString(reader),
-                reader.ReadInt32(), ReadString(reader), ReadFinite(reader, "sample rate"), ReadFinite(reader, "plant enter vertical speed"),
+                ReadString(reader), ReadString(reader), ReadString(reader), ReadString(reader), ReadString(reader),
+                reader.ReadInt32(), ReadString(reader), ReadString(reader), ReadString(reader),
+                ReadFinite(reader, "sample rate"), ReadFinite(reader, "plant enter vertical speed"),
                 ReadFinite(reader, "plant exit vertical speed"), ReadFinite(reader, "plant enter height"),
                 ReadFinite(reader, "plant exit height"), ReadFinite(reader, "minimum landing segment"),
                 ReadFinite(reader, "maximum landing search"), ReadFinite(reader, "velocity tolerance"),

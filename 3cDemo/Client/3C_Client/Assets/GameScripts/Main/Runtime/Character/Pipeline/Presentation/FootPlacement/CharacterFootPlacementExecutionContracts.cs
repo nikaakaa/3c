@@ -107,6 +107,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentOutOfRangeException(nameof(renderFrame));
             if (!float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f)
                 throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
+            if (upstreamPose.CompletionIdentity == 0)
+                throw new ArgumentException("Foot Placement upstream completion identity is invalid.", nameof(upstreamPose));
             ActorId = actorId;
             RenderFrame = renderFrame;
             PresentationDeltaSeconds = presentationDeltaSeconds;
@@ -116,6 +118,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public ActorId ActorId { get; }
         public ulong RenderFrame { get; }
+        public ulong CompletionIdentity => UpstreamPose.CompletionIdentity;
         public float PresentationDeltaSeconds { get; }
         public CharacterBodyPresentationFrame Body { get; }
         internal CharacterFootPlacementPoseInput UpstreamPose { get; }

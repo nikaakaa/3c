@@ -1,12 +1,52 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonSimulation.DeterministicKcc
 {
     public sealed partial class DeterministicKccWorldSolver
     {
+        void PublishNoProgressDiagnostics(
+            ISimulationDiagnosticsSink diagnostics,
+            SimulationTick tick,
+            ActorId actorId,
+            DeterministicKccMotorResult result)
+        {
+            if (!diagnostics.IsEnabled ||
+                result.Termination != DeterministicKccMovementTermination.BlockedNoProgress)
+            {
+                return;
+            }
+            var contacts = new StringBuilder();
+            for (int i = 0; i < result.NoProgressContactCount; i++)
+            {
+                if (i > 0)
+                    contacts.Append('|');
+                DeterministicKccContact contact = result.NoProgressContactAt(i);
+                contacts
+                    .Append(contact.SurfaceId).Append(':')
+                    .Append(contact.PrimitiveId).Append(':')
+                    .Append(contact.FeatureId.Kind).Append(':')
+                    .Append(contact.FeatureId.Index).Append(':')
+                    .Append(contact.Normal.X.Raw).Append(',')
+                    .Append(contact.Normal.Y.Raw).Append(',')
+                    .Append(contact.Normal.Z.Raw);
+            }
+            diagnostics.PublishWorld(new SimulationWorldTraceRecord(
+                SimulationWorldTraceKind.Collision,
+                "deterministic_kcc_blocked_no_progress",
+                $"confirmations={result.NoProgressConfirmationCount};contacts={contacts}",
+                tick,
+                actorId,
+                Descriptor.ImplementationId,
+                Descriptor.Version,
+                traversalCount: result.NoProgressContactCount,
+                resolveStatus: (uint)result.MovementIterations,
+                disposition: "blocked-no-progress"));
+        }
+
         void PublishDiagnostics(
             ISimulationDiagnosticsSink diagnostics,
             SimulationTick tick,
@@ -20,6 +60,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
             bool hasBlockingContact,
             DeterministicKccContact blockingContact,
             int blockingContactCount,
+            DeterministicKccMovementTermination termination,
+            int noProgressConfirmationCount,
             DeterministicKccQuerySummary summary,
             long elapsedStopwatchTicks)
         {
@@ -34,7 +76,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             diagnostics.PublishWorld(new SimulationWorldTraceRecord(
                 SimulationWorldTraceKind.Collision,
                 "deterministic_kcc_resolve",
-                $"candidates={summary.CandidateCount};contacts={summary.ContactCount};queryIterations={summary.IterationCount};movementIterations={movementIterations};foundAnyGround={ground.FoundAnyGround};baseStable={ground.BaseIsStable};grounded={ground.IsStableOnGround};support={ground.SurfaceId}:{ground.PrimitiveId}:{feature};groundNormalRaw={ground.GroundNormal.X.Raw},{ground.GroundNormal.Y.Raw},{ground.GroundNormal.Z.Raw};innerNormalRaw={ground.InnerNormal.X.Raw},{ground.InnerNormal.Y.Raw},{ground.InnerNormal.Z.Raw};outerNormalRaw={ground.OuterNormal.X.Raw},{ground.OuterNormal.Y.Raw},{ground.OuterNormal.Z.Raw};probeDistanceRaw={ground.ProbeDistance.Raw};denivelationDotRaw={ground.DenivelationNormalDot.Raw};snappingPrevented={ground.SnappingPrevented};ledge={ground.LedgeState};lastMovementGround={ground.LastMovementIterationFoundAnyGround};stepMode={stepDiagnostics.Mode};stepStage={stepDiagnostics.Stage};stepRejection={stepDiagnostics.Rejection};steppedSurface={stepDiagnostics.SteppedSurfaceId};blockingContacts={blockingContactCount};hit={hit};remainingRaw={remaining.X.Raw},{remaining.Y.Raw},{remaining.Z.Raw}",
+                $"candidates={summary.CandidateCount};contacts={summary.ContactCount};queryIterations={summary.IterationCount};movementIterations={movementIterations};termination={termination};noProgressConfirmations={noProgressConfirmationCount};foundAnyGround={ground.FoundAnyGround};baseStable={ground.BaseIsStable};grounded={ground.IsStableOnGround};support={ground.SurfaceId}:{ground.PrimitiveId}:{feature};groundNormalRaw={ground.GroundNormal.X.Raw},{ground.GroundNormal.Y.Raw},{ground.GroundNormal.Z.Raw};innerNormalRaw={ground.InnerNormal.X.Raw},{ground.InnerNormal.Y.Raw},{ground.InnerNormal.Z.Raw};outerNormalRaw={ground.OuterNormal.X.Raw},{ground.OuterNormal.Y.Raw},{ground.OuterNormal.Z.Raw};probeDistanceRaw={ground.ProbeDistance.Raw};denivelationDotRaw={ground.DenivelationNormalDot.Raw};snappingPrevented={ground.SnappingPrevented};ledge={ground.LedgeState};lastMovementGround={ground.LastMovementIterationFoundAnyGround};stepMode={stepDiagnostics.Mode};stepStage={stepDiagnostics.Stage};stepRejection={stepDiagnostics.Rejection};steppedSurface={stepDiagnostics.SteppedSurfaceId};blockingContacts={blockingContactCount};hit={hit};remainingRaw={remaining.X.Raw},{remaining.Y.Raw},{remaining.Z.Raw}",
                 tick,
                 actorId,
                 Descriptor.ImplementationId,
@@ -271,6 +313,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 bool hasBlockingContact,
                 DeterministicKccContact blockingContact,
                 int blockingContactCount,
+                DeterministicKccMovementTermination termination,
+                int noProgressConfirmationCount,
                 DeterministicKccQuerySummary querySummary,
                 DeterministicKccBodyState previousState,
                 long elapsedStopwatchTicks)
@@ -286,6 +330,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 HasBlockingContact = hasBlockingContact;
                 BlockingContact = blockingContact;
                 BlockingContactCount = blockingContactCount;
+                Termination = termination;
+                NoProgressConfirmationCount = noProgressConfirmationCount;
                 QuerySummary = querySummary;
                 PreviousState = previousState;
                 ElapsedStopwatchTicks = elapsedStopwatchTicks;
@@ -302,6 +348,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
             public bool HasBlockingContact;
             public DeterministicKccContact BlockingContact;
             public int BlockingContactCount;
+            public DeterministicKccMovementTermination Termination;
+            public int NoProgressConfirmationCount;
             public DeterministicKccQuerySummary QuerySummary;
             public DeterministicKccBodyState PreviousState;
             public long ElapsedStopwatchTicks;

@@ -23,6 +23,16 @@ MonoBehaviour:
     name: CorinTrainingAIController.AIRootTree
     type: AIControllerTree
     locked: 0
+  - guid: 1633ab0e2fdbeaf489aff42fb2c75838
+    path: Assets/Configs/Character/TrainingEnemy/Pipeline/Graphs/TrainingEnemyCharacterRootTree.asset
+    name: TrainingEnemyCharacterRootTree
+    type: BaseTree
+    locked: 0
+  - guid: 4674f94e68908074ba665ea6d62e928e
+    path: Assets/Configs/Character/TrainingEnemy/Pipeline/AI/Authoring/TrainingEnemyAIController.AIRootTree.asset
+    name: TrainingEnemyAIController.AIRootTree
+    type: AIControllerTree
+    locked: 0
   FolderInfos:
   - path: Assets
     expanded: 0
@@ -37,6 +47,16 @@ MonoBehaviour:
   - path: Assets/Configs/Character/Corin/Pipeline/Graphs
     expanded: 0
   - path: Assets/Configs/Character/Corin/Pipeline/Definition
+    expanded: 0
+  - path: Assets/Configs/Character/TrainingEnemy
+    expanded: 0
+  - path: Assets/Configs/Character/TrainingEnemy/Pipeline
+    expanded: 0
+  - path: Assets/Configs/Character/TrainingEnemy/Pipeline/Graphs
+    expanded: 0
+  - path: Assets/Configs/Character/TrainingEnemy/Pipeline/AI
+    expanded: 0
+  - path: Assets/Configs/Character/TrainingEnemy/Pipeline/AI/Authoring
     expanded: 0
   ShowInfos:
   - type: SubTree

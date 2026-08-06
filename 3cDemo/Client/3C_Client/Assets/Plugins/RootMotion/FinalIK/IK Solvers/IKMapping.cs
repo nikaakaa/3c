@@ -20,6 +20,7 @@ namespace RootMotion.FinalIK {
 			/// The transform.
 			/// </summary>
 			public Transform transform;
+			public IndexedBoneHandle boneHandle = IndexedBoneHandle.Invalid;
 			/// <summary>
 			/// The node in %IK Solver.
 			/// </summary>
@@ -37,6 +38,10 @@ namespace RootMotion.FinalIK {
 			public Quaternion animatedRotation;
 
 			private Transform planeBone1, planeBone2, planeBone3;
+			private IndexedBoneHandle planeBone1Handle = IndexedBoneHandle.Invalid;
+			private IndexedBoneHandle planeBone2Handle = IndexedBoneHandle.Invalid;
+			private IndexedBoneHandle planeBone3Handle = IndexedBoneHandle.Invalid;
+			private IKSolverFullBody solver;
 			private int plane1ChainIndex = -1;
 			private int plane1NodeIndex = -1;
 			private int plane2ChainIndex = -1;
@@ -48,10 +53,19 @@ namespace RootMotion.FinalIK {
 
 			public void Initiate(Transform transform, IKSolverFullBody solver) {
 				this.transform = transform;
+				boneHandle = IndexedBoneHandle.Invalid;
+				this.solver = solver;
 
 				solver.GetChainAndNodeIndexes(transform, out chainIndex, out nodeIndex);
 				//IKSolver.Point point = solver.GetPoint(transform);
 				//this.node = point as IKSolver.Node;
+			}
+
+			public void Initiate(IndexedBoneHandle boneHandle, IKSolverFullBody solver) {
+				transform = null;
+				this.boneHandle = boneHandle;
+				this.solver = solver;
+				solver.GetChainAndNodeIndexes(boneHandle, out chainIndex, out nodeIndex);
 			}
 
 			/// <summary>
@@ -59,18 +73,18 @@ namespace RootMotion.FinalIK {
 			/// </summary>
 			public Vector3 swingDirection {
 				get {
-					return transform.rotation * localSwingAxis;
+					return rotation * localSwingAxis;
 				}
 			}
 
 			public void StoreDefaultLocalState() {
-				defaultLocalPosition = transform.localPosition;
-				defaultLocalRotation = transform.localRotation;
+				defaultLocalPosition = localPosition;
+				defaultLocalRotation = localRotation;
 			}
 			
 			public void FixTransform(bool position) {
-				if (position) transform.localPosition = defaultLocalPosition;
-				transform.localRotation = defaultLocalRotation;
+				if (position) localPosition = defaultLocalPosition;
+				localRotation = defaultLocalRotation;
 			}
 			
 			#region Reading
@@ -89,7 +103,7 @@ namespace RootMotion.FinalIK {
 			 * Calculate length of the bone
 			 * */
 			public void SetLength(BoneMap nextBone) {
-				length = Vector3.Distance(transform.position, nextBone.transform.position);
+				length = Vector3.Distance(this.position, nextBone.position);
 			}
 			
 			/*
@@ -103,7 +117,7 @@ namespace RootMotion.FinalIK {
 			 * Sets the direction to the swing target in local space
 			 * */
 			public void SetLocalSwingAxis(BoneMap bone1, BoneMap bone2) {
-				localSwingAxis = Quaternion.Inverse(transform.rotation) * (bone1.transform.position - bone2.transform.position);
+				localSwingAxis = Quaternion.Inverse(rotation) * (bone1.position - bone2.position);
 			}
 			
 			/*
@@ -111,7 +125,7 @@ namespace RootMotion.FinalIK {
 			 * */
 			public void SetLocalTwistAxis(Vector3 twistDirection, Vector3 normalDirection) {
 				Vector3.OrthoNormalize(ref normalDirection, ref twistDirection);
-				localTwistAxis = Quaternion.Inverse(transform.rotation) * twistDirection;
+				localTwistAxis = Quaternion.Inverse(rotation) * twistDirection;
 			}
 
 			/*
@@ -132,6 +146,19 @@ namespace RootMotion.FinalIK {
 				
 				UpdatePlane(true, true);
 			}
+
+			public void SetPlane(IKSolverFullBody solver, IndexedBoneHandle planeBone1, IndexedBoneHandle planeBone2, IndexedBoneHandle planeBone3) {
+				planeBone1Handle = planeBone1;
+				planeBone2Handle = planeBone2;
+				planeBone3Handle = planeBone3;
+				this.planeBone1 = null;
+				this.planeBone2 = null;
+				this.planeBone3 = null;
+				solver.GetChainAndNodeIndexes(planeBone1, out plane1ChainIndex, out plane1NodeIndex);
+				solver.GetChainAndNodeIndexes(planeBone2, out plane2ChainIndex, out plane2NodeIndex);
+				solver.GetChainAndNodeIndexes(planeBone3, out plane3ChainIndex, out plane3NodeIndex);
+				UpdatePlane(true, true);
+			}
 			
 			/*
 			 * Updates the 3 plane points
@@ -139,22 +166,22 @@ namespace RootMotion.FinalIK {
 			public void UpdatePlane(bool rotation, bool position) {
 				Quaternion t = lastAnimatedTargetRotation;
 
-				if (rotation) defaultLocalTargetRotation = QuaTools.RotationToLocalSpace(transform.rotation, t);
-				if (position) planePosition = Quaternion.Inverse(t) * (transform.position - planeBone1.position);
+				if (rotation) defaultLocalTargetRotation = QuaTools.RotationToLocalSpace(this.rotation, t);
+				if (position) planePosition = Quaternion.Inverse(t) * (this.position - planePosition1);
 			}
 			
 			/*
 			 * Sets the virtual position for this bone
 			 * */
 			public void SetIKPosition() {
-				ikPosition = transform.position;
+				ikPosition = position;
 			}
 
 			/*
 			 * Stores the current rotation for later use.
 			 * */
 			public void MaintainRotation() {
-				maintainRotation = transform.rotation;
+				maintainRotation = rotation;
 			}
 			
 			#endregion Reading
@@ -165,7 +192,7 @@ namespace RootMotion.FinalIK {
 			 * Moves the bone to its virtual position
 			 * */
 			public void SetToIKPosition() {
-				transform.position = ikPosition;
+				position = ikPosition;
 			}
 			
 			/*
@@ -175,11 +202,11 @@ namespace RootMotion.FinalIK {
 				if (fixNode == null) fixNode = solver.GetNode(chainIndex, nodeIndex);
 
 				if (weight >= 1f) {
-					transform.position = fixNode.solverPosition;
+					position = fixNode.solverPosition;
 					return;
 				}
 
-				transform.position = Vector3.Lerp(transform.position, fixNode.solverPosition, weight);
+				position = Vector3.Lerp(position, fixNode.solverPosition, weight);
 			}
 			
 			/*
@@ -194,7 +221,7 @@ namespace RootMotion.FinalIK {
 			 * Positions the bone relative to its 3 plane nodes
 			 * */
 			public void PositionToPlane(IKSolverFullBody solver) {
-				transform.position = GetPlanePosition(solver);
+				position = GetPlanePosition(solver);
 			}
 			
 			/*
@@ -204,32 +231,33 @@ namespace RootMotion.FinalIK {
 				Quaternion r = GetTargetRotation(solver) * defaultLocalTargetRotation;
 
 				if (weight >= 1f) {
-					transform.rotation = r;
+					rotation = r;
 					return;
 				}
 
-				transform.rotation = Quaternion.Lerp(transform.rotation, r, weight);
+				rotation = Quaternion.Lerp(rotation, r, weight);
 			}
 
 			/*
 			 * Swings to the swing target
 			 * */
 			public void Swing(Vector3 swingTarget, float weight) {
-				Swing(swingTarget, transform.position, weight);
+				Swing(swingTarget, position, weight);
 			}
 			
 			/*
 			 * Swings to a direction from pos2 to pos1
 			 * */
 			public void Swing(Vector3 pos1, Vector3 pos2, float weight) {
-				Quaternion r = Quaternion.FromToRotation(transform.rotation * localSwingAxis, pos1 - pos2) * transform.rotation;
+				Quaternion currentRotation = rotation;
+				Quaternion r = Quaternion.FromToRotation(currentRotation * localSwingAxis, pos1 - pos2) * currentRotation;
 
 				if (weight >= 1f) {
-					transform.rotation = r;
+					rotation = r;
 					return;
 				}
 
-				transform.rotation = Quaternion.Lerp(transform.rotation, r, weight);
+				rotation = Quaternion.Lerp(currentRotation, r, weight);
 			}
 			
 			/*
@@ -238,14 +266,15 @@ namespace RootMotion.FinalIK {
 			public void Twist(Vector3 twistDirection, Vector3 normalDirection, float weight) {
 				Vector3.OrthoNormalize(ref normalDirection, ref twistDirection);
 
-				Quaternion r = Quaternion.FromToRotation(transform.rotation * localTwistAxis, twistDirection) * transform.rotation;
+				Quaternion currentRotation = rotation;
+				Quaternion r = Quaternion.FromToRotation(currentRotation * localTwistAxis, twistDirection) * currentRotation;
 
 				if (weight >= 1f) {
-					transform.rotation = r;
+					rotation = r;
 					return;
 				}
 
-				transform.rotation = Quaternion.Lerp(transform.rotation, r, weight);
+				rotation = Quaternion.Lerp(currentRotation, r, weight);
 			}
 
 			/*
@@ -254,7 +283,7 @@ namespace RootMotion.FinalIK {
 			public void RotateToMaintain(float weight) {
 				if (weight <= 0f) return;
 
-				transform.rotation = Quaternion.Lerp(transform.rotation, maintainRotation, weight);
+				rotation = Quaternion.Lerp(rotation, maintainRotation, weight);
 			}
 			
 			/*
@@ -266,11 +295,11 @@ namespace RootMotion.FinalIK {
 				if (w <= 0f) return;
 
 				if (w >= 1f) {
-					transform.rotation = solver.GetNode(chainIndex, nodeIndex).solverRotation;
+					rotation = solver.GetNode(chainIndex, nodeIndex).solverRotation;
 					return;
 				}
 
-				transform.rotation = Quaternion.Lerp(transform.rotation, solver.GetNode(chainIndex, nodeIndex).solverRotation, w);
+				rotation = Quaternion.Lerp(rotation, solver.GetNode(chainIndex, nodeIndex).solverRotation, w);
 			}
 			
 			#endregion Writing
@@ -295,10 +324,50 @@ namespace RootMotion.FinalIK {
 			 * */
 			private Quaternion lastAnimatedTargetRotation {
 				get {
-					if (planeBone1.position == planeBone3.position) return Quaternion.identity;
-					return Quaternion.LookRotation(planeBone2.position - planeBone1.position, planeBone3.position - planeBone1.position);
+					if (planePosition1 == planePosition3) return Quaternion.identity;
+					return Quaternion.LookRotation(planePosition2 - planePosition1, planePosition3 - planePosition1);
 				}
 			}
+
+			private Vector3 position {
+				get { return solver.usesIndexedPoseBackend ? solver.poseBackend.GetComponentPosition(boneHandle) : transform.position; }
+				set {
+					if (solver.usesIndexedPoseBackend) solver.poseBackend.SetComponentPosition(boneHandle, value);
+					else transform.position = value;
+				}
+			}
+
+			private Quaternion rotation {
+				get { return solver.usesIndexedPoseBackend ? solver.poseBackend.GetComponentRotation(boneHandle) : transform.rotation; }
+				set {
+					if (solver.usesIndexedPoseBackend) solver.poseBackend.SetComponentRotation(boneHandle, value);
+					else transform.rotation = value;
+				}
+			}
+
+			private Vector3 localPosition {
+				get { return solver.usesIndexedPoseBackend ? solver.poseBackend.GetLocalPosition(boneHandle) : transform.localPosition; }
+				set {
+					if (solver.usesIndexedPoseBackend) solver.poseBackend.SetLocalPosition(boneHandle, value);
+					else transform.localPosition = value;
+				}
+			}
+
+			private Quaternion localRotation {
+				get { return solver.usesIndexedPoseBackend ? solver.poseBackend.GetLocalRotation(boneHandle) : transform.localRotation; }
+				set {
+					if (solver.usesIndexedPoseBackend) solver.poseBackend.SetLocalRotation(boneHandle, value);
+					else transform.localRotation = value;
+				}
+			}
+
+			public Vector3 GetComponentPosition() => position;
+
+			public void SetComponentPosition(Vector3 value) => position = value;
+
+			private Vector3 planePosition1 => solver.usesIndexedPoseBackend ? solver.poseBackend.GetComponentPosition(planeBone1Handle) : planeBone1.position;
+			private Vector3 planePosition2 => solver.usesIndexedPoseBackend ? solver.poseBackend.GetComponentPosition(planeBone2Handle) : planeBone2.position;
+			private Vector3 planePosition3 => solver.usesIndexedPoseBackend ? solver.poseBackend.GetComponentPosition(planeBone3Handle) : planeBone3.position;
 		}
 		
 		/// <summary>
@@ -320,6 +389,20 @@ namespace RootMotion.FinalIK {
 			}
 			if (solver.GetPoint(bone) == null) {
 				message = "IKMappingLimb is referencing to a bone '" + bone.name + "' that does not excist in the Node Chain.";
+				if (logger != null) logger(message);
+				return false;
+			}
+			return true;
+		}
+
+		protected bool BoneIsValid(IndexedBoneHandle bone, IKSolver solver, ref string message, Warning.Logger logger = null) {
+			if (!bone.IsValid) {
+				message = "IKMapping contains an invalid indexed bone reference.";
+				if (logger != null) logger(message);
+				return false;
+			}
+			if (solver.GetPoint(bone) == null) {
+				message = "IKMapping references an indexed bone that does not exist in the Node Chain.";
 				if (logger != null) logger(message);
 				return false;
 			}

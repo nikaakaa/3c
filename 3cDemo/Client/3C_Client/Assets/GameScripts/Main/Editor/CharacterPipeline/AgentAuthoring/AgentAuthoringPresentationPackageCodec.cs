@@ -15,6 +15,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         const string GraphPrefix = "editable/presentation/pose-graphs/";
         const string StateMachinePrefix =
             "editable/presentation/pose-state-machines/";
+        const string InterfacePrefix =
+            "readonly/presentation/linked-pose-interfaces/";
+        const string ImplementationPrefix =
+            "editable/presentation/linked-pose-implementations/";
+
+        public static void WriteReadonly(
+            IDictionary<string, JToken> files,
+            AgentDocumentPresentationContext presentation,
+            AgentCompileReport report)
+        {
+            var identities = new HashSet<string>(StringComparer.Ordinal);
+            foreach (AgentPackageLinkedPoseInterfaceFile value in
+                     presentation?.linkedPoseInterfaces ??
+                     new List<AgentPackageLinkedPoseInterfaceFile>())
+            {
+                string path = InterfacePath(value?.id);
+                if (value == null || !Identity(value.id) ||
+                    !identities.Add(value.id))
+                {
+                    report.Error(
+                        InterfacePrefix,
+                        "linked_pose_interface_identity_invalid",
+                        "Linked Pose Interface context identity缺失或重复。");
+                    continue;
+                }
+                files.Add(path, AgentAuthoringDocumentCodec.ToToken(value));
+            }
+        }
 
         public static void Write(
             IDictionary<string, JToken> files,
@@ -81,6 +109,90 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 files.Add(
                     directory + "/layout.json",
+                    AgentAuthoringDocumentCodec.ToToken(layout));
+            }
+            foreach (AgentPackageLinkedPoseImplementationFile implementation in
+                     presentation.linkedPoseImplementations ??
+                     new List<AgentPackageLinkedPoseImplementationFile>())
+            {
+                WriteImplementation(files, implementation, report);
+            }
+        }
+
+        static void WriteImplementation(
+            IDictionary<string, JToken> files,
+            AgentPackageLinkedPoseImplementationFile implementation,
+            AgentCompileReport report)
+        {
+            string directory = ImplementationDirectory(implementation?.id);
+            if (implementation == null || !Identity(implementation.id))
+            {
+                report.Error(
+                    ImplementationPrefix,
+                    "linked_pose_implementation_identity_invalid",
+                    "Linked Pose Implementation identity缺失。");
+                return;
+            }
+            JObject header = (JObject)AgentAuthoringDocumentCodec.ToToken(
+                implementation);
+            header.Remove(nameof(implementation.poseGraphs));
+            header.Remove(nameof(implementation.poseGraphLayouts));
+            header.Remove(nameof(implementation.poseStateMachines));
+            header.Remove(nameof(implementation.poseStateMachineLayouts));
+            files.Add(directory + "/implementation.json", header);
+            foreach (AgentPackagePoseGraphFile graph in implementation.poseGraphs ??
+                         new List<AgentPackagePoseGraphFile>())
+            {
+                string graphDirectory = ImplementationGraphDirectory(
+                    implementation.id,
+                    graph?.id);
+                files.Add(
+                    graphDirectory + "/graph.json",
+                    AgentAuthoringDocumentCodec.ToToken(graph));
+                AgentPackagePoseGraphLayoutFile layout =
+                    implementation.poseGraphLayouts?.SingleOrDefault(value =>
+                        string.Equals(
+                            value?.graphId,
+                            graph?.id,
+                            StringComparison.Ordinal));
+                if (layout == null)
+                {
+                    report.Error(
+                        graphDirectory + "/layout.json",
+                        "linked_pose_entry_layout_missing",
+                        $"Linked Pose graph '{graph?.id}'缺少layout分片。");
+                    continue;
+                }
+                files.Add(
+                    graphDirectory + "/layout.json",
+                    AgentAuthoringDocumentCodec.ToToken(layout));
+            }
+            foreach (AgentPackagePoseStateMachineFile machine in
+                     implementation.poseStateMachines ??
+                     new List<AgentPackagePoseStateMachineFile>())
+            {
+                string machineDirectory = ImplementationStateMachineDirectory(
+                    implementation.id,
+                    machine?.id);
+                files.Add(
+                    machineDirectory + "/state-machine.json",
+                    AgentAuthoringDocumentCodec.ToToken(machine));
+                AgentPackagePoseStateMachineLayoutFile layout =
+                    implementation.poseStateMachineLayouts?.SingleOrDefault(value =>
+                        string.Equals(
+                            value?.stateMachineId,
+                            machine?.id,
+                            StringComparison.Ordinal));
+                if (layout == null)
+                {
+                    report.Error(
+                        machineDirectory + "/layout.json",
+                        "linked_pose_state_machine_layout_missing",
+                        $"Linked Pose StateMachine '{machine?.id}'缺少layout分片。");
+                    continue;
+                }
+                files.Add(
+                    machineDirectory + "/layout.json",
                     AgentAuthoringDocumentCodec.ToToken(layout));
             }
         }
@@ -186,7 +298,196 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 presentation.poseStateMachineLayouts.Add(layout);
             }
 
+            foreach (string path in files.Keys
+                         .Where(IsImplementationFile)
+                         .OrderBy(value => value, StringComparer.Ordinal))
+            {
+                if (!TryReadImplementation(
+                        files,
+                        path,
+                        report,
+                        out AgentPackageLinkedPoseImplementationFile implementation))
+                {
+                    valid = false;
+                    continue;
+                }
+                presentation.linkedPoseImplementations.Add(implementation);
+            }
+
             valid &= ValidatePresentation(presentation, report);
+            return valid;
+        }
+
+        public static bool TryReadReadonly(
+            IReadOnlyDictionary<string, JToken> files,
+            AgentCompileReport report,
+            out List<AgentPackageLinkedPoseInterfaceFile> interfaces)
+        {
+            interfaces = new List<AgentPackageLinkedPoseInterfaceFile>();
+            bool valid = true;
+            var identities = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string path in files.Keys
+                         .Where(IsInterfaceFile)
+                         .OrderBy(value => value, StringComparer.Ordinal))
+            {
+                if (!TryFile(
+                        files,
+                        path,
+                        report,
+                        out AgentPackageLinkedPoseInterfaceFile value))
+                {
+                    valid = false;
+                    continue;
+                }
+                if (value == null || !Identity(value.id) ||
+                    !identities.Add(value.id) ||
+                    !string.Equals(path, InterfacePath(value.id), StringComparison.Ordinal) ||
+                    !ValidateInterface(value, path, report))
+                {
+                    report.Error(
+                        path,
+                        "linked_pose_interface_context_invalid",
+                        "Linked Pose Interface context的identity、路径或签名合同非法。");
+                    valid = false;
+                    continue;
+                }
+                interfaces.Add(value);
+            }
+            return valid;
+        }
+
+        public static bool ValidateReadonlyClosure(
+            AgentDocumentPresentationEditable presentation,
+            IReadOnlyCollection<AgentPackageLinkedPoseInterfaceFile> interfaces,
+            AgentCompileReport report)
+        {
+            HashSet<string> available = (interfaces ??
+                    Array.Empty<AgentPackageLinkedPoseInterfaceFile>())
+                .Where(value => value?.asset != null)
+                .Select(value => ReferenceIdentity(value.asset))
+                .ToHashSet(StringComparer.Ordinal);
+            HashSet<string> required = (presentation?.profile?.linkedPoseGroups ??
+                    new List<AgentPackageLinkedPoseGroupBinding>())
+                .Where(value => value?.interfaceAsset != null)
+                .Select(value => ReferenceIdentity(value.interfaceAsset))
+                .Concat((presentation?.linkedPoseImplementations ??
+                         new List<AgentPackageLinkedPoseImplementationFile>())
+                    .Where(value => value?.interfaceAsset != null)
+                    .Select(value => ReferenceIdentity(value.interfaceAsset)))
+                .ToHashSet(StringComparer.Ordinal);
+            if (available.SetEquals(required))
+                return true;
+            report.Error(
+                InterfacePrefix,
+                "linked_pose_interface_context_closure_invalid",
+                "Readonly Interface context必须精确覆盖Group与Implementation引用的Interface集合。");
+            return false;
+        }
+
+        static bool TryReadImplementation(
+            IReadOnlyDictionary<string, JToken> files,
+            string path,
+            AgentCompileReport report,
+            out AgentPackageLinkedPoseImplementationFile implementation)
+        {
+            implementation = null;
+            if (files.TryGetValue(path, out JToken headerToken) &&
+                (headerToken?[nameof(implementation.poseGraphs)] != null ||
+                 headerToken?[nameof(implementation.poseGraphLayouts)] != null ||
+                 headerToken?[nameof(implementation.poseStateMachines)] != null ||
+                 headerToken?[nameof(implementation.poseStateMachineLayouts)] != null))
+            {
+                report.Error(
+                    path,
+                    "linked_pose_implementation_inline_graph_forbidden",
+                    "Implementation Graph与layout必须使用独立分片，不能内联进implementation.json。");
+                return false;
+            }
+            if (!TryFile(files, path, report, out implementation) ||
+                implementation == null)
+                return false;
+            string directory = ImplementationDirectory(implementation.id);
+            if (!string.Equals(
+                    path,
+                    directory + "/implementation.json",
+                    StringComparison.Ordinal))
+            {
+                report.Error(
+                    path,
+                    "linked_pose_implementation_path_mismatch",
+                    "Linked Pose Implementation目录必须使用implementation object identity的canonical segment。");
+                return false;
+            }
+            bool valid = true;
+            foreach (string graphPath in files.Keys
+                         .Where(value =>
+                             value.StartsWith(directory + "/pose-graphs/", StringComparison.Ordinal) &&
+                             value.EndsWith("/graph.json", StringComparison.Ordinal))
+                         .OrderBy(value => value, StringComparer.Ordinal))
+            {
+                string layoutPath = graphPath.Substring(
+                    0,
+                    graphPath.Length - "graph.json".Length) + "layout.json";
+                if (!TryFile(files, graphPath, report, out AgentPackagePoseGraphFile graph) ||
+                    !TryFile(files, layoutPath, report, out AgentPackagePoseGraphLayoutFile layout))
+                {
+                    valid = false;
+                    continue;
+                }
+                if (!string.Equals(
+                        graphPath,
+                        ImplementationGraphDirectory(implementation.id, graph.id) +
+                        "/graph.json",
+                        StringComparison.Ordinal) ||
+                    !string.Equals(layout.graphId, graph.id, StringComparison.Ordinal))
+                {
+                    report.Error(
+                        graphPath,
+                        "linked_pose_graph_path_mismatch",
+                        "Linked Pose graph目录、graph id与layout graphId必须一致。");
+                    valid = false;
+                    continue;
+                }
+                implementation.poseGraphs.Add(graph);
+                implementation.poseGraphLayouts.Add(layout);
+            }
+            foreach (string machinePath in files.Keys
+                         .Where(value =>
+                             value.StartsWith(directory + "/pose-state-machines/", StringComparison.Ordinal) &&
+                             value.EndsWith("/state-machine.json", StringComparison.Ordinal))
+                         .OrderBy(value => value, StringComparer.Ordinal))
+            {
+                string layoutPath = machinePath.Substring(
+                    0,
+                    machinePath.Length - "state-machine.json".Length) +
+                    "layout.json";
+                if (!TryFile(files, machinePath, report, out AgentPackagePoseStateMachineFile machine) ||
+                    !TryFile(files, layoutPath, report, out AgentPackagePoseStateMachineLayoutFile layout))
+                {
+                    valid = false;
+                    continue;
+                }
+                if (!string.Equals(
+                        machinePath,
+                        ImplementationStateMachineDirectory(implementation.id, machine.id) +
+                        "/state-machine.json",
+                        StringComparison.Ordinal) ||
+                    !string.Equals(
+                        layout.stateMachineId,
+                        machine.id,
+                        StringComparison.Ordinal))
+                {
+                    report.Error(
+                        machinePath,
+                        "linked_pose_state_machine_path_mismatch",
+                        "Linked Pose StateMachine目录、id与layout owner必须一致。");
+                    valid = false;
+                    continue;
+                }
+                implementation.poseStateMachines.Add(machine);
+                implementation.poseStateMachineLayouts.Add(layout);
+            }
+            valid &= ValidateImplementation(implementation, path, report);
             return valid;
         }
 
@@ -222,6 +523,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     out AgentPackagePoseStateMachineFile _,
                     out raw);
             if (IsStateMachineLayoutFile(relativePath))
+                return AgentAuthoringDocumentCodec.TryReadFile(
+                    fullPath,
+                    report,
+                    out AgentPackagePoseStateMachineLayoutFile _,
+                    out raw);
+            if (IsInterfaceFile(relativePath))
+                return AgentAuthoringDocumentCodec.TryReadFile(
+                    fullPath,
+                    report,
+                    out AgentPackageLinkedPoseInterfaceFile _,
+                    out raw);
+            if (IsImplementationFile(relativePath))
+                return AgentAuthoringDocumentCodec.TryReadFile(
+                    fullPath,
+                    report,
+                    out AgentPackageLinkedPoseImplementationFile _,
+                    out raw);
+            if (IsImplementationGraphFile(relativePath))
+                return AgentAuthoringDocumentCodec.TryReadFile(
+                    fullPath,
+                    report,
+                    out AgentPackagePoseGraphFile _,
+                    out raw);
+            if (IsImplementationGraphLayoutFile(relativePath))
+                return AgentAuthoringDocumentCodec.TryReadFile(
+                    fullPath,
+                    report,
+                    out AgentPackagePoseGraphLayoutFile _,
+                    out raw);
+            if (IsImplementationStateMachineFile(relativePath))
+                return AgentAuthoringDocumentCodec.TryReadFile(
+                    fullPath,
+                    report,
+                    out AgentPackagePoseStateMachineFile _,
+                    out raw);
+            if (IsImplementationStateMachineLayoutFile(relativePath))
                 return AgentAuthoringDocumentCodec.TryReadFile(
                     fullPath,
                     report,
@@ -326,6 +663,170 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return valid;
         }
 
+        internal static bool IsDiscoverableLinkedPoseFragment(string path) =>
+            IsImplementationFile(path) ||
+            IsImplementationGraphFile(path) ||
+            IsImplementationGraphLayoutFile(path) ||
+            IsImplementationStateMachineFile(path) ||
+            IsImplementationStateMachineLayoutFile(path);
+
+        internal static bool TryDiscoverNewLinkedPoseFragments(
+            IReadOnlyDictionary<string, JToken> candidates,
+            AgentCompileReport report,
+            out IReadOnlyCollection<string> discovered)
+        {
+            var result = new HashSet<string>(StringComparer.Ordinal);
+            bool valid = true;
+            foreach (string directory in candidates.Keys
+                         .Select(ImplementationOwnerDirectory)
+                         .Where(value => !string.IsNullOrEmpty(value))
+                         .Distinct(StringComparer.Ordinal)
+                         .OrderBy(value => value, StringComparer.Ordinal))
+            {
+                string implementationPath = directory + "/implementation.json";
+                if (candidates.ContainsKey(implementationPath))
+                {
+                    if (!TryReadImplementation(
+                            candidates,
+                            implementationPath,
+                            report,
+                            out AgentPackageLinkedPoseImplementationFile implementation) ||
+                        !LocalIdentity(implementation.id) ||
+                        !LocalIdentity(implementation.asset?.localId) ||
+                        !LocalIdentity(implementation.graphOwner?.localId))
+                    {
+                        report.Error(
+                            implementationPath,
+                            "linked_pose_new_implementation_invalid",
+                            "新增Linked Pose Implementation及Graph owner必须使用local:* identity并提供完整canonical闭包。");
+                        valid = false;
+                        continue;
+                    }
+                    foreach (string path in candidates.Keys.Where(value =>
+                                 value.StartsWith(directory + "/", StringComparison.Ordinal)))
+                        result.Add(path);
+                    continue;
+                }
+
+                foreach (string graphPath in candidates.Keys.Where(value =>
+                             value.StartsWith(directory + "/pose-graphs/", StringComparison.Ordinal) &&
+                             IsImplementationGraphFile(value)))
+                {
+                    string layoutPath = graphPath.Substring(
+                        0,
+                        graphPath.Length - "graph.json".Length) + "layout.json";
+                    if (!candidates.ContainsKey(layoutPath) ||
+                        !TryFile(candidates, graphPath, report, out AgentPackagePoseGraphFile graph) ||
+                        !TryFile(candidates, layoutPath, report, out AgentPackagePoseGraphLayoutFile layout) ||
+                        !LocalIdentity(graph.id) ||
+                        !string.Equals(layout.graphId, graph.id, StringComparison.Ordinal) ||
+                        !string.Equals(
+                            graphPath,
+                            directory + "/pose-graphs/" +
+                            AgentAuthoringPackageMapper.Segment(graph.id) +
+                            "/graph.json",
+                            StringComparison.Ordinal) ||
+                        !string.Equals(
+                            graph.role,
+                            CharacterPoseGraphAuthoringCapabilities.LinkedPoseEntry.Value,
+                            StringComparison.Ordinal) &&
+                        !string.Equals(
+                            graph.role,
+                            CharacterPoseGraphAuthoringCapabilities.StatePoseGraph.Value,
+                            StringComparison.Ordinal) &&
+                        !string.Equals(
+                            graph.role,
+                            CharacterPoseGraphAuthoringCapabilities.Subgraph.Value,
+                            StringComparison.Ordinal))
+                    {
+                        report.Error(
+                            graphPath,
+                            "linked_pose_new_graph_pair_invalid",
+                            "新增Linked Pose graph必须使用local:* identity、canonical目录和允许的Entry/state/subgraph role。");
+                        valid = false;
+                        continue;
+                    }
+                    result.Add(graphPath);
+                    result.Add(layoutPath);
+                }
+                foreach (string machinePath in candidates.Keys.Where(value =>
+                             value.StartsWith(directory + "/pose-state-machines/", StringComparison.Ordinal) &&
+                             IsImplementationStateMachineFile(value)))
+                {
+                    string layoutPath = machinePath.Substring(
+                        0,
+                        machinePath.Length - "state-machine.json".Length) +
+                        "layout.json";
+                    if (!candidates.ContainsKey(layoutPath) ||
+                        !TryFile(candidates, machinePath, report, out AgentPackagePoseStateMachineFile machine) ||
+                        !TryFile(candidates, layoutPath, report, out AgentPackagePoseStateMachineLayoutFile layout) ||
+                        !LocalIdentity(machine.id) ||
+                        !string.Equals(layout.stateMachineId, machine.id, StringComparison.Ordinal) ||
+                        !string.Equals(
+                            machinePath,
+                            directory + "/pose-state-machines/" +
+                            AgentAuthoringPackageMapper.Segment(machine.id) +
+                            "/state-machine.json",
+                            StringComparison.Ordinal))
+                    {
+                        report.Error(
+                            machinePath,
+                            "linked_pose_new_state_machine_pair_invalid",
+                            "新增Linked Pose StateMachine必须使用local:* identity与canonical pair。");
+                        valid = false;
+                        continue;
+                    }
+                    result.Add(machinePath);
+                    result.Add(layoutPath);
+                }
+            }
+            discovered = result;
+            return valid;
+        }
+
+        internal static bool TryDiscoverRemovedLinkedPoseFragments(
+            IReadOnlyCollection<string> declaredPaths,
+            IReadOnlyCollection<string> actualPaths,
+            AgentCompileReport report,
+            out IReadOnlyCollection<string> discovered)
+        {
+            var declared = new HashSet<string>(
+                declaredPaths ?? Array.Empty<string>(),
+                StringComparer.Ordinal);
+            var actual = new HashSet<string>(
+                actualPaths ?? Array.Empty<string>(),
+                StringComparer.Ordinal);
+            var missing = declared.Except(actual, StringComparer.Ordinal)
+                .Where(IsDiscoverableLinkedPoseFragment)
+                .ToHashSet(StringComparer.Ordinal);
+            var result = new HashSet<string>(StringComparer.Ordinal);
+            bool valid = true;
+            foreach (string directory in missing
+                         .Select(ImplementationOwnerDirectory)
+                         .Where(value => !string.IsNullOrEmpty(value))
+                         .Distinct(StringComparer.Ordinal))
+            {
+                string implementationPath = directory + "/implementation.json";
+                if (!missing.Contains(implementationPath))
+                    continue;
+                string[] closure = declared.Where(value =>
+                        value.StartsWith(directory + "/", StringComparison.Ordinal))
+                    .ToArray();
+                if (closure.Any(actual.Contains))
+                {
+                    report.Error(
+                        implementationPath,
+                        "linked_pose_implementation_remove_closure_incomplete",
+                        "删除Linked Pose Implementation必须删除implementation与全部嵌套Graph闭包。");
+                    valid = false;
+                    continue;
+                }
+                result.UnionWith(closure);
+            }
+            discovered = result;
+            return valid;
+        }
+
         static bool ValidateFileSet(
             IReadOnlyDictionary<string, JToken> files,
             AgentCompileReport report)
@@ -333,6 +834,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             bool valid = true;
             foreach (KeyValuePair<string, JToken> pair in files)
             {
+                if (pair.Key.StartsWith(
+                        "readonly/presentation/",
+                        StringComparison.Ordinal))
+                {
+                    if (!IsInterfaceFile(pair.Key))
+                    {
+                        report.Error(
+                            pair.Key,
+                            "presentation_readonly_file_unknown",
+                            "Document v3包含未知Presentation readonly文件。");
+                        valid = false;
+                    }
+                    valid &= RejectInternalFields(pair.Value, pair.Key, report);
+                    continue;
+                }
                 if (!pair.Key.StartsWith(
                         "editable/presentation/",
                         StringComparison.Ordinal))
@@ -344,7 +860,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     !IsGraphFile(pair.Key) &&
                     !IsLayoutFile(pair.Key) &&
                     !IsStateMachineFile(pair.Key) &&
-                    !IsStateMachineLayoutFile(pair.Key))
+                    !IsStateMachineLayoutFile(pair.Key) &&
+                    !IsImplementationFile(pair.Key) &&
+                    !IsImplementationGraphFile(pair.Key) &&
+                    !IsImplementationGraphLayoutFile(pair.Key) &&
+                    !IsImplementationStateMachineFile(pair.Key) &&
+                    !IsImplementationStateMachineLayoutFile(pair.Key))
                 {
                     report.Error(
                         pair.Key,
@@ -394,6 +915,64 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     layoutPath,
                     "presentation_pose_state_machine_pair_missing",
                     "Pose StateMachine layout缺少同目录state-machine.json。");
+                valid = false;
+            }
+            foreach (string layoutPath in files.Keys.Where(
+                         IsImplementationGraphLayoutFile))
+            {
+                string graphPath = layoutPath.Substring(
+                    0,
+                    layoutPath.Length - "layout.json".Length) + "graph.json";
+                if (files.ContainsKey(graphPath))
+                    continue;
+                report.Error(
+                    layoutPath,
+                    "linked_pose_graph_pair_missing",
+                    "Linked Pose graph layout缺少同目录graph.json。");
+                valid = false;
+            }
+            foreach (string graphPath in files.Keys.Where(
+                         IsImplementationGraphFile))
+            {
+                string layoutPath = graphPath.Substring(
+                    0,
+                    graphPath.Length - "graph.json".Length) + "layout.json";
+                if (files.ContainsKey(layoutPath))
+                    continue;
+                report.Error(
+                    graphPath,
+                    "linked_pose_graph_layout_missing",
+                    "Linked Pose graph缺少同目录layout.json。");
+                valid = false;
+            }
+            foreach (string layoutPath in files.Keys.Where(
+                         IsImplementationStateMachineLayoutFile))
+            {
+                string machinePath = layoutPath.Substring(
+                    0,
+                    layoutPath.Length - "layout.json".Length) +
+                    "state-machine.json";
+                if (files.ContainsKey(machinePath))
+                    continue;
+                report.Error(
+                    layoutPath,
+                    "linked_pose_state_machine_pair_missing",
+                    "Linked Pose StateMachine layout缺少同目录state-machine.json。");
+                valid = false;
+            }
+            foreach (string machinePath in files.Keys.Where(
+                         IsImplementationStateMachineFile))
+            {
+                string layoutPath = machinePath.Substring(
+                    0,
+                    machinePath.Length - "state-machine.json".Length) +
+                    "layout.json";
+                if (files.ContainsKey(layoutPath))
+                    continue;
+                report.Error(
+                    machinePath,
+                    "linked_pose_state_machine_layout_missing",
+                    "Linked Pose StateMachine缺少同目录layout.json。");
                 valid = false;
             }
             return valid;
@@ -562,6 +1141,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 valid = false;
             }
 
+            var implementations = new Dictionary<string, AgentPackageLinkedPoseImplementationFile>(
+                StringComparer.Ordinal);
+            var implementationIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (AgentPackageLinkedPoseImplementationFile implementation in
+                     presentation.linkedPoseImplementations ??
+                     new List<AgentPackageLinkedPoseImplementationFile>())
+            {
+                if (implementation == null || !Identity(implementation.id) ||
+                    !implementations.TryAdd(implementation.id, implementation) ||
+                    !Identity(implementation.implementationId) ||
+                    !implementationIds.Add(implementation.implementationId))
+                {
+                    report.Error(
+                        ImplementationPrefix,
+                        "linked_pose_implementation_identity_invalid",
+                        "Linked Pose Implementation对象identity或业务identity缺失、重复。");
+                    valid = false;
+                    continue;
+                }
+                valid &= ValidateImplementation(
+                    implementation,
+                    ImplementationDirectory(implementation.id) +
+                    "/implementation.json",
+                    report);
+            }
+            valid &= ValidateLinkedProfile(
+                presentation.profile,
+                implementations.Values,
+                report);
+
             foreach (AgentPackagePoseNode node in nodes.Values)
             {
                 bool stateMachine = string.Equals(
@@ -594,6 +1203,361 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             return valid;
         }
+
+        static bool ValidateImplementation(
+            AgentPackageLinkedPoseImplementationFile implementation,
+            string path,
+            AgentCompileReport report)
+        {
+            bool valid = implementation != null &&
+                         Identity(implementation.id) &&
+                         !string.IsNullOrWhiteSpace(implementation.name) &&
+                         AssetReference(implementation.asset) &&
+                         string.Equals(
+                             implementation.id,
+                             ReferenceIdentity(implementation.asset),
+                             StringComparison.Ordinal) &&
+                         Identity(implementation.ownerIdentity) &&
+                         Identity(implementation.implementationId) &&
+                         implementation.revision > 0 &&
+                         Asset(implementation.interfaceAsset) &&
+                         AssetReference(implementation.graphOwner) &&
+                         Identity(implementation.graphOwnerIdentity) &&
+                         (implementation.entries?.Count ?? 0) > 0;
+            if (!valid)
+            {
+                report.Error(
+                    path,
+                    "linked_pose_implementation_invalid",
+                    "Linked Pose Implementation对象引用、owner、业务identity、revision、Interface或Graph owner不完整。");
+            }
+
+            var graphs = new Dictionary<string, AgentPackagePoseGraphFile>(
+                StringComparer.Ordinal);
+            var nodes = new Dictionary<string, AgentPackagePoseNode>(
+                StringComparer.Ordinal);
+            foreach (AgentPackagePoseGraphFile graph in implementation?.poseGraphs ??
+                         new List<AgentPackagePoseGraphFile>())
+            {
+                if (graph == null || !Identity(graph.id) ||
+                    !graphs.TryAdd(graph.id, graph))
+                {
+                    report.Error(
+                        path + ".poseGraphs",
+                        "linked_pose_graph_identity_invalid",
+                        "Linked Pose graph identity缺失或重复。");
+                    valid = false;
+                    continue;
+                }
+                valid &= ValidateGraph(graph, nodes, report);
+            }
+            valid &= ValidateSubgraphSignatures(graphs, report);
+
+            var layouts = new Dictionary<string, AgentPackagePoseGraphLayoutFile>(
+                StringComparer.Ordinal);
+            foreach (AgentPackagePoseGraphLayoutFile layout in
+                     implementation?.poseGraphLayouts ??
+                     new List<AgentPackagePoseGraphLayoutFile>())
+            {
+                if (layout == null || !Identity(layout.graphId) ||
+                    !graphs.TryGetValue(layout.graphId, out AgentPackagePoseGraphFile graph) ||
+                    !layouts.TryAdd(layout.graphId, layout))
+                {
+                    report.Error(
+                        path + ".poseGraphLayouts",
+                        "linked_pose_graph_layout_owner_invalid",
+                        "Linked Pose graph layout owner缺失、重复或引用未知graph。");
+                    valid = false;
+                    continue;
+                }
+                HashSet<string> graphNodes = (graph.nodes ??
+                        new List<AgentPackagePoseNode>())
+                    .Where(value => value != null)
+                    .Select(value => value.id)
+                    .ToHashSet(StringComparer.Ordinal);
+                HashSet<string> layoutNodes = (layout.nodes ??
+                        new List<AgentPackagePoseNodeLayout>())
+                    .Where(value => value != null &&
+                                    float.IsFinite(value.x) &&
+                                    float.IsFinite(value.y))
+                    .Select(value => value.id)
+                    .ToHashSet(StringComparer.Ordinal);
+                if (layoutNodes.Count != (layout.nodes?.Count ?? 0) ||
+                    !layoutNodes.SetEquals(graphNodes))
+                {
+                    report.Error(
+                        path + $".poseGraphLayouts[{layout.graphId}]",
+                        "linked_pose_graph_layout_invalid",
+                        "Linked Pose graph layout必须以有限坐标精确覆盖全部节点。");
+                    valid = false;
+                }
+            }
+            if (!layouts.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(graphs.Keys))
+            {
+                report.Error(
+                    path + ".poseGraphLayouts",
+                    "linked_pose_graph_layout_incomplete",
+                    "每个Linked Pose graph必须精确拥有一个layout分片。");
+                valid = false;
+            }
+
+            var machines = new Dictionary<string, AgentPackagePoseStateMachineFile>(
+                StringComparer.Ordinal);
+            foreach (AgentPackagePoseStateMachineFile machine in
+                     implementation?.poseStateMachines ??
+                     new List<AgentPackagePoseStateMachineFile>())
+            {
+                if (machine == null || !Identity(machine.id) ||
+                    !machines.TryAdd(machine.id, machine))
+                {
+                    report.Error(
+                        path + ".poseStateMachines",
+                        "linked_pose_state_machine_identity_invalid",
+                        "Linked Pose StateMachine identity缺失或重复。");
+                    valid = false;
+                    continue;
+                }
+                valid &= ValidateStateMachine(machine, graphs, report);
+            }
+            HashSet<string> machineLayouts = (implementation?.poseStateMachineLayouts ??
+                    new List<AgentPackagePoseStateMachineLayoutFile>())
+                .Where(value => value != null && Identity(value.stateMachineId))
+                .Select(value => value.stateMachineId)
+                .ToHashSet(StringComparer.Ordinal);
+            if (machineLayouts.Count !=
+                    (implementation?.poseStateMachineLayouts?.Count ?? 0) ||
+                !machineLayouts.SetEquals(machines.Keys))
+            {
+                report.Error(
+                    path + ".poseStateMachineLayouts",
+                    "linked_pose_state_machine_layout_incomplete",
+                    "每个Linked Pose StateMachine必须精确拥有一个layout分片。");
+                valid = false;
+            }
+
+            var entryIds = new HashSet<string>(StringComparer.Ordinal);
+            var entryGraphs = new HashSet<string>(StringComparer.Ordinal);
+            foreach (AgentPackageLinkedPoseImplementationEntry entry in
+                     implementation?.entries ??
+                     new List<AgentPackageLinkedPoseImplementationEntry>())
+            {
+                if (entry == null || !Identity(entry.entryId) ||
+                    !entryIds.Add(entry.entryId) || !Identity(entry.graphId) ||
+                    !entryGraphs.Add(entry.graphId) ||
+                    !graphs.TryGetValue(entry.graphId, out AgentPackagePoseGraphFile graph) ||
+                    !string.Equals(
+                        graph.role,
+                        CharacterPoseGraphAuthoringCapabilities.LinkedPoseEntry.Value,
+                        StringComparison.Ordinal))
+                {
+                    report.Error(
+                        path + $".entries[{entry?.entryId}]",
+                        "linked_pose_entry_invalid",
+                        "Linked Pose Entry identity必须唯一并引用同一owner下的LinkedPoseEntry graph。");
+                    valid = false;
+                }
+            }
+            HashSet<string> declaredEntryGraphs = graphs.Values
+                .Where(value => string.Equals(
+                    value.role,
+                    CharacterPoseGraphAuthoringCapabilities.LinkedPoseEntry.Value,
+                    StringComparison.Ordinal))
+                .Select(value => value.id)
+                .ToHashSet(StringComparer.Ordinal);
+            if (!entryGraphs.SetEquals(declaredEntryGraphs))
+            {
+                report.Error(
+                    path + ".entries",
+                    "linked_pose_entry_graph_closure_invalid",
+                    "Implementation Entry映射必须精确覆盖全部LinkedPoseEntry graph。");
+                valid = false;
+            }
+            return valid;
+        }
+
+        static bool ValidateLinkedProfile(
+            AgentPackagePresentationProfileFile profile,
+            IEnumerable<AgentPackageLinkedPoseImplementationFile> implementations,
+            AgentCompileReport report)
+        {
+            bool valid = true;
+            var implementationById = (implementations ??
+                    Enumerable.Empty<AgentPackageLinkedPoseImplementationFile>())
+                .Where(value => value != null)
+                .ToDictionary(
+                    value => value.implementationId,
+                    StringComparer.Ordinal);
+            var groups = new Dictionary<string, AgentPackageLinkedPoseGroupBinding>(
+                StringComparer.Ordinal);
+            foreach (AgentPackageLinkedPoseGroupBinding group in
+                     profile?.linkedPoseGroups ??
+                     new List<AgentPackageLinkedPoseGroupBinding>())
+            {
+                if (group == null || !Identity(group.id) ||
+                    !string.Equals(group.id, group.groupId, StringComparison.Ordinal) ||
+                    !groups.TryAdd(group.groupId, group) ||
+                    !Asset(group.interfaceAsset))
+                {
+                    report.Error(
+                        ProfilePath + ".linkedPoseGroups",
+                        "linked_pose_group_invalid",
+                        "Linked Pose Group identity重复、对象key不稳定或Interface引用非法。");
+                    valid = false;
+                }
+            }
+            var selectors = new HashSet<string>(StringComparer.Ordinal);
+            var selectorGroups = new HashSet<string>(StringComparer.Ordinal);
+            foreach (AgentPackageLinkedPoseSelectorBinding selector in
+                     profile?.linkedPoseSelectors ??
+                     new List<AgentPackageLinkedPoseSelectorBinding>())
+            {
+                bool selectorValid = selector != null &&
+                                     Identity(selector.id) &&
+                                     selectors.Add(selector.id) &&
+                                     AssetReference(selector.asset) &&
+                                     string.Equals(
+                                         selector.id,
+                                         ReferenceIdentity(selector.asset),
+                                         StringComparison.Ordinal) &&
+                                     Identity(selector.selectorId) &&
+                                     groups.ContainsKey(selector.groupId ?? string.Empty) &&
+                                     selectorGroups.Add(selector.groupId) &&
+                                     string.Equals(
+                                         selector.kind,
+                                         "equipment",
+                                         StringComparison.Ordinal) &&
+                                     selector.equipment != null &&
+                                     Identity(selector.equipment.slotId) &&
+                                     Identity(selector.equipment.emptyImplementationId) &&
+                                     implementationById.TryGetValue(
+                                         selector.equipment.emptyImplementationId,
+                                         out AgentPackageLinkedPoseImplementationFile empty) &&
+                                     SameAssetReference(
+                                         empty.interfaceAsset,
+                                         groups[selector.groupId].interfaceAsset);
+                var equipmentIds = new HashSet<string>(StringComparer.Ordinal);
+                foreach (AgentPackageEquipmentLinkedPoseMapping mapping in
+                         selector?.equipment?.mappings ??
+                         new List<AgentPackageEquipmentLinkedPoseMapping>())
+                {
+                    selectorValid &= mapping != null &&
+                                     Identity(mapping.id) &&
+                                     string.Equals(
+                                         mapping.id,
+                                         mapping.equipmentId,
+                                         StringComparison.Ordinal) &&
+                                     equipmentIds.Add(mapping.equipmentId) &&
+                                     implementationById.TryGetValue(
+                                         mapping.implementationId ?? string.Empty,
+                                         out AgentPackageLinkedPoseImplementationFile candidate) &&
+                                     groups.TryGetValue(
+                                         selector.groupId ?? string.Empty,
+                                         out AgentPackageLinkedPoseGroupBinding selectedGroup) &&
+                                     SameAssetReference(
+                                         candidate.interfaceAsset,
+                                         selectedGroup.interfaceAsset);
+                }
+                if (!selectorValid)
+                {
+                    report.Error(
+                        ProfilePath + $".linkedPoseSelectors[{selector?.selectorId}]",
+                        "linked_pose_selector_invalid",
+                        "Linked Pose selector对象key、Group、Equipment映射或显式Empty Implementation非法。");
+                    valid = false;
+                }
+            }
+            if (!selectorGroups.SetEquals(groups.Keys))
+            {
+                report.Error(
+                    ProfilePath + ".linkedPoseSelectors",
+                    "linked_pose_selector_group_closure_invalid",
+                    "每个Linked Pose Group必须恰好拥有一个selector。");
+                valid = false;
+            }
+            HashSet<string> candidates = (profile?.linkedPoseSelectors ??
+                    new List<AgentPackageLinkedPoseSelectorBinding>())
+                .Where(value => value?.equipment != null)
+                .SelectMany(value => (value.equipment.mappings ??
+                        new List<AgentPackageEquipmentLinkedPoseMapping>())
+                    .Select(mapping => mapping?.implementationId)
+                    .Append(value.equipment.emptyImplementationId))
+                .Where(Identity)
+                .ToHashSet(StringComparer.Ordinal);
+            if (!candidates.SetEquals(implementationById.Keys))
+            {
+                report.Error(
+                    ProfilePath + ".linkedPoseSelectors",
+                    "linked_pose_candidate_closure_invalid",
+                    "全部Implementation必须由唯一selector映射或显式Empty Implementation精确覆盖。");
+                valid = false;
+            }
+            return valid;
+        }
+
+        static bool SameAssetReference(
+            AgentPackageAssetReferenceV3 left,
+            AgentPackageAssetReferenceV3 right) =>
+            string.Equals(
+                ReferenceIdentity(left),
+                ReferenceIdentity(right),
+                StringComparison.Ordinal);
+
+        static bool ValidateInterface(
+            AgentPackageLinkedPoseInterfaceFile value,
+            string path,
+            AgentCompileReport report)
+        {
+            bool valid = value != null && Identity(value.id) &&
+                         Asset(value.asset) &&
+                         Identity(value.ownerIdentity) &&
+                         string.Equals(value.id, value.interfaceId, StringComparison.Ordinal) &&
+                         value.revision > 0 && Identity(value.signatureHash) &&
+                         Identity(value.factContractIdentity) &&
+                         string.Equals(
+                             value.executionContract,
+                             CharacterLinkedPoseExecutionContract.Current,
+                             StringComparison.Ordinal) &&
+                         (value.entries?.Count ?? 0) > 0;
+            var entries = new HashSet<string>(StringComparer.Ordinal);
+            foreach (AgentPackageLinkedPoseInterfaceEntry entry in
+                     value?.entries ?? new List<AgentPackageLinkedPoseInterfaceEntry>())
+            {
+                bool entryValid = entry != null && Identity(entry.entryId) &&
+                                  entries.Add(entry.entryId) &&
+                                  ExactEnum<CharacterPoseExecutionDomain>(
+                                      entry.executionDomain) &&
+                                  (entry.ports?.Count ?? 0) > 0;
+                var ports = new HashSet<string>(StringComparer.Ordinal);
+                var orders = new HashSet<int>();
+                foreach (AgentPackageLinkedPoseInterfacePort port in
+                         entry?.ports ??
+                         new List<AgentPackageLinkedPoseInterfacePort>())
+                {
+                    entryValid &= port != null && Identity(port.portId) &&
+                                  ports.Add(port.portId) &&
+                                  ExactEnum<CharacterPosePortDirection>(
+                                      port.direction) &&
+                                  ExactEnum<CharacterPosePortKind>(port.kind) &&
+                                  ExactEnum<CharacterPoseSpace>(port.space) &&
+                                  port.order >= 0 && orders.Add(port.order);
+                }
+                valid &= entryValid;
+            }
+            if (!valid)
+            {
+                report.Error(
+                    path,
+                    "linked_pose_interface_contract_invalid",
+                    "Linked Pose Interface稳定identity、revision、signature、Fact contract、Entry或typed ports非法。");
+            }
+            return valid;
+        }
+
+        static bool ExactEnum<T>(string value)
+            where T : struct, Enum =>
+            Enum.TryParse(value, false, out T parsed) &&
+            Enum.IsDefined(typeof(T), parsed) &&
+            string.Equals(value, parsed.ToString(), StringComparison.Ordinal);
 
         static bool ValidateProfile(
             AgentPackagePresentationProfileFile profile,
@@ -748,7 +1712,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 role = new GraphAuthoringDocumentRoleId(graph.role);
                 if (!role.Equals(CharacterPoseGraphAuthoringCapabilities.RootGraph) &&
                     !role.Equals(CharacterPoseGraphAuthoringCapabilities.StatePoseGraph) &&
-                    !role.Equals(CharacterPoseGraphAuthoringCapabilities.Subgraph))
+                    !role.Equals(CharacterPoseGraphAuthoringCapabilities.Subgraph) &&
+                    !role.Equals(CharacterPoseGraphAuthoringCapabilities.LinkedPoseEntry))
                     throw new InvalidOperationException();
             }
             catch
@@ -837,7 +1802,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentCompileReport report)
         {
             bool valid = true;
-            var fields = capability.Fields.ToDictionary(
+            var fields = capability.Fields
+                .Where(value => value.AuthoringWritable)
+                .ToDictionary(
                 value => value.FieldId.Value,
                 StringComparer.Ordinal);
             HashSet<string> actual = (node.properties ?? new JObject())
@@ -897,7 +1864,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     !ports.Add(port.id) ||
                     string.IsNullOrWhiteSpace(port.name) ||
                     !ValidPoseValueType(port.valueType) ||
-                    !Identity(port.interfacePortId) ||
+                    Identity(port.interfacePortId) &&
                     !interfacePorts.Add(port.interfacePortId) ||
                     !Enum.TryParse(
                         port.direction,
@@ -1081,6 +2048,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             "pose.parameter" => true,
             "pose.discontinuity" => true,
             "pose.action-playback" => true,
+            "component.full-body-ik-goals" => true,
             _ => false
         };
 
@@ -1435,6 +2403,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static string GraphDirectory(string id) =>
             GraphPrefix + AgentAuthoringPackageMapper.Segment(id);
 
+        static string InterfacePath(string id) =>
+            InterfacePrefix + AgentAuthoringPackageMapper.Segment(id) +
+            "/interface.json";
+
+        static string ImplementationDirectory(string id) =>
+            ImplementationPrefix + AgentAuthoringPackageMapper.Segment(id);
+
+        static string ImplementationGraphDirectory(
+            string implementationId,
+            string graphId) =>
+            ImplementationDirectory(implementationId) + "/pose-graphs/" +
+            AgentAuthoringPackageMapper.Segment(graphId);
+
+        static string ImplementationStateMachineDirectory(
+            string implementationId,
+            string stateMachineId) =>
+            ImplementationDirectory(implementationId) +
+            "/pose-state-machines/" +
+            AgentAuthoringPackageMapper.Segment(stateMachineId);
+
+        static string ImplementationOwnerDirectory(string path)
+        {
+            if (string.IsNullOrEmpty(path) ||
+                !path.StartsWith(ImplementationPrefix, StringComparison.Ordinal))
+                return string.Empty;
+            int separator = path.IndexOf('/', ImplementationPrefix.Length);
+            return separator < 0 ? string.Empty : path.Substring(0, separator);
+        }
+
         static string DirectoryPath(string path)
         {
             int separator = path.LastIndexOf('/');
@@ -1458,6 +2455,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static bool IsStateMachineLayoutFile(string path) =>
             path.StartsWith(StateMachinePrefix, StringComparison.Ordinal) &&
+            path.EndsWith("/layout.json", StringComparison.Ordinal);
+
+        internal static bool IsInterfaceFile(string path) =>
+            path.StartsWith(InterfacePrefix, StringComparison.Ordinal) &&
+            path.EndsWith("/interface.json", StringComparison.Ordinal);
+
+        internal static bool IsImplementationFile(string path) =>
+            path.StartsWith(ImplementationPrefix, StringComparison.Ordinal) &&
+            path.EndsWith("/implementation.json", StringComparison.Ordinal);
+
+        internal static bool IsImplementationGraphFile(string path) =>
+            path.StartsWith(ImplementationPrefix, StringComparison.Ordinal) &&
+            path.Contains("/pose-graphs/", StringComparison.Ordinal) &&
+            path.EndsWith("/graph.json", StringComparison.Ordinal);
+
+        internal static bool IsImplementationGraphLayoutFile(string path) =>
+            path.StartsWith(ImplementationPrefix, StringComparison.Ordinal) &&
+            path.Contains("/pose-graphs/", StringComparison.Ordinal) &&
+            path.EndsWith("/layout.json", StringComparison.Ordinal);
+
+        internal static bool IsImplementationStateMachineFile(string path) =>
+            path.StartsWith(ImplementationPrefix, StringComparison.Ordinal) &&
+            path.Contains("/pose-state-machines/", StringComparison.Ordinal) &&
+            path.EndsWith("/state-machine.json", StringComparison.Ordinal);
+
+        internal static bool IsImplementationStateMachineLayoutFile(string path) =>
+            path.StartsWith(ImplementationPrefix, StringComparison.Ordinal) &&
+            path.Contains("/pose-state-machines/", StringComparison.Ordinal) &&
             path.EndsWith("/layout.json", StringComparison.Ordinal);
 
         sealed class NodeContract

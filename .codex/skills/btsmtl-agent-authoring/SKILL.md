@@ -30,7 +30,7 @@ Document不会自动编译或自动apply。Unity树变化和Document变化只计
 1. 明确`CharacterController`或`AIController` domain，并确定对应Definition的精确`Assets/...`路径。不得按目录、显示名、selection或场景猜root。
 2. 确认Unity不在编译、更新AssetDatabase、Play Mode或切换Play Mode。
 3. 调用`btsmtl.checkout_document`。读取返回的绝对`packagePath`、`syncState`、`sourceRevision`、`editableHash`和`contextHash`。
-4. 先读`manifest.json`以及`context/node-catalog.json`、`context/graph-kinds.json`、`context/asset-catalog.json`、`context/dependencies.json`，再用通用文件工具修改`editable/**/*.json`。Character Presentation目标位于`editable/presentation/profile.json`、`editable/presentation/pose-graphs/*/{graph,layout}.json`与`editable/presentation/pose-state-machines/*/{state-machine,layout}.json`。不得修改`manifest.json`、`.sync.json`或`context/**/*.json`。
+4. 先读`manifest.json`以及`context/node-catalog.json`、`context/graph-kinds.json`、`context/asset-catalog.json`、`context/dependencies.json`和`readonly/presentation/linked-pose-interfaces/*/interface.json`，再用通用文件工具修改`editable/**/*.json`。Character Presentation目标位于`editable/presentation/profile.json`、`editable/presentation/pose-graphs/*/{graph,layout}.json`、`editable/presentation/pose-state-machines/*/{state-machine,layout}.json`与`editable/presentation/linked-pose-implementations/*`完整闭包。不得修改`manifest.json`、`.sync.json`、`context/**/*.json`或`readonly/**/*.json`。
    - 新增Pose State Graph或Subgraph时，graph id必须是`local:<meaningful-id>`，并一次创建同目录`graph.json`和`layout.json`。目录segment由完整local id确定：把非字母数字、`-`、`_`字符替换为`-`，去掉首尾`-`，截取前48字符，再追加`-`和完整local id的SHA-256前12位小写十六进制。
    - 新增Graph-owned Inline Timeline时，timeline id、唯一TimelineNode调用点、Track与Clip都必须使用`local:<meaningful-id>`；一次创建同目录`timeline.json`与`curves.json`，目录使用相同canonical segment算法。controller Timeline摘要、Graph节点、callSite和文件对必须指向同一local TimelineNode与Timeline。
    - Graph、Node、Edge等新实体使用`local:*`；`contentRevision`是版本值而不是实体identity，不得使用带冒号的`local:*`，应提交合法非空revision。
@@ -58,6 +58,7 @@ Character Document v3正式可写：
 
 - Pose Graph-owned typed Source Slot子资产、Presentation Profile-owned typed Source Binding子资产、policy与有限Action producer binding。
 - root-owned Pose Graph catalog中的Graph、layout、parameter、节点typed payload、dynamic port与edge。
+- Linked Pose Implementation及其Entry Graph闭包、Profile Group binding、通用selector envelope和Equipment精确mapping；Interface正文只读。
 - PoseStateMachine的entry、state、alias、transition、transition rule与blend/sync策略。
 - PoseStateMachine同目录layout只稀疏保存Entry、State与Alias的稳定identity和有限二维位置；纯layout apply不修改StateMachine `ContentRevision`，也不触发Build。
 
@@ -68,7 +69,7 @@ Character Document v3正式可写：
 - generated Character Program、Presentation Projection、Native Pose Program和AIIntentProgram身份与stale状态。
 - AI受控Character的Input/Request合同与capability catalog。
 
-Pose Graph-owned Source Slot与Profile-owned Source Binding允许通过同一Document事务创建、重命名、配置和删除；Binding中的Rig、实际source asset、Motion Matching Profile与Foot Analysis字段只能引用正式目录允许的既有资产，可写的是Slot、Binding及其策略，不是被引用资产的内部内容。Pose Graph必须通过唯一共享Capability表达节点、typed payload、port与Document role，不得增加Pose专用MCP action或第二套Reconciler/Mutation入口。
+Pose Graph-owned Source Slot与Profile-owned Source Binding允许通过同一Document事务创建、重命名、配置和删除；Binding中的Rig、实际source asset、Motion Matching Profile与Foot Analysis字段只能引用正式目录允许的既有资产，可写的是Slot、Binding及其策略，不是被引用资产的内部内容。Linked Pose Interface以readonly context提供identity、revision、signature、Fact contract、Entry和typed ports；Implementation、Entry Graph、Group、selector与Equipment mapping通过同一typed Presentation Mutation和资产事务创建、配置、删除，并支持新对象`local:*`计划identity。Pose Graph必须通过唯一共享Capability表达节点、typed payload、port与Document role，不得增加Pose专用MCP action、直接切换活动runtime Implementation或第二套Reconciler/Mutation入口。
 
 Presentation目标必须把State-local Pose Source与Action AnimationChannel分开：Pose Player的`pose-source-slot`必须是精确Graph-owned typed Slot对象引用，`profile.json.poseSources`必须用精确Slot与Binding子资产对象引用绑定实际资源；不得按名称、路径、数组index或字符串identity猜测。Projection编译后Runtime只按dense source index解析资源；按PlayerNodeId生成的typed provider identity只做帧内路由，不进入Document或资源查找。ActionPlaybackInput与AnimationSlot只引用Timeline目标状态中已存在的Animation Channel，AnimationSlot仍是Action channel唯一consumer；有限Action producer必须引用现有Timeline与Animation track。
 

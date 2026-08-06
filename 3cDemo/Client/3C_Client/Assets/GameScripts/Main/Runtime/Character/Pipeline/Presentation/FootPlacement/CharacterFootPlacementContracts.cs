@@ -1,5 +1,4 @@
 using System;
-using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -15,6 +14,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Free = 1,
         Locked = 2,
         Sliding = 3
+    }
+
+    public enum CharacterFootPlantLockType : byte
+    {
+        Unlocked = 1,
+        PivotAroundToe = 2,
+        PivotAroundAnkle = 3,
+        LockRotation = 4
+    }
+
+    public enum CharacterFootPlacementPelvisHeightMode : byte
+    {
+        AllLegs = 1,
+        AllPlantedFeet = 2,
+        DirectionalSlopeSupport = 3
+    }
+
+    public enum CharacterFootPlacementActorMovementCompensationMode : byte
+    {
+        FollowBody = 1,
+        HoldWorldDuringInterpolation = 2
     }
 
     public enum FootConstraintTransitionReason : byte
@@ -33,7 +53,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         MissingAnimationOutput = 11,
         InvalidPose = 12,
         ContactReleased = 13,
-        LegCompressed = 14
+        LegCompressed = 14,
+        AnkleTwistExceeded = 15,
+        FootSeparationReleased = 16,
+        PelvisRangeConflictReleased = 17
     }
 
     public enum FootPredictionRejectReason : byte
@@ -45,50 +68,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ReachExceeded = 4,
         NonFinite = 5,
         NoFutureLanding = 6
-    }
-
-    public enum FootPlacementSupportFoot : byte
-    {
-        None = 0,
-        Left = 1,
-        Right = 2,
-        Both = 3
-    }
-
-    public enum FootPlacementPelvisHeightMode : byte
-    {
-        AllPlantedFeet = 1,
-        DirectionalSlopeSupport = 2
-    }
-
-    public enum FootPlacementPelvisHeightDecision : byte
-    {
-        Neutral = 1,
-        Resolved = 2,
-        Unavailable = 3
-    }
-
-    public enum FootPlacementPelvisHeightReason : byte
-    {
-        NoPlantedFeet = 1,
-        SinglePlantedFoot = 2,
-        AllPlantedFeet = 3,
-        LevelSupport = 4,
-        UphillForwardFoot = 5,
-        DownhillLowerFoot = 6,
-        MovementDirectionUnavailable = 7,
-        FootOrderAmbiguous = 8
-    }
-
-    public enum FootPlacementBendDecisionReason : byte
-    {
-        None = 0,
-        AnimationPlanePreserved = 1,
-        ExtensionStabilized = 2,
-        AnimationPlaneDegenerate = 3,
-        CompressedBeyondLimit = 4,
-        ExtendedBeyondLimit = 5,
-        PolicyDisabled = 6
     }
 
     public readonly struct CharacterFootPlacementAnimatedFootPose
@@ -147,107 +126,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 PelvisLocalPosition { get; }
         public CharacterFootPlacementAnimatedFootPose Left { get; }
         public CharacterFootPlacementAnimatedFootPose Right { get; }
-    }
-
-    public readonly struct FootPlacementFootPlan
-    {
-        public FootPlacementFootPlan(
-            CharacterFootSide side,
-            Vector3 position,
-            Quaternion rotation,
-            float legExtensionRatio,
-            Vector3 animatedBendNormal,
-            Vector3 preferredBendNormal,
-            float bendStabilizationWeight,
-            FootPlacementBendDecisionReason bendDecisionReason,
-            float positionWeight,
-            float rotationWeight,
-            FootConstraintState constraintState,
-            FootConstraintTransitionReason transitionReason)
-        {
-            Side = side;
-            Position = position;
-            Rotation = rotation;
-            LegExtensionRatio = legExtensionRatio;
-            AnimatedBendNormal = animatedBendNormal;
-            PreferredBendNormal = preferredBendNormal;
-            BendStabilizationWeight = Mathf.Clamp01(bendStabilizationWeight);
-            BendDecisionReason = bendDecisionReason;
-            PositionWeight = Mathf.Clamp01(positionWeight);
-            RotationWeight = Mathf.Clamp01(rotationWeight);
-            ConstraintState = constraintState;
-            TransitionReason = transitionReason;
-        }
-
-        public CharacterFootSide Side { get; }
-        public Vector3 Position { get; }
-        public Quaternion Rotation { get; }
-        public float LegExtensionRatio { get; }
-        public Vector3 AnimatedBendNormal { get; }
-        public Vector3 PreferredBendNormal { get; }
-        public float BendStabilizationWeight { get; }
-        public FootPlacementBendDecisionReason BendDecisionReason { get; }
-        public float PositionWeight { get; }
-        public float RotationWeight { get; }
-        public FootConstraintState ConstraintState { get; }
-        public FootConstraintTransitionReason TransitionReason { get; }
-    }
-
-    public readonly struct CharacterFootPlacementPlan
-    {
-        public CharacterFootPlacementPlan(
-            ActorId actorId,
-            ulong renderFrame,
-            ulong resetSequence,
-            FootPlacementFootPlan left,
-            FootPlacementFootPlan right,
-            float pelvisComponentVerticalOffset)
-        {
-            ActorId = actorId;
-            RenderFrame = renderFrame;
-            ResetSequence = resetSequence;
-            Left = left;
-            Right = right;
-            PelvisComponentVerticalOffset = pelvisComponentVerticalOffset;
-        }
-
-        public ActorId ActorId { get; }
-        public ulong RenderFrame { get; }
-        public ulong ResetSequence { get; }
-        public FootPlacementFootPlan Left { get; }
-        public FootPlacementFootPlan Right { get; }
-        public float PelvisComponentVerticalOffset { get; }
-            public bool IsValid => ActorId.IsValid && RenderFrame != 0 &&
-                               IsFinite(Left.Position) && IsFinite(Right.Position) &&
-                               IsFinite(Left.LegExtensionRatio) && IsFinite(Right.LegExtensionRatio) &&
-                               IsFinite(Left.AnimatedBendNormal) && IsFinite(Right.AnimatedBendNormal) &&
-                               IsFinite(Left.PreferredBendNormal) && IsFinite(Right.PreferredBendNormal) &&
-                               IsFinite(Left.Rotation) && IsFinite(Right.Rotation) &&
-                               IsFinite(PelvisComponentVerticalOffset);
-
-        static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
-        static bool IsFinite(Vector3 value) => IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z);
-        static bool IsFinite(Quaternion value) => IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z) && IsFinite(value.w);
-    }
-
-    public readonly struct CharacterFootPlacementSolverResult
-    {
-        public CharacterFootPlacementSolverResult(
-            ulong renderFrame,
-            bool applied,
-            bool duplicateRejected,
-            string detail)
-        {
-            RenderFrame = renderFrame;
-            Applied = applied;
-            DuplicateRejected = duplicateRejected;
-            Detail = detail ?? string.Empty;
-        }
-
-        public ulong RenderFrame { get; }
-        public bool Applied { get; }
-        public bool DuplicateRejected { get; }
-        public string Detail { get; }
     }
 
 }

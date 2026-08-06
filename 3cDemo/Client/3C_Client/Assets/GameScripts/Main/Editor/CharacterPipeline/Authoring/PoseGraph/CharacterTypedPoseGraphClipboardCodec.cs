@@ -52,7 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         document.DocumentRoleId);
                 var properties = new JObject();
                 foreach (GraphAuthoringFieldDescriptor field in
-                         capability.Fields.OrderBy(value => value.FieldId))
+                         capability.Fields
+                             .Where(value => value.AuthoringWritable)
+                             .OrderBy(value => value.FieldId))
                 {
                     properties[field.FieldId.Value] =
                         CharacterPoseAuthoringPayloadCodec.EncodeValue(
@@ -240,6 +242,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         document.DomainId,
                         document.DocumentRoleId);
                 HashSet<string> fields = capability.Fields
+                    .Where(value => value.AuthoringWritable)
                     .Select(value => value.FieldId.Value)
                     .ToHashSet(StringComparer.Ordinal);
                 if (node.properties == null ||
@@ -476,6 +479,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterPosePortKind.PoseDiscontinuity,
             "pose.action-playback" =>
                 CharacterPosePortKind.ActionPlayback,
+            "component.full-body-ik-goals" =>
+                CharacterPosePortKind.FullBodyIkGoals,
             _ => throw new InvalidOperationException(
                 $"Unknown Pose clipboard port value type '{value}'.")
         };

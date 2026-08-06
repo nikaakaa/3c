@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
@@ -12,13 +13,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 return AnimationPresentationDiagnosticsInterest.None;
             if (diagnostics.ShouldCapture(
                     RuntimeTraceChannel.Animation,
-                    RuntimeTraceEventKind.AnimationPlaybackPending))
+                    RuntimeTraceEventKind.AnimationPlaybackPending) ||
+                diagnostics.ShouldCapture(
+                    RuntimeTraceChannel.FootPlacement,
+                    RuntimeTraceEventKind.FootPlacementSnapshot))
             {
                 return AnimationPresentationDiagnosticsInterest.Capture;
             }
             return diagnostics.ShouldPublish(
-                    RuntimeTraceChannel.Animation,
-                    RuntimeTraceEventKind.AnimationPlaybackPending)
+                       RuntimeTraceChannel.Animation,
+                       RuntimeTraceEventKind.AnimationPlaybackPending) ||
+                   diagnostics.ShouldPublish(
+                       RuntimeTraceChannel.FootPlacement,
+                       RuntimeTraceEventKind.FootPlacementSnapshot)
                 ? AnimationPresentationDiagnosticsInterest.LiveState
                 : AnimationPresentationDiagnosticsInterest.None;
         }
@@ -43,6 +50,110 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             PublishRetirements(
                 diagnostics,
                 retiredPlaybacks);
+            PublishFootIk(diagnostics, debugView.PosePlan.FootIk);
+        }
+
+        static void PublishFootIk(
+            RuntimeDiagnosticsContext diagnostics,
+            AnimationFootIkRuntimeSnapshot snapshot)
+        {
+            if (!snapshot.IsAvailable ||
+                !diagnostics.ShouldPublish(
+                    RuntimeTraceChannel.FootPlacement,
+                    RuntimeTraceEventKind.FootPlacementSnapshot))
+            {
+                return;
+            }
+            CharacterPredictiveFootPlacementDiagnostics predictive =
+                snapshot.PredictiveFootPlacement;
+            CharacterFullBodyIkSolverDiagnostics solver = snapshot.Solver;
+            RuntimeFootIkTraceSnapshot footIk = new RuntimeFootIkTraceSnapshot
+            {
+                IsAvailable = true,
+                FrameSequence = predictive.FrameSequence,
+                GoalCompletionIdentity = predictive.CompletionIdentity,
+                SolverCompletionIdentity = solver.OutputCompletionIdentity,
+                GroundingBackendIdentity = predictive.BackendIdentity,
+                SolverBackendIdentity = solver.BackendIdentity,
+                SolverFailure = solver.IsCompleted
+                    ? solver.Failure.ToString()
+                    : "NotCompleted",
+                BodyGrounded = predictive.Grounded,
+                RootHit = predictive.RootHit.HasHit,
+                RootSurfaceIdentity = predictive.RootHit.SurfaceIdentity,
+                PelvisTargetOffset = predictive.PelvisPlan.TargetOffset,
+                PelvisResolvedOffset = predictive.PelvisPlan.ResolvedOffset,
+                RejectLeftGoal = predictive.PelvisPlan.RejectLeftGoal,
+                RejectRightGoal = predictive.PelvisPlan.RejectRightGoal,
+                PelvisHeightMode = predictive.PelvisPlan.HeightMode.ToString(),
+                MovementCompensationMode = predictive.PelvisPlan.MovementCompensationMode.ToString(),
+                Left = BuildFootTrace(predictive.Left, snapshot.LeftFoot),
+                Right = BuildFootTrace(predictive.Right, snapshot.RightFoot)
+            };
+            string status = !solver.IsCompleted
+                ? "GoalSourceCompleted"
+                : solver.Succeeded
+                    ? "Solved"
+                    : $"SolverFailed/{solver.Failure}";
+            diagnostics.Publish(
+                RuntimeTraceChannel.FootPlacement,
+                RuntimeTraceDomain.Presentation,
+                RuntimeTraceEventKind.FootPlacementSnapshot,
+                RuntimeSourceElementHandle.Invalid,
+                RuntimeInstanceKey.Character(diagnostics.CharacterRuntimeId),
+                new RuntimeTracePayload
+                {
+                    Name = "FinalIK Grounding -> Predictive Extension -> FullBodyIK",
+                    Status = status,
+                    OwnerId = predictive.CompletionIdentity.ToString(),
+                    RelatedElementId = predictive.FrameSequence.ToString(),
+                    Time = predictive.Left.FootFeature.PlantConfidence,
+                    SecondaryTime = predictive.PelvisPlan.ResolvedOffset,
+                    NormalizedTime = predictive.Right.FootFeature.PlantConfidence,
+                    Weight = predictive.Left.Goal.PositionWeight,
+                    FinalWeight = predictive.Right.Goal.PositionWeight,
+                    Flag = solver.Succeeded,
+                    Cause = $"PelvisReject(L={predictive.PelvisPlan.RejectLeftGoal},R={predictive.PelvisPlan.RejectRightGoal})",
+                    Detail = $"L confidence {predictive.Left.FootFeature.PlantConfidence:0.###} plant {predictive.Left.PlantWeight:0.###} contact {predictive.Left.ContactWeight:0.###} residual {snapshot.LeftFoot.PositionResidual:0.###} | " +
+                             $"R confidence {predictive.Right.FootFeature.PlantConfidence:0.###} plant {predictive.Right.PlantWeight:0.###} contact {predictive.Right.ContactWeight:0.###} residual {snapshot.RightFoot.PositionResidual:0.###}",
+                    FootIk = footIk
+                });
+        }
+
+        static RuntimeFootIkLegTraceSnapshot BuildFootTrace(
+            CharacterPredictiveFootDiagnostics predictive,
+            CharacterFullBodyIkEffectorDiagnostics solved)
+        {
+            return new RuntimeFootIkLegTraceSnapshot
+            {
+                IsAvailable = true,
+                Grounded = predictive.Grounded,
+                CurrentGroundingHit = predictive.CurrentGroundingHit.HasHit,
+                SurfaceIdentity = predictive.CurrentGroundingHit.SurfaceIdentity,
+                ConstraintState = predictive.ConstraintState.ToString(),
+                TransitionReason = predictive.TransitionReason.ToString(),
+                LockType = predictive.LockType.ToString(),
+                PredictionRejectReason = predictive.PredictionRejectReason.ToString(),
+                GoalApplication = predictive.Goal.Application.ToString(),
+                GoalSourceKind = predictive.Goal.SourceKind.ToString(),
+                SolverResultAvailable = solved.IsAvailable,
+                PlantConfidence = predictive.FootFeature.PlantConfidence,
+                SoleHeight = predictive.FootFeature.SoleHeight,
+                PlacementWeight = predictive.PlacementWeight,
+                PlantWeight = predictive.PlantWeight,
+                ContactWeight = predictive.ContactWeight,
+                GoalPositionWeight = predictive.Goal.PositionWeight,
+                GoalRotationWeight = predictive.Goal.RotationWeight,
+                LegExtensionRatio = predictive.LegExtensionRatio,
+                AnkleTwistDegrees = predictive.AnkleTwistDegrees,
+                QueryCount = predictive.QueryCount,
+                RejectedQueryCount = predictive.RejectedQueryCount,
+                GroundingComponentPosition = predictive.GroundingComponentPosition,
+                GoalComponentPosition = predictive.Goal.ComponentPosition,
+                SolvedComponentPosition = solved.SolvedComponentPosition,
+                PositionResidual = solved.PositionResidual,
+                RotationResidualDegrees = solved.RotationResidualDegrees
+            };
         }
 
         static void PublishActionPlaybacks(

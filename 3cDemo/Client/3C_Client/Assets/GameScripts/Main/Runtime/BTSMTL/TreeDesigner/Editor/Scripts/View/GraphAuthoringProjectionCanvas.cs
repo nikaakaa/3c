@@ -1,4 +1,5 @@
 using System;
+using UnityEditor;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.Experimental.GraphView;
@@ -79,6 +80,7 @@ namespace TreeDesigner.Editor
         {
             "pose.local" => new Color32(93, 173, 255, 255),
             "pose.component" => new Color32(255, 170, 76, 255),
+            "component.full-body-ik-goals" => new Color32(96, 220, 164, 255),
             _ => new Color32(180, 180, 180, 255)
         };
 
@@ -94,6 +96,7 @@ namespace TreeDesigner.Editor
         public GraphAuthoringProjectedNodeView(
             GraphAuthoringNodeProjection projection,
             GraphAuthoringCapabilityDescriptor capability)
+            : base(AssetDatabase.GUIDToAssetPath(BaseNodeView.DefaultVisualTreeGUID))
         {
             Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             Capability = capability ?? throw new ArgumentNullException(nameof(capability));
@@ -563,3 +566,7 @@ namespace TreeDesigner.Editor
             new GraphAuthoringSearchEntry("node/" + node.NodeId.Value, string.IsNullOrWhiteSpace(node.DisplayName) ? capability.DisplayName : node.DisplayName, "Document", node.CapabilityId, node.NodeId);
     }
 }
+
+
+
+

@@ -60,6 +60,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             int units = authoring.QuantizationUnitsPerMeter;
             if (units <= 0 || string.IsNullOrWhiteSpace(authoring.MapId))
                 throw new InvalidDataException("Deterministic Collision World authoring identity is invalid.");
+            StairTraversalWorldValidationReport stairReport = StairTraversalSurfaceValidator.ValidateWorld(authoring);
+            if (stairReport.HasErrors)
+                throw new InvalidDataException($"Deterministic Collision World stair authoring validation failed:{Environment.NewLine}{stairReport.FormatErrors()}");
             var surfaces = new List<DeterministicCollisionSurface>();
             var surfaceIds = new Dictionary<string, int>(StringComparer.Ordinal);
             var vertices = new List<FixedVector3>();
@@ -73,9 +76,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 .ToArray();
             if (sources.Length == 0)
                 throw new InvalidDataException("Deterministic Collision World authoring has no surface sources.");
+            var records = new List<ColliderSourceRecord>();
+            var walkableBoxes = new List<DeterministicWalkableBoxSource>();
             for (int sourceIndex = 0; sourceIndex < sources.Length; sourceIndex++)
             {
                 DeterministicCollisionSurfaceAuthoring source = sources[sourceIndex];
+                if (string.IsNullOrWhiteSpace(source.SurfaceIdentity) || string.IsNullOrWhiteSpace(source.MaterialIdentity))
+                    throw new InvalidDataException("Deterministic collision surface identity is invalid.");
                 Collider[] sourceColliders = source
                     .GetComponentsInChildren<Collider>(true)
                     .Where(value => value != null && value.enabled && value.gameObject.activeInHierarchy)
@@ -86,25 +93,38 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 for (int colliderIndex = 0; colliderIndex < sourceColliders.Length; colliderIndex++)
                 {
                     Collider collider = sourceColliders[colliderIndex];
-                    int surfaceId = ResolveSurface(source, collider, surfaces, surfaceIds);
                     if (!colliders.Add(collider))
                         throw new InvalidDataException($"Collider '{collider.name}' belongs to multiple deterministic surfaces.");
                     if (collider.isTrigger)
                         throw new InvalidDataException($"Collider '{collider.name}' is a trigger and cannot enter the deterministic collision world.");
-                    switch (collider)
+                    ValidateColliderType(collider);
+                    string colliderIdentity = ColliderIdentity(source.transform, collider);
+                    records.Add(new ColliderSourceRecord(source, collider));
+                    if (source.Walkable && collider is BoxCollider box)
                     {
-                        case BoxCollider box:
-                            AddBox(box, surfaceId, units, vertices, vertexIds, primitives);
-                            break;
-                        case MeshCollider mesh:
-                            AddMesh(mesh, surfaceId, units, vertices, vertexIds, primitives);
-                            break;
-                        case TerrainCollider terrain:
-                            AddTerrain(terrain, surfaceId, units, vertices, vertexIds, primitives);
-                            break;
-                        default:
-                            throw new InvalidDataException($"Collider '{collider.name}' type '{collider.GetType().Name}' is not supported by the deterministic artifact.");
+                        walkableBoxes.Add(new DeterministicWalkableBoxSource(
+                            colliderIdentity,
+                            source.SurfaceIdentity.Trim(),
+                            BoxWorldVertices(box, units)));
                     }
+                }
+            }
+            DeterministicWalkableBoxOverlapValidator.Validate(walkableBoxes, units);
+            for (int recordIndex = 0; recordIndex < records.Count; recordIndex++)
+            {
+                ColliderSourceRecord record = records[recordIndex];
+                int surfaceId = ResolveSurface(record.Source, record.Collider, surfaces, surfaceIds);
+                switch (record.Collider)
+                {
+                    case BoxCollider box:
+                        AddBox(box, surfaceId, units, vertices, vertexIds, primitives);
+                        break;
+                    case MeshCollider mesh:
+                        AddMesh(mesh, surfaceId, units, vertices, vertexIds, primitives);
+                        break;
+                    case TerrainCollider terrain:
+                        AddTerrain(terrain, surfaceId, units, vertices, vertexIds, primitives);
+                        break;
                 }
             }
             Bounds worldBounds = authoring.WorldBounds;
@@ -142,6 +162,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return id;
         }
 
+        static void ValidateColliderType(Collider collider)
+        {
+            if (collider is BoxCollider || collider is MeshCollider || collider is TerrainCollider)
+                return;
+            throw new InvalidDataException(
+                $"Collider '{collider.name}' type '{collider.GetType().Name}' is not supported by the deterministic artifact.");
+        }
+
         static void AddBox(
             BoxCollider collider,
             int surfaceId,
@@ -161,22 +189,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 return;
             }
 
-            Vector3 center = collider.center;
-            Vector3 half = collider.size * 0.5f;
-            Vector3[] local =
-            {
-                center + new Vector3(-half.x, -half.y, -half.z),
-                center + new Vector3(half.x, -half.y, -half.z),
-                center + new Vector3(half.x, -half.y, half.z),
-                center + new Vector3(-half.x, -half.y, half.z),
-                center + new Vector3(-half.x, half.y, -half.z),
-                center + new Vector3(half.x, half.y, -half.z),
-                center + new Vector3(half.x, half.y, half.z),
-                center + new Vector3(-half.x, half.y, half.z)
-            };
-            var world = new FixedVector3[local.Length];
-            for (int i = 0; i < local.Length; i++)
-                world[i] = Quantize(collider.transform.TransformPoint(local[i]), units);
+            FixedVector3[] world = BoxWorldVertices(collider, units);
             var triangles = new[]
             {
                 new TriangleInput(world[0], world[1], world[2]),
@@ -193,6 +206,27 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 new TriangleInput(world[1], world[5], world[6])
             };
             AddTriangleSurface(collider.name, surfaceId, triangles, vertices, vertexIds, primitives);
+        }
+
+        static FixedVector3[] BoxWorldVertices(BoxCollider collider, int units)
+        {
+            Vector3 center = collider.center;
+            Vector3 half = collider.size * 0.5f;
+            Vector3[] local =
+            {
+                center + new Vector3(-half.x, -half.y, -half.z),
+                center + new Vector3(half.x, -half.y, -half.z),
+                center + new Vector3(half.x, -half.y, half.z),
+                center + new Vector3(-half.x, -half.y, half.z),
+                center + new Vector3(-half.x, half.y, -half.z),
+                center + new Vector3(half.x, half.y, -half.z),
+                center + new Vector3(half.x, half.y, half.z),
+                center + new Vector3(-half.x, half.y, half.z)
+            };
+            var world = new FixedVector3[local.Length];
+            for (int i = 0; i < local.Length; i++)
+                world[i] = Quantize(collider.transform.TransformPoint(local[i]), units);
+            return world;
         }
 
         static string ColliderIdentity(Transform surfaceRoot, Collider collider)
@@ -405,6 +439,18 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public FixedVector3 A { get; }
             public FixedVector3 B { get; }
             public FixedVector3 C { get; }
+        }
+
+        readonly struct ColliderSourceRecord
+        {
+            public ColliderSourceRecord(DeterministicCollisionSurfaceAuthoring source, Collider collider)
+            {
+                Source = source;
+                Collider = collider;
+            }
+
+            public DeterministicCollisionSurfaceAuthoring Source { get; }
+            public Collider Collider { get; }
         }
 
         sealed class TriangleRecord

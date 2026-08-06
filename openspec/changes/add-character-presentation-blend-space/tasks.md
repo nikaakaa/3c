@@ -224,7 +224,7 @@
 - [x] 13.13 发布typed Pose Discontinuity。
 - [x] 13.14 让节点不保存旧source entry或CrossFade clock。
 - [x] 13.15 让节点不执行inertial residual。
-- [x] 13.16 让节点不执行FootPlacement或final writer。
+- [x] 13.16 让节点不执行PredictiveFootPlacement、FullBodyIK或final writer。
 - [x] 13.17 参数缺失时按节点availability合同输出NoPose或失败。
 - [x] 13.18 数值失败时发布诊断并禁止复用上一帧weight/time。
 
@@ -255,7 +255,7 @@
 - [x] 15.10 按effective child sample time读取左右脚feature。
 - [x] 15.11 用姿势相同的sample weight聚合foot feature。
 - [x] 15.12 让后续LayeredBoneBlend继续乘实际脚部骨骼贡献。
-- [x] 15.13 让唯一FootPlacement节点继续只消费最终聚合结果。
+- [x] 15.13 让唯一PredictiveFootPlacement Goal Source继续只消费最终聚合结果。
 
 ## 16. 扩展Pose Parameter聚合
 

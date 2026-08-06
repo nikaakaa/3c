@@ -1,5 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
-    <Style src="project://database/Assets/Plugin/TreeDesigner/Editor/Resources/StyleSheet/BaseNode.uss?fileID=7433441132597879392&amp;guid=f24502238ee8ac5478af96e8894528ee&amp;type=3#BaseNode" />
+    <Style src="project://database/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/BaseNode.uss?fileID=7433441132597879392&amp;guid=f24502238ee8ac5478af96e8894528ee&amp;type=3#BaseNode" />
     <ui:VisualElement name="node-state" />
     <ui:VisualElement name="node-selection-border" />
     <ui:VisualElement name="node-border" picking-mode="Ignore">

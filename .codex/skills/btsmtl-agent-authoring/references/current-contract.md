@@ -42,9 +42,9 @@ AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/
     dependencies.json
 ```
 
-`manifest.json`声明schema、domain、root identity与精确文件闭包；`.sync.json`保存整包同步基线。两者和`context/`由service拥有。`editable/`是AI唯一可写区域。整个目录仍是一个逻辑Document：hash、同步状态、dry-run、apply和冲突判定都以整包为单位。
+`manifest.json`声明schema、domain、root identity与精确文件闭包；`.sync.json`保存整包同步基线。两者、`context/`和`readonly/`由service拥有。`editable/`是AI唯一可写区域。整个目录仍是一个逻辑Document：hash、同步状态、dry-run、apply和冲突判定都以整包为单位；`readonly/`与`context/`共同进入context hash。
 
-新增Pose Graph或Graph-owned Inline Timeline分片不要求也不允许AI编辑manifest。AI必须使用`local:<meaningful-id>`作为graph/timeline id，并在其canonical segment目录中同时创建完整文件对。canonical segment算法为：
+新增Pose Graph、Graph-owned Inline Timeline或Linked Pose Implementation/Entry Graph分片不要求也不允许AI编辑manifest。AI必须使用`local:<meaningful-id>`作为新对象identity，并在其canonical segment目录中创建完整文件对或Implementation闭包。canonical segment算法为：
 
 ```text
 readable = local id中非[A-Za-z0-9_-]字符替换为-，trim(-)，截取前48字符
@@ -144,6 +144,9 @@ Character Presentation是`editable/`中的正式目标状态：
 - 同目录`layout.json`只保存节点位置，目录segment、Graph id与layout graphId必须一致。
 - `editable/presentation/pose-state-machines/<stable-segment>/state-machine.json`保存entry、显式`alwaysResetOnEntry` state、alias、transition、规则图与blend策略。Transition禁止`targetResetPolicy`和`sourceSyncMode`；Sequence Player properties禁止`reset-on-entry`。
 - 同目录`layout.json`只稀疏保存Entry、State与Alias的稳定identity和有限二维位置。缺失位置由稳定identity确定性排布；纯layout变化进入同一Presentation Mutation、Undo、hash与冲突判定，但不修改StateMachine `ContentRevision`，不使Projection stale，也不触发Build。
+- `readonly/presentation/linked-pose-interfaces/<stable-segment>/interface.json`保存稳定Interface identity、正式对象引用、revision、signature、Fact contract、execution contract、Entry与typed ports；任何改动都按readonly context冲突拒绝。
+- `editable/presentation/linked-pose-implementations/<stable-segment>/implementation.json`保存Implementation对象key、owner key、业务identity、revision、Interface与Graph owner正式引用或`local:*`计划identity、Entry到Graph映射；同目录`pose-graphs/**/{graph,layout}.json`与`pose-state-machines/**/{state-machine,layout}.json`保存完整Entry Graph闭包，不得内联到implementation正文。
+- `profile.json.linkedPoseGroups`只保存Group与Interface，`profile.json.linkedPoseSelectors`使用通用selector envelope；当前正式payload为Equipment Slot、显式Empty Implementation与EquipmentId到ImplementationId精确mapping。每个Group恰好一个selector，全部Implementation必须进入selector候选闭包。
 
 Pose Graph节点、字段、execution domain与port必须来自唯一共享`CharacterPoseGraphAuthoringCapabilities`，不得在Document、MCP或UI重复登记。Pose端口只允许`pose.local`或`pose.component`，不同空间只能通过显式`LocalToComponentPose`或`ComponentToLocalPose`连接；Graph Input/Output动态端口也必须保存精确空间，`OutputPose`只接受Local Pose。PoseStateMachine节点通过`childDocumentId`唯一引用同包StateMachine；State通过`poseGraphId + outputPoseNodeId`引用同包State Pose Graph输出。
 
@@ -238,6 +241,6 @@ Character generated product发布是上述Document事务之外的显式精确Def
 
 保存文件后调用`btsmtl.dry_run_document`，再把返回的`documentHash`原样传给`btsmtl.apply_document.expected_document_hash`。
 
-修改Presentation时直接编辑Document v3的`editable/presentation/**`目标文件，随后对整个Document执行一次dry-run和同hash apply。不得增加Pose专用MCP action、Presentation专用apply或第二套事务。
+修改Presentation时直接编辑Document v3的`editable/presentation/**`目标文件，Linked Interface只从`readonly/presentation/**`读取，随后对整个Document执行一次dry-run和同hash apply。不得增加Pose专用MCP action、直接切换活动runtime Implementation、Presentation专用apply或第二套事务。
 
 完成代码修改时必须说明Agent合同已同步，或说明变化为什么完全不影响package editable/context、identity、ownership、Reconciler和Validator。

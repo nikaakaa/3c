@@ -24,6 +24,8 @@ namespace TreeDesigner.Editor
         readonly VisualElement m_Content;
         GraphAuthoringStateMachineBinding m_Binding;
         IGraphAuthoringStateMachineDetailsDataSource m_DataSource;
+        Func<GraphAuthoringSelection, IReadOnlyList<GraphAuthoringReadOnlyDetail>>
+            m_AppliedValues;
         GraphAuthoringElementId m_DraftCustomTransitionId;
 
         public GraphAuthoringStateMachineDetailsPresenter(VisualElement content)
@@ -33,10 +35,13 @@ namespace TreeDesigner.Editor
 
         public void Bind(
             GraphAuthoringStateMachineBinding binding,
-            IGraphAuthoringStateMachineDetailsDataSource dataSource)
+            IGraphAuthoringStateMachineDetailsDataSource dataSource,
+            Func<GraphAuthoringSelection, IReadOnlyList<GraphAuthoringReadOnlyDetail>>
+                appliedValues = null)
         {
             m_Binding = binding ?? throw new ArgumentNullException(nameof(binding));
             m_DataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+            m_AppliedValues = appliedValues;
             m_Content.Clear();
         }
 
@@ -52,17 +57,25 @@ namespace TreeDesigner.Editor
             m_Content.Add(new Label(string.IsNullOrWhiteSpace(state.DisplayName) ? "State" : state.DisplayName));
             IReadOnlyList<GraphAuthoringFieldDescriptor> fields =
                 m_Binding.Policy.GetStateFields(state) ?? Array.Empty<GraphAuthoringFieldDescriptor>();
-            foreach (GraphAuthoringFieldDescriptor field in fields
-                         .Where(value => value.AuthoringVisible && value.IsVisible(controller =>
-                             m_DataSource.ReadStateField(
-                                 m_Binding.Document,
-                                 state,
-                                 fields.Single(candidate => candidate.FieldId.Equals(controller)))))
-                         .OrderBy(value => value.DisplayName, StringComparer.Ordinal))
-            {
-                object current = m_DataSource.ReadStateField(m_Binding.Document, state, field);
-                m_Content.Add(CreateField(field, current, value => SetStateField(state, field, value)));
-            }
+            AddStateAuthoringSection(state, fields);
+            AddReadOnlySection(
+                "Runtime Inputs",
+                new[] { new GraphAuthoringReadOnlyDetail("Source", "Compiled Pose StateMachine runtime") },
+                true);
+            AddReadOnlySection(
+                "Applied Values",
+                GetAppliedValues(GraphAuthoringSelectionKind.State, state.StateId),
+                true);
+            AddReadOnlySection(
+                "References",
+                state.ChildGraphId.IsValid
+                    ? new[] { new GraphAuthoringReadOnlyDetail("Child Graph", state.ChildGraphId.Value) }
+                    : Array.Empty<GraphAuthoringReadOnlyDetail>(),
+                true);
+            AddReadOnlySection(
+                "Diagnostics",
+                new[] { new GraphAuthoringReadOnlyDetail("Status", string.IsNullOrWhiteSpace(state.Status) ? "No diagnostic." : state.Status) },
+                false);
         }
 
         public void InspectTransition(GraphAuthoringElementId transitionId)
@@ -76,16 +89,7 @@ namespace TreeDesigner.Editor
             m_Content.Add(new Label(string.IsNullOrWhiteSpace(transition.DisplayName) ? "Transition" : transition.DisplayName));
             IReadOnlyList<GraphAuthoringFieldDescriptor> fields =
                 m_Binding.Policy.GetTransitionFields(transition) ?? Array.Empty<GraphAuthoringFieldDescriptor>();
-            foreach (GraphAuthoringFieldDescriptor field in fields
-                         .Where(value => value.AuthoringVisible && value.IsVisible(controller =>
-                             ReadTransitionField(
-                                 transition,
-                                 fields.Single(candidate => candidate.FieldId.Equals(controller)))))
-                         .OrderBy(value => value.DisplayName, StringComparer.Ordinal))
-            {
-                object current = ReadTransitionField(transition, field);
-                m_Content.Add(CreateField(field, current, value => SetTransitionField(transition, field, value)));
-            }
+            AddTransitionAuthoringSection(transition, fields);
             if (transition.RuleOwnerId.IsValid)
             {
                 var openRule = new Button(() =>
@@ -93,8 +97,32 @@ namespace TreeDesigner.Editor
                 {
                     text = "Open Rule"
                 };
-                m_Content.Add(openRule);
+                var commands = new Foldout { text = "Commands", value = true };
+                commands.AddToClassList("graph-authoring-details-section");
+                commands.Add(openRule);
+                m_Content.Add(commands);
             }
+            AddReadOnlySection(
+                "Runtime Inputs",
+                new[] { new GraphAuthoringReadOnlyDetail("Source", "Compiled Pose StateMachine runtime") },
+                true);
+            AddReadOnlySection(
+                "Applied Values",
+                GetAppliedValues(GraphAuthoringSelectionKind.Transition, transition.TransitionId),
+                true);
+            AddReadOnlySection(
+                "References",
+                new[]
+                {
+                    new GraphAuthoringReadOnlyDetail("Source State", transition.SourceStateId.Value),
+                    new GraphAuthoringReadOnlyDetail("Target State", transition.TargetStateId.Value),
+                    new GraphAuthoringReadOnlyDetail("Rule", transition.RuleOwnerId.IsValid ? transition.RuleOwnerId.Value : "None")
+                },
+                true);
+            AddReadOnlySection(
+                "Diagnostics",
+                new[] { new GraphAuthoringReadOnlyDetail("Status", "No diagnostic.") },
+                false);
         }
 
         public void ClearSelection()
@@ -166,6 +194,127 @@ namespace TreeDesigner.Editor
             }
             control.SetEnabled(field.AuthoringWritable && !m_Binding.Mutation.ReadOnly);
             return control;
+        }
+
+        void AddStateAuthoringSection(
+            GraphAuthoringStateProjection state,
+            IReadOnlyList<GraphAuthoringFieldDescriptor> fields)
+        {
+            var section = new Foldout { text = "Authoring Defaults", value = true };
+            section.AddToClassList("graph-authoring-details-section");
+            foreach (GraphAuthoringFieldDescriptor field in VisibleFields(fields, controller =>
+                         m_DataSource.ReadStateField(
+                             m_Binding.Document,
+                             state,
+                             fields.Single(candidate => candidate.FieldId.Equals(controller)))))
+            {
+                object current = m_DataSource.ReadStateField(m_Binding.Document, state, field);
+                section.Add(CreateFieldRow(field, current, value => SetStateField(state, field, value)));
+            }
+            if (section.childCount == 0)
+                section.Add(new Label("This State has no editable authoring fields."));
+            m_Content.Add(section);
+        }
+
+        void AddTransitionAuthoringSection(
+            GraphAuthoringTransitionProjection transition,
+            IReadOnlyList<GraphAuthoringFieldDescriptor> fields)
+        {
+            var section = new Foldout { text = "Authoring Defaults", value = true };
+            section.AddToClassList("graph-authoring-details-section");
+            foreach (GraphAuthoringFieldDescriptor field in VisibleFields(fields, controller =>
+                         ReadTransitionField(
+                             transition,
+                             fields.Single(candidate => candidate.FieldId.Equals(controller)))))
+            {
+                object current = ReadTransitionField(transition, field);
+                section.Add(CreateFieldRow(field, current, value => SetTransitionField(transition, field, value)));
+            }
+            if (section.childCount == 0)
+                section.Add(new Label("This Transition has no editable authoring fields."));
+            m_Content.Add(section);
+        }
+
+        static IEnumerable<GraphAuthoringFieldDescriptor> VisibleFields(
+            IReadOnlyList<GraphAuthoringFieldDescriptor> fields,
+            Func<GraphAuthoringFieldId, object> readField) =>
+            fields
+                .Where(value => value.AuthoringVisible && value.IsVisible(readField))
+                .OrderBy(value => value.DisplayName, StringComparer.Ordinal);
+
+        VisualElement CreateFieldRow(
+            GraphAuthoringFieldDescriptor field,
+            object value,
+            Action<object> setValue)
+        {
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.AddToClassList("graph-authoring-details-field-row");
+            row.Add(CreateField(field, value, setValue));
+            row.Add(new Label(TuningLabel(field)));
+            return row;
+        }
+
+        void AddReadOnlySection(
+            string title,
+            IReadOnlyList<GraphAuthoringReadOnlyDetail> details,
+            bool expanded)
+        {
+            var section = new Foldout { text = title, value = expanded };
+            section.AddToClassList("graph-authoring-details-section");
+            if (details == null || details.Count == 0)
+            {
+                section.Add(new Label("No declared values."));
+            }
+            else
+            {
+                for (int i = 0; i < details.Count; i++)
+                {
+                    GraphAuthoringReadOnlyDetail detail = details[i];
+                    var row = new VisualElement();
+                    row.style.flexDirection = FlexDirection.Row;
+                    row.Add(new Label(detail.Label));
+                    row.Add(new Label(detail.Value));
+                    section.Add(row);
+                }
+            }
+            m_Content.Add(section);
+        }
+
+        static string TuningLabel(GraphAuthoringFieldDescriptor field)
+        {
+            switch (field.Interaction)
+            {
+                case GraphAuthoringFieldInteractionPolicy.Structural:
+                    return "Build Required";
+                case GraphAuthoringFieldInteractionPolicy.TunableDefault:
+                    return field.Tuning != null &&
+                           field.Tuning.ApplyTiming == GraphAuthoringFieldApplyTiming.NextActivation
+                        ? "Next Activation"
+                        : "Live Now";
+                case GraphAuthoringFieldInteractionPolicy.RuntimeInput:
+                    return "Runtime Input";
+                case GraphAuthoringFieldInteractionPolicy.DerivedReadOnly:
+                    return "Read Only";
+                default:
+                    return "Unclassified";
+            }
+        }
+
+        IReadOnlyList<GraphAuthoringReadOnlyDetail> GetAppliedValues(
+            GraphAuthoringSelectionKind kind,
+            GraphAuthoringElementId elementId)
+        {
+            if (m_AppliedValues == null)
+            {
+                return new[]
+                {
+                    new GraphAuthoringReadOnlyDetail(
+                        "Target",
+                        "Select an exact Preview or Live target to inspect applied values.")
+                };
+            }
+            return m_AppliedValues(new GraphAuthoringSelection(kind, elementId));
         }
 
         void SetStateField(

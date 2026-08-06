@@ -16,9 +16,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         SerializedProperty m_VirtualBones;
         SerializedProperty m_RootBonePolicy;
         SerializedProperty m_ScalePolicy;
+        SerializedProperty m_SolverRootBoneId;
         SerializedProperty m_PelvisBoneId;
+        SerializedProperty m_OrderedSpineBoneIds;
+        SerializedProperty m_LeftArm;
+        SerializedProperty m_RightArm;
         SerializedProperty m_LeftLeg;
         SerializedProperty m_RightLeg;
+        SerializedProperty m_HeadBoneId;
         bool m_ShowPhysicalBones;
         bool m_ShowDiagnostics;
         string m_ValidationMessage = string.Empty;
@@ -33,16 +38,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_VirtualBones = serializedObject.FindProperty("m_VirtualBones");
             m_RootBonePolicy = serializedObject.FindProperty("m_RootBonePolicy");
             m_ScalePolicy = serializedObject.FindProperty("m_ScalePolicy");
+            m_SolverRootBoneId = serializedObject.FindProperty("m_SolverRootBoneId");
             m_PelvisBoneId = serializedObject.FindProperty("m_PelvisBoneId");
+            m_OrderedSpineBoneIds = serializedObject.FindProperty("m_OrderedSpineBoneIds");
+            m_LeftArm = serializedObject.FindProperty("m_LeftArm");
+            m_RightArm = serializedObject.FindProperty("m_RightArm");
             m_LeftLeg = serializedObject.FindProperty("m_LeftLeg");
             m_RightLeg = serializedObject.FindProperty("m_RightLeg");
-            RefreshValidation();
+            m_HeadBoneId = serializedObject.FindProperty("m_HeadBoneId");
+            m_ValidationMessage = "尚未执行本次Rig v4显式验证。";
+            m_ValidationType = MessageType.Info;
         }
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            EditorGUILayout.LabelField("Animation Rig v3", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Animation Rig v4", EditorStyles.boldLabel);
             if (string.IsNullOrWhiteSpace(m_RigId.stringValue))
             {
                 EditorGUILayout.HelpBox("Rig尚未初始化机器身份。", MessageType.Error);
@@ -57,9 +68,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.PropertyField(m_ScalePolicy, new GUIContent("Scale Policy"));
             string[] physicalIds = GetPhysicalBoneIds();
             EditorGUI.BeginChangeCheck();
+            EditorGUILayout.LabelField("Root", EditorStyles.boldLabel);
+            DrawPhysicalPicker("Solver Root", m_SolverRootBoneId, physicalIds, string.Empty);
             DrawPhysicalPicker("Pelvis", m_PelvisBoneId, physicalIds, string.Empty);
+            DrawSpine(physicalIds);
+            DrawArmChain("Left Arm", m_LeftArm, physicalIds);
+            DrawArmChain("Right Arm", m_RightArm, physicalIds);
             DrawLegChain("Left Leg", m_LeftLeg, physicalIds);
             DrawLegChain("Right Leg", m_RightLeg, physicalIds);
+            DrawOptionalPhysicalPicker("Head", m_HeadBoneId, physicalIds);
             if (EditorGUI.EndChangeCheck())
                 RegenerateRevision();
 
@@ -68,10 +85,54 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawDiagnostics();
 
             if (serializedObject.ApplyModifiedProperties())
-            {
                 EditorUtility.SetDirty(target);
-                RefreshValidation();
+        }
+
+        void DrawSpine(string[] physicalIds)
+        {
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Ordered Spine", EditorStyles.boldLabel);
+            if (GUILayout.Button("Add", GUILayout.Width(64f)))
+            {
+                int index = m_OrderedSpineBoneIds.arraySize;
+                m_OrderedSpineBoneIds.InsertArrayElementAtIndex(index);
+                m_OrderedSpineBoneIds.GetArrayElementAtIndex(index).stringValue = string.Empty;
             }
+            EditorGUILayout.EndHorizontal();
+            for (int i = 0; i < m_OrderedSpineBoneIds.arraySize; i++)
+            {
+                EditorGUILayout.BeginHorizontal();
+                DrawPhysicalPicker($"[{i}]", m_OrderedSpineBoneIds.GetArrayElementAtIndex(i), physicalIds, string.Empty);
+                using (new EditorGUI.DisabledScope(i == 0))
+                {
+                    if (GUILayout.Button("↑", GUILayout.Width(28f)))
+                        m_OrderedSpineBoneIds.MoveArrayElement(i, i - 1);
+                }
+                using (new EditorGUI.DisabledScope(i == m_OrderedSpineBoneIds.arraySize - 1))
+                {
+                    if (GUILayout.Button("↓", GUILayout.Width(28f)))
+                        m_OrderedSpineBoneIds.MoveArrayElement(i, i + 1);
+                }
+                if (GUILayout.Button("−", GUILayout.Width(28f)))
+                {
+                    m_OrderedSpineBoneIds.DeleteArrayElementAtIndex(i);
+                    GUIUtility.ExitGUI();
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+            EditorGUILayout.EndVertical();
+        }
+
+        static void DrawArmChain(string label, SerializedProperty arm, string[] physicalIds)
+        {
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
+            DrawOptionalPhysicalPicker("Clavicle", arm.FindPropertyRelative("m_ClavicleBoneId"), physicalIds);
+            DrawPhysicalPicker("Upper Arm", arm.FindPropertyRelative("m_UpperArmBoneId"), physicalIds, string.Empty);
+            DrawPhysicalPicker("Forearm", arm.FindPropertyRelative("m_ForearmBoneId"), physicalIds, string.Empty);
+            DrawPhysicalPicker("Hand", arm.FindPropertyRelative("m_HandBoneId"), physicalIds, string.Empty);
+            EditorGUILayout.EndVertical();
         }
 
         static void DrawLegChain(string label, SerializedProperty leg, string[] physicalIds)
@@ -207,6 +268,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             if (!string.IsNullOrWhiteSpace(m_ValidationMessage))
                 EditorGUILayout.HelpBox(m_ValidationMessage, m_ValidationType);
+            if (GUILayout.Button("Validate Rig for FinalIK FBBIK"))
+                ValidateRigForFinalIk();
             using (new EditorGUI.DisabledScope(true))
             {
                 EditorGUILayout.PropertyField(m_Schema, new GUIContent("Schema"));
@@ -215,12 +278,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        void RefreshValidation()
+        void ValidateRigForFinalIk()
         {
+            serializedObject.ApplyModifiedProperties();
             try
             {
                 ((CharacterAnimationRigDefinition)target).RequireValid();
-                m_ValidationMessage = "Rig v3 contract is valid.";
+                m_ValidationMessage = "Rig v4 FullBodyBipedIK contract is valid.";
                 m_ValidationType = MessageType.Info;
             }
             catch (Exception exception)
@@ -228,6 +292,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_ValidationMessage = exception.Message;
                 m_ValidationType = MessageType.Error;
             }
+        }
+
+        static void DrawOptionalPhysicalPicker(string label, SerializedProperty property, string[] physicalIds)
+        {
+            int current = Array.IndexOf(physicalIds, property.stringValue);
+            string[] labels = new string[physicalIds.Length + 1];
+            labels[0] = "(None)";
+            for (int i = 0; i < physicalIds.Length; i++)
+                labels[i + 1] = ShortName(physicalIds[i]);
+            int selected = EditorGUILayout.Popup(label, current + 1, labels);
+            property.stringValue = selected > 0 ? physicalIds[selected - 1] : string.Empty;
         }
 
         string[] GetPhysicalBoneIds()

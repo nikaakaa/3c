@@ -210,6 +210,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterPresentationProjection m_Projection;
         readonly AnimationPoseNativeWorkspace m_Workspace;
         readonly CharacterPoseGraphNativeProgram m_PosePlan;
+        readonly CharacterFinalIkFullBodySolver[] m_FullBodyIkSolvers;
         readonly PoseInertializationNativeProgram m_InertializationPlan;
         readonly PhysicalPoseSourceRegistry m_PhysicalSources;
         readonly AnimancerPoseSamplingBackend m_SourceBackend;
@@ -283,6 +284,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly float m_PreviousOutputWeight;
         readonly bool m_ManagesGraphClock;
         readonly int m_FootPlacementWeightParameterIndex;
+        readonly bool[] m_LinkedPoseActiveFragments;
+        readonly bool[] m_LinkedPoseResetFragments;
+        readonly int[] m_PlayerLinkedPoseFragmentIndices;
+        readonly int[] m_StateMachineLinkedPoseFragmentIndices;
+        readonly int[] m_RootOrientationWarpLinkedPoseFragmentIndices;
+        readonly int[] m_InertializationLinkedPoseFragmentIndices;
 
         AnimationScriptPlayable[] m_SlotPlayables;
         AnimationScriptPlayable[] m_DirectPlayerPlayables;
@@ -307,6 +314,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         int m_MotionMatchingHistoryCompletionCount;
         CharacterPoseGraphNativeBinding m_LastCompletedFrame;
         CharacterPoseGraphNativeBinding m_PendingCompletedFrame;
+        CharacterPredictiveFootPlacementDiagnostics m_LastPredictiveFootPlacementDiagnostics;
+        CharacterPredictiveFootPlacementDiagnostics m_PendingPredictiveFootPlacementDiagnostics;
         PosePlanFrameLease m_ActiveFrameLease;
         bool m_CommitValidated;
         bool m_HasCompletedFrame;
@@ -332,6 +341,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     "Animation Presentation requires an AlwaysAnimate Animator because Pose jobs produce the frame transaction payload.");
             }
             projection.RequirePosePayload();
+            m_LinkedPoseActiveFragments =
+                new bool[projection.PosePlan.LinkedPoseFragments.Count];
+            m_LinkedPoseResetFragments =
+                new bool[projection.PosePlan.LinkedPoseFragments.Count];
+            m_PlayerLinkedPoseFragmentIndices =
+                BuildPlayerLinkedPoseFragmentIndices(
+                    projection.PosePlan);
+            m_StateMachineLinkedPoseFragmentIndices =
+                BuildStateMachineLinkedPoseFragmentIndices(
+                    projection.PosePlan);
+            m_RootOrientationWarpLinkedPoseFragmentIndices =
+                BuildRootOrientationWarpLinkedPoseFragmentIndices(
+                    projection.PosePlan);
+            m_InertializationLinkedPoseFragmentIndices =
+                BuildInertializationLinkedPoseFragmentIndices(
+                    projection.PosePlan);
             int sourceCapacity = CalculateSourceCapacity(projection.PosePlan);
             int physicalSourceCapacity = checked(
                 sourceCapacity +
@@ -342,6 +367,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             AnimationPoseNativeWorkspace workspace = null;
             CharacterPoseGraphNativeProgram poseProgram = null;
+            CharacterFinalIkFullBodySolver[] fullBodyIkSolvers = null;
             PoseInertializationNativeProgram inertializationProgram = null;
             PhysicalPoseSourceRegistry physicalSources = null;
             AnimancerPoseSamplingBackend sourceBackend = null;
@@ -365,6 +391,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection.Rig,
                     projection.BlendCurveCatalog,
                     projection.BlendProfileCatalog);
+                fullBodyIkSolvers = new CharacterFinalIkFullBodySolver[
+                    projection.PosePlan.FullBodyIks.Count];
+                for (int solverIndex = 0; solverIndex < fullBodyIkSolvers.Length; solverIndex++)
+                {
+                    CharacterPresentationFullBodyIkDescriptor descriptor =
+                        projection.PosePlan.FullBodyIks[solverIndex];
+                    descriptor.RequireValid();
+                    fullBodyIkSolvers[solverIndex] = new CharacterFinalIkFullBodySolver(
+                        projection.Rig,
+                        descriptor.Profile,
+                        poseProgram.ParentIndices,
+                        poseProgram.VirtualBones);
+                }
                 inertializationProgram = new PoseInertializationNativeProgram(
                     projection.PosePlan,
                     projection.BlendCurveCatalog,
@@ -507,10 +546,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     new PoseStateAndSourceRuntime(
                         projection.PosePlan,
                         sequencePlayers,
-                        blendSpacePlayers);
+                        blendSpacePlayers,
+                        m_PlayerLinkedPoseFragmentIndices,
+                        m_StateMachineLinkedPoseFragmentIndices,
+                        m_LinkedPoseActiveFragments,
+                        m_LinkedPoseResetFragments);
                 diagnosticsPublisher = new AnimationPresentationRuntimeSnapshotPublisher(
                     projection,
                     poseProgram,
+                    fullBodyIkSolvers,
                     in initialFrame,
                     workspace,
                     physicalSources.Capacity);
@@ -579,6 +623,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             m_Workspace = workspace;
             m_PosePlan = poseProgram;
+            m_FullBodyIkSolvers = fullBodyIkSolvers;
             m_InertializationPlan = inertializationProgram;
             m_PhysicalSources = physicalSources;
             m_SourceBackend = sourceBackend;
@@ -690,6 +735,105 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_DiagnosticsPublisher.Interest;
         internal ulong DiagnosticsNoInterestSkipCount =>
             m_DiagnosticsPublisher.NoInterestSkipCount;
+
+        internal string ApplyTuning(
+            CharacterPoseTuningLayout layout,
+            CharacterPoseTuningParameterBlock block,
+            bool resetOwnerState,
+            CharacterPredictiveFootPlacementGoalSource footPlacement = null)
+        {
+            if (layout == null || block == null)
+                return "Pose tuning payload is missing.";
+            for (int i = 0; i < layout.Entries.Count; i++)
+            {
+                CharacterPoseTuningLayoutEntry entry = layout.Entries[i];
+                if (entry.Interaction != CharacterPoseTuningInteractionPolicy.TunableDefault ||
+                    !entry.FieldId.EndsWith("/play-rate", StringComparison.Ordinal))
+                    continue;
+                CharacterPoseTuningValue value = block.GetValue(entry);
+                string ownerPrefix = "pose-node:";
+                if (!entry.OwnerId.StartsWith(ownerPrefix, StringComparison.Ordinal))
+                    return $"Sequence tuning owner '{entry.OwnerId}' is invalid.";
+                string nodeId = entry.OwnerId.Substring(ownerPrefix.Length);
+                for (int operationIndex = 0;
+                     operationIndex < m_Projection.PosePlan.Operations.Count;
+                     operationIndex++)
+                {
+                    CharacterPresentationPoseOperation operation =
+                        m_Projection.PosePlan.Operations[operationIndex];
+                    if (operation.Code != CharacterPoseOperationCode.SequencePlayer ||
+                        !string.Equals(operation.NodeId.Value, nodeId, StringComparison.Ordinal))
+                        continue;
+                    string error = m_PoseStateSources.SequencePlayers[
+                        operation.SequencePlayerIndex].ApplyTuning(value.FloatValue);
+                    if (!string.IsNullOrEmpty(error))
+                        return error;
+                    break;
+                }
+            }
+            for (int i = 0; i < layout.Entries.Count; i++)
+            {
+                CharacterPoseTuningLayoutEntry entry = layout.Entries[i];
+                if (entry.Interaction != CharacterPoseTuningInteractionPolicy.TunableDefault ||
+                    !entry.OwnerId.StartsWith("pose-node:", StringComparison.Ordinal) ||
+                    !entry.FieldId.EndsWith("/weight", StringComparison.Ordinal))
+                    continue;
+                CharacterPoseTuningValue value = block.GetValue(entry);
+                for (int operationIndex = 0;
+                     operationIndex < m_Projection.PosePlan.Operations.Count;
+                     operationIndex++)
+                {
+                    CharacterPresentationPoseOperation operation =
+                        m_Projection.PosePlan.Operations[operationIndex];
+                    if (!string.Equals(
+                            $"pose-node:{operation.NodeId.Value}/weight",
+                            entry.FieldId,
+                            StringComparison.Ordinal))
+                        continue;
+                    if (!CharacterPoseGraphNativeProgram.IsNativePoseOperation(operation.Code))
+                        return $"Pose tuning operation '{operation.NodeId}' is not a native pose consumer.";
+                    m_PosePlan.SetOperationWeight(operation.Index, value.FloatValue);
+                    break;
+                }
+            }
+            for (int i = 0; i < m_PoseStateSources.StateMachines.Length; i++)
+            {
+                string error = m_PoseStateSources.StateMachines[i].ApplyTuning(
+                    layout,
+                    block);
+                if (!string.IsNullOrEmpty(error))
+                    return error;
+            }
+            for (int i = 0; i < m_Stacks.Length; i++)
+            {
+                string error = m_Stacks[i].ApplyTuning(layout, block);
+                if (!string.IsNullOrEmpty(error))
+                    return error;
+            }
+            string inertializationError =
+                m_InertializationPlan.ApplyTuning(layout, block);
+            if (!string.IsNullOrEmpty(inertializationError))
+                return inertializationError;
+            for (int i = 0; i < m_FullBodyIkSolvers.Length; i++)
+            {
+                string error = m_FullBodyIkSolvers[i].ApplyTuning(
+                    layout,
+                    block,
+                    resetOwnerState);
+                if (!string.IsNullOrEmpty(error))
+                    return error;
+            }
+            if (footPlacement != null)
+            {
+                string error = footPlacement.ApplyTuning(layout, block, resetOwnerState);
+                if (!string.IsNullOrEmpty(error))
+                    return error;
+            }
+            return string.Empty;
+        }
+
+        internal bool CanApplyNextActivation =>
+            m_PoseStateSources.CanApplyNextActivation;
         internal AnimationPresentationRuntimeCapacityMetrics
             CreateCapacityMetrics(
                 int actionJournalCapacity,
@@ -735,11 +879,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal PosePlanFrameLease BeginPendingFrame(
-            ulong frameIdentity)
+            ulong frameIdentity,
+            CharacterLinkedPoseRuntimeSession linkedPose)
         {
             RequireAlive();
             if (frameIdentity == 0)
                 throw new ArgumentOutOfRangeException(nameof(frameIdentity));
+            if (linkedPose == null)
+                throw new ArgumentNullException(nameof(linkedPose));
             if (m_ActiveFrameLease.IsValid)
             {
                 throw new InvalidOperationException(
@@ -765,6 +912,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     "Pose Plan Motion Matching completion from the previous frame was not consumed.");
             }
+            bool modulesOpen = false;
             try
             {
                 m_PendingActionBackendReleaseFrameStartCount =
@@ -772,8 +920,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_SourceBackend.BeginFrame(frameIdentity);
                 m_PendingCompletedFrame = default;
                 m_HasPendingCompletedFrame = false;
+                m_PendingPredictiveFootPlacementDiagnostics = default;
                 m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
                 m_PosePlan.BeginFrame();
+                PrepareLinkedPoseSelection(linkedPose);
                 m_InertializationPlan.BeginFrame();
                 m_PhysicalSources.BeginFrame();
                 for (int i = 0; i < m_StackRoutes.Length; i++)
@@ -781,6 +931,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 for (int i = 0; i < m_RootOrientationWarps.Length; i++)
                     m_RootOrientationWarps[i].BeginFrame();
                 BeginPendingModuleFrames();
+                modulesOpen = true;
+                ApplyLinkedPoseGenerationResets();
                 m_HasOpenFrame = true;
                 m_ActiveFrameLease =
                     new PosePlanFrameLease(frameIdentity);
@@ -788,6 +940,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             catch
             {
+                if (modulesOpen)
+                    DiscardPendingModuleFrames();
                 for (int i = m_StackRoutes.Length - 1; i >= 0; i--)
                 {
                     if (m_StackRoutes[i].HasOpenFrame)
@@ -807,6 +961,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 if (m_SourceBackend.HasOpenFrame)
                     m_SourceBackend.DiscardFrame(frameIdentity);
                 m_PendingActionBackendReleaseFrameStartCount = 0;
+                ClearLinkedPoseFrameSelection();
                 throw;
             }
         }
@@ -843,12 +998,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_DirectPlayers[i].CommitFrame();
             m_PoseStateSources.CommitFrame();
             m_LastCompletedFrame = m_PendingCompletedFrame;
+            m_LastPredictiveFootPlacementDiagnostics =
+                m_PendingPredictiveFootPlacementDiagnostics;
             m_HasCompletedFrame = true;
             m_PendingCompletedFrame = default;
+            m_PendingPredictiveFootPlacementDiagnostics = default;
             m_HasPendingCompletedFrame = false;
             m_HasOpenFrame = false;
             m_ActiveFrameLease = default;
             m_PendingActionBackendReleaseFrameStartCount = 0;
+            ClearLinkedPoseFrameSelection();
         }
 
         internal void ValidatePendingSeal(
@@ -1107,8 +1266,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_CommitValidated = false;
             m_PendingCompletedFrame = default;
             m_HasPendingCompletedFrame = false;
+            m_PendingPredictiveFootPlacementDiagnostics = default;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             m_RecordReleaseDiagnostics = false;
+            ClearLinkedPoseFrameSelection();
             if (failure != null)
             {
                 throw new AggregateException(
@@ -1418,10 +1579,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal void BeginCommittedDiagnostics(
-            AnimationPresentationDiagnosticsInterest interest)
+            AnimationPresentationDiagnosticsInterest interest,
+            CharacterLinkedPoseRuntimeSession linkedPose)
         {
             RequireAlive();
             RequireNoOpenMutation();
+            if (linkedPose == null)
+                throw new ArgumentNullException(nameof(linkedPose));
             if (interest == AnimationPresentationDiagnosticsInterest.None)
                 return;
             if (!m_HasCompletedFrame ||
@@ -1444,6 +1608,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_InertializationPlan,
                     m_PhysicalSources,
                     m_RootOrientationWarps,
+                    linkedPose,
+                    in m_LastPredictiveFootPlacementDiagnostics,
                     interest);
             }
         }
@@ -2007,6 +2173,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in factFrame);
             for (int i = 0; i < m_StackRoutes.Length; i++)
             {
+                if (!IsPlayerActive(m_Stacks[i].PlayerIndex))
+                    continue;
                 CharacterAnimationTransitionRouteRuntime route = m_StackRoutes[i];
                 route.FlushReleaseCompletion();
                 if (!route.IsAnimationSlot)
@@ -2015,7 +2183,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PosePlan.SetAnimationSlotControl(route.AnimationSlotIndex, in control);
             }
             for (int i = 0; i < m_Stacks.Length; i++)
-                m_Stacks[i].Advance(presentationDeltaSeconds);
+            {
+                if (IsPlayerActive(m_Stacks[i].PlayerIndex))
+                    m_Stacks[i].Advance(presentationDeltaSeconds);
+            }
             m_PoseStateSources.AdvanceSources(
                 presentationDeltaSeconds,
                 in parameterFrame);
@@ -2041,6 +2212,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 lease);
             for (int i = 0; i < m_RootOrientationWarps.Length; i++)
             {
+                if (!IsFragmentActive(
+                        m_RootOrientationWarpLinkedPoseFragmentIndices[i]))
+                {
+                    continue;
+                }
                 CharacterRootOrientationWarpNativeControl control =
                     m_RootOrientationWarps[i].Prepare(
                         in factFrame);
@@ -2110,16 +2286,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_BlendSpaceSourceIndices[i] = -1;
                 }
                 for (int stackIndex = 0; stackIndex < m_Stacks.Length; stackIndex++)
-                    PrepareStackSources(
-                        m_Stacks[stackIndex],
-                        presentationDeltaSeconds,
-                        actionSourceSamples,
-                        providerSourceSamples);
+                {
+                    if (IsPlayerActive(m_Stacks[stackIndex].PlayerIndex))
+                    {
+                        PrepareStackSources(
+                            m_Stacks[stackIndex],
+                            presentationDeltaSeconds,
+                            actionSourceSamples,
+                            providerSourceSamples);
+                    }
+                }
                 for (int playerIndex = 0; playerIndex < m_DirectPlayers.Length; playerIndex++)
-                    PrepareDirectSource(
-                        playerIndex,
-                        presentationDeltaSeconds,
-                        providerSourceSamples);
+                {
+                    if (IsPlayerActive(m_DirectPlayers[playerIndex].PlayerIndex))
+                    {
+                        PrepareDirectSource(
+                            playerIndex,
+                            presentationDeltaSeconds,
+                            providerSourceSamples);
+                    }
+                }
                 for (int playerIndex = 0;
                      playerIndex <
                      m_PoseStateSources.SequencePlayers.Length;
@@ -2206,7 +2392,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 poseExecutor = new CharacterPoseGraphStagedExecutor(
                     m_PosePlan,
                     m_InertializationPlan,
-                    m_Workspace.RequirePoseGraphBinding(completionIdentity));
+                    m_Workspace.RequirePoseGraphBinding(completionIdentity),
+                    m_FullBodyIkSolvers);
                 finalRead =
                     m_Workspace.RequireFinalReadBinding(completionIdentity);
                 InstallOrUpdateJobs();
@@ -2230,7 +2417,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ActorId actorId,
             ulong renderFrame,
             in CharacterBodyPresentationFrame bodyFrame,
-            CharacterFootPlacementRuntime footPlacement,
+            CharacterPredictiveFootPlacementGoalSource footPlacement,
             in PosePlanPreparedEvaluation prepared,
             Action enterEvaluateBarrier)
         {
@@ -2277,7 +2464,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_Animancer.Evaluate(presentationDeltaSeconds);
             using (PoseGraphExecuteMarker.Auto())
             {
-                poseExecutor.BeginStagedEvaluation();
+                poseExecutor.BeginStagedEvaluation(renderFrame);
                 for (int stageIndex = 0;
                      stageIndex < m_PosePlan.Stages.Length;
                      stageIndex++)
@@ -2285,7 +2472,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     AnimationPoseGraphNativeStage stage =
                         m_PosePlan.Stages[stageIndex];
                     if (stage.ExecutionDomain ==
-                        CharacterPoseExecutionDomain.WorldAwarePose)
+                        CharacterPoseExecutionDomain.WorldAwareValue)
                     {
                         PrepareWorldAwareStage(
                             actorId,
@@ -2363,7 +2550,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ulong renderFrame,
             float presentationDeltaSeconds,
             in CharacterBodyPresentationFrame bodyFrame,
-            CharacterFootPlacementRuntime footPlacement,
+            CharacterPredictiveFootPlacementGoalSource footPlacement,
             ulong completionIdentity,
             in AnimationPoseGraphNativeStage stage)
         {
@@ -2376,7 +2563,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 AnimationPoseGraphNativeOperation operation =
                     m_PosePlan.Operations[operationIndex];
                 if (operation.Code !=
-                    CharacterPoseOperationCode.FootPlacement)
+                    CharacterPoseOperationCode.PredictiveFootPlacement)
                 {
                     continue;
                 }
@@ -2395,11 +2582,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             AnimationPoseGraphNativeOperation footPlacementOperation =
                 m_PosePlan.Operations[footPlacementOperationIndex];
-            CharacterFootPlacementNativeControl control;
+            CharacterPresentationPredictiveFootPlacementDescriptor descriptor =
+                m_Projection.PosePlan.PredictiveFootPlacements[
+                    footPlacementOperation.PredictiveFootPlacementIndex];
+            int goalSetValueIndex =
+                footPlacementOperation.OutputFullBodyIkGoalSetValueIndex;
+            CharacterFullBodyIkGoalSetHeader goalSet;
             if (footPlacement == null)
             {
-                control = CharacterFootPlacementNativeControl
-                    .WorldContextUnavailable;
+                goalSet = new CharacterFullBodyIkGoalSetHeader(
+                    renderFrame,
+                    completionIdentity,
+                    m_Projection.PosePlan.RigId,
+                    m_Projection.PosePlan.RigRevision,
+                    footPlacementOperation.Index,
+                    footPlacementOperation.FrameCacheIndex,
+                    descriptor.GoalWorkspaceOffset,
+                    0,
+                    CharacterFullBodyIkGoalSetAvailability.WorldContextUnavailable);
             }
             else
             {
@@ -2424,11 +2624,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         presentationDeltaSeconds,
                         bodyFrame,
                         in input);
-                control = footPlacement.Prepare(planningFrame);
+                var goalOutput = new Unity.Collections.NativeSlice<CharacterFullBodyIkGoal>(
+                    m_PosePlan.FullBodyIkGoals,
+                    descriptor.GoalWorkspaceOffset,
+                    CharacterPresentationPredictiveFootPlacementDescriptor.GoalCount);
+                goalSet = footPlacement.Produce(
+                    in planningFrame,
+                    goalOutput,
+                    descriptor.GoalWorkspaceOffset,
+                    footPlacementOperation.Index,
+                    footPlacementOperation.FrameCacheIndex,
+                    footPlacementOperation.ParameterIndex);
+                m_PendingPredictiveFootPlacementDiagnostics = footPlacement.Diagnostics;
             }
-            m_PosePlan.SetFootPlacementControl(
-                footPlacementOperation.FootPlacementIndex,
-                in control);
+            Unity.Collections.NativeSlice<CharacterFullBodyIkGoalSetHeader> goalSets =
+                m_PosePlan.FullBodyIkGoalSets;
+            goalSets[goalSetValueIndex] = goalSet;
         }
 
         private bool TryCopyCompletedPlayerPose(
@@ -2483,11 +2694,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ActionBackendReleaseCompletions.Clear();
             m_LastCompletedFrame = default;
             m_PendingCompletedFrame = default;
+            m_LastPredictiveFootPlacementDiagnostics = default;
+            m_PendingPredictiveFootPlacementDiagnostics = default;
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             m_RecordReleaseDiagnostics = false;
             m_InertializationPlan.Reset();
+            for (int i = 0; i < m_FullBodyIkSolvers.Length; i++)
+                m_FullBodyIkSolvers[i].Reset();
             ulong completionIdentity = NextCompletionIdentity();
             for (int i = 0; i < m_StackRoutes.Length; i++)
                 m_StackRoutes[i].Reset();
@@ -2507,11 +2722,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PosePlan.SetRootOrientationWarpControl(
                     i,
                     in control);
-            }
-            if (m_Projection.PosePlan.FootPlacementNodes.Count == 1)
-            {
-                CharacterFootPlacementNativeControl control = CharacterFootPlacementNativeControl.Inactive;
-                m_PosePlan.SetFootPlacementControl(0, in control);
             }
             ReleaseDirectSources();
             ReleaseSequenceSources();
@@ -2535,6 +2745,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_FramePublisher.Invalidate();
             m_LastCompletedFrame = default;
             m_PendingCompletedFrame = default;
+            m_LastPredictiveFootPlacementDiagnostics = default;
+            m_PendingPredictiveFootPlacementDiagnostics = default;
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
@@ -2577,6 +2789,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     DisposeStep(player.Dispose, ref failure);
             }
             DisposeStep(m_PhysicalSources.Dispose, ref failure);
+            for (int i = m_FullBodyIkSolvers.Length - 1; i >= 0; i--)
+                m_FullBodyIkSolvers[i].Reset();
             DisposeStep(m_PosePlan.Dispose, ref failure);
             DisposeStep(m_InertializationPlan.Dispose, ref failure);
             DisposeStep(m_Workspace.Dispose, ref failure);
@@ -2765,7 +2979,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             AnimationSequencePlayerRuntime player =
                 m_PoseStateSources.SequencePlayers[playerIndex];
-            if (!player.IsRelevant)
+            if (!IsPlayerActive(player.PlayerIndex) || !player.IsRelevant)
                 return;
             AnimationPhysicalSourceIdentity physical = m_PhysicalSources.Register(
                 player.SourceId,
@@ -2792,7 +3006,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationBlendSpacePlayerRuntime player =
                 m_PoseStateSources.BlendSpacePlayers[
                     playerIndex];
-            if (!player.IsRelevant)
+            if (!IsPlayerActive(player.PlayerIndex) || !player.IsRelevant)
                 return;
             AnimationPhysicalSourceIdentity physical = m_PhysicalSources.Register(
                 player.SourceId,
@@ -2974,7 +3188,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_StackRoutes[stackIndex];
                 if (!route.CanReleaseSources)
                     continue;
-                int releaseCount = stack.PendingReleaseCount;
+                int releaseCount =
+                    stack.PendingPriorFrameReleaseCount(
+                        completionIdentity);
                 for (int releaseIndex = 0;
                      releaseIndex < releaseCount;
                      releaseIndex++)
@@ -3472,6 +3688,127 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             sourceId.SourceKind ==
                 AnimationPoseSourceKind.Timeline &&
             sourceId.SourceActionInstanceId != 0;
+
+        void PrepareLinkedPoseSelection(
+            CharacterLinkedPoseRuntimeSession linkedPose)
+        {
+            ClearLinkedPoseFrameSelection();
+            IReadOnlyList<CharacterLinkedPoseGroupProjectionDescriptor> groups =
+                m_Projection.LinkedPose.Groups;
+            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
+            {
+                CharacterLinkedPoseGroupProjectionDescriptor group =
+                    groups[groupIndex];
+                CharacterLinkedPoseGenerationHandle selection =
+                    linkedPose.RequireIncoming(group.GroupId);
+                m_PosePlan.SetLinkedPoseGroupSelection(in selection);
+                int activeCount = 0;
+                for (int fragmentIndex = 0;
+                     fragmentIndex <
+                     m_Projection.PosePlan.LinkedPoseFragments.Count;
+                     fragmentIndex++)
+                {
+                    CharacterLinkedPoseEntryFragmentPlanDescriptor fragment =
+                        m_Projection.PosePlan.LinkedPoseFragments[
+                            fragmentIndex];
+                    if (fragment.GroupId != group.GroupId)
+                        continue;
+                    if (selection.PoseDiscontinuity)
+                        m_LinkedPoseResetFragments[fragmentIndex] = true;
+                    if (fragment.ImplementationId !=
+                        selection.ImplementationId)
+                    {
+                        continue;
+                    }
+                    m_LinkedPoseActiveFragments[fragmentIndex] = true;
+                    activeCount++;
+                }
+                if (activeCount == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Linked Pose Group '{group.GroupId}' selection '{selection.ImplementationId}' has no Entry fragments.");
+                }
+            }
+        }
+
+        void ApplyLinkedPoseGenerationResets()
+        {
+            if (m_LinkedPoseResetFragments.Length == 0)
+                return;
+            for (int i = 0; i < m_Stacks.Length; i++)
+            {
+                int fragmentIndex =
+                    RequirePlayerFragmentIndex(
+                        m_Stacks[i].PlayerIndex);
+                if (!RequiresFragmentReset(fragmentIndex))
+                    continue;
+                m_StackRoutes[i].Reset();
+                m_Stacks[i].Reset(m_CompletionIdentity);
+            }
+            for (int i = 0; i < m_DirectPlayers.Length; i++)
+            {
+                int fragmentIndex =
+                    RequirePlayerFragmentIndex(
+                        m_DirectPlayers[i].PlayerIndex);
+                if (RequiresFragmentReset(fragmentIndex))
+                {
+                    m_DirectPlayers[i].Reset(
+                        PoseDiscontinuityResetReason.BranchReplacement);
+                }
+            }
+            m_PoseStateSources.ApplyLinkedPoseGenerationResets();
+            for (int i = 0; i < m_InertializationLinkedPoseFragmentIndices.Length; i++)
+            {
+                if (RequiresFragmentReset(
+                        m_InertializationLinkedPoseFragmentIndices[i]))
+                {
+                    m_InertializationPlan.RequestReset(i);
+                }
+            }
+            for (int i = 0; i < m_RootOrientationWarps.Length; i++)
+            {
+                if (RequiresFragmentReset(
+                        m_RootOrientationWarpLinkedPoseFragmentIndices[i]))
+                {
+                    m_RootOrientationWarps[i].Reset();
+                }
+            }
+        }
+
+        bool IsPlayerActive(int playerIndex) =>
+            IsFragmentActive(
+                RequirePlayerFragmentIndex(playerIndex));
+
+        int RequirePlayerFragmentIndex(int playerIndex)
+        {
+            if ((uint)playerIndex >=
+                (uint)m_PlayerLinkedPoseFragmentIndices.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Pose Player #{playerIndex} is outside the compiled Linked Pose ownership table.");
+            }
+            return m_PlayerLinkedPoseFragmentIndices[playerIndex];
+        }
+
+        bool IsFragmentActive(int fragmentIndex) =>
+            fragmentIndex < 0 ||
+            m_LinkedPoseActiveFragments[fragmentIndex];
+
+        bool RequiresFragmentReset(int fragmentIndex) =>
+            fragmentIndex >= 0 &&
+            m_LinkedPoseResetFragments[fragmentIndex];
+
+        void ClearLinkedPoseFrameSelection()
+        {
+            Array.Clear(
+                m_LinkedPoseActiveFragments,
+                0,
+                m_LinkedPoseActiveFragments.Length);
+            Array.Clear(
+                m_LinkedPoseResetFragments,
+                0,
+                m_LinkedPoseResetFragments.Length);
+        }
 
         void BeginPendingModuleFrames()
         {
@@ -4003,6 +4340,150 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 database.ClipBindingCount);
         }
 
+        static int[] BuildPlayerLinkedPoseFragmentIndices(
+            CharacterPresentationPosePlan plan)
+        {
+            var result = CreateUnassignedOwnership(plan.PlayerCount);
+            for (int operationIndex = 0;
+                 operationIndex < plan.Operations.Count;
+                 operationIndex++)
+            {
+                CharacterPresentationPoseOperation operation =
+                    plan.Operations[operationIndex];
+                if (operation.PlayerIndex < 0)
+                    continue;
+                SetLinkedPoseOwnership(
+                    result,
+                    operation.PlayerIndex,
+                    operation.LinkedPoseFragmentIndex,
+                    "Player");
+            }
+            RequireCompleteLinkedPoseOwnership(result, "Player");
+            return result;
+        }
+
+        static int[] BuildStateMachineLinkedPoseFragmentIndices(
+            CharacterPresentationPosePlan plan)
+        {
+            var result =
+                CreateUnassignedOwnership(plan.StateMachines.Count);
+            for (int operationIndex = 0;
+                 operationIndex < plan.Operations.Count;
+                 operationIndex++)
+            {
+                CharacterPresentationPoseOperation operation =
+                    plan.Operations[operationIndex];
+                if (operation.Code !=
+                    CharacterPoseOperationCode.PoseStateMachine)
+                {
+                    continue;
+                }
+                SetLinkedPoseOwnership(
+                    result,
+                    operation.StateMachineIndex,
+                    operation.LinkedPoseFragmentIndex,
+                    "StateMachine");
+            }
+            RequireCompleteLinkedPoseOwnership(
+                result,
+                "StateMachine");
+            return result;
+        }
+
+        static int[] BuildRootOrientationWarpLinkedPoseFragmentIndices(
+            CharacterPresentationPosePlan plan)
+        {
+            var result =
+                CreateUnassignedOwnership(
+                    plan.RootOrientationWarps.Count);
+            for (int operationIndex = 0;
+                 operationIndex < plan.Operations.Count;
+                 operationIndex++)
+            {
+                CharacterPresentationPoseOperation operation =
+                    plan.Operations[operationIndex];
+                if (operation.Code !=
+                    CharacterPoseOperationCode.RootOrientationWarp)
+                {
+                    continue;
+                }
+                SetLinkedPoseOwnership(
+                    result,
+                    operation.RootOrientationWarpIndex,
+                    operation.LinkedPoseFragmentIndex,
+                    "Root Orientation Warp");
+            }
+            RequireCompleteLinkedPoseOwnership(
+                result,
+                "Root Orientation Warp");
+            return result;
+        }
+
+        static int[] BuildInertializationLinkedPoseFragmentIndices(
+            CharacterPresentationPosePlan plan)
+        {
+            var result =
+                CreateUnassignedOwnership(plan.Inertializations.Count);
+            for (int operationIndex = 0;
+                 operationIndex < plan.Operations.Count;
+                 operationIndex++)
+            {
+                CharacterPresentationPoseOperation operation =
+                    plan.Operations[operationIndex];
+                if (operation.Code !=
+                    CharacterPoseOperationCode.Inertialization)
+                {
+                    continue;
+                }
+                SetLinkedPoseOwnership(
+                    result,
+                    operation.InertializationIndex,
+                    operation.LinkedPoseFragmentIndex,
+                    "Inertialization");
+            }
+            RequireCompleteLinkedPoseOwnership(
+                result,
+                "Inertialization");
+            return result;
+        }
+
+        static int[] CreateUnassignedOwnership(int count)
+        {
+            var result = new int[count];
+            for (int i = 0; i < result.Length; i++)
+                result[i] = int.MinValue;
+            return result;
+        }
+
+        static void SetLinkedPoseOwnership(
+            int[] ownership,
+            int index,
+            int fragmentIndex,
+            string kind)
+        {
+            if ((uint)index >= (uint)ownership.Length ||
+                ownership[index] != int.MinValue)
+            {
+                throw new InvalidOperationException(
+                    $"{kind} #{index} has invalid Linked Pose ownership.");
+            }
+            ownership[index] = fragmentIndex;
+        }
+
+        static void RequireCompleteLinkedPoseOwnership(
+            int[] ownership,
+            string kind)
+        {
+            for (int i = 0; i < ownership.Length; i++)
+            {
+                if (ownership[i] == int.MinValue)
+                {
+                    throw new InvalidOperationException(
+                        $"{kind} #{i} has no compiled Linked Pose ownership.");
+                }
+            }
+        }
+
         static int CalculateSourceCapacity(
             CharacterPresentationPosePlan plan)
         {
@@ -4034,6 +4515,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         break;
                 }
             }
+            for (int i = 0; i < plan.MotionMatchingNodes.Count; i++)
+                capacity = checked(capacity + plan.MotionMatchingNodes[i].LiveEntryCapacity);
             return capacity > 0
                 ? capacity
                 : throw new InvalidOperationException(

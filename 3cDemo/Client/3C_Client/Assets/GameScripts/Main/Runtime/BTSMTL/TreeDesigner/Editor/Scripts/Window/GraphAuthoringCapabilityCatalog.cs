@@ -33,9 +33,74 @@ namespace TreeDesigner.Editor
     public enum GraphAuthoringDetailsSection : byte
     {
         Authoring = 1,
-        Live = 2,
-        References = 3,
-        Diagnostics = 4
+        RuntimeInputs = 2,
+        AppliedValues = 3,
+        References = 4,
+        Diagnostics = 5
+    }
+
+    public enum GraphAuthoringFieldInteractionPolicy : byte
+    {
+        Unclassified = 0,
+        Structural = 1,
+        TunableDefault = 2,
+        RuntimeInput = 3,
+        DerivedReadOnly = 4
+    }
+
+    public enum GraphAuthoringFieldApplyTiming : byte
+    {
+        NextFrame = 0,
+        NextActivation = 1
+    }
+
+    public enum GraphAuthoringFieldStatePolicy : byte
+    {
+        PreserveState = 0,
+        ResetOwnerState = 1
+    }
+
+    public sealed class GraphAuthoringFieldTuningMetadata
+    {
+        public GraphAuthoringFieldTuningMetadata(
+            GraphAuthoringFieldInteractionPolicy interaction,
+            GraphAuthoringFieldValueKind typedValueKind,
+            string unit,
+            double minimum,
+            double maximum,
+            bool finite,
+            GraphAuthoringFieldApplyTiming applyTiming,
+            GraphAuthoringFieldStatePolicy statePolicy,
+            string consumerId,
+            int consumerOperationStart,
+            int consumerOperationCount)
+        {
+            if (minimum > maximum || consumerOperationStart < 0 || consumerOperationCount < 0)
+                throw new ArgumentException("Graph authoring tuning metadata range is invalid.");
+            Interaction = interaction;
+            TypedValueKind = typedValueKind;
+            Unit = unit ?? string.Empty;
+            Minimum = minimum;
+            Maximum = maximum;
+            Finite = finite;
+            ApplyTiming = applyTiming;
+            StatePolicy = statePolicy;
+            ConsumerId = consumerId ?? string.Empty;
+            ConsumerOperationStart = consumerOperationStart;
+            ConsumerOperationCount = consumerOperationCount;
+        }
+
+        public GraphAuthoringFieldInteractionPolicy Interaction { get; }
+        public GraphAuthoringFieldValueKind TypedValueKind { get; }
+        public string Unit { get; }
+        public double Minimum { get; }
+        public double Maximum { get; }
+        public bool Finite { get; }
+        public GraphAuthoringFieldApplyTiming ApplyTiming { get; }
+        public GraphAuthoringFieldStatePolicy StatePolicy { get; }
+        public string ConsumerId { get; }
+        public int ConsumerOperationStart { get; }
+        public int ConsumerOperationCount { get; }
     }
 
     public enum GraphAuthoringDynamicPortPolicy : byte
@@ -115,7 +180,8 @@ namespace TreeDesigner.Editor
             string pickerKind = "",
             bool optional = false,
             Type objectType = null,
-            GraphAuthoringFieldVisibilityCondition visibility = null)
+            GraphAuthoringFieldVisibilityCondition visibility = null,
+            GraphAuthoringFieldTuningMetadata tuning = null)
         {
             FieldId = fieldId.IsValid ? fieldId : throw new ArgumentException("Field identity is missing.", nameof(fieldId));
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? throw new ArgumentException("Field display name is missing.", nameof(displayName)) : displayName;
@@ -128,6 +194,7 @@ namespace TreeDesigner.Editor
             Optional = optional;
             ObjectType = objectType;
             Visibility = visibility;
+            Tuning = tuning;
         }
 
         public GraphAuthoringFieldId FieldId { get; }
@@ -141,6 +208,9 @@ namespace TreeDesigner.Editor
         public bool Optional { get; }
         public Type ObjectType { get; }
         public GraphAuthoringFieldVisibilityCondition Visibility { get; }
+        public GraphAuthoringFieldTuningMetadata Tuning { get; }
+        public GraphAuthoringFieldInteractionPolicy Interaction =>
+            Tuning?.Interaction ?? GraphAuthoringFieldInteractionPolicy.Unclassified;
         public bool AuthoringVisible => (Access & GraphAuthoringFieldAccess.AuthoringRead) != 0;
         public bool AuthoringWritable => (Access & GraphAuthoringFieldAccess.AuthoringWrite) != 0;
         public bool IsVisible(Func<GraphAuthoringFieldId, object> readField) =>
@@ -156,7 +226,8 @@ namespace TreeDesigner.Editor
             GraphAuthoringPortDirection direction,
             GraphAuthoringPortCapacity capacity,
             bool required,
-            int order)
+            int order,
+            string interfacePortId = "")
         {
             PortId = portId.IsValid ? portId : throw new ArgumentException("Port identity is missing.", nameof(portId));
             DisplayName = displayName ?? string.Empty;
@@ -165,6 +236,7 @@ namespace TreeDesigner.Editor
             Capacity = capacity;
             Required = required;
             Order = order;
+            InterfacePortId = interfacePortId ?? string.Empty;
         }
 
         public GraphAuthoringPortId PortId { get; }
@@ -174,6 +246,7 @@ namespace TreeDesigner.Editor
         public GraphAuthoringPortCapacity Capacity { get; }
         public bool Required { get; }
         public int Order { get; }
+        public string InterfacePortId { get; }
     }
 
     public enum GraphAuthoringCommandPresentationKind : byte

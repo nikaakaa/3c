@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9517a77023a44111817fc23d3c9dff32, type: 3}
+  m_Name: EmptyEquipmentLinkedPoseImplementation
+  m_EditorClassIdentifier: 
+  m_OwnerIdentity: linked-pose-implementation/character.equipment-pose.empty
+  m_ImplementationId: character.equipment-pose.empty
+  m_Revision: 1
+  m_Interface: {fileID: 11400000, guid: 60d51ea6fdc849f890ad74867e31c3ab, type: 2}
+  m_CapturedInterfaceSignature: 46937b027e8fac042c0def236f9e1aa368d7ba56b65edaf0506657d943ba8070
+  m_Entries:
+  - m_EntryId: equipment.pose
+    m_GraphOwnerIdentity: linked-pose-graph/character.equipment-pose.empty
+    m_GraphOwner: {fileID: 11400000, guid: 7e8fbc8fa606453d97f1a7f2474773a9, type: 2}
+    m_GraphId: character.equipment-pose.empty.pose
+  - m_EntryId: equipment.hand-goals
+    m_GraphOwnerIdentity: linked-pose-graph/character.equipment-pose.empty
+    m_GraphOwner: {fileID: 11400000, guid: 7e8fbc8fa606453d97f1a7f2474773a9, type: 2}
+    m_GraphId: character.equipment-pose.empty.hand-goals

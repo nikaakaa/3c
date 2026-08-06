@@ -47,6 +47,24 @@ namespace RootMotion.FinalIK {
 
             public RaycastHit heelHit { get; private set; }
             public RaycastHit capsuleHit { get; private set; }
+			public GroundingQueryHit heelQueryHit { get; private set; }
+			public GroundingQueryHit toeQueryHit { get; private set; }
+			public GroundingQueryHit sideQueryHit { get; private set; }
+			public GroundingQueryHit capsuleQueryHit { get; private set; }
+			public GroundingQueryHit currentQueryHit {
+				get {
+					switch (grounding.quality) {
+						case Quality.Best:
+							return capsuleQueryHit.HasHit ? capsuleQueryHit : heelQueryHit;
+						case Quality.Simple:
+							if (heelQueryHit.HasHit) return heelQueryHit;
+							if (toeQueryHit.HasHit) return toeQueryHit;
+							return sideQueryHit;
+						default:
+							return heelQueryHit;
+					}
+				}
+			}
 
             /// <summary>
             /// Gets the RaycastHit last used by the Grounder to get ground height at foot position.
@@ -68,20 +86,23 @@ namespace RootMotion.FinalIK {
                 overrideFootPosition = position;
             }
             
-            private Grounding grounding;
-			private float lastTime, deltaTime;
+			private Grounding grounding;
+			private float deltaTime;
 			private Vector3 lastPosition;
 			private Quaternion toHitNormal, r;
 			private Vector3 up = Vector3.up;
             private bool doOverrideFootPosition;
             private Vector3 overrideFootPosition;
             private Vector3 transformPosition;
+			private int footIndex;
+			private bool hasHistory;
 			
 			// Initiates the Leg
 			public void Initiate(Grounding grounding, Transform transform) {
 				initiated = false;
 				this.grounding = grounding;
 				this.transform = transform;
+				footIndex = -1;
 				up = Vector3.up;
 				IKPosition = transform.position;
 				rotationOffset = Quaternion.identity;
@@ -90,48 +111,60 @@ namespace RootMotion.FinalIK {
 				OnEnable();
 			}
 
+			internal void Initiate(Grounding grounding, int footIndex) {
+				initiated = false;
+				this.grounding = grounding;
+				this.footIndex = footIndex;
+				transform = null;
+				up = Vector3.up;
+				IKPosition = Vector3.zero;
+				rotationOffset = Quaternion.identity;
+				hasHistory = false;
+				initiated = true;
+			}
+
 			// Should be called each time the leg is (re)activated
 			public void OnEnable() {
 				if (!initiated) return;
 				
 				lastPosition = transform.position;
-				lastTime = Time.deltaTime;
+				hasHistory = true;
 			}
 
 			// Set everything to 0
 			public void Reset() {
-				lastPosition = transform.position;
-				lastTime = Time.deltaTime;
+				lastPosition = transform ? transform.position : IKPosition;
+				hasHistory = transform != null;
 				IKOffset = 0f;
-				IKPosition = transform.position;
+				IKPosition = lastPosition;
 				rotationOffset = Quaternion.identity;
 			}
 
 			// Raycasting, processing the leg's position
-			public void Process() {
+			public void Process(in GroundingFrameInput frame, in GroundingFootInput foot, IGroundingWorldQueryBackend worldQueryBackend) {
 				if (!initiated) return;
 				if (grounding.maxStep <= 0) return;
+				if (footIndex >= 0 && foot.FootIndex != footIndex) throw new System.ArgumentException("Grounding foot input does not match initiated foot slot.", nameof(foot));
 
-                transformPosition = doOverrideFootPosition ? overrideFootPosition : transform.position;
+				transformPosition = doOverrideFootPosition ? overrideFootPosition : foot.Ankle.Position;
                 doOverrideFootPosition = false;
 
-				deltaTime = Time.time - lastTime;
-				lastTime = Time.time;
-				if (deltaTime == 0f) return;
+				deltaTime = frame.DeltaTime;
 
 				up = grounding.up;
 				heightFromGround = Mathf.Infinity;
 				
-				// Calculating velocity
-				velocity = (transformPosition - lastPosition) / deltaTime;
-				//velocity = grounding.Flatten(velocity);
+				velocity = hasHistory ? (transformPosition - lastPosition) / deltaTime : Vector3.zero;
 				lastPosition = transformPosition;
+				hasHistory = true;
 
 				Vector3 prediction = velocity * grounding.prediction;
 				
 				if (grounding.footRadius <= 0) grounding.quality = Grounding.Quality.Fastest;
 
                 isGrounded = false;
+				toeQueryHit = default;
+				sideQueryHit = default;
 
                 // Raycasting
                 switch (grounding.quality)
@@ -140,46 +173,51 @@ namespace RootMotion.FinalIK {
                     // The fastest, single raycast
                     case Grounding.Quality.Fastest:
 
-                        RaycastHit predictedHit = GetRaycastHit(prediction);
-                        SetFootToPoint(predictedHit.normal, predictedHit.point);
-                        if (predictedHit.collider != null) isGrounded = true;
+						GroundingQueryHit predictedHit = GetRaycastHit(foot.Heel.Position + prediction, GroundingQueryPurpose.Heel, foot.FootIndex, in frame, worldQueryBackend);
+						heelQueryHit = predictedHit;
+						if (grounding.secondaryPlantQuery) toeQueryHit = GetRaycastHit(foot.Toe.Position + prediction, GroundingQueryPurpose.Toe, foot.FootIndex, in frame, worldQueryBackend);
+						heelHit = predictedHit.PhysicsHit;
+						SetFootToPoint(predictedHit.Normal, predictedHit.Point);
+						if (predictedHit.HasHit) isGrounded = true;
                         break;
 
                     // Medium, 3 raycasts
                     case Grounding.Quality.Simple:
 
-                        heelHit = GetRaycastHit(Vector3.zero);
-                        Vector3 f = grounding.GetFootCenterOffset();
-                        if (invertFootCenter) f = -f;
-                        RaycastHit toeHit = GetRaycastHit(f + prediction);
-                        RaycastHit sideHit = GetRaycastHit(grounding.root.right * grounding.footRadius * 0.5f);
+						heelQueryHit = GetRaycastHit(foot.Heel.Position, GroundingQueryPurpose.Heel, foot.FootIndex, in frame, worldQueryBackend);
+						heelHit = heelQueryHit.PhysicsHit;
+						toeQueryHit = GetRaycastHit(foot.Toe.Position + prediction, GroundingQueryPurpose.Toe, foot.FootIndex, in frame, worldQueryBackend);
+						sideQueryHit = GetRaycastHit(foot.Heel.Position + grounding.rootRight * grounding.footRadius * 0.5f, GroundingQueryPurpose.Side, foot.FootIndex, in frame, worldQueryBackend);
 
-                        if (heelHit.collider != null || toeHit.collider != null || sideHit.collider != null) isGrounded = true;
+						if (heelQueryHit.HasHit || toeQueryHit.HasHit || sideQueryHit.HasHit) isGrounded = true;
 
-                        Vector3 planeNormal = Vector3.Cross(toeHit.point - heelHit.point, sideHit.point - heelHit.point).normalized;
+						Vector3 planeNormal = Vector3.Cross(toeQueryHit.Point - heelQueryHit.Point, sideQueryHit.Point - heelQueryHit.Point).normalized;
                         if (Vector3.Dot(planeNormal, up) < 0) planeNormal = -planeNormal;
 
-                        SetFootToPlane(planeNormal, heelHit.point, heelHit.point);
+						SetFootToPlane(planeNormal, heelQueryHit.Point, heelQueryHit.Point);
                         break;
 
                     // The slowest, raycast and a capsule cast
                     case Grounding.Quality.Best:
-                        heelHit = GetRaycastHit(invertFootCenter ? -grounding.GetFootCenterOffset() : Vector3.zero);
-                        capsuleHit = GetCapsuleHit(prediction);
+						heelQueryHit = GetRaycastHit(foot.Heel.Position, GroundingQueryPurpose.Heel, foot.FootIndex, in frame, worldQueryBackend);
+						if (grounding.secondaryPlantQuery) toeQueryHit = GetRaycastHit(foot.Toe.Position + prediction, GroundingQueryPurpose.Toe, foot.FootIndex, in frame, worldQueryBackend);
+						capsuleQueryHit = GetCapsuleHit(foot.FootCenter.Position, prediction, foot.FootIndex, in frame, worldQueryBackend);
+						heelHit = heelQueryHit.PhysicsHit;
+						capsuleHit = capsuleQueryHit.PhysicsHit;
 
-						if (heelHit.collider != null || capsuleHit.collider != null) isGrounded = true;
+						if (heelQueryHit.HasHit || capsuleQueryHit.HasHit) isGrounded = true;
 
-                        SetFootToPlane(capsuleHit.normal, capsuleHit.point, heelHit.point);
+						SetFootToPlane(capsuleQueryHit.Normal, capsuleQueryHit.Point, heelQueryHit.Point);
                         break;
                 }
 
 				float offsetTarget = stepHeightFromGround;
 				if (!grounding.rootGrounded) offsetTarget = 0f;
 
-				IKOffset = Interp.LerpValue(IKOffset, offsetTarget, grounding.footSpeed, grounding.footSpeed);
+				IKOffset = Interp.LerpValue(IKOffset, offsetTarget, grounding.footSpeed, grounding.footSpeed, deltaTime);
 				IKOffset = Mathf.Lerp(IKOffset, offsetTarget, deltaTime * grounding.footSpeed);
 
-				float legHeight = grounding.GetVerticalOffset(transformPosition, grounding.root.position);
+				float legHeight = grounding.GetVerticalOffset(transformPosition, grounding.rootPosition);
 				float currentMaxOffset = Mathf.Clamp(grounding.maxStep - legHeight, 0f, grounding.maxStep);
 
 				IKOffset = Mathf.Clamp(IKOffset, -currentMaxOffset, IKOffset);
@@ -201,12 +239,10 @@ namespace RootMotion.FinalIK {
 			}
 
             // Get predicted Capsule hit from the middle of the foot
-            private RaycastHit GetCapsuleHit(Vector3 offsetFromHeel)
+            private GroundingQueryHit GetCapsuleHit(Vector3 footCenter, Vector3 offsetFromHeel, int queryFootIndex, in GroundingFrameInput frame, IGroundingWorldQueryBackend worldQueryBackend)
             {
                 RaycastHit hit = new RaycastHit();
-                Vector3 f = grounding.GetFootCenterOffset();
-                if (invertFootCenter) f = -f;
-                Vector3 origin = transformPosition + f;
+				Vector3 origin = footCenter;
 
                 if (grounding.overstepFallsDown)
                 {
@@ -214,7 +250,7 @@ namespace RootMotion.FinalIK {
                 }
                 else
                 {
-                    hit.point = new Vector3(origin.x, grounding.root.position.y, origin.z);
+					hit.point = origin - up * grounding.GetVerticalOffset(origin, grounding.rootPosition);
                 }
                 hit.normal = up;
 
@@ -223,8 +259,21 @@ namespace RootMotion.FinalIK {
                 // End point of the capsule depending on the foot's velocity.
                 Vector3 capsuleEnd = capsuleStart + offsetFromHeel;
 
-                if (grounding.CapsuleCast(capsuleStart, capsuleEnd, grounding.footRadius, -up, out hit, grounding.maxStep * 2, grounding.layers, QueryTriggerInteraction.Ignore))
+				GroundingQueryRequest request = new GroundingQueryRequest(
+					GroundingQueryShape.Capsule,
+					GroundingQueryPurpose.FootCenter,
+					frame.PhysicsScene,
+					frame.LayerMask,
+					queryFootIndex,
+					capsuleStart,
+					capsuleEnd,
+					-up,
+					grounding.footRadius,
+					grounding.maxStep * 2f);
+				bool hasHit = worldQueryBackend.Query(in request, out GroundingQueryHit queryHit);
+				if (hasHit)
                 {
+					hit = queryHit.PhysicsHit;
                     // Safeguarding from a CapsuleCast bug in Unity that might cause it to return NaN for hit.point when cast against large colliders.
                     if (float.IsNaN(hit.point.x))
                     {
@@ -242,18 +291,17 @@ namespace RootMotion.FinalIK {
                     }
                     else
                     {
-                        hit.point = new Vector3(origin.x, grounding.root.position.y, origin.z);
+						hit.point = origin - up * grounding.GetVerticalOffset(origin, grounding.rootPosition);
                     }
                 }
 
-                return hit;
+				return new GroundingQueryHit(hasHit, hit, hasHit ? queryHit.SurfaceIdentity : 0);
             }
 
             // Get simple Raycast from the heel
-            private RaycastHit GetRaycastHit(Vector3 offsetFromHeel)
+            private GroundingQueryHit GetRaycastHit(Vector3 origin, GroundingQueryPurpose purpose, int queryFootIndex, in GroundingFrameInput frame, IGroundingWorldQueryBackend worldQueryBackend)
             {
                 RaycastHit hit = new RaycastHit();
-                Vector3 origin = transformPosition + offsetFromHeel;
 
                 if (grounding.overstepFallsDown)
                 {
@@ -261,13 +309,25 @@ namespace RootMotion.FinalIK {
                 }
                 else
                 {
-                    hit.point = new Vector3(origin.x, grounding.root.position.y, origin.z);
+					hit.point = origin - up * grounding.GetVerticalOffset(origin, grounding.rootPosition);
                 }
                 hit.normal = up;
 
-                if (grounding.maxStep <= 0f) return hit;
+				if (grounding.maxStep <= 0f) return new GroundingQueryHit(false, hit, 0);
 
-                grounding.Raycast(origin + grounding.maxStep * up, -up, out hit, grounding.maxStep * 2, grounding.layers, QueryTriggerInteraction.Ignore);
+				GroundingQueryRequest request = new GroundingQueryRequest(
+					GroundingQueryShape.Ray,
+					purpose,
+					frame.PhysicsScene,
+					frame.LayerMask,
+					queryFootIndex,
+					origin + grounding.maxStep * up,
+					Vector3.zero,
+					-up,
+					0f,
+					grounding.maxStep * 2f);
+				bool hasHit = worldQueryBackend.Query(in request, out GroundingQueryHit queryHit);
+				if (hasHit) hit = queryHit.PhysicsHit;
 
                 // Since Unity2017 Raycasts will return Vector3.zero when starting from inside a collider
                 if (hit.point == Vector3.zero && hit.normal == Vector3.zero)
@@ -278,11 +338,11 @@ namespace RootMotion.FinalIK {
                     }
                     else
                     {
-                        hit.point = new Vector3(origin.x, grounding.root.position.y, origin.z);
+						hit.point = origin - up * grounding.GetVerticalOffset(origin, grounding.rootPosition);
                     }
                 }
 
-                return hit;
+				return new GroundingQueryHit(hasHit, hit, hasHit ? queryHit.SurfaceIdentity : 0);
             }
 
             // Rotates ground normal with respect to maxFootRotationAngle
@@ -337,7 +397,7 @@ namespace RootMotion.FinalIK {
 			// The foot's height from ground in the animation
 			private float rootYOffset {
 				get {
-					return grounding.GetVerticalOffset(transformPosition, grounding.root.position - up * grounding.heightOffset);
+					return grounding.GetVerticalOffset(transformPosition, grounding.rootPosition - up * grounding.heightOffset);
 				}
 			}		
 		}

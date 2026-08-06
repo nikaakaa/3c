@@ -55,6 +55,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterPresentationPoseGraphAsset m_PoseGraph;
         [SerializeField] CharacterAnimationRigDefinition m_RigDefinition;
         [SerializeField] CharacterMotionMatchingProfile m_MotionMatchingProfile;
+        [SerializeField] CharacterFullBodyIkProfile m_FullBodyIkProfile;
+        [SerializeField] CharacterLinkedPoseGroupBinding[] m_LinkedPoseGroups =
+            Array.Empty<CharacterLinkedPoseGroupBinding>();
+        [SerializeField] CharacterLinkedPoseImplementationAsset[] m_LinkedPoseImplementations =
+            Array.Empty<CharacterLinkedPoseImplementationAsset>();
+        [SerializeField] CharacterLinkedPoseSelectorBindingAsset[] m_LinkedPoseSelectors =
+            Array.Empty<CharacterLinkedPoseSelectorBindingAsset>();
         [SerializeField] AnimationProducerPresentationBinding[] m_ProducerBindings =
             Array.Empty<AnimationProducerPresentationBinding>();
         [SerializeField] CharacterPresentationPoseSourceBinding[] m_PoseSourceBindings =
@@ -65,6 +72,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterPresentationPoseGraphAsset PoseGraph => m_PoseGraph;
         public CharacterAnimationRigDefinition RigDefinition => m_RigDefinition;
         public CharacterMotionMatchingProfile MotionMatchingProfile => m_MotionMatchingProfile;
+        public CharacterFullBodyIkProfile FullBodyIkProfile => m_FullBodyIkProfile;
+        public IReadOnlyList<CharacterLinkedPoseGroupBinding> LinkedPoseGroups =>
+            m_LinkedPoseGroups ?? Array.Empty<CharacterLinkedPoseGroupBinding>();
+        public IReadOnlyList<CharacterLinkedPoseImplementationAsset> LinkedPoseImplementations =>
+            m_LinkedPoseImplementations ?? Array.Empty<CharacterLinkedPoseImplementationAsset>();
+        public IReadOnlyList<CharacterLinkedPoseSelectorBindingAsset> LinkedPoseSelectors =>
+            m_LinkedPoseSelectors ?? Array.Empty<CharacterLinkedPoseSelectorBindingAsset>();
         public IReadOnlyList<AnimationProducerPresentationBinding> ProducerBindings =>
             m_ProducerBindings ?? Array.Empty<AnimationProducerPresentationBinding>();
         public IReadOnlyList<CharacterPresentationPoseSourceBinding> PoseSourceBindings =>
@@ -118,6 +132,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_MotionMatchingProfile = profile;
         }
 
+        public void SetFullBodyIkProfile(CharacterFullBodyIkProfile profile)
+        {
+            m_FullBodyIkProfile = profile ? profile : throw new ArgumentNullException(nameof(profile));
+        }
+
+        public void SetLinkedPoseBindings(
+            CharacterLinkedPoseGroupBinding[] groups,
+            CharacterLinkedPoseImplementationAsset[] implementations,
+            CharacterLinkedPoseSelectorBindingAsset[] selectors)
+        {
+            m_LinkedPoseGroups = groups ?? Array.Empty<CharacterLinkedPoseGroupBinding>();
+            m_LinkedPoseImplementations = implementations ?? Array.Empty<CharacterLinkedPoseImplementationAsset>();
+            m_LinkedPoseSelectors = selectors ?? Array.Empty<CharacterLinkedPoseSelectorBindingAsset>();
+        }
+
         public void SetFootPlacementAnalysis(
             CharacterFootPlacementAnalysisMode mode,
             string analysisSourceAssetGuid)
@@ -153,6 +182,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 errors?.Add($"{name}: Animation Rig Definition is missing.");
                 valid = false;
+            }
+            if (!m_FullBodyIkProfile)
+            {
+                errors?.Add($"{name}: Full Body IK Profile is missing.");
+                valid = false;
+            }
+            else
+            {
+                try
+                {
+                    m_FullBodyIkProfile.RequireValid();
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add($"{name}: {exception.Message}");
+                    valid = false;
+                }
             }
             var producerIds = new HashSet<AnimationProducerId>();
             IReadOnlyList<AnimationProducerPresentationBinding> bindings = ProducerBindings;
@@ -193,6 +239,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 try
                 {
                     m_MotionMatchingProfile.RequireValid();
+                    if (!m_RigDefinition)
+                        throw new InvalidOperationException("Motion Matching Profile requires the Presentation Rig.");
+                    m_MotionMatchingProfile.RequireRigClosure(m_RigDefinition);
                 }
                 catch (Exception exception)
                 {
@@ -200,6 +249,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     valid = false;
                 }
             }
+
+            if (!CollectLinkedPoseConfigurationErrors(errors))
+                valid = false;
 
             if (m_FootPlacementAnalysisMode == CharacterFootPlacementAnalysisMode.GeneratedPerFootFeatures)
             {
@@ -216,6 +268,87 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 valid = false;
             }
 
+            return valid;
+        }
+
+        bool CollectLinkedPoseConfigurationErrors(List<string> errors)
+        {
+            bool valid = true;
+            var groups = new Dictionary<LinkedPoseGroupId, CharacterLinkedPoseGroupBinding>();
+            for (int i = 0; i < LinkedPoseGroups.Count; i++)
+            {
+                CharacterLinkedPoseGroupBinding group = LinkedPoseGroups[i];
+                try
+                {
+                    group?.RequireValid();
+                    if (group == null || !groups.TryAdd(group.GroupId, group))
+                        throw new InvalidOperationException("Group is missing or duplicated.");
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add($"{name}: Linked Pose Group #{i} is invalid: {exception.Message}");
+                    valid = false;
+                }
+            }
+
+            var implementations = new Dictionary<LinkedPoseImplementationId, CharacterLinkedPoseImplementationAsset>();
+            for (int i = 0; i < LinkedPoseImplementations.Count; i++)
+            {
+                CharacterLinkedPoseImplementationAsset implementation = LinkedPoseImplementations[i];
+                try
+                {
+                    implementation?.RequireValid();
+                    if (!implementation || !implementations.TryAdd(implementation.ImplementationId, implementation))
+                        throw new InvalidOperationException("Implementation is missing or duplicated.");
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add($"{name}: Linked Pose Implementation #{i} is invalid: {exception.Message}");
+                    valid = false;
+                }
+            }
+
+            var selectorIds = new HashSet<LinkedPoseSelectorId>();
+            var selectedGroups = new HashSet<LinkedPoseGroupId>();
+            var candidates = new HashSet<LinkedPoseImplementationId>();
+            for (int i = 0; i < LinkedPoseSelectors.Count; i++)
+            {
+                CharacterLinkedPoseSelectorBindingAsset selectorAsset = LinkedPoseSelectors[i];
+                try
+                {
+                    if (!selectorAsset || !(selectorAsset is ICharacterLinkedPoseSelectorAuthoring selector) ||
+                        !selectorIds.Add(selector.SelectorId) || !selectedGroups.Add(selector.GroupId) ||
+                        !groups.TryGetValue(selector.GroupId, out CharacterLinkedPoseGroupBinding group))
+                    {
+                        throw new InvalidOperationException("Selector is missing, duplicated or targets an undeclared Group.");
+                    }
+                    selector.RequireValid(group, implementations);
+                    for (int candidateIndex = 0; candidateIndex < selector.CandidateImplementationIds.Count; candidateIndex++)
+                        candidates.Add(selector.CandidateImplementationIds[candidateIndex]);
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add($"{name}: Linked Pose selector #{i} is invalid: {exception.Message}");
+                    valid = false;
+                }
+            }
+
+            foreach (LinkedPoseGroupId groupId in groups.Keys)
+            {
+                if (!selectedGroups.Contains(groupId))
+                {
+                    errors?.Add($"{name}: Linked Pose Group '{groupId}' does not have exactly one selector.");
+                    valid = false;
+                }
+            }
+            foreach (LinkedPoseImplementationId implementationId in implementations.Keys)
+            {
+                if (!candidates.Contains(implementationId))
+                {
+                    errors?.Add($"{name}: Linked Pose Implementation '{implementationId}' is outside every selector candidate closure.");
+                    valid = false;
+                }
+            }
             return valid;
         }
 

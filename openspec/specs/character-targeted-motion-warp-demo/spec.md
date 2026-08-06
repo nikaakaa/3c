@@ -40,13 +40,14 @@ Standalone玩家Control Source MUST显式绑定训练敌人的Session Actor iden
 
 ### Requirement: Corin 五段攻击必须预置可调 MotionWarp
 
-Corin Attack Profile MUST声明`OptionalSnapshot`，Dodge MUST保持`None`。Attack1到Attack5的`CanActivateAction`与`ActivateActionInstance` MUST引用同一个Character-scope、Spawn-lifetime、InputDerived `ActionTargetSnapshot` declaration。每段Attack Timeline MUST在主Action MotionCurve上拥有一个显式MotionWarpClip；后摇MotionCurve MUST NOT作为Warp source。
+Corin Attack Profile MUST声明`OptionalSnapshot`，Dodge MUST保持`None`。Attack1到Attack5的`CanActivateAction`与`ActivateActionInstance` MUST引用同一个Character-scope、Spawn-lifetime、InputDerived `ActionTargetSnapshot` declaration。每段Attack Timeline MUST在主Action MotionCurve上拥有一个显式MotionWarpClip，`TranslationMode` MUST为`Disabled`，`RotationMode` MUST为`FaceTarget`，`RotationMethod` MUST为`ProgressCurve`；后摇MotionCurve MUST NOT作为Warp source。
 
 #### Scenario: 有目标执行一段攻击
 
 - **WHEN**Attack1激活时目标候选有效
 - **THEN**ActionInstance MUST固定保存目标快照
-- **AND**Attack1 MotionWarp MUST在作者配置窗口内修正其主MotionCurve的平面位置与yaw
+- **AND**Attack1 MotionWarp MUST在作者配置窗口内只修正面向目标的yaw
+- **AND**Attack1 MotionWarp MUST NOT修改主MotionCurve的平面位移
 - **AND**最终Body结果 MUST继续由唯一WorldSolver裁决
 
 #### Scenario: 连续进入下一段攻击
@@ -68,5 +69,5 @@ Corin Attack Profile MUST声明`OptionalSnapshot`，Dodge MUST保持`None`。Att
 #### Scenario: 训练敌人被玩家攻击
 
 - **WHEN**玩家MotionWarp向训练敌人执行攻击
-- **THEN**本change只保证玩家位移与朝向修正面向该逻辑Body
+- **THEN**本capability只保证玩家朝向修正面向该逻辑Body，平面位移继续使用原始主MotionCurve
 - **AND**MUST NOT伪造命中、伤害或敌人反应结果

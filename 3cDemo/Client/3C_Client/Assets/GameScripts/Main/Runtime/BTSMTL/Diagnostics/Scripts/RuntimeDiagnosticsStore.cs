@@ -269,7 +269,61 @@ namespace BTSMTL.Diagnostics
                    left.ClipIndex == right.ClipIndex &&
                    left.Flag == right.Flag &&
                    DebugValueEquivalent(left.Value, right.Value) &&
-                   TimelineProvenanceEquivalent(left.TimelinePlayback, right.TimelinePlayback);
+                   TimelineProvenanceEquivalent(left.TimelinePlayback, right.TimelinePlayback) &&
+                   FootIkEquivalent(left.FootIk, right.FootIk);
+        }
+
+        static bool FootIkEquivalent(RuntimeFootIkTraceSnapshot left, RuntimeFootIkTraceSnapshot right)
+        {
+            return left.IsAvailable == right.IsAvailable &&
+                   left.FrameSequence == right.FrameSequence &&
+                   left.GoalCompletionIdentity == right.GoalCompletionIdentity &&
+                   left.SolverCompletionIdentity == right.SolverCompletionIdentity &&
+                   string.Equals(left.GroundingBackendIdentity, right.GroundingBackendIdentity, StringComparison.Ordinal) &&
+                   string.Equals(left.SolverBackendIdentity, right.SolverBackendIdentity, StringComparison.Ordinal) &&
+                   string.Equals(left.SolverFailure, right.SolverFailure, StringComparison.Ordinal) &&
+                   left.BodyGrounded == right.BodyGrounded &&
+                   left.RootHit == right.RootHit &&
+                   left.RootSurfaceIdentity == right.RootSurfaceIdentity &&
+                   left.PelvisTargetOffset.Equals(right.PelvisTargetOffset) &&
+                   left.PelvisResolvedOffset.Equals(right.PelvisResolvedOffset) &&
+                   left.RejectLeftGoal == right.RejectLeftGoal &&
+                   left.RejectRightGoal == right.RejectRightGoal &&
+                   string.Equals(left.PelvisHeightMode, right.PelvisHeightMode, StringComparison.Ordinal) &&
+                   string.Equals(left.MovementCompensationMode, right.MovementCompensationMode, StringComparison.Ordinal) &&
+                   FootIkLegEquivalent(left.Left, right.Left) &&
+                   FootIkLegEquivalent(left.Right, right.Right);
+        }
+
+        static bool FootIkLegEquivalent(RuntimeFootIkLegTraceSnapshot left, RuntimeFootIkLegTraceSnapshot right)
+        {
+            return left.IsAvailable == right.IsAvailable &&
+                   left.Grounded == right.Grounded &&
+                   left.CurrentGroundingHit == right.CurrentGroundingHit &&
+                   left.SurfaceIdentity == right.SurfaceIdentity &&
+                   string.Equals(left.ConstraintState, right.ConstraintState, StringComparison.Ordinal) &&
+                   string.Equals(left.TransitionReason, right.TransitionReason, StringComparison.Ordinal) &&
+                   string.Equals(left.LockType, right.LockType, StringComparison.Ordinal) &&
+                   string.Equals(left.PredictionRejectReason, right.PredictionRejectReason, StringComparison.Ordinal) &&
+                   string.Equals(left.GoalApplication, right.GoalApplication, StringComparison.Ordinal) &&
+                   string.Equals(left.GoalSourceKind, right.GoalSourceKind, StringComparison.Ordinal) &&
+                   left.SolverResultAvailable == right.SolverResultAvailable &&
+                   left.PlantConfidence.Equals(right.PlantConfidence) &&
+                   left.SoleHeight.Equals(right.SoleHeight) &&
+                   left.PlacementWeight.Equals(right.PlacementWeight) &&
+                   left.PlantWeight.Equals(right.PlantWeight) &&
+                   left.ContactWeight.Equals(right.ContactWeight) &&
+                   left.GoalPositionWeight.Equals(right.GoalPositionWeight) &&
+                   left.GoalRotationWeight.Equals(right.GoalRotationWeight) &&
+                   left.LegExtensionRatio.Equals(right.LegExtensionRatio) &&
+                   left.AnkleTwistDegrees.Equals(right.AnkleTwistDegrees) &&
+                   left.QueryCount == right.QueryCount &&
+                   left.RejectedQueryCount == right.RejectedQueryCount &&
+                   left.GroundingComponentPosition.Equals(right.GroundingComponentPosition) &&
+                   left.GoalComponentPosition.Equals(right.GoalComponentPosition) &&
+                   left.SolvedComponentPosition.Equals(right.SolvedComponentPosition) &&
+                   left.PositionResidual.Equals(right.PositionResidual) &&
+                   left.RotationResidualDegrees.Equals(right.RotationResidualDegrees);
         }
 
         static bool DebugValueEquivalent(DebugValueSnapshot left, DebugValueSnapshot right)
@@ -679,6 +733,7 @@ namespace BTSMTL.Diagnostics
                 RuntimeTraceEventKind.MotionMatchingPoseSource or
                 RuntimeTraceEventKind.MotionMatchingFrame or
                 RuntimeTraceEventKind.PresentationInterpolated or
+                RuntimeTraceEventKind.FootPlacementSnapshot or
                 RuntimeTraceEventKind.CameraSnapshot or
                 RuntimeTraceEventKind.CameraRequest => RuntimeDiagnosticsCaptureDetail.Continuous,
                 _ => RuntimeDiagnosticsCaptureDetail.Boundary

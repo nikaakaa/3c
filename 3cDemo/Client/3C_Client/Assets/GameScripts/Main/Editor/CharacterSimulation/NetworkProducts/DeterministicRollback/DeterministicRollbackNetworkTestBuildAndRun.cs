@@ -88,7 +88,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             local.ValidateComposition(local.Composition);
             rollback.ValidateComposition(rollback.Composition);
             if (!string.Equals(local.DefinitionGuid, rollback.DefinitionGuid, StringComparison.Ordinal) ||
-                local.FixedProgram != rollback.FixedProgram ||
+                local.Program != rollback.Program ||
                 local.PresentationProjection != rollback.PresentationProjection ||
                 local.WorldSolver != rollback.WorldSolver ||
                 local.CollisionWorld != rollback.CollisionWorld)
@@ -106,7 +106,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException("Rollback Variant Character Definition or Projection reference is stale.");
 
             FixedCharacterSimulationProgramAsset fixedProgram =
-                rollback.FixedProgram as FixedCharacterSimulationProgramAsset ??
+                rollback.Program as FixedCharacterSimulationProgramAsset ??
                 throw new InvalidOperationException("Rollback Variant Fixed Program product has the wrong type.");
             ThirdPersonSimulation.Fixed.CharacterSimulationProgram program = fixedProgram.Load();
             CharacterPresentationProjectionAsset projection = rollback.PresentationProjection;

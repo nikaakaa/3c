@@ -8,7 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 {
     public static class MotionMatchingProjectionPayloadCodec
     {
-        const int SchemaVersion = 3;
+        const int SchemaVersion = 5;
 
         public static byte[] Encode(MotionMatchingProjectionPayload payload, out AnimationClip[] clips)
         {
@@ -30,9 +30,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             writer.Write(payload.DatabaseCount);
             for (int i = 0; i < payload.DatabaseCount; i++)
                 WriteDatabase(writer, payload.GetDatabase(i), clipTable);
-            writer.Write(payload.ProviderBindingCount);
-            for (int i = 0; i < payload.ProviderBindingCount; i++)
-                WriteProviderBinding(writer, payload.GetProviderBinding(i));
+            writer.Write(payload.NodeBindingCount);
+            for (int i = 0; i < payload.NodeBindingCount; i++)
+                WriteNodeBinding(writer, payload.GetNodeBinding(i));
             clips = clipTable.ToArray();
             return stream.ToArray();
         }
@@ -58,12 +58,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 databases[i] = ReadDatabase(reader, clips ?? Array.Empty<AnimationClip>());
             int providerCount = RequireCount(
                 reader.ReadInt32(),
-                "provider binding",
+                "node binding",
                 false);
             var providers =
-                new MotionMatchingProviderBindingPayload[providerCount];
+                new MotionMatchingNodeBindingPayload[providerCount];
             for (int i = 0; i < providerCount; i++)
-                providers[i] = ReadProviderBinding(reader);
+                providers[i] = ReadNodeBinding(reader);
             if (stream.Position != stream.Length)
                 throw new InvalidOperationException("Motion Matching Projection payload contains trailing data.");
             return new MotionMatchingProjectionPayload(
@@ -493,28 +493,118 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         static MotionMatchingCoverageSummaryPayload ReadCoverage(BinaryReader reader) => new MotionMatchingCoverageSummaryPayload(
             reader.ReadString(), reader.ReadBoolean(), reader.ReadInt32(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
 
-        static void WriteProviderBinding(
+        static void WriteNodeBinding(
             BinaryWriter writer,
-            MotionMatchingProviderBindingPayload value)
+            MotionMatchingNodeBindingPayload value)
         {
-            writer.Write(value.ProviderId);
-            writer.Write(value.PresentationPoseSourceIndex.Value);
+            writer.Write(value.BindingId.Value);
+            writer.Write(value.BindingRevision);
             writer.Write(value.PoseNodeId.Value);
-            writer.Write(value.SearchDomainId.Value);
+            WriteChooser(writer, value.Chooser);
             writer.Write(value.FirstDatabaseIndex);
             writer.Write(value.DatabaseCount);
         }
 
-        static MotionMatchingProviderBindingPayload ReadProviderBinding(
+        static MotionMatchingNodeBindingPayload ReadNodeBinding(
             BinaryReader reader) =>
-            new MotionMatchingProviderBindingPayload(
-                reader.ReadString(),
-                new PresentationPoseSourceIndex(reader.ReadInt32()),
+            new MotionMatchingNodeBindingPayload(
+                new CharacterMotionMatchingBindingId(reader.ReadString()),
+                reader.ReadInt32(),
                 new PoseNodeId(reader.ReadString()),
-                new CharacterMotionMatchingSearchDomainId(
-                    reader.ReadString()),
+                ReadChooser(reader),
                 reader.ReadInt32(),
                 reader.ReadInt32());
+
+        static void WriteChooser(
+            BinaryWriter writer,
+            MotionMatchingDatabaseChooserPayload value)
+        {
+            writer.Write(value.ChooserId.Value);
+            writer.Write(value.ChooserRevision);
+            writer.Write(value.SearchDomainId.Value);
+            writer.Write(value.RuleCount);
+            for (int ruleIndex = 0; ruleIndex < value.RuleCount; ruleIndex++)
+            {
+                MotionMatchingDatabaseChooserRulePayload rule = value.GetRule(ruleIndex);
+                writer.Write(rule.Priority);
+                writer.Write(rule.Exclusive);
+                writer.Write(rule.ShouldSearch);
+                writer.Write((byte)rule.InterruptMode);
+                writer.Write(rule.SearchPolicyOverrideId);
+                writer.Write(rule.PredicateCount);
+                for (int predicateIndex = 0; predicateIndex < rule.PredicateCount; predicateIndex++)
+                    WriteChooserPredicate(writer, rule.GetPredicate(predicateIndex));
+                writer.Write(rule.DatabaseCount);
+                for (int databaseIndex = 0; databaseIndex < rule.DatabaseCount; databaseIndex++)
+                    writer.Write(rule.GetDatabaseIndex(databaseIndex));
+            }
+        }
+
+        static MotionMatchingDatabaseChooserPayload ReadChooser(BinaryReader reader)
+        {
+            var chooserId = new CharacterMotionMatchingDatabaseChooserId(reader.ReadString());
+            int chooserRevision = reader.ReadInt32();
+            var searchDomainId = new CharacterMotionMatchingSearchDomainId(reader.ReadString());
+            int ruleCount = RequireCount(reader.ReadInt32(), "chooser rule", false);
+            var rules = new MotionMatchingDatabaseChooserRulePayload[ruleCount];
+            for (int ruleIndex = 0; ruleIndex < rules.Length; ruleIndex++)
+            {
+                int priority = reader.ReadInt32();
+                bool exclusive = reader.ReadBoolean();
+                bool shouldSearch = reader.ReadBoolean();
+                var interruptMode = (CharacterMotionMatchingChooserInterruptMode)reader.ReadByte();
+                string searchPolicyOverrideId = reader.ReadString();
+                int predicateCount = RequireCount(reader.ReadInt32(), "chooser predicate", false);
+                var predicates = new MotionMatchingFactPredicatePayload[predicateCount];
+                for (int predicateIndex = 0; predicateIndex < predicates.Length; predicateIndex++)
+                    predicates[predicateIndex] = ReadChooserPredicate(reader);
+                int databaseCount = RequireCount(reader.ReadInt32(), "chooser Database index", false);
+                var databaseIndices = new int[databaseCount];
+                for (int databaseIndex = 0; databaseIndex < databaseIndices.Length; databaseIndex++)
+                    databaseIndices[databaseIndex] = reader.ReadInt32();
+                rules[ruleIndex] = new MotionMatchingDatabaseChooserRulePayload(
+                    priority,
+                    exclusive,
+                    predicates,
+                    databaseIndices,
+                    shouldSearch,
+                    interruptMode,
+                    searchPolicyOverrideId);
+            }
+            return new MotionMatchingDatabaseChooserPayload(
+                chooserId,
+                chooserRevision,
+                searchDomainId,
+                rules);
+        }
+
+        static void WriteChooserPredicate(
+            BinaryWriter writer,
+            MotionMatchingFactPredicatePayload value)
+        {
+            writer.Write(value.FactId.Value);
+            writer.Write((byte)value.ValueKind);
+            writer.Write((byte)value.Operator);
+            writer.Write(value.BoolValue);
+            writer.Write(value.FloatValue);
+            WriteVector2(writer, value.Vector2Value);
+            writer.Write(value.EnumValue);
+            writer.Write(value.UInt64Value);
+            writer.Write(value.IdentityValue);
+        }
+
+        static MotionMatchingFactPredicatePayload ReadChooserPredicate(
+            BinaryReader reader) =>
+            new MotionMatchingFactPredicatePayload(
+                new PresentationFactId(reader.ReadString()),
+                (PresentationFactValueKind)reader.ReadByte(),
+                (CharacterMotionMatchingChooserPredicateOperator)reader.ReadByte(),
+                reader.ReadBoolean(),
+                reader.ReadSingle(),
+                ReadVector2(reader),
+                reader.ReadInt32(),
+                reader.ReadUInt64(),
+                reader.ReadString());
 
         static void WriteFootSample(BinaryWriter writer, AnimationFootFeatureSample value)
         {

@@ -25,10 +25,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AdditivePose = 9,
         PoseParameterResolve = 10,
         ModifyBone = 11,
-        FootPlacement = 12,
+        PredictiveFootPlacement = 12,
         OutputPose = 13,
         BlendSpacePlayer = 15,
-        TwoBoneIK = 16,
+        PoseBoneIKGoals = 16,
         SequencePlayer = 17,
         PoseStateMachine = 18,
         StatePoseOutput = 19,
@@ -36,7 +36,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         ActionPlaybackInput = 21,
         RootOrientationWarp = 22,
         LocalToComponentPose = 23,
-        ComponentToLocalPose = 24
+        ComponentToLocalPose = 24,
+        FullBodyIK = 25,
+        LinkedPoseCall = 26,
+        EmptyFullBodyIkGoals = 27,
+        MotionMatchingPose = 28,
+        PoseHistoryRead = 29,
+        PoseHistoryCommit = 30,
+        MotionMatchingChooserResolve = 31,
+        MotionMatchingEntrySourceCapture = 32,
+        MotionMatchingEntryProcessing = 33,
+        MotionMatchingInternalBlend = 34
     }
 
     [Serializable]
@@ -246,75 +256,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class CharacterPresentationTwoBoneIkDescriptor
-    {
-        [SerializeField] string m_NodeId = string.Empty;
-        [SerializeField] int m_RootPhysicalBoneIndex = -1;
-        [SerializeField] int m_JointPhysicalBoneIndex = -1;
-        [SerializeField] int m_EndPhysicalBoneIndex = -1;
-        [SerializeField] int m_EffectorPoseBoneIndex = -1;
-        [SerializeField] Vector3 m_EffectorLocalPositionOffset;
-        [SerializeField] Quaternion m_EffectorLocalRotationOffset = Quaternion.identity;
-        [SerializeField] int m_JointTargetPoseBoneIndex = -1;
-        [SerializeField] Vector3 m_JointTargetLocalOffset;
-        [SerializeField] CharacterTwoBoneIkEndRotationMode m_EndRotationMode;
-        [SerializeField] float m_Weight;
-
-        public CharacterPresentationTwoBoneIkDescriptor(
-            PoseNodeId nodeId,
-            int rootPhysicalBoneIndex,
-            int jointPhysicalBoneIndex,
-            int endPhysicalBoneIndex,
-            int effectorPoseBoneIndex,
-            Vector3 effectorLocalPositionOffset,
-            Quaternion effectorLocalRotationOffset,
-            int jointTargetPoseBoneIndex,
-            Vector3 jointTargetLocalOffset,
-            CharacterTwoBoneIkEndRotationMode endRotationMode,
-            float weight)
-        {
-            CharacterTwoBoneIkDescriptor descriptor = new CharacterTwoBoneIkDescriptor(
-                new CharacterPoseConstraintId(nodeId.Value),
-                rootPhysicalBoneIndex,
-                jointPhysicalBoneIndex,
-                endPhysicalBoneIndex,
-                effectorPoseBoneIndex,
-                effectorLocalPositionOffset,
-                effectorLocalRotationOffset,
-                jointTargetPoseBoneIndex,
-                jointTargetLocalOffset,
-                endRotationMode,
-                weight);
-            m_NodeId = nodeId.Value;
-            m_RootPhysicalBoneIndex = descriptor.RootPhysicalBoneIndex;
-            m_JointPhysicalBoneIndex = descriptor.JointPhysicalBoneIndex;
-            m_EndPhysicalBoneIndex = descriptor.EndPhysicalBoneIndex;
-            m_EffectorPoseBoneIndex = descriptor.EffectorPoseBoneIndex;
-            m_EffectorLocalPositionOffset = descriptor.EffectorLocalPositionOffset;
-            m_EffectorLocalRotationOffset = descriptor.EffectorLocalRotationOffset;
-            m_JointTargetPoseBoneIndex = descriptor.JointTargetPoseBoneIndex;
-            m_JointTargetLocalOffset = descriptor.JointTargetLocalOffset;
-            m_EndRotationMode = descriptor.EndRotationMode;
-            m_Weight = descriptor.Weight;
-        }
-
-        public PoseNodeId NodeId => new PoseNodeId(m_NodeId);
-
-        public CharacterTwoBoneIkDescriptor ToRuntimeDescriptor() => new CharacterTwoBoneIkDescriptor(
-            new CharacterPoseConstraintId(m_NodeId),
-            m_RootPhysicalBoneIndex,
-            m_JointPhysicalBoneIndex,
-            m_EndPhysicalBoneIndex,
-            m_EffectorPoseBoneIndex,
-            m_EffectorLocalPositionOffset,
-            m_EffectorLocalRotationOffset,
-            m_JointTargetPoseBoneIndex,
-            m_JointTargetLocalOffset,
-            m_EndRotationMode,
-            m_Weight);
-    }
-
-    [Serializable]
     public sealed class CharacterPresentationInertializationRuleDescriptor
     {
         [SerializeField] int m_SourceEndpointIndex;
@@ -409,56 +350,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class CharacterPresentationFootPlacementNodeDescriptor
-    {
-        [SerializeField] int m_Index;
-        [SerializeField] string m_NodeId = string.Empty;
-        [SerializeField] CharacterFootPlacementProfile m_Profile;
-        [SerializeField] CharacterFootPlacementRigCalibration m_Calibration;
-        [SerializeField] string m_CalibrationId = string.Empty;
-        [SerializeField] string m_CalibrationRevision = string.Empty;
-
-        public CharacterPresentationFootPlacementNodeDescriptor(
-            int index,
-            PoseNodeId nodeId,
-            CharacterFootPlacementProfile profile,
-            CharacterFootPlacementRigCalibration calibration)
-        {
-            if (index < 0 || !nodeId.IsValid || !profile || !calibration)
-                throw new ArgumentException("Compiled Foot Placement node descriptor is invalid.");
-            calibration.RequireValid();
-            m_Index = index;
-            m_NodeId = nodeId.Value;
-            m_Profile = profile;
-            m_Calibration = calibration;
-            m_CalibrationId = calibration.CalibrationId.Value;
-            m_CalibrationRevision = calibration.ContentRevision;
-        }
-
-        public int Index => m_Index;
-        public PoseNodeId NodeId => new PoseNodeId(m_NodeId);
-        public CharacterFootPlacementProfile Profile => m_Profile;
-        public CharacterFootPlacementRigCalibration Calibration => m_Calibration;
-        public string CalibrationId => m_CalibrationId ?? string.Empty;
-        public string CalibrationRevision => m_CalibrationRevision ?? string.Empty;
-
-        public void RequireValid(string rigId, string rigRevision)
-        {
-            if (!Profile || !Calibration)
-                throw new InvalidOperationException($"Foot Placement descriptor '{NodeId}' references missing authoring assets.");
-            Calibration.RequireValid();
-            if (!string.Equals(Calibration.RigId, rigId, StringComparison.Ordinal) ||
-                !string.Equals(Calibration.RigRevision, rigRevision, StringComparison.Ordinal) ||
-                !string.Equals(CalibrationId, Calibration.CalibrationId.Value, StringComparison.Ordinal) ||
-                !string.Equals(CalibrationRevision, Calibration.ContentRevision, StringComparison.Ordinal))
-                throw new InvalidOperationException($"Foot Placement descriptor '{NodeId}' identity is stale.");
-        }
-    }
-
-    [Serializable]
     public sealed class CharacterPresentationPoseOperation
     {
-        public const int PayloadVersion = 19;
+        public const int PayloadVersion = 22;
 
         [SerializeField] int m_Index;
         [SerializeField] CharacterPoseExecutionDomain m_ExecutionDomain;
@@ -486,11 +380,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] int m_AdditiveReferenceIndex = -1;
         [SerializeField] int m_ModifyBoneIndex = -1;
         [SerializeField] int m_RootOrientationWarpIndex = -1;
-        [SerializeField] int m_TwoBoneIkIndex = -1;
-        [SerializeField] int m_FootPlacementNodeIndex = -1;
+        [SerializeField] int m_PoseBoneIkGoalsIndex = -1;
+        [SerializeField] int m_PredictiveFootPlacementIndex = -1;
+        [SerializeField] int m_FullBodyIkIndex = -1;
+        [SerializeField] int m_OutputFullBodyIkGoalSetValueIndex = -1;
+        [SerializeField] int m_FullBodyIkGoalInputStart = -1;
+        [SerializeField] int m_FullBodyIkGoalInputCount;
         [SerializeField] int m_SequencePlayerIndex = -1;
         [SerializeField] int m_StateMachineIndex = -1;
         [SerializeField] int m_AnimationSlotIndex = -1;
+        [SerializeField] int m_LinkedPoseCallIndex = -1;
+        [SerializeField] int m_LinkedPoseFragmentIndex = -1;
         [SerializeField] float m_Weight = 1f;
         [SerializeField] PoseParameterResolvePolicy[] m_ParameterPolicies = Array.Empty<PoseParameterResolvePolicy>();
 
@@ -519,11 +419,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int additiveReferenceIndex,
             int modifyBoneIndex,
             int rootOrientationWarpIndex,
-            int twoBoneIkIndex,
-            int footPlacementNodeIndex,
+            int poseBoneIkGoalsIndex,
+            int predictiveFootPlacementIndex,
+            int fullBodyIkIndex,
+            int outputFullBodyIkGoalSetValueIndex,
+            int fullBodyIkGoalInputStart,
+            int fullBodyIkGoalInputCount,
             int sequencePlayerIndex,
             int stateMachineIndex,
             int animationSlotIndex,
+            int linkedPoseCallIndex,
+            int linkedPoseFragmentIndex,
             float weight,
             PoseParameterResolvePolicy[] parameterPolicies)
         {
@@ -532,6 +438,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !Enum.IsDefined(typeof(CharacterPoseSpace), outputPoseSpace) ||
                 !Enum.IsDefined(typeof(CharacterPoseOperationCode), code) || !nodeId.IsValid ||
                 !float.IsFinite(weight) || weight < 0f || weight > 1f ||
+                outputFullBodyIkGoalSetValueIndex < -1 ||
+                fullBodyIkGoalInputStart < -1 || fullBodyIkGoalInputCount < 0 ||
+                linkedPoseCallIndex < -1 || linkedPoseFragmentIndex < -1 ||
+                (fullBodyIkGoalInputCount == 0) != (fullBodyIkGoalInputStart == -1) ||
                 !Enum.IsDefined(typeof(CharacterAnimationBlendSpaceInputRangePolicy), blendSpaceInputRangePolicy))
                 throw new ArgumentException("Compiled Pose Plan operation is invalid.");
             m_Index = index;
@@ -561,11 +471,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_AdditiveReferenceIndex = additiveReferenceIndex;
             m_ModifyBoneIndex = modifyBoneIndex;
             m_RootOrientationWarpIndex = rootOrientationWarpIndex;
-            m_TwoBoneIkIndex = twoBoneIkIndex;
-            m_FootPlacementNodeIndex = footPlacementNodeIndex;
+            m_PoseBoneIkGoalsIndex = poseBoneIkGoalsIndex;
+            m_PredictiveFootPlacementIndex = predictiveFootPlacementIndex;
+            m_FullBodyIkIndex = fullBodyIkIndex;
+            m_OutputFullBodyIkGoalSetValueIndex = outputFullBodyIkGoalSetValueIndex;
+            m_FullBodyIkGoalInputStart = fullBodyIkGoalInputStart;
+            m_FullBodyIkGoalInputCount = fullBodyIkGoalInputCount;
             m_SequencePlayerIndex = sequencePlayerIndex;
             m_StateMachineIndex = stateMachineIndex;
             m_AnimationSlotIndex = animationSlotIndex;
+            m_LinkedPoseCallIndex = linkedPoseCallIndex;
+            m_LinkedPoseFragmentIndex = linkedPoseFragmentIndex;
             m_Weight = weight;
             m_ParameterPolicies = parameterPolicies ?? Array.Empty<PoseParameterResolvePolicy>();
         }
@@ -606,11 +522,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int AdditiveReferenceIndex => m_AdditiveReferenceIndex;
         public int ModifyBoneIndex => m_ModifyBoneIndex;
         public int RootOrientationWarpIndex => m_RootOrientationWarpIndex;
-        public int TwoBoneIkIndex => m_TwoBoneIkIndex;
-        public int FootPlacementNodeIndex => m_FootPlacementNodeIndex;
+        public int PoseBoneIkGoalsIndex => m_PoseBoneIkGoalsIndex;
+        public int PredictiveFootPlacementIndex => m_PredictiveFootPlacementIndex;
+        public int FullBodyIkIndex => m_FullBodyIkIndex;
+        public int OutputFullBodyIkGoalSetValueIndex => m_OutputFullBodyIkGoalSetValueIndex;
+        public int FullBodyIkGoalInputStart => m_FullBodyIkGoalInputStart;
+        public int FullBodyIkGoalInputCount => m_FullBodyIkGoalInputCount;
         public int SequencePlayerIndex => m_SequencePlayerIndex;
         public int StateMachineIndex => m_StateMachineIndex;
         public int AnimationSlotIndex => m_AnimationSlotIndex;
+        public int LinkedPoseCallIndex => m_LinkedPoseCallIndex;
+        public int LinkedPoseFragmentIndex => m_LinkedPoseFragmentIndex;
         public float Weight => m_Weight;
         public IReadOnlyList<PoseParameterResolvePolicy> ParameterPolicies => m_ParameterPolicies ?? Array.Empty<PoseParameterResolvePolicy>();
     }
@@ -706,10 +628,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class CharacterPresentationPosePlan
+    public sealed partial class CharacterPresentationPosePlan
     {
-        public const string SchemaVersion = "character-presentation-pose-plan/v17";
-        public const string RuntimeAbi = "character-presentation-pose-runtime/v20";
+        public const string SchemaVersion = "character-presentation-pose-plan/v21";
+        public const string RuntimeAbi = "character-presentation-pose-runtime/v24";
 
         [SerializeField] string m_SchemaVersion = SchemaVersion;
         [SerializeField] string m_RuntimeAbi = RuntimeAbi;
@@ -728,8 +650,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterPresentationAdditiveReferenceDescriptor[] m_AdditiveReferences = Array.Empty<CharacterPresentationAdditiveReferenceDescriptor>();
         [SerializeField] CharacterPresentationModifyBoneDescriptor[] m_ModifyBones = Array.Empty<CharacterPresentationModifyBoneDescriptor>();
         [SerializeField] CharacterPresentationRootOrientationWarpDescriptor[] m_RootOrientationWarps = Array.Empty<CharacterPresentationRootOrientationWarpDescriptor>();
-        [SerializeField] CharacterPresentationTwoBoneIkDescriptor[] m_TwoBoneIks = Array.Empty<CharacterPresentationTwoBoneIkDescriptor>();
-        [SerializeField] CharacterPresentationFootPlacementNodeDescriptor[] m_FootPlacementNodes = Array.Empty<CharacterPresentationFootPlacementNodeDescriptor>();
+        [SerializeField] CharacterPresentationPoseBoneIkGoalsDescriptor[] m_PoseBoneIkGoalSources = Array.Empty<CharacterPresentationPoseBoneIkGoalsDescriptor>();
+        [SerializeField] CharacterPresentationPredictiveFootPlacementDescriptor[] m_PredictiveFootPlacements = Array.Empty<CharacterPresentationPredictiveFootPlacementDescriptor>();
+        [SerializeField] CharacterPresentationFullBodyIkDescriptor[] m_FullBodyIks = Array.Empty<CharacterPresentationFullBodyIkDescriptor>();
+        [SerializeField] int[] m_FullBodyIkGoalInputValueIndices = Array.Empty<int>();
         [SerializeField] CharacterPresentationSequencePlayerDescriptor[] m_SequencePlayers = Array.Empty<CharacterPresentationSequencePlayerDescriptor>();
         [SerializeField] CharacterPoseStateMachineDescriptor[] m_StateMachines =
             Array.Empty<CharacterPoseStateMachineDescriptor>();
@@ -741,6 +665,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterPresentationPoseSourceMapEntry[] m_SourceMap = Array.Empty<CharacterPresentationPoseSourceMapEntry>();
         [SerializeField] CharacterPresentationPoseStage[] m_Stages = Array.Empty<CharacterPresentationPoseStage>();
         [SerializeField] int m_PoseValueWorkspaceCount;
+        [SerializeField] int m_FullBodyIkGoalSetWorkspaceCount;
+        [SerializeField] int m_FullBodyIkGoalWorkspaceCount;
         [SerializeField] int m_ParameterWorkspaceCount;
         [SerializeField] int m_ContributionWorkspaceCount;
         [SerializeField] int m_FrameCacheCount;
@@ -758,16 +684,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPresentationAdditiveReferenceDescriptor[] additiveReferences,
             CharacterPresentationModifyBoneDescriptor[] modifyBones,
             CharacterPresentationRootOrientationWarpDescriptor[] rootOrientationWarps,
-            CharacterPresentationTwoBoneIkDescriptor[] twoBoneIks,
-            CharacterPresentationFootPlacementNodeDescriptor[] footPlacementNodes,
+            CharacterPresentationPoseBoneIkGoalsDescriptor[] poseBoneIkGoalSources,
+            CharacterPresentationPredictiveFootPlacementDescriptor[] predictiveFootPlacements,
+            CharacterPresentationFullBodyIkDescriptor[] fullBodyIks,
+            int[] fullBodyIkGoalInputValueIndices,
             CharacterPresentationSequencePlayerDescriptor[] sequencePlayers,
             CharacterPoseStateMachineDescriptor[] stateMachines,
             CharacterAnimationSlotDescriptor[] animationSlots,
             ActionPlaybackInputPlan[] actionPlaybackInputs,
+            CharacterLinkedPoseEntryFragmentPlanDescriptor[] linkedPoseFragments,
+            CharacterLinkedPoseCallPlanDescriptor[] linkedPoseCalls,
             CharacterPresentationPoseOperation[] operations,
             CharacterPresentationPoseSourceMapEntry[] sourceMap,
             CharacterPresentationPoseStage[] stages,
             int poseValueWorkspaceCount,
+            int fullBodyIkGoalSetWorkspaceCount,
+            int fullBodyIkGoalWorkspaceCount,
             int parameterWorkspaceCount,
             int contributionWorkspaceCount,
             int frameCacheCount,
@@ -791,17 +723,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_AdditiveReferences = additiveReferences ?? throw new ArgumentNullException(nameof(additiveReferences));
             m_ModifyBones = modifyBones ?? throw new ArgumentNullException(nameof(modifyBones));
             m_RootOrientationWarps = rootOrientationWarps ?? throw new ArgumentNullException(nameof(rootOrientationWarps));
-            m_TwoBoneIks = twoBoneIks ?? throw new ArgumentNullException(nameof(twoBoneIks));
-            m_FootPlacementNodes = footPlacementNodes ?? throw new ArgumentNullException(nameof(footPlacementNodes));
+            m_PoseBoneIkGoalSources = poseBoneIkGoalSources ?? throw new ArgumentNullException(nameof(poseBoneIkGoalSources));
+            m_PredictiveFootPlacements = predictiveFootPlacements ?? throw new ArgumentNullException(nameof(predictiveFootPlacements));
+            m_FullBodyIks = fullBodyIks ?? throw new ArgumentNullException(nameof(fullBodyIks));
+            m_FullBodyIkGoalInputValueIndices = fullBodyIkGoalInputValueIndices ?? throw new ArgumentNullException(nameof(fullBodyIkGoalInputValueIndices));
             m_SequencePlayers = sequencePlayers ?? throw new ArgumentNullException(nameof(sequencePlayers));
             m_StateMachines = stateMachines ?? throw new ArgumentNullException(nameof(stateMachines));
             m_AnimationSlots = animationSlots ?? throw new ArgumentNullException(nameof(animationSlots));
             m_ActionPlaybackInputs = actionPlaybackInputs ??
                 throw new ArgumentNullException(nameof(actionPlaybackInputs));
+            m_LinkedPoseFragments = linkedPoseFragments ?? throw new ArgumentNullException(nameof(linkedPoseFragments));
+            m_LinkedPoseCalls = linkedPoseCalls ?? throw new ArgumentNullException(nameof(linkedPoseCalls));
             m_Operations = operations ?? throw new ArgumentNullException(nameof(operations));
             m_SourceMap = sourceMap ?? throw new ArgumentNullException(nameof(sourceMap));
             m_Stages = stages ?? throw new ArgumentNullException(nameof(stages));
             m_PoseValueWorkspaceCount = poseValueWorkspaceCount;
+            m_FullBodyIkGoalSetWorkspaceCount = fullBodyIkGoalSetWorkspaceCount;
+            m_FullBodyIkGoalWorkspaceCount = fullBodyIkGoalWorkspaceCount;
             m_ParameterWorkspaceCount = parameterWorkspaceCount;
             m_ContributionWorkspaceCount = contributionWorkspaceCount;
             m_FrameCacheCount = frameCacheCount;
@@ -840,8 +778,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<CharacterPresentationAdditiveReferenceDescriptor> AdditiveReferences => m_AdditiveReferences ?? Array.Empty<CharacterPresentationAdditiveReferenceDescriptor>();
         public IReadOnlyList<CharacterPresentationModifyBoneDescriptor> ModifyBones => m_ModifyBones ?? Array.Empty<CharacterPresentationModifyBoneDescriptor>();
         public IReadOnlyList<CharacterPresentationRootOrientationWarpDescriptor> RootOrientationWarps => m_RootOrientationWarps ?? Array.Empty<CharacterPresentationRootOrientationWarpDescriptor>();
-        public IReadOnlyList<CharacterPresentationTwoBoneIkDescriptor> TwoBoneIks => m_TwoBoneIks ?? Array.Empty<CharacterPresentationTwoBoneIkDescriptor>();
-        public IReadOnlyList<CharacterPresentationFootPlacementNodeDescriptor> FootPlacementNodes => m_FootPlacementNodes ?? Array.Empty<CharacterPresentationFootPlacementNodeDescriptor>();
+        public IReadOnlyList<CharacterPresentationPoseBoneIkGoalsDescriptor> PoseBoneIkGoalSources => m_PoseBoneIkGoalSources ?? Array.Empty<CharacterPresentationPoseBoneIkGoalsDescriptor>();
+        public IReadOnlyList<CharacterPresentationPredictiveFootPlacementDescriptor> PredictiveFootPlacements => m_PredictiveFootPlacements ?? Array.Empty<CharacterPresentationPredictiveFootPlacementDescriptor>();
+        public IReadOnlyList<CharacterPresentationFullBodyIkDescriptor> FullBodyIks => m_FullBodyIks ?? Array.Empty<CharacterPresentationFullBodyIkDescriptor>();
+        public IReadOnlyList<int> FullBodyIkGoalInputValueIndices => m_FullBodyIkGoalInputValueIndices ?? Array.Empty<int>();
         public IReadOnlyList<CharacterPresentationSequencePlayerDescriptor> SequencePlayers => m_SequencePlayers ?? Array.Empty<CharacterPresentationSequencePlayerDescriptor>();
         public IReadOnlyList<CharacterPoseStateMachineDescriptor> StateMachines =>
             m_StateMachines ?? Array.Empty<CharacterPoseStateMachineDescriptor>();
@@ -853,6 +793,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<CharacterPresentationPoseSourceMapEntry> SourceMap => m_SourceMap ?? Array.Empty<CharacterPresentationPoseSourceMapEntry>();
         public IReadOnlyList<CharacterPresentationPoseStage> Stages => m_Stages ?? Array.Empty<CharacterPresentationPoseStage>();
         public int PoseValueWorkspaceCount => m_PoseValueWorkspaceCount;
+        public int FullBodyIkGoalSetWorkspaceCount => m_FullBodyIkGoalSetWorkspaceCount;
+        public int FullBodyIkGoalWorkspaceCount => m_FullBodyIkGoalWorkspaceCount;
         public int ParameterWorkspaceCount => m_ParameterWorkspaceCount;
         public int ContributionWorkspaceCount => m_ContributionWorkspaceCount;
         public int FrameCacheCount => m_FrameCacheCount;
@@ -891,6 +833,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 string.IsNullOrEmpty(RigId) || string.IsNullOrEmpty(RigRevision) || PoseBoneCount <= 0 ||
                 Operations.Count == 0 || SourceMap.Count != Operations.Count || Stages.Count == 0 ||
                 PoseValueWorkspaceCount <= 0 ||
+                FullBodyIkGoalSetWorkspaceCount < 0 ||
+                FullBodyIkGoalWorkspaceCount < 0 ||
                 ParameterWorkspaceCount < Parameters.Count || ContributionWorkspaceCount <= 0 ||
                 FrameCacheCount != Operations.Count || OutputOperationIndex < 0 || OutputOperationIndex >= Operations.Count)
                 throw new InvalidOperationException("Character Presentation Pose Plan header or workspace is invalid.");
@@ -922,6 +866,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var operationNodes = new HashSet<PoseNodeId>();
             var playerIndices = new HashSet<int>();
             var poseValueProducers = new Dictionary<int, CharacterPresentationPoseOperation>();
+            var goalSetProducers = new Dictionary<int, CharacterPresentationPoseOperation>();
             int outputCount = 0;
             for (int i = 0; i < Operations.Count; i++)
             {
@@ -932,11 +877,61 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException($"Pose Plan operation #{i} or source map is invalid.");
                 RequirePoseInputDependency(operation, operation.InputValueIndexA, poseValueProducers);
                 RequirePoseInputDependency(operation, operation.InputValueIndexB, poseValueProducers);
+                RequireFullBodyIkGoalInputs(operation, goalSetProducers);
                 if (operation.OutputValueIndex >= 0 &&
                     ((uint)operation.OutputValueIndex >= (uint)PoseValueWorkspaceCount ||
                      !poseValueProducers.TryAdd(operation.OutputValueIndex, operation)))
                 {
                     throw new InvalidOperationException($"Pose Plan operation #{i} has an invalid or duplicated Pose output value.");
+                }
+                if (operation.OutputFullBodyIkGoalSetValueIndex >= 0 &&
+                    ((uint)operation.OutputFullBodyIkGoalSetValueIndex >= (uint)FullBodyIkGoalSetWorkspaceCount ||
+                     !goalSetProducers.TryAdd(operation.OutputFullBodyIkGoalSetValueIndex, operation)))
+                {
+                    throw new InvalidOperationException($"Pose Plan operation #{i} has an invalid or duplicated Full Body IK Goal Set output value.");
+                }
+                if (operation.Code == CharacterPoseOperationCode.PredictiveFootPlacement &&
+                    (operation.ExecutionDomain != CharacterPoseExecutionDomain.WorldAwareValue ||
+                     operation.InputPoseSpace != CharacterPoseSpace.Component ||
+                     operation.OutputPoseSpace != CharacterPoseSpace.None ||
+                     operation.OutputFullBodyIkGoalSetValueIndex < 0 ||
+                     operation.FullBodyIkGoalInputCount != 0 ||
+                     (uint)operation.PredictiveFootPlacementIndex >= (uint)PredictiveFootPlacements.Count))
+                {
+                    throw new InvalidOperationException($"Pose Plan Predictive Foot Placement operation #{i} boundary is invalid.");
+                }
+                if (operation.Code == CharacterPoseOperationCode.PoseBoneIKGoals &&
+                    (operation.ExecutionDomain != CharacterPoseExecutionDomain.PureValue ||
+                     operation.InputPoseSpace != CharacterPoseSpace.Component ||
+                     operation.OutputPoseSpace != CharacterPoseSpace.None ||
+                     operation.OutputFullBodyIkGoalSetValueIndex < 0 ||
+                     operation.FullBodyIkGoalInputCount != 0 ||
+                     (uint)operation.PoseBoneIkGoalsIndex >= (uint)PoseBoneIkGoalSources.Count))
+                {
+                    throw new InvalidOperationException($"Pose Plan Pose Bone IK Goals operation #{i} boundary is invalid.");
+                }
+                if (operation.Code == CharacterPoseOperationCode.EmptyFullBodyIkGoals &&
+                    (operation.ExecutionDomain != CharacterPoseExecutionDomain.PureValue ||
+                     operation.InputPoseSpace != CharacterPoseSpace.Component ||
+                     operation.OutputPoseSpace != CharacterPoseSpace.None ||
+                     operation.OutputValueIndex >= 0 ||
+                     operation.OutputFullBodyIkGoalSetValueIndex < 0 ||
+                     operation.FullBodyIkGoalInputCount != 0 ||
+                     operation.LinkedPoseFragmentIndex < 0))
+                {
+                    throw new InvalidOperationException($"Pose Plan Empty Full Body IK Goals operation #{i} boundary is invalid.");
+                }
+                if (operation.Code == CharacterPoseOperationCode.FullBodyIK &&
+                    (operation.ExecutionDomain != CharacterPoseExecutionDomain.PurePose ||
+                     operation.InputPoseSpace != CharacterPoseSpace.Component ||
+                     operation.OutputPoseSpace != CharacterPoseSpace.Component ||
+                     operation.OutputFullBodyIkGoalSetValueIndex >= 0 ||
+                     operation.FullBodyIkGoalInputStart < 0 ||
+                     operation.FullBodyIkGoalInputCount <= 0 ||
+                     operation.ParameterIndex >= 0 || operation.ParameterIndexB >= 0 ||
+                     (uint)operation.FullBodyIkIndex >= (uint)FullBodyIks.Count))
+                {
+                    throw new InvalidOperationException($"Pose Plan Full Body IK operation #{i} boundary is invalid.");
                 }
                 if (operation.Code == CharacterPoseOperationCode.OutputPose)
                 {
@@ -1108,17 +1103,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 RootOrientationWarps.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.RootOrientationWarp) ||
                 StateMachines.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.PoseStateMachine) ||
                 AnimationSlots.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.AnimationSlot) ||
-                outputCount != 1 || FootPlacementNodes.Count > 1 || playerIndices.Count != PlayerCount ||
+                PoseBoneIkGoalSources.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.PoseBoneIKGoals) ||
+                PredictiveFootPlacements.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.PredictiveFootPlacement) ||
+                FullBodyIks.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.FullBodyIK) ||
+                PredictiveFootPlacements.Count > 1 ||
+                PoseBoneIkGoalSources.Count + PredictiveFootPlacements.Count +
+                Operations.Count(value => value.Code == CharacterPoseOperationCode.EmptyFullBodyIkGoals) +
+                Operations.Count(value => value.Code == CharacterPoseOperationCode.LinkedPoseCall && value.OutputFullBodyIkGoalSetValueIndex >= 0) != FullBodyIkGoalSetWorkspaceCount ||
+                PoseBoneIkGoalSources.Sum(value => value.GoalCount) +
+                PredictiveFootPlacements.Count * CharacterPresentationPredictiveFootPlacementDescriptor.GoalCount != FullBodyIkGoalWorkspaceCount ||
+                FullBodyIkGoalInputValueIndices.Count != Operations.Sum(value => value.FullBodyIkGoalInputCount) ||
+                outputCount != 1 ||
+                playerIndices.Count != PlayerCount ||
                 playerIndices.Count > 0 && (playerIndices.Min() != 0 || playerIndices.Max() != playerIndices.Count - 1))
-                throw new InvalidOperationException("Pose Plan requires one Output and at most one Foot Placement node.");
+                throw new InvalidOperationException("Pose Plan Full Body IK ownership or workspace layout is invalid.");
             RequireStagesValid();
-            for (int i = 0; i < FootPlacementNodes.Count; i++)
+            for (int i = 0; i < PoseBoneIkGoalSources.Count; i++)
             {
-                CharacterPresentationFootPlacementNodeDescriptor descriptor = FootPlacementNodes[i];
+                CharacterPresentationPoseBoneIkGoalsDescriptor descriptor = PoseBoneIkGoalSources[i];
                 if (descriptor == null || descriptor.Index != i)
-                    throw new InvalidOperationException($"Foot Placement descriptor #{i} is invalid.");
+                    throw new InvalidOperationException($"Pose Bone IK Goals descriptor #{i} is invalid.");
+                descriptor.RequireValid();
+            }
+            for (int i = 0; i < PredictiveFootPlacements.Count; i++)
+            {
+                CharacterPresentationPredictiveFootPlacementDescriptor descriptor = PredictiveFootPlacements[i];
+                if (descriptor == null || descriptor.Index != i)
+                    throw new InvalidOperationException($"Predictive Foot Placement descriptor #{i} is invalid.");
                 descriptor.RequireValid(RigId, RigRevision);
             }
+            for (int i = 0; i < FullBodyIks.Count; i++)
+            {
+                CharacterPresentationFullBodyIkDescriptor descriptor = FullBodyIks[i];
+                if (descriptor == null || descriptor.Index != i)
+                    throw new InvalidOperationException($"Full Body IK descriptor #{i} is invalid.");
+                descriptor.RequireValid();
+            }
+            RequireLinkedPoseValid();
         }
 
         public void RequireInertializationValid()
@@ -1286,6 +1307,134 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new InvalidOperationException(
                     $"Pose Plan operation '{operation.NodeId}' cannot read {producer.OutputPoseSpace} Pose from '{producer.NodeId}' as {operation.InputPoseSpace} Pose.");
+            }
+        }
+
+        void RequireFullBodyIkGoalInputs(
+            CharacterPresentationPoseOperation operation,
+            IReadOnlyDictionary<int, CharacterPresentationPoseOperation> goalSetProducers)
+        {
+            if (operation.Code != CharacterPoseOperationCode.FullBodyIK)
+                return;
+            if (operation.FullBodyIkGoalInputStart < 0 ||
+                operation.FullBodyIkGoalInputCount <= 0 ||
+                operation.FullBodyIkGoalInputStart >
+                FullBodyIkGoalInputValueIndices.Count - operation.FullBodyIkGoalInputCount)
+            {
+                throw new InvalidOperationException(
+                    $"Pose Plan Full Body IK '{operation.NodeId}' Goal input span is invalid.");
+            }
+
+            var slotVariants = new HashSet<ushort> { 0 };
+            var inputValues = new HashSet<int>();
+            for (int localIndex = 0; localIndex < operation.FullBodyIkGoalInputCount; localIndex++)
+            {
+                int valueIndex = FullBodyIkGoalInputValueIndices[
+                    operation.FullBodyIkGoalInputStart + localIndex];
+                if (!inputValues.Add(valueIndex) ||
+                    !goalSetProducers.TryGetValue(valueIndex, out CharacterPresentationPoseOperation producer) ||
+                    producer.Index >= operation.Index ||
+                    producer.OutputFullBodyIkGoalSetValueIndex != valueIndex)
+                {
+                    throw new InvalidOperationException(
+                        $"Pose Plan Full Body IK '{operation.NodeId}' reads an invalid Goal Set value '{valueIndex}'.");
+                }
+
+                IReadOnlyCollection<ushort> producerVariants = RequireGoalSourceSlotVariants(producer);
+                var nextVariants = new HashSet<ushort>();
+                foreach (ushort occupiedSlots in slotVariants)
+                {
+                    foreach (ushort producerSlots in producerVariants)
+                    {
+                        if ((occupiedSlots & producerSlots) != 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"Pose Plan Full Body IK '{operation.NodeId}' receives duplicate Effector Slots from '{producer.NodeId}'.");
+                        }
+                        nextVariants.Add((ushort)(occupiedSlots | producerSlots));
+                    }
+                }
+                slotVariants = nextVariants;
+            }
+
+            IReadOnlyCollection<ushort> RequireGoalSourceSlotVariants(
+                CharacterPresentationPoseOperation producer)
+            {
+                if (producer.Code == CharacterPoseOperationCode.PredictiveFootPlacement)
+                {
+                    return new[]
+                    {
+                        SlotMask(
+                            CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation,
+                            CharacterFullBodyIkEffectorSlot.LeftFoot,
+                            CharacterFullBodyIkEffectorSlot.RightFoot)
+                    };
+                }
+                if (producer.Code == CharacterPoseOperationCode.PoseBoneIKGoals &&
+                    (uint)producer.PoseBoneIkGoalsIndex < (uint)PoseBoneIkGoalSources.Count)
+                {
+                    CharacterPresentationPoseBoneIkGoalsDescriptor descriptor =
+                        PoseBoneIkGoalSources[producer.PoseBoneIkGoalsIndex];
+                    ushort slots = 0;
+                    for (int bindingIndex = 0; bindingIndex < descriptor.Bindings.Count; bindingIndex++)
+                    {
+                        ushort slot = SlotMask(descriptor.Bindings[bindingIndex].EffectorSlot);
+                        if ((slots & slot) != 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"Pose Plan Goal producer '{producer.NodeId}' contains a duplicate Effector Slot.");
+                        }
+                        slots = (ushort)(slots | slot);
+                    }
+                    return new[] { slots };
+                }
+                if (producer.Code == CharacterPoseOperationCode.EmptyFullBodyIkGoals)
+                    return new ushort[] { 0 };
+                if (producer.Code == CharacterPoseOperationCode.LinkedPoseCall &&
+                    (uint)producer.LinkedPoseCallIndex < (uint)LinkedPoseCalls.Count)
+                {
+                    CharacterLinkedPoseCallPlanDescriptor call = LinkedPoseCalls[producer.LinkedPoseCallIndex];
+                    var variants = new HashSet<ushort>();
+                    for (int fragmentOffset = 0; fragmentOffset < call.FragmentIndices.Count; fragmentOffset++)
+                    {
+                        int fragmentIndex = call.FragmentIndices[fragmentOffset];
+                        if ((uint)fragmentIndex >= (uint)LinkedPoseFragments.Count)
+                        {
+                            throw new InvalidOperationException(
+                                $"Pose Plan Linked Pose Call '{producer.NodeId}' references an invalid Goal fragment.");
+                        }
+                        CharacterLinkedPoseEntryFragmentPlanDescriptor fragment = LinkedPoseFragments[fragmentIndex];
+                        CharacterLinkedPosePortValueBinding[] goalOutputs = fragment.Outputs
+                            .Where(value => value.Kind == CharacterPosePortKind.FullBodyIkGoals)
+                            .ToArray();
+                        if (goalOutputs.Length != 1 ||
+                            !goalSetProducers.TryGetValue(
+                                goalOutputs[0].ValueIndex,
+                                out CharacterPresentationPoseOperation fragmentProducer) ||
+                            fragmentProducer.Index >= producer.Index)
+                        {
+                            throw new InvalidOperationException(
+                                $"Pose Plan Linked Pose Call '{producer.NodeId}' candidate '{fragment.ImplementationId}' has no completed Goal source.");
+                        }
+                        foreach (ushort slots in RequireGoalSourceSlotVariants(fragmentProducer))
+                            variants.Add(slots);
+                    }
+                    if (variants.Count > 0)
+                        return variants;
+                }
+                throw new InvalidOperationException(
+                    $"Pose Plan Full Body IK '{operation.NodeId}' Goal producer '{producer.NodeId}' is not a Goal Source.");
+            }
+
+            static ushort SlotMask(params CharacterFullBodyIkEffectorSlot[] slots)
+            {
+                ushort mask = 0;
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    int bit = 1 << ((int)slots[i] - 1);
+                    mask = (ushort)(mask | bit);
+                }
+                return mask;
             }
         }
     }

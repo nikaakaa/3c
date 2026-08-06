@@ -12,7 +12,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         SemanticBoneInvalid = 4,
         VirtualBoneInvalid = 5,
         SemanticBoneDuplicate = 6,
-        LegChainInvalid = 7
+        LegChainInvalid = 7,
+        ArmChainInvalid = 8,
+        SpineChainInvalid = 9,
+        BendPlaneInvalid = 10
     }
 
     public sealed class CharacterAnimationRigValidationException : InvalidOperationException
@@ -123,6 +126,49 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
+    public sealed class CharacterAnimationArmChainDefinition
+    {
+        [SerializeField] string m_ClavicleBoneId = string.Empty;
+        [SerializeField] string m_UpperArmBoneId = string.Empty;
+        [SerializeField] string m_ForearmBoneId = string.Empty;
+        [SerializeField] string m_HandBoneId = string.Empty;
+
+        public AnimationBoneId ClavicleBoneId => ToOptionalBoneId(m_ClavicleBoneId);
+        public AnimationBoneId UpperArmBoneId => ToBoneId(m_UpperArmBoneId);
+        public AnimationBoneId ForearmBoneId => ToBoneId(m_ForearmBoneId);
+        public AnimationBoneId HandBoneId => ToBoneId(m_HandBoneId);
+        public bool HasClavicle => ClavicleBoneId.IsValid;
+
+        public CharacterAnimationArmChainDefinition() { }
+
+        public CharacterAnimationArmChainDefinition(
+            AnimationBoneId clavicleBoneId,
+            AnimationBoneId upperArmBoneId,
+            AnimationBoneId forearmBoneId,
+            AnimationBoneId handBoneId)
+        {
+            m_ClavicleBoneId = clavicleBoneId.IsValid ? clavicleBoneId.Value : string.Empty;
+            m_UpperArmBoneId = RequireBoneId(upperArmBoneId, nameof(upperArmBoneId));
+            m_ForearmBoneId = RequireBoneId(forearmBoneId, nameof(forearmBoneId));
+            m_HandBoneId = RequireBoneId(handBoneId, nameof(handBoneId));
+        }
+
+        public IReadOnlyList<AnimationBoneId> GetRequiredBoneIds() =>
+            new[] { UpperArmBoneId, ForearmBoneId, HandBoneId };
+
+        static AnimationBoneId ToOptionalBoneId(string value) =>
+            string.IsNullOrWhiteSpace(value) ? default : new AnimationBoneId(value);
+
+        static AnimationBoneId ToBoneId(string value) =>
+            string.IsNullOrWhiteSpace(value) ? default : new AnimationBoneId(value);
+
+        static string RequireBoneId(AnimationBoneId boneId, string parameterName) =>
+            boneId.IsValid
+                ? boneId.Value
+                : throw new ArgumentException("Arm chain Bone identity is invalid.", parameterName);
+    }
+
+    [Serializable]
     public sealed class CharacterAnimationLegChainDefinition
     {
         [SerializeField] string m_HipBoneId = string.Empty;
@@ -164,7 +210,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [CreateAssetMenu(fileName = "CharacterAnimationRigDefinition", menuName = "3C/Character/Animation Rig Definition")]
     public sealed class CharacterAnimationRigDefinition : ScriptableObject
     {
-        public const string SchemaVersion = "character-animation-rig/v3";
+        public const string SchemaVersion = "character-animation-rig/v4";
 
         [SerializeField] string m_Schema = SchemaVersion;
         [SerializeField] string m_RigId = string.Empty;
@@ -173,9 +219,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterAnimationVirtualBoneDefinition[] m_VirtualBones = Array.Empty<CharacterAnimationVirtualBoneDefinition>();
         [SerializeField] CharacterAnimationRootBonePolicy m_RootBonePolicy = CharacterAnimationRootBonePolicy.ExcludeSourceRoot;
         [SerializeField] CharacterAnimationScalePolicy m_ScalePolicy = CharacterAnimationScalePolicy.PreserveReferenceScale;
+        [SerializeField] string m_SolverRootBoneId = string.Empty;
         [SerializeField] string m_PelvisBoneId = string.Empty;
+        [SerializeField] string[] m_OrderedSpineBoneIds = Array.Empty<string>();
+        [SerializeField] CharacterAnimationArmChainDefinition m_LeftArm = new CharacterAnimationArmChainDefinition();
+        [SerializeField] CharacterAnimationArmChainDefinition m_RightArm = new CharacterAnimationArmChainDefinition();
         [SerializeField] CharacterAnimationLegChainDefinition m_LeftLeg = new CharacterAnimationLegChainDefinition();
         [SerializeField] CharacterAnimationLegChainDefinition m_RightLeg = new CharacterAnimationLegChainDefinition();
+        [SerializeField] string m_HeadBoneId = string.Empty;
 
         public string Schema => m_Schema ?? string.Empty;
         public string RigId => m_RigId ?? string.Empty;
@@ -187,9 +238,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int PoseBoneCount => checked(PhysicalBoneCount + VirtualBoneCount);
         public CharacterAnimationRootBonePolicy RootBonePolicy => m_RootBonePolicy;
         public CharacterAnimationScalePolicy ScalePolicy => m_ScalePolicy;
+        public AnimationBoneId SolverRootBoneId => ToOptionalBoneId(m_SolverRootBoneId);
         public AnimationBoneId PelvisBoneId => string.IsNullOrWhiteSpace(m_PelvisBoneId) ? default : new AnimationBoneId(m_PelvisBoneId);
+        public int SpineBoneCount => m_OrderedSpineBoneIds?.Length ?? 0;
+        public CharacterAnimationArmChainDefinition LeftArm => m_LeftArm;
+        public CharacterAnimationArmChainDefinition RightArm => m_RightArm;
         public CharacterAnimationLegChainDefinition LeftLeg => m_LeftLeg;
         public CharacterAnimationLegChainDefinition RightLeg => m_RightLeg;
+        public AnimationBoneId HeadBoneId => ToOptionalBoneId(m_HeadBoneId);
+
+        public AnimationBoneId GetSpineBoneId(int index)
+        {
+            if (index < 0 || index >= SpineBoneCount)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return ToOptionalBoneId(m_OrderedSpineBoneIds[index]);
+        }
 
         public void Configure(
             string rigId,
@@ -198,9 +261,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationVirtualBoneDefinition[] virtualBones,
             CharacterAnimationRootBonePolicy rootBonePolicy,
             CharacterAnimationScalePolicy scalePolicy,
+            AnimationBoneId solverRootBoneId,
             AnimationBoneId pelvisBoneId,
+            AnimationBoneId[] orderedSpineBoneIds,
+            CharacterAnimationArmChainDefinition leftArm,
+            CharacterAnimationArmChainDefinition rightArm,
             CharacterAnimationLegChainDefinition leftLeg,
-            CharacterAnimationLegChainDefinition rightLeg)
+            CharacterAnimationLegChainDefinition rightLeg,
+            AnimationBoneId headBoneId)
         {
             m_Schema = SchemaVersion;
             m_RigId = PoseNodeId.Require(rigId, nameof(rigId));
@@ -209,11 +277,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_VirtualBones = virtualBones ?? throw new ArgumentNullException(nameof(virtualBones));
             m_RootBonePolicy = rootBonePolicy;
             m_ScalePolicy = scalePolicy;
+            m_SolverRootBoneId = RequireBoneId(solverRootBoneId, nameof(solverRootBoneId));
             m_PelvisBoneId = pelvisBoneId.IsValid
                 ? pelvisBoneId.Value
                 : throw new ArgumentException("Pelvis Bone identity is invalid.", nameof(pelvisBoneId));
+            if (orderedSpineBoneIds == null)
+                throw new ArgumentNullException(nameof(orderedSpineBoneIds));
+            m_OrderedSpineBoneIds = new string[orderedSpineBoneIds.Length];
+            for (int i = 0; i < orderedSpineBoneIds.Length; i++)
+                m_OrderedSpineBoneIds[i] = RequireBoneId(orderedSpineBoneIds[i], nameof(orderedSpineBoneIds));
+            m_LeftArm = leftArm ?? throw new ArgumentNullException(nameof(leftArm));
+            m_RightArm = rightArm ?? throw new ArgumentNullException(nameof(rightArm));
             m_LeftLeg = leftLeg ?? throw new ArgumentNullException(nameof(leftLeg));
             m_RightLeg = rightLeg ?? throw new ArgumentNullException(nameof(rightLeg));
+            m_HeadBoneId = headBoneId.IsValid ? headBoneId.Value : string.Empty;
             RequireValid();
         }
 
@@ -253,16 +330,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     root = i;
                 }
             }
-            if (root < 0 || !PelvisBoneId.IsValid || LeftLeg == null || RightLeg == null)
+            if (root < 0 || !SolverRootBoneId.IsValid || !PelvisBoneId.IsValid || SpineBoneCount == 0 ||
+                LeftArm == null || RightArm == null || LeftLeg == null || RightLeg == null)
             {
                 throw new CharacterAnimationRigValidationException(
                     CharacterAnimationRigValidationCode.SemanticBoneInvalid,
-                    $"Animation Rig '{name}' has incomplete pelvis or leg semantics.");
+                    $"Animation Rig '{name}' has incomplete full-biped semantics.");
             }
             RequireSemanticBonesUnique();
             int pelvisIndex = RequirePhysicalBoneIndex(PelvisBoneId);
+            int[] spineIndices = RequireSpineValid(pelvisIndex);
+            RequireSolverRootValid(pelvisIndex, spineIndices);
+            RequireArmChainValid("Left", spineIndices[spineIndices.Length - 1], LeftArm);
+            RequireArmChainValid("Right", spineIndices[spineIndices.Length - 1], RightArm);
             RequireLegChainValid("Left", pelvisIndex, LeftLeg);
             RequireLegChainValid("Right", pelvisIndex, RightLeg);
+            RequireOptionalHeadValid(spineIndices[spineIndices.Length - 1]);
+            Vector3[] referencePositions = BuildReferenceComponentPositions();
+            RequireReferenceBendPlane("Left Arm", LeftArm.UpperArmBoneId, LeftArm.ForearmBoneId, LeftArm.HandBoneId, referencePositions);
+            RequireReferenceBendPlane("Right Arm", RightArm.UpperArmBoneId, RightArm.ForearmBoneId, RightArm.HandBoneId, referencePositions);
+            RequireReferenceBendPlane("Left Leg", LeftLeg.HipBoneId, LeftLeg.KneeBoneId, LeftLeg.AnkleBoneId, referencePositions);
+            RequireReferenceBendPlane("Right Leg", RightLeg.HipBoneId, RightLeg.KneeBoneId, RightLeg.AnkleBoneId, referencePositions);
             for (int i = 0; i < VirtualBoneCount; i++)
             {
                 CharacterAnimationVirtualBoneDefinition bone = VirtualBones[i];
@@ -349,8 +437,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var semanticBones = new HashSet<AnimationBoneId>();
             if (!semanticBones.Add(PelvisBoneId))
                 ThrowDuplicateSemantic(PelvisBoneId);
+            for (int i = 0; i < SpineBoneCount; i++)
+                AddSemanticBone(GetSpineBoneId(i), semanticBones);
+            AddArmSemanticBones(LeftArm, semanticBones);
+            AddArmSemanticBones(RightArm, semanticBones);
             AddLegSemanticBones(LeftLeg, semanticBones);
             AddLegSemanticBones(RightLeg, semanticBones);
+            if (HeadBoneId.IsValid)
+                AddSemanticBone(HeadBoneId, semanticBones);
+        }
+
+        void AddArmSemanticBones(CharacterAnimationArmChainDefinition arm, HashSet<AnimationBoneId> semanticBones)
+        {
+            if (arm.HasClavicle)
+                AddSemanticBone(arm.ClavicleBoneId, semanticBones);
+            IReadOnlyList<AnimationBoneId> ids = arm.GetRequiredBoneIds();
+            for (int i = 0; i < ids.Count; i++)
+                AddSemanticBone(ids[i], semanticBones);
         }
 
         void AddLegSemanticBones(
@@ -369,6 +472,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (!semanticBones.Add(ids[i]))
                     ThrowDuplicateSemantic(ids[i]);
             }
+        }
+
+        void AddSemanticBone(AnimationBoneId boneId, HashSet<AnimationBoneId> semanticBones)
+        {
+            if (!boneId.IsValid)
+            {
+                throw new CharacterAnimationRigValidationException(
+                    CharacterAnimationRigValidationCode.SemanticBoneInvalid,
+                    $"Animation Rig '{name}' contains an invalid biped Bone identity.");
+            }
+            if (!semanticBones.Add(boneId))
+                ThrowDuplicateSemantic(boneId);
         }
 
         void ThrowDuplicateSemantic(AnimationBoneId boneId) =>
@@ -394,6 +509,133 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireSegmentLength(side, "Foot", toeIndex);
         }
 
+        int[] RequireSpineValid(int pelvisIndex)
+        {
+            var indices = new int[SpineBoneCount];
+            int parentIndex = pelvisIndex;
+            for (int i = 0; i < indices.Length; i++)
+            {
+                indices[i] = RequirePhysicalBoneIndex(GetSpineBoneId(i));
+                if (PhysicalBones[indices[i]].ParentIndex != parentIndex)
+                {
+                    throw new CharacterAnimationRigValidationException(
+                        CharacterAnimationRigValidationCode.SpineChainInvalid,
+                        $"Animation Rig '{name}' Spine #{i} is not a direct child of the previous biped spine Bone.",
+                        indices[i]);
+                }
+                RequirePositiveSegmentLength("Spine", indices[i], CharacterAnimationRigValidationCode.SpineChainInvalid);
+                parentIndex = indices[i];
+            }
+            return indices;
+        }
+
+        void RequireSolverRootValid(int pelvisIndex, int[] spineIndices)
+        {
+            int solverRootIndex = RequirePhysicalBoneIndex(SolverRootBoneId);
+            if (solverRootIndex == pelvisIndex || Array.IndexOf(spineIndices, solverRootIndex) >= 0)
+                return;
+            throw new CharacterAnimationRigValidationException(
+                CharacterAnimationRigValidationCode.SemanticBoneInvalid,
+                $"Animation Rig '{name}' Solver Root must be the Pelvis or an ordered Spine Bone.",
+                solverRootIndex);
+        }
+
+        void RequireArmChainValid(string side, int spineEndIndex, CharacterAnimationArmChainDefinition arm)
+        {
+            int upperArmIndex = RequirePhysicalBoneIndex(arm.UpperArmBoneId);
+            int forearmIndex = RequirePhysicalBoneIndex(arm.ForearmBoneId);
+            int handIndex = RequirePhysicalBoneIndex(arm.HandBoneId);
+            int expectedUpperParent = spineEndIndex;
+            if (arm.HasClavicle)
+            {
+                int clavicleIndex = RequirePhysicalBoneIndex(arm.ClavicleBoneId);
+                RequireParent(side, "Clavicle", clavicleIndex, spineEndIndex, CharacterAnimationRigValidationCode.ArmChainInvalid);
+                RequirePositiveSegmentLength($"{side} Clavicle", clavicleIndex, CharacterAnimationRigValidationCode.ArmChainInvalid);
+                expectedUpperParent = clavicleIndex;
+            }
+            RequireParent(side, "Upper Arm", upperArmIndex, expectedUpperParent, CharacterAnimationRigValidationCode.ArmChainInvalid);
+            RequireParent(side, "Forearm", forearmIndex, upperArmIndex, CharacterAnimationRigValidationCode.ArmChainInvalid);
+            RequireParent(side, "Hand", handIndex, forearmIndex, CharacterAnimationRigValidationCode.ArmChainInvalid);
+            RequirePositiveSegmentLength($"{side} Upper Arm", forearmIndex, CharacterAnimationRigValidationCode.ArmChainInvalid);
+            RequirePositiveSegmentLength($"{side} Forearm", handIndex, CharacterAnimationRigValidationCode.ArmChainInvalid);
+        }
+
+        void RequireOptionalHeadValid(int spineEndIndex)
+        {
+            if (!HeadBoneId.IsValid)
+                return;
+            int headIndex = RequirePhysicalBoneIndex(HeadBoneId);
+            int current = headIndex;
+            while (current >= 0 && current != spineEndIndex)
+                current = PhysicalBones[current].ParentIndex;
+            if (current == spineEndIndex)
+                return;
+            throw new CharacterAnimationRigValidationException(
+                CharacterAnimationRigValidationCode.SemanticBoneInvalid,
+                $"Animation Rig '{name}' Head is not a descendant of the ordered Spine.",
+                headIndex);
+        }
+
+        void RequireParent(string side, string slot, int childIndex, int parentIndex, CharacterAnimationRigValidationCode code)
+        {
+            if (PhysicalBones[childIndex].ParentIndex == parentIndex)
+                return;
+            throw new CharacterAnimationRigValidationException(
+                code,
+                $"Animation Rig '{name}' {side} {slot} parent chain is invalid.",
+                childIndex);
+        }
+
+        void RequirePositiveSegmentLength(string segment, int childIndex, CharacterAnimationRigValidationCode code)
+        {
+            float length = PhysicalBones[childIndex].ReferenceLocalPosition.magnitude;
+            if (float.IsFinite(length) && length > 0.0001f)
+                return;
+            throw new CharacterAnimationRigValidationException(
+                code,
+                $"Animation Rig '{name}' {segment} reference length is invalid.",
+                childIndex);
+        }
+
+        Vector3[] BuildReferenceComponentPositions()
+        {
+            var positions = new Vector3[PhysicalBoneCount];
+            var matrices = new Matrix4x4[PhysicalBoneCount];
+            for (int i = 0; i < PhysicalBoneCount; i++)
+            {
+                CharacterAnimationPhysicalBoneDefinition bone = PhysicalBones[i];
+                Matrix4x4 local = Matrix4x4.TRS(
+                    bone.ReferenceLocalPosition,
+                    bone.ReferenceLocalRotation,
+                    bone.ReferenceLocalScale);
+                matrices[i] = bone.ParentIndex >= 0 ? matrices[bone.ParentIndex] * local : local;
+                positions[i] = matrices[i].GetColumn(3);
+            }
+            return positions;
+        }
+
+        void RequireReferenceBendPlane(
+            string limb,
+            AnimationBoneId upperBoneId,
+            AnimationBoneId middleBoneId,
+            AnimationBoneId endBoneId,
+            Vector3[] positions)
+        {
+            int upperIndex = RequirePhysicalBoneIndex(upperBoneId);
+            int middleIndex = RequirePhysicalBoneIndex(middleBoneId);
+            int endIndex = RequirePhysicalBoneIndex(endBoneId);
+            Vector3 normal = Vector3.Cross(
+                positions[middleIndex] - positions[upperIndex],
+                positions[endIndex] - positions[middleIndex]);
+            float area = normal.sqrMagnitude;
+            if (float.IsFinite(area) && area > 0.00000001f)
+                return;
+            throw new CharacterAnimationRigValidationException(
+                CharacterAnimationRigValidationCode.BendPlaneInvalid,
+                $"Animation Rig '{name}' {limb} reference bend plane is degenerate.",
+                middleIndex);
+        }
+
         void RequireDirectParent(string side, string slot, int childIndex, int expectedParentIndex)
         {
             if (PhysicalBones[childIndex].ParentIndex == expectedParentIndex)
@@ -414,6 +656,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 $"Animation Rig '{name}' {side} {segment} reference length is invalid.",
                 childIndex);
         }
+
+        static AnimationBoneId ToOptionalBoneId(string value) =>
+            string.IsNullOrWhiteSpace(value) ? default : new AnimationBoneId(value);
+
+        static string RequireBoneId(AnimationBoneId boneId, string parameterName) =>
+            boneId.IsValid
+                ? boneId.Value
+                : throw new ArgumentException("Full-biped Bone identity is invalid.", parameterName);
     }
 
     [Serializable]

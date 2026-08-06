@@ -8,9 +8,15 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 8267017062934195806, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+    - target: {fileID: 8267017062934195806, guid: 67b20b0165b77b44f8cf0cfa9ae33f19,
+        type: 3}
       propertyPath: m_Name
-      value: Corin Foot Placement Analysis Rig
+      value: CorinFootPlacementAnalysisRig
+      objectReference: {fileID: 0}
+    - target: {fileID: 9000000000000000106, guid: 67b20b0165b77b44f8cf0cfa9ae33f19,
+        type: 3}
+      propertyPath: m_RigRevision
+      value: 87731f0d0ca14844bbf861368b9847b3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

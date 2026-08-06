@@ -1,6 +1,7 @@
 using System;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -602,6 +603,98 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public float RootYawOffset { get; }
     }
 
+    public readonly struct AnimationLinkedPoseEntryRuntimeSnapshot
+    {
+        internal AnimationLinkedPoseEntryRuntimeSnapshot(
+            LinkedPoseGroupId groupId,
+            LinkedPoseInterfaceId interfaceId,
+            StableHash interfaceSignature,
+            LinkedPoseEntryId entryId,
+            PoseNodeId callNodeId,
+            LinkedPoseImplementationId implementationId,
+            ulong generation,
+            bool stateReset,
+            int fragmentIndex,
+            int operationStart,
+            int operationCount,
+            int stageStart,
+            int stageCount,
+            int sourceDemandCount,
+            ulong completionIdentity,
+            bool completed,
+            CharacterFullBodyIkGoalSetAvailability goalAvailability,
+            int goalCount,
+            string goalRigId,
+            string goalRigRevision,
+            ulong goalCompletionIdentity)
+        {
+            GroupId = groupId;
+            InterfaceId = interfaceId;
+            InterfaceSignature = interfaceSignature;
+            EntryId = entryId;
+            CallNodeId = callNodeId;
+            ImplementationId = implementationId;
+            Generation = generation;
+            StateReset = stateReset;
+            FragmentIndex = fragmentIndex;
+            OperationStart = operationStart;
+            OperationCount = operationCount;
+            StageStart = stageStart;
+            StageCount = stageCount;
+            SourceDemandCount = sourceDemandCount;
+            CompletionIdentity = completionIdentity;
+            Completed = completed;
+            GoalAvailability = goalAvailability;
+            GoalCount = goalCount;
+            GoalRigId = goalRigId ?? string.Empty;
+            GoalRigRevision = goalRigRevision ?? string.Empty;
+            GoalCompletionIdentity = goalCompletionIdentity;
+        }
+
+        public LinkedPoseGroupId GroupId { get; }
+        public LinkedPoseInterfaceId InterfaceId { get; }
+        public StableHash InterfaceSignature { get; }
+        public LinkedPoseEntryId EntryId { get; }
+        public PoseNodeId CallNodeId { get; }
+        public LinkedPoseImplementationId ImplementationId { get; }
+        public ulong Generation { get; }
+        public bool StateReset { get; }
+        public int FragmentIndex { get; }
+        public int OperationStart { get; }
+        public int OperationCount { get; }
+        public int StageStart { get; }
+        public int StageCount { get; }
+        public int SourceDemandCount { get; }
+        public ulong CompletionIdentity { get; }
+        public bool Completed { get; }
+        public CharacterFullBodyIkGoalSetAvailability GoalAvailability { get; }
+        public int GoalCount { get; }
+        public string GoalRigId { get; }
+        public string GoalRigRevision { get; }
+        public ulong GoalCompletionIdentity { get; }
+    }
+
+    public readonly struct AnimationFootIkRuntimeSnapshot
+    {
+        internal AnimationFootIkRuntimeSnapshot(
+            CharacterPredictiveFootPlacementDiagnostics predictiveFootPlacement,
+            CharacterFullBodyIkSolverDiagnostics solver,
+            CharacterFullBodyIkEffectorDiagnostics leftFoot,
+            CharacterFullBodyIkEffectorDiagnostics rightFoot)
+        {
+            PredictiveFootPlacement = predictiveFootPlacement;
+            Solver = solver;
+            LeftFoot = leftFoot;
+            RightFoot = rightFoot;
+        }
+
+        public CharacterPredictiveFootPlacementDiagnostics PredictiveFootPlacement { get; }
+        public CharacterFullBodyIkSolverDiagnostics Solver { get; }
+        public CharacterFullBodyIkEffectorDiagnostics LeftFoot { get; }
+        public CharacterFullBodyIkEffectorDiagnostics RightFoot { get; }
+        public bool IsAvailable => PredictiveFootPlacement.IsCompleted;
+    }
+
     public readonly struct AnimationPresentationRuntimeSnapshot
     {
         readonly FinalAnimationPoseFramePageLease m_Lease;
@@ -620,8 +713,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly AnimationSlotRuntimeSnapshot[] m_AnimationSlots;
         readonly PoseStateMachineRuntimeSnapshot[] m_PoseStateMachines;
         readonly RootOrientationWarpRuntimeSnapshot[] m_RootOrientationWarps;
+        readonly CharacterLinkedPoseRuntimeGroupSnapshot[] m_LinkedPoseGroups;
+        readonly AnimationLinkedPoseEntryRuntimeSnapshot[] m_LinkedPoseEntries;
         readonly AnimationPoseWatchSnapshot[] m_PoseWatches;
-        readonly CharacterTwoBoneIkDiagnostic[] m_TwoBoneIkConstraints;
+        readonly CharacterFullBodyIkGoal[] m_PoseWatchFullBodyIkGoals;
+        readonly CharacterPredictiveFootPlacementDiagnostics[] m_PoseWatchPredictiveFootPlacements;
+        readonly CharacterFullBodyIkSolverDiagnostics[] m_PoseWatchFullBodyIkSolvers;
+        readonly CharacterFullBodyIkEffectorDiagnostics[] m_PoseWatchFullBodyIkEffectors;
+        readonly CharacterFullBodyIkLimbDiagnostics[] m_PoseWatchFullBodyIkLimbs;
         readonly AnimationLocalBonePose[] m_PoseWatchLocalPoses;
         readonly CharacterComponentBonePose[] m_PoseWatchComponentPoses;
         readonly AnimationPoseSourceContribution[] m_PoseWatchContributions;
@@ -637,6 +736,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly float[] m_SlotContributionBoneWeights;
         readonly float[] m_OperationContributionBoneWeights;
         readonly float[] m_FinalContributionBoneWeights;
+        readonly AnimationFootIkRuntimeSnapshot m_FootIk;
         readonly int m_StackCount;
         readonly int m_InertializationCount;
         readonly int m_EntryCount;
@@ -651,8 +751,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly int m_AnimationSlotCount;
         readonly int m_PoseStateMachineCount;
         readonly int m_RootOrientationWarpCount;
+        readonly int m_LinkedPoseGroupCount;
+        readonly int m_LinkedPoseEntryCount;
         readonly int m_PoseWatchCount;
-        readonly int m_TwoBoneIkConstraintCount;
 
         internal AnimationPresentationRuntimeSnapshot(
             string projectionRevision,
@@ -671,6 +772,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             AnimationFootFeatureSample leftFootFeatures,
             AnimationFootFeatureSample rightFootFeatures,
             bool hasFootFeatures,
+            AnimationFootIkRuntimeSnapshot footIk,
             int physicalBoneCount,
             int virtualBoneCount,
             int poseBoneCount,
@@ -704,10 +806,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             int poseStateMachineCount,
             RootOrientationWarpRuntimeSnapshot[] rootOrientationWarps,
             int rootOrientationWarpCount,
+            CharacterLinkedPoseRuntimeGroupSnapshot[] linkedPoseGroups,
+            int linkedPoseGroupCount,
+            AnimationLinkedPoseEntryRuntimeSnapshot[] linkedPoseEntries,
+            int linkedPoseEntryCount,
             AnimationPoseWatchSnapshot[] poseWatches,
             int poseWatchCount,
-            CharacterTwoBoneIkDiagnostic[] twoBoneIkConstraints,
-            int twoBoneIkConstraintCount,
+            CharacterFullBodyIkGoal[] poseWatchFullBodyIkGoals,
+            CharacterPredictiveFootPlacementDiagnostics[] poseWatchPredictiveFootPlacements,
+            CharacterFullBodyIkSolverDiagnostics[] poseWatchFullBodyIkSolvers,
+            CharacterFullBodyIkEffectorDiagnostics[] poseWatchFullBodyIkEffectors,
+            CharacterFullBodyIkLimbDiagnostics[] poseWatchFullBodyIkLimbs,
             AnimationLocalBonePose[] poseWatchLocalPoses,
             CharacterComponentBonePose[] poseWatchComponentPoses,
             AnimationPoseSourceContribution[] poseWatchContributions,
@@ -740,6 +849,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             LeftFootFeatures = leftFootFeatures;
             RightFootFeatures = rightFootFeatures;
             HasFootFeatures = hasFootFeatures;
+            m_FootIk = footIk;
             PhysicalBoneCount = physicalBoneCount;
             VirtualBoneCount = virtualBoneCount;
             PoseBoneCount = poseBoneCount;
@@ -773,10 +883,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_PoseStateMachineCount = poseStateMachineCount;
             m_RootOrientationWarps = rootOrientationWarps;
             m_RootOrientationWarpCount = rootOrientationWarpCount;
+            m_LinkedPoseGroups = linkedPoseGroups;
+            m_LinkedPoseGroupCount = linkedPoseGroupCount;
+            m_LinkedPoseEntries = linkedPoseEntries;
+            m_LinkedPoseEntryCount = linkedPoseEntryCount;
             m_PoseWatches = poseWatches;
             m_PoseWatchCount = poseWatchCount;
-            m_TwoBoneIkConstraints = twoBoneIkConstraints;
-            m_TwoBoneIkConstraintCount = twoBoneIkConstraintCount;
+            m_PoseWatchFullBodyIkGoals = poseWatchFullBodyIkGoals;
+            m_PoseWatchPredictiveFootPlacements = poseWatchPredictiveFootPlacements;
+            m_PoseWatchFullBodyIkSolvers = poseWatchFullBodyIkSolvers;
+            m_PoseWatchFullBodyIkEffectors = poseWatchFullBodyIkEffectors;
+            m_PoseWatchFullBodyIkLimbs = poseWatchFullBodyIkLimbs;
             m_PoseWatchLocalPoses = poseWatchLocalPoses;
             m_PoseWatchComponentPoses = poseWatchComponentPoses;
             m_PoseWatchContributions = poseWatchContributions;
@@ -811,6 +928,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public AnimationFootFeatureSample LeftFootFeatures { get; }
         public AnimationFootFeatureSample RightFootFeatures { get; }
         public bool HasFootFeatures { get; }
+        public AnimationFootIkRuntimeSnapshot FootIk => m_FootIk;
         public int PhysicalBoneCount { get; }
         public int VirtualBoneCount { get; }
         public int PoseBoneCount { get; }
@@ -834,9 +952,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Buffer(m_PoseStateMachines, m_PoseStateMachineCount);
         public AnimationReadOnlyBuffer<RootOrientationWarpRuntimeSnapshot> RootOrientationWarps =>
             Buffer(m_RootOrientationWarps, m_RootOrientationWarpCount);
+        public AnimationReadOnlyBuffer<CharacterLinkedPoseRuntimeGroupSnapshot> LinkedPoseGroups =>
+            Buffer(m_LinkedPoseGroups, m_LinkedPoseGroupCount);
+        public AnimationReadOnlyBuffer<AnimationLinkedPoseEntryRuntimeSnapshot> LinkedPoseEntries =>
+            Buffer(m_LinkedPoseEntries, m_LinkedPoseEntryCount);
         public AnimationReadOnlyBuffer<AnimationPoseWatchSnapshot> PoseWatches => Buffer(m_PoseWatches, m_PoseWatchCount);
-        public AnimationReadOnlyBuffer<CharacterTwoBoneIkDiagnostic> TwoBoneIkConstraints =>
-            Buffer(m_TwoBoneIkConstraints, m_TwoBoneIkConstraintCount);
         public AnimationReadOnlyBuffer<AnimationBoneId> BoneIds => Buffer(m_BoneIds, m_BoneIds.Length);
         public AnimationReadOnlyBuffer<AnimationPoseBoneSnapshot> PoseBones =>
             Buffer(m_PoseBones, m_PoseBones.Length);
@@ -885,6 +1005,67 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 m_PoseWatchComponentPoses,
                 watch.PoseOffset,
                 watch.Availability == AnimationPoseWatchAvailability.Pose ? watch.BoneCount : 0,
+                m_Lease,
+                m_LeaseIdentity);
+        }
+
+        public AnimationReadOnlyBuffer<CharacterFullBodyIkGoal> GetPoseWatchFullBodyIkGoals(int watchIndex)
+        {
+            RequireIndex(watchIndex, m_PoseWatchCount, nameof(watchIndex));
+            AnimationPoseWatchSnapshot watch = m_PoseWatches[watchIndex];
+            int count = watch.Availability == AnimationPoseWatchAvailability.Targets
+                ? watch.GoalSet.GoalCount
+                : 0;
+            return new AnimationReadOnlyBuffer<CharacterFullBodyIkGoal>(
+                m_PoseWatchFullBodyIkGoals,
+                watch.GoalSet.GoalOffset,
+                count,
+                m_Lease,
+                m_LeaseIdentity);
+        }
+
+        public bool TryGetPoseWatchPredictiveFootPlacement(
+            int watchIndex,
+            out CharacterPredictiveFootPlacementDiagnostics diagnostics)
+        {
+            RequireIndex(watchIndex, m_PoseWatchCount, nameof(watchIndex));
+            diagnostics = m_PoseWatchPredictiveFootPlacements[watchIndex];
+            return diagnostics.IsCompleted;
+        }
+
+        public bool TryGetPoseWatchFullBodyIkSolver(
+            int watchIndex,
+            out CharacterFullBodyIkSolverDiagnostics diagnostics)
+        {
+            RequireIndex(watchIndex, m_PoseWatchCount, nameof(watchIndex));
+            diagnostics = m_PoseWatchFullBodyIkSolvers[watchIndex];
+            return diagnostics.IsCompleted;
+        }
+
+        public AnimationReadOnlyBuffer<CharacterFullBodyIkEffectorDiagnostics>
+            GetPoseWatchFullBodyIkEffectors(int watchIndex)
+        {
+            RequireIndex(watchIndex, m_PoseWatchCount, nameof(watchIndex));
+            CharacterFullBodyIkSolverDiagnostics diagnostics =
+                m_PoseWatchFullBodyIkSolvers[watchIndex];
+            return new AnimationReadOnlyBuffer<CharacterFullBodyIkEffectorDiagnostics>(
+                m_PoseWatchFullBodyIkEffectors,
+                watchIndex * CharacterFullBodyIkGoalSetHeader.MaximumGoalCount,
+                diagnostics.IsCompleted ? diagnostics.EffectorCount : 0,
+                m_Lease,
+                m_LeaseIdentity);
+        }
+
+        public AnimationReadOnlyBuffer<CharacterFullBodyIkLimbDiagnostics>
+            GetPoseWatchFullBodyIkLimbs(int watchIndex)
+        {
+            RequireIndex(watchIndex, m_PoseWatchCount, nameof(watchIndex));
+            CharacterFullBodyIkSolverDiagnostics diagnostics =
+                m_PoseWatchFullBodyIkSolvers[watchIndex];
+            return new AnimationReadOnlyBuffer<CharacterFullBodyIkLimbDiagnostics>(
+                m_PoseWatchFullBodyIkLimbs,
+                watchIndex * 4,
+                diagnostics.IsCompleted ? diagnostics.LimbCount : 0,
                 m_Lease,
                 m_LeaseIdentity);
         }

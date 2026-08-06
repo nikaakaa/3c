@@ -119,6 +119,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         uint m_PendingStackReleaseVersion;
         int m_PendingStackReleaseDirtyCount;
         ulong m_PreparedCompletionIdentity;
+        float m_MaxBlendInTimeToReplaceNewest;
+        float m_DepthBlendTimeMultiplier;
 
         int m_EntryCount
         {
@@ -430,6 +432,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
             rig.RequireValid();
             slot.StackPolicy.RequireValid();
+            m_MaxBlendInTimeToReplaceNewest =
+                slot.StackPolicy.MaxBlendInTimeToReplaceNewest;
+            m_DepthBlendTimeMultiplier =
+                slot.StackPolicy.DepthBlendTimeMultiplier;
             for (int i = 0; i < curveCatalog.Entries.Count; i++)
                 curveCatalog.Require(i).RequireValid();
             for (int i = 0; i < profileCatalog.Entries.Count; i++)
@@ -507,6 +513,57 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal float LastOutputWeight => m_LastOutputWeight;
         internal AnimationPoseNativeInvalidReason LastInvalidReason => m_LastInvalidReason;
         internal ulong ContinuityIdentity => m_ContinuityIdentity;
+
+        internal string ApplyTuning(
+            CharacterPoseTuningLayout layout,
+            CharacterPoseTuningParameterBlock block)
+        {
+            if (layout == null || block == null)
+                return "Animation Blend Stack tuning payload is missing.";
+            if (m_FrameOpen)
+                return "Animation Blend Stack tuning cannot change during an open frame.";
+            string ownerId = $"animation-blend-policy:{m_Slot.PolicyId}";
+            float replaceNewest = m_MaxBlendInTimeToReplaceNewest;
+            float depthMultiplier = m_DepthBlendTimeMultiplier;
+            for (int i = 0; i < layout.Entries.Count; i++)
+            {
+                CharacterPoseTuningLayoutEntry entry = layout.Entries[i];
+                if (entry.Interaction !=
+                        CharacterPoseTuningInteractionPolicy.TunableDefault ||
+                    !string.Equals(
+                        entry.OwnerId,
+                        ownerId,
+                        StringComparison.Ordinal))
+                {
+                    continue;
+                }
+                CharacterPoseTuningValue value = block.GetValue(entry);
+                if (value.Kind != CharacterPoseTuningValueKind.Float ||
+                    !float.IsFinite(value.FloatValue))
+                {
+                    return $"Animation Blend Stack tuning field '{entry.FieldId}' is invalid.";
+                }
+                if (entry.FieldId.EndsWith(
+                        "/max-blend-in-time-to-replace-newest",
+                        StringComparison.Ordinal))
+                {
+                    if (value.FloatValue < 0f)
+                        return "Animation Blend Stack Replace Newest Window cannot be negative.";
+                    replaceNewest = value.FloatValue;
+                }
+                else if (entry.FieldId.EndsWith(
+                             "/depth-blend-time-multiplier",
+                             StringComparison.Ordinal))
+                {
+                    if (value.FloatValue <= 0f)
+                        return "Animation Blend Stack Depth Blend Time Multiplier must be greater than zero.";
+                    depthMultiplier = value.FloatValue;
+                }
+            }
+            m_MaxBlendInTimeToReplaceNewest = replaceNewest;
+            m_DepthBlendTimeMultiplier = depthMultiplier;
+            return string.Empty;
+        }
 
         internal void BeginFrame()
         {
@@ -928,6 +985,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             }
         }
 
+        internal int PendingPriorFrameReleaseCount(
+            ulong stagingCompletionIdentity)
+        {
+            RequireAlive();
+            if (!m_FrameOpen ||
+                stagingCompletionIdentity == 0 ||
+                stagingCompletionIdentity != m_PreparedCompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Animation Blend Stack release staging frame is not current.");
+            }
+
+            int count = 0;
+            for (int i = 0; i < m_StackReleaseCount; i++)
+            {
+                AnimationBlendStackRelease release =
+                    ReadStackRelease(
+                        (m_StackReleaseHead + i) %
+                        StackReleaseCapacity);
+                if (release.CompletionIdentity >
+                    stagingCompletionIdentity)
+                {
+                    throw new InvalidOperationException(
+                        "Animation Blend Stack release was published by a future frame.");
+                }
+                if (release.CompletionIdentity ==
+                    stagingCompletionIdentity)
+                {
+                    break;
+                }
+                count++;
+            }
+            return count;
+        }
+
         internal AnimationBlendStackSourceReleaseToken PrepareRelease(
             int releaseOrdinal,
             ulong stagingCompletionIdentity)
@@ -1114,7 +1206,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                                        (!m_HasCompletedFrame || m_LastAvailability != AnimationPoseAvailability.Pose);
             bool replaceHistory = m_EntryCount == EntryCapacity ||
                                   m_EntryCount > 0 && ReadEntry(m_EntryCount - 1).ElapsedSeconds <=
-                                  m_Slot.StackPolicy.MaxBlendInTimeToReplaceNewest;
+                                  m_MaxBlendInTimeToReplaceNewest;
             bool captureHistory =
                 replaceHistory &&
                 HasCapturableFrame();
@@ -1161,7 +1253,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 for (int i = 0; i < m_EntryCount; i++)
                 {
                     m_CompactedEntries[i] = ReadEntry(i);
-                    m_CompactedEntries[i].IncreasePushDepth(m_Slot.StackPolicy.DepthBlendTimeMultiplier);
+                    m_CompactedEntries[i].IncreasePushDepth(
+                        m_DepthBlendTimeMultiplier);
                 }
                 for (int i = 0; i < m_EntryCount; i++)
                     WriteEntry(i, m_CompactedEntries[i]);

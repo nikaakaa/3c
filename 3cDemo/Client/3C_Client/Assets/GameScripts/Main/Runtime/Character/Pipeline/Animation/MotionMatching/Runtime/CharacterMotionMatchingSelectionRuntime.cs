@@ -354,6 +354,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             return LastDecision;
         }
 
+        internal MotionMatchingSelectionDecision CommitKernelSelection(
+            MotionMatchingQuery query,
+            MotionMatchingSearchTriggerReason triggerReason,
+            MotionMatchingSearchResult search,
+            MotionMatchingPlanEvaluationResult evaluated,
+            MotionMatchingSelectionGeneration generation,
+            MotionMatchingSelectionDecisionKind kind)
+        {
+            LastSearchResult = search;
+            return CommitSelection(
+                query,
+                triggerReason,
+                evaluated,
+                generation,
+                kind);
+        }
+
         public void PrepareDomain(ulong resetSequence)
         {
             if (m_DomainActive && m_ResetSequence == resetSequence)

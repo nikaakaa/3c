@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 724f4c0677f34cdba7920522907106b0, type: 3}
+  m_Name: TrainingEnemyMonsterFullBodyIkProfile
+  m_EditorClassIdentifier: 
+  m_Schema: character-full-body-ik-profile/v1
+  m_ProfileId: training-enemy.monster.full-body-ik
+  m_Revision: 1aee4dd867afce0aa0e601c95bca206500e6062ac197ba7d29322e6f2391680f
+  m_Iterations: 4
+  m_FabrikPass: 1
+  m_SpineStiffness: 0.5
+  m_PullBodyVertical: 0.5
+  m_PullBodyHorizontal: 0
+  m_NodeWeight: 1
+  m_LeftArm:
+    m_Pin: 0
+    m_Pull: 1
+    m_Push: 0
+    m_PushParent: 0
+    m_Reach: 0.1
+    m_ReachSmoothing: 1
+    m_PushSmoothing: 1
+    m_MappingWeight: 1
+    m_MaintainRotationWeight: 0
+    m_BendConstraintWeight: 0
+    m_BendClamp: 0.505
+  m_RightArm:
+    m_Pin: 0
+    m_Pull: 1
+    m_Push: 0
+    m_PushParent: 0
+    m_Reach: 0.1
+    m_ReachSmoothing: 1
+    m_PushSmoothing: 1
+    m_MappingWeight: 1
+    m_MaintainRotationWeight: 0
+    m_BendConstraintWeight: 0
+    m_BendClamp: 0.505
+  m_LeftLeg:
+    m_Pin: 0
+    m_Pull: 1
+    m_Push: 0
+    m_PushParent: 0
+    m_Reach: 0.1
+    m_ReachSmoothing: 1
+    m_PushSmoothing: 1
+    m_MappingWeight: 1
+    m_MaintainRotationWeight: 0
+    m_BendConstraintWeight: 0
+    m_BendClamp: 0.505
+  m_RightLeg:
+    m_Pin: 0
+    m_Pull: 1
+    m_Push: 0
+    m_PushParent: 0
+    m_Reach: 0.1
+    m_ReachSmoothing: 1
+    m_PushSmoothing: 1
+    m_MappingWeight: 1
+    m_MaintainRotationWeight: 0
+    m_BendConstraintWeight: 0
+    m_BendClamp: 0.505

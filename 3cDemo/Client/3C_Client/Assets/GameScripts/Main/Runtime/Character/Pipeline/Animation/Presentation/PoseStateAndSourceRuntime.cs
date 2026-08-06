@@ -272,13 +272,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly MotionMatchingRelevance[] m_MotionMatching;
         readonly MotionMatchingRelevance[] m_MotionMatchingByOperation;
         readonly MotionMatchingPoseStateDemand[] m_MotionMatchingDemands;
+        readonly int[] m_PlayerLinkedPoseFragmentIndices;
+        readonly int[] m_StateMachineLinkedPoseFragmentIndices;
+        readonly bool[] m_StateControlledPlayers;
+        readonly bool[] m_LinkedPoseActiveFragments;
+        readonly bool[] m_LinkedPoseResetFragments;
         int m_SourceSyncRelationJournalCount;
         bool m_FrameOpen;
 
         internal PoseStateAndSourceRuntime(
             CharacterPresentationPosePlan plan,
             AnimationSequencePlayerRuntime[] sequencePlayers,
-            AnimationBlendSpacePlayerRuntime[] blendSpacePlayers)
+            AnimationBlendSpacePlayerRuntime[] blendSpacePlayers,
+            int[] playerLinkedPoseFragmentIndices,
+            int[] stateMachineLinkedPoseFragmentIndices,
+            bool[] linkedPoseActiveFragments,
+            bool[] linkedPoseResetFragments)
         {
             if (plan == null)
                 throw new ArgumentNullException(nameof(plan));
@@ -286,6 +295,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentNullException(nameof(sequencePlayers));
             m_BlendSpacePlayers = blendSpacePlayers ??
                 throw new ArgumentNullException(nameof(blendSpacePlayers));
+            m_PlayerLinkedPoseFragmentIndices =
+                playerLinkedPoseFragmentIndices ??
+                throw new ArgumentNullException(
+                    nameof(playerLinkedPoseFragmentIndices));
+            m_StateMachineLinkedPoseFragmentIndices =
+                stateMachineLinkedPoseFragmentIndices ??
+                throw new ArgumentNullException(
+                    nameof(stateMachineLinkedPoseFragmentIndices));
+            m_StateControlledPlayers =
+                BuildStateControlledPlayers(plan);
+            m_LinkedPoseActiveFragments =
+                linkedPoseActiveFragments ??
+                throw new ArgumentNullException(
+                    nameof(linkedPoseActiveFragments));
+            m_LinkedPoseResetFragments =
+                linkedPoseResetFragments ??
+                throw new ArgumentNullException(
+                    nameof(linkedPoseResetFragments));
+            if (m_StateMachineLinkedPoseFragmentIndices.Length !=
+                    plan.StateMachines.Count ||
+                m_LinkedPoseActiveFragments.Length !=
+                    plan.LinkedPoseFragments.Count ||
+                m_LinkedPoseResetFragments.Length !=
+                    plan.LinkedPoseFragments.Count)
+            {
+                throw new InvalidOperationException(
+                    "Pose State Linked Pose ownership does not match the compiled plan.");
+            }
             for (int i = 0; i < m_SequencePlayers.Length; i++)
             {
                 AnimationSequencePlayerRuntime player =
@@ -353,6 +390,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             BlendSpacePlayers => m_BlendSpacePlayers;
         internal CharacterPoseStateMachineRuntime[]
             StateMachines => m_StateMachines;
+        internal bool CanApplyNextActivation
+        {
+            get
+            {
+                for (int i = 0; i < m_StateMachines.Length; i++)
+                    if (m_StateMachines[i].HasActiveTransition)
+                        return false;
+                return true;
+            }
+        }
         internal int MotionMatchingProviderCount =>
             m_MotionMatching.Length;
 
@@ -471,6 +518,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 MotionMatchingRelevance relevance =
                     m_MotionMatching[i];
+                if (!IsOperationActive(
+                        relevance.Usage.OperationIndex))
+                {
+                    continue;
+                }
                 if (!relevance.Relevant)
                     continue;
                 workspace.AddProviderDemand(
@@ -559,7 +611,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 MotionMatchingRelevance relevance =
                     m_MotionMatching[i];
-                if (relevance.Relevant &&
+                if (IsOperationActive(
+                        relevance.Usage.OperationIndex) &&
+                    relevance.Relevant &&
                     relevance.LastResolvedFrame !=
                     resolution.PresentationFrame)
                 {
@@ -584,6 +638,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             for (int i = 0; i < m_StateMachines.Length; i++)
             {
+                if (!IsStateMachineActive(i))
+                    continue;
                 m_StateMachines[i].PrepareFrame(
                     presentationDeltaSeconds,
                     in factFrame,
@@ -607,17 +663,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                  i < m_SequencePlayers.Length;
                  i++)
             {
-                m_SequencePlayers[i].Advance(
-                    presentationDeltaSeconds);
+                AnimationSequencePlayerRuntime player =
+                    m_SequencePlayers[i];
+                bool active =
+                    IsPlayerActive(player.PlayerIndex);
+                if (!m_StateControlledPlayers[player.PlayerIndex])
+                    player.SetRelevant(active);
+                if (!active)
+                {
+                    continue;
+                }
+                player.Advance(presentationDeltaSeconds);
             }
             for (int i = 0;
                  i < m_BlendSpacePlayers.Length;
                  i++)
             {
-                m_BlendSpacePlayers[i].SetParameterFrame(
-                    in parameterFrame);
-                m_BlendSpacePlayers[i].Advance(
-                    presentationDeltaSeconds);
+                AnimationBlendSpacePlayerRuntime player =
+                    m_BlendSpacePlayers[i];
+                bool active =
+                    IsPlayerActive(player.PlayerIndex);
+                if (!m_StateControlledPlayers[player.PlayerIndex])
+                    player.SetRelevant(active);
+                if (!active)
+                {
+                    continue;
+                }
+                player.SetParameterFrame(in parameterFrame);
+                player.Advance(presentationDeltaSeconds);
             }
         }
 
@@ -643,6 +716,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                  i < m_StateMachines.Length;
                  i++)
             {
+                if (!IsStateMachineActive(i))
+                    continue;
                 CharacterPoseStateMachineRuntime machine =
                     m_StateMachines[i];
                 machine.EvaluateTransitions(
@@ -685,6 +760,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                  i < m_StateMachines.Length;
                  i++)
             {
+                if (!IsStateMachineActive(i))
+                    continue;
                 CharacterPoseStateMachineRuntime machine =
                     m_StateMachines[i];
                 if (inertializations.TryGetStateMachineState(
@@ -697,6 +774,107 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
             }
         }
+
+        internal void ApplyLinkedPoseGenerationResets()
+        {
+            if (!m_FrameOpen)
+            {
+                throw new InvalidOperationException(
+                    "Pose State Linked Pose reset requires an open frame.");
+            }
+            for (int i = 0; i < m_SequencePlayers.Length; i++)
+            {
+                AnimationSequencePlayerRuntime player =
+                    m_SequencePlayers[i];
+                if (!RequiresPlayerReset(player.PlayerIndex))
+                    continue;
+                player.SetRelevant(false);
+                player.ResetForStateEntry();
+            }
+            for (int i = 0; i < m_BlendSpacePlayers.Length; i++)
+            {
+                AnimationBlendSpacePlayerRuntime player =
+                    m_BlendSpacePlayers[i];
+                if (!RequiresPlayerReset(player.PlayerIndex))
+                    continue;
+                player.SetRelevant(false);
+                player.ResetForStateEntry();
+            }
+            for (int i = 0; i < m_MotionMatching.Length; i++)
+            {
+                MotionMatchingRelevance relevance =
+                    m_MotionMatching[i];
+                int fragmentIndex =
+                    RequireOperationFragmentIndex(
+                        relevance.Usage.OperationIndex);
+                if (RequiresFragmentReset(fragmentIndex))
+                    relevance.Reset();
+            }
+            for (int i = 0; i < m_StateMachines.Length; i++)
+            {
+                if (!RequiresFragmentReset(
+                        m_StateMachineLinkedPoseFragmentIndices[i]))
+                {
+                    continue;
+                }
+                m_StateMachines[i].Reset(
+                    this,
+                    TransitionRoutingResetReason.Explicit);
+            }
+        }
+
+        bool IsStateMachineActive(int stateMachineIndex) =>
+            IsFragmentActive(
+                m_StateMachineLinkedPoseFragmentIndices[
+                    stateMachineIndex]);
+
+        bool IsPlayerActive(int playerIndex) =>
+            IsFragmentActive(
+                RequirePlayerFragmentIndex(playerIndex));
+
+        bool RequiresPlayerReset(int playerIndex) =>
+            RequiresFragmentReset(
+                RequirePlayerFragmentIndex(playerIndex));
+
+        bool IsOperationActive(int operationIndex) =>
+            IsFragmentActive(
+                RequireOperationFragmentIndex(operationIndex));
+
+        int RequireOperationFragmentIndex(int operationIndex)
+        {
+            if (operationIndex < 0)
+                throw new ArgumentOutOfRangeException(nameof(operationIndex));
+            MotionMatchingRelevance relevance =
+                operationIndex < m_MotionMatchingByOperation.Length
+                    ? m_MotionMatchingByOperation[operationIndex]
+                    : null;
+            if (relevance == null)
+            {
+                throw new InvalidOperationException(
+                    $"Pose operation #{operationIndex} has no Motion Matching relevance ownership.");
+            }
+            return RequirePlayerFragmentIndex(
+                relevance.Usage.PlayerIndex);
+        }
+
+        int RequirePlayerFragmentIndex(int playerIndex)
+        {
+            if ((uint)playerIndex >=
+                (uint)m_PlayerLinkedPoseFragmentIndices.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Pose Player #{playerIndex} is outside the compiled Linked Pose ownership table.");
+            }
+            return m_PlayerLinkedPoseFragmentIndices[playerIndex];
+        }
+
+        bool IsFragmentActive(int fragmentIndex) =>
+            fragmentIndex < 0 ||
+            m_LinkedPoseActiveFragments[fragmentIndex];
+
+        bool RequiresFragmentReset(int fragmentIndex) =>
+            fragmentIndex >= 0 &&
+            m_LinkedPoseResetFragments[fragmentIndex];
 
         internal void Reset(
             PoseDiscontinuityResetReason reason)
@@ -1219,6 +1397,40 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
             }
             return result.ToArray();
+        }
+
+        static bool[] BuildStateControlledPlayers(
+            CharacterPresentationPosePlan plan)
+        {
+            var result = new bool[plan.PlayerCount];
+            for (int machineIndex = 0;
+                 machineIndex < plan.StateMachines.Count;
+                 machineIndex++)
+            {
+                CharacterPoseStateMachineDescriptor machine =
+                    plan.StateMachines[machineIndex];
+                for (int stateIndex = 0;
+                     stateIndex < machine.States.Count;
+                     stateIndex++)
+                {
+                    IReadOnlyList<PoseStateSourceProviderPlan> providers =
+                        machine.States[stateIndex].SourceProviders;
+                    for (int providerIndex = 0;
+                         providerIndex < providers.Count;
+                         providerIndex++)
+                    {
+                        int playerIndex =
+                            providers[providerIndex].PlayerIndex;
+                        if ((uint)playerIndex >= (uint)result.Length)
+                        {
+                            throw new InvalidOperationException(
+                                "Pose State source provider Player index is invalid.");
+                        }
+                        result[playerIndex] = true;
+                    }
+                }
+            }
+            return result;
         }
 
     }

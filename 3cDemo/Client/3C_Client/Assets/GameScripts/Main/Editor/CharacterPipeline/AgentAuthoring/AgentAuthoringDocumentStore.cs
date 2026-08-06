@@ -73,7 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     .Where(value => !string.IsNullOrWhiteSpace(value))
                     .ToHashSet(StringComparer.Ordinal) ??
                     new HashSet<string>(StringComparer.Ordinal);
-                return files
+                bool presentationLayoutIncomplete = files
                     .Where(value =>
                         value.StartsWith(
                             "editable/presentation/pose-state-machines/",
@@ -88,11 +88,70 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                 value.Length -
                                 "state-machine.json".Length) +
                             "layout.json"));
+                return presentationLayoutIncomplete ||
+                       CanRefreshReadOnlyContext(packagePath, files);
             }
             catch (JsonException)
             {
                 return false;
             }
+        }
+
+        static bool CanRefreshReadOnlyContext(
+            string packagePath,
+            IReadOnlyCollection<string> files)
+        {
+            var validation = new AgentCompileReport { success = true };
+            bool contextInvalid = files
+                .Where(IsReadOnlyPath)
+                .Any(relativePath =>
+                    !TryReadContent(
+                        relativePath,
+                        ResolveInside(packagePath, relativePath),
+                        validation,
+                        out _));
+            if (!contextInvalid)
+                return false;
+            string syncPath = Path.Combine(packagePath, ".sync.json");
+            if (!AgentAuthoringDocumentCodec.TryReadFile(
+                    syncPath,
+                    validation,
+                    out AgentAuthoringPackageSync sync,
+                    out _) ||
+                string.IsNullOrWhiteSpace(sync.baseEditableHash))
+                return false;
+            var editable = new Dictionary<string, JToken>(StringComparer.Ordinal);
+            try
+            {
+                foreach (string relativePath in files.Where(value =>
+                             value.StartsWith("editable/", StringComparison.Ordinal)))
+                {
+                    string fullPath = ResolveInside(packagePath, relativePath);
+                    editable.Add(
+                        relativePath,
+                        JToken.Parse(
+                            File.ReadAllText(fullPath, Encoding.UTF8),
+                            new JsonLoadSettings
+                            {
+                                DuplicatePropertyNameHandling =
+                                    DuplicatePropertyNameHandling.Error,
+                                LineInfoHandling = LineInfoHandling.Load,
+                                CommentHandling = CommentHandling.Ignore
+                            }));
+                }
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            return string.Equals(
+                AgentAuthoringDocumentCodec.HashFiles(editable),
+                sync.baseEditableHash,
+                StringComparison.Ordinal);
         }
 
         public string Write(
@@ -109,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (report.HasErrors())
                 throw new InvalidOperationException("Document package导出失败。");
             editableHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair => pair.Key.StartsWith("editable/", StringComparison.Ordinal)));
-            contextHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair => pair.Key.StartsWith("context/", StringComparison.Ordinal)));
+            contextHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair => IsReadOnlyPath(pair.Key)));
             var manifest = new AgentAuthoringPackageManifest
             {
                 domain = target.domain,
@@ -207,11 +266,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 .Except(declared, StringComparer.Ordinal)
                 .OrderBy(value => value, StringComparer.Ordinal)
                 .ToArray();
-            if (!AgentAuthoringPackageMapper.TryDiscoverRemovedAuthoringFragments(
-                    missingPaths,
+            if (!AgentAuthoringPresentationPackageCodec.TryDiscoverRemovedLinkedPoseFragments(
+                    declared,
+                    actual,
                     report,
-                    out IReadOnlyCollection<string> removedFragments))
+                    out IReadOnlyCollection<string> removedLinkedPoseFragments) ||
+                !AgentAuthoringPackageMapper.TryDiscoverRemovedAuthoringFragments(
+                    missingPaths.Except(
+                        removedLinkedPoseFragments,
+                        StringComparer.Ordinal).ToArray(),
+                    report,
+                    out IReadOnlyCollection<string> removedPairedFragments))
                 return false;
+            IReadOnlyCollection<string> removedFragments =
+                removedLinkedPoseFragments
+                    .Concat(removedPairedFragments)
+                    .ToArray();
             string[] rejectedMissing = missingPaths
                 .Except(removedFragments, StringComparer.Ordinal)
                 .OrderBy(value => value, StringComparer.Ordinal)
@@ -227,9 +297,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (unknownPaths.Length > 0)
             {
                 var poseCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
+                var linkedPoseCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
                 var timelineCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
                 foreach (string relativePath in unknownPaths.Where(path =>
                              AgentAuthoringPresentationPackageCodec.IsDiscoverablePoseGraphFragment(path) ||
+                             AgentAuthoringPresentationPackageCodec.IsDiscoverableLinkedPoseFragment(path) ||
                              AgentAuthoringPackageMapper.IsDiscoverableTimelineFragment(path)))
                 {
                     string fullPath = ResolveInside(packagePath, relativePath);
@@ -241,6 +313,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         return false;
                     if (AgentAuthoringPresentationPackageCodec.IsDiscoverablePoseGraphFragment(relativePath))
                         poseCandidates.Add(relativePath, raw);
+                    else if (AgentAuthoringPresentationPackageCodec.IsDiscoverableLinkedPoseFragment(relativePath))
+                        linkedPoseCandidates.Add(relativePath, raw);
                     else
                         timelineCandidates.Add(relativePath, raw);
                 }
@@ -249,12 +323,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             poseCandidates,
                             report,
                             out IReadOnlyCollection<string> discoveredPoseGraphs) ||
+                    !AgentAuthoringPresentationPackageCodec
+                        .TryDiscoverNewLinkedPoseFragments(
+                            linkedPoseCandidates,
+                            report,
+                            out IReadOnlyCollection<string> discoveredLinkedPose) ||
                     !AgentAuthoringPackageMapper.TryDiscoverNewTimelineFragments(
                         timelineCandidates,
                         report,
                         out IReadOnlyCollection<string> discoveredTimelines))
                     return false;
                 discovered = discoveredPoseGraphs
+                    .Concat(discoveredLinkedPose)
                     .Concat(discoveredTimelines)
                     .ToArray();
                 string[] rejected = unknownPaths
@@ -296,7 +376,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
 
             editableHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair => pair.Key.StartsWith("editable/", StringComparison.Ordinal)));
-            contextHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair => pair.Key.StartsWith("context/", StringComparison.Ordinal)));
+            contextHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair => IsReadOnlyPath(pair.Key)));
             documentHash = AgentAuthoringDocumentCodec.HashDocument(manifest, editableHash, contextHash);
             return m_Mapper.TryFromFiles(manifest, files, current, report, phase, out target);
         }
@@ -328,11 +408,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageAssetCatalogFile _, out raw);
             if (string.Equals(relativePath, "context/dependencies.json", StringComparison.Ordinal))
                 return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageDependenciesFile _, out raw);
-            if (relativePath.StartsWith("editable/presentation/", StringComparison.Ordinal))
+            if (relativePath.StartsWith("editable/presentation/", StringComparison.Ordinal) ||
+                relativePath.StartsWith("readonly/presentation/", StringComparison.Ordinal))
                 return AgentAuthoringPresentationPackageCodec.TryReadContent(relativePath, fullPath, report, out raw);
             report.Error(relativePath, "document_file_unknown", $"Manifest包含未登记JSON文件：{relativePath}");
             return false;
         }
+
+        static bool IsReadOnlyPath(string path) =>
+            path.StartsWith("context/", StringComparison.Ordinal) ||
+            path.StartsWith("readonly/", StringComparison.Ordinal);
 
         void Publish(
             string packagePath,

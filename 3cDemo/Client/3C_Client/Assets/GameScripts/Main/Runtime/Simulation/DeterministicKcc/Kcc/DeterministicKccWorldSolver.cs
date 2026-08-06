@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
     public sealed partial class DeterministicKccWorldSolver : ICharacterWorldSolver
     {
         public const string SolverId = "thirdperson.simulation.solver.deterministic-kcc";
-        public const string SolverVersion = "9";
+        public const string SolverVersion = "10";
 
         static readonly SolverImplementationId s_ImplementationId = new SolverImplementationId(SolverId);
         readonly DeterministicCollisionWorldArtifact m_CollisionWorld;
@@ -99,7 +99,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             if (configuration == null)
                 throw new ArgumentNullException(nameof(configuration));
             return StableHash.Compute(
-                "deterministic-kcc/7",
+                "deterministic-kcc/8",
                 SolverId,
                 SolverVersion,
                 DeterministicCollisionWorldArtifact.ArtifactSchema,
@@ -212,6 +212,11 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     PublishFailure(diagnostics, request.Tick, actorRequest.ActorId, requested, exception, Stopwatch.GetTimestamp() - solveStarted);
                     throw;
                 }
+                PublishNoProgressDiagnostics(
+                    diagnostics,
+                    request.Tick,
+                    actorRequest.ActorId,
+                    motorResult);
                 m_Candidates[i] = new ActorSolveCandidate(
                     actorRequest,
                     requested,
@@ -224,6 +229,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     motorResult.HasBlockingContact,
                     motorResult.HasBlockingContact ? motorResult.BlockingContactAt(0) : default,
                     motorResult.BlockingContactCount,
+                    motorResult.Termination,
+                    motorResult.NoProgressConfirmationCount,
                     motorResult.QuerySummary,
                     m_KccStates[i],
                     Stopwatch.GetTimestamp() - solveStarted);
@@ -368,6 +375,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     candidate.HasBlockingContact,
                     candidate.BlockingContact,
                     candidate.BlockingContactCount,
+                    candidate.Termination,
+                    candidate.NoProgressConfirmationCount,
                     querySummary,
                     candidate.ElapsedStopwatchTicks);
             }

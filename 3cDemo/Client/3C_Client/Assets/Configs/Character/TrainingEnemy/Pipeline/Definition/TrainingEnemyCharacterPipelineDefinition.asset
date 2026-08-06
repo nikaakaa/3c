@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1169b7aa14ca445f8161b946163ee6e9, type: 3}
+  m_Name: TrainingEnemyCharacterPipelineDefinition
+  m_EditorClassIdentifier: 
+  m_RootTreeAsset: {fileID: 11400000, guid: 1633ab0e2fdbeaf489aff42fb2c75838, type: 2}
+  m_SimulationTickRate: 60
+  m_SimulationProgram: {fileID: 11400000, guid: 871f835c3a194e749a6fcf09a2e3fadf,
+    type: 2}
+  m_PresentationProjection: {fileID: 11400000, guid: ab8af7c6850cf2446b670852fd187ad0,
+    type: 2}
+  m_InputProfile: {fileID: 11400000, guid: 6290d5451b68bf54fa674117349bd002, type: 2}
+  m_GameplayEffectProfile: {fileID: 11400000, guid: 5fe6d018d695ccb41a71ec15961ce609,
+    type: 2}
+  m_BodyMotionProfile: {fileID: 11400000, guid: 0c59c2ff0ceb77245b51c774c0d11e1e,
+    type: 2}
+  m_AnimationPresentationProfile: {fileID: 11400000, guid: 48cc303b9d63019498bcadfdcf999179,
+    type: 2}
+  m_EquipmentCapabilityEnabled: 0
+  m_EquipmentProfile: {fileID: 0}
+  m_EquipmentPresentationProfile: {fileID: 0}
+  m_ActionProfiles:
+  - {fileID: 11400000, guid: e11ebb923f9b24a4f921023b983911ad, type: 2}
+  m_BehaviorProfiles:
+  - {fileID: 11400000, guid: 34364c7fb1b55924ca59fa36b90728d5, type: 2}

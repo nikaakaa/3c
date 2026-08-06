@@ -18,7 +18,7 @@
 
 ### Requirement: PresentationFrame必须在绑定Pose节点求值后更新MM Pose History
 
-PresentationFrame MUST先以旧history完成MM query与source selection，再执行编译Pose Plan，随后只把本帧绑定history source PoseNode的结果追加到MM Pose History，最后完成FootPlacement阶段与Camera。MM MUST不以本帧尚未完成的pose构造循环query。
+PresentationFrame MUST先以旧history完成MM query与source selection，再执行编译Pose Plan，并在本帧绑定history source PoseNode完成时把该结果追加到MM Pose History，随后完成PredictiveFootPlacement Goals、FullBodyIK、FinalPublication与Camera。MM MUST不以本帧尚未完成的pose、FinalIK Grounding、PredictiveFootPlacement Goals或FullBodyIK结果构造循环query。
 
 #### Scenario: 正常表现帧
 

@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed partial class CharacterPresentationProjection : ISerializationCallbackReceiver
     {
-        public const string CurrentAbiVersion = "character-presentation-projection/v9";
+        public const string CurrentAbiVersion = "character-presentation-projection/v11";
 
         [SerializeField] string m_AbiVersion = string.Empty;
         [SerializeField] string m_ProgramId = string.Empty;
@@ -45,6 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     string.IsNullOrEmpty(m_SemanticHash) ||
                     string.IsNullOrEmpty(m_ContractHash) ||
                     string.IsNullOrEmpty(m_ProjectionRevision) ||
+                    m_LinkedPose == null || !m_LinkedPose.IsValid ||
                     m_FootAnalysis != null && !m_FootAnalysis.IsValid)
                 {
                     return false;

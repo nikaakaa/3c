@@ -2064,7 +2064,7 @@ MonoBehaviour:
         m_Modules: []
         m_Expanded: 1
         m_ShowPanel: 0
-        m_Position: {x: -520, y: -180}
+        m_Position: {x: -506.66666, y: -124}
     - rid: 665191419356100115
       type: {class: StateMachineAnyStateNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -59879,7 +59879,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_SourceMotionClipId: 7e17c38a-c154-4d62-811f-ca2edc377b21
-        TranslationMode: 2
+        TranslationMode: 0
         TargetOffsetSpace: 1
         RotationMode: 1
         RotationMethod: 0
@@ -59985,7 +59985,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_SourceMotionClipId: 421c43dd-230b-4ac9-8214-ff047b7f62e4
-        TranslationMode: 2
+        TranslationMode: 0
         TargetOffsetSpace: 1
         RotationMode: 1
         RotationMethod: 0
@@ -60091,7 +60091,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_SourceMotionClipId: 45192fb7-d872-48eb-8ab0-434d62b1ca30
-        TranslationMode: 2
+        TranslationMode: 0
         TargetOffsetSpace: 1
         RotationMode: 1
         RotationMethod: 0
@@ -60197,7 +60197,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_SourceMotionClipId: 5b7d7ca8-8497-4c3d-97ee-471bf105275a
-        TranslationMode: 2
+        TranslationMode: 0
         TargetOffsetSpace: 1
         RotationMode: 1
         RotationMethod: 0

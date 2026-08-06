@@ -34,6 +34,8 @@ namespace RootMotion.FinalIK {
 			/// The second bone.
 			/// </summary>
 			[SerializeField] private Transform bone2;
+			private IndexedBoneHandle bone1Handle = IndexedBoneHandle.Invalid;
+			private IndexedBoneHandle bone2Handle = IndexedBoneHandle.Invalid;
 
 			// Gets the nominal (animated) distance between the two bones.
 			public float nominalDistance { get; private set; }
@@ -56,13 +58,20 @@ namespace RootMotion.FinalIK {
 				this.pushElasticity = pushElasticity;
 				this.pullElasticity = pullElasticity;
 			}
+
+			public ChildConstraint(IndexedBoneHandle bone1, IndexedBoneHandle bone2, float pushElasticity = 0f, float pullElasticity = 0f) {
+				bone1Handle = bone1;
+				bone2Handle = bone2;
+				this.pushElasticity = pushElasticity;
+				this.pullElasticity = pullElasticity;
+			}
 			
 			/*
 			 * Initiating the constraint
 			 * */
 			public void Initiate(IKSolverFullBody solver) {
-				chain1Index = solver.GetChainIndex(bone1);
-				chain2Index = solver.GetChainIndex(bone2);
+				chain1Index = solver.usesIndexedPoseBackend ? solver.GetChainIndex(bone1Handle) : solver.GetChainIndex(bone1);
+				chain2Index = solver.usesIndexedPoseBackend ? solver.GetChainIndex(bone2Handle) : solver.GetChainIndex(bone2);
 				
 				OnPreSolve(solver);
 			}
@@ -71,7 +80,7 @@ namespace RootMotion.FinalIK {
 			 * Updating nominal distance because it might have changed in the animation
 			 * */
 			public void OnPreSolve(IKSolverFullBody solver) {
-				nominalDistance = Vector3.Distance(solver.chain[chain1Index].nodes[0].transform.position, solver.chain[chain2Index].nodes[0].transform.position);
+				nominalDistance = Vector3.Distance(solver.ReadComponentPosition(solver.chain[chain1Index].nodes[0]), solver.ReadComponentPosition(solver.chain[chain2Index].nodes[0]));
 
 				isRigid = pushElasticity <= 0 && pullElasticity <= 0;
 
@@ -204,10 +213,20 @@ namespace RootMotion.FinalIK {
 			}
 		}
 
+		public void SetNodes(params IndexedBoneHandle[] boneHandles) {
+			nodes = new IKSolver.Node[boneHandles.Length];
+			for (int i = 0; i < boneHandles.Length; i++) nodes[i] = new IKSolver.Node(boneHandles[i]);
+		}
+
 		public int GetNodeIndex(Transform boneTransform) {
 			for (int i = 0; i < nodes.Length; i++) {
 				if (nodes[i].transform == boneTransform) return i;
 			}
+			return -1;
+		}
+
+		public int GetNodeIndex(IndexedBoneHandle boneHandle) {
+			for (int i = 0; i < nodes.Length; i++) if (nodes[i].boneHandle == boneHandle) return i;
 			return -1;
 		}
 
@@ -220,8 +239,8 @@ namespace RootMotion.FinalIK {
 				return false;
 			}
 			
-			foreach (IKSolver.Node node in nodes) if (node.transform == null) {
-				message = "Node transform is null in FBIK chain.";
+			foreach (IKSolver.Node node in nodes) if (node.transform == null && !node.boneHandle.IsValid) {
+				message = "Node identity is invalid in FBIK chain.";
 				return false;
 			}
 			
@@ -235,7 +254,7 @@ namespace RootMotion.FinalIK {
 			initiated = false;
 			
 			foreach (IKSolver.Node node in nodes) {
-				node.solverPosition = node.transform.position;
+				node.solverPosition = solver.ReadComponentPosition(node);
 			}
 			
 			// Calculating bone lengths
@@ -246,7 +265,8 @@ namespace RootMotion.FinalIK {
 
 			// Initiating the bend constraint
 			if (nodes.Length == 3) {
-				bendConstraint.SetBones(nodes[0].transform, nodes[1].transform, nodes[2].transform);
+				if (solver.usesIndexedPoseBackend) bendConstraint.SetBones(nodes[0].boneHandle, nodes[1].boneHandle, nodes[2].boneHandle);
+				else bendConstraint.SetBones(nodes[0].transform, nodes[1].transform, nodes[2].transform);
 				bendConstraint.Initiate(solver as IKSolverFullBody);
 			}
 
@@ -262,7 +282,7 @@ namespace RootMotion.FinalIK {
 			if (!initiated) return;
 			
 			for (int i = 0; i < nodes.Length; i++) {
-				nodes[i].solverPosition = nodes[i].transform.position + nodes[i].offset;
+				nodes[i].solverPosition = solver.ReadComponentPosition(nodes[i]) + nodes[i].offset;
 			}
 
 			// Calculating bone lengths
@@ -294,7 +314,7 @@ namespace RootMotion.FinalIK {
 					reachForce = reach * Mathf.Clamp(nodes[2].effectorPositionWeight, 0f, 1f);
 				} else reachForce = 0f;
 		
-				if (push > 0f && nodes.Length > 1) distance = Vector3.Distance(nodes[0].transform.position, nodes[nodes.Length - 1].transform.position);
+				if (push > 0f && nodes.Length > 1) distance = Vector3.Distance(solver.ReadComponentPosition(nodes[0]), solver.ReadComponentPosition(nodes[nodes.Length - 1]));
 			}
 		}
 
@@ -304,17 +324,17 @@ namespace RootMotion.FinalIK {
 			length = 0f;
 			
 			for (int i = 0; i < nodes.Length - 1; i++) {
-				nodes[i].length = Vector3.Distance(nodes[i].transform.position, nodes[i + 1].transform.position);
+				nodes[i].length = Vector3.Distance(solver.ReadComponentPosition(nodes[i]), solver.ReadComponentPosition(nodes[i + 1]));
 				length += nodes[i].length;
 				
 				if (nodes[i].length == 0) {
-					Warning.Log("Bone " + nodes[i].transform.name + " - " + nodes[i + 1].transform.name + " length is zero, can not solve.", nodes[i].transform);
+					Warning.Log("FBIK chain contains a zero length segment.", nodes[i].transform);
 					return;
 				}
 			}
 			
 			for (int i = 0; i < children.Length; i++) {
-				solver.chain[children[i]].rootLength = (solver.chain[children[i]].nodes[0].transform.position - nodes[nodes.Length - 1].transform.position).magnitude;
+				solver.chain[children[i]].rootLength = (solver.ReadComponentPosition(solver.chain[children[i]].nodes[0]) - solver.ReadComponentPosition(nodes[nodes.Length - 1])).magnitude;
 				
 				if (solver.chain[children[i]].rootLength == 0f) {
 					return;

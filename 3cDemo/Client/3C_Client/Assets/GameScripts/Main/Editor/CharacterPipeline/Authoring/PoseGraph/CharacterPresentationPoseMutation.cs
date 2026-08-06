@@ -48,7 +48,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         DeletePoseSourceSlot = 33,
         CreateProfileSourceBinding = 34,
         RenameProfileSourceBinding = 35,
-        SetPoseStateField = 36
+        SetPoseStateField = 36,
+        CreateLinkedPoseImplementation = 37,
+        ConfigureLinkedPoseImplementation = 38,
+        RemoveLinkedPoseImplementation = 39,
+        SetLinkedPoseGroup = 40,
+        RemoveLinkedPoseGroup = 41,
+        CreateEquipmentLinkedPoseSelector = 42,
+        ConfigureEquipmentLinkedPoseSelector = 43,
+        RemoveLinkedPoseSelector = 44,
+        SetEquipmentLinkedPoseMapping = 45,
+        RemoveEquipmentLinkedPoseMapping = 46,
+        CreateLinkedPoseInterface = 47,
+        ConfigureLinkedPoseInterface = 48,
+        RemoveLinkedPoseInterface = 49,
+        ConfigureLinkedPoseCall = 50
     }
 
     public abstract class CharacterPresentationMutation
@@ -547,6 +561,379 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string SourceAssetGuid { get; }
     }
 
+    public sealed class CreateLinkedPoseImplementationMutation :
+        CharacterPresentationMutation
+    {
+        public CreateLinkedPoseImplementationMutation(
+            string profileId,
+            CharacterLinkedPoseImplementationAsset implementation,
+            CharacterPresentationPoseGraphAsset graphOwner)
+            : base(
+                CharacterPresentationMutationKind.CreateLinkedPoseImplementation,
+                profileId)
+        {
+            Implementation = implementation
+                ? implementation
+                : throw new ArgumentNullException(nameof(implementation));
+            GraphOwner = graphOwner
+                ? graphOwner
+                : throw new ArgumentNullException(nameof(graphOwner));
+        }
+
+        public CharacterLinkedPoseImplementationAsset Implementation { get; }
+        public CharacterPresentationPoseGraphAsset GraphOwner { get; }
+    }
+
+    public sealed class CreateLinkedPoseInterfaceMutation :
+        CharacterPresentationMutation
+    {
+        public CreateLinkedPoseInterfaceMutation(
+            string profileId,
+            CharacterLinkedPoseInterfaceAsset linkedInterface)
+            : base(
+                CharacterPresentationMutationKind.CreateLinkedPoseInterface,
+                profileId)
+        {
+            Interface = linkedInterface
+                ? linkedInterface
+                : throw new ArgumentNullException(nameof(linkedInterface));
+        }
+
+        public CharacterLinkedPoseInterfaceAsset Interface { get; }
+    }
+
+    public sealed class ConfigureLinkedPoseInterfaceMutation :
+        CharacterPresentationMutation
+    {
+        public ConfigureLinkedPoseInterfaceMutation(
+            string profileId,
+            CharacterLinkedPoseInterfaceAsset linkedInterface,
+            string ownerIdentity,
+            string displayName,
+            LinkedPoseInterfaceId interfaceId,
+            LinkedPoseRevision revision,
+            CharacterLinkedPoseInterfaceEntryDescriptor[] entries)
+            : base(
+                CharacterPresentationMutationKind.ConfigureLinkedPoseInterface,
+                profileId)
+        {
+            Interface = linkedInterface
+                ? linkedInterface
+                : throw new ArgumentNullException(nameof(linkedInterface));
+            OwnerIdentity = RequireIdentity(ownerIdentity, nameof(ownerIdentity));
+            DisplayName = RequireIdentity(displayName, nameof(displayName));
+            InterfaceId = interfaceId.IsValid
+                ? interfaceId
+                : throw new ArgumentException(
+                    "Linked Pose Interface identity is invalid.",
+                    nameof(interfaceId));
+            Revision = revision.IsValid
+                ? revision
+                : throw new ArgumentException(
+                    "Linked Pose Interface revision is invalid.",
+                    nameof(revision));
+            Entries = entries ?? Array.Empty<CharacterLinkedPoseInterfaceEntryDescriptor>();
+        }
+
+        public CharacterLinkedPoseInterfaceAsset Interface { get; }
+        public string OwnerIdentity { get; }
+        public string DisplayName { get; }
+        public LinkedPoseInterfaceId InterfaceId { get; }
+        public LinkedPoseRevision Revision { get; }
+        public IReadOnlyList<CharacterLinkedPoseInterfaceEntryDescriptor> Entries { get; }
+    }
+
+    public sealed class RemoveLinkedPoseInterfaceMutation :
+        CharacterPresentationMutation
+    {
+        public RemoveLinkedPoseInterfaceMutation(
+            string profileId,
+            CharacterLinkedPoseInterfaceAsset linkedInterface)
+            : base(
+                CharacterPresentationMutationKind.RemoveLinkedPoseInterface,
+                profileId)
+        {
+            Interface = linkedInterface
+                ? linkedInterface
+                : throw new ArgumentNullException(nameof(linkedInterface));
+        }
+
+        public CharacterLinkedPoseInterfaceAsset Interface { get; }
+    }
+
+    public sealed class ConfigureLinkedPoseCallMutation :
+        CharacterPresentationMutation
+    {
+        public ConfigureLinkedPoseCallMutation(
+            string graphId,
+            PoseNodeId nodeId,
+            CharacterLinkedPoseCallPayload payload,
+            CharacterPoseDynamicPort[] ports)
+            : base(
+                CharacterPresentationMutationKind.ConfigureLinkedPoseCall,
+                graphId)
+        {
+            NodeId = nodeId.IsValid
+                ? nodeId
+                : throw new ArgumentException(
+                    "Linked Pose Call node identity is invalid.",
+                    nameof(nodeId));
+            Payload = payload ?? throw new ArgumentNullException(nameof(payload));
+            Ports = ports ?? Array.Empty<CharacterPoseDynamicPort>();
+        }
+
+        public PoseNodeId NodeId { get; }
+        public CharacterLinkedPoseCallPayload Payload { get; }
+        public IReadOnlyList<CharacterPoseDynamicPort> Ports { get; }
+    }
+
+    public sealed class ConfigureLinkedPoseImplementationMutation :
+        CharacterPresentationMutation
+    {
+        public ConfigureLinkedPoseImplementationMutation(
+            string profileId,
+            CharacterLinkedPoseImplementationAsset implementation,
+            string ownerIdentity,
+            string displayName,
+            LinkedPoseImplementationId implementationId,
+            LinkedPoseRevision revision,
+            CharacterLinkedPoseInterfaceAsset linkedInterface,
+            CharacterLinkedPoseImplementationEntryMutationValue[] entries)
+            : base(
+                CharacterPresentationMutationKind.ConfigureLinkedPoseImplementation,
+                profileId)
+        {
+            Implementation = implementation
+                ? implementation
+                : throw new ArgumentNullException(nameof(implementation));
+            OwnerIdentity = RequireIdentity(ownerIdentity, nameof(ownerIdentity));
+            DisplayName = RequireIdentity(displayName, nameof(displayName));
+            ImplementationId = implementationId.IsValid
+                ? implementationId
+                : throw new ArgumentException(
+                    "Linked Pose Implementation identity is invalid.",
+                    nameof(implementationId));
+            Revision = revision.IsValid
+                ? revision
+                : throw new ArgumentException(
+                    "Linked Pose revision is invalid.",
+                    nameof(revision));
+            Interface = linkedInterface
+                ? linkedInterface
+                : throw new ArgumentNullException(nameof(linkedInterface));
+            Entries = entries ?? Array.Empty<CharacterLinkedPoseImplementationEntryMutationValue>();
+        }
+
+        public CharacterLinkedPoseImplementationAsset Implementation { get; }
+        public string OwnerIdentity { get; }
+        public string DisplayName { get; }
+        public LinkedPoseImplementationId ImplementationId { get; }
+        public LinkedPoseRevision Revision { get; }
+        public CharacterLinkedPoseInterfaceAsset Interface { get; }
+        public IReadOnlyList<CharacterLinkedPoseImplementationEntryMutationValue> Entries { get; }
+    }
+
+    public sealed class CharacterLinkedPoseImplementationEntryMutationValue
+    {
+        public CharacterLinkedPoseImplementationEntryMutationValue(
+            LinkedPoseEntryId entryId,
+            string graphOwnerIdentity,
+            CharacterPresentationPoseGraphAsset graphOwner,
+            PoseGraphId graphId)
+        {
+            EntryId = entryId.IsValid
+                ? entryId
+                : throw new ArgumentException("Entry identity is invalid.", nameof(entryId));
+            GraphOwnerIdentity = string.IsNullOrWhiteSpace(graphOwnerIdentity)
+                ? throw new ArgumentException(
+                    "Graph owner identity is invalid.",
+                    nameof(graphOwnerIdentity))
+                : graphOwnerIdentity.Trim();
+            GraphOwner = graphOwner
+                ? graphOwner
+                : throw new ArgumentNullException(nameof(graphOwner));
+            GraphId = graphId.IsValid
+                ? graphId
+                : throw new ArgumentException("Graph identity is invalid.", nameof(graphId));
+        }
+
+        public LinkedPoseEntryId EntryId { get; }
+        public string GraphOwnerIdentity { get; }
+        public CharacterPresentationPoseGraphAsset GraphOwner { get; }
+        public PoseGraphId GraphId { get; }
+    }
+
+    public sealed class RemoveLinkedPoseImplementationMutation :
+        CharacterPresentationMutation
+    {
+        public RemoveLinkedPoseImplementationMutation(
+            string profileId,
+            CharacterLinkedPoseImplementationAsset implementation)
+            : base(
+                CharacterPresentationMutationKind.RemoveLinkedPoseImplementation,
+                profileId)
+        {
+            Implementation = implementation
+                ? implementation
+                : throw new ArgumentNullException(nameof(implementation));
+        }
+
+        public CharacterLinkedPoseImplementationAsset Implementation { get; }
+    }
+
+    public sealed class SetLinkedPoseGroupMutation : CharacterPresentationMutation
+    {
+        public SetLinkedPoseGroupMutation(
+            string profileId,
+            CharacterLinkedPoseGroupBinding binding)
+            : base(CharacterPresentationMutationKind.SetLinkedPoseGroup, profileId)
+        {
+            Binding = binding ?? throw new ArgumentNullException(nameof(binding));
+        }
+
+        public CharacterLinkedPoseGroupBinding Binding { get; }
+    }
+
+    public sealed class RemoveLinkedPoseGroupMutation : CharacterPresentationMutation
+    {
+        public RemoveLinkedPoseGroupMutation(
+            string profileId,
+            LinkedPoseGroupId groupId)
+            : base(CharacterPresentationMutationKind.RemoveLinkedPoseGroup, profileId)
+        {
+            GroupId = groupId.IsValid
+                ? groupId
+                : throw new ArgumentException(
+                    "Linked Pose Group identity is invalid.",
+                    nameof(groupId));
+        }
+
+        public LinkedPoseGroupId GroupId { get; }
+    }
+
+    public sealed class CreateEquipmentLinkedPoseSelectorMutation :
+        CharacterPresentationMutation
+    {
+        public CreateEquipmentLinkedPoseSelectorMutation(
+            string profileId,
+            CharacterEquipmentLinkedPoseSelectionBinding selector)
+            : base(
+                CharacterPresentationMutationKind.CreateEquipmentLinkedPoseSelector,
+                profileId)
+        {
+            Selector = selector
+                ? selector
+                : throw new ArgumentNullException(nameof(selector));
+        }
+
+        public CharacterEquipmentLinkedPoseSelectionBinding Selector { get; }
+    }
+
+    public sealed class ConfigureEquipmentLinkedPoseSelectorMutation :
+        CharacterPresentationMutation
+    {
+        public ConfigureEquipmentLinkedPoseSelectorMutation(
+            string profileId,
+            CharacterEquipmentLinkedPoseSelectionBinding selector,
+            LinkedPoseSelectorId selectorId,
+            LinkedPoseGroupId groupId,
+            EquipmentSlotId slotId,
+            LinkedPoseImplementationId emptyImplementationId,
+            CharacterEquipmentLinkedPoseMapping[] mappings)
+            : base(
+                CharacterPresentationMutationKind.ConfigureEquipmentLinkedPoseSelector,
+                profileId)
+        {
+            Selector = selector
+                ? selector
+                : throw new ArgumentNullException(nameof(selector));
+            SelectorId = selectorId.IsValid
+                ? selectorId
+                : throw new ArgumentException("Selector identity is invalid.", nameof(selectorId));
+            GroupId = groupId.IsValid
+                ? groupId
+                : throw new ArgumentException("Group identity is invalid.", nameof(groupId));
+            SlotId = slotId.IsValid
+                ? slotId
+                : throw new ArgumentException("Equipment Slot identity is invalid.", nameof(slotId));
+            EmptyImplementationId = emptyImplementationId.IsValid
+                ? emptyImplementationId
+                : throw new ArgumentException(
+                    "Empty Implementation identity is invalid.",
+                    nameof(emptyImplementationId));
+            Mappings = mappings ?? Array.Empty<CharacterEquipmentLinkedPoseMapping>();
+        }
+
+        public CharacterEquipmentLinkedPoseSelectionBinding Selector { get; }
+        public LinkedPoseSelectorId SelectorId { get; }
+        public LinkedPoseGroupId GroupId { get; }
+        public EquipmentSlotId SlotId { get; }
+        public LinkedPoseImplementationId EmptyImplementationId { get; }
+        public IReadOnlyList<CharacterEquipmentLinkedPoseMapping> Mappings { get; }
+    }
+
+    public sealed class RemoveLinkedPoseSelectorMutation :
+        CharacterPresentationMutation
+    {
+        public RemoveLinkedPoseSelectorMutation(
+            string profileId,
+            CharacterLinkedPoseSelectorBindingAsset selector)
+            : base(CharacterPresentationMutationKind.RemoveLinkedPoseSelector, profileId)
+        {
+            Selector = selector
+                ? selector
+                : throw new ArgumentNullException(nameof(selector));
+        }
+
+        public CharacterLinkedPoseSelectorBindingAsset Selector { get; }
+    }
+
+    public sealed class SetEquipmentLinkedPoseMappingMutation :
+        CharacterPresentationMutation
+    {
+        public SetEquipmentLinkedPoseMappingMutation(
+            string profileId,
+            CharacterEquipmentLinkedPoseSelectionBinding selector,
+            CharacterEquipmentLinkedPoseMapping mapping)
+            : base(
+                CharacterPresentationMutationKind.SetEquipmentLinkedPoseMapping,
+                profileId)
+        {
+            Selector = selector
+                ? selector
+                : throw new ArgumentNullException(nameof(selector));
+            Mapping = mapping ?? throw new ArgumentNullException(nameof(mapping));
+        }
+
+        public CharacterEquipmentLinkedPoseSelectionBinding Selector { get; }
+        public CharacterEquipmentLinkedPoseMapping Mapping { get; }
+    }
+
+    public sealed class RemoveEquipmentLinkedPoseMappingMutation :
+        CharacterPresentationMutation
+    {
+        public RemoveEquipmentLinkedPoseMappingMutation(
+            string profileId,
+            CharacterEquipmentLinkedPoseSelectionBinding selector,
+            EquipmentId equipmentId)
+            : base(
+                CharacterPresentationMutationKind.RemoveEquipmentLinkedPoseMapping,
+                profileId)
+        {
+            Selector = selector
+                ? selector
+                : throw new ArgumentNullException(nameof(selector));
+            EquipmentId = equipmentId.IsValid
+                ? equipmentId
+                : throw new ArgumentException(
+                    "Equipment identity is invalid.",
+                    nameof(equipmentId));
+        }
+
+        public CharacterEquipmentLinkedPoseSelectionBinding Selector { get; }
+        public EquipmentId EquipmentId { get; }
+    }
+
     public sealed class CharacterPresentationMutationTransaction
     {
         readonly List<CharacterPresentationMutation> m_Mutations = new List<CharacterPresentationMutation>();
@@ -670,6 +1057,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         nodes[index] = new CharacterTypedPoseNode(node.NodeId, node.DisplayName, CharacterPosePayloadFieldMutation.Set(node.Payload, fields), node.DynamicPorts.ToArray());
                         break;
                     }
+                    case ConfigureLinkedPoseCallMutation configure:
+                    {
+                        int index = RequireNodeIndex(nodes, configure.NodeId);
+                        CharacterTypedPoseNode node = nodes[index];
+                        if (node.Kind != CharacterPoseNodeKind.LinkedPoseCall)
+                            throw new InvalidOperationException(
+                                $"Pose node '{configure.NodeId}' is not a Linked Pose Call.");
+                        var replacement = new CharacterTypedPoseNode(
+                            node.NodeId,
+                            node.DisplayName,
+                            configure.Payload,
+                            configure.Ports.ToArray());
+                        IReadOnlyList<CharacterPosePortDefinition> ports =
+                            CharacterPoseAuthoringPortProjection.Get(replacement);
+                        foreach (CharacterPoseEdge edge in edges.Where(value =>
+                                     value.SourceNodeId == configure.NodeId ||
+                                     value.TargetNodeId == configure.NodeId))
+                        {
+                            bool sourceValid = edge.SourceNodeId != configure.NodeId ||
+                                ports.Any(value => value.PortId.Equals(edge.SourcePortId) &&
+                                                   value.Direction == CharacterPosePortDirection.Output);
+                            bool targetValid = edge.TargetNodeId != configure.NodeId ||
+                                ports.Any(value => value.PortId.Equals(edge.TargetPortId) &&
+                                                   value.Direction == CharacterPosePortDirection.Input);
+                            if (!sourceValid || !targetValid)
+                                throw new InvalidOperationException(
+                                    $"Linked Pose Call '{configure.NodeId}' cannot rebind while edge '{edge.EdgeId}' would become incompatible.");
+                        }
+                        nodes[index] = replacement;
+                        break;
+                    }
                     case AddDynamicPosePortMutation add:
                     {
                         int index = RequireNodeIndex(nodes, add.NodeId);
@@ -776,7 +1194,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             value.Kind >= CharacterPresentationMutationKind.CreatePoseNode &&
             value.Kind <= CharacterPresentationMutationKind.MovePoseNode ||
             value.Kind == CharacterPresentationMutationKind.SetPoseGraphParameters ||
-            value.Kind == CharacterPresentationMutationKind.SetPoseNodeName;
+            value.Kind == CharacterPresentationMutationKind.SetPoseNodeName ||
+            value.Kind == CharacterPresentationMutationKind.ConfigureLinkedPoseCall;
 
         static bool IsStateMachineMutation(CharacterPresentationMutation value) =>
             value.Kind >= CharacterPresentationMutationKind.CreatePoseStateMachine &&
@@ -792,7 +1211,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             value.Kind >= CharacterPresentationMutationKind.RemoveProfileSourceBinding &&
             value.Kind <= CharacterPresentationMutationKind.RemoveProfileProducerBinding ||
             value.Kind == CharacterPresentationMutationKind.CreateProfileSourceBinding ||
-            value.Kind == CharacterPresentationMutationKind.RenameProfileSourceBinding;
+            value.Kind == CharacterPresentationMutationKind.RenameProfileSourceBinding ||
+            value.Kind >= CharacterPresentationMutationKind.CreateLinkedPoseImplementation &&
+            value.Kind <= CharacterPresentationMutationKind.RemoveEquipmentLinkedPoseMapping ||
+            value.Kind >= CharacterPresentationMutationKind.CreateLinkedPoseInterface &&
+            value.Kind <= CharacterPresentationMutationKind.RemoveLinkedPoseInterface;
     }
 
     internal static class CharacterPoseTransitionFieldMutation
@@ -917,6 +1340,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterSequencePlayerPosePayload current => SetSequence(current, fieldId, value),
                 CharacterAnimationSlotPosePayload current => SetSlot(current, fieldId, value),
                 CharacterBlendStackPosePayload current => SetBlendStack(current, fieldId, value),
+                CharacterMotionMatchingPosePayload current => CharacterMotionMatchingPoseFieldMutation.Set(current, fieldId, value),
+                CharacterPoseHistoryCollectorPayload current => CharacterMotionMatchingPoseFieldMutation.Set(current, fieldId, value),
                 CharacterInertializationPosePayload current when fieldId == "inertialization-policy" => new CharacterInertializationPosePayload(Require<CharacterPoseInertializationPolicy>(value, fieldId)),
                 CharacterBlendPosePayload current when fieldId == "weight" => new CharacterBlendPosePayload(Convert.ToSingle(value)),
                 CharacterLayeredBoneBlendPosePayload current => SetLayered(current, fieldId, value),
@@ -924,8 +1349,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterPoseParameterResolvePayload current when fieldId == "parameter-policies" => new CharacterPoseParameterResolvePayload(Require<CharacterPoseParameterPolicy[]>(value, fieldId)),
                 CharacterModifyBonePosePayload current => SetModifyBone(current, fieldId, value),
                 CharacterRootOrientationWarpPosePayload current when fieldId == "yaw-curve" => new CharacterRootOrientationWarpPosePayload(Require<ThirdPersonCharacter.Pipeline.Motion.RootMotion.RootMotionCurveAsset>(value, fieldId)),
-                CharacterTwoBoneIkPosePayload current => SetTwoBoneIk(current, fieldId, value),
-                CharacterFootPlacementPosePayload current => SetFootPlacement(current, fieldId, value),
+                CharacterPoseBoneIkGoalsPayload current when fieldId == "bindings" => new CharacterPoseBoneIkGoalsPayload(Require<CharacterPoseBoneIkGoalBinding[]>(value, fieldId)),
+                CharacterPredictiveFootPlacementPosePayload current => SetPredictiveFootPlacement(current, fieldId, value),
+                CharacterFullBodyIkPosePayload current when fieldId == "profile" => new CharacterFullBodyIkPosePayload(Require<CharacterFullBodyIkProfile>(value, fieldId)),
                 CharacterPoseSubgraphPayload current when fieldId == "graph-id" => new CharacterPoseSubgraphPayload(Subgraph(value)),
                 _ => throw new InvalidOperationException($"Pose payload '{payload.GetType().Name}' does not declare writable field '{fieldId}'.")
             };
@@ -1004,17 +1430,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             field == "rotation" ? Require<Quaternion>(value, field).eulerAngles : current.Rotation.eulerAngles,
             field == "scale" ? Require<Vector3>(value, field) : current.Scale);
 
-        static CharacterPoseNodePayload SetTwoBoneIk(CharacterTwoBoneIkPosePayload current, string field, object value) => new CharacterTwoBoneIkPosePayload(
-            field == "end-physical-bone-id" ? Id<AnimationBoneId>(value, text => new AnimationBoneId(text)) : current.EndPhysicalBoneId,
-            field == "effector-pose-bone-id" ? Id<AnimationBoneId>(value, text => new AnimationBoneId(text)) : current.EffectorPoseBoneId,
-            field == "effector-position-offset" ? Require<Vector3>(value, field) : current.EffectorLocalPositionOffset,
-            field == "effector-rotation-offset" ? Require<Quaternion>(value, field).eulerAngles : current.EffectorLocalRotationOffset.eulerAngles,
-            field == "joint-target-pose-bone-id" ? Id<AnimationBoneId>(value, text => new AnimationBoneId(text)) : current.JointTargetPoseBoneId,
-            field == "joint-target-offset" ? Require<Vector3>(value, field) : current.JointTargetLocalOffset,
-            field == "end-rotation-mode" ? EnumValue<CharacterTwoBoneIkEndRotationMode>(value) : current.EndRotationMode,
-            field == "weight" ? Convert.ToSingle(value) : current.Weight);
-
-        static CharacterPoseNodePayload SetFootPlacement(CharacterFootPlacementPosePayload current, string field, object value) => new CharacterFootPlacementPosePayload(
+        static CharacterPoseNodePayload SetPredictiveFootPlacement(CharacterPredictiveFootPlacementPosePayload current, string field, object value) => new CharacterPredictiveFootPlacementPosePayload(
             field == "profile" ? Require<CharacterFootPlacementProfile>(value, field) : current.Profile,
             field == "calibration" ? Require<CharacterFootPlacementRigCalibration>(value, field) : current.Calibration);
 

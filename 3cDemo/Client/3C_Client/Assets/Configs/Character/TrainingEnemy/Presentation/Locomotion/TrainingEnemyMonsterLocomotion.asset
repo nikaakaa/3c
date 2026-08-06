@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49be86cd214744ad81b3f554089e3b44, type: 3}
+  m_Name: TrainingEnemyMonsterLocomotion
+  m_EditorClassIdentifier: 
+  m_BlendSpaceId: training-enemy.monster.locomotion
+  m_ContentRevision: 7cbeeb6a4ca14c0c97e90e081e637f3e
+  m_Rig: {fileID: 11400000, guid: 9c6c73879a7e85e40a59218627a60603, type: 2}
+  m_Mode: 1
+  m_XAxis:
+    m_ParameterId: character.motor.planar-speed
+    m_ValueType: 1
+    m_Unit: m/s
+    m_Minimum: 0
+    m_Maximum: 6
+  m_YAxis:
+    rid: -2
+  m_PhasePolicy: 1
+  m_PhaseReferenceSampleId: 
+  m_Samples:
+  - m_SampleId: training-enemy.monster.locomotion.idle
+    m_Clip: {fileID: 7400000, guid: f8afd754f3ea3d542bd06d5cd149721e, type: 2}
+    m_ClipContentIdentity: f8afd754f3ea3d542bd06d5cd149721e:cdfbbe7b9751c032eedc83b9f7c82e45
+    m_Position: {x: 0, y: 0}
+    m_Role: 2
+    m_StationaryNormalizedTime: 0
+    m_Markers: []
+    m_Parameters:
+    - m_ParameterId: animation.foot-placement-weight
+      m_Value: 1
+  - m_SampleId: training-enemy.monster.locomotion.run
+    m_Clip: {fileID: 7400000, guid: de85f2008941e2a46ab4045d70cdcb15, type: 2}
+    m_ClipContentIdentity: de85f2008941e2a46ab4045d70cdcb15:31ab73a8922360ea5659007be597ea47
+    m_Position: {x: 6, y: 0}
+    m_Role: 1
+    m_StationaryNormalizedTime: 0
+    m_Markers: []
+    m_Parameters:
+    - m_ParameterId: animation.foot-placement-weight
+      m_Value: 1
+  m_PoseParameterPolicies:
+  - m_ParameterId: animation.foot-placement-weight
+    m_Policy: 1
+  m_Preview:
+    m_Parameter: {x: 0, y: 0}
+    m_NormalizedTime: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }

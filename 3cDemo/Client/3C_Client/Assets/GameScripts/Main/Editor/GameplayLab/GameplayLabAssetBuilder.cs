@@ -4,6 +4,7 @@ using System.Linq;
 using Animancer;
 using Cinemachine;
 using ThirdPersonCamera;
+using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline;
@@ -33,6 +34,7 @@ namespace ThirdPersonGameplay.Editor.Lab
         const string SourceDirectory = ConfigDirectory + "/Sources";
         const string VariantDirectory = ConfigDirectory + "/Variants";
         const string PrefabDirectory = "Assets/Prefabs/GameplayLab";
+        const string FloatCompositionPath = "Assets/Configs/Character/Corin/Pipeline/Simulation/Compositions/CorinLocalSimulationSessionComposition.asset";
         const string FixedProgramPath = "Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgram.asset";
         const string FixedRuntimePath = "Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgramRuntime.asset";
         const string FixedBackendPath = "Assets/Configs/Simulation/DeterministicRollback/Pipelines/CorinFixedPassBackend.asset";
@@ -44,14 +46,17 @@ namespace ThirdPersonGameplay.Editor.Lab
         const string RollbackCompositionPath = "Assets/Configs/Simulation/DeterministicRollback/Compositions/CorinRollbackComposition.asset";
         const string CharacterDefinitionPath = "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset";
         const string PlayerPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab";
-        const string TargetPrefabPath = PlayerPrefabPath;
+        const string TrainingEnemyPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/AI/TrainingEnemyMonster.prefab";
+        const string FixedTargetPrefabPath = PlayerPrefabPath;
         const string AnimationRigTemplatePrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Rollback/CorinDeterministicRollback.prefab";
         const string EnvironmentPrefabPath = "Assets/Scenes/Shared/CharacterMovementTestEnvironment.prefab";
         const string FixedPipelinePath = PipelineDirectory + "/StandardFixedLocalSimulationPipeline.asset";
         const string FixedSourcePath = SourceDirectory + "/LocalFixedSimulationSessionSource.asset";
         const string FixedCompositionPath = CompositionDirectory + "/CorinGameplayLabFixedComposition.asset";
+        const string FloatRootPath = PrefabDirectory + "/GameplayLabLocalFloat32.prefab";
         const string FixedRootPath = PrefabDirectory + "/GameplayLabLocalFixed.prefab";
         const string RollbackRootPath = PrefabDirectory + "/GameplayLabDeterministicRollback.prefab";
+        const string FloatVariantPath = VariantDirectory + "/GameplayLabLocalFloat32Variant.asset";
         const string FixedVariantPath = VariantDirectory + "/GameplayLabLocalFixedVariant.asset";
         const string RollbackVariantPath = VariantDirectory + "/GameplayLabDeterministicRollbackVariant.asset";
         const string PlayerActorId = "gameplay-lab-player";
@@ -85,8 +90,22 @@ namespace ThirdPersonGameplay.Editor.Lab
             ValidatePublishedProducts(definition, fixedProgram, projection, solver, collision);
             SimulationSessionCompositionDefinition fixedComposition = BuildFixedComposition();
             SimulationSessionCompositionDefinition rollbackComposition = BuildRollbackComposition();
+            GameObject floatRoot = BuildFloatRuntimeRoot();
             GameObject fixedRoot = BuildFixedRuntimeRoot(fixedComposition);
             GameObject rollbackRoot = BuildRollbackRuntimeRoot(rollbackComposition);
+            SimulationSessionCompositionDefinition floatComposition =
+                LoadRequired<SimulationSessionCompositionDefinition>(FloatCompositionPath);
+            GameplayLabSessionVariantDefinition floatVariant = BuildVariant(
+                FloatVariantPath,
+                "gameplay-lab.local-float32",
+                floatRoot,
+                floatComposition,
+                definition,
+                definition.SimulationProgram,
+                projection,
+                floatComposition.WorldSolver,
+                null,
+                string.Empty);
             GameplayLabSessionVariantDefinition fixedVariant = BuildVariant(
                 FixedVariantPath,
                 "gameplay-lab.local-fixed-q32.32",
@@ -109,11 +128,93 @@ namespace ThirdPersonGameplay.Editor.Lab
                 solver,
                 collision,
                 RollbackLaunchArgumentPrefix);
-            BuildScene(fixedVariant, rollbackVariant);
+            BuildScene(fixedVariant, floatVariant, rollbackVariant);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             GameplayLabEditorLauncher.Validate();
-            Debug.Log("Shared Gameplay Lab synchronized: Local Fixed Q32.32 and Deterministic Rollback.");
+            Debug.Log("Shared Gameplay Lab synchronized: Local Fixed Q32.32, Local Float32 AI and Deterministic Rollback.");
+        }
+
+        public static void SyncFloat32EnemyVariant()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("Gameplay Lab assets cannot be synchronized in Play Mode.");
+            EnsureFolders();
+            CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
+            if (!definition.SimulationProgram || !definition.PresentationProjection)
+                throw new InvalidOperationException("Gameplay Lab Float32 player products are missing.");
+            SimulationSessionCompositionDefinition composition =
+                LoadRequired<SimulationSessionCompositionDefinition>(FloatCompositionPath);
+            GameObject root = BuildFloatRuntimeRoot();
+            GameplayLabSessionVariantDefinition floatVariant = BuildVariant(
+                FloatVariantPath,
+                "gameplay-lab.local-float32",
+                root,
+                composition,
+                definition,
+                definition.SimulationProgram,
+                definition.PresentationProjection,
+                composition.WorldSolver,
+                null,
+                string.Empty);
+            GameplayLabSessionVariantDefinition fixedVariant =
+                LoadRequired<GameplayLabSessionVariantDefinition>(FixedVariantPath);
+            GameplayLabSessionVariantDefinition rollbackVariant =
+                LoadRequired<GameplayLabSessionVariantDefinition>(RollbackVariantPath);
+            ScriptableObject fixedProgram = LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
+            EnsureVariantProgram(fixedVariant, fixedProgram);
+            EnsureVariantProgram(rollbackVariant, fixedProgram);
+            SyncSceneVariants(fixedVariant, floatVariant, rollbackVariant);
+            AssetDatabase.SaveAssets();
+            GameplayLabEditorLauncher.Validate();
+            Debug.Log("Gameplay Lab Float32 Training Enemy synchronized without rebuilding Fixed or Rollback products.");
+        }
+
+        static void EnsureVariantProgram(
+            GameplayLabSessionVariantDefinition variant,
+            ScriptableObject program)
+        {
+            var serialized = new SerializedObject(variant);
+            SerializedProperty property = serialized.FindProperty("m_Program");
+            if (property.objectReferenceValue)
+                return;
+            property.objectReferenceValue = program;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(variant);
+        }
+
+        static void SyncSceneVariants(params GameplayLabSessionVariantDefinition[] variants)
+        {
+            Scene previous = SceneManager.GetActiveScene();
+            Scene scene = SceneManager.GetSceneByPath(GameplayLabEditorLauncher.ScenePath);
+            bool openedHere = !scene.IsValid() || !scene.isLoaded;
+            if (openedHere)
+                scene = EditorSceneManager.OpenScene(GameplayLabEditorLauncher.ScenePath, OpenSceneMode.Additive);
+            try
+            {
+                GameplayLabBootstrap[] bootstraps = scene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<GameplayLabBootstrap>(true))
+                    .ToArray();
+                if (bootstraps.Length != 1)
+                    throw new InvalidOperationException($"Gameplay Lab scene requires exactly one Bootstrap, found {bootstraps.Length}.");
+                GameplayLabBootstrap bootstrap = bootstraps[0];
+                string selectedId = bootstrap.Variants[bootstrap.StartupVariantIndex].VariantId;
+                int selectedIndex = Array.FindIndex(
+                    variants,
+                    variant => string.Equals(variant.VariantId, selectedId, StringComparison.Ordinal));
+                bootstrap.SetVariants(selectedIndex >= 0 ? selectedIndex : 0, variants);
+                EditorUtility.SetDirty(bootstrap);
+                EditorSceneManager.MarkSceneDirty(scene);
+                if (!EditorSceneManager.SaveScene(scene))
+                    throw new InvalidOperationException("Gameplay Lab scene could not save its synchronized Variant list.");
+            }
+            finally
+            {
+                if (openedHere && scene.IsValid() && scene.isLoaded)
+                    EditorSceneManager.CloseScene(scene, true);
+                if (previous.IsValid() && previous.isLoaded)
+                    SceneManager.SetActiveScene(previous);
+            }
         }
 
         static void ValidatePublishedProducts(
@@ -320,7 +421,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                     cameraRig,
                     true);
                 FixedCharacterHost target = InstantiateFixedActor(
-                    TargetPrefabPath,
+                    FixedTargetPrefabPath,
                     root.transform,
                     "Gameplay Lab Fixed Target",
                     new ActorId(TargetActorId),
@@ -338,6 +439,58 @@ namespace ThirdPersonGameplay.Editor.Lab
                     throw new InvalidOperationException("Gameplay Lab Fixed player requires the formal Session Actor target provider.");
                 provider.SetAuthoring(target);
                 GameObject saved = SavePrefab(root, FixedRootPath);
+                Object.DestroyImmediate(root);
+                return saved;
+            }
+            finally
+            {
+                if (previous.IsValid() && previous.isLoaded)
+                    SceneManager.SetActiveScene(previous);
+                EditorSceneManager.CloseScene(workspace, true);
+            }
+        }
+
+        static GameObject BuildFloatRuntimeRoot()
+        {
+            SimulationSessionCompositionDefinition composition =
+                LoadRequired<SimulationSessionCompositionDefinition>(FloatCompositionPath);
+            Scene previous = SceneManager.GetActiveScene();
+            Scene workspace = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            try
+            {
+                SceneManager.SetActiveScene(workspace);
+                var root = new GameObject("GameplayLabLocalFloat32");
+                SimulationSessionHost sessionHost = root.AddComponent<SimulationSessionHost>();
+                sessionHost.BindComposition(composition);
+                ThirdPersonCameraController cameraRig = CreateCameraRig(root.transform);
+                CharacterPipelineHost player = InstantiateFloatActor(
+                    PlayerPrefabPath,
+                    root.transform,
+                    "Gameplay Lab Float Player",
+                    PlayerActorId,
+                    s_PlayerPosition,
+                    Quaternion.identity,
+                    sessionHost,
+                    CharacterPresentationRole.LocalOwner,
+                    cameraRig);
+                CharacterPipelineHost enemy = InstantiateFloatActor(
+                    TrainingEnemyPrefabPath,
+                    root.transform,
+                    "Gameplay Lab Training Enemy",
+                    TargetActorId,
+                    s_TargetPosition,
+                    Quaternion.Euler(0f, 180f, 0f),
+                    sessionHost,
+                    CharacterPresentationRole.SimulatedActor,
+                    null);
+                if (enemy.ControlSource is not AICharacterControlSource)
+                    throw new InvalidOperationException("Gameplay Lab Float enemy requires the formal AI Character Control Source.");
+                SessionActorActionTargetInputProvider provider =
+                    player.GetComponent<SessionActorActionTargetInputProvider>();
+                if (!provider)
+                    throw new InvalidOperationException("Gameplay Lab Float player requires the formal Session Actor target provider.");
+                provider.SetAuthoring(enemy);
+                GameObject saved = SavePrefab(root, FloatRootPath);
                 Object.DestroyImmediate(root);
                 return saved;
             }
@@ -433,6 +586,29 @@ namespace ThirdPersonGameplay.Editor.Lab
                 bodyBindingId,
                 cameraRig,
                 CameraLookInputId);
+            return host;
+        }
+
+        static CharacterPipelineHost InstantiateFloatActor(
+            string prefabPath,
+            Transform parent,
+            string objectName,
+            string actorId,
+            Vector3 position,
+            Quaternion rotation,
+            SimulationSessionHost sessionHost,
+            CharacterPresentationRole role,
+            ThirdPersonCameraController cameraRig)
+        {
+            GameObject instance = InstantiatePrefab(prefabPath, parent.gameObject.scene);
+            instance.name = objectName;
+            instance.transform.SetParent(parent, false);
+            instance.transform.localPosition = position;
+            instance.transform.localRotation = rotation;
+            CharacterPipelineHost host = instance.GetComponent<CharacterPipelineHost>() ??
+                throw new InvalidOperationException($"Character Prefab '{prefabPath}' has no CharacterPipelineHost.");
+            host.BindSessionActor(sessionHost, new ActorId(actorId));
+            host.SetRuntimeAuthoring(host.ControlSource, role, cameraRig);
             return host;
         }
 
@@ -680,10 +856,10 @@ namespace ThirdPersonGameplay.Editor.Lab
             GameObject rootPrefab,
             SimulationSessionCompositionDefinition composition,
             CharacterPipelineDefinition definition,
-            FixedCharacterSimulationProgramAsset fixedProgram,
+            ScriptableObject programArtifact,
             CharacterPresentationProjectionAsset projection,
-            DeterministicKccWorldSolverDefinition worldSolver,
-            DeterministicCollisionWorldAsset collision,
+            SimulationWorldSolverDefinition worldSolver,
+            ScriptableObject collision,
             string externalLaunchArgumentPrefix)
         {
             GameplayLabSessionVariantDefinition variant = CreateOrLoad<GameplayLabSessionVariantDefinition>(path);
@@ -701,7 +877,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 solver.Identity.ComponentId,
                 AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(definition)),
                 composition,
-                fixedProgram,
+                programArtifact,
                 projection,
                 worldSolver,
                 collision,
@@ -713,9 +889,10 @@ namespace ThirdPersonGameplay.Editor.Lab
 
         static void BuildScene(
             GameplayLabSessionVariantDefinition fixedVariant,
+            GameplayLabSessionVariantDefinition floatVariant,
             GameplayLabSessionVariantDefinition rollbackVariant)
         {
-            BuildSharedScene(new[] { fixedVariant, rollbackVariant });
+            BuildSharedScene(new[] { fixedVariant, floatVariant, rollbackVariant });
         }
 
         static void BuildSharedScene(GameplayLabSessionVariantDefinition[] variants)
@@ -771,14 +948,12 @@ namespace ThirdPersonGameplay.Editor.Lab
             worldSerialized.FindProperty("m_WorldBoundsSize").vector3Value = new Vector3(400f, 60f, 240f);
             worldSerialized.FindProperty("m_Output").objectReferenceValue = collision;
             worldSerialized.ApplyModifiedPropertiesWithoutUndo();
-            DeterministicCollisionSurfaceAuthoring surface =
-                environment.GetComponent<DeterministicCollisionSurfaceAuthoring>() ??
-                environment.AddComponent<DeterministicCollisionSurfaceAuthoring>();
-            var surfaceSerialized = new SerializedObject(surface);
-            surfaceSerialized.FindProperty("m_SurfaceIdentity").stringValue = "movement-test-course";
-            surfaceSerialized.FindProperty("m_MaterialIdentity").stringValue = "sandbox-graybox";
-            surfaceSerialized.FindProperty("m_Walkable").boolValue = true;
-            surfaceSerialized.ApplyModifiedPropertiesWithoutUndo();
+            DeterministicCollisionSurfaceAuthoring broadSurface =
+                environment.GetComponent<DeterministicCollisionSurfaceAuthoring>();
+            if (broadSurface)
+                Object.DestroyImmediate(broadSurface);
+            if (environment.GetComponentsInChildren<DeterministicCollisionSurfaceAuthoring>(true).Length == 0)
+                throw new InvalidOperationException("Gameplay Lab environment Prefab has no explicit deterministic surface authoring roots.");
         }
 
         static void ReplaceSceneContents(Scene source, Scene destination)

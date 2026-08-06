@@ -32,6 +32,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 profile = ExportProfile(profile)
             };
             AppendPoseGraph(result, poseAsset);
+            result.linkedPoseImplementations = profile.LinkedPoseImplementations
+                .Select(ExportLinkedPoseImplementation)
+                .OrderBy(value => value.implementationId, StringComparer.Ordinal)
+                .ToList();
             return result;
         }
 
@@ -50,6 +54,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentDocumentPresentationEditable result,
             CharacterPresentationPoseGraphAsset poseAsset)
         {
+            AppendPoseGraph(
+                result.poseGraphs,
+                result.poseGraphLayouts,
+                result.poseStateMachines,
+                result.poseStateMachineLayouts,
+                poseAsset,
+                new HashSet<PoseGraphId>());
+        }
+
+        static void AppendPoseGraph(
+            ICollection<AgentPackagePoseGraphFile> graphs,
+            ICollection<AgentPackagePoseGraphLayoutFile> layouts,
+            ICollection<AgentPackagePoseStateMachineFile> stateMachines,
+            ICollection<AgentPackagePoseStateMachineLayoutFile> stateMachineLayouts,
+            CharacterPresentationPoseGraphAsset poseAsset,
+            ISet<PoseGraphId> linkedEntryGraphs)
+        {
             HashSet<PoseGraphId> stateGraphs = poseAsset.EnumerateGraphs()
                 .Where(value => value != null)
                 .SelectMany(value => value.Nodes)
@@ -66,13 +87,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     throw new InvalidOperationException(
                         "Pose Graph root-owned catalog contains a missing record.");
                 GraphAuthoringDocumentRoleId role =
-                    ReferenceEquals(graph, poseAsset.Graph)
+                    linkedEntryGraphs.Contains(graph.GraphId)
+                        ? CharacterPoseGraphAuthoringCapabilities.LinkedPoseEntry
+                        : ReferenceEquals(graph, poseAsset.Graph)
                         ? CharacterPoseGraphAuthoringCapabilities.RootGraph
                         : stateGraphs.Contains(graph.GraphId)
                             ? CharacterPoseGraphAuthoringCapabilities.StatePoseGraph
                             : CharacterPoseGraphAuthoringCapabilities.Subgraph;
-                result.poseGraphs.Add(ExportGraph(graph, role));
-                result.poseGraphLayouts.Add(ExportLayout(graph));
+                graphs.Add(ExportGraph(graph, role));
+                layouts.Add(ExportLayout(graph));
             }
 
             foreach (CharacterPoseStateMachineDefinition machine in poseAsset
@@ -85,10 +108,66 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                          .Where(value => value != null)
                          .OrderBy(value => value.StateMachineId))
             {
-                result.poseStateMachines.Add(ExportStateMachine(machine));
-                result.poseStateMachineLayouts.Add(
+                stateMachines.Add(ExportStateMachine(machine));
+                stateMachineLayouts.Add(
                     ExportStateMachineLayout(poseAsset, machine));
             }
+        }
+
+        static AgentPackageLinkedPoseImplementationFile ExportLinkedPoseImplementation(
+            CharacterLinkedPoseImplementationAsset implementation)
+        {
+            implementation?.RequireValid();
+            if (!implementation)
+                throw new InvalidOperationException(
+                    "Presentation Profile contains a missing Linked Pose Implementation.");
+            CharacterPresentationPoseGraphAsset graphOwner = implementation.Entries
+                .Select(value => value?.GraphOwner)
+                .Distinct()
+                .SingleOrDefault() ?? throw new InvalidOperationException(
+                $"Linked Pose Implementation '{implementation.ImplementationId}' must have one graph owner.");
+            AgentPackageAssetReferenceV3 asset = Asset(implementation, true);
+            var result = new AgentPackageLinkedPoseImplementationFile
+            {
+                id = ReferenceIdentity(asset),
+                name = implementation.name,
+                asset = asset,
+                ownerIdentity = implementation.OwnerIdentity,
+                implementationId = implementation.ImplementationId.Value,
+                revision = implementation.Revision.Value,
+                interfaceAsset = Asset(implementation.Interface, true),
+                graphOwner = Asset(graphOwner, true),
+                graphOwnerIdentity = implementation.Entries[0].GraphOwnerIdentity,
+                entries = implementation.Entries
+                    .Select(value => new AgentPackageLinkedPoseImplementationEntry
+                    {
+                        entryId = value.EntryId.Value,
+                        graphId = value.GraphId.Value
+                    })
+                    .OrderBy(value => value.entryId, StringComparer.Ordinal)
+                    .ToList()
+            };
+            if (implementation.Entries.Any(value =>
+                    value.GraphOwner != graphOwner ||
+                    !string.Equals(
+                        value.GraphOwnerIdentity,
+                        result.graphOwnerIdentity,
+                        StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException(
+                    $"Linked Pose Implementation '{implementation.ImplementationId}' Entry graph owners are inconsistent.");
+            }
+            var entryGraphs = implementation.Entries
+                .Select(value => value.GraphId)
+                .ToHashSet();
+            AppendPoseGraph(
+                result.poseGraphs,
+                result.poseGraphLayouts,
+                result.poseStateMachines,
+                result.poseStateMachineLayouts,
+                graphOwner,
+                entryGraphs);
+            return result;
         }
 
         static AgentPackagePresentationProfileFile ExportProfile(
@@ -119,7 +198,50 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     .Select(ExportProducer)
                     .OrderBy(value => value.timelineId, StringComparer.Ordinal)
                     .ThenBy(value => value.trackId, StringComparer.Ordinal)
+                    .ToList(),
+                linkedPoseGroups = profile.LinkedPoseGroups
+                    .Select(value => new AgentPackageLinkedPoseGroupBinding
+                    {
+                        id = value.GroupId.Value,
+                        groupId = value.GroupId.Value,
+                        interfaceAsset = Asset(value.Interface, true)
+                    })
+                    .OrderBy(value => value.groupId, StringComparer.Ordinal)
+                    .ToList(),
+                linkedPoseSelectors = profile.LinkedPoseSelectors
+                    .Select(ExportLinkedPoseSelector)
+                    .OrderBy(value => value.selectorId, StringComparer.Ordinal)
                     .ToList()
+            };
+        }
+
+        static AgentPackageLinkedPoseSelectorBinding ExportLinkedPoseSelector(
+            CharacterLinkedPoseSelectorBindingAsset selector)
+        {
+            if (selector is not CharacterEquipmentLinkedPoseSelectionBinding equipment)
+                throw new InvalidOperationException(
+                    $"Linked Pose selector '{selector?.name ?? "missing"}' has no Document v3 codec.");
+            AgentPackageAssetReferenceV3 asset = Asset(equipment, true);
+            return new AgentPackageLinkedPoseSelectorBinding
+            {
+                id = ReferenceIdentity(asset),
+                kind = "equipment",
+                asset = asset,
+                selectorId = equipment.SelectorId.Value,
+                groupId = equipment.GroupId.Value,
+                equipment = new AgentPackageEquipmentLinkedPoseSelectorPayload
+                {
+                    slotId = equipment.SlotId.Value,
+                    emptyImplementationId = equipment.EmptyImplementationId.Value,
+                    mappings = equipment.Mappings.Select(value =>
+                        new AgentPackageEquipmentLinkedPoseMapping
+                        {
+                            id = value.EquipmentId.Value,
+                            equipmentId = value.EquipmentId.Value,
+                            implementationId = value.ImplementationId.Value
+                        }).OrderBy(value => value.equipmentId, StringComparer.Ordinal)
+                        .ToList()
+                }
             };
         }
 
@@ -236,6 +358,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     role);
             var properties = new JObject();
             foreach (GraphAuthoringFieldDescriptor field in capability.Fields
+                         .Where(value => value.AuthoringWritable)
                          .OrderBy(value => value.FieldId))
             {
                 properties[field.FieldId.Value] =
@@ -264,10 +387,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         order = value.Order,
                         interfacePortId = value.InterfacePortId.Value
                     }).ToList(),
-                childDocumentId =
-                    node.Payload is CharacterPoseStateMachineNodePayload stateMachine
-                        ? stateMachine.StateMachine?.StateMachineId.Value
-                        : string.Empty
+                childDocumentId = node.Payload switch
+                {
+                    CharacterPoseStateMachineNodePayload stateMachine =>
+                        stateMachine.StateMachine?.StateMachineId.Value,
+                    CharacterMotionMatchingPosePayload motionMatching =>
+                        motionMatching.EntryGraph?.PoseGraphId.Value,
+                    _ => string.Empty
+                }
             };
         }
 
@@ -448,5 +575,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 localFileId = localFileId
             };
         }
+
+        internal static AgentPackageAssetReferenceV3 ExportAsset(
+            UnityEngine.Object asset,
+            bool required) => Asset(asset, required);
+
+        internal static string ReferenceIdentity(
+            AgentPackageAssetReferenceV3 reference) =>
+            reference == null
+                ? string.Empty
+                : string.IsNullOrWhiteSpace(reference.localId)
+                    ? reference.assetGuid + ":" + reference.localFileId
+                    : reference.localId;
     }
 }

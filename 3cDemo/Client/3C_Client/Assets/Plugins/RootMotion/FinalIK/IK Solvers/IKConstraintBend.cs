@@ -23,6 +23,9 @@ using System.Collections;
 		/// The third bone.
 		/// </summary>
 		public Transform bone3;
+		public IndexedBoneHandle bone1Handle = IndexedBoneHandle.Invalid;
+		public IndexedBoneHandle bone2Handle = IndexedBoneHandle.Invalid;
+		public IndexedBoneHandle bone3Handle = IndexedBoneHandle.Invalid;
 		/// <summary>
 		/// The bend goal Transform.
 		/// </summary>
@@ -48,6 +51,17 @@ using System.Collections;
 		/// Determines whether this IKConstraintBend is valid.
 		/// </summary>
 		public bool IsValid(IKSolverFullBody solver, Warning.Logger logger) {
+			if (solver.usesIndexedPoseBackend) {
+				if (!bone1Handle.IsValid || !bone2Handle.IsValid || !bone3Handle.IsValid) {
+					if (logger != null) logger("Bend Constraint contains an invalid indexed bone reference.");
+					return false;
+				}
+				if (solver.GetPoint(bone1Handle) == null || solver.GetPoint(bone2Handle) == null || solver.GetPoint(bone3Handle) == null) {
+					if (logger != null) logger("Bend Constraint indexed bone does not exist in the Node Chain.");
+					return false;
+				}
+				return true;
+			}
 			if (bone1 == null || bone2 == null || bone3 == null) {
 				if (logger != null) logger("Bend Constraint contains a null reference.");
 				return false;
@@ -94,27 +108,46 @@ using System.Collections;
 			this.bone2 = bone2;
 			this.bone3 = bone3;
 		}
+
+		public void SetBones(IndexedBoneHandle bone1, IndexedBoneHandle bone2, IndexedBoneHandle bone3) {
+			bone1Handle = bone1;
+			bone2Handle = bone2;
+			bone3Handle = bone3;
+			this.bone1 = null;
+			this.bone2 = null;
+			this.bone3 = null;
+		}
 		
 		/*
 		 * Initiate the constraint and set defaults
 		 * */
 		public void Initiate(IKSolverFullBody solver) {
-			solver.GetChainAndNodeIndexes(bone1, out chainIndex1, out nodeIndex1);
-			solver.GetChainAndNodeIndexes(bone2, out chainIndex2, out nodeIndex2);
-			solver.GetChainAndNodeIndexes(bone3, out chainIndex3, out nodeIndex3);
+			if (solver.usesIndexedPoseBackend) {
+				solver.GetChainAndNodeIndexes(bone1Handle, out chainIndex1, out nodeIndex1);
+				solver.GetChainAndNodeIndexes(bone2Handle, out chainIndex2, out nodeIndex2);
+				solver.GetChainAndNodeIndexes(bone3Handle, out chainIndex3, out nodeIndex3);
+			} else {
+				solver.GetChainAndNodeIndexes(bone1, out chainIndex1, out nodeIndex1);
+				solver.GetChainAndNodeIndexes(bone2, out chainIndex2, out nodeIndex2);
+				solver.GetChainAndNodeIndexes(bone3, out chainIndex3, out nodeIndex3);
+			}
+			IKSolver.Node node1 = solver.GetNode(chainIndex1, nodeIndex1);
+			IKSolver.Node node2 = solver.GetNode(chainIndex2, nodeIndex2);
+			IKSolver.Node node3 = solver.GetNode(chainIndex3, nodeIndex3);
+			Vector3 position1 = solver.ReadComponentPosition(node1);
+			Vector3 position2 = solver.ReadComponentPosition(node2);
+			Vector3 position3 = solver.ReadComponentPosition(node3);
+			Quaternion rotation1 = solver.ReadComponentRotation(node1);
+			Quaternion rotation3 = solver.ReadComponentRotation(node3);
 
-			// Find the default bend direction orthogonal to the chain direction
-			direction = OrthoToBone1(solver, OrthoToLimb(solver, bone2.position - bone1.position));
+			direction = OrthoToBone1(solver, OrthoToLimb(solver, position2 - position1));
 
 			if (!limbOrientationsSet) {
-				// Default bend direction relative to the first node
-				defaultLocalDirection = Quaternion.Inverse(bone1.rotation) * direction;
+				defaultLocalDirection = Quaternion.Inverse(rotation1) * direction;
 
-				// Default plane normal
-				Vector3 defaultNormal = Vector3.Cross((bone3.position - bone1.position).normalized, direction);
+				Vector3 defaultNormal = Vector3.Cross((position3 - position1).normalized, direction);
 				
-				// Default plane normal relative to the third node
-				defaultChildDirection = Quaternion.Inverse(bone3.rotation) * defaultNormal;
+				defaultChildDirection = Quaternion.Inverse(rotation3) * defaultNormal;
 			}
 
 			initiated = true;
@@ -138,36 +171,47 @@ using System.Collections;
 		/*
 		 * Limits the bending joint of the limb to 90 degrees from the default 90 degrees of bend direction
 		 * */
-		public void LimitBend(float solverWeight, float positionWeight) {
+		public void LimitBend(IKSolverFullBody solver, float solverWeight, float positionWeight) {
 			if (!initiated) return;
+			IKSolver.Node node1 = solver.GetNode(chainIndex1, nodeIndex1);
+			IKSolver.Node node2 = solver.GetNode(chainIndex2, nodeIndex2);
+			IKSolver.Node node3 = solver.GetNode(chainIndex3, nodeIndex3);
+			Vector3 position1 = solver.ReadComponentPosition(node1);
+			Vector3 position2 = solver.ReadComponentPosition(node2);
+			Vector3 position3 = solver.ReadComponentPosition(node3);
+			Quaternion rotation1 = solver.ReadComponentRotation(node1);
+			Quaternion rotation2 = solver.ReadComponentRotation(node2);
+			Quaternion rotation3 = solver.ReadComponentRotation(node3);
 
-			Vector3 normalDirection = bone1.rotation * -defaultLocalDirection;
+			Vector3 normalDirection = rotation1 * -defaultLocalDirection;
 			
-			Vector3 axis2 = bone3.position - bone2.position;
+			Vector3 axis2 = position3 - position2;
 
 			// Clamp the direction from knee/elbow to foot/hand to valid range (90 degrees from right-angledly bent limb)
 			bool changed = false;
 			Vector3 clampedAxis2 = V3Tools.ClampDirection(axis2, normalDirection, clampF * solverWeight, 0, out changed);
 
-			Quaternion bone3Rotation = bone3.rotation;
+			Quaternion bone3Rotation = rotation3;
 
 			if (changed) {
 				Quaternion f = Quaternion.FromToRotation(axis2, clampedAxis2); 
-				bone2.rotation = f * bone2.rotation;
+				rotation2 = f * rotation2;
+				solver.WriteComponentRotation(node2, rotation2);
 			}
 
 			// Rotating bend direction to normal when the limb is stretched out
 			if (positionWeight > 0f) {
-				Vector3 normal = bone2.position - bone1.position;
-				Vector3 tangent = bone3.position - bone2.position;
+				Vector3 normal = position2 - position1;
+				Vector3 tangent = position3 - position2;
 
 				Vector3.OrthoNormalize(ref normal, ref tangent);
 				Quaternion q = Quaternion.FromToRotation(tangent, normalDirection);
 
-				bone2.rotation = Quaternion.Lerp(bone2.rotation, q * bone2.rotation, positionWeight * solverWeight);
+				rotation2 = Quaternion.Lerp(rotation2, q * rotation2, positionWeight * solverWeight);
+				solver.WriteComponentRotation(node2, rotation2);
 			}
 
-			if (changed || positionWeight > 0f) bone3.rotation = bone3Rotation;
+			if (changed || positionWeight > 0f) solver.WriteComponentRotation(node3, bone3Rotation);
 		}
 
 		/*
@@ -189,10 +233,12 @@ using System.Collections;
 			Vector3 solverDirection = solver.GetNode(chainIndex3, nodeIndex3).solverPosition - solver.GetNode(chainIndex1, nodeIndex1).solverPosition;
 
 			// Get rotation from animated limb direction to solver limb direction
-			Quaternion f = Quaternion.FromToRotation(bone3.position - bone1.position, solverDirection);
+			Vector3 position1 = solver.ReadComponentPosition(solver.GetNode(chainIndex1, nodeIndex1));
+			Vector3 position2 = solver.ReadComponentPosition(solver.GetNode(chainIndex2, nodeIndex2));
+			Vector3 position3 = solver.ReadComponentPosition(solver.GetNode(chainIndex3, nodeIndex3));
+			Quaternion f = Quaternion.FromToRotation(position3 - position1, solverDirection);
 
-			// Rotate the default bend direction by f
-			Vector3 dir = f * (bone2.position - bone1.position);
+			Vector3 dir = f * (position2 - position1);
 
 			// Effector rotation
 			if (solver.GetNode(chainIndex3, nodeIndex3).effectorRotationWeight > 0f) {

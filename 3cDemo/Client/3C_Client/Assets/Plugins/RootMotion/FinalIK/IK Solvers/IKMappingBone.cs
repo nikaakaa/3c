@@ -15,6 +15,7 @@ namespace RootMotion.FinalIK {
 		/// The bone transform.
 		/// </summary>
 		public Transform bone;
+		public IndexedBoneHandle boneHandle = IndexedBoneHandle.Invalid;
 		
 		/// <summary>
 		/// The weight of maintaining the bone's rotation after solver has finished.
@@ -27,6 +28,13 @@ namespace RootMotion.FinalIK {
 		/// </summary>
 		public override bool IsValid(IKSolver solver, ref string message) {
 			if (!base.IsValid(solver, ref message)) return false;
+			if (solver.usesIndexedPoseBackend) {
+				if (!boneHandle.IsValid) {
+					message = "IKMappingBone indexed bone is invalid.";
+					return false;
+				}
+				return true;
+			}
 			
 			if (bone == null) {
 				message = "IKMappingBone's bone is null.";
@@ -60,7 +68,8 @@ namespace RootMotion.FinalIK {
 		public override void Initiate(IKSolverFullBody solver) {
 			if (boneMap == null) boneMap = new BoneMap();
 
-			boneMap.Initiate(bone, solver);
+			if (solver.usesIndexedPoseBackend) boneMap.Initiate(boneHandle, solver);
+			else boneMap.Initiate(bone, solver);
 		}
 		
 		/*

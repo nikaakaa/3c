@@ -69,7 +69,9 @@ namespace TreeDesigner.Editor
         readonly Toolbar m_Toolbar;
         readonly VisualElement m_Content;
         readonly List<IGraphAuthoringReadOnlyPanel> m_Panels = new List<IGraphAuthoringReadOnlyPanel>();
+        readonly List<string> m_TabIds = new List<string>();
         IGraphAuthoringDocumentProjection m_Document;
+        string m_ActivePageId = string.Empty;
 
         public GraphAuthoringBottomDockPresenter()
         {
@@ -80,6 +82,8 @@ namespace TreeDesigner.Editor
             Add(m_Toolbar);
             Add(m_Content);
         }
+
+        public string ActivePageId => m_ActivePageId;
 
         public void Bind(IGraphAuthoringDocumentProjection document, GraphAuthoringBottomDockCatalog catalog)
         {
@@ -93,6 +97,7 @@ namespace TreeDesigner.Editor
                 panel.Bind(document);
                 panel.View.style.display = DisplayStyle.None;
                 m_Panels.Add(panel);
+                m_TabIds.Add(descriptor.TabId);
                 m_Content.Add(panel.View);
                 int index = i;
                 m_Toolbar.Add(new Button(() => Select(index)) { text = descriptor.DisplayName });
@@ -115,9 +120,20 @@ namespace TreeDesigner.Editor
             foreach (IGraphAuthoringReadOnlyPanel panel in m_Panels)
                 panel.Unbind();
             m_Panels.Clear();
+            m_TabIds.Clear();
             m_Toolbar.Clear();
             m_Content.Clear();
             m_Document = null;
+            m_ActivePageId = string.Empty;
+        }
+
+        public void RestorePage(string pageId)
+        {
+            if (string.IsNullOrEmpty(pageId))
+                return;
+            int index = m_TabIds.IndexOf(pageId);
+            if (index >= 0)
+                Select(index);
         }
 
         void Select(int index)
@@ -126,6 +142,7 @@ namespace TreeDesigner.Editor
                 return;
             for (int i = 0; i < m_Panels.Count; i++)
                 m_Panels[i].View.style.display = i == index ? DisplayStyle.Flex : DisplayStyle.None;
+            m_ActivePageId = m_TabIds[index];
             m_Panels[index].Refresh();
         }
     }

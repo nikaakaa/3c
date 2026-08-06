@@ -194,11 +194,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_Projection = projection;
             int sourceCapacity = workspaceLayout.SourceCapacity;
             m_Providers = new Dictionary<string, CharacterMotionMatchingProviderRuntime>(
-                projection.MotionMatching.ProviderBindingCount,
+                projection.MotionMatching.NodeBindingCount,
                 StringComparer.Ordinal);
             m_ProviderRuntimes =
                 new CharacterMotionMatchingProviderRuntime[
-                    projection.MotionMatching.ProviderBindingCount];
+                    projection.MotionMatching.NodeBindingCount];
             m_FrozenOutputs = new FrozenOutputSlot[sourceCapacity];
             m_ResolvedProviders = new HashSet<string>(sourceCapacity, StringComparer.Ordinal);
             m_Selections = new MotionMatchingSelectionBatchItem[sourceCapacity];
@@ -206,7 +206,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_FrozenOutputMutations = new FrozenOutputMutation[sourceCapacity];
             m_PreparedHistoryMutations =
                 new PreparedHistoryMutation[
-                    projection.MotionMatching.ProviderBindingCount];
+                    projection.MotionMatching.NodeBindingCount];
             string actorSuffix = actorId.ToString();
             m_TrajectoryAdapter = bodySourceMode == CharacterBodyPresentationSourceMode.SelectedStream
                 ? new SelectedBodyTrajectoryAdapter(
@@ -709,20 +709,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
         void BuildProviderRuntimes(MotionMatchingProjectionPayload payload)
         {
-            for (int bindingIndex = 0; bindingIndex < payload.ProviderBindingCount; bindingIndex++)
+            for (int bindingIndex = 0; bindingIndex < payload.NodeBindingCount; bindingIndex++)
             {
-                MotionMatchingProviderBindingPayload binding = payload.GetProviderBinding(bindingIndex);
-                if (!HasProviderUsage(binding))
-                    throw new InvalidOperationException($"Motion Matching provider binding '{binding.ProviderId}' does not match the Projection source.");
+                MotionMatchingNodeBindingPayload binding = payload.GetNodeBinding(bindingIndex);
+                if (!TryResolveProviderUsage(
+                        binding,
+                        out string providerId,
+                        out PresentationPoseSourceIndex sourceIndex))
+                    throw new InvalidOperationException($"Motion Matching node binding '{binding.PoseNodeId}' does not resolve to one Projection source provider.");
                 var runtime =
                     new CharacterMotionMatchingProviderRuntime(
                         $"{m_Projection.ProgramId}@{m_Projection.SourceRevision}:{m_Projection.ContractHash}",
                         payload,
                         binding,
+                        providerId,
+                        sourceIndex,
                         m_Projection.Rig);
                 try
                 {
-                    m_Providers.Add(binding.ProviderId, runtime);
+                    m_Providers.Add(providerId, runtime);
                     m_ProviderRuntimes[bindingIndex] = runtime;
                 }
                 catch
@@ -735,9 +740,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 throw new InvalidOperationException("Motion Matching Projection payload has no provider runtime binding.");
         }
 
-        bool HasProviderUsage(
-            MotionMatchingProviderBindingPayload binding)
+        bool TryResolveProviderUsage(
+            MotionMatchingNodeBindingPayload binding,
+            out string providerId,
+            out PresentationPoseSourceIndex sourceIndex)
         {
+            providerId = null;
+            sourceIndex = default;
             int count = 0;
             for (int machineIndex = 0;
                  machineIndex <
@@ -764,20 +773,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                         if (provider.SourceKind ==
                                 AnimationPoseSourceKind
                                     .MotionMatching &&
-                            provider.ProviderId.Value ==
-                                binding.ProviderId &&
-                            provider.PresentationPoseSourceIndex ==
-                                binding
-                                    .PresentationPoseSourceIndex &&
                             provider.PlayerNodeId ==
                                 binding.PoseNodeId)
                         {
+                            providerId = provider.ProviderId.Value;
+                            sourceIndex = provider.PresentationPoseSourceIndex;
                             count++;
                         }
                     }
                 }
             }
-            return count == 1;
+            return count == 1 &&
+                   !string.IsNullOrWhiteSpace(providerId) &&
+                   sourceIndex.IsValid;
         }
 
         void AddRetainedSelections(ulong presentationFrame)

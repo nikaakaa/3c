@@ -76,6 +76,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public static bool operator !=(CharacterMotionMatchingSearchDomainId left, CharacterMotionMatchingSearchDomainId right) => !left.Equals(right);
     }
 
+    public readonly struct CharacterMotionMatchingDatabaseChooserId : IEquatable<CharacterMotionMatchingDatabaseChooserId>, IComparable<CharacterMotionMatchingDatabaseChooserId>
+    {
+        public CharacterMotionMatchingDatabaseChooserId(string value) { Value = MotionMatchingIdentity.Require(value, nameof(value)); }
+        public string Value { get; }
+        public bool IsValid => !string.IsNullOrEmpty(Value);
+        public StableHash StableHash => MotionMatchingIdentity.Hash("motion-matching-database-chooser", Value);
+        public int CompareTo(CharacterMotionMatchingDatabaseChooserId other) => string.CompareOrdinal(Value, other.Value);
+        public bool Equals(CharacterMotionMatchingDatabaseChooserId other) => string.Equals(Value, other.Value, StringComparison.Ordinal);
+        public override bool Equals(object obj) => obj is CharacterMotionMatchingDatabaseChooserId other && Equals(other);
+        public override int GetHashCode() => Value == null ? 0 : StringComparer.Ordinal.GetHashCode(Value);
+        public override string ToString() => Value ?? string.Empty;
+        public static bool operator ==(CharacterMotionMatchingDatabaseChooserId left, CharacterMotionMatchingDatabaseChooserId right) => left.Equals(right);
+        public static bool operator !=(CharacterMotionMatchingDatabaseChooserId left, CharacterMotionMatchingDatabaseChooserId right) => !left.Equals(right);
+    }
+
     public readonly struct CharacterMotionMatchingSegmentId : IEquatable<CharacterMotionMatchingSegmentId>, IComparable<CharacterMotionMatchingSegmentId>
     {
         public CharacterMotionMatchingSegmentId(string value) { Value = MotionMatchingIdentity.Require(value, nameof(value)); }

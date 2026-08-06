@@ -1,6 +1,8 @@
 using System;
+using System.Globalization;
 using System.Text;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -18,12 +20,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         SoleForwardMismatch = 3,
         SoleUpMismatch = 4,
         FlatGroundCorrectionExceeded = 5,
-        DegenerateBendPlane = 6,
-        PreferredBendCollinear = 7,
-        PreferredBendOpposesReference = 8,
-        FeetGroundMismatch = 9,
-        FeetForwardOpposed = 10,
-        SoleHandednessMismatch = 11
+        FeetGroundMismatch = 6,
+        FeetForwardOpposed = 7,
+        SoleHandednessMismatch = 8
     }
 
     public readonly struct CharacterFootPlacementRigCalibrationDiagnostic
@@ -92,32 +91,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 soleForward,
             Vector3 soleUp,
             Quaternion soleRotation,
-            Vector3 referenceBendDirection,
-            Vector3 preferredBendDirection,
             float legLength,
             float soleLength,
             float contactGroundError,
             float soleForwardErrorDegrees,
             float soleUpErrorDegrees,
-            float flatGroundCorrectionDegrees,
-            float bendAxisDot,
-            float bendReferenceDot)
+            float flatGroundCorrectionDegrees)
         {
             HeelContact = heelContact;
             ToeContact = toeContact;
             SoleForward = soleForward;
             SoleUp = soleUp;
             SoleRotation = soleRotation;
-            ReferenceBendDirection = referenceBendDirection;
-            PreferredBendDirection = preferredBendDirection;
             LegLength = legLength;
             SoleLength = soleLength;
             ContactGroundError = contactGroundError;
             SoleForwardErrorDegrees = soleForwardErrorDegrees;
             SoleUpErrorDegrees = soleUpErrorDegrees;
             FlatGroundCorrectionDegrees = flatGroundCorrectionDegrees;
-            BendAxisDot = bendAxisDot;
-            BendReferenceDot = bendReferenceDot;
         }
 
         public Vector3 HeelContact { get; }
@@ -125,16 +116,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SoleForward { get; }
         public Vector3 SoleUp { get; }
         public Quaternion SoleRotation { get; }
-        public Vector3 ReferenceBendDirection { get; }
-        public Vector3 PreferredBendDirection { get; }
         public float LegLength { get; }
         public float SoleLength { get; }
         public float ContactGroundError { get; }
         public float SoleForwardErrorDegrees { get; }
         public float SoleUpErrorDegrees { get; }
         public float FlatGroundCorrectionDegrees { get; }
-        public float BendAxisDot { get; }
-        public float BendReferenceDot { get; }
     }
 
     public sealed class CharacterFootPlacementRigGeometryReport
@@ -180,8 +167,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         const float MaximumSoleForwardErrorDegrees = 15f;
         const float MaximumSoleUpErrorDegrees = 15f;
         const float MaximumFlatGroundCorrectionDegrees = 20f;
-        const float MaximumBendAxisDot = 0.95f;
-        const float MinimumBendReferenceDot = 0.25f;
         const float MinimumFeetForwardDot = -0.25f;
 
         readonly struct FootGeometryInput
@@ -193,7 +178,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Vector3 heelContact,
                 Vector3 toeContact,
                 Quaternion soleRotation,
-                Vector3 preferredBend,
                 float legLength)
             {
                 Hip = hip;
@@ -202,7 +186,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HeelContact = heelContact;
                 ToeContact = toeContact;
                 SoleRotation = soleRotation;
-                PreferredBend = preferredBend;
                 LegLength = legLength;
             }
 
@@ -212,7 +195,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal Vector3 HeelContact { get; }
             internal Vector3 ToeContact { get; }
             internal Quaternion SoleRotation { get; }
-            internal Vector3 PreferredBend { get; }
             internal float LegLength { get; }
         }
 
@@ -366,7 +348,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in FootGeometryInput input,
             out CharacterFootPlacementRigCalibrationDiagnostic[] diagnostics)
         {
-            var values = new CharacterFootPlacementRigCalibrationDiagnostic[8];
+            var values = new CharacterFootPlacementRigCalibrationDiagnostic[5];
             int count = 0;
             Vector3 heel = input.HeelContact;
             Vector3 toeContact = input.ToeContact;
@@ -395,32 +377,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float flatCorrection = Quaternion.Angle(soleRotation, flatRotation);
             if (flatCorrection > MaximumFlatGroundCorrectionDegrees)
                 Add(values, ref count, CharacterFootPlacementRigCalibrationDiagnosticCode.FlatGroundCorrectionExceeded, side, "flat-ground-correction", flatCorrection, MaximumFlatGroundCorrectionDegrees);
-
-            Vector3 legAxis = input.Ankle - input.Hip;
-            Vector3 referenceBend = Vector3.zero;
-            if (legAxis.sqrMagnitude > 0.000001f)
-            {
-                Vector3 projectedKnee = input.Hip +
-                                        Vector3.Project(
-                                            input.Knee - input.Hip,
-                                            legAxis);
-                referenceBend = input.Knee - projectedKnee;
-            }
-            if (referenceBend.sqrMagnitude <= 0.000001f)
-                Add(values, ref count, CharacterFootPlacementRigCalibrationDiagnosticCode.DegenerateBendPlane, side, "reference-bend-length", referenceBend.magnitude, 0.001f);
-            else
-                referenceBend.Normalize();
-            Vector3 preferredBend = input.PreferredBend;
-            float bendAxisDot = legAxis.sqrMagnitude > 0.000001f
-                ? Mathf.Abs(Vector3.Dot(preferredBend, legAxis.normalized))
-                : 1f;
-            if (bendAxisDot >= MaximumBendAxisDot)
-                Add(values, ref count, CharacterFootPlacementRigCalibrationDiagnosticCode.PreferredBendCollinear, side, "preferred-bend-axis-dot", bendAxisDot, MaximumBendAxisDot);
-            float bendReferenceDot = referenceBend.sqrMagnitude > 0f
-                ? Vector3.Dot(preferredBend, referenceBend)
-                : -1f;
-            if (bendReferenceDot < MinimumBendReferenceDot)
-                Add(values, ref count, CharacterFootPlacementRigCalibrationDiagnosticCode.PreferredBendOpposesReference, side, "preferred-reference-dot", bendReferenceDot, MinimumBendReferenceDot);
             Array.Resize(ref values, count);
             diagnostics = values;
             return new CharacterFootPlacementFootRigGeometry(
@@ -429,16 +385,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 soleForward,
                 soleUp,
                 soleRotation,
-                referenceBend,
-                preferredBend,
                 input.LegLength,
                 soleLength,
                 contactGroundError,
                 forwardError,
                 upError,
-                flatCorrection,
-                bendAxisDot,
-                bendReferenceDot);
+                flatCorrection);
         }
 
         static CharacterComponentBonePose[] BuildReferenceComponentPose(
@@ -498,8 +450,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rig.PoseRoot.rotation *
                 ankle.Rotation *
                 calibration.SoleFrameLocalRotation,
-                rig.VisualRoot.TransformDirection(
-                    calibration.PreferredBendVisualRootLocalDirection).normalized,
                 Vector3.Distance(hipPosition, kneePosition) +
                 Vector3.Distance(kneePosition, anklePosition));
         }
@@ -519,8 +469,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ankle.TransformPoint(calibration.HeelContactLocalOffset),
                 toe.TransformPoint(calibration.ToeContactLocalOffset),
                 ankle.rotation * calibration.SoleFrameLocalRotation,
-                visualRoot.TransformDirection(
-                    calibration.PreferredBendVisualRootLocalDirection).normalized,
                 Vector3.Distance(hip.position, knee.position) +
                 Vector3.Distance(knee.position, ankle.position));
         }

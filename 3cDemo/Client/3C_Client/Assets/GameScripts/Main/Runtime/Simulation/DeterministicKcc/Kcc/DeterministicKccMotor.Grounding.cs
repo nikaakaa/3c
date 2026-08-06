@@ -185,36 +185,167 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     contact.PrimitiveId,
                     contact.FeatureId,
                     normal);
+                return;
             }
+            throw new DeterministicKccQueryException(
+                DeterministicKccQueryStage.Movement,
+                "Movement constraint plane capacity was exceeded.",
+                contact.PrimitiveId,
+                planeCount + 1,
+                m_ConstraintPlanes.Length);
         }
 
         FixedVector3 ProjectRemaining(FixedVector3 remaining, int planeCount)
         {
             if (planeCount <= 0)
                 return remaining;
-            if (planeCount == 1)
-                return ClipAgainstPlane(remaining, m_ConstraintPlanes[0].Normal);
-            FixedVector3 firstNormal = m_ConstraintPlanes[0].Normal;
-            FixedVector3 secondNormal = m_ConstraintPlanes[1].Normal;
-            FixedVector3 crease = FixedVector3.Cross(firstNormal, secondNormal);
-            FixedScalar creaseLength = crease.Magnitude;
-            if (creaseLength <= m_Configuration.QueryTolerance)
-                return ClipAgainstPlane(ClipAgainstPlane(remaining, firstNormal), secondNormal);
-            FixedVector3 direction = Scale(crease, FixedScalar.One / creaseLength);
-            FixedVector3 projected = Scale(direction, FixedVector3.Dot(remaining, direction));
-            if (planeCount >= 3 && FixedVector3.Dot(projected, m_ConstraintPlanes[2].Normal) < FixedScalar.Zero)
-                return FixedVector3.Zero;
-            return projected;
+
+            if (IsConstraintCandidateFeasible(remaining, planeCount))
+                return remaining;
+
+            FixedVector3 best = FixedVector3.Zero;
+            FixedScalar bestDistance = FixedScalar.Zero;
+            DeterministicKccConstraintCandidateKind bestKind = default;
+            int bestFirstIndex = 0;
+            int bestSecondIndex = 0;
+            bool hasBest = false;
+            for (int i = 0; i < planeCount; i++)
+            {
+                FixedVector3 candidate = ProjectOntoConstraintPlane(remaining, m_ConstraintPlanes[i].Normal);
+                SelectConstraintCandidate(
+                    remaining,
+                    candidate,
+                    planeCount,
+                    DeterministicKccConstraintCandidateKind.SinglePlane,
+                    i,
+                    -1,
+                    ref best,
+                    ref bestDistance,
+                    ref bestKind,
+                    ref bestFirstIndex,
+                    ref bestSecondIndex,
+                    ref hasBest);
+            }
+
+            for (int i = 0; i < planeCount; i++)
+            {
+                for (int j = i + 1; j < planeCount; j++)
+                {
+                    FixedVector3 crease = FixedVector3.Cross(
+                        m_ConstraintPlanes[i].Normal,
+                        m_ConstraintPlanes[j].Normal);
+                    FixedScalar creaseLength = crease.Magnitude;
+                    if (creaseLength <= m_Configuration.QueryTolerance)
+                        continue;
+                    FixedVector3 direction = Scale(crease, FixedScalar.One / creaseLength);
+                    FixedVector3 candidate = Scale(direction, FixedVector3.Dot(remaining, direction));
+                    SelectConstraintCandidate(
+                        remaining,
+                        candidate,
+                        planeCount,
+                        DeterministicKccConstraintCandidateKind.PlaneCrease,
+                        i,
+                        j,
+                        ref best,
+                        ref bestDistance,
+                        ref bestKind,
+                        ref bestFirstIndex,
+                        ref bestSecondIndex,
+                        ref hasBest);
+                }
+            }
+            SelectConstraintCandidate(
+                remaining,
+                FixedVector3.Zero,
+                planeCount,
+                DeterministicKccConstraintCandidateKind.Zero,
+                -1,
+                -1,
+                ref best,
+                ref bestDistance,
+                ref bestKind,
+                ref bestFirstIndex,
+                ref bestSecondIndex,
+                ref hasBest);
+            return best;
         }
 
-        static FixedVector3 ClipAgainstPlane(FixedVector3 value, FixedVector3 normal)
+        void SelectConstraintCandidate(
+            FixedVector3 original,
+            FixedVector3 candidate,
+            int planeCount,
+            DeterministicKccConstraintCandidateKind kind,
+            int firstIndex,
+            int secondIndex,
+            ref FixedVector3 best,
+            ref FixedScalar bestDistance,
+            ref DeterministicKccConstraintCandidateKind bestKind,
+            ref int bestFirstIndex,
+            ref int bestSecondIndex,
+            ref bool hasBest)
         {
-            FixedScalar intoSurface = FixedVector3.Dot(value, normal);
-            if (intoSurface >= FixedScalar.Zero)
-                return value;
+            if (!IsConstraintCandidateFeasible(candidate, planeCount))
+                return;
+            FixedScalar distance = (candidate - original).SqrMagnitude;
+            if (!hasBest || distance < bestDistance ||
+                distance == bestDistance && IsConstraintCandidateBefore(
+                    kind,
+                    firstIndex,
+                    secondIndex,
+                    candidate,
+                    bestKind,
+                    bestFirstIndex,
+                    bestSecondIndex,
+                    best))
+            {
+                best = candidate;
+                bestDistance = distance;
+                bestKind = kind;
+                bestFirstIndex = firstIndex;
+                bestSecondIndex = secondIndex;
+                hasBest = true;
+            }
+        }
+
+        static bool IsConstraintCandidateBefore(
+            DeterministicKccConstraintCandidateKind kind,
+            int firstIndex,
+            int secondIndex,
+            FixedVector3 candidate,
+            DeterministicKccConstraintCandidateKind bestKind,
+            int bestFirstIndex,
+            int bestSecondIndex,
+            FixedVector3 best)
+        {
+            if (kind != bestKind)
+                return (int)kind < (int)bestKind;
+            if (firstIndex != bestFirstIndex)
+                return firstIndex < bestFirstIndex;
+            if (secondIndex != bestSecondIndex)
+                return secondIndex < bestSecondIndex;
+            if (candidate.X.Raw != best.X.Raw)
+                return candidate.X.Raw < best.X.Raw;
+            if (candidate.Y.Raw != best.Y.Raw)
+                return candidate.Y.Raw < best.Y.Raw;
+            return candidate.Z.Raw < best.Z.Raw;
+        }
+
+        bool IsConstraintCandidateFeasible(FixedVector3 candidate, int planeCount)
+        {
+            FixedScalar minimum = -m_Configuration.MinimumMovementDistance;
+            for (int i = 0; i < planeCount; i++)
+            {
+                if (FixedVector3.Dot(candidate, m_ConstraintPlanes[i].Normal) < minimum)
+                    return false;
+            }
+            return true;
+        }
+
+        static FixedVector3 ProjectOntoConstraintPlane(FixedVector3 value, FixedVector3 normal)
+        {
             FixedScalar normalSqrMagnitude = normal.SqrMagnitude;
             return normalSqrMagnitude > FixedScalar.Zero
-                ? value - Scale(normal, intoSurface / normalSqrMagnitude)
+                ? value - Scale(normal, FixedVector3.Dot(value, normal) / normalSqrMagnitude)
                 : FixedVector3.Zero;
         }
 

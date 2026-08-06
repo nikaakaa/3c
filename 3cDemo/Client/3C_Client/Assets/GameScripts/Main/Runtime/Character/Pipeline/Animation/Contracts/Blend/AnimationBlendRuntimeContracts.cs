@@ -14,10 +14,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class AnimationBlendStackPolicyPayload
     {
         [SerializeField] int m_MaxActiveSourceEntries;
+        [SerializeField] AnimationStoredPosePolicy m_StoredPosePolicy;
         [SerializeField] float m_MaxBlendInTimeToReplaceNewest;
         [SerializeField] float m_DepthBlendTimeMultiplier;
 
         public int MaxActiveSourceEntries => m_MaxActiveSourceEntries;
+        public AnimationStoredPosePolicy StoredPosePolicy => m_StoredPosePolicy;
         public float MaxBlendInTimeToReplaceNewest => m_MaxBlendInTimeToReplaceNewest;
         public float DepthBlendTimeMultiplier => m_DepthBlendTimeMultiplier;
 
@@ -27,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(source));
             source.RequireValid();
             m_MaxActiveSourceEntries = source.MaxActiveSourceEntries;
+            m_StoredPosePolicy = source.StoredPosePolicy;
             m_MaxBlendInTimeToReplaceNewest = source.MaxBlendInTimeToReplaceNewest;
             m_DepthBlendTimeMultiplier = source.DepthBlendTimeMultiplier;
         }
@@ -34,6 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void RequireValid()
         {
             if (MaxActiveSourceEntries < 2 ||
+                !Enum.IsDefined(typeof(AnimationStoredPosePolicy), StoredPosePolicy) ||
                 !float.IsFinite(MaxBlendInTimeToReplaceNewest) || MaxBlendInTimeToReplaceNewest < 0f ||
                 !float.IsFinite(DepthBlendTimeMultiplier) || DepthBlendTimeMultiplier <= 0f)
             {

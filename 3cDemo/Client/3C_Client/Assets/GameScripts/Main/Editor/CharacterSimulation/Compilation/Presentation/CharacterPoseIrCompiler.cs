@@ -15,7 +15,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         Root = 1,
         StateLocal = 2,
-        Subgraph = 3
+        Subgraph = 3,
+        LinkedPoseEntry = 4
     }
 
     internal enum CharacterPoseNativeNodeRole : byte
@@ -45,8 +46,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         bool Additive { get; }
         bool ModifyBone { get; }
         bool RootOrientationWarp { get; }
-        bool TwoBoneIk { get; }
-        bool FootPlacement { get; }
         bool SequencePlayer { get; }
         CharacterPresentationPoseSourceSlot Source(
             CharacterPoseNodePayload payload);
@@ -118,8 +117,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public virtual bool Additive => false;
         public virtual bool ModifyBone => false;
         public virtual bool RootOrientationWarp => false;
-        public virtual bool TwoBoneIk => false;
-        public virtual bool FootPlacement => false;
         public virtual bool SequencePlayer => false;
 
         public CharacterPoseIrNode Lower(CharacterTypedPoseNode node, IReadOnlyList<CharacterPoseIrInput> inputs, string sourcePath)
@@ -1060,186 +1057,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
     }
 
-    internal sealed class CharacterTwoBoneIkPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterTwoBoneIkPosePayload>
-    {
-        public override CharacterPoseNodeKind Kind =>
-            CharacterPoseNodeKind.TwoBoneIK;
-        public override CharacterPoseOperationCode Code =>
-            CharacterPoseOperationCode.TwoBoneIK;
-        public override bool TwoBoneIk => true;
-
-        protected override float GetWeight(
-            CharacterTwoBoneIkPosePayload payload) =>
-            payload.Weight;
-
-        public override CharacterPoseNodePayload CreatePayload(
-            CharacterPoseAuthoringPayloadInput input) =>
-            new CharacterTwoBoneIkPosePayload(
-                new AnimationBoneId(
-                    input.Require<string>(
-                        "end-physical-bone-id")),
-                new AnimationBoneId(
-                    input.Require<string>(
-                        "effector-pose-bone-id")),
-                input.Require<Vector3>(
-                    "effector-position-offset"),
-                input.Require<Quaternion>(
-                    "effector-rotation-offset").eulerAngles,
-                new AnimationBoneId(
-                    input.Require<string>(
-                        "joint-target-pose-bone-id")),
-                input.Require<Vector3>(
-                    "joint-target-offset"),
-                Enum.Parse<CharacterTwoBoneIkEndRotationMode>(
-                    input.Require<string>("end-rotation-mode"),
-                    false),
-                input.Require<float>("weight"));
-
-        protected override object ReadField(
-            CharacterTwoBoneIkPosePayload payload,
-            string field) =>
-            field switch
-            {
-                "end-physical-bone-id" =>
-                    payload.EndPhysicalBoneId.Value,
-                "effector-pose-bone-id" =>
-                    payload.EffectorPoseBoneId.Value,
-                "effector-position-offset" =>
-                    payload.EffectorLocalPositionOffset,
-                "effector-rotation-offset" =>
-                    payload.EffectorLocalRotationOffset,
-                "joint-target-pose-bone-id" =>
-                    payload.JointTargetPoseBoneId.Value,
-                "joint-target-offset" =>
-                    payload.JointTargetLocalOffset,
-                "end-rotation-mode" =>
-                    payload.EndRotationMode.ToString(),
-                "weight" => payload.Weight,
-                _ => base.ReadField(payload, field)
-            };
-
-        protected override void Validate(
-            CharacterTwoBoneIkPosePayload payload,
-            string sourcePath)
-        {
-            CharacterPoseCompilerHandlerValidation.Require(
-                payload.EndPhysicalBoneId.IsValid &&
-                payload.EffectorPoseBoneId.IsValid &&
-                payload.JointTargetPoseBoneId.IsValid &&
-                CharacterPoseCompilerHandlerValidation.Finite(
-                    payload.EffectorLocalPositionOffset) &&
-                CharacterPoseCompilerHandlerValidation.Finite(
-                    payload.EffectorLocalRotationOffset) &&
-                CharacterPoseCompilerHandlerValidation.Finite(
-                    payload.JointTargetLocalOffset) &&
-                payload.JointTargetLocalOffset.sqrMagnitude > 0f &&
-                Enum.IsDefined(
-                    typeof(CharacterTwoBoneIkEndRotationMode),
-                    payload.EndRotationMode),
-                sourcePath,
-                "Two Bone IK bone binding is incomplete.");
-            CharacterPoseCompilerHandlerValidation.RequireWeight(
-                payload.Weight,
-                sourcePath);
-        }
-
-        protected override void ValidateRig(
-            CharacterTwoBoneIkPosePayload payload,
-            CharacterAnimationRigDefinition rig,
-            string sourcePath)
-        {
-            try
-            {
-                int end = rig.RequirePhysicalBoneIndex(
-                    payload.EndPhysicalBoneId);
-                int joint = rig.PhysicalBones[end].ParentIndex;
-                int root = joint >= 0
-                    ? rig.PhysicalBones[joint].ParentIndex
-                    : -1;
-                int effector = rig.RequirePoseBoneIndex(
-                    payload.EffectorPoseBoneId);
-                int jointTarget = rig.RequirePoseBoneIndex(
-                    payload.JointTargetPoseBoneId);
-                _ = new CharacterTwoBoneIkDescriptor(
-                    new CharacterPoseConstraintId(sourcePath),
-                    root,
-                    joint,
-                    end,
-                    effector,
-                    payload.EffectorLocalPositionOffset,
-                    payload.EffectorLocalRotationOffset,
-                    jointTarget,
-                    payload.JointTargetLocalOffset,
-                    payload.EndRotationMode,
-                    payload.Weight);
-            }
-            catch (Exception exception)
-            {
-                throw new InvalidOperationException(
-                    $"{sourcePath}: {exception.Message}",
-                    exception);
-            }
-        }
-    }
-
-    internal sealed class
-        CharacterFootPlacementPoseCompilerHandler :
-            CharacterPoseCompilerHandler<
-                CharacterFootPlacementPosePayload>
-    {
-        public override CharacterPoseNodeKind Kind =>
-            CharacterPoseNodeKind.FootPlacement;
-        public override CharacterPoseOperationCode Code =>
-            CharacterPoseOperationCode.FootPlacement;
-        public override bool FootPlacement => true;
-
-        public override CharacterPoseNodePayload CreatePayload(
-            CharacterPoseAuthoringPayloadInput input) =>
-            new CharacterFootPlacementPosePayload(
-                input.Require<CharacterFootPlacementProfile>(
-                    "profile"),
-                input.Require<
-                    CharacterFootPlacementRigCalibration>(
-                    "calibration"));
-
-        protected override object ReadField(
-            CharacterFootPlacementPosePayload payload,
-            string field) =>
-            field switch
-            {
-                "profile" => payload.Profile,
-                "calibration" => payload.Calibration,
-                _ => base.ReadField(payload, field)
-            };
-
-        protected override void Validate(
-            CharacterFootPlacementPosePayload payload,
-            string sourcePath) =>
-            CharacterPoseCompilerHandlerValidation.Require(
-                payload.Profile &&
-                payload.Calibration,
-                sourcePath,
-                "Foot Placement profile or calibration is missing.");
-
-        protected override void ValidateRig(
-            CharacterFootPlacementPosePayload payload,
-            CharacterAnimationRigDefinition rig,
-            string sourcePath)
-        {
-            try
-            {
-                payload.Calibration.RequireRig(rig);
-            }
-            catch (Exception exception)
-            {
-                throw new InvalidOperationException(
-                    $"{sourcePath}: {exception.Message}",
-                    exception);
-            }
-        }
-    }
-
     internal sealed class CharacterPoseSubgraphCompilerHandler :
         CharacterPoseCompilerHandler<CharacterPoseSubgraphPayload>
     {
@@ -1464,7 +1281,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 IReadOnlyList<CharacterPoseIrInput> inputs = BuildInputs(node, incoming[node.NodeId], nodes, sourcePath);
                 lowered.Add(m_Handlers.Require(node.Kind).Lower(node, inputs, sourcePath));
             }
-            CharacterTypedPoseNode output = role != CharacterPoseIrGraphRole.Subgraph
+            CharacterTypedPoseNode output = role != CharacterPoseIrGraphRole.Subgraph && role != CharacterPoseIrGraphRole.LinkedPoseEntry
                 ? ordered.Single(value => value.Kind == CharacterPoseNodeKind.OutputPose)
                 : ordered.Single(value => value.Kind == CharacterPoseNodeKind.GraphOutput);
             return new CharacterPoseIrGraph(graph.GraphId, graph.ContentRevision, lowered, new CharacterPoseIrNodeId(output.NodeId.Value));
@@ -1517,11 +1334,18 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
             IReadOnlyDictionary<PoseNodeId, List<CharacterPoseEdge>> incoming)
         {
-            var indegree = incoming.ToDictionary(pair => pair.Key, pair => pair.Value.Select(value => value.SourceNodeId).Distinct().Count());
+            var indegree = incoming.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value
+                    .Where(edge => !IsTemporalHistoryEdge(nodes, edge))
+                    .Select(value => value.SourceNodeId)
+                    .Distinct()
+                    .Count());
             var outgoing = nodes.Keys.ToDictionary(value => value, _ => new HashSet<PoseNodeId>());
             foreach (KeyValuePair<PoseNodeId, List<CharacterPoseEdge>> pair in incoming)
                 foreach (CharacterPoseEdge edge in pair.Value)
-                    outgoing[edge.SourceNodeId].Add(pair.Key);
+                    if (!IsTemporalHistoryEdge(nodes, edge))
+                        outgoing[edge.SourceNodeId].Add(pair.Key);
             var ready = new SortedSet<PoseNodeId>(indegree.Where(pair => pair.Value == 0).Select(pair => pair.Key));
             var result = new List<CharacterTypedPoseNode>(nodes.Count);
             while (ready.Count > 0)
@@ -1540,6 +1364,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException("Pose Graph contains a cycle.");
             return result;
         }
+
+        static bool IsTemporalHistoryEdge(
+            IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
+            CharacterPoseEdge edge) =>
+            ResolvePort(
+                nodes[edge.SourceNodeId],
+                edge.SourcePortId.Value,
+                CharacterPosePortDirection.Output).Kind == CharacterPosePortKind.PoseHistory;
 
         static IReadOnlyList<CharacterPoseIrInput> BuildInputs(
             CharacterTypedPoseNode target,
@@ -1592,10 +1424,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             int rootOutputs = nodes.Count(value => value.Kind == CharacterPoseNodeKind.OutputPose);
             int graphOutputs = nodes.Count(value => value.Kind == CharacterPoseNodeKind.GraphOutput);
-            if (role != CharacterPoseIrGraphRole.Subgraph && (rootOutputs != 1 || graphOutputs != 0))
+            bool graphBoundary = role == CharacterPoseIrGraphRole.Subgraph || role == CharacterPoseIrGraphRole.LinkedPoseEntry;
+            if (!graphBoundary && (rootOutputs != 1 || graphOutputs != 0))
                 throw new InvalidOperationException("Root and state-local Pose Graphs must contain exactly one Output Pose and no Graph Output.");
-            if (role == CharacterPoseIrGraphRole.Subgraph && (graphOutputs != 1 || rootOutputs != 0))
-                throw new InvalidOperationException("Pose Subgraphs must contain exactly one Graph Output and no Output Pose.");
+            if (graphBoundary && (graphOutputs != 1 || rootOutputs != 0))
+                throw new InvalidOperationException("Pose Subgraphs and Linked Pose Entries must contain exactly one Graph Output and no Output Pose.");
         }
     }
 }

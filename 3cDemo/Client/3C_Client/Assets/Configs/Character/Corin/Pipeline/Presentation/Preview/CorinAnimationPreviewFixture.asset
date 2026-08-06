@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e16d069c757a4ff6ba0ec49fdceb0879, type: 3}
+  m_Name: CorinAnimationPreviewFixture
+  m_EditorClassIdentifier: 
+  m_Definition: {fileID: 11400000, guid: c7a7c1e3f7e64d81b5a04a90cbeb8d4e, type: 2}
+  m_Profile: {fileID: 11400000, guid: 2fbcf34b8e3d4f46a91fd81d62b9241e, type: 2}
+  m_PreviewRigPrefab: {fileID: 100100000, guid: 67b20b0165b77b44f8cf0cfa9ae33f19, type: 3}
+  m_EnvironmentPrefab: {fileID: 0}

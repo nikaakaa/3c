@@ -60,6 +60,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         ValueKindMismatch = 4
     }
 
+    public readonly struct CharacterPresentationFactDeclaration
+    {
+        public CharacterPresentationFactDeclaration(
+            PresentationFactId factId,
+            PresentationFactValueKind valueKind)
+        {
+            if (!factId.IsValid)
+                throw new ArgumentException("Presentation Fact declaration identity is invalid.", nameof(factId));
+            if (!Enum.IsDefined(typeof(PresentationFactValueKind), valueKind))
+                throw new ArgumentOutOfRangeException(nameof(valueKind));
+            FactId = factId;
+            ValueKind = valueKind;
+        }
+
+        public PresentationFactId FactId { get; }
+        public PresentationFactValueKind ValueKind { get; }
+    }
+
     public static class CharacterPresentationFactSchema
     {
         public const string Version = "character-presentation-fact/v2";
@@ -75,22 +93,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public static readonly PresentationFactId MovementMode = new PresentationFactId("presentation.movement-mode");
         public static readonly PresentationFactId BodyDiscontinuityGeneration = new PresentationFactId("presentation.body-discontinuity-generation");
 
+        static readonly CharacterPresentationFactDeclaration[] s_OrderedDeclarations =
+        {
+            new CharacterPresentationFactDeclaration(Grounded, PresentationFactValueKind.Bool),
+            new CharacterPresentationFactDeclaration(HorizontalSpeed, PresentationFactValueKind.Float),
+            new CharacterPresentationFactDeclaration(HorizontalAcceleration, PresentationFactValueKind.Float),
+            new CharacterPresentationFactDeclaration(VerticalSpeed, PresentationFactValueKind.Float),
+            new CharacterPresentationFactDeclaration(MovementDirection, PresentationFactValueKind.Vector2),
+            new CharacterPresentationFactDeclaration(DesiredDirection, PresentationFactValueKind.Vector2),
+            new CharacterPresentationFactDeclaration(FacingError, PresentationFactValueKind.Float),
+            new CharacterPresentationFactDeclaration(MotionPhase, PresentationFactValueKind.Enum),
+            new CharacterPresentationFactDeclaration(MovementMode, PresentationFactValueKind.Identity),
+            new CharacterPresentationFactDeclaration(BodyDiscontinuityGeneration, PresentationFactValueKind.UInt64)
+        };
+
+        public static IReadOnlyList<CharacterPresentationFactDeclaration> OrderedDeclarations =>
+            s_OrderedDeclarations;
+
         public static PresentationFactValueKind RequireValueKind(PresentationFactId id)
         {
             if (!id.IsValid)
                 throw new CharacterPresentationFactMissingException(id, PresentationFactMissingReason.FactIdInvalid);
-            if (id == Grounded)
-                return PresentationFactValueKind.Bool;
-            if (id == HorizontalSpeed || id == HorizontalAcceleration || id == VerticalSpeed || id == FacingError)
-                return PresentationFactValueKind.Float;
-            if (id == MovementDirection || id == DesiredDirection)
-                return PresentationFactValueKind.Vector2;
-            if (id == MotionPhase)
-                return PresentationFactValueKind.Enum;
-            if (id == MovementMode)
-                return PresentationFactValueKind.Identity;
-            if (id == BodyDiscontinuityGeneration)
-                return PresentationFactValueKind.UInt64;
+            for (int i = 0; i < s_OrderedDeclarations.Length; i++)
+            {
+                CharacterPresentationFactDeclaration declaration = s_OrderedDeclarations[i];
+                if (declaration.FactId == id)
+                    return declaration.ValueKind;
+            }
             throw new CharacterPresentationFactMissingException(id, PresentationFactMissingReason.FactNotDeclared);
         }
     }
@@ -552,9 +581,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPresentationTrajectoryIntent current,
                 float alpha)
             {
-                Vector2 facing = Vector2.Lerp(previous.DesiredFacing, current.DesiredFacing, alpha);
-                if (facing.sqrMagnitude <= 0.00000001f)
-                    throw new InvalidOperationException("Presentation Fact desired facing interpolation is degenerate.");
+                float radians = Vector2.SignedAngle(previous.DesiredFacing, current.DesiredFacing) *
+                    Mathf.Deg2Rad * alpha;
+                float sin = Mathf.Sin(radians);
+                float cos = Mathf.Cos(radians);
+                Vector2 facing = new Vector2(
+                    previous.DesiredFacing.x * cos - previous.DesiredFacing.y * sin,
+                    previous.DesiredFacing.x * sin + previous.DesiredFacing.y * cos);
                 bool useCurrentDiscrete = alpha >= 1f;
                 return new IntentSample(
                     Vector2.Lerp(previous.DesiredPlanarVelocity, current.DesiredPlanarVelocity, alpha),

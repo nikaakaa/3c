@@ -46,11 +46,18 @@ namespace TreeDesigner.Editor
             }
             viewDataKey = elementId;
             title = displayName ?? string.Empty;
+            Label titleLabel = this.Q<Label>("title-label");
+            if (titleLabel != null)
+                titleLabel.text = displayName ?? string.Empty;
             style.left = position.x;
             style.top = position.y;
             if (titleColor.HasValue)
-                titleContainer.style.backgroundColor =
-                    titleColor.Value;
+            {
+                titleContainer.style.backgroundColor = titleColor.Value;
+                VisualElement titleElement = this.Q("title");
+                if (titleElement != null)
+                    titleElement.style.backgroundColor = titleColor.Value;
+            }
         }
 
         protected void BindAuthoringDescriptor(
@@ -64,11 +71,17 @@ namespace TreeDesigner.Editor
             title = string.IsNullOrWhiteSpace(displayName)
                 ? capability.DisplayName
                 : displayName;
+            Label titleLabel = this.Q<Label>("title-label");
+            if (titleLabel != null)
+                titleLabel.text = title;
             tooltip = capability.CapabilityId.Value;
             if (applyDescriptorColor)
             {
                 titleContainer.style.backgroundColor =
                     capability.Color;
+                VisualElement titleElement = this.Q("title");
+                if (titleElement != null)
+                    titleElement.style.backgroundColor = capability.Color;
             }
 
             m_AuthoringIcon?.RemoveFromHierarchy();

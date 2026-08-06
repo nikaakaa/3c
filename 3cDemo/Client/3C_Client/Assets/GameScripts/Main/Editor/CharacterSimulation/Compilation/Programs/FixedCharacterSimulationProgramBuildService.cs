@@ -14,6 +14,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (!definition)
                 throw new ArgumentNullException(nameof(definition));
+            UnityEngine.Object existingDestination = AssetDatabase.LoadMainAssetAtPath(unityWrapperDestination);
+            if (existingDestination && existingDestination is not FixedCharacterSimulationProgramAsset)
+            {
+                throw new InvalidOperationException(
+                    $"Fixed Program destination '{unityWrapperDestination}' is reserved by " +
+                    $"'{existingDestination.GetType().FullName}' and cannot be replaced by a generated wrapper.");
+            }
             var request = new CharacterSimulationBuildRequest(
                 definition,
                 CharacterSimulationBuildPublicationMode.Publish,

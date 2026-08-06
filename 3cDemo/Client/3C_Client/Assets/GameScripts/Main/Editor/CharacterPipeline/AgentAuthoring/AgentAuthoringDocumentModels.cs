@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
@@ -110,6 +111,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentDocumentLegChainContext rightLeg = new AgentDocumentLegChainContext();
         public List<AgentDocumentPoseCapabilityContext> poseCapabilities =
             new List<AgentDocumentPoseCapabilityContext>();
+        [JsonIgnore]
+        public List<AgentPackageLinkedPoseInterfaceFile> linkedPoseInterfaces =
+            new List<AgentPackageLinkedPoseInterfaceFile>();
         public List<AgentDocumentRigBoneContext> physicalBones =
             new List<AgentDocumentRigBoneContext>();
         public List<AgentDocumentVirtualBoneContext> virtualBones =

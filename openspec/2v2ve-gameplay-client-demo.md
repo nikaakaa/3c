@@ -43,7 +43,7 @@ Environment
 
 项目已经安装通用BTSMTL AI authoring、portable AI Program、独立AI State、committed Actor Observation与Local Float32 Control Source事务链。AI只产生与玩家相同类型的`CharacterSimulationInput`，不会直接执行Action、Timeline、Motion、伤害或动画。
 
-统一Agent authoring合同已经通过`CharacterController`/`AIController` domain覆盖AI Definition、Graph、Blackboard、Perception和Intent。具体schema与工具生命周期以current specs和`openspec/project.md`为准，不在本文固定版本。Standalone中的Corin训练敌人已经通过正式AI Definition、RootTree、Perception和generated Program形成Local Float32闭环：它读取同一Session的committed `LocalActor`观察，只输出MoveAxis、ActionTarget与Attack request，并继续复用Corin角色Program、WorldSolver和Presentation。本文中的Ally Bot、中立怪AI、Team/Faction感知和Authority AI仍未完成；后续场景资产必须从正式AI Definition编译并进入同一Session，不能用MonoBehaviour Bot、Scene查询或客户端本地推断代替。
+统一Agent authoring合同已经通过`CharacterController`/`AIController` domain覆盖AI Definition、Graph、Blackboard、Perception和Intent。具体schema与工具生命周期以current specs和`openspec/project.md`为准，不在本文固定版本。Standalone中的Corin训练敌人已经具备正式AI Definition、RootTree、Perception和行为authoring：它读取同一Session的committed `LocalActor`观察，只输出MoveAxis、ActionTarget与Attack request，并继续复用Corin角色Program、WorldSolver和Presentation。Rig v3、Foot Analysis与Character Program前置产物已经重建；当前仍需由`add-corin-training-ai-demo`重新发布并验证AI Program与Document v3，在这些任务完成前不将该配置描述为已闭合Local Float32 AI产品。本文中的Ally Bot、中立怪AI、Team/Faction感知和Authority AI仍未完成；后续场景资产必须从正式AI Definition编译并进入同一Session，不能用MonoBehaviour Bot、Scene查询或客户端本地推断代替。
 
 ## 核心战斗范围
 

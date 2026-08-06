@@ -21,6 +21,7 @@ MonoBehaviour:
   m_DefaultPlayRate: 1
   m_MarkerGroupId: 
   m_MarkerTopology: 0
+  m_SyncRole: 0
   m_Markers: []
   m_FootPlacementWeightCurve:
     serializedVersion: 2
@@ -67,6 +68,7 @@ MonoBehaviour:
   m_DefaultPlayRate: 1
   m_MarkerGroupId: 
   m_MarkerTopology: 0
+  m_SyncRole: 0
   m_Markers: []
   m_FootPlacementWeightCurve:
     serializedVersion: 2
@@ -113,6 +115,7 @@ MonoBehaviour:
   m_DefaultPlayRate: 1
   m_MarkerGroupId: 
   m_MarkerTopology: 0
+  m_SyncRole: 0
   m_Markers: []
   m_FootPlacementWeightCurve:
     serializedVersion: 2
@@ -153,6 +156,11 @@ MonoBehaviour:
   m_PoseGraph: {fileID: 11400000, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
   m_RigDefinition: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
   m_MotionMatchingProfile: {fileID: 0}
+  m_FullBodyIkProfile: {fileID: 11400000, guid: d8baaf75d0994cf6aa8ed54c35542ea0,
+    type: 2}
+  m_LinkedPoseGroups: []
+  m_LinkedPoseImplementations: []
+  m_LinkedPoseSelectors: []
   m_ProducerBindings:
   - m_TimelineAuthoringId: 001b250e-9f1c-44ab-a170-c43896e756ac
     m_TrackAuthoringId: 5cb744b3-207c-4c5e-8485-5b933cd7b7ad
@@ -266,6 +274,7 @@ MonoBehaviour:
   m_DefaultPlayRate: 1
   m_MarkerGroupId: 
   m_MarkerTopology: 0
+  m_SyncRole: 0
   m_Markers: []
   m_FootPlacementWeightCurve:
     serializedVersion: 2
@@ -365,6 +374,7 @@ MonoBehaviour:
   m_DefaultPlayRate: 1
   m_MarkerGroupId: 
   m_MarkerTopology: 0
+  m_SyncRole: 0
   m_Markers: []
   m_FootPlacementWeightCurve:
     serializedVersion: 2

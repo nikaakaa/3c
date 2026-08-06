@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a4eb2a77d60d924091085c3f2954831, type: 3}
+  m_Name: TrainingEnemyAIControllerDefinition
+  m_EditorClassIdentifier: 
+  m_ControllerId: TrainingEnemy.MonsterAI
+  m_RootTreeAsset: {fileID: 11400000, guid: 4674f94e68908074ba665ea6d62e928e, type: 2}
+  m_ControlledCharacter: {fileID: 11400000, guid: e135c016ef75f604986f7458515fa6b7,
+    type: 2}
+  m_PerceptionProfile: {fileID: 11400000, guid: 94396a55165877a4897ffbbdeaefddf3,
+    type: 2}
+  m_IntentProgram: {fileID: 11400000, guid: 73522846cece9b84cb8f0c34ca3ab2c0, type: 2}

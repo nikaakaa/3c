@@ -55,7 +55,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
         readonly MotionMatchingProjectionPayload m_Projection;
         readonly string m_ProjectionIdentity;
-        readonly MotionMatchingProviderBindingPayload m_Binding;
+        readonly MotionMatchingNodeBindingPayload m_Binding;
+        readonly string m_ProviderId;
+        readonly PresentationPoseSourceIndex m_PresentationPoseSourceIndex;
         readonly DatabaseRuntime[] m_Databases;
         readonly CharacterMotionMatchingTrajectoryRuntime m_Trajectory;
         readonly MotionMatchingTrajectoryEnvelope m_Envelope;
@@ -85,14 +87,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public CharacterMotionMatchingProviderRuntime(
             string projectionIdentity,
             MotionMatchingProjectionPayload projection,
-            MotionMatchingProviderBindingPayload binding,
+            MotionMatchingNodeBindingPayload binding,
+            string providerId,
+            PresentationPoseSourceIndex presentationPoseSourceIndex,
             CharacterAnimationRigPayload rig)
         {
             m_ProjectionIdentity = MotionMatchingIdentity.Require(projectionIdentity, nameof(projectionIdentity));
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             m_Binding = binding;
-            if (string.IsNullOrWhiteSpace(binding.ProviderId) ||
-                !binding.PresentationPoseSourceIndex.IsValid ||
+            m_ProviderId = MotionMatchingIdentity.Require(providerId, nameof(providerId));
+            m_PresentationPoseSourceIndex = presentationPoseSourceIndex;
+            if (!m_PresentationPoseSourceIndex.IsValid ||
+                !binding.BindingId.IsValid ||
+                binding.BindingRevision <= 0 ||
                 !binding.PoseNodeId.IsValid ||
                 !binding.SearchDomainId.IsValid || binding.DatabaseCount <= 0 || rig == null)
                 throw new ArgumentException("Motion Matching provider runtime binding is invalid.");
@@ -130,9 +137,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_CommittedPage = ReadPage();
         }
 
-        public string ProviderId => m_Binding.ProviderId;
+        public string ProviderId => m_ProviderId;
         public PresentationPoseSourceIndex PresentationPoseSourceIndex =>
-            m_Binding.PresentationPoseSourceIndex;
+            m_PresentationPoseSourceIndex;
         public PoseNodeId PoseNodeId => m_Binding.PoseNodeId;
         public int FeatureBoneCount => m_FeatureBoneIndices.Length;
         public MotionMatchingSelectionDecision CurrentDecision => m_CurrentDecision;

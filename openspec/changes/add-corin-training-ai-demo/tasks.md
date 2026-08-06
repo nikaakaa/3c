@@ -55,7 +55,7 @@
 - [x] 4.8 编译Corin AI Semantic IR。
 - [x] 4.9 生成exact-byte Float32 AIIntentProgram资产。
 - [x] 4.10 绑定generated Program identity与source revision。
-- [x] 4.11 校验AI Program与Corin Character input/request catalog匹配。
+- [ ] 4.11 校验AI Program与Corin Character input/request catalog匹配。
 
 ## 5. 训练敌人迁移
 
@@ -93,10 +93,10 @@
 ## 7. 编译与严格校验
 
 - [x] 7.1 使用规定参数构建AI Core与Float32程序集。
-- [ ] 7.2 使用规定参数构建Character Runtime与Editor程序集。
+- [x] 7.2 使用规定参数构建Character Runtime与Editor程序集。
 - [x] 7.3 使用规定参数构建BTSMTL Runtime与Editor程序集。
 - [x] 7.4 每次编译后立即执行dotnet build-server shutdown。
-- [x] 7.5 运行Corin AI Program artifact验证。
-- [x] 7.6 运行Agent Document v3正式validate。
+- [ ] 7.5 运行Corin AI Program artifact验证。
+- [ ] 7.6 运行Agent Document v3正式validate。
 - [x] 7.7 运行openspec validate add-corin-training-ai-demo --strict --no-interactive。
 - [x] 7.8 核对tasks勾选与Corin唯一资产和运行链一致。

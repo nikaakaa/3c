@@ -379,11 +379,61 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void Touch() => m_ContentRevision = Guid.NewGuid().ToString("N");
     }
 
+    public enum CharacterPoseStateMachineValidationTargetKind : byte
+    {
+        StateMachine = 0,
+        State = 1,
+        Alias = 2,
+        Transition = 3
+    }
+
+    public readonly struct CharacterPoseStateMachineValidationIssue
+    {
+        public CharacterPoseStateMachineValidationIssue(
+            string code,
+            string message,
+            CharacterPoseStateMachineValidationTargetKind targetKind,
+            string elementId = "")
+        {
+            Code = string.IsNullOrWhiteSpace(code)
+                ? throw new ArgumentException(
+                    "Pose StateMachine validation code is required.",
+                    nameof(code))
+                : code.Trim();
+            Message = string.IsNullOrWhiteSpace(message)
+                ? throw new ArgumentException(
+                    "Pose StateMachine validation message is required.",
+                    nameof(message))
+                : message.Trim();
+            TargetKind = targetKind;
+            ElementId = elementId ?? string.Empty;
+        }
+
+        public string Code { get; }
+        public string Message { get; }
+        public CharacterPoseStateMachineValidationTargetKind TargetKind
+        {
+            get;
+        }
+        public string ElementId { get; }
+    }
+
     public static class CharacterPoseStateMachineAuthoringValidator
     {
         public static void RequireValid(
             CharacterPoseStateMachineDefinition definition,
             Func<PoseGraphId, CharacterTypedPoseGraph> graphResolver)
+        {
+            CharacterPoseStateMachineValidationIssue? issue =
+                FindFirstIssue(definition, graphResolver);
+            if (issue.HasValue)
+                throw new InvalidOperationException(issue.Value.Message);
+        }
+
+        public static CharacterPoseStateMachineValidationIssue?
+            FindFirstIssue(
+                CharacterPoseStateMachineDefinition definition,
+                Func<PoseGraphId, CharacterTypedPoseGraph> graphResolver)
         {
             if (definition == null || !definition.StateMachineId.IsValid ||
                 string.IsNullOrWhiteSpace(definition.ContentRevision) ||
@@ -391,28 +441,70 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !definition.Entry.TargetStateId.IsValid || definition.MaxTransitionsPerFrame <= 0 ||
                 graphResolver == null)
             {
-                throw new InvalidOperationException("Pose StateMachine authoring identity or Entry is invalid.");
+                return Issue(
+                    "PoseStateMachineIdentityInvalid",
+                    "Pose StateMachine authoring identity or Entry is invalid.",
+                    CharacterPoseStateMachineValidationTargetKind.StateMachine);
             }
 
             var states = new HashSet<PoseStateId>();
             for (int i = 0; i < definition.States.Count; i++)
             {
-                CharacterPoseStateDefinition state = definition.States[i] ??
-                    throw new InvalidOperationException($"Pose StateMachine State #{i} is missing.");
+                CharacterPoseStateDefinition state = definition.States[i];
+                if (state == null)
+                    return Issue(
+                        "PoseStateMissing",
+                        $"Pose StateMachine State #{i} is missing.",
+                        CharacterPoseStateMachineValidationTargetKind.StateMachine);
                 if (!state.StateId.IsValid || !state.PoseGraphId.IsValid || !states.Add(state.StateId))
-                    throw new InvalidOperationException($"Pose StateMachine has a missing or duplicate State identity.");
-                RequireStatePose(state, graphResolver(state.PoseGraphId));
+                    return Issue(
+                        "PoseStateIdentityInvalid",
+                        "Pose StateMachine has a missing or duplicate State identity.",
+                        state.StateId.IsValid
+                            ? CharacterPoseStateMachineValidationTargetKind.State
+                            : CharacterPoseStateMachineValidationTargetKind.StateMachine,
+                        state.StateId.Value);
+                CharacterTypedPoseGraph graph;
+                try
+                {
+                    graph = graphResolver(state.PoseGraphId);
+                }
+                catch (Exception exception)
+                {
+                    return Issue(
+                        "PoseStateGraphUnavailable",
+                        exception.Message,
+                        CharacterPoseStateMachineValidationTargetKind.State,
+                        state.StateId.Value);
+                }
+                CharacterPoseStateMachineValidationIssue? stateIssue =
+                    FindStatePoseIssue(state, graph);
+                if (stateIssue.HasValue)
+                    return stateIssue;
             }
             if (!states.Contains(definition.Entry.TargetStateId))
-                throw new InvalidOperationException("Pose StateMachine Entry target does not exist.");
+                return Issue(
+                    "PoseStateEntryTargetMissing",
+                    "Pose StateMachine Entry target does not exist.",
+                    CharacterPoseStateMachineValidationTargetKind.StateMachine);
 
             var aliases = new HashSet<PoseStateAliasId>();
             for (int i = 0; i < definition.Aliases.Count; i++)
             {
-                CharacterPoseStateAlias alias = definition.Aliases[i] ??
-                    throw new InvalidOperationException($"Pose StateMachine Alias #{i} is missing.");
+                CharacterPoseStateAlias alias = definition.Aliases[i];
+                if (alias == null)
+                    return Issue(
+                        "PoseStateAliasMissing",
+                        $"Pose StateMachine Alias #{i} is missing.",
+                        CharacterPoseStateMachineValidationTargetKind.StateMachine);
                 if (!alias.AliasId.IsValid || !aliases.Add(alias.AliasId) || alias.Sources.Count == 0)
-                    throw new InvalidOperationException("Pose StateMachine has an invalid State Alias.");
+                    return Issue(
+                        "PoseStateAliasInvalid",
+                        "Pose StateMachine has an invalid State Alias.",
+                        alias.AliasId.IsValid
+                            ? CharacterPoseStateMachineValidationTargetKind.Alias
+                            : CharacterPoseStateMachineValidationTargetKind.StateMachine,
+                        alias.AliasId.Value);
             }
             for (int i = 0; i < definition.Aliases.Count; i++)
             {
@@ -420,17 +512,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 for (int sourceIndex = 0; sourceIndex < alias.Sources.Count; sourceIndex++)
                 {
                     CharacterPoseStateTransitionSource source = alias.Sources[sourceIndex];
-                    RequireSource(source, states, aliases);
+                    if (!IsSourceValid(source, states, aliases))
+                        return Issue(
+                            "PoseStateAliasSourceInvalid",
+                            $"Pose State Alias '{alias.AliasId}' has an invalid source.",
+                            CharacterPoseStateMachineValidationTargetKind.Alias,
+                            alias.AliasId.Value);
                     if (source.Kind == PoseStateTransitionSourceKind.Alias && source.AliasId == alias.AliasId)
-                        throw new InvalidOperationException($"Pose State Alias '{alias.AliasId}' directly references itself.");
+                        return Issue(
+                            "PoseStateAliasSelfReference",
+                            $"Pose State Alias '{alias.AliasId}' directly references itself.",
+                            CharacterPoseStateMachineValidationTargetKind.Alias,
+                            alias.AliasId.Value);
                 }
             }
 
             var transitions = new HashSet<PoseStateTransitionId>();
             for (int i = 0; i < definition.Transitions.Count; i++)
             {
-                CharacterPoseStateTransition transition = definition.Transitions[i] ??
-                    throw new InvalidOperationException($"Pose StateMachine Transition #{i} is missing.");
+                CharacterPoseStateTransition transition = definition.Transitions[i];
+                if (transition == null)
+                    return Issue(
+                        "PoseStateTransitionMissing",
+                        $"Pose StateMachine Transition #{i} is missing.",
+                        CharacterPoseStateMachineValidationTargetKind.StateMachine);
                 if (!transition.TransitionId.IsValid || !transitions.Add(transition.TransitionId) ||
                     transition.Priority < 0 || transition.Rule == null ||
                     !transition.Rule.GraphId.IsValid || !transition.Rule.OutputOperationId.IsValid ||
@@ -438,59 +543,112 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     !Enum.IsDefined(typeof(AnimationTransitionBlendLogic), transition.BlendLogic) ||
                     !float.IsFinite(transition.DurationSeconds) || transition.DurationSeconds < 0f)
                 {
-                    throw new InvalidOperationException("Pose StateMachine has an invalid Transition.");
+                    return Issue(
+                        "PoseStateTransitionInvalid",
+                        "Pose StateMachine has an invalid Transition.",
+                        transition.TransitionId.IsValid
+                            ? CharacterPoseStateMachineValidationTargetKind.Transition
+                            : CharacterPoseStateMachineValidationTargetKind.StateMachine,
+                        transition.TransitionId.Value);
                 }
-                CharacterPoseStateTransition.RequireBlendSettings(
-                    transition.BlendLogic,
-                    transition.DurationSeconds,
-                    transition.BlendMode,
-                    transition.CustomBlendCurve,
-                    transition.BlendProfile);
-                RequireSource(transition.Source, states, aliases);
+                try
+                {
+                    CharacterPoseStateTransition.RequireBlendSettings(
+                        transition.BlendLogic,
+                        transition.DurationSeconds,
+                        transition.BlendMode,
+                        transition.CustomBlendCurve,
+                        transition.BlendProfile);
+                }
+                catch (Exception exception)
+                {
+                    return Issue(
+                        "PoseStateTransitionBlendInvalid",
+                        exception.Message,
+                        CharacterPoseStateMachineValidationTargetKind.Transition,
+                        transition.TransitionId.Value);
+                }
+                if (!IsSourceValid(transition.Source, states, aliases))
+                    return Issue(
+                        "PoseStateTransitionSourceInvalid",
+                        "Pose State transition source is invalid.",
+                        CharacterPoseStateMachineValidationTargetKind.Transition,
+                        transition.TransitionId.Value);
             }
+            return null;
         }
 
-        static void RequireStatePose(
+        static CharacterPoseStateMachineValidationIssue?
+            FindStatePoseIssue(
             CharacterPoseStateDefinition state,
             CharacterTypedPoseGraph graph)
         {
             if (graph == null || graph.GraphId != state.PoseGraphId ||
                 string.IsNullOrWhiteSpace(graph.ContentRevision) || !state.OutputPoseNodeId.IsValid)
             {
-                throw new InvalidOperationException(
-                    $"Pose State '{state.StateId}' Pose Graph '{state.PoseGraphId}' is invalid.");
+                return Issue(
+                    "PoseStateGraphInvalid",
+                    $"Pose State '{state.StateId}' Pose Graph '{state.PoseGraphId}' is invalid.",
+                    CharacterPoseStateMachineValidationTargetKind.State,
+                    state.StateId.Value);
             }
             int outputCount = 0;
             bool outputMatched = false;
             var nodeIds = new HashSet<PoseNodeId>();
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
-                CharacterTypedPoseNode node = graph.Nodes[i] ??
-                    throw new InvalidOperationException($"Pose State '{state.StateId}' Node #{i} is missing.");
+                CharacterTypedPoseNode node = graph.Nodes[i];
+                if (node == null)
+                    return Issue(
+                        "PoseStateNodeMissing",
+                        $"Pose State '{state.StateId}' Node #{i} is missing.",
+                        CharacterPoseStateMachineValidationTargetKind.State,
+                        state.StateId.Value);
                 if (!node.NodeId.IsValid || !nodeIds.Add(node.NodeId))
-                    throw new InvalidOperationException($"Pose State '{state.StateId}' has duplicate Node identity.");
+                    return Issue(
+                        "PoseStateNodeIdentityInvalid",
+                        $"Pose State '{state.StateId}' has duplicate Node identity.",
+                        CharacterPoseStateMachineValidationTargetKind.State,
+                        state.StateId.Value);
                 if (node.Kind == CharacterPoseNodeKind.PoseStateMachine)
-                    throw new InvalidOperationException($"Pose State '{state.StateId}' cannot nest a Pose StateMachine.");
+                    return Issue(
+                        "PoseStateNestedStateMachine",
+                        $"Pose State '{state.StateId}' cannot nest a Pose StateMachine.",
+                        CharacterPoseStateMachineValidationTargetKind.State,
+                        state.StateId.Value);
                 if (node.Kind != CharacterPoseNodeKind.OutputPose)
                     continue;
                 outputCount++;
                 outputMatched |= node.NodeId == state.OutputPoseNodeId;
             }
             if (outputCount != 1 || !outputMatched)
-                throw new InvalidOperationException($"Pose State '{state.StateId}' requires one explicit Pose output.");
+                return Issue(
+                    "PoseStateOutputInvalid",
+                    $"Pose State '{state.StateId}' requires one explicit Pose output.",
+                    CharacterPoseStateMachineValidationTargetKind.State,
+                    state.StateId.Value);
+            return null;
         }
 
-        static void RequireSource(
+        static bool IsSourceValid(
             CharacterPoseStateTransitionSource source,
             HashSet<PoseStateId> states,
-            HashSet<PoseStateAliasId> aliases)
-        {
-            if (source == null || !source.IsValid ||
-                source.Kind == PoseStateTransitionSourceKind.State && !states.Contains(source.StateId) ||
-                source.Kind == PoseStateTransitionSourceKind.Alias && !aliases.Contains(source.AliasId))
-            {
-                throw new InvalidOperationException("Pose State transition source is invalid.");
-            }
-        }
+            HashSet<PoseStateAliasId> aliases) =>
+            source != null && source.IsValid &&
+            (source.Kind == PoseStateTransitionSourceKind.State &&
+             states.Contains(source.StateId) ||
+             source.Kind == PoseStateTransitionSourceKind.Alias &&
+             aliases.Contains(source.AliasId));
+
+        static CharacterPoseStateMachineValidationIssue Issue(
+            string code,
+            string message,
+            CharacterPoseStateMachineValidationTargetKind targetKind,
+            string elementId = "") =>
+            new CharacterPoseStateMachineValidationIssue(
+                code,
+                message,
+                targetKind,
+                elementId);
     }
 }

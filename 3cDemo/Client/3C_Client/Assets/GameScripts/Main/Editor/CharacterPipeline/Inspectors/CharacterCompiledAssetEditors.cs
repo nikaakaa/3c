@@ -73,6 +73,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [CustomEditor(typeof(CharacterPresentationProjectionAsset))]
     public sealed class CharacterPresentationProjectionAssetEditor : UnityEditor.Editor
     {
+        bool m_ShowLinkedPose = true;
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
@@ -151,10 +153,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 EditorGUILayout.LabelField("Identity", $"{rig.FindPropertyRelative("m_RigId").stringValue} @ {rig.FindPropertyRelative("m_RigRevision").stringValue}");
                 EditorGUILayout.LabelField("Bones", rig.FindPropertyRelative("m_PhysicalBones").arraySize.ToString());
-                EditorGUILayout.LabelField("Root / Pelvis", $"{rig.FindPropertyRelative("m_RootPhysicalBoneIndex").intValue} / {rig.FindPropertyRelative("m_PelvisPhysicalBoneIndex").intValue}");
+                EditorGUILayout.LabelField("Skeleton Root / Solver Root / Pelvis", $"{rig.FindPropertyRelative("m_RootPhysicalBoneIndex").intValue} / {rig.FindPropertyRelative("m_SolverRootPhysicalBoneIndex").intValue} / {rig.FindPropertyRelative("m_PelvisPhysicalBoneIndex").intValue}");
+                SerializedProperty spine = rig.FindPropertyRelative("m_OrderedSpinePhysicalBoneIndices");
+                EditorGUILayout.LabelField("Ordered Spine", spine == null ? "Missing" : spine.arraySize.ToString());
+                DrawArmChain("Left Arm", rig.FindPropertyRelative("m_LeftArm"));
+                DrawArmChain("Right Arm", rig.FindPropertyRelative("m_RightArm"));
                 DrawLegChain("Left Leg", rig.FindPropertyRelative("m_LeftLeg"));
                 DrawLegChain("Right Leg", rig.FindPropertyRelative("m_RightLeg"));
+                EditorGUILayout.LabelField("Head", rig.FindPropertyRelative("m_HeadPhysicalBoneIndex").intValue.ToString());
             }
+
+            DrawLinkedPoseProjection(projection);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Action Playback Inputs", EditorStyles.boldLabel);
@@ -198,6 +207,192 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        void DrawLinkedPoseProjection(SerializedProperty projection)
+        {
+            EditorGUILayout.Space();
+            SerializedProperty linked = projection.FindPropertyRelative("m_LinkedPose");
+            m_ShowLinkedPose = EditorGUILayout.Foldout(
+                m_ShowLinkedPose,
+                "Linked Pose Projection",
+                true);
+            if (!m_ShowLinkedPose)
+                return;
+            if (linked == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "This Projection ABI has no Linked Pose payload.",
+                    MessageType.Warning);
+                return;
+            }
+
+            SerializedProperty groups = linked.FindPropertyRelative("m_Groups");
+            SerializedProperty interfaces = linked.FindPropertyRelative("m_Interfaces");
+            SerializedProperty selectors = linked.FindPropertyRelative("m_Selectors");
+            SerializedProperty equipmentSelectors = linked.FindPropertyRelative("m_EquipmentSelectors");
+            SerializedProperty implementations = linked.FindPropertyRelative("m_Implementations");
+            SerializedProperty calls = linked.FindPropertyRelative("m_Calls");
+            string rigId = ReadString(linked, "m_RigId");
+            string rigRevision = ReadString(linked, "m_RigRevision");
+            string factContract = ReadString(linked, "m_FactContractIdentity");
+            string executionContract = ReadString(linked, "m_ExecutionContract");
+            if (string.IsNullOrWhiteSpace(rigId) &&
+                (groups?.arraySize ?? 0) == 0 &&
+                (implementations?.arraySize ?? 0) == 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "Linked Pose was not compiled into this Projection.",
+                    MessageType.Info);
+                return;
+            }
+
+            EditorGUILayout.LabelField("Rig", $"{rigId} @ {rigRevision}");
+            EditorGUILayout.LabelField("Fact Contract", factContract);
+            EditorGUILayout.LabelField("Execution Contract", executionContract);
+            EditorGUILayout.LabelField(
+                "Interfaces / Groups / Selectors",
+                $"{interfaces?.arraySize ?? 0} / {groups?.arraySize ?? 0} / {selectors?.arraySize ?? 0}");
+            EditorGUILayout.LabelField(
+                "Implementations / Calls",
+                $"{implementations?.arraySize ?? 0} / {calls?.arraySize ?? 0}");
+
+            DrawLinkedInterfaces(interfaces);
+            DrawLinkedGroups(groups);
+            DrawLinkedSelectors(selectors);
+            DrawEquipmentSelectors(equipmentSelectors);
+            DrawLinkedImplementations(implementations);
+            DrawLinkedCalls(calls);
+            EditorGUILayout.HelpBox(
+                "This read-only view reports the directory currently serialized in the Projection. Entry operation/stage ranges, candidate source closure, group maximum layout and live generation state are not present in the current payload and are therefore not inferred here.",
+                MessageType.Info);
+        }
+
+        static void DrawLinkedInterfaces(SerializedProperty interfaces)
+        {
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField($"Interfaces ({interfaces?.arraySize ?? 0})", EditorStyles.miniBoldLabel);
+            for (int i = 0; i < (interfaces?.arraySize ?? 0); i++)
+            {
+                SerializedProperty value = interfaces.GetArrayElementAtIndex(i);
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.LabelField(ReadString(value, "m_InterfaceId"), EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Revision", ReadUnsigned(value, "m_Revision"));
+                EditorGUILayout.LabelField("Signature", ReadString(value, "m_SignatureHash"));
+                EditorGUILayout.LabelField("Fact Contract", ReadString(value, "m_FactContractIdentity"));
+                EditorGUILayout.LabelField("Execution Contract", ReadString(value, "m_ExecutionContract"));
+                EditorGUILayout.LabelField("Entries", (value.FindPropertyRelative("m_Entries")?.arraySize ?? 0).ToString());
+                EditorGUILayout.EndVertical();
+            }
+        }
+
+        static void DrawLinkedGroups(SerializedProperty groups)
+        {
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField($"Groups ({groups?.arraySize ?? 0})", EditorStyles.miniBoldLabel);
+            for (int i = 0; i < (groups?.arraySize ?? 0); i++)
+            {
+                SerializedProperty value = groups.GetArrayElementAtIndex(i);
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.LabelField(ReadString(value, "m_GroupId"), EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Interface", ReadString(value, "m_InterfaceId"));
+                EditorGUILayout.LabelField("Signature", ReadString(value, "m_InterfaceSignature"));
+                EditorGUILayout.LabelField("Selector", ReadString(value, "m_SelectorId"));
+                EditorGUILayout.EndVertical();
+            }
+        }
+
+        static void DrawLinkedSelectors(SerializedProperty selectors)
+        {
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField($"Selectors ({selectors?.arraySize ?? 0})", EditorStyles.miniBoldLabel);
+            for (int i = 0; i < (selectors?.arraySize ?? 0); i++)
+            {
+                SerializedProperty value = selectors.GetArrayElementAtIndex(i);
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.LabelField(ReadString(value, "m_SelectorId"), EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Group / Interface", $"{ReadString(value, "m_GroupId")} / {ReadString(value, "m_InterfaceId")}");
+                SerializedProperty candidates = value.FindPropertyRelative("m_CandidateImplementationIds");
+                EditorGUILayout.LabelField("Candidate Closure", (candidates?.arraySize ?? 0).ToString());
+                for (int candidateIndex = 0; candidateIndex < (candidates?.arraySize ?? 0); candidateIndex++)
+                    EditorGUILayout.LabelField($"Candidate {candidateIndex + 1}", candidates.GetArrayElementAtIndex(candidateIndex).stringValue);
+                EditorGUILayout.EndVertical();
+            }
+        }
+
+        static void DrawEquipmentSelectors(SerializedProperty selectors)
+        {
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField($"Equipment Selectors ({selectors?.arraySize ?? 0})", EditorStyles.miniBoldLabel);
+            for (int i = 0; i < (selectors?.arraySize ?? 0); i++)
+            {
+                SerializedProperty value = selectors.GetArrayElementAtIndex(i);
+                SerializedProperty core = value.FindPropertyRelative("m_Core");
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.LabelField(ReadString(core, "m_SelectorId"), EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Group", ReadString(core, "m_GroupId"));
+                EditorGUILayout.LabelField("Equipment Slot", ReadString(value, "m_SlotId"));
+                EditorGUILayout.LabelField("Empty Equipment", ReadString(value, "m_EmptyImplementationId"));
+                SerializedProperty mappings = value.FindPropertyRelative("m_Mappings");
+                for (int mappingIndex = 0; mappingIndex < (mappings?.arraySize ?? 0); mappingIndex++)
+                {
+                    SerializedProperty mapping = mappings.GetArrayElementAtIndex(mappingIndex);
+                    EditorGUILayout.LabelField(
+                        ReadString(mapping, "m_EquipmentId"),
+                        ReadString(mapping, "m_ImplementationId"));
+                }
+                EditorGUILayout.EndVertical();
+            }
+        }
+
+        static void DrawLinkedImplementations(SerializedProperty implementations)
+        {
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField($"Implementations ({implementations?.arraySize ?? 0})", EditorStyles.miniBoldLabel);
+            for (int i = 0; i < (implementations?.arraySize ?? 0); i++)
+            {
+                SerializedProperty value = implementations.GetArrayElementAtIndex(i);
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.LabelField(ReadString(value, "m_ImplementationId"), EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Revision", ReadUnsigned(value, "m_Revision"));
+                EditorGUILayout.LabelField("Interface / Signature", $"{ReadString(value, "m_InterfaceId")} / {ReadString(value, "m_InterfaceSignature")}");
+                EditorGUILayout.LabelField("Content Hash", ReadString(value, "m_ContentHash"));
+                EditorGUILayout.LabelField("Rig", $"{ReadString(value, "m_RigId")} @ {ReadString(value, "m_RigRevision")}");
+                SerializedProperty entries = value.FindPropertyRelative("m_Entries");
+                for (int entryIndex = 0; entryIndex < (entries?.arraySize ?? 0); entryIndex++)
+                {
+                    SerializedProperty entry = entries.GetArrayElementAtIndex(entryIndex);
+                    EditorGUILayout.LabelField(
+                        ReadString(entry, "m_EntryId"),
+                        $"{ReadString(entry, "m_GraphId")} @ {ReadString(entry, "m_GraphContentRevision")}");
+                }
+                EditorGUILayout.EndVertical();
+            }
+        }
+
+        static void DrawLinkedCalls(SerializedProperty calls)
+        {
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField($"Root Calls ({calls?.arraySize ?? 0})", EditorStyles.miniBoldLabel);
+            for (int i = 0; i < (calls?.arraySize ?? 0); i++)
+            {
+                SerializedProperty value = calls.GetArrayElementAtIndex(i);
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.LabelField(ReadString(value, "m_EntryId"), EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Group / Interface", $"{ReadString(value, "m_GroupId")} / {ReadString(value, "m_InterfaceId")}");
+                EditorGUILayout.LabelField("Signature", ReadString(value, "m_InterfaceSignature"));
+                EditorGUILayout.LabelField("Call Node", ReadString(value, "m_NodeId"));
+                EditorGUILayout.EndVertical();
+            }
+        }
+
+        static string ReadString(SerializedProperty owner, string name) =>
+            owner?.FindPropertyRelative(name)?.stringValue ?? string.Empty;
+
+        static string ReadUnsigned(SerializedProperty owner, string name)
+        {
+            SerializedProperty value = owner?.FindPropertyRelative(name);
+            return value == null ? string.Empty : value.longValue.ToString();
+        }
+
         static void DrawLegChain(string label, SerializedProperty leg)
         {
             if (leg == null)
@@ -211,6 +406,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"{leg.FindPropertyRelative("m_KneePhysicalBoneIndex").intValue} → " +
                 $"{leg.FindPropertyRelative("m_AnklePhysicalBoneIndex").intValue} → " +
                 leg.FindPropertyRelative("m_ToePhysicalBoneIndex").intValue);
+        }
+
+        static void DrawArmChain(string label, SerializedProperty arm)
+        {
+            if (arm == null)
+            {
+                EditorGUILayout.LabelField(label, "Missing");
+                return;
+            }
+            EditorGUILayout.LabelField(
+                label,
+                $"{arm.FindPropertyRelative("m_ClaviclePhysicalBoneIndex").intValue} → " +
+                $"{arm.FindPropertyRelative("m_UpperArmPhysicalBoneIndex").intValue} → " +
+                $"{arm.FindPropertyRelative("m_ForearmPhysicalBoneIndex").intValue} → " +
+                arm.FindPropertyRelative("m_HandPhysicalBoneIndex").intValue);
         }
     }
 }

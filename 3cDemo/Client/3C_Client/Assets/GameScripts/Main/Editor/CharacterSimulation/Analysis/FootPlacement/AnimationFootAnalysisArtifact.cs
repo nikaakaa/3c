@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class AnimationFootAnalysisArtifactIdentity
     {
-        public const int CurrentFormatVersion = 4;
+        public const int CurrentFormatVersion = 6;
 
         public AnimationFootAnalysisArtifactIdentity(
             string clipAssetGuid,
@@ -27,12 +27,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string rigAssetGuid,
             string rigId,
             string rigRevision,
+            string rigContentHash,
             string samplingRigAssetGuid,
             string samplingRigDependencyHash,
             string calibrationAssetGuid,
             string calibrationId,
             int calibrationSchemaVersion,
             string calibrationRevision,
+            string geometryValidationIdentity,
+            string geometryValidationContentHash,
             float sampleRate,
             float plantEnterVerticalSpeed,
             float plantExitVerticalSpeed,
@@ -58,6 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             RigAssetGuid = RequireGuid(rigAssetGuid, nameof(rigAssetGuid));
             RigId = RequireText(rigId, nameof(rigId));
             RigRevision = RequireText(rigRevision, nameof(rigRevision));
+            RigContentHash = RequireHash(rigContentHash, nameof(rigContentHash));
             SamplingRigAssetGuid = RequireGuid(samplingRigAssetGuid, nameof(samplingRigAssetGuid));
             SamplingRigDependencyHash = RequireHash(samplingRigDependencyHash, nameof(samplingRigDependencyHash));
             CalibrationAssetGuid = RequireGuid(calibrationAssetGuid, nameof(calibrationAssetGuid));
@@ -66,6 +70,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentOutOfRangeException(nameof(calibrationSchemaVersion));
             CalibrationSchemaVersion = calibrationSchemaVersion;
             CalibrationRevision = RequireText(calibrationRevision, nameof(calibrationRevision));
+            GeometryValidationIdentity = RequireHash(geometryValidationIdentity, nameof(geometryValidationIdentity));
+            GeometryValidationContentHash = RequireHash(geometryValidationContentHash, nameof(geometryValidationContentHash));
             SampleRate = RequireFinitePositive(sampleRate, nameof(sampleRate));
             PlantEnterVerticalSpeed = RequireFiniteNonNegative(plantEnterVerticalSpeed, nameof(plantEnterVerticalSpeed));
             PlantExitVerticalSpeed = RequireFinitePositive(plantExitVerticalSpeed, nameof(plantExitVerticalSpeed));
@@ -92,12 +98,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public string RigAssetGuid { get; }
         public string RigId { get; }
         public string RigRevision { get; }
+        public string RigContentHash { get; }
         public string SamplingRigAssetGuid { get; }
         public string SamplingRigDependencyHash { get; }
         public string CalibrationAssetGuid { get; }
         public string CalibrationId { get; }
         public int CalibrationSchemaVersion { get; }
         public string CalibrationRevision { get; }
+        public string GeometryValidationIdentity { get; }
+        public string GeometryValidationContentHash { get; }
         public float SampleRate { get; }
         public float PlantEnterVerticalSpeed { get; }
         public float PlantExitVerticalSpeed { get; }
@@ -124,12 +133,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string.Equals(RigAssetGuid, other.RigAssetGuid, StringComparison.Ordinal) &&
             string.Equals(RigId, other.RigId, StringComparison.Ordinal) &&
             string.Equals(RigRevision, other.RigRevision, StringComparison.Ordinal) &&
+            string.Equals(RigContentHash, other.RigContentHash, StringComparison.Ordinal) &&
             string.Equals(SamplingRigAssetGuid, other.SamplingRigAssetGuid, StringComparison.Ordinal) &&
             string.Equals(SamplingRigDependencyHash, other.SamplingRigDependencyHash, StringComparison.Ordinal) &&
             string.Equals(CalibrationAssetGuid, other.CalibrationAssetGuid, StringComparison.Ordinal) &&
             string.Equals(CalibrationId, other.CalibrationId, StringComparison.Ordinal) &&
             CalibrationSchemaVersion == other.CalibrationSchemaVersion &&
             string.Equals(CalibrationRevision, other.CalibrationRevision, StringComparison.Ordinal) &&
+            string.Equals(GeometryValidationIdentity, other.GeometryValidationIdentity, StringComparison.Ordinal) &&
+            string.Equals(GeometryValidationContentHash, other.GeometryValidationContentHash, StringComparison.Ordinal) &&
             SampleRate.Equals(other.SampleRate) && PlantEnterVerticalSpeed.Equals(other.PlantEnterVerticalSpeed) &&
             PlantExitVerticalSpeed.Equals(other.PlantExitVerticalSpeed) && PlantEnterHeight.Equals(other.PlantEnterHeight) &&
             PlantExitHeight.Equals(other.PlantExitHeight) &&
@@ -145,13 +157,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             return new[]
             {
-                "animation-foot-analysis-artifact/v4", ClipAssetGuid, ClipDependencyHash,
+                "animation-foot-analysis-artifact/v6", ClipAssetGuid, ClipDependencyHash,
                 AnalysisSourceAssetGuid, AnalysisSourceDependencyHash, AnalysisSourceId,
                 AnalysisVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                RigAssetGuid, RigId, RigRevision,
+                RigAssetGuid, RigId, RigRevision, RigContentHash,
                 SamplingRigAssetGuid, SamplingRigDependencyHash, CalibrationAssetGuid, CalibrationId,
                 CalibrationSchemaVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                CalibrationRevision, Bits(SampleRate), Bits(PlantEnterVerticalSpeed), Bits(PlantExitVerticalSpeed),
+                CalibrationRevision, GeometryValidationIdentity, GeometryValidationContentHash,
+                Bits(SampleRate), Bits(PlantEnterVerticalSpeed), Bits(PlantExitVerticalSpeed),
                 Bits(PlantEnterHeight), Bits(PlantExitHeight), Bits(MinimumLandingSegmentSeconds),
                 Bits(MaximumLandingSearchSeconds), Bits(VelocityTolerance), Bits(HeightTolerance),
                 Bits(ConfidenceTolerance), Bits(LandingDelayTolerance), Bits(LandingOffsetTolerance),

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 313afb60e66f63b46a8ee2e8fc154fe2, type: 3}
+  m_Name: TrainingEnemyMonsterFullBodyBlendPolicy
+  m_EditorClassIdentifier: 
+  m_Schema: character-animation-blend-policy/v3
+  m_PolicyId: training-enemy.monster.full-body
+  m_Revision: training-enemy.monster.full-body-v1
+  m_StackPolicy:
+    m_MaxActiveSourceEntries: 4
+    m_StoredPosePolicy: 2
+    m_MaxBlendInTimeToReplaceNewest: 0.05
+    m_DepthBlendTimeMultiplier: 1
+  m_DefaultTransition:
+    m_BlendLogic: 1
+    m_DurationSeconds: 0.15
+    m_BlendMode: 4
+    m_CustomBlendCurve: {fileID: 0}
+    m_BlendProfile: {fileID: 11400000, guid: 99aaf4e89d6f90a4a85e10955889f7ae, type: 2}
+  m_Overrides: []

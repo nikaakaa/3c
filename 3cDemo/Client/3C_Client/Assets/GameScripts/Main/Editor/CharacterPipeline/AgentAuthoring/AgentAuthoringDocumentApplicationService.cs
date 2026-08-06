@@ -219,7 +219,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (!applied.HasErrors() && character)
                     ApplyPresentation(preparation.PresentationPlan, applied);
                 if (!applied.HasErrors())
-                    AppendValidation(applied, character ? new AgentGraphValidator().Validate(character) : new AgentAIControllerValidator().Validate(ai));
+                    AppendValidation(
+                        applied,
+                        character
+                            ? new AgentGraphValidator()
+                                .Validate(character)
+                            : new AgentAIControllerValidator().Validate(ai));
                 if (!applied.HasErrors() && character)
                     AppendPresentationValidation(
                         applied,
@@ -387,6 +392,47 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         owners = Array.Empty<UnityEngine.Object>();
                         return false;
                     }
+                    foreach (UnityEngine.Object linkedOwner in presentation.Profile
+                                 .LinkedPoseImplementations
+                                 .Where(value => value)
+                                 .Cast<UnityEngine.Object>()
+                                 .Concat(presentation.Profile.LinkedPoseSelectors
+                                     .Where(value => value))
+                                 .Concat(presentation.Profile.LinkedPoseImplementations
+                                     .Where(value => value)
+                                     .SelectMany(value => value.Entries)
+                                     .Where(value => value != null && value.GraphOwner)
+                                     .Select(value =>
+                                         (UnityEngine.Object)value.GraphOwner)
+                                     .Distinct()))
+                    {
+                        if (!TryAddPersistentOwner(
+                                linkedOwner,
+                                allOwners,
+                                report,
+                                "presentation_linked_pose"))
+                        {
+                            owners = Array.Empty<UnityEngine.Object>();
+                            return false;
+                        }
+                    }
+                    foreach (AgentLinkedPoseGraphMutationPlan linked in
+                             presentation.LinkedPoseGraphs)
+                    {
+                        string linkedPath = linked.GraphOwner
+                            ? AssetDatabase.GetAssetPath(linked.GraphOwner)
+                            : string.Empty;
+                        if (!string.IsNullOrWhiteSpace(linkedPath) &&
+                            !TryAddPersistentOwner(
+                                linked.GraphOwner,
+                                allOwners,
+                                report,
+                                "presentation_linked_pose_graph"))
+                        {
+                            owners = Array.Empty<UnityEngine.Object>();
+                            return false;
+                        }
+                    }
                 }
                 owners = allOwners.ToArray();
                 return true;
@@ -447,6 +493,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         .OfType<CreatePoseSourceSlotMutation>()
                         .Select(value => (UnityEngine.Object)value.Slot));
             }
+            foreach (AgentLinkedPoseGraphMutationPlan linked in
+                     plan.LinkedPoseGraphs.Where(value =>
+                         value.Transaction.Mutations.Count > 0))
+            {
+                service.ApplyWithoutUndo(
+                    new CharacterPoseGraphAssetMutationOwner(
+                        linked.GraphOwner,
+                        plan.Profile),
+                    linked.Transaction);
+            }
             if (plan.ProfileTransaction.Mutations.Count > 0)
             {
                 service.ApplyWithoutUndo(
@@ -459,7 +515,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     plan.ProfileTransaction.Mutations
                         .OfType<CreateProfileSourceBindingMutation>()
                         .Select(value =>
-                            (UnityEngine.Object)value.Binding));
+                            (UnityEngine.Object)value.Binding)
+                        .Concat(plan.ProfileTransaction.Mutations
+                            .OfType<CreateLinkedPoseImplementationMutation>()
+                            .SelectMany(value => new UnityEngine.Object[]
+                            {
+                                value.Implementation,
+                                value.GraphOwner
+                            }))
+                        .Concat(plan.ProfileTransaction.Mutations
+                            .OfType<CreateLinkedPoseInterfaceMutation>()
+                            .Select(value =>
+                                (UnityEngine.Object)value.Interface))
+                        .Concat(plan.ProfileTransaction.Mutations
+                            .OfType<CreateEquipmentLinkedPoseSelectorMutation>()
+                            .Select(value =>
+                                (UnityEngine.Object)value.Selector)));
             }
             RequirePresentationPlanApplied(plan);
             foreach (AgentCompileDiffEntry diff in report.plannedDiff.Where(
@@ -529,6 +600,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         $"Pose Transition '{mutation.Transition.TransitionId}' did not retain its reconciled Blend Profile.");
                 }
             }
+            foreach (AgentLinkedPoseGraphMutationPlan linked in
+                     plan.LinkedPoseGraphs)
+            {
+                if (!linked.Implementation || !linked.GraphOwner ||
+                    !plan.Profile.LinkedPoseImplementations.Contains(
+                        linked.Implementation))
+                    throw new InvalidOperationException(
+                        "Linked Pose Implementation plan was not attached to the Profile.");
+                Dictionary<string, CharacterPoseStateTransition> transitions =
+                    linked.GraphOwner.EnumerateStateMachines()
+                        .SelectMany(value => value.Transitions)
+                        .ToDictionary(
+                            value => value.TransitionId.Value,
+                            StringComparer.Ordinal);
+                foreach (CreatePoseTransitionMutation mutation in
+                         linked.Transaction.Mutations
+                             .OfType<CreatePoseTransitionMutation>())
+                {
+                    if (!transitions.TryGetValue(
+                            mutation.Transition.TransitionId.Value,
+                            out CharacterPoseStateTransition transition) ||
+                        transition.BlendProfile != mutation.Transition.BlendProfile)
+                        throw new InvalidOperationException(
+                            $"Linked Pose Transition '{mutation.Transition.TransitionId}' did not retain its reconciled Blend Profile.");
+                }
+            }
         }
 
         static void AppendPresentationValidation(
@@ -564,6 +661,52 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     "presentation_pose_validation_" +
                     issue.Code.ToString(),
                     issue.Message);
+            }
+            foreach (AgentLinkedPoseGraphMutationPlan linked in
+                     plan.LinkedPoseGraphs)
+            {
+                IReadOnlyList<string> linkedCapabilityErrors =
+                    CharacterPoseGraphCapabilityValidator.Validate(
+                        linked.GraphOwner,
+                        linked.Implementation.Entries
+                            .Where(value => value != null)
+                            .Select(value => value.GraphId)
+                            .ToArray());
+                for (int i = 0; i < linkedCapabilityErrors.Count; i++)
+                {
+                    report.Error(
+                        "editable/presentation/linked-pose-implementations/" +
+                        linked.Implementation.ImplementationId,
+                        "linked_pose_capability_validation_failed",
+                        linkedCapabilityErrors[i]);
+                }
+                try
+                {
+                    linked.Implementation.RequireValid();
+                    foreach (CharacterLinkedPoseImplementationEntryBinding entry in
+                             linked.Implementation.Entries)
+                        CharacterLinkedPosePortProjection.RequireEntryGraphMatch(
+                            entry.RequireValid(),
+                            linked.Implementation.Interface,
+                            entry.EntryId);
+                }
+                catch (Exception exception)
+                {
+                    report.Error(
+                        "editable/presentation/linked-pose-implementations/" +
+                        linked.Implementation.ImplementationId,
+                        "linked_pose_implementation_validation_failed",
+                        exception.Message);
+                }
+            }
+            var profileErrors = new List<string>();
+            plan.Profile.CollectConfigurationErrors(profileErrors);
+            foreach (string error in profileErrors)
+            {
+                report.Error(
+                    "editable/presentation/profile.json.linkedPose",
+                    "linked_pose_profile_validation_failed",
+                    error);
             }
             foreach (CharacterPresentationPoseSourceBinding source in
                      plan.Profile.PoseSourceBindings)
@@ -611,6 +754,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 EditorUtility.SetDirty(plan.PoseGraph);
             if (plan.ProfileTransaction.Mutations.Count > 0 && plan.Profile)
                 EditorUtility.SetDirty(plan.Profile);
+            foreach (AgentLinkedPoseGraphMutationPlan linked in plan.LinkedPoseGraphs)
+            {
+                if (linked.Transaction.Mutations.Count > 0 && linked.GraphOwner)
+                    EditorUtility.SetDirty(linked.GraphOwner);
+                if (linked.Implementation)
+                    EditorUtility.SetDirty(linked.Implementation);
+            }
         }
 
         static void RecordTouchedOwners(
@@ -624,6 +774,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 owners.Add(presentation.PoseGraph);
             if (presentation?.ProfileTransaction.Mutations.Count > 0)
                 owners.Add(presentation.Profile);
+            if (presentation != null)
+            {
+                foreach (AgentLinkedPoseGraphMutationPlan linked in
+                         presentation.LinkedPoseGraphs)
+                {
+                    if (linked.Transaction.Mutations.Count > 0)
+                        owners.Add(linked.GraphOwner);
+                    if (presentation.ProfileTransaction.Mutations.Count > 0)
+                        owners.Add(linked.Implementation);
+                }
+            }
             report.touchedOwners = owners
                 .Where(value => value)
                 .Select(value =>

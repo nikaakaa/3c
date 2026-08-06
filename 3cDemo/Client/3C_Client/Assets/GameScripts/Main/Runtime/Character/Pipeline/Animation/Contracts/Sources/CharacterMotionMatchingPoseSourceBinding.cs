@@ -43,11 +43,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             base.RequireValid(profileRig);
             if (!m_Profile || !SearchDomainId.IsValid || Databases.Count == 0)
                 throw new InvalidOperationException($"Motion Matching Pose source binding '{name}' is invalid.");
+            m_Profile.RequireRigClosure(profileRig);
             var databaseIds = new HashSet<CharacterMotionMatchingDatabaseId>();
             for (int i = 0; i < Databases.Count; i++)
             {
                 CharacterMotionMatchingDatabaseDefinition database = Databases[i];
-                if (!database || !database.SearchDomainId.Equals(SearchDomainId) || !databaseIds.Add(database.DatabaseId))
+                if (!database || !m_Profile.ContainsDatabase(database) || !database.SearchDomainId.Equals(SearchDomainId) || !databaseIds.Add(database.DatabaseId))
                     throw new InvalidOperationException($"Motion Matching Pose source binding '{name}' database #{i} is invalid.");
             }
         }

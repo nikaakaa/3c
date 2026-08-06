@@ -4,8 +4,9 @@
 }
 
 #workspace-horizontal,
-#workspace-content-vertical,
-#workspace-main-horizontal,
+#workspace-content-horizontal,
+#workspace-center-vertical,
+#workspace-side-vertical,
 #workspace-graph {
     flex-grow: 1;
 }
@@ -54,6 +55,91 @@
 
 .workspace-bottom-region {
     min-height: 120px;
+}
+
+.workspace-preview-region {
+    min-height: 180px;
+}
+
+.pose-read-only-panel {
+    flex-grow: 1;
+}
+
+.pose-preview-frame {
+    position: relative;
+    height: 260px;
+    min-height: 260px;
+    flex-shrink: 0;
+    margin-bottom: 6px;
+    background-color: rgb(14, 14, 18);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgb(58, 58, 66);
+    border-right-color: rgb(58, 58, 66);
+    border-top-color: rgb(58, 58, 66);
+    border-bottom-color: rgb(58, 58, 66);
+}
+
+.pose-preview-render {
+    flex-grow: 1;
+    min-height: 258px;
+}
+
+.pose-preview-overlay {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 48%;
+    max-height: 88%;
+    background-color: rgba(20, 20, 24, 0.9);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgb(78, 78, 88);
+    border-right-color: rgb(78, 78, 88);
+    border-top-color: rgb(78, 78, 88);
+    border-bottom-color: rgb(78, 78, 88);
+}
+
+.pose-preview-transport,
+.pose-watch-controls,
+.pose-watch-remove-controls,
+.pose-linked-pose-controls {
+    flex-direction: row;
+}
+
+.pose-preview-status,
+.pose-tuning-status {
+    margin-top: 4px;
+    margin-bottom: 4px;
+    white-space: normal;
+    color: rgb(175, 175, 180);
+}
+
+.pose-applied-row {
+    flex-direction: row;
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+.pose-applied-label {
+    min-width: 150px;
+    -unity-font-style: bold;
+}
+
+.pose-applied-value {
+    flex-grow: 1;
+    white-space: normal;
+}
+
+.pose-watch-card {
+    margin-top: 4px;
+    padding-bottom: 4px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(60, 60, 66);
 }
 
 .workspace-region-title {
@@ -165,7 +251,8 @@
     flex-grow: 1;
 }
 
-#workspace-graph-content > * {
+#workspace-graph-content > *,
+#workspace-preview-content > * {
     flex-grow: 1;
 }
 

@@ -70,7 +70,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             MotionMatchingProjectionPayload motionMatching = projection.MotionMatching ??
                 throw new InvalidOperationException("Query Fixture Definition has no Motion Matching payload.");
             int databaseIndex = FindDatabase(motionMatching);
-            RequireProviderBinding(motionMatching, databaseIndex);
+            RequireProviderBinding(projection, databaseIndex);
             using var database = new CharacterMotionMatchingRuntimeDatabase(motionMatching, databaseIndex);
             if (m_Trajectory == null || m_Trajectory.Count != motionMatching.TrajectoryPolicy.PointCount)
                 throw new InvalidOperationException($"Query Fixture requires exactly {motionMatching.TrajectoryPolicy.PointCount} trajectory points.");
@@ -153,21 +153,80 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
         }
 
         void RequireProviderBinding(
-            MotionMatchingProjectionPayload motionMatching,
+            CharacterPresentationProjection projection,
             int databaseIndex)
         {
             if (string.IsNullOrEmpty(ProviderId))
                 throw new InvalidOperationException("Query Fixture Provider Id is missing.");
-            for (int i = 0; i < motionMatching.ProviderBindingCount; i++)
+            if (!TryResolveMotionMatchingNodeBinding(
+                    projection,
+                    ProviderId,
+                    out MotionMatchingNodeBindingPayload binding))
             {
-                MotionMatchingProviderBindingPayload binding = motionMatching.GetProviderBinding(i);
-                if (!string.Equals(binding.ProviderId, ProviderId, StringComparison.Ordinal) ||
-                    databaseIndex < binding.FirstDatabaseIndex ||
-                    databaseIndex >= binding.FirstDatabaseIndex + binding.DatabaseCount)
-                    continue;
+                throw new InvalidOperationException(
+                    "Query Fixture Provider Id is not compiled in the Motion Matching Pose Plan.");
+            }
+            if (databaseIndex >= binding.FirstDatabaseIndex &&
+                databaseIndex < binding.FirstDatabaseIndex + binding.DatabaseCount)
+            {
                 return;
             }
             throw new InvalidOperationException("Query Fixture Database is not owned by the selected Motion Matching provider.");
+        }
+
+        internal static bool TryResolveMotionMatchingNodeBinding(
+            CharacterPresentationProjection projection,
+            string providerId,
+            out MotionMatchingNodeBindingPayload binding)
+        {
+            binding = default;
+            if (projection?.MotionMatching == null ||
+                string.IsNullOrWhiteSpace(providerId))
+                return false;
+            PoseNodeId playerNodeId = default;
+            int providerCount = 0;
+            for (int machineIndex = 0;
+                 machineIndex < projection.PosePlan.StateMachines.Count;
+                 machineIndex++)
+            {
+                CharacterPoseStateMachineDescriptor machine =
+                    projection.PosePlan.StateMachines[machineIndex];
+                for (int stateIndex = 0;
+                     stateIndex < machine.States.Count;
+                     stateIndex++)
+                {
+                    CharacterPoseStateDescriptor state = machine.States[stateIndex];
+                    for (int providerIndex = 0;
+                         providerIndex < state.SourceProviders.Count;
+                         providerIndex++)
+                    {
+                        PoseStateSourceProviderPlan plan =
+                            state.SourceProviders[providerIndex];
+                        if (plan == null ||
+                            plan.SourceKind != AnimationPoseSourceKind.MotionMatching ||
+                            !string.Equals(
+                                plan.ProviderId.Value,
+                                providerId,
+                                StringComparison.Ordinal))
+                            continue;
+                        playerNodeId = plan.PlayerNodeId;
+                        providerCount++;
+                    }
+                }
+            }
+            if (providerCount != 1 || !playerNodeId.IsValid)
+                return false;
+            int bindingCount = 0;
+            for (int i = 0; i < projection.MotionMatching.NodeBindingCount; i++)
+            {
+                MotionMatchingNodeBindingPayload candidate =
+                    projection.MotionMatching.GetNodeBinding(i);
+                if (candidate.PoseNodeId != playerNodeId)
+                    continue;
+                binding = candidate;
+                bindingCount++;
+            }
+            return bindingCount == 1;
         }
 
         static string ProjectionIdentity(CharacterPresentationProjection projection) =>
@@ -298,24 +357,11 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 Float32CharacterPresentationContractAdapter.Create(program);
             CharacterPresentationProjection projection = fixture.Definition.PresentationProjection.Load(contract);
             m_ProviderId = fixture.ProviderId;
-            bool hasProvider = false;
-            for (int i = 0;
-                 i < projection.MotionMatching.ProviderBindingCount;
-                 i++)
-            {
-                if (string.Equals(
-                        projection.MotionMatching
-                            .GetProviderBinding(i)
-                            .ProviderId,
-                        m_ProviderId,
-                        StringComparison.Ordinal))
-                {
-                    hasProvider = true;
-                    break;
-                }
-            }
-            if (!hasProvider)
-                throw new InvalidOperationException("Query Fixture Pose Preview provider is not compiled in the Motion Matching payload.");
+            if (!MotionMatchingQueryFixture.TryResolveMotionMatchingNodeBinding(
+                    projection,
+                    m_ProviderId,
+                    out _))
+                throw new InvalidOperationException("Query Fixture Pose Preview provider is not compiled in the Motion Matching Pose Plan.");
             target.AnimationRigBinding.RequireValid(projection.Rig);
             IReadOnlyList<Transform> sourceBones = target.AnimationRigBinding.PhysicalBones;
             m_Bones = new Transform[sourceBones.Count];
@@ -339,6 +385,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 CharacterPresentationBodyState.FromFloat32(target.WorldBodyBinding.InitialBody),
                 target.WorldAwarePresentation,
                 target.gameObject.scene.GetPhysicsScene(),
+                target.EquipmentPreviewFixture,
                 null,
                 Guid.NewGuid());
         }

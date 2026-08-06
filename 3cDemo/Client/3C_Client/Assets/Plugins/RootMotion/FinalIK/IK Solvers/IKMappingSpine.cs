@@ -31,6 +31,11 @@ namespace RootMotion.FinalIK {
 		/// The right thigh bone.
 		/// </summary>
 		public Transform rightThighBone;
+		public IndexedBoneHandle[] spineBoneHandles = new IndexedBoneHandle[0];
+		public IndexedBoneHandle leftUpperArmBoneHandle = IndexedBoneHandle.Invalid;
+		public IndexedBoneHandle rightUpperArmBoneHandle = IndexedBoneHandle.Invalid;
+		public IndexedBoneHandle leftThighBoneHandle = IndexedBoneHandle.Invalid;
+		public IndexedBoneHandle rightThighBoneHandle = IndexedBoneHandle.Invalid;
 		/// <summary>
 		/// The number of iterations of the %FABRIK algorithm. Not used if there are 2 bones assigned to Spine in the References.
 		/// </summary>
@@ -47,6 +52,29 @@ namespace RootMotion.FinalIK {
 		/// </summary>
 		public override bool IsValid(IKSolver solver, ref string message) {
 			if (!base.IsValid(solver, ref message)) return false;
+			if (solver.usesIndexedPoseBackend) {
+				if (spineBoneHandles == null || spineBoneHandles.Length == 0) {
+					message = "IKMappingSpine contains no indexed spine bones.";
+					return false;
+				}
+				int indexedNodes = 0;
+				for (int i = 0; i < spineBoneHandles.Length; i++) {
+					if (!spineBoneHandles[i].IsValid) {
+						message = "IKMappingSpine contains an invalid indexed spine bone.";
+						return false;
+					}
+					if (solver.GetPoint(spineBoneHandles[i]) != null) indexedNodes++;
+				}
+				if (indexedNodes == 0 ||
+					!BoneIsValid(leftUpperArmBoneHandle, solver, ref message) ||
+					!BoneIsValid(rightUpperArmBoneHandle, solver, ref message) ||
+					!BoneIsValid(leftThighBoneHandle, solver, ref message) ||
+					!BoneIsValid(rightThighBoneHandle, solver, ref message)) {
+					if (string.IsNullOrEmpty(message)) message = "IKMappingSpine indexed biped nodes are invalid.";
+					return false;
+				}
+				return true;
+			}
 			
 			foreach (Transform spineBone in spineBones) if (spineBone == null) {
 				message = "Spine bones contains a null reference.";
@@ -126,6 +154,19 @@ namespace RootMotion.FinalIK {
 			this.rightThighBone = rightThighBone;
 		}
 
+		public void SetBones(IndexedBoneHandle[] spineBones, IndexedBoneHandle leftUpperArmBone, IndexedBoneHandle rightUpperArmBone, IndexedBoneHandle leftThighBone, IndexedBoneHandle rightThighBone) {
+			spineBoneHandles = spineBones;
+			leftUpperArmBoneHandle = leftUpperArmBone;
+			rightUpperArmBoneHandle = rightUpperArmBone;
+			leftThighBoneHandle = leftThighBone;
+			rightThighBoneHandle = rightThighBone;
+			this.spineBones = null;
+			this.leftUpperArmBone = null;
+			this.rightUpperArmBone = null;
+			this.leftThighBone = null;
+			this.rightThighBone = null;
+		}
+
 		public void StoreDefaultLocalState() {
 			for (int i = 0; i < spine.Length; i++) {
 				spine[i].StoreDefaultLocalState();
@@ -143,15 +184,16 @@ namespace RootMotion.FinalIK {
 		 * */
 		public override void Initiate(IKSolverFullBody solver) {
 			if (iterations <= 0) iterations = 3;
+			int spineCount = solver.usesIndexedPoseBackend ? spineBoneHandles.Length : spineBones.Length;
 			
-			// Creating the bone maps
-			if (spine == null || spine.Length != spineBones.Length) spine = new BoneMap[spineBones.Length];
+			if (spine == null || spine.Length != spineCount) spine = new BoneMap[spineCount];
 
 			rootNodeIndex = -1;
 			
-			for (int i = 0; i < spineBones.Length; i++) {
+			for (int i = 0; i < spineCount; i++) {
 				if (spine[i] == null) spine[i] = new BoneMap();
-				spine[i].Initiate(spineBones[i], solver);
+				if (solver.usesIndexedPoseBackend) spine[i].Initiate(spineBoneHandles[i], solver);
+				else spine[i].Initiate(spineBones[i], solver);
 
 				// Finding the root node
 				if (spine[i].isNodeBone) rootNodeIndex = i;
@@ -162,26 +204,35 @@ namespace RootMotion.FinalIK {
 			if (leftThigh == null) leftThigh = new BoneMap();
 			if (rightThigh == null) rightThigh = new BoneMap();
 			
-			leftUpperArm.Initiate(leftUpperArmBone, solver);
-			rightUpperArm.Initiate(rightUpperArmBone, solver);
-			leftThigh.Initiate(leftThighBone, solver);
-			rightThigh.Initiate(rightThighBone, solver);
+			if (solver.usesIndexedPoseBackend) {
+				leftUpperArm.Initiate(leftUpperArmBoneHandle, solver);
+				rightUpperArm.Initiate(rightUpperArmBoneHandle, solver);
+				leftThigh.Initiate(leftThighBoneHandle, solver);
+				rightThigh.Initiate(rightThighBoneHandle, solver);
+			} else {
+				leftUpperArm.Initiate(leftUpperArmBone, solver);
+				rightUpperArm.Initiate(rightUpperArmBone, solver);
+				leftThigh.Initiate(leftThighBone, solver);
+				rightThigh.Initiate(rightThighBone, solver);
+			}
 
 			for (int i = 0; i < spine.Length; i++) spine[i].SetIKPosition();
 			
 			// Defining the plane for the first bone
-			spine[0].SetPlane(solver, spine[rootNodeIndex].transform, leftThigh.transform, rightThigh.transform);
+			if (solver.usesIndexedPoseBackend) spine[0].SetPlane(solver, spine[rootNodeIndex].boneHandle, leftThigh.boneHandle, rightThigh.boneHandle);
+			else spine[0].SetPlane(solver, spine[rootNodeIndex].transform, leftThigh.transform, rightThigh.transform);
 			
 			// Finding bone lengths and axes
 			for (int i = 0; i < spine.Length - 1; i++) {
 				spine[i].SetLength(spine[i + 1]);
 				spine[i].SetLocalSwingAxis(spine[i + 1]);
 
-				spine[i].SetLocalTwistAxis(leftUpperArm.transform.position - rightUpperArm.transform.position, spine[i + 1].transform.position - spine[i].transform.position);
+				spine[i].SetLocalTwistAxis(leftUpperArm.GetComponentPosition() - rightUpperArm.GetComponentPosition(), spine[i + 1].GetComponentPosition() - spine[i].GetComponentPosition());
 			}
 			
 			// Defining the plane for the last bone
-			spine[spine.Length - 1].SetPlane(solver, spine[rootNodeIndex].transform, leftUpperArm.transform, rightUpperArm.transform);
+			if (solver.usesIndexedPoseBackend) spine[spine.Length - 1].SetPlane(solver, spine[rootNodeIndex].boneHandle, leftUpperArm.boneHandle, rightUpperArm.boneHandle);
+			else spine[spine.Length - 1].SetPlane(solver, spine[rootNodeIndex].transform, leftUpperArm.transform, rightUpperArm.transform);
 			spine[spine.Length - 1].SetLocalSwingAxis(leftUpperArm, rightUpperArm);
 
 			useFABRIK = UseFABRIK();
@@ -204,11 +255,15 @@ namespace RootMotion.FinalIK {
 				spine[i].SetLength(spine[i + 1]);
 
 				spine[i].SetLocalSwingAxis(spine[i + 1]);
-				spine[i].SetLocalTwistAxis(leftUpperArm.transform.position - rightUpperArm.transform.position, spine[i + 1].transform.position - spine[i].transform.position);
+				spine[i].SetLocalTwistAxis(leftUpperArm.GetComponentPosition() - rightUpperArm.GetComponentPosition(), spine[i + 1].GetComponentPosition() - spine[i].GetComponentPosition());
 			}
 			
 			spine[spine.Length - 1].UpdatePlane(true, true);
 			spine[spine.Length - 1].SetLocalSwingAxis(leftUpperArm, rightUpperArm);
+		}
+
+		public void AddFirstBoneOffset(Vector3 offset) {
+			spine[0].SetComponentPosition(spine[0].GetComponentPosition() + offset);
 		}
 
 		/*
@@ -221,10 +276,10 @@ namespace RootMotion.FinalIK {
 
 			// If we have more than 3 bones, use the FABRIK algorithm
 			if (useFABRIK) {
-				Vector3 offset = solver.GetNode(spine[rootNodeIndex].chainIndex, spine[rootNodeIndex].nodeIndex).solverPosition - spine[rootNodeIndex].transform.position;
+				Vector3 offset = solver.GetNode(spine[rootNodeIndex].chainIndex, spine[rootNodeIndex].nodeIndex).solverPosition - spine[rootNodeIndex].GetComponentPosition();
 					
 				for (int i = 0; i < spine.Length; i++) {
-					spine[i].ikPosition = spine[i].transform.position + offset;
+					spine[i].ikPosition = spine[i].GetComponentPosition() + offset;
 				}
 					
 				// Iterating the FABRIK algorithm
@@ -250,7 +305,7 @@ namespace RootMotion.FinalIK {
 		 * */
 		public void ForwardReach(Vector3 position) {
 			// Lerp last bone's ikPosition to position
-			spine[spineBones.Length - 1].ikPosition = position;
+			spine[spine.Length - 1].ikPosition = position;
 			
 			for (int i = spine.Length - 2; i > -1; i--) {
 				// Finding joint positions
@@ -288,7 +343,7 @@ namespace RootMotion.FinalIK {
 
 					Vector3 s1 = solver.GetNode(leftUpperArm.chainIndex, leftUpperArm.nodeIndex).solverPosition;
 					Vector3 s2 = solver.GetNode(rightUpperArm.chainIndex, rightUpperArm.nodeIndex).solverPosition;
-					spine[i].Twist(s1 - s2, spine[i + 1].ikPosition - spine[i].transform.position, bWeight * twistWeight);
+					spine[i].Twist(s1 - s2, spine[i + 1].ikPosition - spine[i].GetComponentPosition(), bWeight * twistWeight);
 				}
 			}
 			

@@ -40,8 +40,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int index,
             CharacterPoseOperationCode code,
             int outputPoseValueIndex,
+            int outputFullBodyIkGoalSetValueIndex,
             int inputPoseValueIndexA,
             int inputPoseValueIndexB,
+            int fullBodyIkGoalInputStart,
+            int fullBodyIkGoalInputCount,
             int playerIndex,
             AnimationSelectionAvailabilityPolicy playerOutputPolicy,
             int parameterIndex,
@@ -53,26 +56,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int parameterPolicyOffset,
             int modifyBoneIndex,
             int rootOrientationWarpIndex,
-            int twoBoneIkIndex,
-            int footPlacementIndex,
+            int poseBoneIkGoalsIndex,
+            int predictiveFootPlacementIndex,
+            int fullBodyIkIndex,
             int stateMachineIndex,
             int animationSlotIndex,
+            int linkedPoseCallIndex,
+            int linkedPoseFragmentIndex,
             int frameCacheIndex,
             float weight)
         {
             byte codeValue = (byte)code;
             if (index < 0 ||
                 codeValue < (byte)CharacterPoseOperationCode.ProgramParameterInput ||
-                codeValue > (byte)CharacterPoseOperationCode.ComponentToLocalPose ||
+                codeValue > (byte)CharacterPoseOperationCode.EmptyFullBodyIkGoals ||
                 codeValue == 14 ||
-                outputPoseValueIndex < 0 || frameCacheIndex != index ||
+                outputPoseValueIndex < -1 || outputFullBodyIkGoalSetValueIndex < -1 ||
+                fullBodyIkGoalInputStart < -1 || fullBodyIkGoalInputCount < 0 ||
+                frameCacheIndex != index ||
                 !float.IsFinite(weight) || weight < 0f || weight > 1f)
                 throw new ArgumentException("Animation Pose Graph Native operation header is invalid.");
             Index = index;
             Code = code;
             OutputValueIndex = outputPoseValueIndex;
+            OutputFullBodyIkGoalSetValueIndex = outputFullBodyIkGoalSetValueIndex;
             InputValueIndexA = inputPoseValueIndexA;
             InputValueIndexB = inputPoseValueIndexB;
+            FullBodyIkGoalInputStart = fullBodyIkGoalInputStart;
+            FullBodyIkGoalInputCount = fullBodyIkGoalInputCount;
             PhysicalPlayerIndex = playerIndex;
             AnimationSelectionAvailabilityPolicy = playerOutputPolicy;
             ParameterIndex = parameterIndex;
@@ -84,10 +95,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ParameterPolicyOffset = parameterPolicyOffset;
             ModifyBoneIndex = modifyBoneIndex;
             RootOrientationWarpIndex = rootOrientationWarpIndex;
-            TwoBoneIkIndex = twoBoneIkIndex;
-            FootPlacementIndex = footPlacementIndex;
+            PoseBoneIkGoalsIndex = poseBoneIkGoalsIndex;
+            PredictiveFootPlacementIndex = predictiveFootPlacementIndex;
+            FullBodyIkIndex = fullBodyIkIndex;
             StateMachineIndex = stateMachineIndex;
             AnimationSlotIndex = animationSlotIndex;
+            LinkedPoseCallIndex = linkedPoseCallIndex;
+            LinkedPoseFragmentIndex = linkedPoseFragmentIndex;
             FrameCacheIndex = frameCacheIndex;
             Weight = weight;
         }
@@ -95,8 +109,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int Index { get; }
         internal CharacterPoseOperationCode Code { get; }
         internal int OutputValueIndex { get; }
+        internal int OutputFullBodyIkGoalSetValueIndex { get; }
         internal int InputValueIndexA { get; }
         internal int InputValueIndexB { get; }
+        internal int FullBodyIkGoalInputStart { get; }
+        internal int FullBodyIkGoalInputCount { get; }
         internal int PhysicalPlayerIndex { get; }
         internal AnimationSelectionAvailabilityPolicy AnimationSelectionAvailabilityPolicy { get; }
         internal int ParameterIndex { get; }
@@ -108,10 +125,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int ParameterPolicyOffset { get; }
         internal int ModifyBoneIndex { get; }
         internal int RootOrientationWarpIndex { get; }
-        internal int TwoBoneIkIndex { get; }
-        internal int FootPlacementIndex { get; }
+        internal int PoseBoneIkGoalsIndex { get; }
+        internal int PredictiveFootPlacementIndex { get; }
+        internal int FullBodyIkIndex { get; }
         internal int StateMachineIndex { get; }
         internal int AnimationSlotIndex { get; }
+        internal int LinkedPoseCallIndex { get; }
+        internal int LinkedPoseFragmentIndex { get; }
         internal int FrameCacheIndex { get; }
         internal float Weight { get; }
 
@@ -119,8 +139,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Index,
             Code,
             OutputValueIndex,
+            OutputFullBodyIkGoalSetValueIndex,
             InputValueIndexA,
             InputValueIndexB,
+            FullBodyIkGoalInputStart,
+            FullBodyIkGoalInputCount,
             PhysicalPlayerIndex,
             AnimationSelectionAvailabilityPolicy,
             ParameterIndex,
@@ -132,10 +155,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ParameterPolicyOffset,
             ModifyBoneIndex,
             RootOrientationWarpIndex,
-            TwoBoneIkIndex,
-            FootPlacementIndex,
+            PoseBoneIkGoalsIndex,
+            PredictiveFootPlacementIndex,
+            FullBodyIkIndex,
             StateMachineIndex,
             AnimationSlotIndex,
+            LinkedPoseCallIndex,
+            LinkedPoseFragmentIndex,
             FrameCacheIndex,
             value);
 
@@ -146,8 +172,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Index,
             CharacterPoseOperationCode.PoseStateMachine,
             OutputValueIndex,
+            OutputFullBodyIkGoalSetValueIndex,
             sourcePoseValueIndex,
             targetPoseValueIndex,
+            FullBodyIkGoalInputStart,
+            FullBodyIkGoalInputCount,
             PhysicalPlayerIndex,
             AnimationSelectionAvailabilityPolicy,
             ParameterIndex,
@@ -159,12 +188,84 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ParameterPolicyOffset,
             ModifyBoneIndex,
             RootOrientationWarpIndex,
-            TwoBoneIkIndex,
-            FootPlacementIndex,
+            PoseBoneIkGoalsIndex,
+            PredictiveFootPlacementIndex,
+            FullBodyIkIndex,
             StateMachineIndex,
             AnimationSlotIndex,
+            LinkedPoseCallIndex,
+            LinkedPoseFragmentIndex,
             FrameCacheIndex,
             targetWeight);
+    }
+
+    internal readonly struct AnimationPoseGraphNativeLinkedPoseCall
+    {
+        internal AnimationPoseGraphNativeLinkedPoseCall(int candidateStart, int candidateCount)
+        {
+            if (candidateStart < 0 || candidateCount <= 0)
+                throw new ArgumentException("Linked Pose native call range is invalid.");
+            CandidateStart = candidateStart;
+            CandidateCount = candidateCount;
+        }
+
+        internal int CandidateStart { get; }
+        internal int CandidateCount { get; }
+    }
+
+    internal readonly struct AnimationPoseGraphNativeLinkedPoseCandidate
+    {
+        internal AnimationPoseGraphNativeLinkedPoseCandidate(
+            int fragmentIndex,
+            int outputPoseValueIndex,
+            int outputFullBodyIkGoalSetValueIndex)
+        {
+            if (fragmentIndex < 0 || outputPoseValueIndex < -1 ||
+                outputFullBodyIkGoalSetValueIndex < -1 ||
+                outputPoseValueIndex < 0 && outputFullBodyIkGoalSetValueIndex < 0)
+            {
+                throw new ArgumentException("Linked Pose native candidate output is invalid.");
+            }
+            FragmentIndex = fragmentIndex;
+            OutputPoseValueIndex = outputPoseValueIndex;
+            OutputFullBodyIkGoalSetValueIndex = outputFullBodyIkGoalSetValueIndex;
+        }
+
+        internal int FragmentIndex { get; }
+        internal int OutputPoseValueIndex { get; }
+        internal int OutputFullBodyIkGoalSetValueIndex { get; }
+    }
+
+    internal readonly struct AnimationPoseGraphNativeLinkedPoseCallControl
+    {
+        internal AnimationPoseGraphNativeLinkedPoseCallControl(
+            int candidateIndex,
+            ulong generation,
+            bool poseDiscontinuity)
+        {
+            if (candidateIndex < 0 || generation == 0)
+                throw new ArgumentException("Linked Pose native call control is invalid.");
+            CandidateIndex = candidateIndex;
+            Generation = generation;
+            PoseDiscontinuity = poseDiscontinuity ? (byte)1 : (byte)0;
+        }
+
+        internal int CandidateIndex { get; }
+        internal ulong Generation { get; }
+        internal byte PoseDiscontinuity { get; }
+        internal bool IsActive => CandidateIndex >= 0 && Generation != 0 && PoseDiscontinuity <= 1;
+        internal static AnimationPoseGraphNativeLinkedPoseCallControl Inactive =>
+            new AnimationPoseGraphNativeLinkedPoseCallControl(-1, 0, 0);
+
+        AnimationPoseGraphNativeLinkedPoseCallControl(
+            int candidateIndex,
+            ulong generation,
+            byte poseDiscontinuity)
+        {
+            CandidateIndex = candidateIndex;
+            Generation = generation;
+            PoseDiscontinuity = poseDiscontinuity;
+        }
     }
 
     internal readonly struct AnimationPoseGraphNativeStage
@@ -295,110 +396,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                  (Active != 0 || YawOffsetDegrees == 0f);
     }
 
-    internal readonly struct CharacterFootPlacementNativeControl
+    internal readonly struct AnimationPoseGraphNativePoseBoneIkGoalRange
     {
-        internal CharacterFootPlacementNativeControl(
-            bool active,
-            Vector3 pelvisComponentOffset,
-            Vector3 leftTargetComponentPosition,
-            Quaternion leftTargetComponentRotation,
-            Vector3 leftBendComponentDirection,
-            float leftPositionWeight,
-            float leftRotationWeight,
-            Vector3 rightTargetComponentPosition,
-            Quaternion rightTargetComponentRotation,
-            Vector3 rightBendComponentDirection,
-            float rightPositionWeight,
-            float rightRotationWeight,
-            byte executionState = 0)
+        internal AnimationPoseGraphNativePoseBoneIkGoalRange(
+            int descriptorOffset,
+            int descriptorCount,
+            int goalWorkspaceOffset)
         {
-            Active = executionState == 0
-                ? active ? (byte)1 : (byte)0
-                : executionState;
-            PelvisComponentOffset = active ? pelvisComponentOffset : Vector3.zero;
-            LeftTargetComponentPosition = active ? leftTargetComponentPosition : Vector3.zero;
-            LeftTargetComponentRotation = active ? leftTargetComponentRotation.normalized : Quaternion.identity;
-            LeftBendComponentDirection = active ? leftBendComponentDirection.normalized : Vector3.forward;
-            LeftPositionWeight = active ? Mathf.Clamp01(leftPositionWeight) : 0f;
-            LeftRotationWeight = active ? Mathf.Clamp01(leftRotationWeight) : 0f;
-            RightTargetComponentPosition = active ? rightTargetComponentPosition : Vector3.zero;
-            RightTargetComponentRotation = active ? rightTargetComponentRotation.normalized : Quaternion.identity;
-            RightBendComponentDirection = active ? rightBendComponentDirection.normalized : Vector3.forward;
-            RightPositionWeight = active ? Mathf.Clamp01(rightPositionWeight) : 0f;
-            RightRotationWeight = active ? Mathf.Clamp01(rightRotationWeight) : 0f;
+            if (descriptorOffset < 0 || descriptorCount <= 0 || goalWorkspaceOffset < 0)
+                throw new ArgumentException("Pose Bone IK Goal native range is invalid.");
+            DescriptorOffset = descriptorOffset;
+            DescriptorCount = descriptorCount;
+            GoalWorkspaceOffset = goalWorkspaceOffset;
         }
 
-        internal byte Active { get; }
-        internal Vector3 PelvisComponentOffset { get; }
-        internal Vector3 LeftTargetComponentPosition { get; }
-        internal Quaternion LeftTargetComponentRotation { get; }
-        internal Vector3 LeftBendComponentDirection { get; }
-        internal float LeftPositionWeight { get; }
-        internal float LeftRotationWeight { get; }
-        internal Vector3 RightTargetComponentPosition { get; }
-        internal Quaternion RightTargetComponentRotation { get; }
-        internal Vector3 RightBendComponentDirection { get; }
-        internal float RightPositionWeight { get; }
-        internal float RightRotationWeight { get; }
-        internal bool IsValid => Active <= 2 &&
-                                 CharacterPoseConstraintMath.IsFinite(PelvisComponentOffset) &&
-                                 CharacterPoseConstraintMath.IsFinite(LeftTargetComponentPosition) &&
-                                 CharacterPoseConstraintMath.IsFinite(LeftTargetComponentRotation) &&
-                                 CharacterPoseConstraintMath.IsFinite(LeftBendComponentDirection) &&
-                                 float.IsFinite(LeftPositionWeight) && float.IsFinite(LeftRotationWeight) &&
-                                 CharacterPoseConstraintMath.IsFinite(RightTargetComponentPosition) &&
-                                 CharacterPoseConstraintMath.IsFinite(RightTargetComponentRotation) &&
-                                 CharacterPoseConstraintMath.IsFinite(RightBendComponentDirection) &&
-                                 float.IsFinite(RightPositionWeight) && float.IsFinite(RightRotationWeight);
-
-        internal static CharacterFootPlacementNativeControl Inactive =>
-            new CharacterFootPlacementNativeControl(
-                false,
-                Vector3.zero,
-                Vector3.zero,
-                Quaternion.identity,
-                Vector3.forward,
-                0f,
-                0f,
-                Vector3.zero,
-                Quaternion.identity,
-                Vector3.forward,
-                0f,
-                0f);
-
-        internal static CharacterFootPlacementNativeControl WorldContextUnavailable =>
-            new CharacterFootPlacementNativeControl(
-                false,
-                Vector3.zero,
-                Vector3.zero,
-                Quaternion.identity,
-                Vector3.forward,
-                0f,
-                0f,
-                Vector3.zero,
-                Quaternion.identity,
-                Vector3.forward,
-                0f,
-                0f,
-                2);
+        internal int DescriptorOffset { get; }
+        internal int DescriptorCount { get; }
+        internal int GoalWorkspaceOffset { get; }
     }
 
     internal sealed class CharacterPoseGraphNativeProgram : IDisposable
     {
         sealed class Page
         {
-            internal NativeArray<CharacterTwoBoneIkRuntimeDiagnostic>
-                TwoBoneIkDiagnostics;
-            internal NativeArray<CharacterComponentBonePose>
-                ConstraintComponentScratch;
             internal NativeArray<CharacterPoseStateMachineNativeControl>
                 StateMachineControls;
             internal NativeArray<CharacterAnimationSlotNativeControl>
                 AnimationSlotControls;
             internal NativeArray<CharacterRootOrientationWarpNativeControl>
                 RootOrientationWarpControls;
-            internal NativeArray<CharacterFootPlacementNativeControl>
-                FootPlacementControls;
+            internal NativeArray<CharacterFullBodyIkGoalSetHeader>
+                FullBodyIkGoalSets;
+            internal NativeArray<CharacterFullBodyIkGoal>
+                FullBodyIkGoals;
+            internal NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl>
+                LinkedPoseCallControls;
+            internal NativeArray<byte>
+                LinkedPoseActiveFragments;
         }
 
         NativeArray<AnimationPoseGraphNativeOperation> m_Operations;
@@ -415,10 +449,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         NativeArray<AnimationPoseGraphNativeModifyBone> m_ModifyBones;
         NativeArray<AnimationPoseGraphNativeRootOrientationWarp> m_RootOrientationWarps;
         NativeArray<CharacterRootOrientationWarpNativeControl> m_RootOrientationWarpControls;
-        NativeArray<CharacterFootPlacementNativeControl> m_FootPlacementControls;
-        NativeArray<CharacterTwoBoneIkDescriptor> m_TwoBoneIks;
-        NativeArray<CharacterTwoBoneIkRuntimeDiagnostic> m_TwoBoneIkDiagnostics;
-        NativeArray<CharacterComponentBonePose> m_ConstraintComponentScratch;
+        NativeArray<CharacterVirtualBoneDescriptor> m_VirtualBones;
+        NativeArray<AnimationPoseGraphNativePoseBoneIkGoalRange> m_PoseBoneIkGoalRanges;
+        NativeArray<CharacterPoseBoneIkGoalDescriptor> m_PoseBoneIkGoalDescriptors;
+        NativeArray<int> m_FullBodyIkGoalInputValueIndices;
+        NativeArray<CharacterFullBodyIkGoalSetHeader> m_FullBodyIkGoalSets;
+        NativeArray<CharacterFullBodyIkGoal> m_FullBodyIkGoals;
+        NativeArray<AnimationPoseGraphNativeLinkedPoseCall> m_LinkedPoseCalls;
+        NativeArray<AnimationPoseGraphNativeLinkedPoseCandidate> m_LinkedPoseCandidates;
+        NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl> m_LinkedPoseCallControls;
+        NativeArray<byte> m_LinkedPoseActiveFragments;
+        LinkedPoseGroupId[] m_LinkedPoseCallGroupIds;
+        LinkedPoseInterfaceId[] m_LinkedPoseCallInterfaceIds;
+        LinkedPoseImplementationId[] m_LinkedPoseCandidateImplementationIds;
         NativeArray<CharacterPoseStateMachineNativeControl> m_StateMachineControls;
         NativeArray<CharacterAnimationSlotNativeControl> m_AnimationSlotControls;
         Page m_CommittedPage;
@@ -427,6 +470,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         int m_BoneCount;
         int m_ParameterCount;
         int m_PoseValueCount;
+        int m_PredictiveFootPlacementCount;
+        int m_FullBodyIkCount;
         int m_ContributionStride;
         int m_FrameCacheCount;
         int m_OutputOperationIndex;
@@ -437,6 +482,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         int m_PelvisBoneIndex;
         AnimationPoseGraphNativeLegChain m_LeftLeg;
         AnimationPoseGraphNativeLegChain m_RightLeg;
+        FixedString64Bytes m_RigId;
+        FixedString64Bytes m_RigRevision;
         bool m_FrameOpen;
         bool m_Disposed;
 
@@ -470,6 +517,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_BoneCounts = rig.BoneCounts;
                 m_ParameterCount = program.Parameters.Count;
                 m_PoseValueCount = program.PoseValueWorkspaceCount;
+                m_PredictiveFootPlacementCount = program.PredictiveFootPlacements.Count;
+                m_FullBodyIkCount = program.FullBodyIks.Count;
                 m_ContributionStride = program.ContributionWorkspaceCount / program.PoseValueWorkspaceCount;
                 m_FrameCacheCount = program.FrameCacheCount;
                 m_OutputOperationIndex = program.OutputOperationIndex;
@@ -478,6 +527,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PelvisBoneIndex = rig.PelvisPhysicalBoneIndex;
                 m_LeftLeg = new AnimationPoseGraphNativeLegChain(rig.LeftLeg);
                 m_RightLeg = new AnimationPoseGraphNativeLegChain(rig.RightLeg);
+                m_RigId = new FixedString64Bytes(rig.RigId);
+                m_RigRevision = new FixedString64Bytes(rig.RigRevision);
 
                 int nativeOperationCount = 0;
                 int policyCount = 0;
@@ -507,18 +558,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ModifyBones = Allocate<AnimationPoseGraphNativeModifyBone>(program.ModifyBones.Count);
                 m_RootOrientationWarps = Allocate<AnimationPoseGraphNativeRootOrientationWarp>(program.RootOrientationWarps.Count);
                 m_RootOrientationWarpControls = AllocateClear<CharacterRootOrientationWarpNativeControl>(program.RootOrientationWarps.Count);
-                m_FootPlacementControls = AllocateClear<CharacterFootPlacementNativeControl>(program.FootPlacementNodes.Count);
-                for (int i = 0; i < m_FootPlacementControls.Length; i++)
-                    m_FootPlacementControls[i] = CharacterFootPlacementNativeControl.Inactive;
-                m_TwoBoneIks = Allocate<CharacterTwoBoneIkDescriptor>(program.TwoBoneIks.Count);
-                m_TwoBoneIkDiagnostics = AllocateClear<CharacterTwoBoneIkRuntimeDiagnostic>(program.TwoBoneIks.Count);
-                m_ConstraintComponentScratch = Allocate<CharacterComponentBonePose>(m_BoneCount);
+                m_VirtualBones = Allocate<CharacterVirtualBoneDescriptor>(rig.VirtualBoneCount);
+                m_PoseBoneIkGoalRanges = Allocate<AnimationPoseGraphNativePoseBoneIkGoalRange>(program.PoseBoneIkGoalSources.Count);
+                int poseBoneGoalCount = program.PoseBoneIkGoalSources.Sum(value => value.GoalCount);
+                m_PoseBoneIkGoalDescriptors = Allocate<CharacterPoseBoneIkGoalDescriptor>(poseBoneGoalCount);
+                m_FullBodyIkGoalInputValueIndices = Allocate<int>(program.FullBodyIkGoalInputValueIndices.Count);
+                m_FullBodyIkGoalSets = AllocateClear<CharacterFullBodyIkGoalSetHeader>(program.FullBodyIkGoalSetWorkspaceCount);
+                m_FullBodyIkGoals = AllocateClear<CharacterFullBodyIkGoal>(program.FullBodyIkGoalWorkspaceCount);
+                int linkedPoseCandidateCount = program.LinkedPoseCalls.Sum(value => value.FragmentIndices.Count);
+                m_LinkedPoseCalls = Allocate<AnimationPoseGraphNativeLinkedPoseCall>(program.LinkedPoseCalls.Count);
+                m_LinkedPoseCandidates = Allocate<AnimationPoseGraphNativeLinkedPoseCandidate>(linkedPoseCandidateCount);
+                m_LinkedPoseCallControls = Allocate<AnimationPoseGraphNativeLinkedPoseCallControl>(program.LinkedPoseCalls.Count);
+                m_LinkedPoseActiveFragments = AllocateClear<byte>(program.LinkedPoseFragments.Count);
+                m_LinkedPoseCallGroupIds = new LinkedPoseGroupId[program.LinkedPoseCalls.Count];
+                m_LinkedPoseCallInterfaceIds = new LinkedPoseInterfaceId[program.LinkedPoseCalls.Count];
+                m_LinkedPoseCandidateImplementationIds = new LinkedPoseImplementationId[linkedPoseCandidateCount];
+                for (int i = 0; i < m_LinkedPoseCallControls.Length; i++)
+                    m_LinkedPoseCallControls[i] = AnimationPoseGraphNativeLinkedPoseCallControl.Inactive;
                 m_StateMachineControls = Allocate<CharacterPoseStateMachineNativeControl>(program.StateMachines.Count);
                 m_AnimationSlotControls = Allocate<CharacterAnimationSlotNativeControl>(program.AnimationSlots.Count);
 
                 CompileRig(program, rig);
                 CompileBlendCatalogs(curves, profiles);
                 CompilePayloads(program);
+                CompileLinkedPose(program);
                 CompileOperations(program);
                 CompileStages(program);
                 m_CommittedPage = CaptureActivePage();
@@ -535,6 +598,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int PoseBoneCount => m_BoneCount;
         internal int ParameterCount => m_ParameterCount;
         internal int PoseValueCount => m_PoseValueCount;
+        internal int PredictiveFootPlacementCount => m_PredictiveFootPlacementCount;
+        internal int FullBodyIkCount => m_FullBodyIkCount;
         internal int ContributionStride => m_ContributionStride;
         internal int FrameCacheCount => m_FrameCacheCount;
         internal int OutputOperationIndex => m_OutputOperationIndex;
@@ -545,7 +610,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int PelvisBoneIndex => m_PelvisBoneIndex;
         internal AnimationPoseGraphNativeLegChain LeftLeg => m_LeftLeg;
         internal AnimationPoseGraphNativeLegChain RightLeg => m_RightLeg;
+        internal FixedString64Bytes RigId => m_RigId;
+        internal FixedString64Bytes RigRevision => m_RigRevision;
         internal NativeArray<AnimationPoseGraphNativeOperation> Operations => m_Operations;
+
+        internal void SetOperationWeight(int operationIndex, float weight)
+        {
+            RequireAlive();
+            if (!float.IsFinite(weight) || weight < 0f || weight > 1f)
+                throw new ArgumentOutOfRangeException(nameof(weight));
+            for (int i = 0; i < m_Operations.Length; i++)
+            {
+                if (m_Operations[i].Index != operationIndex)
+                    continue;
+                m_Operations[i] = m_Operations[i].WithWeight(weight);
+                return;
+            }
+            throw new InvalidOperationException(
+                $"Pose tuning operation '{operationIndex}' has no native operation.");
+        }
+
         internal NativeArray<AnimationPoseGraphNativeStage> Stages => m_Stages;
         internal NativeArray<float> DenseBoneMasks => m_DenseBoneMasks;
         internal NativeArray<AnimationLocalBonePose> AdditiveReferences => m_AdditiveReferences;
@@ -559,10 +643,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<AnimationPoseGraphNativeModifyBone> ModifyBones => m_ModifyBones;
         internal NativeArray<AnimationPoseGraphNativeRootOrientationWarp> RootOrientationWarps => m_RootOrientationWarps;
         internal NativeArray<CharacterRootOrientationWarpNativeControl> RootOrientationWarpControls => m_RootOrientationWarpControls;
-        internal NativeArray<CharacterFootPlacementNativeControl> FootPlacementControls => m_FootPlacementControls;
-        internal NativeArray<CharacterTwoBoneIkDescriptor> TwoBoneIks => m_TwoBoneIks;
-        internal NativeArray<CharacterTwoBoneIkRuntimeDiagnostic> TwoBoneIkDiagnostics => m_TwoBoneIkDiagnostics;
-        internal NativeArray<CharacterComponentBonePose> ConstraintComponentScratch => m_ConstraintComponentScratch;
+        internal NativeArray<CharacterVirtualBoneDescriptor> VirtualBones => m_VirtualBones;
+        internal NativeArray<AnimationPoseGraphNativePoseBoneIkGoalRange> PoseBoneIkGoalRanges => m_PoseBoneIkGoalRanges;
+        internal NativeArray<CharacterPoseBoneIkGoalDescriptor> PoseBoneIkGoalDescriptors => m_PoseBoneIkGoalDescriptors;
+        internal NativeArray<int> FullBodyIkGoalInputValueIndices => m_FullBodyIkGoalInputValueIndices;
+        internal NativeArray<CharacterFullBodyIkGoalSetHeader> FullBodyIkGoalSets => m_FullBodyIkGoalSets;
+        internal NativeArray<CharacterFullBodyIkGoal> FullBodyIkGoals => m_FullBodyIkGoals;
+        internal NativeArray<AnimationPoseGraphNativeLinkedPoseCall> LinkedPoseCalls => m_LinkedPoseCalls;
+        internal NativeArray<AnimationPoseGraphNativeLinkedPoseCandidate> LinkedPoseCandidates => m_LinkedPoseCandidates;
+        internal NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl> LinkedPoseCallControls => m_LinkedPoseCallControls;
+        internal NativeArray<byte> LinkedPoseActiveFragments => m_LinkedPoseActiveFragments;
         internal CharacterPoseBoneCounts BoneCounts => m_BoneCounts;
         internal NativeArray<CharacterPoseStateMachineNativeControl> StateMachineControls => m_StateMachineControls;
         internal NativeArray<CharacterAnimationSlotNativeControl> AnimationSlotControls =>
@@ -575,6 +665,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_FrameOpen)
                 throw new InvalidOperationException("Character Pose Graph frame is already open.");
             BindPage(m_PendingPage);
+            for (int i = 0; i < m_FullBodyIkGoalSets.Length; i++)
+                m_FullBodyIkGoalSets[i] = default;
+            for (int i = 0; i < m_FullBodyIkGoals.Length; i++)
+                m_FullBodyIkGoals[i] = default;
+            for (int i = 0; i < m_LinkedPoseCallControls.Length; i++)
+                m_LinkedPoseCallControls[i] = AnimationPoseGraphNativeLinkedPoseCallControl.Inactive;
+            for (int i = 0; i < m_LinkedPoseActiveFragments.Length; i++)
+                m_LinkedPoseActiveFragments[i] = 0;
             m_FrameOpen = true;
         }
 
@@ -675,14 +773,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_RootOrientationWarpControls[rootOrientationWarpIndex] = control;
         }
 
-        internal void SetFootPlacementControl(
-            int footPlacementIndex,
-            in CharacterFootPlacementNativeControl control)
+        internal void SetLinkedPoseGroupSelection(
+            in CharacterLinkedPoseGenerationHandle selection)
         {
             RequireAlive();
-            if ((uint)footPlacementIndex >= (uint)m_FootPlacementControls.Length || !control.IsValid)
-                throw new ArgumentOutOfRangeException(nameof(footPlacementIndex));
-            m_FootPlacementControls[footPlacementIndex] = control;
+            RequireOpenFrame();
+            if (!selection.IsValid)
+                throw new ArgumentException("Linked Pose generation selection is invalid.", nameof(selection));
+            int matchingCallCount = 0;
+            for (int callIndex = 0; callIndex < m_LinkedPoseCalls.Length; callIndex++)
+            {
+                if (m_LinkedPoseCallGroupIds[callIndex] != selection.GroupId)
+                    continue;
+                matchingCallCount++;
+                if (m_LinkedPoseCallInterfaceIds[callIndex] != selection.InterfaceId ||
+                    m_LinkedPoseCallControls[callIndex].IsActive ||
+                    FindLinkedPoseCandidate(callIndex, selection.ImplementationId) < 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Linked Pose Group '{selection.GroupId}' selection does not match call #{callIndex}.");
+                }
+            }
+            if (matchingCallCount == 0)
+                throw new InvalidOperationException($"Linked Pose Group '{selection.GroupId}' has no compiled calls.");
+            for (int callIndex = 0; callIndex < m_LinkedPoseCalls.Length; callIndex++)
+            {
+                if (m_LinkedPoseCallGroupIds[callIndex] != selection.GroupId)
+                    continue;
+                int candidateIndex = FindLinkedPoseCandidate(callIndex, selection.ImplementationId);
+                AnimationPoseGraphNativeLinkedPoseCandidate candidate = m_LinkedPoseCandidates[candidateIndex];
+                m_LinkedPoseCallControls[callIndex] = new AnimationPoseGraphNativeLinkedPoseCallControl(
+                    candidateIndex,
+                    selection.Generation,
+                    selection.PoseDiscontinuity);
+                m_LinkedPoseActiveFragments[candidate.FragmentIndex] = 1;
+            }
         }
 
         void CompileRig(CharacterPresentationPosePlan program, CharacterAnimationRigPayload rig)
@@ -693,6 +818,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (parent < -1 || parent >= bone)
                     throw new InvalidOperationException($"Animation Pose Graph Rig Bone #{bone} parent is invalid.");
                 m_ParentIndices[bone] = parent;
+            }
+            for (int virtualIndex = 0; virtualIndex < rig.VirtualBoneCount; virtualIndex++)
+            {
+                CharacterAnimationVirtualBonePayload bone = rig.VirtualBones[virtualIndex];
+                m_VirtualBones[virtualIndex] = new CharacterVirtualBoneDescriptor(
+                    new CharacterPoseBoneRuntimeId(bone.VirtualBoneId),
+                    bone.SourcePhysicalBoneIndex,
+                    bone.TargetPhysicalBoneIndex,
+                    bone.PoseBoneIndex);
             }
             for (int parameter = 0; parameter < m_ParameterCount; parameter++)
             {
@@ -762,8 +896,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException($"Animation Pose Graph Root Orientation Warp #{i} is invalid.");
                 m_RootOrientationWarps[i] = new AnimationPoseGraphNativeRootOrientationWarp(program.RootOrientationWarps[i]);
             }
-            for (int i = 0; i < program.TwoBoneIks.Count; i++)
-                m_TwoBoneIks[i] = program.TwoBoneIks[i].ToRuntimeDescriptor();
+            int poseBoneGoalOffset = 0;
+            for (int sourceIndex = 0; sourceIndex < program.PoseBoneIkGoalSources.Count; sourceIndex++)
+            {
+                CharacterPresentationPoseBoneIkGoalsDescriptor source = program.PoseBoneIkGoalSources[sourceIndex];
+                m_PoseBoneIkGoalRanges[sourceIndex] = new AnimationPoseGraphNativePoseBoneIkGoalRange(
+                    poseBoneGoalOffset,
+                    source.GoalCount,
+                    source.GoalWorkspaceOffset);
+                for (int goalIndex = 0; goalIndex < source.GoalCount; goalIndex++)
+                {
+                    CharacterPresentationPoseBoneIkGoalBindingDescriptor binding = source.Bindings[goalIndex];
+                    m_PoseBoneIkGoalDescriptors[poseBoneGoalOffset++] = new CharacterPoseBoneIkGoalDescriptor(
+                        binding.EffectorSlot,
+                        binding.TargetPoseBoneIndex,
+                        binding.PositionOffset,
+                        binding.RotationOffset,
+                        binding.PositionWeight,
+                        binding.RotationWeight);
+                }
+            }
+            if (poseBoneGoalOffset != m_PoseBoneIkGoalDescriptors.Length)
+                throw new InvalidOperationException("Pose Bone IK Goal native descriptor layout is inconsistent.");
+            for (int inputIndex = 0; inputIndex < m_FullBodyIkGoalInputValueIndices.Length; inputIndex++)
+                m_FullBodyIkGoalInputValueIndices[inputIndex] = program.FullBodyIkGoalInputValueIndices[inputIndex];
             for (int i = 0; i < program.StateMachines.Count; i++)
             {
                 CharacterPoseStateMachineDescriptor machine = program.StateMachines[i];
@@ -780,6 +936,82 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     CharacterPoseStateMachineBlendMode.Single,
                     1);
             }
+        }
+
+        void CompileLinkedPose(CharacterPresentationPosePlan program)
+        {
+            int candidateIndex = 0;
+            for (int callIndex = 0; callIndex < program.LinkedPoseCalls.Count; callIndex++)
+            {
+                CharacterLinkedPoseCallPlanDescriptor call = program.LinkedPoseCalls[callIndex];
+                if (call == null || call.Index != callIndex)
+                    throw new InvalidOperationException($"Linked Pose native call #{callIndex} is invalid.");
+                CharacterPresentationPoseOperation callOperation = program.Operations
+                    .Single(value => value.Code == CharacterPoseOperationCode.LinkedPoseCall &&
+                                     value.LinkedPoseCallIndex == callIndex);
+                int candidateStart = candidateIndex;
+                m_LinkedPoseCallGroupIds[callIndex] = call.GroupId;
+                m_LinkedPoseCallInterfaceIds[callIndex] = call.InterfaceId;
+                for (int offset = 0; offset < call.FragmentIndices.Count; offset++)
+                {
+                    int fragmentIndex = call.FragmentIndices[offset];
+                    if ((uint)fragmentIndex >= (uint)program.LinkedPoseFragments.Count)
+                        throw new InvalidOperationException($"Linked Pose native call #{callIndex} references an invalid fragment.");
+                    CharacterLinkedPoseEntryFragmentPlanDescriptor fragment = program.LinkedPoseFragments[fragmentIndex];
+                    int outputPoseValueIndex = -1;
+                    int outputGoalSetValueIndex = -1;
+                    for (int outputIndex = 0; outputIndex < fragment.Outputs.Count; outputIndex++)
+                    {
+                        CharacterLinkedPosePortValueBinding output = fragment.Outputs[outputIndex];
+                        if (output.Kind == CharacterPosePortKind.LocalPose ||
+                            output.Kind == CharacterPosePortKind.ComponentPose)
+                        {
+                            if (outputPoseValueIndex >= 0 && outputPoseValueIndex != output.ValueIndex)
+                                throw new InvalidOperationException($"Linked Pose fragment #{fragmentIndex} has multiple Pose outputs.");
+                            outputPoseValueIndex = output.ValueIndex;
+                        }
+                        else if (output.Kind == CharacterPosePortKind.FullBodyIkGoals)
+                        {
+                            if (outputGoalSetValueIndex >= 0 && outputGoalSetValueIndex != output.ValueIndex)
+                                throw new InvalidOperationException($"Linked Pose fragment #{fragmentIndex} has multiple Goal Set outputs.");
+                            outputGoalSetValueIndex = output.ValueIndex;
+                        }
+                    }
+                    if ((callOperation.OutputValueIndex >= 0) != (outputPoseValueIndex >= 0) ||
+                        (callOperation.OutputFullBodyIkGoalSetValueIndex >= 0) != (outputGoalSetValueIndex >= 0))
+                    {
+                        throw new InvalidOperationException($"Linked Pose fragment #{fragmentIndex} output ABI does not match call #{callIndex}.");
+                    }
+                    m_LinkedPoseCandidates[candidateIndex] = new AnimationPoseGraphNativeLinkedPoseCandidate(
+                        fragmentIndex,
+                        outputPoseValueIndex,
+                        outputGoalSetValueIndex);
+                    m_LinkedPoseCandidateImplementationIds[candidateIndex] = fragment.ImplementationId;
+                    candidateIndex++;
+                }
+                m_LinkedPoseCalls[callIndex] = new AnimationPoseGraphNativeLinkedPoseCall(
+                    candidateStart,
+                    candidateIndex - candidateStart);
+            }
+            if (candidateIndex != m_LinkedPoseCandidates.Length)
+                throw new InvalidOperationException("Linked Pose native candidate layout is incomplete.");
+        }
+
+        int FindLinkedPoseCandidate(
+            int callIndex,
+            LinkedPoseImplementationId implementationId)
+        {
+            if ((uint)callIndex >= (uint)m_LinkedPoseCalls.Length || !implementationId.IsValid)
+                return -1;
+            AnimationPoseGraphNativeLinkedPoseCall call = m_LinkedPoseCalls[callIndex];
+            for (int candidateIndex = call.CandidateStart;
+                 candidateIndex < call.CandidateStart + call.CandidateCount;
+                 candidateIndex++)
+            {
+                if (m_LinkedPoseCandidateImplementationIds[candidateIndex] == implementationId)
+                    return candidateIndex;
+            }
+            return -1;
         }
 
         void CompileOperations(CharacterPresentationPosePlan program)
@@ -838,8 +1070,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operation.Index,
                     operation.Code,
                     operation.OutputValueIndex,
+                    operation.OutputFullBodyIkGoalSetValueIndex,
                     operation.InputValueIndexA,
                     operation.InputValueIndexB,
+                    operation.FullBodyIkGoalInputStart,
+                    operation.FullBodyIkGoalInputCount,
                     operation.PlayerIndex,
                     outputPolicy,
                     operation.ParameterIndex,
@@ -851,10 +1086,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operationPolicyOffset,
                     operation.ModifyBoneIndex,
                     operation.RootOrientationWarpIndex,
-                    operation.TwoBoneIkIndex,
-                    operation.FootPlacementNodeIndex,
+                    operation.PoseBoneIkGoalsIndex,
+                    operation.PredictiveFootPlacementIndex,
+                    operation.FullBodyIkIndex,
                     operation.StateMachineIndex,
                     operation.AnimationSlotIndex,
+                    operation.LinkedPoseCallIndex,
+                    operation.LinkedPoseFragmentIndex,
                     operation.Index,
                     operation.Weight);
                 if (operation.Code == CharacterPoseOperationCode.OutputPose)
@@ -891,7 +1129,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void RequireValid()
         {
             RequireAlive();
-            if (m_BoneCount <= 0 || m_ParameterCount <= 0 || m_PoseValueCount <= 0 || m_ContributionStride <= 0 ||
+            if (m_BoneCount <= 0 || m_ParameterCount <= 0 || m_PoseValueCount <= 0 ||
+                m_PredictiveFootPlacementCount < 0 || m_FullBodyIkCount < 0 || m_ContributionStride <= 0 ||
                 m_FrameCacheCount <= 0 || m_LeftFootBoneIndex < 0 || m_LeftFootBoneIndex >= m_BoneCount ||
                 m_RightFootBoneIndex < 0 || m_RightFootBoneIndex >= m_BoneCount ||
                 !m_Operations.IsCreated || m_Operations.Length <= 0 ||
@@ -904,21 +1143,60 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_BlendProfiles.Length <= 0 ||
                 m_BlendDenseProfiles.Length != m_BlendProfiles.Length * m_BoneCount ||
                 !m_ModifyBones.IsCreated ||
-                !m_RootOrientationWarps.IsCreated || !m_RootOrientationWarpControls.IsCreated || !m_FootPlacementControls.IsCreated ||
+                !m_RootOrientationWarps.IsCreated || !m_RootOrientationWarpControls.IsCreated ||
                 m_RootOrientationWarps.Length != m_RootOrientationWarpControls.Length ||
-                !m_TwoBoneIks.IsCreated || !m_TwoBoneIkDiagnostics.IsCreated ||
-                m_TwoBoneIkDiagnostics.Length != m_TwoBoneIks.Length ||
-                !m_ConstraintComponentScratch.IsCreated || !m_StateMachineControls.IsCreated ||
+                !m_VirtualBones.IsCreated || m_VirtualBones.Length != m_BoneCounts.VirtualBoneCount ||
+                !m_PoseBoneIkGoalRanges.IsCreated || !m_PoseBoneIkGoalDescriptors.IsCreated ||
+                !m_FullBodyIkGoalInputValueIndices.IsCreated ||
+                !m_FullBodyIkGoalSets.IsCreated || !m_FullBodyIkGoals.IsCreated ||
+                !m_LinkedPoseCalls.IsCreated || !m_LinkedPoseCandidates.IsCreated ||
+                !m_LinkedPoseCallControls.IsCreated || !m_LinkedPoseActiveFragments.IsCreated ||
+                m_LinkedPoseCallGroupIds == null ||
+                m_LinkedPoseCallGroupIds.Length != m_LinkedPoseCalls.Length ||
+                m_LinkedPoseCallInterfaceIds == null ||
+                m_LinkedPoseCallInterfaceIds.Length != m_LinkedPoseCalls.Length ||
+                m_LinkedPoseCandidateImplementationIds == null ||
+                m_LinkedPoseCandidateImplementationIds.Length != m_LinkedPoseCandidates.Length ||
+                !m_StateMachineControls.IsCreated ||
                 !m_AnimationSlotControls.IsCreated ||
-                m_ConstraintComponentScratch.Length != m_BoneCount || !m_BoneCounts.IsValid ||
+                !m_BoneCounts.IsValid ||
                 m_PelvisBoneIndex < 0 || m_PelvisBoneIndex >= m_BoneCount ||
                 !m_LeftLeg.IsValid(m_BoneCounts.PhysicalBoneCount, m_PelvisBoneIndex) ||
                 !m_RightLeg.IsValid(m_BoneCounts.PhysicalBoneCount, m_PelvisBoneIndex) ||
                 m_ParameterDefaults.Length != m_ParameterCount || m_ParentIndices.Length != m_BoneCount ||
+                m_RigId.Length == 0 || m_RigRevision.Length == 0 ||
                 m_OutputNativeOperationIndex < 0 || m_OutputNativeOperationIndex >= m_Operations.Length ||
                 m_OutputOperationIndex < 0 || m_OutputOperationIndex >= m_FrameCacheCount ||
                 m_OutputValueIndex < 0 || m_OutputValueIndex >= m_PoseValueCount)
                 throw new InvalidOperationException("Animation Pose Graph Native Program is invalid.");
+
+            int linkedCandidateStart = 0;
+            for (int callIndex = 0; callIndex < m_LinkedPoseCalls.Length; callIndex++)
+            {
+                AnimationPoseGraphNativeLinkedPoseCall call = m_LinkedPoseCalls[callIndex];
+                if (call.CandidateStart != linkedCandidateStart || call.CandidateCount <= 0 ||
+                    !m_LinkedPoseCallGroupIds[callIndex].IsValid ||
+                    !m_LinkedPoseCallInterfaceIds[callIndex].IsValid)
+                {
+                    throw new InvalidOperationException($"Linked Pose native call #{callIndex} is invalid.");
+                }
+                linkedCandidateStart += call.CandidateCount;
+            }
+            if (linkedCandidateStart != m_LinkedPoseCandidates.Length)
+                throw new InvalidOperationException("Linked Pose native candidate ranges are incomplete.");
+            for (int candidateIndex = 0; candidateIndex < m_LinkedPoseCandidates.Length; candidateIndex++)
+            {
+                AnimationPoseGraphNativeLinkedPoseCandidate candidate = m_LinkedPoseCandidates[candidateIndex];
+                if ((uint)candidate.FragmentIndex >= (uint)m_LinkedPoseActiveFragments.Length ||
+                    candidate.OutputPoseValueIndex < -1 || candidate.OutputPoseValueIndex >= m_PoseValueCount ||
+                    candidate.OutputFullBodyIkGoalSetValueIndex < -1 ||
+                    candidate.OutputFullBodyIkGoalSetValueIndex >= m_FullBodyIkGoalSets.Length ||
+                    candidate.OutputPoseValueIndex < 0 && candidate.OutputFullBodyIkGoalSetValueIndex < 0 ||
+                    !m_LinkedPoseCandidateImplementationIds[candidateIndex].IsValid)
+                {
+                    throw new InvalidOperationException($"Linked Pose native candidate #{candidateIndex} is invalid.");
+                }
+            }
 
             int nativeOperationStart = 0;
             int finalStageCount = 0;
@@ -956,8 +1234,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseOperationCode.PoseParameterResolve => true,
             CharacterPoseOperationCode.ModifyBone => true,
             CharacterPoseOperationCode.RootOrientationWarp => true,
-            CharacterPoseOperationCode.TwoBoneIK => true,
-            CharacterPoseOperationCode.FootPlacement => true,
+            CharacterPoseOperationCode.PredictiveFootPlacement => true,
+            CharacterPoseOperationCode.PoseBoneIKGoals => true,
+            CharacterPoseOperationCode.FullBodyIK => true,
+            CharacterPoseOperationCode.LinkedPoseCall => true,
+            CharacterPoseOperationCode.EmptyFullBodyIkGoals => true,
             CharacterPoseOperationCode.LocalToComponentPose => true,
             CharacterPoseOperationCode.ComponentToLocalPose => true,
             CharacterPoseOperationCode.StatePoseOutput => true,
@@ -978,7 +1259,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             DisposePage(m_PendingPage);
             m_CommittedPage = null;
             m_PendingPage = null;
-            DisposeArray(ref m_TwoBoneIks);
+            m_LinkedPoseCallGroupIds = null;
+            m_LinkedPoseCallInterfaceIds = null;
+            m_LinkedPoseCandidateImplementationIds = null;
+            DisposeArray(ref m_LinkedPoseCandidates);
+            DisposeArray(ref m_LinkedPoseCalls);
+            DisposeArray(ref m_FullBodyIkGoalInputValueIndices);
+            DisposeArray(ref m_PoseBoneIkGoalDescriptors);
+            DisposeArray(ref m_PoseBoneIkGoalRanges);
+            DisposeArray(ref m_VirtualBones);
             DisposeArray(ref m_RootOrientationWarps);
             DisposeArray(ref m_ModifyBones);
             DisposeArray(ref m_BlendDenseProfiles);
@@ -1014,12 +1303,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         Page CaptureActivePage() => new Page
         {
-            TwoBoneIkDiagnostics = m_TwoBoneIkDiagnostics,
-            ConstraintComponentScratch = m_ConstraintComponentScratch,
             StateMachineControls = m_StateMachineControls,
             AnimationSlotControls = m_AnimationSlotControls,
             RootOrientationWarpControls = m_RootOrientationWarpControls,
-            FootPlacementControls = m_FootPlacementControls
+            FullBodyIkGoalSets = m_FullBodyIkGoalSets,
+            FullBodyIkGoals = m_FullBodyIkGoals,
+            LinkedPoseCallControls = m_LinkedPoseCallControls,
+            LinkedPoseActiveFragments = m_LinkedPoseActiveFragments
         };
 
         Page AllocatePage()
@@ -1027,14 +1317,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var page = new Page();
             try
             {
-                page.TwoBoneIkDiagnostics = AllocateClear<CharacterTwoBoneIkRuntimeDiagnostic>(m_TwoBoneIkDiagnostics.Length);
-                page.ConstraintComponentScratch = Allocate<CharacterComponentBonePose>(m_ConstraintComponentScratch.Length);
                 page.StateMachineControls = Allocate<CharacterPoseStateMachineNativeControl>(m_StateMachineControls.Length);
                 page.AnimationSlotControls = Allocate<CharacterAnimationSlotNativeControl>(m_AnimationSlotControls.Length);
                 page.RootOrientationWarpControls = AllocateClear<CharacterRootOrientationWarpNativeControl>(m_RootOrientationWarpControls.Length);
-                page.FootPlacementControls = AllocateClear<CharacterFootPlacementNativeControl>(m_FootPlacementControls.Length);
-                for (int i = 0; i < page.FootPlacementControls.Length; i++)
-                    page.FootPlacementControls[i] = CharacterFootPlacementNativeControl.Inactive;
+                page.FullBodyIkGoalSets = AllocateClear<CharacterFullBodyIkGoalSetHeader>(m_FullBodyIkGoalSets.Length);
+                page.FullBodyIkGoals = AllocateClear<CharacterFullBodyIkGoal>(m_FullBodyIkGoals.Length);
+                page.LinkedPoseCallControls = Allocate<AnimationPoseGraphNativeLinkedPoseCallControl>(m_LinkedPoseCallControls.Length);
+                for (int i = 0; i < page.LinkedPoseCallControls.Length; i++)
+                    page.LinkedPoseCallControls[i] = AnimationPoseGraphNativeLinkedPoseCallControl.Inactive;
+                page.LinkedPoseActiveFragments = AllocateClear<byte>(m_LinkedPoseActiveFragments.Length);
                 return page;
             }
             catch
@@ -1048,24 +1339,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (page == null)
                 throw new ArgumentNullException(nameof(page));
-            m_TwoBoneIkDiagnostics = page.TwoBoneIkDiagnostics;
-            m_ConstraintComponentScratch = page.ConstraintComponentScratch;
             m_StateMachineControls = page.StateMachineControls;
             m_AnimationSlotControls = page.AnimationSlotControls;
             m_RootOrientationWarpControls = page.RootOrientationWarpControls;
-            m_FootPlacementControls = page.FootPlacementControls;
+            m_FullBodyIkGoalSets = page.FullBodyIkGoalSets;
+            m_FullBodyIkGoals = page.FullBodyIkGoals;
+            m_LinkedPoseCallControls = page.LinkedPoseCallControls;
+            m_LinkedPoseActiveFragments = page.LinkedPoseActiveFragments;
         }
 
         static void DisposePage(Page page)
         {
             if (page == null)
                 return;
-            DisposeArray(ref page.FootPlacementControls);
+            DisposeArray(ref page.LinkedPoseActiveFragments);
+            DisposeArray(ref page.LinkedPoseCallControls);
+            DisposeArray(ref page.FullBodyIkGoals);
+            DisposeArray(ref page.FullBodyIkGoalSets);
             DisposeArray(ref page.RootOrientationWarpControls);
             DisposeArray(ref page.AnimationSlotControls);
             DisposeArray(ref page.StateMachineControls);
-            DisposeArray(ref page.ConstraintComponentScratch);
-            DisposeArray(ref page.TwoBoneIkDiagnostics);
         }
 
         static void DisposeArray<T>(ref NativeArray<T> values) where T : struct

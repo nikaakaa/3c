@@ -103,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         menuName = "3C/Editor/Foot Placement Analysis Source")]
     public sealed class CharacterFootPlacementAnalysisSource : ScriptableObject
     {
-        public const string AlgorithmVersion = "animation-foot-analysis/v6";
+        public const string AlgorithmVersion = "animation-foot-analysis/v7";
 
         [SerializeField] string m_AnalysisSourceId = string.Empty;
         [SerializeField, Min(1)] int m_AnalysisVersion = 1;
@@ -146,10 +146,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_RigCalibration = calibration;
             m_CalibrationPreviewClip = calibrationPreviewClip;
             m_CalibrationPreviewNormalizedTime = calibrationPreviewNormalizedTime;
-            RequireValid();
+            RequireCalibrationAuthoringInput();
+            m_Thresholds.RequireValid();
+            m_Reduction.RequireValid();
         }
 
         public void RequireValid()
+        {
+            RequireCalibrationAuthoringInput();
+            m_RigCalibration.RequireRig(m_RigDefinition);
+            if (!float.IsFinite(m_SampleRate) || m_SampleRate < 1f || m_SampleRate > 240f)
+                throw new InvalidOperationException("Foot Analysis sample rate must be within [1, 240] Hz.");
+            if (m_Thresholds == null || m_Reduction == null)
+                throw new InvalidOperationException("Foot Analysis settings are incomplete.");
+            m_Thresholds.RequireValid();
+            m_Reduction.RequireValid();
+        }
+
+        public void RequireCalibrationAuthoringInput()
         {
             _ = AnalysisSourceId;
             if (m_AnalysisVersion <= 0)
@@ -157,11 +171,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!IsAssetGuid(m_SamplingRigAssetGuid))
                 throw new InvalidOperationException("Foot Analysis Sampling Rig Asset GUID is invalid.");
             if (!m_RigDefinition)
-                throw new InvalidOperationException("Foot Analysis requires a Rig Definition v3.");
+                throw new InvalidOperationException("Foot Analysis requires a Rig Definition v4.");
             m_RigDefinition.RequireValid();
             if (!m_RigCalibration)
                 throw new InvalidOperationException("Foot Analysis requires a Rig Calibration.");
-            m_RigCalibration.RequireRig(m_RigDefinition);
+            m_RigCalibration.RequireRigForAuthoring(m_RigDefinition);
             if (!m_CalibrationPreviewClip || !EditorUtility.IsPersistent(m_CalibrationPreviewClip))
                 throw new InvalidOperationException("Foot Analysis requires a persisted Calibration Preview Clip.");
             if (!float.IsFinite(m_CalibrationPreviewClip.length) || m_CalibrationPreviewClip.length <= 0f)
@@ -170,12 +184,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_CalibrationPreviewNormalizedTime < 0f ||
                 m_CalibrationPreviewNormalizedTime > 1f)
                 throw new InvalidOperationException("Foot Analysis Calibration Preview normalized time must be within [0, 1].");
-            if (!float.IsFinite(m_SampleRate) || m_SampleRate < 1f || m_SampleRate > 240f)
-                throw new InvalidOperationException("Foot Analysis sample rate must be within [1, 240] Hz.");
-            if (m_Thresholds == null || m_Reduction == null)
-                throw new InvalidOperationException("Foot Analysis settings are incomplete.");
-            m_Thresholds.RequireValid();
-            m_Reduction.RequireValid();
         }
 
         public static bool IsAssetGuid(string value)

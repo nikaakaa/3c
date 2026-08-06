@@ -118,7 +118,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
     {
         public const string ActorContactPolicyVersion = "solid-body-block/2";
         public const string QuerySemanticVersion = "fixed-capsule-ray-conservative-cast/4";
-        public const string MotorSemanticVersion = "fixed-philippe-kcc-motor/8";
+        public const string MotorSemanticVersion = "fixed-philippe-kcc-motor/9";
 
         public DeterministicKccConfiguration(
             FixedScalar radius,

@@ -105,6 +105,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_BlendProfile = blendProfile;
         }
 
+        public void ApplyDurationTuning(
+            CharacterPoseTuningValue value)
+        {
+            if (Mode != PoseInertializationMode.Inertialize ||
+                value.Kind != CharacterPoseTuningValueKind.Float)
+            {
+                throw new InvalidOperationException(
+                    "Direct Player Inertialization duration is not tunable for the current mode.");
+            }
+            m_DurationSeconds = value.FloatValue;
+            if (!float.IsFinite(m_DurationSeconds) ||
+                m_DurationSeconds <= 0f)
+            {
+                throw new InvalidOperationException(
+                    "Direct Player Inertialization duration must be greater than zero.");
+            }
+        }
+
         public AnimationBlendCurvePayload CompileCurve()
         {
             if (Mode != PoseInertializationMode.Inertialize)

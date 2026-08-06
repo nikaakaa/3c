@@ -28,7 +28,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         [MenuItem("Tools/3C/Build/Compile All Stale Character Simulation Programs")]
         static void CompileAllStale()
         {
-            BuildAllStale();
+            EditorApplication.delayCall += BuildAllStale;
+        }
+
+        [MenuItem("Tools/3C/Build/Compile All Character Simulation Programs")]
+        static void CompileAll()
+        {
+            EditorApplication.delayCall += BuildAll;
         }
 
         public static bool Build(CharacterPipelineDefinition definition, bool logReport)
@@ -68,6 +74,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 CharacterPipelineDefinition definition = AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(AssetDatabase.GUIDToAssetPath(guids[i]));
                 if (definition && EvaluateExactArtifactStaleness(definition))
+                    Build(definition, true);
+            }
+        }
+
+        static void BuildAll()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:CharacterPipelineDefinition");
+            Array.Sort(guids, StringComparer.Ordinal);
+            for (int i = 0; i < guids.Length; i++)
+            {
+                CharacterPipelineDefinition definition = AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(
+                    AssetDatabase.GUIDToAssetPath(guids[i]));
+                if (definition)
                     Build(definition, true);
             }
         }

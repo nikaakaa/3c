@@ -9,8 +9,12 @@
                 <ui:Label text="Navigator" name="workspace-navigator-title" class="workspace-region-title" />
                 <ui:VisualElement name="workspace-navigator-content" class="workspace-region-content" />
             </ui:VisualElement>
-            <BTSMTL.Editor.SplitView name="workspace-content-vertical" fixed-pane-index="1" fixed-pane-initial-dimension="220" orientation="Vertical">
-                <BTSMTL.Editor.SplitView name="workspace-main-horizontal" fixed-pane-index="1" fixed-pane-initial-dimension="340" orientation="Horizontal">
+            <BTSMTL.Editor.SplitView name="workspace-content-horizontal" fixed-pane-index="1" fixed-pane-initial-dimension="340" orientation="Horizontal">
+                <BTSMTL.Editor.SplitView name="workspace-center-vertical" fixed-pane-index="0" fixed-pane-initial-dimension="300" orientation="Vertical">
+                    <ui:VisualElement name="workspace-preview" class="workspace-region workspace-preview-region">
+                        <ui:Label text="Preview Viewport" name="workspace-preview-title" class="workspace-region-title" />
+                        <ui:VisualElement name="workspace-preview-content" class="workspace-region-content" />
+                    </ui:VisualElement>
                     <ui:VisualElement name="workspace-graph" class="workspace-region">
                         <ui:VisualElement name="tree-navigation-toolbar">
                             <ui:Button name="tree-navigation-back-button" text="&lt;" />
@@ -18,15 +22,17 @@
                         </ui:VisualElement>
                         <ui:VisualElement name="workspace-graph-content" class="workspace-region-content" />
                     </ui:VisualElement>
+                </BTSMTL.Editor.SplitView>
+                <BTSMTL.Editor.SplitView name="workspace-side-vertical" fixed-pane-index="1" fixed-pane-initial-dimension="220" orientation="Vertical">
                     <ui:VisualElement name="workspace-details" class="workspace-region workspace-side-region">
                         <ui:Label text="Details" name="workspace-details-title" class="workspace-region-title" />
                         <ui:VisualElement name="workspace-details-content" class="workspace-region-content" />
                     </ui:VisualElement>
+                    <ui:VisualElement name="workspace-bottom-dock" class="workspace-region workspace-bottom-region">
+                        <ui:Label text="Results" name="workspace-bottom-title" class="workspace-region-title" />
+                        <ui:VisualElement name="workspace-bottom-content" class="workspace-region-content" />
+                    </ui:VisualElement>
                 </BTSMTL.Editor.SplitView>
-                <ui:VisualElement name="workspace-bottom-dock" class="workspace-region workspace-bottom-region">
-                    <ui:Label text="Results" name="workspace-bottom-title" class="workspace-region-title" />
-                    <ui:VisualElement name="workspace-bottom-content" class="workspace-region-content" />
-                </ui:VisualElement>
             </BTSMTL.Editor.SplitView>
         </BTSMTL.Editor.SplitView>
         <ui:Label name="tree-title" />

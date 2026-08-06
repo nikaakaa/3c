@@ -47,6 +47,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     files,
                     target.editable.presentation,
                     report);
+                AgentAuthoringPresentationPackageCodec.WriteReadonly(
+                    files,
+                    target.context.presentation,
+                    report);
             }
 
             if (target.editable.aiController != null)
@@ -174,9 +178,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     out AgentDocumentPresentationEditable presentation);
                 target.editable.presentation = presentation;
             }
-            else if (files.Keys.Any(path => path.StartsWith(
-                         "editable/presentation/",
-                         StringComparison.Ordinal)))
+            else if (files.Keys.Any(path =>
+                         path.StartsWith(
+                             "editable/presentation/",
+                             StringComparison.Ordinal) ||
+                         path.StartsWith(
+                             "readonly/presentation/",
+                             StringComparison.Ordinal)))
             {
                 report.Error(
                     "editable/presentation",
@@ -308,6 +316,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 aiController = dependencies.aiController,
                 capabilities = dependencies.capabilities ?? new List<string>()
             };
+            if (string.Equals(
+                    manifest.domain,
+                    AgentAuthoringSchema.CharacterControllerDomain,
+                    StringComparison.Ordinal))
+            {
+                valid &= AgentAuthoringPresentationPackageCodec.TryReadReadonly(
+                    files,
+                    report,
+                    out List<AgentPackageLinkedPoseInterfaceFile> linkedPoseInterfaces);
+                target.context.presentation.linkedPoseInterfaces =
+                    linkedPoseInterfaces;
+                valid &= AgentAuthoringPresentationPackageCodec
+                    .ValidateReadonlyClosure(
+                        target.editable.presentation,
+                        linkedPoseInterfaces,
+                        report);
+            }
             return valid;
         }
 
@@ -1874,7 +1899,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static bool TryResolveFragmentCompanion(string path, out string companion)
         {
             companion = null;
-            if (path.StartsWith("editable/graphs/", StringComparison.Ordinal))
+            if (AgentAuthoringPresentationPackageCodec.IsImplementationGraphFile(path))
+                companion = path.Substring(0, path.Length - "graph.json".Length) + "layout.json";
+            else if (AgentAuthoringPresentationPackageCodec.IsImplementationGraphLayoutFile(path))
+                companion = path.Substring(0, path.Length - "layout.json".Length) + "graph.json";
+            else if (AgentAuthoringPresentationPackageCodec.IsImplementationStateMachineFile(path))
+                companion = path.Substring(0, path.Length - "state-machine.json".Length) + "layout.json";
+            else if (AgentAuthoringPresentationPackageCodec.IsImplementationStateMachineLayoutFile(path))
+                companion = path.Substring(0, path.Length - "layout.json".Length) + "state-machine.json";
+            else if (path.StartsWith("editable/graphs/", StringComparison.Ordinal))
             {
                 if (path.EndsWith("/graph.json", StringComparison.Ordinal))
                     companion = path.Substring(0, path.Length - "graph.json".Length) + "layout.json";

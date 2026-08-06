@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
 {
-    [McpForUnityTool("btsmtl.checkout_document", Description = "Create or refresh the canonical Document v3 package, including editable Presentation Profile, Pose Graph and Pose StateMachine files for CharacterController. Returns the exact package path, sync state, source revision and document hashes without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
+    [McpForUnityTool("btsmtl.checkout_document", Description = "Create or refresh the canonical Document v3 package, including readonly Linked Pose Interface context and editable Presentation Profile, Linked Implementation, Entry Graph, Group and selector fragments for CharacterController. Returns the exact package path, sync state, source revision and document hashes without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
     public static class CheckoutBtsmtlDocumentMcpTool
     {
         public sealed class Parameters
@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
         }
     }
 
-    [McpForUnityTool("btsmtl.rebase_document", Description = "Accept current Unity authoring and context as the new Document v3 baseline while preserving all editable target files, including complete canonical local Pose Graph and inline Timeline fragment pairs admitted by the service-owned manifest lifecycle. Returns the rebased hashes and sync state without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = true, IdempotentHint = true, OpenWorldHint = false)]
+    [McpForUnityTool("btsmtl.rebase_document", Description = "Accept current Unity authoring and readonly context as the new Document v3 baseline while preserving editable target files, including complete canonical local Pose Graph, Timeline and Linked Implementation Entry Graph closures admitted by the service-owned manifest lifecycle. Returns the rebased hashes and sync state without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = true, IdempotentHint = true, OpenWorldHint = false)]
     public static class RebaseBtsmtlDocumentMcpTool
     {
         public sealed class Parameters
@@ -66,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
         }
     }
 
-    [McpForUnityTool("btsmtl.dry_run_document", Description = "Strictly reconcile the complete Document v3 editable target. The service admits complete canonical local Pose Graph graph/layout pairs and graph-owned inline Timeline timeline/curves pairs; every other manifest-external file remains invalid. Returns the exact effective document hash, plan hash, planned diff and diagnostics without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = true, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
+    [McpForUnityTool("btsmtl.dry_run_document", Description = "Strictly reconcile the complete Document v3 editable target into the shared typed Mutation plan, including Linked Implementation, Entry Graph, Group, selector and Equipment mapping changes while rejecting readonly Interface edits and runtime handles. Returns the exact effective document hash, plan hash, planned diff and identity-preserving diagnostics without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = true, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
     public static class DryRunBtsmtlDocumentMcpTool
     {
         public sealed class Parameters
@@ -94,7 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
         }
     }
 
-    [McpForUnityTool("btsmtl.apply_document", Description = "Apply the complete Document v3 target only when expected_document_hash exactly matches the latest dry-run effective hash. Service-admitted local Pose Graph creation and graph-owned inline Timeline creation join the same asset-level transaction; any failure rolls back and returns ApplyFailed. Success saves authoring, reverse-exports stable identities and the canonical service-owned manifest, then returns Clean without building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = true, IdempotentHint = false, OpenWorldHint = false)]
+    [McpForUnityTool("btsmtl.apply_document", Description = "Apply the complete Document v3 target only when expected_document_hash exactly matches the latest dry-run effective hash. Service-admitted local Pose Graph, Timeline, Linked Implementation, Entry Graph and selector creation join the same asset-level transaction; any failure rolls back. Success saves authoring, reverse-exports formal GUID/local file identities and the canonical manifest without building Character products or switching an active runtime Implementation.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = true, IdempotentHint = false, OpenWorldHint = false)]
     public static class ApplyBtsmtlDocumentMcpTool
     {
         public sealed class Parameters
@@ -125,7 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
         }
     }
 
-    [McpForUnityTool("btsmtl.validate", Description = "Validate the current Unity authoring root through the formal domain validators, including Character Presentation ownership and Pose Graph constraints, without editing, checking out a package or building Character products. Returns the structured validation report.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = true, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
+    [McpForUnityTool("btsmtl.validate", Description = "Validate the current Unity authoring root through the formal domain validators, including Linked Interface/Implementation Entry coverage, Graph capability context, Group selector uniqueness and Equipment candidate closure, without editing, checking out a package or building Character products. Returns identity-preserving structured diagnostics.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = true, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
     public static class ValidateBtsmtlAgentMcpTool
     {
         public sealed class Parameters

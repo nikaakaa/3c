@@ -234,30 +234,37 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return new PoseSourceCompilationCatalog(Array.Empty<PoseSourceCompilationEntry>());
             }
 
-            string graphPath = AssetDatabase.GetAssetPath(profile.PoseGraph);
             string profilePath = AssetDatabase.GetAssetPath(profile);
             var ownedSlots = new HashSet<CharacterPresentationPoseSourceSlot>();
-            for (int i = 0; i < profile.PoseGraph.SourceSlots.Count; i++)
+            CharacterPresentationPoseGraphAsset[] graphOwners = EnumeratePoseGraphOwners(profile)
+                .Distinct()
+                .OrderBy(CharacterPresentationAssetObjectIdentity.Require, StringComparer.Ordinal)
+                .ToArray();
+            for (int ownerIndex = 0; ownerIndex < graphOwners.Length; ownerIndex++)
             {
-                CharacterPresentationPoseSourceSlot slot = profile.PoseGraph.SourceSlots[i];
-                if (!slot || !ownedSlots.Add(slot) ||
-                    !string.Equals(AssetDatabase.GetAssetPath(slot), graphPath, StringComparison.Ordinal))
+                CharacterPresentationPoseGraphAsset graphOwner = graphOwners[ownerIndex];
+                string graphPath = AssetDatabase.GetAssetPath(graphOwner);
+                for (int slotIndex = 0; slotIndex < graphOwner.SourceSlots.Count; slotIndex++)
                 {
-                    errors?.Add($"Pose Graph Source Slot #{i} is missing, duplicated or not owned by the Pose Graph asset.");
-                    continue;
-                }
-                try
-                {
-                    slot.RequireValid();
-                }
-                catch (Exception exception)
-                {
-                    errors?.Add($"Pose Graph Source Slot '{slot.name}' is invalid: {exception.Message}");
+                    CharacterPresentationPoseSourceSlot slot = graphOwner.SourceSlots[slotIndex];
+                    if (!slot || !ownedSlots.Add(slot) ||
+                        !string.Equals(AssetDatabase.GetAssetPath(slot), graphPath, StringComparison.Ordinal))
+                    {
+                        errors?.Add($"Pose Graph '{graphOwner.name}' Source Slot #{slotIndex} is missing, duplicated or not owned by that asset.");
+                        continue;
+                    }
+                    try
+                    {
+                        slot.RequireValid();
+                    }
+                    catch (Exception exception)
+                    {
+                        errors?.Add($"Pose Graph Source Slot '{slot.name}' is invalid: {exception.Message}");
+                    }
                 }
             }
 
-            CharacterPresentationPoseSourceSlot[] reachable = profile.PoseGraph
-                .EnumerateGraphs()
+            CharacterPresentationPoseSourceSlot[] reachable = EnumerateReachablePoseGraphs(profile)
                 .Where(value => value != null)
                 .SelectMany(value => value.Nodes)
                 .Where(value => value != null && value.PresentationPoseSourceSlot)
@@ -312,6 +319,78 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     errors?.Add($"Pose Source binding '{pair.Value.name}' is orphaned from every reachable Pose Player.");
             }
             return new PoseSourceCompilationCatalog(entries);
+        }
+
+        static IEnumerable<CharacterPresentationPoseGraphAsset> EnumeratePoseGraphOwners(
+            CharacterAnimationPresentationProfile profile)
+        {
+            yield return profile.PoseGraph;
+            for (int implementationIndex = 0; implementationIndex < profile.LinkedPoseImplementations.Count; implementationIndex++)
+            {
+                CharacterLinkedPoseImplementationAsset implementation = profile.LinkedPoseImplementations[implementationIndex];
+                if (!implementation)
+                    continue;
+                for (int entryIndex = 0; entryIndex < implementation.Entries.Count; entryIndex++)
+                {
+                    CharacterPresentationPoseGraphAsset graphOwner = implementation.Entries[entryIndex]?.GraphOwner;
+                    if (graphOwner)
+                        yield return graphOwner;
+                }
+            }
+        }
+
+        static IEnumerable<CharacterTypedPoseGraph> EnumerateReachablePoseGraphs(
+            CharacterAnimationPresentationProfile profile)
+        {
+            var visited = new HashSet<string>(StringComparer.Ordinal);
+            foreach (CharacterTypedPoseGraph graph in EnumerateReachablePoseGraphs(profile.PoseGraph, profile.PoseGraph.Graph, visited))
+                yield return graph;
+            for (int implementationIndex = 0; implementationIndex < profile.LinkedPoseImplementations.Count; implementationIndex++)
+            {
+                CharacterLinkedPoseImplementationAsset implementation = profile.LinkedPoseImplementations[implementationIndex];
+                if (!implementation)
+                    continue;
+                for (int entryIndex = 0; entryIndex < implementation.Entries.Count; entryIndex++)
+                {
+                    CharacterLinkedPoseImplementationEntryBinding entry = implementation.Entries[entryIndex];
+                    if (entry == null || !entry.GraphOwner)
+                        continue;
+                    CharacterTypedPoseGraph entryGraph = entry.GraphOwner.RequireGraph(entry.GraphId);
+                    foreach (CharacterTypedPoseGraph graph in EnumerateReachablePoseGraphs(entry.GraphOwner, entryGraph, visited))
+                        yield return graph;
+                }
+            }
+        }
+
+        static IEnumerable<CharacterTypedPoseGraph> EnumerateReachablePoseGraphs(
+            CharacterPresentationPoseGraphAsset owner,
+            CharacterTypedPoseGraph graph,
+            HashSet<string> visited)
+        {
+            string key = CharacterPresentationAssetObjectIdentity.Require(owner) + "\0" + graph.GraphId.Value;
+            if (!visited.Add(key))
+                yield break;
+            yield return graph;
+            for (int nodeIndex = 0; nodeIndex < graph.Nodes.Count; nodeIndex++)
+            {
+                CharacterTypedPoseNode node = graph.Nodes[nodeIndex];
+                if (node?.Payload is CharacterPoseSubgraphPayload subgraph && subgraph.Subgraph != null && subgraph.Subgraph.PoseGraphId.IsValid)
+                {
+                    foreach (CharacterTypedPoseGraph child in EnumerateReachablePoseGraphs(owner, owner.RequireGraph(subgraph.Subgraph.PoseGraphId), visited))
+                        yield return child;
+                    continue;
+                }
+                if (node?.Payload is not CharacterPoseStateMachineNodePayload stateMachine || stateMachine.StateMachine == null)
+                    continue;
+                for (int stateIndex = 0; stateIndex < stateMachine.StateMachine.States.Count; stateIndex++)
+                {
+                    CharacterPoseStateDefinition state = stateMachine.StateMachine.States[stateIndex];
+                    if (state == null || !state.PoseGraphId.IsValid)
+                        continue;
+                    foreach (CharacterTypedPoseGraph child in EnumerateReachablePoseGraphs(owner, owner.RequireGraph(state.PoseGraphId), visited))
+                        yield return child;
+                }
+            }
         }
 
         static CharacterPresentationProjection CompileCore(
@@ -411,6 +490,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 profile.RigDefinition,
                 footAnalysis,
                 errors);
+            CharacterLinkedPoseProjectionPayload linkedPose =
+                CharacterLinkedPoseProjectionCompiler.Compile(
+                    profile,
+                    equipmentProfile,
+                    errors);
             CharacterPresentationPosePlan poseProgram = CharacterPresentationPoseGraphCompiler.Compile(
                 profile.PoseGraph,
                 profile.RigDefinition,
@@ -420,6 +504,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 sourceCatalog.SourceIndices,
                 blendCatalogs?.CurveIndices,
                 blendCatalogs?.ProfileIndicesByIdentity,
+                profile,
+                linkedPose,
                 errors);
             if (poseProgram != null && blendCatalogs != null)
             {
@@ -430,6 +516,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     blendCatalogs.CurveIndices,
                     blendCatalogs.ProfileIndicesByIdentity,
                     errors);
+            }
+            if (poseProgram != null && blendCatalogs != null)
+            {
+                try
+                {
+                    CharacterMotionMatchingPosePlanCompiler.Compile(
+                        poseProgram,
+                        profile.PoseGraph,
+                        profile.RigDefinition,
+                        motionMatching,
+                        blendCatalogs.CurveIndices,
+                        blendCatalogs.ProfileIndicesByIdentity);
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add(exception.Message);
+                }
             }
             CharacterAnimationBlendSpacePlayerPlan[] blendSpacePlayers = poseProgram == null
                 ? Array.Empty<CharacterAnimationBlendSpacePlayerPlan>()
@@ -450,7 +553,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (errors.Count > 0)
                 return null;
 
-            return CharacterPresentationProjection.Create(
+            CharacterPresentationProjection projection = CharacterPresentationProjection.Create(
                 reader.Contract,
                 poseProgram,
                 blendCatalogs.CurveCatalog,
@@ -463,7 +566,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 entries.ToArray(),
                 footIdentity,
                 projectionRevision,
-                visualBindings);
+                visualBindings,
+                linkedPose);
+            CharacterPoseTuningCompilationResult tuning =
+                CharacterPoseTuningLayoutCompiler.Compile(
+                    reader.Contract.ProgramId.Value,
+                    projection);
+            projection.SetTuningPayload(
+                tuning.Layout,
+                tuning.DefaultBlock,
+                tuning.PublishedParameterRevision);
+            return projection;
         }
 
         static Dictionary<PresentationPoseSourceIndex, int> CompileBlendSpacePoseSources(
@@ -1158,6 +1271,40 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CollectBlendRule(policy.DefaultTransition, rig, curves, profiles, profileIdentityKeys, errors);
                 for (int overrideIndex = 0; overrideIndex < policy.Overrides.Count; overrideIndex++)
                     CollectBlendRule(policy.Overrides[overrideIndex]?.Rule, rig, curves, profiles, profileIdentityKeys, errors);
+            }
+            foreach (CharacterTypedPoseGraph authoredGraph in graphAsset.EnumerateGraphs())
+            {
+                for (int nodeIndex = 0; nodeIndex < authoredGraph.Nodes.Count; nodeIndex++)
+                {
+                    if (authoredGraph.Nodes[nodeIndex]?.Payload is not CharacterMotionMatchingPosePayload motionMatching ||
+                        !motionMatching.JumpBlendPolicy)
+                    {
+                        continue;
+                    }
+                    CharacterAnimationBlendPolicy policy = motionMatching.JumpBlendPolicy;
+                    try
+                    {
+                        policy.RequireValid(rig);
+                        RequireStandardBlendOnly(policy.DefaultTransition, authoredGraph.Nodes[nodeIndex].NodeId);
+                        if (policy.StackPolicy.StoredPosePolicy != AnimationStoredPosePolicy.CompressOldest ||
+                            policy.Overrides.Count != 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"Motion Matching Pose '{authoredGraph.Nodes[nodeIndex].NodeId}' requires CompressOldest and one default Jump transition without owner overrides.");
+                        }
+                        CollectBlendRule(
+                            policy.DefaultTransition,
+                            rig,
+                            curves,
+                            profiles,
+                            profileIdentityKeys,
+                            errors);
+                    }
+                    catch (Exception exception)
+                    {
+                        errors?.Add(exception.Message);
+                    }
+                }
             }
             foreach (CharacterTypedPoseGraph authoredGraph in graphAsset.EnumerateGraphs())
             {
@@ -2296,18 +2443,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (!profile || sourceCatalog == null)
                 return null;
-            CharacterMotionMatchingPoseSourceBinding[] sourceBindings = sourceCatalog.Entries
-                .Select(value => value.Binding)
-                .OfType<CharacterMotionMatchingPoseSourceBinding>()
+            CharacterMotionMatchingBinding[] bindings = profile.PoseGraph.EnumerateGraphs()
+                .SelectMany(value => value.Nodes)
+                .Select(value => (value?.Payload as CharacterMotionMatchingPosePayload)?.Binding)
+                .Where(value => value)
+                .Distinct()
                 .ToArray();
-            if (!profile.MotionMatchingProfile)
+            if (bindings.Length == 0)
+                return null;
+            CharacterMotionMatchingProfile[] profiles = bindings
+                .Select(value => value.Profile)
+                .Where(value => value)
+                .Distinct()
+                .ToArray();
+            if (profiles.Length != 1)
             {
-                if (sourceBindings.Length > 0)
-                    errors?.Add("Motion Matching Pose source bindings require the Presentation Profile Motion Matching Profile.");
+                errors?.Add("Motion Matching Pose nodes must resolve one exact Motion Matching Profile.");
                 return null;
             }
-            if (sourceBindings.Length == 0)
-                return null;
             if (profile.FootPlacementAnalysisMode != CharacterFootPlacementAnalysisMode.GeneratedPerFootFeatures ||
                 !CharacterFootPlacementAnalysisSource.IsAssetGuid(profile.FootPlacementAnalysisSourceAssetGuid))
             {
@@ -2325,10 +2478,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             try
             {
                 return MotionMatchingProjectionPayloadCompiler.Compile(
-                    profile.MotionMatchingProfile,
+                    profiles[0],
                     profile.PoseGraph,
-                    sourceBindings,
-                    sourceCatalog.SourceIndices,
+                    profile.RigDefinition,
                     analysisSource,
                     AnimationClipMotionMatchingParameterCurveResolver.Instance);
             }

@@ -43,8 +43,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.HelpBox(
                 CharacterFootPlacementRigCalibrationAuthoringSession.GetLastValidation(source.RigCalibration),
                 MessageType.None);
+            if (GUILayout.Button("Rebuild Geometry Validation From Preview Pose"))
+                CharacterFootPlacementRigCalibrationAuthoringSession.RebuildGeometryValidation(source);
             if (GUILayout.Button("Edit Rig Calibration In Sampling Rig"))
-                CharacterFootPlacementRigCalibrationAuthoringSession.Open(source);
+            {
+                try
+                {
+                    CharacterFootPlacementRigCalibrationAuthoringSession.Open(source);
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception);
+                }
+            }
         }
 
         void DrawSamplingRig()

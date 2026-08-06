@@ -44,8 +44,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             _ = WorldRevision;
             _ = SourceClockId;
             _ = TickRate;
-            if (!m_ProgramRuntime || !m_ExecutionBackend || !m_Pipeline || !m_SessionSource || !m_WorldSolver)
-                throw new InvalidOperationException($"Session Composition '{name}' requires all five explicit Definition references.");
+            var missingDefinitions = new List<string>(5);
+            if (!m_ProgramRuntime)
+                missingDefinitions.Add(nameof(m_ProgramRuntime));
+            if (!m_ExecutionBackend)
+                missingDefinitions.Add(nameof(m_ExecutionBackend));
+            if (!m_Pipeline)
+                missingDefinitions.Add(nameof(m_Pipeline));
+            if (!m_SessionSource)
+                missingDefinitions.Add(nameof(m_SessionSource));
+            if (!m_WorldSolver)
+                missingDefinitions.Add(nameof(m_WorldSolver));
+            if (missingDefinitions.Count != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Session Composition '{name}' is missing Definition references: {string.Join(", ", missingDefinitions)}.");
+            }
         }
 
         public SimulationSessionCompositionPreparation CreatePreparation(

@@ -37,6 +37,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireValid();
         }
 
+        public void ApplyTuning(
+            string fieldId,
+            CharacterPoseTuningValue value)
+        {
+            if (value.Kind != CharacterPoseTuningValueKind.Float)
+                throw new InvalidOperationException(
+                    $"Animation Blend Stack field '{fieldId}' requires a float.");
+            if (!float.IsFinite(value.FloatValue))
+                throw new InvalidOperationException(
+                    $"Animation Blend Stack field '{fieldId}' must be finite.");
+            switch (fieldId)
+            {
+                case "max-blend-in-time-to-replace-newest":
+                    if (value.FloatValue < 0f)
+                        throw new InvalidOperationException(
+                            "Replace Newest Window cannot be negative.");
+                    m_MaxBlendInTimeToReplaceNewest = value.FloatValue;
+                    break;
+                case "depth-blend-time-multiplier":
+                    if (value.FloatValue <= 0f)
+                        throw new InvalidOperationException(
+                            "Depth Blend Time Multiplier must be greater than zero.");
+                    m_DepthBlendTimeMultiplier = value.FloatValue;
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Animation Blend Stack field '{fieldId}' is not tunable.");
+            }
+            RequireValid();
+        }
+
         public void RequireValid()
         {
             if (MaxActiveSourceEntries < 2 ||

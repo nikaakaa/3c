@@ -10,14 +10,20 @@ using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using TreeDesigner.Editor;
 using UnityEditor;
+using UnityEditor.Experimental.GraphView;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
-    public sealed class CharacterPresentationPoseGraphEditorWindow : EditorWindow
+    public sealed partial class CharacterPresentationPoseGraphEditorWindow : EditorWindow
     {
+        const string WorkspaceVisualTreePath =
+            "Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.uxml";
+        const string WorkspaceStylePath =
+            "Assets/GameScripts/Main/Editor/CharacterPipeline/Authoring/PoseGraph/CharacterPoseGraphWorkspace.uss";
+
         [SerializeField] CharacterPresentationPoseGraphAsset m_Asset;
         [SerializeField] CharacterAnimationPresentationProfile m_Profile;
         [SerializeField] CharacterPresentationProjectionAsset m_Projection;
@@ -30,19 +36,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         GraphAuthoringNavigatorPresenter m_Navigator;
         GraphAuthoringBreadcrumbHost m_BreadcrumbHost;
         GraphAuthoringUndoBinding m_UndoBinding;
-        GraphAuthoringBottomDockPresenter m_BottomDock;
         Label m_Title;
         Label m_Status;
         ToolbarToggle m_LiveDebugToggle;
         CharacterPoseGraphAssetMutationOwner m_Owner;
         CharacterTypedPoseGraphDocument m_Document;
-        CharacterTypedPoseGraphMutationAdapter m_Mutation;
+        CharacterPoseGraphEditorMutationAdapter m_Mutation;
         CharacterPoseRuntimeTraceProjection m_RuntimeTrace;
-        CharacterPosePreviewPanel m_PreviewPanel;
+        CharacterPosePreviewViewport m_PreviewPanel;
         CharacterPoseStateMachineDocument m_StateMachineDocument;
-        CharacterPoseStateMachineMutationAdapter m_StateMachineMutation;
+        CharacterPoseStateMachineEditorMutationAdapter m_StateMachineMutation;
         CharacterPoseTransitionRuleDocument m_RuleDocument;
         CharacterPoseTransitionRuleMutationAdapter m_RuleMutation;
+        CharacterLinkedPoseAuthoringWorkspacePresenter m_LinkedPoseWorkspace;
+        VisualElement m_LinkedPoseDetails;
+        VisualElement m_SelectionTuningHost;
+        string m_LinkedPoseSelectionId = string.Empty;
+        string m_LinkedPoseWorkspaceStatus = "Unavailable";
         readonly GraphAuthoringPageStack m_PageStack =
             new GraphAuthoringPageStack();
         bool m_ShowingStateMachine;
@@ -50,30 +60,68 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         GraphAuthoringSelectionBinding m_SelectionBinding;
         GraphAuthoringSelection? m_LastSelection;
         string m_LastContentRevision = string.Empty;
-        readonly Guid m_PoseWatchOwnerId = Guid.NewGuid();
         readonly Guid m_DiagnosticsInterestOwnerId = Guid.NewGuid();
-        readonly List<AnimationPoseWatchIdentity> m_PoseWatchIdentities =
-            new List<AnimationPoseWatchIdentity>();
-        AnimationPresentationRuntimeTarget m_PoseWatchRuntimeTarget;
         AnimationPresentationRuntimeTarget m_DiagnosticsInterestTarget;
 
         internal CharacterPipelineDefinition DefinitionContext => m_Definition;
         internal CharacterAnimationPresentationProfile ProfileContext => m_Profile;
-        internal Guid PoseWatchOwnerId => m_PoseWatchOwnerId;
-        internal IReadOnlyList<AnimationPoseWatchIdentity>
-            PoseWatchIdentities => m_PoseWatchIdentities;
+        internal CharacterPresentationProjectionAsset ProjectionContext => m_Projection;
+        internal CharacterPresentationPoseGraphAsset AssetContext => m_Asset;
+        internal string CurrentStateMachineId => m_StateMachineDocument?.DocumentId ?? string.Empty;
+        internal CharacterPipelineDefinition DefinitionContextValue => m_Definition;
+        internal bool IsLinkedPoseReadOnly => m_LiveDebugToggle != null && m_LiveDebugToggle.value;
+        internal string LinkedPoseWorkspaceStatus => m_LinkedPoseWorkspaceStatus;
+
+        public static CharacterPresentationPoseGraphEditorWindow Open(
+            CharacterAnimationPresentationProfile profile)
+        {
+            if (!profile || !profile.PoseGraph || !profile.RigDefinition)
+                throw new ArgumentException(
+                    "Animation Presentation Profile requires one Pose Graph and Rig Definition.",
+                    nameof(profile));
+            CharacterAnimationPreviewFixture[] fixtures =
+                CharacterAnimationPreviewFixtureCatalog.Load()
+                    .Where(value =>
+                        value &&
+                        value.Profile == profile &&
+                        value.Definition &&
+                        value.Definition.AnimationPresentationProfile ==
+                            profile)
+                    .ToArray();
+            if (fixtures.Length != 1)
+            {
+                throw new InvalidOperationException(
+                    $"Animation Presentation Profile '{profile.name}' requires exactly one formal Preview Fixture; found {fixtures.Length}.");
+            }
+            CharacterPipelineDefinition definition =
+                fixtures[0].Definition;
+            if (!definition.PresentationProjection)
+                throw new InvalidOperationException(
+                    $"Character Definition '{definition.name}' has no published Presentation Projection.");
+            return Open(
+                profile.PoseGraph,
+                profile,
+                definition.PresentationProjection,
+                definition);
+        }
 
         public static CharacterPresentationPoseGraphEditorWindow Open(
             CharacterPresentationPoseGraphAsset asset,
-            CharacterAnimationPresentationProfile profile = null,
-            CharacterPresentationProjectionAsset projection = null,
-            CharacterPipelineDefinition definition = null)
+            CharacterAnimationPresentationProfile profile,
+            CharacterPresentationProjectionAsset projection,
+            CharacterPipelineDefinition definition)
         {
             if (!asset || asset.Graph == null || !asset.Graph.GraphId.IsValid)
                 throw new ArgumentException("Presentation Pose Graph is missing typed authoring data.", nameof(asset));
-            if (definition && (!profile || definition.AnimationPresentationProfile != profile))
+            if (!profile || !projection || !definition || !profile.RigDefinition)
+                throw new InvalidOperationException(
+                    "Pose Graph requires one exact Definition, Presentation Profile, Rig Definition and published Projection context.");
+            if (definition.AnimationPresentationProfile != profile)
                 throw new InvalidOperationException("Character Definition does not own the selected Presentation Profile.");
+            if (definition.PresentationProjection != projection)
+                throw new InvalidOperationException("Character Definition does not own the selected Presentation Projection.");
             CharacterPresentationPoseGraphEditorWindow window = GetWindow<CharacterPresentationPoseGraphEditorWindow>();
+            window.minSize = new Vector2(1280f, 760f);
             window.titleContent = new GUIContent("Presentation Pose Graph");
             window.SetDocument(asset, profile, projection, definition);
             window.Show();
@@ -84,93 +132,103 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public void CreateGUI()
         {
             rootVisualElement.Clear();
-            VisualTreeAsset visualTree = Resources.Load<VisualTreeAsset>("VisualTree/BaseTreeWindow");
+            VisualTreeAsset visualTree =
+                AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+                    WorkspaceVisualTreePath);
             if (!visualTree)
-                throw new InvalidOperationException("Graph Authoring workspace visual tree is missing.");
+                throw new InvalidOperationException(
+                    "Pose Graph workspace visual tree is missing.");
             visualTree.CloneTree(rootVisualElement);
+            StyleSheet styleSheet =
+                AssetDatabase.LoadAssetAtPath<StyleSheet>(
+                    WorkspaceStylePath);
+            if (styleSheet)
+                rootVisualElement.styleSheets.Add(styleSheet);
 
-            VisualElement toolbar = Require("workspace-toolbar-content");
-            VisualElement navigatorHost = Require("workspace-navigator-content");
-            VisualElement canvasHost = Require("workspace-graph-content");
-            VisualElement detailsHost = Require("workspace-details-content");
-            VisualElement bottomHost = Require("workspace-bottom-content");
-            rootVisualElement.Q<Label>("workspace-navigator-title").text = "Navigator";
-            rootVisualElement.Q<Label>("workspace-details-title").text = "Details";
-            rootVisualElement.Q<Label>("workspace-bottom-title").text =
-                "Preview / Pose Watch / Live Debug";
+            VisualElement toolbar = Require("pose-toolbar-content");
+            VisualElement previewHost = Require("pose-preview-content");
+            VisualElement navigatorHost = Require("pose-navigator-content");
+            VisualElement canvasHost = Require("pose-graph-content");
+            VisualElement detailsHost = Require("pose-details-content");
 
-            m_Title = new Label { name = "tree-title" };
-            rootVisualElement.Add(m_Title);
             m_Canvas = new GraphAuthoringCanvasView
             {
                 name = "tree-view"
             };
-            m_StateMachineSurface =
-                new GraphAuthoringCanvasView();
+            m_StateMachineSurface = new GraphAuthoringCanvasView();
             m_StateMachineSurface.style.display = DisplayStyle.None;
             m_Details = new GraphAuthoringDetailsRegion
             {
-                name = "tree-inspector"
+                name = "pose-details"
             };
+            m_LinkedPoseDetails = new VisualElement
+            {
+                name = "linked-pose-details"
+            };
+            m_LinkedPoseDetails.style.display = DisplayStyle.None;
+            m_SelectionTuningHost = new ScrollView(
+                ScrollViewMode.Vertical)
+            {
+                name = "pose-selection-tuning"
+            };
+            m_SelectionTuningHost.AddToClassList(
+                "pose-selection-tuning");
+            m_SelectionTuningHost.style.display = DisplayStyle.None;
+            m_LinkedPoseWorkspace = new CharacterLinkedPoseAuthoringWorkspacePresenter(this);
+            m_LinkedPoseWorkspace.Bind(m_LinkedPoseDetails);
             m_Navigator = new GraphAuthoringNavigatorPresenter();
-            m_BreadcrumbHost =
-                new GraphAuthoringBreadcrumbHost(
-                    rootVisualElement.Q<Button>(
-                        "tree-navigation-back-button"),
-                    rootVisualElement.Q(
-                        "tree-navigation-breadcrumb"));
-            m_BreadcrumbHost.BindBack(() =>
-                NavigateToPage(m_PageStack.Pages.Count - 2));
-            m_BottomDock =
-                new GraphAuthoringBottomDockPresenter();
+            m_PreviewPanel = new CharacterPosePreviewViewport(this);
+
             canvasHost.Add(m_Canvas);
             canvasHost.Add(m_StateMachineSurface);
-            detailsHost.Add(m_Details);
+            previewHost.Add(m_PreviewPanel.View);
             navigatorHost.Add(m_Navigator);
-            bottomHost.Add(m_BottomDock);
+            detailsHost.Add(m_Details);
+            detailsHost.Add(m_SelectionTuningHost);
+            detailsHost.Add(m_LinkedPoseDetails);
 
+            m_Title = rootVisualElement.Q<Label>("pose-document-title");
+            m_Status = rootVisualElement.Q<Label>("pose-authoring-status");
             toolbar.Add(new Button(ValidateAuthoring) { text = "Validate" });
             toolbar.Add(new Button(CompileSemanticIr) { text = "Compile" });
             toolbar.Add(new Button(BuildDefinition) { text = "Build" });
-            m_LiveDebugToggle = new ToolbarToggle { text = "Live Debug" };
-            m_LiveDebugToggle.RegisterValueChangedCallback(evt =>
-                SetLiveDebug(evt.newValue));
+            m_LiveDebugToggle = new ToolbarToggle
+            {
+                text = "Live"
+            };
+            m_LiveDebugToggle.RegisterValueChangedCallback(evt => SetLiveDebug(evt.newValue));
             toolbar.Add(m_LiveDebugToggle);
-            toolbar.Add(new Button(() => Selection.activeObject = m_Asset) { text = "Asset" });
-            if (m_Projection)
-                toolbar.Add(new Button(() => Selection.activeObject = m_Projection) { text = "Projection" });
+            toolbar.Add(m_PreviewPanel.TargetField);
 
-            m_Status = new Label();
-            toolbar.Add(m_Status);
-
+            m_BreadcrumbHost = new GraphAuthoringBreadcrumbHost(
+                rootVisualElement.Q<Button>("pose-navigation-back-button"),
+                rootVisualElement.Q("pose-navigation-breadcrumb"));
+            m_BreadcrumbHost.BindBack(() =>
+                NavigateToPage(m_PageStack.Pages.Count - 2));
             m_Canvas.NodeCreationRequested += ShowCreateMenu;
             m_Canvas.ChildSurfaceRequested += OpenChildSurface;
-            m_StateMachineSurface
-                .StateMachineNodeCreationRequested +=
+            m_StateMachineSurface.StateMachineNodeCreationRequested +=
                 ShowStateMachineCreateMenu;
-            m_SelectionBinding =
-                new GraphAuthoringSelectionBinding(
-                    rootVisualElement,
-                    PublishSelection);
-            m_UndoBinding =
-                new GraphAuthoringUndoBinding(Reload);
+            m_SelectionBinding = new GraphAuthoringSelectionBinding(
+                rootVisualElement,
+                PublishSelection);
+            m_UndoBinding = new GraphAuthoringUndoBinding(ReloadAfterUndoRedo);
             RuntimeDebugSession.Shared.Changed += OnRuntimeDebugChanged;
-            BindCurrentGraph();
+            BindCurrentGraph(true);
         }
 
         void OnDisable()
         {
             m_UndoBinding?.Dispose();
             m_UndoBinding = null;
+            m_SelectionBinding?.Dispose();
+            m_SelectionBinding = null;
             RuntimeDebugSession.Shared.Changed -= OnRuntimeDebugChanged;
             RuntimeDebugSession.Shared.ReleaseLiveInterest(this);
             ReleaseDiagnosticsInterest();
-            ReleasePoseWatchInterests();
+            m_PreviewPanel?.Unbind();
             m_BreadcrumbHost?.Dispose();
             m_BreadcrumbHost = null;
-            m_BottomDock?.Unbind();
-            m_SelectionBinding?.Dispose();
-            m_SelectionBinding = null;
             if (m_Canvas != null)
             {
                 m_Canvas.NodeCreationRequested -= ShowCreateMenu;
@@ -178,22 +236,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (m_StateMachineSurface != null)
             {
-                m_StateMachineSurface
-                    .StateMachineNodeCreationRequested -=
-                    ShowStateMachineCreateMenu;
+                m_StateMachineSurface.StateMachineNodeCreationRequested -= ShowStateMachineCreateMenu;
             }
         }
 
-        public void SetDocument(
+        void SetDocument(
             CharacterPresentationPoseGraphAsset asset,
             CharacterAnimationPresentationProfile profile,
             CharacterPresentationProjectionAsset projection,
-            CharacterPipelineDefinition definition = null)
+            CharacterPipelineDefinition definition)
         {
             m_Asset = asset;
             m_Profile = profile;
             m_Projection = projection;
             m_Definition = definition;
+            ResetPoseTuningAuthoringState();
             if (asset && asset.Graph != null)
                 m_CurrentGraphId = asset.Graph.GraphId.Value;
             BindCurrentGraph(true);
@@ -210,6 +267,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             OpenGraph(state.PoseGraphId);
             m_Canvas?.FocusElement(new GraphAuthoringElementId(sequenceNodeId.Value));
+        }
+
+        public void FocusGraph(PoseGraphId graphId)
+        {
+            if (!graphId.IsValid || !m_Asset || !m_Asset.TryGetGraph(graphId, out _))
+                return;
+            OpenGraph(graphId);
         }
 
         void BindCurrentGraph(bool resetPages = false)
@@ -234,7 +298,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 graph.GraphId.Value,
                 ResolveRole(graph),
                 graphDisplayName);
-            m_Mutation = new CharacterTypedPoseGraphMutationAdapter();
+            m_Mutation = new CharacterPoseGraphEditorMutationAdapter(
+                new CharacterTypedPoseGraphMutationAdapter(),
+                m_PreviewPanel.TryApplySelectionTuning);
             m_Mutation.ReadOnly =
                 m_LiveDebugToggle != null && m_LiveDebugToggle.value;
             m_RuntimeTrace =
@@ -255,15 +321,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new CharacterTypedPoseDetailsDataSource(
                     m_RuntimeTrace,
                     m_Profile?.RigDefinition,
-                    m_Profile),
+                    m_Profile,
+                    m_PreviewPanel.GetAppliedValues),
+
                 OpenDetailsCommand,
                 true));
+            m_Details.style.display = DisplayStyle.Flex;
+            m_LinkedPoseDetails.style.display = DisplayStyle.None;
             m_Navigator.Bind(m_Document, new NavigatorDataSource(this));
-            m_BottomDock.Bind(m_Document, CreateBottomDockCatalog());
+            m_PreviewPanel.Rebind(m_Document);
             m_Title.text = $"{m_Asset.name} / {graphDisplayName}";
-            m_Status.text = "Authoring";
+            RefreshLinkedPoseWorkspaceStatus();
             m_LastContentRevision = graph.ContentRevision;
+            CapturePublishedPoseGraphRevision(graph);
+            RefreshPublishedStatus();
             m_LastSelection = null;
+            RefreshSelectionTuning(null);
             if (resetPages || m_PageStack.Pages.Count == 0)
             {
                 m_PageStack.Reset(new GraphAuthoringPageProjection(
@@ -272,39 +345,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ResolveRole(graph).Value));
             }
             RenderBreadcrumb();
-        }
-
-        GraphAuthoringBottomDockCatalog CreateBottomDockCatalog()
-        {
-            var catalog = new GraphAuthoringBottomDockCatalog();
-            GraphAuthoringDocumentRoleId[] roles =
+            if (!string.IsNullOrEmpty(m_LinkedPoseSelectionId))
+                ShowLinkedPoseSelection(m_LinkedPoseSelectionId);
+            RefreshRuntimeHighlight();
+            if (resetPages)
             {
-                CharacterPoseGraphAuthoringCapabilities.RootGraph,
-                CharacterPoseGraphAuthoringCapabilities.Subgraph,
-                CharacterPoseGraphAuthoringCapabilities.StatePoseGraph,
-                CharacterPoseGraphAuthoringCapabilities.StateMachine
-            };
-            catalog.Register(new GraphAuthoringBottomDockTabDescriptor(
-                "pose.preview",
-                CharacterPoseGraphAuthoringCapabilities.Domain,
-                roles,
-                "Preview",
-                () => m_PreviewPanel =
-                    new CharacterPosePreviewPanel(this),
-                true));
-            catalog.Register(new GraphAuthoringBottomDockTabDescriptor(
-                "pose.watch",
-                CharacterPoseGraphAuthoringCapabilities.Domain,
-                roles,
-                "Pose Watch",
-                () => new CharacterPoseWatchPanel(this)));
-            catalog.Register(new GraphAuthoringBottomDockTabDescriptor(
-                "pose.live-debug",
-                CharacterPoseGraphAuthoringCapabilities.Domain,
-                roles,
-                "Live Debug",
-                () => new CharacterPoseLiveDebugPanel(m_RuntimeTrace)));
-            return catalog;
+                rootVisualElement.schedule.Execute(() =>
+                {
+                    if (m_Canvas != null && !m_ShowingStateMachine)
+                        m_Canvas.FrameAll();
+                });
+            }
         }
 
         GraphAuthoringDocumentRoleId ResolveRole(CharacterTypedPoseGraph graph)
@@ -401,6 +452,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPoseNodeKind kind = Enum.GetValues(typeof(CharacterPoseNodeKind))
                 .Cast<CharacterPoseNodeKind>()
                 .Single(value => CharacterPoseGraphAuthoringCapabilities.Get(value).Equals(capability.CapabilityId));
+            if (kind == CharacterPoseNodeKind.LinkedPoseCall)
+            {
+                ShowLinkedPoseSelection("linked-root");
+                m_Status.text = "Linked Pose Call is created from the typed Group/Entry authoring page.";
+                return;
+            }
             CharacterPoseNodePayload payload =
                 (CharacterPoseNodePayload)Activator.CreateInstance(
                     CharacterPoseGraphAuthoringCapabilities
@@ -410,7 +467,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Canvas.CreateNode(capability.CapabilityId, node, graphPosition);
             m_Status.text =
                 "Authoring changed · published Projection is Stale until explicit Build.";
-            m_BottomDock?.Refresh();
+            RefreshSelectedDetails();
         }
 
         void PublishSelection()
@@ -426,15 +483,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ? m_RuleDocument?.ContentRevision ??
                   string.Empty
                 : m_Document?.ContentRevision ?? string.Empty;
+            bool tuningOnly = IsTuningOnlyAuthoringChange();
+            if (!tuningOnly && m_TuningOnlyAuthoringChange)
+                ClearPoseTuningAuthoringChange();
             if (!string.Equals(
                     revision,
                     m_LastContentRevision,
                     StringComparison.Ordinal))
             {
                 m_LastContentRevision = revision;
-                m_Status.text =
-                    "Authoring changed · published Projection is Stale until explicit Build.";
-                m_BottomDock?.Refresh();
+                m_Status.text = tuningOnly
+                    ? "Unpublished Parameter · published Projection remains active."
+                    : "Authoring changed · published Projection is Stale until explicit Build.";
+                RefreshSelectedDetails();
             }
             GraphAuthoringSelection? current = m_Canvas.GetStableSelection().Count == 1
                 ? m_Canvas.GetStableSelection()[0]
@@ -445,9 +506,80 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             m_LastSelection = current;
             if (current.HasValue)
+            {
+                if (!m_ShowingTransitionRule && m_Document != null &&
+                    current.Value.Kind == GraphAuthoringSelectionKind.Node &&
+                    m_Document.Graph.Nodes.FirstOrDefault(value =>
+                        value.NodeId.Value == current.Value.ElementId.Value)?.Kind ==
+                    CharacterPoseNodeKind.LinkedPoseCall)
+                {
+                    ShowLinkedPoseSelection(
+                        $"linked-call:{m_Document.DocumentId}:{current.Value.ElementId.Value}");
+                    return;
+                }
+                HideLinkedPoseSelection();
                 m_Details.Inspect(current.Value);
+                RefreshSelectionTuning(current);
+            }
             else
-                m_Details.ClearSelection();
+            {
+                if (!m_LinkedPoseWorkspace?.IsShowing ?? true)
+                    m_Details.ClearSelection();
+                RefreshSelectionTuning(null);
+            }
+        }
+
+        internal void RefreshSelectedDetails()
+        {
+            if (m_Canvas == null || m_Details == null)
+                return;
+            IReadOnlyList<GraphAuthoringSelection> selection =
+                m_Canvas.GetStableSelection();
+            if (selection.Count == 1)
+            {
+                m_Details.Inspect(selection[0]);
+                RefreshSelectionTuning(selection[0]);
+            }
+        }
+
+        void RefreshSelectionTuning(
+            GraphAuthoringSelection? selection)
+        {
+            bool hasInlineTuning =
+                m_PreviewPanel?.PopulateSelectionTuning(
+                    selection,
+                    m_SelectionTuningHost) ?? false;
+            foreach (VisualElement row in m_Details.Query<VisualElement>(
+                         className:
+                         "graph-authoring-details-field-row").ToList())
+            {
+                Label policy = row.Q<Label>(
+                    className:
+                    "graph-authoring-details-field-policy");
+                bool tunable = policy != null &&
+                               (string.Equals(
+                                    policy.text,
+                                    "Live Now",
+                                    StringComparison.Ordinal) ||
+                                string.Equals(
+                                    policy.text,
+                                    "Next Activation",
+                                    StringComparison.Ordinal));
+                row.style.display = hasInlineTuning && tunable
+                    ? DisplayStyle.None
+                    : DisplayStyle.Flex;
+            }
+            foreach (Foldout section in
+                     m_Details.Query<Foldout>().ToList())
+            {
+                if (string.Equals(
+                        section.text,
+                        "Applied Values",
+                        StringComparison.Ordinal))
+                    section.style.display = hasInlineTuning
+                        ? DisplayStyle.None
+                        : DisplayStyle.Flex;
+            }
         }
 
         void OpenGraph(PoseGraphId graphId)
@@ -463,22 +595,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             GraphAuthoringElementId nodeId = request.ElementId;
             if (TryOpenPoseSource(request, nodeId))
                 return;
-            if (request.Kind ==
-                    GraphAuthoringMutationKind.ExecuteCommand &&
-                request.CommandId.Equals(
-                    ActionAnimationWorkspaceCommands.Open))
-            {
-                CharacterTypedPoseNode typed =
-                    m_Document.Graph.Nodes.Single(value =>
-                        value.NodeId.Value == nodeId.Value);
-                ActionAnimationAuthoringWorkspaceEntryPoints
-                    .OpenFromPoseSlot(
-                        m_Definition,
-                        m_Asset,
-                        m_Document.Graph,
-                        typed);
+            if (TryOpenFullBodyIkProfile(request, nodeId))
                 return;
-            }
             if (request.Kind !=
                 GraphAuthoringMutationKind.OpenChildSurface)
                 throw new InvalidOperationException(
@@ -497,6 +615,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             OpenChildSurface(node, child);
         }
 
+        bool TryOpenFullBodyIkProfile(
+            GraphAuthoringDetailsCommandRequest request,
+            GraphAuthoringElementId nodeId)
+        {
+            if (request.Kind != GraphAuthoringMutationKind.ExecuteCommand ||
+                !request.CommandId.Equals(
+                    CharacterPoseGraphAuthoringCapabilities.OpenFullBodyIkProfile))
+                return false;
+            CharacterTypedPoseNode typed =
+                m_Document.Graph.Nodes.Single(value =>
+                    value.NodeId.Value == nodeId.Value);
+            CharacterFullBodyIkPosePayload payload =
+                typed.Payload as CharacterFullBodyIkPosePayload ??
+                throw new InvalidOperationException(
+                    $"Pose node '{typed.NodeId}' is not a Full Body IK node.");
+            CharacterFullBodyIkProfile profile = payload.Profile;
+            if (!profile)
+                throw new InvalidOperationException(
+                    $"Full Body IK node '{typed.NodeId}' has no Profile.");
+            Selection.activeObject = profile;
+            EditorGUIUtility.PingObject(profile);
+            AssetDatabase.OpenAsset(profile);
+            return true;
+        }
+
         bool TryOpenPoseSource(
             GraphAuthoringDetailsCommandRequest request,
             GraphAuthoringElementId nodeId)
@@ -513,7 +656,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!pingSource && !openSource && !openProfile)
                 return false;
 
-            if (!m_Profile)
+            if (m_Profile == null)
                 throw new InvalidOperationException(
                     "Pose Source command requires an exact Presentation Profile context.");
             if (openProfile)
@@ -604,7 +747,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     m_Asset,
                     machine);
             m_StateMachineMutation =
-                new CharacterPoseStateMachineMutationAdapter
+                new CharacterPoseStateMachineEditorMutationAdapter(
+                    new CharacterPoseStateMachineMutationAdapter(),
+                    m_PreviewPanel.TryApplySelectionTuning)
                 {
                     ReadOnly =
                         m_LiveDebugToggle != null &&
@@ -622,25 +767,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_StateMachineSurface.BindStateMachine(binding);
             m_Details.BindStateMachine(
                 binding,
-                new CharacterPoseStateMachineDetailsDataSource());
+                new CharacterPoseStateMachineDetailsDataSource(),
+                m_PreviewPanel.GetAppliedValues);
             m_Navigator.Bind(
                 m_StateMachineDocument,
                 new NavigatorDataSource(this));
-            m_BottomDock.Bind(
-                m_StateMachineDocument,
-                CreateBottomDockCatalog());
             m_Title.text =
                 $"{m_Asset.name} / " +
                 CharacterPoseAuthoringDisplayNames.StateMachine(machine);
-            m_Status.text = "Authoring";
+            RefreshPublishedStatus();
             m_LastContentRevision = machine.ContentRevision;
             m_LastSelection = null;
+            RefreshSelectionTuning(null);
             if (pushPage)
             {
                 m_PageStack.Push(
                     m_StateMachineDocument.Pages[0]);
             }
             RenderBreadcrumb();
+            RefreshRuntimeHighlight();
         }
 
         void OpenStateGraph(CharacterPoseStateDefinition state)
@@ -704,13 +849,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Navigator.Bind(
                 m_RuleDocument,
                 new NavigatorDataSource(this));
-            m_BottomDock.Bind(
-                m_RuleDocument,
-                CreateBottomDockCatalog());
             m_Title.text =
                 $"{m_Asset.name} / Transition Rule / " +
                 m_RuleDocument.DisplayName;
-            m_Status.text = "Authoring";
+            RefreshPublishedStatus();
             m_LastContentRevision =
                 m_RuleDocument.ContentRevision;
             m_LastSelection = null;
@@ -872,7 +1014,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_LastContentRevision = revision;
                 m_Status.text =
                     "Authoring changed · published Projection is Stale until explicit Build.";
-                m_BottomDock?.Refresh();
+                RefreshSelectedDetails();
             }
             IReadOnlyList<GraphAuthoringSelection> selection =
                 m_StateMachineSurface.GetStableSelection();
@@ -885,6 +1027,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 current.Value.Kind == GraphAuthoringSelectionKind.State)
             {
                 m_Details.InspectState(current.Value.ElementId);
+                RefreshSelectionTuning(current);
                 return;
             }
             if (current.HasValue &&
@@ -893,9 +1036,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 m_Details.InspectTransition(
                     current.Value.ElementId);
+                RefreshSelectionTuning(current);
                 return;
             }
             m_Details.ClearStateMachineSelection();
+            RefreshSelectionTuning(null);
         }
 
         void NavigateToPage(int index)
@@ -1032,6 +1177,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Status.text = "Compile unavailable: no Character Definition context.";
                 return;
             }
+            if (!ValidateAuthoringAndLocate())
+                return;
             try
             {
                 CharacterSemanticFrontendResult result = CharacterSimulationBuildOrchestrator.CompileSemanticIr(m_Definition, true);
@@ -1045,8 +1192,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void ValidateAuthoring()
         {
+            ValidateAuthoringAndLocate();
+        }
+
+        bool ValidateAuthoringAndLocate()
+        {
             if (!m_Asset)
-                return;
+                return false;
+            ClearValidationHighlights();
             IReadOnlyList<string> capabilityErrors =
                 CharacterPoseGraphCapabilityValidator.Validate(m_Asset);
             CharacterPoseGraphValidationReport report =
@@ -1055,9 +1208,224 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     m_Profile ? m_Profile.RigDefinition : null,
                     CharacterPoseAuthoringPortProjection.Get);
             int issueCount = capabilityErrors.Count + report.Issues.Count;
-            m_Status.text = issueCount == 0
-                ? "Authoring valid"
-                : $"Authoring invalid · {issueCount} issue(s)";
+            if (TryFindStateMachineValidationIssue(
+                    out CharacterTypedPoseGraph ownerGraph,
+                    out CharacterTypedPoseNode ownerNode,
+                    out CharacterPoseStateMachineDefinition machine,
+                    out CharacterPoseStateMachineValidationIssue
+                        stateMachineIssue))
+            {
+                LocateStateMachineValidationIssue(
+                    ownerGraph,
+                    ownerNode,
+                    machine,
+                    stateMachineIssue);
+                string target = string.IsNullOrEmpty(
+                    stateMachineIssue.ElementId)
+                    ? stateMachineIssue.TargetKind.ToString()
+                    : $"{stateMachineIssue.TargetKind} " +
+                      stateMachineIssue.ElementId;
+                m_Status.text =
+                    $"{stateMachineIssue.Code} · {stateMachineIssue.Message} · {target} · {Math.Max(1, issueCount)} issue(s)";
+                return false;
+            }
+            if (issueCount == 0)
+            {
+                m_Status.text = "Authoring valid";
+                return true;
+            }
+            if (report.Issues.Count > 0)
+            {
+                CharacterPoseGraphValidationIssue issue = report.Issues[0];
+                LocateValidationIssue(issue);
+                string port = issue.PortId.IsValid
+                    ? $" · Port {issue.PortId.Value}"
+                    : string.Empty;
+                m_Status.text =
+                    $"{issue.Code} · {issue.Message}{port} · {issueCount} issue(s)";
+            }
+            else
+            {
+                m_Status.text =
+                    $"{capabilityErrors[0]} · {issueCount} issue(s)";
+            }
+            return false;
+        }
+
+        void LocateValidationIssue(
+            CharacterPoseGraphValidationIssue issue)
+        {
+            PoseGraphId graphId =
+                string.IsNullOrWhiteSpace(issue.GraphId)
+                    ? default
+                    : new PoseGraphId(issue.GraphId);
+            LocateValidationElement(
+                graphId,
+                issue.NodeId,
+                issue.PortId);
+        }
+
+        bool TryFindStateMachineValidationIssue(
+            out CharacterTypedPoseGraph ownerGraph,
+            out CharacterTypedPoseNode ownerNode,
+            out CharacterPoseStateMachineDefinition machine,
+            out CharacterPoseStateMachineValidationIssue issue)
+        {
+            foreach (CharacterTypedPoseGraph graph in
+                     m_Asset.EnumerateGraphs())
+            {
+                if (graph == null)
+                    continue;
+                foreach (CharacterTypedPoseNode node in graph.Nodes)
+                {
+                    if (node?.Payload is not
+                        CharacterPoseStateMachineNodePayload payload)
+                        continue;
+                    CharacterPoseStateMachineValidationIssue?
+                        candidate =
+                            CharacterPoseStateMachineAuthoringValidator
+                                .FindFirstIssue(
+                                    payload.StateMachine,
+                                    m_Asset.RequireGraph);
+                    if (!candidate.HasValue)
+                        continue;
+                    ownerGraph = graph;
+                    ownerNode = node;
+                    machine = payload.StateMachine;
+                    issue = candidate.Value;
+                    return true;
+                }
+            }
+            ownerGraph = null;
+            ownerNode = null;
+            machine = null;
+            issue = default;
+            return false;
+        }
+
+        void LocateStateMachineValidationIssue(
+            CharacterTypedPoseGraph ownerGraph,
+            CharacterTypedPoseNode ownerNode,
+            CharacterPoseStateMachineDefinition machine,
+            CharacterPoseStateMachineValidationIssue issue)
+        {
+            if (machine == null ||
+                issue.TargetKind ==
+                CharacterPoseStateMachineValidationTargetKind
+                    .StateMachine ||
+                string.IsNullOrEmpty(issue.ElementId))
+            {
+                LocateValidationElement(
+                    ownerGraph.GraphId,
+                    ownerNode.NodeId);
+                return;
+            }
+            bool pushPage = !m_ShowingStateMachine ||
+                            m_StateMachineDocument?.Definition != machine;
+            OpenStateMachine(machine, pushPage);
+            GraphAuthoringElementId elementId =
+                new GraphAuthoringElementId(issue.ElementId);
+            rootVisualElement.schedule.Execute(() =>
+            {
+                m_StateMachineSurface?.FocusElement(elementId);
+                AddValidationHighlight(
+                    m_StateMachineSurface,
+                    elementId);
+            });
+        }
+
+        void LocateValidationElement(
+            PoseGraphId graphId,
+            PoseNodeId nodeId,
+            PosePortId portId = default)
+        {
+            if (graphId.IsValid &&
+                m_Asset.TryGetGraph(graphId, out _))
+                OpenGraph(graphId);
+            if (!nodeId.IsValid)
+                return;
+            string portName = ResolveValidationPortName(
+                graphId,
+                nodeId,
+                portId);
+            GraphAuthoringElementId elementId =
+                new GraphAuthoringElementId(nodeId.Value);
+            rootVisualElement.schedule.Execute(() =>
+            {
+                m_Canvas?.FocusElement(elementId);
+                AddValidationHighlight(
+                    m_Canvas,
+                    elementId,
+                    portName);
+            });
+        }
+
+        string ResolveValidationPortName(
+            PoseGraphId graphId,
+            PoseNodeId nodeId,
+            PosePortId portId)
+        {
+            if (!graphId.IsValid || !nodeId.IsValid ||
+                !portId.IsValid ||
+                !m_Asset.TryGetGraph(
+                    graphId,
+                    out CharacterTypedPoseGraph graph))
+                return string.Empty;
+            CharacterTypedPoseNode node = graph.Nodes
+                .SingleOrDefault(value =>
+                    value != null && value.NodeId == nodeId);
+            if (node == null)
+                return string.Empty;
+            return CharacterPoseAuthoringPortProjection.Get(node)
+                       .SingleOrDefault(value =>
+                           value.PortId.Equals(portId))
+                       ?.Name ?? string.Empty;
+        }
+
+        static void AddValidationHighlight(
+            GraphAuthoringCanvasView canvas,
+            GraphAuthoringElementId elementId,
+            string portName = "")
+        {
+            if (canvas == null)
+                return;
+            foreach (GraphElement element in canvas.graphElements)
+            {
+                if (string.Equals(
+                        element.viewDataKey,
+                        elementId.Value,
+                        StringComparison.Ordinal))
+                    continue;
+                element.AddToClassList("pose-validation-error");
+                if (string.IsNullOrEmpty(portName))
+                    continue;
+                foreach (Port port in element.Query<Port>().ToList())
+                {
+                    if (string.Equals(
+                            port.portName,
+                            portName,
+                            StringComparison.Ordinal))
+                        port.AddToClassList("pose-validation-error");
+                }
+            }
+        }
+
+        void ClearValidationHighlights()
+        {
+            ClearValidationHighlights(m_Canvas);
+            ClearValidationHighlights(m_StateMachineSurface);
+        }
+
+        static void ClearValidationHighlights(
+            GraphAuthoringCanvasView canvas)
+        {
+            if (canvas == null)
+                return;
+            foreach (VisualElement element in
+                     canvas.Query<VisualElement>(
+                         className:
+                         "pose-validation-error").ToList())
+                element.RemoveFromClassList("pose-validation-error");
         }
 
         void BuildDefinition()
@@ -1069,8 +1437,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             try
             {
-                m_Status.text = CharacterSimulationProgramBuildService.Build(m_Definition, true)
-                    ? "Build completed and published."
+                bool built = CharacterSimulationProgramBuildService.Build(m_Definition, true);
+                RefreshLinkedPoseWorkspaceStatus();
+                m_Status.text = built
+                    ? $"Build completed and published. · {m_LinkedPoseWorkspaceStatus}"
                     : "Build failed. Inspect the formal report.";
             }
             catch (Exception exception)
@@ -1104,6 +1474,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        void ReloadAfterUndoRedo()
+        {
+            Reload();
+            m_PreviewPanel?.RebuildCandidateAfterUndoRedo();
+        }
+
         void SetLiveDebug(bool enabled)
         {
             if (enabled)
@@ -1125,12 +1501,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_StateMachineMutation.ReadOnly = enabled;
             if (m_RuleMutation != null)
                 m_RuleMutation.ReadOnly = enabled;
+            RefreshLinkedPoseWorkspaceStatus();
             m_Status.text = enabled
                 ? "Live Debug · authoring mutation disabled."
-                : "Authoring";
+                : CurrentPublishedStatus();
             if (m_LastSelection.HasValue)
                 m_Details?.Inspect(m_LastSelection.Value);
-            m_BottomDock?.Refresh();
+            RefreshSelectedDetails();
+            RefreshRuntimeHighlight();
         }
 
         void OnRuntimeDebugChanged()
@@ -1139,9 +1517,73 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 !m_LiveDebugToggle.value)
                 return;
             SynchronizeDiagnosticsInterest();
-            m_BottomDock?.Refresh();
             if (m_LastSelection.HasValue)
                 m_Details?.Inspect(m_LastSelection.Value);
+            RefreshRuntimeHighlight();
+        }
+
+        internal void RefreshRuntimeHighlight()
+        {
+            GraphAuthoringCanvasView canvas = m_ShowingStateMachine
+                ? m_StateMachineSurface
+                : m_Canvas;
+            if (canvas == null)
+                return;
+            var active = new HashSet<string>(StringComparer.Ordinal);
+            if (TryGetRuntimeSnapshot(
+                    out AnimationPresentationRuntimeSnapshot snapshot,
+                    out _))
+            {
+                if (m_ShowingStateMachine &&
+                    m_StateMachineDocument != null)
+                {
+                    for (int i = 0;
+                         i < snapshot.PoseStateMachines.Count;
+                         i++)
+                    {
+                        PoseStateMachineRuntimeSnapshot stateMachine =
+                            snapshot.PoseStateMachines[i];
+                        if (!stateMachine.StateMachineId.Equals(
+                                m_StateMachineDocument.Definition
+                                    .StateMachineId))
+                            continue;
+                        if (stateMachine.ActiveStateId.IsValid)
+                            active.Add(
+                                stateMachine.ActiveStateId.Value);
+                        if (stateMachine.TargetStateId.IsValid)
+                            active.Add(
+                                stateMachine.TargetStateId.Value);
+                        if (stateMachine.ActiveTransitionId.IsValid)
+                            active.Add(
+                                stateMachine.ActiveTransitionId.Value);
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < snapshot.Operations.Count; i++)
+                    {
+                        AnimationPoseOperationSnapshot operation =
+                            snapshot.Operations[i];
+                        if (operation.NodeId.IsValid &&
+                            string.Equals(
+                                operation.GraphId,
+                                m_CurrentGraphId,
+                                StringComparison.Ordinal))
+                        {
+                            active.Add(operation.NodeId.Value);
+                        }
+                    }
+                }
+            }
+            foreach (GraphElement element in canvas.graphElements)
+            {
+                bool isActive = !string.IsNullOrEmpty(
+                                    element.viewDataKey) &&
+                                active.Contains(element.viewDataKey);
+                element.EnableInClassList(
+                    "pose-runtime-active",
+                    isActive);
+            }
         }
 
         internal bool TryGetPublishedPosePlan(
@@ -1149,6 +1591,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             out string status)
         {
             plan = null;
+            if (!TryGetPublishedProjection(
+                    out CharacterPresentationProjection projection,
+                    out status))
+                return false;
+            plan = projection.PosePlan;
+            if (!m_Asset || m_Asset.Graph == null ||
+                !string.Equals(
+                    plan.PoseGraphId,
+                    m_Asset.Graph.GraphId.Value,
+                    StringComparison.Ordinal) ||
+                (!string.Equals(
+                     plan.ContentRevision,
+                     m_Asset.Graph.ContentRevision,
+                     StringComparison.Ordinal) &&
+                 (!IsTuningOnlyAuthoringChange() ||
+                  !string.Equals(
+                      plan.ContentRevision,
+                      m_LastPublishedPoseGraphRevision,
+                      StringComparison.Ordinal))))
+            {
+                plan = null;
+                status =
+                    "Stale: published Pose Plan does not match current authoring. Run explicit Build.";
+                return false;
+            }
+            status = IsTuningOnlyAuthoringChange()
+                ? "Unpublished Parameter · published Projection remains active."
+                : "Ready";
+            return true;
+        }
+
+        internal bool TryGetPublishedProjection(
+            out CharacterPresentationProjection projection,
+            out string status)
+        {
+            projection = null;
             if (!m_Definition || !m_Profile || !m_Projection ||
                 !m_Definition.SimulationProgram ||
                 m_Definition.AnimationPresentationProfile != m_Profile ||
@@ -1163,9 +1641,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var program = m_Definition.SimulationProgram.Load();
                 CharacterPresentationSemanticContract contract =
                     Float32CharacterPresentationContractAdapter.Create(program);
-                CharacterPresentationProjection projection =
-                    m_Projection.Load(contract);
-                plan = projection.PosePlan;
+                projection = m_Projection.Load(contract);
             }
             catch (Exception exception)
             {
@@ -1173,124 +1649,59 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Unavailable: published Pose Plan cannot be loaded: {exception.Message}";
                 return false;
             }
-            if (!m_Asset || m_Asset.Graph == null ||
-                !string.Equals(
-                    plan.PoseGraphId,
-                    m_Asset.Graph.GraphId.Value,
-                    StringComparison.Ordinal) ||
-                !string.Equals(
-                    plan.ContentRevision,
-                    m_Asset.Graph.ContentRevision,
-                    StringComparison.Ordinal))
-            {
-                plan = null;
-                status =
-                    "Stale: published Pose Plan does not match current authoring. Run explicit Build.";
-                return false;
-            }
             status = "Ready";
             return true;
         }
 
+        void RefreshPublishedStatus()
+        {
+            if (m_Status != null)
+                m_Status.text = CurrentPublishedStatus();
+        }
+
+        string CurrentPublishedStatus()
+        {
+            TryGetPublishedPosePlan(out _, out string status);
+            return status;
+        }
+
         internal bool MatchesCurrentPublishedRevision(
-            AnimationPresentationRuntimeSnapshot snapshot) =>
-            m_Asset && m_Asset.Graph != null && m_Projection &&
-            string.Equals(
-                snapshot.PoseGraphId,
-                m_Asset.Graph.GraphId.Value,
-                StringComparison.Ordinal) &&
-            string.Equals(
-                snapshot.PoseGraphRevision,
-                m_Asset.Graph.ContentRevision,
-                StringComparison.Ordinal) &&
-            string.Equals(
-                snapshot.ProjectionRevision,
-                m_Projection.ProjectionRevision,
-                StringComparison.Ordinal);
-
-        internal void WatchSelectedNode()
+            AnimationPresentationRuntimeSnapshot snapshot)
         {
-            IReadOnlyList<GraphAuthoringSelection> selection =
-                m_Canvas?.GetStableSelection() ??
-                Array.Empty<GraphAuthoringSelection>();
-            if (selection.Count != 1 ||
-                selection[0].Kind != GraphAuthoringSelectionKind.Node)
-            {
-                m_Status.text =
-                    "Pose Watch unavailable: select exactly one Pose node.";
-                return;
-            }
-            if (!TryGetPublishedPosePlan(
-                    out CharacterPresentationPosePlan plan,
-                    out string status))
-            {
-                m_Status.text = status;
-                return;
-            }
-            string nodeId = selection[0].ElementId.Value;
-            var identities = new List<AnimationPoseWatchIdentity>();
-            for (int i = 0; i < plan.Operations.Count; i++)
-            {
-                CharacterPresentationPoseOperation operation =
-                    plan.Operations[i];
-                CharacterPresentationPoseSourceMapEntry source =
-                    plan.SourceMap[i];
-                if (operation.OutputValueIndex < 0 ||
-                    !string.Equals(
-                        source.GraphId,
-                        m_Document.DocumentId,
-                        StringComparison.Ordinal) ||
-                    !string.Equals(
-                        source.NodeId.Value,
-                        nodeId,
-                        StringComparison.Ordinal))
-                {
-                    continue;
-                }
-                identities.Add(new AnimationPoseWatchIdentity(
-                    source.GraphId,
-                    plan.ContentRevision,
-                    source.NodeId,
-                    source.CallSite));
-            }
-            foreach (AnimationPoseWatchIdentity identity in
-                     identities.Distinct())
-            {
-                if (m_PoseWatchIdentities.Contains(identity))
-                    continue;
-                if (m_PoseWatchIdentities.Count >=
-                    AnimationPoseWatchCapacity.PerWindow)
-                {
-                    m_Status.text =
-                        $"Pose Watch capacity exceeded: {AnimationPoseWatchCapacity.PerWindow}.";
-                    break;
-                }
-                m_PoseWatchIdentities.Add(identity);
-            }
-            if (identities.Count == 0)
-            {
-                m_Status.text =
-                    "Pose Watch unavailable: selected node has no compiled Pose output.";
-                return;
-            }
-            SynchronizePoseWatchInterests();
-            m_BottomDock?.Refresh();
+            if (!m_Asset || m_Asset.Graph == null || !m_Projection ||
+                !string.Equals(
+                    snapshot.PoseGraphId,
+                    m_Asset.Graph.GraphId.Value,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    snapshot.ProjectionRevision,
+                    m_Projection.ProjectionRevision,
+                    StringComparison.Ordinal))
+                return false;
+            return string.Equals(
+                       snapshot.PoseGraphRevision,
+                       m_Asset.Graph.ContentRevision,
+                       StringComparison.Ordinal) ||
+                   (IsTuningOnlyAuthoringChange() &&
+                    string.Equals(
+                        snapshot.PoseGraphRevision,
+                        m_LastPublishedPoseGraphRevision,
+                        StringComparison.Ordinal));
         }
 
-        internal void RemovePoseWatch(int index)
+        internal bool TryGetCompiledLinkedPosePreviewCatalog(
+            out IReadOnlyList<CharacterLinkedPosePreviewGroupOption> options,
+            out string status)
         {
-            if ((uint)index >= (uint)m_PoseWatchIdentities.Count)
-                return;
-            m_PoseWatchIdentities.RemoveAt(index);
-            SynchronizePoseWatchInterests();
-            m_BottomDock?.Refresh();
-        }
-
-        internal void ClearPoseWatches()
-        {
-            m_PoseWatchIdentities.Clear();
-            SynchronizePoseWatchInterests();
-            m_BottomDock?.Refresh();
+            options = Array.Empty<CharacterLinkedPosePreviewGroupOption>();
+            if (!TryGetPublishedPosePlan(out _, out status))
+                return false;
+            return CharacterLinkedPoseAuthoringService.TryGetCompiledPreviewCatalog(
+                m_Definition,
+                m_Profile,
+                m_Projection,
+                out options,
+                out status);
         }
 
         internal void FocusNode(PoseNodeId nodeId) =>
@@ -1307,27 +1718,153 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             FocusNode(nodeId);
         }
 
-        internal void SynchronizePoseWatchInterests()
+        internal void ShowLinkedPoseAsset(UnityEngine.Object target)
         {
-            RuntimeDebugViewModel viewModel =
-                RuntimeDebugSession.Shared.ViewModel;
-            AnimationPresentationRuntimeTarget target =
-                viewModel.Attached &&
-                AnimationPresentationRuntimeTargetRegistry.TryGet(
-                    viewModel.Target.CharacterRuntimeId,
-                    out AnimationPresentationRuntimeTarget resolved)
-                    ? resolved
-                    : null;
-            if (!ReferenceEquals(target, m_PoseWatchRuntimeTarget))
+            if (m_Profile == null || target == null)
+                return;
+            string selectionId = target switch
             {
-                m_PoseWatchRuntimeTarget?.RemovePoseWatchInterests(
-                    m_PoseWatchOwnerId);
-                m_PoseWatchRuntimeTarget = target;
-            }
-            m_PoseWatchRuntimeTarget?.SetPoseWatchInterests(
-                m_PoseWatchOwnerId,
-                m_PoseWatchIdentities);
+                CharacterAnimationPresentationProfile => "linked-root",
+                CharacterLinkedPoseInterfaceAsset linkedInterface =>
+                    "linked-interface:" + linkedInterface.InterfaceId.Value,
+                CharacterLinkedPoseImplementationAsset implementation =>
+                    "linked-implementation:" + implementation.ImplementationId.Value,
+                CharacterLinkedPoseSelectorBindingAsset selector =>
+                    "linked-selector:" + selector.SelectorId.Value,
+                _ => string.Empty
+            };
+            if (!string.IsNullOrEmpty(selectionId))
+                ShowLinkedPoseSelection(selectionId);
         }
+
+        internal void ShowLinkedPoseSelection(string selectionId)
+        {
+            if (m_LinkedPoseWorkspace == null || string.IsNullOrWhiteSpace(selectionId))
+                return;
+            m_LinkedPoseSelectionId = selectionId;
+            m_Details.style.display = DisplayStyle.None;
+            m_LinkedPoseDetails.style.display = DisplayStyle.Flex;
+            if (m_SelectionTuningHost != null)
+                m_SelectionTuningHost.style.display = DisplayStyle.None;
+            m_LinkedPoseWorkspace.Show(selectionId);
+        }
+
+        internal void HideLinkedPoseSelection()
+        {
+            m_LinkedPoseSelectionId = string.Empty;
+            m_LinkedPoseWorkspace?.Hide();
+            if (m_Details != null)
+                m_Details.style.display = DisplayStyle.Flex;
+            if (m_LinkedPoseDetails != null)
+                m_LinkedPoseDetails.style.display = DisplayStyle.None;
+            if (m_LastSelection.HasValue)
+                RefreshSelectionTuning(m_LastSelection);
+        }
+
+        internal void ReloadLinkedPoseWorkspace()
+        {
+            MarkLinkedPoseChanged();
+            Reload();
+        }
+
+        internal void MarkLinkedPoseChanged()
+        {
+            RefreshLinkedPoseWorkspaceStatus();
+            m_Status.text = $"Linked Pose · {m_LinkedPoseWorkspaceStatus}";
+            RefreshSelectedDetails();
+        }
+
+        internal void RefreshLinkedPoseWorkspaceStatus()
+        {
+            if (IsLinkedPoseReadOnly)
+            {
+                m_LinkedPoseWorkspaceStatus = "Live";
+                return;
+            }
+            if (m_Profile == null || !m_Asset || m_Asset.Graph == null)
+            {
+                m_LinkedPoseWorkspaceStatus = "Unavailable";
+                return;
+            }
+            bool dirty = EditorUtility.IsDirty(m_Profile) ||
+                         CharacterLinkedPoseAuthoringService.EnumerateInterfaces(m_Profile)
+                             .Any(EditorUtility.IsDirty);
+            bool invalid = false;
+            try
+            {
+                foreach (CharacterLinkedPoseGroupBinding group in m_Profile.LinkedPoseGroups)
+                {
+                    if (group == null)
+                    {
+                        invalid = true;
+                        break;
+                    }
+                    group.RequireValid();
+                }
+                foreach (CharacterLinkedPoseImplementationAsset implementation in m_Profile.LinkedPoseImplementations)
+                {
+                    if (!implementation)
+                    {
+                        invalid = true;
+                        break;
+                    }
+                    implementation.RequireValid();
+                }
+            }
+            catch
+            {
+                invalid = true;
+            }
+            if (invalid)
+            {
+                m_LinkedPoseWorkspaceStatus = dirty ? "Dirty · Invalid" : "Invalid";
+                return;
+            }
+            if (!TryGetPublishedPosePlan(out _, out string status))
+            {
+                bool stale = status.StartsWith("Stale", StringComparison.Ordinal);
+                m_LinkedPoseWorkspaceStatus = stale
+                    ? dirty ? "Dirty · Stale" : "Stale"
+                    : dirty ? "Dirty · Invalid" : "Invalid";
+                return;
+            }
+            m_LinkedPoseWorkspaceStatus = dirty ? "Dirty" : "Ready";
+        }
+
+        internal void FocusLinkedPoseEntry(
+            CharacterPresentationPoseGraphAsset graphOwner,
+            PoseGraphId graphId)
+        {
+            if (!graphOwner || !graphId.IsValid)
+                return;
+            if (graphOwner == m_Asset)
+            {
+                OpenGraph(graphId);
+                return;
+            }
+            CharacterPresentationPoseGraphEditorWindow window =
+                CharacterPresentationPoseGraphEditorWindow.Open(
+                    graphOwner,
+                    m_Profile,
+                    m_Projection,
+                    m_Definition);
+            window.FocusGraph(graphId);
+        }
+
+        internal void FocusLinkedPoseCall(PoseGraphId graphId, PoseNodeId nodeId)
+        {
+            if (!graphId.IsValid || !nodeId.IsValid)
+                return;
+            OpenGraph(graphId);
+            ShowLinkedPoseSelection($"linked-call:{graphId.Value}:{nodeId.Value}");
+            m_Canvas?.FocusElement(new GraphAuthoringElementId(nodeId.Value));
+        }
+
+        internal string FindImplementationId(
+            CharacterLinkedPoseImplementationEntryBinding entry) =>
+            m_Profile?.LinkedPoseImplementations
+                .FirstOrDefault(value => value && value.Entries.Contains(entry))
+                ?.ImplementationId.Value ?? string.Empty;
 
         void SynchronizeDiagnosticsInterest()
         {
@@ -1359,14 +1896,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_DiagnosticsInterestTarget = null;
         }
 
-        internal void ReleasePoseWatchInterests()
-        {
-            m_PoseWatchRuntimeTarget?.RemovePoseWatchInterests(
-                m_PoseWatchOwnerId);
-            m_PoseWatchRuntimeTarget = null;
-        }
-
-        internal bool TryGetPoseWatchSnapshot(
+        internal bool TryGetRuntimeSnapshot(
             out AnimationPresentationRuntimeSnapshot snapshot,
             out string status)
         {
@@ -1384,8 +1914,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return false;
         }
 
-        internal void RefreshBottomDock() =>
-            m_BottomDock?.Refresh();
+        internal void RefreshRuntimeDetails() =>
+            RefreshSelectedDetails();
 
         VisualElement Require(string name) =>
             rootVisualElement.Q(name) ?? throw new InvalidOperationException($"Graph Authoring workspace host '{name}' is missing.");
@@ -1402,8 +1932,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     .Select(graph => new GraphAuthoringNavigatorItem(
                         new GraphAuthoringElementId(graph.GraphId.Value),
                         ReferenceEquals(graph, m_Window.m_Asset.Graph)
-                            ? "Root"
-                            : "Owned Graphs",
+                            ? "Graphs"
+                            : "Graphs / Pose Graphs",
                         m_Window.ResolveGraphDisplayName(graph),
                         m_Window.m_Asset.name,
                         graph.ContentRevision,
@@ -1412,121 +1942,183 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             " ",
                             graph.Nodes.Select(node => node.DisplayName))))
                     .ToList();
-                foreach ((
-                             CharacterPoseStateMachineDefinition machine,
-                             CharacterPoseStateTransition transition) in
-                         m_Window.m_Asset.EnumerateGraphs()
+                foreach (CharacterPoseStateMachineDefinition machine in
+                         m_Window.m_Asset.EnumerateStateMachines()
                              .Where(value => value != null)
-                             .SelectMany(value => value.Nodes)
-                             .Select(value => value?.Payload)
-                             .OfType<
-                                 CharacterPoseStateMachineNodePayload>()
-                             .Select(value => value.StateMachine)
-                             .Where(value => value != null)
-                             .SelectMany(machine =>
-                                 machine.Transitions.Select(
-                                     transition =>
-                                         (
-                                             Machine: machine,
-                                             Transition:
-                                             transition))))
-                {
-                    items.Add(
-                        new GraphAuthoringNavigatorItem(
-                            new GraphAuthoringElementId(
-                                transition.Rule.GraphId.Value),
-                            "Transition Rules",
-                            CharacterPoseAuthoringDisplayNames.Transition(
-                                machine,
-                                transition) +
-                            $" · Priority {transition.Priority}",
-                            machine.StateMachineId.Value,
-                            transition.TransitionId.Value,
-                            new GraphAuthoringCommandId(
-                                "open-owner"),
-                            $"{transition.Rule.GraphId.Value} {transition.TransitionId.Value} {transition.Source.Kind} {transition.TargetStateId.Value}"));
-                }
-                if (!m_Window.m_Definition ||
-                    !m_Window.m_Profile ||
-                    m_Window.m_Definition.AnimationPresentationProfile !=
-                    m_Window.m_Profile)
+                             .OrderBy(
+                                 value => value.StateMachineId.Value,
+                                 StringComparer.Ordinal))
                 {
                     items.Add(new GraphAuthoringNavigatorItem(
                         new GraphAuthoringElementId(
-                            "unavailable:definition-context"),
-                        "Data Catalog",
-                        "Unavailable: exact Definition context required",
-                        string.Empty,
-                        string.Empty,
-                        default,
-                        "Definition Profile Pose Source Action Producer"));
-                    return items;
-                }
-                foreach (CharacterPresentationPoseSourceBinding source in
-                         m_Window.m_Profile.PoseSourceBindings
-                             .Where(value => value && value.Slot)
-                             .OrderBy(value => value.Slot.name, StringComparer.Ordinal))
-                {
-                    UnityEngine.Object asset = source.SourceAsset;
-                    string slotName = source.Slot.name;
-                    string label = asset
-                        ? $"{slotName} → {asset.name}"
-                        : $"{slotName} → Missing Resource";
-                    string detail = source is CharacterSequencePoseSourceBinding sequence
-                        ? $"{slotName} {source.SourceKind} {sequence.MarkerGroupId}"
-                        : $"{slotName} {source.SourceKind}";
-                    items.Add(new GraphAuthoringNavigatorItem(
-                        new GraphAuthoringElementId(
-                            "pose-source:" + GlobalObjectId.GetGlobalObjectIdSlow(source.Slot)),
-                        "Locomotion / Pose Sources",
-                        label,
-                        m_Window.m_Profile.name,
-                        string.Empty,
-                        default,
-                        detail));
-                }
-                IReadOnlyList<AnimationProducerAuthoringEntry> producers;
-                try
-                {
-                    producers =
-                        CharacterAnimationPresentationAuthoringService
-                            .DiscoverProducers(
-                                m_Window.m_Profile,
-                                m_Window.m_Definition);
-                }
-                catch (Exception exception)
-                {
-                    items.Add(new GraphAuthoringNavigatorItem(
-                        new GraphAuthoringElementId(
-                            "unavailable:producer-catalog"),
-                        "Action / Producers",
-                        "Unavailable: producer composition is invalid",
-                        m_Window.m_Definition.name,
-                        string.Empty,
-                        default,
-                        exception.Message));
-                    return items;
-                }
-                foreach (AnimationProducerAuthoringEntry producer in
-                         producers.OrderBy(
-                             value => value.ProgramProducerIdentity,
-                             StringComparer.Ordinal))
-                {
-                    string identity =
-                        producer.ProducerId.TimelineAuthoringId +
-                        "/" +
-                        producer.ProducerId.TrackAuthoringId;
-                    items.Add(new GraphAuthoringNavigatorItem(
-                        new GraphAuthoringElementId(
-                            "producer:" + identity),
-                        "Action / Producers",
-                        producer.DisplayName,
-                        producer.ProducerId.TimelineAuthoringId,
-                        producer.AnimationChannelId.ToString(),
-                        default,
-                        $"{identity} {producer.AnimationChannelId}"));
+                            "state-machine:" +
+                            machine.StateMachineId.Value),
+                        "State Machines",
+                        CharacterPoseAuthoringDisplayNames.StateMachine(
+                            machine),
+                        m_Window.m_Asset.name,
+                        machine.ContentRevision,
+                        new GraphAuthoringCommandId("open-owner"),
+                        string.Join(
+                            " ",
+                            machine.States.Select(value =>
+                                value.DisplayName))));
                 }
                 return items;
+            }
+
+            void AppendLinkedPoseItems(List<GraphAuthoringNavigatorItem> items)
+            {
+                CharacterAnimationPresentationProfile profile =
+                    m_Window.m_Profile;
+                if (!profile)
+                    return;
+                if (profile.LinkedPoseGroups.Count == 0 &&
+                    profile.LinkedPoseImplementations.Count == 0 &&
+                    profile.LinkedPoseSelectors.Count == 0 &&
+                    CharacterLinkedPoseAuthoringService.EnumerateInterfaces(profile).Count == 0)
+                {
+                    items.Add(new GraphAuthoringNavigatorItem(
+                        new GraphAuthoringElementId("linked-empty"),
+                        "Linked Pose",
+                        "Empty · create Interface first · " + m_Window.LinkedPoseWorkspaceStatus,
+                        profile.name,
+                        string.Empty,
+                        new GraphAuthoringCommandId("open-owner"),
+                        "Interface → Group → Implementation → Call"));
+                    return;
+                }
+                var boundInterfaces = new HashSet<CharacterLinkedPoseInterfaceAsset>(
+                    profile.LinkedPoseGroups
+                        .Where(value => value?.Interface)
+                        .Select(value => value.Interface));
+                foreach (CharacterLinkedPoseInterfaceAsset linkedInterface in
+                         CharacterLinkedPoseAuthoringService.EnumerateInterfaces(profile)
+                             .Where(value => !boundInterfaces.Contains(value)))
+                    items.Add(new GraphAuthoringNavigatorItem(
+                        new GraphAuthoringElementId("linked-interface:" + linkedInterface.InterfaceId.Value),
+                        "Linked Pose / Contracts",
+                        linkedInterface.name + " · " + m_Window.LinkedPoseWorkspaceStatus,
+                        profile.name,
+                        string.Empty,
+                        new GraphAuthoringCommandId("open-owner"),
+                        "Unbound Interface · create Group to attach"));
+                int groupIndex = 0;
+                foreach (CharacterLinkedPoseGroupBinding group in profile.LinkedPoseGroups
+                             .Where(value => value != null)
+                             .OrderBy(value => value.GroupId))
+                {
+                    string groupId = group.GroupId.Value;
+                    string groupLabel = group.Interface
+                        ? group.Interface.name
+                        : $"Group {++groupIndex}";
+                    string groupStatus = group.Interface && group.Interface.IsStale
+                        ? "Stale"
+                        : m_Window.LinkedPoseWorkspaceStatus;
+                    items.Add(new GraphAuthoringNavigatorItem(
+                        new GraphAuthoringElementId("linked-group:" + groupId),
+                        "Linked Pose / Groups",
+                        groupLabel + " · " + groupStatus,
+                        profile.name,
+                        string.Empty,
+                        new GraphAuthoringCommandId("open-owner"),
+                        group.Interface ? group.Interface.name : "Missing Interface"));
+                    if (group.Interface)
+                    {
+                        CharacterLinkedPoseInterfaceAsset linkedInterface = group.Interface;
+                        items.Add(new GraphAuthoringNavigatorItem(
+                            new GraphAuthoringElementId("linked-interface:" + linkedInterface.InterfaceId.Value),
+                            "Linked Pose / " + groupLabel + " / Contract",
+                            linkedInterface.name,
+                            groupId,
+                            linkedInterface.InterfaceId.Value,
+                            new GraphAuthoringCommandId("open-owner"),
+                            $"{linkedInterface.InterfaceId} {linkedInterface.SignatureHash}"));
+                    }
+                    foreach (CharacterLinkedPoseSelectorBindingAsset selector in profile.LinkedPoseSelectors
+                                 .Where(value => value && value.GroupId == group.GroupId))
+                        items.Add(new GraphAuthoringNavigatorItem(
+                            new GraphAuthoringElementId("linked-selector:" + selector.SelectorId.Value),
+                            "Linked Pose / " + groupLabel + " / Selection",
+                            selector.name,
+                            groupId,
+                            selector.SelectorId.Value,
+                            new GraphAuthoringCommandId("open-owner"),
+                            string.Join(" ", selector.CandidateImplementationIds.Select(value => value.Value))));
+                    foreach (CharacterLinkedPoseImplementationAsset implementation in profile.LinkedPoseImplementations
+                                 .Where(value => value && (!group.Interface || value.Interface == group.Interface)))
+                    {
+                        items.Add(new GraphAuthoringNavigatorItem(
+                            new GraphAuthoringElementId("linked-implementation:" + implementation.ImplementationId.Value),
+                            "Linked Pose / " + groupLabel + " / Implementations",
+                            implementation.name + " · " + (implementation.IsStale ? "Stale" : m_Window.LinkedPoseWorkspaceStatus),
+                            groupId,
+                            implementation.ImplementationId.Value,
+                            new GraphAuthoringCommandId("open-owner"),
+                            $"{implementation.ImplementationId} {implementation.Interface?.name}"));
+                        foreach (CharacterLinkedPoseInterfaceEntryDescriptor requiredEntry in (implementation.Interface?.Entries ?? Array.Empty<CharacterLinkedPoseInterfaceEntryDescriptor>()).Where(value => value != null))
+                        {
+                            CharacterLinkedPoseImplementationEntryBinding entry = implementation.Entries
+                                .FirstOrDefault(value => value != null && value.EntryId == requiredEntry.EntryId);
+                            items.Add(new GraphAuthoringNavigatorItem(
+                                new GraphAuthoringElementId("linked-entry:" + implementation.ImplementationId.Value + ":" + requiredEntry.EntryId.Value),
+                                "Linked Pose / " + groupLabel + " / Implementations / Entry",
+                                (entry == null ? "Missing · " : string.Empty) + EntryDisplayName(requiredEntry.EntryId),
+                                implementation.ImplementationId.Value,
+                                requiredEntry.EntryId.Value,
+                                new GraphAuthoringCommandId("open-owner"),
+                                entry == null
+                                    ? "Required Entry binding is missing."
+                                    : $"{entry.GraphOwner?.name} {entry.GraphId} {entry.GraphOwnerIdentity}"));
+                        }
+                    }
+                    foreach (CharacterTypedPoseNode call in (m_Window.m_Asset.Graph?.Nodes ?? Array.Empty<CharacterTypedPoseNode>())
+                                 .Where(value => value?.Payload is CharacterLinkedPoseCallPayload payload && payload.GroupId == group.GroupId))
+                        items.Add(new GraphAuthoringNavigatorItem(
+                            new GraphAuthoringElementId("linked-call:" + m_Window.m_Asset.Graph.GraphId.Value + ":" + call.NodeId.Value),
+                            "Linked Pose / " + groupLabel + " / Host Calls",
+                            call.DisplayName,
+                            m_Window.m_Asset.Graph.GraphId.Value,
+                            call.NodeId.Value,
+                            new GraphAuthoringCommandId("open-owner"),
+                            call.LinkedPoseEntryId.Value));
+                    if (group.Interface)
+                    {
+                        foreach (CharacterLinkedPoseInterfaceEntryDescriptor requiredEntry in group.Interface.Entries.Where(value => value != null))
+                        {
+                            int callCount = (m_Window.m_Asset.Graph?.Nodes ?? Array.Empty<CharacterTypedPoseNode>())
+                                .Count(value => value?.Payload is CharacterLinkedPoseCallPayload payload &&
+                                                payload.GroupId == group.GroupId &&
+                                                payload.EntryId == requiredEntry.EntryId);
+                            if (callCount == 1)
+                                continue;
+                            string coverage = callCount == 0 ? "Missing" : "Duplicate";
+                            items.Add(new GraphAuthoringNavigatorItem(
+                                new GraphAuthoringElementId("linked-call-missing:" + group.GroupId.Value + ":" + requiredEntry.EntryId.Value),
+                                "Linked Pose / " + groupLabel + " / Host Calls",
+                                coverage + " · " + EntryDisplayName(requiredEntry.EntryId),
+                                group.GroupId.Value,
+                                requiredEntry.EntryId.Value,
+                                new GraphAuthoringCommandId("open-owner"),
+                                $"Required Call coverage is {coverage.ToLowerInvariant()} ({callCount})."));
+                        }
+                    }
+                }
+            }
+
+            static string EntryDisplayName(LinkedPoseEntryId entryId)
+            {
+                string value = entryId.Value ?? string.Empty;
+                int separator = Math.Max(
+                    value.LastIndexOf('.'),
+                    Math.Max(value.LastIndexOf('/'), value.LastIndexOf(':')));
+                string leaf = separator >= 0 && separator + 1 < value.Length
+                    ? value.Substring(separator + 1)
+                    : value;
+                leaf = leaf.Replace('-', ' ').Replace('_', ' ').Trim();
+                return string.IsNullOrEmpty(leaf)
+                    ? "Entry"
+                    : char.ToUpperInvariant(leaf[0]) + leaf.Substring(1);
             }
 
             public void Open(
@@ -1541,9 +2133,65 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         new PoseGraphId(item.ItemId.Value));
                     return;
                 }
-                m_Window.OpenTransitionRuleFromNavigator(
-                    item.ItemId.Value);
+                const string stateMachinePrefix = "state-machine:";
+                if (item.ItemId.Value.StartsWith(
+                        stateMachinePrefix,
+                        StringComparison.Ordinal))
+                {
+                    string stateMachineId = item.ItemId.Value.Substring(
+                        stateMachinePrefix.Length);
+                    CharacterPoseStateMachineDefinition machine =
+                        m_Window.m_Asset.EnumerateStateMachines()
+                            .Single(value =>
+                                value.StateMachineId.Value ==
+                                stateMachineId);
+                    m_Window.OpenStateMachine(machine, true);
+                    return;
+                }
             }
+
+            bool TryOpenLinkedPoseItem(string itemId)
+            {
+                CharacterAnimationPresentationProfile profile =
+                    m_Window.m_Profile;
+                if (!profile || string.IsNullOrEmpty(itemId))
+                    return false;
+                if (itemId == "linked-empty" ||
+                    itemId.StartsWith("linked-group:", StringComparison.Ordinal) ||
+                    itemId.StartsWith("linked-interface:", StringComparison.Ordinal) ||
+                    itemId.StartsWith("linked-selector:", StringComparison.Ordinal) ||
+                    itemId.StartsWith("linked-implementation:", StringComparison.Ordinal) ||
+                    itemId.StartsWith("linked-entry:", StringComparison.Ordinal) ||
+                    itemId.StartsWith("linked-call:", StringComparison.Ordinal) ||
+                    itemId.StartsWith("linked-call-missing:", StringComparison.Ordinal))
+                {
+                    if (itemId.StartsWith("linked-call-missing:", StringComparison.Ordinal))
+                    {
+                        string[] parts = itemId.Substring("linked-call-missing:".Length).Split(':');
+                        if (parts.Length == 2)
+                            m_Window.ShowLinkedPoseSelection("linked-group:" + parts[0]);
+                        return true;
+                    }
+                    if (itemId.StartsWith("linked-entry:", StringComparison.Ordinal))
+                    {
+                        string[] parts = itemId.Substring("linked-entry:".Length).Split(':');
+                        CharacterLinkedPoseImplementationAsset implementation =
+                            parts.Length == 2
+                                ? profile.LinkedPoseImplementations.FirstOrDefault(value =>
+                                    value && value.ImplementationId.Value == parts[0])
+                                : null;
+                        CharacterLinkedPoseImplementationEntryBinding entry =
+                            implementation?.Entries.FirstOrDefault(value =>
+                                value != null && value.EntryId.Value == parts[1]);
+                        if (entry?.GraphOwner)
+                            m_Window.FocusLinkedPoseEntry(entry.GraphOwner, entry.GraphId);
+                    }
+                    m_Window.ShowLinkedPoseSelection(itemId);
+                    return true;
+                }
+                return false;
+            }
+
         }
     }
 }

@@ -46,4 +46,4 @@ Foot Analysis Artifact MUST继续只表达动画局部特征；MM MAY据此判�
 
 - **WHEN** query使用Foot Artifact feature拒绝一个candidate
 - **THEN** 该拒绝 MUST只影响Presentation pose selection
-- **AND** MUST不产生Gameplay Grounded或Foot Placement world anchor
+- **AND** MUST不产生Gameplay Grounded、FinalIK Grounding结果或PredictiveFootPlacement world anchor

@@ -7,6 +7,8 @@ namespace BTSMTL.Diagnostics.Editor
     [InitializeOnLoad]
     public sealed class RuntimeDebugSession : IDisposable
     {
+        const double CaptureRefreshIntervalSeconds = 0.1d;
+
         static readonly RuntimeDebugSession s_Shared;
 
         readonly Dictionary<object, LiveInterestLease> m_LiveInterests = new Dictionary<object, LiveInterestLease>();
@@ -17,7 +19,9 @@ namespace BTSMTL.Diagnostics.Editor
         RuntimeCaptureSnapshot m_CaptureSnapshot;
         RuntimeDebugAttachmentState m_AttachmentState;
         int m_HistoryOffset;
+        int m_CaptureSegmentLimit;
         long m_TargetRevision;
+        double m_NextCaptureRefreshTime;
         bool m_Disposed;
 
         static RuntimeDebugSession()
@@ -103,6 +107,8 @@ namespace BTSMTL.Diagnostics.Editor
             m_ViewModel = RuntimeDebugViewModel.Detached;
             m_CaptureSnapshot = null;
             m_HistoryOffset = 0;
+            m_CaptureSegmentLimit = 0;
+            m_NextCaptureRefreshTime = 0d;
             m_AttachmentState = RuntimeDebugAttachmentState.Detached;
             m_TargetRevision++;
             NotifyChanged();
@@ -184,6 +190,24 @@ namespace BTSMTL.Diagnostics.Editor
 
         public bool BeginCapture(RuntimeTraceChannel channels, RuntimeDiagnosticsCaptureDetail detail)
         {
+            return BeginCaptureCore(channels, detail, 0);
+        }
+
+        public bool BeginBoundedCapture(
+            RuntimeTraceChannel channels,
+            RuntimeDiagnosticsCaptureDetail detail,
+            int maximumSegments)
+        {
+            if (maximumSegments <= 0)
+                throw new ArgumentOutOfRangeException(nameof(maximumSegments));
+            return BeginCaptureCore(channels, detail, maximumSegments);
+        }
+
+        bool BeginCaptureCore(
+            RuntimeTraceChannel channels,
+            RuntimeDiagnosticsCaptureDetail detail,
+            int maximumSegments)
+        {
             if (!CanStartCapture)
                 return false;
 
@@ -192,6 +216,8 @@ namespace BTSMTL.Diagnostics.Editor
 
             m_CaptureSnapshot = null;
             m_HistoryOffset = 0;
+            m_CaptureSegmentLimit = maximumSegments;
+            m_NextCaptureRefreshTime = 0d;
             if (!RefreshProvider())
                 NotifyChanged();
             return true;
@@ -208,6 +234,8 @@ namespace BTSMTL.Diagnostics.Editor
 
             m_CaptureSnapshot = snapshot;
             m_HistoryOffset = 0;
+            m_CaptureSegmentLimit = 0;
+            m_NextCaptureRefreshTime = 0d;
             ReleaseLiveHandles();
             m_ViewModel = m_Provider.BuildCaptureView(snapshot, m_HistoryOffset);
             m_AttachmentState = RuntimeDebugAttachmentState.CaptureHistory;
@@ -344,6 +372,20 @@ namespace BTSMTL.Diagnostics.Editor
         {
             if (m_Disposed || !CanControlLiveTarget)
                 return;
+
+            if (IsCaptureRecording)
+            {
+                if (m_CaptureSegmentLimit > 0 && CaptureSegmentCount >= m_CaptureSegmentLimit)
+                {
+                    EndCapture();
+                    return;
+                }
+
+                double now = EditorApplication.timeSinceStartup;
+                if (now < m_NextCaptureRefreshTime)
+                    return;
+                m_NextCaptureRefreshTime = now + CaptureRefreshIntervalSeconds;
+            }
 
             if (RefreshProvider())
                 NotifyChanged();

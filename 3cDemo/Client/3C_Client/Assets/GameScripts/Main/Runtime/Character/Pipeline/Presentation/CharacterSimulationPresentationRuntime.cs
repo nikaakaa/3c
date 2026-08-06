@@ -28,7 +28,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterPresentationFactProjector m_FactProjector;
         readonly CharacterAnimationPresentationRuntime m_Animation;
         readonly CharacterEquipmentVisualRuntime m_Equipment;
-        readonly CharacterFootPlacementRuntime m_FootPlacement;
+        readonly CharacterEquipmentLinkedPoseRuntime m_LinkedPose;
+        readonly CharacterPredictiveFootPlacementGoalSource m_FootPlacement;
         readonly CharacterCameraPresentationRuntime m_Camera;
         readonly Transform m_VisualRoot;
         readonly Transform m_AnimationRoot;
@@ -50,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterBodyPresentationRuntime body,
             CharacterAnimationPresentationRuntime animation,
             CharacterEquipmentVisualRuntime equipment,
-            CharacterFootPlacementRuntime footPlacement,
+            CharacterPredictiveFootPlacementGoalSource footPlacement,
             CharacterCameraPresentationRuntime camera,
             Transform animationRoot,
             RuntimeDiagnosticsContext diagnostics)
@@ -63,7 +64,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_FactProjector = new CharacterPresentationFactProjector(actorId);
             m_Animation = animation ?? throw new ArgumentNullException(nameof(animation));
             m_Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
-            bool requiresFootPlacement = projection.PosePlan.FootPlacementNodes.Count == 1;
+            m_LinkedPose = new CharacterEquipmentLinkedPoseRuntime(actorId, projection);
+            bool requiresFootPlacement = projection.PosePlan.PredictiveFootPlacements.Count == 1;
             if (requiresFootPlacement != (footPlacement != null))
                 throw new InvalidOperationException("Foot Placement runtime must match the compiled Pose Graph node exactly.");
             m_FootPlacement = footPlacement;
@@ -89,6 +91,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool MotionMatchingRuntimeEnabled => m_Animation.MotionMatchingRuntimeEnabled;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
             m_Animation.DiagnosticsInterest;
+        internal CharacterPoseTuningLayout TuningLayout =>
+            m_Animation.TuningLayout;
+        internal CharacterPoseTuningParameterBlock ActiveTuningBlock =>
+            m_Animation.ActiveTuningBlock;
+        internal CharacterPoseTuningRuntimeState TuningState =>
+            m_Animation.TuningState;
+        internal bool SubmitTuningCandidate(
+            CharacterPoseTuningCandidate candidate,
+            out string error) =>
+            m_Animation.SubmitTuningCandidate(candidate, out error);
+        internal void ClearPendingTuningCandidate() =>
+            m_Animation.ClearPendingTuningCandidate();
         public ulong BodyResetSequence => m_Body.ResetSequence;
         public CharacterPosePlanStageSnapshot PosePlanStages => m_PosePlanStages;
 
@@ -151,6 +165,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public void CaptureEquipmentSelections(IReadOnlyList<EquipmentVisualSelection> selections)
         {
             RequireAlive();
+            m_LinkedPose.Capture(selections);
             m_Equipment.Capture(selections);
         }
 
@@ -352,8 +367,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_AnimationBranchReplacementCount,
                 m_Body.FollowerPositionCorrectionMeters,
                 m_Body.FollowerYawCorrectionDegrees,
-                m_FootPlacement?.Snapshot ?? default,
-                m_PosePlanStages);
+                m_PosePlanStages,
+                m_Animation.HasRuntimeDiagnosticsSnapshot,
+                m_Animation.HasRuntimeDiagnosticsSnapshot
+                    ? m_Animation.RuntimeDiagnosticsSnapshot
+                    : default);
         }
 
         public void Reset()
@@ -361,6 +379,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_Disposed)
                 return;
             m_CurrentFrameSignals.Clear();
+            m_LinkedPose.Reset();
             m_Equipment.Reset();
             m_Camera?.Reset();
             m_FootPlacement?.Reset(new CharacterFootPlacementReset(
@@ -403,6 +422,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentationDeltaSeconds,
                     in bodyFrame,
                     in factFrame,
+                    m_LinkedPose.Session,
                     m_FootPlacement,
                     m_Diagnostics);
             }

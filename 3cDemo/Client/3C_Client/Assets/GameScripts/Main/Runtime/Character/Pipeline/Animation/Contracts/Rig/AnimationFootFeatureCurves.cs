@@ -260,6 +260,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_CalibrationId = string.Empty;
         [SerializeField] int m_CalibrationSchemaVersion;
         [SerializeField] string m_CalibrationRevision = string.Empty;
+        [SerializeField] string m_GeometryValidationIdentity = string.Empty;
+        [SerializeField] string m_GeometryValidationContentHash = string.Empty;
         [SerializeField] string m_ArtifactContentHash = string.Empty;
 
         public AnimationFootAnalysisProjectionIdentity(
@@ -270,6 +272,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterFootPlacementRigCalibrationId calibrationId,
             int calibrationSchemaVersion,
             string calibrationRevision,
+            string geometryValidationIdentity,
+            string geometryValidationContentHash,
             string artifactContentHash)
         {
             m_Mode = mode;
@@ -279,6 +283,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CalibrationId = calibrationId.Value;
             m_CalibrationSchemaVersion = calibrationSchemaVersion;
             m_CalibrationRevision = calibrationRevision ?? string.Empty;
+            m_GeometryValidationIdentity = geometryValidationIdentity ?? string.Empty;
+            m_GeometryValidationContentHash = geometryValidationContentHash ?? string.Empty;
             m_ArtifactContentHash = artifactContentHash ?? string.Empty;
             RequireValid();
         }
@@ -290,6 +296,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterFootPlacementRigCalibrationId CalibrationId => new CharacterFootPlacementRigCalibrationId(m_CalibrationId);
         public int CalibrationSchemaVersion => m_CalibrationSchemaVersion;
         public string CalibrationRevision => m_CalibrationRevision;
+        public string GeometryValidationIdentity => m_GeometryValidationIdentity;
+        public string GeometryValidationContentHash => m_GeometryValidationContentHash;
         public string ArtifactContentHash => m_ArtifactContentHash;
         public bool IsEnabled => m_Mode == CharacterFootPlacementAnalysisMode.GeneratedPerFootFeatures;
         public bool IsValid => IsEnabled &&
@@ -300,6 +308,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                string.Equals(m_CalibrationId, m_CalibrationId.Trim(), StringComparison.Ordinal) &&
                                m_CalibrationSchemaVersion == CharacterFootPlacementRigCalibration.CurrentSchemaVersion &&
                                !string.IsNullOrWhiteSpace(m_CalibrationRevision) &&
+                               IsStableHash(m_GeometryValidationIdentity) &&
+                               IsStableHash(m_GeometryValidationContentHash) &&
                                IsStableHash(m_ArtifactContentHash);
 
         public void RequireValid()

@@ -108,7 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             CharacterMotionMatchingQueryId queryId,
             CharacterMotionMatchingProfileId profileId,
             MotionMatchingTrajectoryEnvelope envelope,
-            CharacterMotionMatchingPoseHistory history,
+            IMotionMatchingPoseHistoryReadView history,
             MotionMatchingContactProtection contactProtection,
             MotionMatchingSelectionIdentity currentSelection,
             float secondsSinceLastJump,
@@ -202,7 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             }
         }
 
-        void FillPose(MotionMatchingFeatureRange range, CharacterMotionMatchingPoseHistory history, bool velocity, bool initialization)
+        void FillPose(MotionMatchingFeatureRange range, IMotionMatchingPoseHistoryReadView history, bool velocity, bool initialization)
         {
             int expected = m_Database.FeatureSchema.BoneCount * m_Database.FeatureSchema.HistoryHorizonCount * 3;
             RequireRangeCount(range, expected);
@@ -225,7 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             }
         }
 
-        void FillContact(MotionMatchingFeatureRange range, CharacterMotionMatchingPoseHistory history, bool initialization)
+        void FillContact(MotionMatchingFeatureRange range, IMotionMatchingPoseHistoryReadView history, bool initialization)
         {
             RequireRangeCount(range, 8);
             if (initialization)

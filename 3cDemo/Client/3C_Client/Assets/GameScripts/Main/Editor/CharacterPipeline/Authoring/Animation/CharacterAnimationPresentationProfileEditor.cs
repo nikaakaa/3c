@@ -59,6 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         int m_SelectedContextIndex = -1;
         bool m_ContextsLoaded;
         bool m_ConfigurationDiagnosticsReady;
+        bool m_ShowLinkedPoseBindings = true;
         bool m_ShowPoseSourceBindings = true;
         bool m_ShowProducerBindings = true;
 
@@ -83,6 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
             DrawPresentationAssetSummary();
             DrawConfigurationErrors();
+            DrawLinkedPoseBindings();
             DrawPoseSourceBindings();
             DrawContext();
             DrawProducerBindings();
@@ -227,11 +229,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             using (new EditorGUI.DisabledScope(!poseGraph))
             {
                 if (GUILayout.Button("Open Pose Graph"))
-                    CharacterPresentationPoseGraphEditorWindow.Open(
-                        poseGraph,
-                        profile,
-                        SelectedContext ? SelectedContext.PresentationProjection : null,
-                        SelectedContext);
+                    CharacterPresentationPoseGraphEditorWindow.Open(profile);
             }
             using (new EditorGUI.DisabledScope(!rig))
             {
@@ -298,6 +296,168 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 profiles,
                 m_MotionMatchingDiagnostics);
             m_ConfigurationDiagnosticsReady = true;
+        }
+
+        void DrawLinkedPoseBindings()
+        {
+            CharacterAnimationPresentationProfile profile = Profile;
+            if (!profile)
+                return;
+
+            EditorGUILayout.Space(4f);
+            m_ShowLinkedPoseBindings = EditorGUILayout.Foldout(
+                m_ShowLinkedPoseBindings,
+                $"Linked Pose Groups ({profile.LinkedPoseGroups.Count})",
+                true);
+            if (!m_ShowLinkedPoseBindings)
+                return;
+
+            EditorGUILayout.HelpBox(
+                "Groups select one precompiled Implementation through one selector. Candidate closure is derived from the selector mappings and is not separately editable.",
+                MessageType.Info);
+            if (GUILayout.Button("Open Linked Pose in Animation Workspace"))
+                CharacterLinkedPoseAuthoringService.OpenWorkspace(profile);
+            if (profile.LinkedPoseGroups.Count == 0)
+            {
+                EditorGUILayout.HelpBox("This Profile has no Linked Pose Groups.", MessageType.Info);
+                return;
+            }
+
+            for (int groupIndex = 0; groupIndex < profile.LinkedPoseGroups.Count; groupIndex++)
+            {
+                CharacterLinkedPoseGroupBinding group = profile.LinkedPoseGroups[groupIndex];
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.LabelField(
+                    group != null && group.Interface
+                        ? group.Interface.name
+                        : "Missing Linked Pose Group",
+                    EditorStyles.boldLabel);
+                if (group == null)
+                {
+                    EditorGUILayout.HelpBox("Group binding is missing.", MessageType.Error);
+                    EditorGUILayout.EndVertical();
+                    continue;
+                }
+
+                using (new EditorGUI.DisabledScope(true))
+                    EditorGUILayout.ObjectField("Interface", group.Interface, typeof(CharacterLinkedPoseInterfaceAsset), false);
+
+                CharacterLinkedPoseSelectorBindingAsset selector =
+                    FindLinkedPoseSelector(profile, group.GroupId, out int selectorCount);
+                if (selectorCount != 1)
+                {
+                    EditorGUILayout.HelpBox(
+                        selectorCount == 0
+                            ? "This Group has no selector."
+                            : $"This Group has {selectorCount} selectors; exactly one is required.",
+                        MessageType.Error);
+                    selector = null;
+                }
+                using (new EditorGUI.DisabledScope(true))
+                    EditorGUILayout.ObjectField("Selector", selector, typeof(CharacterLinkedPoseSelectorBindingAsset), false);
+
+                if (selector is CharacterEquipmentLinkedPoseSelectionBinding equipment)
+                    DrawEquipmentLinkedPoseSelector(profile, equipment);
+                else if (selector)
+                    DrawLinkedPoseCandidateClosure(profile, selector.CandidateImplementationIds);
+
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Open Group in Animation Workspace"))
+                    CharacterLinkedPoseAuthoringService.OpenWorkspace(profile);
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.EndVertical();
+            }
+            EditorGUILayout.Space(6f);
+        }
+
+        static CharacterLinkedPoseSelectorBindingAsset FindLinkedPoseSelector(
+            CharacterAnimationPresentationProfile profile,
+            LinkedPoseGroupId groupId,
+            out int count)
+        {
+            CharacterLinkedPoseSelectorBindingAsset result = null;
+            count = 0;
+            for (int i = 0; i < profile.LinkedPoseSelectors.Count; i++)
+            {
+                CharacterLinkedPoseSelectorBindingAsset selector = profile.LinkedPoseSelectors[i];
+                if (!selector || selector.GroupId != groupId)
+                    continue;
+                count++;
+                result = selector;
+            }
+            return result;
+        }
+
+        static CharacterLinkedPoseImplementationAsset FindLinkedPoseImplementation(
+            CharacterAnimationPresentationProfile profile,
+            LinkedPoseImplementationId implementationId)
+        {
+            for (int i = 0; i < profile.LinkedPoseImplementations.Count; i++)
+            {
+                CharacterLinkedPoseImplementationAsset implementation =
+                    profile.LinkedPoseImplementations[i];
+                if (implementation && implementation.ImplementationId == implementationId)
+                    return implementation;
+            }
+            return null;
+        }
+
+        void DrawEquipmentLinkedPoseSelector(
+            CharacterAnimationPresentationProfile profile,
+            CharacterEquipmentLinkedPoseSelectionBinding selector)
+        {
+            EditorGUILayout.LabelField("Equipment Slot", selector.SlotId.ToString());
+            CharacterLinkedPoseImplementationAsset empty =
+                FindLinkedPoseImplementation(profile, selector.EmptyImplementationId);
+            DrawLinkedPoseMapping("Empty Equipment", selector.EmptyImplementationId, empty);
+
+            EditorGUILayout.LabelField($"Exact Equipment Mappings ({selector.Mappings.Count})", EditorStyles.miniBoldLabel);
+            for (int i = 0; i < selector.Mappings.Count; i++)
+            {
+                CharacterEquipmentLinkedPoseMapping mapping = selector.Mappings[i];
+                if (mapping == null)
+                {
+                    EditorGUILayout.HelpBox($"Mapping #{i} is missing.", MessageType.Error);
+                    continue;
+                }
+                DrawLinkedPoseMapping(
+                    mapping.EquipmentId.ToString(),
+                    mapping.ImplementationId,
+                    FindLinkedPoseImplementation(profile, mapping.ImplementationId));
+            }
+            DrawLinkedPoseCandidateClosure(profile, selector.CandidateImplementationIds);
+        }
+
+        void DrawLinkedPoseMapping(
+            string label,
+            LinkedPoseImplementationId implementationId,
+            CharacterLinkedPoseImplementationAsset implementation)
+        {
+            EditorGUILayout.BeginHorizontal();
+            using (new EditorGUI.DisabledScope(true))
+                EditorGUILayout.ObjectField(label, implementation, typeof(CharacterLinkedPoseImplementationAsset), false);
+            using (new EditorGUI.DisabledScope(!implementation))
+            {
+                if (GUILayout.Button("Workspace", GUILayout.Width(78f)))
+                    CharacterLinkedPoseAuthoringService.OpenWorkspace(implementation);
+            }
+            EditorGUILayout.EndHorizontal();
+            if (!implementation)
+                EditorGUILayout.HelpBox($"Implementation '{implementationId}' is not in this Profile.", MessageType.Error);
+        }
+
+        void DrawLinkedPoseCandidateClosure(
+            CharacterAnimationPresentationProfile profile,
+            IReadOnlyList<LinkedPoseImplementationId> candidates)
+        {
+            EditorGUILayout.LabelField($"Derived Candidate Closure ({candidates.Count})", EditorStyles.miniBoldLabel);
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                LinkedPoseImplementationId candidateId = candidates[i];
+                CharacterLinkedPoseImplementationAsset implementation =
+                    FindLinkedPoseImplementation(profile, candidateId);
+                DrawLinkedPoseMapping($"Candidate {i + 1}", candidateId, implementation);
+            }
         }
 
         void DrawPoseSourceBindings()
@@ -630,11 +790,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             PoseSourceConsumer consumer)
         {
             CharacterPresentationPoseGraphEditorWindow window =
-                CharacterPresentationPoseGraphEditorWindow.Open(
-                    profile.PoseGraph,
-                    profile,
-                    SelectedContext ? SelectedContext.PresentationProjection : null,
-                    SelectedContext);
+                CharacterPresentationPoseGraphEditorWindow.Open(profile);
             window.FocusStateSequence(consumer.Machine, consumer.State, consumer.Sequence.NodeId);
         }
 

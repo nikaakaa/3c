@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
@@ -18,8 +19,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
         public static MotionMatchingProjectionPayload Compile(
             CharacterMotionMatchingProfile profile,
             CharacterPresentationPoseGraphAsset poseGraphAsset,
-            IReadOnlyList<CharacterMotionMatchingPoseSourceBinding> sourceBindings,
-            IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
+            CharacterAnimationRigDefinition rig,
             CharacterFootPlacementAnalysisSource analysisSource,
             IMotionMatchingProjectionParameterCurveResolver parameterCurveResolver)
         {
@@ -27,43 +27,52 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 throw new ArgumentNullException(nameof(profile));
             if (!analysisSource)
                 throw new ArgumentNullException(nameof(analysisSource));
-            if (!poseGraphAsset || poseGraphAsset.Graph == null || sourceBindings == null || sourceIndices == null)
+            if (!poseGraphAsset || poseGraphAsset.Graph == null || !rig)
                 throw new ArgumentNullException(nameof(poseGraphAsset));
-            CharacterTypedPoseGraph poseGraph = poseGraphAsset.Graph;
             if (parameterCurveResolver == null)
                 throw new ArgumentNullException(nameof(parameterCurveResolver));
             CharacterMotionMatchingAuthoringValidator.RequireProfile(profile);
+            profile.RequireRigClosure(rig);
+            MotionMatchingNodeAuthoringBinding[] nodeBindings = ResolveNodeBindings(poseGraphAsset).ToArray();
+            if (nodeBindings.Length == 0)
+                throw new InvalidOperationException("Motion Matching Projection requires at least one MotionMatchingPose node.");
             var databases = new List<MotionMatchingDatabasePayload>();
             var bindings =
-                new MotionMatchingProviderBindingPayload[
-                    sourceBindings.Count];
+                new MotionMatchingNodeBindingPayload[nodeBindings.Length];
             for (int bindingIndex = 0;
-                 bindingIndex < sourceBindings.Count;
+                 bindingIndex < nodeBindings.Length;
                  bindingIndex++)
             {
-                CharacterMotionMatchingPoseSourceBinding binding = sourceBindings[bindingIndex];
-                binding.RequireValid(binding.Rig);
-                if (binding.Profile != profile || !sourceIndices.TryGetValue(binding.Slot, out PresentationPoseSourceIndex sourceIndex))
-                    throw new InvalidOperationException($"Motion Matching Pose source binding '{binding.name}' is outside the compiled source catalog.");
+                MotionMatchingNodeAuthoringBinding nodeBinding = nodeBindings[bindingIndex];
+                CharacterMotionMatchingBinding binding = nodeBinding.Payload.Binding;
+                binding.RequireValid(rig);
+                if (binding.Profile != profile)
+                    throw new InvalidOperationException($"Motion Matching node binding '{binding.name}' is outside the compiled Profile.");
+                CharacterMotionMatchingDatabaseDefinition[] selectedDatabases = binding.Chooser.Rules
+                    .SelectMany(value => value.Databases)
+                    .Distinct()
+                    .ToArray();
                 int firstDatabase = databases.Count;
-                for (int databaseIndex = 0; databaseIndex < binding.Databases.Count; databaseIndex++)
+                var databaseIndices =
+                    new Dictionary<CharacterMotionMatchingDatabaseDefinition, int>();
+                for (int databaseIndex = 0; databaseIndex < selectedDatabases.Length; databaseIndex++)
                 {
+                    databaseIndices.Add(
+                        selectedDatabases[databaseIndex],
+                        firstDatabase + databaseIndex);
                     databases.Add(CompileDatabase(
                         profile,
-                        binding.Databases[databaseIndex],
+                        selectedDatabases[databaseIndex],
                         analysisSource,
                         parameterCurveResolver));
                 }
-                if (!(binding.Slot is CharacterMotionMatchingPoseSourceSlot slot))
-                    throw new InvalidOperationException($"Motion Matching Pose source binding '{binding.name}' has the wrong Source Slot kind.");
-                PoseNodeId playerNodeId = ResolveProviderNodeId(poseGraphAsset, poseGraph, slot);
-                bindings[bindingIndex] = new MotionMatchingProviderBindingPayload(
-                    $"pose-provider/{playerNodeId}",
-                    sourceIndex,
-                    playerNodeId,
-                    binding.SearchDomainId,
+                bindings[bindingIndex] = new MotionMatchingNodeBindingPayload(
+                    binding.BindingId,
+                    binding.Revision,
+                    nodeBinding.ScopedNodeId,
+                    CompileChooser(binding.Chooser, databaseIndices),
                     firstDatabase,
-                    binding.Databases.Count);
+                    selectedDatabases.Length);
             }
             MotionMatchingFeatureSchemaPayload featureSchema = MotionMatchingAuthoringPayloadCompiler.CompileFeatureSchema(
                 profile.FeatureSchema, profile.TrajectoryPolicy);
@@ -78,30 +87,93 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 bindings);
         }
 
-        static PoseNodeId ResolveProviderNodeId(
-            CharacterPresentationPoseGraphAsset owner,
-            CharacterTypedPoseGraph graph,
-            CharacterMotionMatchingPoseSourceSlot slot)
+        static MotionMatchingDatabaseChooserPayload CompileChooser(
+            CharacterMotionMatchingDatabaseChooser chooser,
+            IReadOnlyDictionary<CharacterMotionMatchingDatabaseDefinition, int> databaseIndices)
         {
-            PoseNodeId result = default;
-            ResolveProviderNodeId(
-                owner,
-                graph,
-                slot,
-                string.Empty,
-                ref result);
-            return result.IsValid
-                ? result
-                : throw new InvalidOperationException(
-                    $"Motion Matching Source Slot '{slot.name}' has no matching player node in Pose Graph '{graph.GraphId}'.");
+            var rules =
+                new MotionMatchingDatabaseChooserRulePayload[chooser.Rules.Count];
+            for (int ruleIndex = 0; ruleIndex < rules.Length; ruleIndex++)
+            {
+                CharacterMotionMatchingDatabaseChooserRule source =
+                    chooser.Rules[ruleIndex];
+                var predicates =
+                    new MotionMatchingFactPredicatePayload[source.Predicates.Count];
+                for (int predicateIndex = 0;
+                     predicateIndex < predicates.Length;
+                     predicateIndex++)
+                {
+                    CharacterMotionMatchingFactPredicate predicate =
+                        source.Predicates[predicateIndex];
+                    predicates[predicateIndex] =
+                        new MotionMatchingFactPredicatePayload(
+                            predicate.FactId,
+                            predicate.ValueKind,
+                            predicate.Operator,
+                            predicate.BoolValue,
+                            predicate.FloatValue,
+                            predicate.Vector2Value,
+                            predicate.EnumValue,
+                            predicate.UInt64Value,
+                            predicate.IdentityValue);
+                }
+                var ruleDatabaseIndices = new int[source.Databases.Count];
+                for (int databaseIndex = 0;
+                     databaseIndex < ruleDatabaseIndices.Length;
+                     databaseIndex++)
+                {
+                    CharacterMotionMatchingDatabaseDefinition database =
+                        source.Databases[databaseIndex];
+                    if (!databaseIndices.TryGetValue(
+                            database,
+                            out ruleDatabaseIndices[databaseIndex]))
+                    {
+                        throw new InvalidOperationException(
+                            $"Motion Matching Chooser '{chooser.ChooserId}' rule #{ruleIndex} Database is outside its compiled closure.");
+                    }
+                }
+                rules[ruleIndex] =
+                    new MotionMatchingDatabaseChooserRulePayload(
+                        source.Priority,
+                        source.Exclusive,
+                        predicates,
+                        ruleDatabaseIndices,
+                        source.ShouldSearch,
+                        source.InterruptMode,
+                        source.SearchPolicyOverrideId);
+            }
+            return new MotionMatchingDatabaseChooserPayload(
+                chooser.ChooserId,
+                chooser.Revision,
+                chooser.SearchDomainId,
+                rules);
         }
 
-        static void ResolveProviderNodeId(
+        readonly struct MotionMatchingNodeAuthoringBinding
+        {
+            internal MotionMatchingNodeAuthoringBinding(PoseNodeId scopedNodeId, CharacterMotionMatchingPosePayload payload)
+            {
+                ScopedNodeId = scopedNodeId;
+                Payload = payload ?? throw new ArgumentNullException(nameof(payload));
+            }
+
+            internal PoseNodeId ScopedNodeId { get; }
+            internal CharacterMotionMatchingPosePayload Payload { get; }
+        }
+
+        static IEnumerable<MotionMatchingNodeAuthoringBinding> ResolveNodeBindings(
+            CharacterPresentationPoseGraphAsset owner)
+        {
+            var result = new List<MotionMatchingNodeAuthoringBinding>();
+            ResolveNodeBindings(owner, owner.Graph, string.Empty, result);
+            return result;
+        }
+
+        static void ResolveNodeBindings(
             CharacterPresentationPoseGraphAsset owner,
             CharacterTypedPoseGraph graph,
-            CharacterMotionMatchingPoseSourceSlot slot,
             string scope,
-            ref PoseNodeId result)
+            ICollection<MotionMatchingNodeAuthoringBinding> result)
         {
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
@@ -111,16 +183,10 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 PoseNodeId scopedNodeId = string.IsNullOrEmpty(scope)
                     ? node.NodeId
                     : new PoseNodeId(scope + "/" + node.NodeId.Value);
-                if ((node.Kind ==
-                         CharacterPoseNodeKind.SelectedPosePlayer ||
-                     node.Kind ==
-                         CharacterPoseNodeKind.BlendStack) &&
-                    node.PresentationPoseSourceSlot == slot)
+                if (node.Payload is CharacterMotionMatchingPosePayload payload)
                 {
-                    if (result.IsValid)
-                        throw new InvalidOperationException(
-                            $"Motion Matching Source Slot '{slot.name}' matches more than one Pose Graph player node.");
-                    result = scopedNodeId;
+                    result.Add(new MotionMatchingNodeAuthoringBinding(scopedNodeId, payload));
+                    continue;
                 }
                 if (node.Kind ==
                         CharacterPoseNodeKind.PoseStateMachine &&
@@ -140,14 +206,13 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                         CharacterTypedPoseGraph stateGraph =
                             owner.RequireGraph(
                                 state.PoseGraphId);
-                        ResolveProviderNodeId(
+                        ResolveNodeBindings(
                             owner,
                             stateGraph,
-                            slot,
                             scopedNodeId.Value +
                             "/state/" +
                             state.StateId.Value,
-                            ref result);
+                            result);
                     }
                 }
                 if (node.Kind != CharacterPoseNodeKind.PoseSubgraph ||
@@ -156,12 +221,11 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                     continue;
                 CharacterTypedPoseGraph child =
                     owner.RequireGraph(node.Subgraph.PoseGraphId);
-                ResolveProviderNodeId(
+                ResolveNodeBindings(
                     owner,
                     child,
-                    slot,
                     scopedNodeId.Value + "/" + child.GraphId,
-                    ref result);
+                    result);
             }
         }
 

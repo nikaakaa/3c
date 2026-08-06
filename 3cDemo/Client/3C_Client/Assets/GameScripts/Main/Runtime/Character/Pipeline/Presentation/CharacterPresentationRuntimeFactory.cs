@@ -248,6 +248,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(animancer));
             projection.RequireContract(contract);
             projection.RequirePosePayload();
+            projection.RequireTuningPayload();
             animationRigBinding.RequireValid(projection.Rig);
             Transform animatorRoot = animancer.Animator.transform;
             if (animatorRoot == visualRoot || !animatorRoot.IsChildOf(visualRoot))
@@ -260,7 +261,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             CharacterBodyPresentationRuntime body = null;
             CharacterAnimationPresentationRuntime animation = null;
-            CharacterFootPlacementRuntime footPlacement = null;
+            CharacterPredictiveFootPlacementGoalSource footPlacement = null;
             CharacterCameraPresentationRuntime camera = null;
             CharacterEquipmentVisualRuntime equipment = null;
             CharacterMotionMatchingPresentationModule motionMatching = null;
@@ -292,19 +293,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     animancer,
                     animationRigBinding,
                     true);
+                animation.SetTuningBinding(
+                    new CharacterPoseTuningRuntimeBinding(
+                        new CharacterPoseTuningTargetIdentity(
+                            actorId.Value,
+                            projection.ProgramId,
+                            projection.ProjectionRevision,
+                            projection.PosePlan.PlanHash,
+                            projection.Rig.RigId,
+                            projection.Rig.RigRevision,
+                            projection.TuningLayout.LayoutHash),
+                        projection.TuningLayout,
+                        projection.TuningDefaultBlock,
+                        projection.PublishedParameterRevision));
                 motionMatching = null;
                 equipment = new CharacterEquipmentVisualRuntime(
                     actorId,
                     projection,
                     equipmentRigCatalog,
                     diagnostics);
-                if (projection.PosePlan.FootPlacementNodes.Count == 1)
+                if (projection.PosePlan.PredictiveFootPlacements.Count == 1)
                 {
                     if (!worldAwareBinding)
                         throw new ArgumentNullException(nameof(worldAwareBinding));
                     if (!physicsScene.IsValid())
                         throw new ArgumentException("Foot Placement requires a valid PhysicsScene.", nameof(physicsScene));
-                    CharacterPresentationFootPlacementNodeDescriptor descriptor = projection.PosePlan.FootPlacementNodes[0];
+                    CharacterPresentationPredictiveFootPlacementDescriptor descriptor =
+                        projection.PosePlan.PredictiveFootPlacements[0];
+                    CharacterFootPlacementPublicationValidation.Require(projection, descriptor.Calibration);
                     CharacterFootPlacementPoseRig rig = new CharacterFootPlacementPoseRig(
                         descriptor.Calibration,
                         projection.Rig,
@@ -315,12 +331,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         throw new InvalidOperationException("World-Aware Presentation Root must match Presentation VisualRoot exactly.");
                     CharacterFootPlacementRuntimeSettings footPlacementSettings =
                         descriptor.Profile.BuildSettings(projection, rig);
-                    footPlacement = new CharacterFootPlacementRuntime(
+                    footPlacement = new CharacterPredictiveFootPlacementGoalSource(
                         actorId,
                         footPlacementSettings,
                         rig,
-                        physicsScene,
-                        diagnostics);
+                        physicsScene);
                 }
                 if (cameraRig)
                 {
@@ -377,7 +392,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         public static void Dispose(
             CharacterCameraPresentationRuntime camera,
-            CharacterFootPlacementRuntime footPlacement,
+            CharacterPredictiveFootPlacementGoalSource footPlacement,
             CharacterEquipmentVisualRuntime equipment,
             CharacterAnimationPresentationRuntime animation,
             CharacterBodyPresentationRuntime body)

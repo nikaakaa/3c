@@ -3,6 +3,19 @@ using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonSimulation.DeterministicKcc
 {
+    internal enum DeterministicKccMovementTermination
+    {
+        Completed = 0,
+        BlockedNoProgress = 1
+    }
+
+    enum DeterministicKccConstraintCandidateKind
+    {
+        SinglePlane = 0,
+        PlaneCrease = 1,
+        Zero = 2
+    }
+
     readonly struct DeterministicKccConstraintPlane
     {
         public DeterministicKccConstraintPlane(
@@ -32,6 +45,10 @@ namespace ThirdPersonSimulation.DeterministicKcc
             int movementIterations,
             DeterministicKccContact[] blockingContacts,
             int blockingContactCount,
+            DeterministicKccMovementTermination termination,
+            int noProgressConfirmationCount,
+            DeterministicKccContact[] noProgressContacts,
+            int noProgressContactCount,
             DeterministicKccQuerySummary querySummary)
         {
             Position = position;
@@ -43,10 +60,15 @@ namespace ThirdPersonSimulation.DeterministicKcc
             MovementIterations = movementIterations;
             m_BlockingContacts = blockingContacts ?? throw new ArgumentNullException(nameof(blockingContacts));
             BlockingContactCount = blockingContactCount;
+            Termination = termination;
+            NoProgressConfirmationCount = noProgressConfirmationCount;
+            m_NoProgressContacts = noProgressContacts ?? throw new ArgumentNullException(nameof(noProgressContacts));
+            NoProgressContactCount = noProgressContactCount;
             QuerySummary = querySummary;
         }
 
         readonly DeterministicKccContact[] m_BlockingContacts;
+        readonly DeterministicKccContact[] m_NoProgressContacts;
 
         public FixedVector3 Position { get; }
         public FixedVector3 AppliedDisplacement { get; }
@@ -57,6 +79,9 @@ namespace ThirdPersonSimulation.DeterministicKcc
         public int MovementIterations { get; }
         public int BlockingContactCount { get; }
         public bool HasBlockingContact => BlockingContactCount > 0;
+        public DeterministicKccMovementTermination Termination { get; }
+        public int NoProgressConfirmationCount { get; }
+        public int NoProgressContactCount { get; }
         public DeterministicKccQuerySummary QuerySummary { get; }
 
         public DeterministicKccContact BlockingContactAt(int index)
@@ -64,6 +89,13 @@ namespace ThirdPersonSimulation.DeterministicKcc
             if (index < 0 || index >= BlockingContactCount)
                 throw new ArgumentOutOfRangeException(nameof(index));
             return m_BlockingContacts[index];
+        }
+
+        public DeterministicKccContact NoProgressContactAt(int index)
+        {
+            if (index < 0 || index >= NoProgressContactCount)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return m_NoProgressContacts[index];
         }
     }
 
@@ -77,7 +109,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
         readonly DeterministicCapsuleQueries m_Queries;
         readonly DeterministicKccContact[] m_HitContacts;
         readonly DeterministicKccContact[] m_OutputContacts;
-        readonly DeterministicKccConstraintPlane[] m_ConstraintPlanes = new DeterministicKccConstraintPlane[3];
+        readonly DeterministicKccContact[] m_ZeroProgressContacts;
+        readonly DeterministicKccConstraintPlane[] m_ConstraintPlanes;
 
         public DeterministicKccMotor(
             DeterministicCollisionWorldArtifact world,
@@ -88,6 +121,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
             m_Queries = new DeterministicCapsuleQueries(world, configuration);
             m_HitContacts = new DeterministicKccContact[configuration.MaximumContacts];
             m_OutputContacts = new DeterministicKccContact[configuration.MaximumContacts];
+            m_ZeroProgressContacts = new DeterministicKccContact[configuration.MaximumContacts];
+            m_ConstraintPlanes = new DeterministicKccConstraintPlane[configuration.MaximumContacts];
         }
 
         public DeterministicKccMotorResult Move(
@@ -125,6 +160,10 @@ namespace ThirdPersonSimulation.DeterministicKcc
             int planeCount = 0;
             int outputContactCount = 0;
             bool lastMovementFoundAnyGround = false;
+            bool zeroProgressSignatureValid = false;
+            int zeroProgressContactCount = 0;
+            int noProgressConfirmationCount = 0;
+            DeterministicKccMovementTermination termination = DeterministicKccMovementTermination.Completed;
             DeterministicKccStepDiagnostics stepDiagnostics = default;
             for (; movementIterations < m_Configuration.MaximumContactIterations; movementIterations++)
             {
@@ -134,9 +173,11 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     break;
                 }
 
+                FixedVector3 positionBeforeCast = position;
+                FixedVector3 remainingBeforeCast = remaining;
                 bool hit = m_Queries.Cast(
-                    position,
-                    remaining,
+                    positionBeforeCast,
+                    remainingBeforeCast,
                     out FixedVector3 safePosition,
                     out int contactCount,
                     out DeterministicKccQuerySummary castSummary);
@@ -219,6 +260,9 @@ namespace ThirdPersonSimulation.DeterministicKcc
                         DeterministicKccStepRejection.None,
                         committed.Landing.SurfaceId,
                         stepDiagnostics.QuerySummary);
+                    zeroProgressSignatureValid = false;
+                    zeroProgressContactCount = 0;
+                    noProgressConfirmationCount = 0;
                     continue;
                 }
 
@@ -244,7 +288,33 @@ namespace ThirdPersonSimulation.DeterministicKcc
                             previousState),
                         ref planeCount);
                 }
-                remaining = ProjectRemaining(remaining, planeCount);
+                FixedVector3 remainingBeforeProjection = remaining;
+                FixedVector3 projectedRemaining = ProjectRemaining(remainingBeforeProjection, planeCount);
+                bool zeroProgress = time == FixedScalar.Zero &&
+                                    safePosition == positionBeforeCast &&
+                                    projectedRemaining == remainingBeforeProjection;
+                if (zeroProgress && zeroProgressSignatureValid &&
+                    MatchesZeroProgressSignature(contactCount, zeroProgressContactCount))
+                {
+                    remaining = FixedVector3.Zero;
+                    termination = DeterministicKccMovementTermination.BlockedNoProgress;
+                    noProgressConfirmationCount = 2;
+                    break;
+                }
+                remaining = projectedRemaining;
+                if (zeroProgress)
+                {
+                    SaveZeroProgressSignature(contactCount);
+                    zeroProgressSignatureValid = true;
+                    zeroProgressContactCount = contactCount;
+                    noProgressConfirmationCount = 1;
+                }
+                else
+                {
+                    zeroProgressSignatureValid = false;
+                    zeroProgressContactCount = 0;
+                    noProgressConfirmationCount = 0;
+                }
             }
             if (movementIterations >= m_Configuration.MaximumContactIterations &&
                 remaining.Magnitude > m_Configuration.MinimumMovementDistance)
@@ -277,6 +347,12 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 movementIterations,
                 m_OutputContacts,
                 outputContactCount,
+                termination,
+                noProgressConfirmationCount,
+                m_ZeroProgressContacts,
+                termination == DeterministicKccMovementTermination.BlockedNoProgress
+                    ? zeroProgressContactCount
+                    : 0,
                 summary);
         }
 
@@ -331,7 +407,35 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 0,
                 m_OutputContacts,
                 0,
+                DeterministicKccMovementTermination.Completed,
+                0,
+                m_ZeroProgressContacts,
+                0,
                 summary);
+        }
+
+        bool MatchesZeroProgressSignature(int contactCount, int previousContactCount)
+        {
+            if (contactCount <= 0 || contactCount != previousContactCount)
+                return false;
+            for (int i = 0; i < contactCount; i++)
+            {
+                DeterministicKccContact current = m_HitContacts[i];
+                DeterministicKccContact previous = m_ZeroProgressContacts[i];
+                if (current.PrimitiveId != previous.PrimitiveId ||
+                    !current.FeatureId.Equals(previous.FeatureId) ||
+                    current.Normal != previous.Normal)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        void SaveZeroProgressSignature(int contactCount)
+        {
+            for (int i = 0; i < contactCount; i++)
+                m_ZeroProgressContacts[i] = m_HitContacts[i];
         }
 
         public void ValidatePose(FixedVector3 position, ref DeterministicKccQuerySummary summary)

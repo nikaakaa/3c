@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e235d13033a16e4faa1444190e08b8e, type: 3}
   m_Name: CorinAnimationRigDefinition
   m_EditorClassIdentifier: 
-  m_Schema: character-animation-rig/v3
+  m_Schema: character-animation-rig/v4
   m_RigId: corin.animation-rig
-  m_Revision: 5f8593de08c64ed0b88dfab51d4cbb72
+  m_Revision: 87731f0d0ca14844bbf861368b9847b3
   m_PhysicalBones:
   - m_BoneId: animation-bone/root
     m_ParentIndex: -1
@@ -1084,7 +1084,22 @@ MonoBehaviour:
     m_TargetPhysicalBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand
   m_RootBonePolicy: 1
   m_ScalePolicy: 1
+  m_SolverRootBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1
   m_PelvisBoneId: animation-bone/Bip001/Bip001_Pelvis
+  m_OrderedSpineBoneIds:
+  - animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine
+  - animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1
+  - animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2
+  m_LeftArm:
+    m_ClavicleBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle
+    m_UpperArmBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm
+    m_ForearmBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm
+    m_HandBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_L_Clavicle/Bip001_L_UpperArm/Bip001_L_Forearm/Bip001_L_Hand
+  m_RightArm:
+    m_ClavicleBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle
+    m_UpperArmBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm
+    m_ForearmBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm
+    m_HandBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_R_Clavicle/Bip001_R_UpperArm/Bip001_R_Forearm/Bip001_R_Hand
   m_LeftLeg:
     m_HipBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_L_Thigh
     m_KneeBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_L_Thigh/Bip001_L_Calf
@@ -1095,3 +1110,4 @@ MonoBehaviour:
     m_KneeBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_R_Thigh/Bip001_R_Calf
     m_AnkleBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_R_Thigh/Bip001_R_Calf/Bip001_R_Foot
     m_ToeBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_R_Thigh/Bip001_R_Calf/Bip001_R_Foot/Bip001_R_Toe0
+  m_HeadBoneId: animation-bone/Bip001/Bip001_Pelvis/Bip001_Spine/Bip001_Spine1/Bip001_Spine2/Bip001_Neck/Bip001_Head

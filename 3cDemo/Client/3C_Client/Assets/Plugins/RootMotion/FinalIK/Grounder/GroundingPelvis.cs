@@ -19,12 +19,13 @@ namespace RootMotion.FinalIK {
 			/// Scalar vertical offset of the pelvis.
 			/// </summary>
 			public float heightOffset { get; private set; }
+			public float rawHeightOffset { get; private set; }
 
 			private Grounding grounding;
 			private Vector3 lastRootPosition;
 			private float damperF;
 			private bool initiated;
-			private float lastTime;
+			private bool hasRootHistory;
 
 			// Initiating the pelvis
 			public void Initiate(Grounding grounding) {
@@ -36,39 +37,47 @@ namespace RootMotion.FinalIK {
 
 			// Set everything to 0
 			public void Reset() {
-				this.lastRootPosition = grounding.root.transform.position;
-				lastTime = Time.deltaTime;
+				lastRootPosition = Vector3.zero;
+				hasRootHistory = false;
+				damperF = 0f;
 				IKOffset = Vector3.zero;
 				heightOffset = 0f;
+				rawHeightOffset = 0f;
 			}
 			
 			// Should be called each time the pelvis is (re)activated
 			public void OnEnable() {
 				if (!initiated) return;
-				this.lastRootPosition = grounding.root.transform.position;
-				lastTime = Time.time;
+				if (grounding.root) {
+					lastRootPosition = grounding.root.position;
+					hasRootHistory = true;
+				} else {
+					lastRootPosition = Vector3.zero;
+					hasRootHistory = false;
+				}
 			}
 			
 			// Updates the pelvis position offset
-			public void Process(float lowestOffset, float highestOffset, bool isGrounded) {
+			public void Process(float lowestOffset, float highestOffset, bool isGrounded, in GroundingFrameInput frame) {
 				if (!initiated) return;
 
-				float deltaTime = Time.time - lastTime;
-				lastTime = Time.time;
+				float deltaTime = frame.DeltaTime;
 				if (deltaTime <= 0f) return;
 				
 				float offsetTarget = lowestOffset + highestOffset;
 				if (!grounding.rootGrounded) offsetTarget = 0f;
+				rawHeightOffset = offsetTarget;
 				
 				// Interpolating the offset
 				heightOffset = Mathf.Lerp(heightOffset, offsetTarget, deltaTime * grounding.pelvisSpeed);
 
 				// Damper
-				Vector3 rootDelta = (grounding.root.position - lastRootPosition);
-				lastRootPosition = grounding.root.position;
+				Vector3 rootDelta = hasRootHistory ? frame.Root.Position - lastRootPosition : Vector3.zero;
+				lastRootPosition = frame.Root.Position;
+				hasRootHistory = true;
 				
 				// Fading out damper when ungrounded
-				damperF = Interp.LerpValue(damperF, isGrounded? 1f: 0f, 1f, 10f);
+				damperF = Interp.LerpValue(damperF, isGrounded? 1f: 0f, 1f, 10f, deltaTime);
 				
 				// Calculating the final damper
 				heightOffset -= grounding.GetVerticalOffset(rootDelta, Vector3.zero) * grounding.pelvisDamper * damperF;
@@ -79,4 +88,3 @@ namespace RootMotion.FinalIK {
 		}
 	}
 }
-

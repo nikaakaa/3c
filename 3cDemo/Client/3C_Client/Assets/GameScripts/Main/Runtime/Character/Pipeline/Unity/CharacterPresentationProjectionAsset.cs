@@ -20,6 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 throw new InvalidOperationException($"Character Presentation Projection asset '{name}' has no compiled projection.");
             m_Projection.RequireContract(contract);
             m_Projection.RequirePosePayload();
+            m_Projection.RequireTuningPayload();
             return m_Projection;
         }
 
@@ -28,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         {
             if (projection == null || !projection.IsValid)
                 throw new ArgumentException("Compiled Character Presentation Projection is invalid.", nameof(projection));
+            projection.RequireTuningPayload();
             m_Projection = projection;
         }
 #endif

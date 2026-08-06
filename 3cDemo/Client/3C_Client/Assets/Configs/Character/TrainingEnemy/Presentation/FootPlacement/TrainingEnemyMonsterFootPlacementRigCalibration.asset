@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b61b86c6e6224e32876583a33d386d6f, type: 3}
+  m_Name: TrainingEnemyMonsterFootPlacementRigCalibration
+  m_EditorClassIdentifier: 
+  m_CalibrationId: TrainingEnemy.Monster.FootPlacementRig
+  m_SchemaVersion: 4
+  m_ContentRevision: f6830aa1f965c30fd57bc3096f9edb6bcccebedd923efcacf15ea30a5cbdc792
+  m_RigId: training-enemy.monster.animation-rig
+  m_RigRevision: training-enemy.monster.rig-118455d4c7c3a21e46effac0dd2c7c05
+  m_LeftHeelContactLocalOffset: {x: -0.14166988, y: -0.0007554209, z: 0.000028541777}
+  m_LeftToeContactLocalOffset: {x: 0.0000057519646, y: -0.0011499972, z: 0.00000015551802}
+  m_LeftSoleFrameLocalRotation: {x: 0.4987421, y: 0.5013085, z: 0.49858773, w: -0.5013545}
+  m_RightHeelContactLocalOffset: {x: -0.14193651, y: 0.000011570752, z: -0.000033629127}
+  m_RightToeContactLocalOffset: {x: 0.000000089407, y: -0.00000004470347, z: -0.000000042915346}
+  m_RightSoleFrameLocalRotation: {x: 0.49992937, y: 0.5000066, z: 0.5001117, w: -0.49995247}
+  m_GeometryValidation:
+    m_SchemaVersion: 2
+    m_IdentityHash: a484f7b8ad3cc2b7fb220238a9b577fca9937b3dc49d67279b943a768eb37a4f
+    m_GeometryContentHash: cff2a8a070d31e99d0b9f502021524c38e5818764bc557dd67b903f56a899157
+    m_RigId: training-enemy.monster.animation-rig
+    m_RigRevision: training-enemy.monster.rig-118455d4c7c3a21e46effac0dd2c7c05
+    m_CalibrationId: TrainingEnemy.Monster.FootPlacementRig
+    m_CalibrationRevision: f6830aa1f965c30fd57bc3096f9edb6bcccebedd923efcacf15ea30a5cbdc792
+    m_SamplingRigAssetGuid: 6597ddbddaf3beb44acf6e1d9e9da8f4
+    m_SamplingRigDependencyHash: 277f82416a0ae228b218a503f42a52c3fee53608221bfecd8b2abc9fa5d7222d
+    m_PreviewClipAssetGuid: f8afd754f3ea3d542bd06d5cd149721e
+    m_PreviewClipDependencyHash: 62585108d3ea9001e3f0bf6acc116dc80c5faf9187a351208c1152e9f6a785b2
+    m_PreviewNormalizedTimeBits: 0

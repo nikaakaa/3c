@@ -41,8 +41,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             NativeArray<AnimationLocalBonePose> m_ComponentPoses;
 
             public float GroundReferenceHeight { get; private set; }
+            public CharacterFootPlacementRigGeometryReport CalibrationGeometryReport { get; private set; }
 
             public SamplingContext(GameObject rigPrefab, CharacterFootPlacementAnalysisSource source)
+                : this(rigPrefab, source, false)
+            {
+            }
+
+            public SamplingContext(
+                GameObject rigPrefab,
+                CharacterFootPlacementAnalysisSource source,
+                bool calibrationAuthoring)
             {
                 try
                 {
@@ -60,12 +69,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             $"Sampling Rig requires exactly one Animation Rig Binding, World-Aware Binding and Animator; found {rigBindings.Length}/{worldBindings.Length}/{animators.Length}");
                     CharacterAnimationRigPayload rig = new CharacterAnimationRigPayload(source.RigDefinition);
                     rigBindings[0].RequireValid(rig);
-                    m_Binding = new CharacterFootPlacementPoseRig(
-                        source.RigCalibration,
-                        rig,
-                        rigBindings[0],
-                        worldBindings[0]);
-                    m_Binding.RequireValid();
+                    m_Binding = calibrationAuthoring
+                        ? CharacterFootPlacementPoseRig.CreateCalibrationAuthoringRig(
+                            source.RigCalibration,
+                            source.RigDefinition,
+                            rigBindings[0],
+                            worldBindings[0])
+                        : new CharacterFootPlacementPoseRig(
+                            source.RigCalibration,
+                            rig,
+                            rigBindings[0],
+                            worldBindings[0]);
+                    if (!calibrationAuthoring)
+                        m_Binding.RequireValid();
                     m_ComponentPoses = new NativeArray<AnimationLocalBonePose>(
                         rig.PoseBoneCount,
                         Allocator.Persistent,
@@ -107,17 +123,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     }
                     BeginClip(source.CalibrationPreviewClip);
                     _ = Sample(source.CalibrationPreviewTimeSeconds, 1UL);
-                    CharacterFootPlacementRigGeometryReport calibrationReport =
+                    CalibrationGeometryReport =
                         CharacterFootPlacementRigGeometryValidator.Evaluate(
                             m_Binding,
                             source.RigCalibration.Left,
                             source.RigCalibration.Right);
-                    if (!calibrationReport.IsValid)
+                    if (!CalibrationGeometryReport.IsValid)
                     {
                         throw new InvalidOperationException(
-                            $"Foot Placement Calibration Preview Pose is geometrically invalid.\n{calibrationReport.FormatDiagnostics()}");
+                            $"Foot Placement Calibration Preview Pose is geometrically invalid.\n{CalibrationGeometryReport.FormatDiagnostics()}");
                     }
-                    GroundReferenceHeight = calibrationReport.ReferenceGroundHeight;
+                    GroundReferenceHeight = CalibrationGeometryReport.ReferenceGroundHeight;
                     if (!float.IsFinite(GroundReferenceHeight))
                         throw new InvalidOperationException("Sampling Rig ground reference is not finite");
                 }
@@ -235,6 +251,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
+        public static CharacterFootPlacementRigGeometryReport EvaluateCalibrationGeometry(
+            CharacterFootPlacementAnalysisSource source)
+        {
+            if (!source)
+                throw new ArgumentNullException(nameof(source));
+            source.RequireCalibrationAuthoringInput();
+            string rigPath = AssetDatabase.GUIDToAssetPath(source.SamplingRigAssetGuid);
+            GameObject rigPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(rigPath);
+            if (!rigPrefab)
+                throw new InvalidOperationException(
+                    $"Foot Placement Sampling Rig '{source.SamplingRigAssetGuid}' does not resolve to a Prefab.");
+            using var samplingContext = new SamplingContext(rigPrefab, source, true);
+            return samplingContext.CalibrationGeometryReport;
+        }
+
         static AnimationFootFeaturePair AnalyzeClip(
             SamplingContext samplingContext,
             CharacterFootPlacementAnalysisSource source,
@@ -324,27 +355,108 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
 
             CharacterFootPlacementAnalysisThresholds thresholds = source.Thresholds;
-            bool planted = false;
-            for (int i = 0; i <= last; i++)
-            {
-                float verticalSpeed = Mathf.Abs(result.Velocities[i].y);
-                float clearance = Mathf.Max(0f, result.Heights[i] - groundReferenceHeight);
-                if (!planted && verticalSpeed <= thresholds.PlantEnterVerticalSpeed && clearance <= thresholds.PlantEnterHeight)
-                    planted = true;
-                else if (planted && (verticalSpeed >= thresholds.PlantExitVerticalSpeed || clearance >= thresholds.PlantExitHeight))
-                    planted = false;
-                float speedFactor = Mathf.InverseLerp(
-                    thresholds.PlantExitVerticalSpeed,
-                    thresholds.PlantEnterVerticalSpeed,
-                    verticalSpeed);
-                float heightFactor = Mathf.InverseLerp(thresholds.PlantExitHeight, thresholds.PlantEnterHeight, clearance);
-                float confidence = Mathf.Clamp01(Mathf.Min(speedFactor, heightFactor));
-                result.PlantConfidence[i] = planted ? Mathf.Max(0.5f, confidence) : Mathf.Min(0.499f, confidence);
-            }
-            if (loop)
-                result.PlantConfidence[last] = result.PlantConfidence[0];
+            float[] contactVerticalSpeeds = BuildContactVerticalSpeeds(result.Heights, loop, step);
+            BuildPlantConfidence(
+                result.PlantConfidence,
+                result.Heights,
+                contactVerticalSpeeds,
+                groundReferenceHeight,
+                loop,
+                thresholds);
             BuildLandingFeatures(result, loop, step, thresholds);
             return result;
+        }
+
+        static float[] BuildContactVerticalSpeeds(float[] heights, bool loop, float step)
+        {
+            int last = heights.Length - 1;
+            var speeds = new float[heights.Length];
+            for (int i = 0; i <= last; i++)
+            {
+                float velocity;
+                if (loop && (i == 0 || i == last))
+                    velocity = (heights[1] - heights[last - 1]) / (2f * step);
+                else if (i == 0)
+                    velocity = (heights[1] - heights[0]) / step;
+                else if (i == last)
+                    velocity = (heights[last] - heights[last - 1]) / step;
+                else
+                    velocity = (heights[i + 1] - heights[i - 1]) / (2f * step);
+                speeds[i] = Mathf.Abs(velocity);
+                if (!float.IsFinite(speeds[i]))
+                    throw new InvalidOperationException($"Foot Analysis contact vertical speed sample #{i} is not finite.");
+            }
+            return speeds;
+        }
+
+        static void BuildPlantConfidence(
+            float[] confidence,
+            float[] heights,
+            float[] contactVerticalSpeeds,
+            float groundReferenceHeight,
+            bool loop,
+            CharacterFootPlacementAnalysisThresholds thresholds)
+        {
+            int intervals = confidence.Length - 1;
+            if (!loop)
+            {
+                bool planted = false;
+                for (int i = 0; i <= intervals; i++)
+                    confidence[i] = EvaluatePlantSample(
+                        ref planted,
+                        heights[i],
+                        contactVerticalSpeeds[i],
+                        groundReferenceHeight,
+                        thresholds);
+                return;
+            }
+
+            int releaseSample = -1;
+            bool hasEnterEvidence = false;
+            for (int i = 0; i < intervals; i++)
+            {
+                float clearance = Mathf.Max(0f, heights[i] - groundReferenceHeight);
+                float verticalSpeed = contactVerticalSpeeds[i];
+                hasEnterEvidence |= verticalSpeed <= thresholds.PlantEnterVerticalSpeed &&
+                                    clearance <= thresholds.PlantEnterHeight;
+                if (verticalSpeed >= thresholds.PlantExitVerticalSpeed || clearance >= thresholds.PlantExitHeight)
+                    releaseSample = i;
+            }
+
+            bool loopPlanted = releaseSample < 0 && hasEnterEvidence;
+            int start = releaseSample < 0 ? 0 : (releaseSample + 1) % intervals;
+            for (int offset = 0; offset < intervals; offset++)
+            {
+                int i = (start + offset) % intervals;
+                confidence[i] = EvaluatePlantSample(
+                    ref loopPlanted,
+                    heights[i],
+                    contactVerticalSpeeds[i],
+                    groundReferenceHeight,
+                    thresholds);
+            }
+            confidence[intervals] = confidence[0];
+        }
+
+        static float EvaluatePlantSample(
+            ref bool planted,
+            float height,
+            float verticalSpeed,
+            float groundReferenceHeight,
+            CharacterFootPlacementAnalysisThresholds thresholds)
+        {
+            float clearance = Mathf.Max(0f, height - groundReferenceHeight);
+            if (!planted && verticalSpeed <= thresholds.PlantEnterVerticalSpeed && clearance <= thresholds.PlantEnterHeight)
+                planted = true;
+            else if (planted && (verticalSpeed >= thresholds.PlantExitVerticalSpeed || clearance >= thresholds.PlantExitHeight))
+                planted = false;
+            float speedFactor = Mathf.InverseLerp(
+                thresholds.PlantExitVerticalSpeed,
+                thresholds.PlantEnterVerticalSpeed,
+                verticalSpeed);
+            float heightFactor = Mathf.InverseLerp(thresholds.PlantExitHeight, thresholds.PlantEnterHeight, clearance);
+            float value = Mathf.Clamp01(Mathf.Min(speedFactor, heightFactor));
+            return planted ? Mathf.Max(0.5f, value) : Mathf.Min(0.499f, value);
         }
 
         static void BuildLandingFeatures(

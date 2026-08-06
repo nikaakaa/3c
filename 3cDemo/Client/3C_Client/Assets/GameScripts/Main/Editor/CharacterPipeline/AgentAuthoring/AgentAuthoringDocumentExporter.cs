@@ -133,7 +133,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (report.HasErrors())
                 throw new InvalidOperationException(string.Join(Environment.NewLine, report.messages.Select(message => message.message)));
             string editableHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair => pair.Key.StartsWith("editable/", StringComparison.Ordinal)));
-            string contextHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair => pair.Key.StartsWith("context/", StringComparison.Ordinal)));
+            string contextHash = AgentAuthoringDocumentCodec.HashFiles(files.Where(pair =>
+                pair.Key.StartsWith("context/", StringComparison.Ordinal) ||
+                pair.Key.StartsWith("readonly/", StringComparison.Ordinal)));
             string sourceRevision = ComputeSourceRevision(editable);
             snapshot.schemaVersion = AgentAuthoringSchema.Version;
             snapshot.sourceRevision = sourceRevision;
@@ -154,6 +156,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     new List<AgentPackagePoseGraphLayoutFile>();
                 semantic.presentation.poseStateMachineLayouts =
                     new List<AgentPackagePoseStateMachineLayoutFile>();
+                foreach (AgentPackageLinkedPoseImplementationFile implementation in
+                         semantic.presentation.linkedPoseImplementations ??
+                         new List<AgentPackageLinkedPoseImplementationFile>())
+                {
+                    implementation.poseGraphLayouts =
+                        new List<AgentPackagePoseGraphLayoutFile>();
+                    implementation.poseStateMachineLayouts =
+                        new List<AgentPackagePoseStateMachineLayoutFile>();
+                }
             }
             return AgentAuthoringDocumentCodec.Hash(semantic);
         }
@@ -204,6 +215,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 rootBonePolicy = rig.RootBonePolicy.ToString(),
                 scalePolicy = rig.ScalePolicy.ToString(),
                 pelvisBoneId = rig.PelvisBoneId.Value,
+                linkedPoseInterfaces = definition.AnimationPresentationProfile
+                    .LinkedPoseGroups
+                    .Select(value => value.Interface)
+                    .Concat(definition.AnimationPresentationProfile
+                        .LinkedPoseImplementations
+                        .Where(value => value)
+                        .Select(value => value.Interface))
+                    .Where(value => value)
+                    .Distinct()
+                    .OrderBy(value => value.InterfaceId)
+                    .Select(ExportLinkedPoseInterface)
+                    .ToList(),
                 leftLeg = ExportLegChain(rig.LeftLeg),
                 rightLeg = ExportLegChain(rig.RightLeg),
                 poseCapabilities = ExportPoseCapabilities(),
@@ -355,7 +378,44 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 "PresentationProfile",
                 "PoseGraph",
                 "PoseStateMachine",
-                "PoseTransitionRule"
+                "PoseTransitionRule",
+                "LinkedPoseInterfaceRuntime"
+            };
+        }
+
+        static AgentPackageLinkedPoseInterfaceFile ExportLinkedPoseInterface(
+            CharacterLinkedPoseInterfaceAsset value)
+        {
+            value.RequireValid();
+            AgentPackageAssetReferenceV3 asset =
+                AgentAuthoringPresentationExporter.ExportAsset(value, true);
+            return new AgentPackageLinkedPoseInterfaceFile
+            {
+                id = value.InterfaceId.Value,
+                asset = asset,
+                ownerIdentity = value.OwnerIdentity,
+                interfaceId = value.InterfaceId.Value,
+                revision = value.Revision.Value,
+                signatureHash = value.SignatureHash.ToString(),
+                factContractIdentity = value.FactContractIdentity.ToString(),
+                executionContract = value.ExecutionContract,
+                entries = value.Entries.Select(entry =>
+                    new AgentPackageLinkedPoseInterfaceEntry
+                    {
+                        entryId = entry.EntryId.Value,
+                        executionDomain = entry.ExecutionDomain.ToString(),
+                        ports = entry.Ports.Select(port =>
+                            new AgentPackageLinkedPoseInterfacePort
+                            {
+                                portId = port.PortId.Value,
+                                direction = port.Direction.ToString(),
+                                kind = port.Kind.ToString(),
+                                space = port.Space.ToString(),
+                                required = port.Required,
+                                order = port.Order
+                            }).OrderBy(port => port.order).ToList()
+                    }).OrderBy(entry => entry.entryId, StringComparer.Ordinal)
+                    .ToList()
             };
         }
 

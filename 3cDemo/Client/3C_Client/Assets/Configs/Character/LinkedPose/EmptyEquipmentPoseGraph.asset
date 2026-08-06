@@ -1,0 +1,126 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c098d552eb42231449a0d29a2f0026cb, type: 3}
+  m_Name: EmptyEquipmentPoseGraph
+  m_EditorClassIdentifier: 
+  m_TypedGraph:
+    m_GraphId: character.equipment-pose.empty.pose
+    m_ContentRevision: character.equipment-pose.empty.pose/v1
+    m_Parameters: []
+    m_Nodes:
+    - m_NodeId: empty-equipment-pose.input
+      m_DisplayName: Equipment Pose Input
+      m_Payload:
+        rid: 7100101
+      m_DynamicPorts:
+      - m_PortId: input.pose
+        m_DisplayName: input.pose
+        m_Kind: 6
+        m_Direction: 2
+        m_Required: 1
+        m_Order: 0
+        m_InterfacePortId: input.pose
+    - m_NodeId: empty-equipment-pose.output
+      m_DisplayName: Equipment Pose Output
+      m_Payload:
+        rid: 7100102
+      m_DynamicPorts:
+      - m_PortId: output.pose
+        m_DisplayName: output.pose
+        m_Kind: 6
+        m_Direction: 1
+        m_Required: 1
+        m_Order: 1
+        m_InterfacePortId: output.pose
+    m_Edges:
+    - m_EdgeId: empty-equipment-pose.passthrough
+      m_SourceNodeId: empty-equipment-pose.input
+      m_SourcePortId: input.pose
+      m_TargetNodeId: empty-equipment-pose.output
+      m_TargetPortId: output.pose
+    m_Layout:
+    - m_NodeId: empty-equipment-pose.input
+      m_Position: {x: -240, y: 0}
+    - m_NodeId: empty-equipment-pose.output
+      m_Position: {x: 240, y: 0}
+  m_TypedGraphCatalog:
+  - m_GraphId: character.equipment-pose.empty.hand-goals
+    m_ContentRevision: character.equipment-pose.empty.hand-goals/v1
+    m_Parameters: []
+    m_Nodes:
+    - m_NodeId: empty-equipment-goals.input
+      m_DisplayName: Equipment Hand Goals Input
+      m_Payload:
+        rid: 7100201
+      m_DynamicPorts:
+      - m_PortId: input.pose
+        m_DisplayName: input.pose
+        m_Kind: 7
+        m_Direction: 2
+        m_Required: 1
+        m_Order: 0
+        m_InterfacePortId: input.pose
+    - m_NodeId: empty-equipment-goals.empty
+      m_DisplayName: Empty Full Body IK Goals
+      m_Payload:
+        rid: 7100202
+      m_DynamicPorts: []
+    - m_NodeId: empty-equipment-goals.output
+      m_DisplayName: Equipment Hand Goals Output
+      m_Payload:
+        rid: 7100203
+      m_DynamicPorts:
+      - m_PortId: output.goals
+        m_DisplayName: output.goals
+        m_Kind: 9
+        m_Direction: 1
+        m_Required: 1
+        m_Order: 1
+        m_InterfacePortId: output.goals
+    m_Edges:
+    - m_EdgeId: empty-equipment-goals.pose-input
+      m_SourceNodeId: empty-equipment-goals.input
+      m_SourcePortId: input.pose
+      m_TargetNodeId: empty-equipment-goals.empty
+      m_TargetPortId: pose
+    - m_EdgeId: empty-equipment-goals.output
+      m_SourceNodeId: empty-equipment-goals.empty
+      m_SourcePortId: goals
+      m_TargetNodeId: empty-equipment-goals.output
+      m_TargetPortId: output.goals
+    m_Layout:
+    - m_NodeId: empty-equipment-goals.input
+      m_Position: {x: -360, y: 0}
+    - m_NodeId: empty-equipment-goals.empty
+      m_Position: {x: 0, y: 0}
+    - m_NodeId: empty-equipment-goals.output
+      m_Position: {x: 360, y: 0}
+  m_StateMachineLayouts: []
+  m_SourceSlots: []
+  references:
+    version: 2
+    RefIds:
+    - rid: 7100101
+      type: {class: CharacterGraphInputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation, asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 7100102
+      type: {class: CharacterGraphOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation, asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 7100201
+      type: {class: CharacterGraphInputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation, asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 7100202
+      type: {class: CharacterEmptyFullBodyIkGoalsPayload, ns: ThirdPersonCharacter.Pipeline.Animation, asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 7100203
+      type: {class: CharacterGraphOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation, asm: ThirdPersonClient.Runtime}
+      data: 

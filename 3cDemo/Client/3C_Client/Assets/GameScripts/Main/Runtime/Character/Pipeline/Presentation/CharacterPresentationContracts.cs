@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonGameplay.Tick;
@@ -167,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int worldStage = -1;
             for (int i = 0; i < plan.Stages.Count; i++)
             {
-                if (plan.Stages[i].ExecutionDomain != CharacterPoseExecutionDomain.WorldAwarePose)
+                if (plan.Stages[i].ExecutionDomain != CharacterPoseExecutionDomain.WorldAwareValue)
                     continue;
                 worldStage = i;
                 break;
@@ -287,23 +288,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong animationBranchReplacementCount,
             float followerPositionCorrectionMeters,
             float followerYawCorrectionDegrees,
-            CharacterFootPlacementFrameSnapshot footPlacement,
-            CharacterPosePlanStageSnapshot posePlanStages)
+            CharacterPosePlanStageSnapshot posePlanStages,
+            bool hasAnimation,
+            AnimationPresentationRuntimeSnapshot animation)
         {
             BodyBranchReplacementCount = bodyBranchReplacementCount;
             AnimationBranchReplacementCount = animationBranchReplacementCount;
             FollowerPositionCorrectionMeters = followerPositionCorrectionMeters;
             FollowerYawCorrectionDegrees = followerYawCorrectionDegrees;
-            FootPlacement = footPlacement;
             PosePlanStages = posePlanStages;
+            HasAnimation = hasAnimation;
+            Animation = animation;
         }
 
         public ulong BodyBranchReplacementCount { get; }
         public ulong AnimationBranchReplacementCount { get; }
         public float FollowerPositionCorrectionMeters { get; }
         public float FollowerYawCorrectionDegrees { get; }
-        public CharacterFootPlacementFrameSnapshot FootPlacement { get; }
         public CharacterPosePlanStageSnapshot PosePlanStages { get; }
+        public bool HasAnimation { get; }
+        public AnimationPresentationRuntimeSnapshot Animation { get; }
     }
 
     public interface ICharacterPresentationRuntime : IDisposable

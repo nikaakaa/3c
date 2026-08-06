@@ -1,0 +1,34 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement name="pose-workspace" class="pose-workspace">
+        <ui:VisualElement name="pose-toolbar" class="pose-toolbar">
+            <ui:Label name="pose-document-title" class="pose-document-title" />
+            <ui:VisualElement name="pose-toolbar-content" class="pose-toolbar-content" />
+            <ui:Label name="pose-authoring-status" class="pose-authoring-status" />
+        </ui:VisualElement>
+        <BTSMTL.Editor.SplitView name="pose-main-horizontal" fixed-pane-index="0" fixed-pane-initial-dimension="340" orientation="Horizontal">
+            <BTSMTL.Editor.SplitView name="pose-left-vertical" fixed-pane-index="0" fixed-pane-initial-dimension="430" orientation="Vertical">
+                <ui:VisualElement name="pose-preview" class="pose-region pose-preview-region">
+                    <ui:Label text="Preview" class="pose-region-title" />
+                    <ui:VisualElement name="pose-preview-content" class="pose-region-content" />
+                </ui:VisualElement>
+                <ui:VisualElement name="pose-navigator" class="pose-region">
+                    <ui:Label text="My Blueprint" class="pose-region-title" />
+                    <ui:VisualElement name="pose-navigator-content" class="pose-region-content" />
+                </ui:VisualElement>
+            </BTSMTL.Editor.SplitView>
+            <BTSMTL.Editor.SplitView name="pose-content-horizontal" fixed-pane-index="1" fixed-pane-initial-dimension="360" orientation="Horizontal">
+                <ui:VisualElement name="pose-graph" class="pose-region pose-graph-region">
+                    <ui:VisualElement name="pose-navigation-toolbar" class="pose-navigation-toolbar">
+                        <ui:Button name="pose-navigation-back-button" text="&lt;" class="pose-navigation-back-button" />
+                        <ui:VisualElement name="pose-navigation-breadcrumb" class="pose-navigation-breadcrumb" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="pose-graph-content" class="pose-region-content" />
+                </ui:VisualElement>
+                <ui:VisualElement name="pose-details" class="pose-region pose-details-region">
+                    <ui:Label text="Details" class="pose-region-title" />
+                    <ui:VisualElement name="pose-details-content" class="pose-region-content" />
+                </ui:VisualElement>
+            </BTSMTL.Editor.SplitView>
+        </BTSMTL.Editor.SplitView>
+    </ui:VisualElement>
+</ui:UXML>

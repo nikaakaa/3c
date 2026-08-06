@@ -116,10 +116,343 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                 StringComparer.Ordinal)
                             .ToArray());
                     break;
+                case CreateLinkedPoseImplementationMutation implementation:
+                    CreateLinkedPoseImplementation(
+                        implementation.Implementation,
+                        implementation.GraphOwner);
+                    break;
+                case ConfigureLinkedPoseImplementationMutation implementation:
+                    RequireLinkedPoseImplementation(implementation.Implementation);
+                    Undo.RegisterCompleteObjectUndo(
+                        implementation.Implementation,
+                        "Configure Linked Pose Implementation");
+                    implementation.Implementation.name =
+                        implementation.DisplayName;
+                    implementation.Implementation.Configure(
+                        implementation.OwnerIdentity,
+                        implementation.ImplementationId,
+                        implementation.Revision,
+                        implementation.Interface,
+                        implementation.Entries.Select(entry =>
+                            new CharacterLinkedPoseImplementationEntryBinding(
+                                entry.EntryId,
+                                entry.GraphOwnerIdentity,
+                                entry.GraphOwner,
+                                entry.GraphId)).ToArray());
+                    EditorUtility.SetDirty(implementation.Implementation);
+                    break;
+                case RemoveLinkedPoseImplementationMutation implementation:
+                    RemoveLinkedPoseImplementation(implementation.Implementation);
+                    break;
+                case CreateLinkedPoseInterfaceMutation linkedInterface:
+                    CreateLinkedPoseInterface(linkedInterface.Interface);
+                    break;
+                case ConfigureLinkedPoseInterfaceMutation linkedInterface:
+                    ConfigureLinkedPoseInterface(linkedInterface);
+                    break;
+                case RemoveLinkedPoseInterfaceMutation linkedInterface:
+                    RemoveLinkedPoseInterface(linkedInterface.Interface);
+                    break;
+                case SetLinkedPoseGroupMutation group:
+                    SetLinkedPoseGroup(group.Binding);
+                    break;
+                case RemoveLinkedPoseGroupMutation group:
+                    RemoveLinkedPoseGroup(group.GroupId);
+                    break;
+                case CreateEquipmentLinkedPoseSelectorMutation selector:
+                    CreateLinkedPoseSelector(selector.Selector);
+                    break;
+                case ConfigureEquipmentLinkedPoseSelectorMutation selector:
+                    RequireLinkedPoseSelector(selector.Selector);
+                    Undo.RegisterCompleteObjectUndo(
+                        selector.Selector,
+                        "Configure Equipment Linked Pose Selector");
+                    selector.Selector.Configure(
+                        selector.SelectorId,
+                        selector.GroupId,
+                        selector.SlotId,
+                        selector.EmptyImplementationId,
+                        selector.Mappings.ToArray());
+                    EditorUtility.SetDirty(selector.Selector);
+                    break;
+                case RemoveLinkedPoseSelectorMutation selector:
+                    RemoveLinkedPoseSelector(selector.Selector);
+                    break;
+                case SetEquipmentLinkedPoseMappingMutation mapping:
+                    SetEquipmentLinkedPoseMapping(mapping.Selector, mapping.Mapping);
+                    break;
+                case RemoveEquipmentLinkedPoseMappingMutation mapping:
+                    RemoveEquipmentLinkedPoseMapping(
+                        mapping.Selector,
+                        mapping.EquipmentId);
+                    break;
                 default:
                     throw new InvalidOperationException(
                         $"Mutation '{mutation.Kind}' is not owned by the Presentation Profile surface.");
             }
+        }
+
+        void CreateLinkedPoseImplementation(
+            CharacterLinkedPoseImplementationAsset implementation,
+            CharacterPresentationPoseGraphAsset graphOwner)
+        {
+            if (m_Profile.LinkedPoseImplementations.Contains(implementation))
+                throw new InvalidOperationException(
+                    $"Linked Pose Implementation '{implementation.name}' already belongs to the Profile.");
+            if (!string.IsNullOrEmpty(AssetDatabase.GetAssetPath(implementation)) ||
+                !string.IsNullOrEmpty(AssetDatabase.GetAssetPath(graphOwner)))
+                throw new InvalidOperationException(
+                    "New Linked Pose Implementation and graph owner must be transient objects.");
+            Undo.RegisterCreatedObjectUndo(
+                graphOwner,
+                "Create Linked Pose Graph Owner");
+            AssetDatabase.AddObjectToAsset(graphOwner, m_Profile);
+            Undo.RegisterCreatedObjectUndo(
+                implementation,
+                "Create Linked Pose Implementation");
+            AssetDatabase.AddObjectToAsset(implementation, m_Profile);
+            m_Profile.SetLinkedPoseBindings(
+                m_Profile.LinkedPoseGroups.ToArray(),
+                m_Profile.LinkedPoseImplementations.Append(implementation)
+                    .ToArray(),
+                m_Profile.LinkedPoseSelectors.ToArray());
+            EditorUtility.SetDirty(graphOwner);
+            EditorUtility.SetDirty(implementation);
+        }
+
+        void CreateLinkedPoseInterface(
+            CharacterLinkedPoseInterfaceAsset linkedInterface)
+        {
+            if (!linkedInterface ||
+                !string.IsNullOrEmpty(AssetDatabase.GetAssetPath(linkedInterface)))
+                throw new InvalidOperationException(
+                    "New Linked Pose Interface must be a transient object.");
+            Undo.RegisterCreatedObjectUndo(
+                linkedInterface,
+                "Create Linked Pose Interface");
+            AssetDatabase.AddObjectToAsset(linkedInterface, m_Profile);
+            EditorUtility.SetDirty(linkedInterface);
+        }
+
+        void ConfigureLinkedPoseInterface(
+            ConfigureLinkedPoseInterfaceMutation mutation)
+        {
+            if (!mutation.Interface ||
+                !string.IsNullOrEmpty(AssetDatabase.GetAssetPath(mutation.Interface)) &&
+                !AssetDatabase.GetAssetPath(mutation.Interface).Equals(
+                    AssetDatabase.GetAssetPath(m_Profile),
+                    StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    "Linked Pose Interface must belong to the current Profile or be transient.");
+            Undo.RegisterCompleteObjectUndo(
+                mutation.Interface,
+                "Configure Linked Pose Interface");
+            mutation.Interface.name = mutation.DisplayName;
+            mutation.Interface.Configure(
+                mutation.OwnerIdentity,
+                mutation.InterfaceId,
+                mutation.Revision,
+                mutation.Entries.ToArray());
+            EditorUtility.SetDirty(mutation.Interface);
+        }
+
+        void RemoveLinkedPoseInterface(
+            CharacterLinkedPoseInterfaceAsset linkedInterface)
+        {
+            if (!linkedInterface ||
+                !IsOwnedSubAsset(linkedInterface))
+                throw new InvalidOperationException(
+                    "Linked Pose Interface does not belong to this Profile.");
+            if (m_Profile.LinkedPoseGroups.Any(value =>
+                    value != null && value.Interface == linkedInterface))
+                throw new InvalidOperationException(
+                    $"Linked Pose Interface '{linkedInterface.InterfaceId}' is still used by a Group.");
+            if (m_Profile.LinkedPoseImplementations.Any(value =>
+                    value != null && value.Interface == linkedInterface))
+                throw new InvalidOperationException(
+                    $"Linked Pose Interface '{linkedInterface.InterfaceId}' is still used by an Implementation.");
+            if (m_Profile.PoseGraph && m_Profile.PoseGraph.EnumerateGraphs()
+                    .SelectMany(value => value.Nodes)
+                    .Any(value => value?.Payload is CharacterLinkedPoseCallPayload call &&
+                                  call.InterfaceId == linkedInterface.InterfaceId))
+                throw new InvalidOperationException(
+                    $"Linked Pose Interface '{linkedInterface.InterfaceId}' is still used by a root Call.");
+            Undo.DestroyObjectImmediate(linkedInterface);
+        }
+
+        bool IsOwnedSubAsset(UnityEngine.Object value) =>
+            value &&
+            string.Equals(
+                AssetDatabase.GetAssetPath(value),
+                AssetDatabase.GetAssetPath(m_Profile),
+                StringComparison.Ordinal);
+
+        void RemoveLinkedPoseImplementation(
+            CharacterLinkedPoseImplementationAsset implementation)
+        {
+            RequireLinkedPoseImplementation(implementation);
+            if (m_Profile.LinkedPoseSelectors.Any(selector =>
+                    selector is CharacterEquipmentLinkedPoseSelectionBinding equipmentSelector &&
+                    (equipmentSelector.EmptyImplementationId == implementation.ImplementationId ||
+                     equipmentSelector.CandidateImplementationIds.Contains(implementation.ImplementationId))))
+                throw new InvalidOperationException(
+                    $"Linked Pose Implementation '{implementation.ImplementationId}' is still used by a selector.");
+            CharacterPresentationPoseGraphAsset[] graphOwners = implementation
+                .Entries
+                .Where(value => value != null && value.GraphOwner)
+                .Select(value => value.GraphOwner)
+                .Distinct()
+                .ToArray();
+            m_Profile.SetLinkedPoseBindings(
+                m_Profile.LinkedPoseGroups.ToArray(),
+                m_Profile.LinkedPoseImplementations
+                    .Where(value => value != implementation)
+                    .ToArray(),
+                m_Profile.LinkedPoseSelectors.ToArray());
+            Undo.DestroyObjectImmediate(implementation);
+            foreach (CharacterPresentationPoseGraphAsset graphOwner in graphOwners)
+            {
+                bool shared = m_Profile.LinkedPoseImplementations
+                    .Where(value => value)
+                    .SelectMany(value => value.Entries)
+                    .Any(value => value != null && value.GraphOwner == graphOwner);
+                if (!shared)
+                    Undo.DestroyObjectImmediate(graphOwner);
+            }
+        }
+
+        void SetLinkedPoseGroup(CharacterLinkedPoseGroupBinding binding)
+        {
+            binding.RequireValid();
+            CharacterLinkedPoseGroupBinding[] groups = m_Profile.LinkedPoseGroups
+                .Where(value => value != null && value.GroupId != binding.GroupId)
+                .Append(binding)
+                .OrderBy(value => value.GroupId)
+                .ToArray();
+            m_Profile.SetLinkedPoseBindings(
+                groups,
+                m_Profile.LinkedPoseImplementations.ToArray(),
+                m_Profile.LinkedPoseSelectors.ToArray());
+        }
+
+        void RemoveLinkedPoseGroup(LinkedPoseGroupId groupId)
+        {
+            if (!m_Profile.LinkedPoseGroups.Any(value =>
+                    value != null && value.GroupId == groupId))
+                throw new InvalidOperationException(
+                    $"Linked Pose Group '{groupId}' does not exist.");
+            if (m_Profile.LinkedPoseSelectors.Any(value =>
+                    value != null && value.GroupId == groupId))
+                throw new InvalidOperationException(
+                    $"Linked Pose Group '{groupId}' is still used by a selector.");
+            if (m_Profile.PoseGraph && m_Profile.PoseGraph.EnumerateGraphs()
+                    .SelectMany(value => value.Nodes)
+                    .Any(value => value?.Payload is CharacterLinkedPoseCallPayload call &&
+                                  call.GroupId == groupId))
+                throw new InvalidOperationException(
+                    $"Linked Pose Group '{groupId}' is still used by a root Call.");
+            m_Profile.SetLinkedPoseBindings(
+                m_Profile.LinkedPoseGroups
+                    .Where(value => value != null && value.GroupId != groupId)
+                    .ToArray(),
+                m_Profile.LinkedPoseImplementations.ToArray(),
+                m_Profile.LinkedPoseSelectors.ToArray());
+        }
+
+        void CreateLinkedPoseSelector(
+            CharacterEquipmentLinkedPoseSelectionBinding selector)
+        {
+            if (m_Profile.LinkedPoseSelectors.Contains(selector))
+                throw new InvalidOperationException(
+                    $"Linked Pose selector '{selector.name}' already belongs to the Profile.");
+            if (!string.IsNullOrEmpty(AssetDatabase.GetAssetPath(selector)))
+                throw new InvalidOperationException(
+                    "New Linked Pose selector must be a transient object.");
+            Undo.RegisterCreatedObjectUndo(selector, "Create Linked Pose Selector");
+            AssetDatabase.AddObjectToAsset(selector, m_Profile);
+            m_Profile.SetLinkedPoseBindings(
+                m_Profile.LinkedPoseGroups.ToArray(),
+                m_Profile.LinkedPoseImplementations.ToArray(),
+                m_Profile.LinkedPoseSelectors.Append(selector).ToArray());
+            EditorUtility.SetDirty(selector);
+        }
+
+        void RemoveLinkedPoseSelector(
+            CharacterLinkedPoseSelectorBindingAsset selector)
+        {
+            RequireLinkedPoseSelector(selector);
+            m_Profile.SetLinkedPoseBindings(
+                m_Profile.LinkedPoseGroups.ToArray(),
+                m_Profile.LinkedPoseImplementations.ToArray(),
+                m_Profile.LinkedPoseSelectors
+                    .Where(value => value != selector)
+                    .ToArray());
+            Undo.DestroyObjectImmediate(selector);
+        }
+
+        void SetEquipmentLinkedPoseMapping(
+            CharacterEquipmentLinkedPoseSelectionBinding selector,
+            CharacterEquipmentLinkedPoseMapping mapping)
+        {
+            RequireLinkedPoseSelector(selector);
+            mapping.RequireValid();
+            CharacterEquipmentLinkedPoseMapping[] mappings = selector.Mappings
+                .Where(value => value != null &&
+                                value.EquipmentId != mapping.EquipmentId)
+                .Append(mapping)
+                .OrderBy(value => value.EquipmentId)
+                .ToArray();
+            Undo.RegisterCompleteObjectUndo(
+                selector,
+                "Set Equipment Linked Pose Mapping");
+            selector.Configure(
+                selector.SelectorId,
+                selector.GroupId,
+                selector.SlotId,
+                selector.EmptyImplementationId,
+                mappings);
+            EditorUtility.SetDirty(selector);
+        }
+
+        void RemoveEquipmentLinkedPoseMapping(
+            CharacterEquipmentLinkedPoseSelectionBinding selector,
+            EquipmentId equipmentId)
+        {
+            RequireLinkedPoseSelector(selector);
+            if (!selector.Mappings.Any(value =>
+                    value != null && value.EquipmentId == equipmentId))
+                throw new InvalidOperationException(
+                    $"Equipment Linked Pose mapping '{equipmentId}' does not exist.");
+            Undo.RegisterCompleteObjectUndo(
+                selector,
+                "Remove Equipment Linked Pose Mapping");
+            selector.Configure(
+                selector.SelectorId,
+                selector.GroupId,
+                selector.SlotId,
+                selector.EmptyImplementationId,
+                selector.Mappings
+                    .Where(value => value != null &&
+                                    value.EquipmentId != equipmentId)
+                    .ToArray());
+            EditorUtility.SetDirty(selector);
+        }
+
+        void RequireLinkedPoseImplementation(
+            CharacterLinkedPoseImplementationAsset implementation)
+        {
+            if (!implementation ||
+                !m_Profile.LinkedPoseImplementations.Contains(implementation))
+                throw new InvalidOperationException(
+                    "Linked Pose Implementation does not belong to this Profile.");
+        }
+
+        void RequireLinkedPoseSelector(
+            CharacterLinkedPoseSelectorBindingAsset selector)
+        {
+            if (!selector || !m_Profile.LinkedPoseSelectors.Contains(selector))
+                throw new InvalidOperationException(
+                    "Linked Pose selector does not belong to this Profile.");
         }
 
         void SetSourceBinding(
@@ -499,6 +832,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPosePortKind.Parameter => "pose.parameter",
             CharacterPosePortKind.PoseDiscontinuity => "pose.discontinuity",
             CharacterPosePortKind.ActionPlayback => "pose.action-playback",
+            CharacterPosePortKind.FullBodyIkGoals => "component.full-body-ik-goals",
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
     }
@@ -603,20 +937,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     public sealed class CharacterTypedPoseDetailsDataSource :
         IGraphAuthoringDetailsDataSource,
+        IGraphAuthoringAppliedValuesDataSource,
         IGraphAuthoringFieldOptionSource
     {
         readonly IGraphAuthoringDomainDiagnostics m_Diagnostics;
         readonly CharacterAnimationRigDefinition m_Rig;
         readonly CharacterAnimationPresentationProfile m_Profile;
+        readonly Func<GraphAuthoringSelection, IReadOnlyList<GraphAuthoringReadOnlyDetail>> m_AppliedValues;
 
         public CharacterTypedPoseDetailsDataSource(
             IGraphAuthoringDomainDiagnostics diagnostics = null,
             CharacterAnimationRigDefinition rig = null,
-            CharacterAnimationPresentationProfile profile = null)
+            CharacterAnimationPresentationProfile profile = null,
+            Func<GraphAuthoringSelection, IReadOnlyList<GraphAuthoringReadOnlyDetail>> appliedValues = null)
         {
             m_Diagnostics = diagnostics;
             m_Rig = rig;
             m_Profile = profile;
+            m_AppliedValues = appliedValues;
         }
 
         public object ReadField(IGraphAuthoringDocumentProjection document, GraphAuthoringElementId elementId, GraphAuthoringFieldDescriptor field)
@@ -648,6 +986,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new GraphAuthoringReadOnlyDetail("Result", trace.Detail)
             };
         }
+
+        public IReadOnlyList<GraphAuthoringReadOnlyDetail> GetAppliedValues(
+            IGraphAuthoringDocumentProjection document,
+            GraphAuthoringSelection selection) =>
+            m_AppliedValues?.Invoke(selection) ?? new[]
+            {
+                new GraphAuthoringReadOnlyDetail(
+                    "Target",
+                    "Select an exact Preview or Live target to inspect applied values.")
+            };
+
         public IReadOnlyList<GraphAuthoringReadOnlyDetail> GetDiagnostics(IGraphAuthoringDocumentProjection document, GraphAuthoringSelection selection) => Array.Empty<GraphAuthoringReadOnlyDetail>();
 
         public IReadOnlyList<GraphAuthoringReadOnlyDetail> GetReferences(IGraphAuthoringDocumentProjection document, GraphAuthoringSelection selection)
@@ -759,6 +1108,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public static IReadOnlyList<string> Validate(CharacterPresentationPoseGraphAsset asset)
         {
+            return Validate(asset, Array.Empty<PoseGraphId>());
+        }
+
+        public static IReadOnlyList<string> Validate(
+            CharacterPresentationPoseGraphAsset asset,
+            IReadOnlyCollection<PoseGraphId> linkedPoseEntryGraphs)
+        {
             var errors = new List<string>();
             if (!asset || asset.Graph == null)
             {
@@ -777,12 +1133,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 .Where(value => value != null && value.PoseGraphId.IsValid)
                 .Select(value => value.PoseGraphId)
                 .ToHashSet();
-
+            var linkedEntries = new HashSet<PoseGraphId>(linkedPoseEntryGraphs ?? Array.Empty<PoseGraphId>());
+            HashSet<PoseGraphId> linkedClosure = CollectLinkedPoseClosure(asset, linkedEntries);
             foreach (CharacterTypedPoseGraph graph in asset.EnumerateGraphs())
             {
                 if (graph == null)
                     continue;
-                GraphAuthoringDocumentRoleId role = ReferenceEquals(graph, asset.Graph)
+                GraphAuthoringDocumentRoleId role = linkedEntries.Contains(graph.GraphId)
+                    ? CharacterPoseGraphAuthoringCapabilities.LinkedPoseEntry
+                    : ReferenceEquals(graph, asset.Graph)
                     ? CharacterPoseGraphAuthoringCapabilities.RootGraph
                     : stateGraphs.Contains(graph.GraphId)
                         ? CharacterPoseGraphAuthoringCapabilities.StatePoseGraph
@@ -804,6 +1163,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ValidatePayload(node, capability);
                         ValidateFields(node, capability);
                         ValidatePorts(node, capability);
+                        if (linkedClosure.Contains(graph.GraphId))
+                            ValidateLinkedPoseEntryContext(node, role);
                         if (node.Kind == CharacterPoseNodeKind.PoseSubgraph)
                         {
                             CharacterPoseSubgraphSignatureValidator.RequireMatch(
@@ -818,6 +1179,56 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             }
             return errors;
+        }
+
+        static HashSet<PoseGraphId> CollectLinkedPoseClosure(
+            CharacterPresentationPoseGraphAsset asset,
+            IReadOnlyCollection<PoseGraphId> roots)
+        {
+            var result = new HashSet<PoseGraphId>();
+            var pending = new Stack<PoseGraphId>(roots.Reverse());
+            while (pending.Count > 0)
+            {
+                PoseGraphId graphId = pending.Pop();
+                if (!result.Add(graphId))
+                    continue;
+                CharacterTypedPoseGraph graph = asset.RequireGraph(graphId);
+                for (int nodeIndex = 0; nodeIndex < graph.Nodes.Count; nodeIndex++)
+                {
+                    CharacterTypedPoseNode node = graph.Nodes[nodeIndex];
+                    if (node?.Payload is CharacterPoseSubgraphPayload subgraph && subgraph.Subgraph != null && subgraph.Subgraph.PoseGraphId.IsValid)
+                        pending.Push(subgraph.Subgraph.PoseGraphId);
+                    if (node?.Payload is not CharacterPoseStateMachineNodePayload stateMachine || stateMachine.StateMachine == null)
+                        continue;
+                    for (int stateIndex = 0; stateIndex < stateMachine.StateMachine.States.Count; stateIndex++)
+                    {
+                        CharacterPoseStateDefinition state = stateMachine.StateMachine.States[stateIndex];
+                        if (state != null && state.PoseGraphId.IsValid)
+                            pending.Push(state.PoseGraphId);
+                    }
+                }
+            }
+            return result;
+        }
+
+        static void ValidateLinkedPoseEntryContext(
+            CharacterTypedPoseNode node,
+            GraphAuthoringDocumentRoleId role)
+        {
+            switch (node.Kind)
+            {
+                case CharacterPoseNodeKind.ActionPlaybackInput:
+                case CharacterPoseNodeKind.AnimationSlot:
+                case CharacterPoseNodeKind.ModifyBone:
+                case CharacterPoseNodeKind.PredictiveFootPlacement:
+                case CharacterPoseNodeKind.FullBodyIK:
+                case CharacterPoseNodeKind.LocalToComponentPose:
+                case CharacterPoseNodeKind.ComponentToLocalPose:
+                case CharacterPoseNodeKind.LinkedPoseCall:
+                    throw new InvalidOperationException($"Linked Pose Entry context forbids '{node.Kind}'.");
+                case CharacterPoseNodeKind.OutputPose when !role.Equals(CharacterPoseGraphAuthoringCapabilities.StatePoseGraph):
+                    throw new InvalidOperationException("Linked Pose Entry context only permits OutputPose as a StateMachine state boundary.");
+            }
         }
 
         static void ValidatePayload(
@@ -842,7 +1253,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterTypedPoseNode node,
             GraphAuthoringCapabilityDescriptor capability)
         {
-            foreach (GraphAuthoringFieldDescriptor field in capability.Fields)
+            foreach (GraphAuthoringFieldDescriptor field in
+                     capability.Fields.Where(value => value.AuthoringWritable))
             {
                 object value = CharacterPoseAuthoringPayloadCodec.Read(
                     node.Payload,

@@ -7236,7 +7236,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_SourceMotionClipId: 142218e6-6644-479b-b721-19d91be03a15
-        TranslationMode: 2
+        TranslationMode: 0
         TargetOffsetSpace: 1
         RotationMode: 1
         RotationMethod: 0

@@ -1,4 +1,5 @@
 using System;
+using UnityEditor;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.Experimental.GraphView;
@@ -59,6 +60,7 @@ namespace TreeDesigner.Editor
     {
         public GraphAuthoringProjectedStateMachineEntryView(
             GraphAuthoringStateMachineEntryProjection projection)
+            : base(AssetDatabase.GUIDToAssetPath(BaseNodeView.DefaultVisualTreeGUID))
         {
             Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             BindAuthoringPresentation(
@@ -86,6 +88,7 @@ namespace TreeDesigner.Editor
         public GraphAuthoringProjectedStateMachineStateView(
             GraphAuthoringStateProjection projection,
             GraphAuthoringCapabilityDescriptor capability)
+            : base(AssetDatabase.GUIDToAssetPath(BaseNodeView.DefaultVisualTreeGUID))
         {
             Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             Capability = capability ?? throw new ArgumentNullException(nameof(capability));
@@ -130,6 +133,7 @@ namespace TreeDesigner.Editor
     {
         public GraphAuthoringProjectedStateMachineAliasView(
             GraphAuthoringStateAliasProjection projection)
+            : base(AssetDatabase.GUIDToAssetPath(BaseNodeView.DefaultVisualTreeGUID))
         {
             Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             BindAuthoringPresentation(
@@ -550,3 +554,9 @@ namespace TreeDesigner.Editor
         }
     }
 }
+
+
+
+
+
+

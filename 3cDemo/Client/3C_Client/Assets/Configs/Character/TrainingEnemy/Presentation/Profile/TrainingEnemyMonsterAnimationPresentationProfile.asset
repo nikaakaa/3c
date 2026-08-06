@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 248c097b8659488296c54f95ad0de83b, type: 3}
+  m_Name: TrainingEnemyMonsterAnimationPresentationProfile
+  m_EditorClassIdentifier: 
+  m_PoseGraph: {fileID: 11400000, guid: 3fc1b3f47ec69db4b985f01b44356f25, type: 2}
+  m_RigDefinition: {fileID: 11400000, guid: 9c6c73879a7e85e40a59218627a60603, type: 2}
+  m_MotionMatchingProfile: {fileID: 0}
+  m_FullBodyIkProfile: {fileID: 11400000, guid: f767dc2454010674fba9800c4bc7318e,
+    type: 2}
+  m_LinkedPoseGroups: []
+  m_LinkedPoseImplementations: []
+  m_LinkedPoseSelectors: []
+  m_ProducerBindings:
+  - m_TimelineAuthoringId: fdd39441-d8cd-4239-a71e-38db0baf29f6
+    m_TrackAuthoringId: 5363209c-c0c6-4fc0-97d8-1188907443c0
+    m_Source: {fileID: 11400000, guid: a3af36d681dfd804692f79554831a768, type: 2}
+    m_FootAnalysisIdentity: TrainingEnemy.Monster.FootPlacementAnalysis
+  m_PoseSourceBindings:
+  - {fileID: 620238734447793074}
+  m_FootPlacementAnalysisMode: 1
+  m_FootPlacementAnalysisSourceAssetGuid: 575540e96db516a4aa328f42f3d3b741
+--- !u!114 &620238734447793074
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5f272b72b3da244ba161898914a1b4b, type: 3}
+  m_Name: TrainingEnemyMonsterLocomotionBinding
+  m_EditorClassIdentifier: 
+  m_Slot: {fileID: 8505760561943621781, guid: 3fc1b3f47ec69db4b985f01b44356f25, type: 2}
+  m_Rig: {fileID: 11400000, guid: 9c6c73879a7e85e40a59218627a60603, type: 2}
+  m_FootAnalysisIdentity: TrainingEnemy.Monster.FootPlacementAnalysis
+  m_ContentRevision: 765a4362b5c2400585d832fd024a7877
+  m_BlendSpace: {fileID: 11400000, guid: dfac616da11bce54b9577e29b1c21c2c, type: 2}

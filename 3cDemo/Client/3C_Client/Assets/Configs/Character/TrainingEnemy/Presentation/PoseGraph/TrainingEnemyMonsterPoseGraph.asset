@@ -1,0 +1,255 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c098d552eb42231449a0d29a2f0026cb, type: 3}
+  m_Name: TrainingEnemyMonsterPoseGraph
+  m_EditorClassIdentifier: 
+  m_TypedGraph:
+    m_GraphId: training-enemy.monster.pose-graph
+    m_ContentRevision: training-enemy.monster.pose-graph-v2
+    m_Parameters:
+    - m_ParameterId: character.motor.planar-speed
+      m_ValueType: 1
+      m_Unit: m/s
+      m_DefaultValue: 0
+    - m_ParameterId: animation.foot-placement-weight
+      m_ValueType: 1
+      m_Unit: 
+      m_DefaultValue: 1
+    m_Nodes:
+    - m_NodeId: training-enemy.monster.pose.speed
+      m_DisplayName: Motor Planar Speed
+      m_Payload:
+        rid: 3396202407018103281
+      m_DynamicPorts: []
+    - m_NodeId: training-enemy.monster.pose.foot-placement-weight
+      m_DisplayName: Foot Placement Weight
+      m_Payload:
+        rid: 3396202407018103282
+      m_DynamicPorts: []
+    - m_NodeId: training-enemy.monster.pose.locomotion
+      m_DisplayName: Monster Locomotion
+      m_Payload:
+        rid: 3396202407018103283
+      m_DynamicPorts: []
+    - m_NodeId: training-enemy.monster.pose.action-input
+      m_DisplayName: Monster Action Playback
+      m_Payload:
+        rid: 3396202407018103284
+      m_DynamicPorts: []
+    - m_NodeId: training-enemy.monster.pose.action-slot
+      m_DisplayName: Monster Full Body Action
+      m_Payload:
+        rid: 3396202407018103285
+      m_DynamicPorts: []
+    - m_NodeId: training-enemy.monster.pose.parameter-resolve
+      m_DisplayName: Resolve Monster Pose Parameters
+      m_Payload:
+        rid: 3396202407018103286
+      m_DynamicPorts: []
+    - m_NodeId: training-enemy.monster.pose.to-component
+      m_DisplayName: Monster Local To Component
+      m_Payload:
+        rid: 3396202407018103287
+      m_DynamicPorts: []
+    - m_NodeId: training-enemy.monster.pose.foot-placement
+      m_DisplayName: Monster Foot Placement
+      m_Payload:
+        rid: 3396202407018103288
+      m_DynamicPorts: []
+    - m_NodeId: training-enemy.monster.pose.full-body-ik
+      m_DisplayName: Monster Full Body IK
+      m_Payload:
+        rid: 3396202407018103289
+      m_DynamicPorts:
+      - m_PortId: foot-goals
+        m_DisplayName: Foot Goals
+        m_Kind: 9
+        m_Direction: 1
+        m_Required: 1
+        m_Order: 0
+        m_InterfacePortId: 
+    - m_NodeId: training-enemy.monster.pose.to-local
+      m_DisplayName: Monster Component To Local
+      m_Payload:
+        rid: 3396202407018103290
+      m_DynamicPorts: []
+    - m_NodeId: training-enemy.monster.pose.output
+      m_DisplayName: Output
+      m_Payload:
+        rid: 3396202407018103291
+      m_DynamicPorts: []
+    m_Edges:
+    - m_EdgeId: training-enemy.monster.edge.speed
+      m_SourceNodeId: training-enemy.monster.pose.speed
+      m_SourcePortId: parameter
+      m_TargetNodeId: training-enemy.monster.pose.locomotion
+      m_TargetPortId: x
+    - m_EdgeId: training-enemy.monster.edge.foot-placement-weight
+      m_SourceNodeId: training-enemy.monster.pose.foot-placement-weight
+      m_SourcePortId: parameter
+      m_TargetNodeId: training-enemy.monster.pose.foot-placement
+      m_TargetPortId: weight
+    - m_EdgeId: training-enemy.monster.edge.locomotion
+      m_SourceNodeId: training-enemy.monster.pose.locomotion
+      m_SourcePortId: pose
+      m_TargetNodeId: training-enemy.monster.pose.action-slot
+      m_TargetPortId: source-pose
+    - m_EdgeId: training-enemy.monster.edge.action
+      m_SourceNodeId: training-enemy.monster.pose.action-input
+      m_SourcePortId: action-playback
+      m_TargetNodeId: training-enemy.monster.pose.action-slot
+      m_TargetPortId: action-playback
+    - m_EdgeId: training-enemy.monster.edge.parameter-resolve-base
+      m_SourceNodeId: training-enemy.monster.pose.action-slot
+      m_SourcePortId: pose
+      m_TargetNodeId: training-enemy.monster.pose.parameter-resolve
+      m_TargetPortId: base-pose
+    - m_EdgeId: training-enemy.monster.edge.parameter-resolve-source
+      m_SourceNodeId: training-enemy.monster.pose.action-slot
+      m_SourcePortId: pose
+      m_TargetNodeId: training-enemy.monster.pose.parameter-resolve
+      m_TargetPortId: parameter-source-pose
+    - m_EdgeId: training-enemy.monster.edge.to-component
+      m_SourceNodeId: training-enemy.monster.pose.parameter-resolve
+      m_SourcePortId: pose
+      m_TargetNodeId: training-enemy.monster.pose.to-component
+      m_TargetPortId: local-pose
+    - m_EdgeId: training-enemy.monster.edge.foot-placement-pose
+      m_SourceNodeId: training-enemy.monster.pose.to-component
+      m_SourcePortId: component-pose
+      m_TargetNodeId: training-enemy.monster.pose.foot-placement
+      m_TargetPortId: pose
+    - m_EdgeId: training-enemy.monster.edge.full-body-ik
+      m_SourceNodeId: training-enemy.monster.pose.to-component
+      m_SourcePortId: component-pose
+      m_TargetNodeId: training-enemy.monster.pose.full-body-ik
+      m_TargetPortId: pose
+    - m_EdgeId: training-enemy.monster.edge.foot-placement-goals
+      m_SourceNodeId: training-enemy.monster.pose.foot-placement
+      m_SourcePortId: goals
+      m_TargetNodeId: training-enemy.monster.pose.full-body-ik
+      m_TargetPortId: foot-goals
+    - m_EdgeId: training-enemy.monster.edge.to-local
+      m_SourceNodeId: training-enemy.monster.pose.full-body-ik
+      m_SourcePortId: result
+      m_TargetNodeId: training-enemy.monster.pose.to-local
+      m_TargetPortId: component-pose
+    - m_EdgeId: training-enemy.monster.edge.output
+      m_SourceNodeId: training-enemy.monster.pose.to-local
+      m_SourcePortId: local-pose
+      m_TargetNodeId: training-enemy.monster.pose.output
+      m_TargetPortId: pose
+    m_Layout:
+    - m_NodeId: training-enemy.monster.pose.speed
+      m_Position: {x: -720, y: -160}
+    - m_NodeId: training-enemy.monster.pose.foot-placement-weight
+      m_Position: {x: 260, y: 260}
+    - m_NodeId: training-enemy.monster.pose.locomotion
+      m_Position: {x: -480, y: -160}
+    - m_NodeId: training-enemy.monster.pose.action-input
+      m_Position: {x: -480, y: 160}
+    - m_NodeId: training-enemy.monster.pose.action-slot
+      m_Position: {x: 0, y: 0}
+    - m_NodeId: training-enemy.monster.pose.parameter-resolve
+      m_Position: {x: 240, y: 0}
+    - m_NodeId: training-enemy.monster.pose.to-component
+      m_Position: {x: 500, y: 0}
+    - m_NodeId: training-enemy.monster.pose.foot-placement
+      m_Position: {x: 500, y: 180}
+    - m_NodeId: training-enemy.monster.pose.full-body-ik
+      m_Position: {x: 740, y: 0}
+    - m_NodeId: training-enemy.monster.pose.to-local
+      m_Position: {x: 980, y: 0}
+    - m_NodeId: training-enemy.monster.pose.output
+      m_Position: {x: 1220, y: 0}
+  m_TypedGraphCatalog: []
+  m_StateMachineLayouts: []
+  m_SourceSlots:
+  - {fileID: 8505760561943621781}
+  references:
+    version: 2
+    RefIds:
+    - rid: 3396202407018103281
+      type: {class: CharacterProgramParameterInputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_ParameterId: character.motor.planar-speed
+    - rid: 3396202407018103282
+      type: {class: CharacterProgramParameterInputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_ParameterId: animation.foot-placement-weight
+    - rid: 3396202407018103283
+      type: {class: CharacterBlendSpacePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: 8505760561943621781}
+        m_InputRangePolicy: 1
+    - rid: 3396202407018103284
+      type: {class: CharacterActionPlaybackInputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_AnimationChannelId: training-enemy.monster.animation.full-body
+    - rid: 3396202407018103285
+      type: {class: CharacterAnimationSlotPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SlotId: training-enemy.monster.full-body
+        m_AnimationChannelId: training-enemy.monster.animation.full-body
+        m_SelectionAvailability: 2
+        m_BlendPolicy: {fileID: 11400000, guid: 593f30a646a9cfd4f8578914aa7da490,
+          type: 2}
+    - rid: 3396202407018103286
+      type: {class: CharacterPoseParameterResolvePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_Policies:
+        - m_ParameterId: character.motor.planar-speed
+          m_Policy: 1
+        - m_ParameterId: animation.foot-placement-weight
+          m_Policy: 3
+    - rid: 3396202407018103287
+      type: {class: CharacterLocalToComponentPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 3396202407018103288
+      type: {class: CharacterPredictiveFootPlacementPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_Profile: {fileID: 11400000, guid: 67caf04cfc2286a46ae27988d8bac11c, type: 2}
+        m_Calibration: {fileID: 11400000, guid: 02ef3c420db2cc642829c7f9f9233b32,
+          type: 2}
+    - rid: 3396202407018103289
+      type: {class: CharacterFullBodyIkPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_Profile: {fileID: 11400000, guid: f767dc2454010674fba9800c4bc7318e, type: 2}
+    - rid: 3396202407018103290
+      type: {class: CharacterComponentToLocalPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data: 
+    - rid: 3396202407018103291
+      type: {class: CharacterOutputPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data: 
+--- !u!114 &8505760561943621781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a322e269d5d91074094692bebbad2b4f, type: 3}
+  m_Name: TrainingEnemyMonsterLocomotionSlot
+  m_EditorClassIdentifier: 

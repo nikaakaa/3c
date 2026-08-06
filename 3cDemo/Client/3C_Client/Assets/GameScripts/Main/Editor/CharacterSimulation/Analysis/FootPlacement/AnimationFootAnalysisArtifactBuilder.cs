@@ -1,5 +1,6 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Editor;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -9,6 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             UnityEngine.AnimationClip clip,
             CharacterFootPlacementAnalysisSource source)
         {
+            CharacterFootPlacementRigGeometryValidationPublisher.RequireCurrent(source);
             return AnimationFootAnalysisArtifactIdentityBuilder.Build(clip, source);
         }
 

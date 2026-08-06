@@ -57,7 +57,7 @@ UnityCharacterSimulationInputAdapter
 - `SimulationInputRequest.SourceTick` 保留请求来源 Tick。
 - Action 事实使用 `ActionInstanceId`、`PredictionKey` 和 `InputSequence` 关联预测事务。
 
-未来 ServerAuthoritative Prediction Pipeline 可以在自己的 SnapshotParticipant 中保存 owner input/state history，并使用 server tick、ack 和 snapshot 对齐；未来 DeterministicRollback Pipeline 可以按 Tick 与 stable ActorId 组装 canonical input bundle。两者复用输入语义，但不共享 history 实现或 correction policy。
+当前ServerAuthoritative Prediction Pipeline在自己的SnapshotParticipant中保存owner input/state history，并使用server tick、ack和snapshot对齐；DeterministicRollback Pipeline按Tick与stable ActorId组装canonical input bundle。两者复用输入语义，但不共享history实现或correction policy。
 
 ### ServerAuthoritative 预测与校正
 
@@ -79,7 +79,7 @@ owner CharacterSimulationInput
 
 ### Deterministic Rollback
 
-参考项目的 canonical input、snapshot ring、restore/replay 和 state hash 可以用于 `add-deterministic-rollback-kcc-model`，但 3C 必须从同一 `.csir` 生成独立 Fixed Program/State/Kernel ABI，并提供自己的 Deterministic KCC 与 Fixed Session Composer。
+参考项目的canonical input、snapshot ring、restore/replay和state hash已经由本项目独立实现在DeterministicRollback组合中。3C仍必须从同一`.csir`生成独立Fixed Program/State/Kernel ABI，并使用项目自有Deterministic KCC与Fixed Session Composer；参考项目不进入运行依赖。
 
 Fixed backend 仍应保持核心世界所有权形状：
 

@@ -7,17 +7,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     public sealed class CharacterFootPlacementPoseRig
     {
+        enum ValidationContract : byte
+        {
+            PublishedRuntime = 1,
+            CalibrationAuthoring = 2
+        }
+
         public CharacterFootPlacementPoseRig(
             CharacterFootPlacementRigCalibration calibration,
             CharacterAnimationRigPayload rig,
             CharacterAnimationRigBinding binding,
             CharacterWorldAwarePresentationBinding world)
+            : this(calibration, rig, binding, world, ValidationContract.PublishedRuntime)
+        {
+        }
+
+        CharacterFootPlacementPoseRig(
+            CharacterFootPlacementRigCalibration calibration,
+            CharacterAnimationRigPayload rig,
+            CharacterAnimationRigBinding binding,
+            CharacterWorldAwarePresentationBinding world,
+            ValidationContract validationContract)
         {
             Calibration = calibration ? calibration : throw new ArgumentNullException(nameof(calibration));
             Rig = rig ?? throw new ArgumentNullException(nameof(rig));
             Binding = binding ? binding : throw new ArgumentNullException(nameof(binding));
             World = world ? world : throw new ArgumentNullException(nameof(world));
-            Calibration.RequireValid();
+            if (validationContract == ValidationContract.PublishedRuntime)
+                Calibration.RequireValid();
+            else
+                Calibration.RequireConfiguredForAuthoring();
             Rig.RequireValid();
             Binding.RequireValid(Rig);
             World.RequireValid();
@@ -48,8 +67,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RightToeContactOffset = right.ToeContactLocalOffset;
             LeftSoleFrameLocalRotation = left.SoleFrameLocalRotation;
             RightSoleFrameLocalRotation = right.SoleFrameLocalRotation;
-            LeftPreferredBendLocalDirection = left.PreferredBendVisualRootLocalDirection;
-            RightPreferredBendLocalDirection = right.PreferredBendVisualRootLocalDirection;
+        }
+
+        public static CharacterFootPlacementPoseRig CreateCalibrationAuthoringRig(
+            CharacterFootPlacementRigCalibration calibration,
+            CharacterAnimationRigDefinition rig,
+            CharacterAnimationRigBinding binding,
+            CharacterWorldAwarePresentationBinding world)
+        {
+            if (!calibration)
+                throw new ArgumentNullException(nameof(calibration));
+            if (!rig)
+                throw new ArgumentNullException(nameof(rig));
+            calibration.RequireRigForAuthoring(rig);
+            return new CharacterFootPlacementPoseRig(
+                calibration,
+                new CharacterAnimationRigPayload(rig),
+                binding,
+                world,
+                ValidationContract.CalibrationAuthoring);
         }
 
         public CharacterFootPlacementRigCalibration Calibration { get; }
@@ -78,8 +114,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 RightToeContactOffset { get; }
         public Quaternion LeftSoleFrameLocalRotation { get; }
         public Quaternion RightSoleFrameLocalRotation { get; }
-        public Vector3 LeftPreferredBendLocalDirection { get; }
-        public Vector3 RightPreferredBendLocalDirection { get; }
         public float LeftLegLength { get; }
         public float RightLegLength { get; }
 

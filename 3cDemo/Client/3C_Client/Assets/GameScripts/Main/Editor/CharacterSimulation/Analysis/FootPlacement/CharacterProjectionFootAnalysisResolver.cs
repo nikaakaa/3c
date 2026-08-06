@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using UnityEditor;
 
@@ -354,6 +355,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
             string[] artifactTokens = BuildArtifactTokens(artifacts.Values);
             StableHash aggregateHash = StableHash.Compute(artifactTokens);
+            CharacterFootPlacementRigGeometryValidationIdentity geometryValidation =
+                source.RigCalibration.GeometryValidation ??
+                throw new InvalidOperationException("Foot Placement Calibration geometry validation identity is missing.");
+            geometryValidation.RequireMatches(source.RigDefinition, source.RigCalibration);
             var identity = new AnimationFootAnalysisProjectionIdentity(
                 CharacterFootPlacementAnalysisMode.GeneratedPerFootFeatures,
                 source.AnalysisSourceId.Value,
@@ -362,6 +367,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 source.RigCalibration.CalibrationId,
                 source.RigCalibration.SchemaVersion,
                 source.RigCalibration.ContentRevision,
+                geometryValidation.IdentityHash,
+                geometryValidation.GeometryContentHash,
                 aggregateHash.Value);
             var revisionTokens = new List<string> { "foot-analysis-artifacts/v1", aggregateHash.Value };
             revisionTokens.AddRange(artifactTokens);
@@ -424,13 +431,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return false;
             string[] artifactTokens = BuildArtifactTokens(artifacts.Values);
             StableHash aggregateHash = StableHash.Compute(artifactTokens);
+            CharacterFootPlacementRigGeometryValidationIdentity geometryValidation =
+                source.RigCalibration.GeometryValidation;
             if (projection.FootAnalysis == null || !projection.FootAnalysis.IsEnabled ||
+                geometryValidation == null ||
                 !string.Equals(projection.FootAnalysis.AnalysisSourceId, source.AnalysisSourceId.Value, StringComparison.Ordinal) ||
                 projection.FootAnalysis.AnalysisVersion != source.AnalysisVersion ||
                 !string.Equals(projection.FootAnalysis.AlgorithmVersion, CharacterFootPlacementAnalysisSource.AlgorithmVersion, StringComparison.Ordinal) ||
                 !string.Equals(projection.FootAnalysis.CalibrationId.Value, source.RigCalibration.CalibrationId.Value, StringComparison.Ordinal) ||
                 projection.FootAnalysis.CalibrationSchemaVersion != source.RigCalibration.SchemaVersion ||
                 !string.Equals(projection.FootAnalysis.CalibrationRevision, source.RigCalibration.ContentRevision, StringComparison.Ordinal) ||
+                !string.Equals(projection.FootAnalysis.GeometryValidationIdentity, geometryValidation.IdentityHash, StringComparison.Ordinal) ||
+                !string.Equals(projection.FootAnalysis.GeometryValidationContentHash, geometryValidation.GeometryContentHash, StringComparison.Ordinal) ||
                 !string.Equals(projection.FootAnalysis.ArtifactContentHash, aggregateHash.Value, StringComparison.Ordinal))
             {
                 errors?.Add("Projection Foot Analysis identity does not match the current artifact set.");

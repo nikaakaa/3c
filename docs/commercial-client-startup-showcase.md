@@ -115,7 +115,7 @@ Unity Editor 的唯一入口是 `Tools/3C/Launcher`。其中`单机 / Gameplay L
 
 工具会先校验两个显式 Variant、完整 Session 组合、正式可琳玩家 Prefab、Animation Rig Binding、World-Aware Binding、Presentation Projection 与 Native Pose Program identity；随后保存当前场景、运行所选 Variant，并在退出 Play 后恢复原场景。它不修改 Build Settings、ProductStartupProfile 或 endpoint，也不会成为正式启动失败后的离线 fallback。
 
-当前仓库已经存在Motion Matching的Profile、Source Set、显式Database Build、`.mmdb` Artifact、Query、Exact Search、短时序Plan、Selection与Projection工作区实现，但该能力仍由active change收口，尚未作为current capability安装，Corin也没有正式MM producer、Profile、Database或演示资产。Motion Warp、Root Motion、动画状态管线和Pose Graph内的Foot Placement解析式骨骼控制仍是当前Corin正式配置；展示时不得把它们改名为Motion Matching，也不得把未安装的MM工作区实现描述为Corin现成功能。
+当前仓库已经存在Motion Matching的Profile、Source Set、显式Database Build、`.mmdb` Artifact、Query、Exact Search、短时序Plan、Selection与Projection工作区实现，但该能力仍由active change收口，尚未作为current capability安装，Corin也没有正式MM producer、Profile、Database或演示资产。Motion Warp、Root Motion、动画状态管线，以及Pose Graph内分离的FootPlacement规划、typed双腿targets和LegIK解析式腿链求解仍是当前Corin正式配置；展示时不得把它们改名为Motion Matching，也不得把未安装的MM工作区实现描述为Corin现成功能。
 
 ## 展示口径
 

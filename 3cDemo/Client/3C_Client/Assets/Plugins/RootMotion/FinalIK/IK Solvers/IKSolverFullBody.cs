@@ -48,6 +48,11 @@ namespace RootMotion.FinalIK {
 			for (int i = 0; i < effectors.Length; i++) if (effectors[i].bone == t) return effectors[i];
 			return null;
 		}
+
+		public IKEffector GetEffector(IndexedBoneHandle bone) {
+			for (int i = 0; i < effectors.Length; i++) if (effectors[i].boneHandle == bone) return effectors[i];
+			return null;
+		}
 		
 		/// <summary>
 		/// Gets the chain that contains the specified Transform.
@@ -56,6 +61,11 @@ namespace RootMotion.FinalIK {
 			int index = GetChainIndex(transform);
 			if (index == -1) return null;
 			return chain[index];
+		}
+
+		public FBIKChain GetChain(IndexedBoneHandle bone) {
+			int index = GetChainIndex(bone);
+			return index == -1 ? null : chain[index];
 		}
 
 		/// <summary>
@@ -68,6 +78,13 @@ namespace RootMotion.FinalIK {
 			return -1; 
 		}
 
+		public int GetChainIndex(IndexedBoneHandle bone) {
+			for (int i = 0; i < chain.Length; i++) {
+				for (int n = 0; n < chain[i].nodes.Length; n++) if (chain[i].nodes[n].boneHandle == bone) return i;
+			}
+			return -1;
+		}
+
 		public IKSolver.Node GetNode(int chainIndex, int nodeIndex) {
 			return chain[chainIndex].nodes[nodeIndex];
 		}
@@ -76,6 +93,11 @@ namespace RootMotion.FinalIK {
 			chainIndex = GetChainIndex(transform);
 			if (chainIndex == -1) nodeIndex = -1;
 			else nodeIndex = chain[chainIndex].GetNodeIndex(transform);
+		}
+
+		public void GetChainAndNodeIndexes(IndexedBoneHandle bone, out int chainIndex, out int nodeIndex) {
+			chainIndex = GetChainIndex(bone);
+			nodeIndex = chainIndex == -1 ? -1 : chain[chainIndex].GetNodeIndex(bone);
 		}
 
 		public override IKSolver.Point[] GetPoints() {
@@ -98,6 +120,13 @@ namespace RootMotion.FinalIK {
 		public override IKSolver.Point GetPoint(Transform transform) {
 			for (int i = 0; i < chain.Length; i++) {
 				for (int n = 0; n < chain[i].nodes.Length; n++) if (chain[i].nodes[n].transform == transform) return chain[i].nodes[n] as IKSolver.Point;
+			}
+			return null;
+		}
+
+		public override IKSolver.Point GetPoint(IndexedBoneHandle bone) {
+			for (int i = 0; i < chain.Length; i++) {
+				for (int n = 0; n < chain[i].nodes.Length; n++) if (chain[i].nodes[n].boneHandle == bone) return chain[i].nodes[n];
 			}
 			return null;
 		}
@@ -229,7 +258,10 @@ namespace RootMotion.FinalIK {
 		protected virtual void ReadPose() {
 			// Making sure the limbs are not inverted
 			for (int i = 0; i < chain.Length; i++) {
-				if (chain[i].bendConstraint.initiated) chain[i].bendConstraint.LimitBend(IKPositionWeight, GetEffector(chain[i].nodes[2].transform).positionWeight);
+				if (chain[i].bendConstraint.initiated) {
+					IKEffector effector = usesIndexedPoseBackend ? GetEffector(chain[i].nodes[2].boneHandle) : GetEffector(chain[i].nodes[2].transform);
+					chain[i].bendConstraint.LimitBend(this, IKPositionWeight, effector.positionWeight);
+				}
 			}
 
 			// Presolve effectors, apply effector offset to the nodes

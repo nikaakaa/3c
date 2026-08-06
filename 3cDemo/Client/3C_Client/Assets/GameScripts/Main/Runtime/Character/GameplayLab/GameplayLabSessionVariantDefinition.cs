@@ -18,7 +18,7 @@ namespace ThirdPersonGameplay.Lab
         [SerializeField] string m_SolverId = string.Empty;
         [SerializeField] string m_DefinitionGuid = string.Empty;
         [SerializeField] SimulationSessionCompositionDefinition m_Composition;
-        [SerializeField] ScriptableObject m_FixedProgram;
+        [SerializeField] ScriptableObject m_Program;
         [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
         [SerializeField] SimulationWorldSolverDefinition m_WorldSolver;
         [SerializeField] ScriptableObject m_CollisionWorld;
@@ -37,15 +37,14 @@ namespace ThirdPersonGameplay.Lab
         public string DefinitionGuid => Require(m_DefinitionGuid, nameof(m_DefinitionGuid));
         public SimulationSessionCompositionDefinition Composition => m_Composition ? m_Composition :
             throw new InvalidOperationException($"Gameplay Lab Variant '{name}' requires an exact Composition.");
-        public ScriptableObject FixedProgram => m_FixedProgram ? m_FixedProgram :
-            throw new InvalidOperationException($"Gameplay Lab Variant '{name}' requires an exact Fixed Program.");
+        public ScriptableObject Program => m_Program ? m_Program :
+            throw new InvalidOperationException($"Gameplay Lab Variant '{name}' requires an exact primary Character Program.");
         public CharacterPresentationProjectionAsset PresentationProjection => m_PresentationProjection
             ? m_PresentationProjection
             : throw new InvalidOperationException($"Gameplay Lab Variant '{name}' requires an exact Presentation Projection.");
         public SimulationWorldSolverDefinition WorldSolver => m_WorldSolver ? m_WorldSolver :
             throw new InvalidOperationException($"Gameplay Lab Variant '{name}' requires an exact KCC Definition.");
-        public ScriptableObject CollisionWorld => m_CollisionWorld ? m_CollisionWorld :
-            throw new InvalidOperationException($"Gameplay Lab Variant '{name}' requires an exact Collision Artifact.");
+        public ScriptableObject CollisionWorld => m_CollisionWorld;
         public bool IsExternalLaunchVariant => !string.IsNullOrEmpty(m_ExternalLaunchArgumentPrefix);
         public string ExternalLaunchArgumentPrefix => m_ExternalLaunchArgumentPrefix;
 
@@ -103,7 +102,7 @@ namespace ThirdPersonGameplay.Lab
             string solverId,
             string definitionGuid,
             SimulationSessionCompositionDefinition composition,
-            ScriptableObject fixedProgram,
+            ScriptableObject program,
             CharacterPresentationProjectionAsset presentationProjection,
             SimulationWorldSolverDefinition worldSolver,
             ScriptableObject collisionWorld,
@@ -118,12 +117,12 @@ namespace ThirdPersonGameplay.Lab
             m_SolverId = solverId;
             m_DefinitionGuid = Require(definitionGuid, nameof(definitionGuid));
             m_Composition = composition ? composition : throw new ArgumentNullException(nameof(composition));
-            m_FixedProgram = fixedProgram ? fixedProgram : throw new ArgumentNullException(nameof(fixedProgram));
+            m_Program = program ? program : throw new ArgumentNullException(nameof(program));
             m_PresentationProjection = presentationProjection
                 ? presentationProjection
                 : throw new ArgumentNullException(nameof(presentationProjection));
             m_WorldSolver = worldSolver ? worldSolver : throw new ArgumentNullException(nameof(worldSolver));
-            m_CollisionWorld = collisionWorld ? collisionWorld : throw new ArgumentNullException(nameof(collisionWorld));
+            m_CollisionWorld = collisionWorld;
             m_ExternalLaunchArgumentPrefix = string.IsNullOrEmpty(externalLaunchArgumentPrefix)
                 ? string.Empty
                 : RequireExternalLaunchArgumentPrefix(externalLaunchArgumentPrefix);

@@ -70,7 +70,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             "ThirdPerson.Presentation.Animation.PoseGraph.Inertialization",
             "ThirdPerson.Presentation.Animation.PoseGraph.Blend",
             "ThirdPerson.Presentation.Animation.PoseGraph.Constraint",
-            "ThirdPerson.Presentation.Animation.PoseGraph.TwoBoneIK",
+            "ThirdPerson.Presentation.Animation.PoseGraph.FullBodyIK",
             "ThirdPerson.Presentation.Animation.PoseGraph.FootPlacement",
             "ThirdPerson.Presentation.Animation.PoseGraph.SpaceConversion",
             "ThirdPerson.Presentation.Animation.PoseGraph.Output",
@@ -91,7 +91,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             "ThirdPerson.Presentation.Camera",
             "FootPlacement.Plan",
             "FootPlacement.Query",
-            "FootPlacement.Solve"
+            "FootPlacement.PublishPlan"
         };
 
         static readonly List<RecorderEntry> s_Recorders = new List<RecorderEntry>();

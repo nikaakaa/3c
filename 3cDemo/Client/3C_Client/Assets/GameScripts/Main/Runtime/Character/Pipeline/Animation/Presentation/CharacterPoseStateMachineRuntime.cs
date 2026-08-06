@@ -141,10 +141,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterPoseStateMachineDescriptor m_Descriptor;
         readonly CompiledTransitionRoutingPlan m_RoutingPlan;
         readonly TransitionRoutingWorkspace m_RoutingWorkspace = new TransitionRoutingWorkspace();
-        readonly Page m_Committed = new Page();
-        readonly Page m_Pending = new Page();
+        Page m_Committed = new Page();
+        Page m_Pending = new Page();
+
         readonly CharacterPoseTransitionRuleValue[] m_RuleValues;
         readonly int[][] m_TransitionsBySource;
+        readonly float[] m_TransitionDurations;
+        readonly float[] m_TransitionCompletionDurations;
 
         ulong m_NextSelectionGeneration = 2;
         ulong m_NextControlGeneration = 2;
@@ -299,6 +302,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 ? 1
                 : descriptor.Transitions.Max(value => value.Rule.Operations.Count);
             m_RuleValues = new CharacterPoseTransitionRuleValue[ruleCapacity];
+            m_TransitionDurations = new float[descriptor.Transitions.Count];
+            m_TransitionCompletionDurations = new float[descriptor.Transitions.Count];
+            for (int i = 0; i < descriptor.Transitions.Count; i++)
+            {
+                m_TransitionDurations[i] = descriptor.Transitions[i].DurationSeconds;
+                m_TransitionCompletionDurations[i] =
+                    descriptor.Transitions[i].CompletionDurationSeconds;
+            }
             m_TransitionsBySource = new int[descriptor.States.Count][];
             for (int state = 0; state < m_TransitionsBySource.Length; state++)
             {
@@ -336,6 +347,70 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal bool CanPublishPose => m_CanPublishPose;
         internal bool HasPendingTarget => m_HasPendingTarget;
         internal PresentationFrameFailure FrameFailure => m_FrameFailure;
+        internal bool HasActiveTransition => m_ActiveTransition != null;
+
+        internal string ApplyTuning(
+            CharacterPoseTuningLayout layout,
+            CharacterPoseTuningParameterBlock block)
+        {
+            if (layout == null || block == null)
+                return "Pose StateMachine tuning payload is missing.";
+            string ownerId = $"pose-state-machine:{m_Descriptor.StateMachineId.Value}";
+            for (int i = 0; i < layout.Entries.Count; i++)
+            {
+                CharacterPoseTuningLayoutEntry entry = layout.Entries[i];
+                if (!string.Equals(entry.OwnerId, ownerId, StringComparison.Ordinal) ||
+                    entry.Interaction != CharacterPoseTuningInteractionPolicy.TunableDefault)
+                    continue;
+                CharacterPoseTuningValue value = block.GetValue(entry);
+                const string transitionPrefix = "/transition:";
+                int transitionStart = entry.FieldId.IndexOf(
+                    transitionPrefix,
+                    ownerId.Length,
+                    StringComparison.Ordinal);
+                if (transitionStart < 0)
+                    continue;
+                transitionStart += transitionPrefix.Length;
+                int separator = entry.FieldId.IndexOf(
+                    '/',
+                    transitionStart);
+                if (separator <= transitionStart)
+                    return $"Pose StateMachine tuning field '{entry.FieldId}' has no transition identity.";
+                string transitionId = entry.FieldId.Substring(
+                    transitionStart,
+                    separator - transitionStart);
+                int transitionIndex = -1;
+                for (int transition = 0;
+                     transition < m_Descriptor.Transitions.Count;
+                     transition++)
+                {
+                    if (string.Equals(
+                            m_Descriptor.Transitions[transition].TransitionId.Value,
+                            transitionId,
+                            StringComparison.Ordinal))
+                    {
+                        transitionIndex = transition;
+                        break;
+                    }
+                }
+                if (transitionIndex < 0 || entry.ValueKind != CharacterPoseTuningValueKind.Float)
+                    return $"Pose StateMachine tuning field '{entry.FieldId}' is not a valid transition field.";
+                if (entry.FieldId.EndsWith("/duration", StringComparison.Ordinal))
+                {
+                    m_TransitionDurations[transitionIndex] = value.FloatValue;
+                    float authoredDuration =
+                        m_Descriptor.Transitions[transitionIndex].DurationSeconds;
+                    float authoredCompletionDuration =
+                        m_Descriptor.Transitions[transitionIndex].CompletionDurationSeconds;
+                    m_TransitionCompletionDurations[transitionIndex] = authoredDuration > 0f
+                        ? authoredCompletionDuration * value.FloatValue / authoredDuration
+                        : value.FloatValue;
+                }
+                else if (entry.FieldId.EndsWith("/completion-duration", StringComparison.Ordinal))
+                    m_TransitionCompletionDurations[transitionIndex] = value.FloatValue;
+            }
+            return string.Empty;
+        }
 
         internal void BeginFrame()
         {
@@ -544,7 +619,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_BlendSourceStateIndex,
                     m_BlendTargetStateIndex,
                     m_BlendElapsed,
-                    m_ActiveTransition.DurationSeconds,
+                    m_TransitionDurations[m_ActiveTransition.Index],
                     m_ActiveTransition.CurveIndex,
                     m_ActiveTransition.BlendProfileIndex,
                     CharacterPoseStateMachineBlendMode.Standard,
@@ -559,7 +634,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_BlendSourceStateIndex,
                     m_BlendTargetStateIndex,
                     0f,
-                    m_ActiveTransition.DurationSeconds,
+                    m_TransitionDurations[m_ActiveTransition.Index],
                     m_ActiveTransition.CurveIndex,
                     m_ActiveTransition.BlendProfileIndex,
                     CharacterPoseStateMachineBlendMode.Inertialization,
@@ -868,7 +943,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_BlendSourceStateIndex = sourceState;
                 m_BlendTargetStateIndex = targetState;
                 m_ActiveStateIndex = targetState;
-                m_BlendDuration = transition.CompletionDurationSeconds;
+                m_BlendDuration = m_TransitionCompletionDurations[transition.Index];
                 m_BlendElapsed = 0f;
                 if (m_BlendDuration <= 0f)
                     CompleteStandardBlend(sources);

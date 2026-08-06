@@ -1,5 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
-    <Style src="project://database/Assets/Plugin/TreeDesigner/Editor/Resources/StyleSheet/BaseTreeInspectorOutside.uss?fileID=7433441132597879392&amp;guid=0e08cd5044397f14aae28bdd458e8391&amp;type=3#BaseTreeInspectorOutside" />
+    <Style src="project://database/Assets/GameScripts/Main/Runtime/BTSMTL/TreeDesigner/Editor/Resources/StyleSheet/BaseTreeInspectorOutside.uss?fileID=7433441132597879392&amp;guid=0e08cd5044397f14aae28bdd458e8391&amp;type=3#BaseTreeInspectorOutside" />
     <ui:Label text="Open" display-tooltip-when-elided="true" name="open-tree-button" />
     <ui:ScrollView name="property-scroll">
         <ui:VisualElement name="property-container" />

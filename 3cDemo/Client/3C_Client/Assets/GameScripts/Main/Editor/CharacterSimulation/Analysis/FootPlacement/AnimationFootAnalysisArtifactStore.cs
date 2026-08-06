@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEditor;
 using UnityEngine;
 
@@ -25,6 +26,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (string.IsNullOrEmpty(rigPath) || !AssetDatabase.LoadAssetAtPath<GameObject>(rigPath))
                 throw new InvalidOperationException($"Sampling Rig GUID '{source.SamplingRigAssetGuid}' does not resolve to a Prefab asset.");
             string calibrationPath = RequireAssetPath(source.RigCalibration, "Rig Calibration");
+            CharacterFootPlacementRigGeometryValidationIdentity geometryValidation =
+                source.RigCalibration.GeometryValidation ??
+                throw new InvalidOperationException("Foot Placement Calibration geometry validation identity is missing.");
+            geometryValidation.RequireMatches(source.RigDefinition, source.RigCalibration);
             CharacterFootPlacementAnalysisThresholds thresholds = source.Thresholds;
             CharacterFootPlacementCurveReductionSettings reduction = source.Reduction;
             return new AnimationFootAnalysisArtifactIdentity(
@@ -37,12 +42,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 AssetDatabase.AssetPathToGUID(rigDefinitionPath),
                 source.RigDefinition.RigId,
                 source.RigDefinition.Revision,
+                AssetDatabase.GetAssetDependencyHash(rigDefinitionPath).ToString(),
                 source.SamplingRigAssetGuid,
                 AssetDatabase.GetAssetDependencyHash(rigPath).ToString(),
                 AssetDatabase.AssetPathToGUID(calibrationPath),
                 source.RigCalibration.CalibrationId.Value,
                 source.RigCalibration.SchemaVersion,
                 source.RigCalibration.ContentRevision,
+                geometryValidation.IdentityHash,
+                geometryValidation.GeometryContentHash,
                 source.SampleRate,
                 thresholds.PlantEnterVerticalSpeed,
                 thresholds.PlantExitVerticalSpeed,

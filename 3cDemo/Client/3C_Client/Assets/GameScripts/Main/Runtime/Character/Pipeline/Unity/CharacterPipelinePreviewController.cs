@@ -20,6 +20,8 @@ namespace ThirdPersonCharacter.Pipeline
         readonly CharacterAnimationRigBinding m_AnimationRigBinding;
         readonly Float32WorldBodyBinding m_WorldBodyBinding;
         readonly CharacterWorldAwarePresentationBinding m_WorldAwareBinding;
+        readonly CharacterEquipmentPreviewFixture
+            m_EquipmentFixture;
         readonly CharacterPresentationBodyState m_BodyFixture;
         readonly PhysicsScene m_PhysicsScene;
         readonly CharacterSimulationProgram m_Program;
@@ -27,6 +29,9 @@ namespace ThirdPersonCharacter.Pipeline
         readonly TimelineMotionAuthoringPreviewEvaluator m_MotionPreview =
             new TimelineMotionAuthoringPreviewEvaluator();
         PreviewSession m_Session;
+        CharacterPoseTuningParameterBlock m_PendingPoseTuningBlock;
+        string m_PendingPoseTuningSourceRevision = string.Empty;
+        string m_PendingPoseTuningCandidateRevision = string.Empty;
         Guid m_SessionId;
         ulong m_Generation;
         bool m_OwnsGraphClock;
@@ -37,6 +42,8 @@ namespace ThirdPersonCharacter.Pipeline
         string m_TargetTrackId = string.Empty;
         string m_SourceTimelineId = string.Empty;
         string m_SourceTrackId = string.Empty;
+        readonly Dictionary<LinkedPoseGroupId, LinkedPoseImplementationId> m_LinkedPosePreviewOverrides =
+            new Dictionary<LinkedPoseGroupId, LinkedPoseImplementationId>();
 
         public CharacterPipelinePreviewController(CharacterPipelineHost host)
         {
@@ -61,6 +68,7 @@ namespace ThirdPersonCharacter.Pipeline
                 m_WorldBodyBinding.InitialBody);
             m_PhysicsScene = host.gameObject.scene.GetPhysicsScene();
             m_WorldAwareBinding = ResolveWorldAwareBinding(host);
+            m_EquipmentFixture = ResolveEquipmentFixture(host);
         }
 
         public bool HasAnimationDebugView =>
@@ -75,10 +83,81 @@ namespace ThirdPersonCharacter.Pipeline
             m_Session != null
                 ? m_Session.Engine.PosePlanStages
                 : default;
-        public CharacterFootPlacementFrameSnapshot FootPlacementSnapshot =>
-            m_Session != null
-                ? m_Session.Engine.FootPlacementSnapshot
-                : default;
+
+        internal CharacterPoseTuningLayout TuningLayout =>
+            m_Session?.Engine.TuningLayout ?? m_Projection.TuningLayout;
+
+        internal CharacterPoseTuningParameterBlock ActiveTuningBlock =>
+            m_Session?.Engine.ActiveTuningBlock ?? m_Projection.TuningDefaultBlock;
+
+        internal CharacterPoseTuningRuntimeState TuningState =>
+            m_Session?.Engine.TuningState ?? new CharacterPoseTuningRuntimeState(
+                CharacterPoseTuningRuntimeStatus.Applied,
+                m_Projection.PublishedParameterRevision,
+                string.Empty,
+                string.Empty,
+                0,
+                string.Empty);
+
+        internal bool SubmitPoseTuningCandidate(
+            string sourceAuthoringRevision,
+            string candidateRevision,
+            CharacterPoseTuningParameterBlock block,
+            out string error)
+        {
+            if (block == null)
+            {
+                error = "Pose tuning block is missing.";
+                return false;
+            }
+            if (m_Session == null)
+            {
+                m_PendingPoseTuningBlock = block.Clone();
+                m_PendingPoseTuningSourceRevision = sourceAuthoringRevision ?? string.Empty;
+                m_PendingPoseTuningCandidateRevision = candidateRevision ?? string.Empty;
+                error = string.Empty;
+                return true;
+            }
+            return m_Session.Engine.SubmitPoseTuningCandidate(
+                sourceAuthoringRevision,
+                candidateRevision,
+                block,
+                out error);
+        }
+
+        public void SetLinkedPosePreviewOverride(
+            Guid sessionId,
+            LinkedPoseGroupId groupId,
+            LinkedPoseImplementationId implementationId)
+        {
+            if (sessionId == Guid.Empty)
+                throw new ArgumentException("Linked Pose preview session identity is incomplete.", nameof(sessionId));
+            if (m_Session != null && m_SessionId != sessionId)
+                throw new InvalidOperationException(
+                    $"Animation preview target '{m_Host.name}' is already owned by session '{m_SessionId}'.");
+            m_LinkedPosePreviewOverrides[groupId] = implementationId;
+            m_Session?.Engine.SetLinkedPosePreviewOverride(groupId, implementationId);
+        }
+
+        public void ClearLinkedPosePreviewOverride(
+            Guid sessionId,
+            LinkedPoseGroupId groupId)
+        {
+            if (sessionId == Guid.Empty ||
+                m_Session != null && m_SessionId != sessionId)
+                return;
+            m_LinkedPosePreviewOverrides.Remove(groupId);
+            m_Session?.Engine.ClearLinkedPosePreviewOverride(groupId);
+        }
+
+        public void ClearLinkedPosePreviewOverrides(Guid sessionId)
+        {
+            if (sessionId == Guid.Empty ||
+                m_Session != null && m_SessionId != sessionId)
+                return;
+            m_LinkedPosePreviewOverrides.Clear();
+            m_Session?.Engine.ClearLinkedPosePreviewOverrides();
+        }
 
         public bool Matches(CharacterPipelineDefinition definition, AnimancerComponent animancer)
         {
@@ -86,7 +165,8 @@ namespace ThirdPersonCharacter.Pipeline
                    m_Animancer == animancer &&
                    m_AnimationRigBinding == m_Host.AnimationRigBinding &&
                    m_WorldBodyBinding == m_Host.WorldBodyBinding &&
-                   m_WorldAwareBinding == ResolveWorldAwareBinding(m_Host);
+                   m_WorldAwareBinding == ResolveWorldAwareBinding(m_Host) &&
+                   m_EquipmentFixture == ResolveEquipmentFixture(m_Host);
         }
 
         public void Evaluate(
@@ -112,21 +192,25 @@ namespace ThirdPersonCharacter.Pipeline
             if (created)
             {
                 CaptureVisualPose();
+                var runtime = new AnimationPreviewRuntime(
+                    m_Definition,
+                    m_Program,
+                    m_Projection,
+                    m_Animancer,
+                    m_AnimationRigBinding,
+                    m_BodyFixture,
+                    m_WorldAwareBinding,
+                    m_PhysicsScene,
+                    m_EquipmentFixture,
+                    timeline,
+                    sessionId);
+                ApplyLinkedPosePreviewOverrides(runtime);
                 m_Session = new PreviewSession(
                     NextGeneration(),
-                    new AnimationPreviewRuntime(
-                        m_Definition,
-                        m_Program,
-                        m_Projection,
-                        m_Animancer,
-                        m_AnimationRigBinding,
-                        m_BodyFixture,
-                        m_WorldAwareBinding,
-                        m_PhysicsScene,
-                        timeline,
-                        sessionId));
+                    runtime);
                 m_SessionId = sessionId;
                 AcquireGraphClock();
+                ApplyPendingPoseTuningCandidate();
                 m_Session.Engine.ConfigureMarkerSyncSource(
                     m_TargetTimelineId,
                     m_TargetTrackId,
@@ -179,21 +263,25 @@ namespace ThirdPersonCharacter.Pipeline
             if (created)
             {
                 CaptureVisualPose();
+                var runtime = new AnimationPreviewRuntime(
+                    m_Definition,
+                    m_Program,
+                    m_Projection,
+                    m_Animancer,
+                    m_AnimationRigBinding,
+                    m_BodyFixture,
+                    m_WorldAwareBinding,
+                    m_PhysicsScene,
+                    m_EquipmentFixture,
+                    null,
+                    sessionId);
+                ApplyLinkedPosePreviewOverrides(runtime);
                 m_Session = new PreviewSession(
                     NextGeneration(),
-                    new AnimationPreviewRuntime(
-                        m_Definition,
-                        m_Program,
-                        m_Projection,
-                        m_Animancer,
-                        m_AnimationRigBinding,
-                        m_BodyFixture,
-                        m_WorldAwareBinding,
-                        m_PhysicsScene,
-                        null,
-                        sessionId));
+                    runtime);
                 m_SessionId = sessionId;
                 AcquireGraphClock();
+                ApplyPendingPoseTuningCandidate();
             }
 
             if (resetLifecycle && !created)
@@ -330,6 +418,14 @@ namespace ThirdPersonCharacter.Pipeline
             ClearSession();
         }
 
+        public void ClearPoseTuningCandidate()
+        {
+            m_PendingPoseTuningBlock = null;
+            m_PendingPoseTuningSourceRevision = string.Empty;
+            m_PendingPoseTuningCandidateRevision = string.Empty;
+            m_Session?.Engine.ClearPendingPoseTuningCandidate();
+        }
+
         public void Dispose()
         {
             ClearSession();
@@ -337,12 +433,38 @@ namespace ThirdPersonCharacter.Pipeline
 
         void ClearSession()
         {
+            ClearPoseTuningCandidate();
             m_Session?.Dispose();
             m_Session = null;
             m_SessionId = Guid.Empty;
             RestoreVisualPose();
             m_HasOriginalVisualPose = false;
             ReleaseGraphClock();
+        }
+
+        void ApplyPendingPoseTuningCandidate()
+        {
+            if (m_PendingPoseTuningBlock == null)
+                return;
+            if (!m_Session.Engine.SubmitPoseTuningCandidate(
+                    m_PendingPoseTuningSourceRevision,
+                    m_PendingPoseTuningCandidateRevision,
+                    m_PendingPoseTuningBlock,
+                    out string error))
+            {
+                ClearPoseTuningCandidate();
+                throw new InvalidOperationException(error);
+            }
+            m_PendingPoseTuningBlock = null;
+            m_PendingPoseTuningSourceRevision = string.Empty;
+            m_PendingPoseTuningCandidateRevision = string.Empty;
+        }
+
+        void ApplyLinkedPosePreviewOverrides(AnimationPreviewRuntime runtime)
+        {
+            foreach (KeyValuePair<LinkedPoseGroupId, LinkedPoseImplementationId> value in
+                     m_LinkedPosePreviewOverrides)
+                runtime.SetLinkedPosePreviewOverride(value.Key, value.Value);
         }
 
         void AcquireGraphClock()
@@ -373,7 +495,7 @@ namespace ThirdPersonCharacter.Pipeline
         CharacterWorldAwarePresentationBinding ResolveWorldAwareBinding(
             CharacterPipelineHost host)
         {
-            if (m_Projection.PosePlan.FootPlacementNodes.Count == 0)
+            if (m_Projection.PosePlan.PredictiveFootPlacements.Count == 0)
                 return null;
             CharacterWorldAwarePresentationBinding binding =
                 host.WorldAwarePresentation;
@@ -393,6 +515,21 @@ namespace ThirdPersonCharacter.Pipeline
             {
                 return null;
             }
+        }
+
+        CharacterEquipmentPreviewFixture ResolveEquipmentFixture(
+            CharacterPipelineHost host)
+        {
+            CharacterEquipmentPreviewFixture fixture =
+                host.EquipmentPreviewFixture;
+            if (m_Projection.LinkedPose.EquipmentSelectors.Count == 0)
+                return fixture;
+            if (!fixture || fixture.gameObject != host.gameObject)
+            {
+                throw new InvalidOperationException(
+                    "Linked Pose Preview requires a CharacterEquipmentPreviewFixture on the target CharacterPipelineHost.");
+            }
+            return fixture;
         }
 
         void CaptureVisualPose()

@@ -126,26 +126,57 @@ namespace TreeDesigner.Editor
                 .OrderBy(value => value.Group, StringComparer.Ordinal)
                 .ThenBy(value => value.DisplayName, StringComparer.Ordinal)
                 .ToArray();
-            string currentGroup = null;
             for (int i = 0; i < items.Length; i++)
             {
                 GraphAuthoringNavigatorItem item = items[i];
-                if (!string.Equals(currentGroup, item.Group, StringComparison.Ordinal))
-                {
-                    currentGroup = item.Group;
-                    var group = new Label(string.IsNullOrEmpty(currentGroup) ? "Document" : currentGroup);
-                    group.AddToClassList("graph-authoring-navigator-group");
-                    m_Items.Add(group);
-                }
-                var button = new Button(() => m_DataSource.Open(m_Document, item))
-                {
-                    text = item.DisplayName,
-                    tooltip = BuildTooltip(item)
-                };
-                button.AddToClassList("graph-authoring-navigator-item");
-                button.SetEnabled(item.OpenCommandId.IsValid);
-                m_Items.Add(button);
+                AddItem(item);
             }
+        }
+
+        void AddItem(GraphAuthoringNavigatorItem item)
+        {
+            string[] segments = string.IsNullOrEmpty(item.Group)
+                ? new[] { "Document" }
+                : item.Group.Split('/');
+            VisualElement parent = m_Items;
+            string path = string.Empty;
+            for (int i = 0; i < segments.Length; i++)
+            {
+                path = string.IsNullOrEmpty(path)
+                    ? segments[i]
+                    : path + "/" + segments[i];
+                VisualElement group = parent.Q<VisualElement>(
+                    $"navigator-group-{Sanitize(path)}");
+                if (group == null)
+                {
+                    var foldout = new Foldout
+                    {
+                        text = segments[i],
+                        value = true,
+                        name = $"navigator-group-{Sanitize(path)}"
+                    };
+                    foldout.AddToClassList("graph-authoring-navigator-group");
+                    parent.Add(foldout);
+                    group = foldout;
+                }
+                parent = group;
+            }
+            var button = new Button(() => m_DataSource.Open(m_Document, item))
+            {
+                text = item.DisplayName,
+                tooltip = BuildTooltip(item)
+            };
+            button.AddToClassList("graph-authoring-navigator-item");
+            button.SetEnabled(item.OpenCommandId.IsValid);
+            parent.Add(button);
+        }
+
+        static string Sanitize(string value)
+        {
+            var result = new System.Text.StringBuilder(value.Length);
+            for (int i = 0; i < value.Length; i++)
+                result.Append(char.IsLetterOrDigit(value[i]) ? value[i] : '-');
+            return result.ToString();
         }
 
         static bool Matches(GraphAuthoringNavigatorItem item, string search)

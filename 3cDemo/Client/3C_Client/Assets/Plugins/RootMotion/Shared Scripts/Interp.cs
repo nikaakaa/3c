@@ -159,9 +159,13 @@ namespace RootMotion {
 		/// Linear interpolation of value towards target.
 		/// </summary>
 		public static float LerpValue(float value, float target, float increaseSpeed, float decreaseSpeed) {
-			if (value == target) return target; 
-			if (value < target) return Mathf.Clamp(value + Time.deltaTime * increaseSpeed, -Mathf.Infinity, target);
-			else return Mathf.Clamp(value - Time.deltaTime * decreaseSpeed, target, Mathf.Infinity);
+			return LerpValue(value, target, increaseSpeed, decreaseSpeed, Time.deltaTime);
+		}
+
+		public static float LerpValue(float value, float target, float increaseSpeed, float decreaseSpeed, float deltaTime) {
+			if (value == target) return target;
+			if (value < target) return Mathf.Clamp(value + deltaTime * increaseSpeed, -Mathf.Infinity, target);
+			else return Mathf.Clamp(value - deltaTime * decreaseSpeed, target, Mathf.Infinity);
 		}
 		
 		#endregion Public methods

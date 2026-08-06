@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonCharacter.Pipeline.Animation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
@@ -26,6 +27,42 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public CharacterMotionMatchingCostProfile CostProfile => m_CostProfile;
         public CharacterMotionMatchingSearchPolicy SearchPolicy => m_SearchPolicy;
         public IReadOnlyList<CharacterMotionMatchingDatabaseDefinition> Databases => m_Databases ?? Array.Empty<CharacterMotionMatchingDatabaseDefinition>();
+
+        public bool ContainsDatabase(CharacterMotionMatchingDatabaseDefinition database)
+        {
+            if (!database)
+                return false;
+            for (int i = 0; i < Databases.Count; i++)
+            {
+                if (Databases[i] == database)
+                    return true;
+            }
+            return false;
+        }
+
+        public void RequireDatabaseMembership(CharacterMotionMatchingDatabaseDefinition database)
+        {
+            if (!ContainsDatabase(database))
+                throw new InvalidOperationException($"Motion Matching Profile '{name}' does not contain the requested Database.");
+        }
+
+        public void RequireRigClosure(CharacterAnimationRigDefinition presentationRig)
+        {
+            if (!presentationRig)
+                throw new InvalidOperationException($"Motion Matching Profile '{name}' has no Presentation Rig.");
+            RequireValid();
+            presentationRig.RequireValid();
+            if (!string.Equals(FeatureSchema.Rig.RigId, presentationRig.RigId, StringComparison.Ordinal) ||
+                !string.Equals(FeatureSchema.Rig.Revision, presentationRig.Revision, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Motion Matching Profile '{name}' Feature Schema Rig does not match the Presentation Rig.");
+            for (int i = 0; i < Databases.Count; i++)
+            {
+                CharacterMotionMatchingDatabaseDefinition database = Databases[i];
+                if (!string.Equals(database.TargetRig.RigId, presentationRig.RigId, StringComparison.Ordinal) ||
+                    !string.Equals(database.TargetRig.Revision, presentationRig.Revision, StringComparison.Ordinal))
+                    throw new InvalidOperationException($"Motion Matching Profile '{name}' Database #{i} does not match the Presentation Rig.");
+            }
+        }
 
         public void RequireValid()
         {

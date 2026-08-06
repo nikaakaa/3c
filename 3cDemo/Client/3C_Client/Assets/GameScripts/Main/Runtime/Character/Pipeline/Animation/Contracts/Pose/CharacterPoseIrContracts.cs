@@ -3,6 +3,18 @@ using System.Collections.Generic;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    public enum CharacterMotionMatchingPoseIrStage : byte
+    {
+        FrameContextResolve = 1,
+        HistoryRead = 2,
+        ChooserResolve = 3,
+        Search = 4,
+        EntrySourceCapture = 5,
+        EntryProcessing = 6,
+        InternalBlend = 7,
+        HistoryCommit = 8
+    }
+
     public readonly struct CharacterPoseIrNodeId : IEquatable<CharacterPoseIrNodeId>
     {
         public CharacterPoseIrNodeId(string value) => Value = PoseIdentity.Require(value, nameof(value));

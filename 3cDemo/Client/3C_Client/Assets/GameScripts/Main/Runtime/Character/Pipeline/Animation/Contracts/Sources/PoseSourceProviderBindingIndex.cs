@@ -107,24 +107,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         $"Blend Space Pose source #{i} is invalid or duplicated.");
                 }
             }
-            MotionMatchingProjectionPayload motionMatching =
-                projection.MotionMatching;
-            if (motionMatching != null)
-            {
-                for (int i = 0; i < motionMatching.ProviderBindingCount; i++)
-                {
-                    MotionMatchingProviderBindingPayload binding =
-                        motionMatching.GetProviderBinding(i);
-                    if (!authoredSources.TryAdd(
-                            binding.PresentationPoseSourceIndex,
-                            AnimationPoseSourceKind.MotionMatching))
-                    {
-                        throw new InvalidOperationException(
-                            $"Motion Matching source index '{binding.PresentationPoseSourceIndex}' is duplicated.");
-                    }
-                }
-            }
-
             for (int machineIndex = 0;
                  machineIndex < projection.PosePlan.StateMachines.Count;
                  machineIndex++)
@@ -143,6 +125,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     {
                         PoseStateSourceProviderPlan plan =
                             state.SourceProviders[providerIndex];
+                        if (plan != null &&
+                            plan.SourceKind == AnimationPoseSourceKind.MotionMatching &&
+                            plan.PresentationPoseSourceIndex.IsValid &&
+                            !authoredSources.TryAdd(
+                                plan.PresentationPoseSourceIndex,
+                                AnimationPoseSourceKind.MotionMatching))
+                        {
+                            throw new InvalidOperationException(
+                                $"Motion Matching source index '{plan.PresentationPoseSourceIndex}' is duplicated.");
+                        }
                         if (plan == null ||
                             plan.StateIndex != stateIndex ||
                             !authoredSources.TryGetValue(

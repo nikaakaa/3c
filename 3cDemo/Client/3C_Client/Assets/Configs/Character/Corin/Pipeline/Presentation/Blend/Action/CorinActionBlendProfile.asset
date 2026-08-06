@@ -15,7 +15,7 @@ MonoBehaviour:
   m_Schema: character-animation-blend-profile/v2
   m_ProfileId: corin.animation-rig.action-blend-profile
   m_RigId: corin.animation-rig
-  m_RigRevision: 5f8593de08c64ed0b88dfab51d4cbb72
+  m_RigRevision: 87731f0d0ca14844bbf861368b9847b3
   m_GlobalDurationMultiplier: 1
   m_BoneOverrides:
   - m_BoneId: animation-bone/root

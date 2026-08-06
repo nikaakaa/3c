@@ -3,22 +3,32 @@
 ## Purpose
 
 定义Character Presentation Pose Graph的正式数据模型、编译边界、作者工作区、Preview、Live Debug和Pose Watch。
-
 ## Requirements
-
 ### Requirement: Pose Graph必须唯一表达完整表现拓扑
 
-`CharacterAnimationPresentationProfile`引用的Pose Graph MUST唯一表达`ProgramParameterInput -> PoseStateMachine -> state-local Player -> AnimationSlot -> Local Pose composition -> LocalToComponentPose -> Component Pose skeletal controls -> ComponentToLocalPose -> OutputPose`。图 MAY包含`SelectedPosePlayer`、`BlendStack`、`Inertialization`、`BlendPose`、`LayeredBoneBlend`、`AdditivePose`、`PoseParameterResolve`、`ModifyBone`、`PoseSubgraph`、`BlendSpacePlayer`、`SequencePlayer`、`ActionPlaybackInput`、`GraphInput`、`GraphOutput`、`TwoBoneIK`、`FootPlacement`与两个显式空间转换节点。Runtime MUST不在图外补建基础动画、Player、StateMachine、Slot、Blend、IK、FootPlacement、空间转换或第二Output路径；Pose Graph MUST不保存旧AnimationSelectionInput、MotionMatchingSelectionInput或MarkerSync节点。
+`CharacterAnimationPresentationProfile`引用的Pose Graph MUST唯一表达`ProgramParameterInput -> PoseStateMachine -> state-local Player -> AnimationSlot -> Local Pose composition -> LocalToComponentPose -> Component Pose controls -> FootPlacement -> LegIK -> ComponentToLocalPose -> OutputPose`。图 MAY包含`SelectedPosePlayer`、`BlendStack`、`Inertialization`、`BlendPose`、`LayeredBoneBlend`、`AdditivePose`、`PoseParameterResolve`、`ModifyBone`、`PoseSubgraph`、`BlendSpacePlayer`、`SequencePlayer`、`ActionPlaybackInput`、`GraphInput`、`GraphOutput`、`TwoBoneIK`、`FootPlacement`、`LegIK`与两个显式空间转换节点。Runtime MUST不在图外补建基础动画、Player、StateMachine、Slot、Blend、IK、FootPlacement、LegIK、空间转换或第二Output路径；Pose Graph MUST不保存旧AnimationSelectionInput、MotionMatchingSelectionInput或MarkerSync节点。
 
 #### Scenario: 检查Corin正式表现链
 
 - **WHEN** 作者打开Corin Pose Graph
-- **THEN** 图 MUST能沿typed edge追踪PoseState基础Pose、Action Slot、Local/Component转换、骨骼控制和最终输出
-- **AND** MUST不显示BaseLocomotion Gameplay AnimationChannel或图外FootPlacement Pass
+- **THEN** 图 MUST能沿typed edge追踪PoseState基础Pose、Action Slot、Local/Component转换、FootPlacement目标、LegIK结果和最终输出
+- **AND** MUST不显示BaseLocomotion Gameplay AnimationChannel、图外FootPlacement Pass或隐藏LegIK
 
-### Requirement: Pose端口必须显式区分Local与Component空间
+### Requirement: Pose端口必须显式区分空间并允许typed控制目标
 
-Pose Graph MUST使用`pose.local`与`pose.component`两种稳定Pose端口类型。Sequence、Blend、StateMachine、Slot、Inertialization、Layered、Additive与Root Orientation操作 MUST在Local Pose工作；ModifyBone、TwoBoneIK与FootPlacement MUST在Component Pose工作。两种空间只能通过作者图中显式`LocalToComponentPose`与`ComponentToLocalPose`转换，Compiler MUST不静默插入转换或按节点名称猜测空间。OutputPose MUST只接收Local Pose。
+Pose Graph MUST使用`pose.local`与`pose.component`两种稳定Pose端口类型，并使用`component.biped-leg-targets`表达同帧Component空间双腿目标。Sequence、Blend、StateMachine、Slot、Inertialization、Layered、Additive与Root Orientation操作 MUST在Local Pose工作；ModifyBone、TwoBoneIK、FootPlacement与LegIK MUST位于Component Pose段。FootPlacement MUST输出Component Pose与typed targets；LegIK MUST同时消费二者。Local与Component Pose只能通过显式转换节点转换；targets不得通过Pose转换、隐式cast或Skeleton可写IK骨伪装。OutputPose MUST只接收Local Pose。
+
+#### Scenario: 作者只连接FootPlacement Pose输出
+
+- **WHEN** FootPlacement Component Pose继续到Output路径但targets没有连接LegIK
+- **THEN** Canvas连接诊断与Validator MUST显示未完成的Foot Placement链
+- **AND** Compiler MUST拒绝生成隐藏LegIK
+
+#### Scenario: FootPlacement连接LegIK
+
+- **WHEN** 作者把同一FootPlacement的Component Pose与targets连接到LegIK
+- **THEN** Compiler MUST保留连续Component Pose段并生成world-aware到pure pose依赖
+- **AND** MUST不插入额外Local/Component转换
 
 #### Scenario: 作者把Sequence直接连接FootPlacement
 
@@ -34,7 +44,19 @@ Pose Graph MUST使用`pose.local`与`pose.component`两种稳定Pose端口类型
 
 ### Requirement: Pose Plan必须按拓扑编译为有序执行阶段
 
-Projection Compiler MUST按typed依赖、Pose空间与execution domain将同一Pose DAG编译为有序`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwarePose`与`FinalPublication`stage。一个world-aware stage完成后 MUST允许后续PurePose或另一个world-aware stage继续消费其输出。stage table MUST只属于generated plan，不得写入authoring Graph。每个source每帧 MUST最多capture一次，PlayableGraph MUST最多Evaluate一次，Physical Transform MUST只由final writer写一次。
+Projection Compiler MUST按typed依赖、Pose空间与execution domain将同一Pose DAG编译为有序`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwarePose`与`FinalPublication`stage。FootPlacement MUST生成WorldAwarePose stage并发布Component Pose与targets completion；其后LegIK MUST生成PurePose stage并同时消费两项输出。一个world-aware stage完成后 MUST允许后续PurePose或另一个world-aware stage继续消费其输出。stage table MUST只属于generated plan，不得写入authoring Graph。每个source每帧 MUST最多capture一次，PlayableGraph MUST最多Evaluate一次，Physical Transform MUST只由final writer写一次。
+
+#### Scenario: FootPlacement后执行LegIK与ModifyBone
+
+- **WHEN** 合法Component Pose图把LegIK和ModifyBone依次连接在FootPlacement之后
+- **THEN** Compiler MUST生成FootPlacement world-aware、LegIK pure pose和后续ModifyBone stage
+- **AND** 后续节点 MUST消费真实已求解Pose而不是FootPlacement输入副本
+
+#### Scenario: LegIK targets失效
+
+- **WHEN** targets Frame、Completion或Rig identity与LegIK Pose输入不匹配
+- **THEN** executor MUST阻止LegIK、后续stage和FinalPublication
+- **AND** 已跨过Animancer Evaluate Barrier的Animation Presentation Runtime MUST进入Faulted
 
 #### Scenario: FootPlacement之后继续ModifyBone
 
@@ -83,19 +105,19 @@ State在作者语义上 MAY拥有inline Pose subgraph，但serialized State MUST
 
 ### Requirement: State-local source必须由Profile binding和provider解析
 
-`SequencePlayer`、`BlendSpacePlayer`与Motion Matching `SelectedPosePlayer` MUST分别引用精确类型的Graph-owned Source Slot对象。Projection Compiler MUST按Slot对象引用解析唯一Profile-owned typed Binding，并把可达Slot/Binding降低为Projection-local dense source index与typed source plan；Binding MUST提供source resource、Rig、topology、marker、Foot Analysis和参数布局。Source plan MUST发布`PresentationPoseSourceSample`的Pending、Ready或Invalid；Player只消费匹配dense source index、PlayerNodeId、generation与frame lease的sample。Pose Graph MUST不把state-local source包装成作者字符串、Gameplay producer、AnimationChannel或PlaybackId。
+`SequencePlayer`、`BlendSpacePlayer`与Motion Matching `SelectedPosePlayer` MUST引用类型匹配的Graph-owned`CharacterPresentationPoseSourceSlot`对象。Projection Compiler MUST从精确Definition/Profile上下文为每个可达Slot解析唯一Profile-owned typed binding子资产，并将其降低为Projection-local dense source index、typed resource plan与只读source map。Provider MUST发布`PresentationPoseSourceSample`的Pending、Ready或Invalid；Player只消费匹配自身Player identity、dense source index、generation、Projection revision与frame lease的sample。Pose Graph MUST不保存作者可编辑Source Id、Provider Id、AnimationClip、Profile binding副本，也不得把state-local source包装成Gameplay producer、AnimationChannel或PlaybackId。
 
 #### Scenario: Idle SequencePlayer首次采样
 
-- **WHEN** Idle State进入relevant且binding合法
-- **THEN** Sequence provider MUST向Idle Player发布Ready sample
+- **WHEN** Idle State进入relevant且Source Slot对应的Profile binding合法
+- **THEN** Sequence provider MUST向Idle Player发布带正确dense source index的Ready sample
 - **AND** CharacterActionPlaybackRuntime MUST不登记该source
 
 #### Scenario: Motion Matching sample投递到错误Player
 
-- **WHEN** sample的PlayerNodeId与当前demand不匹配
+- **WHEN** sample的Player identity、dense source index或Projection revision与当前demand不匹配
 - **THEN** Runtime MUST拒绝该sample
-- **AND** MUST不按SourceId猜测目标Player
+- **AND** MUST不按Source Slot名称、资源名或旧Source Id猜测目标Player
 
 ### Requirement: PoseState target必须经过readiness barrier
 
@@ -199,15 +221,21 @@ Rig v3 MUST以Physical Bones与Virtual Bones组成唯一Pose catalog，并显式
 - **THEN** Definition validation MUST失败
 - **AND** MUST不从该组件或Transform名称迁回Rig v3
 
-### Requirement: TwoBoneIK必须使用Physical chain和显式Pose reference
+### Requirement: TwoBoneIK与LegIK必须使用明确且不同的目标合同
 
-`TwoBoneIK` MUST接收并输出Component Pose，显式引用Physical end bone、Pose catalog中的effector reference与joint target reference、local offset和end rotation policy。Compiler MUST从Rig v3解析唯一Physical chain并验证reference依赖；Runtime MUST只修改该Physical chain，对Virtual Bone只读，并在写入后重算受影响的descendant与Virtual依赖。`FootPlacement` MUST是独立Component Pose world-aware skeletal control，复用正式Planner与解析式Pose solver，不得由TwoBoneIK节点或图外Transform pass代替。
+`TwoBoneIK` MUST接收并输出Component Pose，显式引用Physical end bone、Pose catalog中的effector reference与joint target reference、local offset和end rotation policy。Compiler MUST从Rig v3解析唯一Physical chain并验证reference依赖；Runtime MUST只修改该Physical chain。`LegIK` MUST接收FootPlacement Component Pose与`component.biped-leg-targets`，从Rig v3解析左右Physical腿链，并把BendPlaneNormal转换为KneeDirection后执行保持骨长的双腿求解。TwoBoneIK的joint target direction与LegIK的bend plane normal MUST使用不同字段、ABI与diagnostic名称，不得共用含糊`BendDirection`。Virtual Bone对两者只读，并在Physical写入后按依赖重算。
 
 #### Scenario: 手臂IK使用Virtual effector
 
 - **WHEN** TwoBoneIK的effector引用Virtual Bone
 - **THEN** Solver MUST读取其派生Component Pose作为目标
 - **AND** MUST只写肩肘腕Physical chain
+
+#### Scenario: LegIK消费FootPlacement目标
+
+- **WHEN** LegIK收到同call-site合法Component Pose与双腿targets
+- **THEN** Solver MUST只写Rig v3左右Hip、Knee、Ankle链及其依赖
+- **AND** MUST不query world、重新应用pelvis或读取第二Weight
 
 #### Scenario: Preview缺少world context
 
@@ -217,13 +245,14 @@ Rig v3 MUST以Physical Bones与Virtual Bones组成唯一Pose catalog，并显式
 
 ### Requirement: Pose Graph工作区必须准确映射Authoring、Live与References
 
-正式窗口 MUST提供Definition-scoped Navigator、唯一`GraphAuthoringCanvasView`、Details和可折叠Bottom Dock。Details MUST分离Authoring、Live与References：Authoring只通过正式Presentation Mutation修改当前owner字段；Live只读取匹配PoseGraphId、PoseGraphRevision与ProjectionRevision的snapshot；References只读显示Profile binding、source map、Action producer、Rig、Policy和call site。Live Debug模式下mutation MUST禁用，revision不匹配 MUST显示Stale并清空旧值。
+正式窗口 MUST提供Definition-scoped Navigator、唯一`GraphAuthoringCanvasView`、Details和可折叠Bottom Dock。Details MUST分离Authoring、Live与References：Authoring只通过正式Presentation Mutation修改当前owner字段；Live只读取匹配PoseGraphId、PoseGraphRevision与ProjectionRevision的snapshot；References只读显示Source Slot、Profile binding子资产、实际资源对象、source map、Action producer、Rig、Policy和call site。稳定identity、GUID、revision、hash与compiled index MUST默认隐藏。Live Debug模式下mutation MUST禁用，revision不匹配 MUST显示Stale并清空旧值。
 
 #### Scenario: 查看Locomotion State
 
 - **WHEN** 作者选中Locomotion State的Sequence或BlendSpace Player
-- **THEN** References MUST显示其Provider与PresentationPoseSource binding
-- **AND** MUST不显示BaseLocomotion Gameplay producer
+- **THEN** Authoring MUST显示类型匹配的Source Slot对象选择器
+- **AND** References MUST显示解析后的Profile binding、实际资源、owner与Open Source命令
+- **AND** MUST不显示BaseLocomotion Gameplay producer或可编辑Source Id
 
 #### Scenario: Runtime revision不匹配
 
@@ -231,14 +260,20 @@ Rig v3 MUST以Physical Bones与Virtual Bones组成唯一Pose catalog，并显式
 - **THEN** Live MUST显示Stale
 - **AND** MUST不从authoring默认值或Animancer state伪造结果
 
-### Requirement: Pose Watch必须只观察已完成Pose Value
+### Requirement: Pose Watch必须只观察已完成Pose与typed目标Value
 
-Editor MUST允许按稳定PoseNodeId与call-site订阅Pose Watch。Watch selection、颜色、显隐和面板状态 MUST只属于editor view-state。Preview或Runtime diagnostics MUST从同一帧已完成Pose workspace复制固定容量的目标Pose、Pose空间与contribution，不得重新执行节点、第二次采样source、修改Player/transition/history或改变FinalAnimationPoseFrame。world-aware节点 MUST在Planner与solver均完成后才发布可观察输出。
+Editor MUST允许按稳定PoseNodeId与call-site订阅Pose Watch，并允许FootPlacement targets使用只读Target Watch。Watch selection、颜色、显隐和面板状态 MUST只属于editor view-state。Preview或Runtime diagnostics MUST从同一帧已完成workspace复制固定容量的目标Pose、Pose空间、targets与contribution，不得重新执行节点、第二次采样source、修改Player/transition/history或改变FinalAnimationPoseFrame。FootPlacement MUST在pelvis Pose与targets同时完成后发布completion；LegIK MUST在双腿求解完成后发布可观察Pose。
+
+#### Scenario: 同时观察FootPlacement和LegIK
+
+- **WHEN** FootPlacement与LegIK都启用Watch
+- **THEN** FootPlacement Watch MUST显示应用pelvis后的Pose与左右目标，LegIK Watch MUST显示最终双腿Pose
+- **AND** 两者 MUST共享同一Frame与FootPlacement Completion lineage
 
 #### Scenario: 同时观察State Player和FootPlacement
 
 - **WHEN** 两个节点都启用Pose Watch
-- **THEN** diagnostics MUST从同一frame completion发布Local State Player Pose与已求解Component FootPlacement Pose
+- **THEN** diagnostics MUST从同一frame lineage发布Local State Player Pose、应用pelvis后的FootPlacement Pose与LegIK已求解Pose
 - **AND** MUST不额外Evaluate PlayableGraph或读取Transform反推结果
 
 ### Requirement: Preview、Runtime与Live Debug必须复用同一固定Pose Plan
@@ -263,10 +298,34 @@ Pose Graph、PoseStateMachine、Node、Port与Edge MUST使用共享typed domain 
 
 ### Requirement: Pose Graph UI必须保留准确术语和serialized identity
 
-UI MAY把正式`PoseStateMachine`显示为Animation State Machine、把`AnimationSlot`显示为Slot，并使用Anim Graph、Sequence Player、Transition Rule、State Alias、Layered Blend Per Bone、Inertialization、Sync Group、Pose Watch和Output Pose。UI MUST保留项目serialized node kind和stable identity，明确区分BTSMTL Gameplay StateMachine与Pose StateMachine。AnimationChannel仍是有限Action arbitration identity，BTSMTL Action Timeline职责近似Montage但不得伪装成Montage资产。
+UI MAY把正式`PoseStateMachine`显示为Animation State Machine、把`AnimationSlot`显示为Slot，并使用Anim Graph、Sequence Player、Transition Rule、State Alias、Layered Blend Per Bone、Inertialization、Sync Group、Pose Watch和Output Pose。系统 MUST在序列化、Undo、clipboard、Document、compiler source map与Diagnostics中保留项目serialized node kind和stable identity，但人工UI MUST默认使用业务显示名和Unity资源对象，不得把identity、GUID、hash或compiled index作为节点标题、Navigator项目、breadcrumb或可编辑字段。AnimationChannel仍是有限Action arbitration identity，BTSMTL Action Timeline职责近似Montage但不得伪装成Montage资产。
 
 #### Scenario: 显示FullBodyAction
 
 - **WHEN** Navigator选中FullBodyAction Slot
-- **THEN** UI MUST同时显示SlotId与绑定的Action AnimationChannel
+- **THEN** UI MUST显示Slot业务名与绑定Action AnimationChannel的业务名
+- **AND** 原始SlotId与AnimationChannelId MUST只在显式Diagnostics中只读出现
 - **AND** MUST不把AnimationChannel本身序列化为Slot
+
+### Requirement: Pose StateMachine layout必须是独立纯作者数据
+
+每个root-owned PoseStateMachine MUST在`CharacterPresentationPoseGraphAsset`中拥有按稳定`PoseStateMachineId`索引的唯一layout owner。Layout MAY稀疏保存Entry、State与Alias的显式二维位置；缺少显式位置时 MUST按元素类型和稳定identity使用唯一确定性排布。Layout MUST拒绝重复identity、未知元素和非有限坐标，且 MUST不保存Transition edge位置。Layout变化 MUST进入typed Presentation Mutation、Undo、dirty、保存与Document同步，但 MUST不修改PoseStateMachine `ContentRevision`、不得使Presentation Projection变为Stale，也不得触发Compile或Build。Compiler与Runtime MUST不读取layout。
+
+#### Scenario: 作者拖动Locomotion State
+
+- **WHEN** 作者把Pose StateMachine中的Locomotion State拖到新位置
+- **THEN** 系统 MUST通过Pose StateMachine layout Mutation保存该State的稳定identity与位置
+- **AND** 重新打开工作区后 MUST从同一layout owner恢复位置
+- **AND** Pose StateMachine运行语义与Projection revision MUST保持不变
+
+#### Scenario: 现有State没有显式位置
+
+- **WHEN** 现有Pose StateMachine layout没有某个State的显式位置
+- **THEN** 工作区 MUST按稳定identity使用唯一确定性位置
+- **AND** MUST不在打开窗口、selection变化或AssetDatabase刷新时自动保存生成位置
+
+#### Scenario: layout引用已删除State
+
+- **WHEN** layout包含当前Pose StateMachine中不存在的State identity
+- **THEN** Validator MUST报告悬空layout元素并拒绝正式提交
+- **AND** MUST不忽略该元素或按显示名重绑定

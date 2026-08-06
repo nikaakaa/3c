@@ -430,6 +430,7 @@ namespace TreeDesigner.Editor
         protected VisualElement m_WorkspaceToolbar;
         protected VisualElement m_NavigatorHost;
         protected VisualElement m_GraphCanvasHost;
+        protected VisualElement m_PreviewHost;
         protected VisualElement m_DetailsHost;
         protected VisualElement m_BottomDockHost;
         protected VisualElement m_NavigationToolbar;
@@ -445,7 +446,9 @@ namespace TreeDesigner.Editor
         TwoPaneSplitView m_NavigatorSplit;
         TwoPaneSplitView m_DetailsSplit;
         TwoPaneSplitView m_BottomDockSplit;
+        TwoPaneSplitView m_PreviewSplit;
         VisualElement m_NavigatorRegion;
+        VisualElement m_PreviewRegion;
         VisualElement m_DetailsRegion;
         VisualElement m_BottomDockRegion;
         Button m_NavigatorToggle;
@@ -460,8 +463,10 @@ namespace TreeDesigner.Editor
         protected GraphAuthoringDomainAdapters GraphAuthoringAdapters => m_Adapters;
 
         protected abstract GraphView CreateGraphAuthoringView();
+        protected virtual VisualElement CreateGraphAuthoringPreviewView() => null;
         protected abstract VisualElement CreateGraphAuthoringInspectorView();
         protected abstract GraphAuthoringDomainAdapters CreateGraphAuthoringAdapters();
+        protected virtual bool UseGraphAuthoringShellInteractions => true;
 
         public virtual void CreateGUI()
         {
@@ -476,12 +481,15 @@ namespace TreeDesigner.Editor
             m_WorkspaceToolbar = RequireHost("workspace-toolbar-content");
             m_NavigatorHost = RequireHost("workspace-navigator-content");
             m_GraphCanvasHost = RequireHost("workspace-graph-content");
+            m_PreviewHost = RequireHost("workspace-preview-content");
             m_DetailsHost = RequireHost("workspace-details-content");
             m_BottomDockHost = RequireHost("workspace-bottom-content");
             m_NavigatorSplit = RequireHost("workspace-horizontal") as TwoPaneSplitView;
-            m_BottomDockSplit = RequireHost("workspace-content-vertical") as TwoPaneSplitView;
-            m_DetailsSplit = RequireHost("workspace-main-horizontal") as TwoPaneSplitView;
+            m_DetailsSplit = RequireHost("workspace-content-horizontal") as TwoPaneSplitView;
+            m_PreviewSplit = RequireHost("workspace-center-vertical") as TwoPaneSplitView;
+            m_BottomDockSplit = RequireHost("workspace-side-vertical") as TwoPaneSplitView;
             m_NavigatorRegion = RequireHost("workspace-navigator");
+            m_PreviewRegion = RequireHost("workspace-preview");
             m_DetailsRegion = RequireHost("workspace-details");
             m_BottomDockRegion = RequireHost("workspace-bottom-dock");
             m_NavigationToolbar = rootVisualElement.Q("tree-navigation-toolbar");
@@ -493,6 +501,13 @@ namespace TreeDesigner.Editor
             m_GraphView = CreateGraphAuthoringView() ?? throw new InvalidOperationException("Graph Authoring domain did not create a GraphView.");
             m_GraphView.name = "tree-view";
             m_GraphCanvasHost.Add(m_GraphView);
+            VisualElement preview = CreateGraphAuthoringPreviewView();
+            m_PreviewHost.Clear();
+            if (preview != null)
+                m_PreviewHost.Add(preview);
+            m_PreviewRegion.style.display = preview != null
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
 
             m_TreeTitle = new Label { name = "tree-title" };
             rootVisualElement.Add(m_TreeTitle);
@@ -505,8 +520,11 @@ namespace TreeDesigner.Editor
             ConfigureWorkspace(inspector);
             if (m_GraphView is IGraphAuthoringDomainView domainView)
                 domainView.BindAdapters(m_Adapters.Document, m_Adapters.PortPolicy, m_Adapters.Mutation);
-            BindSearch();
-            BindClipboard();
+            if (UseGraphAuthoringShellInteractions)
+            {
+                BindSearch();
+                BindClipboard();
+            }
             m_Adapters.Inspector.Bind(m_Adapters.Document);
             m_Adapters.Navigator?.Bind(m_Adapters.Document);
             m_Adapters.BottomDock?.Bind(m_Adapters.Document);
@@ -574,6 +592,8 @@ namespace TreeDesigner.Editor
             m_NavigatorRegion.style.minWidth = descriptor.Navigator.MinimumDimension;
             m_DetailsRegion.style.minWidth = descriptor.Details.MinimumDimension;
             m_BottomDockRegion.style.minHeight = descriptor.BottomDock.MinimumDimension;
+            if (m_PreviewRegion.style.display == DisplayStyle.None)
+                SetCollapsed(m_PreviewSplit, 0, true);
             m_DetailsHost.Add(inspector);
             MountRegion(m_NavigatorHost, m_Adapters.Navigator, "No navigator is available for this graph domain.");
             MountRegion(m_BottomDockHost, m_Adapters.BottomDock, "No bottom panel is available for this graph domain.");
@@ -606,7 +626,7 @@ namespace TreeDesigner.Editor
 
         void InitializeLayout()
         {
-            if (m_Adapters == null || m_NavigatorSplit == null || m_DetailsSplit == null || m_BottomDockSplit == null)
+            if (m_Adapters == null || m_NavigatorSplit == null || m_DetailsSplit == null || m_BottomDockSplit == null || m_PreviewSplit == null)
                 return;
             GraphAuthoringWorkspaceDescriptor descriptor = m_Adapters.Workspace;
             if (!m_WorkspaceLayoutState.initialized)
@@ -671,6 +691,7 @@ namespace TreeDesigner.Editor
             SetCollapsed(m_NavigatorSplit, 0, !descriptor.Navigator.Visible || m_WorkspaceLayoutState.navigatorCollapsed || m_NarrowNavigatorCollapsed);
             SetCollapsed(m_DetailsSplit, 1, !descriptor.Details.Visible || m_WorkspaceLayoutState.detailsCollapsed || m_NarrowDetailsCollapsed);
             SetCollapsed(m_BottomDockSplit, 1, !descriptor.BottomDock.Visible || m_WorkspaceLayoutState.bottomDockCollapsed || m_NarrowBottomDockCollapsed);
+            SetCollapsed(m_PreviewSplit, 0, m_PreviewRegion == null || m_PreviewRegion.style.display == DisplayStyle.None);
             UpdateRegionToggle(m_NavigatorToggle, m_NavigatorRegion.resolvedStyle.display != DisplayStyle.None && !m_WorkspaceLayoutState.navigatorCollapsed && !m_NarrowNavigatorCollapsed);
             UpdateRegionToggle(m_DetailsToggle, m_DetailsRegion.resolvedStyle.display != DisplayStyle.None && !m_WorkspaceLayoutState.detailsCollapsed && !m_NarrowDetailsCollapsed);
             UpdateRegionToggle(m_BottomDockToggle, m_BottomDockRegion.resolvedStyle.display != DisplayStyle.None && !m_WorkspaceLayoutState.bottomDockCollapsed && !m_NarrowBottomDockCollapsed);

@@ -38,6 +38,10 @@ namespace RootMotion.FinalIK {
 		/// The third bone (hand or foot).
 		/// </summary>
 		public Transform bone3;
+		public IndexedBoneHandle parentBoneHandle = IndexedBoneHandle.Invalid;
+		public IndexedBoneHandle bone1Handle = IndexedBoneHandle.Invalid;
+		public IndexedBoneHandle bone2Handle = IndexedBoneHandle.Invalid;
+		public IndexedBoneHandle bone3Handle = IndexedBoneHandle.Invalid;
 		/// <summary>
 		/// The weight of maintaining the third bone's rotation as it was in the animation
 		/// </summary>
@@ -58,6 +62,12 @@ namespace RootMotion.FinalIK {
         /// </summary>
         public override bool IsValid(IKSolver solver, ref string message) {
 			if (!base.IsValid(solver, ref message)) return false;
+			if (solver.usesIndexedPoseBackend) {
+				if (!BoneIsValid(bone1Handle, solver, ref message)) return false;
+				if (!BoneIsValid(bone2Handle, solver, ref message)) return false;
+				if (!BoneIsValid(bone3Handle, solver, ref message)) return false;
+				return true;
+			}
 			
 			if (!BoneIsValid(bone1, solver, ref message)) return false;
 			if (!BoneIsValid(bone2, solver, ref message)) return false;
@@ -72,7 +82,7 @@ namespace RootMotion.FinalIK {
 		public BoneMap GetBoneMap(BoneMapType boneMap) {
 			switch(boneMap) {
 			case BoneMapType.Parent:
-				if (parentBone == null) Warning.Log("This limb does not have a parent (shoulder) bone", bone1);
+				if (parentBone == null && !parentBoneHandle.IsValid) Warning.Log("This limb does not have a parent (shoulder) bone", bone1);
 				return boneMapParent;
 			case BoneMapType.Bone1: return boneMap1;
 			case BoneMapType.Bone2: return boneMap2;
@@ -91,6 +101,7 @@ namespace RootMotion.FinalIK {
 		#endregion Main Interface
 		
 		private BoneMap boneMapParent = new BoneMap(), boneMap1 = new BoneMap(), boneMap2 = new BoneMap(), boneMap3 = new BoneMap();
+		private IKSolverFullBody solver;
 		
 		public IKMappingLimb() {}
 		
@@ -104,16 +115,27 @@ namespace RootMotion.FinalIK {
 			this.bone3 = bone3;
 			this.parentBone = parentBone;
 		}
+
+		public void SetBones(IndexedBoneHandle bone1, IndexedBoneHandle bone2, IndexedBoneHandle bone3, IndexedBoneHandle parentBone) {
+			bone1Handle = bone1;
+			bone2Handle = bone2;
+			bone3Handle = bone3;
+			parentBoneHandle = parentBone;
+			this.bone1 = null;
+			this.bone2 = null;
+			this.bone3 = null;
+			this.parentBone = null;
+		}
 		
 		public void StoreDefaultLocalState() {
-			if (parentBone != null) boneMapParent.StoreDefaultLocalState();
+			if (HasParent) boneMapParent.StoreDefaultLocalState();
 			boneMap1.StoreDefaultLocalState();
 			boneMap2.StoreDefaultLocalState();
 			boneMap3.StoreDefaultLocalState();
 		}
 		
 		public void FixTransforms() {
-			if (parentBone != null) boneMapParent.FixTransform(false);
+			if (HasParent) boneMapParent.FixTransform(false);
 			boneMap1.FixTransform(true);
 			boneMap2.FixTransform(false);
 			boneMap3.FixTransform(false);
@@ -123,23 +145,35 @@ namespace RootMotion.FinalIK {
 		 * Initiating and setting defaults
 		 * */
 		public override void Initiate(IKSolverFullBody solver) {
+			this.solver = solver;
 			if (boneMapParent == null) boneMapParent = new BoneMap();
 			if (boneMap1 == null) boneMap1 = new BoneMap();
 			if (boneMap2 == null) boneMap2 = new BoneMap();
 			if (boneMap3 == null) boneMap3 = new BoneMap();
 
 			// Finding the nodes
-			if (parentBone != null) boneMapParent.Initiate(parentBone, solver);
-			boneMap1.Initiate(bone1, solver);
-			boneMap2.Initiate(bone2, solver);
-			boneMap3.Initiate(bone3, solver);
+			if (solver.usesIndexedPoseBackend) {
+				if (HasParent) boneMapParent.Initiate(parentBoneHandle, solver);
+				boneMap1.Initiate(bone1Handle, solver);
+				boneMap2.Initiate(bone2Handle, solver);
+				boneMap3.Initiate(bone3Handle, solver);
+			} else {
+				if (HasParent) boneMapParent.Initiate(parentBone, solver);
+				boneMap1.Initiate(bone1, solver);
+				boneMap2.Initiate(bone2, solver);
+				boneMap3.Initiate(bone3, solver);
+			}
 
-			// Define plane points for the bone maps
-			boneMap1.SetPlane(solver, boneMap1.transform, boneMap2.transform, boneMap3.transform);
-			boneMap2.SetPlane(solver, boneMap2.transform, boneMap3.transform, boneMap1.transform);
+			if (solver.usesIndexedPoseBackend) {
+				boneMap1.SetPlane(solver, boneMap1.boneHandle, boneMap2.boneHandle, boneMap3.boneHandle);
+				boneMap2.SetPlane(solver, boneMap2.boneHandle, boneMap3.boneHandle, boneMap1.boneHandle);
+			} else {
+				boneMap1.SetPlane(solver, boneMap1.transform, boneMap2.transform, boneMap3.transform);
+				boneMap2.SetPlane(solver, boneMap2.transform, boneMap3.transform, boneMap1.transform);
+			}
 
 			// Find the swing axis for the parent bone
-			if (parentBone != null) boneMapParent.SetLocalSwingAxis(boneMap1);
+			if (HasParent) boneMapParent.SetLocalSwingAxis(boneMap1);
 		}
 		
 		/*
@@ -161,7 +195,7 @@ namespace RootMotion.FinalIK {
 
 			// Swing the parent bone to look at the first node's position
 			if (fullBody) {
-				if (parentBone != null) {
+				if (HasParent) {
 					boneMapParent.Swing(solver.GetNode(boneMap1.chainIndex, boneMap1.nodeIndex).solverPosition, weight);
 					//boneMapParent.Swing(boneMap1.node.solverPosition, weight);
 				}
@@ -180,5 +214,7 @@ namespace RootMotion.FinalIK {
 			// Rotate the third bone to the effector rotation
 			boneMap3.RotateToEffector(solver, weight);
 		}
+
+		private bool HasParent => solver != null && solver.usesIndexedPoseBackend ? parentBoneHandle.IsValid : parentBone != null;
 	}
 }

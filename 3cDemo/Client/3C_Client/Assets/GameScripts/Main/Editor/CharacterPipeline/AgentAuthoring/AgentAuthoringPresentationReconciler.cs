@@ -25,7 +25,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string profileId,
             string poseGraphOwnerId,
             CharacterPresentationMutationTransaction graphTransaction,
-            CharacterPresentationMutationTransaction profileTransaction)
+            CharacterPresentationMutationTransaction profileTransaction,
+            IReadOnlyList<AgentLinkedPoseGraphMutationPlan> linkedPoseGraphs)
         {
             Profile = profile;
             PoseGraph = poseGraph;
@@ -33,6 +34,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             PoseGraphOwnerId = poseGraphOwnerId;
             GraphTransaction = graphTransaction;
             ProfileTransaction = profileTransaction;
+            LinkedPoseGraphs = linkedPoseGraphs ??
+                               Array.Empty<AgentLinkedPoseGraphMutationPlan>();
         }
 
         public CharacterAnimationPresentationProfile Profile { get; }
@@ -41,9 +44,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string PoseGraphOwnerId { get; }
         public CharacterPresentationMutationTransaction GraphTransaction { get; }
         public CharacterPresentationMutationTransaction ProfileTransaction { get; }
+        public IReadOnlyList<AgentLinkedPoseGraphMutationPlan> LinkedPoseGraphs { get; }
         public bool IsEmpty =>
             GraphTransaction.Mutations.Count == 0 &&
-            ProfileTransaction.Mutations.Count == 0;
+            ProfileTransaction.Mutations.Count == 0 &&
+            LinkedPoseGraphs.All(value => value.Transaction.Mutations.Count == 0);
+    }
+
+    public sealed class AgentLinkedPoseGraphMutationPlan
+    {
+        internal AgentLinkedPoseGraphMutationPlan(
+            CharacterLinkedPoseImplementationAsset implementation,
+            CharacterPresentationPoseGraphAsset graphOwner,
+            string graphOwnerId,
+            CharacterPresentationMutationTransaction transaction)
+        {
+            Implementation = implementation;
+            GraphOwner = graphOwner;
+            GraphOwnerId = graphOwnerId;
+            Transaction = transaction;
+        }
+
+        public CharacterLinkedPoseImplementationAsset Implementation { get; }
+        public CharacterPresentationPoseGraphAsset GraphOwner { get; }
+        public string GraphOwnerId { get; }
+        public CharacterPresentationMutationTransaction Transaction { get; }
     }
 
     public sealed class AgentAuthoringPresentationReconciler
@@ -150,6 +175,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             if (report.HasErrors())
                 return false;
+            ValidateLinkedPoseCalls(normalized, context, report);
+            if (report.HasErrors())
+                return false;
 
             string poseGraphPath = AssetDatabase.GetAssetPath(poseGraph);
             string poseGraphGuid =
@@ -188,6 +216,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 normalized,
                 builder,
                 report);
+            BuildLinkedPosePlan(
+                current,
+                normalized,
+                context,
+                profile,
+                profileGuid,
+                builder,
+                report,
+                out IReadOnlyList<AgentLinkedPoseGraphMutationPlan>
+                    linkedPoseGraphs);
             BuildProfilePlan(
                 current.profile,
                 normalized.profile,
@@ -205,7 +243,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 profileGuid,
                 poseGraphGuid,
                 graphTransaction,
-                profileTransaction);
+                profileTransaction,
+                linkedPoseGraphs);
             return true;
         }
 
@@ -432,7 +471,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             CharacterPresentationPoseGraphAsset poseAsset,
             string poseAssetId,
             PlanBuilder builder,
-            AgentCompileReport report)
+            AgentCompileReport report,
+            bool requireRoot = true)
         {
             Dictionary<string, AgentPackagePoseGraphFile> oldGraphs = Index(
                 current.poseGraphs,
@@ -450,11 +490,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     value.role,
                     CharacterPoseGraphAuthoringCapabilities.RootGraph.Value,
                     StringComparison.Ordinal));
-            if (targetRoot == null ||
+            if (requireRoot && (targetRoot == null ||
                 !string.Equals(
                     targetRoot.id,
                     rootGraphId,
-                    StringComparison.Ordinal))
+                    StringComparison.Ordinal)))
             {
                 report.Error(
                     "editable/presentation/pose-graphs",
@@ -523,7 +563,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                          .Where(value => !newGraphs.ContainsKey(value.id))
                          .OrderByDescending(value => value.id, StringComparer.Ordinal))
             {
-                if (string.Equals(
+                if (requireRoot && string.Equals(
                         removed.id,
                         rootGraphId,
                         StringComparison.Ordinal))
@@ -935,6 +975,713 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             new Vector2(element.x, element.y)));
                 }
             }
+        }
+
+        void ValidateLinkedPoseCalls(
+            AgentDocumentPresentationEditable presentation,
+            AgentDocumentContext context,
+            AgentCompileReport report)
+        {
+            var groups = Index(
+                presentation.profile.linkedPoseGroups,
+                value => value.groupId);
+            var interfaces = Index(
+                context?.presentation?.linkedPoseInterfaces,
+                value => ReferenceIdentity(value.asset));
+            var interfaceByGroup = new Dictionary<
+                string,
+                CharacterLinkedPoseInterfaceAsset>(StringComparer.Ordinal);
+            var contextByGroup = new Dictionary<
+                string,
+                AgentPackageLinkedPoseInterfaceFile>(StringComparer.Ordinal);
+            foreach (AgentPackageLinkedPoseGroupBinding group in groups.Values)
+            {
+                string interfaceKey = ReferenceIdentity(group.interfaceAsset);
+                CharacterLinkedPoseInterfaceAsset linkedInterface =
+                    Resolve<CharacterLinkedPoseInterfaceAsset>(
+                        group.interfaceAsset,
+                        "editable/presentation/profile.json.linkedPoseGroups[" +
+                        group.groupId + "]",
+                        report);
+                if (!linkedInterface ||
+                    !interfaces.TryGetValue(
+                        interfaceKey,
+                        out AgentPackageLinkedPoseInterfaceFile interfaceContext) ||
+                    !InterfaceContextMatches(interfaceContext, linkedInterface))
+                {
+                    report.Error(
+                        "editable/presentation/profile.json.linkedPoseGroups[" +
+                        group.groupId + "]",
+                        "linked_pose_group_interface_context_mismatch",
+                        "Linked Pose Group必须引用checkout readonly context中的同一Interface合同。");
+                    continue;
+                }
+                interfaceByGroup.Add(group.groupId, linkedInterface);
+                contextByGroup.Add(group.groupId, interfaceContext);
+            }
+
+            string capability = CharacterPoseGraphAuthoringCapabilities
+                .Get(CharacterPoseNodeKind.LinkedPoseCall).Value;
+            var calls = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (AgentPackagePoseGraphFile graph in presentation.poseGraphs)
+            {
+                foreach (AgentPackagePoseNode node in graph.nodes.Where(value =>
+                             string.Equals(
+                                 value?.capability,
+                                 capability,
+                                 StringComparison.Ordinal)))
+                {
+                    string groupId = node.properties?["group-id"]?.Value<string>();
+                    string entryId = node.properties?["entry-id"]?.Value<string>();
+                    string key = (groupId ?? string.Empty) + "\0" +
+                                 (entryId ?? string.Empty);
+                    calls.TryGetValue(key, out int count);
+                    calls[key] = count + 1;
+                    if (!interfaceByGroup.TryGetValue(
+                            groupId ?? string.Empty,
+                            out CharacterLinkedPoseInterfaceAsset linkedInterface))
+                    {
+                        report.Error(
+                            GraphPath(graph.id) + $".nodes[{node.id}]",
+                            "linked_pose_call_group_missing",
+                            "Linked Pose Call引用了未声明或Interface context无效的Group。");
+                        continue;
+                    }
+                    CharacterTypedPoseNode typed = ConvertNode(
+                        node,
+                        graph.role,
+                        presentation,
+                        report,
+                        GraphPath(graph.id) + $".nodes[{node.id}]");
+                    if (typed == null)
+                        continue;
+                    try
+                    {
+                        CharacterLinkedPosePortProjection.RequireCallMatch(
+                            typed,
+                            linkedInterface);
+                    }
+                    catch (Exception exception)
+                    {
+                        report.Error(
+                            GraphPath(graph.id) + $".nodes[{node.id}]",
+                            "linked_pose_call_signature_mismatch",
+                            exception.Message);
+                    }
+                }
+            }
+            foreach (KeyValuePair<string, AgentPackageLinkedPoseInterfaceFile> pair in
+                     contextByGroup)
+            {
+                foreach (AgentPackageLinkedPoseInterfaceEntry entry in
+                         pair.Value.entries)
+                {
+                    string key = pair.Key + "\0" + entry.entryId;
+                    calls.TryGetValue(key, out int count);
+                    if (count != 1)
+                    {
+                        report.Error(
+                            "editable/presentation/profile.json.linkedPoseGroups[" +
+                            pair.Key + "].entries[" + entry.entryId + "]",
+                            "linked_pose_call_count_invalid",
+                            $"每个Group Interface Entry必须在root中恰好有一个Call，当前为{count}个。");
+                    }
+                }
+            }
+        }
+
+        void BuildLinkedPosePlan(
+            AgentDocumentPresentationEditable current,
+            AgentDocumentPresentationEditable target,
+            AgentDocumentContext context,
+            CharacterAnimationPresentationProfile profile,
+            string profileId,
+            PlanBuilder builder,
+            AgentCompileReport report,
+            out IReadOnlyList<AgentLinkedPoseGraphMutationPlan> graphPlans)
+        {
+            var plans = new List<AgentLinkedPoseGraphMutationPlan>();
+            graphPlans = plans;
+            var currentImplementations = Index(
+                current.linkedPoseImplementations,
+                value => value.id);
+            var targetImplementations = Index(
+                target.linkedPoseImplementations,
+                value => value.id);
+            var contextInterfaces = Index(
+                context?.presentation?.linkedPoseInterfaces,
+                value => ReferenceIdentity(value.asset));
+
+            foreach (AgentPackageLinkedPoseImplementationFile value in
+                     target.linkedPoseImplementations
+                         .OrderBy(item => item.implementationId, StringComparer.Ordinal))
+            {
+                string path =
+                    "editable/presentation/linked-pose-implementations/" +
+                    AgentAuthoringPackageMapper.Segment(value.id) +
+                    "/implementation.json";
+                CharacterLinkedPoseInterfaceAsset linkedInterface =
+                    Resolve<CharacterLinkedPoseInterfaceAsset>(
+                        value.interfaceAsset,
+                        path + ".interfaceAsset",
+                        report);
+                string interfaceKey = ReferenceIdentity(value.interfaceAsset);
+                if (!linkedInterface ||
+                    !contextInterfaces.TryGetValue(
+                        interfaceKey,
+                        out AgentPackageLinkedPoseInterfaceFile interfaceContext) ||
+                    !InterfaceContextMatches(interfaceContext, linkedInterface))
+                {
+                    report.Error(
+                        path + ".interfaceAsset",
+                        "linked_pose_interface_context_mismatch",
+                        "Implementation必须引用checkout readonly context中的同一Interface revision与signature。");
+                    continue;
+                }
+                if (!ValidateLinkedTargetEntries(
+                        value,
+                        linkedInterface,
+                        interfaceContext,
+                        path,
+                        report))
+                    continue;
+
+                bool created = !string.IsNullOrWhiteSpace(value.asset?.localId);
+                CharacterLinkedPoseImplementationAsset implementation;
+                CharacterPresentationPoseGraphAsset graphOwner;
+                AgentPackageLinkedPoseImplementationFile previous = null;
+                if (created)
+                {
+                    if (!string.Equals(
+                            value.id,
+                            value.asset.localId,
+                            StringComparison.Ordinal) ||
+                        string.IsNullOrWhiteSpace(value.graphOwner?.localId))
+                    {
+                        report.Error(
+                            path,
+                            "linked_pose_local_identity_invalid",
+                            "新增Implementation的object key、asset localId与Graph owner localId不完整。");
+                        continue;
+                    }
+                    implementation = ScriptableObject.CreateInstance<
+                        CharacterLinkedPoseImplementationAsset>();
+                    implementation.name = value.name;
+                    graphOwner = ScriptableObject.CreateInstance<
+                        CharacterPresentationPoseGraphAsset>();
+                    graphOwner.name = value.name + " Graphs";
+                    if (!m_LocalAssets.TryAdd(value.asset.localId, implementation) ||
+                        !m_LocalAssets.TryAdd(value.graphOwner.localId, graphOwner))
+                    {
+                        report.Error(
+                            path,
+                            "linked_pose_local_identity_duplicate",
+                            "Implementation或Graph owner local identity重复。");
+                        UnityEngine.Object.DestroyImmediate(implementation);
+                        UnityEngine.Object.DestroyImmediate(graphOwner);
+                        continue;
+                    }
+                    builder.Profile(
+                        path,
+                        new CreateLinkedPoseImplementationMutation(
+                            profileId,
+                            implementation,
+                            graphOwner));
+                }
+                else
+                {
+                    implementation = Resolve<CharacterLinkedPoseImplementationAsset>(
+                        value.asset,
+                        path + ".asset",
+                        report);
+                    graphOwner = Resolve<CharacterPresentationPoseGraphAsset>(
+                        value.graphOwner,
+                        path + ".graphOwner",
+                        report);
+                    if (!implementation || !graphOwner ||
+                        !profile.LinkedPoseImplementations.Contains(implementation) ||
+                        !currentImplementations.TryGetValue(value.id, out previous) ||
+                        !Same(previous.graphOwner, value.graphOwner) ||
+                        !string.Equals(
+                            previous.ownerIdentity,
+                            value.ownerIdentity,
+                            StringComparison.Ordinal) ||
+                        !string.Equals(
+                            previous.graphOwnerIdentity,
+                            value.graphOwnerIdentity,
+                            StringComparison.Ordinal) ||
+                        !string.Equals(
+                            previous.implementationId,
+                            value.implementationId,
+                            StringComparison.Ordinal))
+                    {
+                        report.Error(
+                            path,
+                            "linked_pose_implementation_owner_mismatch",
+                            "既有Implementation必须保持Profile成员身份与同一Graph owner对象。");
+                        continue;
+                    }
+                }
+
+                if (!created &&
+                    (value.revision < previous.revision ||
+                     !SameImplementationSemantic(previous, value) &&
+                     value.revision <= previous.revision))
+                {
+                    report.Error(
+                        path + ".revision",
+                        "linked_pose_implementation_revision_stale",
+                        "Implementation语义变化必须显式提高revision，revision不得回退。");
+                    continue;
+                }
+
+                var graphTransaction =
+                    new CharacterPresentationMutationTransaction(
+                        "document-linked-pose-graph-" +
+                        AgentAuthoringPackageMapper.Segment(value.id),
+                        "Apply Linked Pose Entry Graph Document");
+                PlanBuilder graphBuilder = builder.ForGraph(graphTransaction);
+                AgentDocumentPresentationEditable previousClosure =
+                    LinkedClosure(previous);
+                AgentDocumentPresentationEditable targetClosure =
+                    LinkedClosure(value);
+                BuildGraphPlan(
+                    previousClosure,
+                    targetClosure,
+                    graphOwner,
+                    value.graphOwnerIdentity,
+                    graphBuilder,
+                    report,
+                    false);
+                BuildStateMachinePlan(
+                    previousClosure,
+                    targetClosure,
+                    graphBuilder,
+                    report);
+
+                CharacterLinkedPoseImplementationEntryMutationValue[] entries =
+                    value.entries.Select(entry =>
+                        new CharacterLinkedPoseImplementationEntryMutationValue(
+                            new LinkedPoseEntryId(entry.entryId),
+                            value.graphOwnerIdentity,
+                            graphOwner,
+                            new PoseGraphId(entry.graphId)))
+                    .OrderBy(entry => entry.EntryId)
+                    .ToArray();
+                if (created || !SameImplementationHeader(previous, value))
+                {
+                    builder.Profile(
+                        path,
+                        new ConfigureLinkedPoseImplementationMutation(
+                            profileId,
+                            implementation,
+                            value.ownerIdentity,
+                            value.name,
+                            new LinkedPoseImplementationId(
+                                value.implementationId),
+                            new LinkedPoseRevision(value.revision),
+                            linkedInterface,
+                            entries));
+                }
+                plans.Add(new AgentLinkedPoseGraphMutationPlan(
+                    implementation,
+                    graphOwner,
+                    value.graphOwnerIdentity,
+                    graphTransaction));
+            }
+
+            BuildLinkedPoseGroups(
+                current.profile,
+                target.profile,
+                profileId,
+                builder,
+                report);
+            BuildLinkedPoseSelectors(
+                current.profile,
+                target.profile,
+                profile,
+                profileId,
+                builder,
+                report);
+
+            foreach (AgentPackageLinkedPoseImplementationFile removed in
+                     current.linkedPoseImplementations
+                         .Where(value => !targetImplementations.ContainsKey(value.id))
+                         .OrderBy(value => value.implementationId, StringComparer.Ordinal))
+            {
+                CharacterLinkedPoseImplementationAsset implementation =
+                    Resolve<CharacterLinkedPoseImplementationAsset>(
+                        removed.asset,
+                        "editable/presentation/linked-pose-implementations/" +
+                        AgentAuthoringPackageMapper.Segment(removed.id),
+                        report);
+                if (implementation)
+                {
+                    builder.Profile(
+                        "editable/presentation/linked-pose-implementations/" +
+                        AgentAuthoringPackageMapper.Segment(removed.id),
+                        new RemoveLinkedPoseImplementationMutation(
+                            profileId,
+                            implementation));
+                }
+            }
+        }
+
+        void BuildLinkedPoseGroups(
+            AgentPackagePresentationProfileFile current,
+            AgentPackagePresentationProfileFile target,
+            string profileId,
+            PlanBuilder builder,
+            AgentCompileReport report)
+        {
+            var oldGroups = Index(current.linkedPoseGroups, value => value.groupId);
+            var newGroups = Index(target.linkedPoseGroups, value => value.groupId);
+            foreach (AgentPackageLinkedPoseGroupBinding value in
+                     target.linkedPoseGroups.OrderBy(
+                         item => item.groupId,
+                         StringComparer.Ordinal))
+            {
+                if (oldGroups.TryGetValue(value.groupId, out AgentPackageLinkedPoseGroupBinding previous) &&
+                    Same(previous, value))
+                    continue;
+                CharacterLinkedPoseInterfaceAsset linkedInterface =
+                    Resolve<CharacterLinkedPoseInterfaceAsset>(
+                        value.interfaceAsset,
+                        "editable/presentation/profile.json.linkedPoseGroups[" +
+                        value.groupId + "]",
+                        report);
+                if (linkedInterface)
+                {
+                    builder.Profile(
+                        "editable/presentation/profile.json.linkedPoseGroups[" +
+                        value.groupId + "]",
+                        new SetLinkedPoseGroupMutation(
+                            profileId,
+                            new CharacterLinkedPoseGroupBinding(
+                                new LinkedPoseGroupId(value.groupId),
+                                linkedInterface)));
+                }
+            }
+            foreach (AgentPackageLinkedPoseGroupBinding removed in
+                     current.linkedPoseGroups.Where(value =>
+                         !newGroups.ContainsKey(value.groupId)))
+            {
+                builder.Profile(
+                    "editable/presentation/profile.json.linkedPoseGroups[" +
+                    removed.groupId + "]",
+                    new RemoveLinkedPoseGroupMutation(
+                        profileId,
+                        new LinkedPoseGroupId(removed.groupId)));
+            }
+        }
+
+        void BuildLinkedPoseSelectors(
+            AgentPackagePresentationProfileFile current,
+            AgentPackagePresentationProfileFile target,
+            CharacterAnimationPresentationProfile profile,
+            string profileId,
+            PlanBuilder builder,
+            AgentCompileReport report)
+        {
+            var oldSelectors = Index(current.linkedPoseSelectors, value => value.id);
+            var newSelectors = Index(target.linkedPoseSelectors, value => value.id);
+            foreach (AgentPackageLinkedPoseSelectorBinding value in
+                     target.linkedPoseSelectors.OrderBy(
+                         item => item.selectorId,
+                         StringComparer.Ordinal))
+            {
+                string path =
+                    "editable/presentation/profile.json.linkedPoseSelectors[" +
+                    value.selectorId + "]";
+                bool created = !string.IsNullOrWhiteSpace(value.asset?.localId);
+                CharacterEquipmentLinkedPoseSelectionBinding selector;
+                AgentPackageLinkedPoseSelectorBinding previous = null;
+                if (created)
+                {
+                    if (!string.Equals(value.id, value.asset.localId, StringComparison.Ordinal))
+                    {
+                        report.Error(
+                            path,
+                            "linked_pose_selector_local_identity_invalid",
+                            "新增selector的object key必须等于asset localId。");
+                        continue;
+                    }
+                    selector = ScriptableObject.CreateInstance<
+                        CharacterEquipmentLinkedPoseSelectionBinding>();
+                    selector.name = value.selectorId;
+                    if (!m_LocalAssets.TryAdd(value.asset.localId, selector))
+                    {
+                        report.Error(
+                            path,
+                            "linked_pose_selector_local_identity_duplicate",
+                            "selector local identity重复。");
+                        UnityEngine.Object.DestroyImmediate(selector);
+                        continue;
+                    }
+                    builder.Profile(
+                        path,
+                        new CreateEquipmentLinkedPoseSelectorMutation(
+                            profileId,
+                            selector));
+                }
+                else
+                {
+                    selector = Resolve<CharacterEquipmentLinkedPoseSelectionBinding>(
+                        value.asset,
+                        path + ".asset",
+                        report);
+                    if (!selector || !profile.LinkedPoseSelectors.Contains(selector) ||
+                        !oldSelectors.TryGetValue(value.id, out previous))
+                    {
+                        report.Error(
+                            path,
+                            "linked_pose_selector_owner_mismatch",
+                            "既有selector必须保持Profile成员身份与稳定对象identity。");
+                        continue;
+                    }
+                }
+
+                CharacterEquipmentLinkedPoseMapping[] mappings =
+                    (value.equipment?.mappings ??
+                     new List<AgentPackageEquipmentLinkedPoseMapping>())
+                    .Select(mapping => new CharacterEquipmentLinkedPoseMapping(
+                        new EquipmentId(mapping.equipmentId),
+                        new LinkedPoseImplementationId(mapping.implementationId)))
+                    .OrderBy(mapping => mapping.EquipmentId)
+                    .ToArray();
+                bool envelopeChanged = created || previous == null ||
+                    !string.Equals(previous.selectorId, value.selectorId, StringComparison.Ordinal) ||
+                    !string.Equals(previous.groupId, value.groupId, StringComparison.Ordinal) ||
+                    !string.Equals(previous.kind, value.kind, StringComparison.Ordinal) ||
+                    !string.Equals(previous.equipment?.slotId, value.equipment?.slotId, StringComparison.Ordinal) ||
+                    !string.Equals(
+                        previous.equipment?.emptyImplementationId,
+                        value.equipment?.emptyImplementationId,
+                        StringComparison.Ordinal);
+                if (envelopeChanged)
+                {
+                    builder.Profile(
+                        path,
+                        new ConfigureEquipmentLinkedPoseSelectorMutation(
+                            profileId,
+                            selector,
+                            new LinkedPoseSelectorId(value.selectorId),
+                            new LinkedPoseGroupId(value.groupId),
+                            new EquipmentSlotId(value.equipment.slotId),
+                            new LinkedPoseImplementationId(
+                                value.equipment.emptyImplementationId),
+                            mappings));
+                    continue;
+                }
+
+                var oldMappings = Index(
+                    previous.equipment.mappings,
+                    mapping => mapping.equipmentId);
+                var newMappings = Index(
+                    value.equipment.mappings,
+                    mapping => mapping.equipmentId);
+                foreach (AgentPackageEquipmentLinkedPoseMapping mapping in
+                         previous.equipment.mappings.Where(item =>
+                             !newMappings.ContainsKey(item.equipmentId)))
+                {
+                    builder.Profile(
+                        path + ".equipment.mappings[" + mapping.equipmentId + "]",
+                        new RemoveEquipmentLinkedPoseMappingMutation(
+                            profileId,
+                            selector,
+                            new EquipmentId(mapping.equipmentId)));
+                }
+                foreach (AgentPackageEquipmentLinkedPoseMapping mapping in
+                         value.equipment.mappings.Where(item =>
+                             !oldMappings.TryGetValue(
+                                 item.equipmentId,
+                                 out AgentPackageEquipmentLinkedPoseMapping old) ||
+                             !Same(old, item)))
+                {
+                    builder.Profile(
+                        path + ".equipment.mappings[" + mapping.equipmentId + "]",
+                        new SetEquipmentLinkedPoseMappingMutation(
+                            profileId,
+                            selector,
+                            new CharacterEquipmentLinkedPoseMapping(
+                                new EquipmentId(mapping.equipmentId),
+                                new LinkedPoseImplementationId(
+                                    mapping.implementationId))));
+                }
+            }
+            foreach (AgentPackageLinkedPoseSelectorBinding removed in
+                     current.linkedPoseSelectors.Where(value =>
+                         !newSelectors.ContainsKey(value.id)))
+            {
+                CharacterLinkedPoseSelectorBindingAsset selector =
+                    Resolve<CharacterLinkedPoseSelectorBindingAsset>(
+                        removed.asset,
+                        "editable/presentation/profile.json.linkedPoseSelectors[" +
+                        removed.selectorId + "]",
+                        report);
+                if (selector)
+                {
+                    builder.Profile(
+                        "editable/presentation/profile.json.linkedPoseSelectors[" +
+                        removed.selectorId + "]",
+                        new RemoveLinkedPoseSelectorMutation(
+                            profileId,
+                            selector));
+                }
+            }
+        }
+
+        static AgentDocumentPresentationEditable LinkedClosure(
+            AgentPackageLinkedPoseImplementationFile value) =>
+            new AgentDocumentPresentationEditable
+            {
+                profile = new AgentPackagePresentationProfileFile(),
+                poseGraphs = value?.poseGraphs ??
+                             new List<AgentPackagePoseGraphFile>(),
+                poseGraphLayouts = value?.poseGraphLayouts ??
+                                   new List<AgentPackagePoseGraphLayoutFile>(),
+                poseStateMachines = value?.poseStateMachines ??
+                                    new List<AgentPackagePoseStateMachineFile>(),
+                poseStateMachineLayouts = value?.poseStateMachineLayouts ??
+                    new List<AgentPackagePoseStateMachineLayoutFile>()
+            };
+
+        static bool SameImplementationHeader(
+            AgentPackageLinkedPoseImplementationFile left,
+            AgentPackageLinkedPoseImplementationFile right) =>
+            left != null && right != null &&
+            string.Equals(left.name, right.name, StringComparison.Ordinal) &&
+            string.Equals(left.ownerIdentity, right.ownerIdentity, StringComparison.Ordinal) &&
+            string.Equals(
+                left.implementationId,
+                right.implementationId,
+                StringComparison.Ordinal) &&
+            left.revision == right.revision &&
+            Same(left.interfaceAsset, right.interfaceAsset) &&
+            Same(left.graphOwner, right.graphOwner) &&
+            string.Equals(
+                left.graphOwnerIdentity,
+                right.graphOwnerIdentity,
+                StringComparison.Ordinal) &&
+            Same(left.entries, right.entries);
+
+        static bool SameImplementationSemantic(
+            AgentPackageLinkedPoseImplementationFile left,
+            AgentPackageLinkedPoseImplementationFile right) =>
+            left != null && right != null &&
+            string.Equals(
+                left.ownerIdentity,
+                right.ownerIdentity,
+                StringComparison.Ordinal) &&
+            string.Equals(
+                left.implementationId,
+                right.implementationId,
+                StringComparison.Ordinal) &&
+            Same(left.interfaceAsset, right.interfaceAsset) &&
+            Same(left.graphOwner, right.graphOwner) &&
+            string.Equals(
+                left.graphOwnerIdentity,
+                right.graphOwnerIdentity,
+                StringComparison.Ordinal) &&
+            Same(left.entries, right.entries) &&
+            Same(left.poseGraphs, right.poseGraphs) &&
+            Same(left.poseStateMachines, right.poseStateMachines);
+
+        static bool InterfaceContextMatches(
+            AgentPackageLinkedPoseInterfaceFile context,
+            CharacterLinkedPoseInterfaceAsset asset) =>
+            context != null && asset &&
+            string.Equals(
+                context.interfaceId,
+                asset.InterfaceId.Value,
+                StringComparison.Ordinal) &&
+            context.revision == asset.Revision.Value &&
+            string.Equals(
+                context.signatureHash,
+                asset.SignatureHash.ToString(),
+                StringComparison.Ordinal) &&
+            string.Equals(
+                context.factContractIdentity,
+                asset.FactContractIdentity.ToString(),
+                StringComparison.Ordinal) &&
+            string.Equals(
+                context.executionContract,
+                asset.ExecutionContract,
+                StringComparison.Ordinal);
+
+        bool ValidateLinkedTargetEntries(
+            AgentPackageLinkedPoseImplementationFile implementation,
+            CharacterLinkedPoseInterfaceAsset linkedInterface,
+            AgentPackageLinkedPoseInterfaceFile interfaceContext,
+            string path,
+            AgentCompileReport report)
+        {
+            HashSet<string> expected = interfaceContext.entries
+                .Select(value => value.entryId)
+                .ToHashSet(StringComparer.Ordinal);
+            HashSet<string> actual = implementation.entries
+                .Select(value => value.entryId)
+                .ToHashSet(StringComparer.Ordinal);
+            if (!expected.SetEquals(actual))
+            {
+                report.Error(
+                    path + ".entries",
+                    "linked_pose_entry_coverage_mismatch",
+                    "Implementation Entry映射必须精确覆盖Interface全部Entry。");
+                return false;
+            }
+            var graphs = Index(implementation.poseGraphs, value => value.id);
+            var layouts = Index(
+                implementation.poseGraphLayouts,
+                value => value.graphId);
+            AgentDocumentPresentationEditable closure =
+                LinkedClosure(implementation);
+            bool valid = true;
+            foreach (AgentPackageLinkedPoseImplementationEntry entry in
+                     implementation.entries)
+            {
+                if (!graphs.TryGetValue(
+                        entry.graphId,
+                        out AgentPackagePoseGraphFile graph) ||
+                    !layouts.TryGetValue(
+                        entry.graphId,
+                        out AgentPackagePoseGraphLayoutFile layout))
+                {
+                    report.Error(
+                        path + $".entries[{entry.entryId}]",
+                        "linked_pose_entry_graph_missing",
+                        "Implementation Entry缺少同owner下的Graph或layout。");
+                    valid = false;
+                    continue;
+                }
+                CharacterTypedPoseGraph typed = ConvertGraph(
+                    graph,
+                    layout,
+                    closure,
+                    report,
+                    path + $".entries[{entry.entryId}]");
+                if (typed == null)
+                {
+                    valid = false;
+                    continue;
+                }
+                try
+                {
+                    CharacterLinkedPosePortProjection.RequireEntryGraphMatch(
+                        typed,
+                        linkedInterface,
+                        new LinkedPoseEntryId(entry.entryId));
+                }
+                catch (Exception exception)
+                {
+                    report.Error(
+                        path + $".entries[{entry.entryId}]",
+                        "linked_pose_entry_signature_mismatch",
+                        exception.Message);
+                    valid = false;
+                }
+            }
+            return valid;
         }
 
         void BuildProfilePlan(
@@ -1567,7 +2314,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     string.Equals(
                         value.FieldId.Value,
                         fieldId,
-                        StringComparison.Ordinal));
+                        StringComparison.Ordinal) &&
+                    value.AuthoringWritable);
             }
             catch (Exception exception)
             {
@@ -1705,6 +2453,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                 role);
                         foreach (GraphAuthoringFieldDescriptor field in
                                  capability.Fields.Where(field =>
+                                     field.AuthoringWritable &&
                                      field.ValueKind ==
                                      GraphAuthoringFieldValueKind
                                          .IdentityReference))
@@ -1799,6 +2548,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                          layout.elements)
                     element.id = identities.Map(element.id);
             }
+            foreach (AgentPackageLinkedPoseImplementationFile implementation in
+                     value.linkedPoseImplementations ??
+                     new List<AgentPackageLinkedPoseImplementationFile>())
+            {
+                implementation.ownerIdentity = identities.MapOptional(
+                    implementation.ownerIdentity);
+                implementation.graphOwnerIdentity = identities.MapOptional(
+                    implementation.graphOwnerIdentity);
+                foreach (AgentPackageLinkedPoseImplementationEntry entry in
+                         implementation.entries ??
+                         new List<AgentPackageLinkedPoseImplementationEntry>())
+                {
+                    entry.graphId = identities.Map(entry.graphId);
+                }
+                var closure = new AgentDocumentPresentationEditable
+                {
+                    profile = new AgentPackagePresentationProfileFile(),
+                    poseGraphs = implementation.poseGraphs,
+                    poseGraphLayouts = implementation.poseGraphLayouts,
+                    poseStateMachines = implementation.poseStateMachines,
+                    poseStateMachineLayouts =
+                        implementation.poseStateMachineLayouts
+                };
+                Normalize(closure, identities, report);
+                implementation.poseGraphs = closure.poseGraphs;
+                implementation.poseGraphLayouts = closure.poseGraphLayouts;
+                implementation.poseStateMachines = closure.poseStateMachines;
+                implementation.poseStateMachineLayouts =
+                    closure.poseStateMachineLayouts;
+            }
         }
 
         static void Normalize(
@@ -1861,6 +2640,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                              in transition.rule.operations)
                         yield return operation.id;
                 }
+            }
+            foreach (AgentPackageLinkedPoseImplementationFile implementation in
+                     value.linkedPoseImplementations ??
+                     new List<AgentPackageLinkedPoseImplementationFile>())
+            {
+                yield return implementation.ownerIdentity;
+                yield return implementation.graphOwnerIdentity;
+                foreach (AgentPackageLinkedPoseImplementationEntry entry in
+                         implementation.entries ??
+                         new List<AgentPackageLinkedPoseImplementationEntry>())
+                    yield return entry.graphId;
+                var closure = new AgentDocumentPresentationEditable
+                {
+                    profile = new AgentPackagePresentationProfileFile(),
+                    poseGraphs = implementation.poseGraphs,
+                    poseGraphLayouts = implementation.poseGraphLayouts,
+                    poseStateMachines = implementation.poseStateMachines,
+                    poseStateMachineLayouts =
+                        implementation.poseStateMachineLayouts
+                };
+                foreach (string identity in CurrentIdentities(closure))
+                    yield return identity;
             }
         }
 
@@ -2254,17 +3055,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             readonly CharacterPresentationMutationTransaction
                 m_ProfileTransaction;
             readonly AgentCompileReport m_Report;
-            int m_Index;
+            readonly DiffSequence m_Sequence;
 
             public PlanBuilder(
                 CharacterPresentationMutationTransaction graphTransaction,
                 CharacterPresentationMutationTransaction profileTransaction,
-                AgentCompileReport report)
+                AgentCompileReport report,
+                DiffSequence sequence = null)
             {
                 m_GraphTransaction = graphTransaction;
                 m_ProfileTransaction = profileTransaction;
                 m_Report = report;
+                m_Sequence = sequence ?? new DiffSequence();
             }
+
+            public PlanBuilder ForGraph(
+                CharacterPresentationMutationTransaction graphTransaction) =>
+                new PlanBuilder(
+                    graphTransaction,
+                    m_ProfileTransaction,
+                    m_Report,
+                    m_Sequence);
 
             public void Graph(
                 string path,
@@ -2291,7 +3102,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 m_Report.plannedDiff.Add(new AgentCompileDiffEntry
                 {
                     mutationId =
-                        "presentation-" + m_Index++.ToString("D4"),
+                        "presentation-" +
+                        m_Sequence.Index++.ToString("D4"),
                     action = mutation.Kind.ToString(),
                     graph = mutation.OwnerId,
                     target = path,
@@ -2299,6 +3111,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         ? mutation.GetType().Name
                         : detail
                 });
+            }
+
+            public sealed class DiffSequence
+            {
+                public int Index;
             }
         }
 

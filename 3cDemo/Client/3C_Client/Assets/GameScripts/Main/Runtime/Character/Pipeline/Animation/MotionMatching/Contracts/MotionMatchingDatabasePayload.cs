@@ -345,39 +345,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         }
     }
 
-    public readonly struct MotionMatchingProviderBindingPayload
+    public readonly struct MotionMatchingNodeBindingPayload
     {
-        public MotionMatchingProviderBindingPayload(
-            string providerId,
-            PresentationPoseSourceIndex presentationPoseSourceIndex,
+        public MotionMatchingNodeBindingPayload(
+            CharacterMotionMatchingBindingId bindingId,
+            int bindingRevision,
             PoseNodeId poseNodeId,
-            CharacterMotionMatchingSearchDomainId searchDomainId,
+            MotionMatchingDatabaseChooserPayload chooser,
             int firstDatabaseIndex,
             int databaseCount)
         {
-            ProviderId = MotionMatchingIdentity.Require(
-                providerId,
-                nameof(providerId));
-            if (!presentationPoseSourceIndex.IsValid ||
-                !poseNodeId.IsValid ||
-                !searchDomainId.IsValid ||
+            if (!bindingId.IsValid || bindingRevision <= 0 ||
+                !poseNodeId.IsValid || chooser == null ||
                 firstDatabaseIndex < 0 ||
                 databaseCount <= 0)
             {
                 throw new ArgumentException(
-                    "Motion Matching provider binding payload is invalid.");
+                    "Motion Matching node binding payload is invalid.");
             }
-            PresentationPoseSourceIndex = presentationPoseSourceIndex;
+            BindingId = bindingId;
+            BindingRevision = bindingRevision;
             PoseNodeId = poseNodeId;
-            SearchDomainId = searchDomainId;
+            Chooser = chooser;
             FirstDatabaseIndex = firstDatabaseIndex;
             DatabaseCount = databaseCount;
         }
 
-        public string ProviderId { get; }
-        public PresentationPoseSourceIndex PresentationPoseSourceIndex { get; }
+        public CharacterMotionMatchingBindingId BindingId { get; }
+        public int BindingRevision { get; }
+        public CharacterMotionMatchingDatabaseChooserId ChooserId => Chooser.ChooserId;
+        public int ChooserRevision => Chooser.ChooserRevision;
         public PoseNodeId PoseNodeId { get; }
-        public CharacterMotionMatchingSearchDomainId SearchDomainId { get; }
+        public MotionMatchingDatabaseChooserPayload Chooser { get; }
+        public CharacterMotionMatchingSearchDomainId SearchDomainId => Chooser.SearchDomainId;
         public int FirstDatabaseIndex { get; }
         public int DatabaseCount { get; }
     }
@@ -385,7 +385,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
     public sealed class MotionMatchingProjectionPayload
     {
         readonly MotionMatchingDatabasePayload[] m_Databases;
-        readonly MotionMatchingProviderBindingPayload[] m_ProviderBindings;
+        readonly MotionMatchingNodeBindingPayload[] m_NodeBindings;
 
         public MotionMatchingProjectionPayload(
             CharacterMotionMatchingProfileId profileId,
@@ -395,28 +395,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             MotionMatchingCostProfilePayload costProfile,
             MotionMatchingSearchPolicyPayload searchPolicy,
             MotionMatchingDatabasePayload[] databases,
-            MotionMatchingProviderBindingPayload[] providerBindings)
+            MotionMatchingNodeBindingPayload[] nodeBindings)
         {
             if (!profileId.IsValid || profileRevision <= 0 || featureSchema == null || trajectoryPolicy == null ||
                 costProfile == null || searchPolicy == null || databases == null || databases.Length == 0 ||
-                providerBindings == null || providerBindings.Length == 0 ||
+                nodeBindings == null || nodeBindings.Length == 0 ||
                 featureSchema.DenseFeatureCount != costProfile.DenseFeatureCount)
                 throw new ArgumentException("Motion Matching Projection payload is incomplete.");
             m_Databases = (MotionMatchingDatabasePayload[])databases.Clone();
-            m_ProviderBindings =
-                (MotionMatchingProviderBindingPayload[])providerBindings.Clone();
-            for (int i = 0; i < m_ProviderBindings.Length; i++)
+            m_NodeBindings =
+                (MotionMatchingNodeBindingPayload[])nodeBindings.Clone();
+            for (int i = 0; i < m_NodeBindings.Length; i++)
             {
-                MotionMatchingProviderBindingPayload binding =
-                    m_ProviderBindings[i];
+                MotionMatchingNodeBindingPayload binding =
+                    m_NodeBindings[i];
                 if (binding.FirstDatabaseIndex + binding.DatabaseCount > m_Databases.Length)
-                    throw new ArgumentException($"Motion Matching provider binding #{i} exceeds the Database payload range.");
+                    throw new ArgumentException($"Motion Matching node binding #{i} exceeds the Database payload range.");
+                binding.Chooser.RequireDatabaseRange(
+                    binding.FirstDatabaseIndex,
+                    binding.DatabaseCount,
+                    m_Databases.Length);
                 for (int databaseIndex = 0; databaseIndex < binding.DatabaseCount; databaseIndex++)
                 {
                     MotionMatchingDatabasePayload database = m_Databases[binding.FirstDatabaseIndex + databaseIndex];
                     if (database == null || !database.SearchDomainId.Equals(binding.SearchDomainId) ||
                         !database.ArtifactIdentity.FeatureSchemaId.Equals(featureSchema.SchemaId))
-                        throw new ArgumentException($"Motion Matching provider binding #{i} references an incompatible Database payload.");
+                        throw new ArgumentException($"Motion Matching node binding #{i} references an incompatible Database payload.");
                 }
             }
             ProfileId = profileId;
@@ -434,9 +438,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public MotionMatchingCostProfilePayload CostProfile { get; }
         public MotionMatchingSearchPolicyPayload SearchPolicy { get; }
         public int DatabaseCount => m_Databases.Length;
-        public int ProviderBindingCount => m_ProviderBindings.Length;
+        public int NodeBindingCount => m_NodeBindings.Length;
         public MotionMatchingDatabasePayload GetDatabase(int index) => m_Databases[index];
-        public MotionMatchingProviderBindingPayload GetProviderBinding(
-            int index) => m_ProviderBindings[index];
+        public MotionMatchingNodeBindingPayload GetNodeBinding(
+            int index) => m_NodeBindings[index];
     }
 }

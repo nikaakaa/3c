@@ -110,13 +110,13 @@ Blend Space资产 MUST为每个可发布source-local ParameterId声明`RequireAl
 
 ### Requirement: Foot Analysis feature必须使用姿势相同的样本贡献
 
-每个BlendSpace sample MUST通过稳定AssetId/SampleId/Clip/Rig/Calibration identity绑定正式Foot Analysis artifact。Runtime MUST按每个样本effective time读取feature，并用与骨骼姿势相同的最终sample weight聚合左右脚feature和source contribution。BlendSpacePlayer MUST不执行Physics query、plant lock、pelvis修正或IK；唯一FootPlacement节点 MUST继续消费composition后的最终贡献。
+每个BlendSpace sample MUST通过稳定AssetId/SampleId/Clip/Rig/Calibration identity绑定正式Foot Analysis artifact。Runtime MUST按每个样本effective time读取feature，并用与骨骼姿势相同的最终sample weight聚合左右脚feature和source contribution。BlendSpacePlayer MUST不执行Physics query、plant lock、pelvis goal或IK；唯一PredictiveFootPlacement Goal Source MUST继续消费composition后的最终贡献，并由下游唯一FullBodyIK消费其Goal Set。
 
 #### Scenario: Walk与Run共同贡献
 
 - **WHEN** Walk和Run样本分别以0.4与0.6权重生成Pose
 - **THEN** 左右脚feature MUST按同一0.4与0.6贡献聚合
-- **AND** FootPlacement MUST只在后续显式节点执行一次
+- **AND** PredictiveFootPlacement MUST只在后续显式节点生成一次Goals，FullBodyIK MUST只求解一次
 
 ### Requirement: Blend Space必须拥有正式资产编辑体验
 

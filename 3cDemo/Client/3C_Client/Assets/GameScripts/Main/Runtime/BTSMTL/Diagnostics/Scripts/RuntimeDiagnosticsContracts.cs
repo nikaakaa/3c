@@ -506,6 +506,59 @@ namespace BTSMTL.Diagnostics
                                           StateActivationGeneration != 0;
     }
 
+    public struct RuntimeFootIkLegTraceSnapshot
+    {
+        public bool IsAvailable;
+        public bool Grounded;
+        public bool CurrentGroundingHit;
+        public int SurfaceIdentity;
+        public string ConstraintState;
+        public string TransitionReason;
+        public string LockType;
+        public string PredictionRejectReason;
+        public string GoalApplication;
+        public string GoalSourceKind;
+        public bool SolverResultAvailable;
+        public float PlantConfidence;
+        public float SoleHeight;
+        public float PlacementWeight;
+        public float PlantWeight;
+        public float ContactWeight;
+        public float GoalPositionWeight;
+        public float GoalRotationWeight;
+        public float LegExtensionRatio;
+        public float AnkleTwistDegrees;
+        public int QueryCount;
+        public int RejectedQueryCount;
+        public Vector3 GroundingComponentPosition;
+        public Vector3 GoalComponentPosition;
+        public Vector3 SolvedComponentPosition;
+        public float PositionResidual;
+        public float RotationResidualDegrees;
+    }
+
+    public struct RuntimeFootIkTraceSnapshot
+    {
+        public bool IsAvailable;
+        public ulong FrameSequence;
+        public ulong GoalCompletionIdentity;
+        public ulong SolverCompletionIdentity;
+        public string GroundingBackendIdentity;
+        public string SolverBackendIdentity;
+        public string SolverFailure;
+        public bool BodyGrounded;
+        public bool RootHit;
+        public int RootSurfaceIdentity;
+        public float PelvisTargetOffset;
+        public float PelvisResolvedOffset;
+        public bool RejectLeftGoal;
+        public bool RejectRightGoal;
+        public string PelvisHeightMode;
+        public string MovementCompensationMode;
+        public RuntimeFootIkLegTraceSnapshot Left;
+        public RuntimeFootIkLegTraceSnapshot Right;
+    }
+
     public struct RuntimeTracePayload
     {
         public string Status;
@@ -527,6 +580,7 @@ namespace BTSMTL.Diagnostics
         public bool Flag;
         public DebugValueSnapshot Value;
         public RuntimeTimelinePlaybackProvenance TimelinePlayback;
+        public RuntimeFootIkTraceSnapshot FootIk;
     }
 
     public readonly struct RuntimeTraceEvent

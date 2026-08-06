@@ -72,12 +72,67 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         string.Empty,
                         snapshot.PoseGraphRevision);
                 }
+                string details = $"{operation.Code} · {operation.InvalidReason} · weight {operation.OutputWeight:0.###}";
+                if (TryFindLinkedPoseEntry(
+                        in snapshot,
+                        in operation,
+                        out AnimationLinkedPoseEntryRuntimeSnapshot entry,
+                        out CharacterLinkedPoseRuntimeGroupSnapshot group))
+                {
+                    details +=
+                        $" · Linked {entry.GroupId}/{entry.EntryId} call={entry.CallNodeId} " +
+                        $"interface={entry.InterfaceId}@{entry.InterfaceSignature} " +
+                        $"selector={group.SelectorId} selection={group.SelectionRevision} " +
+                        $"implementation={group.ImplementationId}@{group.ImplementationRevision} " +
+                        $"content={group.ImplementationContentHash} generation={group.Generation} " +
+                        $"reset={group.StateReset} completed={entry.Completed} " +
+                        $"sources={entry.SourceDemandCount} " +
+                        $"operations={group.ActiveCapacity.OperationCount}/{group.MaximumCapacity.OperationCount}";
+                    if (entry.GoalCompletionIdentity != 0)
+                    {
+                        details +=
+                            $" goals={entry.GoalAvailability}:{entry.GoalCount} " +
+                            $"rig={entry.GoalRigId}@{entry.GoalRigRevision} " +
+                            $"goalCompletion={entry.GoalCompletionIdentity}";
+                    }
+                }
                 return new GraphAuthoringRuntimeTraceProjection(
                     node.NodeId,
                     operation.Availability.ToString(),
-                    $"{operation.Code} · {operation.InvalidReason} · weight {operation.OutputWeight:0.###}",
+                    details,
                     snapshot.PoseGraphRevision);
             }).ToArray();
+        }
+
+        static bool TryFindLinkedPoseEntry(
+            in AnimationPresentationRuntimeSnapshot snapshot,
+            in AnimationPoseOperationSnapshot operation,
+            out AnimationLinkedPoseEntryRuntimeSnapshot entry,
+            out CharacterLinkedPoseRuntimeGroupSnapshot group)
+        {
+            entry = default;
+            group = default;
+            for (int i = 0; i < snapshot.LinkedPoseEntries.Count; i++)
+            {
+                AnimationLinkedPoseEntryRuntimeSnapshot candidate = snapshot.LinkedPoseEntries[i];
+                bool isCall = candidate.CallNodeId == operation.NodeId;
+                bool isFragmentOperation = operation.OperationIndex >= candidate.OperationStart &&
+                                           operation.OperationIndex < candidate.OperationStart + candidate.OperationCount;
+                if (!isCall && !isFragmentOperation)
+                    continue;
+                entry = candidate;
+                for (int groupIndex = 0; groupIndex < snapshot.LinkedPoseGroups.Count; groupIndex++)
+                {
+                    CharacterLinkedPoseRuntimeGroupSnapshot candidateGroup = snapshot.LinkedPoseGroups[groupIndex];
+                    if (candidateGroup.GroupId == candidate.GroupId)
+                    {
+                        group = candidateGroup;
+                        return true;
+                    }
+                }
+                return false;
+            }
+            return false;
         }
 
         public bool TryGetSnapshot(
@@ -160,30 +215,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 if (string.IsNullOrEmpty(status))
                     status = "Unavailable: runtime target has no Pose stage snapshot.";
-                return false;
-            }
-            status = "Ready";
-            return true;
-        }
-
-        public bool TryGetFootPlacement(
-            out CharacterFootPlacementFrameSnapshot snapshot,
-            out string status)
-        {
-            snapshot = default;
-            if (!TryResolveRuntimeTarget(out AnimationPresentationRuntimeTarget target, out status))
-                return false;
-            CharacterPipelineHost host =
-                EditorUtility.InstanceIDToObject(target.HostInstanceId) as CharacterPipelineHost;
-            if (!host || host.Registration?.PresentationRuntime == null)
-            {
-                status = "Unavailable: runtime target has no formal Presentation runtime.";
-                return false;
-            }
-            snapshot = host.Registration.PresentationRuntime.CaptureDiagnostics().FootPlacement;
-            if (!snapshot.IsValid)
-            {
-                status = "Unavailable: Foot Placement planner has no completed frame.";
                 return false;
             }
             status = "Ready";

@@ -39,17 +39,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AdditiveInvalid = 23,
         ParameterPolicyMissing = 24,
         ModifyBoneInvalid = 25,
-        FootPlacementInvalid = 26,
+        PredictiveFootPlacementInvalid = 26,
         SubgraphOwnershipInvalid = 27,
         SharedSubgraphCycle = 28,
         InterfaceBoundaryInvalid = 29,
         InterfaceIdentityInvalid = 30,
         InterfaceBindingInvalid = 31,
         InterfaceDangling = 32,
-        TwoBoneIkInvalid = 33,
+        PoseBoneIkGoalsInvalid = 33,
         StateMachineInvalid = 34,
         AnimationSlotInvalid = 35,
-        StateMachineLayoutInvalid = 36
+        StateMachineLayoutInvalid = 36,
+        FullBodyIkInvalid = 37,
+        MotionMatchingInvalid = 38
     }
 
     public readonly struct CharacterPoseGraphValidationIssue
@@ -191,6 +193,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                 node.Payload).Subgraph;
                         if (reference?.PoseGraphId.IsValid == true)
                             AddOwner(reference.PoseGraphId);
+                    }
+                    if (node.Payload is CharacterMotionMatchingPosePayload motionMatching &&
+                        motionMatching.EntryGraph?.PoseGraphId.IsValid == true)
+                    {
+                        AddOwner(motionMatching.EntryGraph.PoseGraphId);
                     }
                     if (!handler.StateMachine)
                         continue;
@@ -500,6 +507,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         reachableGraphs,
                         report);
                 }
+                else if (node.Payload is CharacterMotionMatchingPosePayload motionMatching)
+                {
+                    ValidateMotionMatchingEntryGraph(
+                        ownerAsset,
+                        graph,
+                        node,
+                        motionMatching,
+                        rig,
+                        portResolver,
+                        callPath,
+                        reachableGraphs,
+                        report);
+                }
 
                 IReadOnlyList<CharacterPosePortDefinition>
                     nodePorts;
@@ -643,6 +663,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 portResolver,
                 role == GraphRole.Root ||
                 role == GraphRole.StatePose,
+                role == GraphRole.Root,
                 report);
             callPath.RemoveAt(callPath.Count - 1);
         }
@@ -811,6 +832,138 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 report);
         }
 
+        static void ValidateMotionMatchingEntryGraph(
+            CharacterPresentationPoseGraphAsset ownerAsset,
+            CharacterTypedPoseGraph ownerGraph,
+            CharacterTypedPoseNode node,
+            CharacterMotionMatchingPosePayload payload,
+            CharacterAnimationRigDefinition rig,
+            CharacterPosePortContractResolver portResolver,
+            List<PoseGraphId> callPath,
+            HashSet<PoseGraphId> reachableGraphs,
+            CharacterPoseGraphValidationReport report)
+        {
+            if (payload.EntryGraph == null ||
+                !payload.EntryGraph.PoseGraphId.IsValid ||
+                !ownerAsset.TryGetGraph(payload.EntryGraph.PoseGraphId, out CharacterTypedPoseGraph entryGraph))
+            {
+                Report(
+                    report,
+                    CharacterPoseGraphValidationCode.MotionMatchingInvalid,
+                    $"Motion Matching Pose '{node.NodeId}' references a missing entry processing graph.",
+                    ownerGraph.GraphId,
+                    node.NodeId);
+                return;
+            }
+            try
+            {
+                CharacterMotionMatchingEntryGraphPolicy.RequireValid(entryGraph);
+            }
+            catch (Exception exception)
+            {
+                Report(
+                    report,
+                    CharacterPoseGraphValidationCode.MotionMatchingInvalid,
+                    $"Motion Matching Pose '{node.NodeId}': {exception.Message}",
+                    ownerGraph.GraphId,
+                    node.NodeId);
+                return;
+            }
+            ValidateGraph(
+                ownerAsset,
+                entryGraph,
+                rig,
+                portResolver,
+                null,
+                null,
+                GraphRole.Subgraph,
+                callPath,
+                reachableGraphs,
+                report);
+        }
+
+        static void ValidateMotionMatchingTopology(
+            CharacterTypedPoseGraph graph,
+            IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
+            CharacterPoseGraphValidationReport report)
+        {
+            var collectorOwners = new Dictionary<PoseNodeId, PoseNodeId>();
+            foreach (CharacterTypedPoseNode node in nodes.Values)
+            {
+                if (node.Kind != CharacterPoseNodeKind.MotionMatchingPose)
+                    continue;
+                CharacterPoseEdge[] historyEdges = graph.Edges
+                    .Where(edge => edge != null &&
+                                   edge.TargetNodeId == node.NodeId &&
+                                   edge.TargetPortId.Equals(CharacterMotionMatchingPosePorts.History))
+                    .ToArray();
+                if (historyEdges.Length != 1 ||
+                    !nodes.TryGetValue(historyEdges[0].SourceNodeId, out CharacterTypedPoseNode collector) ||
+                    collector.Kind != CharacterPoseNodeKind.PoseHistoryCollector ||
+                    !historyEdges[0].SourcePortId.Equals(CharacterMotionMatchingPosePorts.History))
+                {
+                    Report(
+                        report,
+                        CharacterPoseGraphValidationCode.MotionMatchingInvalid,
+                        $"Motion Matching Pose '{node.NodeId}' requires exactly one Pose History Collector read edge.",
+                        graph.GraphId,
+                        node.NodeId,
+                        CharacterMotionMatchingPosePorts.History);
+                    continue;
+                }
+                if (!collectorOwners.TryAdd(collector.NodeId, node.NodeId))
+                {
+                    Report(
+                        report,
+                        CharacterPoseGraphValidationCode.MotionMatchingInvalid,
+                        $"Pose History Collector '{collector.NodeId}' has competing Motion Matching owners.",
+                        graph.GraphId,
+                        collector.NodeId);
+                }
+                CharacterPoseEdge[] commitEdges = graph.Edges
+                    .Where(edge => edge != null &&
+                                   edge.SourceNodeId == node.NodeId &&
+                                   edge.SourcePortId.Equals(CharacterMotionMatchingPosePorts.LocalPoseOutput) &&
+                                   edge.TargetNodeId == collector.NodeId &&
+                                   edge.TargetPortId.Equals(CharacterMotionMatchingPosePorts.LocalPoseInput))
+                    .ToArray();
+                if (commitEdges.Length != 1)
+                {
+                    Report(
+                        report,
+                        CharacterPoseGraphValidationCode.MotionMatchingInvalid,
+                        $"Motion Matching Pose '{node.NodeId}' must commit its base Local Pose through Collector '{collector.NodeId}'.",
+                        graph.GraphId,
+                        node.NodeId,
+                        CharacterMotionMatchingPosePorts.LocalPoseOutput);
+                }
+                if (node.Payload is CharacterMotionMatchingPosePayload motionMatching &&
+                    collector.Payload is CharacterPoseHistoryCollectorPayload history &&
+                    (!motionMatching.Binding || !history.HistoryId.IsValid))
+                {
+                    Report(
+                        report,
+                        CharacterPoseGraphValidationCode.MotionMatchingInvalid,
+                        $"Motion Matching Pose '{node.NodeId}' Binding or Collector history identity is incomplete.",
+                        graph.GraphId,
+                        node.NodeId);
+                }
+            }
+            foreach (CharacterTypedPoseNode collector in nodes.Values)
+            {
+                if (collector.Kind == CharacterPoseNodeKind.PoseHistoryCollector &&
+                    !collectorOwners.ContainsKey(collector.NodeId))
+                {
+                    Report(
+                        report,
+                        CharacterPoseGraphValidationCode.MotionMatchingInvalid,
+                        $"Pose History Collector '{collector.NodeId}' has no Motion Matching owner.",
+                        graph.GraphId,
+                        collector.NodeId);
+                }
+            }
+        }
+
         static HashSet<PoseParameterId> ValidateParameters(
             CharacterTypedPoseGraph graph,
             CharacterPoseGraphValidationReport report)
@@ -895,7 +1048,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Dictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
             Dictionary<string, CharacterPosePortDefinition> ports,
             CharacterPosePortContractResolver portResolver,
-            bool root,
+            bool outputGraph,
+            bool requireFullBodyIk,
             CharacterPoseGraphValidationReport report)
         {
             var adjacency =
@@ -906,6 +1060,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new HashSet<string>(StringComparer.Ordinal);
             var edgeIds =
                 new HashSet<string>(StringComparer.Ordinal);
+            var componentPoseProducers = new Dictionary<PoseNodeId, PoseNodeId>();
+            var goalProducers = new Dictionary<PoseNodeId, List<PoseNodeId>>();
+            var goalConsumerCounts = new Dictionary<PoseNodeId, int>();
             for (int i = 0; i < graph.Edges.Count; i++)
             {
                 CharacterPoseEdge edge = graph.Edges[i];
@@ -927,8 +1084,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 string targetKey =
                     edge.TargetNodeId.Value + "\0" +
                     edge.TargetPortId.Value;
-                if (!nodes.ContainsKey(edge.SourceNodeId) ||
-                    !nodes.ContainsKey(edge.TargetNodeId) ||
+                if (!nodes.TryGetValue(edge.SourceNodeId, out CharacterTypedPoseNode sourceNode) ||
+                    !nodes.TryGetValue(edge.TargetNodeId, out CharacterTypedPoseNode targetNode) ||
                     !ports.TryGetValue(
                         sourceKey,
                         out CharacterPosePortDefinition source) ||
@@ -956,6 +1113,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         $"Pose Edge '{edge.EdgeId}' connects '{source.Kind}' to '{target.Kind}'.",
                         graph.GraphId);
                 }
+                else if (source.Kind == CharacterPosePortKind.FullBodyIkGoals)
+                {
+                    bool sourceAllowed = sourceNode.Kind == CharacterPoseNodeKind.PoseBoneIKGoals ||
+                                         sourceNode.Kind == CharacterPoseNodeKind.PredictiveFootPlacement ||
+                                         sourceNode.Kind == CharacterPoseNodeKind.GraphInput ||
+                                         sourceNode.Kind == CharacterPoseNodeKind.PoseSubgraph;
+                    bool targetAllowed = targetNode.Kind == CharacterPoseNodeKind.FullBodyIK ||
+                                         targetNode.Kind == CharacterPoseNodeKind.GraphOutput ||
+                                         targetNode.Kind == CharacterPoseNodeKind.PoseSubgraph;
+                    if (!sourceAllowed || !targetAllowed)
+                    {
+                        Report(
+                            report,
+                            CharacterPoseGraphValidationCode.FullBodyIkInvalid,
+                            $"Pose Edge '{edge.EdgeId}' connects Full Body IK Goals outside a Goal Source, Full Body IK or an explicitly typed Subgraph boundary.",
+                            graph.GraphId,
+                            edge.TargetNodeId,
+                            edge.TargetPortId);
+                    }
+                    else
+                    {
+                        if (sourceNode.Kind == CharacterPoseNodeKind.PoseBoneIKGoals ||
+                            sourceNode.Kind == CharacterPoseNodeKind.PredictiveFootPlacement)
+                        {
+                            goalConsumerCounts.TryGetValue(edge.SourceNodeId, out int count);
+                            goalConsumerCounts[edge.SourceNodeId] = count + 1;
+                        }
+                        if (targetNode.Kind == CharacterPoseNodeKind.FullBodyIK)
+                            Add(goalProducers, edge.TargetNodeId, edge.SourceNodeId);
+                    }
+                }
+                else if (source.Kind == CharacterPosePortKind.ComponentPose &&
+                         (targetNode.Kind == CharacterPoseNodeKind.PoseBoneIKGoals ||
+                          targetNode.Kind == CharacterPoseNodeKind.PredictiveFootPlacement ||
+                          targetNode.Kind == CharacterPoseNodeKind.FullBodyIK))
+                {
+                    componentPoseProducers.TryAdd(edge.TargetNodeId, edge.SourceNodeId);
+                }
                 if (!incoming.Add(targetKey))
                 {
                     Report(
@@ -967,14 +1162,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         edge.TargetNodeId,
                         edge.TargetPortId);
                 }
-                Add(
-                    adjacency,
-                    edge.SourceNodeId,
-                    edge.TargetNodeId);
-                Add(
-                    reverse,
-                    edge.TargetNodeId,
-                    edge.SourceNodeId);
+                if (source.Kind != CharacterPosePortKind.PoseHistory)
+                {
+                    Add(
+                        adjacency,
+                        edge.SourceNodeId,
+                        edge.TargetNodeId);
+                    Add(
+                        reverse,
+                        edge.TargetNodeId,
+                        edge.SourceNodeId);
+                }
             }
             foreach (CharacterTypedPoseNode node in nodes.Values)
             {
@@ -1000,6 +1198,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     }
                 }
             }
+            ValidateFullBodyIkTopology(
+                graph,
+                nodes,
+                componentPoseProducers,
+                goalProducers,
+                goalConsumerCounts,
+                requireFullBodyIk,
+                report);
+            ValidateMotionMatchingTopology(graph, nodes, report);
             DetectCycles(
                 graph.GraphId.Value,
                 nodes.Keys,
@@ -1009,8 +1216,81 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 graph,
                 nodes,
                 report);
-            if (root)
+            if (outputGraph)
                 ValidateReachability(nodes, reverse);
+        }
+
+        static void ValidateFullBodyIkTopology(
+            CharacterTypedPoseGraph graph,
+            IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
+            IReadOnlyDictionary<PoseNodeId, PoseNodeId> componentPoseProducers,
+            IReadOnlyDictionary<PoseNodeId, List<PoseNodeId>> goalProducers,
+            IReadOnlyDictionary<PoseNodeId, int> goalConsumerCounts,
+            bool requireFullBodyIk,
+            CharacterPoseGraphValidationReport report)
+        {
+            int solverCount = 0;
+            foreach (CharacterTypedPoseNode node in nodes.Values)
+            {
+                if (node.Kind == CharacterPoseNodeKind.PoseBoneIKGoals ||
+                    node.Kind == CharacterPoseNodeKind.PredictiveFootPlacement)
+                {
+                    goalConsumerCounts.TryGetValue(node.NodeId, out int count);
+                    if (count != 1)
+                    {
+                        Report(
+                            report,
+                            node.Kind == CharacterPoseNodeKind.PredictiveFootPlacement
+                                ? CharacterPoseGraphValidationCode.PredictiveFootPlacementInvalid
+                                : CharacterPoseGraphValidationCode.PoseBoneIkGoalsInvalid,
+                            $"Goal Source '{node.NodeId}' must have exactly one Full Body IK consumer.",
+                            graph.GraphId,
+                            node.NodeId);
+                    }
+                    continue;
+                }
+                if (node.Kind != CharacterPoseNodeKind.FullBodyIK)
+                    continue;
+                solverCount++;
+                if (!componentPoseProducers.TryGetValue(node.NodeId, out PoseNodeId poseProducer) ||
+                    !goalProducers.TryGetValue(node.NodeId, out List<PoseNodeId> sources) ||
+                    sources.Count == 0)
+                {
+                    Report(
+                        report,
+                        CharacterPoseGraphValidationCode.FullBodyIkInvalid,
+                        $"Full Body IK '{node.NodeId}' requires one Component Pose and one or more Goal Sets.",
+                        graph.GraphId,
+                        node.NodeId);
+                    continue;
+                }
+                for (int i = 0; i < sources.Count; i++)
+                {
+                    PoseNodeId source = sources[i];
+                    if (!nodes.TryGetValue(source, out CharacterTypedPoseNode sourceNode) ||
+                        (sourceNode.Kind != CharacterPoseNodeKind.PoseBoneIKGoals &&
+                         sourceNode.Kind != CharacterPoseNodeKind.PredictiveFootPlacement))
+                        continue;
+                    if (!componentPoseProducers.TryGetValue(source, out PoseNodeId sourcePoseProducer) ||
+                        sourcePoseProducer != poseProducer)
+                    {
+                        Report(
+                            report,
+                            CharacterPoseGraphValidationCode.FullBodyIkInvalid,
+                            $"Goal Source '{source}' and Full Body IK '{node.NodeId}' must read the same Component Pose branch.",
+                            graph.GraphId,
+                            node.NodeId);
+                    }
+                }
+            }
+            if (requireFullBodyIk && solverCount != 1)
+            {
+                Report(
+                    report,
+                    CharacterPoseGraphValidationCode.FullBodyIkInvalid,
+                    $"Root Pose Graph '{graph.GraphId}' requires exactly one Full Body IK node.",
+                    graph.GraphId);
+            }
         }
 
         static void ValidateRootOrientationWarps(

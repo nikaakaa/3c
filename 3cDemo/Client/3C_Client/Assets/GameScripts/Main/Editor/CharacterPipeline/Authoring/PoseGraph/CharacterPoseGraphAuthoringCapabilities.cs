@@ -26,10 +26,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static readonly GraphAuthoringCommandId PingPoseSource = new GraphAuthoringCommandId("ping-pose-source");
         public static readonly GraphAuthoringCommandId OpenPoseSource = new GraphAuthoringCommandId("open-pose-source");
         public static readonly GraphAuthoringCommandId OpenPoseSourceProfile = new GraphAuthoringCommandId("open-pose-source-profile");
+        public static readonly GraphAuthoringCommandId OpenFullBodyIkProfile = new GraphAuthoringCommandId("open-full-body-ik-profile");
         public static readonly GraphAuthoringDomainId Domain = new GraphAuthoringDomainId("character-presentation");
         public static readonly GraphAuthoringDocumentRoleId RootGraph = new GraphAuthoringDocumentRoleId("pose-graph");
         public static readonly GraphAuthoringDocumentRoleId StatePoseGraph = new GraphAuthoringDocumentRoleId("pose-state-graph");
         public static readonly GraphAuthoringDocumentRoleId Subgraph = new GraphAuthoringDocumentRoleId("pose-subgraph");
+        public static readonly GraphAuthoringDocumentRoleId LinkedPoseEntry = new GraphAuthoringDocumentRoleId("linked-pose-entry");
         public static readonly GraphAuthoringDocumentRoleId StateMachine = new GraphAuthoringDocumentRoleId("pose-state-machine");
         public static readonly GraphAuthoringDocumentRoleId TransitionRule = new GraphAuthoringDocumentRoleId("pose-transition-rule");
         public static readonly GraphAuthoringCapabilityId StateMachineState = new GraphAuthoringCapabilityId("pose.state-machine.state");
@@ -136,21 +138,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "character-presentation.pose",
                 Register);
             s_Registered = true;
+            CharacterMotionMatchingPoseAuthoringCapabilities.EnsureRegistered();
         }
 
         static void Register(GraphAuthoringCapabilityCatalog catalog)
         {
             GraphAuthoringDocumentRoleId[] allPoseGraphs = { RootGraph, StatePoseGraph, Subgraph };
+            GraphAuthoringDocumentRoleId[] allPoseGraphsWithLinkedEntry = { RootGraph, StatePoseGraph, Subgraph, LinkedPoseEntry };
             GraphAuthoringDocumentRoleId[] rootAndState = { RootGraph, StatePoseGraph };
+            GraphAuthoringDocumentRoleId[] rootAndStateWithLinkedEntry = { RootGraph, StatePoseGraph, LinkedPoseEntry };
+            GraphAuthoringDocumentRoleId[] rootAndLinkedEntry = { RootGraph, LinkedPoseEntry };
             GraphAuthoringDocumentRoleId[] rootOnly = { RootGraph };
-            GraphAuthoringDocumentRoleId[] stateAndSubgraph = { StatePoseGraph, Subgraph };
+            GraphAuthoringDocumentRoleId[] stateSubgraphAndLinkedEntry = { StatePoseGraph, Subgraph, LinkedPoseEntry };
+            GraphAuthoringDocumentRoleId[] linkedEntryOnly = { LinkedPoseEntry };
             Color inputColor = new Color32(58, 103, 138, 255);
             Color sourceColor = new Color32(55, 115, 92, 255);
             Color blendColor = new Color32(98, 76, 142, 255);
             Color constraintColor = new Color32(133, 83, 55, 255);
             Color outputColor = new Color32(132, 55, 67, 255);
 
-            catalog.Register(Node<CharacterProgramParameterInputPosePayload>(CharacterPoseNodeKind.ProgramParameterInput, allPoseGraphs, "Animation Parameter", "Inputs", inputColor,
+            catalog.Register(Node<CharacterProgramParameterInputPosePayload>(CharacterPoseNodeKind.ProgramParameterInput, allPoseGraphsWithLinkedEntry, "Animation Parameter", "Inputs", inputColor,
                 Fields(Field("parameter-id", "Parameter", GraphAuthoringFieldValueKind.IdentityReference, "pose-parameter")),
                 Ports(Out("parameter", "Parameter", "pose.parameter")),
                 executionDomain: CharacterPoseExecutionDomain.FactAndDemand));
@@ -158,84 +165,98 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Fields(Field("animation-channel-id", "Animation Channel", GraphAuthoringFieldValueKind.IdentityReference, "animation-channel")),
                 Ports(Out("action-playback", "Action Playback", "pose.action-playback")),
                 executionDomain: CharacterPoseExecutionDomain.FactAndDemand));
-            catalog.Register(Node<CharacterSelectedPosePlayerPayload>(CharacterPoseNodeKind.SelectedPosePlayer, rootAndState, "Selected Pose Player", "Sources", sourceColor,
+            catalog.Register(Node<CharacterSelectedPosePlayerPayload>(CharacterPoseNodeKind.SelectedPosePlayer, rootAndStateWithLinkedEntry, "Selected Pose Player", "Sources", sourceColor,
                 Fields(SourceField(typeof(CharacterMotionMatchingPoseSourceSlot))),
                 Ports(Out("pose", "Local Pose", "pose.local")),
                 commands: SourceCommands(),
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture));
-            catalog.Register(Node<CharacterBlendSpacePlayerPosePayload>(CharacterPoseNodeKind.BlendSpacePlayer, rootAndState, "Blend Space Player", "Sources", sourceColor,
+            catalog.Register(Node<CharacterBlendSpacePlayerPosePayload>(CharacterPoseNodeKind.BlendSpacePlayer, rootAndStateWithLinkedEntry, "Blend Space Player", "Sources", sourceColor,
                 Fields(SourceField(typeof(CharacterBlendSpacePoseSourceSlot)), EnumField("input-range-policy", "Input Range", typeof(CharacterAnimationBlendSpaceInputRangePolicy))),
                 Ports(In("x", "X", "pose.parameter"), OptionalIn("y", "Y", "pose.parameter"), Out("pose", "Local Pose", "pose.local"), Out("discontinuity", "Discontinuity", "pose.discontinuity")),
                 commands: SourceCommands(),
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture));
-            catalog.Register(Node<CharacterSequencePlayerPosePayload>(CharacterPoseNodeKind.SequencePlayer, rootAndState, "Sequence Player", "Sources", sourceColor,
+            catalog.Register(Node<CharacterSequencePlayerPosePayload>(CharacterPoseNodeKind.SequencePlayer, rootAndStateWithLinkedEntry, "Sequence Player", "Sources", sourceColor,
                 Fields(SourceField(typeof(CharacterSequencePoseSourceSlot)), BoolField("loop", "Loop", false), FloatField("play-rate", "Play Rate", 1f), FloatField("initial-time", "Initial Time", 0f), EnumField("clock-source", "Clock Source", typeof(CharacterSequencePlayerClockSource))),
                 Ports(Out("pose", "Local Pose", "pose.local"), Out("discontinuity", "Discontinuity", "pose.discontinuity")),
                 commands: SourceCommands(),
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture));
-            catalog.Register(Node<CharacterPoseStateMachineNodePayload>(CharacterPoseNodeKind.PoseStateMachine, rootOnly, "Animation State Machine", "State Machine", blendColor,
+            catalog.Register(Node<CharacterPoseStateMachineNodePayload>(CharacterPoseNodeKind.PoseStateMachine, rootAndLinkedEntry, "Animation State Machine", "State Machine", blendColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(),
                 Ports(Out("pose", "Local Pose", "pose.local")),
                 GraphAuthoringDynamicPortPolicy.None,
                 new[] { Child("open-state-machine", "Open State Machine", StateMachine) }));
             catalog.Register(Node<CharacterAnimationSlotPosePayload>(CharacterPoseNodeKind.AnimationSlot, rootOnly, "Slot", "Action", blendColor,
                 Fields(Field("animation-channel-id", "Animation Channel", GraphAuthoringFieldValueKind.IdentityReference, "animation-channel"), Field("slot-id", "Slot", GraphAuthoringFieldValueKind.IdentityReference, "animation-slot"), SelectionAvailabilityField(), AssetField("blend-policy", "Blend Policy", "animation-blend-policy", typeof(CharacterAnimationBlendPolicy))),
-                Ports(In("source-pose", "Source Local Pose", "pose.local"), In("action-playback", "Action Playback", "pose.action-playback"), Out("pose", "Local Pose", "pose.local")),
-                commands: new[]
-                {
-                    new GraphAuthoringCommandDescriptor(
-                        ActionAnimationWorkspaceCommands.Open,
-                        "Open Action Animation Workspace",
-                        false)
-                }));
-            catalog.Register(Node<CharacterBlendStackPosePayload>(CharacterPoseNodeKind.BlendStack, rootAndState, "Blend Stack", "Blend", blendColor,
+                Ports(In("source-pose", "Source Local Pose", "pose.local"), In("action-playback", "Action Playback", "pose.action-playback"), Out("pose", "Local Pose", "pose.local"))));
+            catalog.Register(Node<CharacterBlendStackPosePayload>(CharacterPoseNodeKind.BlendStack, rootAndStateWithLinkedEntry, "Blend Stack", "Blend", blendColor,
                 Fields(SourceField(typeof(CharacterMotionMatchingPoseSourceSlot)), AssetField("blend-policy", "Blend Policy", "animation-blend-policy", typeof(CharacterAnimationBlendPolicy))),
                 Ports(Out("pose", "Local Pose", "pose.local")),
                 commands: SourceCommands(),
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture));
-            catalog.Register(Node<CharacterInertializationPosePayload>(CharacterPoseNodeKind.Inertialization, allPoseGraphs, "Inertialization", "Blend", blendColor,
+            catalog.Register(Node<CharacterInertializationPosePayload>(CharacterPoseNodeKind.Inertialization, allPoseGraphsWithLinkedEntry, "Inertialization", "Blend", blendColor,
                 Fields(AssetField("inertialization-policy", "Policy", "pose-inertialization-policy", typeof(CharacterPoseInertializationPolicy))),
                 UnaryLocalPosePorts()));
-            catalog.Register(Node<CharacterBlendPosePayload>(CharacterPoseNodeKind.BlendPose, allPoseGraphs, "Blend Pose", "Blend", blendColor,
+            catalog.Register(Node<CharacterBlendPosePayload>(CharacterPoseNodeKind.BlendPose, allPoseGraphsWithLinkedEntry, "Blend Pose", "Blend", blendColor,
                 Fields(FloatField("weight", "Weight", 1f, 0f, 1f)),
                 BinaryLocalPoseWithWeight("Base", "Overlay"),
                 GraphAuthoringDynamicPortPolicy.OrderedInputs));
-            catalog.Register(Node<CharacterLayeredBoneBlendPosePayload>(CharacterPoseNodeKind.LayeredBoneBlend, allPoseGraphs, "Layered Blend Per Bone", "Blend", blendColor,
+            catalog.Register(Node<CharacterLayeredBoneBlendPosePayload>(CharacterPoseNodeKind.LayeredBoneBlend, allPoseGraphsWithLinkedEntry, "Layered Blend Per Bone", "Blend", blendColor,
                 Fields(AssetField("bone-mask", "Bone Mask", "animation-bone-mask", typeof(CharacterAnimationBoneMaskAsset)), FloatField("weight", "Weight", 1f, 0f, 1f)),
                 BinaryLocalPoseWithWeight("Base", "Overlay")));
-            catalog.Register(Node<CharacterAdditivePosePayload>(CharacterPoseNodeKind.AdditivePose, allPoseGraphs, "Additive Pose", "Blend", blendColor,
+            catalog.Register(Node<CharacterAdditivePosePayload>(CharacterPoseNodeKind.AdditivePose, allPoseGraphsWithLinkedEntry, "Additive Pose", "Blend", blendColor,
                 Fields(StringField("reference-pose-id", "Reference Pose", "RigReference"), EnumField("reference-space", "Reference Space", typeof(AdditiveReferenceSpace)), EnumField("scale-policy", "Scale Policy", typeof(AdditiveScalePolicy)), FloatField("weight", "Weight", 1f, 0f, 1f)),
                 BinaryLocalPoseWithWeight("Base", "Additive")));
-            catalog.Register(Node<CharacterPoseParameterResolvePayload>(CharacterPoseNodeKind.PoseParameterResolve, allPoseGraphs, "Pose Parameter Resolve", "Parameters", blendColor,
+            catalog.Register(Node<CharacterPoseParameterResolvePayload>(CharacterPoseNodeKind.PoseParameterResolve, allPoseGraphsWithLinkedEntry, "Pose Parameter Resolve", "Parameters", blendColor,
                 Fields(Field("parameter-policies", "Parameter Policies", GraphAuthoringFieldValueKind.Object, "pose-parameter-policy")),
                 Ports(In("base-pose", "Base Local Pose", "pose.local"), In("parameter-source-pose", "Parameter Source Local Pose", "pose.local"), Out("pose", "Local Pose", "pose.local"))));
             catalog.Register(Node<CharacterModifyBonePosePayload>(CharacterPoseNodeKind.ModifyBone, allPoseGraphs, "Modify Bone", "Constraints", constraintColor,
                 Fields(Field("bone-id", "Bone", GraphAuthoringFieldValueKind.IdentityReference, "rig-bone"), EnumField("reference-space", "Reference Space", typeof(ModifyBoneReferenceSpace)), EnumField("operations", "Operations", typeof(ModifyBoneOperationMask)), Vector3Field("position", "Position"), Field("rotation", "Rotation", GraphAuthoringFieldValueKind.Quaternion, ""), Vector3Field("scale", "Scale", Vector3.one)),
                 UnaryComponentPoseWithWeight()));
-            catalog.Register(Node<CharacterRootOrientationWarpPosePayload>(CharacterPoseNodeKind.RootOrientationWarp, rootAndState, "Root Orientation Warp", "Constraints", constraintColor,
+            catalog.Register(Node<CharacterRootOrientationWarpPosePayload>(CharacterPoseNodeKind.RootOrientationWarp, rootAndStateWithLinkedEntry, "Root Orientation Warp", "Constraints", constraintColor,
                 Fields(AssetField("yaw-curve", "Yaw Profile", "root-motion-curve", typeof(RootMotionCurveAsset))),
                 UnaryLocalPosePorts()));
-            catalog.Register(Node<CharacterTwoBoneIkPosePayload>(CharacterPoseNodeKind.TwoBoneIK, allPoseGraphs, "Two Bone IK", "Constraints", constraintColor,
-                Fields(Field("end-physical-bone-id", "End Physical Bone", GraphAuthoringFieldValueKind.IdentityReference, "rig-physical-bone"), Field("effector-pose-bone-id", "Effector Pose Bone", GraphAuthoringFieldValueKind.IdentityReference, "rig-pose-bone"), Vector3Field("effector-position-offset", "Effector Position Offset"), Field("effector-rotation-offset", "Effector Rotation Offset", GraphAuthoringFieldValueKind.Quaternion, ""), Field("joint-target-pose-bone-id", "Joint Target Pose Bone", GraphAuthoringFieldValueKind.IdentityReference, "rig-pose-bone"), Vector3Field("joint-target-offset", "Joint Target Offset"), EnumField("end-rotation-mode", "End Rotation Mode", typeof(CharacterTwoBoneIkEndRotationMode)), FloatField("weight", "Weight", 1f, 0f, 1f)),
-                Ports(In("pose", "Component Pose", "pose.component"), OptionalIn("weight", "Weight", "pose.parameter"), Out("result", "Component Pose", "pose.component"))));
-            catalog.Register(Node<CharacterFootPlacementPosePayload>(CharacterPoseNodeKind.FootPlacement, allPoseGraphs, "Foot Placement", "World Aware", constraintColor,
-                Fields(AssetField("profile", "Profile", "foot-placement-profile", typeof(CharacterFootPlacementProfile)), AssetField("calibration", "Calibration", "foot-placement-calibration", typeof(CharacterFootPlacementRigCalibration))),
-                UnaryComponentPoseWithWeight(),
-                executionDomain: CharacterPoseExecutionDomain.WorldAwarePose));
+            catalog.Register(Node<CharacterPredictiveFootPlacementPosePayload>(CharacterPoseNodeKind.PredictiveFootPlacement, allPoseGraphs, "Predictive Foot Placement", "Goal Sources", constraintColor,
+                Fields(AssetField("profile", "Profile", "foot-placement-profile", typeof(CharacterFootPlacementProfile)), AssetField("calibration", "Calibration", "foot-placement-calibration", typeof(CharacterFootPlacementRigCalibration)), ReadOnlyField("backend", "Grounding Backend", GraphAuthoringFieldValueKind.String)),
+                Ports(In("pose", "Component Pose", "pose.component"), OptionalIn("weight", "Weight", "pose.parameter"), Out("goals", "Full Body IK Goals", "component.full-body-ik-goals")),
+                executionDomain: CharacterPoseExecutionDomain.WorldAwareValue));
+            catalog.Register(Node<CharacterPoseBoneIkGoalsPayload>(CharacterPoseNodeKind.PoseBoneIKGoals, allPoseGraphsWithLinkedEntry, "Pose Bone IK Goals", "Goal Sources", constraintColor,
+                Fields(Field("bindings", "Effector Bindings", GraphAuthoringFieldValueKind.Object, "full-body-ik-goal-binding")),
+                Ports(In("pose", "Component Pose", "pose.component"), Out("goals", "Full Body IK Goals", "component.full-body-ik-goals")),
+                executionDomain: CharacterPoseExecutionDomain.PureValue));
+            catalog.Register(Node<CharacterFullBodyIkPosePayload>(CharacterPoseNodeKind.FullBodyIK, allPoseGraphs, "Full Body IK", "Constraints", constraintColor,
+                Fields(AssetField("profile", "FinalIK FBBIK Profile", "full-body-ik-profile", typeof(CharacterFullBodyIkProfile)), ReadOnlyField("backend", "Solver Backend", GraphAuthoringFieldValueKind.String)),
+                Ports(In("pose", "Component Pose", "pose.component"), Out("result", "Solved Component Pose", "pose.component")),
+                GraphAuthoringDynamicPortPolicy.OrderedInputs,
+                commands: new[]
+                {
+                    new GraphAuthoringCommandDescriptor(OpenFullBodyIkProfile, "Edit FinalIK FBBIK Profile", false)
+                },
+                executionDomain: CharacterPoseExecutionDomain.PurePose));
             catalog.Register(Node<CharacterLocalToComponentPosePayload>(CharacterPoseNodeKind.LocalToComponentPose, allPoseGraphs, "Local To Component", "Pose Space", constraintColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(),
                 Ports(In("local-pose", "Local Pose", "pose.local"), Out("component-pose", "Component Pose", "pose.component"))));
             catalog.Register(Node<CharacterComponentToLocalPosePayload>(CharacterPoseNodeKind.ComponentToLocalPose, allPoseGraphs, "Component To Local", "Pose Space", blendColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(),
                 Ports(In("component-pose", "Component Pose", "pose.component"), Out("local-pose", "Local Pose", "pose.local"))));
-            catalog.Register(Node<CharacterPoseSubgraphPayload>(CharacterPoseNodeKind.PoseSubgraph, allPoseGraphs, "Pose Subgraph", "Graph", blendColor,
+            catalog.Register(Node<CharacterLinkedPoseCallPayload>(CharacterPoseNodeKind.LinkedPoseCall, rootOnly, "Linked Pose Call", "Graph", blendColor,
+                Fields(
+                    Field("group-id", "Group", GraphAuthoringFieldValueKind.IdentityReference, "linked-pose-group"),
+                    Field("interface-id", "Interface", GraphAuthoringFieldValueKind.IdentityReference, "linked-pose-interface"),
+                    Field("entry-id", "Entry", GraphAuthoringFieldValueKind.IdentityReference, "linked-pose-entry")),
+                Array.Empty<GraphAuthoringPortDescriptor>(),
+                GraphAuthoringDynamicPortPolicy.OrderedBidirectional));
+            catalog.Register(Node<CharacterEmptyFullBodyIkGoalsPayload>(CharacterPoseNodeKind.EmptyFullBodyIkGoals, linkedEntryOnly, "Empty Full Body IK Goals", "Goal Sources", constraintColor,
+                Array.Empty<GraphAuthoringFieldDescriptor>(),
+                Ports(In("pose", "Component Pose", "pose.component"), Out("goals", "Full Body IK Goals", "component.full-body-ik-goals")),
+                executionDomain: CharacterPoseExecutionDomain.PureValue));
+            catalog.Register(Node<CharacterPoseSubgraphPayload>(CharacterPoseNodeKind.PoseSubgraph, allPoseGraphsWithLinkedEntry, "Pose Subgraph", "Graph", blendColor,
                 Fields(Field("graph-id", "Graph", GraphAuthoringFieldValueKind.IdentityReference, "pose-graph")),
                 Array.Empty<GraphAuthoringPortDescriptor>(),
                 GraphAuthoringDynamicPortPolicy.OrderedBidirectional,
                 new[] { Child("open-subgraph", "Open Subgraph", Subgraph) }));
-            catalog.Register(Node<CharacterGraphInputPosePayload>(CharacterPoseNodeKind.GraphInput, stateAndSubgraph, "Graph Input", "Graph", inputColor,
+            catalog.Register(Node<CharacterGraphInputPosePayload>(CharacterPoseNodeKind.GraphInput, stateSubgraphAndLinkedEntry, "Graph Input", "Graph", inputColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(), Array.Empty<GraphAuthoringPortDescriptor>(), GraphAuthoringDynamicPortPolicy.OrderedOutputs));
-            catalog.Register(Node<CharacterGraphOutputPosePayload>(CharacterPoseNodeKind.GraphOutput, stateAndSubgraph, "Graph Output", "Graph", outputColor,
+            catalog.Register(Node<CharacterGraphOutputPosePayload>(CharacterPoseNodeKind.GraphOutput, stateSubgraphAndLinkedEntry, "Graph Output", "Graph", outputColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(), Array.Empty<GraphAuthoringPortDescriptor>(), GraphAuthoringDynamicPortPolicy.OrderedInputs));
             catalog.Register(Node<CharacterOutputPosePayload>(CharacterPoseNodeKind.OutputPose, rootAndState, "Output Pose", "Output", outputColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(), Ports(In("pose", "Local Pose", "pose.local")),
@@ -512,7 +533,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     kind == GraphAuthoringFieldValueKind.IdentityReference ||
                     kind == GraphAuthoringFieldValueKind.AssetReference),
                 pickerKind: pickerKind,
-                objectType: objectType);
+                objectType: objectType,
+                tuning: Tuning(id, kind, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite));
 
         static GraphAuthoringFieldDescriptor SourceField(Type slotType) =>
             Field("pose-source-slot", "Pose Source", GraphAuthoringFieldValueKind.AssetReference, "pose-source-slot", slotType);
@@ -524,7 +546,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite,
                 defaultValue: string.Empty,
                 pickerKind: pickerKind,
-                optional: true);
+                optional: true,
+                tuning: Tuning(id, GraphAuthoringFieldValueKind.IdentityReference, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite));
         static GraphAuthoringFieldDescriptor SelectionAvailabilityField() => EnumField("selection-availability", "Availability", typeof(AnimationSelectionAvailabilityPolicy));
         static GraphAuthoringFieldDescriptor AssetField(string id, string name, string pickerKind, Type objectType) =>
             Field(id, name, GraphAuthoringFieldValueKind.AssetReference, pickerKind, objectType);
@@ -545,21 +568,71 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 objectType: objectType,
                 visibility: new GraphAuthoringFieldVisibilityCondition(
                     new GraphAuthoringFieldId(controllerFieldId),
-                    expectedValue));
+                    expectedValue),
+                tuning: Tuning(id, GraphAuthoringFieldValueKind.AssetReference, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite));
         static GraphAuthoringFieldDescriptor StringField(string id, string name, string defaultValue) =>
-            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.String, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, defaultValue: defaultValue, constraint: new GraphAuthoringFieldConstraint(nonEmpty: true));
+            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.String, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, defaultValue: defaultValue, constraint: new GraphAuthoringFieldConstraint(nonEmpty: true), tuning: Tuning(id, GraphAuthoringFieldValueKind.String, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite));
         static GraphAuthoringFieldDescriptor BoolField(string id, string name, bool defaultValue) =>
-            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.Boolean, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, defaultValue: defaultValue);
+            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.Boolean, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, defaultValue: defaultValue, tuning: Tuning(id, GraphAuthoringFieldValueKind.Boolean, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite));
         static GraphAuthoringFieldDescriptor FloatField(string id, string name, float defaultValue, float? minimum = null, float? maximum = null) =>
-            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.Float, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, defaultValue: defaultValue, constraint: new GraphAuthoringFieldConstraint(minimum, maximum, true));
+            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.Float, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, defaultValue: defaultValue, constraint: new GraphAuthoringFieldConstraint(minimum, maximum, true), tuning: Tuning(id, GraphAuthoringFieldValueKind.Float, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, minimum ?? double.MinValue, maximum ?? double.MaxValue));
         static GraphAuthoringFieldDescriptor IntegerField(string id, string name, int defaultValue, int? minimum = null, int? maximum = null) =>
-            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.Integer, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, defaultValue: defaultValue, constraint: new GraphAuthoringFieldConstraint(minimum, maximum));
+            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.Integer, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, defaultValue: defaultValue, constraint: new GraphAuthoringFieldConstraint(minimum, maximum), tuning: Tuning(id, GraphAuthoringFieldValueKind.Integer, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, minimum ?? int.MinValue, maximum ?? int.MaxValue));
         static GraphAuthoringFieldDescriptor ReadOnlyField(string id, string name, GraphAuthoringFieldValueKind kind) =>
-            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, kind, GraphAuthoringFieldAccess.AuthoringRead);
+            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, kind, GraphAuthoringFieldAccess.AuthoringRead, tuning: Tuning(id, kind, GraphAuthoringFieldAccess.AuthoringRead));
         static GraphAuthoringFieldDescriptor Vector3Field(string id, string name, Vector3 defaultValue = default) =>
-            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.Vector3, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, defaultValue: defaultValue);
+            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.Vector3, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, defaultValue: defaultValue, tuning: Tuning(id, GraphAuthoringFieldValueKind.Vector3, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite));
         static GraphAuthoringFieldDescriptor EnumField(string id, string name, Type enumType) =>
-            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.Enum, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, constraint: new GraphAuthoringFieldConstraint(allowedValues: Enum.GetNames(enumType)));
+            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.Enum, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, constraint: new GraphAuthoringFieldConstraint(allowedValues: Enum.GetNames(enumType)), tuning: Tuning(id, GraphAuthoringFieldValueKind.Enum, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite));
+
+        static GraphAuthoringFieldTuningMetadata Tuning(
+            string id,
+            GraphAuthoringFieldValueKind kind,
+            GraphAuthoringFieldAccess access,
+            double minimum = double.MinValue,
+            double maximum = double.MaxValue)
+        {
+            bool writable = (access & GraphAuthoringFieldAccess.AuthoringWrite) != 0;
+            bool tunable = writable &&
+                (string.Equals(id, "weight", StringComparison.Ordinal) ||
+                 string.Equals(id, "play-rate", StringComparison.Ordinal) ||
+                 string.Equals(id, "duration-seconds", StringComparison.Ordinal));
+            GraphAuthoringFieldInteractionPolicy interaction = !writable
+                ? GraphAuthoringFieldInteractionPolicy.DerivedReadOnly
+                : tunable
+                    ? GraphAuthoringFieldInteractionPolicy.TunableDefault
+                    : GraphAuthoringFieldInteractionPolicy.Structural;
+            string unit = string.Equals(id, "weight", StringComparison.Ordinal)
+                ? "normalized"
+                : string.Equals(id, "play-rate", StringComparison.Ordinal)
+                    ? "multiplier"
+                    : string.Equals(id, "duration-seconds", StringComparison.Ordinal)
+                        ? "seconds"
+                        : string.Empty;
+            GraphAuthoringFieldApplyTiming timing =
+                string.Equals(id, "duration-seconds", StringComparison.Ordinal)
+                    ? GraphAuthoringFieldApplyTiming.NextActivation
+                    : GraphAuthoringFieldApplyTiming.NextFrame;
+            if (kind != GraphAuthoringFieldValueKind.Float &&
+                kind != GraphAuthoringFieldValueKind.Integer)
+            {
+                minimum = 0d;
+                maximum = 1d;
+            }
+            return new GraphAuthoringFieldTuningMetadata(
+                interaction,
+                kind,
+                unit,
+                minimum,
+                maximum,
+                true,
+                timing,
+                GraphAuthoringFieldStatePolicy.PreserveState,
+                "pose-graph",
+                0,
+                0);
+        }
+
 
         static GraphAuthoringPortDescriptor In(string id, string name, string valueType) => Port(id, name, valueType, GraphAuthoringPortDirection.Input, true);
         static GraphAuthoringPortDescriptor OptionalIn(string id, string name, string valueType) => Port(id, name, valueType, GraphAuthoringPortDirection.Input, false);
@@ -672,6 +745,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterPosePortKind.PoseDiscontinuity,
                 "pose.action-playback" =>
                     CharacterPosePortKind.ActionPlayback,
+                "component.full-body-ik-goals" =>
+                    CharacterPosePortKind.FullBodyIkGoals,
+                "pose.history" => CharacterPosePortKind.PoseHistory,
+                "motion-matching.trajectory" => CharacterPosePortKind.Trajectory,
+                "presentation.facts" => CharacterPosePortKind.PresentationFacts,
+                "motion-matching.binding" => CharacterPosePortKind.MotionMatchingBinding,
                 _ => throw new InvalidOperationException(
                     $"Pose value type '{valueTypeId}' is not registered.")
             };
@@ -687,6 +766,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "pose.discontinuity",
                 CharacterPosePortKind.ActionPlayback =>
                     "pose.action-playback",
+                CharacterPosePortKind.FullBodyIkGoals =>
+                    "component.full-body-ik-goals",
+                CharacterPosePortKind.PoseHistory => "pose.history",
+                CharacterPosePortKind.Trajectory => "motion-matching.trajectory",
+                CharacterPosePortKind.PresentationFacts => "presentation.facts",
+                CharacterPosePortKind.MotionMatchingBinding => "motion-matching.binding",
                 _ => throw new InvalidOperationException(
                     $"Pose port kind '{kind}' is not registered.")
             };
@@ -701,6 +786,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 GraphAuthoringPortDirection.Input
                     ? CharacterPosePortDirection.Input
                     : CharacterPosePortDirection.Output,
-                port.Required);
+                port.Required,
+                string.IsNullOrWhiteSpace(port.InterfacePortId)
+                    ? default
+                    : new PoseInterfacePortId(port.InterfacePortId));
     }
 }

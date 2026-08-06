@@ -13,15 +13,26 @@ MonoBehaviour:
   m_Name: CorinFootPlacementRigCalibration
   m_EditorClassIdentifier: 
   m_CalibrationId: Corin.FootPlacementRig
-  m_SchemaVersion: 3
-  m_ContentRevision: bc7c2b83a4c226617dfcf8258468c2d10c816eb4e6f5e2b1c1361626841abbcf
+  m_SchemaVersion: 4
+  m_ContentRevision: 2997edf1c34f13f7e2a3033372226eb399379f30c4303fddfe3e97ec1e4bf38d
   m_RigId: corin.animation-rig
-  m_RigRevision: 5f8593de08c64ed0b88dfab51d4cbb72
+  m_RigRevision: 87731f0d0ca14844bbf861368b9847b3
   m_LeftHeelContactLocalOffset: {x: -0.08124063, y: -0.00005460252, z: -0.000029267168}
   m_LeftToeContactLocalOffset: {x: 0.00004123005, y: -0.0051994864, z: -0.000010182891}
   m_LeftSoleFrameLocalRotation: {x: 0.5018886, y: 0.4979625, z: 0.5029893, w: -0.49713477}
-  m_LeftPreferredBendVisualRootLocalDirection: {x: 0.36842135, y: -0.08522753, z: 0.92574406}
   m_RightHeelContactLocalOffset: {x: -0.08114601, y: 0.0014590034, z: -0.00019665039}
   m_RightToeContactLocalOffset: {x: -0.008352402, y: -0.0044627907, z: 0.0012893939}
   m_RightSoleFrameLocalRotation: {x: 0.49782547, y: 0.4928122, z: 0.50724554, w: -0.5020041}
-  m_RightPreferredBendVisualRootLocalDirection: {x: -0.4080375, y: -0.38247102, z: 0.82898813}
+  m_GeometryValidation:
+    m_SchemaVersion: 2
+    m_IdentityHash: 4ef6dd62378b87442f0f850540b7336e0ada6cd51c88a0b69127c0d5987ad849
+    m_GeometryContentHash: 9996f30d90702cc7d2aa0f54d41501f6c2c38fdede3d8eff4e0ae1387b50325a
+    m_RigId: corin.animation-rig
+    m_RigRevision: 87731f0d0ca14844bbf861368b9847b3
+    m_CalibrationId: Corin.FootPlacementRig
+    m_CalibrationRevision: 2997edf1c34f13f7e2a3033372226eb399379f30c4303fddfe3e97ec1e4bf38d
+    m_SamplingRigAssetGuid: 846373e25bc0479cb06bd295c0103817
+    m_SamplingRigDependencyHash: 8c9e128909949d13f6f1387441549b14e30dbcc01aba103dfd444c44dd310caa
+    m_PreviewClipAssetGuid: 7dbd59f643bcfbe4495990d45ad359ef
+    m_PreviewClipDependencyHash: 023000005ed99982952422941d4811a34f41e1e670f2c86d74699e09fafb6580
+    m_PreviewNormalizedTimeBits: 0

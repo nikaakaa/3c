@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCamera;
+using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Editor.ProductStartup;
 using ThirdPersonCharacter.Pipeline;
@@ -112,28 +113,32 @@ namespace ThirdPersonGameplay.Editor.Lab
 
         static void ValidateVariants(GameplayLabBootstrap bootstrap)
         {
-            if (bootstrap.Variants.Count != 2)
-                throw new InvalidOperationException($"Gameplay Lab requires exactly Local Fixed and Rollback Variants, found {bootstrap.Variants.Count}.");
+            if (bootstrap.Variants.Count != 3)
+                throw new InvalidOperationException($"Gameplay Lab requires exactly Local Fixed, Local Float32 and Rollback Variants, found {bootstrap.Variants.Count}.");
             var ids = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < bootstrap.Variants.Count; i++)
             {
                 GameplayLabSessionVariantDefinition variant = bootstrap.Variants[i];
                 if (!ids.Add(variant.VariantId))
                     throw new InvalidOperationException("Gameplay Lab Session Variants require distinct IDs.");
-                if (!string.Equals(variant.NumericProfileId, "fixed-q32.32", StringComparison.Ordinal))
-                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' must use the shared Fixed Program.");
+                if (!string.Equals(variant.NumericProfileId, "fixed-q32.32", StringComparison.Ordinal) &&
+                    !string.Equals(variant.NumericProfileId, "float32-ieee754", StringComparison.Ordinal))
+                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' uses an unsupported numeric profile.");
                 ValidateRuntimeRoot(variant);
             }
             if (!ids.Contains("gameplay-lab.local-fixed-q32.32") ||
+                !ids.Contains("gameplay-lab.local-float32") ||
                 !ids.Contains("gameplay-lab.deterministic-rollback"))
-                throw new InvalidOperationException("Gameplay Lab requires the exact Local Fixed and Deterministic Rollback Variants.");
-            GameplayLabSessionVariantDefinition local = bootstrap.Variants.Single(
+                throw new InvalidOperationException("Gameplay Lab requires the exact Local Fixed, Local Float32 and Deterministic Rollback Variants.");
+            GameplayLabSessionVariantDefinition localFixed = bootstrap.Variants.Single(
                 value => string.Equals(value.VariantId, "gameplay-lab.local-fixed-q32.32", StringComparison.Ordinal));
+            GameplayLabSessionVariantDefinition localFloat = bootstrap.Variants.Single(
+                value => string.Equals(value.VariantId, "gameplay-lab.local-float32", StringComparison.Ordinal));
             GameplayLabSessionVariantDefinition rollback = bootstrap.Variants.Single(
                 value => string.Equals(value.VariantId, "gameplay-lab.deterministic-rollback", StringComparison.Ordinal));
-            if (local.IsExternalLaunchVariant || !rollback.IsExternalLaunchVariant)
+            if (localFixed.IsExternalLaunchVariant || localFloat.IsExternalLaunchVariant || !rollback.IsExternalLaunchVariant)
                 throw new InvalidOperationException("Only the Deterministic Rollback Variant may use external launch.");
-            RequireSharedClosure(local, rollback);
+            RequireSharedClosure(localFixed, rollback);
         }
 
         static void ValidateRuntimeRoot(GameplayLabSessionVariantDefinition variant)
@@ -164,10 +169,16 @@ namespace ThirdPersonGameplay.Editor.Lab
                 variant.VariantId,
                 "gameplay-lab.deterministic-rollback",
                 StringComparison.Ordinal);
+            bool floatVariant = string.Equals(
+                variant.NumericProfileId,
+                "float32-ieee754",
+                StringComparison.Ordinal);
             if (!rollbackVariant)
             {
                 int localOwners = root.GetComponentsInChildren<FixedCharacterHost>(true)
-                    .Count(host => host.PresentationRole == CharacterPresentationRole.LocalOwner);
+                    .Count(host => host.PresentationRole == CharacterPresentationRole.LocalOwner) +
+                    root.GetComponentsInChildren<CharacterPipelineHost>(true)
+                        .Count(host => host.PresentationRole == CharacterPresentationRole.LocalOwner);
                 if (localOwners != 1)
                     throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires exactly one local owner.");
                 SessionActorActionTargetInputProvider[] providers =
@@ -180,12 +191,13 @@ namespace ThirdPersonGameplay.Editor.Lab
             int floatHosts = root.GetComponentsInChildren<CharacterPipelineHost>(true).Length;
             int fixedHosts = root.GetComponentsInChildren<FixedCharacterHost>(true).Length;
             int rollbackHosts = root.GetComponentsInChildren<DeterministicRollbackCharacterHost>(true).Length;
-            if ((!rollbackVariant && (fixedHosts != 2 || rollbackHosts != 0 || floatHosts != 0)) ||
+            if ((floatVariant && (floatHosts != 2 || fixedHosts != 0 || rollbackHosts != 0)) ||
+                (!floatVariant && !rollbackVariant && (fixedHosts != 2 || rollbackHosts != 0 || floatHosts != 0)) ||
                 (rollbackVariant && (rollbackHosts != 2 || fixedHosts != 0 || floatHosts != 0)))
             {
                 throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' Actor host model does not match its numeric profile.");
             }
-            if (!rollbackVariant)
+            if (!floatVariant && !rollbackVariant)
             {
                 FixedCharacterHost[] characters = root.GetComponentsInChildren<FixedCharacterHost>(true);
                 if (characters.Any(character => !character.ControlSource) ||
@@ -193,6 +205,25 @@ namespace ThirdPersonGameplay.Editor.Lab
                     characters.Count(character => character.ControlSource is FixedNeutralCharacterControlSource) != 1)
                 {
                     throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires one persisted Fixed Player Control Source and one persisted Fixed Neutral Control Source.");
+                }
+            }
+            if (floatVariant)
+            {
+                CharacterPipelineHost[] characters = root.GetComponentsInChildren<CharacterPipelineHost>(true);
+                if (characters.Any(character => !character.ControlSource) ||
+                    characters.Count(character => character.ControlSource is PlayerCharacterControlSource) != 1 ||
+                    characters.Count(character => character.ControlSource is AICharacterControlSource) != 1)
+                {
+                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires one Float32 Player and one formal AI Control Source.");
+                }
+                CharacterPipelineHost enemy = characters.Single(
+                    character => character.ControlSource is AICharacterControlSource);
+                AICharacterControlSource ai = (AICharacterControlSource)enemy.ControlSource;
+                if (enemy.ActorId != "gameplay-lab-target" ||
+                    !ai.Controller ||
+                    !ai.Controller.PerceptionProfile.CandidateActorIds.Contains("gameplay-lab-player"))
+                {
+                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' AI target closure is not bound to the Gameplay Lab player roster.");
                 }
             }
             variant.ValidateComposition(hosts[0].Composition);
@@ -203,7 +234,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             GameplayLabSessionVariantDefinition rollback)
         {
             if (!string.Equals(local.DefinitionGuid, rollback.DefinitionGuid, StringComparison.Ordinal) ||
-                local.FixedProgram != rollback.FixedProgram ||
+                local.Program != rollback.Program ||
                 local.PresentationProjection != rollback.PresentationProjection ||
                 local.WorldSolver != rollback.WorldSolver ||
                 local.CollisionWorld != rollback.CollisionWorld)
@@ -235,6 +266,12 @@ namespace ThirdPersonGameplay.Editor.Lab
         static void RebuildAssets()
         {
             GameplayLabAssetBuilder.Rebuild();
+        }
+
+        [MenuItem("Tools/3C/Characters/Sync Training Enemy to Gameplay Lab Float32")]
+        static void SyncTrainingEnemy()
+        {
+            GameplayLabAssetBuilder.SyncFloat32EnemyVariant();
         }
 
         sealed class Operations : IGameplayLabLauncherOperations

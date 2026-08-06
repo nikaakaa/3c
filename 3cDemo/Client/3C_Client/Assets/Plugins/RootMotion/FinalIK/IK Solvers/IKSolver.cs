@@ -34,6 +34,8 @@ namespace RootMotion.FinalIK {
 			if (OnPreInitiate != null) OnPreInitiate();
 
 			if (root == null) Debug.LogError("Initiating IKSolver with null root Transform.");
+			indexedPoseBackend = null;
+			indexedRoot = IndexedBoneHandle.Invalid;
 			this.root = root;
 			initiated = false;
 
@@ -51,6 +53,24 @@ namespace RootMotion.FinalIK {
 
 			if (OnPostInitiate != null) OnPostInitiate();
 		}
+
+		public void Initiate(IIndexedPoseBackend poseBackend, IndexedBoneHandle rootBone) {
+			if (executedInEditor) return;
+			if (poseBackend == null) throw new System.ArgumentNullException(nameof(poseBackend));
+			if (!rootBone.IsValid || rootBone.Index >= poseBackend.BoneCount) throw new System.ArgumentOutOfRangeException(nameof(rootBone));
+			if (OnPreInitiate != null) OnPreInitiate();
+			root = null;
+			indexedPoseBackend = poseBackend;
+			indexedRoot = rootBone;
+			initiated = false;
+			string message = string.Empty;
+			if (!IsValid(ref message)) throw new System.InvalidOperationException(message);
+			OnInitiate();
+			StoreDefaultLocalState();
+			initiated = true;
+			firstInitiation = false;
+			if (OnPostInitiate != null) OnPostInitiate();
+		}
 		
 		/// <summary>
 		/// Updates the %IK solver. Use only if this %IKSolver is not a member of an %IK component or the %IK component has been disabled and you intend to manually control the updating.
@@ -58,7 +78,10 @@ namespace RootMotion.FinalIK {
 		public void Update() {
 			if (OnPreUpdate != null) OnPreUpdate();
 
-			if (firstInitiation) Initiate(root); // when the IK component has been disabled in Awake, this will initiate it.
+			if (firstInitiation) {
+				if (indexedPoseBackend != null) Initiate(indexedPoseBackend, indexedRoot);
+				else Initiate(root);
+			}
 			if (!initiated) return;
 
 			OnUpdate();
@@ -127,6 +150,9 @@ namespace RootMotion.FinalIK {
 		/// Gets the point with the specified Transform.
 		/// </summary>
 		public abstract IKSolver.Point GetPoint(Transform transform);
+		public virtual IKSolver.Point GetPoint(IndexedBoneHandle bone) { return null; }
+		public bool usesIndexedPoseBackend { get { return indexedPoseBackend != null; } }
+		public IIndexedPoseBackend poseBackend { get { return indexedPoseBackend; } }
 
 		/// <summary>
 		/// Fixes all the Transforms used by the solver to their initial state.
@@ -148,6 +174,7 @@ namespace RootMotion.FinalIK {
 			/// The transform.
 			/// </summary>
 			public Transform transform;
+			public IndexedBoneHandle boneHandle = IndexedBoneHandle.Invalid;
 			/// <summary>
 			/// The weight of this bone in the solver.
 			/// </summary>
@@ -178,6 +205,11 @@ namespace RootMotion.FinalIK {
 				defaultLocalRotation = transform.localRotation;
 			}
 
+			public void StoreDefaultLocalState(IIndexedPoseBackend backend) {
+				defaultLocalPosition = backend.GetLocalPosition(boneHandle);
+				defaultLocalRotation = backend.GetLocalRotation(boneHandle);
+			}
+
 			/// <summary>
 			/// Fixes the transform to its default local state.
 			/// </summary>
@@ -186,11 +218,20 @@ namespace RootMotion.FinalIK {
 				if (transform.localRotation != defaultLocalRotation) transform.localRotation = defaultLocalRotation;
 			}
 
+			public void FixTransform(IIndexedPoseBackend backend) {
+				backend.SetLocalPosition(boneHandle, defaultLocalPosition);
+				backend.SetLocalRotation(boneHandle, defaultLocalRotation);
+			}
+
 			/// <summary>
 			/// Updates the solverPosition (in world space).
 			/// </summary>
 			public void UpdateSolverPosition() {
 				solverPosition = transform.position;
+			}
+
+			public void UpdateSolverPosition(IIndexedPoseBackend backend) {
+				solverPosition = backend.GetComponentPosition(boneHandle);
 			}
 
 			/// <summary>
@@ -206,6 +247,11 @@ namespace RootMotion.FinalIK {
 			public void UpdateSolverState() {
 				solverPosition = transform.position;
 				solverRotation = transform.rotation;
+			}
+
+			public void UpdateSolverState(IIndexedPoseBackend backend) {
+				solverPosition = backend.GetComponentPosition(boneHandle);
+				solverRotation = backend.GetComponentRotation(boneHandle);
 			}
 
 			/// <summary>
@@ -355,6 +401,15 @@ namespace RootMotion.FinalIK {
 				this.transform = transform;
 				this.weight = weight;
 			}
+
+			public Node (IndexedBoneHandle boneHandle) {
+				this.boneHandle = boneHandle;
+			}
+
+			public Node (IndexedBoneHandle boneHandle, float weight) {
+				this.boneHandle = boneHandle;
+				this.weight = weight;
+			}
 		}
 
 		/// <summary>
@@ -390,6 +445,38 @@ namespace RootMotion.FinalIK {
 
 		protected bool firstInitiation = true;
 		[SerializeField][HideInInspector] protected Transform root;
+		protected IIndexedPoseBackend indexedPoseBackend;
+		protected IndexedBoneHandle indexedRoot = IndexedBoneHandle.Invalid;
+
+		internal Vector3 ReadComponentPosition(Point point) {
+			return indexedPoseBackend != null ? indexedPoseBackend.GetComponentPosition(point.boneHandle) : point.transform.position;
+		}
+
+		internal Quaternion ReadComponentRotation(Point point) {
+			return indexedPoseBackend != null ? indexedPoseBackend.GetComponentRotation(point.boneHandle) : point.transform.rotation;
+		}
+
+		internal Vector3 ReadLocalPosition(Point point) {
+			return indexedPoseBackend != null ? indexedPoseBackend.GetLocalPosition(point.boneHandle) : point.transform.localPosition;
+		}
+
+		internal Quaternion ReadLocalRotation(Point point) {
+			return indexedPoseBackend != null ? indexedPoseBackend.GetLocalRotation(point.boneHandle) : point.transform.localRotation;
+		}
+
+		internal void WriteComponentPosition(Point point, Vector3 position) {
+			if (indexedPoseBackend != null) indexedPoseBackend.SetComponentPosition(point.boneHandle, position);
+			else point.transform.position = position;
+		}
+
+		internal void WriteComponentRotation(Point point, Quaternion rotation) {
+			if (indexedPoseBackend != null) indexedPoseBackend.SetComponentRotation(point.boneHandle, rotation);
+			else point.transform.rotation = rotation;
+		}
+
+		internal Vector3 ReadRootUp() {
+			return indexedPoseBackend != null ? indexedPoseBackend.GetComponentRotation(indexedRoot) * Vector3.up : root.up;
+		}
 		
 		protected void LogWarning(string message) {
 			Warning.Log(message, root, true);

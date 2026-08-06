@@ -62,6 +62,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable] public sealed class CharacterOutputPosePayload : CharacterPoseNodePayload { public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.OutputPose; }
     [Serializable] public sealed class CharacterLocalToComponentPosePayload : CharacterPoseNodePayload { public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.LocalToComponentPose; }
     [Serializable] public sealed class CharacterComponentToLocalPosePayload : CharacterPoseNodePayload { public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.ComponentToLocalPose; }
+    [Serializable] public sealed class CharacterEmptyFullBodyIkGoalsPayload : CharacterPoseNodePayload { public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.EmptyFullBodyIkGoals; }
+
+    [Serializable]
+    public sealed class CharacterLinkedPoseCallPayload : CharacterPoseNodePayload
+    {
+        [SerializeField] string m_GroupId = string.Empty;
+        [SerializeField] string m_InterfaceId = string.Empty;
+        [SerializeField] string m_EntryId = string.Empty;
+
+        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.LinkedPoseCall;
+        public LinkedPoseGroupId GroupId => string.IsNullOrWhiteSpace(m_GroupId) ? default : new LinkedPoseGroupId(m_GroupId);
+        public LinkedPoseInterfaceId InterfaceId => string.IsNullOrWhiteSpace(m_InterfaceId) ? default : new LinkedPoseInterfaceId(m_InterfaceId);
+        public LinkedPoseEntryId EntryId => string.IsNullOrWhiteSpace(m_EntryId) ? default : new LinkedPoseEntryId(m_EntryId);
+
+        public CharacterLinkedPoseCallPayload() { }
+
+        public CharacterLinkedPoseCallPayload(
+            LinkedPoseGroupId groupId,
+            LinkedPoseInterfaceId interfaceId,
+            LinkedPoseEntryId entryId)
+        {
+            m_GroupId = groupId.IsValid
+                ? groupId.Value
+                : throw new ArgumentException("Linked Pose Group identity is invalid.", nameof(groupId));
+            m_InterfaceId = interfaceId.IsValid
+                ? interfaceId.Value
+                : throw new ArgumentException("Linked Pose Interface identity is invalid.", nameof(interfaceId));
+            m_EntryId = entryId.IsValid
+                ? entryId.Value
+                : throw new ArgumentException("Linked Pose Entry identity is invalid.", nameof(entryId));
+        }
+    }
     [Serializable]
     public sealed class CharacterActionPlaybackInputPosePayload : CharacterPoseNodePayload
     {
@@ -307,53 +339,86 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class CharacterTwoBoneIkPosePayload : CharacterPoseNodePayload
+    public sealed class CharacterPoseBoneIkGoalBinding
     {
-        [SerializeField] string m_EndPhysicalBoneId = string.Empty;
-        [SerializeField] string m_EffectorPoseBoneId = string.Empty;
-        [SerializeField] Vector3 m_EffectorLocalPositionOffset;
-        [SerializeField] Vector3 m_EffectorLocalRotationEuler;
-        [SerializeField] string m_JointTargetPoseBoneId = string.Empty;
-        [SerializeField] Vector3 m_JointTargetLocalOffset;
-        [SerializeField] CharacterTwoBoneIkEndRotationMode m_EndRotationMode = CharacterTwoBoneIkEndRotationMode.PreserveInput;
-        [SerializeField, Range(0f, 1f)] float m_Weight = 1f;
-        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.TwoBoneIK;
-        public AnimationBoneId EndPhysicalBoneId => string.IsNullOrWhiteSpace(m_EndPhysicalBoneId) ? default : new AnimationBoneId(m_EndPhysicalBoneId);
-        public AnimationBoneId EffectorPoseBoneId => string.IsNullOrWhiteSpace(m_EffectorPoseBoneId) ? default : new AnimationBoneId(m_EffectorPoseBoneId);
-        public Vector3 EffectorLocalPositionOffset => m_EffectorLocalPositionOffset;
-        public Quaternion EffectorLocalRotationOffset => Quaternion.Euler(m_EffectorLocalRotationEuler);
-        public AnimationBoneId JointTargetPoseBoneId => string.IsNullOrWhiteSpace(m_JointTargetPoseBoneId) ? default : new AnimationBoneId(m_JointTargetPoseBoneId);
-        public Vector3 JointTargetLocalOffset => m_JointTargetLocalOffset;
-        public CharacterTwoBoneIkEndRotationMode EndRotationMode => m_EndRotationMode;
-        public float Weight => m_Weight;
-        public CharacterTwoBoneIkPosePayload() { }
-        public CharacterTwoBoneIkPosePayload(AnimationBoneId endPhysicalBoneId, AnimationBoneId effectorPoseBoneId, Vector3 effectorPosition, Vector3 effectorRotation, AnimationBoneId jointTargetPoseBoneId, Vector3 jointTargetOffset, CharacterTwoBoneIkEndRotationMode endRotationMode, float weight)
+        [SerializeField] CharacterFullBodyIkEffectorSlot m_EffectorSlot;
+        [SerializeField] string m_TargetPoseBoneId = string.Empty;
+        [SerializeField] Vector3 m_PositionOffset;
+        [SerializeField] Vector3 m_RotationOffsetEuler;
+        [SerializeField, Range(0f, 1f)] float m_PositionWeight = 1f;
+        [SerializeField, Range(0f, 1f)] float m_RotationWeight = 1f;
+
+        public CharacterFullBodyIkEffectorSlot EffectorSlot => m_EffectorSlot;
+        public AnimationBoneId TargetPoseBoneId => string.IsNullOrWhiteSpace(m_TargetPoseBoneId)
+            ? default
+            : new AnimationBoneId(m_TargetPoseBoneId);
+        public Vector3 PositionOffset => m_PositionOffset;
+        public Quaternion RotationOffset => Quaternion.Euler(m_RotationOffsetEuler);
+        public float PositionWeight => m_PositionWeight;
+        public float RotationWeight => m_RotationWeight;
+
+        public CharacterPoseBoneIkGoalBinding() { }
+
+        public CharacterPoseBoneIkGoalBinding(
+            CharacterFullBodyIkEffectorSlot effectorSlot,
+            AnimationBoneId targetPoseBoneId,
+            Vector3 positionOffset,
+            Vector3 rotationOffsetEuler,
+            float positionWeight,
+            float rotationWeight)
         {
-            m_EndPhysicalBoneId = endPhysicalBoneId.IsValid ? endPhysicalBoneId.Value : throw new ArgumentException("Two Bone IK end bone is invalid.", nameof(endPhysicalBoneId));
-            m_EffectorPoseBoneId = effectorPoseBoneId.IsValid ? effectorPoseBoneId.Value : throw new ArgumentException("Two Bone IK effector bone is invalid.", nameof(effectorPoseBoneId));
-            m_EffectorLocalPositionOffset = effectorPosition;
-            m_EffectorLocalRotationEuler = effectorRotation;
-            m_JointTargetPoseBoneId = jointTargetPoseBoneId.IsValid ? jointTargetPoseBoneId.Value : throw new ArgumentException("Two Bone IK joint target bone is invalid.", nameof(jointTargetPoseBoneId));
-            m_JointTargetLocalOffset = jointTargetOffset;
-            m_EndRotationMode = endRotationMode;
-            m_Weight = CharacterBlendPosePayload.RequireWeight(weight);
+            if (effectorSlot < CharacterFullBodyIkEffectorSlot.Body ||
+                effectorSlot > CharacterFullBodyIkEffectorSlot.RightFoot)
+            {
+                throw new ArgumentOutOfRangeException(nameof(effectorSlot));
+            }
+            m_EffectorSlot = effectorSlot;
+            m_TargetPoseBoneId = targetPoseBoneId.IsValid
+                ? targetPoseBoneId.Value
+                : throw new ArgumentException("Pose Bone IK Goal target is invalid.", nameof(targetPoseBoneId));
+            m_PositionOffset = positionOffset;
+            m_RotationOffsetEuler = rotationOffsetEuler;
+            m_PositionWeight = CharacterBlendPosePayload.RequireWeight(positionWeight);
+            m_RotationWeight = CharacterBlendPosePayload.RequireWeight(rotationWeight);
         }
     }
 
     [Serializable]
-    public sealed class CharacterFootPlacementPosePayload : CharacterPoseNodePayload
+    public sealed class CharacterPoseBoneIkGoalsPayload : CharacterPoseNodePayload
+    {
+        [SerializeField] CharacterPoseBoneIkGoalBinding[] m_Bindings = Array.Empty<CharacterPoseBoneIkGoalBinding>();
+        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.PoseBoneIKGoals;
+        public IReadOnlyList<CharacterPoseBoneIkGoalBinding> Bindings => m_Bindings ?? Array.Empty<CharacterPoseBoneIkGoalBinding>();
+        public CharacterPoseBoneIkGoalsPayload() { }
+        public CharacterPoseBoneIkGoalsPayload(CharacterPoseBoneIkGoalBinding[] bindings) =>
+            m_Bindings = bindings ?? Array.Empty<CharacterPoseBoneIkGoalBinding>();
+    }
+
+    [Serializable]
+    public sealed class CharacterPredictiveFootPlacementPosePayload : CharacterPoseNodePayload
     {
         [SerializeField] CharacterFootPlacementProfile m_Profile;
         [SerializeField] CharacterFootPlacementRigCalibration m_Calibration;
-        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FootPlacement;
+        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.PredictiveFootPlacement;
         public CharacterFootPlacementProfile Profile => m_Profile;
         public CharacterFootPlacementRigCalibration Calibration => m_Calibration;
-        public CharacterFootPlacementPosePayload() { }
-        public CharacterFootPlacementPosePayload(CharacterFootPlacementProfile profile, CharacterFootPlacementRigCalibration calibration)
+        public CharacterPredictiveFootPlacementPosePayload() { }
+        public CharacterPredictiveFootPlacementPosePayload(CharacterFootPlacementProfile profile, CharacterFootPlacementRigCalibration calibration)
         {
-            m_Profile = profile;
-            m_Calibration = calibration;
+            m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
+            m_Calibration = calibration ? calibration : throw new ArgumentNullException(nameof(calibration));
         }
+    }
+
+    [Serializable]
+    public sealed class CharacterFullBodyIkPosePayload : CharacterPoseNodePayload
+    {
+        [SerializeField] CharacterFullBodyIkProfile m_Profile;
+        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FullBodyIK;
+        public CharacterFullBodyIkProfile Profile => m_Profile;
+        public CharacterFullBodyIkPosePayload() { }
+        public CharacterFullBodyIkPosePayload(CharacterFullBodyIkProfile profile) =>
+            m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
     }
 
     [Serializable]
@@ -409,7 +474,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterBlendPosePayload value => value.Weight,
             CharacterLayeredBoneBlendPosePayload value => value.Weight,
             CharacterAdditivePosePayload value => value.Weight,
-            CharacterTwoBoneIkPosePayload value => value.Weight,
             _ => 1f
         };
         public IReadOnlyList<CharacterPoseParameterPolicy> ParameterPolicies => (m_Payload as CharacterPoseParameterResolvePayload)?.Policies ?? Array.Empty<CharacterPoseParameterPolicy>();
@@ -423,15 +487,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public Quaternion ModifyRotation => (m_Payload as CharacterModifyBonePosePayload)?.Rotation ?? Quaternion.identity;
         public Vector3 ModifyScale => (m_Payload as CharacterModifyBonePosePayload)?.Scale ?? Vector3.one;
         public RootMotionCurveAsset RootOrientationYawCurve => (m_Payload as CharacterRootOrientationWarpPosePayload)?.YawCurve;
-        public AnimationBoneId TwoBoneIkEndPhysicalBoneId => (m_Payload as CharacterTwoBoneIkPosePayload)?.EndPhysicalBoneId ?? default;
-        public AnimationBoneId TwoBoneIkEffectorPoseBoneId => (m_Payload as CharacterTwoBoneIkPosePayload)?.EffectorPoseBoneId ?? default;
-        public Vector3 TwoBoneIkEffectorLocalPositionOffset => (m_Payload as CharacterTwoBoneIkPosePayload)?.EffectorLocalPositionOffset ?? Vector3.zero;
-        public Quaternion TwoBoneIkEffectorLocalRotationOffset => (m_Payload as CharacterTwoBoneIkPosePayload)?.EffectorLocalRotationOffset ?? Quaternion.identity;
-        public AnimationBoneId TwoBoneIkJointTargetPoseBoneId => (m_Payload as CharacterTwoBoneIkPosePayload)?.JointTargetPoseBoneId ?? default;
-        public Vector3 TwoBoneIkJointTargetLocalOffset => (m_Payload as CharacterTwoBoneIkPosePayload)?.JointTargetLocalOffset ?? Vector3.zero;
-        public CharacterTwoBoneIkEndRotationMode TwoBoneIkEndRotationMode => (m_Payload as CharacterTwoBoneIkPosePayload)?.EndRotationMode ?? CharacterTwoBoneIkEndRotationMode.PreserveInput;
-        public CharacterFootPlacementProfile FootPlacementProfile => (m_Payload as CharacterFootPlacementPosePayload)?.Profile;
-        public CharacterFootPlacementRigCalibration FootPlacementCalibration => (m_Payload as CharacterFootPlacementPosePayload)?.Calibration;
+        public IReadOnlyList<CharacterPoseBoneIkGoalBinding> PoseBoneIkGoalBindings =>
+            (m_Payload as CharacterPoseBoneIkGoalsPayload)?.Bindings ?? Array.Empty<CharacterPoseBoneIkGoalBinding>();
+        public CharacterFootPlacementProfile FootPlacementProfile =>
+            (m_Payload as CharacterPredictiveFootPlacementPosePayload)?.Profile;
+        public CharacterFootPlacementRigCalibration FootPlacementCalibration =>
+            (m_Payload as CharacterPredictiveFootPlacementPosePayload)?.Calibration;
+        public CharacterFullBodyIkProfile FullBodyIkProfile =>
+            (m_Payload as CharacterFullBodyIkPosePayload)?.Profile;
+        public LinkedPoseGroupId LinkedPoseGroupId =>
+            (m_Payload as CharacterLinkedPoseCallPayload)?.GroupId ?? default;
+        public LinkedPoseInterfaceId LinkedPoseInterfaceId =>
+            (m_Payload as CharacterLinkedPoseCallPayload)?.InterfaceId ?? default;
+        public LinkedPoseEntryId LinkedPoseEntryId =>
+            (m_Payload as CharacterLinkedPoseCallPayload)?.EntryId ?? default;
         public CharacterPoseSubgraphReference Subgraph => (m_Payload as CharacterPoseSubgraphPayload)?.Subgraph;
         public CharacterPresentationPoseSourceSlot PresentationPoseSourceSlot => m_Payload switch
         {
@@ -510,6 +579,184 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Nodes = nodes ?? Array.Empty<CharacterTypedPoseNode>();
             m_Edges = edges ?? Array.Empty<CharacterPoseEdge>();
             m_Layout = layout ?? Array.Empty<CharacterPoseGraphLayoutEntry>();
+        }
+    }
+
+    public static class CharacterLinkedPosePortProjection
+    {
+        public static CharacterPoseDynamicPort[] CreateCallPorts(
+            CharacterLinkedPoseInterfaceAsset linkedInterface,
+            LinkedPoseEntryId entryId)
+        {
+            CharacterLinkedPoseInterfaceEntryDescriptor entry = RequireEntry(
+                linkedInterface,
+                entryId);
+            return CreatePorts(entry, null, false);
+        }
+
+        public static CharacterPoseDynamicPort[] CreateGraphInputPorts(
+            CharacterLinkedPoseInterfaceAsset linkedInterface,
+            LinkedPoseEntryId entryId)
+        {
+            CharacterLinkedPoseInterfaceEntryDescriptor entry = RequireEntry(
+                linkedInterface,
+                entryId);
+            return CreatePorts(
+                entry,
+                CharacterPosePortDirection.Input,
+                true);
+        }
+
+        public static CharacterPoseDynamicPort[] CreateGraphOutputPorts(
+            CharacterLinkedPoseInterfaceAsset linkedInterface,
+            LinkedPoseEntryId entryId)
+        {
+            CharacterLinkedPoseInterfaceEntryDescriptor entry = RequireEntry(
+                linkedInterface,
+                entryId);
+            return CreatePorts(
+                entry,
+                CharacterPosePortDirection.Output,
+                true);
+        }
+
+        public static void RequireCallMatch(
+            CharacterTypedPoseNode call,
+            CharacterLinkedPoseInterfaceAsset linkedInterface)
+        {
+            if (call?.Kind != CharacterPoseNodeKind.LinkedPoseCall ||
+                !call.LinkedPoseGroupId.IsValid ||
+                !call.LinkedPoseInterfaceId.IsValid ||
+                !call.LinkedPoseEntryId.IsValid ||
+                !linkedInterface ||
+                call.LinkedPoseInterfaceId != linkedInterface.InterfaceId)
+            {
+                throw new InvalidOperationException(
+                    "Linked Pose Call identity does not match its Interface.");
+            }
+            CharacterLinkedPoseInterfaceEntryDescriptor entry =
+                RequireEntry(linkedInterface, call.LinkedPoseEntryId);
+            RequirePorts(
+                call.DynamicPorts,
+                CreatePorts(entry, null, false),
+                $"Linked Pose Call '{call.NodeId}'");
+        }
+
+        public static void RequireEntryGraphMatch(
+            CharacterTypedPoseGraph graph,
+            CharacterLinkedPoseInterfaceAsset linkedInterface,
+            LinkedPoseEntryId entryId)
+        {
+            if (graph == null)
+                throw new ArgumentNullException(nameof(graph));
+            CharacterLinkedPoseInterfaceEntryDescriptor entry = RequireEntry(
+                linkedInterface,
+                entryId);
+            CharacterTypedPoseNode graphInput = RequireSingleNode(
+                graph,
+                CharacterPoseNodeKind.GraphInput);
+            CharacterTypedPoseNode graphOutput = RequireSingleNode(
+                graph,
+                CharacterPoseNodeKind.GraphOutput);
+            RequirePorts(
+                graphInput.DynamicPorts,
+                CreatePorts(
+                    entry,
+                    CharacterPosePortDirection.Input,
+                    true),
+                $"Linked Pose Entry '{entryId}' Graph Input");
+            RequirePorts(
+                graphOutput.DynamicPorts,
+                CreatePorts(
+                    entry,
+                    CharacterPosePortDirection.Output,
+                    true),
+                $"Linked Pose Entry '{entryId}' Graph Output");
+        }
+
+        static CharacterLinkedPoseInterfaceEntryDescriptor RequireEntry(
+            CharacterLinkedPoseInterfaceAsset linkedInterface,
+            LinkedPoseEntryId entryId)
+        {
+            if (!linkedInterface)
+                throw new ArgumentNullException(nameof(linkedInterface));
+            linkedInterface.RequireValid();
+            return linkedInterface.RequireEntry(entryId);
+        }
+
+        static CharacterPoseDynamicPort[] CreatePorts(
+            CharacterLinkedPoseInterfaceEntryDescriptor entry,
+            CharacterPosePortDirection? interfaceDirection,
+            bool reverseDirection)
+        {
+            entry.RequireValid();
+            return entry.Ports
+                .Where(port =>
+                    !interfaceDirection.HasValue ||
+                    port.Direction == interfaceDirection.Value)
+                .OrderBy(port => port.Order)
+                .Select(port => new CharacterPoseDynamicPort(
+                    new PosePortId(port.PortId.Value),
+                    port.PortId.Value,
+                    port.Kind,
+                    reverseDirection
+                        ? Reverse(port.Direction)
+                        : port.Direction,
+                    port.Required,
+                    port.Order,
+                    port.PortId))
+                .ToArray();
+        }
+
+        static CharacterPosePortDirection Reverse(
+            CharacterPosePortDirection direction) =>
+            direction == CharacterPosePortDirection.Input
+                ? CharacterPosePortDirection.Output
+                : CharacterPosePortDirection.Input;
+
+        static void RequirePorts(
+            IReadOnlyList<CharacterPoseDynamicPort> actual,
+            IReadOnlyList<CharacterPoseDynamicPort> expected,
+            string owner)
+        {
+            CharacterPoseDynamicPort[] ordered = (actual ??
+                    Array.Empty<CharacterPoseDynamicPort>())
+                .OrderBy(port => port?.Order ?? int.MaxValue)
+                .ToArray();
+            if (ordered.Length != expected.Count)
+                throw new InvalidOperationException(
+                    $"{owner} does not exactly cover its Interface ports.");
+            var ids = new HashSet<PosePortId>();
+            for (int i = 0; i < ordered.Length; i++)
+            {
+                CharacterPoseDynamicPort value = ordered[i];
+                CharacterPoseDynamicPort contract = expected[i];
+                if (value == null ||
+                    !ids.Add(value.PortId) ||
+                    !value.PortId.Equals(contract.PortId) ||
+                    value.InterfacePortId != contract.InterfacePortId ||
+                    value.Direction != contract.Direction ||
+                    value.Kind != contract.Kind ||
+                    value.Required != contract.Required ||
+                    value.Order != contract.Order)
+                {
+                    throw new InvalidOperationException(
+                        $"{owner} port #{i} does not match its Interface contract.");
+                }
+            }
+        }
+
+        static CharacterTypedPoseNode RequireSingleNode(
+            CharacterTypedPoseGraph graph,
+            CharacterPoseNodeKind kind)
+        {
+            CharacterTypedPoseNode[] nodes = graph.Nodes
+                .Where(value => value?.Kind == kind)
+                .ToArray();
+            if (nodes.Length != 1)
+                throw new InvalidOperationException(
+                    $"Linked Pose Entry Graph '{graph.GraphId}' requires exactly one {kind} node.");
+            return nodes[0];
         }
     }
 

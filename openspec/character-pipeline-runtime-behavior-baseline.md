@@ -183,7 +183,10 @@ Gameplay Timeline提交短Root Motion
   -> Turn Pose Sequence按PresentationDelta播放
   -> 0.12秒进入Inertialization
   -> 0.30秒退出Inertialization
-  -> FootPlacement处理地面接触
+  -> LocalToComponentPose
+  -> FootPlacement规划pelvis与typed双腿targets
+  -> LegIK求解Physical腿链
+  -> ComponentToLocalPose
   -> FinalPose
 ```
 
@@ -228,7 +231,7 @@ PoseStateMachine需要表达这些可见状态：
 
 ### 6.3 IK与后处理
 
-- Virtual Bone、TwoBoneIK、FootPlacement、Inertialization、Layer、Additive和Mask只处理Pose。
+- Virtual Bone、TwoBoneIK、FootPlacement、LegIK、Inertialization、Layer、Additive和Mask只处理Pose。
 - 它们不得生成或修改Rollback Gameplay状态。
 - 它们不得修改MovingTurn Gameplay Timeline提交的Body Root Motion。
 - Pose Graph和Graph运行内存不进入Rollback snapshot或网络协议。
@@ -310,7 +313,11 @@ Input
   -> state-local Pose Source
   -> AnimationSlot
   -> Inertialization/Blend/Layer
-  -> TwoBoneIK/FootPlacement
+  -> LocalToComponentPose
+  -> TwoBoneIK
+  -> FootPlacement pelvis/targets
+  -> LegIK
+  -> ComponentToLocalPose
   -> FinalPose
 ```
 
@@ -335,7 +342,7 @@ committed MovingTurn Locomotion Mode
   -> FinalPose
 ```
 
-## 9. 修复顺序
+## 9. 已闭合修复记录
 
 1. 恢复本文业务基准，不先调Blend、IK或FootPlacement。
 2. 删除MovingTurn输入运动与Pose RootOrientationWarp的重复所有权，让0–28帧Gameplay Timeline独占X/Z/yaw Root Motion。
@@ -375,7 +382,7 @@ committed MovingTurn Locomotion Mode
 - Turn进入读取0.12秒Inertialization，退出读取0.30秒；RunLoop、WalkLoop与Idle不被强制重置到frame 0。
 - 动画结束前不被RunEnd、Walk或其它Locomotion Pose覆盖。
 - 前闪避链中的MovingTurn结束后回RunLoop。
-- 普通Walk链中的MovingTurn结束后回WalkLoop。
+- MovingTurn结束时若Gameplay已正式清除Run意图且仍有输入，则回WalkLoop；普通Walk本身不进入MovingTurn。
 
 ### 攻击
 

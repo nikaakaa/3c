@@ -26,6 +26,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentPackagePoseStateMachineLayoutFile>
             poseStateMachineLayouts =
                 new List<AgentPackagePoseStateMachineLayoutFile>();
+        public List<AgentPackageLinkedPoseImplementationFile>
+            linkedPoseImplementations =
+                new List<AgentPackageLinkedPoseImplementationFile>();
     }
 
     [Serializable]
@@ -40,6 +43,113 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             new List<AgentPackagePoseSourceBinding>();
         public List<AgentPackageAnimationProducerBinding> actionProducers =
             new List<AgentPackageAnimationProducerBinding>();
+        public List<AgentPackageLinkedPoseGroupBinding> linkedPoseGroups =
+            new List<AgentPackageLinkedPoseGroupBinding>();
+        public List<AgentPackageLinkedPoseSelectorBinding> linkedPoseSelectors =
+            new List<AgentPackageLinkedPoseSelectorBinding>();
+    }
+
+    [Serializable]
+    public sealed class AgentPackageLinkedPoseInterfaceFile
+    {
+        public string id;
+        public AgentPackageAssetReferenceV3 asset;
+        public string ownerIdentity;
+        public string interfaceId;
+        public ulong revision;
+        public string signatureHash;
+        public string factContractIdentity;
+        public string executionContract;
+        public List<AgentPackageLinkedPoseInterfaceEntry> entries =
+            new List<AgentPackageLinkedPoseInterfaceEntry>();
+    }
+
+    [Serializable]
+    public sealed class AgentPackageLinkedPoseInterfaceEntry
+    {
+        public string entryId;
+        public string executionDomain;
+        public List<AgentPackageLinkedPoseInterfacePort> ports =
+            new List<AgentPackageLinkedPoseInterfacePort>();
+    }
+
+    [Serializable]
+    public sealed class AgentPackageLinkedPoseInterfacePort
+    {
+        public string portId;
+        public string direction;
+        public string kind;
+        public string space;
+        public bool required;
+        public int order;
+    }
+
+    [Serializable]
+    public sealed class AgentPackageLinkedPoseImplementationFile
+    {
+        public string id;
+        public string name;
+        public AgentPackageAssetReferenceV3 asset;
+        public string ownerIdentity;
+        public string implementationId;
+        public ulong revision;
+        public AgentPackageAssetReferenceV3 interfaceAsset;
+        public AgentPackageAssetReferenceV3 graphOwner;
+        public string graphOwnerIdentity;
+        public List<AgentPackageLinkedPoseImplementationEntry> entries =
+            new List<AgentPackageLinkedPoseImplementationEntry>();
+        public List<AgentPackagePoseGraphFile> poseGraphs =
+            new List<AgentPackagePoseGraphFile>();
+        public List<AgentPackagePoseGraphLayoutFile> poseGraphLayouts =
+            new List<AgentPackagePoseGraphLayoutFile>();
+        public List<AgentPackagePoseStateMachineFile> poseStateMachines =
+            new List<AgentPackagePoseStateMachineFile>();
+        public List<AgentPackagePoseStateMachineLayoutFile>
+            poseStateMachineLayouts =
+                new List<AgentPackagePoseStateMachineLayoutFile>();
+    }
+
+    [Serializable]
+    public sealed class AgentPackageLinkedPoseImplementationEntry
+    {
+        public string entryId;
+        public string graphId;
+    }
+
+    [Serializable]
+    public sealed class AgentPackageLinkedPoseGroupBinding
+    {
+        public string id;
+        public string groupId;
+        public AgentPackageAssetReferenceV3 interfaceAsset;
+    }
+
+    [Serializable]
+    public sealed class AgentPackageLinkedPoseSelectorBinding
+    {
+        public string id;
+        public string kind;
+        public AgentPackageAssetReferenceV3 asset;
+        public string selectorId;
+        public string groupId;
+        public AgentPackageEquipmentLinkedPoseSelectorPayload equipment;
+    }
+
+    [Serializable]
+    public sealed class AgentPackageEquipmentLinkedPoseSelectorPayload
+    {
+        public string slotId;
+        public string emptyImplementationId;
+        public List<AgentPackageEquipmentLinkedPoseMapping> mappings =
+            new List<AgentPackageEquipmentLinkedPoseMapping>();
+    }
+
+    [Serializable]
+    public sealed class AgentPackageEquipmentLinkedPoseMapping
+    {
+        public string id;
+        public string equipmentId;
+        public string implementationId;
     }
 
     [Serializable]

@@ -42,6 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public float AnimatorStateSpeed => Time.AnimatorStateSpeed;
         public bool IsLooping => Time.Looping;
         public bool RootLocked { get; }
+        public bool IsValid => SourceClipId.IsValid && ClipBindingIndex >= 0 && Clip &&
+                               Time.IsValid && RootLocked;
     }
 
     public readonly struct MotionMatchingPoseParameterSample

@@ -162,20 +162,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AdditivePose = 9,
         PoseParameterResolve = 10,
         ModifyBone = 11,
-        FootPlacement = 12,
         PoseSubgraph = 13,
         OutputPose = 14,
         GraphInput = 15,
         GraphOutput = 16,
         BlendSpacePlayer = 18,
-        TwoBoneIK = 19,
         SequencePlayer = 20,
         PoseStateMachine = 21,
         AnimationSlot = 22,
         ActionPlaybackInput = 23,
         RootOrientationWarp = 24,
         LocalToComponentPose = 25,
-        ComponentToLocalPose = 26
+        ComponentToLocalPose = 26,
+        PredictiveFootPlacement = 28,
+        PoseBoneIKGoals = 29,
+        FullBodyIK = 30,
+        LinkedPoseCall = 31,
+        EmptyFullBodyIkGoals = 32,
+        MotionMatchingPose = 33,
+        PoseHistoryCollector = 34,
+        EntryPoseInput = 35
     }
 
     public enum CharacterPosePortKind : byte
@@ -184,7 +190,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         PoseDiscontinuity = 4,
         ActionPlayback = 5,
         LocalPose = 6,
-        ComponentPose = 7
+        ComponentPose = 7,
+        FullBodyIkGoals = 9,
+        PoseHistory = 10,
+        Trajectory = 11,
+        PresentationFacts = 12,
+        MotionMatchingBinding = 13
     }
 
     public enum CharacterPoseSpace : byte
@@ -198,9 +209,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         FactAndDemand = 1,
         SourceCapture = 2,
-        PurePose = 3,
-        WorldAwarePose = 4,
-        FinalPublication = 5
+        PureValue = 3,
+        WorldAwareValue = 4,
+        PurePose = 5,
+        FinalPublication = 6
     }
 
     public enum CharacterPosePortDirection : byte

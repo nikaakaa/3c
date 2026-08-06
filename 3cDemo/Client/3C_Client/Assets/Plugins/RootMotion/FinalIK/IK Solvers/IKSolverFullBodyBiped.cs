@@ -43,6 +43,7 @@ namespace RootMotion.FinalIK {
 		/// The central root node (body).
 		/// </summary>
 		public Transform rootNode;
+		public IndexedBoneHandle rootNodeHandle = IndexedBoneHandle.Invalid;
 		/// <summary>
 		/// The stiffness of spine constraints.
 		/// </summary>
@@ -272,7 +273,7 @@ namespace RootMotion.FinalIK {
 		public override bool IsValid(ref string message) {
 			if (!base.IsValid(ref message)) return false;
 			
-			if (rootNode == null) {
+			if (usesIndexedPoseBackend ? !rootNodeHandle.IsValid : rootNode == null) {
 				message = "Root Node bone is null. FBBIK will not initiate.";
 				return false;
 			}
@@ -414,6 +415,78 @@ namespace RootMotion.FinalIK {
 			if (Application.isPlaying) Initiate(references.root);
 		}
 
+		public void SetToIndexedReferences(IIndexedPoseBackend backend, in IndexedBipedReferences references) {
+			if (backend == null) throw new ArgumentNullException(nameof(backend));
+			root = null;
+			rootNode = null;
+			rootNodeHandle = references.SolverRoot;
+			if (chain == null || chain.Length != 5) chain = new FBIKChain[5];
+			for (int i = 0; i < chain.Length; i++) if (chain[i] == null) chain[i] = new FBIKChain();
+			chain[0].pin = 0f;
+			chain[0].SetNodes(references.SolverRoot);
+			chain[0].children = new[] { 1, 2, 3, 4 };
+			chain[1].SetNodes(references.LeftUpperArm, references.LeftForearm, references.LeftHand);
+			chain[2].SetNodes(references.RightUpperArm, references.RightForearm, references.RightHand);
+			chain[3].SetNodes(references.LeftThigh, references.LeftCalf, references.LeftFoot);
+			chain[4].SetNodes(references.RightThigh, references.RightCalf, references.RightFoot);
+			if (effectors == null || effectors.Length != 9) {
+				effectors = new IKEffector[9];
+				for (int i = 0; i < effectors.Length; i++) effectors[i] = new IKEffector();
+			}
+			IndexedBoneHandle[] bodyChildren = { references.LeftThigh, references.RightThigh };
+			effectors[0].boneHandle = references.SolverRoot;
+			effectors[0].childBoneHandles = bodyChildren;
+			effectors[1].boneHandle = references.LeftUpperArm;
+			effectors[2].boneHandle = references.RightUpperArm;
+			effectors[3].boneHandle = references.LeftThigh;
+			effectors[4].boneHandle = references.RightThigh;
+			effectors[5].boneHandle = references.LeftHand;
+			effectors[6].boneHandle = references.RightHand;
+			effectors[7].boneHandle = references.LeftFoot;
+			effectors[8].boneHandle = references.RightFoot;
+			SetIndexedEffectorPlane(effectors[5], references.LeftUpperArm, references.RightUpperArm, references.SolverRoot);
+			SetIndexedEffectorPlane(effectors[6], references.RightUpperArm, references.LeftUpperArm, references.SolverRoot);
+			SetIndexedEffectorPlane(effectors[7], references.LeftThigh, references.RightThigh, references.SolverRoot);
+			SetIndexedEffectorPlane(effectors[8], references.RightThigh, references.LeftThigh, references.SolverRoot);
+			chain[0].childConstraints = new[] {
+				new FBIKChain.ChildConstraint(references.LeftUpperArm, references.RightThigh, 0f, 1f),
+				new FBIKChain.ChildConstraint(references.RightUpperArm, references.LeftThigh, 0f, 1f),
+				new FBIKChain.ChildConstraint(references.LeftUpperArm, references.RightUpperArm),
+				new FBIKChain.ChildConstraint(references.LeftThigh, references.RightThigh)
+			};
+			IndexedBoneHandle[] spineBones = new IndexedBoneHandle[references.Spine.Length + 1];
+			spineBones[0] = references.Pelvis;
+			for (int i = 0; i < references.Spine.Length; i++) spineBones[i + 1] = references.Spine[i];
+			if (spineMapping == null) {
+				spineMapping = new IKMappingSpine();
+				spineMapping.iterations = 3;
+			}
+			spineMapping.SetBones(spineBones, references.LeftUpperArm, references.RightUpperArm, references.LeftThigh, references.RightThigh);
+			int boneMappingsCount = references.Head.IsValid ? 1 : 0;
+			if (boneMappings == null || boneMappings.Length != boneMappingsCount) {
+				boneMappings = new IKMappingBone[boneMappingsCount];
+				for (int i = 0; i < boneMappings.Length; i++) boneMappings[i] = new IKMappingBone();
+				if (boneMappingsCount == 1) boneMappings[0].maintainRotationWeight = 0f;
+			}
+			if (boneMappingsCount == 1) boneMappings[0].boneHandle = references.Head;
+			if (limbMappings == null || limbMappings.Length != 4) {
+				limbMappings = new[] { new IKMappingLimb(), new IKMappingLimb(), new IKMappingLimb(), new IKMappingLimb() };
+				limbMappings[2].maintainRotationWeight = 1f;
+				limbMappings[3].maintainRotationWeight = 1f;
+			}
+			limbMappings[0].SetBones(references.LeftUpperArm, references.LeftForearm, references.LeftHand, references.LeftClavicle);
+			limbMappings[1].SetBones(references.RightUpperArm, references.RightForearm, references.RightHand, references.RightClavicle);
+			limbMappings[2].SetBones(references.LeftThigh, references.LeftCalf, references.LeftFoot, IndexedBoneHandle.Invalid);
+			limbMappings[3].SetBones(references.RightThigh, references.RightCalf, references.RightFoot, IndexedBoneHandle.Invalid);
+			Initiate(backend, references.Root);
+		}
+
+		private static void SetIndexedEffectorPlane(IKEffector effector, IndexedBoneHandle bone1, IndexedBoneHandle bone2, IndexedBoneHandle bone3) {
+			effector.planeBone1Handle = bone1;
+			effector.planeBone2Handle = bone2;
+			effector.planeBone3Handle = bone3;
+		}
+
 		/*
 		 * Tries to guess which bone should be the root node
 		 * */
@@ -519,7 +592,8 @@ namespace RootMotion.FinalIK {
 			if (pullBodyVertical != 0f || pullBodyHorizontal != 0f) {
 				Vector3 offset = GetBodyOffset();
 
-				pullBodyOffset = V3Tools.ExtractVertical(offset, root.up, pullBodyVertical) + V3Tools.ExtractHorizontal(offset, root.up, pullBodyHorizontal);
+				Vector3 rootUp = ReadRootUp();
+				pullBodyOffset = V3Tools.ExtractVertical(offset, rootUp, pullBodyVertical) + V3Tools.ExtractHorizontal(offset, rootUp, pullBodyHorizontal);
 				bodyEffector.positionOffset += pullBodyOffset;
 			}
 		}
@@ -537,7 +611,7 @@ namespace RootMotion.FinalIK {
 		 * */
 		private Vector3 GetHandBodyPull(IKEffector effector, FBIKChain arm, Vector3 offset) {
 			// Get the vector from shoulder to hand effector
-			Vector3 direction = effector.position - (arm.nodes[0].transform.position + offset);
+			Vector3 direction = effector.position - (ReadComponentPosition(arm.nodes[0]) + offset);
 			float armLength = arm.nodes[0].length + arm.nodes[1].length;
 			
 			// Find delta of effector distance and arm length
@@ -558,7 +632,7 @@ namespace RootMotion.FinalIK {
 				chain[3].bendConstraint.rotationOffset = leftFootEffector.planeRotationOffset;
 				chain[4].bendConstraint.rotationOffset = rightFootEffector.planeRotationOffset;
 			} else {
-				offset = Vector3.Lerp(effectors[0].positionOffset, effectors[0].position - (effectors[0].bone.position + effectors[0].positionOffset), effectors[0].positionWeight);
+				offset = Vector3.Lerp(effectors[0].positionOffset, effectors[0].position - (ReadComponentPosition(effectors[0].GetNode(this)) + effectors[0].positionOffset), effectors[0].positionWeight);
 
 				for (int i = 0; i < 5; i++) {
 					effectors[i].GetNode(this).solverPosition += offset;
@@ -570,7 +644,7 @@ namespace RootMotion.FinalIK {
 
 		protected override void WritePose() {
 			if (iterations == 0) {
-				spineMapping.spineBones[0].position += offset;
+				spineMapping.AddFirstBoneOffset(offset);
 			}
 
 			base.WritePose();

@@ -39,15 +39,12 @@ namespace RootMotion.FinalIK {
 			GroundingComponentTransform ankle,
 			GroundingComponentTransform heel,
 			GroundingComponentTransform toe,
-			GroundingComponentTransform footCenter,
-			float plantWeight = 1f) {
-			if (!float.IsFinite(plantWeight) || plantWeight < 0f || plantWeight > 1f) throw new ArgumentOutOfRangeException(nameof(plantWeight));
+			GroundingComponentTransform footCenter) {
 			FootIndex = footIndex;
 			Ankle = ankle;
 			Heel = heel;
 			Toe = toe;
 			FootCenter = footCenter;
-			PlantWeight = plantWeight;
 		}
 
 		public int FootIndex { get; }
@@ -55,7 +52,6 @@ namespace RootMotion.FinalIK {
 		public GroundingComponentTransform Heel { get; }
 		public GroundingComponentTransform Toe { get; }
 		public GroundingComponentTransform FootCenter { get; }
-		public float PlantWeight { get; }
 	}
 
 	public readonly struct GroundingFrameInput {

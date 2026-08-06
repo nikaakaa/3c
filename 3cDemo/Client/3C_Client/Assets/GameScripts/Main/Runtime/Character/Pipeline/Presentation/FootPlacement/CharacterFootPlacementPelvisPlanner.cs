@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 animatedAnklePosition,
             Vector3 targetAnklePosition,
             float positionWeight,
-            float plantWeight,
+            float plantSupportWeight,
             float contactWeight,
             float legLength,
             FootPlacementSurface support)
@@ -21,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimatedAnklePosition = animatedAnklePosition;
             TargetAnklePosition = targetAnklePosition;
             PositionWeight = positionWeight;
-            PlantWeight = plantWeight;
+            PlantSupportWeight = plantSupportWeight;
             ContactWeight = contactWeight;
             LegLength = legLength;
             Support = support;
@@ -32,11 +32,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 AnimatedAnklePosition { get; }
         internal Vector3 TargetAnklePosition { get; }
         internal float PositionWeight { get; }
-        internal float PlantWeight { get; }
+        internal float PlantSupportWeight { get; }
         internal float ContactWeight { get; }
         internal float LegLength { get; }
         internal FootPlacementSurface Support { get; }
-        internal float SupportWeight => Mathf.Max(PlantWeight, ContactWeight);
+        internal float SupportWeight => Mathf.Max(PlantSupportWeight, ContactWeight);
     }
 
     public readonly struct CharacterFootPlacementPelvisLegRange

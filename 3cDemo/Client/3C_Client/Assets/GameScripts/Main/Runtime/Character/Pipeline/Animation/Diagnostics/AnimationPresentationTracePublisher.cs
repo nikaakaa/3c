@@ -79,6 +79,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     ? solver.Failure.ToString()
                     : "NotCompleted",
                 BodyGrounded = predictive.Grounded,
+                TargetGrounded = predictive.TargetGrounded,
+                GroundedBefore = predictive.GroundedBefore,
+                GroundedAfter = predictive.GroundedAfter,
                 RootHit = predictive.RootHit.HasHit,
                 RootSurfaceIdentity = predictive.RootHit.SurfaceIdentity,
                 PelvisTargetOffset = predictive.PelvisPlan.TargetOffset,
@@ -114,8 +117,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     FinalWeight = predictive.Right.Goal.PositionWeight,
                     Flag = solver.Succeeded,
                     Cause = $"PelvisReject(L={predictive.PelvisPlan.RejectLeftGoal},R={predictive.PelvisPlan.RejectRightGoal})",
-                    Detail = $"L confidence {predictive.Left.FootFeature.PlantConfidence:0.###} plant {predictive.Left.PlantWeight:0.###} contact {predictive.Left.ContactWeight:0.###} residual {snapshot.LeftFoot.PositionResidual:0.###} | " +
-                             $"R confidence {predictive.Right.FootFeature.PlantConfidence:0.###} plant {predictive.Right.PlantWeight:0.###} contact {predictive.Right.ContactWeight:0.###} residual {snapshot.RightFoot.PositionResidual:0.###}",
+                    Detail = $"L confidence {predictive.Left.FootFeature.PlantConfidence:0.###} contactIntent {predictive.Left.PlantContact} placement {predictive.Left.PlacementWeight:0.###} support {predictive.Left.PlantSupportWeight:0.###} contact {predictive.Left.ContactWeight:0.###} residual {snapshot.LeftFoot.PositionResidual:0.###} | " +
+                             $"R confidence {predictive.Right.FootFeature.PlantConfidence:0.###} contactIntent {predictive.Right.PlantContact} placement {predictive.Right.PlacementWeight:0.###} support {predictive.Right.PlantSupportWeight:0.###} contact {predictive.Right.ContactWeight:0.###} residual {snapshot.RightFoot.PositionResidual:0.###}",
                     FootIk = footIk
                 });
         }
@@ -138,9 +141,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 GoalSourceKind = predictive.Goal.SourceKind.ToString(),
                 SolverResultAvailable = solved.IsAvailable,
                 PlantConfidence = predictive.FootFeature.PlantConfidence,
+                PlantContact = predictive.PlantContact,
                 SoleHeight = predictive.FootFeature.SoleHeight,
                 PlacementWeight = predictive.PlacementWeight,
-                PlantWeight = predictive.PlantWeight,
+                AnimationFootSpeed = predictive.AnimationFootSpeed,
+                SurfaceDistance = predictive.SurfaceDistance,
+                PlantSupportWeight = predictive.PlantSupportWeight,
                 ContactWeight = predictive.ContactWeight,
                 GoalPositionWeight = predictive.Goal.PositionWeight,
                 GoalRotationWeight = predictive.Goal.RotationWeight,

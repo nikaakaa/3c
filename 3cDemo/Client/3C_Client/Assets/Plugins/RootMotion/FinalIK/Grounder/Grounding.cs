@@ -280,12 +280,11 @@ namespace RootMotion.FinalIK {
 				Leg leg = legs[i];
 				GroundingFootInput foot = frame.GetFoot(i);
 				leg.Process(in frame, in foot, worldQueryBackend);
-				float weightedOffset = leg.IKOffset * foot.PlantWeight;
 
-				if (weightedOffset > lowestOffset) lowestOffset = weightedOffset;
-				if (weightedOffset < highestOffset) highestOffset = weightedOffset;
+				if (leg.IKOffset > lowestOffset) lowestOffset = leg.IKOffset;
+				if (leg.IKOffset < highestOffset) highestOffset = leg.IKOffset;
 
-				if (leg.isGrounded && foot.PlantWeight > 0f) isGrounded = true;
+				if (leg.isGrounded) isGrounded = true;
 			}
 
             // Precess pelvis

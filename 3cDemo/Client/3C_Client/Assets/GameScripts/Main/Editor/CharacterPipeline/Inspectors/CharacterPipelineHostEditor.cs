@@ -26,8 +26,181 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     static class CharacterRuntimeDiagnosticsInspector
     {
         const int FootIkCaptureSegmentLimit = 240;
+        const int FootIkSnapshotPollLimit = 120;
 
         static RuntimeDiagnosticsCaptureDetail s_CaptureDetail = RuntimeDiagnosticsCaptureDetail.Evaluation;
+        static readonly object s_FootIkSnapshotInterestOwner = new object();
+        static readonly List<RuntimeDebugTargetInfo> s_FootIkSnapshotTargets = new List<RuntimeDebugTargetInfo>();
+        static int s_FootIkSnapshotHostInstanceId;
+        static int s_FootIkSnapshotPollCount;
+        static int s_FootIkSnapshotTargetIndex;
+
+        [MenuItem("Tools/3C/Internal/Dump Foot IK Live Snapshots")]
+        static void DumpFootIkLiveSnapshots()
+        {
+            if (!EditorApplication.isPlaying)
+            {
+                Debug.LogError("Foot IK live snapshot requires Play Mode.");
+                return;
+            }
+
+            RuntimeDebugSession session = RuntimeDebugSession.Shared;
+            s_FootIkSnapshotTargets.Clear();
+            if (TryGetSelectedHostInstanceId(out int selectedHostInstanceId))
+            {
+                IReadOnlyList<RuntimeDebugTargetInfo> targets = session.Targets;
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    if (targets[i].HostInstanceId == selectedHostInstanceId)
+                    {
+                        s_FootIkSnapshotTargets.Add(targets[i]);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                s_FootIkSnapshotTargets.AddRange(session.Targets);
+            }
+
+            if (s_FootIkSnapshotTargets.Count == 0)
+            {
+                Debug.LogError("No runtime diagnostics target is available for Foot IK snapshot.");
+                return;
+            }
+
+            EditorApplication.update -= PollFootIkSnapshot;
+            session.ReleaseLiveInterest(s_FootIkSnapshotInterestOwner);
+            s_FootIkSnapshotTargetIndex = 0;
+            EditorApplication.update += PollFootIkSnapshot;
+            BeginCurrentFootIkSnapshotTarget();
+        }
+
+        static bool TryGetSelectedHostInstanceId(out int hostInstanceId)
+        {
+            GameObject selected = Selection.activeGameObject;
+            if (selected)
+            {
+                FixedCharacterHost fixedHost = selected.GetComponentInParent<FixedCharacterHost>(true);
+                if (fixedHost)
+                {
+                    hostInstanceId = fixedHost.GetInstanceID();
+                    return true;
+                }
+
+                CharacterPipelineHost host = selected.GetComponentInParent<CharacterPipelineHost>(true);
+                if (host)
+                {
+                    hostInstanceId = host.GetInstanceID();
+                    return true;
+                }
+            }
+
+            hostInstanceId = 0;
+            return false;
+        }
+
+        static void PollFootIkSnapshot()
+        {
+            RuntimeDebugSession session = RuntimeDebugSession.Shared;
+            if (!EditorApplication.isPlaying ||
+                !session.ViewModel.Attached ||
+                session.ViewModel.Target.HostInstanceId != s_FootIkSnapshotHostInstanceId)
+            {
+                if (++s_FootIkSnapshotPollCount < FootIkSnapshotPollLimit)
+                    return;
+                Debug.LogError($"Foot IK live snapshot timed out before target {CurrentFootIkSnapshotTargetName} became readable.");
+                AdvanceFootIkSnapshotTarget();
+                return;
+            }
+
+            IReadOnlyList<RuntimeDebugEventView> events = Filter(
+                session.ViewModel,
+                RuntimeTraceChannel.FootPlacement,
+                RuntimeTraceEventKind.FootPlacementSnapshot);
+            if (events.Count == 0)
+            {
+                if (++s_FootIkSnapshotPollCount < FootIkSnapshotPollLimit)
+                    return;
+                Debug.LogError($"Foot IK live snapshot timed out before target {CurrentFootIkSnapshotTargetName} published a FootPlacementSnapshot.");
+                AdvanceFootIkSnapshotTarget();
+                return;
+            }
+
+            RuntimeFootIkTraceSnapshot snapshot = events[0].Event.Payload.FootIk;
+            Debug.Log($"{CurrentFootIkSnapshotTargetName} | position {ResolveCurrentFootIkTargetPosition()} | {FormatFootIkLiveSnapshot(snapshot)}");
+            AdvanceFootIkSnapshotTarget();
+        }
+
+        static string ResolveCurrentFootIkTargetPosition()
+        {
+            UnityEngine.Object target = EditorUtility.InstanceIDToObject(s_FootIkSnapshotHostInstanceId);
+            if (target is not Component component)
+                return "unavailable";
+
+            Vector3 position = component switch
+            {
+                FixedCharacterHost fixedHost => fixedHost.VisualPosition,
+                CharacterPipelineHost host when host.VisualRoot => host.VisualRoot.position,
+                _ => component.transform.position
+            };
+            return $"{position.x:0.###}/{position.y:0.###}/{position.z:0.###}";
+        }
+
+        static string CurrentFootIkSnapshotTargetName =>
+            s_FootIkSnapshotTargetIndex >= 0 && s_FootIkSnapshotTargetIndex < s_FootIkSnapshotTargets.Count
+                ? s_FootIkSnapshotTargets[s_FootIkSnapshotTargetIndex].DisplayName
+                : "Unknown Target";
+
+        static void BeginCurrentFootIkSnapshotTarget()
+        {
+            RuntimeDebugSession session = RuntimeDebugSession.Shared;
+            RuntimeDebugTargetInfo target = s_FootIkSnapshotTargets[s_FootIkSnapshotTargetIndex];
+            if (!session.AttachToTarget(target.CharacterRuntimeId))
+            {
+                Debug.LogError($"Foot IK live snapshot could not attach target {target.DisplayName}.");
+                AdvanceFootIkSnapshotTarget();
+                return;
+            }
+
+            session.EnsureLiveInterest(s_FootIkSnapshotInterestOwner, RuntimeTraceChannel.FootPlacement);
+            s_FootIkSnapshotHostInstanceId = target.HostInstanceId;
+            s_FootIkSnapshotPollCount = 0;
+        }
+
+        static void AdvanceFootIkSnapshotTarget()
+        {
+            RuntimeDebugSession.Shared.ReleaseLiveInterest(s_FootIkSnapshotInterestOwner);
+            s_FootIkSnapshotTargetIndex++;
+            if (s_FootIkSnapshotTargetIndex < s_FootIkSnapshotTargets.Count)
+            {
+                BeginCurrentFootIkSnapshotTarget();
+                return;
+            }
+
+            CompleteFootIkSnapshotPoll();
+        }
+
+        static void CompleteFootIkSnapshotPoll()
+        {
+            EditorApplication.update -= PollFootIkSnapshot;
+            RuntimeDebugSession.Shared.ReleaseLiveInterest(s_FootIkSnapshotInterestOwner);
+            s_FootIkSnapshotTargets.Clear();
+            s_FootIkSnapshotHostInstanceId = 0;
+            s_FootIkSnapshotPollCount = 0;
+            s_FootIkSnapshotTargetIndex = 0;
+        }
+
+        static string FormatFootIkLiveSnapshot(RuntimeFootIkTraceSnapshot snapshot)
+        {
+            RuntimeFootIkLegTraceSnapshot left = snapshot.Left;
+            RuntimeFootIkLegTraceSnapshot right = snapshot.Right;
+            return $"Foot IK Live | frame {snapshot.FrameSequence} | completion {snapshot.GoalCompletionIdentity}->{snapshot.SolverCompletionIdentity} | " +
+                   $"solver {snapshot.SolverFailure} | grounded body/target/before/after {snapshot.BodyGrounded}/{snapshot.TargetGrounded}/{snapshot.GroundedBefore}/{snapshot.GroundedAfter} | " +
+                   $"L hit {left.CurrentGroundingHit} confidence {left.PlantConfidence:0.###} contact {left.PlantContact} animationSpeed {left.AnimationFootSpeed:0.###} distance {left.SurfaceDistance:0.###} weight placement/support/contact/goal {left.PlacementWeight:0.###}/{left.PlantSupportWeight:0.###}/{left.ContactWeight:0.###}/{left.GoalPositionWeight:0.###} residual {left.PositionResidual:0.###} state {left.ConstraintState}/{left.PredictionRejectReason} | " +
+                   $"R hit {right.CurrentGroundingHit} confidence {right.PlantConfidence:0.###} contact {right.PlantContact} animationSpeed {right.AnimationFootSpeed:0.###} distance {right.SurfaceDistance:0.###} weight placement/support/contact/goal {right.PlacementWeight:0.###}/{right.PlantSupportWeight:0.###}/{right.ContactWeight:0.###}/{right.GoalPositionWeight:0.###} residual {right.PositionResidual:0.###} state {right.ConstraintState}/{right.PredictionRejectReason} | " +
+                   $"pelvis {snapshot.PelvisTargetOffset:0.###}->{snapshot.PelvisResolvedOffset:0.###} reject {snapshot.RejectLeftGoal}/{snapshot.RejectRightGoal}";
+        }
 
         internal static void DrawCharacterPipelineConfiguration(CharacterPipelineHost host)
         {
@@ -456,8 +629,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     if (!footIk.IsAvailable)
                         return $"{payload.Name} | {payload.Status} | {payload.Detail}";
                     return $"{payload.Status} | frame {footIk.FrameSequence} | " +
-                           $"L confidence {footIk.Left.PlantConfidence:0.###} -> plant {footIk.Left.PlantWeight:0.###} -> goal {footIk.Left.GoalPositionWeight:0.###} -> residual {footIk.Left.PositionResidual:0.###} | " +
-                           $"R confidence {footIk.Right.PlantConfidence:0.###} -> plant {footIk.Right.PlantWeight:0.###} -> goal {footIk.Right.GoalPositionWeight:0.###} -> residual {footIk.Right.PositionResidual:0.###} | " +
+                           $"L confidence {footIk.Left.PlantConfidence:0.###} contact {footIk.Left.PlantContact} placement {footIk.Left.PlacementWeight:0.###} support {footIk.Left.PlantSupportWeight:0.###} -> goal {footIk.Left.GoalPositionWeight:0.###} -> residual {footIk.Left.PositionResidual:0.###} | " +
+                           $"R confidence {footIk.Right.PlantConfidence:0.###} contact {footIk.Right.PlantContact} placement {footIk.Right.PlacementWeight:0.###} support {footIk.Right.PlantSupportWeight:0.###} -> goal {footIk.Right.GoalPositionWeight:0.###} -> residual {footIk.Right.PositionResidual:0.###} | " +
                            $"pelvis {footIk.PelvisTargetOffset:0.###}->{footIk.PelvisResolvedOffset:0.###} reject L/R {footIk.RejectLeftGoal}/{footIk.RejectRightGoal}";
                 });
             if (session.IsCaptureRecording)
@@ -535,16 +708,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             AppendCsvRow(builder,
                 "presentation_position", "trace_sequence", "frame_sequence", "goal_completion", "solver_completion",
-                "grounding_backend", "solver_backend", "solver_failure", "body_grounded", "root_hit", "root_surface",
+                "grounding_backend", "solver_backend", "solver_failure", "body_grounded", "target_grounded", "grounded_before", "grounded_after", "root_hit", "root_surface",
                 "pelvis_target", "pelvis_resolved", "reject_left", "reject_right", "pelvis_height_mode", "movement_compensation_mode",
-                "left_grounded", "left_hit", "left_surface", "left_plant_confidence", "left_sole_height", "left_placement_weight",
-                "left_plant_weight", "left_contact_weight", "left_goal_position_weight", "left_goal_rotation_weight", "left_constraint",
+                "left_grounded", "left_hit", "left_surface", "left_plant_confidence", "left_plant_contact", "left_sole_height", "left_placement_weight",
+                "left_animation_foot_speed", "left_surface_distance", "left_plant_support_weight", "left_contact_weight", "left_goal_position_weight", "left_goal_rotation_weight", "left_constraint",
                 "left_transition", "left_lock", "left_prediction_reject", "left_goal_application", "left_goal_source", "left_solver_result_available",
                 "left_leg_extension", "left_ankle_twist", "left_query_count",
                 "left_rejected_query_count", "left_grounding_x", "left_grounding_y", "left_grounding_z", "left_goal_x", "left_goal_y",
                 "left_goal_z", "left_solved_x", "left_solved_y", "left_solved_z", "left_position_residual", "left_rotation_residual_degrees",
-                "right_grounded", "right_hit", "right_surface", "right_plant_confidence", "right_sole_height", "right_placement_weight",
-                "right_plant_weight", "right_contact_weight", "right_goal_position_weight", "right_goal_rotation_weight", "right_constraint",
+                "right_grounded", "right_hit", "right_surface", "right_plant_confidence", "right_plant_contact", "right_sole_height", "right_placement_weight",
+                "right_animation_foot_speed", "right_surface_distance", "right_plant_support_weight", "right_contact_weight", "right_goal_position_weight", "right_goal_rotation_weight", "right_constraint",
                 "right_transition", "right_lock", "right_prediction_reject", "right_goal_application", "right_goal_source", "right_solver_result_available",
                 "right_leg_extension", "right_ankle_twist", "right_query_count",
                 "right_rejected_query_count", "right_grounding_x", "right_grounding_y", "right_grounding_z", "right_goal_x", "right_goal_y",
@@ -560,11 +733,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Number(traceEvent.Position), Number(traceEvent.Sequence), Number(snapshot.FrameSequence),
                 Number(snapshot.GoalCompletionIdentity), Number(snapshot.SolverCompletionIdentity),
                 snapshot.GroundingBackendIdentity, snapshot.SolverBackendIdentity, snapshot.SolverFailure,
-                Bool(snapshot.BodyGrounded), Bool(snapshot.RootHit), Number(snapshot.RootSurfaceIdentity),
+                Bool(snapshot.BodyGrounded), Bool(snapshot.TargetGrounded), Bool(snapshot.GroundedBefore), Bool(snapshot.GroundedAfter), Bool(snapshot.RootHit), Number(snapshot.RootSurfaceIdentity),
                 Number(snapshot.PelvisTargetOffset), Number(snapshot.PelvisResolvedOffset), Bool(snapshot.RejectLeftGoal),
                 Bool(snapshot.RejectRightGoal), snapshot.PelvisHeightMode, snapshot.MovementCompensationMode,
                 Bool(left.Grounded), Bool(left.CurrentGroundingHit), Number(left.SurfaceIdentity), Number(left.PlantConfidence),
-                Number(left.SoleHeight), Number(left.PlacementWeight), Number(left.PlantWeight), Number(left.ContactWeight),
+                Bool(left.PlantContact), Number(left.SoleHeight), Number(left.PlacementWeight), Number(left.AnimationFootSpeed), Number(left.SurfaceDistance), Number(left.PlantSupportWeight), Number(left.ContactWeight),
                 Number(left.GoalPositionWeight), Number(left.GoalRotationWeight), left.ConstraintState, left.TransitionReason, left.LockType,
                 left.PredictionRejectReason, left.GoalApplication, left.GoalSourceKind, Bool(left.SolverResultAvailable),
                 Number(left.LegExtensionRatio), Number(left.AnkleTwistDegrees), Number(left.QueryCount),
@@ -573,7 +746,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Number(left.GoalComponentPosition.z), Number(left.SolvedComponentPosition.x), Number(left.SolvedComponentPosition.y),
                 Number(left.SolvedComponentPosition.z), Number(left.PositionResidual), Number(left.RotationResidualDegrees),
                 Bool(right.Grounded), Bool(right.CurrentGroundingHit), Number(right.SurfaceIdentity), Number(right.PlantConfidence),
-                Number(right.SoleHeight), Number(right.PlacementWeight), Number(right.PlantWeight), Number(right.ContactWeight),
+                Bool(right.PlantContact), Number(right.SoleHeight), Number(right.PlacementWeight), Number(right.AnimationFootSpeed), Number(right.SurfaceDistance), Number(right.PlantSupportWeight), Number(right.ContactWeight),
                 Number(right.GoalPositionWeight), Number(right.GoalRotationWeight), right.ConstraintState, right.TransitionReason, right.LockType,
                 right.PredictionRejectReason, right.GoalApplication, right.GoalSourceKind, Bool(right.SolverResultAvailable),
                 Number(right.LegExtensionRatio), Number(right.AnkleTwistDegrees), Number(right.QueryCount),

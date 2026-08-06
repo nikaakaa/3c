@@ -114,7 +114,7 @@ Diagnostics MUST只读暴露backend source identity、Rig binding、Profile revi
 #### Scenario: 连续排查跑动时脚权重偏低
 
 - **WHEN** 作者以Continuous级别采集Foot Placement Trace
-- **THEN** 每个PresentationFrame MUST在同一typed payload中记录左右Plant Confidence、Placement/Plant/Contact Weight、最终Goal Weight、grounding hit、constraint、pelvis plan与FullBodyIK residual
+- **THEN** 每个PresentationFrame MUST在同一typed payload中记录左右Plant Confidence、Plant Contact迟滞、Animation Foot Speed、surface distance、Placement/Plant Support/Contact Weight、最终Goal Weight、grounding hit、constraint、pelvis plan与FullBodyIK residual
 - **AND** Capture MUST能够直接导出连续帧数据
 - **AND** `CharacterPipelineHost`与`FixedCharacterHost` Inspector MUST复用同一Runtime Diagnostics入口，并按各自Host Instance Id附着同一运行时目标
 - **AND** `FixedCharacterHost`脚IK入口 MUST只申请Foot Placement Live/Capture通道，Inspector预览 MAY降频但Capture MUST保留逐PresentationFrame数据，并 MUST在固定有界segment数量后自动结束

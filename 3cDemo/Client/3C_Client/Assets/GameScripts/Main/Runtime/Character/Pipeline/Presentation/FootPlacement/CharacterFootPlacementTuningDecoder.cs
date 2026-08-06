@@ -36,13 +36,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float maximumHeightDiscontinuity = predictive.MaximumHeightDiscontinuity;
                 float maximumEdgeGap = predictive.MaximumEdgeGap;
                 float maximumSwingClearance = predictive.MaximumSwingClearance;
-                float plantDistance = predictive.PlantDistance;
-                float releaseDistance = predictive.ReleaseDistance;
-                float plantPlanarSpeed = predictive.PlantPlanarSpeed;
-                float releasePlanarSpeed = predictive.ReleasePlanarSpeed;
-                float plantVerticalSpeed = predictive.PlantVerticalSpeed;
-                float releaseVerticalSpeed = predictive.ReleaseVerticalSpeed;
-                float descendingTolerance = predictive.DescendingTolerance;
+                float plantSpeedThreshold = predictive.PlantSpeedThreshold;
+                float unalignmentSpeedThreshold = predictive.UnalignmentSpeedThreshold;
                 float plantConfidenceEnter = predictive.PlantConfidenceEnter;
                 float plantConfidenceExit = predictive.PlantConfidenceExit;
                 float minimumLookAheadSeconds = predictive.MinimumLookAheadSeconds;
@@ -97,13 +92,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     else if (fieldId.EndsWith("/predictive/maximum-height-discontinuity", StringComparison.Ordinal)) maximumHeightDiscontinuity = value.FloatValue;
                     else if (fieldId.EndsWith("/predictive/maximum-edge-gap", StringComparison.Ordinal)) maximumEdgeGap = value.FloatValue;
                     else if (fieldId.EndsWith("/predictive/maximum-swing-clearance", StringComparison.Ordinal)) maximumSwingClearance = value.FloatValue;
-                    else if (fieldId.EndsWith("/predictive/plant-distance", StringComparison.Ordinal)) plantDistance = value.FloatValue;
-                    else if (fieldId.EndsWith("/predictive/release-distance", StringComparison.Ordinal)) releaseDistance = value.FloatValue;
-                    else if (fieldId.EndsWith("/predictive/plant-planar-speed", StringComparison.Ordinal)) plantPlanarSpeed = value.FloatValue;
-                    else if (fieldId.EndsWith("/predictive/release-planar-speed", StringComparison.Ordinal)) releasePlanarSpeed = value.FloatValue;
-                    else if (fieldId.EndsWith("/predictive/plant-vertical-speed", StringComparison.Ordinal)) plantVerticalSpeed = value.FloatValue;
-                    else if (fieldId.EndsWith("/predictive/release-vertical-speed", StringComparison.Ordinal)) releaseVerticalSpeed = value.FloatValue;
-                    else if (fieldId.EndsWith("/predictive/descending-tolerance", StringComparison.Ordinal)) descendingTolerance = value.FloatValue;
+                    else if (fieldId.EndsWith("/predictive/plant-speed-threshold", StringComparison.Ordinal)) plantSpeedThreshold = value.FloatValue;
+                    else if (fieldId.EndsWith("/predictive/unalignment-speed-threshold", StringComparison.Ordinal)) unalignmentSpeedThreshold = value.FloatValue;
                     else if (fieldId.EndsWith("/predictive/plant-confidence-enter", StringComparison.Ordinal)) plantConfidenceEnter = value.FloatValue;
                     else if (fieldId.EndsWith("/predictive/plant-confidence-exit", StringComparison.Ordinal)) plantConfidenceExit = value.FloatValue;
                     else if (fieldId.EndsWith("/predictive/minimum-look-ahead-seconds", StringComparison.Ordinal)) minimumLookAheadSeconds = value.FloatValue;
@@ -156,13 +146,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     maximumHeightDiscontinuity,
                     maximumEdgeGap,
                     maximumSwingClearance,
-                    plantDistance,
-                    releaseDistance,
-                    plantPlanarSpeed,
-                    releasePlanarSpeed,
-                    plantVerticalSpeed,
-                    releaseVerticalSpeed,
-                    descendingTolerance,
+                    plantSpeedThreshold,
+                    unalignmentSpeedThreshold,
                     plantConfidenceEnter,
                     plantConfidenceExit,
                     minimumLookAheadSeconds,

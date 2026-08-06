@@ -283,6 +283,9 @@ namespace BTSMTL.Diagnostics
                    string.Equals(left.SolverBackendIdentity, right.SolverBackendIdentity, StringComparison.Ordinal) &&
                    string.Equals(left.SolverFailure, right.SolverFailure, StringComparison.Ordinal) &&
                    left.BodyGrounded == right.BodyGrounded &&
+                   left.TargetGrounded == right.TargetGrounded &&
+                   left.GroundedBefore == right.GroundedBefore &&
+                   left.GroundedAfter == right.GroundedAfter &&
                    left.RootHit == right.RootHit &&
                    left.RootSurfaceIdentity == right.RootSurfaceIdentity &&
                    left.PelvisTargetOffset.Equals(right.PelvisTargetOffset) &&
@@ -309,9 +312,12 @@ namespace BTSMTL.Diagnostics
                    string.Equals(left.GoalSourceKind, right.GoalSourceKind, StringComparison.Ordinal) &&
                    left.SolverResultAvailable == right.SolverResultAvailable &&
                    left.PlantConfidence.Equals(right.PlantConfidence) &&
+                   left.PlantContact == right.PlantContact &&
                    left.SoleHeight.Equals(right.SoleHeight) &&
                    left.PlacementWeight.Equals(right.PlacementWeight) &&
-                   left.PlantWeight.Equals(right.PlantWeight) &&
+                   left.AnimationFootSpeed.Equals(right.AnimationFootSpeed) &&
+                   left.SurfaceDistance.Equals(right.SurfaceDistance) &&
+                   left.PlantSupportWeight.Equals(right.PlantSupportWeight) &&
                    left.ContactWeight.Equals(right.ContactWeight) &&
                    left.GoalPositionWeight.Equals(right.GoalPositionWeight) &&
                    left.GoalRotationWeight.Equals(right.GoalRotationWeight) &&

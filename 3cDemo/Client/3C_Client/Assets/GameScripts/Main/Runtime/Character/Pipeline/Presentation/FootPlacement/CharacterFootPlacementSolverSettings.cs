@@ -80,13 +80,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_MaximumHeightDiscontinuity = 0.35f;
         [SerializeField] float m_MaximumEdgeGap = 0.4f;
         [SerializeField] float m_MaximumSwingClearance = 0.16f;
-        [SerializeField] float m_PlantDistance = 0.08f;
-        [SerializeField] float m_ReleaseDistance = 0.18f;
-        [SerializeField] float m_PlantPlanarSpeed = 0.14f;
-        [SerializeField] float m_ReleasePlanarSpeed = 0.42f;
-        [SerializeField] float m_PlantVerticalSpeed = 0.14f;
-        [SerializeField] float m_ReleaseVerticalSpeed = 0.48f;
-        [SerializeField] float m_DescendingTolerance = 0.04f;
+        [SerializeField] float m_PlantSpeedThreshold = 0.6f;
+        [SerializeField] float m_UnalignmentSpeedThreshold = 2f;
         [SerializeField, Range(0f, 1f)] float m_PlantConfidenceEnter = 0.65f;
         [SerializeField, Range(0f, 1f)] float m_PlantConfidenceExit = 0.35f;
         [SerializeField] float m_MinimumLookAheadSeconds = 0.04f;
@@ -131,13 +126,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_MaximumHeightDiscontinuity,
                 m_MaximumEdgeGap,
                 m_MaximumSwingClearance,
-                m_PlantDistance,
-                m_ReleaseDistance,
-                m_PlantPlanarSpeed,
-                m_ReleasePlanarSpeed,
-                m_PlantVerticalSpeed,
-                m_ReleaseVerticalSpeed,
-                m_DescendingTolerance,
+                m_PlantSpeedThreshold,
+                m_UnalignmentSpeedThreshold,
                 m_PlantConfidenceEnter,
                 m_PlantConfidenceExit,
                 m_MinimumLookAheadSeconds,
@@ -190,13 +180,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case "maximum-height-discontinuity": m_MaximumHeightDiscontinuity = value.FloatValue; break;
                 case "maximum-edge-gap": m_MaximumEdgeGap = value.FloatValue; break;
                 case "maximum-swing-clearance": m_MaximumSwingClearance = value.FloatValue; break;
-                case "plant-distance": m_PlantDistance = value.FloatValue; break;
-                case "release-distance": m_ReleaseDistance = value.FloatValue; break;
-                case "plant-planar-speed": m_PlantPlanarSpeed = value.FloatValue; break;
-                case "release-planar-speed": m_ReleasePlanarSpeed = value.FloatValue; break;
-                case "plant-vertical-speed": m_PlantVerticalSpeed = value.FloatValue; break;
-                case "release-vertical-speed": m_ReleaseVerticalSpeed = value.FloatValue; break;
-                case "descending-tolerance": m_DescendingTolerance = value.FloatValue; break;
+                case "plant-speed-threshold": m_PlantSpeedThreshold = value.FloatValue; break;
+                case "unalignment-speed-threshold": m_UnalignmentSpeedThreshold = value.FloatValue; break;
                 case "plant-confidence-enter": m_PlantConfidenceEnter = value.FloatValue; break;
                 case "plant-confidence-exit": m_PlantConfidenceExit = value.FloatValue; break;
                 case "minimum-look-ahead-seconds": m_MinimumLookAheadSeconds = value.FloatValue; break;
@@ -243,13 +228,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float maximumHeightDiscontinuity,
             float maximumEdgeGap,
             float maximumSwingClearance,
-            float plantDistance,
-            float releaseDistance,
-            float plantPlanarSpeed,
-            float releasePlanarSpeed,
-            float plantVerticalSpeed,
-            float releaseVerticalSpeed,
-            float descendingTolerance,
+            float plantSpeedThreshold,
+            float unalignmentSpeedThreshold,
             float plantConfidenceEnter,
             float plantConfidenceExit,
             float minimumLookAheadSeconds,
@@ -291,13 +271,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             MaximumHeightDiscontinuity = maximumHeightDiscontinuity;
             MaximumEdgeGap = maximumEdgeGap;
             MaximumSwingClearance = maximumSwingClearance;
-            PlantDistance = plantDistance;
-            ReleaseDistance = releaseDistance;
-            PlantPlanarSpeed = plantPlanarSpeed;
-            ReleasePlanarSpeed = releasePlanarSpeed;
-            PlantVerticalSpeed = plantVerticalSpeed;
-            ReleaseVerticalSpeed = releaseVerticalSpeed;
-            DescendingTolerance = descendingTolerance;
+            PlantSpeedThreshold = plantSpeedThreshold;
+            UnalignmentSpeedThreshold = unalignmentSpeedThreshold;
             PlantConfidenceEnter = plantConfidenceEnter;
             PlantConfidenceExit = plantConfidenceExit;
             MinimumLookAheadSeconds = minimumLookAheadSeconds;
@@ -340,13 +315,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float MaximumHeightDiscontinuity { get; }
         public float MaximumEdgeGap { get; }
         public float MaximumSwingClearance { get; }
-        public float PlantDistance { get; }
-        public float ReleaseDistance { get; }
-        public float PlantPlanarSpeed { get; }
-        public float ReleasePlanarSpeed { get; }
-        public float PlantVerticalSpeed { get; }
-        public float ReleaseVerticalSpeed { get; }
-        public float DescendingTolerance { get; }
+        public float PlantSpeedThreshold { get; }
+        public float UnalignmentSpeedThreshold { get; }
         public float PlantConfidenceEnter { get; }
         public float PlantConfidenceExit { get; }
         public float MinimumLookAheadSeconds { get; }
@@ -390,10 +360,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireNonNegative(MaximumHeightDiscontinuity, nameof(MaximumHeightDiscontinuity));
             RequireNonNegative(MaximumEdgeGap, nameof(MaximumEdgeGap));
             RequireNonNegative(MaximumSwingClearance, nameof(MaximumSwingClearance));
-            RequireOrdered(PlantDistance, ReleaseDistance, nameof(PlantDistance), nameof(ReleaseDistance));
-            RequireOrdered(PlantPlanarSpeed, ReleasePlanarSpeed, nameof(PlantPlanarSpeed), nameof(ReleasePlanarSpeed));
-            RequireOrdered(PlantVerticalSpeed, ReleaseVerticalSpeed, nameof(PlantVerticalSpeed), nameof(ReleaseVerticalSpeed));
-            RequireNonNegative(DescendingTolerance, nameof(DescendingTolerance));
+            RequireOrdered(PlantSpeedThreshold, UnalignmentSpeedThreshold, nameof(PlantSpeedThreshold), nameof(UnalignmentSpeedThreshold));
             RequireRange(PlantConfidenceExit, 0f, 1f, nameof(PlantConfidenceExit));
             RequireRange(PlantConfidenceEnter, 0f, 1f, nameof(PlantConfidenceEnter));
             if (PlantConfidenceExit >= PlantConfidenceEnter)

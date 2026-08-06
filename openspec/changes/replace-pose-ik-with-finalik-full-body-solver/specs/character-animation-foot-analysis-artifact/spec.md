@@ -44,3 +44,20 @@ Animation Foot Analysis MUST为`AnimationClip imported content + Rig Definition 
 - **THEN** Analyzer MUST拒绝生成Artifact并报告Rig、Sampling Rig与Calibration三方identity/revision/hash
 - **AND** MUST不尝试按骨骼名称重绑或搜索其它Prefab补全
 
+## ADDED Requirements
+
+### Requirement: Plant Confidence必须只表达源动画接触意图
+
+每脚`PlantConfidence` MUST由单AnimationClip的校准鞋底高度与垂直速度分析生成，并 MUST继续作为源动画接触意图、稳定Landing候选与Motion Matching脚特征。`0.5` MUST只表示单Clip分析中的Planted/Unplanted语义边界。每脚`SoleLocalVelocity` MUST由该Clip左右Heel/Toe独立采样得到，并 MUST随最终Pose contribution的source权重与visual time scale混合。Runtime MAY使用混合后的`PlantConfidence`与`SoleLocalVelocity.magnitude`维护Plant Contact迟滞；Runtime MUST不把二者通过连续乘法直接变成普通Foot Goal Position/Rotation Weight，也 MUST不把`SoleLocalVelocity`与Body世界平移、可见速度或yaw点速度拼接。普通Current Grounding Goal MUST只由Foot Placement总权重、Body Grounded与合法命中控制。
+
+#### Scenario: Run过渡混合两个源动画
+
+- **WHEN** 左脚最终`PlantConfidence`因源动画混合得到`0.65`
+- **THEN** Runtime MAY把它作为进入或维持接触意图的证据
+- **AND** MUST不把它重映射为`0.3`并直接降低左脚Foot Goal或Pelvis支撑权重
+
+#### Scenario: 左右脚烘焙数据来源
+
+- **WHEN** 分析器处理同一个AnimationClip
+- **THEN** 左右脚MUST分别从各自校准Heel/Toe轨迹生成`SoleLocalVelocity`、`SoleHeight`与`PlantConfidence`
+- **AND** Runtime MUST消费最终贡献混合后的左右独立样本，不得把单脚曲线复制给另一脚或把actor运行速度伪装成烘焙脚速

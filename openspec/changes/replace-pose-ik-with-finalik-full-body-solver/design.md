@@ -1,459 +1,295 @@
 ## Context
 
-当前系统已经完成动画Foot Feature贡献传播、未来落点与world contact lifecycle的基础类型，以及Animancer Evaluate Barrier后的空间化Pose Plan。问题有两层：骨盆、双腿和双臂曾由项目自研解析式算法分三次求解；当前脚地面采样、坡面对齐与脚平滑可复用FinalIK Grounding，但它的stock pelvis只按脚offset取lower/lift，不能表达UE Foot Placement式的逐腿compression/extension可达区间，因此会在同平面或离散台阶上产生悬空、过度下蹲和根运动补偿抖动。
+项目当前已经有一次FinalIK FBBIK求解，但普通脚步目标不是Lyra算法。现有`CharacterPredictiveFootPlacementGoalSource`把FinalIK Grounding、项目自有接触状态、锚点、pelvis reach和未接回输出的预测查询放在同一个类里。FBBIK能把收到的目标解到很小残差，普通效果仍不如Lyra，说明首先要替换的是目标生成，不是继续调solver。
 
-当前普通基线还有第三个已由连续采集复现的问题：单Clip Analyzer烘焙的`PlantConfidence`在动画混合后被直接执行`InverseLerp(0.5, 1)`，同一个值同时承担源动画接触意图、Grounding输入权重、Foot Goal权重和Pelvis支撑权重。240帧采集内FinalIK全部成功，满权重残差接近零，但跑动平均Plant Confidence约为`0.48/0.51`，最终左右Goal平均权重仅约`0.43/0.45`。问题发生在FBBIK前，不是solver没有解到目标。
-
-这次设计把FinalIK能够覆盖的当前脚Grounding交给FinalIK Grounding，把“骨骼如何满足全部目标”交给FinalIK FBBIK。项目只继续拥有FinalIK没有的动画相位Future Landing、Current/Future Support、Ground Envelope、moving surface anchor、Free/Locked/Sliding、source contribution，以及逐腿可达区间驱动的Pelvis Reach Planner。它们在同一个`PredictiveFootPlacement`目标生成节点中组合，不形成第二查询权威或第二骨骼求解器。
+本地Lyra内容审计纠正了旧文档的来源判断：Lyra实际使用`ABP_Mannequin_Base -> CR_Mannequin_FootPlant`，不是UE `AnimNode_FootPlacement`。Control Rig中可以直接确认左右脚Sphere Trace、目标/当前Z偏移、命中法线、骨盆Z、spring interpolation、Aim Bone和两个Basic IK节点。UE通用Foot Placement节点的Plant/Replant、Ball Pivot、Plant Plane和水平pelvis属于另一套实现。
 
 ## Goals
 
-- 让预测式Foot Placement成为FinalIK Grounding-backed纯目标生成节点，不直接写Pose或执行IK。
-- 复用FinalIK Grounding的当前脚查询、命中到脚目标、坡面旋转和脚平滑数学。
-- 以逐腿compression/extension区间生成唯一pelvis pre-solve translation，避免stock lower/lift导致的同平面下蹲与台阶悬空。
-- 把动画相位预测明确限制为FinalIK缺失的Project Predictive Extension。
-- 分离源动画接触意图、当前世界地面对齐强度与脚掌约束强度，禁止一个烘焙标量同时承担三种职责。
-- 让双脚、双手与Body目标只经过一次Full Body IK求解。
-- 让FinalIK在Component Pose Buffer上工作，不复制第二套Transform骨架。
-- 保持唯一编译Pose Plan、一次Animancer Evaluate、一次Physical Transform final write。
-- 删除项目自研TwoBone/LegIK数值求解和旧schema。
-- 让人工UI、Document、Validator、Compiler、Preview、Runtime和Diagnostics使用同一Capability与目标合同。
-- 明确FinalIK与UE PBIK的差距，不用项目私有参数伪装缺失能力。
+- 普通`FootGrounding`按本地Lyra Control Rig的输入、执行顺序、计算和常量生成同语义目标。
+- FinalIK只承担最后一次FBBIK骨骼求解，不承担Grounding、trace、foot smoothing或pelvis planning。
+- 不恢复Lyra原始两个Basic IK节点；用唯一FBBIK消费等价pelvis/foot目标。
+- 普通基线在预测关闭时独立成立。
+- 预测只在基线完成后改写Swing脚，不改变Lyra当前脚链。
+- 旧FinalIK Grounding与重复目标路径一次删除；有效contact、anchor和pelvis reach安全能力迁入唯一`FootGrounding` owner，不保留开关、reader或fallback。
 
 ## Non-Goals
 
-- 不让FinalIK Grounder组件与PredictiveFootPlacement形成第二Foot Placement。
-- 不把FullBodyBipedIK、LimbIK或GrounderFBBIK组件挂到角色Prefab。
-- 不创建shadow skeleton、target GameObject或LateUpdate求解链。
-- 不从UE复制PBIK、LegIK或FootPlacement源码。
-- 不在本change补齐UE PBIK逐骨limits、stiffness、preferred angles或excluded bones。
-- 不修改预测器的Gameplay隔离、Motion Matching选择、KCC或Network边界。
-- 不把FinalIK的简单velocity prediction伪装成动画相位Future Landing。
-- 不保留与FinalIK Grounding竞争的当前脚目标或坡面旋转算法；Pelvis Reach Planner只消费其正式脚目标与Rig腿长，不重新query或重新计算脚高。
-
-## 当前实施阶段
-
-当前普通Foot Placement基线已经接入Project Predictive Extension的接触约束层：FinalIK Grounding唯一根据当前Component Pose执行地面查询、脚高、坡面旋转与脚平滑；同一Goal Source消费最终动画Foot Feature、source contribution、Body可见速度和Current Support，维护Free、Locked与Sliding，并把锁点保存为命中Surface的局部锚点。Pelvis Reach Planner再从左右Hip、动画Ankle、最终Foot Goal、Goal权重、Rig腿长与min/max extension ratio计算每腿允许的骨盆高度区间，合并后只发布一个pelvis pre-solve translation。所有Goals仍只交给一次FBBIK。Future Landing、Path Sample与Ground Envelope尚未改变正式Goal输出，后续继续在同一个Goal Source内接入，不增加第二solver或backend选择。
-
-普通约束层还负责四个有限安全边界：锁点与当前Support法线超过Replant角度时释放；锁点相对当前Grounding姿势产生过度Ankle Twist时释放；左右Foot Goal小于最小脚距时只移动Free脚，双脚均受约束则释放次要支撑脚；单腿目标超出允许pelvis区间或双腿区间无交集时释放不可满足的次要Foot Goal。它们只选择或约束Goal，不重新查询地面、不重算坡面rotation，也不执行第二次IK。
-
-Corin普通基线必须显式关闭FinalIK `Overstep Falls Down`。该stock策略在脚查询无命中时会用`Max Step`向下构造overstep位移，而项目合同禁止把无合法Surface Identity的fallback脚点发布为Foot Goal。Corin `Foot Radius`还必须小于Calibration左右鞋底中较短一侧的半长，避免Best质量的Capsule在鞋底已经越过台阶边缘后仍取得宽于真实鞋底的支撑。FinalIK stock pelvis lower/lift/damper全部退出正式配置与输出；Corin使用`AllPlantedFeet`、`FollowBody`、最大升降范围、插值速度与dead zone配置唯一Pelvis Reach Planner。有效Plant Support或Contact支撑脚目标与动画Ankle没有共同竖直变化时骨盆保持动画高度；目标共同抬高或降低时骨盆按支撑权重跟随，避免把相同平台高度差全部转成膝盖压缩；未进入Plant Contact且无Contact约束的摆动脚不参与高度规划。
-
-有限Heel Lift与Toe Pivot已经沿同一成熟边界闭合。FinalIK Grounding的`Best`质量仍以stock heel Ray与foot-center Capsule唯一计算脚高与坡面rotation；同一个`Grounding.Leg`可额外发布一个typed Toe Ray命中，只作为secondary plant point，不参加或覆盖上述stock结果。Project Predictive Extension据此提供`Unlocked`、`PivotAroundToe`、`PivotAroundAnkle`与`LockRotation`四种plant policy，并把选中的toe plant point、完整ankle目标与`HeelLiftRatio`写入同一个Foot Goal。唯一FinalIK FBBIK在`ReadPose`前按Goal权重绕toe point应用ankle rotation和position offset，再执行原有一次solve。这里没有第二当前Grounding owner、第二LegIK、第二骨架或重复坡面对齐数学。
-
-Corin普通基线不接入当前`VB_Weapon_LeftHand/RightHand` Goal。现有Virtual Bone在Component Pose中等于对应当前手骨姿势，若把它以1.0权重作为固定Component目标，会在pelvis pre-solve translation之后把双手拉回移动前的位置并迫使FBBIK扭曲脊柱和双腿。双手必须等到存在不等于当前手骨Pose的真实武器目标语义后再接入同一个FullBodyIK。
+- 不照搬UE `AnimNode_FootPlacement`的Ball Pivot、Plant Plane、secondary Toe Trace、脚间分离、水平pelvis rebalance或复杂extension finalizer。
+- 不保留与Lyra current target并列的第二套Grounding、脚rotation/smoothing或pelvis resolver；contact/anchor/reach只能作为同一节点中的后置有界阶段。
+- 不盲删Corin当前已调好的有效行为；每项有效参数和状态必须先映射到新owner，旧combined容器才可删除。
+- 不让预测修改pelvis、命中法线、另一只脚或FBBIK参数。
+- 不要求项目与Lyra逐浮点或逐骨完全相同；允许厘米到米、Bone Name到BoneId、Control Rig写骨到typed Goal、Two Bone IK到唯一FBBIK四种明确表示替换。
+- 不修改Gameplay KCC、Body同步、Network、Camera或动画选择。
 
 ## Evidence Audit
 
-### UE/GASP
+### Lyra内容资产
 
-官方GASP文档把Motion Matching作为基础Pose选择，并在AnimGraph中组合Root Offset、Orientation Warping、Leg IK等节点。它证明的是“表现功能进入图、按Pose流组合”，不是“所有locomotion都应使用FBIK”。
+`ABP_Mannequin_Base.uasset`可确认以下输入和装配：
 
-UE的Component Space Conversion文档明确说明Skeletal Control工作于Component Space，并建议把这些节点集中在一次Local-to-Component与Component-to-Local之间。本项目现有空间合同已经与此一致。
+- `CR_Mannequin_FootPlant` Control Rig class；
+- `UseFootPlacement`；
+- `IsOnGround` / `IsMovingOnGround`；
+- `GroundDistance`；
+- `DisableLegIK`；
+- `LeftKneePVCtrl`、`RightKneePVCtrl`与`PelvisCtrl`。
 
-UE Control Rig FBIK使用Root、多Effectors和Bone Settings完成多目标全身求解。它的PBIK后端包含逐骨position/rotation stiffness、轴limit、Preferred Angle、Excluded Bone等FinalIK FBBIK没有的一等合同。因此本设计只对齐目标/求解分层、图内执行和多effector模型，不宣称算法或参数等价。
+资产连线进一步确认：真实执行gate是`DisableLegIK <= 0 && !UseFootPlacement`；`IsOnGround`与`GroundDistance`没有直接连接该gate，`PelvisBlendSpeed=0.5`也没有进入实际执行图。项目没有可正式映射的独立`UseFootPlacement`或`DisableLegIK`参数，因此不能伪造同名运行参数或用Body Grounded替代它们。
+
+`CR_Mannequin_FootPlant.uasset`可确认以下计算单元和状态：
+
+- 左右`ik_foot_l`、`ik_foot_r`；
+- `ProcessFootTrace`和`SphereTraceByTraceChannel`；
+- `TargetLeftFootOffsetZ`、`TargetRightFootOffsetZ`；
+- `CurrentLeftFootOffsetZ`、`CurrentRightFootOffsetZ`；
+- `CurrentLeftFootHitNormal`、`CurrentRightFootHitNormal`；
+- `DidLeftFootTraceHit`、`DidRightFootTraceHit`；
+- `CurrentPelvisOffsetZ`与`PelvisBlendSpeed`；
+- `ProcessFootOffset`、`AimBoneMath`、`OffsetTransformForItem`与`SetRotation`；
+- `SpringInterpV2`、`SpringInterpVectorV2`和`AlphaInterp`；
+- 两个`FRigUnit_TwoBoneIKSimplePerItem` Basic IK。
+
+本地Lyra内容中没有`AnimNode_FootPlacement`引用。旧文档里“Lyra式Plant Plane/Ball Pivot”这一说法没有本地资产依据，必须删除。
 
 ### FinalIK
 
-本地源码显示：
+FinalIK现有FBBIK Pose Buffer改造已经提供：
 
-- `Grounding.Leg.Process`按Quality执行单Ray、heel/toe/side Ray或heel Ray加CapsuleCast，并以`foot velocity * prediction`生成短时查询偏移。
-- `Grounding.Leg`把命中点/平面转换为脚高和rotation offset，并使用`footSpeed`与`footRotationSpeed`平滑。
-- `Grounding.Pelvis.Process`从左右腿offset生成lower/lift pelvis结果，并使用`pelvisSpeed`与`pelvisDamper`平滑。
-- 该stock pelvis只聚合foot offset，不表达每腿minimum/maximum extension interval，也会把root delta damper与角色移动混入骨盆高度；因此只作为审计证据，不进入正式输出。
-- `Grounding`允许替换Raycast、CapsuleCast与SphereCast委托，但stock leg仍直接读取`Transform`和`Time.time`。
-- `IKSolverFullBodyBiped.SetToReferences`固定建立Root、左右臂、左右腿五条chain，九个effectors和四个limb mappings。
-- `IKSolverFullBody.OnUpdate`固定执行`ReadPose -> Solve -> WritePose`。
-- `FBIKChain`负责pin/pull/push/reach、FABRIK与trigonometric pass。
-- `IKConstraintBend`从输入姿势、effector rotation和bend constraint计算四肢弯曲方向。
-- `IKMappingSpine`、`IKMappingLimb`和`BoneMap`把solver node结果映回骨架。
-- `GrounderFBBIK`先移动pelvis，再向左右脚effector写offset，之后由FBBIK统一求解。
+- indexed Physical Pose读取和Pending Pose写入；
+- pelvis-before-effectors应用顺序；
+- spine、arm、leg chain和bend constraint；
+- 单次`ReadPose -> Solve -> WritePose`；
+- 固定workspace与typed failure。
 
-这些Grounding和FBBIK数学及应用顺序成熟可复用；但stock入口直接保存或访问`Transform`、`Time`、`Physics`和MonoBehaviour回调，没有项目的Component Pose、显式delta time、精确PhysicsScene或fixed workspace入口。
-
-FinalIK Grounding的能力边界也必须明确：它没有动画Foot Feature、触地相位、Future Landing delay/local offset、Current/Future Support区分、Ground Envelope、surface identity、moving surface anchor或Free/Locked/Sliding。它不能原样替换完整预测业务，只能成为唯一PredictiveFootPlacement中的成熟Grounding kernel。
+FinalIK Grounding提供的是插件自己的Ray/Capsule、foot offset/rotation和pelvis逻辑。它与Lyra Sphere Trace Control Rig不是同一算法，因此不再进入正式普通脚步链。
 
 ## Selected Architecture
 
 ```text
-Local Pose
-  -> LocalToComponentPose
-       -> Component Pose ---------------------------------------------+
-            |                                                        |
-            |-- read only --> PredictiveFootPlacement                |
-            |                   -> FinalIK Grounding kernel           |
-            |                   -> Project Predictive Extension       |
-            |                   -> Pelvis Reach Planner               |
-            |                   -> Body/Feet Goals --------+          |
-            |                                             |          |
-            |-- read only --> PoseBoneIKGoals             |          |
-            |                   -> Hand Goals -------------+          |
-            |                                             |          |
-            +---------------------------------------------|----------+
-                                                          v
-                                               FullBodyIK (only solver)
-                                                          |
-                                               Solved Component Pose
-  -> ComponentToLocalPose
-  -> OutputPose
+                               +------------------------+
+                               | PoseBoneIKGoals        |
+                               | optional hand goals    |
+                               +-----------+------------+
+                                           |
+Component Pose ----------------------------+--------------------+
+      |                                                         |
+      v                                                         v
++-----------------------------+                     +----------------------+
+| FootGrounding               | Baseline Goal Set   | FullBodyIK           |
+| Lyra -> Stance -> Pelvis    +-------------------->| FinalIK FBBIK once   |
++--------------+--------------+                     +----------+-----------+
+               |                                                   |
+               | optional                                          v
+               v                                            Solved Component Pose
++-----------------------------+
+   | PredictiveFootPlacementModifier |
+| Modifier: Swing foot only   |
++-----------------------------+
 ```
 
-这是一张Pose与Goal value共同组成的DAG，不是三个IK节点串行。`PredictiveFootPlacement`和`PoseBoneIKGoals`只读取同一个Component Pose并生产目标；generated stage table MAY按拓扑有序调用它们，但两者都不改骨骼。`FullBodyIK`是唯一写骨骼Pose的IK solver。
+普通图是`FootGrounding -> FullBodyIK`。预测图是`FootGrounding -> PredictiveFootPlacementModifier -> FullBodyIK`。两个Goal阶段都不写骨骼；只有FullBodyIK是IK solver。
 
-## Decision: PredictiveFootPlacement是FinalIK Grounding-backed Goal Source
+## Lyra到项目的唯一映射
 
-当前FootPlacement先调用项目Support Query和Planner，再以`TranslateSubtree`写pelvis并让LegIK解腿。改造后`PredictiveFootPlacement`仍是唯一world-aware owner，但内部职责固定为：
+| Lyra来源 | Lyra职责 | 项目映射 | 不允许的扩展 |
+|---|---|---|---|
+| `UseFootPlacement` / `DisableLegIK` | 资产内真实执行gate | 项目没有独立正式参数；节点拓扑存在即执行 | 伪造同名参数或按动画名猜测 |
+| `IsOnGround` / `GroundDistance` | AnimBP可观察输入，但未直接连接该gate | `CharacterBodyPresentationFrame`只读ground诊断事实 | 把Body Grounded变成项目伪gate |
+| `ik_foot_l/r` | 每脚trace起点与目标 | Rig v4 Left/Right Foot BoneId的Component Transform | heel/toe两套当前查询 |
+| `ProcessFootTrace` | Sphere Trace与目标Z/法线 | 精确PhysicsScene NonAlloc SphereCast | FinalIK Quality、Ray/Capsule择优 |
+| `SpringInterpVectorV2` | hit normal平滑 | 每脚固定normal spring state | Plant Plane第二状态 |
+| `SpringInterpV2` | foot offset平滑 | 每脚固定vertical offset spring state | 第二套current offset filter |
+| `CurrentPelvisOffsetZ` | pelvis竖直补偿 | 唯一Pelvis期望值 | 并列pelvis target |
+| Pelvis `SpringInterpV2`连线 | pelvis平滑 | 唯一pelvis vertical spring state | 使用未接入执行图的`PelvisBlendSpeed=0.5` |
+| `AimBoneMath` / foot offset | 角色上方向到命中法线的最短旋转、动画脚相对旋转与竖直偏移 | 最终Foot Goal Component Transform | 重建朝向、Ball Pivot或toe-preserving offset |
+| Two Bone IK + Knee PV | 满足每腿目标 | Rig reference bend constraint + 一次FBBIK | 恢复LegIK/TwoBoneIK |
+| 项目Foot Analysis | stance证据 | Lyra目标后的contact滞回 | 把普通Goal总权重归零 |
+| 项目surface anchor | stance稳定 | 当前连续目标与surface-local anchor连续混合；anchor只表达站稳所有权 | Swing脚anchor、第二clearance状态或第二current target |
+| 项目Calibration Heel/Toe | 鞋底几何 | 从唯一Current Surface计算非负Sole Clearance Target，并入现有Foot Offset spring目标；Plant Contact持续执行单向安全约束，同一surface上上一帧鞋底仍在面上、本帧候选刚越到面下时也只消除本帧连续越界 | 新surface首次命中的Swing大缺口Value teleport、spring状态外硬平移、第二查询或第二spring |
+| 项目pelvis reach | 可达保护 | 对Lyra Pelvis期望值做有界安全夹紧 | 第二Pelvis Goal或水平重平衡 |
 
-1. 从Component Pose和Calibration构造FinalIK Grounding实际支持的当前脚采样输入。
-2. 通过FinalIK Grounding处理stock Ray/Sphere/Capsule组合、velocity prediction、命中到脚高、坡面rotation与脚平滑；stock pelvis权重固定为零，不发布stock pelvis结果。
-3. 从Foot Feature构造动画相位Future Landing与路径采样请求，通过同一个PhysicsScene查询端口执行Project Predictive Extension，并补充Current/Future Support区分、Ground Envelope、surface identity/anchor、Free/Locked/Sliding和source contribution。
-4. Pelvis Reach Planner按每腿Hip、动画Ankle、最终Foot Goal、Goal权重、Rig腿长与min/max extension ratio求允许高度区间，同时从贡献脚相对动画Ankle的竖直Goal变化求支撑权重首选高度；区间相交时把首选高度夹入共同区间，区间冲突时保留主要支撑脚并释放不可满足的次要Goal。
-5. 把最终结果发布为Goal value，不写Pose。
+## Baseline Execution
 
-输出包括：
+### 1. 执行资格与总Alpha
 
-- `PelvisPreSolveTranslation`；
-- 左右脚目标Component Position/Rotation；
-- position/rotation weight；
-- constraint、confidence、support与completion诊断元数据。
+项目没有可正式映射的独立`UseFootPlacement`、`DisableLegIK`或单腿禁用输入，因此`FootGrounding`节点存在即执行Current Grounding。它读取同一PresentationFrame的最终Foot Placement Weight、Body ground诊断事实和Rig/Calibration identity；Foot Placement Weight只在最终Pelvis/Foot Goal alpha应用一次。缺失正式Body、Rig、Calibration或PhysicsScene时返回typed Unavailable，不构造默认平面。
 
-FullBodyIK按FinalIK GrounderFBBIK已有顺序在自己的Pending output中应用pelvis pre-solve translation，然后设置effectors并求解。PredictiveFootPlacement不再拥有任何Physical Bone写入，也不调用任何IK solver。
+Foot Placement Weight只作为Lyra Control Rig节点alpha的项目等价物应用一次。Plant Confidence、sole speed与surface distance可以在后置`Stance Stabilization`中形成contact滞回，但不能再次连续缩放整个Goal，也不能让stance判定失败等价于关闭普通Foot Placement。
 
-业务收益是PredictiveFootPlacement可以分别解释“FinalIK Grounding给出了什么当前地面结果”和“项目预测扩展为什么选择这个未来落点”，FullBodyIK只解释“骨架如何满足全部目标”。
+### 2. 每脚当前查询
 
-### FinalIK Grounding复用边界
+每只脚只从同一输入Component Pose的IK Foot位置构造一次Sphere Trace。Start、End、Radius、Trace Channel和命中后的Z偏移公式必须从本地`ProcessFootTrace`资产逐项记录并按厘米到米转换。UE 5.7 `FRigUnit_SphereTraceByTraceChannel`源码把`HitResult.ImpactPoint`转换到VM空间后写入名为`HitLocation`的输出，因此Lyra的`TargetFootOffsetZ = HitLocation.Z`是命中接触点在Control Rig VM空间中的绝对竖直坐标，不是球心停止位置，也不是相对动画脚踝的差值。项目映射为`PoseRoot.InverseTransformPoint(RaycastHit.point).y`，同一Impact Point同时作为surface anchor证据。项目只替换查询入口：
 
-必须复用而不得在项目代码中复制的数学：
+- 使用角色所属的精确PhysicsScene；
+- 使用正式Foot Placement LayerMask；
+- 排除actor自身Collider；
+- 使用`Stance Stabilization.MaximumSurfaceSlopeDegrees`换算minimum normal dot，在命中选择阶段拒绝楼梯立面、近竖直圆角和超过正式坡度上限的伪支撑；
+- 使用固定容量命中workspace；
+- 只接受有限、合法、可走表面命中。
 
-- stock Quality对应的cast组合与velocity prediction基线；
-- 命中点/平面到脚高与rotation offset的转换；
-- Calibration semantic sole frame与ankle frame之间的输入输出变换不改变上述rotation数学；
-- 最大脚旋转限制与rotation interpolation；
-- foot vertical interpolation；
-- GrounderFBBIK的pelvis-before-effectors应用顺序。
+不得加第二条heel/toe trace、Capsule quality、velocity prediction、Root Cast或“最佳命中”选择。未命中行为必须按Lyra graph的原连线输出，不用FinalIK Grounding或默认地面补结果。
 
-只允许项目扩展的内容：
+### 3. 目标与平滑
 
-- 从动画Foot Feature和source contribution产生landing time/local offset；
-- 为FinalIK当前脚Grounding提供显式pose、time与world-query输入；
-- 为Future Landing和路径采样建立项目预测请求；
-- 让两类请求共用精确PhysicsScene、LayerMask、自碰撞排除、稳定surface identity与固定容量命中页；
-- Current/Future Support、Ground Envelope、moving surface anchor与Free/Locked/Sliding生命周期；
-- 基于Rig腿长和Foot Goal权重的逐腿compression/extension区间、pelvis height mode、最大升降范围、dead zone、显式actor movement compensation与pelvis interpolation；
-- 同一Grounding owner中的typed secondary Toe plant query，以及不改变stock脚高、rotation和pelvis结果的plant point发布；
-- `Unlocked`、`PivotAroundToe`、`PivotAroundAnkle`与`LockRotation`策略、`AdjustHeelBeforePlanting`和`HeelLiftRatio`；
-- 将Grounding输出与预测状态降低为Body/Foot Goals及typed diagnostics。
+每脚保存Lyra等价的`DidTraceHit`、`TargetOffsetZ`、`CurrentOffsetZ`与`CurrentHitNormal`。更新严格遵守Control Rig数据依赖：先trace并得到target/normal，再更新normal spring和offset spring，最后形成Lyra current位置/旋转目标。Reset从当前输入Pose和Lyra默认状态重新初始化，同时清除contact、anchor与release状态，不能从上一分支恢复旧surface所有权。
 
-如果实施发现“复用”实际要求把FinalIK Grounding公式复制到新项目类、用另一套公式重算当前脚目标/rotation，或两套查询结果运行时择优，必须停止。Pelvis Reach Planner不得改写Grounding命中、脚高或rotation，只能消费最终Foot Goal与Rig几何合同。允许修改vendor代码的范围只包括显式pose/time/query输入、fixed workspace、命中数据identity和输出结构，不得悄悄改变核心数学语义。
+所有spring/alpha常量必须来自Lyra资产。代码不得用当前FinalIK Grounding的Foot Speed/Rotation Speed或UE通用Foot Placement的stiffness替代。
 
-## Decision: 使用可合并的typed Goal Set
+### 4. Stance Stabilization
 
-`component.full-body-ik-goals`是瞬时、同帧、Component空间value，不是Pose。一个set包含固定容量goal slice和统一lineage：
+Lyra current目标形成后，Foot Analysis的Plant Confidence、sole speed、surface distance和显式Swing/stance特征进入唯一contact滞回。contact只决定能否建立、维持或释放anchor，不决定普通Foot Goal是否整体存在。没有contact时，Foot Goal继续使用Lyra current目标与节点总weight。
 
-- Frame Sequence；
-- Source Node/Call Site；
-- Completion Identity；
-- Rig Id/Revision；
-- 每项Effector Slot；
-- target Component Position/Rotation；
-- position/rotation weight；
-- Goal Application：普通Pose目标使用绝对effector target，Grounding脚目标使用`GroundingEffectorTarget`成熟应用语义，pelvis使用`PelvisPreSolveTranslation`；
-- source kind与只读diagnostic metadata。
+合法stance脚可以把同一current hit的surface identity、point与normal保存为surface-local anchor。最终脚目标在Lyra current目标与重建后的anchor目标之间连续混合；移动surface只通过该局部anchor更新世界目标。Swing、surface失效、reset、不可达、超过释放界限或contact释放时必须退出anchor。Swing脚永不创建anchor，预测也不拥有anchor。
 
-FullBodyIK提供稳定动态输入`goals:<local-id>`。Compiler把全部输入降低为有序value index列表，并在Build时拒绝重复Effector Slot和超出容量。Runtime只验证同帧lineage并按已编译顺序拷入预分配effector page，不分配集合、不按字符串查找、不做最后写入获胜。
+Stance Stabilization必须使用Calibration已有Heel/Toe接触几何，在唯一Current Surface、Lyra Target Offset和目标Hit Normal形成的目标Ankle Transform下计算沿Component Up的非负`Sole Clearance Target`。该值必须与Lyra基础Target Offset相加后进入现有Foot Offset `SpringInterpV2`状态；spring只更新一次，Pelvis target仍只使用Lyra左右Target Offset最小值。
 
-`GroundingEffectorTarget`仍保存FinalIK Grounding算出的绝对Component目标，但FullBodyIK MUST按stock `GrounderFBBIK.SetLegIK`语义应用：pelvis pre-solve平移后，用`target - 当前foot bone position`写`IKEffector.positionOffset`，并在FBBIK `ReadPose`前把目标rotation差值按权重预乘到foot bone。Grounding脚 MUST不把`IKEffector.positionWeight`或`rotationWeight`设为Foot Placement总权重；否则会改变`IKConstraintBend.LimitBend`和effector rotation对bend plane的语义。`PoseBoneIKGoals`等通用目标继续使用绝对effector position/rotation weight。
+`0ef04`采样证明只有目标进入spring仍不足以保护已经承重的离散楼梯：高踏面首次进入Current Query时，spring候选Value可落后安全目标`0.17m`以上。后续`17359`又证明把该安全约束无条件用于Swing会把离散踏面高度直接写入Value：左右全部大于`0.05m`的`Sole Constraint Offset`都发生在Swing，最大单帧写回分别达到`0.134998m`与`0.128789m`。因此Plant Contact仍用同一Current Surface、当前平滑Ankle Rotation和Calibration Heel/Toe测量候选鞋底；若候选穿入支撑平面，才沿Component Up把最小正修正写回同一个offset spring Value，并把小于零的Velocity归零。
 
-第一份正式Effector Slot集合与FinalIK FBBIK保持一致：Body、LeftShoulder、RightShoulder、LeftThigh、RightThigh、LeftHand、RightHand、LeftFoot、RightFoot。Corin首版只使用Body、双手和双脚。
+`410f`继续证明“非Plant Contact一律不约束”过度扩大了这一保护边界：88个显著穿透脚帧发生在同一Current Surface已经稳定8至14帧之后，候选从`0m`至`0.003733m`附近开始小越界，再扩大到`0.124862m`和`0.135886m`。Stance因此在同一个`FootState`内保存上一帧支撑surface identity与约束后Heel/Toe世界位置；只有surface identity不变、上一帧两点对当前平面仍不低于面、当前候选首次进入面下时，才把本帧正向缺口写回原offset spring Value。新surface首次命中且上一帧鞋底不在该面上方时仍只追踪原spring target，不恢复任意Swing大缺口瞬移。该历史不是第二clearance滤波或第二接触owner，只是同一单向碰撞边界的一帧连续性证据。
 
-## Decision: 手部目标也进入同一个FullBodyIK
+Anchor捕获必须从Plant Contact约束后的同一Current Grounding结果出发，只保存surface-local位置。稳定anchor随surface刚体变换保持该局部鞋底间隙；释放或不可达后，旧anchor MAY只作为既有pose blend来源退场，鞋底支撑权威必须立即回到Current Surface并继续使用同一Foot Offset spring，不建立独立clearance blend。`AnchorDistanceExceeded`不得在已经释放Plant Contact后逐帧重复成为新释放原因。
 
-Corin现有两个TwoBoneIK权重为1，目标分别是`VB_Weapon_LeftHand`和`VB_Weapon_RightHand`，不是可直接删除的空节点。
+诊断中的`Sole Clearance Target`表达唯一Current Surface对目标Ankle的完整Component Up增量，`Offset Target`表达它与Lyra Target Offset、Current Pelvis Offset合成后的唯一spring目标，`Unconstrained Offset`表达SpringInterpV2本帧候选，`Sole Constraint Offset`表达Plant Contact或同surface连续跨面写回同一状态的向上修正，`Current Offset`表达约束后的唯一状态Value，`Residual Sole Penetration`表达anchor混合后最终Goal的剩余量。`Previous Sole Surface/Heel/Toe Plane Distance`和`Continuous Sole Contact`必须说明非Plant修正是否来自同一平面的连续越界；新surface首次命中的Swing不得产生该修正。预测改写必须在后置Modifier诊断中单独出现。它们不得改成两套查询、两套spring或spring状态外修正路径。
 
-新增`PoseBoneIKGoals`节点：
+现有Free/Locked/Sliding实现可作为迁移来源，但最终语义必须收敛为一份明确的contact/anchor lifecycle。
+不得保留旧状态机与新状态机并行。普通Goal总权重不得由contact或anchor状态切换。
 
-- 读取同一Component Pose中的Physical或Virtual Pose Bone；
-- 按node-local binding生成一个或多个typed goals；
-- 保留现有effector offset、rotation policy与weight语义；
-- 不写肩、肘、腕，不执行IK。
+### 5. Pelvis Resolve
 
-Corin把两只手合成一个Goal Source，并与PredictiveFootPlacement的Body/Feet goals一起送入唯一FullBodyIK。这样不会为了脚IK牺牲武器持握，也不会保留手臂自研TwoBone fallback。
+Pelvis先按`CR_Mannequin_FootPlant`左右Target Offset最小值形成唯一竖直期望值，再用资产中的`SpringInterpV2`参数更新Current Pelvis Offset。
+现有逐腿reach计算只作为最终安全夹紧。它根据最终双脚目标与Rig腿长限制共同可达区间，不生成第二目标或水平分量。
+未进入执行图的`PelvisBlendSpeed=0.5`不映射为项目参数。
 
-## Decision: Rig v4 owns biped semantics
+最终只有一个`PelvisPreSolveTranslation`和一份vertical interpolation state。FullBodyIK先在Pending Pose中应用该translation，再把双脚完整Component目标作为FinalIK绝对effector position交付。这样保留Lyra“pelvis先动、腿再解”的顺序，并避免FinalIK在`ReadPose`内部执行`LimitBend`后让预先计算的相对offset失去参考系。
 
-Rig v3已经包含完整Physical Bone catalog，但只把pelvis与双腿提升为语义。FinalIK FBBIK需要完整biped references，因此Rig v4增加：
+### 6. Foot Goal
 
-- Solver Root Bone；
-- Pelvis Bone；
-- ordered Spine Bones；
-- 左右Arm：可选Clavicle、Upper Arm、Forearm、Hand；
-- 左右Leg：Hip、Knee、Ankle、Toe；
-- 可选Head。
+`ProcessFootOffset`的脚Z offset、hit normal、Aim Bone和rotation顺序先形成Lyra current Component Transform，再由Stance Stabilization有界混合为最终Foot Goal。Calibration的Sole Frame继续只表达语义脚方向；Heel/Toe contact只在后置鞋底间隙中重建接触几何。Calibration不能改变trace、Lyra smoothing、contact或pelvis算法。
 
-Validator要求：
+Goal Application使用`FootPlacementEffectorTarget`，保存完整目标Transform和最终weight。它不再使用`GroundingEffectorTarget`、toe plant point或PlantPivotWeight。FullBodyIK在pelvis pre-solve后先应用foot pre-rotation，再把Component Position直接设置为FinalIK绝对effector position，随后只求解一次；满权重脚目标若在求解后仍超过`0.001m`残差，返回typed failure并阻断该错误Pose发布。
 
-- 所有语义BoneId存在于同一Physical catalog；
-- solver root只能是pelvis或spine成员；
-- spine、arm和leg父子关系有效且无重复语义；
-- 四肢参考姿势能产生有限非退化bend plane；
-- 参考segment长度有限且为正；
-- Virtual Bone依赖仍只读Physical Pose。
+### 7. Knee PV到FBBIK
 
-FinalIK的`BipedReferences.AutoDetectReferences`、Humanoid Avatar和骨骼命名搜索不进入正式链。Editor MAY提供一次显式迁移命令，把当前已知Corin BoneId写入v4，但Build只认可资产中的明确结果。
+Lyra Basic IK的Left/Right Knee PV只负责腿弯曲方向。项目不创建PV Transform，而是在Rig v4 reference pose中编译左右腿bend constraint。Build必须确认参考膝盖平面有效；退化时失败，不使用世界前方或旧帧方向。
 
-## Decision: Calibration v4只拥有鞋底
+这一步是后端表示映射，不允许改变Lyra脚目标或追加第二腿solver。
 
-Foot Calibration v4保留：
+## Prediction Extension
 
-- 左右heel contact offset；
-- 左右toe contact offset；
-- 自动sole frame；
-- Sampling Rig、Preview Clip、geometry validation identity。
+预测在普通基线之后工作。它的输入是Baseline Goal Set、最终动画Foot Feature、Body future transform和预测world query。只有Foot Analysis明确处于Swing且不由stance anchor拥有的脚具有rewrite资格。
 
-删除：
+Modifier可以：
 
-- preferred bend direction；
-- Knee Bend作者/诊断字段；
-- bend plane geometry error；
-- Runtime target中的preferred bend plane。
+- 查询Future Landing；
+- 构造Ground Envelope；
+- 提高Swing Clearance；
+- 修改该Swing Foot slot的最终目标。
 
-四肢bend constraint由Rig v4参考Component Pose初始化，并在每帧使用输入动画pose和effector rotation更新。这更接近FinalIK真实工作方式，也避免“调鞋底时还要理解膝盖箭头”。若Rig参考姿势退化，Rig v4 Apply/Build直接失败，不能由世界前方、角色前方或旧Calibration补值。
+Modifier不可以：
 
-## Decision: FinalIK Grounding与FBBIK使用中立Backend
+- 改写另一只脚；
+- 改写Pelvis Goal；
+- 改写Lyra current trace hit/normal或spring state；
+- 创建contact、anchor或stance所有权；
+- 调用Grounding或IK solver；
+- 把Baseline Goal与修改后Goal同时送入FullBodyIK。
 
-### Allowed Modification Surface
+预测失败或无合法未来命中时，Modifier原样传递Baseline Goal。脚从Swing交接为contact时，Modifier在该帧停止改写，后续anchor只能由FootGrounding基于current hit接管。这里的“原样传递”是同一正式Goal value的确定结果，不是fallback算法或运行时择优。
 
-Grounding允许修改或扩展的内容仅限：
+## Profile and Runtime State
 
-- root、heel、toe、ankle与foot pose改为显式value/handle输入；
-- `Time.time`改为调用方提供的frame delta和history；
-- 每脚只接收显式当前Component Pose并生成未按Plant Confidence缩放的Grounding结果；最终Foot Goal权重在Project Predictive Extension中根据当前世界运动学与合法Current Support独立计算；
-- Physics查询改为显式world-query port和fixed hit workspace；
-- `RaycastHit.collider`补充稳定surface identity与self-collider裁决结果；
-- FinalIK Grounding只接受其stock语义覆盖的当前脚采样输入；
-- Future Landing和路径采样通过同一world-query port执行，但归属Project Predictive Extension而非Grounding kernel；
-- Grounding state的初始化、reset、workspace和只读diagnostic output；
-- vendor Transform调用链继续由Transform backend提供同等输入。
+`CharacterFootPlacementProfile`只包含三组：
 
-FBBIK允许修改或扩展的内容仅限：
+- `Lyra Current Grounding`：Sphere Trace参数、foot offset smoothing、normal smoothing、pelvis smoothing和明确Lyra来源标识；不保存项目无法正式映射的伪gate；
+- `Stance Stabilization`：最大合法surface坡度、contact进入/退出滞回、anchor blend/release、surface跟随、由Calibration几何确定的无参数鞋底间隙与pelvis reach安全界限；
+- `Predictive Extension`：Future Landing horizons、Ground Envelope、Swing Clearance和未来查询约束。
 
-- bone handle从`Transform`identity抽象为backend handle；
-- position/rotation/local/parent读写；
-- Biped reference建立；
-- chain/effector/mapping初始化；
-- mapping读Pose与写Pose；
-- 预分配workspace和backend lifecycle。
+删除FinalIK Grounding Quality、Max Step、Foot Radius prediction、Foot Height Speed、Foot Rotation Speed、Maximum Angle、Root Cast Radius、Overstep、Plant Plane、Toe Pivot、Pelvis Height Mode、Horizontal Rebalance和Actor Movement Compensation配置。当前Corin中已调好的contact/anchor/reach字段必须先逐项决定迁入`Stance Stabilization`、改名或确认为重复后删除，不能按旧字段名批量清空。
 
-Grounding不得重新实现或修改语义的内容：
+每Actor固定状态只保留：
 
-- stock Ray/heel-toe-side/Capsule query组合；
-- hit point/plane到height offset的数学；
-- slope rotation offset、maximum rotation和插值数学；
-- foot vertical interpolation；
-- stock pelvis lower/lift、interpolation和damper数学；正式adapter必须把其权重固定为零，不能把stock pelvis结果与Pelvis Reach Planner择优混合。
+- 左右脚Lyra current offset、normal spring和trace结果；
+- 左右脚contact滞回、surface identity、surface-local anchor、anchor blend/release状态；
+- Lyra pelvis vertical interpolation；
+- pelvis reach安全夹紧状态；
+- 可选预测的future landing/envelope/swing state；
+- Goal Set workspace；
+- FBBIK workspace。
 
-FBBIK不得重新实现或修改语义的内容：
+Reset、branch replacement、Projection replacement、invalid pose和dispose必须原子清除上述状态。普通source crossfade只继续按最终输入Pose和权重求值，不创建第二生命周期。
 
-- FBIKChain Push/Reach/Stage1/Stage2；
-- FABRIK iteration；
-- trigonometric pass；
-- child constraints；
-- effector solve；
-- bend constraint数学；
-- spine/limb mapping数学。
+## Execution and Transaction
 
-如果为了显式预测请求或Pose Buffer接入必须复制这些Grounding/FBBIK数学到项目新类、改变核心方程、运行两套查询择优或保留Transform shadow，实施必须停止并报告。
+`FootGrounding`与Modifier属于`WorldAwareValue`，`PoseBoneIKGoals`属于`PureValue`，`FullBodyIK`属于`PurePose`。Compiler按typed依赖生成stage table；value阶段不得持有Pose output page或写骨集合。
 
-### Dependency Direction
+world query、Goal validation或FBBIK在Animancer Evaluate Barrier后失败时，阻断后续stage和FinalPublication，并把Actor Animation Runtime置为Faulted。系统不沿用上一帧Goal或部分发布pelvis/单腿Pose。
 
-FinalIK core不能引用`ThirdPersonClient.Runtime`。中立bone backend、ground query backend、frame time input和indexed pose handle放在RootMotion assembly可见的扩展边界；项目adapter只把`CharacterPoseBuffer`、Rig v4、精确PhysicsScene、self-collider filter与FinalIK request连接起来。
+## Diagnostics
 
-正式角色Runtime只引用Grounding adapter与Pose Buffer adapter，不引用`FullBodyBipedIK`、`GrounderFBBIK`或IK MonoBehaviour。vendor Transform backend可继续服务插件自带素材，但不进入Character Capability、Prefab、Projection或runtime switch，不是项目fallback。
+诊断按同一PresentationFrame分层：
 
-### Actor Workspace
+- 执行与观察：节点存在、节点总weight、Body Grounded诊断事实和reset sequence；
+- 每脚trace：start/end/radius/channel、hit、Control Rig Hit Location、Unity Impact Point、normal、target offset Z；
+- 每脚平滑：current offset Z、current normal、spring velocity/state identity；
+- Stance：contact证据/滞回、surface identity、anchor local/world target、blend/release和不可达原因；
+- Pelvis：Lyra target、reach夹紧前后、current offset Z与spring参数；Reach失败必须包含Render Frame、左右Hip/Goal、Goal Weight、腿长、全局升降范围与最终交集；
+- Goal：Lyra Target Offset、Sole Clearance Target、合成Offset Target、Current Grounding、anchor混合后的最终Ankle、鞋底支撑面、Heel/Toe平面距离、Residual Sole Penetration、最终Baseline、总weight、预测rewrite前后与Swing资格；
+- FBBIK：completion、effector目标、bend constraint、iterations、residual和failure。
 
-每Actor在Runtime preparation时按Rig v4与FullBodyIK Profile创建一次：
-
-- indexed biped binding；
-- FinalIK Grounding root/legs state；
-- Project Predictive Extension的Pelvis Reach Planner state；
-- fixed FinalIK current-foot query state；
-- fixed predictive future/path request与共享hit pages；
-- Project Predictive Extension contact、anchor与envelope state；
-- FBBIK chains/effectors/mappings；
-- input component pose view；
-- output component pose view；
-- fixed goal merge page；
-- solver node/mapping scratch；
-- diagnostic snapshot page。
-
-正常PresentationFrame不创建GameObject、Transform、array、list、delegate、Grounding或solver对象。Reset清空Grounding、Project Predictive Extension和solver帧状态，不重建骨架。
-
-## Decision: Foot Placement Profile区分成熟Grounding与预测扩展
-
-现有`CharacterFootPlacementProfile`继续是唯一Foot Placement配置，不新建Grounder组件配置资产。作者表面分为两组：
-
-- `FinalIK Grounding`：Quality、Ground Layer、Max Step、Foot Radius、velocity prediction基线、Foot Height/Rotation Speed、Foot Rotation Weight/Maximum Angle、Root Cast Radius和Overstep policy；Corin正式Profile MUST显式选择`Best`，不得由Runtime按性能或命中结果降级Quality。stock Pelvis Speed/Damper/Lower/Lift不再属于正式作者数据。
-- `Predictive Extension`：动画相位look-ahead、future distance、path samples、surface continuity、contact/lock/slide、moving anchor、leg reach、source contribution、plant lock type、plant前heel调整、heel lift ratio，以及Pelvis Height Mode、Actor Movement Compensation Mode、最大升降范围、插值速度、dead zone与最大水平脚调整。
-
-Project Predictive Extension不得重新声明Foot Rotation Speed、坡面rotation算法或Foot Height interpolation。Pelvis Reach Planner配置描述逐腿可达性与整体验高，不复刻FinalIK stock lower/lift公式。旧stock Pelvis Speed/Damper/Lower/Lift字段直接删除，不做双写。两组配置共同形成一个Profile identity并进入Projection依赖，Profile不保存backend选择或fallback。
-
-普通基线阶段，Corin显式使用`Best`、`velocity prediction = 0`、`Unlocked`、`AdjustHeelBeforePlanting = false`、`AllPlantedFeet`与`FollowBody`。唯一Foot Placement Weight是作者控制的总开关。每脚运行时信号拆成五层：
-
-- `PlacementWeight`：Body Grounded、Current Grounding命中合法且作者Foot Placement Weight有效时等于作者权重，否则为0。它唯一控制未约束FinalIK Grounding Foot Goal的Position/Rotation Weight，不读取脚速、Plant Confidence或surface distance。
-- `PlantConfidence`：单Clip烘焙并随最终Pose contribution混合的源动画接触意图。它只通过enter/exit迟滞决定Plant Contact，不连续缩放Foot Goal或Pelvis贡献。
-- `AnimationFootSpeed`：最终Pose contribution中已经按source权重与visual time scale混合的烘焙`SoleLocalVelocity.magnitude`。它不拼接Body世界平移、Body可见速度或yaw点速度，只用于Plant Contact进入、退出和Contact约束渐退。
-- `PlantSupportWeight`：Plant Contact成立时等于`PlacementWeight`，否则为0。它只表达Pelvis Reach Planner的普通支撑腿选择，不控制普通Foot Goal。
-- `ContactWeight`：只有Plant Contact成立、Plant Policy允许约束且surface anchor有效时才存在，按`PlantSpeedThreshold -> UnalignmentSpeedThreshold`连续渐退，只控制anchor、lock与slide。`Unlocked`下固定为0。
-
-正式Profile只保留`PlantSpeedThreshold`与`UnalignmentSpeedThreshold`两个严格有序阈值。Corin与TrainingEnemy使用`0.6m/s`和`2.0m/s`，对应UE 5.7默认`60cm/s`与`200cm/s`的职责：低速允许进入Plant，达到Unalignment阈值退出，区间内只让锁脚约束连续渐退。旧`Alignment Full/Zero` planar/vertical阈值、descending tolerance、Plant/Release速度距离字段和兼容别名全部删除。
-
-FinalIK Grounding必须先基于当前脚Pose产生完整命中、脚高、rotation与插值结果，`GroundingFootInput`不携带Plant或速度权重。`Grounding.Leg`的`rootYOffset`会从脚到命中面的高度差中扣除动画脚到Root参考平面的高度，所以`IKPosition`表达的是“动画Ankle加地形相对Root的高度差”，不是把摆动脚绝对压到地面。Project Predictive Extension因此可让合法Current Grounding Goal始终使用`PlacementWeight`；脚速只决定支撑/约束状态，不能关闭普通跑动Foot IK。
-
-Pelvis Reach Planner继续从最终Foot Goal计算逐腿区间，支撑权重为`max(PlantSupportWeight, ContactWeight)`。这样普通跑动支撑脚不因烘焙置信度连续降权，受约束脚在释放前仍能维持支撑，摆动脚即使保留地形相对动画高度的Foot Goal也不会参与`AllPlantedFeet`骨盆规划。Foot Goal没有相对动画Ankle竖直变化时骨盆不偏移，双脚目标共同抬高或降低时骨盆按支撑权重跟随该变化。高低踏面区间有交集时先求支撑权重首选高度再夹入共同可达区间，无交集时保留主要支撑脚并释放次要Goal。
-
-这与UE Foot Placement的职责边界对齐：动画/Root Motion空间脚速决定Plant意图，Alignment Alpha参与plant plane过渡与有限roll/hyperextension行为，`DisableLeg`才是整腿回到FK的独立权重。当前后端仍是FinalIK Grounding加唯一FBBIK，不复制UE实现，也不新增第二solver或backend路径。
-
-## Decision: FullBodyIK Profile只暴露真实FinalIK能力
-
-Profile保存：
-
-- Iterations；
-- FABRIK Pass；
-- Spine Stiffness；
-- Pull Body Vertical/Horizontal；
-- 每chain Pin/Pull/Push/Push Parent/Reach及smoothing；
-- 每limb mapping Weight/Maintain Rotation；
-- bend constraint Weight和clamp；
-- 全局node weight。
-
-Profile不保存：
-
-- UE PBIK Position/Rotation Stiffness；
-- 任意逐骨XYZ Rotation Limit；
-- UE Preferred Angle；
-- Excluded Bones；
-- Stretch；
-- Root Behavior枚举。
-
-UI以“FinalIK FBBIK Profile”命名，并在References显示backend identity。不能用UE字段名包装FinalIK近似参数。
-
-## Execution Domains and Transaction
-
-- `PredictiveFootPlacement`：`WorldAwareValue`，执行FinalIK Grounding-backed query与Project Predictive Extension，只发布goal value completion。
-- `PoseBoneIKGoals`：`PureValue`，只读取Component Pose并发布goal value completion。
-- `FullBodyIK`：`PurePose`，消费Component Pose和全部goal values，发布Solved Component Pose。
-
-Compiler根据Pose和goal edges生成拓扑顺序，不保存作者stage index。`PredictiveFootPlacement`与`PoseBoneIKGoals`是从同一Component Pose扇出的两个只读producer；它们在stage table中的先后只表示调度顺序，不表示前一个IK结果输入后一个IK。只有`FullBodyIK`是solver。Grounding query、预测扩展、goal lineage或FBBIK失败都会阻断FullBodyIK后续stage与FinalPublication。Animancer Evaluate Barrier之后失败时Actor Animation Runtime进入Faulted，不恢复状态或Physical Bone快照。
-
-FullBodyIK只写Pending Dense Pose page。唯一Physical Transform writer在全部stage成功并Seal后发布最终Pose。
-
-## Preview, Live Debug and Authoring
-
-### Canvas
-
-- `Predictive Foot Placement`显示Component Pose输入、Weight输入和Full Body IK Goals输出，不显示Pose输出；标题下方显示`Goal Source · FinalIK Grounding`，不得显示IK solver badge。
-- `Pose Bone IK Goals`显示Component Pose输入与Goals输出，Details以可重排binding列表配置Effector Slot、目标Pose Bone、offset和weights。
-- `Full Body IK`显示Component Pose输入、动态`Goals`输入和Solved Component Pose输出。
-- `Two Bone IK`与`Leg IK`从创建菜单、clipboard、Document schema和详情中删除。
-- Canvas把Component Pose扇出edge与Goal value edge完整画出，不把两个Goal Source自动排成Pose backbone，也不隐藏Goal merge。
-
-### Profile and Rig
-
-- Presentation Profile新增唯一FullBodyIK Profile引用。
-- Rig v4编辑器按Root/Spine/Arms/Legs/Head分组，只允许从Physical Bone catalog选择。
-- Foot Calibration Scene只显示和编辑Heel/Toe/Sole，不再显示Knee Direction。
-- 显式`Validate Rig for FinalIK FBBIK`命令输出缺失语义、父子关系、segment length与reference bend plane，不在Inspector repaint运行。
-
-### Diagnostics
-
-IK现象、运行证据、UE源码对照、已踩坑与固定排查顺序统一维护在`ik-diagnostics.md`；后续修正不得只改代码或阈值而不更新该记录。
-
-- Grounding Watch：FinalIK Grounding backend identity、current query requests/hits、stock velocity prediction与foot height/rotation。
-- Predictive Extension Watch：动画Plant Confidence、Plant Contact迟滞、Animation Foot Speed、surface distance、Placement/Plant Support/Contact weights、current/future support、Ground Envelope、surface anchor、lock状态、左右腿pelvis允许区间、目标/平滑pelvis offset、冲突释放与Body/Feet goals。
-- Goal Source Watch：Virtual target和生成的hand goals。
-- FullBodyIK Watch：输入/输出Pose、每effector权重/残差、chain reach、iterations、bend constraint和typed failure。
-- Diagnostics只复制已完成固定workspace，不第二次调用FinalIK、不读取Transform反推。
+Diagnostics只从已完成固定workspace复制，不重新query、重新平滑、重新求解或遍历Animator Transform。Canvas和Trace必须分别显示`Lyra Current Grounding`、`Stance Stabilization`与`Predictive Extension`来源，不再显示FinalIK Grounding badge，也不得把anchor结果标成Lyra原生。
 
 ## Migration and Cleanup
 
-迁移只允许一次正式schema跳变：
-
-1. 审计并安装FinalIK Grounding中立time/pose/query backend，通过Grounding数学复用门禁。
-2. 审计并安装FinalIK FBBIK Pose Buffer backend，通过solver数学复用门禁。
-3. 安装Rig v4、Calibration v4、Foot Placement Profile分组、FullBodyIK Profile与新goal ABI。
-4. 同步Capability、Document、Compiler、Projection和Runtime。
-5. 迁移Corin full-biped mapping、Grounding配置、手部goal bindings和Pose Graph。
-6. 重建Foot Analysis artifact与全部generated products。
-7. 删除旧TwoBone/LegIK及重复Grounding数据、代码、诊断、workspace和authoring能力。
-8. 更新current truth与仍引用旧节点的active change文档。
-
-不提供Rig v3 reader、Calibration v3 reader、旧target codec、节点自动替换fallback或运行时双solver开关。旧资产在迁移完成前应明确Build失败。
+1. 固化Lyra资产函数、变量、节点连线和常量清单。
+2. 盘点Corin当前全部contact/anchor/pelvis配置与运行状态，逐项标记迁移owner、改名或重复删除依据。
+3. 用Lyra Current Grounding payload/profile/runtime替换FinalIK Grounding payload和adapter。
+4. 把有效contact/anchor/reach能力迁入FootGrounding的Stance Stabilization与Pelvis Resolve。
+5. 把combined Goal Source拆成`FootGrounding`与后置Modifier。
+6. 把Goal Application改为通用Foot Placement target，移除Grounding/toe pivot ABI。
+7. 通过BTSMTL Document checkout、dry-run、apply与validate迁移Corin和TrainingEnemy Profile/Pose Graph；不得直接修改Unity YAML。
+8. 删除旧FinalIK Grounding、重复脚目标/平滑、并列pelvis resolver、Plant Plane和已完成迁移的旧字段。
+9. 普通基线完成后保持Corin不连接预测；只有用户以后明确授权时，才通过同一Document生命周期接入可选Swing预测Modifier。
+10. 删除combined operation、旧reader、旧diagnostic列和兼容枚举。
+11. Document apply成功后等待用户明确触发精确Character Build发布Projection、Program和Native Pose Program；不自动构建。
 
 ## Tradeoffs
 
-### 选择FinalIK FBBIK Pose Buffer改造
+### 选择真实Lyra Control Rig而不是UE AnimNode FootPlacement
 
-收益：复用成熟多链约束、effector、FABRIK/trigonometric和mapping数学；统一脚、手和Body；保留图内Pose事务。
+业务收益是先得到用户实际认可、可回指Lyra的current grounding，同时不丢失Corin已经有用的站立稳定和移动平台表现；代价是最终普通基线不是“逐节点纯Lyra”，而是明确的`Lyra current target + 项目有界稳定层`。诊断必须把两层分开显示，不能把anchor效果伪称为Lyra原生。
 
-代价：必须维护第三方源码I/O改造面；FinalIK升级会产生合并成本；功能不等价UE PBIK。
+### 选择FBBIK替换Lyra Basic IK
 
-### 选择FinalIK Grounding作为当前脚Grounding基线
+业务收益是保留项目双手、双脚和骨盆一次联动，避免恢复LegIK/TwoBoneIK分裂链；代价是最终骨骼分配不会与Lyra Two Bone IK逐浮点一致。验收关注相同输入产生相同脚/骨盆目标与同等可见接地效果，不宣称solver bitwise一致。
 
-收益：复用插件已有Ray/Capsule组合、velocity prediction、坡面rotation和foot interpolation；项目不再维护第二套通用当前脚对齐数学。骨盆则使用FinalIK缺失的逐腿可达区间，行为更接近UE Foot Placement。
+### 先迁移增强再接预测
 
-代价：stock Grounding没有动画相位Future Landing、Ground Envelope、surface identity、移动平台锚定或逐腿compression/extension pelvis区间，必须保留范围明确的Project Predictive Extension与Pelvis Reach Planner；同时需要把Transform、Time与Physics入口抽象为显式value和world-query backend。
+业务收益是现有调参不会被无理由抹掉，且每个视觉差异仍能归因于Lyra current grounding、Stance Stabilization、Pelvis Resolve或预测改写；代价是迁移前必须逐项对账，不能直接删除combined类。项目禁止兼容和fallback，因此迁移以单次owner转移完成，不提供旧新运行时切换。
 
-### 不选择Stock GrounderFBBIK组件直挂
+### 严格Lyra Ankle目标与Corin鞋底最终防穿透
 
-收益是接入最快，查询与FBBIK调用顺序由插件组件负责。
+严格停在Lyra Ankle目标的收益是逐项对照简单，代价是Corin鞋底具有实际长度，斜坡旋转后Heel或Toe仍可能进入支撑平面。项目选择把鞋底间隙放进同一Stance Stabilization owner：Lyra current仍保持可观察，最终Baseline明确记录额外平移，不把该结果冒充Lyra原生。
 
-代价是它依赖Physical Transform、MonoBehaviour回调和目标组件，无法进入同一Pose Buffer事务，还会与Pose Graph形成第二生命周期，因此不作为正式方案或fallback。
+### Plant Contact防穿透、Swing连续性与提前跨级
 
-### 不选择Stock FinalIK + Shadow Skeleton
+只把鞋底间隙作为spring target会让已经承重的脚在高踏面首次出现时留下可达`0.18m`的穿透；把安全缺口无条件写回Value又会让Swing脚在离散踏面间单帧吸附。Current-only查询没有未来落点信息，因此不能把“同帧清除任意Swing穿透”伪装成Lyra响应式目标。当前Corin按用户业务顺序只启用普通响应式图：Plant Contact持续约束同一spring Value；非Plant脚只在同一surface上由上一帧非穿透到本帧穿透的连续边界执行单向约束；新surface首次出现的大缺口只追踪同一spring target。Predictive Modifier作为后续可选能力保持未接线。业务收益是已知支撑面上的小越界不会再积累成深下陷，同时不恢复跨级吸附；代价是未启用预测时仍不承诺在Current查询尚未看到下一踏面前提前抬脚。
 
-收益是接入快且不改vendor数学。
+`17359`进一步证明此前Plant Contact本身判错了owner输入：左脚45帧的Plant Confidence为1、动画鞋底速度低于进入阈值、最终Heel/Toe距踏面仅约`0m`至`0.002m`，但旧`surface distance`仍约为`0.289m`，因此状态一直是Swing且没有anchor。原因是contact在Lyra Foot Offset spring之前用动画鞋底量距离；高一级踏面的绝对高度被误当成脚未接触。修复后contact只读取同一帧Lyra spring候选Ankle重建的Heel/Toe到唯一支撑面的最大绝对平面距离，再决定Plant Contact和anchor。这样高台阶不再以角色零高度为锁脚条件，同时Swing仍须先由现有spring靠近踏面，避免一命中高面就硬吸附。
 
-代价是每Actor多一套Transform层级、Pose->Transform和Transform->Pose两次复制、额外生命周期与潜在LateUpdate顺序；这会破坏唯一Pose Buffer/唯一writer并使Preview与Runtime难以统一，因此不作为正式方案或fallback。
+### 拒绝楼梯立面与保留Lyra任意命中
 
-### 不选择保留TwoBoneIK并只替换双腿
+保留任意命中更接近Control Rig原始Trace，但Unity楼梯Collider的立面和圆角会产生低Normal Y，脚掌会朝墙面旋转。项目选择复用现有最大坡度作为查询合法性边界，使SphereCast在同一命中page中选择合法踏面；没有合法踏面时进入Lyra未命中分支，不新增第二查询。
 
-收益是迁移小。
+### 沿Component Up与沿Surface Normal抬脚
 
-代价是手和脚继续走不同solver，骨盆/脊柱无法统一响应，项目仍有两套IK参数和诊断；与用户要求的单路径不一致。
-
-### 不选择Unity Animation Rigging组合约束
-
-它提供成熟Animation Job约束和TwoBoneIK，但没有直接等价于UE PBIK/FinalIK FBBIK的单一多目标全身求解器。接入它会保留多constraint编排或需要另一全身后端，形成第二路径。
-
-### 不选择自研PBIK
-
-它最接近UE功能表，但会把范围扩大到迭代约束、limits、stiffness、preferred angles和稳定性工具，违背“优先成熟方案、项目只自有预测业务”的目标。
-
-### 不选择把Plant Confidence阈值从0.5改成0
-
-收益是只改一行映射，跑动Foot Goal数值会立刻升高。
-
-代价是摆动脚的任意非零烘焙置信度都会直接进入IK，动画混合仍让一个标量同时承担接触判断和地面对齐强度，容易出现拖脚、提前吸附与骨盆误参与。它没有修复职责错误，因此不作为正式方案或调试开关。
+沿Surface Normal位移最短，但会改变脚步X/Z落点并在楼梯边缘产生水平滑动。沿Component Up保留动画水平步幅和anchor落点，代价是斜坡越陡抬升越大。最大坡度门槛保证`Dot(ComponentUp, Normal)`保持有限，项目选择Component Up。
 
 ## Hard Stop Gates
 
-实施必须按顺序通过以下门禁：
-
-1. 生成FinalIK Grounding与FBBIK参与文件清单、内容hash及Transform/Time/Physics依赖矩阵。
-2. 证明Grounding seam可以接受显式current-foot pose/time、精确PhysicsScene和fixed hit page，且不复制命中到目标、rotation、foot/pelvis interpolation数学。
-3. 证明Future Landing与路径采样只复用同一world-query port和命中合同，不冒充FinalIK Grounding能力，也不生成第二套当前脚Grounding结果。
-4. 明确列出FinalIK Grounding无法覆盖、必须由Project Predictive Extension拥有的字段和状态；不存在运行时两套结果择优。
-5. 证明FBBIK backend seam可以覆盖全部read/write/init/mapping，而不改核心求解方程。
-6. 证明正式Runtime不需要shadow skeleton、target GameObject、FinalIK组件或Physical Transform中间写入。
-7. 证明每Actorworkspace可在preparation时完整预分配，正常帧不创建managed集合、Grounding或solver对象。
-8. 证明Rig v4能为Corin提供完整spine/arms/legs/root语义和非退化reference bend plane。
-
-任一门禁失败时，停止实施并向用户报告失败文件、依赖和可选成熟替代方向；不得继续创建临时adapter、保留自研solver fallback或悄悄降低为shadow rig。
-
-## Open Questions Deferred by Evidence
-
-- FinalIK FBBIK与UE PBIK逐骨limits/stiffness的功能差距不在本change解决。
-- FinalIK Grounding的简单velocity prediction不等同动画相位Future Landing；Project Predictive Extension的必要范围必须以源码缺口逐项证明。
-- 第三方插件源码公开分发许可不由本技术提案判断。
-- 如果未来需要非biped、额外触手链或任意effectors拓扑，FinalIK FBBIK固定五chain模型可能不够；届时必须另立成熟solver提案，不能扩写本节点为自研通用PBIK。
+- 无法从Lyra资产确认的常量、分支或公式不得凭经验填写；必须先补资产证据。
+- 如果普通基线仍调用FinalIK Grounding、`GrounderFBBIK`，或旧contact/anchor planner与新Stance Stabilization并行拥有同一状态，停止实施。
+- 如果需要恢复LegIK/TwoBoneIK、shadow skeleton、target GameObject或第二Physical writer，停止实施。
+- 如果预测需要改写pelvis、stance/anchored脚、contact/anchor状态或Lyra current trace状态，停止实施并另提设计。
+- 如果正式PhysicsScene、Body Frame、Rig Foot BoneId或Calibration不完整，返回typed failure，不创建默认配置。
+- 任何构建和发布只能由用户明确触发；Inspector、OnValidate、selection和Preview不得自动执行。

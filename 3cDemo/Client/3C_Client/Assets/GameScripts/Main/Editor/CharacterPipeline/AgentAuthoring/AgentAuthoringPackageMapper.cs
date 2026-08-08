@@ -7,6 +7,7 @@ using System.Text;
 using BTSMTL.Timeline;
 using Newtonsoft.Json.Linq;
 using TreeDesigner;
+using TreeDesigner.Editor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
@@ -36,6 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 });
                 files["editable/blackboard.json"] = AgentAuthoringDocumentCodec.ToToken(new AgentPackageBlackboardFile
                 {
+                    schemaRevision = target.editable.blackboardSchemaRevision,
                     declarations = target.editable.blackboardDeclarations
                 });
                 files["editable/actions.json"] = AgentAuthoringDocumentCodec.ToToken(new AgentPackageActionsFile
@@ -57,6 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 files["editable/ai/perception.json"] = AgentAuthoringDocumentCodec.ToToken(new AgentPackageAIFile
                 {
+                    blackboardSchemaRevision = target.editable.blackboardSchemaRevision,
                     controller = ToPackageAI(target.editable.aiController)
                 });
             }
@@ -78,10 +81,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 files[directory + "/curves.json"] = AgentAuthoringDocumentCodec.ToToken(curvesFile);
             }
 
-            files["context/node-catalog.json"] = AgentAuthoringDocumentCodec.ToToken(new AgentPackageNodeCatalogFile
+            var nodeCatalog = new AgentPackageNodeCatalogFile
             {
-                kinds = m_Catalog.ExportNodeKinds(target.editable.graphs, target.domain).ToList()
-            });
+                kinds = m_Catalog.ExportNodeKinds(target.domain).ToList()
+            };
+            AgentPackageNodeCatalogValidator.Validate(nodeCatalog, report);
+            files["context/node-catalog.json"] = AgentAuthoringDocumentCodec.ToToken(nodeCatalog);
             files["context/graph-kinds.json"] = AgentAuthoringDocumentCodec.ToToken(new AgentPackageGraphKindsFile
             {
                 kinds = m_Catalog.ExportGraphKinds(target.domain).ToList()
@@ -149,21 +154,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentPackageControllerFile controller = new AgentPackageControllerFile();
             AgentPackageBlackboardFile blackboard = new AgentPackageBlackboardFile();
             AgentPackageActionsFile actions = new AgentPackageActionsFile();
+            AgentPackageAIFile aiFile = null;
             if (string.Equals(manifest.domain, AgentAuthoringSchema.CharacterControllerDomain, StringComparison.Ordinal))
             {
                 valid &= TryFile(files, "editable/controller.json", report, out controller);
                 valid &= TryFile(files, "editable/blackboard.json", report, out blackboard);
                 valid &= TryFile(files, "editable/actions.json", report, out actions);
+                valid &= ValidateBlackboardPackage(blackboard, report);
             }
             valid &= TryFile(files, "context/asset-catalog.json", report, out AgentPackageAssetCatalogFile assets);
             valid &= TryFile(files, "context/dependencies.json", report, out AgentPackageDependenciesFile dependencies);
-            valid &= TryFile(files, "context/node-catalog.json", report, out AgentPackageNodeCatalogFile _);
+            valid &= TryFile(files, "context/node-catalog.json", report, out AgentPackageNodeCatalogFile nodeCatalog);
             valid &= TryFile(files, "context/graph-kinds.json", report, out AgentPackageGraphKindsFile _);
+            if (nodeCatalog != null)
+                valid &= AgentPackageNodeCatalogValidator.Validate(nodeCatalog, report);
             if (!valid)
                 return false;
 
             target.editable.stateMachines = controller.stateMachines ?? new List<AgentSnapshotStateMachineSummary>();
             target.editable.timelineTreeClips = controller.timelineTreeClips ?? new List<AgentSnapshotTimelineTreeClip>();
+            target.editable.blackboardSchemaRevision = blackboard.schemaRevision;
             target.editable.blackboardDeclarations = blackboard.declarations ?? new List<AgentSnapshotBlackboardDeclaration>();
             target.editable.actionRequests = actions.requests ?? new List<AgentSnapshotActionRequest>();
             target.editable.actionProfiles = actions.profiles ?? new List<AgentSnapshotActionProfile>();
@@ -195,8 +205,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             AgentPackageAIController packageAI = null;
             if (string.Equals(manifest.domain, AgentAuthoringSchema.AIControllerDomain, StringComparison.Ordinal))
-                valid &= TryFile(files, "editable/ai/perception.json", report, out AgentPackageAIFile aiFile) &&
+            {
+                valid &= TryFile(files, "editable/ai/perception.json", report, out aiFile) &&
                          (packageAI = aiFile.controller) != null;
+                if (aiFile != null)
+                {
+                    target.editable.blackboardSchemaRevision = aiFile.blackboardSchemaRevision;
+                    valid &= ValidateBlackboardSchemaRevision(
+                        aiFile.blackboardSchemaRevision,
+                        "editable/ai/perception.json.blackboardSchemaRevision",
+                        report);
+                }
+            }
             else if (files.ContainsKey("editable/ai/perception.json"))
             {
                 report.Error("editable/ai/perception.json", "document_domain_file_invalid", "CharacterController文档包不能包含AI perception分片。");
@@ -334,6 +354,85 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         report);
             }
             return valid;
+        }
+
+        static bool ValidateBlackboardPackage(
+            AgentPackageBlackboardFile blackboard,
+            AgentCompileReport report)
+        {
+            bool valid = ValidateBlackboardSchemaRevision(
+                blackboard?.schemaRevision ?? 0,
+                "editable/blackboard.json.schemaRevision",
+                report);
+            int index = 0;
+            foreach (AgentSnapshotBlackboardDeclaration declaration in
+                     blackboard?.declarations ?? new List<AgentSnapshotBlackboardDeclaration>())
+            {
+                string path = $"editable/blackboard.json.declarations[{index}]";
+                if (declaration == null)
+                {
+                    report.Error(path, "blackboard_declaration_missing", "Blackboard declaration不能为空。");
+                    valid = false;
+                    index++;
+                    continue;
+                }
+                if (declaration.inputBinding != null &&
+                    string.IsNullOrWhiteSpace(declaration.inputBinding.inputValueId))
+                {
+                    report.Error(
+                        path + ".inputBinding.inputValueId",
+                        "blackboard_input_value_id_missing",
+                        "Blackboard Input Binding必须提供非空inputValueId；没有绑定时应省略inputBinding。");
+                    valid = false;
+                }
+                if (declaration.factProjection != null)
+                {
+                    if (!Enum.TryParse(
+                            declaration.factProjection.kind,
+                            false,
+                            out PipelineBlackboardFactProjectionKind kind) ||
+                        kind != PipelineBlackboardFactProjectionKind.ActionWindow)
+                    {
+                        report.Error(
+                            path + ".factProjection.kind",
+                            "blackboard_fact_projection_kind_invalid",
+                            "Blackboard Fact Projection必须提供受支持的kind；没有投影时应省略factProjection。");
+                        valid = false;
+                    }
+                    if (string.IsNullOrWhiteSpace(declaration.factProjection.windowType))
+                    {
+                        report.Error(
+                            path + ".factProjection.windowType",
+                            "blackboard_action_window_type_missing",
+                            "ActionWindow Fact Projection必须提供windowType。");
+                        valid = false;
+                    }
+                    if (string.IsNullOrWhiteSpace(declaration.factProjection.windowId))
+                    {
+                        report.Error(
+                            path + ".factProjection.windowId",
+                            "blackboard_action_window_id_missing",
+                            "ActionWindow Fact Projection必须提供windowId。");
+                        valid = false;
+                    }
+                }
+                index++;
+            }
+            return valid;
+        }
+
+        static bool ValidateBlackboardSchemaRevision(
+            int revision,
+            string path,
+            AgentCompileReport report)
+        {
+            if (revision == PipelineBlackboardAuthoringSchema.CurrentRevision)
+                return true;
+            report.Error(
+                path,
+                "blackboard_schema_revision_outdated",
+                $"Blackboard schema revision必须是{PipelineBlackboardAuthoringSchema.CurrentRevision}；请重新checkout Document后再apply。");
+            return false;
         }
 
         static bool ValidateTimelineRelationships(
@@ -806,8 +905,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         valueType = InternalValueType(value.valueType),
                         scope = value.scope,
                         lifetime = ResolveAIDefaultLifetime(value.scope),
-                        authority = "LocalOnly",
-                        syncPolicy = "None",
                         defaultValue = value.defaultValue
                     }).ToList()
             };
@@ -1340,6 +1437,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         path + $".nodes[{node.id}]",
                         allowExistingEmptyActionContext))
                     return false;
+                if (!m_Catalog.TryProjectDocumentPortShape(
+                        node.kind,
+                        node.properties,
+                        out _,
+                        out _,
+                        out GraphAuthoringPortShapeException shapeError))
+                {
+                    report.Error(
+                        path + $".nodes[{node.id}].properties",
+                        shapeError.Code,
+                        shapeError.Message);
+                    return false;
+                }
                 if (string.Equals(node.kind, "exposed-property", StringComparison.Ordinal))
                 {
                     JToken exposedToken = node.properties?["exposedProperty"];
@@ -1380,18 +1490,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             foreach (AgentPackageFlowEdge edge in graphFile.flowEdges)
             {
                 if (!ValidateEdgeIdentity(edge?.id, edgeIds, path + ".flowEdges", report) ||
-                    !ValidateEndpoint(domain, graphFile.kind, nodes, current, edge.from, "Output", false, path + $".flowEdges[{edge.id}].from", report) ||
-                    !ValidateEndpoint(domain, graphFile.kind, nodes, current, edge.to, "Input", false, path + $".flowEdges[{edge.id}].to", report))
+                    !ValidateEndpoint(domain, graphFile.kind, nodes, edge.from, "Output", false, path + $".flowEdges[{edge.id}].from", report) ||
+                    !ValidateEndpoint(domain, graphFile.kind, nodes, edge.to, "Input", false, path + $".flowEdges[{edge.id}].to", report))
                     return false;
             }
             foreach (AgentPackagePropertyEdge edge in graphFile.propertyEdges)
             {
                 if (!ValidateEdgeIdentity(edge?.id, edgeIds, path + ".propertyEdges", report) ||
-                    !ValidateEndpoint(domain, graphFile.kind, nodes, current, edge.from, "Output", true, path + $".propertyEdges[{edge.id}].from", report) ||
-                    !ValidateEndpoint(domain, graphFile.kind, nodes, current, edge.to, "Input", true, path + $".propertyEdges[{edge.id}].to", report))
+                    !ValidateEndpoint(domain, graphFile.kind, nodes, edge.from, "Output", true, path + $".propertyEdges[{edge.id}].from", report) ||
+                    !ValidateEndpoint(domain, graphFile.kind, nodes, edge.to, "Input", true, path + $".propertyEdges[{edge.id}].to", report))
                     return false;
             }
-            return true;
+            return ValidatePortCapacities(nodes, graphFile, path, report);
         }
 
         bool AllowsExistingEmptyActionContext(
@@ -1416,7 +1526,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string domain,
             string graphKind,
             IReadOnlyDictionary<string, AgentPackageNode> nodes,
-            AgentSnapshotGraph current,
             AgentPackageEdgeEndpoint endpoint,
             string direction,
             bool property,
@@ -1440,18 +1549,84 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.Error(path, "edge_node_unknown", $"Edge引用未知Node：{endpoint.node}");
                 return false;
             }
-            if (m_Catalog.IsPortAllowed(node.kind, node.properties, endpoint.port, direction, property))
-                return true;
-            if (property)
+            if (!m_Catalog.TryResolveDocumentPort(
+                    node.kind,
+                    node.properties,
+                    endpoint.port,
+                    property,
+                    out GraphAuthoringDynamicPortProjection port,
+                    out GraphAuthoringPortShapeException error))
             {
-                AgentSnapshotNode currentNode = current?.nodes?.FirstOrDefault(value => string.Equals(value.elementAuthoringId, node.id, StringComparison.Ordinal));
-                if (currentNode?.propertyPorts?.Any(port =>
-                        string.Equals(port.portId, endpoint.port, StringComparison.Ordinal) &&
-                        string.Equals(port.direction, direction, StringComparison.Ordinal)) == true)
-                    return true;
+                report.Error(path, error.Code, error.Message);
+                return false;
             }
-            report.Error(path, "logical_port_unknown", $"{node.kind}不存在{direction}逻辑port：{endpoint.port}");
+            GraphAuthoringPortDirection expected = string.Equals(
+                direction,
+                GraphAuthoringPortDirection.Input.ToString(),
+                StringComparison.Ordinal)
+                ? GraphAuthoringPortDirection.Input
+                : GraphAuthoringPortDirection.Output;
+            if (port.Direction == expected)
+                return true;
+            string mode = node.properties?["exposedProperty"]?["mode"]?.Value<string>() ?? string.Empty;
+            report.Error(
+                path,
+                "port_shape_direction_mismatch",
+                $"Node '{endpoint.node}' kind='{node.kind}' mode='{mode}' 的 port '{endpoint.port}' 实际方向为 {port.Direction}，edge endpoint 要求 {expected}。");
             return false;
+        }
+
+        bool ValidatePortCapacities(
+            IReadOnlyDictionary<string, AgentPackageNode> nodes,
+            AgentPackageGraphFile graph,
+            string path,
+            AgentCompileReport report)
+        {
+            var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+            void Count(AgentPackageEdgeEndpoint endpoint, bool property)
+            {
+                if (endpoint?.node?.StartsWith("@", StringComparison.Ordinal) != false)
+                    return;
+                string key = endpoint.node + "\0" + (property ? "property:" : "flow:") + endpoint.port;
+                counts.TryGetValue(key, out int count);
+                counts[key] = count + 1;
+            }
+            foreach (AgentPackageFlowEdge edge in graph.flowEdges)
+            {
+                Count(edge.from, false);
+                Count(edge.to, false);
+            }
+            foreach (AgentPackagePropertyEdge edge in graph.propertyEdges)
+            {
+                Count(edge.from, true);
+                Count(edge.to, true);
+            }
+
+            bool valid = true;
+            foreach (KeyValuePair<string, int> pair in counts.Where(value => value.Value > 1))
+            {
+                string[] identity = pair.Key.Split('\0');
+                if (identity.Length != 2 || !nodes.TryGetValue(identity[0], out AgentPackageNode node))
+                    continue;
+                bool property = identity[1].StartsWith("property:", StringComparison.Ordinal);
+                string portId = identity[1].Substring(identity[1].IndexOf(':') + 1);
+                if (!m_Catalog.TryResolveDocumentPort(
+                        node.kind,
+                        node.properties,
+                        portId,
+                        property,
+                        out GraphAuthoringDynamicPortProjection port,
+                        out _))
+                    continue;
+                if (port.Capacity != GraphAuthoringPortCapacity.Single)
+                    continue;
+                report.Error(
+                    $"{path}.nodes[{identity[0]}]",
+                    "port_shape_capacity_exceeded",
+                    $"Node '{identity[0]}' 的 port '{portId}' 容量为 Single，但目标 Graph 包含 {pair.Value} 条连接。");
+                valid = false;
+            }
+            return valid;
         }
 
         static bool ValidateEdgeIdentity(string identity, ISet<string> identities, string path, AgentCompileReport report)

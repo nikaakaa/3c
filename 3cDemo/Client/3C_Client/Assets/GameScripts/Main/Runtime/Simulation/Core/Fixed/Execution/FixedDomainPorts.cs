@@ -69,7 +69,7 @@ namespace ThirdPersonSimulation.Fixed
 
         void ClearActionInstanceScopes(ulong actionInstanceId);
 
-        void ProjectInputDerived(InputDerivedStateBinding binding, SimulationInputValue value);
+        void ProjectBlackboardInput(BlackboardInputStateBinding binding, SimulationInputValue value);
 
         bool IsActionWindowActive(SimulationOperation operation);
 

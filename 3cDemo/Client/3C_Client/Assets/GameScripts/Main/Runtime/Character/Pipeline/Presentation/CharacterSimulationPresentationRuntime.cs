@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterAnimationPresentationRuntime m_Animation;
         readonly CharacterEquipmentVisualRuntime m_Equipment;
         readonly CharacterEquipmentLinkedPoseRuntime m_LinkedPose;
-        readonly CharacterPredictiveFootPlacementGoalSource m_FootPlacement;
+        readonly CharacterFootPlacementRuntime m_FootPlacement;
         readonly CharacterCameraPresentationRuntime m_Camera;
         readonly Transform m_VisualRoot;
         readonly Transform m_AnimationRoot;
@@ -51,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterBodyPresentationRuntime body,
             CharacterAnimationPresentationRuntime animation,
             CharacterEquipmentVisualRuntime equipment,
-            CharacterPredictiveFootPlacementGoalSource footPlacement,
+            CharacterFootPlacementRuntime footPlacement,
             CharacterCameraPresentationRuntime camera,
             Transform animationRoot,
             RuntimeDiagnosticsContext diagnostics)
@@ -65,7 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Animation = animation ?? throw new ArgumentNullException(nameof(animation));
             m_Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
             m_LinkedPose = new CharacterEquipmentLinkedPoseRuntime(actorId, projection);
-            bool requiresFootPlacement = projection.PosePlan.PredictiveFootPlacements.Count == 1;
+            bool requiresFootPlacement = projection.PosePlan.FootGroundings.Count == 1;
             if (requiresFootPlacement != (footPlacement != null))
                 throw new InvalidOperationException("Foot Placement runtime must match the compiled Pose Graph node exactly.");
             m_FootPlacement = footPlacement;
@@ -85,6 +85,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (interval.ActorId != m_ActorId)
                 throw new InvalidOperationException("Presentation Body interval targets another Actor.");
             m_Body.Capture(interval);
+            m_FactProjector.CaptureBodyBranch(
+                m_Body.ResetSequence,
+                m_Body.ResetReason);
         }
 
         public bool AcceptsTrajectoryIntent => true;
@@ -183,6 +186,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             RequireAlive();
             m_Body.CaptureTransaction(intervals);
+            m_FactProjector.CaptureBodyBranch(
+                m_Body.ResetSequence,
+                m_Body.ResetReason);
         }
 
         public void Publish(PresentationCommand command) =>
@@ -303,17 +309,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (bodyFrame.ResetSequence != m_LastBodyResetSequence)
                 {
                     if (bodyFrame.ResetReason == CharacterBodyPresentationResetReason.CommittedBranchReplacement)
+                    {
                         m_Animation.RetargetBodyBranch(bodyFrame.ResetSequence);
+                        m_FootPlacement?.RetargetBodyBranch(bodyFrame.ResetSequence);
+                    }
                     else
+                    {
                         m_Animation.ResetPoseBranch(bodyFrame.ResetSequence);
-                    m_FootPlacement?.Reset(new CharacterFootPlacementReset(
-                        m_ActorId,
-                        context.RenderFrame,
-                        bodyFrame.ResetSequence,
-                        CharacterFootPlacementResetReason.BodyStreamReset,
-                        bodyFrame.ResetReason));
+                        m_FootPlacement?.Reset(new CharacterFootPlacementReset(
+                            m_ActorId,
+                            context.RenderFrame,
+                            bodyFrame.ResetSequence,
+                            CharacterFootPlacementResetReason.BodyStreamReset,
+                            bodyFrame.ResetReason));
+                        m_PoseHasOutput = false;
+                    }
                     m_LastBodyResetSequence = bodyFrame.ResetSequence;
-                    m_PoseHasOutput = false;
                 }
                 CharacterPresentationFactFrame factFrame;
                 using (FactProjectionMarker.Auto())

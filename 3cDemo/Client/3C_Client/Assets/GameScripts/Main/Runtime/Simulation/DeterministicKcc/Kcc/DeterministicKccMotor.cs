@@ -112,6 +112,14 @@ namespace ThirdPersonSimulation.DeterministicKcc
         readonly DeterministicKccContact[] m_ZeroProgressContacts;
         readonly DeterministicKccConstraintPlane[] m_ConstraintPlanes;
 
+        int m_RepresentativeEvaluationCount;
+        int m_StepDetectionAttemptCount;
+        int m_StabilityEvaluationCount;
+        int m_StandardStepQueryCount;
+        int m_ExtraStepQueryCount;
+        int m_StepValidityCandidateCount;
+        int m_GroundProbeEvaluationCount;
+
         public DeterministicKccMotor(
             DeterministicCollisionWorldArtifact world,
             DeterministicKccConfiguration configuration)
@@ -140,6 +148,13 @@ namespace ThirdPersonSimulation.DeterministicKcc
 
             FixedVector3 position = startPosition;
             FixedVector3 remaining = requestedDisplacement;
+            m_RepresentativeEvaluationCount = 0;
+            m_StepDetectionAttemptCount = 0;
+            m_StabilityEvaluationCount = 0;
+            m_StandardStepQueryCount = 0;
+            m_ExtraStepQueryCount = 0;
+            m_StepValidityCandidateCount = 0;
+            m_GroundProbeEvaluationCount = 0;
             WorldCollisionSummary collision = WorldCollisionSummary.None;
             DeterministicKccQuerySummary summary = default;
             ResolvePenetration(ref position, ref collision, ref summary, DeterministicKccQueryStage.PenetrationRecovery);
@@ -199,44 +214,37 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 FixedScalar time = m_HitContacts[0].TimeOfImpact;
                 remaining = Scale(remaining, FixedScalar.One - time);
 
-                int selectedIndex = 0;
+                bool representativeSelected = TrySelectMovementRepresentative(
+                    contactCount,
+                    remainingBeforeCast,
+                    position,
+                    previousState,
+                    out int selectedIndex,
+                    out FixedVector3 obstructionNormal,
+                    out DeterministicKccStepRejection admissionRejection,
+                    out bool foundStableContact);
+                if (foundStableContact)
+                    lastMovementFoundAnyGround = true;
                 DeterministicKccHitStabilityReport selectedStability = default;
-                bool selected = false;
-                for (int i = 0; i < contactCount; i++)
+                if (representativeSelected)
                 {
-                    DeterministicKccContact contact = m_HitContacts[i];
-                    DeterministicKccHitStabilityReport stability = EvaluateHitStability(
+                    DeterministicKccContact contact = m_HitContacts[selectedIndex];
+                    m_RepresentativeEvaluationCount++;
+                    selectedStability = EvaluateHitStability(
                         position,
                         contact,
                         previousState,
                         requestedDisplacement,
-                        !upwardIntent,
+                        true,
+                        admissionRejection,
                         ref summary,
                         ref stepDiagnostics);
-                    if (stability.IsStable)
+                    if (selectedStability.IsStable)
                         lastMovementFoundAnyGround = true;
-                    if (!selected || stability.ValidStepDetected)
-                    {
-                        selected = true;
-                        selectedIndex = i;
-                        selectedStability = stability;
-                    }
-                    if (stability.ValidStepDetected)
-                        break;
                 }
 
-                DeterministicKccContact selectedContact = m_HitContacts[selectedIndex];
-                FixedVector3 obstructionNormal = GetObstructionNormal(
-                    selectedContact.Normal,
-                    selectedStability.IsStable,
-                    previousState);
-                bool verticalObstruction = FixedScalar.Abs(obstructionNormal.Y) <= m_Configuration.VerticalObstructionCorrelation;
-                DeterministicKccStepRejection commitRejection = previousState.IsStableOnGround
-                    ? upwardIntent
-                        ? DeterministicKccStepRejection.UpwardIntent
-                        : DeterministicKccStepRejection.CommitLandingAbsent
-                    : DeterministicKccStepRejection.PreviousStableGroundAbsent;
-                if (selectedStability.ValidStepDetected && previousState.IsStableOnGround && !upwardIntent && verticalObstruction &&
+                DeterministicKccStepRejection commitRejection = admissionRejection;
+                if (representativeSelected && selectedStability.ValidStepDetected &&
                     TryCommitStep(
                         position,
                         obstructionNormal,
@@ -266,14 +274,16 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     continue;
                 }
 
-                if (selectedStability.ValidStepDetected)
+                if (representativeSelected && selectedStability.ValidStepDetected)
                 {
                     stepDiagnostics = new DeterministicKccStepDiagnostics(
                         selectedStability.StepMode,
                         DeterministicKccStepStage.Commit,
-                        verticalObstruction ? commitRejection : DeterministicKccStepRejection.ObstructionNotVertical,
+                        commitRejection,
                         selectedStability.SteppedSurfaceId,
-                        stepDiagnostics.QuerySummary);
+                        stepDiagnostics.QuerySummary,
+                        m_RepresentativeEvaluationCount,
+                        m_StepDetectionAttemptCount);
                 }
 
                 for (int i = 0; i < contactCount; i++)
@@ -334,6 +344,14 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 ref summary,
                 ref stepDiagnostics,
                 out DeterministicKccGroundReport ground);
+            stepDiagnostics = stepDiagnostics.WithCounters(
+                m_RepresentativeEvaluationCount,
+                m_StepDetectionAttemptCount,
+                m_StabilityEvaluationCount,
+                m_StandardStepQueryCount,
+                m_ExtraStepQueryCount,
+                m_StepValidityCandidateCount,
+                m_GroundProbeEvaluationCount);
             if (ground.IsStableOnGround)
                 collision |= WorldCollisionSummary.Below;
 
@@ -354,6 +372,68 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     ? zeroProgressContactCount
                     : 0,
                 summary);
+        }
+
+        bool TrySelectMovementRepresentative(
+            int contactCount,
+            FixedVector3 displacement,
+            FixedVector3 characterPosition,
+            DeterministicKccBodyState previousState,
+            out int selectedIndex,
+            out FixedVector3 obstructionNormal,
+            out DeterministicKccStepRejection admissionRejection,
+            out bool foundStableContact)
+        {
+            selectedIndex = -1;
+            obstructionNormal = FixedVector3.Zero;
+            admissionRejection = DeterministicKccStepRejection.None;
+            foundStableContact = false;
+            for (int i = 0; i < contactCount; i++)
+            {
+                DeterministicKccContact contact = m_HitContacts[i];
+                bool baseStable = IsStableNormal(contact.SurfaceId, contact.Normal);
+                if (baseStable)
+                {
+                    foundStableContact = true;
+                    continue;
+                }
+                FixedVector3 effectiveNormal = GetObstructionNormal(contact.Normal, false, previousState);
+                if (FixedVector3.Dot(displacement, effectiveNormal) >= -m_Configuration.MinimumMovementDistance)
+                    continue;
+                if (selectedIndex < 0 || CompareContactIdentity(contact, m_HitContacts[selectedIndex]) < 0)
+                {
+                    selectedIndex = i;
+                    obstructionNormal = effectiveNormal;
+                }
+            }
+            if (selectedIndex < 0)
+            {
+                admissionRejection = DeterministicKccStepRejection.ObstructionNotClosing;
+                return false;
+            }
+
+            if (!previousState.IsStableOnGround)
+            {
+                admissionRejection = DeterministicKccStepRejection.PreviousStableGroundAbsent;
+                return true;
+            }
+            if (displacement.Y > m_Configuration.MinimumMovementDistance)
+            {
+                admissionRejection = DeterministicKccStepRejection.UpwardIntent;
+                return true;
+            }
+            if (FixedScalar.Abs(obstructionNormal.Y) > m_Configuration.VerticalObstructionCorrelation)
+            {
+                admissionRejection = DeterministicKccStepRejection.ObstructionNotVertical;
+                return true;
+            }
+            DeterministicCollisionPrimitive primitive = m_World.Primitives[m_HitContacts[selectedIndex].PrimitiveId];
+            if (primitive.Bounds.Maximum.Y - characterPosition.Y >
+                m_Configuration.MaximumStepHeight + m_Configuration.QueryTolerance)
+            {
+                admissionRejection = DeterministicKccStepRejection.ObstacleHeightExceeded;
+            }
+            return true;
         }
 
         public DeterministicKccMotorResult PlaceInitial(
@@ -381,6 +461,13 @@ namespace ThirdPersonSimulation.DeterministicKcc
             DeterministicKccQueryStage stage)
         {
             FixedVector3 position = startPosition;
+            m_RepresentativeEvaluationCount = 0;
+            m_StepDetectionAttemptCount = 0;
+            m_StabilityEvaluationCount = 0;
+            m_StandardStepQueryCount = 0;
+            m_ExtraStepQueryCount = 0;
+            m_StepValidityCandidateCount = 0;
+            m_GroundProbeEvaluationCount = 0;
             WorldCollisionSummary collision = WorldCollisionSummary.None;
             DeterministicKccQuerySummary summary = default;
             DeterministicKccStepDiagnostics diagnostics = default;
@@ -395,6 +482,14 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 ref summary,
                 ref diagnostics,
                 out DeterministicKccGroundReport ground);
+            diagnostics = diagnostics.WithCounters(
+                m_RepresentativeEvaluationCount,
+                m_StepDetectionAttemptCount,
+                m_StabilityEvaluationCount,
+                m_StandardStepQueryCount,
+                m_ExtraStepQueryCount,
+                m_StepValidityCandidateCount,
+                m_GroundProbeEvaluationCount);
             if (ground.IsStableOnGround)
                 collision |= WorldCollisionSummary.Below;
             return new DeterministicKccMotorResult(

@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline
         readonly CharacterEquipmentLinkedPoseRuntime m_LinkedPose;
         readonly CharacterEquipmentPreviewFixture
             m_EquipmentFixture;
-        readonly CharacterPredictiveFootPlacementGoalSource m_FootPlacement;
+        readonly CharacterFootPlacementRuntime m_FootPlacement;
         readonly bool m_WorldContextAvailable;
         readonly ActorId m_PreviewActorId;
         readonly Guid m_DiagnosticsOwnerId;
@@ -103,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline
                     CharacterBodyPresentationSourceMode.CommittedStream,
                     m_Projection);
             CharacterAnimationPresentationRuntime playback = null;
-            CharacterPredictiveFootPlacementGoalSource footPlacement = null;
+            CharacterFootPlacementRuntime footPlacement = null;
             try
             {
                 playback = new CharacterAnimationPresentationRuntime(
@@ -119,13 +119,13 @@ namespace ThirdPersonCharacter.Pipeline
                     AnimationPresentationDiagnosticsInterest.OperationDetail |
                     AnimationPresentationDiagnosticsInterest.FinalPoseDetail);
                 motionMatching = null;
-                if (m_Projection.PosePlan.PredictiveFootPlacements.Count == 1 && worldAwareBinding)
+                if (m_Projection.PosePlan.FootGroundings.Count == 1 && worldAwareBinding)
                 {
                     worldAwareBinding.RequireValid();
                     if (!physicsScene.IsValid())
                         throw new InvalidOperationException("Pose Graph Preview Foot Placement requires the target Scene PhysicsScene.");
-                    CharacterPresentationPredictiveFootPlacementDescriptor descriptor =
-                        m_Projection.PosePlan.PredictiveFootPlacements[0];
+                    CharacterPresentationFootGroundingDescriptor descriptor =
+                        m_Projection.PosePlan.FootGroundings[0];
                     CharacterFootPlacementPublicationValidation.Require(m_Projection, descriptor.Calibration);
                     var rig = new CharacterFootPlacementPoseRig(
                         descriptor.Calibration,
@@ -133,11 +133,12 @@ namespace ThirdPersonCharacter.Pipeline
                         animationRigBinding,
                         worldAwareBinding);
                     rig.RequireValid();
-                    footPlacement = new CharacterPredictiveFootPlacementGoalSource(
+                    footPlacement = new CharacterFootPlacementRuntime(
                         m_PreviewActorId,
                         descriptor.Profile.BuildSettings(m_Projection, rig),
                         rig,
-                        physicsScene);
+                        physicsScene,
+                        m_Projection.PosePlan.PredictiveFootPlacementModifiers.Count == 1);
                 }
                 var tuningTarget = new CharacterPoseTuningTargetIdentity(
                     m_PreviewActorId.Value,
@@ -156,7 +157,7 @@ namespace ThirdPersonCharacter.Pipeline
                 m_Playback = playback;
                 m_FootPlacement = footPlacement;
                 m_WorldContextAvailable =
-                    m_Projection.PosePlan.PredictiveFootPlacements.Count == 0 ||
+                    m_Projection.PosePlan.FootGroundings.Count == 0 ||
                     m_FootPlacement != null;
             }
             catch

@@ -108,7 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class CharacterPresentationPredictiveFootPlacementDescriptor
+    public sealed class CharacterPresentationFootGroundingDescriptor
     {
         public const int GoalCount = 3;
 
@@ -118,11 +118,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterFootPlacementRigCalibration m_Calibration;
         [SerializeField] string m_CalibrationId = string.Empty;
         [SerializeField] string m_CalibrationRevision = string.Empty;
-        [SerializeField] string m_BackendIdentity = string.Empty;
-        [SerializeField] string m_BackendSourceRevision = string.Empty;
         [SerializeField] int m_GoalWorkspaceOffset = -1;
 
-        public CharacterPresentationPredictiveFootPlacementDescriptor(
+        public CharacterPresentationFootGroundingDescriptor(
             int index,
             PoseNodeId nodeId,
             CharacterFootPlacementProfile profile,
@@ -135,9 +133,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Calibration = calibration ? calibration : throw new ArgumentNullException(nameof(calibration));
             m_CalibrationId = calibration.CalibrationId.Value;
             m_CalibrationRevision = calibration.ContentRevision;
-            m_BackendIdentity = CharacterFinalIkGroundingAdapter.BackendIdentity;
-            m_BackendSourceRevision = CharacterFinalIkGroundingAdapter.AuditedVendorSourceRevision;
             m_GoalWorkspaceOffset = goalWorkspaceOffset;
+            RequireValid(calibration.RigId, calibration.RigRevision);
         }
 
         public int Index => m_Index;
@@ -146,14 +143,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterFootPlacementRigCalibration Calibration => m_Calibration;
         public string CalibrationId => m_CalibrationId ?? string.Empty;
         public string CalibrationRevision => m_CalibrationRevision ?? string.Empty;
-        public string BackendIdentity => m_BackendIdentity ?? string.Empty;
-        public string BackendSourceRevision => m_BackendSourceRevision ?? string.Empty;
         public int GoalWorkspaceOffset => m_GoalWorkspaceOffset;
 
         public void RequireValid(string rigId, string rigRevision)
         {
             if (Index < 0 || !NodeId.IsValid || GoalWorkspaceOffset < 0 || !Profile || !Calibration)
-                throw new InvalidOperationException("Predictive Foot Placement descriptor is invalid.");
+                throw new InvalidOperationException("Foot Grounding descriptor is invalid.");
             Profile.RequireValid();
             Calibration.RequireValid();
             string computedProfileRevision = Profile.ComputeRevision();
@@ -161,17 +156,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !string.Equals(Calibration.RigId, rigId, StringComparison.Ordinal) ||
                 !string.Equals(Calibration.RigRevision, rigRevision, StringComparison.Ordinal) ||
                 !string.Equals(CalibrationId, Calibration.CalibrationId.Value, StringComparison.Ordinal) ||
-                !string.Equals(CalibrationRevision, Calibration.ContentRevision, StringComparison.Ordinal) ||
-                !string.Equals(BackendIdentity, CharacterFinalIkGroundingAdapter.BackendIdentity, StringComparison.Ordinal) ||
-                !string.Equals(BackendSourceRevision, CharacterFinalIkGroundingAdapter.AuditedVendorSourceRevision, StringComparison.Ordinal))
+                !string.Equals(CalibrationRevision, Calibration.ContentRevision, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"Predictive Foot Placement descriptor is stale. " +
+                    $"Foot Grounding descriptor is stale. " +
                     $"Profile={Profile.Revision}/{computedProfileRevision} " +
                     $"CalibrationRig={Calibration.RigId}/{Calibration.RigRevision} ExpectedRig={rigId}/{rigRevision} " +
-                    $"Calibration={CalibrationId}/{CalibrationRevision} ExpectedCalibration={Calibration.CalibrationId.Value}/{Calibration.ContentRevision} " +
-                    $"Backend={BackendIdentity}/{BackendSourceRevision} ExpectedBackend={CharacterFinalIkGroundingAdapter.BackendIdentity}/{CharacterFinalIkGroundingAdapter.AuditedVendorSourceRevision}.");
+                    $"Calibration={CalibrationId}/{CalibrationRevision} ExpectedCalibration={Calibration.CalibrationId.Value}/{Calibration.ContentRevision}.");
             }
+        }
+    }
+
+    [Serializable]
+    public sealed class CharacterPresentationPredictiveFootPlacementModifierDescriptor
+    {
+        public const int GoalCount = CharacterPresentationFootGroundingDescriptor.GoalCount;
+
+        [SerializeField] int m_Index = -1;
+        [SerializeField] string m_NodeId = string.Empty;
+        [SerializeField] int m_GoalWorkspaceOffset = -1;
+
+        public CharacterPresentationPredictiveFootPlacementModifierDescriptor(
+            int index,
+            PoseNodeId nodeId,
+            int goalWorkspaceOffset)
+        {
+            m_Index = index;
+            m_NodeId = nodeId.IsValid ? nodeId.Value : string.Empty;
+            m_GoalWorkspaceOffset = goalWorkspaceOffset;
+            RequireValid();
+        }
+
+        public int Index => m_Index;
+        public PoseNodeId NodeId => new PoseNodeId(m_NodeId);
+        public int GoalWorkspaceOffset => m_GoalWorkspaceOffset;
+
+        public void RequireValid()
+        {
+            if (Index < 0 || !NodeId.IsValid || GoalWorkspaceOffset < 0)
+                throw new InvalidOperationException("Predictive Foot Placement Modifier descriptor is invalid.");
         }
     }
 

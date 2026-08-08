@@ -55,7 +55,7 @@
 
 - **WHEN** 离散楼梯Ground Collider经唯一Surface owner进入Collision Artifact
 - **THEN** Fixed KCC MUST使用现有Step与Ground Probe语义处理该几何
-- **AND** Foot Placement MUST从同一组Ground Collider获得heel、toe与路径support
+- **AND** Foot Placement MUST从同一组Ground Collider获得Lyra current Sphere hit与预测路径support
 
 #### Scenario: 离散楼梯误挂Ramp作者组件
 

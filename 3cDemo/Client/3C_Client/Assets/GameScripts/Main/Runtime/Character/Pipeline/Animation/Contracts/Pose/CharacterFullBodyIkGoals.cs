@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public enum CharacterFullBodyIkGoalSourceKind : byte
     {
         None = 0,
-        FinalIkGrounding = 1,
+        FootGrounding = 1,
         PredictiveExtension = 2,
         PoseBone = 4
     }
@@ -37,14 +37,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public enum CharacterFullBodyIkGoalApplication : byte
     {
         AbsoluteEffectorTarget = 1,
-        GroundingEffectorTarget = 2,
+        FootPlacementEffectorTarget = 2,
         PelvisPreSolveTranslation = 3
-    }
-
-    public enum CharacterFullBodyIkPlantPivotMode : byte
-    {
-        None = 0,
-        Toe = 1
     }
 
     public readonly struct CharacterFullBodyIkGoal
@@ -57,9 +51,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float rotationWeight,
             CharacterFullBodyIkGoalApplication application,
             CharacterFullBodyIkGoalSourceKind sourceKind,
-            CharacterFullBodyIkPlantPivotMode plantPivotMode,
-            Vector3 componentPlantPivot,
-            float plantPivotWeight,
             int diagnosticMetadataIndex)
         {
             Slot = slot;
@@ -69,9 +60,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RotationWeight = rotationWeight;
             Application = application;
             SourceKind = sourceKind;
-            PlantPivotMode = plantPivotMode;
-            ComponentPlantPivot = componentPlantPivot;
-            PlantPivotWeight = plantPivotWeight;
             DiagnosticMetadataIndex = diagnosticMetadataIndex;
             if (!IsValid)
                 throw new ArgumentException("Full Body IK Goal is invalid.");
@@ -84,9 +72,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public float RotationWeight { get; }
         public CharacterFullBodyIkGoalApplication Application { get; }
         public CharacterFullBodyIkGoalSourceKind SourceKind { get; }
-        public CharacterFullBodyIkPlantPivotMode PlantPivotMode { get; }
-        public Vector3 ComponentPlantPivot { get; }
-        public float PlantPivotWeight { get; }
         public int DiagnosticMetadataIndex { get; }
 
         public bool IsValid =>
@@ -96,31 +81,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IsUnit(ComponentRotation) &&
             IsWeight(PositionWeight) &&
             IsWeight(RotationWeight) &&
-            IsPlantPivotValid() &&
             IsApplicationValid() &&
             SourceKind != CharacterFullBodyIkGoalSourceKind.None &&
-            (SourceKind & ~(CharacterFullBodyIkGoalSourceKind.FinalIkGrounding |
+            (SourceKind & ~(CharacterFullBodyIkGoalSourceKind.FootGrounding |
                             CharacterFullBodyIkGoalSourceKind.PredictiveExtension |
                             CharacterFullBodyIkGoalSourceKind.PoseBone)) == 0 &&
             DiagnosticMetadataIndex >= -1;
-
-        bool IsPlantPivotValid()
-        {
-            switch (PlantPivotMode)
-            {
-                case CharacterFullBodyIkPlantPivotMode.None:
-                    return ComponentPlantPivot == Vector3.zero && PlantPivotWeight == 0f;
-                case CharacterFullBodyIkPlantPivotMode.Toe:
-                    return Application == CharacterFullBodyIkGoalApplication.GroundingEffectorTarget &&
-                           (Slot == CharacterFullBodyIkEffectorSlot.LeftFoot ||
-                            Slot == CharacterFullBodyIkEffectorSlot.RightFoot) &&
-                           CharacterPoseConstraintMath.IsFinite(ComponentPlantPivot) &&
-                           IsWeight(PlantPivotWeight) &&
-                           Mathf.Abs(PositionWeight - RotationWeight) <= 0.0001f;
-                default:
-                    return false;
-            }
-        }
 
         bool IsApplicationValid()
         {
@@ -129,11 +95,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 case CharacterFullBodyIkGoalApplication.PelvisPreSolveTranslation:
                     return Slot == CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation &&
                            ComponentRotation == Quaternion.identity &&
-                           RotationWeight == 0f;
-                case CharacterFullBodyIkGoalApplication.GroundingEffectorTarget:
+                           RotationWeight == 0f &&
+                           (SourceKind & CharacterFullBodyIkGoalSourceKind.FootGrounding) != 0;
+                case CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget:
                     return (Slot == CharacterFullBodyIkEffectorSlot.LeftFoot ||
                             Slot == CharacterFullBodyIkEffectorSlot.RightFoot) &&
-                           (SourceKind & CharacterFullBodyIkGoalSourceKind.FinalIkGrounding) != 0;
+                           (SourceKind & CharacterFullBodyIkGoalSourceKind.FootGrounding) != 0;
                 case CharacterFullBodyIkGoalApplication.AbsoluteEffectorTarget:
                     return Slot != CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation;
                 default:
@@ -167,11 +134,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int goalOffset,
             int goalCount,
             CharacterFullBodyIkGoalSetAvailability availability)
+            : this(
+                frameSequence,
+                completionIdentity,
+                new FixedString64Bytes(rigId ?? string.Empty),
+                new FixedString64Bytes(rigRevision ?? string.Empty),
+                producerOperationIndex,
+                producerCallSiteIndex,
+                goalOffset,
+                goalCount,
+                availability)
+        {
+        }
+
+        public CharacterFullBodyIkGoalSetHeader(
+            ulong frameSequence,
+            ulong completionIdentity,
+            FixedString64Bytes rigId,
+            FixedString64Bytes rigRevision,
+            int producerOperationIndex,
+            int producerCallSiteIndex,
+            int goalOffset,
+            int goalCount,
+            CharacterFullBodyIkGoalSetAvailability availability)
         {
             FrameSequence = frameSequence;
             CompletionIdentity = completionIdentity;
-            RigId = new FixedString64Bytes(rigId ?? string.Empty);
-            RigRevision = new FixedString64Bytes(rigRevision ?? string.Empty);
+            RigId = rigId;
+            RigRevision = rigRevision;
             ProducerOperationIndex = producerOperationIndex;
             ProducerCallSiteIndex = producerCallSiteIndex;
             GoalOffset = goalOffset;

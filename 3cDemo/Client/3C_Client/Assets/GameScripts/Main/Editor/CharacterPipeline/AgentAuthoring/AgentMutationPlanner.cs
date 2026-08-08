@@ -147,7 +147,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 [AgentMutationKind.EnsureBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureBlackboardDeclaration, AgentMutationOutputKind.BlackboardDeclaration, LowerEnsureBlackboardDeclaration),
                 [AgentMutationKind.MoveBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.MoveBlackboardDeclaration, AgentMutationOutputKind.BlackboardDeclaration, LowerMoveBlackboardDeclaration),
                 [AgentMutationKind.DeleteBlackboardDeclaration] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteBlackboardDeclaration, AgentMutationOutputKind.None, LowerDeleteBlackboardDeclaration, AgentMutationDomainMask.Both),
-                [AgentMutationKind.EnsureBlackboardWrite] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureBlackboardWrite, AgentMutationOutputKind.Node, LowerEnsureBlackboardWrite),
+                [AgentMutationKind.SetBlackboardSchemaRevision] = new AgentMutationDraftDescriptor(AgentMutationKind.SetBlackboardSchemaRevision, AgentMutationOutputKind.None, LowerSetBlackboardSchemaRevision, AgentMutationDomainMask.Both),
+                [AgentMutationKind.EnsureExposedPropertyNode] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureExposedPropertyNode, AgentMutationOutputKind.Node, LowerEnsureExposedPropertyNode),
                 [AgentMutationKind.EnsureTimelineTreeClip] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTimelineTreeClip, AgentMutationOutputKind.TimelineClip, LowerEnsureTimelineTreeClip),
                 [AgentMutationKind.EnsureMotionCurveTrack] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionCurveTrack, AgentMutationOutputKind.TimelineTrack, LowerEnsureMotionCurveTrack),
                 [AgentMutationKind.EnsureMotionCurveClip] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionCurveClip, AgentMutationOutputKind.TimelineClip, LowerEnsureMotionCurveClip),
@@ -497,15 +498,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             Type valueType = ParseBlackboardValueType(context, operation.blackboardValueType);
             object defaultValue = ReadBlackboardDefault(context, operation.blackboardDefaultValue, valueType);
             bool valid = TryParseEnum(context, operation.blackboardScope, "blackboardScope", out PipelineBlackboardVariableScope scope) &
-                         TryParseEnum(context, operation.blackboardLifetime, "blackboardLifetime", out PipelineBlackboardVariableLifetime lifetime) &
-                         TryParseEnum(context, operation.blackboardAuthority, "blackboardAuthority", out PipelineBlackboardVariableAuthority authority) &
-                         TryParseEnum(context, operation.blackboardSyncPolicy, "blackboardSyncPolicy", out PipelineBlackboardVariableSyncPolicy syncPolicy) &
-                         TryParseEnum(context, First(operation.factProjection, "None"), "factProjection", out PipelineBlackboardFactProjectionKind projection);
-            if (projection == PipelineBlackboardFactProjectionKind.ActionWindow && string.IsNullOrWhiteSpace(operation.windowType))
-                context.Error("windowType", "window_type_missing", "ActionWindow declaration 必须显式提供 WindowType。");
-            ValidateInputDerived(context, syncPolicy, operation.inputId);
+                         TryParseEnum(context, operation.blackboardLifetime, "blackboardLifetime", out PipelineBlackboardVariableLifetime lifetime);
+            ValidateBlackboardPayloads(context, operation.inputBinding, operation.factProjection);
             return context.IsValid && valid && valueType != null
-                ? new AgentEnsureBlackboardDeclarationMutation(operation.id, context.Path, graph, declarationAuthoringId, key, valueType, defaultValue, scope, lifetime, authority, syncPolicy, operation.inputId, projection, operation.windowType, operation.windowId, operation.digest, operation.categoryPath)
+                ? new AgentEnsureBlackboardDeclarationMutation(operation.id, context.Path, graph, declarationAuthoringId, key, valueType, defaultValue, scope, lifetime, operation.inputBinding, operation.factProjection, operation.categoryPath)
                 : null;
         }
 
@@ -516,6 +512,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return context.IsValid ? new AgentDeleteBlackboardDeclarationMutation(operation.id, context.Path, graph, declaration) : null;
         }
 
+        static AgentMutation LowerSetBlackboardSchemaRevision(AgentMutationPlanningContext context, AgentMutationDraft operation)
+        {
+            AgentGraphTargetReference graph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
+            if (operation.blackboardSchemaRevision != PipelineBlackboardAuthoringSchema.CurrentRevision)
+                context.Error("blackboardSchemaRevision", "blackboard_schema_revision_invalid", $"Blackboard schema revision 必须是 {PipelineBlackboardAuthoringSchema.CurrentRevision}。");
+            return context.IsValid
+                ? new AgentSetBlackboardSchemaRevisionMutation(operation.id, context.Path, graph, operation.blackboardSchemaRevision)
+                : null;
+        }
+
         static AgentMutation LowerMoveBlackboardDeclaration(AgentMutationPlanningContext context, AgentMutationDraft operation)
         {
             AgentGraphTargetReference sourceGraph = context.RequiredGraph(operation.graphAuthoringId, operation.graphPlannedIdentity, "graph");
@@ -524,25 +530,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string key = context.RequiredText(operation.blackboardKey, string.Empty, "blackboardKey", "move_blackboard_declaration 缺少 blackboardKey。");
             Type valueType = ParseBlackboardValueType(context, operation.blackboardValueType);
             bool valid = TryParseEnum(context, operation.blackboardScope, "blackboardScope", out PipelineBlackboardVariableScope scope) &
-                         TryParseEnum(context, operation.blackboardLifetime, "blackboardLifetime", out PipelineBlackboardVariableLifetime lifetime) &
-                         TryParseEnum(context, operation.blackboardAuthority, "blackboardAuthority", out PipelineBlackboardVariableAuthority authority) &
-                         TryParseEnum(context, operation.blackboardSyncPolicy, "blackboardSyncPolicy", out PipelineBlackboardVariableSyncPolicy syncPolicy) &
-                         TryParseEnum(context, First(operation.factProjection, "None"), "factProjection", out PipelineBlackboardFactProjectionKind projection);
-            if (projection == PipelineBlackboardFactProjectionKind.ActionWindow && string.IsNullOrWhiteSpace(operation.windowType))
-                context.Error("windowType", "window_type_missing", "ActionWindow declaration 必须显式提供 WindowType。");
-            ValidateInputDerived(context, syncPolicy, operation.inputId);
+                         TryParseEnum(context, operation.blackboardLifetime, "blackboardLifetime", out PipelineBlackboardVariableLifetime lifetime);
+            ValidateBlackboardPayloads(context, operation.inputBinding, operation.factProjection);
             return context.IsValid && valid && valueType != null
-                ? new AgentMoveBlackboardDeclarationMutation(operation.id, context.Path, sourceGraph, targetGraph, declaration, key, valueType, scope, lifetime, authority, syncPolicy, operation.inputId, projection, operation.windowType, operation.windowId, operation.digest, operation.categoryPath)
+                ? new AgentMoveBlackboardDeclarationMutation(operation.id, context.Path, sourceGraph, targetGraph, declaration, key, valueType, scope, lifetime, operation.inputBinding, operation.factProjection, operation.categoryPath)
                 : null;
         }
 
-        static AgentMutation LowerEnsureBlackboardWrite(AgentMutationPlanningContext context, AgentMutationDraft operation)
+        static AgentMutation LowerEnsureExposedPropertyNode(AgentMutationPlanningContext context, AgentMutationDraft operation)
         {
             AgentGraphTargetReference graph = context.RequiredGraph(operation.targetGraphAuthoringId, operation.targetGraphPlannedIdentity, "targetGraph");
             AgentAuthoringReference declaration = context.RequiredDeclaration(operation.declarationAuthoringId, operation.declarationPlannedIdentity, "declaration");
-            string displayName = First(operation.displayName, operation.blackboardBoolValue ? "Set Blackboard True" : "Set Blackboard False");
-            return context.IsValid
-                ? new AgentEnsureBlackboardWriteMutation(operation.id, context.Path, graph, operation.targetElementAuthoringId, declaration, operation.blackboardBoolValue, displayName, operation.position)
+            Type valueType = ParseBlackboardValueType(context, operation.blackboardValueType);
+            bool valid = TryParseEnum(context, operation.exposedPropertyMode, "exposedPropertyMode", out ExposedPropertyNodeType mode);
+            object value = null;
+            if (mode == ExposedPropertyNodeType.Set)
+                value = ReadBlackboardDefault(context, operation.blackboardDefaultValue, valueType);
+            else if (operation.blackboardDefaultValue != null && operation.blackboardDefaultValue.Type != Newtonsoft.Json.Linq.JTokenType.Null)
+                context.Error("blackboardDefaultValue", "exposed_property_get_value_forbidden", "Get ExposedProperty 节点不能保存 value。");
+            string displayName = First(operation.displayName, mode + " Blackboard");
+            return context.IsValid && valid && valueType != null
+                ? new AgentEnsureExposedPropertyNodeMutation(operation.id, context.Path, graph, operation.targetElementAuthoringId, declaration, mode, valueType, value, displayName, operation.position)
                 : null;
         }
 
@@ -1421,19 +1429,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
-        static void ValidateInputDerived(
+        static void ValidateBlackboardPayloads(
             AgentMutationPlanningContext context,
-            PipelineBlackboardVariableSyncPolicy syncPolicy,
-            string inputValueId)
+            AgentSnapshotBlackboardInputBinding inputBinding,
+            AgentSnapshotBlackboardFactProjection factProjection)
         {
-            if (syncPolicy == PipelineBlackboardVariableSyncPolicy.InputDerived)
+            if (inputBinding != null && string.IsNullOrWhiteSpace(inputBinding.inputValueId))
+                context.Error("inputBinding.inputValueId", "input_value_id_missing", "Blackboard Input Binding 必须显式提供 inputValueId。");
+            if (factProjection == null)
+                return;
+            if (!TryParseEnum(context, factProjection.kind, "factProjection.kind", out PipelineBlackboardFactProjectionKind projection))
+                return;
+            if (projection == PipelineBlackboardFactProjectionKind.ActionWindow)
             {
-                if (string.IsNullOrWhiteSpace(inputValueId))
-                    context.Error("inputId", "input_value_id_missing", "InputDerived declaration 必须显式提供 inputId。");
-            }
-            else if (!string.IsNullOrWhiteSpace(inputValueId))
-            {
-                context.Error("inputId", "input_value_id_forbidden", "非 InputDerived declaration 不得保留 inputId。");
+                if (string.IsNullOrWhiteSpace(factProjection.windowType))
+                    context.Error("factProjection.windowType", "window_type_missing", "ActionWindow Fact Projection 必须显式提供 windowType。");
+                if (string.IsNullOrWhiteSpace(factProjection.windowId))
+                    context.Error("factProjection.windowId", "window_id_missing", "ActionWindow Fact Projection 必须显式提供 windowId。");
             }
         }
 

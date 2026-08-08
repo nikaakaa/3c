@@ -91,8 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             foreach (CharacterAuthoringBlackboardDeclaration item in m_Model.Declarations.Values)
             {
                 BaseExposedProperty declaration = item.Declaration;
-                if (declaration.BlackboardSyncPolicy != PipelineBlackboardVariableSyncPolicy.InputDerived ||
-                    string.IsNullOrWhiteSpace(declaration.InputValueId))
+                if (declaration.InputBinding == null)
                     continue;
                 ProgramInputValueKind kind = MapInputValueKind(declaration.ValueType);
                 if (!m_Index.InputValues.Add(declaration.InputValueId))
@@ -100,7 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_Report.Error(
                         "input_value_identity_duplicate",
                         item.Route,
-                        $"InputDerived declaration '{declaration.BlackboardKey}' duplicates input value '{declaration.InputValueId}'.");
+                        $"Blackboard Input Binding '{declaration.BlackboardKey}' duplicates input value '{declaration.InputValueId}'.");
                     continue;
                 }
                 CharacterSimulationSourceLocation source = AssetSource(
@@ -198,7 +197,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (type == typeof(ActionTargetSnapshot))
                 return ProgramInputValueKind.ActionTargetSnapshot;
-            throw new InvalidOperationException($"InputDerived Blackboard type '{type?.FullName}' has no portable input kind.");
+            throw new InvalidOperationException($"Blackboard Input Binding type '{type?.FullName}' has no portable input kind.");
         }
 
         void CompileActions()

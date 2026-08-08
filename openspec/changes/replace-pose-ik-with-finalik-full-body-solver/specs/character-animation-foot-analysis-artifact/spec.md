@@ -48,7 +48,7 @@ Animation Foot Analysis MUST为`AnimationClip imported content + Rig Definition 
 
 ### Requirement: Plant Confidence必须只表达源动画接触意图
 
-每脚`PlantConfidence` MUST由单AnimationClip的校准鞋底高度与垂直速度分析生成，并 MUST继续作为源动画接触意图、稳定Landing候选与Motion Matching脚特征。`0.5` MUST只表示单Clip分析中的Planted/Unplanted语义边界。每脚`SoleLocalVelocity` MUST由该Clip左右Heel/Toe独立采样得到，并 MUST随最终Pose contribution的source权重与visual time scale混合。Runtime MAY使用混合后的`PlantConfidence`与`SoleLocalVelocity.magnitude`维护Plant Contact迟滞；Runtime MUST不把二者通过连续乘法直接变成普通Foot Goal Position/Rotation Weight，也 MUST不把`SoleLocalVelocity`与Body世界平移、可见速度或yaw点速度拼接。普通Current Grounding Goal MUST只由Foot Placement总权重、Body Grounded与合法命中控制。
+每脚`PlantConfidence` MUST由单AnimationClip的校准鞋底高度与垂直速度分析生成，并 MUST继续作为源动画接触意图、稳定Landing候选与Motion Matching脚特征。`0.5` MUST只表示单Clip分析中的Planted/Unplanted语义边界。每脚`SoleLocalVelocity` MUST由该Clip左右Heel/Toe独立采样得到，并 MUST随最终Pose contribution的source权重与visual time scale混合。Runtime MAY使用混合后的`PlantConfidence`与`SoleLocalVelocity.magnitude`维护Plant Contact迟滞；Runtime MUST不把二者通过连续乘法直接变成普通Foot Goal Position/Rotation Weight，也 MUST不把`SoleLocalVelocity`与Body世界平移、可见速度或yaw点速度拼接。普通Current Grounding Goal的总alpha MUST只由Foot Placement总权重应用一次；Body Grounded与trace hit只按正式诊断及Lyra未命中分支参与，不得成为关闭普通Goal的gate。
 
 #### Scenario: Run过渡混合两个源动画
 

@@ -23,6 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentGraphSnapshot snapshot = new AgentGraphSnapshotExporter().ExportFull(definition);
             var editable = new AgentDocumentEditable
             {
+                blackboardSchemaRevision = TreeDesigner.PipelineBlackboardAuthoringSchema.CurrentRevision,
                 graphs = snapshot.graphs,
                 stateMachines = snapshot.stateMachines,
                 blackboardDeclarations = snapshot.blackboardDeclarations,
@@ -59,13 +60,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (!definition)
                 throw new ArgumentNullException(nameof(definition));
 
-            AgentGraphSnapshot snapshot = new AgentAIControllerSnapshotExporter().Export(definition, AgentSnapshotExportMode.Full);
-            AgentSnapshotAIController controller = snapshot.aiController ?? new AgentSnapshotAIController();
             AgentGraphSnapshot characterSnapshot = definition.ControlledCharacter
                 ? new AgentGraphSnapshotExporter().ExportFull(definition.ControlledCharacter)
                 : new AgentGraphSnapshot();
+            AgentGraphSnapshot snapshot = new AgentAIControllerSnapshotExporter().Export(
+                definition,
+                AgentSnapshotExportMode.Full,
+                characterSnapshot);
+            AgentSnapshotAIController controller = snapshot.aiController ?? new AgentSnapshotAIController();
             var editable = new AgentDocumentEditable
             {
+                blackboardSchemaRevision = TreeDesigner.PipelineBlackboardAuthoringSchema.CurrentRevision,
                 graphs = snapshot.graphs,
                 aiController = new AgentDocumentAIEditable
                 {
@@ -99,6 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     characterProgramId = controller.characterProgramId,
                     characterProgramHash = controller.characterProgramHash,
+                    characterProgramStale = controller.characterProgramStale,
                     intentProgramAssetPath = controller.intentProgramAssetPath,
                     intentProgramAssetGuid = controller.intentProgramAssetGuid,
                     intentProgramId = controller.intentProgramId,

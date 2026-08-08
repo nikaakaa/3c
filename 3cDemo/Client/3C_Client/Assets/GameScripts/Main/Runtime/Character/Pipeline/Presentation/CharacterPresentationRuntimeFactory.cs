@@ -261,7 +261,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             CharacterBodyPresentationRuntime body = null;
             CharacterAnimationPresentationRuntime animation = null;
-            CharacterPredictiveFootPlacementGoalSource footPlacement = null;
+            CharacterFootPlacementRuntime footPlacement = null;
             CharacterCameraPresentationRuntime camera = null;
             CharacterEquipmentVisualRuntime equipment = null;
             CharacterMotionMatchingPresentationModule motionMatching = null;
@@ -312,14 +312,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     projection,
                     equipmentRigCatalog,
                     diagnostics);
-                if (projection.PosePlan.PredictiveFootPlacements.Count == 1)
+                if (projection.PosePlan.FootGroundings.Count == 1)
                 {
                     if (!worldAwareBinding)
                         throw new ArgumentNullException(nameof(worldAwareBinding));
                     if (!physicsScene.IsValid())
                         throw new ArgumentException("Foot Placement requires a valid PhysicsScene.", nameof(physicsScene));
-                    CharacterPresentationPredictiveFootPlacementDescriptor descriptor =
-                        projection.PosePlan.PredictiveFootPlacements[0];
+                    CharacterPresentationFootGroundingDescriptor descriptor =
+                        projection.PosePlan.FootGroundings[0];
                     CharacterFootPlacementPublicationValidation.Require(projection, descriptor.Calibration);
                     CharacterFootPlacementPoseRig rig = new CharacterFootPlacementPoseRig(
                         descriptor.Calibration,
@@ -331,11 +331,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         throw new InvalidOperationException("World-Aware Presentation Root must match Presentation VisualRoot exactly.");
                     CharacterFootPlacementRuntimeSettings footPlacementSettings =
                         descriptor.Profile.BuildSettings(projection, rig);
-                    footPlacement = new CharacterPredictiveFootPlacementGoalSource(
+                    footPlacement = new CharacterFootPlacementRuntime(
                         actorId,
                         footPlacementSettings,
                         rig,
-                        physicsScene);
+                        physicsScene,
+                        projection.PosePlan.PredictiveFootPlacementModifiers.Count == 1);
                 }
                 if (cameraRig)
                 {
@@ -392,7 +393,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         public static void Dispose(
             CharacterCameraPresentationRuntime camera,
-            CharacterPredictiveFootPlacementGoalSource footPlacement,
+            CharacterFootPlacementRuntime footPlacement,
             CharacterEquipmentVisualRuntime equipment,
             CharacterAnimationPresentationRuntime animation,
             CharacterBodyPresentationRuntime body)

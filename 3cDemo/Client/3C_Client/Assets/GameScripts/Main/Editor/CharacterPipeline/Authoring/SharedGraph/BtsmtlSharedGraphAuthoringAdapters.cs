@@ -443,53 +443,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     capabilityId,
                     node.ResolvedDisplayName,
                     node.Position,
-                    ProjectDynamicPorts(node, capability)));
-            }
-            return result;
-        }
-
-        IReadOnlyList<GraphAuthoringDynamicPortProjection> ProjectDynamicPorts(
-            BaseNode node,
-            GraphAuthoringCapabilityDescriptor capability)
-        {
-            var fixedPorts = new HashSet<GraphAuthoringPortId>(
-                capability.FixedPorts.Select(value => value.PortId));
-            var result = new List<GraphAuthoringDynamicPortProjection>();
-            int order = capability.FixedPorts.Count;
-            foreach (FlowPortDeclaration port in
-                     node.GetSupportedFlowPortDeclarations(m_Graph))
-            {
-                GraphAuthoringPortId id = BtsmtlSharedGraphPort.Flow(port.Name);
-                if (fixedPorts.Contains(id))
-                    continue;
-                result.Add(new GraphAuthoringDynamicPortProjection(
-                    id,
-                    port.Name,
-                    BtsmtlSharedGraphPort.FlowValueType,
-                    BtsmtlSharedGraphPort.Direction(port.Direction),
-                    BtsmtlSharedGraphPort.Capacity(port.Capacity),
-                    port.Direction == PortDirection.Input,
-                    order++));
-            }
-            foreach (PropertyPort port in node.PropertyPortMap.Values
-                         .Where(value => value != null)
-                         .OrderBy(value => value.Index)
-                         .ThenBy(value => value.PortId, StringComparer.Ordinal))
-            {
-                GraphAuthoringPortId id =
-                    BtsmtlSharedGraphPort.Property(port.PortId);
-                if (fixedPorts.Contains(id))
-                    continue;
-                result.Add(new GraphAuthoringDynamicPortProjection(
-                    id,
-                    port.DisplayName,
-                    BtsmtlSharedGraphPort.PropertyValueType,
-                    BtsmtlSharedGraphPort.Direction(port.Direction),
-                    port.Direction == PortDirection.Input
-                        ? GraphAuthoringPortCapacity.Single
-                        : GraphAuthoringPortCapacity.Multiple,
-                    port.Direction == PortDirection.Input,
-                    order++));
+                    m_Catalog.ProjectPortShape(node, m_Graph, capability)));
             }
             return result;
         }

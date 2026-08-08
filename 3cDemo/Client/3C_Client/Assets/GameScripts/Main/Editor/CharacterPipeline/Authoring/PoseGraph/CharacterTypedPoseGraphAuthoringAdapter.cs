@@ -1220,7 +1220,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 case CharacterPoseNodeKind.ActionPlaybackInput:
                 case CharacterPoseNodeKind.AnimationSlot:
                 case CharacterPoseNodeKind.ModifyBone:
-                case CharacterPoseNodeKind.PredictiveFootPlacement:
+                case CharacterPoseNodeKind.FootGrounding:
+                case CharacterPoseNodeKind.PredictiveFootPlacementModifier:
                 case CharacterPoseNodeKind.FullBodyIK:
                 case CharacterPoseNodeKind.LocalToComponentPose:
                 case CharacterPoseNodeKind.ComponentToLocalPose:

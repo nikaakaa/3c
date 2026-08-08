@@ -321,12 +321,12 @@ namespace ThirdPersonCharacter.AI.Editor
                     PipelineBlackboardVariableScope.AITick => AIMemoryScope.Tick,
                     _ => throw new InvalidOperationException($"AI declaration '{declaration.DeclarationId}' uses forbidden scope '{declaration.BlackboardScope}'.")
                 };
-                if (declaration.BlackboardLifetime != PipelineBlackboardVariablePolicy.DefaultLifetime(declaration.BlackboardScope) ||
-                    declaration.BlackboardAuthority != PipelineBlackboardVariableAuthority.LocalOnly ||
-                    declaration.BlackboardSyncPolicy != PipelineBlackboardVariableSyncPolicy.None)
+                if (declaration.BlackboardLifetime != PipelineBlackboardVariablePolicy.DefaultLifetime(declaration.BlackboardScope))
                 {
-                    throw new InvalidOperationException($"AI declaration '{declaration.DeclarationId}' has incompatible lifetime, authority or sync policy.");
+                    throw new InvalidOperationException($"AI declaration '{declaration.DeclarationId}' has incompatible lifetime.");
                 }
+                if (declaration.InputBinding != null || declaration.FactProjection != null)
+                    throw new InvalidOperationException($"AI declaration '{declaration.DeclarationId}' cannot declare Character Input Binding or Fact Projection.");
                 ReadDefault(declaration.GetValue(), out AIIntentValueKind kind, out int integer0, out double x, out double y, out double z, out double w, out string text);
                 result.Add(new AIIntentMemoryDeclaration(
                     i,

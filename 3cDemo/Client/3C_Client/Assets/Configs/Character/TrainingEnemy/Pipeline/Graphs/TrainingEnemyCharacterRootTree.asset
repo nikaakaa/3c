@@ -84,6 +84,7 @@ MonoBehaviour:
         - rid: 3396202407018103054
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 1
         m_RootGUID: dc88f579-612b-4d33-a930-8804cad1a596
     - rid: 3396202407018103047
       type: {class: RootNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -106,7 +107,7 @@ MonoBehaviour:
           m_InputEdgeGUID: 
           m_OutputEdgeGUIDs: []
           m_Value: 0
-        m_OutputEdgeGUID: 
+        m_OutputEdgeGUID: b52acb5a-a10d-439e-add6-322e8d377fcd
     - rid: 3396202407018103048
       type: {class: LoopNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -116,8 +117,8 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: -420, y: 0}
-        m_InputEdgeGUID: 
-        m_OutputEdgeGUID: 
+        m_InputEdgeGUID: b52acb5a-a10d-439e-add6-322e8d377fcd
+        m_OutputEdgeGUID: eeea95ee-77f2-4106-80ac-2721700ba49d
         m_StopType: 0
     - rid: 3396202407018103049
       type: {class: ParallelNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -128,8 +129,10 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: -180, y: 0}
-        m_InputEdgeGUID: 
-        m_OutputEdgeGUIDs: []
+        m_InputEdgeGUID: eeea95ee-77f2-4106-80ac-2721700ba49d
+        m_OutputEdgeGUIDs:
+        - d6f5226d-57af-46f6-811a-99f4345a8b7d
+        - 951c45eb-7c14-4a3b-b496-311f2a419f03
         m_ParallelType: 0
     - rid: 3396202407018103050
       type: {class: StateMachineNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -141,7 +144,7 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 100, y: -120}
-        m_InputEdgeGUID: 
+        m_InputEdgeGUID: d6f5226d-57af-46f6-811a-99f4345a8b7d
     - rid: 3396202407018103051
       type: {class: StateMachineNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -152,7 +155,7 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 100, y: 120}
-        m_InputEdgeGUID: 
+        m_InputEdgeGUID: 951c45eb-7c14-4a3b-b496-311f2a419f03
     - rid: 3396202407018103052
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -165,6 +168,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 1
     - rid: 3396202407018103053
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -178,6 +182,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 1
     - rid: 3396202407018103054
       type: {class: ActionTargetSnapshotExposedProperty, ns: ThirdPersonCharacter.ActionSystem,
@@ -188,13 +193,13 @@ MonoBehaviour:
         m_BlackboardKey: ActionTarget
         m_BlackboardScope: 3
         m_BlackboardLifetime: 1
-        m_BlackboardAuthority: 1
-        m_BlackboardSyncPolicy: 2
-        m_InputValueId: ActionTarget
-        m_BlackboardFactProjection: 0
-        m_ActionWindowType: 
-        m_ActionWindowId: 
-        m_ActionWindowDigest: 0
+        m_InputBinding:
+          m_InputValueId: ActionTarget
+        m_FactProjection:
+          m_Kind: 0
+          m_ActionWindowType:
+          m_ActionWindowId:
+          m_ActionWindowDigest: 0
         m_BlackboardCategoryPath: MonsterCombat/Targeting
         m_Index: 0
         m_Expanded: 1
@@ -290,6 +295,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
     - rid: 3396202407018103060
       type: {class: StateMachineGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -342,6 +348,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
     - rid: 3396202407018103061
       type: {class: StateMachineEnterNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -394,6 +401,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 1
     - rid: 3396202407018103066
       type: {class: StateMachineEnterNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -463,6 +471,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 1
     - rid: 3396202407018103072
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -515,6 +524,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 1
     - rid: 3396202407018103073
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -541,6 +551,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 1
     - rid: 3396202407018103074
       type: {class: StateBehaviorGraphReferenceModule, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -813,6 +824,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_RootGUID: 21307dcc-d905-40a1-bfe1-9ff7790ee42e
         m_EndGUID: 
         m_OnEnterGUID: 9ae21266-0b88-47f9-a09b-3a0a7b859f00
@@ -831,6 +843,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_RootGUID: a6f434aa-9d3c-4e85-951b-fd94e4b386ac
         m_EndGUID: 
         m_OnEnterGUID: f5ba2c60-c60d-4716-9946-ceb6067ea2dd
@@ -966,6 +979,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_RootGUID: 208e203e-7078-489e-9de0-d05a2f6ec2bc
         m_EndGUID: 
         m_OnEnterGUID: cb1ccff8-173b-44df-aa1f-91790c7bf6de
@@ -1428,6 +1442,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 1
     - rid: 3396202407018103109
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -1441,6 +1456,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 1
     - rid: 3396202407018103110
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -1454,6 +1470,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 1
     - rid: 3396202407018103111
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -1532,6 +1549,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 1
     - rid: 3396202407018103112
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -1584,6 +1602,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 1
     - rid: 3396202407018103113
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -1636,6 +1655,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 1
     - rid: 3396202407018103114
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -1649,6 +1669,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 1
     - rid: 3396202407018103115
       type: {class: TimelineOwnershipModule, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}

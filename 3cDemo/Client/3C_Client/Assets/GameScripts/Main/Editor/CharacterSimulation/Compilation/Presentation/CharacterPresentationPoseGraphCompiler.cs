@@ -139,7 +139,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public List<CharacterPresentationModifyBoneDescriptor> ModifyBones { get; } = new List<CharacterPresentationModifyBoneDescriptor>();
             public List<CharacterPresentationRootOrientationWarpDescriptor> RootOrientationWarps { get; } = new List<CharacterPresentationRootOrientationWarpDescriptor>();
             public List<CharacterPresentationPoseBoneIkGoalsDescriptor> PoseBoneIkGoalSources { get; } = new List<CharacterPresentationPoseBoneIkGoalsDescriptor>();
-            public List<CharacterPresentationPredictiveFootPlacementDescriptor> PredictiveFootPlacements { get; } = new List<CharacterPresentationPredictiveFootPlacementDescriptor>();
+            public List<CharacterPresentationFootGroundingDescriptor> FootGroundings { get; } = new List<CharacterPresentationFootGroundingDescriptor>();
+            public List<CharacterPresentationPredictiveFootPlacementModifierDescriptor> PredictiveFootPlacementModifiers { get; } = new List<CharacterPresentationPredictiveFootPlacementModifierDescriptor>();
             public List<CharacterPresentationFullBodyIkDescriptor> FullBodyIks { get; } = new List<CharacterPresentationFullBodyIkDescriptor>();
             public List<int> FullBodyIkGoalInputValueIndices { get; } = new List<int>();
             public List<CharacterPresentationSequencePlayerDescriptor> SequencePlayers { get; } = new List<CharacterPresentationSequencePlayerDescriptor>();
@@ -311,7 +312,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 state.ModifyBones.ToArray(),
                 state.RootOrientationWarps.ToArray(),
                 state.PoseBoneIkGoalSources.ToArray(),
-                state.PredictiveFootPlacements.ToArray(),
+                state.FootGroundings.ToArray(),
+                state.PredictiveFootPlacementModifiers.ToArray(),
                 state.FullBodyIks.ToArray(),
                 state.FullBodyIkGoalInputValueIndices.ToArray(),
                 state.SequencePlayers.ToArray(),
@@ -471,7 +473,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseOperationCode.PoseParameterResolve or
             CharacterPoseOperationCode.ModifyBone or
             CharacterPoseOperationCode.RootOrientationWarp or
-            CharacterPoseOperationCode.PredictiveFootPlacement or
+            CharacterPoseOperationCode.FootGrounding or
+            CharacterPoseOperationCode.PredictiveFootPlacementModifier or
             CharacterPoseOperationCode.PoseBoneIKGoals or
             CharacterPoseOperationCode.FullBodyIK or
             CharacterPoseOperationCode.LocalToComponentPose or
@@ -863,12 +866,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         scopedNodeId,
                         state)
                     : -1;
-                int predictiveFootPlacementIndex = handler.Kind == CharacterPoseNodeKind.PredictiveFootPlacement
-                    ? CompilePredictiveFootPlacement(
-                        RequirePayload<CharacterPredictiveFootPlacementPosePayload>(irNode),
+                int footGroundingIndex = handler.Kind == CharacterPoseNodeKind.FootGrounding
+                    ? CompileFootGrounding(
+                        RequirePayload<CharacterFootGroundingPosePayload>(irNode),
                         scopedNodeId,
                         state)
                     : -1;
+                int predictiveFootPlacementModifierIndex =
+                    handler.Kind == CharacterPoseNodeKind.PredictiveFootPlacementModifier
+                        ? CompilePredictiveFootPlacementModifier(scopedNodeId, state)
+                        : -1;
                 int fullBodyIkIndex = handler.Kind == CharacterPoseNodeKind.FullBodyIK
                     ? CompileFullBodyIk(
                         RequirePayload<CharacterFullBodyIkPosePayload>(irNode),
@@ -921,7 +928,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     modifyIndex,
                     rootOrientationWarpIndex,
                     poseBoneIkGoalsIndex,
-                    predictiveFootPlacementIndex,
+                    footGroundingIndex,
+                    predictiveFootPlacementModifierIndex,
                     fullBodyIkIndex,
                     outputFullBodyIkGoalSetValueIndex,
                     fullBodyIkGoalInputStart,
@@ -1409,24 +1417,44 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         static int CompileInertialization(CompilationState state) =>
             state.InertializationCount++;
 
-        static int CompilePredictiveFootPlacement(
-            CharacterPredictiveFootPlacementPosePayload payload,
+        static int CompileFootGrounding(
+            CharacterFootGroundingPosePayload payload,
             PoseNodeId scopedNodeId,
             CompilationState state)
         {
-            if (state.PredictiveFootPlacements.Count != 0)
-                throw new InvalidOperationException("Pose Plan contains more than one Predictive Foot Placement node.");
-            int index = state.PredictiveFootPlacements.Count;
+            if (state.FootGroundings.Count != 0)
+                throw new InvalidOperationException("Pose Plan contains more than one Foot Grounding node.");
+            int index = state.FootGroundings.Count;
             int goalOffset = state.FullBodyIkGoalWorkspaceCount;
             state.FullBodyIkGoalWorkspaceCount = checked(
                 state.FullBodyIkGoalWorkspaceCount +
-                CharacterPresentationPredictiveFootPlacementDescriptor.GoalCount);
-            state.PredictiveFootPlacements.Add(
-                new CharacterPresentationPredictiveFootPlacementDescriptor(
+                CharacterPresentationFootGroundingDescriptor.GoalCount);
+            state.FootGroundings.Add(
+                new CharacterPresentationFootGroundingDescriptor(
                     index,
                     scopedNodeId,
                     payload.Profile,
                     payload.Calibration,
+                    goalOffset));
+            return index;
+        }
+
+        static int CompilePredictiveFootPlacementModifier(
+            PoseNodeId scopedNodeId,
+            CompilationState state)
+        {
+            if (state.PredictiveFootPlacementModifiers.Count != 0)
+                throw new InvalidOperationException(
+                    "Pose Plan contains more than one Predictive Foot Placement Modifier node.");
+            int index = state.PredictiveFootPlacementModifiers.Count;
+            int goalOffset = state.FullBodyIkGoalWorkspaceCount;
+            state.FullBodyIkGoalWorkspaceCount = checked(
+                state.FullBodyIkGoalWorkspaceCount +
+                CharacterPresentationPredictiveFootPlacementModifierDescriptor.GoalCount);
+            state.PredictiveFootPlacementModifiers.Add(
+                new CharacterPresentationPredictiveFootPlacementModifierDescriptor(
+                    index,
+                    scopedNodeId,
                     goalOffset));
             return index;
         }
@@ -2396,12 +2424,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         $"pose-bone-ik-goal:{i}:{bindingIndex}:{(int)binding.EffectorSlot}:{binding.TargetPoseBoneIndex}:{binding.PositionOffset.x:R}:{binding.PositionOffset.y:R}:{binding.PositionOffset.z:R}:{binding.RotationOffset.x:R}:{binding.RotationOffset.y:R}:{binding.RotationOffset.z:R}:{binding.RotationOffset.w:R}:{binding.PositionWeight:R}:{binding.RotationWeight:R}"));
                 }
             }
-            for (int i = 0; i < state.PredictiveFootPlacements.Count; i++)
+            for (int i = 0; i < state.FootGroundings.Count; i++)
             {
-                CharacterPresentationPredictiveFootPlacementDescriptor descriptor =
-                    state.PredictiveFootPlacements[i];
+                CharacterPresentationFootGroundingDescriptor descriptor =
+                    state.FootGroundings[i];
                 values.Add(
-                    $"predictive-foot-placement:{i}:{descriptor.NodeId}:{descriptor.Profile.ProfileId}:{descriptor.Profile.Revision}:{descriptor.CalibrationId}:{descriptor.CalibrationRevision}:{descriptor.BackendIdentity}:{descriptor.BackendSourceRevision}:{descriptor.GoalWorkspaceOffset}");
+                    $"foot-grounding:{i}:{descriptor.NodeId}:{descriptor.Profile.ProfileId}:{descriptor.Profile.Revision}:{descriptor.CalibrationId}:{descriptor.CalibrationRevision}:{descriptor.GoalWorkspaceOffset}");
+            }
+            for (int i = 0; i < state.PredictiveFootPlacementModifiers.Count; i++)
+            {
+                CharacterPresentationPredictiveFootPlacementModifierDescriptor descriptor =
+                    state.PredictiveFootPlacementModifiers[i];
+                values.Add(
+                    $"predictive-foot-placement-modifier:{i}:{descriptor.NodeId}:{descriptor.GoalWorkspaceOffset}");
             }
             for (int i = 0; i < state.FullBodyIks.Count; i++)
             {
@@ -2493,7 +2528,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 CharacterPresentationPoseOperation operation = state.Operations[i];
                 values.Add(FormattableString.Invariant(
-                    $"operation:{operation.Index}:{(int)operation.ExecutionDomain}:{(int)operation.InputPoseSpace}:{(int)operation.OutputPoseSpace}:{(int)operation.Code}:{operation.NodeId}:{operation.AnimationChannelId}:{(int)operation.SelectionAvailability}:{operation.OutputValueIndex}:{operation.InputValueIndexA}:{operation.InputValueIndexB}:{operation.OutputFullBodyIkGoalSetValueIndex}:{operation.FullBodyIkGoalInputStart}:{operation.FullBodyIkGoalInputCount}:{operation.ControlInputOperationIndex}:{operation.ParameterIndex}:{operation.ParameterIndexB}:{operation.PlayerIndex}:{operation.BlendNodeIndex}:{operation.InertializationIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.ModifyBoneIndex}:{operation.RootOrientationWarpIndex}:{operation.PoseBoneIkGoalsIndex}:{operation.PredictiveFootPlacementIndex}:{operation.FullBodyIkIndex}:{operation.SequencePlayerIndex}:{operation.StateMachineIndex}:{operation.AnimationSlotIndex}:{operation.LinkedPoseCallIndex}:{operation.LinkedPoseFragmentIndex}:{operation.Weight:R}"));
+                    $"operation:{operation.Index}:{(int)operation.ExecutionDomain}:{(int)operation.InputPoseSpace}:{(int)operation.OutputPoseSpace}:{(int)operation.Code}:{operation.NodeId}:{operation.AnimationChannelId}:{(int)operation.SelectionAvailability}:{operation.OutputValueIndex}:{operation.InputValueIndexA}:{operation.InputValueIndexB}:{operation.OutputFullBodyIkGoalSetValueIndex}:{operation.FullBodyIkGoalInputStart}:{operation.FullBodyIkGoalInputCount}:{operation.ControlInputOperationIndex}:{operation.ParameterIndex}:{operation.ParameterIndexB}:{operation.PlayerIndex}:{operation.BlendNodeIndex}:{operation.InertializationIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.ModifyBoneIndex}:{operation.RootOrientationWarpIndex}:{operation.PoseBoneIkGoalsIndex}:{operation.FootGroundingIndex}:{operation.PredictiveFootPlacementModifierIndex}:{operation.FullBodyIkIndex}:{operation.SequencePlayerIndex}:{operation.StateMachineIndex}:{operation.AnimationSlotIndex}:{operation.LinkedPoseCallIndex}:{operation.LinkedPoseFragmentIndex}:{operation.Weight:R}"));
             }
             for (int i = 0; i < stages.Count; i++)
             {

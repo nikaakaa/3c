@@ -4,6 +4,7 @@ using System.Linq;
 using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.AI.Editor;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -216,15 +217,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     ? compiler.Apply(character, preparation)
                     : compiler.Apply(ai, preparation);
                 applied = result.Report;
+                AgentAuthoringPackageProjection appliedProjection = null;
+                bool authoringSemanticsChanged = false;
+                bool controlledCharacterProgramStale = false;
                 if (!applied.HasErrors() && character)
                     ApplyPresentation(preparation.PresentationPlan, applied);
                 if (!applied.HasErrors())
-                    AppendValidation(
-                        applied,
-                        character
-                            ? new AgentGraphValidator()
-                                .Validate(character)
-                            : new AgentAIControllerValidator().Validate(ai));
+                {
+                    if (character)
+                    {
+                        AppendValidation(applied, new AgentGraphValidator().Validate(character));
+                    }
+                    else
+                    {
+                        appliedProjection = m_Exporter.Export(ai);
+                        authoringSemanticsChanged = !string.Equals(
+                            projection.SourceRevision,
+                            appliedProjection.SourceRevision,
+                            StringComparison.Ordinal);
+                        controlledCharacterProgramStale =
+                            CharacterSimulationProgramBuildService.EvaluateExactArtifactStaleness(ai.ControlledCharacter);
+                        AppendValidation(
+                            applied,
+                            new AgentAIControllerValidator().Validate(
+                                ai,
+                                !controlledCharacterProgramStale || authoringSemanticsChanged));
+                    }
+                }
                 if (!applied.HasErrors() && character)
                     AppendPresentationValidation(
                         applied,
@@ -239,14 +258,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     result.TouchedOwners,
                     preparation.PresentationPlan);
                 AssetDatabase.SaveAssets();
-                AgentAuthoringPackageProjection appliedProjection = character
+                appliedProjection ??= character
                     ? m_Exporter.Export(character)
                     : m_Exporter.Export(ai);
-                bool authoringSemanticsChanged = !string.Equals(
-                    projection.SourceRevision,
-                    appliedProjection.SourceRevision,
-                    StringComparison.Ordinal);
-                bool aiProgramNeedsPublish = !character &&
+                if (character)
+                {
+                    authoringSemanticsChanged = !string.Equals(
+                        projection.SourceRevision,
+                        appliedProjection.SourceRevision,
+                        StringComparison.Ordinal);
+                }
+                bool aiProgramNeedsPublish = !character && !controlledCharacterProgramStale &&
                     (authoringSemanticsChanged || !AIIntentProgramBuildService.IsCurrent(ai, out _));
                 if (aiProgramNeedsPublish)
                 {

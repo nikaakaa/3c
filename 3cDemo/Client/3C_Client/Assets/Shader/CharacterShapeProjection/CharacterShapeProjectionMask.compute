@@ -1,0 +1,149 @@
+#pragma kernel ClearAtlas
+#pragma kernel RasterRegion
+#pragma kernel CompleteDepth
+
+struct ShapeProjectedVertex
+{
+    float2 Screen;
+    float Depth;
+    float ClipW;
+};
+
+struct ShapeRegion
+{
+    float4 ScreenRect;
+    float4 AtlasRect;
+    float4 Color;
+    float4 Meta;
+};
+
+StructuredBuffer<ShapeProjectedVertex> _ShapeProjectedVertices;
+StructuredBuffer<int> _ShapeTriangleIndices;
+StructuredBuffer<ShapeRegion> _ShapeRegions;
+RWTexture2D<float> _ShapeMask;
+RWTexture2D<float> _ShapeRawDepth;
+RWTexture2D<float> _ShapeCompletedDepth;
+float4 _ShapeAtlasSize;
+int _ShapeRegionIndex;
+int _ShapeCompletionRadius;
+
+float Cross2(float2 a, float2 b)
+{
+    return a.x * b.y - a.y * b.x;
+}
+
+bool Barycentric(float2 samplePosition, float2 a, float2 b, float2 c, out float3 weights)
+{
+    float area = Cross2(b - a, c - a);
+    if (abs(area) <= 0.00001)
+    {
+        weights = 0;
+        return false;
+    }
+    float inverse = rcp(area);
+    float w1 = Cross2(samplePosition - a, c - a) * inverse;
+    float w2 = Cross2(b - a, samplePosition - a) * inverse;
+    float w0 = 1.0 - w1 - w2;
+    weights = float3(w0, w1, w2);
+    return all(weights >= -0.0001);
+}
+
+bool IsCloser(float candidate, float current)
+{
+    if (current < 0.0)
+        return true;
+#if UNITY_REVERSED_Z
+    return candidate > current;
+#else
+    return candidate < current;
+#endif
+}
+
+[numthreads(8, 8, 1)]
+void ClearAtlas(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_ShapeAtlasSize.x || id.y >= (uint)_ShapeAtlasSize.y)
+        return;
+    _ShapeMask[id.xy] = 0.0;
+    _ShapeRawDepth[id.xy] = -1.0;
+    _ShapeCompletedDepth[id.xy] = -1.0;
+}
+
+[numthreads(8, 8, 1)]
+void RasterRegion(uint3 id : SV_DispatchThreadID)
+{
+    ShapeRegion region = _ShapeRegions[_ShapeRegionIndex];
+    uint width = (uint)region.AtlasRect.z;
+    uint height = (uint)region.AtlasRect.w;
+    if (id.x >= width || id.y >= height)
+        return;
+
+    int2 atlasPixel = int2(region.AtlasRect.xy) + int2(id.xy);
+    float2 screenPixel = region.ScreenRect.xy + float2(id.xy) + 0.5;
+    int triangleStart = (int)region.Meta.x;
+    int triangleCount = (int)region.Meta.y;
+    float bestDepth = -1.0;
+    for (int triangleOffset = 0; triangleOffset < triangleCount; triangleOffset++)
+    {
+        int triangleIndex = (triangleStart + triangleOffset) * 3;
+        ShapeProjectedVertex a = _ShapeProjectedVertices[_ShapeTriangleIndices[triangleIndex]];
+        ShapeProjectedVertex b = _ShapeProjectedVertices[_ShapeTriangleIndices[triangleIndex + 1]];
+        ShapeProjectedVertex c = _ShapeProjectedVertices[_ShapeTriangleIndices[triangleIndex + 2]];
+        if (a.ClipW <= 0.00001 || b.ClipW <= 0.00001 || c.ClipW <= 0.00001)
+            continue;
+        float3 weights;
+        if (!Barycentric(screenPixel, a.Screen, b.Screen, c.Screen, weights))
+            continue;
+        float depth = dot(weights, float3(a.Depth, b.Depth, c.Depth));
+        if (depth < 0.0 || depth > 1.0)
+            continue;
+        if (IsCloser(depth, bestDepth))
+            bestDepth = depth;
+    }
+    if (bestDepth < 0.0)
+        return;
+    _ShapeMask[atlasPixel] = 1.0;
+    _ShapeRawDepth[atlasPixel] = bestDepth;
+}
+
+[numthreads(8, 8, 1)]
+void CompleteDepth(uint3 id : SV_DispatchThreadID)
+{
+    ShapeRegion region = _ShapeRegions[_ShapeRegionIndex];
+    int width = (int)region.AtlasRect.z;
+    int height = (int)region.AtlasRect.w;
+    if (id.x >= (uint)width || id.y >= (uint)height)
+        return;
+
+    int2 atlasOrigin = int2(region.AtlasRect.xy);
+    int2 local = int2(id.xy);
+    int2 atlasPixel = atlasOrigin + local;
+    float raw = _ShapeRawDepth[atlasPixel];
+    if (raw >= 0.0)
+    {
+        _ShapeCompletedDepth[atlasPixel] = raw;
+        return;
+    }
+
+    float nearestDepth = -1.0;
+    int nearestDistance = 2147483647;
+    for (int y = -_ShapeCompletionRadius; y <= _ShapeCompletionRadius; y++)
+    {
+        for (int x = -_ShapeCompletionRadius; x <= _ShapeCompletionRadius; x++)
+        {
+            int2 sampleLocal = local + int2(x, y);
+            if (sampleLocal.x < 0 || sampleLocal.y < 0 || sampleLocal.x >= width || sampleLocal.y >= height)
+                continue;
+            float candidate = _ShapeRawDepth[atlasOrigin + sampleLocal];
+            if (candidate < 0.0)
+                continue;
+            int distance = x * x + y * y;
+            if (distance < nearestDistance || distance == nearestDistance && IsCloser(candidate, nearestDepth))
+            {
+                nearestDistance = distance;
+                nearestDepth = candidate;
+            }
+        }
+    }
+    _ShapeCompletedDepth[atlasPixel] = nearestDepth;
+}

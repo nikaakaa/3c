@@ -21,6 +21,15 @@ Presentation MUST从 Pipeline Egress允许并由 Committer提交的 BodyState in
 - **AND** visual correction MUST从上一帧visible pose与visible velocity接管
 - **AND** canonical Body MUST立即保持replay后的结果
 
+#### Scenario: Replay 替换已表现移动分支
+
+- **WHEN** replay替换已经表现的Committed Body与Intent分支
+- **THEN** Body branch sequence MUST表示新的history revision
+- **AND** Presentation Fact的Pose discontinuity generation MUST保持不变
+- **AND** PoseStateMachine、Sequence Player、Root Orientation Warp与Presentation clock MUST继续当前Locomotion连续状态
+- **AND** Foot Placement与Motion Matching trajectory MUST只重定向到新Body分支
+- **AND** 只有Initialization或显式Selected Stream Reset MAY推进Pose discontinuity generation并执行硬重置
+
 #### Scenario: 连续移动输入产生高频分支替换
 
 - **WHEN** 相邻PresentationFrame持续收到canonical差异并替换Committed Body分支
@@ -272,3 +281,20 @@ Rollback MUST从同一Gameplay input与Program执行重新产生committed Body/I
 - **WHEN** rollback重新产生新的Action selection和Body速度
 - **THEN** 本地Slot MUST按新Action identity接管，PoseStateMachine MUST按新Fact重新求值
 - **AND** 网络 MUST不发送或恢复旧Pose transition、Slot或BlendStack entry
+
+### Requirement: Rollback Action 分支必须以确认边界提交终态
+
+Rollback Output Adapter MUST在同一outer transaction内合并同一PlaybackId/generation的Select、Sample、Complete与Release候选，只向Action Playback Runtime提交最终Action branch revision。Select与Sample MAY预测提交并可被最终分支重基；Complete与Release MUST只在confirmed horizon后提交。撤销已消费的未确认Select或Sample MUST不调用会合成业务Release的通用Retire路径。confirmed terminal提交后，同generation的Sample MUST进入正式Faulted，不得恢复已确认终态。
+
+#### Scenario: 未确认 Action 分支被撤销
+
+- **WHEN** replay撤销已经表现的未确认Select或Sample
+- **THEN** Action Playback Runtime MUST按最终branch revision重基
+- **AND** MUST不生成业务Release
+- **AND** Body Runtime、PoseStateMachine与Presentation clock MUST不因该Action重基被整体重置
+
+#### Scenario: confirmed terminal 后收到同generation Sample
+
+- **WHEN** CompleteProducer或ReleaseProducer已经在confirmed horizon提交后，同一generation再次提交SampleProducer
+- **THEN** Action Playback Runtime MUST拒绝该命令并进入正式Faulted
+- **AND** MUST不恢复已确认terminal对应的sample、Slot或source ownership

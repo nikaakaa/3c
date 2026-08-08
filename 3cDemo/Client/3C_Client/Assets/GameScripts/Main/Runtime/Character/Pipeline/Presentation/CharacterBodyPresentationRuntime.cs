@@ -179,6 +179,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Transform VisualRoot => m_VisualRoot;
         public ulong LatestTick => m_LatestTick;
         public ulong ResetSequence => m_ResetSequence;
+        internal CharacterBodyPresentationResetReason ResetReason => m_ResetReason;
         public ulong BranchReplacementCount => m_BranchReplacementCount;
         public float FollowerPositionCorrectionMeters => m_LastPresentedFrame.PositionError;
         public float FollowerYawCorrectionDegrees => m_LastPresentedFrame.RotationError;
@@ -206,6 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             ValidateCommittedTransaction(intervals);
             bool replacesBranch = ReplacesCommittedBranch(intervals[0]);
+            bool changesBranch = replacesBranch && ChangesCommittedBranch(intervals);
             if (!replacesBranch && intervals[0].PreviousTick != m_LatestTick)
             {
                 throw new InvalidOperationException(
@@ -218,14 +220,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     "Committed Presentation branch replacement does not cover the current Presentation cursor.");
             }
             if (replacesBranch)
-            {
-                m_BranchReplacementCount = checked(m_BranchReplacementCount + 1);
                 RemoveCommittedBranchFrom(intervals[0].PreviousTick);
-            }
             for (int i = 0; i < intervals.Count; i++)
                 StoreCommitted(intervals[i]);
-            if (replacesBranch)
+            if (changesBranch)
+            {
+                m_BranchReplacementCount = checked(m_BranchReplacementCount + 1);
                 RetargetCommittedBranch();
+            }
         }
 
         public CharacterBodyPresentationFrame Present(GameplayPresentationFrameContext context)
@@ -265,6 +267,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             ValidateCommittedInterval(interval);
             bool replacesBranch = ReplacesCommittedBranch(interval);
+            bool changesBranch = replacesBranch && ChangesCommittedBranch(interval);
             if (!replacesBranch && interval.PreviousTick != m_LatestTick)
             {
                 throw new InvalidOperationException(
@@ -276,13 +279,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     "Committed Presentation branch replacement does not cover the current Presentation cursor.");
             }
             if (replacesBranch)
+                RemoveCommittedBranchFrom(interval.PreviousTick);
+            StoreCommitted(interval);
+            if (changesBranch)
             {
                 m_BranchReplacementCount = checked(m_BranchReplacementCount + 1);
-                RemoveCommittedBranchFrom(interval.PreviousTick);
-            }
-            StoreCommitted(interval);
-            if (replacesBranch)
                 RetargetCommittedBranch();
+            }
         }
 
         void ValidateCommittedTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals)
@@ -321,6 +324,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !HasSameKinematicState(existingPrevious, interval.PreviousBody);
             return m_LatestTick != 0 &&
                 (interval.PreviousTick < m_LatestTick || interval.CurrentTick <= m_LatestTick || replacesLatestPrevious);
+        }
+
+        bool ChangesCommittedBranch(IReadOnlyList<CharacterPresentationBodyInterval> intervals)
+        {
+            if (intervals[intervals.Count - 1].CurrentTick < m_LatestTick)
+                return true;
+            for (int i = 0; i < intervals.Count; i++)
+            {
+                CharacterPresentationBodyInterval interval = intervals[i];
+                if (DiffersFromCommitted(interval.PreviousTick, interval.PreviousBody) ||
+                    DiffersFromCommitted(interval.CurrentTick, interval.CurrentBody))
+                    return true;
+            }
+            return false;
+        }
+
+        bool ChangesCommittedBranch(CharacterPresentationBodyInterval interval)
+        {
+            return interval.CurrentTick < m_LatestTick ||
+                   DiffersFromCommitted(interval.PreviousTick, interval.PreviousBody) ||
+                   DiffersFromCommitted(interval.CurrentTick, interval.CurrentBody);
+        }
+
+        bool DiffersFromCommitted(ulong tick, CharacterPresentationBodyState body)
+        {
+            return m_CommittedBodies.TryGetValue(tick, out CharacterPresentationBodyState existing) &&
+                   !HasSameKinematicState(existing, body);
         }
 
         void RetargetCommittedBranch()

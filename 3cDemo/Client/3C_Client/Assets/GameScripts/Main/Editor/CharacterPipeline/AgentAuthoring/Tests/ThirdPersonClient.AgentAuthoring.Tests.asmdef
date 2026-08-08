@@ -1,0 +1,24 @@
+{
+    "name": "ThirdPersonClient.AgentAuthoring.Tests",
+    "rootNamespace": "ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Tests",
+    "references": [
+        "ThirdPersonClient.Editor",
+        "ThirdPersonClient.Runtime",
+        "BTSMTL.TreeDesigner",
+        "BTSMTL.TreeDesigner.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}

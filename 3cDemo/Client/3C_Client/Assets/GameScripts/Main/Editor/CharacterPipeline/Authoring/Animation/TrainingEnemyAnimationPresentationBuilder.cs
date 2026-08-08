@@ -417,7 +417,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "Training Enemy Monster Foot Placement Profile");
             var serialized = new SerializedObject(profile);
             serialized.FindProperty("m_ProfileId").stringValue = "training-enemy.monster.foot-placement";
-            serialized.FindProperty("m_FinalIkGrounding.m_GroundLayerMask").intValue =
+            serialized.FindProperty("m_LyraCurrentGrounding.m_GroundLayerMask").intValue =
                 1 << groundLayer | 1 << footPlacementLayer;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             serialized.Update();
@@ -656,7 +656,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                     PoseParameterResolvePolicy.Weighted)
                             })),
                     new CharacterTypedPoseNode(toComponent, "Monster Local To Component", new CharacterLocalToComponentPosePayload()),
-                    new CharacterTypedPoseNode(footPlacement, "Monster Foot Placement", new CharacterPredictiveFootPlacementPosePayload(footPlacementProfile, footCalibration)),
+                    new CharacterTypedPoseNode(footPlacement, "Monster Foot Grounding", new CharacterFootGroundingPosePayload(footPlacementProfile, footCalibration)),
                     new CharacterTypedPoseNode(
                         fullBodyIk,
                         "Monster Full Body IK",

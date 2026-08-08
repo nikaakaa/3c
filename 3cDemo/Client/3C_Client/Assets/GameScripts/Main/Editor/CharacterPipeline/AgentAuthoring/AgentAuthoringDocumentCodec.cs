@@ -279,7 +279,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             property.Name,
                             "elements",
                             StringComparison.Ordinal) ||
-                        value is JObject nested && !nested.HasValues)
+                        value is JObject nested &&
+                        !nested.HasValues &&
+                        !string.Equals(property.Name, "defaultValue", StringComparison.Ordinal))
                         continue;
                     result.Add(property.Name, value);
                 }

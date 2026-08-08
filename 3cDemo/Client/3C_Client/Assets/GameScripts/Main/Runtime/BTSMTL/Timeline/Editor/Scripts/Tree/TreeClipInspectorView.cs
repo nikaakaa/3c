@@ -168,9 +168,9 @@ namespace BTSMTL.Timeline.Editor
                 if (declaration == null)
                     continue;
 
-                return declaration.BlackboardFactProjection == PipelineBlackboardFactProjectionKind.ActionWindow
-                    ? $"{reference.DisplayKey} -> ActionWindow({declaration.ActionWindowType}/{declaration.ActionWindowId}/{declaration.ActionWindowDigest})"
-                    : $"{reference.DisplayKey} -> None";
+                return declaration.FactProjection?.Kind == PipelineBlackboardFactProjectionKind.ActionWindow
+                    ? $"{reference.DisplayKey} -> ActionWindow({declaration.FactProjection.ActionWindowType}/{declaration.FactProjection.ActionWindowId}/{declaration.FactProjection.ActionWindowDigest})"
+                    : $"{reference.DisplayKey} -> Local";
             }
 
             return $"{reference.DisplayKey} -> Missing declaration";

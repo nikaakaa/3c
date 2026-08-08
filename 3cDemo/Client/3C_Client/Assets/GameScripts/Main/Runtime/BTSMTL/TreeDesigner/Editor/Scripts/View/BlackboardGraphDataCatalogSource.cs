@@ -53,7 +53,7 @@ namespace TreeDesigner.Editor
                     capabilities |= GraphDataCatalogCapability.DragCreateNode;
 
                 string category = NormalizeCategory(declaration.BlackboardCategoryPath);
-                bool actionWindow = declaration.BlackboardFactProjection == PipelineBlackboardFactProjectionKind.ActionWindow;
+                bool actionWindow = declaration.FactProjection?.Kind == PipelineBlackboardFactProjectionKind.ActionWindow;
                 yield return new GraphDataCatalogEntry(
                     this,
                     $"blackboard:{declaration.Owner?.GraphAuthoringId}:{declaration.DeclarationId}",
@@ -69,7 +69,7 @@ namespace TreeDesigner.Editor
                     declaration,
                     context.Generation,
                     unavailableReason,
-                    $"{declaration.BlackboardKey} {declaration.BlackboardFactProjection} {declaration.ActionWindowType} {declaration.ActionWindowId} {declaration.ActionWindowDigest}");
+                    $"{declaration.BlackboardKey} {declaration.InputValueId} {declaration.FactProjection?.Kind} {declaration.FactProjection?.ActionWindowType} {declaration.FactProjection?.ActionWindowId} {declaration.FactProjection?.ActionWindowDigest}");
             }
         }
 
@@ -91,23 +91,33 @@ namespace TreeDesigner.Editor
             AddEditableField(details, declaration, "m_BlackboardKey", "Blackboard Key", requestRefresh);
             AddEditableField(details, declaration, "m_BlackboardScope", "Scope", requestRefresh);
             AddEditableField(details, declaration, "m_BlackboardLifetime", "Lifetime", requestRefresh);
-            AddEditableField(details, declaration, "m_BlackboardAuthority", "Authority", requestRefresh);
-            AddEditableField(details, declaration, "m_BlackboardSyncPolicy", "Sync Policy", requestRefresh);
-            if (declaration.BlackboardSyncPolicy == PipelineBlackboardVariableSyncPolicy.InputDerived)
-                AddEditableField(details, declaration, "m_InputValueId", "Input Value Id", requestRefresh);
-            AddEditableField(details, declaration, "m_BlackboardFactProjection", "Projection", requestRefresh);
-            if (declaration.BlackboardFactProjection == PipelineBlackboardFactProjectionKind.ActionWindow)
+            AddEditableField(details, declaration, "m_BlackboardCategoryPath", "Category Path", requestRefresh);
+            AddEditableField(details, declaration, "m_Value", declaration.ValueType?.Name ?? "Value", requestRefresh);
+
+            AddSection(details, "Input Binding");
+            if (declaration.InputBinding == null)
+                AddPayloadButton(details, declaration, "Add Input Binding", () => declaration.ConfigureInputBinding(declaration.BlackboardKey), requestRefresh);
+            else
             {
-                AddEditableField(details, declaration, "m_ActionWindowType", "Window Type", requestRefresh);
-                AddEditableField(details, declaration, "m_ActionWindowId", "Window Id", requestRefresh);
-                AddEditableField(details, declaration, "m_ActionWindowDigest", "Digest", requestRefresh);
+                AddEditableField(details, declaration, "m_InputBinding.m_InputValueId", "Input Value Id", requestRefresh);
+                AddPayloadButton(details, declaration, "Remove Input Binding", declaration.ClearInputBinding, requestRefresh);
+            }
+            if (!PipelineBlackboardVariablePolicy.TryValidateInputBinding(declaration, out string inputError))
+                GraphDataCatalogDetails.AddRow(details, "Input Error", inputError);
+
+            AddSection(details, "Fact Projection");
+            if (declaration.FactProjection == null)
+                AddPayloadButton(details, declaration, "Add ActionWindow Projection", () => declaration.ConfigureFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "Window", declaration.BlackboardKey, 1UL), requestRefresh);
+            else
+            {
+                AddEditableField(details, declaration, "m_FactProjection.m_Kind", "Projection Kind", requestRefresh);
+                AddEditableField(details, declaration, "m_FactProjection.m_ActionWindowType", "Window Type", requestRefresh);
+                AddEditableField(details, declaration, "m_FactProjection.m_ActionWindowId", "Window Id", requestRefresh);
+                AddEditableField(details, declaration, "m_FactProjection.m_ActionWindowDigest", "Digest", requestRefresh);
+                AddPayloadButton(details, declaration, "Remove Fact Projection", declaration.ClearFactProjection, requestRefresh);
             }
             if (!PipelineBlackboardFactProjectionPolicy.TryValidate(declaration, out string projectionError))
                 GraphDataCatalogDetails.AddRow(details, "Projection Error", projectionError);
-            if (!PipelineBlackboardVariablePolicy.TryValidateInputBinding(declaration, out string inputError))
-                GraphDataCatalogDetails.AddRow(details, "Input Error", inputError);
-            AddEditableField(details, declaration, "m_BlackboardCategoryPath", "Category Path", requestRefresh);
-            AddEditableField(details, declaration, "m_Value", declaration.ValueType?.Name ?? "Value", requestRefresh);
             return details;
         }
 
@@ -239,13 +249,10 @@ namespace TreeDesigner.Editor
                     : request.Name.Trim();
                 declaration.Name = GetUniqueName(context.Tree, declaration);
                 declaration.CanEdit = true;
-                declaration.ConfigurePipelineBlackboard(
+                declaration.ConfigureDeclaration(
                     declaration.Name,
                     scope,
                     PipelineBlackboardVariablePolicy.DefaultLifetime(scope),
-                    PipelineBlackboardVariableAuthority.LocalOnly,
-                    PipelineBlackboardVariableSyncPolicy.None,
-                    string.Empty,
                     string.Empty);
                 context.Tree.GetNewSerializedTree();
                 context.Tree.OnExposedPropertyChanged?.Invoke();
@@ -285,23 +292,51 @@ namespace TreeDesigner.Editor
             GraphDataCatalogDetails.AddRow(details, "Blackboard Key", declaration.BlackboardKey);
             GraphDataCatalogDetails.AddRow(details, "Scope", declaration.BlackboardScope.ToString());
             GraphDataCatalogDetails.AddRow(details, "Lifetime", declaration.BlackboardLifetime.ToString());
-            GraphDataCatalogDetails.AddRow(details, "Authority", declaration.BlackboardAuthority.ToString());
-            GraphDataCatalogDetails.AddRow(details, "Sync Policy", declaration.BlackboardSyncPolicy.ToString());
-            if (declaration.BlackboardSyncPolicy == PipelineBlackboardVariableSyncPolicy.InputDerived)
+            GraphDataCatalogDetails.AddRow(details, "Category Path", string.IsNullOrWhiteSpace(declaration.BlackboardCategoryPath) ? "Uncategorized" : declaration.BlackboardCategoryPath);
+            GraphDataCatalogDetails.AddRow(details, declaration.ValueType?.Name ?? "Value", declaration.GetValue()?.ToString() ?? "null");
+            if (declaration.InputBinding != null)
                 GraphDataCatalogDetails.AddRow(details, "Input Value Id", declaration.InputValueId);
-            GraphDataCatalogDetails.AddRow(details, "Projection", declaration.BlackboardFactProjection.ToString());
-            if (declaration.BlackboardFactProjection == PipelineBlackboardFactProjectionKind.ActionWindow)
+            if (declaration.FactProjection != null)
             {
-                GraphDataCatalogDetails.AddRow(details, "Window Type", declaration.ActionWindowType);
-                GraphDataCatalogDetails.AddRow(details, "Window Id", declaration.ActionWindowId);
-                GraphDataCatalogDetails.AddRow(details, "Digest", declaration.ActionWindowDigest.ToString());
+                GraphDataCatalogDetails.AddRow(details, "Projection Kind", declaration.FactProjection.Kind.ToString());
+                GraphDataCatalogDetails.AddRow(details, "Window Type", declaration.FactProjection.ActionWindowType);
+                GraphDataCatalogDetails.AddRow(details, "Window Id", declaration.FactProjection.ActionWindowId);
+                GraphDataCatalogDetails.AddRow(details, "Digest", declaration.FactProjection.ActionWindowDigest.ToString());
             }
             if (!PipelineBlackboardFactProjectionPolicy.TryValidate(declaration, out string projectionError))
                 GraphDataCatalogDetails.AddRow(details, "Projection Error", projectionError);
             if (!PipelineBlackboardVariablePolicy.TryValidateInputBinding(declaration, out string inputError))
                 GraphDataCatalogDetails.AddRow(details, "Input Error", inputError);
-            GraphDataCatalogDetails.AddRow(details, "Category Path", string.IsNullOrWhiteSpace(declaration.BlackboardCategoryPath) ? "Uncategorized" : declaration.BlackboardCategoryPath);
-            GraphDataCatalogDetails.AddRow(details, declaration.ValueType?.Name ?? "Value", declaration.GetValue()?.ToString() ?? "null");
+        }
+
+        static void AddSection(VisualElement container, string title)
+        {
+            var label = new Label(title);
+            label.AddToClassList("graph-data-detail-section");
+            container.Add(label);
+        }
+
+        static void AddPayloadButton(
+            VisualElement container,
+            BaseExposedProperty declaration,
+            string label,
+            Action mutation,
+            Action requestRefresh)
+        {
+            var button = new Button(() =>
+            {
+                if (declaration.Owner is not BaseTree owner)
+                    return;
+                owner.ApplyModify(label, () =>
+                {
+                    mutation();
+                    owner.GetNewSerializedTree();
+                    owner.OnExposedPropertyChanged?.Invoke();
+                });
+                requestRefresh?.Invoke();
+            }) { text = label };
+            button.AddToClassList("graph-data-detail-field");
+            container.Add(button);
         }
 
         void AddEditableField(
@@ -312,7 +347,9 @@ namespace TreeDesigner.Editor
             Action requestRefresh,
             bool normalizeName = false)
         {
-            SerializedProperty serializedProperty = declaration.GetExposedPropertySerializedProperty(propertyPath);
+            SerializedProperty serializedProperty = declaration.GetSerializedExposedProperty();
+            foreach (string segment in propertyPath.Split('.'))
+                serializedProperty = serializedProperty?.FindPropertyRelative(segment);
             if (serializedProperty == null)
                 return;
 

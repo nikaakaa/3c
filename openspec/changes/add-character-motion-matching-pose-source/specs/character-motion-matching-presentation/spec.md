@@ -212,7 +212,7 @@ Presentation Factory MUST只按Projection是否包含MM payload构造唯一`Char
 
 ### Requirement: Pose History必须只记录匹配MM节点的正式Pose结果
 
-MM Pose History MUST在编译Pose Plan中与PoseState MM Player绑定的history source PoseNode完成后，追加该节点的dense pose、bone velocity、per-foot feature、continuity与presentation time。Query MUST只消费上一帧及更早history。下游FullBody Action覆盖、FinalIK Grounding、PredictiveFootPlacement Goals、FullBodyIK结果与VisualRoot world correction MUST不进入MM Pose History。
+MM Pose History MUST在编译Pose Plan中与PoseState MM Player绑定的history source PoseNode完成后，追加该节点的dense pose、bone velocity、per-foot feature、continuity与presentation time。Query MUST只消费上一帧及更早history。下游FullBody Action覆盖、FootGrounding的Lyra current/contact/anchor/pelvis Baseline Goals、PredictiveFootPlacementModifier Final Goals、FullBodyIK结果与VisualRoot world correction MUST不进入MM Pose History。
 
 #### Scenario: Attack全身覆盖Locomotion
 
@@ -320,7 +320,7 @@ MM Module MUST把选择降低为`PresentationPoseSourceSample`，并通过以下
 
 - **WHEN** Pose Source降低selected Clip在VisualSampleTime的正式Projection结果
 - **THEN** Selection MUST写入固定容量dense PoseParameters，并以canonical PoseParameterId `animation.foot-placement-weight`表达Foot Placement Weight
-- **AND** Selection MUST分别携带LeftFootFeatures与RightFootFeatures，PredictiveFootPlacement节点 MUST不二次查询MM Database
+- **AND** Selection MUST分别携带LeftFootFeatures与RightFootFeatures，FootGrounding与PredictiveFootPlacementModifier节点 MUST不二次查询MM Database
 
 #### Scenario: MM试图私自混合旧pose
 

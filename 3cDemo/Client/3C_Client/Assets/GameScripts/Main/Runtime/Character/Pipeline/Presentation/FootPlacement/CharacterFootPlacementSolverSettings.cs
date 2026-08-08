@@ -1,74 +1,133 @@
 using System;
-using RootMotion.FinalIK;
 using ThirdPersonCharacter.Pipeline.Animation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     [Serializable]
-    public sealed class CharacterFinalIkGroundingAuthoringSettings
+    public sealed class CharacterLyraCurrentGroundingAuthoringSettings
     {
-        [SerializeField] Grounding.Quality m_Quality = Grounding.Quality.Best;
         [SerializeField] LayerMask m_GroundLayerMask;
-        [SerializeField] float m_MaximumStep = 0.45f;
-        [SerializeField] float m_HeightOffset;
-        [SerializeField] float m_FootHeightSpeed = 2.5f;
-        [SerializeField] float m_FootRadius = 0.08f;
-        [SerializeField] float m_VelocityPrediction = 0.05f;
-        [SerializeField, Range(0f, 1f)] float m_FootRotationWeight = 1f;
-        [SerializeField] float m_FootRotationSpeed = 7f;
-        [SerializeField, Range(0f, 90f)] float m_MaximumFootRotationAngle = 45f;
-        [SerializeField] bool m_RotateSolver;
-        [SerializeField] float m_RootCastRadius = 0.2f;
-        [SerializeField] bool m_OverstepFallsDown;
+        [SerializeField, Range(4, 32)] int m_HitCapacity = 16;
+        [SerializeField] float m_TraceAbove = 0.5f;
+        [SerializeField] float m_TraceBelow = 0.5f;
+        [SerializeField] float m_TraceRadius = 0.05f;
+        [SerializeField] float m_HitNormalSpringStrength = 8f;
+        [SerializeField] float m_HitNormalCriticalDamping = 1f;
+        [SerializeField] float m_FootOffsetSpringStrength = 2.5f;
+        [SerializeField] float m_FootOffsetCriticalDamping = 1f;
+        [SerializeField, Range(0f, 1f)] float m_FootOffsetTargetVelocityAmount = 0.2f;
+        [SerializeField] float m_PelvisOffsetSpringStrength = 2.5f;
+        [SerializeField] float m_PelvisOffsetCriticalDamping = 1f;
+        [SerializeField, Range(0f, 1f)] float m_PelvisOffsetTargetVelocityAmount = 0.2f;
 
-        public int GroundLayerMask => m_GroundLayerMask.value;
-
-        internal void ApplyTuning(
-            string fieldPath,
-            CharacterPoseTuningValue value)
+        public CharacterLyraCurrentGroundingSettings Build()
         {
+            var value = new CharacterLyraCurrentGroundingSettings(
+                m_GroundLayerMask.value,
+                m_HitCapacity,
+                m_TraceAbove,
+                m_TraceBelow,
+                m_TraceRadius,
+                m_HitNormalSpringStrength,
+                m_HitNormalCriticalDamping,
+                m_FootOffsetSpringStrength,
+                m_FootOffsetCriticalDamping,
+                m_FootOffsetTargetVelocityAmount,
+                m_PelvisOffsetSpringStrength,
+                m_PelvisOffsetCriticalDamping,
+                m_PelvisOffsetTargetVelocityAmount);
+            value.RequireValid();
+            return value;
+        }
+
+        internal void ApplyTuning(string fieldPath, CharacterPoseTuningValue value)
+        {
+            if (fieldPath == "hit-capacity")
+                throw new InvalidOperationException("Foot Grounding hit capacity is Structural.");
             if (value.Kind != CharacterPoseTuningValueKind.Float)
-                throw new InvalidOperationException($"FinalIK Grounding tuning field '{fieldPath}' requires a float.");
+                throw new InvalidOperationException($"Lyra Current Grounding tuning field '{fieldPath}' requires a float.");
             switch (fieldPath)
             {
-                case "maximum-step": m_MaximumStep = value.FloatValue; break;
-                case "height-offset": m_HeightOffset = value.FloatValue; break;
-                case "foot-height-speed": m_FootHeightSpeed = value.FloatValue; break;
-                case "foot-radius": m_FootRadius = value.FloatValue; break;
-                case "velocity-prediction": m_VelocityPrediction = value.FloatValue; break;
-                case "foot-rotation-weight": m_FootRotationWeight = value.FloatValue; break;
-                case "foot-rotation-speed": m_FootRotationSpeed = value.FloatValue; break;
-                case "maximum-foot-rotation-angle": m_MaximumFootRotationAngle = value.FloatValue; break;
-                default:
-                    throw new InvalidOperationException($"FinalIK Grounding tuning field '{fieldPath}' is not declared.");
+                case "trace-above": m_TraceAbove = value.FloatValue; break;
+                case "trace-below": m_TraceBelow = value.FloatValue; break;
+                case "trace-radius": m_TraceRadius = value.FloatValue; break;
+                case "hit-normal-spring-strength": m_HitNormalSpringStrength = value.FloatValue; break;
+                case "hit-normal-critical-damping": m_HitNormalCriticalDamping = value.FloatValue; break;
+                case "foot-offset-spring-strength": m_FootOffsetSpringStrength = value.FloatValue; break;
+                case "foot-offset-critical-damping": m_FootOffsetCriticalDamping = value.FloatValue; break;
+                case "foot-offset-target-velocity-amount": m_FootOffsetTargetVelocityAmount = value.FloatValue; break;
+                case "pelvis-offset-spring-strength": m_PelvisOffsetSpringStrength = value.FloatValue; break;
+                case "pelvis-offset-critical-damping": m_PelvisOffsetCriticalDamping = value.FloatValue; break;
+                case "pelvis-offset-target-velocity-amount": m_PelvisOffsetTargetVelocityAmount = value.FloatValue; break;
+                default: throw new InvalidOperationException($"Lyra Current Grounding tuning field '{fieldPath}' is not declared.");
             }
             _ = Build();
         }
+    }
 
-        public CharacterFinalIkGroundingSettings Build()
+    [Serializable]
+    public sealed class CharacterStanceStabilizationAuthoringSettings
+    {
+        [SerializeField] float m_MaximumSurfaceSlopeDegrees = 55f;
+        [SerializeField] float m_MaximumContactSurfaceDistance = 0.12f;
+        [SerializeField] float m_PlantSpeedThreshold = 0.6f;
+        [SerializeField] float m_UnalignmentSpeedThreshold = 2f;
+        [SerializeField, Range(0f, 1f)] float m_PlantConfidenceEnter = 0.65f;
+        [SerializeField, Range(0f, 1f)] float m_PlantConfidenceExit = 0.35f;
+        [SerializeField] float m_AnchorBlendSpeed = 8f;
+        [SerializeField] float m_MaximumAnchorDistance = 0.14f;
+        [SerializeField, Range(0.01f, 0.9f)] float m_MinimumLegExtensionRatio = 0.18f;
+        [SerializeField, Range(0.5f, 0.999f)] float m_MaximumLegExtensionRatio = 0.98f;
+        [SerializeField] float m_MaximumPelvisLowering = 0.32f;
+        [SerializeField] float m_MaximumPelvisRaising = 0.18f;
+
+        public CharacterStanceStabilizationSettings Build()
         {
-            return new CharacterFinalIkGroundingSettings(
-                m_Quality,
-                m_GroundLayerMask.value,
-                m_MaximumStep,
-                m_HeightOffset,
-                m_FootHeightSpeed,
-                m_FootRadius,
-                m_VelocityPrediction,
-                m_FootRotationWeight,
-                m_FootRotationSpeed,
-                m_MaximumFootRotationAngle,
-                m_RotateSolver,
-                m_RootCastRadius,
-                m_OverstepFallsDown);
+            var value = new CharacterStanceStabilizationSettings(
+                m_MaximumSurfaceSlopeDegrees,
+                m_MaximumContactSurfaceDistance,
+                m_PlantSpeedThreshold,
+                m_UnalignmentSpeedThreshold,
+                m_PlantConfidenceEnter,
+                m_PlantConfidenceExit,
+                m_AnchorBlendSpeed,
+                m_MaximumAnchorDistance,
+                m_MinimumLegExtensionRatio,
+                m_MaximumLegExtensionRatio,
+                m_MaximumPelvisLowering,
+                m_MaximumPelvisRaising);
+            value.RequireValid();
+            return value;
+        }
+
+        internal void ApplyTuning(string fieldPath, CharacterPoseTuningValue value)
+        {
+            if (value.Kind != CharacterPoseTuningValueKind.Float)
+                throw new InvalidOperationException($"Stance Stabilization tuning field '{fieldPath}' requires a float.");
+            switch (fieldPath)
+            {
+                case "maximum-surface-slope-degrees": m_MaximumSurfaceSlopeDegrees = value.FloatValue; break;
+                case "maximum-contact-surface-distance": m_MaximumContactSurfaceDistance = value.FloatValue; break;
+                case "plant-speed-threshold": m_PlantSpeedThreshold = value.FloatValue; break;
+                case "unalignment-speed-threshold": m_UnalignmentSpeedThreshold = value.FloatValue; break;
+                case "plant-confidence-enter": m_PlantConfidenceEnter = value.FloatValue; break;
+                case "plant-confidence-exit": m_PlantConfidenceExit = value.FloatValue; break;
+                case "anchor-blend-speed": m_AnchorBlendSpeed = value.FloatValue; break;
+                case "maximum-anchor-distance": m_MaximumAnchorDistance = value.FloatValue; break;
+                case "minimum-leg-extension-ratio": m_MinimumLegExtensionRatio = value.FloatValue; break;
+                case "maximum-leg-extension-ratio": m_MaximumLegExtensionRatio = value.FloatValue; break;
+                case "maximum-pelvis-lowering": m_MaximumPelvisLowering = value.FloatValue; break;
+                case "maximum-pelvis-raising": m_MaximumPelvisRaising = value.FloatValue; break;
+                default: throw new InvalidOperationException($"Stance Stabilization tuning field '{fieldPath}' is not declared.");
+            }
+            _ = Build();
         }
     }
 
     [Serializable]
     public sealed class CharacterPredictiveFootPlacementAuthoringSettings
     {
-        [SerializeField, Range(4, 32)] int m_HitCapacity = 16;
         [SerializeField] float m_PathSphereRadius = 0.08f;
         [SerializeField] float m_SwingCapsuleRadius = 0.05f;
         [SerializeField] float m_CastAbove = 0.35f;
@@ -80,41 +139,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_MaximumHeightDiscontinuity = 0.35f;
         [SerializeField] float m_MaximumEdgeGap = 0.4f;
         [SerializeField] float m_MaximumSwingClearance = 0.16f;
-        [SerializeField] float m_PlantSpeedThreshold = 0.6f;
-        [SerializeField] float m_UnalignmentSpeedThreshold = 2f;
-        [SerializeField, Range(0f, 1f)] float m_PlantConfidenceEnter = 0.65f;
-        [SerializeField, Range(0f, 1f)] float m_PlantConfidenceExit = 0.35f;
+        [SerializeField, Range(0f, 1f)] float m_MinimumLandingConfidence = 0.25f;
         [SerializeField] float m_MinimumLookAheadSeconds = 0.04f;
         [SerializeField] float m_MaximumLookAheadSeconds = 0.22f;
         [SerializeField] float m_MaximumYawVelocityDegreesPerSecond = 540f;
         [SerializeField] float m_MaximumPredictionDistance = 0.65f;
         [SerializeField, Range(0.5f, 1.25f)] float m_MaximumPredictionReachRatio = 0.98f;
-        [SerializeField] float m_SlideStartDistance = 0.07f;
-        [SerializeField] float m_SlideStopDistance = 0.025f;
-        [SerializeField] float m_MaximumSlideDistance = 0.14f;
-        [SerializeField] float m_SlideSpeed = 0.45f;
-        [SerializeField] float m_ReplantDistance = 0.3f;
-        [SerializeField, Range(0f, 180f)] float m_ReplantAngleDegrees = 32f;
-        [SerializeField] float m_MinimumFootSeparation = 0.12f;
-        [SerializeField, Range(0f, 180f)] float m_MaximumAnkleTwistDegrees = 35f;
-        [SerializeField] CharacterFootPlantLockType m_LockType = CharacterFootPlantLockType.PivotAroundToe;
-        [SerializeField] bool m_AdjustHeelBeforePlanting = true;
-        [SerializeField, Range(0f, 1f)] float m_HeelLiftRatio = 1f;
-        [SerializeField, Range(0.01f, 0.9f)] float m_MinimumLegExtensionRatio = 0.18f;
-        [SerializeField, Range(0.5f, 0.999f)] float m_MaximumLegExtensionRatio = 0.98f;
-        [SerializeField] CharacterFootPlacementPelvisHeightMode m_PelvisHeightMode = CharacterFootPlacementPelvisHeightMode.AllPlantedFeet;
-        [SerializeField] CharacterFootPlacementActorMovementCompensationMode m_ActorMovementCompensationMode = CharacterFootPlacementActorMovementCompensationMode.FollowBody;
-        [SerializeField] float m_MaximumPelvisLowering = 0.32f;
-        [SerializeField] float m_MaximumPelvisRaising = 0.18f;
-        [SerializeField] float m_PelvisInterpolationSpeed = 14f;
-        [SerializeField] float m_PelvisHeightDeadZone = 0.003f;
-        [SerializeField] float m_MaximumHorizontalFootAdjustment = 0.25f;
-        [SerializeField, Range(0f, 1f)] float m_MinimumSourceContribution = 0.05f;
 
         public CharacterPredictiveFootPlacementRuntimeSettings Build()
         {
             var value = new CharacterPredictiveFootPlacementRuntimeSettings(
-                m_HitCapacity,
                 m_PathSphereRadius,
                 m_SwingCapsuleRadius,
                 m_CastAbove,
@@ -126,48 +160,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_MaximumHeightDiscontinuity,
                 m_MaximumEdgeGap,
                 m_MaximumSwingClearance,
-                m_PlantSpeedThreshold,
-                m_UnalignmentSpeedThreshold,
-                m_PlantConfidenceEnter,
-                m_PlantConfidenceExit,
+                m_MinimumLandingConfidence,
                 m_MinimumLookAheadSeconds,
                 m_MaximumLookAheadSeconds,
                 m_MaximumYawVelocityDegreesPerSecond,
                 m_MaximumPredictionDistance,
-                m_MaximumPredictionReachRatio,
-                m_SlideStartDistance,
-                m_SlideStopDistance,
-                m_MaximumSlideDistance,
-                m_SlideSpeed,
-                m_ReplantDistance,
-                m_ReplantAngleDegrees,
-                m_MinimumFootSeparation,
-                m_MaximumAnkleTwistDegrees,
-                m_LockType,
-                m_AdjustHeelBeforePlanting,
-                m_HeelLiftRatio,
-                m_MinimumLegExtensionRatio,
-                m_MaximumLegExtensionRatio,
-                m_PelvisHeightMode,
-                m_ActorMovementCompensationMode,
-                m_MaximumPelvisLowering,
-                m_MaximumPelvisRaising,
-                m_PelvisInterpolationSpeed,
-                m_PelvisHeightDeadZone,
-                m_MaximumHorizontalFootAdjustment,
-                m_MinimumSourceContribution);
+                m_MaximumPredictionReachRatio);
             value.RequireValid();
             return value;
         }
 
-        internal void ApplyTuning(
-            string fieldPath,
-            CharacterPoseTuningValue value)
+        internal void ApplyTuning(string fieldPath, CharacterPoseTuningValue value)
         {
-            if (fieldPath == "hit-capacity" || fieldPath == "path-sample-count")
-                throw new InvalidOperationException("Foot Placement workspace capacity is Structural.");
+            if (fieldPath == "path-sample-count")
+                throw new InvalidOperationException("Predictive Foot Placement path sample count is Structural.");
             if (value.Kind != CharacterPoseTuningValueKind.Float)
-                throw new InvalidOperationException($"Predictive Foot Placement tuning field '{fieldPath}' requires a float.");
+                throw new InvalidOperationException($"Predictive Extension tuning field '{fieldPath}' requires a float.");
             switch (fieldPath)
             {
                 case "path-sphere-radius": m_PathSphereRadius = value.FloatValue; break;
@@ -180,43 +188,172 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case "maximum-height-discontinuity": m_MaximumHeightDiscontinuity = value.FloatValue; break;
                 case "maximum-edge-gap": m_MaximumEdgeGap = value.FloatValue; break;
                 case "maximum-swing-clearance": m_MaximumSwingClearance = value.FloatValue; break;
-                case "plant-speed-threshold": m_PlantSpeedThreshold = value.FloatValue; break;
-                case "unalignment-speed-threshold": m_UnalignmentSpeedThreshold = value.FloatValue; break;
-                case "plant-confidence-enter": m_PlantConfidenceEnter = value.FloatValue; break;
-                case "plant-confidence-exit": m_PlantConfidenceExit = value.FloatValue; break;
+                case "minimum-landing-confidence": m_MinimumLandingConfidence = value.FloatValue; break;
                 case "minimum-look-ahead-seconds": m_MinimumLookAheadSeconds = value.FloatValue; break;
                 case "maximum-look-ahead-seconds": m_MaximumLookAheadSeconds = value.FloatValue; break;
                 case "maximum-yaw-velocity": m_MaximumYawVelocityDegreesPerSecond = value.FloatValue; break;
                 case "maximum-prediction-distance": m_MaximumPredictionDistance = value.FloatValue; break;
                 case "maximum-prediction-reach-ratio": m_MaximumPredictionReachRatio = value.FloatValue; break;
-                case "slide-start-distance": m_SlideStartDistance = value.FloatValue; break;
-                case "slide-stop-distance": m_SlideStopDistance = value.FloatValue; break;
-                case "maximum-slide-distance": m_MaximumSlideDistance = value.FloatValue; break;
-                case "slide-speed": m_SlideSpeed = value.FloatValue; break;
-                case "replant-distance": m_ReplantDistance = value.FloatValue; break;
-                case "replant-angle-degrees": m_ReplantAngleDegrees = value.FloatValue; break;
-                case "minimum-foot-separation": m_MinimumFootSeparation = value.FloatValue; break;
-                case "maximum-ankle-twist-degrees": m_MaximumAnkleTwistDegrees = value.FloatValue; break;
-                case "heel-lift-ratio": m_HeelLiftRatio = value.FloatValue; break;
-                case "minimum-leg-extension-ratio": m_MinimumLegExtensionRatio = value.FloatValue; break;
-                case "maximum-leg-extension-ratio": m_MaximumLegExtensionRatio = value.FloatValue; break;
-                case "maximum-pelvis-lowering": m_MaximumPelvisLowering = value.FloatValue; break;
-                case "maximum-pelvis-raising": m_MaximumPelvisRaising = value.FloatValue; break;
-                case "pelvis-interpolation-speed": m_PelvisInterpolationSpeed = value.FloatValue; break;
-                case "pelvis-height-dead-zone": m_PelvisHeightDeadZone = value.FloatValue; break;
-                case "maximum-horizontal-foot-adjustment": m_MaximumHorizontalFootAdjustment = value.FloatValue; break;
-                case "minimum-source-contribution": m_MinimumSourceContribution = value.FloatValue; break;
-                default:
-                    throw new InvalidOperationException($"Predictive Foot Placement tuning field '{fieldPath}' is not declared.");
+                default: throw new InvalidOperationException($"Predictive Extension tuning field '{fieldPath}' is not declared.");
             }
             _ = Build();
+        }
+    }
+
+    public readonly struct CharacterLyraCurrentGroundingSettings
+    {
+        public CharacterLyraCurrentGroundingSettings(
+            int groundLayerMask,
+            int hitCapacity,
+            float traceAbove,
+            float traceBelow,
+            float traceRadius,
+            float hitNormalSpringStrength,
+            float hitNormalCriticalDamping,
+            float footOffsetSpringStrength,
+            float footOffsetCriticalDamping,
+            float footOffsetTargetVelocityAmount,
+            float pelvisOffsetSpringStrength,
+            float pelvisOffsetCriticalDamping,
+            float pelvisOffsetTargetVelocityAmount)
+        {
+            GroundLayerMask = groundLayerMask;
+            HitCapacity = hitCapacity;
+            TraceAbove = traceAbove;
+            TraceBelow = traceBelow;
+            TraceRadius = traceRadius;
+            HitNormalSpringStrength = hitNormalSpringStrength;
+            HitNormalCriticalDamping = hitNormalCriticalDamping;
+            FootOffsetSpringStrength = footOffsetSpringStrength;
+            FootOffsetCriticalDamping = footOffsetCriticalDamping;
+            FootOffsetTargetVelocityAmount = footOffsetTargetVelocityAmount;
+            PelvisOffsetSpringStrength = pelvisOffsetSpringStrength;
+            PelvisOffsetCriticalDamping = pelvisOffsetCriticalDamping;
+            PelvisOffsetTargetVelocityAmount = pelvisOffsetTargetVelocityAmount;
+        }
+
+        public int GroundLayerMask { get; }
+        public int HitCapacity { get; }
+        public float TraceAbove { get; }
+        public float TraceBelow { get; }
+        public float TraceRadius { get; }
+        public float HitNormalSpringStrength { get; }
+        public float HitNormalCriticalDamping { get; }
+        public float FootOffsetSpringStrength { get; }
+        public float FootOffsetCriticalDamping { get; }
+        public float FootOffsetTargetVelocityAmount { get; }
+        public float PelvisOffsetSpringStrength { get; }
+        public float PelvisOffsetCriticalDamping { get; }
+        public float PelvisOffsetTargetVelocityAmount { get; }
+
+        public void RequireValid()
+        {
+            if (GroundLayerMask == 0 || HitCapacity < 4 || HitCapacity > 32)
+                throw new InvalidOperationException("Lyra Current Grounding query workspace is invalid.");
+            RequirePositive(TraceAbove, nameof(TraceAbove));
+            RequirePositive(TraceBelow, nameof(TraceBelow));
+            RequirePositive(TraceRadius, nameof(TraceRadius));
+            RequireSpring(HitNormalSpringStrength, HitNormalCriticalDamping, nameof(HitNormalSpringStrength));
+            RequireSpring(FootOffsetSpringStrength, FootOffsetCriticalDamping, nameof(FootOffsetSpringStrength));
+            RequireSpring(PelvisOffsetSpringStrength, PelvisOffsetCriticalDamping, nameof(PelvisOffsetSpringStrength));
+            RequireRange(FootOffsetTargetVelocityAmount, 0f, 1f, nameof(FootOffsetTargetVelocityAmount));
+            RequireRange(PelvisOffsetTargetVelocityAmount, 0f, 1f, nameof(PelvisOffsetTargetVelocityAmount));
+        }
+
+        static void RequireSpring(float strength, float damping, string field)
+        {
+            RequirePositive(strength, field);
+            RequirePositive(damping, field + "CriticalDamping");
+        }
+
+        internal static void RequirePositive(float value, string field)
+        {
+            if (!float.IsFinite(value) || value <= 0f)
+                throw new InvalidOperationException($"Foot Placement {field} must be positive.");
+        }
+
+        internal static void RequireNonNegative(float value, string field)
+        {
+            if (!float.IsFinite(value) || value < 0f)
+                throw new InvalidOperationException($"Foot Placement {field} must be non-negative.");
+        }
+
+        internal static void RequireRange(float value, float minimum, float maximum, string field)
+        {
+            if (!float.IsFinite(value) || value < minimum || value > maximum)
+                throw new InvalidOperationException($"Foot Placement {field} is outside [{minimum}, {maximum}].");
+        }
+    }
+
+    public readonly struct CharacterStanceStabilizationSettings
+    {
+        public CharacterStanceStabilizationSettings(
+            float maximumSurfaceSlopeDegrees,
+            float maximumContactSurfaceDistance,
+            float plantSpeedThreshold,
+            float unalignmentSpeedThreshold,
+            float plantConfidenceEnter,
+            float plantConfidenceExit,
+            float anchorBlendSpeed,
+            float maximumAnchorDistance,
+            float minimumLegExtensionRatio,
+            float maximumLegExtensionRatio,
+            float maximumPelvisLowering,
+            float maximumPelvisRaising)
+        {
+            MaximumSurfaceSlopeDegrees = maximumSurfaceSlopeDegrees;
+            MaximumContactSurfaceDistance = maximumContactSurfaceDistance;
+            PlantSpeedThreshold = plantSpeedThreshold;
+            UnalignmentSpeedThreshold = unalignmentSpeedThreshold;
+            PlantConfidenceEnter = plantConfidenceEnter;
+            PlantConfidenceExit = plantConfidenceExit;
+            AnchorBlendSpeed = anchorBlendSpeed;
+            MaximumAnchorDistance = maximumAnchorDistance;
+            MinimumLegExtensionRatio = minimumLegExtensionRatio;
+            MaximumLegExtensionRatio = maximumLegExtensionRatio;
+            MaximumPelvisLowering = maximumPelvisLowering;
+            MaximumPelvisRaising = maximumPelvisRaising;
+        }
+
+        public float MaximumSurfaceSlopeDegrees { get; }
+        public float MaximumContactSurfaceDistance { get; }
+        public float PlantSpeedThreshold { get; }
+        public float UnalignmentSpeedThreshold { get; }
+        public float PlantConfidenceEnter { get; }
+        public float PlantConfidenceExit { get; }
+        public float AnchorBlendSpeed { get; }
+        public float MaximumAnchorDistance { get; }
+        public float MinimumLegExtensionRatio { get; }
+        public float MaximumLegExtensionRatio { get; }
+        public float MaximumPelvisLowering { get; }
+        public float MaximumPelvisRaising { get; }
+
+        public void RequireValid()
+        {
+            CharacterLyraCurrentGroundingSettings.RequireRange(MaximumSurfaceSlopeDegrees, 0f, 89f, nameof(MaximumSurfaceSlopeDegrees));
+            CharacterLyraCurrentGroundingSettings.RequirePositive(MaximumContactSurfaceDistance, nameof(MaximumContactSurfaceDistance));
+            CharacterLyraCurrentGroundingSettings.RequireNonNegative(PlantSpeedThreshold, nameof(PlantSpeedThreshold));
+            CharacterLyraCurrentGroundingSettings.RequirePositive(UnalignmentSpeedThreshold, nameof(UnalignmentSpeedThreshold));
+            if (PlantSpeedThreshold >= UnalignmentSpeedThreshold)
+                throw new InvalidOperationException("Stance Stabilization speed thresholds are not ordered.");
+            CharacterLyraCurrentGroundingSettings.RequireRange(PlantConfidenceEnter, 0f, 1f, nameof(PlantConfidenceEnter));
+            CharacterLyraCurrentGroundingSettings.RequireRange(PlantConfidenceExit, 0f, 1f, nameof(PlantConfidenceExit));
+            if (PlantConfidenceExit >= PlantConfidenceEnter)
+                throw new InvalidOperationException("Stance Stabilization confidence thresholds are not ordered.");
+            CharacterLyraCurrentGroundingSettings.RequirePositive(AnchorBlendSpeed, nameof(AnchorBlendSpeed));
+            CharacterLyraCurrentGroundingSettings.RequirePositive(MaximumAnchorDistance, nameof(MaximumAnchorDistance));
+            CharacterLyraCurrentGroundingSettings.RequireRange(MinimumLegExtensionRatio, 0.01f, 0.9f, nameof(MinimumLegExtensionRatio));
+            CharacterLyraCurrentGroundingSettings.RequireRange(MaximumLegExtensionRatio, 0.5f, 0.999f, nameof(MaximumLegExtensionRatio));
+            if (MinimumLegExtensionRatio >= MaximumLegExtensionRatio)
+                throw new InvalidOperationException("Stance Stabilization leg reach range is invalid.");
+            CharacterLyraCurrentGroundingSettings.RequireNonNegative(MaximumPelvisLowering, nameof(MaximumPelvisLowering));
+            CharacterLyraCurrentGroundingSettings.RequireNonNegative(MaximumPelvisRaising, nameof(MaximumPelvisRaising));
         }
     }
 
     public readonly struct CharacterPredictiveFootPlacementRuntimeSettings
     {
         public CharacterPredictiveFootPlacementRuntimeSettings(
-            int hitCapacity,
             float pathSphereRadius,
             float swingCapsuleRadius,
             float castAbove,
@@ -228,38 +365,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float maximumHeightDiscontinuity,
             float maximumEdgeGap,
             float maximumSwingClearance,
-            float plantSpeedThreshold,
-            float unalignmentSpeedThreshold,
-            float plantConfidenceEnter,
-            float plantConfidenceExit,
+            float minimumLandingConfidence,
             float minimumLookAheadSeconds,
             float maximumLookAheadSeconds,
             float maximumYawVelocityDegreesPerSecond,
             float maximumPredictionDistance,
-            float maximumPredictionReachRatio,
-            float slideStartDistance,
-            float slideStopDistance,
-            float maximumSlideDistance,
-            float slideSpeed,
-            float replantDistance,
-            float replantAngleDegrees,
-            float minimumFootSeparation,
-            float maximumAnkleTwistDegrees,
-            CharacterFootPlantLockType lockType,
-            bool adjustHeelBeforePlanting,
-            float heelLiftRatio,
-            float minimumLegExtensionRatio,
-            float maximumLegExtensionRatio,
-            CharacterFootPlacementPelvisHeightMode pelvisHeightMode,
-            CharacterFootPlacementActorMovementCompensationMode actorMovementCompensationMode,
-            float maximumPelvisLowering,
-            float maximumPelvisRaising,
-            float pelvisInterpolationSpeed,
-            float pelvisHeightDeadZone,
-            float maximumHorizontalFootAdjustment,
-            float minimumSourceContribution)
+            float maximumPredictionReachRatio)
         {
-            HitCapacity = hitCapacity;
             PathSphereRadius = pathSphereRadius;
             SwingCapsuleRadius = swingCapsuleRadius;
             CastAbove = castAbove;
@@ -271,39 +383,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             MaximumHeightDiscontinuity = maximumHeightDiscontinuity;
             MaximumEdgeGap = maximumEdgeGap;
             MaximumSwingClearance = maximumSwingClearance;
-            PlantSpeedThreshold = plantSpeedThreshold;
-            UnalignmentSpeedThreshold = unalignmentSpeedThreshold;
-            PlantConfidenceEnter = plantConfidenceEnter;
-            PlantConfidenceExit = plantConfidenceExit;
+            MinimumLandingConfidence = minimumLandingConfidence;
             MinimumLookAheadSeconds = minimumLookAheadSeconds;
             MaximumLookAheadSeconds = maximumLookAheadSeconds;
             MaximumYawVelocityDegreesPerSecond = maximumYawVelocityDegreesPerSecond;
             MaximumPredictionDistance = maximumPredictionDistance;
             MaximumPredictionReachRatio = maximumPredictionReachRatio;
-            SlideStartDistance = slideStartDistance;
-            SlideStopDistance = slideStopDistance;
-            MaximumSlideDistance = maximumSlideDistance;
-            SlideSpeed = slideSpeed;
-            ReplantDistance = replantDistance;
-            ReplantAngleDegrees = replantAngleDegrees;
-            MinimumFootSeparation = minimumFootSeparation;
-            MaximumAnkleTwistDegrees = maximumAnkleTwistDegrees;
-            LockType = lockType;
-            AdjustHeelBeforePlanting = adjustHeelBeforePlanting;
-            HeelLiftRatio = heelLiftRatio;
-            MinimumLegExtensionRatio = minimumLegExtensionRatio;
-            MaximumLegExtensionRatio = maximumLegExtensionRatio;
-            PelvisHeightMode = pelvisHeightMode;
-            ActorMovementCompensationMode = actorMovementCompensationMode;
-            MaximumPelvisLowering = maximumPelvisLowering;
-            MaximumPelvisRaising = maximumPelvisRaising;
-            PelvisInterpolationSpeed = pelvisInterpolationSpeed;
-            PelvisHeightDeadZone = pelvisHeightDeadZone;
-            MaximumHorizontalFootAdjustment = maximumHorizontalFootAdjustment;
-            MinimumSourceContribution = minimumSourceContribution;
         }
 
-        public int HitCapacity { get; }
         public float PathSphereRadius { get; }
         public float SwingCapsuleRadius { get; }
         public float CastAbove { get; }
@@ -315,116 +402,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float MaximumHeightDiscontinuity { get; }
         public float MaximumEdgeGap { get; }
         public float MaximumSwingClearance { get; }
-        public float PlantSpeedThreshold { get; }
-        public float UnalignmentSpeedThreshold { get; }
-        public float PlantConfidenceEnter { get; }
-        public float PlantConfidenceExit { get; }
+        public float MinimumLandingConfidence { get; }
         public float MinimumLookAheadSeconds { get; }
         public float MaximumLookAheadSeconds { get; }
         public float MaximumYawVelocityDegreesPerSecond { get; }
         public float MaximumPredictionDistance { get; }
         public float MaximumPredictionReachRatio { get; }
-        public float SlideStartDistance { get; }
-        public float SlideStopDistance { get; }
-        public float MaximumSlideDistance { get; }
-        public float SlideSpeed { get; }
-        public float ReplantDistance { get; }
-        public float ReplantAngleDegrees { get; }
-        public float MinimumFootSeparation { get; }
-        public float MaximumAnkleTwistDegrees { get; }
-        public CharacterFootPlantLockType LockType { get; }
-        public bool AdjustHeelBeforePlanting { get; }
-        public float HeelLiftRatio { get; }
-        public float MinimumLegExtensionRatio { get; }
-        public float MaximumLegExtensionRatio { get; }
-        public CharacterFootPlacementPelvisHeightMode PelvisHeightMode { get; }
-        public CharacterFootPlacementActorMovementCompensationMode ActorMovementCompensationMode { get; }
-        public float MaximumPelvisLowering { get; }
-        public float MaximumPelvisRaising { get; }
-        public float PelvisInterpolationSpeed { get; }
-        public float PelvisHeightDeadZone { get; }
-        public float MaximumHorizontalFootAdjustment { get; }
-        public float MinimumSourceContribution { get; }
 
         public void RequireValid()
         {
-            RequireRange(HitCapacity, 4, 32, nameof(HitCapacity));
-            RequireRange(PathSampleCount, 1, 6, nameof(PathSampleCount));
-            RequirePositive(PathSphereRadius, nameof(PathSphereRadius));
-            RequirePositive(SwingCapsuleRadius, nameof(SwingCapsuleRadius));
-            RequirePositive(CastAbove, nameof(CastAbove));
-            RequirePositive(CastBelow, nameof(CastBelow));
-            RequireRange(MaximumSlopeDegrees, 0f, 89f, nameof(MaximumSlopeDegrees));
-            RequireNonNegative(MaximumStepUp, nameof(MaximumStepUp));
-            RequireNonNegative(MaximumStepDown, nameof(MaximumStepDown));
-            RequireNonNegative(MaximumHeightDiscontinuity, nameof(MaximumHeightDiscontinuity));
-            RequireNonNegative(MaximumEdgeGap, nameof(MaximumEdgeGap));
-            RequireNonNegative(MaximumSwingClearance, nameof(MaximumSwingClearance));
-            RequireOrdered(PlantSpeedThreshold, UnalignmentSpeedThreshold, nameof(PlantSpeedThreshold), nameof(UnalignmentSpeedThreshold));
-            RequireRange(PlantConfidenceExit, 0f, 1f, nameof(PlantConfidenceExit));
-            RequireRange(PlantConfidenceEnter, 0f, 1f, nameof(PlantConfidenceEnter));
-            if (PlantConfidenceExit >= PlantConfidenceEnter)
-                throw new InvalidOperationException("Predictive Foot Placement contact hysteresis is invalid.");
-            RequireOrdered(MinimumLookAheadSeconds, MaximumLookAheadSeconds, nameof(MinimumLookAheadSeconds), nameof(MaximumLookAheadSeconds));
-            RequirePositive(MaximumYawVelocityDegreesPerSecond, nameof(MaximumYawVelocityDegreesPerSecond));
-            RequirePositive(MaximumPredictionDistance, nameof(MaximumPredictionDistance));
-            RequireRange(MaximumPredictionReachRatio, 0.5f, 1.25f, nameof(MaximumPredictionReachRatio));
-            RequireOrdered(SlideStopDistance, SlideStartDistance, nameof(SlideStopDistance), nameof(SlideStartDistance));
-            RequirePositive(MaximumSlideDistance, nameof(MaximumSlideDistance));
-            RequirePositive(SlideSpeed, nameof(SlideSpeed));
-            RequirePositive(ReplantDistance, nameof(ReplantDistance));
-            RequireRange(ReplantAngleDegrees, 0f, 180f, nameof(ReplantAngleDegrees));
-            RequireNonNegative(MinimumFootSeparation, nameof(MinimumFootSeparation));
-            RequireRange(MaximumAnkleTwistDegrees, 0f, 180f, nameof(MaximumAnkleTwistDegrees));
-            if (!Enum.IsDefined(typeof(CharacterFootPlantLockType), LockType))
-                throw new InvalidOperationException("Predictive Foot Placement LockType is invalid.");
-            RequireRange(HeelLiftRatio, 0f, 1f, nameof(HeelLiftRatio));
-            RequireRange(MinimumLegExtensionRatio, 0.01f, 0.9f, nameof(MinimumLegExtensionRatio));
-            RequireRange(MaximumLegExtensionRatio, 0.5f, 0.999f, nameof(MaximumLegExtensionRatio));
-            if (MinimumLegExtensionRatio >= MaximumLegExtensionRatio)
-                throw new InvalidOperationException("Predictive Foot Placement leg reach range is invalid.");
-            if (!Enum.IsDefined(typeof(CharacterFootPlacementPelvisHeightMode), PelvisHeightMode))
-                throw new InvalidOperationException("Predictive Foot Placement PelvisHeightMode is invalid.");
-            if (!Enum.IsDefined(typeof(CharacterFootPlacementActorMovementCompensationMode), ActorMovementCompensationMode))
-                throw new InvalidOperationException("Predictive Foot Placement ActorMovementCompensationMode is invalid.");
-            RequireNonNegative(MaximumPelvisLowering, nameof(MaximumPelvisLowering));
-            RequireNonNegative(MaximumPelvisRaising, nameof(MaximumPelvisRaising));
-            RequirePositive(PelvisInterpolationSpeed, nameof(PelvisInterpolationSpeed));
-            RequireNonNegative(PelvisHeightDeadZone, nameof(PelvisHeightDeadZone));
-            RequireNonNegative(MaximumHorizontalFootAdjustment, nameof(MaximumHorizontalFootAdjustment));
-            RequireRange(MinimumSourceContribution, 0f, 1f, nameof(MinimumSourceContribution));
-        }
-
-        static void RequireRange(int value, int minimum, int maximum, string field)
-        {
-            if (value < minimum || value > maximum)
-                throw new InvalidOperationException($"Predictive Foot Placement {field} is outside [{minimum}, {maximum}].");
-        }
-
-        static void RequireRange(float value, float minimum, float maximum, string field)
-        {
-            if (!float.IsFinite(value) || value < minimum || value > maximum)
-                throw new InvalidOperationException($"Predictive Foot Placement {field} is outside [{minimum}, {maximum}].");
-        }
-
-        static void RequirePositive(float value, string field)
-        {
-            if (!float.IsFinite(value) || value <= 0f)
-                throw new InvalidOperationException($"Predictive Foot Placement {field} must be positive.");
-        }
-
-        static void RequireNonNegative(float value, string field)
-        {
-            if (!float.IsFinite(value) || value < 0f)
-                throw new InvalidOperationException($"Predictive Foot Placement {field} must be non-negative.");
-        }
-
-        static void RequireOrdered(float minimum, float maximum, string minimumField, string maximumField)
-        {
-            RequireNonNegative(minimum, minimumField);
-            RequirePositive(maximum, maximumField);
-            if (minimum >= maximum)
-                throw new InvalidOperationException($"Predictive Foot Placement {minimumField}/{maximumField} ordering is invalid.");
+            CharacterLyraCurrentGroundingSettings.RequirePositive(PathSphereRadius, nameof(PathSphereRadius));
+            CharacterLyraCurrentGroundingSettings.RequirePositive(SwingCapsuleRadius, nameof(SwingCapsuleRadius));
+            CharacterLyraCurrentGroundingSettings.RequirePositive(CastAbove, nameof(CastAbove));
+            CharacterLyraCurrentGroundingSettings.RequirePositive(CastBelow, nameof(CastBelow));
+            if (PathSampleCount < 1 || PathSampleCount > 6)
+                throw new InvalidOperationException("Predictive Extension path sample count is invalid.");
+            CharacterLyraCurrentGroundingSettings.RequireRange(MaximumSlopeDegrees, 0f, 89f, nameof(MaximumSlopeDegrees));
+            CharacterLyraCurrentGroundingSettings.RequireNonNegative(MaximumStepUp, nameof(MaximumStepUp));
+            CharacterLyraCurrentGroundingSettings.RequireNonNegative(MaximumStepDown, nameof(MaximumStepDown));
+            CharacterLyraCurrentGroundingSettings.RequireNonNegative(MaximumHeightDiscontinuity, nameof(MaximumHeightDiscontinuity));
+            CharacterLyraCurrentGroundingSettings.RequireNonNegative(MaximumEdgeGap, nameof(MaximumEdgeGap));
+            CharacterLyraCurrentGroundingSettings.RequireNonNegative(MaximumSwingClearance, nameof(MaximumSwingClearance));
+            CharacterLyraCurrentGroundingSettings.RequireRange(MinimumLandingConfidence, 0f, 1f, nameof(MinimumLandingConfidence));
+            CharacterLyraCurrentGroundingSettings.RequireNonNegative(MinimumLookAheadSeconds, nameof(MinimumLookAheadSeconds));
+            CharacterLyraCurrentGroundingSettings.RequirePositive(MaximumLookAheadSeconds, nameof(MaximumLookAheadSeconds));
+            if (MinimumLookAheadSeconds >= MaximumLookAheadSeconds)
+                throw new InvalidOperationException("Predictive Extension look-ahead range is invalid.");
+            CharacterLyraCurrentGroundingSettings.RequirePositive(MaximumYawVelocityDegreesPerSecond, nameof(MaximumYawVelocityDegreesPerSecond));
+            CharacterLyraCurrentGroundingSettings.RequirePositive(MaximumPredictionDistance, nameof(MaximumPredictionDistance));
+            CharacterLyraCurrentGroundingSettings.RequireRange(MaximumPredictionReachRatio, 0.5f, 1.25f, nameof(MaximumPredictionReachRatio));
         }
     }
 }

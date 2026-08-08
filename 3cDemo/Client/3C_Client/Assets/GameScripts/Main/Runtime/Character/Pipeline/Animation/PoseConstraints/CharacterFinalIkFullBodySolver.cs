@@ -15,7 +15,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         DuplicateEffectorSlot = 5,
         UnsupportedPelvisGoal = 6,
         SolverFailure = 7,
-        NonFiniteOutput = 8
+        NonFiniteOutput = 8,
+        FootEffectorResidualExceeded = 9
     }
 
     public readonly struct CharacterFullBodyIkResult
@@ -50,6 +51,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public sealed class CharacterFinalIkFullBodySolver
     {
+        const float FootEffectorResidualTolerance = 0.001f;
+
         readonly CharacterAnimationRigPayload m_Rig;
         readonly CharacterFullBodyIkProfile m_Profile;
         readonly CharacterFinalIkPoseBufferBackend m_Backend;
@@ -64,10 +67,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterFullBodyIkSolverDiagnostics m_Diagnostics;
         ActiveTuning m_ActiveTuning;
         Vector3 m_DiagnosticPelvisTranslation;
-        Vector3 m_LeftFootPlantOffset;
-        Vector3 m_RightFootPlantOffset;
-        bool m_HasLeftFootPlantOffset;
-        bool m_HasRightFootPlantOffset;
         ulong m_DiagnosticFrameSequence;
         int m_DiagnosticEffectorCount;
         bool m_Prepared;
@@ -166,35 +165,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        public CharacterFullBodyIkResult Solve(
-            NativeSlice<AnimationLocalBonePose> inputComponentPose,
+        public CharacterFullBodyIkResult SolvePrepared(
             NativeSlice<AnimationLocalBonePose> pendingOutputComponentPose,
             NativeSlice<int> goalSetValueIndices,
             NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace,
             ulong frameSequence,
-            ulong completionIdentity)
+            ulong completionIdentity,
+            bool recordDiagnostics)
         {
-            BeginDiagnostics(frameSequence);
+            if (recordDiagnostics)
+                BeginDiagnostics(frameSequence);
             if (!m_Prepared)
-                return CompleteDiagnostics(
+                return CompleteResult(
                     CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.NotPrepared),
                     goalSetValueIndices,
                     goalSets,
                     goalWorkspace,
-                    completionIdentity);
-            if (!IsValidPosePage(inputComponentPose) ||
-                pendingOutputComponentPose.Length != inputComponentPose.Length)
-            {
-                return CompleteDiagnostics(
+                    completionIdentity,
+                    recordDiagnostics);
+            if (!IsValidPosePage(pendingOutputComponentPose))
+                return CompleteResult(
                     CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.InvalidPosePage),
                     goalSetValueIndices,
                     goalSets,
                     goalWorkspace,
-                    completionIdentity);
-            }
-            for (int i = 0; i < inputComponentPose.Length; i++)
-                pendingOutputComponentPose[i] = inputComponentPose[i];
+                    completionIdentity,
+                    recordDiagnostics);
 
             try
             {
@@ -206,38 +203,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     frameSequence,
                     completionIdentity);
                 if (!goalResult.Succeeded)
-                    return CompleteDiagnostics(
+                    return CompleteResult(
                         goalResult,
                         goalSetValueIndices,
                         goalSets,
                         goalWorkspace,
-                        completionIdentity);
+                        completionIdentity,
+                        recordDiagnostics);
                 m_Solver.Update();
                 m_Backend.RebuildVirtualBones();
                 if (!IsValidPosePage(pendingOutputComponentPose))
-                {
-                    return CompleteDiagnostics(
+                    return CompleteResult(
                         CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.NonFiniteOutput),
                         goalSetValueIndices,
                         goalSets,
                         goalWorkspace,
-                        completionIdentity);
-                }
-                return CompleteDiagnostics(
+                        completionIdentity,
+                        recordDiagnostics);
+                CharacterFullBodyIkResult solvedResult = ValidateSolvedFootGoals(
                     goalResult,
                     goalSetValueIndices,
                     goalSets,
+                    goalWorkspace);
+                return CompleteResult(
+                    solvedResult,
+                    goalSetValueIndices,
+                    goalSets,
                     goalWorkspace,
-                    completionIdentity);
+                    completionIdentity,
+                    recordDiagnostics);
             }
             catch (Exception)
             {
-                return CompleteDiagnostics(
+                return CompleteResult(
                     CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.SolverFailure),
                     goalSetValueIndices,
                     goalSets,
                     goalWorkspace,
-                    completionIdentity);
+                    completionIdentity,
+                    recordDiagnostics);
             }
         }
 
@@ -257,10 +261,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_DiagnosticPelvisTranslation = Vector3.zero;
             m_DiagnosticFrameSequence = 0;
             m_DiagnosticEffectorCount = 0;
-            m_LeftFootPlantOffset = Vector3.zero;
-            m_RightFootPlantOffset = Vector3.zero;
-            m_HasLeftFootPlantOffset = false;
-            m_HasRightFootPlantOffset = false;
             Array.Clear(m_DiagnosticEffectors, 0, m_DiagnosticEffectors.Length);
             Array.Clear(m_DiagnosticLimbs, 0, m_DiagnosticLimbs.Length);
         }
@@ -354,17 +354,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
 
-            ushort identityPoseBoneSlots = CollectIdentityPoseBoneSlots(
-                goalSetValueIndices,
-                goalSets,
-                goalWorkspace);
             CharacterFullBodyIkResult pelvisResult = ApplyPelvisGoal(
                 goalSetValueIndices,
                 goalSets,
                 goalWorkspace);
             if (!pelvisResult.Succeeded)
                 return pelvisResult;
-            ApplyGroundingPreSolveRotations(
+            ApplyFootPlacementPreSolveRotations(
+                goalSetValueIndices,
+                goalSets,
+                goalWorkspace);
+            ushort identityPoseBoneSlots = CollectIdentityPoseBoneSlots(
                 goalSetValueIndices,
                 goalSets,
                 goalWorkspace);
@@ -427,41 +427,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     effector.positionWeight = goal.PositionWeight;
                     effector.rotationWeight = goal.RotationWeight;
                     break;
-                case CharacterFullBodyIkGoalApplication.GroundingEffectorTarget:
-                    if (TryGetPlantOffset(goal.Slot, out Vector3 plantOffset))
-                        effector.positionOffset += plantOffset;
-                    else
-                        effector.positionOffset +=
-                            (goal.ComponentPosition - m_Backend.GetComponentPosition(effector.boneHandle)) *
-                            goal.PositionWeight;
+                case CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget:
+                    effector.position = goal.ComponentPosition;
+                    effector.positionWeight = goal.PositionWeight;
                     break;
                 default:
                     throw new InvalidOperationException($"Unsupported effector goal application {goal.Application}.");
             }
         }
 
-        void ApplyGroundingPreSolveRotations(
+        void ApplyFootPlacementPreSolveRotations(
             NativeSlice<int> goalSetValueIndices,
             NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace)
         {
-            m_LeftFootPlantOffset = Vector3.zero;
-            m_RightFootPlantOffset = Vector3.zero;
-            m_HasLeftFootPlantOffset = false;
-            m_HasRightFootPlantOffset = false;
             for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
             {
                 CharacterFullBodyIkGoalSetHeader header = goalSets[goalSetValueIndices[setIndex]];
                 for (int localGoalIndex = 0; localGoalIndex < header.GoalCount; localGoalIndex++)
                 {
                     CharacterFullBodyIkGoal goal = goalWorkspace[header.GoalOffset + localGoalIndex];
-                    if (goal.Application != CharacterFullBodyIkGoalApplication.GroundingEffectorTarget ||
+                    if (goal.Application != CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget ||
                         goal.RotationWeight <= CharacterPoseConstraintMath.Epsilon)
                     {
                         continue;
                     }
                     IKEffector effector = m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
-                    Vector3 currentPosition = m_Backend.GetComponentPosition(effector.boneHandle);
                     Quaternion current = m_Backend.GetComponentRotation(effector.boneHandle);
                     Quaternion offset = goal.ComponentRotation * Quaternion.Inverse(current);
                     Quaternion weightedOffset = Quaternion.Slerp(
@@ -469,65 +460,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         offset,
                         goal.RotationWeight);
                     Quaternion weightedRotation = (weightedOffset * current).normalized;
-                    if (goal.PlantPivotMode == CharacterFullBodyIkPlantPivotMode.Toe)
-                    {
-                        Vector3 ankleToPivot = Quaternion.Inverse(goal.ComponentRotation) *
-                                               (goal.ComponentPlantPivot - goal.ComponentPosition);
-                        Vector3 currentPivot = currentPosition + current * ankleToPivot;
-                        Vector3 blendedPivot = Vector3.Lerp(
-                            currentPivot,
-                            goal.ComponentPlantPivot,
-                            goal.PositionWeight);
-                        Vector3 pivotedPosition = blendedPivot - weightedRotation * ankleToPivot;
-                        Vector3 standardPosition = Vector3.Lerp(
-                            currentPosition,
-                            goal.ComponentPosition,
-                            goal.PositionWeight);
-                        Vector3 plantOffset = Vector3.Lerp(
-                                                 standardPosition,
-                                                 pivotedPosition,
-                                                 goal.PlantPivotWeight) -
-                                             currentPosition;
-                        SetPlantOffset(goal.Slot, plantOffset);
-                    }
                     m_Backend.SetComponentRotation(
                         effector.boneHandle,
                         weightedRotation);
                 }
             }
-        }
-
-        void SetPlantOffset(CharacterFullBodyIkEffectorSlot slot, Vector3 offset)
-        {
-            if (slot == CharacterFullBodyIkEffectorSlot.LeftFoot)
-            {
-                m_LeftFootPlantOffset = offset;
-                m_HasLeftFootPlantOffset = true;
-                return;
-            }
-            if (slot == CharacterFullBodyIkEffectorSlot.RightFoot)
-            {
-                m_RightFootPlantOffset = offset;
-                m_HasRightFootPlantOffset = true;
-                return;
-            }
-            throw new InvalidOperationException("Plant pivot is only valid for foot effectors.");
-        }
-
-        bool TryGetPlantOffset(CharacterFullBodyIkEffectorSlot slot, out Vector3 offset)
-        {
-            if (slot == CharacterFullBodyIkEffectorSlot.LeftFoot && m_HasLeftFootPlantOffset)
-            {
-                offset = m_LeftFootPlantOffset;
-                return true;
-            }
-            if (slot == CharacterFullBodyIkEffectorSlot.RightFoot && m_HasRightFootPlantOffset)
-            {
-                offset = m_RightFootPlantOffset;
-                return true;
-            }
-            offset = Vector3.zero;
-            return false;
         }
 
         ushort CollectIdentityPoseBoneSlots(
@@ -577,6 +514,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+        CharacterFullBodyIkResult ValidateSolvedFootGoals(
+            CharacterFullBodyIkResult solvedResult,
+            NativeSlice<int> goalSetValueIndices,
+            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
+            NativeArray<CharacterFullBodyIkGoal> goalWorkspace)
+        {
+            for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
+            {
+                CharacterFullBodyIkGoalSetHeader header = goalSets[goalSetValueIndices[setIndex]];
+                for (int goalIndex = 0; goalIndex < header.GoalCount; goalIndex++)
+                {
+                    CharacterFullBodyIkGoal goal = goalWorkspace[header.GoalOffset + goalIndex];
+                    if (goal.Application != CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget ||
+                        goal.PositionWeight < 1f - CharacterPoseConstraintMath.Epsilon)
+                    {
+                        continue;
+                    }
+                    IKEffector effector = m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
+                    float residual = Vector3.Distance(
+                        m_Backend.GetComponentPosition(effector.boneHandle),
+                        goal.ComponentPosition);
+                    if (residual > FootEffectorResidualTolerance)
+                    {
+                        return CharacterFullBodyIkResult.Fail(
+                            CharacterFullBodyIkFailure.FootEffectorResidualExceeded,
+                            setIndex,
+                            goal.Slot);
+                    }
+                }
+            }
+            return solvedResult;
+        }
+
         void ApplyProfile()
         {
             m_Solver.iterations = m_ActiveTuning.Iterations;
@@ -608,14 +578,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentOutOfRangeException(nameof(frameSequence));
         }
 
-        CharacterFullBodyIkResult CompleteDiagnostics(
+        CharacterFullBodyIkResult CompleteResult(
             CharacterFullBodyIkResult result,
             NativeSlice<int> goalSetValueIndices,
             NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace,
-            ulong completionIdentity)
+            ulong completionIdentity,
+            bool recordDiagnostics)
         {
-            if (result.Succeeded)
+            if (!recordDiagnostics)
+                return result;
+            if (result.Succeeded ||
+                result.Failure == CharacterFullBodyIkFailure.FootEffectorResidualExceeded)
             {
                 for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
                 {

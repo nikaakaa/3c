@@ -71,6 +71,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (root != null)
             {
                 snapshot.rootGraphAuthoringId = GraphId("root", root);
+                snapshot.blackboardSchemaRevision = root.BlackboardAuthoringSchemaRevision;
                 var program = definition.SimulationProgram;
                 if (program)
                 {
@@ -933,15 +934,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     defaultValue = AgentAuthoringDocumentCodec.ToToken(declaration.GetValue()),
                     scope = declaration.BlackboardScope.ToString(),
                     lifetime = declaration.BlackboardLifetime.ToString(),
-                    authority = declaration.BlackboardAuthority.ToString(),
-                    syncPolicy = declaration.BlackboardSyncPolicy.ToString(),
-                    inputValueId = declaration.InputValueId,
-                    factProjection = declaration.BlackboardFactProjection.ToString(),
-                    windowType = declaration.ActionWindowType,
-                    windowId = declaration.ActionWindowId,
-                    digest = declaration.ActionWindowDigest,
+                    inputBinding = declaration.InputBinding == null
+                        ? null
+                        : new AgentSnapshotBlackboardInputBinding
+                        {
+                            inputValueId = declaration.InputBinding.InputValueId
+                        },
+                    factProjection = declaration.FactProjection == null
+                        ? null
+                        : new AgentSnapshotBlackboardFactProjection
+                        {
+                            kind = declaration.FactProjection.Kind.ToString(),
+                            windowType = declaration.FactProjection.ActionWindowType,
+                            windowId = declaration.FactProjection.ActionWindowId,
+                            digest = declaration.FactProjection.ActionWindowDigest
+                        },
                     categoryPath = declaration.BlackboardCategoryPath
                 });
+                if (declaration.InputBinding != null)
+                {
+                    snapshot.inputValues.Add(new AgentSnapshotInputValue
+                    {
+                        inputValueId = declaration.InputBinding.InputValueId,
+                        valueType = declaration.ValueType == typeof(ActionTargetSnapshot)
+                            ? ProgramInputValueKind.ActionTargetSnapshot.ToString()
+                            : declaration.ValueType?.Name ?? string.Empty
+                    });
+                }
             }
         }
 
@@ -993,11 +1012,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             {
                                 declarationId = setter.BlackboardVariable.DeclarationId,
                                 declarationOwnerId = setter.BlackboardVariable.DeclarationOwnerId,
-                                blackboardKey = setter.BlackboardVariable.DisplayKey,
-                                factProjection = declaration?.BlackboardFactProjection.ToString() ?? PipelineBlackboardFactProjectionKind.None.ToString(),
-                                windowType = declaration?.ActionWindowType ?? string.Empty,
-                                windowId = declaration?.ActionWindowId ?? string.Empty,
-                                digest = declaration?.ActionWindowDigest ?? 0UL
+                                blackboardKey = setter.BlackboardVariable.DisplayKey
                             });
                         }
                     }

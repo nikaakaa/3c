@@ -79,13 +79,13 @@ namespace ThirdPersonSimulation.Fixed
         public TypedStateAddress EventSequence { get; }
     }
 
-    public readonly struct InputDerivedStateBinding
+    public readonly struct BlackboardInputStateBinding
     {
-        public InputDerivedStateBinding(string inputId, ProgramInputValueKind inputKind, TypedStateAddress stateAddress)
+        public BlackboardInputStateBinding(string inputId, ProgramInputValueKind inputKind, TypedStateAddress stateAddress)
         {
             InputId = SimulationIdentity.Require(inputId, nameof(inputId));
             InputKind = inputKind;
-            StateAddress = stateAddress.IsValid ? stateAddress : throw new ArgumentException("InputDerived state address is invalid.", nameof(stateAddress));
+            StateAddress = stateAddress.IsValid ? stateAddress : throw new ArgumentException("Blackboard Input Binding state address is invalid.", nameof(stateAddress));
         }
 
         public string InputId { get; }
@@ -110,7 +110,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IReadOnlyDictionary<string, TypedActionStateAddresses> m_Actions;
         readonly IReadOnlyDictionary<string, IReadOnlyList<TypedStateAddress>> m_ActionContexts;
         readonly IReadOnlyDictionary<int, TypedStateAddress> m_TimelineRetention;
-        readonly IReadOnlyList<InputDerivedStateBinding> m_InputDerivedBindings;
+        readonly IReadOnlyList<BlackboardInputStateBinding> m_BlackboardInputBindings;
         readonly TypedStateAddress[] m_ActionTargetSnapshotByOperation;
         readonly TypedStateAddress m_GameplayEffectAggregate;
         readonly TypedStateAddress m_EquipmentAggregate;
@@ -137,7 +137,7 @@ namespace ThirdPersonSimulation.Fixed
             m_NamedConstantIndexes = BuildNamedConstantIndexes(program);
             BuildGlobalStateSlots(program, stateSemanticCount, out m_FirstStateSlots, out m_StateSlotsByOwner);
             BuildTypedStateLayout(program, out m_TypedAddresses, out m_Partitions);
-            m_InputDerivedBindings = BuildInputDerivedBindings(program, m_CatalogIndex, m_TypedAddresses);
+            m_BlackboardInputBindings = BuildBlackboardInputBindings(program, m_CatalogIndex, m_TypedAddresses);
             BuildDomainIndexes(
                 program,
                 m_TypedAddresses,
@@ -185,7 +185,7 @@ namespace ThirdPersonSimulation.Fixed
         public TypedStateAddress EquipmentAggregateAddress => Equipment.CapabilityEnabled
             ? m_EquipmentAggregate
             : throw new InvalidOperationException("Program does not install Equipment capability.");
-        public IReadOnlyList<InputDerivedStateBinding> InputDerivedBindings => m_InputDerivedBindings;
+        public IReadOnlyList<BlackboardInputStateBinding> BlackboardInputBindings => m_BlackboardInputBindings;
 
         public static ProgramExecutionLayout GetOrCreate(CharacterSimulationProgram program)
         {
@@ -281,6 +281,9 @@ namespace ThirdPersonSimulation.Fixed
 
         internal ProgramCatalogField RequireCatalogField(ProgramCatalogEntry entry, ProgramCatalogFieldId field) =>
             m_CatalogIndex.RequireField(entry, field);
+
+        internal bool TryGetCatalogField(ProgramCatalogEntry entry, ProgramCatalogFieldId field, out ProgramCatalogField value) =>
+            m_CatalogIndex.TryGetField(entry, field, out value);
 
         internal bool TryGetCatalogIdentity(ProgramCatalogEntry entry, ProgramCatalogFieldId field, out string identity) =>
             m_CatalogIndex.TryGetIdentity(entry, field, out identity);
@@ -472,7 +475,7 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        static IReadOnlyList<InputDerivedStateBinding> BuildInputDerivedBindings(
+        static IReadOnlyList<BlackboardInputStateBinding> BuildBlackboardInputBindings(
             CharacterSimulationProgram program,
             ProgramCatalogRuntimeIndex catalog,
             TypedStateAddress[] addresses)
@@ -484,24 +487,23 @@ namespace ThirdPersonSimulation.Fixed
                 if (slot.Semantic == ProgramStateSemantic.BlackboardValue)
                     stateByOwner.Add(slot.OwnerIdentity, addresses[i]);
             }
-            var bindings = new List<InputDerivedStateBinding>();
+            var bindings = new List<BlackboardInputStateBinding>();
             for (int i = 0; i < program.CatalogEntries.Count; i++)
             {
                 ProgramCatalogEntry declaration = program.CatalogEntries[i];
                 if (declaration.Kind != ProgramCatalogEntryKind.BlackboardDeclaration ||
-                    ReadInt32(program, catalog, declaration, ProgramCatalogFieldId.SyncPolicy) != 2)
+                    !TryReadString(program, catalog, declaration, ProgramCatalogFieldId.InputValueId, out string inputId))
                     continue;
-                string inputId = ReadString(program, catalog, declaration, ProgramCatalogFieldId.InputValueId);
                 ProgramCatalogEntry input = catalog.FindEntry(ProgramCatalogEntryKind.InputValue, $"input:value:{inputId}") ??
-                    throw new InvalidDataException($"InputDerived Blackboard '{declaration.Identity}' references absent input '{inputId}'.");
+                    throw new InvalidDataException($"Blackboard Input Binding '{declaration.Identity}' references absent input '{inputId}'.");
                 var kind = (ProgramInputValueKind)ReadInt32(program, catalog, input, ProgramCatalogFieldId.ValueType);
                 if (!Enum.IsDefined(typeof(ProgramInputValueKind), kind))
                     throw new InvalidDataException($"Input '{input.Identity}' has unknown value kind '{(int)kind}'.");
                 if (!stateByOwner.TryGetValue(declaration.Identity, out TypedStateAddress address))
-                    throw new InvalidDataException($"InputDerived Blackboard '{declaration.Identity}' has no state slot.");
+                    throw new InvalidDataException($"Blackboard Input Binding '{declaration.Identity}' has no state slot.");
                 if (address.ValueKind != StateKind(kind))
-                    throw new InvalidDataException($"InputDerived Blackboard '{declaration.Identity}' state kind '{address.ValueKind}' does not match input kind '{kind}'.");
-                bindings.Add(new InputDerivedStateBinding(inputId, kind, address));
+                    throw new InvalidDataException($"Blackboard Input Binding '{declaration.Identity}' state kind '{address.ValueKind}' does not match input kind '{kind}'.");
+                bindings.Add(new BlackboardInputStateBinding(inputId, kind, address));
             }
             bindings.Sort((left, right) => string.CompareOrdinal(left.InputId, right.InputId));
             return bindings.AsReadOnly();
@@ -521,6 +523,19 @@ namespace ThirdPersonSimulation.Fixed
             if (value.Kind != ProgramCatalogFieldKind.Constant || program.Constants[value.ConstantIndex].Kind != ProgramConstantKind.String)
                 throw new InvalidDataException($"Catalog '{entry.Identity}' field '{field}' is not String.");
             return SimulationIdentity.Require(program.Constants[value.ConstantIndex].Text, field.ToString());
+        }
+
+        static bool TryReadString(CharacterSimulationProgram program, ProgramCatalogRuntimeIndex catalog, ProgramCatalogEntry entry, ProgramCatalogFieldId field, out string text)
+        {
+            if (!catalog.TryGetField(entry, field, out ProgramCatalogField value))
+            {
+                text = string.Empty;
+                return false;
+            }
+            if (value.Kind != ProgramCatalogFieldKind.Constant || program.Constants[value.ConstantIndex].Kind != ProgramConstantKind.String)
+                throw new InvalidDataException($"Catalog '{entry.Identity}' field '{field}' is not String.");
+            text = SimulationIdentity.Require(program.Constants[value.ConstantIndex].Text, field.ToString());
+            return true;
         }
 
         static ProgramStateValueKind StateKind(ProgramInputValueKind kind)

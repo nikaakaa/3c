@@ -243,6 +243,7 @@ MonoBehaviour:
         - rid: 3396202407018103323
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 1
         m_RootGUID: f109f754-f9b7-4c50-8744-44793fd3efaf
     - rid: 3396202407018103293
       type: {class: RootNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -530,6 +531,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 3396202407018103311
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -543,6 +545,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 3396202407018103312
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -556,6 +559,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 3396202407018103313
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -569,6 +573,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 3396202407018103314
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -621,6 +626,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 3396202407018103315
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -673,6 +679,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 3396202407018103316
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -686,6 +693,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 3396202407018103317
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -699,6 +707,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 3396202407018103318
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -712,6 +721,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 3396202407018103319
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -725,6 +735,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 3396202407018103320
       type: {class: AIActionTargetSnapshotExposedProperty, ns: ThirdPersonCharacter.AI,
@@ -735,14 +746,14 @@ MonoBehaviour:
         m_BlackboardKey: CurrentTarget
         m_BlackboardScope: 5
         m_BlackboardLifetime: 7
-        m_BlackboardAuthority: 0
-        m_BlackboardSyncPolicy: 0
-        m_InputValueId: 
-        m_BlackboardFactProjection: 0
-        m_ActionWindowType: 
-        m_ActionWindowId: 
-        m_ActionWindowDigest: 0
-        m_BlackboardCategoryPath: MonsterAI
+        m_InputBinding:
+          m_InputValueId:
+        m_FactProjection:
+          m_Kind: 0
+          m_ActionWindowType:
+          m_ActionWindowId:
+          m_ActionWindowDigest: 0
+        m_BlackboardCategoryPath: AI
         m_Index: 0
         m_Expanded: 1
         m_Internal: 0
@@ -761,14 +772,14 @@ MonoBehaviour:
         m_BlackboardKey: AttackRange
         m_BlackboardScope: 5
         m_BlackboardLifetime: 7
-        m_BlackboardAuthority: 0
-        m_BlackboardSyncPolicy: 0
-        m_InputValueId: 
-        m_BlackboardFactProjection: 0
-        m_ActionWindowType: 
-        m_ActionWindowId: 
-        m_ActionWindowDigest: 0
-        m_BlackboardCategoryPath: MonsterAI
+        m_InputBinding:
+          m_InputValueId:
+        m_FactProjection:
+          m_Kind: 0
+          m_ActionWindowType:
+          m_ActionWindowId:
+          m_ActionWindowDigest: 0
+        m_BlackboardCategoryPath: AI
         m_Index: 1
         m_Expanded: 1
         m_Internal: 0
@@ -783,14 +794,14 @@ MonoBehaviour:
         m_BlackboardKey: AttackCooldownTicks
         m_BlackboardScope: 5
         m_BlackboardLifetime: 7
-        m_BlackboardAuthority: 0
-        m_BlackboardSyncPolicy: 0
-        m_InputValueId: 
-        m_BlackboardFactProjection: 0
-        m_ActionWindowType: 
-        m_ActionWindowId: 
-        m_ActionWindowDigest: 0
-        m_BlackboardCategoryPath: MonsterAI
+        m_InputBinding:
+          m_InputValueId:
+        m_FactProjection:
+          m_Kind: 0
+          m_ActionWindowType:
+          m_ActionWindowId:
+          m_ActionWindowDigest: 0
+        m_BlackboardCategoryPath: AI
         m_Index: 2
         m_Expanded: 1
         m_Internal: 0
@@ -805,14 +816,14 @@ MonoBehaviour:
         m_BlackboardKey: StopMove
         m_BlackboardScope: 0
         m_BlackboardLifetime: 0
-        m_BlackboardAuthority: 0
-        m_BlackboardSyncPolicy: 0
-        m_InputValueId: 
-        m_BlackboardFactProjection: 0
-        m_ActionWindowType: 
-        m_ActionWindowId: 
-        m_ActionWindowDigest: 0
-        m_BlackboardCategoryPath: MonsterAI
+        m_InputBinding:
+          m_InputValueId:
+        m_FactProjection:
+          m_Kind: 0
+          m_ActionWindowType:
+          m_ActionWindowId:
+          m_ActionWindowDigest: 0
+        m_BlackboardCategoryPath: AI
         m_Index: 3
         m_Expanded: 1
         m_Internal: 0

@@ -426,6 +426,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             PersistClosedState();
         }
 
+        public void RetargetResetSequence(ulong resetSequence)
+        {
+            if (m_FrameOpen)
+                throw new InvalidOperationException("Motion Matching Selection cannot retarget during a frame.");
+            m_ResetSequence = resetSequence;
+            PersistClosedState();
+        }
+
         void PersistClosedState()
         {
             if (!m_FrameOpen)

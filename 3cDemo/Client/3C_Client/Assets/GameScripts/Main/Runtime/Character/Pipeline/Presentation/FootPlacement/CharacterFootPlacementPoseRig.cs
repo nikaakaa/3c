@@ -215,7 +215,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     heelContactOffset),
                 semanticRotation * Vector3.forward,
                 semanticRotation * Vector3.up,
-                semanticRotation);
+                semanticRotation,
+                soleFrameLocalRotation);
         }
 
         static Vector3 TransformPoint(

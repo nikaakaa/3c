@@ -5,6 +5,7 @@ namespace ThirdPersonGameplay.Tick
     public static class GameplayTickDebugHotkeys
     {
         public const ulong MultiStepCount = 8;
+        public const float SlowPlaybackRate = 0.25f;
 
         public static void Pump()
         {
@@ -19,6 +20,8 @@ namespace ThirdPersonGameplay.Tick
                 Step(MultiStepCount);
             if (Input.GetKeyDown(KeyCode.F8))
                 ResumeLive();
+            if (Input.GetKeyDown(KeyCode.O))
+                ToggleSlowPlayback();
 #endif
         }
 
@@ -49,6 +52,23 @@ namespace ThirdPersonGameplay.Tick
             GameplayTickSystem.EnqueueDriveCommand(
                 GameplayTickDriveCommand.SetPresentationClock(GameplayPresentationDebugClockMode.LivePresentation));
             GameplayTickSystem.EnqueueDriveCommand(GameplayTickDriveCommand.SetRealtime());
+        }
+
+        static void ToggleSlowPlayback()
+        {
+            GameplayTickDriveStatusSnapshot status = GameplayTickSystem.Current.DriveStatus;
+            bool slowPlaybackActive = status.Mode == GameplayTickDriveMode.RatePlayback &&
+                Mathf.Approximately(status.RateMultiplier, SlowPlaybackRate);
+            if (slowPlaybackActive)
+            {
+                ResumeLive();
+                return;
+            }
+
+            GameplayTickSystem.EnqueueDriveCommand(
+                GameplayTickDriveCommand.SetPresentationClock(GameplayPresentationDebugClockMode.LogicLockedPresentation));
+            GameplayTickSystem.EnqueueDriveCommand(
+                GameplayTickDriveCommand.SetRatePlayback(SlowPlaybackRate));
         }
 #endif
     }

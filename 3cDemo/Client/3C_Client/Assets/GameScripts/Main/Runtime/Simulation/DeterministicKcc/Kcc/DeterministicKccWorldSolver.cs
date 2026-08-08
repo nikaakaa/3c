@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
     public sealed partial class DeterministicKccWorldSolver : ICharacterWorldSolver
     {
         public const string SolverId = "thirdperson.simulation.solver.deterministic-kcc";
-        public const string SolverVersion = "10";
+        public const string SolverVersion = "11";
 
         static readonly SolverImplementationId s_ImplementationId = new SolverImplementationId(SolverId);
         readonly DeterministicCollisionWorldArtifact m_CollisionWorld;
@@ -99,7 +99,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             if (configuration == null)
                 throw new ArgumentNullException(nameof(configuration));
             return StableHash.Compute(
-                "deterministic-kcc/8",
+                "deterministic-kcc/9",
                 SolverId,
                 SolverVersion,
                 DeterministicCollisionWorldArtifact.ArtifactSchema,

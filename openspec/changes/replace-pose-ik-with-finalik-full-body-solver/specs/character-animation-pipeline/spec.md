@@ -2,11 +2,11 @@
 
 ### Requirement: CharacterSimulationPresentationRuntime必须执行唯一编译Pose Plan
 
-SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application boundary。Runtime MUST消费committed Body/Intent、Program parameter和有限Action command，构造Presentation Fact，并按Projection编译的ordered staged Pose/Value DAG执行PoseStateMachine、state-local provider demand/readiness、ActionPlaybackInput、AnimationSlot、Local Pose composition、显式`LocalToComponentPose`、Component Pose控制、从同一Component Pose分支执行FinalIK Grounding-backed PredictiveFootPlacement与PoseBoneIKGoals、汇聚全部Goal value到唯一pure pose FullBodyIK、显式`ComponentToLocalPose`、后续Pose stage及FinalPublication。所有Player、Routing、Inertialization、source capture、空间转换、Goal value和output completion MUST位于同一帧固定计划和同一次PlayableGraph Evaluate。Goal Source的调度先后 MUST不被解释为多个IK串行。任一stage失败 MUST阻断后续stage与FinalPublication；若已跨过Animancer Evaluate Barrier，同一Actor Animation Runtime MUST进入Faulted且不得逆序恢复状态或Physical Bone快照。Runtime MUST不创建图外基础动画、Stack、Foot Placement、LegIK、TwoBoneIK、FinalIK组件、隐式Pose空间转换、world-aware postprocess、第二Pose Graph或第二final writer。
+SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application boundary。Runtime MUST消费committed Body/Intent、Program parameter和有限Action command，构造Presentation Fact，并按Projection编译的ordered staged Pose/Value DAG执行PoseStateMachine、state-local provider demand/readiness、ActionPlaybackInput、AnimationSlot、Local Pose composition、显式`LocalToComponentPose`、Component Pose控制、从同一Component Pose分支执行Lyra Foot Plant等价普通FootGrounding、可选Swing脚PredictiveFootPlacementModifier与PoseBoneIKGoals、汇聚全部最终Goal value到唯一pure pose FullBodyIK、显式`ComponentToLocalPose`、后续Pose stage及FinalPublication。所有Player、Routing、Inertialization、source capture、空间转换、Goal value和output completion MUST位于同一帧固定计划和同一次PlayableGraph Evaluate。Goal Source的调度先后 MUST不被解释为多个IK串行。任一stage失败 MUST阻断后续stage与FinalPublication；若已跨过Animancer Evaluate Barrier，同一Actor Animation Runtime MUST进入Faulted且不得逆序恢复状态或Physical Bone快照。Runtime MUST不创建图外基础动画、Stack、Foot Placement、LegIK、TwoBoneIK、FinalIK Grounding、FinalIK组件、隐式Pose空间转换、world-aware postprocess、第二Pose Graph或第二final writer。
 
-#### Scenario: PredictiveFootPlacement完成后FullBodyIK失败
+#### Scenario: FootPlacement Goals完成后FullBodyIK失败
 
-- **WHEN** Predictor已发布Body/Feet Goals但FullBodyIK报告Rig mapping或solver failure
+- **WHEN** FootGrounding及可选Modifier已发布Body/Feet Goals但FullBodyIK报告Rig mapping或solver failure
 - **THEN** Runtime MUST阻断ComponentToLocalPose与FinalPublication并进入正式Faulted路径
 - **AND** MUST不发布只有pelvis pre-solve调整、只有手臂或只有单腿完成的部分Pose
 

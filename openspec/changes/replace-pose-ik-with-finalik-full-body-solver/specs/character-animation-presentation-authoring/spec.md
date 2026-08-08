@@ -2,7 +2,7 @@
 
 ### Requirement: Pipeline Definition 必须引用唯一 Animation Presentation Profile
 
-`CharacterPipelineDefinition` MUST引用唯一`CharacterAnimationPresentationProfile`，不得内联保存动画表现数据。Profile MUST唯一引用Pose Graph、Profile-owned Pose source binding子资产、有限Action producer source binding、node-local Policy、Rig v4、Foot Placement Profile、FullBodyIK Profile与Foot Analysis配置。Foot Placement Profile MUST在同一资产中分组FinalIK Grounding-backed设置和Project Predictive Extension设置，不得保存backend选择、fallback或Grounder组件副本。Pose Graph MUST唯一保存Presentation Fact Input、PoseStateMachine、Graph-owned Source Slot子资产、SequencePlayer、AnimationSlot、Selection Player、composition、PoseBoneIKGoals、PredictiveFootPlacement、FullBodyIK与Output topology。Gameplay Graph、BTSMTL StateMachine、Timeline、Presenter与Prefab MUST不复制这些配置或挂载正式FinalIK组件。
+`CharacterPipelineDefinition` MUST引用唯一`CharacterAnimationPresentationProfile`，不得内联保存动画表现数据。Profile MUST唯一引用Pose Graph、Profile-owned Pose source binding子资产、有限Action producer source binding、node-local Policy、Rig v4、Foot Placement Profile、FullBodyIK Profile与Foot Analysis配置。Foot Placement Profile MUST在同一资产中只分组`Lyra Current Grounding`、`Stance Stabilization`和`Predictive Extension`设置，不得保存FinalIK Grounding、UE `AnimNode_FootPlacement`重复算法、并列pelvis owner、backend选择、fallback或Grounder组件副本。Pose Graph MUST唯一保存Presentation Fact Input、PoseStateMachine、Graph-owned Source Slot子资产、SequencePlayer、AnimationSlot、Selection Player、composition、PoseBoneIKGoals、FootGrounding、可选PredictiveFootPlacementModifier、FullBodyIK与Output topology。Gameplay Graph、BTSMTL StateMachine、Timeline、Presenter与Prefab MUST不复制这些配置或挂载正式FinalIK组件。
 
 #### Scenario: Corin配置动画表现
 

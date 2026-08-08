@@ -243,6 +243,7 @@ MonoBehaviour:
         - rid: 665191818949034374
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 1
         m_RootGUID: 515287d9-5ead-4919-be5e-6e65a86cbd36
     - rid: 665191818949034095
       type: {class: RootNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -530,6 +531,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 665191818949034362
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -543,6 +545,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 665191818949034363
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -556,6 +559,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 665191818949034364
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -569,6 +573,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 665191818949034365
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -621,6 +626,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 665191818949034366
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -673,6 +679,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 665191818949034367
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -686,6 +693,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 665191818949034368
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -699,6 +707,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 665191818949034369
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -712,6 +721,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 665191818949034370
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -725,6 +735,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_AuthoringRole: 5
     - rid: 665191818949034371
       type: {class: AIActionTargetSnapshotExposedProperty, ns: ThirdPersonCharacter.AI,
@@ -735,13 +746,13 @@ MonoBehaviour:
         m_BlackboardKey: CurrentTarget
         m_BlackboardScope: 5
         m_BlackboardLifetime: 7
-        m_BlackboardAuthority: 0
-        m_BlackboardSyncPolicy: 0
-        m_InputValueId: 
-        m_BlackboardFactProjection: 0
-        m_ActionWindowType: 
-        m_ActionWindowId: 
-        m_ActionWindowDigest: 0
+        m_InputBinding:
+          m_InputValueId:
+        m_FactProjection:
+          m_Kind: 0
+          m_ActionWindowType:
+          m_ActionWindowId:
+          m_ActionWindowDigest: 0
         m_BlackboardCategoryPath: AI
         m_Index: 0
         m_Expanded: 1
@@ -761,13 +772,13 @@ MonoBehaviour:
         m_BlackboardKey: AttackRange
         m_BlackboardScope: 5
         m_BlackboardLifetime: 7
-        m_BlackboardAuthority: 0
-        m_BlackboardSyncPolicy: 0
-        m_InputValueId: 
-        m_BlackboardFactProjection: 0
-        m_ActionWindowType: 
-        m_ActionWindowId: 
-        m_ActionWindowDigest: 0
+        m_InputBinding:
+          m_InputValueId:
+        m_FactProjection:
+          m_Kind: 0
+          m_ActionWindowType:
+          m_ActionWindowId:
+          m_ActionWindowDigest: 0
         m_BlackboardCategoryPath: AI
         m_Index: 1
         m_Expanded: 1
@@ -783,13 +794,13 @@ MonoBehaviour:
         m_BlackboardKey: AttackCooldownTicks
         m_BlackboardScope: 5
         m_BlackboardLifetime: 7
-        m_BlackboardAuthority: 0
-        m_BlackboardSyncPolicy: 0
-        m_InputValueId: 
-        m_BlackboardFactProjection: 0
-        m_ActionWindowType: 
-        m_ActionWindowId: 
-        m_ActionWindowDigest: 0
+        m_InputBinding:
+          m_InputValueId:
+        m_FactProjection:
+          m_Kind: 0
+          m_ActionWindowType:
+          m_ActionWindowId:
+          m_ActionWindowDigest: 0
         m_BlackboardCategoryPath: AI
         m_Index: 2
         m_Expanded: 1
@@ -805,13 +816,13 @@ MonoBehaviour:
         m_BlackboardKey: StopMove
         m_BlackboardScope: 0
         m_BlackboardLifetime: 0
-        m_BlackboardAuthority: 0
-        m_BlackboardSyncPolicy: 0
-        m_InputValueId: 
-        m_BlackboardFactProjection: 0
-        m_ActionWindowType: 
-        m_ActionWindowId: 
-        m_ActionWindowDigest: 0
+        m_InputBinding:
+          m_InputValueId:
+        m_FactProjection:
+          m_Kind: 0
+          m_ActionWindowType:
+          m_ActionWindowId:
+          m_ActionWindowDigest: 0
         m_BlackboardCategoryPath: AI
         m_Index: 3
         m_Expanded: 1

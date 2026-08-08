@@ -14,12 +14,15 @@ using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
 using TreeDesigner;
+using TreeDesigner.Editor;
 using UnityEditor;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 {
     public sealed class AgentGraphValidator
     {
+        static readonly BtsmtlGraphAuthoringCapabilities s_Capabilities =
+            new BtsmtlGraphAuthoringCapabilities();
         CharacterPipelineDefinition m_Definition;
         AgentCompileReport m_Report;
         readonly Dictionary<string, BaseExposedProperty> m_Declarations = new Dictionary<string, BaseExposedProperty>(StringComparer.Ordinal);
@@ -576,6 +579,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
                 if (!PipelineBlackboardVariablePolicy.IsValid(declaration.BlackboardScope, declaration.BlackboardLifetime))
                     m_Report.Error(declarationPath, "blackboard_scope_lifetime_invalid", $"非法 scope/lifetime：{declaration.BlackboardScope}/{declaration.BlackboardLifetime}");
+                if (!PipelineBlackboardVariablePolicy.TryValidateInputBinding(declaration, out string inputBindingError))
+                    m_Report.Error(declarationPath, "blackboard_input_binding_invalid", inputBindingError);
+                if (declaration.InputBinding != null &&
+                    HasInputValue(declaration.InputValueId))
+                    m_Report.Error(declarationPath, "input_value_identity_duplicate", $"Blackboard Input Binding 与普通 InputProfile 重复使用 InputValueId：{declaration.InputValueId}");
                 if (!PipelineBlackboardFactProjectionPolicy.TryValidate(declaration, out string projectionError))
                     m_Report.Error(declarationPath, "blackboard_projection_invalid", projectionError);
 
@@ -690,6 +698,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         void ValidateNode(BaseTree graph, BaseNode node, string path, IReadOnlyList<BaseGraph> visibleGraphs)
         {
+            ValidateNodePortShape(graph, node, path);
             if (node is StateMachineNode stateMachineNode)
             {
                 if (stateMachineNode.Graph == null)
@@ -762,10 +771,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             if (node is ExposedPropertyNode exposedPropertyNode)
             {
-                ValidateBlackboardReference(exposedPropertyNode.BlackboardVariable, exposedPropertyNode.Value.ValueType, visibleGraphs, path, true);
+                PortDirection expectedDirection = exposedPropertyNode.NodeType == ExposedPropertyNodeType.Get
+                    ? PortDirection.Output
+                    : PortDirection.Input;
+                if (exposedPropertyNode.Value == null ||
+                    exposedPropertyNode.Value.Direction != expectedDirection)
+                {
+                    m_Report.Error(
+                        path,
+                        "exposed_property_port_shape_mismatch",
+                        $"ExposedProperty Node {node.GUID} 的 mode={exposedPropertyNode.NodeType}，m_Value 实际方向={exposedPropertyNode.Value?.Direction.ToString() ?? "Missing"}，期望方向={expectedDirection}。");
+                }
+                ValidateBlackboardReference(exposedPropertyNode.BlackboardVariable, exposedPropertyNode.Value?.ValueType, visibleGraphs, path, true);
                 if (exposedPropertyNode.NodeType == ExposedPropertyNodeType.Set &&
                     m_Declarations.TryGetValue(exposedPropertyNode.BlackboardVariable.DeclarationId, out BaseExposedProperty writeDeclaration) &&
-                    writeDeclaration.BlackboardFactProjection == PipelineBlackboardFactProjectionKind.ActionWindow &&
+                    writeDeclaration.FactProjection?.Kind == PipelineBlackboardFactProjectionKind.ActionWindow &&
                     !(graph is TimelineRunningTree) &&
                     !(exposedPropertyNode.FactContext is ActionContextSlot))
                     m_Report.Error(path, "window_projection_fact_context_missing", "非 TimelineData ActionWindow projection 写入必须显式引用 Action Context。");
@@ -871,6 +891,69 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
+        void ValidateNodePortShape(BaseTree graph, BaseNode node, string path)
+        {
+            if (!s_Capabilities.TryGetSharedCapability(node, out GraphAuthoringCapabilityId capabilityId))
+            {
+                m_Report.Error(path, "node_capability_missing", $"Node {node.GUID} 没有正式 Capability。");
+                return;
+            }
+            GraphAuthoringCapabilityDescriptor capability =
+                s_Capabilities.SharedCatalog.Require(capabilityId);
+            IReadOnlyList<GraphAuthoringDynamicPortProjection> projected;
+            try
+            {
+                projected = s_Capabilities.ProjectPortShape(node, graph, capability);
+            }
+            catch (GraphAuthoringPortShapeException exception)
+            {
+                m_Report.Error(path, exception.Code, exception.Message);
+                return;
+            }
+
+            var expected = capability.FixedPorts
+                .Select(value => new KeyValuePair<GraphAuthoringPortId, Tuple<GraphAuthoringPortDirection, GraphAuthoringPortCapacity>>(
+                    value.PortId,
+                    Tuple.Create(value.Direction, value.Capacity)))
+                .Concat(projected.Select(value =>
+                    new KeyValuePair<GraphAuthoringPortId, Tuple<GraphAuthoringPortDirection, GraphAuthoringPortCapacity>>(
+                        value.PortId,
+                        Tuple.Create(value.Direction, value.Capacity))))
+                .ToDictionary(value => value.Key, value => value.Value);
+            var actual = new Dictionary<GraphAuthoringPortId, Tuple<GraphAuthoringPortDirection, GraphAuthoringPortCapacity>>();
+            foreach (FlowPortDeclaration port in node.GetFlowPortDeclarations(graph))
+            {
+                actual[BtsmtlSharedGraphPort.Flow(port.Name)] = Tuple.Create(
+                    BtsmtlSharedGraphPort.Direction(port.Direction),
+                    BtsmtlSharedGraphPort.Capacity(port.Capacity));
+            }
+            foreach (PropertyPort port in node.PropertyPortMap.Values.Where(value => value != null))
+            {
+                actual[BtsmtlSharedGraphPort.Property(port.PortId)] = Tuple.Create(
+                    BtsmtlSharedGraphPort.Direction(port.Direction),
+                    port.Direction == PortDirection.Input
+                        ? GraphAuthoringPortCapacity.Single
+                        : GraphAuthoringPortCapacity.Multiple);
+            }
+            foreach (KeyValuePair<GraphAuthoringPortId, Tuple<GraphAuthoringPortDirection, GraphAuthoringPortCapacity>> pair in expected)
+            {
+                if (!actual.TryGetValue(pair.Key, out Tuple<GraphAuthoringPortDirection, GraphAuthoringPortCapacity> value))
+                {
+                    m_Report.Error(path, "node_port_shape_missing", $"Node {node.GUID} 缺少 Capability 端口 {pair.Key}。");
+                    continue;
+                }
+                if (value.Item1 != pair.Value.Item1 || value.Item2 != pair.Value.Item2)
+                {
+                    m_Report.Error(
+                        path,
+                        "node_port_shape_mismatch",
+                        $"Node {node.GUID} 端口 {pair.Key} 实际为 {value.Item1}/{value.Item2}，期望为 {pair.Value.Item1}/{pair.Value.Item2}。");
+                }
+            }
+            foreach (GraphAuthoringPortId extra in actual.Keys.Except(expected.Keys))
+                m_Report.Error(path, "node_port_shape_extra", $"Node {node.GUID} 存在 Capability 未声明端口 {extra}。");
+        }
+
         void ValidateElementAuthoringIdentities(BaseGraph graph, string path)
         {
             var identities = new HashSet<string>(StringComparer.Ordinal);
@@ -911,7 +994,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 if (setter.NodeType != ExposedPropertyNodeType.Set ||
                     !m_Declarations.TryGetValue(setter.BlackboardVariable.DeclarationId, out BaseExposedProperty declaration) ||
-                    declaration.BlackboardFactProjection != PipelineBlackboardFactProjectionKind.ActionWindow)
+                    declaration.FactProjection?.Kind != PipelineBlackboardFactProjectionKind.ActionWindow)
                     continue;
 
                 string outputPath = $"{path}/output:{declaration.DeclarationId}";
@@ -921,7 +1004,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     continue;
                 }
 
-                if (string.IsNullOrWhiteSpace(declaration.ActionWindowType))
+                if (string.IsNullOrWhiteSpace(declaration.FactProjection.ActionWindowType))
                     m_Report.Error(outputPath, "window_projection_type_missing", "ActionWindow projection 缺少 WindowType。");
             }
         }
@@ -1175,8 +1258,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         if (!m_Declarations.TryGetValue(setter.BlackboardVariable.DeclarationId, out BaseExposedProperty declaration))
                             continue;
                         if (visibleOwnerIds.Contains(declaration.DeclarationOwnerId) &&
-                            declaration.BlackboardFactProjection == PipelineBlackboardFactProjectionKind.ActionWindow &&
-                            string.Equals(declaration.ActionWindowType, windowType, StringComparison.Ordinal))
+                            declaration.FactProjection?.Kind == PipelineBlackboardFactProjectionKind.ActionWindow &&
+                            string.Equals(declaration.FactProjection.ActionWindowType, windowType, StringComparison.Ordinal))
                             return true;
                     }
                 }
@@ -1221,7 +1304,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         readonly BtsmtlGraphAuthoringCapabilities m_Catalog =
             new BtsmtlGraphAuthoringCapabilities();
 
-        public AgentCompileReport Validate(AIControllerDefinition definition)
+        public AgentCompileReport Validate(AIControllerDefinition definition, bool validateCompiler = true)
         {
             var report = new AgentCompileReport
             {
@@ -1270,11 +1353,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     report.Error(path, "ai_blackboard_scope_invalid", $"AI Blackboard scope 不允许：{declaration.BlackboardScope}");
                 }
-                if (declaration.BlackboardLifetime != PipelineBlackboardVariablePolicy.DefaultLifetime(declaration.BlackboardScope) ||
-                    declaration.BlackboardAuthority != PipelineBlackboardVariableAuthority.LocalOnly ||
-                    declaration.BlackboardSyncPolicy != PipelineBlackboardVariableSyncPolicy.None)
+                if (declaration.BlackboardLifetime != PipelineBlackboardVariablePolicy.DefaultLifetime(declaration.BlackboardScope))
                 {
-                    report.Error(path, "ai_blackboard_policy_invalid", "AI Blackboard lifetime、authority 或 sync policy 不符合正式策略。");
+                    report.Error(path, "ai_blackboard_lifetime_invalid", "AI Blackboard lifetime 与 scope 不匹配。");
+                }
+                if (declaration.InputBinding != null || declaration.FactProjection != null)
+                {
+                    report.Error(path, "ai_blackboard_character_payload_forbidden", "AI Blackboard 不允许 Character Input Binding 或 Fact Projection。");
                 }
             }
 
@@ -1294,7 +1379,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
             }
 
-            try
+            if (!validateCompiler)
+            {
+                report.Warning(
+                    "compiler",
+                    "ai_intent_compile_deferred",
+                    "受控 Character Program 已过期；AI authoring 已验证，AIIntentProgram 保持 stale，等待 Character Program 重新发布后再编译。");
+                report.metrics.semanticValidCount++;
+            }
+            else try
             {
                 AIIntentProgramBuildService.Validate(definition);
                 report.metrics.compileSuccessCount++;

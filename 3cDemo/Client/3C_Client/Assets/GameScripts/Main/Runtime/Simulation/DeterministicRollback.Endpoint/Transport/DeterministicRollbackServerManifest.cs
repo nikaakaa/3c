@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
     [Serializable]
     public sealed class DeterministicRollbackServerManifest
     {
-        public const int CurrentSchemaVersion = 2;
+        public const int CurrentSchemaVersion = 3;
 
         public int schemaVersion;
         public string buildId = string.Empty;
@@ -38,6 +38,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public int historyLengthTicks;
         public int hashCadenceTicks;
         public int maximumRollbackDepthTicks;
+        public int maximumPredictionLeadTicks;
         public int maximumQueuedBundles;
         public int maximumQueuedSnapshots;
         public int maximumOutputRecords;
@@ -86,7 +87,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
             var values = new List<string>
             {
-                "deterministic-rollback-server-manifest/2",
+                "deterministic-rollback-server-manifest/3",
                 schemaVersion.ToString(), buildId, productId, sessionId, listenAddress, listenPort.ToString(),
                 relayServerPeerId, modelId, modelVersion, modelConfigurationHash, protocolId, protocolVersion,
                 protocolSchemaHash, tickRate.ToString(), programId, sourceRevision, projectionRevision,
@@ -94,6 +95,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 collisionWorldHash, kccIdentityHash, offensiveRequestDelayTicks.ToString(),
                 confirmationDelayTicks.ToString(), historyLengthTicks.ToString(), hashCadenceTicks.ToString(),
                 maximumRollbackDepthTicks.ToString(), maximumQueuedBundles.ToString(),
+                maximumPredictionLeadTicks.ToString(),
                 maximumQueuedSnapshots.ToString(), maximumOutputRecords.ToString(), missingInputPolicy,
                 snapshotAuthority, maximumDatagramBytes.ToString(), maximumQueuedMessages.ToString(),
                 maximumFragmentsPerMessage.ToString(), reliableResendMilliseconds.ToString(),
@@ -125,6 +127,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             historyLengthTicks,
             hashCadenceTicks,
             maximumRollbackDepthTicks,
+            maximumPredictionLeadTicks,
             confirmationDelayTicks,
             maximumQueuedBundles,
             maximumQueuedSnapshots,

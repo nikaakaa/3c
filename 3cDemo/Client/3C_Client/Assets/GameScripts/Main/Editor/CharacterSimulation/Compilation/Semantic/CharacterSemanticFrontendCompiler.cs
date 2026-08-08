@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public static class CharacterSemanticFrontendCompiler
     {
-        public const string CompilerVersion = "character-simulation-compiler/21";
+        public const string CompilerVersion = "character-simulation-compiler/22";
         public static readonly OperationSetVersion OperationSetVersion = CharacterGameplayOperationSet.Version;
 
         public static CharacterSemanticFrontendResult Compile(CharacterPipelineDefinition definition)

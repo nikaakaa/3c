@@ -1,5 +1,4 @@
 using System;
-using RootMotion.FinalIK;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -49,7 +48,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 predictedSole,
             Vector3 hip,
             float legLength,
-            int layerMask)
+            int layerMask,
+            Vector3 up)
         {
             int queryCount = 0;
             int rejectedCount = 0;
@@ -62,36 +62,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 float fraction = sampleIndex / (float)sampleCount;
                 Vector3 sample = Vector3.Lerp(currentSole, predictedSole, fraction);
-                var groundingRequest = new GroundingQueryRequest(
-                    GroundingQueryShape.Sphere,
+                var groundingRequest = new CharacterFootPlacementQueryRequest(
+                    CharacterFootPlacementQueryShape.Sphere,
                     sampleIndex == sampleCount
-                        ? GroundingQueryPurpose.FutureLanding
-                        : GroundingQueryPurpose.GroundEnvelope,
-                    m_World.PhysicsScene,
-                    layerMask,
+                        ? CharacterFootPlacementQueryPurpose.FutureLanding
+                        : CharacterFootPlacementQueryPurpose.GroundEnvelope,
                     footIndex,
-                    sample + Vector3.up * m_Settings.CastAbove,
+                    sample + up * m_Settings.CastAbove,
                     Vector3.zero,
-                    Vector3.down,
+                    -up,
+                    m_Settings.CastAbove + m_Settings.CastBelow,
                     m_Settings.PathSphereRadius,
-                    m_Settings.CastAbove + m_Settings.CastBelow);
+                    layerMask,
+                    Mathf.Cos(m_Settings.MaximumSlopeDegrees * Mathf.Deg2Rad));
                 queryCount++;
                 FootPlacementGroundEnvelopeRejectReason candidateReject =
                     FootPlacementGroundEnvelopeRejectReason.None;
-                GroundingQueryHit hit;
-                bool hasHit;
-                if (sampleIndex == sampleCount)
-                {
-                    var request = new CharacterFutureLandingQueryRequest(in groundingRequest);
-                    hasHit = m_World.Query(in request, out hit);
-                }
-                else
-                {
-                    var request = new CharacterPathSampleQueryRequest(
-                        CharacterPathSampleQueryKind.GroundEnvelope,
-                        in groundingRequest);
-                    hasHit = m_World.Query(in request, out hit);
-                }
+                bool hasHit = m_World.Query(
+                    in groundingRequest,
+                    out CharacterFootPlacementQueryHit hit);
                 if (!hasHit ||
                     !Accept(hit, currentSole.y, hip, legLength, out candidateReject))
                 {
@@ -130,6 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentSole,
                 predictedSole,
                 layerMask,
+                up,
                 ref queryCount);
             if (!future.IsValid && rejectReason == FootPlacementGroundEnvelopeRejectReason.None)
                 rejectReason = FootPlacementGroundEnvelopeRejectReason.NoCandidate;
@@ -149,29 +139,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 start,
             Vector3 end,
             int layerMask,
+            Vector3 up,
             ref int queryCount)
         {
             Vector3 path = end - start;
             float distance = path.magnitude;
             if (distance <= 0.0001f)
                 return 0f;
-            Vector3 origin = start + Vector3.up * m_Settings.CastAbove;
-            var groundingRequest = new GroundingQueryRequest(
-                GroundingQueryShape.Capsule,
-                GroundingQueryPurpose.SwingClearance,
-                m_World.PhysicsScene,
-                layerMask,
+            Vector3 origin = start + up * m_Settings.CastAbove;
+            var groundingRequest = new CharacterFootPlacementQueryRequest(
+                CharacterFootPlacementQueryShape.Capsule,
+                CharacterFootPlacementQueryPurpose.SwingClearance,
                 footIndex,
                 origin,
-                origin + Vector3.up * (m_Settings.SwingCapsuleRadius * 2f),
+                origin + up * (m_Settings.SwingCapsuleRadius * 2f),
                 path / distance,
+                distance,
                 m_Settings.SwingCapsuleRadius,
-                distance);
-            var request = new CharacterPathSampleQueryRequest(
-                CharacterPathSampleQueryKind.SwingClearance,
-                in groundingRequest);
+                layerMask,
+                -1f);
             queryCount++;
-            if (!m_World.Query(in request, out GroundingQueryHit hit))
+            if (!m_World.Query(in groundingRequest, out CharacterFootPlacementQueryHit hit))
                 return 0f;
             return Mathf.Clamp(
                 hit.Point.y + m_Settings.SwingCapsuleRadius - Mathf.Lerp(start.y, end.y, hit.Distance / distance),
@@ -180,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         bool Accept(
-            GroundingQueryHit hit,
+            CharacterFootPlacementQueryHit hit,
             float currentSoleHeight,
             Vector3 hip,
             float legLength,

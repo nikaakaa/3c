@@ -32,7 +32,9 @@ namespace ThirdPersonSimulation.DeterministicKcc
         InnerGroundUnstable = 11,
         CommitLandingAbsent = 12,
         CommitSurfaceMismatch = 13,
-        FinalOverlap = 14
+        FinalOverlap = 14,
+        ObstructionNotClosing = 15,
+        ObstacleHeightExceeded = 16
     }
 
     internal readonly struct DeterministicKccGroundReport
@@ -172,13 +174,27 @@ namespace ThirdPersonSimulation.DeterministicKcc
             DeterministicKccStepStage stage,
             DeterministicKccStepRejection rejection,
             int steppedSurfaceId,
-            DeterministicKccQuerySummary querySummary)
+            DeterministicKccQuerySummary querySummary,
+            int representativeEvaluationCount = 0,
+            int stepDetectionAttemptCount = 0,
+            int stabilityEvaluationCount = 0,
+            int standardStepQueryCount = 0,
+            int extraStepQueryCount = 0,
+            int stepValidityCandidateCount = 0,
+            int groundProbeEvaluationCount = 0)
         {
             Mode = mode;
             Stage = stage;
             Rejection = rejection;
             SteppedSurfaceId = steppedSurfaceId;
             QuerySummary = querySummary;
+            RepresentativeEvaluationCount = representativeEvaluationCount;
+            StepDetectionAttemptCount = stepDetectionAttemptCount;
+            StabilityEvaluationCount = stabilityEvaluationCount;
+            StandardStepQueryCount = standardStepQueryCount;
+            ExtraStepQueryCount = extraStepQueryCount;
+            StepValidityCandidateCount = stepValidityCandidateCount;
+            GroundProbeEvaluationCount = groundProbeEvaluationCount;
         }
 
         public DeterministicKccStepMode Mode { get; }
@@ -186,6 +202,34 @@ namespace ThirdPersonSimulation.DeterministicKcc
         public DeterministicKccStepRejection Rejection { get; }
         public int SteppedSurfaceId { get; }
         public DeterministicKccQuerySummary QuerySummary { get; }
+        public int RepresentativeEvaluationCount { get; }
+        public int StepDetectionAttemptCount { get; }
+        public int StabilityEvaluationCount { get; }
+        public int StandardStepQueryCount { get; }
+        public int ExtraStepQueryCount { get; }
+        public int StepValidityCandidateCount { get; }
+        public int GroundProbeEvaluationCount { get; }
+
+        public DeterministicKccStepDiagnostics WithCounters(
+            int representativeEvaluationCount,
+            int stepDetectionAttemptCount,
+            int stabilityEvaluationCount,
+            int standardStepQueryCount,
+            int extraStepQueryCount,
+            int stepValidityCandidateCount,
+            int groundProbeEvaluationCount) => new DeterministicKccStepDiagnostics(
+                Mode,
+                Stage,
+                Rejection,
+                SteppedSurfaceId,
+                QuerySummary,
+                representativeEvaluationCount,
+                stepDetectionAttemptCount,
+                stabilityEvaluationCount,
+                standardStepQueryCount,
+                extraStepQueryCount,
+                stepValidityCandidateCount,
+                groundProbeEvaluationCount);
     }
 
     internal readonly struct DeterministicKccStepCandidate

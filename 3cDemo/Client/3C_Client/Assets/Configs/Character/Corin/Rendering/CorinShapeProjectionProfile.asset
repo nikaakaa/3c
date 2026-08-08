@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3924bdd6ac764e67951f7c69af83f952, type: 3}
+  m_Name: CorinShapeProjectionProfile
+  m_EditorClassIdentifier: 
+  profileId:
+    value: 4bddb68869d446ceb834eee6934c7498
+  revision: 3
+  contentHash:
+    serializedVersion: 2
+    Hash: 409506c254f26ec4d437521a96d4a902
+  colorClusterThreshold: 64
+  smallRegionMergeThreshold: 72
+  minimumRegionTriangles: 3
+  simplifyEpsilonPixels: 4
+  outlineWidthPixels: 1.25
+  minimumLoopAreaPixels: 12
+  minimumSharedEdgePixels: 2
+  outlineColor: {r: 0.035, g: 0.035, b: 0.045, a: 1}
+  capacity:
+    MaxRenderers: 8
+    MaxVertices: 120000
+    MaxTriangles: 180000
+    MaxRegions: 1024
+    MaxSharedChains: 2048
+    AtlasWidth: 2048
+    AtlasHeight: 2048
+    MaxContourPoints: 262144
+    MaxLoops: 4096
+    MaxIndirectInstances: 1024
+    ReadbackSlots: 3
+  submeshRules:
+  - rendererSlotId: Corin_Weapon
+    submeshIndex: 0
+    material: {fileID: 2100000, guid: c7685f8654aee19499e3a7799e83fc99, type: 2}
+    mode: 0
+    alphaThreshold: 0.5
+    overrideRepresentativeColor: 0
+    representativeColor: {r: 1, g: 1, b: 1, a: 1}
+  - rendererSlotId: Corin_body
+    submeshIndex: 0
+    material: {fileID: 2100000, guid: f06f0e87ad6cdb743a438382b222f732, type: 2}
+    mode: 0
+    alphaThreshold: 0.5
+    overrideRepresentativeColor: 0
+    representativeColor: {r: 1, g: 1, b: 1, a: 1}
+  - rendererSlotId: Corin_body_02
+    submeshIndex: 0
+    material: {fileID: 2100000, guid: f06f0e87ad6cdb743a438382b222f732, type: 2}
+    mode: 0
+    alphaThreshold: 0.5
+    overrideRepresentativeColor: 0
+    representativeColor: {r: 1, g: 1, b: 1, a: 1}
+  - rendererSlotId: Corin_face
+    submeshIndex: 0
+    material: {fileID: 2100000, guid: 6a1226ad2e148c54f9449dfa4a280ee5, type: 2}
+    mode: 0
+    alphaThreshold: 0.5
+    overrideRepresentativeColor: 0
+    representativeColor: {r: 1, g: 1, b: 1, a: 1}
+  - rendererSlotId: Corin_hair
+    submeshIndex: 0
+    material: {fileID: 2100000, guid: c165b759771b01d4e9a9387654222c66, type: 2}
+    mode: 0
+    alphaThreshold: 0.5
+    overrideRepresentativeColor: 0
+    representativeColor: {r: 1, g: 1, b: 1, a: 1}

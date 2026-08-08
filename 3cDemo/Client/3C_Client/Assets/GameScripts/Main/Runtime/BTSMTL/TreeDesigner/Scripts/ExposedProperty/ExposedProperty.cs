@@ -29,28 +29,63 @@ namespace TreeDesigner
         AITick
     }
 
-    public enum PipelineBlackboardVariableAuthority
-    {
-        LocalOnly,
-        ClientPredicted,
-        ServerAuthoritative,
-        PresentationOnly
-    }
-
-    public enum PipelineBlackboardVariableSyncPolicy
-    {
-        None,
-        ConfigVersion,
-        InputDerived,
-        SyncFact,
-        ReplicatedCue,
-        CorrectionOnly
-    }
-
     public enum PipelineBlackboardFactProjectionKind
     {
-        None,
         ActionWindow
+    }
+
+    [Serializable]
+    public sealed class PipelineBlackboardInputBinding
+    {
+        [SerializeField]
+        string m_InputValueId;
+
+        public string InputValueId => m_InputValueId ?? string.Empty;
+        public bool IsDefined => !string.IsNullOrWhiteSpace(m_InputValueId);
+
+        public PipelineBlackboardInputBinding(string inputValueId)
+        {
+            m_InputValueId = string.IsNullOrWhiteSpace(inputValueId)
+                ? throw new ArgumentException("Blackboard Input Binding requires a stable InputValueId.", nameof(inputValueId))
+                : inputValueId.Trim();
+        }
+    }
+
+    [Serializable]
+    public sealed class PipelineBlackboardFactProjection
+    {
+        [SerializeField]
+        PipelineBlackboardFactProjectionKind m_Kind;
+
+        [SerializeField]
+        string m_ActionWindowType;
+
+        [SerializeField]
+        string m_ActionWindowId;
+
+        [SerializeField]
+        ulong m_ActionWindowDigest;
+
+        public PipelineBlackboardFactProjectionKind Kind => m_Kind;
+        public string ActionWindowType => m_ActionWindowType ?? string.Empty;
+        public string ActionWindowId => m_ActionWindowId ?? string.Empty;
+        public ulong ActionWindowDigest => m_ActionWindowDigest;
+        public bool IsDefined =>
+            !string.IsNullOrWhiteSpace(m_ActionWindowType) ||
+            !string.IsNullOrWhiteSpace(m_ActionWindowId) ||
+            m_ActionWindowDigest != 0;
+
+        public PipelineBlackboardFactProjection(
+            PipelineBlackboardFactProjectionKind kind,
+            string actionWindowType,
+            string actionWindowId,
+            ulong actionWindowDigest)
+        {
+            m_Kind = kind;
+            m_ActionWindowType = actionWindowType ?? string.Empty;
+            m_ActionWindowId = actionWindowId ?? string.Empty;
+            m_ActionWindowDigest = actionWindowDigest;
+        }
     }
 
     public interface IPipelineBlackboardRuntimeAccess
@@ -168,21 +203,14 @@ namespace TreeDesigner
                 error = "Blackboard declaration is missing.";
                 return false;
             }
-            bool inputDerived = declaration.BlackboardSyncPolicy == PipelineBlackboardVariableSyncPolicy.InputDerived;
-            if (!inputDerived)
-            {
-                if (!string.IsNullOrWhiteSpace(declaration.InputValueId))
-                    error = "Only InputDerived Blackboard declarations may retain an InputValueId.";
-                return string.IsNullOrEmpty(error);
-            }
-            if (string.IsNullOrWhiteSpace(declaration.InputValueId))
-                error = "InputDerived Blackboard declaration requires a stable InputValueId.";
+            if (declaration.InputBinding == null)
+                return true;
+            if (string.IsNullOrWhiteSpace(declaration.InputBinding.InputValueId))
+                error = "Blackboard Input Binding requires a stable InputValueId.";
             else if (declaration.BlackboardScope != PipelineBlackboardVariableScope.Character)
-                error = "InputDerived Blackboard declaration requires Character scope.";
+                error = "Blackboard Input Binding requires Character scope.";
             else if (declaration.BlackboardLifetime != PipelineBlackboardVariableLifetime.Spawn)
-                error = "InputDerived Blackboard declaration requires Spawn lifetime.";
-            else if (declaration.BlackboardAuthority == PipelineBlackboardVariableAuthority.PresentationOnly)
-                error = "InputDerived Blackboard declaration cannot use PresentationOnly authority.";
+                error = "Blackboard Input Binding requires Spawn lifetime.";
             return string.IsNullOrEmpty(error);
         }
     }
@@ -212,32 +240,15 @@ namespace TreeDesigner
         public PipelineBlackboardVariableLifetime BlackboardLifetime => m_BlackboardLifetime;
 
         [SerializeField]
-        protected PipelineBlackboardVariableAuthority m_BlackboardAuthority = PipelineBlackboardVariableAuthority.LocalOnly;
-        public PipelineBlackboardVariableAuthority BlackboardAuthority => m_BlackboardAuthority;
+        protected PipelineBlackboardInputBinding m_InputBinding;
+        public PipelineBlackboardInputBinding InputBinding =>
+            m_InputBinding?.IsDefined == true ? m_InputBinding : null;
+        public string InputValueId => InputBinding?.InputValueId ?? string.Empty;
 
         [SerializeField]
-        protected PipelineBlackboardVariableSyncPolicy m_BlackboardSyncPolicy = PipelineBlackboardVariableSyncPolicy.None;
-        public PipelineBlackboardVariableSyncPolicy BlackboardSyncPolicy => m_BlackboardSyncPolicy;
-
-        [SerializeField]
-        protected string m_InputValueId;
-        public string InputValueId => m_InputValueId ?? string.Empty;
-
-        [SerializeField]
-        protected PipelineBlackboardFactProjectionKind m_BlackboardFactProjection;
-        public PipelineBlackboardFactProjectionKind BlackboardFactProjection => m_BlackboardFactProjection;
-
-        [SerializeField]
-        protected string m_ActionWindowType;
-        public string ActionWindowType => m_ActionWindowType ?? string.Empty;
-
-        [SerializeField]
-        protected string m_ActionWindowId;
-        public string ActionWindowId => m_ActionWindowId ?? string.Empty;
-
-        [SerializeField]
-        protected ulong m_ActionWindowDigest;
-        public ulong ActionWindowDigest => m_ActionWindowDigest;
+        protected PipelineBlackboardFactProjection m_FactProjection;
+        public PipelineBlackboardFactProjection FactProjection =>
+            m_FactProjection?.IsDefined == true ? m_FactProjection : null;
 
         [SerializeField]
         protected string m_BlackboardCategoryPath;
@@ -267,22 +278,26 @@ namespace TreeDesigner
         public virtual void SetValue(object value) { }
 
 #if UNITY_EDITOR
-        public void ConfigurePipelineBlackboard(
+        public void ConfigureDeclaration(
             string key,
             PipelineBlackboardVariableScope scope,
             PipelineBlackboardVariableLifetime lifetime,
-            PipelineBlackboardVariableAuthority authority,
-            PipelineBlackboardVariableSyncPolicy syncPolicy,
-            string inputValueId,
             string categoryPath)
         {
             m_BlackboardKey = key ?? string.Empty;
             m_BlackboardScope = scope;
             m_BlackboardLifetime = lifetime;
-            m_BlackboardAuthority = authority;
-            m_BlackboardSyncPolicy = syncPolicy;
-            m_InputValueId = inputValueId ?? string.Empty;
             m_BlackboardCategoryPath = categoryPath ?? string.Empty;
+        }
+
+        public void ConfigureInputBinding(string inputValueId)
+        {
+            m_InputBinding = new PipelineBlackboardInputBinding(inputValueId);
+        }
+
+        public void ClearInputBinding()
+        {
+            m_InputBinding = null;
         }
 
         public void ConfigureFactProjection(
@@ -291,10 +306,12 @@ namespace TreeDesigner
             string windowId,
             ulong digest)
         {
-            m_BlackboardFactProjection = projection;
-            m_ActionWindowType = windowType ?? string.Empty;
-            m_ActionWindowId = windowId ?? string.Empty;
-            m_ActionWindowDigest = digest;
+            m_FactProjection = new PipelineBlackboardFactProjection(projection, windowType, windowId, digest);
+        }
+
+        public void ClearFactProjection()
+        {
+            m_FactProjection = null;
         }
 #endif
 
@@ -311,12 +328,12 @@ namespace TreeDesigner
         public static bool TryValidate(BaseExposedProperty declaration, out string error)
         {
             error = string.Empty;
-            if (declaration == null || declaration.BlackboardFactProjection == PipelineBlackboardFactProjectionKind.None)
+            if (declaration == null || declaration.FactProjection == null)
                 return true;
 
-            if (declaration.BlackboardFactProjection != PipelineBlackboardFactProjectionKind.ActionWindow)
+            if (declaration.FactProjection.Kind != PipelineBlackboardFactProjectionKind.ActionWindow)
             {
-                error = $"Unsupported fact projection '{declaration.BlackboardFactProjection}'.";
+                error = $"Unsupported fact projection '{declaration.FactProjection.Kind}'.";
                 return false;
             }
 
@@ -325,11 +342,9 @@ namespace TreeDesigner
             else if (declaration.BlackboardScope != PipelineBlackboardVariableScope.Frame ||
                      declaration.BlackboardLifetime != PipelineBlackboardVariableLifetime.Frame)
                 error = "ActionWindow projection requires Frame scope and Frame lifetime.";
-            else if (declaration.BlackboardSyncPolicy != PipelineBlackboardVariableSyncPolicy.SyncFact)
-                error = "ActionWindow projection requires SyncFact policy.";
-            else if (string.IsNullOrWhiteSpace(declaration.ActionWindowType))
+            else if (string.IsNullOrWhiteSpace(declaration.FactProjection.ActionWindowType))
                 error = "ActionWindow projection requires WindowType.";
-            else if (string.IsNullOrWhiteSpace(declaration.ActionWindowId))
+            else if (string.IsNullOrWhiteSpace(declaration.FactProjection.ActionWindowId))
                 error = "ActionWindow projection requires WindowId.";
 
             return string.IsNullOrEmpty(error);

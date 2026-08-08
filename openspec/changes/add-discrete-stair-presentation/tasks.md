@@ -121,10 +121,10 @@
 - [ ] 6.3 保持Corin Foot Placement Mask排除`CharacterTraversal`。
 - [ ] 6.4 保持离散楼梯Foot support直接来自`Ground`Collider。
 - [ ] 6.5 保持Ramp楼梯Foot support直接来自`FootPlacementSurface`Collider。
-- [ ] 6.6 保持FinalIK Grounding与Predictive Extension不读取竖直Follower私有状态。
-- [ ] 6.7 保持`SuddenMotionOnly`使用最终`VisibleTranslationDelta`。
+- [ ] 6.6 保持`Lyra Current Grounding -> Stance Stabilization -> Pelvis Resolve` FootGrounding与可选Swing Predictive Modifier不读取竖直Follower私有状态。
+- [ ] 6.7 保持FootGrounding只读取正式最终Body Frame；stance anchor只使用合法current surface local anchor，不建立Actor Movement Compensation或第二Body filter。
 - [ ] 6.8 保持Pelvis补偿不写VisualRoot。
-- [ ] 6.9 保持唯一FullBodyIK只消费PredictiveFootPlacement发布的typed Goal Set，不重复world query。
+- [ ] 6.9 保持唯一FullBodyIK只消费FootGrounding或可选Modifier发布的最终typed Goal Set，不重复world query。
 - [ ] 6.10 保持默认Camera使用最终Body Frame visible position。
 - [ ] 6.11 保持Camera不读取logic Body Y或KCC Step diagnostics。
 - [ ] 6.12 保持Camera不创建第二份台阶竖直Follower。

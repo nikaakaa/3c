@@ -664,6 +664,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 throw new InvalidOperationException("Motion Matching Module cannot reset while a frame mutation is open.");
             if (!Enum.IsDefined(typeof(MotionMatchingPresentationResetReason), reason))
                 throw new ArgumentOutOfRangeException(nameof(reason));
+            if (m_BodySourceMode == CharacterBodyPresentationSourceMode.CommittedStream &&
+                reason == MotionMatchingPresentationResetReason.BodyStreamReset)
+            {
+                RetargetBodyBranch(resetSequence);
+                return;
+            }
             m_TrajectoryAdapter.Reset(resetSequence);
             for (int providerIndex = 0;
                  providerIndex < m_ProviderRuntimes.Length;
@@ -688,6 +694,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_PreviewQuery = null;
             m_PreviewProviderId = null;
             m_FrameOpen = false;
+            m_CommittedPage = ReadPage();
+        }
+
+        internal void RetargetBodyBranch(ulong resetSequence)
+        {
+            RequireAlive();
+            if (m_ActiveMutationLease.IsValid)
+                throw new InvalidOperationException("Motion Matching Module cannot retarget while a frame mutation is open.");
+            if (resetSequence == 0)
+                throw new ArgumentOutOfRangeException(nameof(resetSequence));
+            if (resetSequence == m_ResetSequence)
+                return;
+            m_TrajectoryAdapter.RetargetBodyBranch(resetSequence);
+            for (int providerIndex = 0;
+                 providerIndex < m_ProviderRuntimes.Length;
+                 providerIndex++)
+            {
+                m_ProviderRuntimes[providerIndex].RetargetBodyBranch(resetSequence);
+            }
+            m_PreviousResetSequence = m_ResetSequence;
+            m_ResetSequence = resetSequence;
+            Array.Clear(m_FrozenOutputs, 0, m_FrozenOutputs.Length);
+            m_FrozenOutputCount = 0;
+            ClearFrameScratch();
+            m_SelectionWorkspace.Reset();
+            m_OpenCompletionIdentity = 0;
+            m_OpenPresentationFrame = 0;
+            m_OpenResetSequence = 0;
+            m_LastResetReason = MotionMatchingPresentationResetReason.BodyStreamReset;
+            m_PreviewQuery = null;
+            m_PreviewProviderId = null;
             m_CommittedPage = ReadPage();
         }
 
@@ -1291,6 +1328,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             internal abstract void CommitFrame();
             internal abstract void DiscardFrame();
             internal abstract void Reset(ulong resetSequence);
+            internal abstract void RetargetBodyBranch(ulong resetSequence);
             public abstract void Dispose();
         }
 
@@ -1362,6 +1400,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 RequireAlive();
                 m_Intent = default;
                 m_HasIntent = false;
+            }
+
+            internal override void RetargetBodyBranch(ulong resetSequence)
+            {
+                RequireAlive();
+                if (!m_HasIntent)
+                    return;
+                m_Intent = new CharacterPresentationTrajectoryIntent(
+                    m_Intent.ActorId,
+                    m_Intent.PreviousTick,
+                    m_Intent.CurrentTick,
+                    m_Intent.SourceSequence,
+                    m_Intent.DesiredPlanarVelocity,
+                    m_Intent.DesiredFacing,
+                    m_Intent.AcceptedAcceleration,
+                    m_Intent.AcceptedTurnRateDegrees,
+                    m_Intent.HasMotion,
+                    m_Intent.Grounded,
+                    m_Intent.MovementModeId,
+                    resetSequence);
             }
 
             internal override void BeginFrame()
@@ -1461,6 +1519,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             }
 
             internal override void Reset(ulong resetSequence)
+            {
+                RequireAlive();
+            }
+
+            internal override void RetargetBodyBranch(ulong resetSequence)
             {
                 RequireAlive();
             }

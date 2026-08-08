@@ -404,9 +404,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 for (int i = 0; i < plan.FullBodyIks.Count; i++)
                     if (plan.FullBodyIks[i].NodeId.Value == selection.ElementId.Value)
                         owners.Add($"full-body-ik-profile:{plan.FullBodyIks[i].ProfileId}");
-                for (int i = 0; i < plan.PredictiveFootPlacements.Count; i++)
-                    if (plan.PredictiveFootPlacements[i].NodeId.Value == selection.ElementId.Value)
-                        owners.Add($"foot-placement-profile:{plan.PredictiveFootPlacements[i].Profile.ProfileId}");
+                for (int i = 0; i < plan.FootGroundings.Count; i++)
+                    if (plan.FootGroundings[i].NodeId.Value == selection.ElementId.Value)
+                        owners.Add($"foot-placement-profile:{plan.FootGroundings[i].Profile.ProfileId}");
                 for (int i = 0; i < plan.BlendNodes.Count; i++)
                     if (plan.BlendNodes[i].NodeId.Value == selection.ElementId.Value)
                         owners.Add($"animation-blend-policy:{plan.BlendNodes[i].PolicyId}");
@@ -1092,12 +1092,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             owners.Add(
                                 $"full-body-ik-profile:{plan.FullBodyIks[i].ProfileId}");
                     for (int i = 0;
-                         i < plan.PredictiveFootPlacements.Count;
+                         i < plan.FootGroundings.Count;
                          i++)
-                        if (plan.PredictiveFootPlacements[i].NodeId.Value ==
+                        if (plan.FootGroundings[i].NodeId.Value ==
                             current.ElementId.Value)
                             owners.Add(
-                                $"foot-placement-profile:{plan.PredictiveFootPlacements[i].Profile.ProfileId}");
+                                $"foot-placement-profile:{plan.FootGroundings[i].Profile.ProfileId}");
                     for (int i = 0; i < plan.BlendNodes.Count; i++)
                         if (plan.BlendNodes[i].NodeId.Value ==
                             current.ElementId.Value)

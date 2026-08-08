@@ -57,7 +57,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int modifyBoneIndex,
             int rootOrientationWarpIndex,
             int poseBoneIkGoalsIndex,
-            int predictiveFootPlacementIndex,
+            int footGroundingIndex,
+            int predictiveFootPlacementModifierIndex,
             int fullBodyIkIndex,
             int stateMachineIndex,
             int animationSlotIndex,
@@ -66,11 +67,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int frameCacheIndex,
             float weight)
         {
-            byte codeValue = (byte)code;
             if (index < 0 ||
-                codeValue < (byte)CharacterPoseOperationCode.ProgramParameterInput ||
-                codeValue > (byte)CharacterPoseOperationCode.EmptyFullBodyIkGoals ||
-                codeValue == 14 ||
+                !Enum.IsDefined(typeof(CharacterPoseOperationCode), code) ||
                 outputPoseValueIndex < -1 || outputFullBodyIkGoalSetValueIndex < -1 ||
                 fullBodyIkGoalInputStart < -1 || fullBodyIkGoalInputCount < 0 ||
                 frameCacheIndex != index ||
@@ -96,7 +94,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ModifyBoneIndex = modifyBoneIndex;
             RootOrientationWarpIndex = rootOrientationWarpIndex;
             PoseBoneIkGoalsIndex = poseBoneIkGoalsIndex;
-            PredictiveFootPlacementIndex = predictiveFootPlacementIndex;
+            FootGroundingIndex = footGroundingIndex;
+            PredictiveFootPlacementModifierIndex = predictiveFootPlacementModifierIndex;
             FullBodyIkIndex = fullBodyIkIndex;
             StateMachineIndex = stateMachineIndex;
             AnimationSlotIndex = animationSlotIndex;
@@ -126,7 +125,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int ModifyBoneIndex { get; }
         internal int RootOrientationWarpIndex { get; }
         internal int PoseBoneIkGoalsIndex { get; }
-        internal int PredictiveFootPlacementIndex { get; }
+        internal int FootGroundingIndex { get; }
+        internal int PredictiveFootPlacementModifierIndex { get; }
         internal int FullBodyIkIndex { get; }
         internal int StateMachineIndex { get; }
         internal int AnimationSlotIndex { get; }
@@ -156,7 +156,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ModifyBoneIndex,
             RootOrientationWarpIndex,
             PoseBoneIkGoalsIndex,
-            PredictiveFootPlacementIndex,
+            FootGroundingIndex,
+            PredictiveFootPlacementModifierIndex,
             FullBodyIkIndex,
             StateMachineIndex,
             AnimationSlotIndex,
@@ -189,7 +190,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ModifyBoneIndex,
             RootOrientationWarpIndex,
             PoseBoneIkGoalsIndex,
-            PredictiveFootPlacementIndex,
+            FootGroundingIndex,
+            PredictiveFootPlacementModifierIndex,
             FullBodyIkIndex,
             StateMachineIndex,
             AnimationSlotIndex,
@@ -470,7 +472,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         int m_BoneCount;
         int m_ParameterCount;
         int m_PoseValueCount;
-        int m_PredictiveFootPlacementCount;
+        int m_FootGroundingCount;
+        int m_PredictiveFootPlacementModifierCount;
         int m_FullBodyIkCount;
         int m_ContributionStride;
         int m_FrameCacheCount;
@@ -517,7 +520,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_BoneCounts = rig.BoneCounts;
                 m_ParameterCount = program.Parameters.Count;
                 m_PoseValueCount = program.PoseValueWorkspaceCount;
-                m_PredictiveFootPlacementCount = program.PredictiveFootPlacements.Count;
+                m_FootGroundingCount = program.FootGroundings.Count;
+                m_PredictiveFootPlacementModifierCount = program.PredictiveFootPlacementModifiers.Count;
                 m_FullBodyIkCount = program.FullBodyIks.Count;
                 m_ContributionStride = program.ContributionWorkspaceCount / program.PoseValueWorkspaceCount;
                 m_FrameCacheCount = program.FrameCacheCount;
@@ -598,7 +602,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int PoseBoneCount => m_BoneCount;
         internal int ParameterCount => m_ParameterCount;
         internal int PoseValueCount => m_PoseValueCount;
-        internal int PredictiveFootPlacementCount => m_PredictiveFootPlacementCount;
+        internal int FootGroundingCount => m_FootGroundingCount;
+        internal int PredictiveFootPlacementModifierCount => m_PredictiveFootPlacementModifierCount;
         internal int FullBodyIkCount => m_FullBodyIkCount;
         internal int ContributionStride => m_ContributionStride;
         internal int FrameCacheCount => m_FrameCacheCount;
@@ -1087,7 +1092,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operation.ModifyBoneIndex,
                     operation.RootOrientationWarpIndex,
                     operation.PoseBoneIkGoalsIndex,
-                    operation.PredictiveFootPlacementIndex,
+                    operation.FootGroundingIndex,
+                    operation.PredictiveFootPlacementModifierIndex,
                     operation.FullBodyIkIndex,
                     operation.StateMachineIndex,
                     operation.AnimationSlotIndex,
@@ -1130,7 +1136,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             if (m_BoneCount <= 0 || m_ParameterCount <= 0 || m_PoseValueCount <= 0 ||
-                m_PredictiveFootPlacementCount < 0 || m_FullBodyIkCount < 0 || m_ContributionStride <= 0 ||
+                m_FootGroundingCount < 0 || m_PredictiveFootPlacementModifierCount < 0 ||
+                m_FullBodyIkCount < 0 || m_ContributionStride <= 0 ||
                 m_FrameCacheCount <= 0 || m_LeftFootBoneIndex < 0 || m_LeftFootBoneIndex >= m_BoneCount ||
                 m_RightFootBoneIndex < 0 || m_RightFootBoneIndex >= m_BoneCount ||
                 !m_Operations.IsCreated || m_Operations.Length <= 0 ||
@@ -1234,7 +1241,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseOperationCode.PoseParameterResolve => true,
             CharacterPoseOperationCode.ModifyBone => true,
             CharacterPoseOperationCode.RootOrientationWarp => true,
-            CharacterPoseOperationCode.PredictiveFootPlacement => true,
+            CharacterPoseOperationCode.FootGrounding => true,
+            CharacterPoseOperationCode.PredictiveFootPlacementModifier => true,
             CharacterPoseOperationCode.PoseBoneIKGoals => true,
             CharacterPoseOperationCode.FullBodyIK => true,
             CharacterPoseOperationCode.LinkedPoseCall => true,

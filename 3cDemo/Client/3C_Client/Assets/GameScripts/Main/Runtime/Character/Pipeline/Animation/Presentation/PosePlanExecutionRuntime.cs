@@ -10,6 +10,7 @@ using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
 using ThirdPersonSimulation;
+using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -314,8 +315,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         int m_MotionMatchingHistoryCompletionCount;
         CharacterPoseGraphNativeBinding m_LastCompletedFrame;
         CharacterPoseGraphNativeBinding m_PendingCompletedFrame;
-        CharacterPredictiveFootPlacementDiagnostics m_LastPredictiveFootPlacementDiagnostics;
-        CharacterPredictiveFootPlacementDiagnostics m_PendingPredictiveFootPlacementDiagnostics;
+        CharacterFootGroundingDiagnostics m_LastFootGroundingDiagnostics;
+        CharacterFootGroundingDiagnostics m_PendingFootGroundingDiagnostics;
+        CharacterPredictiveFootPlacementModifierDiagnostics m_LastFootPlacementModifierDiagnostics;
+        CharacterPredictiveFootPlacementModifierDiagnostics m_PendingFootPlacementModifierDiagnostics;
         PosePlanFrameLease m_ActiveFrameLease;
         bool m_CommitValidated;
         bool m_HasCompletedFrame;
@@ -740,7 +743,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseTuningLayout layout,
             CharacterPoseTuningParameterBlock block,
             bool resetOwnerState,
-            CharacterPredictiveFootPlacementGoalSource footPlacement = null)
+            CharacterFootPlacementRuntime footPlacement = null)
         {
             if (layout == null || block == null)
                 return "Pose tuning payload is missing.";
@@ -920,7 +923,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_SourceBackend.BeginFrame(frameIdentity);
                 m_PendingCompletedFrame = default;
                 m_HasPendingCompletedFrame = false;
-                m_PendingPredictiveFootPlacementDiagnostics = default;
+                m_PendingFootGroundingDiagnostics = default;
+                m_PendingFootPlacementModifierDiagnostics = default;
                 m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
                 m_PosePlan.BeginFrame();
                 PrepareLinkedPoseSelection(linkedPose);
@@ -998,11 +1002,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_DirectPlayers[i].CommitFrame();
             m_PoseStateSources.CommitFrame();
             m_LastCompletedFrame = m_PendingCompletedFrame;
-            m_LastPredictiveFootPlacementDiagnostics =
-                m_PendingPredictiveFootPlacementDiagnostics;
+            m_LastFootGroundingDiagnostics = m_PendingFootGroundingDiagnostics;
+            m_LastFootPlacementModifierDiagnostics = m_PendingFootPlacementModifierDiagnostics;
             m_HasCompletedFrame = true;
             m_PendingCompletedFrame = default;
-            m_PendingPredictiveFootPlacementDiagnostics = default;
+            m_PendingFootGroundingDiagnostics = default;
+            m_PendingFootPlacementModifierDiagnostics = default;
             m_HasPendingCompletedFrame = false;
             m_HasOpenFrame = false;
             m_ActiveFrameLease = default;
@@ -1266,7 +1271,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_CommitValidated = false;
             m_PendingCompletedFrame = default;
             m_HasPendingCompletedFrame = false;
-            m_PendingPredictiveFootPlacementDiagnostics = default;
+            m_PendingFootGroundingDiagnostics = default;
+            m_PendingFootPlacementModifierDiagnostics = default;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             m_RecordReleaseDiagnostics = false;
             ClearLinkedPoseFrameSelection();
@@ -1609,7 +1615,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_PhysicalSources,
                     m_RootOrientationWarps,
                     linkedPose,
-                    in m_LastPredictiveFootPlacementDiagnostics,
+                    in m_LastFootGroundingDiagnostics,
+                    in m_LastFootPlacementModifierDiagnostics,
                     interest);
             }
         }
@@ -2393,7 +2400,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_PosePlan,
                     m_InertializationPlan,
                     m_Workspace.RequirePoseGraphBinding(completionIdentity),
-                    m_FullBodyIkSolvers);
+                    m_FullBodyIkSolvers,
+                    recordDiagnostics);
                 finalRead =
                     m_Workspace.RequireFinalReadBinding(completionIdentity);
                 InstallOrUpdateJobs();
@@ -2417,7 +2425,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ActorId actorId,
             ulong renderFrame,
             in CharacterBodyPresentationFrame bodyFrame,
-            CharacterPredictiveFootPlacementGoalSource footPlacement,
+            CharacterFootPlacementRuntime footPlacement,
             in PosePlanPreparedEvaluation prepared,
             Action enterEvaluateBarrier)
         {
@@ -2550,11 +2558,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ulong renderFrame,
             float presentationDeltaSeconds,
             in CharacterBodyPresentationFrame bodyFrame,
-            CharacterPredictiveFootPlacementGoalSource footPlacement,
+            CharacterFootPlacementRuntime footPlacement,
             ulong completionIdentity,
             in AnimationPoseGraphNativeStage stage)
         {
-            int footPlacementOperationIndex = -1;
+            bool preparedAny = false;
             for (int operationIndex = stage.OperationStart;
                  operationIndex < stage.OperationStart +
                  stage.OperationCount;
@@ -2562,31 +2570,50 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 AnimationPoseGraphNativeOperation operation =
                     m_PosePlan.Operations[operationIndex];
-                if (operation.Code !=
-                    CharacterPoseOperationCode.PredictiveFootPlacement)
+                switch (operation.Code)
                 {
-                    continue;
+                    case CharacterPoseOperationCode.FootGrounding:
+                        PrepareFootGrounding(
+                            actorId,
+                            renderFrame,
+                            presentationDeltaSeconds,
+                            in bodyFrame,
+                            footPlacement,
+                            completionIdentity,
+                            in operation);
+                        preparedAny = true;
+                        break;
+                    case CharacterPoseOperationCode.PredictiveFootPlacementModifier:
+                        PreparePredictiveFootPlacementModifier(
+                            actorId,
+                            renderFrame,
+                            presentationDeltaSeconds,
+                            in bodyFrame,
+                            footPlacement,
+                            completionIdentity,
+                            in operation);
+                        preparedAny = true;
+                        break;
                 }
-                if (footPlacementOperationIndex >= 0)
-                {
-                    throw new InvalidOperationException(
-                        "World-Aware Pose stage contains multiple Foot Placement operations.");
-                }
-                footPlacementOperationIndex = operationIndex;
             }
-            if (footPlacementOperationIndex < 0)
+            if (!preparedAny)
             {
                 throw new InvalidOperationException(
                     "World-Aware Pose stage has no supported planner operation.");
             }
+        }
 
-            AnimationPoseGraphNativeOperation footPlacementOperation =
-                m_PosePlan.Operations[footPlacementOperationIndex];
-            CharacterPresentationPredictiveFootPlacementDescriptor descriptor =
-                m_Projection.PosePlan.PredictiveFootPlacements[
-                    footPlacementOperation.PredictiveFootPlacementIndex];
-            int goalSetValueIndex =
-                footPlacementOperation.OutputFullBodyIkGoalSetValueIndex;
+        void PrepareFootGrounding(
+            ActorId actorId,
+            ulong renderFrame,
+            float presentationDeltaSeconds,
+            in CharacterBodyPresentationFrame bodyFrame,
+            CharacterFootPlacementRuntime footPlacement,
+            ulong completionIdentity,
+            in AnimationPoseGraphNativeOperation operation)
+        {
+            CharacterPresentationFootGroundingDescriptor descriptor =
+                m_Projection.PosePlan.FootGroundings[operation.FootGroundingIndex];
             CharacterFullBodyIkGoalSetHeader goalSet;
             if (footPlacement == null)
             {
@@ -2595,8 +2622,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     completionIdentity,
                     m_Projection.PosePlan.RigId,
                     m_Projection.PosePlan.RigRevision,
-                    footPlacementOperation.Index,
-                    footPlacementOperation.FrameCacheIndex,
+                    operation.Index,
+                    operation.FrameCacheIndex,
                     descriptor.GoalWorkspaceOffset,
                     0,
                     CharacterFullBodyIkGoalSetAvailability.WorldContextUnavailable);
@@ -2605,7 +2632,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 AnimationPoseValueNativeReadBinding inputBinding =
                     m_Workspace.RequirePoseValueReadBinding(
-                        footPlacementOperation.InputValueIndexA,
+                        operation.InputValueIndexA,
                         completionIdentity);
                 int contributionCount =
                     m_FramePublisher.ResolveContributions(
@@ -2627,19 +2654,93 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 var goalOutput = new Unity.Collections.NativeSlice<CharacterFullBodyIkGoal>(
                     m_PosePlan.FullBodyIkGoals,
                     descriptor.GoalWorkspaceOffset,
-                    CharacterPresentationPredictiveFootPlacementDescriptor.GoalCount);
-                goalSet = footPlacement.Produce(
+                    CharacterPresentationFootGroundingDescriptor.GoalCount);
+                goalSet = footPlacement.ProduceGrounding(
                     in planningFrame,
                     goalOutput,
                     descriptor.GoalWorkspaceOffset,
-                    footPlacementOperation.Index,
-                    footPlacementOperation.FrameCacheIndex,
-                    footPlacementOperation.ParameterIndex);
-                m_PendingPredictiveFootPlacementDiagnostics = footPlacement.Diagnostics;
+                    operation.Index,
+                    operation.FrameCacheIndex,
+                    operation.ParameterIndex);
+                m_PendingFootGroundingDiagnostics = footPlacement.GroundingDiagnostics;
             }
-            Unity.Collections.NativeSlice<CharacterFullBodyIkGoalSetHeader> goalSets =
+            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets =
                 m_PosePlan.FullBodyIkGoalSets;
-            goalSets[goalSetValueIndex] = goalSet;
+            goalSets[operation.OutputFullBodyIkGoalSetValueIndex] = goalSet;
+        }
+
+        void PreparePredictiveFootPlacementModifier(
+            ActorId actorId,
+            ulong renderFrame,
+            float presentationDeltaSeconds,
+            in CharacterBodyPresentationFrame bodyFrame,
+            CharacterFootPlacementRuntime footPlacement,
+            ulong completionIdentity,
+            in AnimationPoseGraphNativeOperation operation)
+        {
+            CharacterPresentationPredictiveFootPlacementModifierDescriptor descriptor =
+                m_Projection.PosePlan.PredictiveFootPlacementModifiers[
+                    operation.PredictiveFootPlacementModifierIndex];
+            CharacterFullBodyIkGoalSetHeader goalSet;
+            if (footPlacement == null)
+            {
+                goalSet = new CharacterFullBodyIkGoalSetHeader(
+                    renderFrame,
+                    completionIdentity,
+                    m_Projection.PosePlan.RigId,
+                    m_Projection.PosePlan.RigRevision,
+                    operation.Index,
+                    operation.FrameCacheIndex,
+                    descriptor.GoalWorkspaceOffset,
+                    0,
+                    CharacterFullBodyIkGoalSetAvailability.WorldContextUnavailable);
+            }
+            else
+            {
+                AnimationPoseValueNativeReadBinding inputBinding =
+                    m_Workspace.RequirePoseValueReadBinding(
+                        operation.InputValueIndexA,
+                        completionIdentity);
+                int contributionCount = m_FramePublisher.ResolveContributions(
+                    in inputBinding,
+                    m_PhysicalSources,
+                    m_FootPlacementContributions);
+                var input = new CharacterFootPlacementPoseInput(
+                    m_Projection.PosePlan.PlanHash,
+                    in inputBinding,
+                    m_FootPlacementContributions,
+                    contributionCount);
+                var planningFrame = new CharacterFootPlacementPlanningFrame(
+                    actorId,
+                    renderFrame,
+                    presentationDeltaSeconds,
+                    bodyFrame,
+                    in input);
+                int baselineValueIndex = m_PosePlan.FullBodyIkGoalInputValueIndices[
+                    operation.FullBodyIkGoalInputStart];
+                CharacterFullBodyIkGoalSetHeader baselineHeader =
+                    m_PosePlan.FullBodyIkGoalSets[baselineValueIndex];
+                var baselineGoals = new Unity.Collections.NativeSlice<CharacterFullBodyIkGoal>(
+                    m_PosePlan.FullBodyIkGoals,
+                    baselineHeader.GoalOffset,
+                    baselineHeader.GoalCount);
+                var output = new Unity.Collections.NativeSlice<CharacterFullBodyIkGoal>(
+                    m_PosePlan.FullBodyIkGoals,
+                    descriptor.GoalWorkspaceOffset,
+                    CharacterPresentationPredictiveFootPlacementModifierDescriptor.GoalCount);
+                goalSet = footPlacement.ProduceModifier(
+                    in planningFrame,
+                    in baselineHeader,
+                    baselineGoals,
+                    output,
+                    descriptor.GoalWorkspaceOffset,
+                    operation.Index,
+                    operation.FrameCacheIndex);
+                m_PendingFootPlacementModifierDiagnostics = footPlacement.ModifierDiagnostics;
+            }
+            NativeArray<CharacterFullBodyIkGoalSetHeader> goalSets =
+                m_PosePlan.FullBodyIkGoalSets;
+            goalSets[operation.OutputFullBodyIkGoalSetValueIndex] = goalSet;
         }
 
         private bool TryCopyCompletedPlayerPose(
@@ -2694,8 +2795,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ActionBackendReleaseCompletions.Clear();
             m_LastCompletedFrame = default;
             m_PendingCompletedFrame = default;
-            m_LastPredictiveFootPlacementDiagnostics = default;
-            m_PendingPredictiveFootPlacementDiagnostics = default;
+            m_LastFootGroundingDiagnostics = default;
+            m_PendingFootGroundingDiagnostics = default;
+            m_LastFootPlacementModifierDiagnostics = default;
+            m_PendingFootPlacementModifierDiagnostics = default;
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
@@ -2745,8 +2848,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_FramePublisher.Invalidate();
             m_LastCompletedFrame = default;
             m_PendingCompletedFrame = default;
-            m_LastPredictiveFootPlacementDiagnostics = default;
-            m_PendingPredictiveFootPlacementDiagnostics = default;
+            m_LastFootGroundingDiagnostics = default;
+            m_PendingFootGroundingDiagnostics = default;
+            m_LastFootPlacementModifierDiagnostics = default;
+            m_PendingFootPlacementModifierDiagnostics = default;
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;

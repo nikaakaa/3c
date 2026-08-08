@@ -9,53 +9,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Right = 2
     }
 
-    public enum FootConstraintState : byte
+    public enum CharacterFootContactState : byte
     {
-        Free = 1,
-        Locked = 2,
-        Sliding = 3
-    }
-
-    public enum CharacterFootPlantLockType : byte
-    {
-        Unlocked = 1,
-        PivotAroundToe = 2,
-        PivotAroundAnkle = 3,
-        LockRotation = 4
-    }
-
-    public enum CharacterFootPlacementPelvisHeightMode : byte
-    {
-        AllLegs = 1,
-        AllPlantedFeet = 2,
-        DirectionalSlopeSupport = 3
-    }
-
-    public enum CharacterFootPlacementActorMovementCompensationMode : byte
-    {
-        FollowBody = 1,
-        HoldWorldDuringInterpolation = 2
+        Swing = 1,
+        Contact = 2,
+        Anchored = 3
     }
 
     public enum FootConstraintTransitionReason : byte
     {
         None = 0,
-        ContactCommitted = 1,
-        AnimationDrift = 2,
-        SlideSettled = 3,
+        ContactEntered = 1,
+        ContactReleased = 2,
+        AnchorCaptured = 3,
         PolicyReleased = 4,
         BodyAirborne = 5,
         SurfaceInvalid = 6,
-        ReplantThresholdExceeded = 7,
+        AnchorDistanceExceeded = 7,
         LegUnreachable = 8,
         BodyReset = 9,
         PresentationReset = 10,
         MissingAnimationOutput = 11,
         InvalidPose = 12,
-        ContactReleased = 13,
-        LegCompressed = 14,
-        AnkleTwistExceeded = 15,
-        FootSeparationReleased = 16,
         PelvisRangeConflictReleased = 17
     }
 
@@ -67,7 +42,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         DistanceExceeded = 3,
         ReachExceeded = 4,
         NonFinite = 5,
-        NoFutureLanding = 6
+        NoFutureLanding = 6,
+        NotSwing = 7,
+        LandingConfidenceInsufficient = 8,
+        NotSelected = 9
     }
 
     public readonly struct CharacterFootPlacementAnimatedFootPose
@@ -82,7 +60,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 heelPosition,
             Vector3 soleForward,
             Vector3 soleUp,
-            Quaternion semanticRotation)
+            Quaternion semanticRotation,
+            Quaternion soleFrameLocalRotation)
         {
             HipPosition = hipPosition;
             KneePosition = kneePosition;
@@ -94,6 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SoleForward = soleForward;
             SoleUp = soleUp;
             SemanticRotation = semanticRotation;
+            SoleFrameLocalRotation = soleFrameLocalRotation;
         }
 
         public Vector3 HipPosition { get; }
@@ -106,6 +86,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SoleForward { get; }
         public Vector3 SoleUp { get; }
         public Quaternion SemanticRotation { get; }
+        public Quaternion SoleFrameLocalRotation { get; }
+
+        internal CharacterFootPlacementSoleContactPose ResolveSoleContacts(
+            Vector3 anklePosition,
+            Quaternion ankleRotation)
+        {
+            Quaternion rotationDelta = (ankleRotation * Quaternion.Inverse(AnkleRotation)).normalized;
+            return new CharacterFootPlacementSoleContactPose(
+                anklePosition + rotationDelta * (HeelPosition - AnklePosition),
+                anklePosition + rotationDelta * (ToePosition - AnklePosition));
+        }
+    }
+
+    public readonly struct CharacterFootPlacementSoleContactPose
+    {
+        internal CharacterFootPlacementSoleContactPose(
+            Vector3 heelPosition,
+            Vector3 toePosition)
+        {
+            HeelPosition = heelPosition;
+            ToePosition = toePosition;
+        }
+
+        public Vector3 HeelPosition { get; }
+        public Vector3 ToePosition { get; }
     }
 
     public readonly struct CharacterFootPlacementAnimatedPose

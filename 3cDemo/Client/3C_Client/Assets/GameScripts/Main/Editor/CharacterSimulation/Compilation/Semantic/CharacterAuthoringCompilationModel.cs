@@ -489,11 +489,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                 if (!m_Declarations.TryGetValue(DeclarationIdentity(reference.DeclarationOwnerId, reference.DeclarationId), out CharacterAuthoringBlackboardDeclaration declarationRecord))
                                     continue;
                                 BaseExposedProperty declaration = declarationRecord.Declaration;
-                                if (declaration.BlackboardFactProjection != PipelineBlackboardFactProjectionKind.ActionWindow ||
-                                    !string.Equals(declaration.ActionWindowType, query.WindowType, StringComparison.Ordinal))
+                                if (declaration.FactProjection?.Kind != PipelineBlackboardFactProjectionKind.ActionWindow ||
+                                    !string.Equals(declaration.FactProjection.ActionWindowType, query.WindowType, StringComparison.Ordinal))
                                     continue;
 
-                                candidates.Add($"owner={declarationRecord.Graph.GraphAuthoringId},phase={clip.ExecutionPhase},windowId={declaration.ActionWindowId},clip={clip.AuthoringId}");
+                                candidates.Add($"owner={declarationRecord.Graph.GraphAuthoringId},phase={clip.ExecutionPhase},windowId={declaration.FactProjection.ActionWindowId},clip={clip.AuthoringId}");
                                 if (clip.ExecutionPhase == TimelineTreeExecutionPhase.Decision &&
                                     visibleOwnerIds.Contains(declarationRecord.Graph.GraphAuthoringId))
                                     matched = true;

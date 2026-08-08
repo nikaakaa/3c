@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using BTSMTL.Timeline;
 using Newtonsoft.Json.Linq;
@@ -26,7 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             public List<string> GraphKinds;
             public List<AgentPackagePortDescriptor> FlowPorts;
             public List<AgentPackagePortDescriptor> PropertyPorts;
-            public Func<BaseNode, JObject, bool> ConfigureFlowPorts;
+            public IReadOnlyList<GraphAuthoringPortVariantDescriptor> PortVariants;
             public IReadOnlyList<GraphAuthoringCommandDescriptor> Commands;
             public bool CanCreate;
             public bool CanConfigure;
@@ -35,13 +36,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         readonly List<NodeDescriptor> m_RegistrationDescriptors =
             new List<NodeDescriptor>();
-        static readonly Dictionary<
-            Type,
-            Func<BaseNode, JObject, bool>>
-            s_DynamicFlowPortConfigurations =
-                new Dictionary<
-                    Type,
-                    Func<BaseNode, JObject, bool>>();
         static bool s_SharedRegistered;
 
         public static readonly GraphAuthoringDomainId SharedDomain = new GraphAuthoringDomainId("btsmtl");
@@ -99,7 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             Register<OrNode>("or");
             Register<NotNode>("not");
             Register<CompareNode>("compare", "compareType");
-            Register<ExposedPropertyNode>("exposed-property", ConfigureExposedPropertyFlowPorts, "exposedProperty");
+            RegisterExposedProperty();
             Register<ReadSelfObservationNode>("ai-read-self");
             Register<EnumerateConfiguredCandidatesNode>("ai-enumerate-candidates");
             Register<SelectNearestCandidateNode>("ai-select-nearest-candidate");
@@ -124,7 +118,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (!TryResolveDescriptor(
                     typeName,
                     out GraphAuthoringCapabilityDescriptor
-                        descriptor))
+                        descriptor) ||
+                !IsNodeCapability(descriptor))
                 return false;
             kind = descriptor.ExternalKind;
             return true;
@@ -152,7 +147,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     kindOrTypeName,
                     out GraphAuthoringCapabilityDescriptor
                         descriptor) ||
-                descriptor.SystemOwned)
+                descriptor.SystemOwned ||
+                !IsNodeCapability(descriptor))
                 return false;
             type = descriptor.AuthoringType;
             return type != null;
@@ -493,34 +489,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         public IReadOnlyList<AgentPackageNodeKindDescriptor> ExportNodeKinds(
-            IReadOnlyList<AgentSnapshotGraph> graphs,
             string domain)
         {
-            var portsByKind = new Dictionary<string, Dictionary<string, AgentPackagePortDescriptor>>(StringComparer.Ordinal);
-            foreach (AgentSnapshotGraph graph in graphs ?? Array.Empty<AgentSnapshotGraph>())
-            {
-                foreach (AgentSnapshotNode node in graph.nodes ?? new List<AgentSnapshotNode>())
-                {
-                    if (!TryGetKind(node.typeName, out string kind) || IsSystemKind(kind))
-                        continue;
-                    if (!portsByKind.TryGetValue(kind, out Dictionary<string, AgentPackagePortDescriptor> ports))
-                    {
-                        ports = new Dictionary<string, AgentPackagePortDescriptor>(StringComparer.Ordinal);
-                        portsByKind.Add(kind, ports);
-                    }
-                    foreach (AgentSnapshotPropertyPort port in node.propertyPorts ?? new List<AgentSnapshotPropertyPort>())
-                    {
-                        if (port != null && !string.IsNullOrEmpty(port.portId))
-                            ports[port.portId] = new AgentPackagePortDescriptor
-                            {
-                                key = port.portId,
-                                direction = port.direction,
-                                valueType = StableValueType(port.valueType)
-                            };
-                    }
-                }
-            }
-
             return Descriptors()
                 .Where(value =>
                     !value.SystemOwned &&
@@ -539,9 +509,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     properties = value.CanConfigure ? value.Properties.ToList() : new List<string>(),
                     defaults = Defaults(value.Kind),
                     flowPorts = value.FlowPorts,
-                    propertyPorts = MergePorts(value.PropertyPorts, portsByKind.TryGetValue(value.Kind, out Dictionary<string, AgentPackagePortDescriptor> ports)
-                        ? ports.Values
-                        : Array.Empty<AgentPackagePortDescriptor>()),
+                    propertyPorts = value.PropertyPorts,
+                    portVariants = ToPackagePortVariants(value.PortVariants),
                     canCreate = value.CanCreate,
                     canConfigure = value.CanConfigure,
                     canDelete = value.CanDelete
@@ -819,20 +788,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 commands);
         }
 
-        void Register<T>(
-            string kind,
-            Func<BaseNode, JObject, bool> configureFlowPorts,
-            params string[] properties)
-            where T : BaseNode
+        void RegisterExposedProperty()
         {
             Register(
-                kind,
-                typeof(T),
+                "exposed-property",
+                typeof(ExposedPropertyNode),
                 false,
                 null,
-                properties,
-                configureFlowPorts,
-                Array.Empty<GraphAuthoringCommandDescriptor>());
+                new[] { "exposedProperty" },
+                CreateExposedPropertyPortVariants(),
+                Array.Empty<GraphAuthoringCommandDescriptor>(),
+                false);
         }
 
         void RegisterSystem<T>(string anchor) where T : BaseNode
@@ -853,10 +819,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             bool systemOwned,
             string anchor,
             string[] properties,
-            Func<BaseNode, JObject, bool> configureFlowPorts,
-            IReadOnlyList<GraphAuthoringCommandDescriptor> commands)
+            IReadOnlyList<GraphAuthoringPortVariantDescriptor> portVariants,
+            IReadOnlyList<GraphAuthoringCommandDescriptor> commands,
+            bool inferFixedPorts = true)
         {
-            CreatePorts(type, out List<AgentPackagePortDescriptor> flowPorts, out List<AgentPackagePortDescriptor> propertyPorts);
+            List<AgentPackagePortDescriptor> flowPorts;
+            List<AgentPackagePortDescriptor> propertyPorts;
+            if (inferFixedPorts)
+                CreatePorts(type, out flowPorts, out propertyPorts);
+            else
+            {
+                flowPorts = new List<AgentPackagePortDescriptor>();
+                propertyPorts = new List<AgentPackagePortDescriptor>();
+            }
             var descriptor = new NodeDescriptor
             {
                 Kind = kind,
@@ -867,7 +842,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 GraphKinds = ResolveGraphKinds(type),
                 FlowPorts = flowPorts,
                 PropertyPorts = propertyPorts,
-                ConfigureFlowPorts = configureFlowPorts,
+                PortVariants = portVariants ?? Array.Empty<GraphAuthoringPortVariantDescriptor>(),
                 Commands = commands ??
                     Array.Empty<GraphAuthoringCommandDescriptor>(),
                 CanCreate = !systemOwned && SupportsCreate(kind),
@@ -885,11 +860,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     $"BTSMTL capability '{kind}' or authoring type '{type.FullName}' is duplicated.");
             }
             m_RegistrationDescriptors.Add(descriptor);
-            if (configureFlowPorts != null)
-            {
-                s_DynamicFlowPortConfigurations[type] =
-                    configureFlowPorts;
-            }
         }
 
         static void EnsureSharedRegistered(IEnumerable<NodeDescriptor> descriptors)
@@ -930,22 +900,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     pickerKind: SharedPickerKind(property)));
             }
             var ports = new List<GraphAuthoringPortDescriptor>();
-            if (descriptor.ConfigureFlowPorts == null)
-            {
-                AddSharedPorts(
-                    ports,
-                    descriptor.FlowPorts,
-                    "flow",
-                    descriptor.Type);
-            }
+            AddSharedPorts(
+                ports,
+                descriptor.FlowPorts,
+                "flow");
             AddSharedPorts(
                 ports,
                 descriptor.PropertyPorts,
-                "property",
-                descriptor.Type);
-            GraphAuthoringDynamicPortPolicy dynamicPortPolicy = descriptor.ConfigureFlowPorts == null
-                ? GraphAuthoringDynamicPortPolicy.None
-                : GraphAuthoringDynamicPortPolicy.OrderedBidirectional;
+                "property");
             return new GraphAuthoringCapabilityDescriptor(
                 SharedCapabilityId(descriptor.Kind),
                 SharedDomain,
@@ -955,7 +917,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 SharedColor(descriptor.Type, descriptor.SystemOwned),
                 fields,
                 ports,
-                dynamicPortPolicy,
+                GraphAuthoringDynamicPortPolicy.None,
                 commands: descriptor.Commands,
                 presentationKind: SharedPresentationKind(descriptor.Type),
                 mutationBindingId: descriptor.SystemOwned ? string.Empty : "btsmtl.node",
@@ -965,7 +927,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 authoringType: descriptor.Type,
                 externalKind: descriptor.Kind,
                 systemOwned: descriptor.SystemOwned,
-                anchorId: descriptor.Anchor);
+                anchorId: descriptor.Anchor,
+                portVariants: descriptor.PortVariants);
         }
 
         static IReadOnlyList<GraphAuthoringCommandDescriptor>
@@ -1001,58 +964,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static void AddSharedPorts(
             ICollection<GraphAuthoringPortDescriptor> target,
             IReadOnlyList<AgentPackagePortDescriptor> source,
-            string family,
-            Type authoringType)
+            string family)
         {
             for (int i = 0; i < source.Count; i++)
             {
                 AgentPackagePortDescriptor port = source[i];
                 bool input = string.Equals(port.direction, "input", StringComparison.OrdinalIgnoreCase);
+                if (!Enum.TryParse(port.capacity, false, out GraphAuthoringPortCapacity capacity))
+                    throw new InvalidOperationException($"BTSMTL port '{family}:{port.key}' has invalid capacity '{port.capacity}'.");
                 target.Add(new GraphAuthoringPortDescriptor(
                     new GraphAuthoringPortId(family + ":" + port.key),
                     SplitDisplayName(port.key),
                     "btsmtl." + family,
                     input ? GraphAuthoringPortDirection.Input : GraphAuthoringPortDirection.Output,
-                    SharedCapacity(
-                        authoringType,
-                        family,
-                        port.key,
-                        input),
-                    input,
+                    capacity,
+                    port.required,
                     i));
             }
-        }
-
-        static GraphAuthoringPortCapacity SharedCapacity(
-            Type authoringType,
-            string family,
-            string portName,
-            bool input)
-        {
-            if (string.Equals(
-                    family,
-                    "property",
-                    StringComparison.Ordinal))
-            {
-                return input
-                    ? GraphAuthoringPortCapacity.Single
-                    : GraphAuthoringPortCapacity.Multiple;
-            }
-            BaseNode node =
-                (BaseNode)Activator.CreateInstance(authoringType);
-            FlowPortDeclaration declaration =
-                node.GetSupportedFlowPortDeclarations(null)
-                    .Single(value =>
-                        value.Direction ==
-                            (input
-                                ? PortDirection.Input
-                                : PortDirection.Output) &&
-                        string.Equals(
-                            value.Name,
-                            portName,
-                            StringComparison.Ordinal));
-            return BtsmtlSharedGraphPort.Capacity(
-                declaration.Capacity);
         }
 
         public static GraphAuthoringCapabilityId SharedCapabilityId(string kind) =>
@@ -1088,6 +1016,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         IEnumerable<NodeDescriptor> Descriptors() =>
             SharedCatalog.GetDomain(SharedDomain)
+                .Where(IsNodeCapability)
                 .Select(Describe);
 
         bool TryDescribe(
@@ -1098,7 +1027,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (!TryResolveDescriptor(
                     kindOrTypeName,
                     out GraphAuthoringCapabilityDescriptor
-                        capability))
+                        capability) ||
+                !IsNodeCapability(capability))
                 return false;
             descriptor = Describe(capability);
             return true;
@@ -1114,11 +1044,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     SharedDomain,
                     type,
                     out GraphAuthoringCapabilityDescriptor
-                        capability))
+                        capability) ||
+                !IsNodeCapability(capability))
                 return false;
             descriptor = Describe(capability);
             return true;
         }
+
+        static bool IsNodeCapability(
+            GraphAuthoringCapabilityDescriptor capability) =>
+            capability?.AuthoringType != null &&
+            !string.IsNullOrWhiteSpace(capability.ExternalKind);
 
         static NodeDescriptor Describe(
             GraphAuthoringCapabilityDescriptor capability)
@@ -1130,14 +1066,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 throw new InvalidOperationException(
                     $"BTSMTL capability '{capability?.CapabilityId}' has no authoring type or external kind.");
             }
-            CreatePorts(
-                capability.AuthoringType,
-                out List<AgentPackagePortDescriptor> flowPorts,
-                out List<AgentPackagePortDescriptor> propertyPorts);
-            s_DynamicFlowPortConfigurations.TryGetValue(
-                capability.AuthoringType,
-                out Func<BaseNode, JObject, bool>
-                    configureFlowPorts);
             return new NodeDescriptor
             {
                 Kind = capability.ExternalKind,
@@ -1158,9 +1086,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         capability.Allows(
                             SharedRoleId(value)))
                     .ToList(),
-                FlowPorts = flowPorts,
-                PropertyPorts = propertyPorts,
-                ConfigureFlowPorts = configureFlowPorts,
+                FlowPorts = ToPackagePortDescriptors(capability.FixedPorts, false),
+                PropertyPorts = ToPackagePortDescriptors(capability.FixedPorts, true),
+                PortVariants = capability.PortVariants,
                 Commands = capability.Commands,
                 CanCreate = !capability.SystemOwned,
                 CanConfigure = !capability.SystemOwned,
@@ -1460,39 +1388,127 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return false;
         }
 
-        public bool IsPortAllowed(
+        public bool TryResolveDocumentPort(
             string kind,
             JObject properties,
             string port,
-            string direction,
-            bool property)
+            bool property,
+            out GraphAuthoringDynamicPortProjection descriptor,
+            out GraphAuthoringPortShapeException error)
         {
-            if (!TryDescribe(
+            descriptor = default;
+            if (!TryProjectDocumentPortShape(
                     kind,
-                    out NodeDescriptor descriptor))
+                    properties,
+                    out GraphAuthoringCapabilityDescriptor capability,
+                    out IReadOnlyList<GraphAuthoringDynamicPortProjection> projected,
+                    out error))
                 return false;
-            List<AgentPackagePortDescriptor> ports;
-            if (property || descriptor.ConfigureFlowPorts == null)
+            GraphAuthoringPortId portId = property
+                ? BtsmtlSharedGraphPort.Property(port)
+                : BtsmtlSharedGraphPort.Flow(port);
+            GraphAuthoringPortDescriptor fixedPort = capability.FixedPorts
+                .SingleOrDefault(value => value.PortId.Equals(portId));
+            if (fixedPort != null)
             {
-                ports = property ? descriptor.PropertyPorts : descriptor.FlowPorts;
+                descriptor = new GraphAuthoringDynamicPortProjection(
+                    fixedPort.PortId,
+                    fixedPort.DisplayName,
+                    fixedPort.ValueTypeId,
+                    fixedPort.Direction,
+                    fixedPort.Capacity,
+                    fixedPort.Required,
+                    fixedPort.Order);
+                return true;
             }
-            else
+            GraphAuthoringDynamicPortProjection[] matches = projected
+                .Where(value => value.PortId.Equals(portId))
+                .ToArray();
+            if (matches.Length == 1)
             {
-                try
-                {
-                    BaseNode node = (BaseNode)Activator.CreateInstance(descriptor.Type);
-                    if (!descriptor.ConfigureFlowPorts(node, properties))
-                        return false;
-                    ports = ToFlowPortDescriptors(node.GetFlowPortDeclarations(null));
-                }
-                catch
-                {
-                    return false;
-                }
+                descriptor = matches[0];
+                return true;
             }
-            return ports.Any(value =>
-                string.Equals(value.key, port, StringComparison.Ordinal) &&
-                string.Equals(value.direction, direction, StringComparison.Ordinal));
+            error = new GraphAuthoringPortShapeException(
+                matches.Length == 0
+                    ? "port_shape_port_unknown"
+                    : "port_shape_port_ambiguous",
+                matches.Length == 0
+                    ? $"BTSMTL node kind '{kind}' does not project port '{portId}'."
+                    : $"BTSMTL node kind '{kind}' projects port '{portId}' more than once.");
+            return false;
+        }
+
+        public bool TryProjectDocumentPortShape(
+            string kind,
+            JObject properties,
+            out GraphAuthoringCapabilityDescriptor capability,
+            out IReadOnlyList<GraphAuthoringDynamicPortProjection> projected,
+            out GraphAuthoringPortShapeException error)
+        {
+            capability = null;
+            projected = Array.Empty<GraphAuthoringDynamicPortProjection>();
+            error = null;
+            if (!TryResolveDescriptor(kind, out capability))
+            {
+                error = new GraphAuthoringPortShapeException(
+                    "port_shape_capability_unknown",
+                    $"BTSMTL node kind '{kind}' has no registered capability.");
+                return false;
+            }
+            try
+            {
+                projected = GraphAuthoringNodePortShapeProjector.Project(
+                    capability,
+                    ReadDocumentTypedProperties(capability, properties));
+                return true;
+            }
+            catch (GraphAuthoringPortShapeException exception)
+            {
+                error = exception;
+                return false;
+            }
+        }
+
+        public bool TryProjectSnapshotPortShape(
+            AgentSnapshotNode node,
+            out GraphAuthoringCapabilityDescriptor capability,
+            out IReadOnlyList<GraphAuthoringDynamicPortProjection> projected,
+            out GraphAuthoringPortShapeException error)
+        {
+            capability = null;
+            projected = Array.Empty<GraphAuthoringDynamicPortProjection>();
+            error = null;
+            if (node == null || !TryResolveDescriptor(node.typeName, out capability))
+            {
+                error = new GraphAuthoringPortShapeException(
+                    "port_shape_capability_unknown",
+                    $"BTSMTL snapshot node '{node?.elementAuthoringId}' has no registered capability.");
+                return false;
+            }
+            try
+            {
+                projected = GraphAuthoringNodePortShapeProjector.Project(
+                    capability,
+                    ReadSnapshotTypedProperties(node, capability));
+                return true;
+            }
+            catch (GraphAuthoringPortShapeException exception)
+            {
+                error = exception;
+                return false;
+            }
+        }
+
+        public IReadOnlyList<GraphAuthoringDynamicPortProjection> ProjectPortShape(
+            BaseNode node,
+            BaseGraph owner,
+            GraphAuthoringCapabilityDescriptor capability)
+        {
+            return GraphAuthoringNodePortShapeProjector.Project(
+                capability,
+                ReadNodeTypedProperties(node, capability),
+                ProjectAuthoredDynamicPorts(node, owner, capability));
         }
 
         public bool IsAnchorPortAllowed(string graphKind, string anchor, string port, string direction, bool property, string domain)
@@ -1538,6 +1554,181 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }).ToList();
         }
 
+        static IReadOnlyList<GraphAuthoringTypedPropertyValue>
+            ReadDocumentTypedProperties(
+                GraphAuthoringCapabilityDescriptor capability,
+                JObject properties)
+        {
+            var result = new List<GraphAuthoringTypedPropertyValue>();
+            foreach (GraphAuthoringPortVariantCondition condition in
+                     capability.PortVariants
+                         .Select(value => value.When)
+                         .GroupBy(value => value.FieldId)
+                         .Select(value => value.First()))
+            {
+                JToken token = properties;
+                foreach (string segment in condition.FieldId.Value.Split('.'))
+                    token = token?[segment];
+                if (!TryReadCanonicalTypedValue(
+                        token,
+                        condition.ValueKind,
+                        out string canonicalValue))
+                    continue;
+                result.Add(new GraphAuthoringTypedPropertyValue(
+                    condition.FieldId,
+                    condition.ValueKind,
+                    canonicalValue));
+            }
+            return result;
+        }
+
+        static bool TryReadCanonicalTypedValue(
+            JToken token,
+            GraphAuthoringFieldValueKind valueKind,
+            out string value)
+        {
+            value = string.Empty;
+            switch (valueKind)
+            {
+                case GraphAuthoringFieldValueKind.String:
+                case GraphAuthoringFieldValueKind.Enum:
+                case GraphAuthoringFieldValueKind.IdentityReference:
+                    if (token?.Type != JTokenType.String)
+                        return false;
+                    value = token.Value<string>();
+                    return !string.IsNullOrWhiteSpace(value);
+                case GraphAuthoringFieldValueKind.Boolean:
+                    if (token?.Type != JTokenType.Boolean)
+                        return false;
+                    value = token.Value<bool>().ToString();
+                    return true;
+                case GraphAuthoringFieldValueKind.Integer:
+                    if (token?.Type != JTokenType.Integer)
+                        return false;
+                    value = token.Value<long>().ToString(CultureInfo.InvariantCulture);
+                    return true;
+                case GraphAuthoringFieldValueKind.Float:
+                    if (token?.Type != JTokenType.Float && token?.Type != JTokenType.Integer)
+                        return false;
+                    double number = token.Value<double>();
+                    if (double.IsNaN(number) || double.IsInfinity(number))
+                        return false;
+                    value = number.ToString("R", CultureInfo.InvariantCulture);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        static IReadOnlyList<GraphAuthoringTypedPropertyValue>
+            ReadNodeTypedProperties(
+                BaseNode node,
+                GraphAuthoringCapabilityDescriptor capability)
+        {
+            var result = new List<GraphAuthoringTypedPropertyValue>();
+            foreach (GraphAuthoringPortVariantCondition condition in
+                     capability.PortVariants
+                         .Select(value => value.When)
+                         .GroupBy(value => value.FieldId)
+                         .Select(value => value.First()))
+            {
+                if (node is ExposedPropertyNode exposedProperty &&
+                    string.Equals(
+                        condition.FieldId.Value,
+                        "exposedProperty.mode",
+                        StringComparison.Ordinal))
+                {
+                    result.Add(new GraphAuthoringTypedPropertyValue(
+                        condition.FieldId,
+                        condition.ValueKind,
+                        exposedProperty.NodeType.ToString()));
+                    continue;
+                }
+                throw new GraphAuthoringPortShapeException(
+                    "port_shape_discriminator_unknown",
+                    $"BTSMTL node '{node?.GUID}' cannot project discriminator '{condition.FieldId}'.");
+            }
+            return result;
+        }
+
+        static IReadOnlyList<GraphAuthoringTypedPropertyValue>
+            ReadSnapshotTypedProperties(
+                AgentSnapshotNode node,
+                GraphAuthoringCapabilityDescriptor capability)
+        {
+            var result = new List<GraphAuthoringTypedPropertyValue>();
+            foreach (GraphAuthoringPortVariantCondition condition in
+                     capability.PortVariants
+                         .Select(value => value.When)
+                         .GroupBy(value => value.FieldId)
+                         .Select(value => value.First()))
+            {
+                if (string.Equals(
+                        condition.FieldId.Value,
+                        "exposedProperty.mode",
+                        StringComparison.Ordinal) &&
+                    !string.IsNullOrWhiteSpace(node.exposedProperty?.mode))
+                {
+                    result.Add(new GraphAuthoringTypedPropertyValue(
+                        condition.FieldId,
+                        condition.ValueKind,
+                        node.exposedProperty.mode));
+                    continue;
+                }
+                throw new GraphAuthoringPortShapeException(
+                    "port_shape_discriminator_unknown",
+                    $"BTSMTL snapshot node '{node.elementAuthoringId}' cannot project discriminator '{condition.FieldId}'.");
+            }
+            return result;
+        }
+
+        static IReadOnlyList<GraphAuthoringDynamicPortProjection>
+            ProjectAuthoredDynamicPorts(
+                BaseNode node,
+                BaseGraph owner,
+                GraphAuthoringCapabilityDescriptor capability)
+        {
+            var declared = new HashSet<GraphAuthoringPortId>(
+                capability.FixedPorts.Select(value => value.PortId)
+                    .Concat(capability.PortVariants.SelectMany(value => value.Ports).Select(value => value.PortId)));
+            var result = new List<GraphAuthoringDynamicPortProjection>();
+            int order = 1000;
+            foreach (FlowPortDeclaration port in node.GetFlowPortDeclarations(owner))
+            {
+                GraphAuthoringPortId id = BtsmtlSharedGraphPort.Flow(port.Name);
+                if (declared.Contains(id))
+                    continue;
+                result.Add(new GraphAuthoringDynamicPortProjection(
+                    id,
+                    port.Name,
+                    BtsmtlSharedGraphPort.FlowValueType,
+                    BtsmtlSharedGraphPort.Direction(port.Direction),
+                    BtsmtlSharedGraphPort.Capacity(port.Capacity),
+                    port.Direction == PortDirection.Input,
+                    order++));
+            }
+            foreach (PropertyPort port in node.PropertyPortMap.Values
+                         .Where(value => value != null)
+                         .OrderBy(value => value.Index)
+                         .ThenBy(value => value.PortId, StringComparer.Ordinal))
+            {
+                GraphAuthoringPortId id = BtsmtlSharedGraphPort.Property(port.PortId);
+                if (declared.Contains(id))
+                    continue;
+                result.Add(new GraphAuthoringDynamicPortProjection(
+                    id,
+                    port.DisplayName,
+                    BtsmtlSharedGraphPort.PropertyValueType,
+                    BtsmtlSharedGraphPort.Direction(port.Direction),
+                    port.Direction == PortDirection.Input
+                        ? GraphAuthoringPortCapacity.Single
+                        : GraphAuthoringPortCapacity.Multiple,
+                    port.Direction == PortDirection.Input,
+                    order++));
+            }
+            return result;
+        }
+
         static void CreatePorts(
             Type type,
             out List<AgentPackagePortDescriptor> flowPorts,
@@ -1563,7 +1754,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     {
                         key = port.PortId,
                         direction = port.Direction.ToString(),
-                        valueType = StableValueType(port.ValueType)
+                        valueType = StableValueType(port.ValueType),
+                        capacity = port.Direction == PortDirection.Input
+                            ? GraphAuthoringPortCapacity.Single.ToString()
+                            : GraphAuthoringPortCapacity.Multiple.ToString(),
+                        required = port.Direction == PortDirection.Input
                     })
                     .OrderBy(port => port.key, StringComparer.Ordinal)
                     .ToList();
@@ -1581,7 +1776,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 .Select(port => new AgentPackagePortDescriptor
                 {
                     key = port.Name,
-                    direction = port.Direction.ToString()
+                    direction = port.Direction.ToString(),
+                    capacity = BtsmtlSharedGraphPort.Capacity(port.Capacity).ToString(),
+                    required = port.Direction == PortDirection.Input
                 })
                 .GroupBy(port => port.key + "\0" + port.direction, StringComparer.Ordinal)
                 .Select(group => group.First())
@@ -1589,30 +1786,104 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 .ToList();
         }
 
-        static bool ConfigureExposedPropertyFlowPorts(BaseNode node, JObject properties)
+        static IReadOnlyList<GraphAuthoringPortVariantDescriptor>
+            CreateExposedPropertyPortVariants()
         {
-            if (node is not ExposedPropertyNode exposedProperty ||
-                properties?["exposedProperty"]?["mode"]?.Type != JTokenType.String ||
-                !Enum.TryParse(
-                    properties["exposedProperty"].Value<string>("mode"),
-                    false,
-                    out ExposedPropertyNodeType mode))
-                return false;
-            exposedProperty.SetNodeType(mode);
-            return true;
+            var discriminator = new GraphAuthoringFieldId("exposedProperty.mode");
+            return new[]
+            {
+                new GraphAuthoringPortVariantDescriptor(
+                    ExposedPropertyNodeType.Get.ToString(),
+                    new GraphAuthoringPortVariantCondition(
+                        discriminator,
+                        GraphAuthoringFieldValueKind.Enum,
+                        ExposedPropertyNodeType.Get.ToString()),
+                    new[]
+                    {
+                        new GraphAuthoringPortDescriptor(
+                            BtsmtlSharedGraphPort.Property("m_Value"),
+                            "Value",
+                            BtsmtlSharedGraphPort.PropertyValueType,
+                            GraphAuthoringPortDirection.Output,
+                            GraphAuthoringPortCapacity.Multiple,
+                            false,
+                            100)
+                    }),
+                new GraphAuthoringPortVariantDescriptor(
+                    ExposedPropertyNodeType.Set.ToString(),
+                    new GraphAuthoringPortVariantCondition(
+                        discriminator,
+                        GraphAuthoringFieldValueKind.Enum,
+                        ExposedPropertyNodeType.Set.ToString()),
+                    new[]
+                    {
+                        new GraphAuthoringPortDescriptor(
+                            BtsmtlSharedGraphPort.Flow(ExposedPropertyNode.FlowInputPortName),
+                            ExposedPropertyNode.FlowInputPortName,
+                            BtsmtlSharedGraphPort.FlowValueType,
+                            GraphAuthoringPortDirection.Input,
+                            GraphAuthoringPortCapacity.Single,
+                            true,
+                            100),
+                        new GraphAuthoringPortDescriptor(
+                            BtsmtlSharedGraphPort.Property("m_Value"),
+                            "Value",
+                            BtsmtlSharedGraphPort.PropertyValueType,
+                            GraphAuthoringPortDirection.Input,
+                            GraphAuthoringPortCapacity.Single,
+                            true,
+                            101)
+                    })
+            };
         }
 
-        static List<AgentPackagePortDescriptor> MergePorts(
-            IEnumerable<AgentPackagePortDescriptor> first,
-            IEnumerable<AgentPackagePortDescriptor> second)
+        static List<AgentPackagePortVariantDescriptor> ToPackagePortVariants(
+            IReadOnlyList<GraphAuthoringPortVariantDescriptor> variants)
         {
-            return (first ?? Array.Empty<AgentPackagePortDescriptor>())
-                .Concat(second ?? Array.Empty<AgentPackagePortDescriptor>())
-                .Where(port => port != null && !string.IsNullOrEmpty(port.key))
-                .GroupBy(port => port.key + "\0" + port.direction, StringComparer.Ordinal)
-                .Select(group => group.First())
-                .OrderBy(port => port.key, StringComparer.Ordinal)
+            return (variants ?? Array.Empty<GraphAuthoringPortVariantDescriptor>())
+                .Select(variant => new AgentPackagePortVariantDescriptor
+                {
+                    id = variant.VariantId,
+                    when = new AgentPackagePortVariantCondition
+                    {
+                        field = variant.When.FieldId.Value,
+                        valueKind = variant.When.ValueKind.ToString(),
+                        equals = variant.When.ExpectedValue
+                    },
+                    flowPorts = ToPackagePortDescriptors(variant.Ports, false),
+                    propertyPorts = ToPackagePortDescriptors(variant.Ports, true)
+                })
                 .ToList();
+        }
+
+        static List<AgentPackagePortDescriptor> ToPackagePortDescriptors(
+            IEnumerable<GraphAuthoringPortDescriptor> ports,
+            bool property)
+        {
+            var result = new List<AgentPackagePortDescriptor>();
+            foreach (GraphAuthoringPortDescriptor descriptor in
+                     ports ?? Array.Empty<GraphAuthoringPortDescriptor>())
+            {
+                if (!BtsmtlSharedGraphPort.TryParse(
+                        descriptor.PortId,
+                        out bool isProperty,
+                        out string name))
+                {
+                    throw new InvalidOperationException(
+                        $"BTSMTL capability port identity '{descriptor.PortId}' is invalid.");
+                }
+                if (isProperty != property)
+                    continue;
+                result.Add(new AgentPackagePortDescriptor
+                {
+                    key = name,
+                    direction = descriptor.Direction.ToString(),
+                    valueType = property ? StableValueType(descriptor.ValueTypeId) : string.Empty,
+                    capacity = descriptor.Capacity.ToString(),
+                    required = descriptor.Required
+                });
+            }
+            return result.OrderBy(value => value.key, StringComparer.Ordinal).ToList();
         }
 
         static string StableValueType(Type type)

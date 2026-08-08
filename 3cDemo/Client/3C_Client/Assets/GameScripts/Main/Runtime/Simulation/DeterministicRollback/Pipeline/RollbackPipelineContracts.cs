@@ -85,18 +85,21 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ActorId actorId,
             ulong exactInputHitCount,
             ulong predictedFallbackCount,
-            long lastArrivalDeltaTicks)
+            long lastArrivalDeltaTicks,
+            ulong explicitFrontier)
         {
             ActorId = actorId;
             ExactInputHitCount = exactInputHitCount;
             PredictedFallbackCount = predictedFallbackCount;
             LastArrivalDeltaTicks = lastArrivalDeltaTicks;
+            ExplicitFrontier = explicitFrontier;
         }
 
         public ActorId ActorId { get; }
         public ulong ExactInputHitCount { get; }
         public ulong PredictedFallbackCount { get; }
         public long LastArrivalDeltaTicks { get; }
+        public ulong ExplicitFrontier { get; }
     }
 
     public readonly struct RollbackInputSourceDiagnosticsSnapshot
@@ -109,7 +112,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ulong relayedArrivalCount,
             ulong relayedArrivalLeadCount,
             ulong relayedArrivalLateCount,
-            long lastRelayedArrivalDeltaTicks)
+            long lastRelayedArrivalDeltaTicks,
+            ulong localExplicitFrontier)
         {
             Local = local;
             m_RemoteActors = remoteActors ?? Array.Empty<RollbackRemoteActorInputDiagnosticsSnapshot>();
@@ -117,6 +121,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             RelayedArrivalLeadCount = relayedArrivalLeadCount;
             RelayedArrivalLateCount = relayedArrivalLateCount;
             LastRelayedArrivalDeltaTicks = lastRelayedArrivalDeltaTicks;
+            LocalExplicitFrontier = localExplicitFrontier;
         }
 
         public RollbackLocalInputDiagnosticsSnapshot Local { get; }
@@ -126,6 +131,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public ulong RelayedArrivalLeadCount { get; }
         public ulong RelayedArrivalLateCount { get; }
         public long LastRelayedArrivalDeltaTicks { get; }
+        public ulong LocalExplicitFrontier { get; }
     }
 
     public interface IRollbackInputSourcePort : ISimulationRuntimePort

@@ -47,7 +47,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentMutationKind.EnsureBlackboardDeclaration,
                 AgentMutationKind.MoveBlackboardDeclaration,
                 AgentMutationKind.DeleteBlackboardDeclaration,
-                AgentMutationKind.EnsureBlackboardWrite,
+                AgentMutationKind.SetBlackboardSchemaRevision,
+                AgentMutationKind.EnsureExposedPropertyNode,
                 AgentMutationKind.EnsureTimelineTreeClip,
                 AgentMutationKind.EnsureInlineTimeline,
                 AgentMutationKind.EnsureMotionCurveTrack,
@@ -357,14 +358,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 session.TryResolveDeclaration(graph, command.ExistingDeclaration.Value, command.Path, out declaration);
             declaration ??= graph.CreateExposedProperty(ExposedPropertyType(command.ValueType));
             declaration.Name = command.Key;
-            declaration.ConfigurePipelineBlackboard(
+            declaration.ConfigureDeclaration(
                 command.Key,
                 command.Scope,
                 PipelineBlackboardVariablePolicy.DefaultLifetime(command.Scope),
-                PipelineBlackboardVariableAuthority.LocalOnly,
-                PipelineBlackboardVariableSyncPolicy.None,
-                string.Empty,
                 "AI");
+            declaration.ClearInputBinding();
+            declaration.ClearFactProjection();
             declaration.SetValue(command.DefaultValue ?? DefaultValue(command.ValueType));
             session.AddAppliedAuthoring(command, graph.SerializedOwner, declaration, declaration.DeclarationId, command.Key);
             session.RefreshIndex(command.Path);

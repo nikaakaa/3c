@@ -4,7 +4,7 @@ using System.Linq;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.AI.Editor;
-using ThirdPersonCharacter.Pipeline.Input;
+using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityEditor;
@@ -14,6 +14,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     public sealed class AgentAIControllerSnapshotExporter
     {
         public AgentGraphSnapshot Export(AIControllerDefinition definition, AgentSnapshotExportMode mode)
+        {
+            AgentGraphSnapshot characterSnapshot = definition?.ControlledCharacter
+                ? new AgentGraphSnapshotExporter().ExportFull(definition.ControlledCharacter)
+                : new AgentGraphSnapshot();
+            return Export(definition, mode, characterSnapshot);
+        }
+
+        public AgentGraphSnapshot Export(
+            AIControllerDefinition definition,
+            AgentSnapshotExportMode mode,
+            AgentGraphSnapshot characterSnapshot)
         {
             string definitionPath = definition ? AssetDatabase.GetAssetPath(definition) : string.Empty;
             var snapshot = new AgentGraphSnapshot
@@ -30,13 +41,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return snapshot;
             root.RebindReadOnlyViewReferences();
             snapshot.rootGraphAuthoringId = root.GraphAuthoringId;
-            snapshot.aiController = ExportController(definition, root);
+            snapshot.blackboardSchemaRevision = root.BlackboardAuthoringSchemaRevision;
+            snapshot.aiController = ExportController(definition, root, characterSnapshot);
             snapshot.sourceRevision = snapshot.aiController.sourceRevision;
             ExportGraph(root, mode, snapshot);
             return snapshot;
         }
 
-        static AgentSnapshotAIController ExportController(AIControllerDefinition definition, AIControllerTree root)
+        static AgentSnapshotAIController ExportController(
+            AIControllerDefinition definition,
+            AIControllerTree root,
+            AgentGraphSnapshot characterSnapshot)
         {
             string definitionPath = AssetDatabase.GetAssetPath(definition);
             string treePath = AssetDatabase.GetAssetPath(definition.RootTreeAsset);
@@ -57,17 +72,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 controlledCharacterAssetPath = characterPath,
                 controlledCharacterAssetGuid = AssetDatabase.AssetPathToGUID(characterPath)
             };
+            result.inputValues.AddRange(characterSnapshot?.inputValues ?? Enumerable.Empty<AgentSnapshotInputValue>());
+            result.actionRequests.AddRange(characterSnapshot?.actionRequests ?? Enumerable.Empty<AgentSnapshotActionRequest>());
             if (definition.PerceptionProfile)
                 result.candidateActorIds.AddRange(definition.PerceptionProfile.CandidateActorIds);
-            if (definition.ControlledCharacter?.SimulationProgram && definition.PerceptionProfile)
+            var characterProgram = definition.ControlledCharacter?.SimulationProgram;
+            result.characterProgramStale = !characterProgram ||
+                CharacterSimulationProgramBuildService.EvaluateExactArtifactStaleness(definition.ControlledCharacter);
+            if (characterProgram)
             {
-                CharacterSimulationProgram characterProgram = definition.ControlledCharacter.SimulationProgram.Load();
-                result.characterProgramId = characterProgram.Manifest.ProgramId.Value;
-                result.characterProgramHash = characterProgram.ProgramHash.ToString();
-                ExportInputCatalog(characterProgram, result);
+                result.characterProgramId = characterProgram.ProgramId;
+                result.characterProgramHash = characterProgram.ProgramHash;
+            }
+            if (!result.characterProgramStale && characterProgram && definition.PerceptionProfile)
+            {
                 var candidates = result.candidateActorIds.Select(value => new ActorId(value)).ToArray();
                 var perception = new AIPerceptionDescriptor(candidates, definition.PerceptionProfile.Ordering == AICandidateOrdering.DistanceThenActorId);
-                result.sourceRevision = AIControllerSourceRevision.Compute(definition, characterProgram.Manifest.ProgramId, characterProgram.ProgramHash, perception.SchemaHash);
+                result.sourceRevision = AIControllerSourceRevision.Compute(
+                    definition,
+                    new ProgramId(characterProgram.ProgramId),
+                    new ProgramHash(new StableHash(characterProgram.ProgramHash)),
+                    perception.SchemaHash);
             }
             for (int i = 0; i < root.ExposedProperties.Count; i++)
             {
@@ -82,8 +107,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     valueType = declaration.ValueType?.FullName ?? string.Empty,
                     scope = declaration.BlackboardScope.ToString(),
                     lifetime = declaration.BlackboardLifetime.ToString(),
-                    authority = declaration.BlackboardAuthority.ToString(),
-                    syncPolicy = declaration.BlackboardSyncPolicy.ToString(),
                     defaultValue = Convert.ToString(declaration.GetValue(), System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty
                 });
             }
@@ -270,47 +293,5 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
-        static void ExportInputCatalog(CharacterSimulationProgram program, AgentSnapshotAIController result)
-        {
-            foreach (ProgramCatalogEntry entry in program.CatalogEntries.OrderBy(value => value.Identity, StringComparer.Ordinal))
-            {
-                if (entry.Kind == ProgramCatalogEntryKind.InputValue)
-                {
-                    result.inputValues.Add(new AgentSnapshotInputValue
-                    {
-                        inputValueId = StripCatalogPrefix(entry.Identity, "input:value:"),
-                        valueType = ReadCatalogEnum<ProgramInputValueKind>(program, entry, "ValueType").ToString()
-                    });
-                }
-                else if (entry.Kind == ProgramCatalogEntryKind.InputRequest)
-                {
-                    result.actionRequests.Add(new AgentSnapshotActionRequest
-                    {
-                        requestId = StripCatalogPrefix(entry.Identity, "input:request:"),
-                        timingClass = ReadCatalogEnum<CharacterActionRequestTimingClass>(program, entry, "TimingClass").ToString()
-                    });
-                }
-            }
-        }
-
-        static T ReadCatalogEnum<T>(CharacterSimulationProgram program, ProgramCatalogEntry entry, string fieldName) where T : struct, Enum
-        {
-            for (int i = 0; i < entry.Fields.Count; i++)
-            {
-                ProgramCatalogField field = entry.Fields[i];
-                if (!string.Equals(field.Name, fieldName, StringComparison.Ordinal) || field.Kind != ProgramCatalogFieldKind.Constant)
-                    continue;
-                ProgramConstant value = program.Constants[field.ConstantIndex];
-                object candidate = Enum.ToObject(typeof(T), value.Int32);
-                if (value.Kind == ProgramConstantKind.Int32 && Enum.IsDefined(typeof(T), candidate))
-                    return (T)candidate;
-            }
-            throw new InvalidOperationException($"Catalog entry '{entry.Identity}' lacks {fieldName}.");
-        }
-
-        static string StripCatalogPrefix(string value, string prefix)
-        {
-            return value.StartsWith(prefix, StringComparison.Ordinal) ? value.Substring(prefix.Length) : value;
-        }
     }
 }

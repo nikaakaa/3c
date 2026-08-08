@@ -11,7 +11,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             "m_ProfileId",
             "m_Revision",
-            "m_FinalIkGrounding",
+            "m_LyraCurrentGrounding",
+            "m_StanceStabilization",
             "m_PredictiveExtension"
         };
 

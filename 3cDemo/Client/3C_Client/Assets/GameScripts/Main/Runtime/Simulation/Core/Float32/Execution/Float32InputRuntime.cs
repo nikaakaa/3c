@@ -82,14 +82,14 @@ namespace ThirdPersonSimulation
             }
         }
 
-        public void ApplyInputDerived(IFloat32BlackboardPort blackboard)
+        public void ApplyBlackboardInputBindings(IFloat32BlackboardPort blackboard)
         {
             if (blackboard == null)
                 throw new ArgumentNullException(nameof(blackboard));
-            for (int i = 0; i < m_Layout.InputDerivedBindings.Count; i++)
+            for (int i = 0; i < m_Layout.BlackboardInputBindings.Count; i++)
             {
-                InputDerivedStateBinding binding = m_Layout.InputDerivedBindings[i];
-                blackboard.ProjectInputDerived(binding, ReadValue(binding.InputId, (SimulationInputValueKind)binding.InputKind));
+                BlackboardInputStateBinding binding = m_Layout.BlackboardInputBindings[i];
+                blackboard.ProjectBlackboardInput(binding, ReadValue(binding.InputId, (SimulationInputValueKind)binding.InputKind));
             }
         }
 

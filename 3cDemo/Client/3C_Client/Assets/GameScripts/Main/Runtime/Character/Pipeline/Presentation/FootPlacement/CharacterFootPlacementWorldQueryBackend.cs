@@ -1,267 +1,178 @@
 using System;
-using RootMotion.FinalIK;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    internal readonly struct CharacterFutureLandingQueryRequest
+    public enum CharacterFootPlacementQueryShape : byte
     {
-        internal CharacterFutureLandingQueryRequest(in GroundingQueryRequest groundingRequest)
+        Sphere = 1,
+        Capsule = 2
+    }
+
+    public enum CharacterFootPlacementQueryPurpose : byte
+    {
+        CurrentGrounding = 1,
+        FutureLanding = 2,
+        GroundEnvelope = 3,
+        SwingClearance = 4
+    }
+
+    public readonly struct CharacterFootPlacementQueryRequest
+    {
+        public CharacterFootPlacementQueryRequest(
+            CharacterFootPlacementQueryShape shape,
+            CharacterFootPlacementQueryPurpose purpose,
+            int footIndex,
+            Vector3 origin,
+            Vector3 capsuleEnd,
+            Vector3 direction,
+            float maximumDistance,
+            float radius,
+            int layerMask,
+            float minimumGroundNormalDot)
         {
-            if (groundingRequest.Shape != GroundingQueryShape.Sphere ||
-                groundingRequest.Purpose != GroundingQueryPurpose.FutureLanding)
-            {
-                throw new ArgumentException(
-                    "Future Landing requires a Sphere Grounding request.",
-                    nameof(groundingRequest));
-            }
-            GroundingRequest = groundingRequest;
+            Shape = shape;
+            Purpose = purpose;
+            FootIndex = footIndex;
+            Origin = origin;
+            CapsuleEnd = capsuleEnd;
+            Direction = direction;
+            MaximumDistance = maximumDistance;
+            Radius = radius;
+            LayerMask = layerMask;
+            MinimumGroundNormalDot = minimumGroundNormalDot;
         }
 
-        internal GroundingQueryRequest GroundingRequest { get; }
+        public CharacterFootPlacementQueryShape Shape { get; }
+        public CharacterFootPlacementQueryPurpose Purpose { get; }
+        public int FootIndex { get; }
+        public Vector3 Origin { get; }
+        public Vector3 CapsuleEnd { get; }
+        public Vector3 Direction { get; }
+        public float MaximumDistance { get; }
+        public float Radius { get; }
+        public int LayerMask { get; }
+        public float MinimumGroundNormalDot { get; }
     }
 
-    internal enum CharacterPathSampleQueryKind : byte
+    public readonly struct CharacterFootPlacementQueryHit
     {
-        GroundEnvelope = 1,
-        SwingClearance = 2
-    }
-
-    internal readonly struct CharacterPathSampleQueryRequest
-    {
-        internal CharacterPathSampleQueryRequest(
-            CharacterPathSampleQueryKind kind,
-            in GroundingQueryRequest groundingRequest)
+        internal CharacterFootPlacementQueryHit(RaycastHit hit)
         {
-            if (kind != CharacterPathSampleQueryKind.GroundEnvelope &&
-                kind != CharacterPathSampleQueryKind.SwingClearance)
-            {
-                throw new ArgumentOutOfRangeException(nameof(kind));
-            }
-            if (kind == CharacterPathSampleQueryKind.GroundEnvelope &&
-                    (groundingRequest.Shape != GroundingQueryShape.Sphere ||
-                     groundingRequest.Purpose != GroundingQueryPurpose.GroundEnvelope) ||
-                kind == CharacterPathSampleQueryKind.SwingClearance &&
-                    (groundingRequest.Shape != GroundingQueryShape.Capsule ||
-                     groundingRequest.Purpose != GroundingQueryPurpose.SwingClearance))
-            {
-                throw new ArgumentException(
-                    $"Path Sample '{kind}' has invalid Grounding shape '{groundingRequest.Shape}'.",
-                    nameof(groundingRequest));
-            }
-            Kind = kind;
-            GroundingRequest = groundingRequest;
+            PhysicsHit = hit;
+            SurfaceIdentity = hit.collider ? hit.collider.GetInstanceID() : 0;
+            HasHit = hit.collider;
+            Location = HasHit ? hit.point : Vector3.zero;
         }
 
-        internal CharacterPathSampleQueryKind Kind { get; }
-        internal GroundingQueryRequest GroundingRequest { get; }
+        public bool HasHit { get; }
+        public RaycastHit PhysicsHit { get; }
+        public int SurfaceIdentity { get; }
+        public Vector3 Location { get; }
+        public Vector3 Point => HasHit ? PhysicsHit.point : Vector3.zero;
+        public Vector3 Normal => HasHit ? PhysicsHit.normal : Vector3.up;
+        public float Distance => HasHit ? PhysicsHit.distance : 0f;
     }
 
-    internal sealed class CharacterFootPlacementWorldQueryBackend : IGroundingWorldQueryBackend
+    internal sealed class CharacterFootPlacementWorldQueryBackend
     {
         readonly PhysicsScene m_PhysicsScene;
         readonly CharacterFootPlacementPoseRig m_Rig;
         readonly RaycastHit[] m_Hits;
-        float m_MinimumGroundNormalDot;
-        readonly GroundingQueryRequest[] m_LastRayRequests = new GroundingQueryRequest[2];
-        readonly GroundingQueryRequest[] m_LastToeRequests = new GroundingQueryRequest[2];
-        readonly GroundingQueryRequest[] m_LastFootCenterRequests = new GroundingQueryRequest[2];
-        readonly bool[] m_HasLastRayRequest = new bool[2];
-        readonly bool[] m_HasLastToeRequest = new bool[2];
-        readonly bool[] m_HasLastFootCenterRequest = new bool[2];
+        readonly CharacterFootPlacementQueryRequest[] m_LastCurrentRequests =
+            new CharacterFootPlacementQueryRequest[2];
+        readonly bool[] m_HasLastCurrentRequest = new bool[2];
 
         internal CharacterFootPlacementWorldQueryBackend(
             PhysicsScene physicsScene,
             CharacterFootPlacementPoseRig rig,
-            int hitCapacity,
-            float maximumSlopeDegrees)
+            int hitCapacity)
         {
             if (!physicsScene.IsValid())
                 throw new ArgumentException("Foot Placement requires a valid PhysicsScene.", nameof(physicsScene));
-            if (hitCapacity <= 0)
+            if (hitCapacity < 4 || hitCapacity > 32)
                 throw new ArgumentOutOfRangeException(nameof(hitCapacity));
-            if (!float.IsFinite(maximumSlopeDegrees) || maximumSlopeDegrees < 0f || maximumSlopeDegrees >= 90f)
-                throw new ArgumentOutOfRangeException(nameof(maximumSlopeDegrees));
             m_PhysicsScene = physicsScene;
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
             m_Hits = new RaycastHit[hitCapacity];
-            m_MinimumGroundNormalDot = Mathf.Cos(maximumSlopeDegrees * Mathf.Deg2Rad);
-        }
-
-        internal void ApplyMaximumSlope(float maximumSlopeDegrees)
-        {
-            if (!float.IsFinite(maximumSlopeDegrees) || maximumSlopeDegrees < 0f || maximumSlopeDegrees >= 90f)
-                throw new ArgumentOutOfRangeException(nameof(maximumSlopeDegrees));
-            m_MinimumGroundNormalDot = Mathf.Cos(maximumSlopeDegrees * Mathf.Deg2Rad);
         }
 
         internal PhysicsScene PhysicsScene => m_PhysicsScene;
         internal RaycastHit[] HitWorkspace => m_Hits;
 
-        internal void BeginGroundingFrameDiagnostics()
+        internal void BeginFrame()
         {
-            m_HasLastRayRequest[0] = false;
-            m_HasLastRayRequest[1] = false;
-            m_HasLastToeRequest[0] = false;
-            m_HasLastToeRequest[1] = false;
-            m_HasLastFootCenterRequest[0] = false;
-            m_HasLastFootCenterRequest[1] = false;
+            m_HasLastCurrentRequest[0] = false;
+            m_HasLastCurrentRequest[1] = false;
         }
 
-        internal bool TryGetLastRayRequest(int footIndex, out GroundingQueryRequest request)
+        internal bool TryGetLastCurrentRequest(
+            int footIndex,
+            out CharacterFootPlacementQueryRequest request)
         {
-            if ((uint)footIndex >= 2u || !m_HasLastRayRequest[footIndex])
+            if ((uint)footIndex >= 2u || !m_HasLastCurrentRequest[footIndex])
             {
                 request = default;
                 return false;
             }
-            request = m_LastRayRequests[footIndex];
+            request = m_LastCurrentRequests[footIndex];
             return true;
         }
-
-        internal bool TryGetLastFootCenterRequest(int footIndex, out GroundingQueryRequest request)
-        {
-            if ((uint)footIndex >= 2u || !m_HasLastFootCenterRequest[footIndex])
-            {
-                request = default;
-                return false;
-            }
-            request = m_LastFootCenterRequests[footIndex];
-            return true;
-        }
-
-        internal bool TryGetLastToeRequest(int footIndex, out GroundingQueryRequest request)
-        {
-            if ((uint)footIndex >= 2u || !m_HasLastToeRequest[footIndex])
-            {
-                request = default;
-                return false;
-            }
-            request = m_LastToeRequests[footIndex];
-            return true;
-        }
-
-        public bool Query(in GroundingQueryRequest request, out GroundingQueryHit hit) =>
-            QueryCore(in request, true, out hit);
 
         internal bool Query(
-            in CharacterFutureLandingQueryRequest request,
-            out GroundingQueryHit hit) =>
-            QueryCore(request.GroundingRequest, false, out hit);
-
-        internal bool Query(
-            in CharacterPathSampleQueryRequest request,
-            out GroundingQueryHit hit) =>
-            QueryCore(request.GroundingRequest, false, out hit);
-
-        bool QueryCore(
-            in GroundingQueryRequest request,
-            bool recordCurrentGroundingDiagnostics,
-            out GroundingQueryHit hit)
+            in CharacterFootPlacementQueryRequest request,
+            out CharacterFootPlacementQueryHit hit)
         {
-            if (!request.PhysicsScene.Equals(m_PhysicsScene) ||
-                request.FootIndex < -1 || request.FootIndex >= 2 ||
-                request.LayerMask == 0 ||
-                !IsFinite(request.Origin) ||
-                !IsFinite(request.Direction) ||
-                request.Direction.sqrMagnitude <= 0f ||
-                !float.IsFinite(request.MaxDistance) ||
-                request.MaxDistance <= 0f)
+            if (!IsRequestValid(in request))
             {
                 hit = default;
                 return false;
             }
-
-            if (recordCurrentGroundingDiagnostics && request.FootIndex >= 0 &&
-                request.Purpose == GroundingQueryPurpose.Heel)
+            if (request.Purpose == CharacterFootPlacementQueryPurpose.CurrentGrounding &&
+                request.FootIndex >= 0)
             {
-                m_LastRayRequests[request.FootIndex] = request;
-                m_HasLastRayRequest[request.FootIndex] = true;
-            }
-            else if (recordCurrentGroundingDiagnostics && request.FootIndex >= 0 &&
-                     request.Purpose == GroundingQueryPurpose.Toe)
-            {
-                m_LastToeRequests[request.FootIndex] = request;
-                m_HasLastToeRequest[request.FootIndex] = true;
-            }
-            else if (recordCurrentGroundingDiagnostics && request.FootIndex >= 0)
-            {
-                m_LastFootCenterRequests[request.FootIndex] = request;
-                m_HasLastFootCenterRequest[request.FootIndex] = true;
+                m_LastCurrentRequests[request.FootIndex] = request;
+                m_HasLastCurrentRequest[request.FootIndex] = true;
             }
 
-            int count;
-            switch (request.Shape)
-            {
-                case GroundingQueryShape.Ray:
-                    count = m_PhysicsScene.Raycast(
-                        request.Origin,
-                        request.Direction.normalized,
-                        m_Hits,
-                        request.MaxDistance,
-                        request.LayerMask,
-                        QueryTriggerInteraction.Ignore);
-                    break;
-                case GroundingQueryShape.Sphere:
-                    if (!float.IsFinite(request.Radius) || request.Radius <= 0f)
-                    {
-                        hit = default;
-                        return false;
-                    }
-                    count = m_PhysicsScene.SphereCast(
-                        request.Origin,
-                        request.Radius,
-                        request.Direction.normalized,
-                        m_Hits,
-                        request.MaxDistance,
-                        request.LayerMask,
-                        QueryTriggerInteraction.Ignore);
-                    break;
-                case GroundingQueryShape.Capsule:
-                    if (!IsFinite(request.CapsuleEnd) ||
-                        !float.IsFinite(request.Radius) ||
-                        request.Radius <= 0f)
-                    {
-                        hit = default;
-                        return false;
-                    }
-                    count = m_PhysicsScene.CapsuleCast(
-                        request.Origin,
-                        request.CapsuleEnd,
-                        request.Radius,
-                        request.Direction.normalized,
-                        m_Hits,
-                        request.MaxDistance,
-                        request.LayerMask,
-                        QueryTriggerInteraction.Ignore);
-                    break;
-                default:
-                    hit = default;
-                    return false;
-            }
-
-            if (!TrySelectHit(count, request.Direction, out RaycastHit selected, out int selectedIdentity))
+            int count = request.Shape == CharacterFootPlacementQueryShape.Sphere
+                ? m_PhysicsScene.SphereCast(
+                    request.Origin,
+                    request.Radius,
+                    request.Direction.normalized,
+                    m_Hits,
+                    request.MaximumDistance,
+                    request.LayerMask,
+                    QueryTriggerInteraction.Ignore)
+                : m_PhysicsScene.CapsuleCast(
+                    request.Origin,
+                    request.CapsuleEnd,
+                    request.Radius,
+                    request.Direction.normalized,
+                    m_Hits,
+                    request.MaximumDistance,
+                    request.LayerMask,
+                    QueryTriggerInteraction.Ignore);
+            if (!TrySelectHit(count, in request, out RaycastHit selected))
             {
                 hit = default;
                 return false;
             }
-
-            hit = new GroundingQueryHit(true, selected, selectedIdentity);
+            hit = new CharacterFootPlacementQueryHit(selected);
             return true;
         }
 
         bool TrySelectHit(
             int count,
-            Vector3 direction,
-            out RaycastHit selected,
-            out int selectedIdentity)
+            in CharacterFootPlacementQueryRequest request,
+            out RaycastHit selected)
         {
-            bool found = false;
             selected = default;
-            selectedIdentity = int.MaxValue;
+            bool found = false;
             float selectedDistance = float.PositiveInfinity;
+            int selectedIdentity = int.MaxValue;
+            Vector3 supportUp = -request.Direction.normalized;
             int hitCount = Mathf.Min(count, m_Hits.Length);
-            Vector3 supportUp = -direction.normalized;
             for (int i = 0; i < hitCount; i++)
             {
                 RaycastHit candidate = m_Hits[i];
@@ -270,7 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     !IsFinite(candidate.point) ||
                     !IsFinite(candidate.normal) ||
                     candidate.normal.sqrMagnitude <= 0.000001f ||
-                    Vector3.Dot(candidate.normal.normalized, supportUp) < m_MinimumGroundNormalDot ||
+                    Vector3.Dot(candidate.normal.normalized, supportUp) < request.MinimumGroundNormalDot ||
                     !float.IsFinite(candidate.distance) ||
                     candidate.distance < 0f)
                 {
@@ -282,13 +193,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     continue;
                 }
-                found = true;
                 selected = candidate;
                 selectedDistance = candidate.distance;
                 selectedIdentity = identity;
+                found = true;
             }
             return found;
         }
+
+        bool IsRequestValid(in CharacterFootPlacementQueryRequest request) =>
+            request.FootIndex >= 0 && request.FootIndex < 2 &&
+            request.LayerMask != 0 &&
+            IsFinite(request.Origin) &&
+            IsFinite(request.CapsuleEnd) &&
+            IsFinite(request.Direction) &&
+            request.Direction.sqrMagnitude > 0f &&
+            float.IsFinite(request.MaximumDistance) && request.MaximumDistance > 0f &&
+            float.IsFinite(request.Radius) && request.Radius > 0f &&
+            float.IsFinite(request.MinimumGroundNormalDot) &&
+            request.MinimumGroundNormalDot >= -1f && request.MinimumGroundNormalDot <= 1f;
 
         static bool IsFinite(Vector3 value) =>
             float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);

@@ -173,7 +173,12 @@ namespace TreeDesigner
 
         public void SetNodeType(ExposedPropertyNodeType nodeType)
         {
+            if (!Enum.IsDefined(typeof(ExposedPropertyNodeType), nodeType))
+                throw new ArgumentOutOfRangeException(nameof(nodeType));
             m_NodeType = nodeType;
+            m_Value.Direction = nodeType == ExposedPropertyNodeType.Get
+                ? PortDirection.Output
+                : PortDirection.Input;
         }
         public void SetExposedProperty(BaseExposedProperty exposedProperty)
         {
@@ -181,15 +186,7 @@ namespace TreeDesigner
             {
                 if (targetTypePair.Value == ExposedPropertyUtility.TargetType(exposedProperty.GetType()))
                 {
-                    switch (m_NodeType)
-                    {
-                        case ExposedPropertyNodeType.Get:
-                            SetPropertyPort("m_Value", targetTypePair.Key, PortDirection.Output);
-                            break;
-                        case ExposedPropertyNodeType.Set:
-                            SetPropertyPort("m_Value", targetTypePair.Key, PortDirection.Input);
-                            break;
-                    }
+                    SetPropertyPort("m_Value", targetTypePair.Key, m_Value.Direction);
                     break;
                 }
             }
@@ -211,15 +208,7 @@ namespace TreeDesigner
         }
         public void RemoveExposedProperty()
         {
-            switch (m_NodeType)
-            {
-                case ExposedPropertyNodeType.Get:
-                    SetPropertyPort("m_Value", typeof(PropertyPort), PortDirection.Output);
-                    break;
-                case ExposedPropertyNodeType.Set:
-                    SetPropertyPort("m_Value", typeof(PropertyPort), PortDirection.Input);
-                    break;
-            }
+            SetPropertyPort("m_Value", typeof(PropertyPort), m_Value.Direction);
             m_BlackboardVariable = PipelineBlackboardVariableReference.None;
             m_ExposedProperty = null;
         }

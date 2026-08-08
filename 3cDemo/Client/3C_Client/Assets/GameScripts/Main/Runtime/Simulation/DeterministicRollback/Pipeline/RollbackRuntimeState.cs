@@ -78,6 +78,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ulong provenancePromotionCount,
             ulong explicitCorrectionCount,
             ulong lastExplicitAffectedTick,
+            int maximumPredictionLeadTicks,
+            ulong predictionLeadTicks,
+            ulong pacedNoStepCount,
             StableHash lastPredictedInputHash,
             StableHash lastCanonicalInputHash,
             StableHash lastAppliedInputHash,
@@ -110,6 +113,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ProvenancePromotionCount = provenancePromotionCount;
             ExplicitCorrectionCount = explicitCorrectionCount;
             LastExplicitAffectedTick = lastExplicitAffectedTick;
+            MaximumPredictionLeadTicks = maximumPredictionLeadTicks;
+            PredictionLeadTicks = predictionLeadTicks;
+            PacedNoStepCount = pacedNoStepCount;
             LastPredictedInputHash = lastPredictedInputHash;
             LastCanonicalInputHash = lastCanonicalInputHash;
             LastAppliedInputHash = lastAppliedInputHash;
@@ -143,6 +149,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public ulong ProvenancePromotionCount { get; }
         public ulong ExplicitCorrectionCount { get; }
         public ulong LastExplicitAffectedTick { get; }
+        public int MaximumPredictionLeadTicks { get; }
+        public ulong PredictionLeadTicks { get; }
+        public ulong PacedNoStepCount { get; }
         public StableHash LastPredictedInputHash { get; }
         public StableHash LastCanonicalInputHash { get; }
         public StableHash LastAppliedInputHash { get; }
@@ -271,6 +280,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         ulong m_ProvenancePromotionCount;
         ulong m_ExplicitCorrectionCount;
         ulong m_LastExplicitAffectedTick;
+        ulong m_PacedNoStepCount;
 
         public RollbackRuntimeState(
             DeterministicRollbackModelPolicy policy,
@@ -297,6 +307,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public ulong ReplayedTickCount => m_ReplayedTickCount;
         public int LastRollbackDepth => m_LastRollbackDepth;
         public ulong LastPublishedHashTick => m_LastPublishedHashTick;
+        public ulong PacedNoStepCount => m_PacedNoStepCount;
         public RollbackInputHistory Inputs => m_Inputs;
         public RollbackSnapshotHistory Snapshots => m_Snapshots;
 
@@ -325,6 +336,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_ProvenancePromotionCount,
                 m_ExplicitCorrectionCount,
                 m_LastExplicitAffectedTick,
+                m_Policy.MaximumPredictionLeadTicks,
+                m_LastCompletedTick >= m_LastCanonicalContiguousTick
+                    ? m_LastCompletedTick - m_LastCanonicalContiguousTick
+                    : 0,
+                m_PacedNoStepCount,
                 m_LastPredictedInputHash,
                 m_LastCanonicalInputHash,
                 m_LastAppliedInputHash,
@@ -356,6 +372,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_LastPredictedInputTick = bundle.Tick.Value;
                 m_LastPredictedInputHash = bundle.GameplayHash;
             }
+        }
+
+        public void RecordPacedNoStep()
+        {
+            m_PacedNoStepCount = checked(m_PacedNoStepCount + 1);
         }
 
         public void RecordRelayedExplicit(RollbackActorInputFrame frame)

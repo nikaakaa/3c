@@ -299,6 +299,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             ApplyReset(resetSequence);
         }
 
+        public void RetargetResetSequence(ulong resetSequence)
+        {
+            if (m_FrameOpen)
+                throw new InvalidOperationException("Motion Matching Pose History cannot retarget during a frame.");
+            m_ResetSequence = resetSequence;
+            m_PendingResetSequence = resetSequence;
+        }
+
         void ApplyReset(ulong resetSequence)
         {
             Array.Clear(m_PresentationTimes, 0, m_PresentationTimes.Length);

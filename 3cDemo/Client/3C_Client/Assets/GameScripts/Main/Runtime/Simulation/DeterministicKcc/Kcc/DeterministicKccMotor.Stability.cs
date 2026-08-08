@@ -10,9 +10,11 @@ namespace ThirdPersonSimulation.DeterministicKcc
             DeterministicKccBodyState previousState,
             FixedVector3 movement,
             bool allowStepDetection,
+            DeterministicKccStepRejection admissionRejection,
             ref DeterministicKccQuerySummary summary,
             ref DeterministicKccStepDiagnostics diagnostics)
         {
+            m_StabilityEvaluationCount++;
             FixedVector3 innerHitDirection = Planar(contact.Normal).Normalized;
             bool baseIsStable = IsStableNormal(contact.SurfaceId, contact.Normal);
             bool isStable = baseIsStable;
@@ -85,7 +87,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
             DeterministicKccStepMode stepMode = DeterministicKccStepMode.None;
             DeterministicKccStepCandidate stepCandidate = default;
             DeterministicKccStepRejection rejection = DeterministicKccStepRejection.ExtraSweepAbsent;
-            if (!isStable && allowStepDetection && innerHitDirection.SqrMagnitude > FixedScalar.Zero &&
+            if (!isStable && allowStepDetection && admissionRejection == DeterministicKccStepRejection.None &&
+                innerHitDirection.SqrMagnitude > FixedScalar.Zero &&
                 TryDetectStep(
                     characterPosition,
                     contact,
@@ -110,7 +113,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 diagnostics = new DeterministicKccStepDiagnostics(
                     DeterministicKccStepMode.Extra,
                     DeterministicKccStepStage.Detection,
-                    rejection,
+                    admissionRejection != DeterministicKccStepRejection.None ? admissionRejection : rejection,
                     -1,
                     summary);
             }
@@ -143,12 +146,14 @@ namespace ThirdPersonSimulation.DeterministicKcc
             out DeterministicKccStepCandidate candidate,
             out DeterministicKccStepRejection rejection)
         {
+            m_StepDetectionAttemptCount++;
             FixedVector3 verticalCharacterToHit = Scale(Up, obstruction.WorldPoint.Y - characterPosition.Y);
             FixedVector3 horizontalCharacterToHit = Planar(obstruction.WorldPoint - characterPosition).Normalized;
             FixedVector3 standardStart = obstruction.WorldPoint - verticalCharacterToHit +
                                          Scale(Up, m_Configuration.MaximumStepHeight) +
                                          Scale(horizontalCharacterToHit, m_Configuration.CollisionOffset * FixedScalar.FromInt64(3));
             FixedScalar standardDistance = m_Configuration.MaximumStepHeight + m_Configuration.CollisionOffset;
+            m_StandardStepQueryCount++;
             int standardCount = m_Queries.CastAll(
                 standardStart,
                 Scale(Down, standardDistance),
@@ -171,6 +176,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             FixedVector3 extraStart = characterPosition + Scale(Up, m_Configuration.MaximumStepHeight) -
                                       Scale(innerHitDirection, m_Configuration.MinimumRequiredStepDepth);
             FixedScalar extraDistance = m_Configuration.MaximumStepHeight - m_Configuration.CollisionOffset;
+            m_ExtraStepQueryCount++;
             int extraCount = m_Queries.CastAll(
                 extraStart,
                 Scale(Down, extraDistance),
@@ -219,6 +225,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     groupStart--;
                 for (int i = groupEnd; i >= groupStart; i--)
                 {
+                    m_StepValidityCandidateCount++;
                     DeterministicKccContact landing = m_Queries.AllCastContactAt(i);
                     FixedVector3 candidatePosition = castStart + Scale(
                         Down,

@@ -160,14 +160,14 @@ namespace ThirdPersonSimulation.Fixed
                 return;
         }
 
-        public void ProjectInputDerived(InputDerivedStateBinding binding, SimulationInputValue value)
+        public void ProjectBlackboardInput(BlackboardInputStateBinding binding, SimulationInputValue value)
         {
             if (!string.Equals(binding.InputId, value.InputId, StringComparison.Ordinal) ||
                 (byte)binding.InputKind != (byte)value.Kind)
-                throw new InvalidOperationException($"InputDerived binding '{binding.InputId}/{binding.InputKind}' received '{value.InputId}/{value.Kind}'.");
+                throw new InvalidOperationException($"Blackboard Input Binding '{binding.InputId}/{binding.InputKind}' received '{value.InputId}/{value.Kind}'.");
             SimulationBlackboardSlotGroup group = RequireBlackboardGroup(binding.StateAddress.SlotIndex);
             if (group.Scope.Kind != ProgramScopeKind.Character || group.LifetimeKind != ProgramBlackboardLifetime.Spawn)
-                throw new InvalidOperationException($"InputDerived Blackboard '{binding.InputId}' must use Character/Spawn ownership.");
+                throw new InvalidOperationException($"Blackboard Input Binding '{binding.InputId}' must use Character/Spawn ownership.");
             var owner = new BlackboardOwnerToken(ProgramScopeKind.Character, group.CompiledOwnerIndex, 1);
             if (m_State.Get(group.OwnerToken).BlackboardOwnerToken != owner)
                 MaterializeGroup(group, owner);
@@ -191,7 +191,7 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationInputValueKind.Vector3 => CharacterStateValue.FromVector3(value.Vector3),
                 SimulationInputValueKind.Yaw => CharacterStateValue.FromYaw(value.Yaw),
                 SimulationInputValueKind.ActionTargetSnapshot => CharacterStateValue.FromActionTargetSnapshot(value.ActionTargetSnapshot),
-                _ => throw new InvalidOperationException($"InputDerived value kind '{value.Kind}' is unsupported.")
+                _ => throw new InvalidOperationException($"Blackboard Input Binding value kind '{value.Kind}' is unsupported.")
             };
         }
 
@@ -342,10 +342,10 @@ namespace ThirdPersonSimulation.Fixed
             FixedActionInstanceState action)
         {
             ProgramCatalogEntry declaration = RequireBlackboardDeclaration(operation);
-            ProgramBlackboardFactProjectionKind projection =
-                (ProgramBlackboardFactProjectionKind)CatalogInt32(declaration, ProgramCatalogFieldId.Projection);
-            if (projection == ProgramBlackboardFactProjectionKind.None)
+            if (!TryCatalogInt32(declaration, ProgramCatalogFieldId.Projection, out int projectionValue))
                 return;
+            ProgramBlackboardFactProjectionKind projection =
+                (ProgramBlackboardFactProjectionKind)projectionValue;
             if (projection != ProgramBlackboardFactProjectionKind.ActionWindow ||
                 value.Kind != ProgramStateValueKind.Boolean)
             {
@@ -413,7 +413,11 @@ namespace ThirdPersonSimulation.Fixed
         bool BlackboardRequiresActionWindowProjection(SimulationOperation operation)
         {
             ProgramCatalogEntry declaration = RequireBlackboardDeclaration(operation);
-            return CatalogInt32(declaration, ProgramCatalogFieldId.Projection) == (int)ProgramBlackboardFactProjectionKind.ActionWindow;
+            if (!TryCatalogInt32(declaration, ProgramCatalogFieldId.Projection, out int projection))
+                return false;
+            if (projection != (int)ProgramBlackboardFactProjectionKind.ActionWindow)
+                throw new InvalidOperationException($"Blackboard projection '{declaration.Identity}' is unsupported.");
+            return true;
         }
 
         ProgramCatalogEntry RequireBlackboardDeclaration(SimulationOperation operation)

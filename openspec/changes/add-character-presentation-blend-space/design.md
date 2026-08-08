@@ -12,7 +12,8 @@ Committed Body / Intent
   -> branch-local Inertialization
   -> FullBodyAction AnimationSlot
   -> Pose composition / ModifyBone
-  -> PredictiveFootPlacement Goals
+  -> FootGrounding Baseline Goals
+  -> optional PredictiveFootPlacementModifier Final Goals
   -> FullBodyIK
   -> OutputPose
 ```
@@ -34,7 +35,7 @@ Committed Body / Intent
 - UE Animation Blueprint Event Graph、Montage、Sync Group自动leader、Notify或Root Motion业务决策。
 - Direct blend、Simple Directional、嵌套Blend Space或运行时动态样本集合。
 - Motion Matching查询、轨迹预测或候选打分。
-- 跨来源CrossFade、Stored Pose、Inertial residual、PredictiveFootPlacement、FullBodyIK和最终Animator写回。
+- 跨来源CrossFade、Stored Pose、Inertial residual、FootGrounding、PredictiveFootPlacementModifier、FullBodyIK和最终Animator写回。
 - Agent对Presentation资产的写入。
 
 ## Concept Mapping
@@ -49,7 +50,7 @@ Committed Body / Intent
 | `BlendStack` | Blend Stack / temporal transition | 不由Mixer负责 | 只保留跨来源时间历史 |
 | `State Source Sync` | State edge source handoff同步 | 项目现有Marker算法 | 只处理PoseState来源间raw-to-effective phase |
 
-名称只表达接近的学习概念，不宣称内部等同UE。特别是项目的world-aware value节点叫`PredictiveFootPlacement`，pure-pose solver叫`FullBodyIK`，二者都不叫Post Process Anim Blueprint。
+名称只表达接近的学习概念，不宣称内部等同UE。特别是项目的world-aware value节点是`FootGrounding`与可选`PredictiveFootPlacementModifier`，pure-pose solver是`FullBodyIK`，三者都不叫Post Process Anim Blueprint。
 
 ## Responsibility Model
 
@@ -64,7 +65,7 @@ Committed Body / Intent
 | BlendSpacePlayer | 上述三项结果 | 聚合source-local Pose、curve、foot feature | Pose Value + discontinuity |
 | Inertialization | 单Pose discontinuity | residual/rebase | 连续Pose Value |
 | BlendStack | 多source history | CrossFade/Stored/release | 跨来源Pose Value |
-| PredictiveFootPlacement | composition后Component Pose与foot contribution | FinalIK Grounding、预测扩展与typed Goals | Goal Set |
+| FootGrounding / Predictive Modifier | composition后Component Pose与foot contribution | Lyra current、contact/anchor/pelvis Baseline、可选未anchored Swing预测与typed Goals | Goal Set |
 | FullBodyIK | 原始Component Pose与全部Goal Sets | 单次FinalIK FBBIK | solved Component Pose |
 
 ## Decision 1: 新增BlendSpacePlayer，不复用BlendStack
@@ -237,7 +238,7 @@ Runtime不得读取ScriptableObject、AssetDatabase、Timeline authoring、Anima
 
 没有全局默认策略。未知ParameterId或policy缺失编译失败。
 
-每个样本的Foot Analysis feature按其effective sample time读取，再按姿势相同权重聚合。进入后续Blend、LayeredBoneBlend或BlendStack时，现有source contribution继续乘上外层权重；PredictiveFootPlacement只读取最终实际脚部贡献并发布Goals。BlendSpace不得自己执行射线、plant锁定、pelvis goal或IK。
+每个样本的Foot Analysis feature按其effective sample time读取，再按姿势相同权重聚合。进入后续Blend、LayeredBoneBlend或BlendStack时，现有source contribution继续乘上外层权重；FootGrounding只读取最终实际脚部贡献生成Baseline Goals，可选PredictiveFootPlacementModifier只改写未被anchor拥有的Swing脚。BlendSpace不得自己执行射线、contact/anchor、pelvis goal或IK。
 
 ## Authoring Workspace
 
@@ -263,7 +264,7 @@ Diagnostics按NodeId和SampleId输出：
 - X/Y原值、range处理结果和parameter availability。
 - active sample、weight、canonical phase、effective time。
 - Pose Parameter和foot feature来源。
-- downstream discontinuity、Inertialization、PredictiveFootPlacement与FullBodyIK状态。
+- downstream discontinuity、Inertialization、FootGrounding、PredictiveFootPlacementModifier与FullBodyIK状态。
 
 Live Debug只读取Runtime Snapshot，不重新计算权重。
 
@@ -339,7 +340,7 @@ Demo Presentation Fact
 ### Pose Graph与PoseState合同
 
 - 第二阶段实施必须在当前PoseState/AnimationSlot ABI上原子升级Pose Operation、Pose Plan Schema和Runtime ABI；不得保留旧Selection版BlendSpace reader。
-- Projection Compiler按拓扑、Pose空间与execution domain生成ordered stage table；`BlendSpacePlayer`属于source/player pose生产，PredictiveFootPlacement属于DAG中对应位置的world-aware value stage，FullBodyIK属于消费Goal Set的pure-pose stage，不再存在固定`WorldAwarePostProcess`尾阶段。
+- Projection Compiler按拓扑、Pose空间与execution domain生成ordered stage table；`BlendSpacePlayer`属于source/player pose生产，`FootGrounding`与图中显式存在的`PredictiveFootPlacementModifier`属于DAG中对应位置的world-aware value stage，`FullBodyIK`属于消费最终Goal Set的pure-pose stage，不再存在固定`WorldAwarePostProcess`尾阶段。
 - `BlendSpacePlayer`固定保存必需typed Blend Space Source Slot对象引用，拥有必需`X`、可选`Y`输入，以及`Pose`、`Discontinuity`输出。X/Y只接受typed Fact Parameter edge。
 - BlendSpace source usage由编译后的PoseState descriptor发布；不得创建Gameplay `AnimationSelectionFrame`、`AnimationPlaybackId`或BaseLocomotion channel binding。
 

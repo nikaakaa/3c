@@ -2190,6 +2190,7 @@ GameObject:
   - component: {fileID: 7290819774409338402}
   - component: {fileID: 4538717769376152845}
   - component: {fileID: 4080268671705005858}
+  - component: {fileID: 4624290055901875321}
   m_Layer: 0
   m_Name: VisualRoot
   m_TagString: Untagged
@@ -2269,6 +2270,89 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_PresentationRoot: {fileID: 8301054601070386138}
   m_SelfColliderRoot: {fileID: 640945827232343004}
+--- !u!114 &4624290055901875321
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2783444762023610531}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 723b643cad254524818dc85ef3f2bcce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  profile: {fileID: 11400000, guid: 798e5d7b7b9eb3544ba32c0cec4cc54f, type: 2}
+  artifact: {fileID: 11400000, guid: 2a23f548b8f275040ab806f010cfaaae, type: 2}
+  rendererBindings:
+  - slotId: Corin_Weapon
+    renderer: {fileID: 248979445252699540}
+  - slotId: Corin_body
+    renderer: {fileID: 1540790534326866338}
+  - slotId: Corin_body_02
+    renderer: {fileID: 3077111822671973031}
+  - slotId: Corin_face
+    renderer: {fileID: 1558316937851238142}
+  - slotId: Corin_hair
+    renderer: {fileID: 6792174624207661954}
+  projectionEnabled: 0
+  renderInGameCamera: 1
+  debugView: 0
+  runtimeState: 0
+  fault: 
+  diagnostics:
+    SourceId:
+      value: 
+    SourceGeneration: 0
+    CameraInstanceId: 0
+    ProfileId:
+      value: 
+    ProfileRevision: 0
+    ArtifactId:
+      value: 
+    ArtifactHash:
+      serializedVersion: 2
+      Hash: 00000000000000000000000000000000
+    ProjectionHash:
+      serializedVersion: 2
+      Hash: 00000000000000000000000000000000
+    SlotGeneration: 0
+    LastSubmissionSequence: 0
+    LastSubmissionFrame: 0
+    DisplayFrame: 0
+    DisplayResultFrame: 0
+    ResultAgeFrames: 0
+    OccupiedSlots: 0
+    SkippedSubmissions: 0
+    RendererCount: 0
+    VertexCount: 0
+    VertexCapacity: 0
+    TriangleCount: 0
+    TriangleCapacity: 0
+    SharedChainCount: 0
+    SharedChainCapacity: 0
+    RegionCapacity: 0
+    ActiveRegions: 0
+    FilteredRegions: 0
+    AtlasWidth: 0
+    AtlasHeight: 0
+    AtlasUsedPixels: 0
+    ContourPointCount: 0
+    ContourPointCapacity: 0
+    LoopCount: 0
+    LoopCapacity: 0
+    IndirectInstanceCount: 0
+    IndirectInstanceCapacity: 0
+    DeformationCaptureMilliseconds: 0
+    ProjectionMilliseconds: 0
+    MaskCommandMilliseconds: 0
+    MaskGpuMilliseconds: 0
+    ReadbackMilliseconds: 0
+    ContourMilliseconds: 0
+    CompositeCommandMilliseconds: 0
+    CompositeGpuMilliseconds: 0
+    State: 0
+    Fault: 
 --- !u!1 &2831792937522958483
 GameObject:
   m_ObjectHideFlags: 0
@@ -3849,8 +3933,11 @@ MonoBehaviour:
   m_ControlSource: {fileID: 2678048635692022184}
   m_PresentationRole: 1
   m_Animancer: {fileID: 4538717769376152845}
+  m_AnimationRigBinding: {fileID: 0}
   m_WorldBodyBinding: {fileID: 1861477906427375716}
   m_VisualRoot: {fileID: 8301054601070386138}
+  m_EquipmentRigBindings: {fileID: 0}
+  m_EquipmentPreviewFixture: {fileID: 0}
   m_BodyPresentationProfile: {fileID: 11400000, guid: 4791f09a9f8040b987d486eb6576cb0e,
     type: 2}
   m_WorldAwarePresentation: {fileID: 4080268671705005858}

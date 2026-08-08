@@ -93,7 +93,7 @@ Pipeline restore MUST不回退单调递增的confirmed frontier。历史Pipeline
 
 Rollback History Pass MUST保存有界 canonical input history与Fixed world snapshot history。Fixed Target MUST复用typed state schema和`Begin -> Evaluate -> Finalize -> Commit|Abort`事务生命周期形状，但 MUST实现自己的Fixed partition、numeric value、canonical codec与transaction specialization。World snapshot MUST包含SimulationTick、Fixed Program/Layout/codec identity、stable actor table、所有Actor committed SimulationState canonical bytes、Deterministic KCC actor/world state、RNG、Event/Command cursor和模型必要状态，MUST不保存active transaction、mutable typed partition或Float32 State/Snapshot，也 MUST不新增平行总世界状态aggregate。
 
-Peer的predicted completed frontier MUST不超过本地canonical contiguous frontier加`MaximumRollbackDepthTicks`。达到上限时Ingress MAY继续接收canonical并重发同一待执行Tick输入，但Schedule MUST不新增predicted history；canonical差异触发的restore/replay仍 MUST执行。
+Peer的predicted completed frontier MUST不超过本地canonical contiguous frontier加`MaximumPredictionLeadTicks`。达到上限时Ingress MAY继续接收canonical并重发同一待执行Tick输入，但Schedule MUST不新增predicted history；canonical差异触发的restore/replay仍 MUST执行。`MaximumRollbackDepthTicks` MUST只用于restore/replay深度、history保护和deep recovery判定。
 
 #### Scenario: Capture Tick T
 
@@ -103,7 +103,7 @@ Peer的predicted completed frontier MUST不超过本地canonical contiguous fron
 
 #### Scenario: 快 Peer 达到最大预测领先
 
-- **WHEN** 下一个predicted Tick会超过canonical contiguous frontier加MaximumRollbackDepthTicks
+- **WHEN** 下一个predicted Tick会超过canonical contiguous frontier加MaximumPredictionLeadTicks
 - **THEN** Schedule MUST返回NoStep并等待canonical推进
 - **AND** input history MUST不因两个进程运行速度不同而无限增长
 
@@ -143,7 +143,9 @@ Model MUST按固定 cadence 交换 confirmed world state hash，并能分解 Pro
 
 ### Requirement: Rollback 表现副作用必须按 EventId 提交
 
-Rollback Output Disposition Pass MUST将 Fixed `SimulationActorTickResult`分为 predictable/reversible与 confirmed-only。Predictable output MAY立即提交并在 replay后按 EventId keep/replace/cancel；confirmed-only output MUST延迟到 confirmed horizon。Replay对旧已确认输出的保护边界 MUST取自outer transaction开始时的confirmed frontier；本事务内replay结果一致后新推进的confirmed Tick MUST仍完成replace/cancel并随后确认提交。Replay MUST不重复触发外部副作用。
+Rollback Output Disposition Pass MUST将 Fixed `SimulationActorTickResult`分为 predictable/reversible与 confirmed-only。有限Action `SelectProducer`与`SampleProducer` MAY立即提交并在replay后按EventId keep/replace/cancel；`CompleteProducer`与`ReleaseProducer` MUST属于confirmed-only，必须等待confirmed horizon后才提交到Action Playback Runtime。其它predictable output MAY立即提交并在 replay后按 EventId keep/replace/cancel；confirmed-only output MUST延迟到 confirmed horizon。Replay对旧已确认输出的保护边界 MUST取自outer transaction开始时的confirmed frontier；本事务内replay结果一致后新推进的confirmed Tick MUST仍完成replace/cancel并随后确认提交。Replay MUST不重复触发外部副作用。
+
+Action predict/replay 的最终输出 MUST先在Fixed Presentation Adapter中合并为outer transaction级最终branch revision，再原子提交给Action Playback Runtime。撤销已消费的未确认`SelectProducer`或`SampleProducer` MUST不合成业务`ReleaseProducer`。
 
 #### Scenario: Replay 移除一个 Cue
 
@@ -170,6 +172,12 @@ Rollback Output Disposition Pass MUST将 Fixed `SimulationActorTickResult`分为
 - **THEN** Presentation Adapter MUST释放该generation的sample与terminal历史记录
 - **AND** MUST保留仍生效状态槽的已确认基线
 - **AND** MUST不通过扩大记录容量掩盖生命周期泄漏
+
+#### Scenario: 未确认 terminal 被 rollback 替换
+
+- **WHEN** replay移除或替换尚未进入confirmed horizon的`CompleteProducer`或`ReleaseProducer`
+- **THEN** Action Playback Runtime MUST从未观察到该terminal
+- **AND** 最终分支的同generation `SampleProducer` MUST可以继续提交
 
 ### Requirement: Rollback Peer 必须优先使用目标 Tick 的远端显式输入
 
@@ -215,7 +223,7 @@ DeterministicRollback Dedicated Relay Server MUST只拥有网络会话、Peer/Ac
 
 ### Requirement: Rollback必须恢复确定性垂直动力状态
 
-Deterministic Rollback完整Fixed `SimulationWorldSnapshot`、History、WorldStateHash、分层desync hash与Snapshot Recovery MUST包含每个Actor的`VerticalVelocity`。Restore与Replay MUST同时恢复Body pose、actual Velocity、VerticalVelocity、Grounded、Collision和KCC stable support state，并在下一Tick执行唯一Fixed Body Motion Prepare。Rollback model/protocol semantic version MUST分别为5/5，Fixed WorldState/WorldSnapshot/SessionSnapshot MUST分别使用v3/v4/v3；旧snapshot或缺失VerticalVelocity的payload MUST被拒绝，MUST不按当前KCC Grounded或actual Velocity.Y重建。
+Deterministic Rollback完整Fixed `SimulationWorldSnapshot`、History、WorldStateHash、分层desync hash与Snapshot Recovery MUST包含每个Actor的`VerticalVelocity`。Restore与Replay MUST同时恢复Body pose、actual Velocity、VerticalVelocity、Grounded、Collision和KCC stable support state，并在下一Tick执行唯一Fixed Body Motion Prepare。Rollback model/protocol semantic version MUST分别为6/5，Fixed WorldState/WorldSnapshot/SessionSnapshot MUST分别使用v3/v4/v3；旧snapshot或缺失VerticalVelocity的payload MUST被拒绝，MUST不按当前KCC Grounded或actual Velocity.Y重建。
 
 #### Scenario: Late Input回退到自由落体Tick
 

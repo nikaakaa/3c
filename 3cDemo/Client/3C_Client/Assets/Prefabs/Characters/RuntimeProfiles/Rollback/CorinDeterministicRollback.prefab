@@ -2013,6 +2013,7 @@ GameObject:
   - component: {fileID: 5542282915324439764}
   - component: {fileID: 4046611573928020424}
   - component: {fileID: 8819041415098219917}
+  - component: {fileID: 1203345607023827491}
   m_Layer: 0
   m_Name: AnimatorRoot
   m_TagString: Untagged
@@ -2295,6 +2296,89 @@ MonoBehaviour:
   - {fileID: 6365357750341075697}
   - {fileID: 1123604276722342059}
   - {fileID: 1111277127259565486}
+--- !u!114 &1203345607023827491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2493909065712362065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 723b643cad254524818dc85ef3f2bcce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  profile: {fileID: 11400000, guid: 798e5d7b7b9eb3544ba32c0cec4cc54f, type: 2}
+  artifact: {fileID: 11400000, guid: 2a23f548b8f275040ab806f010cfaaae, type: 2}
+  rendererBindings:
+  - slotId: Corin_Weapon
+    renderer: {fileID: 5638259853422358738}
+  - slotId: Corin_body
+    renderer: {fileID: 3239619560165340026}
+  - slotId: Corin_body_02
+    renderer: {fileID: 2709954873623219222}
+  - slotId: Corin_face
+    renderer: {fileID: 9136480621315033978}
+  - slotId: Corin_hair
+    renderer: {fileID: 16055779891579671}
+  projectionEnabled: 0
+  renderInGameCamera: 1
+  debugView: 0
+  runtimeState: 0
+  fault: 
+  diagnostics:
+    SourceId:
+      value: 
+    SourceGeneration: 0
+    CameraInstanceId: 0
+    ProfileId:
+      value: 
+    ProfileRevision: 0
+    ArtifactId:
+      value: 
+    ArtifactHash:
+      serializedVersion: 2
+      Hash: 00000000000000000000000000000000
+    ProjectionHash:
+      serializedVersion: 2
+      Hash: 00000000000000000000000000000000
+    SlotGeneration: 0
+    LastSubmissionSequence: 0
+    LastSubmissionFrame: 0
+    DisplayFrame: 0
+    DisplayResultFrame: 0
+    ResultAgeFrames: 0
+    OccupiedSlots: 0
+    SkippedSubmissions: 0
+    RendererCount: 0
+    VertexCount: 0
+    VertexCapacity: 0
+    TriangleCount: 0
+    TriangleCapacity: 0
+    SharedChainCount: 0
+    SharedChainCapacity: 0
+    RegionCapacity: 0
+    ActiveRegions: 0
+    FilteredRegions: 0
+    AtlasWidth: 0
+    AtlasHeight: 0
+    AtlasUsedPixels: 0
+    ContourPointCount: 0
+    ContourPointCapacity: 0
+    LoopCount: 0
+    LoopCapacity: 0
+    IndirectInstanceCount: 0
+    IndirectInstanceCapacity: 0
+    DeformationCaptureMilliseconds: 0
+    ProjectionMilliseconds: 0
+    MaskCommandMilliseconds: 0
+    MaskGpuMilliseconds: 0
+    ReadbackMilliseconds: 0
+    ContourMilliseconds: 0
+    CompositeCommandMilliseconds: 0
+    CompositeGpuMilliseconds: 0
+    State: 0
+    Fault: 
 --- !u!1 &2598938356314745688
 GameObject:
   m_ObjectHideFlags: 0

@@ -88,6 +88,8 @@ Character generated product使用独立生命周期，不混入BTSMTL Document�
 
 两个Character Build工具不读取selection、不扫描目录、不猜destination、不自动触发。Character `apply_document`成功后generated product保持stale，调用方按目标显式Build；Build完成后重新checkout刷新只读generated context。
 
+AI `apply_document`只在受控Character Program为当前版本时校验并按需发布`AIIntentProgram`。纯Blackboard schema normalization不改变AI authoring source revision时，即使Character Program过期也可以提交AI RootTree；事务报告`ai_intent_compile_deferred`，Document context继续明确记录Character Program与AIIntentProgram为stale。任何真实AI语义变化仍要求当前Character Program，禁止从旧Numeric Target解码、按authoring catalog伪造generated identity或自动触发Character Build。
+
 旧`manage_btsmtl_agent_authoring`、`bootstrap_ai_controller`、`export_snapshot`、`dry_run_patch`、`apply_patch`、`patch_json`与v1单文件全部无效，不提供alias、reader、converter或双写。
 
 ## 稀疏Graph合同
@@ -103,7 +105,13 @@ Character generated product使用独立生命周期，不混入BTSMTL Document�
 
 `context/node-catalog.json`是kind、允许property和logical port的机器可读能力目录；`context/graph-kinds.json`声明graph kind、owner slot和anchor。两个文件由同一个`AgentAuthoringCapabilityCatalog`按Document domain过滤生成，AIController只公开`BaseTree`与`ConditionRuleGraph`，不会看到Timeline、Action等Character-only capability，不能和Package Mapper、Reconciler或Validator能力分叉。
 
+节点端口形状只能来自`GraphAuthoringNodePortShapeProjector`。Capability可声明固定端口、由strict typed property discriminator决定的`portVariants`，以及作者拥有的node-local动态端口；projector只接受capability与typed properties，必须唯一命中条件变体并拒绝三类端口的identity重叠。Canvas、Exporter、Package Mapper、Reconciler、Mutation preflight与Validator全部消费该结果，不读取默认构造节点、当前edge或Unity snapshot作为端口fallback。
+
+`exposed-property`保持一个稳定kind，以`exposedProperty.mode`选择条件端口：`Get`只有`m_Value` Property Output/Multiple，`Set`具有`Input` Flow Input/Single和`m_Value` Property Input/Single。Graph实例只保存mode与edge endpoint，不复制方向、容量或required；`ExposedPropertyNode.SetNodeType`是mode与实际PropertyPort方向的唯一写入口。
+
 Character Input节点使用必填`inputId`，Action Request条件节点使用必填`requestId`。Exporter从正式Node binding反向导出，Reconciler生成同一条typed Mutation，preflight按当前Definition检查identity与值类型，apply只调用Node现有的`BindInputValue`或`BindActionRequest`正式接口。
+
+Blackboard declaration只保存identity、key、value type、default、owner、scope、lifetime和category。输入注入使用可选`inputBinding.inputValueId`，事实输出使用可选`factProjection`；不保存任何变量级网络策略字段或旧mode枚举。Character Input Binding必须是Character/Spawn且值类型与唯一InputValueId精确匹配，ActionWindow Fact Projection必须是Bool/Frame/Frame并带稳定windowType、windowId和digest。AI Blackboard只接受AI scope/lifetime declaration，禁止携带Character Input Binding或Fact Projection。
 
 已有实体必须保留导出的stable identity。新实体使用`local:<meaningful-id>`；apply后的反向导出替换为真实stable identity。数组按stable identity规范化；curve key、condition term等业务有序集合保留业务顺序。
 

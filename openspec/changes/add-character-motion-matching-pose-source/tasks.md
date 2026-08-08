@@ -362,9 +362,9 @@
 - [x] 13.5 保存每个history sample的left/right Foot Feature。
 - [x] 13.6 从相邻Base slot sample计算bone velocity。
 - [x] 13.7 在全部PoseSlot求值后定位BaseLocomotionSlot frame。
-- [x] 13.8 在PredictiveFootPlacement Goals与FullBodyIK前追加Base slot sample。
+- [x] 13.8 在FootGrounding Baseline Goals、可选PredictiveFootPlacementModifier Final Goals与FullBodyIK前追加Base slot sample。
 - [x] 13.9 禁止追加FullBody overlay后的Final Pose。
-- [x] 13.10 禁止追加FinalIK Grounding或FullBodyIK修改后的pose。
+- [x] 13.10 禁止追加FootGrounding current/contact/anchor/pelvis、Predictive Modifier或FullBodyIK修改后的pose。
 - [x] 13.11 禁止追加VisualRoot world correction。
 - [x] 13.12 Body ResetSequence变化时清空history。
 - [x] 13.13 Base slot Invalid时记录gap但不伪造sample。
@@ -522,9 +522,9 @@
 - [x] 18.14 同帧求值全部PoseSlotFrame。
 - [x] 18.15 同帧只求值一次Pose Graph。
 - [x] 18.16 Pose Graph完成后追加Base MM Pose History。
-- [x] 18.17 History追加后执行PredictiveFootPlacement Goals与唯一FullBodyIK。
+- [x] 18.17 History追加后执行FootGrounding Baseline Goals、可选PredictiveFootPlacementModifier Final Goals与唯一FullBodyIK。
 - [x] 18.18 FullBodyIK与FinalPublication后推进Camera。
-- [x] 18.19 更新Reset顺序清理MM、Blend、Pose Graph、FinalIK Grounding、Predictive Extension与FullBodyIK状态。
+- [x] 18.19 更新Reset顺序清理MM、Blend、Pose Graph、FootGrounding current/contact/anchor/pelvis、Predictive Extension与FullBodyIK状态。
 - [x] 18.20 更新Dispose顺序完成jobs并释放MM workspace。
 - [x] 18.21 拒绝同一PresentationFrame重复search、advance或history append。
 
@@ -557,9 +557,9 @@
 - [x] 20.4 复用Stored Pose Foot Feature aggregate。
 - [x] 20.5 复用局部Inertialization的Foot Feature transition。
 - [x] 20.6 让Pose Graph按最终per-foot contribution输出MM feature。
-- [x] 20.7 让PredictiveFootPlacement只消费最终Pose贡献与正式Foot Feature输入。
-- [x] 20.8 禁止PredictiveFootPlacement读取MM Database、Query、Cost与Selection。
-- [x] 20.9 禁止MM读取PredictiveFootPlacement Locked/Sliding/anchor、FinalIK Grounding或FullBodyIK结果。
+- [x] 20.7 让FootGrounding只消费最终Pose贡献与正式Foot Feature输入，让PredictiveFootPlacementModifier只消费Baseline Goals、Swing资格与未来落点输入。
+- [x] 20.8 禁止FootGrounding与PredictiveFootPlacementModifier读取MM Database、Query、Cost与Selection。
+- [x] 20.9 禁止MM读取FootGrounding current trace/smoothing、contact/anchor/pelvis、PredictiveFootPlacementModifier future结果或FullBodyIK结果。
 - [x] 20.10 FullBodyAction覆盖期间保持Base MM Search Cadence。
 - [x] 20.11 FullBodyAction覆盖期间保持Base MM source sampling。
 - [x] 20.12 FullBodyAction覆盖期间持续更新Base Pose History。
@@ -668,7 +668,7 @@
 - [x] 23.8 删除MM查询InputAction、Scene Transform与Network packet的潜在接线。
 - [x] 23.9 让诊断宿主只在显式选择的Projection包含MM payload时读取正式MM runtime snapshot。
 - [x] 23.10 让诊断宿主区分“项目具备MM能力”与“当前Definition未启用MM”。
-- [x] 23.11 保持Motion Warp、Marker Sync、PredictiveFootPlacement、FullBodyIK与MM诊断名称互不混淆。
+- [x] 23.11 保持Motion Warp、Marker Sync、FootGrounding、PredictiveFootPlacementModifier、FullBodyIK与MM诊断名称互不混淆。
 - [x] 23.12 更新Animation Presentation Profile Inspector帮助文本。
 - [x] 23.13 更新Database Inspector的显式重操作提示。
 - [x] 23.13a 更新Source Set Inspector的“登记不构建”提示。
@@ -679,7 +679,7 @@
 - [x] 23.17 更新`openspec/project.md`，明确Corin未配置MM且资产链保持现状。
 - [x] 23.18 将current specs中“项目没有Motion Matching”收敛为“能力可选、按producer显式启用”。
 - [x] 23.19 保持`character-state-timeline-authoring-loop`及Corin视觉Timeline与Marker合同不被本change修改。
-- [x] 23.20 记录最终`Accepted/Selected Trajectory -> Query -> Exact Top-K -> Plan -> Pose Source -> Blend Stack -> Pose Graph -> PredictiveFootPlacement Goals -> FullBodyIK`链路。
+- [x] 23.20 记录最终`Accepted/Selected Trajectory -> Query -> Exact Top-K -> Plan -> Pose Source -> Blend Stack -> Pose Graph -> FootGrounding Baseline Goals -> optional PredictiveFootPlacementModifier Final Goals -> FullBodyIK`链路。
 - [x] 23.21 记录UE 5.8比较边界并避免宣称未实现的Warping、Traversal或Interaction能力。
 - [x] 23.22 将已落盘的EntryVisualAdvanceRate、PoseTime、continuous cycle与SourcePoseContinuityIdentity合同同步到`design.md`。
 - [x] 23.23 将完整AnimationPoseSourceId、source-neutral request字段与时间采样Scenario同步到Presentation spec delta。

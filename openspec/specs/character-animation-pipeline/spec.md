@@ -232,6 +232,10 @@ Action lifecycle MUST只以所选producer的第一份匹配generation的合法vi
 - **THEN** Runtime MUST Discard Pending并保留Committed状态
 - **AND** 原异常 MUST继续向上报告
 
+### Requirement: Rollback Action 生命周期必须尊重确认终态
+
+Rollback产生的Action Select与Sample属于可重基的预测生命周期；Complete与Release属于确认后终态。Action Playback Runtime MUST在现有Animancer Evaluate Barrier前的事务内原子处理受影响generation的lifecycle、sample history、Slot usage、source continuity与release ownership。回滚撤销未确认Select或Sample MUST不转换为业务Release；confirmed terminal提交后，同generation的Sample MUST拒绝并进入正式Faulted。
+
 #### Scenario: Graph Evaluate发生不可预期异常
 
 - **WHEN** Animancer Graph Evaluate或Barrier后的Seal发生无法证明无外部副作用的异常

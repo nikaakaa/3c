@@ -374,7 +374,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPresentationFactFrame m_PreviousFrame;
         Vector2 m_PreviousPlanarVelocity;
         double m_PresentationTime;
-        ulong m_ResetSequence;
+        ulong m_BodyBranchSequence;
+        ulong m_BodyDiscontinuityGeneration;
         ulong m_LatestIntentTick;
 
         internal CharacterPresentationFactProjector(ActorId actorId)
@@ -384,21 +385,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ActorId = actorId;
         }
 
+        internal void CaptureBodyBranch(
+            ulong branchSequence,
+            CharacterBodyPresentationResetReason reason)
+        {
+            if (branchSequence == 0 ||
+                reason < CharacterBodyPresentationResetReason.Initialization ||
+                reason > CharacterBodyPresentationResetReason.SelectedStreamReset)
+            {
+                throw new ArgumentException("Presentation Body branch identity is invalid.");
+            }
+            if (m_BodyBranchSequence != 0 && branchSequence < m_BodyBranchSequence)
+                throw new InvalidOperationException("Presentation Body branch sequence regressed.");
+            if (branchSequence == m_BodyBranchSequence)
+                return;
+            if (reason == CharacterBodyPresentationResetReason.CommittedBranchReplacement)
+            {
+                RetargetBodyBranch(branchSequence);
+                return;
+            }
+            ResetBodyBranch(branchSequence);
+        }
+
         internal void CaptureIntent(CharacterPresentationTrajectoryIntent intent)
         {
             if (intent.ActorId != m_ActorId)
                 throw new InvalidOperationException("Presentation Fact Intent targets another Actor.");
             if (intent.ResetSequence == 0)
-                throw new InvalidOperationException("Presentation Fact Intent has no Body discontinuity generation.");
-            if (m_ResetSequence != 0 && intent.ResetSequence < m_ResetSequence)
-                throw new InvalidOperationException("Presentation Fact Intent discontinuity generation regressed.");
-            if (intent.ResetSequence != m_ResetSequence)
+                throw new InvalidOperationException("Presentation Fact Intent has no Body branch sequence.");
+            if (intent.ResetSequence != m_BodyBranchSequence)
+                throw new InvalidOperationException("Presentation Fact Intent does not match the current Body branch.");
+            if (intent.CurrentTick.Value <= m_LatestIntentTick)
             {
-                ResetBranch(intent.ResetSequence);
-            }
-            else if (intent.CurrentTick.Value <= m_LatestIntentTick)
-            {
-                throw new InvalidOperationException("Presentation Fact Intent Tick duplicated or regressed.");
+                ReplaceBranchFrom(intent.CurrentTick.Value);
             }
             m_Intents.Add(intent.CurrentTick.Value, intent);
             m_LatestIntentTick = intent.CurrentTick.Value;
@@ -416,12 +435,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             if (bodyFrame.ResetSequence == 0)
                 throw new InvalidOperationException("Presentation Body has no discontinuity generation.");
-            if (bodyFrame.ResetSequence != m_ResetSequence)
-            {
-                if (bodyFrame.ResetSequence < m_ResetSequence)
-                    throw new InvalidOperationException("Presentation Body discontinuity generation regressed.");
-                ResetBranch(bodyFrame.ResetSequence);
-            }
+            if (bodyFrame.ResetSequence != m_BodyBranchSequence ||
+                m_BodyDiscontinuityGeneration == 0)
+                throw new InvalidOperationException("Presentation Body branch was not captured before Fact projection.");
             double sampleTick = bodyFrame.PreviousTick +
                                 (bodyFrame.CurrentTick - bodyFrame.PreviousTick) *
                                 (double)bodyFrame.SampleAlpha;
@@ -454,7 +470,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 facingError,
                 ResolveMotionPhase(bodyFrame.TargetGrounded, intent.HasMotion, speed, velocity.y),
                 intent.MovementModeId,
-                bodyFrame.ResetSequence);
+                m_BodyDiscontinuityGeneration);
             m_PreviousFrame = frame;
             m_PreviousPlanarVelocity = planarVelocity;
             TrimIntents(bodyFrame.PreviousTick);
@@ -468,7 +484,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PreviousFrame = default;
             m_PreviousPlanarVelocity = default;
             m_PresentationTime = 0d;
-            m_ResetSequence = 0;
+            m_BodyBranchSequence = 0;
+            m_BodyDiscontinuityGeneration = 0;
             m_LatestIntentTick = 0;
         }
 
@@ -505,14 +522,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return IntentSample.From(previous);
         }
 
-        void ResetBranch(ulong resetSequence)
+        void ResetBodyBranch(ulong branchSequence)
         {
             m_Intents.Clear();
             m_TrimIntentTicks.Clear();
             m_PreviousFrame = default;
             m_PreviousPlanarVelocity = default;
-            m_ResetSequence = resetSequence;
+            m_BodyBranchSequence = branchSequence;
+            m_BodyDiscontinuityGeneration = branchSequence;
             m_LatestIntentTick = 0;
+        }
+
+        void RetargetBodyBranch(ulong branchSequence)
+        {
+            if (m_BodyDiscontinuityGeneration == 0)
+                throw new InvalidOperationException("Presentation Body branch cannot retarget before initialization.");
+            m_Intents.Clear();
+            m_TrimIntentTicks.Clear();
+            m_BodyBranchSequence = branchSequence;
+            m_LatestIntentTick = 0;
+        }
+
+        void ReplaceBranchFrom(ulong firstReplacementTick)
+        {
+            m_TrimIntentTicks.Clear();
+            foreach (ulong tick in m_Intents.Keys)
+            {
+                if (tick >= firstReplacementTick)
+                    m_TrimIntentTicks.Add(tick);
+            }
+            for (int i = 0; i < m_TrimIntentTicks.Count; i++)
+                m_Intents.Remove(m_TrimIntentTicks[i]);
+            m_LatestIntentTick = 0;
+            foreach (ulong tick in m_Intents.Keys)
+                m_LatestIntentTick = tick;
+            m_TrimIntentTicks.Clear();
         }
 
         void TrimIntents(ulong retainTick)

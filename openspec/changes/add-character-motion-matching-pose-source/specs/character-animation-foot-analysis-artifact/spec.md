@@ -40,10 +40,10 @@ Source Set Inspector MUST提供显式`Build Source Set Foot Analysis`重操作�
 
 ### Requirement: Foot Analysis与MM Contact Protection必须保持语义分层
 
-Foot Analysis Artifact MUST继续只表达动画局部特征；MM MAY据此判断candidate contact compatibility，但 MUST不把该结果写回Foot Artifact或宣称为world contact。Foot Placement MUST继续根据最终pose与world query决定Locked/Sliding/Free。
+Foot Analysis Artifact MUST继续只表达动画局部特征；MM MAY据此判断candidate contact compatibility，但 MUST不把该结果写回Foot Artifact或宣称为world contact。普通FootGrounding MUST根据最终pose与world query先生成Lyra current目标，再用最终Foot Feature形成唯一contact/anchor稳定与Pelvis Resolve Baseline Goals；可选Predictive Modifier MUST只根据明确Swing且未被anchor拥有的资格决定rewrite。
 
 #### Scenario: MM认为左脚处于protected plant
 
 - **WHEN** query使用Foot Artifact feature拒绝一个candidate
 - **THEN** 该拒绝 MUST只影响Presentation pose selection
-- **AND** MUST不产生Gameplay Grounded、FinalIK Grounding结果或PredictiveFootPlacement world anchor
+- **AND** MUST不产生Gameplay Grounded、Lyra current trace/smoothing结果或PredictiveFootPlacementModifier world-query result

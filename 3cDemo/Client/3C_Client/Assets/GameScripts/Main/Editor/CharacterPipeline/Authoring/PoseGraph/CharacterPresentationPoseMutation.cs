@@ -1350,7 +1350,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterModifyBonePosePayload current => SetModifyBone(current, fieldId, value),
                 CharacterRootOrientationWarpPosePayload current when fieldId == "yaw-curve" => new CharacterRootOrientationWarpPosePayload(Require<ThirdPersonCharacter.Pipeline.Motion.RootMotion.RootMotionCurveAsset>(value, fieldId)),
                 CharacterPoseBoneIkGoalsPayload current when fieldId == "bindings" => new CharacterPoseBoneIkGoalsPayload(Require<CharacterPoseBoneIkGoalBinding[]>(value, fieldId)),
-                CharacterPredictiveFootPlacementPosePayload current => SetPredictiveFootPlacement(current, fieldId, value),
+                CharacterFootGroundingPosePayload current => SetFootGrounding(current, fieldId, value),
                 CharacterFullBodyIkPosePayload current when fieldId == "profile" => new CharacterFullBodyIkPosePayload(Require<CharacterFullBodyIkProfile>(value, fieldId)),
                 CharacterPoseSubgraphPayload current when fieldId == "graph-id" => new CharacterPoseSubgraphPayload(Subgraph(value)),
                 _ => throw new InvalidOperationException($"Pose payload '{payload.GetType().Name}' does not declare writable field '{fieldId}'.")
@@ -1430,7 +1430,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             field == "rotation" ? Require<Quaternion>(value, field).eulerAngles : current.Rotation.eulerAngles,
             field == "scale" ? Require<Vector3>(value, field) : current.Scale);
 
-        static CharacterPoseNodePayload SetPredictiveFootPlacement(CharacterPredictiveFootPlacementPosePayload current, string field, object value) => new CharacterPredictiveFootPlacementPosePayload(
+        static CharacterPoseNodePayload SetFootGrounding(CharacterFootGroundingPosePayload current, string field, object value) => new CharacterFootGroundingPosePayload(
             field == "profile" ? Require<CharacterFootPlacementProfile>(value, field) : current.Profile,
             field == "calibration" ? Require<CharacterFootPlacementRigCalibration>(value, field) : current.Calibration);
 

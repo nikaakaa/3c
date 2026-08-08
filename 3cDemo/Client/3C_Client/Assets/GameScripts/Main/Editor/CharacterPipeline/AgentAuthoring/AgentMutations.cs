@@ -33,7 +33,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         EnsureBlackboardDeclaration,
         MoveBlackboardDeclaration,
         DeleteBlackboardDeclaration,
-        EnsureBlackboardWrite,
+        SetBlackboardSchemaRevision,
+        EnsureExposedPropertyNode,
         EnsureTimelineTreeClip,
         EnsureMotionCurveTrack,
         EnsureMotionCurveClip,
@@ -849,13 +850,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             object defaultValue,
             PipelineBlackboardVariableScope scope,
             PipelineBlackboardVariableLifetime lifetime,
-            PipelineBlackboardVariableAuthority authority,
-            PipelineBlackboardVariableSyncPolicy syncPolicy,
-            string inputValueId,
-            PipelineBlackboardFactProjectionKind factProjection,
-            string windowType,
-            string windowId,
-            ulong digest,
+            AgentSnapshotBlackboardInputBinding inputBinding,
+            AgentSnapshotBlackboardFactProjection factProjection,
             string categoryPath)
             : base(id, AgentMutationKind.EnsureBlackboardDeclaration, "ensure_blackboard_declaration", AgentMutationOutputKind.BlackboardDeclaration, path, graph.Identity, Vector2.zero)
         {
@@ -866,13 +862,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             DefaultValue = defaultValue;
             Scope = scope;
             Lifetime = lifetime;
-            Authority = authority;
-            SyncPolicy = syncPolicy;
-            InputValueId = inputValueId ?? string.Empty;
+            InputBinding = inputBinding;
             FactProjection = factProjection;
-            WindowType = windowType ?? string.Empty;
-            WindowId = windowId ?? string.Empty;
-            Digest = digest;
             CategoryPath = categoryPath ?? string.Empty;
         }
 
@@ -883,13 +874,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public object DefaultValue { get; }
         public PipelineBlackboardVariableScope Scope { get; }
         public PipelineBlackboardVariableLifetime Lifetime { get; }
-        public PipelineBlackboardVariableAuthority Authority { get; }
-        public PipelineBlackboardVariableSyncPolicy SyncPolicy { get; }
-        public string InputValueId { get; }
-        public PipelineBlackboardFactProjectionKind FactProjection { get; }
-        public string WindowType { get; }
-        public string WindowId { get; }
-        public ulong Digest { get; }
+        public AgentSnapshotBlackboardInputBinding InputBinding { get; }
+        public AgentSnapshotBlackboardFactProjection FactProjection { get; }
         public string CategoryPath { get; }
     }
 
@@ -906,6 +892,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string DeclarationAuthoringId { get; }
     }
 
+    public sealed class AgentSetBlackboardSchemaRevisionMutation : AgentMutation
+    {
+        public AgentSetBlackboardSchemaRevisionMutation(
+            string id,
+            string path,
+            AgentGraphTargetReference graph,
+            int revision)
+            : base(id, AgentMutationKind.SetBlackboardSchemaRevision, "set_blackboard_schema_revision", AgentMutationOutputKind.None, path, graph.Identity, Vector2.zero)
+        {
+            Graph = graph;
+            Revision = revision;
+        }
+
+        public AgentGraphTargetReference Graph { get; }
+        public int Revision { get; }
+    }
+
     public sealed class AgentMoveBlackboardDeclarationMutation : AgentMutation
     {
         public AgentMoveBlackboardDeclarationMutation(
@@ -918,13 +921,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             Type valueType,
             PipelineBlackboardVariableScope scope,
             PipelineBlackboardVariableLifetime lifetime,
-            PipelineBlackboardVariableAuthority authority,
-            PipelineBlackboardVariableSyncPolicy syncPolicy,
-            string inputValueId,
-            PipelineBlackboardFactProjectionKind factProjection,
-            string windowType,
-            string windowId,
-            ulong digest,
+            AgentSnapshotBlackboardInputBinding inputBinding,
+            AgentSnapshotBlackboardFactProjection factProjection,
             string categoryPath)
             : base(id, AgentMutationKind.MoveBlackboardDeclaration, "move_blackboard_declaration", AgentMutationOutputKind.BlackboardDeclaration, path, targetGraph.Identity, Vector2.zero)
         {
@@ -935,13 +933,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             ValueType = valueType;
             Scope = scope;
             Lifetime = lifetime;
-            Authority = authority;
-            SyncPolicy = syncPolicy;
-            InputValueId = inputValueId ?? string.Empty;
+            InputBinding = inputBinding;
             FactProjection = factProjection;
-            WindowType = windowType ?? string.Empty;
-            WindowId = windowId ?? string.Empty;
-            Digest = digest;
             CategoryPath = categoryPath ?? string.Empty;
         }
 
@@ -952,32 +945,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public Type ValueType { get; }
         public PipelineBlackboardVariableScope Scope { get; }
         public PipelineBlackboardVariableLifetime Lifetime { get; }
-        public PipelineBlackboardVariableAuthority Authority { get; }
-        public PipelineBlackboardVariableSyncPolicy SyncPolicy { get; }
-        public string InputValueId { get; }
-        public PipelineBlackboardFactProjectionKind FactProjection { get; }
-        public string WindowType { get; }
-        public string WindowId { get; }
-        public ulong Digest { get; }
+        public AgentSnapshotBlackboardInputBinding InputBinding { get; }
+        public AgentSnapshotBlackboardFactProjection FactProjection { get; }
         public string CategoryPath { get; }
     }
 
-    public sealed class AgentEnsureBlackboardWriteMutation : AgentMutation
+    public sealed class AgentEnsureExposedPropertyNodeMutation : AgentMutation
     {
-        public AgentEnsureBlackboardWriteMutation(
+        public AgentEnsureExposedPropertyNodeMutation(
             string id,
             string path,
             AgentGraphTargetReference graph,
             string elementAuthoringId,
             AgentAuthoringReference declaration,
-            bool value,
+            ExposedPropertyNodeType mode,
+            Type valueType,
+            object value,
             string displayName,
             Vector2 position)
-            : base(id, AgentMutationKind.EnsureBlackboardWrite, "ensure_blackboard_write", AgentMutationOutputKind.Node, path, graph.Identity, position)
+            : base(id, AgentMutationKind.EnsureExposedPropertyNode, "ensure_exposed_property_node", AgentMutationOutputKind.Node, path, graph.Identity, position)
         {
             Graph = graph;
             ElementAuthoringId = elementAuthoringId ?? string.Empty;
             Declaration = declaration;
+            Mode = mode;
+            ValueType = valueType ?? throw new ArgumentNullException(nameof(valueType));
             Value = value;
             DisplayName = displayName ?? string.Empty;
         }
@@ -985,7 +977,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentGraphTargetReference Graph { get; }
         public string ElementAuthoringId { get; }
         public AgentAuthoringReference Declaration { get; }
-        public bool Value { get; }
+        public ExposedPropertyNodeType Mode { get; }
+        public Type ValueType { get; }
+        public object Value { get; }
         public string DisplayName { get; }
     }
 

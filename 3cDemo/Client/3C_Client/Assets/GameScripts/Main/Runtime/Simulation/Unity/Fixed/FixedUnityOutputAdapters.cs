@@ -22,7 +22,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             new Dictionary<PresentationStateKey, List<EventId>>();
         readonly Dictionary<PresentationStateKey, ActivePresentationRecord> m_Applied =
             new Dictionary<PresentationStateKey, ActivePresentationRecord>();
+        readonly Dictionary<EventId, ActivePresentationRecord> m_DeferredAnimationRetirements =
+            new Dictionary<EventId, ActivePresentationRecord>();
         readonly HashSet<PresentationStateKey> m_Dirty = new HashSet<PresentationStateKey>();
+        readonly HashSet<PresentationStateKey> m_ConfirmedAnimationTerminals =
+            new HashSet<PresentationStateKey>();
         readonly List<CharacterPresentationCommand> m_ConfirmedPublishes =
             new List<CharacterPresentationCommand>();
         bool m_CommitActive;
@@ -91,7 +95,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             RequireCommit();
             try
             {
-                ReconcileDirtyStates();
+                ReconcileDirtyStates(confirmedTick);
+                FlushDeferredAnimationRetirements(confirmedTick);
                 for (int i = 0; i < m_ConfirmedPublishes.Count; i++)
                     m_Runtime.Publish(m_ConfirmedPublishes[i]);
                 PruneConfirmed(confirmedTick);
@@ -116,7 +121,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_ByEvent.Clear();
             m_ByState.Clear();
             m_Applied.Clear();
+            m_DeferredAnimationRetirements.Clear();
             m_Dirty.Clear();
+            m_ConfirmedAnimationTerminals.Clear();
             m_ConfirmedPublishes.Clear();
             m_CommitActive = false;
             m_Runtime.Reset();
@@ -151,34 +158,191 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_Dirty.Add(record.Key);
         }
 
-        void ReconcileDirtyStates()
+        void ReconcileDirtyStates(ulong confirmedTick)
         {
             var keys = new List<PresentationStateKey>(m_Dirty);
             keys.Sort();
             for (int i = 0; i < keys.Count; i++)
             {
+                if (!TryResolveLatest(keys[i], out ActivePresentationRecord current) ||
+                    !IsTerminal(current.Command) ||
+                    current.Command.Header.Tick.Value > confirmedTick)
+                {
+                    continue;
+                }
+                m_ConfirmedAnimationTerminals.Add(keys[i]);
+            }
+            for (int i = 0; i < keys.Count; i++)
+            {
                 PresentationStateKey key = keys[i];
                 bool hasCurrent = TryResolveLatest(key, out ActivePresentationRecord current);
                 bool hasApplied = m_Applied.TryGetValue(key, out ActivePresentationRecord applied);
+                if (hasCurrent &&
+                    IsTerminal(current.Command) &&
+                    current.Command.Header.Tick.Value > confirmedTick)
+                {
+                    continue;
+                }
                 if (hasCurrent && hasApplied)
                 {
                     if (!current.Command.Header.EventId.Equals(applied.Command.Header.EventId))
                     {
-                        m_Runtime.Replace(applied.Command, current.Command);
+                        if (IsAnimationPlaybackCommand(current.Command) &&
+                            IsAnimationPlaybackCommand(applied.Command) &&
+                            !SamePlayback(current.Command, applied.Command))
+                        {
+                            PublishOrRestore(current);
+                            if (HasConfirmedTerminal(applied.Command))
+                                RemoveDeferredAnimationRetirements(applied.Command);
+                            else
+                                QueueAnimationRetirement(applied);
+                        }
+                        else
+                        {
+                            m_Runtime.Replace(applied.Command, current.Command);
+                        }
                         m_Applied[key] = current;
                     }
                 }
                 else if (hasCurrent)
                 {
-                    m_Runtime.Publish(current.Command);
+                    if (IsTerminal(current.Command))
+                    {
+                        RemoveDeferredAnimationRetirements(current.Command);
+                        m_Runtime.Publish(current.Command);
+                    }
+                    else
+                        PublishOrRestore(current);
                     m_Applied[key] = current;
                 }
                 else if (hasApplied)
                 {
-                    m_Runtime.Retire(applied.Command);
+                    if (IsAnimationPlaybackCommand(applied.Command))
+                    {
+                        if (HasConfirmedTerminal(applied.Command))
+                            RemoveDeferredAnimationRetirements(applied.Command);
+                        else
+                            QueueAnimationRetirement(applied);
+                    }
+                    else
+                    {
+                        m_Runtime.Retire(applied.Command);
+                    }
                     m_Applied.Remove(key);
                 }
             }
+        }
+
+        void PublishOrRestore(ActivePresentationRecord record)
+        {
+            if (!TryTakeDeferredAnimationRetirement(record, out ActivePresentationRecord deferred))
+            {
+                m_Runtime.Publish(record.Command);
+                return;
+            }
+            if (!deferred.Key.Equals(record.Key) ||
+                !deferred.Command.Header.EventId.Equals(record.Command.Header.EventId))
+            {
+                if (!deferred.Key.Equals(record.Key))
+                    m_Runtime.Publish(record.Command);
+                else
+                    m_Runtime.Replace(deferred.Command, record.Command);
+            }
+        }
+
+        void QueueAnimationRetirement(ActivePresentationRecord record)
+        {
+            if (IsTerminal(record.Command) ||
+                m_DeferredAnimationRetirements.ContainsKey(record.Command.Header.EventId))
+            {
+                return;
+            }
+            foreach (ActivePresentationRecord deferred in m_DeferredAnimationRetirements.Values)
+            {
+                if (SamePlayback(deferred.Command, record.Command))
+                    return;
+            }
+            m_DeferredAnimationRetirements.Add(record.Command.Header.EventId, record);
+        }
+
+        void FlushDeferredAnimationRetirements(ulong confirmedTick)
+        {
+            var remove = new List<EventId>();
+            foreach (KeyValuePair<EventId, ActivePresentationRecord> pair in m_DeferredAnimationRetirements)
+            {
+                if (pair.Value.Command.Header.Tick.Value > confirmedTick)
+                    continue;
+                m_Runtime.Retire(pair.Value.Command);
+                remove.Add(pair.Key);
+            }
+            for (int i = 0; i < remove.Count; i++)
+                m_DeferredAnimationRetirements.Remove(remove[i]);
+        }
+
+        bool TryTakeDeferredAnimationRetirement(
+            ActivePresentationRecord current,
+            out ActivePresentationRecord record)
+        {
+            record = default;
+            EventId found = default;
+            bool hasFound = false;
+            foreach (KeyValuePair<EventId, ActivePresentationRecord> pair in m_DeferredAnimationRetirements)
+            {
+                if (!SamePlayback(pair.Value.Command, current.Command))
+                    continue;
+                found = pair.Key;
+                record = pair.Value;
+                hasFound = true;
+                break;
+            }
+            if (hasFound)
+            {
+                m_DeferredAnimationRetirements.Remove(found);
+                return true;
+            }
+            return false;
+        }
+
+        void RemoveDeferredAnimationRetirements(CharacterPresentationCommand command)
+        {
+            var remove = new List<EventId>();
+            foreach (KeyValuePair<EventId, ActivePresentationRecord> pair in m_DeferredAnimationRetirements)
+            {
+                if (SamePlayback(pair.Value.Command, command))
+                    remove.Add(pair.Key);
+            }
+            for (int i = 0; i < remove.Count; i++)
+                m_DeferredAnimationRetirements.Remove(remove[i]);
+        }
+
+        bool HasConfirmedTerminal(CharacterPresentationCommand command)
+        {
+            return m_ConfirmedAnimationTerminals.Contains(
+                new PresentationStateKey(
+                    "animation-terminal",
+                    command.ProducerId,
+                    command.ProducerGeneration));
+        }
+
+        static bool IsAnimationPlaybackCommand(CharacterPresentationCommand command)
+        {
+            return command.Kind == CharacterPresentationCommandKind.SelectProducer ||
+                   command.Kind == CharacterPresentationCommandKind.SampleProducer ||
+                   IsTerminal(command);
+        }
+
+        static bool IsTerminal(CharacterPresentationCommand command)
+        {
+            return command.Kind == CharacterPresentationCommandKind.CompleteProducer ||
+                   command.Kind == CharacterPresentationCommandKind.ReleaseProducer;
+        }
+
+        static bool SamePlayback(
+            CharacterPresentationCommand left,
+            CharacterPresentationCommand right)
+        {
+            return string.Equals(left.ProducerId, right.ProducerId, StringComparison.Ordinal) &&
+                   left.ProducerGeneration == right.ProducerGeneration;
         }
 
         bool TryResolveLatest(PresentationStateKey key, out ActivePresentationRecord latest)

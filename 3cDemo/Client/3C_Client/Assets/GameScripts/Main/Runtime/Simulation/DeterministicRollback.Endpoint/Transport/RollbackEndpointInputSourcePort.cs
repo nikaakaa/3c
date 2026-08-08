@@ -17,6 +17,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             public RollbackActorInputFrame PendingLocalFrame;
             public RollbackCanonicalInputBundle PendingPredicted;
             public ulong PendingSimulationTick;
+            public ulong LocalExplicitFrontier;
             public ulong NextInputSequence;
             public ulong NextPredictedBundleSequence;
             public ulong LastOuterSourceTick;
@@ -48,6 +49,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         RollbackActorInputFrame m_PendingLocalFrame;
         RollbackCanonicalInputBundle m_PendingPredicted;
         ulong m_PendingSimulationTick;
+        ulong m_LocalExplicitFrontier;
         ulong m_NextInputSequence = 1;
         ulong m_NextPredictedBundleSequence = 1;
         ulong m_LastOuterSourceTick;
@@ -164,6 +166,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 PendingLocalFrame = m_PendingLocalFrame,
                 PendingPredicted = m_PendingPredicted,
                 PendingSimulationTick = m_PendingSimulationTick,
+                LocalExplicitFrontier = m_LocalExplicitFrontier,
                 NextInputSequence = m_NextInputSequence,
                 NextPredictedBundleSequence = m_NextPredictedBundleSequence,
                 LastOuterSourceTick = m_LastOuterSourceTick,
@@ -188,6 +191,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_PendingLocalFrame = value.PendingLocalFrame;
             m_PendingPredicted = value.PendingPredicted;
             m_PendingSimulationTick = value.PendingSimulationTick;
+            m_LocalExplicitFrontier = value.LocalExplicitFrontier;
             m_NextInputSequence = value.NextInputSequence;
             m_NextPredictedBundleSequence = value.NextPredictedBundleSequence;
             m_LastOuterSourceTick = value.LastOuterSourceTick;
@@ -205,7 +209,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     pair.Key,
                     pair.Value.ExactInputHitCount,
                     pair.Value.PredictedFallbackCount,
-                    pair.Value.LastArrivalDeltaTicks));
+                    pair.Value.LastArrivalDeltaTicks,
+                    ExplicitFrontier(pair.Key)));
             }
             remote.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
             FixedCharacterControlSourceDiagnosticsSnapshot local = m_InputAdapter.CaptureDiagnostics();
@@ -218,7 +223,25 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_RelayedArrivalCount,
                 m_RelayedArrivalLeadCount,
                 m_RelayedArrivalLateCount,
-                m_LastRelayedArrivalDeltaTicks);
+                m_LastRelayedArrivalDeltaTicks,
+                ExplicitFrontier(m_LocalActorId));
+        }
+
+        ulong ExplicitFrontier(ActorId actorId)
+        {
+            if (actorId.Equals(m_LocalActorId))
+                return m_LocalExplicitFrontier;
+            if (m_Explicit.TryGetValue(actorId, out SortedDictionary<ulong, RollbackActorInputFrame> history) &&
+                history.Count > 0)
+            {
+                ulong frontier = 0;
+                foreach (ulong tick in history.Keys)
+                    frontier = tick;
+                return frontier;
+            }
+            return m_LastConfirmed.TryGetValue(actorId, out RollbackActorInputFrame confirmed)
+                ? confirmed.Tick.Value
+                : 0;
         }
 
         void BuildLocalFrame(SimulationTick tick, SimulationTickSourceIdentity source)
@@ -246,6 +269,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 inputSequence,
                 localInput,
                 RollbackInputProvenance.LocalExplicit);
+            m_LocalExplicitFrontier = tick.Value;
             m_PendingSimulationTick = tick.Value;
         }
 

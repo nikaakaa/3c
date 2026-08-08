@@ -40,12 +40,14 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     return;
 
                 DeterministicKccContact contact = m_Queries.CastContactAt(0);
+                m_GroundProbeEvaluationCount++;
                 DeterministicKccHitStabilityReport stability = EvaluateHitStability(
                     safePosition,
                     contact,
                     previousState,
                     requestedDisplacement,
                     !upwardIntent,
+                    DeterministicKccStepRejection.None,
                     ref summary,
                     ref diagnostics);
                 FixedScalar distance = remainingDistance * contact.TimeOfImpact;

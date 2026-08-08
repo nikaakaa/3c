@@ -23,11 +23,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         SourcePhysicalPoseInvalid = 14,
         SourceVirtualBoneInvalid = 15,
         SourcePoseHistoryInvalid = 16,
-        PredictiveFootPlacementInvalid = 17,
+        FootGroundingInvalid = 17,
         PoseSpaceConversionInvalid = 18,
         WorldContextUnavailable = 19,
         FullBodyIkGoalSetInvalid = 20,
-        FullBodyIkSolverInvalid = 21
+        FullBodyIkSolverInvalid = 21,
+        PredictiveFootPlacementModifierInvalid = 22
     }
 
     internal enum AnimationFinalPoseWriteOutcome : byte

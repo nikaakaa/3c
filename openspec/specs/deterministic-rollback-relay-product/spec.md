@@ -24,7 +24,7 @@
 
 ### Requirement: Relay Server Runtime Manifest必须完整锁定会话身份
 
-Build adapter MUST生成portable `DeterministicRollbackServerManifest`，至少记录SchemaVersion、BuildId、ProductId、SessionId、listen endpoint、expected client/actor roster、Model/Protocol identity、TickRate、SemanticHash、Fixed ProgramHash、LayoutHash、CollisionWorldHash、Kcc identity/capabilities、confirmation policy、capacity和snapshot source policy。Server MUST在监听前完整校验manifest，MUST不从Unity asset、环境目录、文件存在性或默认值补齐缺失事实。
+Build adapter MUST生成portable `DeterministicRollbackServerManifest`，至少记录SchemaVersion、BuildId、ProductId、SessionId、listen endpoint、expected client/actor roster、Model/Protocol identity、TickRate、MaximumPredictionLeadTicks、SemanticHash、Fixed ProgramHash、LayoutHash、CollisionWorldHash、Kcc identity/capabilities、confirmation policy、capacity和snapshot source policy。Server MUST在监听前完整校验manifest，MUST不从Unity asset、环境目录、文件存在性或默认值补齐缺失事实。
 
 #### Scenario: Manifest缺少ProgramHash
 

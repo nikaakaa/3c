@@ -87,7 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         profiles[$"full-body:{fullBody.Profile.ProfileId}"] =
                             fullBody.Profile.Revision;
                     }
-                    if (node?.Payload is CharacterPredictiveFootPlacementPosePayload foot &&
+                    if (node?.Payload is CharacterFootGroundingPosePayload foot &&
                         foot.Profile)
                     {
                         profiles[$"foot-placement:{foot.Profile.ProfileId}"] =

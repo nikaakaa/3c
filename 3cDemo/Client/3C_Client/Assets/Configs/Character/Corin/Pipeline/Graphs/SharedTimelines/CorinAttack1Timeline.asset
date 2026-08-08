@@ -6760,6 +6760,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_RootGUID: 33e2d967-5325-410f-8401-34efa61ff376
         m_OnEnableGUID: ed0632b7-b37a-404c-9c71-704dd3c85818
         m_OnDisableGUID: d3ab225d-9add-4ea1-b2a1-27c90a33b8c5
@@ -6792,6 +6793,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_RootGUID: a45a9ce8-9cac-4c8c-bc79-b2ce7df85bc6
         m_OnEnableGUID: 65b9de6f-230d-4dec-b4f9-e44917bfe7eb
         m_OnDisableGUID: 24e90bec-632d-4bcc-a0a7-3793a1d97fad
@@ -6824,6 +6826,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_RootGUID: 379e752a-c1d4-4dd1-9502-07f716198f02
         m_OnEnableGUID: b0451f77-b183-48de-9a14-43bb6d7bcbfa
         m_OnDisableGUID: 582114d8-1b55-4968-b01b-20a6db1d0835
@@ -6856,6 +6859,7 @@ MonoBehaviour:
         m_ExposedProperties: []
         m_NodeGroups: []
         m_StackNodes: []
+        m_BlackboardAuthoringSchemaRevision: 0
         m_RootGUID: f24c1141-ebf7-49b7-8a98-962db6b6c4df
         m_OnEnableGUID: e52e43a0-44ea-4950-b6ce-13e66308bd1b
         m_OnDisableGUID: 8f008907-5f21-4609-959b-c606b1bc3e4f

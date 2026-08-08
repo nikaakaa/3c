@@ -23,6 +23,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             };
             if (!m_Planner.TryCreatePlan(drafts, report, out AgentMutationPlan plan))
                 return new AgentDocumentPreparation(null, snapshot, null, report);
+            if (!AgentMutationPortShapePreflight.Validate(snapshot, plan, report))
+                return new AgentDocumentPreparation(plan, snapshot, null, report);
 
             var session = new AgentMutationSession(definition, snapshot, plan, report, false);
             if (!session.Initialize())
@@ -95,6 +97,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             };
             if (!m_Planner.TryCreatePlan(drafts, report, out AgentMutationPlan plan))
                 return new AgentDocumentPreparation(null, snapshot, null, report);
+            if (!AgentMutationPortShapePreflight.Validate(snapshot, plan, report))
+                return new AgentDocumentPreparation(plan, snapshot, null, report);
 
             var session = new AgentMutationSession(definition, snapshot, plan, report, false);
             if (!session.Initialize())

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonSimulation.DeterministicKcc
@@ -14,6 +13,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             out DeterministicKccQuerySummary summary)
         {
             m_RayHitCount = 0;
+            m_HasClosestRayHit = false;
             closest = default;
             if (direction.SqrMagnitude == FixedScalar.Zero || distance <= FixedScalar.Zero)
             {
@@ -29,11 +29,10 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 if (TryRaycastPrimitive(origin, normalized, distance, primitive, out DeterministicKccRayHit hit))
                     AddRayHit(hit);
             }
-            Array.Sort(m_RayHits, 0, m_RayHitCount, RayHitComparer.Instance);
             summary = new DeterministicKccQuerySummary(1, candidateCount, m_RayHitCount, 0);
-            if (m_RayHitCount == 0)
+            if (!m_HasClosestRayHit)
                 return false;
-            closest = m_RayHits[0];
+            closest = m_ClosestRayHit;
             return true;
         }
 
@@ -201,16 +200,21 @@ namespace ThirdPersonSimulation.DeterministicKcc
 
         void AddRayHit(DeterministicKccRayHit hit)
         {
-            if (m_RayHitCount >= m_RayHits.Length)
+            if (m_RayHitCount >= m_Configuration.MaximumContacts)
             {
                 throw new DeterministicKccQueryException(
                     DeterministicKccQueryStage.Raycast,
                     "Canonical ray hit buffer capacity was exceeded.",
                     hit.PrimitiveId,
                     m_RayHitCount + 1,
-                    m_RayHits.Length);
+                    m_Configuration.MaximumContacts);
             }
-            m_RayHits[m_RayHitCount++] = hit;
+            m_RayHitCount++;
+            if (!m_HasClosestRayHit || IsRayHitBefore(hit, m_ClosestRayHit))
+            {
+                m_ClosestRayHit = hit;
+                m_HasClosestRayHit = true;
+            }
         }
 
         static DeterministicCollisionBounds SegmentBounds(
@@ -251,30 +255,25 @@ namespace ThirdPersonSimulation.DeterministicKcc
             };
         }
 
-        sealed class RayHitComparer : IComparer<DeterministicKccRayHit>
+        static bool IsRayHitBefore(DeterministicKccRayHit left, DeterministicKccRayHit right)
         {
-            public static RayHitComparer Instance { get; } = new RayHitComparer();
-
-            public int Compare(DeterministicKccRayHit left, DeterministicKccRayHit right)
-            {
-                int distance = left.Distance.CompareTo(right.Distance);
-                if (distance != 0)
-                    return distance;
-                int surface = left.SurfaceId.CompareTo(right.SurfaceId);
-                if (surface != 0)
-                    return surface;
-                int primitive = left.PrimitiveId.CompareTo(right.PrimitiveId);
-                if (primitive != 0)
-                    return primitive;
-                int feature = left.FeatureId.CompareTo(right.FeatureId);
-                if (feature != 0)
-                    return feature;
-                int x = left.Point.X.Raw.CompareTo(right.Point.X.Raw);
-                if (x != 0)
-                    return x;
-                int y = left.Point.Y.Raw.CompareTo(right.Point.Y.Raw);
-                return y != 0 ? y : left.Point.Z.Raw.CompareTo(right.Point.Z.Raw);
-            }
+            int distance = left.Distance.CompareTo(right.Distance);
+            if (distance != 0)
+                return distance < 0;
+            int surface = left.SurfaceId.CompareTo(right.SurfaceId);
+            if (surface != 0)
+                return surface < 0;
+            int primitive = left.PrimitiveId.CompareTo(right.PrimitiveId);
+            if (primitive != 0)
+                return primitive < 0;
+            int feature = left.FeatureId.CompareTo(right.FeatureId);
+            if (feature != 0)
+                return feature < 0;
+            if (left.Point.X.Raw != right.Point.X.Raw)
+                return left.Point.X.Raw < right.Point.X.Raw;
+            if (left.Point.Y.Raw != right.Point.Y.Raw)
+                return left.Point.Y.Raw < right.Point.Y.Raw;
+            return left.Point.Z.Raw < right.Point.Z.Raw;
         }
     }
 }

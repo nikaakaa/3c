@@ -50,7 +50,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_TypedGraph:
     m_GraphId: ed8ff472330e4057a900af3eae5dfb8f
-    m_ContentRevision: cf31e9a5e24f42b1a2f428623a158b67
+    m_ContentRevision: 89ffc79642574bd7a81e817c6fd44af2
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
@@ -97,7 +97,7 @@ MonoBehaviour:
         rid: 665192033737244900
       m_DynamicPorts: []
     - m_NodeId: cc0cb7f36cb9426d88f6ae03f255a013
-      m_DisplayName: Foot Placement
+      m_DisplayName: Foot Grounding
       m_Payload:
         rid: 665191900899704840
       m_DynamicPorts: []
@@ -154,11 +154,6 @@ MonoBehaviour:
       m_SourcePortId: pose
       m_TargetNodeId: corin.pose.local-to-component
       m_TargetPortId: local-pose
-    - m_EdgeId: corin.pose.local-to-component-predictive-foot-placement
-      m_SourceNodeId: corin.pose.local-to-component
-      m_SourcePortId: component-pose
-      m_TargetNodeId: cc0cb7f36cb9426d88f6ae03f255a013
-      m_TargetPortId: pose
     - m_EdgeId: corin.pose.local-to-component-full-body-ik
       m_SourceNodeId: corin.pose.local-to-component
       m_SourcePortId: component-pose
@@ -184,9 +179,12 @@ MonoBehaviour:
       m_SourcePortId: goals
       m_TargetNodeId: 1acecc122c13d615cc425fa3cc8a70d0
       m_TargetPortId: foot-goals
+    - m_EdgeId: corin.pose.local-to-component-foot-grounding
+      m_SourceNodeId: corin.pose.local-to-component
+      m_SourcePortId: component-pose
+      m_TargetNodeId: cc0cb7f36cb9426d88f6ae03f255a013
+      m_TargetPortId: pose
     m_Layout:
-    - m_NodeId: 09e41ce9fa3f4440b10013916e72b185
-      m_Position: {x: -240, y: -160}
     - m_NodeId: corin.full-body-action.playback-input
       m_Position: {x: -483.3333, y: 115.99999}
     - m_NodeId: corin.full-body-action.slot
@@ -207,6 +205,8 @@ MonoBehaviour:
       m_Position: {x: 640.6666, y: 536.6667}
     - m_NodeId: fd84c35ae6ed49a1b72703b92795c43c
       m_Position: {x: 236.66666, y: 562}
+    - m_NodeId: 09e41ce9fa3f4440b10013916e72b185
+      m_Position: {x: -190.66666, y: -131.33334}
   m_TypedGraphCatalog:
   - m_GraphId: corin.locomotion.idle.graph
     m_ContentRevision: dae5e9365ba74cd78bb57ce7533b1cbe
@@ -1764,7 +1764,7 @@ MonoBehaviour:
       data:
         m_ParameterId: animation.foot-placement-weight
     - rid: 665191900899704840
-      type: {class: CharacterPredictiveFootPlacementPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+      type: {class: CharacterFootGroundingPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
       data:
         m_Profile: {fileID: 11400000, guid: 6b94b222eff64c24a2ecf708238ef9a1, type: 2}

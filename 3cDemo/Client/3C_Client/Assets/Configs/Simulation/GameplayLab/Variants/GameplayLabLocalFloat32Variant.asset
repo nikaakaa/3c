@@ -16,7 +16,7 @@ MonoBehaviour:
   m_RuntimeRootPrefab: {fileID: 2689725502635145400, guid: bb0dd6754f3e1fc459ac248422ba466d,
     type: 3}
   m_NumericProfileId: float32-ieee754
-  m_TargetAbiVersion: 7
+  m_TargetAbiVersion: 8
   m_SourceId: thirdperson.simulation.session-source.local
   m_PipelineId: thirdperson.simulation.pipeline.standard-local
   m_SolverId: thirdperson.simulation.world-solver.unity-character-controller

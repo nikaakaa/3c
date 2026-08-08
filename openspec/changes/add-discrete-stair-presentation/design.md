@@ -158,12 +158,12 @@ Corin Direct、Rollback与Observed三个正式Body Profile都显式配置`Bounde
 
 ## Decision 5: Predictive Foot Placement和Camera不增加第二套楼梯逻辑
 
-Predictive Foot Placement通过唯一FinalIK Grounding world-query backend查询`Ground | FootPlacementSurface`并排除`CharacterTraversal`：
+普通FootGrounding与可选Predictive Modifier通过唯一world-query backend查询`Ground | FootPlacementSurface`并排除`CharacterTraversal`：
 
-- Ramp楼梯从`FootPlacementSurface`得到heel、toe、Current Support与Future Landing。
-- 离散楼梯从同一组`Ground`阶梯Collider得到这些支撑。
+- Ramp楼梯让FootGrounding的Lyra current Sphere Trace命中`FootPlacementSurface`，合法stance脚 MAY基于该命中建立surface-local anchor，可选Modifier只为未被anchor拥有的Swing脚得到Future Landing。
+- 离散楼梯让两个阶段从同一组`Ground`阶梯Collider得到各自归属的current hit或Future支撑。
 
-Body竖直阶段改变最终visible delta；Predictive Extension只读取正式Body Frame，并从FinalIK Grounding与Current/Future Support生成pelvis pre-solve goal。它不得读取竖直阶段私有offset、维护独立Actor Movement Compensation状态或根据它切换Surface。
+Body竖直阶段改变最终visible delta；普通FootGrounding读取正式Body Frame并按Lyra current trace、foot offset/normal smoothing、contact/anchor稳定和唯一Pelvis resolve生成Baseline Goals，可选Modifier只从Future Support/Envelope修改未被anchor拥有的Swing脚。两者都不得读取竖直阶段私有offset、维护第二Body filter或根据它切换Surface。
 
 默认Camera继续由`CharacterCameraPresentationRuntime`使用最终`CharacterBodyPresentationFrame.VisiblePosition`和既有bind offset生成follow point。它不读取logic body、KCC diagnostics或场景楼梯，也不保存第二份台阶vertical filter。Cinemachine adapter现有阻尼仍只是CameraRig实现细节。
 

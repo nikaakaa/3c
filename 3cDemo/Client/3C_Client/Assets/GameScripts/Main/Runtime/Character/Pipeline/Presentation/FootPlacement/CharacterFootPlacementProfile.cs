@@ -10,17 +10,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v11";
+        public const string SchemaVersion = "character-foot-placement-profile/v12";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] string m_Revision = string.Empty;
-        [SerializeField] CharacterFinalIkGroundingAuthoringSettings m_FinalIkGrounding = new CharacterFinalIkGroundingAuthoringSettings();
+        [SerializeField] CharacterLyraCurrentGroundingAuthoringSettings m_LyraCurrentGrounding = new CharacterLyraCurrentGroundingAuthoringSettings();
+        [SerializeField] CharacterStanceStabilizationAuthoringSettings m_StanceStabilization = new CharacterStanceStabilizationAuthoringSettings();
         [SerializeField] CharacterPredictiveFootPlacementAuthoringSettings m_PredictiveExtension = new CharacterPredictiveFootPlacementAuthoringSettings();
 
         public string ProfileId => RequireIdentity(m_ProfileId, nameof(m_ProfileId));
         public string Revision => RequireIdentity(m_Revision, nameof(m_Revision));
-        public CharacterFinalIkGroundingAuthoringSettings FinalIkGrounding =>
-            m_FinalIkGrounding ?? throw new InvalidOperationException("Foot Placement Profile has no FinalIK Grounding settings.");
+        public CharacterLyraCurrentGroundingAuthoringSettings LyraCurrentGrounding =>
+            m_LyraCurrentGrounding ?? throw new InvalidOperationException("Foot Placement Profile has no Lyra Current Grounding settings.");
+        public CharacterStanceStabilizationAuthoringSettings StanceStabilization =>
+            m_StanceStabilization ?? throw new InvalidOperationException("Foot Placement Profile has no Stance Stabilization settings.");
         public CharacterPredictiveFootPlacementAuthoringSettings PredictiveExtension =>
             m_PredictiveExtension ?? throw new InvalidOperationException("Foot Placement Profile has no Predictive Extension settings.");
 
@@ -38,8 +41,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (string.IsNullOrWhiteSpace(fieldPath))
                 throw new ArgumentException("Foot Placement tuning field is missing.", nameof(fieldPath));
-            if (fieldPath.StartsWith("grounding/", StringComparison.Ordinal))
-                FinalIkGrounding.ApplyTuning(fieldPath.Substring("grounding/".Length), value);
+            if (fieldPath.StartsWith("lyra-current-grounding/", StringComparison.Ordinal))
+                LyraCurrentGrounding.ApplyTuning(fieldPath.Substring("lyra-current-grounding/".Length), value);
+            else if (fieldPath.StartsWith("stance-stabilization/", StringComparison.Ordinal))
+                StanceStabilization.ApplyTuning(fieldPath.Substring("stance-stabilization/".Length), value);
             else if (fieldPath.StartsWith("predictive/", StringComparison.Ordinal))
                 PredictiveExtension.ApplyTuning(fieldPath.Substring("predictive/".Length), value);
             else
@@ -51,7 +56,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public string ComputeRevision() => StableHash.Compute(
             SchemaVersion,
             ProfileId,
-            JsonUtility.ToJson(FinalIkGrounding),
+            JsonUtility.ToJson(LyraCurrentGrounding),
+            JsonUtility.ToJson(StanceStabilization),
             JsonUtility.ToJson(PredictiveExtension)).ToString();
 
         public void RequireValid()
@@ -61,7 +67,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             string computedRevision = ComputeRevision();
             if (!string.Equals(revision, computedRevision, StringComparison.Ordinal))
                 throw new InvalidOperationException($"Foot Placement Profile revision is stale: {revision}/{computedRevision}.");
-            _ = FinalIkGrounding.Build();
+            _ = LyraCurrentGrounding.Build();
+            _ = StanceStabilization.Build();
             _ = PredictiveExtension.Build();
         }
 
@@ -86,7 +93,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ProfileId,
                 Revision,
                 projection.PosePlan.PlanHash,
-                FinalIkGrounding.Build(),
+                LyraCurrentGrounding.Build(),
+                StanceStabilization.Build(),
                 PredictiveExtension.Build());
         }
 
@@ -107,35 +115,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             string profileId,
             string profileRevision,
             string posePlanHash,
-            CharacterFinalIkGroundingSettings grounding,
+            CharacterLyraCurrentGroundingSettings currentGrounding,
+            CharacterStanceStabilizationSettings stanceStabilization,
             CharacterPredictiveFootPlacementRuntimeSettings predictive)
         {
             ProfileId = RequireIdentity(profileId, nameof(profileId));
             ProfileRevision = RequireIdentity(profileRevision, nameof(profileRevision));
             PosePlanHash = RequireIdentity(posePlanHash, nameof(posePlanHash));
-            grounding.RequireValid();
+            currentGrounding.RequireValid();
+            stanceStabilization.RequireValid();
             predictive.RequireValid();
-            Grounding = grounding;
-            Predictive = predictive;
+            CurrentGrounding = currentGrounding;
+            StanceStabilization = stanceStabilization;
+            PredictiveExtension = predictive;
         }
 
         public string ProfileId { get; }
         public string ProfileRevision { get; }
         public string PosePlanHash { get; }
-        public CharacterFinalIkGroundingSettings Grounding { get; private set; }
-        public CharacterPredictiveFootPlacementRuntimeSettings Predictive { get; private set; }
+        public CharacterLyraCurrentGroundingSettings CurrentGrounding { get; private set; }
+        public CharacterStanceStabilizationSettings StanceStabilization { get; private set; }
+        public CharacterPredictiveFootPlacementRuntimeSettings PredictiveExtension { get; private set; }
 
         internal void ApplyTuning(
-            CharacterFinalIkGroundingSettings grounding,
+            CharacterLyraCurrentGroundingSettings currentGrounding,
+            CharacterStanceStabilizationSettings stanceStabilization,
             CharacterPredictiveFootPlacementRuntimeSettings predictive)
         {
-            grounding.RequireValid();
+            currentGrounding.RequireValid();
+            stanceStabilization.RequireValid();
             predictive.RequireValid();
-            if (predictive.HitCapacity != Predictive.HitCapacity ||
-                predictive.PathSampleCount != Predictive.PathSampleCount)
+            if (currentGrounding.HitCapacity != CurrentGrounding.HitCapacity ||
+                predictive.PathSampleCount != PredictiveExtension.PathSampleCount)
                 throw new InvalidOperationException("Foot Placement tuning cannot change published workspace capacity.");
-            Grounding = grounding;
-            Predictive = predictive;
+            CurrentGrounding = currentGrounding;
+            StanceStabilization = stanceStabilization;
+            PredictiveExtension = predictive;
         }
 
         static string RequireIdentity(string value, string field)

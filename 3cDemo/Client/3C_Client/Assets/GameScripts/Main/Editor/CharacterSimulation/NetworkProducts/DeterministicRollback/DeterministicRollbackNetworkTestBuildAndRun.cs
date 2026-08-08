@@ -247,10 +247,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     .SelectMany(value => value.GetComponentsInChildren<GameplayLabBootstrap>(true))
                     .ToArray();
                 if (bootstraps.Length != 1 ||
-                    bootstraps[0].Variants.Count != 2 ||
                     !bootstraps[0].Variants.Contains(closure.LocalVariant) ||
                     !bootstraps[0].Variants.Contains(variant))
-                    throw new InvalidOperationException("Shared Gameplay Debug Scene does not reference the exact two Variants.");
+                    throw new InvalidOperationException(
+                        "Shared Gameplay Debug Scene must reference the exact Local Fixed and Deterministic Rollback Variants.");
                 DeterministicCollisionWorldAuthoring[] worlds = scene.GetRootGameObjects()
                     .SelectMany(value => value.GetComponentsInChildren<DeterministicCollisionWorldAuthoring>(true))
                     .ToArray();
@@ -463,6 +463,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 historyLengthTicks = policy.HistoryLengthTicks,
                 hashCadenceTicks = policy.HashCadenceTicks,
                 maximumRollbackDepthTicks = policy.MaximumRollbackDepthTicks,
+                maximumPredictionLeadTicks = policy.MaximumPredictionLeadTicks,
                 maximumQueuedBundles = policy.MaximumQueuedBundles,
                 maximumQueuedSnapshots = policy.MaximumQueuedSnapshots,
                 maximumOutputRecords = policy.MaximumOutputRecords,
@@ -501,7 +502,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     new[]
                     {
                         NetworkTestProductAdapterUtility.Field("endpoint", $"{endpoint.Address}:{endpoint.Port}"),
-                        NetworkTestProductAdapterUtility.Field("protocol", model.Handshake.Protocol.ToString())
+                        NetworkTestProductAdapterUtility.Field("protocol", model.Handshake.Protocol.ToString()),
+                        NetworkTestProductAdapterUtility.Field("maximumPredictionLeadTicks", policy.MaximumPredictionLeadTicks.ToString())
                     })
             };
         }
@@ -513,6 +515,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             DeterministicRollbackProductClosure closure =
                 DeterministicRollbackNetworkTestBuildAndRun.RequireProductClosure();
+            if (!string.Equals(
+                    descriptor.NetworkModelIdentity,
+                    closure.Model.ModelIdentity.ToString(),
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Rollback Product model identity changed during Build.");
+            }
             NetworkTestRuntimeArtifactManifest relay = NetworkTestProductAdapterUtility.RequireManagedArtifact(
                 manifest,
                 "deterministic-relay-server",
@@ -534,6 +543,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 !string.Equals(serverManifest.fixedProgramHash, closure.ProgramAsset.ProgramHash, StringComparison.Ordinal) ||
                 !string.Equals(serverManifest.collisionWorldHash, closure.Collision.ContentHash, StringComparison.Ordinal) ||
                 !string.Equals(serverManifest.kccIdentityHash, closure.KccIdentityHash, StringComparison.Ordinal) ||
+                serverManifest.maximumPredictionLeadTicks != closure.Model.Policy.MaximumPredictionLeadTicks ||
                 actualRoster.Entries.Count != expectedRoster.Entries.Count)
             {
                 throw new InvalidOperationException("Rollback Relay manifest does not match the exact Variant product closure.");

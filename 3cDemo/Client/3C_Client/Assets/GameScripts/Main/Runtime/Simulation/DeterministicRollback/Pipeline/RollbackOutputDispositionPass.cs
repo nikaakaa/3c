@@ -73,7 +73,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             SimulationOutputDispositionKind kind = command.Kind == PresentationCommandKind.Cue ||
                                                    command.Kind == PresentationCommandKind.Vfx ||
-                                                   command.Kind == PresentationCommandKind.Ui
+                                                   command.Kind == PresentationCommandKind.Ui ||
+                                                   command.Kind == PresentationCommandKind.CompleteProducer ||
+                                                   command.Kind == PresentationCommandKind.ReleaseProducer
                 ? SimulationOutputDispositionKind.Defer
                 : SimulationOutputDispositionKind.Publish;
             dispositions.Add(new SimulationOutputDisposition(command.Header.EventId, command.Header.ActorId, kind));

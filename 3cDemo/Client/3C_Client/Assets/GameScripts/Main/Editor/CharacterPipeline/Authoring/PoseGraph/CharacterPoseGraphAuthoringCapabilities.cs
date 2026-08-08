@@ -215,9 +215,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             catalog.Register(Node<CharacterRootOrientationWarpPosePayload>(CharacterPoseNodeKind.RootOrientationWarp, rootAndStateWithLinkedEntry, "Root Orientation Warp", "Constraints", constraintColor,
                 Fields(AssetField("yaw-curve", "Yaw Profile", "root-motion-curve", typeof(RootMotionCurveAsset))),
                 UnaryLocalPosePorts()));
-            catalog.Register(Node<CharacterPredictiveFootPlacementPosePayload>(CharacterPoseNodeKind.PredictiveFootPlacement, allPoseGraphs, "Predictive Foot Placement", "Goal Sources", constraintColor,
-                Fields(AssetField("profile", "Profile", "foot-placement-profile", typeof(CharacterFootPlacementProfile)), AssetField("calibration", "Calibration", "foot-placement-calibration", typeof(CharacterFootPlacementRigCalibration)), ReadOnlyField("backend", "Grounding Backend", GraphAuthoringFieldValueKind.String)),
+            catalog.Register(Node<CharacterFootGroundingPosePayload>(CharacterPoseNodeKind.FootGrounding, allPoseGraphs, "Foot Grounding", "Goal Sources", constraintColor,
+                Fields(AssetField("profile", "Profile", "foot-placement-profile", typeof(CharacterFootPlacementProfile)), AssetField("calibration", "Calibration", "foot-placement-calibration", typeof(CharacterFootPlacementRigCalibration))),
                 Ports(In("pose", "Component Pose", "pose.component"), OptionalIn("weight", "Weight", "pose.parameter"), Out("goals", "Full Body IK Goals", "component.full-body-ik-goals")),
+                executionDomain: CharacterPoseExecutionDomain.WorldAwareValue));
+            catalog.Register(Node<CharacterPredictiveFootPlacementModifierPosePayload>(CharacterPoseNodeKind.PredictiveFootPlacementModifier, allPoseGraphs, "Predictive Foot Placement Modifier", "Goal Sources", constraintColor,
+                Array.Empty<GraphAuthoringFieldDescriptor>(),
+                Ports(In("pose", "Component Pose", "pose.component"), In("baseline-goals", "Baseline Goals", "component.full-body-ik-goals"), Out("goals", "Modified Goals", "component.full-body-ik-goals")),
                 executionDomain: CharacterPoseExecutionDomain.WorldAwareValue));
             catalog.Register(Node<CharacterPoseBoneIkGoalsPayload>(CharacterPoseNodeKind.PoseBoneIKGoals, allPoseGraphsWithLinkedEntry, "Pose Bone IK Goals", "Goal Sources", constraintColor,
                 Fields(Field("bindings", "Effector Bindings", GraphAuthoringFieldValueKind.Object, "full-body-ik-goal-binding")),

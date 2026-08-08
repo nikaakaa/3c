@@ -471,6 +471,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public static void Build(NetworkTestProductBuildRequest request)
         {
             RequireEditorIdle(request.Adapter.DisplayName, "build");
+            RefreshProjectAssets();
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
             string repositoryRoot = Path.GetFullPath(Path.Combine(projectRoot, "..", "..", ".."));
             string networkRoot = ClientBuildArtifactLayout.NetworkRoot;
@@ -560,6 +561,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public static void Run(NetworkTestProductRunRequest request)
         {
             RequireEditorIdle(request.Adapter.DisplayName, "run");
+            RefreshProjectAssets();
             string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
             string repositoryRoot = Path.GetFullPath(Path.Combine(projectRoot, "..", "..", ".."));
             string networkRoot = ClientBuildArtifactLayout.NetworkRoot;
@@ -611,6 +613,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             };
         }
 
+        static void RefreshProjectAssets()
+        {
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+        }
+
         static NetworkTestProductBuildManifest ValidateCandidate(
             NetworkTestProductContext context,
             NetworkTestProductDescriptor descriptor,
@@ -621,14 +628,27 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException($"{descriptor.DisplayName} has no completed build manifest. Run Build first.");
             NetworkTestProductBuildManifest manifest = JsonUtility.FromJson<NetworkTestProductBuildManifest>(
                 File.ReadAllText(manifestPath, Encoding.UTF8));
-            if (manifest == null || manifest.schemaVersion != ManifestSchemaVersion ||
-                !string.Equals(manifest.productId, descriptor.ProductId, StringComparison.Ordinal) ||
-                string.IsNullOrWhiteSpace(manifest.buildId) ||
-                !string.Equals(manifest.programIdentity, descriptor.ProgramIdentity, StringComparison.Ordinal) ||
-                !string.Equals(manifest.pipelineIdentity, descriptor.PipelineIdentity, StringComparison.Ordinal) ||
-                !string.Equals(manifest.networkModelIdentity, descriptor.NetworkModelIdentity, StringComparison.Ordinal) ||
-                !string.Equals(manifest.runtimeTopologyIdentity, descriptor.RuntimeTopologyIdentity, StringComparison.Ordinal))
-                throw new InvalidOperationException($"{descriptor.DisplayName} build manifest identity is stale or invalid.");
+            if (manifest == null)
+                throw new InvalidOperationException($"{descriptor.DisplayName} build manifest is invalid.");
+            var identityMismatches = new List<string>();
+            if (manifest.schemaVersion != ManifestSchemaVersion)
+                identityMismatches.Add("schemaVersion");
+            if (!string.Equals(manifest.productId, descriptor.ProductId, StringComparison.Ordinal))
+                identityMismatches.Add("productId");
+            if (string.IsNullOrWhiteSpace(manifest.buildId))
+                identityMismatches.Add("buildId");
+            if (!string.Equals(manifest.programIdentity, descriptor.ProgramIdentity, StringComparison.Ordinal))
+                identityMismatches.Add("programIdentity");
+            if (!string.Equals(manifest.pipelineIdentity, descriptor.PipelineIdentity, StringComparison.Ordinal))
+                identityMismatches.Add("pipelineIdentity");
+            if (!string.Equals(manifest.networkModelIdentity, descriptor.NetworkModelIdentity, StringComparison.Ordinal))
+                identityMismatches.Add(
+                    $"networkModelIdentity built='{manifest.networkModelIdentity}' current='{descriptor.NetworkModelIdentity}'");
+            if (!string.Equals(manifest.runtimeTopologyIdentity, descriptor.RuntimeTopologyIdentity, StringComparison.Ordinal))
+                identityMismatches.Add("runtimeTopologyIdentity");
+            if (identityMismatches.Count > 0)
+                throw new InvalidOperationException(
+                    $"{descriptor.DisplayName} build manifest identity mismatch: {string.Join(", ", identityMismatches)}.");
             RequireManifestArtifacts(context.ProductRoot, manifest.artifacts);
             NetworkTestRuntimeArtifactManifest player = RequireArtifact(manifest, descriptor.PlayerRoleId);
             if (!string.Equals(player.kind, NetworkTestRuntimeArtifactKind.UnityPlayer.ToString(), StringComparison.Ordinal) ||

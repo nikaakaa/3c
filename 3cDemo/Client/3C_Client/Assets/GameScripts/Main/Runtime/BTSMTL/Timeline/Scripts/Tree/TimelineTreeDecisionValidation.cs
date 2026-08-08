@@ -100,9 +100,8 @@ namespace BTSMTL.Timeline
                 return false;
             }
 
-            bool localGate = variable.BlackboardFactProjection == PipelineBlackboardFactProjectionKind.None &&
-                             variable.BlackboardSyncPolicy == PipelineBlackboardVariableSyncPolicy.None;
-            bool projectedWindow = variable.BlackboardFactProjection == PipelineBlackboardFactProjectionKind.ActionWindow &&
+            bool localGate = variable.FactProjection == null;
+            bool projectedWindow = variable.FactProjection?.Kind == PipelineBlackboardFactProjectionKind.ActionWindow &&
                                    PipelineBlackboardFactProjectionPolicy.TryValidate(variable, out _);
             if (!localGate && !projectedWindow)
             {
@@ -121,13 +120,12 @@ namespace BTSMTL.Timeline
                 if (local.ValueType != variable.ValueType ||
                     local.BlackboardScope != variable.BlackboardScope ||
                     local.BlackboardLifetime != variable.BlackboardLifetime ||
-                    local.BlackboardAuthority != variable.BlackboardAuthority ||
-                    local.BlackboardSyncPolicy != variable.BlackboardSyncPolicy ||
-                    local.BlackboardFactProjection != variable.BlackboardFactProjection ||
-                    variable.BlackboardFactProjection == PipelineBlackboardFactProjectionKind.ActionWindow &&
-                    (local.ActionWindowType != variable.ActionWindowType ||
-                     local.ActionWindowId != variable.ActionWindowId ||
-                     local.ActionWindowDigest != variable.ActionWindowDigest))
+                    local.InputValueId != variable.InputValueId ||
+                    local.FactProjection?.Kind != variable.FactProjection?.Kind ||
+                    variable.FactProjection?.Kind == PipelineBlackboardFactProjectionKind.ActionWindow &&
+                    (local.FactProjection?.ActionWindowType != variable.FactProjection.ActionWindowType ||
+                     local.FactProjection?.ActionWindowId != variable.FactProjection.ActionWindowId ||
+                     local.FactProjection?.ActionWindowDigest != variable.FactProjection.ActionWindowDigest))
                 {
                     errors?.Add($"Decision blackboard declaration conflicts with '{variable.BlackboardKey}'.");
                     return false;

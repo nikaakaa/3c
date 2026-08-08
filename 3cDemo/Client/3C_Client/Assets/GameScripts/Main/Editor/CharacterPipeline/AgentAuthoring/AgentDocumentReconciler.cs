@@ -4,6 +4,7 @@ using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.AI;
 using TreeDesigner;
+using TreeDesigner.Editor;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
@@ -98,6 +99,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.Error("document.rootIdentity", "document_root_mismatch", "Document rootIdentity与当前root不一致。");
             if (target.editable == null)
                 report.Error("document.editable", "editable_missing", "Document editable正文缺失。");
+            else if (target.editable.blackboardSchemaRevision != PipelineBlackboardAuthoringSchema.CurrentRevision)
+                report.Error(
+                    "document.editable.blackboardSchemaRevision",
+                    "blackboard_schema_revision_outdated",
+                    $"Blackboard schema revision必须是{PipelineBlackboardAuthoringSchema.CurrentRevision}；请重新checkout Document后再apply。");
             return report;
         }
 
@@ -107,7 +113,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentMutationDraftSet mutations,
             AgentCompileReport report)
         {
-            BuildCharacterBlackboardMutations(current.blackboardDeclarations, target.blackboardDeclarations, target.graphs, mutations, report);
+            bool normalizeBlackboard =
+                current.blackboardSchemaRevision != target.blackboardSchemaRevision;
+            BuildCharacterBlackboardMutations(
+                current.blackboardDeclarations,
+                target.blackboardDeclarations,
+                target.graphs,
+                mutations,
+                report,
+                normalizeBlackboard);
+            BuildBlackboardSchemaRevisionMutation(current, target, mutations, normalizeBlackboard);
             BuildStateMachineMutations(current.stateMachines, target.stateMachines, target.graphs, mutations, report);
             BuildCharacterGraphMutations(current.graphs, target.graphs, target.stateMachines, mutations, report);
             BuildTimelineMutations(current, target, mutations, report);
@@ -386,14 +401,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             IReadOnlyList<AgentSnapshotBlackboardDeclaration> target,
             IReadOnlyList<AgentSnapshotGraph> targetGraphs,
             AgentMutationDraftSet mutations,
-            AgentCompileReport report)
+            AgentCompileReport report,
+            bool normalize)
         {
             var oldValues = Index(current, value => value.declarationId, "document.editable.blackboardDeclarations", report);
             var newValues = Index(target, value => value.declarationId, "document.editable.blackboardDeclarations", report);
             foreach (AgentSnapshotBlackboardDeclaration declaration in target ?? Array.Empty<AgentSnapshotBlackboardDeclaration>())
             {
                 string path = $"document.editable.blackboardDeclarations[{Escape(declaration.declarationId)}]";
-                if (IsLocal(declaration.declarationId) || !oldValues.TryGetValue(declaration.declarationId, out AgentSnapshotBlackboardDeclaration oldValue) || !Same(oldValue, declaration))
+                if (normalize || IsLocal(declaration.declarationId) || !oldValues.TryGetValue(declaration.declarationId, out AgentSnapshotBlackboardDeclaration oldValue) || !Same(oldValue, declaration))
                 {
                     Add(mutations, path, AgentMutationKind.EnsureBlackboardDeclaration, operation =>
                     {
@@ -412,13 +428,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         operation.blackboardDefaultValue = declaration.defaultValue?.DeepClone();
                         operation.blackboardScope = declaration.scope;
                         operation.blackboardLifetime = declaration.lifetime;
-                        operation.blackboardAuthority = declaration.authority;
-                        operation.blackboardSyncPolicy = declaration.syncPolicy;
-                        operation.inputId = declaration.inputValueId;
+                        operation.inputBinding = declaration.inputBinding;
                         operation.factProjection = declaration.factProjection;
-                        operation.windowType = declaration.windowType;
-                        operation.windowId = declaration.windowId;
-                        operation.digest = declaration.digest;
                         operation.categoryPath = declaration.categoryPath;
                     });
                 }
@@ -433,6 +444,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     operation.declarationAuthoringId = declaration.declarationId;
                 });
             }
+        }
+
+        static void BuildBlackboardSchemaRevisionMutation(
+            AgentGraphSnapshot current,
+            AgentDocumentEditable target,
+            AgentMutationDraftSet mutations,
+            bool required)
+        {
+            if (!required)
+                return;
+            Add(
+                mutations,
+                "document.editable.blackboardSchemaRevision",
+                AgentMutationKind.SetBlackboardSchemaRevision,
+                operation =>
+                {
+                    SetGraph(operation, current.rootGraphAuthoringId);
+                    operation.blackboardSchemaRevision = target.blackboardSchemaRevision;
+                });
         }
 
         static void BuildActionMutations(
@@ -553,7 +583,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     operation.candidateActorIds = controller.candidateActorIds;
                 });
             }
-            BuildAIBlackboardMutations(oldController.blackboardDeclarations, controller.blackboardDeclarations, mutations, report);
+            bool normalizeBlackboard =
+                current.blackboardSchemaRevision != target.blackboardSchemaRevision;
+            BuildAIBlackboardMutations(
+                oldController.blackboardDeclarations,
+                controller.blackboardDeclarations,
+                mutations,
+                report,
+                normalizeBlackboard);
+            BuildBlackboardSchemaRevisionMutation(current, target, mutations, normalizeBlackboard);
             HashSet<string> removedNodes = BuildAINodeMutations(
                 oldController.nodes,
                 controller.nodes,
@@ -600,14 +638,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             IReadOnlyList<AgentSnapshotAIBlackboardDeclaration> current,
             IReadOnlyList<AgentSnapshotAIBlackboardDeclaration> target,
             AgentMutationDraftSet mutations,
-            AgentCompileReport report)
+            AgentCompileReport report,
+            bool normalize)
         {
             var oldValues = Index(current, value => value.declarationAuthoringId, "document.editable.aiController.blackboardDeclarations", report);
             var newValues = Index(target, value => value.declarationAuthoringId, "document.editable.aiController.blackboardDeclarations", report);
             foreach (AgentSnapshotAIBlackboardDeclaration declaration in target ?? Array.Empty<AgentSnapshotAIBlackboardDeclaration>())
             {
                 string path = $"document.editable.aiController.blackboardDeclarations[{Escape(declaration.declarationAuthoringId)}]";
-                if (!IsLocal(declaration.declarationAuthoringId) &&
+                if (!normalize &&
+                    !IsLocal(declaration.declarationAuthoringId) &&
                     oldValues.TryGetValue(declaration.declarationAuthoringId, out AgentSnapshotAIBlackboardDeclaration oldValue) &&
                     Same(oldValue, declaration))
                     continue;
@@ -850,6 +890,86 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
+        static bool TryGetPortShapeSignature(
+            AgentSnapshotNode node,
+            AgentCompileReport report,
+            string graphPath,
+            out string signature)
+        {
+            signature = string.Empty;
+            if (!s_Capabilities.TryProjectSnapshotPortShape(
+                    node,
+                    out GraphAuthoringCapabilityDescriptor capability,
+                    out IReadOnlyList<GraphAuthoringDynamicPortProjection> projected,
+                    out GraphAuthoringPortShapeException error))
+            {
+                report.Error($"{graphPath}.nodes[{Escape(node.elementAuthoringId)}].properties", error.Code, error.Message);
+                return false;
+            }
+            signature = string.Join("|", capability.FixedPorts
+                .Select(value => $"{value.PortId}:{value.Direction}:{value.Capacity}")
+                .Concat(projected.Select(value => $"{value.PortId}:{value.Direction}:{value.Capacity}"))
+                .OrderBy(value => value, StringComparer.Ordinal));
+            return true;
+        }
+
+        static AgentSnapshotGraph PreparePortShapeChangeEdgeDeletions(
+            AgentSnapshotGraph current,
+            AgentSnapshotGraph target,
+            AgentMutationDraftSet mutations,
+            AgentCompileReport report)
+        {
+            string graphPath = $"document.editable.graphs[{Escape(target.graphAuthoringId)}]";
+            var currentNodes = Index(current.nodes, value => value.elementAuthoringId, graphPath + ".nodes", report);
+            var changedNodes = new HashSet<string>(StringComparer.Ordinal);
+            foreach (AgentSnapshotNode targetNode in target.nodes ?? new List<AgentSnapshotNode>())
+            {
+                if (!currentNodes.TryGetValue(targetNode.elementAuthoringId, out AgentSnapshotNode currentNode))
+                    continue;
+                if (TryGetPortShapeSignature(currentNode, report, graphPath, out string currentShape) &&
+                    TryGetPortShapeSignature(targetNode, report, graphPath, out string targetShape) &&
+                    !string.Equals(currentShape, targetShape, StringComparison.Ordinal))
+                    changedNodes.Add(targetNode.elementAuthoringId);
+            }
+            if (changedNodes.Count == 0)
+                return current;
+
+            var deletedFlow = new HashSet<string>(StringComparer.Ordinal);
+            foreach (AgentSnapshotFlowEdge edge in current.flowEdges ?? new List<AgentSnapshotFlowEdge>())
+            {
+                if (!changedNodes.Contains(edge.startElementAuthoringId) &&
+                    !changedNodes.Contains(edge.endElementAuthoringId))
+                    continue;
+                deletedFlow.Add(edge.elementAuthoringId);
+                Add(mutations, $"{graphPath}.flowEdges[{Escape(edge.elementAuthoringId)}]", AgentMutationKind.DeleteFlowEdge, operation =>
+                {
+                    SetGraph(operation, target);
+                    operation.targetElementAuthoringId = edge.elementAuthoringId;
+                });
+            }
+            var deletedProperty = new HashSet<string>(StringComparer.Ordinal);
+            foreach (AgentSnapshotPropertyEdge edge in current.propertyEdges ?? new List<AgentSnapshotPropertyEdge>())
+            {
+                if (!changedNodes.Contains(edge.startElementAuthoringId) &&
+                    !changedNodes.Contains(edge.endElementAuthoringId))
+                    continue;
+                deletedProperty.Add(edge.elementAuthoringId);
+                Add(mutations, $"{graphPath}.propertyEdges[{Escape(edge.elementAuthoringId)}]", AgentMutationKind.DeletePropertyEdge, operation =>
+                {
+                    SetGraph(operation, target);
+                    operation.targetElementAuthoringId = edge.elementAuthoringId;
+                });
+            }
+            AgentSnapshotGraph baseline = AgentAuthoringDocumentCodec.Clone(current);
+            baseline.flowEdges = (baseline.flowEdges ?? new List<AgentSnapshotFlowEdge>())
+                .Where(value => !deletedFlow.Contains(value.elementAuthoringId))
+                .ToList();
+            baseline.propertyEdges = (baseline.propertyEdges ?? new List<AgentSnapshotPropertyEdge>())
+                .Where(value => !deletedProperty.Contains(value.elementAuthoringId))
+                .ToList();
+            return baseline;
+        }
+
         static void BuildPropertyEdgeMutations(
             AgentSnapshotGraph current,
             AgentSnapshotGraph target,
@@ -986,6 +1106,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return;
             }
 
+            AgentSnapshotGraph edgeBaseline = PreparePortShapeChangeEdgeDeletions(
+                current,
+                target,
+                mutations,
+                report);
+
             bool Ignored(AgentSnapshotNode node) =>
                 node?.typeName?.EndsWith(".StateMachineNode", StringComparison.Ordinal) == true;
             var oldNodes = Index(
@@ -1069,7 +1195,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return clone;
             }
             BuildGraphEdgeMutations(
-                new[] { Filter(current, true) },
+                new[] { Filter(edgeBaseline, true) },
                 new[] { Filter(target, false) },
                 mutations,
                 report);
@@ -1146,6 +1272,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return;
             }
 
+            AgentSnapshotGraph edgeBaseline = PreparePortShapeChangeEdgeDeletions(
+                current,
+                target,
+                mutations,
+                report);
+
             var oldNodes = Index(current.nodes, value => value.elementAuthoringId, graphPath + ".nodes", report);
             var newNodes = Index(target.nodes, value => value.elementAuthoringId, graphPath + ".nodes", report);
             var removedNodes = new HashSet<string>(oldNodes.Keys.Except(newNodes.Keys, StringComparer.Ordinal), StringComparer.Ordinal);
@@ -1218,7 +1350,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 });
             }
 
-            var oldFlow = Index(current.flowEdges, value => value.elementAuthoringId, graphPath + ".flowEdges", report);
+            var oldFlow = Index(edgeBaseline.flowEdges, value => value.elementAuthoringId, graphPath + ".flowEdges", report);
             var newFlow = Index(target.flowEdges, value => value.elementAuthoringId, graphPath + ".flowEdges", report);
             foreach (AgentSnapshotFlowEdge edge in target.flowEdges ?? new List<AgentSnapshotFlowEdge>())
             {
@@ -1243,7 +1375,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     operation.flowEdgeAuthoringId = edge.elementAuthoringId;
                 });
             }
-            foreach (AgentSnapshotFlowEdge edge in current.flowEdges ?? new List<AgentSnapshotFlowEdge>())
+            foreach (AgentSnapshotFlowEdge edge in edgeBaseline.flowEdges ?? new List<AgentSnapshotFlowEdge>())
             {
                 if (newFlow.ContainsKey(edge.elementAuthoringId) ||
                     removedNodes.Contains(edge.startElementAuthoringId) ||
@@ -1256,7 +1388,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 });
             }
 
-            BuildPropertyEdgeMutations(current, target, mutations, report, removedNodes);
+            BuildPropertyEdgeMutations(edgeBaseline, target, mutations, report, removedNodes);
         }
 
         static bool ValidateGenericNodeChange(
@@ -2419,17 +2551,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             AgentSnapshotExposedProperty exposed = node.exposedProperty;
             string path = $"{graphPath}.nodes[{Escape(node.elementAuthoringId)}].exposedProperty";
-            if (!string.Equals(exposed.mode, ExposedPropertyNodeType.Set.ToString(), StringComparison.Ordinal) ||
-                !string.Equals(exposed.valueType, typeof(bool).FullName, StringComparison.Ordinal) ||
-                exposed.value?.Type != Newtonsoft.Json.Linq.JTokenType.Boolean)
+            if (!Enum.TryParse(exposed.mode, false, out ExposedPropertyNodeType mode) ||
+                string.IsNullOrWhiteSpace(exposed.valueType) ||
+                mode == ExposedPropertyNodeType.Set &&
+                (exposed.value == null || exposed.value.Type == Newtonsoft.Json.Linq.JTokenType.Null))
             {
                 report.Error(
                     path,
-                    "exposed_property_mutation_unsupported",
-                    "当前正式Mutation只允许修改Bool Set；Get与其它ValueType可完整读取，但不能作为目标修改。");
+                    "exposed_property_mutation_invalid",
+                    "ExposedProperty Mutation 必须声明有效 mode、valueType，Set 还必须声明 value。");
                 return;
             }
-            Add(mutations, $"{graphPath}.nodes[{Escape(node.elementAuthoringId)}]", AgentMutationKind.EnsureBlackboardWrite, operation =>
+            Add(mutations, $"{graphPath}.nodes[{Escape(node.elementAuthoringId)}]", AgentMutationKind.EnsureExposedPropertyNode, operation =>
             {
                 if (IsLocal(node.elementAuthoringId))
                     operation.id = LocalIdentity(node.elementAuthoringId);
@@ -2439,7 +2572,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     operation.declarationPlannedIdentity = LocalIdentity(exposed.declarationAuthoringId);
                 else
                     operation.declarationAuthoringId = exposed.declarationAuthoringId;
-                operation.blackboardBoolValue = exposed.value.ToObject<bool>();
+                operation.exposedPropertyMode = mode.ToString();
+                operation.blackboardValueType = exposed.valueType;
+                operation.blackboardDefaultValue = exposed.value?.DeepClone();
                 operation.displayName = node.displayName;
                 operation.position = ToVector(node.position);
             });

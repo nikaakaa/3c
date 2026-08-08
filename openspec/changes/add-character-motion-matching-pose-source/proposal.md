@@ -8,7 +8,7 @@ MM是PoseState内部Selection provider。当前relevant State的显式Player消�
 
 ## Why
 
-最终方向已经收敛为：Gameplay只提交有限Action Timeline业务事实，PoseState relevance驱动State内部Sequence、Blend Space或Motion Matching source，完整Pose Graph显式决定Player、局部Inertialization、Blend Stack、空间合成、骨骼修改、PredictiveFootPlacement Goals与FullBodyIK。当前缺失的是一套具有完整内容闭包、又不夺取Gameplay Body权威的正式Motion Matching配置。Corin没有本能力所需的成套动画，因此本change不配置、不迁移也不修改Corin；能力通过用户另行提供的独立正式配置验证。
+最终方向已经收敛为：Gameplay只提交有限Action Timeline业务事实，PoseState relevance驱动State内部Sequence、Blend Space或Motion Matching source，完整Pose Graph显式决定Player、局部Inertialization、Blend Stack、空间合成、骨骼修改、FootGrounding Baseline Goals、可选PredictiveFootPlacementModifier Final Goals与FullBodyIK。当前缺失的是一套具有完整内容闭包、又不夺取Gameplay Body权威的正式Motion Matching配置。Corin没有本能力所需的成套动画，因此本change不配置、不迁移也不修改Corin；能力通过用户另行提供的独立正式配置验证。
 
 UE 5.8 的公开 Motion Matching 已经覆盖 Pose Search Schema、Pose History、Trajectory、Continuing Pose、Chooser 数据库过滤、Brute Force/PCAKDTree/VPTree 搜索、Game Animation Sample 的 capsule-driven locomotion，以及实验性的多角色交互搜索。只复制“轨迹加最近姿势”不会形成项目竞争力，也会把现有 Graph 状态名改写成另一套数据库标签，继续保留人工视觉状态机。
 
@@ -33,7 +33,7 @@ UE 5.8 的公开 Motion Matching 已经覆盖 Pose Search Schema、Pose History�
 - Artifact固定写入`Library/CharacterSimulation/Analysis/MotionMatching/<database-guid>.mmdb`；Character Build只解析匹配identity与content hash的Artifact并把不可变payload写入target-neutral Presentation Projection。
 - 新增`CharacterPresentationTrajectoryIntent`与model-neutral trajectory source合同。本地/Prediction消费已被Program/World request接受的意图，Remote消费Selected Body observation；二者均降低为统一`MotionMatchingTrajectoryEnvelope`，Runtime不按Network Model切换搜索算法。
 - `MotionMatchingTrajectoryEnvelope`在每个未来horizon保存局部位置、面对方向、容许半径和置信度。远期或Remote不确定性通过正式包络表达，不通过隐藏权重或回退数据库处理。
-- 新增只记录上一帧及更早、与PoseState MM Player绑定的完成Pose的固定容量Pose History。FullBody Action覆盖后的最终pose、FinalIK Grounding、PredictiveFootPlacement Goals、FullBodyIK结果和VisualRoot correction不进入查询姿势真相。
+- 新增只记录上一帧及更早、与PoseState MM Player绑定的完成Pose的固定容量Pose History。FullBody Action覆盖后的最终pose、FootGrounding的Lyra current/contact/anchor/pelvis Baseline Goals、PredictiveFootPlacementModifier Final Goals、FullBodyIK结果和VisualRoot correction不进入查询姿势真相。
 - 新增constraint-first candidate admission：Search Domain、Rig/Clip可用性、初始化资格、jump interval、segment horizon、continuation graph和双脚protected contact任一不满足时直接拒绝候选。
 - 新增确定性分层精确搜索：对规范化特征树计算代价下界并稳定剪枝，精确计算剩余候选，使用stable SampleId打破同分；不按毫秒预算提前退出，也不在无结果时回退全库或旧Locomotion。
 - 新增短时序Plan Rerank：对精确Top-K候选沿显式continuation graph评估固定horizon内的轨迹、面对、姿势趋势、contact release与segment终点，输出一个有界`MotionMatchingSelectionPlan`。
@@ -42,7 +42,7 @@ UE 5.8 的公开 Motion Matching 已经覆盖 Pose Search Schema、Pose History�
 - 将Motion Matching降低为state-local `PresentationPoseSourceSample`。Sample表达Projection-local dense source index、Player NodeId、generation、lease、sample time、availability、clip sample descriptor、Pose Parameter与Foot Feature；不携带作者Source Slot/Binding对象、source字符串、Gameplay channel、producer或PlaybackId，显式Player和Animancer source backend不读取搜索器类型。
 - MM只作为Locomotion PoseState内部Pose Source。它不建立私有crossfade、Pose Graph、IK、root motion应用、Gameplay事件、Notify或网络同步路径。
 - 动画root只进入离线trajectory feature。Runtime不得读取`Animator.deltaPosition`/`deltaRotation`修改Body；VisualRoot继续只服从`CharacterBodyPresentationRuntime`。
-- 每帧正式顺序扩展为`Body -> MM trajectory/query/search -> Selection -> compiled Pose Graph Plan内绑定Player节点完成时append matched Base Pose History -> PredictiveFootPlacement Goals -> FullBodyIK -> FinalPublication -> Camera`。
+- 每帧正式顺序扩展为`Body -> MM trajectory/query/search -> Selection -> compiled Pose Graph Plan内绑定Player节点完成时append matched Base Pose History -> FootGrounding Baseline Goals -> optional PredictiveFootPlacementModifier Final Goals -> FullBodyIK -> FinalPublication -> Camera`。
 - 新增统一Motion Matching diagnostics、Database coverage inspection与显式Search Replay capture，显示query envelope、admission reject、Top-K cost、plan cost、continue/jump、contact protection、reset、search visit count和exact identity。
 - 独立验证配置使用现有`CharacterPipelineDefinition`、`CharacterAnimationPresentationProfile`、Rig、Foot Analysis、MM Profile与Database类型完整装配，并由验证环境显式选择；它不是第二套Runtime、fallback或临时配置，也不得引用Corin资产或缺失动画的占位资源。
 
@@ -80,11 +80,11 @@ current specs已经安装PoseState内部Sequence与Blend Space的正式来源，
 ### Modified Capabilities
 
 - `character-animation-presentation-authoring`：让唯一Animation Presentation Profile装配Motion Matching Profile，并保持显式Analysis Build与target-neutral Projection边界。
-- `character-animation-pipeline`：把Motion Matching置于Animation Selection阶段，并固定进入同一编译Pose Plan、显式Player、PredictiveFootPlacement Goal Source与FullBodyIK链。
+- `character-animation-pipeline`：把Motion Matching置于Animation Selection阶段，并固定进入同一编译Pose Plan、显式Player、`Lyra Current Grounding -> Stance Stabilization -> Pelvis Resolve` FootGrounding、可选Swing脚PredictiveFootPlacementModifier与FullBodyIK链。
 - `character-animation-layer-runtime`：区分Program playback generation与MM内部pose selection generation，使同playback pose jump能够产生typed discontinuity，而不是强制创建Blend Entry。
 - `character-presentation-interpolation`：增加轨迹意图、MM表现历史和分支重置语义，同时保持Simulation与Presentation单向隔离。
 - `character-animation-foot-analysis-artifact`：让MM Artifact精确复用同一Foot Analysis，不生成第二份foot phase/contact数据源。
-- `character-foot-placement-presentation`：让MM选中sample的Foot Feature沿最终Pose贡献进入既有PredictiveFootPlacement Goal Source，并禁止Grounding、Predictive Extension与FullBodyIK反向选择动画。
+- `character-foot-placement-presentation`：让MM选中sample的Foot Feature沿最终Pose贡献进入普通FootGrounding，下一落地Feature再供可选Swing脚Predictive Modifier消费，并禁止FootGrounding current/contact/anchor/pelvis、Predictive Extension与FullBodyIK反向选择动画。
 - `btsmtl-runtime-diagnostics`：增加统一Motion Matching query、candidate、plan和replay只读诊断。
 
 ## Dependencies And Sequencing
@@ -106,7 +106,7 @@ current specs已经安装PoseState内部Sequence与Blend Space的正式来源，
 - 现行`character-animation-presentation-authoring`已有Pose Graph、node-local policy、Rig、Foot Analysis Source和Timeline producer binding，但没有条件式Motion Matching Profile、Database、Schema或Search Policy。本change继续由同一个Profile Inspector进入配置，不新增独立Workbench或运行时SO读取；没有MM provider的Profile保持无MM引用。
 - 现行`character-presentation-interpolation`只定义Body、Timeline visual time、动画fade和网络selected stream。本change新增Presentation-owned trajectory envelope、MM history与plan，但不把它们写入Character/World state、Snapshot、Hash或协议。
 - 现行`character-animation-foot-analysis-artifact`已经拥有Editor-only规范artifact、显式build、stale校验和Projection发布。本change复用其Artifact identity与sample语义；MM database不重新计算另一套plant/landing真相。
-- 现行`character-foot-placement-presentation`要求PredictiveFootPlacement消费最终pose contribution并发布Goals。本change只让MM source按选中Clip/SampleTime提供正式Foot Feature；Grounding、Predictive Extension与FullBodyIK仍位于MM history source节点之后且不能反向影响搜索。
+- active `replace-pose-ik-with-finalik-full-body-solver`要求FootGrounding消费最终pose contribution并发布Baseline Goals，可选PredictiveFootPlacementModifier只消费Swing资格与未来落点并发布Final Goals。本change只让MM source按选中Clip/SampleTime提供正式Foot Feature；Grounding、Predictive Extension与FullBodyIK仍位于MM history source节点之后且不能反向影响搜索。
 - 现行`character-state-timeline-authoring-loop`描述Corin的既有Locomotion链。本change不修改该capability，也不修改其Graph、Timeline、Marker、producer或transition资产。
 - `openspec/project.md`现在明确记录MM工作区基础和剩余闭环，但current specs尚未安装`character-motion-matching-presentation`。实施完成后必须把current口径拆成“项目具备可选MM能力”与“Corin未配置MM”；active阶段不提前宣称已安装。
 
@@ -138,7 +138,7 @@ current specs已经安装PoseState内部Sequence与Blend Space的正式来源，
 - 不实现Stride Warping、Orientation Warping、Slope Warping、Distance Matching、Root Offset Bone或Motion Warping替代品。
 - 不把Attack、Dodge、Hit Reaction、Traversal、Vault、Climb或Airborne第一版迁入MM；它们继续使用正式Timeline/Action Pose Source。
 - 不实现UE实验性的多角色Interaction Motion Matching；当前项目命中、目标registry与跨角色GameplayResult尚未闭环，不能由Presentation先行旁路。
-- 不把FinalIK Grounding、PredictiveFootPlacement world anchor、FullBodyIK结果或Scene Physics查询写回MM candidate selection。
+- 不把Lyra Foot Plant current trace/smoothing、PredictiveFootPlacementModifier future world-query result、FullBodyIK结果或Scene Physics查询写回MM candidate selection。
 - 不建立运行时数据库构建、动态Clip扫描、目录约定、clip名Tag、Humanoid bone fallback或stale Artifact fallback。
 - 不自动镜像动画，不从in-place移动Clip猜测或合成root trajectory，不在MM内实现通用DCC清洗/重定向烘焙；首版只接受通过显式Humanoid Avatar retarget或Exact Generic Rig合同后能在目标Sampling Rig上得到合法姿势与root trajectory的Clip。
 - 不新增BTSMTL Gameplay Graph MM状态、Timeline Motion Matching Track或独立Animation Blueprint解释层；MM Selection只存在于PoseState内部typed Player输入。
@@ -173,6 +173,6 @@ current specs已经安装PoseState内部Sequence与Blend Space的正式来源，
 - 同一PoseState relevance continuation保持Selection identity并只更新sample；pose jump提升Selection Generation并由SelectedPosePlayer发布discontinuity。推荐State subgraph使用局部Inertialization；若作者显式选择BlendStack，则只复用该节点的CrossFade、Stored Pose和retirement。
 - FullBody Action覆盖期间Locomotion PoseState MM继续更新绑定Player的Pose和history，Action退出后Slot直接回到当前基础Pose。
 - Rollback branch replacement、Selected stream reset、Presentation reset和Projection replacement会原子清空query history、selection plan与contact protection，并在新分支执行Initialization Query。
-- MM Foot Feature沿普通Pose Value的实际脚骨骼贡献进入显式PredictiveFootPlacement节点；FinalIK Grounding、Predictive Extension、FullBodyIK和world anchor不反向影响candidate选择。
+- MM Foot Feature沿普通Pose Value的实际脚骨骼贡献进入显式FootGrounding与可选PredictiveFootPlacementModifier；Lyra current grounding、contact/anchor、pelvis resolve、Predictive Extension、FullBodyIK和world-query result不反向影响candidate选择。
 - Diagnostics能够显示完整query envelope、stage candidate count、reject reason、Top-K cost、plan cost、selected sample、contact protection、selection generation、Player discontinuity、可选Stack entry或Inertialization residual与reset reason。
 - 显式Search Replay Artifact能在相同Database identity上复现query、候选顺序、reject、cost与最终Selection；identity不匹配时拒绝重放。

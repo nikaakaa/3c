@@ -69,28 +69,46 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 BaseExposedProperty declaration = item.Declaration;
                 CharacterSimulationSourceLocation source = DeclarationSource(item);
                 string identity = DeclarationIdentity(item.Graph.GraphAuthoringId, declaration.DeclarationId);
+                var fields = new List<ProgramCatalogField>
+                {
+                    m_Builder.ConstantField(source, "Key", declaration.BlackboardKey),
+                    m_Builder.ConstantField(source, "ValueType", declaration.ValueType?.FullName),
+                    m_Builder.ConstantField(source, "Scope", declaration.BlackboardScope),
+                    m_Builder.ConstantField(source, "Lifetime", declaration.BlackboardLifetime),
+                    m_Builder.ConstantField(source, "Category", declaration.BlackboardCategoryPath),
+                    m_Builder.ConstantField(source, "Default", CompileBlackboardDefault(declaration.GetValue(), source))
+                };
+                if (declaration.InputBinding != null)
+                    fields.Add(m_Builder.ConstantField(source, "InputValueId", declaration.InputBinding.InputValueId));
+                if (declaration.FactProjection != null)
+                {
+                    fields.Add(m_Builder.ConstantField(
+                        source,
+                        "Projection",
+                        CompileBlackboardFactProjection(declaration.FactProjection.Kind)));
+                    fields.Add(m_Builder.ConstantField(source, "ActionWindowType", declaration.FactProjection.ActionWindowType));
+                    fields.Add(m_Builder.ConstantField(source, "ActionWindowId", declaration.FactProjection.ActionWindowId));
+                    fields.Add(m_Builder.ConstantField(source, "ActionWindowDigest", declaration.FactProjection.ActionWindowDigest));
+                }
                 m_Builder.DeclareCatalogEntry(
                     ProgramCatalogEntryKind.BlackboardDeclaration,
                     identity,
                     2,
-                    Fields(
-                        m_Builder.ConstantField(source, "Key", declaration.BlackboardKey),
-                        m_Builder.ConstantField(source, "ValueType", declaration.ValueType?.FullName),
-                        m_Builder.ConstantField(source, "Scope", declaration.BlackboardScope),
-                        m_Builder.ConstantField(source, "Lifetime", declaration.BlackboardLifetime),
-                        m_Builder.ConstantField(source, "Authority", declaration.BlackboardAuthority),
-                        m_Builder.ConstantField(source, "SyncPolicy", declaration.BlackboardSyncPolicy),
-                        m_Builder.ConstantField(source, "InputValueId", declaration.InputValueId),
-                        m_Builder.ConstantField(source, "Projection", declaration.BlackboardFactProjection),
-                        m_Builder.ConstantField(source, "ActionWindowType", declaration.ActionWindowType),
-                        m_Builder.ConstantField(source, "ActionWindowId", declaration.ActionWindowId),
-                        m_Builder.ConstantField(source, "ActionWindowDigest", declaration.ActionWindowDigest),
-                        m_Builder.ConstantField(source, "Category", declaration.BlackboardCategoryPath),
-                        m_Builder.ConstantField(source, "Default", CompileBlackboardDefault(declaration.GetValue(), source))),
+                    fields.ToArray(),
                     source);
                 if (declaration.BlackboardScope == PipelineBlackboardVariableScope.Character)
                     EnsureDeclarationState(item, item.Route);
             }
+        }
+
+        static ProgramBlackboardFactProjectionKind CompileBlackboardFactProjection(
+            PipelineBlackboardFactProjectionKind projection)
+        {
+            return projection switch
+            {
+                PipelineBlackboardFactProjectionKind.ActionWindow => ProgramBlackboardFactProjectionKind.ActionWindow,
+                _ => throw new ArgumentOutOfRangeException(nameof(projection), projection, "Unsupported Blackboard Fact Projection.")
+            };
         }
 
         OperationHandle CompileGraph(CharacterAuthoringGraphOccurrence occurrence, OperationHandle stateScopeOwner)

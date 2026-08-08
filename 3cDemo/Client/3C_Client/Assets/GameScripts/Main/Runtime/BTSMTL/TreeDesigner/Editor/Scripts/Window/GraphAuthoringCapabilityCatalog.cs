@@ -249,6 +249,180 @@ namespace TreeDesigner.Editor
         public string InterfacePortId { get; }
     }
 
+    public readonly struct GraphAuthoringTypedPropertyValue
+    {
+        public GraphAuthoringTypedPropertyValue(
+            GraphAuthoringFieldId fieldId,
+            GraphAuthoringFieldValueKind valueKind,
+            string canonicalValue)
+        {
+            FieldId = fieldId.IsValid
+                ? fieldId
+                : throw new ArgumentException("Typed property field identity is missing.", nameof(fieldId));
+            ValueKind = valueKind;
+            CanonicalValue = GraphAuthoringIdentity.Require(canonicalValue, nameof(canonicalValue));
+        }
+
+        public GraphAuthoringFieldId FieldId { get; }
+        public GraphAuthoringFieldValueKind ValueKind { get; }
+        public string CanonicalValue { get; }
+    }
+
+    public sealed class GraphAuthoringPortVariantCondition
+    {
+        public GraphAuthoringPortVariantCondition(
+            GraphAuthoringFieldId fieldId,
+            GraphAuthoringFieldValueKind valueKind,
+            string equals)
+        {
+            FieldId = fieldId.IsValid
+                ? fieldId
+                : throw new ArgumentException("Port variant discriminator field identity is missing.", nameof(fieldId));
+            ValueKind = valueKind;
+            ExpectedValue = GraphAuthoringIdentity.Require(equals, nameof(equals));
+        }
+
+        public GraphAuthoringFieldId FieldId { get; }
+        public GraphAuthoringFieldValueKind ValueKind { get; }
+        public string ExpectedValue { get; }
+
+        public bool Matches(GraphAuthoringTypedPropertyValue value) =>
+            value.FieldId.Equals(FieldId) &&
+            value.ValueKind == ValueKind &&
+            string.Equals(value.CanonicalValue, ExpectedValue, StringComparison.Ordinal);
+    }
+
+    public sealed class GraphAuthoringPortVariantDescriptor
+    {
+        readonly Dictionary<GraphAuthoringPortId, GraphAuthoringPortDescriptor> m_Ports;
+
+        public GraphAuthoringPortVariantDescriptor(
+            string variantId,
+            GraphAuthoringPortVariantCondition when,
+            IReadOnlyList<GraphAuthoringPortDescriptor> ports)
+        {
+            VariantId = GraphAuthoringIdentity.Require(variantId, nameof(variantId));
+            When = when ?? throw new ArgumentNullException(nameof(when));
+            m_Ports = new Dictionary<GraphAuthoringPortId, GraphAuthoringPortDescriptor>();
+            foreach (GraphAuthoringPortDescriptor port in ports ?? Array.Empty<GraphAuthoringPortDescriptor>())
+            {
+                if (port == null)
+                    throw new ArgumentException($"Port variant '{VariantId}' contains a missing port.", nameof(ports));
+                if (!m_Ports.TryAdd(port.PortId, port))
+                    throw new InvalidOperationException($"Port variant '{VariantId}' contains duplicate port identity '{port.PortId}'.");
+            }
+        }
+
+        public string VariantId { get; }
+        public GraphAuthoringPortVariantCondition When { get; }
+        public IReadOnlyCollection<GraphAuthoringPortDescriptor> Ports => m_Ports.Values;
+    }
+
+    public sealed class GraphAuthoringPortShapeException : InvalidOperationException
+    {
+        public GraphAuthoringPortShapeException(string code, string message)
+            : base(message)
+        {
+            Code = GraphAuthoringIdentity.Require(code, nameof(code));
+        }
+
+        public string Code { get; }
+    }
+
+    public static class GraphAuthoringNodePortShapeProjector
+    {
+        public static IReadOnlyList<GraphAuthoringDynamicPortProjection> Project(
+            GraphAuthoringCapabilityDescriptor capability,
+            IReadOnlyList<GraphAuthoringTypedPropertyValue> properties,
+            IReadOnlyList<GraphAuthoringDynamicPortProjection> authoredDynamicPorts = null)
+        {
+            if (capability == null)
+                throw new ArgumentNullException(nameof(capability));
+
+            GraphAuthoringPortVariantDescriptor variant = ResolveVariant(
+                capability,
+                properties ?? Array.Empty<GraphAuthoringTypedPropertyValue>());
+            var occupied = new HashSet<GraphAuthoringPortId>(
+                capability.FixedPorts.Select(value => value.PortId));
+            var result = new List<GraphAuthoringDynamicPortProjection>();
+            if (variant != null)
+            {
+                foreach (GraphAuthoringPortDescriptor port in variant.Ports.OrderBy(value => value.Order))
+                {
+                    AddProjectedPort(
+                        result,
+                        occupied,
+                        new GraphAuthoringDynamicPortProjection(
+                            port.PortId,
+                            port.DisplayName,
+                            port.ValueTypeId,
+                            port.Direction,
+                            port.Capacity,
+                            port.Required,
+                            port.Order),
+                        capability.CapabilityId);
+                }
+            }
+            foreach (GraphAuthoringDynamicPortProjection port in
+                     authoredDynamicPorts ?? Array.Empty<GraphAuthoringDynamicPortProjection>())
+            {
+                AddProjectedPort(result, occupied, port, capability.CapabilityId);
+            }
+            return result.OrderBy(value => value.Order).ToArray();
+        }
+
+        static GraphAuthoringPortVariantDescriptor ResolveVariant(
+            GraphAuthoringCapabilityDescriptor capability,
+            IReadOnlyList<GraphAuthoringTypedPropertyValue> properties)
+        {
+            if (capability.PortVariants.Count == 0)
+                return null;
+
+            GraphAuthoringPortVariantCondition discriminator = capability.PortVariants[0].When;
+            GraphAuthoringTypedPropertyValue[] values = properties
+                .Where(value => value.FieldId.Equals(discriminator.FieldId))
+                .ToArray();
+            if (values.Length != 1 || values[0].ValueKind != discriminator.ValueKind)
+            {
+                throw new GraphAuthoringPortShapeException(
+                    "port_shape_discriminator_unknown",
+                    $"Capability '{capability.CapabilityId}' requires one '{discriminator.ValueKind}' discriminator '{discriminator.FieldId}'.");
+            }
+
+            GraphAuthoringPortVariantDescriptor[] matches = capability.PortVariants
+                .Where(value => value.When.Matches(values[0]))
+                .ToArray();
+            if (matches.Length == 0)
+            {
+                throw new GraphAuthoringPortShapeException(
+                    "port_shape_variant_missing",
+                    $"Capability '{capability.CapabilityId}' has no port variant for '{discriminator.FieldId}={values[0].CanonicalValue}'.");
+            }
+            if (matches.Length > 1)
+            {
+                throw new GraphAuthoringPortShapeException(
+                    "port_shape_variant_ambiguous",
+                    $"Capability '{capability.CapabilityId}' has multiple port variants for '{discriminator.FieldId}={values[0].CanonicalValue}'.");
+            }
+            return matches[0];
+        }
+
+        static void AddProjectedPort(
+            ICollection<GraphAuthoringDynamicPortProjection> result,
+            ISet<GraphAuthoringPortId> occupied,
+            GraphAuthoringDynamicPortProjection port,
+            GraphAuthoringCapabilityId capabilityId)
+        {
+            if (!occupied.Add(port.PortId))
+            {
+                throw new GraphAuthoringPortShapeException(
+                    "port_shape_identity_duplicate",
+                    $"Capability '{capabilityId}' projects duplicate port identity '{port.PortId}'.");
+            }
+            result.Add(port);
+        }
+    }
+
     public enum GraphAuthoringCommandPresentationKind : byte
     {
         Button = 1,
@@ -298,6 +472,7 @@ namespace TreeDesigner.Editor
         readonly HashSet<GraphAuthoringDocumentRoleId> m_AllowedDocumentRoles;
         readonly Dictionary<GraphAuthoringFieldId, GraphAuthoringFieldDescriptor> m_Fields;
         readonly Dictionary<GraphAuthoringPortId, GraphAuthoringPortDescriptor> m_FixedPorts;
+        readonly IReadOnlyList<GraphAuthoringPortVariantDescriptor> m_PortVariants;
 
         public GraphAuthoringCapabilityDescriptor(
             GraphAuthoringCapabilityId capabilityId,
@@ -321,7 +496,8 @@ namespace TreeDesigner.Editor
             string externalKind = "",
             bool systemOwned = false,
             string anchorId = "",
-            string executionDomainId = "")
+            string executionDomainId = "",
+            IReadOnlyList<GraphAuthoringPortVariantDescriptor> portVariants = null)
         {
             CapabilityId = capabilityId.IsValid ? capabilityId : throw new ArgumentException("Capability identity is missing.", nameof(capabilityId));
             DomainId = domainId.IsValid ? domainId : throw new ArgumentException("Capability domain identity is missing.", nameof(domainId));
@@ -334,6 +510,8 @@ namespace TreeDesigner.Editor
             m_Fields = Index(fields ?? Array.Empty<GraphAuthoringFieldDescriptor>(), value => value.FieldId, "field");
             m_FixedPorts = Index(fixedPorts ?? Array.Empty<GraphAuthoringPortDescriptor>(), value => value.PortId, "port");
             DynamicPortPolicy = dynamicPortPolicy;
+            m_PortVariants = ValidatePortVariants(
+                portVariants ?? Array.Empty<GraphAuthoringPortVariantDescriptor>());
             ChildSurfaces = childSurfaces ?? Array.Empty<GraphAuthoringChildSurfaceDescriptor>();
             Commands = commands ?? Array.Empty<GraphAuthoringCommandDescriptor>();
             IconName = iconName ?? string.Empty;
@@ -372,6 +550,7 @@ namespace TreeDesigner.Editor
         public IReadOnlyCollection<GraphAuthoringFieldDescriptor> Fields => m_Fields.Values;
         public IReadOnlyCollection<GraphAuthoringPortDescriptor> FixedPorts => m_FixedPorts.Values;
         public GraphAuthoringDynamicPortPolicy DynamicPortPolicy { get; }
+        public IReadOnlyList<GraphAuthoringPortVariantDescriptor> PortVariants => m_PortVariants;
         public IReadOnlyList<GraphAuthoringChildSurfaceDescriptor> ChildSurfaces { get; }
         public IReadOnlyList<GraphAuthoringCommandDescriptor> Commands { get; }
         public string IconName { get; }
@@ -402,6 +581,35 @@ namespace TreeDesigner.Editor
                     throw new InvalidOperationException($"Capability contains duplicate {label} identity '{identity}'.");
             }
             return result;
+        }
+
+        IReadOnlyList<GraphAuthoringPortVariantDescriptor> ValidatePortVariants(
+            IReadOnlyList<GraphAuthoringPortVariantDescriptor> variants)
+        {
+            if (variants.Count == 0)
+                return Array.Empty<GraphAuthoringPortVariantDescriptor>();
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            GraphAuthoringPortVariantCondition discriminator = variants[0]?.When ??
+                throw new ArgumentException("Capability port variant is missing.", nameof(variants));
+            foreach (GraphAuthoringPortVariantDescriptor variant in variants)
+            {
+                if (variant == null || !ids.Add(variant.VariantId))
+                    throw new InvalidOperationException($"Capability '{CapabilityId}' contains a missing or duplicate port variant identity.");
+                if (!variant.When.FieldId.Equals(discriminator.FieldId) ||
+                    variant.When.ValueKind != discriminator.ValueKind)
+                {
+                    throw new InvalidOperationException($"Capability '{CapabilityId}' port variants must use one typed discriminator.");
+                }
+                foreach (GraphAuthoringPortDescriptor port in variant.Ports)
+                {
+                    if (m_FixedPorts.ContainsKey(port.PortId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Capability '{CapabilityId}' port variant '{variant.VariantId}' overlaps fixed port '{port.PortId}'.");
+                    }
+                }
+            }
+            return variants.ToArray();
         }
     }
 

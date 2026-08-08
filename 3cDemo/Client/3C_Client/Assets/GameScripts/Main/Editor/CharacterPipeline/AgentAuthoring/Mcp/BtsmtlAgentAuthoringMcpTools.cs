@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
 {
-    [McpForUnityTool("btsmtl.checkout_document", Description = "Create or refresh the canonical Document v3 package, including readonly Linked Pose Interface context and editable Presentation Profile, Linked Implementation, Entry Graph, Group and selector fragments for CharacterController. Returns the exact package path, sync state, source revision and document hashes without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
+    [McpForUnityTool("btsmtl.checkout_document", Description = "Create or refresh the canonical Document v3 package, including Blackboard declarations with optional inputBinding.inputValueId and factProjection payloads, readonly Linked Pose Interface context, and editable Presentation Profile, Linked Implementation, Entry Graph, Group and selector fragments for CharacterController. Returns the exact package path, sync state, source revision and document hashes without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
     public static class CheckoutBtsmtlDocumentMcpTool
     {
         public sealed class Parameters
@@ -66,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring.Mcp
         }
     }
 
-    [McpForUnityTool("btsmtl.dry_run_document", Description = "Strictly reconcile the complete Document v3 editable target into the shared typed Mutation plan, including Linked Implementation, Entry Graph, Group, selector and Equipment mapping changes while rejecting readonly Interface edits and runtime handles. Returns the exact effective document hash, plan hash, planned diff and identity-preserving diagnostics without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = true, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
+    [McpForUnityTool("btsmtl.dry_run_document", Description = "Strictly reconcile the complete Document v3 editable target, including Blackboard declaration, inputBinding.inputValueId and factProjection paths, into the shared typed Mutation plan. Reject readonly Interface edits, runtime handles, legacy authority/syncPolicy fields and old flat Blackboard payloads. Returns the exact effective document hash, plan hash, planned diff and identity-preserving diagnostics without mutating Unity authoring or building Character products.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = true, DestructiveHint = false, IdempotentHint = true, OpenWorldHint = false)]
     public static class DryRunBtsmtlDocumentMcpTool
     {
         public sealed class Parameters

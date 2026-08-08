@@ -825,9 +825,13 @@ namespace ThirdPersonGameplay.Editor.Lab
                 new CinemachineFreeLook.Orbit(-0.6f, 3f)
             };
             CinemachineCollider collider = freeLookObject.AddComponent<CinemachineCollider>();
-            collider.m_CollideAgainst = 1;
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            if (groundLayer < 0)
+                throw new InvalidOperationException("Required layer 'Ground' is not configured.");
+            collider.m_CollideAgainst = 1 << groundLayer;
             collider.m_MinimumDistanceFromTarget = 0.3f;
             collider.m_CameraRadius = 0.25f;
+            collider.m_Strategy = CinemachineCollider.ResolutionStrategy.PreserveCameraHeight;
             collider.m_SmoothingTime = 0.05f;
             collider.m_Damping = 0.15f;
             collider.m_DampingWhenOccluded = 0.05f;

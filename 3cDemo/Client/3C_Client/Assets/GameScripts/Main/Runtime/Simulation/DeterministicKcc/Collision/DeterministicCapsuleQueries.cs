@@ -13,12 +13,13 @@ namespace ThirdPersonSimulation.DeterministicKcc
         readonly DeterministicKccContact[] m_OverlapContacts;
         readonly DeterministicKccContact[] m_CastContacts;
         readonly DeterministicKccContact[] m_AllCastContacts;
-        readonly DeterministicKccRayHit[] m_RayHits;
 
         int m_OverlapContactCount;
         int m_CastContactCount;
         int m_AllCastContactCount;
         int m_RayHitCount;
+        DeterministicKccRayHit m_ClosestRayHit;
+        bool m_HasClosestRayHit;
 
         public DeterministicCapsuleQueries(
             DeterministicCollisionWorldArtifact world,
@@ -31,7 +32,6 @@ namespace ThirdPersonSimulation.DeterministicKcc
             m_OverlapContacts = new DeterministicKccContact[configuration.MaximumContacts];
             m_CastContacts = new DeterministicKccContact[configuration.MaximumContacts];
             m_AllCastContacts = new DeterministicKccContact[configuration.MaximumContacts];
-            m_RayHits = new DeterministicKccRayHit[configuration.MaximumContacts];
         }
 
         public int Overlap(FixedVector3 position, out DeterministicKccQuerySummary summary)

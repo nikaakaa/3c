@@ -137,7 +137,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
 
         public bool TryGetRuntimeDiagnostics(out RollbackRuntimeDiagnosticsSnapshot snapshot)
         {
-            if (m_RuntimeState == null || m_OutputCommitter == null || m_NetworkDiagnostics == null)
+            if (m_Disposed || m_RuntimeState == null || m_OutputCommitter == null || m_NetworkDiagnostics == null)
             {
                 snapshot = default;
                 return false;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -136,11 +137,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         void RequireStructuralTuningPayload()
         {
-            for (int profileIndex = 0; profileIndex < PosePlan.PredictiveFootPlacements.Count; profileIndex++)
+            for (int profileIndex = 0; profileIndex < PosePlan.FootGroundings.Count; profileIndex++)
             {
-                CharacterPresentationPredictiveFootPlacementDescriptor descriptor =
-                    PosePlan.PredictiveFootPlacements[profileIndex];
-                var settings = descriptor.Profile.PredictiveExtension.Build();
+                CharacterPresentationFootGroundingDescriptor descriptor =
+                    PosePlan.FootGroundings[profileIndex];
+                CharacterLyraCurrentGroundingSettings current =
+                    descriptor.Profile.LyraCurrentGrounding.Build();
+                CharacterPredictiveFootPlacementRuntimeSettings predictive =
+                    descriptor.Profile.PredictiveExtension.Build();
                 string ownerId = $"foot-placement-profile:{descriptor.Profile.ProfileId}";
                 for (int entryIndex = 0; entryIndex < TuningLayout.Entries.Count; entryIndex++)
                 {
@@ -149,11 +153,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         entry.Interaction != CharacterPoseTuningInteractionPolicy.Structural)
                         continue;
                     CharacterPoseTuningValue value = TuningDefaultBlock.GetValue(entry);
-                    if (entry.FieldId.EndsWith("/predictive/hit-capacity", StringComparison.Ordinal) &&
-                        value.IntegerValue != settings.HitCapacity)
+                    if (entry.FieldId.EndsWith("/lyra-current-grounding/hit-capacity", StringComparison.Ordinal) &&
+                        value.IntegerValue != current.HitCapacity)
                         throw new InvalidOperationException("Character Presentation Projection Foot Placement hit capacity is stale.");
                     if (entry.FieldId.EndsWith("/predictive/path-sample-count", StringComparison.Ordinal) &&
-                        value.IntegerValue != settings.PathSampleCount)
+                        value.IntegerValue != predictive.PathSampleCount)
                         throw new InvalidOperationException("Character Presentation Projection Foot Placement path sample capacity is stale.");
                 }
             }

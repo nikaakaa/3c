@@ -151,9 +151,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 }
             }
             bool canAdvancePrediction = nextTick <= checked(
-                m_State.LastCanonicalContiguousTick + (ulong)m_Policy.MaximumRollbackDepthTicks);
+                m_State.LastCanonicalContiguousTick + (ulong)m_Policy.MaximumPredictionLeadTicks);
             if (!canAdvancePrediction && steps.Count == 0 && restore == null)
+            {
+                m_State.RecordPacedNoStep();
                 return BuildNoStep(context, programRuntime.Catalog.CatalogHash, roster);
+            }
             if (canAdvancePrediction || steps.Count == 0)
             {
                 RollbackCanonicalInputBundle current = SelectBundle(new SimulationTick(nextTick));

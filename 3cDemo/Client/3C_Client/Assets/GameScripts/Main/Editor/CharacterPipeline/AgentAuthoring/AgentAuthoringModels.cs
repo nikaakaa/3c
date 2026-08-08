@@ -68,6 +68,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string definitionAssetPath;
         public string rootTreeAssetPath;
         public string rootGraphAuthoringId;
+        public int blackboardSchemaRevision;
         public string programId;
         public string sourceRevision;
         public string semanticHash;
@@ -111,6 +112,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string controlledCharacterAssetGuid;
         public string characterProgramId;
         public string characterProgramHash;
+        public bool characterProgramStale;
         public List<AgentSnapshotInputValue> inputValues = new List<AgentSnapshotInputValue>();
         public List<AgentSnapshotActionRequest> actionRequests = new List<AgentSnapshotActionRequest>();
         public List<AgentSnapshotAIBlackboardDeclaration> blackboardDeclarations = new List<AgentSnapshotAIBlackboardDeclaration>();
@@ -132,8 +134,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string valueType;
         public string scope;
         public string lifetime;
-        public string authority;
-        public string syncPolicy;
         public string defaultValue;
     }
 
@@ -285,6 +285,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
+    public sealed class AgentSnapshotBlackboardInputBinding
+    {
+        public string inputValueId;
+    }
+
+    [Serializable]
+    public sealed class AgentSnapshotBlackboardFactProjection
+    {
+        public string kind;
+        public string windowType;
+        public string windowId;
+        public ulong digest;
+    }
+
+    [Serializable]
     public sealed class AgentSnapshotBlackboardDeclaration
     {
         public string declarationId;
@@ -295,13 +310,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public JToken defaultValue;
         public string scope;
         public string lifetime;
-        public string authority;
-        public string syncPolicy;
-        public string inputValueId;
-        public string factProjection;
-        public string windowType;
-        public string windowId;
-        public ulong digest;
+        public AgentSnapshotBlackboardInputBinding inputBinding;
+        public AgentSnapshotBlackboardFactProjection factProjection;
         public string categoryPath;
     }
 
@@ -331,10 +341,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string declarationId;
         public string declarationOwnerId;
         public string blackboardKey;
-        public string factProjection;
-        public string windowType;
-        public string windowId;
-        public ulong digest;
     }
 
     [Serializable]
@@ -825,6 +831,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string state;
         public string displayName;
         public string nodeType;
+        public string exposedPropertyMode;
         public string from;
         public string to;
         public string sourceNode;
@@ -850,9 +857,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public JToken blackboardDefaultValue;
         public string blackboardScope;
         public string blackboardLifetime;
-        public string blackboardAuthority;
-        public string blackboardSyncPolicy;
-        public string factProjection;
+        public int blackboardSchemaRevision;
+        public AgentSnapshotBlackboardInputBinding inputBinding;
+        public AgentSnapshotBlackboardFactProjection factProjection;
         public string windowType;
         public string windowId;
         public ulong digest;

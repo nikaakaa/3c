@@ -68,7 +68,7 @@ namespace ThirdPersonCharacter.Editor
             m_DriveLabel = new Label();
             m_HistoryLabel = new Label();
             m_ResultLabel = new Label();
-            m_HotkeyLabel = new Label("Hotkeys in GameView: F5 Pause+Lock/Resume, F6 Step 1, F7 Step 8, F8 Resume Live.");
+            m_HotkeyLabel = new Label("Hotkeys in GameView: F5 Pause+Lock/Resume, F6 Step 1, F7 Step 8, F8 Resume Live, O Toggle 0.25x Slow Motion.");
             rootVisualElement.Add(m_StatusLabel);
             rootVisualElement.Add(m_IdentityLabel);
             rootVisualElement.Add(m_DriveLabel);

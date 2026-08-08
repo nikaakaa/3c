@@ -428,6 +428,9 @@ namespace ThirdPersonGameplay.Tick
             if (m_DrivePolicy.PresentationClockMode == GameplayPresentationDebugClockMode.LivePresentation)
                 return m_LastScaledDeltaSeconds;
 
+            if (m_DrivePolicy.Mode == GameplayTickDriveMode.RatePlayback)
+                return m_LastScaledDeltaSeconds * m_DrivePolicy.RateMultiplier;
+
             if (advancedLogicTicks > 0)
                 return fixedDeltaSeconds;
 

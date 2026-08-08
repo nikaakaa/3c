@@ -497,7 +497,7 @@ namespace ThirdPersonSimulation.Fixed
                 using (request.Performance.Measure(SimulationPerformancePhase.InputRequestApply))
                 {
                     m_Input.ApplyRequests();
-                    m_Input.ApplyInputDerived(m_Blackboard);
+                    m_Input.ApplyBlackboardInputBindings(m_Blackboard);
                 }
                 using (request.Performance.Measure(SimulationPerformancePhase.TimelineDecision))
                     m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);

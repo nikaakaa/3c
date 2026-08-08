@@ -470,7 +470,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     errors.Add($"Foot Placement Profile '{path}' could not be loaded.");
                     continue;
                 }
-                int mask = profile.FinalIkGrounding.GroundLayerMask;
+                int mask = profile.LyraCurrentGrounding.Build().GroundLayerMask;
                 bool ground = (mask & CharacterSurfaceLayerRoles.GroundMask) != 0;
                 bool foot = (mask & CharacterSurfaceLayerRoles.FootPlacementSurfaceMask) != 0;
                 bool traversal = (mask & CharacterSurfaceLayerRoles.CharacterTraversalMask) != 0;

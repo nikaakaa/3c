@@ -405,8 +405,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return asset.EnumerateGraphs()
                 .Where(graph => graph != null)
                 .SelectMany(graph => graph.Nodes)
-                .Where(node => node?.Payload is CharacterPredictiveFootPlacementPosePayload)
-                .Select(node => ((CharacterPredictiveFootPlacementPosePayload)node.Payload).Profile)
+                .Where(node => node?.Payload is CharacterFootGroundingPosePayload)
+                .Select(node => ((CharacterFootGroundingPosePayload)node.Payload).Profile)
                 .Where(profile => profile && $"foot-placement-profile:{profile.ProfileId}" == ownerId)
                 .Distinct()
                 .SingleOrDefault();

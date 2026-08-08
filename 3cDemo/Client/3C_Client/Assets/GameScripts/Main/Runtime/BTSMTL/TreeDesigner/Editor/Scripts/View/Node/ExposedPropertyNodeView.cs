@@ -131,15 +131,7 @@ namespace TreeDesigner.Editor
                             m_InputPortContainer.RemovePropertyPort(ExposedPropertyNode.Value);
                             break;
                     }
-                    switch (selectedNodeType)
-                    {
-                        case ExposedPropertyNodeType.Get:
-                            ExposedPropertyNode.Value.Direction = PortDirection.Output;
-                            break;
-                        case ExposedPropertyNodeType.Set:
-                            ExposedPropertyNode.Value.Direction = PortDirection.Input;
-                            break;
-                    }
+                    ExposedPropertyNode.SetNodeType(selectedNodeType);
                     switch (selectedNodeType)
                     {
                         case ExposedPropertyNodeType.Get:
@@ -150,7 +142,6 @@ namespace TreeDesigner.Editor
                             m_InputPortContainer.AddPropertyPort(ExposedPropertyNode.Value, "Value", Port.Capacity.Single);
                             break;
                     }
-                    ExposedPropertyNode.SetNodeType(selectedNodeType);
                     Refresh();
                     RefreshPorts();
                     OnNodeTypeChanged();

@@ -37,9 +37,12 @@ Document不会自动编译或自动apply。Unity树变化和Document变化只计
    - dry-run只会把合法的local Pose Graph文件对与graph-owned Inline Timeline文件对加入服务端有效manifest。缺少配对、非canonical目录、非local id、非法role、非唯一调用点或其它manifest外文件仍会严格失败。AI不得直接修改manifest。
    - dry-run返回的document hash已经锁定扩展后的完整文件闭包；apply成功后reverse export把local identity替换为stable identity，并由service发布新的canonical manifest。
 5. Graph文件只表达stable capability、typed properties、逻辑port和system anchor。Pose Graph节点必须使用共享Capability提供的typed payload字段、port与role约束。已有实体保持stable authoring identity；新实体使用`local:<meaningful-id>`，不得写C#类型名、序列化field、compiler index、generated payload、冗余port镜像或系统节点正文。
+   - 节点端口随typed property变化时，Capability必须声明严格`portVariants`。唯一Node Port Shape Projector把固定端口、唯一命中的条件端口和作者拥有的动态端口合成完整形状；Canvas、Document、Reconciler、Mutation与Validator不得各自判断mode或从默认构造节点推断端口。
 6. 调用`btsmtl.dry_run_document`。必须处理机器可读`path/code/message/suggestion`，并确认`plannedDiff`符合业务目标。
 7. 仅当dry-run成功时，把其返回的精确`documentHash`原样作为`expected_document_hash`调用`btsmtl.apply_document`；任一editable文件变化后都必须重新dry-run。
 8. apply成功必须同时满足`success=true`、`applied=true`、`saved=true`和`syncState=Clean`。Character的Gameplay、Timeline与Presentation owner进入同一资产级事务，Document从最终Unity树反向导出，local identity被真实stable identity替换。任一Mutation、Validator、保存或反向发布失败都必须完整回滚并返回`syncState=ApplyFailed`。
+   - AI schema normalization未改变AI authoring语义且受控Character Program已过期时，apply只验证并保存AI authoring，`AIIntentProgram`保持stale；不得加载旧Numeric Target或自动Build Character。
+   - AI authoring语义真实变化时仍必须通过当前Character Program的正式AI Compiler校验。Character Program过期时必须先按精确Definition重新发布Character产物，不能用authoring catalog代替generated identity发布AIIntentProgram。
 9. Character authoring语义变化且需要正式产物时，显式调用`character.build_float32_products(definition_asset_path)`；需要Fixed wrapper时再调用`character.build_fixed_products(definition_asset_path, wrapper_asset_path)`。两个工具都只接受精确路径，不读取selection、不扫描目录、不自动触发。
 10. Character Build后重新checkout刷新generated context，再调用`btsmtl.validate`确认正式authoring与compiler约束。
 
@@ -56,6 +59,7 @@ Document不会自动编译或自动apply。Unity树变化和Document变化只计
 
 Character Document v3正式可写：
 
+- Blackboard declaration的基础字段，以及可选`inputBinding.inputValueId`和可选`factProjection`。禁止旧变量级网络策略字段、旧mode枚举、旧平铺input/projection字段或AI Character payload。
 - Pose Graph-owned typed Source Slot子资产、Presentation Profile-owned typed Source Binding子资产、policy与有限Action producer binding。
 - root-owned Pose Graph catalog中的Graph、layout、parameter、节点typed payload、dynamic port与edge。
 - Linked Pose Implementation及其Entry Graph闭包、Profile Group binding、通用selector envelope和Equipment精确mapping；Interface正文只读。

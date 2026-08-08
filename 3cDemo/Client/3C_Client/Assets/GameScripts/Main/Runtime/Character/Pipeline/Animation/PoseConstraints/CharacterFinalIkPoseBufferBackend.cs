@@ -16,7 +16,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly NativeArray<CharacterVirtualBoneDescriptor> m_VirtualBones;
         readonly Vector3[] m_ReferenceComponentPositions;
         readonly Quaternion[] m_ReferenceComponentRotations;
-        readonly bool[] m_Descendants;
+        readonly int[] m_DescendantOffsets;
+        readonly int[] m_DescendantIndices;
         NativeSlice<AnimationLocalBonePose> m_ComponentPose;
 
         public CharacterFinalIkPoseBufferBackend(
@@ -36,9 +37,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_VirtualBones = virtualBones;
             m_ReferenceComponentPositions = new Vector3[m_Counts.PhysicalBoneCount];
             m_ReferenceComponentRotations = new Quaternion[m_Counts.PhysicalBoneCount];
-            m_Descendants = new bool[checked(m_Counts.PhysicalBoneCount * m_Counts.PhysicalBoneCount)];
             BuildReferencePose(rig);
-            BuildDescendantTable();
+            BuildDescendantIndex(out m_DescendantOffsets, out m_DescendantIndices);
         }
 
         public int BoneCount => m_Counts.PoseBoneCount;
@@ -77,11 +77,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (componentPose.Length != m_Counts.PoseBoneCount)
                 throw new ArgumentException("FinalIK Pose Buffer page does not match the Animation Rig.", nameof(componentPose));
-            for (int i = 0; i < componentPose.Length; i++)
-            {
-                if (!componentPose[i].IsValid)
-                    throw new ArgumentException($"FinalIK Pose Buffer bone #{i} is invalid.", nameof(componentPose));
-            }
             m_ComponentPose = componentPose;
         }
 
@@ -137,10 +132,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ComponentPose[index] = new AnimationLocalBonePose(position, current.Rotation, current.Scale);
             if (delta == Vector3.zero)
                 return;
-            for (int child = 0; child < m_Counts.PhysicalBoneCount; child++)
+            int end = m_DescendantOffsets[index + 1];
+            for (int descendant = m_DescendantOffsets[index]; descendant < end; descendant++)
             {
-                if (!IsDescendant(index, child))
-                    continue;
+                int child = m_DescendantIndices[descendant];
                 AnimationLocalBonePose value = m_ComponentPose[child];
                 m_ComponentPose[child] = new AnimationLocalBonePose(value.Position + delta, value.Rotation, value.Scale);
             }
@@ -154,10 +149,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Quaternion normalized = rotation.normalized;
             Quaternion delta = normalized * Quaternion.Inverse(current.Rotation);
             m_ComponentPose[index] = new AnimationLocalBonePose(current.Position, normalized, current.Scale);
-            for (int child = 0; child < m_Counts.PhysicalBoneCount; child++)
+            int end = m_DescendantOffsets[index + 1];
+            for (int descendant = m_DescendantOffsets[index]; descendant < end; descendant++)
             {
-                if (!IsDescendant(index, child))
-                    continue;
+                int child = m_DescendantIndices[descendant];
                 AnimationLocalBonePose value = m_ComponentPose[child];
                 m_ComponentPose[child] = new AnimationLocalBonePose(
                     current.Position + delta * (value.Position - current.Position),
@@ -240,8 +235,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        void BuildDescendantTable()
+        void BuildDescendantIndex(
+            out int[] offsets,
+            out int[] descendants)
         {
+            int physicalBoneCount = m_Counts.PhysicalBoneCount;
+            offsets = new int[physicalBoneCount + 1];
             for (int child = 0; child < m_Counts.PhysicalBoneCount; child++)
             {
                 int parent = m_ParentIndices[child];
@@ -249,14 +248,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     if (parent >= child)
                         throw new ArgumentException($"FinalIK Pose Buffer hierarchy bone #{child} is invalid.", nameof(m_ParentIndices));
-                    m_Descendants[parent * m_Counts.PhysicalBoneCount + child] = true;
+                    offsets[parent + 1]++;
+                    parent = m_ParentIndices[parent];
+                }
+            }
+            for (int parent = 0; parent < physicalBoneCount; parent++)
+                offsets[parent + 1] = checked(offsets[parent + 1] + offsets[parent]);
+            descendants = new int[offsets[physicalBoneCount]];
+            var writeOffsets = new int[physicalBoneCount];
+            Array.Copy(offsets, writeOffsets, physicalBoneCount);
+            for (int child = 0; child < physicalBoneCount; child++)
+            {
+                int parent = m_ParentIndices[child];
+                while (parent >= 0)
+                {
+                    descendants[writeOffsets[parent]++] = child;
                     parent = m_ParentIndices[parent];
                 }
             }
         }
-
-        bool IsDescendant(int parent, int child) =>
-            m_Descendants[parent * m_Counts.PhysicalBoneCount + child];
 
         AnimationLocalBonePose RequirePose(IndexedBoneHandle bone)
         {

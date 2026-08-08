@@ -1114,8 +1114,7 @@ namespace ThirdPersonSimulation
 
     public enum ProgramBlackboardFactProjectionKind : byte
     {
-        None = 0,
-        ActionWindow = 1
+        ActionWindow = 0
     }
     public sealed class ProgramScopeLayout
     {

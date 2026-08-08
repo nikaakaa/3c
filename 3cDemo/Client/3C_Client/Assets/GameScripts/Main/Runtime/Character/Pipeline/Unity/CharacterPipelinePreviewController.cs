@@ -495,7 +495,7 @@ namespace ThirdPersonCharacter.Pipeline
         CharacterWorldAwarePresentationBinding ResolveWorldAwareBinding(
             CharacterPipelineHost host)
         {
-            if (m_Projection.PosePlan.PredictiveFootPlacements.Count == 0)
+            if (m_Projection.PosePlan.FootGroundings.Count == 0)
                 return null;
             CharacterWorldAwarePresentationBinding binding =
                 host.WorldAwarePresentation;

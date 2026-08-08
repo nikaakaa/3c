@@ -277,23 +277,46 @@ namespace BTSMTL.Diagnostics
         {
             return left.IsAvailable == right.IsAvailable &&
                    left.FrameSequence == right.FrameSequence &&
-                   left.GoalCompletionIdentity == right.GoalCompletionIdentity &&
+                   left.ResetSequence == right.ResetSequence &&
+                   left.GroundingCompletionIdentity == right.GroundingCompletionIdentity &&
+                   left.ModifierCompletionIdentity == right.ModifierCompletionIdentity &&
                    left.SolverCompletionIdentity == right.SolverCompletionIdentity &&
-                   string.Equals(left.GroundingBackendIdentity, right.GroundingBackendIdentity, StringComparison.Ordinal) &&
+                   left.HasPredictiveModifier == right.HasPredictiveModifier &&
                    string.Equals(left.SolverBackendIdentity, right.SolverBackendIdentity, StringComparison.Ordinal) &&
                    string.Equals(left.SolverFailure, right.SolverFailure, StringComparison.Ordinal) &&
+                   left.NodeExecuted == right.NodeExecuted &&
                    left.BodyGrounded == right.BodyGrounded &&
-                   left.TargetGrounded == right.TargetGrounded &&
-                   left.GroundedBefore == right.GroundedBefore &&
-                   left.GroundedAfter == right.GroundedAfter &&
-                   left.RootHit == right.RootHit &&
-                   left.RootSurfaceIdentity == right.RootSurfaceIdentity &&
-                   left.PelvisTargetOffset.Equals(right.PelvisTargetOffset) &&
-                   left.PelvisResolvedOffset.Equals(right.PelvisResolvedOffset) &&
-                   left.RejectLeftGoal == right.RejectLeftGoal &&
-                   left.RejectRightGoal == right.RejectRightGoal &&
-                   string.Equals(left.PelvisHeightMode, right.PelvisHeightMode, StringComparison.Ordinal) &&
-                   string.Equals(left.MovementCompensationMode, right.MovementCompensationMode, StringComparison.Ordinal) &&
+                   left.PlacementAlpha.Equals(right.PlacementAlpha) &&
+                   left.PresentationDeltaSeconds.Equals(right.PresentationDeltaSeconds) &&
+                   left.PoseRootVerticalDelta.Equals(right.PoseRootVerticalDelta) &&
+                   left.PelvisLyraTargetOffset.Equals(right.PelvisLyraTargetOffset) &&
+                   left.PelvisResolvedTargetOffset.Equals(right.PelvisResolvedTargetOffset) &&
+                   left.CurrentPelvisOffset.Equals(right.CurrentPelvisOffset) &&
+                   left.PelvisSpringVelocity.Equals(right.PelvisSpringVelocity) &&
+                   left.PreviousPelvisTarget.Equals(right.PreviousPelvisTarget) &&
+                   left.PelvisSpringInitialized == right.PelvisSpringInitialized &&
+                   left.PelvisPreSolveTranslation.Equals(right.PelvisPreSolveTranslation) &&
+                   left.PelvisGoalPositionWeight.Equals(right.PelvisGoalPositionWeight) &&
+                   string.Equals(left.PelvisGoalApplication, right.PelvisGoalApplication, StringComparison.Ordinal) &&
+                   string.Equals(left.PelvisGoalSourceKind, right.PelvisGoalSourceKind, StringComparison.Ordinal) &&
+                   string.Equals(left.LyraSourceIdentity, right.LyraSourceIdentity, StringComparison.Ordinal) &&
+                   string.Equals(left.SpringIdentity, right.SpringIdentity, StringComparison.Ordinal) &&
+                   string.Equals(left.RigId, right.RigId, StringComparison.Ordinal) &&
+                   string.Equals(left.RigRevision, right.RigRevision, StringComparison.Ordinal) &&
+                   string.Equals(left.ProfileId, right.ProfileId, StringComparison.Ordinal) &&
+                   string.Equals(left.ProfileRevision, right.ProfileRevision, StringComparison.Ordinal) &&
+                   string.Equals(left.PosePlanHash, right.PosePlanHash, StringComparison.Ordinal) &&
+                   string.Equals(left.CalibrationId, right.CalibrationId, StringComparison.Ordinal) &&
+                   string.Equals(left.CalibrationRevision, right.CalibrationRevision, StringComparison.Ordinal) &&
+                   left.PhysicsSceneIdentity == right.PhysicsSceneIdentity &&
+                   left.SelfFilterIdentity == right.SelfFilterIdentity &&
+                   string.Equals(left.ModifierSelectedSide, right.ModifierSelectedSide, StringComparison.Ordinal) &&
+                   left.BaselineProducerOperationIndex == right.BaselineProducerOperationIndex &&
+                   left.BaselineProducerCallSiteIndex == right.BaselineProducerCallSiteIndex &&
+                   left.BaselineGoalOffset == right.BaselineGoalOffset &&
+                   left.BaselineGoalCount == right.BaselineGoalCount &&
+                   string.Equals(left.BaselineRigId, right.BaselineRigId, StringComparison.Ordinal) &&
+                   string.Equals(left.BaselineRigRevision, right.BaselineRigRevision, StringComparison.Ordinal) &&
                    FootIkLegEquivalent(left.Left, right.Left) &&
                    FootIkLegEquivalent(left.Right, right.Right);
         }
@@ -301,15 +324,42 @@ namespace BTSMTL.Diagnostics
         static bool FootIkLegEquivalent(RuntimeFootIkLegTraceSnapshot left, RuntimeFootIkLegTraceSnapshot right)
         {
             return left.IsAvailable == right.IsAvailable &&
-                   left.Grounded == right.Grounded &&
-                   left.CurrentGroundingHit == right.CurrentGroundingHit &&
-                   left.SurfaceIdentity == right.SurfaceIdentity &&
-                   string.Equals(left.ConstraintState, right.ConstraintState, StringComparison.Ordinal) &&
+                   left.DidCurrentTraceHit == right.DidCurrentTraceHit &&
+                   left.CurrentSurfaceIdentity == right.CurrentSurfaceIdentity &&
+                   string.Equals(left.CurrentQueryShape, right.CurrentQueryShape, StringComparison.Ordinal) &&
+                   string.Equals(left.CurrentQueryPurpose, right.CurrentQueryPurpose, StringComparison.Ordinal) &&
+                   left.CurrentQueryFootIndex == right.CurrentQueryFootIndex &&
+                   left.CurrentQueryOrigin.Equals(right.CurrentQueryOrigin) &&
+                   left.CurrentQueryCapsuleEnd.Equals(right.CurrentQueryCapsuleEnd) &&
+                   left.CurrentQueryDirection.Equals(right.CurrentQueryDirection) &&
+                   left.CurrentQueryRadius.Equals(right.CurrentQueryRadius) &&
+                   left.CurrentQueryMaximumDistance.Equals(right.CurrentQueryMaximumDistance) &&
+                   left.CurrentQueryLayerMask == right.CurrentQueryLayerMask &&
+                   left.CurrentQueryMinimumGroundNormalDot.Equals(right.CurrentQueryMinimumGroundNormalDot) &&
+                   left.CurrentHitLocation.Equals(right.CurrentHitLocation) &&
+                   left.CurrentImpactPoint.Equals(right.CurrentImpactPoint) &&
+                   left.CurrentHitNormal.Equals(right.CurrentHitNormal) &&
+                   left.CurrentHitDistance.Equals(right.CurrentHitDistance) &&
+                   string.Equals(left.ContactState, right.ContactState, StringComparison.Ordinal) &&
                    string.Equals(left.TransitionReason, right.TransitionReason, StringComparison.Ordinal) &&
-                   string.Equals(left.LockType, right.LockType, StringComparison.Ordinal) &&
+                   left.HasSurfaceAnchor == right.HasSurfaceAnchor &&
+                   left.SurfaceLocalAnchor.Equals(right.SurfaceLocalAnchor) &&
+                   left.SurfaceLocalRotation.Equals(right.SurfaceLocalRotation) &&
+                   left.AnchorWorldPosition.Equals(right.AnchorWorldPosition) &&
+                   left.AnchorWorldRotation.Equals(right.AnchorWorldRotation) &&
+                   left.SwingEligible == right.SwingEligible &&
+                   left.SelectedForPredictiveRewrite == right.SelectedForPredictiveRewrite &&
+                   left.PredictiveRewritten == right.PredictiveRewritten &&
                    string.Equals(left.PredictionRejectReason, right.PredictionRejectReason, StringComparison.Ordinal) &&
-                   string.Equals(left.GoalApplication, right.GoalApplication, StringComparison.Ordinal) &&
-                   string.Equals(left.GoalSourceKind, right.GoalSourceKind, StringComparison.Ordinal) &&
+                   left.FutureSurfaceIdentity == right.FutureSurfaceIdentity &&
+                   left.FutureSupportPoint.Equals(right.FutureSupportPoint) &&
+                   left.FutureSupportNormal.Equals(right.FutureSupportNormal) &&
+                   left.GroundEnvelopeSegmentCount == right.GroundEnvelopeSegmentCount &&
+                   string.Equals(left.GroundEnvelopeRejectReason, right.GroundEnvelopeRejectReason, StringComparison.Ordinal) &&
+                   left.PredictiveQueryCount == right.PredictiveQueryCount &&
+                   left.PredictiveRejectedQueryCount == right.PredictiveRejectedQueryCount &&
+                   string.Equals(left.BaselineGoalApplication, right.BaselineGoalApplication, StringComparison.Ordinal) &&
+                   string.Equals(left.FinalGoalSourceKind, right.FinalGoalSourceKind, StringComparison.Ordinal) &&
                    left.SolverResultAvailable == right.SolverResultAvailable &&
                    left.PlantConfidence.Equals(right.PlantConfidence) &&
                    left.PlantContact == right.PlantContact &&
@@ -317,16 +367,46 @@ namespace BTSMTL.Diagnostics
                    left.PlacementWeight.Equals(right.PlacementWeight) &&
                    left.AnimationFootSpeed.Equals(right.AnimationFootSpeed) &&
                    left.SurfaceDistance.Equals(right.SurfaceDistance) &&
-                   left.PlantSupportWeight.Equals(right.PlantSupportWeight) &&
-                   left.ContactWeight.Equals(right.ContactWeight) &&
-                   left.GoalPositionWeight.Equals(right.GoalPositionWeight) &&
-                   left.GoalRotationWeight.Equals(right.GoalRotationWeight) &&
-                   left.LegExtensionRatio.Equals(right.LegExtensionRatio) &&
-                   left.AnkleTwistDegrees.Equals(right.AnkleTwistDegrees) &&
-                   left.QueryCount == right.QueryCount &&
-                   left.RejectedQueryCount == right.RejectedQueryCount &&
-                   left.GroundingComponentPosition.Equals(right.GroundingComponentPosition) &&
-                   left.GoalComponentPosition.Equals(right.GoalComponentPosition) &&
+                   left.SoleSupportSurfaceIdentity == right.SoleSupportSurfaceIdentity &&
+                   left.SoleSupportPoint.Equals(right.SoleSupportPoint) &&
+                   left.SoleSupportNormal.Equals(right.SoleSupportNormal) &&
+                   left.SoleClearanceTarget.Equals(right.SoleClearanceTarget) &&
+                   left.SoleClearanceTargetTranslation.Equals(right.SoleClearanceTargetTranslation) &&
+                   left.SoleAnklePosition.Equals(right.SoleAnklePosition) &&
+                   left.SoleHeelPosition.Equals(right.SoleHeelPosition) &&
+                   left.SoleToePosition.Equals(right.SoleToePosition) &&
+                   left.SoleHeelPlaneDistance.Equals(right.SoleHeelPlaneDistance) &&
+                   left.SoleToePlaneDistance.Equals(right.SoleToePlaneDistance) &&
+                   left.ResidualSolePenetration.Equals(right.ResidualSolePenetration) &&
+                   left.AnimatedAnkleComponentY.Equals(right.AnimatedAnkleComponentY) &&
+                   left.HasPreviousSoleSample == right.HasPreviousSoleSample &&
+                   left.PreviousSoleSurfaceIdentity == right.PreviousSoleSurfaceIdentity &&
+                   left.PreviousSoleHeelPlaneDistance.Equals(right.PreviousSoleHeelPlaneDistance) &&
+                   left.PreviousSoleToePlaneDistance.Equals(right.PreviousSoleToePlaneDistance) &&
+                   left.ContinuousSoleContact == right.ContinuousSoleContact &&
+                   left.AnchorBlendWeight.Equals(right.AnchorBlendWeight) &&
+                   left.BaselineGoalPositionWeight.Equals(right.BaselineGoalPositionWeight) &&
+                   left.BaselineGoalRotationWeight.Equals(right.BaselineGoalRotationWeight) &&
+                   left.FinalGoalPositionWeight.Equals(right.FinalGoalPositionWeight) &&
+                   left.FinalGoalRotationWeight.Equals(right.FinalGoalRotationWeight) &&
+                   left.TargetOffset.Equals(right.TargetOffset) &&
+                   left.OffsetTarget.Equals(right.OffsetTarget) &&
+                   left.UnconstrainedOffset.Equals(right.UnconstrainedOffset) &&
+                   left.SoleConstraintOffset.Equals(right.SoleConstraintOffset) &&
+                   left.CurrentOffset.Equals(right.CurrentOffset) &&
+                   left.OffsetSpringVelocity.Equals(right.OffsetSpringVelocity) &&
+                   left.PreviousOffsetTarget.Equals(right.PreviousOffsetTarget) &&
+                   left.OffsetSpringInitialized == right.OffsetSpringInitialized &&
+                   left.TargetNormal.Equals(right.TargetNormal) &&
+                   left.CurrentNormal.Equals(right.CurrentNormal) &&
+                   left.NormalSpringVelocity.Equals(right.NormalSpringVelocity) &&
+                   left.PreviousNormalTarget.Equals(right.PreviousNormalTarget) &&
+                   left.NormalSpringInitialized == right.NormalSpringInitialized &&
+                   left.PredictionHorizon.Equals(right.PredictionHorizon) &&
+                   left.SwingClearance.Equals(right.SwingClearance) &&
+                   left.CurrentGroundingComponentPosition.Equals(right.CurrentGroundingComponentPosition) &&
+                   left.BaselineGoalComponentPosition.Equals(right.BaselineGoalComponentPosition) &&
+                   left.FinalGoalComponentPosition.Equals(right.FinalGoalComponentPosition) &&
                    left.SolvedComponentPosition.Equals(right.SolvedComponentPosition) &&
                    left.PositionResidual.Equals(right.PositionResidual) &&
                    left.RotationResidualDegrees.Equals(right.RotationResidualDegrees);

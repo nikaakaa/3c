@@ -23,6 +23,7 @@ MonoBehaviour:
   m_HistoryLengthTicks: 180
   m_HashCadenceTicks: 10
   m_MaximumRollbackDepthTicks: 90
+  m_MaximumPredictionLeadTicks: 1
   m_ConfirmationDelayTicks: 4
   m_MaximumQueuedBundles: 256
   m_MaximumQueuedSnapshots: 192

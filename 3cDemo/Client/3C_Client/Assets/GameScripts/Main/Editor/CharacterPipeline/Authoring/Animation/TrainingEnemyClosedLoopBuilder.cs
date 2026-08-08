@@ -248,14 +248,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ActionTargetSnapshotExposedProperty actionTarget = tree.CreateExposedProperty(typeof(ActionTargetSnapshotExposedProperty)) as ActionTargetSnapshotExposedProperty ??
                 throw new InvalidOperationException("Training Enemy ActionTarget Blackboard declaration could not be created.");
             actionTarget.Name = "ActionTarget";
-            actionTarget.ConfigurePipelineBlackboard(
+            actionTarget.ConfigureDeclaration(
                 "ActionTarget",
                 PipelineBlackboardVariableScope.Character,
                 PipelineBlackboardVariableLifetime.Spawn,
-                PipelineBlackboardVariableAuthority.ClientPredicted,
-                PipelineBlackboardVariableSyncPolicy.InputDerived,
-                "ActionTarget",
                 "MonsterCombat/Targeting");
+            actionTarget.ConfigureInputBinding("ActionTarget");
             actionTarget.ShowOutside = true;
             actionTarget.CanEdit = false;
             PipelineBlackboardVariableReference actionTargetReference = actionTarget.CreateBlackboardReference();
@@ -599,13 +597,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             T declaration = tree.CreateExposedProperty(typeof(T)) as T ??
                 throw new InvalidOperationException($"Training Enemy AI Blackboard declaration '{key}' could not be created.");
             declaration.Name = key;
-            declaration.ConfigurePipelineBlackboard(
+            declaration.ConfigureDeclaration(
                 key,
                 scope,
                 PipelineBlackboardVariablePolicy.DefaultLifetime(scope),
-                PipelineBlackboardVariableAuthority.LocalOnly,
-                PipelineBlackboardVariableSyncPolicy.None,
-                string.Empty,
                 "MonsterAI");
             declaration.SetValue(value);
             return declaration;

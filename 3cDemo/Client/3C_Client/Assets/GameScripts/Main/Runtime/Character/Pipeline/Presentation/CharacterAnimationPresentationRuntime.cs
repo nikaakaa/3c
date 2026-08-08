@@ -401,7 +401,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
             CharacterLinkedPoseRuntimeSession linkedPose,
-            CharacterPredictiveFootPlacementGoalSource footPlacement,
+            CharacterFootPlacementRuntime footPlacement,
             RuntimeDiagnosticsContext diagnostics = null)
         {
             CharacterPresentationProgramParameterFrame parameterFrame =
@@ -429,7 +429,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterPresentationFactFrame factFrame,
             in CharacterPresentationProgramParameterFrame parameterFrame,
             CharacterLinkedPoseRuntimeSession linkedPose,
-            CharacterPredictiveFootPlacementGoalSource footPlacement,
+            CharacterFootPlacementRuntime footPlacement,
             RuntimeDiagnosticsContext diagnostics = null)
         {
             RequirePresentable();
@@ -686,7 +686,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         void ApplyPendingTuning(
             ulong presentationFrame,
-            CharacterPredictiveFootPlacementGoalSource footPlacement)
+            CharacterFootPlacementRuntime footPlacement)
         {
             if (m_TuningBinding is null)
                 return;
@@ -1555,5 +1555,3 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
     }
 }
-
-

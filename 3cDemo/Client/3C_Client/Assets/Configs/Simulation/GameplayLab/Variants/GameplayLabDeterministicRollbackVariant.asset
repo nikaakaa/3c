@@ -16,7 +16,7 @@ MonoBehaviour:
   m_RuntimeRootPrefab: {fileID: 7126019970263781612, guid: 811fdb16bc141fc48a8dd83da38018a8,
     type: 3}
   m_NumericProfileId: fixed-q32.32
-  m_TargetAbiVersion: 6
+  m_TargetAbiVersion: 7
   m_SourceId: thirdperson.simulation.session-source.deterministic-rollback
   m_PipelineId: thirdperson.simulation.pipeline.deterministic-rollback
   m_SolverId: thirdperson.simulation.solver.deterministic-kcc

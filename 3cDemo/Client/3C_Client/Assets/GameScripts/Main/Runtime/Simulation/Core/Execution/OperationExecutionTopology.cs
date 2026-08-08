@@ -38,13 +38,12 @@ namespace ThirdPersonSimulation
         Yaw = 29,
         TargetRequirement = 30,
         ValueType = 31,
-        SyncPolicy = 32,
-        InputValueId = 33
+        InputValueId = 32
     }
 
     public sealed class ProgramCatalogRuntimeIndex
     {
-        const int FieldCount = 34;
+        const int FieldCount = 33;
         readonly IReadOnlyList<ProgramCatalogEntry> m_Entries;
         readonly int m_KindCount;
         readonly int[] m_OperationEntries;
@@ -147,6 +146,17 @@ namespace ThirdPersonSimulation
                 throw new ArgumentOutOfRangeException(nameof(field));
             ProgramCatalogField value = m_Fields[entry.Index * FieldCount + fieldIndex];
             return value ?? throw new InvalidOperationException($"Catalog '{entry.Identity}' has no field '{field}'.");
+        }
+
+        public bool TryGetField(ProgramCatalogEntry entry, ProgramCatalogFieldId field, out ProgramCatalogField value)
+        {
+            if (entry == null)
+                throw new ArgumentNullException(nameof(entry));
+            int fieldIndex = (int)field;
+            if (entry.Index < 0 || entry.Index >= m_Entries.Count || fieldIndex < 0 || fieldIndex >= FieldCount)
+                throw new ArgumentOutOfRangeException(nameof(field));
+            value = m_Fields[entry.Index * FieldCount + fieldIndex];
+            return value != null;
         }
 
         public bool TryGetIdentity(ProgramCatalogEntry entry, ProgramCatalogFieldId field, out string identity)

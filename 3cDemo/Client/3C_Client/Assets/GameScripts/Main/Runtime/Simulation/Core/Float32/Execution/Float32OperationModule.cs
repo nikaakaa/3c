@@ -62,6 +62,9 @@ namespace ThirdPersonSimulation
         public ProgramCatalogField RequireCatalogField(ProgramCatalogEntry entry, ProgramCatalogFieldId field) =>
             Layout.RequireCatalogField(entry, field);
 
+        public bool TryGetCatalogField(ProgramCatalogEntry entry, ProgramCatalogFieldId field, out ProgramCatalogField value) =>
+            Layout.TryGetCatalogField(entry, field, out value);
+
         public bool TryGetCatalogIdentity(ProgramCatalogEntry entry, ProgramCatalogFieldId field, out string identity) =>
             Layout.TryGetCatalogIdentity(entry, field, out identity);
 
@@ -130,6 +133,20 @@ namespace ThirdPersonSimulation
             if (value.Kind != ProgramCatalogFieldKind.Constant)
                 throw new InvalidOperationException($"Catalog field '{entry.Identity}/{field}' is not Constant.");
             return m_Program.Constants[value.ConstantIndex];
+        }
+
+        protected bool TryCatalogInt32(ProgramCatalogEntry entry, ProgramCatalogFieldId field, out int value)
+        {
+            value = 0;
+            if (!Access.TryGetCatalogField(entry, field, out ProgramCatalogField catalogField))
+                return false;
+            if (catalogField.Kind != ProgramCatalogFieldKind.Constant)
+                throw new InvalidOperationException($"Catalog field '{entry.Identity}/{field}' is not Constant.");
+            ProgramConstant constant = m_Program.Constants[catalogField.ConstantIndex];
+            if (constant.Kind != ProgramConstantKind.Int32)
+                throw new InvalidOperationException($"Catalog field '{entry.Identity}/{field}' is not Int32.");
+            value = constant.Int32;
+            return true;
         }
 
         protected int CatalogInt32(ProgramCatalogEntry entry, ProgramCatalogFieldId field)

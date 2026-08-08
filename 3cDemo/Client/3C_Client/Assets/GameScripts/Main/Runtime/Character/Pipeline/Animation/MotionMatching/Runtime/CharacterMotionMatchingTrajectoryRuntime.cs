@@ -164,6 +164,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_PendingResetSequence = resetSequence;
         }
 
+        public void RetargetResetSequence(ulong resetSequence)
+        {
+            if (m_FrameOpen)
+                throw new InvalidOperationException("Motion Matching Trajectory cannot retarget during a frame.");
+            m_CommittedResetSequence = resetSequence;
+            m_PendingResetSequence = resetSequence;
+        }
+
         internal void BeginFrame()
         {
             if (m_FrameOpen)

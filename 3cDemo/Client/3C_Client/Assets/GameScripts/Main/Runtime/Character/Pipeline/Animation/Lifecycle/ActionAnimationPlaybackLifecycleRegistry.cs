@@ -833,7 +833,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         void ValidateCommandMutationJournal()
         {
-            ulong previousSequence = 0;
+            ActionPlaybackInboxEntry previous = default;
             for (int i = 0; i < m_CommandMutationCount; i++)
             {
                 AnimationPresentationMutationJournalHeader header =
@@ -848,13 +848,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     !payload.IsValid ||
                     header.OperationKind !=
                         MapCommandOperation(payload.Command.Kind) ||
-                    payload.Sequence <= previousSequence)
+                    i > 0 && CompareCommandOrder(previous, payload) >= 0)
                 {
                     throw new InvalidOperationException(
                         "Action lifecycle command mutation journal order or identity is invalid.");
                 }
-                previousSequence = payload.Sequence;
+                previous = payload;
             }
+        }
+
+        static int CompareCommandOrder(
+            ActionPlaybackInboxEntry left,
+            ActionPlaybackInboxEntry right)
+        {
+            int tick = left.Command.LocalLogicTick.CompareTo(
+                right.Command.LocalLogicTick);
+            return tick != 0
+                ? tick
+                : left.Sequence.CompareTo(right.Sequence);
         }
 
         static AnimationPresentationMutationOperationKind MapCommandOperation(

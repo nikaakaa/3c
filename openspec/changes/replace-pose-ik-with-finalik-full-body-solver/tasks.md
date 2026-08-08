@@ -1,6 +1,8 @@
 ## 0. 固定实施门禁
 
-- [x] 0.1 记录本change唯一正式链为FinalIK Grounding-backed PredictiveFootPlacement Goal生成与单次FullBodyIK Pose求解。
+> 第1至18节记录本change已经完成或部分完成的过渡实现。第19节是本次纠偏后的唯一剩余目标；旧FinalIK Grounding、UE `AnimNode_FootPlacement`式重复算法、Plant Plane和并列Pelvis控制权是待删除路径。现有contact/anchor与pelvis reach中已经有效的行为是迁移来源，必须先收进第19节定义的唯一`FootGrounding` owner，不能整体删除。
+
+- [x] 0.1 记录本change唯一正式链为Lyra Foot Plant等价普通FootGrounding Goal、只修改Swing脚的显式PredictiveFootPlacementModifier（如接入）与单次FinalIK FBBIK Pose求解。
 - [x] 0.2 禁止创建shadow skeleton GameObject层级。
 - [x] 0.3 禁止创建FinalIK target GameObject。
 - [x] 0.4 禁止在角色Prefab挂FullBodyBipedIK组件。
@@ -10,8 +12,8 @@
 - [x] 0.8 禁止复制FinalIK核心求解方程到项目自有solver类。
 - [x] 0.9 约定任一硬门禁失败时停止后续实施并报告精确依赖。
 - [x] 0.10 保持唯一Animancer Evaluate Barrier与唯一Physical Transform final writer。
-- [x] 0.11 保持PredictiveFootPlacement为唯一world query与Foot contact owner。
-- [x] 0.12 禁止把PredictiveFootPlacement或PoseBoneIKGoals标为IK solver。
+- [x] 0.11 保持Foot Placement runtime为唯一world query owner；FootGrounding唯一拥有Lyra当前Sphere Trace与平滑，PredictiveFootPlacementModifier只拥有Swing脚未来查询。
+- [x] 0.12 禁止把FootGrounding、PredictiveFootPlacementModifier或PoseBoneIKGoals标为IK solver。
 - [x] 0.13 禁止把两个Goal Source的generated调度顺序表述为串行IK。
 - [x] 0.14 禁止运行时在FinalIK Grounding结果与项目重复Grounding结果之间择优。
 
@@ -277,66 +279,30 @@
 - [x] 8.29 禁止Canvas自动把两个Goal Sources排列成Pose backbone。
 - [x] 8.30 让Document往返保留Pose分支与Goal value分支。
 
-## 9. 重构Predictive Foot Placement
+## 9. 建立唯一 FootGrounding 与预测 Modifier 链
 
-- [x] 9.1 保留动画Foot Feature与source contribution输入。
-- [ ] 9.2 在普通Grounding基线稳定后重新接入未来落点delay与local offset预测。
-- [x] 9.3 从Component Pose和Calibration构造Current Heel Grounding request。
-- [x] 9.4 从Component Pose和Calibration构造Current Toe Grounding request。
-- [ ] 9.5 从动画Foot Feature构造Project Predictive Extension Future Landing request并接回正式Goal输出。
-- [ ] 9.6 从动画脚路径构造固定数量Project Predictive Extension Path Sample request并接回正式Goal输出。
-- [x] 9.7 只通过FinalIK Grounding adapter执行current-foot Grounding输入。
-- [ ] 9.7A 通过共享world-query backend执行Future Landing与Path Sample请求。
-- [x] 9.7B 禁止Predictive Extension请求覆盖FinalIK Grounding当前脚高或rotation结果。
-- [x] 9.8 让FinalIK Grounding提供当前脚高基础结果。
-- [x] 9.9 让FinalIK Grounding提供坡面rotation基础结果。
-- [x] 9.10 让FinalIK Grounding提供foot interpolation基础结果。
-- [x] 9.11 禁用FinalIK stock pelvis输出，让逐腿Pelvis Reach Planner提供target与resolved pelvis结果。
-- [ ] 9.12 让Project Predictive Extension构造Current Support与Future Landing Support。
-- [ ] 9.13 让Project Predictive Extension构造Ground Envelope与surface continuity。
-- [x] 9.14 让Project Predictive Extension维护Free、Locked与Sliding状态机。
-- [x] 9.15 让Project Predictive Extension维护moving surface anchor。
-- [x] 9.16 让Project Predictive Extension计算逐腿可达区间，并在目标不可满足或区间冲突时显式释放对应Foot Goal。
-- [x] 9.17 删除项目重复的当前脚高计算。
-- [x] 9.18 删除项目重复的坡面rotation计算。
-- [x] 9.19 删除项目重复的foot interpolation计算。
-- [x] 9.20 删除FinalIK stock pelvis正式输出与旧lower/lift/damper字段。
-- [x] 9.20A 用逐腿可达区间统一AllLegs、AllPlantedFeet与DirectionalSlopeSupport选择。
-- [x] 9.20B 用唯一Planner状态实现pelvis interpolation与显式Actor Movement Compensation。
-- [x] 9.20C 让Calibration semantic sole frame只转换FinalIK rotation offset的输入输出表达。
-- [x] 9.21 把pelvis结果改为PelvisPreSolveTranslation goal数据。
-- [x] 9.22 把左右Ankle目标改为LeftFoot与RightFoot effectors。
-- [x] 9.23 删除Animated Bend Plane输出。
-- [x] 9.24 删除Preferred Bend Plane输出。
-- [x] 9.25 删除Knee Direction或Bend Stabilization Weight输出。
-- [x] 9.26 删除FootPlacement operation中的TranslateSubtree调用。
-- [x] 9.27 禁止PredictiveFootPlacement写任意Physical或Virtual Pose Bone。
-- [x] 9.28 禁止PredictiveFootPlacement创建或调用IK solver。
-- [x] 9.29 禁止PredictiveFootPlacement调用GrounderFBBIK组件生命周期。
-- [x] 9.30 让PredictiveFootPlacement发布匹配Pose completion的Goal Set。
-- [x] 9.31 预测扩展重新接入后，为受其改变的Goal标记Project Predictive Extension来源。
-- [ ] 9.32 预测扩展重新接入后，Reset清除contact、anchor和prediction历史；普通基线继续清除Grounding历史。
-
-### 9A. 先闭合普通Foot Placement基线
-
-- [x] 9A.1 让FinalIK Grounding当前帧结果生成LeftFoot与RightFoot Goals，让Pelvis Reach Planner生成唯一Pelvis Goal。
-- [x] 9A.2 让Grounding root来自Rig物理Root的Component Pose，而不是假设Presentation VisualRoot等于骨架根。
-- [x] 9A.3 在普通基线闭合阶段暂停Future Landing与Path Sample对正式Goal输出的影响；Current Support的Foot Lock、Slide与moving surface anchor只约束FinalIK Grounding当帧目标。
-- [x] 9A.4 只在逐腿目标不可达或双腿区间冲突时清零不可满足Foot Goal，合法Current Grounding目标保持连续Placement Weight。
-- [x] 9A.5 保持一次FinalIK FBBIK求解，不恢复TwoBoneIK、LegIK或第二求解器。
-- [x] 9A.6 用有限Replant角度与Ankle Twist阈值释放失效锁点，并在同帧返回FinalIK Grounding目标。
-- [x] 9A.7 在有限腿长范围内保持左右Foot Goal最小水平分离；双脚均受约束时释放次要支撑脚。
-- [x] 9A.8 让不可达或过度压缩目标按PelvisRangeConflictReleased释放，避免FBBIK拉伸或骨盆无限下蹲。
-- [x] 9A.9 把Replant角度、最小脚距与最大Ankle Twist接入同一Foot Placement Profile、Live Tuning与typed diagnostics。
-- [x] 9A.10 在同一FinalIK Grounding owner中发布typed secondary Toe plant hit，并以同一个Foot Goal和唯一FBBIK实现有限Heel Lift与Toe Pivot；不新增第二当前地面查询权威、不复制stock Grounding数学。
-- [x] 9A.11 定义`Unlocked`、`PivotAroundToe`、`PivotAroundAnkle`与`LockRotation`四种plant policy；普通基线阶段让Corin正式选择`Unlocked`，不创建anchor或toe pivot。
-- [x] 9A.12 让`AdjustHeelBeforePlanting`和`HeelLiftRatio`进入唯一Foot Placement Profile、Projection identity与Pose Watch诊断，并只让连续量`HeelLiftRatio`进入Live Tuning。
-- [x] 9A.13 让Foot Goal携带完整ankle目标、toe plant point与pivot weight，并在一次FBBIK中完成部分权重下的toe-preserving offset。
-- [x] 9A.14 让作者Foot Placement Weight唯一控制合法Current Grounding Goal；Plant Confidence与动画Foot Speed只参与接触意图迟滞，Contact Weight只控制anchor、lock与slide。
-- [x] 9A.14A 让FinalIK Grounding用root-relative height保留动画摆脚高度，禁止用actor世界脚速关闭普通跑动Foot Goal。
-- [x] 9A.14B 让最小脚距修正只在左右脚都有有效Contact Weight时运行，禁止连续Position Goal把自由摆脚横向推开。
-- [x] 9A.15 让Grounding leg与Pelvis Reach Planner插值全部使用调用方显式frame delta，禁止同帧混用`Time.deltaTime`。
-- [x] 9A.16 让Corin普通基线关闭velocity prediction、plant anchor与提前Heel Lift，选择AllPlantedFeet与FollowBody，并以显式Character Build重建正式Projection。
+- [x] 9.1 保留最终Pose contribution、Foot Analysis feature与同帧Component Pose输入。
+- [x] 9.2 为`FootGrounding`建立`Lyra Current Grounding`、`Stance Stabilization`与`Pelvis Resolve`三段内部职责。
+- [x] 9.3 为`Lyra Current Grounding`保存Trace above/below/radius、normal/offset/pelvis spring和其资产来源identity。
+- [x] 9.4 每脚通过正式PhysicsScene、LayerMask、self-collider过滤和固定workspace执行一次SphereCast。
+- [x] 9.5 将Lyra `Hit Location`对账为UE 5.7 Control Rig写入的VM空间Impact Point；Target Foot Offset Z使用该点的Component绝对竖直坐标。
+- [x] 9.6 按Lyra顺序执行trace、normal spring、foot offset spring、pelvis target和ProcessFootOffset rotation/position。
+- [x] 9.7 节点存在即执行Current Grounding；Foot Placement Weight只在最终Goal alpha应用一次，Body Grounded只作为诊断事实。
+- [x] 9.8 将Plant Confidence、sole speed和surface distance收敛为唯一contact滞回输入；contact只拥有anchor生命周期。
+- [x] 9.9 将surface-local anchor、移动surface跟随、释放与不可达处理纳入同一FootGrounding稳定层。
+- [x] 9.10 以Lyra Pelvis target为唯一期望值，并用最终脚目标与Rig腿长形成共同reach安全夹紧。
+- [x] 9.11 使用`FootPlacementEffectorTarget`和`PelvisPreSolveTranslation`作为唯一Foot/Pelvis Goal ABI。
+- [x] 9.12 删除FinalIK Grounding、Grounder、toe pivot、Plant Plane、第二current query与并列pelvis owner。
+- [x] 9.13 为`PredictiveFootPlacementModifier`建立Baseline Goal Set的严格输入校验和同slot输出lineage。
+- [x] 9.14 Modifier只选择一只Swing且未被anchor拥有的脚；双Swing按delay、confidence、Left稳定排序。
+- [x] 9.15 Modifier逐值透传Pelvis、stance/anchored脚、另一只脚、Baseline metadata和无效预测结果。
+- [x] 9.16 Modifier只在合法Future Landing、Ground Envelope与Swing Clearance存在时改写选中脚。
+- [x] 9.17 Swing转contact、Reset、Body branch retarget或surface失效时由FootGrounding重新取得唯一owner。
+- [x] 9.18 普通图可只连接`FootGrounding -> FullBodyIK`，预测图才连接Modifier；禁止隐式Goal Merge或第二solver。
+- [x] 9.19 Compiler、Projection、Native Program、staged executor、Preview和Runtime Factory统一新operation、payload、workspace与completion。
+- [x] 9.20 删除旧combined Goal Source、旧diagnostics和旧serialized reader；不保留兼容或fallback路径。
+- [x] 9.21 更新Capability、Document codec/exporter/reconciler/mutation/validator、Canvas、Details、Pose Watch和Target Watch的阶段名称与端口。
+- [x] 9.22 让统一Trace与CSV发布Lyra gate/trace/offset/normal/spring、contact/anchor、Pelvis reach、Baseline/Final Goal、Modifier lineage和FBBIK residual。
 
 ## 10. 实现Pose Bone Goal Source
 
@@ -470,13 +436,10 @@
 - [x] 14.9A 把Corin Foot Placement Profile迁移为FinalIK Grounding与Predictive Extension分组。
 - [x] 14.9AA 把Corin FinalIK Grounding Quality显式配置为Best。
 - [x] 14.9AB 让Corin普通基线关闭FinalIK Overstep Falls Down，并把Foot Radius约束到Calibration鞋底半长以内，避免无命中脚驱动pelvis下沉或胶囊越过台阶边缘取得伪支撑。
-- [x] 14.9AC 让Corin普通基线显式选择AllPlantedFeet、FollowBody与有限最大升降范围，禁止stock lower/lift输出。
 - [x] 14.9B 删除Corin重复Foot rotation、Foot smoothing与stock Pelvis Speed/Damper/Lower/Lift旧字段。
 - [x] 14.10 将Corin Foot Calibration迁移为v4。
 - [x] 14.11 删除Corin Calibration preferred bend数据。
 - [x] 14.12 从Corin普通Foot Placement基线删除与当前手骨同位、会反向钉住骨盆位移的PoseBoneIKGoals节点。
-- [ ] 14.13 定义不等于当前LeftHand Pose的真实武器目标后再接入LeftHand Goal。
-- [ ] 14.14 定义不等于当前RightHand Pose的真实武器目标后再接入RightHand Goal。
 - [x] 14.15 将FootPlacement节点迁为PredictiveFootPlacement。
 - [x] 14.16 删除Corin LegIK节点。
 - [x] 14.17 新增唯一Corin FullBodyIK节点。
@@ -517,7 +480,7 @@
 - [x] 15.22A 删除旧Directional Pelvis resolver，统一成Pelvis Height Mode与Actor Movement Compensation Mode。
 - [x] 15.23 删除项目正式链中的GrounderFBBIK组件引用和配置副本。
 - [x] 15.24 保留FinalIK插件自带Grounder示例走vendor Transform backend。
-- [x] 15.25 确认正式Runtime只有一个Grounding adapter、一个Predictive Extension owner和一个FBBIK solver。
+- [x] 15.25 确认正式Runtime只有一个Grounding adapter、一个Foot Placement owner（含Grounding与Predictive Extension Modifier）和一个FBBIK solver。
 - [x] 15.26 确认旧schema、旧reader、兼容枚举和fallback开关均不存在。
 
 ## 16. 同步架构真相与重叠change
@@ -549,7 +512,6 @@
 - [x] 17.4 在单腿不可达或双腿区间冲突时稳定保留主要支撑脚，并以PelvisRangeConflictReleased释放不可满足Goal。
 - [x] 17.5 以最大升降范围、dead zone、显式frame delta和Actor Movement Compensation Mode维护唯一pelvis插值状态。
 - [x] 17.6 在正式PredictiveFootPlacement diagnostics发布左右区间、target/resolved offset与左右Goal拒绝结果。
-- [x] 17.7 将Corin Profile迁移到schema v9，并配置AllPlantedFeet、FollowBody和正式Planner参数。
 - [x] 17.8 刷新Unity工程并通过Runtime与Editor编译。
 - [x] 17.9 以显式Character Build发布匹配新Profile revision的Corin Float32/Fixed Program与Presentation Projection。
 - [x] 17.10 对修改后的change执行strict OpenSpec validate并按真实结果收口任务状态。
@@ -574,3 +536,173 @@
 - [x] 18.12 新增并维护IK诊断文档，记录现象、运行证据、UE对照、踩坑和固定排查链路。
 - [x] 18.13 在用户明确触发Character Build后发布匹配新Profile revision的Corin Float32/Fixed Program、Presentation Projection与Native Pose Program，以及TrainingEnemy Float32 Program、Presentation Projection与Native Pose Program。
 - [x] 18.14 对最终修订执行静态搜索与strict OpenSpec validate并按真实结果更新任务状态。
+
+## 19. 以真实 Lyra Current Grounding 收口正式实现
+
+- [x] 19.1 固化Lyra AnimBP与Control Rig审计清单，并区分资产事实和项目可映射输入。
+- [x] 19.2 记录每脚Sphere Trace上下0.5米、半径0.05米、normal spring 8/1、foot与pelvis spring 2.5/1/0.2及未命中分支。
+- [x] 19.3 明确Lyra真实gate为`DisableLegIK <= 0 && !UseFootPlacement`，同时确认项目没有可正式映射的独立参数；不伪造Body Grounded或Ground Distance gate。
+- [x] 19.4 让FootGrounding节点存在即执行Current Grounding，Foot Placement Weight只作为最终Pelvis/Foot Goal alpha应用一次，Body Grounded只进入诊断。
+- [x] 19.5 盘点并迁移旧combined Goal Source中的contact、anchor、moving surface与reach能力；删除重复Grounding、toe pivot和pelvis owner。
+- [x] 19.6 每脚只从Rig Foot BoneId的输入Component Transform执行一次Lyra参数NonAlloc SphereCast，并使用精确PhysicsScene、正式LayerMask、self-collider filter和固定workspace。
+- [x] 19.7 将Sphere Trace的Lyra Hit Location对账为UE 5.7 Control Rig写入的VM空间Impact Point；Target Foot Offset Z按该点的Component绝对竖直坐标形成，surface anchor使用同一Impact Point。
+- [x] 19.8 按Lyra顺序实现DidTraceHit、Target Offset、Hit Normal、normal spring、foot offset spring及未命中世界上方向。
+- [x] 19.9 使用UE 5.7 `SpringInterpV2`的Hz、target velocity、阻尼分支与`InvExpApprox`数学，并在Reset和Body branch retarget时原子清空状态。
+- [x] 19.10 按Lyra `AimBoneMath`以角色上方向到平滑Hit Normal的最短旋转乘回动画Ankle Rotation，不在平地重建或压平动画脚朝向。
+- [x] 19.11 以左右Target Offset最小值形成唯一Lyra Pelvis target，并用同一pelvis spring形成Current Pelvis Offset。
+- [x] 19.12 将逐腿reach收敛为Lyra Pelvis target的共同区间安全夹紧；区间冲突明确失败，不再选择或清零次要脚。
+- [x] 19.13 将Knee PV等价语义限制为Rig reference bend constraint，不恢复Basic IK、LegIK、TwoBoneIK或第二solver。
+- [x] 19.14 将Foot Goal ABI迁为`FootPlacementEffectorTarget`，删除`GroundingEffectorTarget`、toe plant point和PlantPivotWeight。
+- [x] 19.15 让唯一FullBodyIK按`pelvis subtree translation -> foot pre-rotation -> 相对平移后positionOffset -> single solve`执行。
+- [x] 19.16 删除正式Runtime中的FinalIK Grounding adapter、Grounding state、Profile分组、Projection payload、backend badge和diagnostic列；FinalIK只保留FBBIK Pose Buffer backend。
+- [x] 19.17 将有效Free/Locked/Sliding语义收敛为唯一contact/anchor lifecycle，并删除Plant Plane、Ball Pivot、脚间分离和重复Replant算法。
+- [x] 19.18 为FootGrounding安装独立payload、descriptor、operation、Projection数据和固定workspace，保持只输出Goal value不写Pose。
+- [x] 19.19 为PredictiveFootPlacementModifier安装独立operation与严格Baseline lineage校验，每帧最多稳定选择一只Swing脚。
+- [x] 19.20 让普通拓扑不创建预测query或state；只有图中存在Modifier时才执行Future Landing、Ground Envelope和Swing Clearance。
+- [x] 19.21 让Modifier只改写被选中且未被anchor拥有的Swing脚，并逐值透传Pelvis、另一只脚和无效预测Baseline。
+- [x] 19.22 同步Document模型、strict parser、exporter、reconciler、Mutation、Validator、Capability、Pose IR、Projection、Native executor、Canvas、Pose Watch和Target Watch。
+- [x] 19.23 更新统一diagnostics、Host Inspector和CSV，发布Lyra query/location/impact、offset/normal/pelvis spring、identity、contact/anchor、reach、Modifier lineage/query/reject和FBBIK residual。
+- [x] 19.24 删除旧combined Goal Source、旧FinalIK Grounding、旧诊断合同、兼容reader和fallback配置。
+- [x] 19.25 通过BTSMTL Document生命周期迁移Corin与TrainingEnemy Profile/Pose Graph；两份Document均完成checkout、dry-run、apply、apply后checkout与validate，未绕过直接修改YAML。
+- [x] 19.26 在Document apply成功后，由用户明确触发精确Character Build发布Corin与TrainingEnemy Float32产品，以及Corin Fixed产品；Build后已重新checkout并validate，generated产品不再stale。
+- [x] 19.27 同步`add-discrete-stair-presentation`、Motion Matching、BlendSpace与`openspec/project.md`中的行为来源和阶段名称，不改KCC、Simulation、Network、Camera或MM History边界。
+- [x] 19.28 对主change与全部受影响重叠change执行strict OpenSpec validate，并在正式Runtime/Editor源码中完成静态旧路径搜索；按真实结果更新任务状态。
+- [x] 19.29 删除被主change吸收的`enable-corin-idle-foot-plant-lock` active change，确保普通脚步不存在第二份spec、task或发布路径。
+
+## 20. 修正 Lyra Hit Location、Target Offset 与运行期 Reach 诊断
+
+- [x] 20.1 记录用户提供的平地、台阶和斜坡效果截图及长时间运行 Reach 区间错误。
+- [x] 20.2 复核 240 帧 Foot IK CSV，量化 FinalIK failure、左右位置/旋转残差、Target Offset、Pelvis Target/Current/Resolved 与 Hit Location/Impact Point 差值。
+- [x] 20.3 对账 UE 5.7 `FRigUnit_SphereTraceByTraceChannel`源码，确认 Control Rig `HitLocation`来自 VM 空间 `ImpactPoint`而不是 SphereCast 球心。
+- [x] 20.4 对账 Lyra `ProcessFootTrace`，确认 Target Foot Offset 使用 Component/VM 空间绝对竖直坐标而不是相对动画 Ankle 差值。
+- [x] 20.5 将项目 Current Grounding 的 `CharacterFootPlacementQueryHit.Location`收敛为 Unity `RaycastHit.point`。
+- [x] 20.6 将项目 Target Offset 收敛为 Impact Point 的 PoseRoot Component 绝对竖直坐标。
+- [x] 20.7 将项目 Foot rotation 收敛为角色上方向到平滑 Hit Normal 的最短旋转乘回动画 Ankle Rotation。
+- [x] 20.8 删除 Current Grounding 中投影 forward 与 `LookRotation`重建脚朝向的旧公式。
+- [x] 20.9 为无效单腿 Reach 和双腿共同区间冲突补充 Lyra Target/Current、全局升降范围、左右 Hip/Goal、Goal Weight、腿长、左右区间与最终交集。
+- [x] 20.10 在 FootGrounding 抛出的 Reach 错误中补充精确 Render Frame。
+- [x] 20.11 重写 IK 效果诊断记录，区分已确认根因、本轮修复、待验证假设和业务 Tradeoff。
+- [x] 20.12 静态核对 Goal 位置公式、Component/World 变换、Pelvis spring 与最终 Reach 夹紧的唯一职责顺序。
+- [x] 20.13 静态搜索旧 `Location - anklePosition`、SphereCast 球心 Hit Location、Current Grounding `LookRotation`与错误 Calibration rotation 职责描述。
+- [x] 20.14 同步 proposal、design、implementation inventory、diagnostics 与 spec delta，删除相互矛盾的旧空间口径。
+- [x] 20.15 对本change执行 strict OpenSpec validate，并按真实结果更新任务状态。
+- [x] 20.16 在用户明确授权后通过已打开的Unity Editor执行全量Asset refresh与脚本编译，不运行batchmode、不触发Character Build。
+- [x] 20.17 修复编译发现的Reach诊断格式化类型错误，重新编译并确认Console无C#或AssetDatabase错误。
+- [x] 20.18 进入`GameplayLab` Play Mode并确认启动阶段Console无项目错误，保留运行态供用户直接端到端测试。
+
+## 21. 拒绝楼梯立面并增加鞋底最终间隙
+
+- [x] 21.1 记录旧CSV已删除，后续只消费新采样。
+- [x] 21.2 复核240帧solver、Goal、Target Offset、Pelvis与Hit Normal。
+- [x] 21.3 定位左脚最大位置残差帧及surface、Goal、Pelvis和contact。
+- [x] 21.4 定位左右最低Hit Normal Y帧及完整命中上下文。
+- [x] 21.5 证明`MinimumGroundNormalDot=-1`没有拒绝楼梯立面和锐边。
+- [x] 21.6 复用55度最大坡度过滤唯一Current SphereCast。
+- [x] 21.7 保持命中排序、PhysicsScene、LayerMask、自碰撞过滤和固定workspace。
+- [x] 21.8 用Calibration Heel/Toe与动画Ankle定义鞋底几何。
+- [x] 21.9 从最终Ankle Transform重建修正前Heel/Toe。
+- [x] 21.10 计算Heel/Toe平面距离和唯一穿透量。
+- [x] 21.11 沿Component Up计算保持X/Z的最小抬升。
+- [x] 21.12 在Lyra/anchor混合后、Pelvis Reach前应用间隙。
+- [x] 21.13 让Pelvis Reach和唯一FBBIK消费修正后Goal。
+- [x] 21.14 Anchor释放后用current surface重算同一间隙。
+- [x] 21.15 发布支撑面、鞋底点、平面距离、穿透和位移诊断。
+- [x] 21.16 同步Trace、capture、Inspector和CSV字段。
+- [x] 21.17 同步OpenSpec与IK诊断文档。
+- [x] 21.18 静态排除旧坡度、第二查询、固定补偿和第二IK。
+- [x] 21.19 通过strict OpenSpec validate。
+- [x] 21.20 通过已打开Editor编译与GameplayLab启动检查；未运行batchmode或Character Build。
+
+## 22. 消除楼梯鞋底间隙对Swing脚的离散吸附
+
+- [x] 22.1 只读分析唯一a619 CSV，记录240帧、319列与文件hash。
+- [x] 22.2 计算左右Goal Y差值Top 20并对账Grounding、Stance、Pelvis与FBBIK字段。
+- [x] 22.3 搜索Surface A-B-A和Goal Y正负往返，区分踏面切换与同surface突变。
+- [x] 22.4 以CSV裁决鞋底间隙、surface、anchor、Pelvis和FBBIK假设。
+- [x] 22.5 在现有Stance owner内复用唯一`AnchorBlendWeight`，不增加配置、查询或状态。
+- [x] 22.6 区分原始`SolePenetration`与实际`SoleClearanceTranslation`。
+- [x] 22.7 Swing不再直写离散间隙；捕获、释放与不可达重算共用所有权权重。
+- [x] 22.8 保持Lyra、Stance、Pelvis、可选Modifier和唯一FBBIK顺序及参数。
+- [x] 22.9 同步typed diagnostics、Trace、Inspector和CSV语义。
+- [x] 22.10 用a619反事实replay量化修复收益。
+- [x] 22.11 同步proposal、design、spec、inventory及IK诊断文档。
+- [x] 22.12 静态排除第二Grounding/查询/Pelvis/IK、默认地面、固定补偿和fallback。
+- [x] 22.13 通过strict OpenSpec validate。
+- [x] 22.14 本地编译`ThirdPersonClient.Runtime.csproj`并确认0 error，随后关闭.NET构建服务器。
+- [x] 22.15 通过已打开Editor刷新编译、Console和GameplayLab短时运行检查；不运行batchmode或Character Build。
+
+## 23. 将鞋底间隙并入唯一Foot Offset连续状态
+
+- [x] 23.1 只读分析唯一最新09979 CSV，记录行列数、hash、左右Top 20 Goal变化、穿透、surface往返、Pelvis与FBBIK证据。
+- [x] 23.2 证明`AnchorBlendWeight=0`使Swing严重穿透帧的实际清障全部归零，并区分正常动画摆脚变化与solver误差。
+- [x] 23.3 对账本地Lyra楼梯资产、Sphere Trace、Foot/Pelvis spring、碰撞复杂度与Basic IK边界，明确项目扩展和Lyra原生行为。
+- [x] 23.4 在现有Stance Stabilization中从唯一Current Surface和Calibration Heel/Toe生成无参数Sole Clearance Target。
+- [x] 23.5 将Sole Clearance Target作为增量送入现有Foot Offset SpringInterpV2目标，不增加第二状态、查询、配置或solver。
+- [x] 23.6 删除spring后按AnchorBlend直接平移Ankle的旧清障处理，让Anchor只锁定由同一连续目标形成的surface-local脚位姿。
+- [x] 23.7 让Anchor捕获位置吸收捕获时剩余鞋底穿透，并只通过既有Anchor Blend渐入。
+- [x] 23.8 将诊断迁移为Lyra Target Offset、Sole Clearance Target、合成Offset Target、Current Offset与Residual Sole Penetration，不保留旧实际平移语义。
+- [x] 23.9 同步Runtime Trace、Inspector和CSV字段，保证下一份采样可裁决输入目标、连续处理与最终残余穿透。
+- [x] 23.10 同步proposal、design、spec、inventory及IK诊断文档，保留第22节历史完成状态并明确其后续反证。
+- [x] 23.11 静态排除第二Grounding、Heel/Toe Current Query、第二spring、第二Pelvis、第二IK、默认地面、固定补偿与fallback。
+- [x] 23.12 对本change执行strict OpenSpec validate。
+- [x] 23.13 本地编译`ThirdPersonClient.Runtime.csproj`并在完成后关闭.NET build server。
+
+## 24. 约束唯一Foot Offset连续状态的楼梯向上穿透
+
+- [x] 24.1 只读分析唯一最新0ef04 CSV，记录240个数据帧、307列、Frame 562至801与SHA-256 `52D010691E50E2910A55EB6BBD776165F0B0A501F71D94C2CB3FC6F948F2B069`。
+- [x] 24.2 量化左右穿透、Surface切换、Target/Current Offset、Anchor、Pelvis与FBBIK证据；左/右最大穿透分别为`0.178420m`与`0.185388m`。
+- [x] 24.3 证明Current Query已命中正确水平踏面而FBBIK按近零残差执行Goal；广泛运动穿模归属于唯一Foot Offset spring的Current Value落后安全踏面目标。
+- [x] 24.4 在现有Stance Stabilization owner中从同一Current Surface、当前平滑Ankle Rotation与Calibration Heel/Toe计算向上安全约束。
+- [x] 24.5 把向上修正写回同一个Foot Offset spring的Value并取消其向下Velocity，不增加第二时间状态、查询、参数或输出后处理owner。
+- [x] 24.6 保持向上安全立即成立、向下释放继续使用原SpringInterpV2，使短暂Surface A-B-A交接保留同一连续高度记忆。
+- [x] 24.7 保持`Lyra Current -> Stance约束 -> Anchor -> Pelvis Reach -> optional Modifier -> 唯一FBBIK`顺序，不修改FBBIK参数或Goal总权重。
+- [x] 24.8 发布`Unconstrained Offset`、`Sole Constraint Offset`、约束后`Current Offset`与最终`Residual Sole Penetration`typed diagnostics。
+- [x] 24.9 同步Runtime Trace、Inspector与CSV列，使下一份采样能逐帧裁决spring候选、约束写回、Baseline与FBBIK结果。
+- [x] 24.10 同步proposal、design、spec、implementation inventory、IK诊断/效果记录与`openspec/project.md`，记录本轮经验和业务取舍。
+- [x] 24.11 静态排除第二Grounding、Heel/Toe Current Query、第二spring、第二Pelvis、第二IK、默认地面、固定补偿、fallback与spring外Ankle硬平移。
+- [x] 24.12 本地编译`ThirdPersonClient.Runtime.csproj`与相关Editor项目并在完成后关闭.NET build server。
+- [x] 24.13 对本change执行strict OpenSpec validate。
+- [x] 24.14 通过已打开Editor刷新编译、Console和GameplayLab短时运行检查；不运行batchmode或Character Build。
+
+## 25. 修正Swing楼梯吸附与FBBIK绝对脚目标失配
+
+- [x] 25.1 只读分析唯一最新17359 CSV，记录240个数据帧、311列与SHA-256 `A25893B2C9C09E7C4ACCC0D7887B503F00485FB8740BBB0C2354525ABCD5E7CA`。
+- [x] 25.2 证明全部大于`0.05m`的`Sole Constraint Offset`都发生在Swing，并量化离散约束把平滑候选改写为`0.08m`至`0.135m`单帧上抬。
+- [x] 25.3 对账Surface A-B-A、Anchor、Pelvis与FBBIK字段，区分Current Surface切换诱因、Stance硬约束owner和solver独立异常。
+- [x] 25.4 记录Current-only查询无法同时保证“Swing同帧零穿透、离散踏面交接连续、无未来信息”三项目标，禁止再次用同一状态容器掩盖离散Value teleport。
+- [x] 25.5 将现有Stance单向鞋底硬约束收敛为Plant Contact安全约束；Swing只把完整Sole Clearance Target送入既有Foot Offset spring，不再直接改写Value或Velocity。
+- [x] 25.6 通过BTSMTL Document把Corin正式图迁为`FootGrounding -> PredictiveFootPlacementModifier -> FullBodyIK`，不直接修改Unity YAML且不自动Character Build。
+- [x] 25.7 将`FootPlacementEffectorTarget`作为FinalIK绝对effector position交付，删除在FinalIK内部`LimitBend`之前计算一次性position offset的错误解释。
+- [x] 25.8 为满权重Foot Placement Goal增加有界残差失败契约，使可达脚目标被明显漏解时返回typed failure并阻断错误Pose发布。
+- [x] 25.9 保持Rig reference bend constraint、Pelvis pre-solve、唯一FBBIK与Goal总weight，不增加第二腿solver、FBBIK后处理或兼容路径。
+- [x] 25.10 同步proposal、design、spec delta、implementation inventory、IK诊断、经验记录与project架构真相，保留第24节历史完成状态但明确其结论已被17359反证。
+- [x] 25.11 静态搜索单一路径并排除第二Grounding、Heel/Toe Current Query、第二spring、第二Pelvis、第二IK、默认地面、固定补偿与fallback。
+- [x] 25.12 本地编译受影响项目并按项目规则关闭.NET build server。
+- [x] 25.13 对本change执行strict OpenSpec validate。
+- [x] 25.14 通过已打开Editor完成显式刷新、编译与GameplayLab启动检查；不运行batchmode、不自动Character Build。
+
+## 26. 撤销未授权预测接线并把Corin响应式IK收敛到Lyra资产语义
+
+- [x] 26.1 在IK主记录中明确：当前业务目标是纯响应式IK达到Lyra效果；Predictive Modifier只保留为未接线能力，未经用户再次明确授权不得接入Corin。
+- [x] 26.2 通过BTSMTL Document把Corin正式图恢复为`FootGrounding -> FullBodyIK`，删除Corin中的Predictive Modifier节点和对应三条edge，不直接修改Unity YAML。
+- [x] 26.3 直接读取本地Lyra `ABP_Mannequin_Base -> CR_Mannequin_FootPlant`资产事实，逐项对账gate、Sphere Trace、Hit Location、Target Offset、Foot Offset spring、Normal spring、Pelvis和ProcessFootOffset执行顺序。
+- [x] 26.4 用最新CSV与Lyra资产差异建立可证伪假设，明确响应式穿模或跳变发生在Current Grounding、Stance、Pelvis还是FBBIK，不用预测路径掩盖Current问题。
+- [x] 26.5 只在现有`FootGrounding -> Stance Stabilization -> Pelvis Resolve`owner内修正已证实偏差，不新增查询、clearance状态、Pelvis owner、solver、默认地面、固定补偿或fallback。
+- [x] 26.6 通过正式Document dry-run与apply保存Corin响应式作者图，并确认checkout为Clean。
+- [x] 26.6A 在用户明确触发Character Build后重建Foot Placement geometry validation，刷新19个过期Foot Analysis identity，再通过Document apply把遗留的`local-to-component-predictive-foot-placement` edge identity改为`local-to-component-foot-grounding`，最终发布匹配响应式作者图的Float32/Fixed Program、Presentation Projection与Native Pose Program，并重新checkout和validate。
+- [x] 26.7 同步proposal、design、spec delta、IK主记录、diagnostics、implementation inventory与project架构真相，保留第25节为错误历史。
+- [x] 26.8 完成单一路径静态搜索、本地编译、strict OpenSpec validate和已打开Unity Editor编译检查；不运行batchmode。
+- [x] 26.9 对账Source、Document与Generated Projection均无Predictive Modifier，并通过GameplayLab Live Snapshot确认运行产品报告`ModifierNotCompiled`、左右脚Anchored、Sole Residual与FBBIK Residual为零。
+
+## 27. 重新诊断慢放楼梯运动穿模并修正历史记录
+
+- [x] 27.1 只读分析唯一最新410f CSV，记录240个数据帧、311列、Frame 706至945与SHA-256 `E8195763A0FC57A986F1F58CAA8C6E8D599D587809DAC901DAADE6F11DFABF6D`。
+- [x] 27.2 检查presentation position、trace sequence、frame sequence和reset连续性，明确慢放样本可裁决空间穿透与owner归属，但当前CSV缺少delta和clock字段，不能精确横比真实毫秒收敛速度。
+- [x] 27.3 按左右脚量化`Residual Sole Penetration > 0.005m`事件，并区分释放中旧anchor、同surface Swing spring滞后、Current Surface切换、Pelvis与FBBIK。
+- [x] 27.4 证明左右共134个显著穿透脚帧均已有合法Current Hit、Sole Constraint为零且FBBIK Position Residual为零；本样本无Surface A-B-A。
+- [x] 27.5 对照本地Lyra资产，裁决46个旧anchor脚帧存在项目Stance交权/无限平面诊断缺陷，88个同surface Swing脚帧属于已知目标后的连续状态与安全gate问题；只把首次Current Query之前的碰撞归入无未来信息上限。
+- [x] 27.6 在IK主记录中新增只追加的修复时间线，按第18至27节记录现象、CSV证据、实际改动、随后副作用与当前有效/替代状态。
+- [x] 27.7 将anchor锁脚资格与同surface连续非穿透分责，使用同一surface identity、上一帧约束后鞋底位置和既有Foot Offset状态处理候选首次小越界，不恢复任意Swing大缺口硬写Value。
+- [x] 27.8 在现有Stance Stabilization owner内修正`AnchorDistanceExceeded`释放交权，使旧anchor退混合不再拥有当前鞋底支撑权威且不重复报告释放，不增加查询、配置或owner。
+- [x] 27.9 补齐Presentation Delta、动画Ankle、PoseRoot竖直delta与上一帧surface/平面距离/连续接触边界诊断，并同步Trace、Inspector、CSV和IK诊断文档；clock/rate不属于FootGrounding输入，后续若需横比调试时钟则从Session capture单独发布，不能在Foot owner反推。
+- [x] 27.10 对实施结果执行单一路径静态搜索、本地编译、strict OpenSpec validate和已打开Unity Editor编译检查；不运行batchmode，Character Build只在用户明确触发后执行。

@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation
 {
     public static class Float32SimulationNumericProfile
     {
-        public const int AbiVersion = 7;
+        public const int AbiVersion = 8;
 
         public static SimulationNumericProfile Value { get; } = new SimulationNumericProfile(
             new NumericProfileId("float32-ieee754"),

@@ -54,8 +54,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int goalWorkspaceOffset,
             ulong frameSequence,
             ulong completionIdentity,
-            string rigId,
-            string rigRevision,
+            FixedString64Bytes rigId,
+            FixedString64Bytes rigRevision,
             int producerOperationIndex,
             int producerCallSiteIndex)
         {
@@ -90,9 +90,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     descriptor.RotationWeight,
                     CharacterFullBodyIkGoalApplication.AbsoluteEffectorTarget,
                     CharacterFullBodyIkGoalSourceKind.PoseBone,
-                    CharacterFullBodyIkPlantPivotMode.None,
-                    Vector3.zero,
-                    0f,
                     i);
             }
             return new CharacterFullBodyIkGoalSetHeader(

@@ -47,6 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     [Serializable]
     public sealed class AgentDocumentEditable
     {
+        public int blackboardSchemaRevision;
         public List<AgentSnapshotGraph> graphs = new List<AgentSnapshotGraph>();
         public List<AgentSnapshotStateMachineSummary> stateMachines = new List<AgentSnapshotStateMachineSummary>();
         public List<AgentSnapshotBlackboardDeclaration> blackboardDeclarations = new List<AgentSnapshotBlackboardDeclaration>();
@@ -211,6 +212,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public string characterProgramId;
         public string characterProgramHash;
+        public bool characterProgramStale;
         public string intentProgramAssetPath;
         public string intentProgramAssetGuid;
         public string intentProgramId;
@@ -229,6 +231,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     [Serializable]
     public sealed class AgentPackageBlackboardFile
     {
+        public int schemaRevision;
         public List<AgentSnapshotBlackboardDeclaration> declarations = new List<AgentSnapshotBlackboardDeclaration>();
     }
 
@@ -242,6 +245,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     [Serializable]
     public sealed class AgentPackageAIFile
     {
+        public int blackboardSchemaRevision;
         public AgentPackageAIController controller;
     }
 
@@ -432,6 +436,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public JObject defaults;
         public List<AgentPackagePortDescriptor> flowPorts = new List<AgentPackagePortDescriptor>();
         public List<AgentPackagePortDescriptor> propertyPorts = new List<AgentPackagePortDescriptor>();
+        public List<AgentPackagePortVariantDescriptor> portVariants = new List<AgentPackagePortVariantDescriptor>();
         public bool canCreate;
         public bool canConfigure;
         public bool canDelete;
@@ -443,6 +448,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string key;
         public string direction;
         public string valueType;
+        public string capacity;
+        public bool required;
+    }
+
+    [Serializable]
+    public sealed class AgentPackagePortVariantDescriptor
+    {
+        public string id;
+        public AgentPackagePortVariantCondition when;
+        public List<AgentPackagePortDescriptor> flowPorts = new List<AgentPackagePortDescriptor>();
+        public List<AgentPackagePortDescriptor> propertyPorts = new List<AgentPackagePortDescriptor>();
+    }
+
+    [Serializable]
+    public sealed class AgentPackagePortVariantCondition
+    {
+        public string field;
+        public string valueKind;
+        public string equals;
     }
 
     [Serializable]

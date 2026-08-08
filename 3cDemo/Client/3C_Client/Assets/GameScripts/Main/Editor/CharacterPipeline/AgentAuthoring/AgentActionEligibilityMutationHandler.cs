@@ -35,8 +35,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     if (!TryResolveGraphDeclaration(session, value.Graph, value.DeclarationAuthoringId, value.Path, out BaseTree deleteGraph, out BaseExposedProperty declaration)) return false;
                     session.AddPlanned(value, deleteGraph, declaration.BlackboardKey, "delete declaration");
                     return true;
-                case AgentEnsureBlackboardWriteMutation value:
-                    return PreflightBlackboardWrite(session, value);
+                case AgentSetBlackboardSchemaRevisionMutation value:
+                    if (!session.TryResolveGraph(value.Graph, value.Path, out BaseTree schemaRoot) || !ReferenceEquals(schemaRoot, session.RootTree)) return false;
+                    if (value.Revision != PipelineBlackboardAuthoringSchema.CurrentRevision)
+                    {
+                        session.Report.Error(value.Path, "blackboard_schema_revision_invalid", $"Blackboard schema revision 必须是 {PipelineBlackboardAuthoringSchema.CurrentRevision}。");
+                        return false;
+                    }
+                    session.AddPlanned(value, schemaRoot, value.Revision.ToString(), "set Blackboard schema revision");
+                    return true;
+                case AgentEnsureExposedPropertyNodeMutation value:
+                    return PreflightExposedPropertyNode(session, value);
                 case AgentEnsureTimelineTreeClipMutation value:
                     if (!ValidateTimelineTreeClipTarget(session, value)) return false;
                     session.AddPlanned(value, null, value.Target.ClipAuthoringId, $"ensure TreeClip {value.StartFrame}..{value.EndFrame}/{value.Phase}");
@@ -187,7 +196,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 case AgentEnsureBlackboardDeclarationMutation value: ApplyEnsureDeclaration(session, value); break;
                 case AgentMoveBlackboardDeclarationMutation value: ApplyMoveDeclaration(session, value); break;
                 case AgentDeleteBlackboardDeclarationMutation value: ApplyDeleteDeclaration(session, value); break;
-                case AgentEnsureBlackboardWriteMutation value: ApplyEnsureBlackboardWrite(session, value); break;
+                case AgentSetBlackboardSchemaRevisionMutation value: ApplyBlackboardSchemaRevision(session, value); break;
+                case AgentEnsureExposedPropertyNodeMutation value: ApplyEnsureExposedPropertyNode(session, value); break;
                 case AgentEnsureTimelineTreeClipMutation value: ApplyEnsureTreeClip(session, value); break;
                 case AgentEnsureInlineTimelineMutation value: ApplyEnsureInlineTimeline(session, value); break;
                 case AgentEnsureMotionCurveTrackMutation value: ApplyEnsureMotionCurveTrack(session, value); break;
@@ -238,8 +248,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             declaration.Name = command.Key;
             declaration.SetValue(command.DefaultValue);
-            declaration.ConfigurePipelineBlackboard(command.Key, command.Scope, command.Lifetime, command.Authority, command.SyncPolicy, command.InputValueId, command.CategoryPath);
-            declaration.ConfigureFactProjection(command.FactProjection, command.WindowType, command.WindowId, command.Digest);
+            ConfigureDeclaration(declaration, command.Key, command.Scope, command.Lifetime, command.CategoryPath, command.InputBinding, command.FactProjection);
             graph.CheckInit();
             session.AddAppliedAuthoring(command, graph.SerializedOwner, declaration, command.Key, "ensure declaration");
         }
@@ -280,15 +289,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 session.Report.Error(command.Path, "blackboard_key_ambiguous", $"Target Graph {target.GraphAuthoringId} 已包含 key={command.Key} declaration。");
                 return false;
             }
-            if (!ValidateInputDerivedPolicy(
+            if (!ValidateBlackboardPayloads(
                     session,
                     command.Path,
+                    command.DeclarationAuthoringId,
                     command.ValueType,
                     command.Scope,
                     command.Lifetime,
-                    command.Authority,
-                    command.SyncPolicy,
-                    command.InputValueId))
+                    command.InputBinding,
+                    command.FactProjection))
                 return false;
             session.PlanBlackboardDeclaration(command.DeclarationAuthoringId, target.GraphAuthoringId, command.ValueType);
             session.AddPlanned(command, target, command.Key, sourceDeclaration != null ? "move declaration" : "declaration already moved");
@@ -319,8 +328,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 declaration.GUID = command.DeclarationAuthoringId;
             }
             declaration.Name = command.Key;
-            declaration.ConfigurePipelineBlackboard(command.Key, command.Scope, command.Lifetime, command.Authority, command.SyncPolicy, command.InputValueId, command.CategoryPath);
-            declaration.ConfigureFactProjection(command.FactProjection, command.WindowType, command.WindowId, command.Digest);
+            ConfigureDeclaration(declaration, command.Key, command.Scope, command.Lifetime, command.CategoryPath, command.InputBinding, command.FactProjection);
             source.CheckInit();
             target.CheckInit();
             if (!session.RefreshIndex(command.Path))
@@ -372,46 +380,86 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 session.Report.Error(command.Path, "blackboard_type_change_rejected", $"已有 declaration {command.Key} 是 {declaration.ValueType?.Name}，不能原位改成 {command.ValueType.Name}。");
                 return false;
             }
-            if (!ValidateInputDerivedPolicy(
+            if (!ValidateBlackboardPayloads(
                     session,
                     command.Path,
+                    command.DeclarationAuthoringId,
                     command.ValueType,
                     command.Scope,
                     command.Lifetime,
-                    command.Authority,
-                    command.SyncPolicy,
-                    command.InputValueId))
+                    command.InputBinding,
+                    command.FactProjection))
                 return false;
             return true;
         }
 
-        static bool ValidateInputDerivedPolicy(
+        static bool ValidateBlackboardPayloads(
             AgentMutationSession session,
             string path,
+            string declarationId,
             Type valueType,
             PipelineBlackboardVariableScope scope,
             PipelineBlackboardVariableLifetime lifetime,
-            PipelineBlackboardVariableAuthority authority,
-            PipelineBlackboardVariableSyncPolicy syncPolicy,
-            string inputValueId)
+            AgentSnapshotBlackboardInputBinding inputBinding,
+            AgentSnapshotBlackboardFactProjection factProjection)
         {
-            if (syncPolicy != PipelineBlackboardVariableSyncPolicy.InputDerived)
+            if (inputBinding != null)
             {
-                if (string.IsNullOrEmpty(inputValueId))
-                    return true;
-                session.Report.Error(path, "input_value_id_forbidden", "非 InputDerived declaration 不得保留 InputValueId。");
-                return false;
+                if (valueType != typeof(ActionTargetSnapshot) ||
+                    scope != PipelineBlackboardVariableScope.Character ||
+                    lifetime != PipelineBlackboardVariableLifetime.Spawn ||
+                    string.IsNullOrWhiteSpace(inputBinding.inputValueId))
+                {
+                    session.Report.Error(path + ".inputBinding", "blackboard_input_binding_invalid", "Blackboard Input Binding 必须使用 Character scope、Spawn lifetime、受支持的值类型和稳定 InputValueId。");
+                    return false;
+                }
+                if (session.Snapshot.inputValues.Any(value => string.Equals(value.inputValueId, inputBinding.inputValueId, StringComparison.Ordinal)) ||
+                    session.Snapshot.blackboardDeclarations.Any(value =>
+                        !string.Equals(value.declarationId, declarationId, StringComparison.Ordinal) &&
+                        string.Equals(value.inputBinding?.inputValueId, inputBinding.inputValueId, StringComparison.Ordinal)))
+                {
+                    session.Report.Error(path + ".inputBinding.inputValueId", "input_value_identity_duplicate", $"InputValueId 已被其它 Input 或 Blackboard Input Binding 使用：{inputBinding.inputValueId}");
+                    return false;
+                }
             }
-            if (valueType != typeof(ActionTargetSnapshot) ||
-                scope != PipelineBlackboardVariableScope.Character ||
-                lifetime != PipelineBlackboardVariableLifetime.Spawn ||
-                authority == PipelineBlackboardVariableAuthority.PresentationOnly ||
-                string.IsNullOrWhiteSpace(inputValueId))
+            if (factProjection == null)
+                return true;
+            if (!Enum.TryParse(factProjection.kind, false, out PipelineBlackboardFactProjectionKind projection) ||
+                projection != PipelineBlackboardFactProjectionKind.ActionWindow ||
+                valueType != typeof(bool) ||
+                scope != PipelineBlackboardVariableScope.Frame ||
+                lifetime != PipelineBlackboardVariableLifetime.Frame ||
+                string.IsNullOrWhiteSpace(factProjection.windowType) ||
+                string.IsNullOrWhiteSpace(factProjection.windowId))
             {
-                session.Report.Error(path, "input_derived_policy_invalid", "InputDerived ActionTargetSnapshot declaration 必须使用 Character scope、Spawn lifetime、非 PresentationOnly authority，并提供稳定 InputValueId。");
+                session.Report.Error(path + ".factProjection", "action_window_projection_invalid", "ActionWindow Fact Projection 必须使用 Bool、Frame scope/lifetime，并提供合法 kind、windowType 和 windowId。");
                 return false;
             }
             return true;
+        }
+
+        static void ConfigureDeclaration(
+            BaseExposedProperty declaration,
+            string key,
+            PipelineBlackboardVariableScope scope,
+            PipelineBlackboardVariableLifetime lifetime,
+            string categoryPath,
+            AgentSnapshotBlackboardInputBinding inputBinding,
+            AgentSnapshotBlackboardFactProjection factProjection)
+        {
+            declaration.ConfigureDeclaration(key, scope, lifetime, categoryPath);
+            if (inputBinding == null)
+                declaration.ClearInputBinding();
+            else
+                declaration.ConfigureInputBinding(inputBinding.inputValueId);
+            if (factProjection == null)
+            {
+                declaration.ClearFactProjection();
+                return;
+            }
+            if (!Enum.TryParse(factProjection.kind, false, out PipelineBlackboardFactProjectionKind kind))
+                throw new InvalidOperationException($"Unsupported Blackboard Fact Projection kind: {factProjection.kind}");
+            declaration.ConfigureFactProjection(kind, factProjection.windowType, factProjection.windowId, factProjection.digest);
         }
 
         static void ApplyDeleteDeclaration(AgentMutationSession session, AgentDeleteBlackboardDeclarationMutation command)
@@ -423,30 +471,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             session.AddAppliedAuthoring(command, graph.SerializedOwner, null, declaration.BlackboardKey, "delete declaration");
         }
 
-        static bool PreflightBlackboardWrite(AgentMutationSession session, AgentEnsureBlackboardWriteMutation command)
+        static void ApplyBlackboardSchemaRevision(AgentMutationSession session, AgentSetBlackboardSchemaRevisionMutation command)
+        {
+            if (!session.TryResolveGraph(command.Graph, command.Path, out BaseTree root) || !ReferenceEquals(root, session.RootTree))
+                return;
+            root.SetBlackboardAuthoringSchemaRevision(command.Revision);
+            session.AddAppliedAuthoring(command, root.SerializedOwner, null, command.Revision.ToString(), "set Blackboard schema revision");
+        }
+
+        static bool PreflightExposedPropertyNode(AgentMutationSession session, AgentEnsureExposedPropertyNodeMutation command)
         {
             if (!session.TryResolveGraph(command.Graph, command.Path, out BaseTree graph) ||
-                !TryResolveVisibleBoolDeclaration(session, graph, command.Declaration, command.Path, out _))
+                !TryResolveVisibleDeclaration(session, graph, command.Declaration, command.ValueType, command.Path, out _))
                 return false;
             if (!graph.CanCreateNodeType(typeof(ExposedPropertyNode)))
             {
-                session.Report.Error(command.Path, "blackboard_write_graph_rejected", $"Graph {graph.GraphAuthoringId} 不允许创建 ExposedPropertyNode。");
+                session.Report.Error(command.Path, "exposed_property_graph_rejected", $"Graph {graph.GraphAuthoringId} 不允许创建 ExposedPropertyNode。");
                 return false;
             }
             if (!string.IsNullOrEmpty(command.ElementAuthoringId) &&
                 (!session.TryResolveNode(graph, ElementReference(command.ElementAuthoringId), command.Path, out BaseNode existing) || existing is not ExposedPropertyNode))
             {
-                session.Report.Error(command.Path, "blackboard_write_node_invalid", $"目标 element 不是 ExposedPropertyNode：{command.ElementAuthoringId}");
+                session.Report.Error(command.Path, "exposed_property_node_invalid", $"目标 element 不是 ExposedPropertyNode：{command.ElementAuthoringId}");
                 return false;
             }
-            session.AddPlanned(command, graph, command.DisplayName, $"ensure Bool write {command.Value}");
+            session.AddPlanned(command, graph, command.DisplayName, $"ensure {command.Mode} {command.ValueType.Name}");
             return true;
         }
 
-        static void ApplyEnsureBlackboardWrite(AgentMutationSession session, AgentEnsureBlackboardWriteMutation command)
+        static void ApplyEnsureExposedPropertyNode(AgentMutationSession session, AgentEnsureExposedPropertyNodeMutation command)
         {
             if (!session.TryResolveGraph(command.Graph, command.Path, out BaseTree graph) ||
-                !TryResolveVisibleBoolDeclaration(session, graph, command.Declaration, command.Path, out BaseExposedProperty declaration))
+                !TryResolveVisibleDeclaration(session, graph, command.Declaration, command.ValueType, command.Path, out BaseExposedProperty declaration))
                 return;
 
             ExposedPropertyNode node = null;
@@ -459,24 +515,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (node == null)
             {
                 List<ExposedPropertyNode> matches = graph.Nodes.OfType<ExposedPropertyNode>().Where(value =>
-                    value.NodeType == ExposedPropertyNodeType.Set &&
+                    value.NodeType == command.Mode &&
                     value.BlackboardVariable.DeclarationId == declaration.DeclarationId &&
                     value.BlackboardVariable.DeclarationOwnerId == declaration.DeclarationOwnerId &&
-                    value.Value.GetValue() is bool current && current == command.Value).ToList();
+                    (command.Mode == ExposedPropertyNodeType.Get || Equals(value.Value.GetValue(), command.Value))).ToList();
                 if (matches.Count > 1)
                 {
-                    session.Report.Error(command.Path, "blackboard_write_ambiguous", $"Graph {graph.GraphAuthoringId} 已有多个同值 write，必须提供 stable node identity。");
+                    session.Report.Error(command.Path, "exposed_property_node_ambiguous", $"Graph {graph.GraphAuthoringId} 已有多个匹配 ExposedPropertyNode，必须提供 stable node identity。");
                     return;
                 }
                 node = matches.SingleOrDefault() ?? graph.CreateNode(typeof(ExposedPropertyNode)) as ExposedPropertyNode;
             }
-            node.SetNodeType(ExposedPropertyNodeType.Set);
+            node.SetNodeType(command.Mode);
             node.SetExposedProperty(declaration);
-            node.Value.SetValue(command.Value);
+            if (command.Mode == ExposedPropertyNodeType.Set)
+                node.Value.SetValue(command.Value);
             node.DisplayName = command.DisplayName;
             node.Position = command.Position;
             graph.CheckInit();
-            session.AddApplied(command, graph, node, $"set {declaration.BlackboardKey}={command.Value}");
+            session.AddApplied(command, graph, node, $"{command.Mode} {declaration.BlackboardKey}");
         }
 
         static void ApplyEnsureTreeClip(AgentMutationSession session, AgentEnsureTimelineTreeClipMutation command)
@@ -971,10 +1028,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return false;
         }
 
-        static bool TryResolveVisibleBoolDeclaration(
+        static bool TryResolveVisibleDeclaration(
             AgentMutationSession session,
             BaseTree graph,
             AgentAuthoringReference declarationReference,
+            Type expectedType,
             string path,
             out BaseExposedProperty declaration)
         {
@@ -1004,9 +1062,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     session.Report.Error(path, "blackboard_declaration_missing", $"Blackboard declaration 无法解析：{declarationReference.Identity}");
                     return false;
                 }
-                if (plannedType != typeof(bool))
+                if (plannedType != expectedType)
                 {
-                    session.Report.Error(path, "blackboard_write_type_invalid", $"ensure_blackboard_write 只接受 Bool declaration，实际为 {plannedType?.Name ?? "Unknown"}。");
+                    session.Report.Error(path, "exposed_property_type_invalid", $"ExposedProperty 目标类型为 {expectedType?.Name ?? "Unknown"}，Declaration 实际为 {plannedType?.Name ?? "Unknown"}。");
                     return false;
                 }
                 if (entry.Graph == null || !entry.VisibleGraphs.OfType<BaseTree>().Any(value => value.GraphAuthoringId == plannedOwnerId))
@@ -1016,9 +1074,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 return true;
             }
-            if (declaration.ValueType != typeof(bool))
+            if (declaration.ValueType != expectedType)
             {
-                session.Report.Error(path, "blackboard_write_type_invalid", $"ensure_blackboard_write 只接受 Bool declaration，实际为 {declaration.ValueType?.Name ?? "Unknown"}。");
+                session.Report.Error(path, "exposed_property_type_invalid", $"ExposedProperty 目标类型为 {expectedType?.Name ?? "Unknown"}，Declaration 实际为 {declaration.ValueType?.Name ?? "Unknown"}。");
                 return false;
             }
             string declarationOwnerId = declaration.DeclarationOwnerId;

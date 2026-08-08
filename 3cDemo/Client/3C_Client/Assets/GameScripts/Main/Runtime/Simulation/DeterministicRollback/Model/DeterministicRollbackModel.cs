@@ -21,6 +21,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             int historyLengthTicks,
             int hashCadenceTicks,
             int maximumRollbackDepthTicks,
+            int maximumPredictionLeadTicks,
             int confirmationDelayTicks,
             int maximumQueuedBundles,
             int maximumQueuedSnapshots,
@@ -30,6 +31,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (offensiveRequestDelayTicks < 0 || historyLengthTicks <= 0 || hashCadenceTicks <= 0 ||
                 maximumRollbackDepthTicks <= 0 || maximumRollbackDepthTicks >= historyLengthTicks ||
+                maximumPredictionLeadTicks <= 0 || maximumPredictionLeadTicks >= historyLengthTicks ||
                 confirmationDelayTicks < 0 || confirmationDelayTicks >= historyLengthTicks ||
                 maximumQueuedBundles <= 0 || maximumQueuedSnapshots <= 0 || maximumOutputRecords <= 0 ||
                 maximumQueuedSnapshots <= maximumRollbackDepthTicks ||
@@ -42,6 +44,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             HistoryLengthTicks = historyLengthTicks;
             HashCadenceTicks = hashCadenceTicks;
             MaximumRollbackDepthTicks = maximumRollbackDepthTicks;
+            MaximumPredictionLeadTicks = maximumPredictionLeadTicks;
             ConfirmationDelayTicks = confirmationDelayTicks;
             MaximumQueuedBundles = maximumQueuedBundles;
             MaximumQueuedSnapshots = maximumQueuedSnapshots;
@@ -49,11 +52,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
             MissingInputPolicy = missingInputPolicy;
             SnapshotAuthority = snapshotAuthority;
             ConfigurationHash = StableHash.Compute(
-                "deterministic-rollback-policy/2",
+                "deterministic-rollback-policy/3",
                 offensiveRequestDelayTicks.ToString(),
                 historyLengthTicks.ToString(),
                 hashCadenceTicks.ToString(),
                 maximumRollbackDepthTicks.ToString(),
+                maximumPredictionLeadTicks.ToString(),
                 confirmationDelayTicks.ToString(),
                 maximumQueuedBundles.ToString(),
                 maximumQueuedSnapshots.ToString(),
@@ -66,6 +70,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public int HistoryLengthTicks { get; }
         public int HashCadenceTicks { get; }
         public int MaximumRollbackDepthTicks { get; }
+        public int MaximumPredictionLeadTicks { get; }
         public int ConfirmationDelayTicks { get; }
         public int MaximumQueuedBundles { get; }
         public int MaximumQueuedSnapshots { get; }
@@ -78,9 +83,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
     public static class DeterministicRollbackModelIdentity
     {
         public const string ModelId = "thirdperson.network-model.deterministic-rollback";
-        public const string SemanticVersion = "5";
+        public const string SemanticVersion = "6";
         public const string PipelineId = "thirdperson.simulation.pipeline.deterministic-rollback";
-        public const string PipelineRevision = "5";
+        public const string PipelineRevision = "6";
         public const string BackendId = "thirdperson.simulation.backend.fixed-pass";
         public const string EndpointId = "thirdperson.network-endpoint.deterministic-rollback";
         public const string EndpointVersion = "4";
@@ -105,7 +110,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 ModelId,
                 SemanticVersion,
                 StableHash.Compute(
-                    "deterministic-rollback-model/3",
+                    "deterministic-rollback-model/4",
                     policy.ConfigurationHash.Value,
                     semanticHash.ToString(),
                     fixedProgramHash.ToString(),

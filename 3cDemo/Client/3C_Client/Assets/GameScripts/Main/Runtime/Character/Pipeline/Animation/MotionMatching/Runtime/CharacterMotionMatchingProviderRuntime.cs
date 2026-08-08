@@ -501,6 +501,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_CommittedPage = ReadPage();
         }
 
+        public void RetargetBodyBranch(ulong resetSequence)
+        {
+            RequireAlive();
+            if (m_FrameOpen)
+                throw new InvalidOperationException("Motion Matching provider cannot retarget while a frame is open.");
+            if (resetSequence == m_ResetSequence)
+                return;
+            m_PendingResetPreviousSequence = m_ResetSequence;
+            m_HasPendingReset = true;
+            for (int i = 0; i < m_Databases.Length; i++)
+                m_Databases[i].Selection.RetargetResetSequence(resetSequence);
+            m_Trajectory.RetargetResetSequence(resetSequence);
+            m_History.RetargetResetSequence(resetSequence);
+            m_ResetSequence = resetSequence;
+            m_CommittedPage = ReadPage();
+        }
+
         public bool TryCaptureSearchReplay(out MotionMatchingSearchReplayArtifact artifact)
         {
             RequireAlive();

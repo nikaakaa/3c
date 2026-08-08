@@ -16,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         [SerializeField, Min(2)] int m_HistoryLengthTicks = 180;
         [SerializeField, Min(1)] int m_HashCadenceTicks = 10;
         [SerializeField, Min(1)] int m_MaximumRollbackDepthTicks = 90;
+        [SerializeField, Min(1)] int m_MaximumPredictionLeadTicks = 1;
         [SerializeField, Min(0)] int m_ConfirmationDelayTicks = 4;
         [SerializeField, Min(1)] int m_MaximumQueuedBundles = 256;
         [SerializeField, Min(2)] int m_MaximumQueuedSnapshots = 192;
@@ -35,6 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 m_HistoryLengthTicks,
                 m_HashCadenceTicks,
                 m_MaximumRollbackDepthTicks,
+                m_MaximumPredictionLeadTicks,
                 m_ConfirmationDelayTicks,
                 m_MaximumQueuedBundles,
                 m_MaximumQueuedSnapshots,

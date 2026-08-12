@@ -23,6 +23,8 @@ Corin的身体、头发、衣服和武器不再以原始PBR彩色表面出现在
 
 ## What Changes
 
+`CharacterShapeProjectionSource`默认关闭，只有作者显式开启后才进入形状投影链。
+
 ### 忠实复刻算法链
 
 - 新增独立`Character Shape Projection`表现能力，唯一正式链路为：
@@ -33,7 +35,7 @@ Corin的身体、头发、衣服和武器不再以原始PBR彩色表面出现在
   5. 仅回读二值Mask；CPU/Burst恢复边界环，将共享三维边作为锚点，执行RDP直线化和小环过滤。
   6. GPU通过区域包围Quad和点在多边形内判断填充代表色、绘制像素描边，并使用对应深度写入Camera Color/Depth。
 - 首版保留“每区域二值Mask”的参考语义，不把它偷换为全局Region ID Mask或新的区域累计算法。
-- 角色原始彩色Forward渲染从已安装源上移除。绑定Renderer只保留正式阴影投射职责；形状投影合成是唯一角色彩色发布者。
+- Source在首个兼容结果发布时原子接管角色彩色发布。Waiting阶段绑定Renderer保持普通Forward职责；Ready阶段Renderer只保留正式阴影投射职责，形状投影合成成为唯一角色彩色发布者。
 - 形状投影只读取最终可见骨架和相机矩阵，不读取或修改Gameplay Body、动画Pose Buffer、Rollback状态、网络状态、Action、Timeline或Camera状态。
 - 使用URP Renderer Feature接入现有非RenderGraph渲染链；不创建Builtin、RenderGraph或第二Renderer兼容路径。
 
@@ -75,7 +77,7 @@ Corin的身体、头发、衣服和武器不再以原始PBR彩色表面出现在
 - 新增独立Runtime、Editor、Shader和Generated Content模块，不修改`CharacterPipelineDefinition`的Gameplay/Animation配置合同。
 - 影响URP Renderer Data、Corin可见Prefab、Corin Renderer阴影/彩色发布设置，以及角色渲染资源生命周期。
 - 不修改角色输入、状态机、KCC、动作时间轴、Animancer、Pose Graph、FinalIK、Secondary Motion、GameplayCue、网络包或Rollback快照。
-- 不把效果Activation直接接到Action或Timeline。当前项目没有统一GameplayCue视觉消费者；首版安装到Source后持续生效，避免创建第三条业务到表现的临时调用链。
+- 不把效果Activation直接接到Action或Timeline。当前项目没有统一GameplayCue视觉消费者；Source只由作者通过同一显式开关启用，避免创建第三条业务到表现的临时调用链。
 - 参考仓库作为效果与算法研究来源；实现采用clean-room方式重新定义项目合同和代码，不复制其源文件，也不形成运行时依赖。仓库未提供可直接继承到本项目的明确License时，不把其源码或资产搬入项目。
 
 ## 与Current Spec及Active Change对比
@@ -98,4 +100,4 @@ Corin的身体、头发、衣服和武器不再以原始PBR彩色表面出现在
 4. 必须证明Camera Depth在`BeforeRenderingTransparents`合成点可正确接受形状深度并与场景不透明物、后续透明VFX和后处理保持正式顺序。
 5. 必须证明所有正常帧资源存在固定容量和明确上限；超限必须报告配置错误，不能临时分配、降质量或切换备用路径。
 
-任一门禁失败时停止实施并记录Unity/URP API、受影响Renderer和数据identity；不得加入原始表面fallback、同步GPU Readback、第二轮Animator Evaluate、自动降低分辨率或CPU/GPU双backend。
+任一门禁失败时停止实施并记录Unity/URP API、受影响Renderer和数据identity；不得在`Ready`阶段加入原始表面叠加fallback、同步GPU Readback、第二轮Animator Evaluate、自动降低分辨率或CPU/GPU双backend。

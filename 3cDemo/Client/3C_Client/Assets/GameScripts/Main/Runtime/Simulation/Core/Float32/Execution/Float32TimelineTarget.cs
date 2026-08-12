@@ -327,7 +327,7 @@ namespace ThirdPersonSimulation
             }
         }
 
-        public void SampleMotionCurve(OperationHandle operation, TimelineSegment<Float32Scalar> segment)
+        public void SampleMotionCurve(OperationHandle timeline, OperationHandle operation, TimelineSegment<Float32Scalar> segment)
         {
             Float32Scalar start = ClipTime(operation, TimelineClipTimePoint.Start);
             Float32Scalar end = ClipTime(operation, TimelineClipTimePoint.End);
@@ -363,19 +363,32 @@ namespace ThirdPersonSimulation
             Float32Scalar yaw = SampleCurve(operation, TimelineCurveChannel.Yaw, currentCurve, Float32Scalar.Zero) -
                                 SampleCurve(operation, TimelineCurveChannel.Yaw, previousCurve, Float32Scalar.Zero);
             ProgramCatalogEntry definition = RequireClipCatalog(Access.Operation(operation));
+            var channel = (SimulationMotionChannel)CatalogInt32(definition, ProgramCatalogFieldId.Channel);
+            CommittedMovementPlaybackClock movementPlaybackClock = channel == SimulationMotionChannel.Locomotion
+                ? new CommittedMovementPlaybackClock(
+                    SourcePath(timeline),
+                    ReadActivationGeneration(timeline),
+                    m_Frame.Tick,
+                    checked((int)Math.Round(
+                        (Float32Scalar.FromInt64(segment.Cycle) * TimelineDuration(timeline) + segment.Current).ToDouble() * m_Program.Manifest.TickRate,
+                        MidpointRounding.AwayFromZero)),
+                    m_Program.Manifest.TickRate)
+                : default;
             var contribution = new SimulationMotionContribution(
                 SourcePath(operation),
                 operation,
                 currentPosition - previousPosition,
                 yaw,
+                Float32Vector2.Zero,
                 CatalogInt32(definition, ProgramCatalogFieldId.Space) == 1
                     ? SimulationMotionContributionSpace.World
                     : SimulationMotionContributionSpace.ActorLocal,
                 weight,
                 CatalogInt32(definition, ProgramCatalogFieldId.Priority),
-                (SimulationMotionChannel)CatalogInt32(definition, ProgramCatalogFieldId.Channel),
+                channel,
                 (SimulationMotionBlendMode)CatalogInt32(definition, ProgramCatalogFieldId.BlendMode),
-                CatalogBoolean(definition, ProgramCatalogFieldId.ConsumeLowerChannels));
+                CatalogBoolean(definition, ProgramCatalogFieldId.ConsumeLowerChannels),
+                movementPlaybackClock);
             if (contribution.CanResolve)
                 m_Motion.Submit(contribution);
         }

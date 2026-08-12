@@ -649,11 +649,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal void AdvanceSources(
             float presentationDeltaSeconds,
+            in CharacterPresentationFactFrame factFrame,
             in CharacterPresentationProgramParameterFrame
                 parameterFrame)
         {
             if (!float.IsFinite(presentationDeltaSeconds) ||
                 presentationDeltaSeconds < 0f ||
+                !factFrame.IsValid ||
                 !parameterFrame.IsValid)
             {
                 throw new ArgumentOutOfRangeException(
@@ -673,7 +675,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     continue;
                 }
-                player.Advance(presentationDeltaSeconds);
+                if (player.ClockSource == CharacterSequencePlayerClockSource.CommittedMovement)
+                    player.SynchronizeMovementClock(
+                        factFrame.MovementPlaybackTime,
+                        factFrame.MovementPlaybackClock,
+                        presentationDeltaSeconds);
+                else
+                    player.Advance(presentationDeltaSeconds);
             }
             for (int i = 0;
                  i < m_BlendSpacePlayers.Length;
@@ -928,7 +936,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return;
             }
             RequireSequence(usage)
-                .SetRelevant(relevant);
+                .SetRelevant(relevant, demandKind);
         }
 
         void ICharacterPoseStateSourceRuntime.Reset(
@@ -1059,6 +1067,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             SetSourceClock(
                 followerPlayerIndex,
                 effective);
+            if (m_SequenceByPlayerIndex.TryGetValue(
+                    plan.SourcePlayerIndex,
+                    out AnimationSequencePlayerRuntime sourceSequence) &&
+                m_SequenceByPlayerIndex.TryGetValue(
+                    plan.TargetPlayerIndex,
+                    out AnimationSequencePlayerRuntime targetSequence) &&
+                sourceSequence.ClockSource ==
+                    CharacterSequencePlayerClockSource.CommittedMovement &&
+                targetSequence.ClockSource ==
+                    CharacterSequencePlayerClockSource.CommittedMovement)
+            {
+                targetSequence.AlignMovementMarkerEpoch(sourceSequence);
+            }
             if (!TryGetSourceClock(
                     plan.TargetPlayerIndex,
                     out _,

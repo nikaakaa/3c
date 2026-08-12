@@ -4,9 +4,9 @@
 
 唯一Framework MUST通过`GraphAuthoringCapabilityCatalog`查询每个domain的Graph kind、node kind、typed payload、静态/动态logical port、数据类型、Pose空间、非Pose瞬时value空间、execution domain、允许连接、资源引用、创建菜单、显示标题、Details provider、Mutation入口与Compiler handler。人工UI、Document exporter、strict parser、Reconciler、Validator和Compiler MUST读取同一Capability；固定port MUST不在实例数据中复制。Capability未声明的字段、port、Pose空间转换、瞬时value lineage或execution domain MUST不被任何入口创建或保存，系统 MUST不按C#类型名、显示名、窗口类型或字段路径重复硬编码能力。
 
-#### Scenario: FootGrounding声明Goal输出
+#### Scenario: FootPlacement声明Goal输出
 
-- **WHEN** FootGrounding Capability声明Component Pose输入与`component.full-body-ik-goals`输出
+- **WHEN** FootPlacement Capability声明Component Pose输入与`component.full-body-ik-goals`输出
 - **THEN** Canvas、Document、Validator与Compiler MUST从同一Capability识别Pose只读输入、Goals输出及其lineage规则
 - **AND** MUST把该节点投影为Lyra Foot Plant等价Goal Source而不是IK solver或Pose backbone节点
 
@@ -46,7 +46,7 @@ Graph Canvas MUST通过document projection和Capability生成通用Node View、P
 
 #### Scenario: 作者连接两个Goal Sources与FullBodyIK
 
-- **WHEN** 作者从FootGrounding或其PredictiveFootPlacementModifier最终输出和PoseBoneIKGoals拖出Goals到FullBodyIK两个动态输入
+- **WHEN** 作者从统一FootPlacement最终输出和PoseBoneIKGoals拖出Goals到FullBodyIK两个动态输入
 - **THEN** Canvas MUST显示两条Goals edge并保留各自稳定port identity
 - **AND** Component Pose MUST分别扇出到两个Goal Sources与FullBodyIK而不得被自动排成串行IK链
 

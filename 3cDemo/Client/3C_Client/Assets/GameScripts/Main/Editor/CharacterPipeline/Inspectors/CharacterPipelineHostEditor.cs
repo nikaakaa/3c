@@ -196,9 +196,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RuntimeFootIkLegTraceSnapshot left = snapshot.Left;
             RuntimeFootIkLegTraceSnapshot right = snapshot.Right;
             return $"Foot IK Live | frame {snapshot.FrameSequence} | completion {snapshot.GroundingCompletionIdentity}/{snapshot.ModifierCompletionIdentity}->{snapshot.SolverCompletionIdentity} | " +
-                   $"solver {snapshot.SolverFailure} | alpha/body {snapshot.PlacementAlpha:0.###}/{snapshot.BodyGrounded} | modifier {snapshot.ModifierSelectedSide} | " +
-                   $"L hit {left.DidCurrentTraceHit} offset {left.TargetOffset:0.###}+{left.SoleClearanceTarget:0.###}->{left.UnconstrainedOffset:0.###}+constraint {left.SoleConstraintOffset:0.###}={left.CurrentOffset:0.###} continuous {left.ContinuousSoleContact} contact {left.ContactState} anchor {left.AnchorBlendWeight:0.###} soleResidual {left.ResidualSolePenetration:0.###} rewrite {left.SelectedForPredictiveRewrite}/{left.PredictiveRewritten}/{left.PredictionRejectReason} residual {left.PositionResidual:0.###} | " +
-                   $"R hit {right.DidCurrentTraceHit} offset {right.TargetOffset:0.###}+{right.SoleClearanceTarget:0.###}->{right.UnconstrainedOffset:0.###}+constraint {right.SoleConstraintOffset:0.###}={right.CurrentOffset:0.###} continuous {right.ContinuousSoleContact} contact {right.ContactState} anchor {right.AnchorBlendWeight:0.###} soleResidual {right.ResidualSolePenetration:0.###} rewrite {right.SelectedForPredictiveRewrite}/{right.PredictiveRewritten}/{right.PredictionRejectReason} residual {right.PositionResidual:0.###} | " +
+                   $"solver {snapshot.SolverFailure} | alpha/body {snapshot.PlacementAlpha:0.###}/{snapshot.BodyGrounded} | " +
+                   $"L hit {left.DidCurrentTraceHit} offset {left.TargetOffset:0.###}+{left.SoleClearanceTarget:0.###}->{left.UnconstrainedOffset:0.###}+constraint {left.SoleConstraintOffset:0.###}={left.CurrentOffset:0.###} contact {left.ContactState}/{left.ContactDecision} anchor {left.AnchorBlendWeight:0.###} finalPhysical {left.FinalPhysicalResidualPenetration:0.###} event {left.LandingEventIdentity}/{left.LandingEventIdentityValid} plan {left.PlanLandingEventIdentity}/{left.PredictivePlanState}@{left.PlanElapsedSeconds:0.###} progress {left.PredictiveExecutionProgress:0.###} rewrite {left.PredictiveRewritten}/{left.PredictionRejectReason} lift {left.AppliedLift:0.###} residual {left.PositionResidual:0.###} | " +
+                   $"R hit {right.DidCurrentTraceHit} offset {right.TargetOffset:0.###}+{right.SoleClearanceTarget:0.###}->{right.UnconstrainedOffset:0.###}+constraint {right.SoleConstraintOffset:0.###}={right.CurrentOffset:0.###} contact {right.ContactState}/{right.ContactDecision} anchor {right.AnchorBlendWeight:0.###} finalPhysical {right.FinalPhysicalResidualPenetration:0.###} event {right.LandingEventIdentity}/{right.LandingEventIdentityValid} plan {right.PlanLandingEventIdentity}/{right.PredictivePlanState}@{right.PlanElapsedSeconds:0.###} progress {right.PredictiveExecutionProgress:0.###} rewrite {right.PredictiveRewritten}/{right.PredictionRejectReason} lift {right.AppliedLift:0.###} residual {right.PositionResidual:0.###} | " +
                    $"pelvis {snapshot.PelvisLyraTargetOffset:0.###}->{snapshot.PelvisResolvedTargetOffset:0.###}->{snapshot.CurrentPelvisOffset:0.###} velocity {snapshot.PelvisSpringVelocity:0.###}";
         }
 
@@ -629,9 +629,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     if (!footIk.IsAvailable)
                         return $"{payload.Name} | {payload.Status} | {payload.Detail}";
                     return $"{payload.Status} | frame {footIk.FrameSequence} | " +
-                           $"L {footIk.Left.ContactState} offset {footIk.Left.TargetOffset:0.###}+{footIk.Left.SoleClearanceTarget:0.###}->{footIk.Left.UnconstrainedOffset:0.###}+constraint {footIk.Left.SoleConstraintOffset:0.###}={footIk.Left.CurrentOffset:0.###} continuous {footIk.Left.ContinuousSoleContact} anchor {footIk.Left.AnchorBlendWeight:0.###} soleResidual {footIk.Left.ResidualSolePenetration:0.###} rewrite {footIk.Left.PredictiveRewritten} residual {footIk.Left.PositionResidual:0.###} | " +
-                           $"R {footIk.Right.ContactState} offset {footIk.Right.TargetOffset:0.###}+{footIk.Right.SoleClearanceTarget:0.###}->{footIk.Right.UnconstrainedOffset:0.###}+constraint {footIk.Right.SoleConstraintOffset:0.###}={footIk.Right.CurrentOffset:0.###} continuous {footIk.Right.ContinuousSoleContact} anchor {footIk.Right.AnchorBlendWeight:0.###} soleResidual {footIk.Right.ResidualSolePenetration:0.###} rewrite {footIk.Right.PredictiveRewritten} residual {footIk.Right.PositionResidual:0.###} | " +
-                           $"pelvis {footIk.PelvisLyraTargetOffset:0.###}->{footIk.PelvisResolvedTargetOffset:0.###}->{footIk.CurrentPelvisOffset:0.###} | modifier {footIk.ModifierSelectedSide}";
+                           $"L {footIk.Left.ContactState}/{footIk.Left.ContactDecision} offset {footIk.Left.TargetOffset:0.###}+{footIk.Left.SoleClearanceTarget:0.###}->{footIk.Left.UnconstrainedOffset:0.###}+constraint {footIk.Left.SoleConstraintOffset:0.###}={footIk.Left.CurrentOffset:0.###} event {footIk.Left.LandingEventIdentity}/{footIk.Left.LandingEventIdentityValid} plan {footIk.Left.PlanLandingEventIdentity}/{footIk.Left.PredictivePlanState}@{footIk.Left.PlanElapsedSeconds:0.###} progress {footIk.Left.PredictiveExecutionProgress:0.###} anchor {footIk.Left.AnchorBlendWeight:0.###} finalPhysical {footIk.Left.FinalPhysicalResidualPenetration:0.###} rewrite {footIk.Left.PredictiveRewritten} residual {footIk.Left.PositionResidual:0.###} | " +
+                           $"R {footIk.Right.ContactState}/{footIk.Right.ContactDecision} offset {footIk.Right.TargetOffset:0.###}+{footIk.Right.SoleClearanceTarget:0.###}->{footIk.Right.UnconstrainedOffset:0.###}+constraint {footIk.Right.SoleConstraintOffset:0.###}={footIk.Right.CurrentOffset:0.###} event {footIk.Right.LandingEventIdentity}/{footIk.Right.LandingEventIdentityValid} plan {footIk.Right.PlanLandingEventIdentity}/{footIk.Right.PredictivePlanState}@{footIk.Right.PlanElapsedSeconds:0.###} progress {footIk.Right.PredictiveExecutionProgress:0.###} anchor {footIk.Right.AnchorBlendWeight:0.###} finalPhysical {footIk.Right.FinalPhysicalResidualPenetration:0.###} rewrite {footIk.Right.PredictiveRewritten} residual {footIk.Right.PositionResidual:0.###} | " +
+                           $"pelvis {footIk.PelvisLyraTargetOffset:0.###}->{footIk.PelvisResolvedTargetOffset:0.###}->{footIk.CurrentPelvisOffset:0.###}";
                 });
             if (session.IsCaptureRecording)
             {
@@ -704,7 +704,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static void AppendFootIkHeader(StringBuilder builder)
+        internal static void AppendFootIkHeader(StringBuilder builder)
         {
             var values = new List<string>
             {
@@ -716,7 +716,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "pelvis_lyra_target", "pelvis_resolved_target", "pelvis_current", "pelvis_spring_velocity",
                 "pelvis_previous_target", "pelvis_spring_initialized", "pelvis_translation_x", "pelvis_translation_y",
                 "pelvis_translation_z", "pelvis_goal_weight", "pelvis_goal_application", "pelvis_goal_source",
-                "modifier_selected_side", "baseline_producer_operation", "baseline_producer_call_site",
+                "baseline_producer_operation", "baseline_producer_call_site",
                 "baseline_goal_offset", "baseline_goal_count", "baseline_rig_id", "baseline_rig_revision"
             };
             AppendFootIkLegHeader(values, "left");
@@ -739,7 +739,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Number(snapshot.PelvisLyraTargetOffset), Number(snapshot.PelvisResolvedTargetOffset), Number(snapshot.CurrentPelvisOffset), Number(snapshot.PelvisSpringVelocity),
                 Number(snapshot.PreviousPelvisTarget), Bool(snapshot.PelvisSpringInitialized), Number(snapshot.PelvisPreSolveTranslation.x), Number(snapshot.PelvisPreSolveTranslation.y),
                 Number(snapshot.PelvisPreSolveTranslation.z), Number(snapshot.PelvisGoalPositionWeight), snapshot.PelvisGoalApplication, snapshot.PelvisGoalSourceKind,
-                snapshot.ModifierSelectedSide, Number(snapshot.BaselineProducerOperationIndex), Number(snapshot.BaselineProducerCallSiteIndex),
+                Number(snapshot.BaselineProducerOperationIndex), Number(snapshot.BaselineProducerCallSiteIndex),
                 Number(snapshot.BaselineGoalOffset), Number(snapshot.BaselineGoalCount), snapshot.BaselineRigId, snapshot.BaselineRigRevision
             };
             AppendFootIkLegValues(values, left);
@@ -749,29 +749,98 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void AppendFootIkLegHeader(List<string> values, string prefix)
         {
-            string[] names =
+            string[] beforePath =
             {
                 "hit", "surface", "query_shape", "query_purpose", "query_foot_index",
                 "query_origin_x", "query_origin_y", "query_origin_z", "query_capsule_end_x", "query_capsule_end_y", "query_capsule_end_z",
                 "query_direction_x", "query_direction_y", "query_direction_z", "query_radius", "query_maximum_distance", "query_layer_mask", "query_minimum_ground_normal_dot",
                 "hit_location_x", "hit_location_y", "hit_location_z", "impact_point_x", "impact_point_y", "impact_point_z",
                 "hit_normal_x", "hit_normal_y", "hit_normal_z", "hit_distance",
-                "contact", "transition", "has_anchor", "anchor_local_x", "anchor_local_y", "anchor_local_z",
+                "contact", "transition", "contact_decision", "contact_surface_valid", "contact_surface_distance_accepted",
+                "contact_capture_speed_accepted", "contact_retention_speed_accepted", "contact_confidence_accepted",
+                "maximum_contact_surface_distance", "plant_speed_threshold", "unalignment_speed_threshold",
+                "plant_confidence_enter", "plant_confidence_exit", "anchor_distance", "anchor_distance_accepted",
+                "maximum_anchor_distance", "anchor_blend_speed", "has_anchor", "anchor_local_x", "anchor_local_y", "anchor_local_z",
                 "anchor_local_rotation_x", "anchor_local_rotation_y", "anchor_local_rotation_z", "anchor_local_rotation_w",
                 "anchor_world_x", "anchor_world_y", "anchor_world_z", "anchor_world_rotation_x", "anchor_world_rotation_y", "anchor_world_rotation_z", "anchor_world_rotation_w", "anchor_blend",
-                "swing_eligible", "selected_for_rewrite", "rewritten", "prediction_reject", "future_surface",
+                "foot_feature_valid", "predicted_step_valid", "predicted_step_has_landing_event",
+                "predicted_step_source_bound", "has_authoritative_landing_event", "expected_landing_event_identity",
+                "landing_event_identity_valid", "current_event_is_pre_swing", "current_event_is_swing",
+                "rewritten", "prediction_reject", "future_surface",
                 "future_point_x", "future_point_y", "future_point_z", "future_normal_x", "future_normal_y", "future_normal_z",
-                "ground_envelope_count", "ground_envelope_reject", "predictive_query_count", "predictive_rejected_query_count", "prediction_horizon", "swing_clearance",
+                "ground_envelope_count", "ground_envelope_reject", "predictive_query_count", "predictive_raw_hit_count", "predictive_rejected_query_count",
+                "predictive_reject_no_candidate_count", "predictive_reject_height_discontinuity_count", "predictive_reject_edge_gap_count",
+                "predictive_reject_surface_discontinuity_count", "predictive_reject_reach_exceeded_count", "predictive_reject_slope_exceeded_count",
+                "predictive_reject_step_exceeded_count", "predictive_reject_invalid_candidate_count", "predictive_reject_unsupported_center_count",
+                "future_landing_query_available", "future_landing_query_shape", "future_landing_query_purpose",
+                "future_landing_query_origin_x", "future_landing_query_origin_y", "future_landing_query_origin_z",
+                "future_landing_query_direction_x", "future_landing_query_direction_y", "future_landing_query_direction_z",
+                "future_landing_query_radius", "future_landing_query_maximum_distance", "future_landing_query_minimum_ground_normal_dot", "prediction_horizon",
+                "landing_event_identity", "source_sample_identity", "source_sample_cycle", "event_ordinal", "contribution_continuity_identity",
+                "landing_confidence", "authored_landing_delay", "landing_event_phase", "landing_lift_off_phase",
+                "root_local_landing_x", "root_local_landing_y", "root_local_landing_z",
+                "root_local_route_0_x", "root_local_route_0_y", "root_local_route_0_z",
+                "root_local_route_1_x", "root_local_route_1_y", "root_local_route_1_z",
+                "root_local_route_2_x", "root_local_route_2_y", "root_local_route_2_z",
+                "root_local_route_3_x", "root_local_route_3_y", "root_local_route_3_z",
+                "root_local_route_4_x", "root_local_route_4_y", "root_local_route_4_z",
+                "root_local_route_5_x", "root_local_route_5_y", "root_local_route_5_z",
+                "root_local_route_6_x", "root_local_route_6_y", "root_local_route_6_z",
+                "authored_foot_route_start_x", "authored_foot_route_start_y", "authored_foot_route_start_z",
+                "authored_foot_route_landing_x", "authored_foot_route_landing_y", "authored_foot_route_landing_z",
+                "prediction_distance", "predictive_plan_sequence", "predictive_plan_generated_frame",
+                "predictive_plan_state", "predictive_plan_transition", "predictive_plan_end_reason", "predictive_execution_progress",
+                "plan_landing_event_identity", "plan_source_sample_identity", "plan_source_sample_cycle", "plan_event_ordinal",
+                "plan_contribution_continuity_identity", "plan_elapsed_seconds", "plan_seconds_to_lift_off", "plan_swing_duration",
+                "plan_has_path_geometry", "plan_has_executable_path",
+                "frozen_planar_velocity_x", "frozen_planar_velocity_y", "frozen_planar_velocity_z",
+                "current_sole_world_x", "current_sole_world_y", "current_sole_world_z",
+                "fixed_path_start_world_x", "fixed_path_start_world_y", "fixed_path_start_world_z",
+                "fixed_landing_world_x", "fixed_landing_world_y", "fixed_landing_world_z",
+                "current_path_world_x", "current_path_world_y", "current_path_world_z",
+                "current_path_root_world_x", "current_path_root_world_y", "current_path_root_world_z",
+                "current_path_hip_world_x", "current_path_hip_world_y", "current_path_hip_world_z",
+                "predicted_hip_world_x", "predicted_hip_world_y", "predicted_hip_world_z",
+                "frozen_root_start_world_x", "frozen_root_start_world_y", "frozen_root_start_world_z",
+                "frozen_root_start_rotation_x", "frozen_root_start_rotation_y", "frozen_root_start_rotation_z", "frozen_root_start_rotation_w",
+                "frozen_root_landing_world_x", "frozen_root_landing_world_y", "frozen_root_landing_world_z",
+                "frozen_root_landing_rotation_x", "frozen_root_landing_rotation_y", "frozen_root_landing_rotation_z", "frozen_root_landing_rotation_w",
+                "prediction_up_x", "prediction_up_y", "prediction_up_z",
+                "minimum_landing_confidence", "maximum_prediction_reach_ratio", "prediction_reach_ratio",
+                "prediction_cast_above", "prediction_cast_below", "prediction_route_sample_count", "prediction_accepted_hit_count", "prediction_edge_plane_candidate_count", "prediction_accepted_edge_plane_count", "path_sphere_radius", "swing_capsule_radius",
+                "current_path_surface", "current_path_support_x", "current_path_support_y", "current_path_support_z",
+                "current_path_normal_x", "current_path_normal_y", "current_path_normal_z",
+                "pre_clearance_heel_path_distance", "pre_clearance_toe_path_distance",
+                "post_clearance_heel_path_distance", "post_clearance_toe_path_distance",
+                "predictive_clearance_evaluated", "predictive_residual_penetration", "planned_foot_route_world_sample_count",
+                "planned_foot_route_world_0_x", "planned_foot_route_world_0_y", "planned_foot_route_world_0_z",
+                "planned_foot_route_world_1_x", "planned_foot_route_world_1_y", "planned_foot_route_world_1_z",
+                "planned_foot_route_world_2_x", "planned_foot_route_world_2_y", "planned_foot_route_world_2_z",
+                "planned_foot_route_world_3_x", "planned_foot_route_world_3_y", "planned_foot_route_world_3_z",
+                "planned_foot_route_world_4_x", "planned_foot_route_world_4_y", "planned_foot_route_world_4_z",
+                "planned_foot_route_world_5_x", "planned_foot_route_world_5_y", "planned_foot_route_world_5_z",
+                "planned_foot_route_world_6_x", "planned_foot_route_world_6_y", "planned_foot_route_world_6_z",
+                "path_diagnostic_sample_count"
+            };
+            for (int i = 0; i < beforePath.Length; i++)
+                values.Add($"{prefix}_{beforePath[i]}");
+            for (int i = 0; i < 8; i++)
+                AppendFootIkPathSampleHeader(values, prefix, i);
+            string[] afterPath =
+            {
+                "required_lift", "applied_lift",
+                "baseline_goal_world_x", "baseline_goal_world_y", "baseline_goal_world_z",
+                "final_goal_world_x", "final_goal_world_y", "final_goal_world_z",
                 "baseline_application", "final_source", "solver_result_available", "plant_confidence", "plant_contact", "sole_height",
                 "placement_weight", "animation_foot_speed", "surface_distance",
                 "sole_support_surface", "sole_support_point_x", "sole_support_point_y", "sole_support_point_z",
                 "sole_support_normal_x", "sole_support_normal_y", "sole_support_normal_z",
-                "sole_clearance_target", "sole_clearance_target_x", "sole_clearance_target_y", "sole_clearance_target_z",
-                "sole_ankle_x", "sole_ankle_y", "sole_ankle_z",
-                "sole_heel_x", "sole_heel_y", "sole_heel_z",
-                "sole_toe_x", "sole_toe_y", "sole_toe_z",
-                "sole_heel_plane_distance", "sole_toe_plane_distance", "residual_sole_penetration",
-                "animated_ankle_component_y", "has_previous_sole_sample", "previous_sole_surface", "previous_sole_heel_plane_distance", "previous_sole_toe_plane_distance", "continuous_sole_contact",
+                "sole_clearance_target", "baseline_sole_pose_seq", "final_goal_sole_pose_seq", "final_solved_sole_pose_seq",
+                "final_physical_support_kind", "final_physical_support_surface",
+                "final_physical_support_point_x", "final_physical_support_point_y", "final_physical_support_point_z",
+                "final_physical_support_normal_x", "final_physical_support_normal_y", "final_physical_support_normal_z",
+                "final_physical_heel_plane_distance", "final_physical_toe_plane_distance", "final_physical_residual_penetration", "final_physical_evaluated",
+                "animated_ankle_component_y",
                 "baseline_position_weight", "baseline_rotation_weight",
                 "final_position_weight", "final_rotation_weight", "target_offset", "offset_target", "unconstrained_offset", "sole_constraint_offset", "current_offset", "offset_spring_velocity", "previous_offset_target", "offset_spring_initialized",
                 "target_normal_x", "target_normal_y", "target_normal_z", "current_normal_x", "current_normal_y", "current_normal_z",
@@ -780,11 +849,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "current_grounding_x", "current_grounding_y", "current_grounding_z", "baseline_x", "baseline_y", "baseline_z", "final_x", "final_y", "final_z",
                 "solved_x", "solved_y", "solved_z", "position_residual", "rotation_residual_degrees"
             };
-            for (int i = 0; i < names.Length; i++)
-                values.Add($"{prefix}_{names[i]}");
+            for (int i = 0; i < afterPath.Length; i++)
+                values.Add($"{prefix}_{afterPath[i]}");
         }
 
-        static void AppendFootIkLegValues(List<string> values, RuntimeFootIkLegTraceSnapshot leg)
+        static void AppendFootIkPathSampleHeader(List<string> values, string prefix, int index)
+        {
+            string sample = $"{prefix}_path_{index}";
+            values.Add($"{sample}_fraction");
+            values.Add($"{sample}_position_x");
+            values.Add($"{sample}_position_y");
+            values.Add($"{sample}_position_z");
+            values.Add($"{sample}_normal_x");
+            values.Add($"{sample}_normal_y");
+            values.Add($"{sample}_normal_z");
+            values.Add($"{sample}_surface");
+            values.Add($"{sample}_root_x");
+            values.Add($"{sample}_root_y");
+            values.Add($"{sample}_root_z");
+            values.Add($"{sample}_hip_x");
+            values.Add($"{sample}_hip_y");
+            values.Add($"{sample}_hip_z");
+        }
+
+        internal static void AppendFootIkLegValues(List<string> values, RuntimeFootIkLegTraceSnapshot leg)
         {
             values.AddRange(new[]
             {
@@ -796,27 +884,98 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Number(leg.CurrentHitLocation.x), Number(leg.CurrentHitLocation.y), Number(leg.CurrentHitLocation.z),
                 Number(leg.CurrentImpactPoint.x), Number(leg.CurrentImpactPoint.y), Number(leg.CurrentImpactPoint.z),
                 Number(leg.CurrentHitNormal.x), Number(leg.CurrentHitNormal.y), Number(leg.CurrentHitNormal.z), Number(leg.CurrentHitDistance),
-                leg.ContactState, leg.TransitionReason, Bool(leg.HasSurfaceAnchor),
+                leg.ContactState, leg.TransitionReason, leg.ContactDecision, Bool(leg.ContactSurfaceValid), Bool(leg.ContactSurfaceDistanceAccepted),
+                Bool(leg.ContactCaptureSpeedAccepted), Bool(leg.ContactRetentionSpeedAccepted), Bool(leg.ContactConfidenceAccepted),
+                Number(leg.MaximumContactSurfaceDistance), Number(leg.PlantSpeedThreshold), Number(leg.UnalignmentSpeedThreshold),
+                Number(leg.PlantConfidenceEnter), Number(leg.PlantConfidenceExit), Number(leg.AnchorDistance), Bool(leg.AnchorDistanceAccepted),
+                Number(leg.MaximumAnchorDistance), Number(leg.AnchorBlendSpeed), Bool(leg.HasSurfaceAnchor),
                 Number(leg.SurfaceLocalAnchor.x), Number(leg.SurfaceLocalAnchor.y), Number(leg.SurfaceLocalAnchor.z),
                 Number(leg.SurfaceLocalRotation.x), Number(leg.SurfaceLocalRotation.y), Number(leg.SurfaceLocalRotation.z), Number(leg.SurfaceLocalRotation.w),
                 Number(leg.AnchorWorldPosition.x), Number(leg.AnchorWorldPosition.y), Number(leg.AnchorWorldPosition.z),
                 Number(leg.AnchorWorldRotation.x), Number(leg.AnchorWorldRotation.y), Number(leg.AnchorWorldRotation.z), Number(leg.AnchorWorldRotation.w), Number(leg.AnchorBlendWeight),
-                Bool(leg.SwingEligible), Bool(leg.SelectedForPredictiveRewrite), Bool(leg.PredictiveRewritten), leg.PredictionRejectReason, Number(leg.FutureSurfaceIdentity),
+                Bool(leg.FootFeatureValid), Bool(leg.PredictedStepValid), Bool(leg.PredictedStepHasLandingEvent),
+                Bool(leg.PredictedStepSourceBound), Bool(leg.HasAuthoritativeLandingEvent), Number(leg.ExpectedLandingEventIdentity),
+                Bool(leg.LandingEventIdentityValid), Bool(leg.CurrentEventIsPreSwing), Bool(leg.CurrentEventIsSwing),
+                Bool(leg.PredictiveRewritten), leg.PredictionRejectReason, Number(leg.FutureSurfaceIdentity),
                 Number(leg.FutureSupportPoint.x), Number(leg.FutureSupportPoint.y), Number(leg.FutureSupportPoint.z),
                 Number(leg.FutureSupportNormal.x), Number(leg.FutureSupportNormal.y), Number(leg.FutureSupportNormal.z),
-                Number(leg.GroundEnvelopeSegmentCount), leg.GroundEnvelopeRejectReason, Number(leg.PredictiveQueryCount), Number(leg.PredictiveRejectedQueryCount),
-                Number(leg.PredictionHorizon), Number(leg.SwingClearance), leg.BaselineGoalApplication, leg.FinalGoalSourceKind, Bool(leg.SolverResultAvailable),
+                Number(leg.GroundEnvelopeSegmentCount), leg.GroundEnvelopeRejectReason, Number(leg.PredictiveQueryCount), Number(leg.PredictiveRawHitCount), Number(leg.PredictiveRejectedQueryCount),
+                Number(leg.PredictiveRejectNoCandidateCount), Number(leg.PredictiveRejectHeightDiscontinuityCount), Number(leg.PredictiveRejectEdgeGapCount),
+                Number(leg.PredictiveRejectSurfaceDiscontinuityCount), Number(leg.PredictiveRejectReachExceededCount), Number(leg.PredictiveRejectSlopeExceededCount),
+                Number(leg.PredictiveRejectStepExceededCount), Number(leg.PredictiveRejectInvalidCandidateCount), Number(leg.PredictiveRejectUnsupportedCenterCount),
+                Bool(leg.FutureLandingQueryAvailable), leg.FutureLandingQueryShape, leg.FutureLandingQueryPurpose,
+                Number(leg.FutureLandingQueryOrigin.x), Number(leg.FutureLandingQueryOrigin.y), Number(leg.FutureLandingQueryOrigin.z),
+                Number(leg.FutureLandingQueryDirection.x), Number(leg.FutureLandingQueryDirection.y), Number(leg.FutureLandingQueryDirection.z),
+                Number(leg.FutureLandingQueryRadius), Number(leg.FutureLandingQueryMaximumDistance), Number(leg.FutureLandingQueryMinimumGroundNormalDot), Number(leg.PredictionHorizon),
+                Number(leg.LandingEventIdentity), Number(leg.SourceSampleIdentity), Number(leg.SourceSampleCycle), Number(leg.EventOrdinal), Number(leg.ContributionContinuityIdentity),
+                Number(leg.LandingConfidence), Number(leg.AuthoredLandingDelaySeconds), Number(leg.LandingEventPhase), Number(leg.LandingLiftOffPhase),
+                Number(leg.RootLocalLanding.x), Number(leg.RootLocalLanding.y), Number(leg.RootLocalLanding.z),
+                Number(leg.RootLocalRouteSample0.x), Number(leg.RootLocalRouteSample0.y), Number(leg.RootLocalRouteSample0.z),
+                Number(leg.RootLocalRouteSample1.x), Number(leg.RootLocalRouteSample1.y), Number(leg.RootLocalRouteSample1.z),
+                Number(leg.RootLocalRouteSample2.x), Number(leg.RootLocalRouteSample2.y), Number(leg.RootLocalRouteSample2.z),
+                Number(leg.RootLocalRouteSample3.x), Number(leg.RootLocalRouteSample3.y), Number(leg.RootLocalRouteSample3.z),
+                Number(leg.RootLocalRouteSample4.x), Number(leg.RootLocalRouteSample4.y), Number(leg.RootLocalRouteSample4.z),
+                Number(leg.RootLocalRouteSample5.x), Number(leg.RootLocalRouteSample5.y), Number(leg.RootLocalRouteSample5.z),
+                Number(leg.RootLocalRouteSample6.x), Number(leg.RootLocalRouteSample6.y), Number(leg.RootLocalRouteSample6.z),
+                Number(leg.AuthoredFootRouteStart.x), Number(leg.AuthoredFootRouteStart.y), Number(leg.AuthoredFootRouteStart.z),
+                Number(leg.AuthoredFootRouteLanding.x), Number(leg.AuthoredFootRouteLanding.y), Number(leg.AuthoredFootRouteLanding.z),
+                Number(leg.PredictionDistance), Number(leg.PredictivePlanSequence), Number(leg.PredictivePlanGeneratedFrame),
+                leg.PredictivePlanState, leg.PredictivePlanTransitionReason, leg.PredictivePlanEndReason,
+                Number(leg.PredictiveExecutionProgress),
+                Number(leg.PlanLandingEventIdentity), Number(leg.PlanSourceSampleIdentity), Number(leg.PlanSourceSampleCycle), Number(leg.PlanEventOrdinal),
+                Number(leg.PlanContributionContinuityIdentity), Number(leg.PlanElapsedSeconds), Number(leg.PlanSecondsToLiftOff), Number(leg.PlanSwingDuration),
+                Bool(leg.PlanHasPathGeometry), Bool(leg.PlanHasExecutablePath),
+                Number(leg.FrozenPlanarVelocity.x), Number(leg.FrozenPlanarVelocity.y), Number(leg.FrozenPlanarVelocity.z),
+                Number(leg.CurrentSoleWorldPosition.x), Number(leg.CurrentSoleWorldPosition.y), Number(leg.CurrentSoleWorldPosition.z),
+                Number(leg.FixedPathStartWorldPosition.x), Number(leg.FixedPathStartWorldPosition.y), Number(leg.FixedPathStartWorldPosition.z),
+                Number(leg.FixedLandingWorldPosition.x), Number(leg.FixedLandingWorldPosition.y), Number(leg.FixedLandingWorldPosition.z),
+                Number(leg.CurrentPathWorldPosition.x), Number(leg.CurrentPathWorldPosition.y), Number(leg.CurrentPathWorldPosition.z),
+                Number(leg.CurrentPathRootWorldPosition.x), Number(leg.CurrentPathRootWorldPosition.y), Number(leg.CurrentPathRootWorldPosition.z),
+                Number(leg.CurrentPathHipWorldPosition.x), Number(leg.CurrentPathHipWorldPosition.y), Number(leg.CurrentPathHipWorldPosition.z),
+                Number(leg.PredictedHipWorldPosition.x), Number(leg.PredictedHipWorldPosition.y), Number(leg.PredictedHipWorldPosition.z),
+                Number(leg.FrozenRootStartWorldPosition.x), Number(leg.FrozenRootStartWorldPosition.y), Number(leg.FrozenRootStartWorldPosition.z),
+                Number(leg.FrozenRootStartWorldRotation.x), Number(leg.FrozenRootStartWorldRotation.y), Number(leg.FrozenRootStartWorldRotation.z), Number(leg.FrozenRootStartWorldRotation.w),
+                Number(leg.FrozenRootLandingWorldPosition.x), Number(leg.FrozenRootLandingWorldPosition.y), Number(leg.FrozenRootLandingWorldPosition.z),
+                Number(leg.FrozenRootLandingWorldRotation.x), Number(leg.FrozenRootLandingWorldRotation.y), Number(leg.FrozenRootLandingWorldRotation.z), Number(leg.FrozenRootLandingWorldRotation.w),
+                Number(leg.PredictionUp.x), Number(leg.PredictionUp.y), Number(leg.PredictionUp.z),
+                Number(leg.MinimumLandingConfidence), Number(leg.MaximumPredictionReachRatio), Number(leg.PredictionReachRatio),
+                Number(leg.CastAbove), Number(leg.CastBelow), Number(leg.PredictiveRouteSampleCount), Number(leg.PredictiveAcceptedHitCount), Number(leg.PredictiveEdgePlaneCandidateCount), Number(leg.PredictiveAcceptedEdgePlaneCount), Number(leg.PathSphereRadius), Number(leg.SwingCapsuleRadius),
+                Number(leg.CurrentPathSurfaceIdentity),
+                Number(leg.CurrentPathSupportPoint.x), Number(leg.CurrentPathSupportPoint.y), Number(leg.CurrentPathSupportPoint.z),
+                Number(leg.CurrentPathSupportNormal.x), Number(leg.CurrentPathSupportNormal.y), Number(leg.CurrentPathSupportNormal.z),
+                Number(leg.PreClearanceHeelPathDistance), Number(leg.PreClearanceToePathDistance),
+                Number(leg.PostClearanceHeelPathDistance), Number(leg.PostClearanceToePathDistance),
+                Bool(leg.PredictiveClearanceEvaluated), Number(leg.PredictiveResidualPenetration), Number(leg.PlannedFootRouteWorldSampleCount),
+                Number(leg.PlannedFootRouteWorldSample0.x), Number(leg.PlannedFootRouteWorldSample0.y), Number(leg.PlannedFootRouteWorldSample0.z),
+                Number(leg.PlannedFootRouteWorldSample1.x), Number(leg.PlannedFootRouteWorldSample1.y), Number(leg.PlannedFootRouteWorldSample1.z),
+                Number(leg.PlannedFootRouteWorldSample2.x), Number(leg.PlannedFootRouteWorldSample2.y), Number(leg.PlannedFootRouteWorldSample2.z),
+                Number(leg.PlannedFootRouteWorldSample3.x), Number(leg.PlannedFootRouteWorldSample3.y), Number(leg.PlannedFootRouteWorldSample3.z),
+                Number(leg.PlannedFootRouteWorldSample4.x), Number(leg.PlannedFootRouteWorldSample4.y), Number(leg.PlannedFootRouteWorldSample4.z),
+                Number(leg.PlannedFootRouteWorldSample5.x), Number(leg.PlannedFootRouteWorldSample5.y), Number(leg.PlannedFootRouteWorldSample5.z),
+                Number(leg.PlannedFootRouteWorldSample6.x), Number(leg.PlannedFootRouteWorldSample6.y), Number(leg.PlannedFootRouteWorldSample6.z),
+                Number(leg.PredictivePathDiagnosticSampleCount)
+            });
+            for (int i = 0; i < 8; i++)
+                AppendFootIkPathSampleValues(values, GetFootIkPathSample(leg, i));
+            values.AddRange(new[]
+            {
+                Number(leg.RequiredLift), Number(leg.AppliedLift),
+                Number(leg.BaselineGoalWorldPosition.x), Number(leg.BaselineGoalWorldPosition.y), Number(leg.BaselineGoalWorldPosition.z),
+                Number(leg.FinalGoalWorldPosition.x), Number(leg.FinalGoalWorldPosition.y), Number(leg.FinalGoalWorldPosition.z),
+                leg.BaselineGoalApplication, leg.FinalGoalSourceKind, Bool(leg.SolverResultAvailable),
                 Number(leg.PlantConfidence), Bool(leg.PlantContact), Number(leg.SoleHeight), Number(leg.PlacementWeight), Number(leg.AnimationFootSpeed), Number(leg.SurfaceDistance),
                 Number(leg.SoleSupportSurfaceIdentity),
                 Number(leg.SoleSupportPoint.x), Number(leg.SoleSupportPoint.y), Number(leg.SoleSupportPoint.z),
                 Number(leg.SoleSupportNormal.x), Number(leg.SoleSupportNormal.y), Number(leg.SoleSupportNormal.z),
                 Number(leg.SoleClearanceTarget),
-                Number(leg.SoleClearanceTargetTranslation.x), Number(leg.SoleClearanceTargetTranslation.y), Number(leg.SoleClearanceTargetTranslation.z),
-                Number(leg.SoleAnklePosition.x), Number(leg.SoleAnklePosition.y), Number(leg.SoleAnklePosition.z),
-                Number(leg.SoleHeelPosition.x), Number(leg.SoleHeelPosition.y), Number(leg.SoleHeelPosition.z),
-                Number(leg.SoleToePosition.x), Number(leg.SoleToePosition.y), Number(leg.SoleToePosition.z),
-                Number(leg.SoleHeelPlaneDistance), Number(leg.SoleToePlaneDistance), Number(leg.ResidualSolePenetration),
-                Number(leg.AnimatedAnkleComponentY), Bool(leg.HasPreviousSoleSample), Number(leg.PreviousSoleSurfaceIdentity), Number(leg.PreviousSoleHeelPlaneDistance), Number(leg.PreviousSoleToePlaneDistance), Bool(leg.ContinuousSoleContact),
+                FootSolePoseSequence(leg.BaselineGoalWorldPosition, leg.SoleHeelPosition, leg.SoleToePosition),
+                FootSolePoseSequence(leg.FinalGoalWorldPosition, leg.FinalGoalSoleHeelPosition, leg.FinalGoalSoleToePosition),
+                FootSolePoseSequence(leg.SolvedSoleAnklePosition, leg.SolvedSoleHeelPosition, leg.SolvedSoleToePosition),
+                leg.FinalPhysicalSupportKind, Number(leg.FinalPhysicalSupportSurfaceIdentity),
+                Number(leg.FinalPhysicalSupportPoint.x), Number(leg.FinalPhysicalSupportPoint.y), Number(leg.FinalPhysicalSupportPoint.z),
+                Number(leg.FinalPhysicalSupportNormal.x), Number(leg.FinalPhysicalSupportNormal.y), Number(leg.FinalPhysicalSupportNormal.z),
+                Number(leg.FinalPhysicalHeelPlaneDistance), Number(leg.FinalPhysicalToePlaneDistance), Number(leg.FinalPhysicalResidualPenetration), Bool(leg.FinalPhysicalEvaluationAvailable),
+                Number(leg.AnimatedAnkleComponentY),
                 Number(leg.BaselineGoalPositionWeight), Number(leg.BaselineGoalRotationWeight), Number(leg.FinalGoalPositionWeight), Number(leg.FinalGoalRotationWeight),
                 Number(leg.TargetOffset), Number(leg.OffsetTarget), Number(leg.UnconstrainedOffset), Number(leg.SoleConstraintOffset), Number(leg.CurrentOffset), Number(leg.OffsetSpringVelocity), Number(leg.PreviousOffsetTarget), Bool(leg.OffsetSpringInitialized),
                 Number(leg.TargetNormal.x), Number(leg.TargetNormal.y), Number(leg.TargetNormal.z),
@@ -831,7 +990,45 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             });
         }
 
-        static void AppendCsvRow(StringBuilder builder, params string[] values)
+        static RuntimeFootIkPathSampleSnapshot GetFootIkPathSample(
+            RuntimeFootIkLegTraceSnapshot leg,
+            int index)
+        {
+            switch (index)
+            {
+                case 0: return leg.PredictivePathSample0;
+                case 1: return leg.PredictivePathSample1;
+                case 2: return leg.PredictivePathSample2;
+                case 3: return leg.PredictivePathSample3;
+                case 4: return leg.PredictivePathSample4;
+                case 5: return leg.PredictivePathSample5;
+                case 6: return leg.PredictivePathSample6;
+                case 7: return leg.PredictivePathSample7;
+                default: return default;
+            }
+        }
+
+        static void AppendFootIkPathSampleValues(
+            List<string> values,
+            RuntimeFootIkPathSampleSnapshot sample)
+        {
+            values.Add(Number(sample.Fraction));
+            values.Add(Number(sample.Position.x));
+            values.Add(Number(sample.Position.y));
+            values.Add(Number(sample.Position.z));
+            values.Add(Number(sample.Normal.x));
+            values.Add(Number(sample.Normal.y));
+            values.Add(Number(sample.Normal.z));
+            values.Add(Number(sample.SurfaceIdentity));
+            values.Add(Number(sample.AnimationRootPosition.x));
+            values.Add(Number(sample.AnimationRootPosition.y));
+            values.Add(Number(sample.AnimationRootPosition.z));
+            values.Add(Number(sample.HipPosition.x));
+            values.Add(Number(sample.HipPosition.y));
+            values.Add(Number(sample.HipPosition.z));
+        }
+
+        internal static void AppendCsvRow(StringBuilder builder, params string[] values)
         {
             for (int i = 0; i < values.Length; i++)
             {
@@ -848,10 +1045,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             builder.AppendLine();
         }
 
-        static string Number<T>(T value) where T : IFormattable =>
+        internal static string Number<T>(T value) where T : IFormattable =>
             value.ToString(null, CultureInfo.InvariantCulture);
 
-        static string Bool(bool value) => value ? "true" : "false";
+        internal static string Bool(bool value) => value ? "true" : "false";
+
+        static string FootSolePoseSequence(Vector3 ankle, Vector3 heel, Vector3 toe) =>
+            string.Join(";", new[]
+            {
+                Number(ankle.x), Number(ankle.y), Number(ankle.z),
+                Number(heel.x), Number(heel.y), Number(heel.z),
+                Number(toe.x), Number(toe.y), Number(toe.z)
+            });
 
         static void DrawAnimationGroup(string title, IReadOnlyList<RuntimeDebugEventView> events, params RuntimeTraceEventKind[] kinds)
         {

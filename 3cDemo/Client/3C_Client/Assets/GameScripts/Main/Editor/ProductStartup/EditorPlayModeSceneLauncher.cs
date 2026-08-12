@@ -60,8 +60,7 @@ namespace ThirdPersonCharacter.Editor.ProductStartup
         static void RestoreScene(string scenePath)
         {
             if (string.IsNullOrWhiteSpace(scenePath) ||
-                !AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) ||
-                string.Equals(SceneManager.GetActiveScene().path, scenePath, StringComparison.Ordinal))
+                !AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath))
             {
                 return;
             }

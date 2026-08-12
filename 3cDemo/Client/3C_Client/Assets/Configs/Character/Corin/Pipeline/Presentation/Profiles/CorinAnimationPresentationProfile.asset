@@ -62,14 +62,29 @@ MonoBehaviour:
   m_Slot: {fileID: 1041388167119753750, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
   m_Rig: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
   m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
-  m_ContentRevision: 7601b54be9bc4e94b9fbac9563e19c56
+  m_ContentRevision: 7beba070b3f9418a947effdbfd0f7f03
   m_Clip: {fileID: 7400000, guid: c3f6deae23e56064fb4b8938601e35e5, type: 2}
   m_Loop: 0
   m_DefaultPlayRate: 1
-  m_MarkerGroupId: 
-  m_MarkerTopology: 0
-  m_SyncRole: 0
-  m_Markers: []
+  m_MarkerGroupId: Locomotion.Gait
+  m_MarkerTopology: 1
+  m_SyncRole: 1
+  m_Markers:
+  - m_AuthoringId: 6ef13dcd-6e76-411c-a810-1570a6650678
+    m_MarkerId: RightFootContact
+    m_Frame: 0
+  - m_AuthoringId: 9943a08f-935f-42fc-b6b2-ed68c30aa535
+    m_MarkerId: LeftFootContact
+    m_Frame: 13
+  - m_AuthoringId: ff182546-00e7-4c0c-b959-44fa65bff52a
+    m_MarkerId: RightFootContact
+    m_Frame: 33
+  - m_AuthoringId: 95d50c33-08c8-48de-987c-37e11010d4d1
+    m_MarkerId: LeftFootContact
+    m_Frame: 48
+  - m_AuthoringId: a13c4412-cd6d-424b-b201-2ca59a58e5c0
+    m_MarkerId: RightFootContact
+    m_Frame: 63
   m_FootPlacementWeightCurve:
     serializedVersion: 2
     m_Curve:
@@ -109,14 +124,29 @@ MonoBehaviour:
   m_Slot: {fileID: 5181372091040810034, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
   m_Rig: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
   m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
-  m_ContentRevision: 34ca2616f16343b08908274114cb13a4
+  m_ContentRevision: eb4690a52b304163a00f7f8f9e7553d6
   m_Clip: {fileID: 7400000, guid: 90d528fc935ce2e43b4b301c8c2b98db, type: 2}
   m_Loop: 0
   m_DefaultPlayRate: 1
-  m_MarkerGroupId: 
-  m_MarkerTopology: 0
-  m_SyncRole: 0
-  m_Markers: []
+  m_MarkerGroupId: Locomotion.Gait
+  m_MarkerTopology: 1
+  m_SyncRole: 1
+  m_Markers:
+  - m_AuthoringId: ee3180db-d387-4d62-abb1-92d9d015df85
+    m_MarkerId: RightFootContact
+    m_Frame: 0
+  - m_AuthoringId: 0db89275-e695-4138-a469-ca73008c53e6
+    m_MarkerId: LeftFootContact
+    m_Frame: 13
+  - m_AuthoringId: c128dc3c-cba8-4b33-a689-4846808727b0
+    m_MarkerId: RightFootContact
+    m_Frame: 41
+  - m_AuthoringId: 6a650921-0f0b-47a2-9373-73f204280ddb
+    m_MarkerId: LeftFootContact
+    m_Frame: 57
+  - m_AuthoringId: a7eff86c-7f18-463f-ada0-189fd417696d
+    m_MarkerId: RightFootContact
+    m_Frame: 75
   m_FootPlacementWeightCurve:
     serializedVersion: 2
     m_Curve:
@@ -268,14 +298,23 @@ MonoBehaviour:
   m_Slot: {fileID: 6877363416557948613, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
   m_Rig: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
   m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
-  m_ContentRevision: bdcc2e87f7d94b4eaa623b457324d782
+  m_ContentRevision: a3eee464d35d4f49bed7866286830755
   m_Clip: {fileID: 7400000, guid: 9654782e7ebbcd14bab93c76dc248019, type: 2}
   m_Loop: 0
   m_DefaultPlayRate: 1
-  m_MarkerGroupId: 
-  m_MarkerTopology: 0
-  m_SyncRole: 0
-  m_Markers: []
+  m_MarkerGroupId: Locomotion.Gait
+  m_MarkerTopology: 1
+  m_SyncRole: 1
+  m_Markers:
+  - m_AuthoringId: 38ad4903-3127-4361-8676-f319d7ae5a1a
+    m_MarkerId: RightFootContact
+    m_Frame: 0
+  - m_AuthoringId: 22ccc779-3dd7-48d9-8e19-416ac2981005
+    m_MarkerId: LeftFootContact
+    m_Frame: 4
+  - m_AuthoringId: 0d31357b-3ddb-4668-acc4-f9153d9f6975
+    m_MarkerId: RightFootContact
+    m_Frame: 64
   m_FootPlacementWeightCurve:
     serializedVersion: 2
     m_Curve:
@@ -368,14 +407,23 @@ MonoBehaviour:
   m_Slot: {fileID: -8411527234393366902, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
   m_Rig: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
   m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
-  m_ContentRevision: d827b136c65c4416930987e26f71f7dc
+  m_ContentRevision: 660e279cc2674c2b94d5a505226536ea
   m_Clip: {fileID: 7400000, guid: e569e81bd2858154b9bf4f2e660cf981, type: 2}
   m_Loop: 0
   m_DefaultPlayRate: 1
-  m_MarkerGroupId: 
-  m_MarkerTopology: 0
-  m_SyncRole: 0
-  m_Markers: []
+  m_MarkerGroupId: Locomotion.Gait
+  m_MarkerTopology: 1
+  m_SyncRole: 1
+  m_Markers:
+  - m_AuthoringId: 9ab112ca-cac1-4c1c-abe7-0bd56c5614f6
+    m_MarkerId: RightFootContact
+    m_Frame: 1
+  - m_AuthoringId: 924c6cdc-93e0-4e62-bb53-00af12583617
+    m_MarkerId: LeftFootContact
+    m_Frame: 10
+  - m_AuthoringId: 961142bd-111e-4c66-9425-3645d787d538
+    m_MarkerId: RightFootContact
+    m_Frame: 71
   m_FootPlacementWeightCurve:
     serializedVersion: 2
     m_Curve:

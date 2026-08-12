@@ -214,7 +214,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly int m_ParameterCount;
         readonly int m_PoseValueCount;
         readonly int m_FootGroundingCount;
-        readonly int m_PredictiveFootPlacementModifierCount;
         readonly int m_ContributionStride;
         readonly int m_OutputOperationIndex;
         readonly int m_OutputValueIndex;
@@ -258,7 +257,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_FullBodyIkGoalSets = program.FullBodyIkGoalSets;
             m_FullBodyIkGoals = program.FullBodyIkGoals;
             m_FootGroundingCount = program.FootGroundingCount;
-            m_PredictiveFootPlacementModifierCount = program.PredictiveFootPlacementModifierCount;
             m_LinkedPoseCalls = program.LinkedPoseCalls;
             m_LinkedPoseCandidates = program.LinkedPoseCandidates;
             m_LinkedPoseCallControls = program.LinkedPoseCallControls;
@@ -467,8 +465,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         using (IkGoalMarker.Auto())
                             valueOperationValid = EvaluatePoseBoneIkGoals(operation);
                         break;
-                    case CharacterPoseOperationCode.FootGrounding:
-                    case CharacterPoseOperationCode.PredictiveFootPlacementModifier:
+                    case CharacterPoseOperationCode.FootPlacement:
                         using (IkGoalMarker.Auto())
                             valueOperationValid = EvaluateWorldAwareFootGoal(operation);
                         break;
@@ -1179,6 +1176,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     hasAction,
                     actionLeftFoot,
                     actionLeftFootWeight,
+                    hasAction && actionLeftFootWeight > 0f,
                     out AnimationFootFeatureSample left) ||
                 !TryResolveFeature(
                     hasSource,
@@ -1186,6 +1184,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     hasAction,
                     actionRightFoot,
                     actionRightFootWeight,
+                    hasAction && actionRightFootWeight > 0f,
                     out AnimationFootFeatureSample right))
             {
                 return false;
@@ -1761,6 +1760,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     true,
                     m_ValueLeftFootFeatures[input],
                     leftEnvelope,
+                    true,
                     out AnimationFootFeatureSample left) &&
                 TryResolveFeature(
                     true,
@@ -1768,6 +1768,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     true,
                     m_ValueRightFootFeatures[input],
                     rightEnvelope,
+                    true,
                     out AnimationFootFeatureSample right))
             {
                 m_ValueLeftFootFeatures[output] = left;
@@ -2121,30 +2122,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         bool EvaluateWorldAwareFootGoal(AnimationPoseGraphNativeOperation operation)
         {
             int output = operation.OutputFullBodyIkGoalSetValueIndex;
-            bool descriptorValid = operation.Code switch
-            {
-                CharacterPoseOperationCode.FootGrounding =>
-                    (uint)operation.FootGroundingIndex < (uint)m_FootGroundingCount,
-                CharacterPoseOperationCode.PredictiveFootPlacementModifier =>
-                    (uint)operation.PredictiveFootPlacementModifierIndex <
-                    (uint)m_PredictiveFootPlacementModifierCount,
-                _ => false
-            };
+            bool descriptorValid = operation.Code == CharacterPoseOperationCode.FootPlacement &&
+                                   (uint)operation.FootGroundingIndex < (uint)m_FootGroundingCount;
             if (!descriptorValid || (uint)output >= (uint)m_FullBodyIkGoalSets.Length)
             {
                 return false;
-            }
-            if (operation.Code == CharacterPoseOperationCode.PredictiveFootPlacementModifier)
-            {
-                if (operation.FullBodyIkGoalInputCount != 1 ||
-                    operation.FullBodyIkGoalInputStart < 0 ||
-                    operation.FullBodyIkGoalInputStart >= m_FullBodyIkGoalInputValueIndices.Length ||
-                    !IsGoalSetInputReady(
-                        m_FullBodyIkGoalInputValueIndices[operation.FullBodyIkGoalInputStart],
-                        operation.Index))
-                {
-                    return false;
-                }
             }
             CharacterFullBodyIkGoalSetHeader header = m_FullBodyIkGoalSets[output];
             return header.IsValid &&
@@ -2341,18 +2323,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AnimationPoseNativeInvalidReason ValueOperationInvalidReason(
             AnimationPoseGraphNativeOperation operation)
         {
-            if ((operation.Code == CharacterPoseOperationCode.FootGrounding ||
-                 operation.Code == CharacterPoseOperationCode.PredictiveFootPlacementModifier) &&
+            if (operation.Code == CharacterPoseOperationCode.FootPlacement &&
                 (uint)operation.OutputFullBodyIkGoalSetValueIndex < (uint)m_FullBodyIkGoalSets.Length &&
                 m_FullBodyIkGoalSets[operation.OutputFullBodyIkGoalSetValueIndex].Availability ==
                 CharacterFullBodyIkGoalSetAvailability.WorldContextUnavailable)
             {
                 return AnimationPoseNativeInvalidReason.WorldContextUnavailable;
             }
-            return operation.Code == CharacterPoseOperationCode.FootGrounding
+            return operation.Code == CharacterPoseOperationCode.FootPlacement
                 ? AnimationPoseNativeInvalidReason.FootGroundingInvalid
-                : operation.Code == CharacterPoseOperationCode.PredictiveFootPlacementModifier
-                    ? AnimationPoseNativeInvalidReason.PredictiveFootPlacementModifierInvalid
                 : operation.Code == CharacterPoseOperationCode.PoseBoneIKGoals ||
                   operation.Code == CharacterPoseOperationCode.EmptyFullBodyIkGoals ||
                   operation.Code == CharacterPoseOperationCode.LinkedPoseCall &&
@@ -2610,14 +2589,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ValueHasFootFeatures[output] = 0;
                 return true;
             }
-            if (!TryResolveFeature(
+            if (!TryResolveStateMachineFeature(
                     hasSource,
                     m_ValueLeftFootFeatures[source],
                     hasTarget,
                     m_ValueLeftFootFeatures[target],
                     leftWeight,
                     out AnimationFootFeatureSample left) ||
-                !TryResolveFeature(
+                !TryResolveStateMachineFeature(
                     hasSource,
                     m_ValueRightFootFeatures[source],
                     hasTarget,
@@ -3252,6 +3231,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     hasOverlay,
                     m_ValueLeftFootFeatures[overlayValue],
                     left,
+                    hasOverlay && left > 0f,
                     out AnimationFootFeatureSample leftFeature) ||
                 !TryResolveFeature(
                     hasBase,
@@ -3259,6 +3239,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     hasOverlay,
                     m_ValueRightFootFeatures[overlayValue],
                     right,
+                    hasOverlay && right > 0f,
                     out AnimationFootFeatureSample rightFeature))
             {
                 return false;
@@ -3658,6 +3639,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             bool hasOverlay,
             AnimationFootFeatureSample overlayValue,
             float weight,
+            bool overlayPredictionAuthoritative,
             out AnimationFootFeatureSample result)
         {
             result = default;
@@ -3684,25 +3666,67 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 t);
             float height = Mathf.LerpUnclamped(baseValue.SoleHeight, overlayValue.SoleHeight, t);
             float plant = Mathf.LerpUnclamped(baseValue.PlantConfidence, overlayValue.PlantConfidence, t);
-            float landing = Mathf.LerpUnclamped(
-                baseValue.NextLandingConfidence,
-                overlayValue.NextLandingConfidence,
-                t);
-            float delay = Mathf.LerpUnclamped(
-                baseValue.NextLandingDelaySeconds,
-                overlayValue.NextLandingDelaySeconds,
-                t);
-            Vector2 offset = Vector2.LerpUnclamped(
-                baseValue.NextLandingLocalOffset,
-                overlayValue.NextLandingLocalOffset,
-                t);
-            if (!IsFinite(velocity) || !float.IsFinite(height) || !IsWeight(plant) ||
-                !IsWeight(landing) || !float.IsFinite(delay) || delay < 0f || !IsFinite(offset))
+            AnimationPredictedFootStepSample predicted = overlayPredictionAuthoritative
+                ? overlayValue.PredictedStep
+                : baseValue.PredictedStep;
+            if (!IsFinite(velocity) || !float.IsFinite(height) || !IsWeight(plant))
             {
                 return false;
             }
-            result = new AnimationFootFeatureSample(velocity, height, plant, landing, delay, offset);
+            result = new AnimationFootFeatureSample(velocity, height, plant, predicted);
             return result.IsValid;
+        }
+
+        static bool TryResolveStateMachineFeature(
+            bool hasSource,
+            AnimationFootFeatureSample source,
+            bool hasTarget,
+            AnimationFootFeatureSample target,
+            float weight,
+            out AnimationFootFeatureSample result)
+        {
+            if (!TryResolveFeature(
+                    hasSource,
+                    source,
+                    hasTarget,
+                    target,
+                    weight,
+                    true,
+                    out result))
+            {
+                return false;
+            }
+            if (!hasSource || !hasTarget)
+                return true;
+            AnimationPredictedFootStepSample predicted = SelectStateMachinePrediction(
+                source.PredictedStep,
+                target.PredictedStep);
+            result = new AnimationFootFeatureSample(
+                result.SoleLocalVelocity,
+                result.SoleHeight,
+                result.PlantConfidence,
+                predicted);
+            return result.IsValid;
+        }
+
+        static AnimationPredictedFootStepSample SelectStateMachinePrediction(
+            AnimationPredictedFootStepSample source,
+            AnimationPredictedFootStepSample target)
+        {
+            if (!source.HasLandingEvent)
+                return target.HasLandingEvent ? target : default;
+            if (!target.HasLandingEvent)
+                return source;
+            if (source.SourceSampleIdentity == 0 ||
+                source.SourceSampleIdentity != target.SourceSampleIdentity)
+            {
+                return target;
+            }
+            if (source.SourceSampleCycle != target.SourceSampleCycle)
+                return source.SourceSampleCycle < target.SourceSampleCycle ? source : target;
+            if (source.EventOrdinal != target.EventOrdinal)
+                return source.EventOrdinal < target.EventOrdinal ? source : target;
+            return target;
         }
 
         static bool IsValidPrimitiveContribution(AnimationPrimitivePoseContribution contribution)
@@ -3730,20 +3754,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IsFinite(sample.SoleLocalVelocity) &&
             float.IsFinite(sample.SoleHeight) &&
             IsWeight(sample.PlantConfidence) &&
-            IsWeight(sample.NextLandingConfidence) &&
-            float.IsFinite(sample.NextLandingDelaySeconds) &&
-            sample.NextLandingDelaySeconds >= 0f &&
-            IsFinite(sample.NextLandingLocalOffset);
+            (!sample.PredictedStep.IsValid ||
+             IsWeight(sample.PredictedStep.Confidence) &&
+             float.IsFinite(sample.PredictedStep.TimeToLandingSeconds) &&
+             sample.PredictedStep.TimeToLandingSeconds >= 0f &&
+             IsWeight(sample.PredictedStep.EventPhase) &&
+             IsWeight(sample.PredictedStep.LiftOffPhase) &&
+             IsValidRootLocalFootRoute(sample.PredictedStep));
+
+        static bool IsValidRootLocalFootRoute(AnimationPredictedFootStepSample value)
+        {
+            if (value.RootLocalFootRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.RootLocalAnkleRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.RootLocalHipRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
+                return false;
+            for (int i = 0; i < value.RootLocalFootRoute.Length; i++)
+            {
+                if (!IsFinite(value.RootLocalFootRoute[i]) ||
+                    !IsFinite(value.RootLocalAnkleRoute[i]) ||
+                    !IsFinite(value.RootLocalHipRoute[i]))
+                    return false;
+            }
+            return true;
+        }
 
         static AnimationPoseNativeInvalidReason NormalizeInvalidReason(
-            AnimationPoseNativeInvalidReason reason)
-        {
-            int value = (int)reason;
-            return value > (int)AnimationPoseNativeInvalidReason.None &&
-                   value <= (int)AnimationPoseNativeInvalidReason.FullBodyIkSolverInvalid
-                ? reason
-                : AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid;
-        }
+            AnimationPoseNativeInvalidReason reason) =>
+            AnimationPoseNativeInvalidReasonContract.NormalizeFailure(reason);
 
         static bool IsAvailability(AnimationPoseAvailability availability)
         {
@@ -3946,24 +3983,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         operation.OutputFullBodyIkGoalSetValueIndex >= 0 &&
                         operation.PoseBoneIkGoalsIndex >= 0 &&
                         operation.PoseBoneIkGoalsIndex < program.PoseBoneIkGoalRanges.Length,
-                    CharacterPoseOperationCode.FootGrounding =>
+                    CharacterPoseOperationCode.FootPlacement =>
                         operation.OutputValueIndex == -1 && validPoseInputA &&
                         operation.InputValueIndexB == -1 &&
                         operation.OutputFullBodyIkGoalSetValueIndex >= 0 &&
                         operation.FullBodyIkGoalInputCount == 0 &&
                         operation.FootGroundingIndex >= 0 &&
                         operation.FootGroundingIndex < program.FootGroundingCount,
-                    CharacterPoseOperationCode.PredictiveFootPlacementModifier =>
-                        operation.OutputValueIndex == -1 && validPoseInputA &&
-                        operation.InputValueIndexB == -1 &&
-                        operation.OutputFullBodyIkGoalSetValueIndex >= 0 &&
-                        operation.FullBodyIkGoalInputStart >= 0 &&
-                        operation.FullBodyIkGoalInputCount == 1 &&
-                        operation.FullBodyIkGoalInputStart <
-                            program.FullBodyIkGoalInputValueIndices.Length &&
-                        operation.PredictiveFootPlacementModifierIndex >= 0 &&
-                        operation.PredictiveFootPlacementModifierIndex <
-                            program.PredictiveFootPlacementModifierCount,
                     CharacterPoseOperationCode.FullBodyIK =>
                         inputA && operation.InputValueIndexB == -1 &&
                         operation.OutputFullBodyIkGoalSetValueIndex == -1 &&

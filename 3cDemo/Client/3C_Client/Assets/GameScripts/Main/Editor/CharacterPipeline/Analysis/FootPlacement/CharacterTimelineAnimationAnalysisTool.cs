@@ -523,9 +523,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootAnalysisMetric.Plant => sample.PlantConfidence,
                 CharacterFootAnalysisMetric.Landing => m_LandingMetric switch
                 {
-                    CharacterFootAnalysisLandingMetric.Delay => sample.NextLandingDelaySeconds,
-                    CharacterFootAnalysisLandingMetric.OffsetX => sample.NextLandingLocalOffset.x,
-                    CharacterFootAnalysisLandingMetric.OffsetZ => sample.NextLandingLocalOffset.y,
+                    CharacterFootAnalysisLandingMetric.Delay => sample.PredictedStep.TimeToLandingSeconds,
+                    CharacterFootAnalysisLandingMetric.OffsetX => sample.PredictedStep.RootLocalLanding.x,
+                    CharacterFootAnalysisLandingMetric.OffsetZ => sample.PredictedStep.RootLocalLanding.z,
                     _ => 0f
                 },
                 _ => 0f

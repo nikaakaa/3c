@@ -75,6 +75,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationFootFeatureSample footFeature,
             CharacterFootContactState contactState,
             FootConstraintTransitionReason transitionReason,
+            CharacterFootContactDecision contactDecision,
+            bool contactSurfaceValid,
+            bool contactSurfaceDistanceAccepted,
+            bool contactCaptureSpeedAccepted,
+            bool contactRetentionSpeedAccepted,
+            bool contactConfidenceAccepted,
+            float maximumContactSurfaceDistance,
+            float plantSpeedThreshold,
+            float unalignmentSpeedThreshold,
+            float plantConfidenceEnter,
+            float plantConfidenceExit,
+            float anchorDistance,
+            bool anchorDistanceAccepted,
+            float maximumAnchorDistance,
+            float anchorBlendSpeed,
             FootPlacementSurface currentSurface,
             Vector3 surfaceLocalAnchor,
             Quaternion surfaceLocalRotation,
@@ -94,11 +109,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float residualSolePenetration,
             Vector3 soleClearanceTargetTranslation,
             float animatedAnkleComponentY,
-            bool hasPreviousSoleSample,
-            int previousSoleSurfaceIdentity,
-            float previousSoleHeelPlaneDistance,
-            float previousSoleToePlaneDistance,
-            bool continuousSoleContact,
             Vector3 baselineComponentPosition,
             Quaternion baselineComponentRotation,
             CharacterFullBodyIkGoal goal)
@@ -130,6 +140,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootFeature = footFeature;
             ContactState = contactState;
             TransitionReason = transitionReason;
+            ContactDecision = contactDecision;
+            ContactSurfaceValid = contactSurfaceValid;
+            ContactSurfaceDistanceAccepted = contactSurfaceDistanceAccepted;
+            ContactCaptureSpeedAccepted = contactCaptureSpeedAccepted;
+            ContactRetentionSpeedAccepted = contactRetentionSpeedAccepted;
+            ContactConfidenceAccepted = contactConfidenceAccepted;
+            MaximumContactSurfaceDistance = maximumContactSurfaceDistance;
+            PlantSpeedThreshold = plantSpeedThreshold;
+            UnalignmentSpeedThreshold = unalignmentSpeedThreshold;
+            PlantConfidenceEnter = plantConfidenceEnter;
+            PlantConfidenceExit = plantConfidenceExit;
+            AnchorDistance = anchorDistance;
+            AnchorDistanceAccepted = anchorDistanceAccepted;
+            MaximumAnchorDistance = maximumAnchorDistance;
+            AnchorBlendSpeed = anchorBlendSpeed;
             CurrentSurface = new CharacterFootGroundingHitDiagnostics(currentSurface);
             SurfaceLocalAnchor = surfaceLocalAnchor;
             SurfaceLocalRotation = surfaceLocalRotation;
@@ -150,11 +175,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ResidualSolePenetration = residualSolePenetration;
             SoleClearanceTargetTranslation = soleClearanceTargetTranslation;
             AnimatedAnkleComponentY = animatedAnkleComponentY;
-            HasPreviousSoleSample = hasPreviousSoleSample;
-            PreviousSoleSurfaceIdentity = previousSoleSurfaceIdentity;
-            PreviousSoleHeelPlaneDistance = previousSoleHeelPlaneDistance;
-            PreviousSoleToePlaneDistance = previousSoleToePlaneDistance;
-            ContinuousSoleContact = continuousSoleContact;
             Goal = goal;
         }
 
@@ -183,6 +203,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public AnimationFootFeatureSample FootFeature { get; }
         public CharacterFootContactState ContactState { get; }
         public FootConstraintTransitionReason TransitionReason { get; }
+        public CharacterFootContactDecision ContactDecision { get; }
+        public bool ContactSurfaceValid { get; }
+        public bool ContactSurfaceDistanceAccepted { get; }
+        public bool ContactCaptureSpeedAccepted { get; }
+        public bool ContactRetentionSpeedAccepted { get; }
+        public bool ContactConfidenceAccepted { get; }
+        public float MaximumContactSurfaceDistance { get; }
+        public float PlantSpeedThreshold { get; }
+        public float UnalignmentSpeedThreshold { get; }
+        public float PlantConfidenceEnter { get; }
+        public float PlantConfidenceExit { get; }
+        public float AnchorDistance { get; }
+        public bool AnchorDistanceAccepted { get; }
+        public float MaximumAnchorDistance { get; }
+        public float AnchorBlendSpeed { get; }
         public CharacterFootGroundingHitDiagnostics CurrentSurface { get; }
         public Vector3 SurfaceLocalAnchor { get; }
         public Quaternion SurfaceLocalRotation { get; }
@@ -203,11 +238,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float ResidualSolePenetration { get; }
         public Vector3 SoleClearanceTargetTranslation { get; }
         public float AnimatedAnkleComponentY { get; }
-        public bool HasPreviousSoleSample { get; }
-        public int PreviousSoleSurfaceIdentity { get; }
-        public float PreviousSoleHeelPlaneDistance { get; }
-        public float PreviousSoleToePlaneDistance { get; }
-        public bool ContinuousSoleContact { get; }
         public CharacterFullBodyIkGoal Goal { get; }
     }
 
@@ -258,6 +288,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CalibrationRevision = new FixedString128Bytes(rig.CalibrationRevision);
             PhysicsSceneIdentity = physicsSceneIdentity;
             SelfFilterIdentity = selfFilterIdentity;
+            PoseRootWorldPosition = rig.PoseRoot.position;
+            PoseRootWorldRotation = rig.PoseRoot.rotation;
+            PoseRootWorldScale = rig.PoseRoot.lossyScale;
             Left = left;
             Right = right;
         }
@@ -289,74 +322,413 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public FixedString128Bytes CalibrationRevision { get; }
         public int PhysicsSceneIdentity { get; }
         public int SelfFilterIdentity { get; }
+        public Vector3 PoseRootWorldPosition { get; }
+        public Quaternion PoseRootWorldRotation { get; }
+        public Vector3 PoseRootWorldScale { get; }
         public CharacterFootGroundingFootDiagnostics Left { get; }
         public CharacterFootGroundingFootDiagnostics Right { get; }
         public bool IsCompleted => FrameSequence != 0 && CompletionIdentity != 0;
     }
 
-    public readonly struct CharacterPredictiveFootPlacementModifierFootDiagnostics
+    public enum CharacterPredictiveFootPlanState : byte
     {
-        internal CharacterPredictiveFootPlacementModifierFootDiagnostics(
+        Inactive = 0,
+        Planned = 1,
+        Executing = 2,
+        Rejected = 3,
+        Completed = 4
+    }
+
+    public enum CharacterPredictiveFootPlanTransitionReason : byte
+    {
+        None = 0,
+        PlanGenerated = 1,
+        PlanRejected = 2,
+        PlanExecutionStarted = 3,
+        PlanEnded = 4
+    }
+
+    public enum CharacterPredictiveFootPlanEndReason : byte
+    {
+        None = 0,
+        EventReplaced = 1,
+        PresentationReset = 2,
+        ActionCompleted = 3,
+        ActionInterrupted = 4,
+        ActionClockInvalid = 5
+    }
+
+    public readonly struct CharacterPredictiveFootPathSampleDiagnostics
+    {
+        internal CharacterPredictiveFootPathSampleDiagnostics(
+            float fraction,
+            Vector3 position,
+            Vector3 normal,
+            int surfaceInstanceId,
+            Vector3 animationRootPosition,
+            Vector3 hipPosition)
+        {
+            Fraction = fraction;
+            Position = position;
+            Normal = normal;
+            SurfaceInstanceId = surfaceInstanceId;
+            AnimationRootPosition = animationRootPosition;
+            HipPosition = hipPosition;
+        }
+
+        public float Fraction { get; }
+        public Vector3 Position { get; }
+        public Vector3 Normal { get; }
+        public int SurfaceInstanceId { get; }
+        public Vector3 AnimationRootPosition { get; }
+        public Vector3 HipPosition { get; }
+    }
+
+    public struct CharacterPredictiveFootQueryRejectCounts
+    {
+        public int NoCandidate { get; private set; }
+        public int HeightDiscontinuity { get; private set; }
+        public int EdgeGap { get; private set; }
+        public int SurfaceDiscontinuity { get; private set; }
+        public int ReachExceeded { get; private set; }
+        public int SlopeExceeded { get; private set; }
+        public int StepExceeded { get; private set; }
+        public int InvalidCandidate { get; private set; }
+        public int UnsupportedCenter { get; private set; }
+        public int Total => NoCandidate + HeightDiscontinuity + EdgeGap +
+                            SurfaceDiscontinuity + ReachExceeded + SlopeExceeded +
+                            StepExceeded + InvalidCandidate + UnsupportedCenter;
+
+        internal void Add(FootPlacementGroundEnvelopeRejectReason reason)
+        {
+            switch (reason)
+            {
+                case FootPlacementGroundEnvelopeRejectReason.NoCandidate: NoCandidate++; break;
+                case FootPlacementGroundEnvelopeRejectReason.HeightDiscontinuity: HeightDiscontinuity++; break;
+                case FootPlacementGroundEnvelopeRejectReason.EdgeGap: EdgeGap++; break;
+                case FootPlacementGroundEnvelopeRejectReason.SurfaceDiscontinuity: SurfaceDiscontinuity++; break;
+                case FootPlacementGroundEnvelopeRejectReason.ReachExceeded: ReachExceeded++; break;
+                case FootPlacementGroundEnvelopeRejectReason.SlopeExceeded: SlopeExceeded++; break;
+                case FootPlacementGroundEnvelopeRejectReason.StepExceeded: StepExceeded++; break;
+                case FootPlacementGroundEnvelopeRejectReason.InvalidCandidate: InvalidCandidate++; break;
+                case FootPlacementGroundEnvelopeRejectReason.UnsupportedCenter: UnsupportedCenter++; break;
+            }
+        }
+    }
+
+    public readonly struct CharacterPredictiveFootQueryDiagnostics
+    {
+        internal CharacterPredictiveFootQueryDiagnostics(
+            CharacterPredictiveFootPlacementPlan plan)
+        {
+            FutureLandingQuery = plan.FutureLandingRequest.MaximumDistance > 0f
+                ? new CharacterFootGroundingQueryDiagnostics(plan.FutureLandingRequest)
+                : default;
+            QueryCount = plan.QueryCount;
+            RawHitCount = plan.RawHitCount;
+            AcceptedHitCount = plan.AcceptedHitCount;
+            EdgePlaneCandidateCount = plan.EdgePlaneCandidateCount;
+            AcceptedEdgePlaneCount = plan.AcceptedEdgePlaneCount;
+            RejectedHitCount = plan.RejectedQueryCount;
+            RejectCounts = plan.QueryRejectCounts;
+            RouteSampleCount = plan.RouteSampleCount;
+            GroundEnvelopeSegmentCount = plan.GroundEnvelopeSegmentCount;
+            GroundEnvelopeRejectReason = plan.GroundEnvelopeRejectReason;
+        }
+
+        public CharacterFootGroundingQueryDiagnostics FutureLandingQuery { get; }
+        public int QueryCount { get; }
+        public int RawHitCount { get; }
+        public int AcceptedHitCount { get; }
+        public int EdgePlaneCandidateCount { get; }
+        public int AcceptedEdgePlaneCount { get; }
+        public int RejectedHitCount { get; }
+        public CharacterPredictiveFootQueryRejectCounts RejectCounts { get; }
+        public int RouteSampleCount { get; }
+        public int GroundEnvelopeSegmentCount { get; }
+        public FootPlacementGroundEnvelopeRejectReason GroundEnvelopeRejectReason { get; }
+    }
+
+    public readonly struct CharacterPredictiveFootEventDiagnostics
+    {
+        internal CharacterPredictiveFootEventDiagnostics(
             CharacterFootSide side,
-            bool swingEligible,
-            bool selectedForRewrite,
+            in AnimationFootFeatureSample feature)
+        {
+            AnimationPredictedFootStepSample step = feature.PredictedStep;
+            FootFeatureValid = feature.IsValid;
+            PredictedStepValid = step.IsValid;
+            HasLandingEvent = step.HasLandingEvent;
+            IsSourceBound = step.IsSourceBound;
+            IsAuthoritative = step.IsAuthoritative;
+            ExpectedLandingEventIdentity = step.ResolveExpectedLandingEventIdentity(side);
+            LandingEventIdentityValid = step.HasConsistentLandingEventIdentity(side);
+            IsPreSwing = step.IsPreSwing;
+            IsSwing = step.IsSwing;
+            LandingEventIdentity = step.LandingEventIdentity;
+            SourceSampleIdentity = step.SourceSampleIdentity;
+            SourceSampleCycle = step.SourceSampleCycle;
+            EventOrdinal = step.EventOrdinal;
+            ContributionContinuityIdentity = step.ContributionContinuityIdentity;
+            Confidence = step.Confidence;
+            TimeToLandingSeconds = step.TimeToLandingSeconds;
+            EventPhase = step.EventPhase;
+            LiftOffPhase = step.LiftOffPhase;
+            RootLocalFootRoute = step.RootLocalFootRoute;
+            AuthoredFootRouteStart = step.AuthoredFootPlanarRoute.Length > 0
+                ? step.AuthoredFootPlanarRoute[0]
+                : Vector3.zero;
+            AuthoredFootRouteLanding = step.AuthoredFootPlanarRoute.Length > 0
+                ? step.AuthoredFootPlanarRoute[step.AuthoredFootPlanarRoute.Length - 1]
+                : Vector3.zero;
+        }
+
+        public bool FootFeatureValid { get; }
+        public bool PredictedStepValid { get; }
+        public bool HasLandingEvent { get; }
+        public bool IsSourceBound { get; }
+        public bool IsAuthoritative { get; }
+        public ulong ExpectedLandingEventIdentity { get; }
+        public bool LandingEventIdentityValid { get; }
+        public bool IsPreSwing { get; }
+        public bool IsSwing { get; }
+        public ulong LandingEventIdentity { get; }
+        public ulong SourceSampleIdentity { get; }
+        public int SourceSampleCycle { get; }
+        public int EventOrdinal { get; }
+        public ulong ContributionContinuityIdentity { get; }
+        public float Confidence { get; }
+        public float TimeToLandingSeconds { get; }
+        public float EventPhase { get; }
+        public float LiftOffPhase { get; }
+        public FixedList128Bytes<Vector3> RootLocalFootRoute { get; }
+        public Vector3 AuthoredFootRouteStart { get; }
+        public Vector3 AuthoredFootRouteLanding { get; }
+    }
+
+    public readonly struct CharacterPredictiveFootPlanLifecycleDiagnostics
+    {
+        internal CharacterPredictiveFootPlanLifecycleDiagnostics(
+            CharacterPredictiveFootPlacementPlan plan)
+        {
+            Sequence = plan.Sequence;
+            GeneratedFrame = plan.GeneratedFrame;
+            State = plan.State;
+            TransitionReason = plan.TransitionReason;
+            EndReason = plan.EndReason;
+            LandingEventIdentity = plan.LandingEventIdentity;
+            SourceSampleIdentity = plan.SourceSampleIdentity;
+            SourceSampleCycle = plan.SourceSampleCycle;
+            EventOrdinal = plan.EventOrdinal;
+            ContributionContinuityIdentity = plan.ContributionContinuityIdentity;
+            ElapsedSeconds = plan.ActionStepPhase * plan.ActionStepDurationSeconds;
+            SecondsToLiftOff = plan.LiftOffPhase * plan.ActionStepDurationSeconds;
+            SwingDuration = (1f - plan.LiftOffPhase) * plan.ActionStepDurationSeconds;
+            ExecutionProgress = plan.Progress;
+            HasPathGeometry = plan.HasPathGeometry;
+            HasExecutablePath = plan.HasExecutablePath && plan.HasPathGeometry;
+            FrozenPlanarVelocity = plan.RootTrajectory.FrozenPlanarVelocity;
+        }
+
+        public ulong Sequence { get; }
+        public ulong GeneratedFrame { get; }
+        public CharacterPredictiveFootPlanState State { get; }
+        public CharacterPredictiveFootPlanTransitionReason TransitionReason { get; }
+        public CharacterPredictiveFootPlanEndReason EndReason { get; }
+        public ulong LandingEventIdentity { get; }
+        public ulong SourceSampleIdentity { get; }
+        public int SourceSampleCycle { get; }
+        public int EventOrdinal { get; }
+        public ulong ContributionContinuityIdentity { get; }
+        public float ElapsedSeconds { get; }
+        public float SecondsToLiftOff { get; }
+        public float SwingDuration { get; }
+        public float ExecutionProgress { get; }
+        public bool HasPathGeometry { get; }
+        public bool HasExecutablePath { get; }
+        public Vector3 FrozenPlanarVelocity { get; }
+    }
+
+    public readonly struct CharacterPredictiveFootPlacementFootDiagnostics
+    {
+        internal CharacterPredictiveFootPlacementFootDiagnostics(
+            CharacterFootSide side,
             bool rewritten,
             FootPredictionRejectReason rejectReason,
             CharacterFootGroundingHitDiagnostics futureSupport,
-            int groundEnvelopeSegmentCount,
-            FootPlacementGroundEnvelopeRejectReason groundEnvelopeRejectReason,
-            int queryCount,
-            int rejectedQueryCount,
+            in CharacterPredictiveFootQueryDiagnostics query,
+            in CharacterPredictiveFootEventDiagnostics currentEvent,
             float predictionHorizon,
-            float swingClearance,
+            float predictionDistance,
+            in CharacterPredictiveFootPlanLifecycleDiagnostics plan,
+            Vector3 currentSoleWorldPosition,
+            Vector3 fixedPathStartWorldPosition,
+            Vector3 fixedLandingWorldPosition,
+            Vector3 currentPathWorldPosition,
+            Vector3 currentPathRootWorldPosition,
+            Vector3 currentPathHipWorldPosition,
+            Vector3 predictedHipWorldPosition,
+            Vector3 frozenRootStartWorldPosition,
+            Quaternion frozenRootStartWorldRotation,
+            Vector3 frozenRootLandingWorldPosition,
+            Quaternion frozenRootLandingWorldRotation,
+            Vector3 predictionUp,
+            float minimumLandingConfidence,
+            float maximumPredictionReachRatio,
+            float predictionReachRatio,
+            float castAbove,
+            float castBelow,
+            float pathSphereRadius,
+            float swingCapsuleRadius,
+            CharacterFootGroundingHitDiagnostics currentPathSupport,
+            float preClearanceHeelPathDistance,
+            float preClearanceToePathDistance,
+            float postClearanceHeelPathDistance,
+            float postClearanceToePathDistance,
+            bool clearanceEvaluated,
+            float predictiveResidualPenetration,
+            float requiredLift,
+            float appliedLift,
+            in FixedList128Bytes<Vector3> plannedFootRouteWorld,
+            in FixedList512Bytes<CharacterPredictiveFootPathSampleDiagnostics> pathSamples,
+            Vector3 baselineGoalWorldPosition,
+            Vector3 finalGoalWorldPosition,
             CharacterFullBodyIkGoal baselineGoal,
             CharacterFullBodyIkGoal finalGoal)
         {
             Side = side;
-            SwingEligible = swingEligible;
-            SelectedForRewrite = selectedForRewrite;
             Rewritten = rewritten;
             RejectReason = rejectReason;
             FutureSupport = futureSupport;
-            GroundEnvelopeSegmentCount = groundEnvelopeSegmentCount;
-            GroundEnvelopeRejectReason = groundEnvelopeRejectReason;
-            QueryCount = queryCount;
-            RejectedQueryCount = rejectedQueryCount;
+            Query = query;
+            CurrentEvent = currentEvent;
             PredictionHorizon = predictionHorizon;
-            SwingClearance = swingClearance;
+            PredictionDistance = predictionDistance;
+            Plan = plan;
+            CurrentSoleWorldPosition = currentSoleWorldPosition;
+            FixedPathStartWorldPosition = fixedPathStartWorldPosition;
+            FixedLandingWorldPosition = fixedLandingWorldPosition;
+            CurrentPathWorldPosition = currentPathWorldPosition;
+            CurrentPathRootWorldPosition = currentPathRootWorldPosition;
+            CurrentPathHipWorldPosition = currentPathHipWorldPosition;
+            PredictedHipWorldPosition = predictedHipWorldPosition;
+            FrozenRootStartWorldPosition = frozenRootStartWorldPosition;
+            FrozenRootStartWorldRotation = frozenRootStartWorldRotation;
+            FrozenRootLandingWorldPosition = frozenRootLandingWorldPosition;
+            FrozenRootLandingWorldRotation = frozenRootLandingWorldRotation;
+            PredictionUp = predictionUp;
+            MinimumLandingConfidence = minimumLandingConfidence;
+            MaximumPredictionReachRatio = maximumPredictionReachRatio;
+            PredictionReachRatio = predictionReachRatio;
+            CastAbove = castAbove;
+            CastBelow = castBelow;
+            PathSphereRadius = pathSphereRadius;
+            SwingCapsuleRadius = swingCapsuleRadius;
+            CurrentPathSupport = currentPathSupport;
+            PreClearanceHeelPathDistance = preClearanceHeelPathDistance;
+            PreClearanceToePathDistance = preClearanceToePathDistance;
+            PostClearanceHeelPathDistance = postClearanceHeelPathDistance;
+            PostClearanceToePathDistance = postClearanceToePathDistance;
+            ClearanceEvaluated = clearanceEvaluated;
+            PredictiveResidualPenetration = predictiveResidualPenetration;
+            RequiredLift = requiredLift;
+            AppliedLift = appliedLift;
+            PlannedFootRouteWorld = plannedFootRouteWorld;
+            PathSamples = pathSamples;
+            BaselineGoalWorldPosition = baselineGoalWorldPosition;
+            FinalGoalWorldPosition = finalGoalWorldPosition;
             BaselineGoal = baselineGoal;
             FinalGoal = finalGoal;
         }
 
         public CharacterFootSide Side { get; }
-        public bool SwingEligible { get; }
-        public bool SelectedForRewrite { get; }
         public bool Rewritten { get; }
         public FootPredictionRejectReason RejectReason { get; }
         public CharacterFootGroundingHitDiagnostics FutureSupport { get; }
-        public int GroundEnvelopeSegmentCount { get; }
-        public FootPlacementGroundEnvelopeRejectReason GroundEnvelopeRejectReason { get; }
-        public int QueryCount { get; }
-        public int RejectedQueryCount { get; }
+        public CharacterPredictiveFootQueryDiagnostics Query { get; }
+        public CharacterFootGroundingQueryDiagnostics FutureLandingQuery => Query.FutureLandingQuery;
+        public int GroundEnvelopeSegmentCount => Query.GroundEnvelopeSegmentCount;
+        public FootPlacementGroundEnvelopeRejectReason GroundEnvelopeRejectReason => Query.GroundEnvelopeRejectReason;
+        public int QueryCount => Query.QueryCount;
+        public int RawHitCount => Query.RawHitCount;
+        public int RejectedQueryCount => Query.RejectedHitCount;
+        public CharacterPredictiveFootQueryRejectCounts QueryRejectCounts => Query.RejectCounts;
+        public CharacterPredictiveFootEventDiagnostics CurrentEvent { get; }
+        public bool HasAuthoritativeLandingEvent => CurrentEvent.IsAuthoritative;
+        public ulong LandingEventIdentity => CurrentEvent.LandingEventIdentity;
+        public ulong SourceSampleIdentity => CurrentEvent.SourceSampleIdentity;
+        public int SourceSampleCycle => CurrentEvent.SourceSampleCycle;
+        public int EventOrdinal => CurrentEvent.EventOrdinal;
+        public ulong ContributionContinuityIdentity => CurrentEvent.ContributionContinuityIdentity;
+        public float LandingConfidence => CurrentEvent.Confidence;
+        public float AuthoredLandingDelaySeconds => CurrentEvent.TimeToLandingSeconds;
+        public float EventPhase => CurrentEvent.EventPhase;
+        public float LiftOffPhase => CurrentEvent.LiftOffPhase;
+        public FixedList128Bytes<Vector3> RootLocalFootRoute => CurrentEvent.RootLocalFootRoute;
+        public Vector3 RootLocalLanding => RootLocalFootRoute.Length > 0
+            ? RootLocalFootRoute[RootLocalFootRoute.Length - 1]
+            : Vector3.zero;
         public float PredictionHorizon { get; }
-        public float SwingClearance { get; }
+        public float PredictionDistance { get; }
+        public CharacterPredictiveFootPlanLifecycleDiagnostics Plan { get; }
+        public ulong PlanSequence => Plan.Sequence;
+        public ulong PlanGeneratedFrame => Plan.GeneratedFrame;
+        public CharacterPredictiveFootPlanState PlanState => Plan.State;
+        public CharacterPredictiveFootPlanTransitionReason PlanTransitionReason => Plan.TransitionReason;
+        public CharacterPredictiveFootPlanEndReason PlanEndReason => Plan.EndReason;
+        public float PlanExecutionProgress => Plan.ExecutionProgress;
+        public Vector3 FrozenPlanarVelocity => Plan.FrozenPlanarVelocity;
+        public Vector3 CurrentSoleWorldPosition { get; }
+        public Vector3 FixedPathStartWorldPosition { get; }
+        public Vector3 FixedLandingWorldPosition { get; }
+        public Vector3 CurrentPathWorldPosition { get; }
+        public Vector3 CurrentPathRootWorldPosition { get; }
+        public Vector3 CurrentPathHipWorldPosition { get; }
+        public Vector3 PredictedHipWorldPosition { get; }
+        public Vector3 FrozenRootStartWorldPosition { get; }
+        public Quaternion FrozenRootStartWorldRotation { get; }
+        public Vector3 FrozenRootLandingWorldPosition { get; }
+        public Quaternion FrozenRootLandingWorldRotation { get; }
+        public Vector3 PredictionUp { get; }
+        public float MinimumLandingConfidence { get; }
+        public float MaximumPredictionReachRatio { get; }
+        public float PredictionReachRatio { get; }
+        public float CastAbove { get; }
+        public float CastBelow { get; }
+        public int RouteSampleCount => Query.RouteSampleCount;
+        public int AcceptedHitCount => Query.AcceptedHitCount;
+        public int EdgePlaneCandidateCount => Query.EdgePlaneCandidateCount;
+        public int AcceptedEdgePlaneCount => Query.AcceptedEdgePlaneCount;
+        public float PathSphereRadius { get; }
+        public float SwingCapsuleRadius { get; }
+        public CharacterFootGroundingHitDiagnostics CurrentPathSupport { get; }
+        public float PreClearanceHeelPathDistance { get; }
+        public float PreClearanceToePathDistance { get; }
+        public float PostClearanceHeelPathDistance { get; }
+        public float PostClearanceToePathDistance { get; }
+        public bool ClearanceEvaluated { get; }
+        public float PredictiveResidualPenetration { get; }
+        public float RequiredLift { get; }
+        public float AppliedLift { get; }
+        public FixedList128Bytes<Vector3> PlannedFootRouteWorld { get; }
+        public FixedList512Bytes<CharacterPredictiveFootPathSampleDiagnostics> PathSamples { get; }
+        public Vector3 BaselineGoalWorldPosition { get; }
+        public Vector3 FinalGoalWorldPosition { get; }
         public CharacterFullBodyIkGoal BaselineGoal { get; }
         public CharacterFullBodyIkGoal FinalGoal { get; }
     }
 
-    public readonly struct CharacterPredictiveFootPlacementModifierDiagnostics
+    public readonly struct CharacterPredictiveFootPlacementDiagnostics
     {
-        internal CharacterPredictiveFootPlacementModifierDiagnostics(
+        internal CharacterPredictiveFootPlacementDiagnostics(
             ulong frameSequence,
             ulong completionIdentity,
-            CharacterFootSide selectedSide,
             in CharacterFullBodyIkGoalSetHeader baselineHeader,
-            CharacterPredictiveFootPlacementModifierFootDiagnostics left,
-            CharacterPredictiveFootPlacementModifierFootDiagnostics right)
+            in CharacterPredictiveFootPlacementFootDiagnostics left,
+            in CharacterPredictiveFootPlacementFootDiagnostics right)
         {
             FrameSequence = frameSequence;
             CompletionIdentity = completionIdentity;
-            SelectedSide = selectedSide;
             BaselineProducerOperationIndex = baselineHeader.ProducerOperationIndex;
             BaselineProducerCallSiteIndex = baselineHeader.ProducerCallSiteIndex;
             BaselineGoalOffset = baselineHeader.GoalOffset;
@@ -369,15 +741,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public ulong FrameSequence { get; }
         public ulong CompletionIdentity { get; }
-        public CharacterFootSide SelectedSide { get; }
         public int BaselineProducerOperationIndex { get; }
         public int BaselineProducerCallSiteIndex { get; }
         public int BaselineGoalOffset { get; }
         public int BaselineGoalCount { get; }
         public FixedString64Bytes BaselineRigId { get; }
         public FixedString64Bytes BaselineRigRevision { get; }
-        public CharacterPredictiveFootPlacementModifierFootDiagnostics Left { get; }
-        public CharacterPredictiveFootPlacementModifierFootDiagnostics Right { get; }
+        public CharacterPredictiveFootPlacementFootDiagnostics Left { get; }
+        public CharacterPredictiveFootPlacementFootDiagnostics Right { get; }
         public bool IsCompleted => FrameSequence != 0 && CompletionIdentity != 0;
     }
 }

@@ -303,6 +303,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             ulong resetSequence)
         {
             FixedVector3 velocity = result.Motion.RequestedVelocity;
+            FixedVector2 basis = result.Motion.LocomotionPlanarBasis;
             var desiredVelocity = new UnityEngine.Vector2(
                 velocity.X.ToSingle(),
                 velocity.Z.ToSingle());
@@ -311,6 +312,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 result.Tick.Value > 1 ? new SimulationTick(result.Tick.Value - 1) : default,
                 result.Tick,
                 sourceSequence,
+                new UnityEngine.Vector2(basis.X.ToSingle(), basis.Y.ToSingle()),
                 desiredVelocity,
                 CharacterPresentationTrajectoryIntent.ResolveDesiredFacing(
                     desiredVelocity,
@@ -320,9 +322,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 CharacterPresentationTrajectoryIntent.HasPlanarMotion(desiredVelocity),
                 result.BodySample.FinalBody.Grounded,
                 CharacterPresentationTrajectoryIntent.ResolveMovementModeId(
-                    result.Motion.LocomotionOwnerIdentity,
+                    result.Motion.MovementPlaybackClock.OwnerIdentity,
                     result.Motion.ActionOwnerIdentity,
                     result.Motion.GameplayResultOwnerIdentity),
+                result.Motion.MovementPlaybackClock,
                 resetSequence);
         }
 

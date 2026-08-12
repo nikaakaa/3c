@@ -3215,7 +3215,7 @@ MonoBehaviour:
           m_InputEdgeGUID: 
           m_OutputEdgeGUIDs: []
           m_Value: 0
-        m_OutputEdgeGUID: 
+        m_OutputEdgeGUID: 6d59e744-bb97-529d-b6cb-8e75f6bb164b
     - rid: 665191419356100163
       type: {class: LoopNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -3225,8 +3225,8 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 260, y: 0}
-        m_InputEdgeGUID: 
-        m_OutputEdgeGUID: 
+        m_InputEdgeGUID: 6d59e744-bb97-529d-b6cb-8e75f6bb164b
+        m_OutputEdgeGUID: 50bc9d9c-09df-5b18-98bd-c6901931b89c
         m_StopType: 0
     - rid: 665191419356100164
       type: {class: ParallelNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -3237,8 +3237,10 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 559.3333, y: 0}
-        m_InputEdgeGUID: 
-        m_OutputEdgeGUIDs: []
+        m_InputEdgeGUID: 50bc9d9c-09df-5b18-98bd-c6901931b89c
+        m_OutputEdgeGUIDs:
+        - a4615273-cd1c-5322-8ccb-eedfe05ee9bd
+        - eece0465-79f5-5dbe-bc59-7eb53c6691b7
         m_ParallelType: 1
     - rid: 665191419356100167
       type: {class: StateMachineNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -3250,7 +3252,7 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 860, y: -29.333336}
-        m_InputEdgeGUID: 
+        m_InputEdgeGUID: a4615273-cd1c-5322-8ccb-eedfe05ee9bd
     - rid: 665191419356100168
       type: {class: StateMachineNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -3261,7 +3263,7 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 876, y: 107.99999}
-        m_InputEdgeGUID: 
+        m_InputEdgeGUID: eece0465-79f5-5dbe-bc59-7eb53c6691b7
     - rid: 665191419356100193
       type: {class: FloatExposedProperty, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -3367,9 +3369,12 @@ MonoBehaviour:
           m_OutputEdgeGUIDs: []
           m_Value: {x: 0, y: 0}
         m_MoveSpeed: 4.592
+        m_DisplacementMode: 0
+        m_ActionMotionCurve: {fileID: 0}
         m_TurnSpeedDegrees: 720
         m_CameraRelative: 1
-        m_Continuous: 0
+        m_ExecutionMode: 1
+        m_DurationSeconds: 1.1
     - rid: 665191419356100198
       type: {class: ParallelNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -3431,9 +3436,12 @@ MonoBehaviour:
           m_OutputEdgeGUIDs: []
           m_Value: {x: 0, y: 0}
         m_MoveSpeed: 6
+        m_DisplacementMode: 0
+        m_ActionMotionCurve: {fileID: 0}
         m_TurnSpeedDegrees: 720
         m_CameraRelative: 1
-        m_Continuous: 1
+        m_ExecutionMode: 2
+        m_DurationSeconds: 0
     - rid: 665191419356100201
       type: {class: ParallelNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -3495,9 +3503,12 @@ MonoBehaviour:
           m_OutputEdgeGUIDs: []
           m_Value: {x: 0, y: 0}
         m_MoveSpeed: 5.1
+        m_DisplacementMode: 0
+        m_ActionMotionCurve: {fileID: 0}
         m_TurnSpeedDegrees: 720
         m_CameraRelative: 1
-        m_Continuous: 0
+        m_ExecutionMode: 0
+        m_DurationSeconds: 0
     - rid: 665191419356100204
       type: {class: ParallelNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -3559,9 +3570,12 @@ MonoBehaviour:
           m_OutputEdgeGUIDs: []
           m_Value: {x: 0, y: 0}
         m_MoveSpeed: 7.36
+        m_DisplacementMode: 0
+        m_ActionMotionCurve: {fileID: 0}
         m_TurnSpeedDegrees: 720
         m_CameraRelative: 1
-        m_Continuous: 1
+        m_ExecutionMode: 2
+        m_DurationSeconds: 0
     - rid: 665191461149736963
       type: {class: ConditionRuleGraph, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:

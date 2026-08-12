@@ -26,6 +26,7 @@
                 <BTSMTL.Editor.EnumMenuView name="nodeType-field" />
                 <ui:Label text="Label" display-tooltip-when-elided="true" name="property-dropdown-button" />
             </ui:VisualElement>
+            <ui:VisualElement name="extension" class="unity-node__extension" />
         </ui:VisualElement>
     </ui:VisualElement>
     <TreeDesigner.Editor.NodePanelView name="node-panel" />

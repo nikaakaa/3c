@@ -46,6 +46,19 @@ namespace ThirdPersonSimulation
         GameplayResult = 2
     }
 
+    public enum LocomotionInputMotionExecutionMode : byte
+    {
+        Once = 0,
+        Timed = 1,
+        Continuous = 2
+    }
+
+    public enum LocomotionInputMotionDisplacementMode : byte
+    {
+        ConstantSpeed = 0,
+        ActionMotionCurve = 1
+    }
+
     public enum ProgramMotionSourceBlendMode : byte
     {
         Additive = 0,
@@ -341,7 +354,7 @@ namespace ThirdPersonSimulation
     public static class CharacterGameplayOperationSet
     {
         public const string Id = "character-gameplay-operations";
-        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/11");
+        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/12");
 
         static readonly ReadOnlyCollection<SimulationOperationCode> s_Operations =
             Array.AsReadOnly(new[]
@@ -846,6 +859,7 @@ namespace ThirdPersonSimulation
         RunnableChildCursor = 2,
         RunnableStopBarrier = 3,
         RunnableActivationGeneration = 4,
+        LocomotionMotionElapsedTicks = 5,
         StateMachineActive = 20,
         StateMachinePending = 21,
         StateMachineExiting = 22,
@@ -967,6 +981,7 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.RunnableChildCursor => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Runnable,
                 ProgramStateSemantic.RunnableStopBarrier => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Runnable,
                 ProgramStateSemantic.RunnableActivationGeneration => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Runnable,
+                ProgramStateSemantic.LocomotionMotionElapsedTicks => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Runnable,
                 ProgramStateSemantic.AIWaitElapsedTicks => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Runnable,
                 ProgramStateSemantic.StateMachineActive => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.StateMachine,
                 ProgramStateSemantic.StateMachinePending => kind == ProgramStateValueKind.Identity && owner == ProgramStateOwnerKind.StateMachine,

@@ -1,7 +1,10 @@
 using System;
+using System.Globalization;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
@@ -212,6 +215,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal double ContinuousTime;
             internal float SampleTime;
             internal int Cycle;
+            internal double MovementClockOriginSeconds;
+            internal double MovementClockLastElapsedSeconds;
+            internal double MovementClockOffsetSeconds;
+            internal string MovementClockOwnerIdentity;
+            internal ulong MovementClockGeneration;
+            internal ulong MovementMarkerEpochIdentity;
+            internal long MovementMarkerOrdinalOffset;
             internal ulong NextSourceGeneration;
             internal ulong ContinuityIdentity;
             internal ulong NextContinuityIdentity;
@@ -224,6 +234,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal bool Relevant;
             internal bool SourceRetained;
             internal bool HasCompletedFrame;
+            internal bool HasMovementClockOrigin;
+            internal bool HasPendingMovementClockRebase;
+            internal bool HasMovementMarkerEpoch;
+            internal PoseSourceProviderDemandKind DemandKind;
         }
 
         readonly CharacterPresentationSequencePlayerDescriptor m_Descriptor;
@@ -252,6 +266,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         double m_ContinuousTime { get => ActiveState.ContinuousTime; set => ActiveState.ContinuousTime = value; }
         float m_SampleTime { get => ActiveState.SampleTime; set => ActiveState.SampleTime = value; }
         int m_Cycle { get => ActiveState.Cycle; set => ActiveState.Cycle = value; }
+        double m_MovementClockOriginSeconds { get => ActiveState.MovementClockOriginSeconds; set => ActiveState.MovementClockOriginSeconds = value; }
+        double m_MovementClockLastElapsedSeconds { get => ActiveState.MovementClockLastElapsedSeconds; set => ActiveState.MovementClockLastElapsedSeconds = value; }
+        double m_MovementClockOffsetSeconds { get => ActiveState.MovementClockOffsetSeconds; set => ActiveState.MovementClockOffsetSeconds = value; }
+        string m_MovementClockOwnerIdentity { get => ActiveState.MovementClockOwnerIdentity; set => ActiveState.MovementClockOwnerIdentity = value; }
+        ulong m_MovementClockGeneration { get => ActiveState.MovementClockGeneration; set => ActiveState.MovementClockGeneration = value; }
+        ulong m_MovementMarkerEpochIdentity { get => ActiveState.MovementMarkerEpochIdentity; set => ActiveState.MovementMarkerEpochIdentity = value; }
+        long m_MovementMarkerOrdinalOffset { get => ActiveState.MovementMarkerOrdinalOffset; set => ActiveState.MovementMarkerOrdinalOffset = value; }
         ulong m_NextSourceGeneration { get => ActiveState.NextSourceGeneration; set => ActiveState.NextSourceGeneration = value; }
         ulong m_ContinuityIdentity { get => ActiveState.ContinuityIdentity; set => ActiveState.ContinuityIdentity = value; }
         ulong m_NextContinuityIdentity { get => ActiveState.NextContinuityIdentity; set => ActiveState.NextContinuityIdentity = value; }
@@ -264,6 +285,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         bool m_Relevant { get => ActiveState.Relevant; set => ActiveState.Relevant = value; }
         bool m_SourceRetained { get => ActiveState.SourceRetained; set => ActiveState.SourceRetained = value; }
         bool m_HasCompletedFrame { get => ActiveState.HasCompletedFrame; set => ActiveState.HasCompletedFrame = value; }
+        bool m_HasMovementClockOrigin { get => ActiveState.HasMovementClockOrigin; set => ActiveState.HasMovementClockOrigin = value; }
+        bool m_HasPendingMovementClockRebase { get => ActiveState.HasPendingMovementClockRebase; set => ActiveState.HasPendingMovementClockRebase = value; }
+        bool m_HasMovementMarkerEpoch { get => ActiveState.HasMovementMarkerEpoch; set => ActiveState.HasMovementMarkerEpoch = value; }
+        PoseSourceProviderDemandKind m_DemandKind { get => ActiveState.DemandKind; set => ActiveState.DemandKind = value; }
 
         internal AnimationSequencePlayerRuntime(
             CharacterPresentationSequencePlayerDescriptor descriptor,
@@ -373,15 +398,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_FrameOpen = false;
         }
 
-        internal void SetRelevant(bool relevant)
+        internal void SetRelevant(
+            bool relevant,
+            PoseSourceProviderDemandKind demandKind = PoseSourceProviderDemandKind.Active)
         {
             RequireAlive();
+            if (relevant && !Enum.IsDefined(typeof(PoseSourceProviderDemandKind), demandKind))
+                throw new ArgumentOutOfRangeException(nameof(demandKind));
             if (m_Relevant == relevant)
+            {
+                if (relevant)
+                    m_DemandKind = demandKind;
                 return;
+            }
             m_Relevant = relevant;
             m_HasCompletedFrame = false;
             if (relevant)
             {
+                m_DemandKind = demandKind;
                 if (m_NextSourceGeneration == ulong.MaxValue)
                     throw new InvalidOperationException($"Sequence Player '{NodeId}' source generation was exhausted.");
                 ulong sourceGeneration = m_NextSourceGeneration;
@@ -402,6 +436,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ReleaseRetainedSource();
             m_SourceId = default;
             m_Endpoint = default;
+            m_DemandKind = default;
+            ClearMovementClockOrigin();
         }
 
         internal void Reset(PoseDiscontinuityResetReason reason)
@@ -420,6 +456,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 AllocateContinuityIdentity();
             m_ResetSequence = AllocateResetSequence();
             m_PendingResetReason = reason;
+            ClearMovementClockOrigin();
             SetClock(m_Descriptor.InitialTime);
             m_SourceWorkspace.ResetContinuity();
         }
@@ -427,6 +464,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void ResetForStateEntry()
         {
             RequireAlive();
+            ClearMovementClockOrigin();
             SetClock(m_Descriptor.InitialTime);
             m_HasCompletedFrame = false;
             m_ContinuityIdentity =
@@ -443,7 +481,139 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireOpenFrame();
             if (!m_Relevant)
                 throw new InvalidOperationException($"Sequence Player '{NodeId}' is not relevant.");
+            if (continuousTime < m_ContinuousTime)
+            {
+                m_HasCompletedFrame = false;
+                m_ContinuityIdentity = AllocateContinuityIdentity();
+                m_ResetSequence = AllocateResetSequence();
+                m_PendingResetReason = PoseDiscontinuityResetReason.BranchReplacement;
+            }
+            if (m_Descriptor.ClockSource ==
+                CharacterSequencePlayerClockSource.CommittedMovement)
+            {
+                if (m_HasMovementClockOrigin)
+                {
+                    m_MovementClockOffsetSeconds =
+                        continuousTime - m_Descriptor.InitialTime -
+                        (m_MovementClockLastElapsedSeconds -
+                         m_MovementClockOriginSeconds) * m_PlayRate;
+                    m_HasPendingMovementClockRebase = false;
+                }
+                else
+                {
+                    m_MovementClockOffsetSeconds =
+                        continuousTime - m_Descriptor.InitialTime;
+                    m_HasPendingMovementClockRebase = true;
+                }
+            }
             SetClock(continuousTime);
+        }
+
+        internal void SynchronizeMovementClock(
+            double elapsedSeconds,
+            CommittedMovementPlaybackClock clock,
+            float presentationDeltaSeconds)
+        {
+            RequireAlive();
+            RequireOpenFrame();
+            if (!double.IsFinite(elapsedSeconds) || elapsedSeconds < 0d ||
+                !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f)
+                throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
+            if (!m_Relevant)
+                return;
+            if (!clock.IsValid)
+            {
+                ContinueMovementClock(presentationDeltaSeconds);
+                return;
+            }
+            string ownerIdentity = clock.OwnerIdentity;
+            ulong generation = clock.Generation;
+            bool hadClockOrigin = m_HasMovementClockOrigin;
+            bool changedClock = !hadClockOrigin ||
+                                m_MovementClockGeneration != generation ||
+                                !string.Equals(
+                                    m_MovementClockOwnerIdentity,
+                                    ownerIdentity,
+                                    StringComparison.Ordinal);
+            if (changedClock && hadClockOrigin &&
+                m_DemandKind == PoseSourceProviderDemandKind.TransitionSource)
+            {
+                ContinueMovementClock(presentationDeltaSeconds);
+                return;
+            }
+            if (changedClock)
+            {
+                double preservedContinuousTime = m_ContinuousTime;
+                m_MovementClockOriginSeconds = elapsedSeconds;
+                m_MovementClockLastElapsedSeconds = elapsedSeconds;
+                m_MovementClockOwnerIdentity = ownerIdentity;
+                m_MovementClockGeneration = generation;
+                m_HasMovementClockOrigin = true;
+                if (!m_HasMovementMarkerEpoch &&
+                    m_Source.MarkerSync != null &&
+                    m_Source.MarkerSync.IsMarkerGroup)
+                {
+                    m_MovementMarkerEpochIdentity =
+                        AnimationPredictedFootStepSample.SourceIdentity(
+                            string.Concat(
+                                m_Source.MarkerSync.CanonicalGroupId,
+                                ":",
+                                ownerIdentity,
+                                ":",
+                                generation.ToString(CultureInfo.InvariantCulture)));
+                    m_MovementMarkerOrdinalOffset = 0;
+                    m_HasMovementMarkerEpoch = true;
+                }
+                else if (!m_HasMovementMarkerEpoch)
+                {
+                    m_MovementMarkerEpochIdentity = 0;
+                    m_MovementMarkerOrdinalOffset = 0;
+                    m_HasMovementMarkerEpoch = false;
+                }
+                if (hadClockOrigin)
+                    m_MovementClockOffsetSeconds =
+                        preservedContinuousTime - m_Descriptor.InitialTime;
+                else if (!m_HasPendingMovementClockRebase)
+                    m_MovementClockOffsetSeconds = 0d;
+                m_HasPendingMovementClockRebase = false;
+            }
+            if (elapsedSeconds < m_MovementClockLastElapsedSeconds)
+                throw new InvalidOperationException($"Sequence Player '{NodeId}' Movement clock regressed within one owner generation.");
+            m_MovementClockLastElapsedSeconds = elapsedSeconds;
+            double stateTime = m_Descriptor.InitialTime +
+                               (elapsedSeconds - m_MovementClockOriginSeconds) * m_PlayRate +
+                               m_MovementClockOffsetSeconds;
+            SetClock(stateTime);
+        }
+
+        void ContinueMovementClock(float presentationDeltaSeconds)
+        {
+            if (presentationDeltaSeconds == 0f)
+                return;
+            SetClock(m_ContinuousTime + presentationDeltaSeconds * m_PlayRate);
+        }
+
+        internal void AlignMovementMarkerEpoch(
+            AnimationSequencePlayerRuntime source)
+        {
+            RequireAlive();
+            RequireOpenFrame();
+            if (source == null || !source.m_HasMovementMarkerEpoch ||
+                !m_HasMovementMarkerEpoch ||
+                !string.Equals(
+                    source.MarkerSync.CanonicalGroupId,
+                    MarkerSync.CanonicalGroupId,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Synchronized Movement marker epochs are incompatible.");
+            }
+            long sourceOrdinal = source.ResolveCurrentMarkerOrdinal();
+            long targetLocalOrdinal = ResolveCurrentLocalMarkerOrdinal();
+            m_MovementMarkerEpochIdentity =
+                source.m_MovementMarkerEpochIdentity;
+            m_MovementMarkerOrdinalOffset = checked(
+                sourceOrdinal - targetLocalOrdinal);
         }
 
         internal void Advance(float presentationDeltaSeconds)
@@ -502,12 +672,174 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PlayRate,
                 new AnimationReadOnlyBuffer<float>(m_Parameters, 0, m_Parameters.Length),
                 new AnimationReadOnlyBuffer<byte>(m_ParameterAvailability, 0, m_ParameterAvailability.Length),
-                m_Source.LeftFootFeatures.Sample(normalizedTime),
-                m_Source.RightFootFeatures.Sample(normalizedTime),
+                BindPredictionSource(
+                    m_Source.LeftFootFeatures.Sample(normalizedTime),
+                    CharacterFootSide.Left),
+                BindPredictionSource(
+                    m_Source.RightFootFeatures.Sample(normalizedTime),
+                    CharacterFootSide.Right),
                 true,
                 presentationDeltaSeconds);
             m_SourceRetained = true;
             return binding;
+        }
+
+        AnimationFootFeatureSample BindPredictionSource(
+            AnimationFootFeatureSample feature,
+            CharacterFootSide side)
+        {
+            AnimationFootFeatureSample bound = feature.BindPredictionSource(
+                AnimationPredictedFootStepSample.SourceIdentity(m_SourceId),
+                m_Cycle,
+                m_SampleTime,
+                m_Source.Clip.length,
+                m_Descriptor.Loop);
+            AnimationPredictedFootStepSample step = bound.PredictedStep;
+            if (!step.IsSourceBound || !m_HasMovementMarkerEpoch)
+                return bound;
+            int landingOrdinal = checked((int)ResolveLandingMarkerOrdinal(
+                side,
+                step.TimeToLandingSeconds));
+            int opposingOrdinal = -1;
+            if (step.OpposingEventOrdinal > 0)
+            {
+                opposingOrdinal = checked((int)ResolveLandingMarkerOrdinal(
+                    side == CharacterFootSide.Left
+                        ? CharacterFootSide.Right
+                        : CharacterFootSide.Left,
+                    step.OpposingLandingDelaySeconds));
+            }
+            return bound.WithPredictedStep(
+                step.BindSynchronizedMarkerSource(
+                    m_MovementMarkerEpochIdentity,
+                    landingOrdinal,
+                    opposingOrdinal));
+        }
+
+        long ResolveLandingMarkerOrdinal(
+            CharacterFootSide side,
+            float delaySeconds)
+        {
+            if (side != CharacterFootSide.Left &&
+                side != CharacterFootSide.Right ||
+                !float.IsFinite(delaySeconds) || delaySeconds < 0f)
+            {
+                throw new ArgumentException(
+                    "Locomotion landing marker request is invalid.");
+            }
+            AnimationMarkerSyncBinding binding = MarkerSync;
+            string markerId = side == CharacterFootSide.Left
+                ? "LeftFootContact"
+                : "RightFootContact";
+            double landingTime = m_ContinuousTime + delaySeconds;
+            long bestOrdinal = long.MinValue;
+            double bestDistance = double.MaxValue;
+            if (binding.SequenceTopology ==
+                BTSMTL.Timeline.AnimationMarkerSequenceTopology.Finite)
+            {
+                SelectLandingMarkerCandidate(
+                    binding,
+                    markerId,
+                    landingTime,
+                    0,
+                    ref bestOrdinal,
+                    ref bestDistance);
+            }
+            else
+            {
+                long centerCycle = (long)Math.Floor(
+                    landingTime / binding.DurationSeconds);
+                for (long cycle = Math.Max(0, centerCycle - 1);
+                     cycle <= centerCycle + 1;
+                     cycle++)
+                {
+                    SelectLandingMarkerCandidate(
+                        binding,
+                        markerId,
+                        landingTime,
+                        cycle,
+                        ref bestOrdinal,
+                        ref bestDistance);
+                }
+            }
+            if (bestOrdinal == long.MinValue || bestDistance > 0.025d)
+            {
+                throw new InvalidOperationException(
+                    $"Sequence Player '{NodeId}' predicted {markerId} landing does not resolve to its authored locomotion marker.");
+            }
+            return checked(bestOrdinal + m_MovementMarkerOrdinalOffset);
+        }
+
+        static void SelectLandingMarkerCandidate(
+            AnimationMarkerSyncBinding binding,
+            string markerId,
+            double landingTime,
+            long cycle,
+            ref long bestOrdinal,
+            ref double bestDistance)
+        {
+            for (int i = 0; i < binding.Markers.Count; i++)
+            {
+                AnimationMarkerSyncMarkerBinding marker = binding.Markers[i];
+                if (!string.Equals(marker.MarkerId, markerId, StringComparison.Ordinal))
+                    continue;
+                double candidate = cycle * binding.DurationSeconds +
+                                   marker.TimeSeconds;
+                double distance = Math.Abs(candidate - landingTime);
+                long ordinal = checked(cycle * binding.Markers.Count + i);
+                if (distance < bestDistance - 0.0000001d ||
+                    Math.Abs(distance - bestDistance) <= 0.0000001d &&
+                    (bestOrdinal == long.MinValue || ordinal < bestOrdinal))
+                {
+                    bestOrdinal = ordinal;
+                    bestDistance = distance;
+                }
+            }
+        }
+
+        long ResolveCurrentMarkerOrdinal() => checked(
+            ResolveCurrentLocalMarkerOrdinal() +
+            m_MovementMarkerOrdinalOffset);
+
+        long ResolveCurrentLocalMarkerOrdinal()
+        {
+            AnimationMarkerSyncBinding binding = MarkerSync;
+            if (binding == null || !binding.IsMarkerGroup ||
+                binding.Markers.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    "Locomotion marker occurrence is unavailable.");
+            }
+            if (binding.SequenceTopology ==
+                BTSMTL.Timeline.AnimationMarkerSequenceTopology.Finite)
+            {
+                int index = 0;
+                for (int i = 0; i < binding.Markers.Count; i++)
+                {
+                    if (m_ContinuousTime + 0.0000001d <
+                        binding.Markers[i].TimeSeconds)
+                        break;
+                    index = i;
+                }
+                return index;
+            }
+            long cycle = (long)Math.Floor(
+                m_ContinuousTime / binding.DurationSeconds);
+            double localTime = m_ContinuousTime -
+                               cycle * binding.DurationSeconds;
+            int markerIndex = -1;
+            for (int i = 0; i < binding.Markers.Count; i++)
+            {
+                if (localTime + 0.0000001d <
+                    binding.Markers[i].TimeSeconds)
+                    break;
+                markerIndex = i;
+            }
+            if (markerIndex >= 0)
+                return checked(cycle * binding.Markers.Count + markerIndex);
+            return checked(
+                (cycle - 1) * binding.Markers.Count +
+                binding.Markers.Count - 1);
         }
 
         internal AnimationSelectedPosePlayerJob PrepareJob(
@@ -608,6 +940,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             m_Cycle = 0;
             m_SampleTime = (float)Math.Min(continuousTime, duration);
+        }
+
+        void ClearMovementClockOrigin()
+        {
+            m_MovementClockOriginSeconds = 0d;
+            m_MovementClockLastElapsedSeconds = 0d;
+            m_MovementClockOffsetSeconds = 0d;
+            m_MovementClockOwnerIdentity = string.Empty;
+            m_MovementClockGeneration = 0;
+            m_MovementMarkerEpochIdentity = 0;
+            m_MovementMarkerOrdinalOffset = 0;
+            m_HasMovementClockOrigin = false;
+            m_HasPendingMovementClockRebase = false;
+            m_HasMovementMarkerEpoch = false;
         }
 
         void ReleaseRetainedSource()

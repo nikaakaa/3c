@@ -21,6 +21,7 @@
                 <ui:VisualElement name="space" style="flex-grow: 1;" />
                 <TreeDesigner.Editor.NodePortContainerView name="output" />
             </ui:VisualElement>
+            <ui:VisualElement name="extension" class="unity-node__extension" />
         </ui:VisualElement>
     </ui:VisualElement>
     <TreeDesigner.Editor.NodePanelView name="node-panel" />

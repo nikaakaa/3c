@@ -19,6 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             SimulationTick previousTick,
             SimulationTick currentTick,
             ulong sourceSequence,
+            Vector2 locomotionPlanarBasis,
             Vector2 desiredPlanarVelocity,
             Vector2 desiredFacing,
             float acceptedAcceleration,
@@ -26,12 +27,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             bool hasMotion,
             bool grounded,
             string movementModeId,
+            CommittedMovementPlaybackClock movementPlaybackClock,
             ulong resetSequence)
         {
             if (!actorId.IsValid || !currentTick.IsValid || sourceSequence == 0 ||
+                !IsFinite(locomotionPlanarBasis) || locomotionPlanarBasis.sqrMagnitude > 1.0001f ||
                 !IsFinite(desiredPlanarVelocity) || !IsFinite(desiredFacing) || desiredFacing.sqrMagnitude <= 0f ||
                 !float.IsFinite(acceptedAcceleration) || acceptedAcceleration < 0f ||
                 !float.IsFinite(acceptedTurnRateDegrees) || acceptedTurnRateDegrees < 0f ||
+                movementPlaybackClock.IsValid && movementPlaybackClock.AuthorityTick != currentTick ||
                 string.IsNullOrWhiteSpace(movementModeId))
                 throw new ArgumentException("Character Presentation Trajectory Intent is incomplete.");
             if (previousTick.IsValid && previousTick.Value >= currentTick.Value)
@@ -40,6 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             PreviousTick = previousTick;
             CurrentTick = currentTick;
             SourceSequence = sourceSequence;
+            LocomotionPlanarBasis = locomotionPlanarBasis;
             DesiredPlanarVelocity = desiredPlanarVelocity;
             DesiredFacing = desiredFacing.normalized;
             AcceptedAcceleration = acceptedAcceleration;
@@ -47,6 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             HasMotion = hasMotion;
             Grounded = grounded;
             MovementModeId = movementModeId;
+            MovementPlaybackClock = movementPlaybackClock;
             ResetSequence = resetSequence;
         }
 
@@ -54,6 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public SimulationTick PreviousTick { get; }
         public SimulationTick CurrentTick { get; }
         public ulong SourceSequence { get; }
+        public Vector2 LocomotionPlanarBasis { get; }
         public Vector2 DesiredPlanarVelocity { get; }
         public Vector2 DesiredFacing { get; }
         public float AcceptedAcceleration { get; }
@@ -61,6 +68,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public bool HasMotion { get; }
         public bool Grounded { get; }
         public string MovementModeId { get; }
+        public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
         public ulong ResetSequence { get; }
 
         public static CharacterPresentationTrajectoryIntent FromFloat32(
@@ -71,12 +79,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             if (result == null)
                 throw new ArgumentNullException(nameof(result));
             Float32Vector3 velocity = result.Motion.RequestedVelocity;
+            Float32Vector2 basis = result.Motion.LocomotionPlanarBasis;
             var desiredVelocity = new Vector2(velocity.X.ToSingle(), velocity.Z.ToSingle());
             return new CharacterPresentationTrajectoryIntent(
                 result.ActorId,
                 result.Tick.Value > 1 ? new SimulationTick(result.Tick.Value - 1) : default,
                 result.Tick,
                 sourceSequence,
+                new Vector2(basis.X.ToSingle(), basis.Y.ToSingle()),
                 desiredVelocity,
                 ResolveDesiredFacing(
                     desiredVelocity,
@@ -86,9 +96,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 HasPlanarMotion(desiredVelocity),
                 result.BodySample.FinalBody.Grounded,
                 ResolveMovementModeId(
-                    result.Motion.LocomotionOwnerIdentity,
+                    result.Motion.MovementPlaybackClock.OwnerIdentity,
                     result.Motion.ActionOwnerIdentity,
                     result.Motion.GameplayResultOwnerIdentity),
+                result.Motion.MovementPlaybackClock,
                 resetSequence);
         }
 

@@ -8,29 +8,37 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         public static AnimationFootAnalysisArtifactIdentity GetExpectedIdentity(
             UnityEngine.AnimationClip clip,
-            CharacterFootPlacementAnalysisSource source)
+            CharacterFootPlacementAnalysisSource source,
+            AnimationFootContactSchedule contactSchedule = null)
         {
             CharacterFootPlacementRigGeometryValidationPublisher.RequireCurrent(source);
-            return AnimationFootAnalysisArtifactIdentityBuilder.Build(clip, source);
+            return AnimationFootAnalysisArtifactIdentityBuilder.Build(
+                clip,
+                source,
+                contactSchedule ?? AnimationFootContactSchedule.Inferred);
         }
 
         public static AnimationFootAnalysisArtifactInspection Inspect(
             UnityEngine.AnimationClip clip,
-            CharacterFootPlacementAnalysisSource source)
+            CharacterFootPlacementAnalysisSource source,
+            AnimationFootContactSchedule contactSchedule = null)
         {
-            return AnimationFootAnalysisArtifactStore.Inspect(GetExpectedIdentity(clip, source));
+            return AnimationFootAnalysisArtifactStore.Inspect(
+                GetExpectedIdentity(clip, source, contactSchedule));
         }
 
         public static AnimationFootAnalysisArtifact Build(
             UnityEngine.AnimationClip clip,
-            CharacterFootPlacementAnalysisSource source)
+            CharacterFootPlacementAnalysisSource source,
+            AnimationFootContactSchedule contactSchedule = null)
         {
             if (!clip)
                 throw new ArgumentNullException(nameof(clip));
             if (!source)
                 throw new ArgumentNullException(nameof(source));
-            AnimationFootAnalysisArtifactIdentity identity = GetExpectedIdentity(clip, source);
-            AnimationFootFeaturePair features = CharacterFootPlacementAnimationAnalyzer.Analyze(clip, source);
+            AnimationFootContactSchedule schedule = contactSchedule ?? AnimationFootContactSchedule.Inferred;
+            AnimationFootAnalysisArtifactIdentity identity = GetExpectedIdentity(clip, source, schedule);
+            AnimationFootFeaturePair features = CharacterFootPlacementAnimationAnalyzer.Analyze(clip, source, schedule);
             return AnimationFootAnalysisArtifactStore.Write(identity, features);
         }
     }

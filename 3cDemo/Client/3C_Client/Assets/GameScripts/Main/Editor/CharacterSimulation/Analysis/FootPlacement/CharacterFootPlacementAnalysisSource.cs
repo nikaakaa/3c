@@ -26,15 +26,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     [Serializable]
     public sealed class CharacterFootPlacementAnalysisThresholds
     {
-        [SerializeField, Min(0f)] float m_PlantEnterVerticalSpeed = 0.12f;
-        [SerializeField, Min(0f)] float m_PlantExitVerticalSpeed = 0.28f;
+        [SerializeField, Min(0f)] float m_PlantEnterContactSpeed = 0.12f;
+        [SerializeField, Min(0f)] float m_PlantExitContactSpeed = 0.28f;
         [SerializeField, Min(0f)] float m_PlantEnterHeight = 0.025f;
         [SerializeField, Min(0f)] float m_PlantExitHeight = 0.08f;
         [SerializeField, Min(0.001f)] float m_MinimumLandingSegmentSeconds = 0.05f;
         [SerializeField, Min(0.001f)] float m_MaximumLandingSearchSeconds = 1.5f;
 
-        public float PlantEnterVerticalSpeed => m_PlantEnterVerticalSpeed;
-        public float PlantExitVerticalSpeed => m_PlantExitVerticalSpeed;
+        public float PlantEnterContactSpeed => m_PlantEnterContactSpeed;
+        public float PlantExitContactSpeed => m_PlantExitContactSpeed;
         public float PlantEnterHeight => m_PlantEnterHeight;
         public float PlantExitHeight => m_PlantExitHeight;
         public float MinimumLandingSegmentSeconds => m_MinimumLandingSegmentSeconds;
@@ -42,13 +42,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public void RequireValid()
         {
-            RequireFiniteNonNegative(m_PlantEnterVerticalSpeed, nameof(m_PlantEnterVerticalSpeed));
-            RequireFinitePositive(m_PlantExitVerticalSpeed, nameof(m_PlantExitVerticalSpeed));
+            RequireFiniteNonNegative(m_PlantEnterContactSpeed, nameof(m_PlantEnterContactSpeed));
+            RequireFinitePositive(m_PlantExitContactSpeed, nameof(m_PlantExitContactSpeed));
             RequireFiniteNonNegative(m_PlantEnterHeight, nameof(m_PlantEnterHeight));
             RequireFinitePositive(m_PlantExitHeight, nameof(m_PlantExitHeight));
             RequireFinitePositive(m_MinimumLandingSegmentSeconds, nameof(m_MinimumLandingSegmentSeconds));
             RequireFinitePositive(m_MaximumLandingSearchSeconds, nameof(m_MaximumLandingSearchSeconds));
-            if (m_PlantExitVerticalSpeed <= m_PlantEnterVerticalSpeed || m_PlantExitHeight <= m_PlantEnterHeight)
+            if (m_PlantExitContactSpeed <= m_PlantEnterContactSpeed || m_PlantExitHeight <= m_PlantEnterHeight)
                 throw new InvalidOperationException("Foot Analysis plant exit thresholds must exceed enter thresholds.");
             if (m_MaximumLandingSearchSeconds < m_MinimumLandingSegmentSeconds)
                 throw new InvalidOperationException("Foot Analysis landing search must cover the minimum segment duration.");
@@ -103,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         menuName = "3C/Editor/Foot Placement Analysis Source")]
     public sealed class CharacterFootPlacementAnalysisSource : ScriptableObject
     {
-        public const string AlgorithmVersion = "animation-foot-analysis/v7";
+        public const string AlgorithmVersion = "animation-foot-analysis/v53";
 
         [SerializeField] string m_AnalysisSourceId = string.Empty;
         [SerializeField, Min(1)] int m_AnalysisVersion = 1;

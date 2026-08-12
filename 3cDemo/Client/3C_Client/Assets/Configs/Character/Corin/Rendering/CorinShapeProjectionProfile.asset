@@ -14,18 +14,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   profileId:
     value: 4bddb68869d446ceb834eee6934c7498
-  revision: 3
+  revision: 4
+  runtimeTuningRevision: 282
   contentHash:
     serializedVersion: 2
-    Hash: 409506c254f26ec4d437521a96d4a902
+    Hash: d832b3e1ad448b72c0e1c9f100d88bd5
   colorClusterThreshold: 64
   smallRegionMergeThreshold: 72
-  minimumRegionTriangles: 3
-  simplifyEpsilonPixels: 4
-  outlineWidthPixels: 1.25
-  minimumLoopAreaPixels: 12
-  minimumSharedEdgePixels: 2
-  outlineColor: {r: 0.035, g: 0.035, b: 0.045, a: 1}
+  smallRegionTriangleLimit: 2
+  minimumProjectedRegionTriangles: 4
+  maximumSimplifyEpsilonPixels: 6.27
+  outlineWidthPixels: 3.47
+  minimumSecondaryLoopAreaPixels: 23.2
+  minimumSharedEdgePixels: 2.41
+  outlineColor: {r: 0, g: 0, b: 1, a: 1}
   capacity:
     MaxRenderers: 8
     MaxVertices: 120000

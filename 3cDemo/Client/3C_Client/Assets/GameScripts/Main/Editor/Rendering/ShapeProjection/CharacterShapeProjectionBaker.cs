@@ -433,7 +433,7 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
                 for (int rootIndex = 0; rootIndex < roots.Count; rootIndex++)
                 {
                     int root = Find(parent, roots[rootIndex]);
-                    if (!groups.TryGetValue(root, out List<int> group) || group.Count >= profile.MinimumRegionTriangles)
+                    if (!groups.TryGetValue(root, out List<int> group) || group.Count > profile.SmallRegionTriangleLimit)
                         continue;
 
                     Color color = AverageColor(build.Triangles, group);
@@ -476,9 +476,15 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
             sortedGroups.Sort((left, right) => build.Triangles[MinOrderTriangle(build.Triangles, left)].Order
                 .CompareTo(build.Triangles[MinOrderTriangle(build.Triangles, right)].Order));
 
-            for (int localRegion = 0; localRegion < sortedGroups.Count; localRegion++)
+            int localRegion = 0;
+            for (int groupIndex = 0; groupIndex < sortedGroups.Count; groupIndex++)
             {
-                List<int> triangleGroup = sortedGroups[localRegion];
+                List<int> triangleGroup = sortedGroups[groupIndex];
+                if (triangleGroup.Count < profile.MinimumProjectedRegionTriangles)
+                {
+                    build.ExcludedTriangles += triangleGroup.Count;
+                    continue;
+                }
                 triangleGroup.Sort((left, right) => build.Triangles[left].Order.CompareTo(build.Triangles[right].Order));
                 RegionBuild region = new RegionBuild
                 {
@@ -494,6 +500,7 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
                     region.Triangles.Add(triangle);
                 }
                 build.Regions.Add(region);
+                localRegion++;
             }
         }
 
@@ -508,17 +515,17 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
                 for (int i = 0; i < uses.Count; i++)
                 {
                     int region = build.Triangles[uses[i].Triangle].Region;
-                    if (!regions.Contains(region))
+                    if (region >= 0 && !regions.Contains(region))
                         regions.Add(region);
                 }
                 regions.Sort();
                 if (regions.Count > 2)
                     throw new InvalidOperationException($"Renderer {build.Renderer.name}存在跨三个Region的非流形边");
-                if (regions.Count == 1 && uses.Count > 1)
+                if (regions.Count != 2)
                     continue;
 
                 int left = regions[0];
-                int right = regions.Count == 1 ? -1 : regions[1];
+                int right = regions[1];
                 EdgeUse oriented = default;
                 bool found = false;
                 for (int i = 0; i < uses.Count; i++)
@@ -672,12 +679,8 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
             value.Append(profile.ProfileId.Value).Append('|').Append(profile.Revision).Append('|')
                 .Append(profile.ColorClusterThreshold.ToString("R")).Append('|')
                 .Append(profile.SmallRegionMergeThreshold.ToString("R")).Append('|')
-                .Append(profile.MinimumRegionTriangles).Append('|')
-                .Append(profile.SimplifyEpsilonPixels.ToString("R")).Append('|')
-                .Append(profile.OutlineWidthPixels.ToString("R")).Append('|')
-                .Append(profile.MinimumLoopAreaPixels.ToString("R")).Append('|')
-                .Append(profile.MinimumSharedEdgePixels.ToString("R")).Append('|')
-                .Append(profile.OutlineColor).Append('|');
+                .Append(profile.SmallRegionTriangleLimit).Append('|')
+                .Append(profile.MinimumProjectedRegionTriangles).Append('|');
             AppendCapacity(value, profile.Capacity);
             List<ShapeProjectionSubmeshRule> rules = new List<ShapeProjectionSubmeshRule>(profile.SubmeshRules);
             rules.Sort((left, right) =>

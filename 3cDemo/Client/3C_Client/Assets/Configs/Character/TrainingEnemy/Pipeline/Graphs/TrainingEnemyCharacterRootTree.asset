@@ -197,8 +197,8 @@ MonoBehaviour:
           m_InputValueId: ActionTarget
         m_FactProjection:
           m_Kind: 0
-          m_ActionWindowType:
-          m_ActionWindowId:
+          m_ActionWindowType: 
+          m_ActionWindowId: 
           m_ActionWindowDigest: 0
         m_BlackboardCategoryPath: MonsterCombat/Targeting
         m_Index: 0
@@ -1098,9 +1098,12 @@ MonoBehaviour:
           m_OutputEdgeGUIDs: []
           m_Value: {x: 0, y: 0}
         m_MoveSpeed: 4.5
+        m_DisplacementMode: 0
+        m_ActionMotionCurve: {fileID: 0}
         m_TurnSpeedDegrees: 720
         m_CameraRelative: 0
-        m_Continuous: 1
+        m_ExecutionMode: 2
+        m_DurationSeconds: 0
     - rid: 3396202407018103093
       type: {class: RootNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:

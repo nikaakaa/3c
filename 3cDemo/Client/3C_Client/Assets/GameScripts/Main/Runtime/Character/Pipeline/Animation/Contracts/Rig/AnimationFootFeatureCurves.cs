@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using Unity.Collections;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -11,84 +12,332 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         GeneratedPerFootFeatures = 1
     }
 
-    [Serializable]
-    public sealed class AnimationFootFeatureCurveSet
+    public enum AnimationFootConstraintMode : byte
     {
-        [SerializeField] AnimationCurve m_SoleLocalVelocityX;
-        [SerializeField] AnimationCurve m_SoleLocalVelocityY;
-        [SerializeField] AnimationCurve m_SoleLocalVelocityZ;
-        [SerializeField] AnimationCurve m_SoleHeight;
-        [SerializeField] AnimationCurve m_PlantConfidence;
-        [SerializeField] AnimationCurve m_NextLandingConfidence;
-        [SerializeField] AnimationCurve m_NextLandingDelaySeconds;
-        [SerializeField] AnimationCurve m_NextLandingLocalOffsetX;
-        [SerializeField] AnimationCurve m_NextLandingLocalOffsetZ;
+        Unlocked = 0,
+        Sliding = 1,
+        Locked = 2
+    }
 
-        public AnimationFootFeatureCurveSet(
-            AnimationCurve soleLocalVelocityX,
-            AnimationCurve soleLocalVelocityY,
-            AnimationCurve soleLocalVelocityZ,
-            AnimationCurve soleHeight,
-            AnimationCurve plantConfidence,
-            AnimationCurve nextLandingConfidence,
-            AnimationCurve nextLandingDelaySeconds,
-            AnimationCurve nextLandingLocalOffsetX,
-            AnimationCurve nextLandingLocalOffsetZ)
+    public enum AnimationFootSupportPhase : byte
+    {
+        Unsupported = 0,
+        ApproachingContact = 1,
+        Supporting = 2,
+        Releasing = 3
+    }
+
+    public enum AnimationFootOrientationPolicy : byte
+    {
+        PreserveAnimation = 0,
+        LandingSurface = 1
+    }
+
+    public enum AnimationBodyRotationPivotMode : byte
+    {
+        Pelvis = 0,
+        SupportFoot = 1
+    }
+
+    public static class AnimationFootConstraintFacts
+    {
+        public const float GroundedMinimumConfidence = 0.5f;
+        public const float LockedMinimumConfidence = 0.75f;
+
+        public static AnimationFootConstraintMode ResolveConstraintMode(float plantConfidence)
         {
-            m_SoleLocalVelocityX = Copy(soleLocalVelocityX);
-            m_SoleLocalVelocityY = Copy(soleLocalVelocityY);
-            m_SoleLocalVelocityZ = Copy(soleLocalVelocityZ);
-            m_SoleHeight = Copy(soleHeight);
-            m_PlantConfidence = Copy(plantConfidence);
-            m_NextLandingConfidence = Copy(nextLandingConfidence);
-            m_NextLandingDelaySeconds = Copy(nextLandingDelaySeconds);
-            m_NextLandingLocalOffsetX = Copy(nextLandingLocalOffsetX);
-            m_NextLandingLocalOffsetZ = Copy(nextLandingLocalOffsetZ);
+            if (!float.IsFinite(plantConfidence) || plantConfidence < 0f || plantConfidence > 1f)
+                throw new ArgumentOutOfRangeException(nameof(plantConfidence));
+            return plantConfidence >= LockedMinimumConfidence
+                ? AnimationFootConstraintMode.Locked
+                : plantConfidence >= GroundedMinimumConfidence
+                    ? AnimationFootConstraintMode.Sliding
+                    : AnimationFootConstraintMode.Unlocked;
+        }
+
+        public static AnimationFootSupportPhase ResolveSupportPhase(
+            float plantConfidence,
+            AnimationFootSupportPhase plannedPhase)
+        {
+            AnimationFootConstraintMode constraint = ResolveConstraintMode(plantConfidence);
+            if (constraint != AnimationFootConstraintMode.Unlocked)
+            {
+                return plannedPhase == AnimationFootSupportPhase.Releasing
+                    ? AnimationFootSupportPhase.Releasing
+                    : AnimationFootSupportPhase.Supporting;
+            }
+            return plannedPhase == AnimationFootSupportPhase.ApproachingContact
+                ? AnimationFootSupportPhase.ApproachingContact
+                : AnimationFootSupportPhase.Unsupported;
+        }
+
+        public static AnimationBodyRotationPivotMode ResolveBodyPivotMode(float plantConfidence) =>
+            ResolveConstraintMode(plantConfidence) == AnimationFootConstraintMode.Unlocked
+                ? AnimationBodyRotationPivotMode.Pelvis
+                : AnimationBodyRotationPivotMode.SupportFoot;
+    }
+
+    public readonly struct AnimationActionStepClockSample
+    {
+        public AnimationActionStepClockSample(
+            float phase,
+            float liftOffPhase,
+            float durationSeconds,
+            float timeToLandingSeconds)
+        {
+            Phase = RequireNormalized(phase, nameof(phase));
+            LiftOffPhase = RequireNormalized(liftOffPhase, nameof(liftOffPhase));
+            DurationSeconds = RequireNonNegative(durationSeconds, nameof(durationSeconds));
+            TimeToLandingSeconds = RequireNonNegative(timeToLandingSeconds, nameof(timeToLandingSeconds));
+        }
+
+        public float Phase { get; }
+        public float LiftOffPhase { get; }
+        public float DurationSeconds { get; }
+        public float TimeToLandingSeconds { get; }
+        public bool IsPreSwing => Phase < LiftOffPhase;
+        public bool IsSwing => Phase >= LiftOffPhase && Phase < 0.9999f;
+
+        static float RequireNormalized(float value, string field)
+        {
+            if (!float.IsFinite(value) || value < 0f || value > 1f)
+                throw new ArgumentOutOfRangeException(field);
+            return value;
+        }
+
+        static float RequireNonNegative(float value, string field)
+        {
+            if (!float.IsFinite(value) || value < 0f)
+                throw new ArgumentOutOfRangeException(field);
+            return value;
+        }
+    }
+
+    [Serializable]
+    public sealed class AnimationPredictedFootStepCurveSet
+    {
+        public const int RouteSampleCount = 7;
+
+        [SerializeField] AnimationCurve m_Confidence;
+        [SerializeField] AnimationCurve m_TimeToLandingSeconds;
+        [SerializeField] AnimationCurve m_EventPhase;
+        [SerializeField] AnimationCurve m_LiftOffPhase;
+        [SerializeField] AnimationCurve m_ActionStepDurationSeconds;
+        [SerializeField] AnimationCurve m_EventOrdinal;
+        [SerializeField] AnimationCurve m_OpposingLandingDelaySeconds;
+        [SerializeField] AnimationCurve m_OpposingEventOrdinal;
+        [SerializeField] AnimationCurve m_OpposingLandingCycleOffset;
+        [SerializeField] AnimationCurve[] m_RootLocalFootRouteX = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_RootLocalFootRouteY = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_RootLocalFootRouteZ = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_RootLocalAnkleRouteX = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_RootLocalAnkleRouteY = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_RootLocalAnkleRouteZ = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_RootLocalHipRouteX = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_RootLocalHipRouteY = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_RootLocalHipRouteZ = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_AuthoredFootPlanarRouteX = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_AuthoredFootPlanarRouteZ = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_AnimationClearanceHeight = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_ConstraintMode = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_SupportPhase = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_FootOrientationPolicy = Array.Empty<AnimationCurve>();
+        [SerializeField] AnimationCurve[] m_BodyRotationPivotMode = Array.Empty<AnimationCurve>();
+
+        public AnimationPredictedFootStepCurveSet(
+            AnimationCurve confidence,
+            AnimationCurve timeToLandingSeconds,
+            AnimationCurve eventPhase,
+            AnimationCurve liftOffPhase,
+            AnimationCurve actionStepDurationSeconds,
+            AnimationCurve eventOrdinal,
+            AnimationCurve opposingLandingDelaySeconds,
+            AnimationCurve opposingEventOrdinal,
+            AnimationCurve opposingLandingCycleOffset,
+            AnimationCurve[] rootLocalFootRouteX,
+            AnimationCurve[] rootLocalFootRouteY,
+            AnimationCurve[] rootLocalFootRouteZ,
+            AnimationCurve[] rootLocalAnkleRouteX,
+            AnimationCurve[] rootLocalAnkleRouteY,
+            AnimationCurve[] rootLocalAnkleRouteZ,
+            AnimationCurve[] rootLocalHipRouteX,
+            AnimationCurve[] rootLocalHipRouteY,
+            AnimationCurve[] rootLocalHipRouteZ,
+            AnimationCurve[] authoredFootPlanarRouteX,
+            AnimationCurve[] authoredFootPlanarRouteZ,
+            AnimationCurve[] animationClearanceHeight,
+            AnimationCurve[] constraintMode,
+            AnimationCurve[] supportPhase,
+            AnimationCurve[] footOrientationPolicy,
+            AnimationCurve[] bodyRotationPivotMode)
+        {
+            m_Confidence = Copy(confidence);
+            m_TimeToLandingSeconds = Copy(timeToLandingSeconds);
+            m_EventPhase = Copy(eventPhase);
+            m_LiftOffPhase = Copy(liftOffPhase);
+            m_ActionStepDurationSeconds = Copy(actionStepDurationSeconds);
+            m_EventOrdinal = Copy(eventOrdinal);
+            m_OpposingLandingDelaySeconds = Copy(opposingLandingDelaySeconds);
+            m_OpposingEventOrdinal = Copy(opposingEventOrdinal);
+            m_OpposingLandingCycleOffset = Copy(opposingLandingCycleOffset);
+            m_RootLocalFootRouteX = CopyRoute(rootLocalFootRouteX);
+            m_RootLocalFootRouteY = CopyRoute(rootLocalFootRouteY);
+            m_RootLocalFootRouteZ = CopyRoute(rootLocalFootRouteZ);
+            m_RootLocalAnkleRouteX = CopyRoute(rootLocalAnkleRouteX);
+            m_RootLocalAnkleRouteY = CopyRoute(rootLocalAnkleRouteY);
+            m_RootLocalAnkleRouteZ = CopyRoute(rootLocalAnkleRouteZ);
+            m_RootLocalHipRouteX = CopyRoute(rootLocalHipRouteX);
+            m_RootLocalHipRouteY = CopyRoute(rootLocalHipRouteY);
+            m_RootLocalHipRouteZ = CopyRoute(rootLocalHipRouteZ);
+            m_AuthoredFootPlanarRouteX = CopyRoute(authoredFootPlanarRouteX);
+            m_AuthoredFootPlanarRouteZ = CopyRoute(authoredFootPlanarRouteZ);
+            m_AnimationClearanceHeight = CopyRoute(animationClearanceHeight);
+            m_ConstraintMode = CopyRoute(constraintMode);
+            m_SupportPhase = CopyRoute(supportPhase);
+            m_FootOrientationPolicy = CopyRoute(footOrientationPolicy);
+            m_BodyRotationPivotMode = CopyRoute(bodyRotationPivotMode);
             RequireValid();
         }
 
-        public AnimationCurve SoleLocalVelocityX => m_SoleLocalVelocityX;
-        public AnimationCurve SoleLocalVelocityY => m_SoleLocalVelocityY;
-        public AnimationCurve SoleLocalVelocityZ => m_SoleLocalVelocityZ;
-        public AnimationCurve SoleHeight => m_SoleHeight;
-        public AnimationCurve PlantConfidence => m_PlantConfidence;
-        public AnimationCurve NextLandingConfidence => m_NextLandingConfidence;
-        public AnimationCurve NextLandingDelaySeconds => m_NextLandingDelaySeconds;
-        public AnimationCurve NextLandingLocalOffsetX => m_NextLandingLocalOffsetX;
-        public AnimationCurve NextLandingLocalOffsetZ => m_NextLandingLocalOffsetZ;
+        public AnimationCurve Confidence => m_Confidence;
+        public AnimationCurve TimeToLandingSeconds => m_TimeToLandingSeconds;
+        public AnimationCurve EventPhase => m_EventPhase;
+        public AnimationCurve LiftOffPhase => m_LiftOffPhase;
+        public AnimationCurve ActionStepDurationSeconds => m_ActionStepDurationSeconds;
+        public AnimationCurve EventOrdinal => m_EventOrdinal;
+        public AnimationCurve OpposingLandingDelaySeconds => m_OpposingLandingDelaySeconds;
+        public AnimationCurve OpposingEventOrdinal => m_OpposingEventOrdinal;
+        public AnimationCurve OpposingLandingCycleOffset => m_OpposingLandingCycleOffset;
+        public AnimationCurve GetRootLocalFootRouteX(int index) => GetRouteCurve(m_RootLocalFootRouteX, index);
+        public AnimationCurve GetRootLocalFootRouteY(int index) => GetRouteCurve(m_RootLocalFootRouteY, index);
+        public AnimationCurve GetRootLocalFootRouteZ(int index) => GetRouteCurve(m_RootLocalFootRouteZ, index);
+        public AnimationCurve GetRootLocalAnkleRouteX(int index) => GetRouteCurve(m_RootLocalAnkleRouteX, index);
+        public AnimationCurve GetRootLocalAnkleRouteY(int index) => GetRouteCurve(m_RootLocalAnkleRouteY, index);
+        public AnimationCurve GetRootLocalAnkleRouteZ(int index) => GetRouteCurve(m_RootLocalAnkleRouteZ, index);
+        public AnimationCurve GetRootLocalHipRouteX(int index) => GetRouteCurve(m_RootLocalHipRouteX, index);
+        public AnimationCurve GetRootLocalHipRouteY(int index) => GetRouteCurve(m_RootLocalHipRouteY, index);
+        public AnimationCurve GetRootLocalHipRouteZ(int index) => GetRouteCurve(m_RootLocalHipRouteZ, index);
+        public AnimationCurve GetAuthoredFootPlanarRouteX(int index) => GetRouteCurve(m_AuthoredFootPlanarRouteX, index);
+        public AnimationCurve GetAuthoredFootPlanarRouteZ(int index) => GetRouteCurve(m_AuthoredFootPlanarRouteZ, index);
+        public AnimationCurve GetAnimationClearanceHeight(int index) => GetRouteCurve(m_AnimationClearanceHeight, index);
+        public AnimationCurve GetConstraintMode(int index) => GetRouteCurve(m_ConstraintMode, index);
+        public AnimationCurve GetSupportPhase(int index) => GetRouteCurve(m_SupportPhase, index);
+        public AnimationCurve GetFootOrientationPolicy(int index) => GetRouteCurve(m_FootOrientationPolicy, index);
+        public AnimationCurve GetBodyRotationPivotMode(int index) => GetRouteCurve(m_BodyRotationPivotMode, index);
 
-        public AnimationFootFeatureSample Sample(float normalizedTime)
+        public AnimationPredictedFootStepSample Sample(float normalizedTime)
         {
             RequireValid();
             float time = Mathf.Clamp01(normalizedTime);
-            return new AnimationFootFeatureSample(
-                new Vector3(
-                    m_SoleLocalVelocityX.Evaluate(time),
-                    m_SoleLocalVelocityY.Evaluate(time),
-                    m_SoleLocalVelocityZ.Evaluate(time)),
-                m_SoleHeight.Evaluate(time),
-                m_PlantConfidence.Evaluate(time),
-                m_NextLandingConfidence.Evaluate(time),
-                m_NextLandingDelaySeconds.Evaluate(time),
-                new Vector2(
-                    m_NextLandingLocalOffsetX.Evaluate(time),
-                    m_NextLandingLocalOffsetZ.Evaluate(time)));
+            var rootLocalFootRoute = new FixedList128Bytes<Vector3>();
+            var rootLocalAnkleRoute = new FixedList128Bytes<Vector3>();
+            var rootLocalHipRoute = new FixedList128Bytes<Vector3>();
+            var authoredFootPlanarRoute = new FixedList128Bytes<Vector3>();
+            var animationClearanceHeights = new FixedList128Bytes<float>();
+            var constraintModes = new FixedList32Bytes<byte>();
+            var supportPhases = new FixedList32Bytes<byte>();
+            var footOrientationPolicies = new FixedList32Bytes<byte>();
+            var bodyRotationPivotModes = new FixedList32Bytes<byte>();
+            for (int i = 0; i < RouteSampleCount; i++)
+            {
+                rootLocalFootRoute.Add(new Vector3(
+                    m_RootLocalFootRouteX[i].Evaluate(time),
+                    m_RootLocalFootRouteY[i].Evaluate(time),
+                    m_RootLocalFootRouteZ[i].Evaluate(time)));
+                rootLocalAnkleRoute.Add(new Vector3(
+                    m_RootLocalAnkleRouteX[i].Evaluate(time),
+                    m_RootLocalAnkleRouteY[i].Evaluate(time),
+                    m_RootLocalAnkleRouteZ[i].Evaluate(time)));
+                rootLocalHipRoute.Add(new Vector3(
+                    m_RootLocalHipRouteX[i].Evaluate(time),
+                    m_RootLocalHipRouteY[i].Evaluate(time),
+                    m_RootLocalHipRouteZ[i].Evaluate(time)));
+                authoredFootPlanarRoute.Add(new Vector3(
+                    m_AuthoredFootPlanarRouteX[i].Evaluate(time),
+                    0f,
+                    m_AuthoredFootPlanarRouteZ[i].Evaluate(time)));
+                animationClearanceHeights.Add(m_AnimationClearanceHeight[i].Evaluate(time));
+                constraintModes.Add((byte)Mathf.RoundToInt(m_ConstraintMode[i].Evaluate(time)));
+                supportPhases.Add((byte)Mathf.RoundToInt(m_SupportPhase[i].Evaluate(time)));
+                footOrientationPolicies.Add((byte)Mathf.RoundToInt(m_FootOrientationPolicy[i].Evaluate(time)));
+                bodyRotationPivotModes.Add((byte)Mathf.RoundToInt(m_BodyRotationPivotMode[i].Evaluate(time)));
+            }
+            return new AnimationPredictedFootStepSample(
+                Mathf.Max(0, Mathf.RoundToInt(m_EventOrdinal.Evaluate(time))),
+                m_Confidence.Evaluate(time),
+                m_TimeToLandingSeconds.Evaluate(time),
+                m_EventPhase.Evaluate(time),
+                m_LiftOffPhase.Evaluate(time),
+                m_ActionStepDurationSeconds.Evaluate(time),
+                Mathf.Max(0, Mathf.RoundToInt(m_OpposingEventOrdinal.Evaluate(time))),
+                m_OpposingLandingDelaySeconds.Evaluate(time),
+                Mathf.RoundToInt(m_OpposingLandingCycleOffset.Evaluate(time)),
+                rootLocalFootRoute,
+                rootLocalAnkleRoute,
+                rootLocalHipRoute,
+                authoredFootPlanarRoute,
+                animationClearanceHeights,
+                constraintModes,
+                supportPhases,
+                footOrientationPolicies,
+                bodyRotationPivotModes);
         }
 
         public void RequireValid()
         {
-            RequireCurve(m_SoleLocalVelocityX, nameof(m_SoleLocalVelocityX), false, false);
-            RequireCurve(m_SoleLocalVelocityY, nameof(m_SoleLocalVelocityY), false, false);
-            RequireCurve(m_SoleLocalVelocityZ, nameof(m_SoleLocalVelocityZ), false, false);
-            RequireCurve(m_SoleHeight, nameof(m_SoleHeight), false, false);
-            RequireCurve(m_PlantConfidence, nameof(m_PlantConfidence), true, false);
-            RequireCurve(m_NextLandingConfidence, nameof(m_NextLandingConfidence), true, false);
-            RequireCurve(m_NextLandingDelaySeconds, nameof(m_NextLandingDelaySeconds), false, true);
-            RequireCurve(m_NextLandingLocalOffsetX, nameof(m_NextLandingLocalOffsetX), false, false);
-            RequireCurve(m_NextLandingLocalOffsetZ, nameof(m_NextLandingLocalOffsetZ), false, false);
+            RequireCurve(m_Confidence, nameof(m_Confidence), true, false);
+            RequireCurve(m_TimeToLandingSeconds, nameof(m_TimeToLandingSeconds), false, true);
+            RequireCurve(m_EventPhase, nameof(m_EventPhase), true, false);
+            RequireCurve(m_LiftOffPhase, nameof(m_LiftOffPhase), true, false);
+            RequireCurve(m_ActionStepDurationSeconds, nameof(m_ActionStepDurationSeconds), false, true);
+            RequireCurve(m_EventOrdinal, nameof(m_EventOrdinal), false, true);
+            RequireCurve(m_OpposingLandingDelaySeconds, nameof(m_OpposingLandingDelaySeconds), false, true);
+            RequireCurve(m_OpposingEventOrdinal, nameof(m_OpposingEventOrdinal), false, true);
+            RequireCurve(m_OpposingLandingCycleOffset, nameof(m_OpposingLandingCycleOffset), false, false);
+            RequireRoute(m_RootLocalFootRouteX, nameof(m_RootLocalFootRouteX));
+            RequireRoute(m_RootLocalFootRouteY, nameof(m_RootLocalFootRouteY));
+            RequireRoute(m_RootLocalFootRouteZ, nameof(m_RootLocalFootRouteZ));
+            RequireRoute(m_RootLocalAnkleRouteX, nameof(m_RootLocalAnkleRouteX));
+            RequireRoute(m_RootLocalAnkleRouteY, nameof(m_RootLocalAnkleRouteY));
+            RequireRoute(m_RootLocalAnkleRouteZ, nameof(m_RootLocalAnkleRouteZ));
+            RequireRoute(m_RootLocalHipRouteX, nameof(m_RootLocalHipRouteX));
+            RequireRoute(m_RootLocalHipRouteY, nameof(m_RootLocalHipRouteY));
+            RequireRoute(m_RootLocalHipRouteZ, nameof(m_RootLocalHipRouteZ));
+            RequireRoute(m_AuthoredFootPlanarRouteX, nameof(m_AuthoredFootPlanarRouteX));
+            RequireRoute(m_AuthoredFootPlanarRouteZ, nameof(m_AuthoredFootPlanarRouteZ));
+            RequireRoute(m_AnimationClearanceHeight, nameof(m_AnimationClearanceHeight));
+            RequireRoute(m_ConstraintMode, nameof(m_ConstraintMode));
+            RequireRoute(m_SupportPhase, nameof(m_SupportPhase));
+            RequireRoute(m_FootOrientationPolicy, nameof(m_FootOrientationPolicy));
+            RequireRoute(m_BodyRotationPivotMode, nameof(m_BodyRotationPivotMode));
         }
 
-        static void RequireCurve(AnimationCurve curve, string field, bool normalized, bool nonNegative)
+        static void RequireRoute(AnimationCurve[] route, string field)
+        {
+            if (route == null || route.Length != RouteSampleCount)
+                throw new InvalidOperationException($"Foot Analysis route '{field}' has invalid capacity.");
+            for (int i = 0; i < route.Length; i++)
+                RequireCurve(route[i], $"{field}[{i}]", false, false);
+        }
+
+        static AnimationCurve GetRouteCurve(AnimationCurve[] route, int index)
+        {
+            if (route == null || index < 0 || index >= route.Length)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return route[index];
+        }
+
+        static AnimationCurve[] CopyRoute(AnimationCurve[] source)
+        {
+            if (source == null)
+                return null;
+            var result = new AnimationCurve[source.Length];
+            for (int i = 0; i < source.Length; i++)
+                result[i] = Copy(source[i]);
+            return result;
+        }
+
+        internal static void RequireCurve(AnimationCurve curve, string field, bool normalized, bool nonNegative)
         {
             if (curve == null || curve.length == 0)
                 throw new InvalidOperationException($"Foot Analysis curve '{field}' is missing.");
@@ -107,7 +356,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        static AnimationCurve Copy(AnimationCurve source)
+        internal static AnimationCurve Copy(AnimationCurve source)
         {
             if (source == null)
                 return null;
@@ -119,33 +368,662 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    public readonly struct AnimationFootFeatureSample
+    [Serializable]
+    public sealed class AnimationFootFeatureCurveSet
     {
-        public AnimationFootFeatureSample(
-            Vector3 soleLocalVelocity,
-            float soleHeight,
-            float plantConfidence,
-            float nextLandingConfidence,
-            float nextLandingDelaySeconds,
-            Vector2 nextLandingLocalOffset)
+        [SerializeField] AnimationCurve m_SoleLocalVelocityX;
+        [SerializeField] AnimationCurve m_SoleLocalVelocityY;
+        [SerializeField] AnimationCurve m_SoleLocalVelocityZ;
+        [SerializeField] AnimationCurve m_SoleHeight;
+        [SerializeField] AnimationCurve m_PlantConfidence;
+        [SerializeField] AnimationPredictedFootStepCurveSet m_PredictedStep;
+
+        public AnimationFootFeatureCurveSet(
+            AnimationCurve soleLocalVelocityX,
+            AnimationCurve soleLocalVelocityY,
+            AnimationCurve soleLocalVelocityZ,
+            AnimationCurve soleHeight,
+            AnimationCurve plantConfidence,
+            AnimationPredictedFootStepCurveSet predictedStep)
         {
-            SoleLocalVelocity = RequireFinite(soleLocalVelocity, nameof(soleLocalVelocity));
-            SoleHeight = RequireFinite(soleHeight, nameof(soleHeight));
-            PlantConfidence = RequireNormalized(plantConfidence, nameof(plantConfidence));
-            NextLandingConfidence = RequireNormalized(nextLandingConfidence, nameof(nextLandingConfidence));
-            NextLandingDelaySeconds = RequireNonNegative(nextLandingDelaySeconds, nameof(nextLandingDelaySeconds));
-            NextLandingLocalOffset = RequireFinite(nextLandingLocalOffset, nameof(nextLandingLocalOffset));
+            m_SoleLocalVelocityX = Copy(soleLocalVelocityX);
+            m_SoleLocalVelocityY = Copy(soleLocalVelocityY);
+            m_SoleLocalVelocityZ = Copy(soleLocalVelocityZ);
+            m_SoleHeight = Copy(soleHeight);
+            m_PlantConfidence = Copy(plantConfidence);
+            m_PredictedStep = predictedStep ?? throw new ArgumentNullException(nameof(predictedStep));
+            RequireValid();
+        }
+
+        public AnimationCurve SoleLocalVelocityX => m_SoleLocalVelocityX;
+        public AnimationCurve SoleLocalVelocityY => m_SoleLocalVelocityY;
+        public AnimationCurve SoleLocalVelocityZ => m_SoleLocalVelocityZ;
+        public AnimationCurve SoleHeight => m_SoleHeight;
+        public AnimationCurve PlantConfidence => m_PlantConfidence;
+        public AnimationPredictedFootStepCurveSet PredictedStep => m_PredictedStep;
+
+        public AnimationFootFeatureSample Sample(float normalizedTime)
+        {
+            RequireValid();
+            float time = Mathf.Clamp01(normalizedTime);
+            return new AnimationFootFeatureSample(
+                new Vector3(
+                    m_SoleLocalVelocityX.Evaluate(time),
+                    m_SoleLocalVelocityY.Evaluate(time),
+                    m_SoleLocalVelocityZ.Evaluate(time)),
+                m_SoleHeight.Evaluate(time),
+                m_PlantConfidence.Evaluate(time),
+                m_PredictedStep.Sample(time));
+        }
+
+        public void RequireValid()
+        {
+            RequireCurve(m_SoleLocalVelocityX, nameof(m_SoleLocalVelocityX), false, false);
+            RequireCurve(m_SoleLocalVelocityY, nameof(m_SoleLocalVelocityY), false, false);
+            RequireCurve(m_SoleLocalVelocityZ, nameof(m_SoleLocalVelocityZ), false, false);
+            RequireCurve(m_SoleHeight, nameof(m_SoleHeight), false, false);
+            RequireCurve(m_PlantConfidence, nameof(m_PlantConfidence), true, false);
+            if (m_PredictedStep == null)
+                throw new InvalidOperationException("Foot Analysis predicted step curves are missing.");
+            m_PredictedStep.RequireValid();
+        }
+
+        static void RequireCurve(AnimationCurve curve, string field, bool normalized, bool nonNegative) =>
+            AnimationPredictedFootStepCurveSet.RequireCurve(curve, field, normalized, nonNegative);
+
+        static AnimationCurve Copy(AnimationCurve source) =>
+            AnimationPredictedFootStepCurveSet.Copy(source);
+    }
+
+    public readonly struct AnimationPredictedFootStepSample
+    {
+        public AnimationPredictedFootStepSample(
+            int eventOrdinal,
+            float confidence,
+            float timeToLandingSeconds,
+            float eventPhase,
+            float liftOffPhase,
+            float actionStepDurationSeconds,
+            int opposingEventOrdinal,
+            float opposingLandingDelaySeconds,
+            int opposingLandingCycleOffset,
+            FixedList128Bytes<Vector3> rootLocalFootRoute,
+            FixedList128Bytes<Vector3> rootLocalAnkleRoute,
+            FixedList128Bytes<Vector3> rootLocalHipRoute,
+            FixedList128Bytes<Vector3> authoredFootPlanarRoute,
+            FixedList128Bytes<float> animationClearanceHeights,
+            FixedList32Bytes<byte> constraintModes,
+            FixedList32Bytes<byte> supportPhases,
+            FixedList32Bytes<byte> footOrientationPolicies,
+            FixedList32Bytes<byte> bodyRotationPivotModes)
+            : this(
+                eventOrdinal,
+                confidence,
+                timeToLandingSeconds,
+                eventPhase,
+                liftOffPhase,
+                actionStepDurationSeconds,
+                opposingEventOrdinal,
+                opposingLandingDelaySeconds,
+                opposingLandingCycleOffset,
+                rootLocalFootRoute,
+                rootLocalAnkleRoute,
+                rootLocalHipRoute,
+                authoredFootPlanarRoute,
+                animationClearanceHeights,
+                constraintModes,
+                supportPhases,
+                footOrientationPolicies,
+                bodyRotationPivotModes,
+                0,
+                0,
+                0,
+                0,
+                0)
+        {
+        }
+
+        AnimationPredictedFootStepSample(
+            int eventOrdinal,
+            float confidence,
+            float timeToLandingSeconds,
+            float eventPhase,
+            float liftOffPhase,
+            float actionStepDurationSeconds,
+            int opposingEventOrdinal,
+            float opposingLandingDelaySeconds,
+            int opposingLandingCycleOffset,
+            FixedList128Bytes<Vector3> rootLocalFootRoute,
+            FixedList128Bytes<Vector3> rootLocalAnkleRoute,
+            FixedList128Bytes<Vector3> rootLocalHipRoute,
+            FixedList128Bytes<Vector3> authoredFootPlanarRoute,
+            FixedList128Bytes<float> animationClearanceHeights,
+            FixedList32Bytes<byte> constraintModes,
+            FixedList32Bytes<byte> supportPhases,
+            FixedList32Bytes<byte> footOrientationPolicies,
+            FixedList32Bytes<byte> bodyRotationPivotModes,
+            ulong sourceSampleIdentity,
+            int sourceSampleCycle,
+            ulong contributionContinuityIdentity,
+            ulong landingEventIdentity,
+            ulong opposingLandingEventIdentity)
+        {
+            if (eventOrdinal < 0)
+                throw new ArgumentOutOfRangeException(nameof(eventOrdinal));
+            if (opposingEventOrdinal < 0 || opposingLandingCycleOffset < -1 || opposingLandingCycleOffset > 1)
+                throw new ArgumentOutOfRangeException(nameof(opposingEventOrdinal));
+            EventOrdinal = eventOrdinal;
+            Confidence = RequireNormalized(confidence, nameof(confidence));
+            TimeToLandingSeconds = RequireNonNegative(timeToLandingSeconds, nameof(timeToLandingSeconds));
+            EventPhase = RequireNormalized(eventPhase, nameof(eventPhase));
+            LiftOffPhase = RequireNormalized(liftOffPhase, nameof(liftOffPhase));
+            ActionStepClock = new AnimationActionStepClockSample(
+                EventPhase,
+                LiftOffPhase,
+                actionStepDurationSeconds,
+                TimeToLandingSeconds);
+            OpposingEventOrdinal = opposingEventOrdinal;
+            OpposingLandingDelaySeconds = RequireNonNegative(
+                opposingLandingDelaySeconds,
+                nameof(opposingLandingDelaySeconds));
+            OpposingLandingCycleOffset = opposingLandingCycleOffset;
+            bool hasOpposingLanding = OpposingEventOrdinal != 0;
+            if (hasOpposingLanding != (OpposingLandingDelaySeconds > 0f) ||
+                !hasOpposingLanding && OpposingLandingCycleOffset != 0)
+                throw new ArgumentException("Predicted opposing landing pair is incomplete.");
+            if (rootLocalFootRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                rootLocalAnkleRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                rootLocalHipRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                authoredFootPlanarRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                animationClearanceHeights.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                constraintModes.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                supportPhases.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                footOrientationPolicies.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                bodyRotationPivotModes.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
+            {
+                throw new ArgumentException("Predicted foot route sample counts are invalid.");
+            }
+            for (int i = 0; i < rootLocalFootRoute.Length; i++)
+            {
+                RequireFinite(rootLocalFootRoute[i], nameof(rootLocalFootRoute));
+                RequireFinite(rootLocalAnkleRoute[i], nameof(rootLocalAnkleRoute));
+                RequireFinite(rootLocalHipRoute[i], nameof(rootLocalHipRoute));
+                RequirePlanar(authoredFootPlanarRoute[i], nameof(authoredFootPlanarRoute));
+                RequireNonNegative(animationClearanceHeights[i], nameof(animationClearanceHeights));
+                RequireByteRange(
+                    constraintModes[i],
+                    (byte)AnimationFootConstraintMode.Locked,
+                    nameof(constraintModes));
+                RequireByteRange(
+                    supportPhases[i],
+                    (byte)AnimationFootSupportPhase.Releasing,
+                    nameof(supportPhases));
+                RequireByteRange(
+                    footOrientationPolicies[i],
+                    (byte)AnimationFootOrientationPolicy.LandingSurface,
+                    nameof(footOrientationPolicies));
+                RequireByteRange(
+                    bodyRotationPivotModes[i],
+                    (byte)AnimationBodyRotationPivotMode.SupportFoot,
+                    nameof(bodyRotationPivotModes));
+            }
+            RootLocalFootRoute = rootLocalFootRoute;
+            RootLocalAnkleRoute = rootLocalAnkleRoute;
+            RootLocalHipRoute = rootLocalHipRoute;
+            AuthoredFootPlanarRoute = authoredFootPlanarRoute;
+            AnimationClearanceHeights = animationClearanceHeights;
+            ConstraintModes = constraintModes;
+            SupportPhases = supportPhases;
+            FootOrientationPolicies = footOrientationPolicies;
+            BodyRotationPivotModes = bodyRotationPivotModes;
+            SourceSampleIdentity = sourceSampleIdentity;
+            SourceSampleCycle = sourceSampleCycle;
+            ContributionContinuityIdentity = contributionContinuityIdentity;
+            LandingEventIdentity = landingEventIdentity;
+            OpposingLandingEventIdentity = opposingLandingEventIdentity;
             m_IsSpecified = 1;
         }
 
         readonly byte m_IsSpecified;
-        public Vector3 SoleLocalVelocity { get; }
-        public float SoleHeight { get; }
-        public float PlantConfidence { get; }
-        public float NextLandingConfidence { get; }
-        public float NextLandingDelaySeconds { get; }
-        public Vector2 NextLandingLocalOffset { get; }
+        public int EventOrdinal { get; }
+        public float Confidence { get; }
+        public float TimeToLandingSeconds { get; }
+        public float EventPhase { get; }
+        public float LiftOffPhase { get; }
+        public AnimationActionStepClockSample ActionStepClock { get; }
+        public int OpposingEventOrdinal { get; }
+        public float OpposingLandingDelaySeconds { get; }
+        public int OpposingLandingCycleOffset { get; }
+        public FixedList128Bytes<Vector3> RootLocalFootRoute { get; }
+        public FixedList128Bytes<Vector3> RootLocalAnkleRoute { get; }
+        public FixedList128Bytes<Vector3> RootLocalHipRoute { get; }
+        public FixedList128Bytes<Vector3> AuthoredFootPlanarRoute { get; }
+        public FixedList128Bytes<float> AnimationClearanceHeights { get; }
+        public FixedList32Bytes<byte> ConstraintModes { get; }
+        public FixedList32Bytes<byte> SupportPhases { get; }
+        public FixedList32Bytes<byte> FootOrientationPolicies { get; }
+        public FixedList32Bytes<byte> BodyRotationPivotModes { get; }
+        public Vector3 RootLocalLanding => RootLocalFootRoute.Length > 0
+            ? RootLocalFootRoute[RootLocalFootRoute.Length - 1]
+            : Vector3.zero;
+        public ulong SourceSampleIdentity { get; }
+        public int SourceSampleCycle { get; }
+        public ulong ContributionContinuityIdentity { get; }
+        public ulong LandingEventIdentity { get; }
+        public ulong OpposingLandingEventIdentity { get; }
         public bool IsValid => m_IsSpecified != 0;
+        public bool HasLandingEvent => IsValid && EventOrdinal > 0 && Confidence > 0f;
+        public bool IsSourceBound => HasLandingEvent && SourceSampleIdentity != 0;
+        public bool IsAuthoritative => IsSourceBound && ContributionContinuityIdentity != 0 && LandingEventIdentity != 0;
+        public bool HasOpposingLandingEvent => IsAuthoritative && OpposingEventOrdinal > 0 &&
+                                               OpposingLandingDelaySeconds > 0.000001f &&
+                                               OpposingLandingEventIdentity != 0;
+        public bool IsPreSwing => IsAuthoritative && ActionStepClock.IsPreSwing;
+        public bool IsSwing => IsAuthoritative && ActionStepClock.IsSwing;
+
+        public ulong ResolveExpectedLandingEventIdentity(CharacterFootSide side)
+        {
+            if (!IsSourceBound || ContributionContinuityIdentity == 0 ||
+                side != CharacterFootSide.Left && side != CharacterFootSide.Right)
+            {
+                return 0;
+            }
+            return ResolveLandingEventIdentity(
+                ContributionContinuityIdentity,
+                SourceSampleIdentity,
+                SourceSampleCycle,
+                EventOrdinal,
+                side);
+        }
+
+        public bool HasConsistentLandingEventIdentity(CharacterFootSide side) =>
+            IsAuthoritative && LandingEventIdentity == ResolveExpectedLandingEventIdentity(side);
+
+        public Vector3 EvaluateRootLocalFootRoute(float eventPhase)
+        {
+            if (RootLocalFootRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
+                throw new InvalidOperationException("Predicted foot route is unavailable.");
+            float scaled = Mathf.Clamp01(eventPhase) * (RootLocalFootRoute.Length - 1);
+            int first = Mathf.Min(RootLocalFootRoute.Length - 1, Mathf.FloorToInt(scaled));
+            int second = Mathf.Min(RootLocalFootRoute.Length - 1, first + 1);
+            return Vector3.Lerp(RootLocalFootRoute[first], RootLocalFootRoute[second], scaled - first);
+        }
+
+        public Vector3 EvaluateRootLocalAnkleRoute(float eventPhase)
+        {
+            if (RootLocalAnkleRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
+                throw new InvalidOperationException("Predicted ankle route is unavailable.");
+            float scaled = Mathf.Clamp01(eventPhase) * (RootLocalAnkleRoute.Length - 1);
+            int first = Mathf.Min(RootLocalAnkleRoute.Length - 1, Mathf.FloorToInt(scaled));
+            int second = Mathf.Min(RootLocalAnkleRoute.Length - 1, first + 1);
+            return Vector3.Lerp(RootLocalAnkleRoute[first], RootLocalAnkleRoute[second], scaled - first);
+        }
+
+        public Vector3 EvaluateRootLocalHipRoute(float eventPhase)
+        {
+            if (RootLocalHipRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
+                throw new InvalidOperationException("Predicted hip route is unavailable.");
+            float scaled = Mathf.Clamp01(eventPhase) * (RootLocalHipRoute.Length - 1);
+            int first = Mathf.Min(RootLocalHipRoute.Length - 1, Mathf.FloorToInt(scaled));
+            int second = Mathf.Min(RootLocalHipRoute.Length - 1, first + 1);
+            return Vector3.Lerp(RootLocalHipRoute[first], RootLocalHipRoute[second], scaled - first);
+        }
+
+        public Vector3 EvaluateAuthoredFootPlanarRoute(float eventPhase) =>
+            EvaluateVectorRoute(AuthoredFootPlanarRoute, eventPhase, "authored Foot planar route");
+
+        public float EvaluateAnimationClearanceHeight(float eventPhase)
+        {
+            EvaluateIndices(AnimationClearanceHeights.Length, eventPhase, out int first, out int second, out float t);
+            return Mathf.Lerp(AnimationClearanceHeights[first], AnimationClearanceHeights[second], t);
+        }
+
+        public AnimationFootConstraintMode EvaluateConstraintMode(float eventPhase) =>
+            (AnimationFootConstraintMode)EvaluateDiscrete(ConstraintModes, eventPhase);
+
+        public AnimationFootSupportPhase EvaluateSupportPhase(float eventPhase) =>
+            (AnimationFootSupportPhase)EvaluateDiscrete(SupportPhases, eventPhase);
+
+        public AnimationFootOrientationPolicy EvaluateFootOrientationPolicy(float eventPhase) =>
+            (AnimationFootOrientationPolicy)EvaluateDiscrete(FootOrientationPolicies, eventPhase);
+
+        public AnimationBodyRotationPivotMode EvaluateBodyRotationPivotMode(float eventPhase) =>
+            (AnimationBodyRotationPivotMode)EvaluateDiscrete(BodyRotationPivotModes, eventPhase);
+
+        public static ulong SourceIdentity(AnimationPoseSourceId sourceId, string discriminator = null)
+        {
+            if (!sourceId.IsValid)
+                throw new ArgumentException("Predicted foot step pose source identity is invalid.", nameof(sourceId));
+            ulong value = HashText(sourceId.ToString());
+            return string.IsNullOrEmpty(discriminator)
+                ? value
+                : Hash(value, HashText(discriminator), 0, 0, 0);
+        }
+
+        public static ulong SourceIdentity(string stableIdentity)
+        {
+            if (string.IsNullOrWhiteSpace(stableIdentity))
+                throw new ArgumentException("Predicted foot step source identity is invalid.", nameof(stableIdentity));
+            return HashText(stableIdentity.Trim());
+        }
+
+        public AnimationPredictedFootStepSample BindSource(
+            ulong sourceSampleIdentity,
+            int sourceSampleCycle,
+            float sourceSampleTimeSeconds,
+            float sourceDurationSeconds,
+            bool sourceLooping)
+        {
+            if (!HasLandingEvent)
+                return this;
+            if (sourceSampleIdentity == 0 || sourceSampleCycle < 0 ||
+                !float.IsFinite(sourceSampleTimeSeconds) || sourceSampleTimeSeconds < 0f ||
+                !float.IsFinite(sourceDurationSeconds) || sourceDurationSeconds <= 0f)
+            {
+                throw new ArgumentException("Predicted foot step source occurrence is invalid.");
+            }
+            int landingCycleOffset = sourceLooping
+                ? ResolveLandingCycleOffset(
+                    sourceSampleTimeSeconds,
+                    TimeToLandingSeconds,
+                    sourceDurationSeconds)
+                : 0;
+            int sourceLandingCycle = checked(sourceSampleCycle + landingCycleOffset);
+            return new AnimationPredictedFootStepSample(
+                EventOrdinal,
+                Confidence,
+                TimeToLandingSeconds,
+                EventPhase,
+                LiftOffPhase,
+                ActionStepClock.DurationSeconds,
+                OpposingEventOrdinal,
+                OpposingLandingDelaySeconds,
+                OpposingLandingCycleOffset,
+                RootLocalFootRoute,
+                RootLocalAnkleRoute,
+                RootLocalHipRoute,
+                AuthoredFootPlanarRoute,
+                AnimationClearanceHeights,
+                ConstraintModes,
+                SupportPhases,
+                FootOrientationPolicies,
+                BodyRotationPivotModes,
+                sourceSampleIdentity,
+                sourceLandingCycle,
+                0,
+                0,
+                0);
+        }
+
+        public AnimationPredictedFootStepSample BindSynchronizedMarkerSource(
+            ulong markerEpochIdentity,
+            int landingMarkerOrdinal,
+            int opposingLandingMarkerOrdinal)
+        {
+            if (!IsSourceBound)
+                return this;
+            if (markerEpochIdentity == 0 || landingMarkerOrdinal < 0 ||
+                (OpposingEventOrdinal > 0) != (opposingLandingMarkerOrdinal >= 0))
+            {
+                throw new ArgumentException("Synchronized marker landing occurrence is invalid.");
+            }
+            int opposingOffset = OpposingEventOrdinal > 0
+                ? checked(opposingLandingMarkerOrdinal - landingMarkerOrdinal)
+                : 0;
+            if (opposingOffset < -1 || opposingOffset > 1)
+            {
+                throw new ArgumentException("Synchronized opposing marker is not adjacent to the owned landing.");
+            }
+            return new AnimationPredictedFootStepSample(
+                1,
+                Confidence,
+                TimeToLandingSeconds,
+                EventPhase,
+                LiftOffPhase,
+                ActionStepClock.DurationSeconds,
+                OpposingEventOrdinal > 0 ? 1 : 0,
+                OpposingLandingDelaySeconds,
+                opposingOffset,
+                RootLocalFootRoute,
+                RootLocalAnkleRoute,
+                RootLocalHipRoute,
+                AuthoredFootPlanarRoute,
+                AnimationClearanceHeights,
+                ConstraintModes,
+                SupportPhases,
+                FootOrientationPolicies,
+                BodyRotationPivotModes,
+                markerEpochIdentity,
+                landingMarkerOrdinal,
+                0,
+                0,
+                0);
+        }
+
+        public AnimationPredictedFootStepSample BindContribution(
+            ulong contributionContinuityIdentity,
+            CharacterFootSide side)
+        {
+            if (!IsSourceBound)
+                return this;
+            if (contributionContinuityIdentity == 0 ||
+                side != CharacterFootSide.Left && side != CharacterFootSide.Right)
+            {
+                throw new ArgumentException("Predicted foot step contribution identity is invalid.");
+            }
+            ulong identity = ResolveLandingEventIdentity(
+                contributionContinuityIdentity,
+                SourceSampleIdentity,
+                SourceSampleCycle,
+                EventOrdinal,
+                side);
+            ulong opposingIdentity = OpposingEventOrdinal > 0
+                ? ResolveLandingEventIdentity(
+                    contributionContinuityIdentity,
+                    SourceSampleIdentity,
+                    checked(SourceSampleCycle + OpposingLandingCycleOffset),
+                    OpposingEventOrdinal,
+                    side == CharacterFootSide.Left ? CharacterFootSide.Right : CharacterFootSide.Left)
+                : 0;
+            return new AnimationPredictedFootStepSample(
+                EventOrdinal,
+                Confidence,
+                TimeToLandingSeconds,
+                EventPhase,
+                LiftOffPhase,
+                ActionStepClock.DurationSeconds,
+                OpposingEventOrdinal,
+                OpposingLandingDelaySeconds,
+                OpposingLandingCycleOffset,
+                RootLocalFootRoute,
+                RootLocalAnkleRoute,
+                RootLocalHipRoute,
+                AuthoredFootPlanarRoute,
+                AnimationClearanceHeights,
+                ConstraintModes,
+                SupportPhases,
+                FootOrientationPolicies,
+                BodyRotationPivotModes,
+                SourceSampleIdentity,
+                SourceSampleCycle,
+                contributionContinuityIdentity,
+                identity,
+                opposingIdentity);
+        }
+
+        public AnimationPredictedFootStepSample ApplyTimeScale(float visualTimeScale)
+        {
+            if (!float.IsFinite(visualTimeScale) || visualTimeScale < 0f)
+                throw new ArgumentOutOfRangeException(nameof(visualTimeScale));
+            if (!HasLandingEvent || visualTimeScale <= 0.000001f)
+                return default;
+            return new AnimationPredictedFootStepSample(
+                EventOrdinal,
+                Confidence,
+                TimeToLandingSeconds / visualTimeScale,
+                EventPhase,
+                LiftOffPhase,
+                ActionStepClock.DurationSeconds / visualTimeScale,
+                OpposingEventOrdinal,
+                OpposingLandingDelaySeconds / visualTimeScale,
+                OpposingLandingCycleOffset,
+                RootLocalFootRoute,
+                RootLocalAnkleRoute,
+                RootLocalHipRoute,
+                AuthoredFootPlanarRoute,
+                AnimationClearanceHeights,
+                ConstraintModes,
+                SupportPhases,
+                FootOrientationPolicies,
+                BodyRotationPivotModes,
+                SourceSampleIdentity,
+                SourceSampleCycle,
+                ContributionContinuityIdentity,
+                LandingEventIdentity,
+                OpposingLandingEventIdentity);
+        }
+
+        internal AnimationPredictedFootStepSample WithQueryStartPhase(float queryStartPhase)
+        {
+            if (!IsAuthoritative)
+                throw new InvalidOperationException("Predicted foot step query requires an authoritative event.");
+            return new AnimationPredictedFootStepSample(
+                EventOrdinal,
+                Confidence,
+                TimeToLandingSeconds,
+                EventPhase,
+                RequireNormalized(queryStartPhase, nameof(queryStartPhase)),
+                ActionStepClock.DurationSeconds,
+                OpposingEventOrdinal,
+                OpposingLandingDelaySeconds,
+                OpposingLandingCycleOffset,
+                RootLocalFootRoute,
+                RootLocalAnkleRoute,
+                RootLocalHipRoute,
+                AuthoredFootPlanarRoute,
+                AnimationClearanceHeights,
+                ConstraintModes,
+                SupportPhases,
+                FootOrientationPolicies,
+                BodyRotationPivotModes,
+                SourceSampleIdentity,
+                SourceSampleCycle,
+                ContributionContinuityIdentity,
+                LandingEventIdentity,
+                OpposingLandingEventIdentity);
+        }
+
+        internal static AnimationPredictedFootStepSample Select(
+            AnimationPredictedFootStepSample current,
+            float currentScore,
+            AnimationPredictedFootStepSample candidate,
+            float candidateScore,
+            out bool candidateSelected)
+        {
+            candidateSelected = false;
+            if (!candidate.HasLandingEvent)
+                return current;
+            if (!current.HasLandingEvent || candidateScore > currentScore + 0.000001f)
+            {
+                candidateSelected = true;
+                return candidate;
+            }
+            if (Mathf.Abs(candidateScore - currentScore) > 0.000001f)
+                return current;
+            if (candidate.SourceSampleIdentity != current.SourceSampleIdentity)
+            {
+                candidateSelected = candidate.SourceSampleIdentity < current.SourceSampleIdentity;
+                return candidateSelected ? candidate : current;
+            }
+            if (candidate.SourceSampleCycle != current.SourceSampleCycle)
+            {
+                candidateSelected = candidate.SourceSampleCycle < current.SourceSampleCycle;
+                return candidateSelected ? candidate : current;
+            }
+            candidateSelected = candidate.EventOrdinal < current.EventOrdinal;
+            return candidateSelected ? candidate : current;
+        }
+
+        static Vector3 EvaluateVectorRoute(
+            FixedList128Bytes<Vector3> route,
+            float eventPhase,
+            string label)
+        {
+            if (route.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
+                throw new InvalidOperationException($"Predicted {label} is unavailable.");
+            EvaluateIndices(route.Length, eventPhase, out int first, out int second, out float t);
+            return Vector3.Lerp(route[first], route[second], t);
+        }
+
+        static byte EvaluateDiscrete(FixedList32Bytes<byte> route, float eventPhase)
+        {
+            EvaluateIndices(route.Length, eventPhase, out int first, out int second, out float t);
+            return t < 0.5f ? route[first] : route[second];
+        }
+
+        static void EvaluateIndices(
+            int count,
+            float eventPhase,
+            out int first,
+            out int second,
+            out float t)
+        {
+            if (count != AnimationPredictedFootStepCurveSet.RouteSampleCount)
+                throw new InvalidOperationException("Predicted action route is unavailable.");
+            float scaled = Mathf.Clamp01(eventPhase) * (count - 1);
+            first = Mathf.Min(count - 1, Mathf.FloorToInt(scaled));
+            second = Mathf.Min(count - 1, first + 1);
+            t = scaled - first;
+        }
+
+        static ulong Hash(ulong a, ulong b, ulong c, ulong d, ulong e)
+        {
+            const ulong offset = 14695981039346656037UL;
+            const ulong prime = 1099511628211UL;
+            ulong value = offset;
+            value = (value ^ a) * prime;
+            value = (value ^ b) * prime;
+            value = (value ^ c) * prime;
+            value = (value ^ d) * prime;
+            value = (value ^ e) * prime;
+            return value == 0 ? 1UL : value;
+        }
+
+        static ulong ResolveLandingEventIdentity(
+            ulong contributionContinuityIdentity,
+            ulong sourceSampleIdentity,
+            int sourceSampleCycle,
+            int eventOrdinal,
+            CharacterFootSide side) =>
+            Hash(
+                contributionContinuityIdentity,
+                sourceSampleIdentity,
+                unchecked((ulong)(long)sourceSampleCycle),
+                (ulong)(uint)eventOrdinal,
+                (ulong)side);
+
+        static int ResolveLandingCycleOffset(
+            float sourceSampleTimeSeconds,
+            float timeToLandingSeconds,
+            float sourceDurationSeconds)
+        {
+            double normalizedLanding =
+                ((double)sourceSampleTimeSeconds + timeToLandingSeconds) / sourceDurationSeconds;
+            double nearestBoundary = Math.Round(normalizedLanding);
+            if (Math.Abs(normalizedLanding - nearestBoundary) <= 0.00001d)
+                normalizedLanding = nearestBoundary;
+            return checked((int)Math.Floor(normalizedLanding));
+        }
+
+        static ulong HashText(string value)
+        {
+            const ulong offset = 14695981039346656037UL;
+            const ulong prime = 1099511628211UL;
+            ulong hash = offset;
+            for (int i = 0; i < value.Length; i++)
+                hash = (hash ^ value[i]) * prime;
+            return hash == 0 ? 1UL : hash;
+        }
 
         static float RequireNormalized(float value, string field)
         {
@@ -161,16 +1039,92 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return Mathf.Max(0f, value);
         }
 
-        static float RequireFinite(float value, string field)
+        static Vector3 RequireFinite(Vector3 value, string field)
         {
-            if (!float.IsFinite(value))
+            if (!float.IsFinite(value.x) || !float.IsFinite(value.y) || !float.IsFinite(value.z))
                 throw new ArgumentOutOfRangeException(field);
             return value;
         }
 
-        static Vector2 RequireFinite(Vector2 value, string field)
+        static void RequirePlanar(Vector3 value, string field)
         {
-            if (!float.IsFinite(value.x) || !float.IsFinite(value.y))
+            RequireFinite(value, field);
+            if (Mathf.Abs(value.y) > 0.00001f)
+                throw new ArgumentOutOfRangeException(field);
+        }
+
+        static void RequireByteRange(byte value, byte maximum, string field)
+        {
+            if (value > maximum)
+                throw new ArgumentOutOfRangeException(field);
+        }
+
+        static Quaternion RequireFinite(Quaternion value, string field)
+        {
+            if (!float.IsFinite(value.x) || !float.IsFinite(value.y) ||
+                !float.IsFinite(value.z) || !float.IsFinite(value.w) ||
+                Quaternion.Dot(value, value) <= 0.000001f)
+            {
+                throw new ArgumentOutOfRangeException(field);
+            }
+            return value.normalized;
+        }
+
+    }
+
+    public readonly struct AnimationFootFeatureSample
+    {
+        public AnimationFootFeatureSample(
+            Vector3 soleLocalVelocity,
+            float soleHeight,
+            float plantConfidence,
+            AnimationPredictedFootStepSample predictedStep)
+        {
+            SoleLocalVelocity = RequireFinite(soleLocalVelocity, nameof(soleLocalVelocity));
+            SoleHeight = RequireFinite(soleHeight, nameof(soleHeight));
+            PlantConfidence = RequireNormalized(plantConfidence, nameof(plantConfidence));
+            PredictedStep = predictedStep;
+            m_IsSpecified = 1;
+        }
+
+        readonly byte m_IsSpecified;
+        public Vector3 SoleLocalVelocity { get; }
+        public float SoleHeight { get; }
+        public float PlantConfidence { get; }
+        public AnimationPredictedFootStepSample PredictedStep { get; }
+        public bool IsValid => m_IsSpecified != 0;
+
+        public AnimationFootFeatureSample WithPredictedStep(AnimationPredictedFootStepSample value) =>
+            new AnimationFootFeatureSample(SoleLocalVelocity, SoleHeight, PlantConfidence, value);
+
+        public AnimationFootFeatureSample BindPredictionSource(
+            ulong sourceIdentity,
+            int sourceCycle,
+            float sourceSampleTimeSeconds,
+            float sourceDurationSeconds,
+            bool sourceLooping) =>
+            WithPredictedStep(PredictedStep.BindSource(
+                sourceIdentity,
+                sourceCycle,
+                sourceSampleTimeSeconds,
+                sourceDurationSeconds,
+                sourceLooping));
+
+        public AnimationFootFeatureSample BindPredictionContribution(
+            ulong contributionContinuityIdentity,
+            CharacterFootSide side) =>
+            WithPredictedStep(PredictedStep.BindContribution(contributionContinuityIdentity, side));
+
+        static float RequireNormalized(float value, string field)
+        {
+            if (!float.IsFinite(value) || value < -0.00001f || value > 1.00001f)
+                throw new ArgumentOutOfRangeException(field);
+            return Mathf.Clamp01(value);
+        }
+
+        static float RequireFinite(float value, string field)
+        {
+            if (!float.IsFinite(value))
                 throw new ArgumentOutOfRangeException(field);
             return value;
         }
@@ -204,10 +1158,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Vector3 m_Velocity;
         float m_Height;
         float m_PlantConfidence;
-        float m_LandingConfidence;
-        float m_LandingWeight;
-        float m_LandingDelay;
-        Vector2 m_LandingOffset;
+        AnimationPredictedFootStepSample m_PredictedStep;
+        float m_PredictedStepScore;
 
         public void Add(AnimationFootFeatureSample sample, float weight)
         {
@@ -223,30 +1175,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Velocity += sample.SoleLocalVelocity * visualTimeScale * weight;
             m_Height += sample.SoleHeight * weight;
             m_PlantConfidence += sample.PlantConfidence * weight;
-            float effectiveLandingConfidence = visualTimeScale > 0.000001f
-                ? sample.NextLandingConfidence
-                : 0f;
-            m_LandingConfidence += effectiveLandingConfidence * weight;
-            float landingWeight = weight * effectiveLandingConfidence;
-            m_LandingWeight += landingWeight;
-            if (landingWeight > 0f)
-                m_LandingDelay += sample.NextLandingDelaySeconds / visualTimeScale * landingWeight;
-            m_LandingOffset += sample.NextLandingLocalOffset * landingWeight;
+            AnimationPredictedFootStepSample candidate =
+                sample.PredictedStep.ApplyTimeScale(visualTimeScale);
+            float score = candidate.HasLandingEvent ? weight * candidate.Confidence : 0f;
+            AnimationPredictedFootStepSample selected = AnimationPredictedFootStepSample.Select(
+                m_PredictedStep,
+                m_PredictedStepScore,
+                candidate,
+                score,
+                out bool candidateSelected);
+            m_PredictedStep = selected;
+            if (candidateSelected)
+                m_PredictedStepScore = score;
         }
 
         public AnimationFootFeatureSample Resolve()
         {
             if (m_Weight <= 0f)
                 throw new InvalidOperationException("Foot Analysis blend has no visible contribution.");
-            float landingDelay = m_LandingWeight > 0f ? m_LandingDelay / m_LandingWeight : 0f;
-            Vector2 landingOffset = m_LandingWeight > 0f ? m_LandingOffset / m_LandingWeight : Vector2.zero;
             return new AnimationFootFeatureSample(
                 m_Velocity / m_Weight,
                 m_Height / m_Weight,
                 m_PlantConfidence / m_Weight,
-                m_LandingConfidence / m_Weight,
-                landingDelay,
-                landingOffset);
+                m_PredictedStep);
         }
     }
 

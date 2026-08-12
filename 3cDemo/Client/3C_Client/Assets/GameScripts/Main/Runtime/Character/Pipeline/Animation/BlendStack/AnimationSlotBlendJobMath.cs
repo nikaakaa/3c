@@ -1,4 +1,5 @@
 using UnityEngine;
+using ThirdPersonCharacter.Pipeline.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 {
@@ -81,34 +82,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             ref float totalWeight,
             ref Vector3 velocity,
             ref float height,
-            ref float plantConfidence,
-            ref float landingConfidence,
-            ref float landingWeight,
-            ref float landingDelay,
-            ref Vector2 landingOffset)
+            ref float plantConfidence)
         {
             if (!IsValidFoot(sample) || !float.IsFinite(weight) || weight <= 0f ||
                 !float.IsFinite(visualTimeScale) || visualTimeScale < 0f)
             {
                 return false;
             }
-            float effectiveLandingConfidence = visualTimeScale > 0.000001f
-                ? sample.NextLandingConfidence
-                : 0f;
-            float nextLandingWeight = weight * effectiveLandingConfidence;
             totalWeight += weight;
             velocity += sample.SoleLocalVelocity * visualTimeScale * weight;
             height += sample.SoleHeight * weight;
             plantConfidence += sample.PlantConfidence * weight;
-            landingConfidence += effectiveLandingConfidence * weight;
-            landingWeight += nextLandingWeight;
-            if (nextLandingWeight > 0f)
-                landingDelay += sample.NextLandingDelaySeconds / visualTimeScale * nextLandingWeight;
-            landingOffset += sample.NextLandingLocalOffset * nextLandingWeight;
             return float.IsFinite(totalWeight) && AnimationPoseMath.IsFinite(velocity) &&
-                   float.IsFinite(height) && float.IsFinite(plantConfidence) &&
-                   float.IsFinite(landingConfidence) && float.IsFinite(landingWeight) &&
-                   float.IsFinite(landingDelay) && IsFinite(landingOffset);
+                   float.IsFinite(height) && float.IsFinite(plantConfidence);
+        }
+
+        internal static bool TryResolveAuthoritativePrediction(
+            AnimationFootFeatureSample sample,
+            float visualTimeScale,
+            ulong contributionContinuityIdentity,
+            CharacterFootSide side,
+            out AnimationPredictedFootStepSample predictedStep)
+        {
+            predictedStep = default;
+            if (!IsValidFoot(sample) || !float.IsFinite(visualTimeScale) || visualTimeScale < 0f ||
+                contributionContinuityIdentity == 0 ||
+                side != CharacterFootSide.Left && side != CharacterFootSide.Right)
+            {
+                return false;
+            }
+            predictedStep = sample.PredictedStep
+                .ApplyTimeScale(visualTimeScale)
+                .BindContribution(contributionContinuityIdentity, side);
+            return IsValidPrediction(predictedStep);
         }
 
         internal static bool TryResolveFoot(
@@ -116,23 +122,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             Vector3 velocity,
             float height,
             float plantConfidence,
-            float landingConfidence,
-            float landingWeight,
-            float landingDelay,
-            Vector2 landingOffset,
+            AnimationPredictedFootStepSample predictedStep,
             out AnimationFootFeatureSample sample)
         {
             float inverseWeight = 1f / weight;
             float resolvedPlant = plantConfidence * inverseWeight;
-            float resolvedLandingConfidence = landingConfidence * inverseWeight;
-            float resolvedLandingDelay = landingWeight > 0f ? landingDelay / landingWeight : 0f;
-            Vector2 resolvedLandingOffset = landingWeight > 0f ? landingOffset / landingWeight : Vector2.zero;
             Vector3 resolvedVelocity = velocity * inverseWeight;
             float resolvedHeight = height * inverseWeight;
             if (!AnimationPoseMath.IsFinite(resolvedVelocity) || !float.IsFinite(resolvedHeight) ||
-                !IsNormalized(resolvedPlant) || !IsNormalized(resolvedLandingConfidence) ||
-                !float.IsFinite(resolvedLandingDelay) || resolvedLandingDelay < 0f ||
-                !IsFinite(resolvedLandingOffset))
+                !IsNormalized(resolvedPlant))
             {
                 sample = default;
                 return false;
@@ -141,18 +139,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 resolvedVelocity,
                 resolvedHeight,
                 resolvedPlant,
-                resolvedLandingConfidence,
-                resolvedLandingDelay,
-                resolvedLandingOffset);
+                predictedStep);
             return true;
         }
 
         internal static bool IsValidFoot(AnimationFootFeatureSample sample) =>
             sample.IsValid && AnimationPoseMath.IsFinite(sample.SoleLocalVelocity) &&
             float.IsFinite(sample.SoleHeight) && IsNormalized(sample.PlantConfidence) &&
-            IsNormalized(sample.NextLandingConfidence) &&
-            float.IsFinite(sample.NextLandingDelaySeconds) && sample.NextLandingDelaySeconds >= 0f &&
-            IsFinite(sample.NextLandingLocalOffset);
+            IsValidPrediction(sample.PredictedStep);
+
+        static bool IsValidPrediction(AnimationPredictedFootStepSample value) =>
+            !value.IsValid ||
+            IsNormalized(value.Confidence) &&
+            float.IsFinite(value.TimeToLandingSeconds) && value.TimeToLandingSeconds >= 0f &&
+            IsNormalized(value.EventPhase) && IsNormalized(value.LiftOffPhase) &&
+            IsValidRootLocalFootRoute(value);
+
+        static bool IsValidRootLocalFootRoute(AnimationPredictedFootStepSample value)
+        {
+            if (value.RootLocalFootRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.RootLocalAnkleRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount ||
+                value.RootLocalHipRoute.Length != AnimationPredictedFootStepCurveSet.RouteSampleCount)
+                return false;
+            for (int i = 0; i < value.RootLocalFootRoute.Length; i++)
+            {
+                if (!AnimationPoseMath.IsFinite(value.RootLocalFootRoute[i]) ||
+                    !AnimationPoseMath.IsFinite(value.RootLocalAnkleRoute[i]) ||
+                    !AnimationPoseMath.IsFinite(value.RootLocalHipRoute[i]))
+                    return false;
+            }
+            return true;
+        }
 
         internal static bool IsNormalized(float value) =>
             float.IsFinite(value) && value >= 0f && value <= 1f;

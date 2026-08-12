@@ -293,9 +293,13 @@ namespace ThirdPersonCharacter.Pipeline
                 verticalSpeed,
                 movementDirection,
                 desiredDirection,
+                new Vector2(bodyFrame.TargetVelocity.x, bodyFrame.TargetVelocity.z),
+                desiredDirection,
                 facingError,
                 motionPhase,
                 CharacterPresentationTrajectoryIntent.StationaryMovementModeId,
+                default,
+                0d,
                 bodyFrame.ResetSequence);
         }
     }

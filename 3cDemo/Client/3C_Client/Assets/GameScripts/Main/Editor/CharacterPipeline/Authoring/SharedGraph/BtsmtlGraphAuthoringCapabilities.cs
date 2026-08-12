@@ -9,6 +9,7 @@ using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Motion;
+using ThirdPersonSimulation;
 using TreeDesigner;
 using TreeDesigner.Editor;
 using UnityEngine;
@@ -86,9 +87,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             Register<LocomotionInputMotionNode>(
                 "locomotion-input-motion",
                 "moveSpeed",
+                "displacementMode",
                 "turnSpeedDegrees",
                 "cameraRelative",
-                "continuous");
+                "executionMode",
+                "durationSeconds",
+                "assetReferences");
             Register<AndNode>("and");
             Register<OrNode>("or");
             Register<NotNode>("not");
@@ -235,10 +239,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                            field.FieldId.Value,
                            "compareType",
                            StringComparison.Ordinal) ||
-                       string.Equals(field.FieldId.Value, "moveSpeed", StringComparison.Ordinal) ||
+                   string.Equals(field.FieldId.Value, "moveSpeed", StringComparison.Ordinal) ||
+                       string.Equals(field.FieldId.Value, "displacementMode", StringComparison.Ordinal) ||
                        string.Equals(field.FieldId.Value, "turnSpeedDegrees", StringComparison.Ordinal) ||
                        string.Equals(field.FieldId.Value, "cameraRelative", StringComparison.Ordinal) ||
-                       string.Equals(field.FieldId.Value, "continuous", StringComparison.Ordinal));
+                       string.Equals(field.FieldId.Value, "executionMode", StringComparison.Ordinal) ||
+                       string.Equals(field.FieldId.Value, "durationSeconds", StringComparison.Ordinal) ||
+                       string.Equals(field.FieldId.Value, "assetReferences", StringComparison.Ordinal));
         }
 
         public bool CanEditProperty(string kindOrTypeName, string property)
@@ -310,6 +317,50 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.Error(path + ".properties." + required, "node_property_required", $"{kind}必须声明有效{required}。");
                 return false;
             }
+            if (string.Equals(kind, "locomotion-input-motion", StringComparison.Ordinal))
+            {
+                var executionMode = Enum.Parse<LocomotionInputMotionExecutionMode>(
+                    properties.Value<string>("executionMode"),
+                    false);
+                var displacementMode = Enum.Parse<LocomotionInputMotionDisplacementMode>(
+                    properties.Value<string>("displacementMode"),
+                    false);
+                float moveSpeed = properties.Value<float>("moveSpeed");
+                JArray assetReferences = properties["assetReferences"] as JArray ?? new JArray();
+                JObject[] actionMotionCurves = assetReferences
+                    .OfType<JObject>()
+                    .Where(value => string.Equals(value.Value<string>("key"), "m_ActionMotionCurve", StringComparison.Ordinal))
+                    .ToArray();
+                if (displacementMode == LocomotionInputMotionDisplacementMode.ActionMotionCurve && moveSpeed != 0f)
+                {
+                    report.Error(path + ".properties.moveSpeed", "curve_move_speed_invalid", "ActionMotionCurve locomotion的moveSpeed必须为0。");
+                    return false;
+                }
+                if (displacementMode == LocomotionInputMotionDisplacementMode.ActionMotionCurve &&
+                    (actionMotionCurves.Length != 1 ||
+                     string.IsNullOrEmpty(actionMotionCurves[0].Value<string>("assetPath")) &&
+                     string.IsNullOrEmpty(actionMotionCurves[0].Value<string>("assetGuid"))))
+                {
+                    report.Error(path + ".properties.assetReferences", "action_motion_curve_required", "ActionMotionCurve locomotion必须声明唯一m_ActionMotionCurve资产引用。");
+                    return false;
+                }
+                if (displacementMode == LocomotionInputMotionDisplacementMode.ConstantSpeed && actionMotionCurves.Length != 0)
+                {
+                    report.Error(path + ".properties.assetReferences", "constant_speed_curve_forbidden", "ConstantSpeed locomotion不能声明m_ActionMotionCurve资产引用。");
+                    return false;
+                }
+                float durationSeconds = properties.Value<float>("durationSeconds");
+                if (executionMode == LocomotionInputMotionExecutionMode.Timed && durationSeconds <= 0f)
+                {
+                    report.Error(path + ".properties.durationSeconds", "timed_duration_invalid", "Timed locomotion-input-motion必须声明大于0的durationSeconds。");
+                    return false;
+                }
+                if (executionMode != LocomotionInputMotionExecutionMode.Timed && durationSeconds != 0f)
+                {
+                    report.Error(path + ".properties.durationSeconds", "unused_duration_invalid", "非Timed locomotion-input-motion的durationSeconds必须为0。");
+                    return false;
+                }
+            }
             return true;
         }
 
@@ -325,9 +376,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             return IsRequiredStringProperty(property) ||
                    string.Equals(property, "moveSpeed", StringComparison.Ordinal) ||
+                   string.Equals(property, "displacementMode", StringComparison.Ordinal) ||
                    string.Equals(property, "turnSpeedDegrees", StringComparison.Ordinal) ||
                    string.Equals(property, "cameraRelative", StringComparison.Ordinal) ||
-                   string.Equals(property, "continuous", StringComparison.Ordinal);
+                   string.Equals(property, "executionMode", StringComparison.Ordinal) ||
+                   string.Equals(property, "durationSeconds", StringComparison.Ordinal);
         }
 
         static bool IsRequiredStringProperty(string property)
@@ -439,8 +492,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return TryReadFiniteFloat(property.Value, out float turnSpeedDegrees) && turnSpeedDegrees > 0f ||
                        FailProperty(report, path, "turnSpeedDegrees必须是大于0的有限Float。");
             }
-            if (string.Equals(property.Name, "cameraRelative", StringComparison.Ordinal) ||
-                string.Equals(property.Name, "continuous", StringComparison.Ordinal))
+            if (string.Equals(property.Name, "durationSeconds", StringComparison.Ordinal))
+            {
+                return TryReadFiniteFloat(property.Value, out float durationSeconds) && durationSeconds >= 0f ||
+                       FailProperty(report, path, "durationSeconds必须是大于等于0的有限Float。");
+            }
+            if (string.Equals(property.Name, "executionMode", StringComparison.Ordinal))
+            {
+                return property.Value.Type == JTokenType.String &&
+                       Enum.TryParse(property.Value.Value<string>(), false, out LocomotionInputMotionExecutionMode _) ||
+                       FailProperty(report, path, "executionMode不是已登记枚举值。");
+            }
+            if (string.Equals(property.Name, "displacementMode", StringComparison.Ordinal))
+            {
+                return property.Value.Type == JTokenType.String &&
+                       Enum.TryParse(property.Value.Value<string>(), false, out LocomotionInputMotionDisplacementMode _) ||
+                       FailProperty(report, path, "displacementMode不是已登记枚举值。");
+            }
+            if (string.Equals(property.Name, "cameraRelative", StringComparison.Ordinal))
             {
                 return property.Value.Type == JTokenType.Boolean ||
                        FailProperty(report, path, $"{property.Name}必须是Boolean。");
@@ -886,7 +955,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 string property = descriptor.Properties[i];
                 bool referenceOnly =
-                    property.EndsWith("References", StringComparison.Ordinal);
+                    property.EndsWith("References", StringComparison.Ordinal) &&
+                    !(descriptor.Type == typeof(LocomotionInputMotionNode) && string.Equals(property, "assetReferences", StringComparison.Ordinal));
                 fields.Add(new GraphAuthoringFieldDescriptor(
                     new GraphAuthoringFieldId(property),
                     SplitDisplayName(property),
@@ -1124,15 +1194,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (property.EndsWith("References", StringComparison.Ordinal))
                 return GraphAuthoringFieldValueKind.Object;
             if (string.Equals(property, "moveSpeed", StringComparison.Ordinal) ||
-                string.Equals(property, "turnSpeedDegrees", StringComparison.Ordinal))
+                string.Equals(property, "turnSpeedDegrees", StringComparison.Ordinal) ||
+                string.Equals(property, "durationSeconds", StringComparison.Ordinal))
                 return GraphAuthoringFieldValueKind.Float;
-            if (string.Equals(property, "cameraRelative", StringComparison.Ordinal) ||
-                string.Equals(property, "continuous", StringComparison.Ordinal))
+            if (string.Equals(property, "cameraRelative", StringComparison.Ordinal))
                 return GraphAuthoringFieldValueKind.Boolean;
             if (string.Equals(property, "loopStopType", StringComparison.Ordinal) ||
                 string.Equals(property, "compareType", StringComparison.Ordinal) ||
                 string.Equals(property, "stateExitCause", StringComparison.Ordinal) ||
-                string.Equals(property, "windowType", StringComparison.Ordinal))
+                string.Equals(property, "windowType", StringComparison.Ordinal) ||
+                string.Equals(property, "executionMode", StringComparison.Ordinal))
+                return GraphAuthoringFieldValueKind.Enum;
+            if (string.Equals(property, "displacementMode", StringComparison.Ordinal))
                 return GraphAuthoringFieldValueKind.Enum;
             if (property.EndsWith("Id", StringComparison.Ordinal))
                 return GraphAuthoringFieldValueKind.IdentityReference;
@@ -1145,6 +1218,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return new GraphAuthoringFieldConstraint(allowedValues: Enum.GetNames(typeof(LoopNode.StopType)));
             if (string.Equals(property, "compareType", StringComparison.Ordinal))
                 return new GraphAuthoringFieldConstraint(allowedValues: Enum.GetNames(typeof(CompareNode.CompareType)));
+            if (string.Equals(property, "executionMode", StringComparison.Ordinal))
+                return new GraphAuthoringFieldConstraint(allowedValues: Enum.GetNames(typeof(LocomotionInputMotionExecutionMode)));
+            if (string.Equals(property, "displacementMode", StringComparison.Ordinal))
+                return new GraphAuthoringFieldConstraint(allowedValues: Enum.GetNames(typeof(LocomotionInputMotionDisplacementMode)));
             if (string.Equals(property, "stateExitCause", StringComparison.Ordinal))
                 return new GraphAuthoringFieldConstraint(nonEmpty: true);
             if (string.Equals(property, "windowType", StringComparison.Ordinal))
@@ -1153,6 +1230,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return new GraphAuthoringFieldConstraint(minimum: 0d, finite: true);
             if (string.Equals(property, "turnSpeedDegrees", StringComparison.Ordinal))
                 return new GraphAuthoringFieldConstraint(minimum: 0.000001d, finite: true);
+            if (string.Equals(property, "durationSeconds", StringComparison.Ordinal))
+                return new GraphAuthoringFieldConstraint(minimum: 0d, finite: true);
             return new GraphAuthoringFieldConstraint(nonEmpty: IsRequiredProperty(property));
         }
 
@@ -1923,9 +2002,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return new JObject
                 {
                     ["moveSpeed"] = 4f,
+                    ["displacementMode"] = LocomotionInputMotionDisplacementMode.ConstantSpeed.ToString(),
                     ["turnSpeedDegrees"] = 720f,
                     ["cameraRelative"] = true,
-                    ["continuous"] = false
+                    ["executionMode"] = LocomotionInputMotionExecutionMode.Once.ToString(),
+                    ["durationSeconds"] = 0f
                 };
             return null;
         }

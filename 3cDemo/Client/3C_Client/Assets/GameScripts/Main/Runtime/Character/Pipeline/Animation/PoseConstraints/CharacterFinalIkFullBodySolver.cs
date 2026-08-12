@@ -16,7 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         UnsupportedPelvisGoal = 6,
         SolverFailure = 7,
         NonFiniteOutput = 8,
-        FootEffectorResidualExceeded = 9
+        FootEffectorSolverResidualExceeded = 9
     }
 
     public readonly struct CharacterFullBodyIkResult
@@ -25,33 +25,112 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterFullBodyIkFailure failure,
             int failedGoalSetIndex,
             CharacterFullBodyIkEffectorSlot failedSlot,
-            int appliedGoalCount)
+            int appliedGoalCount,
+            Vector3 failedTargetPosition,
+            Vector3 failedSolverPosition,
+            Vector3 failedSolvedPosition,
+            float failedSolverResidual,
+            float failedPositionResidual,
+            CharacterFullBodyIkGoalSourceKind failedSourceKind,
+            string failureDetail)
         {
             Failure = failure;
             FailedGoalSetIndex = failedGoalSetIndex;
             FailedSlot = failedSlot;
             AppliedGoalCount = appliedGoalCount;
+            FailedTargetPosition = failedTargetPosition;
+            FailedSolverPosition = failedSolverPosition;
+            FailedSolvedPosition = failedSolvedPosition;
+            FailedSolverResidual = failedSolverResidual;
+            FailedPositionResidual = failedPositionResidual;
+            FailedSourceKind = failedSourceKind;
+            FailureDetail = failureDetail;
         }
 
         public CharacterFullBodyIkFailure Failure { get; }
         public int FailedGoalSetIndex { get; }
         public CharacterFullBodyIkEffectorSlot FailedSlot { get; }
         public int AppliedGoalCount { get; }
+        public Vector3 FailedTargetPosition { get; }
+        public Vector3 FailedSolverPosition { get; }
+        public Vector3 FailedSolvedPosition { get; }
+        public float FailedSolverResidual { get; }
+        public float FailedPositionResidual { get; }
+        public CharacterFullBodyIkGoalSourceKind FailedSourceKind { get; }
+        public string FailureDetail { get; }
         public bool Succeeded => Failure == CharacterFullBodyIkFailure.None;
 
         internal static CharacterFullBodyIkResult Success(int appliedGoalCount) =>
-            new CharacterFullBodyIkResult(CharacterFullBodyIkFailure.None, -1, default, appliedGoalCount);
+            new CharacterFullBodyIkResult(
+                CharacterFullBodyIkFailure.None,
+                -1,
+                default,
+                appliedGoalCount,
+                default,
+                default,
+                default,
+                0f,
+                0f,
+                default,
+                string.Empty);
 
         internal static CharacterFullBodyIkResult Fail(
             CharacterFullBodyIkFailure failure,
             int failedGoalSetIndex = -1,
             CharacterFullBodyIkEffectorSlot failedSlot = default) =>
-            new CharacterFullBodyIkResult(failure, failedGoalSetIndex, failedSlot, 0);
+            new CharacterFullBodyIkResult(
+                failure,
+                failedGoalSetIndex,
+                failedSlot,
+                0,
+                default,
+                default,
+                default,
+                0f,
+                0f,
+                default,
+                string.Empty);
+
+        internal static CharacterFullBodyIkResult FailSolver(Exception exception) =>
+            new CharacterFullBodyIkResult(
+                CharacterFullBodyIkFailure.SolverFailure,
+                -1,
+                default,
+                0,
+                default,
+                default,
+                default,
+                0f,
+                0f,
+                default,
+                $"{exception.GetType().Name}: {exception.Message}");
+
+        internal static CharacterFullBodyIkResult FailFootSolverResidual(
+            int failedGoalSetIndex,
+            CharacterFullBodyIkEffectorSlot failedSlot,
+            int appliedGoalCount,
+            Vector3 targetPosition,
+            Vector3 solverPosition,
+            Vector3 solvedPosition,
+            CharacterFullBodyIkGoalSourceKind sourceKind,
+            float positionResidual) =>
+            new CharacterFullBodyIkResult(
+                CharacterFullBodyIkFailure.FootEffectorSolverResidualExceeded,
+                failedGoalSetIndex,
+                failedSlot,
+                appliedGoalCount,
+                targetPosition,
+                solverPosition,
+                solvedPosition,
+                Vector3.Distance(targetPosition, solverPosition),
+                positionResidual,
+                sourceKind,
+                string.Empty);
     }
 
     public sealed class CharacterFinalIkFullBodySolver
     {
-        const float FootEffectorResidualTolerance = 0.001f;
+        const float FootEffectorSolverResidualTolerance = 0.001f;
 
         readonly CharacterAnimationRigPayload m_Rig;
         readonly CharacterFullBodyIkProfile m_Profile;
@@ -65,6 +144,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterFullBodyIkLimbDiagnostics[] m_DiagnosticLimbs =
             new CharacterFullBodyIkLimbDiagnostics[4];
         CharacterFullBodyIkSolverDiagnostics m_Diagnostics;
+        CharacterFullBodyIkResult m_LastResult;
+        ulong m_LastCompletionIdentity;
         ActiveTuning m_ActiveTuning;
         Vector3 m_DiagnosticPelvisTranslation;
         ulong m_DiagnosticFrameSequence;
@@ -94,6 +175,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string ProfileRevision => m_Profile.Revision;
         public bool IsPrepared => m_Prepared;
         public CharacterFullBodyIkSolverDiagnostics Diagnostics => m_Diagnostics;
+        internal CharacterFullBodyIkResult LastResult => m_LastResult;
+        internal ulong LastCompletionIdentity => m_LastCompletionIdentity;
         public int DiagnosticEffectorCount => m_DiagnosticEffectorCount;
         public int DiagnosticLimbCount => m_DiagnosticLimbs.Length;
 
@@ -158,10 +241,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Prepared = true;
                 return CharacterFullBodyIkResult.Success(0);
             }
-            catch (Exception)
+            catch (Exception exception)
             {
                 m_Prepared = false;
-                return CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.SolverFailure);
+                return CharacterFullBodyIkResult.FailSolver(exception);
             }
         }
 
@@ -233,10 +316,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     completionIdentity,
                     recordDiagnostics);
             }
-            catch (Exception)
+            catch (Exception exception)
             {
                 return CompleteResult(
-                    CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.SolverFailure),
+                    CharacterFullBodyIkResult.FailSolver(exception),
                     goalSetValueIndices,
                     goalSets,
                     goalWorkspace,
@@ -258,6 +341,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 effector.positionOffset = Vector3.zero;
             }
             m_Diagnostics = default;
+            m_LastResult = default;
+            m_LastCompletionIdentity = 0;
             m_DiagnosticPelvisTranslation = Vector3.zero;
             m_DiagnosticFrameSequence = 0;
             m_DiagnosticEffectorCount = 0;
@@ -532,15 +617,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         continue;
                     }
                     IKEffector effector = m_Solver.GetEffector(ToFinalIkEffector(goal.Slot));
-                    float residual = Vector3.Distance(
-                        m_Backend.GetComponentPosition(effector.boneHandle),
-                        goal.ComponentPosition);
-                    if (residual > FootEffectorResidualTolerance)
+                    Vector3 solverPosition = effector.GetNode(m_Solver).solverPosition;
+                    Vector3 solvedPosition = m_Backend.GetComponentPosition(effector.boneHandle);
+                    if (!CharacterPoseConstraintMath.IsFinite(solverPosition))
                     {
                         return CharacterFullBodyIkResult.Fail(
-                            CharacterFullBodyIkFailure.FootEffectorResidualExceeded,
+                            CharacterFullBodyIkFailure.NonFiniteOutput,
                             setIndex,
                             goal.Slot);
+                    }
+                    float solverResidual = Vector3.Distance(solverPosition, goal.ComponentPosition);
+                    float residual = Vector3.Distance(solvedPosition, goal.ComponentPosition);
+                    if (solverResidual > FootEffectorSolverResidualTolerance)
+                    {
+                        return CharacterFullBodyIkResult.FailFootSolverResidual(
+                            setIndex,
+                            goal.Slot,
+                            solvedResult.AppliedGoalCount,
+                            goal.ComponentPosition,
+                            solverPosition,
+                            solvedPosition,
+                            goal.SourceKind,
+                            residual);
                     }
                 }
             }
@@ -586,10 +684,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong completionIdentity,
             bool recordDiagnostics)
         {
+            m_LastResult = result;
+            m_LastCompletionIdentity = completionIdentity;
             if (!recordDiagnostics)
                 return result;
             if (result.Succeeded ||
-                result.Failure == CharacterFullBodyIkFailure.FootEffectorResidualExceeded)
+                result.Failure == CharacterFullBodyIkFailure.FootEffectorSolverResidualExceeded)
             {
                 for (int setIndex = 0; setIndex < goalSetValueIndices.Length; setIndex++)
                 {

@@ -239,17 +239,19 @@ namespace BTSMTL.Diagnostics
             m_Version++;
         }
 
-        static bool StateEquivalent(RuntimeTraceEvent left, RuntimeTraceEvent right)
+        static bool StateEquivalent(in RuntimeTraceEvent left, in RuntimeTraceEvent right)
         {
+            RuntimeTracePayload leftPayload = left.Payload;
+            RuntimeTracePayload rightPayload = right.Payload;
             return left.Channel == right.Channel &&
                    left.Domain == right.Domain &&
                    left.RuntimeInstance.Equals(right.RuntimeInstance) &&
                    left.Source.Equals(right.Source) &&
                    left.Kind == right.Kind &&
-                   PayloadEquivalent(left.Payload, right.Payload);
+                   PayloadEquivalent(in leftPayload, in rightPayload);
         }
 
-        static bool PayloadEquivalent(RuntimeTracePayload left, RuntimeTracePayload right)
+        static bool PayloadEquivalent(in RuntimeTracePayload left, in RuntimeTracePayload right)
         {
             return string.Equals(left.Status, right.Status, StringComparison.Ordinal) &&
                    string.Equals(left.Name, right.Name, StringComparison.Ordinal) &&
@@ -268,12 +270,12 @@ namespace BTSMTL.Diagnostics
                    left.TrackIndex == right.TrackIndex &&
                    left.ClipIndex == right.ClipIndex &&
                    left.Flag == right.Flag &&
-                   DebugValueEquivalent(left.Value, right.Value) &&
-                   TimelineProvenanceEquivalent(left.TimelinePlayback, right.TimelinePlayback) &&
-                   FootIkEquivalent(left.FootIk, right.FootIk);
+                   DebugValueEquivalent(in left.Value, in right.Value) &&
+                   TimelineProvenanceEquivalent(in left.TimelinePlayback, in right.TimelinePlayback) &&
+                   FootIkEquivalent(in left.FootIk, in right.FootIk);
         }
 
-        static bool FootIkEquivalent(RuntimeFootIkTraceSnapshot left, RuntimeFootIkTraceSnapshot right)
+        static bool FootIkEquivalent(in RuntimeFootIkTraceSnapshot left, in RuntimeFootIkTraceSnapshot right)
         {
             return left.IsAvailable == right.IsAvailable &&
                    left.FrameSequence == right.FrameSequence &&
@@ -310,18 +312,17 @@ namespace BTSMTL.Diagnostics
                    string.Equals(left.CalibrationRevision, right.CalibrationRevision, StringComparison.Ordinal) &&
                    left.PhysicsSceneIdentity == right.PhysicsSceneIdentity &&
                    left.SelfFilterIdentity == right.SelfFilterIdentity &&
-                   string.Equals(left.ModifierSelectedSide, right.ModifierSelectedSide, StringComparison.Ordinal) &&
                    left.BaselineProducerOperationIndex == right.BaselineProducerOperationIndex &&
                    left.BaselineProducerCallSiteIndex == right.BaselineProducerCallSiteIndex &&
                    left.BaselineGoalOffset == right.BaselineGoalOffset &&
                    left.BaselineGoalCount == right.BaselineGoalCount &&
                    string.Equals(left.BaselineRigId, right.BaselineRigId, StringComparison.Ordinal) &&
                    string.Equals(left.BaselineRigRevision, right.BaselineRigRevision, StringComparison.Ordinal) &&
-                   FootIkLegEquivalent(left.Left, right.Left) &&
-                   FootIkLegEquivalent(left.Right, right.Right);
+                   FootIkLegEquivalent(in left.Left, in right.Left) &&
+                   FootIkLegEquivalent(in left.Right, in right.Right);
         }
 
-        static bool FootIkLegEquivalent(RuntimeFootIkLegTraceSnapshot left, RuntimeFootIkLegTraceSnapshot right)
+        static bool FootIkLegEquivalent(in RuntimeFootIkLegTraceSnapshot left, in RuntimeFootIkLegTraceSnapshot right)
         {
             return left.IsAvailable == right.IsAvailable &&
                    left.DidCurrentTraceHit == right.DidCurrentTraceHit &&
@@ -342,13 +343,26 @@ namespace BTSMTL.Diagnostics
                    left.CurrentHitDistance.Equals(right.CurrentHitDistance) &&
                    string.Equals(left.ContactState, right.ContactState, StringComparison.Ordinal) &&
                    string.Equals(left.TransitionReason, right.TransitionReason, StringComparison.Ordinal) &&
+                   string.Equals(left.ContactDecision, right.ContactDecision, StringComparison.Ordinal) &&
+                   left.ContactSurfaceValid == right.ContactSurfaceValid &&
+                   left.ContactSurfaceDistanceAccepted == right.ContactSurfaceDistanceAccepted &&
+                   left.ContactCaptureSpeedAccepted == right.ContactCaptureSpeedAccepted &&
+                   left.ContactRetentionSpeedAccepted == right.ContactRetentionSpeedAccepted &&
+                   left.ContactConfidenceAccepted == right.ContactConfidenceAccepted &&
+                   left.MaximumContactSurfaceDistance.Equals(right.MaximumContactSurfaceDistance) &&
+                   left.PlantSpeedThreshold.Equals(right.PlantSpeedThreshold) &&
+                   left.UnalignmentSpeedThreshold.Equals(right.UnalignmentSpeedThreshold) &&
+                   left.PlantConfidenceEnter.Equals(right.PlantConfidenceEnter) &&
+                   left.PlantConfidenceExit.Equals(right.PlantConfidenceExit) &&
+                   left.AnchorDistance.Equals(right.AnchorDistance) &&
+                   left.AnchorDistanceAccepted == right.AnchorDistanceAccepted &&
+                   left.MaximumAnchorDistance.Equals(right.MaximumAnchorDistance) &&
+                   left.AnchorBlendSpeed.Equals(right.AnchorBlendSpeed) &&
                    left.HasSurfaceAnchor == right.HasSurfaceAnchor &&
                    left.SurfaceLocalAnchor.Equals(right.SurfaceLocalAnchor) &&
                    left.SurfaceLocalRotation.Equals(right.SurfaceLocalRotation) &&
                    left.AnchorWorldPosition.Equals(right.AnchorWorldPosition) &&
                    left.AnchorWorldRotation.Equals(right.AnchorWorldRotation) &&
-                   left.SwingEligible == right.SwingEligible &&
-                   left.SelectedForPredictiveRewrite == right.SelectedForPredictiveRewrite &&
                    left.PredictiveRewritten == right.PredictiveRewritten &&
                    string.Equals(left.PredictionRejectReason, right.PredictionRejectReason, StringComparison.Ordinal) &&
                    left.FutureSurfaceIdentity == right.FutureSurfaceIdentity &&
@@ -358,6 +372,109 @@ namespace BTSMTL.Diagnostics
                    string.Equals(left.GroundEnvelopeRejectReason, right.GroundEnvelopeRejectReason, StringComparison.Ordinal) &&
                    left.PredictiveQueryCount == right.PredictiveQueryCount &&
                    left.PredictiveRejectedQueryCount == right.PredictiveRejectedQueryCount &&
+                   left.PredictiveRawHitCount == right.PredictiveRawHitCount &&
+                   left.PredictiveRejectNoCandidateCount == right.PredictiveRejectNoCandidateCount &&
+                   left.PredictiveRejectHeightDiscontinuityCount == right.PredictiveRejectHeightDiscontinuityCount &&
+                   left.PredictiveRejectEdgeGapCount == right.PredictiveRejectEdgeGapCount &&
+                   left.PredictiveRejectSurfaceDiscontinuityCount == right.PredictiveRejectSurfaceDiscontinuityCount &&
+                   left.PredictiveRejectReachExceededCount == right.PredictiveRejectReachExceededCount &&
+                   left.PredictiveRejectSlopeExceededCount == right.PredictiveRejectSlopeExceededCount &&
+                   left.PredictiveRejectStepExceededCount == right.PredictiveRejectStepExceededCount &&
+                   left.PredictiveRejectInvalidCandidateCount == right.PredictiveRejectInvalidCandidateCount &&
+                   left.PredictiveRejectUnsupportedCenterCount == right.PredictiveRejectUnsupportedCenterCount &&
+                   left.FutureLandingQueryAvailable == right.FutureLandingQueryAvailable &&
+                   string.Equals(left.FutureLandingQueryShape, right.FutureLandingQueryShape, StringComparison.Ordinal) &&
+                   string.Equals(left.FutureLandingQueryPurpose, right.FutureLandingQueryPurpose, StringComparison.Ordinal) &&
+                   left.FutureLandingQueryOrigin.Equals(right.FutureLandingQueryOrigin) &&
+                   left.FutureLandingQueryDirection.Equals(right.FutureLandingQueryDirection) &&
+                   left.FutureLandingQueryRadius.Equals(right.FutureLandingQueryRadius) &&
+                   left.FutureLandingQueryMaximumDistance.Equals(right.FutureLandingQueryMaximumDistance) &&
+                   left.FutureLandingQueryMinimumGroundNormalDot.Equals(right.FutureLandingQueryMinimumGroundNormalDot) &&
+                   left.FootFeatureValid == right.FootFeatureValid &&
+                   left.PredictedStepValid == right.PredictedStepValid &&
+                   left.PredictedStepHasLandingEvent == right.PredictedStepHasLandingEvent &&
+                   left.PredictedStepSourceBound == right.PredictedStepSourceBound &&
+                   left.HasAuthoritativeLandingEvent == right.HasAuthoritativeLandingEvent &&
+                   left.ExpectedLandingEventIdentity == right.ExpectedLandingEventIdentity &&
+                   left.LandingEventIdentityValid == right.LandingEventIdentityValid &&
+                   left.CurrentEventIsPreSwing == right.CurrentEventIsPreSwing &&
+                   left.CurrentEventIsSwing == right.CurrentEventIsSwing &&
+                   left.LandingEventIdentity == right.LandingEventIdentity &&
+                   left.SourceSampleIdentity == right.SourceSampleIdentity &&
+                   left.SourceSampleCycle == right.SourceSampleCycle &&
+                   left.EventOrdinal == right.EventOrdinal &&
+                   left.ContributionContinuityIdentity == right.ContributionContinuityIdentity &&
+                   left.LandingConfidence.Equals(right.LandingConfidence) &&
+                   left.AuthoredLandingDelaySeconds.Equals(right.AuthoredLandingDelaySeconds) &&
+                   left.LandingEventPhase.Equals(right.LandingEventPhase) &&
+                   left.LandingLiftOffPhase.Equals(right.LandingLiftOffPhase) &&
+                   left.RootLocalLanding.Equals(right.RootLocalLanding) &&
+                   left.RootLocalRouteSample0.Equals(right.RootLocalRouteSample0) &&
+                   left.RootLocalRouteSample1.Equals(right.RootLocalRouteSample1) &&
+                   left.RootLocalRouteSample2.Equals(right.RootLocalRouteSample2) &&
+                   left.RootLocalRouteSample3.Equals(right.RootLocalRouteSample3) &&
+                   left.RootLocalRouteSample4.Equals(right.RootLocalRouteSample4) &&
+                   left.RootLocalRouteSample5.Equals(right.RootLocalRouteSample5) &&
+                   left.RootLocalRouteSample6.Equals(right.RootLocalRouteSample6) &&
+                   left.AuthoredFootRouteStart.Equals(right.AuthoredFootRouteStart) &&
+                   left.AuthoredFootRouteLanding.Equals(right.AuthoredFootRouteLanding) &&
+                   left.PredictivePlanSequence == right.PredictivePlanSequence &&
+                   left.PredictivePlanGeneratedFrame == right.PredictivePlanGeneratedFrame &&
+                   string.Equals(left.PredictivePlanState, right.PredictivePlanState, StringComparison.Ordinal) &&
+                   string.Equals(left.PredictivePlanTransitionReason, right.PredictivePlanTransitionReason, StringComparison.Ordinal) &&
+                   string.Equals(left.PredictivePlanEndReason, right.PredictivePlanEndReason, StringComparison.Ordinal) &&
+                   left.PredictiveExecutionProgress.Equals(right.PredictiveExecutionProgress) &&
+                   left.PlanLandingEventIdentity == right.PlanLandingEventIdentity &&
+                   left.PlanSourceSampleIdentity == right.PlanSourceSampleIdentity &&
+                   left.PlanSourceSampleCycle == right.PlanSourceSampleCycle &&
+                   left.PlanEventOrdinal == right.PlanEventOrdinal &&
+                   left.PlanContributionContinuityIdentity == right.PlanContributionContinuityIdentity &&
+                   left.PlanElapsedSeconds.Equals(right.PlanElapsedSeconds) &&
+                   left.PlanSecondsToLiftOff.Equals(right.PlanSecondsToLiftOff) &&
+                   left.PlanSwingDuration.Equals(right.PlanSwingDuration) &&
+                   left.PlanHasPathGeometry == right.PlanHasPathGeometry &&
+                   left.PlanHasExecutablePath == right.PlanHasExecutablePath &&
+                   left.FrozenPlanarVelocity.Equals(right.FrozenPlanarVelocity) &&
+                   left.FixedPathStartWorldPosition.Equals(right.FixedPathStartWorldPosition) &&
+                   left.FixedLandingWorldPosition.Equals(right.FixedLandingWorldPosition) &&
+                   left.CurrentPathWorldPosition.Equals(right.CurrentPathWorldPosition) &&
+                   left.CurrentPathRootWorldPosition.Equals(right.CurrentPathRootWorldPosition) &&
+                   left.CurrentPathHipWorldPosition.Equals(right.CurrentPathHipWorldPosition) &&
+                   left.FrozenRootStartWorldPosition.Equals(right.FrozenRootStartWorldPosition) &&
+                   left.FrozenRootStartWorldRotation.Equals(right.FrozenRootStartWorldRotation) &&
+                   left.FrozenRootLandingWorldPosition.Equals(right.FrozenRootLandingWorldPosition) &&
+                   left.FrozenRootLandingWorldRotation.Equals(right.FrozenRootLandingWorldRotation) &&
+                   left.PredictiveRouteSampleCount == right.PredictiveRouteSampleCount &&
+                   left.PredictiveAcceptedHitCount == right.PredictiveAcceptedHitCount &&
+                   left.PredictiveEdgePlaneCandidateCount == right.PredictiveEdgePlaneCandidateCount &&
+                   left.PredictiveAcceptedEdgePlaneCount == right.PredictiveAcceptedEdgePlaneCount &&
+                   left.CurrentPathSurfaceIdentity == right.CurrentPathSurfaceIdentity &&
+                   left.CurrentPathSupportPoint.Equals(right.CurrentPathSupportPoint) &&
+                   left.CurrentPathSupportNormal.Equals(right.CurrentPathSupportNormal) &&
+                   left.PreClearanceHeelPathDistance.Equals(right.PreClearanceHeelPathDistance) &&
+                   left.PreClearanceToePathDistance.Equals(right.PreClearanceToePathDistance) &&
+                   left.PostClearanceHeelPathDistance.Equals(right.PostClearanceHeelPathDistance) &&
+                   left.PostClearanceToePathDistance.Equals(right.PostClearanceToePathDistance) &&
+                   left.PredictiveClearanceEvaluated == right.PredictiveClearanceEvaluated &&
+                   left.PredictiveResidualPenetration.Equals(right.PredictiveResidualPenetration) &&
+                   left.PlannedFootRouteWorldSampleCount == right.PlannedFootRouteWorldSampleCount &&
+                   left.PlannedFootRouteWorldSample0.Equals(right.PlannedFootRouteWorldSample0) &&
+                   left.PlannedFootRouteWorldSample1.Equals(right.PlannedFootRouteWorldSample1) &&
+                   left.PlannedFootRouteWorldSample2.Equals(right.PlannedFootRouteWorldSample2) &&
+                   left.PlannedFootRouteWorldSample3.Equals(right.PlannedFootRouteWorldSample3) &&
+                   left.PlannedFootRouteWorldSample4.Equals(right.PlannedFootRouteWorldSample4) &&
+                   left.PlannedFootRouteWorldSample5.Equals(right.PlannedFootRouteWorldSample5) &&
+                   left.PlannedFootRouteWorldSample6.Equals(right.PlannedFootRouteWorldSample6) &&
+                   left.PredictivePathDiagnosticSampleCount == right.PredictivePathDiagnosticSampleCount &&
+                   PathSampleEquivalent(in left.PredictivePathSample0, in right.PredictivePathSample0) &&
+                   PathSampleEquivalent(in left.PredictivePathSample1, in right.PredictivePathSample1) &&
+                   PathSampleEquivalent(in left.PredictivePathSample2, in right.PredictivePathSample2) &&
+                   PathSampleEquivalent(in left.PredictivePathSample3, in right.PredictivePathSample3) &&
+                   PathSampleEquivalent(in left.PredictivePathSample4, in right.PredictivePathSample4) &&
+                   PathSampleEquivalent(in left.PredictivePathSample5, in right.PredictivePathSample5) &&
+                   PathSampleEquivalent(in left.PredictivePathSample6, in right.PredictivePathSample6) &&
+                   PathSampleEquivalent(in left.PredictivePathSample7, in right.PredictivePathSample7) &&
+                   left.RequiredLift.Equals(right.RequiredLift) &&
                    string.Equals(left.BaselineGoalApplication, right.BaselineGoalApplication, StringComparison.Ordinal) &&
                    string.Equals(left.FinalGoalSourceKind, right.FinalGoalSourceKind, StringComparison.Ordinal) &&
                    left.SolverResultAvailable == right.SolverResultAvailable &&
@@ -378,12 +495,20 @@ namespace BTSMTL.Diagnostics
                    left.SoleHeelPlaneDistance.Equals(right.SoleHeelPlaneDistance) &&
                    left.SoleToePlaneDistance.Equals(right.SoleToePlaneDistance) &&
                    left.ResidualSolePenetration.Equals(right.ResidualSolePenetration) &&
+                   left.FinalGoalSoleHeelPosition.Equals(right.FinalGoalSoleHeelPosition) &&
+                   left.FinalGoalSoleToePosition.Equals(right.FinalGoalSoleToePosition) &&
+                   left.SolvedSoleAnklePosition.Equals(right.SolvedSoleAnklePosition) &&
+                   left.SolvedSoleHeelPosition.Equals(right.SolvedSoleHeelPosition) &&
+                   left.SolvedSoleToePosition.Equals(right.SolvedSoleToePosition) &&
+                   left.FinalPhysicalEvaluationAvailable == right.FinalPhysicalEvaluationAvailable &&
+                   string.Equals(left.FinalPhysicalSupportKind, right.FinalPhysicalSupportKind, StringComparison.Ordinal) &&
+                   left.FinalPhysicalSupportSurfaceIdentity == right.FinalPhysicalSupportSurfaceIdentity &&
+                   left.FinalPhysicalSupportPoint.Equals(right.FinalPhysicalSupportPoint) &&
+                   left.FinalPhysicalSupportNormal.Equals(right.FinalPhysicalSupportNormal) &&
+                   left.FinalPhysicalHeelPlaneDistance.Equals(right.FinalPhysicalHeelPlaneDistance) &&
+                   left.FinalPhysicalToePlaneDistance.Equals(right.FinalPhysicalToePlaneDistance) &&
+                   left.FinalPhysicalResidualPenetration.Equals(right.FinalPhysicalResidualPenetration) &&
                    left.AnimatedAnkleComponentY.Equals(right.AnimatedAnkleComponentY) &&
-                   left.HasPreviousSoleSample == right.HasPreviousSoleSample &&
-                   left.PreviousSoleSurfaceIdentity == right.PreviousSoleSurfaceIdentity &&
-                   left.PreviousSoleHeelPlaneDistance.Equals(right.PreviousSoleHeelPlaneDistance) &&
-                   left.PreviousSoleToePlaneDistance.Equals(right.PreviousSoleToePlaneDistance) &&
-                   left.ContinuousSoleContact == right.ContinuousSoleContact &&
                    left.AnchorBlendWeight.Equals(right.AnchorBlendWeight) &&
                    left.BaselineGoalPositionWeight.Equals(right.BaselineGoalPositionWeight) &&
                    left.BaselineGoalRotationWeight.Equals(right.BaselineGoalRotationWeight) &&
@@ -403,7 +528,6 @@ namespace BTSMTL.Diagnostics
                    left.PreviousNormalTarget.Equals(right.PreviousNormalTarget) &&
                    left.NormalSpringInitialized == right.NormalSpringInitialized &&
                    left.PredictionHorizon.Equals(right.PredictionHorizon) &&
-                   left.SwingClearance.Equals(right.SwingClearance) &&
                    left.CurrentGroundingComponentPosition.Equals(right.CurrentGroundingComponentPosition) &&
                    left.BaselineGoalComponentPosition.Equals(right.BaselineGoalComponentPosition) &&
                    left.FinalGoalComponentPosition.Equals(right.FinalGoalComponentPosition) &&
@@ -412,7 +536,17 @@ namespace BTSMTL.Diagnostics
                    left.RotationResidualDegrees.Equals(right.RotationResidualDegrees);
         }
 
-        static bool DebugValueEquivalent(DebugValueSnapshot left, DebugValueSnapshot right)
+        static bool PathSampleEquivalent(
+            in RuntimeFootIkPathSampleSnapshot left,
+            in RuntimeFootIkPathSampleSnapshot right) =>
+            left.Fraction.Equals(right.Fraction) &&
+            left.Position.Equals(right.Position) &&
+            left.Normal.Equals(right.Normal) &&
+            left.SurfaceIdentity == right.SurfaceIdentity &&
+            left.AnimationRootPosition.Equals(right.AnimationRootPosition) &&
+            left.HipPosition.Equals(right.HipPosition);
+
+        static bool DebugValueEquivalent(in DebugValueSnapshot left, in DebugValueSnapshot right)
         {
             return left.Kind == right.Kind &&
                    left.Boolean == right.Boolean &&
@@ -423,7 +557,7 @@ namespace BTSMTL.Diagnostics
                    left.Vector.Equals(right.Vector);
         }
 
-        static bool TimelineProvenanceEquivalent(RuntimeTimelinePlaybackProvenance left, RuntimeTimelinePlaybackProvenance right)
+        static bool TimelineProvenanceEquivalent(in RuntimeTimelinePlaybackProvenance left, in RuntimeTimelinePlaybackProvenance right)
         {
             return string.Equals(left.SourceGraphAuthoringId, right.SourceGraphAuthoringId, StringComparison.Ordinal) &&
                    string.Equals(left.SourceNodeAuthoringId, right.SourceNodeAuthoringId, StringComparison.Ordinal) &&

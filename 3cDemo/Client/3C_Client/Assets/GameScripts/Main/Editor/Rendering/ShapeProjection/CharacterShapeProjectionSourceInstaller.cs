@@ -37,6 +37,7 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
                 throw new InvalidOperationException($"{root.name}没有唯一匹配Artifact的Renderer集合");
 
             CharacterShapeProjectionSource source = root.GetComponent<CharacterShapeProjectionSource>();
+            bool created = source == null;
             if (source == null)
                 source = root.AddComponent<CharacterShapeProjectionSource>();
             source.EnsureIdentity();
@@ -44,9 +45,12 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
             SerializedObject serialized = new SerializedObject(source);
             serialized.FindProperty("profile").objectReferenceValue = profile;
             serialized.FindProperty("artifact").objectReferenceValue = artifact;
-            serialized.FindProperty("projectionEnabled").boolValue = true;
-            serialized.FindProperty("renderInGameCamera").boolValue = true;
-            serialized.FindProperty("debugView").enumValueIndex = (int)ShapeProjectionDebugView.Final;
+            if (created)
+            {
+                serialized.FindProperty("projectionEnabled").boolValue = false;
+                serialized.FindProperty("renderInGameCamera").boolValue = true;
+                serialized.FindProperty("debugView").enumValueIndex = (int)ShapeProjectionDebugView.Final;
+            }
             SerializedProperty bindings = serialized.FindProperty("rendererBindings");
             bindings.arraySize = resolved.Length;
             for (int i = 0; i < resolved.Length; i++)
@@ -54,7 +58,7 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
                 SerializedProperty binding = bindings.GetArrayElementAtIndex(i);
                 binding.FindPropertyRelative("slotId").stringValue = artifact.Renderers[i].SlotId;
                 binding.FindPropertyRelative("renderer").objectReferenceValue = resolved[i];
-                resolved[i].shadowCastingMode = ShadowCastingMode.ShadowsOnly;
+                resolved[i].shadowCastingMode = ShadowCastingMode.On;
                 EditorUtility.SetDirty(resolved[i]);
             }
             serialized.ApplyModifiedPropertiesWithoutUndo();

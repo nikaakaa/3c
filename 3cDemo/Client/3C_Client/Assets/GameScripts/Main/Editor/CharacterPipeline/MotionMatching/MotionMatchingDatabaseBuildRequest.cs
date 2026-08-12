@@ -197,7 +197,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
 
     public static class MotionMatchingDatabaseBuildRequestFactory
     {
-        public const int ArtifactSchemaVersion = 2;
+        public const int ArtifactSchemaVersion = 4;
         public const string AlgorithmVersion = "character-motion-matching-analysis/v2";
 
         public static MotionMatchingDatabaseBuildRequest Create(

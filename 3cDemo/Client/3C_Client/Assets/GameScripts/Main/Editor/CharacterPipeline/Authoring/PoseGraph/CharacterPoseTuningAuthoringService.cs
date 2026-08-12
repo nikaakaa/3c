@@ -30,6 +30,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        public static bool TryReadCurrentValue(
+            CharacterPresentationPoseGraphAsset asset,
+            CharacterPoseTuningLayoutEntry entry,
+            out CharacterPoseTuningValue value,
+            out string error)
+        {
+            value = default;
+            error = string.Empty;
+            try
+            {
+                if (!asset)
+                    throw new InvalidOperationException("Pose tuning requires an exact Pose Graph owner.");
+                if (entry == null)
+                    throw new InvalidOperationException("Pose tuning field is missing.");
+                value = ReadCurrentValue(asset, entry);
+                return true;
+            }
+            catch (Exception exception)
+            {
+                error = exception.Message;
+                return false;
+            }
+        }
+
         public static bool TryCompileCurrentBlock(
             CharacterPresentationPoseGraphAsset asset,
             CharacterPresentationProjection projection,
@@ -68,7 +92,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         continue;
                     CharacterPoseTuningValue value = ReadCurrentValue(
                         asset,
-                        currentProfiles.DefaultBlock,
                         entry);
                     result = CharacterPoseTuningCandidateCompiler.CompileBlock(
                         layout,
@@ -136,17 +159,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static CharacterPoseTuningValue ReadCurrentValue(
             CharacterPresentationPoseGraphAsset asset,
-            CharacterPoseTuningParameterBlock currentProfiles,
             CharacterPoseTuningLayoutEntry entry)
         {
             if (entry.OwnerId.StartsWith(
                     "full-body-ik-profile:",
-                    StringComparison.Ordinal) ||
-                entry.OwnerId.StartsWith(
+                    StringComparison.Ordinal))
+            {
+                return ReadFullBodyIkValue(
+                    FindFullBodyIkProfile(asset, entry.OwnerId),
+                    entry.FieldId.Substring(entry.OwnerId.Length + 1));
+            }
+            if (entry.OwnerId.StartsWith(
                     "foot-placement-profile:",
                     StringComparison.Ordinal))
             {
-                return currentProfiles.GetValue(entry);
+                return ReadFootPlacementValue(
+                    FindFootPlacementProfile(asset, entry.OwnerId),
+                    entry.FieldId.Substring(entry.OwnerId.Length + 1));
             }
             if (entry.OwnerId.StartsWith(
                     "animation-blend-policy:",
@@ -239,6 +268,124 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             throw new InvalidOperationException(
                 $"Pose tuning owner '{entry.OwnerId}' is not registered.");
+        }
+
+        static CharacterPoseTuningValue ReadFullBodyIkValue(
+            CharacterFullBodyIkProfile profile,
+            string fieldPath)
+        {
+            if (!profile)
+                throw new InvalidOperationException("Full Body IK Profile tuning owner is missing.");
+            if (fieldPath.StartsWith("left-arm/", StringComparison.Ordinal))
+                return ReadFullBodyIkLimbValue(profile.LeftArm, fieldPath.Substring("left-arm/".Length));
+            if (fieldPath.StartsWith("right-arm/", StringComparison.Ordinal))
+                return ReadFullBodyIkLimbValue(profile.RightArm, fieldPath.Substring("right-arm/".Length));
+            if (fieldPath.StartsWith("left-leg/", StringComparison.Ordinal))
+                return ReadFullBodyIkLimbValue(profile.LeftLeg, fieldPath.Substring("left-leg/".Length));
+            if (fieldPath.StartsWith("right-leg/", StringComparison.Ordinal))
+                return ReadFullBodyIkLimbValue(profile.RightLeg, fieldPath.Substring("right-leg/".Length));
+            return fieldPath switch
+            {
+                "iterations" => CharacterPoseTuningValue.Integer(profile.Iterations),
+                "fabrik-pass" => CharacterPoseTuningValue.Boolean(profile.FabrikPass),
+                "spine-stiffness" => CharacterPoseTuningValue.Float(profile.SpineStiffness),
+                "pull-body-vertical" => CharacterPoseTuningValue.Float(profile.PullBodyVertical),
+                "pull-body-horizontal" => CharacterPoseTuningValue.Float(profile.PullBodyHorizontal),
+                "node-weight" => CharacterPoseTuningValue.Float(profile.NodeWeight),
+                _ => throw new InvalidOperationException($"Full Body IK tuning field '{fieldPath}' is not declared.")
+            };
+        }
+
+        static CharacterPoseTuningValue ReadFullBodyIkLimbValue(
+            CharacterFullBodyIkLimbSettings limb,
+            string fieldPath)
+        {
+            if (limb == null)
+                throw new InvalidOperationException("Full Body IK limb tuning owner is missing.");
+            return fieldPath switch
+            {
+                "pin" => CharacterPoseTuningValue.Float(limb.Pin),
+                "pull" => CharacterPoseTuningValue.Float(limb.Pull),
+                "push" => CharacterPoseTuningValue.Float(limb.Push),
+                "push-parent" => CharacterPoseTuningValue.Float(limb.PushParent),
+                "reach" => CharacterPoseTuningValue.Float(limb.Reach),
+                "reach-smoothing" => CharacterPoseTuningValue.Enum((int)limb.ReachSmoothing),
+                "push-smoothing" => CharacterPoseTuningValue.Enum((int)limb.PushSmoothing),
+                "mapping-weight" => CharacterPoseTuningValue.Float(limb.MappingWeight),
+                "maintain-rotation-weight" => CharacterPoseTuningValue.Float(limb.MaintainRotationWeight),
+                "bend-constraint-weight" => CharacterPoseTuningValue.Float(limb.BendConstraintWeight),
+                "bend-clamp" => CharacterPoseTuningValue.Float(limb.BendClamp),
+                _ => throw new InvalidOperationException($"Full Body IK limb tuning field '{fieldPath}' is not declared.")
+            };
+        }
+
+        static CharacterPoseTuningValue ReadFootPlacementValue(
+            CharacterFootPlacementProfile profile,
+            string fieldPath)
+        {
+            if (!profile)
+                throw new InvalidOperationException("Foot Placement Profile tuning owner is missing.");
+            if (fieldPath.StartsWith("lyra-current-grounding/", StringComparison.Ordinal))
+            {
+                CharacterLyraCurrentGroundingSettings value = profile.LyraCurrentGrounding.Build();
+                string field = fieldPath.Substring("lyra-current-grounding/".Length);
+                return field switch
+                {
+                    "trace-above" => CharacterPoseTuningValue.Float(value.TraceAbove),
+                    "trace-below" => CharacterPoseTuningValue.Float(value.TraceBelow),
+                    "trace-radius" => CharacterPoseTuningValue.Float(value.TraceRadius),
+                    "hit-normal-spring-strength" => CharacterPoseTuningValue.Float(value.HitNormalSpringStrength),
+                    "hit-normal-critical-damping" => CharacterPoseTuningValue.Float(value.HitNormalCriticalDamping),
+                    "foot-offset-spring-strength" => CharacterPoseTuningValue.Float(value.FootOffsetSpringStrength),
+                    "foot-offset-critical-damping" => CharacterPoseTuningValue.Float(value.FootOffsetCriticalDamping),
+                    "foot-offset-target-velocity-amount" => CharacterPoseTuningValue.Float(value.FootOffsetTargetVelocityAmount),
+                    "pelvis-offset-spring-strength" => CharacterPoseTuningValue.Float(value.PelvisOffsetSpringStrength),
+                    "pelvis-offset-critical-damping" => CharacterPoseTuningValue.Float(value.PelvisOffsetCriticalDamping),
+                    _ => throw new InvalidOperationException($"Lyra Current Grounding tuning field '{field}' is not declared.")
+                };
+            }
+            if (fieldPath.StartsWith("stance-stabilization/", StringComparison.Ordinal))
+            {
+                CharacterStanceStabilizationSettings value = profile.StanceStabilization.Build();
+                string field = fieldPath.Substring("stance-stabilization/".Length);
+                return field switch
+                {
+                    "maximum-surface-slope-degrees" => CharacterPoseTuningValue.Float(value.MaximumSurfaceSlopeDegrees),
+                    "maximum-contact-surface-distance" => CharacterPoseTuningValue.Float(value.MaximumContactSurfaceDistance),
+                    "plant-speed-threshold" => CharacterPoseTuningValue.Float(value.PlantSpeedThreshold),
+                    "unalignment-speed-threshold" => CharacterPoseTuningValue.Float(value.UnalignmentSpeedThreshold),
+                    "plant-confidence-enter" => CharacterPoseTuningValue.Float(value.PlantConfidenceEnter),
+                    "plant-confidence-exit" => CharacterPoseTuningValue.Float(value.PlantConfidenceExit),
+                    "anchor-blend-speed" => CharacterPoseTuningValue.Float(value.AnchorBlendSpeed),
+                    "maximum-anchor-distance" => CharacterPoseTuningValue.Float(value.MaximumAnchorDistance),
+                    "minimum-leg-extension-ratio" => CharacterPoseTuningValue.Float(value.MinimumLegExtensionRatio),
+                    "maximum-leg-extension-ratio" => CharacterPoseTuningValue.Float(value.MaximumLegExtensionRatio),
+                    "maximum-pelvis-lowering" => CharacterPoseTuningValue.Float(value.MaximumPelvisLowering),
+                    "maximum-pelvis-raising" => CharacterPoseTuningValue.Float(value.MaximumPelvisRaising),
+                    _ => throw new InvalidOperationException($"Stance Stabilization tuning field '{field}' is not declared.")
+                };
+            }
+            if (fieldPath.StartsWith("predictive/", StringComparison.Ordinal))
+            {
+                CharacterPredictiveFootPlacementRuntimeSettings value = profile.PredictiveExtension.Build();
+                string field = fieldPath.Substring("predictive/".Length);
+                return field switch
+                {
+                    "path-sphere-radius" => CharacterPoseTuningValue.Float(value.PathSphereRadius),
+                    "swing-capsule-radius" => CharacterPoseTuningValue.Float(value.SwingCapsuleRadius),
+                    "cast-above" => CharacterPoseTuningValue.Float(value.CastAbove),
+                    "cast-below" => CharacterPoseTuningValue.Float(value.CastBelow),
+                    "maximum-slope-degrees" => CharacterPoseTuningValue.Float(value.MaximumSlopeDegrees),
+                    "maximum-step-up" => CharacterPoseTuningValue.Float(value.MaximumStepUp),
+                    "maximum-step-down" => CharacterPoseTuningValue.Float(value.MaximumStepDown),
+                    "maximum-height-discontinuity" => CharacterPoseTuningValue.Float(value.MaximumHeightDiscontinuity),
+                    "maximum-edge-gap" => CharacterPoseTuningValue.Float(value.MaximumEdgeGap),
+                    "minimum-landing-confidence" => CharacterPoseTuningValue.Float(value.MinimumLandingConfidence),
+                    "maximum-prediction-reach-ratio" => CharacterPoseTuningValue.Float(value.MaximumPredictionReachRatio),
+                    _ => throw new InvalidOperationException($"Predictive Extension tuning field '{field}' is not declared.")
+                };
+            }
+            throw new InvalidOperationException($"Foot Placement tuning field '{fieldPath}' is not declared.");
         }
 
         static void ApplyPoseNode(
@@ -405,8 +552,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return asset.EnumerateGraphs()
                 .Where(graph => graph != null)
                 .SelectMany(graph => graph.Nodes)
-                .Where(node => node?.Payload is CharacterFootGroundingPosePayload)
-                .Select(node => ((CharacterFootGroundingPosePayload)node.Payload).Profile)
+                .Where(node => node?.Payload is CharacterFootPlacementPosePayload)
+                .Select(node => ((CharacterFootPlacementPosePayload)node.Payload).Profile)
                 .Where(profile => profile && $"foot-placement-profile:{profile.ProfileId}" == ownerId)
                 .Distinct()
                 .SingleOrDefault();

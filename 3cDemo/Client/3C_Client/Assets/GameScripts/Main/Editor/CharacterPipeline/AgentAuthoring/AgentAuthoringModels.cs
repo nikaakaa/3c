@@ -520,9 +520,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string loopStopType;
         public string compareType;
         public float moveSpeed;
+        public string displacementMode;
         public float turnSpeedDegrees;
         public bool cameraRelative;
-        public bool continuous;
+        public string executionMode;
+        public float durationSeconds;
         public string inputId;
         public string requestId;
         public string blackboardDeclarationId;
@@ -942,9 +944,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string loopStopType;
         public string compareType;
         public float moveSpeed;
+        public string displacementMode;
+        public string actionMotionCurve;
+        public string actionMotionCurveAssetPath;
+        public string actionMotionCurveAssetGuid;
         public float turnSpeedDegrees;
         public bool cameraRelative;
-        public bool continuous;
+        public string executionMode;
+        public float durationSeconds;
         public string abortPolicy;
         public string aiMemoryValueKind;
         public string aiRequestRepeatPolicy;

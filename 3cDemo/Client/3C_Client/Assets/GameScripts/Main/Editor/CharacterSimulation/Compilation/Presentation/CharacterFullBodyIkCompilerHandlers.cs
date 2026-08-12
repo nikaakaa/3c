@@ -7,18 +7,18 @@ using ThirdPersonCharacter.Pipeline.Presentation;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
-    internal sealed class CharacterFootGroundingPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterFootGroundingPosePayload>
+    internal sealed class CharacterFootPlacementPoseCompilerHandler :
+        CharacterPoseCompilerHandler<CharacterFootPlacementPosePayload>
     {
-        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FootGrounding;
-        public override CharacterPoseOperationCode Code => CharacterPoseOperationCode.FootGrounding;
+        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FootPlacement;
+        public override CharacterPoseOperationCode Code => CharacterPoseOperationCode.FootPlacement;
 
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
-            new CharacterFootGroundingPosePayload(
+            new CharacterFootPlacementPosePayload(
                 input.Require<CharacterFootPlacementProfile>("profile"),
                 input.Require<CharacterFootPlacementRigCalibration>("calibration"));
 
-        protected override object ReadField(CharacterFootGroundingPosePayload payload, string field) =>
+        protected override object ReadField(CharacterFootPlacementPosePayload payload, string field) =>
             field switch
             {
                 "profile" => payload.Profile,
@@ -26,7 +26,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 _ => base.ReadField(payload, field)
             };
 
-        protected override void Validate(CharacterFootGroundingPosePayload payload, string sourcePath)
+        protected override void Validate(CharacterFootPlacementPosePayload payload, string sourcePath)
         {
             CharacterPoseCompilerHandlerValidation.Require(
                 payload.Profile && payload.Calibration,
@@ -43,7 +43,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         protected override void ValidateRig(
-            CharacterFootGroundingPosePayload payload,
+            CharacterFootPlacementPosePayload payload,
             CharacterAnimationRigDefinition rig,
             string sourcePath)
         {
@@ -56,16 +56,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException($"{sourcePath}: {exception.Message}", exception);
             }
         }
-    }
-
-    internal sealed class CharacterPredictiveFootPlacementModifierPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterPredictiveFootPlacementModifierPosePayload>
-    {
-        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.PredictiveFootPlacementModifier;
-        public override CharacterPoseOperationCode Code => CharacterPoseOperationCode.PredictiveFootPlacementModifier;
-
-        public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
-            new CharacterPredictiveFootPlacementModifierPosePayload();
     }
 
     internal sealed class CharacterPoseBoneIkGoalsCompilerHandler :

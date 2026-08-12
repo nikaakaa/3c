@@ -8,6 +8,7 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline
 {
+    [DefaultExecutionOrder(-9000)]
     [DisallowMultipleComponent]
     public sealed class SimulationSessionHost : MonoBehaviour, IGameplayRenderFrameInputTarget, IGameplayLogicTickTarget
     {
@@ -191,7 +192,9 @@ namespace ThirdPersonCharacter.Pipeline
 
         void OnEnable()
         {
-            if (m_Disposed || m_Quiesced || m_State == SimulationSessionLifecycleState.Failed || !m_Composition)
+            if (m_Disposed)
+                BeginFreshLifecycle();
+            if (m_Quiesced || m_State == SimulationSessionLifecycleState.Failed || !m_Composition)
                 return;
             if (!GameplayTickSystem.IsInitialized)
             {
@@ -480,6 +483,23 @@ namespace ThirdPersonCharacter.Pipeline
             m_OutputLifecycle = null;
             m_LaunchPlan = null;
             m_State = SimulationSessionLifecycleState.Disposed;
+        }
+
+        void BeginFreshLifecycle()
+        {
+            if (m_Preparation != null || m_Runtime != null || m_Registrations.Count != 0 ||
+                m_TickTargetsRegistered || m_DebugControlPort != null)
+            {
+                throw new InvalidOperationException("Disposed Simulation Session retained runtime state before reactivation.");
+            }
+            m_Disposed = false;
+            m_Quiesced = false;
+            m_State = SimulationSessionLifecycleState.Uninitialized;
+            m_Failure = null;
+            m_LastDiagnostics = null;
+            m_LaunchPlan = null;
+            m_OutputLifecycle = null;
+            m_OuterTickKind = default;
         }
 
         static void TryCleanup(Action cleanup, List<Exception> failures)

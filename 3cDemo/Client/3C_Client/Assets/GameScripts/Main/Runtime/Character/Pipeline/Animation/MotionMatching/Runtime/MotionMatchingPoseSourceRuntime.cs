@@ -154,8 +154,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 clip.FootPlacementWeightCurve.Sample(clipSamplePlan.NormalizedTime));
             var footPlacement = new AnimationFootPlacementSample(
                 footPlacementWeight.Value,
-                sample.LeftFoot,
-                sample.RightFoot);
+                sample.LeftFoot.BindPredictionSource(
+                    AnimationPredictedFootStepSample.SourceIdentity(clip.SourceClipId.Value),
+                    selection.PoseTime.Cycle,
+                    clipSamplePlan.ClipTime,
+                    clip.Clip.length,
+                    true),
+                sample.RightFoot.BindPredictionSource(
+                    AnimationPredictedFootStepSample.SourceIdentity(clip.SourceClipId.Value),
+                    selection.PoseTime.Cycle,
+                    clipSamplePlan.ClipTime,
+                    clip.Clip.length,
+                    true));
             return new MotionMatchingPoseSourceOutput(
                 m_Database.ArtifactIdentity,
                 m_Database.ProjectionDatabaseIndex,

@@ -151,9 +151,9 @@ namespace ThirdPersonRendering.ShapeProjection
                 using (new ProfilingScope(cmd, sampler))
                     workspace.RecordMask(cmd, compute, clearKernel, rasterKernel, completeKernel, slot);
                 slot.RecordMaskCommand((float)((Time.realtimeSinceStartupAsDouble - maskStart) * 1000.0));
+                slot.RecordReadback(cmd);
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
-                slot.RequestReadback();
             }
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);

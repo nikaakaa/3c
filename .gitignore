@@ -53,6 +53,7 @@ coverage/
 coverage.cobertura.xml
 *.coverage
 *.coveragexml
+/3cDemo/Client/3C_Client/FootIkEnduranceRuns/
 
 # .NET generated output
 artifacts/

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet" />
+    <link href="./style.css" rel="stylesheet" />
+    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+    <script>
+      var PLAYBACK_URL = "";
+    </script>
+    <script src="./script_VOD.js"></script>
+    <!-- If you'd like to support IE8 (for Video.js versions prior to v7) -->
+    <!-- <script src="https://vjs.zencdn.net/ie8/1.1.2/videojs-ie8.min.js"></script> -->
+  </head>
+
+  <body>
+    <script src="https://src.litix.io/videojs/4/videojs-mux.js"></script>
+    <script type="text/javascript" src="https://cdn.bitmovin.com/analytics/web/2/bitmovinanalytics.min.js"></script>
+    <div class="video-container outer" id="playerContainer">
+      <video-js id="my-video" class="video-js vjs-big-play-centered vjs-fluid" controls preload="auto" width="auto" height="auto">
+        <p class="vjs-no-js">
+          To view this video please enable JavaScript, and consider upgrading to a web browser that
+          <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+        </p>
+      </video-js>
+    </div>
+
+    <script>
+      var player = videojs("my-video", {
+        autoplay: "true",
+        playbackRates: [0.5, 1, 1.25, 1.5, 2],
+        controlBar: {
+          children: [
+            "playToggle",
+            "volumePanel",
+            "progressControl",
+            "RemainingTimeDisplay",
+            "PlaybackRateMenuButton",
+            "SubsCapsButton",
+            "fullscreenToggle",
+            "PictureInPictureToggle",
+          ],
+        },
+      });
+      var volumeLevel = 0.7;
+
+      player.src(PLAYBACK_URL);
+
+      const playerInitTime = Date.now();
+      player.mux({
+        debug: false,
+        data: {
+          env_key: "KEY_HERE", // required
+
+          // Metadata
+          player_name: "GDC_Vault", // ex: 'My Main Player'
+          player_init_time: playerInitTime, // ex: 1451606400000
+          video_id: videoId,
+        },
+      });
+      
+      const analyticsConfig = {
+        key: 'f64391d7-3965-4c0c-9e67-b9d4ebf63a8b',
+        videoId: videoId,
+        title: videoId,
+        customData1: 'GDC Vault'
+      };
+
+      var analytics;
+        if (window.VideojsAdapter) { // Directly available
+            analytics = new VideojsAdapter(analyticsConfig, player);
+        } else if (window.bitmovin && window.bitmovin.analytics && window.bitmovin.analytics.VideojsAdapter) { // Nested under a namespace
+            analytics = new window.bitmovin.analytics.VideojsAdapter(analyticsConfig, player);
+            console.log('analytics object created')
+        } else {
+            console.error('Bitmovin Analytics adapter not found.');
+        }
+  
+
+      player.on("loadeddata", function () {
+        // Play video which returns a promise
+        var promise = player.play();
+
+        // +++ Use promise to see if video is playing or not +++
+        if (promise !== undefined) {
+          promise
+            .then(function () {
+              // Autoplay started!
+              // If video playing unmute and set the volume
+              player.muted(false);
+              player.volume(volumeLevel);
+            })
+            .catch(function (error) {
+              // Autoplay was prevented.
+              // // +++ If autoplay prevented mute the video, play video and display unmute button +++
+              player.muted(true);
+              player.play();
+
+              var button = document.createElement("button");
+
+              // +++ Add button's event listener +++
+              button.addEventListener("click", function () {
+                player.muted(false);
+                player.volume(volumeLevel);
+                playerContainer.removeChild(button);
+              });
+
+              // +++ Configure the button +++
+              button.textContent = "Click to Unmute";
+              button.classList.add("button-54");
+              button.classList.add("inner");
+              button.setAttribute(
+                "style",
+                "color:white; background-color: rgb(0, 186, 209); \
+                         border: .5rem solid rgb(72,62,140); border-radius: 3rem; \
+                         font-size: 2.5vw; font-family: Verdana, sans-serif; \
+                         font-weight: bold; text-overflow: clip; \
+                         overflow-wrap: break-word;"
+              );
+
+              // +++ Add the button to the container +++
+              playerContainer.appendChild(button);
+            });
+        }
+      });
+      
+      player.ready(function () {
+        var trackList = player.textTracks();
+
+        // Function to process tracks
+        function processTrack(track) {
+          if (track.kind === "subtitles" || track.kind === "captions") {
+            console.log("Processing Track:", track.label, "| Language:", track.language);
+            if (track.label.toLowerCase() === "chinese") {
+              track.label = "Chinese (Simplified)";
+            }
+        
+          }
+        }
+
+        // Process existing tracks
+        for (var i = 0; i < trackList.length; i++) {
+          processTrack(trackList[i]);
+        }
+
+        // Listen for new tracks
+        trackList.addEventListener("addtrack", function (event) {
+          processTrack(event.track);
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -10,7 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v12";
+        public const string SchemaVersion = "character-foot-placement-profile/v15";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] string m_Revision = string.Empty;
@@ -145,8 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             currentGrounding.RequireValid();
             stanceStabilization.RequireValid();
             predictive.RequireValid();
-            if (currentGrounding.HitCapacity != CurrentGrounding.HitCapacity ||
-                predictive.PathSampleCount != PredictiveExtension.PathSampleCount)
+            if (currentGrounding.HitCapacity != CurrentGrounding.HitCapacity)
                 throw new InvalidOperationException("Foot Placement tuning cannot change published workspace capacity.");
             CurrentGrounding = currentGrounding;
             StanceStabilization = stanceStabilization;

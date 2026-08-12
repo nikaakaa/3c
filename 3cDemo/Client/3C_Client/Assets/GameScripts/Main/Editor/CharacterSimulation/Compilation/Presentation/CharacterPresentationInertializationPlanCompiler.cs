@@ -175,7 +175,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 source.RootOrientationWarps.ToArray(),
                 source.PoseBoneIkGoalSources.ToArray(),
                 source.FootGroundings.ToArray(),
-                source.PredictiveFootPlacementModifiers.ToArray(),
                 source.FullBodyIks.ToArray(),
                 source.FullBodyIkGoalInputValueIndices.ToArray(),
                 source.SequencePlayers.ToArray(),

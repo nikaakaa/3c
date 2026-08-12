@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_TypedGraph:
     m_GraphId: training-enemy.monster.pose-graph
-    m_ContentRevision: ca3fd7608b7d494b992582ac9a785000
+    m_ContentRevision: 4088df11e66e4398b1bd5b263b995519
     m_Parameters:
     - m_ParameterId: character.motor.planar-speed
       m_ValueType: 1
@@ -61,7 +61,7 @@ MonoBehaviour:
         rid: 3396202407018103287
       m_DynamicPorts: []
     - m_NodeId: training-enemy.monster.pose.foot-placement
-      m_DisplayName: Monster Foot Grounding
+      m_DisplayName: Monster Foot Placement
       m_Payload:
         rid: 3396202407018103288
       m_DynamicPorts: []
@@ -222,7 +222,7 @@ MonoBehaviour:
         asm: ThirdPersonClient.Runtime}
       data: 
     - rid: 3396202407018103288
-      type: {class: CharacterFootGroundingPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+      type: {class: CharacterFootPlacementPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
       data:
         m_Profile: {fileID: 11400000, guid: 67caf04cfc2286a46ae27988d8bac11c, type: 2}

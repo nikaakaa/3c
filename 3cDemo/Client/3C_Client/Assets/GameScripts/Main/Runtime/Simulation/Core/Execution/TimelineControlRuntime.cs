@@ -337,7 +337,7 @@ namespace ThirdPersonSimulation
                 switch (clip.Code)
                 {
                     case SimulationOperationCode.TimelineMotionCurve:
-                        m_Target.SampleMotionCurve(clip.Handle, segment);
+                        m_Target.SampleMotionCurve(timeline, clip.Handle, segment);
                         break;
                     case SimulationOperationCode.TimelineMotionWarp:
                         m_Target.SampleMotionWarp(

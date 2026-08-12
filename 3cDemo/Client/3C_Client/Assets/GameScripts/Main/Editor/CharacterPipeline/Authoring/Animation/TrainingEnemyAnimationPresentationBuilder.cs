@@ -656,7 +656,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                     PoseParameterResolvePolicy.Weighted)
                             })),
                     new CharacterTypedPoseNode(toComponent, "Monster Local To Component", new CharacterLocalToComponentPosePayload()),
-                    new CharacterTypedPoseNode(footPlacement, "Monster Foot Grounding", new CharacterFootGroundingPosePayload(footPlacementProfile, footCalibration)),
+                    new CharacterTypedPoseNode(footPlacement, "Monster Foot Placement", new CharacterFootPlacementPosePayload(footPlacementProfile, footCalibration)),
                     new CharacterTypedPoseNode(
                         fullBodyIk,
                         "Monster Full Body IK",

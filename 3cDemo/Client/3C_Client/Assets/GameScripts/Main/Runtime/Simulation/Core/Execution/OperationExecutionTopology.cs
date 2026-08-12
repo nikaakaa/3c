@@ -202,14 +202,18 @@ namespace ThirdPersonSimulation
         MoveSpeed = 11,
         TurnSpeedDegrees = 12,
         Weight = 13,
-        Intensity = 14
+        Intensity = 14,
+        DurationSeconds = 15,
+        ActionMotionPositionX = 16,
+        ActionMotionPositionZ = 17,
+        ActionMotionDuration = 18
     }
 
     public static class OperationNamedConstantSchema
     {
         const string Marker = "/constant/";
 
-        public static int Count => 15;
+        public static int Count => 19;
 
         public static bool TryParseIdentity(string identity, out OperationNamedConstant field)
         {

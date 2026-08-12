@@ -2,6 +2,8 @@
 #pragma kernel RasterRegion
 #pragma kernel CompleteDepth
 
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+
 struct ShapeProjectedVertex
 {
     float2 Screen;

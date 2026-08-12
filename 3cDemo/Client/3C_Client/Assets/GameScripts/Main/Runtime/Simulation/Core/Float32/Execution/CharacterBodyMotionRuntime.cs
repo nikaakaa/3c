@@ -123,10 +123,11 @@ namespace ThirdPersonSimulation
                 "body-motion:integrated",
                 requestedDisplacement,
                 requestedVelocity,
+                gameplayMotion.LocomotionPlanarBasis,
                 gameplayMotion.YawDegrees,
                 WorldMotionSpace.World,
                 requestedDisplacement != Float32Vector3.Zero || gameplayMotion.YawDegrees != Float32Scalar.Zero,
-                gameplayMotion.LocomotionOwnerIdentity,
+                gameplayMotion.MovementPlaybackClock,
                 gameplayMotion.ActionOwnerIdentity,
                 gameplayMotion.GameplayResultOwnerIdentity);
             return new BodyMotionPrepareResult(plan, motion);

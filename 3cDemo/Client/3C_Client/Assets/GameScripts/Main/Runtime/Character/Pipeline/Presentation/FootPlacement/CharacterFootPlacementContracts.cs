@@ -34,18 +34,51 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         PelvisRangeConflictReleased = 17
     }
 
+    public enum CharacterFootContactDecision : byte
+    {
+        None = 0,
+        WaitingForSurface = 1,
+        WaitingForDistance = 2,
+        WaitingForCaptureSpeed = 3,
+        WaitingForPlantConfidence = 4,
+        AnchorFading = 5,
+        ContactEntered = 6,
+        ContactRetained = 7,
+        ContactReleasedSurfaceInvalid = 8,
+        ContactReleasedSurfaceDistance = 9,
+        ContactReleasedAnimationSpeed = 10,
+        ContactReleasedAnchorSurface = 11,
+        ContactReleasedAnchorDistance = 12,
+        ContactReleasedPelvisConflict = 13,
+        ContactReleasedLegUnreachable = 14,
+        Reset = 15,
+        ContactReleasedAnimationConstraint = 16
+    }
+
     public enum FootPredictionRejectReason : byte
     {
         None = 0,
-        NoSupportEstimate = 1,
-        AngularVelocityExceeded = 2,
-        DistanceExceeded = 3,
-        ReachExceeded = 4,
-        NonFinite = 5,
-        NoFutureLanding = 6,
-        NotSwing = 7,
-        LandingConfidenceInsufficient = 8,
-        NotSelected = 9
+        ReachExceeded = 1,
+        NonFinite = 2,
+        NoFutureLanding = 3,
+        LandingConfidenceInsufficient = 5,
+        NoClearanceRequired = 6,
+        NoCommittedPlan = 7,
+        LandingEventUnavailable = 8,
+        LandingEventNotPreSwing = 9,
+        LandingEventIdentityInvalid = 11,
+        PlanWaitingForRelease = 12,
+        CurrentSupportUnavailable = 13,
+        StanceConstraintOwnsFoot = 14,
+        MovementDirectionUnavailable = 15,
+        FutureLandingNoCandidate = 16,
+        FutureLandingHeightDiscontinuity = 17,
+        FutureLandingEdgeGap = 18,
+        FutureLandingReachExceeded = 19,
+        FutureLandingStepExceeded = 20,
+        FutureLandingUnsupportedCenter = 21,
+        FutureLandingSlopeExceeded = 22,
+        FutureLandingInvalidCandidate = 23
     }
 
     public readonly struct CharacterFootPlacementAnimatedFootPose

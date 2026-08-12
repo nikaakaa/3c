@@ -8,13 +8,15 @@ namespace ThirdPersonRendering.ShapeProjection
     {
         [SerializeField] ShapeProjectionProfileId profileId;
         [SerializeField, Min(1)] int revision = 1;
+        [SerializeField, Min(1)] int runtimeTuningRevision = 1;
         [SerializeField] Hash128 contentHash;
         [SerializeField, Range(0f, 255f)] float colorClusterThreshold = 64f;
         [SerializeField, Range(0f, 255f)] float smallRegionMergeThreshold = 72f;
-        [SerializeField, Min(1)] int minimumRegionTriangles = 3;
-        [SerializeField, Min(0.25f)] float simplifyEpsilonPixels = 4f;
+        [SerializeField, Min(0)] int smallRegionTriangleLimit = 2;
+        [SerializeField, Min(1)] int minimumProjectedRegionTriangles = 4;
+        [SerializeField, Min(0.25f)] float maximumSimplifyEpsilonPixels = 4f;
         [SerializeField, Min(0.25f)] float outlineWidthPixels = 1.25f;
-        [SerializeField, Min(0f)] float minimumLoopAreaPixels = 12f;
+        [SerializeField, Min(0f)] float minimumSecondaryLoopAreaPixels = 48f;
         [SerializeField, Min(0f)] float minimumSharedEdgePixels = 2f;
         [SerializeField] Color outlineColor = new Color(0.035f, 0.035f, 0.045f, 1f);
         [SerializeField] ShapeProjectionCapacity capacity = new ShapeProjectionCapacity
@@ -35,13 +37,15 @@ namespace ThirdPersonRendering.ShapeProjection
 
         public ShapeProjectionProfileId ProfileId => profileId;
         public int Revision => revision;
+        public int RuntimeTuningRevision => runtimeTuningRevision;
         public Hash128 ContentHash => contentHash;
         public float ColorClusterThreshold => colorClusterThreshold;
         public float SmallRegionMergeThreshold => smallRegionMergeThreshold;
-        public int MinimumRegionTriangles => minimumRegionTriangles;
-        public float SimplifyEpsilonPixels => simplifyEpsilonPixels;
+        public int SmallRegionTriangleLimit => smallRegionTriangleLimit;
+        public int MinimumProjectedRegionTriangles => minimumProjectedRegionTriangles;
+        public float MaximumSimplifyEpsilonPixels => maximumSimplifyEpsilonPixels;
         public float OutlineWidthPixels => outlineWidthPixels;
-        public float MinimumLoopAreaPixels => minimumLoopAreaPixels;
+        public float MinimumSecondaryLoopAreaPixels => minimumSecondaryLoopAreaPixels;
         public float MinimumSharedEdgePixels => minimumSharedEdgePixels;
         public Color OutlineColor => outlineColor;
         public ShapeProjectionCapacity Capacity => capacity;
@@ -53,15 +57,18 @@ namespace ThirdPersonRendering.ShapeProjection
                 return ShapeProjectionValidationResult.Fail("ProfileId为空");
             if (revision < 1)
                 return ShapeProjectionValidationResult.Fail("Profile revision必须大于0");
+            if (runtimeTuningRevision < 1)
+                return ShapeProjectionValidationResult.Fail("Profile runtime tuning revision必须大于0");
             if (!IsFinite(colorClusterThreshold) || !IsFinite(smallRegionMergeThreshold)
-                                                 || !IsFinite(simplifyEpsilonPixels)
+                                                 || !IsFinite(maximumSimplifyEpsilonPixels)
                                                  || !IsFinite(outlineWidthPixels)
-                                                 || !IsFinite(minimumLoopAreaPixels)
+                                                 || !IsFinite(minimumSecondaryLoopAreaPixels)
                                                  || !IsFinite(minimumSharedEdgePixels))
                 return ShapeProjectionValidationResult.Fail("Profile包含非有限数值");
-            if (colorClusterThreshold < 0f || smallRegionMergeThreshold < 0f || minimumRegionTriangles < 1)
+            if (colorClusterThreshold < 0f || smallRegionMergeThreshold < 0f || smallRegionTriangleLimit < 0
+                                                || minimumProjectedRegionTriangles < 1)
                 return ShapeProjectionValidationResult.Fail("Region分区参数无效");
-            if (simplifyEpsilonPixels <= 0f || outlineWidthPixels <= 0f || minimumLoopAreaPixels < 0f || minimumSharedEdgePixels < 0f)
+            if (maximumSimplifyEpsilonPixels <= 0f || outlineWidthPixels <= 0f || minimumSecondaryLoopAreaPixels < 0f || minimumSharedEdgePixels < 0f)
                 return ShapeProjectionValidationResult.Fail("轮廓参数无效");
             if (!capacity.Validate(out string capacityError))
                 return ShapeProjectionValidationResult.Fail(capacityError);
@@ -134,6 +141,12 @@ namespace ThirdPersonRendering.ShapeProjection
         {
             contentHash = default;
             revision++;
+            runtimeTuningRevision++;
+        }
+
+        public void RecordRuntimeTuningChange()
+        {
+            runtimeTuningRevision++;
         }
 #endif
 

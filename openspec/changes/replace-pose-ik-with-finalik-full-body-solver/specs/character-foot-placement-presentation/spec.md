@@ -1,276 +1,206 @@
 ## RENAMED Requirements
 
 - FROM: `### Requirement: Foot Placement规划与Leg IK求解必须在Pose Graph中显式分段`
-- TO: `### Requirement: Lyra Foot Grounding与Full Body IK必须在Pose Graph中显式分段`
+- TO: `### Requirement: 统一Foot Placement与Full Body IK必须在Pose Graph中显式分段`
 - FROM: `### Requirement: Foot Placement Planner与Leg IK Solver必须使用typed目标合同`
-- TO: `### Requirement: Lyra Foot Grounding与Full Body IK必须使用typed目标合同`
+- TO: `### Requirement: 统一Foot Placement与Full Body IK必须使用typed目标合同`
 - FROM: `### Requirement: Leg IK必须保持Physical腿链长度`
 - TO: `### Requirement: Full Body IK必须由成熟后端保持biped约束`
 - FROM: `### Requirement: Foot Placement与Leg IK必须提供分层诊断且保持热路径有界`
-- TO: `### Requirement: Lyra Foot Grounding与Full Body IK必须提供分层诊断且保持热路径有界`
-- FROM: `### Requirement: Foot Rotation必须应用语义foot frame差值`
-- TO: `### Requirement: Foot Rotation必须复刻Lyra ProcessFootOffset语义`
-- FROM: `### Requirement: 地面查询必须形成有限连续 Support Envelope`
-- TO: `### Requirement: 当前Grounding与未来Support Envelope必须显式分离`
-- FROM: `### Requirement: Pelvis 必须由支撑腿和腿长约束统一求解`
-- TO: `### Requirement: Pelvis必须使用Lyra期望值与唯一Reach安全夹紧`
-- FROM: `### Requirement: 每只脚必须使用有限约束生命周期`
-- TO: `### Requirement: 普通FootGrounding必须统一维护Lyra与Stance运行状态`
-- FROM: `### Requirement: Locked Foot 必须支持移动 Surface`
-- TO: `### Requirement: Stance Anchor必须支持移动Surface`
-
-## ADDED Requirements
-
-### Requirement: 普通FootGrounding必须以本地Lyra Control Rig作为Current Grounding行为权威
-
-正式`FootGrounding`的`Lyra Current Grounding`阶段 MUST逐项对照本地`ABP_Mannequin_Base -> CR_Mannequin_FootPlant`的资产gate事实、每脚Sphere Trace、目标Z偏移、命中法线、脚偏移平滑、法线平滑、Pelvis Z期望值及`ProcessFootOffset`目标形成顺序。项目没有可正式映射的独立`UseFootPlacement`或`DisableLegIK`参数，因此节点存在即执行，Body Grounded只作为诊断事实。每个Current Grounding计算和Profile字段 MUST能够回指Lyra资产中的变量、函数、节点连线或常量。系统 MAY执行UE厘米到Unity米、Bone Name到Rig BoneId、Control Rig写骨到typed Goal、Two Bone IK到唯一FinalIK FBBIK四种表示映射，但 MUST不以FinalIK Grounding、UE `AnimNode_FootPlacement`或项目旧planner替换Lyra current算法。
-
-普通`FootGrounding` MUST在同一节点内按`Lyra Current Grounding -> Stance Stabilization -> Pelvis Resolve`生成唯一Baseline Goal Set。它 MUST保留有界contact滞回、surface-local anchor、移动surface跟随与pelvis reach安全，但 MUST把这些能力诊断为项目稳定层，不得伪装成Lyra原生。它 MUST不包含FinalIK Grounding Quality/Ray/Capsule current target、Plant Plane、Ball Pivot、secondary Toe Trace、脚间分离、水平Pelvis Rebalance、Future Landing或与上述三阶段竞争的第二控制路径。
-
-Stance Stabilization MUST把现有最大合法surface坡度应用到同一次Current Grounding SphereCast的命中选择，并使用Calibration Heel/Toe几何计算唯一`Sole Clearance Target`。该目标 MUST作为非负增量并入既有Foot Offset `SpringInterpV2`目标。Plant Contact MUST对求值后的同一spring候选执行向上鞋底安全约束。非Plant脚 MAY只在Current Surface identity与上一帧相同、上一帧约束后Heel/Toe对当前平面均不低于面且本帧候选首次进入面下时执行同一约束；该历史 MUST保存在现有Stance `FootState`内且不得形成第二spring或第二clearance owner。正修正 MUST写回该spring的同一个Value并取消向下Velocity。新surface首次命中的Swing MUST只追踪同一spring target，`Sole Constraint Offset` MUST为零；提前跨级由显式`PredictiveFootPlacementModifier`处理。系统 MUST不在spring状态之外直接平移Ankle，不得使用`AnchorBlendWeight`充当清障资格，也不得创建第二current query、第二clearance状态、第二rotation目标、第二配置或第二solver。
-
-#### Scenario: Swing脚首次查询到高一级踏面
-
-- **WHEN** Current SphereCast命中合法高踏面且Foot Offset spring候选仍让Heel或Toe低于该面
-- **THEN** Stance Stabilization MUST保留完整`Sole Clearance Target`作为同一脚现有spring target
-- **AND** MUST不直接改写该Swing脚的Value或Velocity，`Sole Constraint Offset` MUST为零
-- **AND** 图中显式存在的Predictive Modifier MAY依据Future Landing提前改写该Swing Goal
-
-#### Scenario: 非Plant脚在同一支撑面上连续越界
-
-- **WHEN** Current Surface identity与上一帧相同，上一帧约束后Heel/Toe对当前支撑平面均不低于面，且本帧spring候选第一次使Heel或Toe进入面下
-- **THEN** Stance MUST只把本帧最小Component Up缺口写回同一Foot Offset spring Value
-- **AND** MUST发布连续接触证据，且不得创建anchor、第二clearance状态或spring状态外Ankle平移
-
-#### Scenario: 实现者准备添加Plant Plane
-
-- **WHEN** Lyra资产对照中没有Plant Plane节点、状态或参数
-- **THEN** 本change实现 MUST拒绝把Plant Plane加入普通FootGrounding
-- **AND** MUST不以“提升Lyra质量”为理由保留旧项目路径
-
-#### Scenario: 普通基线执行一个接地帧
-
-- **WHEN** FootGrounding节点、节点总weight、Rig、Calibration与PhysicsScene均合法
-- **THEN** FootGrounding MUST先按Lyra顺序生成current目标，再由Stance Stabilization与Pelvis Resolve生成唯一Baseline Goals
-- **AND** 最后 MUST只由唯一FullBodyIK写入骨骼Pose
-- **AND** Body Grounded MUST只作为同帧诊断事实而不关闭普通Goal
-
-### Requirement: 普通基线与预测扩展必须是有序Goal阶段
-
-`FootGrounding` MUST输出完整Baseline Goal Set。可选`PredictiveFootPlacementModifier` MUST消费该Goal Set并只重写Foot Analysis明确标记为Swing且未由stance anchor拥有的单个Foot slot；stance/anchored脚、另一只脚、Pelvis slot、Lyra current trace结果、Stance状态和Lyra平滑状态 MUST逐值保持。普通Goal与Modifier最终Goal MUST不作为两个并行Foot输入同时连接FullBodyIK。Compiler、Build Validator与Runtime MUST拒绝同slot竞争、隐式Goal Merge、最后写入获胜或运行时择优。
-
-#### Scenario: 普通基线不接预测
-
-- **WHEN** Pose Graph连接`FootGrounding -> FullBodyIK`
-- **THEN** 一个表现帧 MUST执行完整Lyra普通脚步目标生成和一次FBBIK
-- **AND** MUST不创建Future Landing query或预测状态
-
-#### Scenario: 预测修改摆动脚
-
-- **WHEN** Pose Graph连接`FootGrounding -> PredictiveFootPlacementModifier -> FullBodyIK`且左脚具有Swing资格
-- **THEN** Modifier MAY重写LeftFoot slot
-- **AND** RightFoot与Pelvis slot MUST逐值保持Baseline结果
-
-#### Scenario: Swing脚进入contact
-
-- **WHEN** 被预测改写的脚在当前帧进入合法stance contact
-- **THEN** Modifier MUST停止改写该Foot slot并逐值传递Baseline Goal
-- **AND** 只有FootGrounding MAY根据current hit建立或维持surface-local anchor
-
-#### Scenario: 预测失去合法落点
-
-- **WHEN** Swing脚Future Landing或Ground Envelope无合法结果
-- **THEN** Modifier MUST原样输出该脚Baseline Goal
-- **AND** MUST不调用第二Grounding算法或第二IK solver
+- TO: `### Requirement: 统一Foot Placement与Full Body IK必须提供分层诊断且保持热路径有界`
 
 ## MODIFIED Requirements
 
-### Requirement: Rig Calibration必须同时约束Editor分析与Runtime Solver
+### Requirement: Footprint prediction 必须保留动画水平脚步
 
-`CharacterFootPlacementCalibration` MUST只保存左右脚contact距离、anchor surface distance与鞋底间隙及未来预测共用的heel/toe几何、sole frame及geometry validation identity。Rig v4 MUST显式保存Pelvis、左右Hip/Knee/Foot及FBBIK biped映射。Lyra Current Grounding rotation MUST不依赖Calibration重建脚朝向；Stance Stabilization MAY使用Heel/Toe接触几何重建最终Ankle目标下的鞋底两点，但 MUST只产生同一个Ankle Goal的平移修正。Calibration MUST不保存preferred bend、Knee Direction、pole、Plant Pivot或FinalIK Grounding参数；左右Knee PV的项目等价物 MUST由Rig reference pose编译成FBBIK bend constraint。
+统一Foot Placement MUST在计划创建时冻结同帧committed Locomotion Intent请求平面速度、世界Root、方向、Native Sole和同相位脚骨局部姿态，并与同一权威Landing Event的root-local Foot姿态序列生成不可变世界Query Route。请求速度乘动作剩余时间 MUST表示角色沿未来地面的路程预算，不得把CharacterController碰撞后的Body水平投影或输入幅值当作第二速度模型。`constraintReleasePhase` MUST取离散Constraint从`Locked`切到非`Locked`时最近采样规则真正生效的交界，并 MUST不晚于LiftOff；`planStartPhase = max(generationPhase, constraintReleasePhase)`。
 
-#### Scenario: Corin膝盖参考平面退化
+唯一Future Query owner MUST在同一个Plan创建事务中先沿覆盖路程预算的发现路线取得合法支撑并构造分段Upper Envelope，再以该Envelope三维弧长把动作路程预算反解为不可变水平Route Progress，最终生成唯一正式Query Route、Ground Path与Landing。只有正式结果 MAY提交、诊断和执行；发现阶段 MUST不成为第二Plan、第二Grounding或可执行Path。地形映射 MUST只改变Root平面位移，脚局部变化、Clearance、Constraint和Support仍按原Action Phase采样；平地映射 MUST为恒等。PreSwing计划的首点是预测Constraint Release Sole，终点 MUST是同一事件Landing。系统 MUST不读取Action Motion Curve，不把完整同脚周期重复为未来路线，提交后不得按Body速度、当前输入、当前脚或新查询重映射，也 MUST不丢弃局部X或用`FootRouteWorldAlignment`渐退掩盖不一致。
 
-- **WHEN** Rig reference pose无法形成合法Hip-Knee-Foot平面
-- **THEN** Build MUST失败并报告对应Leg BoneId
-- **AND** Runtime MUST不使用世界前方、旧PV Transform或上一帧方向
+Swing最终Foot Goal的XZ与基础旋转 MUST来自当前上游原动画Component Pose；Ground Path MUST只提供高度、法线、边缘和可达性。系统 MUST不以响应式Ankle为基准只叠加预测Lift，也 MUST不把冻结Query Route完整XYZ写入最终Goal。
 
-### Requirement: Foot Rotation必须复刻Lyra ProcessFootOffset语义
+#### Scenario: 平地预测步
 
-每脚最终rotation MUST从Lyra平滑后的Hit Normal与Control Rig `AimBoneMath`/rotation连线形成：以Component上方向到Hit Normal的最短旋转乘回输入动画Ankle Rotation，等价于`AimBoneMath`对`ik_foot_root` Primary Axis的旋转再乘`IKFoot`相对`root`的动画旋转。系统 MUST保持Lyra先更新trace/normal、再更新foot offset、最后形成rotation/position目标的顺序。FootGrounding MUST不按投影forward重新构造朝向，不调用FinalIK Grounding rotation offset，也不得增加Maximum Angle、Ankle Twist Reduction、Ball Pivot或toe-preserving rotation。
+- **WHEN** Ground Path高度保持不变且计划正在执行
+- **THEN** Final Foot XZ MUST保持当前原动画Pose的平面运动
+- **AND** Gizmo Query Route、CSV Native Foot与Final Goal MUST来自同一完成快照且能明确区分
+- **AND** Query Route长度 MUST只等于当前计划相位到Landing的剩余动作位移与root-local Foot变化
 
-鞋底间隙 MAY只改变该rotation对应的Ankle竖直状态。它 MUST先计算使Calibration Heel/Toe到同一支撑平面的最小有符号距离回到零的完整`Sole Clearance Target`，再把该值并入既有Foot Offset spring；求值后 MAY只通过上述单向约束提高同一spring Value。最终Goal MUST发布相对有效支撑面的`Residual Sole Penetration`。它 MUST不修改rotation、不在spring状态之外直接平移Ankle，也不得引入第二rotation owner。
+#### Scenario: 楼梯预测步
 
-#### Scenario: 平地动画脚处于摆动姿势
+- **WHEN** 同一Foot Route经过多个合法踏面
+- **THEN** Query Route MUST按冻结Upper Envelope弧长映射保持同一动作路程预算且不随帧重建
+- **AND** 地形变化 MUST进入冻结水平Route Progress、Ground Path高度、支撑法线和地形修正后的预测Hip，但 MUST不改变动画局部Foot相位
 
-- **WHEN** 平滑Hit Normal等于Component上方向而动画Ankle保留抬脚pitch
-- **THEN** FootGrounding MUST保留输入动画Ankle Rotation
-- **AND** MUST不把sole up强制重建为地面法线
+### Requirement: 地面查询必须形成有限连续 Support Envelope
 
-### Requirement: 当前Grounding与未来Support Envelope必须显式分离
+统一Foot Placement MUST只有一个World Query owner。Current查询只用于当前合法支撑与Stance接触证据；Future Query只允许在同一Plan创建事务内完成发现Envelope与正式Route两阶段，计划提交后不得再次查询。每个路线采样 MUST先选出与上一正式支撑连通的唯一正式支撑；相邻正式支撑之间的连续Sweep命中只有在同时可连接前后两端时才可进入Ground Envelope，近竖直命中 MUST只作为Edge Plane。查询 MUST先得到合法支撑高度，以该高度相对参考支撑的变化平移同相位预测Root/Hip，再执行相邻Step、Edge和Ankle Reach过滤。Ground高度 MUST只来自地形接触，不得被Query Route或无IK脚高度向上钳制；Reach MUST不使用尚未应用地形高度的Hip。不可通行候选 MUST在Convex Hull之前删除。
 
-普通`FootGrounding` MUST为每脚从同一输入Component Pose的Rig Foot BoneId执行一次Lyra参数的NonAlloc SphereCast，并输出`DidTraceHit`、Hit Location、Hit Normal与Target Foot Offset Z。Lyra `Hit Location` MUST按UE 5.7 Control Rig源码解释为`HitResult.ImpactPoint`转换到VM/Component空间后的点；Target Foot Offset Z MUST取该点的Component绝对竖直坐标，不得减去动画Ankle高度，也不得使用swept sphere中心。它 MUST使用精确PhysicsScene、正式Foot Placement LayerMask、self-collider过滤、固定容量workspace和由Stance最大坡度换算的minimum ground normal dot。超过该坡度的楼梯立面、锐边与近竖直命中 MUST在同一命中page选择阶段被拒绝；该命中同时是Stance Stabilization建立anchor和鞋底间隙的唯一current surface证据。系统 MUST不执行heel/toe双查询、Ray/Capsule Quality组合、Root Cast、velocity prediction或第二套Current Support查询择优。
+本脚前后Landing之间若存在权威对侧脚Landing，Ground Path MUST在该对侧接触Phase建立Virtual Ground分割，并对前后区间分别构造连续Upper Hull。分割点 MUST使用同一动作时钟和唯一Future Query得到的对侧支撑，在本脚Plan提交时冻结；MUST不逐帧移动、不得把对侧Landing冒充本脚终点，也不得对完整同脚步幅只做一次全局Hull。
 
-可选`PredictiveFootPlacementModifier` MAY只为Swing脚执行Future Landing、Ground Envelope与Swing Clearance查询。Future结果 MUST不覆盖普通current hit、current normal或Pelvis Goal。全部命中 MUST来自合法有限Collider，不得使用默认平面、隐藏Collider或Gameplay `CharacterTraversal` Ramp。
+末端Landing失败 MUST保留具体无命中或几何拒绝原因，MUST不把所有失败只表示为`NoFutureLanding`。Rejected计划 MUST不发布Executable Path或悬空Landing。
 
-#### Scenario: 左脚站在斜坡
+#### Scenario: 查询命中但末端不可达
 
-- **WHEN** 左Foot SphereCast命中合法斜坡
-- **THEN** FootGrounding MUST按Lyra计算Left Target Offset Z和Hit Normal
-- **AND** MUST先通过Lyra normal/offset平滑形成Left Current Goal，再由Stance Stabilization形成唯一Left Baseline Goal
+- **WHEN** Future Landing查询命中几何但候选违反Reach或Step
+- **THEN** 计划 MUST以具体原因Rejected
+- **AND** Gizmo与CSV MUST保留真实请求、命中和拒绝几何
 
-#### Scenario: SphereCast同时接触楼梯立面与踏面
+#### Scenario: 下楼预测Hip
 
-- **WHEN** 同一次Current Grounding命中page包含超过最大坡度的立面和合法踏面
-- **THEN** 查询 MUST拒绝立面并选择最近合法踏面
-- **AND** MUST不启动第二条toe、heel或edge查询
+- **WHEN** Future Query命中低于当前支撑的合法踏面
+- **THEN** Reach MUST使用随该踏面下降的预测Hip判断候选
+- **AND** MUST不因Hip仍停在上一级而把合法下楼Landing拒绝为`ReachExceeded`
 
-#### Scenario: 稳定stance脚在斜坡旋转后Heel进入支撑面
+#### Scenario: 下楼Query Route高于未来地面
 
-- **WHEN** 唯一Current Surface和目标rotation使Calibration Heel或Toe低于支撑平面
-- **THEN** Stance Stabilization MUST把完整非负Sole Clearance Target加入现有Foot Offset spring目标
-- **AND** Plant Contact成立时 MUST把求值后仍存在的最小正缺口写回同一spring Value
-- **AND** Pelvis Reach MUST消费该连续状态形成的Goal
+- **WHEN** 无IK Query Route仍位于起始台阶高度而唯一连通支撑链逐级下降
+- **THEN** Ground Path MUST使用各地形接触的真实下降高度
+- **AND** MUST不把Query Route高度写入Ground Envelope造成末端单段瞬降
 
-#### Scenario: Swing脚的Current hit切换到高一级踏面
+#### Scenario: 同脚步幅跨过对侧接触
 
-- **WHEN** 同一脚没有anchor所有权且唯一Current SphereCast从低踏面切到高踏面
-- **THEN** Stance Stabilization MUST记录新支撑面的完整`Sole Clearance Target`
-- **AND** MUST把它并入既有Lyra Foot Offset spring目标
-- **AND** MUST不因`AnchorBlendWeight=0`关闭该目标或把离散间隙直接写入Swing脚Ankle Goal
+- **WHEN** 本脚下一Landing之前存在身份有效且时间更早的对侧脚Landing
+- **THEN** 本脚Ground Path MUST在对应动作Phase包含一个冻结Virtual Ground分割点
+- **AND** 分割前后 MUST分别形成连续Upper Hull，再与本脚Animation Clearance合成最终高度
+- **AND** Gizmo与CSV MUST能区分本脚最终Landing和对侧Virtual Ground分割点
 
-#### Scenario: 当前SphereCast未命中
+### Requirement: 每只脚必须使用有限约束生命周期
 
-- **WHEN** Lyra current SphereCast没有合法命中
-- **THEN** FootGrounding MUST按Lyra Control Rig未命中分支更新目标与状态
-- **AND** MUST不调用FinalIK Grounding或默认地面补命中
+每只脚 MUST只有一个`Planned / Executing / Rejected / Completed`计划生命周期和一个`Locked / Sliding / Unlocked` Stance生命周期。动作相位 MUST消费身份匹配的Simulation Locomotion Clock；Plan不得按Presentation Delta维护私有时钟。Ground Path采样进度 MUST只由该Action Step Clock在`planStartPhase -> landingPhase`区间的规范化相位产生；当前原动画鞋底、Body位移或Render Frame不得重新决定进度或逐帧重建计划。
 
-#### Scenario: Swing脚跨越楼梯边缘
+Stance约束从`Locked`开始释放时，同一Plan MUST在相同Action Step Phase进入Executing；系统 MUST不等待更晚的LiftOff再开始计划。`Constraint Release -> LiftOff`区间 MUST始终由同一个Stance Anchor Blend与同一个Executing Plan连续交接，不得出现Anchor Blend已经归零但Plan仍为Planned的Current Grounding所有权空窗。
 
-- **WHEN** Modifier为Swing脚取得多个合法Future Envelope segment
-- **THEN** Modifier MAY提高该脚clearance或调整Future Landing
-- **AND** 当前SphereCast的Hit Normal与另一只脚Baseline Goal MUST不变
+事件身份替换、Phase回退、动作中断或Stance捕获Landing MUST结束旧计划。相同事件不得重试或逐帧重映射。
 
-### Requirement: 普通FootGrounding必须统一维护Lyra与Stance运行状态
+#### Scenario: Pose Contribution被替换
 
-每脚普通状态 MUST包含Lyra等价的current foot offset、target foot offset、current hit normal、trace hit、normal spring与offset spring，以及唯一contact滞回、surface identity、surface-local anchor、anchor blend/release、上一帧约束后鞋底的surface identity与Heel/Toe世界位置及明确失效原因。该鞋底历史 MUST只供同surface连续越界判断，reset或无合法surface时 MUST清除。Pelvis状态 MUST包含Lyra vertical期望/平滑和唯一reach安全夹紧状态。Initialization、Body reset、branch replacement、Projection replacement、invalid pose与dispose MUST从当前输入Pose和Lyra默认值原子重建Lyra状态，并清除contact、anchor、鞋底连续性、release与reach历史。
+- **WHEN** 当前Landing Event身份不再匹配Executing Plan
+- **THEN** 旧Plan MUST在该帧结束
+- **AND** Final Goal与Gizmo MUST不再消费旧路线
 
-动画Foot Feature中的Plant Confidence、sole speed与显式Swing/stance特征 MAY形成唯一contact进入/退出滞回。运行时`surface distance` MUST在同一帧Lyra Foot Offset spring求值后，以其候选Ankle和Rotation重建Calibration Heel/Toe，并取两点到唯一Current Surface的最大绝对平面距离；它 MUST不读取IK前动画鞋底到高踏面的高度差，也 MUST不使用角色零高度判断锁脚。
-contact MUST只决定anchor建立、维持与释放，不得连续缩放或归零普通Foot Goal总weight。
-FootGrounding MAY迁移Free/Locked/Sliding语义，但 MUST不保留第二状态机、Plant Plane、heel lift或toe pivot。
+#### Scenario: Constraint早于LiftOff释放
 
-唯一Current Surface、Lyra Target Offset和目标Hit Normal形成的目标Ankle MUST通过Calibration Heel/Toe重建目标鞋底点并计算`Sole Clearance Target = max(0, -minimumDistance) / Dot(ComponentUp, SupportNormal)`。FootGrounding MUST把该值加入同一脚既有Foot Offset spring的target，再由该spring的唯一value/velocity/previous-target状态形成候选Current Grounding Goal。Stance MUST用当前平滑Rotation和同一Current Surface复核候选Heel/Toe；Plant Contact成立时，或非Plant脚满足同surface上一帧非穿透、本帧首次穿透的连续边界时，正向安全缺口 MUST累加到同一value，且向下velocity MUST归零。新Current Surface首次命中的Swing MUST保留spring候选，不得把离散高度直接改写value。Pelvis target MUST继续只使用Lyra左右Target Offset最小值，不能把鞋底目标变成第二Pelvis owner。
+- **WHEN** 烘焙Constraint按最近采样在LiftOff之前从`Locked`切到`Sliding`或`Unlocked`
+- **THEN** Plan MUST在该精确交界开始Executing并从同一冻结Query Route的起点采样
+- **AND** 现有Anchor MUST只通过同一个Blend连续交接，不得让Current Grounding在Release与LiftOff之间接管Swing
 
-Anchor捕获 MUST从Plant Contact约束后的同一连续Current Grounding Goal出发并保存surface-local位置。最终Current/anchor Goal MUST再次通过Calibration Heel/Toe计算`Residual Sole Penetration`用于诊断，但 MUST不建立spring状态外硬平移。Anchor释放后旧anchor MAY只在既有blend退场期间继续提供pose来源；鞋底支撑与安全平面权威 MUST立即回到唯一Current Surface，且同一释放原因 MUST不逐帧重复触发。Swing、无anchor、anchor不可达释放以及重新使用current surface时 MUST继续使用同一Foot Offset spring，不得建立独立clearance blend。没有合法支撑面时 MUST不伪造平面或固定高度补偿。
+### Requirement: Pelvis 必须由支撑腿和腿长约束统一求解
 
-#### Scenario: 高台阶上的当前脚已贴住踏面
+Stance Stabilization MUST是唯一Anchor与Pelvis owner。它 MAY消费当前支撑、预测Landing、Support Phase和Hip Route，但 MUST只输出一个Pelvis Pre-Solve Goal。地形修正后的预测Root/Hip MUST只进入该Goal的唯一目标与连续Spring；腿长Reach MUST不在Spring之后再次修改Pelvis。锁定Anchor对Spring当前值不可达时，Stance MUST释放该Anchor并沿现有Anchor Blend连续退出，不得立即Clear Anchor或把Foot Goal权重单帧归零。Predictive Plan MUST不创建第二Pelvis、第二Anchor或FBBIK后处理。
 
-- **WHEN** Plant Confidence和sole speed满足contact进入条件，且Lyra spring候选重建的Heel/Toe均处于唯一Current Surface的contact进入距离内
-- **THEN** Stance MUST允许该脚进入Plant Contact并从同一候选Goal捕获anchor
-- **AND** MUST不因IK前动画Ankle低于该踏面或Target Offset高于角色零高度而继续判为Swing
+#### Scenario: Swing脚接近高踏面
 
-#### Scenario: Swing脚刚查询到高踏面但当前候选尚未到达
+- **WHEN** Executing Plan进入ApproachingContact且Landing合法
+- **THEN** 未来Hip与Landing事实 MUST进入现有Pelvis与接触解析
+- **AND** Landing捕获后 MUST只由同一Stance owner锁脚
 
-- **WHEN** Current Surface已切到高踏面，但Lyra spring候选Heel或Toe仍超出contact进入距离
-- **THEN** Stance MUST保持Swing且不得建立anchor
-- **AND** MUST继续由唯一Foot Offset spring向该面收敛，不得直接吸附到高一级踏面
+#### Scenario: Anchored脚进入预测Swing
 
-#### Scenario: Rollback替换表现分支
+- **WHEN** Action Step Clock越过Constraint Release且同一Foot仍保留非零Anchor Blend
+- **THEN** Stance MUST保留同一个Anchor并连续衰减现有Blend，不得在Release帧立即清除
+- **AND** 唯一最终Foot Goal MUST按该Blend从Stance Goal连续交接到同一Executing Plan的Swing Goal
 
-- **WHEN** Body ResetSequence变化
-- **THEN** 左右脚与Pelvis Lyra spring state MUST在应用新Goal前重建
-- **AND** MUST不存在旧surface anchor、release或contact权重可带入新分支
+#### Scenario: 锁定支撑腿对当前Pelvis不可达
 
-### Requirement: Pelvis必须使用Lyra期望值与唯一Reach安全夹紧
-
-Pelvis期望值 MUST按`CR_Mannequin_FootPlant`中左右Target Foot Offset与Current Pelvis Offset Z的原始连线和运算生成，并使用资产实际连接的`SpringInterpV2`参数更新唯一current value；未进入执行图的`PelvisBlendSpeed=0.5` MUST不映射为项目配置。随后Pelvis Resolve MUST根据最终双脚Goals与Rig腿长把该值有界夹入共同可达区间。FootGrounding MUST输出一个Component空间竖直`PelvisPreSolveTranslation`，且 MUST不存在第二Pelvis Goal、AllPlantedFeet/Directional目标模式、水平分量、Heel Lift或Actor Movement Compensation。
-
-FullBodyIK MUST先在Pending Component Pose应用Pelvis translation，再把完整Foot Component Position作为FinalIK绝对effector目标交付，最后执行一次FBBIK。FootGrounding与FullBodyIK都 MUST不写VisualRoot。
-
-#### Scenario: 左脚目标低于右脚目标
-
-- **WHEN** Lyra Pelvis graph根据左右Target Offset得到新的Target Pelvis Z
-- **THEN** FootGrounding MUST用相同运算和平滑更新Lyra Current Pelvis Offset Z
-- **AND** MUST只允许唯一reach安全阶段在必要时夹紧该值，不得调用旧AllPlantedFeet或Directional目标resolver
+- **WHEN** 唯一Pelvis Spring当前值落在某个锁定Anchor的腿长可达区间之外
+- **THEN** Reach MUST只把该Anchor转入现有连续释放
+- **AND** Pelvis Resolved MUST保持等于同帧Spring Current
+- **AND** Foot Goal MUST保留同帧位置与权重，并由后续Anchor Blend连续退出
+- **AND** 交接 MUST不结束Plan、不创建第二Anchor，也不得退回响应式Swing目标
 
 ### Requirement: Animation Clip Foot Placement曲线必须沿正式表现投影采样
 
-每个Pose Source MUST在同一effective sample time提供唯一Foot Placement Weight与生成Foot Features。Foot Placement Weight MUST映射Lyra Control Rig节点总alpha并只应用一次；项目 MUST不伪造独立`DisableLegIK`或单腿关闭参数。Plant Confidence与sole speed MAY供FootGrounding的唯一contact滞回使用，但 MUST不再次连续缩放整个Goal；Next Landing只可由显式PredictiveFootPlacementModifier消费，Swing feature同时定义stance释放和预测改写资格。
+Action Step Fact MUST与生成当前Component Pose的Pose Contribution同源，原子携带Landing身份、Action Step Clock、root-local Foot、Ankle、Hip、Clearance、约束策略，以及本脚下一次Landing前的对侧Landing身份与时间，不得携带Action Root或运行速度。Locomotion Sequence、Pose、Step Fact与Clearance MUST从Simulation提交的Locomotion elapsed tick投影到同一相位；Presentation只能插值，不得独立累计第二动作时间。计划创建帧的请求平面速度 MUST来自同帧committed Locomotion Intent Fact，不得从碰撞后Body水平速度反推。Blend或source替换 MUST生成明确新身份。Virtual Ground MUST只消费本脚Action Step Fact携带的原子对侧配对，不得独立选择或混合另一只脚的事实。
 
-#### Scenario: Foot Placement Weight为一半
+#### Scenario: Blend winner改变
 
-- **WHEN** 最终`animation.foot-placement-weight`为0.5
-- **THEN** FootGrounding Baseline Pelvis与Foot Goals MUST只应用一次0.5总权重
-- **AND** FullBodyIK MUST不再次乘相同作者权重
+- **WHEN** 当前Component Pose的权威Foot Contribution改变
+- **THEN** Foot Placement MUST消费新Contribution的动作事实
+- **AND** 旧Contribution计划 MUST不按私有时钟继续执行
 
-### Requirement: Lyra Foot Grounding与Full Body IK必须在Pose Graph中显式分段
+#### Scenario: Editor诊断降低Simulation推进速度
 
-Pose Graph MUST显式表达`Component Pose -> FootGrounding -> 可选PredictiveFootPlacementModifier -> FullBodyIK -> Solved Component Pose`。`FootGrounding`和Modifier MUST只输出Goal value；唯一FullBodyIK MUST是唯一biped Pose solver。Runtime MUST不恢复Lyra Control Rig中的两个Basic IK节点，不串联LegIK/TwoBoneIK，也不挂FinalIK组件。
+- **WHEN** 一个wall-clock区间包含的Presentation Frame多于Simulation Tick
+- **THEN** Locomotion Pose、Action Step Fact与Clearance MUST仍保持同一Simulation动作相位
+- **AND** MUST不因Presentation Delta累计而提前到达Landing
+- **AND** Realtime、Rate Playback、Pause或Step切换 MUST以同帧已呈现Body Sample Cursor计算动画Delta，不得从`LocalLogicTick + InterpolationAlpha`建立会因Accumulator变化而倒退的第二时钟
+- **AND** Committed Body Sample Cursor未前进时 MUST保持上一帧已提交Physical Pose并跳过Fact、Animation、Foot Placement与FBBIK执行，不得向Grounding传入零值、上一帧值或人为最小Delta
 
-#### Scenario: 一个表现帧更新Corin
+### Requirement: Body与Presentation重置必须原子清除Foot Placement历史
 
-- **WHEN** FootGrounding与可选Hand Goal Source完成且lineage匹配
-- **THEN** FullBodyIK MUST在一个Pending Pose中应用Pelvis、Feet和Hands后执行一次FBBIK
-- **AND** final writer之前 MUST不存在Transform写入
+Body branch、Presentation reset、Rig/Projection replacement、invalid pose或dispose MUST在下一帧前清除Plan、Stance、Anchor、Pelvis与诊断快照。不得保留跨branch Goal或查询结果。
 
-### Requirement: Lyra Foot Grounding与Full Body IK必须使用typed目标合同
+#### Scenario: Presentation branch替换
 
-`FootGrounding` MUST发布同帧`component.full-body-ik-goals`，包含唯一Pelvis Pre-Solve Translation、LeftFoot与RightFoot Goal。每个Foot Goal MUST携带完整Component Transform、position/rotation weight、`FootPlacementEffectorTarget` application、producer/completion/rig lineage及分层Baseline diagnostics。Modifier MUST消费并发布同一类型，不得扇出第二Foot Goal Set。FullBodyIK MUST只消费最终Goal value，不读取Foot Placement Profile、PhysicsScene或动画曲线。
+- **WHEN** Reset Sequence改变
+- **THEN** 下一帧 MUST从新的Pose completion和动作身份建立Foot Placement状态
+- **AND** FBBIK MUST不读取旧Goal Set
 
-#### Scenario: Pose与Goal lineage不同
+## ADDED Requirements
 
-- **WHEN** FullBodyIK输入Pose与Foot Goal Set不共享Frame、Completion或Rig revision
-- **THEN** Runtime MUST明确失败并阻断FinalPublication
-- **AND** MUST不使用上一帧Goal或按节点顺序猜测配对
+### Requirement: 统一Foot Placement必须直接生成唯一最终Goal Set
 
-### Requirement: Full Body IK必须由成熟后端保持biped约束
+Pose Graph MUST只有一个world-aware Foot Placement owner从同一上游Component Pose生成Pelvis、Left Foot和Right Foot最终Goal。Current Grounding不得先发布Swing空间Goal再由Predictive Modifier覆盖；独立Predictive Modifier后处理节点、第二Goal链和fallback MUST不存在。
 
-FullBodyIK MUST通过现有FinalIK FBBIK Pose Buffer backend求解Rig v4 Physical biped。它 MUST先应用Pelvis Pre-Solve Translation和Foot pre-rotation，再把Lyra最终Foot Component Position直接设置为FBBIK绝对effector position，并只执行一次`ReadPose -> Solve -> WritePose`。它 MUST不在FinalIK内部`LimitBend`执行前按旧Foot Transform预计算一次性position offset。左右腿bend constraint MUST来自Rig reference pose。满权重Foot Placement Goal求解后位置残差超过`0.001m`时 MUST返回typed failure并阻断FinalPublication。FullBodyIK MUST不调用FinalIK Grounding、`GrounderFBBIK`、LegIK或TwoBoneIK，也 MUST不重新计算trace、smoothing或pelvis。
+无Executable Plan时，Swing MUST保持上游动画姿势并明确报告计划不可用；Contact/Anchored脚 MAY由同一Stance owner输出约束Goal。
 
-#### Scenario: 左脚目标与双手目标同时存在
+#### Scenario: Executing Swing Plan
 
-- **WHEN** 最终Foot Goal Set和不重叠Hand Goal Set合法
-- **THEN** 一个FBBIK solve MUST同时处理Pelvis、双腿和双手
-- **AND** 未提供的effector MUST在本帧明确归零
+- **WHEN** 一只脚处于Swing且拥有Executable Plan
+- **THEN** Final Ankle MUST由当前原动画Foot XZ、Ground Path、Animation Clearance和当前动画Sole-to-Ankle几何重建
+- **AND** 响应式Current Grounding与冻结Query Route XYZ MUST不作为该Swing目标的空间基准
 
-### Requirement: Foot Placement配置和Rig必须显式且通过发布验证
+#### Scenario: Rejected Swing Plan
 
-`CharacterFootPlacementProfile` MUST只包含`Lyra Current Grounding`、`Stance Stabilization`与`Predictive Extension`三组。Lyra字段 MUST逐项保存来源资产标识、Sphere Trace、foot offset/normal smoothing、pelvis spring与alignment参数；资产gate事实只进入来源对账，不得成为项目Profile字段。Stance字段 MUST只保存contact滞回、anchor blend/release、surface跟随和pelvis reach安全界限；Predictive字段 MUST只保存Future Landing、Envelope与Swing Clearance参数。Profile MUST不保存FinalIK Grounding、Grounder、UE AnimNode FootPlacement、并列Pelvis模式或重复current target字段。
+- **WHEN** 一只Swing脚的计划Rejected
+- **THEN** 系统 MUST不把响应式修正描述为预测结果
+- **AND** 诊断 MUST明确该脚没有Executable预测输出
 
-Definition Build MUST验证Profile、Rig v4、Calibration v4、Foot Analysis与Projection identity，并拒绝旧combined节点、旧Goal Application或旧Profile schema。任何生成产品只能由用户显式Character Build发布；Inspector、OnValidate、selection和Preview MUST不自动构建。
+### Requirement: 最终Foot Motion必须组合Ground Path与动画净空
 
-#### Scenario: Corin仍保存FinalIK Grounding Quality
+统一Foot Placement MUST按下列分工计算：
 
-- **WHEN** Corin Profile包含旧Grounding Quality、Overstep或Root Cast字段
-- **THEN** Build MUST失败并报告旧字段
-- **AND** MUST不忽略字段或通过兼容reader继续发布
+```text
+PathProgress = Normalize(SimulationActionStepPhase, PlanStartPhase, LandingPhase)
+FinalSoleXZ = NativeAnimatedSoleXZ
+FinalSoleY = GroundPathY(PathProgress) + AnimationClearanceY(SimulationActionPhase)
+```
 
-### Requirement: Lyra Foot Grounding与Full Body IK必须提供分层诊断且保持热路径有界
+目标Ankle MUST由该鞋底与当前动画Sole-to-Ankle几何重建。Heel/Toe MAY沿同一Component Up执行最小安全修正，但不得改变原动画Foot XZ或创建第二支撑面。
 
-Diagnostics MUST只读暴露节点执行状态、总alpha、Body Grounded诊断事实、Presentation Delta、PoseRoot竖直delta、每脚动画Ankle Component Y、每脚Sphere Trace输入/命中、minimum ground normal dot、Hit Location、Impact Point、Lyra Target Offset、Sole Clearance Target、合成Offset Target、Unconstrained Offset、Sole Constraint Offset、约束后Current Offset、Current Hit Normal、spring state、contact证据/滞回、surface identity、anchor local/world与blend/release、鞋底支撑面、上一帧鞋底surface identity及Heel/Toe对当前平面距离、连续越界是否成立、最终Ankle与Heel/Toe平面距离、Residual Sole Penetration、Pelvis Lyra target/reach夹紧前后、Baseline Goals、可选Swing rewrite、最终Goals、FBBIK completion/residual与typed failure。Pelvis Reach失败 MUST包含Render Frame、Lyra target/current、全局升降范围、左右Hip/Goal、Goal Weight、腿长、左右可达区间与最终交集。Canvas、Pose Watch、Target Watch和Trace MUST分别显示`Lyra Current Grounding`、`Stance Stabilization`和`Predictive Extension`，不得显示FinalIK Grounding backend badge，也不得把anchor或鞋底间隙结果标为Lyra原生。Diagnostics MUST复用固定workspace，不得重新query、平滑、求解或遍历Transform反推。
+#### Scenario: 上楼保留抬脚弧线
 
-#### Scenario: 排查左脚悬空
+- **WHEN** 动画净空为0.10m且Ground Path比起点高0.20m
+- **THEN** 目标鞋底高度 MUST约为Ground Path加0.10m
+- **AND** MUST不退化成`max(AnimationHeight, GroundHeight)`
 
-- **WHEN** 最终Left Foot Pose高于预期
-- **THEN** Live Debug MUST在同一Frame显示Left Sphere Trace、Target/Current Offset、Baseline/Final Goal和FBBIK residual
-- **AND** 必须能区分问题发生在Lyra目标生成、预测rewrite还是solver
+#### Scenario: 下楼路径下降
 
-### Requirement: Preview 必须遵守正式世界上下文边界
+- **WHEN** Ground Path随Progress下降
+- **THEN** 目标鞋底 MUST沿该路径下降并保留动画净空
+- **AND** MUST不被只允许非负Lift的逻辑阻止
 
-Preview MUST通过共享AnimationPreviewRuntime执行同一Pose/Value Plan。只有精确Host提供匹配Definition、Rig v4、Calibration、Body ground输入、World-Aware Binding与PhysicsScene时，Preview才可执行Lyra Sphere Trace、可选预测和FBBIK。上下文缺失时 MUST报告typed Unavailable，不创建假地面、默认Profile或旧Grounding adapter。
+### Requirement: Full Body IK必须在统一Foot Placement之后保持单次成熟biped求解
 
-#### Scenario: 纯动画预览缺少PhysicsScene
+FullBodyIK MUST复用FinalIK FBBIK核心数学，在同一Pending Component Pose中应用唯一Pelvis与最终Foot Goals并执行一次solve。它 MUST不查询world、不读取Action Step、不规划、不锁脚，也 MUST不调用FinalIK Grounding、LegIK、TwoBoneIK或第二solver。
 
-- **WHEN** Preview只有动画资源和Pose而没有正式world context
-- **THEN** pure-pose阶段 MAY继续显示
-- **AND** FootGrounding及其依赖的FullBodyIK输出 MUST明确Unavailable
+#### Scenario: Goal连续但Solved Foot异常
 
-### Requirement: Stance Anchor必须支持移动Surface
+- **WHEN** Final Goal有限连续而solver或physical residual超过正式容差
+- **THEN** FullBodyIK MUST返回typed failure并阻断Final Pose发布
+- **AND** Diagnostics MUST保留Goal、solver与physical结果
 
-合法stance脚 MAY把当前Lyra SphereCast命中的support point与normal保存为命中Collider Transform的局部anchor，并在后续表现帧从同一surface重建世界目标。最终Foot Goal MUST在Lyra current目标与anchor目标之间连续混合。Surface被销毁、禁用、移出合法layer、不再满足坡度/reach或脚转入Swing时 MUST以明确原因释放。Surface引用和局部anchor MUST只属于Presentation runtime；预测Modifier MUST不创建、维持或改写它们。
+### Requirement: 统一Foot Placement诊断必须与Full Body IK结果保持同一完成快照
 
-#### Scenario: 角色站在移动平台
+每帧诊断 MUST覆盖动作身份与Phase、Plan状态、当前Route/Ground/Clearance采样、Stance/Pelvis、Final Goal和FBBIK结果。每计划不可变快照 MUST覆盖完整Route、Ground Path、Landing、Query requests、接受支撑和拒绝几何。
 
-- **WHEN** stance anchor所在平台Transform在下一表现帧移动
-- **THEN** 该脚Baseline世界目标 MUST由原局部anchor随平台更新并与Lyra current目标连续混合
-- **AND** Network、Snapshot和WorldState MUST不保存该脚anchor
+Scene、Game、CSV MUST只读同一完成快照。Executable只画真实完整Path；Rejected只画真实查询与拒绝几何；Completed或Inactive不得继续画旧Path；不得显示文字。
+
+诊断 MUST同时保存计划创建帧committed请求平面速度、Generation/Constraint Release/Plan Start/LiftOff/Landing Phase、剩余时间、地形路程预算、冻结正式Route与预测Root位移、完整同脚周期距离、剩余Query Route距离、生成帧Native Sole、预测Plan Start Sole以及执行到Plan Start时它与同帧Native Sole的误差。发现路线被画成可执行Path、完整周期距离被误画成剩余路线、平地映射不为恒等、坡面预测Root未遵守冻结Envelope弧长映射、Plan Start执行误差不连续或`Plan=Planned && AnchorBlend=0`时 MUST是明确invalid，不得只显示一条看似合法的线。
+
+#### Scenario: Debug Path与脚目标对账
+
+- **WHEN** Scene或Game绘制Executing Plan
+- **THEN** 当前Ground sample MUST等于统一Foot Placement实际消费的同一冻结Path sample
+- **AND** Final Foot XZ MUST等于同帧Native Animated Foot XZ，诊断 MUST不把Query Route点冒充最终落脚点

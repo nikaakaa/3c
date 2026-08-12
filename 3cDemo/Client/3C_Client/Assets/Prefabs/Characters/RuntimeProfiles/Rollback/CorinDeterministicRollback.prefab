@@ -2334,6 +2334,7 @@ MonoBehaviour:
     ProfileId:
       value: 
     ProfileRevision: 0
+    ProfileRuntimeTuningRevision: 0
     ArtifactId:
       value: 
     ArtifactHash:

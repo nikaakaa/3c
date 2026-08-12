@@ -177,6 +177,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public CharacterBodyPresentationSourceMode SourceMode => m_SourceMode;
         internal Transform VisualRoot => m_VisualRoot;
+        internal float TickDurationSeconds => m_TickDurationSeconds;
         public ulong LatestTick => m_LatestTick;
         public ulong ResetSequence => m_ResetSequence;
         internal CharacterBodyPresentationResetReason ResetReason => m_ResetReason;

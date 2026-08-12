@@ -29,7 +29,6 @@ MonoBehaviour:
     m_FootOffsetTargetVelocityAmount: 0.2
     m_PelvisOffsetSpringStrength: 2.5
     m_PelvisOffsetCriticalDamping: 1
-    m_PelvisOffsetTargetVelocityAmount: 0.2
   m_StanceStabilization:
     m_MaximumSurfaceSlopeDegrees: 55
     m_MaximumContactSurfaceDistance: 0.12
@@ -48,7 +47,6 @@ MonoBehaviour:
     m_SwingCapsuleRadius: 0.05
     m_CastAbove: 0.35
     m_CastBelow: 0.75
-    m_PathSampleCount: 3
     m_MaximumSlopeDegrees: 55
     m_MaximumStepUp: 0.45
     m_MaximumStepDown: 0.65
@@ -56,8 +54,4 @@ MonoBehaviour:
     m_MaximumEdgeGap: 0.4
     m_MaximumSwingClearance: 0.16
     m_MinimumLandingConfidence: 0.25
-    m_MinimumLookAheadSeconds: 0.04
-    m_MaximumLookAheadSeconds: 0.22
-    m_MaximumYawVelocityDegreesPerSecond: 540
-    m_MaximumPredictionDistance: 0.65
     m_MaximumPredictionReachRatio: 0.98

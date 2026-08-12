@@ -174,15 +174,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         RootOrientationWarp = 24,
         LocalToComponentPose = 25,
         ComponentToLocalPose = 26,
-        FootGrounding = 28,
+        FootPlacement = 28,
         PoseBoneIKGoals = 29,
         FullBodyIK = 30,
         LinkedPoseCall = 31,
         EmptyFullBodyIkGoals = 32,
         MotionMatchingPose = 33,
         PoseHistoryCollector = 34,
-        EntryPoseInput = 35,
-        PredictiveFootPlacementModifier = 36
+        EntryPoseInput = 35
     }
 
     public enum CharacterPosePortKind : byte

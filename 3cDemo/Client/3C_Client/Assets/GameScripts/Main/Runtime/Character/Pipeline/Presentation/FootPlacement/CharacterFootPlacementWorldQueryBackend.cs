@@ -98,7 +98,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal PhysicsScene PhysicsScene => m_PhysicsScene;
-        internal RaycastHit[] HitWorkspace => m_Hits;
 
         internal void BeginFrame()
         {
@@ -123,18 +122,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPlacementQueryRequest request,
             out CharacterFootPlacementQueryHit hit)
         {
-            if (!IsRequestValid(in request))
+            int count = QueryAll(in request);
+            if (count <= 0)
             {
                 hit = default;
                 return false;
             }
+            hit = new CharacterFootPlacementQueryHit(m_Hits[0]);
+            return true;
+        }
+
+        internal int QueryAll(in CharacterFootPlacementQueryRequest request)
+        {
+            if (!IsRequestValid(in request))
+                return 0;
             if (request.Purpose == CharacterFootPlacementQueryPurpose.CurrentGrounding &&
                 request.FootIndex >= 0)
             {
                 m_LastCurrentRequests[request.FootIndex] = request;
                 m_HasLastCurrentRequest[request.FootIndex] = true;
             }
-
             int count = request.Shape == CharacterFootPlacementQueryShape.Sphere
                 ? m_PhysicsScene.SphereCast(
                     request.Origin,
@@ -153,31 +160,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     request.MaximumDistance,
                     request.LayerMask,
                     QueryTriggerInteraction.Ignore);
-            if (!TrySelectHit(count, in request, out RaycastHit selected))
-            {
-                hit = default;
-                return false;
-            }
-            hit = new CharacterFootPlacementQueryHit(selected);
-            return true;
-        }
-
-        bool TrySelectHit(
-            int count,
-            in CharacterFootPlacementQueryRequest request,
-            out RaycastHit selected)
-        {
-            selected = default;
-            bool found = false;
-            float selectedDistance = float.PositiveInfinity;
-            int selectedIdentity = int.MaxValue;
             Vector3 supportUp = -request.Direction.normalized;
             int hitCount = Mathf.Min(count, m_Hits.Length);
+            int validCount = 0;
             for (int i = 0; i < hitCount; i++)
             {
                 RaycastHit candidate = m_Hits[i];
                 if (!candidate.collider ||
                     m_Rig.IsSelfCollider(candidate.collider) ||
+                    IsInitialOverlap(in candidate, request.Direction) ||
                     !IsFinite(candidate.point) ||
                     !IsFinite(candidate.normal) ||
                     candidate.normal.sqrMagnitude <= 0.000001f ||
@@ -187,19 +178,48 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     continue;
                 }
-                int identity = candidate.collider.GetInstanceID();
-                if (candidate.distance > selectedDistance ||
-                    Mathf.Approximately(candidate.distance, selectedDistance) && identity >= selectedIdentity)
-                {
-                    continue;
-                }
-                selected = candidate;
-                selectedDistance = candidate.distance;
-                selectedIdentity = identity;
-                found = true;
+                m_Hits[validCount++] = candidate;
             }
-            return found;
+            for (int i = 1; i < validCount; i++)
+            {
+                RaycastHit value = m_Hits[i];
+                int insertion = i;
+                while (insertion > 0 && Compare(value, m_Hits[insertion - 1]) < 0)
+                {
+                    m_Hits[insertion] = m_Hits[insertion - 1];
+                    insertion--;
+                }
+                m_Hits[insertion] = value;
+            }
+            return validCount;
         }
+
+        internal CharacterFootPlacementQueryHit GetHit(int index)
+        {
+            if (index < 0 || index >= m_Hits.Length)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return new CharacterFootPlacementQueryHit(m_Hits[index]);
+        }
+
+        static int Compare(RaycastHit left, RaycastHit right)
+        {
+            int distance = left.distance.CompareTo(right.distance);
+            if (distance != 0)
+                return distance;
+            int identity = left.collider.GetInstanceID().CompareTo(right.collider.GetInstanceID());
+            if (identity != 0)
+                return identity;
+            int x = left.point.x.CompareTo(right.point.x);
+            if (x != 0)
+                return x;
+            int y = left.point.y.CompareTo(right.point.y);
+            return y != 0 ? y : left.point.z.CompareTo(right.point.z);
+        }
+
+        static bool IsInitialOverlap(in RaycastHit hit, Vector3 direction) =>
+            hit.distance <= 0.000001f &&
+            hit.point.sqrMagnitude <= 0.00000001f &&
+            Vector3.Dot(hit.normal.normalized, -direction.normalized) >= 0.9999f;
 
         bool IsRequestValid(in CharacterFootPlacementQueryRequest request) =>
             request.FootIndex >= 0 && request.FootIndex < 2 &&

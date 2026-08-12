@@ -160,8 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             {
                 AnimationPoseOperationSnapshot operation = operations[i];
                 if (operation.Code != CharacterPoseOperationCode.LocalToComponentPose &&
-                    operation.Code != CharacterPoseOperationCode.FootGrounding &&
-                    operation.Code != CharacterPoseOperationCode.PredictiveFootPlacementModifier &&
+                    operation.Code != CharacterPoseOperationCode.FootPlacement &&
                     operation.Code != CharacterPoseOperationCode.FullBodyIK &&
                     operation.Code != CharacterPoseOperationCode.ComponentToLocalPose)
                 {

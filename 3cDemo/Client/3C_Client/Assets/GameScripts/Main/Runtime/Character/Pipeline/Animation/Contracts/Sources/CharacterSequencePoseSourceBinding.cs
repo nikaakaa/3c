@@ -87,7 +87,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 PresentationPoseSourceMarker marker = Markers[i];
                 if (marker == null || string.IsNullOrWhiteSpace(marker.AuthoringId) ||
                     string.IsNullOrWhiteSpace(marker.MarkerId) || !authoringIds.Add(marker.AuthoringId) ||
-                    marker.Frame < 0 || marker.Frame >= durationFrame ||
+                    marker.Frame < 0 ||
+                    Loop && marker.Frame >= durationFrame ||
+                    !Loop && marker.Frame > durationFrame ||
                     i > 0 && marker.Frame <= Markers[i - 1].Frame)
                     throw new InvalidOperationException($"Sequence Pose source binding '{name}' marker #{i} is invalid.");
             }

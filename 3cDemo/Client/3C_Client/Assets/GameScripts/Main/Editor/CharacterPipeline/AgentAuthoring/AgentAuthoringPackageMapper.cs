@@ -1113,12 +1113,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     Add(properties, "compareType", node.compareType);
                 if (m_Catalog.CanEditProperty(kind, "moveSpeed"))
                     Add(properties, "moveSpeed", node.moveSpeed);
+                if (m_Catalog.CanEditProperty(kind, "displacementMode"))
+                    Add(properties, "displacementMode", node.displacementMode);
                 if (m_Catalog.CanEditProperty(kind, "turnSpeedDegrees"))
                     Add(properties, "turnSpeedDegrees", node.turnSpeedDegrees);
                 if (m_Catalog.CanEditProperty(kind, "cameraRelative"))
                     Add(properties, "cameraRelative", node.cameraRelative);
-                if (m_Catalog.CanEditProperty(kind, "continuous"))
-                    Add(properties, "continuous", node.continuous);
+                if (m_Catalog.CanEditProperty(kind, "executionMode"))
+                    Add(properties, "executionMode", node.executionMode);
+                if (m_Catalog.CanEditProperty(kind, "durationSeconds"))
+                    Add(properties, "durationSeconds", node.durationSeconds);
                 if (m_Catalog.CanEditProperty(kind, "inputId"))
                     Add(properties, "inputId", node.inputId);
                 if (m_Catalog.CanEditProperty(kind, "requestId"))
@@ -1316,13 +1320,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     moveSpeed = m_Catalog.CanEditProperty(packageNode.kind, "moveSpeed")
                         ? properties.Value<float>("moveSpeed")
                         : 0f,
+                    displacementMode = m_Catalog.CanEditProperty(packageNode.kind, "displacementMode")
+                        ? properties.Value<string>("displacementMode")
+                        : null,
                     turnSpeedDegrees = m_Catalog.CanEditProperty(packageNode.kind, "turnSpeedDegrees")
                         ? properties.Value<float>("turnSpeedDegrees")
                         : 0f,
                     cameraRelative = m_Catalog.CanEditProperty(packageNode.kind, "cameraRelative") &&
                                      properties.Value<bool>("cameraRelative"),
-                    continuous = m_Catalog.CanEditProperty(packageNode.kind, "continuous") &&
-                                 properties.Value<bool>("continuous"),
+                    executionMode = m_Catalog.CanEditProperty(packageNode.kind, "executionMode")
+                        ? properties.Value<string>("executionMode")
+                        : null,
+                    durationSeconds = m_Catalog.CanEditProperty(packageNode.kind, "durationSeconds")
+                        ? properties.Value<float>("durationSeconds")
+                        : 0f,
                     inputId = m_Catalog.CanEditProperty(packageNode.kind, "inputId")
                         ? properties.Value<string>("inputId")
                         : null,

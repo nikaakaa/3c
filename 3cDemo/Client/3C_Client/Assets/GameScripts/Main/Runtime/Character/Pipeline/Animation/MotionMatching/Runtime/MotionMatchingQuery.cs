@@ -234,11 +234,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             m_RawFeatures[range.Offset] = sample.Left.PlantConfidence;
             m_RawFeatures[range.Offset + 1] = sample.Left.SoleHeight;
             m_RawFeatures[range.Offset + 2] = sample.Left.SoleLocalVelocity.magnitude;
-            m_RawFeatures[range.Offset + 3] = sample.Left.NextLandingConfidence;
+            m_RawFeatures[range.Offset + 3] = sample.Left.PredictedStep.Confidence;
             m_RawFeatures[range.Offset + 4] = sample.Right.PlantConfidence;
             m_RawFeatures[range.Offset + 5] = sample.Right.SoleHeight;
             m_RawFeatures[range.Offset + 6] = sample.Right.SoleLocalVelocity.magnitude;
-            m_RawFeatures[range.Offset + 7] = sample.Right.NextLandingConfidence;
+            m_RawFeatures[range.Offset + 7] = sample.Right.PredictedStep.Confidence;
         }
 
         static void RequireRangeCount(MotionMatchingFeatureRange range, int expected)

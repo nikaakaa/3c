@@ -1,10 +1,73 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
+    public sealed class AnimationFootContactSchedule
+    {
+        public const string LeftMarkerId = "LeftFootContact";
+        public const string RightMarkerId = "RightFootContact";
+
+        readonly float[] m_LeftLandingPhases;
+        readonly float[] m_RightLandingPhases;
+
+        AnimationFootContactSchedule(bool inferLandingEvents, IEnumerable<float> left, IEnumerable<float> right)
+        {
+            InferLandingEvents = inferLandingEvents;
+            m_LeftLandingPhases = Normalize(left, nameof(left));
+            m_RightLandingPhases = Normalize(right, nameof(right));
+            var parts = new List<string>
+            {
+                "animation-foot-contact-schedule/v1",
+                inferLandingEvents ? "proposal" : "authored"
+            };
+            Append(parts, LeftMarkerId, m_LeftLandingPhases);
+            Append(parts, RightMarkerId, m_RightLandingPhases);
+            IdentityHash = StableHash.Compute(parts.ToArray());
+        }
+
+        public static AnimationFootContactSchedule Inferred { get; } =
+            new AnimationFootContactSchedule(true, Array.Empty<float>(), Array.Empty<float>());
+
+        public static AnimationFootContactSchedule None { get; } =
+            new AnimationFootContactSchedule(false, Array.Empty<float>(), Array.Empty<float>());
+
+        public static AnimationFootContactSchedule Authored(
+            IEnumerable<float> leftLandingPhases,
+            IEnumerable<float> rightLandingPhases) =>
+            new AnimationFootContactSchedule(false, leftLandingPhases, rightLandingPhases);
+
+        public bool InferLandingEvents { get; }
+        public IReadOnlyList<float> LeftLandingPhases => m_LeftLandingPhases;
+        public IReadOnlyList<float> RightLandingPhases => m_RightLandingPhases;
+        public StableHash IdentityHash { get; }
+
+        static float[] Normalize(IEnumerable<float> values, string field)
+        {
+            float[] result = values?.OrderBy(value => value).ToArray() ?? Array.Empty<float>();
+            for (int i = 0; i < result.Length; i++)
+            {
+                if (!float.IsFinite(result[i]) || result[i] < 0f || result[i] > 1f ||
+                    i > 0 && Math.Abs(result[i] - result[i - 1]) <= 0.000001f)
+                    throw new ArgumentException("Foot contact schedule contains an invalid or duplicate phase.", field);
+            }
+            return result;
+        }
+
+        static void Append(List<string> parts, string markerId, IReadOnlyList<float> phases)
+        {
+            parts.Add(markerId);
+            parts.Add(phases.Count.ToString(CultureInfo.InvariantCulture));
+            for (int i = 0; i < phases.Count; i++)
+                parts.Add(BitConverter.SingleToInt32Bits(phases[i]).ToString("x8", CultureInfo.InvariantCulture));
+        }
+    }
+
     public enum AnimationFootAnalysisArtifactStatus : byte
     {
         Missing = 0,
@@ -15,7 +78,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class AnimationFootAnalysisArtifactIdentity
     {
-        public const int CurrentFormatVersion = 6;
+        public const int CurrentFormatVersion = 22;
 
         public AnimationFootAnalysisArtifactIdentity(
             string clipAssetGuid,
@@ -36,9 +99,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string calibrationRevision,
             string geometryValidationIdentity,
             string geometryValidationContentHash,
+            string contactScheduleHash,
             float sampleRate,
-            float plantEnterVerticalSpeed,
-            float plantExitVerticalSpeed,
+            float plantEnterContactSpeed,
+            float plantExitContactSpeed,
             float plantEnterHeight,
             float plantExitHeight,
             float minimumLandingSegmentSeconds,
@@ -72,9 +136,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CalibrationRevision = RequireText(calibrationRevision, nameof(calibrationRevision));
             GeometryValidationIdentity = RequireHash(geometryValidationIdentity, nameof(geometryValidationIdentity));
             GeometryValidationContentHash = RequireHash(geometryValidationContentHash, nameof(geometryValidationContentHash));
+            ContactScheduleHash = RequireHash(contactScheduleHash, nameof(contactScheduleHash));
             SampleRate = RequireFinitePositive(sampleRate, nameof(sampleRate));
-            PlantEnterVerticalSpeed = RequireFiniteNonNegative(plantEnterVerticalSpeed, nameof(plantEnterVerticalSpeed));
-            PlantExitVerticalSpeed = RequireFinitePositive(plantExitVerticalSpeed, nameof(plantExitVerticalSpeed));
+            PlantEnterContactSpeed = RequireFiniteNonNegative(plantEnterContactSpeed, nameof(plantEnterContactSpeed));
+            PlantExitContactSpeed = RequireFinitePositive(plantExitContactSpeed, nameof(plantExitContactSpeed));
             PlantEnterHeight = RequireFiniteNonNegative(plantEnterHeight, nameof(plantEnterHeight));
             PlantExitHeight = RequireFinitePositive(plantExitHeight, nameof(plantExitHeight));
             MinimumLandingSegmentSeconds = RequireFinitePositive(minimumLandingSegmentSeconds, nameof(minimumLandingSegmentSeconds));
@@ -107,9 +172,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public string CalibrationRevision { get; }
         public string GeometryValidationIdentity { get; }
         public string GeometryValidationContentHash { get; }
+        public string ContactScheduleHash { get; }
         public float SampleRate { get; }
-        public float PlantEnterVerticalSpeed { get; }
-        public float PlantExitVerticalSpeed { get; }
+        public float PlantEnterContactSpeed { get; }
+        public float PlantExitContactSpeed { get; }
         public float PlantEnterHeight { get; }
         public float PlantExitHeight { get; }
         public float MinimumLandingSegmentSeconds { get; }
@@ -142,8 +208,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string.Equals(CalibrationRevision, other.CalibrationRevision, StringComparison.Ordinal) &&
             string.Equals(GeometryValidationIdentity, other.GeometryValidationIdentity, StringComparison.Ordinal) &&
             string.Equals(GeometryValidationContentHash, other.GeometryValidationContentHash, StringComparison.Ordinal) &&
-            SampleRate.Equals(other.SampleRate) && PlantEnterVerticalSpeed.Equals(other.PlantEnterVerticalSpeed) &&
-            PlantExitVerticalSpeed.Equals(other.PlantExitVerticalSpeed) && PlantEnterHeight.Equals(other.PlantEnterHeight) &&
+            string.Equals(ContactScheduleHash, other.ContactScheduleHash, StringComparison.Ordinal) &&
+            SampleRate.Equals(other.SampleRate) && PlantEnterContactSpeed.Equals(other.PlantEnterContactSpeed) &&
+            PlantExitContactSpeed.Equals(other.PlantExitContactSpeed) && PlantEnterHeight.Equals(other.PlantEnterHeight) &&
             PlantExitHeight.Equals(other.PlantExitHeight) &&
             MinimumLandingSegmentSeconds.Equals(other.MinimumLandingSegmentSeconds) &&
             MaximumLandingSearchSeconds.Equals(other.MaximumLandingSearchSeconds) &&
@@ -157,14 +224,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             return new[]
             {
-                "animation-foot-analysis-artifact/v6", ClipAssetGuid, ClipDependencyHash,
+                "animation-foot-analysis-artifact/v16", ClipAssetGuid, ClipDependencyHash,
                 AnalysisSourceAssetGuid, AnalysisSourceDependencyHash, AnalysisSourceId,
                 AnalysisVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 RigAssetGuid, RigId, RigRevision, RigContentHash,
                 SamplingRigAssetGuid, SamplingRigDependencyHash, CalibrationAssetGuid, CalibrationId,
                 CalibrationSchemaVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                CalibrationRevision, GeometryValidationIdentity, GeometryValidationContentHash,
-                Bits(SampleRate), Bits(PlantEnterVerticalSpeed), Bits(PlantExitVerticalSpeed),
+                CalibrationRevision, GeometryValidationIdentity, GeometryValidationContentHash, ContactScheduleHash,
+                Bits(SampleRate), Bits(PlantEnterContactSpeed), Bits(PlantExitContactSpeed),
                 Bits(PlantEnterHeight), Bits(PlantExitHeight), Bits(MinimumLandingSegmentSeconds),
                 Bits(MaximumLandingSearchSeconds), Bits(VelocityTolerance), Bits(HeightTolerance),
                 Bits(ConfidenceTolerance), Bits(LandingDelayTolerance), Bits(LandingOffsetTolerance),

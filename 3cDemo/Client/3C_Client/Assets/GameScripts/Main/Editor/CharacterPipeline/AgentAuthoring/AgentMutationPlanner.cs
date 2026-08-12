@@ -345,11 +345,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 TryParseEnum(context, operation.compareType, "compareType", out compareType);
             if (string.Equals(nodeType, typeof(LocomotionInputMotionNode).FullName, StringComparison.Ordinal))
             {
+                if (!Enum.TryParse(operation.displacementMode, false, out LocomotionInputMotionDisplacementMode displacementMode) ||
+                    !Enum.IsDefined(typeof(LocomotionInputMotionDisplacementMode), displacementMode))
+                {
+                    context.Error("displacementMode", "displacement_mode_invalid", $"locomotion-input-motion 的 displacementMode 无效：{operation.displacementMode}");
+                    displacementMode = LocomotionInputMotionDisplacementMode.ConstantSpeed;
+                }
                 if (float.IsNaN(operation.moveSpeed) || float.IsInfinity(operation.moveSpeed) || operation.moveSpeed < 0f)
                     context.Error("moveSpeed", "move_speed_invalid", "locomotion-input-motion 的 moveSpeed 必须大于等于0且为有限值。");
+                bool hasActionMotionCurve = !string.IsNullOrEmpty(operation.actionMotionCurveAssetPath) || !string.IsNullOrEmpty(operation.actionMotionCurveAssetGuid);
+                if (displacementMode == LocomotionInputMotionDisplacementMode.ActionMotionCurve && operation.moveSpeed != 0f)
+                    context.Error("moveSpeed", "curve_move_speed_invalid", "ActionMotionCurve locomotion 的 moveSpeed 必须为0。");
+                if (displacementMode == LocomotionInputMotionDisplacementMode.ActionMotionCurve && !hasActionMotionCurve)
+                    context.Error("actionMotionCurve", "action_motion_curve_required", "ActionMotionCurve locomotion 必须声明正式曲线资产。");
+                if (displacementMode == LocomotionInputMotionDisplacementMode.ConstantSpeed && hasActionMotionCurve)
+                    context.Error("actionMotionCurve", "constant_speed_curve_forbidden", "ConstantSpeed locomotion 不能声明Action Motion Curve。");
                 if (float.IsNaN(operation.turnSpeedDegrees) || float.IsInfinity(operation.turnSpeedDegrees) || operation.turnSpeedDegrees <= 0f)
                     context.Error("turnSpeedDegrees", "turn_speed_invalid", "locomotion-input-motion 的 turnSpeedDegrees 必须大于0且为有限值。");
+                if (!Enum.TryParse(operation.executionMode, false, out LocomotionInputMotionExecutionMode executionMode) ||
+                    !Enum.IsDefined(typeof(LocomotionInputMotionExecutionMode), executionMode))
+                {
+                    context.Error("executionMode", "execution_mode_invalid", $"locomotion-input-motion 的 executionMode 无效：{operation.executionMode}");
+                    executionMode = LocomotionInputMotionExecutionMode.Once;
+                }
+                if (float.IsNaN(operation.durationSeconds) || float.IsInfinity(operation.durationSeconds) || operation.durationSeconds < 0f)
+                    context.Error("durationSeconds", "duration_invalid", "locomotion-input-motion 的 durationSeconds 必须大于等于0且为有限值。");
+                else if (executionMode == LocomotionInputMotionExecutionMode.Timed && operation.durationSeconds <= 0f)
+                    context.Error("durationSeconds", "timed_duration_invalid", "Timed locomotion-input-motion 的 durationSeconds 必须大于0。");
+                else if (executionMode != LocomotionInputMotionExecutionMode.Timed && operation.durationSeconds != 0f)
+                    context.Error("durationSeconds", "unused_duration_invalid", "非Timed locomotion-input-motion 的 durationSeconds 必须为0。");
             }
+            Enum.TryParse(operation.displacementMode, false, out LocomotionInputMotionDisplacementMode resolvedDisplacementMode);
+            Enum.TryParse(operation.executionMode, false, out LocomotionInputMotionExecutionMode resolvedExecutionMode);
+            var actionMotionCurve = new AgentAssetReference(
+                operation.actionMotionCurve,
+                operation.actionMotionCurveAssetPath,
+                operation.actionMotionCurveAssetGuid);
             return context.IsValid
                 ? new AgentEnsureStateBehaviorNodeMutation(
                     operation.id,
@@ -362,9 +393,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     loopStopType,
                     compareType,
                     operation.moveSpeed,
+                    resolvedDisplacementMode,
+                    actionMotionCurve,
                     operation.turnSpeedDegrees,
                     operation.cameraRelative,
-                    operation.continuous,
+                    resolvedExecutionMode,
+                    operation.durationSeconds,
                     operation.position)
                 : null;
         }

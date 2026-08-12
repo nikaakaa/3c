@@ -11,6 +11,7 @@ namespace ThirdPersonRendering.ShapeProjection
         public int CameraInstanceId;
         public ShapeProjectionProfileId ProfileId;
         public int ProfileRevision;
+        public int ProfileRuntimeTuningRevision;
         public ShapeProjectionArtifactId ArtifactId;
         public UnityEngine.Hash128 ArtifactHash;
         public UnityEngine.Hash128 ProjectionHash;

@@ -44,8 +44,8 @@ namespace ThirdPersonRendering.ShapeProjection
         public int RegionCount;
         public int AtlasWidth;
         public int AtlasHeight;
-        public float SimplifyEpsilon;
-        public float MinimumLoopArea;
+        public float MaximumSimplifyEpsilon;
+        public float MinimumSecondaryLoopArea;
         public float MinimumSharedEdgeLength;
 
         public NativeArray<ShapeProjectionBoundaryEdge> Edges;
@@ -100,10 +100,23 @@ namespace ThirdPersonRendering.ShapeProjection
                 if (ErrorCode.Value != 0)
                     return;
 
+                int primaryLoop = rawLoopStart;
+                float primaryArea = 0f;
+                for (int loopIndex = rawLoopStart; loopIndex < rawLoopEnd; loopIndex++)
+                {
+                    ShapeProjectionLoopNative loop = RawLoops[loopIndex];
+                    float area = PolygonArea(RawPoints, loop.PointStart, loop.PointCount);
+                    if (area > primaryArea)
+                    {
+                        primaryArea = area;
+                        primaryLoop = loopIndex;
+                    }
+                }
+
                 int outputLoopStart = OutputLoopCount.Value;
                 for (int loopIndex = rawLoopStart; loopIndex < rawLoopEnd; loopIndex++)
                 {
-                    if (!SimplifyLoop(RawLoops[loopIndex]))
+                    if (!SimplifyLoop(RawLoops[loopIndex], loopIndex == primaryLoop))
                         return;
                 }
 
@@ -144,15 +157,19 @@ namespace ThirdPersonRendering.ShapeProjection
                 for (int localX = 0; localX < width; localX++)
                 {
                     int x = atlasX + localX;
-                    if (!IsFilled(x, y))
+                    if (!IsFilled(x, y, atlasX, atlasY, width, height))
                         continue;
-                    if (!IsFilled(x, y - 1) && !AddEdge(ref edgeCount, new int2(x, y), new int2(x + 1, y)))
+                    if (!IsFilled(x, y - 1, atlasX, atlasY, width, height)
+                        && !AddEdge(ref edgeCount, new int2(x, y), new int2(x + 1, y)))
                         return false;
-                    if (!IsFilled(x + 1, y) && !AddEdge(ref edgeCount, new int2(x + 1, y), new int2(x + 1, y + 1)))
+                    if (!IsFilled(x + 1, y, atlasX, atlasY, width, height)
+                        && !AddEdge(ref edgeCount, new int2(x + 1, y), new int2(x + 1, y + 1)))
                         return false;
-                    if (!IsFilled(x, y + 1) && !AddEdge(ref edgeCount, new int2(x + 1, y + 1), new int2(x, y + 1)))
+                    if (!IsFilled(x, y + 1, atlasX, atlasY, width, height)
+                        && !AddEdge(ref edgeCount, new int2(x + 1, y + 1), new int2(x, y + 1)))
                         return false;
-                    if (!IsFilled(x - 1, y) && !AddEdge(ref edgeCount, new int2(x, y + 1), new int2(x, y)))
+                    if (!IsFilled(x - 1, y, atlasX, atlasY, width, height)
+                        && !AddEdge(ref edgeCount, new int2(x, y + 1), new int2(x, y)))
                         return false;
                 }
             }
@@ -263,7 +280,7 @@ namespace ThirdPersonRendering.ShapeProjection
         void SnapSharedChains(int regionIndex, int rawLoopStart, int rawLoopEnd)
         {
             ShapeProjectionRegionNative region = Regions[regionIndex];
-            float snapDistanceSquared = (SimplifyEpsilon + 2f) * (SimplifyEpsilon + 2f);
+            float snapDistanceSquared = (MaximumSimplifyEpsilon + 2f) * (MaximumSimplifyEpsilon + 2f);
             for (int relation = 0; relation < region.SharedChainCount; relation++)
             {
                 int relationIndex = region.SharedChainStart + relation;
@@ -295,7 +312,7 @@ namespace ThirdPersonRendering.ShapeProjection
 
                 RdpKeep[0] = 1;
                 RdpKeep[chain.VertexCount - 1] = 1;
-                if (!RunRdp(0, chain.VertexCount - 1, chain.VertexCount))
+                if (!RunRdp(0, chain.VertexCount - 1, chain.VertexCount, MaximumSimplifyEpsilon))
                     return;
                 SnapRawPointsToChain(rawLoopStart, rawLoopEnd, chain.VertexCount, snapDistanceSquared);
                 for (int pointIndex = 0; pointIndex < chain.VertexCount; pointIndex++)
@@ -368,13 +385,18 @@ namespace ThirdPersonRendering.ShapeProjection
             }
         }
 
-        bool SimplifyLoop(ShapeProjectionLoopNative loop)
+        bool SimplifyLoop(ShapeProjectionLoopNative loop, bool preservePrimary)
         {
             if (loop.PointCount + 1 > RdpInput.Length)
             {
                 ErrorCode.Value = 5;
                 return false;
             }
+            float rawArea = PolygonArea(RawPoints, loop.PointStart, loop.PointCount);
+            if (!preservePrimary && rawArea < MinimumSecondaryLoopArea)
+                return true;
+            float perimeter = PolygonPerimeter(RawPoints, loop.PointStart, loop.PointCount);
+            float effectiveEpsilon = math.min(MaximumSimplifyEpsilon, math.max(0.25f, rawArea / math.max(1f, perimeter)));
             int split = 0;
             for (int i = 0; i < loop.PointCount; i++)
             {
@@ -424,7 +446,7 @@ namespace ThirdPersonRendering.ShapeProjection
                     continue;
                 RdpKeep[previousAnchor] = 1;
                 RdpKeep[i] = 1;
-                if (!RunRdp(previousAnchor, i, inputCount))
+                if (!RunRdp(previousAnchor, i, inputCount, effectiveEpsilon))
                     return false;
                 previousAnchor = i;
             }
@@ -444,10 +466,22 @@ namespace ThirdPersonRendering.ShapeProjection
                 OutputAnchorFlags[outputIndex] = RdpAnchors[i] == 2 ? 1u : 0u;
             }
             int outputCount = OutputPointCount.Value - outputStart;
-            if (outputCount < 3 || PolygonArea(OutputPoints, outputStart, outputCount) < MinimumLoopArea)
+            if (outputCount < 3 || PolygonArea(OutputPoints, outputStart, outputCount) < rawArea * 0.25f)
             {
                 OutputPointCount.Value = outputStart;
-                return true;
+                for (int i = 0; i < loop.PointCount; i++)
+                {
+                    if (OutputPointCount.Value >= OutputPoints.Length)
+                    {
+                        ErrorCode.Value = 5;
+                        return false;
+                    }
+                    int rawIndex = loop.PointStart + i;
+                    int outputIndex = OutputPointCount.Value++;
+                    OutputPoints[outputIndex] = RawPoints[rawIndex];
+                    OutputAnchorFlags[outputIndex] = RawAnchors[rawIndex] == 2 ? 1u : 0u;
+                }
+                outputCount = loop.PointCount;
             }
             if (OutputLoopCount.Value >= OutputLoops.Length)
             {
@@ -464,7 +498,7 @@ namespace ThirdPersonRendering.ShapeProjection
             return true;
         }
 
-        bool RunRdp(int start, int end, int inputCount)
+        bool RunRdp(int start, int end, int inputCount, float epsilon)
         {
             int stackCount = 0;
             if (stackCount >= RdpStack.Length)
@@ -473,7 +507,7 @@ namespace ThirdPersonRendering.ShapeProjection
                 return false;
             }
             RdpStack[stackCount++] = new int2(start, end);
-            float epsilonSquared = SimplifyEpsilon * SimplifyEpsilon;
+            float epsilonSquared = epsilon * epsilon;
             while (stackCount > 0)
             {
                 int2 range = RdpStack[--stackCount];
@@ -510,9 +544,10 @@ namespace ThirdPersonRendering.ShapeProjection
             return true;
         }
 
-        bool IsFilled(int x, int y)
+        bool IsFilled(int x, int y, int atlasX, int atlasY, int width, int height)
         {
-            return x >= 0 && y >= 0 && x < AtlasWidth && y < AtlasHeight && Mask[x + y * AtlasWidth] > 127;
+            return x >= atlasX && y >= atlasY && x < atlasX + width && y < atlasY + height
+                   && x < AtlasWidth && y < AtlasHeight && Mask[x + y * AtlasWidth] > 127;
         }
 
         int EncodePoint(int2 point)
@@ -546,6 +581,14 @@ namespace ThirdPersonRendering.ShapeProjection
                 area += a.x * b.y - b.x * a.y;
             }
             return math.abs(area) * 0.5f;
+        }
+
+        static float PolygonPerimeter(NativeArray<float2> points, int start, int count)
+        {
+            float perimeter = 0f;
+            for (int i = 0; i < count; i++)
+                perimeter += math.distance(points[start + i], points[start + (i + 1) % count]);
+            return perimeter;
         }
     }
 }

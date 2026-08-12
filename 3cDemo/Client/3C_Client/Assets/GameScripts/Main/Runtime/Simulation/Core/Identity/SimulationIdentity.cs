@@ -229,6 +229,64 @@ namespace ThirdPersonSimulation
         public static bool operator !=(SimulationTick left, SimulationTick right) => !left.Equals(right);
     }
 
+    public readonly struct CommittedMovementPlaybackClock : IEquatable<CommittedMovementPlaybackClock>
+    {
+        public CommittedMovementPlaybackClock(
+            string ownerIdentity,
+            ulong generation,
+            SimulationTick authorityTick,
+            int continuousTicks,
+            int tickRate)
+        {
+            OwnerIdentity = SimulationIdentity.Require(ownerIdentity, nameof(ownerIdentity));
+            if (generation == 0)
+                throw new ArgumentOutOfRangeException(nameof(generation));
+            if (!authorityTick.IsValid)
+                throw new ArgumentException("Movement playback authority tick is invalid.", nameof(authorityTick));
+            if (continuousTicks < 0)
+                throw new ArgumentOutOfRangeException(nameof(continuousTicks));
+            if (tickRate <= 0)
+                throw new ArgumentOutOfRangeException(nameof(tickRate));
+            Generation = generation;
+            AuthorityTick = authorityTick;
+            ContinuousTicks = continuousTicks;
+            TickRate = tickRate;
+        }
+
+        public string OwnerIdentity { get; }
+        public ulong Generation { get; }
+        public SimulationTick AuthorityTick { get; }
+        public int ContinuousTicks { get; }
+        public int TickRate { get; }
+        public bool IsValid =>
+            !string.IsNullOrEmpty(OwnerIdentity) &&
+            Generation != 0 &&
+            AuthorityTick.IsValid &&
+            ContinuousTicks >= 0 &&
+            TickRate > 0;
+        public double ElapsedSeconds => IsValid ? (double)ContinuousTicks / TickRate : 0d;
+        public bool Equals(CommittedMovementPlaybackClock other) =>
+            Generation == other.Generation &&
+            AuthorityTick == other.AuthorityTick &&
+            ContinuousTicks == other.ContinuousTicks &&
+            TickRate == other.TickRate &&
+            string.Equals(OwnerIdentity, other.OwnerIdentity, StringComparison.Ordinal);
+        public override bool Equals(object obj) =>
+            obj is CommittedMovementPlaybackClock other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(
+            OwnerIdentity == null ? 0 : StringComparer.Ordinal.GetHashCode(OwnerIdentity),
+            Generation,
+            AuthorityTick,
+            ContinuousTicks,
+            TickRate);
+        public static bool operator ==(
+            CommittedMovementPlaybackClock left,
+            CommittedMovementPlaybackClock right) => left.Equals(right);
+        public static bool operator !=(
+            CommittedMovementPlaybackClock left,
+            CommittedMovementPlaybackClock right) => !left.Equals(right);
+    }
+
     public enum SimulationTickSourceKind : byte
     {
         LocalLogic = 1,

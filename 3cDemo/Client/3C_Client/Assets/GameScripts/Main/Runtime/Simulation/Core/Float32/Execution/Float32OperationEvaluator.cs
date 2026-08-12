@@ -132,6 +132,36 @@ namespace ThirdPersonSimulation
             return m_Values.EvaluateCondition(cursor, edge);
         }
 
+        OperationExecutionResult TickLocomotion(
+            OperationControlCursor<Float32OperationTarget> cursor,
+            SimulationOperation operation)
+        {
+            int slot = m_Access.RequireOperationSlot(operation.Handle, ProgramStateSemantic.LocomotionMotionElapsedTicks);
+            int elapsedTicks = m_ControlState.ReadInt32(slot);
+            int committedTicks = checked(elapsedTicks + 1);
+            int generationSlot = m_Access.RequireOperationSlot(
+                operation.Handle,
+                ProgramStateSemantic.RunnableActivationGeneration);
+            m_Locomotion.Submit(cursor, operation, committedTicks, m_ControlState.ReadUInt64(generationSlot));
+            var mode = (LocomotionInputMotionExecutionMode)operation.Integer0;
+            if (mode == LocomotionInputMotionExecutionMode.Once)
+                return OperationExecutionResult.Success;
+            m_ControlState.WriteInt32(slot, committedTicks);
+            if (mode == LocomotionInputMotionExecutionMode.Continuous)
+                return OperationExecutionResult.Running;
+            if (mode != LocomotionInputMotionExecutionMode.Timed)
+                throw new InvalidOperationException($"Locomotion operation '{operation.Handle}' has invalid execution mode '{operation.Integer0}'.");
+            ProgramConstant duration = m_Access.FindConstant(operation, OperationNamedConstant.DurationSeconds);
+            if (duration == null || duration.Kind != ProgramConstantKind.Scalar)
+                throw new InvalidOperationException($"Locomotion operation '{operation.Handle}' has no duration.");
+            int requiredTicks = checked((int)Math.Ceiling(duration.Scalar.ToDouble() * m_Access.Program.Manifest.TickRate));
+            if (requiredTicks <= 0)
+                throw new InvalidOperationException($"Locomotion operation '{operation.Handle}' has a non-positive timed duration.");
+            return committedTicks >= requiredTicks
+                ? OperationExecutionResult.Success
+                : OperationExecutionResult.Running;
+        }
+
 		public OperationExecutionResult ExecuteLeaf(
 			OperationControlCursor<Float32OperationTarget> cursor,
 			OperationExecutionDescriptor descriptor)
@@ -171,10 +201,7 @@ namespace ThirdPersonSimulation
 					using (Float32ValueInputLease equipmentInputs = m_Values.ReadInputs(cursor, operation))
 						return m_Equipment.TickHost(cursor, operation, equipmentInputs);
 				case SimulationOperationCode.LocomotionInputMotion:
-					m_Locomotion.Submit(cursor, operation);
-					return (operation.Flags & 2U) != 0
-						? OperationExecutionResult.Running
-						: OperationExecutionResult.Success;
+					return TickLocomotion(cursor, operation);
 				case SimulationOperationCode.CameraStateRequest:
 				case SimulationOperationCode.CameraCue:
 				case SimulationOperationCode.CameraResponse:

@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed partial class CharacterPresentationProjection : ISerializationCallbackReceiver
     {
-        public const string CurrentAbiVersion = "character-presentation-projection/v11";
+        public const string CurrentAbiVersion = "character-presentation-projection/v12";
 
         [SerializeField] string m_AbiVersion = string.Empty;
         [SerializeField] string m_ProgramId = string.Empty;
@@ -748,6 +748,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public string ClipAuthoringId => m_ClipAuthoringId;
         public UnityEngine.AnimationClip Clip => m_Clip;
+        public float StartTime => m_StartTime;
+        public float EndTime => m_EndTime;
+        public float ClipInTime => m_ClipInTime;
+        public float DurationTime => m_DurationTime;
         public AnimationFootFeatureCurveSet LeftFootFeatures => m_LeftFootFeatures;
         public AnimationFootFeatureCurveSet RightFootFeatures => m_RightFootFeatures;
         public bool HasFootAnalysis => m_LeftFootFeatures != null && m_RightFootFeatures != null;
@@ -866,8 +870,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 isLooping);
             var footSample = new AnimationFootPlacementSample(
                 EvaluateRequired(m_FootPlacementWeightCurve, authoringNormalized, nameof(m_FootPlacementWeightCurve)),
-                m_LeftFootFeatures.Sample(animationNormalized),
-                m_RightFootFeatures.Sample(animationNormalized));
+                m_LeftFootFeatures.Sample(animationNormalized).BindPredictionSource(
+                    AnimationPredictedFootStepSample.SourceIdentity(m_ClipAuthoringId),
+                    checked((int)Math.Floor(continuousClipTime / m_Clip.length)),
+                    clipTime,
+                    m_Clip.length,
+                    isLooping),
+                m_RightFootFeatures.Sample(animationNormalized).BindPredictionSource(
+                    AnimationPredictedFootStepSample.SourceIdentity(m_ClipAuthoringId),
+                    checked((int)Math.Floor(continuousClipTime / m_Clip.length)),
+                    clipTime,
+                    m_Clip.length,
+                    isLooping));
 
             destination[destinationIndex] = plan;
             totalWeight += plan.Weight;

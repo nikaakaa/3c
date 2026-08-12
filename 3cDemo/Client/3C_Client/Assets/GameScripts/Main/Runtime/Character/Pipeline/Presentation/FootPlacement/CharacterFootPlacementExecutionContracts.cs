@@ -99,6 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong renderFrame,
             float presentationDeltaSeconds,
             CharacterBodyPresentationFrame body,
+            in CharacterPresentationFactFrame facts,
             in CharacterFootPlacementPoseInput upstreamPose)
         {
             if (!actorId.IsValid)
@@ -109,10 +110,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
             if (upstreamPose.CompletionIdentity == 0)
                 throw new ArgumentException("Foot Placement upstream completion identity is invalid.", nameof(upstreamPose));
+            if (!facts.IsValid)
+                throw new ArgumentException("Foot Placement Presentation Facts are invalid.", nameof(facts));
             ActorId = actorId;
             RenderFrame = renderFrame;
             PresentationDeltaSeconds = presentationDeltaSeconds;
             Body = body;
+            LocomotionPlanarBasis = facts.LocomotionPlanarBasis;
+            DesiredPlanarVelocity = facts.DesiredPlanarVelocity;
             UpstreamPose = upstreamPose;
         }
 
@@ -121,6 +126,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong CompletionIdentity => UpstreamPose.CompletionIdentity;
         public float PresentationDeltaSeconds { get; }
         public CharacterBodyPresentationFrame Body { get; }
+        public UnityEngine.Vector2 LocomotionPlanarBasis { get; }
+        public UnityEngine.Vector2 DesiredPlanarVelocity { get; }
         internal CharacterFootPlacementPoseInput UpstreamPose { get; }
     }
 }

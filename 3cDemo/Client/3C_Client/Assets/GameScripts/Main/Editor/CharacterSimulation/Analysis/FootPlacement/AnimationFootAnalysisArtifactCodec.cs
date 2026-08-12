@@ -99,9 +99,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             WriteString(writer, value.CalibrationRevision);
             WriteString(writer, value.GeometryValidationIdentity);
             WriteString(writer, value.GeometryValidationContentHash);
+            WriteString(writer, value.ContactScheduleHash);
             writer.Write(value.SampleRate);
-            writer.Write(value.PlantEnterVerticalSpeed);
-            writer.Write(value.PlantExitVerticalSpeed);
+            writer.Write(value.PlantEnterContactSpeed);
+            writer.Write(value.PlantExitContactSpeed);
             writer.Write(value.PlantEnterHeight);
             writer.Write(value.PlantExitHeight);
             writer.Write(value.MinimumLandingSegmentSeconds);
@@ -121,12 +122,27 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (version != AnimationFootAnalysisArtifactIdentity.CurrentFormatVersion)
                 throw new InvalidDataException($"Animation Foot Analysis payload format '{version}' is unsupported.");
             var identity = new AnimationFootAnalysisArtifactIdentity(
-                ReadString(reader), ReadString(reader), ReadString(reader), ReadString(reader), ReadString(reader),
-                reader.ReadInt32(), ReadString(reader), ReadString(reader), ReadString(reader),
-                ReadString(reader), ReadString(reader), ReadString(reader), ReadString(reader), ReadString(reader),
-                reader.ReadInt32(), ReadString(reader), ReadString(reader), ReadString(reader),
-                ReadFinite(reader, "sample rate"), ReadFinite(reader, "plant enter vertical speed"),
-                ReadFinite(reader, "plant exit vertical speed"), ReadFinite(reader, "plant enter height"),
+                ReadString(reader),
+                ReadString(reader),
+                ReadString(reader),
+                ReadString(reader),
+                ReadString(reader),
+                reader.ReadInt32(),
+                ReadString(reader),
+                ReadString(reader),
+                ReadString(reader),
+                ReadString(reader),
+                ReadString(reader),
+                ReadString(reader),
+                ReadString(reader),
+                ReadString(reader),
+                reader.ReadInt32(),
+                ReadString(reader),
+                ReadString(reader),
+                ReadString(reader),
+                ReadString(reader),
+                ReadFinite(reader, "sample rate"), ReadFinite(reader, "plant enter contact speed"),
+                ReadFinite(reader, "plant exit contact speed"), ReadFinite(reader, "plant enter height"),
                 ReadFinite(reader, "plant exit height"), ReadFinite(reader, "minimum landing segment"),
                 ReadFinite(reader, "maximum landing search"), ReadFinite(reader, "velocity tolerance"),
                 ReadFinite(reader, "height tolerance"), ReadFinite(reader, "confidence tolerance"),
@@ -155,16 +171,124 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             WriteCurve(writer, value.SoleLocalVelocityZ);
             WriteCurve(writer, value.SoleHeight);
             WriteCurve(writer, value.PlantConfidence);
-            WriteCurve(writer, value.NextLandingConfidence);
-            WriteCurve(writer, value.NextLandingDelaySeconds);
-            WriteCurve(writer, value.NextLandingLocalOffsetX);
-            WriteCurve(writer, value.NextLandingLocalOffsetZ);
+            WritePredictedStepCurveSet(writer, value.PredictedStep);
         }
 
         static AnimationFootFeatureCurveSet ReadCurveSet(BinaryReader reader) =>
             new AnimationFootFeatureCurveSet(
                 ReadCurve(reader), ReadCurve(reader), ReadCurve(reader), ReadCurve(reader), ReadCurve(reader),
-                ReadCurve(reader), ReadCurve(reader), ReadCurve(reader), ReadCurve(reader));
+                ReadPredictedStepCurveSet(reader));
+
+        static void WritePredictedStepCurveSet(
+            BinaryWriter writer,
+            AnimationPredictedFootStepCurveSet value)
+        {
+            value.RequireValid();
+            WriteCurve(writer, value.Confidence);
+            WriteCurve(writer, value.TimeToLandingSeconds);
+            WriteCurve(writer, value.EventPhase);
+            WriteCurve(writer, value.LiftOffPhase);
+            WriteCurve(writer, value.ActionStepDurationSeconds);
+            WriteCurve(writer, value.EventOrdinal);
+            WriteCurve(writer, value.OpposingLandingDelaySeconds);
+            WriteCurve(writer, value.OpposingEventOrdinal);
+            WriteCurve(writer, value.OpposingLandingCycleOffset);
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetRootLocalFootRouteX(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetRootLocalFootRouteY(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetRootLocalFootRouteZ(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetRootLocalAnkleRouteX(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetRootLocalAnkleRouteY(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetRootLocalAnkleRouteZ(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetRootLocalHipRouteX(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetRootLocalHipRouteY(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetRootLocalHipRouteZ(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetAuthoredFootPlanarRouteX(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetAuthoredFootPlanarRouteZ(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetAnimationClearanceHeight(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetConstraintMode(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetSupportPhase(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetFootOrientationPolicy(i));
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                WriteCurve(writer, value.GetBodyRotationPivotMode(i));
+        }
+
+        static AnimationPredictedFootStepCurveSet ReadPredictedStepCurveSet(BinaryReader reader)
+        {
+            AnimationCurve confidence = ReadCurve(reader);
+            AnimationCurve timeToLanding = ReadCurve(reader);
+            AnimationCurve eventPhase = ReadCurve(reader);
+            AnimationCurve liftOffPhase = ReadCurve(reader);
+            AnimationCurve actionStepDurationSeconds = ReadCurve(reader);
+            AnimationCurve eventOrdinal = ReadCurve(reader);
+            AnimationCurve opposingLandingDelaySeconds = ReadCurve(reader);
+            AnimationCurve opposingEventOrdinal = ReadCurve(reader);
+            AnimationCurve opposingLandingCycleOffset = ReadCurve(reader);
+            AnimationCurve[] routeX = ReadRouteCurves(reader);
+            AnimationCurve[] routeY = ReadRouteCurves(reader);
+            AnimationCurve[] routeZ = ReadRouteCurves(reader);
+            AnimationCurve[] ankleRouteX = ReadRouteCurves(reader);
+            AnimationCurve[] ankleRouteY = ReadRouteCurves(reader);
+            AnimationCurve[] ankleRouteZ = ReadRouteCurves(reader);
+            AnimationCurve[] hipRouteX = ReadRouteCurves(reader);
+            AnimationCurve[] hipRouteY = ReadRouteCurves(reader);
+            AnimationCurve[] hipRouteZ = ReadRouteCurves(reader);
+            AnimationCurve[] authoredFootPlanarX = ReadRouteCurves(reader);
+            AnimationCurve[] authoredFootPlanarZ = ReadRouteCurves(reader);
+            AnimationCurve[] animationClearanceHeight = ReadRouteCurves(reader);
+            AnimationCurve[] constraintMode = ReadRouteCurves(reader);
+            AnimationCurve[] supportPhase = ReadRouteCurves(reader);
+            AnimationCurve[] footOrientationPolicy = ReadRouteCurves(reader);
+            AnimationCurve[] bodyRotationPivotMode = ReadRouteCurves(reader);
+            return new AnimationPredictedFootStepCurveSet(
+                confidence,
+                timeToLanding,
+                eventPhase,
+                liftOffPhase,
+                actionStepDurationSeconds,
+                eventOrdinal,
+                opposingLandingDelaySeconds,
+                opposingEventOrdinal,
+                opposingLandingCycleOffset,
+                routeX,
+                routeY,
+                routeZ,
+                ankleRouteX,
+                ankleRouteY,
+                ankleRouteZ,
+                hipRouteX,
+                hipRouteY,
+                hipRouteZ,
+                authoredFootPlanarX,
+                authoredFootPlanarZ,
+                animationClearanceHeight,
+                constraintMode,
+                supportPhase,
+                footOrientationPolicy,
+                bodyRotationPivotMode);
+        }
+
+        static AnimationCurve[] ReadRouteCurves(BinaryReader reader)
+        {
+            var result = new AnimationCurve[AnimationPredictedFootStepCurveSet.RouteSampleCount];
+            for (int i = 0; i < result.Length; i++)
+                result[i] = ReadCurve(reader);
+            return result;
+        }
 
         static void WriteCurve(BinaryWriter writer, AnimationCurve curve)
         {
@@ -180,8 +304,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 Keyframe key = keys[i];
                 RequireFinite(key.time, "key time");
                 RequireFinite(key.value, "key value");
-                RequireFinite(key.inTangent, "key in tangent");
-                RequireFinite(key.outTangent, "key out tangent");
+                RequireCurveTangent(key.inTangent, "key in tangent");
+                RequireCurveTangent(key.outTangent, "key out tangent");
                 RequireFinite(key.inWeight, "key in weight");
                 RequireFinite(key.outWeight, "key out weight");
                 if (key.time <= previous || !Enum.IsDefined(typeof(WeightedMode), key.weightedMode))
@@ -210,8 +334,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 float time = ReadFinite(reader, "key time");
                 float value = ReadFinite(reader, "key value");
-                float inTangent = ReadFinite(reader, "key in tangent");
-                float outTangent = ReadFinite(reader, "key out tangent");
+                float inTangent = ReadCurveTangent(reader, "key in tangent");
+                float outTangent = ReadCurveTangent(reader, "key out tangent");
                 float inWeight = ReadFinite(reader, "key in weight");
                 float outWeight = ReadFinite(reader, "key out weight");
                 int weightedModeValue = reader.ReadInt32();
@@ -238,6 +362,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             float value = reader.ReadSingle();
             RequireFinite(value, field);
             return value;
+        }
+
+        static float ReadCurveTangent(BinaryReader reader, string field)
+        {
+            float value = reader.ReadSingle();
+            RequireCurveTangent(value, field);
+            return value;
+        }
+
+        static void RequireCurveTangent(float value, string field)
+        {
+            if (!float.IsFinite(value) && !float.IsPositiveInfinity(value))
+                throw new InvalidDataException($"Animation Foot Analysis {field} is invalid.");
         }
 
         static void RequireFinite(float value, string field)

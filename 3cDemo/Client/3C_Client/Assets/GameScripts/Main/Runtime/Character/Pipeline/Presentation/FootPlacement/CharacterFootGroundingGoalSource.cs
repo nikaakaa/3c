@@ -49,10 +49,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PhysicsScene physicsScene)
         {
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
-            m_Planner = new CharacterFootGroundingPlanner(actorId, settings, rig, physicsScene);
+            m_Planner = new CharacterFootGroundingPlanner(
+                actorId,
+                settings,
+                rig,
+                physicsScene);
         }
 
         internal CharacterFootGroundingDiagnostics Diagnostics => m_Planner.Diagnostics;
+        internal CharacterPredictiveFootPlacementDiagnostics PredictionDiagnostics =>
+            m_Planner.PredictionDiagnostics;
         internal CharacterFootPlacementRuntimeSettings Settings => m_Planner.Settings;
 
         internal string ApplyTuning(
@@ -110,9 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int producerCallSiteIndex,
             int weightParameterIndex)
         {
-            CharacterFootGroundingPlan plan = m_Planner.Plan(in frame, weightParameterIndex);
-            plan.WriteGoals(goalOutput);
-            return new CharacterFullBodyIkGoalSetHeader(
+            var header = new CharacterFullBodyIkGoalSetHeader(
                 frame.RenderFrame,
                 frame.CompletionIdentity,
                 m_Rig.Rig.RigId,
@@ -122,6 +126,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 goalWorkspaceOffset,
                 3,
                 CharacterFullBodyIkGoalSetAvailability.Ready);
+            CharacterFootGroundingPlan plan = m_Planner.Plan(
+                in frame,
+                in header,
+                weightParameterIndex);
+            plan.WriteGoals(goalOutput);
+            return header;
         }
 
         internal void Reset(CharacterFootPlacementReset reset) => m_Planner.Reset(reset);
@@ -144,12 +154,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             internal FootPlacementSurface AnchorSurface;
             internal Vector3 AnchorLocalPosition;
             internal Quaternion AnchorLocalRotation = Quaternion.identity;
+            internal Vector3 AnchorAnimationReferenceLocalPosition;
+            internal Quaternion AnchorAnimationReferenceLocalRotation = Quaternion.identity;
+            internal bool HasAnchorAnimationReference;
             internal float AnchorBlendWeight;
             internal bool HasAnchor;
-            int m_PreviousSoleSurfaceIdentity;
-            Vector3 m_PreviousSoleHeelPosition;
-            Vector3 m_PreviousSoleToePosition;
-            bool m_HasPreviousSoleSample;
+            internal CharacterFootContactDecision ContactDecision;
+            internal bool ContactSurfaceValid;
+            internal bool ContactSurfaceDistanceAccepted;
+            internal bool ContactCaptureSpeedAccepted;
+            internal bool ContactRetentionSpeedAccepted;
+            internal bool ContactConfidenceAccepted;
+            internal float AnchorDistance = float.PositiveInfinity;
+            internal bool AnchorDistanceAccepted;
+            internal bool HasAnimationConstraint;
+            internal AnimationFootConstraintMode AnimationConstraintMode = AnimationFootConstraintMode.Locked;
+            internal AnimationFootSupportPhase AnimationSupportPhase = AnimationFootSupportPhase.Supporting;
+            internal float PelvisSupportWeight;
+
+            internal bool AllowsAnchor =>
+                !HasAnimationConstraint ||
+                AnimationConstraintMode == AnimationFootConstraintMode.Locked ||
+                AnimationSupportPhase == AnimationFootSupportPhase.ApproachingContact;
 
             internal CharacterFootContactState ContactState =>
                 HasAnchor || AnchorBlendWeight > 0.0001f
@@ -162,94 +188,216 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationFootFeatureSample feature,
                 float surfaceDistance,
                 bool surfaceValid,
+                CharacterPredictiveFootStanceInput predictive,
                 CharacterStanceStabilizationSettings settings)
             {
                 float speed = feature.SoleLocalVelocity.magnitude;
-                if (!surfaceValid ||
-                    surfaceDistance > settings.MaximumContactSurfaceDistance ||
-                    speed >= settings.UnalignmentSpeedThreshold)
+                HasAnimationConstraint = predictive.HasActionConstraint;
+                AnimationConstraintMode = predictive.HasActionConstraint
+                    ? predictive.ConstraintMode
+                    : AnimationFootConstraintMode.Locked;
+                AnimationSupportPhase = predictive.HasActionConstraint
+                    ? predictive.SupportPhase
+                    : AnimationFootSupportPhase.Supporting;
+                ContactSurfaceValid = surfaceValid;
+                ContactSurfaceDistanceAccepted = surfaceValid &&
+                                                   float.IsFinite(surfaceDistance) &&
+                                                   surfaceDistance <= settings.MaximumContactSurfaceDistance;
+                ContactCaptureSpeedAccepted = speed <= settings.PlantSpeedThreshold;
+                ContactRetentionSpeedAccepted = speed < settings.UnalignmentSpeedThreshold;
+                ContactConfidenceAccepted = HasAnimationConstraint
+                    ? AnimationConstraintMode != AnimationFootConstraintMode.Unlocked ||
+                      AnimationSupportPhase == AnimationFootSupportPhase.ApproachingContact
+                    : feature.PlantConfidence >= settings.PlantConfidenceEnter;
+                if (HasAnimationConstraint)
+                {
+                    if (AnimationConstraintMode == AnimationFootConstraintMode.Unlocked &&
+                        AnimationSupportPhase != AnimationFootSupportPhase.ApproachingContact)
+                    {
+                        if (PlantContact || HasAnchor)
+                        {
+                            TransitionReason = FootConstraintTransitionReason.PolicyReleased;
+                            ContactDecision = CharacterFootContactDecision.ContactReleasedAnimationConstraint;
+                        }
+                        else
+                        {
+                            ContactDecision = CharacterFootContactDecision.WaitingForPlantConfidence;
+                        }
+                        PlantContact = false;
+                        return;
+                    }
+                    if (!surfaceValid)
+                    {
+                        if (PlantContact)
+                        {
+                            TransitionReason = FootConstraintTransitionReason.ContactReleased;
+                            ContactDecision = CharacterFootContactDecision.ContactReleasedSurfaceInvalid;
+                        }
+                        else
+                        {
+                            ContactDecision = CharacterFootContactDecision.WaitingForSurface;
+                        }
+                        PlantContact = false;
+                        return;
+                    }
+                    if (!ContactSurfaceDistanceAccepted)
+                    {
+                        if (PlantContact)
+                        {
+                            TransitionReason = FootConstraintTransitionReason.ContactReleased;
+                            ContactDecision = CharacterFootContactDecision.ContactReleasedSurfaceDistance;
+                        }
+                        else
+                        {
+                            ContactDecision = CharacterFootContactDecision.WaitingForDistance;
+                        }
+                        PlantContact = false;
+                        return;
+                    }
+                    if (!PlantContact && HasAnchor)
+                    {
+                        ContactDecision = CharacterFootContactDecision.AnchorFading;
+                        return;
+                    }
+                    if (PlantContact)
+                    {
+                        ContactDecision = CharacterFootContactDecision.ContactRetained;
+                        return;
+                    }
+                    PlantContact = true;
+                    TransitionReason = FootConstraintTransitionReason.ContactEntered;
+                    ContactDecision = CharacterFootContactDecision.ContactEntered;
+                    return;
+                }
+                ContactConfidenceAccepted = feature.PlantConfidence >= settings.PlantConfidenceEnter;
+                if (!surfaceValid)
                 {
                     if (PlantContact)
+                    {
                         TransitionReason = FootConstraintTransitionReason.ContactReleased;
+                        ContactDecision = CharacterFootContactDecision.ContactReleasedSurfaceInvalid;
+                    }
+                    else
+                    {
+                        ContactDecision = CharacterFootContactDecision.WaitingForSurface;
+                    }
                     PlantContact = false;
+                    return;
+                }
+                if (!ContactSurfaceDistanceAccepted)
+                {
+                    if (PlantContact)
+                    {
+                        TransitionReason = FootConstraintTransitionReason.ContactReleased;
+                        ContactDecision = CharacterFootContactDecision.ContactReleasedSurfaceDistance;
+                    }
+                    else
+                    {
+                        ContactDecision = CharacterFootContactDecision.WaitingForDistance;
+                    }
+                    PlantContact = false;
+                    return;
+                }
+                if (!ContactRetentionSpeedAccepted)
+                {
+                    if (PlantContact)
+                    {
+                        TransitionReason = FootConstraintTransitionReason.ContactReleased;
+                        ContactDecision = CharacterFootContactDecision.ContactReleasedAnimationSpeed;
+                    }
+                    else
+                    {
+                        ContactDecision = CharacterFootContactDecision.WaitingForCaptureSpeed;
+                    }
+                    PlantContact = false;
+                    return;
+                }
+                if (!PlantContact && HasAnchor)
+                {
+                    ContactDecision = CharacterFootContactDecision.AnchorFading;
                     return;
                 }
                 if (PlantContact)
                 {
-                    if (feature.PlantConfidence <= settings.PlantConfidenceExit)
-                    {
-                        PlantContact = false;
-                        TransitionReason = FootConstraintTransitionReason.ContactReleased;
-                    }
+                    ContactDecision = CharacterFootContactDecision.ContactRetained;
                     return;
                 }
-                if (speed <= settings.PlantSpeedThreshold &&
-                    feature.PlantConfidence >= settings.PlantConfidenceEnter)
+                if (!ContactCaptureSpeedAccepted)
+                {
+                    ContactDecision = CharacterFootContactDecision.WaitingForCaptureSpeed;
+                    return;
+                }
+                if (!ContactConfidenceAccepted)
+                {
+                    ContactDecision = CharacterFootContactDecision.WaitingForPlantConfidence;
+                    return;
+                }
+                if (ContactCaptureSpeedAccepted && ContactConfidenceAccepted)
                 {
                     PlantContact = true;
                     TransitionReason = FootConstraintTransitionReason.ContactEntered;
+                    ContactDecision = CharacterFootContactDecision.ContactEntered;
                 }
-            }
-
-            internal SoleContinuityPlan ResolveSoleContinuity(
-                FootPlacementSurface support,
-                in SoleClearancePlan clearance)
-            {
-                if (!m_HasPreviousSoleSample || !support.IsValid)
-                {
-                    return new SoleContinuityPlan(
-                        m_HasPreviousSoleSample,
-                        m_PreviousSoleSurfaceIdentity,
-                        0f,
-                        0f,
-                        false);
-                }
-                Vector3 normal = support.Normal.normalized;
-                float previousHeelDistance = Vector3.Dot(
-                    m_PreviousSoleHeelPosition - support.Point,
-                    normal);
-                float previousToeDistance = Vector3.Dot(
-                    m_PreviousSoleToePosition - support.Point,
-                    normal);
-                bool crossedCurrentSurface =
-                    support.Identity == m_PreviousSoleSurfaceIdentity &&
-                    clearance.Penetration > 0f &&
-                    Mathf.Min(previousHeelDistance, previousToeDistance) >= -0.0001f;
-                return new SoleContinuityPlan(
-                    true,
-                    m_PreviousSoleSurfaceIdentity,
-                    previousHeelDistance,
-                    previousToeDistance,
-                    crossedCurrentSurface);
-            }
-
-            internal void CommitSoleSample(
-                FootPlacementSurface support,
-                in SoleClearancePlan clearance,
-                Vector3 constraintTranslation)
-            {
-                if (!support.IsValid)
-                {
-                    ClearSoleSample();
-                    return;
-                }
-                m_PreviousSoleSurfaceIdentity = support.Identity;
-                m_PreviousSoleHeelPosition = clearance.Contacts.HeelPosition + constraintTranslation;
-                m_PreviousSoleToePosition = clearance.Contacts.ToePosition + constraintTranslation;
-                m_HasPreviousSoleSample = true;
             }
 
             internal void Capture(
                 FootPlacementSurface surface,
                 Vector3 worldPosition,
-                Quaternion worldRotation)
+                Quaternion worldRotation,
+                Vector3 animatedWorldPosition,
+                Quaternion animatedWorldRotation,
+                bool preserveGoalContinuity)
             {
                 AnchorSurface = surface;
                 AnchorLocalPosition = surface.Transform.InverseTransformPoint(worldPosition);
                 AnchorLocalRotation =
                     (Quaternion.Inverse(surface.Transform.rotation) * worldRotation).normalized;
+                UpdateAnimationReference(animatedWorldPosition, animatedWorldRotation, surface);
                 HasAnchor = true;
+                if (preserveGoalContinuity)
+                    AnchorBlendWeight = 1f;
                 TransitionReason = FootConstraintTransitionReason.AnchorCaptured;
+            }
+
+            internal void UpdateAnimationReference(
+                Vector3 animatedWorldPosition,
+                Quaternion animatedWorldRotation,
+                FootPlacementSurface surface)
+            {
+                AnchorAnimationReferenceLocalPosition =
+                    surface.Transform.InverseTransformPoint(animatedWorldPosition);
+                AnchorAnimationReferenceLocalRotation = (
+                    Quaternion.Inverse(surface.Transform.rotation) * animatedWorldRotation).normalized;
+                HasAnchorAnimationReference = true;
+            }
+
+            internal bool TryResolveFadeTarget(
+                Vector3 animatedWorldPosition,
+                Quaternion animatedWorldRotation,
+                FootPlacementSurface surface,
+                out Vector3 worldPosition,
+                out Quaternion worldRotation)
+            {
+                if (!HasAnchorAnimationReference || !surface.IsValid)
+                {
+                    worldPosition = Vector3.zero;
+                    worldRotation = Quaternion.identity;
+                    return false;
+                }
+                Vector3 currentAnimationLocalPosition =
+                    surface.Transform.InverseTransformPoint(animatedWorldPosition);
+                Quaternion currentAnimationLocalRotation = (
+                    Quaternion.Inverse(surface.Transform.rotation) * animatedWorldRotation).normalized;
+                Vector3 fadeLocalPosition = AnchorLocalPosition +
+                                            currentAnimationLocalPosition -
+                                            AnchorAnimationReferenceLocalPosition;
+                Quaternion animationDelta = (
+                    currentAnimationLocalRotation *
+                    Quaternion.Inverse(AnchorAnimationReferenceLocalRotation)).normalized;
+                worldPosition = surface.Transform.TransformPoint(fadeLocalPosition);
+                worldRotation = (
+                    surface.Transform.rotation * animationDelta * AnchorLocalRotation).normalized;
+                return IsFinite(worldPosition) && IsUnit(worldRotation);
             }
 
             internal bool TryResolve(
@@ -278,10 +426,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return IsFinite(worldPosition) && IsUnit(worldRotation);
             }
 
-            internal void Release(FootConstraintTransitionReason reason)
+            internal void Release(
+                FootConstraintTransitionReason reason,
+                CharacterFootContactDecision decision = CharacterFootContactDecision.None)
             {
                 PlantContact = false;
                 TransitionReason = reason;
+                if (decision != CharacterFootContactDecision.None)
+                    ContactDecision = decision;
             }
 
             internal void ClearAnchor()
@@ -289,6 +441,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnchorSurface = default;
                 AnchorLocalPosition = Vector3.zero;
                 AnchorLocalRotation = Quaternion.identity;
+                AnchorAnimationReferenceLocalPosition = Vector3.zero;
+                AnchorAnimationReferenceLocalRotation = Quaternion.identity;
+                HasAnchorAnimationReference = false;
                 HasAnchor = false;
                 AnchorBlendWeight = 0f;
             }
@@ -297,16 +452,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 PlantContact = false;
                 TransitionReason = reason;
+                ContactDecision = CharacterFootContactDecision.Reset;
+                ContactSurfaceValid = false;
+                ContactSurfaceDistanceAccepted = false;
+                ContactCaptureSpeedAccepted = false;
+                ContactRetentionSpeedAccepted = false;
+                ContactConfidenceAccepted = false;
+                AnchorDistance = float.PositiveInfinity;
+                AnchorDistanceAccepted = false;
+                HasAnimationConstraint = false;
+                AnimationConstraintMode = AnimationFootConstraintMode.Locked;
+                AnimationSupportPhase = AnimationFootSupportPhase.Supporting;
+                PelvisSupportWeight = 0f;
                 ClearAnchor();
-                ClearSoleSample();
-            }
-
-            void ClearSoleSample()
-            {
-                m_PreviousSoleSurfaceIdentity = 0;
-                m_PreviousSoleHeelPosition = Vector3.zero;
-                m_PreviousSoleToePosition = Vector3.zero;
-                m_HasPreviousSoleSample = false;
             }
 
             static bool IsFinite(Vector3 value) =>
@@ -325,6 +483,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterFootPlacementPoseRig m_Rig;
         readonly CharacterFootPlacementWorldQueryBackend m_World;
         readonly CharacterLyraCurrentGroundingSolver m_CurrentGrounding;
+        readonly CharacterPredictiveFootPlacementPlanner m_SwingPrediction;
         readonly CharacterFootPlacementPelvisPlanner m_Pelvis = new CharacterFootPlacementPelvisPlanner();
         readonly FootState m_Left = new FootState(CharacterFootSide.Left);
         readonly FootState m_Right = new FootState(CharacterFootSide.Right);
@@ -355,10 +514,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rig,
                 m_World,
                 settings.CurrentGrounding);
+            m_SwingPrediction = new CharacterPredictiveFootPlacementPlanner(
+                actorId,
+                rig,
+                settings,
+                m_World);
             ResetInternal(0, FootConstraintTransitionReason.PresentationReset);
         }
 
         internal CharacterFootGroundingDiagnostics Diagnostics => m_Diagnostics;
+        internal CharacterPredictiveFootPlacementDiagnostics PredictionDiagnostics =>
+            m_SwingPrediction.Diagnostics;
         internal CharacterFootPlacementRuntimeSettings Settings => m_Settings;
 
         internal void ApplyTuning(
@@ -369,12 +535,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             m_Settings.ApplyTuning(currentGrounding, stanceStabilization, predictiveExtension);
             m_CurrentGrounding.ApplyTuning(currentGrounding);
+            m_SwingPrediction.ApplyTuning(predictiveExtension);
             if (resetOwnerState)
                 ResetInternal(m_ResetSequence, FootConstraintTransitionReason.PresentationReset);
         }
 
         internal CharacterFootGroundingPlan Plan(
             in CharacterFootPlacementPlanningFrame frame,
+            in CharacterFullBodyIkGoalSetHeader ownerHeader,
             int weightParameterIndex)
         {
             RequireAlive();
@@ -402,6 +570,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterLyraCurrentGroundingTrace trace = m_CurrentGrounding.Trace(
                 pose,
                 minimumGroundNormalDot);
+            CharacterPredictiveFootStanceInput leftPredictive = default;
+            CharacterPredictiveFootStanceInput rightPredictive = default;
+            if (m_SwingPrediction != null)
+            {
+                m_SwingPrediction.Prepare(
+                    in frame,
+                    in pose);
+                leftPredictive = m_SwingPrediction.GetStanceInput(
+                    CharacterFootSide.Left,
+                    frame.RenderFrame,
+                    frame.CompletionIdentity,
+                    frame.UpstreamPose.LeftFootFeatures,
+                    pose.Left);
+                rightPredictive = m_SwingPrediction.GetStanceInput(
+                    CharacterFootSide.Right,
+                    frame.RenderFrame,
+                    frame.CompletionIdentity,
+                    frame.UpstreamPose.RightFootFeatures,
+                    pose.Right);
+            }
+            float pelvisTargetOffset = ResolvePelvisTargetOffset(
+                trace.PelvisTargetOffset,
+                leftPredictive,
+                rightPredictive,
+                m_Rig.PoseRoot.position,
+                poseRootUp);
+            pelvisTargetOffset = Mathf.Clamp(
+                pelvisTargetOffset,
+                -m_Settings.StanceStabilization.MaximumPelvisLowering,
+                m_Settings.StanceStabilization.MaximumPelvisRaising);
             PreparedFoot leftPrepared = PrepareFoot(
                 m_Left,
                 trace.Left);
@@ -421,7 +619,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterLyraCurrentGroundingResult lyra = m_CurrentGrounding.Resolve(
                 trace,
                 pose,
-                trace.PelvisTargetOffset,
+                pelvisTargetOffset,
                 leftSoleClearanceTarget,
                 rightSoleClearanceTarget,
                 frame.PresentationDeltaSeconds);
@@ -432,6 +630,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 lyra.Left,
                 leftPrepared,
                 features.Left,
+                leftPredictive,
                 frame.PresentationDeltaSeconds);
             rightPrepared = UpdateStance(
                 m_Right,
@@ -440,19 +639,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 lyra.Right,
                 rightPrepared,
                 features.Right,
+                rightPredictive,
                 frame.PresentationDeltaSeconds);
-            SoleContinuityPlan leftContinuity = m_Left.ResolveSoleContinuity(
-                leftPrepared.Surface,
-                leftPrepared.CurrentClearance);
-            SoleContinuityPlan rightContinuity = m_Right.ResolveSoleContinuity(
-                rightPrepared.Surface,
-                rightPrepared.CurrentClearance);
-            float leftSoleConstraintOffset = m_Left.PlantContact || leftContinuity.CrossedCurrentSurface
+            float leftSoleConstraintOffset = m_Left.PlantContact
                 ? ResolveCurrentSoleConstraintOffset(
                     leftPrepared.CurrentClearance,
                     m_Rig.PoseRoot.up)
                 : 0f;
-            float rightSoleConstraintOffset = m_Right.PlantContact || rightContinuity.CrossedCurrentSurface
+            float rightSoleConstraintOffset = m_Right.PlantContact
                 ? ResolveCurrentSoleConstraintOffset(
                     rightPrepared.CurrentClearance,
                     m_Rig.PoseRoot.up)
@@ -461,48 +655,50 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 lyra,
                 leftSoleConstraintOffset,
                 rightSoleConstraintOffset);
-            Vector3 componentUp = m_Rig.PoseRoot.up.normalized;
-            m_Left.CommitSoleSample(
-                leftPrepared.Surface,
-                leftPrepared.CurrentClearance,
-                componentUp * leftSoleConstraintOffset);
-            m_Right.CommitSoleSample(
-                rightPrepared.Surface,
-                rightPrepared.CurrentClearance,
-                componentUp * rightSoleConstraintOffset);
             ResolvedFoot left = StabilizeFoot(
                 m_Left,
                 pose.Left,
                 lyra.Left,
                 leftPrepared,
                 features.Left,
-                features.Value,
-                m_Rig.LeftLegLength);
+                features.Value);
             ResolvedFoot right = StabilizeFoot(
                 m_Right,
                 pose.Right,
                 lyra.Right,
                 rightPrepared,
                 features.Right,
-                features.Value,
-                m_Rig.RightLegLength);
-            CharacterFootPlacementPelvisPlan pelvisPlan;
-            try
+                features.Value);
+            CharacterFootPlacementPelvisPlan pelvisPlan = m_Pelvis.Plan(
+                pelvisTargetOffset,
+                lyra.CurrentPelvisOffset,
+                BuildPelvisInput(
+                    m_Left,
+                    CharacterFootSide.Left,
+                    pose.Left,
+                    left,
+                    features.Value,
+                    m_Rig.LeftLegLength),
+                BuildPelvisInput(
+                    m_Right,
+                    CharacterFootSide.Right,
+                    pose.Right,
+                    right,
+                    features.Value,
+                    m_Rig.RightLegLength),
+                m_Rig.PoseRoot.up,
+                m_Settings.StanceStabilization);
+            if (pelvisPlan.RejectLeftGoal)
             {
-                pelvisPlan = m_Pelvis.Plan(
-                    trace.PelvisTargetOffset,
-                    lyra.CurrentPelvisOffset,
-                    BuildPelvisInput(CharacterFootSide.Left, pose.Left, left, features.Value, m_Rig.LeftLegLength),
-                    BuildPelvisInput(CharacterFootSide.Right, pose.Right, right, features.Value, m_Rig.RightLegLength),
-                    m_Rig.PoseRoot.up,
-                    m_Settings.StanceStabilization);
+                m_Left.Release(
+                    FootConstraintTransitionReason.PelvisRangeConflictReleased,
+                    CharacterFootContactDecision.ContactReleasedPelvisConflict);
             }
-            catch (CharacterFootPlacementPelvisReachException exception)
+            if (pelvisPlan.RejectRightGoal)
             {
-                throw new InvalidOperationException(
-                    FormattableString.Invariant(
-                        $"Foot Grounding render frame {frame.RenderFrame} pelvis reach failure. {exception.Message}"),
-                    exception);
+                m_Right.Release(
+                    FootConstraintTransitionReason.PelvisRangeConflictReleased,
+                    CharacterFootContactDecision.ContactReleasedPelvisConflict);
             }
             var pelvis = new CharacterFullBodyIkGoal(
                 CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation,
@@ -528,13 +724,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Rig,
                 m_World.PhysicsScene.GetHashCode(),
                 m_Rig.SelfColliderRoot.GetInstanceID(),
-                BuildDiagnostics(m_Left, pose.Left, lyra.Left, features.Left, leftContinuity, left),
-                BuildDiagnostics(m_Right, pose.Right, lyra.Right, features.Right, rightContinuity, right));
+                BuildDiagnostics(m_Left, pose.Left, lyra.Left, features.Left, left),
+                BuildDiagnostics(m_Right, pose.Right, lyra.Right, features.Right, right));
             m_LastRenderFrame = frame.RenderFrame;
             m_ResetSequence = frame.Body.ResetSequence;
             m_PreviousPoseRootPosition = m_Rig.PoseRoot.position;
             m_HasPreviousPoseRootPosition = true;
-            return new CharacterFootGroundingPlan(pelvis, left.Goal, right.Goal, m_Diagnostics);
+            var baseline = new CharacterFootGroundingPlan(
+                pelvis,
+                left.Goal,
+                right.Goal,
+                m_Diagnostics);
+            return m_SwingPrediction.Resolve(in frame, in ownerHeader, in baseline);
         }
 
         internal void Reset(CharacterFootPlacementReset reset)
@@ -583,6 +784,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterLyraCurrentGroundingFootResult lyra,
             PreparedFoot prepared,
             AnimationFootFeatureSample feature,
+            CharacterPredictiveFootStanceInput predictive,
             float deltaSeconds)
         {
             CharacterStanceStabilizationSettings settings = m_Settings.StanceStabilization;
@@ -594,46 +796,99 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 (root.rotation * lyra.ComponentRotation).normalized,
                 prepared.Surface,
                 root.up);
-            float surfaceDistance = prepared.SurfaceValid
+            FootPlacementSurface contactSurface = prepared.Surface;
+            bool contactSurfaceValid = prepared.SurfaceValid;
+            SoleClearancePlan contactClearance = currentClearance;
+            bool hasPredictiveContactTarget = predictive.HasContactTarget &&
+                                              predictive.SupportPhase == AnimationFootSupportPhase.ApproachingContact;
+            if (hasPredictiveContactTarget)
+            {
+                contactSurface = predictive.ContactSurface.Rebuild();
+                contactSurfaceValid = contactSurface.IsValid &&
+                                      Vector3.Angle(root.up, contactSurface.Normal) <=
+                                      settings.MaximumSurfaceSlopeDegrees;
+                contactClearance = MeasureSoleClearance(
+                    animated,
+                    predictive.ContactAnklePosition,
+                    predictive.ContactAnkleRotation,
+                    contactSurface,
+                    root.up);
+            }
+            bool usePredictiveContactTarget = hasPredictiveContactTarget && contactSurfaceValid;
+            float surfaceDistance = contactSurfaceValid
                 ? Mathf.Max(
-                    Mathf.Abs(currentClearance.HeelPlaneDistance),
-                    Mathf.Abs(currentClearance.ToePlaneDistance))
+                    Mathf.Abs(contactClearance.HeelPlaneDistance),
+                    Mathf.Abs(contactClearance.ToePlaneDistance))
                 : float.PositiveInfinity;
-            state.UpdateContact(feature, surfaceDistance, prepared.SurfaceValid, settings);
-            Vector3 targetWorldPosition = animated.AnklePosition +
-                                          up * (trace.TargetOffset + lyra.SoleClearanceTarget);
+            state.UpdateContact(
+                feature,
+                surfaceDistance,
+                contactSurfaceValid,
+                predictive,
+                settings);
+            Vector3 targetWorldPosition = usePredictiveContactTarget
+                ? predictive.ContactAnklePosition
+                : animated.AnklePosition + up * (trace.TargetOffset + lyra.SoleClearanceTarget);
+            bool hadAnchor = state.HasAnchor;
             bool hasResolvedAnchor = state.TryResolve(
                 m_Settings.CurrentGrounding.GroundLayerMask,
                 root.up,
                 settings.MaximumSurfaceSlopeDegrees,
                 out Vector3 anchorWorldPosition,
                 out _,
-                out _);
+                out FootPlacementSurface anchorSurface);
             if (state.HasAnchor && !hasResolvedAnchor)
             {
-                state.Release(FootConstraintTransitionReason.SurfaceInvalid);
+                state.Release(
+                    FootConstraintTransitionReason.SurfaceInvalid,
+                    CharacterFootContactDecision.ContactReleasedAnchorSurface);
                 state.ClearAnchor();
             }
-            if (state.PlantContact && hasResolvedAnchor &&
-                Vector3.Distance(anchorWorldPosition, targetWorldPosition) > settings.MaximumAnchorDistance)
+            if (state.PlantContact && hasResolvedAnchor)
             {
-                state.Release(FootConstraintTransitionReason.AnchorDistanceExceeded);
+                state.UpdateAnimationReference(
+                    animated.AnklePosition,
+                    animated.AnkleRotation,
+                    anchorSurface);
             }
-            float targetBlend = state.PlantContact && hasResolvedAnchor ? 1f : 0f;
+            state.AnchorDistance = hasResolvedAnchor
+                ? Vector3.Distance(anchorWorldPosition, targetWorldPosition)
+                : float.PositiveInfinity;
+            state.AnchorDistanceAccepted = !hadAnchor ||
+                                           hasResolvedAnchor &&
+                                           state.AnchorDistance <= settings.MaximumAnchorDistance;
+            if (state.PlantContact && hasResolvedAnchor && !state.AnchorDistanceAccepted)
+            {
+                state.Release(
+                    FootConstraintTransitionReason.AnchorDistanceExceeded,
+                    CharacterFootContactDecision.ContactReleasedAnchorDistance);
+            }
+            float targetBlend = state.PlantContact && hasResolvedAnchor && state.AllowsAnchor ? 1f : 0f;
             state.AnchorBlendWeight = Mathf.MoveTowards(
                 state.AnchorBlendWeight,
                 targetBlend,
                 settings.AnchorBlendSpeed * deltaSeconds);
-            if (state.AnchorBlendWeight <= 0.0001f && !state.PlantContact)
+            float pelvisSupportTarget = state.PlantContact && hasResolvedAnchor
+                ? 1f
+                : 0f;
+            state.PelvisSupportWeight = Mathf.MoveTowards(
+                state.PelvisSupportWeight,
+                pelvisSupportTarget,
+                settings.AnchorBlendSpeed * deltaSeconds);
+            if (state.AnchorBlendWeight <= 0.0001f &&
+                (!state.PlantContact || !state.AllowsAnchor))
             {
                 state.ClearAnchor();
                 hasResolvedAnchor = false;
             }
             return new PreparedFoot(
-                prepared.Surface,
-                prepared.SurfaceValid,
+                contactSurface,
+                contactSurfaceValid,
                 surfaceDistance,
-                currentClearance);
+                usePredictiveContactTarget ? contactClearance : currentClearance,
+                usePredictiveContactTarget,
+                predictive.ContactAnklePosition,
+                predictive.ContactAnkleRotation);
         }
 
         ResolvedFoot StabilizeFoot(
@@ -642,25 +897,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterLyraCurrentGroundingFootResult lyra,
             PreparedFoot prepared,
             AnimationFootFeatureSample feature,
-            float alpha,
-            float legLength)
+            float alpha)
         {
             CharacterStanceStabilizationSettings settings = m_Settings.StanceStabilization;
             Transform root = m_Rig.PoseRoot;
             Vector3 lyraWorldPosition = root.TransformPoint(lyra.ComponentPosition);
             Quaternion lyraWorldRotation = (root.rotation * lyra.ComponentRotation).normalized;
-            if (state.PlantContact && !state.HasAnchor && prepared.SurfaceValid)
+            if (state.PlantContact && state.AllowsAnchor && !state.HasAnchor && prepared.SurfaceValid)
             {
-                SoleClearancePlan captureClearance = MeasureSoleClearance(
-                    animated,
-                    lyraWorldPosition,
-                    lyraWorldRotation,
-                    prepared.Surface,
-                    root.up);
+                Quaternion captureRotation = prepared.HasContactTarget
+                    ? prepared.ContactAnkleRotation
+                    : lyraWorldRotation;
+                Vector3 capturePosition = prepared.HasContactTarget
+                    ? ResolveSoleContactAnklePosition(
+                        animated,
+                        prepared.ContactAnklePosition,
+                        captureRotation,
+                        prepared.Surface,
+                        root.up)
+                    : MeasureSoleClearance(
+                        animated,
+                        lyraWorldPosition,
+                        lyraWorldRotation,
+                        prepared.Surface,
+                        root.up).SafeAnklePosition;
                 state.Capture(
                     prepared.Surface,
-                    captureClearance.SafeAnklePosition,
-                    lyraWorldRotation);
+                    capturePosition,
+                    captureRotation,
+                    animated.AnklePosition,
+                    animated.AnkleRotation,
+                    prepared.HasContactTarget);
             }
             bool hasResolvedAnchor = state.TryResolve(
                 m_Settings.CurrentGrounding.GroundLayerMask,
@@ -671,8 +938,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out FootPlacementSurface anchorSurface);
             if (state.HasAnchor && !hasResolvedAnchor)
             {
-                state.Release(FootConstraintTransitionReason.SurfaceInvalid);
+                state.Release(
+                    FootConstraintTransitionReason.SurfaceInvalid,
+                    CharacterFootContactDecision.ContactReleasedAnchorSurface);
                 state.ClearAnchor();
+            }
+            if (hasResolvedAnchor && !state.PlantContact &&
+                !state.TryResolveFadeTarget(
+                    animated.AnklePosition,
+                    animated.AnkleRotation,
+                    anchorSurface,
+                    out anchorWorldPosition,
+                    out anchorWorldRotation))
+            {
+                throw new InvalidOperationException("Stance Anchor fade reference is invalid.");
             }
             Vector3 finalWorldPosition = hasResolvedAnchor
                 ? Vector3.Lerp(lyraWorldPosition, anchorWorldPosition, state.AnchorBlendWeight)
@@ -686,32 +965,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 finalWorldRotation,
                 state.PlantContact && hasResolvedAnchor ? anchorSurface : prepared.Surface,
                 root.up);
-            if (hasResolvedAnchor && alpha > 0.0001f)
-            {
-                var reachInput = new CharacterFootPlacementPelvisLegInput(
-                    state.Side,
-                    animated.HipPosition,
-                    finalWorldPosition,
-                    Mathf.Clamp01(alpha),
-                    legLength);
-                if (!m_Pelvis.HasReachableOffset(
-                        in reachInput,
-                        root.up,
-                        settings))
-                {
-                    state.Release(FootConstraintTransitionReason.LegUnreachable);
-                    state.ClearAnchor();
-                    hasResolvedAnchor = false;
-                    finalWorldPosition = lyraWorldPosition;
-                    finalWorldRotation = lyraWorldRotation;
-                    soleClearance = MeasureSoleClearance(
-                        animated,
-                        finalWorldPosition,
-                        finalWorldRotation,
-                        prepared.Surface,
-                        root.up);
-                }
-            }
+            finalWorldPosition = soleClearance.SafeAnklePosition;
             float placementWeight = Mathf.Clamp01(alpha);
             Vector3 componentPosition = Quaternion.Inverse(root.rotation) * (finalWorldPosition - root.position);
             Quaternion componentRotation = (Quaternion.Inverse(root.rotation) * finalWorldRotation).normalized;
@@ -746,7 +1000,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementAnimatedFootPose animated,
             CharacterLyraCurrentGroundingFootResult lyra,
             AnimationFootFeatureSample feature,
-            SoleContinuityPlan continuity,
             ResolvedFoot resolved) =>
             new CharacterFootGroundingFootDiagnostics(
                 state.Side,
@@ -754,6 +1007,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 feature,
                 state.ContactState,
                 state.TransitionReason,
+                state.ContactDecision,
+                state.ContactSurfaceValid,
+                state.ContactSurfaceDistanceAccepted,
+                state.ContactCaptureSpeedAccepted,
+                state.ContactRetentionSpeedAccepted,
+                state.ContactConfidenceAccepted,
+                m_Settings.StanceStabilization.MaximumContactSurfaceDistance,
+                m_Settings.StanceStabilization.PlantSpeedThreshold,
+                m_Settings.StanceStabilization.UnalignmentSpeedThreshold,
+                m_Settings.StanceStabilization.PlantConfidenceEnter,
+                m_Settings.StanceStabilization.PlantConfidenceExit,
+                state.AnchorDistance,
+                state.AnchorDistanceAccepted,
+                m_Settings.StanceStabilization.MaximumAnchorDistance,
+                m_Settings.StanceStabilization.AnchorBlendSpeed,
                 resolved.Surface,
                 resolved.SurfaceLocalAnchor,
                 resolved.SurfaceLocalRotation,
@@ -771,18 +1039,66 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 resolved.SoleClearance.HeelPlaneDistance,
                 resolved.SoleClearance.ToePlaneDistance,
                 resolved.SoleClearance.Penetration,
-                m_Rig.PoseRoot.up.normalized * lyra.SoleClearanceTarget,
+                resolved.SoleClearance.SafeAnklePosition - resolved.SoleClearance.AnklePosition,
                 m_Rig.PoseRoot.InverseTransformPoint(animated.AnklePosition).y,
-                continuity.HasPreviousSample,
-                continuity.PreviousSurfaceIdentity,
-                continuity.PreviousHeelPlaneDistance,
-                continuity.PreviousToePlaneDistance,
-                continuity.CrossedCurrentSurface,
                 resolved.BaselineComponentPosition,
                 resolved.BaselineComponentRotation,
                 resolved.Goal);
 
+        static float ResolvePelvisTargetOffset(
+            float currentTarget,
+            CharacterPredictiveFootStanceInput left,
+            CharacterPredictiveFootStanceInput right,
+            Vector3 currentRoot,
+            Vector3 componentUp)
+        {
+            Vector3 up = componentUp.normalized;
+            bool leftValid = TryResolvePredictivePelvisDisplacement(
+                left,
+                currentRoot,
+                up,
+                out float leftDisplacement,
+                out float leftWeight);
+            bool rightValid = TryResolvePredictivePelvisDisplacement(
+                right,
+                currentRoot,
+                up,
+                out float rightDisplacement,
+                out float rightWeight);
+            float totalWeight = (leftValid ? leftWeight : 0f) +
+                                (rightValid ? rightWeight : 0f);
+            if (totalWeight <= 0.0001f)
+                return currentTarget;
+            float weightedDisplacement =
+                (leftValid ? leftDisplacement * leftWeight : 0f) +
+                (rightValid ? rightDisplacement * rightWeight : 0f);
+            float predictiveTarget = weightedDisplacement / totalWeight;
+            return Mathf.Lerp(currentTarget, predictiveTarget, Mathf.Clamp01(totalWeight));
+        }
+
+        static bool TryResolvePredictivePelvisDisplacement(
+            CharacterPredictiveFootStanceInput input,
+            Vector3 currentRoot,
+            Vector3 up,
+            out float displacement,
+            out float weight)
+        {
+            displacement = 0f;
+            weight = 0f;
+            if (!input.HasExecutablePlan || !input.IsExecuting ||
+                !IsFiniteVector(input.PathRoot) || !IsFiniteVector(currentRoot))
+                return false;
+            float progress = Mathf.Clamp01(input.Progress);
+            weight = 4f * progress * (1f - progress);
+            displacement = Vector3.Dot(input.PathRoot - currentRoot, up);
+            return weight > 0.0001f && float.IsFinite(displacement);
+        }
+
+        static bool IsFiniteVector(Vector3 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
+
         CharacterFootPlacementPelvisLegInput BuildPelvisInput(
+            FootState state,
             CharacterFootSide side,
             CharacterFootPlacementAnimatedFootPose pose,
             ResolvedFoot resolved,
@@ -790,11 +1106,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float legLength)
         {
             float goalWeight = Mathf.Clamp01(alpha);
+            bool hasLockedSupport = state.PlantContact && state.HasAnchor;
+            float supportWeight = hasLockedSupport
+                ? Mathf.Clamp01(state.PelvisSupportWeight) * goalWeight
+                : 0f;
+            Vector3 targetAnklePosition = hasLockedSupport
+                ? resolved.AnchorWorldPosition
+                : m_Rig.PoseRoot.TransformPoint(resolved.BaselineComponentPosition);
             return new CharacterFootPlacementPelvisLegInput(
                 side,
                 pose.HipPosition,
-                m_Rig.PoseRoot.TransformPoint(resolved.BaselineComponentPosition),
+                targetAnklePosition,
                 goalWeight,
+                supportWeight,
                 legLength);
         }
 
@@ -826,6 +1150,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             m_CurrentGrounding.Reset();
             m_Pelvis.Reset();
+            m_SwingPrediction.Reset();
             m_Left.Reset(reason);
             m_Right.Reset(reason);
             m_ResetSequence = resetSequence;
@@ -895,6 +1220,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 penetration);
         }
 
+        static Vector3 ResolveSoleContactAnklePosition(
+            CharacterFootPlacementAnimatedFootPose animated,
+            Vector3 anklePosition,
+            Quaternion ankleRotation,
+            FootPlacementSurface support,
+            Vector3 componentUp)
+        {
+            CharacterFootPlacementSoleContactPose contacts = animated.ResolveSoleContacts(
+                anklePosition,
+                ankleRotation);
+            Vector3 up = componentUp.normalized;
+            Vector3 normal = support.Normal.normalized;
+            float upNormalDot = Vector3.Dot(up, normal);
+            if (!support.IsValid || !float.IsFinite(upNormalDot) || upNormalDot <= 0.0001f)
+                throw new InvalidOperationException("Foot Grounding contact support is invalid.");
+            float heelDistance = Vector3.Dot(contacts.HeelPosition - support.Point, normal);
+            float toeDistance = Vector3.Dot(contacts.ToePosition - support.Point, normal);
+            float translation = -Mathf.Min(heelDistance, toeDistance) / upNormalDot;
+            Vector3 result = anklePosition + up * translation;
+            if (!float.IsFinite(result.x) || !float.IsFinite(result.y) || !float.IsFinite(result.z))
+                throw new InvalidOperationException("Foot Grounding contact position is not finite.");
+            return result;
+        }
+
         static float ResolveSoleClearanceTarget(
             CharacterFootPlacementAnimatedFootPose animated,
             CharacterLyraFootTraceResult trace,
@@ -943,41 +1292,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 FootPlacementSurface surface,
                 bool surfaceValid,
                 float surfaceDistance,
-                SoleClearancePlan currentClearance)
+                SoleClearancePlan currentClearance,
+                bool hasContactTarget = false,
+                Vector3 contactAnklePosition = default,
+                Quaternion contactAnkleRotation = default)
             {
                 Surface = surface;
                 SurfaceValid = surfaceValid;
                 SurfaceDistance = surfaceDistance;
                 CurrentClearance = currentClearance;
+                HasContactTarget = hasContactTarget;
+                ContactAnklePosition = contactAnklePosition;
+                ContactAnkleRotation = contactAnkleRotation;
             }
 
             internal FootPlacementSurface Surface { get; }
             internal bool SurfaceValid { get; }
             internal float SurfaceDistance { get; }
             internal SoleClearancePlan CurrentClearance { get; }
-        }
-
-        readonly struct SoleContinuityPlan
-        {
-            internal SoleContinuityPlan(
-                bool hasPreviousSample,
-                int previousSurfaceIdentity,
-                float previousHeelPlaneDistance,
-                float previousToePlaneDistance,
-                bool crossedCurrentSurface)
-            {
-                HasPreviousSample = hasPreviousSample;
-                PreviousSurfaceIdentity = previousSurfaceIdentity;
-                PreviousHeelPlaneDistance = previousHeelPlaneDistance;
-                PreviousToePlaneDistance = previousToePlaneDistance;
-                CrossedCurrentSurface = crossedCurrentSurface;
-            }
-
-            internal bool HasPreviousSample { get; }
-            internal int PreviousSurfaceIdentity { get; }
-            internal float PreviousHeelPlaneDistance { get; }
-            internal float PreviousToePlaneDistance { get; }
-            internal bool CrossedCurrentSurface { get; }
+            internal bool HasContactTarget { get; }
+            internal Vector3 ContactAnklePosition { get; }
+            internal Quaternion ContactAnkleRotation { get; }
         }
 
         readonly struct ResolvedFoot

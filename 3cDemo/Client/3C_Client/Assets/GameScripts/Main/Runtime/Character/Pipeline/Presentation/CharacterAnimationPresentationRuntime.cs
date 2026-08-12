@@ -576,6 +576,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_ActorId,
                     presentationFrame,
                     in bodyFrame,
+                    in factFrame,
                     footPlacement,
                     in preparedPose,
                     m_EnterEvaluateBarrier);
@@ -586,13 +587,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     AnimationFinalPoseNativeReadBinding finalRead =
                         preparedPose.FinalRead;
+                    int invalidOperation = finalRead.PoseGraphInvalidOperationIndex[0];
+                    string solverFailure =
+                        finalRead.PoseGraphInvalidReason[0] ==
+                            AnimationPoseNativeInvalidReason.FullBodyIkSolverInvalid &&
+                        m_PoseRuntime.TryGetFullBodyIkFailure(
+                            invalidOperation,
+                            preparedPose.CompletionIdentity,
+                            out CharacterFullBodyIkResult fullBodyIkResult)
+                            ? $", solverFailure={fullBodyIkResult.Failure}, " +
+                              $"failedGoalSet={fullBodyIkResult.FailedGoalSetIndex}, " +
+                              $"failedSlot={fullBodyIkResult.FailedSlot}, " +
+                              $"appliedGoals={fullBodyIkResult.AppliedGoalCount}" +
+                              FormatFullBodyIkFailure(fullBodyIkResult)
+                            : string.Empty;
                     throw new InvalidOperationException(
                         $"Animation Presentation frame produced '{poseOutcome}' after the Evaluate Barrier: " +
                         $"availability={finalRead.Availability[0]}, " +
                         $"outputReason={finalRead.OutputInvalidReason[0]}, " +
                         $"graphReason={finalRead.PoseGraphInvalidReason[0]}, " +
-                        $"operation={finalRead.PoseGraphInvalidOperationIndex[0]}, " +
-                        $"completion={preparedPose.CompletionIdentity}.");
+                        $"operation={invalidOperation}, " +
+                        $"completion={preparedPose.CompletionIdentity}{solverFailure}.");
                 }
                 ComposedAnimationPoseFrame composedPose;
                 using (FrameCommitMarker.Auto())
@@ -633,6 +648,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             ClearCommittedStateSnapshots();
                         PublishCommittedDebugView(
                             publishStateDiagnostics);
+                        AnimationPresentationTracePublisher.PublishCompletedFootIk(
+                            m_ActorId,
+                            m_DebugView.PosePlan.FootIk);
                         if (traceInterest !=
                             AnimationPresentationDiagnosticsInterest.None)
                         {
@@ -682,6 +700,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 throw;
             }
+        }
+
+        static string FormatFullBodyIkFailure(CharacterFullBodyIkResult result)
+        {
+            if (result.Failure == CharacterFullBodyIkFailure.FootEffectorSolverResidualExceeded)
+            {
+                UnityEngine.Vector3 target = result.FailedTargetPosition;
+                UnityEngine.Vector3 solver = result.FailedSolverPosition;
+                UnityEngine.Vector3 solved = result.FailedSolvedPosition;
+                return $", sourceKind={result.FailedSourceKind}, " +
+                       $"targetComponent=({target.x:R},{target.y:R},{target.z:R}), " +
+                       $"solverNodeComponent=({solver.x:R},{solver.y:R},{solver.z:R}), " +
+                       $"solvedComponent=({solved.x:R},{solved.y:R},{solved.z:R}), " +
+                       $"solverResidual={result.FailedSolverResidual:R}, " +
+                       $"positionResidual={result.FailedPositionResidual:R}";
+            }
+            return string.IsNullOrEmpty(result.FailureDetail)
+                ? string.Empty
+                : $", solverDetail={result.FailureDetail}";
         }
 
         void ApplyPendingTuning(

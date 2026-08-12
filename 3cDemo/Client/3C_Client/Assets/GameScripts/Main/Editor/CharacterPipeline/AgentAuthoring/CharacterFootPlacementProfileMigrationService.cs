@@ -33,7 +33,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             SetFloat(serialized, "m_LyraCurrentGrounding.m_FootOffsetTargetVelocityAmount", 0.2f);
             SetFloat(serialized, "m_LyraCurrentGrounding.m_PelvisOffsetSpringStrength", 2.5f);
             SetFloat(serialized, "m_LyraCurrentGrounding.m_PelvisOffsetCriticalDamping", 1f);
-            SetFloat(serialized, "m_LyraCurrentGrounding.m_PelvisOffsetTargetVelocityAmount", 0.2f);
             SetFloat(serialized, "m_StanceStabilization.m_MaximumSurfaceSlopeDegrees", 55f);
             SetFloat(serialized, "m_StanceStabilization.m_MaximumContactSurfaceDistance", 0.12f);
             SetFloat(serialized, "m_StanceStabilization.m_PlantSpeedThreshold", 0.6f);

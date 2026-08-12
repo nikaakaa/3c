@@ -27,8 +27,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         PoseSpaceConversionInvalid = 18,
         WorldContextUnavailable = 19,
         FullBodyIkGoalSetInvalid = 20,
-        FullBodyIkSolverInvalid = 21,
-        PredictiveFootPlacementModifierInvalid = 22
+        FullBodyIkSolverInvalid = 21
+    }
+
+    internal static class AnimationPoseNativeInvalidReasonContract
+    {
+        internal static bool IsDefined(AnimationPoseNativeInvalidReason value) =>
+            (byte)value >= (byte)AnimationPoseNativeInvalidReason.None &&
+            (byte)value <= (byte)AnimationPoseNativeInvalidReason.FullBodyIkSolverInvalid;
+
+        internal static AnimationPoseNativeInvalidReason NormalizeFailure(
+            AnimationPoseNativeInvalidReason value) =>
+            value != AnimationPoseNativeInvalidReason.None && IsDefined(value)
+                ? value
+                : AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid;
     }
 
     internal enum AnimationFinalPoseWriteOutcome : byte

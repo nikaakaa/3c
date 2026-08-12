@@ -1707,9 +1707,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             else if (node is LocomotionInputMotionNode motionNode)
             {
                 result.moveSpeed = motionNode.MoveSpeed;
+                result.displacementMode = motionNode.DisplacementMode.ToString();
                 result.turnSpeedDegrees = motionNode.TurnSpeedDegrees;
                 result.cameraRelative = motionNode.CameraRelative;
-                result.continuous = motionNode.Continuous;
+                result.executionMode = motionNode.ExecutionMode.ToString();
+                result.durationSeconds = motionNode.DurationSeconds;
             }
             else if (node is CharacterInputValueInfoNode inputValueNode)
                 result.inputId = inputValueNode.InputValueId;

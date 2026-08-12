@@ -43,6 +43,7 @@
                     </ui:Label>
                 </ui:VisualElement>
             </ui:VisualElement>
+            <ui:VisualElement name="extension" class="unity-node__extension" />
         </ui:VisualElement>
     </ui:VisualElement>
     <TreeDesigner.Editor.NodePanelView name="node-panel" />

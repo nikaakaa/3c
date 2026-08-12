@@ -451,7 +451,10 @@ namespace ThirdPersonSimulation
             int cycle,
             TimelineActionContextIdentity identity);
         void ResetTreeClipState(OperationHandle operation);
-        void SampleMotionCurve(OperationHandle operation, TimelineSegment<TTime> segment);
+        void SampleMotionCurve(
+            OperationHandle timeline,
+            OperationHandle operation,
+            TimelineSegment<TTime> segment);
         void SampleMotionWarp(
             OperationHandle operation,
             TimelineSegment<TTime> segment,

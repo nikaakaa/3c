@@ -1,6 +1,7 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using Unity.Burst;
 using Unity.Collections;
@@ -550,8 +551,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_ParameterAvailability[parameter] = available;
             }
             bool hasFeet = m_Source.HasFootFeatures[m_SourceIndex] != 0;
-            m_LeftFootFeatures[0] = m_Source.LeftFootFeatures[m_SourceIndex];
-            m_RightFootFeatures[0] = m_Source.RightFootFeatures[m_SourceIndex];
+            m_LeftFootFeatures[0] = hasFeet
+                ? m_Source.LeftFootFeatures[m_SourceIndex].BindPredictionContribution(
+                    m_ContinuityIdentity,
+                    CharacterFootSide.Left)
+                : default;
+            m_RightFootFeatures[0] = hasFeet
+                ? m_Source.RightFootFeatures[m_SourceIndex].BindPredictionContribution(
+                    m_ContinuityIdentity,
+                    CharacterFootSide.Right)
+                : default;
             m_HasFootFeatures[0] = hasFeet ? (byte)1 : (byte)0;
             m_Contributions[0] = new AnimationPrimitivePoseContribution(
                 m_PlayerIndex,

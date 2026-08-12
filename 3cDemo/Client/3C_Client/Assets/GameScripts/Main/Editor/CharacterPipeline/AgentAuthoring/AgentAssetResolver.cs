@@ -4,6 +4,7 @@ using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Input;
+using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using TreeDesigner;
 using UnityEditor;
 using UnityEngine;
@@ -123,6 +124,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
 
             return TryResolveActionContextFromSnapshot(reference.LogicalId, out actionContext);
+        }
+
+        public bool TryResolveRootMotionCurve(AgentAssetReference reference, out RootMotionCurveAsset curve)
+        {
+            curve = ResolveObject(reference.AssetGuid, reference.AssetPath, typeof(RootMotionCurveAsset)) as RootMotionCurveAsset;
+            return curve;
         }
 
         bool TryResolveTimelineFromSnapshot(string key, out TimelineAsset timelineAsset)

@@ -176,7 +176,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 (byte)ScalePolicy < (byte)CharacterAnimationScalePolicy.PreserveReferenceScale ||
                 (byte)ScalePolicy > (byte)CharacterAnimationScalePolicy.BlendLocalScale ||
                 (!pose && !noPose && !invalid) ||
-                (byte)InvalidReason > (byte)AnimationPoseNativeInvalidReason.WorldContextUnavailable ||
+                !AnimationPoseNativeInvalidReasonContract.IsDefined(InvalidReason) ||
                 !float.IsFinite(OutputWeight) || OutputWeight < 0f || OutputWeight > 1f ||
                 MaxActiveSourceEntries < 2 || ContributionCapacity != checked(MaxActiveSourceEntries + 1) ||
                 ContributionCount < 0 || ContributionCount > ContributionCapacity ||

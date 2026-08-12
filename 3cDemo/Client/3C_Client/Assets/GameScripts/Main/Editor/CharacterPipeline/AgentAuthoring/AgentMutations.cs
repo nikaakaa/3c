@@ -5,6 +5,7 @@ using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline.Input;
+using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
 using TreeDesigner;
@@ -601,9 +602,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             LoopNode.StopType loopStopType,
             CompareNode.CompareType compareType,
             float moveSpeed,
+            LocomotionInputMotionDisplacementMode displacementMode,
+            AgentAssetReference actionMotionCurve,
             float turnSpeedDegrees,
             bool cameraRelative,
-            bool continuous,
+            LocomotionInputMotionExecutionMode executionMode,
+            float durationSeconds,
             Vector2 position)
             : base(id, AgentMutationKind.EnsureStateBehaviorNode, "ensure_state_behavior_node", AgentMutationOutputKind.Node, path, target, position)
         {
@@ -614,9 +618,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             LoopStopType = loopStopType;
             CompareType = compareType;
             MoveSpeed = moveSpeed;
+            DisplacementMode = displacementMode;
+            ActionMotionCurve = actionMotionCurve;
             TurnSpeedDegrees = turnSpeedDegrees;
             CameraRelative = cameraRelative;
-            Continuous = continuous;
+            ExecutionMode = executionMode;
+            DurationSeconds = durationSeconds;
         }
 
         public AgentElementTargetReference ExistingElement { get; }
@@ -626,9 +633,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public LoopNode.StopType LoopStopType { get; }
         public CompareNode.CompareType CompareType { get; }
         public float MoveSpeed { get; }
+        public LocomotionInputMotionDisplacementMode DisplacementMode { get; }
+        public AgentAssetReference ActionMotionCurve { get; }
         public float TurnSpeedDegrees { get; }
         public bool CameraRelative { get; }
-        public bool Continuous { get; }
+        public LocomotionInputMotionExecutionMode ExecutionMode { get; }
+        public float DurationSeconds { get; }
     }
 
     public sealed class AgentEnsureTimelineNodeMutation : AgentStateBehaviorMutation

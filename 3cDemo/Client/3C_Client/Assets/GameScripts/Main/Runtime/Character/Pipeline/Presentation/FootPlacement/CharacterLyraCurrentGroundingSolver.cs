@@ -221,7 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 resolvedPelvisTarget,
                 m_Settings.PelvisOffsetSpringStrength,
                 m_Settings.PelvisOffsetCriticalDamping,
-                m_Settings.PelvisOffsetTargetVelocityAmount,
+                0f,
                 deltaSeconds);
             CharacterLyraCurrentGroundingFootResult left = ResolveFoot(
                 trace.Left,

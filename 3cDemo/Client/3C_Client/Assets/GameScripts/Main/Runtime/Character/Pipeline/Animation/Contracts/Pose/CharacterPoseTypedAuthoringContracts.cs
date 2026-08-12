@@ -143,7 +143,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public enum CharacterSequencePlayerClockSource : byte
     {
-        PresentationDelta = 0
+        PresentationDelta = 0,
+        CommittedMovement = 1
     }
 
     [Serializable]
@@ -395,25 +396,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class CharacterFootGroundingPosePayload : CharacterPoseNodePayload
+    public sealed class CharacterFootPlacementPosePayload : CharacterPoseNodePayload
     {
         [SerializeField] CharacterFootPlacementProfile m_Profile;
         [SerializeField] CharacterFootPlacementRigCalibration m_Calibration;
-        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FootGrounding;
+        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FootPlacement;
         public CharacterFootPlacementProfile Profile => m_Profile;
         public CharacterFootPlacementRigCalibration Calibration => m_Calibration;
-        public CharacterFootGroundingPosePayload() { }
-        public CharacterFootGroundingPosePayload(CharacterFootPlacementProfile profile, CharacterFootPlacementRigCalibration calibration)
+        public CharacterFootPlacementPosePayload() { }
+        public CharacterFootPlacementPosePayload(CharacterFootPlacementProfile profile, CharacterFootPlacementRigCalibration calibration)
         {
             m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
             m_Calibration = calibration ? calibration : throw new ArgumentNullException(nameof(calibration));
         }
-    }
-
-    [Serializable]
-    public sealed class CharacterPredictiveFootPlacementModifierPosePayload : CharacterPoseNodePayload
-    {
-        public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.PredictiveFootPlacementModifier;
     }
 
     [Serializable]
@@ -496,9 +491,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<CharacterPoseBoneIkGoalBinding> PoseBoneIkGoalBindings =>
             (m_Payload as CharacterPoseBoneIkGoalsPayload)?.Bindings ?? Array.Empty<CharacterPoseBoneIkGoalBinding>();
         public CharacterFootPlacementProfile FootPlacementProfile =>
-            (m_Payload as CharacterFootGroundingPosePayload)?.Profile;
+            (m_Payload as CharacterFootPlacementPosePayload)?.Profile;
         public CharacterFootPlacementRigCalibration FootPlacementCalibration =>
-            (m_Payload as CharacterFootGroundingPosePayload)?.Calibration;
+            (m_Payload as CharacterFootPlacementPosePayload)?.Calibration;
         public CharacterFullBodyIkProfile FullBodyIkProfile =>
             (m_Payload as CharacterFullBodyIkPosePayload)?.Profile;
         public LinkedPoseGroupId LinkedPoseGroupId =>

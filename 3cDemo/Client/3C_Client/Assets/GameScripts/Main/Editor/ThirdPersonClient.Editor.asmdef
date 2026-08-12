@@ -39,6 +39,7 @@
         "Newtonsoft.Json",
         "TEngine.Runtime",
         "TEngine.Editor",
+        "Unity.Collections",
         "Unity.InputSystem",
         "YooAsset",
         "YooAsset.Editor"

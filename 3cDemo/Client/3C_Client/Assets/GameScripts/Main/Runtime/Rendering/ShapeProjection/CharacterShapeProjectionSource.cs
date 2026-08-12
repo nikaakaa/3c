@@ -21,7 +21,7 @@ namespace ThirdPersonRendering.ShapeProjection
         [SerializeField] CharacterShapeProjectionProfile profile;
         [SerializeField] CharacterShapeProjectionArtifact artifact;
         [SerializeField] RendererBinding[] rendererBindings = Array.Empty<RendererBinding>();
-        [SerializeField] bool projectionEnabled = true;
+        [SerializeField] bool projectionEnabled;
         [SerializeField] bool renderInGameCamera = true;
         [SerializeField] ShapeProjectionDebugView debugView;
         [SerializeField, HideInInspector] ShapeProjectionRuntimeState runtimeState = ShapeProjectionRuntimeState.Stale;
@@ -29,6 +29,7 @@ namespace ThirdPersonRendering.ShapeProjection
         [SerializeField, HideInInspector] ShapeProjectionDiagnosticsSnapshot diagnostics;
 
         int generation;
+        bool publishesShapeProjection;
 
         public ShapeProjectionSourceId SourceId => sourceId;
         public CharacterShapeProjectionProfile Profile => profile;
@@ -48,12 +49,15 @@ namespace ThirdPersonRendering.ShapeProjection
         {
             generation++;
             EnsureRuntimeIdentity();
-            ApplyRendererPublishingMode(projectionEnabled);
+            ApplyRendererPublishingMode(false);
             if (!projectionEnabled)
             {
                 MarkDisabled();
                 return;
             }
+            runtimeState = ShapeProjectionRuntimeState.Stale;
+            if (!Application.isPlaying)
+                return;
             PrepareAndRegister();
         }
 
@@ -69,7 +73,7 @@ namespace ThirdPersonRendering.ShapeProjection
         {
             if (projectionEnabled == value)
             {
-                ApplyRendererPublishingMode(value);
+                ApplyRendererPublishingMode(value && runtimeState == ShapeProjectionRuntimeState.Ready);
                 if (!value)
                     MarkDisabled();
                 return;
@@ -78,7 +82,7 @@ namespace ThirdPersonRendering.ShapeProjection
             CharacterShapeProjectionRegistry.Unregister(this);
             generation++;
             projectionEnabled = value;
-            ApplyRendererPublishingMode(value);
+            ApplyRendererPublishingMode(false);
             if (!value)
             {
                 MarkDisabled();
@@ -126,11 +130,11 @@ namespace ThirdPersonRendering.ShapeProjection
                     return ShapeProjectionValidationResult.Fail($"Renderer绑定{i}的Mesh与Artifact不一致");
                 if (!binding.Renderer.transform.IsChildOf(transform))
                     return ShapeProjectionValidationResult.Fail($"Renderer绑定{i}不属于当前Source Root");
-                ShadowCastingMode expectedMode = projectionEnabled ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+                ShadowCastingMode expectedMode = publishesShapeProjection ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
                 if (binding.Renderer.shadowCastingMode != expectedMode)
-                    return ShapeProjectionValidationResult.Fail(projectionEnabled
+                    return ShapeProjectionValidationResult.Fail(publishesShapeProjection
                         ? $"Renderer绑定{i}必须使用ShadowsOnly并停止Forward彩色发布"
-                        : $"Renderer绑定{i}必须恢复普通Forward彩色发布");
+                        : $"Renderer绑定{i}必须在首个兼容结果发布前保持普通Forward彩色发布");
 
                 Material[] materials = binding.Renderer.sharedMaterials;
                 Material[] expected = record.SourceMaterials;
@@ -156,13 +160,19 @@ namespace ThirdPersonRendering.ShapeProjection
         public void MarkWaitingForFirstResult()
         {
             if (runtimeState != ShapeProjectionRuntimeState.Faulted)
+            {
                 runtimeState = ShapeProjectionRuntimeState.WaitingForFirstCompatibleResult;
+                ApplyRendererPublishingMode(false);
+            }
         }
 
         public void MarkReady()
         {
             if (runtimeState != ShapeProjectionRuntimeState.Faulted)
+            {
                 runtimeState = ShapeProjectionRuntimeState.Ready;
+                ApplyRendererPublishingMode(true);
+            }
         }
 
         public void SetFault(string message)
@@ -170,6 +180,7 @@ namespace ThirdPersonRendering.ShapeProjection
             fault = message ?? "未知Shape Projection错误";
             runtimeState = ShapeProjectionRuntimeState.Faulted;
             CharacterShapeProjectionRegistry.Unregister(this);
+            ApplyRendererPublishingMode(false);
         }
 
         public void PublishDiagnostics(ShapeProjectionDiagnosticsSnapshot snapshot)
@@ -188,14 +199,14 @@ namespace ThirdPersonRendering.ShapeProjection
         {
             EnsureRuntimeIdentity();
             fault = string.Empty;
+            runtimeState = ShapeProjectionRuntimeState.WaitingForFirstCompatibleResult;
+            ApplyRendererPublishingMode(false);
             ShapeProjectionValidationResult result = ValidateSource();
             if (!result.IsValid)
             {
                 SetFault(result.Error);
                 return;
             }
-
-            runtimeState = ShapeProjectionRuntimeState.WaitingForFirstCompatibleResult;
             if (!CharacterShapeProjectionRegistry.TryRegister(this, out string error))
                 SetFault(error);
         }
@@ -208,6 +219,7 @@ namespace ThirdPersonRendering.ShapeProjection
 
         void ApplyRendererPublishingMode(bool useShapeProjection)
         {
+            publishesShapeProjection = useShapeProjection;
             if (rendererBindings == null)
                 return;
             ShadowCastingMode mode = useShapeProjection ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;

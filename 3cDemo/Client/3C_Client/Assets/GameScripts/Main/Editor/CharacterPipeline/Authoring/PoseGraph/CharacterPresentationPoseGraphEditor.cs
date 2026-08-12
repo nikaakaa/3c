@@ -2125,14 +2125,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 IGraphAuthoringDocumentProjection document,
                 GraphAuthoringNavigatorItem item)
             {
-                if (m_Window.m_Asset.TryGetGraph(
-                        new PoseGraphId(item.ItemId.Value),
-                        out _))
-                {
-                    m_Window.OpenGraph(
-                        new PoseGraphId(item.ItemId.Value));
-                    return;
-                }
                 const string stateMachinePrefix = "state-machine:";
                 if (item.ItemId.Value.StartsWith(
                         stateMachinePrefix,
@@ -2146,6 +2138,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                 value.StateMachineId.Value ==
                                 stateMachineId);
                     m_Window.OpenStateMachine(machine, true);
+                    return;
+                }
+                var graphId = new PoseGraphId(item.ItemId.Value);
+                if (m_Window.m_Asset.TryGetGraph(graphId, out _))
+                {
+                    m_Window.OpenGraph(graphId);
                     return;
                 }
             }

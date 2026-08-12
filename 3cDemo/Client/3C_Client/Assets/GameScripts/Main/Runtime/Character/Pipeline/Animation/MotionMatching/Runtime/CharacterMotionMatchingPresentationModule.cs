@@ -1412,6 +1412,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                     m_Intent.PreviousTick,
                     m_Intent.CurrentTick,
                     m_Intent.SourceSequence,
+                    m_Intent.LocomotionPlanarBasis,
                     m_Intent.DesiredPlanarVelocity,
                     m_Intent.DesiredFacing,
                     m_Intent.AcceptedAcceleration,
@@ -1419,6 +1420,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                     m_Intent.HasMotion,
                     m_Intent.Grounded,
                     m_Intent.MovementModeId,
+                    m_Intent.MovementPlaybackClock,
                     resetSequence);
             }
 

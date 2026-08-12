@@ -3,61 +3,6 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    internal sealed class CharacterFootPlacementPelvisReachException : InvalidOperationException
-    {
-        internal CharacterFootPlacementPelvisReachException(
-            string reason,
-            float lyraTargetOffset,
-            float lyraCurrentOffset,
-            float globalMinimum,
-            float globalMaximum,
-            in CharacterFootPlacementPelvisLegInput left,
-            CharacterFootPlacementPelvisLegRange leftRange,
-            in CharacterFootPlacementPelvisLegInput right,
-            CharacterFootPlacementPelvisLegRange rightRange,
-            float intersectionMinimum,
-            float intersectionMaximum)
-            : base(BuildMessage(
-                reason,
-                lyraTargetOffset,
-                lyraCurrentOffset,
-                globalMinimum,
-                globalMaximum,
-                in left,
-                leftRange,
-                in right,
-                rightRange,
-                intersectionMinimum,
-                intersectionMaximum))
-        {
-        }
-
-        static string BuildMessage(
-            string reason,
-            float lyraTargetOffset,
-            float lyraCurrentOffset,
-            float globalMinimum,
-            float globalMaximum,
-            in CharacterFootPlacementPelvisLegInput left,
-            CharacterFootPlacementPelvisLegRange leftRange,
-            in CharacterFootPlacementPelvisLegInput right,
-            CharacterFootPlacementPelvisLegRange rightRange,
-            float intersectionMinimum,
-            float intersectionMaximum) =>
-            string.Concat(
-                reason,
-                " ",
-                FormattableString.Invariant(
-                    $"LyraTarget={lyraTargetOffset:0.######}, LyraCurrent={lyraCurrentOffset:0.######}, Global=[{globalMinimum:0.######},{globalMaximum:0.######}], Intersection=[{intersectionMinimum:0.######},{intersectionMaximum:0.######}], "),
-                FormattableString.Invariant(
-                    $"Left(Hip={Format(left.HipPosition)}, Goal={Format(left.TargetAnklePosition)}, Weight={left.GoalWeight:0.######}, Leg={left.LegLength:0.######}, Range=[{leftRange.MinimumOffset:0.######},{leftRange.MaximumOffset:0.######}], Valid={leftRange.IsValid}), "),
-                FormattableString.Invariant(
-                    $"Right(Hip={Format(right.HipPosition)}, Goal={Format(right.TargetAnklePosition)}, Weight={right.GoalWeight:0.######}, Leg={right.LegLength:0.######}, Range=[{rightRange.MinimumOffset:0.######},{rightRange.MaximumOffset:0.######}], Valid={rightRange.IsValid})."));
-
-        static string Format(Vector3 value) =>
-            FormattableString.Invariant($"({value.x:0.######},{value.y:0.######},{value.z:0.######})");
-    }
-
     internal readonly struct CharacterFootPlacementPelvisLegInput
     {
         internal CharacterFootPlacementPelvisLegInput(
@@ -65,12 +10,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 hipPosition,
             Vector3 targetAnklePosition,
             float goalWeight,
+            float supportWeight,
             float legLength)
         {
             Side = side;
             HipPosition = hipPosition;
             TargetAnklePosition = targetAnklePosition;
             GoalWeight = goalWeight;
+            SupportWeight = supportWeight;
             LegLength = legLength;
         }
 
@@ -78,6 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 HipPosition { get; }
         internal Vector3 TargetAnklePosition { get; }
         internal float GoalWeight { get; }
+        internal float SupportWeight { get; }
         internal float LegLength { get; }
     }
 
@@ -87,17 +35,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             float minimumOffset,
             float maximumOffset,
+            float supportWeight,
             bool contributes)
         {
             Side = side;
             MinimumOffset = minimumOffset;
             MaximumOffset = maximumOffset;
+            SupportWeight = supportWeight;
             Contributes = contributes;
         }
 
         public CharacterFootSide Side { get; }
         public float MinimumOffset { get; }
         public float MaximumOffset { get; }
+        public float SupportWeight { get; }
         public bool Contributes { get; }
         public bool IsValid =>
             Side != 0 &&
@@ -113,13 +64,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float lyraCurrentOffset,
             float resolvedOffset,
             CharacterFootPlacementPelvisLegRange leftRange,
-            CharacterFootPlacementPelvisLegRange rightRange)
+            CharacterFootPlacementPelvisLegRange rightRange,
+            bool rejectLeftGoal,
+            bool rejectRightGoal)
         {
             LyraTargetOffset = lyraTargetOffset;
             LyraCurrentOffset = lyraCurrentOffset;
             ResolvedOffset = resolvedOffset;
             LeftRange = leftRange;
             RightRange = rightRange;
+            RejectLeftGoal = rejectLeftGoal;
+            RejectRightGoal = rejectRightGoal;
         }
 
         public float LyraTargetOffset { get; }
@@ -127,6 +82,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float ResolvedOffset { get; }
         public CharacterFootPlacementPelvisLegRange LeftRange { get; }
         public CharacterFootPlacementPelvisLegRange RightRange { get; }
+        public bool RejectLeftGoal { get; }
+        public bool RejectRightGoal { get; }
         public Vector3 ComponentTranslation => Vector3.up * ResolvedOffset;
     }
 
@@ -149,70 +106,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 up = componentUp.normalized;
             CharacterFootPlacementPelvisLegRange leftRange = BuildRange(in left, up, settings);
             CharacterFootPlacementPelvisLegRange rightRange = BuildRange(in right, up, settings);
-            bool useLeft = left.GoalWeight > Epsilon;
-            bool useRight = right.GoalWeight > Epsilon;
-            if (useLeft && !leftRange.IsValid || useRight && !rightRange.IsValid)
-            {
-                throw new CharacterFootPlacementPelvisReachException(
-                    "Foot Placement final Foot Goal has no valid pelvis reach interval.",
-                    lyraTargetOffset,
-                    lyraCurrentOffset,
-                    -settings.MaximumPelvisLowering,
-                    settings.MaximumPelvisRaising,
-                    in left,
-                    leftRange,
-                    in right,
-                    rightRange,
-                    1f,
-                    -1f);
-            }
-
-            float minimum = -settings.MaximumPelvisLowering;
-            float maximum = settings.MaximumPelvisRaising;
-            Intersect(leftRange, useLeft, ref minimum, ref maximum);
-            Intersect(rightRange, useRight, ref minimum, ref maximum);
-            if (minimum > maximum)
-            {
-                throw new CharacterFootPlacementPelvisReachException(
-                    "Foot Placement final Foot Goals have no common pelvis reach interval.",
-                    lyraTargetOffset,
-                    lyraCurrentOffset,
-                    -settings.MaximumPelvisLowering,
-                    settings.MaximumPelvisRaising,
-                    in left,
-                    leftRange,
-                    in right,
-                    rightRange,
-                    minimum,
-                    maximum);
-            }
-            leftRange = SetContribution(leftRange, useLeft);
-            rightRange = SetContribution(rightRange, useRight);
+            bool useLeft = left.GoalWeight > Epsilon && left.SupportWeight > Epsilon;
+            bool useRight = right.GoalWeight > Epsilon && right.SupportWeight > Epsilon;
+            bool leftReachable = !useLeft || Contains(leftRange, lyraCurrentOffset, settings);
+            bool rightReachable = !useRight || Contains(rightRange, lyraCurrentOffset, settings);
+            bool rejectLeftGoal = useLeft && !leftReachable;
+            bool rejectRightGoal = useRight && !rightReachable;
+            leftRange = SetContribution(leftRange, useLeft && leftReachable);
+            rightRange = SetContribution(rightRange, useRight && rightReachable);
             return new CharacterFootPlacementPelvisPlan(
                 lyraTargetOffset,
                 lyraCurrentOffset,
-                Mathf.Clamp(lyraCurrentOffset, minimum, maximum),
+                lyraCurrentOffset,
                 leftRange,
-                rightRange);
-        }
-
-        internal bool HasReachableOffset(
-            in CharacterFootPlacementPelvisLegInput input,
-            Vector3 componentUp,
-            CharacterStanceStabilizationSettings settings)
-        {
-            if (componentUp.sqrMagnitude <= Epsilon)
-                return false;
-            CharacterFootPlacementPelvisLegRange range = BuildRange(
-                in input,
-                componentUp.normalized,
-                settings);
-            if (!range.IsValid)
-                return false;
-            float minimum = -settings.MaximumPelvisLowering;
-            float maximum = settings.MaximumPelvisRaising;
-            Intersect(range, true, ref minimum, ref maximum);
-            return minimum <= maximum;
+                rightRange,
+                rejectLeftGoal,
+                rejectRightGoal);
         }
 
         static CharacterFootPlacementPelvisLegRange BuildRange(
@@ -228,6 +137,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     input.Side,
                     1f,
                     -1f,
+                    input.SupportWeight,
                     false);
             }
             Vector3 hipToTarget = input.TargetAnklePosition - input.HipPosition;
@@ -242,6 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     input.Side,
                     1f,
                     -1f,
+                    input.SupportWeight,
                     false);
             }
             float maximumVertical = Mathf.Sqrt(maximumVerticalSquared);
@@ -250,24 +161,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float minimumVerticalSquared = minimumLength * minimumLength - horizontalSquared;
             if (minimumVerticalSquared > 0f)
                 minimum = Mathf.Max(minimum, vertical + Mathf.Sqrt(minimumVerticalSquared));
+            minimum = Mathf.Max(minimum, -settings.MaximumPelvisLowering);
+            maximum = Mathf.Min(maximum, settings.MaximumPelvisRaising);
+            if (!float.IsFinite(minimum) || !float.IsFinite(maximum) || minimum > maximum)
+            {
+                return new CharacterFootPlacementPelvisLegRange(
+                    input.Side,
+                    1f,
+                    -1f,
+                    input.SupportWeight,
+                    false);
+            }
             return new CharacterFootPlacementPelvisLegRange(
                 input.Side,
                 minimum,
                 maximum,
+                input.SupportWeight,
                 false);
         }
 
-        static void Intersect(
+        static bool Contains(
             CharacterFootPlacementPelvisLegRange range,
-            bool contributes,
-            ref float minimum,
-            ref float maximum)
-        {
-            if (!contributes)
-                return;
-            minimum = Mathf.Max(minimum, range.MinimumOffset);
-            maximum = Mathf.Min(maximum, range.MaximumOffset);
-        }
+            float offset,
+            CharacterStanceStabilizationSettings settings) =>
+            range.IsValid &&
+            offset >= Mathf.Max(range.MinimumOffset, -settings.MaximumPelvisLowering) - Epsilon &&
+            offset <= Mathf.Min(range.MaximumOffset, settings.MaximumPelvisRaising) + Epsilon;
 
         static CharacterFootPlacementPelvisLegRange SetContribution(
             CharacterFootPlacementPelvisLegRange range,
@@ -276,6 +195,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 range.Side,
                 range.MinimumOffset,
                 range.MaximumOffset,
+                range.SupportWeight,
                 contributes);
 
         internal void Reset()

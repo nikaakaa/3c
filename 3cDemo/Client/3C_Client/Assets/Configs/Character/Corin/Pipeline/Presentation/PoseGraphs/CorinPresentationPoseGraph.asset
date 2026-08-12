@@ -50,7 +50,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_TypedGraph:
     m_GraphId: ed8ff472330e4057a900af3eae5dfb8f
-    m_ContentRevision: 89ffc79642574bd7a81e817c6fd44af2
+    m_ContentRevision: f738d327412348d8b9e07bfeeb8abc73
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
@@ -97,7 +97,7 @@ MonoBehaviour:
         rid: 665192033737244900
       m_DynamicPorts: []
     - m_NodeId: cc0cb7f36cb9426d88f6ae03f255a013
-      m_DisplayName: Foot Grounding
+      m_DisplayName: Foot Placement
       m_Payload:
         rid: 665191900899704840
       m_DynamicPorts: []
@@ -174,12 +174,12 @@ MonoBehaviour:
       m_SourcePortId: result
       m_TargetNodeId: corin.pose.component-to-local
       m_TargetPortId: component-pose
-    - m_EdgeId: corin.pose.foot-goals-full-body-ik
+    - m_EdgeId: 71eb576827248f42c7e7829a68f2a130
       m_SourceNodeId: cc0cb7f36cb9426d88f6ae03f255a013
       m_SourcePortId: goals
       m_TargetNodeId: 1acecc122c13d615cc425fa3cc8a70d0
       m_TargetPortId: foot-goals
-    - m_EdgeId: corin.pose.local-to-component-foot-grounding
+    - m_EdgeId: corin.pose.local-to-component-foot-placement
       m_SourceNodeId: corin.pose.local-to-component
       m_SourcePortId: component-pose
       m_TargetNodeId: cc0cb7f36cb9426d88f6ae03f255a013
@@ -201,12 +201,12 @@ MonoBehaviour:
       m_Position: {x: 1266, y: 384}
     - m_NodeId: 1acecc122c13d615cc425fa3cc8a70d0
       m_Position: {x: 948.66675, y: 331.3333}
-    - m_NodeId: cc0cb7f36cb9426d88f6ae03f255a013
-      m_Position: {x: 640.6666, y: 536.6667}
     - m_NodeId: fd84c35ae6ed49a1b72703b92795c43c
       m_Position: {x: 236.66666, y: 562}
+    - m_NodeId: cc0cb7f36cb9426d88f6ae03f255a013
+      m_Position: {x: 692, y: 416}
     - m_NodeId: 09e41ce9fa3f4440b10013916e72b185
-      m_Position: {x: -190.66666, y: -131.33334}
+      m_Position: {x: -124, y: -179.33334}
   m_TypedGraphCatalog:
   - m_GraphId: corin.locomotion.idle.graph
     m_ContentRevision: dae5e9365ba74cd78bb57ce7533b1cbe
@@ -275,7 +275,7 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.start.output
       m_Position: {x: 220, y: 0}
   - m_GraphId: corin.locomotion.locomotion.graph
-    m_ContentRevision: 411654d0b95d4235ac01ea1a50aa0914
+    m_ContentRevision: e785b9dfa8ef4d95bd02b1cab923b7cc
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
@@ -289,7 +289,7 @@ MonoBehaviour:
     - m_NodeId: corin.locomotion.locomotion.sequence
       m_DisplayName: Run Loop Sequence
       m_Payload:
-        rid: 665192033737244842
+        rid: 3396202550353985538
       m_DynamicPorts: []
     - m_NodeId: corin.locomotion.locomotion.output
       m_DisplayName: Output Pose
@@ -407,7 +407,7 @@ MonoBehaviour:
     - m_NodeId: a60a24c736273ce8e07e2aaf8b3403f8
       m_Position: {x: -220, y: 0}
   - m_GraphId: 658ab38fd39b80592ae222925f31e25c
-    m_ContentRevision: 931d7adb1ed847f8933a61d0be0dd8bc
+    m_ContentRevision: 6b207176edd64b4392743aac0bc6025f
     m_Parameters:
     - m_ParameterId: animation.action-weight
       m_ValueType: 1
@@ -426,7 +426,7 @@ MonoBehaviour:
     - m_NodeId: cff873cb4c0040670d27858670fcfb31
       m_DisplayName: Walk Loop Sequence
       m_Payload:
-        rid: 665192033737244846
+        rid: 3396202550353985539
       m_DynamicPorts: []
     m_Edges:
     - m_EdgeId: 4b9956bcabbd5e950a33d7b48cac1bca
@@ -443,13 +443,15 @@ MonoBehaviour:
   - m_StateMachineId: corin.locomotion
     m_Elements:
     - m_ElementId: 12a31544976ddf152639d62c6d19142c
-      m_Position: {x: 592, y: 61.333336}
+      m_Position: {x: 506, y: 90.666664}
     - m_ElementId: 89eeedab7b97adb04b02ef9abd06f8bc
       m_Position: {x: 260, y: 320}
+    - m_ElementId: corin.locomotion.entry
+      m_Position: {x: -354, y: 224}
     - m_ElementId: corin.locomotion.locomotion
       m_Position: {x: 716.6667, y: 592.6667}
     - m_ElementId: corin.locomotion.stop
-      m_Position: {x: 505.3333, y: 850}
+      m_Position: {x: 407.3333, y: 777.3334}
     - m_ElementId: corin.locomotion.turn
       m_Position: {x: 381.3333, y: 509.99997}
   m_SourceSlots:
@@ -469,7 +471,7 @@ MonoBehaviour:
       data:
         m_StateMachine:
           m_StateMachineId: corin.locomotion
-          m_ContentRevision: fbea4e3334b54ff09835727a775b3794
+          m_ContentRevision: 329c9dda3dec4db9a44b84b997fc2abd
           m_Entry:
             m_EntryId: corin.locomotion.entry
             m_TargetStateId: corin.locomotion.idle
@@ -478,7 +480,7 @@ MonoBehaviour:
             m_DisplayName: Walk Loop
             m_PoseGraphId: 658ab38fd39b80592ae222925f31e25c
             m_OutputPoseNodeId: 8d4b1b80835e97d02b73d6e166a01be7
-            m_AlwaysResetOnEntry: 0
+            m_AlwaysResetOnEntry: 1
           - m_StateId: 89eeedab7b97adb04b02ef9abd06f8bc
             m_DisplayName: Walk Start
             m_PoseGraphId: 239fb85af79509b36208db12ad91354f
@@ -493,7 +495,7 @@ MonoBehaviour:
             m_DisplayName: Run Loop
             m_PoseGraphId: corin.locomotion.locomotion.graph
             m_OutputPoseNodeId: corin.locomotion.locomotion.output
-            m_AlwaysResetOnEntry: 0
+            m_AlwaysResetOnEntry: 1
           - m_StateId: corin.locomotion.start
             m_DisplayName: Run Start
             m_PoseGraphId: corin.locomotion.start.graph
@@ -645,15 +647,15 @@ MonoBehaviour:
             m_Priority: 0
             m_Rule:
               m_GraphId: 0d7eff3ee315c8479906e6e01aab8104
-              m_ContentRevision: 4ee4a73cb77a4fee83528637d8c461d2
+              m_ContentRevision: 8eb9d0ea1c70486a9f6baf03f0a9ebd9
               m_Operations:
-              - m_OperationId: blend-duration
+              - m_OperationId: gait-handoff-lead
                 m_Kind: 3
                 m_InputA: 
                 m_InputB: 
                 m_FactId: 
                 m_BoolLiteral: 0
-                m_FloatLiteral: 0.15
+                m_FloatLiteral: 0.25
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
                 m_IdentityLiteral: 
@@ -690,7 +692,7 @@ MonoBehaviour:
               - m_OperationId: state-pose-ready
                 m_Kind: 13
                 m_InputA: state-pose-remaining-time
-                m_InputB: blend-duration
+                m_InputB: gait-handoff-lead
                 m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
@@ -829,15 +831,15 @@ MonoBehaviour:
             m_Priority: 1
             m_Rule:
               m_GraphId: 99a39b3d4b0d878453cc4049fff8bff4
-              m_ContentRevision: 3a24f047159c10a92bc000c45b8e1290
+              m_ContentRevision: e9cc19dda89e4975a27f1362d98b30f3
               m_Operations:
-              - m_OperationId: blend-duration
+              - m_OperationId: gait-handoff-lead
                 m_Kind: 3
                 m_InputA: 
                 m_InputB: 
                 m_FactId: 
                 m_BoolLiteral: 0
-                m_FloatLiteral: 0.15
+                m_FloatLiteral: 0.3
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
                 m_IdentityLiteral: 
@@ -874,7 +876,7 @@ MonoBehaviour:
               - m_OperationId: state-pose-ready
                 m_Kind: 13
                 m_InputA: state-pose-remaining-time
-                m_InputB: blend-duration
+                m_InputB: gait-handoff-lead
                 m_FactId: 
                 m_BoolLiteral: 0
                 m_FloatLiteral: 0
@@ -1764,7 +1766,7 @@ MonoBehaviour:
       data:
         m_ParameterId: animation.foot-placement-weight
     - rid: 665191900899704840
-      type: {class: CharacterFootGroundingPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+      type: {class: CharacterFootPlacementPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
       data:
         m_Profile: {fileID: 11400000, guid: 6b94b222eff64c24a2ecf708238ef9a1, type: 2}
@@ -1819,16 +1821,7 @@ MonoBehaviour:
         m_Loop: 0
         m_PlayRate: 1
         m_InitialTime: 0
-        m_ClockSource: 0
-    - rid: 665192033737244842
-      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
-        asm: ThirdPersonClient.Runtime}
-      data:
-        m_SourceSlot: {fileID: -1663756737420138858}
-        m_Loop: 1
-        m_PlayRate: 1
-        m_InitialTime: 0
-        m_ClockSource: 0
+        m_ClockSource: 1
     - rid: 665192033737244843
       type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
@@ -1837,7 +1830,7 @@ MonoBehaviour:
         m_Loop: 0
         m_PlayRate: 1
         m_InitialTime: 0
-        m_ClockSource: 0
+        m_ClockSource: 1
     - rid: 665192033737244844
       type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
@@ -1846,7 +1839,7 @@ MonoBehaviour:
         m_Loop: 0
         m_PlayRate: 1
         m_InitialTime: 0
-        m_ClockSource: 0
+        m_ClockSource: 1
     - rid: 665192033737244845
       type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
@@ -1855,16 +1848,7 @@ MonoBehaviour:
         m_Loop: 0
         m_PlayRate: 1
         m_InitialTime: 0
-        m_ClockSource: 0
-    - rid: 665192033737244846
-      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
-        asm: ThirdPersonClient.Runtime}
-      data:
-        m_SourceSlot: {fileID: -6787058357175954472}
-        m_Loop: 1
-        m_PlayRate: 1
-        m_InitialTime: 0
-        m_ClockSource: 0
+        m_ClockSource: 1
     - rid: 665192033737244900
       type: {class: CharacterLocalToComponentPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
         asm: ThirdPersonClient.Runtime}
@@ -1878,6 +1862,24 @@ MonoBehaviour:
         asm: ThirdPersonClient.Runtime}
       data:
         m_Profile: {fileID: 11400000, guid: d8baaf75d0994cf6aa8ed54c35542ea0, type: 2}
+    - rid: 3396202550353985538
+      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: -1663756737420138858}
+        m_Loop: 1
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 1
+    - rid: 3396202550353985539
+      type: {class: CharacterSequencePlayerPosePayload, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_SourceSlot: {fileID: -6787058357175954472}
+        m_Loop: 1
+        m_PlayRate: 1
+        m_InitialTime: 0
+        m_ClockSource: 1
 --- !u!114 &1041388167119753750
 MonoBehaviour:
   m_ObjectHideFlags: 0

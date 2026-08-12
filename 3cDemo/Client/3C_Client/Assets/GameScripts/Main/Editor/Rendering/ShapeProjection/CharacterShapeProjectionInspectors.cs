@@ -11,15 +11,33 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
             CharacterShapeProjectionProfile profile = (CharacterShapeProjectionProfile)target;
             serializedObject.Update();
             EditorGUILayout.LabelField("Profile ID", profile.ProfileId.ToString());
-            EditorGUILayout.LabelField("Revision", profile.Revision.ToString());
-            EditorGUILayout.LabelField("Published Content Hash", profile.ContentHash.ToString());
+            EditorGUILayout.LabelField("Bake Revision", profile.Revision.ToString());
+            EditorGUILayout.LabelField("Runtime Tuning Revision", profile.RuntimeTuningRevision.ToString());
+            EditorGUILayout.LabelField("Bake Content Hash", profile.ContentHash.ToString());
+            EditorGUILayout.Space();
+            bool runtimeChanged = DrawRuntimeTuningFields(serializedObject);
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("烘焙参数", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("这些参数决定Region拓扑、材质归属和固定容量，修改后必须重新Bake Artifact。", MessageType.Info);
             EditorGUI.BeginChangeCheck();
-            DrawPropertiesExcluding(serializedObject, "m_Script", "profileId", "revision", "contentHash");
-            bool changed = EditorGUI.EndChangeCheck();
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("colorClusterThreshold"), new GUIContent("颜色聚类阈值"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("smallRegionMergeThreshold"), new GUIContent("小区域合并阈值"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("smallRegionTriangleLimit"), new GUIContent("小区域三角上限"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("minimumProjectedRegionTriangles"), new GUIContent("发布Region最少三角数"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("capacity"), new GUIContent("固定容量"), true);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("submeshRules"), new GUIContent("材质与Submesh规则"), true);
+            bool bakeChanged = EditorGUI.EndChangeCheck();
+            if (runtimeChanged || bakeChanged)
+                Undo.RecordObject(profile, "Change Shape Projection Profile");
             serializedObject.ApplyModifiedProperties();
-            if (changed)
+            if (bakeChanged)
             {
                 profile.InvalidatePublishedContent();
+                EditorUtility.SetDirty(profile);
+            }
+            else if (runtimeChanged)
+            {
+                profile.RecordRuntimeTuningChange();
                 EditorUtility.SetDirty(profile);
             }
             if (GUILayout.Button("生成缺失Profile Identity"))
@@ -33,6 +51,33 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
                 ShapeProjectionValidationResult result = profile.ValidateProfile();
                 EditorUtility.DisplayDialog("Shape Projection Profile", result.IsValid ? "Profile有效" : result.Error, "确定");
             }
+        }
+
+        internal static void DrawRuntimeTuningEditor(CharacterShapeProjectionProfile profile)
+        {
+            SerializedObject profileObject = new SerializedObject(profile);
+            profileObject.Update();
+            bool changed = DrawRuntimeTuningFields(profileObject);
+            if (changed)
+                Undo.RecordObject(profile, "Tune Shape Projection Appearance");
+            profileObject.ApplyModifiedProperties();
+            if (!changed)
+                return;
+            profile.RecordRuntimeTuningChange();
+            EditorUtility.SetDirty(profile);
+        }
+
+        static bool DrawRuntimeTuningFields(SerializedObject profileObject)
+        {
+            EditorGUILayout.LabelField("运行时效果参数", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("这些参数不改变Bake拓扑，Play Mode中也可以直接调节；新参数会使旧的异步结果失效并重新发布。每个Region的主体环始终保留。", MessageType.None);
+            EditorGUI.BeginChangeCheck();
+            EditorGUILayout.PropertyField(profileObject.FindProperty("maximumSimplifyEpsilonPixels"), new GUIContent("最大直线化误差（像素）", "值越大越接近大块直线色面；运行时会按当前环尺寸自动收紧，避免主体退化。"));
+            EditorGUILayout.PropertyField(profileObject.FindProperty("outlineWidthPixels"), new GUIContent("描边宽度（像素）"));
+            EditorGUILayout.PropertyField(profileObject.FindProperty("minimumSecondaryLoopAreaPixels"), new GUIContent("次要环过滤面积（像素²）", "只过滤同一Region的次要碎屑环或小孔，不删除最大主体环。"));
+            EditorGUILayout.PropertyField(profileObject.FindProperty("minimumSharedEdgePixels"), new GUIContent("共享边最短长度（像素）"));
+            EditorGUILayout.PropertyField(profileObject.FindProperty("outlineColor"), new GUIContent("描边颜色"));
+            return EditorGUI.EndChangeCheck();
         }
     }
 
@@ -64,6 +109,8 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
     [CustomEditor(typeof(CharacterShapeProjectionSource))]
     sealed class CharacterShapeProjectionSourceInspector : UnityEditor.Editor
     {
+        bool showRuntimeTuning = true;
+
         public override void OnInspectorGUI()
         {
             CharacterShapeProjectionSource source = (CharacterShapeProjectionSource)target;
@@ -90,12 +137,29 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
                 }
                 serializedObject.Update();
             }
+            if (source.Profile != null)
+            {
+                EditorGUILayout.Space();
+                showRuntimeTuning = EditorGUILayout.Foldout(showRuntimeTuning, "效果参数", true);
+                if (showRuntimeTuning)
+                {
+                    EditorGUI.indentLevel++;
+                    CharacterShapeProjectionProfileInspector.DrawRuntimeTuningEditor(source.Profile);
+                    if (GUILayout.Button("定位完整Profile与烘焙参数"))
+                    {
+                        Selection.activeObject = source.Profile;
+                        EditorGUIUtility.PingObject(source.Profile);
+                    }
+                    EditorGUI.indentLevel--;
+                }
+            }
             ShapeProjectionDiagnosticsSnapshot diagnostics = source.Diagnostics;
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Runtime State", source.RuntimeState.ToString());
             if (!string.IsNullOrEmpty(source.Fault))
                 EditorGUILayout.HelpBox(source.Fault, MessageType.Error);
             EditorGUILayout.LabelField("Camera / Slot", $"{diagnostics.CameraInstanceId} / {diagnostics.SlotGeneration}");
+            EditorGUILayout.LabelField("Bake / Tuning Revision", $"{diagnostics.ProfileRevision} / {diagnostics.ProfileRuntimeTuningRevision}");
             EditorGUILayout.LabelField("Submission / Age", $"{diagnostics.LastSubmissionSequence} / {diagnostics.ResultAgeFrames} frame");
             EditorGUILayout.LabelField("Slots / Skipped", $"{diagnostics.OccupiedSlots} / {diagnostics.SkippedSubmissions}");
             EditorGUILayout.LabelField("Renderer", $"{diagnostics.RendererCount}");

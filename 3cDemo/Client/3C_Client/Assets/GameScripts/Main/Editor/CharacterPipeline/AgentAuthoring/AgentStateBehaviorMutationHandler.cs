@@ -5,6 +5,8 @@ using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Motion;
+using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
+using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityEngine;
 
@@ -154,6 +156,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     session.Report.Error(command.Path, "node_type_rejected", $"{graph.GetType().Name} 不能创建 {nodeType.Name}。");
                     return false;
                 }
+            }
+            if (command.DisplacementMode == LocomotionInputMotionDisplacementMode.ActionMotionCurve &&
+                !session.Resolver.TryResolveRootMotionCurve(command.ActionMotionCurve, out _))
+            {
+                session.Report.Error(command.Path, "action_motion_curve_not_found", $"Action Motion Curve无法解析：{command.ActionMotionCurve.AssetPath}");
+                return false;
             }
             session.AddPlanned(command, graph, command.DisplayName, "create or reuse state behavior node");
             return true;
@@ -361,7 +369,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 existing.DisplayName = command.DisplayName;
                 existing.Position = command.Position;
-                ConfigureNode(existing, command);
+                ConfigureNode(session, existing, command);
                 if (!string.IsNullOrEmpty(command.LifecycleSlot))
                     AgentMutationGraphAuthoringUtility.TryLinkLifecycleSlot(session, graph, command.LifecycleSlot, existing, command.Path);
                 session.AddApplied(command, graph, existing, "exists");
@@ -369,7 +377,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             if (!m_Emitters.TryCreateNode(graph, command.NodeType, command.DisplayName, command.Position, out BaseNode node, session.Report, command.Path))
                 return;
-            ConfigureNode(node, command);
+            ConfigureNode(session, node, command);
             if (!string.IsNullOrEmpty(command.LifecycleSlot))
                 AgentMutationGraphAuthoringUtility.TryLinkLifecycleSlot(session, graph, command.LifecycleSlot, node, command.Path);
             if (!session.RefreshIndex(command.Path))
@@ -377,18 +385,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             session.AddApplied(command, graph, node, "created");
         }
 
-        static void ConfigureNode(BaseNode node, AgentEnsureStateBehaviorNodeMutation command)
+        static void ConfigureNode(AgentMutationSession session, BaseNode node, AgentEnsureStateBehaviorNodeMutation command)
         {
             if (node is LoopNode loop)
                 loop.ConfigureAuthoring(command.LoopStopType);
             if (node is CompareNode compare)
                 compare.ConfigureAuthoring(command.CompareType);
             if (node is LocomotionInputMotionNode motion)
+            {
+                RootMotionCurveAsset actionMotionCurve = null;
+                if (command.DisplacementMode == LocomotionInputMotionDisplacementMode.ActionMotionCurve &&
+                    !session.Resolver.TryResolveRootMotionCurve(command.ActionMotionCurve, out actionMotionCurve))
+                    throw new InvalidOperationException($"Action Motion Curve无法解析：{command.ActionMotionCurve.AssetPath}");
                 motion.ConfigureAuthoring(
                     command.MoveSpeed,
+                    command.DisplacementMode,
+                    actionMotionCurve,
                     command.TurnSpeedDegrees,
                     command.CameraRelative,
-                    command.Continuous);
+                    command.ExecutionMode,
+                    command.DurationSeconds);
+            }
         }
 
         void ApplyTimeline(AgentMutationSession session, AgentEnsureTimelineNodeMutation command)

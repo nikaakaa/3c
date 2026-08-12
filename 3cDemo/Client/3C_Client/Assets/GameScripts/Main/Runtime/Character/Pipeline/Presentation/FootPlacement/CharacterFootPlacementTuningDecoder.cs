@@ -29,7 +29,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float footOffsetTargetVelocityAmount = current.FootOffsetTargetVelocityAmount;
                 float pelvisOffsetSpringStrength = current.PelvisOffsetSpringStrength;
                 float pelvisOffsetCriticalDamping = current.PelvisOffsetCriticalDamping;
-                float pelvisOffsetTargetVelocityAmount = current.PelvisOffsetTargetVelocityAmount;
 
                 float maximumSurfaceSlopeDegrees = stance.MaximumSurfaceSlopeDegrees;
                 float maximumContactSurfaceDistance = stance.MaximumContactSurfaceDistance;
@@ -53,12 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float maximumStepDown = predictive.MaximumStepDown;
                 float maximumHeightDiscontinuity = predictive.MaximumHeightDiscontinuity;
                 float maximumEdgeGap = predictive.MaximumEdgeGap;
-                float maximumSwingClearance = predictive.MaximumSwingClearance;
                 float minimumLandingConfidence = predictive.MinimumLandingConfidence;
-                float minimumLookAheadSeconds = predictive.MinimumLookAheadSeconds;
-                float maximumLookAheadSeconds = predictive.MaximumLookAheadSeconds;
-                float maximumYawVelocity = predictive.MaximumYawVelocityDegreesPerSecond;
-                float maximumPredictionDistance = predictive.MaximumPredictionDistance;
                 float maximumPredictionReachRatio = predictive.MaximumPredictionReachRatio;
 
                 string ownerId = $"foot-placement-profile:{settings.ProfileId}";
@@ -70,8 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         continue;
                     CharacterPoseTuningValue value = block.GetValue(entry);
                     string fieldId = entry.FieldId;
-                    if (fieldId.EndsWith("/lyra-current-grounding/hit-capacity", StringComparison.Ordinal) ||
-                        fieldId.EndsWith("/predictive/path-sample-count", StringComparison.Ordinal))
+                    if (fieldId.EndsWith("/lyra-current-grounding/hit-capacity", StringComparison.Ordinal))
                         return "Foot Placement tuning cannot change published workspace capacity.";
                     if (fieldId.EndsWith("/lyra-current-grounding/trace-above", StringComparison.Ordinal)) traceAbove = value.FloatValue;
                     else if (fieldId.EndsWith("/lyra-current-grounding/trace-below", StringComparison.Ordinal)) traceBelow = value.FloatValue;
@@ -83,7 +76,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     else if (fieldId.EndsWith("/lyra-current-grounding/foot-offset-target-velocity-amount", StringComparison.Ordinal)) footOffsetTargetVelocityAmount = value.FloatValue;
                     else if (fieldId.EndsWith("/lyra-current-grounding/pelvis-offset-spring-strength", StringComparison.Ordinal)) pelvisOffsetSpringStrength = value.FloatValue;
                     else if (fieldId.EndsWith("/lyra-current-grounding/pelvis-offset-critical-damping", StringComparison.Ordinal)) pelvisOffsetCriticalDamping = value.FloatValue;
-                    else if (fieldId.EndsWith("/lyra-current-grounding/pelvis-offset-target-velocity-amount", StringComparison.Ordinal)) pelvisOffsetTargetVelocityAmount = value.FloatValue;
                     else if (fieldId.EndsWith("/stance-stabilization/maximum-surface-slope-degrees", StringComparison.Ordinal)) maximumSurfaceSlopeDegrees = value.FloatValue;
                     else if (fieldId.EndsWith("/stance-stabilization/maximum-contact-surface-distance", StringComparison.Ordinal)) maximumContactSurfaceDistance = value.FloatValue;
                     else if (fieldId.EndsWith("/stance-stabilization/plant-speed-threshold", StringComparison.Ordinal)) plantSpeedThreshold = value.FloatValue;
@@ -105,12 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     else if (fieldId.EndsWith("/predictive/maximum-step-down", StringComparison.Ordinal)) maximumStepDown = value.FloatValue;
                     else if (fieldId.EndsWith("/predictive/maximum-height-discontinuity", StringComparison.Ordinal)) maximumHeightDiscontinuity = value.FloatValue;
                     else if (fieldId.EndsWith("/predictive/maximum-edge-gap", StringComparison.Ordinal)) maximumEdgeGap = value.FloatValue;
-                    else if (fieldId.EndsWith("/predictive/maximum-swing-clearance", StringComparison.Ordinal)) maximumSwingClearance = value.FloatValue;
                     else if (fieldId.EndsWith("/predictive/minimum-landing-confidence", StringComparison.Ordinal)) minimumLandingConfidence = value.FloatValue;
-                    else if (fieldId.EndsWith("/predictive/minimum-look-ahead-seconds", StringComparison.Ordinal)) minimumLookAheadSeconds = value.FloatValue;
-                    else if (fieldId.EndsWith("/predictive/maximum-look-ahead-seconds", StringComparison.Ordinal)) maximumLookAheadSeconds = value.FloatValue;
-                    else if (fieldId.EndsWith("/predictive/maximum-yaw-velocity", StringComparison.Ordinal)) maximumYawVelocity = value.FloatValue;
-                    else if (fieldId.EndsWith("/predictive/maximum-prediction-distance", StringComparison.Ordinal)) maximumPredictionDistance = value.FloatValue;
                     else if (fieldId.EndsWith("/predictive/maximum-prediction-reach-ratio", StringComparison.Ordinal)) maximumPredictionReachRatio = value.FloatValue;
                 }
 
@@ -126,8 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     footOffsetCriticalDamping,
                     footOffsetTargetVelocityAmount,
                     pelvisOffsetSpringStrength,
-                    pelvisOffsetCriticalDamping,
-                    pelvisOffsetTargetVelocityAmount);
+                    pelvisOffsetCriticalDamping);
                 stance = new CharacterStanceStabilizationSettings(
                     maximumSurfaceSlopeDegrees,
                     maximumContactSurfaceDistance,
@@ -146,18 +132,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     swingCapsuleRadius,
                     castAbove,
                     castBelow,
-                    predictive.PathSampleCount,
                     maximumSlopeDegrees,
                     maximumStepUp,
                     maximumStepDown,
                     maximumHeightDiscontinuity,
                     maximumEdgeGap,
-                    maximumSwingClearance,
                     minimumLandingConfidence,
-                    minimumLookAheadSeconds,
-                    maximumLookAheadSeconds,
-                    maximumYawVelocity,
-                    maximumPredictionDistance,
                     maximumPredictionReachRatio);
                 settings.ApplyTuning(current, stance, predictive);
                 return string.Empty;

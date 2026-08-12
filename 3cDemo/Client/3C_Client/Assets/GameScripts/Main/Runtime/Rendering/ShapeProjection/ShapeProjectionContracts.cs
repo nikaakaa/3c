@@ -201,6 +201,7 @@ namespace ThirdPersonRendering.ShapeProjection
         public int ViewportHeight;
         public ShapeProjectionProfileId ProfileId;
         public int ProfileRevision;
+        public int ProfileRuntimeTuningRevision;
         public ShapeProjectionArtifactId ArtifactId;
         public Hash128 ArtifactHash;
         public int RenderFrame;
@@ -217,6 +218,7 @@ namespace ThirdPersonRendering.ShapeProjection
                    && ViewportHeight == other.ViewportHeight
                    && ProfileId.Equals(other.ProfileId)
                    && ProfileRevision == other.ProfileRevision
+                   && ProfileRuntimeTuningRevision == other.ProfileRuntimeTuningRevision
                    && ArtifactId.Equals(other.ArtifactId)
                    && ArtifactHash == other.ArtifactHash
                    && RenderFrame == other.RenderFrame

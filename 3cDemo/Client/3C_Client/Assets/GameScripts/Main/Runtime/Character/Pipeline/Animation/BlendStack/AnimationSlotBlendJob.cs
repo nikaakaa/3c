@@ -556,20 +556,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             Vector3 leftVelocity = Vector3.zero;
             float leftHeight = 0f;
             float leftPlant = 0f;
-            float leftLandingConfidence = 0f;
-            float leftLandingWeight = 0f;
-            float leftLandingDelay = 0f;
-            Vector2 leftLandingOffset = Vector2.zero;
+            AnimationPredictedFootStepSample leftPredictedStep = default;
             float rightWeight = 0f;
             Vector3 rightVelocity = Vector3.zero;
             float rightHeight = 0f;
             float rightPlant = 0f;
-            float rightLandingConfidence = 0f;
-            float rightLandingWeight = 0f;
-            float rightLandingDelay = 0f;
-            Vector2 rightLandingOffset = Vector2.zero;
+            AnimationPredictedFootStepSample rightPredictedStep = default;
             bool leftValid = true;
             bool rightValid = true;
+            int predictionContribution = -1;
+            for (int contributionIndex = header.ContributionCount - 1; contributionIndex >= 0; contributionIndex--)
+            {
+                if (m_FramePlan.GetEntry(contributionIndex).Kind == AnimationPoseContributionKind.Live)
+                {
+                    predictionContribution = contributionIndex;
+                    break;
+                }
+            }
 
             for (int contributionIndex = 0; contributionIndex < header.ContributionCount; contributionIndex++)
             {
@@ -584,6 +587,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     return AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid;
                 }
 
+                if (contributionIndex == predictionContribution && hasFeatures &&
+                    (!TryResolveAuthoritativePrediction(
+                         left,
+                         visualTimeScale,
+                         entry.ContributionContinuityIdentity,
+                         global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Left,
+                         out leftPredictedStep) ||
+                     !TryResolveAuthoritativePrediction(
+                         right,
+                         visualTimeScale,
+                         entry.ContributionContinuityIdentity,
+                         global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Right,
+                         out rightPredictedStep)))
+                {
+                    return AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid;
+                }
+
                 if (entry.LeftFootWeight > 0f)
                 {
                     leftValid &= hasFeatures;
@@ -594,11 +614,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                             ref leftWeight,
                             ref leftVelocity,
                             ref leftHeight,
-                            ref leftPlant,
-                            ref leftLandingConfidence,
-                            ref leftLandingWeight,
-                            ref leftLandingDelay,
-                            ref leftLandingOffset))
+                            ref leftPlant))
                     {
                         return AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid;
                     }
@@ -613,11 +629,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                             ref rightWeight,
                             ref rightVelocity,
                             ref rightHeight,
-                            ref rightPlant,
-                            ref rightLandingConfidence,
-                            ref rightLandingWeight,
-                            ref rightLandingDelay,
-                            ref rightLandingOffset))
+                            ref rightPlant))
                     {
                         return AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid;
                     }
@@ -633,20 +645,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                      leftVelocity,
                      leftHeight,
                      leftPlant,
-                     leftLandingConfidence,
-                     leftLandingWeight,
-                     leftLandingDelay,
-                     leftLandingOffset,
+                     leftPredictedStep,
                      out leftResult) ||
                  !TryResolveFoot(
                      rightWeight,
                      rightVelocity,
                      rightHeight,
                      rightPlant,
-                     rightLandingConfidence,
-                     rightLandingWeight,
-                     rightLandingDelay,
-                     rightLandingOffset,
+                     rightPredictedStep,
                      out rightResult)))
             {
                 return AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid;

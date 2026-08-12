@@ -168,37 +168,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class CharacterPresentationPredictiveFootPlacementModifierDescriptor
-    {
-        public const int GoalCount = CharacterPresentationFootGroundingDescriptor.GoalCount;
-
-        [SerializeField] int m_Index = -1;
-        [SerializeField] string m_NodeId = string.Empty;
-        [SerializeField] int m_GoalWorkspaceOffset = -1;
-
-        public CharacterPresentationPredictiveFootPlacementModifierDescriptor(
-            int index,
-            PoseNodeId nodeId,
-            int goalWorkspaceOffset)
-        {
-            m_Index = index;
-            m_NodeId = nodeId.IsValid ? nodeId.Value : string.Empty;
-            m_GoalWorkspaceOffset = goalWorkspaceOffset;
-            RequireValid();
-        }
-
-        public int Index => m_Index;
-        public PoseNodeId NodeId => new PoseNodeId(m_NodeId);
-        public int GoalWorkspaceOffset => m_GoalWorkspaceOffset;
-
-        public void RequireValid()
-        {
-            if (Index < 0 || !NodeId.IsValid || GoalWorkspaceOffset < 0)
-                throw new InvalidOperationException("Predictive Foot Placement Modifier descriptor is invalid.");
-        }
-    }
-
-    [Serializable]
     public sealed class CharacterPresentationFullBodyIkDescriptor
     {
         [SerializeField] int m_Index = -1;

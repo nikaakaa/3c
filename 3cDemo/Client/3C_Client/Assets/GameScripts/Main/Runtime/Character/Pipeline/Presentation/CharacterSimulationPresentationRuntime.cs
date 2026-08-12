@@ -39,6 +39,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         bool m_PoseHasOutput;
         ulong m_LastBodyResetSequence;
+        double m_LastAnimationSampleTick;
+        bool m_AnimationClockInitialized;
         ulong m_AnimationBranchReplacementCount;
         bool m_ReportedPresentationFailure;
         FinalAnimationPoseFrame m_LastFinalPose;
@@ -299,6 +301,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
                 if (!bodyFrame.IsValid)
                 {
+                    m_AnimationClockInitialized = false;
                     ResetPoseIfNeeded(
                         context.RenderFrame,
                         m_LastBodyResetSequence,
@@ -308,6 +311,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 if (bodyFrame.ResetSequence != m_LastBodyResetSequence)
                 {
+                    m_AnimationClockInitialized = false;
                     if (bodyFrame.ResetReason == CharacterBodyPresentationResetReason.CommittedBranchReplacement)
                     {
                         m_Animation.RetargetBodyBranch(bodyFrame.ResetSequence);
@@ -326,12 +330,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     }
                     m_LastBodyResetSequence = bodyFrame.ResetSequence;
                 }
+                float animationDeltaSeconds = ResolveAnimationDeltaSeconds(in context, in bodyFrame);
+                if (animationDeltaSeconds <= 0f)
+                {
+                    if (m_Camera != null)
+                    {
+                        using (CameraMarker.Auto())
+                            m_Camera.Present(bodyFrame, context.PresentationDeltaSeconds);
+                    }
+                    return;
+                }
                 CharacterPresentationFactFrame factFrame;
                 using (FactProjectionMarker.Auto())
                 {
                     factFrame = m_FactProjector.Project(
                         context.RenderFrame,
-                        context.PresentationDeltaSeconds,
+                        animationDeltaSeconds,
                         in bodyFrame);
                 }
                 ComposedAnimationPoseFrame animationPose;
@@ -341,7 +355,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         bodyFrame,
                         factFrame,
                         context.RenderFrame,
-                        context.PresentationDeltaSeconds);
+                        animationDeltaSeconds);
                 }
                 catch (Exception exception)
                 {
@@ -404,6 +418,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_FactProjector.Reset();
             m_PoseHasOutput = false;
             m_LastBodyResetSequence = 0;
+            m_LastAnimationSampleTick = 0d;
+            m_AnimationClockInitialized = false;
             m_AnimationBranchReplacementCount = 0;
             m_LastFinalPose = default;
             m_PosePlanStages = default;
@@ -437,6 +453,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_FootPlacement,
                     m_Diagnostics);
             }
+        }
+
+        float ResolveAnimationDeltaSeconds(
+            in GameplayPresentationFrameContext context,
+            in CharacterBodyPresentationFrame bodyFrame)
+        {
+            if (m_Body.SourceMode != CharacterBodyPresentationSourceMode.CommittedStream)
+                return context.PresentationDeltaSeconds;
+            double sampleTick = (double)bodyFrame.PreviousTick +
+                                ((double)bodyFrame.CurrentTick - bodyFrame.PreviousTick) *
+                                (double)bodyFrame.SampleAlpha;
+            if (!m_AnimationClockInitialized)
+            {
+                m_LastAnimationSampleTick = sampleTick;
+                m_AnimationClockInitialized = true;
+                return m_Body.TickDurationSeconds;
+            }
+            double deltaTicks = sampleTick - m_LastAnimationSampleTick;
+            if (deltaTicks < -0.000001d)
+                throw new InvalidOperationException("Animation presentation sample clock cannot move backward.");
+            m_LastAnimationSampleTick = sampleTick;
+            double deltaSeconds = Math.Max(0d, deltaTicks) * m_Body.TickDurationSeconds;
+            if (double.IsNaN(deltaSeconds) || double.IsInfinity(deltaSeconds) || deltaSeconds > float.MaxValue)
+                throw new InvalidOperationException("Animation logic delta is invalid.");
+            return (float)deltaSeconds;
         }
 
         void CommitFinalPose(

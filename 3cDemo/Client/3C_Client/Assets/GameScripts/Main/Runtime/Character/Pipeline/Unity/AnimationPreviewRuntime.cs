@@ -84,9 +84,9 @@ namespace ThirdPersonCharacter.Pipeline
                     program,
                     m_PreviewActorId);
             m_PoseGraphFactPreview =
-                new PoseGraphFactPreviewAdapter(
-                    m_PreviewActorId,
-                    bodyFixture);
+            new PoseGraphFactPreviewAdapter(
+                m_PreviewActorId,
+                bodyFixture);
             m_TimelineOperation = timeline == null
                 ? default
                 : CharacterPipelinePreviewProgram.FindTimelineOperation(
@@ -137,8 +137,7 @@ namespace ThirdPersonCharacter.Pipeline
                         m_PreviewActorId,
                         descriptor.Profile.BuildSettings(m_Projection, rig),
                         rig,
-                        physicsScene,
-                        m_Projection.PosePlan.PredictiveFootPlacementModifiers.Count == 1);
+                        physicsScene);
                 }
                 var tuningTarget = new CharacterPoseTuningTargetIdentity(
                     m_PreviewActorId.Value,

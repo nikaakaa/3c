@@ -1025,6 +1025,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var nodes = graph.Nodes.ToList();
             var edges = graph.Edges.ToList();
             var layout = graph.Layout.ToList();
+            bool layoutOnly = mutations.All(value => value is MovePoseNodeMutation);
             CharacterPoseParameterDeclaration[] parameters =
                 graph.Parameters.ToArray();
             var appliedFieldNodes = new HashSet<PoseNodeId>();
@@ -1160,7 +1161,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         throw new InvalidOperationException($"Mutation '{mutation.Kind}' is not a Pose Graph command.");
                 }
             }
-            return new CharacterTypedPoseGraph(graph.GraphId, Guid.NewGuid().ToString("N"), parameters, nodes.ToArray(), edges.ToArray(), layout.ToArray());
+            string contentRevision = layoutOnly
+                ? graph.ContentRevision
+                : Guid.NewGuid().ToString("N");
+            return new CharacterTypedPoseGraph(graph.GraphId, contentRevision, parameters, nodes.ToArray(), edges.ToArray(), layout.ToArray());
         }
 
         static int RequireNodeIndex(IReadOnlyList<CharacterTypedPoseNode> nodes, PoseNodeId nodeId)
@@ -1350,7 +1354,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterModifyBonePosePayload current => SetModifyBone(current, fieldId, value),
                 CharacterRootOrientationWarpPosePayload current when fieldId == "yaw-curve" => new CharacterRootOrientationWarpPosePayload(Require<ThirdPersonCharacter.Pipeline.Motion.RootMotion.RootMotionCurveAsset>(value, fieldId)),
                 CharacterPoseBoneIkGoalsPayload current when fieldId == "bindings" => new CharacterPoseBoneIkGoalsPayload(Require<CharacterPoseBoneIkGoalBinding[]>(value, fieldId)),
-                CharacterFootGroundingPosePayload current => SetFootGrounding(current, fieldId, value),
+                CharacterFootPlacementPosePayload current => SetFootGrounding(current, fieldId, value),
                 CharacterFullBodyIkPosePayload current when fieldId == "profile" => new CharacterFullBodyIkPosePayload(Require<CharacterFullBodyIkProfile>(value, fieldId)),
                 CharacterPoseSubgraphPayload current when fieldId == "graph-id" => new CharacterPoseSubgraphPayload(Subgraph(value)),
                 _ => throw new InvalidOperationException($"Pose payload '{payload.GetType().Name}' does not declare writable field '{fieldId}'.")
@@ -1430,7 +1434,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             field == "rotation" ? Require<Quaternion>(value, field).eulerAngles : current.Rotation.eulerAngles,
             field == "scale" ? Require<Vector3>(value, field) : current.Scale);
 
-        static CharacterPoseNodePayload SetFootGrounding(CharacterFootGroundingPosePayload current, string field, object value) => new CharacterFootGroundingPosePayload(
+        static CharacterPoseNodePayload SetFootGrounding(CharacterFootPlacementPosePayload current, string field, object value) => new CharacterFootPlacementPosePayload(
             field == "profile" ? Require<CharacterFootPlacementProfile>(value, field) : current.Profile,
             field == "calibration" ? Require<CharacterFootPlacementRigCalibration>(value, field) : current.Calibration);
 

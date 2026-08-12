@@ -6,6 +6,7 @@ using System.Text;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonSimulation;
+using Unity.Collections;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Editor.MotionMatching
@@ -13,7 +14,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
     public static class CharacterMotionMatchingDatabaseArtifactCodec
     {
         const int Magic = 0x42444d4d;
-        const int FormatVersion = 2;
+        const int FormatVersion = 9;
 
         enum SectionId
         {
@@ -503,18 +504,96 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             WriteVector3(writer, value.SoleLocalVelocity);
             writer.Write(value.SoleHeight);
             writer.Write(value.PlantConfidence);
-            writer.Write(value.NextLandingConfidence);
-            writer.Write(value.NextLandingDelaySeconds);
-            WriteVector2(writer, value.NextLandingLocalOffset);
+            AnimationPredictedFootStepSample predicted = value.PredictedStep;
+            writer.Write(predicted.IsValid);
+            if (!predicted.IsValid)
+                return;
+            writer.Write(predicted.EventOrdinal);
+            writer.Write(predicted.Confidence);
+            writer.Write(predicted.TimeToLandingSeconds);
+            writer.Write(predicted.EventPhase);
+            writer.Write(predicted.LiftOffPhase);
+            writer.Write(predicted.ActionStepClock.DurationSeconds);
+            writer.Write(predicted.OpposingEventOrdinal);
+            writer.Write(predicted.OpposingLandingDelaySeconds);
+            writer.Write(predicted.OpposingLandingCycleOffset);
+            for (int i = 0; i < predicted.RootLocalFootRoute.Length; i++)
+                WriteVector3(writer, predicted.RootLocalFootRoute[i]);
+            for (int i = 0; i < predicted.RootLocalAnkleRoute.Length; i++)
+                WriteVector3(writer, predicted.RootLocalAnkleRoute[i]);
+            for (int i = 0; i < predicted.RootLocalHipRoute.Length; i++)
+                WriteVector3(writer, predicted.RootLocalHipRoute[i]);
+            for (int i = 0; i < predicted.AuthoredFootPlanarRoute.Length; i++)
+                WriteVector3(writer, predicted.AuthoredFootPlanarRoute[i]);
+            for (int i = 0; i < predicted.AnimationClearanceHeights.Length; i++)
+                writer.Write(predicted.AnimationClearanceHeights[i]);
+            for (int i = 0; i < predicted.ConstraintModes.Length; i++)
+                writer.Write(predicted.ConstraintModes[i]);
+            for (int i = 0; i < predicted.SupportPhases.Length; i++)
+                writer.Write(predicted.SupportPhases[i]);
+            for (int i = 0; i < predicted.FootOrientationPolicies.Length; i++)
+                writer.Write(predicted.FootOrientationPolicies[i]);
+            for (int i = 0; i < predicted.BodyRotationPivotModes.Length; i++)
+                writer.Write(predicted.BodyRotationPivotModes[i]);
         }
 
-        static AnimationFootFeatureSample ReadFoot(BinaryReader reader) => new AnimationFootFeatureSample(
-            ReadVector3(reader), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), ReadVector2(reader));
+        static AnimationFootFeatureSample ReadFoot(BinaryReader reader)
+        {
+            Vector3 velocity = ReadVector3(reader);
+            float soleHeight = reader.ReadSingle();
+            float plantConfidence = reader.ReadSingle();
+            AnimationPredictedFootStepSample predicted = reader.ReadBoolean()
+                ? new AnimationPredictedFootStepSample(
+                reader.ReadInt32(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadInt32(),
+                reader.ReadSingle(),
+                reader.ReadInt32(),
+                ReadVector3Route(reader),
+                ReadVector3Route(reader),
+                ReadVector3Route(reader),
+                ReadVector3Route(reader),
+                ReadFloatRoute(reader),
+                ReadByteRoute(reader),
+                ReadByteRoute(reader),
+                ReadByteRoute(reader),
+                ReadByteRoute(reader))
+                : default;
+            return new AnimationFootFeatureSample(
+                velocity,
+                soleHeight,
+                plantConfidence,
+                predicted);
+        }
+        static FixedList128Bytes<Vector3> ReadVector3Route(BinaryReader reader)
+        {
+            var result = new FixedList128Bytes<Vector3>();
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                result.Add(ReadVector3(reader));
+            return result;
+        }
+        static FixedList128Bytes<float> ReadFloatRoute(BinaryReader reader)
+        {
+            var result = new FixedList128Bytes<float>();
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                result.Add(reader.ReadSingle());
+            return result;
+        }
+        static FixedList32Bytes<byte> ReadByteRoute(BinaryReader reader)
+        {
+            var result = new FixedList32Bytes<byte>();
+            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
+                result.Add(reader.ReadByte());
+            return result;
+        }
         static void WriteVector2(BinaryWriter writer, Vector2 value) { writer.Write(value.x); writer.Write(value.y); }
         static void WriteVector3(BinaryWriter writer, Vector3 value) { writer.Write(value.x); writer.Write(value.y); writer.Write(value.z); }
         static Vector2 ReadVector2(BinaryReader reader) => new Vector2(reader.ReadSingle(), reader.ReadSingle());
         static Vector3 ReadVector3(BinaryReader reader) => new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
-
         static T ReadSection<T>(ArraySegment<byte> section, Func<BinaryReader, T> read)
         {
             using var stream = new MemoryStream(section.Array, section.Offset, section.Count, false);

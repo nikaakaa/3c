@@ -313,11 +313,11 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
             raw[range.Offset] = left.PlantConfidence;
             raw[range.Offset + 1] = left.SoleHeight;
             raw[range.Offset + 2] = left.SoleLocalVelocity.magnitude;
-            raw[range.Offset + 3] = left.NextLandingConfidence;
+            raw[range.Offset + 3] = left.PredictedStep.Confidence;
             raw[range.Offset + 4] = right.PlantConfidence;
             raw[range.Offset + 5] = right.SoleHeight;
             raw[range.Offset + 6] = right.SoleLocalVelocity.magnitude;
-            raw[range.Offset + 7] = right.NextLandingConfidence;
+            raw[range.Offset + 7] = right.PredictedStep.Confidence;
         }
 
         PoseSnapshot SamplePose(MotionMatchingResolvedClipBuildInput clip, float time)

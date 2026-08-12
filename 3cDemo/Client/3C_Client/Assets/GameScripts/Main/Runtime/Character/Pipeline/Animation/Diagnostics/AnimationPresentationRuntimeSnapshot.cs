@@ -674,32 +674,132 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public ulong GoalCompletionIdentity { get; }
     }
 
+    internal sealed class AnimationFootIkRuntimeSnapshotPage
+    {
+        internal CharacterFootGroundingDiagnostics Grounding;
+        internal CharacterPredictiveFootPlacementDiagnostics Prediction;
+        internal CharacterFullBodyIkSolverDiagnostics Solver;
+        internal CharacterFullBodyIkEffectorDiagnostics LeftFoot;
+        internal CharacterFullBodyIkEffectorDiagnostics RightFoot;
+
+        internal void Clear()
+        {
+            Grounding = default;
+            Prediction = default;
+            Solver = default;
+            LeftFoot = default;
+            RightFoot = default;
+        }
+    }
+
     public readonly struct AnimationFootIkRuntimeSnapshot
     {
+        static readonly CharacterFootGroundingDiagnostics s_DefaultGrounding;
+        static readonly CharacterPredictiveFootPlacementDiagnostics s_DefaultPrediction;
+        static readonly CharacterFullBodyIkSolverDiagnostics s_DefaultSolver;
+        static readonly CharacterFullBodyIkEffectorDiagnostics s_DefaultEffector;
+
+        readonly AnimationFootIkRuntimeSnapshotPage m_Page;
+        readonly FinalAnimationPoseFramePageLease m_Lease;
+        readonly ulong m_LeaseIdentity;
+
         internal AnimationFootIkRuntimeSnapshot(
-            CharacterFootGroundingDiagnostics grounding,
-            CharacterPredictiveFootPlacementModifierDiagnostics modifier,
-            CharacterFullBodyIkSolverDiagnostics solver,
-            CharacterFullBodyIkEffectorDiagnostics leftFoot,
-            CharacterFullBodyIkEffectorDiagnostics rightFoot)
+            AnimationFootIkRuntimeSnapshotPage page,
+            FinalAnimationPoseFramePageLease lease,
+            ulong leaseIdentity)
         {
-            Grounding = grounding;
-            Modifier = modifier;
-            Solver = solver;
-            LeftFoot = leftFoot;
-            RightFoot = rightFoot;
+            m_Page = page ?? throw new ArgumentNullException(nameof(page));
+            m_Lease = lease ?? throw new ArgumentNullException(nameof(lease));
+            m_LeaseIdentity = leaseIdentity != 0
+                ? leaseIdentity
+                : throw new ArgumentOutOfRangeException(nameof(leaseIdentity));
         }
 
-        public CharacterFootGroundingDiagnostics Grounding { get; }
-        public CharacterPredictiveFootPlacementModifierDiagnostics Modifier { get; }
-        public CharacterFullBodyIkSolverDiagnostics Solver { get; }
-        public CharacterFullBodyIkEffectorDiagnostics LeftFoot { get; }
-        public CharacterFullBodyIkEffectorDiagnostics RightFoot { get; }
-        public CharacterFullBodyIkGoal LeftGoal =>
-            Modifier.IsCompleted ? Modifier.Left.FinalGoal : Grounding.Left.Goal;
-        public CharacterFullBodyIkGoal RightGoal =>
-            Modifier.IsCompleted ? Modifier.Right.FinalGoal : Grounding.Right.Goal;
-        public bool IsAvailable => Grounding.IsCompleted;
+        public ref readonly CharacterFootGroundingDiagnostics Grounding
+        {
+            get
+            {
+                if (m_Page == null)
+                    return ref s_DefaultGrounding;
+                RequireValid();
+                return ref m_Page.Grounding;
+            }
+        }
+
+        public ref readonly CharacterPredictiveFootPlacementDiagnostics Prediction
+        {
+            get
+            {
+                if (m_Page == null)
+                    return ref s_DefaultPrediction;
+                RequireValid();
+                return ref m_Page.Prediction;
+            }
+        }
+
+        public ref readonly CharacterFullBodyIkSolverDiagnostics Solver
+        {
+            get
+            {
+                if (m_Page == null)
+                    return ref s_DefaultSolver;
+                RequireValid();
+                return ref m_Page.Solver;
+            }
+        }
+
+        public ref readonly CharacterFullBodyIkEffectorDiagnostics LeftFoot
+        {
+            get
+            {
+                if (m_Page == null)
+                    return ref s_DefaultEffector;
+                RequireValid();
+                return ref m_Page.LeftFoot;
+            }
+        }
+
+        public ref readonly CharacterFullBodyIkEffectorDiagnostics RightFoot
+        {
+            get
+            {
+                if (m_Page == null)
+                    return ref s_DefaultEffector;
+                RequireValid();
+                return ref m_Page.RightFoot;
+            }
+        }
+
+        public CharacterFullBodyIkGoal LeftGoal
+        {
+            get
+            {
+                ref readonly CharacterPredictiveFootPlacementDiagnostics prediction = ref Prediction;
+                return prediction.IsCompleted ? prediction.Left.FinalGoal : Grounding.Left.Goal;
+            }
+        }
+
+        public CharacterFullBodyIkGoal RightGoal
+        {
+            get
+            {
+                ref readonly CharacterPredictiveFootPlacementDiagnostics prediction = ref Prediction;
+                return prediction.IsCompleted ? prediction.Right.FinalGoal : Grounding.Right.Goal;
+            }
+        }
+
+        public bool IsAvailable
+        {
+            get
+            {
+                if (m_Page == null)
+                    return false;
+                RequireValid();
+                return m_Page.Grounding.IsCompleted;
+            }
+        }
+
+        void RequireValid() => m_Lease.RequireValid(m_LeaseIdentity);
     }
 
     public readonly struct AnimationPresentationRuntimeSnapshot
@@ -725,7 +825,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly AnimationPoseWatchSnapshot[] m_PoseWatches;
         readonly CharacterFullBodyIkGoal[] m_PoseWatchFullBodyIkGoals;
         readonly CharacterFootGroundingDiagnostics[] m_PoseWatchFootGroundings;
-        readonly CharacterPredictiveFootPlacementModifierDiagnostics[] m_PoseWatchFootPlacementModifiers;
+        readonly CharacterPredictiveFootPlacementDiagnostics[] m_PoseWatchFootPlacementPredictions;
         readonly CharacterFullBodyIkSolverDiagnostics[] m_PoseWatchFullBodyIkSolvers;
         readonly CharacterFullBodyIkEffectorDiagnostics[] m_PoseWatchFullBodyIkEffectors;
         readonly CharacterFullBodyIkLimbDiagnostics[] m_PoseWatchFullBodyIkLimbs;
@@ -822,7 +922,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             int poseWatchCount,
             CharacterFullBodyIkGoal[] poseWatchFullBodyIkGoals,
             CharacterFootGroundingDiagnostics[] poseWatchFootGroundings,
-            CharacterPredictiveFootPlacementModifierDiagnostics[] poseWatchFootPlacementModifiers,
+            CharacterPredictiveFootPlacementDiagnostics[] poseWatchFootPlacementPredictions,
             CharacterFullBodyIkSolverDiagnostics[] poseWatchFullBodyIkSolvers,
             CharacterFullBodyIkEffectorDiagnostics[] poseWatchFullBodyIkEffectors,
             CharacterFullBodyIkLimbDiagnostics[] poseWatchFullBodyIkLimbs,
@@ -900,7 +1000,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_PoseWatchCount = poseWatchCount;
             m_PoseWatchFullBodyIkGoals = poseWatchFullBodyIkGoals;
             m_PoseWatchFootGroundings = poseWatchFootGroundings;
-            m_PoseWatchFootPlacementModifiers = poseWatchFootPlacementModifiers;
+            m_PoseWatchFootPlacementPredictions = poseWatchFootPlacementPredictions;
             m_PoseWatchFullBodyIkSolvers = poseWatchFullBodyIkSolvers;
             m_PoseWatchFullBodyIkEffectors = poseWatchFullBodyIkEffectors;
             m_PoseWatchFullBodyIkLimbs = poseWatchFullBodyIkLimbs;
@@ -1043,12 +1143,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             return diagnostics.IsCompleted;
         }
 
-        public bool TryGetPoseWatchPredictiveFootPlacementModifier(
+        public bool TryGetPoseWatchPredictiveFootPlacement(
             int watchIndex,
-            out CharacterPredictiveFootPlacementModifierDiagnostics diagnostics)
+            out CharacterPredictiveFootPlacementDiagnostics diagnostics)
         {
             RequireIndex(watchIndex, m_PoseWatchCount, nameof(watchIndex));
-            diagnostics = m_PoseWatchFootPlacementModifiers[watchIndex];
+            diagnostics = m_PoseWatchFootPlacementPredictions[watchIndex];
             return diagnostics.IsCompleted;
         }
 

@@ -12,12 +12,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         public static AnimationFootAnalysisArtifactIdentity Build(
             UnityEngine.AnimationClip clip,
-            CharacterFootPlacementAnalysisSource source)
+            CharacterFootPlacementAnalysisSource source,
+            AnimationFootContactSchedule contactSchedule)
         {
             if (!clip)
                 throw new ArgumentNullException(nameof(clip));
             if (!source)
                 throw new ArgumentNullException(nameof(source));
+            if (contactSchedule == null)
+                throw new ArgumentNullException(nameof(contactSchedule));
             source.RequireValid();
             string clipPath = RequireAssetPath(clip, "AnimationClip");
             string sourcePath = RequireAssetPath(source, "Analysis Source");
@@ -51,9 +54,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 source.RigCalibration.ContentRevision,
                 geometryValidation.IdentityHash,
                 geometryValidation.GeometryContentHash,
+                contactSchedule.IdentityHash.Value,
                 source.SampleRate,
-                thresholds.PlantEnterVerticalSpeed,
-                thresholds.PlantExitVerticalSpeed,
+                thresholds.PlantEnterContactSpeed,
+                thresholds.PlantExitContactSpeed,
                 thresholds.PlantEnterHeight,
                 thresholds.PlantExitHeight,
                 thresholds.MinimumLandingSegmentSeconds,

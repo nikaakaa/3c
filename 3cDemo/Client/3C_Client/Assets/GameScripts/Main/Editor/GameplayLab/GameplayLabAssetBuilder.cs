@@ -55,9 +55,11 @@ namespace ThirdPersonGameplay.Editor.Lab
         const string FixedCompositionPath = CompositionDirectory + "/CorinGameplayLabFixedComposition.asset";
         const string FloatRootPath = PrefabDirectory + "/GameplayLabLocalFloat32.prefab";
         const string FixedRootPath = PrefabDirectory + "/GameplayLabLocalFixed.prefab";
+        const string FootIkEnduranceRootPath = PrefabDirectory + "/GameplayLabFootIkEnduranceFixed.prefab";
         const string RollbackRootPath = PrefabDirectory + "/GameplayLabDeterministicRollback.prefab";
         const string FloatVariantPath = VariantDirectory + "/GameplayLabLocalFloat32Variant.asset";
         const string FixedVariantPath = VariantDirectory + "/GameplayLabLocalFixedVariant.asset";
+        const string FootIkEnduranceVariantPath = VariantDirectory + "/GameplayLabFootIkEnduranceFixedVariant.asset";
         const string RollbackVariantPath = VariantDirectory + "/GameplayLabDeterministicRollbackVariant.asset";
         const string PlayerActorId = "gameplay-lab-player";
         const string TargetActorId = "gameplay-lab-target";
@@ -91,7 +93,8 @@ namespace ThirdPersonGameplay.Editor.Lab
             SimulationSessionCompositionDefinition fixedComposition = BuildFixedComposition();
             SimulationSessionCompositionDefinition rollbackComposition = BuildRollbackComposition();
             GameObject floatRoot = BuildFloatRuntimeRoot();
-            GameObject fixedRoot = BuildFixedRuntimeRoot(fixedComposition);
+            GameObject fixedRoot = BuildFixedRuntimeRoot(fixedComposition, false);
+            GameObject footIkEnduranceRoot = BuildFixedRuntimeRoot(fixedComposition, true);
             GameObject rollbackRoot = BuildRollbackRuntimeRoot(rollbackComposition);
             SimulationSessionCompositionDefinition floatComposition =
                 LoadRequired<SimulationSessionCompositionDefinition>(FloatCompositionPath);
@@ -128,11 +131,22 @@ namespace ThirdPersonGameplay.Editor.Lab
                 solver,
                 collision,
                 RollbackLaunchArgumentPrefix);
-            BuildScene(fixedVariant, floatVariant, rollbackVariant);
+            GameplayLabSessionVariantDefinition footIkEnduranceVariant = BuildVariant(
+                FootIkEnduranceVariantPath,
+                GameplayLabEditorLauncher.FootIkEnduranceVariantId,
+                footIkEnduranceRoot,
+                fixedComposition,
+                definition,
+                fixedProgram,
+                projection,
+                solver,
+                collision,
+                string.Empty);
+            BuildScene(fixedVariant, floatVariant, footIkEnduranceVariant, rollbackVariant);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             GameplayLabEditorLauncher.Validate();
-            Debug.Log("Shared Gameplay Lab synchronized: Local Fixed Q32.32, Local Float32 AI and Deterministic Rollback.");
+            Debug.Log("Shared Gameplay Lab synchronized: Local Fixed Q32.32, Foot IK Endurance, Local Float32 AI and Deterministic Rollback.");
         }
 
         public static void SyncFloat32EnemyVariant()
@@ -161,13 +175,69 @@ namespace ThirdPersonGameplay.Editor.Lab
                 LoadRequired<GameplayLabSessionVariantDefinition>(FixedVariantPath);
             GameplayLabSessionVariantDefinition rollbackVariant =
                 LoadRequired<GameplayLabSessionVariantDefinition>(RollbackVariantPath);
+            GameplayLabSessionVariantDefinition footIkEnduranceVariant =
+                LoadRequired<GameplayLabSessionVariantDefinition>(FootIkEnduranceVariantPath);
             ScriptableObject fixedProgram = LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
             EnsureVariantProgram(fixedVariant, fixedProgram);
             EnsureVariantProgram(rollbackVariant, fixedProgram);
-            SyncSceneVariants(fixedVariant, floatVariant, rollbackVariant);
+            EnsureVariantProgram(footIkEnduranceVariant, fixedProgram);
+            SyncSceneVariants(fixedVariant, floatVariant, footIkEnduranceVariant, rollbackVariant);
             AssetDatabase.SaveAssets();
             GameplayLabEditorLauncher.Validate();
             Debug.Log("Gameplay Lab Float32 Training Enemy synchronized without rebuilding Fixed or Rollback products.");
+        }
+
+        [MenuItem("Tools/3C/Gameplay Lab/Sync Foot IK Endurance Assets")]
+        public static void SyncFootIkEnduranceVariant()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("Gameplay Lab assets cannot be synchronized in Play Mode.");
+            EnsureFolders();
+            CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
+            FixedCharacterSimulationProgramAsset fixedProgram =
+                LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
+            CharacterPresentationProjectionAsset projection = definition.PresentationProjection
+                ? definition.PresentationProjection
+                : throw new InvalidOperationException("Gameplay Lab Character Definition has no published Projection.");
+            SimulationSessionCompositionDefinition fixedComposition =
+                LoadRequired<SimulationSessionCompositionDefinition>(FixedCompositionPath);
+            DeterministicKccWorldSolverDefinition solver =
+                LoadRequired<DeterministicKccWorldSolverDefinition>(FixedSolverPath);
+            DeterministicCollisionWorldAsset collision =
+                LoadRequired<DeterministicCollisionWorldAsset>(CollisionPath);
+            GameObject fixedRoot = BuildFixedRuntimeRoot(fixedComposition, false);
+            GameObject enduranceRoot = BuildFixedRuntimeRoot(fixedComposition, true);
+            GameplayLabSessionVariantDefinition fixedVariant = BuildVariant(
+                FixedVariantPath,
+                "gameplay-lab.local-fixed-q32.32",
+                fixedRoot,
+                fixedComposition,
+                definition,
+                fixedProgram,
+                projection,
+                solver,
+                collision,
+                string.Empty);
+            GameplayLabSessionVariantDefinition enduranceVariant = BuildVariant(
+                FootIkEnduranceVariantPath,
+                GameplayLabEditorLauncher.FootIkEnduranceVariantId,
+                enduranceRoot,
+                fixedComposition,
+                definition,
+                fixedProgram,
+                projection,
+                solver,
+                collision,
+                string.Empty);
+            GameplayLabSessionVariantDefinition floatVariant =
+                LoadRequired<GameplayLabSessionVariantDefinition>(FloatVariantPath);
+            GameplayLabSessionVariantDefinition rollbackVariant =
+                LoadRequired<GameplayLabSessionVariantDefinition>(RollbackVariantPath);
+            SyncSceneVariants(fixedVariant, floatVariant, enduranceVariant, rollbackVariant);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            GameplayLabEditorLauncher.Validate();
+            Debug.Log("Gameplay Lab manual Fixed and Foot IK Endurance launch assets synchronized.");
         }
 
         static void EnsureVariantProgram(
@@ -394,7 +464,9 @@ namespace ThirdPersonGameplay.Editor.Lab
             EditorUtility.SetDirty(source);
         }
 
-        static GameObject BuildFixedRuntimeRoot(SimulationSessionCompositionDefinition composition)
+        static GameObject BuildFixedRuntimeRoot(
+            SimulationSessionCompositionDefinition composition,
+            bool footIkEndurance)
         {
             CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
             FixedCharacterSimulationProgramAsset fixedProgram = LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
@@ -419,7 +491,8 @@ namespace ThirdPersonGameplay.Editor.Lab
                     definition,
                     CharacterPresentationRole.LocalOwner,
                     cameraRig,
-                    true);
+                    true,
+                    footIkEndurance);
                 FixedCharacterHost target = InstantiateFixedActor(
                     FixedTargetPrefabPath,
                     root.transform,
@@ -432,13 +505,16 @@ namespace ThirdPersonGameplay.Editor.Lab
                     definition,
                     CharacterPresentationRole.SimulatedActor,
                     null,
+                    false,
                     false);
                 SessionActorActionTargetInputProvider provider =
                     player.GetComponent<SessionActorActionTargetInputProvider>();
                 if (!provider)
                     throw new InvalidOperationException("Gameplay Lab Fixed player requires the formal Session Actor target provider.");
                 provider.SetAuthoring(target);
-                GameObject saved = SavePrefab(root, FixedRootPath);
+                GameObject saved = SavePrefab(
+                    root,
+                    footIkEndurance ? FootIkEnduranceRootPath : FixedRootPath);
                 Object.DestroyImmediate(root);
                 return saved;
             }
@@ -624,7 +700,8 @@ namespace ThirdPersonGameplay.Editor.Lab
             CharacterPipelineDefinition definition,
             CharacterPresentationRole role,
             ThirdPersonCameraController cameraRig,
-            bool playerControlled)
+            bool playerControlled,
+            bool footIkEndurance)
         {
             GameObject instance = InstantiatePrefab(prefabPath, parent.gameObject.scene);
             PrefabUtility.UnpackPrefabInstance(
@@ -663,9 +740,26 @@ namespace ThirdPersonGameplay.Editor.Lab
                 SessionActorActionTargetInputProvider provider =
                     instance.GetComponent<SessionActorActionTargetInputProvider>() ??
                     instance.AddComponent<SessionActorActionTargetInputProvider>();
-                var playerSource = instance.AddComponent<FixedPlayerCharacterControlSource>();
-                playerSource.SetAuthoring(definition.InputProfile, ActionTargetInputId, provider);
-                controlSource = playerSource;
+                if (footIkEndurance)
+                {
+                    var enduranceSource = instance.AddComponent<GameplayLabFootIkFixedControlSource>();
+                    enduranceSource.SetAuthoring(
+                        "teststart",
+                        "testend",
+                        definition.InputProfile,
+                        ActionTargetInputId,
+                        provider,
+                        "MoveAxis",
+                        0.18f,
+                        0.75f);
+                    controlSource = enduranceSource;
+                }
+                else
+                {
+                    var playerSource = instance.AddComponent<FixedPlayerCharacterControlSource>();
+                    playerSource.SetAuthoring(definition.InputProfile, ActionTargetInputId, provider);
+                    controlSource = playerSource;
+                }
             }
             else
             {
@@ -894,9 +988,10 @@ namespace ThirdPersonGameplay.Editor.Lab
         static void BuildScene(
             GameplayLabSessionVariantDefinition fixedVariant,
             GameplayLabSessionVariantDefinition floatVariant,
+            GameplayLabSessionVariantDefinition footIkEnduranceVariant,
             GameplayLabSessionVariantDefinition rollbackVariant)
         {
-            BuildSharedScene(new[] { fixedVariant, floatVariant, rollbackVariant });
+            BuildSharedScene(new[] { fixedVariant, floatVariant, footIkEnduranceVariant, rollbackVariant });
         }
 
         static void BuildSharedScene(GameplayLabSessionVariantDefinition[] variants)

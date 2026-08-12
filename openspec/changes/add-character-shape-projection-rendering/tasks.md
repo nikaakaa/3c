@@ -22,7 +22,7 @@
 ## 3. 建立Profile和Artifact资产
 
 - [x] 3.1 新增`CharacterShapeProjectionProfile`
-- [x] 3.2 新增颜色聚类、微小区域合并和最小三角数参数
+- [x] 3.2 新增颜色聚类、微小区域合并三角上限和发布Region最少三角数参数
 - [x] 3.3 新增材质、子网格和Alpha纳入/排除规则
 - [x] 3.4 新增RDP像素误差、描边像素宽度、最小环面积和最短共享边参数
 - [x] 3.5 新增Renderer、顶点、三角、Region、Chain、Atlas、轮廓点、环、slot和Indirect instance容量
@@ -32,6 +32,7 @@
 - [x] 3.9 保存有方向共享三维边链和两侧Region identity
 - [x] 3.10 保存运行时Buffer布局、容量和Bake统计
 - [x] 3.11 拒绝重复identity、非法范围、非有限参数、空Region和容量不一致
+- [x] 3.12 分离Bake lineage参数与可直接调节的runtime tuning revision
 
 ## 4. 实现显式Editor Baker
 
@@ -40,9 +41,9 @@
 - [x] 4.3 按固定三角内部采样点读取材质颜色和Alpha
 - [x] 4.4 建立共享拓扑边和三角邻接
 - [x] 4.5 按Profile颜色阈值生成连接区域
-- [x] 4.6 按正式邻接与颜色规则合并微小区域
-- [x] 4.7 计算Region代表色和稳定Region排序
-- [x] 4.8 提取外边界与跨Region共享边
+- [x] 4.6 按正式邻接与颜色规则仅尝试合并不超过小区域三角上限的颜色簇
+- [x] 4.7 丢弃低于发布阈值的颜色簇，再计算Region代表色和稳定Region排序
+- [x] 4.8 只提取两个已发布Region之间的共享边，外轮廓不进入Shared Chain
 - [x] 4.9 将边段连接为稳定有向共享链
 - [x] 4.10 生成稳定RegionId、ChainId、范围和content hash
 - [x] 4.11 以一次资产事务创建或替换唯一Artifact
@@ -61,6 +62,9 @@
 - [x] 5.8 拒绝Renderer仍发布普通Forward彩色表面
 - [x] 5.9 禁止Transform层级、名称、Tag、`Camera.main`或场景搜索
 - [x] 5.10 新增显式形状投影总开关，关闭时注销Source、停止全部投影工作并恢复原始Forward彩色发布
+- [x] 5.11 在Source Inspector直接提供运行时效果参数并定位完整Profile烘焙参数
+- [x] 5.12 让Waiting保持Forward发布并在首个兼容结果Ready时原子切换为`ShadowsOnly`
+- [x] 5.13 让重复安装和重烘焙保留已有Source的作者开关，新建Source和Corin正式Prefab统一默认关闭
 
 ## 6. 建立固定容量Workspace与调度
 
@@ -84,7 +88,7 @@
 - [x] 7.3 把变形顶点写入固定Native页面
 - [x] 7.4 使用Burst按当前GPU投影约定计算屏幕坐标和深度
 - [x] 7.5 从同一投影页计算每个Region紧致屏幕包围
-- [x] 7.6 剔除裁剪面外、空包围、无有效三角和屏幕过小Region
+- [x] 7.6 剔除裁剪面外、空包围和无有效三角Region，不以运行时小环阈值删除已烘焙Region主体
 - [x] 7.7 按稳定Region顺序把有效包围打进Mask Atlas
 - [x] 7.8 生成Region到Atlas Rect和三角范围映射
 - [x] 7.9 投影共享三维链端点并保存同一slot锚点页面
@@ -102,6 +106,9 @@
 - [x] 8.8 对R8 Mask发起唯一Async GPU Readback
 - [x] 8.9 保持Depth在对应GPU slot直到结果合成或失效
 - [x] 8.10 禁止深度回读、同步Readback和全画面逐Region Dispatch
+- [x] 8.11 分离每个Slot的GPU回读Mask页与Contour Job Mask页并保持固定容量生命周期
+- [x] 8.12 让Mask Compute使用SRP平台深度约定并在反向Z设备保留最近表面
+- [x] 8.13 把R8 Mask Readback记录在同一CommandBuffer最后一个Dispatch之后，禁止读取未完成Atlas
 
 ## 9. 实现Burst轮廓连接与简化
 
@@ -112,10 +119,13 @@
 - [x] 9.5 建立两侧共用的端点和必要转折锚点
 - [x] 9.6 在锚点分段内执行RDP像素简化
 - [x] 9.7 统一共享链方向并复用同一简化点序列
-- [x] 9.8 过滤点数、面积或长度低于Profile阈值的环
+- [x] 9.8 始终保留每个可见已烘焙Region的最大主体环，只按Profile阈值过滤次要碎屑环
 - [x] 9.9 生成连续Point、Loop Range和Region Range页面
 - [x] 9.10 生成当前Source的Indirect instance数量和Args
 - [x] 9.11 让所有Job只写固定容量Native页面并携带slot identity
+- [x] 9.12 让轮廓取样严格限制在当前Region Atlas Rect内并隔离相邻Region
+- [x] 9.13 将Corin次要小环过滤基线对齐为48像素²，过滤脱落碎片后再生成Indirect实例
+- [x] 9.14 将RDP容差解释为上限并按环面积与周长自适应收紧，简化退化时恢复原始合法闭环
 
 ## 10. 实现GPU间接合成
 
@@ -129,6 +139,8 @@
 - [x] 10.8 通过一次Indirect Draw提交一个Source全部Region
 - [x] 10.9 保持透明VFX和现有后处理位于形状合成之后
 - [x] 10.10 拒绝Mask、Depth、Loop、Camera或slot identity不一致的合成
+- [x] 10.11 在Fault、结果失效和组件停用时释放形状发布权并恢复Renderer普通Forward职责
+- [x] 10.12 让Y向上的屏幕坐标通过SRP平台约定转换到裁剪空间，禁止合成结果上下翻转
 
 ## 11. 接入URP唯一正式链
 
@@ -155,6 +167,7 @@
 - [x] 12.9 不在authority-only或不发布画面的角色体安装Source
 - [x] 12.10 将绑定Renderer原始彩色发布迁移为`ShadowsOnly`职责
 - [x] 12.11 删除Corin旧Forward彩色发布和任何临时Outline近似接线
+- [x] 12.12 以微小区域上限2、发布Region下限4和次要小环面积48像素²重烘焙Corin正式内容
 
 ## 13. 完成Diagnostics与清理
 

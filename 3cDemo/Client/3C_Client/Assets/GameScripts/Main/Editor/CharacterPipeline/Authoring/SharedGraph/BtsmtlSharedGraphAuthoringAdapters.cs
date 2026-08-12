@@ -11,10 +11,13 @@ using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Motion;
+using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
+using ThirdPersonSimulation;
 using TreeDesigner;
 using TreeDesigner.Editor;
 using UnityEditor;
 using UnityEngine;
+using Newtonsoft.Json.Linq;
 using GraphElement =
     UnityEditor.Experimental.GraphView.GraphElement;
 
@@ -1607,30 +1610,73 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 case "moveSpeed" when node is LocomotionInputMotionNode motion:
                     motion.ConfigureAuthoring(
                         ReadFloat(value, fieldId),
+                        motion.DisplacementMode,
+                        motion.ActionMotionCurve,
                         motion.TurnSpeedDegrees,
                         motion.CameraRelative,
-                        motion.Continuous);
+                        motion.ExecutionMode,
+                        motion.DurationSeconds);
                     return;
                 case "turnSpeedDegrees" when node is LocomotionInputMotionNode motion:
                     motion.ConfigureAuthoring(
                         motion.MoveSpeed,
+                        motion.DisplacementMode,
+                        motion.ActionMotionCurve,
                         ReadFloat(value, fieldId),
                         motion.CameraRelative,
-                        motion.Continuous);
+                        motion.ExecutionMode,
+                        motion.DurationSeconds);
                     return;
                 case "cameraRelative" when node is LocomotionInputMotionNode motion:
                     motion.ConfigureAuthoring(
                         motion.MoveSpeed,
+                        motion.DisplacementMode,
+                        motion.ActionMotionCurve,
                         motion.TurnSpeedDegrees,
                         ReadBool(value, fieldId),
-                        motion.Continuous);
+                        motion.ExecutionMode,
+                        motion.DurationSeconds);
                     return;
-                case "continuous" when node is LocomotionInputMotionNode motion:
+                case "executionMode" when node is LocomotionInputMotionNode motion:
                     motion.ConfigureAuthoring(
                         motion.MoveSpeed,
+                        motion.DisplacementMode,
+                        motion.ActionMotionCurve,
                         motion.TurnSpeedDegrees,
                         motion.CameraRelative,
-                        ReadBool(value, fieldId));
+                        Parse<LocomotionInputMotionExecutionMode>(text, fieldId),
+                        motion.DurationSeconds);
+                    return;
+                case "durationSeconds" when node is LocomotionInputMotionNode motion:
+                    motion.ConfigureAuthoring(
+                        motion.MoveSpeed,
+                        motion.DisplacementMode,
+                        motion.ActionMotionCurve,
+                        motion.TurnSpeedDegrees,
+                        motion.CameraRelative,
+                        motion.ExecutionMode,
+                        ReadFloat(value, fieldId));
+                    return;
+                case "displacementMode" when node is LocomotionInputMotionNode motion:
+                    motion.ConfigureAuthoring(
+                        motion.MoveSpeed,
+                        Parse<LocomotionInputMotionDisplacementMode>(text, fieldId),
+                        motion.ActionMotionCurve,
+                        motion.TurnSpeedDegrees,
+                        motion.CameraRelative,
+                        motion.ExecutionMode,
+                        motion.DurationSeconds);
+                    return;
+                case "assetReferences" when node is LocomotionInputMotionNode motion:
+                    RootMotionCurveAsset curve = ResolveActionMotionCurve(value, fieldId);
+                    motion.ConfigureAuthoring(
+                        curve ? 0f : motion.MoveSpeed,
+                        curve ? LocomotionInputMotionDisplacementMode.ActionMotionCurve : LocomotionInputMotionDisplacementMode.ConstantSpeed,
+                        curve,
+                        motion.TurnSpeedDegrees,
+                        motion.CameraRelative,
+                        motion.ExecutionMode,
+                        motion.DurationSeconds);
                     return;
                 case "inputId" when node is CharacterInputValueInfoNode input:
                     RequireNonEmpty(text, fieldId);
@@ -1714,6 +1760,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Blackboard declaration '{declarationId}' resolved {matches.Length} exact matches.");
             }
             return matches[0];
+        }
+
+        static RootMotionCurveAsset ResolveActionMotionCurve(object value, GraphAuthoringFieldId fieldId)
+        {
+            JToken token = value as JToken ?? (value == null ? new JArray() : JToken.FromObject(value));
+            JArray references = token as JArray ?? throw new InvalidOperationException($"Field '{fieldId}' must be an Asset reference array.");
+            JObject[] matches = references
+                .OfType<JObject>()
+                .Where(reference => string.Equals(reference.Value<string>("key"), "m_ActionMotionCurve", StringComparison.Ordinal))
+                .ToArray();
+            if (matches.Length == 0)
+                return null;
+            if (matches.Length != 1)
+                throw new InvalidOperationException($"Field '{fieldId}' contains duplicate m_ActionMotionCurve references.");
+            string guid = matches[0].Value<string>("assetGuid") ?? string.Empty;
+            string path = string.IsNullOrEmpty(guid) ? string.Empty : AssetDatabase.GUIDToAssetPath(guid);
+            if (string.IsNullOrEmpty(path))
+                path = matches[0].Value<string>("assetPath") ?? string.Empty;
+            RootMotionCurveAsset curve = AssetDatabase.LoadAssetAtPath<RootMotionCurveAsset>(path);
+            return curve ? curve : throw new InvalidOperationException($"Field '{fieldId}' cannot resolve RootMotionCurveAsset '{path}'.");
         }
 
         static T ResolveAssetGuid<T>(
@@ -1867,12 +1933,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return compare.Comparison.ToString();
                 case "moveSpeed" when node is LocomotionInputMotionNode motion:
                     return motion.MoveSpeed;
+                case "displacementMode" when node is LocomotionInputMotionNode motion:
+                    return motion.DisplacementMode.ToString();
+                case "assetReferences" when node is LocomotionInputMotionNode motion:
+                    if (!motion.ActionMotionCurve)
+                        return Array.Empty<AgentPackageAssetReference>();
+                    string curvePath = AssetDatabase.GetAssetPath(motion.ActionMotionCurve);
+                    return new[]
+                    {
+                        new AgentPackageAssetReference
+                        {
+                            key = "m_ActionMotionCurve",
+                            assetPath = curvePath,
+                            assetGuid = AssetDatabase.AssetPathToGUID(curvePath)
+                        }
+                    };
                 case "turnSpeedDegrees" when node is LocomotionInputMotionNode motion:
                     return motion.TurnSpeedDegrees;
                 case "cameraRelative" when node is LocomotionInputMotionNode motion:
                     return motion.CameraRelative;
-                case "continuous" when node is LocomotionInputMotionNode motion:
-                    return motion.Continuous;
+                case "executionMode" when node is LocomotionInputMotionNode motion:
+                    return motion.ExecutionMode.ToString();
+                case "durationSeconds" when node is LocomotionInputMotionNode motion:
+                    return motion.DurationSeconds;
                 case "inputId" when node is CharacterInputValueInfoNode input:
                     return input.InputValueId;
                 case "requestId" when node is CharacterActionRequestInfoNode request:

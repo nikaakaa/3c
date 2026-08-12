@@ -146,6 +146,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 {
                     return false;
                 }
+                AnimationMarkerSyncSegmentOccurrence first =
+                    binding.Segments[0];
+                if (continuousTime <= first.StartTimeSeconds)
+                {
+                    position = new SegmentPosition(first, 0, 0f);
+                    return true;
+                }
+                int finiteLastIndex = binding.Segments.Count - 1;
+                AnimationMarkerSyncSegmentOccurrence last =
+                    binding.Segments[finiteLastIndex];
+                if (continuousTime >= last.EndTimeSeconds)
+                {
+                    position = new SegmentPosition(last, finiteLastIndex, 1f);
+                    return true;
+                }
                 for (int i = 0; i < binding.Segments.Count; i++)
                 {
                     AnimationMarkerSyncSegmentOccurrence segment =

@@ -233,7 +233,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         internal void RebuildCandidateAfterUndoRedo()
         {
-            RefreshTuningState();
+            RefreshTuningBinding();
             if (!m_Target || m_TuningLayout == null || m_TuningBlock == null)
             {
                 m_TuningBlock = null;
@@ -308,7 +308,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 RebuildParameterFixture(plan);
             }
-            RefreshTuningState();
+            RefreshTuningBinding();
             RefreshViewportOverlay();
             RefreshLinkedPoseOverrideCatalog();
             RenderPreview();
@@ -886,7 +886,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             SetTarget(m_LiveChoices[liveIndex]);
         }
 
-        void RefreshTuningState()
+        void RefreshTuningBinding()
         {
             CharacterPoseTuningLayout layout = m_SelectedFixture != null
                 ? m_Target?.PreviewTuningLayout
@@ -913,26 +913,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_TuningBlock = null;
                 return;
             }
-            if (!CharacterPoseTuningAuthoringService.TryCompileCurrentBlock(
-                    m_Window.AssetContext,
-                    m_Window.TryGetPublishedProjection(
-                        out CharacterPresentationProjection currentProjection,
-                        out _)
-                        ? currentProjection
-                        : null,
-                    layout,
-                    source,
-                    out CharacterPoseTuningParameterBlock block,
-                    out string error))
-            {
-                m_TuningLayout = null;
-                m_TuningBlock = null;
-                m_Status.text = error;
-                return;
-            }
-
             m_TuningLayout = layout;
-            m_TuningBlock = block;
+            m_TuningBlock = source;
         }
 
         static string FormatTuningValue(
@@ -963,12 +945,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return false;
             try
             {
-                CharacterPoseTuningParameterBlock nextBlock =
-                    CharacterPoseTuningCandidateCompiler.CompileBlock(
-                        m_TuningLayout,
-                        m_TuningBlock,
-                        entry,
-                        value);
+                _ = CharacterPoseTuningCandidateCompiler.CompileBlock(
+                    m_TuningLayout,
+                    m_TuningBlock,
+                    entry,
+                    value);
                 if (!CharacterPoseTuningAuthoringService.TryApply(
                         m_Window.AssetContext,
                         m_Window.ProfileContext,
@@ -980,13 +961,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return true;
                 }
 
-                m_TuningBlock = nextBlock;
                 m_Window.MarkPoseTuningAuthoringChanged();
                 if (!m_Target)
                 {
                     m_Status.text = "Saved · No Preview or Live target is selected.";
                     return true;
                 }
+                if (!m_Window.TryGetPublishedProjection(
+                        out CharacterPresentationProjection projection,
+                        out string projectionError))
+                {
+                    m_Status.text = $"Saved · {projectionError}";
+                    return true;
+                }
+                if (!CharacterPoseTuningAuthoringService.TryCompileCurrentBlock(
+                        m_Window.AssetContext,
+                        projection,
+                        m_TuningLayout,
+                        m_TuningBlock,
+                        out CharacterPoseTuningParameterBlock nextBlock,
+                        out string compileError))
+                {
+                    m_Status.text = $"Saved · {compileError}";
+                    return true;
+                }
+                m_TuningBlock = nextBlock;
                 string sourceRevision =
                     m_Window.AssetContext?.Graph?.ContentRevision ??
                     string.Empty;
@@ -1073,7 +1072,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             host.style.display = DisplayStyle.None;
             if (!selection.HasValue)
                 return false;
-            RefreshTuningState();
+            RefreshTuningBinding();
             if (m_TuningLayout == null ||
                 m_TuningBlock == null)
                 return false;
@@ -1154,6 +1153,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         VisualElement CreateSelectionTuningField(
             CharacterPoseTuningLayoutEntry entry)
         {
+            if (!CharacterPoseTuningAuthoringService.TryReadCurrentValue(
+                    m_Window.AssetContext,
+                    entry,
+                    out CharacterPoseTuningValue currentValue,
+                    out string readError))
+            {
+                m_Status.text = readError;
+                var error = new Label($"{entry.DisplayName}: {readError}");
+                error.AddToClassList("pose-tuning-authoring-error");
+                return error;
+            }
             string timing = entry.ApplyTiming ==
                             CharacterPoseTuningApplyTiming.NextActivation
                 ? "Next Activation"
@@ -1170,7 +1180,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     var field = new FloatField(label)
                     {
-                        value = m_TuningBlock.Floats[entry.ValueIndex],
+                        value = currentValue.FloatValue,
                         isDelayed = true
                     };
                     field.RegisterValueChangedCallback(evt =>
@@ -1186,8 +1196,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     int current = entry.ValueKind ==
                                   CharacterPoseTuningValueKind.Integer
-                        ? m_TuningBlock.Integers[entry.ValueIndex]
-                        : m_TuningBlock.Enums[entry.ValueIndex];
+                        ? currentValue.IntegerValue
+                        : currentValue.EnumValue;
                     var field = new IntegerField(label)
                     {
                         value = current,
@@ -1209,8 +1219,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     var field = new Toggle(label)
                     {
-                        value =
-                            m_TuningBlock.Booleans[entry.ValueIndex] != 0
+                        value = currentValue.BooleanValue
                     };
                     field.RegisterValueChangedCallback(evt =>
                         SubmitSelectionTuningValue(

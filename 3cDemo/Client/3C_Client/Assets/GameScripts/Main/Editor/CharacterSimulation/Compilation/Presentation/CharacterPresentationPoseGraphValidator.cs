@@ -51,8 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AnimationSlotInvalid = 35,
         StateMachineLayoutInvalid = 36,
         FullBodyIkInvalid = 37,
-        MotionMatchingInvalid = 38,
-        PredictiveFootPlacementModifierInvalid = 39
+        MotionMatchingInvalid = 38
     }
 
     public readonly struct CharacterPoseGraphValidationIssue
@@ -1117,12 +1116,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 else if (source.Kind == CharacterPosePortKind.FullBodyIkGoals)
                 {
                     bool sourceAllowed = sourceNode.Kind == CharacterPoseNodeKind.PoseBoneIKGoals ||
-                                         sourceNode.Kind == CharacterPoseNodeKind.FootGrounding ||
-                                         sourceNode.Kind == CharacterPoseNodeKind.PredictiveFootPlacementModifier ||
+                                         sourceNode.Kind == CharacterPoseNodeKind.FootPlacement ||
                                          sourceNode.Kind == CharacterPoseNodeKind.GraphInput ||
                                          sourceNode.Kind == CharacterPoseNodeKind.PoseSubgraph;
                     bool targetAllowed = targetNode.Kind == CharacterPoseNodeKind.FullBodyIK ||
-                                         targetNode.Kind == CharacterPoseNodeKind.PredictiveFootPlacementModifier ||
                                          targetNode.Kind == CharacterPoseNodeKind.GraphOutput ||
                                          targetNode.Kind == CharacterPoseNodeKind.PoseSubgraph;
                     if (!sourceAllowed || !targetAllowed)
@@ -1138,21 +1135,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     else
                     {
                         if (sourceNode.Kind == CharacterPoseNodeKind.PoseBoneIKGoals ||
-                            sourceNode.Kind == CharacterPoseNodeKind.FootGrounding ||
-                            sourceNode.Kind == CharacterPoseNodeKind.PredictiveFootPlacementModifier)
+                            sourceNode.Kind == CharacterPoseNodeKind.FootPlacement)
                         {
                             goalConsumerCounts.TryGetValue(edge.SourceNodeId, out int count);
                             goalConsumerCounts[edge.SourceNodeId] = count + 1;
                         }
-                        if (targetNode.Kind == CharacterPoseNodeKind.FullBodyIK ||
-                            targetNode.Kind == CharacterPoseNodeKind.PredictiveFootPlacementModifier)
+                        if (targetNode.Kind == CharacterPoseNodeKind.FullBodyIK)
                             Add(goalProducers, edge.TargetNodeId, edge.SourceNodeId);
                     }
                 }
                 else if (source.Kind == CharacterPosePortKind.ComponentPose &&
                          (targetNode.Kind == CharacterPoseNodeKind.PoseBoneIKGoals ||
-                          targetNode.Kind == CharacterPoseNodeKind.FootGrounding ||
-                          targetNode.Kind == CharacterPoseNodeKind.PredictiveFootPlacementModifier ||
+                          targetNode.Kind == CharacterPoseNodeKind.FootPlacement ||
                           targetNode.Kind == CharacterPoseNodeKind.FullBodyIK))
                 {
                     componentPoseProducers.TryAdd(edge.TargetNodeId, edge.SourceNodeId);
@@ -1239,37 +1233,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             foreach (CharacterTypedPoseNode node in nodes.Values)
             {
                 if (node.Kind == CharacterPoseNodeKind.PoseBoneIKGoals ||
-                    node.Kind == CharacterPoseNodeKind.FootGrounding ||
-                    node.Kind == CharacterPoseNodeKind.PredictiveFootPlacementModifier)
+                    node.Kind == CharacterPoseNodeKind.FootPlacement)
                 {
                     goalConsumerCounts.TryGetValue(node.NodeId, out int count);
                     if (count != 1)
                     {
                         Report(
                             report,
-                            node.Kind == CharacterPoseNodeKind.FootGrounding
+                            node.Kind == CharacterPoseNodeKind.FootPlacement
                                 ? CharacterPoseGraphValidationCode.FootGroundingInvalid
-                                : node.Kind == CharacterPoseNodeKind.PredictiveFootPlacementModifier
-                                    ? CharacterPoseGraphValidationCode.PredictiveFootPlacementModifierInvalid
-                                    : CharacterPoseGraphValidationCode.PoseBoneIkGoalsInvalid,
+                                : CharacterPoseGraphValidationCode.PoseBoneIkGoalsInvalid,
                             $"Goal Source '{node.NodeId}' must have exactly one downstream Goal consumer.",
-                            graph.GraphId,
-                            node.NodeId);
-                    }
-                    if (node.Kind != CharacterPoseNodeKind.PredictiveFootPlacementModifier)
-                        continue;
-                    if (!goalProducers.TryGetValue(node.NodeId, out List<PoseNodeId> modifierSources) ||
-                        modifierSources.Count != 1 ||
-                        !nodes.TryGetValue(modifierSources[0], out CharacterTypedPoseNode baselineSource) ||
-                        baselineSource.Kind != CharacterPoseNodeKind.FootGrounding ||
-                        !componentPoseProducers.TryGetValue(node.NodeId, out PoseNodeId modifierPose) ||
-                        !componentPoseProducers.TryGetValue(baselineSource.NodeId, out PoseNodeId baselinePose) ||
-                        modifierPose != baselinePose)
-                    {
-                        Report(
-                            report,
-                            CharacterPoseGraphValidationCode.PredictiveFootPlacementModifierInvalid,
-                            $"Predictive Foot Placement Modifier '{node.NodeId}' requires one Foot Grounding Goal Set from the same Component Pose branch.",
                             graph.GraphId,
                             node.NodeId);
                     }
@@ -1295,8 +1269,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     PoseNodeId source = sources[i];
                     if (!nodes.TryGetValue(source, out CharacterTypedPoseNode sourceNode) ||
                         (sourceNode.Kind != CharacterPoseNodeKind.PoseBoneIKGoals &&
-                         sourceNode.Kind != CharacterPoseNodeKind.FootGrounding &&
-                         sourceNode.Kind != CharacterPoseNodeKind.PredictiveFootPlacementModifier))
+                         sourceNode.Kind != CharacterPoseNodeKind.FootPlacement))
                         continue;
                     if (!componentPoseProducers.TryGetValue(source, out PoseNodeId sourcePoseProducer) ||
                         sourcePoseProducer != poseProducer)

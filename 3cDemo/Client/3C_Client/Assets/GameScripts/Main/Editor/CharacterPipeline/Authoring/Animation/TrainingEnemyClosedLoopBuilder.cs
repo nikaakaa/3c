@@ -291,7 +291,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterInputVector2InfoNode input = CreateNode<CharacterInputVector2InfoNode>(behavior, "MoveAxis", new Vector2(0f, -100f));
             input.BindInputValue("MoveAxis");
             LocomotionInputMotionNode motion = CreateNode<LocomotionInputMotionNode>(behavior, "Monster Locomotion Motion", new Vector2(260f, 0f));
-            motion.ConfigureAuthoring(4.5f, 720f, false, true);
+            motion.ConfigureAuthoring(
+                4.5f,
+                LocomotionInputMotionDisplacementMode.ConstantSpeed,
+                null,
+                720f,
+                false,
+                LocomotionInputMotionExecutionMode.Continuous,
+                0f);
             behavior.LinkProperty(input, motion, input.PropertyPortMap["m_Output"], motion.PropertyPortMap["m_MoveInput"]);
             behavior.Link(root, motion, "Output", "Input");
         }

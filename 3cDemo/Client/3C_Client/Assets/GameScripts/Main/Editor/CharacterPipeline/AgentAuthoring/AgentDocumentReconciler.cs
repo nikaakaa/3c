@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.AI;
+using ThirdPersonCharacter.Pipeline.Motion;
 using TreeDesigner;
 using TreeDesigner.Editor;
 using UnityEngine;
@@ -1397,11 +1398,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentCompileReport report,
             string path)
         {
+            bool typedLocomotion = string.Equals(target?.typeName, typeof(LocomotionInputMotionNode).FullName, StringComparison.Ordinal);
             if (current == null)
             {
                 if (s_Capabilities.SupportsGenericMutation(target.typeName) &&
                     (target.graphReferences?.Count ?? 0) == 0 &&
-                    (target.assetReferences?.Count ?? 0) == 0)
+                    ((target.assetReferences?.Count ?? 0) == 0 || typedLocomotion))
                     return true;
                 report.Error(path, "authoring_capability_incomplete", "该Node没有完整typed create capability，或带有尚未闭合的Graph/Asset reference。");
                 return false;
@@ -1412,7 +1414,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return false;
             }
             if (!Same(current.graphReferences, target.graphReferences) ||
-                !Same(current.assetReferences, target.assetReferences))
+                !typedLocomotion && !Same(current.assetReferences, target.assetReferences))
             {
                 report.Error(path + ".properties", "authoring_capability_incomplete", "该Node的Graph或Asset reference发生变化，但没有对应的typed configure capability。");
                 return false;
@@ -2507,9 +2509,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentSnapshotNode node)
         {
             operation.moveSpeed = node.moveSpeed;
+            operation.displacementMode = node.displacementMode;
+            AgentSnapshotAssetReference actionMotionCurve = (node.assetReferences ?? new List<AgentSnapshotAssetReference>())
+                .SingleOrDefault(value => string.Equals(value.key, "m_ActionMotionCurve", StringComparison.Ordinal));
+            if (actionMotionCurve != null)
+            {
+                operation.actionMotionCurve = actionMotionCurve.label;
+                operation.actionMotionCurveAssetPath = actionMotionCurve.assetPath;
+                operation.actionMotionCurveAssetGuid = actionMotionCurve.assetGuid;
+            }
             operation.turnSpeedDegrees = node.turnSpeedDegrees;
             operation.cameraRelative = node.cameraRelative;
-            operation.continuous = node.continuous;
+            operation.executionMode = node.executionMode;
+            operation.durationSeconds = node.durationSeconds;
         }
 
         static Vector2 FindNodePosition(IReadOnlyList<AgentSnapshotGraph> graphs, string identity)

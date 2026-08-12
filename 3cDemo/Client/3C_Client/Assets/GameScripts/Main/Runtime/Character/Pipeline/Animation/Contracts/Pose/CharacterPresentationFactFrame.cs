@@ -80,13 +80,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public static class CharacterPresentationFactSchema
     {
-        public const string Version = "character-presentation-fact/v2";
+        public const string Version = "character-presentation-fact/v3";
 
         public static readonly PresentationFactId Grounded = new PresentationFactId("presentation.grounded");
         public static readonly PresentationFactId HorizontalSpeed = new PresentationFactId("presentation.horizontal-speed");
         public static readonly PresentationFactId HorizontalAcceleration = new PresentationFactId("presentation.horizontal-acceleration");
         public static readonly PresentationFactId VerticalSpeed = new PresentationFactId("presentation.vertical-speed");
         public static readonly PresentationFactId MovementDirection = new PresentationFactId("presentation.movement-direction");
+        public static readonly PresentationFactId LocomotionPlanarBasis = new PresentationFactId("presentation.locomotion-planar-basis");
         public static readonly PresentationFactId DesiredDirection = new PresentationFactId("presentation.desired-direction");
         public static readonly PresentationFactId FacingError = new PresentationFactId("presentation.facing-error");
         public static readonly PresentationFactId MotionPhase = new PresentationFactId("presentation.motion-phase");
@@ -100,6 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new CharacterPresentationFactDeclaration(HorizontalAcceleration, PresentationFactValueKind.Float),
             new CharacterPresentationFactDeclaration(VerticalSpeed, PresentationFactValueKind.Float),
             new CharacterPresentationFactDeclaration(MovementDirection, PresentationFactValueKind.Vector2),
+            new CharacterPresentationFactDeclaration(LocomotionPlanarBasis, PresentationFactValueKind.Vector2),
             new CharacterPresentationFactDeclaration(DesiredDirection, PresentationFactValueKind.Vector2),
             new CharacterPresentationFactDeclaration(FacingError, PresentationFactValueKind.Float),
             new CharacterPresentationFactDeclaration(MotionPhase, PresentationFactValueKind.Enum),
@@ -258,10 +260,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float horizontalAcceleration,
             float verticalSpeed,
             Vector2 movementDirection,
+            Vector2 locomotionPlanarBasis,
+            Vector2 desiredPlanarVelocity,
             Vector2 desiredDirection,
             float facingError,
             CharacterPresentationMotionPhase motionPhase,
             string movementModeId,
+            CommittedMovementPlaybackClock movementPlaybackClock,
+            double movementPlaybackTime,
             ulong bodyDiscontinuityGeneration)
         {
             if (!identity.IsValid || !simulationTick.IsValid ||
@@ -270,11 +276,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !float.IsFinite(horizontalAcceleration) || horizontalAcceleration < 0f ||
                 !float.IsFinite(verticalSpeed) ||
                 !IsFinite(movementDirection) || movementDirection.sqrMagnitude > 1.0001f ||
+                !IsFinite(locomotionPlanarBasis) || locomotionPlanarBasis.sqrMagnitude > 1.0001f ||
+                !IsFinite(desiredPlanarVelocity) ||
                 !IsFinite(desiredDirection) || desiredDirection.sqrMagnitude > 1.0001f ||
                 !float.IsFinite(facingError) ||
                 (byte)motionPhase < (byte)CharacterPresentationMotionPhase.GroundedStationary ||
                 (byte)motionPhase > (byte)CharacterPresentationMotionPhase.AirborneFalling ||
                 string.IsNullOrWhiteSpace(movementModeId) ||
+                movementPlaybackClock.IsValid && movementPlaybackClock.AuthorityTick.Value > simulationTick.Value ||
+                !double.IsFinite(movementPlaybackTime) || movementPlaybackTime < 0d ||
                 bodyDiscontinuityGeneration == 0)
             {
                 throw new ArgumentException("Presentation Fact frame is incomplete.");
@@ -287,10 +297,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             HorizontalAcceleration = horizontalAcceleration;
             VerticalSpeed = verticalSpeed;
             MovementDirection = movementDirection;
+            LocomotionPlanarBasis = locomotionPlanarBasis;
+            DesiredPlanarVelocity = desiredPlanarVelocity;
             DesiredDirection = desiredDirection;
             FacingError = facingError;
             MotionPhase = motionPhase;
             MovementModeId = movementModeId.Trim();
+            MovementPlaybackClock = movementPlaybackClock;
+            MovementPlaybackTime = movementPlaybackTime;
             BodyDiscontinuityGeneration = bodyDiscontinuityGeneration;
         }
 
@@ -302,10 +316,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public float HorizontalAcceleration { get; }
         public float VerticalSpeed { get; }
         public Vector2 MovementDirection { get; }
+        public Vector2 LocomotionPlanarBasis { get; }
+        public Vector2 DesiredPlanarVelocity { get; }
         public Vector2 DesiredDirection { get; }
         public float FacingError { get; }
         public CharacterPresentationMotionPhase MotionPhase { get; }
         public string MovementModeId { get; }
+        public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
+        public double MovementPlaybackTime { get; }
         public ulong BodyDiscontinuityGeneration { get; }
         public bool IsValid => Identity.IsValid && SimulationTick.IsValid && BodyDiscontinuityGeneration != 0;
 
@@ -335,6 +353,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 value = CharacterPresentationFactValue.FromFloat(VerticalSpeed);
             else if (factId == CharacterPresentationFactSchema.MovementDirection)
                 value = CharacterPresentationFactValue.FromVector2(MovementDirection);
+            else if (factId == CharacterPresentationFactSchema.LocomotionPlanarBasis)
+                value = CharacterPresentationFactValue.FromVector2(LocomotionPlanarBasis);
             else if (factId == CharacterPresentationFactSchema.DesiredDirection)
                 value = CharacterPresentationFactValue.FromVector2(DesiredDirection);
             else if (factId == CharacterPresentationFactSchema.FacingError)
@@ -466,10 +486,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 acceleration,
                 velocity.y,
                 movementDirection,
+                intent.LocomotionPlanarBasis,
+                intent.DesiredPlanarVelocity,
                 desiredDirection,
                 facingError,
                 ResolveMotionPhase(bodyFrame.TargetGrounded, intent.HasMotion, speed, velocity.y),
                 intent.MovementModeId,
+                intent.MovementPlaybackClock,
+                intent.MovementPlaybackTime,
                 m_BodyDiscontinuityGeneration);
             m_PreviousFrame = frame;
             m_PreviousPlanarVelocity = planarVelocity;
@@ -595,30 +619,42 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly struct IntentSample
         {
             IntentSample(
+                Vector2 locomotionPlanarBasis,
                 Vector2 desiredPlanarVelocity,
                 Vector2 desiredFacing,
                 bool hasMotion,
-                string movementModeId)
+                string movementModeId,
+                CommittedMovementPlaybackClock movementPlaybackClock,
+                double movementPlaybackTime)
             {
                 if (string.IsNullOrWhiteSpace(movementModeId))
                     throw new ArgumentException("Presentation Intent movement mode identity is missing.", nameof(movementModeId));
+                LocomotionPlanarBasis = locomotionPlanarBasis;
                 DesiredPlanarVelocity = desiredPlanarVelocity;
                 DesiredFacing = desiredFacing;
                 HasMotion = hasMotion;
                 MovementModeId = movementModeId;
+                MovementPlaybackClock = movementPlaybackClock;
+                MovementPlaybackTime = movementPlaybackTime;
             }
 
+            internal Vector2 LocomotionPlanarBasis { get; }
             internal Vector2 DesiredPlanarVelocity { get; }
             internal Vector2 DesiredFacing { get; }
             internal bool HasMotion { get; }
             internal string MovementModeId { get; }
+            internal CommittedMovementPlaybackClock MovementPlaybackClock { get; }
+            internal double MovementPlaybackTime { get; }
 
             internal static IntentSample From(CharacterPresentationTrajectoryIntent intent) =>
                 new IntentSample(
+                    intent.LocomotionPlanarBasis,
                     intent.DesiredPlanarVelocity,
                     intent.DesiredFacing,
                     intent.HasMotion,
-                    intent.MovementModeId);
+                    intent.MovementModeId,
+                    intent.MovementPlaybackClock,
+                    intent.MovementPlaybackClock.ElapsedSeconds);
 
             internal static IntentSample Lerp(
                 CharacterPresentationTrajectoryIntent previous,
@@ -633,11 +669,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     previous.DesiredFacing.x * cos - previous.DesiredFacing.y * sin,
                     previous.DesiredFacing.x * sin + previous.DesiredFacing.y * cos);
                 bool useCurrentDiscrete = alpha >= 1f;
+                CommittedMovementPlaybackClock previousClock = previous.MovementPlaybackClock;
+                CommittedMovementPlaybackClock currentClock = current.MovementPlaybackClock;
+                bool sameMovementClock = previousClock.IsValid &&
+                                         currentClock.IsValid &&
+                                         previousClock.Generation == currentClock.Generation &&
+                                         string.Equals(
+                                             previousClock.OwnerIdentity,
+                                             currentClock.OwnerIdentity,
+                                             StringComparison.Ordinal);
+                if (sameMovementClock &&
+                    (currentClock.AuthorityTick.Value <= previousClock.AuthorityTick.Value ||
+                     currentClock.ContinuousTicks < previousClock.ContinuousTicks))
+                {
+                    throw new InvalidOperationException("Committed Movement playback clock is not monotonic within one identity.");
+                }
+                double previousMotionTime = previousClock.ElapsedSeconds;
+                double currentMotionTime = currentClock.ElapsedSeconds;
+                double movementPlaybackTime = sameMovementClock
+                    ? previousMotionTime + (currentMotionTime - previousMotionTime) * alpha
+                    : useCurrentDiscrete ? currentMotionTime : previousMotionTime;
                 return new IntentSample(
+                    Vector2.Lerp(previous.LocomotionPlanarBasis, current.LocomotionPlanarBasis, alpha),
                     Vector2.Lerp(previous.DesiredPlanarVelocity, current.DesiredPlanarVelocity, alpha),
                     facing.normalized,
                     useCurrentDiscrete ? current.HasMotion : previous.HasMotion,
-                    useCurrentDiscrete ? current.MovementModeId : previous.MovementModeId);
+                    useCurrentDiscrete ? current.MovementModeId : previous.MovementModeId,
+                    useCurrentDiscrete ? currentClock : previousClock,
+                    movementPlaybackTime);
             }
         }
     }

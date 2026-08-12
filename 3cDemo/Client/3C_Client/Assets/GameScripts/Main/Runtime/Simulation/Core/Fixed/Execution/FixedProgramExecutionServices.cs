@@ -33,7 +33,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly ProgramExecutionLayout m_Layout;
         readonly string[] m_OperationSourcePaths;
-        readonly IReadOnlyDictionary<int, ProgramCurve> m_TimelineCurves;
+        readonly IReadOnlyDictionary<int, ProgramCurve> m_ProgramCurves;
         readonly PortableTagQuery[] m_TagQueries;
         readonly SimulationSetByCallerValue[][] m_SetByCallerValues;
         readonly IReadOnlyDictionary<GameplayCueProducerKey, ProgramProducer> m_GameplayCueProducers;
@@ -67,7 +67,7 @@ namespace ThirdPersonSimulation.Fixed
                 program.Manifest.OperationSetVersion,
                 program.Manifest.NumericProfile);
             Topology = topology;
-            m_TimelineCurves = BuildTimelineCurves(program);
+            m_ProgramCurves = BuildProgramCurves(program);
             m_TagQueries = BuildTagQueries(program);
             m_SetByCallerValues = BuildSetByCallerValues(program);
             GameplayEffectProgram = new SimulationGameplayEffectProgram(program);
@@ -83,6 +83,7 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateSemantic.RunnableChildCursor,
                 ProgramStateSemantic.RunnableStopBarrier,
                 ProgramStateSemantic.RunnableActivationGeneration,
+                ProgramStateSemantic.LocomotionMotionElapsedTicks,
                 ProgramStateSemantic.StateMachineActive,
                 ProgramStateSemantic.StateMachinePending,
                 ProgramStateSemantic.StateMachineExiting,
@@ -158,8 +159,8 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (constant == null)
                 throw new ArgumentNullException(nameof(constant));
-            if (!m_TimelineCurves.TryGetValue(constant.Index, out ProgramCurve curve))
-                throw new InvalidDataException($"Timeline curve '{identity}' was not compiled into Program execution services.");
+            if (!m_ProgramCurves.TryGetValue(constant.Index, out ProgramCurve curve))
+                throw new InvalidDataException($"Program curve '{identity}' was not compiled into Program execution services.");
             return curve;
         }
 
@@ -236,7 +237,7 @@ namespace ThirdPersonSimulation.Fixed
             return false;
         }
 
-        static IReadOnlyDictionary<int, ProgramCurve> BuildTimelineCurves(CharacterSimulationProgram program)
+        static IReadOnlyDictionary<int, ProgramCurve> BuildProgramCurves(CharacterSimulationProgram program)
         {
             var result = new Dictionary<int, ProgramCurve>();
             for (int entryIndex = 0; entryIndex < program.CatalogEntries.Count; entryIndex++)
@@ -260,6 +261,18 @@ namespace ThirdPersonSimulation.Fixed
                         throw new InvalidDataException($"Timeline curve '{entry.Identity}/{field.Name}' is empty.");
                     result.Add(constant.Index, ProgramCurveCodec.Read(bytes));
                 }
+            }
+            for (int i = 0; i < program.Constants.Count; i++)
+            {
+                ProgramConstant constant = program.Constants[i];
+                if (constant.Kind != ProgramConstantKind.Bytes || result.ContainsKey(constant.Index) ||
+                    !OperationNamedConstantSchema.TryParseIdentity(constant.Identity, out OperationNamedConstant field) ||
+                    field != OperationNamedConstant.ActionMotionPositionX && field != OperationNamedConstant.ActionMotionPositionZ)
+                    continue;
+                byte[] bytes = constant.Bytes.ToArray();
+                if (bytes.Length == 0)
+                    throw new InvalidDataException($"Program curve '{constant.Identity}' is empty.");
+                result.Add(constant.Index, ProgramCurveCodec.Read(bytes));
             }
             return result;
         }

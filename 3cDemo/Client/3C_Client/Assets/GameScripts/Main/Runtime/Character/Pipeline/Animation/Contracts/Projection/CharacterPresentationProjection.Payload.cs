@@ -143,8 +143,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     PosePlan.FootGroundings[profileIndex];
                 CharacterLyraCurrentGroundingSettings current =
                     descriptor.Profile.LyraCurrentGrounding.Build();
-                CharacterPredictiveFootPlacementRuntimeSettings predictive =
-                    descriptor.Profile.PredictiveExtension.Build();
                 string ownerId = $"foot-placement-profile:{descriptor.Profile.ProfileId}";
                 for (int entryIndex = 0; entryIndex < TuningLayout.Entries.Count; entryIndex++)
                 {
@@ -156,9 +154,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     if (entry.FieldId.EndsWith("/lyra-current-grounding/hit-capacity", StringComparison.Ordinal) &&
                         value.IntegerValue != current.HitCapacity)
                         throw new InvalidOperationException("Character Presentation Projection Foot Placement hit capacity is stale.");
-                    if (entry.FieldId.EndsWith("/predictive/path-sample-count", StringComparison.Ordinal) &&
-                        value.IntegerValue != predictive.PathSampleCount)
-                        throw new InvalidOperationException("Character Presentation Projection Foot Placement path sample capacity is stale.");
                 }
             }
         }

@@ -79,7 +79,7 @@ Shader "Hidden/3C/CharacterShapeProjectionComposite"
                     displayPixel = atlasPixel * _ShapeAtlasSize.zw * _ShapeScreenSize.xy;
                 float2 uv = displayPixel * _ShapeScreenSize.zw;
                 Varyings output;
-                output.Position = float4(uv * 2.0 - 1.0, 0.0, 1.0);
+                output.Position = ComputeClipSpacePosition(uv, 0.0);
                 output.RegionIndex = instanceId;
                 output.ScreenPixel = sourcePixel;
                 output.AtlasPixel = atlasPixel;

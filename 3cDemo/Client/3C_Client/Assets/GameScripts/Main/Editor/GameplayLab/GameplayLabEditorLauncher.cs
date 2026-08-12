@@ -21,6 +21,7 @@ namespace ThirdPersonGameplay.Editor.Lab
     internal static class GameplayLabEditorLauncher
     {
         public const string ScenePath = "Assets/Scenes/GameplayLab/GameplayLab.unity";
+        public const string FootIkEnduranceVariantId = "gameplay-lab.foot-ik-endurance-fixed-q32.32";
         const string PlayerPrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab";
 
         internal static void Open()
@@ -59,6 +60,24 @@ namespace ThirdPersonGameplay.Editor.Lab
             {
                 GameplayLabBootstrap bootstrap = RequireBootstrap(scene);
                 bootstrap.SetStartupVariantIndex(variantIndex);
+            });
+        }
+
+        [MenuItem("Tools/3C/Gameplay Lab/Play Foot IK Endurance")]
+        static void PlayFootIkEndurance()
+        {
+            Validate();
+            EditorPlayModeSceneLauncher.Play(ScenePath, scene =>
+            {
+                GameplayLabBootstrap bootstrap = RequireBootstrap(scene);
+                int index = bootstrap.Variants
+                    .Select((variant, variantIndex) => new { variant, variantIndex })
+                    .Single(value => string.Equals(
+                        value.variant.VariantId,
+                        FootIkEnduranceVariantId,
+                        StringComparison.Ordinal))
+                    .variantIndex;
+                bootstrap.SetStartupVariantIndex(index);
             });
         }
 
@@ -113,8 +132,8 @@ namespace ThirdPersonGameplay.Editor.Lab
 
         static void ValidateVariants(GameplayLabBootstrap bootstrap)
         {
-            if (bootstrap.Variants.Count != 3)
-                throw new InvalidOperationException($"Gameplay Lab requires exactly Local Fixed, Local Float32 and Rollback Variants, found {bootstrap.Variants.Count}.");
+            if (bootstrap.Variants.Count != 4)
+                throw new InvalidOperationException($"Gameplay Lab requires exactly Local Fixed, Foot IK Endurance, Local Float32 and Rollback Variants, found {bootstrap.Variants.Count}.");
             var ids = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < bootstrap.Variants.Count; i++)
             {
@@ -127,16 +146,20 @@ namespace ThirdPersonGameplay.Editor.Lab
                 ValidateRuntimeRoot(variant);
             }
             if (!ids.Contains("gameplay-lab.local-fixed-q32.32") ||
+                !ids.Contains(FootIkEnduranceVariantId) ||
                 !ids.Contains("gameplay-lab.local-float32") ||
                 !ids.Contains("gameplay-lab.deterministic-rollback"))
-                throw new InvalidOperationException("Gameplay Lab requires the exact Local Fixed, Local Float32 and Deterministic Rollback Variants.");
+                throw new InvalidOperationException("Gameplay Lab requires the exact Local Fixed, Foot IK Endurance, Local Float32 and Deterministic Rollback Variants.");
             GameplayLabSessionVariantDefinition localFixed = bootstrap.Variants.Single(
                 value => string.Equals(value.VariantId, "gameplay-lab.local-fixed-q32.32", StringComparison.Ordinal));
             GameplayLabSessionVariantDefinition localFloat = bootstrap.Variants.Single(
                 value => string.Equals(value.VariantId, "gameplay-lab.local-float32", StringComparison.Ordinal));
+            GameplayLabSessionVariantDefinition footIkEndurance = bootstrap.Variants.Single(
+                value => string.Equals(value.VariantId, FootIkEnduranceVariantId, StringComparison.Ordinal));
             GameplayLabSessionVariantDefinition rollback = bootstrap.Variants.Single(
                 value => string.Equals(value.VariantId, "gameplay-lab.deterministic-rollback", StringComparison.Ordinal));
-            if (localFixed.IsExternalLaunchVariant || localFloat.IsExternalLaunchVariant || !rollback.IsExternalLaunchVariant)
+            if (localFixed.IsExternalLaunchVariant || localFloat.IsExternalLaunchVariant ||
+                footIkEndurance.IsExternalLaunchVariant || !rollback.IsExternalLaunchVariant)
                 throw new InvalidOperationException("Only the Deterministic Rollback Variant may use external launch.");
             RequireSharedClosure(localFixed, rollback);
         }
@@ -173,6 +196,10 @@ namespace ThirdPersonGameplay.Editor.Lab
                 variant.NumericProfileId,
                 "float32-ieee754",
                 StringComparison.Ordinal);
+            bool footIkEnduranceVariant = string.Equals(
+                variant.VariantId,
+                FootIkEnduranceVariantId,
+                StringComparison.Ordinal);
             if (!rollbackVariant)
             {
                 int localOwners = root.GetComponentsInChildren<FixedCharacterHost>(true)
@@ -201,10 +228,16 @@ namespace ThirdPersonGameplay.Editor.Lab
             {
                 FixedCharacterHost[] characters = root.GetComponentsInChildren<FixedCharacterHost>(true);
                 if (characters.Any(character => !character.ControlSource) ||
-                    characters.Count(character => character.ControlSource is FixedPlayerCharacterControlSource) != 1 ||
+                    characters.Count(character => character.ControlSource is FixedPlayerCharacterControlSource) !=
+                    (footIkEnduranceVariant ? 0 : 1) ||
+                    characters.Count(character => character.ControlSource is GameplayLabFootIkFixedControlSource) !=
+                    (footIkEnduranceVariant ? 1 : 0) ||
                     characters.Count(character => character.ControlSource is FixedNeutralCharacterControlSource) != 1)
                 {
-                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires one persisted Fixed Player Control Source and one persisted Fixed Neutral Control Source.");
+                    throw new InvalidOperationException(
+                        footIkEnduranceVariant
+                            ? $"Gameplay Lab Variant '{variant.VariantId}' requires one persisted Foot IK Endurance Control Source and one persisted Fixed Neutral Control Source."
+                            : $"Gameplay Lab Variant '{variant.VariantId}' requires one persisted Fixed Player Control Source and one persisted Fixed Neutral Control Source.");
                 }
             }
             if (floatVariant)

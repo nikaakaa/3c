@@ -335,8 +335,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         actorId,
                         footPlacementSettings,
                         rig,
-                        physicsScene,
-                        projection.PosePlan.PredictiveFootPlacementModifiers.Count == 1);
+                        physicsScene);
                 }
                 if (cameraRig)
                 {

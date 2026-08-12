@@ -19,7 +19,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField, Range(0f, 1f)] float m_FootOffsetTargetVelocityAmount = 0.2f;
         [SerializeField] float m_PelvisOffsetSpringStrength = 2.5f;
         [SerializeField] float m_PelvisOffsetCriticalDamping = 1f;
-        [SerializeField, Range(0f, 1f)] float m_PelvisOffsetTargetVelocityAmount = 0.2f;
 
         public CharacterLyraCurrentGroundingSettings Build()
         {
@@ -35,8 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_FootOffsetCriticalDamping,
                 m_FootOffsetTargetVelocityAmount,
                 m_PelvisOffsetSpringStrength,
-                m_PelvisOffsetCriticalDamping,
-                m_PelvisOffsetTargetVelocityAmount);
+                m_PelvisOffsetCriticalDamping);
             value.RequireValid();
             return value;
         }
@@ -59,7 +57,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case "foot-offset-target-velocity-amount": m_FootOffsetTargetVelocityAmount = value.FloatValue; break;
                 case "pelvis-offset-spring-strength": m_PelvisOffsetSpringStrength = value.FloatValue; break;
                 case "pelvis-offset-critical-damping": m_PelvisOffsetCriticalDamping = value.FloatValue; break;
-                case "pelvis-offset-target-velocity-amount": m_PelvisOffsetTargetVelocityAmount = value.FloatValue; break;
                 default: throw new InvalidOperationException($"Lyra Current Grounding tuning field '{fieldPath}' is not declared.");
             }
             _ = Build();
@@ -132,18 +129,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_SwingCapsuleRadius = 0.05f;
         [SerializeField] float m_CastAbove = 0.35f;
         [SerializeField] float m_CastBelow = 0.75f;
-        [SerializeField, Range(1, 6)] int m_PathSampleCount = 3;
         [SerializeField, Range(0f, 89f)] float m_MaximumSlopeDegrees = 55f;
         [SerializeField] float m_MaximumStepUp = 0.45f;
         [SerializeField] float m_MaximumStepDown = 0.65f;
         [SerializeField] float m_MaximumHeightDiscontinuity = 0.35f;
         [SerializeField] float m_MaximumEdgeGap = 0.4f;
-        [SerializeField] float m_MaximumSwingClearance = 0.16f;
         [SerializeField, Range(0f, 1f)] float m_MinimumLandingConfidence = 0.25f;
-        [SerializeField] float m_MinimumLookAheadSeconds = 0.04f;
-        [SerializeField] float m_MaximumLookAheadSeconds = 0.22f;
-        [SerializeField] float m_MaximumYawVelocityDegreesPerSecond = 540f;
-        [SerializeField] float m_MaximumPredictionDistance = 0.65f;
         [SerializeField, Range(0.5f, 1.25f)] float m_MaximumPredictionReachRatio = 0.98f;
 
         public CharacterPredictiveFootPlacementRuntimeSettings Build()
@@ -153,18 +144,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_SwingCapsuleRadius,
                 m_CastAbove,
                 m_CastBelow,
-                m_PathSampleCount,
                 m_MaximumSlopeDegrees,
                 m_MaximumStepUp,
                 m_MaximumStepDown,
                 m_MaximumHeightDiscontinuity,
                 m_MaximumEdgeGap,
-                m_MaximumSwingClearance,
                 m_MinimumLandingConfidence,
-                m_MinimumLookAheadSeconds,
-                m_MaximumLookAheadSeconds,
-                m_MaximumYawVelocityDegreesPerSecond,
-                m_MaximumPredictionDistance,
                 m_MaximumPredictionReachRatio);
             value.RequireValid();
             return value;
@@ -172,8 +157,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal void ApplyTuning(string fieldPath, CharacterPoseTuningValue value)
         {
-            if (fieldPath == "path-sample-count")
-                throw new InvalidOperationException("Predictive Foot Placement path sample count is Structural.");
             if (value.Kind != CharacterPoseTuningValueKind.Float)
                 throw new InvalidOperationException($"Predictive Extension tuning field '{fieldPath}' requires a float.");
             switch (fieldPath)
@@ -187,12 +170,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case "maximum-step-down": m_MaximumStepDown = value.FloatValue; break;
                 case "maximum-height-discontinuity": m_MaximumHeightDiscontinuity = value.FloatValue; break;
                 case "maximum-edge-gap": m_MaximumEdgeGap = value.FloatValue; break;
-                case "maximum-swing-clearance": m_MaximumSwingClearance = value.FloatValue; break;
                 case "minimum-landing-confidence": m_MinimumLandingConfidence = value.FloatValue; break;
-                case "minimum-look-ahead-seconds": m_MinimumLookAheadSeconds = value.FloatValue; break;
-                case "maximum-look-ahead-seconds": m_MaximumLookAheadSeconds = value.FloatValue; break;
-                case "maximum-yaw-velocity": m_MaximumYawVelocityDegreesPerSecond = value.FloatValue; break;
-                case "maximum-prediction-distance": m_MaximumPredictionDistance = value.FloatValue; break;
                 case "maximum-prediction-reach-ratio": m_MaximumPredictionReachRatio = value.FloatValue; break;
                 default: throw new InvalidOperationException($"Predictive Extension tuning field '{fieldPath}' is not declared.");
             }
@@ -214,8 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float footOffsetCriticalDamping,
             float footOffsetTargetVelocityAmount,
             float pelvisOffsetSpringStrength,
-            float pelvisOffsetCriticalDamping,
-            float pelvisOffsetTargetVelocityAmount)
+            float pelvisOffsetCriticalDamping)
         {
             GroundLayerMask = groundLayerMask;
             HitCapacity = hitCapacity;
@@ -229,7 +206,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootOffsetTargetVelocityAmount = footOffsetTargetVelocityAmount;
             PelvisOffsetSpringStrength = pelvisOffsetSpringStrength;
             PelvisOffsetCriticalDamping = pelvisOffsetCriticalDamping;
-            PelvisOffsetTargetVelocityAmount = pelvisOffsetTargetVelocityAmount;
         }
 
         public int GroundLayerMask { get; }
@@ -244,7 +220,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float FootOffsetTargetVelocityAmount { get; }
         public float PelvisOffsetSpringStrength { get; }
         public float PelvisOffsetCriticalDamping { get; }
-        public float PelvisOffsetTargetVelocityAmount { get; }
 
         public void RequireValid()
         {
@@ -257,7 +232,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireSpring(FootOffsetSpringStrength, FootOffsetCriticalDamping, nameof(FootOffsetSpringStrength));
             RequireSpring(PelvisOffsetSpringStrength, PelvisOffsetCriticalDamping, nameof(PelvisOffsetSpringStrength));
             RequireRange(FootOffsetTargetVelocityAmount, 0f, 1f, nameof(FootOffsetTargetVelocityAmount));
-            RequireRange(PelvisOffsetTargetVelocityAmount, 0f, 1f, nameof(PelvisOffsetTargetVelocityAmount));
         }
 
         static void RequireSpring(float strength, float damping, string field)
@@ -358,36 +332,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float swingCapsuleRadius,
             float castAbove,
             float castBelow,
-            int pathSampleCount,
             float maximumSlopeDegrees,
             float maximumStepUp,
             float maximumStepDown,
             float maximumHeightDiscontinuity,
             float maximumEdgeGap,
-            float maximumSwingClearance,
             float minimumLandingConfidence,
-            float minimumLookAheadSeconds,
-            float maximumLookAheadSeconds,
-            float maximumYawVelocityDegreesPerSecond,
-            float maximumPredictionDistance,
             float maximumPredictionReachRatio)
         {
             PathSphereRadius = pathSphereRadius;
             SwingCapsuleRadius = swingCapsuleRadius;
             CastAbove = castAbove;
             CastBelow = castBelow;
-            PathSampleCount = pathSampleCount;
             MaximumSlopeDegrees = maximumSlopeDegrees;
             MaximumStepUp = maximumStepUp;
             MaximumStepDown = maximumStepDown;
             MaximumHeightDiscontinuity = maximumHeightDiscontinuity;
             MaximumEdgeGap = maximumEdgeGap;
-            MaximumSwingClearance = maximumSwingClearance;
             MinimumLandingConfidence = minimumLandingConfidence;
-            MinimumLookAheadSeconds = minimumLookAheadSeconds;
-            MaximumLookAheadSeconds = maximumLookAheadSeconds;
-            MaximumYawVelocityDegreesPerSecond = maximumYawVelocityDegreesPerSecond;
-            MaximumPredictionDistance = maximumPredictionDistance;
             MaximumPredictionReachRatio = maximumPredictionReachRatio;
         }
 
@@ -395,18 +357,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float SwingCapsuleRadius { get; }
         public float CastAbove { get; }
         public float CastBelow { get; }
-        public int PathSampleCount { get; }
         public float MaximumSlopeDegrees { get; }
         public float MaximumStepUp { get; }
         public float MaximumStepDown { get; }
         public float MaximumHeightDiscontinuity { get; }
         public float MaximumEdgeGap { get; }
-        public float MaximumSwingClearance { get; }
         public float MinimumLandingConfidence { get; }
-        public float MinimumLookAheadSeconds { get; }
-        public float MaximumLookAheadSeconds { get; }
-        public float MaximumYawVelocityDegreesPerSecond { get; }
-        public float MaximumPredictionDistance { get; }
         public float MaximumPredictionReachRatio { get; }
 
         public void RequireValid()
@@ -415,21 +371,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterLyraCurrentGroundingSettings.RequirePositive(SwingCapsuleRadius, nameof(SwingCapsuleRadius));
             CharacterLyraCurrentGroundingSettings.RequirePositive(CastAbove, nameof(CastAbove));
             CharacterLyraCurrentGroundingSettings.RequirePositive(CastBelow, nameof(CastBelow));
-            if (PathSampleCount < 1 || PathSampleCount > 6)
-                throw new InvalidOperationException("Predictive Extension path sample count is invalid.");
             CharacterLyraCurrentGroundingSettings.RequireRange(MaximumSlopeDegrees, 0f, 89f, nameof(MaximumSlopeDegrees));
             CharacterLyraCurrentGroundingSettings.RequireNonNegative(MaximumStepUp, nameof(MaximumStepUp));
             CharacterLyraCurrentGroundingSettings.RequireNonNegative(MaximumStepDown, nameof(MaximumStepDown));
             CharacterLyraCurrentGroundingSettings.RequireNonNegative(MaximumHeightDiscontinuity, nameof(MaximumHeightDiscontinuity));
             CharacterLyraCurrentGroundingSettings.RequireNonNegative(MaximumEdgeGap, nameof(MaximumEdgeGap));
-            CharacterLyraCurrentGroundingSettings.RequireNonNegative(MaximumSwingClearance, nameof(MaximumSwingClearance));
             CharacterLyraCurrentGroundingSettings.RequireRange(MinimumLandingConfidence, 0f, 1f, nameof(MinimumLandingConfidence));
-            CharacterLyraCurrentGroundingSettings.RequireNonNegative(MinimumLookAheadSeconds, nameof(MinimumLookAheadSeconds));
-            CharacterLyraCurrentGroundingSettings.RequirePositive(MaximumLookAheadSeconds, nameof(MaximumLookAheadSeconds));
-            if (MinimumLookAheadSeconds >= MaximumLookAheadSeconds)
-                throw new InvalidOperationException("Predictive Extension look-ahead range is invalid.");
-            CharacterLyraCurrentGroundingSettings.RequirePositive(MaximumYawVelocityDegreesPerSecond, nameof(MaximumYawVelocityDegreesPerSecond));
-            CharacterLyraCurrentGroundingSettings.RequirePositive(MaximumPredictionDistance, nameof(MaximumPredictionDistance));
             CharacterLyraCurrentGroundingSettings.RequireRange(MaximumPredictionReachRatio, 0.5f, 1.25f, nameof(MaximumPredictionReachRatio));
         }
     }

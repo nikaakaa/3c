@@ -239,6 +239,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequireAlive();
             RequireOpenFrame();
+            if (continuousTime < m_ContinuousTime)
+            {
+                m_HasCompletedFrame = false;
+                m_ContinuityIdentity = AllocateContinuityIdentity();
+                m_ResetSequence = AllocateResetSequence();
+                m_PendingResetReason = PoseDiscontinuityResetReason.BranchReplacement;
+            }
             SetClock(continuousTime);
         }
 
@@ -339,11 +346,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 if (sample.HasFootFeatures)
                 {
                     left.Add(
-                        sample.LeftFootFeatures.Sample(time.NormalizedTime),
+                        sample.LeftFootFeatures.Sample(time.NormalizedTime).BindPredictionSource(
+                            AnimationPredictedFootStepSample.SourceIdentity(m_SourceId, sample.SampleId.Value),
+                            time.Cycle,
+                            time.ClipTime,
+                            sample.Clip.length,
+                            looping),
                         weight,
                         1f);
                     right.Add(
-                        sample.RightFootFeatures.Sample(time.NormalizedTime),
+                        sample.RightFootFeatures.Sample(time.NormalizedTime).BindPredictionSource(
+                            AnimationPredictedFootStepSample.SourceIdentity(m_SourceId, sample.SampleId.Value),
+                            time.Cycle,
+                            time.ClipTime,
+                            sample.Clip.length,
+                            looping),
                         weight,
                         1f);
                 }

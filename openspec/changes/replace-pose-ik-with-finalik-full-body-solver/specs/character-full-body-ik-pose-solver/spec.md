@@ -1,20 +1,14 @@
 ## MODIFIED Requirements
 
-### Requirement: FullBodyIK只消费最终Foot Goal并拒绝同slot基础与扩展并行输入
+### Requirement: FullBodyIK只消费统一Foot Placement最终Goal
 
-`FullBodyIK` MUST消费一个最终Foot Goal Set与任意不重叠的其它Goal Sets。普通拓扑中最终Foot Goal Set由`FootGrounding`按`Lyra Current Grounding -> Stance Stabilization -> Pelvis Resolve`发布；预测拓扑中最终Foot Goal Set MUST由`PredictiveFootPlacementModifier`只重写未被anchor拥有的Swing Foot slot后发布。`FootGrounding`基础Goal与Modifier最终Goal不得作为两个并行输入直接连接FullBodyIK；Compiler、Build Validator与Runtime MUST拒绝重复Foot slot，不得插入隐式Goal Merge、按port顺序覆盖或运行时择优。
+`FullBodyIK` MUST消费统一`FootPlacement`发布的一个最终Foot Goal Set与任意不重叠的其它Goal Sets。Current Support、Predictive Swing、Stance、Anchor与Pelvis MUST在该Goal Set发布前由同一Foot Placement owner完成。Compiler、Build Validator与Runtime MUST拒绝第二Foot Goal producer、独立Predictive Modifier、重复Foot slot、隐式Goal Merge、按port顺序覆盖或运行时择优。
 
-#### Scenario: 普通Lyra基线直接进入FullBodyIK
+#### Scenario: 统一Foot Placement进入FullBodyIK
 
-- **WHEN** 作者把FootGrounding Baseline Goals和不重叠Hand Goals连接到FullBodyIK
+- **WHEN** 作者把FootPlacement Goals和不重叠Hand Goals连接到FullBodyIK
 - **THEN** FullBodyIK MUST只合并这两个Goal Set并执行一次FBBIK
-- **AND** MUST不启动Future Landing、FinalIK Grounding或第二腿solver
-
-#### Scenario: 预测Modifier成为唯一Foot producer
-
-- **WHEN** 作者把FootGrounding连接到PredictiveFootPlacementModifier，再把Modifier输出连接到FullBodyIK
-- **THEN** FullBodyIK MUST只消费Modifier输出的最终Foot Goal Set
-- **AND** MUST拒绝FootGrounding基础Goal同时直连
+- **AND** MUST不启动第二Grounding、独立Predictive Modifier、FinalIK Grounding或第二腿solver
 
 ## ADDED Requirements
 
@@ -72,19 +66,19 @@ Compiler MUST拒绝重复Effector Slot、超出容量、跨Rig或无法建立唯
 
 #### Scenario: 最终Foot与Hand Goals来自两个Goal Source
 
-- **WHEN** FootGrounding或Modifier发布最终Pelvis/Feet goals且PoseBoneIKGoals发布Hands
+- **WHEN** FootPlacement发布最终Pelvis/Feet goals且PoseBoneIKGoals发布Hands
 - **THEN** Compiler MUST按稳定动态port顺序形成唯一Goal merge plan
 - **AND** FullBodyIK MUST在一次solve中消费全部不重叠slots
 
 #### Scenario: 两个Goal Set同时写LeftFoot
 
-- **WHEN** Graph把Baseline Foot Goal和Modifier Final Goal同时连接
+- **WHEN** Graph把FootPlacement Goal和另一个Foot Goal producer同时连接
 - **THEN** Build MUST报告LeftFoot重复producer
 - **AND** MUST不按port顺序覆盖
 
 ### Requirement: FullBodyIK必须按Lyra可见顺序应用pelvis与feet
 
-FullBodyIK MUST先复制输入Component Pose到独立Pending output，按最终Foot Goal Set中的唯一Component空间竖直`PelvisPreSolveTranslation`调整Pelvis subtree；随后 MUST把`FootPlacementEffectorTarget`的旋转作为foot pre-rotation写入Pending Pose，并把同一Goal的Component Position作为绝对effector position交付，使它在FinalIK `ReadPose`与`LimitBend`之后仍由Solve按绝对目标消费；再设置普通Body/Hand effectors，最后只执行一次FBBIK `ReadPose -> Solve -> WritePose`。Foot Position MUST不在FinalIK内部`LimitBend`修改腿链参考Pose之前预先降低成相对`positionOffset`；未提供的effectors MUST在本帧明确归零。
+FullBodyIK MUST先复制输入Component Pose到独立Pending output，按最终Foot Goal Set中的唯一Component空间`PelvisPreSolveTransform`及其显式pivot调整Pelvis subtree；该Transform只能由现有Stance Stabilization owner发布，包含经过双腿reach夹紧的竖直translation与有限body/pelvis rotation。随后 MUST把`FootPlacementEffectorTarget`的旋转作为foot pre-rotation写入Pending Pose，并把同一Goal的Component Position作为绝对effector position交付，使它在FinalIK `ReadPose`与`LimitBend`之后仍由Solve按绝对目标消费；再设置普通Body/Hand effectors，最后只执行一次FBBIK `ReadPose -> Solve -> WritePose`。Foot Position MUST不在FinalIK内部`LimitBend`修改腿链参考Pose之前预先降低成相对`positionOffset`；未提供的effectors MUST在本帧明确归零。
 
 FullBodyIK MUST不查询world、不读取AnimationClip或Foot Placement Profile、不决定trace/plant/swing、不平滑foot/pelvis，也 MUST不调用FinalIK Grounding、`GrounderFBBIK`、TwoBoneIK或LegIK。
 
@@ -96,7 +90,7 @@ FullBodyIK MUST不查询world、不读取AnimationClip或Foot Placement Profile�
 
 ### Requirement: FullBodyIK失败必须服从动画帧事务
 
-Goal lineage错误、Rig mapping错误、非有限输入、FinalIK mapping/solver失败、非有限输出，或满位置权重`FootPlacementEffectorTarget`的求解后位置残差超过`0.001m`，MUST产生typed failure，阻断ComponentToLocalPose、后续stage与FinalPublication。残差失败 MUST保留对应Goal Set、Foot Slot、目标、求解结果与残差诊断。若已跨过Animancer Evaluate Barrier，同一Actor Animation Runtime MUST进入Faulted，不得逆序恢复Player状态或Physical Bone快照，也不得发布只完成pelvis、单腿或手臂的部分Pose。
+Goal lineage错误、Rig mapping错误、非有限输入、FinalIK mapping/solver失败、非有限输出，或满位置权重`FootPlacementEffectorTarget`对应的FinalIK内部end-effector solver node位置残差超过`0.001m`，MUST产生typed failure，阻断ComponentToLocalPose、后续stage与FinalPublication。solver残差失败 MUST保留对应Goal Set、Foot Slot、绝对目标、solver node、映射后Physical Foot及两层残差诊断。若已跨过Animancer Evaluate Barrier，同一Actor Animation Runtime MUST进入Faulted，不得逆序恢复Player状态或Physical Bone快照，也不得发布只完成pelvis、单腿或手臂的部分Pose。映射后的Physical Foot位置残差只要有限，MUST不单独升级为solver失败。
 
 #### Scenario: FinalIK映射输出非有限旋转
 
@@ -104,15 +98,21 @@ Goal lineage错误、Rig mapping错误、非有限输入、FinalIK mapping/solve
 - **THEN** FullBodyIK MUST失败并阻断FinalPublication
 - **AND** MUST不沿用上一帧Solved Pose
 
-#### Scenario: 满权重Foot目标未被FBBIK满足
+#### Scenario: 满权重Foot目标未被FBBIK内部节点满足
 
-- **WHEN** LeftFoot或RightFoot使用满位置权重`FootPlacementEffectorTarget`且求解后位置残差超过`0.001m`
-- **THEN** FullBodyIK MUST返回`FootEffectorResidualExceeded`并报告对应Goal Set与Foot Slot
+- **WHEN** LeftFoot或RightFoot使用满位置权重`FootPlacementEffectorTarget`且对应end-effector solver node的求解后位置残差超过`0.001m`
+- **THEN** FullBodyIK MUST返回`FootEffectorSolverResidualExceeded`并报告对应Goal Set与Foot Slot
 - **AND** MUST阻断FinalPublication，不得把明显偏离目标的脚Pose作为成功帧发布
+
+#### Scenario: Rig映射产生有限Physical Foot残差
+
+- **WHEN** 满权重Foot的end-effector solver node残差不超过`0.001m`，但映射回真实Rig层级后的Physical Foot存在有限非零位置残差
+- **THEN** FullBodyIK MUST允许该完整Pose继续提交，并发布目标、solver node、Physical Foot与两层残差诊断
+- **AND** MUST不运行第二solver、后处理回拉或兼容路径
 
 ### Requirement: FullBodyIK必须提供分层只读诊断
 
-Diagnostics MUST只读暴露backend source identity、Rig binding、Profile revision、Goal Set lineage、每effector目标与权重、最终pelvis pre-solve translation、chain pull/reach、iterations、bend constraint、输入/输出Pose completion、residual与typed failure。Target Watch MUST分别观察Lyra Current Goals、Stance Stabilization Baseline Goals、可选Predictive Modifier Final Goals与Hand Goals。Diagnostics MUST从已完成固定workspace复制，不得第二次调用FinalIK、重新执行world query、创建Transform或遍历Animator反推。
+Diagnostics MUST只读暴露backend source identity、Rig binding、Profile revision、Goal Set lineage、每effector目标与权重、最终pelvis pre-solve transform及其pivot、chain pull/reach、iterations、bend constraint、输入/输出Pose completion、residual与typed failure。Target Watch MUST观察统一FootPlacement Final Goals与Hand Goals；Current Support、Prediction、Stance与Pelvis细节只从同一FootPlacement完成快照展开。Diagnostics MUST从已完成固定workspace复制，不得第二次调用FinalIK、重新执行world query、创建Transform或遍历Animator反推。
 
 #### Scenario: 排查右手与左脚互相拉扯
 

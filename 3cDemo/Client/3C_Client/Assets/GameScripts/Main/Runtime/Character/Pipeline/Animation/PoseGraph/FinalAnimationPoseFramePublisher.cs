@@ -349,7 +349,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !finalPhysicalInvalid && !graphInvalid ||
                 outcome != AnimationFinalPoseWriteOutcome.TypedInvalid)
             {
-                throw new InvalidOperationException("Final Animation Pose Graph Invalid completion metadata is inconsistent.");
+                throw new InvalidOperationException(
+                    $"Final Animation Pose Graph Invalid completion metadata is inconsistent. " +
+                    $"Availability={binding.Availability[0]}, OutputReason={outputReason}, " +
+                    $"GraphReason={graphReason}, InvalidOperation={invalidOperationIndex}, " +
+                    $"ContributionCount={binding.ContributionCount[0]}, AppliedAt={binding.AppliedAt[0]}, " +
+                    $"Completion={binding.CompletionIdentity}, GraphCompletedAt={binding.PoseGraphCompletedAt[0]}, " +
+                    $"Continuity={binding.ContinuityIdentity[0]}, WriteOutcome={outcome}.");
             }
             int poseOffset = checked(page * m_BoneCount);
             int parameterOffset = checked(page * m_ParameterCount);
@@ -456,8 +462,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             (int)value >= (int)AnimationPoseAvailability.Pose &&
             (int)value <= (int)AnimationPoseAvailability.Invalid;
         static bool IsInvalidReason(AnimationPoseNativeInvalidReason value) =>
-            (int)value >= (int)AnimationPoseNativeInvalidReason.None &&
-            (int)value <= (int)AnimationPoseNativeInvalidReason.WorldContextUnavailable;
+            AnimationPoseNativeInvalidReasonContract.IsDefined(value);
         static bool IsContributionKind(AnimationPoseContributionKind value) =>
             (int)value >= (int)AnimationPoseContributionKind.Live &&
             (int)value <= (int)AnimationPoseContributionKind.Stored;

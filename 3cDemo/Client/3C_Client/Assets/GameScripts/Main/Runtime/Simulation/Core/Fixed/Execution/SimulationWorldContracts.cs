@@ -18,20 +18,22 @@ namespace ThirdPersonSimulation.Fixed
             string sourceIdentity,
             FixedVector3 displacement,
             FixedVector3 requestedVelocity,
+            FixedVector2 locomotionPlanarBasis,
             FixedScalar yawDegrees,
             WorldMotionSpace space,
             bool hasMotion,
-            string locomotionOwnerIdentity,
+            CommittedMovementPlaybackClock movementPlaybackClock,
             string actionOwnerIdentity,
             string gameplayResultOwnerIdentity)
         {
             SourceIdentity = SimulationIdentity.Require(sourceIdentity, nameof(sourceIdentity));
             Displacement = displacement;
             RequestedVelocity = requestedVelocity;
+            LocomotionPlanarBasis = locomotionPlanarBasis;
             YawDegrees = yawDegrees;
             Space = space;
             HasMotion = hasMotion;
-            LocomotionOwnerIdentity = locomotionOwnerIdentity ?? string.Empty;
+            MovementPlaybackClock = movementPlaybackClock;
             ActionOwnerIdentity = actionOwnerIdentity ?? string.Empty;
             GameplayResultOwnerIdentity = gameplayResultOwnerIdentity ?? string.Empty;
         }
@@ -39,10 +41,11 @@ namespace ThirdPersonSimulation.Fixed
         public string SourceIdentity { get; }
         public FixedVector3 Displacement { get; }
         public FixedVector3 RequestedVelocity { get; }
+        public FixedVector2 LocomotionPlanarBasis { get; }
         public FixedScalar YawDegrees { get; }
         public WorldMotionSpace Space { get; }
         public bool HasMotion { get; }
-        public string LocomotionOwnerIdentity { get; }
+        public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
         public string ActionOwnerIdentity { get; }
         public string GameplayResultOwnerIdentity { get; }
     }
@@ -63,6 +66,8 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("World solve request identity is incomplete or inconsistent.");
             if (beforeBody.ActorId != actorId)
                 throw new ArgumentException("World solve request body does not match ActorId.", nameof(beforeBody));
+            if (motion.MovementPlaybackClock.IsValid && motion.MovementPlaybackClock.AuthorityTick != tick)
+                throw new ArgumentException("World solve request Movement playback clock does not match Tick.", nameof(motion));
             if (requiredCapabilities == WorldCapability.None)
                 throw new ArgumentOutOfRangeException(nameof(requiredCapabilities));
             if (bodyMotionPlan.ActorId != actorId || bodyMotionPlan.Tick != tick || !bodyMotionPlan.Identity.IsValid ||
@@ -320,9 +325,20 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteString(request.Motion.SourceIdentity);
             writer.WriteVector3(request.Motion.Displacement);
             writer.WriteVector3(request.Motion.RequestedVelocity);
+            writer.WriteVector2(request.Motion.LocomotionPlanarBasis);
             writer.WriteScalar(request.Motion.YawDegrees);
             writer.WriteByte((byte)request.Motion.Space);
             writer.WriteBoolean(request.Motion.HasMotion);
+            CommittedMovementPlaybackClock movementClock = request.Motion.MovementPlaybackClock;
+            writer.WriteBoolean(movementClock.IsValid);
+            if (movementClock.IsValid)
+            {
+                writer.WriteString(movementClock.OwnerIdentity);
+                writer.WriteUInt64(movementClock.Generation);
+                writer.WriteUInt64(movementClock.AuthorityTick.Value);
+                writer.WriteInt32(movementClock.ContinuousTicks);
+                writer.WriteInt32(movementClock.TickRate);
+            }
             WriteBodyMotionPlan(writer, request.BodyMotionPlan);
             writer.WriteUInt64((ulong)request.RequiredCapabilities);
         }

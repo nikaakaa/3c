@@ -25,7 +25,6 @@ namespace ThirdPersonRendering.ShapeProjection
         readonly int maxRegions;
         readonly int atlasWidth;
         readonly int atlasHeight;
-        AsyncGPUReadbackRequest readbackRequest;
         JobHandle contourHandle;
         double readbackStarted;
         double contourStarted;
@@ -39,7 +38,8 @@ namespace ThirdPersonRendering.ShapeProjection
         public readonly int[] ActiveRegionIndices;
         public readonly NativeArray<ShapeProjectionProjectedVertex> ProjectedVertices;
         public NativeArray<ShapeProjectionRegionGpu> RegionGpu;
-        public NativeArray<byte> MaskReadback;
+        public NativeArray<byte> ReadbackMask;
+        public readonly NativeArray<byte> ContourMask;
         public readonly NativeArray<ShapeProjectionBoundaryEdge> Edges;
         public readonly NativeArray<byte> EdgeUsed;
         public readonly NativeParallelMultiHashMap<int, int> EdgeStarts;
@@ -90,7 +90,9 @@ namespace ThirdPersonRendering.ShapeProjection
                 NativeArrayOptions.UninitializedMemory);
             RegionGpu = new NativeArray<ShapeProjectionRegionGpu>(capacity.MaxRegions, Allocator.Persistent,
                 NativeArrayOptions.ClearMemory);
-            MaskReadback = new NativeArray<byte>(capacity.AtlasWidth * capacity.AtlasHeight, Allocator.Persistent,
+            ReadbackMask = new NativeArray<byte>(capacity.AtlasWidth * capacity.AtlasHeight, Allocator.Persistent,
+                NativeArrayOptions.UninitializedMemory);
+            ContourMask = new NativeArray<byte>(capacity.AtlasWidth * capacity.AtlasHeight, Allocator.Persistent,
                 NativeArrayOptions.UninitializedMemory);
             Edges = new NativeArray<ShapeProjectionBoundaryEdge>(edgeCapacity, Allocator.Persistent,
                 NativeArrayOptions.UninitializedMemory);
@@ -151,13 +153,13 @@ namespace ThirdPersonRendering.ShapeProjection
             State = ShapeProjectionSlotState.Recorded;
         }
 
-        public void RequestReadback()
+        public void RecordReadback(CommandBuffer cmd)
         {
             if (State != ShapeProjectionSlotState.Recorded)
                 return;
             State = ShapeProjectionSlotState.Readback;
             readbackStarted = Time.realtimeSinceStartupAsDouble;
-            readbackRequest = AsyncGPUReadback.RequestIntoNativeArray(ref MaskReadback, MaskTexture.rt, 0,
+            cmd.RequestAsyncReadbackIntoNativeArray(ref ReadbackMask, MaskTexture.rt, 0,
                 GraphicsFormat.R8_UNorm, readbackCallback);
         }
 
@@ -222,13 +224,12 @@ namespace ThirdPersonRendering.ShapeProjection
 
         public void Dispose()
         {
-            if (State == ShapeProjectionSlotState.Readback && !readbackRequest.done)
-                readbackRequest.WaitForCompletion();
             if (State == ShapeProjectionSlotState.Contour)
                 contourHandle.Complete();
             DisposeNative(ProjectedVertices);
             DisposeNative(RegionGpu);
-            DisposeNative(MaskReadback);
+            DisposeNative(ReadbackMask);
+            DisposeNative(ContourMask);
             DisposeNative(Edges);
             DisposeNative(EdgeUsed);
             if (EdgeStarts.IsCreated) EdgeStarts.Dispose();
@@ -280,9 +281,10 @@ namespace ThirdPersonRendering.ShapeProjection
                 return;
             }
 
+            NativeArray<byte>.Copy(ReadbackMask, ContourMask);
             ShapeProjectionContourJob job = new ShapeProjectionContourJob
             {
-                Mask = MaskReadback,
+                Mask = ContourMask,
                 RegionGpu = RegionGpu,
                 Regions = owner.Regions,
                 RegionSharedChainIndices = owner.RegionSharedChainIndices,
@@ -292,8 +294,8 @@ namespace ThirdPersonRendering.ShapeProjection
                 RegionCount = owner.RegionCount,
                 AtlasWidth = atlasWidth,
                 AtlasHeight = atlasHeight,
-                SimplifyEpsilon = owner.Profile.SimplifyEpsilonPixels,
-                MinimumLoopArea = owner.Profile.MinimumLoopAreaPixels,
+                MaximumSimplifyEpsilon = owner.Profile.MaximumSimplifyEpsilonPixels,
+                MinimumSecondaryLoopArea = owner.Profile.MinimumSecondaryLoopAreaPixels,
                 MinimumSharedEdgeLength = owner.Profile.MinimumSharedEdgePixels,
                 Edges = Edges,
                 EdgeUsed = EdgeUsed,
@@ -358,6 +360,7 @@ namespace ThirdPersonRendering.ShapeProjection
         readonly Hash128 artifactHash;
         readonly int profileRevision;
         readonly int sourceGeneration;
+        int runtimeTuningRevision;
         bool hasCameraState;
         Vector3 lastCameraPosition;
         Quaternion lastCameraRotation;
@@ -402,6 +405,7 @@ namespace ThirdPersonRendering.ShapeProjection
             profileHash = source.Profile.ContentHash;
             artifactHash = artifact.ContentHash;
             profileRevision = source.Profile.Revision;
+            runtimeTuningRevision = source.Profile.RuntimeTuningRevision;
             sourceGeneration = source.Generation;
             ShapeProjectionCapacity capacity = source.Profile.Capacity;
             bakedMeshes = new Mesh[artifact.Renderers.Length];
@@ -506,6 +510,11 @@ namespace ThirdPersonRendering.ShapeProjection
                 SetFault("Source、Profile或Artifact在Workspace存活期间发生了lineage变化");
                 return null;
             }
+            if (runtimeTuningRevision != source.Profile.RuntimeTuningRevision)
+            {
+                runtimeTuningRevision = source.Profile.RuntimeTuningRevision;
+                InvalidateAll();
+            }
 
             ShapeProjectionFrameSlot slot = null;
             for (int i = 0; i < slots.Length; i++)
@@ -593,6 +602,7 @@ namespace ThirdPersonRendering.ShapeProjection
                 ViewportHeight = viewportHeight,
                 ProfileId = source.Profile.ProfileId,
                 ProfileRevision = source.Profile.Revision,
+                ProfileRuntimeTuningRevision = source.Profile.RuntimeTuningRevision,
                 ArtifactId = artifact.ArtifactId,
                 ArtifactHash = artifact.ContentHash,
                 RenderFrame = Time.frameCount,
@@ -633,7 +643,7 @@ namespace ThirdPersonRendering.ShapeProjection
             cmd.SetComputeBufferParam(compute, completeKernel, "_ShapeRegions", slot.RegionBuffer);
             cmd.SetComputeTextureParam(compute, completeKernel, "_ShapeRawDepth", slot.RawDepthTexture.rt);
             cmd.SetComputeTextureParam(compute, completeKernel, "_ShapeCompletedDepth", slot.CompletedDepthTexture.rt);
-            cmd.SetComputeIntParam(compute, "_ShapeCompletionRadius", Mathf.CeilToInt(Profile.SimplifyEpsilonPixels + Profile.OutlineWidthPixels) + 2);
+            cmd.SetComputeIntParam(compute, "_ShapeCompletionRadius", Mathf.CeilToInt(Profile.MaximumSimplifyEpsilonPixels + Profile.OutlineWidthPixels) + 2);
             for (int active = 0; active < slot.ActiveRegionCount; active++)
             {
                 int regionIndex = slot.ActiveRegionIndices[active];
@@ -647,6 +657,7 @@ namespace ThirdPersonRendering.ShapeProjection
         public void Publish(ShapeProjectionFrameSlot slot)
         {
             if (!slot.IsValid || slot.Identity.SourceGeneration != source.Generation
+                              || slot.Identity.ProfileRuntimeTuningRevision != runtimeTuningRevision
                               || !IsLineageCompatible()
                               || slot.Identity.CameraInstanceId != cameraInstanceId
                               || slot.Identity.ViewportWidth != viewportWidth
@@ -685,6 +696,7 @@ namespace ThirdPersonRendering.ShapeProjection
 
         public void Dispose()
         {
+            AsyncGPUReadback.WaitAllRequests();
             for (int i = 0; i < slots.Length; i++)
                 slots[i].Dispose();
             triangleIndexBuffer.Dispose();
@@ -706,7 +718,7 @@ namespace ThirdPersonRendering.ShapeProjection
 
         bool PackRegions(ShapeProjectionFrameSlot slot)
         {
-            int padding = Mathf.CeilToInt(Profile.SimplifyEpsilonPixels + Profile.OutlineWidthPixels) + 2;
+            int padding = Mathf.CeilToInt(Profile.MaximumSimplifyEpsilonPixels + Profile.OutlineWidthPixels) + 2;
             int atlasX = 0;
             int atlasY = 0;
             int rowHeight = 0;
@@ -725,7 +737,7 @@ namespace ThirdPersonRendering.ShapeProjection
                     int screenMaxY = Mathf.Min(viewportHeight, Mathf.CeilToInt(bounds.Max.y) + padding);
                     int width = screenMaxX - screenMinX;
                     int height = screenMaxY - screenMinY;
-                    if (width > 0 && height > 0 && width * height >= Profile.MinimumLoopAreaPixels)
+                    if (width > 0 && height > 0)
                     {
                         if (width > Profile.Capacity.AtlasWidth || height > Profile.Capacity.AtlasHeight)
                         {
@@ -811,6 +823,7 @@ namespace ThirdPersonRendering.ShapeProjection
                 CameraInstanceId = published?.Identity.CameraInstanceId ?? 0,
                 ProfileId = published?.Identity.ProfileId ?? profileId,
                 ProfileRevision = published?.Identity.ProfileRevision ?? profileRevision,
+                ProfileRuntimeTuningRevision = published?.Identity.ProfileRuntimeTuningRevision ?? runtimeTuningRevision,
                 ArtifactId = published?.Identity.ArtifactId ?? artifactId,
                 ArtifactHash = published?.Identity.ArtifactHash ?? artifactHash,
                 ProjectionHash = published?.Identity.ProjectionHash ?? CurrentProjectionHash(),

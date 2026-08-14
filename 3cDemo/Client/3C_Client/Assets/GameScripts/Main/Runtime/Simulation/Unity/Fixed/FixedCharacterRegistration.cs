@@ -301,6 +301,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     result.Motion.ActionOwnerIdentity,
                     result.Motion.GameplayResultOwnerIdentity),
                 result.Motion.MovementPlaybackClock,
+                result.Motion.LocomotionTimeline,
                 resetSequence);
         }
 

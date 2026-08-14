@@ -28,6 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             bool grounded,
             string movementModeId,
             CommittedMovementPlaybackClock movementPlaybackClock,
+            CommittedLocomotionPlanarMotionTimeline locomotionMotionTimeline,
             ulong resetSequence)
         {
             if (!actorId.IsValid || !currentTick.IsValid || sourceSequence == 0 ||
@@ -36,6 +37,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 !float.IsFinite(acceptedAcceleration) || acceptedAcceleration < 0f ||
                 !float.IsFinite(acceptedTurnRateDegrees) || acceptedTurnRateDegrees < 0f ||
                 movementPlaybackClock.IsValid && movementPlaybackClock.AuthorityTick != currentTick ||
+                movementPlaybackClock.IsValid != locomotionMotionTimeline.IsValid ||
+                locomotionMotionTimeline.IsValid && !locomotionMotionTimeline.Matches(movementPlaybackClock) ||
                 string.IsNullOrWhiteSpace(movementModeId))
                 throw new ArgumentException("Character Presentation Trajectory Intent is incomplete.");
             if (previousTick.IsValid && previousTick.Value >= currentTick.Value)
@@ -53,6 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             Grounded = grounded;
             MovementModeId = movementModeId;
             MovementPlaybackClock = movementPlaybackClock;
+            LocomotionMotionTimeline = locomotionMotionTimeline;
             ResetSequence = resetSequence;
         }
 
@@ -69,6 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public bool Grounded { get; }
         public string MovementModeId { get; }
         public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
+        public CommittedLocomotionPlanarMotionTimeline LocomotionMotionTimeline { get; }
         public ulong ResetSequence { get; }
 
         public static CharacterPresentationTrajectoryIntent FromFloat32(
@@ -100,6 +105,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                     result.Motion.ActionOwnerIdentity,
                     result.Motion.GameplayResultOwnerIdentity),
                 result.Motion.MovementPlaybackClock,
+                result.Motion.LocomotionTimeline,
                 resetSequence);
         }
 

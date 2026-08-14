@@ -272,7 +272,7 @@ AnimationFootPhaseWarpSegmentPlan
 
 `GeneratedFootPhase`查表失败属于typed invalid。Runtime不得读取artifact、重新计算cost、尝试其它策略或保留上一帧effective time。
 
-Transition建立relation时执行同一流程，之后共同可见的每帧继续执行。Transition clock和blend weight不参与时间映射。
+Transition建立relation时执行同一流程，之后共同可见的每帧继续执行。有限leader到达最后marker coverage后已经没有新的相位可供映射；Runtime必须提交一次终点映射并保留follower continuation anchor，后续共同可见帧让follower按自己的raw delta连续推进，不得重复把follower压回终点。outgoing source的Pose retention与同步时间relation分开结束，Transition clock和blend weight不参与时间映射。
 
 ## Blend Space Integration
 

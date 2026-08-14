@@ -138,6 +138,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] int m_TargetPoseSourceIndex = -1;
         [SerializeField] string m_CanonicalGroupId = string.Empty;
         [SerializeField] bool m_SourceIsLeader;
+        [SerializeField] BTSMTL.Timeline.AnimationSyncTimeMapping m_TimeMapping;
+        [SerializeField] AnimationFootPhaseTimeWarpPlan m_FootPhaseWarp;
 
         public PoseStateSourceSyncMode Mode => m_Mode;
         public string RelationId => m_RelationId ?? string.Empty;
@@ -151,6 +153,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             : new PresentationPoseSourceIndex(m_TargetPoseSourceIndex);
         public string CanonicalGroupId => m_CanonicalGroupId ?? string.Empty;
         public bool SourceIsLeader => m_SourceIsLeader;
+        public BTSMTL.Timeline.AnimationSyncTimeMapping TimeMapping => m_TimeMapping;
+        public AnimationFootPhaseTimeWarpPlan FootPhaseWarp => m_FootPhaseWarp;
 
         public CharacterPoseStateSourceSyncPlan(PoseStateSourceSyncMode mode)
         {
@@ -166,11 +170,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PresentationPoseSourceIndex sourcePoseSourceIndex,
             PresentationPoseSourceIndex targetPoseSourceIndex,
             string canonicalGroupId,
-            bool sourceIsLeader)
+            bool sourceIsLeader,
+            BTSMTL.Timeline.AnimationSyncTimeMapping timeMapping,
+            AnimationFootPhaseTimeWarpPlan footPhaseWarp)
         {
             if (string.IsNullOrWhiteSpace(relationId) || sourcePlayerIndex < 0 || targetPlayerIndex < 0 ||
                 !sourcePoseSourceIndex.IsValid || !targetPoseSourceIndex.IsValid ||
-                string.IsNullOrWhiteSpace(canonicalGroupId))
+                string.IsNullOrWhiteSpace(canonicalGroupId) ||
+                timeMapping != BTSMTL.Timeline.AnimationSyncTimeMapping.MarkerSegmentFraction &&
+                timeMapping != BTSMTL.Timeline.AnimationSyncTimeMapping.GeneratedFootPhase ||
+                timeMapping == BTSMTL.Timeline.AnimationSyncTimeMapping.GeneratedFootPhase &&
+                footPhaseWarp == null ||
+                timeMapping == BTSMTL.Timeline.AnimationSyncTimeMapping.MarkerSegmentFraction &&
+                footPhaseWarp != null)
             {
                 throw new ArgumentException("Pose State MarkerGroup sync plan is invalid.");
             }
@@ -182,6 +194,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_TargetPoseSourceIndex = targetPoseSourceIndex.Value;
             m_CanonicalGroupId = canonicalGroupId.Trim();
             m_SourceIsLeader = sourceIsLeader;
+            m_TimeMapping = timeMapping;
+            m_FootPhaseWarp = footPhaseWarp;
+            m_FootPhaseWarp?.RequireValid();
         }
     }
 

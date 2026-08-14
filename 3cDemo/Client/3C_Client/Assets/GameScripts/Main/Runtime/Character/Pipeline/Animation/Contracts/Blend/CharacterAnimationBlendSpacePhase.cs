@@ -25,7 +25,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationBlendSpaceSampleRole role,
             float clipLength,
             float stationaryNormalizedTime,
-            CharacterAnimationBlendSpaceMarkerPlan[] markers)
+            CharacterAnimationBlendSpaceMarkerPlan[] markers,
+            AnimationFootPhaseTimeWarpPlan footPhaseWarp)
         {
             if (!sampleId.IsValid || !Enum.IsDefined(typeof(CharacterAnimationBlendSpaceSampleRole), role) ||
                 !float.IsFinite(clipLength) || clipLength <= 0f ||
@@ -36,6 +37,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ClipLength = clipLength;
             StationaryNormalizedTime = role == CharacterAnimationBlendSpaceSampleRole.StationaryPose ? stationaryNormalizedTime : 0f;
             m_Markers = markers == null ? Array.Empty<CharacterAnimationBlendSpaceMarkerPlan>() : (CharacterAnimationBlendSpaceMarkerPlan[])markers.Clone();
+            FootPhaseWarp = footPhaseWarp;
+            FootPhaseWarp?.RequireValid();
         }
 
         public CharacterAnimationBlendSpaceSampleId SampleId { get; }
@@ -44,6 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public float StationaryNormalizedTime { get; }
         public int MarkerCount => m_Markers.Length;
         public CharacterAnimationBlendSpaceMarkerPlan GetMarker(int index) => m_Markers[index];
+        public AnimationFootPhaseTimeWarpPlan FootPhaseWarp { get; }
     }
 
     public sealed class CharacterAnimationBlendSpacePhasePlan
@@ -57,7 +61,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!Enum.IsDefined(typeof(CharacterAnimationBlendSpacePhasePolicy), policy) || samples == null || samples.Length == 0)
                 throw new ArgumentException("Blend Space phase plan is invalid.");
-            if (policy == CharacterAnimationBlendSpacePhasePolicy.MarkerSynchronizedPhase &&
+            if ((policy == CharacterAnimationBlendSpacePhasePolicy.MarkerSegmentPhase ||
+                 policy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase) &&
                 (referenceSampleIndex < 0 || referenceSampleIndex >= samples.Length ||
                  samples[referenceSampleIndex].Role != CharacterAnimationBlendSpaceSampleRole.DynamicCycle))
                 throw new ArgumentException("Marker synchronized Blend Space reference sample is invalid.");
@@ -66,6 +71,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Policy = policy;
             ReferenceSampleIndex = referenceSampleIndex;
             m_Samples = (CharacterAnimationBlendSpaceSamplePhasePlan[])samples.Clone();
+            for (int i = 0; i < m_Samples.Length; i++)
+            {
+                CharacterAnimationBlendSpaceSamplePhasePlan sample = m_Samples[i] ??
+                    throw new ArgumentException("Blend Space Sample phase plan is missing.", nameof(samples));
+                bool requiresWarp =
+                    policy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase &&
+                    i != referenceSampleIndex &&
+                    sample.Role == CharacterAnimationBlendSpaceSampleRole.DynamicCycle;
+                if (requiresWarp != (sample.FootPhaseWarp != null))
+                    throw new ArgumentException("Blend Space Foot Phase Warp presence is invalid.", nameof(samples));
+            }
         }
 
         public CharacterAnimationBlendSpacePhasePolicy Policy { get; }
@@ -263,7 +279,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 CharacterAnimationBlendSpaceMarkerPlan targetPrevious = sample.GetMarker(targetSegment);
                 CharacterAnimationBlendSpaceMarkerPlan targetNext = sample.GetMarker((targetSegment + 1) % sample.MarkerCount);
-                float targetNormalized = LerpSegment(targetPrevious.NormalizedTime, targetNext.NormalizedTime, fraction);
+                float targetFraction = fraction;
+                if (plan.Policy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase &&
+                    i != plan.ReferenceSampleIndex)
+                {
+                    if (sample.FootPhaseWarp == null)
+                    {
+                        output.Reset();
+                        canonicalPhase = default;
+                        failure = CharacterAnimationBlendSpacePhaseFailure.InvalidPlan;
+                        return false;
+                    }
+                    targetFraction = sample.FootPhaseWarp.RequireSegment(
+                        segmentIndex,
+                        targetSegment,
+                        previous.MarkerId,
+                        next.MarkerId).Evaluate(fraction);
+                }
+                float targetNormalized = LerpSegment(targetPrevious.NormalizedTime, targetNext.NormalizedTime, targetFraction);
                 WriteSampleTime(sample, targetNormalized, cycle, output);
             }
             failure = CharacterAnimationBlendSpacePhaseFailure.None;

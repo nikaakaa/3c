@@ -21,7 +21,8 @@ MonoBehaviour:
     - rid: 665191780990845505
     - rid: 665191780990845503
     - rid: 665191780990845502
-    m_Scale: 0.08019365
+    m_Sections: []
+    m_Scale: 0.117767066
   references:
     version: 2
     RefIds:
@@ -37,11 +38,6 @@ MonoBehaviour:
         - rid: 665191780990845506
         - rid: 665191780990845507
         m_AnimationChannelId: FullBodyAction
-        m_SyncMode: 1
-        m_SyncGroupId: 
-        m_SequenceTopology: 0
-        m_SyncRole: 0
-        m_SyncMarkers: []
     - rid: 665191780990845503
       type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -82,7 +78,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Clip: {fileID: 7400000, guid: 1085463043eec484c9173b05b7037f92, type: 2}
+        Sequence: {fileID: 11400000, guid: ece1421ead360ce4cbbcecc60f8daeaa, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -147,30 +143,6 @@ MonoBehaviour:
           - serializedVersion: 3
             time: 1
             value: 1
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          m_PreInfinity: 2
-          m_PostInfinity: 2
-          m_RotationOrder: 4
-        FootPlacementCurve:
-          serializedVersion: 2
-          m_Curve:
-          - serializedVersion: 3
-            time: 0
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 1
-            value: 0
             inSlope: 0
             outSlope: 0
             tangentMode: 0
@@ -191,7 +163,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Clip: {fileID: 7400000, guid: 4bd2aa40793a8a5449b6ef7f4de23426, type: 2}
+        Sequence: {fileID: 11400000, guid: 6558b174fa4a85d428a67102c44d1ab6, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -262,39 +234,6 @@ MonoBehaviour:
             weightedMode: 0
             inWeight: 0
             outWeight: 0
-          m_PreInfinity: 2
-          m_PostInfinity: 2
-          m_RotationOrder: 4
-        FootPlacementCurve:
-          serializedVersion: 2
-          m_Curve:
-          - serializedVersion: 3
-            time: 0
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 0.5426811
-            value: 0.0015869141
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 1
-            value: 1
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4

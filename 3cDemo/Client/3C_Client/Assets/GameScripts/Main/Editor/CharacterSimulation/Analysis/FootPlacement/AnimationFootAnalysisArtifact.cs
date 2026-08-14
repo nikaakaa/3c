@@ -5,6 +5,7 @@ using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -78,7 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class AnimationFootAnalysisArtifactIdentity
     {
-        public const int CurrentFormatVersion = 22;
+        public const int CurrentFormatVersion = 26;
 
         public AnimationFootAnalysisArtifactIdentity(
             string clipAssetGuid,
@@ -224,7 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             return new[]
             {
-                "animation-foot-analysis-artifact/v16", ClipAssetGuid, ClipDependencyHash,
+                "animation-foot-analysis-artifact/v17", ClipAssetGuid, ClipDependencyHash,
                 AnalysisSourceAssetGuid, AnalysisSourceDependencyHash, AnalysisSourceId,
                 AnalysisVersion.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 RigAssetGuid, RigId, RigRevision, RigContentHash,
@@ -288,6 +289,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public AnimationFootAnalysisArtifact(
             AnimationFootAnalysisArtifactIdentity identity,
             AnimationFootFeaturePair features,
+            AnimationFootSynchronizationDescriptor synchronization,
             StableHash contentHash)
         {
             Identity = identity ?? throw new ArgumentNullException(nameof(identity));
@@ -295,13 +297,134 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentException("Animation Foot Analysis artifact features are invalid.", nameof(features));
             if (!contentHash.IsValid)
                 throw new ArgumentException("Animation Foot Analysis artifact content hash is invalid.", nameof(contentHash));
+            Synchronization = synchronization ??
+                throw new ArgumentNullException(nameof(synchronization));
+            Synchronization.RequireValid();
             Features = features;
             ContentHash = contentHash;
         }
 
         public AnimationFootAnalysisArtifactIdentity Identity { get; }
         public AnimationFootFeaturePair Features { get; }
+        public AnimationFootSynchronizationDescriptor Synchronization { get; }
         public StableHash ContentHash { get; }
+    }
+
+    public readonly struct AnimationFootSynchronizationSample
+    {
+        public AnimationFootSynchronizationSample(
+            float normalizedTime,
+            Vector2 rootLocalSolePlanarPosition,
+            float calibratedSoleHeight,
+            Vector3 soleLocalVelocity,
+            float plantConfidence)
+        {
+            NormalizedTime = normalizedTime;
+            RootLocalSolePlanarPosition = rootLocalSolePlanarPosition;
+            CalibratedSoleHeight = calibratedSoleHeight;
+            SoleLocalVelocity = soleLocalVelocity;
+            PlantConfidence = plantConfidence;
+            RequireValid();
+        }
+
+        public float NormalizedTime { get; }
+        public Vector2 RootLocalSolePlanarPosition { get; }
+        public float CalibratedSoleHeight { get; }
+        public Vector3 SoleLocalVelocity { get; }
+        public float PlantConfidence { get; }
+
+        public void RequireValid()
+        {
+            if (!float.IsFinite(NormalizedTime) || NormalizedTime < 0f || NormalizedTime > 1f ||
+                !float.IsFinite(RootLocalSolePlanarPosition.x) ||
+                !float.IsFinite(RootLocalSolePlanarPosition.y) ||
+                !float.IsFinite(CalibratedSoleHeight) ||
+                !float.IsFinite(SoleLocalVelocity.x) ||
+                !float.IsFinite(SoleLocalVelocity.y) ||
+                !float.IsFinite(SoleLocalVelocity.z) ||
+                !float.IsFinite(PlantConfidence) || PlantConfidence < 0f || PlantConfidence > 1f)
+                throw new InvalidOperationException("Foot synchronization sample is invalid.");
+        }
+    }
+
+    public sealed class AnimationFootSynchronizationFootDescriptor
+    {
+        readonly AnimationFootSynchronizationSample[] m_Samples;
+
+        public AnimationFootSynchronizationFootDescriptor(
+            AnimationFootSynchronizationSample[] samples)
+        {
+            m_Samples = samples == null
+                ? throw new ArgumentNullException(nameof(samples))
+                : (AnimationFootSynchronizationSample[])samples.Clone();
+            RequireValid();
+        }
+
+        public IReadOnlyList<AnimationFootSynchronizationSample> Samples => m_Samples;
+
+        public void RequireValid()
+        {
+            if (m_Samples == null || m_Samples.Length < 3)
+                throw new InvalidOperationException("Foot synchronization descriptor requires at least three samples.");
+            for (int i = 0; i < m_Samples.Length; i++)
+            {
+                m_Samples[i].RequireValid();
+                if (i > 0 && m_Samples[i].NormalizedTime <= m_Samples[i - 1].NormalizedTime)
+                    throw new InvalidOperationException("Foot synchronization sample time is not strictly increasing.");
+            }
+            if (m_Samples[0].NormalizedTime != 0f ||
+                m_Samples[m_Samples.Length - 1].NormalizedTime != 1f)
+                throw new InvalidOperationException("Foot synchronization descriptor must cover normalized time [0, 1].");
+        }
+    }
+
+    public sealed class AnimationFootSynchronizationDescriptor
+    {
+        public AnimationFootSynchronizationDescriptor(
+            float sampleRate,
+            float durationSeconds,
+            AnimationFootSynchronizationFootDescriptor left,
+            AnimationFootSynchronizationFootDescriptor right)
+        {
+            SampleRate = sampleRate;
+            DurationSeconds = durationSeconds;
+            Left = left ?? throw new ArgumentNullException(nameof(left));
+            Right = right ?? throw new ArgumentNullException(nameof(right));
+            RequireValid();
+        }
+
+        public float SampleRate { get; }
+        public float DurationSeconds { get; }
+        public AnimationFootSynchronizationFootDescriptor Left { get; }
+        public AnimationFootSynchronizationFootDescriptor Right { get; }
+
+        public void RequireValid()
+        {
+            if (!float.IsFinite(SampleRate) || SampleRate <= 0f ||
+                !float.IsFinite(DurationSeconds) || DurationSeconds <= 0f)
+                throw new InvalidOperationException("Foot synchronization descriptor timing is invalid.");
+            Left?.RequireValid();
+            Right?.RequireValid();
+            if (Left == null || Right == null || Left.Samples.Count != Right.Samples.Count)
+                throw new InvalidOperationException("Foot synchronization descriptor sample counts do not match.");
+        }
+    }
+
+    public readonly struct AnimationFootAnalysisBuildResult
+    {
+        public AnimationFootAnalysisBuildResult(
+            AnimationFootFeaturePair features,
+            AnimationFootSynchronizationDescriptor synchronization)
+        {
+            if (!features.IsValid)
+                throw new ArgumentException("Foot Analysis features are invalid.", nameof(features));
+            Features = features;
+            Synchronization = synchronization ?? throw new ArgumentNullException(nameof(synchronization));
+            Synchronization.RequireValid();
+        }
+
+        public AnimationFootFeaturePair Features { get; }
+        public AnimationFootSynchronizationDescriptor Synchronization { get; }
     }
 
     public readonly struct AnimationFootAnalysisArtifactInspection

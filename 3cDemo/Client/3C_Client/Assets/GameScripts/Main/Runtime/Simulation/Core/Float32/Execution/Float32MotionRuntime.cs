@@ -11,6 +11,7 @@ namespace ThirdPersonSimulation
             Float32Vector2 locomotionPlanarBasis,
             bool hasMotion,
             CommittedMovementPlaybackClock movementPlaybackClock,
+            CommittedLocomotionPlanarMotionTimeline locomotionTimeline,
             string actionOwnerIdentity,
             string gameplayResultOwnerIdentity)
         {
@@ -19,6 +20,7 @@ namespace ThirdPersonSimulation
             LocomotionPlanarBasis = locomotionPlanarBasis;
             HasMotion = hasMotion;
             MovementPlaybackClock = movementPlaybackClock;
+            LocomotionTimeline = locomotionTimeline;
             ActionOwnerIdentity = actionOwnerIdentity ?? string.Empty;
             GameplayResultOwnerIdentity = gameplayResultOwnerIdentity ?? string.Empty;
         }
@@ -28,6 +30,7 @@ namespace ThirdPersonSimulation
         public Float32Vector2 LocomotionPlanarBasis { get; }
         public bool HasMotion { get; }
         public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
+        public CommittedLocomotionPlanarMotionTimeline LocomotionTimeline { get; }
         public string ActionOwnerIdentity { get; }
         public string GameplayResultOwnerIdentity { get; }
     }
@@ -66,7 +69,8 @@ namespace ThirdPersonSimulation
             SimulationMotionChannel channel,
             SimulationMotionBlendMode blendMode,
             bool consumeLowerChannels,
-            CommittedMovementPlaybackClock movementPlaybackClock)
+            CommittedMovementPlaybackClock movementPlaybackClock,
+            CommittedLocomotionPlanarMotionTimeline locomotionTimeline)
         {
             SourceIdentity = SimulationIdentity.Require(sourceIdentity, nameof(sourceIdentity));
             if (!sourceOperation.IsValid)
@@ -86,6 +90,14 @@ namespace ThirdPersonSimulation
             if (channel != SimulationMotionChannel.Locomotion && movementPlaybackClock.IsValid)
                 throw new ArgumentException("Only the Locomotion motion channel may carry a committed Movement playback clock.", nameof(movementPlaybackClock));
             MovementPlaybackClock = movementPlaybackClock;
+            if (channel == SimulationMotionChannel.Locomotion &&
+                (!locomotionTimeline.IsValid || !locomotionTimeline.Matches(movementPlaybackClock)))
+            {
+                throw new ArgumentException("Locomotion motion contribution has no matching committed motion timeline.", nameof(locomotionTimeline));
+            }
+            if (channel != SimulationMotionChannel.Locomotion && locomotionTimeline.IsValid)
+                throw new ArgumentException("Only the Locomotion motion channel may carry a committed motion timeline.", nameof(locomotionTimeline));
+            LocomotionTimeline = locomotionTimeline;
         }
 
         public string SourceIdentity { get; }
@@ -100,6 +112,7 @@ namespace ThirdPersonSimulation
         public SimulationMotionBlendMode BlendMode { get; }
         public bool ConsumeLowerChannels { get; }
         public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
+        public CommittedLocomotionPlanarMotionTimeline LocomotionTimeline { get; }
         public bool HasDelta => Weight > Float32Scalar.Zero &&
             (Displacement != Float32Vector3.Zero || YawDegrees != Float32Scalar.Zero);
         public bool ClaimsLowerChannels => Weight > Float32Scalar.Zero &&
@@ -120,6 +133,7 @@ namespace ThirdPersonSimulation
             OperationHandle resolvedOwnerOperation,
             string resolvedOwnerIdentity,
             CommittedMovementPlaybackClock movementPlaybackClock,
+            CommittedLocomotionPlanarMotionTimeline locomotionTimeline,
             Float32Vector3 resolvedOwnerDisplacement,
             Float32Scalar resolvedOwnerYawDegrees,
             OperationHandle traceOperation,
@@ -135,6 +149,7 @@ namespace ThirdPersonSimulation
             ResolvedOwnerOperation = resolvedOwnerOperation;
             ResolvedOwnerIdentity = resolvedOwnerIdentity ?? string.Empty;
             MovementPlaybackClock = movementPlaybackClock;
+            LocomotionTimeline = locomotionTimeline;
             ResolvedOwnerDisplacement = resolvedOwnerDisplacement;
             ResolvedOwnerYawDegrees = resolvedOwnerYawDegrees;
             TraceOperation = traceOperation;
@@ -151,6 +166,7 @@ namespace ThirdPersonSimulation
         public OperationHandle ResolvedOwnerOperation { get; }
         public string ResolvedOwnerIdentity { get; }
         public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
+        public CommittedLocomotionPlanarMotionTimeline LocomotionTimeline { get; }
         public Float32Vector3 ResolvedOwnerDisplacement { get; }
         public Float32Scalar ResolvedOwnerYawDegrees { get; }
         public OperationHandle TraceOperation { get; }
@@ -232,6 +248,7 @@ namespace ThirdPersonSimulation
                 locomotion.PlanarBasis,
                 hasMotion,
                 locomotion.MovementPlaybackClock,
+                locomotion.LocomotionTimeline,
                 action.ResolvedOwnerIdentity,
                 gameplayResult.ResolvedOwnerIdentity);
             TraceResolvedGameplayMotion(motion, action);
@@ -294,7 +311,7 @@ namespace ThirdPersonSimulation
                 }
             }
             if (!hasAdditive && !hasWeighted && !hasOverride)
-                return new ResolvedMotionChannel(channel, Float32Vector3.Zero, Float32Scalar.Zero, Float32Vector2.Zero, false, false, OperationHandle.Invalid, string.Empty, default, Float32Vector3.Zero, Float32Scalar.Zero, OperationHandle.Invalid, 0, 0);
+                return new ResolvedMotionChannel(channel, Float32Vector3.Zero, Float32Scalar.Zero, Float32Vector2.Zero, false, false, OperationHandle.Invalid, string.Empty, default, default, Float32Vector3.Zero, Float32Scalar.Zero, OperationHandle.Invalid, 0, 0);
 
             Float32Vector3 channelDisplacement = additiveDisplacement;
             Float32Scalar channelYaw = additiveYaw;
@@ -327,6 +344,9 @@ namespace ThirdPersonSimulation
                 hasOverride ? overrideWinner.SourceOperation : OperationHandle.Invalid,
                 hasOverride ? overrideWinner.SourceIdentity : string.Empty,
                 movementPlaybackClock,
+                channel == SimulationMotionChannel.Locomotion && hasOverride
+                    ? overrideWinner.LocomotionTimeline
+                    : default,
                 hasOverride ? overrideDisplacement : Float32Vector3.Zero,
                 hasOverride ? overrideYaw : Float32Scalar.Zero,
                 hasOverride ? overrideWinner.SourceOperation : traceOperation,
@@ -1089,6 +1109,15 @@ namespace ThirdPersonSimulation
                 Float32Yaw desired = Float32Angle.FromPlanarDirection(move);
                 yaw = Float32Scalar.Clamp(Float32Angle.Delta(m_Frame.Body.Yaw, desired), -maxYaw, maxYaw);
             }
+            CommittedLocomotionPlanarMotionTimeline locomotionTimeline = ResolveMotionTimeline(
+                cursor,
+                operation,
+                move,
+                displacement,
+                yaw,
+                turnConstant.Scalar,
+                delta,
+                generation);
             m_Motion.Submit(new SimulationMotionContribution(
                 SourcePath(operation),
                 operation.Handle,
@@ -1101,7 +1130,92 @@ namespace ThirdPersonSimulation
                 SimulationMotionChannel.Locomotion,
                 SimulationMotionBlendMode.Override,
                 false,
-                movementPlaybackClock));
+                movementPlaybackClock,
+                locomotionTimeline));
+        }
+
+        CommittedLocomotionPlanarMotionTimeline ResolveMotionTimeline<TTarget>(
+            OperationControlCursor<TTarget> cursor,
+            SimulationOperation operation,
+            Float32Vector2 move,
+            Float32Vector3 displacement,
+            Float32Scalar yawDegrees,
+            Float32Scalar maximumYawVelocityDegreesPerSecond,
+            Float32Scalar delta,
+            ulong generation)
+            where TTarget : struct, IOperationControlTarget<TTarget>
+        {
+            int durationTicks = ResolveDurationTicks(operation);
+            string continuationOwner = string.Empty;
+            Float32Vector2 continuationVelocity = Float32Vector2.Zero;
+            if ((LocomotionInputMotionExecutionMode)operation.Integer0 == LocomotionInputMotionExecutionMode.Timed)
+            {
+                ProgramControlFlowEdge transition = cursor.PredictCurrentStateRootCompletionTransition();
+                if (transition != null &&
+                    TryFindSingleLocomotion(transition.Target, out SimulationOperation continuation) &&
+                    (LocomotionInputMotionExecutionMode)continuation.Integer0 == LocomotionInputMotionExecutionMode.Continuous &&
+                    (LocomotionInputMotionDisplacementMode)continuation.Integer1 == LocomotionInputMotionDisplacementMode.ConstantSpeed)
+                {
+                    ProgramConstant speed = FindConstant(continuation, OperationNamedConstant.MoveSpeed);
+                    if (speed == null || speed.Kind != ProgramConstantKind.Scalar || speed.Scalar < Float32Scalar.Zero)
+                        throw new InvalidOperationException($"Locomotion continuation '{SourcePath(continuation)}' has invalid Move Speed.");
+                    continuationOwner = SourcePath(continuation);
+                    continuationVelocity = move * speed.Scalar;
+                }
+            }
+            Float32Vector2 currentVelocity = delta > Float32Scalar.Zero
+                ? new Float32Vector2(displacement.X / delta, displacement.Z / delta)
+                : Float32Vector2.Zero;
+            return new CommittedLocomotionPlanarMotionTimeline(
+                SourcePath(operation),
+                generation,
+                m_Frame.Tick,
+                m_Program.Manifest.TickRate,
+                currentVelocity.X.ToSingle(),
+                currentVelocity.Y.ToSingle(),
+                (yawDegrees / delta).ToSingle(),
+                maximumYawVelocityDegreesPerSecond.ToSingle(),
+                durationTicks,
+                continuationOwner,
+                continuationVelocity.X.ToSingle(),
+                continuationVelocity.Y.ToSingle());
+        }
+
+        int ResolveDurationTicks(SimulationOperation operation)
+        {
+            if ((LocomotionInputMotionExecutionMode)operation.Integer0 != LocomotionInputMotionExecutionMode.Timed)
+                return 0;
+            ProgramConstant duration = FindConstant(operation, OperationNamedConstant.DurationSeconds);
+            if (duration == null || duration.Kind != ProgramConstantKind.Scalar || duration.Scalar <= Float32Scalar.Zero)
+                throw new InvalidOperationException($"Locomotion operation '{SourcePath(operation)}' has invalid duration.");
+            return checked((int)Math.Ceiling(duration.Scalar.ToDouble() * m_Program.Manifest.TickRate));
+        }
+
+        bool TryFindSingleLocomotion(OperationHandle state, out SimulationOperation motion)
+        {
+            motion = null;
+            if (!state.IsValid || Access.Topology.Operation(state).Code != SimulationOperationCode.State)
+                return false;
+            ProgramControlFlowEdge root = Access.Topology.StateRoot(state);
+            if (root == null)
+                return false;
+            var pending = new Stack<OperationHandle>();
+            pending.Push(root.Target);
+            while (pending.Count != 0)
+            {
+                OperationHandle handle = pending.Pop();
+                SimulationOperation candidate = Access.Operation(handle);
+                if (candidate.Code == SimulationOperationCode.LocomotionInputMotion)
+                {
+                    if (motion != null)
+                        return false;
+                    motion = candidate;
+                }
+                IReadOnlyList<ProgramControlFlowEdge> children = Edges(handle, ProgramControlFlowKind.Child);
+                for (int i = children.Count - 1; i >= 0; i--)
+                    pending.Push(children[i].Target);
+            }
+            return motion != null;
         }
 
         Float32Vector3 ResolveDisplacement(

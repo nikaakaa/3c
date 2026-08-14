@@ -263,10 +263,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Vector2 locomotionPlanarBasis,
             Vector2 desiredPlanarVelocity,
             Vector2 desiredDirection,
+            float trajectoryCurvatureDegreesPerSecond,
+            bool trajectoryCurvatureAvailable,
             float facingError,
             CharacterPresentationMotionPhase motionPhase,
             string movementModeId,
             CommittedMovementPlaybackClock movementPlaybackClock,
+            CommittedLocomotionPlanarMotionTimeline locomotionMotionTimeline,
             double movementPlaybackTime,
             ulong bodyDiscontinuityGeneration)
         {
@@ -279,11 +282,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !IsFinite(locomotionPlanarBasis) || locomotionPlanarBasis.sqrMagnitude > 1.0001f ||
                 !IsFinite(desiredPlanarVelocity) ||
                 !IsFinite(desiredDirection) || desiredDirection.sqrMagnitude > 1.0001f ||
+                !float.IsFinite(trajectoryCurvatureDegreesPerSecond) ||
                 !float.IsFinite(facingError) ||
                 (byte)motionPhase < (byte)CharacterPresentationMotionPhase.GroundedStationary ||
                 (byte)motionPhase > (byte)CharacterPresentationMotionPhase.AirborneFalling ||
                 string.IsNullOrWhiteSpace(movementModeId) ||
                 movementPlaybackClock.IsValid && movementPlaybackClock.AuthorityTick.Value > simulationTick.Value ||
+                movementPlaybackClock.IsValid != locomotionMotionTimeline.IsValid ||
+                locomotionMotionTimeline.IsValid && !locomotionMotionTimeline.Matches(movementPlaybackClock) ||
                 !double.IsFinite(movementPlaybackTime) || movementPlaybackTime < 0d ||
                 bodyDiscontinuityGeneration == 0)
             {
@@ -300,10 +306,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             LocomotionPlanarBasis = locomotionPlanarBasis;
             DesiredPlanarVelocity = desiredPlanarVelocity;
             DesiredDirection = desiredDirection;
+            TrajectoryCurvatureDegreesPerSecond = trajectoryCurvatureDegreesPerSecond;
+            TrajectoryCurvatureAvailable = trajectoryCurvatureAvailable;
             FacingError = facingError;
             MotionPhase = motionPhase;
             MovementModeId = movementModeId.Trim();
             MovementPlaybackClock = movementPlaybackClock;
+            LocomotionMotionTimeline = locomotionMotionTimeline;
             MovementPlaybackTime = movementPlaybackTime;
             BodyDiscontinuityGeneration = bodyDiscontinuityGeneration;
         }
@@ -319,10 +328,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public Vector2 LocomotionPlanarBasis { get; }
         public Vector2 DesiredPlanarVelocity { get; }
         public Vector2 DesiredDirection { get; }
+        public float TrajectoryCurvatureDegreesPerSecond { get; }
+        public bool TrajectoryCurvatureAvailable { get; }
         public float FacingError { get; }
         public CharacterPresentationMotionPhase MotionPhase { get; }
         public string MovementModeId { get; }
         public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
+        public CommittedLocomotionPlanarMotionTimeline LocomotionMotionTimeline { get; }
         public double MovementPlaybackTime { get; }
         public ulong BodyDiscontinuityGeneration { get; }
         public bool IsValid => Identity.IsValid && SimulationTick.IsValid && BodyDiscontinuityGeneration != 0;
@@ -476,6 +488,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float acceleration = m_PreviousFrame.IsValid && presentationDeltaSeconds > 0f
                 ? (planarVelocity - m_PreviousPlanarVelocity).magnitude / presentationDeltaSeconds
                 : 0f;
+            ResolveTrajectoryCurvature(
+                desiredVelocity,
+                intent.LocomotionMotionTimeline,
+                presentationDeltaSeconds,
+                out float trajectoryCurvatureDegreesPerSecond,
+                out bool trajectoryCurvatureAvailable);
             m_PresentationTime += presentationDeltaSeconds;
             var frame = new CharacterPresentationFactFrame(
                 new CharacterPresentationFactFrameIdentity(m_ActorId, renderFrame),
@@ -489,16 +507,61 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 intent.LocomotionPlanarBasis,
                 intent.DesiredPlanarVelocity,
                 desiredDirection,
+                trajectoryCurvatureDegreesPerSecond,
+                trajectoryCurvatureAvailable,
                 facingError,
                 ResolveMotionPhase(bodyFrame.TargetGrounded, intent.HasMotion, speed, velocity.y),
                 intent.MovementModeId,
                 intent.MovementPlaybackClock,
+                intent.LocomotionMotionTimeline,
                 intent.MovementPlaybackTime,
                 m_BodyDiscontinuityGeneration);
             m_PreviousFrame = frame;
             m_PreviousPlanarVelocity = planarVelocity;
             TrimIntents(bodyFrame.PreviousTick);
             return frame;
+        }
+
+        void ResolveTrajectoryCurvature(
+            Vector2 desiredPlanarVelocity,
+            in CommittedLocomotionPlanarMotionTimeline motionTimeline,
+            float presentationDeltaSeconds,
+            out float curvatureDegreesPerSecond,
+            out bool available)
+        {
+            curvatureDegreesPerSecond = 0f;
+            available = false;
+            if (!m_PreviousFrame.IsValid || presentationDeltaSeconds <= 0f ||
+                !motionTimeline.IsValid || motionTimeline.MaximumYawVelocityDegreesPerSecond <= 0f ||
+                desiredPlanarVelocity.sqrMagnitude <= 0.00000001f)
+            {
+                return;
+            }
+            CommittedLocomotionPlanarMotionTimeline previousTimeline =
+                m_PreviousFrame.LocomotionMotionTimeline;
+            Vector2 previousVelocity = m_PreviousFrame.DesiredPlanarVelocity;
+            if (!previousTimeline.IsValid || previousTimeline.MaximumYawVelocityDegreesPerSecond <= 0f ||
+                previousVelocity.sqrMagnitude <= 0.00000001f ||
+                previousTimeline.Generation != motionTimeline.Generation ||
+                !string.Equals(
+                    previousTimeline.OwnerIdentity,
+                    motionTimeline.OwnerIdentity,
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
+            float directionDeltaDegrees = -Vector2.SignedAngle(
+                previousVelocity,
+                desiredPlanarVelocity);
+            float maximumDirectionDeltaDegrees = Mathf.Min(
+                previousTimeline.MaximumYawVelocityDegreesPerSecond,
+                motionTimeline.MaximumYawVelocityDegreesPerSecond) * presentationDeltaSeconds;
+            if (Mathf.Abs(directionDeltaDegrees) > maximumDirectionDeltaDegrees + 0.001f)
+                return;
+            curvatureDegreesPerSecond = directionDeltaDegrees / presentationDeltaSeconds;
+            available = float.IsFinite(curvatureDegreesPerSecond);
+            if (!available)
+                curvatureDegreesPerSecond = 0f;
         }
 
         internal void Reset()
@@ -625,6 +688,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 bool hasMotion,
                 string movementModeId,
                 CommittedMovementPlaybackClock movementPlaybackClock,
+                CommittedLocomotionPlanarMotionTimeline locomotionMotionTimeline,
                 double movementPlaybackTime)
             {
                 if (string.IsNullOrWhiteSpace(movementModeId))
@@ -635,6 +699,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 HasMotion = hasMotion;
                 MovementModeId = movementModeId;
                 MovementPlaybackClock = movementPlaybackClock;
+                LocomotionMotionTimeline = locomotionMotionTimeline;
                 MovementPlaybackTime = movementPlaybackTime;
             }
 
@@ -644,6 +709,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal bool HasMotion { get; }
             internal string MovementModeId { get; }
             internal CommittedMovementPlaybackClock MovementPlaybackClock { get; }
+            internal CommittedLocomotionPlanarMotionTimeline LocomotionMotionTimeline { get; }
             internal double MovementPlaybackTime { get; }
 
             internal static IntentSample From(CharacterPresentationTrajectoryIntent intent) =>
@@ -654,6 +720,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     intent.HasMotion,
                     intent.MovementModeId,
                     intent.MovementPlaybackClock,
+                    intent.LocomotionMotionTimeline,
                     intent.MovementPlaybackClock.ElapsedSeconds);
 
             internal static IntentSample Lerp(
@@ -696,6 +763,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     useCurrentDiscrete ? current.HasMotion : previous.HasMotion,
                     useCurrentDiscrete ? current.MovementModeId : previous.MovementModeId,
                     useCurrentDiscrete ? currentClock : previousClock,
+                    useCurrentDiscrete
+                        ? current.LocomotionMotionTimeline
+                        : previous.LocomotionMotionTimeline,
                     movementPlaybackTime);
             }
         }

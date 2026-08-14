@@ -177,7 +177,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 model.Definition.EquipmentProfile,
                 model.Definition.EquipmentPresentationProfile,
                 projectionRevision,
-                request.FootAnalysis.BuildData,
+                request.FootAnalysis,
                 motionMatching,
                 sourceCatalog,
                 model.Timelines,
@@ -399,7 +399,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterEquipmentProfile equipmentProfile,
             CharacterEquipmentPresentationProfile equipmentPresentationProfile,
             string projectionRevision,
-            AnimationFootAnalysisProjectionBuildData footAnalysis,
+            CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             MotionMatchingProjectionPayload motionMatching,
             PoseSourceCompilationCatalog sourceCatalog,
             IReadOnlyDictionary<string, TimelineData> timelines,
@@ -413,6 +413,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
 
             profile.CollectConfigurationErrors(errors);
+            AnimationFootAnalysisProjectionBuildData footAnalysis =
+                footAnalysisCompilation?.BuildData;
             AnimationFootAnalysisProjectionIdentity footIdentity = default;
             if (profile.FootPlacementAnalysisMode == CharacterFootPlacementAnalysisMode.GeneratedPerFootFeatures)
             {
@@ -481,7 +483,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CompileBlendSpacePoseSources(
                     sourceCatalog,
                     profile.RigDefinition,
-                    footAnalysis,
+                    footAnalysisCompilation,
                     blendSpaces,
                     blendSpaceIndices,
                     errors);
@@ -506,6 +508,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 blendCatalogs?.ProfileIndicesByIdentity,
                 profile,
                 linkedPose,
+                footAnalysisCompilation,
                 errors);
             if (poseProgram != null && blendCatalogs != null)
             {
@@ -541,6 +544,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     blendSpaces,
                     blendSpacePlanBySource,
                     errors);
+            ActionAnimationFootPhaseTimeWarpPlan[] actionFootPhaseWarps = poseProgram == null
+                ? Array.Empty<ActionAnimationFootPhaseTimeWarpPlan>()
+                : CompileActionFootPhaseWarps(
+                    poseProgram,
+                    entries,
+                    footAnalysisCompilation,
+                    errors);
             CharacterAnimationRigPayload rig = poseProgram == null
                 ? null
                 : new CharacterAnimationRigPayload(profile.RigDefinition);
@@ -563,6 +573,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 poseSources,
                 blendSpaces.ToArray(),
                 blendSpacePlayers,
+                actionFootPhaseWarps,
                 entries.ToArray(),
                 footIdentity,
                 projectionRevision,
@@ -579,15 +590,130 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return projection;
         }
 
+        static ActionAnimationFootPhaseTimeWarpPlan[] CompileActionFootPhaseWarps(
+            CharacterPresentationPosePlan posePlan,
+            IReadOnlyList<CharacterPresentationProducerEntry> producers,
+            CharacterFootPlacementAnalysisCompilation footAnalysis,
+            List<string> errors)
+        {
+            var producersByIdentity = new Dictionary<string, CharacterPresentationProducerEntry>(StringComparer.Ordinal);
+            for (int i = 0; i < producers.Count; i++)
+            {
+                CharacterPresentationProducerEntry producer = producers[i];
+                if (producer.Kind == CharacterPresentationProducerKind.Animation)
+                    producersByIdentity.Add(producer.ProgramProducerIdentity, producer);
+            }
+            var inputsBySlot = new Dictionary<AnimationSlotId, List<ActionPlaybackInputPlan>>();
+            for (int i = 0; i < posePlan.ActionPlaybackInputs.Count; i++)
+            {
+                ActionPlaybackInputPlan input = posePlan.ActionPlaybackInputs[i];
+                if (!inputsBySlot.TryGetValue(input.SlotId, out List<ActionPlaybackInputPlan> values))
+                {
+                    values = new List<ActionPlaybackInputPlan>();
+                    inputsBySlot.Add(input.SlotId, values);
+                }
+                values.Add(input);
+            }
+
+            var result = new List<ActionAnimationFootPhaseTimeWarpPlan>();
+            foreach (KeyValuePair<AnimationSlotId, List<ActionPlaybackInputPlan>> slot in inputsBySlot)
+            {
+                List<ActionPlaybackInputPlan> inputs = slot.Value;
+                inputs.Sort((left, right) => string.CompareOrdinal(left.ProgramProducerId, right.ProgramProducerId));
+                for (int leaderIndex = 0; leaderIndex < inputs.Count; leaderIndex++)
+                {
+                    CharacterPresentationProducerEntry leader =
+                        producersByIdentity[inputs[leaderIndex].ProgramProducerId];
+                    for (int followerIndex = 0; followerIndex < inputs.Count; followerIndex++)
+                    {
+                        if (leaderIndex == followerIndex)
+                            continue;
+                        CharacterPresentationProducerEntry follower =
+                            producersByIdentity[inputs[followerIndex].ProgramProducerId];
+                        AnimationMarkerSyncBinding leaderSync = leader.Animation.MarkerSync;
+                        AnimationMarkerSyncBinding followerSync = follower.Animation.MarkerSync;
+                        if (!leaderSync.IsMarkerGroup || !followerSync.IsMarkerGroup)
+                            continue;
+                        if (!string.Equals(
+                                leaderSync.CanonicalGroupId,
+                                followerSync.CanonicalGroupId,
+                                StringComparison.Ordinal) ||
+                            leaderSync.TimeMapping != followerSync.TimeMapping)
+                        {
+                            errors?.Add(
+                                $"Animation Slot '{slot.Key}' Action relation '{leader.ProgramProducerIdentity}->{follower.ProgramProducerIdentity}' has mismatched Marker Group or Time Mapping.");
+                            continue;
+                        }
+                        if (leaderSync.TimeMapping != AnimationSyncTimeMapping.GeneratedFootPhase)
+                            continue;
+                        try
+                        {
+                            if (footAnalysis == null)
+                                throw new InvalidOperationException("Generated Foot Phase requires Foot Analysis artifacts.");
+                            CharacterPresentationAnimationClipBinding leaderClip =
+                                RequireExactActionFootPhaseClip(leader);
+                            CharacterPresentationAnimationClipBinding followerClip =
+                                RequireExactActionFootPhaseClip(follower);
+                            string leaderBindingKey = AnimationFootAnalysisProjectionBuildData.BindingKey(
+                                leader.ProducerId.TimelineAuthoringId,
+                                leader.ProducerId.TrackAuthoringId,
+                                leaderClip.ClipAuthoringId);
+                            string followerBindingKey = AnimationFootAnalysisProjectionBuildData.BindingKey(
+                                follower.ProducerId.TimelineAuthoringId,
+                                follower.ProducerId.TrackAuthoringId,
+                                followerClip.ClipAuthoringId);
+                            result.Add(new ActionAnimationFootPhaseTimeWarpPlan(
+                                leader.ProgramProducerIdentity,
+                                follower.ProgramProducerIdentity,
+                                AnimationFootPhaseTimeWarpCompiler.Compile(
+                                    $"action-foot-phase/{slot.Key.Value}/{leader.ProgramProducerIdentity}/{follower.ProgramProducerIdentity}",
+                                    leaderBindingKey,
+                                    leaderSync,
+                                    footAnalysis.RequireArtifact(leaderBindingKey),
+                                    followerBindingKey,
+                                    followerSync,
+                                    footAnalysis.RequireArtifact(followerBindingKey))));
+                        }
+                        catch (Exception exception)
+                        {
+                            errors?.Add(
+                                $"Animation Slot '{slot.Key}' Generated Foot Phase relation '{leader.ProgramProducerIdentity}->{follower.ProgramProducerIdentity}' failed to compile: {exception.Message}");
+                        }
+                    }
+                }
+            }
+            return result.ToArray();
+        }
+
+        static CharacterPresentationAnimationClipBinding RequireExactActionFootPhaseClip(
+            CharacterPresentationProducerEntry producer)
+        {
+            if (producer?.Animation == null || producer.Animation.Clips.Count != 1)
+                throw new InvalidOperationException(
+                    $"Action '{producer?.ProgramProducerIdentity}' must contain exactly one Clip for Generated Foot Phase.");
+            CharacterPresentationAnimationClipBinding clip = producer.Animation.Clips[0];
+            const float tolerance = 0.00001f;
+            if (clip == null || !clip.Clip ||
+                Math.Abs(clip.StartTime) > tolerance ||
+                Math.Abs(clip.EndTime - producer.Animation.DurationSeconds) > tolerance ||
+                Math.Abs(clip.ClipInTime) > tolerance ||
+                Math.Abs(clip.DurationTime - clip.Clip.length) > tolerance ||
+                Math.Abs(clip.DurationTime - producer.Animation.DurationSeconds) > tolerance)
+                throw new InvalidOperationException(
+                    $"Action '{producer.ProgramProducerIdentity}' Generated Foot Phase requires one unstretched full-duration Clip.");
+            return clip;
+        }
+
         static Dictionary<PresentationPoseSourceIndex, int> CompileBlendSpacePoseSources(
             PoseSourceCompilationCatalog sourceCatalog,
             CharacterAnimationRigDefinition rig,
-            AnimationFootAnalysisProjectionBuildData footAnalysis,
+            CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             List<CharacterAnimationBlendSpacePlan> blendSpaces,
             Dictionary<CharacterAnimationBlendSpaceAsset, int> blendSpaceIndices,
             List<string> errors)
         {
             var result = new Dictionary<PresentationPoseSourceIndex, int>();
+            AnimationFootAnalysisProjectionBuildData footAnalysis = footAnalysisCompilation?.BuildData;
             for (int bindingIndex = 0; bindingIndex < sourceCatalog.Entries.Count; bindingIndex++)
             {
                 PoseSourceCompilationEntry entry = sourceCatalog.Entries[bindingIndex];
@@ -617,7 +743,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             samples[sampleIndex] =
                                 new CharacterAnimationBlendSpaceSamplePlan(sample, features);
                         }
-                        var plan = new CharacterAnimationBlendSpacePlan(blendSpace, samples);
+                        IReadOnlyDictionary<CharacterAnimationBlendSpaceSampleId, AnimationFootPhaseTimeWarpPlan> footPhaseWarps =
+                            CompileBlendSpaceFootPhaseWarps(
+                                blendSpace,
+                                samples,
+                                footAnalysisCompilation);
+                        var plan = new CharacterAnimationBlendSpacePlan(
+                            blendSpace,
+                            samples,
+                            footPhaseWarps);
                         plan.RequireValid(footAnalysis != null);
                         planIndex = blendSpaces.Count;
                         blendSpaces.Add(plan);
@@ -631,6 +765,70 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     errors?.Add(
                         $"Blend Space Presentation Pose source binding #{bindingIndex} failed to compile: {exception.Message}");
                 }
+            }
+            return result;
+        }
+
+        static IReadOnlyDictionary<CharacterAnimationBlendSpaceSampleId, AnimationFootPhaseTimeWarpPlan>
+            CompileBlendSpaceFootPhaseWarps(
+                CharacterAnimationBlendSpaceAsset blendSpace,
+                IReadOnlyList<CharacterAnimationBlendSpaceSamplePlan> samples,
+                CharacterFootPlacementAnalysisCompilation footAnalysis)
+        {
+            if (blendSpace.PhasePolicy != CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase)
+                return null;
+            if (footAnalysis == null)
+                throw new InvalidOperationException(
+                    $"Blend Space '{blendSpace.BlendSpaceId}' Generated Foot Phase requires Foot Analysis artifacts.");
+
+            CharacterAnimationBlendSpaceSamplePlan reference = null;
+            for (int i = 0; i < samples.Count; i++)
+            {
+                if (samples[i].SampleId.Equals(blendSpace.PhaseReferenceSampleId))
+                {
+                    reference = samples[i];
+                    break;
+                }
+            }
+            if (reference == null)
+                throw new InvalidOperationException(
+                    $"Blend Space '{blendSpace.BlendSpaceId}' has no Generated Foot Phase reference Sample.");
+
+            string referenceBindingKey = AnimationFootAnalysisProjectionBuildData.BlendSpaceBindingKey(
+                blendSpace.BlendSpaceId,
+                reference.SampleId);
+            AnimationMarkerSyncBinding referenceMarkerSync =
+                CharacterAnimationBlendSpacePlan.BuildSampleMarkerSync(
+                    blendSpace.BlendSpaceId,
+                    blendSpace.PhasePolicy,
+                    reference);
+            AnimationFootAnalysisArtifact referenceArtifact =
+                footAnalysis.RequireArtifact(referenceBindingKey);
+            var result = new Dictionary<CharacterAnimationBlendSpaceSampleId, AnimationFootPhaseTimeWarpPlan>();
+            for (int i = 0; i < samples.Count; i++)
+            {
+                CharacterAnimationBlendSpaceSamplePlan follower = samples[i];
+                if (follower.Role != CharacterAnimationBlendSpaceSampleRole.DynamicCycle ||
+                    follower.SampleId.Equals(reference.SampleId))
+                    continue;
+                string followerBindingKey = AnimationFootAnalysisProjectionBuildData.BlendSpaceBindingKey(
+                    blendSpace.BlendSpaceId,
+                    follower.SampleId);
+                AnimationMarkerSyncBinding followerMarkerSync =
+                    CharacterAnimationBlendSpacePlan.BuildSampleMarkerSync(
+                        blendSpace.BlendSpaceId,
+                        blendSpace.PhasePolicy,
+                        follower);
+                result.Add(
+                    follower.SampleId,
+                    AnimationFootPhaseTimeWarpCompiler.Compile(
+                        $"blend-space-foot-phase/{blendSpace.BlendSpaceId.Value}/{reference.SampleId.Value}/{follower.SampleId.Value}",
+                        referenceBindingKey,
+                        referenceMarkerSync,
+                        referenceArtifact,
+                        followerBindingKey,
+                        followerMarkerSync,
+                        footAnalysis.RequireArtifact(followerBindingKey)));
             }
             return result;
         }
@@ -923,12 +1121,30 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 if (track.Clips[i] is not BTSMTL.Timeline.AnimationClip clip)
                     continue;
-                if (!clip.Clip)
+                if (clip.Sequence is not CharacterAnimationSequenceAsset sequence || !sequence.Clip)
                 {
-                    errors?.Add($"Animation producer '{producerId}' clip '{clip.AuthoringId}' has no AnimationClip resource.");
+                    errors?.Add($"Animation producer '{producerId}' segment '{clip.AuthoringId}' has no Character Animation Sequence.");
                     continue;
                 }
-                clip.RequireFootPlacementWeightCurve();
+                try
+                {
+                    sequence.RequireValid();
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add($"Animation producer '{producerId}' Sequence '{sequence.name}' is invalid: {exception.Message}");
+                    continue;
+                }
+                if (!ReferenceEquals(sequence.Rig, profile.RigDefinition))
+                {
+                    errors?.Add($"Animation producer '{producerId}' Sequence '{sequence.name}' Rig does not match the Presentation Profile.");
+                    continue;
+                }
+                if (!string.Equals(sequence.FootAnalysisIdentity, authoringBinding.FootAnalysisIdentity, StringComparison.Ordinal))
+                {
+                    errors?.Add($"Animation producer '{producerId}' Sequence '{sequence.name}' Foot Analysis identity does not match the Action binding.");
+                    continue;
+                }
                 AnimationFootFeaturePair features = default;
                 if (profile.FootPlacementAnalysisMode == CharacterFootPlacementAnalysisMode.GeneratedPerFootFeatures &&
                     (footAnalysis == null || !footAnalysis.TryGet(
@@ -942,7 +1158,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 clips.Add(new CharacterPresentationAnimationClipBinding(
                     clip.AuthoringId,
-                    clip.Clip,
+                    sequence.AuthoringId,
+                    sequence.ContentRevision,
+                    sequence.Clip,
+                    sequence.Loop,
+                    CharacterPresentationPoseSourcePlan.CompileMarkerSync(sequence),
+                    CompileSequenceNotifies(sequence),
                     clip.StartTime,
                     clip.EndTime,
                     clip.ClipInTime,
@@ -953,7 +1174,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     clip.WeightCurve,
                     clip.EaseInCurve,
                     clip.EaseOutCurve,
-                    clip.FootPlacementCurve,
+                    sequence.FootPlacementWeightCurve,
                     features));
             }
             if (clips.Count == 0)
@@ -976,7 +1197,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 timeline.Duration,
                 lastSampleTimeSeconds,
                 clips.ToArray(),
-                CompileMarkerSync(track, timeline),
+                CompileActionMarkerSync(track, timeline),
                 new AnimationMarkerBindingId($"marker-binding:{producer.Identity}"));
             return new CharacterPresentationProducerEntry(
                 producer.Index,
@@ -1018,7 +1239,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BTSMTL.Timeline.AnimationClip[] clips =
                 track.Clips
                     .OfType<BTSMTL.Timeline.AnimationClip>()
-                    .Where(value => value != null && value.Clip)
+                    .Where(value => value != null && value.Sequence && value.Sequence.Clip)
                     .OrderBy(value => value.StartTime)
                     .ThenBy(value => value.EndTime)
                     .ToArray();
@@ -1062,6 +1283,43 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return false;
             }
             return true;
+        }
+
+        static CharacterPresentationSequenceNotifyBinding[] CompileSequenceNotifies(
+            CharacterAnimationSequenceAsset sequence)
+        {
+            var result = new CharacterPresentationSequenceNotifyBinding[sequence.Notifies.Count];
+            for (int i = 0; i < result.Length; i++)
+            {
+                AnimationSequenceNotify notify = sequence.Notifies[i];
+                string primary;
+                string secondary;
+                switch (notify.Payload)
+                {
+                    case AnimationSequenceFootstepAudioPayload footstep:
+                        primary = footstep.CueId;
+                        secondary = footstep.FootId;
+                        break;
+                    case AnimationSequenceVisualEffectPayload effect:
+                        primary = effect.EffectId;
+                        secondary = effect.SocketId;
+                        break;
+                    case AnimationSequenceEditorAnnotationPayload annotation:
+                        primary = annotation.Text;
+                        secondary = string.Empty;
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"Animation Sequence '{sequence.name}' Notify '{notify.AuthoringId}' has an unsupported presentation payload.");
+                }
+                result[i] = new CharacterPresentationSequenceNotifyBinding(
+                    notify.AuthoringId,
+                    notify.Kind,
+                    notify.Frame,
+                    primary,
+                    secondary);
+            }
+            return result;
         }
 
         static bool TryResolvePlaybackMode(
@@ -2282,7 +2540,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             IReadOnlyDictionary<string, IReadOnlyList<AnimationMarkerSyncCallSite>> callSites,
             List<string> errors)
         {
-            var inputs = new List<AnimationMarkerSyncAuthoringInput>();
+            int issueStart = errors?.Count ?? 0;
             for (int producerIndex = 0; producerIndex < producers.Count; producerIndex++)
             {
                 ProgramProducer producer = producers[producerIndex];
@@ -2304,81 +2562,65 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 if (track == null)
                     continue;
-                callSites.TryGetValue(producerId.TimelineAuthoringId, out IReadOnlyList<AnimationMarkerSyncCallSite> producerCallSites);
-                inputs.Add(new AnimationMarkerSyncAuthoringInput(
-                    producer.Identity,
-                    timeline,
-                    track,
-                    producerCallSites ?? Array.Empty<AnimationMarkerSyncCallSite>()));
+                try
+                {
+                    AnimationMarkerSyncBinding markerSync = CompileActionMarkerSync(track, timeline);
+                    if (!markerSync.IsMarkerGroup)
+                        continue;
+                    TimelinePlaybackMode required = markerSync.SequenceTopology == AnimationMarkerSequenceTopology.Cyclic
+                        ? TimelinePlaybackMode.Loop
+                        : TimelinePlaybackMode.Once;
+                    callSites.TryGetValue(
+                        producerId.TimelineAuthoringId,
+                        out IReadOnlyList<AnimationMarkerSyncCallSite> producerCallSites);
+                    IReadOnlyList<AnimationMarkerSyncCallSite> sites =
+                        producerCallSites ?? Array.Empty<AnimationMarkerSyncCallSite>();
+                    for (int i = 0; i < sites.Count; i++)
+                    {
+                        if (sites[i].PlaybackMode != required)
+                            errors?.Add(
+                                $"Animation producer '{producer.Identity}' Sequence topology '{markerSync.SequenceTopology}' requires '{required}' playback, but call site '{sites[i].AuthoringIdentity}' uses '{sites[i].PlaybackMode}'.");
+                    }
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add($"Animation producer '{producer.Identity}' Sequence marker plan is invalid: {exception.Message}");
+                }
             }
-            var issues = new List<AnimationMarkerSyncAuthoringIssue>();
-            AnimationMarkerSyncAuthoring.Validate(inputs, issues);
-            for (int i = 0; i < issues.Count; i++)
-            {
-                AnimationMarkerSyncAuthoringIssue issue = issues[i];
-                errors?.Add($"{issue.Code} [{issue.AuthoringPath}]: {issue.Message}");
-            }
-            return issues.Count == 0;
+            return errors == null || errors.Count == issueStart;
         }
 
-        static AnimationMarkerSyncBinding CompileMarkerSync(AnimationTrack track, TimelineData timeline)
+        static AnimationMarkerSyncBinding CompileActionMarkerSync(AnimationTrack track, TimelineData timeline)
         {
-            if (track.SyncMode == AnimationSyncMode.None)
+            if (track == null || timeline == null)
+                throw new ArgumentNullException(track == null ? nameof(track) : nameof(timeline));
+            BTSMTL.Timeline.AnimationClip[] segments = track.Clips
+                .OfType<BTSMTL.Timeline.AnimationClip>()
+                .Where(value => value != null && value.Sequence)
+                .ToArray();
+            if (segments.Length == 0)
+                throw new InvalidOperationException("Action AnimationTrack has no Sequence Segment.");
+            var markerSegments = new List<BTSMTL.Timeline.AnimationClip>();
+            for (int i = 0; i < segments.Length; i++)
+            {
+                segments[i].Sequence.RequireValid();
+                if (segments[i].Sequence.SyncMode == AnimationSyncMode.MarkerGroup)
+                    markerSegments.Add(segments[i]);
+            }
+            if (markerSegments.Count == 0)
                 return new AnimationMarkerSyncBinding();
-            if (track.SyncMode != AnimationSyncMode.MarkerGroup)
-                throw new InvalidOperationException($"AnimationTrack '{track.AuthoringId}' has not been migrated to a publishable sync mode.");
-            var markers = new AnimationMarkerSyncMarkerBinding[track.SyncMarkers.Count];
-            for (int i = 0; i < track.SyncMarkers.Count; i++)
+            if (markerSegments.Count != segments.Length || markerSegments.Count != 1)
+                throw new InvalidOperationException(
+                    "Action marker relation requires exactly one full-coverage Sequence Segment; multiple or mixed Sequence marker owners are ambiguous.");
+            BTSMTL.Timeline.AnimationClip segment = markerSegments[0];
+            AnimationSequenceAsset sequence = segment.Sequence;
+            if (segment.StartFrame != 0 || segment.EndFrame != timeline.MaxFrame || segment.ClipInFrame != 0 ||
+                Math.Abs(timeline.Duration - sequence.Clip.length) > 1f / TimelineUtility.FrameRate)
             {
-                AnimationSyncMarker marker = track.SyncMarkers[i];
-                markers[i] = new AnimationMarkerSyncMarkerBinding(
-                    marker.AuthoringId,
-                    AnimationMarkerSyncAuthoring.NormalizeId(marker.MarkerId),
-                    marker.Frame,
-                    marker.Frame / (float)TimelineUtility.FrameRate);
+                throw new InvalidOperationException(
+                    $"Action Sequence Segment '{segment.AuthoringId}' must cover the Timeline exactly with zero ClipIn before its material Marker plan can drive an Action relation.");
             }
-            int segmentCount = Math.Max(0, markers.Length - 1) +
-                               (track.SequenceTopology == AnimationMarkerSequenceTopology.Cyclic ? 1 : 0);
-            var segments = new AnimationMarkerSyncSegmentOccurrence[segmentCount];
-            int segmentIndex = 0;
-            for (int i = 1; i < markers.Length; i++)
-            {
-                AnimationMarkerSyncMarkerBinding previous = markers[i - 1];
-                AnimationMarkerSyncMarkerBinding next = markers[i];
-                segments[segmentIndex] = new AnimationMarkerSyncSegmentOccurrence(
-                    segmentIndex,
-                    i - 1,
-                    i,
-                    previous.MarkerId,
-                    next.MarkerId,
-                    previous.TimeSeconds,
-                    next.TimeSeconds,
-                    false);
-                segmentIndex++;
-            }
-            if (track.SequenceTopology == AnimationMarkerSequenceTopology.Cyclic)
-            {
-                AnimationMarkerSyncMarkerBinding previous = markers[markers.Length - 1];
-                AnimationMarkerSyncMarkerBinding next = markers[0];
-                segments[segmentIndex] = new AnimationMarkerSyncSegmentOccurrence(
-                    segmentIndex,
-                    markers.Length - 1,
-                    0,
-                    previous.MarkerId,
-                    next.MarkerId,
-                    previous.TimeSeconds,
-                    timeline.Duration + next.TimeSeconds,
-                    true);
-            }
-            return new AnimationMarkerSyncBinding(
-                AnimationSyncMode.MarkerGroup,
-                AnimationMarkerSyncAuthoring.NormalizeId(track.SyncGroupId),
-                track.SequenceTopology,
-                track.SyncRole,
-                timeline.MaxFrame,
-                timeline.Duration,
-                markers,
-                segments);
+            return CharacterPresentationPoseSourcePlan.CompileMarkerSync(sequence);
         }
 
         static IReadOnlyDictionary<string, IReadOnlyList<AnimationMarkerSyncCallSite>> CollectAnimationMarkerSyncCallSites(

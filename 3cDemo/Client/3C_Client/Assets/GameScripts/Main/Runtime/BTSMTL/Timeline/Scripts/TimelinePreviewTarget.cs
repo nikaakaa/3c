@@ -94,6 +94,9 @@ namespace BTSMTL.Timeline
     {
         public abstract bool CanPreviewTimeline { get; }
         public abstract string PreviewStatus { get; }
+        public abstract bool TryGetAnimationSequencePreviewStatus(
+            AnimationSequenceAsset sequence,
+            out string status);
         public abstract void EvaluateTimelinePreview(
             Guid sessionId,
             TimelineData timeline,
@@ -101,6 +104,14 @@ namespace BTSMTL.Timeline
             float currentTime,
             string sourceId,
             string sourceName,
+            ulong evaluationTick,
+            float presentationDeltaSeconds,
+            bool resetLifecycle);
+        public abstract void EvaluateAnimationSequencePreview(
+            Guid sessionId,
+            AnimationSequenceAsset sequence,
+            float previousTime,
+            float currentTime,
             ulong evaluationTick,
             float presentationDeltaSeconds,
             bool resetLifecycle);
@@ -119,5 +130,6 @@ namespace BTSMTL.Timeline
             string targetTrackAuthoringId,
             out TimelineAnimationMarkerSyncPreviewState state);
         public abstract void ClearTimelinePreview(Guid sessionId);
+        public abstract void ClearAnimationSequencePreview(Guid sessionId);
     }
 }

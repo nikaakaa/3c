@@ -3215,7 +3215,7 @@ MonoBehaviour:
           m_InputEdgeGUID: 
           m_OutputEdgeGUIDs: []
           m_Value: 0
-        m_OutputEdgeGUID: 6d59e744-bb97-529d-b6cb-8e75f6bb164b
+        m_OutputEdgeGUID: 
     - rid: 665191419356100163
       type: {class: LoopNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -3225,8 +3225,8 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 260, y: 0}
-        m_InputEdgeGUID: 6d59e744-bb97-529d-b6cb-8e75f6bb164b
-        m_OutputEdgeGUID: 50bc9d9c-09df-5b18-98bd-c6901931b89c
+        m_InputEdgeGUID: 
+        m_OutputEdgeGUID: 
         m_StopType: 0
     - rid: 665191419356100164
       type: {class: ParallelNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -3237,10 +3237,8 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 559.3333, y: 0}
-        m_InputEdgeGUID: 50bc9d9c-09df-5b18-98bd-c6901931b89c
-        m_OutputEdgeGUIDs:
-        - a4615273-cd1c-5322-8ccb-eedfe05ee9bd
-        - eece0465-79f5-5dbe-bc59-7eb53c6691b7
+        m_InputEdgeGUID: 
+        m_OutputEdgeGUIDs: []
         m_ParallelType: 1
     - rid: 665191419356100167
       type: {class: StateMachineNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
@@ -3252,7 +3250,7 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 860, y: -29.333336}
-        m_InputEdgeGUID: a4615273-cd1c-5322-8ccb-eedfe05ee9bd
+        m_InputEdgeGUID: 
     - rid: 665191419356100168
       type: {class: StateMachineNode, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -3263,7 +3261,7 @@ MonoBehaviour:
         m_Expanded: 1
         m_ShowPanel: 0
         m_Position: {x: 876, y: 107.99999}
-        m_InputEdgeGUID: eece0465-79f5-5dbe-bc59-7eb53c6691b7
+        m_InputEdgeGUID: 
     - rid: 665191419356100193
       type: {class: FloatExposedProperty, ns: TreeDesigner, asm: BTSMTL.TreeDesigner}
       data:
@@ -5854,11 +5852,6 @@ MonoBehaviour:
         - rid: 665191601650270985
         - rid: 665191753987391803
         m_AnimationChannelId: FullBodyAction
-        m_SyncMode: 1
-        m_SyncGroupId: 
-        m_SequenceTopology: 0
-        m_SyncRole: 0
-        m_SyncMarkers: []
     - rid: 665191601650270962
       type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -5897,11 +5890,6 @@ MonoBehaviour:
         m_Clips:
         - rid: 665191601650270991
         m_AnimationChannelId: FullBodyAction
-        m_SyncMode: 1
-        m_SyncGroupId: 
-        m_SequenceTopology: 0
-        m_SyncRole: 0
-        m_SyncMarkers: []
     - rid: 665191601650270966
       type: {class: MotionCurveTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -5928,11 +5916,6 @@ MonoBehaviour:
         m_Clips:
         - rid: 665191601650270995
         m_AnimationChannelId: FullBodyAction
-        m_SyncMode: 1
-        m_SyncGroupId: 
-        m_SequenceTopology: 0
-        m_SyncRole: 0
-        m_SyncMarkers: []
     - rid: 665191601650270969
       type: {class: MotionCurveTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -5961,7 +5944,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Clip: {fileID: 7400000, guid: 4ef82b85767cffe4883132371252902e, type: 2}
+        Sequence: {fileID: 11400000, guid: 586c5f445307ebc459a07268831d5f25, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -6026,30 +6009,6 @@ MonoBehaviour:
           - serializedVersion: 3
             time: 1
             value: 1
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          m_PreInfinity: 2
-          m_PostInfinity: 2
-          m_RotationOrder: 4
-        FootPlacementCurve:
-          serializedVersion: 2
-          m_Curve:
-          - serializedVersion: 3
-            time: 0
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 1
-            value: 0
             inSlope: 0
             outSlope: 0
             tangentMode: 0
@@ -8004,7 +7963,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Clip: {fileID: 7400000, guid: edd7c59a8dbf622489dcbd2692cd2ecd, type: 2}
+        Sequence: {fileID: 11400000, guid: 1393834b968743d44afda26da8754186, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -8075,39 +8034,6 @@ MonoBehaviour:
             weightedMode: 0
             inWeight: 0
             outWeight: 0
-          m_PreInfinity: 2
-          m_PostInfinity: 2
-          m_RotationOrder: 4
-        FootPlacementCurve:
-          serializedVersion: 2
-          m_Curve:
-          - serializedVersion: 3
-            time: 0
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 0.72
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 1
-            value: 1
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
@@ -13378,7 +13304,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Clip: {fileID: 7400000, guid: 6f9dc7e23ba63244e95d8f8d7142c5a2, type: 2}
+        Sequence: {fileID: 11400000, guid: 7dc151b3b92f47b46860257c9fb25cac, type: 2}
         ExtraPolationMode: 1
         WeightCurve:
           serializedVersion: 2
@@ -13449,39 +13375,6 @@ MonoBehaviour:
             weightedMode: 0
             inWeight: 0
             outWeight: 0
-          m_PreInfinity: 2
-          m_PostInfinity: 2
-          m_RotationOrder: 4
-        FootPlacementCurve:
-          serializedVersion: 2
-          m_Curve:
-          - serializedVersion: 3
-            time: 0
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 0.72
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 1
-            value: 1
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
@@ -20915,11 +20808,6 @@ MonoBehaviour:
         - rid: 665191753987391610
         - rid: 665191753987391805
         m_AnimationChannelId: FullBodyAction
-        m_SyncMode: 1
-        m_SyncGroupId: 
-        m_SequenceTopology: 0
-        m_SyncRole: 0
-        m_SyncMarkers: []
     - rid: 665191753987391595
       type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -20959,11 +20847,6 @@ MonoBehaviour:
         - rid: 665191753987391618
         - rid: 665191753987391807
         m_AnimationChannelId: FullBodyAction
-        m_SyncMode: 1
-        m_SyncGroupId: 
-        m_SequenceTopology: 0
-        m_SyncRole: 0
-        m_SyncMarkers: []
     - rid: 665191753987391599
       type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -21003,11 +20886,6 @@ MonoBehaviour:
         - rid: 665191753987391626
         - rid: 665191753987391809
         m_AnimationChannelId: FullBodyAction
-        m_SyncMode: 1
-        m_SyncGroupId: 
-        m_SequenceTopology: 0
-        m_SyncRole: 0
-        m_SyncMarkers: []
     - rid: 665191753987391603
       type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -21047,7 +20925,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Clip: {fileID: 7400000, guid: 928dc4fc54458fe488f6ee2bd52054a7, type: 2}
+        Sequence: {fileID: 11400000, guid: f350f9e8bd7d132489983cf861d364a0, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -21112,30 +20990,6 @@ MonoBehaviour:
           - serializedVersion: 3
             time: 1
             value: 1
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          m_PreInfinity: 2
-          m_PostInfinity: 2
-          m_RotationOrder: 4
-        FootPlacementCurve:
-          serializedVersion: 2
-          m_Curve:
-          - serializedVersion: 3
-            time: 0
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 1
-            value: 0
             inSlope: 0
             outSlope: 0
             tangentMode: 0
@@ -24278,7 +24132,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Clip: {fileID: 7400000, guid: c0186e9f72ed34e4dae58f9f7de9ffa0, type: 2}
+        Sequence: {fileID: 11400000, guid: cbf549475d3d53049969e379be751c51, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -24343,30 +24197,6 @@ MonoBehaviour:
           - serializedVersion: 3
             time: 1
             value: 1
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          m_PreInfinity: 2
-          m_PostInfinity: 2
-          m_RotationOrder: 4
-        FootPlacementCurve:
-          serializedVersion: 2
-          m_Curve:
-          - serializedVersion: 3
-            time: 0
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 1
-            value: 0
             inSlope: 0
             outSlope: 0
             tangentMode: 0
@@ -27797,7 +27627,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Clip: {fileID: 7400000, guid: cacfffd6d16755a40bd024ab1cfd8438, type: 2}
+        Sequence: {fileID: 11400000, guid: c9d84cf8f76c31340a657e94de7afb05, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -27862,30 +27692,6 @@ MonoBehaviour:
           - serializedVersion: 3
             time: 1
             value: 1
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          m_PreInfinity: 2
-          m_PostInfinity: 2
-          m_RotationOrder: 4
-        FootPlacementCurve:
-          serializedVersion: 2
-          m_Curve:
-          - serializedVersion: 3
-            time: 0
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 1
-            value: 0
             inSlope: 0
             outSlope: 0
             tangentMode: 0
@@ -34115,7 +33921,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Clip: {fileID: 7400000, guid: 69b4dda2a99b8c441833d55ec2229928, type: 2}
+        Sequence: {fileID: 11400000, guid: 0b90b15ff3f0a33438ea233f36685e8c, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -34186,39 +33992,6 @@ MonoBehaviour:
             weightedMode: 0
             inWeight: 0
             outWeight: 0
-          m_PreInfinity: 2
-          m_PostInfinity: 2
-          m_RotationOrder: 4
-        FootPlacementCurve:
-          serializedVersion: 2
-          m_Curve:
-          - serializedVersion: 3
-            time: 0
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 0.55712
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 1
-            value: 1
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
@@ -38883,7 +38656,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Clip: {fileID: 7400000, guid: fe89c3755a34cf64ca6ec99408ab55d6, type: 2}
+        Sequence: {fileID: 11400000, guid: f896916a727f0d44ebc8f436542faf30, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -38954,39 +38727,6 @@ MonoBehaviour:
             weightedMode: 0
             inWeight: 0
             outWeight: 0
-          m_PreInfinity: 2
-          m_PostInfinity: 2
-          m_RotationOrder: 4
-        FootPlacementCurve:
-          serializedVersion: 2
-          m_Curve:
-          - serializedVersion: 3
-            time: 0
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 0.47264
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 1
-            value: 1
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
@@ -43651,7 +43391,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Clip: {fileID: 7400000, guid: 67587c79547407b4a9fb97cadcf2b6e6, type: 2}
+        Sequence: {fileID: 11400000, guid: c72e274b473106848af2282ab4ba0077, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -43722,39 +43462,6 @@ MonoBehaviour:
             weightedMode: 0
             inWeight: 0
             outWeight: 0
-          m_PreInfinity: 2
-          m_PostInfinity: 2
-          m_RotationOrder: 4
-        FootPlacementCurve:
-          serializedVersion: 2
-          m_Curve:
-          - serializedVersion: 3
-            time: 0
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 0.53243524
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 1
-            value: 1
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
@@ -50867,7 +50574,7 @@ MonoBehaviour:
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        Clip: {fileID: 7400000, guid: 4cfdcca827720544e9b01db0507ad2bf, type: 2}
+        Sequence: {fileID: 11400000, guid: eda84cad9f6c91b49b4386bf059a7100, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
           serializedVersion: 2
@@ -50938,39 +50645,6 @@ MonoBehaviour:
             weightedMode: 0
             inWeight: 0
             outWeight: 0
-          m_PreInfinity: 2
-          m_PostInfinity: 2
-          m_RotationOrder: 4
-        FootPlacementCurve:
-          serializedVersion: 2
-          m_Curve:
-          - serializedVersion: 3
-            time: 0
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 0.22022988
-            value: 0
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
-          - serializedVersion: 3
-            time: 1
-            value: 1
-            inSlope: 0
-            outSlope: 0
-            tangentMode: 0
-            weightedMode: 0
-            inWeight: 0.33333334
-            outWeight: 0.33333334
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4

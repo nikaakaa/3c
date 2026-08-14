@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonGameplay.Tags;
@@ -74,6 +75,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     if (!TryResolveTimelineTrack(session, value.TimelineAuthoringId, value.TrackAuthoringId, value.Path, out _, out Track deleteTrack)) return false;
                     session.AddPlanned(value, null, deleteTrack.AuthoringId, "delete track");
                     return true;
+                case AgentEnsureTimelineSectionMutation value:
+                    if (!ValidateTimelineSectionTarget(session, value)) return false;
+                    session.AddPlanned(value, null, value.SectionAuthoringId, $"ensure Section {value.DisplayName}@{value.Frame}");
+                    return true;
+                case AgentDeleteTimelineSectionMutation value:
+                    if (!TryResolveTimelineSection(session, value.Target, value.SectionAuthoringId, value.Path, out _, out TimelineSection deleteSection)) return false;
+                    session.AddPlanned(value, null, deleteSection.AuthoringId, "delete Section");
+                    return true;
                 case AgentEnsureMotionWarpClipMutation value:
                     if (!ValidateMotionWarpClipTarget(session, value)) return false;
                     session.AddPlanned(value, null, value.Target.ClipAuthoringId, $"ensure MotionWarp clip {value.StartFrame}..{value.EndFrame}");
@@ -131,24 +140,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     session.AddPlanned(value, null, channelTrack.AuthoringId,
                         $"configure animation channel {channelTrack.AnimationChannelId} -> {value.AnimationChannelId}");
                     return true;
-                case AgentConfigureAnimationTrackMarkerSyncMutation value:
-                    if (!TryResolveAnimationTrack(session, value.Target, value.Path, out _, out AnimationTrack configureTrack)) return false;
-                    session.AddPlanned(value, null, configureTrack?.AuthoringId ?? value.Target.TrackAuthoringId,
-                        $"configure marker sync {value.Mode}/{value.SyncGroupId}/{value.Topology}/{value.SyncRole}");
-                    return true;
-                case AgentEnsureAnimationSyncMarkerMutation value:
-                    if (!TryResolveAnimationTrack(session, value.Target, value.Path, out _, out _)) return false;
-                    session.AddPlanned(value, null, value.MarkerAuthoringId,
-                        $"ensure animation marker {value.MarkerId}@{value.Frame}");
-                    return true;
-                case AgentMoveAnimationSyncMarkerMutation value:
-                    if (!TryResolveAnimationMarker(session, value.Target, value.Marker, value.Path, out _, out _, out AnimationSyncMarker moveMarker)) return false;
-                    session.AddPlanned(value, null, moveMarker?.AuthoringId ?? value.Marker.Identity,
-                        $"move animation marker to {value.Frame}");
-                    return true;
-                case AgentDeleteAnimationSyncMarkerMutation value:
-                    if (!TryResolveAnimationMarker(session, value.Target, value.Marker, value.Path, out _, out _, out AnimationSyncMarker deleteMarker)) return false;
-                    session.AddPlanned(value, null, deleteMarker?.AuthoringId ?? value.Marker.Identity, "delete animation marker");
+                case AgentEnsureAnimationSequenceSegmentMutation value:
+                    if (!ValidateAnimationSequenceSegment(session, value)) return false;
+                    session.AddPlanned(value, null, value.Target.ClipAuthoringId,
+                        $"ensure animation Sequence segment {value.StartFrame}..{value.EndFrame}");
                     return true;
                 case AgentDeleteTimelineClipMutation value:
                     if (!TryResolveTimelineClip(session, value.Target, value.Path, out _, out Clip deleteClip)) return false;
@@ -205,6 +200,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 case AgentConfigureMotionCurveClipMutation value: ApplyConfigureMotionCurveClip(session, value); break;
                 case AgentEnsureMotionWarpTrackMutation value: ApplyEnsureMotionWarpTrack(session, value); break;
                 case AgentDeleteTimelineTrackMutation value: ApplyDeleteTimelineTrack(session, value); break;
+                case AgentEnsureTimelineSectionMutation value: ApplyEnsureTimelineSection(session, value); break;
+                case AgentDeleteTimelineSectionMutation value: ApplyDeleteTimelineSection(session, value); break;
                 case AgentEnsureMotionWarpClipMutation value: ApplyEnsureMotionWarpClip(session, value); break;
                 case AgentConfigureMotionWarpSourceMutation value: ApplyConfigureMotionWarpSource(session, value); break;
                 case AgentConfigureMotionWarpParametersMutation value: ApplyConfigureMotionWarpParameters(session, value); break;
@@ -212,10 +209,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 case AgentConfigureTimelineClipEaseMutation value: ApplyConfigureTimelineClipEase(session, value); break;
                 case AgentConfigureTimelineCurveChannelMutation value: ApplyConfigureTimelineCurveChannel(session, value); break;
                 case AgentConfigureAnimationTrackChannelMutation value: ApplyConfigureAnimationTrackChannel(session, value); break;
-                case AgentConfigureAnimationTrackMarkerSyncMutation value: ApplyConfigureAnimationTrackMarkerSync(session, value); break;
-                case AgentEnsureAnimationSyncMarkerMutation value: ApplyEnsureAnimationSyncMarker(session, value); break;
-                case AgentMoveAnimationSyncMarkerMutation value: ApplyMoveAnimationSyncMarker(session, value); break;
-                case AgentDeleteAnimationSyncMarkerMutation value: ApplyDeleteAnimationSyncMarker(session, value); break;
+                case AgentEnsureAnimationSequenceSegmentMutation value: ApplyEnsureAnimationSequenceSegment(session, value); break;
                 case AgentDeleteTimelineClipMutation value: ApplyDeleteTimelineClip(session, value); break;
                 case AgentEnsureTreeClipBlackboardWriteMutation value: ApplyEnsureTreeClipWrite(session, value); break;
                 case AgentDeleteTransitionMutation value: ApplyDeleteTransition(session, value); break;
@@ -582,6 +576,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             session.AddAppliedAuthoring(command, timeline.SerializedOwner, null, command.TrackAuthoringId, "delete track");
         }
 
+        static void ApplyEnsureTimelineSection(AgentMutationSession session, AgentEnsureTimelineSectionMutation command)
+        {
+            if (!TryResolveTimeline(session, command.Target, command.Path, out TimelineData timeline))
+                return;
+            TimelineSection section = string.IsNullOrEmpty(command.SectionAuthoringId)
+                ? timeline.AddSection(command.DisplayName, command.Frame)
+                : timeline.EnsureSection(command.SectionAuthoringId, command.DisplayName, command.Frame);
+            session.AddAppliedAuthoring(command, timeline.SerializedOwner, section, section.AuthoringId, "ensure Timeline Section");
+        }
+
+        static void ApplyDeleteTimelineSection(AgentMutationSession session, AgentDeleteTimelineSectionMutation command)
+        {
+            if (!TryResolveTimelineSection(session, command.Target, command.SectionAuthoringId, command.Path, out TimelineData timeline, out TimelineSection section))
+                return;
+            timeline.RemoveSection(section);
+            session.AddAppliedAuthoring(command, timeline.SerializedOwner, null, command.SectionAuthoringId, "delete Timeline Section");
+        }
+
         static void ApplyMoveTimelineClip(AgentMutationSession session, AgentMoveTimelineClipMutation command)
         {
             if (!TryResolveTimelineClip(session, command.Target, command.Path, out TimelineData timeline, out Clip clip))
@@ -618,20 +630,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             session.AddAppliedAuthoring(command, timeline.SerializedOwner, clip, clip.AuthoringId, $"configure Timeline curve {command.ChannelId}");
         }
 
-        static void ApplyConfigureAnimationTrackMarkerSync(
-            AgentMutationSession session,
-            AgentConfigureAnimationTrackMarkerSyncMutation command)
-        {
-            if (!TryResolveAnimationTrack(session, command.Target, command.Path, out TimelineData timeline, out AnimationTrack track))
-                return;
-            if (command.Mode == AnimationSyncMode.None)
-                track.ConfigureNone();
-            else
-                track.ConfigureMarkerGroup(command.SyncGroupId, command.Topology, command.SyncRole);
-            timeline.Init();
-            session.AddAppliedAuthoring(command, timeline.SerializedOwner, track, track.AuthoringId, "configure animation marker sync");
-        }
-
         static void ApplyConfigureAnimationTrackChannel(
             AgentMutationSession session,
             AgentConfigureAnimationTrackChannelMutation command)
@@ -643,40 +641,89 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             session.AddAppliedAuthoring(command, timeline.SerializedOwner, track, track.AuthoringId, $"configure animation channel {command.AnimationChannelId}");
         }
 
-        static void ApplyEnsureAnimationSyncMarker(
+        static void ApplyEnsureAnimationSequenceSegment(
             AgentMutationSession session,
-            AgentEnsureAnimationSyncMarkerMutation command)
+            AgentEnsureAnimationSequenceSegmentMutation command)
         {
-            if (!TryResolveAnimationTrack(session, command.Target, command.Path, out TimelineData timeline, out AnimationTrack track))
+            if (!TryResolveAnimationTrack(session, command.Target, command.Path, out TimelineData timeline, out AnimationTrack track) ||
+                !TryResolveAnimationSequence(session, command.Sequence, command.Path, out CharacterAnimationSequenceAsset sequence))
                 return;
-            AnimationSyncMarker marker = string.IsNullOrEmpty(command.MarkerAuthoringId)
-                ? track.AddMarker(command.MarkerId, command.Frame)
-                : track.EnsureMarker(command.MarkerAuthoringId, command.MarkerId, command.Frame);
+            BTSMTL.Timeline.AnimationClip clip = string.IsNullOrEmpty(command.Target.ClipAuthoringId)
+                ? null
+                : track.Clips.OfType<BTSMTL.Timeline.AnimationClip>().SingleOrDefault(value =>
+                    string.Equals(value.AuthoringId, command.Target.ClipAuthoringId, StringComparison.Ordinal));
+            clip ??= timeline.AddClip(sequence, track, command.StartFrame) as BTSMTL.Timeline.AnimationClip;
+            clip.Sequence = sequence;
+            clip.StartFrame = command.StartFrame;
+            clip.EndFrame = command.EndFrame;
+            clip.ClipInFrame = command.ClipInFrame;
+            clip.ExtraPolationMode = command.ExtraPolationMode;
+            track.UpdateMix();
             timeline.Init();
-            session.AddAppliedAuthoring(command, timeline.SerializedOwner, marker, marker.AuthoringId, "ensure animation marker");
+            session.AddAppliedAuthoring(command, timeline.SerializedOwner, clip, clip.AuthoringId, "ensure animation Sequence segment");
         }
 
-        static void ApplyMoveAnimationSyncMarker(
+        static bool ValidateAnimationSequenceSegment(
             AgentMutationSession session,
-            AgentMoveAnimationSyncMarkerMutation command)
+            AgentEnsureAnimationSequenceSegmentMutation command)
         {
-            if (!TryResolveAnimationMarker(session, command.Target, command.Marker, command.Path, out TimelineData timeline, out AnimationTrack track, out AnimationSyncMarker marker))
-                return;
-            track.MoveMarker(marker.AuthoringId, command.Frame);
-            timeline.Init();
-            session.AddAppliedAuthoring(command, timeline.SerializedOwner, marker, marker.AuthoringId, "move animation marker");
+            if (!TryResolveAnimationTrack(session, command.Target, command.Path, out _, out AnimationTrack track) ||
+                !TryResolveAnimationSequence(session, command.Sequence, command.Path, out CharacterAnimationSequenceAsset sequence))
+                return false;
+            if (command.StartFrame < 0 || command.EndFrame <= command.StartFrame || command.ClipInFrame < 0)
+            {
+                session.Report.Error(command.Path, "animation_sequence_segment_frames_invalid", "Sequence Segment frame范围非法。");
+                return false;
+            }
+            if (sequence && command.ClipInFrame > sequence.DurationFrame)
+            {
+                session.Report.Error(command.Path, "animation_sequence_segment_clip_in_invalid", "Sequence Segment ClipIn超出Sequence时长。");
+                return false;
+            }
+            if (track == null || string.IsNullOrEmpty(command.Target.ClipAuthoringId))
+                return true;
+            Clip existing = track.Clips.SingleOrDefault(value =>
+                string.Equals(value.AuthoringId, command.Target.ClipAuthoringId, StringComparison.Ordinal));
+            if (existing is BTSMTL.Timeline.AnimationClip)
+                return true;
+            session.Report.Error(command.Path, "animation_sequence_segment_not_found", $"Sequence Segment identity无法解析：{command.Target.ClipAuthoringId}");
+            return false;
         }
 
-        static void ApplyDeleteAnimationSyncMarker(
+        static bool TryResolveAnimationSequence(
             AgentMutationSession session,
-            AgentDeleteAnimationSyncMarkerMutation command)
+            AgentPackageAssetReferenceV3 reference,
+            string path,
+            out CharacterAnimationSequenceAsset sequence)
         {
-            if (!TryResolveAnimationMarker(session, command.Target, command.Marker, command.Path, out TimelineData timeline, out AnimationTrack track, out AnimationSyncMarker marker))
-                return;
-            string markerAuthoringId = marker.AuthoringId;
-            track.DeleteMarker(markerAuthoringId);
-            timeline.Init();
-            session.AddAppliedAuthoring(command, timeline.SerializedOwner, null, markerAuthoringId, "delete animation marker");
+            sequence = null;
+            if (!string.IsNullOrWhiteSpace(reference?.localId))
+            {
+                if (!session.IsApply)
+                    return true;
+                sequence = session.PresentationPlan?.AnimationSequences
+                    .Where(value => value.Target != null && value.Target.asset != null)
+                    .SingleOrDefault(value => string.Equals(
+                        value.Target.asset.localId,
+                        reference.localId,
+                        StringComparison.Ordinal))?.Asset;
+            }
+            else if (reference != null)
+            {
+                sequence = AssetDatabase.LoadAssetAtPath<CharacterAnimationSequenceAsset>(reference.assetPath);
+                if (sequence &&
+                    AssetDatabase.TryGetGUIDAndLocalFileIdentifier(sequence, out string guid, out long localFileId) &&
+                    (!string.Equals(guid, reference.assetGuid, StringComparison.Ordinal) ||
+                     localFileId != reference.localFileId))
+                    sequence = null;
+            }
+            if (!sequence)
+            {
+                session.Report.Error(path + ".animationSequence", "animation_sequence_reference_unresolved", "Sequence Segment无法解析精确Sequence引用。");
+                return false;
+            }
+            sequence.RequireValid();
+            return true;
         }
 
         static void ApplyEnsureInlineTimeline(AgentMutationSession session, AgentEnsureInlineTimelineMutation command)
@@ -1188,36 +1235,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return false;
         }
 
-        static bool TryResolveAnimationMarker(
-            AgentMutationSession session,
-            AgentTimelineTargetReference target,
-            AgentAuthoringReference markerReference,
-            string path,
-            out TimelineData timeline,
-            out AnimationTrack track,
-            out AnimationSyncMarker marker)
-        {
-            marker = null;
-            if (!TryResolveAnimationTrack(session, target, path, out timeline, out track))
-                return false;
-            if (markerReference.PlannedIdentity.IsValid)
-            {
-                if (!session.TryResolvePlannedIdentity(markerReference.PlannedIdentity, path, out marker))
-                    return false;
-                if (!session.IsApply)
-                    return true;
-            }
-            else
-            {
-                marker = track?.SyncMarkers.SingleOrDefault(value =>
-                    string.Equals(value.AuthoringId, markerReference.AuthoringId, StringComparison.Ordinal));
-            }
-            if (marker != null && (track == null || track.SyncMarkers.Contains(marker)))
-                return true;
-            session.Report.Error(path, "animation_marker_not_found", $"Animation marker identity 无法解析：{markerReference.Identity}");
-            return false;
-        }
-
         static bool ValidateTimelineClipEase(
             AgentMutationSession session,
             AgentConfigureTimelineClipEaseMutation command,
@@ -1576,6 +1593,51 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (track != null)
                 return true;
             session.Report.Error(path, "timeline_track_not_found", $"Timeline Track identity 无法解析：{trackAuthoringId}");
+            return false;
+        }
+
+        static bool ValidateTimelineSectionTarget(AgentMutationSession session, AgentEnsureTimelineSectionMutation command)
+        {
+            if (!TryResolveTimeline(session, command.Target, command.Path, out TimelineData timeline))
+                return false;
+            if (!session.IsApply && timeline == null)
+                return true;
+            TimelineSection existing = string.IsNullOrEmpty(command.SectionAuthoringId)
+                ? null
+                : timeline.Sections.SingleOrDefault(value => value.AuthoringId == command.SectionAuthoringId);
+            if (!string.IsNullOrEmpty(command.SectionAuthoringId) && existing == null)
+            {
+                session.Report.Error(command.Path, "timeline_section_not_found", $"Timeline Section identity无法解析：{command.SectionAuthoringId}");
+                return false;
+            }
+            TimelineSection duplicate = timeline.Sections.SingleOrDefault(value =>
+                !ReferenceEquals(value, existing) && string.Equals(value.Name, command.DisplayName, StringComparison.Ordinal));
+            if (duplicate == null)
+                return true;
+            session.Report.Error(command.Path, "timeline_section_name_duplicate", $"Timeline Section名称重复：{command.DisplayName}");
+            return false;
+        }
+
+        static bool TryResolveTimelineSection(
+            AgentMutationSession session,
+            AgentTimelineTargetReference target,
+            string sectionAuthoringId,
+            string path,
+            out TimelineData timeline,
+            out TimelineSection section)
+        {
+            section = null;
+            if (!TryResolveTimeline(session, target, path, out timeline))
+                return false;
+            if (timeline == null)
+            {
+                session.Report.Error(path, "timeline_section_owner_unresolved", "删除Timeline Section时Timeline必须已存在。");
+                return false;
+            }
+            section = timeline.Sections.SingleOrDefault(value => value.AuthoringId == sectionAuthoringId);
+            if (section != null)
+                return true;
+            session.Report.Error(path, "timeline_section_not_found", $"Timeline Section identity无法解析：{sectionAuthoringId}");
             return false;
         }
 

@@ -44,7 +44,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 presentation = ExportPresentationContext(
                     definition,
                     snapshot.presentation),
-                animationMarkerGroups = snapshot.animationMarkerGroups,
                 timelineAssets = snapshot.timelineAssets,
                 actionContextAssets = snapshot.actionContextAssets,
                 generatedProduct = ExportGeneratedProduct(
@@ -262,6 +261,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 blendCurves = ExportBlendCurves(),
                 blendProfiles = ExportBlendProfiles(
                     rig),
+                animationSequences = ExportAnimationSequences(
+                    definition),
                 footAnalysisSourceId =
                     snapshot.footAnalysisSourceId,
                 footAnalysisSourceVersion =
@@ -303,6 +304,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                 required = port.Required
                             })
                         .ToList()
+                })
+                .ToList();
+        }
+
+        static List<AgentDocumentAnimationSequenceContext> ExportAnimationSequences(
+            CharacterPipelineDefinition definition)
+        {
+            AgentDocumentPresentationEditable presentation =
+                new AgentAuthoringPresentationExporter().Export(definition);
+            return presentation.animationSequences
+                .Select(value => new AgentDocumentAnimationSequenceContext
+                {
+                    id = value.id,
+                    name = value.name,
+                    asset = value.asset,
+                    clip = value.clip,
+                    rig = value.rig,
+                    footAnalysisSource = value.footAnalysisSource,
+                    footAnalysisIdentity = value.footAnalysisIdentity,
+                    contentRevision = value.contentRevision
                 })
                 .ToList();
         }
@@ -379,7 +400,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 "Timeline",
                 "MotionWarp",
                 "AnimationChannel",
-                "TimelineMarkerSync",
+                "AnimationSequence",
                 "RegisteredCurveChannel",
                 "PresentationProfile",
                 "PoseGraph",

@@ -182,17 +182,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     readonly struct TimelineFootContactMarkerCandidate
     {
-        public TimelineFootContactMarkerCandidate(AnimationFootContactCandidate source, int timelineFrame)
+        public TimelineFootContactMarkerCandidate(AnimationFootContactCandidate source, int sequenceFrame)
         {
-            if (timelineFrame < 0)
-                throw new ArgumentOutOfRangeException(nameof(timelineFrame));
+            if (sequenceFrame < 0)
+                throw new ArgumentOutOfRangeException(nameof(sequenceFrame));
             Source = source;
-            TimelineFrame = timelineFrame;
+            SequenceFrame = sequenceFrame;
         }
 
         public AnimationFootContactCandidate Source { get; }
         public string MarkerId => Source.MarkerId;
-        public int TimelineFrame { get; }
+        public int SequenceFrame { get; }
     }
 
     sealed class TimelineFootContactMarkerProposal
@@ -202,160 +202,106 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         TimelineFootContactMarkerProposal(
             string revision,
-            string timelineAuthoringId,
-            string trackAuthoringId,
-            string clipAuthoringId,
+            string sequenceAuthoringId,
             AnimationFootContactCandidateSet source,
             TimelineFootContactMarkerCandidate[] candidates)
         {
             Revision = revision;
-            TimelineAuthoringId = timelineAuthoringId;
-            TrackAuthoringId = trackAuthoringId;
-            ClipAuthoringId = clipAuthoringId;
+            SequenceAuthoringId = sequenceAuthoringId;
             Source = source;
             Candidates = candidates;
         }
 
         public string Revision { get; }
-        public string TimelineAuthoringId { get; }
-        public string TrackAuthoringId { get; }
-        public string ClipAuthoringId { get; }
+        public string SequenceAuthoringId { get; }
         public AnimationFootContactCandidateSet Source { get; }
         public IReadOnlyList<TimelineFootContactMarkerCandidate> Candidates { get; }
 
         public static TimelineFootContactMarkerProposal Build(
-            TimelineData timeline,
-            AnimationTrack track,
-            TimelineAnimationClip clip,
+            CharacterAnimationSequenceAsset sequence,
             AnimationFootAnalysisArtifact artifact)
         {
-            if (timeline == null)
-                throw new ArgumentNullException(nameof(timeline));
-            if (track == null)
-                throw new ArgumentNullException(nameof(track));
-            if (clip == null || !clip.Clip)
-                throw new ArgumentNullException(nameof(clip));
-            if (!ReferenceEquals(clip.Track, track))
-                throw new InvalidOperationException("Foot contact marker proposal Clip does not belong to the target AnimationTrack.");
-            if (!AuthoringIdentity.IsValid(timeline.AuthoringId) ||
-                !AuthoringIdentity.IsValid(track.AuthoringId) ||
-                !AuthoringIdentity.IsValid(clip.AuthoringId))
-            {
-                throw new InvalidOperationException(
-                    "Foot contact marker proposal requires stable Timeline, Track and Clip authoring identities.");
-            }
-            if (track.SyncMode != AnimationSyncMode.MarkerGroup ||
-                track.SequenceTopology != AnimationMarkerSequenceTopology.Cyclic)
-                throw new InvalidOperationException("Foot contact marker proposal requires a MarkerGroup/Cyclic AnimationTrack.");
-            if (timeline.MaxFrame <= 0)
-                throw new InvalidOperationException("Foot contact marker proposal requires a positive Timeline duration.");
+            if (!sequence || !sequence.Clip)
+                throw new ArgumentNullException(nameof(sequence));
+            if (!AuthoringIdentity.IsValid(sequence.AuthoringId))
+                throw new InvalidOperationException("Foot contact marker proposal requires a stable Sequence identity.");
+            if (!sequence.Loop || sequence.SyncMode != AnimationSyncMode.MarkerGroup ||
+                sequence.SequenceTopology != AnimationMarkerSequenceTopology.Cyclic)
+                throw new InvalidOperationException("Foot contact marker proposal requires a looping MarkerGroup/Cyclic Sequence.");
 
-            int animationClipCount = 0;
-            TimelineAnimationClip onlyClip = null;
-            for (int i = 0; i < track.Clips.Count; i++)
-            {
-                if (track.Clips[i] is not TimelineAnimationClip value || !value.Clip)
-                    continue;
-                animationClipCount++;
-                onlyClip = value;
-            }
-            if (animationClipCount != 1 || !ReferenceEquals(onlyClip, clip))
-                throw new InvalidOperationException("Foot contact marker proposal requires exactly one AnimationClip on the target track.");
-            if (clip.StartFrame != 0 || clip.EndFrame != timeline.MaxFrame)
-                throw new InvalidOperationException("Foot contact marker proposal requires the selected AnimationClip to exactly cover the Timeline.");
-
-            AnimationFootContactCandidateSet source = AnimationFootContactCandidateSet.Build(clip.Clip, artifact);
-            int sourceCycleFrames = clip.Length;
-            if (sourceCycleFrames <= 0)
-                throw new InvalidOperationException("Foot contact marker proposal source cycle has no frames.");
+            AnimationFootContactCandidateSet source = AnimationFootContactCandidateSet.Build(sequence.Clip, artifact);
+            int sourceCycleFrames = sequence.DurationFrame;
             var mapped = new List<TimelineFootContactMarkerCandidate>();
             var occupiedFrames = new HashSet<int>();
             for (int i = 0; i < source.Candidates.Count; i++)
             {
                 AnimationFootContactCandidate candidate = source.Candidates[i];
-                int sourceFrame = Mathf.Clamp(
+                int frame = Mathf.Clamp(
                     Mathf.RoundToInt(candidate.SourceNormalizedTime * sourceCycleFrames),
                     0,
                     sourceCycleFrames - 1);
-                int firstFrame = PositiveModulo(sourceFrame - clip.ClipInFrame, sourceCycleFrames);
-                for (int frame = firstFrame; frame < timeline.MaxFrame; frame += sourceCycleFrames)
-                {
-                    if (!occupiedFrames.Add(frame))
-                        throw new InvalidOperationException($"Foot contact candidates collide at Timeline frame {frame}.");
-                    mapped.Add(new TimelineFootContactMarkerCandidate(candidate, frame));
-                }
+                if (!occupiedFrames.Add(frame))
+                    throw new InvalidOperationException($"Foot contact candidates collide at Sequence frame {frame}.");
+                mapped.Add(new TimelineFootContactMarkerCandidate(candidate, frame));
             }
             mapped.Sort((left, right) =>
             {
-                int frame = left.TimelineFrame.CompareTo(right.TimelineFrame);
+                int frame = left.SequenceFrame.CompareTo(right.SequenceFrame);
                 return frame != 0 ? frame : string.CompareOrdinal(left.MarkerId, right.MarkerId);
             });
             if (mapped.Count < 2)
-                throw new InvalidOperationException("Foot contact marker proposal does not cover both feet on the target Timeline.");
+                throw new InvalidOperationException("Foot contact marker proposal does not cover both feet on the Sequence.");
 
-            for (int i = 0; i < track.SyncMarkers.Count; i++)
+            for (int i = 0; i < sequence.SyncMarkers.Count; i++)
             {
-                AnimationSyncMarker marker = track.SyncMarkers[i];
-                if (marker == null || IsFootMarker(marker.MarkerId))
-                    continue;
-                if (occupiedFrames.Contains(marker.Frame))
+                AnimationSyncMarker marker = sequence.SyncMarkers[i];
+                if (marker != null && !IsFootMarker(marker.MarkerId) && occupiedFrames.Contains(marker.Frame))
                     throw new InvalidOperationException(
-                        $"Foot contact candidate frame {marker.Frame} conflicts with business marker '{marker.MarkerId}'.");
+                        $"Foot contact candidate frame {marker.Frame} conflicts with material marker '{marker.MarkerId}'.");
             }
 
             var revisionParts = new List<string>
             {
-                "timeline-foot-contact-marker-proposal/v1",
-                timeline.AuthoringId,
-                track.AuthoringId,
-                clip.AuthoringId,
+                "animation-sequence-foot-contact-marker-proposal/v2",
+                sequence.AuthoringId,
+                sequence.ContentRevision,
                 source.Revision,
-                timeline.MaxFrame.ToString(CultureInfo.InvariantCulture),
-                clip.StartFrame.ToString(CultureInfo.InvariantCulture),
-                clip.EndFrame.ToString(CultureInfo.InvariantCulture),
-                clip.ClipInFrame.ToString(CultureInfo.InvariantCulture),
                 sourceCycleFrames.ToString(CultureInfo.InvariantCulture),
-                clip.ExtraPolationMode.ToString(),
-                track.AnimationChannelId.ToString(),
-                track.SyncGroupId ?? string.Empty,
-                track.SyncMode.ToString(),
-                track.SequenceTopology.ToString(),
-                track.SyncRole.ToString()
+                sequence.SyncGroupId,
+                sequence.TimeMapping.ToString(),
+                sequence.SequenceTopology.ToString(),
+                sequence.SyncRole.ToString()
             };
-            for (int i = 0; i < track.SyncMarkers.Count; i++)
-            {
-                AnimationSyncMarker marker = track.SyncMarkers[i];
-                revisionParts.Add(marker?.AuthoringId ?? string.Empty);
-                revisionParts.Add(marker?.MarkerId ?? string.Empty);
-                revisionParts.Add((marker?.Frame ?? -1).ToString(CultureInfo.InvariantCulture));
-            }
             for (int i = 0; i < mapped.Count; i++)
             {
                 revisionParts.Add(mapped[i].MarkerId);
-                revisionParts.Add(mapped[i].TimelineFrame.ToString(CultureInfo.InvariantCulture));
+                revisionParts.Add(mapped[i].SequenceFrame.ToString(CultureInfo.InvariantCulture));
             }
             return new TimelineFootContactMarkerProposal(
                 StableHash.Compute(revisionParts.ToArray()).Value,
-                timeline.AuthoringId,
-                track.AuthoringId,
-                clip.AuthoringId,
+                sequence.AuthoringId,
                 source,
                 mapped.ToArray());
         }
 
-        public void Apply(AnimationTrack track)
+        public void Apply(CharacterAnimationSequenceAsset sequence)
         {
-            if (track == null || !string.Equals(track.AuthoringId, TrackAuthoringId, StringComparison.Ordinal))
-                throw new InvalidOperationException("Foot contact marker proposal target track changed.");
+            if (!sequence || !string.Equals(sequence.AuthoringId, SequenceAuthoringId, StringComparison.Ordinal))
+                throw new InvalidOperationException("Foot contact marker proposal target Sequence changed.");
+            sequence.ApplyModify(() => ApplyMarkers(sequence), "Apply Foot Contact Markers");
+        }
+
+        void ApplyMarkers(CharacterAnimationSequenceAsset sequence)
+        {
             var reusable = new Dictionary<string, List<AnimationSyncMarker>>(StringComparer.Ordinal)
             {
                 [LeftMarkerId] = new List<AnimationSyncMarker>(),
                 [RightMarkerId] = new List<AnimationSyncMarker>()
             };
             var existingFootMarkers = new List<AnimationSyncMarker>();
-            for (int i = 0; i < track.SyncMarkers.Count; i++)
+            for (int i = 0; i < sequence.SyncMarkers.Count; i++)
             {
-                AnimationSyncMarker marker = track.SyncMarkers[i];
+                AnimationSyncMarker marker = sequence.SyncMarkers[i];
                 if (marker == null || !IsFootMarker(marker.MarkerId))
                     continue;
                 reusable[marker.MarkerId].Add(marker);
@@ -368,21 +314,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 TimelineFootContactMarkerCandidate candidate = Candidates[i];
                 AnimationSyncMarker marker = FindReusableMarker(
                     reusable[candidate.MarkerId],
-                    candidate.TimelineFrame,
+                    candidate.SequenceFrame,
                     reusedIds);
-                if (marker == null)
-                {
-                    track.AddMarker(candidate.MarkerId, candidate.TimelineFrame);
-                    continue;
-                }
-                reusedIds.Add(marker.AuthoringId);
-                track.EnsureMarker(marker.AuthoringId, candidate.MarkerId, candidate.TimelineFrame);
+                string identity = marker?.AuthoringId ?? AuthoringIdentity.Create();
+                sequence.EnsureMarker(identity, candidate.MarkerId, candidate.SequenceFrame);
+                reusedIds.Add(identity);
             }
             for (int i = 0; i < existingFootMarkers.Count; i++)
             {
                 AnimationSyncMarker marker = existingFootMarkers[i];
                 if (!reusedIds.Contains(marker.AuthoringId))
-                    track.DeleteMarker(marker.AuthoringId);
+                    sequence.DeleteMarker(marker.AuthoringId);
             }
         }
 
@@ -404,12 +346,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return marker;
             }
             return null;
-        }
-
-        static int PositiveModulo(int value, int modulus)
-        {
-            int result = value % modulus;
-            return result < 0 ? result + modulus : result;
         }
 
         static bool IsFootMarker(string markerId) =>

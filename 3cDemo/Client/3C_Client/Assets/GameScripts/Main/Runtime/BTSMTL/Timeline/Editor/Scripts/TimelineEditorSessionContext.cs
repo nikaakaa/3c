@@ -12,8 +12,8 @@ namespace BTSMTL.Timeline.Editor
         Track = 1,
         Clip = 2,
         TreeClip = 3,
-        Marker = 4,
-        Curve = 5
+        Curve = 4,
+        Section = 5
     }
 
     public interface ITimelineEditorRuntimeDebugBinding
@@ -42,6 +42,19 @@ namespace BTSMTL.Timeline.Editor
         {
         }
 
+        public TimelineEditorSelection(TimelineSection section)
+            : this(
+                section != null ? TimelineEditorSelectionKind.Section : TimelineEditorSelectionKind.None,
+                null,
+                null,
+                section?.AuthoringId ?? string.Empty,
+                string.Empty,
+                Array.Empty<int>(),
+                0)
+        {
+            Section = section;
+        }
+
         TimelineEditorSelection(
             TimelineEditorSelectionKind kind,
             Track track,
@@ -54,6 +67,7 @@ namespace BTSMTL.Timeline.Editor
             Kind = kind;
             Track = track;
             Clip = clip;
+            Section = null;
             ElementAuthoringId =
                 elementAuthoringId ?? string.Empty;
             SubElementId = subElementId ?? string.Empty;
@@ -64,6 +78,7 @@ namespace BTSMTL.Timeline.Editor
         public TimelineEditorSelectionKind Kind { get; }
         public Track Track { get; }
         public Clip Clip { get; }
+        public TimelineSection Section { get; }
         public string ElementAuthoringId { get; }
         public string SubElementId { get; }
         public IReadOnlyList<int> KeyIndices { get; }
@@ -72,10 +87,22 @@ namespace BTSMTL.Timeline.Editor
         public bool HasClip => Clip != null;
         public bool IsTreeClip =>
             Kind == TimelineEditorSelectionKind.TreeClip;
-        public bool HasMarker =>
-            Kind == TimelineEditorSelectionKind.Marker;
         public bool HasCurve =>
             Kind == TimelineEditorSelectionKind.Curve;
+
+        internal static TimelineEditorSelection FromCurve(AnimationCurveSelection selection)
+        {
+            if (selection == null || selection.Binding is not TimelineCurveLaneBinding binding || selection.Owner is not Clip owner)
+                return default;
+            return new TimelineEditorSelection(
+                TimelineEditorSelectionKind.Curve,
+                owner.Track,
+                owner,
+                selection.OwnerAuthoringId,
+                binding.Descriptor.ChannelId.Value,
+                selection.KeyIndices,
+                selection.Revision);
+        }
 
     }
 
@@ -161,7 +188,6 @@ namespace BTSMTL.Timeline.Editor
             UnityEngine.Object serializedOwner,
             string serializedPropertyPath,
             string ownershipLabel,
-            ITimelineAnimationMarkerSyncAuthoringContext markerTopologyContext,
             ITimelineEditorRuntimeDebugBinding runtimeDebugBinding,
             TimelineEditorToolCatalog toolCatalog)
         {
@@ -171,7 +197,6 @@ namespace BTSMTL.Timeline.Editor
                 throw new ArgumentException("Timeline serialized property path is invalid.", nameof(serializedPropertyPath));
             SerializedPropertyPath = serializedPropertyPath;
             OwnershipLabel = ownershipLabel ?? string.Empty;
-            MarkerTopologyContext = markerTopologyContext;
             RuntimeDebugBinding = runtimeDebugBinding;
             ToolCatalog = toolCatalog ?? TimelineEditorToolCatalog.Empty;
         }
@@ -180,7 +205,6 @@ namespace BTSMTL.Timeline.Editor
         public UnityEngine.Object SerializedOwner { get; }
         public string SerializedPropertyPath { get; }
         public string OwnershipLabel { get; }
-        public ITimelineAnimationMarkerSyncAuthoringContext MarkerTopologyContext { get; }
         public ITimelineEditorRuntimeDebugBinding RuntimeDebugBinding { get; }
         public TimelineEditorToolCatalog ToolCatalog { get; }
     }
@@ -206,7 +230,6 @@ namespace BTSMTL.Timeline.Editor
         public UnityEngine.Object SerializedOwner => m_Request.SerializedOwner;
         public string SerializedPropertyPath => m_Request.SerializedPropertyPath;
         public string OwnershipLabel => m_Request.OwnershipLabel;
-        public ITimelineAnimationMarkerSyncAuthoringContext MarkerTopologyContext => m_Request.MarkerTopologyContext;
         public ITimelineEditorRuntimeDebugBinding RuntimeDebugBinding => m_Request.RuntimeDebugBinding;
         public TimelineEditorToolCatalog ToolCatalog => m_Request.ToolCatalog;
         public TimelineEditorSelection Selection => m_Selection;
@@ -231,8 +254,10 @@ namespace BTSMTL.Timeline.Editor
         {
             TimelineEditorSelection selection = target switch
             {
+                AnimationCurveSelection curveSelection => TimelineEditorSelection.FromCurve(curveSelection),
                 Clip clip => new TimelineEditorSelection(clip.Track, clip),
                 Track track => new TimelineEditorSelection(track, null),
+                TimelineSection section => new TimelineEditorSelection(section),
                 _ => default
             };
             if (selection.Kind == m_Selection.Kind &&
@@ -242,6 +267,9 @@ namespace BTSMTL.Timeline.Editor
                 ReferenceEquals(
                     selection.Clip,
                     m_Selection.Clip) &&
+                ReferenceEquals(
+                    selection.Section,
+                    m_Selection.Section) &&
                 string.Equals(
                     selection.ElementAuthoringId,
                     m_Selection.ElementAuthoringId,
@@ -251,7 +279,7 @@ namespace BTSMTL.Timeline.Editor
                     m_Selection.SubElementId,
                     StringComparison.Ordinal) &&
                 selection.Revision == m_Selection.Revision &&
-                selection.KeyIndices.SequenceEqual(
+                (selection.KeyIndices ?? Array.Empty<int>()).SequenceEqual(
                     m_Selection.KeyIndices ??
                     Array.Empty<int>()))
                 return;

@@ -25,6 +25,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             IReadOnlyDictionary<string, int> profileIndicesByIdentity,
             CharacterAnimationPresentationProfile profile,
             CharacterLinkedPoseProjectionPayload linkedPose,
+            CharacterFootPlacementAnalysisCompilation footAnalysis,
             List<string> errors) =>
             CharacterPoseNativePlanBuilder.Build(
                 asset,
@@ -37,6 +38,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 profileIndicesByIdentity,
                 profile,
                 linkedPose,
+                footAnalysis,
                 errors);
     }
 
@@ -95,7 +97,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 IReadOnlyDictionary<string, int> curveIndices,
                 IReadOnlyDictionary<string, int> profileIndicesByIdentity,
                 CharacterAnimationPresentationProfile profile,
-                CharacterLinkedPoseProjectionPayload linkedPose)
+                CharacterLinkedPoseProjectionPayload linkedPose,
+                CharacterFootPlacementAnalysisCompilation footAnalysis)
             {
                 GraphAsset = graphAsset;
                 Rig = rig;
@@ -112,6 +115,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     throw new ArgumentNullException(nameof(profileIndicesByIdentity));
                 Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
                 LinkedPose = linkedPose ?? throw new ArgumentNullException(nameof(linkedPose));
+                FootAnalysis = footAnalysis ?? throw new ArgumentNullException(nameof(footAnalysis));
                 LinkedGroups = profile.LinkedPoseGroups.ToDictionary(value => value.GroupId);
                 LinkedImplementations = profile.LinkedPoseImplementations.ToDictionary(value => value.ImplementationId);
             }
@@ -128,6 +132,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public IReadOnlyDictionary<string, int> ProfileIndicesByIdentity { get; }
             public CharacterAnimationPresentationProfile Profile { get; }
             public CharacterLinkedPoseProjectionPayload LinkedPose { get; }
+            public CharacterFootPlacementAnalysisCompilation FootAnalysis { get; }
             public Dictionary<LinkedPoseGroupId, CharacterLinkedPoseGroupBinding> LinkedGroups { get; }
             public Dictionary<LinkedPoseImplementationId, CharacterLinkedPoseImplementationAsset> LinkedImplementations { get; }
             public List<CharacterLinkedPoseEntryFragmentPlanDescriptor> LinkedFragments { get; } = new List<CharacterLinkedPoseEntryFragmentPlanDescriptor>();
@@ -195,6 +200,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             IReadOnlyDictionary<string, int> profileIndicesByIdentity,
             CharacterAnimationPresentationProfile profile,
             CharacterLinkedPoseProjectionPayload linkedPose,
+            CharacterFootPlacementAnalysisCompilation footAnalysis,
             List<string> errors)
         {
             IReadOnlyList<string> capabilityErrors =
@@ -226,7 +232,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     curveIndices,
                     profileIndicesByIdentity,
                     profile,
-                    linkedPose);
+                    linkedPose,
+                    footAnalysis);
             }
             catch (Exception exception)
             {
@@ -244,7 +251,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             IReadOnlyDictionary<string, int> curveIndices,
             IReadOnlyDictionary<string, int> profileIndicesByIdentity,
             CharacterAnimationPresentationProfile profile,
-            CharacterLinkedPoseProjectionPayload linkedPose)
+            CharacterLinkedPoseProjectionPayload linkedPose,
+            CharacterFootPlacementAnalysisCompilation footAnalysis)
         {
             CharacterTypedPoseGraph graph = asset.Graph;
             CharacterPoseParameterDeclaration[] authoredParameters = graph.Parameters.OrderBy(value => value.ParameterId).ToArray();
@@ -272,7 +280,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 curveIndices,
                 profileIndicesByIdentity,
                 profile,
-                linkedPose);
+                linkedPose,
+                footAnalysis);
             CompileGraph(
                 state,
                 asset,
@@ -1823,6 +1832,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 return new CharacterPoseStateSourceSyncPlan(PoseStateSourceSyncMode.None);
             }
+            if (sourceBinding.TimeMapping != targetBinding.TimeMapping)
+            {
+                throw new InvalidOperationException(
+                    $"Pose State transition '{transition.TransitionId}' MarkerGroup time mapping does not match.");
+            }
             bool sourceIsLeader = ResolveStateSyncLeader(
                 transition.TransitionId,
                 sourceBinding.SyncRole,
@@ -1845,14 +1859,42 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         $"'{segment.PreviousMarkerId}->{segment.NextMarkerId}'.");
                 }
             }
+            string relationIdentity =
+                $"pose-state-sync/{stateMachineId}/{transition.TransitionId}/{sourceState.StateId}";
+            AnimationFootPhaseTimeWarpPlan warp = null;
+            if (sourceBinding.TimeMapping == AnimationSyncTimeMapping.GeneratedFootPhase)
+            {
+                CharacterPresentationPoseSourcePlan leaderSource =
+                    sourceIsLeader ? source : target;
+                CharacterPresentationPoseSourcePlan followerSource =
+                    sourceIsLeader ? target : source;
+                AnimationFootAnalysisArtifact leaderArtifact =
+                    state.FootAnalysis.RequireArtifact(
+                        AnimationFootAnalysisProjectionBuildData.PoseSourceBindingKey(
+                            leaderSource.BindingAssetIdentity));
+                AnimationFootAnalysisArtifact followerArtifact =
+                    state.FootAnalysis.RequireArtifact(
+                        AnimationFootAnalysisProjectionBuildData.PoseSourceBindingKey(
+                            followerSource.BindingAssetIdentity));
+                warp = AnimationFootPhaseTimeWarpCompiler.Compile(
+                    relationIdentity,
+                    leaderSource.BindingAssetIdentity,
+                    leader,
+                    leaderArtifact,
+                    followerSource.BindingAssetIdentity,
+                    follower,
+                    followerArtifact);
+            }
             return new CharacterPoseStateSourceSyncPlan(
-                $"pose-state-sync/{stateMachineId}/{transition.TransitionId}/{sourceState.StateId}",
+                relationIdentity,
                 sourceUsage.PlayerIndex,
                 targetUsage.PlayerIndex,
                 source.SourceIndex,
                 target.SourceIndex,
                 sourceBinding.CanonicalGroupId,
-                sourceIsLeader);
+                sourceIsLeader,
+                sourceBinding.TimeMapping,
+                warp);
         }
 
         static PoseStateSourceProviderPlan FindSyncProvider(CharacterPoseStateDescriptor state)

@@ -1,3 +1,0 @@
-namespace BTSMTL.Timeline.Editor
-{
-}

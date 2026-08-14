@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BTSMTL.Timeline;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
@@ -20,9 +21,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
     {
         sealed class SourceSyncRelationSlot
         {
-            internal SourceSyncRelationSlot(string relationId)
+            internal SourceSyncRelationSlot(CharacterPoseStateSourceSyncPlan plan)
             {
-                RelationId = relationId;
+                RelationId = plan?.RelationId ?? throw new ArgumentNullException(nameof(plan));
+                TimeMapping = plan.TimeMapping;
+                PlanIdentity = plan.FootPhaseWarp?.PlanIdentity ?? string.Empty;
             }
 
             internal string RelationId { get; }
@@ -30,6 +33,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 new MarkerSegmentRelationCursor();
             internal bool Active;
             internal bool Journaled;
+            internal AnimationSyncTimeMapping TimeMapping { get; }
+            internal string PlanIdentity { get; }
+            internal float LeaderFraction;
+            internal float FollowerFraction;
+            internal int LeaderOccurrenceIndex = -1;
+            internal int FollowerOccurrenceIndex = -1;
+            internal double FollowerEffectiveTime;
+            internal bool FiniteLeaderReleased;
         }
 
         struct SourceSyncRelationJournalEntry
@@ -39,6 +50,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal bool Initialized;
             internal long LeaderOrdinal;
             internal long FollowerOrdinal;
+            internal float LeaderFraction;
+            internal float FollowerFraction;
+            internal int LeaderOccurrenceIndex;
+            internal int FollowerOccurrenceIndex;
+            internal double FollowerEffectiveTime;
+            internal bool FiniteLeaderReleased;
         }
 
         internal sealed class MotionMatchingRelevance
@@ -490,7 +507,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         relation.Key,
                         relation.Value.Cursor.Initialized,
                         relation.Value.Cursor.LeaderOrdinal,
-                        relation.Value.Cursor.FollowerOrdinal));
+                        relation.Value.Cursor.FollowerOrdinal,
+                        relation.Value.TimeMapping,
+                        relation.Value.PlanIdentity,
+                        relation.Value.LeaderFraction,
+                        relation.Value.FollowerFraction,
+                        relation.Value.LeaderOccurrenceIndex,
+                        relation.Value.FollowerOccurrenceIndex,
+                        relation.Value.FollowerEffectiveTime));
             }
             destination.Sort(
                 (left, right) =>
@@ -1015,16 +1039,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return true;
             if (plan.Mode !=
                     PoseStateSourceSyncMode.MarkerGroup ||
-                !TryGetSourceClock(
+                !TryGetSourceClocks(
                     plan.SourcePlayerIndex,
                     out AnimationMarkerSyncBinding
                         sourceMarkerSync,
-                    out double sourceContinuousTime) ||
-                !TryGetSourceClock(
+                    out double sourceRawTime,
+                    out double sourceEffectiveTime) ||
+                !TryGetSourceClocks(
                     plan.TargetPlayerIndex,
                     out AnimationMarkerSyncBinding
                         targetMarkerSync,
-                    out double targetContinuousTime))
+                    out double targetRawTime,
+                    out double targetEffectiveSourceTime))
             {
                 return false;
             }
@@ -1044,22 +1070,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 relation.Cursor.Initialized = false;
                 relation.Cursor.LeaderOrdinal = 0;
                 relation.Cursor.FollowerOrdinal = 0;
+                relation.FiniteLeaderReleased = false;
             }
-            double effective =
-                MarkerSegmentTimeMapper.Map(
-                    plan.SourceIsLeader
-                        ? sourceMarkerSync
-                        : targetMarkerSync,
-                    plan.SourceIsLeader
-                        ? sourceContinuousTime
-                        : targetContinuousTime,
+            if (relation.FiniteLeaderReleased)
+            {
+                return TryGetSourceEffectiveClock(
+                    plan.TargetPlayerIndex,
+                    out targetEffectiveTime);
+            }
+            AnimationMarkerSyncBinding leaderBinding = plan.SourceIsLeader
+                ? sourceMarkerSync
+                : targetMarkerSync;
+            double leaderEffectiveTime = plan.SourceIsLeader
+                ? sourceEffectiveTime
+                : targetEffectiveSourceTime;
+            MarkerMappedTime mapped =
+                MarkerSegmentTimeMapper.MapDetailed(
+                    leaderBinding,
+                    leaderEffectiveTime,
                     plan.SourceIsLeader
                         ? targetMarkerSync
                         : sourceMarkerSync,
                     plan.SourceIsLeader
-                        ? targetContinuousTime
-                        : sourceContinuousTime,
-                    relation.Cursor);
+                        ? targetRawTime
+                        : sourceRawTime,
+                    relation.Cursor,
+                    plan.FootPhaseWarp);
+            double effective = mapped.ContinuousTime;
+            relation.LeaderFraction = mapped.LeaderSegmentFraction;
+            relation.FollowerFraction = mapped.FollowerSegmentFraction;
+            relation.LeaderOccurrenceIndex = mapped.LeaderOccurrenceIndex;
+            relation.FollowerOccurrenceIndex = mapped.FollowerOccurrenceIndex;
+            relation.FollowerEffectiveTime = mapped.ContinuousTime;
             int followerPlayerIndex =
                 plan.SourceIsLeader
                     ? plan.TargetPlayerIndex
@@ -1067,6 +1109,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             SetSourceClock(
                 followerPlayerIndex,
                 effective);
+            relation.FiniteLeaderReleased =
+                leaderBinding.SequenceTopology ==
+                AnimationMarkerSequenceTopology.Finite &&
+                leaderEffectiveTime >= leaderBinding.DurationSeconds;
             if (m_SequenceByPlayerIndex.TryGetValue(
                     plan.SourcePlayerIndex,
                     out AnimationSequencePlayerRuntime sourceSequence) &&
@@ -1080,9 +1126,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 targetSequence.AlignMovementMarkerEpoch(sourceSequence);
             }
-            if (!TryGetSourceClock(
+            if (!TryGetSourceEffectiveClock(
                     plan.TargetPlayerIndex,
-                    out _,
                     out targetEffectiveTime))
             {
                 throw new InvalidOperationException(
@@ -1092,8 +1137,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         void ICharacterPoseStateSourceRuntime
-            .ClearSynchronization(
+            .ReleaseSynchronization(
                 CharacterPoseStateSourceSyncPlan plan)
+        {
+            ClearSynchronization(plan, true);
+        }
+
+        void ICharacterPoseStateSourceRuntime
+            .ResetSynchronization(
+                CharacterPoseStateSourceSyncPlan plan)
+        {
+            ClearSynchronization(plan, false);
+        }
+
+        void ClearSynchronization(
+            CharacterPoseStateSourceSyncPlan plan,
+            bool anchorFollower)
         {
             if (plan != null &&
                 plan.Mode ==
@@ -1103,6 +1162,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     out SourceSyncRelationSlot relation) &&
                 relation.Active)
             {
+                if (anchorFollower)
+                {
+                    int followerPlayerIndex = plan.SourceIsLeader
+                        ? plan.TargetPlayerIndex
+                        : plan.SourcePlayerIndex;
+                    AnchorSourceClock(followerPlayerIndex);
+                }
                 JournalSourceSyncRelation(relation);
                 relation.Active = false;
             }
@@ -1203,10 +1269,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 $"Motion Matching provider '{item.ProviderId}' is not demanded by the active Pose Plan.");
         }
 
-        bool TryGetSourceClock(
+        bool TryGetSourceClocks(
             int playerIndex,
             out AnimationMarkerSyncBinding markerSync,
-            out double continuousTime)
+            out double rawContinuousTime,
+            out double effectiveContinuousTime)
         {
             if (m_SequenceByPlayerIndex.TryGetValue(
                     playerIndex,
@@ -1214,8 +1281,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         sequence))
             {
                 markerSync = sequence.MarkerSync;
-                continuousTime =
-                    sequence.ContinuousTime;
+                rawContinuousTime =
+                    sequence.RawContinuousTime;
+                effectiveContinuousTime = sequence.ContinuousTime;
                 return true;
             }
             if (m_BlendSpaceByPlayerIndex.TryGetValue(
@@ -1224,13 +1292,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         blendSpace))
             {
                 markerSync = blendSpace.MarkerSync;
-                continuousTime =
-                    blendSpace.ContinuousTime;
+                rawContinuousTime =
+                    blendSpace.RawContinuousTime;
+                effectiveContinuousTime = blendSpace.ContinuousTime;
                 return true;
             }
             markerSync = null;
-            continuousTime = 0d;
+            rawContinuousTime = 0d;
+            effectiveContinuousTime = 0d;
             return false;
+        }
+
+        void AnchorSourceClock(int playerIndex)
+        {
+            if (m_SequenceByPlayerIndex.TryGetValue(
+                    playerIndex,
+                    out AnimationSequencePlayerRuntime sequence))
+            {
+                if (sequence.IsRelevant)
+                    sequence.AnchorSynchronizedTime();
+                return;
+            }
+            if (m_BlendSpaceByPlayerIndex.TryGetValue(
+                    playerIndex,
+                    out AnimationBlendSpacePlayerRuntime blendSpace))
+            {
+                if (blendSpace.IsRelevant)
+                    blendSpace.AnchorSynchronizedTime();
+                return;
+            }
+            throw new InvalidOperationException(
+                $"Pose State Player index '{playerIndex}' has no continuation source runtime.");
         }
 
         void SetSourceClock(
@@ -1259,6 +1351,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 $"Pose State Player index '{playerIndex}' has no synchronized source runtime.");
         }
 
+        bool TryGetSourceEffectiveClock(
+            int playerIndex,
+            out double continuousTime)
+        {
+            if (m_SequenceByPlayerIndex.TryGetValue(
+                    playerIndex,
+                    out AnimationSequencePlayerRuntime sequence))
+            {
+                continuousTime = sequence.ContinuousTime;
+                return true;
+            }
+            if (m_BlendSpaceByPlayerIndex.TryGetValue(
+                    playerIndex,
+                    out AnimationBlendSpacePlayerRuntime blendSpace))
+            {
+                continuousTime = blendSpace.ContinuousTime;
+                return true;
+            }
+            continuousTime = 0d;
+            return false;
+        }
+
         void JournalSourceSyncRelation(SourceSyncRelationSlot slot)
         {
             if (!m_FrameOpen || slot.Journaled)
@@ -1277,7 +1391,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     Active = slot.Active,
                     Initialized = slot.Cursor.Initialized,
                     LeaderOrdinal = slot.Cursor.LeaderOrdinal,
-                    FollowerOrdinal = slot.Cursor.FollowerOrdinal
+                    FollowerOrdinal = slot.Cursor.FollowerOrdinal,
+                    LeaderFraction = slot.LeaderFraction,
+                    FollowerFraction = slot.FollowerFraction,
+                    LeaderOccurrenceIndex = slot.LeaderOccurrenceIndex,
+                    FollowerOccurrenceIndex = slot.FollowerOccurrenceIndex,
+                    FollowerEffectiveTime = slot.FollowerEffectiveTime,
+                    FiniteLeaderReleased = slot.FiniteLeaderReleased
                 };
             slot.Journaled = true;
         }
@@ -1292,6 +1412,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 entry.Slot.Cursor.Initialized = entry.Initialized;
                 entry.Slot.Cursor.LeaderOrdinal = entry.LeaderOrdinal;
                 entry.Slot.Cursor.FollowerOrdinal = entry.FollowerOrdinal;
+                entry.Slot.LeaderFraction = entry.LeaderFraction;
+                entry.Slot.FollowerFraction = entry.FollowerFraction;
+                entry.Slot.LeaderOccurrenceIndex = entry.LeaderOccurrenceIndex;
+                entry.Slot.FollowerOccurrenceIndex = entry.FollowerOccurrenceIndex;
+                entry.Slot.FollowerEffectiveTime = entry.FollowerEffectiveTime;
+                entry.Slot.FiniteLeaderReleased = entry.FiniteLeaderReleased;
             }
             ClearSourceSyncJournal();
         }
@@ -1348,7 +1474,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     }
                     result.Add(
                         sync.RelationId,
-                        new SourceSyncRelationSlot(sync.RelationId));
+                        new SourceSyncRelationSlot(sync));
                 }
             }
             return result;

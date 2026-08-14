@@ -210,7 +210,8 @@ namespace ThirdPersonSimulation.Fixed
                     stateStore,
                     transaction,
                     runtimes.AsReadOnly(),
-                    resources);
+                    resources,
+                    request.Solver as ICharacterFutureBodyTrajectorySource);
                 return new FixedPassBackendCompositionResult(
                     launchPlan,
                     initialPipelineState,

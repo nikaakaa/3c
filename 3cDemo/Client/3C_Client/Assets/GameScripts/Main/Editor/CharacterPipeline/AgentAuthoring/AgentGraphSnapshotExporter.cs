@@ -104,7 +104,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     ExportProjectedGraphs(projection, AgentSnapshotExportMode.Compact, snapshot);
                 }
                 AttachAuthoringRoutes(projection, snapshot);
-                BuildMarkerGroupSummaries(snapshot);
             }
 
             return snapshot;
@@ -288,8 +287,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     AnimationProducerPresentationBinding binding = presentation.FindProducerBinding(producerId);
                     UnityEngine.Object sourceAsset = binding?.Source;
                     string sourceAssetPath = sourceAsset ? AssetDatabase.GetAssetPath(sourceAsset) : string.Empty;
-                    bool markerGroup =
-                        track.SyncMode == AnimationSyncMode.MarkerGroup;
                     snapshot.presentation.producers.Add(new AgentSnapshotAnimationProducer
                     {
                         route = ExportRoute(source.Route),
@@ -300,14 +297,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         trackName = track.Name,
                         actionContextId = AssetIdentity(source.Node.ActionContext),
                         animationChannelId = track.AnimationChannelId.IsValid ? track.AnimationChannelId.Value : string.Empty,
-                        syncMode = track.SyncMode.ToString(),
-                        syncGroupId = markerGroup ? track.SyncGroupId : string.Empty,
-                        sequenceTopology = markerGroup
-                            ? track.SequenceTopology.ToString()
-                            : string.Empty,
-                        syncRole = markerGroup
-                            ? track.SyncRole.ToString()
-                            : string.Empty,
                         sourceAssetPath = sourceAssetPath,
                         sourceAssetGuid = string.IsNullOrEmpty(sourceAssetPath)
                             ? string.Empty
@@ -1036,6 +1025,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             };
             snapshot.timelines.Add(timelineSnapshot);
 
+            for (int sectionIndex = 0; sectionIndex < timeline.Sections.Count; sectionIndex++)
+            {
+                TimelineSection section = timeline.Sections[sectionIndex];
+                if (section == null)
+                    continue;
+                timelineSnapshot.sections.Add(new AgentSnapshotTimelineSection
+                {
+                    sectionAuthoringId = section.AuthoringId,
+                    name = section.Name,
+                    frame = section.Frame
+                });
+            }
+
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
                 Track track = timeline.Tracks[trackIndex];
@@ -1043,9 +1045,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     continue;
 
                 AnimationTrack animationTrack = track as AnimationTrack;
-                bool markerGroup =
-                    animationTrack?.SyncMode ==
-                    AnimationSyncMode.MarkerGroup;
                 var trackSnapshot = new AgentSnapshotTimelineTrack
                 {
                     trackAuthoringId = track.AuthoringId,
@@ -1055,46 +1054,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     animationChannelId = animationTrack != null && animationTrack.AnimationChannelId.IsValid
                         ? animationTrack.AnimationChannelId.Value
                         : string.Empty,
-                    motionWarpTrack = track is MotionWarpTrack,
-                    syncMode = animationTrack?.SyncMode.ToString() ?? string.Empty,
-                    syncGroupId = markerGroup
-                        ? animationTrack.SyncGroupId
-                        : string.Empty,
-                    sequenceTopology = markerGroup
-                        ? animationTrack.SequenceTopology.ToString()
-                        : string.Empty,
-                    syncRole = markerGroup
-                        ? animationTrack.SyncRole.ToString()
-                        : string.Empty
+                    motionWarpTrack = track is MotionWarpTrack
                 };
                 timelineSnapshot.tracks.Add(trackSnapshot);
-
-                if (animationTrack != null)
-                {
-                    for (int markerIndex = 0; markerIndex < animationTrack.SyncMarkers.Count; markerIndex++)
-                    {
-                        AnimationSyncMarker marker = animationTrack.SyncMarkers[markerIndex];
-                        trackSnapshot.markers.Add(new AgentSnapshotAnimationMarker
-                        {
-                            authoringId = marker.AuthoringId,
-                            markerId = marker.MarkerId,
-                            frame = marker.Frame
-                        });
-                    }
-                    for (int markerIndex = 1; markerIndex < animationTrack.SyncMarkers.Count; markerIndex++)
-                    {
-                        trackSnapshot.directedMarkerPairs.Add(AnimationMarkerSyncAuthoring.PairKey(
-                            animationTrack.SyncMarkers[markerIndex - 1].MarkerId,
-                            animationTrack.SyncMarkers[markerIndex].MarkerId));
-                    }
-                    if (animationTrack.SequenceTopology == AnimationMarkerSequenceTopology.Cyclic &&
-                        animationTrack.SyncMarkers.Count > 1)
-                    {
-                        trackSnapshot.directedMarkerPairs.Add(AnimationMarkerSyncAuthoring.PairKey(
-                            animationTrack.SyncMarkers[animationTrack.SyncMarkers.Count - 1].MarkerId,
-                            animationTrack.SyncMarkers[0].MarkerId));
-                    }
-                }
 
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                 {
@@ -1102,9 +1064,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     if (clip == null)
                         continue;
 
-                    string animationClipPath = clip is BTSMTL.Timeline.AnimationClip animationClip && animationClip.Clip
-                        ? AssetDatabase.GetAssetPath(animationClip.Clip)
-                        : string.Empty;
+                    BTSMTL.Timeline.AnimationClip animationClip =
+                        clip as BTSMTL.Timeline.AnimationClip;
                     var clipSnapshot = new AgentSnapshotTimelineClip
                     {
                         clipAuthoringId = clip.AuthoringId,
@@ -1118,10 +1079,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         selfEaseOutFrame = clip.SelfEaseOutFrame,
                         easeInFrame = clip.EaseInFrame,
                         easeOutFrame = clip.EaseOutFrame,
-                        animationClipAssetPath = animationClipPath,
-                        animationClipAssetGuid = string.IsNullOrEmpty(animationClipPath)
-                            ? string.Empty
-                            : AssetDatabase.AssetPathToGUID(animationClipPath)
+                        clipInFrame = clip.ClipInFrame,
+                        extraPolationMode = animationClip?.ExtraPolationMode.ToString() ?? string.Empty,
+                        animationSequence = animationClip != null && animationClip.Sequence
+                            ? AssetReference(animationClip.Sequence)
+                            : null
                     };
                     if (clip is MotionCurveClip motionCurve)
                     {
@@ -1178,42 +1140,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
             }
             return timelineSnapshot;
-        }
-
-        static void BuildMarkerGroupSummaries(AgentGraphSnapshot snapshot)
-        {
-            var groups = new Dictionary<string, AgentSnapshotAnimationMarkerGroup>(StringComparer.Ordinal);
-            for (int timelineIndex = 0; timelineIndex < snapshot.timelines.Count; timelineIndex++)
-            {
-                AgentSnapshotTimeline timeline = snapshot.timelines[timelineIndex];
-                for (int trackIndex = 0; trackIndex < timeline.tracks.Count; trackIndex++)
-                {
-                    AgentSnapshotTimelineTrack track = timeline.tracks[trackIndex];
-                    if (!string.Equals(track.syncMode, AnimationSyncMode.MarkerGroup.ToString(), StringComparison.Ordinal))
-                        continue;
-                    string key = track.animationChannelId + "\0" + track.syncGroupId;
-                    if (!groups.TryGetValue(key, out AgentSnapshotAnimationMarkerGroup group))
-                    {
-                        group = new AgentSnapshotAnimationMarkerGroup
-                        {
-                            animationChannelId = track.animationChannelId,
-                            syncGroupId = track.syncGroupId,
-                            compatible = true,
-                            directedMarkerPairs = track.directedMarkerPairs.Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal).ToList()
-                        };
-                        groups.Add(key, group);
-                    }
-                    else if (!new HashSet<string>(group.directedMarkerPairs, StringComparer.Ordinal).SetEquals(track.directedMarkerPairs))
-                    {
-                        group.compatible = false;
-                    }
-                    group.producerIds.Add($"{timeline.timelineAuthoringId}/{track.trackAuthoringId}");
-                }
-            }
-            snapshot.animationMarkerGroups = groups.Values
-                .OrderBy(value => value.animationChannelId, StringComparer.Ordinal)
-                .ThenBy(value => value.syncGroupId, StringComparer.Ordinal)
-                .ToList();
         }
 
         static string ResolveTimelineClipPath(TimelineData timeline, string clipAuthoringId)
@@ -1903,6 +1829,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return string.Empty;
             string path = AssetDatabase.GetAssetPath(asset);
             return string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path);
+        }
+
+        static AgentPackageAssetReferenceV3 AssetReference(UnityEngine.Object asset)
+        {
+            if (!asset ||
+                !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(
+                    asset,
+                    out string guid,
+                    out long localFileId))
+                return null;
+            return new AgentPackageAssetReferenceV3
+            {
+                assetPath = AssetDatabase.GetAssetPath(asset),
+                assetGuid = guid,
+                localFileId = localFileId
+            };
         }
 
         static void AddUnique(List<string> values, string value)

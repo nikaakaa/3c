@@ -216,7 +216,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         public void SetActionFrame(
             PresentationFrameWorkspaceLease lease,
-            ActionAnimationPlaybackFrame frame)
+            in ActionAnimationPlaybackFrame frame)
         {
             RequireLease(lease);
             Dictionary<AnimationPlaybackId,

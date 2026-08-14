@@ -51,11 +51,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         string m_NewPoseSourceName = string.Empty;
         PresentationPoseSourceKind m_NewPoseSourceKind =
             PresentationPoseSourceKind.Sequence;
-        UnityEngine.AnimationClip m_NewPoseSourceClip;
+        CharacterAnimationSequenceAsset m_NewPoseSourceSequence;
         CharacterAnimationBlendSpaceAsset m_NewPoseSourceBlendSpace;
         CharacterMotionMatchingProfile m_NewPoseSourceMotionMatching;
         int m_NewMotionMatchingDomainIndex;
-        bool m_NewPoseSourceLoop;
         int m_SelectedContextIndex = -1;
         bool m_ContextsLoaded;
         bool m_ConfigurationDiagnosticsReady;
@@ -520,7 +519,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 EditorGUILayout.LabelField("Duration", sequence.Clip ? $"{sequence.Clip.length:0.###} s" : "Unavailable");
                 EditorGUILayout.LabelField("Loop", sequence.Loop ? "Yes" : "No");
-                EditorGUILayout.LabelField("Markers", sequence.Markers.Count.ToString());
+                EditorGUILayout.LabelField("Markers", sequence.Sequence.SyncMarkers.Count.ToString());
+                EditorGUILayout.LabelField("Time Mapping", sequence.Sequence.TimeMapping.ToString());
             }
             DrawPoseSourceConsumers(profile, slot);
 
@@ -530,7 +530,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (GUILayout.Button("Ping Source"))
                     EditorGUIUtility.PingObject(binding.SourceAsset);
                 if (GUILayout.Button("Open Source"))
-                    CharacterPoseSourceEditorWindow.Open(profile, binding);
+                {
+                    if (binding is CharacterSequencePoseSourceBinding sequence && sequence.Sequence)
+                        TimelineEditorWindow.Open(sequence.Sequence);
+                    else if (binding is CharacterBlendSpacePoseSourceBinding blendSpace && blendSpace.BlendSpace)
+                        CharacterAnimationBlendSpaceEditorWindow.Open(blendSpace.BlendSpace);
+                }
             }
             if (GUILayout.Button("Open Binding"))
                 OpenAsset(binding);
@@ -598,15 +603,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             bool canCreate = !string.IsNullOrWhiteSpace(m_NewPoseSourceName);
             if (m_NewPoseSourceKind == PresentationPoseSourceKind.Sequence)
             {
-                m_NewPoseSourceClip = EditorGUILayout.ObjectField(
-                    "Animation Clip",
-                    m_NewPoseSourceClip,
-                    typeof(UnityEngine.AnimationClip),
-                    false) as UnityEngine.AnimationClip;
-                m_NewPoseSourceLoop = EditorGUILayout.Toggle(
-                    "Loop",
-                    m_NewPoseSourceLoop);
-                canCreate &= m_NewPoseSourceClip;
+                m_NewPoseSourceSequence = EditorGUILayout.ObjectField(
+                    "Sequence",
+                    m_NewPoseSourceSequence,
+                    typeof(CharacterAnimationSequenceAsset),
+                    false) as CharacterAnimationSequenceAsset;
+                canCreate &= m_NewPoseSourceSequence;
             }
             else if (m_NewPoseSourceKind == PresentationPoseSourceKind.BlendSpace)
             {
@@ -649,8 +651,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                 .CreateSequencePoseSource(
                                     profile,
                                     m_NewPoseSourceName,
-                                    m_NewPoseSourceClip,
-                                    m_NewPoseSourceLoop);
+                                    m_NewPoseSourceSequence);
                         }
                         else if (m_NewPoseSourceKind == PresentationPoseSourceKind.BlendSpace)
                         {
@@ -683,10 +684,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                     databases.ToArray());
                         }
                         m_NewPoseSourceName = string.Empty;
-                        m_NewPoseSourceClip = null;
+                        m_NewPoseSourceSequence = null;
                         m_NewPoseSourceBlendSpace = null;
                         m_NewPoseSourceMotionMatching = null;
-                        m_NewPoseSourceLoop = false;
                         m_PoseSourceError = string.Empty;
                         InvalidateDiagnostics();
                         InvalidateProjection();

@@ -23,6 +23,7 @@ namespace ThirdPersonSimulation.Fixed
             WorldMotionSpace space,
             bool hasMotion,
             CommittedMovementPlaybackClock movementPlaybackClock,
+            CommittedLocomotionPlanarMotionTimeline locomotionTimeline,
             string actionOwnerIdentity,
             string gameplayResultOwnerIdentity)
         {
@@ -34,6 +35,12 @@ namespace ThirdPersonSimulation.Fixed
             Space = space;
             HasMotion = hasMotion;
             MovementPlaybackClock = movementPlaybackClock;
+            if (movementPlaybackClock.IsValid != locomotionTimeline.IsValid ||
+                locomotionTimeline.IsValid && !locomotionTimeline.Matches(movementPlaybackClock))
+            {
+                throw new ArgumentException("Character motion request Locomotion timeline does not match its Movement clock.", nameof(locomotionTimeline));
+            }
+            LocomotionTimeline = locomotionTimeline;
             ActionOwnerIdentity = actionOwnerIdentity ?? string.Empty;
             GameplayResultOwnerIdentity = gameplayResultOwnerIdentity ?? string.Empty;
         }
@@ -46,6 +53,7 @@ namespace ThirdPersonSimulation.Fixed
         public WorldMotionSpace Space { get; }
         public bool HasMotion { get; }
         public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
+        public CommittedLocomotionPlanarMotionTimeline LocomotionTimeline { get; }
         public string ActionOwnerIdentity { get; }
         public string GameplayResultOwnerIdentity { get; }
     }

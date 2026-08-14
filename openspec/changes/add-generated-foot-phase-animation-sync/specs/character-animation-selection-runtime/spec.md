@@ -4,7 +4,7 @@
 
 Marker topology、SyncGroup、SyncRole、Time Mapping与marker occurrence MUST来自Presentation source binding或Action producer binding。PoseState source同步 MUST由Compiler根据Transition两侧State唯一同步候选、共同canonical MarkerGroup与一致Time Mapping生成具体Source Sync Plan；Transition不得保存同步开关、Time Mapping或Foot Phase pair配置。Action同步 MUST由具体AnimationSlot route和Action source usage拥有。
 
-Runtime MUST在source采样前生成effective sample，并在共同可见期间持续定位有向Marker pair。`MarkerSegmentFraction` MUST使用明确线性比例；`GeneratedFootPhase` MUST根据已选择leader/follower occurrence查找Projection固定warp plan并求值follower fraction。Pose Graph MUST不序列化独立MarkerSync节点，Runtime与Preview MUST不按同名State、clip名称、Action名称、weight、当前骨骼或IK结果建立relation或重新搜索时间。
+Runtime MUST在source采样前生成effective sample，并在leader仍有相位覆盖的共同可见期间持续定位有向Marker pair。`MarkerSegmentFraction` MUST使用明确线性比例；`GeneratedFootPhase` MUST根据已选择leader/follower occurrence查找Projection固定warp plan并求值follower fraction。finite leader到达最后coverage时 MUST只提交一次终点映射并让follower从continuation anchor连续推进，不得重复固定target sample。Pose Graph MUST不序列化独立MarkerSync节点，Runtime与Preview MUST不按同名State、clip名称、Action名称、weight、当前骨骼或IK结果建立relation或重新搜索时间。
 
 #### Scenario: Walk State切换Run State
 

@@ -155,6 +155,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 [AgentMutationKind.ConfigureMotionCurveClip] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureMotionCurveClip, AgentMutationOutputKind.None, LowerConfigureMotionCurveClip),
                 [AgentMutationKind.EnsureMotionWarpTrack] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionWarpTrack, AgentMutationOutputKind.TimelineTrack, LowerEnsureMotionWarpTrack),
                 [AgentMutationKind.DeleteTimelineTrack] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTimelineTrack, AgentMutationOutputKind.None, LowerDeleteTimelineTrack),
+                [AgentMutationKind.EnsureTimelineSection] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTimelineSection, AgentMutationOutputKind.TimelineSection, LowerEnsureTimelineSection),
+                [AgentMutationKind.DeleteTimelineSection] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTimelineSection, AgentMutationOutputKind.None, LowerDeleteTimelineSection),
                 [AgentMutationKind.EnsureMotionWarpClip] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureMotionWarpClip, AgentMutationOutputKind.TimelineClip, LowerEnsureMotionWarpClip),
                 [AgentMutationKind.ConfigureMotionWarpSource] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureMotionWarpSource, AgentMutationOutputKind.None, LowerConfigureMotionWarpSource),
                 [AgentMutationKind.ConfigureMotionWarpParameters] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureMotionWarpParameters, AgentMutationOutputKind.None, LowerConfigureMotionWarpParameters),
@@ -162,10 +164,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 [AgentMutationKind.ConfigureTimelineClipEase] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureTimelineClipEase, AgentMutationOutputKind.None, LowerConfigureTimelineClipEase),
                 [AgentMutationKind.ConfigureTimelineCurveChannel] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureTimelineCurveChannel, AgentMutationOutputKind.None, LowerConfigureTimelineCurveChannel),
                 [AgentMutationKind.ConfigureAnimationTrackChannel] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureAnimationTrackChannel, AgentMutationOutputKind.None, LowerConfigureAnimationTrackChannel),
-                [AgentMutationKind.ConfigureAnimationTrackMarkerSync] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureAnimationTrackMarkerSync, AgentMutationOutputKind.None, LowerConfigureAnimationTrackMarkerSync),
-                [AgentMutationKind.EnsureAnimationSyncMarker] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAnimationSyncMarker, AgentMutationOutputKind.TimelineMarker, LowerEnsureAnimationSyncMarker),
-                [AgentMutationKind.MoveAnimationSyncMarker] = new AgentMutationDraftDescriptor(AgentMutationKind.MoveAnimationSyncMarker, AgentMutationOutputKind.None, LowerMoveAnimationSyncMarker),
-                [AgentMutationKind.DeleteAnimationSyncMarker] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteAnimationSyncMarker, AgentMutationOutputKind.None, LowerDeleteAnimationSyncMarker),
+                [AgentMutationKind.EnsureAnimationSequenceSegment] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAnimationSequenceSegment, AgentMutationOutputKind.TimelineClip, LowerEnsureAnimationSequenceSegment),
                 [AgentMutationKind.DeleteTimelineClip] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTimelineClip, AgentMutationOutputKind.None, LowerDeleteTimelineClip),
                 [AgentMutationKind.EnsureTreeClipBlackboardWrite] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureTreeClipBlackboardWrite, AgentMutationOutputKind.None, LowerEnsureTreeClipBlackboardWrite),
                 [AgentMutationKind.DeleteTransition] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteTransition, AgentMutationOutputKind.None, LowerDeleteTransition),
@@ -803,6 +802,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return context.IsValid ? new AgentDeleteTimelineTrackMutation(operation.id, context.Path, timeline, track) : null;
         }
 
+        static AgentMutation LowerEnsureTimelineSection(AgentMutationPlanningContext context, AgentMutationDraft operation)
+        {
+            ReadTimelineReference(context, operation, "ensure_timeline_section", out string timeline, out AgentPlannedIdentityReference timelineOutput);
+            string section = context.OptionalAuthoringId(operation.sectionAuthoringId, "sectionAuthoringId");
+            string displayName = context.RequiredText(operation.displayName, string.Empty, "displayName", "ensure_timeline_section 缺少Section名称。");
+            if (!string.Equals(displayName, displayName.Trim(), StringComparison.Ordinal))
+                context.Error("displayName", "timeline_section_name_invalid", "Timeline Section名称不能包含首尾空白。");
+            if (operation.startFrame < 0)
+                context.Error("startFrame", "timeline_section_frame_invalid", "Timeline Section frame不能小于0。");
+            var target = new AgentTimelineTargetReference(timeline, timelineOutput, string.Empty, default, string.Empty, default);
+            return context.IsValid
+                ? new AgentEnsureTimelineSectionMutation(operation.id, context.Path, target, section, displayName, operation.startFrame)
+                : null;
+        }
+
+        static AgentMutation LowerDeleteTimelineSection(AgentMutationPlanningContext context, AgentMutationDraft operation)
+        {
+            ReadTimelineReference(context, operation, "delete_timeline_section", out string timeline, out AgentPlannedIdentityReference timelineOutput);
+            string section = context.OptionalAuthoringId(
+                context.RequiredText(operation.sectionAuthoringId, string.Empty, "sectionAuthoringId", "delete_timeline_section 缺少Section identity。"),
+                "sectionAuthoringId");
+            var target = new AgentTimelineTargetReference(timeline, timelineOutput, string.Empty, default, string.Empty, default);
+            return context.IsValid
+                ? new AgentDeleteTimelineSectionMutation(operation.id, context.Path, target, section)
+                : null;
+        }
+
         static AgentMutation LowerMoveTimelineClip(AgentMutationPlanningContext context, AgentMutationDraft operation)
         {
             string timeline = context.OptionalAuthoringId(context.RequiredText(operation.timelineAuthoringId, string.Empty, "timelineAuthoringId", "move_timeline_clip 缺少 Timeline identity。"), "timelineAuthoringId");
@@ -986,48 +1012,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return new AnimationCurve(keys) { preWrapMode = preWrapMode, postWrapMode = postWrapMode };
         }
 
-        static AgentMutation LowerConfigureAnimationTrackMarkerSync(
-            AgentMutationPlanningContext context,
-            AgentMutationDraft operation)
-        {
-            AgentTimelineTargetReference target = LowerAnimationTrackTarget(context, operation);
-            if (!Enum.TryParse(operation.animationSyncMode, true, out AnimationSyncMode mode) ||
-                mode != AnimationSyncMode.None && mode != AnimationSyncMode.MarkerGroup)
-            {
-                context.Error("animationSyncMode", "animation_marker_sync_mode_invalid", $"Animation Sync mode 无效：{operation.animationSyncMode}");
-            }
-            string groupId = AnimationMarkerSyncAuthoring.NormalizeId(operation.animationSyncGroupId);
-            AnimationMarkerSequenceTopology topology = AnimationMarkerSequenceTopology.Unspecified;
-            AnimationMarkerSyncRole syncRole = AnimationMarkerSyncRole.Unspecified;
-            if (mode == AnimationSyncMode.None)
-            {
-                if (!string.IsNullOrEmpty(groupId) ||
-                    !string.IsNullOrEmpty(operation.animationMarkerSequenceTopology) ||
-                    !string.IsNullOrEmpty(operation.animationMarkerSyncRole))
-                    context.Error("animationSyncMode", "animation_marker_sync_none_residue", "None 模式不能携带 group、topology 或 role。");
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(groupId) || !string.Equals(groupId, operation.animationSyncGroupId, StringComparison.Ordinal))
-                    context.Error("animationSyncGroupId", "animation_marker_sync_group_invalid", "MarkerGroup 必须提供已规范化且无首尾空白的 SyncGroupId。");
-                if (!Enum.TryParse(operation.animationMarkerSequenceTopology, true, out topology) ||
-                    topology != AnimationMarkerSequenceTopology.Finite && topology != AnimationMarkerSequenceTopology.Cyclic)
-                {
-                    context.Error("animationMarkerSequenceTopology", "animation_marker_sync_topology_invalid", $"Animation marker topology 无效：{operation.animationMarkerSequenceTopology}");
-                }
-                if (!Enum.TryParse(operation.animationMarkerSyncRole, true, out syncRole) ||
-                    syncRole != AnimationMarkerSyncRole.CanBeLeader &&
-                    syncRole != AnimationMarkerSyncRole.AlwaysLeader &&
-                    syncRole != AnimationMarkerSyncRole.AlwaysFollower)
-                {
-                    context.Error("animationMarkerSyncRole", "animation_marker_sync_role_invalid", $"Animation marker sync role 无效：{operation.animationMarkerSyncRole}");
-                }
-            }
-            return context.IsValid
-                ? new AgentConfigureAnimationTrackMarkerSyncMutation(operation.id, context.Path, target, mode, groupId, topology, syncRole)
-                : null;
-        }
-
         static AgentMutation LowerConfigureAnimationTrackChannel(
             AgentMutationPlanningContext context,
             AgentMutationDraft operation)
@@ -1048,43 +1032,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 : null;
         }
 
-        static AgentMutation LowerEnsureAnimationSyncMarker(
+        static AgentMutation LowerEnsureAnimationSequenceSegment(
             AgentMutationPlanningContext context,
             AgentMutationDraft operation)
         {
-            AgentTimelineTargetReference target = LowerAnimationTrackTarget(context, operation);
-            string markerAuthoringId = context.OptionalAuthoringId(operation.markerAuthoringId, "markerAuthoringId");
-            string markerId = context.RequiredText(operation.markerId, string.Empty, "markerId", "ensure_animation_sync_marker 缺少 MarkerId。");
-            if (!string.Equals(markerId, markerId.Trim(), StringComparison.Ordinal))
-                context.Error("markerId", "animation_marker_id_invalid", "MarkerId 不能包含首尾空白。");
-            if (operation.markerFrame < 0)
-                context.Error("markerFrame", "animation_marker_frame_negative", "Marker frame 不能小于 0。");
+            ReadTimelineReference(context, operation, "ensure_animation_sequence_segment", out string timeline, out AgentPlannedIdentityReference timelineOutput);
+            string track = context.OptionalAuthoringId(operation.trackAuthoringId, "trackAuthoringId");
+            string clip = context.OptionalAuthoringId(operation.clipAuthoringId, "clipAuthoringId");
+            AgentPlannedIdentityReference clipOutput = context.OptionalPlannedIdentity(operation.clipPlannedIdentity, "clipPlannedIdentity", AgentMutationOutputKind.TimelineClip);
+            if (string.IsNullOrEmpty(clip) == !clipOutput.IsValid)
+                context.Error("clip", "animation_sequence_segment_reference_invalid", "Sequence Segment必须且只能提供clipAuthoringId或clipPlannedIdentity。");
+            AgentPackageAssetReferenceV3 sequence = operation.animationSequence;
+            bool localSequence = !string.IsNullOrWhiteSpace(sequence?.localId);
+            bool externalSequence = sequence != null &&
+                                    !string.IsNullOrWhiteSpace(sequence.assetPath) &&
+                                    !string.IsNullOrWhiteSpace(sequence.assetGuid) &&
+                                    sequence.localFileId != 0;
+            if (localSequence == externalSequence)
+                context.Error("animationSequence", "animation_sequence_reference_invalid", "Sequence Segment必须提供唯一local或外部Sequence引用。");
+            if (operation.startFrame < 0 || operation.endFrame <= operation.startFrame || operation.clipInFrame < 0)
+                context.Error("frames", "animation_sequence_segment_frames_invalid", "Sequence Segment必须满足0 <= Start < End且ClipIn >= 0。");
+            if (!Enum.TryParse(operation.extraPolationMode, false, out ExtraPolationMode extraPolationMode))
+                context.Error("extraPolationMode", "animation_sequence_segment_extrapolation_invalid", $"Sequence Segment Extrapolation无效：{operation.extraPolationMode}");
             return context.IsValid
-                ? new AgentEnsureAnimationSyncMarkerMutation(operation.id, context.Path, target, markerAuthoringId, markerId, operation.markerFrame)
-                : null;
-        }
-
-        static AgentMutation LowerMoveAnimationSyncMarker(
-            AgentMutationPlanningContext context,
-            AgentMutationDraft operation)
-        {
-            AgentTimelineTargetReference target = LowerAnimationTrackTarget(context, operation);
-            AgentAuthoringReference marker = context.RequiredMarker(operation.markerAuthoringId, operation.markerPlannedIdentity, "marker");
-            if (operation.markerFrame < 0)
-                context.Error("markerFrame", "animation_marker_frame_negative", "Marker frame 不能小于 0。");
-            return context.IsValid
-                ? new AgentMoveAnimationSyncMarkerMutation(operation.id, context.Path, target, marker, operation.markerFrame)
-                : null;
-        }
-
-        static AgentMutation LowerDeleteAnimationSyncMarker(
-            AgentMutationPlanningContext context,
-            AgentMutationDraft operation)
-        {
-            AgentTimelineTargetReference target = LowerAnimationTrackTarget(context, operation);
-            AgentAuthoringReference marker = context.RequiredMarker(operation.markerAuthoringId, operation.markerPlannedIdentity, "marker");
-            return context.IsValid
-                ? new AgentDeleteAnimationSyncMarkerMutation(operation.id, context.Path, target, marker)
+                ? new AgentEnsureAnimationSequenceSegmentMutation(
+                    operation.id,
+                    context.Path,
+                    new AgentTimelineTargetReference(timeline, timelineOutput, track, default, clip, clipOutput),
+                    sequence,
+                    operation.startFrame,
+                    operation.endFrame,
+                    operation.clipInFrame,
+                    extraPolationMode)
                 : null;
         }
 
@@ -1645,11 +1624,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentAuthoringReference RequiredDeclaration(string authoringId, string plannedIdentity, string label)
         {
             return RequiredReference(authoringId, plannedIdentity, label, AgentMutationOutputKind.BlackboardDeclaration);
-        }
-
-        public AgentAuthoringReference RequiredMarker(string authoringId, string plannedIdentity, string label)
-        {
-            return RequiredReference(authoringId, plannedIdentity, label, AgentMutationOutputKind.TimelineMarker);
         }
 
         public AgentPlannedIdentityReference OptionalPlannedIdentity(string plannedIdentity, string label, AgentMutationOutputKind expectedKind)

@@ -42,6 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         ConfigureMotionCurveClip,
         EnsureMotionWarpTrack,
         DeleteTimelineTrack,
+        EnsureTimelineSection,
+        DeleteTimelineSection,
         EnsureMotionWarpClip,
         ConfigureMotionWarpSource,
         ConfigureMotionWarpParameters,
@@ -49,10 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         ConfigureTimelineClipEase,
         ConfigureTimelineCurveChannel,
         ConfigureAnimationTrackChannel,
-        ConfigureAnimationTrackMarkerSync,
-        EnsureAnimationSyncMarker,
-        MoveAnimationSyncMarker,
-        DeleteAnimationSyncMarker,
+        EnsureAnimationSequenceSegment,
         DeleteTimelineClip,
         EnsureTreeClipBlackboardWrite,
         DeleteTransition,
@@ -90,9 +89,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         Node,
         BlackboardDeclaration,
         Timeline,
+        TimelineSection,
         TimelineTrack,
         TimelineClip,
-        TimelineMarker,
         FlowEdge,
         PropertyEdge
     }
@@ -1134,6 +1133,46 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string TrackAuthoringId { get; }
     }
 
+    public sealed class AgentEnsureTimelineSectionMutation : AgentMutation
+    {
+        public AgentEnsureTimelineSectionMutation(
+            string id,
+            string path,
+            AgentTimelineTargetReference target,
+            string sectionAuthoringId,
+            string displayName,
+            int frame)
+            : base(id, AgentMutationKind.EnsureTimelineSection, "ensure_timeline_section", AgentMutationOutputKind.TimelineSection, path, target.TimelineIdentity, Vector2.zero)
+        {
+            Target = target;
+            SectionAuthoringId = sectionAuthoringId ?? string.Empty;
+            DisplayName = displayName ?? string.Empty;
+            Frame = frame;
+        }
+
+        public AgentTimelineTargetReference Target { get; }
+        public string SectionAuthoringId { get; }
+        public string DisplayName { get; }
+        public int Frame { get; }
+    }
+
+    public sealed class AgentDeleteTimelineSectionMutation : AgentMutation
+    {
+        public AgentDeleteTimelineSectionMutation(
+            string id,
+            string path,
+            AgentTimelineTargetReference target,
+            string sectionAuthoringId)
+            : base(id, AgentMutationKind.DeleteTimelineSection, "delete_timeline_section", AgentMutationOutputKind.None, path, target.TimelineIdentity, Vector2.zero)
+        {
+            Target = target;
+            SectionAuthoringId = sectionAuthoringId ?? string.Empty;
+        }
+
+        public AgentTimelineTargetReference Target { get; }
+        public string SectionAuthoringId { get; }
+    }
+
     public sealed class AgentEnsureMotionWarpClipMutation : AgentTimelineClipMutation
     {
         public AgentEnsureMotionWarpClipMutation(string id, string path, AgentTimelineTargetReference target, int startFrame, int endFrame)
@@ -1297,94 +1336,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AnimationChannelId AnimationChannelId { get; }
     }
 
-    public sealed class AgentConfigureAnimationTrackMarkerSyncMutation : AgentAnimationTrackMutation
+    public sealed class AgentEnsureAnimationSequenceSegmentMutation : AgentTimelineClipMutation
     {
-        public AgentConfigureAnimationTrackMarkerSyncMutation(
+        public AgentEnsureAnimationSequenceSegmentMutation(
             string id,
             string path,
             AgentTimelineTargetReference target,
-            BTSMTL.Timeline.AnimationSyncMode mode,
-            string syncGroupId,
-            BTSMTL.Timeline.AnimationMarkerSequenceTopology topology,
-            BTSMTL.Timeline.AnimationMarkerSyncRole syncRole)
-            : base(id, AgentMutationKind.ConfigureAnimationTrackMarkerSync, "configure_animation_track_marker_sync", AgentMutationOutputKind.None, path, target)
+            AgentPackageAssetReferenceV3 sequence,
+            int startFrame,
+            int endFrame,
+            int clipInFrame,
+            ExtraPolationMode extraPolationMode)
+            : base(id, AgentMutationKind.EnsureAnimationSequenceSegment, "ensure_animation_sequence_segment", AgentMutationOutputKind.TimelineClip, path, target)
         {
-            Mode = mode;
-            SyncGroupId = syncGroupId ?? string.Empty;
-            Topology = topology;
-            SyncRole = syncRole;
+            Sequence = sequence ?? throw new ArgumentNullException(nameof(sequence));
+            StartFrame = startFrame;
+            EndFrame = endFrame;
+            ClipInFrame = clipInFrame;
+            ExtraPolationMode = extraPolationMode;
         }
 
-        public BTSMTL.Timeline.AnimationSyncMode Mode { get; }
-        public string SyncGroupId { get; }
-        public BTSMTL.Timeline.AnimationMarkerSequenceTopology Topology { get; }
-        public BTSMTL.Timeline.AnimationMarkerSyncRole SyncRole { get; }
-    }
-
-    public sealed class AgentEnsureAnimationSyncMarkerMutation : AgentAnimationTrackMutation
-    {
-        public AgentEnsureAnimationSyncMarkerMutation(
-            string id,
-            string path,
-            AgentTimelineTargetReference target,
-            string markerAuthoringId,
-            string markerId,
-            int frame)
-            : base(id, AgentMutationKind.EnsureAnimationSyncMarker, "ensure_animation_sync_marker", AgentMutationOutputKind.TimelineMarker, path, target)
-        {
-            MarkerAuthoringId = markerAuthoringId ?? string.Empty;
-            MarkerId = markerId ?? string.Empty;
-            Frame = frame;
-        }
-
-        public string MarkerAuthoringId { get; }
-        public string MarkerId { get; }
-        public int Frame { get; }
-    }
-
-    public abstract class AgentAnimationMarkerMutation : AgentAnimationTrackMutation
-    {
-        protected AgentAnimationMarkerMutation(
-            string id,
-            AgentMutationKind kind,
-            string operationName,
-            string path,
-            AgentTimelineTargetReference target,
-            AgentAuthoringReference marker)
-            : base(id, kind, operationName, AgentMutationOutputKind.None, path, target)
-        {
-            Marker = marker;
-        }
-
-        public AgentAuthoringReference Marker { get; }
-    }
-
-    public sealed class AgentMoveAnimationSyncMarkerMutation : AgentAnimationMarkerMutation
-    {
-        public AgentMoveAnimationSyncMarkerMutation(
-            string id,
-            string path,
-            AgentTimelineTargetReference target,
-            AgentAuthoringReference marker,
-            int frame)
-            : base(id, AgentMutationKind.MoveAnimationSyncMarker, "move_animation_sync_marker", path, target, marker)
-        {
-            Frame = frame;
-        }
-
-        public int Frame { get; }
-    }
-
-    public sealed class AgentDeleteAnimationSyncMarkerMutation : AgentAnimationMarkerMutation
-    {
-        public AgentDeleteAnimationSyncMarkerMutation(
-            string id,
-            string path,
-            AgentTimelineTargetReference target,
-            AgentAuthoringReference marker)
-            : base(id, AgentMutationKind.DeleteAnimationSyncMarker, "delete_animation_sync_marker", path, target, marker)
-        {
-        }
+        public AgentPackageAssetReferenceV3 Sequence { get; }
+        public int StartFrame { get; }
+        public int EndFrame { get; }
+        public int ClipInFrame { get; }
+        public ExtraPolationMode ExtraPolationMode { get; }
     }
 
     public sealed class AgentEnsureTreeClipBlackboardWriteMutation : AgentTimelineClipMutation

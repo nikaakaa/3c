@@ -17,6 +17,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     public sealed class AgentDocumentPresentationEditable
     {
         public AgentPackagePresentationProfileFile profile;
+        public List<AgentPackageAnimationSequenceFile> animationSequences =
+            new List<AgentPackageAnimationSequenceFile>();
+        public List<AgentPackageAnimationSequenceCurvesFile> animationSequenceCurves =
+            new List<AgentPackageAnimationSequenceCurvesFile>();
         public List<AgentPackagePoseGraphFile> poseGraphs =
             new List<AgentPackagePoseGraphFile>();
         public List<AgentPackagePoseGraphLayoutFile> poseGraphLayouts =
@@ -168,15 +172,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentPackageAssetReferenceV3 slot;
         public AgentPackageAssetReferenceV3 binding;
         public AgentPackageAssetReferenceV3 source;
-        public AgentPackageAssetReferenceV3 rig;
-        public bool loop;
-        public float defaultPlayRate;
-        public string markerGroupId;
-        public string markerTopology;
-        public string syncRole;
-        public List<AgentPackagePoseSourceMarker> markers =
-            new List<AgentPackagePoseSourceMarker>();
-        public AgentPackageCurve footPlacementWeight;
         public string searchDomainId;
         public List<AgentPackageAssetReferenceV3> databases =
             new List<AgentPackageAssetReferenceV3>();
@@ -185,11 +180,52 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
-    public sealed class AgentPackagePoseSourceMarker
+    public sealed class AgentPackageAnimationSequenceFile
+    {
+        public string id;
+        public string name;
+        public AgentPackageAssetReferenceV3 asset;
+        public AgentPackageAssetReferenceV3 clip;
+        public AgentPackageAssetReferenceV3 rig;
+        public bool loop;
+        public float defaultPlayRate;
+        public string syncMode;
+        public string timeMapping;
+        public string markerGroupId;
+        public string markerTopology;
+        public string syncRole;
+        public List<AgentPackageAnimationSequenceMarker> markers =
+            new List<AgentPackageAnimationSequenceMarker>();
+        public List<AgentPackageAnimationSequenceNotify> notifies =
+            new List<AgentPackageAnimationSequenceNotify>();
+        public AgentPackageAssetReferenceV3 footAnalysisSource;
+        public string footAnalysisIdentity;
+        public string contentRevision;
+    }
+
+    [Serializable]
+    public sealed class AgentPackageAnimationSequenceCurvesFile
+    {
+        public string sequenceId;
+        public List<AgentPackageCurve> curves = new List<AgentPackageCurve>();
+    }
+
+    [Serializable]
+    public sealed class AgentPackageAnimationSequenceMarker
     {
         public string id;
         public string markerId;
         public int frame;
+    }
+
+    [Serializable]
+    public sealed class AgentPackageAnimationSequenceNotify
+    {
+        public string id;
+        public string kind;
+        public int frame;
+        public string primaryValue;
+        public string secondaryValue;
     }
 
     [Serializable]

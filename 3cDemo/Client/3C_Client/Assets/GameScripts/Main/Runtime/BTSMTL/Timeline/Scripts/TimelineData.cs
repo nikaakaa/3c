@@ -19,6 +19,9 @@ namespace BTSMTL.Timeline
         List<Track> m_Tracks = new List<Track>();
 
         [SerializeField]
+        List<TimelineSection> m_Sections = new List<TimelineSection>();
+
+        [SerializeField]
         float m_Scale = 1f;
 
         [NonSerialized]
@@ -30,6 +33,7 @@ namespace BTSMTL.Timeline
         public string Name { get => string.IsNullOrEmpty(m_Name) ? "Timeline" : m_Name; set => m_Name = value; }
         public string AuthoringId => m_AuthoringId ?? string.Empty;
         public List<Track> Tracks => m_Tracks;
+        public IReadOnlyList<TimelineSection> Sections => m_Sections;
         public float Scale { get => m_Scale; set => m_Scale = value; }
         public UnityEngine.Object SerializedOwner => m_SerializedOwner;
         public string SerializedPropertyPath => m_SerializedPropertyPath ?? string.Empty;
@@ -78,6 +82,8 @@ namespace BTSMTL.Timeline
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                     changed |= track.Clips[clipIndex]?.EnsureAuthoringIdentity() ?? false;
             }
+            for (int i = 0; i < m_Sections.Count; i++)
+                changed |= m_Sections[i]?.EnsureAuthoringIdentity() ?? false;
             return changed;
         }
 
@@ -100,6 +106,8 @@ namespace BTSMTL.Timeline
                         owner.RegenerateOwnedAuthoringIdentity();
                 }
             }
+            for (int i = 0; i < m_Sections.Count; i++)
+                m_Sections[i]?.RegenerateAuthoringIdentity();
         }
 #endif
 
@@ -112,6 +120,7 @@ namespace BTSMTL.Timeline
                 valid = false;
             }
             var identities = new HashSet<string>(StringComparer.Ordinal);
+            var sectionNames = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < m_Tracks.Count; i++)
             {
                 Track track = m_Tracks[i];
@@ -131,6 +140,16 @@ namespace BTSMTL.Timeline
                     }
                 }
             }
+            for (int i = 0; i < m_Sections.Count; i++)
+            {
+                TimelineSection section = m_Sections[i];
+                if (section == null || !section.RequireValid() || !identities.Add(section.AuthoringId) ||
+                    !sectionNames.Add(section.Name))
+                {
+                    errors?.Add($"Timeline '{Name}' section #{i} is invalid or duplicated.");
+                    valid = false;
+                }
+            }
             return valid;
         }
 
@@ -147,6 +166,70 @@ namespace BTSMTL.Timeline
             return string.IsNullOrEmpty(SerializedPropertyPath) ? relativePath : $"{SerializedPropertyPath}.{relativePath}";
         }
 
+    }
+
+    [Serializable]
+    public sealed class TimelineSection
+    {
+        [SerializeField]
+        string m_AuthoringId;
+
+        [SerializeField]
+        string m_Name;
+
+        [SerializeField]
+        int m_Frame;
+
+        public string AuthoringId => m_AuthoringId ?? string.Empty;
+        public string Name => m_Name ?? string.Empty;
+        public int Frame => m_Frame;
+
+#if UNITY_EDITOR
+        public static TimelineSection Create(string name, int frame)
+        {
+            return Create(AuthoringIdentity.Create(), name, frame);
+        }
+
+        public static TimelineSection Create(string authoringId, string name, int frame)
+        {
+            if (!AuthoringIdentity.IsValid(authoringId))
+                throw new ArgumentException("Timeline Section authoring identity is invalid.", nameof(authoringId));
+            var section = new TimelineSection
+            {
+                m_AuthoringId = authoringId
+            };
+            section.Configure(name, frame);
+            return section;
+        }
+
+        public void Configure(string name, int frame)
+        {
+            string value = name?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(value) || frame < 0)
+                throw new ArgumentException("Timeline Section requires a name and non-negative frame.");
+            m_Name = value;
+            m_Frame = frame;
+        }
+
+        public bool EnsureAuthoringIdentity()
+        {
+            if (AuthoringIdentity.IsValid(m_AuthoringId))
+                return false;
+            m_AuthoringId = AuthoringIdentity.Create();
+            return true;
+        }
+
+        public void RegenerateAuthoringIdentity()
+        {
+            m_AuthoringId = AuthoringIdentity.Create();
+        }
+#endif
+
+        public bool RequireValid() =>
+            AuthoringIdentity.IsValid(AuthoringId) &&
+            !string.IsNullOrWhiteSpace(Name) &&
+            string.Equals(Name, Name.Trim(), StringComparison.Ordinal) &&
+            Frame >= 0;
     }
 
     public interface ITimelineOwnedAuthoringIdentity

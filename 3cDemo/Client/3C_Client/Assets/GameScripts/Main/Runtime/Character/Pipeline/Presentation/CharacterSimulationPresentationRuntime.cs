@@ -352,8 +352,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 try
                 {
                     animationPose = PresentAnimation(
-                        bodyFrame,
-                        factFrame,
+                        in bodyFrame,
+                        in factFrame,
                         context.RenderFrame,
                         animationDeltaSeconds);
                 }
@@ -435,8 +435,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         ComposedAnimationPoseFrame PresentAnimation(
-            CharacterBodyPresentationFrame bodyFrame,
-            CharacterPresentationFactFrame factFrame,
+            in CharacterBodyPresentationFrame bodyFrame,
+            in CharacterPresentationFactFrame factFrame,
             ulong presentationFrame,
             float presentationDeltaSeconds)
         {

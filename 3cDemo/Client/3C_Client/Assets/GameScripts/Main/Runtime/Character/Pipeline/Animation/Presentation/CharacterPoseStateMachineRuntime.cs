@@ -25,10 +25,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             int curveIndex,
             int blendProfileIndex,
             CharacterPoseStateMachineBlendMode blendMode,
-            ulong generation)
+            ulong generation,
+            int predictionPoseValueIndex = -1)
         {
             if (sourcePoseValueIndex < 0 || targetPoseValueIndex < 0 ||
                 sourceStateIndex < 0 || targetStateIndex < 0 ||
+                predictionPoseValueIndex < -1 ||
                 !float.IsFinite(elapsedSeconds) || elapsedSeconds < 0f ||
                 !float.IsFinite(durationSeconds) || durationSeconds < 0f ||
                 (blendMode == CharacterPoseStateMachineBlendMode.Standard && curveIndex < 0) ||
@@ -50,6 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             BlendProfileIndex = blendProfileIndex;
             BlendMode = blendMode;
             Generation = generation;
+            PredictionPoseValueIndex = predictionPoseValueIndex;
         }
 
         internal int SourcePoseValueIndex { get; }
@@ -62,6 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal int BlendProfileIndex { get; }
         internal CharacterPoseStateMachineBlendMode BlendMode { get; }
         internal ulong Generation { get; }
+        internal int PredictionPoseValueIndex { get; }
     }
 
     internal interface ICharacterPoseStateSourceRuntime
@@ -77,7 +81,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseStateSourceSyncPlan plan,
             bool establishRelation,
             out double targetEffectiveTime);
-        void ClearSynchronization(CharacterPoseStateSourceSyncPlan plan);
+        void ReleaseSynchronization(CharacterPoseStateSourceSyncPlan plan);
+        void ResetSynchronization(CharacterPoseStateSourceSyncPlan plan);
     }
 
     internal sealed class CharacterPoseStateMachineRuntime
@@ -108,7 +113,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CanPublishPose = 1u << 19,
             HasPendingTarget = 1u << 20,
             PendingTargetTransition = 1u << 21,
-            FrameFailure = 1u << 22
+            FrameFailure = 1u << 22,
+            PendingTargetRuleSatisfied = 1u << 23,
+            PendingTargetSynchronized = 1u << 24
         }
 
         sealed class Page
@@ -136,6 +143,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal bool HasPendingTarget;
             internal CharacterPoseStateTransitionDescriptor PendingTargetTransition;
             internal PresentationFrameFailure FrameFailure;
+            internal bool PendingTargetRuleSatisfied;
+            internal bool PendingTargetSynchronized;
         }
 
         readonly CharacterPoseStateMachineDescriptor m_Descriptor;
@@ -291,6 +300,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             get => Read(PageField.FrameFailure, m_Committed.FrameFailure, m_Pending.FrameFailure);
             set => Write(PageField.FrameFailure, ref m_Committed.FrameFailure, ref m_Pending.FrameFailure, value);
+        }
+
+        bool m_PendingTargetRuleSatisfied
+        {
+            get => Read(
+                PageField.PendingTargetRuleSatisfied,
+                m_Committed.PendingTargetRuleSatisfied,
+                m_Pending.PendingTargetRuleSatisfied);
+            set => Write(
+                PageField.PendingTargetRuleSatisfied,
+                ref m_Committed.PendingTargetRuleSatisfied,
+                ref m_Pending.PendingTargetRuleSatisfied,
+                value);
+        }
+
+        bool m_PendingTargetSynchronized
+        {
+            get => Read(
+                PageField.PendingTargetSynchronized,
+                m_Committed.PendingTargetSynchronized,
+                m_Pending.PendingTargetSynchronized);
+            set => Write(
+                PageField.PendingTargetSynchronized,
+                ref m_Committed.PendingTargetSynchronized,
+                ref m_Pending.PendingTargetSynchronized,
+                value);
         }
 
         internal CharacterPoseStateMachineRuntime(CharacterPoseStateMachineDescriptor descriptor)
@@ -487,6 +522,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             Apply(PageField.HasPendingTarget, ref m_Committed.HasPendingTarget, m_Pending.HasPendingTarget);
             Apply(PageField.PendingTargetTransition, ref m_Committed.PendingTargetTransition, m_Pending.PendingTargetTransition);
             Apply(PageField.FrameFailure, ref m_Committed.FrameFailure, m_Pending.FrameFailure);
+            Apply(PageField.PendingTargetRuleSatisfied, ref m_Committed.PendingTargetRuleSatisfied, m_Pending.PendingTargetRuleSatisfied);
+            Apply(PageField.PendingTargetSynchronized, ref m_Committed.PendingTargetSynchronized, m_Pending.PendingTargetSynchronized);
         }
 
         internal PoseStateMachineRuntimeSnapshot CreateSnapshot()
@@ -568,6 +605,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_ActiveTransition != null &&
                 m_HasPendingTarget &&
                 m_PendingTargetTransition != null &&
+                m_PendingTargetRuleSatisfied &&
                 m_PendingTargetTransition.Index != m_ActiveTransition.Index &&
                 TryBeginTransition(
                     m_PendingTargetTransition,
@@ -582,6 +620,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 if (!m_HasPendingRelease)
                     UpdateSynchronization(sources);
+                EnsurePredictiveTargetSynchronized(sources);
                 return;
             }
             if (!m_HasPendingTarget ||
@@ -592,6 +631,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     true,
                     PoseSourceProviderDemandKind.Active,
                     sources);
+                return;
+            }
+            if (!m_PendingTargetRuleSatisfied)
+            {
+                EnsurePredictiveTargetSynchronized(sources);
                 return;
             }
             TryBeginTransition(
@@ -610,6 +654,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             if (!m_Initialized || (uint)m_ActiveStateIndex >= (uint)m_Descriptor.States.Count)
                 throw new InvalidOperationException("Pose StateMachine has no active state.");
+            int predictionPoseValueIndex = ResolvePredictionPoseValueIndex();
             if (m_ActiveTransition != null &&
                 m_ActiveTransition.BlendLogic == AnimationTransitionBlendLogic.StandardBlend)
             {
@@ -623,7 +668,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_ActiveTransition.CurveIndex,
                     m_ActiveTransition.BlendProfileIndex,
                     CharacterPoseStateMachineBlendMode.Standard,
-                    m_ControlGeneration);
+                    m_ControlGeneration,
+                    predictionPoseValueIndex);
             }
             if (m_ActiveTransition != null &&
                 m_ActiveTransition.BlendLogic == AnimationTransitionBlendLogic.Inertialization)
@@ -638,7 +684,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_ActiveTransition.CurveIndex,
                     m_ActiveTransition.BlendProfileIndex,
                     CharacterPoseStateMachineBlendMode.Inertialization,
-                    m_ControlGeneration);
+                    m_ControlGeneration,
+                    predictionPoseValueIndex);
             }
             int output = m_Descriptor.States[m_ActiveStateIndex].OutputPoseValueIndex;
             return new CharacterPoseStateMachineNativeControl(
@@ -651,7 +698,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 -1,
                 -1,
                 CharacterPoseStateMachineBlendMode.Single,
-                m_ControlGeneration);
+                m_ControlGeneration,
+                predictionPoseValueIndex);
+        }
+
+        int ResolvePredictionPoseValueIndex()
+        {
+            if (!m_HasPendingTarget ||
+                m_PendingTargetTransition == null ||
+                m_PendingTargetRuleSatisfied ||
+                !m_PendingTargetSynchronized)
+            {
+                return -1;
+            }
+            return m_Descriptor.States[
+                m_PendingTargetTransition.TargetStateIndex]
+                .OutputPoseValueIndex;
         }
 
         internal void NotifyNativeFrameCompleted(
@@ -728,7 +790,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     default,
                     sources);
             if (m_ActiveTransition?.SourceSync != null)
-                sources.ClearSynchronization(m_ActiveTransition.SourceSync);
+                sources.ResetSynchronization(m_ActiveTransition.SourceSync);
+            if (m_PendingTargetTransition?.SourceSync != null &&
+                (m_ActiveTransition == null ||
+                 m_PendingTargetTransition.Index != m_ActiveTransition.Index))
+            {
+                sources.ResetSynchronization(
+                    m_PendingTargetTransition.SourceSync);
+            }
             m_ActiveStateIndex = m_Descriptor.EntryStateIndex;
             m_BlendSourceStateIndex = -1;
             m_BlendTargetStateIndex = -1;
@@ -747,6 +816,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_CanPublishPose = false;
             m_HasPendingTarget = false;
             m_PendingTargetTransition = null;
+            m_PendingTargetRuleSatisfied = false;
+            m_PendingTargetSynchronized = false;
             m_FrameFailure = default;
             m_SelectionGeneration =
                 AllocateSelectionGeneration();
@@ -823,12 +894,99 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return null;
         }
 
+        CharacterPoseStateTransitionDescriptor SelectPredictiveTarget(
+            in CharacterPresentationFactFrame facts,
+            ICharacterPoseStateSourceRuntime sources)
+        {
+            if (facts.MotionPhase !=
+                CharacterPresentationMotionPhase.GroundedMoving)
+            {
+                return null;
+            }
+            float statePoseRemainingTime = GetStateRemainingTime(
+                m_ActiveStateIndex,
+                sources);
+            int[] candidates = m_TransitionsBySource[m_ActiveStateIndex];
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                CharacterPoseStateTransitionDescriptor transition =
+                    m_Descriptor.Transitions[candidates[i]];
+                if (transition.SourceSync.Mode !=
+                        PoseStateSourceSyncMode.MarkerGroup ||
+                    !UsesStatePoseRemainingTime(transition.Rule) ||
+                    !TryResolveTargetMovementMode(
+                        transition.Rule,
+                        out string targetMovementMode))
+                {
+                    continue;
+                }
+                if (CharacterPoseTransitionRuleRuntime.EvaluateProspectiveMovementMode(
+                        transition.Rule,
+                        in facts,
+                        m_TimeInState,
+                        statePoseRemainingTime,
+                        targetMovementMode,
+                        m_RuleValues))
+                {
+                    return transition;
+                }
+            }
+            return null;
+        }
+
+        static bool UsesStatePoseRemainingTime(
+            CharacterPoseTransitionRuleProgram rule)
+        {
+            for (int i = 0; i < rule.Operations.Count; i++)
+            {
+                if (rule.Operations[i].Code ==
+                    PoseTransitionRuleOperationCode.StatePoseRemainingTime)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        static bool TryResolveTargetMovementMode(
+            CharacterPoseTransitionRuleProgram rule,
+            out string movementMode)
+        {
+            const string prefix = "presentation.movement-mode.state/";
+            movementMode = string.Empty;
+            for (int i = 0; i < rule.Operations.Count; i++)
+            {
+                CharacterPoseTransitionRuleCompiledOperation operation =
+                    rule.Operations[i];
+                if (operation.Code !=
+                        PoseTransitionRuleOperationCode.IdentityLiteral ||
+                    !operation.IdentityLiteral.StartsWith(
+                        prefix,
+                        StringComparison.Ordinal))
+                {
+                    continue;
+                }
+                if (movementMode.Length > 0 &&
+                    !string.Equals(
+                        movementMode,
+                        operation.IdentityLiteral,
+                        StringComparison.Ordinal))
+                {
+                    movementMode = string.Empty;
+                    return false;
+                }
+                movementMode = operation.IdentityLiteral;
+            }
+            return movementMode.Length > 0;
+        }
+
         void PrepareTransitionDemand(
             in CharacterPresentationFactFrame facts,
             ICharacterPoseStateSourceRuntime sources)
         {
             CharacterPoseStateTransitionDescriptor selected =
                 SelectTransition(in facts, sources);
+            bool ruleSatisfied = selected != null;
             if (m_ActiveTransition != null &&
                 selected != null &&
                 selected.Index == m_ActiveTransition.Index)
@@ -836,6 +994,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 ClearPendingTarget(sources);
                 return;
             }
+            if (selected == null)
+                selected = SelectPredictiveTarget(in facts, sources);
             if (selected == null)
             {
                 ClearPendingTarget(sources);
@@ -868,6 +1028,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 sources);
             m_HasPendingTarget = true;
             m_PendingTargetTransition = selected;
+            m_PendingTargetRuleSatisfied = ruleSatisfied;
+            if (firstDemand)
+            {
+                m_PendingTargetSynchronized = false;
+                m_ControlGeneration = AllocateControlGeneration();
+            }
         }
 
         bool TryBeginTransition(
@@ -882,6 +1048,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             int replacedTargetState = m_BlendTargetStateIndex;
             if (!m_HasPendingTarget ||
                 m_PendingTargetTransition == null ||
+                !m_PendingTargetRuleSatisfied ||
                 m_PendingTargetTransition.Index != transition.Index)
             {
                 throw new InvalidOperationException(
@@ -900,6 +1067,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             m_HasPendingTarget = false;
             m_PendingTargetTransition = null;
+            m_PendingTargetRuleSatisfied = false;
+            m_PendingTargetSynchronized = false;
             if (transition.SourceSync.Mode == PoseStateSourceSyncMode.MarkerGroup &&
                 !sources.TrySynchronize(transition.SourceSync, true, out _))
             {
@@ -909,7 +1078,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             if (replacedTransition != null)
             {
-                sources.ClearSynchronization(replacedTransition.SourceSync);
+                sources.ReleaseSynchronization(replacedTransition.SourceSync);
                 m_CaptureCompletion = default;
                 m_ReleaseCompletion = default;
                 m_HasPendingCapture = false;
@@ -1008,7 +1177,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 false,
                 default,
                 sources);
-            sources.ClearSynchronization(transition.SourceSync);
+            sources.ReleaseSynchronization(transition.SourceSync);
             m_ActiveTransition = null;
             m_BlendSourceStateIndex = -1;
             m_BlendTargetStateIndex = -1;
@@ -1042,7 +1211,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     false,
                     default,
                     sources);
-                sources.ClearSynchronization(m_ActiveTransition.SourceSync);
+                sources.ReleaseSynchronization(m_ActiveTransition.SourceSync);
                 m_HasPendingRelease = true;
                 return;
             }
@@ -1075,6 +1244,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     $"Pose State transition '{m_ActiveTransition.TransitionId}' source sync update failed.");
             }
+        }
+
+        void EnsurePredictiveTargetSynchronized(
+            ICharacterPoseStateSourceRuntime sources)
+        {
+            if (!m_HasPendingTarget ||
+                m_PendingTargetTransition == null ||
+                m_PendingTargetRuleSatisfied ||
+                m_PendingTargetSynchronized)
+            {
+                return;
+            }
+            PoseSourceProviderStatus targetStatus = GetStateStatus(
+                m_PendingTargetTransition.TargetStateIndex,
+                sources);
+            if (targetStatus.Availability !=
+                PresentationPoseSourceAvailability.Ready)
+            {
+                ClearPendingTarget(sources);
+                return;
+            }
+            if (!sources.TrySynchronize(
+                    m_PendingTargetTransition.SourceSync,
+                    true,
+                    out _))
+            {
+                throw new InvalidOperationException(
+                    $"Pose State predictive target '{m_PendingTargetTransition.TransitionId}' source sync could not be established.");
+            }
+            m_PendingTargetSynchronized = true;
+            m_ControlGeneration = AllocateControlGeneration();
         }
 
         TransitionRoutingFrameOutput SubmitRouting(
@@ -1214,13 +1414,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             if (!m_HasPendingTarget || m_PendingTargetTransition == null)
                 return;
-            int targetState = m_PendingTargetTransition.TargetStateIndex;
+            CharacterPoseStateTransitionDescriptor pendingTransition =
+                m_PendingTargetTransition;
+            int targetState = pendingTransition.TargetStateIndex;
             if (targetState != m_ActiveStateIndex)
                 SetStateRelevant(
                     targetState,
                     false,
                     default,
                     sources);
+            if (m_ActiveTransition == null ||
+                pendingTransition.Index != m_ActiveTransition.Index)
+            {
+                sources.ResetSynchronization(
+                    pendingTransition.SourceSync);
+            }
             SetStateRelevant(
                 m_ActiveStateIndex,
                 true,
@@ -1228,6 +1436,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 sources);
             m_HasPendingTarget = false;
             m_PendingTargetTransition = null;
+            m_PendingTargetRuleSatisfied = false;
+            m_PendingTargetSynchronized = false;
+            m_ControlGeneration = AllocateControlGeneration();
         }
 
         float GetStateRemainingTime(int stateIndex, ICharacterPoseStateSourceRuntime sources)
@@ -1300,6 +1511,42 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             float statePoseRemainingTime,
             CharacterPoseTransitionRuleValue[] values)
         {
+            return Evaluate(
+                program,
+                in facts,
+                timeInState,
+                statePoseRemainingTime,
+                string.Empty,
+                values);
+        }
+
+        internal static bool EvaluateProspectiveMovementMode(
+            CharacterPoseTransitionRuleProgram program,
+            in CharacterPresentationFactFrame facts,
+            float timeInState,
+            float statePoseRemainingTime,
+            string movementMode,
+            CharacterPoseTransitionRuleValue[] values)
+        {
+            if (string.IsNullOrWhiteSpace(movementMode))
+                throw new ArgumentException(nameof(movementMode));
+            return Evaluate(
+                program,
+                in facts,
+                timeInState,
+                0f,
+                movementMode,
+                values);
+        }
+
+        static bool Evaluate(
+            CharacterPoseTransitionRuleProgram program,
+            in CharacterPresentationFactFrame facts,
+            float timeInState,
+            float statePoseRemainingTime,
+            string movementMode,
+            CharacterPoseTransitionRuleValue[] values)
+        {
             program.RequireValid();
             if (!facts.IsValid || !float.IsFinite(timeInState) || timeInState < 0f ||
                 !float.IsFinite(statePoseRemainingTime) || statePoseRemainingTime < 0f ||
@@ -1312,7 +1559,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 CharacterPoseTransitionRuleCompiledOperation operation = program.Operations[i];
                 values[i] = operation.Code switch
                 {
-                    PoseTransitionRuleOperationCode.ReadFact => ReadFact(operation, in facts),
+                    PoseTransitionRuleOperationCode.ReadFact => ReadFact(
+                        operation,
+                        in facts,
+                        movementMode),
                     PoseTransitionRuleOperationCode.BoolLiteral => Bool(operation.BoolLiteral),
                     PoseTransitionRuleOperationCode.FloatLiteral => Float(operation.FloatLiteral),
                     PoseTransitionRuleOperationCode.EnumLiteral => Enum(operation.EnumLiteral),
@@ -1343,8 +1593,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         static CharacterPoseTransitionRuleValue ReadFact(
             CharacterPoseTransitionRuleCompiledOperation operation,
-            in CharacterPresentationFactFrame facts)
+            in CharacterPresentationFactFrame facts,
+            string movementMode)
         {
+            if (operation.FactId ==
+                    CharacterPresentationFactSchema.MovementMode &&
+                !string.IsNullOrEmpty(movementMode))
+            {
+                return Identity(movementMode);
+            }
             CharacterPresentationFactValue value = facts.Require(operation.FactId);
             return value.Kind switch
             {

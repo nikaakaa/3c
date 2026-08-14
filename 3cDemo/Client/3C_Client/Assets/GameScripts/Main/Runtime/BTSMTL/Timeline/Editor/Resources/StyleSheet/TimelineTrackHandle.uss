@@ -40,19 +40,6 @@
     margin-left: 5px;
 }
 
-#marker-sync-summary {
-    display: none;
-    position: absolute;
-    left: 5px;
-    right: 5px;
-    top: 34px;
-    height: 16px;
-    font-size: 10px;
-    color: rgba(205, 220, 222, 0.72);
-    -unity-text-align: middle-left;
-    overflow: hidden;
-}
-
 #curve-channel-labels {
     display: none;
     position: absolute;
@@ -102,7 +89,7 @@
     position: absolute;
     left: 5px;
     right: 5px;
-    top: 54px;
+    top: 34px;
     height: 22px;
     flex-direction: row;
     align-items: center;

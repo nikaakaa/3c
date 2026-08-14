@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using BTSMTL.Timeline;
 using UnityEngine;
+using UnityAnimationClip = UnityEngine.AnimationClip;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -39,18 +41,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class CharacterAnimationBlendSpaceMarkerPlanPayload
+    public sealed class CharacterAnimationSequenceMarkerPlanPayload
     {
+        [SerializeField] string m_AuthoringId = string.Empty;
         [SerializeField] string m_MarkerId = string.Empty;
+        [SerializeField] int m_Frame;
         [SerializeField] float m_NormalizedTime;
 
-        internal CharacterAnimationBlendSpaceMarkerPlanPayload(CharacterAnimationBlendSpaceMarker marker)
+        internal CharacterAnimationSequenceMarkerPlanPayload(AnimationSyncMarker marker, int durationFrame)
         {
-            m_MarkerId = marker?.MarkerId ?? throw new ArgumentNullException(nameof(marker));
-            m_NormalizedTime = marker.NormalizedTime;
+            if (marker == null || durationFrame <= 0)
+                throw new ArgumentException("Animation Sequence Marker plan input is invalid.");
+            m_AuthoringId = marker.AuthoringId;
+            m_MarkerId = marker.MarkerId;
+            m_Frame = marker.Frame;
+            m_NormalizedTime = marker.Frame / (float)durationFrame;
         }
 
+        public string AuthoringId => m_AuthoringId ?? string.Empty;
         public string MarkerId => m_MarkerId ?? string.Empty;
+        public int Frame => m_Frame;
         public float NormalizedTime => m_NormalizedTime;
         internal CharacterAnimationBlendSpaceMarkerPlan ToPlan() => new CharacterAnimationBlendSpaceMarkerPlan(MarkerId, NormalizedTime);
     }
@@ -59,13 +69,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public sealed class CharacterAnimationBlendSpaceSamplePlan
     {
         [SerializeField] string m_SampleId = string.Empty;
-        [SerializeField] AnimationClip m_Clip;
+        [SerializeField] string m_SequenceAuthoringId = string.Empty;
+        [SerializeField] UnityAnimationClip m_Clip;
         [SerializeField] string m_ClipContentIdentity = string.Empty;
+        [SerializeField] AnimationSyncMode m_SyncMode;
+        [SerializeField] AnimationSyncTimeMapping m_TimeMapping;
+        [SerializeField] string m_SyncGroupId = string.Empty;
+        [SerializeField] AnimationMarkerSequenceTopology m_SequenceTopology;
+        [SerializeField] AnimationMarkerSyncRole m_SyncRole;
+        [SerializeField] int m_DurationFrame;
         [SerializeField] float m_PositionX;
         [SerializeField] float m_PositionY;
         [SerializeField] CharacterAnimationBlendSpaceSampleRole m_Role;
         [SerializeField] float m_StationaryNormalizedTime;
-        [SerializeField] CharacterAnimationBlendSpaceMarkerPlanPayload[] m_Markers = Array.Empty<CharacterAnimationBlendSpaceMarkerPlanPayload>();
+        [SerializeField] CharacterAnimationSequenceMarkerPlanPayload[] m_Markers = Array.Empty<CharacterAnimationSequenceMarkerPlanPayload>();
         [SerializeField] AnimationFootFeatureCurveSet m_LeftFootFeatures;
         [SerializeField] AnimationFootFeatureCurveSet m_RightFootFeatures;
         [SerializeField] CharacterAnimationBlendSpaceSampleParameter[] m_Parameters = Array.Empty<CharacterAnimationBlendSpaceSampleParameter>();
@@ -74,18 +91,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationBlendSpaceSample sample,
             AnimationFootFeaturePair footFeatures)
         {
-            if (sample == null || !sample.SampleId.IsValid || !sample.Clip || string.IsNullOrWhiteSpace(sample.ClipContentIdentity))
+            if (sample == null || !sample.SampleId.IsValid || !sample.Sequence)
                 throw new ArgumentException("Blend Space Sample plan input is invalid.", nameof(sample));
+            sample.Sequence.RequireValid();
             m_SampleId = sample.SampleId.Value;
-            m_Clip = sample.Clip;
-            m_ClipContentIdentity = sample.ClipContentIdentity;
+            m_SequenceAuthoringId = sample.Sequence.AuthoringId;
+            m_Clip = sample.Sequence.Clip;
+            m_ClipContentIdentity = sample.Sequence.ContentRevision;
+            m_SyncMode = sample.Sequence.SyncMode;
+            m_TimeMapping = sample.Sequence.TimeMapping;
+            m_SyncGroupId = sample.Sequence.SyncGroupId;
+            m_SequenceTopology = sample.Sequence.SequenceTopology;
+            m_SyncRole = sample.Sequence.SyncRole;
+            m_DurationFrame = sample.Sequence.DurationFrame;
             m_PositionX = sample.Position.x;
             m_PositionY = sample.Position.y;
             m_Role = sample.Role;
             m_StationaryNormalizedTime = sample.StationaryNormalizedTime;
-            m_Markers = new CharacterAnimationBlendSpaceMarkerPlanPayload[sample.Markers.Count];
+            m_Markers = new CharacterAnimationSequenceMarkerPlanPayload[sample.Sequence.SyncMarkers.Count];
             for (int i = 0; i < m_Markers.Length; i++)
-                m_Markers[i] = new CharacterAnimationBlendSpaceMarkerPlanPayload(sample.Markers[i]);
+                m_Markers[i] = new CharacterAnimationSequenceMarkerPlanPayload(sample.Sequence.SyncMarkers[i], m_DurationFrame);
             if (footFeatures.IsValid)
             {
                 m_LeftFootFeatures = footFeatures.Left;
@@ -97,13 +122,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         public CharacterAnimationBlendSpaceSampleId SampleId => string.IsNullOrWhiteSpace(m_SampleId) ? default : new CharacterAnimationBlendSpaceSampleId(m_SampleId);
-        public AnimationClip Clip => m_Clip;
+        public string SequenceAuthoringId => m_SequenceAuthoringId ?? string.Empty;
+        public UnityAnimationClip Clip => m_Clip;
         public string ClipContentIdentity => m_ClipContentIdentity ?? string.Empty;
+        public AnimationSyncMode SyncMode => m_SyncMode;
+        public AnimationSyncTimeMapping TimeMapping => m_TimeMapping;
+        public string SyncGroupId => m_SyncGroupId ?? string.Empty;
+        public AnimationMarkerSequenceTopology SequenceTopology => m_SequenceTopology;
+        public AnimationMarkerSyncRole SyncRole => m_SyncRole;
+        public int DurationFrame => m_DurationFrame;
         public float PositionX => m_PositionX;
         public float PositionY => m_PositionY;
         public CharacterAnimationBlendSpaceSampleRole Role => m_Role;
         public float StationaryNormalizedTime => m_StationaryNormalizedTime;
-        public IReadOnlyList<CharacterAnimationBlendSpaceMarkerPlanPayload> Markers => m_Markers ?? Array.Empty<CharacterAnimationBlendSpaceMarkerPlanPayload>();
+        public IReadOnlyList<CharacterAnimationSequenceMarkerPlanPayload> Markers => m_Markers ?? Array.Empty<CharacterAnimationSequenceMarkerPlanPayload>();
         public AnimationFootFeatureCurveSet LeftFootFeatures => m_LeftFootFeatures;
         public AnimationFootFeatureCurveSet RightFootFeatures => m_RightFootFeatures;
         public bool HasFootFeatures => m_LeftFootFeatures != null && m_RightFootFeatures != null;
@@ -125,7 +157,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public void RequireValid(bool requireFootFeatures)
         {
-            if (!SampleId.IsValid || !Clip || !float.IsFinite(Clip.length) || Clip.length <= 0f ||
+            if (!SampleId.IsValid || string.IsNullOrWhiteSpace(SequenceAuthoringId) ||
+                !Clip || !float.IsFinite(Clip.length) || Clip.length <= 0f || DurationFrame <= 0 ||
                 string.IsNullOrWhiteSpace(ClipContentIdentity) || !float.IsFinite(PositionX) || !float.IsFinite(PositionY) ||
                 !Enum.IsDefined(typeof(CharacterAnimationBlendSpaceSampleRole), Role) ||
                 !float.IsFinite(StationaryNormalizedTime) || StationaryNormalizedTime < 0f || StationaryNormalizedTime > 1f ||
@@ -133,12 +166,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException($"Blend Space Sample plan '{SampleId}' is invalid.");
         }
 
-        internal CharacterAnimationBlendSpaceSamplePhasePlan CreatePhasePlan()
+        internal CharacterAnimationBlendSpaceSamplePhasePlan CreatePhasePlan(
+            AnimationFootPhaseTimeWarpPlan footPhaseWarp)
         {
             var markers = new CharacterAnimationBlendSpaceMarkerPlan[Markers.Count];
             for (int i = 0; i < markers.Length; i++)
                 markers[i] = Markers[i].ToPlan();
-            return new CharacterAnimationBlendSpaceSamplePhasePlan(SampleId, Role, Clip.length, StationaryNormalizedTime, markers);
+            return new CharacterAnimationBlendSpaceSamplePhasePlan(
+                SampleId,
+                Role,
+                Clip.length,
+                StationaryNormalizedTime,
+                markers,
+                footPhaseWarp);
         }
     }
 
@@ -179,10 +219,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] float[] m_SolverFactorsY = Array.Empty<float>();
         [SerializeField] float[] m_SolverMagnitudes = Array.Empty<float>();
         [SerializeField] AnimationMarkerSyncBinding m_MarkerSync = new AnimationMarkerSyncBinding();
+        [SerializeField] AnimationFootPhaseTimeWarpPlan[] m_FootPhaseWarps =
+            Array.Empty<AnimationFootPhaseTimeWarpPlan>();
 
         internal CharacterAnimationBlendSpacePlan(
             CharacterAnimationBlendSpaceAsset asset,
-            CharacterAnimationBlendSpaceSamplePlan[] samples)
+            CharacterAnimationBlendSpaceSamplePlan[] samples,
+            IReadOnlyDictionary<CharacterAnimationBlendSpaceSampleId, AnimationFootPhaseTimeWarpPlan> footPhaseWarps = null)
         {
             CharacterAnimationBlendSpaceValidationReport validation = CharacterAnimationBlendSpaceValidator.Validate(asset);
             if (!validation.IsValid)
@@ -227,6 +270,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 if (m_Samples[i].SampleId.Equals(asset.PhaseReferenceSampleId))
                     m_PhaseReferenceSampleIndex = i;
+            }
+            m_FootPhaseWarps = new AnimationFootPhaseTimeWarpPlan[m_Samples.Length];
+            if (footPhaseWarps != null)
+            {
+                for (int i = 0; i < m_Samples.Length; i++)
+                    footPhaseWarps.TryGetValue(m_Samples[i].SampleId, out m_FootPhaseWarps[i]);
             }
             int factorCount = solver.SampleCount * solver.SampleCount;
             m_SolverFactorsX = new float[factorCount];
@@ -294,7 +343,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             var samples = new CharacterAnimationBlendSpaceSamplePhasePlan[Samples.Count];
             for (int i = 0; i < samples.Length; i++)
-                samples[i] = Samples[i].CreatePhasePlan();
+                samples[i] = Samples[i].CreatePhasePlan(m_FootPhaseWarps[i]);
             return new CharacterAnimationBlendSpacePhasePlan(PhasePolicy, PhaseReferenceSampleIndex, samples);
         }
 
@@ -307,8 +356,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !Enum.IsDefined(typeof(CharacterAnimationBlendSpacePhasePolicy), PhasePolicy) ||
                 AxisCount == 1 && YAxis != null || AxisCount == 2 && YAxis == null ||
                 PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.SharedNormalizedPhase && PhaseReferenceSampleIndex != -1 ||
-                PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.MarkerSynchronizedPhase &&
-                (PhaseReferenceSampleIndex < 0 || PhaseReferenceSampleIndex >= Samples.Count))
+                (PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.MarkerSegmentPhase ||
+                 PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase) &&
+                (PhaseReferenceSampleIndex < 0 || PhaseReferenceSampleIndex >= Samples.Count) ||
+                m_FootPhaseWarps == null || m_FootPhaseWarps.Length != Samples.Count)
                 throw new InvalidOperationException($"Blend Space plan '{PlanIdentity}' is invalid.");
             XAxis.RequireValid();
             YAxis?.RequireValid();
@@ -318,6 +369,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Samples[i]?.RequireValid(requireFootFeatures);
                 if (Samples[i] == null || !ids.Add(Samples[i].SampleId))
                     throw new InvalidOperationException($"Blend Space plan '{PlanIdentity}' has duplicate or missing Samples.");
+                bool requiresWarp =
+                    PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase &&
+                    i != PhaseReferenceSampleIndex &&
+                    Samples[i].Role == CharacterAnimationBlendSpaceSampleRole.DynamicCycle;
+                if (requiresWarp != (m_FootPhaseWarps[i] != null))
+                    throw new InvalidOperationException(
+                        $"Blend Space plan '{PlanIdentity}' Sample '{Samples[i].SampleId}' Foot Phase Warp presence is invalid.");
+                m_FootPhaseWarps[i]?.RequireValid();
                 var parameterIds = new HashSet<PoseParameterId>();
                 for (int parameter = 0; parameter < Samples[i].Parameters.Count; parameter++)
                 {
@@ -330,7 +389,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             _ = CreatePhasePlan();
             string markerError = string.Empty;
             if (MarkerSync == null || !MarkerSync.TryValidate(out markerError) ||
-                PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.MarkerSynchronizedPhase != MarkerSync.IsMarkerGroup)
+                (PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.MarkerSegmentPhase ||
+                 PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase) != MarkerSync.IsMarkerGroup)
                 throw new InvalidOperationException($"Blend Space plan '{PlanIdentity}' marker source is invalid: {markerError}");
         }
 
@@ -338,29 +398,58 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.SharedNormalizedPhase)
                 return new AnimationMarkerSyncBinding();
-            CharacterAnimationBlendSpaceSamplePlan reference = m_Samples[m_PhaseReferenceSampleIndex];
-            float duration = reference.Clip.length;
-            var markers = new AnimationMarkerSyncMarkerBinding[reference.Markers.Count];
-            var segments = new AnimationMarkerSyncSegmentOccurrence[reference.Markers.Count];
-            var occurrences = new Dictionary<string, int>(StringComparer.Ordinal);
+            return BuildSampleMarkerSync(
+                BlendSpaceId,
+                PhasePolicy,
+                m_Samples[m_PhaseReferenceSampleIndex]);
+        }
+
+        public AnimationMarkerSyncBinding BuildSampleMarkerSync(
+            CharacterAnimationBlendSpaceSampleId sampleId)
+        {
+            return BuildSampleMarkerSync(
+                BlendSpaceId,
+                PhasePolicy,
+                RequireSample(sampleId));
+        }
+
+        public static AnimationMarkerSyncBinding BuildSampleMarkerSync(
+            CharacterAnimationBlendSpaceId blendSpaceId,
+            CharacterAnimationBlendSpacePhasePolicy phasePolicy,
+            CharacterAnimationBlendSpaceSamplePlan sample)
+        {
+            if (!blendSpaceId.IsValid || sample == null)
+                throw new ArgumentException("Blend Space Sample marker source is invalid.");
+            if (phasePolicy != CharacterAnimationBlendSpacePhasePolicy.MarkerSegmentPhase &&
+                phasePolicy != CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase)
+                return new AnimationMarkerSyncBinding();
+            AnimationSyncTimeMapping requiredMapping =
+                phasePolicy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase
+                    ? AnimationSyncTimeMapping.GeneratedFootPhase
+                    : AnimationSyncTimeMapping.MarkerSegmentFraction;
+            if (sample.SyncMode != AnimationSyncMode.MarkerGroup ||
+                sample.TimeMapping != requiredMapping ||
+                sample.SequenceTopology != AnimationMarkerSequenceTopology.Cyclic ||
+                sample.Markers.Count < 2)
+                throw new InvalidOperationException($"Blend Space Sample '{sample.SampleId}' Sequence Marker plan is incompatible with {phasePolicy}.");
+            float duration = sample.Clip.length;
+            var markers = new AnimationMarkerSyncMarkerBinding[sample.Markers.Count];
+            var segments = new AnimationMarkerSyncSegmentOccurrence[markers.Length];
             for (int i = 0; i < markers.Length; i++)
             {
-                CharacterAnimationBlendSpaceMarkerPlanPayload marker = reference.Markers[i];
+                CharacterAnimationSequenceMarkerPlanPayload marker = sample.Markers[i];
                 markers[i] = new AnimationMarkerSyncMarkerBinding(
-                    $"{BlendSpaceId.Value}/{reference.SampleId.Value}/{i}",
+                    marker.AuthoringId,
                     marker.MarkerId,
-                    i + 1,
+                    marker.Frame,
                     marker.NormalizedTime * duration);
             }
             for (int i = 0; i < segments.Length; i++)
             {
                 int next = (i + 1) % markers.Length;
-                string key = BTSMTL.Timeline.AnimationMarkerSyncAuthoring.PairKey(markers[i].MarkerId, markers[next].MarkerId);
-                occurrences.TryGetValue(key, out int occurrence);
-                occurrences[key] = occurrence + 1;
                 float end = next == 0 ? duration + markers[next].TimeSeconds : markers[next].TimeSeconds;
                 segments[i] = new AnimationMarkerSyncSegmentOccurrence(
-                    occurrence,
+                    i,
                     i,
                     next,
                     markers[i].MarkerId,
@@ -370,25 +459,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     next == 0);
             }
             return new AnimationMarkerSyncBinding(
-                BTSMTL.Timeline.AnimationSyncMode.MarkerGroup,
-                BuildCanonicalMarkerGroup(markers),
-                BTSMTL.Timeline.AnimationMarkerSequenceTopology.Cyclic,
-                BTSMTL.Timeline.AnimationMarkerSyncRole.CanBeLeader,
-                markers.Length + 1,
+                sample.SyncMode,
+                sample.TimeMapping,
+                sample.SyncGroupId,
+                sample.SequenceTopology,
+                sample.SyncRole,
+                sample.DurationFrame,
                 duration,
                 markers,
                 segments);
-        }
-
-        static string BuildCanonicalMarkerGroup(IReadOnlyList<AnimationMarkerSyncMarkerBinding> markers)
-        {
-            var builder = new System.Text.StringBuilder("blend-space-marker-topology:");
-            for (int i = 0; i < markers.Count; i++)
-            {
-                string id = markers[i].MarkerId;
-                builder.Append(id.Length).Append(':').Append(id).Append(';');
-            }
-            return builder.ToString();
         }
 
         public CharacterAnimationBlendSpaceSamplePlan RequireSample(CharacterAnimationBlendSpaceSampleId sampleId)

@@ -204,6 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                         m_CameraTargetBindings,
                         input,
                         Require(m_CameraLookInputValueId, nameof(m_CameraLookInputValueId)),
+                        null,
                         diagnosticsContext);
                 }
                 else
@@ -220,6 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                         bodyPresentationProfile,
                         worldAwarePresentation,
                         physicsScene,
+                        null,
                         diagnosticsContext);
                 }
                 presentation = presentationBinding.Runtime;

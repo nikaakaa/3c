@@ -142,7 +142,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterAnimationBlendSpaceAsset asset,
             IReadOnlyCollection<CharacterAnimationBlendSpaceSampleId> sampleIds)
         {
-            if (asset.PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.MarkerSynchronizedPhase &&
+            if ((asset.PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.MarkerSegmentPhase ||
+                 asset.PhasePolicy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase) &&
                 asset.PhaseReferenceSampleId.IsValid &&
                 sampleIds.Contains(asset.PhaseReferenceSampleId))
             {
@@ -180,20 +181,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Finish(asset);
         }
 
-        public static void SetSampleClip(
+        public static void SetSampleSequence(
             CharacterAnimationBlendSpaceAsset asset,
             CharacterAnimationBlendSpaceSampleId sampleId,
-            AnimationClip clip)
+            CharacterAnimationSequenceAsset sequence)
         {
             RequireAsset(asset);
             CharacterAnimationBlendSpaceSample sample = RequireSample(asset, sampleId);
-            string path = clip ? AssetDatabase.GetAssetPath(clip) : string.Empty;
+            string path = sequence ? AssetDatabase.GetAssetPath(sequence) : string.Empty;
             if (string.IsNullOrWhiteSpace(path))
-                throw new ArgumentException("Blend Space Sample AnimationClip is not a persistent asset.", nameof(clip));
-            string guid = AssetDatabase.AssetPathToGUID(path);
-            string dependency = AssetDatabase.GetAssetDependencyHash(path).ToString();
-            Undo.RecordObject(asset, "Set Blend Space Sample Clip");
-            sample.SetClip(clip, $"{guid}:{dependency}");
+                throw new ArgumentException("Blend Space Sample Sequence is not a persistent asset.", nameof(sequence));
+            sequence.RequireValid();
+            if (asset.Rig && sequence.Rig != asset.Rig)
+                throw new InvalidOperationException("Blend Space Sample Sequence Rig does not match the Blend Space Rig.");
+            Undo.RecordObject(asset, "Set Blend Space Sample Sequence");
+            sample.SetSequence(sequence);
             asset.TouchContentRevision();
             Finish(asset);
         }
@@ -221,7 +223,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterAnimationBlendSpaceSampleId referenceSampleId)
         {
             RequireAsset(asset);
-            if (policy == CharacterAnimationBlendSpacePhasePolicy.MarkerSynchronizedPhase)
+            if (policy == CharacterAnimationBlendSpacePhasePolicy.MarkerSegmentPhase ||
+                policy == CharacterAnimationBlendSpacePhasePolicy.GeneratedFootPhase)
             {
                 CharacterAnimationBlendSpaceSample reference = RequireSample(asset, referenceSampleId);
                 if (reference.Role != CharacterAnimationBlendSpaceSampleRole.DynamicCycle)
@@ -229,31 +232,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             Undo.RecordObject(asset, "Set Blend Space Phase");
             asset.SetPhase(policy, referenceSampleId);
-            if (policy == CharacterAnimationBlendSpacePhasePolicy.SharedNormalizedPhase)
-            {
-                for (int i = 0; i < asset.Samples.Count; i++)
-                    asset.Samples[i]?.SetMarkers(Array.Empty<CharacterAnimationBlendSpaceMarker>());
-            }
-            Finish(asset);
-        }
-
-        public static void SetSampleMarkers(
-            CharacterAnimationBlendSpaceAsset asset,
-            CharacterAnimationBlendSpaceSampleId sampleId,
-            CharacterAnimationBlendSpaceMarker[] markers)
-        {
-            RequireAsset(asset);
-            if (asset.PhasePolicy != CharacterAnimationBlendSpacePhasePolicy.MarkerSynchronizedPhase)
-                throw new InvalidOperationException("Marker bindings require MarkerSynchronizedPhase.");
-            CharacterAnimationBlendSpaceSample sample = RequireSample(asset, sampleId);
-            if (sample.Role != CharacterAnimationBlendSpaceSampleRole.DynamicCycle)
-                throw new InvalidOperationException("Stationary Blend Space Samples cannot own marker bindings.");
-            CharacterAnimationBlendSpaceMarker[] ordered = markers == null
-                ? Array.Empty<CharacterAnimationBlendSpaceMarker>()
-                : markers.OrderBy(value => value?.NormalizedTime ?? float.PositiveInfinity).ToArray();
-            Undo.RecordObject(asset, "Set Blend Space Sample Markers");
-            sample.SetMarkers(ordered);
-            asset.TouchContentRevision();
             Finish(asset);
         }
 

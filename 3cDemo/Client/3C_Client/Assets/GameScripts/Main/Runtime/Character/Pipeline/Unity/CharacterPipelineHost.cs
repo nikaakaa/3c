@@ -173,6 +173,26 @@ namespace ThirdPersonCharacter.Pipeline
 		public bool CanPreviewPoseGraph => CanPreviewTimeline;
 		public override string PreviewStatus =>
 			"Pose Graph preview uses the selected Host's formal Body fixture and Scene PhysicsScene. A missing World-Aware Binding is reported at the first world-aware stage.";
+		public override bool TryGetAnimationSequencePreviewStatus(
+			AnimationSequenceAsset sequence,
+			out string status)
+		{
+			if (!CanPreviewTimeline)
+			{
+				status = "Sequence Preview is unavailable: the selected Host is missing its compiled Definition, Animancer, Rig Binding, Body fixture or Visual Root.";
+				return false;
+			}
+			try
+			{
+				return EnsurePreviewController()
+					.TryGetSequencePreviewStatus(sequence, out status);
+			}
+			catch (InvalidOperationException exception)
+			{
+				status = exception.Message;
+				return false;
+			}
+		}
 
 		public void BindSessionActor(SimulationSessionHost sessionHost, ActorId actorId)
 		{
@@ -378,6 +398,7 @@ namespace ThirdPersonCharacter.Pipeline
 						lookInput,
 						m_CameraLookInputValueId,
 						m_EquipmentRigBindings,
+						m_SessionHost,
 						diagnosticsContext);
 				}
 				else
@@ -395,6 +416,7 @@ namespace ThirdPersonCharacter.Pipeline
 						m_WorldAwarePresentation,
 						physicsScene,
 						m_EquipmentRigBindings,
+						m_SessionHost,
 						diagnosticsContext);
 				}
 				presentationRuntime = presentationBinding.Runtime;
@@ -462,6 +484,29 @@ namespace ThirdPersonCharacter.Pipeline
 				evaluationTick,
 				presentationDeltaSeconds,
 				resetLifecycle);
+		}
+
+		public override void EvaluateAnimationSequencePreview(
+			Guid sessionId,
+			AnimationSequenceAsset sequence,
+			float previousTime,
+			float currentTime,
+			ulong evaluationTick,
+			float presentationDeltaSeconds,
+			bool resetLifecycle)
+		{
+			if (sessionId == Guid.Empty || sequence == null || !CanPreviewTimeline)
+			{
+				ClearAnimationSequencePreview(sessionId);
+				return;
+			}
+			EnsurePreviewController().EvaluateSequence(
+				sessionId,
+				sequence,
+				currentTime,
+				evaluationTick,
+				presentationDeltaSeconds,
+				resetLifecycle || currentTime + 0.000001f < previousTime);
 		}
 
 		public void EvaluatePoseGraphPreview(
@@ -537,6 +582,11 @@ namespace ThirdPersonCharacter.Pipeline
 		}
 
 		public override void ClearTimelinePreview(Guid sessionId)
+		{
+			m_PreviewController?.Clear(sessionId);
+		}
+
+		public override void ClearAnimationSequencePreview(Guid sessionId)
 		{
 			m_PreviewController?.Clear(sessionId);
 		}

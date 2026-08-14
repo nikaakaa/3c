@@ -1,4 +1,5 @@
 using System;
+using BTSMTL.Timeline.Editor;
 using ThirdPersonCharacter.Pipeline.Animation;
 using UnityEditor;
 using UnityEngine;
@@ -41,13 +42,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 EditorGUILayout.LabelField("Duration", sequence.Clip ? $"{sequence.Clip.length:0.###} s" : "Unavailable");
                 EditorGUILayout.LabelField("Loop", sequence.Loop ? "Yes" : "No");
-                EditorGUILayout.LabelField("Sync Group", string.IsNullOrEmpty(sequence.MarkerGroupId) ? "None" : sequence.MarkerGroupId);
-                EditorGUILayout.LabelField("Sync Role", sequence.SyncRole.ToString());
-                EditorGUILayout.LabelField("Markers", sequence.Markers.Count.ToString());
-                EditorGUILayout.LabelField("Foot Weight Keys", sequence.FootPlacementWeightCurve.length.ToString());
+                EditorGUILayout.LabelField("Sync Group", string.IsNullOrEmpty(sequence.Sequence.SyncGroupId) ? "None" : sequence.Sequence.SyncGroupId);
+                EditorGUILayout.LabelField("Sync Role", sequence.Sequence.SyncRole.ToString());
+                EditorGUILayout.LabelField("Time Mapping", sequence.Sequence.TimeMapping.ToString());
+                EditorGUILayout.LabelField("Markers", sequence.Sequence.SyncMarkers.Count.ToString());
+                EditorGUILayout.LabelField("Material Curves", sequence.Sequence.CurveChannels.Count.ToString());
             }
             EditorGUILayout.Space(6f);
-            if (GUILayout.Button("Open Pose Source Editor", GUILayout.Height(28f)))
+            if (GUILayout.Button("Open Sequence", GUILayout.Height(28f)))
                 OpenEditor();
             EditorGUILayout.BeginHorizontal();
             using (new EditorGUI.DisabledScope(!m_Binding.SourceAsset))
@@ -63,14 +65,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.EndHorizontal();
             if (!string.IsNullOrEmpty(m_Error))
                 EditorGUILayout.HelpBox(m_Error, MessageType.Error);
-            EditorGUILayout.HelpBox("Markers and curves are authored in the Pose Source Editor so drag, box selection, tangents, analysis and preview use one transaction-aware workflow.", MessageType.Info);
+            EditorGUILayout.HelpBox("素材 Marker、Curve、Notify 与 Analysis 只在主 Timeline Editor 的 Sequence 文档中编辑。", MessageType.Info);
         }
 
         void OpenEditor()
         {
             try
             {
-                CharacterPoseSourceEditorWindow.Open(m_Profile, m_Binding);
+                if (m_Binding is not CharacterSequencePoseSourceBinding sequence || !sequence.Sequence)
+                    throw new InvalidOperationException("Pose Source Binding does not reference a Sequence document.");
+                TimelineEditorWindow.Open(sequence.Sequence);
                 m_Error = string.Empty;
             }
             catch (Exception exception)

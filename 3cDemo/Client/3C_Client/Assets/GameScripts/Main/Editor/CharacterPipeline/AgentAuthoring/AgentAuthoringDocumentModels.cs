@@ -91,7 +91,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentSnapshotBodyMotionProfile bodyMotion = new AgentSnapshotBodyMotionProfile();
         public AgentDocumentPresentationContext presentation =
             new AgentDocumentPresentationContext();
-        public List<AgentSnapshotAnimationMarkerGroup> animationMarkerGroups = new List<AgentSnapshotAnimationMarkerGroup>();
         public List<AgentSnapshotAsset> timelineAssets = new List<AgentSnapshotAsset>();
         public List<AgentSnapshotAsset> actionContextAssets = new List<AgentSnapshotAsset>();
         public AgentDocumentGeneratedProduct generatedProduct = new AgentDocumentGeneratedProduct();
@@ -133,6 +132,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             new List<AgentDocumentBlendAssetContext>();
         public List<AgentDocumentBlendAssetContext> blendProfiles =
             new List<AgentDocumentBlendAssetContext>();
+        public List<AgentDocumentAnimationSequenceContext> animationSequences =
+            new List<AgentDocumentAnimationSequenceContext>();
         public string footAnalysisSourceId;
         public int footAnalysisSourceVersion;
         public string footAnalysisAlgorithmVersion;
@@ -148,6 +149,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string rigRevision;
         public string assetPath;
         public string assetGuid;
+    }
+
+    [Serializable]
+    public sealed class AgentDocumentAnimationSequenceContext
+    {
+        public string id;
+        public string name;
+        public AgentPackageAssetReferenceV3 asset;
+        public AgentPackageAssetReferenceV3 clip;
+        public AgentPackageAssetReferenceV3 rig;
+        public AgentPackageAssetReferenceV3 footAnalysisSource;
+        public string footAnalysisIdentity;
+        public string contentRevision;
     }
 
     [Serializable]
@@ -395,6 +409,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string id;
         public string name;
         public List<AgentSnapshotTimelineCallSite> callSites = new List<AgentSnapshotTimelineCallSite>();
+        public List<AgentSnapshotTimelineSection> sections = new List<AgentSnapshotTimelineSection>();
         public List<AgentSnapshotTimelineTrack> tracks = new List<AgentSnapshotTimelineTrack>();
     }
 
@@ -505,6 +520,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             new List<AgentDocumentBlendAssetContext>();
         public List<AgentDocumentBlendAssetContext> animationBlendProfiles =
             new List<AgentDocumentBlendAssetContext>();
+        public List<AgentDocumentAnimationSequenceContext> animationSequences =
+            new List<AgentDocumentAnimationSequenceContext>();
     }
 
     [Serializable]
@@ -516,7 +533,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string rootGraphAuthoringId;
         public AgentSnapshotBodyMotionProfile bodyMotion;
         public AgentDocumentPresentationContext presentation;
-        public List<AgentSnapshotAnimationMarkerGroup> animationMarkerGroups = new List<AgentSnapshotAnimationMarkerGroup>();
         public AgentDocumentGeneratedProduct generatedProduct;
         public AgentDocumentAIContext aiController;
         public List<string> capabilities = new List<string>();

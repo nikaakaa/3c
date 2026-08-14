@@ -12,6 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     internal static class AgentAuthoringPresentationPackageCodec
     {
         const string ProfilePath = "editable/presentation/profile.json";
+        const string SequencePrefix = "editable/animation-sequences/";
         const string GraphPrefix = "editable/presentation/pose-graphs/";
         const string StateMachinePrefix =
             "editable/presentation/pose-state-machines/";
@@ -60,6 +61,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             files.Add(
                 ProfilePath,
                 AgentAuthoringDocumentCodec.ToToken(presentation.profile));
+            foreach (AgentPackageAnimationSequenceFile sequence in presentation.animationSequences ??
+                         new List<AgentPackageAnimationSequenceFile>())
+            {
+                string directory = SequenceDirectory(sequence?.id);
+                files.Add(directory + "/sequence.json", AgentAuthoringDocumentCodec.ToToken(sequence));
+                AgentPackageAnimationSequenceCurvesFile curves =
+                    presentation.animationSequenceCurves?.SingleOrDefault(value =>
+                        string.Equals(value?.sequenceId, sequence?.id, StringComparison.Ordinal));
+                if (curves == null)
+                {
+                    report.Error(directory + "/curves.json", "animation_sequence_curves_missing", "Animation Sequence缺少curves.json分片。");
+                    continue;
+                }
+                files.Add(directory + "/curves.json", AgentAuthoringDocumentCodec.ToToken(curves));
+            }
             foreach (AgentPackagePoseGraphFile graph in presentation.poseGraphs ??
                          new List<AgentPackagePoseGraphFile>())
             {
@@ -210,6 +226,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report,
                 out AgentPackagePresentationProfileFile profile);
             presentation.profile = profile;
+
+            foreach (string path in files.Keys.Where(IsSequenceFile).OrderBy(value => value, StringComparer.Ordinal))
+            {
+                string curvesPath = path.Substring(0, path.Length - "sequence.json".Length) + "curves.json";
+                if (!TryFile(files, path, report, out AgentPackageAnimationSequenceFile sequence) ||
+                    !TryFile(files, curvesPath, report, out AgentPackageAnimationSequenceCurvesFile curves))
+                {
+                    valid = false;
+                    continue;
+                }
+                if (!string.Equals(path, SequenceDirectory(sequence.id) + "/sequence.json", StringComparison.Ordinal) ||
+                    !string.Equals(curves.sequenceId, sequence.id, StringComparison.Ordinal))
+                {
+                    report.Error(path, "animation_sequence_path_mismatch", "Animation Sequence目录、identity与curves owner必须一致。");
+                    valid = false;
+                    continue;
+                }
+                presentation.animationSequences.Add(sequence);
+                presentation.animationSequenceCurves.Add(curves);
+            }
 
             foreach (string graphPath in files.Keys
                          .Where(IsGraphFile)
@@ -504,6 +540,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     report,
                     out AgentPackagePresentationProfileFile _,
                     out raw);
+            if (IsSequenceFile(relativePath))
+                return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageAnimationSequenceFile _, out raw);
+            if (IsSequenceCurvesFile(relativePath))
+                return AgentAuthoringDocumentCodec.TryReadFile(fullPath, report, out AgentPackageAnimationSequenceCurvesFile _, out raw);
             if (IsGraphFile(relativePath))
                 return AgentAuthoringDocumentCodec.TryReadFile(
                     fullPath,
@@ -851,13 +891,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 if (!pair.Key.StartsWith(
                         "editable/presentation/",
-                        StringComparison.Ordinal))
+                        StringComparison.Ordinal) &&
+                    !pair.Key.StartsWith(SequencePrefix, StringComparison.Ordinal))
                     continue;
                 if (!string.Equals(
                         pair.Key,
                         ProfilePath,
                         StringComparison.Ordinal) &&
                     !IsGraphFile(pair.Key) &&
+                    !IsSequenceFile(pair.Key) &&
+                    !IsSequenceCurvesFile(pair.Key) &&
                     !IsLayoutFile(pair.Key) &&
                     !IsStateMachineFile(pair.Key) &&
                     !IsStateMachineLayoutFile(pair.Key) &&
@@ -874,6 +917,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     valid = false;
                 }
                 valid &= RejectInternalFields(pair.Value, pair.Key, report);
+            }
+            foreach (string sequencePath in files.Keys.Where(IsSequenceFile))
+            {
+                string curvesPath = sequencePath.Substring(0, sequencePath.Length - "sequence.json".Length) + "curves.json";
+                if (!files.ContainsKey(curvesPath))
+                {
+                    report.Error(sequencePath, "animation_sequence_curves_pair_missing", "Animation Sequence缺少同目录curves.json。");
+                    valid = false;
+                }
+            }
+            foreach (string curvesPath in files.Keys.Where(IsSequenceCurvesFile))
+            {
+                string sequencePath = curvesPath.Substring(0, curvesPath.Length - "curves.json".Length) + "sequence.json";
+                if (!files.ContainsKey(sequencePath))
+                {
+                    report.Error(curvesPath, "animation_sequence_pair_missing", "Animation Sequence curves缺少同目录sequence.json。");
+                    valid = false;
+                }
             }
             foreach (string layoutPath in files.Keys.Where(IsLayoutFile))
             {
@@ -982,7 +1043,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentDocumentPresentationEditable presentation,
             AgentCompileReport report)
         {
-            bool valid = ValidateProfile(presentation.profile, report);
+            bool valid = ValidateSequences(presentation, report);
+            valid &= ValidateProfile(presentation.profile, presentation, report);
             var graphs = new Dictionary<string, AgentPackagePoseGraphFile>(
                 StringComparer.Ordinal);
             var nodes = new Dictionary<string, AgentPackagePoseNode>(
@@ -1202,6 +1264,98 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 valid = false;
             }
             return valid;
+        }
+
+        static bool ValidateSequences(
+            AgentDocumentPresentationEditable presentation,
+            AgentCompileReport report)
+        {
+            bool valid = true;
+            var identities = new HashSet<string>(StringComparer.Ordinal);
+            var assets = new HashSet<string>(StringComparer.Ordinal);
+            Dictionary<string, AgentPackageAnimationSequenceCurvesFile> curves =
+                (presentation.animationSequenceCurves ?? new List<AgentPackageAnimationSequenceCurvesFile>())
+                .Where(value => value != null && Identity(value.sequenceId))
+                .GroupBy(value => value.sequenceId, StringComparer.Ordinal)
+                .Where(group => group.Count() == 1)
+                .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
+            foreach (AgentPackageAnimationSequenceFile sequence in presentation.animationSequences ??
+                         new List<AgentPackageAnimationSequenceFile>())
+            {
+                string path = SequenceDirectory(sequence?.id) + "/sequence.json";
+                if (sequence == null || !Identity(sequence.id) || !identities.Add(sequence.id) ||
+                    !AssetReference(sequence.asset) || !assets.Add(ReferenceIdentity(sequence.asset)) ||
+                    !Asset(sequence.clip) || !Asset(sequence.rig) || !Asset(sequence.footAnalysisSource) ||
+                    !float.IsFinite(sequence.defaultPlayRate) || sequence.defaultPlayRate <= 0f ||
+                    !Identity(sequence.contentRevision) || string.IsNullOrWhiteSpace(sequence.footAnalysisIdentity) ||
+                    !Enum.TryParse(sequence.syncMode, false, out AnimationSyncMode syncMode) ||
+                    !Enum.TryParse(sequence.timeMapping, false, out AnimationSyncTimeMapping timeMapping) ||
+                    !Enum.TryParse(sequence.markerTopology, false, out AnimationMarkerSequenceTopology topology) ||
+                    !Enum.TryParse(sequence.syncRole, false, out AnimationMarkerSyncRole syncRole) ||
+                    !ValidateSequenceMarkers(sequence, syncMode, timeMapping, topology, syncRole) ||
+                    !ValidateSequenceNotifies(sequence) ||
+                    !curves.TryGetValue(sequence.id, out AgentPackageAnimationSequenceCurvesFile sequenceCurves) ||
+                    sequenceCurves.curves == null || sequenceCurves.curves.Count == 0 ||
+                    sequenceCurves.curves.Any(value => value == null || !Identity(value.channelId) || value.keys == null || value.keys.Count == 0))
+                {
+                    report.Error(path, "animation_sequence_invalid", "Animation Sequence owner、引用、Marker、Curve、Notify或Analysis合同非法。");
+                    valid = false;
+                }
+            }
+            if (curves.Count != identities.Count)
+            {
+                report.Error(SequencePrefix, "animation_sequence_curve_closure_invalid", "Animation Sequence与curves分片必须一一对应。");
+                valid = false;
+            }
+            return valid;
+        }
+
+        static bool ValidateSequenceMarkers(
+            AgentPackageAnimationSequenceFile sequence,
+            AnimationSyncMode syncMode,
+            AnimationSyncTimeMapping timeMapping,
+            AnimationMarkerSequenceTopology topology,
+            AnimationMarkerSyncRole syncRole)
+        {
+            List<AgentPackageAnimationSequenceMarker> markers = sequence.markers ??
+                new List<AgentPackageAnimationSequenceMarker>();
+            if (syncMode == AnimationSyncMode.None)
+                return timeMapping == AnimationSyncTimeMapping.Unspecified &&
+                       topology == AnimationMarkerSequenceTopology.Unspecified &&
+                       syncRole == AnimationMarkerSyncRole.Unspecified &&
+                       string.IsNullOrEmpty(sequence.markerGroupId) && markers.Count == 0;
+            if (syncMode != AnimationSyncMode.MarkerGroup || markers.Count < 2 || !Identity(sequence.markerGroupId) ||
+                topology != (sequence.loop ? AnimationMarkerSequenceTopology.Cyclic : AnimationMarkerSequenceTopology.Finite) ||
+                syncRole is not (AnimationMarkerSyncRole.CanBeLeader or AnimationMarkerSyncRole.AlwaysLeader or AnimationMarkerSyncRole.AlwaysFollower) ||
+                timeMapping is not (AnimationSyncTimeMapping.MarkerSegmentFraction or AnimationSyncTimeMapping.GeneratedFootPhase))
+                return false;
+            var identities = new HashSet<string>(StringComparer.Ordinal);
+            int previousFrame = -1;
+            for (int i = 0; i < markers.Count; i++)
+            {
+                AgentPackageAnimationSequenceMarker marker = markers[i];
+                if (marker == null || !Identity(marker.id) || !Identity(marker.markerId) ||
+                    !identities.Add(marker.id) || marker.frame <= previousFrame)
+                    return false;
+                previousFrame = marker.frame;
+            }
+            return true;
+        }
+
+        static bool ValidateSequenceNotifies(AgentPackageAnimationSequenceFile sequence)
+        {
+            var identities = new HashSet<string>(StringComparer.Ordinal);
+            foreach (AgentPackageAnimationSequenceNotify notify in sequence.notifies ??
+                         new List<AgentPackageAnimationSequenceNotify>())
+            {
+                if (notify == null || !Identity(notify.id) || !identities.Add(notify.id) || notify.frame < 0 ||
+                    !Enum.TryParse(notify.kind, false, out AnimationSequenceNotifyKind kind) ||
+                    string.IsNullOrWhiteSpace(notify.primaryValue) ||
+                    kind is AnimationSequenceNotifyKind.FootstepAudio or AnimationSequenceNotifyKind.VisualEffect &&
+                    string.IsNullOrWhiteSpace(notify.secondaryValue))
+                    return false;
+            }
+            return true;
         }
 
         static bool ValidateImplementation(
@@ -1561,6 +1715,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static bool ValidateProfile(
             AgentPackagePresentationProfileFile profile,
+            AgentDocumentPresentationEditable presentation,
             AgentCompileReport report)
         {
             if (profile == null || !Identity(profile.id) ||
@@ -1600,15 +1755,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         source.kind,
                         false,
                         out PresentationPoseSourceKind sourceKind) ||
-                    !Asset(source.source) || !Asset(source.rig) ||
+                    !Asset(source.source) ||
                     !Identity(source.contentRevision) ||
-                    string.IsNullOrWhiteSpace(source.footAnalysisIdentity) ||
-                    !ValidatePoseSourceKind(source, sourceKind))
+                    !ValidatePoseSourceKind(source, sourceKind, presentation))
                 {
                     report.Error(
                         ProfilePath + $".poseSources[{source?.name}]",
                         "presentation_pose_source_invalid",
-                        "Pose source Slot、binding或资源字段不完整，或者对象引用重复。");
+                        $"Pose source非法：kind={source?.kind ?? "<null>"}, " +
+                        $"source={ReferenceIdentity(source?.source)}, " +
+                        $"contentRevision={source?.contentRevision ?? "<null>"}, footAnalysisIdentity={source?.footAnalysisIdentity ?? "<null>"}, " +
+                        $"slot={slotIdentity}, binding={bindingIdentity}。");
                     valid = false;
                 }
             }
@@ -1635,66 +1792,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static bool ValidatePoseSourceKind(
             AgentPackagePoseSourceBinding source,
-            PresentationPoseSourceKind kind)
+            PresentationPoseSourceKind kind,
+            AgentDocumentPresentationEditable presentation)
         {
             if (kind == PresentationPoseSourceKind.Sequence)
-            {
-                if (!float.IsFinite(source.defaultPlayRate) ||
-                    source.defaultPlayRate <= 0f ||
-                    source.footPlacementWeight?.keys == null ||
-                    !Enum.TryParse(
-                        source.markerTopology,
-                        false,
-                        out AnimationMarkerSequenceTopology topology) ||
-                    !Enum.TryParse(
-                        source.syncRole,
-                        false,
-                        out AnimationMarkerSyncRole syncRole))
-                    return false;
-                List<AgentPackagePoseSourceMarker> markers = source.markers ??
-                    new List<AgentPackagePoseSourceMarker>();
-                if (markers.Count == 0)
-                {
-                    return string.IsNullOrEmpty(source.markerGroupId) &&
-                           topology == AnimationMarkerSequenceTopology.Unspecified &&
-                           syncRole == AnimationMarkerSyncRole.Unspecified;
-                }
-                if (markers.Count < 2 || !Identity(source.markerGroupId) ||
-                    topology != (source.loop
-                        ? AnimationMarkerSequenceTopology.Cyclic
-                        : AnimationMarkerSequenceTopology.Finite) ||
-                    syncRole != AnimationMarkerSyncRole.CanBeLeader &&
-                    syncRole != AnimationMarkerSyncRole.AlwaysLeader &&
-                    syncRole != AnimationMarkerSyncRole.AlwaysFollower)
-                    return false;
-                var ids = new HashSet<string>(StringComparer.Ordinal);
-                int previousFrame = -1;
-                foreach (AgentPackagePoseSourceMarker marker in markers)
-                {
-                    if (marker == null || !Identity(marker.id) ||
-                        !Identity(marker.markerId) || !ids.Add(marker.id) ||
-                        marker.frame < 0 || marker.frame <= previousFrame)
-                        return false;
-                    previousFrame = marker.frame;
-                }
-                return true;
-            }
-            bool hasSequenceData = source.loop ||
-                                   !string.IsNullOrEmpty(source.markerGroupId) ||
-                                   !string.Equals(
-                                       source.markerTopology,
-                                       AnimationMarkerSequenceTopology.Unspecified.ToString(),
-                                       StringComparison.Ordinal) ||
-                                   !string.Equals(
-                                       source.syncRole,
-                                       AnimationMarkerSyncRole.Unspecified.ToString(),
-                                       StringComparison.Ordinal) ||
-                                   (source.markers?.Count ?? 0) != 0 ||
-                                   source.footPlacementWeight != null;
-            if (hasSequenceData)
-                return false;
+                return (presentation.animationSequences ?? new List<AgentPackageAnimationSequenceFile>())
+                    .Any(value => string.Equals(ReferenceIdentity(value?.asset), ReferenceIdentity(source.source), StringComparison.Ordinal));
             if (kind == PresentationPoseSourceKind.BlendSpace)
-                return true;
+                return string.IsNullOrWhiteSpace(source.footAnalysisIdentity);
             return kind == PresentationPoseSourceKind.MotionMatching &&
                    !string.IsNullOrWhiteSpace(source.searchDomainId) &&
                    source.databases != null && source.databases.Count > 0 &&
@@ -2440,6 +2545,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static string StateMachineDirectory(string id) =>
             StateMachinePrefix + AgentAuthoringPackageMapper.Segment(id);
+
+        static string SequenceDirectory(string id) =>
+            SequencePrefix + AgentAuthoringPackageMapper.Segment(id);
+
+        static bool IsSequenceFile(string path) =>
+            path.StartsWith(SequencePrefix, StringComparison.Ordinal) &&
+            path.EndsWith("/sequence.json", StringComparison.Ordinal);
+
+        static bool IsSequenceCurvesFile(string path) =>
+            path.StartsWith(SequencePrefix, StringComparison.Ordinal) &&
+            path.EndsWith("/curves.json", StringComparison.Ordinal);
 
         static bool IsGraphFile(string path) =>
             path.StartsWith(GraphPrefix, StringComparison.Ordinal) &&

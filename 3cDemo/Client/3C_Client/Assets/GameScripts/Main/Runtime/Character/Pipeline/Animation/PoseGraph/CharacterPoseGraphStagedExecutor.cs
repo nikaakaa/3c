@@ -549,6 +549,48 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return !stop;
         }
 
+        internal void ExecuteSequencePreview(int sourceOperationIndex)
+        {
+            AnimationPoseGraphNativeOperation sourceOperation = default;
+            bool found = false;
+            for (int i = 0; i < m_Operations.Length; i++)
+            {
+                if (m_Operations[i].Index != sourceOperationIndex)
+                    continue;
+                sourceOperation = m_Operations[i];
+                found = true;
+                break;
+            }
+            if (!found || sourceOperation.Code != CharacterPoseOperationCode.SequencePlayer)
+                throw new InvalidOperationException(
+                    $"Sequence Preview source operation #{sourceOperationIndex} is not a compiled Sequence Player.");
+
+            ResetValue(sourceOperation.OutputValueIndex);
+            EvaluatePlayerInput(sourceOperation);
+            m_FrameCacheCompletedAt[sourceOperation.FrameCacheIndex] = m_CompletionIdentity;
+            if (m_ValueAvailability[sourceOperation.OutputValueIndex] == AnimationPoseAvailability.Pose &&
+                sourceOperation.OutputValueIndex != m_OutputValueIndex)
+            {
+                ResetValue(m_OutputValueIndex);
+                if (!TryCopyValue(
+                        sourceOperation.OutputValueIndex,
+                        m_OutputValueIndex,
+                        sourceOperation.Index))
+                {
+                    SetInvalid(
+                        m_OutputValueIndex,
+                        m_ValueContinuityIdentities[sourceOperation.OutputValueIndex],
+                        AnimationPoseNativeInvalidReason.PoseGraphOutputInvalid,
+                        sourceOperation.Index);
+                }
+            }
+            for (int i = 0; i < m_FrameCacheCompletedAt.Length; i++)
+                m_FrameCacheCompletedAt[i] = m_CompletionIdentity;
+            for (int i = 0; i < m_StageCompletedAt.Length; i++)
+                m_StageCompletedAt[i] = m_CompletionIdentity;
+            CompleteStagedEvaluation();
+        }
+
         internal void CompleteStagedEvaluation()
         {
             if (m_ValueAvailability[m_OutputValueIndex] != AnimationPoseAvailability.Pose)
@@ -1430,7 +1472,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 control.SourcePoseValueIndex < 0 ||
                 control.SourcePoseValueIndex >= operation.OutputValueIndex ||
                 control.TargetPoseValueIndex < 0 ||
-                control.TargetPoseValueIndex >= operation.OutputValueIndex)
+                control.TargetPoseValueIndex >= operation.OutputValueIndex ||
+                control.PredictionPoseValueIndex < -1 ||
+                control.PredictionPoseValueIndex >= operation.OutputValueIndex)
             {
                 SetInvalid(
                     operation.OutputValueIndex,
@@ -1446,6 +1490,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     !TryCopyValue(
                         control.TargetPoseValueIndex,
                         operation.OutputValueIndex,
+                        operation.Index) ||
+                    !TryApplyStateMachinePrediction(
+                        operation.OutputValueIndex,
+                        control.PredictionPoseValueIndex,
                         operation.Index))
                 {
                     SetInvalid(
@@ -1585,7 +1633,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     target,
                     output,
                     leftWeight,
-                    rightWeight))
+                    rightWeight) ||
+                !TryApplyStateMachinePrediction(
+                    output,
+                    control.PredictionPoseValueIndex,
+                    operation.Index))
             {
                 SetInvalid(
                     output,
@@ -2609,6 +2661,136 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ValueHasFootFeatures[output] =
                 left.IsValid && right.IsValid ? (byte)1 : (byte)0;
             return true;
+        }
+
+        bool TryApplyStateMachinePrediction(
+            int output,
+            int prediction,
+            int operationIndex)
+        {
+            if (prediction < 0)
+                return true;
+            if (!IsInputReady(prediction, operationIndex) ||
+                m_ValueHasFootFeatures[output] == 0 ||
+                m_ValueHasFootFeatures[prediction] == 0)
+            {
+                return false;
+            }
+            for (int contribution = 0;
+                 contribution < m_ValueContributionCounts[prediction];
+                 contribution++)
+            {
+                AnimationPrimitivePoseContribution source =
+                    m_ValueContributions[
+                        ContributionOffset(prediction) + contribution];
+                if (!IsValidPrimitiveContribution(source))
+                    return false;
+                if (FindContribution(output, source) >= 0)
+                    continue;
+                int targetIndex = m_ValueContributionCounts[output];
+                if (targetIndex >= m_ContributionStride)
+                    return false;
+                m_ValueContributionCounts[output] = targetIndex + 1;
+                ClearContributionWeights(output, targetIndex);
+                m_ValueContributions[
+                    ContributionOffset(output) + targetIndex] =
+                    new AnimationPrimitivePoseContribution(
+                        source.PhysicalPlayerIndex,
+                        source.PhysicalSourceIndex,
+                        source.PhysicalSourceGeneration,
+                        source.Kind,
+                        source.SourceOwnerIndex,
+                        source.ContributionContinuityIdentity,
+                        0f,
+                        0f,
+                        0f);
+            }
+            AnimationFootFeatureSample left = ApplyStateMachinePrediction(
+                m_ValueLeftFootFeatures[output],
+                m_ValueLeftFootFeatures[prediction]);
+            AnimationFootFeatureSample right = ApplyStateMachinePrediction(
+                m_ValueRightFootFeatures[output],
+                m_ValueRightFootFeatures[prediction]);
+            if (!left.IsValid || !right.IsValid)
+                return false;
+            m_ValueLeftFootFeatures[output] = left;
+            m_ValueRightFootFeatures[output] = right;
+            m_ValueHasFootFeatures[output] = 1;
+            return true;
+        }
+
+        static AnimationFootFeatureSample ApplyStateMachinePrediction(
+            AnimationFootFeatureSample output,
+            AnimationFootFeatureSample prediction)
+        {
+            AnimationPredictedFootStepSample incoming = SelectIncomingPrediction(
+                output.PredictedStep,
+                output.IncomingPredictedStep,
+                prediction.PredictedStep,
+                prediction.IncomingPredictedStep);
+            if (output.PredictedStep.IsAuthoritative ||
+                !incoming.IsAuthoritative ||
+                incoming.PredictionLeadSeconds > 0.0001f)
+            {
+                return output.WithIncomingPredictedStep(incoming);
+            }
+            AnimationPredictedFootStepSample following = SelectIncomingPrediction(
+                incoming,
+                default,
+                prediction.PredictedStep,
+                prediction.IncomingPredictedStep);
+            return output
+                .WithPredictedStep(incoming)
+                .WithIncomingPredictedStep(following);
+        }
+
+        static AnimationPredictedFootStepSample SelectIncomingPrediction(
+            AnimationPredictedFootStepSample current,
+            AnimationPredictedFootStepSample incoming,
+            AnimationPredictedFootStepSample successor,
+            AnimationPredictedFootStepSample following)
+        {
+            AnimationPredictedFootStepSample result = SelectIncomingCandidate(
+                current,
+                incoming,
+                successor);
+            return SelectIncomingCandidate(current, result, following);
+        }
+
+        static AnimationPredictedFootStepSample SelectIncomingCandidate(
+            AnimationPredictedFootStepSample current,
+            AnimationPredictedFootStepSample incoming,
+            AnimationPredictedFootStepSample candidate)
+        {
+            if (!candidate.IsAuthoritative ||
+                current.IsAuthoritative &&
+                current.LandingEventIdentity == candidate.LandingEventIdentity)
+                return incoming;
+            if (!current.IsAuthoritative)
+                return SelectEarlierIncoming(incoming, candidate);
+            float successorTimeToLiftOff = Mathf.Max(
+                0f,
+                candidate.PredictionLeadSeconds) +
+                Mathf.Max(0f, candidate.LiftOffPhase - candidate.EventPhase) *
+                candidate.ActionStepClock.DurationSeconds;
+            if (current.TimeToLandingSeconds <=
+                successorTimeToLiftOff + 0.00001f)
+                return SelectEarlierIncoming(incoming, candidate);
+            return candidate.TimeToLandingSeconds + 0.00001f <
+                   current.TimeToLandingSeconds
+                ? SelectEarlierIncoming(incoming, candidate)
+                : incoming;
+        }
+
+        static AnimationPredictedFootStepSample SelectEarlierIncoming(
+            AnimationPredictedFootStepSample current,
+            AnimationPredictedFootStepSample candidate)
+        {
+            if (!current.IsAuthoritative ||
+                candidate.TimeToLandingSeconds + 0.00001f <
+                current.TimeToLandingSeconds)
+                return candidate;
+            return current;
         }
 
         void EvaluateLayeredBoneBlend(AnimationPoseGraphNativeOperation operation)
@@ -3669,11 +3851,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPredictedFootStepSample predicted = overlayPredictionAuthoritative
                 ? overlayValue.PredictedStep
                 : baseValue.PredictedStep;
+            AnimationPredictedFootStepSample incomingPredicted = overlayPredictionAuthoritative
+                ? overlayValue.IncomingPredictedStep
+                : baseValue.IncomingPredictedStep;
             if (!IsFinite(velocity) || !float.IsFinite(height) || !IsWeight(plant))
             {
                 return false;
             }
-            result = new AnimationFootFeatureSample(velocity, height, plant, predicted);
+            result = new AnimationFootFeatureSample(
+                velocity,
+                height,
+                plant,
+                predicted,
+                incomingPredicted);
             return result.IsValid;
         }
 
@@ -3696,37 +3886,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 return false;
             }
-            if (!hasSource || !hasTarget)
-                return true;
-            AnimationPredictedFootStepSample predicted = SelectStateMachinePrediction(
-                source.PredictedStep,
-                target.PredictedStep);
-            result = new AnimationFootFeatureSample(
-                result.SoleLocalVelocity,
-                result.SoleHeight,
-                result.PlantConfidence,
-                predicted);
             return result.IsValid;
-        }
-
-        static AnimationPredictedFootStepSample SelectStateMachinePrediction(
-            AnimationPredictedFootStepSample source,
-            AnimationPredictedFootStepSample target)
-        {
-            if (!source.HasLandingEvent)
-                return target.HasLandingEvent ? target : default;
-            if (!target.HasLandingEvent)
-                return source;
-            if (source.SourceSampleIdentity == 0 ||
-                source.SourceSampleIdentity != target.SourceSampleIdentity)
-            {
-                return target;
-            }
-            if (source.SourceSampleCycle != target.SourceSampleCycle)
-                return source.SourceSampleCycle < target.SourceSampleCycle ? source : target;
-            if (source.EventOrdinal != target.EventOrdinal)
-                return source.EventOrdinal < target.EventOrdinal ? source : target;
-            return target;
         }
 
         static bool IsValidPrimitiveContribution(AnimationPrimitivePoseContribution contribution)
@@ -3760,7 +3920,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
              sample.PredictedStep.TimeToLandingSeconds >= 0f &&
              IsWeight(sample.PredictedStep.EventPhase) &&
              IsWeight(sample.PredictedStep.LiftOffPhase) &&
-             IsValidRootLocalFootRoute(sample.PredictedStep));
+             IsValidRootLocalFootRoute(sample.PredictedStep)) &&
+            (!sample.IncomingPredictedStep.IsValid ||
+             IsWeight(sample.IncomingPredictedStep.Confidence) &&
+             float.IsFinite(sample.IncomingPredictedStep.TimeToLandingSeconds) &&
+             sample.IncomingPredictedStep.TimeToLandingSeconds >= 0f &&
+             IsWeight(sample.IncomingPredictedStep.EventPhase) &&
+             IsWeight(sample.IncomingPredictedStep.LiftOffPhase) &&
+             IsValidRootLocalFootRoute(sample.IncomingPredictedStep));
 
         static bool IsValidRootLocalFootRoute(AnimationPredictedFootStepSample value)
         {

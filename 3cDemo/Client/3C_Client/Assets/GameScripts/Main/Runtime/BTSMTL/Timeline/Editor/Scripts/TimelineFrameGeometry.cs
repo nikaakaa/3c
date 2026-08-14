@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace BTSMTL.Timeline.Editor
 {
-    internal sealed class TimelineFrameGeometry : IAnimationTimeFieldGeometry
+    internal sealed class TimelineFrameGeometry
     {
         const float MarkerWidth = 50f;
         const float FieldOffset = 6f;
@@ -19,7 +19,6 @@ namespace BTSMTL.Timeline.Editor
         }
 
         public int MaxFrame => m_MaxFrame;
-        public int DurationFrames => m_MaxFrame;
         public float OneFrameWidth => MarkerWidth * m_Scale;
         public float FieldOffsetX => FieldOffset;
 
@@ -85,12 +84,6 @@ namespace BTSMTL.Timeline.Editor
         {
             return ClampFrame(Mathf.RoundToInt((position - FieldOffset) / OneFrameWidth));
         }
-
-        public float NormalizedTimeToPosition(float normalizedTime) =>
-            FrameToPosition(Mathf.RoundToInt(Mathf.Clamp01(normalizedTime) * Mathf.Max(1, m_MaxFrame - 1)));
-
-        public float PositionToNormalizedTime(float position) =>
-            PositionToClosestFrame(position) / (float)Mathf.Max(1, m_MaxFrame - 1);
 
         public int PositionToFloorFrame(float position)
         {

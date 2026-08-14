@@ -14,22 +14,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         const int MaximumPayloadBytes = 64 * 1024 * 1024;
         const int MaximumStringBytes = 16 * 1024;
         const int MaximumKeysPerCurve = 1024 * 1024;
+        const int MaximumSynchronizationSamples = 1024 * 1024;
 
         public static byte[] Write(
             AnimationFootAnalysisArtifactIdentity identity,
             AnimationFootFeaturePair features,
+            AnimationFootSynchronizationDescriptor synchronization,
             out StableHash contentHash)
         {
             if (identity == null)
                 throw new ArgumentNullException(nameof(identity));
             if (!features.IsValid)
                 throw new ArgumentException("Animation Foot Analysis features are invalid.", nameof(features));
+            if (synchronization == null)
+                throw new ArgumentNullException(nameof(synchronization));
+            synchronization.RequireValid();
             byte[] payload;
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream, Encoding.UTF8, true))
             {
                 WriteIdentity(writer, identity);
                 WriteFeaturePair(writer, features);
+                WriteSynchronizationDescriptor(writer, synchronization);
                 writer.Flush();
                 payload = stream.ToArray();
             }
@@ -73,9 +79,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             using var payloadReader = new BinaryReader(payloadStream, Encoding.UTF8, true);
             AnimationFootAnalysisArtifactIdentity identity = ReadIdentity(payloadReader);
             AnimationFootFeaturePair features = ReadFeaturePair(payloadReader);
+            AnimationFootSynchronizationDescriptor synchronization =
+                ReadSynchronizationDescriptor(payloadReader);
             if (payloadStream.Position != payloadStream.Length)
                 throw new InvalidDataException("Animation Foot Analysis payload has trailing bytes.");
-            return new AnimationFootAnalysisArtifact(identity, features, actualHash);
+            return new AnimationFootAnalysisArtifact(
+                identity,
+                features,
+                synchronization,
+                actualHash);
         }
 
         static void WriteIdentity(BinaryWriter writer, AnimationFootAnalysisArtifactIdentity value)
@@ -163,6 +175,70 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static AnimationFootFeaturePair ReadFeaturePair(BinaryReader reader) =>
             new AnimationFootFeaturePair(ReadCurveSet(reader), ReadCurveSet(reader));
 
+        static void WriteSynchronizationDescriptor(
+            BinaryWriter writer,
+            AnimationFootSynchronizationDescriptor value)
+        {
+            value.RequireValid();
+            writer.Write(value.SampleRate);
+            writer.Write(value.DurationSeconds);
+            WriteSynchronizationFoot(writer, value.Left);
+            WriteSynchronizationFoot(writer, value.Right);
+        }
+
+        static AnimationFootSynchronizationDescriptor ReadSynchronizationDescriptor(
+            BinaryReader reader) =>
+            new AnimationFootSynchronizationDescriptor(
+                ReadFinite(reader, "synchronization sample rate"),
+                ReadFinite(reader, "synchronization duration"),
+                ReadSynchronizationFoot(reader),
+                ReadSynchronizationFoot(reader));
+
+        static void WriteSynchronizationFoot(
+            BinaryWriter writer,
+            AnimationFootSynchronizationFootDescriptor value)
+        {
+            value.RequireValid();
+            writer.Write(value.Samples.Count);
+            for (int i = 0; i < value.Samples.Count; i++)
+            {
+                AnimationFootSynchronizationSample sample = value.Samples[i];
+                sample.RequireValid();
+                writer.Write(sample.NormalizedTime);
+                writer.Write(sample.RootLocalSolePlanarPosition.x);
+                writer.Write(sample.RootLocalSolePlanarPosition.y);
+                writer.Write(sample.CalibratedSoleHeight);
+                writer.Write(sample.SoleLocalVelocity.x);
+                writer.Write(sample.SoleLocalVelocity.y);
+                writer.Write(sample.SoleLocalVelocity.z);
+                writer.Write(sample.PlantConfidence);
+            }
+        }
+
+        static AnimationFootSynchronizationFootDescriptor ReadSynchronizationFoot(
+            BinaryReader reader)
+        {
+            int count = reader.ReadInt32();
+            if (count < 3 || count > MaximumSynchronizationSamples)
+                throw new InvalidDataException("Foot synchronization sample count is invalid.");
+            var samples = new AnimationFootSynchronizationSample[count];
+            for (int i = 0; i < count; i++)
+            {
+                samples[i] = new AnimationFootSynchronizationSample(
+                    ReadFinite(reader, "synchronization normalized time"),
+                    new Vector2(
+                        ReadFinite(reader, "synchronization planar x"),
+                        ReadFinite(reader, "synchronization planar z")),
+                    ReadFinite(reader, "synchronization height"),
+                    new Vector3(
+                        ReadFinite(reader, "synchronization velocity x"),
+                        ReadFinite(reader, "synchronization velocity y"),
+                        ReadFinite(reader, "synchronization velocity z")),
+                    ReadFinite(reader, "synchronization plant confidence"));
+            }
+            return new AnimationFootSynchronizationFootDescriptor(samples);
+        }
+
         static void WriteCurveSet(BinaryWriter writer, AnimationFootFeatureCurveSet value)
         {
             value.RequireValid();
@@ -187,12 +263,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             WriteCurve(writer, value.Confidence);
             WriteCurve(writer, value.TimeToLandingSeconds);
             WriteCurve(writer, value.EventPhase);
+            WriteCurve(writer, value.ReleasePhase);
             WriteCurve(writer, value.LiftOffPhase);
+            WriteCurve(writer, value.ApproachContactPhase);
             WriteCurve(writer, value.ActionStepDurationSeconds);
             WriteCurve(writer, value.EventOrdinal);
             WriteCurve(writer, value.OpposingLandingDelaySeconds);
             WriteCurve(writer, value.OpposingEventOrdinal);
             WriteCurve(writer, value.OpposingLandingCycleOffset);
+            WriteCurve(writer, value.OpposingRootLocalLandingX);
+            WriteCurve(writer, value.OpposingRootLocalLandingY);
+            WriteCurve(writer, value.OpposingRootLocalLandingZ);
             for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
                 WriteCurve(writer, value.GetRootLocalFootRouteX(i));
             for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
@@ -217,14 +298,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 WriteCurve(writer, value.GetAuthoredFootPlanarRouteZ(i));
             for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
                 WriteCurve(writer, value.GetAnimationClearanceHeight(i));
-            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
-                WriteCurve(writer, value.GetConstraintMode(i));
-            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
-                WriteCurve(writer, value.GetSupportPhase(i));
-            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
-                WriteCurve(writer, value.GetFootOrientationPolicy(i));
-            for (int i = 0; i < AnimationPredictedFootStepCurveSet.RouteSampleCount; i++)
-                WriteCurve(writer, value.GetBodyRotationPivotMode(i));
         }
 
         static AnimationPredictedFootStepCurveSet ReadPredictedStepCurveSet(BinaryReader reader)
@@ -232,12 +305,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationCurve confidence = ReadCurve(reader);
             AnimationCurve timeToLanding = ReadCurve(reader);
             AnimationCurve eventPhase = ReadCurve(reader);
+            AnimationCurve releasePhase = ReadCurve(reader);
             AnimationCurve liftOffPhase = ReadCurve(reader);
+            AnimationCurve approachContactPhase = ReadCurve(reader);
             AnimationCurve actionStepDurationSeconds = ReadCurve(reader);
             AnimationCurve eventOrdinal = ReadCurve(reader);
             AnimationCurve opposingLandingDelaySeconds = ReadCurve(reader);
             AnimationCurve opposingEventOrdinal = ReadCurve(reader);
             AnimationCurve opposingLandingCycleOffset = ReadCurve(reader);
+            AnimationCurve opposingRootLocalLandingX = ReadCurve(reader);
+            AnimationCurve opposingRootLocalLandingY = ReadCurve(reader);
+            AnimationCurve opposingRootLocalLandingZ = ReadCurve(reader);
             AnimationCurve[] routeX = ReadRouteCurves(reader);
             AnimationCurve[] routeY = ReadRouteCurves(reader);
             AnimationCurve[] routeZ = ReadRouteCurves(reader);
@@ -250,20 +328,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationCurve[] authoredFootPlanarX = ReadRouteCurves(reader);
             AnimationCurve[] authoredFootPlanarZ = ReadRouteCurves(reader);
             AnimationCurve[] animationClearanceHeight = ReadRouteCurves(reader);
-            AnimationCurve[] constraintMode = ReadRouteCurves(reader);
-            AnimationCurve[] supportPhase = ReadRouteCurves(reader);
-            AnimationCurve[] footOrientationPolicy = ReadRouteCurves(reader);
-            AnimationCurve[] bodyRotationPivotMode = ReadRouteCurves(reader);
             return new AnimationPredictedFootStepCurveSet(
                 confidence,
                 timeToLanding,
                 eventPhase,
+                releasePhase,
                 liftOffPhase,
+                approachContactPhase,
                 actionStepDurationSeconds,
                 eventOrdinal,
                 opposingLandingDelaySeconds,
                 opposingEventOrdinal,
                 opposingLandingCycleOffset,
+                opposingRootLocalLandingX,
+                opposingRootLocalLandingY,
+                opposingRootLocalLandingZ,
                 routeX,
                 routeY,
                 routeZ,
@@ -275,11 +354,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 hipRouteZ,
                 authoredFootPlanarX,
                 authoredFootPlanarZ,
-                animationClearanceHeight,
-                constraintMode,
-                supportPhase,
-                footOrientationPolicy,
-                bodyRotationPivotMode);
+                animationClearanceHeight);
         }
 
         static AnimationCurve[] ReadRouteCurves(BinaryReader reader)

@@ -1,0 +1,886 @@
+﻿{
+  "files": 46,
+  "rows": 960,
+  "columns": 1207,
+  "width_errors": [],
+  "directions": {
+    "turn-left": 18,
+    "turn-right": 18,
+    "align-start": 27,
+    "approach-start": 103,
+    "settle-start": 72,
+    "start-to-end": 169,
+    "exit-end": 70,
+    "hold-end": 56,
+    "approach-end": 88,
+    "settle-end": 56,
+    "end-to-start": 160,
+    "exit-start": 66,
+    "hold-start": 57
+  },
+  "sides": {
+    "left": {
+      "unique_plans": 67,
+      "states": {
+        "Planned": 88,
+        "Completed": 269,
+        "Executing": 362,
+        "Inactive": 241
+      },
+      "rejects": {
+        "PlanWaitingForRelease": 88,
+        "NoCommittedPlan": 45,
+        "LandingEventNotPreSwing": 224,
+        "LandingEventUnavailable": 241
+      },
+      "timeline_combinations": {
+        "(6.0, 0.0, inf, False)": 24,
+        "(4.592, 6.0, 1.0833, True)": 5,
+        "(5.3595, 0.0, inf, False)": 4,
+        "(4.1136, 6.0, 0.0833, True)": 3,
+        "(4.592, 6.0, 1.0667, True)": 3,
+        "(4.1018, 6.0, 0.0833, True)": 3,
+        "(5.3749, 0.0, inf, False)": 3,
+        "(4.592, 6.0, 0.0833, True)": 3,
+        "(5.3768, 0.0, inf, False)": 2,
+        "(4.592, 6.0, 1.0865, True)": 1,
+        "(5.4543, 0.0, inf, False)": 1,
+        "(4.592, 6.0, 0.0667, True)": 1,
+        "(4.592, 6.0, 1.0842, True)": 1,
+        "(4.592, 6.0, 1.0895, True)": 1,
+        "(4.592, 6.0, 1.0906, True)": 1,
+        "(4.1136, 6.0, 0.0667, True)": 1,
+        "(4.592, 6.0, 1.0747, True)": 1,
+        "(4.592, 6.0, 0.15, True)": 1,
+        "(4.592, 6.0, 1.0834, True)": 1,
+        "(4.592, 6.0, 1.0856, True)": 1,
+        "(5.4544, 0.0, inf, False)": 1,
+        "(4.5906, 6.0, 1.0871, True)": 1,
+        "(3.4644, 6.0, 0.8167, True)": 1,
+        "(4.592, 6.0, 0.1667, True)": 1,
+        "(4.592, 6.0, 1.0812, True)": 1,
+        "(4.592, 6.0, 1.082, True)": 1
+      },
+      "plans_with_continuation": 32,
+      "completed_root_landing_error_cm": {
+        "count": 37,
+        "p50": 3.9940000000152893,
+        "p95": 34.438106144494384,
+        "max": 83.84159135212676
+      },
+      "plan_root_error_cm_by_direction": {
+        "align-start": {
+          "count": 16,
+          "p50": 0.0033260679617439157,
+          "p95": 0.008613792685948862,
+          "max": 0.009070790979846779
+        },
+        "approach-start": {
+          "count": 38,
+          "p50": 6.442300005492182,
+          "p95": 69.6303780544106,
+          "max": 71.12518951296931
+        },
+        "start-to-end": {
+          "count": 96,
+          "p50": 0.00020035967660979223,
+          "p95": 6.442325000058723,
+          "max": 9.025500000851807
+        },
+        "exit-end": {
+          "count": 62,
+          "p50": 0.0016639999999998323,
+          "p95": 4.127000004781296,
+          "max": 9.982000334713842
+        },
+        "approach-end": {
+          "count": 20,
+          "p50": 4.606000618734118,
+          "p95": 78.46105202996196,
+          "max": 80.08296165009517
+        },
+        "end-to-start": {
+          "count": 74,
+          "p50": 0.00010138212095759043,
+          "p95": 6.442235000007751,
+          "max": 10.264100000001775
+        },
+        "exit-start": {
+          "count": 56,
+          "p50": 1.9999999999881224e-05,
+          "p95": 2.2307500000838782,
+          "max": 9.996600001095594
+        }
+      },
+      "root_kinematics": {
+        "actual_speed": {
+          "p50": 5.374875000000004,
+          "p95": 6.0000292394766035
+        },
+        "planned_speed": {
+          "p50": 5.255265000000017,
+          "p95": 105.82280839386682
+        },
+        "direction_dot": {
+          "p05": -0.9996633506709676,
+          "p50": 0.9999999999998662
+        },
+        "error_cm_by_progress_quarter": {
+          "0": {
+            "count": 360,
+            "p50": 321.1862277756193,
+            "p95": 1665.2917722722336,
+            "max": 1882.0000165784195
+          },
+          "1": {
+            "count": 105,
+            "p50": 0.0002003596766098338,
+            "p95": 31.81813575466572,
+            "max": 39.00644364072948
+          },
+          "2": {
+            "count": 80,
+            "p50": 0.003924000000000288,
+            "p95": 6.442300020230692,
+            "max": 6.4423315369049385
+          },
+          "3": {
+            "count": 82,
+            "p50": 1.1508000000289162,
+            "p95": 71.03337608758949,
+            "max": 80.08296165009517
+          }
+        }
+      },
+      "same_plan_goal_jump_cm": {
+        "count": 627,
+        "p50": 11.719869999999998,
+        "p95": 31.795360999999996,
+        "max": 46.98470000000001
+      },
+      "same_plan_path_jump_cm": {
+        "count": 627,
+        "p50": 0.0,
+        "p95": 30.662009999999988,
+        "max": 192.0
+      },
+      "goal_rebounds": 108,
+      "static_goal_jump_cm": {
+        "count": 241,
+        "p50": 0.011850999999998835,
+        "p95": 14.820640000000001,
+        "max": 42.672430000000006
+      },
+      "required_lift_by_direction": {
+        "align-start": {
+          "count": 16,
+          "p05_cm": 0.0,
+          "p50_cm": 2.980232e-06,
+          "p95_cm": 21.187492499999998,
+          "negative_ratio": 0.0
+        },
+        "approach-start": {
+          "count": 38,
+          "p05_cm": -1.1175871499999996e-07,
+          "p50_cm": 4.3884405,
+          "p95_cm": 21.185736,
+          "negative_ratio": 0.0
+        },
+        "start-to-end": {
+          "count": 96,
+          "p05_cm": -2.384186e-05,
+          "p50_cm": 10.019416,
+          "p95_cm": 51.487705000000005,
+          "negative_ratio": 0.0
+        },
+        "exit-end": {
+          "count": 62,
+          "p05_cm": -7.078051949999998e-07,
+          "p50_cm": 3.2432719999999997,
+          "p95_cm": 10.2762,
+          "negative_ratio": 0.0
+        },
+        "approach-end": {
+          "count": 20,
+          "p05_cm": -7.450579999999997e-08,
+          "p50_cm": 10.875576500000001,
+          "p95_cm": 24.54177750000001,
+          "negative_ratio": 0.0
+        },
+        "end-to-start": {
+          "count": 74,
+          "p05_cm": -1.6093255499999995e-05,
+          "p50_cm": 11.840485000000001,
+          "p95_cm": 51.97386749999997,
+          "negative_ratio": 0.0
+        },
+        "exit-start": {
+          "count": 56,
+          "p05_cm": -2.980232e-06,
+          "p50_cm": 0.0,
+          "p95_cm": 0.946051720348,
+          "negative_ratio": 0.0
+        }
+      },
+      "physical_penetration_cm": {
+        "count": 926,
+        "p50": 0.0,
+        "p95": 6.941169000000001e-06,
+        "max": 1.853007e-05
+      },
+      "physical_penetration_over_1mm": 0,
+      "solver_residual_cm": {
+        "count": 960,
+        "p50": 9.606784e-06,
+        "p95": 0.7608129099999831,
+        "max": 10.41575
+      },
+      "top_goal_jumps": [
+        {
+          "frame": 768,
+          "plan": 233,
+          "direction": "start-to-end",
+          "action_progress": 0.6086816,
+          "goal_delta_cm": -46.98470000000001,
+          "path_delta_cm": -30.6894,
+          "required_lift_cm": 23.41878,
+          "applied_lift_cm": 23.41878,
+          "solver_residual_cm": 8.503133e-06
+        },
+        {
+          "frame": 448,
+          "plan": 138,
+          "direction": "end-to-start",
+          "action_progress": 0.6165496,
+          "goal_delta_cm": -46.857399999999984,
+          "path_delta_cm": -30.598099999999985,
+          "required_lift_cm": 25.355349999999998,
+          "applied_lift_cm": 25.355349999999998,
+          "solver_residual_cm": 1.3249679999999998e-05
+        },
+        {
+          "frame": 341,
+          "plan": 104,
+          "direction": "start-to-end",
+          "action_progress": 0.605912,
+          "goal_delta_cm": -46.738500000000016,
+          "path_delta_cm": -30.412499999999998,
+          "required_lift_cm": 24.245330000000003,
+          "applied_lift_cm": 24.245330000000003,
+          "solver_residual_cm": 1.107608e-05
+        },
+        {
+          "frame": 556,
+          "plan": 169,
+          "direction": "start-to-end",
+          "action_progress": 0.6041666,
+          "goal_delta_cm": -46.38129999999998,
+          "path_delta_cm": -30.033299999999997,
+          "required_lift_cm": 24.418699999999998,
+          "applied_lift_cm": 24.418699999999998,
+          "solver_residual_cm": 9.002571e-06
+        },
+        {
+          "frame": 125,
+          "plan": 39,
+          "direction": "start-to-end",
+          "action_progress": 0.6105862,
+          "goal_delta_cm": -46.12700000000001,
+          "path_delta_cm": -29.848300000000005,
+          "required_lift_cm": 24.05221,
+          "applied_lift_cm": 24.05221,
+          "solver_residual_cm": 1.2383439999999998e-05
+        },
+        {
+          "frame": 233,
+          "plan": 73,
+          "direction": "end-to-start",
+          "action_progress": 0.6041666,
+          "goal_delta_cm": -46.015699999999995,
+          "path_delta_cm": -29.667700000000007,
+          "required_lift_cm": 26.63314,
+          "applied_lift_cm": 26.63314,
+          "solver_residual_cm": 6.365779e-06
+        },
+        {
+          "frame": 663,
+          "plan": 202,
+          "direction": "end-to-start",
+          "action_progress": 0.6043978,
+          "goal_delta_cm": -45.75179999999999,
+          "path_delta_cm": -29.4068,
+          "required_lift_cm": 28.084559999999996,
+          "applied_lift_cm": 28.084559999999996,
+          "solver_residual_cm": 5.268356e-06
+        },
+        {
+          "frame": 876,
+          "plan": 265,
+          "direction": "end-to-start",
+          "action_progress": 0.0,
+          "goal_delta_cm": -45.74849999999999,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 1.146331e-05
+        },
+        {
+          "frame": 664,
+          "plan": 202,
+          "direction": "end-to-start",
+          "action_progress": 0.7377311,
+          "goal_delta_cm": -44.683800000000005,
+          "path_delta_cm": -32.76749999999999,
+          "required_lift_cm": 13.097059999999999,
+          "applied_lift_cm": 13.097059999999999,
+          "solver_residual_cm": 8.503133e-06
+        },
+        {
+          "frame": 342,
+          "plan": 104,
+          "direction": "start-to-end",
+          "action_progress": 0.7392454,
+          "goal_delta_cm": -43.6231,
+          "path_delta_cm": -31.822400000000005,
+          "required_lift_cm": 10.34087,
+          "applied_lift_cm": 10.34087,
+          "solver_residual_cm": 1.206557e-05
+        },
+        {
+          "frame": 126,
+          "plan": 39,
+          "direction": "start-to-end",
+          "action_progress": 0.7439196,
+          "goal_delta_cm": -43.50780000000001,
+          "path_delta_cm": -32.04550000000002,
+          "required_lift_cm": 9.697962,
+          "applied_lift_cm": 9.697962,
+          "solver_residual_cm": 6.143906e-06
+        },
+        {
+          "frame": 769,
+          "plan": 233,
+          "direction": "start-to-end",
+          "action_progress": 0.7420149,
+          "goal_delta_cm": -43.44049999999999,
+          "path_delta_cm": -31.84260000000001,
+          "required_lift_cm": 9.362268,
+          "applied_lift_cm": 9.362268,
+          "solver_residual_cm": 8.429369999999999e-06
+        },
+        {
+          "frame": 557,
+          "plan": 169,
+          "direction": "start-to-end",
+          "action_progress": 0.7375,
+          "goal_delta_cm": -43.327000000000005,
+          "path_delta_cm": -31.392599999999995,
+          "required_lift_cm": 11.02061,
+          "applied_lift_cm": 11.02061,
+          "solver_residual_cm": 3.960038e-06
+        },
+        {
+          "frame": 234,
+          "plan": 73,
+          "direction": "end-to-start",
+          "action_progress": 0.7375,
+          "goal_delta_cm": -42.9182,
+          "path_delta_cm": -30.9839,
+          "required_lift_cm": 13.43896,
+          "applied_lift_cm": 13.43896,
+          "solver_residual_cm": 1.011332e-05
+        },
+        {
+          "frame": 449,
+          "plan": 138,
+          "direction": "end-to-start",
+          "action_progress": 0.7498829,
+          "goal_delta_cm": -42.4609,
+          "path_delta_cm": -31.42100000000001,
+          "required_lift_cm": 11.126859999999999,
+          "applied_lift_cm": 11.126859999999999,
+          "solver_residual_cm": 4.470348e-06
+        },
+        {
+          "frame": 40,
+          "plan": 10,
+          "direction": "align-start",
+          "action_progress": 0.0,
+          "goal_delta_cm": -40.339400000000005,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 1.2108979999999999e-05
+        },
+        {
+          "frame": 877,
+          "plan": 265,
+          "direction": "end-to-start",
+          "action_progress": 0.0,
+          "goal_delta_cm": -39.70150000000001,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 4.36034e-06
+        },
+        {
+          "frame": 41,
+          "plan": 10,
+          "direction": "align-start",
+          "action_progress": 0.0,
+          "goal_delta_cm": -37.710620000000006,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 7.233205999999999e-06
+        },
+        {
+          "frame": 104,
+          "plan": 31,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": 35.35372,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 1.279815e-05
+        },
+        {
+          "frame": 747,
+          "plan": 225,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": 35.295359999999995,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 6.705523e-06
+        }
+      ]
+    },
+    "right": {
+      "unique_plans": 27,
+      "states": {
+        "Inactive": 259,
+        "Planned": 64,
+        "Executing": 110,
+        "Completed": 527
+      },
+      "rejects": {
+        "LandingEventNotPreSwing": 490,
+        "PlanWaitingForRelease": 64,
+        "NoCommittedPlan": 55,
+        "LandingEventUnavailable": 241
+      },
+      "timeline_combinations": {
+        "(4.592, 6.0, 1.0167, True)": 11,
+        "(4.592, 6.0, 1.0, True)": 6,
+        "(6.0, 0.0, inf, False)": 2,
+        "(4.5921, 6.0, 1.0, True)": 1,
+        "(5.3768, 0.0, inf, False)": 1,
+        "(4.592, 6.0, 0.35, True)": 1,
+        "(4.592, 6.0, 0.1667, True)": 1,
+        "(4.592, 6.0, 0.3667, True)": 1,
+        "(4.592, 6.0, 0.1833, True)": 1,
+        "(3.8291, 6.0, 0.4833, True)": 1,
+        "(4.592, 6.0, 0.15, True)": 1
+      },
+      "plans_with_continuation": 24,
+      "completed_root_landing_error_cm": {
+        "count": 13,
+        "p50": 6.836300000012334,
+        "p95": 288.56436481625514,
+        "max": 326.88755310432504
+      },
+      "plan_root_error_cm_by_direction": {
+        "turn-left": {
+          "count": 7,
+          "p50": 127.89795332955877,
+          "p95": 248.7846203659903,
+          "max": 263.0155726242087
+        },
+        "turn-right": {
+          "count": 8,
+          "p50": 200.42519750288926,
+          "p95": 329.7341847277491,
+          "max": 334.13351510329056
+        },
+        "align-start": {
+          "count": 1,
+          "p50": 15.025963858232188,
+          "p95": 15.025963858232188,
+          "max": 15.025963858232188
+        },
+        "approach-start": {
+          "count": 5,
+          "p50": 96.54259271714855,
+          "p95": 96.54335985453987,
+          "max": 96.5433714178608
+        },
+        "start-to-end": {
+          "count": 33,
+          "p50": 0.00018278129006641254,
+          "p95": 0.0003223968229590637,
+          "max": 0.0003592005011159928
+        },
+        "approach-end": {
+          "count": 28,
+          "p50": 4.2855023293787875,
+          "p95": 69.18311166214089,
+          "max": 98.1988515922479
+        },
+        "end-to-start": {
+          "count": 28,
+          "p50": 6.000000000311312e-06,
+          "p95": 0.00010283745840486515,
+          "max": 0.0010001279919488071
+        }
+      },
+      "root_kinematics": {
+        "actual_speed": {
+          "p50": 5.374867500001207,
+          "p95": 6.0000282621041325
+        },
+        "planned_speed": {
+          "p50": 0.0,
+          "p95": 7.065375000441559
+        },
+        "direction_dot": {
+          "p05": -0.9999805678974419,
+          "p50": 0.9999999999537741
+        },
+        "error_cm_by_progress_quarter": {
+          "0": {
+            "count": 540,
+            "p50": 536.1772345364793,
+            "p95": 1751.4196992785367,
+            "max": 1927.840706977677
+          },
+          "1": {
+            "count": 20,
+            "p50": 0.00017903195949122845,
+            "p95": 106.89879676257986,
+            "max": 168.40705553573133
+          },
+          "2": {
+            "count": 23,
+            "p50": 0.00020300000000000873,
+            "p95": 226.20992387815153,
+            "max": 285.88874665724427
+          },
+          "3": {
+            "count": 28,
+            "p50": 0.00032374602869891,
+            "p95": 301.07205025246344,
+            "max": 334.13351510329056
+          }
+        }
+      },
+      "same_plan_goal_jump_cm": {
+        "count": 611,
+        "p50": 11.627729999999998,
+        "p95": 30.351550000000003,
+        "max": 52.07423000000001
+      },
+      "same_plan_path_jump_cm": {
+        "count": 611,
+        "p50": 0.0,
+        "p95": 20.470819000000006,
+        "max": 95.99999
+      },
+      "goal_rebounds": 90,
+      "static_goal_jump_cm": {
+        "count": 241,
+        "p50": 0.0017000000000003124,
+        "p95": 11.383145,
+        "max": 26.278146999999997
+      },
+      "required_lift_by_direction": {
+        "turn-left": {
+          "count": 7,
+          "p05_cm": -1.26659863e-06,
+          "p50_cm": 0.0,
+          "p95_cm": 0.0,
+          "negative_ratio": 0.0
+        },
+        "turn-right": {
+          "count": 8,
+          "p05_cm": -2.980232e-06,
+          "p50_cm": 0.0,
+          "p95_cm": 2.458691399999999e-06,
+          "negative_ratio": 0.0
+        },
+        "align-start": {
+          "count": 1,
+          "p05_cm": 21.86735,
+          "p50_cm": 21.86735,
+          "p95_cm": 21.86735,
+          "negative_ratio": 0.0
+        },
+        "approach-start": {
+          "count": 5,
+          "p05_cm": 0.0,
+          "p50_cm": 7.450581e-07,
+          "p95_cm": 5.364417599999999e-06,
+          "negative_ratio": 0.0
+        },
+        "start-to-end": {
+          "count": 33,
+          "p05_cm": -8.3446504e-06,
+          "p50_cm": 5.960464e-06,
+          "p95_cm": 15.685174000000002,
+          "negative_ratio": 0.0
+        },
+        "approach-end": {
+          "count": 28,
+          "p05_cm": -9.685753999999998e-07,
+          "p50_cm": 2.980232e-06,
+          "p95_cm": 14.149113499999993,
+          "negative_ratio": 0.0
+        },
+        "end-to-start": {
+          "count": 28,
+          "p05_cm": -8.7916857e-06,
+          "p50_cm": 8.940696999999999e-06,
+          "p95_cm": 14.900949499999996,
+          "negative_ratio": 0.0
+        }
+      },
+      "physical_penetration_cm": {
+        "count": 943,
+        "p50": 0.0,
+        "p95": 8.211667e-06,
+        "max": 2.309726e-05
+      },
+      "physical_penetration_over_1mm": 0,
+      "solver_residual_cm": {
+        "count": 960,
+        "p50": 9.502222000000002e-06,
+        "p95": 0.33377916999999974,
+        "max": 6.234547
+      },
+      "top_goal_jumps": [
+        {
+          "frame": 668,
+          "plan": 201,
+          "direction": "end-to-start",
+          "action_progress": 0.0,
+          "goal_delta_cm": -52.07423000000001,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 0.0
+        },
+        {
+          "frame": 773,
+          "plan": 232,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": -50.14744999999999,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 9.778444e-06
+        },
+        {
+          "frame": 130,
+          "plan": 38,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": -50.005129999999994,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 1.349872e-05
+        },
+        {
+          "frame": 881,
+          "plan": 266,
+          "direction": "end-to-start",
+          "action_progress": 0.0,
+          "goal_delta_cm": -49.43723,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 6.244724e-06
+        },
+        {
+          "frame": 561,
+          "plan": 168,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": -42.93582,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 8.503133e-06
+        },
+        {
+          "frame": 238,
+          "plan": 72,
+          "direction": "end-to-start",
+          "action_progress": 0.0,
+          "goal_delta_cm": -42.88934000000001,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 9.453727e-06
+        },
+        {
+          "frame": 346,
+          "plan": 103,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": -42.835029999999996,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 7.1560490000000005e-06
+        },
+        {
+          "frame": 453,
+          "plan": 137,
+          "direction": "end-to-start",
+          "action_progress": 0.0,
+          "goal_delta_cm": -41.932779999999994,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 6.828570000000001e-06
+        },
+        {
+          "frame": 562,
+          "plan": 168,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": -39.61414,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 1.4756100000000001e-05
+        },
+        {
+          "frame": 347,
+          "plan": 103,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": -39.53934,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 1.203678e-05
+        },
+        {
+          "frame": 669,
+          "plan": 201,
+          "direction": "end-to-start",
+          "action_progress": 0.0,
+          "goal_delta_cm": -38.83481,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 1.299053e-05
+        },
+        {
+          "frame": 882,
+          "plan": 266,
+          "direction": "end-to-start",
+          "action_progress": 0.0,
+          "goal_delta_cm": -38.04899999999999,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 0.05137937000000001
+        },
+        {
+          "frame": 129,
+          "plan": 38,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": -37.7427,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 3.332001e-06
+        },
+        {
+          "frame": 772,
+          "plan": 232,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": -37.5297,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 1.349358e-05
+        },
+        {
+          "frame": 44,
+          "plan": 13,
+          "direction": "align-start",
+          "action_progress": 0.03749989,
+          "goal_delta_cm": -34.17791,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 4.01226e-06
+        },
+        {
+          "frame": 880,
+          "plan": 266,
+          "direction": "end-to-start",
+          "action_progress": 0.0,
+          "goal_delta_cm": -33.3072,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 1.002373e-05
+        },
+        {
+          "frame": 774,
+          "plan": 232,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": -33.249289999999995,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 6.757065e-06
+        },
+        {
+          "frame": 131,
+          "plan": 38,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": -33.1729,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 8.696778e-06
+        },
+        {
+          "frame": 752,
+          "plan": 227,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": 33.15130000000002,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 8.823513e-06
+        },
+        {
+          "frame": 109,
+          "plan": 33,
+          "direction": "start-to-end",
+          "action_progress": 0.0,
+          "goal_delta_cm": 33.145599999999995,
+          "path_delta_cm": 0.0,
+          "required_lift_cm": 0.0,
+          "applied_lift_cm": 0.0,
+          "solver_residual_cm": 1.637672e-05
+        }
+      ]
+    }
+  }
+}

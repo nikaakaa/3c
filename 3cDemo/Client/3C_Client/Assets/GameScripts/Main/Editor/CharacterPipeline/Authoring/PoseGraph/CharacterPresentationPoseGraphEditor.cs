@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
+using BTSMTL.Timeline.Editor;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
@@ -682,8 +683,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     $"Pose Source Slot '{slot.name}' has no valid Binding in Profile '{m_Profile.name}'.");
 
-            if (openSource)
-                CharacterPoseSourceEditorWindow.Open(m_Profile, binding);
+            if (openSource && binding is CharacterSequencePoseSourceBinding sequence && sequence.Sequence)
+                TimelineEditorWindow.Open(sequence.Sequence);
+            else if (openSource && binding is CharacterBlendSpacePoseSourceBinding blendSpace && blendSpace.BlendSpace)
+                CharacterAnimationBlendSpaceEditorWindow.Open(blendSpace.BlendSpace);
             else
             {
                 Selection.activeObject = source;

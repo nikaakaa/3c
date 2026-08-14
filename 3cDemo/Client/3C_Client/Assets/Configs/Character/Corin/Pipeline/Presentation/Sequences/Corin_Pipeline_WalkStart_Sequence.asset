@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0012d01fa994c63bcdcc815e9fa7d16, type: 3}
+  m_Name: Corin_Pipeline_WalkStart_Sequence
+  m_EditorClassIdentifier: 
+  m_AuthoringId: cef31e9e-20e0-404b-8d12-8a2746adccb2
+  m_Clip: {fileID: 7400000, guid: 90d528fc935ce2e43b4b301c8c2b98db, type: 2}
+  m_Loop: 0
+  m_DefaultPlayRate: 1
+  m_SyncMode: 2
+  m_TimeMapping: 2
+  m_SyncGroupId: Locomotion.Gait
+  m_SequenceTopology: 1
+  m_SyncRole: 1
+  m_SyncMarkers:
+  - m_AuthoringId: ee3180db-d387-4d62-abb1-92d9d015df85
+    m_MarkerId: RightFootContact
+    m_Frame: 0
+  - m_AuthoringId: 0db89275-e695-4138-a469-ca73008c53e6
+    m_MarkerId: LeftFootContact
+    m_Frame: 13
+  - m_AuthoringId: c128dc3c-cba8-4b33-a689-4846808727b0
+    m_MarkerId: RightFootContact
+    m_Frame: 41
+  - m_AuthoringId: 6a650921-0f0b-47a2-9373-73f204280ddb
+    m_MarkerId: LeftFootContact
+    m_Frame: 57
+  - m_AuthoringId: a7eff86c-7f18-463f-ada0-189fd417696d
+    m_MarkerId: RightFootContact
+    m_Frame: 75
+  m_CurveChannels:
+  - m_ChannelId: presentation.foot-placement-weight
+    m_ValueDomain: 1
+    m_Curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  m_Notifies: []
+  m_ContentRevision: 129700d8bf0842838fe6f213b776686d
+  m_Rig: {fileID: 11400000, guid: 6f792f666e4405d4b813f79b53714aea, type: 2}
+  m_FootAnalysisSource: {fileID: 11400000, guid: 2487156154864bb5b49cb283c2583808,
+    type: 2}
+  m_FootAnalysisIdentity: Corin.FootPlacementAnalysis
+  references:
+    version: 2
+    RefIds: []

@@ -702,8 +702,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         m_Report.DiscoveryError("timeline_clip_emitter_missing", clipRoute, $"Clip type '{clip.GetType().FullName}' has no Character Simulation emitter.");
                     if (clip.EndFrame <= clip.StartFrame)
                         m_Report.DiscoveryError("timeline_clip_range_invalid", clipRoute, "Timeline Clip requires EndFrame greater than StartFrame.");
-                    if (clip is BTSMTL.Timeline.AnimationClip animation && !animation.Clip)
-                        m_Report.DiscoveryError("animation_projection_missing", clipRoute, "Animation Clip resource is missing from the authoring source.");
+                    if (clip is BTSMTL.Timeline.AnimationClip animation &&
+                        (!animation.Sequence || !animation.Sequence.Clip))
+                        m_Report.DiscoveryError("animation_sequence_missing", clipRoute, "Animation Sequence resource is missing from the authoring source.");
                     CharacterAuthoringGraphOccurrence treeGraph = null;
                     if (clip is TreeClip treeClip)
                     {

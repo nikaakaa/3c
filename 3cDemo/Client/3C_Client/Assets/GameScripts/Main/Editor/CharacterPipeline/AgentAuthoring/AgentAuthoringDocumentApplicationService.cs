@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BTSMTL.Timeline;
 using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.AI.Editor;
 using ThirdPersonCharacter.Pipeline.Animation;
@@ -226,7 +227,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     if (character)
                     {
-                        AppendValidation(applied, new AgentGraphValidator().Validate(character));
+                        AppendValidation(
+                            applied,
+                            new AgentGraphValidator().Validate(character, false));
                     }
                     else
                     {
@@ -455,6 +458,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             return false;
                         }
                     }
+                    foreach (AgentAnimationSequenceMutationPlan sequence in
+                             presentation.AnimationSequences.Where(value =>
+                                 value.Kind != AgentAnimationSequenceMutationKind.Create))
+                    {
+                        if (!TryAddPersistentOwner(
+                                sequence.Asset,
+                                allOwners,
+                                report,
+                                "presentation_animation_sequence"))
+                        {
+                            owners = Array.Empty<UnityEngine.Object>();
+                            return false;
+                        }
+                    }
                 }
                 owners = allOwners.ToArray();
                 return true;
@@ -501,6 +518,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (plan == null || plan.IsEmpty)
                 return;
+            ApplyAnimationSequences(plan.AnimationSequences, false);
             var service = new CharacterPresentationMutationService();
             if (plan.GraphTransaction.Mutations.Count > 0)
             {
@@ -554,6 +572,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             .Select(value =>
                                 (UnityEngine.Object)value.Selector)));
             }
+            ApplyAnimationSequences(plan.AnimationSequences, true);
             RequirePresentationPlanApplied(plan);
             foreach (AgentCompileDiffEntry diff in report.plannedDiff.Where(
                          value => value.mutationId?.StartsWith(
@@ -569,6 +588,150 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     detail = diff.detail
                 });
             }
+        }
+
+        static void ApplyAnimationSequences(
+            IReadOnlyList<AgentAnimationSequenceMutationPlan> plans,
+            bool deletePass)
+        {
+            foreach (AgentAnimationSequenceMutationPlan plan in plans)
+            {
+                if (deletePass !=
+                    (plan.Kind == AgentAnimationSequenceMutationKind.Delete))
+                    continue;
+                if (deletePass)
+                {
+                    if (plan.Asset)
+                        Undo.DestroyObjectImmediate(plan.Asset);
+                    continue;
+                }
+                ApplyAnimationSequence(plan);
+            }
+        }
+
+        static void ApplyAnimationSequence(AgentAnimationSequenceMutationPlan plan)
+        {
+            AgentPackageAnimationSequenceFile target = plan.Target ??
+                throw new InvalidOperationException("Animation Sequence mutation target is missing.");
+            AgentPackageCurve footCurve = plan.Curves.curves.Single(value =>
+                string.Equals(
+                    value.channelId,
+                    CharacterAnimationSequenceAsset.FootPlacementWeightChannelId,
+                    StringComparison.Ordinal));
+            CharacterAnimationSequenceAsset asset = plan.Asset;
+            string[] oldCurveIds = asset.CurveChannels
+                .Select(value => value.ChannelId)
+                .ToArray();
+            string[] oldNotifyIds = asset.Notifies
+                .Select(value => value.AuthoringId)
+                .ToArray();
+            for (int i = 0; i < oldCurveIds.Length; i++)
+                asset.DeleteCurve(oldCurveIds[i]);
+            for (int i = 0; i < oldNotifyIds.Length; i++)
+                asset.DeleteNotify(oldNotifyIds[i]);
+
+            asset.name = target.name;
+            asset.Configure(
+                target.id,
+                plan.Clip,
+                plan.Rig,
+                target.loop,
+                target.defaultPlayRate,
+                plan.FootAnalysisSource,
+                target.footAnalysisIdentity,
+                ConvertCurve(footCurve));
+            if (Enum.Parse<AnimationSyncMode>(target.syncMode, false) ==
+                AnimationSyncMode.MarkerGroup)
+            {
+                asset.ConfigureMarkerGroup(
+                    target.markerGroupId,
+                    Enum.Parse<AnimationMarkerSequenceTopology>(target.markerTopology, false),
+                    Enum.Parse<AnimationMarkerSyncRole>(target.syncRole, false),
+                    Enum.Parse<AnimationSyncTimeMapping>(target.timeMapping, false));
+                foreach (AgentPackageAnimationSequenceMarker marker in target.markers)
+                    asset.EnsureMarker(marker.id, marker.markerId, marker.frame);
+            }
+            foreach (AgentPackageCurve curve in plan.Curves.curves)
+            {
+                asset.SetCurve(
+                    curve.channelId,
+                    Enum.Parse<AnimationSequenceCurveValueDomain>(curve.unit, false),
+                    ConvertCurve(curve));
+            }
+            foreach (AgentPackageAnimationSequenceNotify notify in target.notifies)
+            {
+                AnimationSequenceNotifyKind kind =
+                    Enum.Parse<AnimationSequenceNotifyKind>(notify.kind, false);
+                asset.EnsureNotify(
+                    notify.id,
+                    kind,
+                    notify.frame,
+                    kind switch
+                    {
+                        AnimationSequenceNotifyKind.FootstepAudio =>
+                            new AnimationSequenceFootstepAudioPayload(
+                                notify.primaryValue,
+                                notify.secondaryValue),
+                        AnimationSequenceNotifyKind.VisualEffect =>
+                            new AnimationSequenceVisualEffectPayload(
+                                notify.primaryValue,
+                                notify.secondaryValue),
+                        AnimationSequenceNotifyKind.EditorAnnotation =>
+                            new AnimationSequenceEditorAnnotationPayload(
+                                notify.primaryValue),
+                        _ => throw new InvalidOperationException(
+                            $"Animation Sequence Notify kind '{notify.kind}' is unsupported.")
+                    });
+            }
+            asset.RequireValid();
+            if (plan.Kind == AgentAnimationSequenceMutationKind.Create)
+            {
+                EnsureAssetFolder(plan.AssetPath);
+                AssetDatabase.CreateAsset(asset, plan.AssetPath);
+                Undo.RegisterCreatedObjectUndo(asset, "Create Animation Sequence");
+            }
+            EditorUtility.SetDirty(asset);
+        }
+
+        static AnimationCurve ConvertCurve(AgentPackageCurve value)
+        {
+            var keys = value.keys.Select(key =>
+            {
+                var result = new Keyframe(
+                    key.time,
+                    key.value,
+                    key.inTangent,
+                    key.outTangent,
+                    key.inWeight,
+                    key.outWeight)
+                {
+                    weightedMode = Enum.Parse<WeightedMode>(
+                        key.weightedMode,
+                        false)
+                };
+                return result;
+            }).ToArray();
+            return new AnimationCurve(keys)
+            {
+                preWrapMode = Enum.Parse<WrapMode>(value.preWrapMode, false),
+                postWrapMode = Enum.Parse<WrapMode>(value.postWrapMode, false)
+            };
+        }
+
+        static void EnsureAssetFolder(string assetPath)
+        {
+            string folder = System.IO.Path.GetDirectoryName(assetPath)
+                ?.Replace('\\', '/');
+            if (string.IsNullOrWhiteSpace(folder) ||
+                AssetDatabase.IsValidFolder(folder))
+                return;
+            string parent = System.IO.Path.GetDirectoryName(folder)
+                ?.Replace('\\', '/');
+            if (string.IsNullOrWhiteSpace(parent) ||
+                !AssetDatabase.IsValidFolder(parent))
+                throw new InvalidOperationException(
+                    $"Animation Sequence parent folder is missing: {parent}");
+            AssetDatabase.CreateFolder(parent, System.IO.Path.GetFileName(folder));
         }
 
         static void SaveCreatedSubassets(
@@ -647,6 +810,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         throw new InvalidOperationException(
                             $"Linked Pose Transition '{mutation.Transition.TransitionId}' did not retain its reconciled Blend Profile.");
                 }
+            }
+            foreach (AgentAnimationSequenceMutationPlan sequence in plan.AnimationSequences)
+            {
+                if (sequence.Kind == AgentAnimationSequenceMutationKind.Delete)
+                {
+                    if (AssetDatabase.LoadMainAssetAtPath(sequence.AssetPath))
+                        throw new InvalidOperationException($"Animation Sequence '{sequence.AssetPath}' was not deleted.");
+                    continue;
+                }
+                if (!sequence.Asset ||
+                    !string.Equals(sequence.Asset.AuthoringId, sequence.Target.id, StringComparison.Ordinal))
+                    throw new InvalidOperationException($"Animation Sequence '{sequence.Target.id}' was not applied.");
+                sequence.Asset.RequireValid();
             }
         }
 
@@ -746,6 +922,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         exception.Message);
                 }
             }
+            foreach (AgentAnimationSequenceMutationPlan sequence in
+                     plan.AnimationSequences.Where(value =>
+                         value.Kind != AgentAnimationSequenceMutationKind.Delete))
+            {
+                try
+                {
+                    sequence.Asset.RequireValid();
+                }
+                catch (Exception exception)
+                {
+                    report.Error(
+                        "editable/animation-sequences/" + sequence.Target.id,
+                        "presentation_sequence_validation_failed",
+                        exception.Message);
+                }
+            }
         }
 
         static void AppendValidation(AgentCompileReport target, AgentCompileReport validation)
@@ -783,6 +975,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (linked.Implementation)
                     EditorUtility.SetDirty(linked.Implementation);
             }
+            foreach (AgentAnimationSequenceMutationPlan sequence in
+                     plan.AnimationSequences.Where(value =>
+                         value.Kind != AgentAnimationSequenceMutationKind.Delete))
+            {
+                if (sequence.Asset)
+                    EditorUtility.SetDirty(sequence.Asset);
+            }
         }
 
         static void RecordTouchedOwners(
@@ -807,7 +1006,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         owners.Add(linked.Implementation);
                 }
             }
-            report.touchedOwners = owners
+            var touched = owners
                 .Where(value => value)
                 .Select(value =>
                 {
@@ -820,6 +1019,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         assetType = value.GetType().FullName
                     };
                 })
+                .ToList();
+            if (presentation != null)
+            {
+                touched.AddRange(presentation.AnimationSequences.Select(value =>
+                    new AgentTouchedOwner
+                    {
+                        assetGuid = AssetDatabase.AssetPathToGUID(value.AssetPath),
+                        assetPath = value.AssetPath,
+                        assetType = typeof(CharacterAnimationSequenceAsset).FullName
+                    }));
+            }
+            report.touchedOwners = touched
+                .GroupBy(value => value.assetPath, StringComparer.Ordinal)
+                .Select(value => value.First())
                 .OrderBy(value => value.assetPath, StringComparer.Ordinal)
                 .ToList();
         }

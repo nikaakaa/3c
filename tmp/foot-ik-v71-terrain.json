@@ -1,0 +1,1521 @@
+{
+  "left": {
+    "up": {
+      "plans": 34,
+      "vertical_delta": {
+        "count": 34,
+        "min": 0.09944399999999987,
+        "p50": 0.25818299999999983,
+        "p95": 1.7506316,
+        "max": 1.7735493999999998
+      },
+      "planned_foot_horizontal": {
+        "count": 34,
+        "min": 1.1713110612161421,
+        "p50": 2.862378640296059,
+        "p95": 3.184107713905941,
+        "max": 3.1859478717240384
+      },
+      "planned_root_horizontal": {
+        "count": 34,
+        "min": 0.9949300000000001,
+        "p50": 2.3897000000038333,
+        "p95": 3.2725846000020917,
+        "max": 3.2805170000000228
+      },
+      "actual_actor_horizontal": {
+        "count": 34,
+        "min": 0.8995767000904968,
+        "p50": 2.500000000000001,
+        "p95": 2.879460400002455,
+        "max": 3.0079170000003064
+      },
+      "root_distance_error": {
+        "count": 34,
+        "min": -0.3119770009596543,
+        "p50": 0.0765299999996446,
+        "p95": 0.39742099999975666,
+        "max": 0.4634749999997272
+      },
+      "same_plan_goal_delta_y": {
+        "count": 355,
+        "min": 0.0,
+        "p50": 0.07000300000000026,
+        "p95": 0.19614449999999994,
+        "max": 0.35583149999999997
+      },
+      "same_plan_path_delta_y": {
+        "count": 355,
+        "min": 0.0,
+        "p50": 0.02375039999999995,
+        "p95": 0.19340500000000005,
+        "max": 0.28716980000000003
+      },
+      "solver_residual": {
+        "count": 389,
+        "min": 3.72529e-09,
+        "p50": 9.835048e-08,
+        "p95": 0.04278434,
+        "max": 0.1544571
+      },
+      "physical_penetration": {
+        "count": 389,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 1.192093e-07
+      },
+      "predictive_penetration": {
+        "count": 389,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.03807631
+      },
+      "required_minus_applied": {
+        "count": 389,
+        "min": -0.1462735,
+        "p50": 0.0,
+        "p95": 0.3062794,
+        "max": 0.435298
+      },
+      "goal_reversals_over_5cm": 33,
+      "path_reversals_over_5cm": 0,
+      "pre_liftoff_progress_violations": 0,
+      "pre_liftoff_lift_violations": 0,
+      "largest_vertical_examples": [
+        {
+          "plan": 79,
+          "frames": [
+            579,
+            593
+          ],
+          "vertical_delta": 1.7735493999999998,
+          "planned_foot_horizontal": 3.1673434350287906,
+          "planned_root_horizontal": 3.200234000000036,
+          "actual_actor_horizontal": 2.8028130000002793,
+          "generation_phase": 0.04966115,
+          "lift_off_phase": 0.2045455
+        },
+        {
+          "plan": 189,
+          "frames": [
+            1472,
+            1490
+          ],
+          "vertical_delta": 1.7508458,
+          "planned_foot_horizontal": 3.151327765346733,
+          "planned_root_horizontal": 3.1310631000051883,
+          "actual_actor_horizontal": 2.8108633000056784,
+          "generation_phase": 0.07020232,
+          "lift_off_phase": 0.2045455
+        },
+        {
+          "plan": 145,
+          "frames": [
+            1105,
+            1121
+          ],
+          "vertical_delta": 1.7506316,
+          "planned_foot_horizontal": 3.162583962329272,
+          "planned_root_horizontal": 3.1796799000063407,
+          "actual_actor_horizontal": 2.742290800007329,
+          "generation_phase": 0.05576495,
+          "lift_off_phase": 0.2045455
+        },
+        {
+          "plan": 123,
+          "frames": [
+            926,
+            942
+          ],
+          "vertical_delta": 1.7493651,
+          "planned_foot_horizontal": 3.1526442093573643,
+          "planned_root_horizontal": 3.1367650000000022,
+          "actual_actor_horizontal": 2.8028350000001643,
+          "generation_phase": 0.06850745,
+          "lift_off_phase": 0.2045455
+        },
+        {
+          "plan": 233,
+          "frames": [
+            1847,
+            1863
+          ],
+          "vertical_delta": 1.7486479,
+          "planned_foot_horizontal": 3.1646058145195095,
+          "planned_root_horizontal": 3.188412300006165,
+          "actual_actor_horizontal": 2.8793698000081482,
+          "generation_phase": 0.05317187,
+          "lift_off_phase": 0.2045455
+        }
+      ],
+      "top_frames": [
+        {
+          "score": 0.1544571,
+          "frame": 242,
+          "plan": 35,
+          "phase": 0.3832497,
+          "lift_off": 0.2045455,
+          "progress": 0.1370248,
+          "goal_y": 0.7829709,
+          "path_y": 0.6953511,
+          "required_lift": -0.2313304,
+          "applied_lift": -0.2313304,
+          "solver_residual": 0.1544571,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1487411,
+          "frame": 406,
+          "plan": 57,
+          "phase": 0.3627911,
+          "lift_off": 0.2045455,
+          "progress": 0.115471,
+          "goal_y": 0.7503821,
+          "path_y": 0.6661401,
+          "required_lift": -0.2065106,
+          "applied_lift": -0.2065106,
+          "solver_residual": 0.1487411,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1465599,
+          "frame": 1667,
+          "plan": 211,
+          "phase": 0.3888391,
+          "lift_off": 0.2045455,
+          "progress": 0.1442619,
+          "goal_y": 0.8038989,
+          "path_y": 0.7069623,
+          "required_lift": -0.2317159,
+          "applied_lift": -0.2317159,
+          "solver_residual": 0.1465599,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.139106,
+          "frame": 751,
+          "plan": 101,
+          "phase": 0.3577336,
+          "lift_off": 0.2045455,
+          "progress": 0.1101514,
+          "goal_y": 0.7395461,
+          "path_y": 0.6542083,
+          "required_lift": -0.1888269,
+          "applied_lift": -0.1888269,
+          "solver_residual": 0.139106,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1388555,
+          "frame": 76,
+          "plan": 13,
+          "phase": 0.3815951,
+          "lift_off": 0.2045455,
+          "progress": 0.1200823,
+          "goal_y": 0.7994665,
+          "path_y": 0.6709307,
+          "required_lift": -0.2108107,
+          "applied_lift": -0.2108107,
+          "solver_residual": 0.1388555,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1261139,
+          "frame": 1666,
+          "plan": 211,
+          "phase": 0.343471,
+          "lift_off": 0.2045455,
+          "progress": 0.09526693,
+          "goal_y": 0.7190943,
+          "path_y": 0.6298802,
+          "required_lift": -0.1656083,
+          "applied_lift": -0.1656083,
+          "solver_residual": 0.1261139,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1202995,
+          "frame": 241,
+          "plan": 35,
+          "phase": 0.3364239,
+          "lift_off": 0.2045455,
+          "progress": 0.08734066,
+          "goal_y": 0.7089102,
+          "path_y": 0.6172665,
+          "required_lift": -0.1505682,
+          "applied_lift": -0.1505682,
+          "solver_residual": 0.1202995,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1163911,
+          "frame": 752,
+          "plan": 101,
+          "phase": 0.4061237,
+          "lift_off": 0.2045455,
+          "progress": 0.1624027,
+          "goal_y": 0.8748332,
+          "path_y": 0.7368455,
+          "required_lift": -0.2187157,
+          "applied_lift": -0.2187157,
+          "solver_residual": 0.1163911,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1086292,
+          "frame": 407,
+          "plan": 57,
+          "phase": 0.4099048,
+          "lift_off": 0.2045455,
+          "progress": 0.1663416,
+          "goal_y": 0.9025544,
+          "path_y": 0.7475989,
+          "required_lift": -0.2164415,
+          "applied_lift": -0.2164415,
+          "solver_residual": 0.1086292,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.08051416,
+          "frame": 405,
+          "plan": 57,
+          "phase": 0.3164575,
+          "lift_off": 0.2045455,
+          "progress": 0.07897702,
+          "goal_y": 0.7061512,
+          "path_y": 0.6073115,
+          "required_lift": -0.09705448,
+          "applied_lift": -0.09705448,
+          "solver_residual": 0.08051416,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        }
+      ]
+    },
+    "down": {
+      "plans": 22,
+      "vertical_delta": {
+        "count": 22,
+        "min": -1.454258,
+        "p50": -1.2098116,
+        "p95": -0.6039129,
+        "max": -0.5808647
+      },
+      "planned_foot_horizontal": {
+        "count": 22,
+        "min": 3.601092619736577,
+        "p50": 3.601853690019349,
+        "p95": 3.603055694755391,
+        "max": 3.6032564097788478
+      },
+      "planned_root_horizontal": {
+        "count": 22,
+        "min": 3.2785640000000535,
+        "p50": 3.4063400000020203,
+        "p95": 3.4740620000023483,
+        "max": 3.4920480000061613
+      },
+      "actual_actor_horizontal": {
+        "count": 22,
+        "min": 2.1398600000418315,
+        "p50": 2.4331594000000383,
+        "p95": 3.237756000005412,
+        "max": 3.237918000000117
+      },
+      "root_distance_error": {
+        "count": 22,
+        "min": 0.17929199999995893,
+        "p50": 0.5223999999968263,
+        "p95": 1.225703699972145,
+        "max": 1.2664799999601888
+      },
+      "same_plan_goal_delta_y": {
+        "count": 264,
+        "min": 0.0,
+        "p50": 0.0980669999999999,
+        "p95": 0.28075000000000006,
+        "max": 0.3338390000000002
+      },
+      "same_plan_path_delta_y": {
+        "count": 264,
+        "min": 0.0,
+        "p50": 0.05090499999999998,
+        "p95": 0.218847,
+        "max": 0.29659560000000007
+      },
+      "solver_residual": {
+        "count": 286,
+        "min": 0.0,
+        "p50": 1.020492e-07,
+        "p95": 0.01346499,
+        "max": 0.1130561
+      },
+      "physical_penetration": {
+        "count": 286,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 1.788139e-07
+      },
+      "predictive_penetration": {
+        "count": 286,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.07765573
+      },
+      "required_minus_applied": {
+        "count": 286,
+        "min": -0.2671141,
+        "p50": 0.0,
+        "p95": 0.07972533,
+        "max": 0.2791995
+      },
+      "goal_reversals_over_5cm": 22,
+      "path_reversals_over_5cm": 0,
+      "pre_liftoff_progress_violations": 0,
+      "pre_liftoff_lift_violations": 0,
+      "largest_vertical_examples": [
+        {
+          "plan": 61,
+          "frames": [
+            434,
+            448
+          ],
+          "vertical_delta": -1.454258,
+          "planned_foot_horizontal": 3.602856109664896,
+          "planned_root_horizontal": 3.317625000002351,
+          "actual_actor_horizontal": 3.026223000002238,
+          "generation_phase": 0.07843857,
+          "lift_off_phase": 0.1666667
+        },
+        {
+          "plan": 171,
+          "frames": [
+            1323,
+            1337
+          ],
+          "vertical_delta": -1.452337,
+          "planned_foot_horizontal": 3.602407902637462,
+          "planned_root_horizontal": 3.361972000000001,
+          "actual_actor_horizontal": 3.131957000000013,
+          "generation_phase": 0.06611888,
+          "lift_off_phase": 0.1666667
+        },
+        {
+          "plan": 215,
+          "frames": [
+            1697,
+            1713
+          ],
+          "vertical_delta": -1.450099,
+          "planned_foot_horizontal": 3.6017742964305848,
+          "planned_root_horizontal": 3.424506,
+          "actual_actor_horizontal": 3.1218690000000064,
+          "generation_phase": 0.04874848,
+          "lift_off_phase": 0.1666667
+        },
+        {
+          "plan": 17,
+          "frames": [
+            99,
+            112
+          ],
+          "vertical_delta": -1.450053,
+          "planned_foot_horizontal": 3.6017486046464278,
+          "planned_root_horizontal": 3.427239010548901,
+          "actual_actor_horizontal": 3.1301750095061145,
+          "generation_phase": 0.04799019,
+          "lift_off_phase": 0.1666667
+        },
+        {
+          "plan": 39,
+          "frames": [
+            267,
+            281
+          ],
+          "vertical_delta": -1.449871,
+          "planned_foot_horizontal": 3.601620582879245,
+          "planned_root_horizontal": 3.4397470000000014,
+          "actual_actor_horizontal": 3.042706000000006,
+          "generation_phase": 0.04451488,
+          "lift_off_phase": 0.1666667
+        }
+      ],
+      "top_frames": [
+        {
+          "score": 0.1130561,
+          "frame": 112,
+          "plan": 17,
+          "phase": 0.9817232,
+          "lift_off": 0.1666667,
+          "progress": 0.980188,
+          "goal_y": 0.6361947,
+          "path_y": 0.5572524,
+          "required_lift": -0.1691868,
+          "applied_lift": 0.0,
+          "solver_residual": 0.1130561,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1006137,
+          "frame": 281,
+          "plan": 39,
+          "phase": 0.9752232,
+          "lift_off": 0.1666667,
+          "progress": 0.9732253,
+          "goal_y": 0.6873852,
+          "path_y": 0.6105001,
+          "required_lift": -0.1386377,
+          "applied_lift": 0.0,
+          "solver_residual": 0.1006137,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.07765573,
+          "frame": 282,
+          "plan": 41,
+          "phase": 0.03629313,
+          "lift_off": 0.1666667,
+          "progress": 0.0,
+          "goal_y": 0.7217612,
+          "path_y": 0.7199999,
+          "required_lift": 0.06966734,
+          "applied_lift": 0.0,
+          "solver_residual": 2.499001e-08,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.07765573
+        },
+        {
+          "score": 0.07688381,
+          "frame": 447,
+          "plan": 61,
+          "phase": 0.9229761,
+          "lift_off": 0.1666667,
+          "progress": 0.9141123,
+          "goal_y": 0.8318309,
+          "path_y": 0.7554041,
+          "required_lift": -0.09662318,
+          "applied_lift": 0.0,
+          "solver_residual": 0.07688381,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.07604754,
+          "frame": 1712,
+          "plan": 215,
+          "phase": 0.952091,
+          "lift_off": 0.1666667,
+          "progress": 0.9480302,
+          "goal_y": 0.7343358,
+          "path_y": 0.6669775,
+          "required_lift": -0.1131164,
+          "applied_lift": 0.0,
+          "solver_residual": 0.07604754,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.03984715,
+          "frame": 1521,
+          "plan": 193,
+          "phase": 0.9639957,
+          "lift_off": 0.1666667,
+          "progress": 0.961139,
+          "goal_y": 0.8604209,
+          "path_y": 0.7877295,
+          "required_lift": -0.0790258,
+          "applied_lift": 0.0,
+          "solver_residual": 0.03984715,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.03031545,
+          "frame": 973,
+          "plan": 127,
+          "phase": 0.9708779,
+          "lift_off": 0.1666667,
+          "progress": 0.9683982,
+          "goal_y": 0.8505533,
+          "path_y": 0.7750562,
+          "required_lift": -0.0637117,
+          "applied_lift": 0.0,
+          "solver_residual": 0.03031545,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 1.517982e-08
+        },
+        {
+          "score": 0.02962989,
+          "frame": 283,
+          "plan": 41,
+          "phase": 0.1249958,
+          "lift_off": 0.1666667,
+          "progress": 0.0,
+          "goal_y": 0.7714781,
+          "path_y": 0.7199999,
+          "required_lift": 0.2178261,
+          "applied_lift": 0.0,
+          "solver_residual": 1.965598e-07,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.02962989
+        },
+        {
+          "score": 0.02948957,
+          "frame": 1336,
+          "plan": 171,
+          "phase": 0.9596114,
+          "lift_off": 0.1666667,
+          "progress": 0.9554709,
+          "goal_y": 0.8367202,
+          "path_y": 0.7381916,
+          "required_lift": -0.04584247,
+          "applied_lift": 0.0,
+          "solver_residual": 0.02948957,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.0291194,
+          "frame": 1890,
+          "plan": 237,
+          "phase": 0.9454216,
+          "lift_off": 0.1666667,
+          "progress": 0.9418895,
+          "goal_y": 0.9025617,
+          "path_y": 0.7765956,
+          "required_lift": -0.03710604,
+          "applied_lift": 0.0,
+          "solver_residual": 0.0291194,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 2.430361e-08
+        }
+      ]
+    }
+  },
+  "right": {
+    "flat": {
+      "plans": 17,
+      "vertical_delta": {
+        "count": 17,
+        "min": -0.01066438,
+        "p50": -0.01001382,
+        "p95": -0.007885948,
+        "max": -0.007629175
+      },
+      "planned_foot_horizontal": {
+        "count": 17,
+        "min": 0.07652999999999999,
+        "p50": 0.07653340000000264,
+        "p95": 3.6068233645484247,
+        "max": 3.6084119952447784
+      },
+      "planned_root_horizontal": {
+        "count": 17,
+        "min": 0.07652999999999999,
+        "p50": 0.07653340000000063,
+        "p95": 3.4824896094712106,
+        "max": 3.4987002700000387
+      },
+      "actual_actor_horizontal": {
+        "count": 17,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.7999933976149546,
+        "max": 0.9999916104879526
+      },
+      "root_distance_error": {
+        "count": 17,
+        "min": 0.07652999999999999,
+        "p50": 0.07653340000000063,
+        "p95": 2.8575295073481812,
+        "max": 2.8824945074053234
+      },
+      "same_plan_goal_delta_y": {
+        "count": 13,
+        "min": 0.002028000000000002,
+        "p50": 0.010451800000000011,
+        "p95": 0.09075879999999997,
+        "max": 0.1167732
+      },
+      "same_plan_path_delta_y": {
+        "count": 13,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "solver_residual": {
+        "count": 30,
+        "min": 2.939204e-08,
+        "p50": 1.011332e-07,
+        "p95": 0.01496896,
+        "max": 0.01820451
+      },
+      "physical_penetration": {
+        "count": 30,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 6.946093e-08,
+        "max": 1.236666e-07
+      },
+      "predictive_penetration": {
+        "count": 30,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 1.244247e-06
+      },
+      "required_minus_applied": {
+        "count": 30,
+        "min": -0.008789055,
+        "p50": 0.0,
+        "p95": 0.009367361549419001,
+        "max": 0.009560063
+      },
+      "goal_reversals_over_5cm": 2,
+      "path_reversals_over_5cm": 0,
+      "pre_liftoff_progress_violations": 0,
+      "pre_liftoff_lift_violations": 0,
+      "largest_vertical_examples": [
+        {
+          "plan": 165,
+          "frames": [
+            1283,
+            1283
+          ],
+          "vertical_delta": -0.01066438,
+          "planned_foot_horizontal": 0.07653999999999961,
+          "planned_root_horizontal": 0.07653999999999961,
+          "actual_actor_horizontal": 0.0,
+          "generation_phase": 0.0,
+          "lift_off_phase": 0.0
+        },
+        {
+          "plan": 253,
+          "frames": [
+            2014,
+            2014
+          ],
+          "vertical_delta": -0.01038837,
+          "planned_foot_horizontal": 0.07652999999999999,
+          "planned_root_horizontal": 0.07652999999999999,
+          "actual_actor_horizontal": 0.0,
+          "generation_phase": 0.0,
+          "lift_off_phase": 0.0
+        },
+        {
+          "plan": 77,
+          "frames": [
+            574,
+            574
+          ],
+          "vertical_delta": -0.01037355,
+          "planned_foot_horizontal": 0.07652999999999999,
+          "planned_root_horizontal": 0.07652999999999999,
+          "actual_actor_horizontal": 0.0,
+          "generation_phase": 0.0,
+          "lift_off_phase": 0.0
+        },
+        {
+          "plan": 99,
+          "frames": [
+            740,
+            740
+          ],
+          "vertical_delta": -0.01031744,
+          "planned_foot_horizontal": 0.07653339999999997,
+          "planned_root_horizontal": 0.07653340000000063,
+          "actual_actor_horizontal": 0.0,
+          "generation_phase": 0.0,
+          "lift_off_phase": 0.0
+        },
+        {
+          "plan": 33,
+          "frames": [
+            231,
+            231
+          ],
+          "vertical_delta": -0.01020606,
+          "planned_foot_horizontal": 0.07652999999999999,
+          "planned_root_horizontal": 0.07654000000000138,
+          "actual_actor_horizontal": 0.0,
+          "generation_phase": 0.0,
+          "lift_off_phase": 0.0
+        }
+      ],
+      "top_frames": [
+        {
+          "score": 0.01820451,
+          "frame": 631,
+          "plan": 86,
+          "phase": 0.2347618,
+          "lift_off": 0.1666667,
+          "progress": 0.02830578,
+          "goal_y": 0.1955138,
+          "path_y": 0.0,
+          "required_lift": -0.01516682,
+          "applied_lift": -0.01516682,
+          "solver_residual": 0.01820451,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.01496896,
+          "frame": 1348,
+          "plan": 174,
+          "phase": 0.2348182,
+          "lift_off": 0.1666667,
+          "progress": 0.0281888,
+          "goal_y": 0.1960434,
+          "path_y": 0.0,
+          "required_lift": -0.01471654,
+          "applied_lift": -0.01471654,
+          "solver_residual": 0.01496896,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.0145483,
+          "frame": 1723,
+          "plan": 218,
+          "phase": 0.2074575,
+          "lift_off": 0.1666667,
+          "progress": 0.01550483,
+          "goal_y": 0.167854,
+          "path_y": 0.0,
+          "required_lift": -0.009452537,
+          "applied_lift": -0.009452537,
+          "solver_residual": 0.0145483,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.01402013,
+          "frame": 291,
+          "plan": 42,
+          "phase": 0.1981281,
+          "lift_off": 0.1666667,
+          "progress": 0.01099137,
+          "goal_y": 0.1575204,
+          "path_y": 0.0,
+          "required_lift": -0.008784801,
+          "applied_lift": -0.008784801,
+          "solver_residual": 0.01402013,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.007375605,
+          "frame": 984,
+          "plan": 130,
+          "phase": 0.1758919,
+          "lift_off": 0.1666667,
+          "progress": 0.001979472,
+          "goal_y": 0.1183472,
+          "path_y": 0.0,
+          "required_lift": -0.00364624,
+          "applied_lift": -0.003620982,
+          "solver_residual": 0.007375605,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.006735487,
+          "frame": 630,
+          "plan": 86,
+          "phase": 0.1635107,
+          "lift_off": 0.1666667,
+          "progress": 0.0,
+          "goal_y": 0.110593,
+          "path_y": 0.0,
+          "required_lift": -0.0007609427,
+          "applied_lift": 0.0,
+          "solver_residual": 0.006735487,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.00555919,
+          "frame": 985,
+          "plan": 130,
+          "phase": 0.2418031,
+          "lift_off": 0.1666667,
+          "progress": 0.03171118,
+          "goal_y": 0.208793,
+          "path_y": 0.0,
+          "required_lift": -0.01187846,
+          "applied_lift": -0.01187846,
+          "solver_residual": 0.00555919,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 1.244247e-06,
+          "frame": 231,
+          "plan": 33,
+          "phase": 0.0,
+          "lift_off": 0.0,
+          "progress": 0.0,
+          "goal_y": 0.09247766,
+          "path_y": 0.0,
+          "required_lift": 0.0,
+          "applied_lift": 0.0009219199,
+          "solver_residual": 9.872019e-08,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 1.244247e-06
+        },
+        {
+          "score": 1.647994e-07,
+          "frame": 574,
+          "plan": 77,
+          "phase": 0.0,
+          "lift_off": 0.0,
+          "progress": 0.0,
+          "goal_y": 0.1005128,
+          "path_y": 0.0,
+          "required_lift": 0.0,
+          "applied_lift": 0.008789055,
+          "solver_residual": 1.647994e-07,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 1.374324e-07,
+          "frame": 395,
+          "plan": 55,
+          "phase": 0.0,
+          "lift_off": 0.0,
+          "progress": 0.0,
+          "goal_y": 0.08439502,
+          "path_y": 0.0,
+          "required_lift": 0.0,
+          "applied_lift": -0.007137761,
+          "solver_residual": 1.374324e-07,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        }
+      ]
+    },
+    "up": {
+      "plans": 29,
+      "vertical_delta": {
+        "count": 29,
+        "min": 0.113395409,
+        "p50": 0.8252359999999999,
+        "p95": 1.415346439,
+        "max": 1.41907838
+      },
+      "planned_foot_horizontal": {
+        "count": 29,
+        "min": 2.8134879696556965,
+        "p50": 2.935111440342966,
+        "p95": 3.6066896983337724,
+        "max": 3.611410552251086
+      },
+      "planned_root_horizontal": {
+        "count": 29,
+        "min": 2.2136039999999997,
+        "p50": 2.9177630000000074,
+        "p95": 3.3932400000050777,
+        "max": 3.448150000005151
+      },
+      "actual_actor_horizontal": {
+        "count": 29,
+        "min": 0.4000000003929415,
+        "p50": 2.394988000001534,
+        "p95": 2.7272296000082297,
+        "max": 2.7320991000056982
+      },
+      "root_distance_error": {
+        "count": 29,
+        "min": -0.04773700000011294,
+        "p50": 0.24466799999982713,
+        "p95": 2.878830002527674,
+        "max": 2.8824300090494965
+      },
+      "same_plan_goal_delta_y": {
+        "count": 308,
+        "min": 0.0,
+        "p50": 0.09387900000000005,
+        "p95": 0.21902539999999993,
+        "max": 0.3427689999999999
+      },
+      "same_plan_path_delta_y": {
+        "count": 308,
+        "min": 0.0,
+        "p50": 0.05138799999999999,
+        "p95": 0.21735139999999997,
+        "max": 0.3737943
+      },
+      "solver_residual": {
+        "count": 337,
+        "min": 3.72529e-09,
+        "p50": 9.912353e-08,
+        "p95": 0.04737891,
+        "max": 0.1622189
+      },
+      "physical_penetration": {
+        "count": 337,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 1.336854e-07
+      },
+      "predictive_penetration": {
+        "count": 337,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.01219405,
+        "max": 0.03246985
+      },
+      "required_minus_applied": {
+        "count": 337,
+        "min": -0.16615248000000002,
+        "p50": 0.0,
+        "p95": 0.1676387,
+        "max": 0.3930632
+      },
+      "goal_reversals_over_5cm": 51,
+      "path_reversals_over_5cm": 0,
+      "pre_liftoff_progress_violations": 0,
+      "pre_liftoff_lift_violations": 0,
+      "largest_vertical_examples": [
+        {
+          "plan": 12,
+          "frames": [
+            68,
+            79
+          ],
+          "vertical_delta": 1.41907838,
+          "planned_foot_horizontal": 2.8488250771941424,
+          "planned_root_horizontal": 2.8671254090766625,
+          "actual_actor_horizontal": 2.513187208501786,
+          "generation_phase": 0.08628189,
+          "lift_off_phase": 0.3658537
+        },
+        {
+          "plan": 100,
+          "frames": [
+            741,
+            757
+          ],
+          "vertical_delta": 1.415346439,
+          "planned_foot_horizontal": 2.9006951877113356,
+          "planned_root_horizontal": 2.9343668000000327,
+          "actual_actor_horizontal": 2.7272296000082297,
+          "generation_phase": 0.06485312,
+          "lift_off_phase": 0.3658537
+        },
+        {
+          "plan": 56,
+          "frames": [
+            396,
+            411
+          ],
+          "vertical_delta": 1.41062879,
+          "planned_foot_horizontal": 2.894858861544226,
+          "planned_root_horizontal": 2.926800600000021,
+          "actual_actor_horizontal": 2.589602500006473,
+          "generation_phase": 0.06726409,
+          "lift_off_phase": 0.3658537
+        },
+        {
+          "plan": 254,
+          "frames": [
+            2015,
+            2018
+          ],
+          "vertical_delta": 1.3896516300000001,
+          "planned_foot_horizontal": 2.89079179734731,
+          "planned_root_horizontal": 2.921523000000006,
+          "actual_actor_horizontal": 0.6711000000000922,
+          "generation_phase": 0.06894644,
+          "lift_off_phase": 0.3658537
+        },
+        {
+          "plan": 188,
+          "frames": [
+            1467,
+            1483
+          ],
+          "vertical_delta": 1.2001465939,
+          "planned_foot_horizontal": 2.8961499202484418,
+          "planned_root_horizontal": 2.928473500000379,
+          "actual_actor_horizontal": 2.6719945000132355,
+          "generation_phase": 0.06673096,
+          "lift_off_phase": 0.3658537
+        }
+      ],
+      "top_frames": [
+        {
+          "score": 0.1622189,
+          "frame": 414,
+          "plan": 58,
+          "phase": 0.2078865,
+          "lift_off": 0.0882353,
+          "progress": 0.001506296,
+          "goal_y": 1.380099,
+          "path_y": 1.203529,
+          "required_lift": -0.2240697,
+          "applied_lift": -0.2240697,
+          "solver_residual": 0.1622189,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1376972,
+          "frame": 590,
+          "plan": 80,
+          "phase": 0.219428,
+          "lift_off": 0.0882353,
+          "progress": 0.01223331,
+          "goal_y": 1.356656,
+          "path_y": 1.195114,
+          "required_lift": -0.2150364,
+          "applied_lift": -0.2150364,
+          "solver_residual": 0.1376972,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1371338,
+          "frame": 1303,
+          "plan": 168,
+          "phase": 0.1903131,
+          "lift_off": 0.0882353,
+          "progress": 0.0,
+          "goal_y": 1.30874,
+          "path_y": 1.199982,
+          "required_lift": -0.2062171,
+          "applied_lift": -0.1935974,
+          "solver_residual": 0.1371338,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1339099,
+          "frame": 1486,
+          "plan": 190,
+          "phase": 0.2125055,
+          "lift_off": 0.0882353,
+          "progress": 0.007713952,
+          "goal_y": 1.327957,
+          "path_y": 1.184809,
+          "required_lift": -0.2119868,
+          "applied_lift": -0.2063018,
+          "solver_residual": 0.1339099,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1254428,
+          "frame": 1119,
+          "plan": 146,
+          "phase": 0.2236708,
+          "lift_off": 0.0882353,
+          "progress": 0.01517273,
+          "goal_y": 1.37366,
+          "path_y": 1.224889,
+          "required_lift": -0.2107414,
+          "applied_lift": -0.2107414,
+          "solver_residual": 0.1254428,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1250131,
+          "frame": 1675,
+          "plan": 212,
+          "phase": 0.205229,
+          "lift_off": 0.0882353,
+          "progress": 0.003317425,
+          "goal_y": 1.393339,
+          "path_y": 1.206502,
+          "required_lift": -0.2163363,
+          "applied_lift": -0.2021303,
+          "solver_residual": 0.1250131,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1242169,
+          "frame": 938,
+          "plan": 124,
+          "phase": 0.2161235,
+          "lift_off": 0.0882353,
+          "progress": 0.0107883,
+          "goal_y": 1.358632,
+          "path_y": 1.179161,
+          "required_lift": -0.2085549,
+          "applied_lift": -0.2017761,
+          "solver_residual": 0.1242169,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1160138,
+          "frame": 759,
+          "plan": 102,
+          "phase": 0.1623573,
+          "lift_off": 0.0882353,
+          "progress": 0.0,
+          "goal_y": 1.338739,
+          "path_y": 1.2,
+          "required_lift": -0.1587709,
+          "applied_lift": -0.1356972,
+          "solver_residual": 0.1160138,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1149985,
+          "frame": 82,
+          "plan": 14,
+          "phase": 0.245521,
+          "lift_off": 0.0882353,
+          "progress": 0.02847563,
+          "goal_y": 1.494234,
+          "path_y": 1.261866,
+          "required_lift": -0.2027847,
+          "applied_lift": -0.2027847,
+          "solver_residual": 0.1149985,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.1065006,
+          "frame": 760,
+          "plan": 102,
+          "phase": 0.2382044,
+          "lift_off": 0.0882353,
+          "progress": 0.02869305,
+          "goal_y": 1.486281,
+          "path_y": 1.257324,
+          "required_lift": -0.1865107,
+          "applied_lift": -0.1865107,
+          "solver_residual": 0.1065006,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        }
+      ]
+    },
+    "down": {
+      "plans": 22,
+      "vertical_delta": {
+        "count": 22,
+        "min": -1.532565,
+        "p50": -1.380463,
+        "p95": -0.4872350000000001,
+        "max": -0.4871810000000001
+      },
+      "planned_foot_horizontal": {
+        "count": 22,
+        "min": 3.6032485521191355,
+        "p50": 3.6061380390524023,
+        "p95": 3.60899939388037,
+        "max": 3.609481211462841
+      },
+      "planned_root_horizontal": {
+        "count": 22,
+        "min": 3.276974800000006,
+        "p50": 3.3762190000054018,
+        "p95": 3.4873640000000043,
+        "max": 3.4890120000063365
+      },
+      "actual_actor_horizontal": {
+        "count": 22,
+        "min": 2.858434000004658,
+        "p50": 3.1221670096103606,
+        "p95": 3.4076640000022773,
+        "max": 3.4093850000000008
+      },
+      "root_distance_error": {
+        "count": 22,
+        "min": -0.043726000000005705,
+        "p50": 0.1932240000003711,
+        "p95": 0.517510599999988,
+        "max": 0.525986299024082
+      },
+      "same_plan_goal_delta_y": {
+        "count": 318,
+        "min": 0.0,
+        "p50": 0.07671899999999976,
+        "p95": 0.25255439999999996,
+        "max": 0.44638599999999995
+      },
+      "same_plan_path_delta_y": {
+        "count": 318,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.19107390000000002,
+        "max": 0.30448300000000006
+      },
+      "solver_residual": {
+        "count": 340,
+        "min": 0.0,
+        "p50": 8.940697e-08,
+        "p95": 0.001673477,
+        "max": 0.02356842
+      },
+      "physical_penetration": {
+        "count": 340,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 2.795786e-07
+      },
+      "predictive_penetration": {
+        "count": 340,
+        "min": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 1.192093e-07
+      },
+      "required_minus_applied": {
+        "count": 340,
+        "min": -0.1995554,
+        "p50": 0.0,
+        "p95": 0.03324755,
+        "max": 0.1949544
+      },
+      "goal_reversals_over_5cm": 28,
+      "path_reversals_over_5cm": 0,
+      "pre_liftoff_progress_violations": 0,
+      "pre_liftoff_lift_violations": 0,
+      "largest_vertical_examples": [
+        {
+          "plan": 128,
+          "frames": [
+            966,
+            981
+          ],
+          "vertical_delta": -1.532565,
+          "planned_foot_horizontal": 3.6036993909447363,
+          "planned_root_horizontal": 3.473761000000014,
+          "actual_actor_horizontal": 2.956250400000026,
+          "generation_phase": 0.03506646,
+          "lift_off_phase": 0.1666667
+        },
+        {
+          "plan": 150,
+          "frames": [
+            1146,
+            1162
+          ],
+          "vertical_delta": -1.517312,
+          "planned_foot_horizontal": 3.6032485521191355,
+          "planned_root_horizontal": 3.4890120000063365,
+          "actual_actor_horizontal": 3.1264960003621973,
+          "generation_phase": 0.03083096,
+          "lift_off_phase": 0.1666667
+        },
+        {
+          "plan": 84,
+          "frames": [
+            614,
+            628
+          ],
+          "vertical_delta": -1.490576,
+          "planned_foot_horizontal": 3.6059415700598625,
+          "planned_root_horizontal": 3.3973975000000016,
+          "actual_actor_horizontal": 3.045827200000009,
+          "generation_phase": 0.05627855,
+          "lift_off_phase": 0.1666667
+        },
+        {
+          "plan": 194,
+          "frames": [
+            1515,
+            1530
+          ],
+          "vertical_delta": -1.486827,
+          "planned_foot_horizontal": 3.607931107879911,
+          "planned_root_horizontal": 3.3295090000055163,
+          "actual_actor_horizontal": 2.947763000004819,
+          "generation_phase": 0.07513516,
+          "lift_off_phase": 0.1666667
+        },
+        {
+          "plan": 238,
+          "frames": [
+            1885,
+            1898
+          ],
+          "vertical_delta": -1.443697,
+          "planned_foot_horizontal": 3.6077955893077736,
+          "planned_root_horizontal": 3.3341970000051666,
+          "actual_actor_horizontal": 2.858434000004658,
+          "generation_phase": 0.07383375,
+          "lift_off_phase": 0.1666667
+        }
+      ],
+      "top_frames": [
+        {
+          "score": 0.02356842,
+          "frame": 787,
+          "plan": 104,
+          "phase": 0.9552194,
+          "lift_off": 0.1666667,
+          "progress": 0.9527953,
+          "goal_y": 1.612063,
+          "path_y": 1.541466,
+          "required_lift": -0.07017517,
+          "applied_lift": 0.0,
+          "solver_residual": 0.02356842,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.02208887,
+          "frame": 440,
+          "plan": 60,
+          "phase": 0.9544612,
+          "lift_off": 0.1666667,
+          "progress": 0.9523447,
+          "goal_y": 1.618332,
+          "path_y": 1.547922,
+          "required_lift": -0.06778693,
+          "applied_lift": 0.0,
+          "solver_residual": 0.02208887,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.01205134,
+          "frame": 105,
+          "plan": 16,
+          "phase": 0.9866012,
+          "lift_off": 0.1666667,
+          "progress": 0.9857262,
+          "goal_y": 1.549846,
+          "path_y": 1.469834,
+          "required_lift": -0.05923116,
+          "applied_lift": 0.0,
+          "solver_residual": 0.01205134,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.01089297,
+          "frame": 273,
+          "plan": 38,
+          "phase": 0.9469376,
+          "lift_off": 0.1666667,
+          "progress": 0.9448811,
+          "goal_y": 1.643763,
+          "path_y": 1.574451,
+          "required_lift": -0.04882336,
+          "applied_lift": 0.0,
+          "solver_residual": 0.01089297,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.00967182,
+          "frame": 1514,
+          "plan": 192,
+          "phase": 0.9565899,
+          "lift_off": 0.1666667,
+          "progress": 0.9555464,
+          "goal_y": 1.727716,
+          "path_y": 1.656757,
+          "required_lift": -0.04600155,
+          "applied_lift": 0.0,
+          "solver_residual": 0.00967182,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.009604179,
+          "frame": 1883,
+          "plan": 236,
+          "phase": 0.9385918,
+          "lift_off": 0.1666667,
+          "progress": 0.9359608,
+          "goal_y": 1.717342,
+          "path_y": 1.647028,
+          "required_lift": -0.04547536,
+          "applied_lift": 0.0,
+          "solver_residual": 0.009604179,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.006967604,
+          "frame": 1144,
+          "plan": 148,
+          "phase": 0.9191222,
+          "lift_off": 0.1666667,
+          "progress": 0.9169121,
+          "goal_y": 1.773305,
+          "path_y": 1.700954,
+          "required_lift": -0.004618883,
+          "applied_lift": 0.0,
+          "solver_residual": 0.006967604,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.006933519,
+          "frame": 1328,
+          "plan": 170,
+          "phase": 0.9441504,
+          "lift_off": 0.1666667,
+          "progress": 0.9403171,
+          "goal_y": 1.681785,
+          "path_y": 1.612423,
+          "required_lift": -0.03985751,
+          "applied_lift": 0.0,
+          "solver_residual": 0.006933519,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.006534837,
+          "frame": 1529,
+          "plan": 194,
+          "phase": 0.9403175,
+          "lift_off": 0.1666667,
+          "progress": 0.9369023,
+          "goal_y": 0.17194,
+          "path_y": 0.1020291,
+          "required_lift": -0.01411432,
+          "applied_lift": 0.0,
+          "solver_residual": 0.006534837,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        },
+        {
+          "score": 0.002853567,
+          "frame": 1872,
+          "plan": 236,
+          "phase": 0.223334,
+          "lift_off": 0.1666667,
+          "progress": 0.02306831,
+          "goal_y": 2.099621,
+          "path_y": 1.92,
+          "required_lift": -0.01536775,
+          "applied_lift": -0.01536775,
+          "solver_residual": 0.002853567,
+          "physical_penetration": 0.0,
+          "predictive_penetration": 0.0
+        }
+      ]
+    }
+  }
+}

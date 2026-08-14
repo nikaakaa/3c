@@ -59,7 +59,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         sources.OfType<JObject>().Any(value =>
                             value["id"] != null ||
                             value["slot"] == null ||
-                            value["binding"] == null) ||
+                            value["binding"] == null ||
+                            value["timeMapping"] == null) ||
                         profile.Descendants().OfType<JObject>().Any(value =>
                             value["assetGuid"] != null &&
                             value["assetPath"] != null &&

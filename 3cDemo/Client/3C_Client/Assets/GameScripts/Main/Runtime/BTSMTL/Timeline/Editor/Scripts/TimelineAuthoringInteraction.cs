@@ -95,15 +95,12 @@ namespace BTSMTL.Timeline.Editor
     internal static class TimelineCurveEditorSession
     {
         static readonly HashSet<string> ExpandedTracks = new HashSet<string>(StringComparer.Ordinal);
-        static readonly HashSet<string> ExpandedMarkerTracks = new HashSet<string>(StringComparer.Ordinal);
         static readonly HashSet<string> HiddenChannels = new HashSet<string>(StringComparer.Ordinal);
         static readonly Dictionary<string, TimelineCurveVerticalView> VerticalViews =
             new Dictionary<string, TimelineCurveVerticalView>(StringComparer.Ordinal);
 
         public static bool CurvesExpanded(Track track) => ExpandedTracks.Contains(RequireTrackIdentity(track));
-        public static bool MarkersExpanded(Track track) => ExpandedMarkerTracks.Contains(RequireTrackIdentity(track));
         public static void ToggleCurves(Track track) => Toggle(ExpandedTracks, RequireTrackIdentity(track));
-        public static void ToggleMarkers(Track track) => Toggle(ExpandedMarkerTracks, RequireTrackIdentity(track));
 
         public static bool IsChannelVisible(Track track, TimelineCurveChannelId channelId) =>
             !HiddenChannels.Contains(ChannelKey(track, channelId));

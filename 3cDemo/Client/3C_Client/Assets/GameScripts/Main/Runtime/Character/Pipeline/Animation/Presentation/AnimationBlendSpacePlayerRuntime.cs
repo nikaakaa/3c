@@ -11,7 +11,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         struct State
         {
             internal CharacterPresentationProgramParameterFrame ParameterFrame;
+            internal double RawContinuousTime;
             internal double ContinuousTime;
+            internal double ContinuationAnchorRawTime;
+            internal double ContinuationAnchorEffectiveTime;
             internal float SampleTime;
             internal int Cycle;
             internal int ClipSampleCount;
@@ -35,6 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal bool Relevant;
             internal bool SourceRetained;
             internal bool HasCompletedFrame;
+            internal bool HasContinuationAnchor;
         }
 
         readonly CharacterAnimationBlendSpacePlayerPlan m_Descriptor;
@@ -67,6 +71,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         CharacterPresentationProgramParameterFrame m_ParameterFrame { get => ActiveState.ParameterFrame; set => ActiveState.ParameterFrame = value; }
         double m_ContinuousTime { get => ActiveState.ContinuousTime; set => ActiveState.ContinuousTime = value; }
+        double m_RawContinuousTime { get => ActiveState.RawContinuousTime; set => ActiveState.RawContinuousTime = value; }
+        double m_ContinuationAnchorRawTime { get => ActiveState.ContinuationAnchorRawTime; set => ActiveState.ContinuationAnchorRawTime = value; }
+        double m_ContinuationAnchorEffectiveTime { get => ActiveState.ContinuationAnchorEffectiveTime; set => ActiveState.ContinuationAnchorEffectiveTime = value; }
         float m_SampleTime { get => ActiveState.SampleTime; set => ActiveState.SampleTime = value; }
         int m_Cycle { get => ActiveState.Cycle; set => ActiveState.Cycle = value; }
         int m_ClipSampleCount { get => ActiveState.ClipSampleCount; set => ActiveState.ClipSampleCount = value; }
@@ -88,6 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         bool m_Relevant { get => ActiveState.Relevant; set => ActiveState.Relevant = value; }
         bool m_SourceRetained { get => ActiveState.SourceRetained; set => ActiveState.SourceRetained = value; }
         bool m_HasCompletedFrame { get => ActiveState.HasCompletedFrame; set => ActiveState.HasCompletedFrame = value; }
+        bool m_HasContinuationAnchor { get => ActiveState.HasContinuationAnchor; set => ActiveState.HasContinuationAnchor = value; }
 
         internal AnimationBlendSpacePlayerRuntime(
             CharacterAnimationBlendSpacePlayerPlan descriptor,
@@ -142,6 +150,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal float RemainingTime => float.MaxValue;
         internal AnimationMarkerSyncBinding MarkerSync => m_Plan.MarkerSync;
         internal double ContinuousTime => m_ContinuousTime;
+        internal double RawContinuousTime => m_RawContinuousTime;
         internal AnimationReadOnlyBuffer<ClipSamplePlan> ClipSamples =>
             new AnimationReadOnlyBuffer<ClipSamplePlan>(
                 m_ClipSamples,
@@ -192,6 +201,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 ReleaseRetainedSource();
                 m_SourceId = default;
                 m_Endpoint = default;
+                ClearContinuationAnchor();
                 return;
             }
             if (m_NextSourceGeneration == ulong.MaxValue)
@@ -208,7 +218,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 AllocateContinuityIdentity();
             m_ResetSequence = AllocateResetSequence();
             m_PendingResetReason = PoseDiscontinuityResetReason.BranchReplacement;
-            SetClock(0d);
+            ClearContinuationAnchor();
+            SetRawClock(0d);
         }
 
         internal void SetParameterFrame(
@@ -232,7 +243,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
             if (!m_Relevant || presentationDeltaSeconds == 0f)
                 return;
-            SetClock(m_ContinuousTime + presentationDeltaSeconds);
+            SetRawClock(m_RawContinuousTime + presentationDeltaSeconds);
         }
 
         internal void SetSynchronizedTime(double continuousTime)
@@ -247,6 +258,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PendingResetReason = PoseDiscontinuityResetReason.BranchReplacement;
             }
             SetClock(continuousTime);
+        }
+
+        internal void AnchorSynchronizedTime()
+        {
+            RequireAlive();
+            RequireOpenFrame();
+            if (!m_Relevant)
+                throw new InvalidOperationException($"Blend Space Player '{NodeId}' is not relevant.");
+            m_ContinuationAnchorRawTime = m_RawContinuousTime;
+            m_ContinuationAnchorEffectiveTime = m_ContinuousTime;
+            m_HasContinuationAnchor = true;
         }
 
         internal void BeginFrame(ulong completionIdentity)
@@ -513,14 +535,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 AllocateContinuityIdentity();
             m_ResetSequence = AllocateResetSequence();
             m_PendingResetReason = reason;
-            SetClock(0d);
+            ClearContinuationAnchor();
+            SetRawClock(0d);
             m_SourceWorkspace.ResetContinuity();
         }
 
         internal void ResetForStateEntry()
         {
             RequireAlive();
-            SetClock(0d);
+            ClearContinuationAnchor();
+            SetRawClock(0d);
             m_HasCompletedFrame = false;
             m_ContinuityIdentity =
                 AllocateContinuityIdentity();
@@ -681,6 +705,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_SampleTime = (float)(continuousTime - m_Cycle * duration);
             if (m_SampleTime >= duration)
                 m_SampleTime = 0f;
+        }
+
+        void SetRawClock(double continuousTime)
+        {
+            if (!double.IsFinite(continuousTime) || continuousTime < 0d)
+                throw new ArgumentOutOfRangeException(nameof(continuousTime));
+            double effectiveTime = m_HasContinuationAnchor
+                ? m_ContinuationAnchorEffectiveTime +
+                  continuousTime -
+                  m_ContinuationAnchorRawTime
+                : continuousTime;
+            if (!double.IsFinite(effectiveTime) || effectiveTime < 0d)
+                throw new InvalidOperationException($"Blend Space Player '{NodeId}' continuation anchor produced an invalid time.");
+            m_RawContinuousTime = continuousTime;
+            SetClock(effectiveTime);
+        }
+
+        void ClearContinuationAnchor()
+        {
+            m_ContinuationAnchorRawTime = 0d;
+            m_ContinuationAnchorEffectiveTime = 0d;
+            m_HasContinuationAnchor = false;
         }
 
         void ReleaseRetainedSource()

@@ -139,12 +139,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public static AnimationFootAnalysisArtifact Write(
             AnimationFootAnalysisArtifactIdentity identity,
-            AnimationFootFeaturePair features)
+            AnimationFootFeaturePair features,
+            AnimationFootSynchronizationDescriptor synchronization)
         {
             string path = GetPath(identity);
             string directory = Path.GetDirectoryName(path) ?? throw new InvalidOperationException("Artifact path has no directory.");
             Directory.CreateDirectory(directory);
-            byte[] bytes = AnimationFootAnalysisArtifactCodec.Write(identity, features, out _);
+            byte[] bytes = AnimationFootAnalysisArtifactCodec.Write(
+                identity,
+                features,
+                synchronization,
+                out _);
             string temporaryPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try
             {

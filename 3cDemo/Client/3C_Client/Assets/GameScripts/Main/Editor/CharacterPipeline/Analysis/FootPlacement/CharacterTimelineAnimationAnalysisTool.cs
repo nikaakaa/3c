@@ -20,7 +20,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static CharacterTimelineEditorComposition()
         {
             TimelineEditorToolComposition.SetCatalog(CreateCatalog(null));
-            TimelineEditorOpenRequestComposition.SetMarkerTopologyResolver(new MarkerTopologyResolver());
             TimelineEditorOpenRequestComposition.SetToolCatalogResolver(new ToolCatalogResolver());
         }
 
@@ -29,12 +28,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 new CharacterTimelineAnimationAnalysisToolProvider(source)
             });
-
-        sealed class MarkerTopologyResolver : ITimelineEditorMarkerTopologyResolver
-        {
-            public ITimelineAnimationMarkerSyncAuthoringContext Resolve(BaseTreeWindow sourceGraphWindow) =>
-                sourceGraphWindow?.AuthoringContext as CharacterPipelineAuthoringContext;
-        }
 
         sealed class ToolCatalogResolver : ITimelineEditorToolCatalogResolver
         {
@@ -69,7 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string ToolId => "thirdperson.character.animation-analysis";
         public string DisplayName => "Animation Analysis";
         public bool Supports(TimelineEditorSelection selection) =>
-            selection.Clip is TimelineAnimationClip clip && clip.Clip;
+            selection.Clip is TimelineAnimationClip clip && clip.Sequence is CharacterAnimationSequenceAsset;
         public TimelineEditorToolPanel CreatePanel(TimelineEditorSessionContext session) =>
             new CharacterTimelineAnimationAnalysisPanel(session, m_InitialSource);
     }
@@ -111,6 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly Button m_ApplyContactMarkers;
         readonly CharacterFootAnalysisCurveCanvas m_Canvas;
         TimelineAnimationClip m_SelectedClip;
+        CharacterAnimationSequenceAsset m_SelectedSequence;
         CharacterFootPlacementAnalysisSource m_Source;
         AnimationFootAnalysisArtifact m_Artifact;
         AnimationFootContactCandidateSet m_ContactCandidates;
@@ -207,7 +201,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         void OnSelectionChanged(TimelineEditorSelection selection)
         {
             m_SelectedClip = selection.Clip as TimelineAnimationClip;
-            m_ClipField.SetValueWithoutNotify(m_SelectedClip?.Clip);
+            m_SelectedSequence = m_SelectedClip?.Sequence as CharacterAnimationSequenceAsset;
+            m_ClipField.SetValueWithoutNotify(m_SelectedSequence ? m_SelectedSequence.Clip : null);
+            m_Source = m_SelectedSequence?.FootAnalysisSource as CharacterFootPlacementAnalysisSource;
+            m_SourceField.SetValueWithoutNotify(m_Source);
             RefreshArtifact();
         }
 
@@ -218,7 +215,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_ContactProposal = null;
             m_Error.text = string.Empty;
             m_Identity.text = string.Empty;
-            if (m_SelectedClip == null || !m_SelectedClip.Clip)
+            if (!m_SelectedSequence || !m_SelectedSequence.Clip)
             {
                 SetStatus("Animation Clip Required", false);
                 RefreshCanvas();
@@ -233,9 +230,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             try
             {
                 AnimationFootAnalysisArtifactIdentity identity =
-                    AnimationFootAnalysisArtifactBuilder.GetExpectedIdentity(m_SelectedClip.Clip, m_Source);
+                    AnimationFootAnalysisArtifactBuilder.GetExpectedIdentity(m_SelectedSequence.Clip, m_Source);
                 AnimationFootAnalysisArtifactInspection inspection =
-                    AnimationFootAnalysisArtifactBuilder.Inspect(m_SelectedClip.Clip, m_Source);
+                    AnimationFootAnalysisArtifactBuilder.Inspect(m_SelectedSequence.Clip, m_Source);
                 m_Artifact = inspection.Artifact;
                 SetStatus(inspection.Status.ToString(), inspection.Status == AnimationFootAnalysisArtifactStatus.Ready);
                 m_Identity.text = $"{identity.IdentityHash.Value}\n{inspection.Path}";
@@ -252,11 +249,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void Rebuild()
         {
-            if (m_SelectedClip == null || !m_SelectedClip.Clip || !m_Source)
+            if (!m_SelectedSequence || !m_SelectedSequence.Clip || !m_Source)
                 return;
             try
             {
-                AnimationFootAnalysisArtifactBuilder.Build(m_SelectedClip.Clip, m_Source);
+                AnimationFootAnalysisArtifactBuilder.Build(m_SelectedSequence.Clip, m_Source);
                 RefreshArtifact();
             }
             catch (Exception exception)
@@ -271,7 +268,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Status.style.color = ready
                 ? new Color(0.42f, 0.82f, 0.58f)
                 : new Color(0.92f, 0.68f, 0.34f);
-            m_Rebuild.SetEnabled(m_SelectedClip != null && m_SelectedClip.Clip && m_Source);
+            m_Rebuild.SetEnabled(m_SelectedSequence && m_SelectedSequence.Clip && m_Source);
         }
 
         void RefreshContactMarkers()
@@ -284,22 +281,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             try
             {
-                m_ContactCandidates = AnimationFootContactCandidateSet.Build(m_SelectedClip.Clip, m_Artifact);
+                m_ContactCandidates = AnimationFootContactCandidateSet.Build(m_SelectedSequence.Clip, m_Artifact);
                 string sourceSummary =
                     $"Candidate revision: {Short(m_ContactCandidates.Revision)}\n" +
                     BuildSourceCandidateSummary(m_ContactCandidates);
-                if (m_SelectedClip?.Track is not AnimationTrack track)
-                {
-                    m_ContactMarkers.text =
-                        $"Contact candidates\n{sourceSummary}\nApply status: Unavailable - target track is not an AnimationTrack.";
-                    return;
-                }
                 try
                 {
                     m_ContactProposal = TimelineFootContactMarkerProposal.Build(
-                        m_Session.Timeline,
-                        track,
-                        m_SelectedClip,
+                        m_SelectedSequence,
                         m_Artifact);
                     m_ContactMarkers.text =
                         $"Contact candidates\n{sourceSummary}\nProposal revision: {Short(m_ContactProposal.Revision)}\n" +
@@ -319,32 +308,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void ApplyContactMarkers()
         {
-            if (m_ContactProposal == null || m_SelectedClip?.Track is not AnimationTrack track || !m_Source)
+            if (m_ContactProposal == null || !m_SelectedSequence || !m_Source)
                 return;
             TimelineFootContactMarkerProposal displayed = m_ContactProposal;
             try
             {
                 AnimationFootAnalysisArtifactInspection inspection =
-                    AnimationFootAnalysisArtifactBuilder.Inspect(m_SelectedClip.Clip, m_Source);
+                    AnimationFootAnalysisArtifactBuilder.Inspect(m_SelectedSequence.Clip, m_Source);
                 if (inspection.Status != AnimationFootAnalysisArtifactStatus.Ready || inspection.Artifact == null)
                     throw new InvalidOperationException($"Foot Analysis artifact is {inspection.Status}; rebuild it before applying markers.");
                 TimelineFootContactMarkerProposal current = TimelineFootContactMarkerProposal.Build(
-                    m_Session.Timeline,
-                    track,
-                    m_SelectedClip,
+                    m_SelectedSequence,
                     inspection.Artifact);
                 if (!string.Equals(current.Revision, displayed.Revision, StringComparison.Ordinal))
                     throw new InvalidOperationException("Foot contact marker candidates are stale; review the refreshed proposal before applying.");
                 string confirmation =
-                    $"Timeline: {current.TimelineAuthoringId}\n" +
-                    $"Track: {current.TrackAuthoringId}\n" +
-                    $"Clip: {current.ClipAuthoringId}\n" +
+                    $"Sequence: {current.SequenceAuthoringId}\n" +
                     $"Artifact: {Short(current.Source.ArtifactContentHash)}\n\n" +
                     BuildTimelineCandidateSummary(current) +
                     "\n\nOnly LeftFootContact and RightFootContact markers will be replaced. Other markers will be preserved.";
                 if (!EditorUtility.DisplayDialog("Apply Foot Contact Markers", confirmation, "Apply", "Cancel"))
                     return;
-                m_Session.Apply(() => current.Apply(track), "Apply Foot Contact Markers");
+                current.Apply(m_SelectedSequence);
                 RefreshContactMarkers();
             }
             catch (Exception exception)
@@ -371,7 +356,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < proposal.Candidates.Count; i++)
             {
                 TimelineFootContactMarkerCandidate candidate = proposal.Candidates[i];
-                values.Add($"{candidate.MarkerId}@{candidate.TimelineFrame}F");
+                values.Add($"{candidate.MarkerId}@{candidate.SequenceFrame}F");
             }
             return string.Join(", ", values);
         }
@@ -533,70 +518,4 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
     }
 
-    public sealed partial class CharacterPipelineAuthoringContext : ITimelineAnimationMarkerSyncAuthoringContext
-    {
-        public void CollectAnimationMarkerSyncAuthoringIssues(
-            TimelineData timeline,
-            string targetTrackAuthoringId,
-            List<TimelineAnimationMarkerSyncAuthoringIssue> destination)
-        {
-            if (destination == null)
-                throw new ArgumentNullException(nameof(destination));
-            destination.Clear();
-            if (!Definition || !Definition.RootTreeAsset || Definition.RootTreeAsset.Tree == null || timeline == null)
-                return;
-            var topologyErrors = new List<string>();
-            CharacterAuthoringTopologyProjection topology = CharacterAuthoringTopologyProjection.Build(
-                Definition.RootTreeAsset.Tree,
-                topologyErrors);
-            for (int i = 0; i < topologyErrors.Count; i++)
-            {
-                destination.Add(new TimelineAnimationMarkerSyncAuthoringIssue(
-                    "character_authoring_topology",
-                    topologyErrors[i],
-                    Definition.RootTreeAsset.name,
-                    string.Empty));
-            }
-            if (!topology.IsValid)
-                return;
-            var issues = new List<AnimationMarkerSyncAuthoringIssue>();
-            CharacterAnimationMarkerSyncAuthoringContext.ValidateTrackContext(
-                topology,
-                timeline.AuthoringId,
-                targetTrackAuthoringId,
-                issues);
-            for (int i = 0; i < issues.Count; i++)
-            {
-                AnimationMarkerSyncAuthoringIssue issue = issues[i];
-                destination.Add(new TimelineAnimationMarkerSyncAuthoringIssue(
-                    issue.Code,
-                    issue.Message,
-                    issue.AuthoringPath,
-                    issue.RelatedIdentity));
-            }
-        }
-
-        public void CollectAnimationMarkerSyncGroupMembers(
-            TimelineData timeline,
-            string targetTrackAuthoringId,
-            List<TimelineAnimationMarkerSyncGroupMember> destination)
-        {
-            if (destination == null)
-                throw new ArgumentNullException(nameof(destination));
-            destination.Clear();
-            if (!Definition || !Definition.RootTreeAsset || Definition.RootTreeAsset.Tree == null || timeline == null)
-                return;
-            var topologyErrors = new List<string>();
-            CharacterAuthoringTopologyProjection topology = CharacterAuthoringTopologyProjection.Build(
-                Definition.RootTreeAsset.Tree,
-                topologyErrors);
-            if (!topology.IsValid)
-                return;
-            CharacterAnimationMarkerSyncAuthoringContext.CollectGroupMembers(
-                topology,
-                timeline.AuthoringId,
-                targetTrackAuthoringId,
-                destination);
-        }
-    }
 }

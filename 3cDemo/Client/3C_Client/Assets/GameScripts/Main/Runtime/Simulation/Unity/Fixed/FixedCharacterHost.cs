@@ -232,6 +232,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                             lookInput,
                             Require(m_CameraLookInputValueId, nameof(m_CameraLookInputValueId)),
                             m_EquipmentRigBindings,
+                            sessionHost,
                             diagnosticsContext);
                         break;
                     }
@@ -249,6 +250,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                             worldAwarePresentation,
                             physicsScene,
                             m_EquipmentRigBindings,
+                            sessionHost,
                             diagnosticsContext);
                         break;
                     default:

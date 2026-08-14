@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Animancer;
+using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.AI;
@@ -13,6 +14,7 @@ using ThirdPersonCharacter.Pipeline.GameplayEffect;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Motion;
+using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityEditor;
@@ -36,7 +38,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string AttackActionPath = RootPath + "/Actions/Attack/TrainingEnemyAttackActionProfile.asset";
         const string AttackContextPath = RootPath + "/Actions/Attack/TrainingEnemyAttackActionContext.asset";
         const string AttackTimelinePath = RootPath + "/Graphs/Timelines/TrainingEnemyAttackTimeline.asset";
+        const string AttackSequencePath = "Assets/Configs/Character/TrainingEnemy/Presentation/Sequences/TrainingEnemyMonsterAttackSequence.asset";
         const string AttackSourcePath = "Assets/Configs/Character/TrainingEnemy/Presentation/Sources/TrainingEnemyAttackAnimationSource.asset";
+        const string AnimationRigPath = "Assets/Configs/Character/TrainingEnemy/Presentation/Rig/TrainingEnemyMonsterAnimationRig.asset";
+        const string FootAnalysisSourcePath = "Assets/Configs/Character/TrainingEnemy/Presentation/FootPlacement/TrainingEnemyMonsterFootPlacementAnalysisSource.asset";
         const string AnimationProfilePath = "Assets/Configs/Character/TrainingEnemy/Presentation/Profile/TrainingEnemyMonsterAnimationPresentationProfile.asset";
         const string MonsterClipRootPath = "Assets/Configs/Character/TrainingEnemy/Presentation/Clips";
         const string SourceInputProfilePath = "Assets/Configs/Character/Corin/Pipeline/Input/CorinCharacterInputProfile.asset";
@@ -70,7 +75,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ActionProfile attackAction = BuildAttackAction();
             ActionContextSlot attackContext = LoadOrCreate<ActionContextSlot>(AttackContextPath, "Training Enemy Attack Action Context");
             UnityAnimationClip attackClip = LoadMonsterClips()["Goblin_Ani_Attack_01"];
-            TimelineAsset attackTimeline = BuildAttackTimeline(attackClip);
+            CharacterAnimationSequenceAsset attackSequence = BuildAttackSequence(attackClip);
+            TimelineAsset attackTimeline = BuildAttackTimeline(attackSequence);
             TransitionAsset attackSource = BuildAttackSource(attackClip);
             BindAttackAnimation(attackTimeline, attackSource);
             BaseTreeAsset characterTree = BuildCharacterTree(attackAction, attackContext, attackTimeline);
@@ -193,7 +199,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             query.FindPropertyRelative("m_None").arraySize = 0;
         }
 
-        static TimelineAsset BuildAttackTimeline(UnityAnimationClip attackClip)
+        static CharacterAnimationSequenceAsset BuildAttackSequence(UnityAnimationClip attackClip)
+        {
+            CharacterAnimationSequenceAsset sequence = LoadOrCreate<CharacterAnimationSequenceAsset>(
+                AttackSequencePath,
+                "Training Enemy Monster Attack Sequence");
+            sequence.Configure(
+                AuthoringIdentity.IsValid(sequence.AuthoringId) ? sequence.AuthoringId : AuthoringIdentity.Create(),
+                attackClip,
+                RequireAsset<CharacterAnimationRigDefinition>(AnimationRigPath),
+                false,
+                1f,
+                RequireAsset<CharacterFootPlacementAnalysisSource>(FootAnalysisSourcePath),
+                FootAnalysisIdentity,
+                AnimationCurve.Linear(0f, 1f, 1f, 1f));
+            EditorUtility.SetDirty(sequence);
+            return sequence;
+        }
+
+        static TimelineAsset BuildAttackTimeline(CharacterAnimationSequenceAsset attackSequence)
         {
             TimelineAsset asset = LoadOrCreate<TimelineAsset>(AttackTimelinePath, "Training Enemy Attack Timeline");
             TimelineData timeline = TimelineData.CreateDefault("Training Enemy Attack");
@@ -201,10 +225,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnimationTrack track = timeline.Tracks.OfType<AnimationTrack>().Single();
             track.Name = "Full Body Attack";
             track.SetAnimationChannelId(new AnimationChannelId(AnimationChannel));
-            track.ConfigureNone();
-            BTSMTL.Timeline.AnimationClip clip = timeline.AddClip(attackClip, track, 0) as BTSMTL.Timeline.AnimationClip ??
+            BTSMTL.Timeline.AnimationClip clip = timeline.AddClip(attackSequence, track, 0) as BTSMTL.Timeline.AnimationClip ??
                 throw new InvalidOperationException("Training Enemy Attack Timeline could not create an Animation Clip.");
-            clip.EndFrame = Math.Max(1, Mathf.CeilToInt(attackClip.length * TimelineUtility.FrameRate));
+            clip.EndFrame = Math.Max(1, Mathf.CeilToInt(attackSequence.Clip.length * TimelineUtility.FrameRate));
             timeline.Init();
             asset.SetData(timeline);
             EditorUtility.SetDirty(asset);

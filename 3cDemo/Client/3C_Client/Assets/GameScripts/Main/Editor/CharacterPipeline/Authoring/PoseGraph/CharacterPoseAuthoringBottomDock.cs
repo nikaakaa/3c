@@ -352,6 +352,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_FixtureSession?.Dispose();
                 m_FixtureSession = null;
                 m_Target = null;
+                m_TargetChoicesRevision = long.MinValue;
+                if (state == PlayModeStateChange.EnteredPlayMode)
+                    RefreshTargetChoices();
                 RenderPreview();
                 return;
             }
@@ -760,13 +763,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_TargetChoicesContextKey = contextKey;
 
             m_FixtureChoices.Clear();
-            foreach (CharacterAnimationPreviewFixture fixture in
-                     CharacterAnimationPreviewFixtureCatalog.Load())
+            if (CharacterAnimationPreviewFixtureSession.CanCreate)
             {
-                if (fixture &&
-                    fixture.Definition == m_Window.DefinitionContext &&
-                    fixture.Profile == m_Window.ProfileContext)
-                    m_FixtureChoices.Add(fixture);
+                foreach (CharacterAnimationPreviewFixture fixture in
+                         CharacterAnimationPreviewFixtureCatalog.Load())
+                {
+                    if (fixture &&
+                        fixture.Definition == m_Window.DefinitionContext &&
+                        fixture.Profile == m_Window.ProfileContext)
+                        m_FixtureChoices.Add(fixture);
+                }
             }
 
             m_LiveChoices.Clear();
@@ -843,6 +849,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (selected >= 0 && selected < choices.Count)
                 m_TargetField.SetValueWithoutNotify(choices[selected]);
+            else
+                m_TargetField.SetValueWithoutNotify(null);
         }
 
         void SelectTarget(int index)

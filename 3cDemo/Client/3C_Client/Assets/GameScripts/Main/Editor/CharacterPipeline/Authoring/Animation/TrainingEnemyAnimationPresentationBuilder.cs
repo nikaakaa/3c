@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Animancer;
+using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor;
@@ -78,7 +79,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterAnimationBlendSpaceAsset blendSpace = BuildLocomotion(
                     rig,
                     clips["Goblin_Ani_Idle"],
-                    clips["Goblin_Ani_Run"]);
+                    clips["Goblin_Ani_Run"],
+                    footAnalysisSource);
                 CharacterAnimationBlendProfile blendProfile = BuildBlendProfile(rig);
                 CharacterAnimationBlendPolicy blendPolicy = BuildBlendPolicy(rig, blendProfile);
                 CharacterPresentationPoseGraphAsset poseGraph = BuildPoseGraph(
@@ -244,7 +246,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static CharacterAnimationBlendSpaceAsset BuildLocomotion(
             CharacterAnimationRigDefinition rig,
             AnimationClip idle,
-            AnimationClip run)
+            AnimationClip run,
+            CharacterFootPlacementAnalysisSource footAnalysisSource)
         {
             CharacterAnimationBlendSpaceAsset blendSpace = LoadOrCreate<CharacterAnimationBlendSpaceAsset>(
                 BlendSpacePath,
@@ -274,8 +277,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterAnimationBlendSpaceAuthoringService.DeleteSamples(blendSpace, existing);
             var idleId = new CharacterAnimationBlendSpaceSampleId("training-enemy.monster.locomotion.idle");
             var runId = new CharacterAnimationBlendSpaceSampleId("training-enemy.monster.locomotion.run");
+            CharacterAnimationSequenceAsset idleSequence = BuildSequence(
+                "TrainingEnemyMonsterIdle",
+                idle,
+                rig,
+                true,
+                footAnalysisSource);
+            CharacterAnimationSequenceAsset runSequence = BuildSequence(
+                "TrainingEnemyMonsterRun",
+                run,
+                rig,
+                true,
+                footAnalysisSource);
             CharacterAnimationBlendSpaceAuthoringService.CreateSample(blendSpace, idleId, Vector2.zero);
-            CharacterAnimationBlendSpaceAuthoringService.SetSampleClip(blendSpace, idleId, idle);
+            CharacterAnimationBlendSpaceAuthoringService.SetSampleSequence(blendSpace, idleId, idleSequence);
             CharacterAnimationBlendSpaceAuthoringService.SetSampleRole(
                 blendSpace,
                 idleId,
@@ -291,7 +306,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         1f)
                 });
             CharacterAnimationBlendSpaceAuthoringService.CreateSample(blendSpace, runId, new Vector2(6f, 0f));
-            CharacterAnimationBlendSpaceAuthoringService.SetSampleClip(blendSpace, runId, run);
+            CharacterAnimationBlendSpaceAuthoringService.SetSampleSequence(blendSpace, runId, runSequence);
             CharacterAnimationBlendSpaceAuthoringService.SetSampleRole(
                 blendSpace,
                 runId,
@@ -315,6 +330,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         CharacterAnimationBlendSpaceParameterPolicy.RequireAllSamplesWeighted)
                 });
             return blendSpace;
+        }
+
+        static CharacterAnimationSequenceAsset BuildSequence(
+            string assetName,
+            AnimationClip clip,
+            CharacterAnimationRigDefinition rig,
+            bool loop,
+            CharacterFootPlacementAnalysisSource footAnalysisSource)
+        {
+            string path = $"{RootPath}/Sequences/{assetName}.asset";
+            CharacterAnimationSequenceAsset sequence = LoadOrCreate<CharacterAnimationSequenceAsset>(path, assetName);
+            string authoringId = AuthoringIdentity.IsValid(sequence.AuthoringId)
+                ? sequence.AuthoringId
+                : AuthoringIdentity.Create();
+            sequence.Configure(
+                authoringId,
+                clip,
+                rig,
+                loop,
+                1f,
+                footAnalysisSource,
+                FootAnalysisIdentity,
+                AnimationCurve.Constant(0f, 1f, 1f));
+            EditorUtility.SetDirty(sequence);
+            return sequence;
         }
 
         static CharacterFullBodyIkProfile BuildIkProfile()
@@ -816,6 +856,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                          RootPath + "/Rig",
                          RootPath + "/FootPlacement",
                          RootPath + "/Clips",
+                         RootPath + "/Sequences",
                          MaterialPath,
                          RootPath + "/Locomotion",
                          RootPath + "/Blend",
